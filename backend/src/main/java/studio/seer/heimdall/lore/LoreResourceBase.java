@@ -234,6 +234,25 @@ public abstract class LoreResourceBase {
         return mart.basicAuth();
     }
 
+    /**
+     * Активные коды словаря {@code dictType}; пустой словарь (свежая БД до
+     * сидов) или сбой чтения — {@code fallback}. Канон — словарь, константа
+     * только страхует старт (тот же приём, что AL-79 у decision_status).
+     */
+    java.util.List<String> activeDictCodes(String dictType, java.util.List<String> fallback) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT code FROM KnowDictEntry WHERE dict_type=:dt AND is_active=true",
+                Map.of("dt", dictType));
+            java.util.List<String> codes = rows.stream()
+                .map(r -> r.get("code")).filter(java.util.Objects::nonNull)
+                .map(String::valueOf).toList();
+            return codes.isEmpty() ? fallback : codes;
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
     /** Param map that tolerates null values (Map.of forbids them) — used for nullable note_md. */
     static Map<String, Object> mapOfNullable(Object... kv) {
         Map<String, Object> m = new java.util.HashMap<>();
@@ -378,6 +397,22 @@ public abstract class LoreResourceBase {
      */
     Response unlinkOutcome(Map<String, Object> base, boolean had) {
         return noStore(Response.ok(LoreOutcome.unlink(base, had)));
+    }
+
+    /**
+     * Есть ли вершина (DBR-17). Сбой запроса летит наверх: «не смогли
+     * проверить» — не то же самое, что «нет», и отвечать за вызывающего нельзя.
+     */
+    boolean exists(String type, String field, String value) {
+        if (value == null) return false;
+        return !ingestService.queryPublic(
+            "SELECT @rid FROM " + type + " WHERE " + field + "=:v LIMIT 1", Map.of("v", value)).isEmpty();
+    }
+
+    /** Отказ ДО записи: отсутствующий конец не должен оставлять сироту или полузапись. */
+    Response targetNotFound(String what) {
+        return noStore(Response.status(Response.Status.NOT_FOUND)
+            .entity(new LoreError("TARGET_NOT_FOUND", what)));
     }
 
     boolean linkComponentEdge(String type, String idField, String id, String componentId) {

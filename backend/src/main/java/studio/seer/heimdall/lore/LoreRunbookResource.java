@@ -45,13 +45,15 @@ public class LoreRunbookResource extends LoreResourceBase {
             return badParams("adr_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            // DBR-17 (ADR-LORE-043): проба ДО записи и ДО удаления — исход из факта.
+            boolean had = edgeExists("REFERENCES_ADR", "runbook_id", req.runbook_id(), "adr_id", req.adr_id());
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('REFERENCES_ADR')) FROM KnowRunbook WHERE runbook_id=:id) " +
                     "WHERE @in.adr_id = :aid",
                     Map.of("id", req.runbook_id(), "aid", req.adr_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
-                    "adr_id", req.adr_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                    "adr_id", req.adr_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -62,9 +64,10 @@ public class LoreRunbookResource extends LoreResourceBase {
                     Map.of("id", req.runbook_id(), "aid", req.adr_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
-                "adr_id", req.adr_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check runbook_id/adr_id exist")));
+            return linkOutcome(had, Map.of("ok", true, "runbook_id", req.runbook_id(),
+                "adr_id", req.adr_id(), "action", "added", "linked", linked),
+                linked, "REFERENCES_ADR", "runbook_id", req.runbook_id(), "adr_id", req.adr_id(),
+                "ранбук " + req.runbook_id() + " или ADR " + req.adr_id());
         } catch (Exception e) {
             LOG.warnf("[LORE RUNBOOK ADR LINK] %s: %s", req.runbook_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -91,13 +94,14 @@ public class LoreRunbookResource extends LoreResourceBase {
             return badParams("project contains illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            boolean had = edgeExists("BELONGS_TO_PROJECT", "runbook_id", req.runbook_id(), "slug", req.project()); // DBR-17
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowRunbook WHERE runbook_id=:id) " +
                     "WHERE @in.slug = :p",
                     Map.of("id", req.runbook_id(), "p", req.project()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
-                    "project", req.project(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                    "project", req.project(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -108,9 +112,10 @@ public class LoreRunbookResource extends LoreResourceBase {
                     Map.of("id", req.runbook_id(), "p", req.project())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
-                "project", req.project(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check runbook_id exists and project is registered (project_new)")));
+            return linkOutcome(had, Map.of("ok", true, "runbook_id", req.runbook_id(),
+                "project", req.project(), "action", "added", "linked", linked),
+                linked, "BELONGS_TO_PROJECT", "runbook_id", req.runbook_id(), "slug", req.project(),
+                "ранбук " + req.runbook_id() + " или проект " + req.project() + " (проект заводится через project_new)");
         } catch (Exception e) {
             LOG.warnf("[LORE RUNBOOK PROJECT] %s: %s", req.runbook_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

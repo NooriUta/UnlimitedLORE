@@ -72,6 +72,10 @@ public class LoreDocResource extends LoreResourceBase {
             if (req.content_md_en() != null) { dcsql.append(", content_md_en=:md_en");  p.put("md_en",    req.content_md_en()); }
             if (req.content_md_ru() != null) { dcsql.append(", content_md_ru=:md_ru");  p.put("md_ru",    req.content_md_ru()); }
             if (req.sort_order() != null)    { dcsql.append(", sort_order=:sort_order"); p.put("sort_order", req.sort_order()); }
+            // DS-3: хеш/длина пишутся тем же UPDATE, что и тело, — разъехаться не могут.
+            LoreDocBodyDigest.appendSet(dcsql, p, "content_html",  req.content_html());
+            LoreDocBodyDigest.appendSet(dcsql, p, "content_md_en", req.content_md_en());
+            LoreDocBodyDigest.appendSet(dcsql, p, "content_md_ru", req.content_md_ru());
             dcsql.append(" UPSERT WHERE doc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dcsql.toString(), p)).await().indefinitely();

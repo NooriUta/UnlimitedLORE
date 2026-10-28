@@ -68,6 +68,22 @@ public class ForgejoBridge {
 
     private String token() { return secrets.get(FORGEJO_TOKEN_KEY).orElseThrow(); }
 
+    /** DBR-18: тот же токен для пробы живости — наружу не отдаётся, только в заголовок. */
+    String probeToken() { return token(); }
+
+    // Геттеры, а не поля: потребители держат CDI-прокси, и ЧТЕНИЕ ПОЛЯ через него
+    // отдаёт поле самого прокси — null/0, без ошибки. Так проба мостов падала NPE
+    // (#711), а гейт мержа жил с grace-окном 0 вместо 300 с. Сторож —
+    // InjectedBeanFieldAccessTest.
+
+    /** Grace-окно регистрации рана, секунды. */
+    long graceSeconds() { return graceSeconds; }
+
+    /** Адрес Forgejo из контейнера бэкенда (base-override) без хвостового слэша; empty — не задан. */
+    Optional<String> probeBase() {
+        return baseOverride.filter(v -> !v.isBlank()).map(v -> v.replaceAll("/$", ""));
+    }
+
     /** Адресация репозитория, выведенная из KnowGitProject.hosts[] primary. */
     record Repo(String apiBase, String owner, String name) {
         String path() { return owner + "/" + name; }

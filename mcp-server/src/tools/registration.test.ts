@@ -19,12 +19,13 @@ function fakeServer() {
 }
 
 describe('registerLoreRead', () => {
-  it('registers exactly the four read tools under their canonical names', () => {
+  it('registers exactly the five read tools under their canonical names', () => {
     const { server, names } = fakeServer();
     registerLoreRead(server);
     // search — SRCH-07 (ADR-LORE-033): агент ищет тем же /lore/search, что UI.
     // search_similar — SRCH-06 (D6): «похожие» на SEARCH_INDEX_MORE, вход — id.
-    expect(names).toEqual(['list_slices', 'query_slice', 'search', 'search_similar']);
+    // task_shape — MT-TASK-SHAPE: форма и объём задач для статистики и BI.
+    expect(names).toEqual(['list_slices', 'query_slice', 'search', 'search_similar', 'task_shape']);
   });
 });
 
@@ -69,7 +70,15 @@ describe('registerLoreWrite', () => {
     // + milestone_sprints (RM-M1 — список спринтов за один вызов. sprint_link
     //   работает по одному, и карта из двадцати спринтов строится двадцатью
     //   вызовами, то есть не строится вовсе)
-    expect(names).toHaveLength(84);
+    // + project_role_set (DS-1 — выдача проектной роли из MCP; бэкенд открыт
+    //   только профилю full, D-2026-LORE-FULL-WRITES-PROJECT-ROLES)
+    expect(names).toHaveLength(85);
+  });
+
+  it('registers project_role_set (DS-1 — роль в проекте выдаётся без захода в админку)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    expect(names).toContain('project_role_set');
   });
 
   it('registers project_actor_new separately from actor_new (ADR-LORE-041 §4)', () => {

@@ -222,7 +222,7 @@ public class LoreForgejoResource extends LoreResourceBase {
                     .entity(new LoreError("REF_NOT_RESOLVED", res.error())));
             CiProbe probe = ciProbe(repo.get(), res.sha(), 0);
             String status = ForgejoBridge.gateStatus(probe.byContext(), bridge.requiredChecks(gitProject),
-                probe.ageSeconds(), bridge.graceSeconds, probe.failed());
+                probe.ageSeconds(), bridge.graceSeconds(), probe.failed());
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ref", ref);
             out.put("sha", res.sha());
@@ -347,7 +347,7 @@ public class LoreForgejoResource extends LoreResourceBase {
         }
         CiProbe probe = ciProbe(repo, headSha, age);
         String status = ForgejoBridge.gateStatus(probe.byContext(), bridge.requiredChecks(gitProject),
-            probe.ageSeconds(), bridge.graceSeconds, probe.failed());
+            probe.ageSeconds(), bridge.graceSeconds(), probe.failed());
         return new PrGate(number, pr.getString("title"), pr.getString("state"),
             Boolean.TRUE.equals(pr.getBoolean("merged")), headSha, baseRef, status, probe.byContext(), null, 200);
     }
@@ -440,12 +440,20 @@ public class LoreForgejoResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowPR SET pr_uid=:uid, pr_number=:n, git_project=:gp UPSERT WHERE pr_uid=:uid",
                 Map.of("uid", prUid, "n", prNumber, "gp", gitProject))).await().indefinitely();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE SHIPPED_IN FROM (SELECT FROM KnowPR WHERE pr_uid=:uid) " +
-                "TO (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
-                Map.of("uid", prUid, "ruid", ruid))).await().indefinitely();
-            out.put("linked", true);
+            // DBR-17: IF NOT EXISTS + исход из факта. Голый CREATE EDGE на
+            // повторном вызове плодил дубль, а linked:true ставился по факту
+            // выполнения команды, а не по ребру в графе.
+            boolean prHad = edgeExists("SHIPPED_IN", "pr_uid", prUid, "release_uid", ruid);
+            if (!prHad)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE SHIPPED_IN FROM (SELECT FROM KnowPR WHERE pr_uid=:uid) " +
+                    "TO (SELECT FROM KnowRelease WHERE release_uid=:ruid) IF NOT EXISTS",
+                    Map.of("uid", prUid, "ruid", ruid))).await().indefinitely();
+            boolean prLinked = prHad || edgeExists("SHIPPED_IN", "pr_uid", prUid, "release_uid", ruid);
+            out.put("linked", prLinked);
             out.put("release_id", rid);
+            out.put("link_outcome", prHad ? LoreOutcome.UNCHANGED : prLinked ? LoreOutcome.CREATED : LoreOutcome.NOOP);
+            if (!prLinked) out.put("link_hint", "ребро SHIPPED_IN " + prUid + " → " + ruid + " не создано — release_link rel:pr руками");
             if (!str(sprintId).isEmpty()) {
                 // Оба ребра — разными вызовами, как учит feedback_release_link_sprint_and_pr.
                 List<Map<String, Object>> sp = ingestService.queryPublic(
@@ -454,11 +462,17 @@ public class LoreForgejoResource extends LoreResourceBase {
                     out.put("sprint_linked", false);
                     out.put("sprint_hint", "KnowSprint " + sprintId + " не найден");
                 } else {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE IMPLEMENTED_IN_RELEASE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
-                        "TO (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
-                        Map.of("sid", sprintId, "ruid", ruid))).await().indefinitely();
-                    out.put("sprint_linked", true);
+                    // Каждый PR спринта звал этот путь заново — без IF NOT EXISTS у
+                    // спринта копилось по ребру IMPLEMENTED_IN_RELEASE на каждый мерж.
+                    boolean spHad = edgeExists("IMPLEMENTED_IN_RELEASE", "sprint_id", sprintId, "release_uid", ruid);
+                    if (!spHad)
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "CREATE EDGE IMPLEMENTED_IN_RELEASE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                            "TO (SELECT FROM KnowRelease WHERE release_uid=:ruid) IF NOT EXISTS",
+                            Map.of("sid", sprintId, "ruid", ruid))).await().indefinitely();
+                    boolean spLinked = spHad || edgeExists("IMPLEMENTED_IN_RELEASE", "sprint_id", sprintId, "release_uid", ruid);
+                    out.put("sprint_linked", spLinked);
+                    out.put("sprint_link_outcome", spHad ? LoreOutcome.UNCHANGED : spLinked ? LoreOutcome.CREATED : LoreOutcome.NOOP);
                 }
             }
         } catch (Exception e) {

@@ -63,7 +63,7 @@ const TOOLS: ToolDoc[] = [
   // ── Task (KnowTask) ────────────────────────────────────────────────────────
   { name: 'task_new', kind: 'write', entity: 'Task', backend: 'POST /lore/task',
     params: 'sprint_id, task_id, title, note_md?, phase_uid?, author_agent?, executor_agent?, reviewer_agent?, task_type?',
-    desc: 'KnowTask: создать задачу в спринте (order_index = max по спринту + 1, стартовый статус PLANNED с открытой hist-строкой). phase_uid — опционально сразу привязать к фазе тем же вызовом (ребро IN_PHASE); фаза должна уже существовать (sprint_phase_new) и принадлежать тому же спринту. author/executor/reviewer_agent (ADR-LORE-014 §4) — свободный текст, но лучше значением из справочника agent_role (dictionary, dict_set) — кто поставил/кто исполняет/кто примет задачу. task_type (ADR-LORE-015, T14) — classification planning|design|dev|test|ops|research|analytics|docs|content, по умолчанию "dev".' },
+    desc: 'KnowTask: создать задачу в спринте (order_index = max по спринту + 1, стартовый статус PLANNED с открытой hist-строкой). phase_uid — опционально сразу привязать к фазе тем же вызовом (ребро IN_PHASE); фаза должна уже существовать (sprint_phase_new) и принадлежать тому же спринту. author/executor/reviewer_agent (ADR-LORE-014 §4) — заявленная личность (человек с ролью в проекте или агентная личность; с TR-05 это ребро ROLE_HELD_BY, незаявленное — отказ со списком кандидатов) — кто поставил/кто исполняет/кто примет задачу. task_type (ADR-LORE-015, T14) — classification planning|design|dev|test|ops|research|analytics|docs|content, по умолчанию "dev".' },
   { name: 'task_set', kind: 'write', entity: 'Task', backend: 'POST /lore/task/edit, POST /lore/task/edit/batch',
     params: 'task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type? | tasks: [{task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}]',
     desc: 'KnowTask: изменить заголовок/заметку/оценку трудозатрат/роли/task_type существующей задачи (обновляется и вершина, и её открытая hist-строка). Одиночный режим — task_uid+title в аргументах напрямую; batch-режим — массив tasks[] за один вызов, ошибки собираются по элементу, не прерывая остальные. reviewer_agent должен отличаться от executor_agent — единственный жёсткий гейт SDLC: status_set task→done отклоняется (409 NO_SELF_ACCEPTANCE), если ревьювер и исполнитель совпадают.' },
@@ -179,7 +179,7 @@ const TOOLS: ToolDoc[] = [
   // ── Dictionary (KnowDictEntry, ADR-LORE-012) ──────────────────────────────
   { name: 'dict_set', kind: 'write', entity: 'Dictionary', backend: 'POST /lore/dict/entry',
     params: 'dict_type, code, label_ru?, label_en?, color?, icon?, sort_order?, is_active?, is_extensible?',
-    desc: 'KnowDictEntry: создать/дописать одно значение справочника — upsert по (dict_type, code), партициально-безопасно (непереданные поля метаданных не трогаются; is_active по умолчанию true, is_extensible false при создании). Единый канон, читается фронтом (useDictionary), бэкендом и MCP через query_slice "dictionary". Примеры dict_type: sprint_status, task_status, adr_status, priority, area, agent_role, task_type, bragi_channel, tag. Проверить query_slice "dictionary" (опционально dict_type=...) перед добавлением, чтобы не плодить дубли.' },
+    desc: 'KnowDictEntry: создать/дописать одно значение справочника — upsert по (dict_type, code), партициально-безопасно (непереданные поля метаданных не трогаются; is_active по умолчанию true, is_extensible false при создании). Единый канон, читается фронтом (useDictionary), бэкендом и MCP через query_slice "dictionary". Примеры dict_type: sprint_status, task_status, adr_status, priority, area, agent_profile, task_type, bragi_channel, tag. Проверить query_slice "dictionary" (опционально dict_type=...) перед добавлением, чтобы не плодить дубли.' },
 
   // ── Release (KnowRelease) ──────────────────────────────────────────────────
   { name: 'release_new', kind: 'write', entity: 'Release', backend: 'POST /lore/release',
@@ -267,6 +267,11 @@ printf '%s\\n' \\
  '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"query_slice","arguments":{"slice":"plan_config"}}}' \\
  | node dist/index.js`;
 
+// FI-KC-DEFAULTS: issuer в сниппете — того Keycloak, которым пользуется ЭТА
+// установка (VITE_OIDC_ISSUER сборки), а не зашитый адрес нашего стенда:
+// чужая установка копировала бы чужой issuer. Без auth — явная заглушка.
+const SNIPPET_ISSUER = (import.meta.env.VITE_OIDC_ISSUER as string | undefined)
+  || '<issuer вашего Keycloak, например https://kc.example/realms/omilore>';
 // AL-18: client_credentials fields kept in sync with the real repo-root
 // .mcp.json — LORE_OIDC_ISSUER/LORE_MCP_CLIENT_ID/LORE_MCP_CLIENT_SECRET are
 // not optional extras, they're what makes AgentScopeFilter see agent_scope
@@ -282,7 +287,7 @@ const MCP_JSON = `{
       "env": {
         "LORE_BACKEND_URL": "http://localhost:9100",
         "LORE_SEER_ROLE": "admin",
-        "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
+        "LORE_OIDC_ISSUER": "${SNIPPET_ISSUER}",
         "LORE_MCP_CLIENT_ID": "lore-mcp-full",
         "LORE_MCP_CLIENT_SECRET": "\${LORE_MCP_CLIENT_SECRET}"
       }
@@ -301,7 +306,7 @@ const OPENCODE_JSON = `{
       "environment": {
         "LORE_BACKEND_URL": "http://localhost:9100",
         "LORE_SEER_ROLE": "admin",
-        "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
+        "LORE_OIDC_ISSUER": "${SNIPPET_ISSUER}",
         "LORE_MCP_CLIENT_ID": "lore-mcp-architect",
         "LORE_MCP_CLIENT_SECRET": "\${LORE_MCP_CLIENT_SECRET}"
       }
@@ -536,8 +541,8 @@ export default function LoreMcpApiScreen() {
             <code style={S.code}>adr_new</code> {t('lore.mcpApi.toolsNote4', 'создаёт полную SCD2-структуру: вершина + KnowADRHist (valid_to=null) + HAS_STATE edge — тело ADR читается именно из hist-строки.')}{' '}
             {t('lore.mcpApi.toolsNote5', 'Партиальные (amend) вызовы у всех upsert-инструментов с 2026-07 безопасны — SQL SET собирается динамически, непереданное поле не трогается (раньше пропущенный параметр молча обнулялся).')}{' '}
             {t('lore.mcpApi.toolsNoteRoles', 'Задачи несут author/executor/reviewer_agent (ADR-LORE-014 §4) — единственный жёсткий SDLC-гейт: reviewer_agent должен отличаться от executor_agent, иначе')}{' '}
-            <code style={S.code}>status_set</code> {t('lore.mcpApi.toolsNoteRoles2', 'task→done отклоняется (409 NO_SELF_ACCEPTANCE). Значения ролей — расширяемый справочник')}{' '}
-            <code style={S.code}>agent_role</code> {t('lore.mcpApi.toolsNoteRoles3', '(см. Dictionary ниже) — UI сам регистрирует новую роль в словаре при первом вводе.')}{' '}
+            <code style={S.code}>status_set</code> {t('lore.mcpApi.toolsNoteRoles2', 'task→done отклоняется (409 NO_SELF_ACCEPTANCE). Значения ролей — заявленные личности (рёбра ROLE_HELD_BY, TR-05): незаявленное имя — отказ со списком кандидатов. Справочник')}{' '}
+            <code style={S.code}>agent_profile</code> {t('lore.mcpApi.toolsNoteRoles3', '(профили агентов) здесь не участвует: профиль — набор инструментов агента, а не его роль на задаче.')}{' '}
             <b>{t('lore.mcpApi.toolsNoteDeletionLabel', 'Удаление:')}</b> {t('lore.mcpApi.toolsNote6', 'штатный путь — soft-delete через статус (')}<code style={S.code}>status_set</code>
             {t('lore.mcpApi.toolsNote7', ' со status="cancelled"/"deprecated"/"archived" — история сохраняется). Настоящий hard-delete есть только у ')}<code style={S.code}>adr_del</code> {t('lore.mcpApi.toolsNote8', 'и')}{' '}
             <code style={S.code}>spec_del</code>, {t('lore.mcpApi.toolsNote9', 'оба явно помечены как «только для тестовых артефактов». Остальные типы (Sprint/Task/Release/Component/Milestone/ QualityGate/Runbook/Doc) осознанно без hard-delete тула — реальные данные не удаляются, только архивируются статусом.')}{' '}

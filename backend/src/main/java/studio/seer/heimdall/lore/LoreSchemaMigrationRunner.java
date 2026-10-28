@@ -65,6 +65,14 @@ public class LoreSchemaMigrationRunner {
      */
     @ConfigProperty(name = "lore.schema.verify", defaultValue = "true")
     boolean verifySchema;
+    /**
+     * DBR-06: накатка отдельным шагом CD. При {@code true} процесс накатывает
+     * схему и завершается (код 0; упавший шаг — ненулевой код), не оставаясь
+     * сервером. Рантайм потом стартует с {@code lore.migrate=false} и токеном
+     * без updateSchema, а перезапуск контейнера перестаёт быть операцией над схемой.
+     */
+    @ConfigProperty(name = "lore.migrate.only", defaultValue = "false")
+    boolean migrateOnly;
     @ConfigProperty(name = "lore.migrate.backup", defaultValue = "true")
     boolean backupRequired;
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
@@ -238,8 +246,37 @@ public class LoreSchemaMigrationRunner {
         }
     }
 
+    /**
+     * DBR-01/DBR-06: недопустимые сочетания режимов; null — сочетание допустимо.
+     * Накатка под токеном невозможна по построению (у токена нет updateSchema),
+     * «только накатить» без накатки — опечатка, после которой сервис молча не поднялся бы.
+     */
+    static String modeProblem(boolean migrate, boolean migrateOnly, String authMode) {
+        if (migrateOnly && !migrate)
+            return "lore.migrate.only=true при lore.migrate=false — накатывать нечего, а сервер не поднимется; "
+                + "для шага накатки нужны оба флага";
+        if (migrate && "token".equals(authMode))
+            return "накатка (lore.migrate=true) под API-токеном невозможна: у токена нет updateSchema "
+                + "(D-DB-ACCESS-SPLIT). Накатывайте отдельным запуском с lore.mart.auth=basic (шаг CD «Migrate schema»)";
+        return null;
+    }
+
     @PostConstruct
     void run() {
+        if (enabled) {
+            LOG.infof("[LORE MART] вход в ArcadeDB: %s", "token".equals(mart.authMode())
+                ? "собственный API-токен (без updateSchema)" : "user/пароль (" + mart.user() + ")");
+            String problem = modeProblem(migrate, migrateOnly, mart.authMode());
+            if (problem != null) throw new IllegalStateException("[LORE MIGRATE] Отказ старта: " + problem);
+        }
+        runSchema();
+        if (enabled && migrateOnly) {
+            LOG.info("[LORE MIGRATE] lore.migrate.only=true — схема накатана, процесс завершается (шаг накатки CD)");
+            io.quarkus.runtime.Quarkus.asyncExit(0);
+        }
+    }
+
+    private void runSchema() {
         if (!enabled) {
             LOG.info("[LORE MIGRATE] skipped (lore.enabled=false)");
             return;
@@ -444,6 +481,82 @@ public class LoreSchemaMigrationRunner {
         if (version == 41) normalizeHistValidFrom();
         if (version == 46) backfillDroppedRoleNotes();
         if (version == 47) backfillDocProjectEdgesByProduct();
+        if (version == 48) renameAgentRoleDictToProfile();
+        if (version == 49) backfillDocBodyDigest();
+        if (version == 51) dropLegacyAdrHasStatus();
+    }
+
+    /**
+     * V51 (LH-44, п.3): выгрузить в лог и снять легаси-рёбра HAS_STATUS у KnowADRHist.
+     *
+     * <p>Порядок «сначала выгрузка, потом удаление» — условие владельца: удаление
+     * необратимо, и строка лога — единственный след того, что было. Каждое ребро
+     * пишется отдельной строкой ДО удаления. После прохода — проверка факта:
+     * осталось ли хоть одно; осталось — шаг падает, ledger не пишется.
+     * Идемпотентен: повторный проход не находит рёбер.
+     */
+    void dropLegacyAdrHasStatus() {
+        // Та же форма выборки рёбер, что у DELETE в ресурсах (expand(outE(...))) —
+        // проверенная на этой грамматике, без фильтра по типу конца.
+        List<Map<String, Object>> edges = ingest.queryPublic(
+            "SELECT @rid AS rid, @out.state_uid AS state_uid, @out.adr_id AS adr_id, @in.status_id AS status_id "
+            + "FROM (SELECT expand(outE('HAS_STATUS')) FROM KnowADRHist)", Map.of());
+        for (Map<String, Object> e : edges) {
+            LOG.infof("[LORE MIGRATE] V51 снимаю HAS_STATUS rid=%s adr=%s state_uid=%s status=%s",
+                e.get("rid"), e.get("adr_id"), e.get("state_uid"), e.get("status_id"));
+            command("DELETE FROM HAS_STATUS WHERE @rid = " + e.get("rid"), Map.of());
+        }
+        List<Map<String, Object>> rest = ingest.queryPublic(
+            "SELECT count(*) AS n FROM (SELECT expand(outE('HAS_STATUS')) FROM KnowADRHist)", Map.of());
+        long left = rest.isEmpty() ? 0 : ((Number) rest.get(0).getOrDefault("n", 0)).longValue();
+        if (left > 0)
+            throw new IllegalStateException("V51: после удаления осталось " + left + " рёбер HAS_STATUS у KnowADRHist");
+        LOG.infof("[LORE MIGRATE] V51 снято %d легаси-рёбер HAS_STATUS у KnowADRHist", edges.size());
+    }
+
+    /**
+     * V49 (DS-3): хеш и длина тел KnowDoc, у которых тело есть, а хеша нет.
+     *
+     * <p>Батч мал (50) намеренно: тело дока бывает ~100 КБ, и 5000 строк за раз,
+     * как в backfillContentHash, — это полгигабайта в одном ответе. Идемпотентен:
+     * повторный проход не находит строк без хеша.
+     */
+    void backfillDocBodyDigest() {
+        for (String f : LoreDocBodyDigest.BODY_FIELDS) {
+            int total = 0;
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            while (true) {
+                List<Map<String, Object>> rows = ingest.queryPublic(
+                    "SELECT @rid AS rid, " + f + " AS body FROM KnowDoc WHERE "
+                    + f + " IS NOT NULL AND " + f + "_sha256 IS NULL LIMIT 50", Map.of());
+                if (rows.isEmpty()) break;
+                for (Map<String, Object> r : rows) {
+                    // Строка вернулась повторно = запись не легла. Без этой проверки
+                    // цикл крутился бы вечно на одном батче, держа старт бэкенда.
+                    if (!seen.add(String.valueOf(r.get("rid"))))
+                        throw new IllegalStateException("V49: хеш не записался в " + r.get("rid") + "." + f);
+                    String body = String.valueOf(r.get("body"));
+                    command("UPDATE " + r.get("rid") + " SET " + f + "_sha256=:h, " + f + "_bytes=:n",
+                        Map.of("h", LoreDocBodyDigest.sha256(body), "n", LoreDocBodyDigest.bytes(body)));
+                    total++;
+                }
+                if (rows.size() < 50) break;
+            }
+            LOG.infof("[LORE MIGRATE] V49 backfill KnowDoc.%s_sha256: %d строк", f, total);
+        }
+    }
+
+    /**
+     * V48 (SE-06): справочник agent_role → agent_profile, коды сохраняются.
+     *
+     * <p>История ({@code KnowDictEntryHist}) связана с записью парой
+     * (dict_type, code), а не ключом — поэтому переносится тем же условием, иначе
+     * срез history_dict потерял бы прошлое записи. Идемпотентен: второй прогон
+     * не находит строк со старым именем.
+     */
+    void renameAgentRoleDictToProfile() {
+        exec("UPDATE KnowDictEntry SET dict_type = 'agent_profile' WHERE dict_type = 'agent_role'");
+        exec("UPDATE KnowDictEntryHist SET dict_type = 'agent_profile' WHERE dict_type = 'agent_role'");
     }
 
     /**

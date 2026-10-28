@@ -357,6 +357,13 @@ class LoreScd2AndRollbackLiveDbTest {
         .when().post("/lore/quality-gate")
         .then().statusCode(200);
 
+        // DBR-17: промоут в несуществующий спринт теперь отказ (задача-сирота без
+        // PART_OF); раньше этот тест опирался ровно на такое поведение.
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintId + "\",\"name\":\"C5 promote probe\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body("{\"job_id\":\"" + jobId + "\",\"qg_id\":\"" + qgId + "\"}")
         .when().post("/lore/qg/job-task")

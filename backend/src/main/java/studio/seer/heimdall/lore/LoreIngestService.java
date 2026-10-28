@@ -100,12 +100,19 @@ public class LoreIngestService {
             // without its HAS_STATE edge. created_date is stamped exactly once here —
             // unlike valid_from (which moves on every SCD2 transition), it must
             // survive untouched so lead/cycle-time analytics have a real anchor.
+            // DS-7: priority — поле SCD2 (KnowSprintHist), его читают срез sprints и
+            // sprint_plan_set. Раньше начальная строка шла без него, и priority из
+            // sprint_new оседал только на вершине: ok:true, а в срезе пусто.
+            java.util.Map<String, Object> hp = new java.util.HashMap<>(
+                Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
+            String priSet = "";
+            if (priority != null && !priority.isBlank()) { priSet = ", priority=:pri"; hp.put("pri", priority); }
             execScript(
-                "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now;" +
+                "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now" + priSet + ";" +
                 "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
                 "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su);" +
                 "UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp;",
-                Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
+                hp);
         }
 
         LOG.infof("[LORE] created sprint %s (new=%b)", sprintId, created);
@@ -591,11 +598,15 @@ public class LoreIngestService {
         params.put("file_path",    nullToEmpty(doc.filePath()));
         params.put("content_html", nullToEmpty(doc.contentHtml()));
 
-        exec("UPDATE KnowDoc SET " +
+        // DS-3: второй писатель тела — хеш обязан ехать и отсюда, иначе он
+        // устареет молча после первого инжеста (см. LoreDocBodyDigest).
+        StringBuilder sql = new StringBuilder("UPDATE KnowDoc SET " +
                 "doc_id=:doc_id, title=:title, kind=:kind, " +
                 "has_ext_deps=:has_ext_deps, component_id=:component_id, " +
-                "file_path=:file_path, content_html=:content_html " +
-                "UPSERT WHERE doc_id=:doc_id", params);
+                "file_path=:file_path, content_html=:content_html");
+        LoreDocBodyDigest.appendSet(sql, params, "content_html", (String) params.get("content_html"));
+        sql.append(" UPSERT WHERE doc_id=:doc_id");
+        exec(sql.toString(), params);
     }
 
     // ── Infrastructure ────────────────────────────────────────────────────────

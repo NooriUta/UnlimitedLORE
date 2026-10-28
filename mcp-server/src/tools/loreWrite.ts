@@ -134,6 +134,8 @@ function definePostTool<S extends z.ZodRawShape>(
     schema: S;
     path: string;
     body: (args: ShapeOutput<S>) => Record<string, unknown>;
+    /** AL-113: второй шаг после успешной записи; его поля добавляются к ответу. */
+    after?: (args: ShapeOutput<S>) => Promise<Record<string, unknown>>;
   },
 ): void {
   // The SDK's server.tool overloads don't unify cleanly with a generic shape, so
@@ -141,12 +143,61 @@ function definePostTool<S extends z.ZodRawShape>(
   // being checked against `S`; runtime validation is the zod `schema` itself.
   const handler = async (args: ShapeOutput<S>) => {
     try {
-      return json(await lorePost(def.path, def.body(args)));
+      const res = await lorePost(def.path, def.body(args));
+      if (!def.after) return json(res);
+      return json({ ...(res as Record<string, unknown>), ...(await def.after(args)) });
     } catch (e) {
       return err(e);
     }
   };
   (server.tool as (...a: unknown[]) => unknown)(def.name, def.description, def.schema, handler);
+}
+
+// ── AL-113: проект прямо в создающем вызове ─────────────────────────────────
+//
+// Владелец 17.08: «сразу указывать проект и связывать одним запросом, а не
+// двумя; отдельную линковку тоже оставляем». Раньше связь требовала второго
+// вызова, его пропуск не наказывался ничем (ok:true), и сущность без проекта
+// всплывала на ленте телефона днями позже.
+//
+// Ребро ставится ТЕМ ЖЕ путём, что *_link(rel:"project") — второй дороги к
+// одному ребру нет. Не передан project — берётся LORE_ACTIVE_PROJECT сессии
+// (как у sprint_new); откуда взят, видно в ответе (project_source). Ни того,
+// ни другого — рёбра не трогаются. Только ДОБАВЛЯЕТ: принадлежность
+// множественная, чужие проекты сущности не снимаются.
+type ProjectKind = 'adr' | 'doc' | 'spec' | 'runbook' | 'question';
+
+const PROJECT_LINK: Record<ProjectKind, (id: string, project: string) => [string, Record<string, unknown>]> = {
+  adr:      (id, p) => ['/lore/adr/project',      { adr_id: id, project: p, action: 'add' }],
+  doc:      (id, p) => ['/lore/doc/project',      { doc_id: id, project: p, action: 'add' }],
+  runbook:  (id, p) => ['/lore/runbook/project',  { runbook_id: id, project: p, action: 'add' }],
+  question: (id, p) => ['/lore/question/project', { question_id: id, project: p, action: 'add' }],
+  spec:     (id, p) => ['/lore/spec/link',        { spec_id: id, target_id: p, rel: 'project', mode: 'add' }],
+};
+
+const PROJECT_PARAM = z.string().optional().describe(
+  'AL-113: git project slug — links BELONGS_TO_PROJECT in the same call (same path as *_link rel="project"; ' +
+  'ONLY ADDS, never removes other projects). Omit → LORE_ACTIVE_PROJECT of the session, if set; ' +
+  'project_source in the answer says which. project_linked:false = slug not registered (project_new), not a silent no-op.');
+
+export async function inlineProject(kind: ProjectKind, id: string, explicit?: string): Promise<Record<string, unknown>> {
+  const project = explicit ?? ACTIVE_PROJECT;
+  if (!project) return {};
+  const source = explicit ? 'param' : 'LORE_ACTIVE_PROJECT';
+  const [path, body] = PROJECT_LINK[kind](id, project);
+  try {
+    const r = (await lorePost(path, body)) as Record<string, unknown>;
+    // Решает outcome (ADR-LORE-043): created/unchanged — ребро есть, noop — нет.
+    // linked читается ТОЛЬКО у ответов без outcome: рядом с outcome «unchanged»
+    // он тоже false (ребро не создавалось, потому что уже было), и по нему
+    // повтор выглядел бы провалом.
+    const failed = r?.outcome !== undefined ? r.outcome === 'noop' : r?.linked === false;
+    return { project, project_source: source, project_linked: !failed, project_link: r };
+  } catch (e) {
+    // Сущность УЖЕ записана — ошибку ребра не прячем и не роняем запись целиком.
+    return { project, project_source: source, project_linked: false,
+             project_error: (e as Error).message ?? String(e) };
+  }
 }
 
 // Full set of statuses accepted by the backend. Canonical source of truth:
@@ -912,6 +963,7 @@ export function registerLoreWrite(server: McpServer): void {
       tags:             z.array(z.string()).optional().describe('free-text tags — upserts KnowTag + TAGGED_WITH edges, replaces the full set'),
       file_path:        z.string().optional().describe('source .md path relative to docs root, e.g. "engine/specs/adr/ADR-HND-022.md"'),
       checkpoint:       z.boolean().optional().describe('LH-02: true = a body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
+      project:          PROJECT_PARAM,
     },
     path: '/lore/adr',
     body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path, checkpoint }) => ({
@@ -923,6 +975,7 @@ export function registerLoreWrite(server: McpServer): void {
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
           tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
+    after: ({ adr_id, project }) => inlineProject('adr', adr_id, project),
   });
 
   definePostTool(server, {
@@ -1088,7 +1141,8 @@ export function registerLoreWrite(server: McpServer): void {
           body_md: body_md ?? null, date_created: date_created ?? null,
           refs_raw: refs_raw ?? null,
           component_id: component_id ?? null, adr_id: adr_id ?? null, tags: tags ?? null,
-          status: status ?? null, project: project ?? null,
+          // AL-113: как у sprint_new — не передан project, берётся проект сессии.
+          status: status ?? null, project: project ?? ACTIVE_PROJECT ?? null,
         }),
   });
 
@@ -1148,6 +1202,7 @@ export function registerLoreWrite(server: McpServer): void {
       priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
       owner:        z.string().optional().describe('who owns getting the answer'),
       raised_by:    z.string().optional(),
+      project:      PROJECT_PARAM,
     },
     path: '/lore/question',
     body: (a) => ({
@@ -1155,6 +1210,7 @@ export function registerLoreWrite(server: McpServer): void {
       status: a.status ?? null, trigger: a.trigger ?? null, component_id: a.component_id ?? null,
       due_date: a.due_date ?? null, priority: a.priority ?? null, owner: a.owner ?? null, raised_by: a.raised_by ?? null,
     }),
+    after: (a) => inlineProject('question', a.question_id, a.project),
   });
 
   definePostTool(server, {
@@ -1242,7 +1298,7 @@ export function registerLoreWrite(server: McpServer): void {
       git_tag:        z.string().optional(),
       type:           z.enum(['patch', 'minor', 'major']).optional(),
       description_md: z.string().optional().describe('changelog / release notes in Markdown'),
-      is_current:     z.boolean().optional().default(false).describe('mark as current prod release'),
+      is_current:     z.boolean().optional().describe('mark as current prod release; omit to let LORE decide: the newest TAGGED release of the project becomes current (ADR-LORE-025)'),
       week:           z.number().int().optional().describe('plan week number (relative to W0)'),
       git_project:    z.string().optional()
         .describe('GitHub project slug (default: NooriUta/AIDA)'),
@@ -1252,7 +1308,7 @@ export function registerLoreWrite(server: McpServer): void {
           release_id, release_date: release_date ?? null,
           git_tag: git_tag ?? null, type: type ?? null,
           description_md: description_md ?? null,
-          is_current: is_current ?? false, week: week ?? null,
+          is_current: is_current ?? null, week: week ?? null,
           git_project: git_project ?? null,
         }),
   });
@@ -1346,10 +1402,14 @@ export function registerLoreWrite(server: McpServer): void {
       summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
       checkpoint:   z.boolean().optional().describe('LH-02: true = body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
+      status:       z.string().optional().describe('DS-4: spec_status dictionary code — proposed|accepted|deprecated|superseded (editable in admin); written to the open KnowSpecHist row, read back by specs/spec_by_id. A free-text value is rejected with the allowed list'),
+      project:      PROJECT_PARAM,
     },
-    async (p) => {
-      try { return json(await lorePost('/lore/spec', p)); }
-      catch (e) { return err(e); }
+    async ({ project, ...p }) => {
+      try {
+        const res = (await lorePost('/lore/spec', p)) as Record<string, unknown>;
+        return json({ ...res, ...(await inlineProject('spec', p.spec_id, project)) });
+      } catch (e) { return err(e); }
     },
   );
 
@@ -1369,6 +1429,7 @@ export function registerLoreWrite(server: McpServer): void {
       summary:      z.string().optional().describe('omit to leave untouched'),
       file_path:    z.string().optional().describe('omit to leave untouched'),
       checkpoint:   z.boolean().optional().describe('LH-02: true = body amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
+      status:       z.string().optional().describe('DS-4: spec_status code (proposed|accepted|deprecated|superseded) — omit to leave untouched'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
@@ -1481,10 +1542,13 @@ export function registerLoreWrite(server: McpServer): void {
       area:         z.string().optional().describe('e.g. "recovery", "infra", "deploy", "ops", "auth", "db", "service"'),
       date_created: z.string().optional().describe('ISO date YYYY-MM-DD; defaults to today'),
       content_md:   z.string().optional().describe('runbook body in Markdown'),
+      project:      PROJECT_PARAM,
     },
-    async (p) => {
-      try { return json(await lorePost('/lore/runbook', p)); }
-      catch (e) { return err(e); }
+    async ({ project, ...p }) => {
+      try {
+        const res = (await lorePost('/lore/runbook', p)) as Record<string, unknown>;
+        return json({ ...res, ...(await inlineProject('runbook', p.runbook_id, project)) });
+      } catch (e) { return err(e); }
     },
   );
 
@@ -1511,10 +1575,13 @@ export function registerLoreWrite(server: McpServer): void {
         'leave the current parent untouched. For reparenting without touching content, use doc_link(rel:"parent") instead.'),
       sort_order: z.number().int().optional().describe(
         'Position among sibling pages under the same parent (used for tree ordering and prev/next navigation).'),
+      project:        PROJECT_PARAM,
     },
-    async (p) => {
-      try { return json(await lorePost('/lore/doc', p)); }
-      catch (e) { return err(e); }
+    async ({ project, ...p }) => {
+      try {
+        const res = (await lorePost('/lore/doc', p)) as Record<string, unknown>;
+        return json({ ...res, ...(await inlineProject('doc', p.doc_id, project)) });
+      } catch (e) { return err(e); }
     },
   );
 
@@ -1967,7 +2034,10 @@ export function registerLoreWrite(server: McpServer): void {
     description: 'Create or update a KnowGitProject vertex (upsert by slug, partial-safe — omitted ' +
       'fields left untouched). Register a repo BEFORE sprint_link(rel:"project"), release_new, or ' +
       'release_mv reference it — those all silently no-op if the git_project slug has no matching ' +
-      'vertex yet. RBAC: pm + architect + full only.',
+      'vertex yet. RBAC: pm + architect + full only. DS-1: a project with NO roles yet gives `owner` ' +
+      'to its creator (an agent\'s OWNED_BY owner, or the calling human) — `roles_granted` in the ' +
+      'response lists what was granted; `roles_warning` means nobody got a role and the project\'s ' +
+      'doc/spec bodies stay hidden from everyone but superadmin until project_role_set is called.',
     schema: {
       slug: z.string().describe('e.g. "NooriUta/UnlimitedLORE" (GitHub) or "AIDA/aida-root@forgejo" (Forgejo)'),
       name: z.string().optional().describe('human-readable project name, e.g. "UnlimitedLORE"'),
@@ -1992,6 +2062,30 @@ export function registerLoreWrite(server: McpServer): void {
     }),
   });
 
+  // DS-1: выдача проектной роли из MCP. Бэкенд (/lore/user/role) открыт ровно
+  // профилю full — D-2026-LORE-FULL-WRITES-PROJECT-ROLES; остальным профилям
+  // AgentScopeFilter отвечает AGENT_SCOPE_FORBIDDEN, инструмент этого не обходит.
+  definePostTool(server, {
+    name: 'project_role_set',
+    description: 'Grant, change or remove a person\'s role in a git project (HAS_PROJECT_ROLE edge, ' +
+      'one per person+project; every change is journaled in KnowProjectRoleEvent). The role scope ' +
+      'decides which doc/spec bodies the person — and their agents, via OWNED_BY — can read. ' +
+      'Allowed for the full agent profile only (owner decision D-2026-LORE-FULL-WRITES-PROJECT-ROLES); ' +
+      'other profiles get AGENT_SCOPE_FORBIDDEN. Removing the last owner of a project is refused (409).',
+    schema: {
+      kc_sub:       z.string().describe('Keycloak subject of the person (KnowUser.kc_sub) — see slice user_project_roles'),
+      project:      z.string().describe('git project slug, e.g. "AIDA/Datawanderers-ServerandLore"'),
+      role:         z.string().optional().describe('project_role code, e.g. "owner" — required unless action="remove"'),
+      display_name: z.string().optional().describe('creates/updates the KnowUser display name in the same call'),
+      action:       z.enum(['set', 'remove']).optional().default('set'),
+    },
+    path: '/lore/user/role',
+    body: ({ kc_sub, project, role, display_name, action }) => ({
+      kc_sub, project, role: role ?? null, display_name: display_name ?? null,
+      action: action === 'remove' ? 'remove' : null,
+    }),
+  });
+
   // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────
   definePostTool(server, {
     name: 'dict_set',
@@ -1999,10 +2093,10 @@ export function registerLoreWrite(server: McpServer): void {
       '(dict_type, code), partial-safe for metadata (label/color/icon/sort_order left untouched when omitted; ' +
       'is_active defaults true, is_extensible false on create). Single canon read by frontend (useDictionary), ' +
       'backend and MCP via query_slice "dictionary". dict_type e.g. "sprint_status"|"task_status"|"adr_status"|' +
-      '"priority"|"artifact_kind"|"area"|"agent_role"|"task_type"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
+      '"priority"|"artifact_kind"|"area"|"agent_profile"|"task_type"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
       'Check query_slice "dictionary" (optionally dict_type=...) before adding. Mutates the shared system_aida_lore.',
     schema: {
-      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area", "agent_role"'),
+      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area", "agent_profile"'),
       code:          z.string().describe('stable key, e.g. "done", "P0", "PROPOSED", "runbook"'),
       label_ru:      z.string().optional(),
       label_en:      z.string().optional(),

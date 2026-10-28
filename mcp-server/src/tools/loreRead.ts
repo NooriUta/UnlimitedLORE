@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ACTIVE_PROJECT, loreGet, loreSlice, loreSlices } from '../backend.js';
+import { ACTIVE_PROJECT, loreGet, loreSliceWithMeta, loreSlices } from '../backend.js';
 
 // ADR-LORE-017 (T16): slices that take a `project` param inherit LORE_ACTIVE_PROJECT
 // when the caller omits it. Tier 2 (Task/Component/ADR/tech-registry) deliberately
@@ -105,8 +105,16 @@ export function registerLoreRead(server: McpServer): void {
               `("${ACTIVE_PROJECT}", from LORE_ACTIVE_PROJECT) — proceeding with the explicit value.`;
           }
         }
-        const rows = await loreSlice(slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
-        return json(warning ? { rows, _warning: warning } : rows);
+        const { rows, meta } = await loreSliceWithMeta(
+          slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
+        // Усечённая выдача обязана выглядеть усечённой: голый массив читался
+        // как полный список, даже когда бэкенд прямо сказал «обрезал».
+        if (!warning && !meta) return json(rows);
+        return json({
+          rows,
+          ...(meta ? { _truncated: meta.truncated, _limit: meta.limit, _hint: meta.hint } : {}),
+          ...(warning ? { _warning: warning } : {}),
+        });
       } catch (e) {
         return err(e);
       }
@@ -172,6 +180,31 @@ export function registerLoreRead(server: McpServer): void {
         const params: Record<string, string> = { ref };
         if (limit !== undefined) params.limit = String(limit);
         return json(await loreGet('/lore/search/similar', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  // MT-TASK-SHAPE: форма и объём задач — статистика и вход для BI (Völva).
+  server.tool(
+    'task_shape',
+    'Task shape & volume statistics (SPRINT_LORE_MEASURE_TRUTH/MT-TASK-SHAPE). Per task: project, status, type, ' +
+      'effort_days, complexity class S/M/L/XL derived from factors (layers touched, prod data, hypothesis, owner ' +
+      'decision, touch points), skeleton signals (steps, why, verify, test) and recommendation codes ' +
+      '(epic|merge|stale_partial|steps|verify|test|probe|estimate). Fact for calibration: cycle_days created→done; ' +
+      'created_done=true marks tasks logged already done (excluded from cycle medians). summary is per project plus "*". ' +
+      'Note text is never returned. Use rows:false for the summary only — rows for all projects are large.',
+    {
+      project: z.string().optional().describe('git-project slug filter, e.g. "NooriUta/UnlimitedLORE"; omit = all projects'),
+      rows: z.boolean().optional().describe('include per-task rows (default true)'),
+    },
+    async ({ project, rows }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (project) params.project = project;
+        if (rows !== undefined) params.rows = String(rows);
+        return json(await loreGet('/lore/task-shape', params));
       } catch (e) {
         return err(e);
       }

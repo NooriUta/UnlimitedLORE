@@ -130,6 +130,11 @@ public class LoreQgResource extends LoreResourceBase {
         if (req.qg_id() == null || req.qg_id().isBlank())
             return badParams("qg_id required");
         try {
+            // DBR-17 (ADR-LORE-043): гейт проверяется ДО записи. Раньше прогон
+            // несуществующего гейта писался сиротой без YIELDED и отвечал ok:true.
+            if (!exists("QualityGate", "qg_id", req.qg_id()))
+                return targetNotFound("гейт " + req.qg_id() + " не найден — заведите его qg_new до прогона");
+            boolean existed = exists("QGJobTask", "job_id", req.job_id());
             // LH-44: only SET provided fields — a status-only resolve call must not
             // wipe note_md/severity/run_date evidence.
             StringBuilder jsql = new StringBuilder("UPDATE QGJobTask SET job_id=:jid, qg_id=:qid");
@@ -149,7 +154,9 @@ public class LoreQgResource extends LoreResourceBase {
                 "CREATE EDGE YIELDED FROM (SELECT FROM QualityGate WHERE qg_id=:qid) " +
                 "TO (SELECT FROM QGJobTask WHERE job_id=:jid) IF NOT EXISTS",
                 Map.of("qid", req.qg_id(), "jid", req.job_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "job_id", req.job_id())));
+            return written(Map.of("ok", true, "job_id", req.job_id()), existed,
+                edgeExists("YIELDED", "qg_id", req.qg_id(), "job_id", req.job_id()),
+                "гейт " + req.qg_id() + " или прогон " + req.job_id());
         } catch (Exception e) {
             LOG.warnf("[LORE QG JOB-TASK] %s: %s", req.job_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -176,6 +183,10 @@ public class LoreQgResource extends LoreResourceBase {
         if (req.job_id() == null || req.job_id().isBlank())
             return badParams("job_id required");
         try {
+            // DBR-17: прогон проверяется ДО записи — иначе рекомендация-сирота без PRODUCED.
+            if (!exists("QGJobTask", "job_id", req.job_id()))
+                return targetNotFound("прогон " + req.job_id() + " не найден — заведите его qg_job_new до рекомендации");
+            boolean existed = exists("QGRecommendation", "rec_id", req.rec_id());
             // LH-44: only SET provided fields. Two former hazards on partial re-calls:
             // (1) body_md/fix_cmd/how_to_verify etc. wiped to null; (2) status forced
             // back to 'pending' — silently un-promoting an already promoted rec.
@@ -207,7 +218,9 @@ public class LoreQgResource extends LoreResourceBase {
                 "CREATE EDGE PRODUCED FROM (SELECT FROM QGJobTask WHERE job_id=:jid) " +
                 "TO (SELECT FROM QGRecommendation WHERE rec_id=:rid) IF NOT EXISTS",
                 Map.of("jid", req.job_id(), "rid", req.rec_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "rec_id", req.rec_id())));
+            return written(Map.of("ok", true, "rec_id", req.rec_id()), existed,
+                edgeExists("PRODUCED", "job_id", req.job_id(), "rec_id", req.rec_id()),
+                "прогон " + req.job_id() + " или рекомендация " + req.rec_id());
         } catch (Exception e) {
             LOG.warnf("[LORE QG REC] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -238,6 +251,32 @@ public class LoreQgResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.rec_id() == null || req.rec_id().isBlank())
             return badParams("rec_id required");
+        // DBR-17 (ADR-LORE-043): концы проверяются ДО записи, и повтор не плодит задачи.
+        // Раньше промоут несуществующей рекомендации заводил пустую задачу, промоут в
+        // несуществующий спринт — задачу без PART_OF, а повтор — вторую задачу под ту же
+        // рекомендацию (номер берётся «следующий свободный»).
+        try {
+            if (!exists("QGRecommendation", "rec_id", req.rec_id()))
+                return targetNotFound("рекомендация " + req.rec_id() + " не найдена");
+            List<Map<String, Object>> promoted = ingestService.queryPublic(
+                "SELECT @in.task_uid AS task_uid FROM PROMOTED_TO WHERE @out.rec_id=:rid LIMIT 1",
+                Map.of("rid", req.rec_id()));
+            if (!promoted.isEmpty() && promoted.get(0).get("task_uid") != null) {
+                Map<String, Object> out = new LinkedHashMap<>();
+                out.put("ok", true);
+                out.put("task_uid", promoted.get(0).get("task_uid"));
+                out.put("outcome", LoreOutcome.UNCHANGED);
+                out.put("hint", "рекомендация уже продвинута в эту задачу — повторять вызов не нужно");
+                return noStore(Response.ok(out));
+            }
+            if (req.sprint_id() != null && !exists("KnowSprint", "sprint_id", req.sprint_id()))
+                return targetNotFound("спринт " + req.sprint_id() + " не найден — заведите его sprint_new "
+                    + "или не передавайте sprint_id (тогда — недельный спринт QG-housekeeping)");
+        } catch (Exception e) {
+            LOG.warnf("[LORE QG PROMOTE] probe %s: %s", req.rec_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
         // Default target: a weekly rotating housekeeping sprint (ISO week), not one
         // never-closing bucket. Explicit req.sprint_id() still wins (backward-compat
         // override). Found 2026-07-02: SPRINT_QG_VIOLATIONS accumulated every promoted
@@ -369,11 +408,38 @@ public class LoreQgResource extends LoreResourceBase {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("task_uid", taskUid);
             out.put("task_id", taskId); out.put("sprint_id", sprintId);
+            // Факт, а не признак: обе связи задачи обязаны быть в графе.
+            boolean partOf = edgeExists("PART_OF", "task_uid", taskUid, "sprint_id", sprintId);
+            boolean promotedTo = edgeExists("PROMOTED_TO", "rec_id", req.rec_id(), "task_uid", taskUid);
+            if (partOf && promotedTo) {
+                out.put("outcome", LoreOutcome.CREATED);
+            } else {
+                out.put("outcome", LoreOutcome.NOOP);
+                out.put("reason", "задача записана, но связи нет: "
+                    + (partOf ? "" : "PART_OF→" + sprintId + " ") + (promotedTo ? "" : "PROMOTED_TO←" + req.rec_id()));
+            }
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QG PROMOTE] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    // ── DBR-17 helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Ответ upsert-записи с исходом (ADR-LORE-043): created/updated по пробе
+     * вершины ДО записи; ребра к родителю после записи нет — noop с причиной.
+     */
+    private Response written(Map<String, Object> base, boolean existed, boolean parentLinked, String what) {
+        Map<String, Object> out = new LinkedHashMap<>(base);
+        if (parentLinked) {
+            out.put("outcome", existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED);
+        } else {
+            out.put("outcome", LoreOutcome.NOOP);
+            out.put("reason", "запись есть, но ребро к родителю не создано: " + what + " не найден(ы)");
+        }
+        return noStore(Response.ok(out));
     }
 }

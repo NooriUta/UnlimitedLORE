@@ -136,6 +136,32 @@ public class LoreReleaseResource extends LoreResourceBase {
     // Первый релиз проекта → текущий. Задним числом старее текущего → НЕ крадёт
     // флаг. Сбой пробы → true: цель OP-04 в том, чтобы у проекта всегда был
     // текущий; лучше пометить, чем оставить проект без current из-за read-сбоя.
+    // SE-18: «текущий» — выкаченный, а не заведённый. Запись без тега (её
+    // заводят заранее, пока промо идёт) по дате оказывается самой свежей и
+    // забрала бы флаг раньше выкатки. Поэтому авто-current только с тегом;
+    // явное значение уважается как прежде. Проба `newest` без тега не зовётся.
+    static boolean autoCurrent(Boolean explicit, String gitTag, java.util.function.BooleanSupplier newest) {
+        if (explicit != null) return explicit;
+        if (gitTag == null || gitTag.isBlank()) return false;
+        return newest.getAsBoolean();
+    }
+
+    /** Дата уже заведённого релиза — для авто-current при простановке тега через update. */
+    private String releaseDateOf(String gp, String releaseId) {
+        try {
+            var rows = client.query(db, basicAuth(), new MartQuery("sql",
+                "SELECT release_date FROM KnowRelease WHERE release_uid = :k OR "
+                + "(release_id = :rid AND git_project = :gp) LIMIT 1",
+                Map.of("k", gp + "#" + releaseId, "rid", releaseId, "gp", gp), 1))
+                .await().indefinitely().result();
+            return rows == null || rows.isEmpty() ? null : str(rows.get(0).get("release_date"));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE RELEASE] auto-current: дата релиза %s не прочитана (%s) — флаг не трогаю",
+                releaseId, LoreUpstream.detail(e));
+            return null;
+        }
+    }
+
     private boolean isNewestForProject(String gp, String rdate) {
         try {
             var res = client.query(db, basicAuth(), new MartQuery("sql",
@@ -181,9 +207,8 @@ public class LoreReleaseResource extends LoreResourceBase {
             // текущего (NooriUta/AIDA: 101 релиз, ни одного current), и на это
             // жалуется мобильное приложение. Правка целиком в LORE — чужой
             // релизный пайплайн aida-root трогать не нужно.
-            boolean cur = req.is_current() != null
-                          ? req.is_current()
-                          : isNewestForProject(gp, rdate);
+            // SE-18: без тега запись заведена заранее и текущей не становится.
+            boolean cur = autoCurrent(req.is_current(), req.git_tag(), () -> isNewestForProject(gp, rdate));
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + gp + "'",
@@ -253,6 +278,16 @@ public class LoreReleaseResource extends LoreResourceBase {
             boolean cur    = Boolean.TRUE.equals(req.is_current());
             String ugp = projectOf(req.git_project());
             if (ugp == null) return badParams(NO_PROJECT);
+            // SE-18: тег проставлен позже записи (промо закончилось) и флаг не
+            // прислан — та же проба «самый свежий», что при создании. Не самый
+            // свежий — флаг не трогаем вовсе (не снимаем чужой текущий).
+            if (!curSet && req.git_tag() != null && !req.git_tag().isBlank()) {
+                String rd = req.release_date() != null ? req.release_date() : releaseDateOf(ugp, req.release_id());
+                if (rd != null && autoCurrent(null, req.git_tag(), () -> isNewestForProject(ugp, rd))) {
+                    curSet = true;
+                    cur = true;
+                }
+            }
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + ugp + "'",
@@ -318,24 +353,43 @@ public class LoreReleaseResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.release_id()).matches()) {
             return badParams("release_id contains illegal characters");
         }
-        int sprintsLinked = 0, prsLinked = 0;
+        // DBR-17 (ADR-LORE-043): счётчики считают СВЯЗАННОЕ (создано или уже было),
+        // а не исполненные CREATE EDGE. Раньше несуществующий спринт давал
+        // ok:true, sprints_linked:1 при нуле рёбер: CREATE EDGE по пустой выборке
+        // в ArcadeDB — тихий no-op.
+        int sprintsLinked = 0, prsLinked = 0, created = 0;
         List<String> errors = new java.util.ArrayList<>();
+        List<String> noops = new java.util.ArrayList<>();
         try {
             String gp = projectOf(req.git_project());
             if (gp == null) return badParams(NO_PROJECT);
             String ruid = gp + "#" + req.release_id();
+            // Релиз проверяется до записи: без него PR-вершины заводились бы сиротами.
+            boolean releaseExists = !ingestService.queryPublic(
+                "SELECT release_uid FROM KnowRelease WHERE release_uid=:ruid", Map.of("ruid", ruid)).isEmpty();
+            if (!releaseExists)
+                noops.add("релиз " + ruid + " не найден — заведите его release_new до привязки");
             List<String> sprintIds = req.sprint_ids() != null ? req.sprint_ids() : List.of();
-            for (String sid : sprintIds) {
+            for (String sid : releaseExists ? sprintIds : List.<String>of()) {
                 if (!SAFE_ID.matcher(sid).matches()) {
                     errors.add("skipped sprint (illegal id): " + sid); continue;
                 }
                 try {
+                    if (edgeExists("IMPLEMENTED_IN_RELEASE", "sprint_id", sid, "release_uid", ruid)) {
+                        sprintsLinked++;
+                        continue;
+                    }
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE IMPLEMENTED_IN_RELEASE " +
                         "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
-                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
+                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid) IF NOT EXISTS",
                         Map.of("sid", sid, "ruid", ruid))).await().indefinitely();
-                    sprintsLinked++;
+                    if (edgeExists("IMPLEMENTED_IN_RELEASE", "sprint_id", sid, "release_uid", ruid)) {
+                        sprintsLinked++;
+                        created++;
+                    } else {
+                        noops.add("спринт " + sid + " не найден");
+                    }
                 } catch (Exception e) {
                     errors.add("sprint " + sid + ": " + e.getMessage());
                 }
@@ -366,9 +420,13 @@ public class LoreReleaseResource extends LoreResourceBase {
                 }
             }
             List<Integer> prs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
-            for (Integer prNum : prs) {
+            for (Integer prNum : releaseExists ? prs : List.<Integer>of()) {
                 try {
                     String prUid = gp + "#" + prNum;
+                    if (edgeExists("SHIPPED_IN", "pr_uid", prUid, "release_uid", ruid)) {
+                        prsLinked++;
+                        continue;
+                    }
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "UPDATE KnowPR SET pr_uid=:uid, pr_number=:n, git_project=:gp " +
                         "UPSERT WHERE pr_uid=:uid",
@@ -376,9 +434,14 @@ public class LoreReleaseResource extends LoreResourceBase {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE SHIPPED_IN " +
                         "FROM (SELECT FROM KnowPR WHERE pr_uid=:uid) " +
-                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
+                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid) IF NOT EXISTS",
                         Map.of("uid", prUid, "ruid", ruid))).await().indefinitely();
-                    prsLinked++;
+                    if (edgeExists("SHIPPED_IN", "pr_uid", prUid, "release_uid", ruid)) {
+                        prsLinked++;
+                        created++;
+                    } else {
+                        noops.add("PR #" + prNum + " не привязан");
+                    }
                 } catch (Exception e) {
                     errors.add("pr #" + prNum + ": " + e.getMessage());
                 }
@@ -388,11 +451,24 @@ public class LoreReleaseResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+        // Несделанное — ошибка, симметрично CIM-03 у unlink: ok:true при
+        // непривязанном читался бы как «привязано».
+        errors.addAll(noops);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", errors.isEmpty());
         out.put("release_id", req.release_id());
         out.put("sprints_linked", sprintsLinked);
         out.put("prs_linked", prsLinked);
+        // Любой несделанный элемент — noop, а не только «конца нет»: пропуск по
+        // недопустимому id и исключение тоже не создали ребра.
+        if (!errors.isEmpty()) {
+            out.put("outcome", LoreOutcome.NOOP);
+            out.put("reason", "ребро не создано: " + String.join("; ", errors)
+                + (noops.isEmpty() ? "" : ". CREATE EDGE по пустой выборке в ArcadeDB — тихий no-op."));
+        } else {
+            out.put("outcome", created > 0 ? LoreOutcome.CREATED : LoreOutcome.UNCHANGED);
+            if (created == 0) out.put("hint", "связи уже были — повторять вызов не нужно");
+        }
         // Проект берём тем же правилом, что и внутри try (та переменная не видна
         // здесь по области видимости) — дефолт обязан совпадать, иначе вердикт
         // ушёл бы искать релиз не в том репозитории.
@@ -461,6 +537,9 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("release_id", req.release_id());
         out.put("sprints_removed", sprintsRemoved);
         out.put("prs_removed", prsRemoved);
+        // ADR-LORE-043: снимать нечего — unchanged, а не «снято»; errors и
+        // ok:false по CIM-03 остаются как были — outcome добавлен рядом.
+        out.put("outcome", sprintsRemoved + prsRemoved > 0 ? LoreOutcome.DELETED : LoreOutcome.UNCHANGED);
         // ADR-LORE-039: на снятии связей вердикт нужнее, чем где-либо — именно
         // здесь релиз становится неполным, и сказать об этом надо сразу.
         out.put("quality", WorkQuality.compact(releaseQuality(req.release_id(), gp)));

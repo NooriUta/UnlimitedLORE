@@ -1245,7 +1245,9 @@ public final class LoreSlices {
             List.of(), Map.of(), "");
 
         // Batch variant: fetch tasks for multiple sprints in one query.
-        // sprint_ids is a comma-separated string that the slice layer splits into a list.
+        // sprint_ids — список через запятую; слой срезов режет его в List (isListParam,
+        // SE-16). До 20.10.2026 этот комментарий обещал разбор, которого не было:
+        // строка "A,B" уходила в IN целиком и находила пусто.
         slice("tasks_of_sprints_batch",
             "SELECT task_uid, task_id, title, order_index, " +
             "out('PART_OF').sprint_id[0]                              AS sprint_id, " +
@@ -1516,6 +1518,11 @@ public final class LoreSlices {
         slice("specs",
             "SELECT spec_id, title, file_path, " +
             "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id, " +
+            // DS-2: версия/аннотация/статус — с открытой ревизии, как в spec_by_id.
+            // Без них сверка реестра шла N вызовами spec_by_id.
+            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
+            "out('HAS_STATE').summary[0] AS summary, " +
+            "out('HAS_STATE').status[0]  AS status, " + // DS-4
             // AL-96: ребро писалось (spec_link rel=project) с самого начала, но
             // ни один слайс его не читал — привязку можно было создать и нельзя
             // увидеть. Самый тихий вид разрыва: write-path «работает», данных нет.
@@ -1526,7 +1533,9 @@ public final class LoreSlices {
                 // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
                 // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
                 // делало сущность видимой только под одним произвольным компонентом.
-                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component",
+                // DS-2: был 400 «unknown param: project».
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
             " ORDER BY spec_id");
 
         slice("spec_by_id",
@@ -1534,6 +1543,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
             "out('HAS_STATE').summary[0]                          AS summary, " +
             "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
+            "out('HAS_STATE').status[0]                           AS status, " + // DS-4
             "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
             "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id, " +
             "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-96
@@ -1658,6 +1668,9 @@ public final class LoreSlices {
             // prev/next sequence client-side from these three fields, same
             // pattern as component/milestone facets elsewhere in this app.
             "SELECT doc_id, title, kind, has_ext_deps, sort_order, " +
+            // DS-3: хеш и длина каждого тела — сверка корпуса одним вызовом,
+            // без N вызовов doc_by_id (сами тела список не тянет).
+            LoreDocBodyDigest.selectColumns() +
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
@@ -1672,7 +1685,9 @@ public final class LoreSlices {
                 "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component",
                 // Панель «Правила CLAUDE»: общий корпус KnowDoc уже упирается в
                 // LIMIT 200, серверный фильтр гарантирует полноту выборки по kind.
-                "kind", " WHERE kind = :kind")),
+                "kind", " WHERE kind = :kind",
+                // DS-3: доки одного проекта — без выгрузки всего корпуса.
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
             " ORDER BY doc_id");
 
         slice("doc_by_id",
@@ -1682,6 +1697,7 @@ public final class LoreSlices {
             // consistency with every other *_by_id slice (was HAS_HIST, a type
             // never declared in the schema) in case doc history is added later.
             "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
+            LoreDocBodyDigest.selectColumns() + // DS-3
             "sort_order, " +
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
@@ -1921,7 +1937,15 @@ public final class LoreSlices {
             // в момент включения lore.scope.enforce. Без скоупа итоговый SQL тот же
             // символ в символ: тело + suffix склеиваются как раньше.
             "FROM KnowRelease",
-            List.of(), Map.of(), " ORDER BY release_date DESC LIMIT 200");
+            List.of(),
+            // DS-9: релизы одного проекта (был 400 «unknown param: project») —
+            // по ребру, тем же путём, что read-скоуп. Свой LIMIT 200 снят: он прятал
+            // старые релизы целиком, и is_current у v1.8.0 нечем было прочесть.
+            // Потолки списочных срезов сняты решением владельца 30.08.2026,
+            // серверное усечение помечается явно (DBU-13).
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
+            " ORDER BY release_date DESC");
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +
@@ -2341,6 +2365,34 @@ public final class LoreSlices {
         return new Composed(head + connector + condition + suffix, params);
     }
 
+    /**
+     * SE-16: списочный параметр — имя на {@code _ids} или {@code _uids}. Уходит в
+     * СУБД СПИСКОМ: ArcadeDB в {@code IN :ids} находит элементы массива, а строку
+     * «A,B» сравнивает целиком и отдаёт пусто (замер на проде 20.10.2026) — так
+     * пакетный срез работал только с одним элементом.
+     */
+    static final int LIST_PARAM_MAX = 200;
+
+    static boolean isListParam(String name) {
+        return name.endsWith("_ids") || name.endsWith("_uids");
+    }
+
+    /** Каждый элемент — тем же белым списком, что одиночное значение; пустые выброшены. */
+    static List<String> listValue(String name, String raw) {
+        List<String> out = new java.util.ArrayList<>();
+        if (raw != null) for (String part : raw.split(",")) {
+            String v = part.trim();
+            if (v.isEmpty()) continue;
+            if (!VALUE_RE.matcher(v).matches() || v.contains(","))
+                throw new IllegalArgumentException("bad value for param: " + name);
+            out.add(v);
+        }
+        if (out.isEmpty()) throw new IllegalArgumentException("empty list for param: " + name);
+        if (out.size() > LIST_PARAM_MAX)
+            throw new IllegalArgumentException("too many values for param: " + name + " (max " + LIST_PARAM_MAX + ")");
+        return out;
+    }
+
     public static Composed compose(String id, Map<String, String> given) {
         SliceDef def = SLICES.get(id);
         if (def == null) throw new IllegalArgumentException("unknown slice: " + id);
@@ -2356,6 +2408,10 @@ public final class LoreSlices {
         Map<String, Object> params = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : given.entrySet()) {
             String value = e.getValue();
+            if (isListParam(e.getKey())) {
+                params.put(e.getKey(), listValue(e.getKey(), value));
+                continue;
+            }
             if (value == null || !VALUE_RE.matcher(value).matches())
                 throw new IllegalArgumentException("bad value for param: " + e.getKey());
             params.put(e.getKey(), value);

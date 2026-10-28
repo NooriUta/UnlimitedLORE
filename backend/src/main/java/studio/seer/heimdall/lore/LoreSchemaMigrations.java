@@ -1243,7 +1243,49 @@ final class LoreSchemaMigrations {
         //
         // Карта «продукт → проект» выведена из уже привязанных записей и зашита
         // в PRODUCT_TO_PROJECT — читаемо на ревью и одинаково на любом прогоне.
-        new Step(47, 17, "java__doc_project_edges_by_product", List.of())
+        new Step(47, 17, "java__doc_project_edges_by_product", List.of()),
+
+        // SE-06, D-2026-LORE-AGENT-ROLE-DICT-IS-PROFILE (20.10.2026): справочник
+        // agent_role хранит ПРОФИЛИ агентов (набор разрешённых инструментов), а
+        // имя «роль» путало его с ролью доступа человека (project_role) и ролью в
+        // продукте. Коды не меняются. SQL пуст: перенос — два UPDATE данных,
+        // текстовое правило идемпотентности SQL-шагов их не пропустило бы, —
+        // вся работа в javaStep(48).
+        //
+        // Ось совместимости не поднимается: Java-код бэкенда словарь по имени не
+        // читает, читают фронт и описание MCP — они правятся в том же PR.
+        // Свойство KnowActor.agent_role и поле API actor/owner.agent_role — это
+        // другой контракт (клиенты вне репозитория) и этим шагом НЕ трогаются.
+        new Step(48, 17, "java__dict_agent_role_to_agent_profile", List.of()),
+
+        // DS-3 (SPRINT_LORE_MCP_DOCSYNC_GAPS): хеш и длина каждого тела KnowDoc
+        // для сверки корпуса по списку docs. Новые записи получают их при upsert
+        // (LoreDocResource, LoreIngestService); этот шаг добирает уже записанные.
+        // SQL пуст — вся работа в javaStep(49). Аддитивен: только новые поля.
+        new Step(49, 17, "java__doc_body_digest", List.of()),
+
+        // DS-4: у спеки не было поля статуса — «предложение» жило только в тексте
+        // (SPEC-DWL-RUNE-DREAMS, сверка DWL 24.10.2026). Статус пишется на
+        // открытую KnowSpecHist (SCD2, как у ADR), значения — из этого словаря.
+        // Коды и иконография — те же, что у adr_status/decision_status: один
+        // смысл, один вид. is_extensible=true — владелец дополняет в админке.
+        new Step(50, 17, "spec_status_dictionary", List.of(
+            "CREATE PROPERTY KnowSpecHist.status IF NOT EXISTS STRING",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='proposed',   label_ru='Предложение', label_en='Proposed', icon='calendar',     color='var(--inf)', sort_order=10, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='proposed'",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='accepted',   label_ru='Принята',     label_en='Accepted', icon='laurel-crown', color='var(--suc)', sort_order=20, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='accepted'",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='deprecated', label_ru='Устарела',    label_en='Deprecated', icon='pause-button', color='var(--t3)', sort_order=30, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='deprecated'",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='superseded', label_ru='Вытеснена',   label_en='Superseded', icon='pause-button', color='var(--t3)', sort_order=40, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='superseded'"
+        )),
+
+        // LH-44, пункт 3 (решение владельца 27.10.2026: «удалить после выгрузки»):
+        // легаси-рёбра HAS_STATUS KnowADRHist → StatusAdr от Python-ingest. Их не
+        // читает ни один слайс, UI, MCP или скрипт (сверено grep-ом по всему
+        // репозиторию); статус ADR живёт в KnowADR.status. Рассинхрон с полем —
+        // ложь, которую можно прочесть прямым запросом. SQL пуст: javaStep(51)
+        // сначала ВЫГРУЖАЕТ каждое ребро в лог (rid, состояние ADR, статус), потом
+        // удаляет — по @rid, DELETE EDGE в грамматике нет. Типы StatusAdr и
+        // HAS_STATUS не снимаются: схема аддитивна, снос типа — отдельное решение.
+        new Step(51, 17, "java__drop_legacy_adr_has_status", List.of())
     );
 
     /**
