@@ -34,6 +34,14 @@ import java.util.regex.Pattern;
  * <p>Эвристики текстовые и намеренно грубые: это измеритель «чего не видно в
  * заметке», а не суждение о задаче. Пороги — ASSUMED владельцем 27.10.2026,
  * калибруются срезом /lore/task-shape (цикл против класса).
+ *
+ * <p><b>Калибровка 28.10.2026</b> (MT-TASK-SHAPE-2, {@code TaskShapeCalibrationReport}
+ * по выгрузке 5310 задач, медиана цикла «создана → done» без заведённых уже
+ * сделанными): v1 давала S 1,48 / M 1,41 / L 3,62 / XL 5,02 д — S и M не
+ * различались, потому что факторы срабатывали на обзоре и итоге. После
+ * отсечения контекстных разделов: S 1,47 / M 1,61 / L 2,88 / XL 6,83 д —
+ * монотонно. Пороги баллов не трогали: монотонность дала правка ВХОДА, а
+ * подгонка порогов под одну выгрузку переобучила бы классификатор.
  */
 final class TaskShape {
 
@@ -75,8 +83,14 @@ final class TaskShape {
 
     // ── распознавание скелета ────────────────────────────────────────────────
 
+    // MT-TASK-SHAPE-2: номер шага бывает жирным («**1. …**», «- **2.**»), словом
+    // («Шаг 3», «Фаза 2») и заголовком («### 4. …») — в первой версии ловилась
+    // только голая цифра в начале строки, и разложенные задачи числились
+    // одношаговыми.
     private static final Pattern STEP = Pattern.compile(
-        "(?m)^\\s*(?:\\d+[.)]|- \\[[ xX]\\]|#{2,4}\\s*(?:шаг|step)\\b)\\s*", Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+        "(?m)^[ \\t]*(?:#{2,4}[ \\t]*)?(?:[-*+][ \\t]+)?(?:\\*\\*|__)?[ \\t]*"
+        + "(?:\\d+[.)](?=[\\s*_])|(?:шаг|step|фаза|phase)[ \\t]*\\d+|\\[[ xX]\\])",
+        Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
     private static final Pattern WHY = ci(
         "(повод|зачем|почему|факт|контекст|проблем|симптом|корень|причин|находк|источник:)");
     private static final Pattern VERIFY = ci(
@@ -104,6 +118,55 @@ final class TaskShape {
     private static final Pattern FILE = ci(
         "\\b[\\w.-]+\\.(java|ts|tsx|yml|yaml|json|sql|sh|ps1|mjs|kt|dart|py)\\b");
 
+    // MT-TASK-SHAPE-2: разделы, которые описывают мир, а не работу. Заметка со
+    // срезом статистики упоминает все слои и прод — и в v1 получала XL, хотя
+    // сама задача была подписью кнопки. Итог/результат дописывают ПОСЛЕ работы,
+    // и без отсечения сделанные задачи «тяжелели» задним числом — калибровка
+    // по циклу мерила бы отчёты, а не задачи.
+    private static final Pattern HEADING = Pattern.compile(
+        "^[ \\t]*(?:#{1,6}[ \\t]+(.+?)|\\*\\*([^*]{2,60}?)\\*\\*[ \\t]*:?.*)$",
+        Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
+    private static final Pattern CONTEXT_HEADING = ci(
+        "^(контекст|повод|почему|зачем|проблем|симптом|факт|находк|статистик|срез|истори|итог|результат"
+        + "|отчёт|отчет|обзор|сделано|выполнено|context|background|why|problem|result|summary|связано|см\\.)");
+
+    /**
+     * Текст, по которому ищутся факторы сложности: всё, кроме контекстных и
+     * итоговых разделов. Заголовок — markdown {@code #…} или строка, начатая
+     * жирной меткой ({@code **Проблема:** …}); у метки текст на той же строке
+     * принадлежит её разделу. Заметка без заголовков берётся целиком.
+     */
+    static String workText(String note) {
+        StringBuilder out = new StringBuilder();
+        boolean skip = false;
+        for (String line : note.split("\n", -1)) {
+            Matcher h = HEADING.matcher(line);
+            if (h.matches()) {
+                String label = (h.group(1) != null ? h.group(1) : h.group(2)).trim();
+                // «**1. Тест.**» — шаг, а не заголовок раздела.
+                if (!label.matches("^\\d+[.)].*")) {
+                    skip = CONTEXT_HEADING.matcher(label.replaceAll("^[^\\p{L}]+", "")).find();
+                }
+            }
+            if (!skip) out.append(line).append('\n');
+        }
+        return out.toString();
+    }
+
+    /**
+     * Заметки, записанные с буквальным «\n» (два символа) вместо переноса —
+     * так пишут вызовы с двойным экранированием. Срез 28.10.2026: ~65 тыс.
+     * таких вхождений на 5310 задач; без нормализации шаги и разделы в них не
+     * видны вовсе. Меняем, только когда буквальных больше настоящих: в коде
+     * внутри заметки «\n» законен.
+     */
+    static String normalize(String note) {
+        if (note == null || note.isEmpty()) return "";
+        int literal = note.split("\\\\n", -1).length - 1;
+        int real = note.split("\n", -1).length - 1;
+        return literal > real ? note.replace("\\n", "\n") : note;
+    }
+
     private static Pattern ci(String re) {
         return Pattern.compile(re, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
     }
@@ -113,8 +176,11 @@ final class TaskShape {
      */
     static Shape analyze(String title, String noteMd, String taskType, Double effortDays,
                          String statusRaw, Long daysInStatus) {
-        String note = noteMd == null ? "" : noteMd;
+        String note = normalize(noteMd);
         String text = (title == null ? "" : title) + "\n" + note;
+        // Слои, прод и точки правки — только по разделам работы; гипотеза и
+        // решение владельца — по всему тексту: они живут как раз в «Проблеме».
+        String work = (title == null ? "" : title) + "\n" + workText(note);
         int len = note.length();
 
         int steps = count(STEP, note);
@@ -126,20 +192,21 @@ final class TaskShape {
         List<String> factors = new ArrayList<>();
         int points = 0;
         Set<String> layers = new LinkedHashSet<>();
-        for (var e : LAYERS.entrySet()) if (e.getValue().matcher(text).find()) layers.add(e.getKey());
+        for (var e : LAYERS.entrySet()) if (e.getValue().matcher(work).find()) layers.add(e.getKey());
         if (layers.size() > 1) {
             points += layers.size() - 1;
             factors.add("слоёв " + layers.size() + ": " + String.join(", ", layers));
         }
-        if (PROD.matcher(text).find())       { points += 2; factors.add("прод-данные / необратимое"); }
+        if (PROD.matcher(work).find())       { points += 2; factors.add("прод-данные / необратимое"); }
         if (HYPOTHESIS.matcher(text).find()) { points += 1; factors.add("причина — гипотеза"); }
         if (OWNER.matcher(text).find())      { points += 1; factors.add("нужно решение владельца"); }
         Set<String> files = new LinkedHashSet<>();
-        Matcher fm = FILE.matcher(note);
+        Matcher fm = FILE.matcher(work);
         while (fm.find()) files.add(fm.group().toLowerCase());
         if (files.size() >= 10)     { points += 2; factors.add("точек правки " + files.size()); }
         else if (files.size() >= 5) { points += 1; factors.add("точек правки " + files.size()); }
-        if (len > EPIC_NOTE_CHARS)  { points += 1; factors.add("заметка " + len + " симв."); }
+        int workLen = work.length() - (title == null ? 0 : title.length()) - 1;
+        if (workLen > EPIC_NOTE_CHARS) { points += 1; factors.add("заметка " + workLen + " симв. вне обзора"); }
 
         String cls;
         double min, max;

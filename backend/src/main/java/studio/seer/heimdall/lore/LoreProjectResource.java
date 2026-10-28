@@ -59,6 +59,7 @@ public class LoreProjectResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.slug()).matches())
             return badParams("slug contains illegal characters");
         try {
+            boolean existed = exists("KnowGitProject", "slug", req.slug()); // DBR-17: исход из факта
             // LH-44 partial-safe upsert: only SET fields that were actually supplied,
             // so a slug-only call never wipes an existing name.
             StringBuilder sql = new StringBuilder("UPDATE KnowGitProject SET slug=:slug");
@@ -73,6 +74,7 @@ public class LoreProjectResource extends LoreResourceBase {
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("slug", req.slug());
+            out.put("outcome", existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED);
             grantCreatorOwnerIfOrphan(req.slug(), role, out);
             return noStore(Response.ok(out));
         } catch (Exception e) {
@@ -123,6 +125,14 @@ public class LoreProjectResource extends LoreResourceBase {
                 "CREATE EDGE HAS_PROJECT_ROLE FROM (SELECT FROM KnowUser WHERE kc_sub=:sub) " +
                 "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role='owner'",
                 Map.of("sub", grantee, "proj", slug))).await().indefinitely();
+            // DBR-17: CREATE EDGE по пустой выборке — тихий no-op; без сверки
+            // ответ заявил бы выданную роль, которой в графе нет.
+            if (!edgeExists("HAS_PROJECT_ROLE", "kc_sub", grantee, "slug", slug)) {
+                out.put("roles_granted", java.util.List.of());
+                out.put("roles_warning", "ребро HAS_PROJECT_ROLE " + grantee + " → " + slug
+                    + " не создано — выдайте роль project_role_set");
+                return;
+            }
             Map<String, Object> ev = new java.util.HashMap<>();
             ev.put("eid", java.util.UUID.randomUUID().toString());
             ev.put("sub", grantee);

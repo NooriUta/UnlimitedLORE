@@ -50,8 +50,20 @@ public class LoreUserResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.kc_sub()).matches())
             return badParams("kc_sub contains illegal characters");
         try {
+            // DBR-17: исход из факта — прежнее состояние читаем до записи.
+            List<Map<String, Object>> prev = ingestService.queryPublic(
+                "SELECT display_name FROM KnowUser WHERE kc_sub=:sub", Map.of("sub", req.kc_sub()));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("kc_sub", req.kc_sub());
+            if (!prev.isEmpty() && (req.display_name() == null
+                    || req.display_name().equals(prev.get(0).get("display_name")))) {
+                out.put("outcome", LoreOutcome.UNCHANGED);
+                return noStore(Response.ok(out));
+            }
             upsertUserVertex(req.kc_sub(), req.display_name());
-            return noStore(Response.ok(Map.of("ok", true, "kc_sub", req.kc_sub())));
+            out.put("outcome", prev.isEmpty() ? LoreOutcome.CREATED : LoreOutcome.UPDATED);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE USER UPSERT] %s: %s", req.kc_sub(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -152,7 +164,18 @@ public class LoreUserResource extends LoreResourceBase {
         if (!remove && (req.role() == null || req.role().isBlank()))
             return badParams("role required unless action=remove");
         try {
+            // DBR-17: проект — до записи. CREATE EDGE к несуществующему проекту
+            // молча не создавал ребра, а событие «grant» в журнал всё равно
+            // уходило: аудит показывал выдачу, которой не было.
+            if (!exists("KnowGitProject", "slug", req.project()))
+                return targetNotFound("проект " + req.project() + " не зарегистрирован — заведите его project_new");
+            Map<String, Object> pair = Map.of("sub", req.kc_sub(), "proj", req.project());
+            List<Map<String, Object>> existing = ingestService.queryPublic(
+                "SELECT @rid AS rid, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj", pair);
             if (remove) {
+                // Снимать нечего — законный повтор: ни блокировок, ни события в журнале.
+                if (existing.isEmpty())
+                    return noStore(Response.ok(LoreOutcome.unlink(Map.of("ok", true, "removed", false), false)));
                 // AL-100: снятие роли необратимо в обе стороны — вернуть её можно
                 // только этой же админкой, а она сама живёт за проектным скоупом.
                 // Поэтому две проверки ДО удаления, а не предупреждение после.
@@ -166,37 +189,58 @@ public class LoreUserResource extends LoreResourceBase {
                 // (памятка feedback_arcadedb_edge_delete) — DELETE FROM по @rid,
                 // @out/@in для матча по свойствам соседних вершин.
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj",
-                    Map.of("sub", req.kc_sub(), "proj", req.project())))
+                    "DELETE FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj", pair))
                     .await().indefinitely();
-                logRoleEvent(req.kc_sub(), req.project(), null, "remove", role); // AL-102
-                return noStore(Response.ok(Map.of("ok", true, "removed", true)));
+                boolean gone = !edgeExists("HAS_PROJECT_ROLE", "kc_sub", req.kc_sub(), "slug", req.project());
+                if (gone) logRoleEvent(req.kc_sub(), req.project(), null, "remove", role); // AL-102
+                Map<String, Object> out = new java.util.LinkedHashMap<>();
+                out.put("ok", true);
+                out.put("removed", gone);
+                out.put("outcome", gone ? LoreOutcome.DELETED : LoreOutcome.NOOP);
+                if (!gone) out.put("reason", "DELETE выполнен, но ребро роли осталось в графе");
+                return noStore(Response.ok(out));
             }
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("kc_sub", req.kc_sub());
+            out.put("project", req.project());
+            out.put("role", req.role());
             // Роль человека в проекте — ребро ОДНО на пару (человек, проект),
             // роль свойством (то же устройство, что HAS_ACTOR/role, ADR-028 D19).
             // Вершину пользователя заводим тут же, а не отдельным вызовом —
             // назначение роли из «Люди» (карточка KC-пользователя) не должно
             // распадаться на два запроса ради одного действия админа.
             upsertUserVertex(req.kc_sub(), req.display_name());
-            List<Map<String, Object>> existing = ingestService.queryPublic(
-                "SELECT @rid AS rid FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj",
-                Map.of("sub", req.kc_sub(), "proj", req.project()));
             if (!existing.isEmpty()) {
+                if (req.role().equals(existing.get(0).get("role"))) {
+                    // Та же роль — не правка: без события в журнале, иначе аудит
+                    // насчитал бы изменения там, где их не было.
+                    out.put("outcome", LoreOutcome.UNCHANGED);
+                    out.put("hint", "роль уже такая — повторять вызов не нужно");
+                    return noStore(Response.ok(out));
+                }
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE HAS_PROJECT_ROLE SET role=:r WHERE @out.kc_sub=:sub AND @in.slug=:proj",
                     Map.of("r", req.role(), "sub", req.kc_sub(), "proj", req.project())))
                     .await().indefinitely();
                 logRoleEvent(req.kc_sub(), req.project(), req.role(), "update", role); // AL-102
+                out.put("outcome", LoreOutcome.UPDATED);
+                out.put("previous_role", existing.get(0).get("role"));
             } else {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE HAS_PROJECT_ROLE FROM (SELECT FROM KnowUser WHERE kc_sub=:sub) " +
                     "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role=:r",
                     Map.of("sub", req.kc_sub(), "proj", req.project(), "r", req.role())))
                     .await().indefinitely();
+                if (!edgeExists("HAS_PROJECT_ROLE", "kc_sub", req.kc_sub(), "slug", req.project())) {
+                    out.put("outcome", LoreOutcome.NOOP);
+                    out.put("reason", "ребро HAS_PROJECT_ROLE не создано: пользователь или проект не найден");
+                    return noStore(Response.ok(out));
+                }
                 logRoleEvent(req.kc_sub(), req.project(), req.role(), "grant", role); // AL-102
+                out.put("outcome", LoreOutcome.CREATED);
             }
-            return noStore(Response.ok(Map.of(
-                "ok", true, "kc_sub", req.kc_sub(), "project", req.project(), "role", req.role())));
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE USER ROLE] %s @ %s: %s", req.kc_sub(), req.project(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
