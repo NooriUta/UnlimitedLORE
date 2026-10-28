@@ -88,6 +88,50 @@ class TaskShapeTest {
         assertFalse(s.toMap().containsKey("estimate_fits"));
     }
 
+    /** MT-TASK-SHAPE-2: шаги с жирным номером и «Шаг N» — тоже шаги. */
+    @Test
+    void boldAndNamedStepsAreSteps() {
+        String note = """
+            **1. Падающий тест.** Пишем.
+            - **2.** Правка.
+            **Шаг 3** — проверка на стенде.
+            ### 4. Отчёт
+            """;
+        assertEquals(4, TaskShape.analyze("x", note, "dev", 0.5, null, null).steps());
+    }
+
+    /** Заметки, записанные с буквальным «\\n» вместо переноса, — шаги видны. */
+    @Test
+    void literalBackslashNIsALineBreak() {
+        String note = "Повод: x.\\n\\n1. Тест.\\n2. Правка.\\n3. Проверка.";
+        assertEquals(3, TaskShape.analyze("x", note, "dev", 0.5, null, null).steps());
+    }
+
+    /** Обзор и итог не делают задачу сложнее: факторы ищутся вне них. */
+    @Test
+    void factorsIgnoreContextAndResultSections() {
+        String note = """
+            ## Контекст
+            Срез по java, mcp-server, ui .tsx, миграции схемы, docker, прод-данным.
+            ## Сделать
+            1. Подпись кнопки.
+            2. Проверка глазами.
+            ## Итог
+            Сделано в LorePage.tsx, a.java, b.java, c.ts, d.ts, e.yml.
+            """;
+        var s = TaskShape.analyze("Подпись", note, "design", 0.125, null, null);
+        assertEquals("S", s.complexity(), s.factors().toString());
+    }
+
+    /** Жирная метка «**Проблема:** …» — тоже контекстный раздел. */
+    @Test
+    void boldLabelContextIsSkipped() {
+        String note = "**Проблема:** на проде бэкфилл java + ui .tsx + docker.\n\n"
+            + "**Решение:** поправить подпись.\n";
+        var s = TaskShape.analyze("Подпись", note, "design", 0.125, null, null);
+        assertEquals("S", s.complexity(), s.factors().toString());
+    }
+
     /** Гипотеза + решение владельца + прод поднимают класс. */
     @Test
     void riskFactorsRaiseClass() {
