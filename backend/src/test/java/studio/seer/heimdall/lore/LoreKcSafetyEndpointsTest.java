@@ -74,4 +74,20 @@ class LoreKcSafetyEndpointsTest {
         .when().get("/lore/kc/user-orphans")
         .then().statusCode(503).body("error", equalTo("KC_NOT_CONFIGURED"));
     }
+
+    // 04.11.2026: список ролей realm'а — та же ось людей, только admin; без KC —
+    // «не настроено», а не пустой список (иначе админка нарисовала бы «ролей нет»).
+    @Test
+    void realmRolesForbiddenWithoutAdminRole() {
+        given().header("X-Seer-Role", "viewer")
+        .when().get("/lore/kc/realm-roles")
+        .then().statusCode(403).body("error", equalTo("FORBIDDEN"));
+    }
+
+    @Test
+    void realmRolesSaysNotConfiguredWhenKcUnconfigured() {
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/kc/realm-roles")
+        .then().statusCode(503).body("error", equalTo("KC_NOT_CONFIGURED"));
+    }
 }

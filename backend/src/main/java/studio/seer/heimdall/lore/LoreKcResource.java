@@ -85,6 +85,38 @@ public class LoreKcResource extends LoreResourceBase {
         } catch (Exception e) { return upstream(e); }
     }
 
+    /**
+     * Роли realm'а, какие есть на самом деле, — чтобы админка выдавала их, а не
+     * держала в коде список «admin, viewer» (04.11.2026: роль, заведённую в realm
+     * руками, нельзя было ни увидеть в карточке, ни выдать). Служебные роли KC
+     * не отдаются вовсе; super-admin отдаётся с {@code grantable:false} — его
+     * видно, но выдаётся он только в консоли KC (D11).
+     */
+    @GET
+    @Path("realm-roles")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response listRealmRoles(@HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!configured()) return notConfigured();
+        try {
+            HttpResponse<String> r = kc("GET", "/roles?max=200", null, adminToken());
+            if (r.statusCode() != 200)
+                return noStore(Response.status(r.statusCode()).entity(new LoreError("KC_UPSTREAM", r.body())));
+            io.vertx.core.json.JsonArray arr = new io.vertx.core.json.JsonArray(r.body());
+            io.vertx.core.json.JsonArray out = new io.vertx.core.json.JsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                io.vertx.core.json.JsonObject x = arr.getJsonObject(i);
+                String name = x.getString("name");
+                if (name == null || KcBridge.isKeycloakServiceRole(name)) continue;
+                out.add(io.vertx.core.json.JsonObject.of(
+                    "name", name, "description", x.getString("description"),
+                    "grantable", KcBridge.isGrantableRealmRole(name)));
+            }
+            return noStore(Response.ok(out.encode()));
+        } catch (Exception e) { return upstream(e); }
+    }
+
     // AL-82: два источника знают о людях — KC (учётки) и граф (роли в проектах).
     // Инвариант «пользователь KC без вершины KnowUser не получает проектных
     // прав» дырой не является (это и есть defaults-to-deny), но живёт незаметно
@@ -158,9 +190,10 @@ public class LoreKcResource extends LoreResourceBase {
         requireAdmin(role);
         if (!configured()) return notConfigured();
         if (req == null || req.role() == null) return badParams("role required");
-        // D11: эскалация до super-admin — только вручную в KC, вне моста.
-        if (!List.of("admin", "viewer").contains(req.role()))
-            return badParams("role must be admin|viewer (super-admin is out of bridge scope by design)");
+        // D11: эскалация до super-admin — только вручную в KC, вне моста. Остальные
+        // роли realm'а выдаются (KcBridge.isGrantableRealmRole); несуществующая — 404 ниже.
+        if (!KcBridge.isGrantableRealmRole(req.role()))
+            return badParams("role " + req.role() + " is not grantable from LORE: super-admin is out of bridge scope by design (D11), Keycloak service roles are not LORE rights");
         try {
             String t = adminToken();
             boolean remove = "remove".equalsIgnoreCase(req.action());
