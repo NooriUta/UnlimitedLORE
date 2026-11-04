@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, updateLoreDoc, updateLoreRunbook, updateLoreQualityGate } from '../../api/lore';
+import { fetchLoreSlice, updateLoreDoc, updateLoreRunbook, updateLoreQualityGate, describeLoreError } from '../../api/lore';
+import { LoadError } from './EmptyState';
 import { MartProse } from '../bench/MartProse';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
 import TipTapField from './TipTapField';
@@ -100,6 +101,9 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   const [row, setRow]         = useState<RawRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<QgMetricRow[] | null>(null);
+  // AH-07: сбой qg_metrics раньше становился [] — таблица метрик просто не
+  // рисовалась, и гейт выглядел «без метрик».
+  const [metricsErr, setMetricsErr] = useState<string | null>(null);
   const [lang, setLang]       = useState<'en' | 'ru'>(i18n.language?.startsWith('ru') ? 'ru' : 'en');
   const [editLang, setEditLang] = useState<'en' | 'ru'>('en');
   const [editing, setEditing] = useState(false);
@@ -126,9 +130,10 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   useEffect(() => {
     if (kind !== 'qg') return;
     const ctrl = new AbortController();
+    setMetricsErr(null);
     fetchLoreSlice<QgMetricRow>('qg_metrics', { qg_id: id }, ctrl.signal)
       .then(m => { if (!ctrl.signal.aborted) setMetrics(m); })
-      .catch(() => setMetrics([]));
+      .catch(e => { if (!ctrl.signal.aborted) { setMetrics([]); setMetricsErr(describeLoreError(e).text); } });
     return () => ctrl.abort();
   }, [kind, id]);
 
@@ -312,6 +317,9 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
         return <div style={S.empty}>{t('lore.artifactDoc.emptyContent', 'Контент пуст.')}</div>;
       })()}
 
+      {kind === 'qg' && metricsErr && (
+        <LoadError text={t('lore.artifactDoc.metricsLoadError', 'Метрики гейта не загрузились: {{reason}}', { reason: metricsErr })} />
+      )}
       {kind === 'qg' && metrics && metrics.length > 0 && (
         <table style={S.table}>
           <thead>

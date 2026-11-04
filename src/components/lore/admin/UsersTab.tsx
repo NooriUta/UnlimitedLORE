@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { fetchLoreSlice, loreMutate } from '../../../api/lore';
+import { fetchLoreSlice, loreMutate, describeLoreError, LoreNotFoundError } from '../../../api/lore';
+import { LoadError } from '../EmptyState';
 import { type KcState } from '../kc-state';
 import { addableRealmRoles, isAdminRealmRole, isRemovableRealmRole, visibleRealmRoles, type RealmRole } from '../adminRealmRoles';
 import type { KcUser, Preflight } from './types';
@@ -31,16 +32,27 @@ function ProjectRolesEditor({ kcSub, username, onError }: {
   const [reload, setReload] = useState(0);
   const [pick, setPick] = useState<{ project: string; role: string }>({ project: '', role: 'developer' });
   const [err, setErr] = useState<string | null>(null);
+  // AH-07 (U-18/U-20): сбой загрузки ролей рисовался как «ролей нет — человек
+  // не видит ни одного проекта», сбой списка проектов — как «все проекты уже
+  // назначены». Оба утверждения ложные, если данные просто не пришли.
+  const [rowsErr, setRowsErr] = useState<string | null>(null);
+  const [projectsErr, setProjectsErr] = useState<string | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
+    setRowsErr(null); setProjectsErr(null);
     fetchLoreSlice<{ projects: (string | null)[] | null; roles: (string | null)[] | null }>(
       'user_project_roles', { kc_sub: kcSub }, ctrl.signal)
       .then(rs => setRows(rs[0] ?? { projects: [], roles: [] }))
-      .catch(() => setRows({ projects: [], roles: [] })); // человека ещё нет в графе — не ошибка
+      .catch(e => {
+        // 404 — человека ещё нет в графе: это честное «ролей нет», не сбой.
+        if (e instanceof LoreNotFoundError) { setRows({ projects: [], roles: [] }); return; }
+        const d = describeLoreError(e);
+        if (d.kind !== 'aborted') { setRows({ projects: [], roles: [] }); setRowsErr(d.text); }
+      });
     fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
       .then(ps => setProjects(ps.map(p => p.slug).filter(Boolean).sort()))
-      .catch(() => { /* пикер деградирует в пустой список */ });
+      .catch(e => { const d = describeLoreError(e); if (d.kind !== 'aborted') setProjectsErr(d.text); });
     return () => ctrl.abort();
   }, [kcSub, reload]);
 
@@ -76,6 +88,8 @@ function ProjectRolesEditor({ kcSub, username, onError }: {
       {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 6 }}>{err}</div>}
       {rows === null ? (
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.loading', 'загрузка…')}</div>
+      ) : rowsErr ? (
+        <LoadError text={t('lore.admin.projectRolesLoadError', 'Роли в проектах не загрузились: {{reason}}', { reason: rowsErr })} />
       ) : (
         <>
           {pairs.length === 0 && (
@@ -94,8 +108,9 @@ function ProjectRolesEditor({ kcSub, username, onError }: {
           ))}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
             <select style={S.input} value={pick.project} disabled={busy || free.length === 0}
+              title={projectsErr ?? undefined}
               onChange={e => setPick(p => ({ ...p, project: e.target.value }))}>
-              <option value="">{free.length ? t('lore.admin.pickProject', 'проект…') : t('lore.admin.noFreeProjects', 'все проекты уже назначены')}</option>
+              <option value="">{projectsErr ? t('lore.admin.projectsLoadFailedOpt', 'проекты не загрузились') : free.length ? t('lore.admin.pickProject', 'проект…') : t('lore.admin.noFreeProjects', 'все проекты уже назначены')}</option>
               {free.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
             <select style={S.input} value={pick.role} disabled={busy}
@@ -126,11 +141,15 @@ function useProjectRoleMap(reloadKey: number) {
   const [map, setMap] = useState<Map<string, { project: string; role: string }[]>>(new Map());
   const [projects, setProjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  // AH-07 (U-06): сбой git_projects давал пустую карту — у ВСЕХ людей «нет
+  // проектов — не увидит ничего»; сбой отдельного project_users молча выпадал.
+  const [error, setError] = useState<string | null>(null);
+  const [partial, setPartial] = useState(0);
 
   useEffect(() => {
     const ctrl = new AbortController();
     let alive = true;
-    setLoading(true);
+    setLoading(true); setError(null); setPartial(0);
     fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
       .then(async ps => {
         const slugs = ps.map(p => p.slug).filter(Boolean).sort();
@@ -139,6 +158,7 @@ function useProjectRoleMap(reloadKey: number) {
           fetchLoreSlice<{ kc_subs: (string | null)[] | null; roles: (string | null)[] | null }>(
             'project_users', { project: slug }, ctrl.signal).then(rs => ({ slug, row: rs[0] }))));
         if (!alive) return;
+        setPartial(settled.filter(s => s.status === 'rejected').length);
         const m = new Map<string, { project: string; role: string }[]>();
         for (const s of settled) {
           if (s.status !== 'fulfilled' || !s.value.row) continue;
@@ -153,11 +173,15 @@ function useProjectRoleMap(reloadKey: number) {
         setMap(m);
         setLoading(false);
       })
-      .catch(() => { if (alive) { setMap(new Map()); setLoading(false); } });
+      .catch(e => {
+        if (!alive) return;
+        setMap(new Map()); setLoading(false);
+        setError(describeLoreError(e).text);
+      });
     return () => { alive = false; ctrl.abort(); };
   }, [reloadKey]);
 
-  return { map, projects, loading };
+  return { map, projects, loading, error, partial };
 }
 
 /**
@@ -175,8 +199,8 @@ function useProjectRoleMap(reloadKey: number) {
  * Модалка с фиксированным центрированием не зависит от того, где в таблице
  * стоит строка.
  */
-function InlineRolesPopup({ kcSub, username, projects, current, onClose, onChanged, onError }: {
-  kcSub: string; username: string; projects: string[];
+function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onClose, onChanged, onError }: {
+  kcSub: string; username: string; projects: string[]; projectsErr?: string | null;
   current: { project: string; role: string }[];
   onClose: () => void; onChanged: () => void; onError: (e: unknown) => void;
 }) {
@@ -231,7 +255,8 @@ function InlineRolesPopup({ kcSub, username, projects, current, onClose, onChang
           }}>✕</button>
         </div>
         {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 8 }}>{err}</div>}
-        {projects.length === 0 && (
+        {projectsErr && <LoadError text={t('lore.admin.projectsLoadError', 'Проекты не загрузились: {{reason}}', { reason: projectsErr })} />}
+        {!projectsErr && projects.length === 0 && (
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.inlineNoProjects', 'проектов нет — заведите их в разделе «Проекты»')}</div>
         )}
         {projects.map(p => {
@@ -271,7 +296,7 @@ export function UsersTab({ st, preflight, realmRoles, onError, reload }: {
   // AL-101: инлайн-назначение ролей из строки списка.
   const [rolesFor, setRolesFor] = useState<string | null>(null);
   const [projReload, setProjReload] = useState(0);
-  const { map: projRoles, projects: allProjects, loading: projLoading } = useProjectRoleMap(projReload);
+  const { map: projRoles, projects: allProjects, loading: projLoading, error: projErr, partial: projPartial } = useProjectRoleMap(projReload);
 
   const rows = st.k === 'ok' ? st.rows : [];
   const selectedId = params.get('user');
@@ -401,6 +426,11 @@ export function UsersTab({ st, preflight, realmRoles, onError, reload }: {
                       состояние не должно требовать раскопок. */}
                   <td style={S.td}>
                     {projLoading ? <span style={{ color: 'var(--t3)' }}>…</span>
+                      : projErr || (projPartial > 0 && mine.length === 0)
+                        ? <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}
+                                title={projErr ?? t('lore.admin.projectUsersPartial', 'участники части проектов ({{n}}) не загрузились', { n: projPartial })}>
+                            {t('lore.admin.projectRolesUnknown', '? не загрузилось')}
+                          </span>
                       : mine.length === 0
                         ? <span style={{ color: 'var(--wrn)', fontSize: 'var(--fs-xs)' }}>
                             {t('lore.admin.noProjectRoles', '⚠ нет проектов — не увидит ничего')}
@@ -419,7 +449,7 @@ export function UsersTab({ st, preflight, realmRoles, onError, reload }: {
                     <button style={S.btn} onClick={() => openCard(u.id)}>{t('lore.admin.open', 'Открыть')}</button>
                     {rolesFor === u.id && (
                       <InlineRolesPopup
-                        kcSub={u.id} username={u.username} projects={allProjects} current={mine}
+                        kcSub={u.id} username={u.username} projects={allProjects} projectsErr={projErr} current={mine}
                         onClose={() => setRolesFor(null)}
                         onChanged={() => setProjReload(r => r + 1)}
                         onError={onError}

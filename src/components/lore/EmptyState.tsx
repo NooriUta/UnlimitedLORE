@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Shared empty-state primitive (SPRINT_LORE_UX_OPTIMIZATION T19) — 20 list/
 // detail components each had their own ad-hoc "nothing here" markup with
@@ -41,6 +42,27 @@ export function LoadError({ text, onRetry, retryLabel }: { text: string; onRetry
           padding: '4px 12px', cursor: 'pointer', font: 'inherit', fontSize: 'var(--fs-xs)', minHeight: 28,
         }}>{retryLabel ?? '↻'}</button>
       )}
+    </div>
+  );
+}
+
+// AH-07 (зона 3): списки для выбора не загрузились — форма работает, но выбрать
+// из них нельзя, и это должно быть видно. Пустой селект без пометки читается
+// как «вариантов нет», хотя их просто не удалось получить.
+export function PickerLoadWarning({ failed }: { failed: Record<string, string> }) {
+  const { t } = useTranslation();
+  const names = Object.keys(failed);
+  if (names.length === 0) return null;
+  return (
+    <div role="alert" style={{
+      margin: '6px 0', padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', color: 'var(--wrn)',
+      border: '1px solid color-mix(in srgb, var(--wrn) 40%, transparent)',
+      background: 'color-mix(in srgb, var(--wrn) 8%, transparent)',
+    }}>
+      <div>{t('lore.pickerLoadFailed', 'Не загрузились списки для выбора: {{lists}}. Это сбой, а не пустота — выбрать из них сейчас нельзя, обновите позже.', { lists: names.join(', ') })}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', wordBreak: 'break-word' }}>
+        {names.map(n => `${n}: ${failed[n]}`).join(' · ')}
+      </div>
     </div>
   );
 }

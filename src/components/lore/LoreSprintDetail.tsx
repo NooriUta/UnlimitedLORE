@@ -22,6 +22,8 @@ import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import TipTapField from './TipTapField';
+import { usePickerFailures } from './loadState';
+import { PickerLoadWarning } from './EmptyState';
 
 interface SprintMeta {
   sprint_id: string;
@@ -1199,6 +1201,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   // Load available projects from DB once (not per-sprint). hosts[] (ADR-018) rides
   // along so PR/file URLs compose from the template, not a hardcoded host.
   const [projectHosts, setProjectHosts] = useState<Record<string, RepoHost[]>>({});
+  // AH-07: справочные списки ниже кормят пикеры привязок и бейджи модулей.
+  // Сбой любого раньше глушился: модули спринта пропадали, а «привязать» было
+  // не из чего — и это выглядело как «нечего привязывать». Теперь видно, что
+  // именно не загрузилось.
+  const [pickFail, fail] = usePickerFailures();
   useEffect(() => {
     fetchLoreSlice<{ slug: string; hosts: string | null }>('git_projects', {})
       .then(rows => {
@@ -1207,22 +1214,22 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         rows.forEach(r => { if (r.slug) m[r.slug] = parseHosts(r.hosts); });
         setProjectHosts(m);
       })
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.projects', 'проекты')));
+  }, [fail, t]);
 
   // Load all components once for the reverse sprint→modules badges.
   useEffect(() => {
     fetchLoreSlice<CompRow>('components', {})
       .then(rows => setAllComps(rows ?? []))
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.components', 'компоненты')));
+  }, [fail, t]);
 
   // Load milestones once (for the sprint↔milestone linker).
   useEffect(() => {
     fetchLoreSlice<{ milestone_id: string; label: string }>('milestones', {})
       .then(rows => setAllMilestones((rows ?? []).map(r => ({ id: r.milestone_id, label: r.label }))))
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.milestones', 'вехи')));
+  }, [fail, t]);
 
   // Load releases once (for the sprint↔release linker) — release_uid is
   // "<git_project>#<release_id>", split it since the slice has no separate
@@ -1238,8 +1245,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       .then(rows => setAllReleases((rows ?? []).map(r => ({
         id: r.release_id, gitProject: r.release_uid?.split('#')[0] ?? '',
       })).filter(r => r.gitProject !== '')))
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.releases', 'релизы')));
+  }, [fail, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -1276,7 +1283,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             const m = new Map<string, { status_raw: string | null; task_total: number; task_done: number }>();
             results.forEach(r => { if (r) m.set(r.id, r); });
             setRelatedMeta(m);
-          }).catch(() => {});
+          }).catch(() => { /* статус и счётчик связанных спринтов — украшение строки: без них остаются id со ссылкой */ });
         }
       })
       .catch(e => { onError(e); setLoading(false); });
@@ -1353,6 +1360,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
   return (
     <div className="lore-sprint-detail-root" style={S.root}>
+      <PickerLoadWarning failed={pickFail} />
       <div style={S.header}>
         <span style={S.sprintId}>{sprint.sprint_id}</span>
         {status && <StatusChip status={status} />}
