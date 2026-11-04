@@ -34,9 +34,48 @@ export class LoreConflictError extends Error {
   constructor(detail?: string) { super(detail ?? 'операция конфликтует с текущим состоянием'); }
 }
 
+/**
+ * AH-07: ответ сервера с кодом — 403, 413, 500 и т.п. Раньше это был голый
+ * Error, а при не-JSON теле — LoreUpstreamError, то есть «LORE недоступен» на
+ * всю страницу из-за одного отказа. Сообщение — в прежнем формате
+ * «<status> <code>: <detail>»: на нём держатся проверки вида msg.includes('409').
+ */
+export class LoreHttpError extends Error {
+  constructor(readonly status: number, readonly code: string, readonly detail: string) {
+    super(`${status} ${code}${detail ? `: ${detail}` : ''}`);
+  }
+}
+
+// «Недоступен» — это когда до бэкенда не дошли: шлюз и прокси отвечают 502/503/504.
+const UNREACHABLE = new Set([502, 503, 504]);
+
+function isJson(res: Response): boolean {
+  return (res.headers.get('content-type') ?? '').includes('application/json');
+}
+
 function assertJson(res: Response): void {
-  const ct = res.headers.get('content-type') ?? '';
-  if (!ct.includes('application/json')) throw new LoreUpstreamError(`backend returned ${res.status} non-JSON`);
+  if (!isJson(res)) throw new LoreUpstreamError(`backend returned ${res.status} non-JSON`);
+}
+
+export type LoreErrorKind =
+  | 'aborted' | 'disabled' | 'unreachable' | 'notFound' | 'conflict' | 'forbidden' | 'http' | 'unknown';
+
+/**
+ * AH-07: что сказать человеку про ошибку. `pageLevel` — только «выключен» и
+ * «недоступен»: остальное показывается на месте (toast, состояние экрана), а
+ * не заменяет страницу и не глушится в «пусто».
+ */
+export function describeLoreError(err: unknown): { kind: LoreErrorKind; status?: number; text: string; pageLevel: boolean } {
+  const text = err instanceof Error ? err.message : String(err);
+  if (err instanceof Error && err.name === 'AbortError') return { kind: 'aborted', text, pageLevel: false };
+  if (err instanceof LoreDisabledError) return { kind: 'disabled', text, pageLevel: true };
+  if (err instanceof LoreUpstreamError) return { kind: 'unreachable', text, pageLevel: true };
+  if (err instanceof LoreNotFoundError) return { kind: 'notFound', status: 404, text, pageLevel: false };
+  if (err instanceof LoreConflictError) return { kind: 'conflict', status: 409, text, pageLevel: false };
+  if (err instanceof LoreHttpError) {
+    return { kind: err.status === 403 ? 'forbidden' : 'http', status: err.status, text, pageLevel: false };
+  }
+  return { kind: 'unknown', text, pageLevel: false };
 }
 
 async function parseError(res: Response): Promise<never> {
@@ -53,7 +92,12 @@ async function parseError(res: Response): Promise<never> {
     sessionExpired();
     throw new Error('401 unauthenticated');
   }
-  assertJson(res);
+  // AH-07: не-JSON тело — «недоступен» только для 502/503/504. 403 от прокси или
+  // 413 на большое тело — ответ по существу, а не пропавший сервер.
+  if (!isJson(res)) {
+    if (UNREACHABLE.has(res.status)) throw new LoreUpstreamError(`backend returned ${res.status} non-JSON`);
+    throw new LoreHttpError(res.status, res.statusText || 'NON_JSON', '');
+  }
   let code = '';
   let detail = '';
   try {
@@ -65,7 +109,7 @@ async function parseError(res: Response): Promise<never> {
   if (code === 'LORE_UPSTREAM') throw new LoreUpstreamError(detail);
   if (code === 'NOT_FOUND')     throw new LoreNotFoundError(detail);
   if (res.status === 409)       throw new LoreConflictError(detail);
-  throw new Error(`${res.status} ${code || res.statusText}${detail ? `: ${detail}` : ''}`);
+  throw new LoreHttpError(res.status, code || res.statusText, detail);
 }
 
 export async function fetchLoreSlice<T>(

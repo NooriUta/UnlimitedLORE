@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
+import { describeLoreError } from '../api/lore';
+import { LoreErrorToast } from '../components/lore/LoreErrorToast';
 import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
 import { LoreSearchScreen } from '../components/lore/LoreSearchScreen';
 import { DictionaryProvider } from '../components/lore/DictionaryProvider';
@@ -240,6 +241,8 @@ export default function LorePage() {
 
   const [loreDisabled, setLoreDisabled] = useState(false);
   const [loreUnreachable, setLoreUnreachable] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+  const closeErrorToast = useCallback(() => setErrorToast(null), []);
   const [search, setSearch] = useState(q);
   const [listSearch, setListSearch] = useState('');
   const [sprintQ, setSprintQ] = useState('');
@@ -433,9 +436,15 @@ export default function LorePage() {
   };
 
   const handleFetchError = useCallback((err: unknown) => {
-    if (err instanceof LoreDisabledError) { setLoreDisabled(true); }
-    else if (err instanceof LoreUpstreamError) { setLoreUnreachable(true); }
-    // swallow other errors — they show in component empty-states
+    // AH-07: страницу целиком заменяют только «выключен» и «недоступен».
+    // Остальное раньше глушилось («they show in component empty-states») —
+    // на деле экраны рисовали «пусто», а неудачное сохранение не было видно
+    // вовсе. Теперь — toast с кодом и текстом сервера; отмена запроса при
+    // уходе с экрана ошибкой не считается.
+    const d = describeLoreError(err);
+    if (d.kind === 'disabled') setLoreDisabled(true);
+    else if (d.kind === 'unreachable') setLoreUnreachable(true);
+    else if (d.kind !== 'aborted') setErrorToast(d.text);
   }, []);
 
   // Clear list search on section change
@@ -1369,6 +1378,7 @@ export default function LorePage() {
         </div>
         )}
       </div>
+      <LoreErrorToast text={errorToast} onClose={closeErrorToast} />
     </div>
     </DictionaryProvider>
   );
