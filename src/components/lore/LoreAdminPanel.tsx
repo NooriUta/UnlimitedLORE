@@ -11,6 +11,7 @@ import { loadKc, loadKcObj, type KcState } from './kc-state';
 import { GameIcon } from './GameIcon';
 import { AUTH_ENABLED, authHeaders } from '../../auth/session';
 import { useRole } from '../../auth/useRole';
+import { adminMain, adminShell, adminSide } from './adminLayout';
 
 // ⚙ Admin LORE (ADR-LORE-025, SPEC-ADMIN-LORE-UC): администрирование доступа и
 // единого языка графа. Структура — ОДОБРЕННЫЙ прототип AL-44: навигация по РИСКУ
@@ -137,18 +138,8 @@ function useIsNarrow(): boolean {
 }
 
 const S = {
-  shell: (narrow: boolean) => ({
-    display: narrow ? 'block' : 'grid',
-    gridTemplateColumns: '212px 1fr',
-    gap: 0, flex: 1, minHeight: 0, overflow: 'hidden' as const,
-  }),
-  side: (narrow: boolean) => ({
-    background: 'var(--bg1)', padding: narrow ? '8px 10px' : '12px 8px',
-    borderRight: narrow ? 'none' : '1px solid var(--bd)',
-    borderBottom: narrow ? '1px solid var(--bd)' : 'none',
-    display: 'flex', flexDirection: (narrow ? 'row' : 'column') as 'row' | 'column',
-    gap: narrow ? 14 : 16, overflowX: 'auto' as const, flexWrap: (narrow ? 'wrap' : 'nowrap') as 'wrap' | 'nowrap',
-  }),
+  shell: adminShell,
+  side: adminSide,
   grpLabel: { fontSize: 'var(--fs-2xs)', letterSpacing: '.12em', textTransform: 'uppercase' as const, color: 'var(--t3)', padding: '0 8px 5px', display: 'flex', alignItems: 'center', gap: 6 },
   dot: (c: string) => ({ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }),
   nav: (on: boolean) => ({
@@ -160,7 +151,7 @@ const S = {
   }),
   rail: (c: string | null) => ({ width: 3, height: 14, borderRadius: 2, background: c ?? 'transparent', flexShrink: 0 }),
   navN: { marginLeft: 'auto', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' },
-  main: { padding: '12px 16px', minWidth: 0, overflowY: 'auto' as const },
+  main: adminMain,
   crumb: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 8 },
   crumbB: { color: 'var(--t1)', fontWeight: 600 },
   toolbar: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' as const },
