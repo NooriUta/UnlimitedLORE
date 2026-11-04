@@ -161,7 +161,8 @@ class AgentScopeFilterTest {
      */
     @Test
     void матрицаБэкендаСовпадаетСТаблицейАдминПанели() throws Exception {
-        Path tsx = Path.of("../src/components/lore/LoreAdminPanel.tsx");
+        // AH-03: таблица матрицы переехала вместе с вкладкой «Роли и права».
+        Path tsx = Path.of("../src/components/lore/admin/RolesTab.tsx");
         if (!Files.exists(tsx)) return;   // тест запущен вне монорепозитория — не падаем
         String src = Files.readString(tsx);
 
