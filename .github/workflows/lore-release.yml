@@ -85,9 +85,14 @@ jobs:
           if [ -n "${TG_TOKEN:-}" ]; then
             curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               -H 'Content-Type: application/json' \
-              -d "{\"chat_id\":\"${TG_CHAT}\",\"text\":\"probe: verify-шаг стартовал, длина GH_MIRROR_TOKEN=${#GH_TOKEN}\"}" || true
+              -d "{\"chat_id\":\"${TG_CHAT}\",\"text\":\"probe: verify-шаг стартовал, длина GH_MIRROR_TOKEN=${#GH_TOKEN}\"}" \
+              && echo "[verify] telegram-проба: отправлено" \
+              || echo "::warning::[verify] telegram-проба НЕ отправлена — api.telegram.org недоступен или отказал"
           fi
-          echo "[verify] telegram-проба пройдена"
+          # 04.11.2026: здесь печаталось «проба пройдена» при любом исходе (curl
+          # стоял под `|| true`), и две недели неработающего Telegram выглядели
+          # как работающий. Отметка «докуда дошли» осталась, исход — выше, честно.
+          echo "[verify] после telegram-пробы"
           FAIL=""
           NOTE=""
           if [ -z "${GH_TOKEN:-}" ]; then
@@ -350,6 +355,7 @@ jobs:
       # Нет дублирования с MIR-01/TG-03: прочитан весь файл целиком —
       # оповещения о самом релизе здесь не было ни в одной ветке этого шага.
       - name: Notify release
+        id: notify_release
         continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -364,44 +370,48 @@ jobs:
           [ -f "$FILE" ] || exit 0
           TITLE=$(head -1 "$FILE" | sed 's/^#\+[[:space:]]*//')
           [ -z "$TITLE" ] && TITLE="$TAG"
-          # ТЕЛО ЦЕЛИКОМ, а не только первый раздел. Лимит Telegram у
-          # sendMessage — 4096 СИМВОЛОВ на всё сообщение, а заметки к релизу
-          # обычно куда короче; слать один вводный абзац (как было) — прятать
-          # список изменений там, куда с телефона так и не заглянут.
-          #
-          # Меряем СИМВОЛЫ, а не байты: кириллица — 2 байта на символ, и порог
-          # по `wc -c` резал бы заметки, которые в символах спокойно влезают
-          # (проверено: тело v1.5.0 ~2.5k символов = ~4.5k байт). `LC_ALL` в
-          # UTF-8 — иначе `wc -m` в locale C считает байты. Порог 3600 символов
-          # оставляет ~500 под заголовок, ссылки и служебные строки.
-          #
-          # Обрезаем ТОЛЬКО если реально длиннее — и помечаем обрез явно, чтобы
-          # «…» не читалось как весь релиз. В этой редкой ветке режем `head -c
-          # 3600` (байты): 3600 байт ≤ 3600 символов ≤ 4096 при любом алфавите.
-          BODY=$(tail -n +2 "$FILE")
-          if [ "$(printf '%s' "$BODY" | LC_ALL=C.UTF-8 wc -m)" -gt 3600 ]; then
-            TRUNC=$(printf '%s' "$BODY" | head -c 3600)
-            BODY=$(printf '%s\n\n… (обрезано — полный список на странице релиза)' "$TRUNC")
-          fi
+          # ВЕСЬ RELEASE-<tag>.md, без обрезки (владелец 04.11.2026: «хочу, чтобы
+          # релиз выдавал весь release notes, без run, со всеми фичами»). Раньше
+          # тело резалось на 3600 байт с пометкой «обрезано», и список изменений
+          # терялся. Лимит Telegram — 4096 СИМВОЛОВ на сообщение, поэтому длинные
+          # заметки уходят несколькими сообщениями (k/n), разрез по абзацам —
+          # .github/scripts/tg-split.sh (самопроверка: --selftest). Ссылки на
+          # прогон в сообщении нет — только на страницы релиза.
+          bash .github/scripts/tg-split.sh --selftest
+          tail -n +2 "$FILE" > /tmp/tg-body.md
+          N=$(bash .github/scripts/tg-split.sh /tmp/tg-body.md /tmp/tg-parts 3700)
           FG_LINK="${PUBLIC_REPO}/releases/tag/${TAG}"
           GH_LINE=""
           [ -n "${GH_REPO:-}" ] && GH_LINE=$(printf "\nGitHub: https://github.com/%s/releases/tag/%s" "$GH_REPO" "$TAG")
-          MSG=$(printf "🏷️ LORE: релиз %s опубликован\n%s\n\n%s\n\nForgejo: %s%s" \
-            "$TAG" "$TITLE" "$BODY" "$FG_LINK" "$GH_LINE")
-          jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
-            '{"chat_id":$chat,"text":$text}' > /tmp/tg-release.json
-          for attempt in 1 2 3; do
-            if curl -sf --max-time 10 -X POST \
-                 "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
-                 -H "Content-Type: application/json" \
-                 -d @/tmp/tg-release.json; then
-              echo "[tg] release notification sent (attempt $attempt)"
-              break
-            fi
-            echo "::warning::[tg] release-notify attempt $attempt/3 failed"
-            [ $attempt -lt 3 ] && sleep $((attempt * 5))
+          FAILED=0
+          i=0
+          for part in /tmp/tg-parts/part-*.txt; do
+            i=$((i + 1))
+            HEAD=$(printf "🏷️ LORE: релиз %s опубликован\n%s" "$TAG" "$TITLE")
+            [ "$N" -gt 1 ] && HEAD=$(printf "%s (%d/%d)" "$HEAD" "$i" "$N")
+            [ "$i" -gt 1 ] && HEAD=$(printf "🏷️ %s (%d/%d)" "$TAG" "$i" "$N")
+            TAIL=""
+            [ "$i" -eq "$N" ] && TAIL=$(printf "\n\nForgejo: %s%s" "$FG_LINK" "$GH_LINE")
+            MSG=$(printf "%s\n\n%s%s" "$HEAD" "$(cat "$part")" "$TAIL")
+            jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
+              '{"chat_id":$chat,"text":$text}' > /tmp/tg-release.json
+            sent=0
+            for attempt in 1 2 3; do
+              if curl -sf --max-time 10 -X POST \
+                   "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                   -H "Content-Type: application/json" \
+                   -d @/tmp/tg-release.json; then
+                echo "[tg] release notification $i/$N sent (attempt $attempt)"
+                sent=1; break
+              fi
+              echo "::warning::[tg] release-notify $i/$N attempt $attempt/3 failed"
+              [ $attempt -lt 3 ] && sleep $((attempt * 5))
+            done
+            [ $sent = 1 ] || FAILED=1
           done
-          exit 0
+          # Отказ виден: шаг под continue-on-error, ненулевой код ловит
+          # «Вердикт оповещения Telegram» в конце прогона.
+          [ $FAILED = 0 ] || { echo "::error::[tg] оповещение о релизе $TAG не доставлено"; exit 1; }
 
       # SE-12: вердикт по токену зеркала — ПОСЛЕ публикации и последним.
       #
@@ -428,4 +438,15 @@ jobs:
         if: ${{ always() && steps.mirror.outcome == 'failure' }}
         run: |
           echo "::error::зеркало GitHub НЕ обновилось (см. шаг Mirror main + tag to GitHub). Релиз в Forgejo опубликован; после починки — dispatch lore-release.yml с tag=<тег>, он идемпотентен."
+          exit 1
+
+      # 04.11.2026: оповещение о релизе две недели не доходило (api.telegram.org
+      # недоступен с ci-server — VPN-выход xray сломан), а прогоны были зелёными:
+      # шаг под continue-on-error. Тот же приём, что у зеркала: релиз уже выложен,
+      # но прогон красный, и отказ виден снаружи. Нет TELEGRAM_TOKEN — шаг выходит
+      # кодом 0 и сюда не попадает.
+      - name: Вердикт оповещения Telegram
+        if: ${{ always() && steps.notify_release.outcome == 'failure' }}
+        run: |
+          echo "::error::оповещение о релизе в Telegram НЕ доставлено (см. шаг Notify release). Релиз опубликован; проверьте выход xray для api.telegram.org (~/xray/refresh-vpn.sh на ci-server)."
           exit 1
