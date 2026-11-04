@@ -1572,7 +1572,9 @@
         "flat": "flat",
         "kind": "by type",
         "project": "by project"
-      }
+      },
+      "loadError": "Could not load the feed: {{reason}}",
+      "retry": "Retry"
     },
     "page": {
       "disabled": {
