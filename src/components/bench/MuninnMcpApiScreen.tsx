@@ -236,7 +236,7 @@ function Node({ children, accent }: { children: React.ReactNode; accent?: boolea
 function Arrow({ label }: { label: string }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', color: 'var(--t3)' }}>
-      <span style={{ fontSize: 8, lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 'var(--fs-2xs)', lineHeight: 1 }}>{label}</span>
       <span style={{ fontSize: 'var(--fs-md)', lineHeight: 1 }}>→</span>
     </span>
   );

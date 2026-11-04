@@ -231,7 +231,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
               style={{ ...S.sectionHdr, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
               {...a11yClick(() => toggleArea(thisArea))}
             >
-              <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
               {curArea}
             </div>
           );

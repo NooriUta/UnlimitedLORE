@@ -156,7 +156,7 @@ function AppShellBody() {
     fontSize: 12.5, padding: '7px 9px', borderRadius: 6, cursor: 'pointer',
   });
   const ddSep   = { height: 1, background: 'var(--bd)', margin: '5px 3px' };
-  const ddBadge = { marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 8, border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 5px', color: 'var(--t3)' };
+  const ddBadge = { marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 5px', color: 'var(--t3)' };
   const ddNote  = { fontSize: 9.5, color: 'var(--t3)', padding: '4px 9px 2px', lineHeight: 1.35 };
   const kbd     = { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '0 4px' };
 

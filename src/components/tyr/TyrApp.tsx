@@ -436,7 +436,7 @@ export default function TyrApp() {
               </div>
               <LiveLog runId={currentRun.id} bufferedLines={logBuffer.current.get(currentRun.id)} />
               {currentRun.reportUrl && (
-                <div style={{ padding: 8, borderTop: '1px solid var(--border)', textAlign: 'center', background: 'var(--panel-2)' }}>
+                <div style={{ padding: 8, borderTop: '1px solid var(--bd)', textAlign: 'center', background: 'var(--bg2)' }}>
                   <button
                     className="primary"
                     onClick={() => { setHistoryRunId(currentRun.id); setReportTab('report'); setTab('reports'); }}

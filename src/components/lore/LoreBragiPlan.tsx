@@ -176,8 +176,8 @@ function dnumStyle(isToday: boolean): React.CSSProperties {
 }
 function pchipStyle(color: string): React.CSSProperties {
   return {
-    fontSize: 'var(--fs-xs)', border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 5px', marginTop: 3,
-    lineHeight: 1.3, color, background: `${color}1a`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+    fontSize: 'var(--fs-xs)', border: `1px solid color-mix(in srgb, ${color} 33%, transparent)`, borderRadius: 5, padding: '2px 5px', marginTop: 3,
+    lineHeight: 1.3, color, background: `color-mix(in srgb, ${color} 10%, transparent)`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   };
 }
 

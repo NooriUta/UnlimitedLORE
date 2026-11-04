@@ -1372,7 +1372,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             return (
               <React.Fragment key={group.key}>
                 <div style={S.groupHdr} onClick={() => toggleGroup(group.key)}>
-                  <span style={{ fontSize: 7, color: 'var(--t3)', width: 8 }}>{isOpen ? '▼' : '▶'}</span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 8 }}>{isOpen ? '▼' : '▶'}</span>
                   {group.icon
                     ? <GameIcon slug={group.icon} size={11} style={{ color: group.color, flexShrink: 0 }} />
                     : <div style={{ width: 8, height: 8, borderRadius: 2, background: group.color, flexShrink: 0 }} />}
@@ -1755,7 +1755,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                       <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t2)' }}>{b.n}</span>
                       <div title={`${b.label}: ${b.n}`} style={{ width: '100%', height: Math.max(2, (b.n / max) * 40),
                         background: 'color-mix(in srgb,var(--inf) 50%,var(--b3))', borderRadius: 2 }} />
-                      <span style={{ fontSize: 7, color: 'var(--t3)' }}>{b.label}</span>
+                      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{b.label}</span>
                     </div>
                   );
                 })}
@@ -2178,7 +2178,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                     background: `color-mix(in srgb,${col} 12%,var(--b3))`,
                     border: `1px solid color-mix(in srgb,${col} 30%,transparent)`,
                     color: col, overflow: 'hidden', cursor: clickable ? 'pointer' : 'default' }}>
-                  <div style={{ fontSize: 7, color: 'var(--t3)', fontFamily: 'var(--mono)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', marginBottom: 2 }}>
                     {runSt === 'norun' ? '—' : runSt}
                   </div>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, lineHeight: 1.3 }}>{label}</div>
