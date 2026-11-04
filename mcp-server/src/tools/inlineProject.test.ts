@@ -31,6 +31,13 @@ describe('AL-113: проект в создающем вызове', () => {
     expect(sent[0]).toEqual({ path: '/lore/spec/link', body: { spec_id: 'SPEC-X', target_id: 'org/a', rel: 'project', mode: 'add' } });
   });
 
+  // AL-113 хвост: сценарий (uc_new) и корень-фича (feature_new — тот же KnowUseCase)
+  // принимали проект только вторым вызовом uc_link — теперь одним, тем же путём.
+  it('сценарий/фича — через uc/link с rel=project и action=add', async () => {
+    await inlineProject('uc', 'UC-X', 'org/a');
+    expect(sent[0]).toEqual({ path: '/lore/uc/link', body: { uc_id: 'UC-X', rel: 'project', target_id: 'org/a', action: 'add' } });
+  });
+
   it('без project и без LORE_ACTIVE_PROJECT рёбра не трогаются и в ответе ничего не добавляется', async () => {
     expect(await inlineProject('doc', 'd1')).toEqual({});
     expect(sent).toEqual([]);
