@@ -6,6 +6,7 @@ import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { parseHosts, releaseUrl, hostLabel } from './repo-url';
+import { releaseProjectOf } from './releaseProject';
 
 interface Props {
   q: string;
@@ -133,15 +134,15 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
   // тем же номером — то есть выглядела рабочей. Идиома та же, что у аналитики
   // («— без проекта»): честное пустое состояние вместо выдуманного значения.
   const noProject = t('lore.releasesBoard.noProject', '— без репозитория');
-  const projects = ['all', ...Array.from(new Set(rows.map(r => r.git_project ?? noProject)))];
+  const projects = ['all', ...Array.from(new Set(rows.map(r => releaseProjectOf(r) ?? noProject)))];
 
   const currentByProject: Record<string, string> = {};
-  rows.forEach(r => { if (r.is_current) currentByProject[r.git_project ?? noProject] = r.git_tag ?? r.release_id; });
+  rows.forEach(r => { if (r.is_current) currentByProject[releaseProjectOf(r) ?? noProject] = r.git_tag ?? r.release_id; });
 
   const filtered = [...rows]
     .sort(semverCompare)
     .filter(r => {
-      if (projectFilter !== 'all' && (r.git_project ?? noProject) !== projectFilter) return false;
+      if (projectFilter !== 'all' && (releaseProjectOf(r) ?? noProject) !== projectFilter) return false;
       if (onlyCurrent && !r.is_current) return false;
       if (q && !(r.git_tag ?? r.release_id).toLowerCase().includes(q.toLowerCase())) return false;
       return true;
