@@ -25,3 +25,22 @@ export function EmptyState({ message, icon, hint }: EmptyStateProps) {
     </div>
   );
 }
+
+// AH-07: честное «не удалось загрузить» рядом с EmptyState. Сбой не рисуется как
+// «пусто»: данные могут существовать — их не удалось получить.
+export function LoadError({ text, onRetry, retryLabel }: { text: string; onRetry?: () => void; retryLabel?: ReactNode }) {
+  return (
+    <div role="alert" style={{
+      padding: 24, color: 'var(--dng)', fontSize: 'var(--fs-base)', textAlign: 'center',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+    }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', wordBreak: 'break-word' }}>{text}</span>
+      {onRetry && (
+        <button onClick={onRetry} style={{
+          background: 'none', border: '1px solid var(--bd)', borderRadius: 999, color: 'var(--t2)',
+          padding: '4px 12px', cursor: 'pointer', font: 'inherit', fontSize: 'var(--fs-xs)', minHeight: 28,
+        }}>{retryLabel ?? '↻'}</button>
+      )}
+    </div>
+  );
+}
