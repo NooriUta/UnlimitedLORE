@@ -56,9 +56,9 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   // писать в них мог любой профиль — проверять было нечему.
   { what: 'Фичи', api: '/lore/feature*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'US (сценарии)', api: '/lore/uc*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
-  { what: 'Боли', api: '/lore/pain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
-  { what: 'Ожидания', api: '/lore/gain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
-  { what: 'Работы', api: '/lore/job*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Боли', api: '/lore/pain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst', 'marketer'] },
+  { what: 'Ожидания', api: '/lore/gain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst', 'marketer'] },
+  { what: 'Работы', api: '/lore/job*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst', 'marketer'] },
   { what: 'VP-связи', api: '/lore/vp*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   // Две строки, а не одна: ADR-LORE-041 §4 развёл ЛИЧНОСТЬ и ОПИСАНИЕ по разным
   // типам вершин, и права у них разные. Слитая строка врала бы про обе — именно

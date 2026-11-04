@@ -126,9 +126,9 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // существовал в KC вовсе, хотя профиль был описан ещё в v1.0.53.
         Map.entry("feature",   Set.of("full", "architect", "pm", "product-analyst")),
         Map.entry("uc",        Set.of("full", "architect", "pm", "product-analyst")),
-        Map.entry("pain",      Set.of("full", "architect", "pm", "product-analyst")),
-        Map.entry("gain",      Set.of("full", "architect", "pm", "product-analyst")),
-        Map.entry("job",       Set.of("full", "architect", "pm", "product-analyst")),
+        Map.entry("pain",      Set.of("full", "architect", "pm", "product-analyst", "marketer")),
+        Map.entry("gain",      Set.of("full", "architect", "pm", "product-analyst", "marketer")),
+        Map.entry("job",       Set.of("full", "architect", "pm", "product-analyst", "marketer")),
         Map.entry("vp",        Set.of("full", "architect", "pm", "product-analyst")),
         Map.entry("actor",     Set.of("full", "architect", "pm")),
         // Проектный актор — то же семейство прав, что uc/feature/pain/gain, а не
