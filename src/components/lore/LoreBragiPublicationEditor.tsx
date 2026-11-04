@@ -624,10 +624,10 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         {readOnly ? (
           <div style={{ fontSize: 'var(--fs-base)', color: annotationMd ? 'var(--t2)' : 'var(--t3)', whiteSpace: 'pre-wrap' }}>{annotationMd || '—'}</div>
         ) : (
-          <textarea
-            style={S.textarea} value={annotationMd}
+          // AH-10: указание — Markdown (annotation_md), поэтому TipTapField.
+          <TipTapField minHeight={60} enableImages={false} enableHtmlMode={false} value={annotationMd}
             placeholder={t('bragi.publicationEditor.annotationPlaceholder', 'постоянная мета: мастер-источник, правило замены, контекст релиза…')}
-            onChange={e => setAnnotationMd(e.target.value)}
+            onChange={setAnnotationMd}
           />
         )}
       </Sec>
@@ -800,10 +800,10 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
                 {editVariant.status === 'published' && editVariant.variant_id && <VariantMetrics variantId={editVariant.variant_id} />}
                 {/* V2-02: this variant's own editorial meta / TODO — same
                     exclusion-from-preview rule as the publication-level fields. */}
-                <textarea
-                  style={{ ...S.textarea, minHeight: 32, fontSize: 'var(--fs-sm)' }} value={editVariant.annotationMd ?? ''}
+                {/* AH-10: указание вариации — Markdown, поэтому TipTapField. */}
+                <TipTapField minHeight={40} enableImages={false} enableHtmlMode={false} value={editVariant.annotationMd ?? ''}
                   placeholder={t('bragi.publicationEditor.variantAnnotationPlaceholder', 'указание для этой вариации…')}
-                  onChange={e => setVariant(editVariantIdx, { annotationMd: e.target.value })}
+                  onChange={md => setVariant(editVariantIdx, { annotationMd: md })}
                 />
                 <TodoChecklist
                   value={editVariant.todoMd ?? ''} onChange={val => setVariant(editVariantIdx, { todoMd: val })}
