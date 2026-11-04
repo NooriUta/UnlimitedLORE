@@ -8,6 +8,7 @@ import { fetchLoreSlice, loreMutate, fetchLoreDoc, type LoreKnowDocRow, type Lor
 import { MartProse } from '../bench/MartProse';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
 import { loadKc, loadKcObj, type KcState } from './kc-state';
+import { addableRealmRoles, isAdminRealmRole, isRemovableRealmRole, visibleRealmRoles, type RealmRole } from './adminRealmRoles';
 import { GameIcon } from './GameIcon';
 import { AUTH_ENABLED, authHeaders } from '../../auth/session';
 import { useRole } from '../../auth/useRole';
@@ -324,6 +325,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const [users, setUsers] = useState<KcState<KcUser>>({ k: 'loading' });
   const [agents, setAgents] = useState<KcState<KcAgent>>({ k: 'loading' });
   const [preflight, setPreflight] = useState<Preflight | null>(null);
+  const [realmRoles, setRealmRoles] = useState<KcState<RealmRole>>({ k: 'loading' });
   const [reload, setReload] = useState(0);
   const bump = () => setReload(x => x + 1);
 
@@ -348,6 +350,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
     loadKc<KcUser>('/lore/kc/users').then(setUsers);
     loadKc<KcAgent>('/lore/kc/agents').then(setAgents);
     loadKcObj<Preflight>('/lore/kc/auth-preflight').then(setPreflight);
+    loadKc<RealmRole>('/lore/kc/realm-roles').then(setRealmRoles);
   }, [onError, reload]);
 
   const dictTypes = useMemo(() => [...new Set(dicts.map(r => r.dict_type))].sort(), [dicts]);
@@ -395,7 +398,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
         </nav>
         <main style={S.main}>
           <div style={S.crumb}>{t('lore.admin.crumb', 'Администрирование')} · <span style={S.crumbB}>{TAB_TITLES[tab]}</span></div>
-          {tab === 'users' && <UsersTab st={users} preflight={preflight} onError={onError} reload={bump} />}
+          {tab === 'users' && <UsersTab st={users} preflight={preflight} realmRoles={realmRoles.k === 'ok' ? realmRoles.rows : null} onError={onError} reload={bump} />}
           {tab === 'agents' && <AgentsTab st={agents} people={users} preflight={preflight} onError={onError} />}
           {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} preflight={preflight} />}
           {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
@@ -660,8 +663,8 @@ function InlineRolesPopup({ kcSub, username, projects, current, onClose, onChang
 }
 
 // ── Люди: список + карточка (AL-36) ─────────────────────────────────────────
-function UsersTab({ st, preflight, onError, reload }: {
-  st: KcState<KcUser>; preflight: Preflight | null; onError: (e: unknown) => void; reload: () => void;
+function UsersTab({ st, preflight, realmRoles, onError, reload }: {
+  st: KcState<KcUser>; preflight: Preflight | null; realmRoles: RealmRole[] | null; onError: (e: unknown) => void; reload: () => void;
 }) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
@@ -723,8 +726,8 @@ function UsersTab({ st, preflight, onError, reload }: {
             </span>
             <span>
               <span style={{ fontFamily: 'var(--mono)', fontWeight: 600 }}>{selected.username}</span>{' '}
-              {(selected.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
-                <span key={r} style={{ ...S.pill(r === 'viewer' ? 'var(--t2)' : 'var(--dng)'), marginLeft: 4 }}>{r}</span>
+              {visibleRealmRoles(selected.roles).map(r => (
+                <span key={r} style={{ ...S.pill(isAdminRealmRole(r) ? 'var(--dng)' : 'var(--t2)'), marginLeft: 4 }}>{r}</span>
               ))}
               <span style={{ ...S.pill(selected.enabled ? 'var(--suc)' : 'var(--t3)'), marginLeft: 4 }}>{selected.enabled ? t('lore.admin.enabled', 'включён') : t('lore.admin.disabled', 'отключён')}</span>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{selected.email ?? '—'}</div>
@@ -741,20 +744,21 @@ function UsersTab({ st, preflight, onError, reload }: {
             <dl style={S.kv}>
               <dt style={{ color: 'var(--t3)' }}>{t('lore.admin.cardRoles', 'Роли (люди)')}</dt>
               <dd style={{ margin: 0 }}>
-                {(selected.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
-                  <span key={r} style={{ ...S.pill(r === 'viewer' ? 'var(--t2)' : 'var(--dng)'), marginRight: 6 }}>
+                {visibleRealmRoles(selected.roles).map(r => (
+                  <span key={r} style={{ ...S.pill(isAdminRealmRole(r) ? 'var(--dng)' : 'var(--t2)'), marginRight: 6 }}>
                     {r}
-                    {r !== 'super-admin' && (
+                    {isRemovableRealmRole(r) && (
                       <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', font: 'inherit' }}
                         disabled={busy} title={t('lore.admin.removeRole', 'снять роль')}
                         onClick={() => setRole(selected.id, r, 'remove')}>✕</button>
                     )}
                   </span>
                 ))}
-                {!selected.roles?.includes('viewer') && <button style={S.btn} disabled={busy} onClick={() => setRole(selected.id, 'viewer', 'add')}>+viewer</button>}{' '}
-                {!selected.roles?.includes('admin') && (confirmAdmin === selected.id
-                  ? <button style={S.primary} disabled={busy} onClick={() => setRole(selected.id, 'admin', 'add')}>{t('lore.admin.confirmAdmin', 'точно admin?')}</button>
-                  : <button style={S.btn} disabled={busy} onClick={() => setConfirmAdmin(selected.id)}>+admin</button>)}
+                {addableRealmRoles(realmRoles, selected.roles).map(rr => rr.name === 'admin'
+                  ? (confirmAdmin === selected.id
+                    ? <button key={rr.name} style={{ ...S.primary, marginRight: 4 }} disabled={busy} onClick={() => setRole(selected.id, 'admin', 'add')}>{t('lore.admin.confirmAdmin', 'точно admin?')}</button>
+                    : <button key={rr.name} style={{ ...S.btn, marginRight: 4 }} disabled={busy} onClick={() => setConfirmAdmin(selected.id)}>+admin</button>)
+                  : <button key={rr.name} style={{ ...S.btn, marginRight: 4 }} disabled={busy} title={rr.description ?? undefined} onClick={() => setRole(selected.id, rr.name, 'add')}>+{rr.name}</button>)}
               </dd>
               <dt style={{ color: 'var(--t3)' }}>{t('lore.admin.cardId', 'KC id')}</dt>
               <dd style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{selected.id}</dd>
@@ -792,8 +796,8 @@ function UsersTab({ st, preflight, onError, reload }: {
                   <td style={S.td}>{u.email ?? '—'}</td>
                   <td style={S.td}>{u.enabled ? '✓' : '✗'}</td>
                   <td style={S.td}>
-                    {(u.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
-                      <span key={r} style={{ ...S.pill(r === 'viewer' ? 'var(--t2)' : 'var(--dng)'), marginRight: 4 }}>{r}</span>
+                    {visibleRealmRoles(u.roles).map(r => (
+                      <span key={r} style={{ ...S.pill(isAdminRealmRole(r) ? 'var(--dng)' : 'var(--t2)'), marginRight: 4 }}>{r}</span>
                     ))}
                   </td>
                   {/* AL-101: видно прямо в строке, без раскрытия карточки.

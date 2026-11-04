@@ -108,6 +108,26 @@ public class KcBridge {
     }
 
     /**
+     * Какую realm-роль мост выдаёт и снимает из админки. Правило от противного:
+     * любую роль realm'а, кроме super-admin (D11 — эскалация только в консоли KC)
+     * и служебных ролей самого Keycloak. Раньше здесь был список {@code admin|viewer},
+     * и роль, заведённую в realm руками, нельзя было выдать вовсе (04.11.2026).
+     * Существует ли роль, проверяет сам вызов — KC ответит 404.
+     */
+    static boolean isGrantableRealmRole(String role) {
+        if (role == null || role.isBlank()) return false;
+        if ("super-admin".equals(role)) return false;
+        return !isKeycloakServiceRole(role);
+    }
+
+    /** Роли, которые Keycloak заводит сам на каждый realm, — не права LORE. */
+    static boolean isKeycloakServiceRole(String role) {
+        return role.startsWith("default-roles-")
+            || "offline_access".equals(role)
+            || "uma_authorization".equals(role);
+    }
+
+    /**
      * Чистое правило AL-35 (юнит-тестируемо без KC): снятие админ-роли запрещено,
      * когда цель — ЕДИНСТВЕННЫЙ включённый носитель администрирования. Роль viewer
      * снимать можно всегда; super-admin мост не трогает вовсе (D11).
