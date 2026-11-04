@@ -2344,6 +2344,10 @@
       "expand": "▾ expand",
       "notSet": "not set",
       "search": "Search"
+    },
+    "errorToast": {
+      "title": "Failed:",
+      "close": "Close"
     }
   },
   "bragi": {
