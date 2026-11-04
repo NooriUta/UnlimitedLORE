@@ -13,6 +13,8 @@ import TipTapField from './TipTapField';
 import BragiSkinPreview, { type BragiSkin } from './BragiSkinPreview';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import type { RubricRow } from './LoreBragiRubricManager';
+import { usePickerFailures } from './loadState';
+import { PickerLoadWarning } from './EmptyState';
 import { activeCharLimit, validateSkin, validateVariant, type ValidationIssue } from './bragiValidators';
 
 
@@ -232,13 +234,16 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   const [annotationMd, setAnnotationMd] = useState(editing?.annotation_md ?? '');
   const [todoMd, setTodoMd] = useState(editing?.todo_md ?? '');
 
+  // AH-07: без этих списков форма сохраняется, но рубрику/канал/ключи/связи
+  // выбрать не из чего — сбой показывается, а не выглядит «вариантов нет».
+  const [pickFail, fail] = usePickerFailures();
   useEffect(() => {
-    fetchLoreSlice<KeywordRow>('bragi_keys').then(setKeywords).catch(() => {});
-    fetchLoreSlice<ChannelRow>('bragi_channels').then(setChannels).catch(() => {});
-    fetchLoreSlice<RubricRow>('bragi_rubrics').then(setRubrics).catch(() => {});
-    fetchLoreSlice<LoreSprintRow>('sprints').then(setSprints).catch(() => {});
-    fetchLoreSlice<LoreRelease>('releases').then(setReleases).catch(() => {});
-  }, []);
+    fetchLoreSlice<KeywordRow>('bragi_keys').then(setKeywords).catch(fail(t('lore.pickerList.keywords', 'ключевые слова')));
+    fetchLoreSlice<ChannelRow>('bragi_channels').then(setChannels).catch(fail(t('lore.pickerList.channels', 'площадки')));
+    fetchLoreSlice<RubricRow>('bragi_rubrics').then(setRubrics).catch(fail(t('lore.pickerList.rubrics', 'рубрики')));
+    fetchLoreSlice<LoreSprintRow>('sprints').then(setSprints).catch(fail(t('lore.pickerList.sprints', 'спринты')));
+    fetchLoreSlice<LoreRelease>('releases').then(setReleases).catch(fail(t('lore.pickerList.releases', 'релизы')));
+  }, [fail, t]);
 
   // EDIT-01: localStorage draft autosave — protects against a closed tab/
   // crashed browser losing unsaved edits. Deliberately client-side only, not
@@ -519,6 +524,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       </div>
 
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
+      <PickerLoadWarning failed={pickFail} />
       {!readOnly && restoreDraft && (
         <div style={S.restoreBanner}>
           <span>{t('bragi.publicationEditor.draftFound', 'Найден несохранённый черновик от {{ts}}', { ts: new Date(restoreDraft.ts).toLocaleString('ru') })}</span>

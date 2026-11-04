@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, loreMutate } from '../../../api/lore';
+import { fetchLoreSlice, loreMutate, describeLoreError, LoreHttpError } from '../../../api/lore';
+import { LoadError } from '../EmptyState';
 import { type KcState } from '../kc-state';
 import { authHeaders } from '../../../auth/session';
 import type { DictRow, KcUser, KcAgent, Preflight } from './types';
@@ -23,6 +24,12 @@ interface AgentRow {
   owner_display_name: (string | null)[] | string | null;
 }
 
+/** Текст сбоя загрузки; отмена (abort) сбоем не считается. */
+const failText = (e: unknown): string | null => {
+  const d = describeLoreError(e);
+  return d.kind === 'aborted' ? null : d.text;
+};
+
 /** Траверс отдаёт скаляр или список — берём первое непустое. */
 const firstOf = (v: unknown): string | null => {
   if (Array.isArray(v)) return (v.find(x => x) as string | undefined) ?? null;
@@ -42,20 +49,32 @@ export function AgentsTab({ st, people, preflight, onError }: {
   const [roles, setRoles] = useState<DictRow[]>([]);
   const [matrix, setMatrix] = useState<Record<string, string[]>>({});
   const [projRoles, setProjRoles] = useState<Record<string, { projects: string[]; roles: string[] }>>({});
+  // AH-07 (A-05/A-06/A-07/A-11): сбой каждого источника раньше становился
+  // пустым значением — «агентов нет», «видит 0», «пишет 0», пустые профили.
+  // Это выглядело как реальный запрет или пустой граф, хотя данных просто не было.
+  const [agentsErr, setAgentsErr] = useState<string | null>(null);
+  const [rolesErr, setRolesErr] = useState<string | null>(null);
+  const [matrixErr, setMatrixErr] = useState<string | null>(null);
+  const [projFailed, setProjFailed] = useState<Set<string>>(new Set());
   const [reload, setReload] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', role: '', owner: '', client: '' });
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchLoreSlice<AgentRow>('agent_owners', {}, ctrl.signal).then(setAgents).catch(() => setAgents([]));
+    fetchLoreSlice<AgentRow>('agent_owners', {}, ctrl.signal)
+      .then(rs => { setAgents(rs); setAgentsErr(null); })
+      .catch(e => { const m = failText(e); if (m) { setAgents([]); setAgentsErr(m); } });
     fetchLoreSlice<DictRow>('dictionary', { dict_type: 'agent_profile' }, ctrl.signal)
-      .then(rs => setRoles(rs.filter(r => r.is_active !== false))).catch(() => setRoles([]));
+      .then(rs => { setRoles(rs.filter(r => r.is_active !== false)); setRolesErr(null); })
+      .catch(e => { const m = failText(e); if (m) { setRoles([]); setRolesErr(m); } });
     // Матрица D4 — с бэкенда, не константой на фронте: правило живёт в
     // ProjectRbacService, вторая копия разошлась бы с первой.
+    // Не-2xx раньше подменялся пустой матрицей — теперь это сбой.
     fetch('/lore/rbac/agent-matrix', { signal: ctrl.signal, headers: { ...authHeaders() } })
-      .then(r => r.ok ? r.json() : { matrix: {} })
-      .then(b => setMatrix(b?.matrix ?? {})).catch(() => setMatrix({}));
+      .then(r => { if (!r.ok) throw new LoreHttpError(r.status, r.statusText || 'agent-matrix', ''); return r.json(); })
+      .then(b => { setMatrix(b?.matrix ?? {}); setMatrixErr(null); })
+      .catch(e => { const m = failText(e); if (m) { setMatrix({}); setMatrixErr(m); } });
     return () => ctrl.abort();
   }, [reload]);
 
@@ -71,6 +90,9 @@ export function AgentsTab({ st, people, preflight, onError }: {
         .then(rs => [sub, rs[0]] as const)))
       .then(res => {
         const m: Record<string, { projects: string[]; roles: string[] }> = {};
+        const failed = new Set<string>();
+        res.forEach((r, i) => { if (r.status === 'rejected' && failText(r.reason)) failed.add(subs[i]); });
+        setProjFailed(failed);
         for (const r of res) {
           if (r.status !== 'fulfilled') continue;
           const [sub, row] = r.value;
@@ -161,7 +183,11 @@ export function AgentsTab({ st, people, preflight, onError }: {
       <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '14px 0 4px' }}>
         {t('lore.admin.agentsSection', 'Агенты')}
       </div>
-      {agents.length === 0 && (
+      {agentsErr && <LoadError text={t('lore.admin.agentsLoadError', 'Агенты графа не загрузились: {{reason}}', { reason: agentsErr })} />}
+      {matrixErr && !agentsErr && (
+        <div style={S.warn}>{t('lore.admin.matrixLoadError', 'Матрица делегирования не загрузилась — «пишет» неизвестно (?), а не 0: {{reason}}', { reason: matrixErr })}</div>
+      )}
+      {!agentsErr && agents.length === 0 && (
         <div style={S.warn}>
           {t('lore.admin.noAgents', 'Агентов нет ни одного. Роли и учётки заведены, но кто ими пользуется — не записано: права агента берутся у владельца, а владельца нет. При включённом проектном скоупе такой агент увидит пустой LORE.')}
         </div>
@@ -183,9 +209,16 @@ export function AgentsTab({ st, people, preflight, onError }: {
                   <td style={S.td}>{firstOf(a.owner_display_name)
                     ?? <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noOwner', '⚠ нет владельца')}</span>}</td>
                   <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{a.client_id ?? '—'}</td>
-                  <td style={{ ...S.td, ...S.num }}>{seesCount(sub)}</td>
-                  <td style={{ ...S.td, ...S.num, color: w.length ? 'var(--t2)' : 'var(--wrn)' }}>{w.length}</td>
-                  <td style={{ ...S.td, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{w.slice(0, 3).join(', ')}{w.length > 3 ? ' …' : ''}</td>
+                  <td style={{ ...S.td, ...S.num }} title={sub && projFailed.has(sub) ? t('lore.admin.unknownLoadFailed', 'не загрузилось') : undefined}>
+                    {sub && projFailed.has(sub) ? '?' : seesCount(sub)}</td>
+                  {(() => {
+                    const unknown = !!matrixErr || (!!sub && projFailed.has(sub));
+                    return <>
+                      <td style={{ ...S.td, ...S.num, color: unknown ? 'var(--t3)' : w.length ? 'var(--t2)' : 'var(--wrn)' }}
+                          title={unknown ? t('lore.admin.unknownLoadFailed', 'не загрузилось') : undefined}>{unknown ? '?' : w.length}</td>
+                      <td style={{ ...S.td, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{unknown ? '?' : <>{w.slice(0, 3).join(', ')}{w.length > 3 ? ' …' : ''}</>}</td>
+                    </>;
+                  })()}
                 </tr>
               );
             })}
@@ -216,6 +249,7 @@ export function AgentsTab({ st, people, preflight, onError }: {
       <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '20px 0 4px' }}>
         {t('lore.admin.agentRolesSection', 'Профили агентов')}
       </div>
+      {rolesErr && <LoadError text={t('lore.admin.profilesLoadError', 'Справочник профилей агентов не загрузился — выбрать профиль сейчас не из чего: {{reason}}', { reason: rolesErr })} />}
       <div style={S.tw}>
         <table style={S.table}>
           <thead><tr>{['код', 'название', 'кто вправе делегировать (D4)', 'учётка в KC', 'агентов'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
@@ -227,7 +261,7 @@ export function AgentsTab({ st, people, preflight, onError }: {
                 <tr key={r.code}>
                   <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td>
                   <td style={S.td}>{r.label_ru ?? r.code}</td>
-                  <td style={S.td}>{by.length
+                  <td style={S.td}>{matrixErr ? <span style={{ color: 'var(--t3)' }}>?</span> : by.length
                     ? by.map(x => <span key={x} style={{ ...S.pill('var(--t3)'), marginRight: 4 }}>{x}</span>)
                     : <span style={{ color: 'var(--t3)' }}>—</span>}</td>
                   <td style={S.td}>{hasClient

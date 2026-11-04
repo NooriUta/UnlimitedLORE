@@ -11,6 +11,8 @@ import {
 import { adrStatusLabel } from './LoreAdrList';
 import TipTapField from './TipTapField';
 import { LoreLinkChips, type LinkMeta } from './LoreLinkChips';
+import { usePickerFailures } from './loadState';
+import { PickerLoadWarning } from './EmptyState';
 
 type AdrStatus = 'PROPOSED' | 'ACCEPTED' | 'DEPRECATED' | 'SUPERSEDED';
 const ADR_STATUSES: AdrStatus[] = ['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED'];
@@ -70,11 +72,12 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
   const [compList, setCompList] = useState<Array<{ id: string; label: string }>>([]);
   const [compMeta, setCompMeta] = useState<Record<string, LinkMeta>>({});
   const [projList, setProjList] = useState<string[]>([]);
+  const [pickFail, fail] = usePickerFailures();
 
   useEffect(() => {
     fetchLoreSlice<LoreAdrRow>('adrs')
       .then(rows => setAdrList(rows.map(r => r.adr_id)))
-      .catch(() => {});
+      .catch(fail(t('lore.pickerList.adrs', 'ADR')));
     fetchLoreSlice<LoreComponent>('components')
       .then(rows => {
         setCompList(rows.map(r => ({ id: r.component_id, label: r.full_name || r.component_id })));
@@ -82,11 +85,11 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
         rows.forEach(r => { if (r.component_id) m[r.component_id] = { game_icon: r.game_icon, area: r.area, full_name: r.full_name }; });
         setCompMeta(m);
       })
-      .catch(() => {});
+      .catch(fail(t('lore.pickerList.components', 'компоненты')));
     fetchLoreSlice<{ slug: string }>('git_projects')
       .then(rows => setProjList(rows.map(r => r.slug).filter(Boolean).sort()))
-      .catch(() => { /* поле проектов деградирует в пустой список кандидатов */ });
-  }, []);
+      .catch(fail(t('lore.pickerList.projects', 'проекты')));
+  }, [fail, t]);
 
   const set = <K extends keyof FormState>(key: K) => (v: FormState[K]) =>
     setForm(f => ({ ...f, [key]: v }));
@@ -175,6 +178,7 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
       </div>
 
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
+      <PickerLoadWarning failed={pickFail} />
 
       {/* Row 1: ID · Name · Status · Date */}
       <div style={S.row4}>

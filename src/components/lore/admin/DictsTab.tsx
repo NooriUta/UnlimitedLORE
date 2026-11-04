@@ -18,8 +18,8 @@ const COLOR_TOKENS: [string, string][] = [
 ];
 const GAME_ICON_NAMES: string[] = Object.keys((gameIconsData as { icons: Record<string, unknown> }).icons);
 
-export function DictsTab({ rows, areaUsage, onError, reload }: {
-  rows: DictRow[]; areaUsage: Record<string, number>; onError: (e: unknown) => void; reload: () => void;
+export function DictsTab({ rows, areaUsage, usageUnknown, onError, reload }: {
+  rows: DictRow[]; areaUsage: Record<string, number>; usageUnknown?: boolean; onError: (e: unknown) => void; reload: () => void;
 }) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
@@ -41,7 +41,8 @@ export function DictsTab({ rows, areaUsage, onError, reload }: {
     .filter(r => active === 'all' || r.is_active)
     .filter(r => !q || r.code.includes(q.toLowerCase()) || (r.label_ru ?? '').toLowerCase().includes(q.toLowerCase()));
   const canon = CANON_TYPES.has(dt);
-  const usage = (code: string): number | null => (dt === 'area' ? (areaUsage[code] ?? 0) : null);
+  // AH-07: сбой загрузки компонентов — счёт неизвестен (н/д), а не «0 использований».
+  const usage = (code: string): number | null => (dt === 'area' && !usageUnknown ? (areaUsage[code] ?? 0) : null);
 
   async function save(activeOverride?: boolean) {
     if (!edit || !edit.code.trim()) { onError(new Error('code обязателен')); return; }

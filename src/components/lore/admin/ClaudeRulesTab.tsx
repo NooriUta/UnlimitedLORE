@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { fetchLoreDoc, type LoreKnowDocRow, type LoreKnowDoc } from '../../../api/lore';
+import { fetchLoreDoc, describeLoreError, type LoreKnowDocRow, type LoreKnowDoc } from '../../../api/lore';
+import { LoadError } from '../EmptyState';
 import { MartProse } from '../../bench/MartProse';
 import SandboxedHtmlFrame from '../SandboxedHtmlFrame';
 import { S } from './adminStyles';
@@ -24,15 +25,23 @@ export function ClaudeRulesTab({ rows }: { rows: LoreKnowDocRow[] }) {
   };
   const [body, setBody] = useState<LoreKnowDoc | null>(null);
   const [loading, setLoading] = useState(false);
+  // AH-07 (C-04): сбой загрузки тела показывался как «у документа нет тела», а
+  // body не сбрасывался — на новом документе оставалось тело предыдущего.
+  const [bodyErr, setBodyErr] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     if (!sel) return;
     const ctl = new AbortController();
-    setLoading(true);
+    setLoading(true); setBody(null); setBodyErr(null);
     fetchLoreDoc(sel, ctl.signal)
       .then(d => { setBody(d); setLoading(false); })
-      .catch(() => { /* abort или сбой сети — экран покажет «нет тела» */ setLoading(false); });
+      .catch(e => {
+        const d = describeLoreError(e);
+        if (d.kind === 'aborted') return; // отмена при смене документа — не сбой
+        setBodyErr(d.text); setLoading(false);
+      });
     return () => ctl.abort();
-  }, [sel]);
+  }, [sel, retry]);
   if (!rows.length) {
     return <div style={S.state('neutral')}>{t('lore.admin.claudeRulesEmpty', 'Правила не загружены: нет документов с kind claude-rules. Заводятся через MCP doc_new.')}</div>;
   }
@@ -53,7 +62,11 @@ export function ClaudeRulesTab({ rows }: { rows: LoreKnowDocRow[] }) {
           {loading && <div style={S.state('neutral')}>{t('lore.admin.claudeRulesLoading', 'Читаем документ…')}</div>}
           {!loading && body && md && <MartProse text={md} />}
           {!loading && body && !md && body.content_html && <SandboxedHtmlFrame html={body.content_html} title={body.title ?? body.doc_id} />}
-          {!loading && (!body || (!md && !body.content_html)) && (
+          {!loading && bodyErr && (
+            <LoadError text={t('lore.admin.claudeRulesLoadError', 'Документ не загрузился: {{reason}}', { reason: bodyErr })}
+              onRetry={() => setRetry(r => r + 1)} retryLabel={t('lore.admin.retry', 'повторить')} />
+          )}
+          {!loading && !bodyErr && (!body || (!md && !body.content_html)) && (
             <div style={S.state('neutral')}>{t('lore.admin.claudeRulesNoBody', 'У документа нет тела — проверьте content_md_ru/content_md_en.')}</div>
           )}
         </div>

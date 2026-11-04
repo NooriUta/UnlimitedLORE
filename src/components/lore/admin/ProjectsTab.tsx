@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
-import { fetchLoreSlice, loreMutate } from '../../../api/lore';
+import { fetchLoreSlice, loreMutate, describeLoreError, LoreNotFoundError } from '../../../api/lore';
+import { LoadError } from '../EmptyState';
 import { type KcState } from '../kc-state';
 import type { ProjRow, HostRow, KcUser } from './types';
 import { S } from './adminStyles';
@@ -26,13 +27,23 @@ function ProjectMembers({ slug, people, onError }: {
   const [err, setErr] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [pick, setPick] = useState<{ sub: string; role: string }>({ sub: '', role: 'reader' });
+  // AH-07 (P-07): сбой project_users рисовался как «в проекте нет ни одного
+  // участника — его не увидит никто». Без данных этого утверждать нельзя.
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
+    setLoadErr(null);
     fetchLoreSlice<{ kc_subs: (string | null)[] | null; display_names: (string | null)[] | null; roles: (string | null)[] | null }>(
       'project_users', { project: slug }, ctrl.signal)
       .then(rs => setRows(rs[0] ?? { kc_subs: [], display_names: [], roles: [] }))
-      .catch(() => setRows({ kc_subs: [], display_names: [], roles: [] })); // проект без участников — не ошибка
+      .catch(e => {
+        const empty = { kc_subs: [], display_names: [], roles: [] };
+        // 404 — проекта ещё нет в графе ролей: честное «участников нет», не сбой.
+        if (e instanceof LoreNotFoundError) { setRows(empty); return; }
+        const d = describeLoreError(e);
+        if (d.kind !== 'aborted') { setRows(empty); setLoadErr(d.text); }
+      });
     return () => ctrl.abort();
   }, [slug, reload]);
 
@@ -65,14 +76,18 @@ function ProjectMembers({ slug, people, onError }: {
         <span style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)' }}>
           {t('lore.admin.projectMembers', 'Участники проекта')}
         </span>
-        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
-          {t('lore.admin.membersCount', '{{n}} чел. · {{o}} owner', { n: members.length, o: owners })}
-        </span>
+        {!loadErr && (
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+            {t('lore.admin.membersCount', '{{n}} чел. · {{o}} owner', { n: members.length, o: owners })}
+          </span>
+        )}
       </div>
 
       {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 6 }}>{err}</div>}
 
-      {members.length === 0 ? (
+      {loadErr ? (
+        <LoadError text={t('lore.admin.membersLoadError', 'Участники проекта не загрузились: {{reason}}', { reason: loadErr })} onRetry={() => setReload(r => r + 1)} retryLabel={t('lore.admin.retry', 'повторить')} />
+      ) : members.length === 0 ? (
         <div style={{ ...S.warn, marginBottom: 6 }}>
           {t('lore.admin.noMembers', 'В проекте нет ни одного участника — при включённом проектном скоупе его не увидит никто.')}
         </div>
@@ -113,8 +128,8 @@ function ProjectMembers({ slug, people, onError }: {
   );
 }
 
-export function ProjectsTab({ rows, sprints, people, onError, reload }: {
-  rows: ProjRow[]; sprints: Record<string, number>; people: KcState<KcUser>;
+export function ProjectsTab({ rows, sprints, sprintsUnknown, people, onError, reload }: {
+  rows: ProjRow[]; sprints: Record<string, number>; sprintsUnknown?: boolean; people: KcState<KcUser>;
   onError: (e: unknown) => void; reload: () => void;
 }) {
   const { t } = useTranslation();
@@ -176,7 +191,10 @@ export function ProjectsTab({ rows, sprints, people, onError, reload }: {
                 <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
                   {p.hosts ? (() => { try { return (JSON.parse(p.hosts) as HostRow[]).map(h => h.remote).join(' · '); } catch { return '⚠ bad JSON'; } })() : '—'}
                 </td>
-                <td style={{ ...S.td, ...S.num }}><span style={{ color: sprints[p.slug] ? 'var(--t2)' : 'var(--t3)' }}>{sprints[p.slug] ?? 0}</span></td>
+                <td style={{ ...S.td, ...S.num }}>{sprintsUnknown
+                  // AH-07 (P-05): сбой слайса sprints — счёт неизвестен, а не «0».
+                  ? <span style={{ color: 'var(--t3)' }} title={t('lore.admin.unknownLoadFailed', 'не загрузилось')}>?</span>
+                  : <span style={{ color: sprints[p.slug] ? 'var(--t2)' : 'var(--t3)' }}>{sprints[p.slug] ?? 0}</span>}</td>
                 <td style={S.td}>
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button style={S.btn} onClick={() => setMembersOf(v => v === p.slug ? null : p.slug)}

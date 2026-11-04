@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { fetchLoreSlice, type LoreKnowDocRow } from '../../../api/lore';
+import { fetchLoreSlice, describeLoreError, type LoreKnowDocRow } from '../../../api/lore';
+import { LoadError } from '../EmptyState';
 import { loadKc, loadKcObj, type KcState } from '../kc-state';
 import { type RealmRole } from '../adminRealmRoles';
 import { AUTH_ENABLED } from '../../../auth/session';
@@ -34,6 +35,18 @@ function useIsNarrow(): boolean {
   );
 }
 
+/**
+ * AH-07 (SH-06): источники данных панели. Сбой источника раньше уходил только
+ * в тост, а стейт оставался `[]` — вкладка рисовала пустую таблицу, тост
+ * исчезал, «пусто» оставалось. Теперь сбой запоминается и показывается на
+ * каждой вкладке, которая из этого источника читает.
+ */
+type Src = 'dicts' | 'projects' | 'tags' | 'claudeRules' | 'sprints' | 'components';
+const TAB_SOURCES: Partial<Record<Tab, Src[]>> = {
+  dicts: ['dicts', 'components'], roles: ['dicts'], settings: ['dicts'],
+  projects: ['projects', 'sprints'], tags: ['tags'], claudeRules: ['claudeRules'],
+};
+
 export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
   const role = useRole();
@@ -60,25 +73,34 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const [realmRoles, setRealmRoles] = useState<KcState<RealmRole>>({ k: 'loading' });
   const [reload, setReload] = useState(0);
   const bump = () => setReload(x => x + 1);
+  const [srcErr, setSrcErr] = useState<Partial<Record<Src, string>>>({});
 
   useEffect(() => {
-    fetchLoreSlice<DictRow>('dictionary', {}).then(setDicts).catch(onError);
-    fetchLoreSlice<ProjRow>('git_projects', {}).then(setProjects).catch(onError);
-    fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnowTags).catch(onError);
+    setSrcErr({});
+    const failed = (src: Src, toast = true) => (e: unknown) => {
+      if (toast) onError(e);
+      const d = describeLoreError(e);
+      if (d.kind !== 'aborted') setSrcErr(m => ({ ...m, [src]: d.text }));
+    };
+    fetchLoreSlice<DictRow>('dictionary', {}).then(setDicts).catch(failed('dicts'));
+    fetchLoreSlice<ProjRow>('git_projects', {}).then(setProjects).catch(failed('projects'));
+    fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnowTags).catch(failed('tags'));
     // kind — серверный фильтр: общий корпус KnowDoc упирается в LIMIT 200 слайса.
-    fetchLoreSlice<LoreKnowDocRow>('docs', { kind: 'claude-rules' }).then(setClaudeRules).catch(onError);
+    fetchLoreSlice<LoreKnowDocRow>('docs', { kind: 'claude-rules' }).then(setClaudeRules).catch(failed('claudeRules'));
     fetchLoreSlice<{ sprint_id: string; git_projects: string[] | null }>('sprints', {})
       .then(rows => {
         const m: Record<string, number> = {};
         rows.forEach(r => (r.git_projects ?? []).forEach(p => { m[p] = (m[p] ?? 0) + 1; }));
         setSprintsByProject(m);
-      }).catch(() => { /* счётчик спринтов — украшение, не блокер */ });
+      // Счётчик спринтов — не блокер (без тоста), но и не «0»: столбец станет «?».
+      }).catch(failed('sprints', false));
     fetchLoreSlice<{ component_id: string; area: string | null }>('components', {})
       .then(rows => {
         const m: Record<string, number> = {};
         rows.forEach(c => { if (c.area) m[c.area] = (m[c.area] ?? 0) + 1; });
         setAreaUsage(m);
-      }).catch(() => { /* usage-колонка деградирует в «н/д» */ });
+      // usage-колонка деградирует в «н/д» (без тоста), а не в «0 использований».
+      }).catch(failed('components', false));
     loadKc<KcUser>('/lore/kc/users').then(setUsers);
     loadKc<KcAgent>('/lore/kc/agents').then(setAgents);
     loadKcObj<Preflight>('/lore/kc/auth-preflight').then(setPreflight);
@@ -130,11 +152,16 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
         </nav>
         <main style={S.main}>
           <div style={S.crumb}>{t('lore.admin.crumb', 'Администрирование')} · <span style={S.crumbB}>{TAB_TITLES[tab]}</span></div>
+          {(TAB_SOURCES[tab] ?? []).filter(s => srcErr[s]).map(s => (
+            <LoadError key={s}
+              text={t('lore.admin.sourceLoadError', 'Не загрузилось ({{src}}): {{reason}} — пустая таблица ниже не значит «данных нет»', { src: s, reason: srcErr[s] })}
+              onRetry={bump} retryLabel={t('lore.admin.retry', 'повторить')} />
+          ))}
           {tab === 'users' && <UsersTab st={users} preflight={preflight} realmRoles={realmRoles.k === 'ok' ? realmRoles.rows : null} onError={onError} reload={bump} />}
           {tab === 'agents' && <AgentsTab st={agents} people={users} preflight={preflight} onError={onError} />}
           {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} preflight={preflight} />}
-          {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
-          {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} people={users} onError={onError} reload={bump} />}
+          {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} usageUnknown={!!srcErr.components} onError={onError} reload={bump} />}
+          {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} sprintsUnknown={!!srcErr.sprints} people={users} onError={onError} reload={bump} />}
           {tab === 'tags' && <TagsTab know={knowTags} />}
           {tab === 'claudeRules' && <ClaudeRulesTab rows={claudeRules} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
