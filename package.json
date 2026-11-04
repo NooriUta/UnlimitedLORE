@@ -58,10 +58,14 @@
     "postcss-simple-vars": "^7.0.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.62.1",
-    "vite": "8.1.5",
+    "vite": "^8.3.5",
     "vitest": "^5.1.0"
   },
   "overrides": {
-    "dompurify": "^3.4.17"
+    "dompurify": "^3.4.17",
+    "katex": "^0.18.2",
+    "minimatch": "^11.0.1",
+    "brace-expansion": "^5.0.12",
+    "source-map-js": "^1.2.2"
   }
 }
