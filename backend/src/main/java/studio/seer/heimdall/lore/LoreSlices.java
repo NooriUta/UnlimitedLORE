@@ -1989,7 +1989,11 @@ public final class LoreSlices {
             // серверное усечение помечается явно (DBU-13).
             new LinkedHashMap<>(Map.of(
                 "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
-            " ORDER BY release_date DESC");
+            // 05.11.2026 (Völva): limit=1 отдавал произвольный релиз одной даты, а не
+            // текущий. Текущий — первым (true раньше false/null — проверяет
+            // ReleasesCurrentFirstLiveDbTest на настоящей базе), при равной дате —
+            // детерминированно по release_uid.
+            " ORDER BY is_current DESC, release_date DESC, release_uid DESC");
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +
