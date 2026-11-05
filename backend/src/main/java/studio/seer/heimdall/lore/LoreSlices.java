@@ -1692,7 +1692,9 @@ public final class LoreSlices {
         // Every task state row (scalar valid_from). Frontend takes min per task = created date,
         // for calendar duration (proxy «потраченного» в effort accuracy).
         slice("task_starts",
-            "SELECT in('HAS_STATE').task_id[0] AS task_id, valid_from " +
+            // SE-08: task_uid — пара «спринт/код»; голый task_id неоднозначен (220 кодов в
+            // нескольких спринтах). task_id оставлен для прежних читателей.
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from " +
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
