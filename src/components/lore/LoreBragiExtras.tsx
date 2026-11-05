@@ -3,7 +3,7 @@
 // one slice (bragi_keys/bragi_insights/bragi_integrations) or a small
 // client-side join over bragi_calendar + fetchBragiMetrics (Архив has no
 // dedicated backend slice — see note below).
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import { fetchLoreSlice, fetchBragiMetrics } from '../../api/lore';
@@ -12,7 +12,9 @@ import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBra
 import LoreBragiRubricManager, { type RubricRow } from './LoreBragiRubricManager';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
 import { ratioPct, channelCtrMedians, benchmarkArrow, snapshotValue, type RetroWindowHours } from './bragiAnalytics';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import LoreBragiInsightForm from './LoreBragiInsightForm';
+import { nextInsightId, insightEvidence, insightsOfRow } from './bragiInsight';
 import { searchHitHref } from '../../api/searchRoutes';
 
 // Shared facet helpers for the Bragi tables (T35) — same "empty = all,
@@ -185,10 +187,9 @@ export function LoreBragiKeys() {
 
 // ── Архив ────────────────────────────────────────────────────────────────
 // No dedicated backend slice — join bragi_calendar (published variants) with
-// per-object metrics client-side. "вывод" (takeaway) isn't a modeled field
-// on Publication/Variant in the v0.4 spec (it lives conceptually in
-// BragiInsight.statement_md, but there's no direct edge from archive row to
-// insight) — shown as "—" until that's modeled.
+// per-object metrics client-side. «Вывод» (V2-05) — не поле строки, а
+// BragiInsight с subject_id = вариация/публикация строки: кнопка фиксирует его,
+// чип «инсайт → INS-xx» показывает уже зафиксированные.
 interface CalendarRow {
   variant_id: string; status: string | null; published_at: string;
   publication_id: string[]; title: string[]; channel_id: string[];
@@ -221,6 +222,19 @@ export function LoreBragiArchive() {
   // V2-04: посты разного возраста несравнимы по цифрам «за всё время» —
   // переключатель окна от даты публикации.
   const [win, setWin] = useState<RetroWindowHours>(null);
+  // V2-05: инсайты — для номера следующего и для чипов строк. Не загрузились —
+  // кнопка не предлагается (номер угадывать нельзя), сама таблица не страдает.
+  const [insights, setInsights] = useState<{ insight_id: string; subject_id: string | null }[] | null>(null);
+  const [insightsFailed, setInsightsFailed] = useState(false);
+  const [formFor, setFormFor] = useState<string | null>(null);
+  const [, setSp] = useSearchParams();
+  const loadInsights = useCallback(() => {
+    fetchLoreSlice<{ insight_id: string; subject_id: string | null }>('bragi_insights')
+      .then(r => { setInsights(r.map(x => ({ insight_id: x.insight_id, subject_id: x.subject_id ?? null }))); setInsightsFailed(false); })
+      .catch(() => setInsightsFailed(true));
+  }, []);
+  useEffect(() => { loadInsights(); }, [loadInsights]);
+  const openInsights = () => setSp(p => { const n = new URLSearchParams(p); n.set('btab', 'insights'); return n; });
   useEffect(() => {
     let cancelled = false;
     fetchLoreSlice<CalendarRow>('bragi_calendar').then(async cal => {
@@ -302,6 +316,7 @@ export function LoreBragiArchive() {
             <th style={S.th}>{t('bragi.extras.archive.colPublication', 'публикация')}</th><th style={S.th}>{t('bragi.extras.archive.colChannel', 'канал')}</th><th style={S.th}>{t('bragi.extras.archive.colDate', 'дата')}</th>
             <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th>
             <th style={S.thNum}>{t('bragi.extras.archive.colCtr', 'CTR')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemoRate', 'демо-rate')}</th>
+            <th style={S.th}>{t('bragi.extras.archive.colInsight', 'вывод')}</th>
           </tr></thead>
           <tbody>
             {filteredWithRates.map(r => {
@@ -311,8 +326,11 @@ export function LoreBragiArchive() {
               const medianTitle = channelMedian !== undefined
                 ? t('bragi.extras.archive.ctrMedianTitle', 'медиана {{channel}}: {{v}}%', { channel, v: channelMedian.toFixed(1) })
                 : undefined;
+              const pubId = r.publication_id[0] ?? null;
+              const own = insights ? insightsOfRow(insights, r.variant_id, pubId) : [];
               return (
-                <tr key={r.variant_id}>
+                <Fragment key={r.variant_id}>
+                <tr>
                   <td style={S.td}>{r.title[0] ?? r.publication_id[0]}</td>
                   <td style={S.td}>{channel ?? '—'}</td>
                   <td style={S.td}>{r.published_at}</td>
@@ -324,7 +342,34 @@ export function LoreBragiArchive() {
                     {arrow && <span style={arrow === '▲' ? S.arrowUp : S.arrowDown}> {arrow}</span>}
                   </td>
                   <td style={S.tdNum}>{r.demoRate === null ? '—' : `${r.demoRate.toFixed(1)}%`}</td>
+                  <td style={S.td}>
+                    {own.map(id => (
+                      <button key={id} type="button" className="lore-tap" style={S.chipLink} onClick={openInsights}>
+                        {t('bragi.extras.archive.insightChip', 'инсайт → {{id}}', { id })}
+                      </button>
+                    ))}
+                    {insights && formFor !== r.variant_id && (
+                      <button type="button" style={S.editBtn} onClick={() => setFormFor(r.variant_id)}>
+                        {t('bragi.extras.archive.fixInsight', '+ зафиксировать вывод')}
+                      </button>
+                    )}
+                    {insightsFailed && own.length === 0 && (
+                      <span style={{ color: 'var(--t3)' }} title={t('bragi.extras.archive.insightsFailed', 'инсайты не загрузились — номер следующего неизвестен')}>?</span>
+                    )}
+                  </td>
                 </tr>
+                {formFor === r.variant_id && insights && (
+                  <tr><td colSpan={9} style={{ padding: 0 }}>
+                    <LoreBragiInsightForm
+                      insightId={nextInsightId(insights.map(i => i.insight_id))}
+                      subjectId={r.variant_id}
+                      evidence={insightEvidence(r, win)}
+                      onSaved={() => { setFormFor(null); loadInsights(); }}
+                      onCancel={() => setFormFor(null)}
+                    />
+                  </td></tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>

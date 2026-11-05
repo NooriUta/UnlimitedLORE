@@ -2220,7 +2220,7 @@ public final class LoreSlices {
         // returns whatever field exists on the target (adr_id null on a task row
         // and vice versa), so both arrays below are safe to project together.
         slice("bragi_insights",
-            "SELECT insight_id, statement_md, insight_date, evidence_ref, " +
+            "SELECT insight_id, statement_md, insight_date, evidence_ref, subject_id, " +
             "out('LED_TO').task_uid AS led_tasks, " +
             "out('LED_TO').adr_id AS led_adrs " +
             "FROM BragiInsight",

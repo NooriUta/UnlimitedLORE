@@ -2636,7 +2636,11 @@
         "windowLabel": "window from publication date",
         "winLifetime": "lifetime",
         "win72h": "first 72 h",
-        "win7d": "first 7 days"
+        "win7d": "first 7 days",
+        "colInsight": "takeaway",
+        "insightChip": "insight → {{id}}",
+        "fixInsight": "+ record takeaway",
+        "insightsFailed": "insights failed to load — next number unknown"
       },
       "insights": {
         "loading": "loading…",
@@ -2656,6 +2660,22 @@
         "colLastCalled": "last call",
         "editBtn": "✎ edit",
         "empty": "no integrations yet"
+      },
+      "insightForm": {
+        "linkFailed": "takeaway {{id}} saved, link not set: {{err}}",
+        "evidenceTitle": "evidence filled in from the row",
+        "placeholder": "what the numbers showed and what follows from it",
+        "statementLabel": "takeaway",
+        "ledTo": "leads to",
+        "ledNone": "nothing yet",
+        "ledTask": "a task",
+        "ledAdr": "an ADR",
+        "taskPlaceholder": "SPRINT_X/CODE",
+        "adrPlaceholder": "ADR-LORE-0NN",
+        "targetLabel": "where it leads",
+        "saving": "saving…",
+        "save": "record",
+        "cancel": "cancel"
       }
     },
     "integrationEditor": {
