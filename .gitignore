@@ -29,3 +29,7 @@ Thumbs.db
 # build/crash artifacts
 *.tsbuildinfo
 *.stackdump
+
+# CLAUDE.md проекта живёт только локально (убран из репо в 692b8e2a);
+# источник для панели «Правила CLAUDE» — его снимок claude_rules_unlimitedlore в LORE.
+/CLAUDE.md
