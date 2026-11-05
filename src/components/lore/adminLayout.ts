@@ -44,3 +44,28 @@ export const peopleSplit = (narrow: boolean, hasCard: boolean) => ({
 
 /** На телефоне открытая карточка занимает экран целиком — список не рисуется. */
 export const showPeopleList = (narrow: boolean, hasCard: boolean) => !(narrow && hasCard);
+
+/** AH-05 п.2: кнопка действия — на телефоне 40px и делит ширину карточки, на десктопе плотная. */
+export const actBtn = (narrow: boolean) => ({
+  minHeight: tapMin(narrow), flex: narrow ? 1 : undefined,
+  display: 'inline-flex', alignItems: 'center' as const, justifyContent: 'center' as const, gap: 4,
+});
+
+/**
+ * SH-13: поле поиска. На телефоне — во всю ширину, тап-цель 40px и шрифт 16px:
+ * iOS приближает страницу при фокусе на поле со шрифтом меньше 16px, и после
+ * ввода админка остаётся увеличенной. 16px — отдельный токен (--fs-touch-input),
+ * а не ступень шкалы: он нужен ровно полям ввода на сенсорном экране.
+ */
+export const searchBox = (narrow: boolean) => ({
+  wrap: {
+    display: 'flex', alignItems: 'center' as const, gap: 6, flex: 1, minWidth: narrow ? 0 : 150,
+    maxWidth: narrow ? 'none' : 300, flexBasis: narrow ? '100%' : undefined,
+    minHeight: tapMin(narrow), padding: '0 8px', borderRadius: 5,
+    border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t3)',
+  },
+  input: {
+    flex: 1, minWidth: 0, border: 'none', background: 'none', outline: 'none', color: 'var(--t1)',
+    fontFamily: 'inherit', fontSize: narrow ? 'var(--fs-touch-input)' : 'var(--fs-sm)', padding: '3px 0',
+  },
+});
