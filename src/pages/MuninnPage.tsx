@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { switchParam } from '../hooks/useUrlState';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -32,6 +33,8 @@ import {
 } from '../components/bench/NarrativeScreens';
 import { MuninnErrorBoundary, PanelMsg } from '../components/bench/shared';
 
+// AH-09: ключи состояния экранов вкладок бенча (см. switchParam в setTab).
+const BENCH_SCREEN_KEYS = ['bview', 'cst'] as const;
 const EMPTY_PARAMS: Record<string, string> = {};
 
 type TabId =
@@ -122,9 +125,9 @@ export default function MuninnPage() {
   const isMobile = useIsMobile();
   const setTab = useCallback((next: TabId) => {
     setSearchParams(prev => {
-      const p = new URLSearchParams(prev);
-      p.set('tab', next);
-      return p;
+      // AH-09: смена вкладки снимает состояние экранов вкладок (вид Biblio,
+      // фильтр кампаний) — раньше его сбрасывал размонтаж.
+      return switchParam(new URLSearchParams(prev), 'tab', next, BENCH_SCREEN_KEYS);
     });
   }, [setSearchParams]);
 

@@ -6,6 +6,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { MartProse } from './MartProse';
+import { useUrlState } from '../../hooks/useUrlState';
 import { fetchMartSlice, muninnFileUrl } from '../../api/muninn';
 
 /* ELK runs in-process (bundled build, no worker) — one instance for the module */
@@ -14,6 +15,7 @@ const elk = new ELK();
 /* ── Types ──────────────────────────────────────────────────────────── */
 type LangMode   = 'ru' | 'ru_sci' | 'en';
 type BiblioView = 'cards' | 'slice' | 'graph';
+const BIBLIO_VIEWS: readonly BiblioView[] = ['cards', 'slice', 'graph'];
 
 interface HarmoNode {
   node_id:            string;
@@ -1232,7 +1234,8 @@ interface Props {
 }
 
 export function BiblioScreen({ onError }: Props) {
-  const [view,      setView]      = useState<BiblioView>('slice');
+  // AH-09: вид Biblio в URL (?bview=).
+  const [view,      setView]      = useUrlState<BiblioView>('bview', 'slice', BIBLIO_VIEWS);
   const [lang,      setLang]      = useState<LangMode>('ru');
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);

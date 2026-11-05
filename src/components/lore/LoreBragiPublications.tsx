@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchBragiMetrics, describeLoreError, type BragiMetricPoint } from '../../api/lore';
 import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData, countOpenTodos } from './LoreBragiPublicationEditor';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
+import { useUrlSet } from '../../hooks/useUrlState';
 
 interface PublicationRow {
   publication_id: string;
@@ -63,9 +64,10 @@ export default function LoreBragiPublications() {
   const [rows, setRows] = useState<PublicationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
-  const [rubricSel, setRubricSel] = useState<Set<string>>(new Set());
-  const [channelSel, setChannelSel] = useState<Set<string>>(new Set());
+  // AH-09: фильтры публикаций в URL (?bst=&brb=&bch=, повтор ключа на значение).
+  const [statusSel, setStatusSel] = useUrlSet('bst');
+  const [rubricSel, setRubricSel] = useUrlSet('brb');
+  const [channelSel, setChannelSel] = useUrlSet('bch');
   const [filterOpen, setFilterOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<BragiMetricPoint[]>([]);
@@ -134,7 +136,7 @@ export default function LoreBragiPublications() {
     return m;
   }, [rows, matchStatus, matchRubric]);
 
-  const mkToggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (v: string) =>
+  const mkToggle = (setter: (v: (prev: Set<string>) => Set<string>) => void) => (v: string) =>
     setter(prev => { const n = new Set(prev); if (n.has(v)) n.delete(v); else n.add(v); return n; });
   const toggleStatus = mkToggle(setStatusSel);
   const toggleRubric = mkToggle(setRubricSel);
