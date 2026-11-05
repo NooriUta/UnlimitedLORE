@@ -123,10 +123,15 @@ class DateTimeFormatProbeLiveDbTest {
         String alter = sql(A, "ALTER DATABASE `arcadedb.dateTimeFormat` \"" + ISO_FMT + "\"");
         assertTrue(alter.startsWith("200"), "ALTER DATABASE dateTimeFormat принят: " + alter);
         String afterA = query(A, "SELECT ts FROM Probe");
-        // ТОЧНОЕ равенство: contains() пропускал бы «…171Z.171» (разбор байткода 26.10.2:
-        // expandFormatToPrecision дописывает .SSS к формату, не кончающемуся на S).
-        assertEquals("2026-11-04T19:56:10.171Z", tsOf(afterA),
-            "после ALTER выдача базы A обязана быть РОВНО ISO-8601 с Z. По умолчанию было: " + defVal);
+        // ЗАМЕР 05.11.2026 (CI, ArcadeDB 26.10.2): после ALTER выдача —
+        // «2026-11-04T19:56:10.171Z.171», не ISO: expandFormatToPrecision дописывает .SSS к
+        // формату, не кончающемуся на S. Поэтому V56 (RM-P13) формат базы НЕ трогает, а ISO-Z
+        // дописывает бэкенд (LoreTimeFormatResponseFilter). Этот тест фиксирует ПРИЧИНУ
+        // решения: если новая версия движка отдаст ровно ISO — он упадёт и скажет, что
+        // решение можно пересмотреть. Точное значение, не contains (contains пропускал хвост).
+        assertEquals("2026-11-04T19:56:10.171Z.171", tsOf(afterA),
+            "поведение ALTER dateTimeFormat изменилось — пересмотреть решение RM-P13 «формат базы не трогаем». "
+            + "По умолчанию было: " + defVal);
 
         // допущение 2: соседняя база не задета
         String afterB = query(B, "SELECT ts FROM Probe");
