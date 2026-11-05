@@ -7,7 +7,7 @@
 // Неизвестность — не «ok»: молчаливое «ok» при неизвестной сборке — та же
 // пустышка, что зелёный сторож, который ничего не сторожит.
 
-export type DriftVerdict = 'ok' | 'mcp_older' | 'unknown';
+export type DriftVerdict = 'ok' | 'mcp_older' | 'unknown' | 'restart_needed';
 export type Drift = { verdict: DriftVerdict; reason: string };
 
 function parseInstant(s: string | undefined): number | null {
@@ -35,4 +35,25 @@ export function driftVerdict(mcpBuiltAt: string | undefined, backendBuiltAt: str
     };
   }
   return { verdict: 'ok', reason: '' };
+}
+
+/**
+ * 05.11.2026: процесс исполняет сборку, загруженную ПРИ СТАРТЕ, а npm run build
+ * меняет только файлы на диске. Раньше lore_version читал отметку с диска на каждом
+ * вызове и показывал свежую сборку при старом коде в памяти — «drift: ok», когда
+ * новых инструментов и полей у процесса нет. Вердикт restart_needed говорит прямо:
+ * пересобрано, но не перезапущено. Нечитаемая отметка на диске — не повод (null).
+ */
+export function processStale(
+  loaded: { commit: string; built_at: string },
+  onDisk: { commit: string; built_at: string },
+): Drift | null {
+  if (!onDisk.commit || onDisk.commit === 'unknown') return null;
+  if (onDisk.commit === loaded.commit && onDisk.built_at === loaded.built_at) return null;
+  return {
+    verdict: 'restart_needed',
+    reason: `процесс MCP исполняет сборку ${loaded.commit} (${loaded.built_at || '?'}), а на диске уже ` +
+      `${onDisk.commit} (${onDisk.built_at || '?'}) — пересобрано, но не перезапущено. Новые инструменты и поля ` +
+      'появятся только после перезапуска сессии (или /mcp → Reconnect).',
+  };
 }

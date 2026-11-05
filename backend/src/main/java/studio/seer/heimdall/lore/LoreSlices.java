@@ -1307,6 +1307,23 @@ public final class LoreSlices {
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
 
+        // SE-01, шаг 1 (пункт 4 mig_gen, 05.11.2026): заметки задач по списку uid.
+        // После open_tasks агенту нужно прочитать 10–20 заметок — раньше либо по
+        // одной, либо весь спринт целиком (78–90 КБ ради трёх заметок). Поля и
+        // выражения — те же, что у tasks_of_sprints_batch; список — механизмом SE-16
+        // (имя на _uids уходит в СУБД списком, каждый элемент — белым списком).
+        slice("tasks_by_uids",
+            "SELECT task_uid, task_id, title, " +
+            "out('PART_OF').sprint_id[0]                              AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
+            "out('TAGGED_WITH').component_id                          AS component_ids, " +
+            ROLE_HOLDERS + ", task_type, work_class " +
+            "FROM KnowTask WHERE task_uid IN :task_uids " +
+            "ORDER BY task_uid",
+            List.of("task_uids"), Map.of(), "");
+
         // Lightweight projection: one row per task carrying only its sprint_id +
         // status_raw. Feeds the sprint LIST (LoreSprintTree) task-status breakdown
         // across ALL sprints — the frontend aggregates counts per sprint in JS.
@@ -1989,7 +2006,11 @@ public final class LoreSlices {
             // серверное усечение помечается явно (DBU-13).
             new LinkedHashMap<>(Map.of(
                 "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
-            " ORDER BY release_date DESC");
+            // 05.11.2026 (Völva): limit=1 отдавал произвольный релиз одной даты, а не
+            // текущий. Текущий — первым (true раньше false/null — проверяет
+            // ReleasesCurrentFirstLiveDbTest на настоящей базе), при равной дате —
+            // детерминированно по release_uid.
+            " ORDER BY is_current DESC, release_date DESC, release_uid DESC");
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +

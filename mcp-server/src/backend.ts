@@ -172,11 +172,24 @@ async function serviceAccountToken(): Promise<string> {
  * Благодаря этому MCP можно настроить заранее и включать auth когда угодно —
  * без окна молчания и без согласованного рестарта двух сторон.
  */
+/**
+ * AO-07, путь «full заявляет роль» (решение владельца 04.11): экземпляр MCP подагента
+ * запускается с LORE_ACT_AS=<профиль>, и каждая запись несёт X-Lore-Act-As. Бэкенд
+ * проверяет запись матрицей ЗАЯВЛЕННОГО профиля — заявка только сужает права full;
+ * профиль, закреплённый своим клиентом, заголовком не меняется (AgentScopeFilter).
+ */
+export function actAsHeader(env: Record<string, string | undefined>): Record<string, string> {
+  const v = (env.LORE_ACT_AS ?? '').trim();
+  return v ? { 'X-Lore-Act-As': v } : {};
+}
+
 async function writeAuthHeaders(): Promise<Record<string, string>> {
-  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE };
+  const actAs = actAsHeader(process.env);
+  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs };
   return {
     Authorization: `Bearer ${await serviceAccountToken()}`,
     'X-Seer-Role': ROLE,
+    ...actAs,
   };
 }
 

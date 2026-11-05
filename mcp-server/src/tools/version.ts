@@ -1,7 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { loreGet } from '../backend.js';
 import { readBuildInfo, type BuildInfo } from '../buildInfo.js';
-import { driftVerdict, type Drift } from '../drift.js';
+import { driftVerdict, processStale, type Drift } from '../drift.js';
+
+// Сборка, которую ИСПОЛНЯЕТ этот процесс: читается один раз при загрузке модуля.
+// Повторное чтение на вызове видит диск, а не память (см. processStale).
+const LOADED: BuildInfo = readBuildInfo();
 
 // SE-10: сверка сборки MCP-сервера со сборкой бэкенда.
 //
@@ -22,7 +26,8 @@ export type VersionReport = {
 };
 
 export async function versionReport(): Promise<VersionReport> {
-  const mcp = readBuildInfo();
+  const mcp = LOADED;
+  const onDisk = readBuildInfo();
   let backend: BackendVersion | null = null;
   let backendError: string | undefined;
   try {
@@ -32,7 +37,7 @@ export async function versionReport(): Promise<VersionReport> {
     // причиной, чтобы «не смогли проверить» не читалось как «проверили».
     backendError = e instanceof Error ? e.message : String(e);
   }
-  const drift = driftVerdict(mcp.built_at, backend?.built_at);
+  const drift = processStale(mcp, onDisk) ?? driftVerdict(mcp.built_at, backend?.built_at);
   return backendError ? { mcp, backend, drift, backend_error: backendError } : { mcp, backend, drift };
 }
 
@@ -40,7 +45,7 @@ export function registerVersion(server: McpServer): void {
   server.tool(
     'lore_version',
     'Build of this MCP server vs build of the LORE backend (SE-10). Returns {mcp:{commit,built_at}, ' +
-      'backend:{commit,built_at,schema_version}, drift:{verdict: ok|mcp_older|unknown, reason}}. ' +
+      'backend:{commit,built_at,schema_version}, drift:{verdict: ok|mcp_older|unknown|restart_needed, reason}}. restart_needed = rebuilt on disk but this process still runs the build it loaded at start (mcp = the LOADED build, not the file). ' +
       'mcp_older = the tool schemas you see may lag the backend (a new parameter answers ' +
       '"Unrecognized key", a fixed description still reads old) — rebuild mcp-server and restart the session. ' +
       'Call it when a tool rejects a parameter the backend is known to accept.',
