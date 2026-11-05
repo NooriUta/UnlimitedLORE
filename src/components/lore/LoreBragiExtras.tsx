@@ -11,7 +11,7 @@ import LoreBragiIntegrationEditor, { type LoreBragiIntegrationEditData } from '.
 import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBragiKeywordEditor';
 import LoreBragiRubricManager, { type RubricRow } from './LoreBragiRubricManager';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
-import { ratioPct, channelCtrMedians, benchmarkArrow } from './bragiAnalytics';
+import { ratioPct, channelCtrMedians, benchmarkArrow, snapshotValue, type RetroWindowHours } from './bragiAnalytics';
 import { useNavigate } from 'react-router-dom';
 import { searchHitHref } from '../../api/searchRoutes';
 
@@ -193,15 +193,34 @@ interface CalendarRow {
   variant_id: string; status: string | null; published_at: string;
   publication_id: string[]; title: string[]; channel_id: string[];
 }
-interface ArchiveRow extends CalendarRow { views: number; clicks: number; demo: number }
+type MetricPoint = { metric: string; value: number; ts: string };
+interface FetchedRow extends CalendarRow { variantPts: MetricPoint[]; pubPts: MetricPoint[] }
+interface ArchiveRow extends FetchedRow { views: number | null; clicks: number | null; demo: number | null }
+
+/**
+ * V2-04: значение метрики строки в выбранном окне. Точка — накопительный снимок,
+ * поэтому у КАЖДОГО объекта (вариация, публикация) берётся последний снимок в
+ * окне, а не сумма точек (сумма задваивала цифру при втором замере). Метрики
+ * вариации и публикации — разные объекты, их снимки складываются, как и раньше.
+ * Ни у одного объекта нет снимка в окне — null («мало точек»), не 0.
+ */
+function metricInWindow(r: FetchedRow, metric: string, win: RetroWindowHours): number | null {
+  const vals = [r.variantPts, r.pubPts]
+    .map(pts => snapshotValue(pts, metric, r.published_at, win).value)
+    .filter((v): v is number => v !== null);
+  return vals.length === 0 ? null : vals.reduce((s, v) => s + v, 0);
+}
 
 export function LoreBragiArchive() {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<ArchiveRow[]>([]);
+  const [fetched, setFetched] = useState<FetchedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [channelSel, setChannelSel] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
+  // V2-04: посты разного возраста несравнимы по цифрам «за всё время» —
+  // переключатель окна от даты публикации.
+  const [win, setWin] = useState<RetroWindowHours>(null);
   useEffect(() => {
     let cancelled = false;
     fetchLoreSlice<CalendarRow>('bragi_calendar').then(async cal => {
@@ -210,14 +229,18 @@ export function LoreBragiArchive() {
           fetchBragiMetrics({ object_id: c.variant_id }),
           fetchBragiMetrics({ object_id: c.publication_id[0] ?? '' }),
         ]);
-        const sum = (metric: string) =>
-          [...vm, ...pm].filter(m => m.metric === metric).reduce((s, m) => s + m.value, 0);
-        return { ...c, views: sum('views'), clicks: sum('clicks'), demo: sum('demo_conv') };
+        return { ...c, variantPts: vm, pubPts: pm };
       }));
-      if (!cancelled) { setRows(withMetrics); setLoading(false); }
+      if (!cancelled) { setFetched(withMetrics); setLoading(false); }
     }).catch(() => { if (!cancelled) { setLoading(false); setError(true); } });
     return () => { cancelled = true; };
   }, []);
+  const rows: ArchiveRow[] = useMemo(() => fetched.map(r => ({
+    ...r,
+    views: metricInWindow(r, 'views', win),
+    clicks: metricInWindow(r, 'clicks', win),
+    demo: metricInWindow(r, 'demo_conv', win),
+  })), [fetched, win]);
   const channels = useMemo(() => distinct(rows, r => r.channel_id), [rows]);
   const matchChannel = useCallback((r: ArchiveRow) => channelSel.size === 0 || r.channel_id.some(c => channelSel.has(c)), [channelSel]);
   const filtered = useMemo(() => rows.filter(matchChannel), [rows, matchChannel]);
@@ -230,9 +253,12 @@ export function LoreBragiArchive() {
   // для канала», а не только видимость строк.
   const withRates = useMemo(() => rows.map(r => ({
     ...r,
-    ctr: ratioPct(r.clicks, r.views),
-    demoRate: ratioPct(r.demo, r.clicks),
+    // Нет снимка в окне — доли нет: «мало точек», а не 0 %.
+    ctr: r.clicks === null || r.views === null ? null : ratioPct(r.clicks, r.views),
+    demoRate: r.demo === null || r.clicks === null ? null : ratioPct(r.demo, r.clicks),
   })), [rows]);
+  const fewPts = t('bragi.extras.archive.fewPoints', 'мало точек: в этом окне нет ни одного замера');
+  const num = (v: number | null) => (v === null ? <span style={{ color: 'var(--t3)' }} title={fewPts}>—</span> : v);
   const ctrMedianByChannel = useMemo(
     () => channelCtrMedians(withRates.map(r => ({ channel: r.channel_id[0] ?? null, ctr: r.ctr }))),
     [withRates],
@@ -244,6 +270,14 @@ export function LoreBragiArchive() {
   return (
     <div>
       <div style={S.desc}>{t('bragi.extras.archive.desc', 'ретроспектива: опубликованное и что оно дало.')}</div>
+      <div role="group" aria-label={t('bragi.extras.archive.windowLabel', 'окно от даты публикации')}
+        style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+        <span style={S.hint}>{t('bragi.extras.archive.windowLabel', 'окно от даты публикации')}:</span>
+        {([[null, t('bragi.extras.archive.winLifetime', 'за всё время')], [72, t('bragi.extras.archive.win72h', 'первые 72 ч')], [168, t('bragi.extras.archive.win7d', 'первые 7 дней')]] as [RetroWindowHours, string][]).map(([w, label]) => (
+          <button key={String(w)} type="button" aria-pressed={win === w} onClick={() => setWin(w)}
+            style={win === w ? S.winOn : S.winOff}>{label}</button>
+        ))}
+      </div>
       {channels.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <FilterBar
@@ -282,9 +316,9 @@ export function LoreBragiArchive() {
                   <td style={S.td}>{r.title[0] ?? r.publication_id[0]}</td>
                   <td style={S.td}>{channel ?? '—'}</td>
                   <td style={S.td}>{r.published_at}</td>
-                  <td style={S.tdNum}>{r.views || '—'}</td>
-                  <td style={S.tdNum}>{r.clicks || '—'}</td>
-                  <td style={S.tdNum}>{r.demo || '—'}</td>
+                  <td style={S.tdNum}>{num(r.views)}</td>
+                  <td style={S.tdNum}>{num(r.clicks)}</td>
+                  <td style={S.tdNum}>{num(r.demo)}</td>
                   <td style={S.tdNum} title={medianTitle}>
                     {r.ctr === null ? '—' : `${r.ctr.toFixed(1)}%`}
                     {arrow && <span style={arrow === '▲' ? S.arrowUp : S.arrowDown}> {arrow}</span>}
@@ -450,6 +484,11 @@ const S: Record<string, React.CSSProperties> = {
   // V2-03: CTR выше/ниже медианы канала — тот же смысл, что светофор в
   // остальном LORE (--suc/--dng), не жёлтый: тут не «предупреждение», а
   // направленное сравнение с типичным результатом канала.
+  // V2-04: переключатель окна ретроспективы.
+  winOn:   { borderRadius: 999, padding: '2px 10px', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+             background: 'color-mix(in srgb, var(--acc) 16%, transparent)', border: '1px solid var(--acc)', color: 'var(--acc)' },
+  winOff:  { borderRadius: 999, padding: '2px 10px', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+             background: 'transparent', border: '1px solid var(--bd)', color: 'var(--t2)' },
   arrowUp:   { color: 'var(--suc)', fontWeight: 700 },
   arrowDown: { color: 'var(--dng)', fontWeight: 700 },
   // Тот же анти-паттерн, что в паспортах ADR/компонента: transparent на
