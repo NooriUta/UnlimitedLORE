@@ -4,7 +4,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.Assumptions;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -34,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * которые создаёт и удаляет сам. system_aida_lore и lore_ci_test не трогает.
  * Каждое наблюдение печатается — при провале видно фактическую выдачу.</p>
  */
-@EnabledIfEnvironmentVariable(named = "LORE_TEST_DB_URL", matches = ".+")
 @DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class DateTimeFormatProbeLiveDbTest {
 
@@ -69,7 +68,16 @@ class DateTimeFormatProbeLiveDbTest {
 
     @BeforeAll
     static void setUp() throws Exception {
-        url = System.getenv("LORE_TEST_DB_URL").replaceAll("/+$", "");
+        // Fail-closed в CI: Gradle печатает только упавшие тесты, и пропущенная проба
+        // была бы неотличима от прошедшей — «зелёный» ничего не доказывал бы. В CI
+        // LORE_TEST_DB_URL задаётся всегда; нет его там — это поломка, а не повод молчать.
+        String raw = System.getenv("LORE_TEST_DB_URL");
+        boolean ci = "true".equals(System.getenv("GITHUB_ACTIONS")) || "true".equals(System.getenv("CI"));
+        if (raw == null || raw.isBlank()) {
+            if (ci) fail("RM-P13 probe: в CI нет LORE_TEST_DB_URL — проба не выполнилась бы, а зелёный выглядел бы подтверждением");
+            Assumptions.abort("локально без LORE_TEST_DB_URL проба не запускается");
+        }
+        url = raw.replaceAll("/+$", "");
         String pw = System.getenv().getOrDefault("LORE_TEST_DB_PASSWORD", "playwithdata");
         auth = "Basic " + Base64.getEncoder().encodeToString(("root:" + pw).getBytes(StandardCharsets.UTF_8));
         for (String db : new String[]{A, B}) {
