@@ -212,6 +212,30 @@ class HistValidTimeDatetimeLiveDbTest {
         assertFalse(vf.contains(" "));
     }
 
+    /**
+     * Не-слайсовый эндпоинт: строки идут через queryPublic → Map ресурса →
+     * ответ, мимо sliceBody. Приводит их только фильтр ответа
+     * (LoreTimeFormatResponseFilter). Эндпоинта, отдающего valid_from/valid_to
+     * *Hist мимо слайсов, в бэкенде нет (паспорта и история — слайсы), поэтому
+     * берём /lore/uc/quality/all с date_created: путь выдачи тот же, что у
+     * любых остальных ~120 вызовов queryPublic.
+     */
+    @Test
+    @Order(6)
+    void nonSliceEndpointEmitsIsoZ() throws Exception {
+        sql("INSERT INTO KnowUseCase SET uc_id = 'UC-V56-PROBE', title = 'проба V56', "
+            + "date_created = '2026-04-13 08:15:00.123'");
+        assertEquals("2026-04-13 08:15:00.123",
+            String.valueOf(sql("SELECT date_created AS v FROM KnowUseCase WHERE uc_id = 'UC-V56-PROBE'").get(0).get("v")),
+            "положительный контроль: база отдаёт форму без зоны");
+
+        List<Map<String, Object>> rows = given().when().get("/lore/uc/quality/all")
+            .then().statusCode(200).extract().jsonPath().getList("rows");
+        Object dc = rows.stream().filter(r -> "UC-V56-PROBE".equals(r.get("uc_id")))
+            .map(r -> r.get("date_created")).findFirst().orElseThrow();
+        assertEquals("2026-04-13T08:15:00.123Z", dc, "фильтр ответа не привёл время вне слайсов");
+    }
+
     private static LoreSchemaMigrationRunner.HistTimeReport report(
             List<LoreSchemaMigrationRunner.HistTimeReport> reports, String type, String field) {
         return reports.stream().filter(r -> r.type().equals(type) && r.field().equals(field))
@@ -223,6 +247,7 @@ class HistValidTimeDatetimeLiveDbTest {
         if (LoreArcadeDbTestResource.BASE_URL == null) return;
         sql("DELETE FROM KnowRunbookHist WHERE state_uid IN ['v56-a', 'v56-b', 'v56-c']");
         sql("DELETE FROM KnowPhaseHist WHERE state_uid IN ['v56-ok', 'v56-bad']");
+        sql("DELETE FROM KnowUseCase WHERE uc_id = 'UC-V56-PROBE'");
         redeclare("KnowPhaseHist", "valid_from", "DATETIME");
     }
 }

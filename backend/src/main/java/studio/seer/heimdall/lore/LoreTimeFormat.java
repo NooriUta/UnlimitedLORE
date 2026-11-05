@@ -57,6 +57,38 @@ final class LoreTimeFormat {
         return v;
     }
 
+    /**
+     * Дерево Jackson: текстовые узлы формы рендера DATETIME заменяются на ISO-Z
+     * НА МЕСТЕ; возвращается тот же узел. Для тел ответа, которые не Map/List
+     * (record, POJO) — их строки видны только после {@code valueToTree}.
+     */
+    static com.fasterxml.jackson.databind.JsonNode isoUtcTree(com.fasterxml.jackson.databind.JsonNode n) {
+        if (n instanceof com.fasterxml.jackson.databind.node.ObjectNode o) {
+            List<String> names = new ArrayList<>();
+            o.fieldNames().forEachRemaining(names::add);
+            for (String f : names) {
+                com.fasterxml.jackson.databind.JsonNode c = o.get(f);
+                if (c != null && c.isTextual()) {
+                    Object v = isoUtc(c.textValue());
+                    if (!v.equals(c.textValue())) o.put(f, (String) v);
+                } else {
+                    isoUtcTree(c);
+                }
+            }
+        } else if (n instanceof com.fasterxml.jackson.databind.node.ArrayNode a) {
+            for (int i = 0; i < a.size(); i++) {
+                com.fasterxml.jackson.databind.JsonNode c = a.get(i);
+                if (c != null && c.isTextual()) {
+                    Object v = isoUtc(c.textValue());
+                    if (!v.equals(c.textValue())) a.set(i, a.textNode((String) v));
+                } else {
+                    isoUtcTree(c);
+                }
+            }
+        }
+        return n;
+    }
+
     /** Строки выдачи: каждая — новая карта с приведёнными значениями (вход не меняется). */
     @SuppressWarnings("unchecked")
     static List<Map<String, Object>> isoUtcRows(List<Map<String, Object>> rows) {

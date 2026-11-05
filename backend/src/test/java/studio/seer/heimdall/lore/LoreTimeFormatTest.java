@@ -72,15 +72,56 @@ class LoreTimeFormatTest {
         assertEquals("2026-04-13 00:00:00", row.get("valid_from"));
     }
 
-    /** Точка выдачи /lore/slice/{id}: нормализация стоит именно там. */
+    record Passport(String id, String valid_from, List<Map<String, Object>> history) {}
+
+    /**
+     * Единая точка выдачи — фильтр ответа: тело любого вида (Map, record с
+     * вложенными картами, JsonNode) сериализуется тем же ObjectMapper с
+     * приведённым временем; прочие строки — без изменений.
+     */
     @Test
-    void sliceBodyEmitsIsoZ() {
-        Map<String, Object> body = AidaLoreResource.sliceBody(new studio.seer.heimdall.bench.MartResult(
-            List.of(Map.of("sprint_id", "S1", "valid_from", "2026-04-13 00:00:00"))));
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> rows = (List<Map<String, Object>>) body.get("rows");
-        assertEquals("2026-04-13T00:00:00.000Z", rows.get(0).get("valid_from"));
-        assertEquals("S1", rows.get(0).get("sprint_id"));
+    void responseFilterNormalizesAnyJsonBody() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("valid_from", "2026-04-13 00:00:00.123");
+        body.put("date", "2026-04-13");
+        body.put("word", "вчера");
+        body.put("iso", "2026-08-31T12:34:56.789Z");
+        body.put("rows", List.of(Map.of("valid_to", "2026-04-14 10:00:00")));
+        String json = mapper.writeValueAsString(LoreTimeFormatResponseFilter.isoUtcEntity(body, mapper));
+        Map<?, ?> back = mapper.readValue(json, Map.class);
+        assertEquals("2026-04-13T00:00:00.123Z", back.get("valid_from"));
+        assertEquals("2026-04-13", back.get("date"));
+        assertEquals("вчера", back.get("word"));
+        assertEquals("2026-08-31T12:34:56.789Z", back.get("iso"));
+        assertEquals("2026-04-14T10:00:00.000Z", ((Map<?, ?>) ((List<?>) back.get("rows")).get(0)).get("valid_to"));
+
+        Passport p = new Passport("ADR-1", "2026-04-13 00:00:00",
+            List.of(Map.of("valid_from", "2026-04-12 09:30:00.5")));
+        Map<?, ?> pj = mapper.readValue(mapper.writeValueAsString(
+            LoreTimeFormatResponseFilter.isoUtcEntity(p, mapper)), Map.class);
+        assertEquals("ADR-1", pj.get("id"));
+        assertEquals("2026-04-13T00:00:00.000Z", pj.get("valid_from"), "record тоже приводится");
+        assertEquals("2026-04-12T09:30:00.500Z", ((Map<?, ?>) ((List<?>) pj.get("history")).get(0)).get("valid_from"));
+    }
+
+    @Test
+    void responseFilterLeavesForeignBodiesAndBenchAlone() {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String raw = "{\"ts\":\"2026-04-13 00:00:00\"}";
+        assertEquals(raw, LoreTimeFormatResponseFilter.isoUtcEntity(raw, mapper), "строковое тело — уже готовый ответ");
+        byte[] bytes = new byte[]{1, 2};
+        assertEquals(bytes, LoreTimeFormatResponseFilter.isoUtcEntity(bytes, mapper));
+        assertNull(LoreTimeFormatResponseFilter.isoUtcEntity(null, mapper));
+
+        assertEquals(true, LoreTimeFormatResponseFilter.isBench("/bench/mart/slice/x"),
+            "витрина bench пишет местные часы стенда — Z ей не дописываем");
+        assertEquals(true, LoreTimeFormatResponseFilter.isBench("bench"));
+        assertEquals(false, LoreTimeFormatResponseFilter.isBench("/lore/slice/sprint_starts"));
+        assertEquals(false, LoreTimeFormatResponseFilter.isBench("/lore/benchmarks"));
+        assertEquals(true, LoreTimeFormatResponseFilter.isJson(jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE));
+        assertEquals(false, LoreTimeFormatResponseFilter.isJson(jakarta.ws.rs.core.MediaType.TEXT_PLAIN_TYPE));
     }
 
     @Test

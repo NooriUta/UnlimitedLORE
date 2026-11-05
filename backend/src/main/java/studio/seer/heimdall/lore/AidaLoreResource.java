@@ -560,8 +560,12 @@ public class AidaLoreResource extends LoreResourceBase {
 
     private List<Map<String, Object>> composeAndQuery(String sliceId) {
         LoreSlices.Composed c = LoreSlices.compose(sliceId, Map.of());
-        // RM-P13: те же строки слайсов, что и у /lore/slice — та же нормализация
-        // времени, иначе лента сравнивала бы «2026-04-13 00:00:00» с «…T…Z» строкой.
+        // RM-P13: здесь нормализация нужна ДО выдачи, а не в фильтре ответа: лента
+        // работает со строками дат в Java — min valid_from по задаче сравнением
+        // строк, сортировка по date/time, отсечение since/before. Смесь
+        // «2026-04-13 00:00:00» (DATETIME) и «…T…Z» (текстовые поля вроде
+        // updated_at) сравнивалась бы неверно: пробел меньше «T». Фильтр ответа
+        // потом ничего не меняет — значения уже ISO-Z.
         return LoreTimeFormat.isoUtcRows(ingestService.queryPublic(c.sql(), c.params()));
     }
 
@@ -743,9 +747,9 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
-        // RM-P13: время наружу — ISO-8601 UTC с Z (DATETIME база печатает без зоны,
-        // браузер прочёл бы это как местное время). Одна функция — LoreTimeFormat.
-        List<Map<String, Object>> rows = res.result() == null ? List.of() : LoreTimeFormat.isoUtcRows(res.result());
+        // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
+        // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
+        List<Map<String, Object>> rows = res.result() == null ? List.of() : res.result();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("rows", rows);
         if (Boolean.TRUE.equals(res.truncated())) {
