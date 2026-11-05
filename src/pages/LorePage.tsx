@@ -51,6 +51,12 @@ import LoreVpCanvas    from '../components/lore/product/LoreVpCanvas';
 // (AppShell — как модули активного пространства, эталон Seiðr), подвкладки и
 // контент — эта страница.
 import { chapterOf, type Section } from '../components/layout/forsetiChapters';
+import { switchParam } from '../hooks/useUrlState';
+
+// AH-09: ключи состояния экранов разделов (вкладка, выбранный/раскрытый элемент,
+// вид). Уникальны в пределах страницы; при смене раздела снимаются — раньше
+// их сбрасывал размонтаж экрана. Таблица ключей — в описании коммита AH-09.
+const LORE_SCREEN_KEYS = ['atab', 'ms', 'rel', 'dec', 'tview', 'ptab'] as const;
 
 // Module-scope constant (not recreated per render) — ADR/QG already have their
 // own top-level nav sections, so «Знания» adds spec+runbook+doc. Specs have no
@@ -394,26 +400,35 @@ export default function LorePage() {
   };
 
   const go = (s: Section) => setParams(p => {
-    p.set('section', s);
+    switchParam(p, 'section', s, LORE_SCREEN_KEYS);
     p.delete('passport');
     p.delete('kind');
     p.delete('art');
     p.delete('spec');
     return p;
   });
+  // AH-09: открыть борд раздела сразу на элементе (?rel= / ?dec=) — переход
+  // go() плюс ключ элемента ОДНИМ вызовом setParams: два вызова подряд
+  // затёрли бы друг друга (react-router отдаёт prev из замыкания рендера).
+  const openOnBoard = (s: Section, key: string, id: string) => setParams(p => {
+    switchParam(p, 'section', s, LORE_SCREEN_KEYS);
+    p.delete('passport'); p.delete('kind'); p.delete('art'); p.delete('spec');
+    p.set(key, id);
+    return p;
+  });
 
   const selectItem    = (id: string) => setParams(p => { p.set('passport', id); p.delete('spec'); return p; });
   const clearItem     = ()           => setParams(p => { p.delete('passport'); p.delete('spec'); return p; });
   const clearSpec     = ()           => setParams(p => { p.delete('spec'); return p; });
-  const navigateToAdr    = (id: string) => setParams(p => { p.set('section', 'adrs');    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
-  const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
-  const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
-  const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToAdr    = (id: string) => setParams(p => { switchParam(p, 'section', 'adrs', LORE_SCREEN_KEYS);    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToSprint = (id: string) => setParams(p => { switchParam(p, 'section', 'sprints', LORE_SCREEN_KEYS); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToComponent = (id: string) => setParams(p => { switchParam(p, 'section', 'components', LORE_SCREEN_KEYS); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToQG = (id: string) => setParams(p => { switchParam(p, 'section', 'qg', LORE_SCREEN_KEYS); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   // Кросс-переходы продуктового слоя (feature↔uc↔pain/gain/job↔actor): section + passport.
   // `uc` снимается вместе с ними: раскрытый сценарий принадлежит ПРЕДЫДУЩЕЙ
   // фиче, и переживи он переход — новая открылась бы с раскрытым чужим узлом.
   const navigateProduct = (sec: string, id?: string) => setParams(p => {
-    p.set('section', sec);
+    switchParam(p, 'section', sec, LORE_SCREEN_KEYS);
     if (id) p.set('passport', id); else p.delete('passport');
     p.delete('spec'); p.delete('kind'); p.delete('art'); p.delete('uc');
     return p;
@@ -1342,8 +1357,11 @@ export default function LorePage() {
                 const id = it.ref?.id ?? it.title;
                 if (it.kind === 'adr') navigateToAdr(id);
                 else if (it.kind === 'sprint') navigateToSprint(id);
-                else if (it.kind === 'release') go('releases');
-                else if (it.kind === 'decision') go('decisions');
+                // AH-09: релиз и решение открываются на самом элементе, а не
+                // на всём борде. Релиз адресуется парой «проект#id»: один номер
+                // версии живёт в нескольких репозиториях.
+                else if (it.kind === 'release') openOnBoard('releases', 'rel', it.project ? `${it.project}#${id}` : id);
+                else if (it.kind === 'decision') openOnBoard('decisions', 'dec', id);
               }}
             />
           )}

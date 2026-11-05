@@ -1,4 +1,7 @@
-import { adminMain, adminShell, adminSide } from '../adminLayout';
+import { adminMain, adminShell, adminSide, adminStrip, tapMin } from '../adminLayout';
+
+type Tone = 'suc' | 'wrn' | 'dng' | 'mute';
+const toneColor = (t: Tone) => (t === 'mute' ? 'var(--t3)' : `var(--${t})`);
 
 export const S = {
   shell: adminShell,
@@ -18,7 +21,6 @@ export const S = {
   crumb: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 8 },
   crumbB: { color: 'var(--t1)', fontWeight: 600 },
   toolbar: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' as const },
-  search: { fontSize: 'var(--fs-sm)', padding: '4px 10px', borderRadius: 5, border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'inherit', flex: 1, minWidth: 150, maxWidth: 280 },
   count: { fontSize: 'var(--fs-xs)', color: 'var(--t2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const },
   seg: { display: 'inline-flex', border: '1px solid var(--b3)', borderRadius: 5, overflow: 'hidden' },
   segBtn: (on: boolean) => ({
@@ -74,4 +76,69 @@ export const S = {
     background: `color-mix(in srgb, ${ok ? 'var(--suc)' : 'var(--dng)'} 18%, transparent)`,
   }),
   kv: { display: 'grid', gridTemplateColumns: '130px 1fr', gap: '6px 12px', fontSize: 'var(--fs-sm)' },
+  // ── AH-05: оболочка v2 (прототип admin-v2) ──
+  grpRisk: { marginLeft: 'auto', letterSpacing: '.04em', textTransform: 'none' as const },
+  /** «?» (не смогли проверить) — пунктир wrn; красный счётчик проблем — сплошной dng. */
+  navCnt: (tone: 'wrn' | 'dng') => ({
+    marginLeft: 'auto', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', color: `var(--${tone})`,
+    border: `1px ${tone === 'wrn' ? 'dashed' : 'solid'} color-mix(in srgb, var(--${tone}) 55%, transparent)`,
+    borderRadius: 999, padding: '0 6px',
+  }),
+  crumbG: (c: string) => ({ color: c, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '.1em', fontSize: 'var(--fs-2xs)' }),
+  sysBar: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px' },
+  sysBrand: { fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'var(--fs-sm)', letterSpacing: '.14em', color: 'var(--acc)', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const },
+  sysChips: { display: 'flex', gap: 6, marginLeft: 'auto', overflowX: 'auto' as const, scrollbarWidth: 'none' as const, minWidth: 0 },
+  sysChip: (tone: Tone, on: boolean, narrow: boolean) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: 999, padding: '1px 10px', flexShrink: 0,
+    minHeight: narrow ? 32 : 22, fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const, cursor: 'pointer',
+    color: toneColor(tone),
+    border: `1px solid ${tone === 'mute' ? 'var(--bd)' : `color-mix(in srgb, ${toneColor(tone)} 45%, var(--bd))`}`,
+    background: tone === 'mute' ? (on ? 'var(--bg2)' : 'transparent') : `color-mix(in srgb, ${toneColor(tone)} ${on ? 20 : 10}%, transparent)`,
+  }),
+  sysDetail: (tone: Tone) => ({
+    padding: '6px 12px', fontSize: 'var(--fs-sm)', color: 'var(--t2)', borderTop: '1px solid var(--bd)',
+    borderLeft: `3px solid ${toneColor(tone)}`, background: 'var(--bg0)',
+  }),
+  where: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, padding: '6px 12px', background: 'var(--bg1)', borderBottom: '1px solid var(--bd)', flexShrink: 0 },
+  whereRail: (c: string) => ({ width: 3, alignSelf: 'stretch', minHeight: 16, borderRadius: 2, background: c }),
+  whereG: (c: string) => ({ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: c }),
+  whereT: { fontFamily: 'var(--display)', fontWeight: 800, fontSize: 'var(--fs-md)', color: 'var(--t1)' },
+  wherePos: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' },
+  whereWhy: (tone: 'wrn' | 'dng') => ({ flexBasis: '100%', fontSize: 'var(--fs-xs)', color: `var(--${tone})` }),
+  strip: adminStrip,
+  stripGrp: (c: string) => ({
+    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 2px 0 8px', color: c,
+    fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const,
+  }),
+  stripTab: (on: boolean, c: string) => ({
+    flexShrink: 0, scrollSnapAlign: 'center', display: 'inline-flex', alignItems: 'center', gap: 6,
+    borderRadius: 999, padding: '0 12px', minHeight: tapMin(true), font: 'inherit', fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap' as const, cursor: 'pointer',
+    border: `1px solid ${on ? c : 'var(--bd)'}`, color: on ? 'var(--t1)' : 'var(--t2)', fontWeight: on ? 700 : 400,
+    background: on ? `color-mix(in srgb, ${c} 14%, transparent)` : 'transparent',
+  }),
+  stripFade: (side: 'left' | 'right') => ({
+    position: 'absolute' as const, top: 0, bottom: 0, [side]: 0, width: 22, pointerEvents: 'none' as const,
+    background: `linear-gradient(${side === 'left' ? 90 : 270}deg, var(--bg1), transparent)`,
+  }),
+  // «Люди» v2: тап-цели (40px телефон / 26px десктоп), выбранная строка, карточка.
+  tap: (narrow: boolean) => ({ minHeight: tapMin(narrow), minWidth: tapMin(narrow), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }),
+  rowSel: { background: 'color-mix(in srgb, var(--acc) 8%, var(--bg1))' },
+  rowSelFirst: { boxShadow: 'inset 3px 0 0 var(--acc)' },
+  pcard: (sel: boolean) => ({
+    border: `1px solid ${sel ? 'var(--acc)' : 'var(--bd)'}`, borderRadius: 6, background: 'var(--bg1)',
+    padding: '8px 12px', marginBottom: 8, cursor: 'pointer',
+  }),
+  pcardRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '2px 0', fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
+  pcardL: { fontSize: 'var(--fs-2xs)', textTransform: 'uppercase' as const, letterSpacing: '.08em', color: 'var(--t3)', flexShrink: 0 },
+  personCard: { border: '1px solid var(--bdh)', borderRadius: 6, background: 'var(--bg1)', overflow: 'hidden', position: 'sticky' as const, top: 0 },
+  blkH: { margin: '0 0 6px', fontSize: 'var(--fs-2xs)', letterSpacing: '.12em', textTransform: 'uppercase' as const, color: 'var(--t3)', fontWeight: 700, display: 'flex', gap: 6, alignItems: 'center' },
+  rr: { display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '4px 8px', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)' },
+  rrNarrow: { gridTemplateColumns: 'auto 1fr' },
+  // AH-05 п.2: секции вкладок и рамка таблицы (прототип .sec / .tw).
+  sec: { fontSize: 'var(--fs-2xs)', letterSpacing: '.12em', textTransform: 'uppercase' as const, color: 'var(--t3)', margin: '16px 0 6px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
+  twBox: { overflowX: 'auto' as const, border: '1px solid var(--bd)', borderRadius: 6, background: 'var(--bg1)' },
+  /** Модалка: подложка и тень — от токена фона, не rgba (SH-18). */
+  scrim: 'color-mix(in srgb, var(--bg0) 72%, transparent)',
+  popShadow: '0 12px 40px color-mix(in srgb, var(--bg0) 80%, transparent)',
+  note: { border: '1px solid var(--bd)', borderLeft: '3px solid var(--inf)', background: 'var(--bg1)', borderRadius: 6, padding: '6px 12px', color: 'var(--t2)', fontSize: 'var(--fs-sm)', marginBottom: 8 },
 };

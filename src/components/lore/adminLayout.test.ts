@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adminMain, adminShell, adminSide } from './adminLayout';
+import { adminMain, adminShell, adminSide, adminStrip, peopleSplit, showPeopleList, tapMin } from './adminLayout';
 
 // Регресс 04.11.2026 (владелец: «админка… have no scroll in mobile version»).
 // На узком экране shell переключался с grid на display:block и сохранял
@@ -38,5 +38,33 @@ describe('админка: прокрутка на узком экране', () =
     const s = adminShell(false);
     expect(s.display).toBe('grid');
     expect(s.gridTemplateColumns).toBe('212px 1fr');
+  });
+});
+
+// AH-05 (прототип admin-v2): «Люди» — список и карточка рядом на десктопе, на
+// телефоне карточка на весь экран (список не рисуется); тап-цели телефона 40px.
+describe('админка v2: master-detail и тап-цели', () => {
+  it('десктоп с карточкой — две колонки (список | карточка), без карточки — одна', () => {
+    expect(peopleSplit(false, true).gridTemplateColumns).toBe('minmax(0, 1fr) 420px');
+    expect(peopleSplit(false, false).gridTemplateColumns).toBe('minmax(0, 1fr)');
+  });
+
+  it('телефон — всегда одна колонка, список при открытой карточке не рисуется', () => {
+    expect(peopleSplit(true, true).gridTemplateColumns).toBe('minmax(0, 1fr)');
+    expect(showPeopleList(true, true)).toBe(false);
+    expect(showPeopleList(true, false)).toBe(true);
+    expect(showPeopleList(false, true)).toBe(true);
+  });
+
+  it('тап-цель: 40px на телефоне, 26px на десктопе', () => {
+    expect(tapMin(true)).toBe(40);
+    expect(tapMin(false)).toBe(26);
+  });
+
+  it('лента вкладок телефона листается вбок и не сжимается', () => {
+    const s = adminStrip;
+    expect(s.overflowX).toBe('auto');
+    expect(s.flexWrap).toBe('nowrap');
+    expect(s.flexShrink).toBe(0);
   });
 });

@@ -4,6 +4,8 @@ import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreTimelineItem } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { timelineRow } from './mobileLayout';
 
 // game-icons slugs per timeline kind (uniform with the sidebar sections)
 const KIND_ICON: Record<string, string> = {
@@ -81,6 +83,8 @@ interface Props {
 
 export default function LoreTimeline({ module, q, onError, onSelect, onSelectSprint }: Props) {
   const { t } = useTranslation();
+  // AH-08: на 375px строка (дата+тип+ref ≈ 272px) не оставляла места заголовку.
+  const rowL = timelineRow(useIsNarrow());
   const KIND_LABEL: Record<string, string> = {
     adr: 'ADR',
     decision: t('lore.timeline.kindDecision', 'Решения'),
@@ -223,7 +227,7 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
           return (
             <div
               key={`${item.kind}-${item.ref_id}-${i}`}
-              style={{ ...S.item, cursor: clickable ? 'pointer' : 'default', borderLeft: `3px solid ${color}` }}
+              style={{ ...S.item, ...rowL.row, cursor: clickable ? 'pointer' : 'default', borderLeft: `3px solid ${color}` }}
               onClick={() => {
                 if (isSprint) onSelectSprint?.(item.ref_id);
                 else if (item.kind === 'adr' || item.kind === 'decision') onSelect(item.ref_id);
@@ -231,9 +235,9 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
             >
               <span style={S.date}>{item.date?.slice(0, 10)}</span>
               <span style={{ ...S.icon, color }}><GameIcon slug={KIND_ICON[item.kind]} size={14} /></span>
-              <span style={{ ...S.kind, color }}>{item.kind}</span>
-              <span style={S.ref}>{item.ref_id}</span>
-              <span style={S.title}>{item.title}</span>
+              {rowL.showKind && <span style={{ ...S.kind, color }}>{item.kind}</span>}
+              <span style={{ ...S.ref, ...rowL.ref }}>{item.ref_id}</span>
+              <span style={{ ...S.title, ...rowL.title }}>{item.title}</span>
               {item.status && <StatusChip status={item.status} />}
             </div>
           );

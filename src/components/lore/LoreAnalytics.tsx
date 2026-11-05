@@ -8,8 +8,10 @@ import LoreSkeleton from './LoreSkeleton';
 import { parseRoutine, parseInvariants, type ParsedInv } from '../../lib/qgContentMd';
 import { isStale as isTechStale, parseFields as parseTechFields } from './LoreTechRegistry';
 import LoreAnalyticsProduct from './LoreAnalyticsProduct';
+import { useUrlState } from '../../hooks/useUrlState';
 import { LoadError, SliceLoadWarning } from './EmptyState';
 import { pageLevelError, settleSlices } from './loadState';
+import { scrollStrip, stripItem } from './mobileLayout';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -99,6 +101,7 @@ const TABS: { key: AnalyticsTab; icon: string; label: string }[] = [
   // вкладки лениво, в общий Promise.all этого экрана НЕ входит.
   { key: 'product',    icon: 'bullseye',      label: 'Продукт'  },
 ];
+const ANALYTICS_TABS: readonly AnalyticsTab[] = TABS.map(x => x.key);
 
 const SPRINT_FILTERS: { key: SprintFilter; label: string }[] = [
   { key: 'all',    label: 'Все'           },
@@ -380,7 +383,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [sprintStarts, setSprintStarts] = useState<{ sprint_id: string; valid_from: string | null }[]>([]);
   const [blockedRows, setBlockedRows] = useState<{ sprint_id: string }[]>([]);
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState<AnalyticsTab>('overview');
+  // AH-09: вкладка в URL (?atab=) — ссылка и F5 открывают ту же вкладку.
+  const [tab,        setTab]        = useUrlState<AnalyticsTab>('atab', 'overview', ANALYTICS_TABS);
   const [groupBy,    setGroupBy]    = useState<CompGroupBy>('area');
   const [sprintFilter, setSprintFilter] = useState<SprintFilter>('active');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
@@ -1199,11 +1203,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   // ── tab bar ───────────────────────────────────────────────────────────────
 
+  // AH-08: семь вкладок ≈700px без прокрутки распирали панель на телефоне —
+  // лента листается вбок, вкладки не сжимаются.
   const tabBar = (
-    <div style={S.tabBar}>
+    <div style={{ ...S.tabBar, ...scrollStrip }}>
       {TABS.map(tb => (
         <button key={tb.key}
-          style={{ ...S.tabBtn, ...(tab === tb.key ? S.tabBtnActive : {}) }}
+          style={{ ...S.tabBtn, ...stripItem, ...(tab === tb.key ? S.tabBtnActive : {}) }}
           onClick={() => setTab(tb.key)}>
           <GameIcon slug={tb.icon} size={12} style={{ color: 'inherit' }} />
           {t(`lore.analytics.tabs.${tb.key}`, tb.label)}

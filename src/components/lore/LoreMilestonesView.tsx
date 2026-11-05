@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import {
@@ -10,6 +10,9 @@ import { statusMeta } from './lore-status';
 import LoreSkeleton from './LoreSkeleton';
 import TipTapField from './TipTapField';
 import { useProjectScope, sliceParamsForProject } from '../../context/ProjectScopeContext';
+import { useUrlId } from '../../hooks/useUrlState';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { milestonesTwoCol } from './mobileLayout';
 
 const TODAY = new Date();
 const RU_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -87,13 +90,17 @@ interface EditState { label: string; date_display: string; week: string; priorit
 
 export default function LoreMilestonesView({ onError, onNavigateToSprint }: Props) {
   const { t } = useTranslation();
+  // AH-08: детали вехи — две колонки 1fr 1fr; на телефоне — одна.
+  const twoCol = { ...S.twoCol, ...milestonesTwoCol(useIsNarrow()) };
   const { project } = useProjectScope();
   const [milestones, setMilestones] = useState<LoreMilestone[]>([]);
   const [sprints, setSprints]       = useState<LoreSprintRow[]>([]);
   const [doneDates, setDoneDates]   = useState<LoreSprintDoneDate[]>([]);
   const [loading, setLoading]       = useState(true);
   const [reload, setReload]         = useState(0);
-  const [selId, setSelId]           = useState<string | null>(null);
+  // AH-09: выбранная веха в URL (?ms=id).
+  const [selId, setSelId]           = useUrlId('ms');
+  const linkedRef = useRef<string | null>(null);
   const [editMode, setEditMode]     = useState(false);  // edit header only via button
   const [edit, setEdit]             = useState<EditState>({ label: '', date_display: '', week: '', priority: '', goal_md: '' });
   const [tasks, setTasks]           = useState<(LoreSprintTask & { sprint_id: string })[]>([]);
@@ -151,7 +158,21 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
   function selectMilestone(m: LoreMilestone) {
     if (selId === m.milestone_id) { setSelId(null); return; }
-    setSelId(m.milestone_id); setEditMode(false);
+    linkedRef.current = m.milestone_id;
+    setSelId(m.milestone_id);
+    openMilestone(m);
+  }
+  // AH-09: веха пришла из URL (ссылка, F5) — когда вехи загружены, открыть её
+  // так же, как кликом: заполнить форму и подгрузить задачи.
+  useEffect(() => {
+    if (!selId) { linkedRef.current = null; return; }
+    if (!selM || linkedRef.current === selM.milestone_id) return;
+    linkedRef.current = selM.milestone_id;
+    openMilestone(selM);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selM, selId]);
+  function openMilestone(m: LoreMilestone) {
+    setEditMode(false);
     setEdit({ label: m.label ?? '', date_display: m.date_display ?? '', week: m.week != null ? String(m.week) : '', priority: m.priority ?? '', goal_md: m.goal_md ?? '' });
     setPick(''); setNewTask({ sprint_id: '', title: '' }); setTasks([]); setTasksErr(null);
     const ids = msIds(m);
@@ -328,7 +349,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
             </>
           )}
 
-          <div style={S.twoCol}>
+          <div style={twoCol}>
             {/* Sprints */}
             <div style={S.col}>
               <div style={S.colTitle}>{t('lore.milestonesView.milestoneSprints', 'Спринты вехи · {{count}}', { count: selIds.length })}</div>

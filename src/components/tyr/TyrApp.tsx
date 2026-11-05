@@ -12,19 +12,25 @@ import { SuiteList } from './components/SuiteList';
 import { SuiteDetail } from './components/SuiteDetail';
 import { buildSuites, Suite } from './lib/suites';
 import { CatalogFilters, FilterState, emptyFilter, applyFilters } from './components/CatalogFilters';
+import { useUrlState, useUrlId } from '../../hooks/useUrlState';
 import '../../styles/tyr.css';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { tyrReportsLayout } from '../lore/mobileLayout';
 
 type TopTab = 'plan' | 'current' | 'reports';
 type PlanMode = 'catalog' | 'select';
+const TOP_TABS: readonly TopTab[] = ['plan', 'current', 'reports'];
+const ENV_MODES: readonly EnvMode[] = ['dev', 'docker', 'preprod'];
 
 export default function TyrApp() {
-  const [tab, setTab] = useState<TopTab>('plan');
+  // AH-09: вкладка, окружение, suite, тест и прогоны — в URL (см. таблицу ключей в PR).
+  const [tab, setTab] = useUrlState<TopTab>('ttab', 'plan', TOP_TABS);
   const [planMode, setPlanMode] = useState<PlanMode>('catalog');
   const [suiteSearch, setSuiteSearch] = useState('');
   const [filterState, setFilterState] = useState<FilterState>(() => emptyFilter());
-  const [mode, setMode] = useState<EnvMode>('dev');
-  const [activeSuite, setActiveSuite] = useState<Suite | null>(null);
-  const [activeTest, setActiveTest] = useState<TestNode | null>(null);
+  const [mode, setMode] = useUrlState<EnvMode>('tenv', 'dev', ENV_MODES);
+  const [activeSuiteId, setActiveSuiteId] = useUrlId('tsuite');
+  const [activeTestId, setActiveTestId] = useUrlId('ttest');
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
 
@@ -40,9 +46,9 @@ export default function TyrApp() {
   const [runsError, setRunsError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   /** Текущий прогон, который смотрим в "Тесты" — обновляется при запуске нового и при появлении running на сервере. */
-  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [currentRunId, setCurrentRunId] = useUrlId('trun');
   /** Прогон, выбранный в "Отчёты и история". */
-  const [historyRunId, setHistoryRunId] = useState<string | null>(null);
+  const [historyRunId, setHistoryRunId] = useUrlId('thist');
   const [reportTab, setReportTab] = useState<'log' | 'report'>('report');
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -116,6 +122,20 @@ export default function TyrApp() {
       .map((s) => ({ ...s, tests: s.tests.filter((t) => filteredIds.has(t.id)) }))
       .filter((s) => s.tests.length > 0);
   }, [allSuites, filteredNodes, filterState]);
+
+  // Объекты suite/теста выводятся из id в URL: сначала среди отфильтрованных
+  // (их и показывает список), затем во всём дереве — фильтр, скрывший suite,
+  // не должен молча закрывать открытую карточку.
+  const activeSuite: Suite | null = useMemo(
+    () => (activeSuiteId ? (suites.find((s) => s.id === activeSuiteId) ?? allSuites.find((s) => s.id === activeSuiteId) ?? null) : null),
+    [activeSuiteId, suites, allSuites],
+  );
+  const activeTest: TestNode | null = useMemo(
+    () => (activeTestId ? (tree?.nodes.find((n) => n.id === activeTestId) ?? null) : null),
+    [activeTestId, tree],
+  );
+  const setActiveSuite = (s: Suite | null): void => setActiveSuiteId(s?.id ?? null);
+  const setActiveTest = (n: TestNode | null): void => setActiveTestId(n?.id ?? null);
 
   // Switching suite resets the open test detail
   const pickSuite = (s: Suite): void => {
@@ -221,6 +241,11 @@ export default function TyrApp() {
   const runsState = loadStateOf(runsLoaded ? runs : null, runsError);
   const currentRun = runs.find((r) => r.id === currentRunId) ?? null;
   const historyRun = runs.find((r) => r.id === historyRunId) ?? null;
+  // AH-08: на телефоне сетка отчётов была `auto minmax(0,1fr)` — .sidebar росла
+  // по длине истории, отчёту доставалось 0px. Теперь одна панель: список прогонов
+  // ИЛИ отчёт с «← к истории»; выбор живёт в URL (?thist=), как и раньше.
+  const narrow = useIsNarrow();
+  const rl = tyrReportsLayout(narrow, !!historyRun);
 
   return (
     <div className="app" style={{ height: '100%' }}>
@@ -461,7 +486,8 @@ export default function TyrApp() {
 
       {/* Spacer so the 3rd grid row (statusbar) doesn't collapse main content */}
       {tab === 'reports' && (
-        <div className="layout-reports">
+        <div className="layout-reports" style={rl.gridTemplateRows ? { gridTemplateRows: rl.gridTemplateRows } : undefined}>
+          {rl.showList && (
           <aside className="sidebar">
             <h2>📜 История прогонов{runs.length > 0 && <span className="muted"> · {runs.length}</span>}</h2>
             <RunsList
@@ -473,7 +499,15 @@ export default function TyrApp() {
               onPick={(id) => { setHistoryRunId(id); setReportTab('report'); }}
             />
           </aside>
+          )}
+          {rl.showDetail && (
           <section className="detail-pane">
+            {rl.showBack && (
+              <div className="suite-back-bar">
+                <button className="suite-back-btn" onClick={() => setHistoryRunId(null)}>← история прогонов</button>
+                {historyRun && <span className="muted suite-back-title">{historyRun.filterDescr}</span>}
+              </div>
+            )}
             {!historyRun && runsState.k === 'error' && (
               <div className="empty">
                 <h2>⚠ История прогонов не загрузилась</h2>
@@ -524,6 +558,7 @@ export default function TyrApp() {
               </>
             )}
           </section>
+          )}
         </div>
       )}
 

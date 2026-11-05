@@ -9,6 +9,7 @@ import LoreBragiPublications from './LoreBragiPublications';
 import LoreBragiPlan from './LoreBragiPlan';
 import LoreBragiAnalytics from './LoreBragiAnalytics';
 import { LoreBragiKeys, LoreBragiArchive, LoreBragiInsights, LoreBragiIntegrations } from './LoreBragiExtras';
+import { useUrlState } from '../../hooks/useUrlState';
 
 type BragiSection =
   | 'obzor' | 'plan' | 'pubs' | 'keys' | 'analitika' | 'archive' | 'insights' | 'integrations';
@@ -23,6 +24,7 @@ const MENU: { id: BragiSection; labelKey: string; fallback: string }[] = [
   { id: 'insights',     labelKey: 'bragi.screen.menu.insights',      fallback: 'Инсайты' },
   { id: 'integrations', labelKey: 'bragi.screen.menu.integrations',  fallback: 'Интеграции' },
 ];
+const BRAGI_SECTIONS: readonly BragiSection[] = MENU.map(m => m.id);
 
 interface OverviewRow { status_general: string; n: number }
 interface CompetitorRow { competitor_id: string; name: string }
@@ -30,7 +32,8 @@ interface PublicationRow { publication_id: string; title: string; status_general
 
 export default function LoreBragiScreen() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<BragiSection>('obzor');
+  // AH-09: раздел BRAGI в URL (?btab=).
+  const [tab, setTab] = useUrlState<BragiSection>('btab', 'obzor', BRAGI_SECTIONS);
   const [overview, setOverview]     = useState<OverviewRow[]>([]);
   const [competitors, setCompetitors] = useState<CompetitorRow[]>([]);
   const [publications, setPublications] = useState<PublicationRow[]>([]);

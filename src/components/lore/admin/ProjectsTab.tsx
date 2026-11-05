@@ -5,9 +5,12 @@ import { fetchLoreSlice, loreMutate, describeLoreError, LoreNotFoundError } from
 import { LoadError } from '../EmptyState';
 import { type KcState } from '../kc-state';
 import type { ProjRow, HostRow, KcUser } from './types';
+import { GameIcon } from '../GameIcon';
 import { S } from './adminStyles';
 import { PROJECT_ROLES } from './adminHelpers';
-import { Toolbar } from './adminWidgets';
+import { RespTable, Toolbar, rowBtn } from './adminWidgets';
+import { useIsNarrow } from './useIsNarrow';
+import type { Col } from './adminCards';
 
 // ── Проекты ──────────────────────────────────────────────────────────────────
 /**
@@ -22,6 +25,7 @@ function ProjectMembers({ slug, people, onError }: {
   slug: string; people: KcState<KcUser>; onError: (e: unknown) => void;
 }) {
   const { t } = useTranslation();
+  const narrow = useIsNarrow();
   const [rows, setRows] = useState<{ kc_subs: (string | null)[] | null; display_names: (string | null)[] | null; roles: (string | null)[] | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -69,10 +73,15 @@ function ProjectMembers({ slug, people, onError }: {
       onError(e);
     } finally { setBusy(false); }
   }
+  const sel = { ...S.select, minHeight: S.tap(narrow).minHeight };
+  // P-10: KC не ответил — людей для выбора нет, но это не «все уже добавлены».
+  const freeLabel = people.k !== 'ok'
+    ? t('lore.admin.pickKcNa', '— Keycloak не ответил —')
+    : free.length ? t('lore.admin.pickPerson', '— выберите человека —') : t('lore.admin.allAdded', '— все уже добавлены —');
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)' }}>
           {t('lore.admin.projectMembers', 'Участники проекта')}
         </span>
@@ -91,32 +100,43 @@ function ProjectMembers({ slug, people, onError }: {
         <div style={{ ...S.warn, marginBottom: 6 }}>
           {t('lore.admin.noMembers', 'В проекте нет ни одного участника — при включённом проектном скоупе его не увидит никто.')}
         </div>
-      ) : members.map(m => (
-        <div key={m.sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
-          <span style={{ minWidth: 200 }}>{m.name ?? m.sub}</span>
-          <select style={S.select} value={m.role} disabled={busy}
-                  onChange={e => apply(m.sub, m.name ?? m.sub, e.target.value, 'add')}>
-            {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <button style={S.btn} disabled={busy}
-                  title={m.role === 'owner' && owners === 1
-                    ? t('lore.admin.lastOwnerHint', 'последнего владельца снять нельзя — назначьте другого')
-                    : t('lore.admin.removeProjectRole', 'снять роль в проекте')}
-                  onClick={() => apply(m.sub, m.name ?? m.sub, m.role, 'remove')}>✕</button>
-        </div>
-      ))}
+      ) : members.map(m => {
+        const lastOwner = m.role === 'owner' && owners === 1;
+        return (
+          <div key={m.sub} style={{ ...S.rr, ...(narrow ? S.rrNarrow : null) }}>
+            <span style={{ fontFamily: 'var(--mono)', minWidth: 0, overflowWrap: 'anywhere', gridColumn: narrow ? '1 / -1' : undefined }}>{m.name ?? m.sub}</span>
+            <select style={sel} value={m.role} disabled={busy} aria-label={t('lore.admin.thRoles', 'роли')}
+                    onChange={e => apply(m.sub, m.name ?? m.sub, e.target.value, 'add')}>
+              {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            {/* P-09: подсказка про последнего owner — текстом, не только в title (на тач его не видно). */}
+            <span style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
+              {lastOwner && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><GameIcon slug="padlock" size={11} style={{ color: 'inherit' }} />{t('lore.admin.lastOwnerShort', 'последний owner')}</span>}
+              <button style={rowBtn(narrow, S.danger)} disabled={busy}
+                      title={lastOwner
+                        ? t('lore.admin.lastOwnerHint', 'последнего владельца снять нельзя — назначьте другого')
+                        : t('lore.admin.removeProjectRole', 'снять роль в проекте')}
+                      aria-label={t('lore.admin.removeProjectRole', 'снять роль в проекте')}
+                      onClick={() => apply(m.sub, m.name ?? m.sub, m.role, 'remove')}>
+                <GameIcon slug="cross-mark" size={11} style={{ color: 'inherit' }} />{narrow && t('lore.admin.removeShort', 'снять')}
+              </button>
+            </span>
+          </div>
+        );
+      })}
 
-      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-        <select style={S.select} value={pick.sub} disabled={busy || free.length === 0}
+      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+        <select style={{ ...sel, flex: narrow ? '1 1 100%' : undefined }} value={pick.sub} disabled={busy || free.length === 0}
+                aria-label={t('lore.admin.pickPerson', '— выберите человека —')}
                 onChange={e => setPick(p => ({ ...p, sub: e.target.value }))}>
-          <option value="">{free.length ? t('lore.admin.pickPerson', '— выберите человека —') : t('lore.admin.allAdded', '— все уже добавлены —')}</option>
+          <option value="">{freeLabel}</option>
           {free.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
         </select>
-        <select style={S.select} value={pick.role} disabled={busy}
+        <select style={{ ...sel, flex: narrow ? 1 : undefined }} value={pick.role} disabled={busy} aria-label={t('lore.admin.thRoles', 'роли')}
                 onChange={e => setPick(p => ({ ...p, role: e.target.value }))}>
           {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <button style={S.primary} disabled={busy || !pick.sub}
+        <button style={rowBtn(narrow, S.primary)} disabled={busy || !pick.sub}
                 onClick={() => {
                   const u = kcUsers.find(x => x.id === pick.sub);
                   if (u) apply(u.id, u.username, pick.role, 'add');
@@ -133,6 +153,7 @@ export function ProjectsTab({ rows, sprints, sprintsUnknown, people, onError, re
   onError: (e: unknown) => void; reload: () => void;
 }) {
   const { t } = useTranslation();
+  const narrow = useIsNarrow();
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<ProjRow | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -173,89 +194,114 @@ export function ProjectsTab({ rows, sprints, sprintsUnknown, people, onError, re
   const setHost = (i: number, k: keyof HostRow, v: string) => setHosts(hs => hs.map((h, j) => j === i ? { ...h, [k]: v } : h));
 
   const shown = rows.filter(p => !q || p.slug.toLowerCase().includes(q.toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.toLowerCase()));
+  const cols: Col[] = [
+    { key: 'slug', label: t('lore.admin.thSlug', 'slug'), kind: 'title' },
+    { key: 'name', label: t('lore.admin.thProjName', 'имя') },
+    { key: 'branch', label: t('lore.admin.thBranch', 'ветка') },
+    { key: 'hosts', label: t('lore.admin.thHosts', 'хосты') },
+    { key: 'sprints', label: t('lore.admin.thSprints', 'спринтов'), num: true },
+    { key: 'act', label: '', kind: 'act' },
+  ];
+  const cell = (p: ProjRow, k: string) => {
+    switch (k) {
+      case 'slug': return p.slug;
+      case 'name': return p.name ?? '—';
+      case 'branch': return p.default_branch ? <span style={{ fontFamily: 'var(--mono)' }}>{p.default_branch}</span> : '—';
+      case 'hosts': return (
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)', overflowWrap: 'anywhere' }}>
+          {p.hosts ? (() => {
+            try { return (JSON.parse(p.hosts) as HostRow[]).map(h => h.remote).join(' · '); }
+            catch { return <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.badHostsJson', '⚠ битый JSON')}</span>; }
+          })() : '—'}
+        </span>
+      );
+      case 'sprints': return sprintsUnknown
+        // AH-07 (P-05): сбой слайса sprints — счёт неизвестен, а не «0».
+        ? <span style={{ color: 'var(--t3)' }} title={t('lore.admin.unknownLoadFailed', 'не загрузилось')}>?</span>
+        : <span style={{ color: sprints[p.slug] ? 'var(--t2)' : 'var(--t3)' }}>{sprints[p.slug] ?? 0}</span>;
+      case 'act': return (
+        <>
+          <button style={rowBtn(narrow)} aria-expanded={membersOf === p.slug} onClick={() => setMembersOf(v => v === p.slug ? null : p.slug)}
+                  title={t('lore.admin.membersTitle', 'кто имеет доступ к проекту')}>
+            {membersOf === p.slug ? t('lore.admin.collapse', 'Свернуть') : t('lore.admin.members', 'Участники')}
+          </button>
+          <button style={rowBtn(narrow)} onClick={() => startEdit(p)}>{t('lore.admin.edit', 'Править')}</button>
+        </>
+      );
+    }
+    return null;
+  };
+  const inp = { ...S.input, minHeight: S.tap(narrow).minHeight, minWidth: 0, boxSizing: 'border-box' as const };
+  const lbl = { display: 'flex', flexDirection: 'column' as const, gap: 3, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '.06em', minWidth: 0 };
+
   return (
     <div>
-      <div style={{ marginBottom: 8 }}>
-        <button style={S.btn} onClick={startNew}>{t('lore.admin.addProject', '+ Добавить проект')}</button>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} placeholder={t('lore.admin.projSearch', 'slug или имя…')} />
+        </div>
+        <button style={rowBtn(narrow, S.primary)} onClick={startNew}>{t('lore.admin.addProject', '+ Добавить проект')}</button>
       </div>
-      <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
-      <div style={S.tw}>
-        <table style={S.table}>
-          <thead><tr>{['slug', 'имя', 'branch', 'хосты', 'спринтов', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-          <tbody>
-            {shown.map(p => (
-              <tr key={p.slug}>
-                <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{p.slug}</td>
-                <td style={S.td}>{p.name ?? '—'}</td>
-                <td style={S.td}>{p.default_branch ?? '—'}</td>
-                <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
-                  {p.hosts ? (() => { try { return (JSON.parse(p.hosts) as HostRow[]).map(h => h.remote).join(' · '); } catch { return '⚠ bad JSON'; } })() : '—'}
-                </td>
-                <td style={{ ...S.td, ...S.num }}>{sprintsUnknown
-                  // AH-07 (P-05): сбой слайса sprints — счёт неизвестен, а не «0».
-                  ? <span style={{ color: 'var(--t3)' }} title={t('lore.admin.unknownLoadFailed', 'не загрузилось')}>?</span>
-                  : <span style={{ color: sprints[p.slug] ? 'var(--t2)' : 'var(--t3)' }}>{sprints[p.slug] ?? 0}</span>}</td>
-                <td style={S.td}>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button style={S.btn} onClick={() => setMembersOf(v => v === p.slug ? null : p.slug)}
-                            title={t('lore.admin.membersTitle', 'кто имеет доступ к проекту')}>
-                      {membersOf === p.slug ? '✕' : t('lore.admin.members', 'Участники')}
-                    </button>
-                    <button style={S.btn} onClick={() => startEdit(p)}>{t('lore.admin.edit', 'Править')}</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {membersOf && shown.some(p => p.slug === membersOf) && (
-              <tr>
-                <td colSpan={6} style={{ ...S.td, background: 'var(--bg2)' }}>
-                  <ProjectMembers slug={membersOf} people={people} onError={onError} />
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {shown.length > 0 && (
+        <RespTable cols={cols} rows={shown} rowKey={p => p.slug} cell={cell} narrow={narrow}
+          selected={p => membersOf === p.slug}
+          expand={p => (membersOf === p.slug ? <ProjectMembers slug={p.slug} people={people} onError={onError} /> : null)} />
+      )}
+      {rows.length > 0 && shown.length === 0 && (
+        <div style={S.state('neutral')}>{t('lore.admin.projNoMatch', 'Под поиск ни один проект не подошёл.')}</div>
+      )}
       <Modal
         opened={!!edit}
         onClose={() => { setEdit(null); setIsNew(false); }}
         title={isNew ? t('lore.admin.addProject', '+ Добавить проект') : edit?.slug}
         size={620}
+        fullScreen={narrow}
       >
         {edit && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {isNew ? (
-              <>
-                <input style={{ ...S.input, fontFamily: 'var(--mono)' }} placeholder="AIDA/miniLORE"
+              <label style={lbl}>{t('lore.admin.thSlug', 'slug')}
+                <input style={{ ...inp, fontFamily: 'var(--mono)' }} placeholder="AIDA/miniLORE"
                   value={edit.slug} onChange={e => setEdit(f => f && ({ ...f, slug: e.target.value }))} />
-                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                <span style={{ textTransform: 'none', letterSpacing: 0 }}>
                   {t('lore.admin.projectSlugHint', 'owner/repo — как в Forgejo/GitHub; правке не подлежит после создания')}
-                </div>
-              </>
+                </span>
+              </label>
             ) : (
               <div style={{ fontFamily: 'var(--mono)', color: 'var(--acc)' }}>{edit.slug}</div>
             )}
-            <input style={S.input} placeholder="name" value={edit.name ?? ''} onChange={e => setEdit(f => f && ({ ...f, name: e.target.value }))} />
-            <input style={S.input} placeholder="default_branch" value={edit.default_branch ?? ''} onChange={e => setEdit(f => f && ({ ...f, default_branch: e.target.value }))} />
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('lore.admin.hosts', 'Хостинги (origin + зеркала, ADR-018)')}</div>
+            {/* P-13: у полей подписи, а не только placeholder. */}
+            <label style={lbl}>name
+              <input style={inp} placeholder="name" value={edit.name ?? ''} onChange={e => setEdit(f => f && ({ ...f, name: e.target.value }))} />
+            </label>
+            <label style={lbl}>default_branch
+              <input style={inp} placeholder="default_branch" value={edit.default_branch ?? ''} onChange={e => setEdit(f => f && ({ ...f, default_branch: e.target.value }))} />
+            </label>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 4 }}>{t('lore.admin.hosts', 'Хостинги (origin + зеркала, ADR-018)')}</div>
             {hosts.map((h, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 80px 1fr 1fr 1fr auto', gap: 4 }}>
-                <input style={S.input} placeholder="remote" value={h.remote} onChange={e => setHost(i, 'remote', e.target.value)} />
-                <input style={S.input} placeholder="role" value={h.role} onChange={e => setHost(i, 'role', e.target.value)} />
-                <input style={S.input} placeholder="base_url" value={h.base_url} onChange={e => setHost(i, 'base_url', e.target.value)} />
-                <input style={S.input} placeholder="file_url_template" value={h.file_url_template} onChange={e => setHost(i, 'file_url_template', e.target.value)} />
-                <input style={S.input} placeholder="pr_url_template" value={h.pr_url_template} onChange={e => setHost(i, 'pr_url_template', e.target.value)} />
-                <button style={S.btn} onClick={() => setHosts(hs => hs.filter((_, j) => j !== i))}>✕</button>
+              // P-14: на телефоне — две колонки, URL-шаблоны во всю ширину; на десктопе — строка.
+              <div key={i} style={narrow
+                ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 8, border: '1px solid var(--bd)', borderRadius: 6 }
+                : { display: 'grid', gridTemplateColumns: '90px 80px 1fr 1fr 1fr auto', gap: 4 }}>
+                <input style={inp} placeholder="remote" aria-label="remote" value={h.remote} onChange={e => setHost(i, 'remote', e.target.value)} />
+                <input style={inp} placeholder="role" aria-label="role" value={h.role} onChange={e => setHost(i, 'role', e.target.value)} />
+                <input style={{ ...inp, gridColumn: narrow ? '1 / -1' : undefined }} placeholder="base_url" aria-label="base_url" value={h.base_url} onChange={e => setHost(i, 'base_url', e.target.value)} />
+                <input style={{ ...inp, gridColumn: narrow ? '1 / -1' : undefined }} placeholder="file_url_template" aria-label="file_url_template" value={h.file_url_template} onChange={e => setHost(i, 'file_url_template', e.target.value)} />
+                <input style={{ ...inp, gridColumn: narrow ? '1 / -1' : undefined }} placeholder="pr_url_template" aria-label="pr_url_template" value={h.pr_url_template} onChange={e => setHost(i, 'pr_url_template', e.target.value)} />
+                <button style={{ ...rowBtn(narrow, S.danger), gridColumn: narrow ? '1 / -1' : undefined }} aria-label={t('lore.admin.removeHost', 'убрать хостинг')}
+                        onClick={() => setHosts(hs => hs.filter((_, j) => j !== i))}>
+                  <GameIcon slug="cross-mark" size={11} style={{ color: 'inherit' }} />{narrow && t('lore.admin.removeHost', 'убрать хостинг')}
+                </button>
               </div>
             ))}
             <div>
-              <button style={S.btn} onClick={() => setHosts(hs => [...hs, { remote: '', role: hs.length ? 'mirror' : 'primary', base_url: '', file_url_template: '{base}/src/branch/{branch}/{path}', pr_url_template: '{base}/pulls/{number}' }])}>
+              <button style={rowBtn(narrow)} onClick={() => setHosts(hs => [...hs, { remote: '', role: hs.length ? 'mirror' : 'primary', base_url: '', file_url_template: '{base}/src/branch/{branch}/{path}', pr_url_template: '{base}/pulls/{number}' }])}>
                 {t('lore.admin.addHost', '+ хостинг')}
               </button>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button style={S.primary} disabled={saving || !edit.slug.trim()} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
-              <button style={S.btn} onClick={() => { setEdit(null); setIsNew(false); }}>{t('lore.admin.cancel', 'Отмена')}</button>
+              <button style={rowBtn(narrow, S.primary)} disabled={saving || !edit.slug.trim()} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
+              <button style={rowBtn(narrow)} onClick={() => { setEdit(null); setIsNew(false); }}>{t('lore.admin.cancel', 'Отмена')}</button>
             </div>
           </div>
         )}

@@ -4,25 +4,15 @@ import { fetchLoreSlice, loreMutate, describeLoreError, LoreHttpError } from '..
 import { LoadError } from '../EmptyState';
 import { type KcState } from '../kc-state';
 import { authHeaders } from '../../../auth/session';
-import type { DictRow, KcUser, KcAgent, Preflight } from './types';
+import { GameIcon } from '../GameIcon';
+import type { DictRow, KcUser, KcAgent, Preflight, AgentRow } from './types';
 import { S } from './adminStyles';
-import { KcStateView, NotEnforcedNotice, Toolbar } from './adminWidgets';
+import { KcStateView, NotEnforcedNotice, RespTable, Sec, Toolbar, rowBtn } from './adminWidgets';
+import { useIsNarrow } from './useIsNarrow';
+import type { Col } from './adminCards';
 
 // ── Агенты ───────────────────────────────────────────────────────────────────
-/**
- * AL-104: агент в графе — единица прав. Профиль берётся из поля `agent_role` (имя поля вершины прежнее, справочник — agent_profile с V48)
- * (миграция V21), а НЕ выводится из имени учётки: раньше роль и учётка были
- * неразличимы, и двух агентов одной роли завести было некуда
- * ([[D-AGENT-IDENTITY-PROFILE-VS-INSTANCE]]).
- */
-interface AgentRow {
-  actor_id: string;
-  name: string | null;
-  client_id: string | null;
-  agent_role: string | null;
-  owner_kc_sub: (string | null)[] | string | null;
-  owner_display_name: (string | null)[] | string | null;
-}
+// AL-104: агент графа (AgentRow) — тип в types.ts; слайс agent_owners грузит оболочка (SH-05).
 
 /** Текст сбоя загрузки; отмена (abort) сбоем не считается. */
 const failText = (e: unknown): string | null => {
@@ -36,23 +26,27 @@ const firstOf = (v: unknown): string | null => {
   return (v as string | null) ?? null;
 };
 
-export function AgentsTab({ st, people, preflight, onError }: {
+export function AgentsTab({ st, people, preflight, graph, graphErr, onError, reload: reloadAll }: {
   st: KcState<KcAgent>; people: KcState<KcUser>;
-  preflight: Preflight | null; onError: (e: unknown) => void;
+  preflight: Preflight | null;
+  /** Агенты графа (agent_owners) — от KC не зависят: видны и при 403/503 KC (A-02). */
+  graph: AgentRow[]; graphErr: string | null;
+  onError: (e: unknown) => void; reload: () => void;
 }) {
   const { t } = useTranslation();
+  const narrow = useIsNarrow();
+  const agents = graph;
+  const agentsErr = graphErr;
   const [q, setQ] = useState('');
   const [secret, setSecret] = useState<{ client: string; value: string } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [agents, setAgents] = useState<AgentRow[]>([]);
   const [roles, setRoles] = useState<DictRow[]>([]);
   const [matrix, setMatrix] = useState<Record<string, string[]>>({});
   const [projRoles, setProjRoles] = useState<Record<string, { projects: string[]; roles: string[] }>>({});
   // AH-07 (A-05/A-06/A-07/A-11): сбой каждого источника раньше становился
   // пустым значением — «агентов нет», «видит 0», «пишет 0», пустые профили.
   // Это выглядело как реальный запрет или пустой граф, хотя данных просто не было.
-  const [agentsErr, setAgentsErr] = useState<string | null>(null);
   const [rolesErr, setRolesErr] = useState<string | null>(null);
   const [matrixErr, setMatrixErr] = useState<string | null>(null);
   const [projFailed, setProjFailed] = useState<Set<string>>(new Set());
@@ -62,9 +56,6 @@ export function AgentsTab({ st, people, preflight, onError }: {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchLoreSlice<AgentRow>('agent_owners', {}, ctrl.signal)
-      .then(rs => { setAgents(rs); setAgentsErr(null); })
-      .catch(e => { const m = failText(e); if (m) { setAgents([]); setAgentsErr(m); } });
     fetchLoreSlice<DictRow>('dictionary', { dict_type: 'agent_profile' }, ctrl.signal)
       .then(rs => { setRoles(rs.filter(r => r.is_active !== false)); setRolesErr(null); })
       .catch(e => { const m = failText(e); if (m) { setRoles([]); setRolesErr(m); } });
@@ -135,7 +126,7 @@ export function AgentsTab({ st, people, preflight, onError }: {
         actor_id: actorId, client_id: draft.client, kc_sub: draft.owner, agent_role: draft.role,
       });
       setDraft({ name: '', role: '', owner: '', client: '' });
-      setReload(r => r + 1);
+      setReload(r => r + 1); reloadAll();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
       onError(e);
@@ -146,7 +137,7 @@ export function AgentsTab({ st, people, preflight, onError }: {
     setBusy(true);
     try {
       const res = await loreMutate<{ value?: string }>(`/kc/agent/${a.id}/rotate`, {});
-      setSecret({ client: a.clientId, value: res?.value ?? '(секрет не возвращён)' });
+      setSecret({ client: a.clientId, value: res?.value ?? t('lore.admin.secretNotReturned', '(секрет не возвращён)') });
       setConfirm(null);
     } catch (e) { onError(e); } finally { setBusy(false); }
   }
@@ -154,20 +145,133 @@ export function AgentsTab({ st, people, preflight, onError }: {
   // Текст правился вместе с разделением сущностей: раньше он утверждал, что
   // агенты «не заводятся руками», и это перестало быть правдой ровно на этом
   // экране. Учётка и агент — разные вещи с разным способом появления.
-  const note = <div style={S.card}>{t('lore.admin.agentsNote', 'Агент — это пара «владелец × роль», и заводится он здесь. Учётные записи Keycloak под них провижинятся скриптом: ротация показывает секрет ОДИН раз, LORE его не хранит. Права агент берёт у владельца — своих не имеет.')}</div>;
-  if (st.k !== 'ok') return <div>{note}<KcStateView s={st} empty={null} /></div>;
+  const note = (
+    <details style={S.note}>
+      <summary style={{ cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>{t('lore.admin.agentsNoteSummary', 'Как устроены агенты')}</summary>
+      <div style={{ marginTop: 4 }}>{t('lore.admin.agentsNote', 'Агент — это пара «владелец × роль», и заводится он здесь. Учётные записи Keycloak под них провижинятся скриптом: ротация показывает секрет ОДИН раз, LORE его не хранит. Права агент берёт у владельца — своих не имеет.')}</div>
+    </details>
+  );
 
-  const rows = st.rows;
+  // A-02: состояние KC — только в секции учёток. Граф агентов, профили и форма
+  // от KC не зависят и рисуются всегда; там, где нужен KC, — «?» вместо выдумки.
+  const kcOk = st.k === 'ok';
+  const rows = kcOk ? st.rows : [];
 
   // Роль, которая есть в Keycloak, но отсутствует в справочнике agent_profile (до V48 — agent_role):
   // агента с ней здесь не завести — селект ролей берётся из справочника.
   // Показать обязательно: молча пропущенная роль выглядит как «такой роли
   // нет вовсе», хотя учётка под неё уже выпущена и клейм работает.
-  const orphanScopes = Array.from(new Set(rows.flatMap(c => c.agent_scope ?? [])))
+  // При сбое справочника сиротами стали бы ВСЕ скоупы (A-12) — тогда не считаем.
+  const orphanScopes = kcOk && !rolesErr ? Array.from(new Set(rows.flatMap(c => c.agent_scope ?? [])))
     .map(s => s.replace(/^agent-/, ''))
     .filter(code => !roles.some(r => r.code === code))
-    .sort();
-  const shown = rows.filter(a => !q || a.clientId.includes(q) || a.agent_scope.some(s => s.includes(q)));
+    .sort() : [];
+  // A-13: поиск по учёткам — без учёта регистра, как в остальных вкладках.
+  const ql = q.toLowerCase();
+  const shown = rows.filter(a => !ql || a.clientId.toLowerCase().includes(ql) || a.agent_scope.some(s => s.toLowerCase().includes(ql)));
+  const unknownMark = (title: string) => <span style={{ color: 'var(--t3)' }} title={title}>?</span>;
+  const failedT = t('lore.admin.unknownLoadFailed', 'не загрузилось');
+  const kcNaT = t('lore.admin.kcNa', 'Keycloak не ответил');
+
+  // ── Агенты графа (A-05…A-08) ──
+  const agentCols: Col[] = [
+    { key: 'name', label: t('lore.admin.thAgent', 'агент'), kind: 'title' },
+    { key: 'role', label: t('lore.admin.thProfile', 'профиль') },
+    { key: 'owner', label: t('lore.admin.thOwner', 'владелец') },
+    { key: 'client', label: t('lore.admin.thClient', 'учётка') },
+    { key: 'sees', label: t('lore.admin.thSees', 'видит'), num: true },
+    { key: 'writes', label: t('lore.admin.thWrites', 'пишет'), num: true },
+    { key: 'where', label: t('lore.admin.thWritesWhere', 'куда пишет') },
+  ];
+  const agentCell = (a: AgentRow, k: string) => {
+    const sub = firstOf(a.owner_kc_sub);
+    const ownerFailed = !!sub && projFailed.has(sub);
+    const unknown = !!matrixErr || ownerFailed;
+    const w = writesIn(sub, a.agent_role);
+    switch (k) {
+      case 'name': return a.name ?? a.actor_id;
+      case 'role': return a.agent_role
+        ? <span style={S.pill('var(--inf)')}>{a.agent_role}</span>
+        : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noRole', '⚠ профиль не задан')}</span>;
+      case 'owner': return firstOf(a.owner_display_name)
+        ?? <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noOwner', '⚠ нет владельца')}</span>;
+      case 'client': return <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{a.client_id ?? '—'}</span>;
+      case 'sees': return ownerFailed ? unknownMark(failedT) : seesCount(sub);
+      case 'writes': return unknown ? unknownMark(failedT) : <span style={{ color: w.length ? 'var(--t2)' : 'var(--wrn)' }}>{w.length}</span>;
+      case 'where': return unknown ? unknownMark(failedT)
+        : <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{w.length ? <>{w.slice(0, 3).join(', ')}{w.length > 3 ? ' …' : ''}</> : '—'}</span>;
+    }
+    return null;
+  };
+
+  // ── Профили агентов (A-11) ──
+  const profCols: Col[] = [
+    { key: 'code', label: t('lore.admin.thCode', 'код'), kind: 'title' },
+    { key: 'label', label: t('lore.admin.thName', 'название') },
+    { key: 'by', label: t('lore.admin.thDelegators', 'кто вправе делегировать (D4)'), kind: 'full' },
+    { key: 'kc', label: t('lore.admin.thKcClient', 'учётка в KC') },
+    { key: 'n', label: t('lore.admin.thAgentsN', 'агентов'), num: true },
+  ];
+  const profCell = (r: DictRow, k: string) => {
+    switch (k) {
+      case 'code': return r.code;
+      case 'label': return r.label_ru ?? r.code;
+      case 'by': {
+        if (matrixErr) return unknownMark(failedT);
+        const by = Object.entries(matrix).filter(([, list]) => list.includes(r.code)).map(([role]) => role);
+        return by.length
+          ? <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>{by.map(x => <span key={x} style={S.pill('var(--t3)')}>{x}</span>)}</span>
+          : <span style={{ color: 'var(--t3)' }}>—</span>;
+      }
+      case 'kc': {
+        if (!kcOk) return unknownMark(kcNaT);
+        return rows.some(c => (c.agent_scope ?? []).includes('agent-' + r.code))
+          ? <GameIcon slug="tick" size={13} style={{ color: 'var(--suc)' }} />
+          : <span style={{ color: 'var(--dng)' }}>{t('lore.admin.noClientForRole', 'нет учётки')}</span>;
+      }
+      case 'n': return agentsErr ? unknownMark(failedT) : agents.filter(a => a.agent_role === r.code).length;
+    }
+    return null;
+  };
+
+  // ── Учётки KC (A-14, A-15) ──
+  const kcCols: Col[] = [
+    { key: 'client', label: t('lore.admin.thKcClientId', 'клиент'), kind: 'title' },
+    { key: 'scope', label: t('lore.admin.thAgentScope', 'agent_scope'), kind: 'full' },
+    { key: 'on', label: t('lore.admin.thEnabled', 'вкл') },
+    { key: 'agent', label: t('lore.admin.thAgent', 'агент') },
+    { key: 'act', label: '', kind: 'act' },
+  ];
+  const kcCell = (a: KcAgent, k: string) => {
+    switch (k) {
+      case 'client': return a.clientId;
+      case 'scope': return (a.agent_scope ?? []).length
+        ? <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>{a.agent_scope.map(s => <span key={s} style={S.pill('var(--inf)')}>{s}</span>)}</span>
+        : <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noScope', '— (оси не несёт, легаси)')}</span>;
+      case 'on': return a.enabled
+        ? <GameIcon slug="tick" size={13} style={{ color: 'var(--suc)' }} />
+        : <GameIcon slug="cross-mark" size={12} style={{ color: 'var(--t3)' }} />;
+      case 'agent': {
+        if ((a.agent_scope ?? []).length === 0) return <span style={{ color: 'var(--t3)' }}>{t('lore.admin.legacyNoBind', 'привязка запрещена')}</span>;
+        if (agentsErr) return unknownMark(failedT);
+        const bound = agents.find(x => x.client_id === a.clientId);
+        return bound
+          ? <span style={{ color: 'var(--suc)' }}>{bound.name ?? bound.actor_id}</span>
+          : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noAgentForClient', 'агента нет')}</span>;
+      }
+      case 'act': return confirm === a.id
+        ? <button style={rowBtn(narrow, S.primary)} disabled={busy} onClick={() => rotate(a)}>{t('lore.admin.confirmRotate', 'точно ротировать?')}</button>
+        : <button style={rowBtn(narrow)} onClick={() => setConfirm(a.id)}><GameIcon slug="cycle" size={12} style={{ color: 'inherit' }} />{t('lore.admin.rotate', 'ротировать секрет')}</button>;
+    }
+    return null;
+  };
+
+  // A-09: поля формы с подписями; на телефоне — столбиком во всю ширину, 40px.
+  const fld = { ...S.input, minHeight: S.tap(narrow).minHeight, width: narrow ? '100%' : undefined };
+  const lbl = { display: 'flex', flexDirection: 'column' as const, gap: 3, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '.06em', flex: narrow ? '1 1 100%' : undefined };
+  const ownerOptions = people.k === 'ok' ? people.rows : [];
+  const clientOptions = rows.filter(c => (c.agent_scope ?? []).length && !agents.some(a => a.client_id === c.clientId));
+
   return (
     <div>
       {note}
@@ -176,104 +280,57 @@ export function AgentsTab({ st, people, preflight, onError }: {
         <div style={{ ...S.warn, color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)', background: 'color-mix(in srgb, var(--suc) 8%, transparent)' }}>
           <div>{t('lore.admin.newSecret', 'Новый секрет {{c}} — скопируйте сейчас, больше не покажем:', { c: secret.client })}</div>
           <code style={{ fontSize: 'var(--fs-sm)', wordBreak: 'break-all' }}>{secret.value}</code>
-          <div><button style={S.btn} onClick={() => setSecret(null)}>{t('lore.admin.hide', 'скрыть')}</button></div>
+          <div><button style={rowBtn(narrow)} onClick={() => setSecret(null)}>{t('lore.admin.hide', 'скрыть')}</button></div>
         </div>
       )}
+
       {/* ── Агенты: единицы прав (имя + роль + владелец) ──────────────── */}
-      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '14px 0 4px' }}>
-        {t('lore.admin.agentsSection', 'Агенты')}
-      </div>
-      {agentsErr && <LoadError text={t('lore.admin.agentsLoadError', 'Агенты графа не загрузились: {{reason}}', { reason: agentsErr })} />}
+      <Sec first n={agentsErr ? '?' : agents.length} hint={t('lore.admin.agentsGraphHint', 'от Keycloak не зависят — видны и при сбое KC')}>
+        {t('lore.admin.agentsGraphSection', 'Агенты графа')}
+      </Sec>
+      {agentsErr && <LoadError text={t('lore.admin.agentsLoadError', 'Агенты графа не загрузились: {{reason}}', { reason: agentsErr })} onRetry={reloadAll} retryLabel={t('lore.admin.retry', 'повторить')} />}
       {matrixErr && !agentsErr && (
         <div style={S.warn}>{t('lore.admin.matrixLoadError', 'Матрица делегирования не загрузилась — «пишет» неизвестно (?), а не 0: {{reason}}', { reason: matrixErr })}</div>
       )}
       {!agentsErr && agents.length === 0 && (
         <div style={S.warn}>
-          {t('lore.admin.noAgents', 'Агентов нет ни одного. Роли и учётки заведены, но кто ими пользуется — не записано: права агента берутся у владельца, а владельца нет. При включённом проектном скоупе такой агент увидит пустой LORE.')}
+          {t('lore.admin.noGraphAgents', 'Агентов нет ни одного. Роли и учётки заведены, но кто ими пользуется — не записано: права агента берутся у владельца, а владельца нет. При включённом проектном скоупе такой агент увидит пустой LORE.')}
         </div>
       )}
       {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>{err}</div>}
-      <div style={S.tw}>
-        <table style={S.table}>
-          <thead><tr>{['агент', 'профиль', 'владелец', 'учётка', 'видит', 'пишет', 'куда пишет'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-          <tbody>
-            {agents.map(a => {
-              const sub = firstOf(a.owner_kc_sub);
-              const w = writesIn(sub, a.agent_role);
-              return (
-                <tr key={a.actor_id}>
-                  <td style={S.td}>{a.name ?? a.actor_id}</td>
-                  <td style={S.td}>{a.agent_role
-                    ? <span style={S.pill('var(--inf)')}>{a.agent_role}</span>
-                    : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noRole', '⚠ профиль не задан')}</span>}</td>
-                  <td style={S.td}>{firstOf(a.owner_display_name)
-                    ?? <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noOwner', '⚠ нет владельца')}</span>}</td>
-                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{a.client_id ?? '—'}</td>
-                  <td style={{ ...S.td, ...S.num }} title={sub && projFailed.has(sub) ? t('lore.admin.unknownLoadFailed', 'не загрузилось') : undefined}>
-                    {sub && projFailed.has(sub) ? '?' : seesCount(sub)}</td>
-                  {(() => {
-                    const unknown = !!matrixErr || (!!sub && projFailed.has(sub));
-                    return <>
-                      <td style={{ ...S.td, ...S.num, color: unknown ? 'var(--t3)' : w.length ? 'var(--t2)' : 'var(--wrn)' }}
-                          title={unknown ? t('lore.admin.unknownLoadFailed', 'не загрузилось') : undefined}>{unknown ? '?' : w.length}</td>
-                      <td style={{ ...S.td, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{unknown ? '?' : <>{w.slice(0, 3).join(', ')}{w.length > 3 ? ' …' : ''}</>}</td>
-                    </>;
-                  })()}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, alignItems: 'center', marginTop: 8 }}>
-        <input style={{ ...S.input, width: 170 }} placeholder={t('lore.admin.agentName', 'имя агента')}
-               value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
-        <select style={S.select} value={draft.role} onChange={e => setDraft(d => ({ ...d, role: e.target.value }))}>
-          <option value="">{t('lore.admin.pickRole', '— профиль —')}</option>
-          {roles.map(r => <option key={r.code} value={r.code}>{r.code}</option>)}
-        </select>
-        <select style={S.select} value={draft.owner} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))}>
-          <option value="">{t('lore.admin.pickOwner', '— владелец —')}</option>
-          {(people.k === 'ok' ? people.rows : []).map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
-        </select>
-        <select style={S.select} value={draft.client} onChange={e => setDraft(d => ({ ...d, client: e.target.value }))}>
-          <option value="">{t('lore.admin.pickClient', '— учётка —')}</option>
-          {(st.k === 'ok' ? st.rows : [])
-            .filter(c => (c.agent_scope ?? []).length && !agents.some(a => a.client_id === c.clientId))
-            .map(c => <option key={c.id} value={c.clientId}>{c.clientId}</option>)}
-        </select>
-        <button style={S.primary} disabled={busy} onClick={saveAgent}>{busy ? '…' : t('lore.admin.addAgent', '+ агент')}</button>
+      {agents.length > 0 && (
+        <RespTable cols={agentCols} rows={agents} rowKey={a => a.actor_id} cell={agentCell} narrow={narrow} ariaLabel={t('lore.admin.agentsGraphSection', 'Агенты графа')} />
+      )}
+      <div style={{ ...S.form, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={lbl}>{t('lore.admin.agentName', 'имя агента')}
+          <input style={{ ...fld, width: narrow ? '100%' : 170 }} placeholder={t('lore.admin.agentName', 'имя агента')}
+                 value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
+        </label>
+        <label style={lbl}>{t('lore.admin.thProfile', 'профиль')}
+          <select style={{ ...fld, fontFamily: 'var(--mono)' }} value={draft.role} onChange={e => setDraft(d => ({ ...d, role: e.target.value }))}>
+            <option value="">{t('lore.admin.pickRole', '— профиль —')}</option>
+            {roles.map(r => <option key={r.code} value={r.code}>{r.code}</option>)}
+          </select>
+        </label>
+        <label style={lbl}>{t('lore.admin.thOwner', 'владелец')}
+          <select style={{ ...fld, fontFamily: 'var(--mono)' }} value={draft.owner} disabled={people.k !== 'ok'} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))}>
+            <option value="">{people.k === 'ok' ? t('lore.admin.pickOwner', '— владелец —') : t('lore.admin.pickKcNa', '— Keycloak не ответил —')}</option>
+            {ownerOptions.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+          </select>
+        </label>
+        <label style={lbl}>{t('lore.admin.thClient', 'учётка')}
+          <select style={{ ...fld, fontFamily: 'var(--mono)' }} value={draft.client} disabled={!kcOk} onChange={e => setDraft(d => ({ ...d, client: e.target.value }))}>
+            <option value="">{kcOk ? t('lore.admin.pickClient', '— учётка —') : t('lore.admin.pickKcNa', '— Keycloak не ответил —')}</option>
+            {clientOptions.map(c => <option key={c.id} value={c.clientId}>{c.clientId}</option>)}
+          </select>
+        </label>
+        <button style={{ ...rowBtn(narrow, S.primary), flex: narrow ? '1 1 100%' : undefined }} disabled={busy} onClick={saveAgent}>{busy ? '…' : t('lore.admin.addAgent', '+ агент')}</button>
       </div>
 
       {/* ── Профили агентов: справочник agent_profile + кто вправе делегировать ─ */}
-      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '20px 0 4px' }}>
-        {t('lore.admin.agentRolesSection', 'Профили агентов')}
-      </div>
+      <Sec n={rolesErr ? '?' : roles.length}>{t('lore.admin.agentRolesSection', 'Профили агентов')}</Sec>
       {rolesErr && <LoadError text={t('lore.admin.profilesLoadError', 'Справочник профилей агентов не загрузился — выбрать профиль сейчас не из чего: {{reason}}', { reason: rolesErr })} />}
-      <div style={S.tw}>
-        <table style={S.table}>
-          <thead><tr>{['код', 'название', 'кто вправе делегировать (D4)', 'учётка в KC', 'агентов'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-          <tbody>
-            {roles.map(r => {
-              const by = Object.entries(matrix).filter(([, list]) => list.includes(r.code)).map(([role]) => role);
-              const hasClient = (st.k === 'ok' ? st.rows : []).some(c => (c.agent_scope ?? []).includes('agent-' + r.code));
-              return (
-                <tr key={r.code}>
-                  <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td>
-                  <td style={S.td}>{r.label_ru ?? r.code}</td>
-                  <td style={S.td}>{matrixErr ? <span style={{ color: 'var(--t3)' }}>?</span> : by.length
-                    ? by.map(x => <span key={x} style={{ ...S.pill('var(--t3)'), marginRight: 4 }}>{x}</span>)
-                    : <span style={{ color: 'var(--t3)' }}>—</span>}</td>
-                  <td style={S.td}>{hasClient
-                    ? '✓'
-                    : <span style={{ color: 'var(--dng)' }}>{t('lore.admin.noClientForRole', 'нет учётки')}</span>}</td>
-                  <td style={{ ...S.td, ...S.num }}>{agents.filter(a => a.agent_role === r.code).length}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {roles.length > 0 && <RespTable cols={profCols} rows={roles} rowKey={r => r.code} cell={profCell} narrow={narrow} ariaLabel={t('lore.admin.agentRolesSection', 'Профили агентов')} />}
       {orphanScopes.length > 0 && (
         <div style={S.warn}>
           {t('lore.admin.scopeNotInDict',
@@ -282,44 +339,14 @@ export function AgentsTab({ st, people, preflight, onError }: {
         </div>
       )}
 
-      {/* ── Учётные записи KC ─────────────────────────────────────────── */}
-      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '20px 0 4px' }}>
-        {t('lore.admin.kcClientsSection', 'Учётные записи Keycloak')}
-      </div>
-      <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
-      <div style={S.tw}>
-        <table style={S.table}>
-          <thead><tr>{['клиент', 'agent_scope', 'вкл', 'агент', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-          <tbody>
-            {shown.map(a => (
-              <tr key={a.id}>
-                <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{a.clientId}</td>
-                <td style={S.td}>
-                  {(a.agent_scope ?? []).length
-                    ? a.agent_scope.map(s => <span key={s} style={{ ...S.pill('var(--inf)'), marginRight: 4 }}>{s}</span>)
-                    : <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noScope', '— (оси не несёт, легаси)')}</span>}
-                </td>
-                <td style={S.td}>{a.enabled ? '✓' : '✗'}</td>
-                <td style={S.td}>
-                  {(a.agent_scope ?? []).length === 0
-                    ? <span style={{ color: 'var(--t3)' }}>{t('lore.admin.legacyNoBind', 'привязка запрещена')}</span>
-                    : (() => {
-                        const bound = agents.find(x => x.client_id === a.clientId);
-                        return bound
-                          ? <span style={{ color: 'var(--suc)' }}>{bound.name ?? bound.actor_id}</span>
-                          : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noAgentForClient', 'агента нет')}</span>;
-                      })()}
-                </td>
-                <td style={S.td}>
-                  {confirm === a.id
-                    ? <button style={S.primary} disabled={busy} onClick={() => rotate(a)}>{t('lore.admin.confirmRotate', 'точно ротировать?')}</button>
-                    : <button style={S.btn} onClick={() => setConfirm(a.id)}>{t('lore.admin.rotate', 'ротировать секрет')}</button>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* ── Учётные записи KC: единственное место, где видно состояние KC ── */}
+      <Sec n={kcOk ? rows.length : '?'}>{t('lore.admin.kcClientsSection', 'Учётные записи Keycloak')}</Sec>
+      {kcOk ? (
+        <>
+          <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} placeholder={t('lore.admin.kcClientSearch', 'клиент или agent_scope…')} />
+          <RespTable cols={kcCols} rows={shown} rowKey={a => a.id} cell={kcCell} narrow={narrow} ariaLabel={t('lore.admin.kcClientsSection', 'Учётные записи Keycloak')} />
+        </>
+      ) : <KcStateView s={st} empty={null} />}
     </div>
   );
 }

@@ -1,73 +1,63 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { GameIcon } from '../GameIcon';
 import { S } from './adminStyles';
-
-// ── Быстрые команды — личная шпаргалка владельца (не продуктовая фича,
-//    не читает LORE-данные) ──────────────────────────────────────────────────
-// Формат нарочно плоский массив, а не таблица/справочник в БД: список личный,
-// правится редко и вручную, заводить под него ещё один dict_type — лишний слой
-// для того, что проще редактировать прямо в коде при следующем расширении.
-const QUICK_GROUPS: { title: string; items: { label: string; cmd: string }[] }[] = [
-  {
-    title: 'Перейти в проект',
-    items: [
-      { label: 'UnlimitedLORE', cmd: 'cd C:\\AIDA\\UnlimitedLORE' },
-      { label: 'aida-root', cmd: 'cd C:\\AIDA\\aida-root' },
-      { label: 'Mobilepoc', cmd: 'cd D:\\Mobilepoc' },
-    ],
-  },
-  {
-    title: 'Канал miniLORE',
-    items: [
-      {
-        label: 'Подключить консоль к диалогу по sessionId (виден в приложении) — НЕ -c, он берёт не тот диалог. PowerShell.',
-        cmd: '& "$env:USERPROFILE\\.local\\bin\\claude.exe" --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>',
-      },
-    ],
-  },
-];
+import { QUICK_GROUPS, tryCopy, type CopyResult } from './quickCommands';
 
 function CopyBlock({ cmd }: { cmd: string }) {
-  const [copied, setCopied] = useState(false);
+  const { t } = useTranslation();
+  const [res, setRes] = useState<CopyResult | null>(null);
+  const tone = res === 'ok' ? 'var(--suc)' : res ? 'var(--dng)' : null;
   return (
-    <button
-      type="button"
-      onClick={() => {
-        void navigator.clipboard?.writeText(cmd);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }}
-      title="Скопировать"
-      style={{
-        display: 'block', width: '100%', textAlign: 'left', font: 'inherit',
-        fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', lineHeight: 1.5,
-        padding: '7px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'pre-wrap',
-        wordBreak: 'break-all',
-        border: `1px solid ${copied ? 'var(--suc)' : 'var(--bd)'}`,
-        background: copied ? 'color-mix(in srgb, var(--suc) 10%, transparent)' : 'var(--bg1)',
-        color: copied ? 'var(--suc)' : 'var(--t1)',
-      }}
-    >
-      {copied ? '✓ скопировано' : cmd}
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={async () => {
+          const r = await tryCopy(cmd, typeof navigator !== 'undefined' ? navigator.clipboard : undefined);
+          setRes(r);
+          setTimeout(() => setRes(null), r === 'ok' ? 1500 : 4000);
+        }}
+        title={t('lore.admin.copyTitle', 'Скопировать')}
+        style={{
+          display: 'block', width: '100%', textAlign: 'left', font: 'inherit', minHeight: 40,
+          fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', lineHeight: 1.5,
+          padding: '7px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          border: `1px solid ${tone ?? 'var(--bd)'}`,
+          background: tone ? `color-mix(in srgb, ${tone} 10%, transparent)` : 'var(--bg1)',
+          color: tone ?? 'var(--t1)',
+        }}
+      >
+        {res === 'ok'
+          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><GameIcon slug="tick" size={12} style={{ color: 'inherit' }} />{t('lore.admin.copied', 'скопировано')}</span>
+          : cmd}
+      </button>
+      {/* Q-03: «не скопировано» — с причиной; команда остаётся видна, её можно выделить вручную. */}
+      {res && res !== 'ok' && (
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--dng)', marginTop: 2 }}>
+          {res === 'unavailable'
+            ? t('lore.admin.copyUnavailable', 'Не скопировано: буфер обмена недоступен (страница открыта не по https/localhost). Выделите команду вручную.')
+            : t('lore.admin.copyFailed', 'Не скопировано: браузер отказал в доступе к буферу. Выделите команду вручную.')}
+        </div>
+      )}
+    </div>
   );
 }
 
 export function QuickCommandsTab() {
+  const { t } = useTranslation();
   return (
     <div>
-      <div style={S.card}>
-        Личная шпаргалка — команды на каждый день, чтобы не вспоминать порядок заново. Клик по строке копирует её в буфер.
-        Полный рецепт с оговорками — вкладка «Подключения» в разделе «Основа».
+      <div style={S.note}>
+        {t('lore.admin.quickNote', 'Личная шпаргалка — команды на каждый день, чтобы не вспоминать порядок заново. Нажатие на строку копирует её в буфер. Полный рецепт с оговорками — вкладка «Подключения» в разделе «Основа».')}
       </div>
       {QUICK_GROUPS.map(g => (
-        <div key={g.title} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
-            {g.title}
-          </div>
+        <div key={g.titleKey} style={{ marginBottom: 16 }}>
+          <div style={{ ...S.sec, marginTop: 0 }}>{t(g.titleKey, g.title)}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {g.items.map(it => (
               <div key={it.cmd}>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 2 }}>{it.label}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 2 }}>{t(it.labelKey, it.label)}</div>
                 <CopyBlock cmd={it.cmd} />
               </div>
             ))}
