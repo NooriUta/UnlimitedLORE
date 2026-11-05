@@ -86,7 +86,10 @@ jobs:
       # без явной передачи деплой поднимал бы бэкенд с ПУСТЫМИ секретами — оба
       # моста молча уходили бы в 503 «not configured» при зелёном деплое.
       LORE_SECRETS_PROVIDER: infisical
-      LORE_SECRETS_URL: http://infisical:18080
+      # SPEC-SECRETS-001: хранилище — только по https (сертификат Let's Encrypt,
+      # имя внутри сети резолвится в ci-server). По http машинная личность
+      # логинилась открытым текстом. Порт 18080 закроют, когда переедут все клиенты.
+      LORE_SECRETS_URL: https://secrets.seidrstudio.pro
       LORE_SECRETS_CLIENT_ID: ${{ secrets.LORE_SECRETS_CLIENT_ID }}
       LORE_SECRETS_CLIENT_SECRET: ${{ secrets.LORE_SECRETS_CLIENT_SECRET }}
       LORE_SECRETS_PROJECT_ID: ${{ secrets.LORE_SECRETS_PROJECT_ID }}
@@ -500,8 +503,8 @@ jobs:
               # было в логе CD вообще:
               echo "--- /q/health/ready тело (полностью) ---"
               echo "$hbody"
-              echo "--- сетевая связность контейнера до Infisical (host-gateway:18080) ---"
-              docker exec "$cid" curl -sv -m 10 -o /dev/null "${LORE_SECRETS_URL:-http://infisical:18080}" 2>&1 || true
+              echo "--- сетевая связность контейнера до Infisical ($LORE_SECRETS_URL) ---"
+              docker exec "$cid" curl -sv -m 10 -o /dev/null "$LORE_SECRETS_URL/api/status" 2>&1 || true
               echo "--- логи lore-backend (последние 150 строк, фильтр SecretProvider/Infisical/KC) ---"
               docker compose logs --no-color --tail=150 lore-backend 2>&1 | grep -iE "secretprovider|infisical|kcbridge|authstartupguard" || echo "(в логах ничего не найдено по фильтру — секцию расширить вручную: docker compose logs lore-backend)"
               exit 1
