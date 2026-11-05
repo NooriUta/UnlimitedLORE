@@ -34,6 +34,29 @@ const KNOWN_SETTINGS: KnownSetting[] = [
       hint: t('lore.admin.settingQgProjectsHint', 'Список проектов — во вкладке «Проекты» (slug вида owner/repo). Правка подхватывается со следующего захода опроса, без рестарта.'),
     }),
   },
+  // Картинки в MD-полях (LoreAssetResource.settingBool/settingLong) — ключи заводит
+  // миграция, читает бэкенд при каждой загрузке. Раньше их не было в реестре, и
+  // админка показывала их «неопознанными» с обещанием «удаление ни на что не повлияет».
+  {
+    key: 'md_images_enabled',
+    placeholder: 'true',
+    text: t => ({
+      type: t('lore.admin.settingTypeBool', 'да/нет (true | false)'),
+      def: 'true',
+      descr: t('lore.admin.settingMdImagesDescr', 'Разрешена ли вставка картинок в MD-поля (описания, заметки, тела доков). false — загрузка отвечает отказом MD_IMAGES_DISABLED.'),
+      hint: t('lore.admin.settingMdImagesHint', 'Действует сразу, без рестарта: значение читается при каждой загрузке.'),
+    }),
+  },
+  {
+    key: 'md_image_max_mb',
+    placeholder: '5',
+    text: t => ({
+      type: t('lore.admin.settingTypeMb', 'число, мегабайты'),
+      def: '5',
+      descr: t('lore.admin.settingMdImageMaxDescr', 'Предельный размер одной картинки в MD-поле. Больше — загрузка отклоняется с размером файла в ответе.'),
+      hint: t('lore.admin.settingMdImagesHint', 'Действует сразу, без рестарта: значение читается при каждой загрузке.'),
+    }),
+  },
 ];
 
 /** Строка таблицы известных ключей: запись из базы или null — ключ ещё не задан. */
