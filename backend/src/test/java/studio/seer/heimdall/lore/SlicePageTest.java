@@ -100,6 +100,33 @@ class SlicePageTest {
     }
 
     @Test
+    void unknownFieldFailsWithAvailableColumns() {
+        // Völva 05.11: молча отсутствующее поле агент читает как «значения нет» —
+        // вывод о данных вместо вывода о запросе. Слайсы отдают null-поля явно,
+        // поэтому колонка, которой нет НИ В ОДНОЙ строке, — опечатка или чужая колонка.
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of(
+            Map.of("release_id", "v2", "is_current", true))));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> SlicePage.apply(body, SlicePage.extract(given("fields", "release_id,is_curent"))));
+        assertTrue(e.getMessage().contains("is_curent"), e.getMessage());
+        assertTrue(e.getMessage().contains("is_current"), "перечислены доступные колонки: " + e.getMessage());
+    }
+
+    @Test
+    void nullValuedFieldIsNotUnknown() {
+        java.util.Map<String, Object> row = new java.util.HashMap<>();
+        row.put("a", 1); row.put("b", null);
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of(row)));
+        assertDoesNotThrow(() -> SlicePage.apply(body, SlicePage.extract(given("fields", "b"))));
+    }
+
+    @Test
+    void emptyResultCannotJudgeFields() {
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of()));
+        assertDoesNotThrow(() -> SlicePage.apply(body, SlicePage.extract(given("fields", "whatever"))));
+    }
+
+    @Test
     void fieldsAloneWithoutPaging() {
         Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of(Map.of("a", 1, "b", 2))));
         SlicePage.apply(body, SlicePage.extract(given("fields", "a")));

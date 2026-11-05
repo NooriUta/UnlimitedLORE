@@ -816,7 +816,12 @@ public class AidaLoreResource extends LoreResourceBase {
         return client.query(db, basicAuth(), body)
             .map(res -> {
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
-                SlicePage.apply(out, page);
+                try {
+                    SlicePage.apply(out, page);
+                } catch (IllegalArgumentException e) {
+                    return noStore(Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new LoreError("BAD_PARAMS", e.getMessage())));
+                }
                 return noStore(Response.ok(out));
             })
             .onFailure().recoverWithItem(ex -> {

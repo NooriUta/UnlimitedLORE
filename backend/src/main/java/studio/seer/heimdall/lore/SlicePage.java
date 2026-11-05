@@ -67,7 +67,10 @@ public record SlicePage(Integer limit, int offset, java.util.List<String> fields
         }
     }
 
-    /** Режет {@code body.rows} и дописывает {@code page}. {@code page == null} — ничего не делает. */
+    /**
+     * Режет {@code body.rows} и дописывает {@code page}. {@code page == null} — ничего не делает.
+     * @throws IllegalArgumentException колонка из {@code fields}, которой нет ни в одной строке
+     */
     static void apply(Map<String, Object> body, SlicePage page) {
         if (page == null) return;
         Object raw = body.get("rows");
@@ -75,6 +78,17 @@ public record SlicePage(Integer limit, int offset, java.util.List<String> fields
         int total = rows.size();
         int from = Math.min(page.offset(), total);
         int to = page.limit() == null ? total : (int) Math.min((long) from + page.limit(), total);
+        if (page.fields() != null && !rows.isEmpty()) {
+            // Völva 05.11: молча отсутствующее поле читается как «значения нет».
+            // Слайсы отдают null-поля явно, поэтому колонка, которой нет ни в одной
+            // строке, — ошибка запроса; отказ перечисляет, что есть. Пустая выдача
+            // судить не позволяет — её не трогаем.
+            java.util.Set<String> seen = new java.util.TreeSet<>();
+            for (Object row : rows) if (row instanceof Map<?, ?> m) for (Object k : m.keySet()) seen.add(String.valueOf(k));
+            java.util.List<String> unknown = page.fields().stream().filter(k -> !seen.contains(k)).toList();
+            if (!unknown.isEmpty())
+                throw new IllegalArgumentException("unknown field(s) " + unknown + " — this slice returns: " + seen);
+        }
         List<?> cut = rows.subList(from, to);
         if (page.fields() != null) {
             java.util.List<Object> projected = new java.util.ArrayList<>(cut.size());
