@@ -920,7 +920,7 @@
       "lazyClaude": "ToolSearch — tool schemas load on demand, not all at once. Only names sit in context.",
       "lazyColClient": "Client",
       "lazyColHow": "How it narrows",
-      "lazyIntro": "60 tools is too many to dump on every agent: context bloats and the role blurs (\"anyone can write\"). ADR-LORE-014 solves this",
+      "lazyIntro": "{{n}} tools is too many to dump on every agent: context bloats and the role blurs (\"anyone can write\"). ADR-LORE-014 solves this",
       "lazyIntro2": "— the server always returns the full list, and narrowing happens client-side, by tool name.",
       "lazyNoDispatcher": "without a server-side dispatcher",
       "lazyOpenCode": "permission wildcard in the profile:",
