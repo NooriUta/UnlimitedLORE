@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { fetchLoreSlice, describeLoreError, type LoreKnowDocRow } from '../../../api/lore';
 import { LoadError } from '../EmptyState';
+import { GameIcon } from '../GameIcon';
 import { loadKc, loadKcObj, type KcState } from '../kc-state';
 import { type RealmRole } from '../adminRealmRoles';
 import { AUTH_ENABLED } from '../../../auth/session';
@@ -10,6 +11,8 @@ import { useRole } from '../../../auth/useRole';
 import type { DictRow, ProjRow, TagRow, KcUser, KcAgent, Preflight, Tab } from './types';
 import { S } from './adminStyles';
 import { NAV_GROUPS, TAB_TITLES, ALL_TABS } from './adminTabs';
+import { kcCounter, readinessCounter, sliceCounter, systemChips, whereAmI, type NavCounter, type SysChip } from './adminShellModel';
+import { useIsNarrow } from './useIsNarrow';
 import { UsersTab } from './UsersTab';
 import { AgentsTab } from './AgentsTab';
 import { RolesTab } from './RolesTab';
@@ -25,15 +28,11 @@ import { QuickCommandsTab } from './QuickCommandsTab';
 // (Доступ / Справочники / Система), а не по таблицам БД; выдача admin-роли и правка
 // подписи справочника не равны по весу и не стоят рядом.
 // Write path = те же эндпоинты, что у MCP (D4) — параллельного admin-API нет.
-
-// Узкий экран: группы навигации схлопываются в горизонтальные ряды (mobile-проверка фазы UI).
-const narrowQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 760px)') : null;
-function useIsNarrow(): boolean {
-  return useSyncExternalStore(
-    cb => { narrowQuery?.addEventListener('change', cb); return () => narrowQuery?.removeEventListener('change', cb); },
-    () => narrowQuery?.matches ?? false,
-  );
-}
+//
+// AH-05 — оболочка по прототипу admin-v2 (одобрен 04.11.2026, мобильная навигация —
+// вариант A): полоса состояния системы на всех вкладках (вместо dev-баннера и плашки
+// роли), честные счётчики («?» с причиной, красный — проблемы), подпись риска у
+// группы; на телефоне — строка «где я» и лента вкладок с подписями групп.
 
 /**
  * AH-07 (SH-06): источники данных панели. Сбой источника раньше уходил только
@@ -46,6 +45,91 @@ const TAB_SOURCES: Partial<Record<Tab, Src[]>> = {
   dicts: ['dicts', 'components'], roles: ['dicts'], settings: ['dicts'],
   projects: ['projects', 'sprints'], tags: ['tags'], claudeRules: ['claudeRules'],
 };
+
+/** Пояснение к счётчику: «?» обязан сказать, ЧТО не удалось проверить. */
+function useCounterTitle() {
+  const { t } = useTranslation();
+  return (c: NavCounter, tab: Tab): string | undefined => {
+    if (c.kind === 'unk') {
+      switch (c.why) {
+        case 'kc403': return t('lore.admin.cntKc403', 'не смогли проверить: 403 — нет прав');
+        case 'kc503': return t('lore.admin.cntKc503', 'не смогли проверить: 503 — Keycloak не настроен ({{detail}})', { detail: c.detail ?? '' });
+        case 'kcErr': return t('lore.admin.cntKcErr', 'не смогли проверить: Keycloak не ответил ({{detail}})', { detail: c.detail ?? '' });
+        case 'srcErr': return t('lore.admin.cntSrcErr', 'не смогли проверить: {{detail}}', { detail: c.detail ?? '' });
+        case 'preflight': return t('lore.admin.cntPreflight', 'не смогли проверить: auth-preflight не ответил');
+      }
+    }
+    if (c.kind === 'bad') return t('lore.admin.cntBad', 'проверок готовности к включению auth не пройдено: {{n}}', { n: c.n });
+    // SH-05: счётчик «Агенты» — это учётки KC, а не агенты графа; подпись это говорит.
+    if (c.kind === 'n' && tab === 'agents') return t('lore.admin.cntAgents', 'учёток Keycloak: {{n}}', { n: c.n });
+    return undefined;
+  };
+}
+
+function NavCount({ c, title }: { c: NavCounter; title?: string }) {
+  if (c.kind === 'none') return null;
+  if (c.kind === 'n') return <span style={S.navN} title={title}>{c.n}</span>;
+  if (c.kind === 'unk') return <span style={S.navCnt('wrn')} title={title} aria-label={title}>?</span>;
+  return <span style={S.navCnt('dng')} title={title} aria-label={title}>{c.n}</span>;
+}
+
+/** Полоса состояния системы (SH-08/SH-09): видна на всех вкладках, и на телефоне. */
+function SystemBar({ chips, narrow }: { chips: SysChip[]; narrow: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState<SysChip['id'] | null>(null);
+  const label = (c: SysChip): string => {
+    switch (c.id) {
+      case 'auth': return c.state === 'on' ? t('lore.admin.sysAuthOn', 'auth: on') : t('lore.admin.sysAuthOff', 'auth: off · dev');
+      case 'kc': return ({
+        ok: t('lore.admin.sysKcOk', 'KC: ok'), off: t('lore.admin.sysKcOff', 'KC: не настроен'),
+        down: t('lore.admin.sysKcDown', 'KC: недоступен'), '403': t('lore.admin.sysKc403', 'KC: 403'),
+      } as Record<string, string>)[c.state] ?? t('lore.admin.sysKcUnknown', 'KC: ?');
+      case 'scope': return c.state === 'on' ? t('lore.admin.sysScopeOn', 'права агентов: проверяются')
+        : c.state === 'off' ? t('lore.admin.sysScopeOff', 'права агентов: не проверяются')
+        : t('lore.admin.sysScopeUnknown', 'права агентов: ?');
+      case 'role': return t('lore.admin.sysRole', 'роль: {{role}}', { role: c.state });
+    }
+  };
+  // Пояснение раскрывается по нажатию — у телефона нет наведения, title там не виден.
+  const detail = (c: SysChip): ReactNode => {
+    switch (c.id) {
+      case 'auth': return c.state === 'on'
+        ? t('lore.admin.sysAuthOnD', 'Аутентификация включена: роль берётся из токена Keycloak.')
+        : <><b>{t('lore.admin.devBannerH', 'Аутентификация выключена.')}</b>{' '}
+            {t('lore.admin.devBannerB', 'Администрировать LORE может любой, кто открыл этот адрес: роль берётся из конфига, а не из токена. Режим разработки.')}</>;
+      case 'kc': return ({
+        ok: t('lore.admin.sysKcOkD', 'Мост в Keycloak отвечает.'),
+        off: t('lore.admin.sysKcOffD', 'Мост в Keycloak не настроен (KC_ADMIN_CLIENT_SECRET). Списки людей и учёток сейчас неизвестны — это не «пусто». Остальной LORE работает.'),
+        down: t('lore.admin.sysKcDownD', 'Keycloak не ответил: {{detail}}. Состояние людей и учёток неизвестно.', { detail: c.detail ?? '' }),
+        '403': t('lore.admin.sysKc403D', 'Keycloak отказал: управление доступом открыто только роли admin.'),
+      } as Record<string, string>)[c.state] ?? t('lore.admin.sysKcUnknownD', 'auth-preflight не ответил — состояние Keycloak не подтверждено.');
+      case 'scope': return c.state === 'on'
+        ? t('lore.admin.sysScopeOnD', 'Клейм agent_scope проверяется бэкендом.')
+        : c.state === 'off'
+          ? t('lore.admin.notEnforcedB', 'Клейм agent_scope бэкенд не читает: сейчас это фильтр видимости инструментов, не защита. Включается флагом LORE_AUTH_ENABLED — состояние видно в «Настройках».')
+          : t('lore.admin.notEnforcedUnkB', 'Бэкенд не ответил на auth-preflight, поэтому состояние защиты не подтверждено. Считайте таблицу описанием намерения, пока не восстановится связь.');
+      case 'role': return t('lore.admin.sysRoleD', 'Роль текущей сессии: {{role}}. При выключенной аутентификации она берётся из конфига.', { role: c.state });
+    }
+  };
+  const cur = chips.find(c => c.id === open);
+  return (
+    <div style={{ flexShrink: 0, background: 'var(--bg1)', borderBottom: '1px solid var(--bd)' }}>
+      <div style={S.sysBar}>
+        {!narrow && <span style={S.sysBrand}>{t('lore.admin.crumb', 'Администрирование')}</span>}
+        <div style={S.sysChips}>
+          {chips.map(c => (
+            <button key={c.id} type="button" style={S.sysChip(c.tone, open === c.id, narrow)}
+              aria-expanded={open === c.id} onClick={() => setOpen(o => (o === c.id ? null : c.id))}>
+              {c.id === 'auth' && c.state === 'off' && <GameIcon slug="hazard-sign" size={12} style={{ color: 'inherit' }} />}
+              {label(c)}
+            </button>
+          ))}
+        </div>
+      </div>
+      {cur && <div style={S.sysDetail(cur.tone)}>{detail(cur)}</div>}
+    </div>
+  );
+}
 
 export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
@@ -74,19 +158,22 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const [reload, setReload] = useState(0);
   const bump = () => setReload(x => x + 1);
   const [srcErr, setSrcErr] = useState<Partial<Record<Src, string>>>({});
+  // AH-05: «загружено» отдельно от «пусто» — счётчик не рисует число до ответа.
+  const [loaded, setLoaded] = useState<Partial<Record<Src, boolean>>>({});
 
   useEffect(() => {
-    setSrcErr({});
+    setSrcErr({}); setLoaded({});
+    const done = (src: Src) => setLoaded(m => ({ ...m, [src]: true }));
     const failed = (src: Src, toast = true) => (e: unknown) => {
       if (toast) onError(e);
       const d = describeLoreError(e);
       if (d.kind !== 'aborted') setSrcErr(m => ({ ...m, [src]: d.text }));
     };
-    fetchLoreSlice<DictRow>('dictionary', {}).then(setDicts).catch(failed('dicts'));
-    fetchLoreSlice<ProjRow>('git_projects', {}).then(setProjects).catch(failed('projects'));
-    fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnowTags).catch(failed('tags'));
+    fetchLoreSlice<DictRow>('dictionary', {}).then(r => { setDicts(r); done('dicts'); }).catch(failed('dicts'));
+    fetchLoreSlice<ProjRow>('git_projects', {}).then(r => { setProjects(r); done('projects'); }).catch(failed('projects'));
+    fetchLoreSlice<TagRow>('tags_usage', {}).then(r => { setKnowTags(r); done('tags'); }).catch(failed('tags'));
     // kind — серверный фильтр: общий корпус KnowDoc упирается в LIMIT 200 слайса.
-    fetchLoreSlice<LoreKnowDocRow>('docs', { kind: 'claude-rules' }).then(setClaudeRules).catch(failed('claudeRules'));
+    fetchLoreSlice<LoreKnowDocRow>('docs', { kind: 'claude-rules' }).then(r => { setClaudeRules(r); done('claudeRules'); }).catch(failed('claudeRules'));
     fetchLoreSlice<{ sprint_id: string; git_projects: string[] | null }>('sprints', {})
       .then(rows => {
         const m: Record<string, number> = {};
@@ -108,50 +195,94 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   }, [onError, reload]);
 
   const dictTypes = useMemo(() => [...new Set(dicts.map(r => r.dict_type))].sort(), [dicts]);
-  const counters: Partial<Record<Tab, number>> = {
-    users: users.k === 'ok' ? users.rows.length : undefined,
-    agents: agents.k === 'ok' ? agents.rows.length : undefined,
-    dicts: dictTypes.length || undefined,
-    projects: projects.length || undefined,
-    tags: knowTags.length || undefined,
-    claudeRules: claudeRules.length || undefined,
+  // SH-04: число · «?» (не смогли проверить) · красный (проблемы) · пусто — только честный 0.
+  const counters: Partial<Record<Tab, NavCounter>> = {
+    users: kcCounter(users),
+    agents: kcCounter(agents),
+    dicts: sliceCounter(dictTypes.length, srcErr.dicts, !!loaded.dicts),
+    projects: sliceCounter(projects.length, srcErr.projects, !!loaded.projects),
+    tags: sliceCounter(knowTags.length, srcErr.tags, !!loaded.tags),
+    claudeRules: sliceCounter(claudeRules.length, srcErr.claudeRules, !!loaded.claudeRules),
+    settings: readinessCounter(preflight),
   };
+  const none: NavCounter = { kind: 'none' };
+  const cntOf = (k: Tab) => counters[k] ?? none;
+  const cntTitle = useCounterTitle();
+  const chips = systemChips({ authEnabled: AUTH_ENABLED, preflight, users, role });
+  const where = whereAmI(tab);
+  const curCnt = cntOf(tab);
+
+  // Вариант A: активная вкладка ленты всегда в видимой зоне (SH-01).
+  const activeStrip = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (narrow) activeStrip.current?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
+  }, [narrow, tab]);
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-      {!AUTH_ENABLED && (
-        <div style={{ ...S.banner, margin: '8px 12px 0' }}>
-          <span aria-hidden>⚠</span>
-          <span>
-            <b>{t('lore.admin.devBannerH', 'Аутентификация выключена.')}</b>{' '}
-            {t('lore.admin.devBannerB', 'Администрировать LORE может любой, кто открыл этот адрес: роль берётся из конфига, а не из токена. Режим разработки.')}
+      <SystemBar chips={chips} narrow={narrow} />
+      {narrow && (
+        // «Где я» на телефоне (SH-10): группа › вкладка · N/9 в цвете группы;
+        // причина «?»/красного счётчика текущей вкладки — текстом (наведения нет).
+        <div style={S.where} aria-label={t('lore.admin.whereAmI', 'Где я')}>
+          <span style={S.whereRail(where.color)} />
+          <span style={{ minWidth: 0 }}>
+            <span style={S.whereG(where.color)}>{where.group}</span>
+            <span style={{ color: 'var(--t3)' }}> › </span>
+            <span style={S.whereT}>{where.title}</span>
           </span>
+          <span style={S.wherePos}>· {where.pos}/{where.total}</span>
+          {(curCnt.kind === 'unk' || curCnt.kind === 'bad') && (
+            <span style={S.whereWhy(curCnt.kind === 'unk' ? 'wrn' : 'dng')}>{cntTitle(curCnt, tab)}</span>
+          )}
         </div>
       )}
       <div style={S.shell(narrow)}>
-        <nav style={S.side(narrow)}>
-          {NAV_GROUPS.map(g => (
-            <div key={g.label} style={{ minWidth: narrow ? 'auto' : undefined }}>
-              <div style={S.grpLabel}><span style={S.dot(g.rail)} />{g.label}</div>
-              <div style={{ display: 'flex', flexDirection: narrow ? 'row' : 'column', gap: 2 }}>
-                {g.tabs.map(([k, l]) => (
-                  <button key={k} style={S.nav(tab === k)} onClick={() => setTab(k)} aria-current={tab === k}>
-                    <span style={S.rail(tab === k ? g.rail : null)} />
-                    {l}
-                    {counters[k] !== undefined && <span style={S.navN}>{counters[k]}</span>}
-                  </button>
-                ))}
-              </div>
+        {narrow ? (
+          // Лента вкладок с подписями групп (вариант A); края затухают — видно, что листается.
+          <nav style={{ position: 'relative', flexShrink: 0, background: 'var(--bg1)', borderBottom: '1px solid var(--bd)' }}>
+            <div style={S.strip}>
+              {NAV_GROUPS.map(g => (
+                <span key={g.key} style={{ display: 'contents' }}>
+                  <span style={S.stripGrp(g.rail)}><span style={S.dot(g.rail)} />{g.label}</span>
+                  {g.tabs.map(([k, l]) => (
+                    <button key={k} ref={tab === k ? activeStrip : undefined}
+                      style={S.stripTab(tab === k, g.rail)} onClick={() => setTab(k)} aria-current={tab === k ? 'page' : undefined}>
+                      {l}
+                      <NavCount c={cntOf(k)} title={cntTitle(cntOf(k), k)} />
+                    </button>
+                  ))}
+                </span>
+              ))}
             </div>
-          ))}
-          {!narrow && (
-            <span style={{ marginTop: 'auto', padding: '0 8px', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
-              {t('lore.admin.roleBadge', 'роль: {{role}} · auth: {{auth}}', { role, auth: AUTH_ENABLED ? 'on' : 'off (dev)' })}
-            </span>
-          )}
-        </nav>
+            <span style={S.stripFade('left')} />
+            <span style={S.stripFade('right')} />
+          </nav>
+        ) : (
+          <nav style={S.side(narrow)}>
+            {NAV_GROUPS.map(g => (
+              <div key={g.key}>
+                <div style={S.grpLabel}><span style={S.dot(g.rail)} />{g.label}<span style={S.grpRisk}>{g.risk}</span></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {g.tabs.map(([k, l, icon]) => (
+                    <button key={k} style={S.nav(tab === k)} onClick={() => setTab(k)} aria-current={tab === k ? 'page' : undefined}>
+                      <span style={S.rail(tab === k ? g.rail : null)} />
+                      <GameIcon slug={icon} size={13} style={{ color: tab === k ? g.rail : 'var(--t3)' }} />
+                      {l}
+                      <NavCount c={cntOf(k)} title={cntTitle(cntOf(k), k)} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+        )}
         <main style={S.main}>
-          <div style={S.crumb}>{t('lore.admin.crumb', 'Администрирование')} · <span style={S.crumbB}>{TAB_TITLES[tab]}</span></div>
+          {!narrow && (
+            <div style={S.crumb}>
+              {t('lore.admin.crumb', 'Администрирование')} › <span style={S.crumbG(where.color)}>{where.group}</span> › <span style={S.crumbB}>{TAB_TITLES[tab]}</span>
+            </div>
+          )}
           {(TAB_SOURCES[tab] ?? []).filter(s => srcErr[s]).map(s => (
             <LoadError key={s}
               text={t('lore.admin.sourceLoadError', 'Не загрузилось ({{src}}): {{reason}} — пустая таблица ниже не значит «данных нет»', { src: s, reason: srcErr[s] })}
