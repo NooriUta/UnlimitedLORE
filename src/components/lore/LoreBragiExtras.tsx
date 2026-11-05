@@ -15,6 +15,8 @@ import { ratioPct, channelCtrMedians, benchmarkArrow, snapshotValue, type RetroW
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import LoreBragiInsightForm from './LoreBragiInsightForm';
 import { nextInsightId, insightEvidence, insightsOfRow } from './bragiInsight';
+import { inPeriod, groupRetro, sparkSeries, type RetroGroup } from './bragiRetro';
+import { useUrlState } from '../../hooks/useUrlState';
 import { searchHitHref } from '../../api/searchRoutes';
 
 // Shared facet helpers for the Bragi tables (T35) — same "empty = all,
@@ -193,6 +195,24 @@ export function LoreBragiKeys() {
 interface CalendarRow {
   variant_id: string; status: string | null; published_at: string;
   publication_id: string[]; title: string[]; channel_id: string[];
+  /** V2-06: рубрика публикации (IN_RUBRIC) — для группировки ретро. */
+  rubric_names?: string[] | null;
+}
+
+type RetroGroupBy = 'none' | 'channel' | 'rubric';
+const RETRO_GROUPS: readonly RetroGroupBy[] = ['none', 'channel', 'rubric'];
+
+/** V2-06: спарклайн накопительного ряда; меньше двух точек — не рисуется (линии нет). */
+function Spark({ values, label }: { values: number[]; label: string }) {
+  if (values.length < 2) return null;
+  const w = 48, h = 14, max = Math.max(...values), min = Math.min(...values);
+  const span = max - min || 1;
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * w},${h - ((v - min) / span) * h}`).join(' ');
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} style={{ marginLeft: 6, verticalAlign: 'middle' }}>
+      <polyline points={pts} fill="none" stroke="var(--acc)" strokeWidth={1.2} />
+    </svg>
+  );
 }
 type MetricPoint = { metric: string; value: number; ts: string };
 interface FetchedRow extends CalendarRow { variantPts: MetricPoint[]; pubPts: MetricPoint[] }
@@ -222,6 +242,10 @@ export function LoreBragiArchive() {
   // V2-04: посты разного возраста несравнимы по цифрам «за всё время» —
   // переключатель окна от даты публикации.
   const [win, setWin] = useState<RetroWindowHours>(null);
+  // V2-06: период и группировка — в URL (состояние вида живёт в адресе).
+  const [groupBy, setGroupBy] = useUrlState<RetroGroupBy>('rgroup', 'none', RETRO_GROUPS);
+  const [from, setFrom] = useUrlState<string>('rfrom', '');
+  const [to, setTo] = useUrlState<string>('rto', '');
   // V2-05: инсайты — для номера следующего и для чипов строк. Не загрузились —
   // кнопка не предлагается (номер угадывать нельзя), сама таблица не страдает.
   const [insights, setInsights] = useState<{ insight_id: string; subject_id: string | null }[] | null>(null);
@@ -257,7 +281,6 @@ export function LoreBragiArchive() {
   })), [fetched, win]);
   const channels = useMemo(() => distinct(rows, r => r.channel_id), [rows]);
   const matchChannel = useCallback((r: ArchiveRow) => channelSel.size === 0 || r.channel_id.some(c => channelSel.has(c)), [channelSel]);
-  const filtered = useMemo(() => rows.filter(matchChannel), [rows, matchChannel]);
   const channelCounts = useMemo(() => facetCount(rows, () => true, r => r.channel_id), [rows]);
   const toggleChannel = mkSetToggle(setChannelSel);
 
@@ -277,7 +300,17 @@ export function LoreBragiArchive() {
     () => channelCtrMedians(withRates.map(r => ({ channel: r.channel_id[0] ?? null, ctr: r.ctr }))),
     [withRates],
   );
-  const filteredWithRates = useMemo(() => withRates.filter(matchChannel), [withRates, matchChannel]);
+  const filteredWithRates = useMemo(
+    () => withRates.filter(r => matchChannel(r) && inPeriod(r.published_at, from, to)),
+    [withRates, matchChannel, from, to],
+  );
+  const keyOf = useCallback((r: (typeof withRates)[number]): string | null =>
+    groupBy === 'channel' ? (r.channel_id[0] ?? null)
+      : groupBy === 'rubric' ? (r.rubric_names?.[0] ?? null) : null, [groupBy]);
+  const groups: RetroGroup[] = useMemo(
+    () => (groupBy === 'none' ? [] : groupRetro(filteredWithRates, keyOf)),
+    [groupBy, filteredWithRates, keyOf],
+  );
 
   if (loading) return <div style={S.hint}>{t('bragi.extras.archive.loading', 'загрузка…')}</div>;
   if (error) return <div style={S.hint}>{t('bragi.extras.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
@@ -291,6 +324,23 @@ export function LoreBragiArchive() {
           <button key={String(w)} type="button" aria-pressed={win === w} onClick={() => setWin(w)}
             style={win === w ? S.winOn : S.winOff}>{label}</button>
         ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+        <label style={S.hint}>
+          {t('bragi.extras.archive.periodFrom', 'опубликовано с')}{' '}
+          <input type="date" value={from} onChange={e => setFrom(e.target.value || null)} style={S.dateIn} />
+        </label>
+        <label style={S.hint}>
+          {t('bragi.extras.archive.periodTo', 'по')}{' '}
+          <input type="date" value={to} onChange={e => setTo(e.target.value || null)} style={S.dateIn} />
+        </label>
+        <span role="group" aria-label={t('bragi.extras.archive.groupLabel', 'группировать')} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={S.hint}>{t('bragi.extras.archive.groupLabel', 'группировать')}:</span>
+          {([['none', t('bragi.extras.archive.groupNone', 'нет')], ['channel', t('bragi.extras.archive.groupChannel', 'по каналу')], ['rubric', t('bragi.extras.archive.groupRubric', 'по рубрике')]] as [RetroGroupBy, string][]).map(([g, label]) => (
+            <button key={g} type="button" aria-pressed={groupBy === g} onClick={() => setGroupBy(g)}
+              style={groupBy === g ? S.winOn : S.winOff}>{label}</button>
+          ))}
+        </span>
       </div>
       {channels.length > 0 && (
         <div style={{ marginBottom: 12 }}>
@@ -319,7 +369,8 @@ export function LoreBragiArchive() {
             <th style={S.th}>{t('bragi.extras.archive.colInsight', 'вывод')}</th>
           </tr></thead>
           <tbody>
-            {filteredWithRates.map(r => {
+            {(() => {
+            const renderRow = (r: (typeof filteredWithRates)[number]) => {
               const channel = r.channel_id[0] ?? null;
               const channelMedian = channel ? ctrMedianByChannel.get(channel) : undefined;
               const arrow = benchmarkArrow(r.ctr, channelMedian);
@@ -334,7 +385,7 @@ export function LoreBragiArchive() {
                   <td style={S.td}>{r.title[0] ?? r.publication_id[0]}</td>
                   <td style={S.td}>{channel ?? '—'}</td>
                   <td style={S.td}>{r.published_at}</td>
-                  <td style={S.tdNum}>{num(r.views)}</td>
+                  <td style={S.tdNum}>{num(r.views)}<Spark values={sparkSeries([r.variantPts, r.pubPts], 'views')} label={t('bragi.extras.archive.sparkLabel', 'динамика просмотров')} /></td>
                   <td style={S.tdNum}>{num(r.clicks)}</td>
                   <td style={S.tdNum}>{num(r.demo)}</td>
                   <td style={S.tdNum} title={medianTitle}>
@@ -371,12 +422,32 @@ export function LoreBragiArchive() {
                 )}
                 </Fragment>
               );
-            })}
+            };
+            if (groupBy === 'none') return filteredWithRates.map(renderRow);
+            const pct = (v: number | null) => (v === null ? '—' : `${v.toFixed(1)}%`);
+            return groups.map(g => (
+              <Fragment key={'g:' + String(g.key)}>
+                <tr style={S.subtotal}>
+                  <td style={S.td} colSpan={3}>
+                    {g.key ?? t('bragi.extras.archive.groupNoKey', '— без значения')}
+                    <span style={{ color: 'var(--t3)' }}> · {t('bragi.extras.archive.groupCount', '{{n}} шт.', { n: g.count })}</span>
+                  </td>
+                  <td style={S.tdNum}>{num(g.views)}</td>
+                  <td style={S.tdNum}>{num(g.clicks)}</td>
+                  <td style={S.tdNum}>{num(g.demo)}</td>
+                  <td style={S.tdNum}>{pct(g.ctr)}</td>
+                  <td style={S.tdNum} />
+                  <td style={S.td} />
+                </tr>
+                {filteredWithRates.filter(r => keyOf(r) === g.key).map(renderRow)}
+              </Fragment>
+            ));
+            })()}
           </tbody>
         </table>
         </div>
         {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyState', 'опубликованных вариаций пока нет')}</div>}
-        {rows.length > 0 && filtered.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
+        {rows.length > 0 && filteredWithRates.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
       </div>
     </div>
   );
@@ -538,6 +609,8 @@ const S: Record<string, React.CSSProperties> = {
   arrowDown: { color: 'var(--dng)', fontWeight: 700 },
   // Тот же анти-паттерн, что в паспортах ADR/компонента: transparent на
   // светлых темах сливается с фоном страницы. Заливка var(--b2).
+  subtotal: { background: 'var(--bg2)', fontWeight: 600 },
+  dateIn: { background: 'var(--bg1)', color: 'var(--t1)', border: '1px solid var(--bd)', borderRadius: 4, padding: '2px 6px', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)' },
   editBtn: { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--b3)',
              borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
 };

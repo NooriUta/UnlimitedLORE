@@ -2640,7 +2640,16 @@
         "colInsight": "вывод",
         "insightChip": "инсайт → {{id}}",
         "fixInsight": "+ зафиксировать вывод",
-        "insightsFailed": "инсайты не загрузились — номер следующего неизвестен"
+        "insightsFailed": "инсайты не загрузились — номер следующего неизвестен",
+        "periodFrom": "опубликовано с",
+        "periodTo": "по",
+        "groupLabel": "группировать",
+        "groupNone": "нет",
+        "groupChannel": "по каналу",
+        "groupRubric": "по рубрике",
+        "groupNoKey": "— без значения",
+        "groupCount": "{{n}} шт.",
+        "sparkLabel": "динамика просмотров"
       },
       "insights": {
         "loading": "загрузка…",
