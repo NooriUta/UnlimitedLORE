@@ -399,6 +399,9 @@
     "unresolvedRevExcluded": "неразрешимо (ран без started_ts, Д-1)"
   },
   "lore": {
+    "mobile": {
+      "back": "назад"
+    },
     "adrEditor": {
       "errIdRequired": "ADR ID обязателен",
       "errNameRequired": "Название обязательно",

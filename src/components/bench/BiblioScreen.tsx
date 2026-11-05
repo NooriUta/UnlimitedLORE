@@ -7,6 +7,9 @@ import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { MartProse } from './MartProse';
 import { useUrlState } from '../../hooks/useUrlState';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { biblioPanes } from '../lore/mobileLayout';
+import { MobileBack } from '../lore/MobileBack';
 import { fetchMartSlice, muninnFileUrl } from '../../api/muninn';
 
 /* ELK runs in-process (bundled build, no worker) — one instance for the module */
@@ -770,6 +773,9 @@ function GraphView({
   const [challengeLayer, setChallengeLayer] = useState(false);
   const [panelRef,       setPanelRef]       = useState<RefRow | null>(null);
   const [panelNode,      setPanelNode]      = useState<HarmoNode | null>(null);
+  // AH-08: панель 300px поверх холста + отступ холста 300px — на 375px холсту
+  // оставалось ≈0. Телефон: панель на всю область, «← назад» её закрывает.
+  const bp = biblioPanes(useIsNarrow(), !!(panelRef || panelNode));
 
   const refMap = useMemo(() => {
     const m = new Map<string, RefRow>();
@@ -1105,7 +1111,7 @@ function GraphView({
           height regardless of the flex chain above it. minHeight is the fallback
           when the chain collapses (e.g. in narrow iframes / SSR). */}
       <div style={{ flex: 1, position: 'relative', minHeight: 400, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, right: (panelRef || panelNode) ? 300 : 0, bottom: 0 }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: bp.canvasRight, bottom: 0 }}>
           <ReactFlow
             key="graph"
             onInit={inst => { rfRef.current = inst; }}
@@ -1132,7 +1138,8 @@ function GraphView({
 
         {/* Ref detail panel */}
         {panelRef && (
-          <div style={S.graphPanel} className="lore-panel-scroll">
+          <div style={{ ...S.graphPanel, ...bp.panel }} className="lore-panel-scroll">
+            {bp.showBack && <MobileBack onBack={() => setPanelRef(null)} />}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 8 }}>
               <span style={{ ...S.mono, color: 'var(--acc)', fontWeight: 700, fontSize: 'var(--fs-base)', flex: 1 }}>
                 {panelRef.ref_id}
@@ -1192,7 +1199,8 @@ function GraphView({
 
         {/* Construct detail panel */}
         {panelNode && (
-          <div style={S.graphPanel} className="lore-panel-scroll">
+          <div style={{ ...S.graphPanel, ...bp.panel }} className="lore-panel-scroll">
+            {bp.showBack && <MobileBack onBack={() => { setPanelNode(null); setSel(null); }} />}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 8 }}>
               <div style={{ flex: 1 }}>
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', display: 'block', marginBottom: 2 }}>

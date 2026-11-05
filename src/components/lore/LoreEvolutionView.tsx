@@ -14,6 +14,9 @@ import { fetchLoreSlice, type LoreHistRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import { normalizeStatus } from './loreUtils';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { evolutionPanes } from './mobileLayout';
+import { MobileBack } from './MobileBack';
 
 type EntityKind = 'sprint' | 'adr' | 'task';
 
@@ -184,6 +187,11 @@ export default function LoreEvolutionView({ onError }: Props) {
   const curStatus = curRow && showStatusCol ? normalizeStatus(curRow.status_raw ?? null) : null;
   const curMeta   = curStatus ? statusMeta(curStatus) : null;
 
+  // AH-08: список 220px на телефоне не сворачивался — истории оставалось ≈150px.
+  // Телефон: список ИЛИ история; «← назад» снимает выбор.
+  const panes = evolutionPanes(useIsNarrow(), !!loadedId || loading);
+  const backToList = () => { setRows([]); setLoadedId(''); setLoading(false); };
+
   return (
     <div style={S.root}>
       {/* ── Kind selector ────────────────────────────────────────────────── */}
@@ -212,7 +220,8 @@ export default function LoreEvolutionView({ onError }: Props) {
 
       <div style={S.body}>
         {/* ── LHR-06: left entity list ─────────────────────────────────── */}
-        <div style={S.listPane}>
+        {panes.showList && (
+        <div style={{ ...S.listPane, width: panes.listWidth, borderRight: panes.listBorderRight ? S.listPane.borderRight : 'none' }}>
           {pickerErr && <div style={S.msg}>{t('lore.evolutionView.listLoadError', 'Ошибка загрузки списка.')}</div>}
           {picker.map(o => {
             const namePart = o.label !== o.id ? o.label.replace(/^[^·]+·\s*/, '') : '';
@@ -233,9 +242,12 @@ export default function LoreEvolutionView({ onError }: Props) {
             );
           })}
         </div>
+        )}
 
         {/* ── Right: history detail ────────────────────────────────────── */}
+        {panes.showDetail && (
         <div style={S.histPane}>
+          {panes.showBack && <MobileBack onBack={backToList} />}
           {/* LHR-01: empty state */}
           {!loadedId && !loading && (
             <div style={S.msg}>
@@ -344,6 +356,7 @@ export default function LoreEvolutionView({ onError }: Props) {
             </table>
           )}
         </div>
+        )}
       </div>
     </div>
   );

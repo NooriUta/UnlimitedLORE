@@ -11,6 +11,7 @@ import LoreAnalyticsProduct from './LoreAnalyticsProduct';
 import { useUrlState } from '../../hooks/useUrlState';
 import { LoadError, SliceLoadWarning } from './EmptyState';
 import { pageLevelError, settleSlices } from './loadState';
+import { scrollStrip, stripItem } from './mobileLayout';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -1202,11 +1203,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   // ── tab bar ───────────────────────────────────────────────────────────────
 
+  // AH-08: семь вкладок ≈700px без прокрутки распирали панель на телефоне —
+  // лента листается вбок, вкладки не сжимаются.
   const tabBar = (
-    <div style={S.tabBar}>
+    <div style={{ ...S.tabBar, ...scrollStrip }}>
       {TABS.map(tb => (
         <button key={tb.key}
-          style={{ ...S.tabBtn, ...(tab === tb.key ? S.tabBtnActive : {}) }}
+          style={{ ...S.tabBtn, ...stripItem, ...(tab === tb.key ? S.tabBtnActive : {}) }}
           onClick={() => setTab(tb.key)}>
           <GameIcon slug={tb.icon} size={12} style={{ color: 'inherit' }} />
           {t(`lore.analytics.tabs.${tb.key}`, tb.label)}

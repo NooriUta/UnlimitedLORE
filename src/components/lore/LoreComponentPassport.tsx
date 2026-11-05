@@ -23,6 +23,9 @@ import { statusMeta, taskTick } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
 import { MartProse } from '../bench/MartProse';
 import { useUrlState } from '../../hooks/useUrlState';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { passportLayout, scrollStrip, stripItem } from './mobileLayout';
+import { clamp, dragHandleTouch, startPointerDrag } from './pointerDrag';
 
 interface QGRow {
   qg_id: string;
@@ -276,19 +279,22 @@ export default function LoreComponentPassport({
 
   // ── Resizable split ────────────────────────────────────────────────────────
   const [topHeight, setTopHeight] = useState(280);
-  const dragState = useRef<{ startY: number; startH: number } | null>(null);
-
-  useEffect(() => {
-    function onMove(e: MouseEvent) {
-      if (!dragState.current) return;
-      const delta = e.clientY - dragState.current.startY;
-      setTopHeight(Math.max(120, Math.min(600, dragState.current.startH + delta)));
-    }
-    function onUp() { dragState.current = null; document.body.style.cursor = ''; }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, []);
+  // AH-08: ручка слушала только мышь (onMouseDown + mousemove) — пальцем не
+  // тянулась. Pointer events покрывают мышь, касание и перо; слушатели живут
+  // ровно один жест. На телефоне ручки нет вовсе: паспорт идёт одной колонкой.
+  const stopDrag = useRef<(() => void) | null>(null);
+  useEffect(() => () => { stopDrag.current?.(); document.body.style.cursor = ''; }, []);
+  const onHandleDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const startH = topHeight;
+    document.body.style.cursor = 'ns-resize';
+    stopDrag.current = startPointerDrag(e, {
+      axis: 'y',
+      onDelta: d => setTopHeight(clamp(startH + d, 120, 600)),
+      onEnd: () => { stopDrag.current = null; document.body.style.cursor = ''; },
+    });
+  };
+  const narrow = useIsNarrow();
+  const PL = passportLayout(narrow, topHeight);
 
   // ── Data load ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -436,9 +442,9 @@ export default function LoreComponentPassport({
         .filter(r => sprintStatusFilter.size === 0 || sprintStatusFilter.has(r.status ?? ''));
 
   return (
-    <div className="lore-component-passport-root" style={S.root}>
+    <div className="lore-component-passport-root" style={{ ...S.root, ...PL.root }}>
       {/* ── TOP ──────────────────────────────────────────────────────────── */}
-      <div className="lore-component-passport-top" style={{ ...S.top, height: topHeight, flexShrink: 0, overflow: 'hidden' }}>
+      <div className="lore-component-passport-top" style={{ ...S.top, ...PL.top }}>
         {/* Header row */}
         <div style={S.hdr}>
           <div style={S.iconLg(color)}>
@@ -507,9 +513,9 @@ export default function LoreComponentPassport({
         )}
 
         {/* Doc tabs */}
-        <div style={S.tabsRow}>
+        <div style={{ ...S.tabsRow, ...scrollStrip }}>
           {tabList.map(t => (
-            <div key={t.key} style={S.tab(docTab === t.key)} aria-pressed={docTab === t.key}
+            <div key={t.key} style={{ ...S.tab(docTab === t.key), ...stripItem }} aria-pressed={docTab === t.key}
               {...a11yClick(() => {
                 setDocTab(t.key); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
                 setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
@@ -601,9 +607,13 @@ export default function LoreComponentPassport({
       </div>
 
       {/* ── Resize handle ────────────────────────────────────────────────── */}
+      {PL.showHandle && (
       <div
-        onMouseDown={e => { dragState.current = { startY: e.clientY, startH: topHeight }; document.body.style.cursor = 'ns-resize'; e.preventDefault(); }}
+        onPointerDown={onHandleDown}
+        role="separator"
+        aria-orientation="horizontal"
         style={{
+          ...dragHandleTouch,
           height: 5, flexShrink: 0, cursor: 'ns-resize',
           background: 'transparent',
           borderTop: '1px solid var(--bd)',
@@ -613,9 +623,10 @@ export default function LoreComponentPassport({
         onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'color-mix(in srgb, var(--acc) 20%, transparent)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
       />
+      )}
 
       {/* ── BOTTOM: reader ───────────────────────────────────────────────── */}
-      <div className="lore-component-passport-reader" style={S.reader}>
+      <div className="lore-component-passport-reader" style={{ ...S.reader, ...PL.reader }}>
         {!selDocId ? (
           <div style={S.placeholder}>{t('lore.componentPassport.reader.selectDoc', 'Выберите документ выше')}</div>
         ) : docLoading ? (
@@ -641,7 +652,7 @@ export default function LoreComponentPassport({
                 {docContent.type.toUpperCase()}
               </span>
             </div>
-            <div className="lore-component-passport-reader-scroll" style={S.readerScroll}>
+            <div className="lore-component-passport-reader-scroll" style={{ ...S.readerScroll, ...PL.readerScroll }}>
               {docContent.type === 'adr' && (
                 <>
                   <MdBlock md={docContent.data.context_md}      label={t('lore.componentPassport.reader.context', 'Контекст')} />

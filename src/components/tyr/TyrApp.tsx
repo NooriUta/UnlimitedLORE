@@ -14,6 +14,8 @@ import { buildSuites, Suite } from './lib/suites';
 import { CatalogFilters, FilterState, emptyFilter, applyFilters } from './components/CatalogFilters';
 import { useUrlState, useUrlId } from '../../hooks/useUrlState';
 import '../../styles/tyr.css';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { tyrReportsLayout } from '../lore/mobileLayout';
 
 type TopTab = 'plan' | 'current' | 'reports';
 type PlanMode = 'catalog' | 'select';
@@ -239,6 +241,11 @@ export default function TyrApp() {
   const runsState = loadStateOf(runsLoaded ? runs : null, runsError);
   const currentRun = runs.find((r) => r.id === currentRunId) ?? null;
   const historyRun = runs.find((r) => r.id === historyRunId) ?? null;
+  // AH-08: на телефоне сетка отчётов была `auto minmax(0,1fr)` — .sidebar росла
+  // по длине истории, отчёту доставалось 0px. Теперь одна панель: список прогонов
+  // ИЛИ отчёт с «← к истории»; выбор живёт в URL (?thist=), как и раньше.
+  const narrow = useIsNarrow();
+  const rl = tyrReportsLayout(narrow, !!historyRun);
 
   return (
     <div className="app" style={{ height: '100%' }}>
@@ -479,7 +486,8 @@ export default function TyrApp() {
 
       {/* Spacer so the 3rd grid row (statusbar) doesn't collapse main content */}
       {tab === 'reports' && (
-        <div className="layout-reports">
+        <div className="layout-reports" style={rl.gridTemplateRows ? { gridTemplateRows: rl.gridTemplateRows } : undefined}>
+          {rl.showList && (
           <aside className="sidebar">
             <h2>📜 История прогонов{runs.length > 0 && <span className="muted"> · {runs.length}</span>}</h2>
             <RunsList
@@ -491,7 +499,15 @@ export default function TyrApp() {
               onPick={(id) => { setHistoryRunId(id); setReportTab('report'); }}
             />
           </aside>
+          )}
+          {rl.showDetail && (
           <section className="detail-pane">
+            {rl.showBack && (
+              <div className="suite-back-bar">
+                <button className="suite-back-btn" onClick={() => setHistoryRunId(null)}>← история прогонов</button>
+                {historyRun && <span className="muted suite-back-title">{historyRun.filterDescr}</span>}
+              </div>
+            )}
             {!historyRun && runsState.k === 'error' && (
               <div className="empty">
                 <h2>⚠ История прогонов не загрузилась</h2>
@@ -542,6 +558,7 @@ export default function TyrApp() {
               </>
             )}
           </section>
+          )}
         </div>
       )}
 
