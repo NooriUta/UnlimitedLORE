@@ -136,12 +136,15 @@ function definePostTool<S extends z.ZodRawShape>(
     body: (args: ShapeOutput<S>) => Record<string, unknown>;
     /** AL-113: второй шаг после успешной записи; его поля добавляются к ответу. */
     after?: (args: ShapeOutput<S>) => Promise<Record<string, unknown>>;
+    /** Сироты 05.11: true = проекта нет ни в вызове, ни у сессии — отказ ДО записи. */
+    missingProject?: (args: ShapeOutput<S>) => boolean;
   },
 ): void {
   // The SDK's server.tool overloads don't unify cleanly with a generic shape, so
   // the registration is cast. Per-call-site type safety comes from `def.body`
   // being checked against `S`; runtime validation is the zod `schema` itself.
   const handler = async (args: ShapeOutput<S>) => {
+    if (def.missingProject?.(args)) return projectRequired();
     try {
       const res = await lorePost(def.path, def.body(args));
       if (!def.after) return json(res);
@@ -181,6 +184,21 @@ const PROJECT_PARAM = z.string().optional().describe(
   'AL-113: git project slug — links BELONGS_TO_PROJECT in the same call (same path as *_link rel="project"; ' +
   'ONLY ADDS, never removes other projects). Omit → LORE_ACTIVE_PROJECT of the session, if set; ' +
   'project_source in the answer says which. project_linked:false = slug not registered (project_new), not a silent no-op.');
+
+// Владелец 05.11.2026: «опять сироты». LORE_ACTIVE_PROJECT не задан ни в одном
+// конфиге MCP, и «не передан ни project, ни проект сессии — рёбра не трогаются»
+// день за днём давало ленту «без проекта». Теперь такой вызов создания
+// отклоняется до записи: сущность без проекта не пишется вовсе.
+export function projectMissing(explicit?: string | null): boolean {
+  return !(explicit && explicit.trim()) && !ACTIVE_PROJECT;
+}
+const projectRequired = () => ({
+  content: [{ type: 'text' as const, text:
+    'ERROR: project required — pass project (KnowGitProject slug, e.g. "NooriUta/UnlimitedLORE"; ' +
+    'list: query_slice slice="git_projects"; new one via project_new) or set LORE_ACTIVE_PROJECT for the session. An entity without ' +
+    'a project is an orphan on the feed, so nothing was written.' }],
+  isError: true,
+});
 
 export async function inlineProject(kind: ProjectKind, id: string, explicit?: string): Promise<Record<string, unknown>> {
   const project = explicit ?? ACTIVE_PROJECT;
@@ -449,6 +467,7 @@ export function registerLoreWrite(server: McpServer): void {
       status: status ?? null, component_id: component_id ?? null, goal_level: goal_level ?? null,
     }),
     after: ({ feature_id, project }) => inlineProject('uc', feature_id, project),
+    missingProject: ({ project }) => projectMissing(project),
   });
 
   definePostTool(server, {
@@ -491,6 +510,7 @@ export function registerLoreWrite(server: McpServer): void {
       goal_level: goal_level ?? null, rigor: rigor ?? null, priority: priority ?? null,
     }),
     after: ({ uc_id, project }) => inlineProject('uc', uc_id, project),
+    missingProject: ({ project }) => projectMissing(project),
   });
 
   // ADR-LORE-032 §2 (D5): боли и выгоды — ВЕРШИНЫ, не проза. Только так fit
@@ -983,6 +1003,7 @@ export function registerLoreWrite(server: McpServer): void {
           tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
     after: ({ adr_id, project }) => inlineProject('adr', adr_id, project),
+    missingProject: ({ project }) => projectMissing(project),
   });
 
   definePostTool(server, {
@@ -1151,6 +1172,8 @@ export function registerLoreWrite(server: McpServer): void {
           // AL-113: как у sprint_new — не передан project, берётся проект сессии.
           status: status ?? null, project: project ?? ACTIVE_PROJECT ?? null,
         }),
+    // Решение под ADR получает проект через родителя (quality_check это учитывает).
+    missingProject: ({ project, adr_id }) => !adr_id && projectMissing(project),
   });
 
   // AL-79: простановка статуса на СУЩЕСТВУЮЩЕМ решении. Отдельный инструмент,
@@ -1218,6 +1241,7 @@ export function registerLoreWrite(server: McpServer): void {
       due_date: a.due_date ?? null, priority: a.priority ?? null, owner: a.owner ?? null, raised_by: a.raised_by ?? null,
     }),
     after: (a) => inlineProject('question', a.question_id, a.project),
+    missingProject: (a) => projectMissing(a.project),
   });
 
   definePostTool(server, {
@@ -1413,6 +1437,7 @@ export function registerLoreWrite(server: McpServer): void {
       project:      PROJECT_PARAM,
     },
     async ({ project, ...p }) => {
+      if (projectMissing(project)) return projectRequired();
       try {
         const res = (await lorePost('/lore/spec', p)) as Record<string, unknown>;
         return json({ ...res, ...(await inlineProject('spec', p.spec_id, project)) });
@@ -1499,8 +1524,10 @@ export function registerLoreWrite(server: McpServer): void {
       usage:        z.string().optional().describe('free text — how/where this is actually used'),
       source_url:   z.string().optional().describe('where this was verified (LICENSE file, release notes, ...)'),
       checked_at:   z.string().optional().describe('YYYY-MM-DD this was last verified; defaults to today if omitted'),
+      project:      PROJECT_PARAM,
     },
-    async ({ component_id, tech_name, version, release_date, our_release, license, usage, source_url, checked_at }) => {
+    async ({ component_id, tech_name, version, release_date, our_release, license, usage, source_url, checked_at, project }) => {
+      if (projectMissing(project)) return projectRequired();
       try {
         const specId = `SPEC-TECH-${component_id.toUpperCase()}-${tech_name.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
         const today = new Date().toISOString().slice(0, 10);
@@ -1512,10 +1539,11 @@ export function registerLoreWrite(server: McpServer): void {
           source_url && `- **Источник:** ${source_url}`,
           `- **Проверено:** ${checked_at ?? today}`,
         ].filter(Boolean);
-        return json(await lorePost('/lore/spec', {
+        const res = (await lorePost('/lore/spec', {
           spec_id: specId, title: tech_name, version, component_id,
           content_md: lines.join('\n'),
-        }));
+        })) as Record<string, unknown>;
+        return json({ ...res, ...(await inlineProject('spec', specId, project)) });
       } catch (e) { return err(e); }
     },
   );
@@ -1552,6 +1580,7 @@ export function registerLoreWrite(server: McpServer): void {
       project:      PROJECT_PARAM,
     },
     async ({ project, ...p }) => {
+      if (projectMissing(project)) return projectRequired();
       try {
         const res = (await lorePost('/lore/runbook', p)) as Record<string, unknown>;
         return json({ ...res, ...(await inlineProject('runbook', p.runbook_id, project)) });
@@ -1585,6 +1614,7 @@ export function registerLoreWrite(server: McpServer): void {
       project:        PROJECT_PARAM,
     },
     async ({ project, ...p }) => {
+      if (projectMissing(project)) return projectRequired();
       try {
         const res = (await lorePost('/lore/doc', p)) as Record<string, unknown>;
         return json({ ...res, ...(await inlineProject('doc', p.doc_id, project)) });
