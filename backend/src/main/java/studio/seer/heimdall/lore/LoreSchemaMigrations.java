@@ -1285,8 +1285,50 @@ final class LoreSchemaMigrations {
         // сначала ВЫГРУЖАЕТ каждое ребро в лог (rid, состояние ADR, статус), потом
         // удаляет — по @rid, DELETE EDGE в грамматике нет. Типы StatusAdr и
         // HAS_STATUS не снимаются: схема аддитивна, снос типа — отдельное решение.
-        new Step(51, 17, "java__drop_legacy_adr_has_status", List.of())
+        new Step(51, 17, "java__drop_legacy_adr_has_status", List.of()),
+
+        // RM-P17 (D-2026-LORE-OWNER-ANSWERS-20261104, ответ №8 «а»): открытые
+        // строки KnowTaskHist без valid_from получают дату СОЗДАНИЯ задачи из
+        // честного источника — самой ранней даты её же истории, либо отметки
+        // создания на вершине. Источника нет — строка остаётся NULL и пишется в
+        // лог: выдуманная дата стала бы фактом аналитики
+        // (D-2026-LORE-HISTORY-GAP-VISIBLE-NOT-GUESSED). Плюс снимается остаток
+        // тестового прогона (state_uid «test-state-*») — по @rid, после выгрузки
+        // строки в лог. SQL пуст — вся работа в javaStep(52).
+        new Step(52, 17, "java__task_hist_valid_from_backfill_and_test_rows", List.of()),
+
+        // RM-X1 (ответ №9 «а»): id вехи «M2 ✓ core» с пробелом и глифом
+        // неадресуем. Переименование в M2 — тот же вид, что у соседей M0…M7;
+        // label не трогается. Рёбра идут по @rid и не меняются; переписываются
+        // строковые ссылки в полях. Идемпотентен: старого id нет → no-op.
+        new Step(53, 17, "java__milestone_m2_core_rename", List.of()),
+
+        // T-14 (ответ №15 «да»): DROP TYPE PlanItem, PlanItemHist, ON_TRACK,
+        // CONTRIBUTES_TO — ТОЛЬКО при нулевом использовании. Счётчик > 0 у
+        // любого из них → не удаляется ничего, WARN с числами, старт не
+        // валится. Бэкап перед шагом снимает раннер (upgrade-путь). Ни один шаг
+        // и ни инициализатор эти типы не создают — requiredLiveTypes их не ждёт.
+        new Step(54, 17, "java__drop_planitem_types_if_unused", List.of())
     );
+
+    /** RM-X1: старый и новый id вехи для V53. */
+    static final String MILESTONE_OLD_ID = "M2 ✓ core";
+    static final String MILESTONE_NEW_ID = "M2";
+
+    /**
+     * RM-X1: поля, в которых строкой может лежать id вехи. Сверено grep-ом по
+     * коду: milestone_id (KnowMilestone и легаси-строки истории/PlanItem),
+     * planned_milestone_id (снятое поле спринта, на старых строках может
+     * остаться). Массивов id вех в корпусе нет — множественная связь только
+     * рёбрами TARGETS_MILESTONE/ON_MILESTONE.
+     */
+    static final List<String> MILESTONE_REF_FIELDS = List.of("milestone_id", "planned_milestone_id");
+
+    /**
+     * T-14: типы снятого пласта PlanItem. Рёбра раньше вершин; при нулевом
+     * счёте порядок не существенен, но так DROP не упрётся в живое ребро.
+     */
+    static final List<String> PLANITEM_TYPES = List.of("ON_TRACK", "CONTRIBUTES_TO", "PlanItemHist", "PlanItem");
 
     /**
      * Одна строка справочника продуктов. Идиома UPSERT та же, что у
