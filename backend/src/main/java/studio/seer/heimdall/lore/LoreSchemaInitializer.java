@@ -304,17 +304,25 @@ public class LoreSchemaInitializer {
         // writes from drifting again.
         "CREATE PROPERTY KnowSprintHist.valid_from  IF NOT EXISTS DATETIME",
 
-        // RM-P12: остальные *Hist — valid_from ТЕКСТОМ в ISO-8601 UTC.
-        // Тот же баг, что выше, и то же лечение, но тип другой, и выбран он
-        // замером, а не симметрией: 90.7 % строк уже в ISO-Z, все нынешние
-        // пишущие пути дают Instant.toString(), а вид «через пробел», в который
-        // приводит DATETIME, в JS разбирается как МЕСТНОЕ время и молча сдвигает
-        // дату у читателя. Разбор целиком — LoreSchemaMigrations.HIST_VALID_FROM_TEXT.
+        // RM-P12 объявлял остальные valid_from ТЕКСТОМ (ISO-8601 UTC); RM-P13
+        // (решение владельца 05.11.2026: «единый формат, рекомендованный БД»)
+        // свёл ВСЕ *Hist к нативному DATETIME — на живой БД это делает шаг V56,
+        // здесь свежая БД сразу приходит к той же схеме. Граница с браузером
+        // (DATETIME печатается «через пробел», JS читает это как местное время)
+        // закрыта в выдаче слайсов: LoreTimeFormat.isoUtcRows.
         //
-        // Список здесь НЕ дублируется списком: инициализатор — статический
-        // массив строк, поэтому имена берутся из того же реестра, что и шаг V42
-        // (см. histValidFromText() ниже). Расхождение двух ручных таблиц —
-        // отдельная разбираемая болезнь корпуса (RM-P8), не заводим третью.
+        // Строки — литералами, а не генерацией: LoreHistValidFromTypedTest
+        // сверяет реестр HIST_VALID_FROM_TEMPORAL с этими объявлениями по тексту
+        // исходника. KnowRunbookHist и KnowDocHist — ниже, после своих типов.
+        "CREATE PROPERTY KnowDecisionHist.valid_from  IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowADRHist.valid_from       IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowSpecHist.valid_from      IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowFindingHist.valid_from   IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowReleaseHist.valid_from   IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowMilestoneHist.valid_from IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowPhaseHist.valid_from     IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowTaskHist.valid_from      IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowDictEntryHist.valid_from IF NOT EXISTS DATETIME",
 
         // ── Hist valid_to indexes (current-row queries) ───────────────────────
         "CREATE PROPERTY KnowDecisionHist.valid_to  IF NOT EXISTS DATETIME",
@@ -349,8 +357,11 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE MEASURED_BY       IF NOT EXISTS EXTENDS E",
 
         "CREATE PROPERTY KnowRunbookHist.state_uid  IF NOT EXISTS STRING",
-        "CREATE PROPERTY KnowRunbookHist.valid_from  IF NOT EXISTS STRING",
-        "CREATE PROPERTY KnowRunbookHist.valid_to    IF NOT EXISTS STRING",
+        // RM-P13: обе даты — DATETIME, как у остальных *Hist. До RM-P13 тут стояло
+        // STRING, а на проде valid_to был DATETIME (снимок db-schema/schema-metadata.json):
+        // свежая БД расходилась с боевой.
+        "CREATE PROPERTY KnowRunbookHist.valid_from  IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowRunbookHist.valid_to    IF NOT EXISTS DATETIME",
         "CREATE PROPERTY KnowRunbookHist.content_md  IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowRunbook.runbook_id      IF NOT EXISTS STRING",
         "CREATE PROPERTY QualityGate.qg_id           IF NOT EXISTS STRING",
@@ -388,6 +399,7 @@ public class LoreSchemaInitializer {
         // ArcadeDB DDL note (see Phase 6 comment below): no EXTENDS V/E via SQL.
         "CREATE EDGE TYPE DOC_CHILD_OF IF NOT EXISTS",
         "CREATE PROPERTY KnowDoc.sort_order IF NOT EXISTS INTEGER",
+        "CREATE PROPERTY KnowDocHist.valid_from IF NOT EXISTS DATETIME",
         "CREATE PROPERTY KnowDocHist.valid_to IF NOT EXISTS DATETIME",
         "CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to) NOTUNIQUE",
 
@@ -740,6 +752,11 @@ public class LoreSchemaInitializer {
      * остался без объявления. Свежая БД и мигрированная обязаны прийти к
      * ОДНОЙ схеме; два списка руками гарантированно разъедутся — этой болезнью
      * корпус уже болеет в другом месте (RM-P8).
+     *
+     * <p>RM-P13: реестр пуст — текстовых valid_from больше нет, все *Hist
+     * объявлены DATETIME литералами выше. Метод оставлен: если кто-то вернёт
+     * тип в текстовый реестр, свежая БД получит то же объявление, что и живая,
+     * а LoreHistValidFromTypedTest упадёт на «текстовых быть не должно».
      */
     static List<String> histValidFromText() {
         return LoreSchemaMigrations.HIST_VALID_FROM_TEXT.stream()

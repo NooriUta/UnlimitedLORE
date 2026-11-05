@@ -560,7 +560,9 @@ public class AidaLoreResource extends LoreResourceBase {
 
     private List<Map<String, Object>> composeAndQuery(String sliceId) {
         LoreSlices.Composed c = LoreSlices.compose(sliceId, Map.of());
-        return ingestService.queryPublic(c.sql(), c.params());
+        // RM-P13: те же строки слайсов, что и у /lore/slice — та же нормализация
+        // времени, иначе лента сравнивала бы «2026-04-13 00:00:00» с «…T…Z» строкой.
+        return LoreTimeFormat.isoUtcRows(ingestService.queryPublic(c.sql(), c.params()));
     }
 
     /** "2026-06-11 22:26:41" and "2026-07-10" both → "2026-07-10". Null when no date. */
@@ -741,7 +743,9 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
-        List<Map<String, Object>> rows = res.result() == null ? List.of() : res.result();
+        // RM-P13: время наружу — ISO-8601 UTC с Z (DATETIME база печатает без зоны,
+        // браузер прочёл бы это как местное время). Одна функция — LoreTimeFormat.
+        List<Map<String, Object>> rows = res.result() == null ? List.of() : LoreTimeFormat.isoUtcRows(res.result());
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("rows", rows);
         if (Boolean.TRUE.equals(res.truncated())) {

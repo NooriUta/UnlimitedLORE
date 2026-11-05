@@ -84,6 +84,17 @@ class DataHygieneMigrationsLiveDbTest {
         return out;
     }
 
+    /**
+     * RM-P13: сравнение моментов, а не строк. valid_from — DATETIME, и прямой
+     * запрос отдаёт его «через пробел» без зоны (UTC wall clock), а записывался
+     * он ISO-Z; строки разные, момент один.
+     */
+    static java.time.Instant at(Object v) {
+        String s = String.valueOf(v);
+        if (s.endsWith("Z")) return java.time.Instant.parse(s);
+        return java.time.LocalDateTime.parse(s.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC);
+    }
+
     private static long n(String query) throws Exception {
         return ((Number) sql(query).get(0).get("n")).longValue();
     }
@@ -141,11 +152,11 @@ class DataHygieneMigrationsLiveDbTest {
         assertTrue(runner.backfillOpenTaskHistValidFrom() >= 2, "заполнено меньше двух строк");
 
         Map<String, Object> a = sql(openOf(TASK_A)).get(0);
-        assertEquals("2026-06-20T00:00:00Z", a.get("valid_from"), "A: дата не взята с вершины");
+        assertEquals(at("2026-06-20T00:00:00Z"), at(a.get("valid_from")), "A: дата не взята с вершины");
         assertEquals("task.date_created", a.get("valid_from_source"));
 
         Map<String, Object> b = sql(openOf(TASK_B)).get(0);
-        assertEquals(bMinValidFrom, b.get("valid_from"), "B: дата не равна самой ранней дате истории");
+        assertEquals(at(bMinValidFrom), at(b.get("valid_from")), "B: дата не равна самой ранней дате истории");
         assertEquals("hist.min_valid_from", b.get("valid_from_source"));
 
         Map<String, Object> c = sql(openOf(TASK_C)).get(0);
@@ -294,7 +305,7 @@ class DataHygieneMigrationsLiveDbTest {
 
         assertTrue(runner.backfillDaliP1FromPr204() >= 1, "V55 не заполнил ни одной строки");
         Map<String, Object> a = sql(openOf(DALI_P1_A)).get(0);
-        assertEquals(LoreSchemaMigrations.PR204_MERGED_AT, a.get("valid_from"));
+        assertEquals(at(LoreSchemaMigrations.PR204_MERGED_AT), at(a.get("valid_from")));
         assertEquals("pr#204.merged_at", a.get("valid_from_source"));
     }
 

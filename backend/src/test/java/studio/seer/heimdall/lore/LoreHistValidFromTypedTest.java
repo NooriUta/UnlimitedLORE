@@ -64,8 +64,8 @@ class LoreHistValidFromTypedTest {
         }
         assertEquals(List.of(), missing,
             "тип *Hist без реестра valid_from: " + missing + ". Добавьте его в "
-            + "LoreSchemaMigrations.HIST_VALID_FROM_TEXT (текст ISO-8601 UTC — по умолчанию) "
-            + "или в HIST_VALID_FROM_TEMPORAL (если valid_from объявлен DATETIME).");
+            + "LoreSchemaMigrations.HIST_VALID_FROM_TEMPORAL и объявите valid_from/valid_to DATETIME "
+            + "(RM-P13: текстовых дат в корпусе нет).");
         assertEquals(List.of(), both, "тип *Hist сразу в двух реестрах: " + both);
 
         List<String> unknown = new ArrayList<>();
@@ -91,24 +91,105 @@ class LoreHistValidFromTypedTest {
             "HIST_VALID_FROM_TEMPORAL разошёлся с реальными объявлениями DATETIME");
     }
 
-    /** Шаг V42 объявляет свойство ровно по текстовому реестру, без ручного списка. */
+    /**
+     * RM-P13 (решение владельца 05.11.2026 «единый формат, рекомендованный
+     * БД»): текстовых valid_from больше нет — все *Hist в temporal.
+     */
     @Test
-    void migrationStepDeclaresEveryTextType() {
+    void everyHistTypeIsTemporal() {
+        assertEquals(List.of(), LoreSchemaMigrations.HIST_VALID_FROM_TEXT,
+            "текстовый реестр valid_from обязан быть пуст: время в корпусе — DATETIME");
+        assertEquals(histVertexTypes(), new LinkedHashSet<>(LoreSchemaMigrations.HIST_VALID_FROM_TEMPORAL),
+            "каждый объявленный *Hist обязан быть в HIST_VALID_FROM_TEMPORAL");
+    }
+
+    /**
+     * Свежая БД (CI) приходит к той же схеме, что прод после V56: у каждого
+     * *Hist ОБА поля времени объявлены DATETIME, и ни одно — STRING. До RM-P13
+     * KnowRunbookHist.valid_to в инициализаторе был STRING, а на проде —
+     * DATETIME: тесты гонялись на схеме, которой в бою нет.
+     */
+    @Test
+    void bootstrapDeclaresBothTimeFieldsDatetime() {
+        String src = sources();
+        for (String field : LoreSchemaMigrations.HIST_TIME_FIELDS) {
+            Pattern p = Pattern.compile("CREATE PROPERTY\\s+(\\w*Hist)\\." + field + "\\s+IF NOT EXISTS\\s+(\\w+)");
+            Set<String> datetime = new LinkedHashSet<>();
+            List<String> notDatetime = new ArrayList<>();
+            Matcher m = p.matcher(src);
+            while (m.find()) {
+                if ("DATETIME".equals(m.group(2))) datetime.add(m.group(1));
+                else notDatetime.add(m.group(1) + "." + field + " " + m.group(2));
+            }
+            assertEquals(List.of(), notDatetime, "литеральное объявление времени не DATETIME: " + notDatetime);
+            assertEquals(new LinkedHashSet<>(LoreSchemaMigrations.HIST_VALID_FROM_TEMPORAL), datetime,
+                field + ": не у всех *Hist объявлен DATETIME");
+        }
+        assertEquals(List.of(), LoreSchemaInitializer.histValidFromText(),
+            "инициализатор не должен объявлять valid_from текстом");
+    }
+
+    /**
+     * Шаг V42 выпущен и неизменяем (checksum по SQL): он объявляет свойство по
+     * ЗАМОРОЖЕННОМУ списку V42_HIST_VALID_FROM_TEXT, а не по действующему
+     * реестру. Свяжи его с действующим — опустевший при RM-P13 реестр сменил
+     * бы SQL шага, и прод отказался бы стартовать на дрейфе истории.
+     */
+    @Test
+    void v42StaysFrozenOnItsOwnList() {
         LoreSchemaMigrations.Step v42 = LoreSchemaMigrations.STEPS.stream()
             .filter(s -> s.version() == 42).findFirst().orElseThrow();
-        assertEquals(LoreSchemaMigrations.HIST_VALID_FROM_TEXT.size(), v42.sql().size());
-        for (String t : LoreSchemaMigrations.HIST_VALID_FROM_TEXT) {
+        assertEquals(10, LoreSchemaMigrations.V42_HIST_VALID_FROM_TEXT.size());
+        assertEquals(LoreSchemaMigrations.V42_HIST_VALID_FROM_TEXT.size(), v42.sql().size());
+        for (String t : LoreSchemaMigrations.V42_HIST_VALID_FROM_TEXT) {
             assertTrue(v42.sql().contains("CREATE PROPERTY " + t + ".valid_from IF NOT EXISTS STRING"),
                 "V42 не объявляет " + t + ".valid_from");
         }
     }
 
-    /** Свежая БД и мигрированная приходят к одной схеме — списки те же. */
+    /** V56 зарегистрирован java-шагом: SQL пуст, вся работа — в раннере. */
     @Test
-    void bootstrapDdlMatchesMigrationStep() {
-        LoreSchemaMigrations.Step v42 = LoreSchemaMigrations.STEPS.stream()
-            .filter(s -> s.version() == 42).findFirst().orElseThrow();
-        assertEquals(v42.sql(), LoreSchemaInitializer.histValidFromText());
+    void v56IsRegisteredAsJavaStep() {
+        LoreSchemaMigrations.Step v56 = LoreSchemaMigrations.STEPS.stream()
+            .filter(s -> s.version() == 56).findFirst().orElseThrow();
+        assertEquals("java__hist_valid_time_datetime", v56.name());
+        assertEquals(List.of(), v56.sql());
+        assertEquals(17, v56.compatMajor(), "шаг аддитивный — major не растёт");
+    }
+
+    /**
+     * Разбор значения в момент для V56: всё, что V41 считал датой, плюс ISO
+     * со смещением; непонятное — null (строка не трогается и уходит в WARN).
+     */
+    @Test
+    void instantOfParsesMeasuredShapesAndRefusesTheRest() {
+        assertEquals(java.time.Instant.parse("2026-08-31T12:34:56.789Z"),
+            LoreSchemaMigrationRunner.instantOf("2026-08-31T12:34:56.789Z"));
+        assertEquals(java.time.Instant.parse("2026-06-30T06:24:46.590910794Z"),
+            LoreSchemaMigrationRunner.instantOf("2026-06-30T06:24:46.590910794Z"));
+        assertEquals(java.time.Instant.parse("2026-06-11T22:26:41Z"),
+            LoreSchemaMigrationRunner.instantOf("2026-06-11 22:26:41"));
+        assertEquals(java.time.Instant.parse("2026-06-14T00:00:00Z"),
+            LoreSchemaMigrationRunner.instantOf("2026-06-14"));
+        assertEquals(java.time.Instant.parse("2026-06-16T00:22:49.738Z"),
+            LoreSchemaMigrationRunner.instantOf(1781569369738L));
+        assertEquals(java.time.Instant.parse("2026-11-04T16:56:10Z"),
+            LoreSchemaMigrationRunner.instantOf("2026-11-04T19:56:10+03:00"));
+
+        assertNull(LoreSchemaMigrationRunner.instantOf(null));
+        assertNull(LoreSchemaMigrationRunner.instantOf(""));
+        assertNull(LoreSchemaMigrationRunner.instantOf("вчера"));
+        assertNull(LoreSchemaMigrationRunner.instantOf("11.06.2026 22:26:41"));
+        assertNull(LoreSchemaMigrationRunner.instantOf("2026-13-45T99:00:00Z"), "похожее на дату, но не дата");
+    }
+
+    /** Форма рендера DATETIME, по которой V56 узнаёт уже нативное значение. */
+    @Test
+    void renderedDatetimeShapeIsRecognised() {
+        assertTrue(LoreSchemaMigrationRunner.DATETIME_RENDERED.matcher("2026-04-13 00:00:00").matches());
+        assertTrue(LoreSchemaMigrationRunner.DATETIME_RENDERED.matcher("2026-04-13 00:00:00.171").matches());
+        assertTrue(!LoreSchemaMigrationRunner.DATETIME_RENDERED.matcher("2026-04-13T00:00:00Z").matches());
+        assertTrue(!LoreSchemaMigrationRunner.DATETIME_RENDERED.matcher("2026-04-13").matches());
     }
 
     /**

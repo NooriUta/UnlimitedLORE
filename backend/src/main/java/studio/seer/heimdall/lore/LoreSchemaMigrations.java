@@ -195,8 +195,14 @@ final class LoreSchemaMigrations {
      * именно java-сериализацию Instant, а не рендер DATETIME (у того точность
      * миллисекундная). Цифры часов при этом НЕ трогаются: приведение меняет
      * форму, а не момент, и любой существующий порядок сохраняется.
+     *
+     * <p><b>RM-P13 (05.11.2026): реестр ЗАМОРОЖЕН.</b> Это список, по которому
+     * когда-то шли V41 и V42, и только он: SQL шага V42 собирается из него, а
+     * checksum выпущенного шага неизменяем (дрейф = отказ старта). Действующее
+     * правило — {@link #HIST_VALID_FROM_TEXT} (пуст) и
+     * {@link #HIST_VALID_FROM_TEMPORAL} (все *Hist), переход делает V56.
      */
-    static final List<String> HIST_VALID_FROM_TEXT = List.of(
+    static final List<String> V42_HIST_VALID_FROM_TEXT = List.of(
         "KnowADRHist",
         "KnowDecisionHist",
         "KnowDocHist",
@@ -209,23 +215,47 @@ final class LoreSchemaMigrations {
         "KnowTaskHist");
 
     /**
-     * RM-P12: типы *Hist, у которых {@code valid_from} объявлен DATETIME и
-     * данные ему уже соответствуют — {@link #HIST_VALID_FROM_TEXT} их не
-     * трогает НАМЕРЕННО.
+     * RM-P13: типы *Hist, у которых {@code valid_from} хранится ТЕКСТОМ. Пуст —
+     * и должен оставаться пустым.
      *
-     * <p>Переводить их в текст значило бы переписать 1711 строк KnowSprintHist
-     * и сменить вид выдачи у {@code sprint_starts}, на котором висят lead/cycle
-     * time и вся аналитика — ради единообразия, а не ради исправления. Оба типа
-     * внутри себя согласованы, разнобоя в них нет.
+     * <p>Решение владельца 05.11.2026: «единый формат, рекомендованный БД,
+     * перестаём сочинять». Время в корпусе — нативный DATETIME ArcadeDB
+     * (миллисекунды, UTC wall clock). Довод RM-P12 против DATETIME был о
+     * ГРАНИЦЕ с браузером («2026-04-13 00:00:00» JS читает как местное время),
+     * а не о хранении — и граница теперь закрыта в одном месте:
+     * {@link LoreTimeFormat#isoUtcRows} переводит выдачу слайсов в ISO-8601 с
+     * {@code Z}. Формат выдачи самой базы ({@code dateTimeFormat}) не трогаем:
+     * на 26.10.2 формат, не кончающийся на {@code S}, искажается.
      *
-     * <p>Открытый вопрос владельцу — свести ли корпус к ОДНОМУ представлению
-     * (и к какому), с учётом того что вид «через пробел» на границе с JS
-     * двусмыслен. Замер и обе стороны — в задаче RM-P13; молча решать за неё
-     * переписывание всей истории спринтов не стали.
+     * <p>Список оставлен, а не удалён: {@code LoreHistValidFromTypedTest}
+     * держит инвариант «каждый *Hist ровно в одном реестре», и новый тип,
+     * заведённый сюда, валит его проверку «текстовых нет».
+     */
+    static final List<String> HIST_VALID_FROM_TEXT = List.of();
+
+    /**
+     * RM-P13: типы *Hist, у которых {@code valid_from} и {@code valid_to}
+     * объявлены DATETIME — все двенадцать. До V56 сюда входили только
+     * KnowSprintHist и KnowDictEntryHist; порядок — прежний (сначала бывшие
+     * текстовые, потом два исходных), чтобы SQL среза history_hygiene,
+     * собираемый по этому списку, не переставлял ветки без нужды.
      */
     static final List<String> HIST_VALID_FROM_TEMPORAL = List.of(
+        "KnowADRHist",
+        "KnowDecisionHist",
+        "KnowDocHist",
+        "KnowFindingHist",
+        "KnowMilestoneHist",
+        "KnowPhaseHist",
+        "KnowReleaseHist",
+        "KnowRunbookHist",
+        "KnowSpecHist",
+        "KnowTaskHist",
         "KnowSprintHist",
         "KnowDictEntryHist");
+
+    /** RM-P13 (V56): свойства времени SCD2-строки, которые приводятся к DATETIME. */
+    static final List<String> HIST_TIME_FIELDS = List.of("valid_from", "valid_to");
 
     // SV-06: DDL сессий 2026-07 задним числом. На живой БД эти стейтменты уже
     // исполнялись out-of-band — идемпотентный replay безвреден и ставит ledger.
@@ -1151,9 +1181,10 @@ final class LoreSchemaMigrations {
         // KnowSprintHist.valid_from (SPRINT_PLANITEM_RETIRE, «Comparison method
         // violates its general contract!» на ORDER BY) и KnowDictEntryHist
         // (V16). Разница в выбранном типе, и она обоснована замером — см.
-        // комментарий к HIST_VALID_FROM_TEXT.
+        // комментарий к V42_HIST_VALID_FROM_TEXT (замороженный список шага;
+        // с RM-P13 тип сменён на DATETIME шагом V56, сам V42 неизменяем).
         new Step(42, 17, "hist_valid_from_declared_string",
-            HIST_VALID_FROM_TEXT.stream()
+            V42_HIST_VALID_FROM_TEXT.stream()
                 .map(t -> "CREATE PROPERTY " + t + ".valid_from IF NOT EXISTS STRING")
                 .toList()),
 
@@ -1316,7 +1347,18 @@ final class LoreSchemaMigrations {
         // ближайший факт — момент мержа PR #204, которым эти задачи сделаны.
         // Только перечисленные задачи и только открытые строки с valid_from IS NULL;
         // источник — в valid_from_source. SQL пуст — работа в javaStep(55).
-        new Step(55, 17, "java__dali_p1_valid_from_from_pr204", List.of())
+        new Step(55, 17, "java__dali_p1_valid_from_from_pr204", List.of()),
+
+        // RM-P13 (решение владельца 05.11.2026: «единый формат, рекомендованный
+        // БД, перестаём сочинять»): valid_from и valid_to у ВСЕХ *Hist —
+        // нативный DATETIME. Смена типа уже объявленного свойства в ArcadeDB
+        // делается только DROP PROPERTY + CREATE PROPERTY (ALTER PROPERTY типа не
+        // меняет), а записанные значения схема не переписывает — поэтому вся
+        // работа (счёт до/после, смена объявления, пересохранение строк) в
+        // javaStep(56); SQL пуст. Разбор движка — в javadoc
+        // LoreSchemaMigrationRunner.histTimeToDatetime. Аддитивный (major 17):
+        // форма записи для пишущих путей не меняется — они и так шлют ISO-Z.
+        new Step(56, 17, "java__hist_valid_time_datetime", List.of())
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
