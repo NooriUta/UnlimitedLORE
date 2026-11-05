@@ -22,8 +22,8 @@ import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import TipTapField from './TipTapField';
-import { usePickerFailures } from './loadState';
-import { PickerLoadWarning } from './EmptyState';
+import { loadFailureOf, usePickerFailures } from './loadState';
+import { LoadError, PickerLoadWarning } from './EmptyState';
 
 interface SprintMeta {
   sprint_id: string;
@@ -1093,6 +1093,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [tasks,   setTasks]   = useState<LoreSprintTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  // AH-07 (зона 4): сбой загрузки (сеть, 5xx, 403) рисовался как «Спринт X не
+  // найден». «Не найден» — только пустой ответ или NOT_FOUND; остальное — ошибка.
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const [filter, setFilter]   = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [ctxEdit, setCtxEdit] = useState(false);
@@ -1250,6 +1253,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
   useEffect(() => {
     setLoading(true);
+    setLoadErr(null);
     setSprint(null);
     setPhases([]);
     setTasks([]);
@@ -1286,11 +1290,20 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           }).catch(() => { /* статус и счётчик связанных спринтов — украшение строки: без них остаются id со ссылкой */ });
         }
       })
-      .catch(e => { onError(e); setLoading(false); });
+      .catch(e => {
+        const f = loadFailureOf(e);
+        if (f === null) return;
+        if (f.k === 'error') { if (f.pageLevel) onError(e); else setLoadErr(f.text); }
+        setLoading(false);
+      });
     return () => ctrl.abort();
   }, [sprintId, onError, reloadKey]);
 
   if (loading) return <div style={S.empty}>{t('lore.sprintDetail.loading', 'Загрузка {{sprintId}}…', { sprintId })}</div>;
+  if (!sprint && loadErr) return (
+    <LoadError text={t('lore.sprintDetail.loadError', 'Спринт {{sprintId}} не загрузился: {{reason}}', { sprintId, reason: loadErr })}
+      onRetry={() => setReloadKey(k => k + 1)} retryLabel={t('lore.loadRetry', 'Повторить')} />
+  );
   if (!sprint)  return <div style={S.empty}>{t('lore.sprintDetail.notFound', 'Спринт {{sprintId}} не найден.', { sprintId })}</div>;
 
   const status  = normalizeStatus(sprint.status_raw);

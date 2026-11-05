@@ -4,7 +4,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { useMartSlice } from '../../hooks/useMuninn';
 import type { CaseDimRow, CaseRow, CaseWithDim, GoldInfo, GoldRow, GoldVerdictRow, HopKindRow, RunRow, SubstrateRow, TaskRow, TraceRow } from '../../utils/muninnData';
 import { buildGoldIndex, diffGoldPredicted, f1Band, fmtF1, formatTokens, formatUsd, joinCases, num, strArr } from '../../utils/muninnData';
-import { MuninnSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink } from './shared';
+import { MartSliceWarning, MuninnSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink } from './shared';
 import { MetricChip } from './NarrativeScreens';
 import type { CasesPreset } from './MatrixScreen';
 
@@ -42,6 +42,7 @@ function TraceBlock({ run, c }: { run: string; c: CaseWithDim }) {
       {open && (
         <div style={{ marginTop: 6 }}>
           {trace.loading && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>}
+          {trace.error && <PanelMsg kind="error" text={trace.error} onRetry={trace.reload} />}
           {!trace.loading && trace.rows && !row && (
             <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.traceEmpty', 'No trace (deterministic or not loaded into the mart)')}</span>
           )}
@@ -223,6 +224,7 @@ export function CasesScreen({ runs, substrates, tasks, hopKinds, subLabel, prese
   return (
     <div data-testid="bench-cases">
       <ScreenTitle text={t('bench.secCases', 'Case drill-down — facts joined with the case dimension')} />
+      <MartSliceWarning slices={{ cases_dim: dim, golds, gold_verdicts: goldVerdicts }} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.run', 'Run')}>
           <MuninnSelect value={run} onChange={setRun}

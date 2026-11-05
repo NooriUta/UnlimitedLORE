@@ -5,6 +5,7 @@ import { SelectionPanel } from './components/SelectionPanel';
 import { TestEditor } from './components/TestEditor';
 import { NewTestModal } from './components/NewTestModal';
 import { RunsList } from './components/RunsList';
+import { loadStateOf } from '../lore/loadState';
 import { LiveLog } from './components/LiveLog';
 import { ReportFrame } from './components/ReportFrame';
 import { SuiteList } from './components/SuiteList';
@@ -32,6 +33,11 @@ export default function TyrApp() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [runs, setRuns] = useState<RunMeta[]>([]);
+  // AH-07 (зона 4): сбой /runs раньше уходил в необработанный reject, runs
+  // оставался [] — и экран писал «Прогонов ещё не было». Теперь у истории
+  // четыре исхода (loadStateOf): грузится / сбой / пусто / есть прогоны.
+  const [runsLoaded, setRunsLoaded] = useState(false);
+  const [runsError, setRunsError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   /** Текущий прогон, который смотрим в "Тесты" — обновляется при запуске нового и при появлении running на сервере. */
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
@@ -44,7 +50,11 @@ export default function TyrApp() {
   const [, force] = useState(0);
 
   const reload = async (): Promise<void> => {
-    const r = await api.runs();
+    let r: Awaited<ReturnType<typeof api.runs>>;
+    try { r = await api.runs(); }
+    catch (e) { setRunsError(e); return; }
+    setRunsError(null);
+    setRunsLoaded(true);
     setRuns(r.runs);
     setBusy(r.busy);
     // Сразу подхватить «running» (если кто-то стартовал из CLI/другого окна)
@@ -208,6 +218,7 @@ export default function TyrApp() {
     return startRun(`Тег @${tag} · ${mode}`, `--grep @${tag}`);
   };
 
+  const runsState = loadStateOf(runsLoaded ? runs : null, runsError);
   const currentRun = runs.find((r) => r.id === currentRunId) ?? null;
   const historyRun = runs.find((r) => r.id === historyRunId) ?? null;
 
@@ -455,18 +466,29 @@ export default function TyrApp() {
             <h2>📜 История прогонов{runs.length > 0 && <span className="muted"> · {runs.length}</span>}</h2>
             <RunsList
               runs={runs}
+              state={runsState.k}
+              error={runsState.k === 'error' ? runsState.text : undefined}
+              onRetry={() => { void reload(); }}
               activeId={historyRunId}
               onPick={(id) => { setHistoryRunId(id); setReportTab('report'); }}
             />
           </aside>
           <section className="detail-pane">
-            {!historyRun && runs.length === 0 && (
+            {!historyRun && runsState.k === 'error' && (
+              <div className="empty">
+                <h2>⚠ История прогонов не загрузилась</h2>
+                <p className="error">{runsState.text}</p>
+                <p>Это сбой, а не пустая история — прогоны могли быть.</p>
+                <button onClick={() => { void reload(); }}>↻ Повторить</button>
+              </div>
+            )}
+            {!historyRun && runsState.k === 'empty' && (
               <div className="empty">
                 <h2>📊 Прогонов ещё не было</h2>
                 <p>Перейди в <strong>📋 Тест-планы</strong> и запусти.</p>
               </div>
             )}
-            {!historyRun && runs.length > 0 && (
+            {!historyRun && runsState.k === 'ok' && (
               <div className="empty">
                 <h2>👈 Выберите прогон слева</h2>
               </div>
@@ -529,7 +551,7 @@ export default function TyrApp() {
           <code style={{ color: 'var(--acc)' }}>SEER</code>
         </span>
         <span className="sb-item">{tree?.nodes.length ?? '—'} тестов</span>
-        <span className="sb-item">{runs.length} прогон{plural(runs.length)}</span>
+        <span className="sb-item">{runsState.k === 'error' ? <span className="error">прогоны: сбой загрузки</span> : runsState.k === 'loading' ? 'прогоны: …' : <>{runs.length} прогон{plural(runs.length)}</>}</span>
         <span className="sb-item">env: <code>{mode}</code></span>
         {currentRun && (
           <span className="sb-item">

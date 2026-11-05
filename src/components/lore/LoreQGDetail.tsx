@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, loreMutate } from '../../api/lore';
+import { describeLoreError, fetchLoreSlice, loreMutate } from '../../api/lore';
+import { LoadError } from './EmptyState';
 import { parseRoutine, parseInvariants, parseGateSubtitle } from '../../lib/qgContentMd';
 import { MartProse } from '../bench/MartProse';
 
@@ -131,6 +132,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   const [runs, setRuns]               = useState<RoutineRun[]>([]);
   const [latestMetrics, setLatestMetrics] = useState<RunMetric[]>([]);
   // metric_key -> ordered (oldest→newest) history across structured runs
+  const [metricsErr, setMetricsErr]   = useState<string | null>(null);
   const [metricHist, setMetricHist]   = useState<Record<string, { v: number; status: string | null }[]>>({});
   // prev structured run's metrics (for "what changed")
   const [prevMetrics, setPrevMetrics] = useState<RunMetric[]>([]);
@@ -169,15 +171,20 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
         setRuns(runRows);
         // structured runs = those with a run_id (newest first from slice)
         const structured = runRows.filter(r => r.run_id);
-        if (structured.length === 0) { setLatestMetrics([]); setPrevMetrics([]); setMetricHist({}); return; }
+        if (structured.length === 0) { setMetricsErr(null); setLatestMetrics([]); setPrevMetrics([]); setMetricHist({}); return; }
         // fetch metrics for up to last 8 structured runs
         const take = structured.slice(0, 8);
-        const metricsByRun = await Promise.all(
-          take.map(r =>
-            fetchLoreSlice<RunMetric>('qg_run_metrics', { run_id: r.run_id! }, ctrl.signal)
-              .catch(() => [] as RunMetric[]),
-          ),
+        // AH-07 (зона 4): упавшие метрики прогона подменялись [] — и инварианты
+        // писали «нет прогона», хотя прогон был. Теперь сбой виден над списком.
+        const settled = await Promise.allSettled(
+          take.map(r => fetchLoreSlice<RunMetric>('qg_run_metrics', { run_id: r.run_id! }, ctrl.signal)),
         );
+        if (ctrl.signal.aborted) return;
+        const bad = settled
+          .map((r, i) => (r.status === 'rejected' ? `${take[i].run_id}: ${describeLoreError(r.reason).text}` : null))
+          .filter((x): x is string => x !== null);
+        setMetricsErr(bad.length ? bad.join(' · ') : null);
+        const metricsByRun = settled.map(r => (r.status === 'fulfilled' ? r.value : []));
         // newest first → latest + prev
         setLatestMetrics(metricsByRun[0] ?? []);
         setPrevMetrics(metricsByRun[1] ?? []);
@@ -424,6 +431,9 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
               </span>
             )}
           </div>
+          {metricsErr && (
+            <LoadError text={t('lore.qgDetail.metricsLoadError', 'Метрики прогонов не загрузились — «нет прогона» ниже может быть неправдой: {{reason}}', { reason: metricsErr })} />
+          )}
           {invariants.length === 0 ? (
             <div style={S.emptySection}>{t('lore.qgDetail.invariants.empty', 'В content_md нет распознанных INV-блоков.')}</div>
           ) : (
