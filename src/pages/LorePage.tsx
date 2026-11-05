@@ -143,6 +143,13 @@ const LIST_W_DEFAULT = 260;
 const LIST_W_MIN     = 130;
 const LIST_W_MAX     = 440;
 
+/** AH-10: ✕ поиска — настоящая кнопка (фокус, Enter, подпись), вид прежний. */
+const CLEAR_BTN = {
+  color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0,
+  background: 'transparent', border: 'none', padding: 0, fontFamily: 'inherit', lineHeight: 1,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+} as const;
+
 const S = {
   root: {
     display: 'flex', flexDirection: 'column' as const,
@@ -1070,10 +1077,11 @@ export default function LorePage() {
             )}
             {section === 'sprints' && (
               <>
-                {/* Поиск по имени/ID — в шапке левой панели */}
+                {/* Поиск по имени/ID — в шапке левой панели.
+                    AH-10: minHeight, а не height — на телефоне «+» растёт до 40px. */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '0 10px', height: 30, flexShrink: 0,
+                  padding: '0 10px', minHeight: 30, flexShrink: 0,
                   borderBottom: '1px solid var(--bd)',
                 }}>
                   <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
@@ -1088,12 +1096,16 @@ export default function LorePage() {
                     onChange={e => setSprintQ(e.target.value)}
                   />
                   {sprintQ && (
-                    <span onClick={() => setSprintQ('')}
-                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>✕</span>
+                    <button type="button" className="lore-tap" onClick={() => setSprintQ('')}
+                      aria-label={t('lore.page.searchClear', 'очистить поиск')}
+                      style={CLEAR_BTN}>✕</button>
                   )}
                   <button
+                    type="button"
+                    className="lore-tap-main"
                     onClick={() => selectItem('__new')}
                     title={t('lore.page.sprints.newSprintTitle', 'Новый спринт')}
+                    aria-label={t('lore.page.sprints.newSprintTitle', 'Новый спринт')}
                     style={{
                       flexShrink: 0, width: 20, height: 20, borderRadius: 4,
                       border: '1px solid var(--bd)', background: 'transparent',
@@ -1125,7 +1137,7 @@ export default function LorePage() {
               <>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '0 10px', height: 30, flexShrink: 0,
+                  padding: '0 10px', minHeight: 30, flexShrink: 0,
                   borderBottom: '1px solid var(--bd)',
                 }}>
                   <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
@@ -1140,8 +1152,9 @@ export default function LorePage() {
                     onChange={e => setCompQ(e.target.value)}
                   />
                   {compQ && (
-                    <span onClick={() => setCompQ('')}
-                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>✕</span>
+                    <button type="button" className="lore-tap" onClick={() => setCompQ('')}
+                      aria-label={t('lore.page.searchClear', 'очистить поиск')}
+                      style={CLEAR_BTN}>✕</button>
                   )}
                 </div>
                 <LoreComponentList

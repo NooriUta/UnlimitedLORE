@@ -9,6 +9,7 @@ import { fetchLoreSlice } from '../../api/lore';
 import LoreBragiPublicationEditor from './LoreBragiPublicationEditor';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { bragiPlanLayout } from './mobileLayout';
+import { a11yClick } from './a11y';
 
 interface CalendarRow {
   variant_id: string;
@@ -115,9 +116,9 @@ export default function LoreBragiPlan() {
             {t('bragi.plan.calendarTitle', 'календарь публикаций')} <span style={S.meta}>{monthLabel(cursor)}</span>
           </h2>
           <div style={S.monthNav}>
-            <span style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}>{t('bragi.plan.navPrev', '‹ пред.')}</span>
-            <span style={S.navBtn} onClick={() => setCursor(new Date())}>{t('bragi.plan.navToday', 'сегодня')}</span>
-            <span style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}>{t('bragi.plan.navNext', 'след. ›')}</span>
+            <button type="button" className="lore-tap" style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} aria-label={t('bragi.plan.navPrevAria', 'предыдущий месяц')}>{t('bragi.plan.navPrev', '‹ пред.')}</button>
+            <button type="button" className="lore-tap" style={S.navBtn} onClick={() => setCursor(new Date())} aria-label={t('bragi.plan.navTodayAria', 'к текущему месяцу')}>{t('bragi.plan.navToday', 'сегодня')}</button>
+            <button type="button" className="lore-tap" style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} aria-label={t('bragi.plan.navNextAria', 'следующий месяц')}>{t('bragi.plan.navNext', 'след. ›')}</button>
           </div>
           <div style={S.legend}>
             {Object.entries(CHANNEL_COLOR).map(([ch, col]) => (
@@ -136,7 +137,7 @@ export default function LoreBragiPlan() {
                 <div
                   key={i}
                   style={{ ...cellStyle(c.otherMonth, isToday), padding: L.cellPad, minHeight: L.cellMinH, minWidth: 0 }}
-                  onClick={() => setCreatingDate(dateStr)}
+                  {...a11yClick(() => setCreatingDate(dateStr), t('bragi.plan.cellTitle', 'Запланировать публикацию на эту дату'))}
                   title={t('bragi.plan.cellTitle', 'Запланировать публикацию на эту дату')}
                 >
                   <div style={dnumStyle(isToday)}>{c.date.getDate()}</div>
@@ -195,7 +196,7 @@ const S: Record<string, React.CSSProperties> = {
                justifyContent: 'space-between', alignItems: 'center' },
   meta:      { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   monthNav:  { display: 'flex', gap: 10, fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 10 },
-  navBtn:    { cursor: 'pointer', color: 'var(--acc)' },
+  navBtn:    { cursor: 'pointer', color: 'var(--acc)', background: 'transparent', border: 'none', padding: '0 4px', fontFamily: 'inherit', fontSize: 'inherit' },
   legend:    { display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginBottom: 12 },
   legendItem:{ display: 'flex', alignItems: 'center' },
   calHead:   { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6,

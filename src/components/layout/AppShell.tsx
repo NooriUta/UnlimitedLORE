@@ -229,7 +229,7 @@ function AppShellBody() {
             aria-expanded={openDD === 'brand'}
             aria-haspopup="menu"
             title={t('shell.brandTitle', 'LORE — пространства')}
-            onClick={() => setOpenDD(d => d === 'brand' ? null : 'brand')}
+            className="lore-tap" onClick={() => setOpenDD(d => d === 'brand' ? null : 'brand')}
             style={{
               // Бренд без окантовки — прежний вид логотипа (display-шрифт),
               // но поведение кнопки-dropdown (эталон Студии).
@@ -285,7 +285,7 @@ function AppShellBody() {
           <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
             <button type="button" aria-expanded={openDD === 'project'} aria-haspopup="menu"
               title={t('shell.projectTitle', 'Рабочее пространство данных (проект)')}
-              onClick={() => setOpenDD(d => d === 'project' ? null : 'project')}
+              className="lore-tap" onClick={() => setOpenDD(d => d === 'project' ? null : 'project')}
               style={pill(false)}>
               <span style={liveDot} />{project ?? t('shell.projectAll', 'ВСЕ ПРОЕКТЫ')}<span style={caret}>⌄</span>
             </button>
@@ -310,7 +310,7 @@ function AppShellBody() {
             <button type="button"
               aria-haspopup="menu" aria-expanded={openDD === 'chapters'}
               aria-label={t('shell.chapters', 'Главы Forseti')}
-              onClick={() => setOpenDD(d => d === 'chapters' ? null : 'chapters')}
+              className="lore-tap" onClick={() => setOpenDD(d => d === 'chapters' ? null : 'chapters')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
                 background: 'none', border: 'none', padding: '2px 4px', maxWidth: '100%', minWidth: 0,
@@ -401,7 +401,7 @@ function AppShellBody() {
           </span>
         )}
 
-        <button type="button" onClick={() => setPalOpen(true)}
+        <button type="button" className="lore-tap" onClick={() => setPalOpen(true)}
           title={t('shell.searchTitle', 'Поиск по данным (/)')} aria-label={t('shell.searchAria', 'Поиск')}
           style={{ ...btnStyle, textTransform: 'none' as const, display: 'inline-flex', alignItems: 'center' }}>
           <GameIcon slug="magnifying-glass" size={15} style={{ color: 'inherit' }} />
@@ -411,7 +411,7 @@ function AppShellBody() {
         <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
           <button type="button" aria-expanded={openDD === 'more'} aria-haspopup="menu"
             title={t('shell.moreTitle', 'Ещё — тема, палитра, язык')}
-            onClick={() => setOpenDD(d => d === 'more' ? null : 'more')} style={btnStyle}>⋯</button>
+            className="lore-tap" onClick={() => setOpenDD(d => d === 'more' ? null : 'more')} style={btnStyle}>⋯</button>
           {openDD === 'more' && (
             <div style={{ ...dd, left: 'auto', right: 0, maxHeight: 'calc(100vh - 80px)', overflowY: 'auto' }} role="menu">
               {/* AH-08: на телефоне выбора проекта в шапке нет — он здесь. */}
@@ -475,7 +475,7 @@ function AppShellBody() {
           <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
             <button type="button" aria-expanded={openDD === 'user'} aria-haspopup="menu"
               title={t('shell.profile', 'Профиль')}
-              onClick={() => setOpenDD(d => d === 'user' ? null : 'user')}
+              className="lore-tap" onClick={() => setOpenDD(d => d === 'user' ? null : 'user')}
               // AL-113: btnStyle несёт моно-шрифт + letter-spacing + uppercase —
               // рассчитан на короткие символьные кнопки (лупа, «⋯»), единственные
               // соседи в этой строке. Имя пользователя — читаемый текст переменной

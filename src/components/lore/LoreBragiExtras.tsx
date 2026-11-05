@@ -12,6 +12,8 @@ import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBra
 import LoreBragiRubricManager, { type RubricRow } from './LoreBragiRubricManager';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
 import { ratioPct, channelCtrMedians, benchmarkArrow } from './bragiAnalytics';
+import { useNavigate } from 'react-router-dom';
+import { searchHitHref } from '../../api/searchRoutes';
 
 // Shared facet helpers for the Bragi tables (T35) — same "empty = all,
 // counts exclude own dimension" model as Forseti (T33/T34).
@@ -309,6 +311,7 @@ interface InsightRow {
 
 export function LoreBragiInsights() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<InsightRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -330,8 +333,8 @@ export function LoreBragiInsights() {
             <div style={S.insightTxt}>{r.statement_md}</div>
             {(r.led_tasks.length > 0 || r.led_adrs.length > 0) && (
               <div style={S.insightLinks}>
-                {r.led_tasks.map(tk => <span key={tk} style={S.chipAcc}>{t('bragi.extras.insights.linkTask', '→ Forseti · {{id}}', { id: tk })}</span>)}
-                {r.led_adrs.map(a => <span key={a} style={S.chipAcc}>{t('bragi.extras.insights.linkAdr', '→ ADR · {{id}}', { id: a })}</span>)}
+                {r.led_tasks.map(tk => <button key={tk} type="button" className="lore-tap" style={S.chipLink} onClick={() => navigate(searchHitHref('task', tk))}>{t('bragi.extras.insights.linkTask', '→ Forseti · {{id}}', { id: tk })}</button>)}
+                {r.led_adrs.map(a => <button key={a} type="button" className="lore-tap" style={S.chipLink} onClick={() => navigate(searchHitHref('adr', a))}>{t('bragi.extras.insights.linkAdr', '→ ADR · {{id}}', { id: a })}</button>)}
               </div>
             )}
           </div>
@@ -441,8 +444,9 @@ const S: Record<string, React.CSSProperties> = {
   insightDate: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 5 },
   insightTxt:  { fontSize: 'var(--fs-lg)', lineHeight: 1.5 },
   insightLinks:{ marginTop: 9, display: 'flex', gap: 7, flexWrap: 'wrap' },
-  chipAcc: { background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
-             borderRadius: 6, padding: '1px 8px', fontSize: 'var(--fs-sm)', color: 'var(--acc)' },
+  // AH-10: чип-ссылка инсайта — кнопка с переходом в паспорт; вид прежнего chipAcc.
+  chipLink: { background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
+             borderRadius: 6, padding: '1px 8px', fontSize: 'var(--fs-sm)', color: 'var(--acc)', fontFamily: 'inherit', cursor: 'pointer' },
   // V2-03: CTR выше/ниже медианы канала — тот же смысл, что светофор в
   // остальном LORE (--suc/--dng), не жёлтый: тут не «предупреждение», а
   // направленное сравнение с типичным результатом канала.

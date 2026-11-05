@@ -20,6 +20,10 @@ export default defineConfig({
     // Путь с ВКЛЮЧЁННЫМ auth от этого не страдает: auth-enabled.test.ts
     // взводит флаг явно через vi.stubEnv, что здесь и перекрывается.
     env: { VITE_LORE_AUTH_ENABLED: 'false' },
+    // AH-10: гварды правил в tokens.css (тап-цели) читают файл через ?raw.
+    // По умолчанию Vitest отдаёт любой CSS пустой строкой — тест правила был бы
+    // «красным» на пустом входе и ничего не проверял бы.
+    css: { include: [/tokens\.css/] },
   },
   build: {
     rollupOptions: {

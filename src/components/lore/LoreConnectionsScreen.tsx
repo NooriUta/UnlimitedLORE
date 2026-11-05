@@ -1,34 +1,39 @@
 // LoreConnectionsScreen — рецепты подключения внешних клиентов к живому диалогу
 // Claude Code. Лежит в разделе «Основа» рядом с MCP API (тот же паттерн
 // страницы — Section/Pre/Th/Td, локальные стили, без общих компонентов).
-// Первый рецепт — miniLORE (мобильное приложение, было MobilePoc):
-// мобильное приложение и десктопная консоль, работающие с ОДНИМ и тем же
-// диалогом одновременно через dev-канал.
+// Первый рецепт — miniLORE: мобильное приложение и десктопная консоль,
+// работающие с ОДНИМ и тем же диалогом одновременно через канал.
 //
-// Версия 2 (исправлена авторами miniLORE после первого прохода): канал
-// принадлежит СЕССИИ, а не проекту — предыдущая формулировка «канал один на
-// все проекты, определяет проект по рабочей папке» была неточной. Три факта
-// ниже — прямая цитата их правки, не обкатанное самостоятельно.
-//
-// Версия 3: секрет в config-файле не нужен вовсе — server.js читает его из
-// process.env, а MCP-сервер наследует окружение родительского процесса.
-// Блок env с ${VAR} в первой правке был лишним усложнением, снят по указанию
-// авторов miniLORE.
+// AH-10 (SPRINT_LORE_ADMIN_HOUSEKEEPING): прежний канал выключен 23.08.2026,
+// единственный канал — minilore-link. Он подключён в user-скоупе Claude Code
+// (C:/Mobilepoc/v2/link, роутер 127.0.0.1:8789), поэтому шаг «добавить сервер
+// в .mcp.json проекта» и шаг с секретом в переменной окружения сняты. Секретов
+// на странице нет: где он нужен — «задаётся в настройках канала». Что не
+// перепроверено на новом канале, помечено в тексте как «уточнить».
 import { useTranslation } from 'react-i18next';
 
-const SETX_CMD = `setx MOBILEPOC_CHANNEL_SECRET "<значение из gateway/.env>"`;
-
-const MINILORE_MCP_JSON = `{
-  "mcpServers": {
-    "mobilepoc-channel": {
-      "command": "node",
-      "args": ["D:/Mobilepoc/channel/server.js"]
-    }
+// Блок сервера в ~/.claude.json (user-скоуп) — как он заведён на этой машине.
+const LINK_MCP_JSON = `"mcpServers": {
+  "minilore-link": {
+    "command": "node",
+    "args": ["C:/Mobilepoc/v2/link/dist/mcp-server.js"],
+    "env": { "MINILORE_ROUTER_URL": "http://127.0.0.1:8789" }
   }
 }`;
 
 const ATTACH_CMD = `cd <папка проекта>
-& "$env:USERPROFILE\\.local\\bin\\claude.exe" --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>`;
+& "$env:USERPROFILE\\.local\\bin\\claude.exe" --dangerously-load-development-channels server:minilore-link --resume <sessionId>`;
+
+/** Инструменты канала: имя — как в MCP, описание — ключ локали. */
+const TOOLS: { name: string; key: string; fallback: string }[] = [
+  { name: 'reply',        key: 'lore.connections.toolReply', fallback: 'ответ владельцу на телефон. В диалоге не виден — тот же текст продублировать обычным сообщением, длинное — целиком' },
+  { name: 'ask',          key: 'lore.connections.toolAsk',   fallback: 'вопрос с ожиданием ответа — дорога для решений владельца' },
+  { name: 'peers',        key: 'lore.connections.toolPeers', fallback: 'соседние сессии на этой машине' },
+  { name: 'tell',         key: 'lore.connections.toolTell',  fallback: 'написать соседней сессии напрямую — по имени диалога, проекта или префиксу sessionId' },
+  { name: 'send',         key: 'lore.connections.toolSend',  fallback: 'передать файл на телефон' },
+  { name: 'fetch',        key: 'lore.connections.toolFetch', fallback: 'забрать файл из архива сервера, если вложение не скачалось само' },
+  { name: 'note_to_self', key: 'lore.connections.toolNote',  fallback: 'заметка себе, можно с задержкой' },
+];
 
 export default function LoreConnectionsScreen() {
   const { t } = useTranslation();
@@ -46,45 +51,46 @@ export default function LoreConnectionsScreen() {
         </p>
 
         {/* ── miniLORE: один диалог в консоли и в приложении ────────────────── */}
-        <Section title={t('lore.connections.mobilepocTitle', 'miniLORE — один диалог, доступный и в консоли, и в мобильном приложении')}>
+        <Section title={t('lore.connections.channelTitle', 'miniLORE — один диалог в консоли и в мобильном приложении (канал minilore-link)')}>
           <p style={S.note}>
-            {t('lore.connections.mobilepocLead', 'Канал — это MCP-сервер, который поднимает сама сессия Claude Code: он дочерний процесс своей сессии и принадлежит только ей, а не проекту.')}
+            {t('lore.connections.channelLead', 'Канал — MCP-сервер minilore-link. Сессия Claude Code запускает его своим дочерним процессом; процессы всех сессий ходят в общий локальный роутер. Прежний канал выключен 23.08.2026 — его рецепт с этой страницы снят.')}
           </p>
 
-          <p style={S.note}><b>{t('lore.connections.factsLabel', 'Что значит «в диалог можно писать» — три факта прямо:')}</b></p>
+          <p style={S.note}><b>{t('lore.connections.factsLabel', 'Что значит «в диалог можно писать» — факты прямо:')}</b></p>
           <ul style={S.ul}>
             <li>
-              <b>{t('lore.connections.fact1Label', 'Каналов может быть сколько угодно.')}</b>{' '}
-              {t('lore.connections.fact1', 'Файл')} <code style={S.code}>channel/server.js</code> {t('lore.connections.fact1Rest', 'один, но каждая сессия поднимает свой процесс на своём порту и регистрируется отдельно. Прописывать канал в')} <code style={S.code}>.mcp.json</code> {t('lore.connections.fact1Rest2', 'каждого проекта — нормально, они не конфликтуют.')}
+              <b>{t('lore.connections.fact1Label', 'Подключён один раз — на всю машину.')}</b>{' '}
+              {t('lore.connections.fact1', 'Сервер заведён в user-скоупе Claude Code (')}<code style={S.code}>~/.claude.json</code>{t('lore.connections.fact1Rest', '), поэтому доступен во всех проектах сразу. В')} <code style={S.code}>.mcp.json</code> {t('lore.connections.fact1Rest2', 'проекта ничего добавлять не нужно.')}
             </li>
             <li>
               <b>{t('lore.connections.fact2Label', 'Десктопная сессия канал не получает.')}</b>{' '}
-              {t('lore.connections.fact2', 'Проверено экспериментом: десктоп и headless (')}<code style={S.code}>-p</code>{t('lore.connections.fact2Rest', ') принимают событие и молча его роняют. Пишет только интерактивная консольная сессия, запущенная с флагом ниже.')}
+              {t('lore.connections.fact2', 'Десктоп и headless (')}<code style={S.code}>-p</code>{t('lore.connections.fact2Rest', ') принимают событие и молча его роняют. Пишет только интерактивная консольная сессия, запущенная с флагом ниже.')}{' '}
+              <span style={S.todo}>{t('lore.connections.fact2Check', 'Проверено экспериментом на прежнем канале; для minilore-link — уточнить.')}</span>
             </li>
             <li>
               <b>{t('lore.connections.fact3Label', 'Адресация — по сессии, не по проекту.')}</b>{' '}
               {t('lore.connections.fact3', 'Раньше шлюз искал канал по имени проекта: при двух диалогах в одном проекте выигрывал первый попавшийся, и сообщение уходило в соседнюю переписку молча. Сейчас — по sessionId; если у сессии своего канала нет, шлюз так и отвечает, вместо того чтобы подставить чужой диалог.')}
             </li>
+            <li>
+              <b>{t('lore.connections.fact4Label', 'Живой — значит ответил.')}</b>{' '}
+              {t('lore.connections.fact4', 'Имя minilore-link в списке инструментов ещё не значит, что канал жив: живым считается только инструмент, который действительно ответил.')}
+            </li>
           </ul>
 
           <ol style={S.ol}>
             <li>
-              {t('lore.connections.setxLabel', 'Завести секрет переменной окружения — один раз на машину.')}{' '}
-              {t('lore.connections.setx1', 'Значение лежит в')} <code style={S.code}>gateway/.env</code>{t('lore.connections.setx1Rest', ', ключ')} <code style={S.codeAcc}>MOBILEPOC_CHANNEL_SECRET</code>{t('lore.connections.setx1Rest2', '. Сюда, на страницу, значение не копировать — только команда:')}
-              <Pre>{SETX_CMD}</Pre>
+              {t('lore.connections.step1', 'Проверить, что сервер заведён в user-скоупе —')} <code style={S.code}>~/.claude.json</code>{t('lore.connections.step1Rest', ', раздел')} <code style={S.code}>mcpServers</code>{t('lore.connections.step1Rest2', '. Обычно блок уже есть; если нет — добавить его ВНУТРЬ существующего раздела, файл целиком не заменять:')}
+              <Pre>{LINK_MCP_JSON}</Pre>
               <p style={S.noteTight}>
-                {t('lore.connections.setxNote', 'setx действует только на НОВЫЕ процессы')}{t('lore.connections.setxNoteRest', ' — терминал, из которого ставили переменную, для канала не годится, нужен свежий.')}
+                {t('lore.connections.secretNote', 'Секрет в конфиг не пишем.')}{' '}{t('lore.connections.secretNoteRest', 'Если каналу нужен секрет — он задаётся в настройках канала, а не на этой странице и не в .mcp.json.')}
+              </p>
+              <p style={S.noteTight}>
+                {t('lore.connections.routerNote', 'Роутер слушает')} <code style={S.code}>http://127.0.0.1:8789</code>{t('lore.connections.routerNoteRest', ' (переменная')} <code style={S.code}>MINILORE_ROUTER_URL</code>{t('lore.connections.routerNoteRest2', ').')}{' '}
+                <span style={S.todo}>{t('lore.connections.routerCheck', 'Кто и как поднимает роутер — уточнить.')}</span>
               </p>
             </li>
             <li>
-              {t('lore.connections.step1', 'Дать проекту канал — добавить сервер в')} <code style={S.code}>.mcp.json</code> {t('lore.connections.step1Rest', 'этого проекта. Если у проекта уже есть свой')} <code style={S.code}>.mcp.json</code>{t('lore.connections.step1Rest2', ' — блок добавляется ВНУТРЬ существующего')} <code style={S.code}>mcpServers</code>{t('lore.connections.step1Rest3', ', файл не заменяется целиком:')}
-              <Pre>{MINILORE_MCP_JSON}</Pre>
-              <p style={S.noteTight}>
-                {t('lore.connections.secretNote', 'Секрет в конфиг не пишем')}{t('lore.connections.secretNoteRest', ' — сервер сам читает его из окружения процесса, унаследованного от родителя (шаг 1 выше), поэтому блок')} <code style={S.code}>env</code>{t('lore.connections.secretNoteRest2', ' тут не нужен.')}
-              </p>
-            </li>
-            <li>
-              {t('lore.connections.step2', 'Открыть диалог на десктопе в этом же проекте и немного поработать в нём — пока транскрипт пуст, подключаться не к чему. Сама десктопная сессия канал не получает (факт 2 выше) — этот шаг только создаёт диалог, к которому потом подключится консоль.')}
+              {t('lore.connections.step2', 'Открыть диалог на десктопе в нужном проекте и немного поработать в нём — пока транскрипт пуст, подключаться не к чему. Сама десктопная сессия канал не получает (факт 2 выше) — этот шаг только создаёт диалог, к которому потом подключится консоль.')}
             </li>
             <li>
               {t('lore.connections.step3', 'Подцепить к нему консоль — по')} <code style={S.codeAcc}>sessionId</code>{t('lore.connections.step3Rest', ', видимому в приложении:')}
@@ -97,6 +103,24 @@ export default function LoreConnectionsScreen() {
               </p>
             </li>
           </ol>
+
+          <p style={S.note}><b>{t('lore.connections.toolsLabel', 'Инструменты канала')}</b></p>
+          <div style={S.tableWrap}>
+            <table style={S.table}>
+              <thead><tr>
+                <Th>{t('lore.connections.colTool', 'Инструмент')}</Th>
+                <Th>{t('lore.connections.colWhat', 'Что делает')}</Th>
+              </tr></thead>
+              <tbody>
+                {TOOLS.map(tool => (
+                  <tr key={tool.name} style={S.tr}>
+                    <Td><code style={S.code}>{tool.name}</code></Td>
+                    <Td style={{ color: 'var(--t2)' }}>{t(tool.key, tool.fallback)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <p style={S.note}><b>{t('lore.connections.verifyLabel', 'Как проверить, что получилось')}</b></p>
           <p style={S.note}>
@@ -125,7 +149,7 @@ export default function LoreConnectionsScreen() {
             </table>
           </div>
 
-          <p style={S.note}><b>{t('lore.connections.gotchasLabel', 'Подводный камень:')}</b></p>
+          <p style={S.note}><b>{t('lore.connections.gotchasLabel', 'Подводные камни:')}</b></p>
           <div style={S.tableWrap}>
             <table style={S.table}>
               <thead><tr>
@@ -142,7 +166,7 @@ export default function LoreConnectionsScreen() {
                 <tr style={S.tr}>
                   <Td>{t('lore.connections.gotcha3Label', 'Диалог виден, но без явной ошибки только читается')}</Td>
                   <Td style={{ color: 'var(--t2)' }}>
-                    {t('lore.connections.gotcha3', 'Если секрет не доехал, сервер не падает — поднимается с пустой строкой и получает от шлюза 403 на регистрацию, внешне неотличимо от read-only. Проверка: у диалога должна стать зелёная 🗨️. Серая — почти всегда несвежая консоль (см. шаг 1: setx не действует на уже открытый терминал).')}
+                    {t('lore.connections.gotcha3', 'Сначала проверить, что консоль запущена с флагом из шага 3 и что роутер отвечает на 127.0.0.1:8789. Если каналу нужен секрет — он задаётся в настройках канала. Результат: у диалога должна стать зелёная 🗨️.')}
                   </Td>
                 </tr>
               </tbody>
@@ -192,6 +216,8 @@ const S: Record<string, React.CSSProperties> = {
   td:      { padding: '7px 10px', verticalAlign: 'top', color: 'var(--t1)' },
   note:    { marginTop: 10, fontSize: 'var(--fs-base)', lineHeight: 1.6, color: 'var(--t3)' },
   noteTight: { marginTop: 6, fontSize: 'var(--fs-sm)', lineHeight: 1.55, color: 'var(--t3)' },
+  // AH-10: честная пометка «уточнить» — не перепроверенное на minilore-link.
+  todo:    { color: 'var(--wrn)', fontSize: 'var(--fs-sm)' },
   code:    { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', padding: '1px 5px', borderRadius: 3,
              background: 'var(--b2)', color: 'var(--t2)' },
   codeAcc: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', padding: '1px 5px', borderRadius: 3,

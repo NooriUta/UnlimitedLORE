@@ -8,6 +8,8 @@ import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { parseHosts, releaseUrl, hostLabel } from './repo-url';
 import { releaseProjectOf, resolveReleaseRef, uidOfRelease } from './releaseProject';
 import { useUrlId } from '../../hooks/useUrlState';
+import { MartProse } from '../bench/MartProse';
+import { mdExcerpt } from './markdown';
 
 interface Props {
   q: string;
@@ -192,37 +194,39 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
         <span style={S.count}>{t('lore.releasesBoard.releaseCount', '{{count}} релизов', { count: filtered.length })}</span>
 
         {/* Current filter chip */}
-        <span
+        <button
+          type="button" className="lore-tap" aria-pressed={onlyCurrent}
           style={{ ...S.projectTab, ...(onlyCurrent ? S.currentTabActive : {}) }}
           onClick={() => setOnlyCurrent(v => !v)}
           title={t('lore.releasesBoard.showOnlyCurrentTitle', 'Показать только текущие релизы каждого модуля')}
         >
           {t('lore.releasesBoard.currentChip', '● CURRENT')}
-        </span>
+        </button>
 
         {/* Project tabs — always visible when >1 project */}
         {projects.filter(p => p !== 'all').length > 1 && projects.map(p => (
-          <span
-            key={p}
+          <button
+            key={p} type="button" className="lore-tap" aria-pressed={projectFilter === p}
             style={{ ...S.projectTab, ...(projectFilter === p ? S.projectTabActive : {}) }}
             onClick={() => setProjectFilter(p)}
           >
             {p === 'all' ? t('lore.releasesBoard.allProjects', 'Все') : p.split('/')[1]}
-          </span>
+          </button>
         ))}
 
         {/* Active filter chips */}
         {(projectFilter !== 'all' || onlyCurrent || q) && (
-          <span
+          <button
+            type="button" className="lore-tap"
             style={S.resetBtn}
             onClick={() => { setProjectFilter('all'); setOnlyCurrent(false); onClearQ?.(); }}
           >
             {t('lore.releasesBoard.reset', '✕ сбросить')}
-          </span>
+          </button>
         )}
         {q && (
           <span style={S.filterNote}>
-            {t('lore.releasesBoard.quotedQuery', '«{{query}}»', { query: q })}{onClearQ && <span style={S.clearQ} onClick={onClearQ}>✕</span>}
+            {t('lore.releasesBoard.quotedQuery', '«{{query}}»', { query: q })}{onClearQ && <button type="button" className="lore-tap" style={S.clearQ} onClick={onClearQ} aria-label={t('lore.releasesBoard.clearQueryAria', 'очистить поиск')}>✕</button>}
           </span>
         )}
       </div>
@@ -287,7 +291,8 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                     {(r.pr_count != null && r.pr_count > 0) && (
                       <span style={S.countBadge} title={t('lore.releasesBoard.linkedPrsTitle', 'Привязанных PR')}>PR {r.pr_count}</span>
                     )}
-                    {r.description_md && <span style={{ ...S.desc, ...(narrow ? S.descNarrow : null) }}>{r.description_md.slice(0, 110)}</span>}
+                    {/* AH-10: превью описания — разметкой (MartProse), а не сырым markdown. */}
+                    {r.description_md && <MartProse text={mdExcerpt(r.description_md, 110)} style={{ ...S.desc, ...S.descPreview, ...(narrow ? S.descNarrow : null) }} />}
                     {isOpen && (
                       <div style={S.detail} onClick={e => e.stopPropagation()}>
                         {loadingDetail === uid && <span style={S.meta}>{t('lore.releasesBoard.loading', 'Загрузка…')}</span>}
@@ -435,9 +440,9 @@ const S = {
   },
   count:      { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   filterNote: { fontSize: 'var(--fs-sm)', color: 'var(--acc)', display: 'inline-flex', alignItems: 'center', gap: 4 },
-  clearQ: { cursor: 'pointer', fontSize: 'var(--fs-xs)', color: 'var(--t3)', padding: '0 2px' },
+  clearQ: { cursor: 'pointer', fontSize: 'var(--fs-xs)', color: 'var(--t3)', padding: '0 2px', background: 'transparent', border: 'none', fontFamily: 'inherit' },
   resetBtn: {
-    fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 10, cursor: 'pointer',
+    fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
     border: '1px solid color-mix(in srgb, var(--err) 40%, transparent)',
     color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 6%, transparent)',
   },
@@ -446,7 +451,7 @@ const S = {
     color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)',
   },
   projectTab: {
-    fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
+    fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
     border: '1px solid var(--bd)', color: 'var(--t3)',
     background: 'transparent', transition: 'all 0.1s',
   },
@@ -489,6 +494,7 @@ const S = {
   bodyNarrow: { order: 2, flexBasis: '100%', width: '100%' },
   rowRightNarrow: { order: 1, marginLeft: 'auto' as const },
   descNarrow: { flexBasis: '100%', width: '100%' },
+  descPreview: { maxHeight: '3.2em', overflow: 'hidden', minWidth: 0, lineHeight: 1.5 },
   tagCell: { display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 },
   tag: {
     fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', fontWeight: 700,

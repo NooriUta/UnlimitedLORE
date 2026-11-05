@@ -619,14 +619,15 @@ function ToolBtn({ active, onClick, children, title }: { active: boolean; onClic
   // text/emoji content (e.g. "B", "🔗") — the browser prefers that content
   // over title for the a11y-tree name, so screen readers announced the raw
   // glyph instead of what the button does. Mirror title into aria-label.
-  return <button type="button" style={toolBtnStyle(active)} onClick={onClick} title={title} aria-label={title}>{children}</button>;
+  return <button type="button" className="lore-tap" style={toolBtnStyle(active)} onClick={onClick} title={title} aria-label={title}>{children}</button>;
 }
 function Sep() {
   return <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--b3)', margin: '2px 1px' }} />;
 }
 function toolBtnStyle(active: boolean): React.CSSProperties {
   return {
-    height: 22, minWidth: 22, padding: '0 5px', borderRadius: 3, fontSize: 'var(--fs-sm)', cursor: 'pointer',
+    // AH-10: 22px на десктопе, на узком — токен тап-цели (инлайн бьёт класс).
+    height: 22, minWidth: 'max(22px, var(--tap))', padding: '0 5px', borderRadius: 3, fontSize: 'var(--fs-sm)', cursor: 'pointer',
     background: active ? 'color-mix(in srgb, var(--acc) 18%, transparent)' : 'transparent',
     color: active ? 'var(--acc)' : 'var(--t2)',
     border: active ? '1px solid color-mix(in srgb, var(--acc) 35%, transparent)' : '1px solid transparent',
