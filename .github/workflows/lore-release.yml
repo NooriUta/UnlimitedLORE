@@ -388,8 +388,40 @@ jobs:
           N=$(bash .github/scripts/tg-split.sh /tmp/tg-body.md /tmp/tg-parts 3700)
           FG_LINK="${PUBLIC_REPO}/releases/tag/${TAG}"
           GH_LINE=""
-          [ -n "${GH_REPO:-}" ] && GH_LINE=$(printf "\nGitHub: https://github.com/%s/releases/tag/%s" "$GH_REPO" "$TAG")
+          GH_URL=""
+          [ -n "${GH_REPO:-}" ] && GH_URL="https://github.com/${GH_REPO}/releases/tag/${TAG}"
+          [ -n "$GH_URL" ] && GH_LINE=$(printf "\nGitHub: %s" "$GH_URL")
           FAILED=0
+
+          # Основной путь (владелица 05.11.2026: «в телеграм создавать вот такие
+          # HTML и писать кратко выложено ссылка и аттачем полноценное
+          # описание»): короткая подпись + полное описание HTML-файлом. Кусками
+          # текста — только запасной путь, если вложение не ушло.
+          bash .github/scripts/release-html.sh --selftest
+          DOC="/tmp/LORE-${TAG}.html"
+          DOC_SENT=0
+          if bash .github/scripts/release-html.sh "$FILE" "$DOC" "$TAG" "$FG_LINK" "$GH_URL"; then
+            ESC_TITLE=$(printf '%s' "$TITLE" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
+            CAPTION=$(printf '🏷️ <b>LORE %s опубликован</b>\n%s\n\nForgejo: %s%s\n\nПолное описание — в файле.' \
+              "$TAG" "$ESC_TITLE" "$FG_LINK" "$GH_LINE")
+            for attempt in 1 2 3; do
+              code=$(curl -s --max-time 30 -o /tmp/tg-doc.json -w '%{http_code}' -X POST \
+                   "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" \
+                   --form-string "chat_id=${TG_CHAT}" --form-string "parse_mode=HTML" \
+                   --form-string "caption=${CAPTION}" -F "document=@${DOC};type=text/html")
+              if [ "$code" = "200" ]; then
+                echo "[tg] release notification sent as caption + ${DOC##*/} (attempt $attempt)"
+                DOC_SENT=1; break
+              fi
+              echo "::warning::[tg] sendDocument attempt $attempt/3 failed (HTTP $code): $(head -c 200 /tmp/tg-doc.json)"
+              [ "$code" = "400" ] && break
+              [ $attempt -lt 3 ] && sleep $((attempt * 5))
+            done
+          else
+            echo "::warning::[tg] HTML-описание не собралось — отправляю текстом"
+          fi
+          [ $DOC_SENT = 1 ] && exit 0
+
           i=0
           for part in /tmp/tg-parts/part-*.txt; do
             i=$((i + 1))
