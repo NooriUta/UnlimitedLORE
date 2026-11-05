@@ -31,3 +31,29 @@ describe('driftVerdict', () => {
     expect(v.reason).not.toBe('');
   });
 });
+
+// 05.11.2026: lore_version читал build-info.json с ДИСКА при каждом вызове и
+// показывал свежую сборку, когда работающий процесс исполнял старый код (сессия
+// не перезапускалась). Völva получила «drift: ok» при отсутствующем _page и
+// искала причину в бэкенде. Загруженная сборка и сборка на диске — разные факты.
+import { processStale } from './drift.js';
+
+describe('processStale: процесс MCP исполняет не ту сборку, что лежит на диске', () => {
+  it('на диске новее загруженной — restart_needed с обеими отметками', () => {
+    const d = processStale(
+      { commit: '58aa2588f817', built_at: '2026-11-05T05:52:47Z' },
+      { commit: 'c1422502bfc2', built_at: '2026-11-05T07:02:35Z' });
+    expect(d?.verdict).toBe('restart_needed');
+    expect(d?.reason).toContain('58aa2588f817');
+    expect(d?.reason).toContain('c1422502bfc2');
+  });
+
+  it('совпадают — null (решает обычный вердикт)', () => {
+    const b = { commit: 'c1422502bfc2', built_at: '2026-11-05T07:02:35Z' };
+    expect(processStale(b, { ...b })).toBeNull();
+  });
+
+  it('файла на диске не прочитать — не повод кричать о рестарте', () => {
+    expect(processStale({ commit: 'c1422502bfc2', built_at: 'x' }, { commit: 'unknown', built_at: '' })).toBeNull();
+  });
+});
