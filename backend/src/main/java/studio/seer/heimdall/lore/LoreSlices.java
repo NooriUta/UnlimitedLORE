@@ -40,6 +40,9 @@ public final class LoreSlices {
     static final Pattern VALUE_RE =
         Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}", Pattern.UNICODE_CHARACTER_CLASS);
 
+    /** MT-03: с этой даты заведения enb-задача обязана нести JUSTIFIED_BY (раньше — вне правила). Константа времени компиляции. */
+    static final String ENB_RULE_SINCE = "2026-08-01";
+
     private static final Map<String, SliceDef> SLICES = new LinkedHashMap<>();
 
     /**
@@ -939,9 +942,18 @@ public final class LoreSlices {
         // Зеркало дисциплины D16 для второго класса: enb-задача обязана нести
         // JUSTIFIED_BY. Advisory, как и unlinked_uc_tasks — список нарушений,
         // а не гейт записи (гейт задушил бы ввод, TOC-раздел ADR-022).
+        //
+        // MT-03 (05.11.2026, рекомендация 2): правило считается от даты — с
+        // ENB_RULE_SINCE. Хвост июня–июля (класс проставлен задним числом, ADR не
+        // подбирали) объявлен вне правила: он делал список нечитаемым (632 строки),
+        // а само правило по свежим задачам работает (август — 55 %, и растёт).
+        // Отсечка по САМОЙ РАННЕЙ строке истории = дате заведения: «нет ни одной
+        // строки старше даты». По текущей строке нельзя — правка июльской задачи
+        // вернула бы её в список. Строки истории без valid_from не мешают.
         slice("unlinked_enb_tasks",
             "SELECT task_uid, task_id, title, work_class, out('PART_OF').sprint_id[0] AS sprint_id " +
             "FROM KnowTask WHERE work_class = 'enb' AND out('JUSTIFIED_BY').size() = 0 " +
+            "AND out('HAS_STATE')[valid_from < date('" + ENB_RULE_SINCE + "', 'yyyy-MM-dd')].size() = 0 " +
             "ORDER BY task_uid",
             List.of(), Map.of(), "");
 
