@@ -22,7 +22,7 @@ export const whereAmILine = (w: WhereAmI) => `${w.group} › ${w.title} · ${w.p
 export type CounterWhy = 'kc403' | 'kc503' | 'kcErr' | 'srcErr' | 'preflight';
 export type NavCounter =
   | { kind: 'none' }                                           // нечего показать (загрузка или честный 0 слайса)
-  | { kind: 'n'; n: number }                                   // число
+  | { kind: 'n'; n: number; kcAccounts?: number | null }        // число (у «Агентов» — ещё учётки KC; null = неизвестно)
   | { kind: 'unk'; why: CounterWhy; detail?: string }          // «?» — не смогли проверить
   | { kind: 'bad'; n: number };                                // красный — N проблем
 
@@ -42,6 +42,17 @@ export function sliceCounter(n: number, err: string | undefined, loaded: boolean
   if (err) return { kind: 'unk', why: 'srcErr', detail: err };
   if (!loaded || n === 0) return { kind: 'none' };
   return { kind: 'n', n };
+}
+
+/**
+ * SH-05: «Агенты» считают агентов ГРАФА (agent_owners) — то же, что первая таблица
+ * вкладки; учётки Keycloak уходят в подпись. Граф от KC не зависит: при 403/503
+ * число агентов остаётся, а учётки становятся неизвестными (null), не нулём.
+ */
+export function agentsCounter(graphN: number, err: string | undefined, loaded: boolean, kc: KcState<unknown>): NavCounter {
+  const c = sliceCounter(graphN, err, loaded);
+  if (c.kind !== 'n') return c;
+  return { ...c, kcAccounts: kc.k === 'ok' ? kc.rows.length : null };
 }
 
 /** Проверки готовности к включению auth — ровно те, что в чек-листе «Настроек». */

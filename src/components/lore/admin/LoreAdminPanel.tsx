@@ -8,10 +8,10 @@ import { loadKc, loadKcObj, type KcState } from '../kc-state';
 import { type RealmRole } from '../adminRealmRoles';
 import { AUTH_ENABLED } from '../../../auth/session';
 import { useRole } from '../../../auth/useRole';
-import type { DictRow, ProjRow, TagRow, KcUser, KcAgent, Preflight, Tab } from './types';
+import type { DictRow, ProjRow, TagRow, KcUser, KcAgent, Preflight, Tab, AgentRow } from './types';
 import { S } from './adminStyles';
-import { NAV_GROUPS, TAB_TITLES, ALL_TABS } from './adminTabs';
-import { kcCounter, readinessCounter, sliceCounter, systemChips, whereAmI, type NavCounter, type SysChip } from './adminShellModel';
+import { NAV_GROUPS, TAB_TITLES, ALL_TABS, TAB_I18N, GROUP_I18N } from './adminTabs';
+import { agentsCounter, kcCounter, readinessCounter, sliceCounter, systemChips, whereAmI, type NavCounter, type SysChip } from './adminShellModel';
 import { useIsNarrow } from './useIsNarrow';
 import { UsersTab } from './UsersTab';
 import { AgentsTab } from './AgentsTab';
@@ -40,7 +40,7 @@ import { QuickCommandsTab } from './QuickCommandsTab';
  * исчезал, «пусто» оставалось. Теперь сбой запоминается и показывается на
  * каждой вкладке, которая из этого источника читает.
  */
-type Src = 'dicts' | 'projects' | 'tags' | 'claudeRules' | 'sprints' | 'components';
+type Src = 'dicts' | 'projects' | 'tags' | 'claudeRules' | 'sprints' | 'components' | 'agents';
 const TAB_SOURCES: Partial<Record<Tab, Src[]>> = {
   dicts: ['dicts', 'components'], roles: ['dicts'], settings: ['dicts'],
   projects: ['projects', 'sprints'], tags: ['tags'], claudeRules: ['claudeRules'],
@@ -60,8 +60,8 @@ function useCounterTitle() {
       }
     }
     if (c.kind === 'bad') return t('lore.admin.cntBad', 'проверок готовности к включению auth не пройдено: {{n}}', { n: c.n });
-    // SH-05: счётчик «Агенты» — это учётки KC, а не агенты графа; подпись это говорит.
-    if (c.kind === 'n' && tab === 'agents') return t('lore.admin.cntAgents', 'учёток Keycloak: {{n}}', { n: c.n });
+    // SH-05: «Агенты» — агенты графа (как первая таблица вкладки), учётки KC — в подписи.
+    if (c.kind === 'n' && tab === 'agents') return t('lore.admin.cntAgentsGraph', 'агентов в графе: {{n}} · учёток Keycloak: {{kc}}', { n: c.n, kc: c.kcAccounts ?? '?' });
     return undefined;
   };
 }
@@ -155,6 +155,8 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const [agents, setAgents] = useState<KcState<KcAgent>>({ k: 'loading' });
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [realmRoles, setRealmRoles] = useState<KcState<RealmRole>>({ k: 'loading' });
+  // SH-05/A-02: агенты графа грузятся здесь — их считает навигация, и от KC они не зависят.
+  const [graphAgents, setGraphAgents] = useState<AgentRow[]>([]);
   const [reload, setReload] = useState(0);
   const bump = () => setReload(x => x + 1);
   const [srcErr, setSrcErr] = useState<Partial<Record<Src, string>>>({});
@@ -188,6 +190,8 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
         setAreaUsage(m);
       // usage-колонка деградирует в «н/д» (без тоста), а не в «0 использований».
       }).catch(failed('components', false));
+    // Без тоста: вкладка «Агенты» показывает сбой на месте, в своей секции.
+    fetchLoreSlice<AgentRow>('agent_owners', {}).then(r => { setGraphAgents(r); done('agents'); }).catch(failed('agents', false));
     loadKc<KcUser>('/lore/kc/users').then(setUsers);
     loadKc<KcAgent>('/lore/kc/agents').then(setAgents);
     loadKcObj<Preflight>('/lore/kc/auth-preflight').then(setPreflight);
@@ -198,7 +202,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   // SH-04: число · «?» (не смогли проверить) · красный (проблемы) · пусто — только честный 0.
   const counters: Partial<Record<Tab, NavCounter>> = {
     users: kcCounter(users),
-    agents: kcCounter(agents),
+    agents: agentsCounter(graphAgents.length, srcErr.agents, !!loaded.agents, agents),
     dicts: sliceCounter(dictTypes.length, srcErr.dicts, !!loaded.dicts),
     projects: sliceCounter(projects.length, srcErr.projects, !!loaded.projects),
     tags: sliceCounter(knowTags.length, srcErr.tags, !!loaded.tags),
@@ -210,6 +214,11 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const cntTitle = useCounterTitle();
   const chips = systemChips({ authEnabled: AUTH_ENABLED, preflight, users, role });
   const where = whereAmI(tab);
+  // SH-16: подписи групп/вкладок — через t() (ключи — adminTabs, наличие держит тест).
+  const tabL = (k: Tab) => t(TAB_I18N[k], TAB_TITLES[k]);
+  const grpL = (g: (typeof NAV_GROUPS)[number]) => t(GROUP_I18N[g.key].label, g.label);
+  const riskL = (g: (typeof NAV_GROUPS)[number]) => t(GROUP_I18N[g.key].risk, g.risk);
+  const whereG = grpL(NAV_GROUPS.find(g => g.key === where.groupKey) ?? NAV_GROUPS[0]);
   const curCnt = cntOf(tab);
 
   // Вариант A: активная вкладка ленты всегда в видимой зоне (SH-01).
@@ -227,9 +236,9 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
         <div style={S.where} aria-label={t('lore.admin.whereAmI', 'Где я')}>
           <span style={S.whereRail(where.color)} />
           <span style={{ minWidth: 0 }}>
-            <span style={S.whereG(where.color)}>{where.group}</span>
+            <span style={S.whereG(where.color)}>{whereG}</span>
             <span style={{ color: 'var(--t3)' }}> › </span>
-            <span style={S.whereT}>{where.title}</span>
+            <span style={S.whereT}>{tabL(tab)}</span>
           </span>
           <span style={S.wherePos}>· {where.pos}/{where.total}</span>
           {(curCnt.kind === 'unk' || curCnt.kind === 'bad') && (
@@ -244,11 +253,11 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
             <div style={S.strip}>
               {NAV_GROUPS.map(g => (
                 <span key={g.key} style={{ display: 'contents' }}>
-                  <span style={S.stripGrp(g.rail)}><span style={S.dot(g.rail)} />{g.label}</span>
-                  {g.tabs.map(([k, l]) => (
+                  <span style={S.stripGrp(g.rail)}><span style={S.dot(g.rail)} />{grpL(g)}</span>
+                  {g.tabs.map(([k]) => (
                     <button key={k} ref={tab === k ? activeStrip : undefined}
                       style={S.stripTab(tab === k, g.rail)} onClick={() => setTab(k)} aria-current={tab === k ? 'page' : undefined}>
-                      {l}
+                      {tabL(k)}
                       <NavCount c={cntOf(k)} title={cntTitle(cntOf(k), k)} />
                     </button>
                   ))}
@@ -262,13 +271,13 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           <nav style={S.side(narrow)}>
             {NAV_GROUPS.map(g => (
               <div key={g.key}>
-                <div style={S.grpLabel}><span style={S.dot(g.rail)} />{g.label}<span style={S.grpRisk}>{g.risk}</span></div>
+                <div style={S.grpLabel}><span style={S.dot(g.rail)} />{grpL(g)}<span style={S.grpRisk}>{riskL(g)}</span></div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {g.tabs.map(([k, l, icon]) => (
+                  {g.tabs.map(([k, , icon]) => (
                     <button key={k} style={S.nav(tab === k)} onClick={() => setTab(k)} aria-current={tab === k ? 'page' : undefined}>
                       <span style={S.rail(tab === k ? g.rail : null)} />
                       <GameIcon slug={icon} size={13} style={{ color: tab === k ? g.rail : 'var(--t3)' }} />
-                      {l}
+                      {tabL(k)}
                       <NavCount c={cntOf(k)} title={cntTitle(cntOf(k), k)} />
                     </button>
                   ))}
@@ -280,7 +289,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
         <main style={S.main}>
           {!narrow && (
             <div style={S.crumb}>
-              {t('lore.admin.crumb', 'Администрирование')} › <span style={S.crumbG(where.color)}>{where.group}</span> › <span style={S.crumbB}>{TAB_TITLES[tab]}</span>
+              {t('lore.admin.crumb', 'Администрирование')} › <span style={S.crumbG(where.color)}>{whereG}</span> › <span style={S.crumbB}>{tabL(tab)}</span>
             </div>
           )}
           {(TAB_SOURCES[tab] ?? []).filter(s => srcErr[s]).map(s => (
@@ -289,12 +298,12 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
               onRetry={bump} retryLabel={t('lore.admin.retry', 'повторить')} />
           ))}
           {tab === 'users' && <UsersTab st={users} preflight={preflight} realmRoles={realmRoles.k === 'ok' ? realmRoles.rows : null} onError={onError} reload={bump} />}
-          {tab === 'agents' && <AgentsTab st={agents} people={users} preflight={preflight} onError={onError} />}
+          {tab === 'agents' && <AgentsTab st={agents} people={users} preflight={preflight} graph={graphAgents} graphErr={srcErr.agents ?? null} onError={onError} reload={bump} />}
           {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} preflight={preflight} />}
           {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} usageUnknown={!!srcErr.components} onError={onError} reload={bump} />}
           {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} sprintsUnknown={!!srcErr.sprints} people={users} onError={onError} reload={bump} />}
           {tab === 'tags' && <TagsTab know={knowTags} />}
-          {tab === 'claudeRules' && <ClaudeRulesTab rows={claudeRules} />}
+          {tab === 'claudeRules' && <ClaudeRulesTab rows={claudeRules} loadFailed={!!srcErr.claudeRules} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
           {tab === 'quick' && <QuickCommandsTab />}
         </main>

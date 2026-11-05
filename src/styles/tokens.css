@@ -169,6 +169,9 @@
   --fs-lg:   14px;  /* section/card headers, dialog titles */
   --fs-xl:   20px;  /* secondary KPI numbers */
   --fs-2xl:  24px;  /* primary/hero KPI numbers */
+  /* Вне шкалы: поля ввода на сенсорном экране. iOS приближает страницу при
+     фокусе на поле со шрифтом меньше 16px (AH-05, SH-13) — только для input. */
+  --fs-touch-input: 16px;
 }
 
 /* ---------- SLATE (холодный сине-серый) ---------- */

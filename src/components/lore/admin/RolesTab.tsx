@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { type KcState } from '../kc-state';
 import type { DictRow, KcUser, KcAgent, Preflight } from './types';
 import { S } from './adminStyles';
-import { NotEnforcedNotice } from './adminWidgets';
+import { NotEnforcedNotice, RespTable } from './adminWidgets';
+import { useIsNarrow } from './useIsNarrow';
+import type { Col } from './adminCards';
 
 // RBAC scope per ADR-LORE-014 §3 (agent-profiles — файлы; read-only отображение).
 const PROFILE_SCOPE: [string, string][] = [
@@ -95,12 +98,25 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Чтение (слайсы)', api: '/lore/slice/*', humanOnly: false, agents: ['все агенты'] },
 ];
 
-// ── Роли и права: обе оси + обратная матрица (AL-32) ─────────────────────────
+/// ── Роли и права: обе оси + обратная матрица (AL-32) ─────────────────────────
+// AH-05 п.2: три таблицы — RespTable (карточки на телефоне, без прокрутки панели);
+// режим «кто что может / кто имеет доступ к…» — в URL (?roles=by-object, R-03).
+const HUMAN_ROLES: { role: string; tone: string }[] = [
+  { role: 'super-admin', tone: 'var(--dng)' }, { role: 'admin', tone: 'var(--dng)' }, { role: 'viewer', tone: 'var(--t2)' },
+];
+
 export function RolesTab({ dicts, users, agents, preflight }: {
   dicts: DictRow[]; users: KcState<KcUser>; agents: KcState<KcAgent>; preflight: Preflight | null;
 }) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<'by-role' | 'by-object'>('by-role');
+  const narrow = useIsNarrow();
+  const [params, setParams] = useSearchParams();
+  const mode: 'by-role' | 'by-object' = params.get('roles') === 'by-object' ? 'by-object' : 'by-role';
+  const setMode = (m: 'by-role' | 'by-object') => {
+    const p = new URLSearchParams(params);
+    if (m === 'by-object') p.set('roles', m); else p.delete('roles');
+    setParams(p, { replace: true });
+  };
   const agentRoles = dicts.filter(r => r.dict_type === 'agent_profile');
   const humanCounts = useMemo(() => {
     if (users.k !== 'ok') return null;
@@ -116,93 +132,103 @@ export function RolesTab({ dicts, users, agents, preflight }: {
   }, [agents]);
 
   const holders = (r: string) => humanCounts
-    ? (humanCounts[r].length ? `${humanCounts[r].length} · ${humanCounts[r].join(', ')}` : 'никому')
-    : 'н/д (KC недоступен)';
+    ? (humanCounts[r].length ? `${humanCounts[r].length} · ${humanCounts[r].join(', ')}` : t('lore.admin.holdersNobody', 'никому'))
+    : t('lore.admin.holdersKcNa', 'н/д (KC недоступен)');
+  const gives: Record<string, string> = {
+    'super-admin': t('lore.admin.superAdminGives', 'Всё, включая выдачу admin'),
+    admin: t('lore.admin.adminGives', 'Администрирование: люди, словари, настройки, включение auth'),
+    viewer: t('lore.admin.viewerGives', 'Только чтение LORE. В администрирование не пускает'),
+  };
+  const where: Record<string, string> = {
+    'super-admin': t('lore.admin.kcConsoleOnly', 'Только консоль Keycloak (D11)'),
+    admin: t('lore.admin.herePeople', 'Здесь → Люди'),
+    viewer: t('lore.admin.herePeople', 'Здесь → Люди'),
+  };
+  const mono = { fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' };
+
+  const humanCols: Col[] = [
+    { key: 'role', label: t('lore.admin.thHumanRole', 'люди · realm-роль'), kind: 'title' },
+    { key: 'gives', label: t('lore.admin.thGives', 'что даёт'), kind: 'full' },
+    { key: 'where', label: t('lore.admin.thWhereAssigned', 'где назначается') },
+    { key: 'holders', label: t('lore.admin.thHolders', 'кому выдана') },
+  ];
+  const humanCell = (r: { role: string; tone: string }, k: string) => {
+    switch (k) {
+      case 'role': return <span style={S.pill(r.tone)}>{r.role}</span>;
+      case 'gives': return gives[r.role];
+      case 'where': return where[r.role];
+      case 'holders': return <span style={mono}>{holders(r.role)}</span>;
+    }
+    return null;
+  };
+
+  const agentCols: Col[] = [
+    { key: 'p', label: t('lore.admin.thAgentRole', 'агенты · роль'), kind: 'title' },
+    { key: 'label', label: t('lore.admin.thDictLabel', 'label (словарь)') },
+    { key: 'allow', label: t('lore.admin.thCanWrite', 'что может писать'), kind: 'full' },
+    { key: 'client', label: t('lore.admin.thKcClientId', 'клиент') },
+  ];
+  const agentCell = ([p, allow]: [string, string], k: string) => {
+    switch (k) {
+      case 'p': return <span style={S.pill('var(--inf)')}>agent-{p}</span>;
+      case 'label': return agentRoles.find(r => r.code === p)?.label_ru ?? '—';
+      case 'allow': return <span style={{ ...mono, overflowWrap: 'anywhere' }}>{allow}</span>;
+      case 'client': return <span style={{ ...mono, color: 'var(--t3)' }}>{agentByScope ? (agentByScope[p] ?? '—') : t('lore.admin.na', 'н/д')}</span>;
+    }
+    return null;
+  };
+
+  const objCols: Col[] = [
+    { key: 'what', label: t('lore.admin.thWhat', 'что'), kind: 'title' },
+    { key: 'humans', label: t('lore.admin.thHumans', 'люди') },
+    { key: 'agents', label: t('lore.admin.thAgents', 'агенты'), kind: 'full' },
+  ];
+  type Rev = (typeof REVERSE_MATRIX)[number];
+  const objCell = (r: Rev, k: string) => {
+    switch (k) {
+      case 'what': return (
+        <span style={{ fontFamily: 'var(--font)' }}>
+          <b style={{ color: 'var(--t1)' }}>{r.what}</b>{' '}
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontWeight: 400, overflowWrap: 'anywhere' }}>{r.api}</span>
+        </span>
+      );
+      case 'humans': return (
+        <span style={{ display: 'inline-flex', gap: 4 }}>
+          <span style={S.pill('var(--dng)')}>admin</span>
+          {r.api === '/lore/slice/*' && <span style={S.pill('var(--t2)')}>viewer</span>}
+        </span>
+      );
+      case 'agents': return r.humanOnly
+        ? <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noAgentsAllowed', 'никто — запрещено всем агентам, включая agent-full')}</span>
+        : <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>{r.agents.map(a => <span key={a} style={S.pill('var(--inf)')}>{a}</span>)}</span>;
+    }
+    return null;
+  };
 
   return (
     <div>
-      <div style={S.card}>{t('lore.admin.rolesNote2', 'Две оси, которые не смешиваются: люди входят паролем и несут realm-роли (seer_roles), агенты — секретом и несут agent_scope. Скоуп агентов правится в mcp-server/agent-profiles/*.json (D6, read-only здесь).')}</div>
+      <div style={S.note}>{t('lore.admin.rolesNote2', 'Две оси, которые не смешиваются: люди входят паролем и несут realm-роли (seer_roles), агенты — секретом и несут agent_scope. Скоуп агентов правится в mcp-server/agent-profiles/*.json (D6, read-only здесь).')}</div>
       <NotEnforcedNotice pf={preflight} />
       <div style={{ marginBottom: 8 }}>
         <span style={S.seg}>
-          <button style={S.segBtn(mode === 'by-role')} onClick={() => setMode('by-role')}>{t('lore.admin.byRole', 'Кто что может')}</button>
-          <button style={S.segBtn(mode === 'by-object')} onClick={() => setMode('by-object')}>{t('lore.admin.byObject', 'Кто имеет доступ к…')}</button>
+          <button style={{ ...S.segBtn(mode === 'by-role'), minHeight: narrow ? 40 : undefined }} aria-pressed={mode === 'by-role'} onClick={() => setMode('by-role')}>{t('lore.admin.byRole', 'Кто что может')}</button>
+          <button style={{ ...S.segBtn(mode === 'by-object'), minHeight: narrow ? 40 : undefined }} aria-pressed={mode === 'by-object'} onClick={() => setMode('by-object')}>{t('lore.admin.byObject', 'Кто имеет доступ к…')}</button>
         </span>
       </div>
 
       {mode === 'by-role' && (
         <>
-          <div style={S.tw}>
-            <table style={S.table}>
-              <thead><tr>{['люди · realm-роль', 'что даёт', 'где назначается', 'кому выдана'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-              <tbody>
-                <tr>
-                  <td style={S.td}><span style={S.pill('var(--dng)')}>super-admin</span></td>
-                  <td style={S.td}>{t('lore.admin.superAdminGives', 'Всё, включая выдачу admin')}</td>
-                  <td style={S.td}>{t('lore.admin.kcConsoleOnly', 'Только консоль Keycloak (D11)')}</td>
-                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{holders('super-admin')}</td>
-                </tr>
-                <tr>
-                  <td style={S.td}><span style={S.pill('var(--dng)')}>admin</span></td>
-                  <td style={S.td}>{t('lore.admin.adminGives', 'Администрирование: люди, словари, настройки, включение auth')}</td>
-                  <td style={S.td}>{t('lore.admin.herePeople', 'Здесь → Люди')}</td>
-                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{holders('admin')}</td>
-                </tr>
-                <tr>
-                  <td style={S.td}><span style={S.pill('var(--t2)')}>viewer</span></td>
-                  <td style={S.td}>{t('lore.admin.viewerGives', 'Только чтение LORE. В администрирование не пускает')}</td>
-                  <td style={S.td}>{t('lore.admin.herePeople', 'Здесь → Люди')}</td>
-                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{holders('viewer')}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <RespTable cols={humanCols} rows={HUMAN_ROLES} rowKey={r => r.role} cell={humanCell} narrow={narrow} />
           <div style={{ height: 12 }} />
-          <div style={S.tw}>
-            <table style={S.table}>
-              <thead><tr>{['агенты · роль', 'label (словарь)', 'что может писать', 'клиент'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-              <tbody>
-                {PROFILE_SCOPE.map(([p, allow]) => (
-                  <tr key={p}>
-                    <td style={S.td}><span style={S.pill('var(--inf)')}>agent-{p}</span></td>
-                    <td style={S.td}>{agentRoles.find(r => r.code === p)?.label_ru ?? '—'}</td>
-                    <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{allow}</td>
-                    <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{agentByScope ? (agentByScope[p] ?? '—') : 'н/д'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <RespTable cols={agentCols} rows={PROFILE_SCOPE} rowKey={([p]) => p} cell={agentCell} narrow={narrow} />
         </>
       )}
 
       {mode === 'by-object' && (
         <>
-          <div style={S.card}>{t('lore.admin.byObjectNote', 'Обратный вопрос — тот, который задают на ревью доступа: кто может трогать вот это? Красным подсвечены операции, доступные только людям (§4 спеки RBAC).')}</div>
-          <div style={S.tw}>
-            <table style={S.table}>
-              <thead><tr>{['что', 'люди', 'агенты'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-              <tbody>
-                {REVERSE_MATRIX.map(r => (
-                  <tr key={r.what} style={r.humanOnly ? { background: 'color-mix(in srgb, var(--dng) 7%, transparent)' } : undefined}>
-                    <td style={S.td}>
-                      <b style={{ color: 'var(--t1)' }}>{r.what}</b>{' '}
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{r.api}</span>
-                    </td>
-                    <td style={S.td}>
-                      <span style={S.pill('var(--dng)')}>admin</span>
-                      {r.what === 'Чтение (слайсы)' && <span style={{ ...S.pill('var(--t2)'), marginLeft: 4 }}>viewer</span>}
-                    </td>
-                    <td style={S.td}>
-                      {r.humanOnly
-                        ? <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noAgents', 'никто — запрещено всем агентам, включая agent-full')}</span>
-                        : r.agents.map(a => <span key={a} style={{ ...S.pill('var(--inf)'), marginRight: 4 }}>{a}</span>)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div style={S.note}>{t('lore.admin.byObjectNote', 'Обратный вопрос — тот, который задают на ревью доступа: кто может трогать вот это? Красным подсвечены операции, доступные только людям (§4 спеки RBAC).')}</div>
+          <RespTable cols={objCols} rows={REVERSE_MATRIX} rowKey={r => r.what} cell={objCell} narrow={narrow}
+            rowStyle={r => r.humanOnly ? { background: 'color-mix(in srgb, var(--dng) 7%, transparent)' } : undefined} />
         </>
       )}
     </div>

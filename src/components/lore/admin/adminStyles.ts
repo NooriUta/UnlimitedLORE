@@ -21,7 +21,6 @@ export const S = {
   crumb: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 8 },
   crumbB: { color: 'var(--t1)', fontWeight: 600 },
   toolbar: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' as const },
-  search: { fontSize: 'var(--fs-sm)', padding: '4px 10px', borderRadius: 5, border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'inherit', flex: 1, minWidth: 150, maxWidth: 280 },
   count: { fontSize: 'var(--fs-xs)', color: 'var(--t2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const },
   seg: { display: 'inline-flex', border: '1px solid var(--b3)', borderRadius: 5, overflow: 'hidden' },
   segBtn: (on: boolean) => ({
@@ -135,5 +134,11 @@ export const S = {
   blkH: { margin: '0 0 6px', fontSize: 'var(--fs-2xs)', letterSpacing: '.12em', textTransform: 'uppercase' as const, color: 'var(--t3)', fontWeight: 700, display: 'flex', gap: 6, alignItems: 'center' },
   rr: { display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '4px 8px', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)' },
   rrNarrow: { gridTemplateColumns: 'auto 1fr' },
+  // AH-05 п.2: секции вкладок и рамка таблицы (прототип .sec / .tw).
+  sec: { fontSize: 'var(--fs-2xs)', letterSpacing: '.12em', textTransform: 'uppercase' as const, color: 'var(--t3)', margin: '16px 0 6px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
+  twBox: { overflowX: 'auto' as const, border: '1px solid var(--bd)', borderRadius: 6, background: 'var(--bg1)' },
+  /** Модалка: подложка и тень — от токена фона, не rgba (SH-18). */
+  scrim: 'color-mix(in srgb, var(--bg0) 72%, transparent)',
+  popShadow: '0 12px 40px color-mix(in srgb, var(--bg0) 80%, transparent)',
   note: { border: '1px solid var(--bd)', borderLeft: '3px solid var(--inf)', background: 'var(--bg1)', borderRadius: 6, padding: '6px 12px', color: 'var(--t2)', fontSize: 'var(--fs-sm)', marginBottom: 8 },
 };

@@ -210,6 +210,7 @@ function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onC
   onClose: () => void; onChanged: () => void; onError: (e: unknown) => void;
 }) {
   const { t } = useTranslation();
+  const narrow = useIsNarrow();
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -238,7 +239,7 @@ function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onC
       style={{
         position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
         alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(2px)',
+        background: S.scrim, backdropFilter: 'blur(2px)',
       }}
       // Клик по фону закрывает, клик внутри карточки — нет: иначе каждое
       // назначение роли требовало бы открывать попап заново, а он и заведён
@@ -248,16 +249,15 @@ function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onC
       <div style={{
         width: 380, maxWidth: '92vw', maxHeight: '80vh', overflowY: 'auto',
         background: 'var(--bg1)', border: '1px solid var(--bdh)', borderRadius: 10,
-        boxShadow: '0 12px 40px rgba(0,0,0,.4)', padding: 14, textAlign: 'left',
+        boxShadow: S.popShadow, padding: 14, textAlign: 'left',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <span style={{ flex: 1, fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--t3)' }}>
             {t('lore.admin.inlineRolesH', 'Проекты и роли')} · {username}
           </span>
-          <button type="button" onClick={onClose} style={{
-            width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', borderRadius: 5,
-          }}>✕</button>
+          <button type="button" onClick={onClose} aria-label={t('lore.admin.close', 'Закрыть')} style={{
+            ...S.tap(narrow), background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', borderRadius: 5,
+          }}><GameIcon slug="cross-mark" size={12} style={{ color: 'inherit' }} /></button>
         </div>
         {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 8 }}>{err}</div>}
         {projectsErr && <LoadError text={t('lore.admin.projectsLoadError', 'Проекты не загрузились: {{reason}}', { reason: projectsErr })} />}
@@ -267,14 +267,14 @@ function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onC
         {projects.map(p => {
           const has = current.find(x => x.project === p);
           return (
-            <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0' }}>
+            <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', minHeight: S.tap(narrow).minHeight }}>
               <input type="checkbox" checked={!!has} disabled={busy === p}
                 aria-label={p}
                 // Новое назначение — самая узкая роль. Расширять надо осознанно,
                 // а не получать developer'а одним кликом по чекбоксу.
                 onChange={() => apply(p, has ? has.role : 'reader', has ? 'remove' : 'add')} />
               <span style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{p}</span>
-              <select style={{ ...S.input, minWidth: 120 }} value={has?.role ?? ''} disabled={!has || busy === p}
+              <select style={{ ...S.input, minWidth: 120, minHeight: narrow ? S.tap(narrow).minHeight : undefined }} value={has?.role ?? ''} disabled={!has || busy === p}
                 onChange={e => apply(p, e.target.value, 'add')}>
                 {!has && <option value="">—</option>}
                 {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -512,7 +512,10 @@ export function UsersTab({ st, preflight, realmRoles, onError, reload }: {
 
   const shown = rows.filter(u => !q || u.username.toLowerCase().includes(q.toLowerCase()) || (u.email ?? '').toLowerCase().includes(q.toLowerCase()));
   const popupUser = rows.find(u => u.id === rolesFor) ?? null;
-  const H = ['логин', 'email', 'вкл', 'роли', 'проекты и роли'];
+  const H = [
+    t('lore.admin.thLogin', 'логин'), t('lore.admin.thEmail', 'email'), t('lore.admin.thEnabled', 'вкл'),
+    t('lore.admin.thRoles', 'роли'), t('lore.admin.thProjRoles', 'проекты и роли'),
+  ];
 
   const list = (
     <div style={{ minWidth: 0 }}>
