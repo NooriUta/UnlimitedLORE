@@ -2319,7 +2319,9 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'metric_log',
     description: 'MetricSnapshot: append one measurement to the BRAGI TIMESERIES store (native ArcadeDB time-series, ' +
-      'not a graph vertex — no edges, referenced by object_type+object_id tags). ts accepts ISO-8601 ' +
+      'not a graph vertex — no edges, referenced by object_type+object_id tags). Funnel metrics ' +
+      '(views/clicks/demo_conv) are CUMULATIVE snapshots — the total as of ts, not the increment since the last ' +
+      'point: the archive reads the latest snapshot per window (V2-04). ts accepts ISO-8601 ' +
       '(e.g. "2026-07-02T09:00:00Z") or epoch millis; omit for now(). This is append-only — there is no ' +
       'delete/amend path (TIMESERIES sealed storage). Mutates the shared system_aida_lore.',
     schema: {

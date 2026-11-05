@@ -2631,7 +2631,12 @@
         "colTakeaway": "takeaway",
         "emptyState": "no published variants yet",
         "emptyFiltered": "nothing found under this filter",
-        "filtersLabel": "Filters"
+        "filtersLabel": "Filters",
+        "fewPoints": "too few points: no measurement in this window",
+        "windowLabel": "window from publication date",
+        "winLifetime": "lifetime",
+        "win72h": "first 72 h",
+        "win7d": "first 7 days"
       },
       "insights": {
         "loading": "loading…",
