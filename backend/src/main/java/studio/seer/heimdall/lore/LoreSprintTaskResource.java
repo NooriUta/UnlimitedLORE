@@ -273,6 +273,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 && !java.util.List.of("uc", "jtd", "enb").contains(req.work_class())) {
             return Uni.createFrom().item(badParams("work_class must be uc|jtd|enb (or omitted)"));
         }
+        // MT-SPRINT-DONE-GUARD — до первой записи: «не создана» должно быть правдой.
+        String closed = closedSprintRefusalFor(req.sprint_id());
+        if (closed != null) return Uni.createFrom().item(badParams(closed));
         if (req.effort_days() != null && (req.effort_days().isNaN() || req.effort_days() < 0)) {
             return Uni.createFrom().item(badParams("effort_days must be a non-negative number of person-days (or omitted)"));
         }
@@ -482,6 +485,37 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // No PK re-key / SCD2 surgery — reuses the create + status write paths.
     public record TaskMoveRequest(String task_uid, String target_sprint_id, String new_task_id) {}
 
+    /**
+     * MT-SPRINT-DONE-GUARD (владелец 05.11.2026): в закрытый (done/cancelled) спринт
+     * задачу не заводят и не переносят. В Völva два DONE-спринта держали 11 открытых
+     * задач: task_new брал sprint_id строкой и статус не смотрел, агент выбирал спринт
+     * «по смыслу». Отказ, а не предупреждение — предупреждение рядом с ok:true агент
+     * проглатывает. status_set задач закрытого спринта НЕ запрещается: унаследованное
+     * должно оставаться чинимым. Нет строки статуса — не отказ («не знаем» ≠ «закрыт»).
+     *
+     * @return текст отказа или null
+     */
+    static String closedSprintRefusal(String sprintId, String statusRaw, Object since) {
+        if (statusRaw == null || statusRaw.isBlank()) return null;
+        String canon = LoreStatusVocabulary.classify(statusRaw);
+        if (!"done".equals(canon) && !"cancelled".equals(canon)) return null;
+        return "спринт " + sprintId + " закрыт (статус «" + statusRaw.strip() + "»"
+            + (since != null ? ", с " + since : "") + ") — задачи в закрытый спринт не заводят и не переносят. "
+            + "Выберите открытый спринт (срез sprints со status) или заведите новый; если работа "
+            + "правда продолжает этот спринт — сначала переоткройте его status_set, осознанно.";
+    }
+
+    /** Статус ОТКРЫТОЙ строки истории спринта; отказ или null. Блокирующий — звать только с @Blocking/worker. */
+    private String closedSprintRefusalFor(String sprintId) {
+        List<Map<String, Object>> st = ingestService.queryPublic(
+            "SELECT out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS st, "
+            + "out('HAS_STATE')[valid_to IS NULL].valid_from[0] AS since "
+            + "FROM KnowSprint WHERE sprint_id=:s LIMIT 1", Map.of("s", sprintId));
+        if (st.isEmpty()) return null;   // «спринт не найден» решают существующие проверки
+        Object raw = st.get(0).get("st");
+        return closedSprintRefusal(sprintId, raw == null ? null : String.valueOf(raw), st.get(0).get("since"));
+    }
+
     @POST
     @Path("task/move")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -512,6 +546,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (ingestService.queryPublic("SELECT sprint_id FROM KnowSprint WHERE sprint_id=:s LIMIT 1",
                     Map.of("s", targetSid)).isEmpty())
                 return badParams("target sprint not found: " + targetSid);
+            String closedMv = closedSprintRefusalFor(targetSid);
+            if (closedMv != null) return badParams(closedMv);
             Map<String, Object> s = src.get(0);
             String title    = (String) s.get("title");
             String note     = (String) s.get("note_md");
