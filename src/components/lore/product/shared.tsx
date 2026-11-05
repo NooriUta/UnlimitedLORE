@@ -48,19 +48,21 @@ export function useSlice<T>(
   params: Record<string, string> | undefined,
   onError: (e: unknown) => void,
   deps: unknown[] = [],
-): { rows: T[]; loading: boolean } {
+): { rows: T[]; loading: boolean; error: unknown } {
   const [rows, setRows] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
+  // AH-07: ошибка отдаётся вызывающему — без неё экран на сбое рисовал «пусто».
+  const [error, setError] = useState<unknown>(null);
   useEffect(() => {
     const ctrl = new AbortController();
-    setLoading(true);
+    setLoading(true); setError(null);
     fetchLoreSlice<T>(slice, params, ctrl.signal)
       .then(r => { setRows(r); setLoading(false); })
-      .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
+      .catch(e => { if (!ctrl.signal.aborted) { onError(e); setError(e); setLoading(false); } });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
-  return { rows, loading };
+  return { rows, loading, error };
 }
 
 const arr = (x: string[] | null | undefined): string[] => Array.isArray(x) ? x : [];

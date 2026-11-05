@@ -10,6 +10,9 @@
     "task_*": "allow",
     "insight_*": "allow",
     "rec_*": "allow",
+    "pain_*": "allow",
+    "gain_*": "allow",
+    "job_*": "allow",
     "doc_*": "allow",
     "status_set": "allow",
     "doc_del": "deny"

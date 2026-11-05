@@ -22,6 +22,8 @@ import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import TipTapField from './TipTapField';
+import { loadFailureOf, usePickerFailures } from './loadState';
+import { LoadError, PickerLoadWarning } from './EmptyState';
 
 interface SprintMeta {
   sprint_id: string;
@@ -1091,6 +1093,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [tasks,   setTasks]   = useState<LoreSprintTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  // AH-07 (зона 4): сбой загрузки (сеть, 5xx, 403) рисовался как «Спринт X не
+  // найден». «Не найден» — только пустой ответ или NOT_FOUND; остальное — ошибка.
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const [filter, setFilter]   = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [ctxEdit, setCtxEdit] = useState(false);
@@ -1199,6 +1204,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   // Load available projects from DB once (not per-sprint). hosts[] (ADR-018) rides
   // along so PR/file URLs compose from the template, not a hardcoded host.
   const [projectHosts, setProjectHosts] = useState<Record<string, RepoHost[]>>({});
+  // AH-07: справочные списки ниже кормят пикеры привязок и бейджи модулей.
+  // Сбой любого раньше глушился: модули спринта пропадали, а «привязать» было
+  // не из чего — и это выглядело как «нечего привязывать». Теперь видно, что
+  // именно не загрузилось.
+  const [pickFail, fail] = usePickerFailures();
   useEffect(() => {
     fetchLoreSlice<{ slug: string; hosts: string | null }>('git_projects', {})
       .then(rows => {
@@ -1207,22 +1217,22 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         rows.forEach(r => { if (r.slug) m[r.slug] = parseHosts(r.hosts); });
         setProjectHosts(m);
       })
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.projects', 'проекты')));
+  }, [fail, t]);
 
   // Load all components once for the reverse sprint→modules badges.
   useEffect(() => {
     fetchLoreSlice<CompRow>('components', {})
       .then(rows => setAllComps(rows ?? []))
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.components', 'компоненты')));
+  }, [fail, t]);
 
   // Load milestones once (for the sprint↔milestone linker).
   useEffect(() => {
     fetchLoreSlice<{ milestone_id: string; label: string }>('milestones', {})
       .then(rows => setAllMilestones((rows ?? []).map(r => ({ id: r.milestone_id, label: r.label }))))
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.milestones', 'вехи')));
+  }, [fail, t]);
 
   // Load releases once (for the sprint↔release linker) — release_uid is
   // "<git_project>#<release_id>", split it since the slice has no separate
@@ -1238,11 +1248,12 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       .then(rows => setAllReleases((rows ?? []).map(r => ({
         id: r.release_id, gitProject: r.release_uid?.split('#')[0] ?? '',
       })).filter(r => r.gitProject !== '')))
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.releases', 'релизы')));
+  }, [fail, t]);
 
   useEffect(() => {
     setLoading(true);
+    setLoadErr(null);
     setSprint(null);
     setPhases([]);
     setTasks([]);
@@ -1276,14 +1287,23 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             const m = new Map<string, { status_raw: string | null; task_total: number; task_done: number }>();
             results.forEach(r => { if (r) m.set(r.id, r); });
             setRelatedMeta(m);
-          }).catch(() => {});
+          }).catch(() => { /* статус и счётчик связанных спринтов — украшение строки: без них остаются id со ссылкой */ });
         }
       })
-      .catch(e => { onError(e); setLoading(false); });
+      .catch(e => {
+        const f = loadFailureOf(e);
+        if (f === null) return;
+        if (f.k === 'error') { if (f.pageLevel) onError(e); else setLoadErr(f.text); }
+        setLoading(false);
+      });
     return () => ctrl.abort();
   }, [sprintId, onError, reloadKey]);
 
   if (loading) return <div style={S.empty}>{t('lore.sprintDetail.loading', 'Загрузка {{sprintId}}…', { sprintId })}</div>;
+  if (!sprint && loadErr) return (
+    <LoadError text={t('lore.sprintDetail.loadError', 'Спринт {{sprintId}} не загрузился: {{reason}}', { sprintId, reason: loadErr })}
+      onRetry={() => setReloadKey(k => k + 1)} retryLabel={t('lore.loadRetry', 'Повторить')} />
+  );
   if (!sprint)  return <div style={S.empty}>{t('lore.sprintDetail.notFound', 'Спринт {{sprintId}} не найден.', { sprintId })}</div>;
 
   const status  = normalizeStatus(sprint.status_raw);
@@ -1353,6 +1373,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
   return (
     <div className="lore-sprint-detail-root" style={S.root}>
+      <PickerLoadWarning failed={pickFail} />
       <div style={S.header}>
         <span style={S.sprintId}>{sprint.sprint_id}</span>
         {status && <StatusChip status={status} />}

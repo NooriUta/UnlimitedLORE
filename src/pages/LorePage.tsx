@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
+import { describeLoreError } from '../api/lore';
+import { LoreErrorToast } from '../components/lore/LoreErrorToast';
 import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
 import { LoreSearchScreen } from '../components/lore/LoreSearchScreen';
 import { DictionaryProvider } from '../components/lore/DictionaryProvider';
@@ -50,6 +51,12 @@ import LoreVpCanvas    from '../components/lore/product/LoreVpCanvas';
 // (AppShell — как модули активного пространства, эталон Seiðr), подвкладки и
 // контент — эта страница.
 import { chapterOf, type Section } from '../components/layout/forsetiChapters';
+import { switchParam } from '../hooks/useUrlState';
+
+// AH-09: ключи состояния экранов разделов (вкладка, выбранный/раскрытый элемент,
+// вид). Уникальны в пределах страницы; при смене раздела снимаются — раньше
+// их сбрасывал размонтаж экрана. Таблица ключей — в описании коммита AH-09.
+const LORE_SCREEN_KEYS = ['atab', 'ms', 'rel', 'dec', 'tview', 'ptab'] as const;
 
 // Module-scope constant (not recreated per render) — ADR/QG already have their
 // own top-level nav sections, so «Знания» adds spec+runbook+doc. Specs have no
@@ -135,6 +142,13 @@ const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 
 const LIST_W_DEFAULT = 260;
 const LIST_W_MIN     = 130;
 const LIST_W_MAX     = 440;
+
+/** AH-10: ✕ поиска — настоящая кнопка (фокус, Enter, подпись), вид прежний. */
+const CLEAR_BTN = {
+  color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0,
+  background: 'transparent', border: 'none', padding: 0, fontFamily: 'inherit', lineHeight: 1,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+} as const;
 
 const S = {
   root: {
@@ -240,6 +254,8 @@ export default function LorePage() {
 
   const [loreDisabled, setLoreDisabled] = useState(false);
   const [loreUnreachable, setLoreUnreachable] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+  const closeErrorToast = useCallback(() => setErrorToast(null), []);
   const [search, setSearch] = useState(q);
   const [listSearch, setListSearch] = useState('');
   const [sprintQ, setSprintQ] = useState('');
@@ -391,26 +407,35 @@ export default function LorePage() {
   };
 
   const go = (s: Section) => setParams(p => {
-    p.set('section', s);
+    switchParam(p, 'section', s, LORE_SCREEN_KEYS);
     p.delete('passport');
     p.delete('kind');
     p.delete('art');
     p.delete('spec');
     return p;
   });
+  // AH-09: открыть борд раздела сразу на элементе (?rel= / ?dec=) — переход
+  // go() плюс ключ элемента ОДНИМ вызовом setParams: два вызова подряд
+  // затёрли бы друг друга (react-router отдаёт prev из замыкания рендера).
+  const openOnBoard = (s: Section, key: string, id: string) => setParams(p => {
+    switchParam(p, 'section', s, LORE_SCREEN_KEYS);
+    p.delete('passport'); p.delete('kind'); p.delete('art'); p.delete('spec');
+    p.set(key, id);
+    return p;
+  });
 
   const selectItem    = (id: string) => setParams(p => { p.set('passport', id); p.delete('spec'); return p; });
   const clearItem     = ()           => setParams(p => { p.delete('passport'); p.delete('spec'); return p; });
   const clearSpec     = ()           => setParams(p => { p.delete('spec'); return p; });
-  const navigateToAdr    = (id: string) => setParams(p => { p.set('section', 'adrs');    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
-  const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
-  const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
-  const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToAdr    = (id: string) => setParams(p => { switchParam(p, 'section', 'adrs', LORE_SCREEN_KEYS);    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToSprint = (id: string) => setParams(p => { switchParam(p, 'section', 'sprints', LORE_SCREEN_KEYS); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToComponent = (id: string) => setParams(p => { switchParam(p, 'section', 'components', LORE_SCREEN_KEYS); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToQG = (id: string) => setParams(p => { switchParam(p, 'section', 'qg', LORE_SCREEN_KEYS); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   // Кросс-переходы продуктового слоя (feature↔uc↔pain/gain/job↔actor): section + passport.
   // `uc` снимается вместе с ними: раскрытый сценарий принадлежит ПРЕДЫДУЩЕЙ
   // фиче, и переживи он переход — новая открылась бы с раскрытым чужим узлом.
   const navigateProduct = (sec: string, id?: string) => setParams(p => {
-    p.set('section', sec);
+    switchParam(p, 'section', sec, LORE_SCREEN_KEYS);
     if (id) p.set('passport', id); else p.delete('passport');
     p.delete('spec'); p.delete('kind'); p.delete('art'); p.delete('uc');
     return p;
@@ -433,9 +458,15 @@ export default function LorePage() {
   };
 
   const handleFetchError = useCallback((err: unknown) => {
-    if (err instanceof LoreDisabledError) { setLoreDisabled(true); }
-    else if (err instanceof LoreUpstreamError) { setLoreUnreachable(true); }
-    // swallow other errors — they show in component empty-states
+    // AH-07: страницу целиком заменяют только «выключен» и «недоступен».
+    // Остальное раньше глушилось («they show in component empty-states») —
+    // на деле экраны рисовали «пусто», а неудачное сохранение не было видно
+    // вовсе. Теперь — toast с кодом и текстом сервера; отмена запроса при
+    // уходе с экрана ошибкой не считается.
+    const d = describeLoreError(err);
+    if (d.kind === 'disabled') setLoreDisabled(true);
+    else if (d.kind === 'unreachable') setLoreUnreachable(true);
+    else if (d.kind !== 'aborted') setErrorToast(d.text);
   }, []);
 
   // Clear list search on section change
@@ -1046,10 +1077,11 @@ export default function LorePage() {
             )}
             {section === 'sprints' && (
               <>
-                {/* Поиск по имени/ID — в шапке левой панели */}
+                {/* Поиск по имени/ID — в шапке левой панели.
+                    AH-10: minHeight, а не height — на телефоне «+» растёт до 40px. */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '0 10px', height: 30, flexShrink: 0,
+                  padding: '0 10px', minHeight: 30, flexShrink: 0,
                   borderBottom: '1px solid var(--bd)',
                 }}>
                   <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
@@ -1064,12 +1096,16 @@ export default function LorePage() {
                     onChange={e => setSprintQ(e.target.value)}
                   />
                   {sprintQ && (
-                    <span onClick={() => setSprintQ('')}
-                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>✕</span>
+                    <button type="button" className="lore-tap" onClick={() => setSprintQ('')}
+                      aria-label={t('lore.page.searchClear', 'очистить поиск')}
+                      style={CLEAR_BTN}>✕</button>
                   )}
                   <button
+                    type="button"
+                    className="lore-tap-main"
                     onClick={() => selectItem('__new')}
                     title={t('lore.page.sprints.newSprintTitle', 'Новый спринт')}
+                    aria-label={t('lore.page.sprints.newSprintTitle', 'Новый спринт')}
                     style={{
                       flexShrink: 0, width: 20, height: 20, borderRadius: 4,
                       border: '1px solid var(--bd)', background: 'transparent',
@@ -1101,7 +1137,7 @@ export default function LorePage() {
               <>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '0 10px', height: 30, flexShrink: 0,
+                  padding: '0 10px', minHeight: 30, flexShrink: 0,
                   borderBottom: '1px solid var(--bd)',
                 }}>
                   <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
@@ -1116,8 +1152,9 @@ export default function LorePage() {
                     onChange={e => setCompQ(e.target.value)}
                   />
                   {compQ && (
-                    <span onClick={() => setCompQ('')}
-                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>✕</span>
+                    <button type="button" className="lore-tap" onClick={() => setCompQ('')}
+                      aria-label={t('lore.page.searchClear', 'очистить поиск')}
+                      style={CLEAR_BTN}>✕</button>
                   )}
                 </div>
                 <LoreComponentList
@@ -1182,7 +1219,7 @@ export default function LorePage() {
               }}
             >← {t('lore.page.backToList', 'к списку')}</button>
           )}
-          <LoreErrorBoundary label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
+          <LoreErrorBoundary key={section} label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
           {/* ── Продуктовый слой (глава «Зачем», ADR-LORE-022/032) — самодостаточные экраны ── */}
@@ -1333,8 +1370,11 @@ export default function LorePage() {
                 const id = it.ref?.id ?? it.title;
                 if (it.kind === 'adr') navigateToAdr(id);
                 else if (it.kind === 'sprint') navigateToSprint(id);
-                else if (it.kind === 'release') go('releases');
-                else if (it.kind === 'decision') go('decisions');
+                // AH-09: релиз и решение открываются на самом элементе, а не
+                // на всём борде. Релиз адресуется парой «проект#id»: один номер
+                // версии живёт в нескольких репозиториях.
+                else if (it.kind === 'release') openOnBoard('releases', 'rel', it.project ? `${it.project}#${id}` : id);
+                else if (it.kind === 'decision') openOnBoard('decisions', 'dec', id);
               }}
             />
           )}
@@ -1369,6 +1409,7 @@ export default function LorePage() {
         </div>
         )}
       </div>
+      <LoreErrorToast text={errorToast} onClose={closeErrorToast} />
     </div>
     </DictionaryProvider>
   );

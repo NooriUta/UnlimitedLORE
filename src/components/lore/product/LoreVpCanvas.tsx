@@ -192,12 +192,12 @@ function StickerNode({ data }: NodeProps) {
           виден: «—» честнее пустоты, которую читают как «неважно». */}
       {!d.ghost && (
         <span style={{
-          position: 'absolute', left: 5, bottom: 2, fontSize: 8, letterSpacing: '.04em',
+          position: 'absolute', left: 5, bottom: 2, fontSize: 'var(--fs-2xs)', letterSpacing: '.04em',
           color: d.rank ? d.color : 'var(--t3)', textTransform: 'uppercase',
         }}>{d.rank ?? '—'}</span>
       )}
       <span style={{
-        position: 'absolute', right: 5, bottom: 2, fontFamily: 'var(--mono)', fontSize: 8,
+        position: 'absolute', right: 5, bottom: 2, fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)',
         color: 'var(--t3)', maxWidth: 'calc(100% - 44px)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{d.ghost ? '' : d.code}</span>

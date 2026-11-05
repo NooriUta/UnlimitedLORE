@@ -1,6 +1,6 @@
 // Composite feed view for KnowDecision — all records in a scrollable list.
 // No master-detail split: decisions are short notes, not large documents.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreDecisionRow, type LoreDecisionPassport } from '../../api/lore';
@@ -10,6 +10,7 @@ import { MartProse } from '../bench/MartProse';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
 import { resolveStatusMeta, statusLabel } from './lore-status';
+import { useUrlId } from '../../hooks/useUrlState';
 import { GameIcon } from './GameIcon';
 
 // Distinct marker for orphan decisions (no parent ADR) — used both on the
@@ -63,7 +64,10 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
   const narrow = useIsNarrow(720);
   const [rows,           setRows]           = useState<LoreDecisionRow[]>([]);
   const [loading,        setLoading]        = useState(true);
-  const [expanded,       setExpanded]       = useState<string | null>(null);
+  // AH-09: раскрытое решение в URL (?dec=id) — лента новостей и ссылка
+  // открывают борд на нём.
+  const [expanded,       setExpanded]       = useUrlId('dec');
+  const linkedRef = useRef<string | null>(null);
   const [detail,         setDetail]         = useState<Record<string, LoreDecisionPassport>>({});
   const [loadingDetail,  setLoadingDetail]  = useState<string | null>(null);
   const [sortBy,         setSortBy]         = useState<'id' | 'date'>('id');
@@ -90,7 +94,24 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
 
   function toggle(id: string) {
     if (expanded === id) { setExpanded(null); return; }
+    linkedRef.current = id;
     setExpanded(id);
+    loadDetail(id);
+  }
+
+  // AH-09: решение пришло из URL — когда строки загружены, догрузить паспорт
+  // и прокрутить к строке.
+  useEffect(() => {
+    if (!expanded) { linkedRef.current = null; return; }
+    if (rows.length === 0 || linkedRef.current === expanded) return;
+    linkedRef.current = expanded;
+    if (!rows.some(r => r.decision_id === expanded)) return;
+    loadDetail(expanded);
+    requestAnimationFrame(() => document.getElementById(`lore-dec-${expanded}`)?.scrollIntoView({ block: 'center' }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, expanded]);
+
+  function loadDetail(id: string) {
     if (detail[id]) return;
     setLoadingDetail(id);
     fetchLoreSlice<LoreDecisionPassport>('decision', { id })
@@ -201,6 +222,7 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
     return (
       <div
         key={d.decision_id}
+        id={`lore-dec-${d.decision_id}`}
         style={{ ...S.row, background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
         {...a11yClick(() => toggle(d.decision_id))}
       >

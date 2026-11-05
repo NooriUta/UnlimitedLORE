@@ -2147,4 +2147,14 @@ button.primary.big {
     border-bottom: 1px solid var(--bd);
     overflow-y: auto;
   }
+  /* AH-08: .sidebar отчётов росла по длине истории прогонов, и строка `auto`
+     отдавала отчёту 0px. TyrApp на телефоне рисует одну панель (сетка
+     minmax(0,1fr) задаётся из tyrReportsLayout); здесь — страховка на случай,
+     если обе панели окажутся на экране: сайдбар ограничен, как .cat-list-pane. */
+  .layout-reports > .sidebar {
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--bd);
+  }
+  .layout-reports > .sidebar:only-child { max-height: none; border-bottom: none; }
 }

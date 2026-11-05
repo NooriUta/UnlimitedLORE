@@ -484,6 +484,316 @@ public class LoreSchemaMigrationRunner {
         if (version == 48) renameAgentRoleDictToProfile();
         if (version == 49) backfillDocBodyDigest();
         if (version == 51) dropLegacyAdrHasStatus();
+        if (version == 52) { backfillOpenTaskHistValidFrom(); dropTestStateTaskHist(); }
+        if (version == 53) renameMilestoneM2Core();
+        if (version == 54) dropPlanItemTypesIfUnused();
+        if (version == 55) backfillDaliP1FromPr204();
+    }
+
+    /**
+     * V55 (RM-P17, вариант «б» владельца 05.11.2026): семь задач DALI P1-* без
+     * даты создания в корпусе получают момент мержа PR #204. Узко по замыслу:
+     * только перечисленные задачи, только открытые строки с valid_from IS NULL —
+     * общее правило V52 («чужая дата — выдумка») для остальных не меняется.
+     * Идемпотентен: заполненные строки повторно не выбираются.
+     *
+     * @return сколько строк заполнено
+     */
+    int backfillDaliP1FromPr204() {
+        int filled = 0;
+        for (String uid : LoreSchemaMigrations.DALI_P1_TASKS) {
+            for (Map<String, Object> h : ingest.queryPublic(
+                    "SELECT @rid AS rid FROM (SELECT expand(out('HAS_STATE')) FROM KnowTask WHERE task_uid = :u) "
+                    + "WHERE valid_to IS NULL AND valid_from IS NULL", Map.of("u", uid))) {
+                String rid = str(h.get("rid"));
+                command("UPDATE " + rid + " SET valid_from = :vf, valid_from_source = :src",
+                    Map.of("vf", LoreSchemaMigrations.PR204_MERGED_AT, "src", "pr#204.merged_at"));
+                filled++;
+                LOG.infof("[LORE MIGRATE] V55 %s (%s): valid_from := %s (источник pr#204.merged_at)",
+                    uid, rid, LoreSchemaMigrations.PR204_MERGED_AT);
+            }
+        }
+        LOG.infof("[LORE MIGRATE] V55 задач DALI P1-* заполнено строк: %d", filled);
+        return filled;
+    }
+
+    // ── V52 (RM-P17) ────────────────────────────────────────────────────────
+
+    /** Префикс state_uid, которым тестовые прогоны метили свои строки истории. */
+    static final String TEST_STATE_PREFIX = "test-state-";
+
+    /** Поля вершины KnowTask, которые легаси-пути записи ставили как отметку создания. */
+    private static final List<String> TASK_CREATED_FIELDS = List.of("date_created", "created_at", "created_date");
+
+    /**
+     * V52, часть 1: открытая строка KnowTaskHist без {@code valid_from} получает
+     * дату СОЗДАНИЯ задачи (решение владельца, ответ №8 «а»).
+     *
+     * <p>Источник — самая ранняя из дат, которые в корпусе принадлежат этой
+     * задаче: {@code valid_from} других строк её истории (так «заведение»
+     * определено и в срезе {@code task_created_dates}) и легаси-отметки
+     * создания на вершине ({@link #TASK_CREATED_FIELDS}). Дату спринта, PR или
+     * соседней задачи НЕ берём: это дата другого объекта, и в аналитике она
+     * стала бы выдуманным фактом. Нет ни одной — строка остаётся NULL, WARN в
+     * лог с task_uid и @rid; срез {@code history_hygiene} продолжит её
+     * показывать, и это честно.
+     *
+     * <p>Источник пишется рядом, в {@code valid_from_source}: подставленное
+     * значение должно отличаться от записанного в момент события.
+     * Идемпотентен: заполненные строки повторно не выбираются, а оставшиеся
+     * NULL дадут тот же ответ на тех же данных.
+     *
+     * @return сколько строк заполнено
+     */
+    int backfillOpenTaskHistValidFrom() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT @rid AS rid, state_uid, in('HAS_STATE').task_uid AS task_uids "
+            + "FROM KnowTaskHist WHERE valid_to IS NULL AND valid_from IS NULL", Map.of());
+        int filled = 0, left = 0;
+        for (Map<String, Object> r : rows) {
+            String rid = str(r.get("rid"));
+            String uid = firstString(r.get("task_uids"));
+            if (uid == null) {
+                left++;
+                LOG.warnf("[LORE MIGRATE] V52 строка %s (state_uid=%s) без родителя-задачи — оставлена NULL",
+                    rid, r.get("state_uid"));
+                continue;
+            }
+            String best = null, source = null;
+            for (Map<String, Object> h : ingest.queryPublic(
+                    "SELECT valid_from FROM (SELECT expand(out('HAS_STATE')) FROM KnowTask WHERE task_uid = :u) "
+                    + "WHERE valid_from IS NOT NULL", Map.of("u", uid))) {
+                String iso = asIsoUtc(h.get("valid_from"));
+                if (iso != null && (best == null || earlier(iso, best))) { best = iso; source = "hist.min_valid_from"; }
+            }
+            List<Map<String, Object>> task = ingest.queryPublic(
+                "SELECT " + String.join(", ", TASK_CREATED_FIELDS) + " FROM KnowTask WHERE task_uid = :u",
+                Map.of("u", uid));
+            if (!task.isEmpty()) {
+                for (String f : TASK_CREATED_FIELDS) {
+                    String iso = asIsoUtc(task.get(0).get(f));
+                    if (iso != null && (best == null || earlier(iso, best))) { best = iso; source = "task." + f; }
+                }
+            }
+            if (best == null) {
+                left++;
+                LOG.warnf("[LORE MIGRATE] V52 %s (%s): даты создания в корпусе нет — valid_from оставлен NULL",
+                    uid, rid);
+                continue;
+            }
+            command("UPDATE " + rid + " SET valid_from = :vf, valid_from_source = :src",
+                Map.of("vf", best, "src", source));
+            filled++;
+            LOG.infof("[LORE MIGRATE] V52 %s (%s): valid_from := %s (источник %s)", uid, rid, best, source);
+        }
+        LOG.infof("[LORE MIGRATE] V52 открытых строк KnowTaskHist без valid_from: %d, заполнено %d, оставлено NULL %d",
+            rows.size(), filled, left);
+        return filled;
+    }
+
+    /**
+     * V52, часть 2: снять строки истории задач, оставленные тестовыми прогонами
+     * ({@code state_uid} с префиксом {@link #TEST_STATE_PREFIX}). Каждая строка
+     * выгружается в лог целиком ДО удаления — это единственный её след. Удаление
+     * по {@code @rid}: у легаси-строк state_uid бывает null, и DELETE по нему
+     * тихо не задевает ничего. Вместе с вершиной ArcadeDB снимает и её ребро
+     * HAS_STATE. После — проверка факта: осталась хоть одна → шаг падает.
+     *
+     * @return сколько строк снято
+     */
+    int dropTestStateTaskHist() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT @rid AS rid, state_uid, status_raw, valid_from, valid_to, in('HAS_STATE').task_uid AS task_uids "
+            + "FROM KnowTaskHist WHERE state_uid LIKE :p", Map.of("p", TEST_STATE_PREFIX + "%"));
+        for (Map<String, Object> r : rows) {
+            LOG.infof("[LORE MIGRATE] V52 снимаю тестовую строку rid=%s state_uid=%s task=%s status=%s valid_from=%s valid_to=%s",
+                r.get("rid"), r.get("state_uid"), r.get("task_uids"), r.get("status_raw"), r.get("valid_from"), r.get("valid_to"));
+            command("DELETE FROM KnowTaskHist WHERE @rid = " + r.get("rid"), Map.of());
+        }
+        long rest = countOf("SELECT count(*) AS n FROM KnowTaskHist WHERE state_uid LIKE :p",
+            Map.of("p", TEST_STATE_PREFIX + "%"));
+        if (rest > 0)
+            throw new IllegalStateException("V52: после удаления осталось " + rest + " тестовых строк KnowTaskHist");
+        LOG.infof("[LORE MIGRATE] V52 снято тестовых строк KnowTaskHist: %d", rows.size());
+        return rows.size();
+    }
+
+    /** Значение даты → ISO-8601 UTC (канон оставляется как есть); непонятная форма → null. */
+    private static String asIsoUtc(Object v) {
+        if (v == null) return null;
+        String iso = toIsoUtc(v);
+        if (iso == null && isCanonicalIsoUtc(v)) iso = (String) v;
+        if (iso == null) return null;
+        // Строка, похожая на дату, но не разбираемая (месяц 13 и т.п.), источником не считается.
+        try { Instant.parse(iso); return iso; }
+        catch (java.time.format.DateTimeParseException e) { return null; }
+    }
+
+    /** Сравнение моментов, а не строк: «…46.5Z» и «…46Z» лексикографически стоят наоборот. */
+    private static boolean earlier(String a, String b) {
+        return Instant.parse(a).isBefore(Instant.parse(b));
+    }
+
+    private static String firstString(Object v) {
+        if (v instanceof java.util.Collection<?> c) {
+            for (Object o : c) if (o != null) return String.valueOf(o);
+            return null;
+        }
+        return v == null ? null : String.valueOf(v);
+    }
+
+    private long countOf(String sql, Map<String, Object> params) {
+        List<Map<String, Object>> r = ingest.queryPublic(sql, params);
+        return r.isEmpty() || !(r.get(0).get("n") instanceof Number n) ? 0 : n.longValue();
+    }
+
+    // ── V53 (RM-X1) ─────────────────────────────────────────────────────────
+
+    /**
+     * V53: переименовать веху {@code «M2 ✓ core»} → {@code M2}.
+     *
+     * <p>Что меняется: {@code milestone_id} самой вершины и строковые ссылки на
+     * него в полях {@link LoreSchemaMigrations#MILESTONE_REF_FIELDS} у ЛЮБОГО
+     * типа схемы (легаси-строки истории, снятый planned_milestone_id) — список
+     * типов берётся из schema:types, а не перечисляется рукой. Рёбра
+     * (TARGETS_MILESTONE, ON_MILESTONE, HAS_STATE) идут по @rid и не меняются.
+     * label не трогается — это подпись, а не адрес.
+     *
+     * <p>Идемпотентен: старого id нет → no-op. Новый id уже занят → WARN и
+     * ничего не делается (слияние двух вех — решение владельца, не миграции);
+     * старт не валится.
+     *
+     * @return true, если переименование выполнено
+     */
+    boolean renameMilestoneM2Core() {
+        String oldId = LoreSchemaMigrations.MILESTONE_OLD_ID;
+        String newId = LoreSchemaMigrations.MILESTONE_NEW_ID;
+        if (!typeExists("KnowMilestone")) {
+            LOG.info("[LORE MIGRATE] V53 типа KnowMilestone нет — переименовывать нечего");
+            return false;
+        }
+        String oldRid = firstRid("SELECT @rid AS rid FROM KnowMilestone WHERE milestone_id = :id", Map.of("id", oldId));
+        if (oldRid == null) {
+            LOG.infof("[LORE MIGRATE] V53 вехи «%s» нет — шаг ничего не делает", oldId);
+            return false;
+        }
+        String clash = firstRid("SELECT @rid AS rid FROM KnowMilestone WHERE milestone_id = :id", Map.of("id", newId));
+        if (clash != null) {
+            LOG.warnf("[LORE MIGRATE] V53 НЕ ВЫПОЛНЕН: id «%s» уже занят вехой %s, а «%s» — это %s. "
+                + "Слияние вех — решение владельца; переименуйте вручную.", newId, clash, oldId, oldRid);
+            return false;
+        }
+        // Порядок: сперва ссылки, вершина — последней. Упади шаг посередине, при
+        // повторе старый id ещё найдётся и шаг доделает ссылки; в обратном
+        // порядке повтор ушёл бы в no-op, оставив ссылки на несуществующий id.
+        List<String> types = new ArrayList<>();
+        for (Map<String, Object> t : ingest.queryPublic("SELECT name, type FROM schema:types", Map.of())) {
+            if (t.get("name") == null) continue;
+            // Только записи графа/документы: у временных рядов строк-ссылок на вехи нет,
+            // а полный скан ряда по полю, которого у него нет, — лишняя нагрузка на старте.
+            String kind = t.get("type") == null ? null : String.valueOf(t.get("type")).toLowerCase();
+            if (kind != null && !Set.of("vertex", "edge", "document").contains(kind)) continue;
+            types.add(String.valueOf(t.get("name")));
+        }
+        int refs = 0;
+        for (String type : types) {
+            for (String f : LoreSchemaMigrations.MILESTONE_REF_FIELDS) {
+                // Сама вершина-веха переименовывается ниже, по @rid.
+                if ("KnowMilestone".equals(type) && "milestone_id".equals(f)) continue;
+                long n;
+                try {
+                    n = countOf("SELECT count(*) AS n FROM `" + type + "` WHERE " + f + " = :o", Map.of("o", oldId));
+                } catch (RuntimeException e) {
+                    // Тип не читается этим запросом — это диагностика, а не повод валить старт:
+                    // рёбра целы, вершина переименуется. Громко, с типом.
+                    LOG.warnf("[LORE MIGRATE] V53 %s.%s: ссылки не проверены (%s)", type, f, e.getMessage());
+                    continue;
+                }
+                if (n == 0) continue;
+                command("UPDATE `" + type + "` SET " + f + " = :n WHERE " + f + " = :o", Map.of("n", newId, "o", oldId));
+                refs += (int) n;
+                LOG.infof("[LORE MIGRATE] V53 %s.%s: переписано ссылок %d", type, f, n);
+            }
+        }
+        if (typeExists("KnowAsset")) {
+            long n = countOf("SELECT count(*) AS n FROM KnowAsset WHERE entity_type = 'milestone' AND entity_id = :o",
+                Map.of("o", oldId));
+            if (n > 0) {
+                // asset_key ({type}/{id}/{hash}) — путь объекта в хранилище, его не трогаем:
+                // переименование ключа = перенос файла, а не правка данных.
+                command("UPDATE KnowAsset SET entity_id = :n WHERE entity_type = 'milestone' AND entity_id = :o",
+                    Map.of("n", newId, "o", oldId));
+                refs += (int) n;
+                LOG.infof("[LORE MIGRATE] V53 KnowAsset.entity_id: переписано %d (asset_key не менялся)", n);
+            }
+        }
+        command("UPDATE " + oldRid + " SET milestone_id = :n", Map.of("n", newId));
+        long leftOld = countOf("SELECT count(*) AS n FROM KnowMilestone WHERE milestone_id = :o", Map.of("o", oldId));
+        long haveNew = countOf("SELECT count(*) AS n FROM KnowMilestone WHERE milestone_id = :n", Map.of("n", newId));
+        if (leftOld != 0 || haveNew != 1)
+            throw new IllegalStateException("V53: после переименования «" + oldId + "»=" + leftOld
+                + ", «" + newId + "»=" + haveNew + " (ожидалось 0 и 1)");
+        LOG.infof("[LORE MIGRATE] V53 веха %s: «%s» → «%s», строковых ссылок переписано %d",
+            oldRid, oldId, newId, refs);
+        return true;
+    }
+
+    // ── V54 (T-14) ──────────────────────────────────────────────────────────
+
+    /**
+     * V54: снять типы пласта PlanItem ({@link LoreSchemaMigrations#PLANITEM_TYPES})
+     * — только если ни в одном нет ни записи.
+     *
+     * <p>Всё или ничего: хоть один счётчик &gt; 0 → не удаляется ни один тип,
+     * WARN с числами по каждому, старт НЕ валится (шаг считается пройденным —
+     * снос остатка тогда решается заново, отдельным шагом). Счёт ребра идёт по
+     * типу целиком, а не только по рёбрам у PlanItem: если тип ребра кем-то ещё
+     * используется, его записи попадут в счёт, и он не снимется.
+     *
+     * <p>Упавший DROP тоже не валит старт: тип пуст и не читается кодом, его
+     * существование ничего не ломает — WARN, остальные типы снимаются дальше.
+     *
+     * @return список снятых типов
+     */
+    List<String> dropPlanItemTypesIfUnused() {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (String t : LoreSchemaMigrations.PLANITEM_TYPES)
+            if (typeExists(t)) counts.put(t, countOf("SELECT count(*) AS n FROM `" + t + "`", Map.of()));
+        if (counts.isEmpty()) {
+            LOG.infof("[LORE MIGRATE] V54 типов %s в схеме нет — снимать нечего", LoreSchemaMigrations.PLANITEM_TYPES);
+            return List.of();
+        }
+        if (counts.values().stream().anyMatch(n -> n > 0)) {
+            StringBuilder ends = new StringBuilder();
+            for (String edge : List.of("ON_TRACK", "CONTRIBUTES_TO")) {
+                if (counts.getOrDefault(edge, 0L) == 0) continue;
+                try {
+                    Map<String, Integer> pairs = new LinkedHashMap<>();
+                    for (Map<String, Object> e : ingest.queryPublic(
+                            "SELECT @out.@type AS f, @in.@type AS t FROM `" + edge + "` LIMIT 10000", Map.of()))
+                        pairs.merge(e.get("f") + "→" + e.get("t"), 1, Integer::sum);
+                    ends.append(' ').append(edge).append(pairs);
+                } catch (RuntimeException q) {
+                    ends.append(' ').append(edge).append("{концы неизвестны: ").append(q.getMessage()).append('}');
+                }
+            }
+            LOG.warnf("[LORE MIGRATE] V54 ПРОПУЩЕН: типы PlanItem используются, ничего не удалено. Счётчики %s;%s",
+                counts, ends);
+            return List.of();
+        }
+        List<String> dropped = new ArrayList<>();
+        for (String t : counts.keySet()) {
+            try {
+                exec("DROP TYPE `" + t + "`");
+            } catch (RuntimeException e) {
+                LOG.warnf("[LORE MIGRATE] V54 DROP TYPE %s не прошёл (тип пуст, оставлен): %s", t, e.getMessage());
+                continue;
+            }
+            if (typeExists(t)) LOG.warnf("[LORE MIGRATE] V54 DROP TYPE %s ответил успехом, а тип остался", t);
+            else dropped.add(t);
+        }
+        LOG.infof("[LORE MIGRATE] V54 сняты пустые типы PlanItem: %s (были %s)", dropped, counts.keySet());
+        return dropped;
     }
 
     /**

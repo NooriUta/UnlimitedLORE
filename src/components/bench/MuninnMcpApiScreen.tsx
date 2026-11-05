@@ -44,6 +44,9 @@ const MCP_JSON = `{
 export default function MuninnMcpApiScreen() {
   const [slices, setSlices] = useState<MartSliceDescriptor[] | null>(null);
   const [status, setStatus] = useState<MuninnStatus | null>(null);
+  // AH-07 (зона 4): сбой статуса подменялся null — и экран уверенно писал «нет
+  // активного прогона». Причину показываем рядом: это может быть и сбой.
+  const [statusErr, setStatusErr] = useState<string | null>(null);
   const [health, setHealth] = useState<'checking' | 'up' | 'down'>('checking');
   const [filter, setFilter] = useState('');
 
@@ -51,7 +54,11 @@ export default function MuninnMcpApiScreen() {
     const ctrl = new AbortController();
     Promise.all([
       fetchMartCatalog(ctrl.signal),
-      fetchMuninnStatus(ctrl.signal).catch(() => null),
+      fetchMuninnStatus(ctrl.signal).catch((e: unknown) => {
+        // статус — необязательная часть экрана: каталог ниже живой и без него
+        if (!ctrl.signal.aborted) setStatusErr(String((e as Error)?.message ?? e));
+        return null;
+      }),
     ])
       .then(([cat, st]) => { setSlices(cat); setStatus(st); setHealth('up'); })
       .catch(() => { if (!ctrl.signal.aborted) setHealth('down'); });
@@ -127,7 +134,9 @@ export default function MuninnMcpApiScreen() {
             </div>
           )}
           {health === 'up' && !status && (
-            <div style={S.note}>STATUS.json недоступен (нет активного прогона) — каталог витрины ниже всё равно живой.</div>
+            <div style={S.note}>
+              STATUS.json недоступен{statusErr ? <>: <code style={S.code}>{statusErr}</code> (это может быть и отсутствие прогона, и сбой)</> : ' (нет активного прогона)'} — каталог витрины ниже всё равно живой.
+            </div>
           )}
         </Section>
 
@@ -236,7 +245,7 @@ function Node({ children, accent }: { children: React.ReactNode; accent?: boolea
 function Arrow({ label }: { label: string }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', color: 'var(--t3)' }}>
-      <span style={{ fontSize: 8, lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 'var(--fs-2xs)', lineHeight: 1 }}>{label}</span>
       <span style={{ fontSize: 'var(--fs-md)', lineHeight: 1 }}>→</span>
     </span>
   );

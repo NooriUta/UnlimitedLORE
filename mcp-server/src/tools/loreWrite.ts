@@ -165,7 +165,7 @@ function definePostTool<S extends z.ZodRawShape>(
 // (как у sprint_new); откуда взят, видно в ответе (project_source). Ни того,
 // ни другого — рёбра не трогаются. Только ДОБАВЛЯЕТ: принадлежность
 // множественная, чужие проекты сущности не снимаются.
-type ProjectKind = 'adr' | 'doc' | 'spec' | 'runbook' | 'question';
+type ProjectKind = 'adr' | 'doc' | 'spec' | 'runbook' | 'question' | 'uc';
 
 const PROJECT_LINK: Record<ProjectKind, (id: string, project: string) => [string, Record<string, unknown>]> = {
   adr:      (id, p) => ['/lore/adr/project',      { adr_id: id, project: p, action: 'add' }],
@@ -173,6 +173,8 @@ const PROJECT_LINK: Record<ProjectKind, (id: string, project: string) => [string
   runbook:  (id, p) => ['/lore/runbook/project',  { runbook_id: id, project: p, action: 'add' }],
   question: (id, p) => ['/lore/question/project', { question_id: id, project: p, action: 'add' }],
   spec:     (id, p) => ['/lore/spec/link',        { spec_id: id, target_id: p, rel: 'project', mode: 'add' }],
+  // uc_new и feature_new пишут один тип KnowUseCase (PL-28) — путь uc_link(rel=project).
+  uc:       (id, p) => ['/lore/uc/link',          { uc_id: id, rel: 'project', target_id: p, action: 'add' }],
 };
 
 const PROJECT_PARAM = z.string().optional().describe(
@@ -438,12 +440,14 @@ export function registerLoreWrite(server: McpServer): void {
       // выставить 🪁 kite через мост было нельзя.
       goal_level:   z.enum(['cloud', 'kite']).optional()
         .describe('altitude of the root: ☁ cloud (strategic, default) or 🪁 kite (overview)'),
+      project:      PROJECT_PARAM,
     },
     path: '/lore/feature',
     body: ({ feature_id, title, body_md, context_md, status, component_id, goal_level }) => ({
       feature_id, title: title ?? null, body_md: body_md ?? null, context_md: context_md ?? null,
       status: status ?? null, component_id: component_id ?? null, goal_level: goal_level ?? null,
     }),
+    after: ({ feature_id, project }) => inlineProject('uc', feature_id, project),
   });
 
   definePostTool(server, {
@@ -477,6 +481,7 @@ export function registerLoreWrite(server: McpServer): void {
         .describe('writing weight (ADR-LORE-027-D1) — omit to derive from goal_level ' +
           '(subfunction → casual, everything else → fully-dressed); passing it explicitly always wins'),
       priority:      z.enum(['high', 'normal', 'low']).optional(),
+      project:       PROJECT_PARAM,
     },
     path: '/lore/uc',
     body: ({ uc_id, title, scenario_md, acceptance_md, status, parent_uc_id, goal_level, rigor, priority }) => ({
@@ -484,6 +489,7 @@ export function registerLoreWrite(server: McpServer): void {
       acceptance_md: acceptance_md ?? null, status: status ?? null, parent_uc_id: parent_uc_id ?? null,
       goal_level: goal_level ?? null, rigor: rigor ?? null, priority: priority ?? null,
     }),
+    after: ({ uc_id, project }) => inlineProject('uc', uc_id, project),
   });
 
   // ADR-LORE-032 §2 (D5): боли и выгоды — ВЕРШИНЫ, не проза. Только так fit

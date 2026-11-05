@@ -4,7 +4,7 @@ import { useMartSlice } from '../../hooks/useMuninn';
 import type { CaseRow, FactRow, RunRow, SubstrateRow } from '../../utils/muninnData';
 import { defaultRunId, fmtF1, short, substrateSortKey, winLoss } from '../../utils/muninnData';
 import { CaseDetails } from './CasesScreen';
-import { MuninnSelect, Field, PanelMsg, ScreenTitle } from './shared';
+import { MartSliceWarning, MuninnSelect, Field, PanelMsg, ScreenTitle } from './shared';
 
 // categorical register B (NOT the F1 scale A): A — accent, B — violet
 const A_COLOR = 'var(--acc)';
@@ -75,12 +75,13 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
 
   if (aSlice.unavailable) return <PanelMsg kind="info" text={t('bench.unavailable', 'Experiment mart is unavailable')} onRetry={aSlice.reload} />;
   const err = aSlice.error ?? bSlice.error;
-  if (err) return <PanelMsg kind="error" text={err} onRetry={aSlice.reload} />;
+  if (err) return <PanelMsg kind="error" text={err} onRetry={() => { aSlice.reload(); bSlice.reload(); }} />;
 
   return (
     <div data-testid="bench-winloss">
       <ScreenTitle text={t('bench.wl.title', 'Win/loss — substrate pair, case by case')}
                    hint={t('bench.wl.hint', 'the WHY behind a leaderboard gap: divergent cases side by side, with traces')} />
+      <MartSliceWarning slices={{ facts: runFacts }} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.run', 'Run')}>
           <MuninnSelect value={run} onChange={setRun}

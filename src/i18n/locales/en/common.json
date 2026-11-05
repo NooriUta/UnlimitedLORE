@@ -399,6 +399,9 @@
     "unresolvedRevExcluded": "unresolvable (run w/o started_ts, D-1)"
   },
   "lore": {
+    "mobile": {
+      "back": "back"
+    },
     "adrEditor": {
       "errIdRequired": "ADR ID is required",
       "errNameRequired": "Name is required",
@@ -666,7 +669,8 @@
           "clickToOpen": "(click — list)",
           "truncated": "showing the first {{n}} of {{total}} — the rest is omitted, not absent"
         }
-      }
+      },
+      "loadError": "Analytics failed to load: {{reason}}"
     },
     "artifactDoc": {
       "loading": "Loading {{id}}…",
@@ -690,7 +694,8 @@
       "edit": "✎ Edit",
       "htmlLegacyWarning": "⚠ This document is currently stored as HTML. If you save text here (even in a single field), the display will switch to Markdown and the current HTML content will stop showing (it is not deleted, just no longer used).",
       "save": "Save",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "metricsLoadError": "Gate metrics failed to load: {{reason}}"
     },
     "artifactList": {
       "kindSpec": "Specs",
@@ -708,7 +713,8 @@
     },
     "componentList": {
       "sprintCountTitle": "Linked sprints",
-      "empty": "No components found."
+      "empty": "No components found.",
+      "loadError": "Components failed to load: {{reason}}"
     },
     "componentPassport": {
       "mermaidRendering": "Rendering diagram…",
@@ -759,7 +765,8 @@
         "draft": "draft",
         "archived": "archived",
         "deprecated": "deprecated"
-      }
+      },
+      "loadError": "Module {{componentId}} failed to load: {{reason}}"
     },
     "componentTree": {
       "loading": "Loading components…",
@@ -941,32 +948,31 @@
     "connections": {
       "headerTitle": "Connections",
       "lead": "Recipes for hooking up an external client (a mobile app, a separate process) to a Claude Code conversation so both sides write into the same transcript — instead of re-deriving the steps every time.",
-      "mobilepocTitle": "miniLORE — one conversation, reachable from both the console and the mobile app",
-      "mobilepocLead": "A channel is an MCP server that the Claude Code session itself starts: it's a child process of that one session, and belongs only to it — not to the project.",
-      "factsLabel": "What \"you can write into this conversation\" actually means — three facts, stated plainly:",
-      "fact1Label": "There can be as many channels as you like.",
-      "fact1": "There's one",
-      "fact1Rest": "file, but every session starts its own process on its own port and registers separately. Adding the channel to",
-      "fact1Rest2": "of every project is fine — they don't conflict.",
-      "fact2Label": "A desktop session never gets a channel.",
-      "fact2": "Confirmed by experiment: both desktop and headless (",
-      "fact2Rest": ") receive the event and silently drop it. Only an interactive console session started with the flag below writes.",
-      "fact3Label": "Addressing is by session, not by project.",
+      "channelTitle": "miniLORE — one conversation in the console and in the mobile app (minilore-link channel)",
+      "channelLead": "The channel is the minilore-link MCP server. A Claude Code session starts it as its own child process; the processes of all sessions talk to one shared local router. The previous channel was switched off on 2026-08-23 — its recipe has been removed from this page.",
+      "factsLabel": "What “you can write into the conversation” means — the facts, plainly:",
+      "fact1Label": "Connected once — for the whole machine.",
+      "fact1": "The server is registered in the Claude Code user scope (",
+      "fact1Rest": "), so it is available in every project at once. Nothing needs to be added to the project",
+      "fact1Rest2": "file.",
+      "fact2Label": "A desktop session does not receive the channel.",
+      "fact2": "Desktop and headless (",
+      "fact2Rest": ") accept the event and silently drop it. Only an interactive console session started with the flag below can write.",
+      "fact2Check": "Verified experimentally on the previous channel; for minilore-link — to be confirmed.",
+      "fact3Label": "Addressing is per session, not per project.",
       "fact3": "The gateway used to look up a channel by project name: with two conversations in the same project, whichever registered first won, and the message silently went to the wrong one. Now it addresses by sessionId; if a session has no channel of its own, the gateway says so instead of substituting a different conversation.",
-      "setxLabel": "Set the secret as an environment variable — once per machine.",
-      "setx1": "The value lives in",
-      "setx1Rest": ", key",
-      "setx1Rest2": ". Don't paste the value on this page — only the command:",
-      "setxNote": "setx only affects NEW processes",
-      "setxNoteRest": " — the terminal you ran it from won't pick it up; the channel needs a fresh one.",
-      "step1": "Give the project a channel — add the server to its",
-      "step1Rest": ". If the project already has its own",
-      "step1Rest2": " — add the block INSIDE the existing",
-      "step1Rest3": ", don't replace the file wholesale:",
-      "secretNote": "No secret goes in the config",
-      "secretNoteRest": " — the server reads it from the process environment, inherited from the parent (step 1 above), so the",
-      "secretNoteRest2": " block isn't needed here.",
-      "step2": "Open a conversation on the desktop in this same project and do a bit of work in it — nothing to attach to while the transcript is empty. The desktop session itself never gets a channel (fact 2 above) — this step only creates the conversation the console will attach to.",
+      "fact4Label": "Alive means it answered.",
+      "fact4": "minilore-link appearing in the tool list does not mean the channel is alive: only a tool that actually answered counts as alive.",
+      "step1": "Check that the server is registered in the user scope —",
+      "step1Rest": ", section",
+      "step1Rest2": ". Usually the block is already there; if not, add it INSIDE the existing section — do not replace the whole file:",
+      "secretNote": "No secret goes into the config.",
+      "secretNoteRest": "If the channel needs a secret, it is set in the channel settings — not on this page and not in .mcp.json.",
+      "routerNote": "The router listens on",
+      "routerNoteRest": " (variable",
+      "routerNoteRest2": ").",
+      "routerCheck": "Who starts the router and how — to be confirmed.",
+      "step2": "Open a conversation on the desktop in the target project and work in it a little — while the transcript is empty there is nothing to attach to. The desktop session itself does not receive the channel (fact 2 above) — this step only creates the conversation the console will attach to.",
       "step3": "Attach the console to it — by",
       "step3Rest": ", visible in the app:",
       "step3Note": "Not",
@@ -976,6 +982,16 @@
       "step3ShellRest": " (the",
       "step3ShellRest2": " operator and",
       "step3ShellRest3": " syntax) — won't run as-is in Git Bash.",
+      "toolsLabel": "Channel tools",
+      "colTool": "Tool",
+      "colWhat": "What it does",
+      "toolReply": "reply to the owner’s phone. Not visible in the conversation — repeat the same text as a normal message, long content in full",
+      "toolAsk": "ask and wait for the answer — the route for the owner’s decisions",
+      "toolPeers": "neighbouring sessions on this machine",
+      "toolTell": "write to a neighbouring session directly — by conversation name, project name or sessionId prefix",
+      "toolSend": "send a file to the phone",
+      "toolFetch": "fetch a file from the server archive if an attachment did not download by itself",
+      "toolNote": "a note to self, optionally delayed",
       "verifyLabel": "How to check it worked",
       "verifyLead": "Every conversation gets its own icon in the app — an honest marker regardless of how many channels a project has:",
       "colIcon": "Icon",
@@ -983,13 +999,13 @@
       "iconWritable": "green speech bubble — this conversation has a live channel, you can write",
       "iconReadonly": "grey console or laptop — the conversation is visible, read-only (no channel, or not attached)",
       "iconEnded": "tombstone — the session has ended",
-      "gotchasLabel": "One thing that trips people up:",
+      "gotchasLabel": "Pitfalls:",
       "colGotcha": "What",
       "colWhy": "Why",
       "gotcha2Label": "events don't reach the app",
       "gotcha2": "On first run Claude Code will prompt to confirm loading the dev channel and to approve the new MCP server. Both need to be accepted, or events won't flow through — and the conversation will look writable even though it isn't.",
       "gotcha3Label": "The conversation shows up but is silently read-only",
-      "gotcha3": "If the secret never arrived, the server doesn't crash — it starts with an empty string and gets a 403 from the gateway on registration, indistinguishable from read-only. Check: the conversation icon should turn green 🗨️. Grey almost always means a stale console (see step 1 — setx doesn't affect an already-open terminal)."
+      "gotcha3": "First check that the console was started with the flag from step 3 and that the router answers on 127.0.0.1:8789. If the channel needs a secret, it is set in the channel settings. Result: the conversation should turn into a green 🗨️."
     },
     "milestoneManager": {
       "loading": "Loading milestones…",
@@ -1062,7 +1078,8 @@
       "addTask": "+ task",
       "sprintsWithoutMilestones": "Sprints without milestones · {{count}}",
       "allSprintsLinked": "All sprints are linked to milestones ✓",
-      "intoMilestonePlaceholder": "→ into milestone…"
+      "intoMilestonePlaceholder": "→ into milestone…",
+      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}"
     },
     "modulePassport": {
       "loading": "Loading module…",
@@ -1238,7 +1255,8 @@
         "openSprintTitle": "Open {{sprintId}}",
         "taskLink": "→ task {{taskUid}}",
         "taskCreated": "→ task created"
-      }
+      },
+      "metricsLoadError": "Run metrics failed to load — \"no run\" below may be untrue: {{reason}}"
     },
     "qualityGateList": {
       "export": {
@@ -1290,7 +1308,8 @@
       "decisionsLabel": "Decisions",
       "noLinkedRecords": "No linked records found.",
       "githubReleaseTitle": "GitHub Release {{tag}}",
-      "remoteReleaseTitle": "{{role}} · release {{tag}} at {{url}}"
+      "remoteReleaseTitle": "{{role}} · release {{tag}} at {{url}}",
+      "clearQueryAria": "clear search"
     },
     "runbookList": {
       "allFilter": "all",
@@ -1465,7 +1484,8 @@
       "filtersToggle": "filter by status/type",
       "wcUc": "realizes a scenario",
       "wcJtd": "supporting job",
-      "wcEnb": "enabler — justified by an ADR"
+      "wcEnb": "enabler — justified by an ADR",
+      "loadError": "Sprint {{sprintId}} failed to load: {{reason}}"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID is required",
@@ -1572,7 +1592,9 @@
         "flat": "flat",
         "kind": "by type",
         "project": "by project"
-      }
+      },
+      "loadError": "Could not load the feed: {{reason}}",
+      "retry": "Retry"
     },
     "page": {
       "disabled": {
@@ -1684,7 +1706,8 @@
         "features": "filter features…",
         "userStories": "filter user stories…"
       },
-      "backToList": "to list"
+      "backToList": "to list",
+      "searchClear": "clear search"
     },
     "techMatrix": {
       "empty": "No technologies registered.",
@@ -2128,7 +2151,6 @@
       "agentsSection": "Agents",
       "agentRolesSection": "Agent profiles",
       "kcClientsSection": "Keycloak accounts",
-      "noAgents": "no one — forbidden to all agents, including agent-full",
       "noRole": "⚠ profile not set",
       "noOwner": "⚠ no owner",
       "noAgentForClient": "no agent",
@@ -2262,7 +2284,171 @@
       "usageWarn": "{{n}} entities carry this code.",
       "usageWarn2": "Changing the color/icon will change how they look across all of LORE; deactivating requires confirmation.",
       "usersNote": "People are Keycloak realm roles (the \"people\" axis). LORE stores no passwords: the user sets it in KC. The super-admin role is assigned only in the KC console (outside the bridge, D11).",
-      "viewerGives": "Read-only access to LORE. Does not allow into administration"
+      "viewerGives": "Read-only access to LORE. Does not allow into administration",
+      "agentsLoadError": "Graph agents failed to load: {{reason}}",
+      "matrixLoadError": "Delegation matrix failed to load — \"writes\" is unknown (?), not 0: {{reason}}",
+      "unknownLoadFailed": "failed to load",
+      "profilesLoadError": "Agent profile dictionary failed to load — there is nothing to pick a profile from: {{reason}}",
+      "projectRolesLoadError": "Project roles failed to load: {{reason}}",
+      "projectsLoadFailedOpt": "projects failed to load",
+      "projectsLoadError": "Projects failed to load: {{reason}}",
+      "projectUsersPartial": "members of some projects ({{n}}) failed to load",
+      "projectRolesUnknown": "? failed to load",
+      "membersLoadError": "Project members failed to load: {{reason}}",
+      "retry": "retry",
+      "sourceLoadError": "Failed to load ({{src}}): {{reason}} — an empty table below does not mean \"no data\"",
+      "claudeRulesLoadError": "Document failed to load: {{reason}}",
+      "accountH": "Account",
+      "adminCountUnknown": "Number of administrators is unknown (KC did not respond) — we cannot warn that this is the last administrating account.",
+      "backToPeople": "People",
+      "closeCard": "close card",
+      "cntBad": "auth readiness checks failed: {{n}}",
+      "cntKc403": "could not check: 403 — no permission",
+      "cntKc503": "could not check: 503 — Keycloak not configured ({{detail}})",
+      "cntKcErr": "could not check: Keycloak did not respond ({{detail}})",
+      "cntPreflight": "could not check: auth-preflight did not respond",
+      "cntSrcErr": "could not check: {{detail}}",
+      "kcOnly": "KC console only",
+      "projectUsersErrNote": "Project roles failed to load: {{reason}} — the \"projects and roles\" column is unknown, this is not \"no roles\".",
+      "projectUsersPartialNote": "Members of some projects ({{n}}) failed to load — the \"projects and roles\" column is incomplete, this is not \"no roles\".",
+      "realmHidden": "hidden Keycloak service roles: {{n}}",
+      "realmRolesFallback": "The realm role list failed to load — showing the fallback minimum admin/viewer plus the person's own roles. This is not the whole realm.",
+      "realmRolesH": "Realm roles · all realm roles",
+      "roleHas": "has",
+      "roleRemove": "remove",
+      "sysAuthOff": "auth: off · dev",
+      "sysAuthOn": "auth: on",
+      "sysAuthOnD": "Authentication is on: the role comes from the Keycloak token.",
+      "sysKc403": "KC: 403",
+      "sysKc403D": "Keycloak refused: access management is open to the admin role only.",
+      "sysKcDown": "KC: unreachable",
+      "sysKcDownD": "Keycloak did not respond: {{detail}}. The state of people and accounts is unknown.",
+      "sysKcOff": "KC: not configured",
+      "sysKcOffD": "The Keycloak bridge is not configured (KC_ADMIN_CLIENT_SECRET). People and account lists are unknown right now — this is not \"empty\". The rest of LORE works.",
+      "sysKcOk": "KC: ok",
+      "sysKcOkD": "The Keycloak bridge responds.",
+      "sysKcUnknown": "KC: ?",
+      "sysKcUnknownD": "auth-preflight did not respond — the Keycloak state is not confirmed.",
+      "sysRole": "role: {{role}}",
+      "sysRoleD": "Role of the current session: {{role}}. With authentication off it comes from the config.",
+      "sysScopeOff": "agent rights: not enforced",
+      "sysScopeOn": "agent rights: enforced",
+      "sysScopeOnD": "The agent_scope claim is checked by the backend.",
+      "sysScopeUnknown": "agent rights: ?",
+      "usersNoteSummary": "How people work",
+      "whereAmI": "Where am I",
+      "close": "Close",
+      "navTabUsers": "People",
+      "navTabAgents": "Agents",
+      "navTabRoles": "Roles & rights",
+      "navTabDicts": "Dictionaries",
+      "navTabProjects": "Projects",
+      "navTabTags": "Tags",
+      "navTabClaudeRules": "CLAUDE rules",
+      "navTabSettings": "Settings",
+      "navTabQuick": "Quick commands",
+      "navGrpAccess": "Access",
+      "navGrpDicts": "Reference data",
+      "navGrpSys": "System",
+      "navRiskAccess": "high risk",
+      "navRiskDicts": "data",
+      "navRiskSys": "maintenance",
+      "thLogin": "login",
+      "thEmail": "email",
+      "thEnabled": "on",
+      "thRoles": "roles",
+      "thProjRoles": "projects & roles",
+      "cntAgentsGraph": "agents in the graph: {{n}} · Keycloak accounts: {{kc}}",
+      "quickGrpProject": "Go to project",
+      "quickUnlimitedLore": "UnlimitedLORE",
+      "quickAidaRoot": "aida-root",
+      "quickMobilepoc": "Mobilepoc",
+      "quickGrpChannel": "miniLORE channel",
+      "quickAttach": "Attach the console to a dialogue by sessionId (shown in the app) via the minilore-link channel — NOT -c, it picks the wrong dialogue. PowerShell.",
+      "copyTitle": "Copy",
+      "copied": "copied",
+      "copyUnavailable": "Not copied: the clipboard is unavailable (the page is not served over https/localhost). Select the command manually.",
+      "copyFailed": "Not copied: the browser denied clipboard access. Select the command manually.",
+      "quickNote": "Personal cheat sheet — everyday commands so the order need not be recalled again. Tapping a row copies it to the clipboard. The full recipe with caveats is on the “Connections” tab in “Basics”.",
+      "secretNotReturned": "(secret not returned)",
+      "agentsNoteSummary": "How agents work",
+      "kcNa": "Keycloak did not respond",
+      "thAgent": "agent",
+      "thProfile": "profile",
+      "thOwner": "owner",
+      "thClient": "account",
+      "thSees": "sees",
+      "thWrites": "writes",
+      "thWritesWhere": "writes to",
+      "thCode": "code",
+      "thName": "name",
+      "thDelegators": "who may delegate (D4)",
+      "thKcClient": "KC account",
+      "thAgentsN": "agents",
+      "thKcClientId": "client",
+      "thAgentScope": "agent_scope",
+      "pickKcNa": "— Keycloak did not respond —",
+      "agentsGraphHint": "independent of Keycloak — shown even when KC fails",
+      "agentsGraphSection": "Graph agents",
+      "noGraphAgents": "There are no agents at all. Roles and accounts exist, but who uses them is not recorded: an agent takes its rights from its owner, and there is no owner. With project scope on, such an agent will see an empty LORE.",
+      "noAgentsAllowed": "no one — forbidden to all agents, including agent-full",
+      "kcClientSearch": "client or agent_scope…",
+      "codeRequired": "code is required",
+      "na": "n/a",
+      "thLabel": "label",
+      "thLook": "look",
+      "thUses": "uses",
+      "thOrder": "order",
+      "thActive": "active",
+      "inactive": "off",
+      "collapse": "Collapse",
+      "reactivate": "Re-enable",
+      "reactivateNote": "This value is disabled — “Save” will enable it again.",
+      "canonChip": "canonical dictionary",
+      "dictSearch": "code or label…",
+      "dictEmptyActiveH": "Dictionary “{{dt}}” has no active values",
+      "dictEmptyH": "Dictionary “{{dt}}” has no values",
+      "dictEmptyQ": "Nothing matches the search.",
+      "dictEmptyB": "The slice answered with no rows.",
+      "lastOwnerShort": "last owner",
+      "removeShort": "remove",
+      "thSlug": "slug",
+      "thProjName": "name",
+      "thBranch": "branch",
+      "thHosts": "hosts",
+      "thSprints": "sprints",
+      "badHostsJson": "⚠ broken JSON",
+      "projSearch": "slug or name…",
+      "projNoMatch": "No project matches the search.",
+      "removeHost": "remove hosting",
+      "holdersNobody": "nobody",
+      "holdersKcNa": "n/a (KC unavailable)",
+      "thHumanRole": "people · realm role",
+      "thGives": "grants",
+      "thWhereAssigned": "assigned where",
+      "thHolders": "held by",
+      "thAgentRole": "agents · role",
+      "thDictLabel": "label (dictionary)",
+      "thCanWrite": "may write",
+      "thWhat": "what",
+      "thHumans": "people",
+      "thAgents": "agents",
+      "chkKcDown": "KC did not respond: {{err}}",
+      "chkScopeOn": "AgentScopeFilter is on: the agent_scope claim is checked on every request.",
+      "thKey": "key",
+      "thValue": "value",
+      "thDescr": "description",
+      "removeConfirm": "Really delete?",
+      "thPath": "path",
+      "thWhen": "when",
+      "thMethod": "method",
+      "thStatus": "status",
+      "thError": "error",
+      "thRole": "role",
+      "authOnLine": "on (JWT, role from seer_roles)",
+      "authOffLine": "off — dev mode, role from config (VITE_LORE_ROLE)",
+      "thTag": "tag",
+      "tagSearch": "tag…"
     },
     "oqBoard": {
       "ansFailed": "Failed to load decision #{{id}} — click to retry",
@@ -2344,7 +2530,26 @@
       "expand": "▾ expand",
       "notSet": "not set",
       "search": "Search"
-    }
+    },
+    "errorToast": {
+      "title": "Failed:",
+      "close": "Close"
+    },
+    "pickerLoadFailed": "Picker lists failed to load: {{lists}}. This is a failure, not emptiness — you cannot pick from them right now; refresh later.",
+    "pickerList": {
+      "adrs": "ADRs",
+      "components": "components",
+      "projects": "projects",
+      "pages": "pages",
+      "keywords": "keywords",
+      "channels": "channels",
+      "rubrics": "rubrics",
+      "sprints": "sprints",
+      "releases": "releases",
+      "milestones": "milestones"
+    },
+    "sliceLoadFailed": "Failed to load: {{lists}}. This is a failure, not zeros — figures that depend on them are incomplete.",
+    "loadRetry": "Retry"
   },
   "bragi": {
     "analytics": {
@@ -2367,7 +2572,9 @@
         "colMetric": "metric",
         "colValue": "value",
         "colSource": "source"
-      }
+      },
+      "loadError": "failed to load: {{reason}}",
+      "kpiFailed": "failed to load"
     },
     "extras": {
       "loadError": "failed to load — data may still exist, check your session/network and reload",
@@ -2499,7 +2706,10 @@
         "habr": "1 technical post / 2–3 wk",
         "telegram": "2 posts/wk (anchor + warm)",
         "seed": "after VC/Habr"
-      }
+      },
+      "navPrevAria": "previous month",
+      "navTodayAria": "to the current month",
+      "navNextAria": "next month"
     },
     "publicationEditor": {
       "errPublicationIdRequired": "Publication ID is required",
@@ -2590,7 +2800,8 @@
       "filtersLabel": "Filters",
       "rubricLabel": "Rubric",
       "statusLabel": "Status",
-      "todoBadge": "{{n}} todo"
+      "todoBadge": "{{n}} todo",
+      "metricsLoadError": "metrics failed to load: {{reason}}"
     },
     "rubricManager": {
       "errId": "Category ID is required",

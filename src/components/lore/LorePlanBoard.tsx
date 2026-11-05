@@ -31,6 +31,7 @@ import { areaColor, compArea } from './LoreComponentList';
 import { useProjectScope, sliceParamsForProject } from '../../context/ProjectScopeContext';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { GameIcon } from './GameIcon';
+import { clamp, dragHandleTouch, startPointerDrag } from './pointerDrag';
 import { statusMeta, taskTick } from './lore-status';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 
@@ -191,7 +192,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   // ── Panels ─────────────────────────────────────────────────────────────────
   const [msPanel,    setMsPanel]    = useState<LoreMilestone | null>(null);
   const [panelH,     setPanelH]     = useState(238);          // resizable bottom panel
-  const panelDragRef = useRef<{ y: number; h: number } | null>(null);
+  const panelDragRef = useRef<(() => void) | null>(null);
 
   // ── Timeline plumbing ────────────────────────────────────────────────────────
   const hostRef     = useRef<HTMLDivElement>(null);
@@ -738,7 +739,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         end:   addWeeks(w0, sec.end_week),
         type: 'background',
         className: 'sec',
-        style: `background-color:${sec.color}14;border-color:${sec.color}40;`,
+        style: `background-color:color-mix(in srgb, ${sec.color} 8%, transparent);border-color:color-mix(in srgb, ${sec.color} 25%, transparent);`,
       } as TimelineItem);
     }
 
@@ -823,22 +824,18 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       showDone, showActive, cropPast, board, t]);
 
   // ── Drag-resize the bottom detail panel ──────────────────────────────────────
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!panelDragRef.current) return;
-      const delta = panelDragRef.current.y - e.clientY;   // drag up → taller
-      setPanelH(Math.min(560, Math.max(120, panelDragRef.current.h + delta)));
-    };
-    const onUp = () => { panelDragRef.current = null; document.body.style.userSelect = ''; };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, []);
+  // AH-08: ручка слушала только мышь — пальцем панель не тянулась. Pointer
+  // events покрывают мышь, касание и перо; слушатели живут ровно один жест.
+  useEffect(() => () => { panelDragRef.current?.(); document.body.style.userSelect = ''; }, []);
 
-  function startPanelDrag(e: React.MouseEvent) {
-    panelDragRef.current = { y: e.clientY, h: panelH };
+  function startPanelDrag(e: React.PointerEvent<HTMLDivElement>) {
+    const startH = panelH;
     document.body.style.userSelect = 'none';
-    e.preventDefault();
+    panelDragRef.current = startPointerDrag(e, {
+      axis: 'y',
+      onDelta: d => setPanelH(clamp(startH - d, 120, 560)),   // drag up → taller
+      onEnd: () => { panelDragRef.current = null; document.body.style.userSelect = ''; },
+    });
   }
 
   if (loading) return <div style={S.empty}>{t('lore.planBoard.loading', 'Loading plan…')}</div>;
@@ -1085,11 +1082,12 @@ function LegendStatus({ status, label }: { status: string; label: string }) {
 }
 
 // Drag handle at the top edge of the bottom panel (resize its height).
-function ResizeGrip({ onDown }: { onDown: (e: React.MouseEvent) => void }) {
+function ResizeGrip({ onDown }: { onDown: (e: React.PointerEvent<HTMLDivElement>) => void }) {
   const { t } = useTranslation();
   return (
-    <div onMouseDown={onDown} title={t('lore.planBoard.resizeGripTooltip', 'Потянуть, чтобы изменить высоту панели')}
+    <div onPointerDown={onDown} role="separator" aria-orientation="horizontal" title={t('lore.planBoard.resizeGripTooltip', 'Потянуть, чтобы изменить высоту панели')}
       style={{
+        ...dragHandleTouch,
         height: 9, flexShrink: 0, cursor: 'ns-resize',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderBottom: '1px solid var(--bd)', background: 'var(--b2)',

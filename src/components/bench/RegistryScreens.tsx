@@ -10,7 +10,7 @@ import type {
 import { groupRevChains, pickLocale, substrateSortKey } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
 import {
-  PanelMsg, RegistryFooter, ScreenTitle, StatusBadge, SubstrateLink, hypothesisTone, useRegistryTable,
+  MartSliceWarning, PanelMsg, RegistryFooter, ScreenTitle, StatusBadge, SubstrateLink, hypothesisTone, useRegistryTable,
 } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
@@ -73,6 +73,7 @@ export function SubstratesScreen({ substrates }: { substrates: SubstrateRow[] })
     <div>
       <ScreenTitle text={t('bench.reg.substratesTitle', 'Substrates — all actors of the experiment')}
                    hint={t('bench.reg.substratesHint', 'click a name to open the passport')} />
+      <MartSliceWarning slices={{ substrate_revs_all: revsAll }} />
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 'var(--fs-base)' }}>
         {table.controls}
         <span style={{ color: 'var(--t3)' }}>{table.count} / {substrates.length}</span>
@@ -467,6 +468,7 @@ export function ReferencesScreen() {
     <div>
       <ScreenTitle text={t('bench.refs.title', 'Bibliography')}
                    hint={t('bench.refs.subtitle', 'ExpReference — what the method is grounded in (GROUNDED_IN)')} />
+      <MartSliceWarning slices={{ sources, method_cards: methodCards }} />
       {(methodCards.rows ?? []).length > 0 && (
         <MethodCardsOverview cards={methodCards.rows!} />
       )}
@@ -613,6 +615,7 @@ export function CasesDimScreen() {
     <div>
       <ScreenTitle text={t('bench.reg.casesTitle', 'Cases & gold — the question bank with its answer revisions')}
                    hint={t('bench.reg.casesHint', 'campaigns assemble runs from these cases')} />
+      <MartSliceWarning slices={{ golds, gold_verdicts: verdicts }} />
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
                     marginBottom: 8, fontSize: 'var(--fs-base)' }}>
         <input value={q} onChange={e => setQ(e.target.value)}

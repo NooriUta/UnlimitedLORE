@@ -6,7 +6,7 @@ import type {
 } from '../../utils/muninnData';
 import { dedupe, formatSeconds, formatUsd, num, pickLocale, strArr } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
-import { PanelMsg, StatusBadge, campaignTone, hypothesisTone } from './shared';
+import { MartSliceWarning, PanelMsg, StatusBadge, campaignTone, hypothesisTone } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -99,6 +99,7 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
 
   return (
     <div data-testid="bench-story" style={{ maxWidth: 1080 }}>
+      <MartSliceWarning slices={{ campaigns, hypotheses, findings, decisions }} />
       {ordered.map((p, i) => {
         const phaseCampaigns = allCampaigns.filter(c => strArr(c.phase_ids).includes(p.phase_id));
         const phaseCampaignIds = new Set(phaseCampaigns.map(c => c.campaign_id));

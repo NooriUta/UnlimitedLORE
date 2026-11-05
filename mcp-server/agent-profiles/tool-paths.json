@@ -109,7 +109,8 @@
     "/lore/feature/link"
   ],
   "feature_new": [
-    "/lore/feature"
+    "/lore/feature",
+    "/lore/uc/link"
   ],
   "gain_new": [
     "/lore/gain"
@@ -270,7 +271,8 @@
     "/lore/uc/link"
   ],
   "uc_new": [
-    "/lore/uc"
+    "/lore/uc",
+    "/lore/uc/link"
   ],
   "uc_quality": [
     "/lore/uc/quality"

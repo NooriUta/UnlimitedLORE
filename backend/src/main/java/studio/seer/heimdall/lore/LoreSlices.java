@@ -242,6 +242,46 @@ public final class LoreSlices {
             + "ORDER BY entity_type, ref_id";
     }
 
+    /**
+     * AL-113: типы с проектной осью — вершина без BELONGS_TO_PROJECT у них
+     * дефект данных. {@code inherit} — путь к родителю, чей проект засчитывается
+     * (как у read-скоупа {@link #PROJECT_SCOPED}). Глобальных вершин (KnowJob)
+     * здесь нет по замыслу: у них проекта нет и быть не должно.
+     */
+    record ProjectOwned(String entityType, String vertexType, String idField, String titleField, String inherit) {}
+
+    static final List<ProjectOwned> PROJECT_OWNED = List.of(
+        new ProjectOwned("sprint",   "KnowSprint",   "sprint_id",   "name",       null),
+        new ProjectOwned("adr",      "KnowADR",      "adr_id",      "title",      null),
+        new ProjectOwned("decision", "KnowDecision", "decision_id", "title",      "out('DECIDED_IN')"),
+        new ProjectOwned("question", "KnowQuestion", "question_id", "title",      "out('RAISED_IN')"),
+        new ProjectOwned("release",  "KnowRelease",  "release_uid", "release_id", null),
+        new ProjectOwned("spec",     "KnowSpec",     "spec_id",     "title",      null),
+        new ProjectOwned("doc",      "KnowDoc",      "doc_id",      "title",      null),
+        new ProjectOwned("runbook",  "KnowRunbook",  "runbook_id",  "name",       null),
+        new ProjectOwned("use_case", "KnowUseCase",  "uc_id",       "title",      null)
+    );
+
+    /** SQL среза {@code entities_without_project} — по ветке unionall на тип (собирается кодом, как history_hygiene). */
+    private static String entitiesWithoutProjectSql() {
+        StringBuilder vars = new StringBuilder();
+        StringBuilder lets = new StringBuilder();
+        for (int i = 0; i < PROJECT_OWNED.size(); i++) {
+            ProjectOwned t = PROJECT_OWNED.get(i);
+            String var = "$e" + (char) ('a' + i);
+            if (i > 0) { vars.append(", "); lets.append(", "); }
+            vars.append(var);
+            lets.append(var).append(" = (SELECT '").append(t.entityType()).append("' AS entity_type, ")
+                .append(t.idField()).append(" AS ref_id, ").append(t.titleField()).append(" AS title FROM ")
+                .append(t.vertexType()).append(" WHERE out('BELONGS_TO_PROJECT').size() = 0");
+            if (t.inherit() != null)
+                lets.append(" AND ").append(t.inherit()).append(".out('BELONGS_TO_PROJECT').size() = 0");
+            lets.append(")");
+        }
+        return "SELECT entity_type, ref_id, title FROM (SELECT expand(unionall(" + vars + ")) LET "
+            + lets + ") ORDER BY entity_type, ref_id";
+    }
+
     static {
         // ── §1 Timeline — 3 separate slices, merged on frontend ──────────────
         // No UNION in ArcadeDB /api/v1/query. Frontend fetches all 3, merges by date.
@@ -1012,6 +1052,10 @@ public final class LoreSlices {
         //
         // Считаем ЛЮБУЮ роль, а не только owner: проект с ролью reader тоже
         // «настроен», просто узко, и это другой разговор, чем «о нём забыли».
+
+        // AL-113: сущности без проекта по типам — вход для quality gate «привязка
+        // к проекту». Решение и вопрос наследуют проект родителя (как в скоупе).
+        slice("entities_without_project", entitiesWithoutProjectSql(), List.of(), Map.of(), "");
 
         slice("projects_without_role",
             "SELECT slug, name, in('HAS_PROJECT_ROLE').size() AS roles " +

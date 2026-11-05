@@ -5,6 +5,7 @@ import { GameIcon } from '../lore/GameIcon';
 import { SHELL_TABS, type ShellTab } from './shellNav';
 import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { projectPickerInMore, whereAmILabel } from './shellLayout';
 import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '../../auth/session';
 import { Modal } from '@mantine/core';
 import { LoreSearchScreen } from '../lore/LoreSearchScreen';
@@ -103,6 +104,15 @@ function AppShellBody() {
   // ОДНО на оба варианта: разойдись они — на какой-то ширине главы пропали бы
   // и из строки, и из меню, и разделы стали бы недостижимы (так и было).
   const chaptersInMenu = active === 'projects' && narrow;
+  // AH-08: на узкой шапке выбор проекта не рисовался вовсе — сменить скоуп с
+  // телефона было нечем. Теперь он уезжает в «⋯»; список пунктов один на оба места.
+  const pickerInMore = projectPickerInMore(narrow);
+  // «Где я»: на телефоне кнопка глав показывала только иконку пространства.
+  const whereAmI = activeTab ? whereAmILabel({
+    narrow, inProjects: active === 'projects',
+    chapter: t(curChapter.nameKey, curChapter.name),
+    space: t(activeTab.labelKey, activeTab.fallback),
+  }) : '';
 
   // Закрытие dropdown — outside-click (mousedown) + Esc, НЕ onBlur: blur
   // срабатывает раньше клика в Firefox/Safari и съедает выбор.
@@ -156,9 +166,29 @@ function AppShellBody() {
     fontSize: 12.5, padding: '7px 9px', borderRadius: 6, cursor: 'pointer',
   });
   const ddSep   = { height: 1, background: 'var(--bd)', margin: '5px 3px' };
-  const ddBadge = { marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 8, border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 5px', color: 'var(--t3)' };
+  const ddBadge = { marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 5px', color: 'var(--t3)' };
   const ddNote  = { fontSize: 9.5, color: 'var(--t3)', padding: '4px 9px 2px', lineHeight: 1.35 };
   const kbd     = { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '0 4px' };
+  const projectMenuItems = (
+    <>
+      <div style={ddHead}>{t('shell.project', 'Проект')}</div>
+      <button type="button" role="menuitem" style={ddItem(project === null)}
+        onClick={() => { setProject(null); setOpenDD(null); }}>
+        <span style={{ width: 15, textAlign: 'center' }}>◉</span>
+        <span style={{ fontWeight: project === null ? 700 : 500 }}>{t('shell.projectAll', 'Все проекты')}</span>
+        {project === null && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
+      </button>
+      {projects.map(p => (
+        <button key={p.slug} type="button" role="menuitem" style={ddItem(p.slug === project)}
+          onClick={() => { setProject(p.slug); setOpenDD(null); }}>
+          <span style={{ width: 15, textAlign: 'center' }}>◐</span>
+          <span style={{ fontWeight: p.slug === project ? 700 : 500 }}>{p.name ?? p.slug}</span>
+          {p.slug === project && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
+        </button>
+      ))}
+      <div style={ddNote}>{t('shell.projectNote', 'Проект ⟂ навигация: смена скоупа не меняет раздел — вы остаётесь там же. Сегодня влияет на План и Вехи.')}</div>
+    </>
+  );
 
   const btnStyle = {
     background: 'transparent',
@@ -199,7 +229,7 @@ function AppShellBody() {
             aria-expanded={openDD === 'brand'}
             aria-haspopup="menu"
             title={t('shell.brandTitle', 'LORE — пространства')}
-            onClick={() => setOpenDD(d => d === 'brand' ? null : 'brand')}
+            className="lore-tap" onClick={() => setOpenDD(d => d === 'brand' ? null : 'brand')}
             style={{
               // Бренд без окантовки — прежний вид логотипа (display-шрифт),
               // но поведение кнопки-dropdown (эталон Студии).
@@ -251,32 +281,17 @@ function AppShellBody() {
             сегодня принимающий `project`) на страницах, где своего фильтра ещё
             нет (План, Вехи). LoreSprintTree/LoreAnalytics уже несут собственный
             клиентский фильтр по проекту — им эта шапка ничего не добавляет. */}
-        {!narrow && (
+        {!pickerInMore && (
           <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
             <button type="button" aria-expanded={openDD === 'project'} aria-haspopup="menu"
               title={t('shell.projectTitle', 'Рабочее пространство данных (проект)')}
-              onClick={() => setOpenDD(d => d === 'project' ? null : 'project')}
+              className="lore-tap" onClick={() => setOpenDD(d => d === 'project' ? null : 'project')}
               style={pill(false)}>
               <span style={liveDot} />{project ?? t('shell.projectAll', 'ВСЕ ПРОЕКТЫ')}<span style={caret}>⌄</span>
             </button>
             {openDD === 'project' && (
               <div style={dd} role="menu">
-                <div style={ddHead}>{t('shell.project', 'Проект')}</div>
-                <button type="button" role="menuitem" style={ddItem(project === null)}
-                  onClick={() => { setProject(null); setOpenDD(null); }}>
-                  <span style={{ width: 15, textAlign: 'center' }}>◉</span>
-                  <span style={{ fontWeight: project === null ? 700 : 500 }}>{t('shell.projectAll', 'Все проекты')}</span>
-                  {project === null && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
-                </button>
-                {projects.map(p => (
-                  <button key={p.slug} type="button" role="menuitem" style={ddItem(p.slug === project)}
-                    onClick={() => { setProject(p.slug); setOpenDD(null); }}>
-                    <span style={{ width: 15, textAlign: 'center' }}>◐</span>
-                    <span style={{ fontWeight: p.slug === project ? 700 : 500 }}>{p.name ?? p.slug}</span>
-                    {p.slug === project && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
-                  </button>
-                ))}
-                <div style={ddNote}>{t('shell.projectNote', 'Проект ⟂ навигация: смена скоупа не меняет раздел — вы остаётесь там же. Сегодня влияет на План и Вехи.')}</div>
+                {projectMenuItems}
               </div>
             )}
           </div>
@@ -291,18 +306,20 @@ function AppShellBody() {
             решили · Основа · Контроль» становились недостижимы с телефона.
             Теперь на узком он — кнопка с тем же списком глав в выпадающем меню. */}
         {chaptersInMenu ? (
-          <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
+          <div style={{ position: 'relative', flexShrink: 1, minWidth: 0 }} data-dd>
             <button type="button"
               aria-haspopup="menu" aria-expanded={openDD === 'chapters'}
               aria-label={t('shell.chapters', 'Главы Forseti')}
-              onClick={() => setOpenDD(d => d === 'chapters' ? null : 'chapters')}
+              className="lore-tap" onClick={() => setOpenDD(d => d === 'chapters' ? null : 'chapters')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                background: 'none', border: 'none', padding: '2px 4px',
+                background: 'none', border: 'none', padding: '2px 4px', maxWidth: '100%', minWidth: 0,
                 fontFamily: 'inherit', fontWeight: 800, fontSize: 'var(--fs-md)',
                 letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)',
               }}>
-              {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
+              {/* AH-08: «где я» — иконка и НАЗВАНИЕ текущей главы, а не только значок пространства. */}
+              <GameIcon slug={curChapter.icon} size={15} style={{ color: 'var(--acc)', flexShrink: 0 }} />
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{whereAmI}</span>
               <span style={caret}>⌄</span>
             </button>
             {openDD === 'chapters' && (
@@ -325,7 +342,7 @@ function AppShellBody() {
         ) : (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 'var(--fs-md)', letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
             {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
-            <span>{t(activeTab!.labelKey, activeTab!.fallback)}</span>
+            <span>{whereAmI}</span>
           </div>
         )}
 
@@ -384,7 +401,7 @@ function AppShellBody() {
           </span>
         )}
 
-        <button type="button" onClick={() => setPalOpen(true)}
+        <button type="button" className="lore-tap" onClick={() => setPalOpen(true)}
           title={t('shell.searchTitle', 'Поиск по данным (/)')} aria-label={t('shell.searchAria', 'Поиск')}
           style={{ ...btnStyle, textTransform: 'none' as const, display: 'inline-flex', alignItems: 'center' }}>
           <GameIcon slug="magnifying-glass" size={15} style={{ color: 'inherit' }} />
@@ -394,9 +411,11 @@ function AppShellBody() {
         <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
           <button type="button" aria-expanded={openDD === 'more'} aria-haspopup="menu"
             title={t('shell.moreTitle', 'Ещё — тема, палитра, язык')}
-            onClick={() => setOpenDD(d => d === 'more' ? null : 'more')} style={btnStyle}>⋯</button>
+            className="lore-tap" onClick={() => setOpenDD(d => d === 'more' ? null : 'more')} style={btnStyle}>⋯</button>
           {openDD === 'more' && (
-            <div style={{ ...dd, left: 'auto', right: 0 }} role="menu">
+            <div style={{ ...dd, left: 'auto', right: 0, maxHeight: 'calc(100vh - 80px)', overflowY: 'auto' }} role="menu">
+              {/* AH-08: на телефоне выбора проекта в шапке нет — он здесь. */}
+              {pickerInMore && <>{projectMenuItems}<div style={ddSep} /></>}
               <div style={ddHead}>{t('shell.secondary', 'Вторичное')}</div>
               {/* Палитр стало четыре (общие с платформой), и перебор кнопкой
                   «следующая» заставлял бы прощёлкивать мимо нужной. Сватчи
@@ -456,7 +475,7 @@ function AppShellBody() {
           <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
             <button type="button" aria-expanded={openDD === 'user'} aria-haspopup="menu"
               title={t('shell.profile', 'Профиль')}
-              onClick={() => setOpenDD(d => d === 'user' ? null : 'user')}
+              className="lore-tap" onClick={() => setOpenDD(d => d === 'user' ? null : 'user')}
               // AL-113: btnStyle несёт моно-шрифт + letter-spacing + uppercase —
               // рассчитан на короткие символьные кнопки (лупа, «⋯»), единственные
               // соседи в этой строке. Имя пользователя — читаемый текст переменной

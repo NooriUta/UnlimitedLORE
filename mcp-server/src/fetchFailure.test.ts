@@ -53,6 +53,26 @@ describe('повтор только там, где запрос не ушёл', 
     expect(f).toHaveBeenCalledTimes(2);
   });
 
+  // DS-5 хвост: сброс простаивающего keep-alive сокета (undici: UND_ERR_SOCKET
+  // «other side closed», ECONNRESET). Для ЧТЕНИЯ повтор безопасен всегда —
+  // GET ничего не пишет; для записи по-прежнему нет (см. тест выше).
+  it('GET: обрыв открытого сокета — один повтор, чтение идемпотентно', async () => {
+    for (const code of ['UND_ERR_SOCKET', 'ECONNRESET']) {
+      const f = vi.fn().mockRejectedValueOnce(netError(code, 'other side closed'))
+        .mockResolvedValueOnce(new Response('{"rows":[]}', { status: 200 }));
+      const res = await loreFetch('GET /lore/slice/x', 'http://x', {}, f as typeof fetch);
+      expect(res.status).toBe(200);
+      expect(f).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it('POST: обрыв открытого сокета — без повтора, даже UND_ERR_SOCKET', async () => {
+    const f = vi.fn().mockRejectedValue(netError('UND_ERR_SOCKET', 'other side closed'));
+    await expect(loreFetch('POST /lore/metric', 'http://x', { method: 'POST' }, f as typeof fetch))
+      .rejects.toThrow(/UND_ERR_SOCKET/);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
   it('каждому запросу задан таймаут', async () => {
     const f = vi.fn().mockResolvedValue(new Response('{}'));
     await loreFetch('GET /x', 'http://x', {}, f as typeof fetch);

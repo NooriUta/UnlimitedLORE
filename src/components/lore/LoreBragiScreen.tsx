@@ -9,6 +9,12 @@ import LoreBragiPublications from './LoreBragiPublications';
 import LoreBragiPlan from './LoreBragiPlan';
 import LoreBragiAnalytics from './LoreBragiAnalytics';
 import { LoreBragiKeys, LoreBragiArchive, LoreBragiInsights, LoreBragiIntegrations } from './LoreBragiExtras';
+import { useUrlState } from '../../hooks/useUrlState';
+import { useNavigate } from 'react-router-dom';
+import { SHELL_TABS } from '../layout/shellNav';
+
+// AH-10: «связи → Forseti» ведёт в пространство Forseti — тот же адрес, что у шапки.
+const FORSETI_HREF = SHELL_TABS.find(tab => tab.id === 'projects')?.to ?? '/lore';
 
 type BragiSection =
   | 'obzor' | 'plan' | 'pubs' | 'keys' | 'analitika' | 'archive' | 'insights' | 'integrations';
@@ -23,6 +29,7 @@ const MENU: { id: BragiSection; labelKey: string; fallback: string }[] = [
   { id: 'insights',     labelKey: 'bragi.screen.menu.insights',      fallback: 'Инсайты' },
   { id: 'integrations', labelKey: 'bragi.screen.menu.integrations',  fallback: 'Интеграции' },
 ];
+const BRAGI_SECTIONS: readonly BragiSection[] = MENU.map(m => m.id);
 
 interface OverviewRow { status_general: string; n: number }
 interface CompetitorRow { competitor_id: string; name: string }
@@ -30,7 +37,9 @@ interface PublicationRow { publication_id: string; title: string; status_general
 
 export default function LoreBragiScreen() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<BragiSection>('obzor');
+  const navigate = useNavigate();
+  // AH-09: раздел BRAGI в URL (?btab=).
+  const [tab, setTab] = useUrlState<BragiSection>('btab', 'obzor', BRAGI_SECTIONS);
   const [overview, setOverview]     = useState<OverviewRow[]>([]);
   const [competitors, setCompetitors] = useState<CompetitorRow[]>([]);
   const [publications, setPublications] = useState<PublicationRow[]>([]);
@@ -85,7 +94,8 @@ export default function LoreBragiScreen() {
             {t(m.labelKey, m.fallback)}
           </button>
         ))}
-        <span style={S.menuLink}>{t('bragi.screen.menu.forsetiLink', 'связи → Forseti')}</span>
+        {/* AH-10: была подпись со стрелкой без обработчика — теперь переход в Forseti. */}
+        <button type="button" className="lore-tap" style={S.menuLink} onClick={() => navigate(FORSETI_HREF)}>{t('bragi.screen.menu.forsetiLink', 'связи → Forseti')}</button>
       </div>
 
       <div style={S.wrap}>
@@ -114,7 +124,7 @@ export default function LoreBragiScreen() {
                   <div style={S.hint}>{t('bragi.screen.overview.kpiError', 'часть показателей не загрузилась — проверьте сессию/сеть и обновите страницу')}</div>
                 )}
                 <div style={S.card}>
-                  <h2 style={S.cardH2}>{t('bragi.screen.overview.publicationsTitle', 'публикации')} <span style={S.meta}>{t('bragi.screen.overview.publicationsMeta', '→ Публикации')}</span></h2>
+                  <h2 style={S.cardH2}>{t('bragi.screen.overview.publicationsTitle', 'публикации')} <button type="button" className="lore-tap" style={S.metaLink} onClick={() => setTab('pubs')}>{t('bragi.screen.overview.publicationsMeta', '→ Публикации')}</button></h2>
                   <div style={{ fontSize: 'var(--fs-md)', lineHeight: 2 }}>
                     {publicationsError ? (
                       <span style={S.hint}>{t('bragi.screen.overview.publicationsError', 'не удалось загрузить публикации — данные могут быть, проверьте сессию/сеть')}</span>
@@ -161,7 +171,7 @@ const S: Record<string, React.CSSProperties> = {
   tagline:  { color: 'var(--t3)', fontSize: 'var(--fs-md)' },
   menu:     { display: 'flex', flexWrap: 'wrap', gap: 16, padding: '12px 22px 0', fontSize: 'var(--fs-base)',
               color: 'var(--t3)', borderBottom: '1px solid var(--bd)' },
-  menuLink: { marginLeft: 'auto', color: 'var(--t3)', cursor: 'default' },
+  menuLink: { marginLeft: 'auto', color: 'var(--t3)', cursor: 'pointer', background: 'transparent', border: 'none', font: 'inherit', padding: 0 },
   wrap:     { maxWidth: 1120, margin: '0 auto', padding: '22px 22px 56px' },
   desc:     { color: 'var(--t2)', fontSize: 'var(--fs-lg)', marginBottom: 18 },
   hint:     { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
@@ -173,6 +183,7 @@ const S: Record<string, React.CSSProperties> = {
   cardH2:   { fontFamily: 'var(--font)', fontWeight: 600, fontSize: 'var(--fs-lg)', margin: '0 0 12px', display: 'flex',
               justifyContent: 'space-between', alignItems: 'center' },
   meta:     { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  metaLink: { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 'var(--fs-sm)', color: 'var(--acc)', cursor: 'pointer', background: 'transparent', border: 'none', padding: 0 },
   chip:     { background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 6, padding: '1px 8px',
               fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
 };

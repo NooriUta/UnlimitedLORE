@@ -3,6 +3,11 @@
 # Please see the documentation for all configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
+# SPRINT_LORE_DEPS_HOUSEKEEPING/DEP-06 (04.11.2026): GitHub — только зеркало релизов,
+# Actions выключены, мержить там нельзя. PR Dependabot (#144…#187) копились без
+# хозяина. Поэтому PR версий выключены (open-pull-requests-limit: 0), а алерты
+# безопасности остаются сигналом; обновления идут PR в Forgejo, плюс
+# информационный npm audit в frontend-ci.yml.
 version: 2
 updates:
   # Frontend (React/Vite/TypeScript) — root package.json
@@ -10,6 +15,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # DEP-06: PR версий на зеркале не нужны — см. шапку
+    open-pull-requests-limit: 0
     groups:
       react:
         patterns:
@@ -27,25 +34,35 @@ updates:
     directory: "/mcp-server"
     schedule:
       interval: "weekly"
+    # DEP-06: PR версий на зеркале не нужны — см. шапку
+    open-pull-requests-limit: 0
 
   # Backend (Quarkus/Java) — Gradle
   - package-ecosystem: "gradle"
     directory: "/backend"
     schedule:
       interval: "weekly"
+    # DEP-06: PR версий на зеркале не нужны — см. шапку
+    open-pull-requests-limit: 0
 
   # Docker base images
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    # DEP-06: PR версий на зеркале не нужны — см. шапку
+    open-pull-requests-limit: 0
   - package-ecosystem: "docker"
     directory: "/backend"
     schedule:
       interval: "weekly"
+    # DEP-06: PR версий на зеркале не нужны — см. шапку
+    open-pull-requests-limit: 0
 
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    # DEP-06: PR версий на зеркале не нужны — см. шапку
+    open-pull-requests-limit: 0

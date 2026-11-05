@@ -8,6 +8,10 @@ import LoreSkeleton from './LoreSkeleton';
 import { parseRoutine, parseInvariants, type ParsedInv } from '../../lib/qgContentMd';
 import { isStale as isTechStale, parseFields as parseTechFields } from './LoreTechRegistry';
 import LoreAnalyticsProduct from './LoreAnalyticsProduct';
+import { useUrlState } from '../../hooks/useUrlState';
+import { LoadError, SliceLoadWarning } from './EmptyState';
+import { pageLevelError, settleSlices } from './loadState';
+import { scrollStrip, stripItem } from './mobileLayout';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -97,6 +101,7 @@ const TABS: { key: AnalyticsTab; icon: string; label: string }[] = [
   // вкладки лениво, в общий Promise.all этого экрана НЕ входит.
   { key: 'product',    icon: 'bullseye',      label: 'Продукт'  },
 ];
+const ANALYTICS_TABS: readonly AnalyticsTab[] = TABS.map(x => x.key);
 
 const SPRINT_FILTERS: { key: SprintFilter; label: string }[] = [
   { key: 'all',    label: 'Все'           },
@@ -378,7 +383,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [sprintStarts, setSprintStarts] = useState<{ sprint_id: string; valid_from: string | null }[]>([]);
   const [blockedRows, setBlockedRows] = useState<{ sprint_id: string }[]>([]);
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState<AnalyticsTab>('overview');
+  // AH-09: вкладка в URL (?atab=) — ссылка и F5 открывают ту же вкладку.
+  const [tab,        setTab]        = useUrlState<AnalyticsTab>('atab', 'overview', ANALYTICS_TABS);
   const [groupBy,    setGroupBy]    = useState<CompGroupBy>('area');
   const [sprintFilter, setSprintFilter] = useState<SprintFilter>('active');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
@@ -389,37 +395,47 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [taskStarts, setTaskStarts] = useState<{ task_id: string; valid_from: string | null }[]>([]);
   const [techRows,   setTechRows]   = useState<LoreTechRow[]>([]);
 
+  // AH-07 (зона 4): 16 срезов грузились одним Promise.all — сбой любого ронял
+  // экран целиком, а после toast'а оставалось «Нет данных.». Теперь каждый срез
+  // сам по себе: загруженные показываются, упавшие перечислены в баннере над
+  // вкладками (их место иначе заняли бы нули), сводка analytics — LoadError.
+  const [failed, setFailed] = useState<Record<string, string>>({});
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     setLoading(true);
     const ctrl = new AbortController();
-    Promise.all([
-      fetchLoreAnalytics(ctrl.signal),
-      fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal),
-      fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
-      fetchLoreSlice<LoreMilestone>('milestones', undefined, ctrl.signal),
-      fetchLoreSlice<LoreSprintRow>('sprints', undefined, ctrl.signal),
-      fetchLoreSlice<LoreRelease>('releases', undefined, ctrl.signal),
-      fetchLoreSlice<QGRow>('quality_gates', undefined, ctrl.signal),
-      fetchLoreSlice<{ sprint_id: string; valid_from: string | null }>('sprint_starts', undefined, ctrl.signal),
-      fetchLoreSlice<{ sprint_id: string }>('blocked_sprints', undefined, ctrl.signal),
-      fetchLoreSlice<LoreQGViolation>('qg_violations', undefined, ctrl.signal),
-      fetchLoreSlice<LoreQGPendingRec>('qg_pending_recs', undefined, ctrl.signal),
-      fetchLoreSlice<LoreQGRoutineRun>('qg_routine_runs', undefined, ctrl.signal),
-      fetchLoreSlice<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }>('task_done_dates', undefined, ctrl.signal),
-      fetchLoreSlice<{ task_id: string; valid_from: string | null }>('task_starts', undefined, ctrl.signal),
-      fetchLoreSlice<QGMetricRow>('qg_metrics_latest', undefined, ctrl.signal),
-      fetchLoreSlice<LoreTechRow>('tech_registry', undefined, ctrl.signal),
-    ])
-      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone, tstarts, qgmet, tech]) => {
-        setData(d); setComponents(comps); setDoneDates(dones); setMilestoneList(ms);
-        setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts); setBlockedRows(blocked);
-        setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs); setTaskDone(tdone); setTaskStarts(tstarts);
-        setQgMetricsLatest(qgmet); setTechRows(tech);
-        setLoading(false);
-      })
-      .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
+    settleSlices({
+      analytics:         fetchLoreAnalytics(ctrl.signal),
+      components:        fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal),
+      sprint_done_dates: fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
+      milestones:        fetchLoreSlice<LoreMilestone>('milestones', undefined, ctrl.signal),
+      sprints:           fetchLoreSlice<LoreSprintRow>('sprints', undefined, ctrl.signal),
+      releases:          fetchLoreSlice<LoreRelease>('releases', undefined, ctrl.signal),
+      quality_gates:     fetchLoreSlice<QGRow>('quality_gates', undefined, ctrl.signal),
+      sprint_starts:     fetchLoreSlice<{ sprint_id: string; valid_from: string | null }>('sprint_starts', undefined, ctrl.signal),
+      blocked_sprints:   fetchLoreSlice<{ sprint_id: string }>('blocked_sprints', undefined, ctrl.signal),
+      qg_violations:     fetchLoreSlice<LoreQGViolation>('qg_violations', undefined, ctrl.signal),
+      qg_pending_recs:   fetchLoreSlice<LoreQGPendingRec>('qg_pending_recs', undefined, ctrl.signal),
+      qg_routine_runs:   fetchLoreSlice<LoreQGRoutineRun>('qg_routine_runs', undefined, ctrl.signal),
+      task_done_dates:   fetchLoreSlice<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }>('task_done_dates', undefined, ctrl.signal),
+      task_starts:       fetchLoreSlice<{ task_id: string; valid_from: string | null }>('task_starts', undefined, ctrl.signal),
+      qg_metrics_latest: fetchLoreSlice<QGMetricRow>('qg_metrics_latest', undefined, ctrl.signal),
+      tech_registry:     fetchLoreSlice<LoreTechRow>('tech_registry', undefined, ctrl.signal),
+    }).then(({ values: v, failed: f, errors }) => {
+      if (ctrl.signal.aborted) return;
+      const pageErr = pageLevelError(errors);
+      if (pageErr) onError(pageErr);
+      setData(v.analytics ?? null); setComponents(v.components ?? []); setDoneDates(v.sprint_done_dates ?? []);
+      setMilestoneList(v.milestones ?? []); setSprintRows(v.sprints ?? []); setReleases(v.releases ?? []);
+      setQgRows(v.quality_gates ?? []); setSprintStarts(v.sprint_starts ?? []); setBlockedRows(v.blocked_sprints ?? []);
+      setQgViolations(v.qg_violations ?? []); setQgPendingRecs(v.qg_pending_recs ?? []); setQgRoutineRuns(v.qg_routine_runs ?? []);
+      setTaskDone(v.task_done_dates ?? []); setTaskStarts(v.task_starts ?? []);
+      setQgMetricsLatest(v.qg_metrics_latest ?? []); setTechRows(v.tech_registry ?? []);
+      setFailed(f as Record<string, string>);
+      setLoading(false);
+    });
     return () => ctrl.abort();
-  }, [onError]);
+  }, [onError, reloadKey]);
 
   // ── derived ───────────────────────────────────────────────────────────────
 
@@ -1177,17 +1193,23 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   }, [techRows, components]);
 
   if (loading) return <LoreSkeleton />;
+  if (!data && failed.analytics) return (
+    <LoadError text={t('lore.analytics.loadError', 'Аналитика не загрузилась: {{reason}}', { reason: failed.analytics })}
+      onRetry={() => setReloadKey(k => k + 1)} retryLabel={t('lore.loadRetry', 'Повторить')} />
+  );
   if (!data)   return <div style={S.empty}>{t('lore.analytics.noData', 'Нет данных.')}</div>;
 
   const totals = data.totals;
 
   // ── tab bar ───────────────────────────────────────────────────────────────
 
+  // AH-08: семь вкладок ≈700px без прокрутки распирали панель на телефоне —
+  // лента листается вбок, вкладки не сжимаются.
   const tabBar = (
-    <div style={S.tabBar}>
+    <div style={{ ...S.tabBar, ...scrollStrip }}>
       {TABS.map(tb => (
         <button key={tb.key}
-          style={{ ...S.tabBtn, ...(tab === tb.key ? S.tabBtnActive : {}) }}
+          style={{ ...S.tabBtn, ...stripItem, ...(tab === tb.key ? S.tabBtnActive : {}) }}
           onClick={() => setTab(tb.key)}>
           <GameIcon slug={tb.icon} size={12} style={{ color: 'inherit' }} />
           {t(`lore.analytics.tabs.${tb.key}`, tb.label)}
@@ -1372,7 +1394,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             return (
               <React.Fragment key={group.key}>
                 <div style={S.groupHdr} onClick={() => toggleGroup(group.key)}>
-                  <span style={{ fontSize: 7, color: 'var(--t3)', width: 8 }}>{isOpen ? '▼' : '▶'}</span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 8 }}>{isOpen ? '▼' : '▶'}</span>
                   {group.icon
                     ? <GameIcon slug={group.icon} size={11} style={{ color: group.color, flexShrink: 0 }} />
                     : <div style={{ width: 8, height: 8, borderRadius: 2, background: group.color, flexShrink: 0 }} />}
@@ -1755,7 +1777,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                       <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t2)' }}>{b.n}</span>
                       <div title={`${b.label}: ${b.n}`} style={{ width: '100%', height: Math.max(2, (b.n / max) * 40),
                         background: 'color-mix(in srgb,var(--inf) 50%,var(--b3))', borderRadius: 2 }} />
-                      <span style={{ fontSize: 7, color: 'var(--t3)' }}>{b.label}</span>
+                      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{b.label}</span>
                     </div>
                   );
                 })}
@@ -2178,7 +2200,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                     background: `color-mix(in srgb,${col} 12%,var(--b3))`,
                     border: `1px solid color-mix(in srgb,${col} 30%,transparent)`,
                     color: col, overflow: 'hidden', cursor: clickable ? 'pointer' : 'default' }}>
-                  <div style={{ fontSize: 7, color: 'var(--t3)', fontFamily: 'var(--mono)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', marginBottom: 2 }}>
                     {runSt === 'norun' ? '—' : runSt}
                   </div>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, lineHeight: 1.3 }}>{label}</div>
@@ -2505,6 +2527,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   return (
     <div style={S.root}>
       {tabBar}
+      {tab !== 'product' && <SliceLoadWarning failed={failed} onRetry={() => setReloadKey(k => k + 1)} />}
       {tab === 'overview'   && tabOverview}
       {tab === 'progress'   && tabProgress}
       {tab === 'flow'       && tabFlow}

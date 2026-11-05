@@ -7,7 +7,7 @@ import type {
 } from '../../utils/muninnData';
 import { num, pickLocale, severityRank, strArr } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
-import { PanelMsg, ScreenTitle, StatusBadge } from './shared';
+import { MartSliceWarning, PanelMsg, ScreenTitle, StatusBadge } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 const entityLink: React.CSSProperties = { color: 'var(--acc)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)' };
@@ -274,6 +274,7 @@ export function DesignScreen({ tasks }: { tasks: TaskRow[] }) {
     <div data-testid="bench-design">
       <ScreenTitle text={t('bench.nar.designTitle', 'Design — the role ladder and the corpus')}
                    hint={t('bench.nar.designHint', 'why each role exists and why the corpus is built this way')} />
+      <MartSliceWarning slices={{ subtypes }} />
 
       <div className="analytics-card" style={{ marginBottom: 12 }}>
         <div className="analytics-card-title">{t('bench.nar.roleLadder', 'Role ladder')}</div>

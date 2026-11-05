@@ -169,6 +169,9 @@
   --fs-lg:   14px;  /* section/card headers, dialog titles */
   --fs-xl:   20px;  /* secondary KPI numbers */
   --fs-2xl:  24px;  /* primary/hero KPI numbers */
+  /* Вне шкалы: поля ввода на сенсорном экране. iOS приближает страницу при
+     фокусе на поле со шрифтом меньше 16px (AH-05, SH-13) — только для input. */
+  --fs-touch-input: 16px;
 }
 
 /* ---------- SLATE (холодный сине-серый) ---------- */
@@ -616,6 +619,18 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
   .toast { left: 12px; right: 12px; max-width: unset; }
   .btn-sm, .btn-xs { min-height: 30px; }
 }
+
+/* AH-10 (SPRINT_LORE_ADMIN_HOUSEKEEPING): тап-цели вне админки — одно правило.
+   На десктопе плотный IDE-интерфейс не меняется (токены 0px), на узком экране
+   мелкий контрол растёт до 32px, основное действие — до 40px. Класс ставится
+   на <button>; инлайн-`minHeight`/`minWidth` бьёт класс, поэтому там, где
+   десктопу нужен свой минимум, пишут `max(22px, var(--tap))`, а не число. */
+:root { --tap: 0px; --tap-main: 0px; }
+@media (max-width: 768px) {
+  :root { --tap: 32px; --tap-main: 40px; }
+}
+.lore-tap { min-height: var(--tap); min-width: var(--tap); }
+.lore-tap-main { min-height: var(--tap-main); min-width: var(--tap-main); }
 
 /* MOB-10 (SPRINT_LORE_MOBILE_UX): app shell height. 100vh on mobile includes
    the area under the browser chrome (address bar) — the bottom ~60-100px of

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import {
-  fetchLoreSlice, linkSprintMilestone, upsertMilestone, createLoreTask,
+  fetchLoreSlice, linkSprintMilestone, upsertMilestone, createLoreTask, describeLoreError,
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
@@ -10,6 +10,9 @@ import { statusMeta } from './lore-status';
 import LoreSkeleton from './LoreSkeleton';
 import TipTapField from './TipTapField';
 import { useProjectScope, sliceParamsForProject } from '../../context/ProjectScopeContext';
+import { useUrlId } from '../../hooks/useUrlState';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { milestonesTwoCol } from './mobileLayout';
 
 const TODAY = new Date();
 const RU_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -51,12 +54,20 @@ const projShort = (p: string | null | undefined) => (p ?? '').split('/').pop() ?
 
 // tasks_of_sprints_batch passes sprint_ids in the URL — too long for big milestones.
 // Fetch in chunks of 20 and merge so even 60-sprint milestones load their tasks.
-async function fetchTasksChunked(ids: string[]): Promise<(LoreSprintTask & { sprint_id: string })[]> {
+// AH-07: упавшая пачка раньше молча становилась [] — веха показывала неполный
+// список (или «нет задач») как полный. Теперь сбой пачек возвращается вместе со
+// строками: загруженное показываем, недогруженное — помечаем.
+type TaskRow = LoreSprintTask & { sprint_id: string };
+async function fetchTasksChunked(ids: string[]): Promise<{ rows: TaskRow[]; failed: number; total: number; error: unknown }> {
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += 20) chunks.push(ids.slice(i, i + 20));
-  const results = await Promise.all(chunks.map(c =>
-    fetchLoreSlice<LoreSprintTask & { sprint_id: string }>('tasks_of_sprints_batch', { sprint_ids: c.join(',') }).catch(() => [])));
-  return results.flat();
+  const results = await Promise.allSettled(chunks.map(c =>
+    fetchLoreSlice<TaskRow>('tasks_of_sprints_batch', { sprint_ids: c.join(',') })));
+  const bad = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  return {
+    rows: results.flatMap(r => r.status === 'fulfilled' ? r.value : []),
+    failed: bad.length, total: chunks.length, error: bad[0]?.reason,
+  };
 }
 
 function msIds(m: LoreMilestone): string[] {
@@ -79,16 +90,21 @@ interface EditState { label: string; date_display: string; week: string; priorit
 
 export default function LoreMilestonesView({ onError, onNavigateToSprint }: Props) {
   const { t } = useTranslation();
+  // AH-08: детали вехи — две колонки 1fr 1fr; на телефоне — одна.
+  const twoCol = { ...S.twoCol, ...milestonesTwoCol(useIsNarrow()) };
   const { project } = useProjectScope();
   const [milestones, setMilestones] = useState<LoreMilestone[]>([]);
   const [sprints, setSprints]       = useState<LoreSprintRow[]>([]);
   const [doneDates, setDoneDates]   = useState<LoreSprintDoneDate[]>([]);
   const [loading, setLoading]       = useState(true);
   const [reload, setReload]         = useState(0);
-  const [selId, setSelId]           = useState<string | null>(null);
+  // AH-09: выбранная веха в URL (?ms=id).
+  const [selId, setSelId]           = useUrlId('ms');
+  const linkedRef = useRef<string | null>(null);
   const [editMode, setEditMode]     = useState(false);  // edit header only via button
   const [edit, setEdit]             = useState<EditState>({ label: '', date_display: '', week: '', priority: '', goal_md: '' });
   const [tasks, setTasks]           = useState<(LoreSprintTask & { sprint_id: string })[]>([]);
+  const [tasksErr, setTasksErr]     = useState<string | null>(null);
   const [busy, setBusy]             = useState<string | null>(null);
   const [err, setErr]               = useState<string | null>(null);
   const [pick, setPick]             = useState('');                       // sprint to link
@@ -142,11 +158,36 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
   function selectMilestone(m: LoreMilestone) {
     if (selId === m.milestone_id) { setSelId(null); return; }
-    setSelId(m.milestone_id); setEditMode(false);
+    linkedRef.current = m.milestone_id;
+    setSelId(m.milestone_id);
+    openMilestone(m);
+  }
+  // AH-09: веха пришла из URL (ссылка, F5) — когда вехи загружены, открыть её
+  // так же, как кликом: заполнить форму и подгрузить задачи.
+  useEffect(() => {
+    if (!selId) { linkedRef.current = null; return; }
+    if (!selM || linkedRef.current === selM.milestone_id) return;
+    linkedRef.current = selM.milestone_id;
+    openMilestone(selM);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selM, selId]);
+  function openMilestone(m: LoreMilestone) {
+    setEditMode(false);
     setEdit({ label: m.label ?? '', date_display: m.date_display ?? '', week: m.week != null ? String(m.week) : '', priority: m.priority ?? '', goal_md: m.goal_md ?? '' });
-    setPick(''); setNewTask({ sprint_id: '', title: '' }); setTasks([]);
+    setPick(''); setNewTask({ sprint_id: '', title: '' }); setTasks([]); setTasksErr(null);
     const ids = msIds(m);
-    if (ids.length) fetchTasksChunked(ids).then(setTasks).catch(() => {});
+    if (ids.length) loadTasks(ids);
+  }
+  function loadTasks(ids: string[]) {
+    fetchTasksChunked(ids)
+      .then(r => {
+        setTasks(r.rows);
+        setTasksErr(r.failed
+          ? t('lore.milestonesView.tasksPartial', 'Задачи загружены не полностью: {{failed}} из {{total}} пачек упали — {{reason}}',
+              { failed: r.failed, total: r.total, reason: describeLoreError(r.error).text })
+          : null);
+      })
+      .catch(e => setTasksErr(describeLoreError(e).text));
   }
   async function run(key: string, fn: () => Promise<unknown>) {
     setBusy(key); setErr(null);
@@ -158,8 +199,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   useEffect(() => {
     if (selM) {
       const ids = msIds(selM);
-      if (ids.length) fetchTasksChunked(ids).then(setTasks).catch(() => {});
-      else setTasks([]);
+      if (ids.length) loadTasks(ids);
+      else { setTasks([]); setTasksErr(null); }
     }
   }, [milestones]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -308,7 +349,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
             </>
           )}
 
-          <div style={S.twoCol}>
+          <div style={twoCol}>
             {/* Sprints */}
             <div style={S.col}>
               <div style={S.colTitle}>{t('lore.milestonesView.milestoneSprints', 'Спринты вехи · {{count}}', { count: selIds.length })}</div>
@@ -339,7 +380,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
             <div style={S.col}>
               <div style={S.colTitle}>{t('lore.milestonesView.milestoneTasks', 'Задачи вехи · {{count}}', { count: tasks.length })}</div>
               <div style={S.sprList}>
-                {tasks.length === 0 && <div style={S.muted}>{t('lore.milestonesView.noTasks', 'нет задач')}</div>}
+                {tasksErr && <div role="alert" style={{ ...S.muted, color: 'var(--dng)', fontStyle: 'normal' }}>{tasksErr}</div>}
+                {tasks.length === 0 && !tasksErr && <div style={S.muted}>{t('lore.milestonesView.noTasks', 'нет задач')}</div>}
                 {tasks.map(t => {
                   const k = classify(t.status_raw ?? null);
                   return (

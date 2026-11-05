@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Админка LORE v2 — прототип раскладки (AH-04)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<!--
+  SPRINT_LORE_ADMIN_HOUSEKEEPING/AH-04 — standalone-прототип новой раскладки админки.
+  Сверка функций: docs/prototypes/admin-v2-inventory.md (ID вида U-07, D-18 и т.п. —
+  в подсказках и заглушках). Данные — выдуманные примеры, записей никаких.
+  Токены — копия src/styles/tokens.css (тёмная Seiðr). Цвет и шрифт — только var(--…).
+-->
+<style>
+:root{
+  /* цвета — tokens.css, тёмная тема */
+  --bg0:#141108; --bg1:#1c1810; --bg2:#252019; --bg3:#302a20;
+  --bd:#42382a; --bdh:#584c38;
+  --t1:#ede5d0; --t2:#a6997f; --t3:#9c937b;
+  --acc:#A8B860; --suc:#7DBF78; --wrn:#D4922A; --inf:#88B8A8; --dng:#C85848;
+  --on-accent:#fff;
+  /* шрифты */
+  --font:'Manrope',sans-serif; --mono:'IBM Plex Mono',monospace; --display:'Unbounded',sans-serif;
+  --fs-2xs:9px; --fs-xs:10px; --fs-sm:11px; --fs-base:12px; --fs-md:13px; --fs-lg:14px; --fs-xl:20px; --fs-2xl:24px;
+  /* размеры (прототипные токены) */
+  --r-sm:4px; --r-md:6px; --r-lg:10px; --r-pill:999px;
+  --sp1:2px; --sp2:4px; --sp3:6px; --sp4:8px; --sp5:12px; --sp6:16px; --sp7:24px;
+  --side-w:224px; --card-w:420px; --tap:26px;
+  --phone-w:375px; --phone-h:780px; --desk-w:1440px; --desk-h:880px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--font);font-size:var(--fs-base);line-height:1.45}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.mono{font-family:var(--mono)}
+.ic{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;flex-shrink:0}
+
+/* ── панель прототипа (вне «экрана») ── */
+.pbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp5);
+  padding:var(--sp4) var(--sp6);background:var(--bg1);border-bottom:1px solid var(--bd)}
+.pbar h1{font-family:var(--display);font-weight:800;font-size:var(--fs-md);letter-spacing:.06em;margin:0;text-transform:uppercase}
+.pbar .lbl{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.12em;color:var(--t3)}
+.pbar .grp{display:flex;align-items:center;gap:var(--sp3)}
+.pbar .hint{margin-left:auto;font-size:var(--fs-xs);color:var(--t3);max-width:52ch}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:var(--r-md);overflow:hidden}
+.seg button{border:none;background:var(--bg1);color:var(--t3);padding:var(--sp2) var(--sp4);font-size:var(--fs-xs)}
+.seg button[aria-pressed="true"]{background:var(--bg3);color:var(--t1);font-weight:700}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+
+.stage{padding:var(--sp6);overflow-x:auto}
+.frame{margin:0 auto;background:var(--bg0);overflow:hidden;position:relative}
+.frame.desktop{width:var(--desk-w);height:var(--desk-h);border:1px solid var(--bd);border-radius:var(--r-lg)}
+.frame.phone{width:calc(var(--phone-w) + 20px);height:var(--phone-h);border:10px solid var(--bg2);border-radius:36px;
+  box-shadow:0 0 0 1px var(--bdh)}
+.frame.phone::before{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);width:90px;height:18px;
+  border-radius:var(--r-pill);background:var(--bg2);z-index:3}
+.dim{text-align:center;color:var(--t3);font-size:var(--fs-2xs);font-family:var(--mono);margin-top:var(--sp3)}
+
+/* ── само приложение ── */
+.app{container:app / inline-size;height:100%;display:flex;flex-direction:column;background:var(--bg0)}
+.frame.phone .app{padding-top:28px}
+.urlbar{display:flex;align-items:center;gap:var(--sp3);padding:var(--sp2) var(--sp5);background:var(--bg1);
+  border-bottom:1px solid var(--bd);font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3);white-space:nowrap;overflow-x:auto}
+.urlbar b{color:var(--acc);font-weight:500}
+.topbar{display:flex;align-items:center;gap:var(--sp4);padding:var(--sp3) var(--sp5);border-bottom:1px solid var(--bd);background:var(--bg1)}
+.brand{font-family:var(--display);font-weight:800;font-size:var(--fs-sm);letter-spacing:.14em;color:var(--acc)}
+.brand small{color:var(--t3);letter-spacing:.08em;font-family:var(--font);font-weight:700;font-size:var(--fs-2xs);margin-left:var(--sp3)}
+/* полоса состояния системы: роль, auth, KC, защита — видна ВСЕГДА, и на телефоне (SH-08/SH-09) */
+.sys{display:flex;gap:var(--sp3);margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.sys::-webkit-scrollbar{display:none}
+.pill{display:inline-flex;align-items:center;gap:var(--sp2);border-radius:var(--r-pill);padding:var(--sp1) var(--sp4);
+  font-size:var(--fs-xs);font-family:var(--mono);white-space:nowrap;border:1px solid var(--bd);color:var(--t2);background:transparent}
+.pill.dng{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 45%,var(--bd));background:color-mix(in srgb,var(--dng) 10%,transparent)}
+.pill.wrn{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 45%,var(--bd));background:color-mix(in srgb,var(--wrn) 10%,transparent)}
+.pill.suc{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 45%,var(--bd));background:color-mix(in srgb,var(--suc) 10%,transparent)}
+.pill.inf{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 45%,var(--bd));background:color-mix(in srgb,var(--inf) 10%,transparent)}
+.pill.acc{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 45%,var(--bd));background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.pill.mute{color:var(--t3)}
+.pill .x{border:none;background:none;color:inherit;padding:0 var(--sp1);margin-right:calc(-1 * var(--sp2));min-width:var(--tap);min-height:calc(var(--tap) - 8px);display:inline-grid;place-items:center}
+
+.shell{flex:1;min-height:0;display:grid;grid-template-columns:var(--side-w) 1fr}
+.side{background:var(--bg1);border-right:1px solid var(--bd);padding:var(--sp5) var(--sp4);overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp6)}
+.glabel{display:flex;align-items:center;gap:var(--sp3);padding:0 var(--sp4) var(--sp2);font-size:var(--fs-2xs);
+  letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.glabel .dot{width:6px;height:6px;border-radius:50%}
+.glabel .risk{margin-left:auto;letter-spacing:.04em;text-transform:none}
+.nav{display:flex;align-items:center;gap:var(--sp4);width:100%;text-align:left;background:transparent;border:1px solid transparent;
+  border-radius:var(--r-md);padding:var(--sp3) var(--sp4);color:var(--t2);font-size:var(--fs-sm)}
+.nav:hover{background:var(--bg2);color:var(--t1)}
+.nav[aria-current="page"]{background:var(--bg2);border-color:var(--bdh);color:var(--t1);font-weight:700}
+.nav .rail{width:3px;height:14px;border-radius:2px;background:transparent}
+.nav[aria-current="page"] .rail{background:var(--g)}
+.nav .ic{color:var(--t3)} .nav[aria-current="page"] .ic{color:var(--g)}
+.cnt{margin-left:auto;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+.cnt.unk{color:var(--wrn);border:1px dashed color-mix(in srgb,var(--wrn) 60%,transparent);border-radius:var(--r-pill);padding:0 var(--sp3)}
+.cnt.bad{color:var(--dng);border:1px solid color-mix(in srgb,var(--dng) 50%,transparent);border-radius:var(--r-pill);padding:0 var(--sp3)}
+
+.main{min-width:0;min-height:0;overflow-y:auto;padding:var(--sp5) var(--sp6) var(--sp7)}
+.head{display:flex;align-items:flex-start;gap:var(--sp5);margin-bottom:var(--sp5)}
+.crumb{font-size:var(--fs-xs);color:var(--t3);display:flex;align-items:center;gap:var(--sp3);margin-bottom:var(--sp2)}
+.crumb .g{color:var(--g);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:var(--fs-2xs)}
+.head h2{margin:0;font-family:var(--display);font-weight:800;font-size:var(--fs-lg);letter-spacing:.02em}
+.head p{margin:var(--sp2) 0 0;color:var(--t2);font-size:var(--fs-sm);max-width:80ch}
+.head .act{margin-left:auto;display:flex;gap:var(--sp3);flex-wrap:wrap;justify-content:flex-end}
+
+.btn{display:inline-flex;align-items:center;gap:var(--sp2);border:1px solid var(--bd);background:transparent;color:var(--t2);
+  border-radius:var(--r-sm);padding:var(--sp1) var(--sp4);font-size:var(--fs-sm);min-height:var(--tap);white-space:nowrap}
+.btn:hover{border-color:var(--bdh);color:var(--t1)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--on-accent);font-weight:700}
+.btn.dng{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 55%,var(--bd))}
+.btn.confirm{background:var(--dng);border-color:var(--dng);color:var(--on-accent);font-weight:700}
+.btn.ghost{border-color:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.toolbar{display:flex;align-items:center;gap:var(--sp4);flex-wrap:wrap;margin-bottom:var(--sp4)}
+.search{display:flex;align-items:center;gap:var(--sp3);flex:1;min-width:0;max-width:300px;border:1px solid var(--bd);background:var(--bg1);
+  border-radius:var(--r-sm);padding:0 var(--sp4);min-height:var(--tap);color:var(--t3)}
+.search input{flex:1;min-width:0;border:none;background:none;outline:none;color:var(--t1);font-size:var(--fs-sm)}
+.count{font-family:var(--mono);font-size:var(--fs-xs);color:var(--t2);white-space:nowrap}
+.chips{display:flex;gap:var(--sp2);flex-wrap:wrap;margin-bottom:var(--sp4)}
+.chip{border:1px solid var(--bd);background:transparent;color:var(--t3);border-radius:var(--r-pill);padding:var(--sp1) var(--sp4);
+  font-family:var(--mono);font-size:var(--fs-xs);min-height:calc(var(--tap) - 4px);display:inline-flex;align-items:center;gap:var(--sp2)}
+.chip[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,transparent)}
+.chip .n{color:var(--t3)}
+.chip.canon{border-style:dashed}
+
+.sec{font-size:var(--fs-2xs);letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin:var(--sp6) 0 var(--sp3);display:flex;align-items:center;gap:var(--sp3)}
+.sec .n{font-family:var(--mono);letter-spacing:0}
+.sec:first-child{margin-top:0}
+
+/* таблица: на десктопе — таблица, на телефоне — карточки (класс .rt) */
+.tw{border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg1);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+th{text-align:left;padding:var(--sp2) var(--sp4);color:var(--t3);font-size:var(--fs-2xs);font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  border-bottom:1px solid var(--bd);white-space:nowrap;background:var(--bg1)}
+td{padding:var(--sp2) var(--sp4);border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);color:var(--t2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg2)}
+tr.sel td{background:color-mix(in srgb,var(--acc) 8%,var(--bg1))}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+tr.off td{opacity:.55}
+tr.click{cursor:pointer}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.c-title{color:var(--t1);font-family:var(--mono)}
+td.c-act{white-space:nowrap;text-align:right}
+td.c-act .btn+.btn{margin-left:var(--sp2)}
+.wrap{display:flex;flex-wrap:wrap;gap:var(--sp2)}
+.mut{color:var(--t3)}
+.warnc{color:var(--wrn)}
+.dngc{color:var(--dng)}
+.succ{color:var(--suc)}
+.expand td{background:var(--bg2) !important;padding:var(--sp5)}
+
+/* плашки и состояния */
+.note{border:1px solid var(--bd);border-left:3px solid var(--inf);background:var(--bg1);border-radius:var(--r-md);
+  padding:var(--sp3) var(--sp5);color:var(--t2);font-size:var(--fs-sm);margin-bottom:var(--sp4)}
+.note b{color:var(--t1)}
+.note.wrn{border-left-color:var(--wrn)} .note.wrn b{color:var(--wrn)}
+.note.dng{border-left-color:var(--dng);background:color-mix(in srgb,var(--dng) 6%,var(--bg1))} .note.dng b{color:var(--dng)}
+.note .ic{margin-right:var(--sp2)}
+details.note summary{cursor:pointer;color:var(--t3);font-size:var(--fs-xs);list-style:none}
+details.note summary::before{content:"ⓘ ";color:var(--inf)}
+.state{border:1px dashed var(--bd);border-radius:var(--r-md);padding:var(--sp7) var(--sp6);text-align:center;background:var(--bg1);color:var(--t2);font-size:var(--fs-sm)}
+.state h3{margin:0 0 var(--sp2);font-size:var(--fs-md);color:var(--t1)}
+.state.bad{border-style:solid;border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+.state.bad h3{color:var(--dng)}
+.state .big{font-size:var(--fs-2xl);color:var(--t3);display:block;margin:0 auto var(--sp3)}
+.state.bad .big{color:var(--dng)}
+.state code{display:block;margin-top:var(--sp4);font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+.state .row{display:flex;gap:var(--sp3);justify-content:center;margin-top:var(--sp5);flex-wrap:wrap}
+.stub{border:1px dashed var(--bd);border-radius:var(--r-md);padding:var(--sp6);background:var(--bg1)}
+.stub h3{margin:0 0 var(--sp3);font-family:var(--display);font-weight:800;font-size:var(--fs-md)}
+.stub p{margin:0 0 var(--sp4);color:var(--t2)}
+.stub ul{margin:0;padding-left:var(--sp6);color:var(--t2);font-size:var(--fs-sm)}
+.stub li{margin-bottom:var(--sp1)}
+.stub .ids{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+
+/* master-detail «Люди» */
+.md{display:grid;grid-template-columns:1fr var(--card-w);gap:var(--sp5);align-items:start}
+.md.nocard{grid-template-columns:1fr}
+.card{border:1px solid var(--bdh);border-radius:var(--r-md);background:var(--bg1);overflow:hidden;position:sticky;top:0}
+.card-h{display:flex;align-items:center;gap:var(--sp4);padding:var(--sp5);background:var(--bg2);border-bottom:1px solid var(--bd)}
+.ava{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid var(--bdh);display:grid;place-items:center;font-weight:800;color:var(--t2);flex-shrink:0}
+.card-h .who{min-width:0;flex:1}
+.card-h .who b{font-family:var(--mono);font-size:var(--fs-md)}
+.card-h .who div{font-size:var(--fs-xs);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-b{padding:var(--sp5);display:grid;gap:var(--sp5)}
+.blk h4{margin:0 0 var(--sp3);font-size:var(--fs-2xs);letter-spacing:.12em;text-transform:uppercase;color:var(--t3);font-weight:700;display:flex;gap:var(--sp3);align-items:center}
+.blk h4 .n{font-family:var(--mono);letter-spacing:0}
+.rr{display:grid;grid-template-columns:auto 1fr auto;gap:var(--sp2) var(--sp4);align-items:center;padding:var(--sp2) 0;border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent)}
+.rr:last-of-type{border-bottom:none}
+.rr .d{font-size:var(--fs-xs);color:var(--t3)}
+.rr .st{display:flex;gap:var(--sp2);justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.lock{font-size:var(--fs-xs);color:var(--t3);display:inline-flex;align-items:center;gap:var(--sp2)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:var(--sp2) var(--sp5);font-size:var(--fs-sm)}
+.kv dt{color:var(--t3)} .kv dd{margin:0;word-break:break-all}
+.back{display:none}
+
+/* мобильная навигация */
+.mnav{display:none}
+.where{display:flex;align-items:center;gap:var(--sp3);padding:var(--sp3) var(--sp5);background:var(--bg1);border-bottom:1px solid var(--bd)}
+.where .rail{width:3px;align-self:stretch;border-radius:2px;background:var(--g)}
+.where .g{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--g)}
+.where .t{font-family:var(--display);font-weight:800;font-size:var(--fs-md)}
+.where .pos{margin-left:auto;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+/* вариант A — лента вкладок */
+.strip{position:relative;border-bottom:1px solid var(--bd);background:var(--bg1)}
+.strip .sc{display:flex;gap:var(--sp2);overflow-x:auto;padding:var(--sp3) var(--sp5);scroll-snap-type:x proximity;scrollbar-width:none}
+.strip .sc::-webkit-scrollbar{display:none}
+.strip::before,.strip::after{content:"";position:absolute;top:0;bottom:0;width:22px;pointer-events:none;z-index:1}
+.strip::before{left:0;background:linear-gradient(90deg,var(--bg1),transparent)}
+.strip::after{right:0;background:linear-gradient(270deg,var(--bg1),transparent)}
+.sgl{flex-shrink:0;align-self:center;font-size:var(--fs-2xs);letter-spacing:.1em;text-transform:uppercase;color:var(--g);padding:0 var(--sp2) 0 var(--sp4);display:flex;align-items:center;gap:var(--sp2)}
+.sgl:first-child{padding-left:0}
+.sgl .dot{width:6px;height:6px;border-radius:50%;background:var(--g)}
+.stab{flex-shrink:0;scroll-snap-align:center;display:inline-flex;align-items:center;gap:var(--sp3);border:1px solid var(--bd);background:transparent;
+  color:var(--t2);border-radius:var(--r-pill);padding:0 var(--sp5);min-height:var(--tap);font-size:var(--fs-sm)}
+.stab[aria-current="page"]{border-color:var(--g);color:var(--t1);font-weight:700;background:color-mix(in srgb,var(--g) 14%,transparent)}
+.stab .cnt{margin-left:0}
+/* вариант B — выпадающий список */
+.dd{position:relative;padding:var(--sp3) var(--sp5);border-bottom:1px solid var(--bd);background:var(--bg1)}
+.dd-btn{width:100%;display:flex;align-items:center;gap:var(--sp4);border:1px solid var(--bdh);background:var(--bg2);border-radius:var(--r-md);
+  padding:0 var(--sp5);min-height:var(--tap);text-align:left}
+.dd-btn .rail{width:3px;height:18px;border-radius:2px;background:var(--g)}
+.dd-btn .g{font-size:var(--fs-2xs);letter-spacing:.1em;text-transform:uppercase;color:var(--g);font-weight:700}
+.dd-btn .t{font-weight:700;font-size:var(--fs-md)}
+.dd-btn .chev{margin-left:auto;transform:rotate(90deg);color:var(--t3)}
+.dd-btn[aria-expanded="true"] .chev{transform:rotate(-90deg)}
+.dd-list{position:absolute;left:var(--sp5);right:var(--sp5);top:calc(100% - var(--sp2));z-index:4;background:var(--bg1);border:1px solid var(--bdh);
+  border-radius:var(--r-md);box-shadow:0 10px 30px color-mix(in srgb,var(--bg0) 80%,transparent);padding:var(--sp3);max-height:520px;overflow-y:auto}
+.dd-list .glabel{padding-top:var(--sp4)}
+.dd-list .nav{min-height:var(--tap)}
+
+/* ── телефон: всё, что зависит от ширины, — через container query ── */
+@container app (max-width: 760px){
+  .app{--tap:40px}
+  .shell{display:flex;flex-direction:column}
+  .side{display:none}
+  .mnav{display:block}
+  .main{padding:var(--sp5) var(--sp5) var(--sp7)}
+  .head{flex-direction:column;gap:var(--sp3)}
+  .head .crumb,.head h2{display:none}           /* «где я» уже в полосе .where */
+  .head .act{margin-left:0;justify-content:flex-start}
+  .search{max-width:none;flex-basis:100%}
+  .md{grid-template-columns:1fr}
+  .card{position:static}
+  .back{display:inline-flex}
+  .topbar .brand small{display:none}
+  .sys{margin-left:var(--sp3)}
+  /* таблица → карточки */
+  .tw{border:none;background:none}
+  .rt thead{display:none}
+  .rt,.rt tbody{display:block}
+  .rt tr{display:block;border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg1);padding:var(--sp4) var(--sp5);margin-bottom:var(--sp4)}
+  .rt tr.sel{border-color:var(--acc)}
+  .rt tbody tr:hover td,.rt tr.sel td{background:none}
+  .rt tr.sel td:first-child{box-shadow:none}
+  .rt td{display:flex;justify-content:space-between;align-items:center;gap:var(--sp4);border:none;padding:var(--sp1) 0;text-align:right}
+  .rt td::before{content:attr(data-l);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);text-align:left;flex-shrink:0}
+  .rt td.c-title{font-size:var(--fs-md);font-weight:700;padding-bottom:var(--sp3)}
+  .rt td.c-title::before,.rt td.c-act::before,.rt td.c-full::before{display:none}
+  .rt td.c-full{display:block;text-align:left}
+  .rt td.c-act{justify-content:flex-start;flex-wrap:wrap;gap:var(--sp3);padding-top:var(--sp4);margin-top:var(--sp3);border-top:1px solid color-mix(in srgb,var(--bd) 50%,transparent)}
+  .rt td.c-act .btn{flex:1;justify-content:center}
+  .rt td.c-act .btn+.btn{margin-left:0}
+  .rt td .wrap{justify-content:flex-end}
+  .rt tr.expand{padding:var(--sp5)}
+  .rt tr.expand td{display:block;padding:0;text-align:left;background:none !important}
+  .rt tr.expand td::before{display:none}
+  .rr{grid-template-columns:auto 1fr}
+  .rr .d{grid-column:1 / -1;order:3}
+  .rr .st{grid-column:2}
+}
+</style>
+</head>
+<body>
+
+<div class="pbar">
+  <h1>admin v2 · прототип</h1>
+  <div class="grp"><span class="lbl">экран</span>
+    <span class="seg" id="segView">
+      <button data-v="desktop">Десктоп 1440</button><button data-v="phone">Телефон 375</button>
+    </span></div>
+  <div class="grp"><span class="lbl">навигация телефона</span>
+    <span class="seg" id="segNav">
+      <button data-v="A" title="Лента вкладок с прокруткой вбок">A · лента</button><button data-v="B" title="Выпадающий список по группам">B · список</button>
+    </span></div>
+  <div class="grp"><span class="lbl">ответ Keycloak</span>
+    <span class="seg" id="segKc">
+      <button data-v="ok">200 · данные</button><button data-v="empty">200 · []</button><button data-v="403">403</button><button data-v="off">503 · не настроен</button>
+    </span></div>
+  <div class="hint">Данные выдуманы. ID в подсказках (U-07, D-18…) — строки инвентаризации <span class="mono">admin-v2-inventory.md</span>. Состояние — в URL (<span class="mono">?tab=&amp;user=&amp;dict=&amp;members=</span>).</div>
+</div>
+
+<div class="stage">
+  <div class="frame desktop" id="frame"><div class="app" id="app"></div></div>
+  <div class="dim" id="dim"></div>
+</div>
+
+<script>
+/* ═════════════ данные (примеры) ═════════════ */
+const GROUPS = [
+  { key:'access', label:'Доступ', color:'var(--dng)', risk:'высокий риск', tabs:[
+    ['users','Люди','person'], ['agents','Агенты','robot-golem'], ['roles','Роли и права','key'] ]},
+  { key:'dicts', label:'Справочники', color:'var(--acc)', risk:'данные', tabs:[
+    ['dicts','Словари','book-cover'], ['projects','Проекты','open-folder'], ['tags','Теги','price-tag'], ['claudeRules','Правила CLAUDE','scroll-unfurled'] ]},
+  { key:'sys', label:'Система', color:'var(--inf)', risk:'обслуживание', tabs:[
+    ['settings','Настройки','cog'], ['quick','Быстрые команды','fast-arrow'] ]},
+];
+const ALL = GROUPS.flatMap(g => g.tabs.map(t => ({ k:t[0], l:t[1], ic:t[2], g })));
+
+const DESC = {
+  users:'Учётные записи Keycloak: realm-роли (кто ты в LORE) и роли в проектах (что ты делаешь в проекте).',
+  agents:'Агент = владелец × профиль. Права агент берёт у владельца; секрет учётки показывается один раз.',
+  roles:'Обе оси прав и обратная матрица «кто имеет доступ к X» — для ревью доступа.',
+  dicts:'Единый язык графа: коды, подписи, цвета и иконки. Канон-словари помечены пунктиром.',
+  projects:'Git-проекты LORE: хостинги, ветка, участники и их роли.',
+  tags:'KnowTag и число использований. Только чтение — слияние через MCP.',
+  claudeRules:'Снимки CLAUDE.md машины и проектов. Только чтение — источник истины в файлах.',
+  settings:'Готовность к включению auth, параметры app_setting, последние отказы доступа.',
+  quick:'Личная шпаргалка команд владельца — копирование одним нажатием.',
+};
+
+const REALM = [
+  { name:'super-admin', d:'Всё, включая выдачу admin. Выдаётся только в консоли KC (D11).', grant:false },
+  { name:'admin',       d:'Администрирование: люди, словари, настройки, включение auth.', grant:true },
+  { name:'viewer',      d:'Только чтение LORE. В администрирование не пускает.', grant:true },
+  { name:'auditor',     d:'Пример роли, заведённой в realm: показывается, потому что есть в realm.', grant:true },
+];
+const HIDDEN_REALM = ['default-roles-seer','offline_access','uma_authorization'];
+const PROJECT_ROLES = ['owner','architect','pm','developer','business-analyst','marketer','tester','reader'];
+
+const USERS = [
+  { id:'7f3c2a91-0b4e-4d1f-9a55-1c2e3f4a5b61', u:'noori', email:'noori@seidrstudio.pro', on:true, roles:['super-admin','admin'],
+    proj:[['AIDA/UnlimitedLORE','owner'],['AIDA/aida-root','owner'],['AIDA/miniLORE','owner']] },
+  { id:'b21e8c40-77aa-4c0e-8d12-9e0f11223344', u:'svetlana.k', email:'s.k@seidrstudio.pro', on:true, roles:['admin'],
+    proj:[['AIDA/UnlimitedLORE','architect'],['AIDA/BRAGI','pm']] },
+  { id:'c9d0e1f2-3344-4556-8778-99aabbccdd01', u:'ivan.p', email:null, on:true, roles:['viewer'],
+    proj:[['AIDA/UnlimitedLORE','developer'],['AIDA/aida-root','developer']] },
+  { id:'d1e2f3a4-5566-4778-8990-aabbccddeeff', u:'qa.lena', email:'lena@seidrstudio.pro', on:true, roles:['viewer','auditor'],
+    proj:[['AIDA/UnlimitedLORE','tester']] },
+  { id:'e5f6a7b8-1122-4334-8556-778899aabbcc', u:'pr.team', email:'pr@seidrstudio.pro', on:true, roles:['viewer'], proj:[] },
+  { id:'f0a1b2c3-9988-4776-8554-332211000fff', u:'old.bot', email:null, on:false, roles:['viewer'], proj:[] },
+];
+// честная частичная картина: один проект не ответил — колонка неполная, и это сказано (U-06)
+const PROJ_FAIL = { slug:'AIDA/midgard', code:'HTTP 500' };
+
+const PROJECTS = [
+  { slug:'AIDA/UnlimitedLORE', name:'LORE', br:'develop', hosts:'origin · github', sprints:41,
+    members:[['noori','owner'],['svetlana.k','architect'],['ivan.p','developer'],['qa.lena','tester']] },
+  { slug:'AIDA/aida-root', name:'AIDA monorepo', br:'develop', hosts:'origin', sprints:63, members:[['noori','owner'],['ivan.p','developer']] },
+  { slug:'AIDA/miniLORE', name:'miniLORE', br:'main', hosts:'origin', sprints:9, members:[['noori','owner']] },
+  { slug:'AIDA/BRAGI', name:'BRAGI', br:'main', hosts:'origin · github', sprints:6, members:[['svetlana.k','pm']] },
+  { slug:'AIDA/midgard', name:'Midgard', br:'develop', hosts:'origin', sprints:3, members:null /* сбой загрузки */ },
+  { slug:'AIDA/sandbox', name:null, br:null, hosts:null, sprints:0, members:[] },
+];
+
+const AGENTS = [
+  { name:'Claude · основной', role:'full', owner:'noori', client:'lore-mcp-full', sees:3, writes:['AIDA/UnlimitedLORE','AIDA/aida-root','AIDA/miniLORE'] },
+  { name:'Тестировщик LORE', role:'tester', owner:'noori', client:'lore-mcp-tester', sees:3, writes:['AIDA/UnlimitedLORE','AIDA/aida-root','AIDA/miniLORE'] },
+  { name:'Маркетолог BRAGI', role:'marketer', owner:'svetlana.k', client:'lore-mcp-marketer', sees:2, writes:['AIDA/BRAGI'] },
+  { name:'Аналитик', role:'analyst', owner:null, client:'lore-mcp-analyst', sees:0, writes:[] },
+];
+const PROFILES = [
+  ['full','Полный доступ',['owner'],true], ['architect','Архитектор',['owner','architect'],true],
+  ['developer','Разработчик',['owner','architect','developer'],false], ['tester','Тестировщик',['owner','tester'],true],
+  ['pm','Менеджер',['owner','pm'],false], ['analyst','Аналитик',['owner','business-analyst'],true],
+  ['marketer','Маркетолог',['owner','pm','marketer'],true], ['product-analyst','Продуктовый аналитик',['owner','pm'],false],
+];
+const KC_CLIENTS = [
+  ['lore-mcp-full',['agent-full'],true], ['lore-mcp-tester',['agent-tester'],true], ['lore-mcp-marketer',['agent-marketer'],true],
+  ['lore-mcp-analyst',['agent-analyst'],true], ['lore-mcp-architect',['agent-architect'],true], ['lore-mcp',[],true],
+];
+
+const DICT_TYPES = [
+  ['area',9],['adr_status',6],['sprint_status',7],['task_status',9],['priority',4],['agent_profile',8],
+  ['product',5],['component_kind',5],['doc_kind',7],['release_kind',3],['tech_kind',6],['app_setting',2],
+];
+const CANON = new Set(['adr_status','sprint_status','task_status','priority']);
+const AREA = [
+  ['core','Ядро','var(--acc)','cog',14,10,true], ['access','Доступ','var(--dng)','key',6,20,true],
+  ['knowledge','Знания','var(--inf)','book-cover',11,30,true], ['delivery','Поставка','var(--suc)','fast-arrow',8,40,true],
+  ['product','Продукт','var(--wrn)','triangle-target',5,50,true], ['marketing','Маркетинг','var(--t2)','scroll-unfurled',2,60,true],
+  ['analytics','Аналитика','var(--inf)','histogram',3,70,true], ['ops','Эксплуатация','var(--acc)','shield-reflect',0,80,true],
+  ['legacy','Наследие','var(--t2)','cardboard-box',0,90,false],
+];
+const GENERIC = { adr_status:[['proposed','Предложено','var(--wrn)','info'],['accepted','Принято','var(--suc)','tick'],['deprecated','Устарело','var(--t2)','cardboard-box'],['superseded','Заменено','var(--t2)','cycle'],['rejected','Отклонено','var(--dng)','cross-mark'],['draft','Черновик','var(--t3)','scroll-unfurled']] };
+
+/* ═════════════ состояние (URL) ═════════════ */
+const P = new URLSearchParams(location.search);
+const S = {
+  view: P.get('view') === 'phone' ? 'phone' : 'desktop',
+  nav:  P.get('nav') === 'B' ? 'B' : 'A',
+  kc:   ['ok','empty','403','off'].includes(P.get('kc')) ? P.get('kc') : 'ok',
+  tab:  ALL.some(t => t.k === P.get('tab')) ? P.get('tab') : 'users',
+  user: P.get('user'), dict: P.get('dict') || 'area', members: P.get('members'),
+  q: '', active: 'active', ddOpen: false, confirmAdmin: false, confirmRotate: null,
+};
+function syncUrl(){
+  const p = new URLSearchParams();
+  p.set('section','admin'); p.set('tab', S.tab);
+  if (S.tab === 'users' && S.user) p.set('user', S.user);
+  if (S.tab === 'dicts') p.set('dict', S.dict);
+  if (S.tab === 'projects' && S.members) p.set('members', S.members);
+  const route = '/lore?' + p.toString();
+  // в адресной строке браузера — ещё и параметры самого прототипа
+  const full = new URLSearchParams(p); full.delete('section');
+  full.set('view', S.view); full.set('nav', S.nav); full.set('kc', S.kc);
+  try { history.replaceState(null, '', location.pathname + '?' + full.toString()); } catch (e) { /* file:// в некоторых браузерах */ }
+  return route;
+}
+
+/* ═════════════ помощники ═════════════ */
+const ic = (n, cls='') => `<iconify-icon class="ic ${cls}" icon="game-icons:${n}"></iconify-icon>`;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pill = (txt, tone='', extra='') => `<span class="pill ${tone}">${extra}${esc(txt)}</span>`;
+const isAdminRole = r => r === 'admin' || r === 'super-admin';
+function table(cols, rows, opts={}){
+  // cols: [label, cls]; rows: {cells:[html], cls, attrs}
+  return `<div class="tw"><table class="rt"><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${
+    rows.map(r => r.raw ? r.raw : `<tr class="${r.cls||''}" ${r.attrs||''}>${r.cells.map((c,i) =>
+      `<td class="${cols[i][1]||''}" data-l="${esc(cols[i][0])}">${c}</td>`).join('')}</tr>`).join('')
+  }</tbody></table></div>`;
+}
+function kcState(kind){
+  if (kind === '403') return `<div class="state bad"><span class="big">${ic('padlock')}</span>
+    <h3>Нет прав смотреть этот список</h3>
+    <div>Управление доступом открыто только роли admin. Это <b>не пустой список</b>: записи могут существовать, но вам они не видны.</div>
+    <code>GET /lore/kc/users → 403 · admin role required</code></div>`;
+  if (kind === 'off') return `<div class="state bad"><span class="big">${ic('broken-shield')}</span>
+    <h3>Keycloak не подключён</h3>
+    <div>Мост в KC не настроен — получить список неоткуда. Это не значит, что людей нет: их состояние <b>неизвестно</b>.
+    Настройка: <span class="mono">KC_ADMIN_CLIENT_SECRET</span> в .env, см. RUNBOOK-ADMIN-LORE. Остальной LORE работает.</div>
+    <code>GET /lore/kc/users → 503 · KC_ADMIN_CLIENT_SECRET not set</code></div>`;
+  return '';
+}
+
+/* счётчики: число · «?» (не смогли проверить) · пусто только когда правда 0 */
+function counter(k){
+  const kcBad = S.kc === '403' || S.kc === 'off';
+  const why = S.kc === '403' ? '403 — нет прав' : '503 — KC не настроен';
+  if (k === 'users')  return kcBad ? `<span class="cnt unk" title="не смогли проверить: ${why}">?</span>` : `<span class="cnt">${S.kc === 'empty' ? 0 : USERS.length}</span>`;
+  if (k === 'agents') return `<span class="cnt" title="агентов в графе; учёток KC: ${kcBad ? '?' : KC_CLIENTS.length}">${AGENTS.length}</span>`;
+  if (k === 'dicts')  return `<span class="cnt">${DICT_TYPES.length}</span>`;
+  if (k === 'projects') return `<span class="cnt">${PROJECTS.length}</span>`;
+  if (k === 'tags') return `<span class="cnt">93</span>`;
+  if (k === 'claudeRules') return `<span class="cnt">4</span>`;
+  if (k === 'settings') return `<span class="cnt bad" title="2 проверки готовности к включению auth не пройдены">2</span>`;
+  return '';
+}
+
+/* ═════════════ оболочка ═════════════ */
+function render(){
+  const route = syncUrl();
+  const cur = ALL.find(t => t.k === S.tab);
+  const frame = document.getElementById('frame');
+  frame.className = 'frame ' + S.view;
+  document.getElementById('dim').textContent = S.view === 'phone' ? '375 × 780 · рамка телефона' : '1440 × 880 · десктоп';
+  for (const [id, key] of [['segView','view'],['segNav','nav'],['segKc','kc']])
+    document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S[key])));
+  document.querySelectorAll('#segNav button').forEach(b => b.disabled = S.view !== 'phone');
+
+  const sysChips = [
+    pill('auth: off · dev', 'wrn', ic('hazard-sign')),
+    S.kc === 'off' ? pill('KC: не настроен', 'dng') : S.kc === '403' ? pill('KC: 403', 'dng') : pill('KC: ok', 'suc'),
+    pill('права агентов: не проверяются', 'dng'),
+    pill('роль: admin', 'mute'),
+  ].join('');
+
+  const navDesk = GROUPS.map(g => `<div style="--g:${g.color}">
+      <div class="glabel"><span class="dot" style="background:${g.color}"></span>${g.label}<span class="risk">${g.risk}</span></div>
+      ${g.tabs.map(([k,l,i]) => `<button class="nav" data-tab="${k}" ${S.tab===k?'aria-current="page"':''}><span class="rail"></span>${ic(i)}${l}${counter(k)}</button>`).join('')}
+    </div>`).join('');
+
+  const idx = ALL.findIndex(t => t.k === S.tab) + 1;
+  const where = `<div class="where" style="--g:${cur.g.color}"><span class="rail"></span>
+      <div><div class="g">${cur.g.label}</div><div class="t">${cur.l}</div></div>
+      <span class="pos">${idx} / ${ALL.length}</span></div>`;
+  const navA = `<div class="strip"><div class="sc" id="strip">${GROUPS.map(g =>
+      `<span class="sgl" style="--g:${g.color}"><span class="dot"></span>${g.label}</span>` +
+      g.tabs.map(([k,l]) => `<button class="stab" style="--g:${g.color}" data-tab="${k}" ${S.tab===k?'aria-current="page"':''}>${l}${counter(k)}</button>`).join('')
+    ).join('')}</div></div>`;
+  const navB = `<div class="dd" style="--g:${cur.g.color}">
+      <button class="dd-btn" id="ddBtn" aria-expanded="${S.ddOpen}"><span class="rail"></span><span class="g">${cur.g.label}</span><span class="t">${cur.l}</span>${counter(cur.k)}${ic('plain-arrow','chev')}</button>
+      ${S.ddOpen ? `<div class="dd-list">${navDesk}</div>` : ''}
+    </div>`;
+  const mnav = `<div class="mnav">${S.nav === 'A' ? where + navA : navB}</div>`;
+
+  document.getElementById('app').innerHTML = `
+    <div class="urlbar">${ic('magnifying-glass')}<span>192.168.3.131:4400</span><b>${esc(route)}</b></div>
+    <div class="topbar"><span class="brand">LORE<small>АДМИНИСТРИРОВАНИЕ</small></span><div class="sys">${sysChips}</div></div>
+    ${mnav}
+    <div class="shell">
+      <nav class="side">${navDesk}</nav>
+      <main class="main" id="main" style="--g:${cur.g.color}">
+        <div class="head">
+          <div><div class="crumb">Администрирование › <span class="g">${cur.g.label}</span> › <b style="color:var(--t1)">${cur.l}</b></div>
+          <h2>${cur.l}</h2><p>${DESC[cur.k]}</p></div>
+          <div class="act">${headActions(cur.k)}</div>
+        </div>
+        ${body(cur.k)}
+      </main>
+    </div>`;
+
+  const st = document.querySelector('#strip .stab[aria-current="page"]');
+  if (st && S.view === 'phone') st.scrollIntoView({ inline:'center', block:'nearest' });
+}
+
+function headActions(k){
+  if (k === 'users' && S.kc !== '403' && S.kc !== 'off') return `<button class="btn pri" title="U-09">+ Человек</button>`;
+  if (k === 'agents') return `<button class="btn pri" title="A-09: имя + профиль + владелец + учётка">+ агент</button>`;
+  if (k === 'dicts') return `<button class="btn" title="D-08">+ значение</button>`;
+  if (k === 'projects') return `<button class="btn pri" title="P-01">+ проект</button>`;
+  return '';
+}
+function body(k){
+  return ({ users:usersTab, agents:agentsTab, dicts:dictsTab, projects:projectsTab }[k] || (() => stubTab(k)))();
+}
+
+/* ═════════════ Люди ═════════════ */
+function usersTab(){
+  const note = `<details class="note"><summary>Как устроены люди</summary>Realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пароль задаётся в KC. super-admin назначается только в KC-консоли (D11). <span class="mono mut">U-01</span></details>`;
+  if (S.kc === '403' || S.kc === 'off') return note + kcState(S.kc);
+  if (S.kc === 'empty') return note + `<div class="state"><span class="big">${ic('person')}</span>
+      <h3>Ни одного человека ещё не заведено</h3>
+      <div>Keycloak отвечает нормально — в realm просто нет учётных записей. Заведите себя первой <b>до</b> включения аутентификации: после включения войти станет некому.</div>
+      <code>GET /lore/kc/users → 200 · []</code>
+      <div class="row"><button class="btn pri">+ Человек</button></div></div>`;
+
+  const sel = USERS.find(u => u.id === S.user) || null;
+  const phoneCard = S.view === 'phone' && sel;
+  const q = S.q.toLowerCase();
+  const shown = USERS.filter(u => !q || u.u.includes(q) || (u.email||'').includes(q));
+  const list = phoneCard ? '' : `
+    <div class="note wrn"><b>${ic('hazard-sign')}Роли в проекте ${PROJ_FAIL.slug} не загрузились</b> (${PROJ_FAIL.code}) — колонка «проекты» неполная. Это не «нет ролей». <button class="btn ghost">Повторить</button></div>
+    <div class="toolbar">
+      <label class="search">${ic('magnifying-glass')}<input id="q" placeholder="логин или email…" value="${esc(S.q)}"></label>
+      <span class="count">показано ${shown.length} из ${USERS.length}</span>
+    </div>
+    ${table([['логин','c-title'],['email'],['вкл'],['realm-роли'],['проекты и роли'],['','c-act']], shown.map(u => ({
+      cls: 'click' + (sel && sel.id === u.id ? ' sel' : '') + (u.on ? '' : ' off'), attrs:`data-user="${u.id}"`,
+      cells:[
+        esc(u.u),
+        u.email ? esc(u.email) : '<span class="mut">—</span>',
+        u.on ? `<span class="succ">${ic('tick')}</span>` : `<span class="mut">${ic('cross-mark')} откл.</span>`,
+        `<span class="wrap">${u.roles.map(r => pill(r, isAdminRole(r) ? 'dng' : '')).join('')}</span>`,
+        u.proj.length ? `<span class="wrap">${u.proj.map(([p,r]) => pill(p.split('/').pop()+' · '+r, 'suc')).join('')}<span class="pill wrn" title="${PROJ_FAIL.slug}: ${PROJ_FAIL.code}">midgard · ?</span></span>`
+                      : `<span class="wrap"><span class="warnc">${ic('hazard-sign')} нет ролей в проверенных проектах</span><span class="pill wrn" title="${PROJ_FAIL.slug}: ${PROJ_FAIL.code}">midgard · ?</span></span>`,
+        `<button class="btn" data-stop title="U-07: инлайн-назначение по проектам">Роли в проектах</button><button class="btn" data-open="${u.id}">Открыть</button>`,
+      ]})))}`;
+  return note + `<div class="md ${sel ? '' : 'nocard'}"><div>${list}</div>${sel ? userCard(sel) : ''}</div>`;
+}
+
+function userCard(u){
+  const admins = USERS.filter(x => x.on && x.roles.some(isAdminRole)).length;
+  const rows = REALM.map(r => {
+    const has = u.roles.includes(r.name);
+    let st;
+    if (r.name === 'super-admin') st = has ? `${pill('есть','dng')}<span class="lock">${ic('padlock')} только консоль KC</span>` : `<span class="lock">${ic('padlock')} только консоль KC</span>`;
+    else if (has) st = `${pill('есть', isAdminRole(r.name)?'dng':'suc')}<button class="btn dng" title="U-14 снять роль">снять</button>`;
+    else if (r.name === 'admin') st = S.confirmAdmin
+      ? `<button class="btn confirm" data-act="adminYes">точно admin?</button><button class="btn" data-act="adminNo">отмена</button>`
+      : `<button class="btn" data-act="adminAsk" title="U-16: двухшаговая выдача">+admin</button>`;
+    else st = `<button class="btn" title="U-15">+${r.name}</button>`;
+    return `<div class="rr">${pill(r.name, isAdminRole(r.name)?'dng':'')}<span class="d">${r.d}</span><span class="st">${st}</span></div>`;
+  }).join('');
+  const failNote = `<div class="note wrn" style="margin:var(--sp3) 0 0"><b>${PROJ_FAIL.slug}: роль не проверена</b> (${PROJ_FAIL.code}).</div>`;
+  return `<aside class="card">
+    <div class="card-h">
+      <button class="btn back" data-open="">${ic('return-arrow')} Люди</button>
+      <span class="ava">${esc(u.u[0].toUpperCase())}</span>
+      <div class="who"><b>${esc(u.u)}</b> ${pill(u.on?'включён':'отключён', u.on?'suc':'mute')}<div>${esc(u.email || 'email не задан')}</div></div>
+      <button class="btn ghost" data-open="" title="закрыть карточку">${ic('cross-mark')}</button>
+    </div>
+    <div class="card-b">
+      ${u.roles.some(isAdminRole) && admins === 1 ? `<div class="note wrn"><b>Последняя администрирующая учётка.</b> Снятие роли оставит LORE без admin — бэкенд отклонит (AL-35).</div>` : ''}
+      <div class="blk"><h4>Realm-роли · все роли realm <span class="n">${REALM.length}</span></h4>
+        ${rows}
+        <div class="d mut" style="font-size:var(--fs-2xs);margin-top:var(--sp3)">скрыто служебных ролей KC: ${HIDDEN_REALM.length} (${HIDDEN_REALM.join(', ')})</div>
+      </div>
+      <div class="blk"><h4>Роли в проектах <span class="n">${u.proj.length}</span></h4>
+        ${u.proj.length ? `<div class="wrap">${u.proj.map(([p,r]) => `<span class="pill acc">${esc(r)} · <span class="mono">${esc(p)}</span><button class="x" title="U-19 снять роль в проекте">${ic('cross-mark')}</button></span>`).join('')}</div>`
+          : `<div class="warnc" style="font-size:var(--fs-sm)">ролей в проектах нет — при включённом проектном скоупе не увидит ни одного проекта</div>`}
+        ${failNote}
+        <div style="margin-top:var(--sp4)"><button class="btn pri" title="U-20: проект + роль (8 ролей)">+ роль в проекте</button></div>
+      </div>
+      <div class="blk"><h4>Учётка</h4><dl class="kv"><dt>KC id</dt><dd class="mono mut">${u.id}</dd></dl></div>
+      <div class="blk"><h4>История доступа и действий</h4>
+        <div class="mut" style="font-size:var(--fs-sm)">Истории пока нет: аудит админ-операций появится с AL-20/AL-43. Экран не показывает того, чего система ещё не пишет.</div></div>
+    </div></aside>`;
+}
+
+/* ═════════════ Агенты ═════════════ */
+function agentsTab(){
+  const kcBad = S.kc === '403' || S.kc === 'off';
+  const notice = `<div class="note dng"><b>${ic('broken-shield')}Права из этих таблиц не проверяются.</b> Клейм agent_scope бэкенд сейчас не читает — это фильтр видимости, не защита. Состояние — в «Настройках». <span class="mono mut">A-03</span></div>`;
+  const ag = table([['агент','c-title'],['профиль'],['владелец'],['учётка'],['видит'],['пишет'],['куда пишет']], AGENTS.map(a => ({ cells:[
+      esc(a.name),
+      a.role ? pill(a.role,'inf') : `<span class="warnc">${ic('hazard-sign')} профиль не задан</span>`,
+      a.owner ? esc(a.owner) : `<span class="warnc">${ic('hazard-sign')} нет владельца</span>`,
+      `<span class="mono mut">${a.client}</span>`,
+      `<span class="mono">${a.sees}</span>`,
+      `<span class="mono ${a.writes.length ? '' : 'warnc'}">${a.writes.length}</span>`,
+      a.writes.length ? `<span class="mut" style="font-size:var(--fs-xs)">${a.writes.map(w => w.split('/').pop()).join(', ')}</span>` : '<span class="mut">—</span>',
+  ]})));
+  const pr = table([['код','c-title'],['название'],['кто вправе делегировать (D4)'],['учётка в KC'],['агентов']], PROFILES.map(([c,l,by,has]) => ({ cells:[
+      c, esc(l), `<span class="wrap">${by.map(b => pill(b,'mute')).join('')}</span>`,
+      kcBad ? `<span class="warnc" title="KC не ответил">?</span>` : has ? `<span class="succ">${ic('tick')}</span>` : `<span class="dngc">нет учётки</span>`,
+      `<span class="mono">${AGENTS.filter(a => a.role === c).length}</span>`,
+  ]})));
+  const kc = kcBad ? kcState(S.kc).replace('/lore/kc/users','/lore/kc/agents') : table([['клиент','c-title'],['agent_scope'],['вкл'],['агент'],['','c-act']], KC_CLIENTS.map(([c,sc,on]) => {
+      const bound = AGENTS.find(a => a.client === c);
+      return { cells:[ c,
+        sc.length ? `<span class="wrap">${sc.map(s => pill(s,'inf')).join('')}</span>` : '<span class="mut">— (легаси, оси нет)</span>',
+        on ? `<span class="succ">${ic('tick')}</span>` : ic('cross-mark'),
+        !sc.length ? '<span class="mut">привязка запрещена</span>' : bound ? `<span class="succ">${esc(bound.name)}</span>` : '<span class="warnc">агента нет</span>',
+        S.confirmRotate === c ? `<button class="btn confirm" data-rot="">точно ротировать?</button>` : `<button class="btn" data-rot="${c}" title="A-15">${ic('cycle')} ротировать секрет</button>` ]};
+  }));
+  return notice +
+    `<div class="sec">Агенты графа <span class="n">${AGENTS.length}</span><span class="mut" style="text-transform:none;letter-spacing:0">· от Keycloak не зависят — видны и при сбое KC</span></div>${ag}
+     <div class="sec">Профили агентов <span class="n">${PROFILES.length}</span></div>${pr}
+     <div class="note wrn" style="margin-top:var(--sp4)"><b>В KC есть учётки под профили, которых нет в справочнике agent_profile:</b> — <span class="mut">(здесь пусто: все профили на месте; пример места для A-12)</span></div>
+     <div class="sec">Учётные записи Keycloak <span class="n">${kcBad ? '?' : KC_CLIENTS.length}</span></div>
+     ${kcBad ? '' : `<div class="toolbar"><label class="search">${ic('magnifying-glass')}<input placeholder="клиент или agent_scope…"></label><span class="count">показано ${KC_CLIENTS.length} из ${KC_CLIENTS.length}</span></div>`}
+     ${kc}`;
+}
+
+/* ═════════════ Словари ═════════════ */
+function dictsTab(){
+  const dt = S.dict;
+  const canon = CANON.has(dt);
+  const rowsSrc = dt === 'area' ? AREA
+    : (GENERIC[dt] || Array.from({length: (DICT_TYPES.find(x => x[0]===dt)||[0,3])[1]}, (_,i) => [`${dt}_${i+1}`, `Значение ${i+1}`, ['var(--acc)','var(--inf)','var(--suc)','var(--wrn)'][i%4], ['book-cover','key','cog','price-tag'][i%4]]))
+      .map((r,i) => [r[0], r[1], r[2], r[3], null, (i+1)*10, true]);
+  const q = S.q.toLowerCase();
+  const all = rowsSrc;
+  const shown = all.filter(r => (S.active === 'all' || r[6]) && (!q || r[0].toLowerCase().includes(q) || r[1].toLowerCase().includes(q)));
+  return `
+    <div class="chips">${DICT_TYPES.map(([t,n]) => `<button class="chip ${CANON.has(t)?'canon':''}" data-dict="${t}" aria-pressed="${t===dt}" title="${CANON.has(t)?'канон-словарь':''}">${t}<span class="n">${n}</span></button>`).join('')}</div>
+    ${canon ? `<div class="note wrn"><b>${ic('hazard-sign')}Канон-словарь (ADR-LORE-010).</b> Значения зашиты в статусы всего корпуса. Подпись/цвет/иконка — безопасно, коды не правятся; сохранение — с подтверждением. <span class="mono mut">D-02, D-16</span></div>` : ''}
+    <div class="toolbar">
+      <label class="search">${ic('magnifying-glass')}<input id="q" placeholder="код или подпись…" value="${esc(S.q)}"></label>
+      <span class="count">показано ${shown.length} из ${all.length}</span>
+      <span class="seg"><button data-act="fltA" aria-pressed="${S.active==='active'}">Активные</button><button data-act="fltAll" aria-pressed="${S.active==='all'}">Все</button></span>
+    </div>
+    ${table([['код','c-title'],['подпись'],['вид'],['использований'],['порядок'],['акт.'],['','c-act']], shown.map(r => ({ cls: r[6] ? '' : 'off', cells:[
+      r[0], esc(r[1]),
+      `<span class="pill" style="color:${r[2]};border-color:${r[2]};background:color-mix(in srgb,${r[2]} 12%,transparent)">${ic(r[3])}${esc(r[1])}</span>`,
+      r[4] === null ? `<span class="mut" title="подсчёт для этого словаря ещё не сделан (AL-30/SV-10) — это не ноль">н/д</span>` : `<span class="mono ${r[4] ? '' : 'mut'}">${r[4]}</span>`,
+      `<span class="mono">${r[5]}</span>`,
+      r[6] ? `<span class="succ">${ic('tick')}</span>` : '<span class="mut">откл.</span>',
+      `<button class="btn" title="D-07…D-18: форма правки">Править</button>${r[6] ? '' : '<button class="btn" title="D-19: сейчас реактивации нет — пробел инвентаризации">Включить</button>'}`,
+    ]})))}
+    ${shown.length === 0 ? `<div class="state" style="margin-top:var(--sp4)"><h3>В словаре «${dt}» нет ${S.active==='active'?'активных ':''}значений</h3><div>Слайс ответил, строк нет.</div></div>` : ''}`;
+}
+
+/* ═════════════ Проекты ═════════════ */
+function projectsTab(){
+  const q = S.q.toLowerCase();
+  const shown = PROJECTS.filter(p => !q || p.slug.toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q));
+  const rows = [];
+  for (const p of shown){
+    const open = S.members === p.slug;
+    rows.push({ cls: open ? 'sel' : '', cells:[
+      esc(p.slug), p.name ? esc(p.name) : '<span class="mut">—</span>', p.br ? `<span class="mono">${p.br}</span>` : '<span class="mut">—</span>',
+      p.hosts ? `<span class="mono mut">${p.hosts}</span>` : '<span class="mut">—</span>',
+      `<span class="mono ${p.sprints ? '' : 'mut'}">${p.sprints}</span>`,
+      p.members === null ? `<span class="pill wrn" title="project_users: HTTP 500">не проверено</span>` : p.members.length ? `<span class="mono">${p.members.length}</span>` : `<span class="warnc">${ic('hazard-sign')} 0</span>`,
+      `<button class="btn" data-mem="${open ? '' : p.slug}" title="P-06">${open ? 'Свернуть' : 'Участники'}</button><button class="btn" title="P-11…P-16: модалка правки">Править</button>`,
+    ]});
+    if (open) rows.push({ raw:`<tr class="expand"><td colspan="7">${members(p)}</td></tr>` });
+  }
+  return `
+    <div class="toolbar"><label class="search">${ic('magnifying-glass')}<input id="q" placeholder="slug или имя…" value="${esc(S.q)}"></label>
+      <span class="count">показано ${shown.length} из ${PROJECTS.length}</span></div>
+    ${table([['slug','c-title'],['имя'],['ветка'],['хосты'],['спринтов'],['участников'],['','c-act']], rows)}`;
+}
+function members(p){
+  if (p.members === null) return `<div class="state bad"><h3>Участников ${esc(p.slug)} проверить не удалось</h3>
+     <div>Слайс project_users не ответил. Это не «в проекте никого нет».</div><code>GET /lore/slice/project_users?project=${esc(p.slug)} → 500</code>
+     <div class="row"><button class="btn">Повторить</button></div></div>`;
+  const owners = p.members.filter(m => m[1] === 'owner').length;
+  return `<div class="blk"><h4>Участники ${esc(p.slug)} <span class="n">${p.members.length} чел. · ${owners} owner</span></h4>
+    ${p.members.length === 0 ? `<div class="note wrn"><b>В проекте нет ни одного участника</b> — при включённом проектном скоупе его не увидит никто. Слайс ответил: 200 · [].</div>` :
+      p.members.map(([n,r]) => `<div class="rr"><span class="mono">${esc(n)}</span>
+        <span><select class="btn" title="P-08 смена роли">${PROJECT_ROLES.map(x => `<option ${x===r?'selected':''}>${x}</option>`).join('')}</select></span>
+        <span class="st">${r==='owner' && owners===1 ? '<span class="lock">' + ic('padlock') + ' последний owner</span>' : `<button class="btn dng" title="P-09">${ic('cross-mark')} снять</button>`}</span></div>`).join('')}
+    <div style="margin-top:var(--sp4)"><button class="btn pri" title="P-10: человек + роль (по умолчанию reader)">+ участник</button></div></div>`;
+}
+
+/* ═════════════ заглушки ═════════════ */
+const STUBS = {
+  roles:['Две оси прав — люди (realm-роли) и агенты (agent_scope) — и обратная матрица «кто имеет доступ к X».',
+    ['Переключатель «Кто что может» / «Кто имеет доступ к…» (в v2 — в URL) · R-03','Люди: realm-роль → что даёт → где назначается → кому выдана · R-04','Агенты: профиль → label → что может писать → клиент · R-05','Обратная матрица, human-only красным · R-06','Плашка «права не проверяются» · R-02']],
+  tags:['KnowTag с числом использований; 0 — «кандидат на удаление». Только чтение.',
+    ['Поиск по тегу · T-02','Сортировка по использованию / по алфавиту · T-03','Таблица тег / использований · T-04']],
+  claudeRules:['Снимки CLAUDE.md: глобальный и по репозиториям; тело через MartProse, HTML — в песочнице.',
+    ['Список документов + ?doc= · C-02','Тело MartProse / SandboxedHtmlFrame · C-03','Сбой загрузки тела ≠ «нет тела» · C-04','Пустой корпус ≠ сбой слайса · C-05']],
+  settings:['Готовность к включению auth, параметры app_setting и последние отказы доступа.',
+    ['Чек-лист: admin есть / KC доступен / права агентов проверяются · S-01, S-02','«Включать auth нельзя» + hint · S-03','Кнопка «Включить аутентификацию» (disabled) · S-04','Реестр app_setting + неопознанные и «Удалить» · S-06, S-07','Последние отказы доступа (30) · S-08','Auth / роль / LORE_ACTIVE_PROJECT · S-09, S-10']],
+  quick:['Личная шпаргалка: команды «перейти в проект», «канал miniLORE»; копирование нажатием.',
+    ['Группы команд · Q-02','Копирование с подтверждением (в v2 — честный «не скопировано» без clipboard) · Q-03','Устаревшая команда mobilepoc-channel — на ревизию · Q-04']],
+};
+function stubTab(k){
+  const [d, items] = STUBS[k];
+  return `<div class="stub"><h3>${ALL.find(t => t.k===k).l} — заглушка прототипа</h3><p>${d}</p>
+    <ul>${items.map(i => { const [a,b] = i.split(' · '); return `<li>${a} <span class="ids">${b||''}</span></li>`; }).join('')}</ul></div>`;
+}
+
+/* ═════════════ события ═════════════ */
+document.addEventListener('click', e => {
+  const t = e.target.closest('button, tr[data-user]');
+  if (!t) return;
+  const seg = t.closest('.pbar .seg');
+  if (seg){
+    const key = { segView:'view', segNav:'nav', segKc:'kc' }[seg.id];
+    S[key] = t.dataset.v; S.ddOpen = false; render(); return;
+  }
+  if (t.dataset.tab){ S.tab = t.dataset.tab; S.user = null; S.members = null; S.q = ''; S.ddOpen = false; S.confirmAdmin = false; render(); return; }
+  if (t.id === 'ddBtn'){ S.ddOpen = !S.ddOpen; render(); return; }
+  if (t.dataset.dict){ S.dict = t.dataset.dict; S.q = ''; render(); return; }
+  if (t.dataset.open !== undefined){ S.user = t.dataset.open || null; S.confirmAdmin = false; render(); return; }
+  if (t.dataset.mem !== undefined){ S.members = t.dataset.mem || null; render(); return; }
+  if (t.dataset.rot !== undefined){ S.confirmRotate = t.dataset.rot || null; render(); return; }
+  if (t.dataset.act === 'adminAsk'){ S.confirmAdmin = true; render(); return; }
+  if (t.dataset.act === 'adminNo' || t.dataset.act === 'adminYes'){ S.confirmAdmin = false; render(); return; }
+  if (t.dataset.act === 'fltA'){ S.active = 'active'; render(); return; }
+  if (t.dataset.act === 'fltAll'){ S.active = 'all'; render(); return; }
+  if (t.dataset.stop !== undefined) return;
+  if (t.matches('tr[data-user]')){ S.user = t.dataset.user; S.confirmAdmin = false; render(); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id !== 'q') return;
+  S.q = e.target.value; const pos = e.target.selectionStart; render();
+  const n = document.getElementById('q'); if (n){ n.focus(); n.setSelectionRange(pos, pos); }
+});
+render();
+</script>
+</body>
+</html>
