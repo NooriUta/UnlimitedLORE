@@ -488,6 +488,7 @@ public class LoreSchemaMigrationRunner {
         if (version == 53) renameMilestoneM2Core();
         if (version == 54) dropPlanItemTypesIfUnused();
         if (version == 55) backfillDaliP1FromPr204();
+        if (version == 56) histTimeToDatetime();
     }
 
     /**
@@ -515,6 +516,324 @@ public class LoreSchemaMigrationRunner {
         }
         LOG.infof("[LORE MIGRATE] V55 задач DALI P1-* заполнено строк: %d", filled);
         return filled;
+    }
+
+    // ── V56 (RM-P13) ────────────────────────────────────────────────────────
+
+    /**
+     * Как ArcadeDB печатает DATETIME в JSON при формате базы по умолчанию:
+     * через пробел, без зоны, доля секунды — если есть. Строка такой формы в
+     * свойстве, объявленном DATETIME, считается уже нативной.
+     */
+    static final java.util.regex.Pattern DATETIME_RENDERED =
+        java.util.regex.Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?$");
+    private static final java.util.regex.Pattern ISO_Z =
+        java.util.regex.Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$");
+    private static final java.time.format.DateTimeFormatter ISO_MILLIS =
+        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(java.time.ZoneOffset.UTC);
+
+    /** V56: итог по одному свойству одного типа — для лога и для теста. */
+    record HistTimeReport(String type, String field, String declaredBefore, String declaredAfter,
+                          long rows, long nonNullBefore, long nonNullAfter,
+                          int alreadyNative, int rewritten, List<String> unparsed) {}
+
+    /**
+     * V56 (RM-P13, решение владельца 05.11.2026 «единый формат, рекомендованный
+     * БД»): {@code valid_from} и {@code valid_to} у всех *Hist
+     * ({@link LoreSchemaMigrations#HIST_VALID_FROM_TEMPORAL}) — нативный DATETIME.
+     *
+     * <p><b>Как меняется тип свойства — по движку 26.10.2, а не по догадке</b>
+     * (байткод {@code arcadedb-engine-26.10.2.jar}, только чтение):
+     * <ul>
+     *   <li>{@code AlterPropertyStatement} умеет name / readonly / mandatory /
+     *       notnull / hidden / external / compression / max / min / default /
+     *       regexp / custom — атрибута ТИПА нет. Значит, только
+     *       {@code DROP PROPERTY} + {@code CREATE PROPERTY}.</li>
+     *   <li>{@code DropPropertyStatement}: при индексе на свойстве без
+     *       {@code FORCE} — отказ, с {@code FORCE} — «cascade drop index».
+     *       {@code LocalDocumentType.dropProperty} снимает только объявление
+     *       (запись из карты свойств типа); записи не трогает — значения
+     *       остаются schemaless.</li>
+     *   <li>{@code CreatePropertyStatement} после создания зовёт
+     *       {@code ExistingRecordsCheck.requireDeclaration}: для скалярного
+     *       типа ({@code StoredValueConstraints.canBeViolatedOn} — checkType
+     *       всегда true) обходит ВСЕ записи типа и каждое непустое значение
+     *       прогоняет через {@code Type.convert} к DATETIME. Хоть одно не
+     *       сводится — объявление откатывается ({@code dropProperty}) и
+     *       команда падает. Сами записи при этом НЕ переписываются: строка
+     *       остаётся строкой.</li>
+     *   <li>Перевод значения в DATETIME делает запись:
+     *       {@code MutableDocument.set → convertValueToSchemaType → Type.convert}
+     *       ({@code DateUtils.parseDateTime}: ISO с зоной — через
+     *       {@code ZonedDateTime.parse}, «через пробел» — по формату базы).
+     *       Отсюда пересохранение каждой строки параметром-строкой ISO-Z.</li>
+     * </ul>
+     *
+     * <p>Порядок для свойства не-DATETIME: (1) счёт до; (2) разбор каждого
+     * значения; нераспознанное есть — свойство НЕ трогается вовсе (движок всё
+     * равно отказал бы в объявлении), WARN со списком rid=значение, шаг идёт
+     * дальше; (3) неканоничные формы (эпоха, «через пробел», дата) переписываются
+     * в ISO-Z, пока свойство ещё текстовое; (4) индексы на свойстве запоминаются,
+     * {@code DROP PROPERTY … FORCE}, {@code CREATE PROPERTY … DATETIME}; (5)
+     * каждая строка пересохраняется тем же моментом; (6) индексы пересоздаются;
+     * (7) счёт после: непустых столько же, текстом осталось ровно столько,
+     * сколько нераспознанных. Расхождение — отказ шага (ledger не пишется).
+     *
+     * <p>Для свойства, уже объявленного DATETIME, шаги (3)–(4) и (6) не нужны,
+     * но (5) — нужен: строки, записанные ДО объявления, хранятся текстом
+     * (так было у KnowSprintHist), и это ровно тот разнобой, что ломал
+     * {@code ORDER BY}. Идемпотентен: нативные значения не переписываются,
+     * повтор на приведённой базе — только счёт.
+     *
+     * <p>Точность: DATETIME — миллисекунды. Микро- и наносекундные хвосты
+     * {@code Instant.toString()} усекаются до мс; момент для аналитики тот же.
+     */
+    List<HistTimeReport> histTimeToDatetime() {
+        List<HistTimeReport> out = new ArrayList<>();
+        for (String type : LoreSchemaMigrations.HIST_VALID_FROM_TEMPORAL) {
+            if (!typeExists(type)) {
+                LOG.infof("[LORE MIGRATE] V56 %s: типа в схеме нет — пропуск", type);
+                continue;
+            }
+            for (String field : LoreSchemaMigrations.HIST_TIME_FIELDS) out.add(histFieldToDatetime(type, field));
+        }
+        long declared = out.stream().filter(r -> !"DATETIME".equals(r.declaredBefore())
+            && "DATETIME".equals(r.declaredAfter())).count();
+        long notDatetime = out.stream().filter(r -> !"DATETIME".equals(r.declaredAfter())).count();
+        int rewritten = out.stream().mapToInt(HistTimeReport::rewritten).sum();
+        int unparsed = out.stream().mapToInt(r -> r.unparsed().size()).sum();
+        LOG.infof("[LORE MIGRATE] V56 итог: свойств %d, объявление сменено у %d, пересохранено строк %d, "
+            + "нераспознанных значений %d, свойств НЕ DATETIME после шага %d",
+            out.size(), declared, rewritten, unparsed, notDatetime);
+        if (notDatetime > 0) {
+            LOG.warnf("[LORE MIGRATE] V56: %d свойств остались не DATETIME (см. WARN выше по каждому) — "
+                + "нераспознанные значения разобрать руками и перевести объявление отдельным шагом", notDatetime);
+        }
+        return out;
+    }
+
+    HistTimeReport histFieldToDatetime(String type, String field) {
+        String declared = declaredPropertyType(type, field);
+        long rows = countOf("SELECT count(*) AS n FROM " + type, Map.of());
+        long before = countOf("SELECT count(*) AS n FROM " + type + " WHERE " + field + " IS NOT NULL", Map.of());
+        LOG.infof("[LORE MIGRATE] V56 %s.%s ДО: объявлен %s; строк %d, с непустым значением %d",
+            type, field, declared == null ? "не объявлен" : declared, rows, before);
+
+        boolean wasDatetime = "DATETIME".equals(declared);
+        List<String[]> toWrite = new ArrayList<>();   // {rid, ISO-Z мс, нужна ли предзапись}
+        List<String> unparsed = new ArrayList<>();
+        int nativeCount = 0;
+        for (Map<String, Object> r : scanNonNull(type, field)) {
+            Object raw = r.get("v");
+            String rid = str(r.get("rid"));
+            if (wasDatetime && isNativeDatetime(r)) {
+                nativeCount++;
+                continue;
+            }
+            Instant at = instantOf(raw);
+            if (at == null) { unparsed.add(rid + "=" + raw); continue; }
+            boolean canonical = raw instanceof String s && ISO_Z.matcher(s).matches();
+            toWrite.add(new String[]{rid, ISO_MILLIS.format(at), canonical ? null : "pre"});
+        }
+
+        List<Map<String, Object>> indexes = List.of();
+        if (!wasDatetime) {
+            if (!unparsed.isEmpty()) {
+                LOG.warnf("[LORE MIGRATE] V56 %s.%s: %d значений не распознаны как момент времени — "
+                    + "объявление НЕ сменено и строки НЕ тронуты (CREATE PROPERTY DATETIME движок отклонил бы "
+                    + "целиком). Разобрать руками: %s", type, field, unparsed.size(), unparsed);
+                return new HistTimeReport(type, field, declared, declared, rows, before, before,
+                    nativeCount, 0, List.copyOf(unparsed));
+            }
+            int pre = 0;
+            for (String[] w : toWrite) {
+                if (w[2] == null) continue;
+                command("UPDATE " + w[0] + " SET " + field + " = :v", Map.of("v", w[1]));
+                pre++;
+            }
+            if (pre > 0) LOG.infof("[LORE MIGRATE] V56 %s.%s: %d неканоничных значений приведены к ISO-Z до смены типа",
+                type, field, pre);
+            indexes = indexesOn(type, field);
+            if (declared != null) exec("DROP PROPERTY " + type + "." + field + " FORCE");
+            try {
+                exec("CREATE PROPERTY " + type + "." + field + " DATETIME");
+            } catch (RuntimeException e) {
+                // Вернуть как было: объявление и индексы. Значения не менялись,
+                // кроме приведения формы (тот же момент, ISO-Z).
+                if (declared != null) {
+                    try { exec("CREATE PROPERTY " + type + "." + field + " " + declared); }
+                    catch (RuntimeException restore) { e.addSuppressed(restore); }
+                }
+                recreateIndexes(type, field, indexes);
+                throw new IllegalStateException("[LORE MIGRATE] V56 " + type + "." + field
+                    + ": CREATE PROPERTY DATETIME отклонён движком, объявление возвращено к "
+                    + declared + ": " + e.getMessage(), e);
+            }
+        }
+
+        // Значение собирается в нативную дату САМИМ SQL: date(<строка>) —
+        // SQLFunctionDate с одним аргументом → DateUtils.parseDateTimeKeepingWallClock
+        // (ISO с Z → UTC wall clock) → DateUtils.getDate(…, serializer.getDateTimeImplementation()),
+        // то есть ровно тот класс, которым движок хранит DATETIME. Так запись не
+        // зависит от того, сработает ли на этом пути конвертация строки по
+        // объявлению свойства (MutableDocument.putProperty → convertValueToSchemaType):
+        // первый прогон в CI (PR #769) после пересохранения строкой-параметром
+        // счёл 2 из 3 значений «текстом» (опознание было по виду печати — его
+        // тоже заменили на type()/javatype(); что именно лежало — покажут образцы
+        // в сообщении шага, если повторится).
+        int rewritten = 0;
+        for (String[] w : toWrite) {
+            command("UPDATE " + w[0] + " SET " + field + " = date(:v)", Map.of("v", w[1]));
+            rewritten++;
+        }
+        if (!wasDatetime) recreateIndexes(type, field, indexes);
+
+        long after = countOf("SELECT count(*) AS n FROM " + type + " WHERE " + field + " IS NOT NULL", Map.of());
+        String declaredAfter = declaredPropertyType(type, field);
+        // По ТИПУ значения в записи (SQL-методы type()/javatype()), а не по виду
+        // его JSON-печати: печать зависит от формата базы и от java-реализации
+        // DATETIME, тип — нет. Первый прогон в CI опознавал по виду и ошибся.
+        int textLeft = 0;
+        List<String> textSample = new ArrayList<>();
+        for (Map<String, Object> r : scanNonNull(type, field)) {
+            if (isNativeDatetime(r)) continue;
+            textLeft++;
+            if (textSample.size() < 5) textSample.add(describe(r));
+        }
+        LOG.infof("[LORE MIGRATE] V56 %s.%s ПОСЛЕ: объявлен %s → %s; непустых до %d / после %d; "
+            + "уже нативных %d, пересохранено %d, нераспознанных %d, текстом осталось %d",
+            type, field, declared == null ? "не объявлен" : declared, declaredAfter,
+            before, after, nativeCount, rewritten, unparsed.size(), textLeft);
+        if (!unparsed.isEmpty()) {
+            LOG.warnf("[LORE MIGRATE] V56 %s.%s: %d значений не распознаны и оставлены как есть: %s",
+                type, field, unparsed.size(), unparsed);
+        }
+        if (after != before) {
+            throw new IllegalStateException("[LORE MIGRATE] V56 " + type + "." + field
+                + ": число непустых значений изменилось (" + before + " → " + after + ") — смена типа "
+                + "не имеет права терять данные. Бэкап снят до шага (RUNBOOK-LORE-SCHEMA-UPGRADE).");
+        }
+        if (!"DATETIME".equals(declaredAfter) || textLeft != unparsed.size()) {
+            throw new IllegalStateException("[LORE MIGRATE] V56 " + type + "." + field
+                + ": после шага объявлен " + declaredAfter + ", текстом осталось " + textLeft
+                + " при " + unparsed.size() + " нераспознанных — значения не стали DATETIME. "
+                + "Образцы, как их видит движок: " + textSample);
+        }
+        return new HistTimeReport(type, field, declared, declaredAfter, rows, before, after,
+            nativeCount, rewritten, List.copyOf(unparsed));
+    }
+
+    /**
+     * Значение в записи — нативная дата, а не строка/число. Решает тип, который
+     * сообщает сам движок: {@code type()} ({@code SQLMethodType →
+     * Type.getTypeByValue}) и {@code javatype()} ({@code SQLMethodJavaType →
+     * getClass().getName()}), а не вид печати в JSON.
+     */
+    static boolean isNativeDatetime(Map<String, Object> r) {
+        String t = str(r.get("t"));
+        String jt = str(r.get("jt"));
+        if (jt != null && (jt.equals("java.lang.String") || jt.startsWith("java.lang.Long")
+                || jt.startsWith("java.lang.Integer") || jt.startsWith("java.lang.Double"))) return false;
+        if (t != null && (t.startsWith("DATETIME") || t.equals("DATE"))) return true;
+        return jt != null && (jt.equals("java.util.Date") || jt.startsWith("java.time."));
+    }
+
+    private static String describe(Map<String, Object> r) {
+        return r.get("rid") + " v=" + r.get("v") + " type()=" + r.get("t") + " javatype()=" + r.get("jt");
+    }
+
+    /**
+     * Все непустые значения свойства: {@code rid}, {@code v} и тип значения в
+     * записи ({@code t} — type(), {@code jt} — javatype()). Страницами.
+     */
+    private List<Map<String, Object>> scanNonNull(String type, String field) {
+        List<Map<String, Object>> all = new ArrayList<>();
+        int seen = 0;
+        while (true) {
+            List<Map<String, Object>> page = ingest.queryPublic(
+                "SELECT @rid AS rid, " + field + " AS v, " + field + ".type() AS t, "
+                + field + ".javatype() AS jt FROM " + type + " WHERE " + field
+                + " IS NOT NULL ORDER BY @rid SKIP " + seen + " LIMIT 5000", Map.of());
+            all.addAll(page);
+            seen += page.size();
+            if (page.size() < 5000) break;
+        }
+        return all;
+    }
+
+    /** Объявленный тип свойства ({@code "STRING"}, {@code "DATETIME"} …) или {@code null}, если не объявлено. */
+    String declaredPropertyType(String type, String field) {
+        for (Map<String, Object> t : ingest.queryPublic(
+                "SELECT properties FROM schema:types WHERE name = :n", Map.of("n", type))) {
+            if (!(t.get("properties") instanceof java.util.Collection<?> props)) continue;
+            for (Object p : props) {
+                if (p instanceof Map<?, ?> m && field.equals(m.get("name"))) return str(m.get("type"));
+            }
+        }
+        return null;
+    }
+
+    /** Однополевые индексы на свойстве: {@code name}, {@code unique}. */
+    private List<Map<String, Object>> indexesOn(String type, String field) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        // Без WHERE и без перечисления полей: строку schema:indexes фильтруем в
+        // Java (так же читает её LoreMigrationRunnerLiveDbTest), «unique» в
+        // проекции — лишний риск грамматики.
+        for (Map<String, Object> r : ingest.queryPublic("SELECT FROM schema:indexes", Map.of())) {
+            if (!type.equals(str(r.get("typeName")))) continue;
+            // schema:indexes отдаёт properties ВЛОЖЕННЫМ списком:
+            // FetchFromSchemaIndexesStep кладёт Collections.singletonList(index.getPropertyNames()),
+            // то есть [["valid_to"]]. Первая редакция сравнивала верхний уровень и
+            // не находила индекс никогда (CI PR #769) — на проде он молча
+            // пропал бы после DROP PROPERTY FORCE. fieldKey расплющивает, как у FT-индексов.
+            if (fieldKey(type, r.get("properties")).equals(type + "[" + field + "]")) out.add(r);
+        }
+        return out;
+    }
+
+    private void recreateIndexes(String type, String field, List<Map<String, Object>> indexes) {
+        for (Map<String, Object> ix : indexes) {
+            boolean unique = Boolean.TRUE.equals(ix.get("unique"));
+            String kind = unique ? "UNIQUE" : "NOTUNIQUE";
+            // Без IF NOT EXISTS: индекс только что снят FORCE-ом, и «уже есть»
+            // здесь — факт, который надо увидеть, а не проглотить. Отказ
+            // допустим, только если индекс действительно на месте.
+            RuntimeException fail = null;
+            try { exec("CREATE INDEX ON " + type + " (" + field + ") " + kind); }
+            catch (RuntimeException e) { fail = e; }
+            if (indexesOn(type, field).isEmpty()) {
+                List<Map<String, Object>> all = new ArrayList<>();
+                for (Map<String, Object> r : ingest.queryPublic("SELECT FROM schema:indexes", Map.of()))
+                    if (type.equals(str(r.get("typeName")))) all.add(r);
+                throw new IllegalStateException("[LORE MIGRATE] V56 " + type + "." + field + ": индекс " + ix.get("name")
+                    + " не восстановлен" + (fail != null ? " (" + fail.getMessage() + ")" : "")
+                    + "; индексы типа сейчас: " + all, fail);
+            }
+            LOG.infof("[LORE MIGRATE] V56 %s.%s: индекс %s пересоздан (%s)%s", type, field, ix.get("name"), kind,
+                fail != null ? " — CREATE ответил «" + fail.getMessage() + "», но индекс на месте" : "");
+        }
+    }
+
+    /**
+     * Значение времени → момент, или {@code null}, если это не момент. ISO-8601
+     * с зоной — как есть; остальные замеренные формы (эпоха, «через пробел»,
+     * только дата, ISO без зоны) — тем же правилом, что V41 ({@link #toIsoUtc}:
+     * без зоны значит UTC).
+     */
+    static Instant instantOf(Object v) {
+        if (v == null) return null;
+        try {
+            if (v instanceof String s) {
+                String t = s.trim();
+                if (ISO_Z.matcher(t).matches()) return Instant.parse(t);
+                if (t.length() > 19 && t.charAt(10) == 'T' && t.matches(".*[+-]\\d{2}:\\d{2}$"))
+                    return java.time.OffsetDateTime.parse(t).toInstant();
+            }
+            String iso = toIsoUtc(v);
+            return iso == null ? null : Instant.parse(iso);
+        } catch (java.time.format.DateTimeParseException e) {
+            return null;
+        }
     }
 
     // ── V52 (RM-P17) ────────────────────────────────────────────────────────
@@ -1073,7 +1392,7 @@ public class LoreSchemaMigrationRunner {
      * уже обжигались: строка осталась бы кривой, а шаг отчитался бы успехом.
      */
     private void normalizeHistValidFrom() {
-        for (String type : LoreSchemaMigrations.HIST_VALID_FROM_TEXT) {
+        for (String type : LoreSchemaMigrations.V42_HIST_VALID_FROM_TEXT) {
             int seen = 0, fixed = 0, unknown = 0;
             String unknownSample = null;
             while (true) {
