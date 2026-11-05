@@ -12,13 +12,16 @@ import * as TagsTab from './TagsTab';
 import * as ClaudeRulesTab from './ClaudeRulesTab';
 import * as SettingsTab from './SettingsTab';
 import * as QuickCommandsTab from './QuickCommandsTab';
+import * as LoreMcpApiScreen from '../LoreMcpApiScreen';
+import * as LoreConnectionsScreen from '../LoreConnectionsScreen';
 import LoreAdminPanel from './LoreAdminPanel';
 import LoreAdminPanelLegacy from '../LoreAdminPanel';
 
 // Исходник оболочки — тем же способом, что font-scale/i18n-гварды (без node:fs).
 const SHELL_SRC = import.meta.glob('./LoreAdminPanel.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
-const TAB_MODULES: Record<Tab, [string, Record<string, unknown>]> = {
+// [экспорт в модуле, модуль, имя в JSX оболочки — если отличается от экспорта]
+const TAB_MODULES: Record<Tab, [string, Record<string, unknown>, string?]> = {
   users: ['UsersTab', UsersTab],
   agents: ['AgentsTab', AgentsTab],
   roles: ['RolesTab', RolesTab],
@@ -28,21 +31,24 @@ const TAB_MODULES: Record<Tab, [string, Record<string, unknown>]> = {
   claudeRules: ['ClaudeRulesTab', ClaudeRulesTab],
   settings: ['SettingsTab', SettingsTab],
   quick: ['QuickCommandsTab', QuickCommandsTab],
+  // группа «MCP» (05.11) показывает те же экраны, что глава «Основа»: компонент — default-экспорт
+  mcpApi: ['default', LoreMcpApiScreen, 'LoreMcpApiScreen'],
+  connections: ['default', LoreConnectionsScreen, 'LoreConnectionsScreen'],
 };
 
 describe('AH-03: разрез LoreAdminPanel по вкладкам', () => {
-  it('в модуле каждой вкладки есть её компонент, оболочка рендерит все 9 через ALL_TABS', () => {
+  it('в модуле каждой вкладки есть её компонент, оболочка рендерит все 11 через ALL_TABS', () => {
     for (const [name, mod] of Object.values(TAB_MODULES)) {
       expect(typeof mod[name], name).toBe('function');
     }
 
     expect([...ALL_TABS].sort()).toEqual(Object.keys(TAB_MODULES).sort());
-    expect(ALL_TABS).toHaveLength(9);
+    expect(ALL_TABS).toHaveLength(11);
     const shell = Object.values(SHELL_SRC)[0];
     expect(typeof shell).toBe('string');
     for (const k of ALL_TABS) {
-      const [name] = TAB_MODULES[k];
-      expect(shell, k).toContain(`tab === '${k}' && <${name}`);
+      const [name, , jsx] = TAB_MODULES[k];
+      expect(shell, k).toContain(`tab === '${k}' && <${jsx ?? name}`);
     }
 
     // старый путь импорта (LorePage) отдаёт ту же оболочку
