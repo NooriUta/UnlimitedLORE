@@ -55,9 +55,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // field like author/executor/reviewer_agent above, so no carry-forward concern.
     // work_class (ADR-LORE-022): ЗАЧЕМ-ось (uc|jtd|enb), ортогональна task_type
     // (КАК-ось); vertex-only — как task_type, carry-forward не касается.
+    // effort_days (05.11.2026): то же поле, что пишет task/edit, — задача рождается
+    // с оценкой, без второго вызова и без упрёка чекера качества «missing: effort_days».
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md,
         String phase_uid, String author_agent, String executor_agent, String reviewer_agent,
-        String task_type, String work_class, String uc_id) {}
+        String task_type, String work_class, String uc_id, Double effort_days) {}
     // effort_days: fractional, granular to the hour (1 day = 8 working hours,
     // so the smallest meaningful increment is 0.125). Was Integer — too coarse
     // to estimate sub-day tasks.
@@ -271,6 +273,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 && !java.util.List.of("uc", "jtd", "enb").contains(req.work_class())) {
             return Uni.createFrom().item(badParams("work_class must be uc|jtd|enb (or omitted)"));
         }
+        if (req.effort_days() != null && (req.effort_days().isNaN() || req.effort_days() < 0)) {
+            return Uni.createFrom().item(badParams("effort_days must be a non-negative number of person-days (or omitted)"));
+        }
         final String sid   = req.sprint_id();
         final String tid   = req.task_id();
         final String uid   = sid + "/" + tid;
@@ -314,15 +319,16 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     ? null : req.work_class(); // null легален (D3: не каждая задача несёт класс)
                 StringBuilder script = new StringBuilder()
                     .append("INSERT INTO KnowTask SET task_uid = :uid, task_id = :tid, title = :title, ")
-                    .append("note_md = :note, order_index = :oi, src = 'manual', task_type = :tt, work_class = :wc;")
+                    .append("note_md = :note, effort_days = :eff, order_index = :oi, src = 'manual', task_type = :tt, work_class = :wc;")
                     .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
                     .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
-                    .append("valid_from = :now, note_md = :note;")
+                    .append("valid_from = :now, note_md = :note, effort_days = :eff;")
                     .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
                 Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
-                    "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType, "wc", workClass);
+                    "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType, "wc", workClass,
+                    "eff", req.effort_days());
                 // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
                 if (phase != null) {
                     script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")

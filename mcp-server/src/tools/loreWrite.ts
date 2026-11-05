@@ -240,6 +240,7 @@ export function registerLoreWrite(server: McpServer): void {
       task_id: z.string().describe('short task id, unique within the sprint'),
       title: z.string(),
       note_md: z.string().optional().describe('optional Markdown note'),
+      effort_days: z.number().nonnegative().optional().describe('estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125) — same field task_set writes, set at creation so the task is born with its estimate'),
       phase_uid: z.string().optional()
         .describe('optional phase to attach to, e.g. "SPRINT_X/PHASE_A" (must belong to the same sprint; create via sprint_phase_new first)'),
       author_agent: z.string().optional().describe('кто поставил задачу. С TR-05 это РЕБРО, а не поле: значение обязано быть заявленной личностью (человек с ролью в проекте задачи либо агентная личность). Незаявленное — отказ со списком кандидатов, а не тихая запись строки'),
@@ -250,9 +251,9 @@ export function registerLoreWrite(server: McpServer): void {
       uc_id: z.string().optional().describe('D16: the use case this task realizes. Creates the REALIZES edge ATOMICALLY with the task — no second call, no window where the task exists unlinked. A non-existent uc_id is a 400, not a silent no-op.'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id }) => ({
+    body: ({ sprint_id, task_id, title, note_md, effort_days, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id }) => ({
           sprint_id, task_id, title,
-          note_md: note_md ?? null, phase_uid: phase_uid ?? null,
+          note_md: note_md ?? null, effort_days: effort_days ?? null, phase_uid: phase_uid ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
           reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
           work_class: work_class ?? null, uc_id: uc_id ?? null,
