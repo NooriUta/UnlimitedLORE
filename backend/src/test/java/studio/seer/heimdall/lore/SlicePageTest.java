@@ -86,7 +86,30 @@ class SlicePageTest {
     }
 
     @Test
+    void fieldsProjectionDropsHeavyColumns() {
+        // «какой релиз текущий» без description_md всех релизов
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of(
+            Map.of("release_id", "v2", "is_current", true, "description_md", "много текста"),
+            Map.of("release_id", "v1", "is_current", false, "description_md", "ещё больше"))));
+        Map<String, String> g = given("fields", "release_id, is_current", "limit", "1");
+        SlicePage p = SlicePage.extract(g);
+        assertTrue(g.isEmpty(), "fields тоже не уходит в compose");
+        SlicePage.apply(body, p);
+        List<?> r = (List<?>) body.get("rows");
+        assertEquals(List.of(Map.of("release_id", "v2", "is_current", true)), r);
+    }
+
+    @Test
+    void fieldsAloneWithoutPaging() {
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of(Map.of("a", 1, "b", 2))));
+        SlicePage.apply(body, SlicePage.extract(given("fields", "a")));
+        assertEquals(List.of(Map.of("a", 1)), body.get("rows"));
+    }
+
+    @Test
     void badValuesAreRefusedLoudly() {
+        assertThrows(IllegalArgumentException.class, () -> SlicePage.extract(given("fields", " , ")));
+        assertThrows(IllegalArgumentException.class, () -> SlicePage.extract(given("fields", "a;DROP")));
         assertThrows(IllegalArgumentException.class, () -> SlicePage.extract(given("limit", "0")));
         assertThrows(IllegalArgumentException.class, () -> SlicePage.extract(given("limit", "-1")));
         assertThrows(IllegalArgumentException.class, () -> SlicePage.extract(given("limit", "abc")));

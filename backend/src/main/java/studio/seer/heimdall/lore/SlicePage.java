@@ -19,7 +19,9 @@ import java.util.Map;
  * с {@code total} и {@code has_more}. Без этого страница неотличима от полного
  * списка — тот же класс «не нашли ≠ не смотрели».</p>
  */
-public record SlicePage(Integer limit, int offset) {
+public record SlicePage(Integer limit, int offset, java.util.List<String> fields) {
+
+    private static final java.util.regex.Pattern FIELD = java.util.regex.Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
 
     static final int MAX_LIMIT = 1000;
 
@@ -27,7 +29,22 @@ public record SlicePage(Integer limit, int offset) {
     static SlicePage extract(Map<String, String> given) {
         String l = given.remove("limit");
         String o = given.remove("offset");
-        if (l == null && o == null) return null;
+        String f = given.remove("fields");
+        if (l == null && o == null && f == null) return null;
+        java.util.List<String> fields = null;
+        if (f != null) {
+            // Проекция (SE-01, шаг 2): лишние колонки отбрасываются ПОСЛЕ запроса —
+            // SQL слайсов не переписывается. Имя поля — только идентификатор.
+            fields = new java.util.ArrayList<>();
+            for (String part : f.split(",")) {
+                String name = part.trim();
+                if (name.isEmpty()) continue;
+                if (!FIELD.matcher(name).matches())
+                    throw new IllegalArgumentException("bad value for param: fields (" + name + ")");
+                fields.add(name);
+            }
+            if (fields.isEmpty()) throw new IllegalArgumentException("empty list for param: fields");
+        }
         Integer limit = null;
         if (l != null) {
             limit = parse("limit", l);
@@ -39,7 +56,7 @@ public record SlicePage(Integer limit, int offset) {
             offset = parse("offset", o);
             if (offset < 0) throw new IllegalArgumentException("offset must be >= 0 (got " + o + ")");
         }
-        return new SlicePage(limit, offset);
+        return new SlicePage(limit, offset, fields == null ? null : java.util.List.copyOf(fields));
     }
 
     private static int parse(String name, String v) {
@@ -58,12 +75,25 @@ public record SlicePage(Integer limit, int offset) {
         int total = rows.size();
         int from = Math.min(page.offset(), total);
         int to = page.limit() == null ? total : (int) Math.min((long) from + page.limit(), total);
-        body.put("rows", List.copyOf(rows.subList(from, to)));
+        List<?> cut = rows.subList(from, to);
+        if (page.fields() != null) {
+            java.util.List<Object> projected = new java.util.ArrayList<>(cut.size());
+            for (Object row : cut) {
+                if (row instanceof Map<?, ?> m) {
+                    Map<Object, Object> keep = new LinkedHashMap<>();
+                    for (String k : page.fields()) if (m.containsKey(k)) keep.put(k, m.get(k));
+                    projected.add(keep);
+                } else projected.add(row);
+            }
+            cut = projected;
+        }
+        body.put("rows", new java.util.ArrayList<>(cut));
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("limit", page.limit());
         meta.put("offset", page.offset());
         meta.put("total", total);
         meta.put("has_more", to < total);
+        if (page.fields() != null) meta.put("fields", page.fields());
         body.put("page", meta);
     }
 }
