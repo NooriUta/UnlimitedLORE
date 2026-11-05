@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api/lore';
@@ -6,7 +6,8 @@ import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { parseHosts, releaseUrl, hostLabel } from './repo-url';
-import { releaseProjectOf } from './releaseProject';
+import { releaseProjectOf, resolveReleaseRef, uidOfRelease } from './releaseProject';
+import { useUrlId } from '../../hooks/useUrlState';
 
 interface Props {
   q: string;
@@ -72,7 +73,12 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
   const narrow = useIsNarrow(720);
   const [rows,           setRows]           = useState<LoreRelease[]>([]);
   const [loading,        setLoading]        = useState(true);
-  const [expanded,       setExpanded]       = useState<string | null>(null);
+  // AH-09: раскрытый релиз в URL (?rel=uid) — ссылка из ленты новостей и F5
+  // открывают борд на нём.
+  const [expanded,       setExpanded]       = useUrlId('rel');
+  // uid, для которого deep-link уже отработан: клик сам грузит детали, эффект
+  // ниже не должен делать это второй раз.
+  const linkedRef = useRef<string | null>(null);
   const [decisions,      setDecisions]      = useState<Record<string, DecisionRef[]>>({});
   const [sprintRefs,     setSprintRefs]     = useState<Record<string, SprintRef[]>>({});
   const [prRefs,         setPrRefs]         = useState<Record<string, PrRef[]>>({});
@@ -95,8 +101,29 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
   // подставить монорепо значило бы показать связи ЧУЖОГО релиза.
   function toggle(uid: string, tag: string, ruid: string | null, gitTag: string | null) {
     if (expanded === uid) { setExpanded(null); return; }
-    if (!ruid) { setExpanded(uid); return; }
+    linkedRef.current = uid;
     setExpanded(uid);
+    loadDetail(uid, tag, ruid, gitTag);
+  }
+
+  // AH-09: релиз пришёл из URL (лента новостей, ссылка, F5) — когда строки
+  // загружены, привести ключ к uid строки, догрузить связи и прокрутить к ней.
+  useEffect(() => {
+    if (!expanded) { linkedRef.current = null; return; }
+    if (rows.length === 0 || linkedRef.current === expanded) return;
+    linkedRef.current = expanded;
+    const r = resolveReleaseRef(rows, expanded);
+    if (!r) return;
+    const uid = uidOfRelease(r);
+    const ruid = r.release_uid ?? (r.git_project ? `${r.git_project}#${r.release_id}` : null);
+    if (uid !== expanded) { linkedRef.current = uid; setExpanded(uid); }
+    loadDetail(uid, r.git_tag ?? r.release_id, ruid, r.git_tag ?? null);
+    requestAnimationFrame(() => document.getElementById(`lore-rel-${uid}`)?.scrollIntoView({ block: 'center' }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, expanded]);
+
+  function loadDetail(uid: string, tag: string, ruid: string | null, gitTag: string | null) {
+    if (!ruid) return;
     if (decisions[uid]) return;
     setLoadingDetail(uid);
     // Use ruid-based slices to avoid cross-project tag collisions (e.g. AIDA#v1.3.0 vs seidr-site#v1.3.0).
@@ -238,6 +265,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
               return (
                 <div
                   key={uid}
+                  id={`lore-rel-${uid}`}
                   style={{ ...S.row, ...(narrow ? S.rowNarrow : null), background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
                   {...a11yClick(() => toggle(uid, tag, ruid, r.git_tag ?? null))}
                 >

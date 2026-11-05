@@ -22,6 +22,7 @@ import { loadFailureOf } from './loadState';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
 import { MartProse } from '../bench/MartProse';
+import { useUrlState } from '../../hooks/useUrlState';
 
 interface QGRow {
   qg_id: string;
@@ -45,6 +46,7 @@ interface ComponentSprintRow {
 }
 
 type DocTab = 'adr' | 'spec' | 'qg' | 'doc' | 'sprint' | 'uc';
+const DOC_TABS: readonly DocTab[] = ['adr', 'spec', 'qg', 'doc', 'sprint', 'uc'];
 
 type DocContent =
   | { type: 'spec';   data: LoreSpecPassport }
@@ -261,7 +263,8 @@ export default function LoreComponentPassport({
   const [editParentId, setEditParentId] = useState<string>('');
   const [allComponents, setAllComponents] = useState<LoreComponent[]>([]);
 
-  const [docTab, setDocTab]           = useState<DocTab>('adr');
+  // AH-09: вкладка документов паспорта в URL (?ptab=).
+  const [docTab, setDocTab]           = useUrlState<DocTab>('ptab', 'adr', DOC_TABS);
   // PL-19: сценарии компонента — все уровни, не только корни.
   const [ucs, setUcs] = useState<LoreUcRow[]>([]);
   const [selDocId, setSelDocId]       = useState<string | null>(null);

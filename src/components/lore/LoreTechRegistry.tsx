@@ -6,6 +6,7 @@ import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
 import LoreTechMatrix from './LoreTechMatrix';
+import { useUrlState } from '../../hooks/useUrlState';
 
 // checked_at older than this reads as stale — same intent as TR-05's
 // "не разово, а по регламенту" (a registry with no upkeep signal rots).
@@ -60,6 +61,7 @@ const S = {
 };
 
 type TechView = 'list' | 'matrix';
+const TECH_VIEWS: readonly TechView[] = ['list', 'matrix'];
 
 export default function LoreTechRegistry({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
@@ -72,7 +74,8 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
   // ("which components use ArcadeDB?"). Empty = show all.
   const [techSel, setTechSel] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
-  const [view, setView] = useState<TechView>('list');
+  // AH-09: вид техреестра в URL (?tview=).
+  const [view, setView] = useUrlState<TechView>('tview', 'list', TECH_VIEWS);
   // Технология, предзаполняемая в форме после клика по ячейке матрицы.
   const [addTech, setAddTech] = useState<string | null>(null);
 
