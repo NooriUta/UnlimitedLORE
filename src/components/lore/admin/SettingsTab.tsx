@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { loreMutate } from '../../../api/lore';
 import { loadKcObj } from '../kc-state';
 import { AUTH_ENABLED } from '../../../auth/session';
@@ -12,10 +13,31 @@ import { RespTable, rowBtn } from './adminWidgets';
 import { useIsNarrow } from './useIsNarrow';
 import type { Col } from './adminCards';
 
-// AL-38: реестр известных app_setting-ключей. Сейчас приложение НЕ читает ни одного —
-// реестр пуст, и это честно: всё, что лежит в dict_type=app_setting, попадает в
-// «неопознанные». Появится реальный ключ → строка здесь + чтение в коде одним PR.
-const KNOWN_SETTINGS: { key: string; type: string; def: string; descr: string }[] = [];
+// AL-38: реестр известных app_setting-ключей. Ключ попадает сюда только вместе с
+// чтением в коде (одним PR) — всё прочее в dict_type=app_setting остаётся «неопознанным».
+// Тексты — функцией от t: ключи локалей литералами, их видит i18n-coverage.
+interface KnownSetting {
+  key: string;
+  text: (t: TFunction) => { type: string; def: string; descr: string; hint: string };
+  placeholder: string;
+}
+const KNOWN_SETTINGS: KnownSetting[] = [
+  // SPRINT_QG_REBUILD/QG-09: читает LoreQgActionsPoller на каждом заходе
+  // (настройка → иначе LORE_QG_ACTIONS_PROJECTS → иначе пусто).
+  {
+    key: 'qg.actions_projects',
+    placeholder: 'NooriUta/UnlimitedLORE,NooriUta/AIDA',
+    text: t => ({
+      type: t('lore.admin.settingTypeProjects', 'список git-проектов через запятую'),
+      def: t('lore.admin.settingQgProjectsDef', '— (берётся из LORE_QG_ACTIONS_PROJECTS, если задан)'),
+      descr: t('lore.admin.settingQgProjectsDescr', 'Какие репозитории опрашивает канал прогонов Forgejo Actions для гейтов качества. Пусто — прогоны Actions в гейты не пишутся.'),
+      hint: t('lore.admin.settingQgProjectsHint', 'Список проектов — во вкладке «Проекты» (slug вида owner/repo). Правка подхватывается со следующего захода опроса, без рестарта.'),
+    }),
+  },
+];
+
+/** Строка таблицы известных ключей: запись из базы или null — ключ ещё не задан. */
+interface KnownRow { k: KnownSetting; row: DictRow | null }
 
 // ── Настройки (AL-38 + чеклист AL-35 + отказы AL-45) ────────────────────────
 // AH-05 п.2: таблицы — RespTable (на телефоне карточки, панель вбок не листается).
@@ -34,9 +56,25 @@ export function SettingsTab({ dicts, preflight, onError, reload }: {
     loadKcObj<{ denials: Denial[] }>('/lore/kc/denials').then(r => setDenials(r?.denials ?? null));
   }, []);
 
+  // QG-09: правка значения известного ключа. editing — код ключа в режиме правки.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+
   const settings = dicts.filter(r => r.dict_type === 'app_setting' && r.is_active);
-  const known = settings.filter(s => KNOWN_SETTINGS.some(k => k.key === s.code));
+  // Известный ключ виден ВСЕГДА: нет записи в базе — строка «не задано», её можно создать.
+  const known: KnownRow[] = KNOWN_SETTINGS.map(k => ({ k, row: settings.find(s => s.code === k.key) ?? null }));
   const unknown = settings.filter(s => !KNOWN_SETTINGS.some(k => k.key === s.code));
+
+  // Поля, кроме label_ru/is_active, — null: /dict/entry partial-safe, null-поле не
+  // трогается (на новой записи is_extensible получит дефолт false).
+  async function saveKnown(code: string, value: string) {
+    setBusy(true);
+    try {
+      await loreMutate('/dict/entry', { dict_type: 'app_setting', code, label_ru: value.trim(), is_active: true, label_en: null, color: null, icon: null, sort_order: null, is_extensible: null });
+      setEditing(null);
+      reload();
+    } catch (e) { onError(e); } finally { setBusy(false); }
+  }
 
   async function removeUnknown(code: string) {
     setBusy(true);
@@ -79,7 +117,44 @@ export function SettingsTab({ dicts, preflight, onError, reload }: {
     { key: 'code', label: t('lore.admin.thKey', 'ключ'), kind: 'title' },
     { key: 'value', label: t('lore.admin.thValue', 'значение') },
     { key: 'descr', label: t('lore.admin.thDescr', 'описание'), kind: 'full' },
+    { key: 'act', label: '', kind: 'act' },
   ];
+  const knownCell = ({ k, row }: KnownRow, col: string) => {
+    const tx = k.text(t);
+    const isEdit = editing === k.key;
+    switch (col) {
+      case 'code': return <span style={{ fontFamily: 'var(--mono)' }}>{k.key}</span>;
+      case 'value':
+        if (isEdit) return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+            <input style={{ ...S.input, fontFamily: 'var(--mono)', width: '100%', boxSizing: 'border-box' }}
+              value={draft} placeholder={k.placeholder} disabled={busy} autoFocus
+              aria-label={k.key}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveKnown(k.key, draft); if (e.key === 'Escape') setEditing(null); }} />
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', overflowWrap: 'anywhere' }}>{tx.hint}</span>
+          </div>
+        );
+        return row && row.label_ru
+          ? <span style={{ fontFamily: 'var(--mono)', overflowWrap: 'anywhere' }}>{row.label_ru}</span>
+          : <span style={{ color: 'var(--t3)' }}>{t('lore.admin.settingNotSet', 'не задано')}</span>;
+      case 'descr': return (
+        <span style={{ overflowWrap: 'anywhere' }}>
+          {tx.descr}
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 2 }}>
+            {t('lore.admin.settingTypeDef', 'тип: {{type}} · по умолчанию: {{def}}', { type: tx.type, def: tx.def })}
+          </div>
+        </span>
+      );
+      case 'act': return isEdit
+        ? <>
+            <button style={rowBtn(narrow, S.primary)} disabled={busy} onClick={() => saveKnown(k.key, draft)}>{t('lore.admin.settingSave', 'Сохранить')}</button>
+            <button style={rowBtn(narrow)} disabled={busy} onClick={() => setEditing(null)}>{t('lore.admin.cancel', 'Отмена')}</button>
+          </>
+        : <button style={rowBtn(narrow)} disabled={busy} onClick={() => { setDraft(row?.label_ru ?? ''); setEditing(k.key); }}>{t('lore.admin.settingEdit', 'Изменить')}</button>;
+    }
+    return null;
+  };
   const unkCols: Col[] = [
     { key: 'code', label: t('lore.admin.thKey', 'ключ'), kind: 'title' },
     { key: 'value', label: t('lore.admin.thValue', 'значение') },
@@ -89,7 +164,6 @@ export function SettingsTab({ dicts, preflight, onError, reload }: {
     switch (k) {
       case 'code': return s.code;
       case 'value': return <span style={{ fontFamily: 'var(--mono)', overflowWrap: 'anywhere' }}>{s.label_ru}</span>;
-      case 'descr': return KNOWN_SETTINGS.find(x => x.key === s.code)?.descr;
       case 'act': return confirmDel === s.code
         ? <>
             <button style={rowBtn(narrow, S.danger)} disabled={busy} onClick={() => removeUnknown(s.code)}>{t('lore.admin.removeConfirm', 'Точно удалить?')}</button>
@@ -161,7 +235,7 @@ export function SettingsTab({ dicts, preflight, onError, reload }: {
           {t('lore.admin.noKnownSettings', 'Приложение пока не читает ни одного ключа app_setting — реестр известных параметров пуст (AL-38). Появится реальный параметр → он получит здесь строку с типом, дефолтом и описанием; свободного ввода ключей больше нет: выдуманный ключ не прочитает никто.')}
         </div>
       )}
-      {known.length > 0 && <RespTable cols={keyCols} rows={known} rowKey={s => s.code} cell={settingCell} narrow={narrow} />}
+      {known.length > 0 && <RespTable cols={keyCols} rows={known} rowKey={r => r.k.key} cell={knownCell} narrow={narrow} />}
       {unknown.length > 0 && (
         <div style={{ ...S.warn, marginTop: 10 }}>
           <b>{t('lore.admin.unknownH', 'Неопознанные значения · {{n}}', { n: unknown.length })}</b>
