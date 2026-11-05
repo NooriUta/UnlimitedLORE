@@ -16,6 +16,11 @@ describe('slicePageOf: страница слайса не теряется по 
     expect(slicePageOf({ rows: [1, 2] })).toBeUndefined();
   });
 
+  it('предупреждение «колонки не проверены» на пустой выдаче доходит до агента', () => {
+    expect(slicePageOf({ rows: [], page: { limit: null, offset: 0, total: 0, has_more: false, fields: ['x'], fields_checked: false, warning: '0 rows: fields [x] could NOT be checked' } }))
+      .toMatchObject({ fields_checked: false, warning: expect.stringContaining('NOT be checked') });
+  });
+
   it('мусор вместо page не выдаётся за страницу', () => {
     expect(slicePageOf({ rows: [], page: 'x' as unknown as object })).toBeUndefined();
   });

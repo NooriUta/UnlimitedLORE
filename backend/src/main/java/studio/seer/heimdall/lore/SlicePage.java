@@ -107,7 +107,14 @@ public record SlicePage(Integer limit, int offset, java.util.List<String> fields
         meta.put("offset", page.offset());
         meta.put("total", total);
         meta.put("has_more", to < total);
-        if (page.fields() != null) meta.put("fields", page.fields());
+        if (page.fields() != null) {
+            meta.put("fields", page.fields());
+            // Пустая выдача — слепая зона проверки колонок: отказывать не на чем, но
+            // «0 строк» нельзя отдать так, чтобы оно читалось как «данных нет».
+            meta.put("fields_checked", total > 0);
+            if (total == 0) meta.put("warning", "0 rows: fields " + page.fields()
+                + " could NOT be checked against the slice columns — an empty answer here may be a typo in fields, not absent data");
+        }
         body.put("page", meta);
     }
 }

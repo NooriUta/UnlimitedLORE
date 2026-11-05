@@ -236,7 +236,7 @@ export async function loreSliceWithMeta(
 }
 
 type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string; page?: unknown };
-export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean };
+export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean; fields?: string[]; fields_checked?: boolean; warning?: string };
 
 /**
  * SE-01: страница выдачи (limit/offset у любого слайса). Бэкенд кладёт её в `page`;
@@ -247,7 +247,13 @@ export function slicePageOf(body: SliceBody): SlicePage | undefined {
   if (!p || typeof p !== 'object') return undefined;
   const o = p as Record<string, unknown>;
   if (typeof o.total !== 'number' || typeof o.has_more !== 'boolean') return undefined;
-  return { limit: typeof o.limit === 'number' ? o.limit : null, offset: typeof o.offset === 'number' ? o.offset : 0, total: o.total, has_more: o.has_more };
+  return {
+    limit: typeof o.limit === 'number' ? o.limit : null, offset: typeof o.offset === 'number' ? o.offset : 0,
+    total: o.total, has_more: o.has_more,
+    ...(Array.isArray(o.fields) ? { fields: o.fields as string[] } : {}),
+    ...(typeof o.fields_checked === 'boolean' ? { fields_checked: o.fields_checked } : {}),
+    ...(typeof o.warning === 'string' ? { warning: o.warning } : {}),
+  };
 }
 export type SliceMeta = { truncated: boolean | string; limit?: number; hint?: string };
 

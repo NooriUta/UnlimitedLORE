@@ -121,9 +121,24 @@ class SlicePageTest {
     }
 
     @Test
-    void emptyResultCannotJudgeFields() {
+    void emptyResultSaysFieldsWereNotChecked() {
+        // Völva: пустая выдача — самый опасный случай: «0 строк» читается как «данных
+        // нет», хотя может быть опечатка в fields. Отказывать не на чем, но и молчать
+        // нельзя: ответ говорит, что колонки проверить было не по чему.
         Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of()));
         assertDoesNotThrow(() -> SlicePage.apply(body, SlicePage.extract(given("fields", "whatever"))));
+        @SuppressWarnings("unchecked") Map<String, Object> page = (Map<String, Object>) body.get("page");
+        assertEquals(false, page.get("fields_checked"));
+        assertTrue(String.valueOf(page.get("warning")).contains("whatever"), String.valueOf(page.get("warning")));
+    }
+
+    @Test
+    void nonEmptyResultMarksFieldsChecked() {
+        Map<String, Object> body = new LinkedHashMap<>(Map.of("rows", List.of(Map.of("a", 1))));
+        SlicePage.apply(body, SlicePage.extract(given("fields", "a")));
+        @SuppressWarnings("unchecked") Map<String, Object> page = (Map<String, Object>) body.get("page");
+        assertEquals(true, page.get("fields_checked"));
+        assertFalse(page.containsKey("warning"));
     }
 
     @Test
