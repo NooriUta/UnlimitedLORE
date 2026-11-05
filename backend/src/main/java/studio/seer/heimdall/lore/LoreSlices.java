@@ -433,7 +433,9 @@ public final class LoreSlices {
         // показывает факт правки, не диф.
         slice("adr_history_all",
             "SELECT in('HAS_STATE').adr_id[0] AS adr_id, valid_from, valid_to, " +
-            "content_hash, source_commit " +
+            "content_hash, source_commit, " +
+            // Проект вершины — событию «изменено» в ленте (см. NewsChangedCarriesProjectTest).
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
@@ -441,7 +443,8 @@ public final class LoreSlices {
         // спек и решений — такая же новость, как правка ADR. Свёртку «одна строка
         // на (id, день)» делает потребитель (/news), здесь только сырые ревизии.
         slice("spec_history_all",
-            "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash " +
+            "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash, " +
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowSpecHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
