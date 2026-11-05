@@ -10,6 +10,7 @@ import { S } from './adminStyles';
 import { RespTable, Toolbar, rowBtn } from './adminWidgets';
 import { useIsNarrow } from './useIsNarrow';
 import type { Col } from './adminCards';
+import { checkNewDictType } from './dictTypeInput';
 
 const CANON_TYPES = new Set(['adr_status', 'sprint_status', 'task_status', 'priority']);
 
@@ -39,6 +40,20 @@ export function DictsTab({ rows, areaUsage, usageUnknown, onError, reload }: {
   const [confirmCanon, setConfirmCanon] = useState(false);
   const [confirmDeact, setConfirmDeact] = useState(false);
   const [saving, setSaving] = useState(false);
+  // RM-P11: вход для нового типа. Тип не существует отдельно от записей, поэтому
+  // «Завести» сразу открывает форму ПЕРВОЙ записи — иначе остался бы пустой тип,
+  // которого снова не видно (тот же дефект под другим именем).
+  const [newType, setNewType] = useState('');
+  const newTypeCheck = checkNewDictType(newType, types);
+  function startNewValue(forType: string, count: number) {
+    setEdit({ dict_type: forType, code: '', label_ru: '', label_en: null, color: null, icon: null, sort_order: (count + 1) * 10, is_active: true, is_extensible: true });
+    setIsNew(true); setConfirmCanon(false); setConfirmDeact(false);
+  }
+  function applyNewType() {
+    if (newTypeCheck.kind === 'exists') { setDt(newTypeCheck.code); closeEdit(); setNewType(''); return; }
+    if (newTypeCheck.kind !== 'new') return;
+    setDt(newTypeCheck.code); setNewType(''); startNewValue(newTypeCheck.code, 0);
+  }
 
   const all = rows.filter(r => r.dict_type === dt);
   const ql = q.toLowerCase();
@@ -224,6 +239,26 @@ export function DictsTab({ rows, areaUsage, usageUnknown, onError, reload }: {
           </button>
         ))}
       </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+        <input style={{ ...S.input, fontFamily: 'var(--mono)', minHeight: S.tap(narrow).minHeight, width: narrow ? '100%' : 200, boxSizing: 'border-box' }}
+          aria-label={t('lore.admin.newTypeLabel', 'Новый тип справочника')}
+          placeholder={t('lore.admin.newTypePlaceholder', 'новый тип: release_kind')}
+          value={newType} onChange={e => setNewType(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') applyNewType(); }} />
+        <button style={rowBtn(narrow)} disabled={newTypeCheck.kind === 'empty' || newTypeCheck.kind === 'bad'} onClick={applyNewType}>
+          {newTypeCheck.kind === 'exists' ? t('lore.admin.newTypeOpen', 'Открыть') : t('lore.admin.newTypeCreate', 'Завести тип')}
+        </button>
+        {newTypeCheck.kind === 'bad' && (
+          <span style={{ color: 'var(--dng)', fontSize: 'var(--fs-xs)' }}>
+            {t('lore.admin.newTypeBad', 'код — строчная латиница, цифры и «_», с буквы в начале')}
+          </span>
+        )}
+        {newTypeCheck.kind === 'new' && (
+          <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>
+            {t('lore.admin.newTypeHint', 'тип появится вместе с первой записью')}
+          </span>
+        )}
+      </div>
       {canon && <div style={S.warn}>{t('lore.admin.canonWarn', '⚠ Канон-словарь (ADR-LORE-010): значения зашиты в статусы всего корпуса. Правка label/color/icon безопасна; коды здесь не правятся вовсе.')}</div>}
       <Toolbar q={q} setQ={setQ} shown={shown.length} total={all.length} placeholder={t('lore.admin.dictSearch', 'код или подпись…')}
         seg={{ options: [['active', t('lore.admin.fltActive', 'Активные')], ['all', t('lore.admin.fltAll', 'Все')]], value: active, set: v => setActive(v as 'active' | 'all') }} />
@@ -246,7 +281,7 @@ export function DictsTab({ rows, areaUsage, usageUnknown, onError, reload }: {
         </div>
       )}
       <div style={{ marginTop: 8 }}>
-        <button style={rowBtn(narrow)} onClick={() => { setEdit({ dict_type: dt, code: '', label_ru: '', label_en: null, color: null, icon: null, sort_order: (all.length + 1) * 10, is_active: true, is_extensible: true }); setIsNew(true); setConfirmCanon(false); setConfirmDeact(false); }}>
+        <button style={rowBtn(narrow)} onClick={() => startNewValue(dt, all.length)}>
           {t('lore.admin.addValue', '+ значение')}
         </button>
       </div>

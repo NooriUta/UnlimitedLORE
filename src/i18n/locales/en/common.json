@@ -2465,7 +2465,13 @@
       "authOnLine": "on (JWT, role from seer_roles)",
       "authOffLine": "off — dev mode, role from config (VITE_LORE_ROLE)",
       "thTag": "tag",
-      "tagSearch": "tag…"
+      "tagSearch": "tag…",
+      "newTypeLabel": "New dictionary type",
+      "newTypePlaceholder": "new type: release_kind",
+      "newTypeOpen": "Open",
+      "newTypeCreate": "Create type",
+      "newTypeBad": "code: lowercase latin, digits and \"_\", starting with a letter",
+      "newTypeHint": "the type appears together with its first entry"
     },
     "oqBoard": {
       "ansFailed": "Failed to load decision #{{id}} — click to retry",

@@ -2465,7 +2465,13 @@
       "authOnLine": "включён (JWT, роль из seer_roles)",
       "authOffLine": "выключен — dev-режим, роль из конфига (VITE_LORE_ROLE)",
       "thTag": "тег",
-      "tagSearch": "тег…"
+      "tagSearch": "тег…",
+      "newTypeLabel": "Новый тип справочника",
+      "newTypePlaceholder": "новый тип: release_kind",
+      "newTypeOpen": "Открыть",
+      "newTypeCreate": "Завести тип",
+      "newTypeBad": "код — строчная латиница, цифры и «_», с буквы в начале",
+      "newTypeHint": "тип появится вместе с первой записью"
     },
     "oqBoard": {
       "ansFailed": "Не удалось загрузить решение #{{id}} — клик повторит",
