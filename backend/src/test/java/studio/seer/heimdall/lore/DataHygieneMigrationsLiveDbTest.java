@@ -278,6 +278,41 @@ class DataHygieneMigrationsLiveDbTest {
         assertTrue(runner.dropPlanItemTypesIfUnused().isEmpty());
     }
 
+    // ── V57 (T-14, хвост): StatusPlanItem + REPRESENTS ──────────────────────
+
+    @Test
+    @Order(23)
+    void v57_usedTypesAreNotDropped() throws Exception {
+        sql("CREATE VERTEX TYPE StatusPlanItem IF NOT EXISTS");
+        sql("CREATE EDGE TYPE REPRESENTS IF NOT EXISTS");
+        sql("INSERT INTO StatusPlanItem SET status = 'v57probe'");
+        for (String t : LoreSchemaMigrations.PLANITEM_LEFTOVER_TYPES)
+            assertTrue(typeExists(t), "положительный контроль: тип " + t + " заведён");
+
+        assertTrue(runner.dropPlanItemLeftoversIfUnused().isEmpty(), "при записи в StatusPlanItem снят хоть один тип");
+        for (String t : LoreSchemaMigrations.PLANITEM_LEFTOVER_TYPES)
+            assertTrue(typeExists(t), "тип " + t + " снят, хотя StatusPlanItem не пуст — всё или ничего");
+    }
+
+    @Test
+    @Order(24)
+    void v57_emptyTypesAreDropped() throws Exception {
+        sql("DELETE FROM StatusPlanItem WHERE status = 'v57probe'");
+        assertEquals(0, n("SELECT count(*) AS n FROM StatusPlanItem"));
+
+        List<String> dropped = runner.dropPlanItemLeftoversIfUnused();
+
+        assertEquals(LoreSchemaMigrations.PLANITEM_LEFTOVER_TYPES, dropped, "сняты не все: " + dropped);
+        for (String t : LoreSchemaMigrations.PLANITEM_LEFTOVER_TYPES)
+            assertFalse(typeExists(t), "тип " + t + " остался в схеме");
+    }
+
+    @Test
+    @Order(25)
+    void v57_secondRunIsNoop() {
+        assertTrue(runner.dropPlanItemLeftoversIfUnused().isEmpty());
+    }
+
     @AfterAll
     static void cleanup() throws Exception {
         // Не оставлять NULL-строку пробы C общей тестовой БД: соседние проверки

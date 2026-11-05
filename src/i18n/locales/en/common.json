@@ -1140,7 +1140,6 @@
         "toggleHide": "legend"
       },
       "card": {
-        "registerTooltip": "Create a KnowSprint, link the plan item (REPRESENTS), and set an initial status",
         "registering": "Registering…",
         "registerSprint": "＋ Schedule sprint",
         "plan": "Plan",

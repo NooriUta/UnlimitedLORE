@@ -11,6 +11,7 @@ import { useIsNarrow } from './useIsNarrow';
 import type { KcUser, Preflight } from './types';
 import { S } from './adminStyles';
 import { PROJECT_ROLES } from './adminHelpers';
+import { projectLabels, applyRoleChange } from '../projectLabel';
 import { KcStateView, Toolbar } from './adminWidgets';
 
 // ── Проектные роли человека (AL-98) ─────────────────────────────────────────
@@ -213,6 +214,16 @@ function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onC
   const narrow = useIsNarrow();
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Своё состояние галочек: после успешной записи попап показывает её сразу.
+  // Раньше он ждал полной перезагрузки карты ролей (срез project_users по
+  // каждому проекту) и до её конца рисовал старое — «страница не
+  // дообновилась» (05.11.2026). Пришла свежая карта — она главнее.
+  const [cur, setCur] = useState(current);
+  // Ключ по содержимому, а не по ссылке: `?? []` у родителя даёт новый массив
+  // на каждый рендер и сбрасывал бы только что применённую правку.
+  const currentKey = JSON.stringify(current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setCur(current); }, [currentKey]);
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -224,6 +235,7 @@ function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onC
     setBusy(project); setErr(null);
     try {
       await loreMutate('/user/role', { kc_sub: kcSub, display_name: username, project, role, action });
+      setCur(c => applyRoleChange(c, project, role, action));
       onChanged();
     } catch (e) {
       // 409 из AL-100 (последний owner / собственная последняя роль) — ответ
@@ -265,7 +277,7 @@ function InlineRolesPopup({ kcSub, username, projects, projectsErr, current, onC
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.inlineNoProjects', 'проектов нет — заведите их в разделе «Проекты»')}</div>
         )}
         {projects.map(p => {
-          const has = current.find(x => x.project === p);
+          const has = cur.find(x => x.project === p);
           return (
             <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', minHeight: S.tap(narrow).minHeight }}>
               <input type="checkbox" checked={!!has} disabled={busy === p}
@@ -467,6 +479,9 @@ export function UsersTab({ st, preflight, realmRoles, onError, reload }: {
   if (st.k !== 'ok') return <div>{note}<KcStateView s={st} empty={null} /></div>;
 
   // Ячейка «проекты и роли» — одна для таблицы и для карточек телефона.
+  // Короткое имя — только пока однозначно: AIDA/udwe-mig-gen и
+  // ciadmin/udwe-mig-gen не должны рисоваться одинаковыми чипами.
+  const projLabels = projectLabels([...allProjects, ...[...projRoles.values()].flat().map(x => x.project)]);
   const projCell = (u: KcUser) => {
     const mine = projRoles.get(u.id) ?? [];
     // AL-101: видно прямо в строке, без раскрытия карточки. Человек без
@@ -486,7 +501,7 @@ export function UsersTab({ st, preflight, realmRoles, onError, reload }: {
       <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4, justifyContent: narrow ? 'flex-end' : undefined }}>
         {mine.map(x => (
           <span key={x.project} style={S.pill('var(--suc)')} title={`${x.project} · ${x.role}`}>
-            {x.project.split('/').pop()} · {x.role}
+            {projLabels.get(x.project) ?? x.project} · {x.role}
           </span>
         ))}
       </span>

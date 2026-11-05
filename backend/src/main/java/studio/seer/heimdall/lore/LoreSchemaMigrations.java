@@ -1358,7 +1358,14 @@ final class LoreSchemaMigrations {
         // javaStep(56); SQL пуст. Разбор движка — в javadoc
         // LoreSchemaMigrationRunner.histTimeToDatetime. Аддитивный (major 17):
         // форма записи для пишущих путей не меняется — они и так шлют ISO-Z.
-        new Step(56, 17, "java__hist_valid_time_datetime", List.of())
+        new Step(56, 17, "java__hist_valid_time_datetime", List.of()),
+
+        // T-14, хвост V54 (решение владельца 05.11.2026: «удаляй из спек из базы и
+        // закрывай задачу, это уже архивная история»): StatusPlanItem и REPRESENTS
+        // в ответ №15 не входили и пережили V54. На проде 05.11 оба пусты (0 строк),
+        // код их не создаёт и не читает. Тот же механизм: только при нулевом счёте,
+        // иначе WARN и ничего не удаляется. Бэкап перед шагом снимает раннер.
+        new Step(57, 17, "java__drop_planitem_leftovers_if_unused", List.of())
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
@@ -1384,6 +1391,9 @@ final class LoreSchemaMigrations {
      * счёте порядок не существенен, но так DROP не упрётся в живое ребро.
      */
     static final List<String> PLANITEM_TYPES = List.of("ON_TRACK", "CONTRIBUTES_TO", "PlanItemHist", "PlanItem");
+
+    /** T-14, V57: что пережило V54 (замер прода 05.11.2026 — оба пусты). Рёбра раньше вершин. */
+    static final List<String> PLANITEM_LEFTOVER_TYPES = List.of("REPRESENTS", "StatusPlanItem");
 
     /**
      * Одна строка справочника продуктов. Идиома UPSERT та же, что у

@@ -1140,7 +1140,6 @@
         "toggleHide": "легенда"
       },
       "card": {
-        "registerTooltip": "Создать KnowSprint, связать план-элемент (REPRESENTS) и завести начальный статус",
         "registering": "Регистрирую…",
         "registerSprint": "＋ Запланировать спринт",
         "plan": "План",
