@@ -482,6 +482,16 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // No PK re-key / SCD2 surgery — reuses the create + status write paths.
     public record TaskMoveRequest(String task_uid, String target_sprint_id, String new_task_id) {}
 
+    /**
+     * MT-TASK-MV-HISTORY (Völva 05.11.2026): перенос задачи создавал новую с историей
+     * «📋 PLANNED» — статус терялся, его восстанавливали руками у каждой перенесённой
+     * задачи. Переносится статус открытой строки истории; нет его — PLANNED, как раньше.
+     */
+    static String carriedStatus(Object statusRaw) {
+        String v = statusRaw == null ? null : String.valueOf(statusRaw).strip();
+        return (v == null || v.isEmpty()) ? "📋 PLANNED" : v;
+    }
+
     @POST
     @Path("task/move")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -506,7 +516,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 "SELECT task_id, title, task_type, author_agent, executor_agent, reviewer_agent, " +
                 "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
                 "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
-                "out('TAGGED_WITH').component_id AS components " +
+                "out('TAGGED_WITH').component_id AS components, " +
+                // MT-TASK-MV-HISTORY: статус ОТКРЫТОЙ строки истории переезжает вместе с задачей
+                "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw " +
                 "FROM KnowTask WHERE task_uid=:u LIMIT 1", Map.of("u", oldUid));
             if (src.isEmpty()) return badParams("task not found: " + oldUid);
             if (ingestService.queryPublic("SELECT sprint_id FROM KnowSprint WHERE sprint_id=:s LIMIT 1",
@@ -524,6 +536,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             String executor = (String) s.get("executor_agent");
             String reviewer = (String) s.get("reviewer_agent");
             List<?> comps = s.get("components") instanceof List<?> l ? l : List.of();
+            final String carriedStatus = carriedStatus(s.get("status_raw"));
 
             // Resolve a collision-free task_id in the target sprint.
             String wantTid = (req.new_task_id() != null && !req.new_task_id().isBlank())
@@ -543,12 +556,13 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .append("INSERT INTO KnowTask SET task_uid=:uid, task_id=:tid, title=:title, note_md=:note, order_index=:oi, src='manual', ")
                 .append("task_type=:tt, author_agent=:author, executor_agent=:executor, reviewer_agent=:reviewer;")
                 .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowSprint WHERE sprint_id=:sid);")
-                .append("INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='📋 PLANNED', valid_from=:now, note_md=:note")
+                .append("INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw=:st, valid_from=:now, note_md=:note")
                 .append(effort != null ? ", effort_days=:eff;" : ";")
                 .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid);");
             Map<String, Object> p = mapOfNullable("uid", newUid, "tid", tid, "title", title,
                 "note", note, "oi", order, "sid", targetSid, "nsid", nsid, "now", now,
-                "tt", taskType, "author", author, "executor", executor, "reviewer", reviewer);
+                "tt", taskType, "author", author, "executor", executor, "reviewer", reviewer,
+                "st", carriedStatus);
             if (effort != null) p.put("eff", effort);
             for (Object c : comps) {
                 if (c == null) continue;
@@ -574,7 +588,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             boolean tidChanged = !tid.equals(s.get("task_id"));
             return noStore(Response.ok(Map.of("ok", true,
                 "old_task_uid", oldUid, "new_task_uid", newUid,
-                "task_id_changed", tidChanged, "new_task_id", tid)));
+                "task_id_changed", tidChanged, "new_task_id", tid, "status", carriedStatus)));
         } catch (Exception e) {
             LOG.warnf("[LORE TASK MOVE] %s → %s: %s", oldUid, targetSid, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
