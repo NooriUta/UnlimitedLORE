@@ -81,7 +81,11 @@ export function registerLoreRead(server: McpServer): void {
       'LORE_ACTIVE_PROJECT default when you omit it; passing one that differs from that default ' +
       'is allowed but the response carries a `_warning` field so the mismatch is never silent. ' +
       'If the registry cannot be reached, NO default is applied and the response says so — ' +
-      'an unscoped answer must not look like a scoped one.',
+      'an unscoped answer must not look like a scoped one. ' +
+      'SE-01: every slice accepts params limit (1..1000), offset (>=0) and fields (comma list of columns to keep) — ' +
+      'e.g. {"limit":"1","fields":"release_id,is_current"} reads just the newest release instead of every description_md; ' +
+      'a paged/projected answer carries _page ' +
+      '{limit, offset, total, has_more}, so a page never looks like the full list.',
     {
       slice: z.string().describe('slice id from list_slices, e.g. "sprints"'),
       params: z
@@ -105,13 +109,14 @@ export function registerLoreRead(server: McpServer): void {
               `("${ACTIVE_PROJECT}", from LORE_ACTIVE_PROJECT) — proceeding with the explicit value.`;
           }
         }
-        const { rows, meta } = await loreSliceWithMeta(
+        const { rows, meta, page } = await loreSliceWithMeta(
           slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
         // Усечённая выдача обязана выглядеть усечённой: голый массив читался
         // как полный список, даже когда бэкенд прямо сказал «обрезал».
-        if (!warning && !meta) return json(rows);
+        if (!warning && !meta && !page) return json(rows);
         return json({
           rows,
+          ...(page ? { _page: page } : {}),
           ...(meta ? { _truncated: meta.truncated, _limit: meta.limit, _hint: meta.hint } : {}),
           ...(warning ? { _warning: warning } : {}),
         });

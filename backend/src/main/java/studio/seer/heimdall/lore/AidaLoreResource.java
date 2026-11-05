@@ -560,7 +560,13 @@ public class AidaLoreResource extends LoreResourceBase {
 
     private List<Map<String, Object>> composeAndQuery(String sliceId) {
         LoreSlices.Composed c = LoreSlices.compose(sliceId, Map.of());
-        return ingestService.queryPublic(c.sql(), c.params());
+        // RM-P13: здесь нормализация нужна ДО выдачи, а не в фильтре ответа: лента
+        // работает со строками дат в Java — min valid_from по задаче сравнением
+        // строк, сортировка по date/time, отсечение since/before. Смесь
+        // «2026-04-13 00:00:00» (DATETIME) и «…T…Z» (текстовые поля вроде
+        // updated_at) сравнивалась бы неверно: пробел меньше «T». Фильтр ответа
+        // потом ничего не меняет — значения уже ISO-Z.
+        return LoreTimeFormat.isoUtcRows(ingestService.queryPublic(c.sql(), c.params()));
     }
 
     /** "2026-06-11 22:26:41" and "2026-07-10" both → "2026-07-10". Null when no date. */
@@ -741,6 +747,8 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
+        // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
+        // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
         List<Map<String, Object>> rows = res.result() == null ? List.of() : res.result();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("rows", rows);
@@ -786,7 +794,10 @@ public class AidaLoreResource extends LoreResourceBase {
         });
 
         LoreSlices.Composed composed;
+        final SlicePage page;
         try {
+            // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
+            page = SlicePage.extract(given);
             composed = LoreSlices.compose(id, given, allowedProjectsOrNull(role));
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
@@ -811,7 +822,16 @@ public class AidaLoreResource extends LoreResourceBase {
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
-            .map(res -> noStore(Response.ok(sliceBody(redactIfNoRole(id, res, allowedForRedact)))))
+            .map(res -> {
+                Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
+                try {
+                    SlicePage.apply(out, page);
+                } catch (IllegalArgumentException e) {
+                    return noStore(Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new LoreError("BAD_PARAMS", e.getMessage())));
+                }
+                return noStore(Response.ok(out));
+            })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)

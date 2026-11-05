@@ -46,6 +46,13 @@ class LoreReadinessLiveDbTest {
     @Order(1)
     void setUp() {
         post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_RD\",\"name\":\"readiness\"}");
+        // MT-SPRINT-DONE-GUARD: когда все задачи SPRINT_RD сделаны, спринт закрывается сам,
+        // и новая задача туда уже не заводится (отказ 400). Доработка и поздние задачи —
+        // в отдельном открытом спринте, как и в жизни.
+        post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_RD_LATER\",\"name\":\"readiness later\"}");
+        // Якорь: незакрытая задача держит SPRINT_RD_LATER открытым, пока R3…R5 по очереди
+        // уходят в done (иначе спринт закрылся бы сам после R3, и R4 уже не завёлся бы).
+        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD_LATER\",\"task_id\":\"KEEP-OPEN\",\"title\":\"якорь открытого спринта\"}");
         post("/lore/feature", "{\"feature_id\":\"FEAT-RD\",\"title\":\"Корень\"}");
         post("/lore/uc", "{\"uc_id\":\"UC-RD-1\",\"title\":\"Сценарий\",\"parent_uc_id\":\"FEAT-RD\","
             + "\"goal_level\":\"sea-level\"}");
@@ -124,9 +131,9 @@ class LoreReadinessLiveDbTest {
             .then().statusCode(200).extract()
             .path("rows.find { it.uc_id == 'UC-RD-1' }.shipped_at");
 
-        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD\",\"task_id\":\"R3\",\"title\":\"доработка\","
+        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD_LATER\",\"task_id\":\"R3\",\"title\":\"доработка\","
             + "\"work_class\":\"uc\",\"uc_id\":\"UC-RD-1\",\"executor_agent\":\"a\",\"reviewer_agent\":\"b\"}");
-        setStatus("SPRINT_RD/R3", "active");
+        setStatus("SPRINT_RD_LATER/R3", "active");
 
         given().header("X-Seer-Role", "admin")
         .when().get("/lore/slice/use_cases_of_feature?id=FEAT-RD")
@@ -136,7 +143,7 @@ class LoreReadinessLiveDbTest {
 
         // Доработка закрыта — снова shipped, и shipped_at ТОТ ЖЕ: система
         // ставит его один раз, а не переписывает на каждый выпуск.
-        setStatus("SPRINT_RD/R3", "done");
+        setStatus("SPRINT_RD_LATER/R3", "done");
         given().header("X-Seer-Role", "admin")
         .when().get("/lore/slice/use_cases_of_feature?id=FEAT-RD")
         .then().statusCode(200)
@@ -150,9 +157,9 @@ class LoreReadinessLiveDbTest {
     void droppedIsNotOverriddenByTheCalculator() {
         post("/lore/uc", "{\"uc_id\":\"UC-RD-2\",\"title\":\"Отменённый\",\"parent_uc_id\":\"FEAT-RD\","
             + "\"goal_level\":\"sea-level\",\"status\":\"dropped\"}");
-        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD\",\"task_id\":\"R4\",\"title\":\"по отменённому\","
+        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD_LATER\",\"task_id\":\"R4\",\"title\":\"по отменённому\","
             + "\"work_class\":\"uc\",\"uc_id\":\"UC-RD-2\",\"executor_agent\":\"a\",\"reviewer_agent\":\"b\"}");
-        setStatus("SPRINT_RD/R4", "done");
+        setStatus("SPRINT_RD_LATER/R4", "done");
 
         given().header("X-Seer-Role", "admin")
         .when().get("/lore/slice/use_cases_of_feature?id=FEAT-RD")
@@ -177,16 +184,16 @@ class LoreReadinessLiveDbTest {
     @Order(7)
     void linkingAnAlreadyDoneTaskShipsTheUc() {
         // Задача закрывается ДО того, как появится сценарий.
-        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD\",\"task_id\":\"R5\",\"title\":\"сделано раньше\","
+        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD_LATER\",\"task_id\":\"R5\",\"title\":\"сделано раньше\","
             + "\"work_class\":\"uc\",\"executor_agent\":\"a\",\"reviewer_agent\":\"b\"}");
-        setStatus("SPRINT_RD/R5", "done");
+        setStatus("SPRINT_RD_LATER/R5", "done");
 
         post("/lore/uc", "{\"uc_id\":\"UC-RD-3\",\"title\":\"Описан задним числом\","
             + "\"parent_uc_id\":\"FEAT-RD\",\"goal_level\":\"sea-level\"}");
 
         // Ни одного status_set после привязки — только сама привязка.
         post("/lore/uc/link", "{\"uc_id\":\"UC-RD-3\",\"rel\":\"task\","
-            + "\"target_id\":\"SPRINT_RD/R5\"}");
+            + "\"target_id\":\"SPRINT_RD_LATER/R5\"}");
 
         given().header("X-Seer-Role", "admin")
         .when().get("/lore/slice/use_cases_of_feature?id=FEAT-RD")
@@ -204,7 +211,7 @@ class LoreReadinessLiveDbTest {
     @Order(8)
     void unlinkingTheLastTaskUnshipsTheUc() {
         post("/lore/uc/link", "{\"uc_id\":\"UC-RD-3\",\"rel\":\"task\","
-            + "\"target_id\":\"SPRINT_RD/R5\",\"action\":\"remove\"}");
+            + "\"target_id\":\"SPRINT_RD_LATER/R5\",\"action\":\"remove\"}");
 
         given().header("X-Seer-Role", "admin")
         .when().get("/lore/slice/use_cases_of_feature?id=FEAT-RD")

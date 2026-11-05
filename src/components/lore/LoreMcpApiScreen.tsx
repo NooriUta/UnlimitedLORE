@@ -41,6 +41,15 @@ const TOOLS: ToolDoc[] = [
   { name: 'query_slice', kind: 'read', entity: 'Meta', backend: 'GET /lore/slice/{slice}', params: 'slice, params?',
     desc: 'Выполнить один слайс из каталога list_slices и получить rows[]. params — map строк-значений: {"id":"ADR-FE-001"}, {"sprint_id":"SPRINT_X"} и т.п. Сам SQL и whitelisting полей — на бэкенде, клиент их не видит. ADR-LORE-017 (T16): project-scoped слайсы (сегодня — "sprints") принимают опциональный params.project (git_project slug) — не передан, подставляется сессионный LORE_ACTIVE_PROJECT, если задан; явный project, отличный от него, разрешён, но ответ несёт поле _warning — расхождение никогда не тихое.' },
 
+  { name: 'search', kind: 'read', entity: 'Search', backend: 'GET /lore/search',
+    params: 'q, types?, components?, projects?, limit?, offset?, mode?',
+    desc: 'Ранжированный поиск по всему корпусу LORE (ADR-LORE-033, SRCH-07) — тот же /lore/search, что в интерфейсе: русская морфология («релиз» находит «релиза»), префикс по мере набора, поиск по телам (*Hist-строки сворачиваются к родителю). Возвращает {hits[], by_type, by_component, took_ms}; types/components/projects — CSV-фильтры, применяемые внутри каждой ветки поиска, а не постфильтром. mode = smart (по умолчанию) | exact | fuzzy. Предпочтительнее query_slice("search") — тот слайс плоский и без релевантности.' },
+  { name: 'search_similar', kind: 'read', entity: 'Search', backend: 'GET /lore/search/similar',
+    params: 'ref, limit?',
+    desc: '«Похожие записи» (SRCH-06, SEARCH_INDEX_MORE): на входе идентификатор записи, не строка запроса. Два измеренных ограничения движка отдаются в ответе: похожесть не пересекает типы (same_type_only) и порядок не является ранжированием (ranked:false — $similarity = 1.0 у всех строк). Пустой результат — штатный ответ, а не ошибка: на малом корпусе MoreLikeThis отсекает всё порогами частот.' },
+  { name: 'lore_version', kind: 'read', entity: 'Meta', backend: 'GET /lore/version',
+    params: '—',
+    desc: 'Сверка сборки MCP-сервера со сборкой бэкенда (SE-10): {mcp:{commit, built_at}, backend:{commit, built_at, schema_version}, drift:{verdict: ok|mcp_older|unknown, reason}}. mcp_older — схемы инструментов в сессии могут отставать от бэкенда (новый параметр отбивается «Unrecognized key», исправленное описание читается старым): пересобрать mcp-server и перезапустить сессию. Бэкенд недоступен — verdict unknown с причиной, а не ok.' },
   // ── Sprint (KnowSprint) ──────────────────────────────────────────────────
   { name: 'sprint_new', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint/create',
     params: 'sprint_id, name, status?, plan_id?, priority?, outcome_md?, context_md?, project?',
@@ -52,6 +61,9 @@ const TOOLS: ToolDoc[] = [
     params: 'sprint_id, rel (project|dep|component|milestone), target_id, kind?, reason?, action?',
     desc: 'Link-collapse (T02, 4→1): rel="project" — BELONGS_TO_PROJECT, target_id=git_project (спринт может относиться к нескольким репозиториям). rel="dep" — DEPENDS_ON на ДРУГОЙ спринт, target_id=спринт-от-которого-зависим; kind = hard (блокирует деплой) | soft (координация) | gate (go/no-go) | informs; сервер отклоняет циклы. rel="component" — явное ребро BELONGS_TO, target_id=component_id, перекрывает нечёткий матч по имени. rel="milestone" — TARGETS_MILESTONE, target_id=milestone_id, единственный способ привязки к вехе. action = add | remove, идемпотентно на add.' },
 
+  { name: 'sprint_plan_set', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint/plan',
+    params: 'sprint_id, priority?, planned_start_date?, planned_end_date?, track_id?',
+    desc: 'KnowSprint: плановые SCD2-поля — priority, planned_start_date/planned_end_date (YYYY-MM-DD), track_id. Открывает НОВУЮ hist-ревизию (close-open), перенося остальное как есть; нужно хотя бы одно поле. Отдельный инструмент, а не поле sprint_set (MCPSYNC-01): у /plan другой SCD2-контракт. Статус не меняет — status_set.' },
   // ── Status (SCD2-переходы, общие для нескольких типов) ────────────────────
   { name: 'status_set', kind: 'write', entity: 'Status', backend: 'POST /lore/status',
     params: 'entity_type, id, status',
@@ -74,6 +86,9 @@ const TOOLS: ToolDoc[] = [
     params: 'task_uid, rel (phase|component), target_id?, action?',
     desc: 'Link-collapse (T02, 2→1): rel="phase" — ребро IN_PHASE к фазе спринта (задача и фаза обязаны принадлежать одному спринту; action="remove" без target_id отвязывает от ВСЕХ фаз). rel="component" — ребро TAGGED_WITH к LoreComponent, many-to-many. Идемпотентно на add.' },
 
+  { name: 'task_shape', kind: 'read', entity: 'Task', backend: 'GET /lore/task-shape',
+    params: 'project?, rows?',
+    desc: 'Статистика формы и объёма задач (MT-TASK-SHAPE, вход для BI): по задаче — проект, статус, тип, effort_days, класс сложности S/M/L/XL из факторов, сигналы скелета (шаги, зачем, проверка, тест) и коды рекомендаций (epic|merge|stale_partial|steps|verify|test|probe|estimate); факт для калибровки — cycle_days created→done (created_done=true исключается из медиан). summary — по проекту и «*». Тексты заметок не возвращаются; rows:false — только сводка.' },
   // ── Phase (KnowPhase) ──────────────────────────────────────────────────────
   { name: 'sprint_phase_new', kind: 'write', entity: 'Phase', backend: 'POST /lore/phase',
     params: 'sprint_id, phase_key, name?, order_index?',
@@ -87,6 +102,12 @@ const TOOLS: ToolDoc[] = [
     params: 'milestone_id, label?, week?, date_display?, goal_md?, priority?',
     desc: 'KnowMilestone: тот же эндпоинт, что и milestone_new, для точечной правки существующей вехи — например, только goal_md, не трогая label/week. Спринты к вехе привязываются отдельно — sprint_link(rel:"milestone").' },
 
+  { name: 'milestone_link', kind: 'write', entity: 'Milestone', backend: 'POST /lore/milestone/product',
+    params: 'milestone_id, rel (product), target_id, action?',
+    desc: 'Ребро TARGETS_PRODUCT: веха → ПРОДУКТ, чьей дорожной карте она принадлежит (RM-S1/RM-M1). Носитель карты — продукт, а не git-проект: продукт переживает разделение и слияние репозиториев, проект остаётся границей прав. Продукт — запись справочника (dict_set, dict_type="product"); веха может целиться в несколько продуктов, add идемпотентен. Оба конца проверяются до записи — отсутствующий даёт 400, а не тихий ok:true.' },
+  { name: 'milestone_sprints', kind: 'write', entity: 'Milestone', backend: 'POST /lore/milestone/sprints',
+    params: 'milestone_id, sprint_ids[], action?',
+    desc: 'Привязать (или отвязать) СПИСОК спринтов к одной вехе одним вызовом — рёбра TARGETS_MILESTONE (sprint_link работает по одному). Ответ — исход по каждому спринту, а не одно общее ok; один непривязанный спринт не отменяет остальные — пачка не транзакция и не притворяется ею.' },
   // ── ADR (KnowADR) ─────────────────────────────────────────────────────────
   { name: 'adr_new', kind: 'write', entity: 'ADR', backend: 'POST /lore/adr',
     params: 'adr_id, name, status?, date_created?, component_id?, component_ids?, context_md?, decision_md?, consequences_md?, depends_on_ids?, supersedes_ids?, tags?, file_path?',
@@ -109,6 +130,22 @@ const TOOLS: ToolDoc[] = [
     params: 'decision_id, title, body_md?, date_created?, refs_raw?',
     desc: 'KnowDecision: создать или обновить (upsert по decision_id, частичные вызовы безопасны). Для фиксации разовых ключевых решений, принятых в ходе спринта или дизайн-сессии — не заменяет ADR, а дополняет их для менее формальных вердиктов.' },
 
+  { name: 'decision_set', kind: 'write', entity: 'Decision', backend: 'POST /lore/decision/status',
+    params: 'decision_id, status',
+    desc: 'Статус СУЩЕСТВУЮЩЕГО KnowDecision (AL-79). Значение — код словаря decision_status (proposed|accepted|deferred|superseded, плюс легаси fixed|done до ревизии владельца), иное отклоняется со списком допустимых. Не status_set: у решений нет SCD2-истории, пишется плоское поле, ответ {old_status, new_status}; отсутствующее решение — 404, никогда не ok:true.' },
+  { name: 'decision_link', kind: 'write', entity: 'Decision', backend: 'POST /lore/decision/component, /lore/decision/project',
+    params: 'decision_id, rel (component|project), target_id, action?',
+    desc: 'Рёбра KnowDecision (T43): rel="component" — BELONGS_TO (MULTI, add/remove), rel="project" — BELONGS_TO_PROJECT (MULTI). Связь с родительским ADR (DECIDED_IN) ставится через decision_new(adr_id), не здесь. Идемпотентно.' },
+  // ── Question (KnowQuestion, ADR-020/021) ─────────────────────────────────
+  { name: 'question_new', kind: 'write', entity: 'Question', backend: 'POST /lore/question',
+    params: 'question_id, title?, body_md?, status?, trigger?, component_id?, due_date?, priority?, owner?, raised_by?, project?',
+    desc: 'KnowQuestion: создать или обновить ОТКРЫТЫЙ ВОПРОС — реестр «на что мы ещё не ответили» (upsert по question_id, только вершина, без истории). status = open|deferred|dropped; status="deferred" ТРЕБУЕТ trigger (условие реактивации, может быть датой); closed ставится автоматически, когда решение отвечает на вопрос (question_link rel="answers"), а не здесь. project — BELONGS_TO_PROJECT тем же вызовом (только добавляет).' },
+  { name: 'question_set', kind: 'write', entity: 'Question', backend: 'POST /lore/question',
+    params: 'question_id, title?, body_md?, status?, trigger?, component_id?, due_date?, priority?, owner?, raised_by?',
+    desc: 'KnowQuestion: частичная правка существующего вопроса (непереданные поля не трогаются) — тот же путь, что question_new; для смены status/priority/due_date/owner. deferred по-прежнему требует trigger; status="closed" здесь не ставить — привязать отвечающее решение.' },
+  { name: 'question_link', kind: 'write', entity: 'Question', backend: 'POST /lore/question/answers, /lore/question/raised_in, /lore/question/gates, /lore/question/component, /lore/question/project',
+    params: 'question_id, rel (answers|raised_in|gates|component|project), target_id, target_type?, action?',
+    desc: 'Рёбра KnowQuestion: rel="answers" — решение закрывает вопрос (ANSWERS + автоматически status=closed); rel="raised_in" — где поднят (нужен target_type adr|sprint|task); rel="gates" — вопрос блокирует задачу (GATES); rel="component"/"project" — BELONGS_TO / BELONGS_TO_PROJECT (MULTI). Идемпотентно.' },
   // ── Spec (KnowSpec) ───────────────────────────────────────────────────────
   { name: 'spec_new', kind: 'write', entity: 'Spec', backend: 'POST /lore/spec',
     params: 'spec_id, title, version?, component_id?, content_md?, summary?, file_path?',
@@ -120,11 +157,18 @@ const TOOLS: ToolDoc[] = [
     params: 'spec_id',
     desc: 'KnowSpec: безвозвратно удалить вершину по spec_id (hard delete — у KnowSpec нет статусного поля для soft-delete).' },
 
+  { name: 'spec_link', kind: 'write', entity: 'Spec', backend: 'POST /lore/spec/link',
+    params: 'spec_id, target_id, rel? (component|project), mode? (add|remove|replace)',
+    desc: 'PL-34: перепривязать KnowSpec к другому компоненту или git-проекту РЕБРОМ. Нужен потому, что spec_new/spec_set пишут component_id полем вершины, а слайс specs читает ребро BELONGS_TO — смена компонента через spec_set была тихим no-op. По умолчанию mode="replace" (один владелец); несуществующая цель — ошибка, а не no-op.' },
   // ── Tech registry (SPRINT_TECH_REGISTRY) ──────────────────────────────────
   { name: 'tech_set', kind: 'write', entity: 'Tech', backend: 'POST /lore/spec',
     params: 'component_id, tech_name, version, release_date?, our_release?, license?, usage?, source_url?, checked_at?',
     desc: 'Зарегистрировать/обновить одну технологию (версия + дата релиза + лицензия + источник + наш релиз + использование) для компонента — например «ArcadeDB 26.6.1» под YGG. Хранится как один KnowSpec на пару (компонент, технология) через существующий upsert-путь спек — spec_id "SPEC-TECH-<COMPONENT>-<TECH>". Идемпотентно — upsert по этому id. Читать обратно через query_slice(slice="tech_registry", params={component: "<ID>"}) (component опционален — без него полный реестр).' },
 
+  // ── Quality (линтер полноты, ADR-LORE-039) ───────────────────────────────
+  { name: 'quality_check', kind: 'read', entity: 'Quality', backend: 'POST /lore/quality',
+    params: 'type, ids[]',
+    desc: 'Вердикт полноты для ПАЧКИ существующих сущностей БЕЗ записи (QUAL-7, ADR-LORE-039): {kind, checked, passed, failed[], missing[]} — прошедшие только считаются, поимённо названы лишь провалившиеся (score/max и проваленные проверки с сообщениями), худшие первыми; missing — несуществующие id. type = task|sprint|adr|decision|spec|release|component|milestone|question. Режима «весь слой» нет намеренно: ids обязателен, пустой список или больше 200 — 400, а не тихое усечение. Для UC — uc_quality.' },
   // ── QualityGate ───────────────────────────────────────────────────────────
   { name: 'qg_new', kind: 'write', entity: 'QualityGate', backend: 'POST /lore/quality-gate',
     params: 'qg_id, name, description?, component_id?, status?, content_md?, sprint_id?',
@@ -149,6 +193,17 @@ const TOOLS: ToolDoc[] = [
     params: 'doc_id',
     desc: 'KnowDoc: БЕЗВОЗВРАТНО удалить: каскад рёбра → KnowDocHist-строки → вершина. Необратимо — только для устаревших дублей и пустых страниц-заглушек (например легаси DOC-* записи, вытесненные новым guide_*/product_*/ref_* документом с реальным содержимым). Проверить, что content_html/content_md_en/content_md_ru действительно пусты (слайс doc_by_id), прежде чем удалять что-то, что может нести реальный контент.' },
 
+  // ── Asset (KnowAsset, ADR-LORE-031) ──────────────────────────────────────
+  { name: 'asset_up', kind: 'write', entity: 'Asset', backend: 'POST /lore/asset/upload',
+    params: 'entity_type, entity_id, filename, base64_data, content_type, alt?',
+    desc: 'Загрузить base64-картинку и привязать к существующей сущности LORE одним вызовом (вершина KnowAsset + ребро ATTACHED_TO — ассет-сирота невозможен). Ключ контент-адресный ({entity_type}/{entity_id}/{sha256-16}.{ext}), одинаковые байты дедуплицируются. Ответ несёт md — готовый сниппет ![alt](url) для *_md-тела. 404, если сущности нет (ничего не пишется), 400 на не-картинку, 409 при md_images_enabled=false в настройках.' },
+  // ── Правила CLAUDE (доки kind=claude-rules) ──────────────────────────────
+  { name: 'claude_rules_push', kind: 'write', entity: 'ClaudeRules', backend: 'POST /lore/doc',
+    params: 'path, doc_id, title?, sort_order?',
+    desc: 'Загрузить локальный CLAUDE.md в LORE как док kind=claude-rules (upsert) под родителем claude_rules — файл читается с диска, текст не перепечатывается руками. doc_id: claude_rules_global для правил машины, claude_rules_<project> для репозитория; виден в админке (Справочники → Правила CLAUDE). Пустой файл — отказ, а не пустой док.' },
+  { name: 'claude_rules_pull', kind: 'read', entity: 'ClaudeRules', backend: 'GET /lore/slice/doc_by_id',
+    params: 'doc_id, path?, overwrite?',
+    desc: 'Получить док правил из LORE: с path — записать Markdown в файл (так свежая сессия получает правила проекта), без path — вернуть текст. Существующий файл без overwrite:true не перезаписывается; док с пустым телом на диск не пишется — иначе затёр бы рабочие правила.' },
   // ── QG-рутина: прогон → job-task → рекомендация → задача ──────────────────
   { name: 'qg_run_log', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/run',
     params: 'routine_name, run_date, status, metrics[]?, started_at?, finished_at?, flags?, run_id?',
@@ -171,16 +226,26 @@ const TOOLS: ToolDoc[] = [
     params: 'component_id, full_name?, area?, team?, game_icon?, owner?, parent_id?',
     desc: 'LoreComponent: частичное обновление существующего компонента — переименование, смена владельца/команды/иконки, репарент. Пишутся только переданные поля. Новый компонент этим тулом не создать.' },
 
+  { name: 'component_del', kind: 'write', entity: 'Component', backend: 'POST /lore/component/delete',
+    params: 'component_id',
+    desc: 'LoreComponent: удалить вершину — С ГВАРДОМ, в отличие от adr_del/doc_del (AL-110). 409 с разбивкой, если у компонента есть дети, рёбра BELONGS_TO (из любого типа), документированные спеки или плоская ссылка component_id на KnowTask/KnowQuestion/QualityGate/QGJobTask/QGRecommendation/KnowDecision — сначала перепривязать блокеры. Для пустых дублей и ошибочных компонентов, не для компонентов с историей.' },
   // ── Project (KnowGitProject, T15) ─────────────────────────────────────────
   { name: 'project_new', kind: 'write', entity: 'Project', backend: 'POST /lore/project',
     params: 'slug, name?',
     desc: 'KnowGitProject: создать/обновить (upsert по slug, частично-безопасно). Первый реальный write-путь для этого типа — раньше вершина создавалась только прямым INSERT в ArcadeDB. Регистрировать репозиторий ДО того, как на него сошлётся sprint_link(rel:"project")/release_new/release_mv — иначе эти вызовы молча no-op (ok:true, без вершины/ребра). RBAC: только pm + architect + full (ADR-LORE-014 §3, agent-profiles/pm.json и architect.json).' },
 
+  { name: 'project_role_set', kind: 'write', entity: 'Project', backend: 'POST /lore/user/role',
+    params: 'kc_sub, project, role?, display_name?, action? (set|remove)',
+    desc: 'Выдать, сменить или снять роль человека в git-проекте (ребро HAS_PROJECT_ROLE, одно на человека+проект; каждое изменение журналируется в KnowProjectRoleEvent, DS-1). Роль определяет, какие тела доков/спек может читать человек и его агенты через OWNED_BY. Только профилю full (D-2026-LORE-FULL-WRITES-PROJECT-ROLES), остальным — AGENT_SCOPE_FORBIDDEN; снять последнего owner проекта нельзя (409).' },
   // ── Dictionary (KnowDictEntry, ADR-LORE-012) ──────────────────────────────
   { name: 'dict_set', kind: 'write', entity: 'Dictionary', backend: 'POST /lore/dict/entry',
     params: 'dict_type, code, label_ru?, label_en?, color?, icon?, sort_order?, is_active?, is_extensible?',
     desc: 'KnowDictEntry: создать/дописать одно значение справочника — upsert по (dict_type, code), партициально-безопасно (непереданные поля метаданных не трогаются; is_active по умолчанию true, is_extensible false при создании). Единый канон, читается фронтом (useDictionary), бэкендом и MCP через query_slice "dictionary". Примеры dict_type: sprint_status, task_status, adr_status, priority, area, agent_profile, task_type, bragi_channel, tag. Проверить query_slice "dictionary" (опционально dict_type=...) перед добавлением, чтобы не плодить дубли.' },
 
+  // ── Product (продуктовая ось, RM-P6) ─────────────────────────────────────
+  { name: 'product_link', kind: 'write', entity: 'Product', backend: 'POST /lore/product/link',
+    params: 'product_code, rel (component|project|parent), target_id, role?, action?',
+    desc: 'Рёбра ПРОДУКТА (D-2026-LORE-PRODUCT-IS-OWN-ENTITY). Сам продукт — запись справочника, заводится dict_set(dict_type="product"), не здесь. rel="component" — IN_PRODUCT от компонента с role owner (строит, по умолчанию) | consumer (использует); rel="parent" — PARENT_PRODUCT к родительскому продукту (отдельное дерево, не дерево компонентов); rel="project" — BELONGS_TO_PROJECT. Идемпотентно на add; отсутствующий конец — 400, а не тихий ok:true.' },
   // ── Release (KnowRelease) ──────────────────────────────────────────────────
   { name: 'release_new', kind: 'write', entity: 'Release', backend: 'POST /lore/release',
     params: 'release_id, release_date?, git_tag?, type?, description_md?, is_current?, week?, git_project?',
@@ -198,6 +263,48 @@ const TOOLS: ToolDoc[] = [
     params: 'entity_type (pr|release), id, git_project',
     desc: 'Исправить git_project у PR или релиза, ошибочно привязанного не к тому репозиторию: перевешивает ребро BELONGS_TO_PROJECT, обновляет pr_uid или release_uid. Renamed from lore_move_to_project (T02) — не входит в семью project_* несмотря на путь /lore/project/move: "project" там означает НОВЫЙ project_new/KnowGitProject тул, другую сущность (см. MIGRATION.md).' },
 
+  // ── Feature / UC (продуктовый слой, ADR-LORE-022) ────────────────────────
+  { name: 'feature_new', kind: 'write', entity: 'Feature/UC', backend: 'POST /lore/feature',
+    params: 'feature_id, title?, body_md?, context_md?, status?, component_id?, goal_level?, project?',
+    desc: 'Создать или обновить КОРНЕВОЙ use case — то, что раньше было отдельным типом «фича» (PL-28: один тип KnowUseCase с самоиерархией). Пишет goal_level ☁ cloud (по умолчанию) или 🪁 kite, более низкие уровни отклоняются — для них uc_new. Upsert по feature_id (хранится как uc_id). status = proposed|active|dropped — shipped ВЫЧИСЛЯЕТСЯ и отклоняется; ребра фича→релиз нет намеренно. Дети — через uc_new(parent_uc_id).' },
+  { name: 'feature_link', kind: 'write', entity: 'Feature/UC', backend: 'POST /lore/feature/link',
+    params: 'feature_id, rel (pain|gain|job|milestone|component), target_id, action?',
+    desc: 'Рёбра корневого UC — ЗАЯВЛЕННАЯ половина ценностных пар: rel="pain" — ADDRESSES, "gain" — PROMISES, "job" — HELPS_WITH (фактически снимают/дают/выполняют UC через uc_link), "milestone" — TARGETS_MILESTONE (стратегическая цель, которую фича уточняет), "component" — BELONGS_TO. linked:false в ответе — ребро НЕ создано (нет цели), не тихий no-op.' },
+  { name: 'uc_new', kind: 'write', entity: 'Feature/UC', backend: 'POST /lore/uc',
+    params: 'uc_id, title?, scenario_md?, acceptance_md?, status?, parent_uc_id?, goal_level?, rigor?, priority?, project?',
+    desc: 'KnowUseCase — единица пользовательской ценности (ADR-LORE-022), с PL-28 единственный тип вершины продуктового слоя. Upsert по uc_id; parent_uc_id держит DECOMPOSES_INTO (parent_linked:false, если родителя нет; цикл — 400). scenario_md — шаблон Кокберна с машинно читаемыми заголовками (ADR-LORE-027), acceptance_md — критерий приёмки; rigor casual|fully-dressed выводится из goal_level, если не передан. Акторы — вершины KnowProjectActor через uc_link(rel="actor"), не строка.' },
+  { name: 'uc_link', kind: 'write', entity: 'Feature/UC', backend: 'POST /lore/uc/link',
+    params: 'uc_id, rel (task|adr|decision|actor|component|project|includes|extends|relieves|delivers|performs), target_id, action?, actor_role?',
+    desc: 'Рёбра KnowUseCase: task — REALIZES (задача→UC, обязательно для work_class=uc); adr/decision — TRACED_TO (опционально); actor — HAS_ACTOR к KnowProjectActor (MULTI; первый — primary, actor_role переопределяет); includes/extends — UC→UC; relieves/delivers/performs — UC ФАКТИЧЕСКИ снимает боль / даёт выгоду / выполняет работу, закрывая fit, который фича лишь заявила через feature_link. linked:false — ребро не создано.' },
+  { name: 'uc_quality', kind: 'read', entity: 'Feature/UC', backend: 'POST /lore/uc/quality, GET /lore/uc/quality/all',
+    params: 'uc_id?',
+    desc: 'Перелинтовать UC по правилам Кокберна (ADR-LORE-027 §3-4) БЕЗ записи: {rigor, score, max, findings[]}, где max считает только проверки, обязательные для веса UC (у casual знаменатель меньше). Те же числа приходят в ответе uc_new — нужен в основном для ревью чужого UC. Без uc_id — распределение качества по всему слою с нормализованным score и флагами below_threshold (AN-08).' },
+  // ── VPC: боли, выгоды, работы (ADR-LORE-032 §2) ──────────────────────────
+  { name: 'pain_new', kind: 'write', entity: 'VPC', backend: 'POST /lore/pain',
+    params: 'pain_id, title?, body_md?, severity?',
+    desc: 'KnowPain — боль клиента как вершина графа (upsert по pain_id). Связи: feature_link(rel="pain") — фича заявляет, что её решает; uc_link(rel="relieves") — UC фактически снимает; vp_link(rel="felt_by"/"blocks") — чья боль и какой работе мешает. Одна боль переиспользуется несколькими фичами — ради этого она и вершина.' },
+  { name: 'gain_new', kind: 'write', entity: 'VPC', backend: 'POST /lore/gain',
+    params: 'gain_id, title?, body_md?, metric_md?, rank?',
+    desc: 'KnowGain — выгода клиента как вершина графа (upsert по gain_id). metric_md — чем меряем: выгода без измеримой метрики не закрывает VP-fit, и ответ об этом говорит. rank = essential|expected|desired|unexpected (Остервальдер). Связи: feature_link(rel="gain") — обещает, uc_link(rel="delivers") — фактически даёт, vp_link(rel="success_of") — успех в какой работе.' },
+  { name: 'job_new', kind: 'write', entity: 'VPC', backend: 'POST /lore/job',
+    params: 'job_id, title?, body_md?, kind?, importance?',
+    desc: 'KnowJob — работа клиента (job-to-be-done), третий столп профиля клиента VPC Остервальдера: боль ей мешает (BLOCKS), выгода — успех в ней (SUCCESS_OF), UC её выполняет (uc_link rel="performs"); чья работа — vp_link(rel="performed_by"). Глобальная вершина без проекта — продуктовый контекст живёт на рёбрах. kind = functional|social|emotional|supporting; upsert по job_id.' },
+  { name: 'vp_link', kind: 'write', entity: 'VPC', backend: 'POST /lore/vp/link',
+    params: 'source_id, rel (felt_by|desired_by|performed_by|blocks|success_of), target_id, action?',
+    desc: 'Рёбра профиля клиента в Value Proposition Canvas: felt_by / desired_by / performed_by — боль / выгода / работа принадлежит KnowProjectActor (сегмент); blocks — боль мешает работе; success_of — выгода есть успех в работе. Сшивает три столпа в одну канву. linked:false — ребро НЕ создано (нет цели), не тихий no-op.' },
+  // ── Actor (KnowActor / KnowProjectActor, ADR-LORE-041 §4) ────────────────
+  { name: 'actor_new', kind: 'write', entity: 'Actor', backend: 'POST /lore/actor',
+    params: 'actor_id, name?, kind?, body_md?, project?, projects?[], machine_id?, session_id?',
+    desc: 'KnowActor — агентная ЛИЧНОСТЬ: учётка за пишущей сессией с client_id, владельцем-человеком (OWNED_BY) и журналом сессий; отсюда начинается цепочка RBAC. kind = human-role|system|agent. Это НЕ актор use case — роль в сценарии заводит project_actor_new. projects[] — полный набор проектов (передача заменяет весь набор), project — один slug, отвязывающий остальные. Upsert по actor_id.' },
+  { name: 'project_actor_new', kind: 'write', entity: 'Actor', backend: 'POST /lore/project-actor',
+    params: 'actor_id, name?, kind?, body_md?, project?, projects?[]',
+    desc: 'KnowProjectActor — актор ПРОЕКТИРУЕМОЙ части: кто действует в UC, чья боль, кто выполняет работу (AC-02). Прав не несёт, поэтому проектного RBAC-гейта нет — акторов можно описывать в проекте, где у вас нет роли. kind = human-role|system|automation («agent» отклоняется — переименован миграцией 30); actor_id, занятый KnowActor, — 400. Upsert по actor_id.' },
+  { name: 'actor_link', kind: 'write', entity: 'Actor', backend: 'POST /lore/actor/link',
+    params: 'actor_id, rel (fills_role), target_id, action?',
+    desc: 'Ребро FILLS_ROLE: агент (KnowActor kind=agent) → проектная роль (KnowProjectActor), чью работу он исполняет (D-VP-ROLE-AGENT-PAIR). Пара проверяется в product/self-check (actor_pairs): наборы PERFORMED_BY-работ должны совпадать. Переприсвоение заменяет прежнее ребро; агент без FILLS_ROLE — законное третье состояние, не ошибка.' },
+  { name: 'agent_session_log', kind: 'write', entity: 'Actor', backend: 'POST /lore/actor/session',
+    params: 'session_id, actor_id?, machine_id?, project?, entrypoint?, dialogue_name?',
+    desc: 'Upsert собственной строки KnowAgentSession (по session_id) и ребра LOGGED_BY к вызывающему агенту (ADR-LORE-037 V1): вызывать в начале сессии и при дальнейшей активности (started_at ставится только первым вызовом, last_activity_at обновляется). Журнал присутствия, не содержания — ни текста, ни вызовов. В отличие от machine_id/session_id в actor_new — append-only строка на сессию; actor_id без передачи определяется по client_id токена.' },
   // ── BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4) ────────────────────
   // Sub-namespaced (bragi_pub_new, bragi_channel_set, …) per ADR-LORE-014 §2 rather than
   // flattened bragi_new/bragi_set — BRAGI covers 9+ distinct sub-entities.
@@ -252,6 +359,23 @@ const TOOLS: ToolDoc[] = [
   { name: 'bragi_sync', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/integration/sync',
     params: 'integration_id, metrics[]',
     desc: 'Каркас ручной синхронизации (без крона): пишет уже полученные извне метрики в MetricSnapshot и обновляет last_called_at интеграции. Сам к внешнему API НЕ обращается — маппинг источник→метрика и реальный HTTP-вызов (Яндекс.Метрика/Keys.so/GSC/Telegram) остаются на вызывающей стороне (реальный коннектор или человек, вставляющий цифры вручную). 404, если integration_id не существует. Живой опрос по расписанию отложен до появления реальных ключей (SPRINT_BRAGI_ARCHIVE_IMPL/INT-01,02).' },
+
+  // ── Forgejo-мост (ADR-LORE-024; регистрируются только при LORE_FORGEJO / FORGEJO_*-env) ──
+  { name: 'forgejo_pr_new', kind: 'write', entity: 'Forgejo', backend: 'POST /lore/forgejo/pr',
+    params: 'git_project, head, base?, title?, release_id?, body_md?',
+    desc: 'Открыть PR на основном Forgejo-хосте зарегистрированного KnowGitProject. release_id — тело PR берётся из description_md релиза; body_md явно переопределяет. base по умолчанию develop. Токен живёт только в бэкенде — через инструмент секреты не идут.' },
+  { name: 'forgejo_pr_status', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo/pr/{number}',
+    params: 'git_project, number',
+    desc: 'Статус PR и CI-гейта для решения о мерже (ADR-LORE-024 §10): строго один из NO_RUN|PENDING|GREEN|RED|UNKNOWN|STALLED плюс состояния чеков и merge_allowed. UNKNOWN/STALLED — диагностировать через forgejo-mcp, а не повторять мерж в цикле.' },
+  { name: 'forgejo_pr_merge', kind: 'write', entity: 'Forgejo', backend: 'POST /lore/forgejo/pr/{number}/merge',
+    params: 'git_project, number, release_id?, sprint_id?',
+    desc: 'Смержить PR ТОЛЬКО при зелёном CI-гейте; иначе 409 с фактическим состоянием — не обходить. После успеха связывает граф (FJ-05): KnowPR + SHIPPED_IN к релизу (release_id или текущему is_current проекта), с sprint_id — ещё и спринт→релиз. linked:false — вершины релиза не было: мерж уже случился, release_new + release_link сделать самому.' },
+  { name: 'forgejo_ci_status', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo/ci',
+    params: 'git_project, ref',
+    desc: 'Статус CI-гейта (словарь §10) для произвольной ветки или коммита — проверить, что ветка GREEN, до открытия PR. Логи и перезапуски — через forgejo-mcp, не этим инструментом.' },
+  { name: 'forgejo_branch_protection', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo/branch-protection',
+    params: 'git_project, branch?',
+    desc: 'ЧИТАТЬ защиту веток основного Forgejo-репозитория проекта (решение 136: мост защиту никогда не пишет — менять её может только человек). Без branch — полный список.' },
 ];
 
 const ENV_ROWS: [string, string, string][] = [
@@ -383,7 +507,7 @@ export default function LoreMcpApiScreen() {
         {/* ── Lazy-доступ + ролевые профили (ADR-LORE-014 §1, §3) ─────────────── */}
         <Section title={t('lore.mcpApi.lazyTitle', 'Lazy-доступ к инструментам и ролевые профили')}>
           <p style={S.note}>
-            {t('lore.mcpApi.lazyIntro', '60 инструментов — слишком много, чтобы вываливать их все каждому агенту: контекст раздувается, а роль размывается («писать может кто угодно»). ADR-LORE-014 решает это')}{' '}
+            {t('lore.mcpApi.lazyIntro', '{{n}} инструментов — слишком много, чтобы вываливать их все каждому агенту: контекст раздувается, а роль размывается («писать может кто угодно»). ADR-LORE-014 решает это', { n: TOOLS.length })}{' '}
             <b>{t('lore.mcpApi.lazyNoDispatcher', 'без server-side диспетчера')}</b>{' '}
             {t('lore.mcpApi.lazyIntro2', '— сервер всегда отдаёт полный список, а сужение происходит на стороне клиента, по имени инструмента.')}
           </p>

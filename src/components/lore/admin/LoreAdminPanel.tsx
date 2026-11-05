@@ -22,6 +22,8 @@ import { TagsTab } from './TagsTab';
 import { ClaudeRulesTab } from './ClaudeRulesTab';
 import { SettingsTab } from './SettingsTab';
 import { QuickCommandsTab } from './QuickCommandsTab';
+import LoreMcpApiScreen from '../LoreMcpApiScreen';
+import LoreConnectionsScreen from '../LoreConnectionsScreen';
 
 // ⚙ Admin LORE (ADR-LORE-025, SPEC-ADMIN-LORE-UC): администрирование доступа и
 // единого языка графа. Структура — ОДОБРЕННЫЙ прототип AL-44: навигация по РИСКУ
@@ -306,6 +308,8 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           {tab === 'claudeRules' && <ClaudeRulesTab rows={claudeRules} loadFailed={!!srcErr.claudeRules} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
           {tab === 'quick' && <QuickCommandsTab />}
+          {tab === 'mcpApi' && <LoreMcpApiScreen />}
+          {tab === 'connections' && <LoreConnectionsScreen />}
         </main>
       </div>
     </div>

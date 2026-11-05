@@ -7,7 +7,7 @@ export interface KcAgent { clientId: string; id: string; enabled: boolean; agent
 export interface Preflight { auth_enabled: boolean; kc_configured: boolean; kc_reachable: boolean; kc_error: string; admin_count: number; agent_scope_enforced: boolean; can_enable_auth: boolean; hint: string }
 export interface Denial { ts: string; method: string; path: string; status: number; error: string; role: string }
 
-export type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'claudeRules' | 'settings' | 'quick';
+export type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'claudeRules' | 'settings' | 'quick' | 'mcpApi' | 'connections';
 /**
  * AL-104: агент в графе — единица прав (слайс agent_owners). Профиль — поле `agent_role`
  * (имя поля вершины прежнее, справочник — agent_profile с V48), а не имя учётки.

@@ -172,11 +172,24 @@ async function serviceAccountToken(): Promise<string> {
  * Благодаря этому MCP можно настроить заранее и включать auth когда угодно —
  * без окна молчания и без согласованного рестарта двух сторон.
  */
+/**
+ * AO-07, путь «full заявляет роль» (решение владельца 04.11): экземпляр MCP подагента
+ * запускается с LORE_ACT_AS=<профиль>, и каждая запись несёт X-Lore-Act-As. Бэкенд
+ * проверяет запись матрицей ЗАЯВЛЕННОГО профиля — заявка только сужает права full;
+ * профиль, закреплённый своим клиентом, заголовком не меняется (AgentScopeFilter).
+ */
+export function actAsHeader(env: Record<string, string | undefined>): Record<string, string> {
+  const v = (env.LORE_ACT_AS ?? '').trim();
+  return v ? { 'X-Lore-Act-As': v } : {};
+}
+
 async function writeAuthHeaders(): Promise<Record<string, string>> {
-  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE };
+  const actAs = actAsHeader(process.env);
+  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs };
   return {
     Authorization: `Bearer ${await serviceAccountToken()}`,
     'X-Seer-Role': ROLE,
+    ...actAs,
   };
 }
 
@@ -222,7 +235,7 @@ export async function loreSlice(
 export async function loreSliceWithMeta(
   slice: string,
   params?: Record<string, string>,
-): Promise<{ rows: unknown[]; meta?: SliceMeta }> {
+): Promise<{ rows: unknown[]; meta?: SliceMeta; page?: SlicePage }> {
   const qs =
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
@@ -232,10 +245,29 @@ export async function loreSliceWithMeta(
   });
   if (!res.ok) throw new Error(`GET /lore/slice/${slice} → ${res.status} ${await detail(res)}`);
   const body = (await res.json()) as SliceBody;
-  return { rows: Array.isArray(body.rows) ? body.rows : [], meta: sliceMetaOf(body) };
+  return { rows: Array.isArray(body.rows) ? body.rows : [], meta: sliceMetaOf(body), page: slicePageOf(body) };
 }
 
-type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string };
+type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string; page?: unknown };
+export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean; fields?: string[]; fields_checked?: boolean; warning?: string };
+
+/**
+ * SE-01: страница выдачи (limit/offset у любого слайса). Бэкенд кладёт её в `page`;
+ * без проброса агент принял бы страницу за полный список.
+ */
+export function slicePageOf(body: SliceBody): SlicePage | undefined {
+  const p = body.page;
+  if (!p || typeof p !== 'object') return undefined;
+  const o = p as Record<string, unknown>;
+  if (typeof o.total !== 'number' || typeof o.has_more !== 'boolean') return undefined;
+  return {
+    limit: typeof o.limit === 'number' ? o.limit : null, offset: typeof o.offset === 'number' ? o.offset : 0,
+    total: o.total, has_more: o.has_more,
+    ...(Array.isArray(o.fields) ? { fields: o.fields as string[] } : {}),
+    ...(typeof o.fields_checked === 'boolean' ? { fields_checked: o.fields_checked } : {}),
+    ...(typeof o.warning === 'string' ? { warning: o.warning } : {}),
+  };
+}
 export type SliceMeta = { truncated: boolean | string; limit?: number; hint?: string };
 
 /**

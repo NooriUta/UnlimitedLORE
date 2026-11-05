@@ -108,8 +108,10 @@ public class LoreDecisionResource extends LoreResourceBase {
             // события об одном факте.
             if (existedBefore) {
                 dsql.append(", updated_at=:upd");
-                p.put("upd", java.time.LocalDateTime.now()
-                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                // RM-P13: UTC-момент, а не местные часы контейнера без зоны —
+                // выдача слайсов дописывает Z к форме «через пробел», и местное
+                // время было бы выдано за UTC.
+                p.put("upd", java.time.Instant.now().toString());
             }
             dsql.append(" UPSERT WHERE decision_id=:did");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
