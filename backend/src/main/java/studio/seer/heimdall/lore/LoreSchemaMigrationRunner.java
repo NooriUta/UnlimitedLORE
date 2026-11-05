@@ -626,7 +626,7 @@ public class LoreSchemaMigrationRunner {
         for (Map<String, Object> r : scanNonNull(type, field)) {
             Object raw = r.get("v");
             String rid = str(r.get("rid"));
-            if (wasDatetime && raw instanceof String s && DATETIME_RENDERED.matcher(s).matches()) {
+            if (wasDatetime && isNativeDatetime(r)) {
                 nativeCount++;
                 continue;
             }
@@ -671,18 +671,34 @@ public class LoreSchemaMigrationRunner {
             }
         }
 
+        // Значение собирается в нативную дату САМИМ SQL: date(<строка>) —
+        // SQLFunctionDate с одним аргументом → DateUtils.parseDateTimeKeepingWallClock
+        // (ISO с Z → UTC wall clock) → DateUtils.getDate(…, serializer.getDateTimeImplementation()),
+        // то есть ровно тот класс, которым движок хранит DATETIME. Так запись не
+        // зависит от того, сработает ли на этом пути конвертация строки по
+        // объявлению свойства (MutableDocument.putProperty → convertValueToSchemaType):
+        // первый прогон в CI (PR #769) после пересохранения строкой-параметром
+        // счёл 2 из 3 значений «текстом» (опознание было по виду печати — его
+        // тоже заменили на type()/javatype(); что именно лежало — покажут образцы
+        // в сообщении шага, если повторится).
         int rewritten = 0;
         for (String[] w : toWrite) {
-            command("UPDATE " + w[0] + " SET " + field + " = :v", Map.of("v", w[1]));
+            command("UPDATE " + w[0] + " SET " + field + " = date(:v)", Map.of("v", w[1]));
             rewritten++;
         }
         if (!wasDatetime) recreateIndexes(type, field, indexes);
 
         long after = countOf("SELECT count(*) AS n FROM " + type + " WHERE " + field + " IS NOT NULL", Map.of());
         String declaredAfter = declaredPropertyType(type, field);
+        // По ТИПУ значения в записи (SQL-методы type()/javatype()), а не по виду
+        // его JSON-печати: печать зависит от формата базы и от java-реализации
+        // DATETIME, тип — нет. Первый прогон в CI опознавал по виду и ошибся.
         int textLeft = 0;
+        List<String> textSample = new ArrayList<>();
         for (Map<String, Object> r : scanNonNull(type, field)) {
-            if (!(r.get("v") instanceof String s && DATETIME_RENDERED.matcher(s).matches())) textLeft++;
+            if (isNativeDatetime(r)) continue;
+            textLeft++;
+            if (textSample.size() < 5) textSample.add(describe(r));
         }
         LOG.infof("[LORE MIGRATE] V56 %s.%s ПОСЛЕ: объявлен %s → %s; непустых до %d / после %d; "
             + "уже нативных %d, пересохранено %d, нераспознанных %d, текстом осталось %d",
@@ -700,19 +716,43 @@ public class LoreSchemaMigrationRunner {
         if (!"DATETIME".equals(declaredAfter) || textLeft != unparsed.size()) {
             throw new IllegalStateException("[LORE MIGRATE] V56 " + type + "." + field
                 + ": после шага объявлен " + declaredAfter + ", текстом осталось " + textLeft
-                + " при " + unparsed.size() + " нераспознанных — значения не стали DATETIME");
+                + " при " + unparsed.size() + " нераспознанных — значения не стали DATETIME. "
+                + "Образцы, как их видит движок: " + textSample);
         }
         return new HistTimeReport(type, field, declared, declaredAfter, rows, before, after,
             nativeCount, rewritten, List.copyOf(unparsed));
     }
 
-    /** Все непустые значения свойства: {@code rid}, {@code v}. Страницами — тип может быть большим. */
+    /**
+     * Значение в записи — нативная дата, а не строка/число. Решает тип, который
+     * сообщает сам движок: {@code type()} ({@code SQLMethodType →
+     * Type.getTypeByValue}) и {@code javatype()} ({@code SQLMethodJavaType →
+     * getClass().getName()}), а не вид печати в JSON.
+     */
+    static boolean isNativeDatetime(Map<String, Object> r) {
+        String t = str(r.get("t"));
+        String jt = str(r.get("jt"));
+        if (jt != null && (jt.equals("java.lang.String") || jt.startsWith("java.lang.Long")
+                || jt.startsWith("java.lang.Integer") || jt.startsWith("java.lang.Double"))) return false;
+        if (t != null && (t.startsWith("DATETIME") || t.equals("DATE"))) return true;
+        return jt != null && (jt.equals("java.util.Date") || jt.startsWith("java.time."));
+    }
+
+    private static String describe(Map<String, Object> r) {
+        return r.get("rid") + " v=" + r.get("v") + " type()=" + r.get("t") + " javatype()=" + r.get("jt");
+    }
+
+    /**
+     * Все непустые значения свойства: {@code rid}, {@code v} и тип значения в
+     * записи ({@code t} — type(), {@code jt} — javatype()). Страницами.
+     */
     private List<Map<String, Object>> scanNonNull(String type, String field) {
         List<Map<String, Object>> all = new ArrayList<>();
         int seen = 0;
         while (true) {
             List<Map<String, Object>> page = ingest.queryPublic(
-                "SELECT @rid AS rid, " + field + " AS v FROM " + type + " WHERE " + field
+                "SELECT @rid AS rid, " + field + " AS v, " + field + ".type() AS t, "
+                + field + ".javatype() AS jt FROM " + type + " WHERE " + field
                 + " IS NOT NULL ORDER BY @rid SKIP " + seen + " LIMIT 5000", Map.of());
             all.addAll(page);
             seen += page.size();
@@ -741,10 +781,12 @@ public class LoreSchemaMigrationRunner {
         // проекции — лишний риск грамматики.
         for (Map<String, Object> r : ingest.queryPublic("SELECT FROM schema:indexes", Map.of())) {
             if (!type.equals(str(r.get("typeName")))) continue;
-            if (r.get("properties") instanceof java.util.Collection<?> c && c.size() == 1
-                    && field.equals(str(c.iterator().next()))) {
-                out.add(r);
-            }
+            // schema:indexes отдаёт properties ВЛОЖЕННЫМ списком:
+            // FetchFromSchemaIndexesStep кладёт Collections.singletonList(index.getPropertyNames()),
+            // то есть [["valid_to"]]. Первая редакция сравнивала верхний уровень и
+            // не находила индекс никогда (CI PR #769) — на проде он молча
+            // пропал бы после DROP PROPERTY FORCE. fieldKey расплющивает, как у FT-индексов.
+            if (fieldKey(type, r.get("properties")).equals(type + "[" + field + "]")) out.add(r);
         }
         return out;
     }
@@ -752,9 +794,23 @@ public class LoreSchemaMigrationRunner {
     private void recreateIndexes(String type, String field, List<Map<String, Object>> indexes) {
         for (Map<String, Object> ix : indexes) {
             boolean unique = Boolean.TRUE.equals(ix.get("unique"));
-            exec("CREATE INDEX IF NOT EXISTS ON " + type + " (" + field + ") " + (unique ? "UNIQUE" : "NOTUNIQUE"));
-            LOG.infof("[LORE MIGRATE] V56 %s.%s: индекс %s пересоздан (%s)", type, field, ix.get("name"),
-                unique ? "UNIQUE" : "NOTUNIQUE");
+            String kind = unique ? "UNIQUE" : "NOTUNIQUE";
+            // Без IF NOT EXISTS: индекс только что снят FORCE-ом, и «уже есть»
+            // здесь — факт, который надо увидеть, а не проглотить. Отказ
+            // допустим, только если индекс действительно на месте.
+            RuntimeException fail = null;
+            try { exec("CREATE INDEX ON " + type + " (" + field + ") " + kind); }
+            catch (RuntimeException e) { fail = e; }
+            if (indexesOn(type, field).isEmpty()) {
+                List<Map<String, Object>> all = new ArrayList<>();
+                for (Map<String, Object> r : ingest.queryPublic("SELECT FROM schema:indexes", Map.of()))
+                    if (type.equals(str(r.get("typeName")))) all.add(r);
+                throw new IllegalStateException("[LORE MIGRATE] V56 " + type + "." + field + ": индекс " + ix.get("name")
+                    + " не восстановлен" + (fail != null ? " (" + fail.getMessage() + ")" : "")
+                    + "; индексы типа сейчас: " + all, fail);
+            }
+            LOG.infof("[LORE MIGRATE] V56 %s.%s: индекс %s пересоздан (%s)%s", type, field, ix.get("name"), kind,
+                fail != null ? " — CREATE ответил «" + fail.getMessage() + "», но индекс на месте" : "");
         }
     }
 

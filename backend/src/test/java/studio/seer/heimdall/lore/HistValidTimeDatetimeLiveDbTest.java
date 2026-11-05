@@ -92,11 +92,45 @@ class HistValidTimeDatetimeLiveDbTest {
     private static boolean indexOn(String type, String field) throws Exception {
         for (Map<String, Object> r : sql("SELECT FROM schema:indexes")) {
             if (!type.equals(r.get("typeName")) || !(r.get("properties") instanceof Iterable<?> props)) continue;
+            // properties — вложенный список [["valid_to"]]
+            // (FetchFromSchemaIndexesStep: Collections.singletonList(getPropertyNames())).
             List<String> names = new ArrayList<>();
-            for (Object p : props) names.add(String.valueOf(p));
+            for (Object p : props) {
+                if (p instanceof Iterable<?> inner) for (Object x : inner) names.add(String.valueOf(x));
+                else names.add(String.valueOf(p));
+            }
             if (names.equals(List.of(field))) return true;
         }
         return false;
+    }
+
+    /**
+     * Паспорт типа для сообщения assertion — при падении CI печатает его в лог:
+     * объявленные свойства времени, ВСЕ индексы типа как их отдаёт
+     * schema:indexes, и строки с типом значения по мнению движка
+     * (type() / javatype()), а не по виду печати.
+     */
+    private static String dump(String type) {
+        StringBuilder sb = new StringBuilder("\n── dump ").append(type).append(" ──");
+        try {
+            for (Map<String, Object> t : sql("SELECT properties FROM schema:types WHERE name = '" + type + "'"))
+                sb.append("\n  schema:types.properties = ").append(t.get("properties"));
+            for (Map<String, Object> r : sql("SELECT FROM schema:indexes"))
+                if (type.equals(String.valueOf(r.get("typeName"))))
+                    sb.append("\n  schema:indexes ").append(r);
+            for (String f : List.of("valid_from", "valid_to"))
+                for (Map<String, Object> r : sql("SELECT @rid AS rid, state_uid, " + f + " AS v, " + f + ".type() AS t, "
+                        + f + ".javatype() AS jt FROM " + type + " WHERE " + f + " IS NOT NULL"))
+                    sb.append("\n  ").append(f).append(' ').append(r);
+        } catch (Throwable e) {
+            sb.append("\n  dump не снялся: ").append(e);
+        }
+        return sb.toString();
+    }
+
+    private static String typeOf(String type, String stateUid, String field) throws Exception {
+        return String.valueOf(sql("SELECT " + field + ".type() AS t FROM " + type + " WHERE state_uid = '"
+            + stateUid + "'").get(0).get("t"));
     }
 
     private static Object value(String type, String stateUid, String field) throws Exception {
@@ -117,7 +151,9 @@ class HistValidTimeDatetimeLiveDbTest {
 
         redeclare("KnowRunbookHist", "valid_from", "STRING");
         redeclare("KnowRunbookHist", "valid_to", "STRING");
-        sql("CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (valid_to) NOTUNIQUE");
+        // Без IF NOT EXISTS: если движок считает индекс существующим после DROP
+        // PROPERTY FORCE, ответ с ошибкой попадёт в лог (sql() печатает тело).
+        sql("CREATE INDEX ON KnowRunbookHist (valid_to) NOTUNIQUE");
         redeclare("KnowPhaseHist", "valid_from", "STRING");
 
         sql("INSERT INTO KnowRunbookHist SET state_uid = 'v56-a', valid_from = '" + ISO_A + "', valid_to = '" + TO_A + "'");
@@ -128,7 +164,7 @@ class HistValidTimeDatetimeLiveDbTest {
 
         assertEquals("STRING", declared("KnowRunbookHist", "valid_from"), "положительный контроль: объявлен текстом");
         assertEquals("STRING", declared("KnowRunbookHist", "valid_to"));
-        assertTrue(indexOn("KnowRunbookHist", "valid_to"), "положительный контроль: индекс на valid_to есть");
+        assertTrue(indexOn("KnowRunbookHist", "valid_to"), "положительный контроль: индекс на valid_to есть" + dump("KnowRunbookHist"));
         assertEquals(ISO_A, value("KnowRunbookHist", "v56-a", "valid_from"), "положительный контроль: значение лежит текстом");
         assertEquals(SPACE_B, value("KnowRunbookHist", "v56-b", "valid_from"));
     }
@@ -136,16 +172,25 @@ class HistValidTimeDatetimeLiveDbTest {
     @Test
     @Order(2)
     void v56ConvertsTextToDatetimeAndKeepsTheMoment() throws Exception {
-        List<LoreSchemaMigrationRunner.HistTimeReport> reports = runner.histTimeToDatetime();
+        List<LoreSchemaMigrationRunner.HistTimeReport> reports;
+        try {
+            reports = runner.histTimeToDatetime();
+        } catch (RuntimeException e) {
+            throw new AssertionError(e.getMessage() + dump("KnowRunbookHist"), e);
+        }
 
         assertEquals("DATETIME", declared("KnowRunbookHist", "valid_from"));
         assertEquals("DATETIME", declared("KnowRunbookHist", "valid_to"));
-        assertTrue(indexOn("KnowRunbookHist", "valid_to"), "индекс на valid_to снят и не пересоздан");
+        assertTrue(indexOn("KnowRunbookHist", "valid_to"), "индекс на valid_to снят и не пересоздан" + dump("KnowRunbookHist"));
 
-        // значение стало нативным (печатается формой DATETIME) — и момент тот же
+        // значение стало нативным — по типу значения в записи (type()), а не по
+        // виду печати — и момент тот же
+        for (String su : List.of("v56-a", "v56-b", "v56-c"))
+            assertTrue(typeOf("KnowRunbookHist", su, "valid_from").startsWith("DATETIME"),
+                su + ": значение не DATETIME" + dump("KnowRunbookHist"));
+        assertTrue(typeOf("KnowRunbookHist", "v56-a", "valid_to").startsWith("DATETIME"),
+            "valid_to не DATETIME" + dump("KnowRunbookHist"));
         Object a = value("KnowRunbookHist", "v56-a", "valid_from");
-        assertTrue(LoreSchemaMigrationRunner.DATETIME_RENDERED.matcher(String.valueOf(a)).matches(),
-            "значение осталось текстом: " + a);
         assertEquals(Instant.parse(ISO_A), DataHygieneMigrationsLiveDbTest.at(a));
         assertEquals(Instant.parse("2026-06-11T22:26:41Z"),
             DataHygieneMigrationsLiveDbTest.at(value("KnowRunbookHist", "v56-b", "valid_from")),

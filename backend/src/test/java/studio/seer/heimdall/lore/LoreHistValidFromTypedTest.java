@@ -183,6 +183,23 @@ class LoreHistValidFromTypedTest {
         assertNull(LoreSchemaMigrationRunner.instantOf("2026-13-45T99:00:00Z"), "похожее на дату, но не дата");
     }
 
+    /**
+     * V56 опознаёт нативную дату по типу значения, который сообщает движок
+     * (type() / javatype()), а не по виду JSON-печати: CI PR #769 показал, что
+     * опознание по виду ошибалось.
+     */
+    @Test
+    void nativeDatetimeIsRecognisedByValueType() {
+        assertTrue(LoreSchemaMigrationRunner.isNativeDatetime(java.util.Map.of("t", "DATETIME", "jt", "java.util.Date")));
+        assertTrue(LoreSchemaMigrationRunner.isNativeDatetime(java.util.Map.of("t", "DATETIME", "jt", "java.time.LocalDateTime")));
+        assertTrue(LoreSchemaMigrationRunner.isNativeDatetime(java.util.Map.of("jt", "java.time.LocalDateTime")));
+        assertTrue(!LoreSchemaMigrationRunner.isNativeDatetime(java.util.Map.of("t", "STRING", "jt", "java.lang.String")));
+        assertTrue(!LoreSchemaMigrationRunner.isNativeDatetime(java.util.Map.of("t", "DATETIME", "jt", "java.lang.String")),
+            "javatype() строки перевешивает");
+        assertTrue(!LoreSchemaMigrationRunner.isNativeDatetime(java.util.Map.of("t", "LONG", "jt", "java.lang.Long")));
+        assertTrue(!LoreSchemaMigrationRunner.isNativeDatetime(java.util.Map.of()));
+    }
+
     /** Форма рендера DATETIME, по которой V56 узнаёт уже нативное значение. */
     @Test
     void renderedDatetimeShapeIsRecognised() {
