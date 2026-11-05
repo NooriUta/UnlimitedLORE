@@ -10,3 +10,27 @@ import { marked } from 'marked';
 marked.setOptions({ gfm: true, breaks: false });
 
 export { marked };
+
+/**
+ * AH-10: короткое превью markdown для строк списков (описание релиза).
+ * Раньше превью было `md.slice(0, 110)` сырой строкой — с «##»/«**» на экране
+ * и разрывом посреди слова или разметки. Теперь режем по границе строки
+ * (а одну длинную строку — по слову) и рендерим результат MartProse.
+ */
+export function mdExcerpt(md: string | null | undefined, max: number): string {
+  const text = (md ?? '').trim();
+  if (!text) return '';
+  if (text.length <= max) return text;
+  const lines = text.split('\n');
+  let acc = '';
+  for (const line of lines) {
+    const next = acc ? `${acc}\n${line}` : line;
+    if (next.length > max) break;
+    acc = next;
+  }
+  acc = acc.trimEnd();
+  if (acc) return `${acc} …`;
+  const head = text.slice(0, max);
+  const cut = head.lastIndexOf(' ');
+  return `${(cut > 0 ? head.slice(0, cut) : head).trimEnd()} …`;
+}

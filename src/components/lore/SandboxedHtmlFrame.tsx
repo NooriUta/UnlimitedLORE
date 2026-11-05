@@ -4,6 +4,7 @@
 // Height auto-fits via postMessage from inside the iframe (resize shim).
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { frameThemeCss, hostFrameTheme, type FrameTheme } from './sandboxFrameTheme';
 
 interface Props {
   html: string;
@@ -29,16 +30,14 @@ const RESIZE_SHIM = `<script>
 })();
 </script>`;
 
-function wrapHtml(html: string, title: string): string {
+function wrapHtml(html: string, title: string, theme: FrameTheme): string {
   return (
     `<!DOCTYPE html><html><head>` +
     `<meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${CSP}">` +
     `<title>${title.replace(/</g,'&lt;')}</title>` +
-    `<style>body{margin:0;font-family:system-ui,sans-serif;font-size:13px;` +
-    `color:#cdd0d4;background:transparent;word-break:break-word;}` +
-    `a{color:#7cbcf8;}pre,code{background:#0004;border-radius:3px;padding:2px 4px;}` +
-    `table{border-collapse:collapse;}td,th{padding:4px 8px;border:1px solid #333;}</style>` +
+    // AH-10: цвета — из токенов темы хоста (iframe их не наследует).
+    `<style>${frameThemeCss(theme)}</style>` +
     `</head><body>${html}${RESIZE_SHIM}</body></html>`
   );
 }
@@ -47,6 +46,14 @@ export default function SandboxedHtmlFrame({ html, title = '', minHeight = 120 }
   const { t } = useTranslation();
   const [height, setHeight] = useState(minHeight);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  // Тема хоста; перечитывается при смене режима/палитры (атрибуты на <html>).
+  const [theme, setTheme] = useState<FrameTheme>(hostFrameTheme);
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return;
+    const mo = new MutationObserver(() => setTheme(hostFrameTheme()));
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode', 'data-theme', 'class', 'style'] });
+    return () => mo.disconnect();
+  }, []);
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -61,7 +68,7 @@ export default function SandboxedHtmlFrame({ html, title = '', minHeight = 120 }
   return (
     <iframe
       ref={frameRef}
-      srcDoc={wrapHtml(html, title)}
+      srcDoc={wrapHtml(html, title, theme)}
       title={title || t('lore.sandboxedHtmlFrame.defaultTitle', 'KnowDoc')}
       sandbox="allow-scripts"
       style={{
