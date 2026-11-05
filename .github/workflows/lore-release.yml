@@ -378,6 +378,12 @@ jobs:
           # .github/scripts/tg-split.sh (самопроверка: --selftest). Ссылки на
           # прогон в сообщении нет — только на страницы релиза.
           bash .github/scripts/tg-split.sh --selftest
+          # Разметка (05.11.2026, «не проходит твое форматирование в telegram
+          # читать больно»): сообщение уходило без parse_mode, и Telegram
+          # печатал «##», «**», обратные кавычки как текст. Теперь каждый кусок
+          # переводится в Telegram-HTML; отверг HTML (400 can't parse entities) —
+          # тот же текст без разметки, чтобы оповещение дошло в любом случае.
+          bash .github/scripts/tg-format.sh --selftest
           tail -n +2 "$FILE" > /tmp/tg-body.md
           N=$(bash .github/scripts/tg-split.sh /tmp/tg-body.md /tmp/tg-parts 3700)
           FG_LINK="${PUBLIC_REPO}/releases/tag/${TAG}"
@@ -393,18 +399,31 @@ jobs:
             TAIL=""
             [ "$i" -eq "$N" ] && TAIL=$(printf "\n\nForgejo: %s%s" "$FG_LINK" "$GH_LINE")
             MSG=$(printf "%s\n\n%s%s" "$HEAD" "$(cat "$part")" "$TAIL")
-            jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
-              '{"chat_id":$chat,"text":$text}' > /tmp/tg-release.json
+            jq -n --arg chat "$TG_CHAT" --arg text "$(printf '%s' "$MSG" | bash .github/scripts/tg-format.sh html)" \
+              '{"chat_id":$chat,"text":$text,"parse_mode":"HTML","disable_web_page_preview":true}' > /tmp/tg-release.json
+            jq -n --arg chat "$TG_CHAT" --arg text "$(printf '%s' "$MSG" | bash .github/scripts/tg-format.sh plain)" \
+              '{"chat_id":$chat,"text":$text,"disable_web_page_preview":true}' > /tmp/tg-release-plain.json
             sent=0
             for attempt in 1 2 3; do
-              if curl -sf --max-time 10 -X POST \
+              code=$(curl -s --max-time 10 -o /tmp/tg-resp.json -w '%{http_code}' -X POST \
                    "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
                    -H "Content-Type: application/json" \
-                   -d @/tmp/tg-release.json; then
-                echo "[tg] release notification $i/$N sent (attempt $attempt)"
+                   -d @/tmp/tg-release.json)
+              if [ "$code" = "200" ]; then
+                echo "[tg] release notification $i/$N sent as HTML (attempt $attempt)"
                 sent=1; break
               fi
-              echo "::warning::[tg] release-notify $i/$N attempt $attempt/3 failed"
+              if [ "$code" = "400" ]; then
+                # Разметку не принял — не ретраим её, шлём без разметки.
+                echo "::warning::[tg] $i/$N: Telegram отверг HTML ($(head -c 200 /tmp/tg-resp.json)) — отправляю без разметки"
+                if curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                     -H "Content-Type: application/json" -d @/tmp/tg-release-plain.json >/dev/null; then
+                  echo "[tg] release notification $i/$N sent as plain text"
+                  sent=1
+                fi
+                break
+              fi
+              echo "::warning::[tg] release-notify $i/$N attempt $attempt/3 failed (HTTP $code)"
               [ $attempt -lt 3 ] && sleep $((attempt * 5))
             done
             [ $sent = 1 ] || FAILED=1
