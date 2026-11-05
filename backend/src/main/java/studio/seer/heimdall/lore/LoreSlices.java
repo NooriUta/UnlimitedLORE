@@ -2130,7 +2130,9 @@ public final class LoreSlices {
             "SELECT variant_id, status, published_at, url, " +
             "in('HAS_VARIANT').publication_id AS publication_id, " +
             "in('HAS_VARIANT').title AS title, " +
-            "out('IN_CHANNEL').channel_id AS channel_id " +
+            "out('IN_CHANNEL').channel_id AS channel_id, " +
+            // V2-06: группировка ретро по рубрике — рубрика живёт на публикации.
+            "in('HAS_VARIANT').out('IN_RUBRIC').name AS rubric_names " +
             "FROM BragiVariant WHERE published_at IS NOT NULL",
             List.of(), Map.of(), " ORDER BY published_at");
 

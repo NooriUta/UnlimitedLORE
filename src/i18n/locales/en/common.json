@@ -2640,7 +2640,16 @@
         "colInsight": "takeaway",
         "insightChip": "insight → {{id}}",
         "fixInsight": "+ record takeaway",
-        "insightsFailed": "insights failed to load — next number unknown"
+        "insightsFailed": "insights failed to load — next number unknown",
+        "periodFrom": "published from",
+        "periodTo": "to",
+        "groupLabel": "group",
+        "groupNone": "none",
+        "groupChannel": "by channel",
+        "groupRubric": "by rubric",
+        "groupNoKey": "— no value",
+        "groupCount": "{{n}} items",
+        "sparkLabel": "views over time"
       },
       "insights": {
         "loading": "loading…",
