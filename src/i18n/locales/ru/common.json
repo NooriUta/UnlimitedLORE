@@ -2636,7 +2636,11 @@
         "windowLabel": "окно от даты публикации",
         "winLifetime": "за всё время",
         "win72h": "первые 72 ч",
-        "win7d": "первые 7 дней"
+        "win7d": "первые 7 дней",
+        "colInsight": "вывод",
+        "insightChip": "инсайт → {{id}}",
+        "fixInsight": "+ зафиксировать вывод",
+        "insightsFailed": "инсайты не загрузились — номер следующего неизвестен"
       },
       "insights": {
         "loading": "загрузка…",
@@ -2656,6 +2660,22 @@
         "colLastCalled": "последний вызов",
         "editBtn": "✎ редактировать",
         "empty": "интеграций пока нет"
+      },
+      "insightForm": {
+        "linkFailed": "вывод {{id}} записан, связь не поставлена: {{err}}",
+        "evidenceTitle": "обоснование подставлено из строки",
+        "placeholder": "что показали цифры и что из этого следует",
+        "statementLabel": "вывод",
+        "ledTo": "ведёт к",
+        "ledNone": "пока ни к чему",
+        "ledTask": "задаче",
+        "ledAdr": "ADR",
+        "taskPlaceholder": "SPRINT_X/CODE",
+        "adrPlaceholder": "ADR-LORE-0NN",
+        "targetLabel": "куда ведёт",
+        "saving": "записываю…",
+        "save": "зафиксировать",
+        "cancel": "отмена"
       }
     },
     "integrationEditor": {

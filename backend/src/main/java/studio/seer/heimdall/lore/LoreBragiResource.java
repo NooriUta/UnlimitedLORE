@@ -780,7 +780,8 @@ public class LoreBragiResource extends LoreResourceBase {
     }
 
     public record BragiInsightRequest(
-        String insight_id, String statement_md, String insight_date, String evidence_ref) {}
+        String insight_id, String statement_md, String insight_date, String evidence_ref,
+        String subject_id) {}
 
     @POST
     @Path("bragi/insight")
@@ -801,6 +802,7 @@ public class LoreBragiResource extends LoreResourceBase {
             if (req.statement_md() != null) { sql.append(", statement_md=:sm"); p.put("sm", req.statement_md()); }
             if (req.insight_date() != null) { sql.append(", insight_date=:idt"); p.put("idt", req.insight_date()); }
             if (req.evidence_ref() != null) { sql.append(", evidence_ref=:er"); p.put("er", req.evidence_ref()); }
+            if (req.subject_id() != null)   { sql.append(", subject_id=:sj");   p.put("sj", req.subject_id()); }
             sql.append(" UPSERT WHERE insight_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();

@@ -2402,10 +2402,11 @@ export function registerLoreWrite(server: McpServer): void {
       statement_md:  z.string().optional(),
       insight_date:  z.string().optional().describe('YYYY-MM-DD'),
       evidence_ref:  z.string().optional().describe('freeform pointer to supporting metrics/source'),
+      subject_id:    z.string().optional().describe('V2-05: archive row the insight is about — variant_id or publication_id (exact id; the row chip matches by equality)'),
     },
     path: '/lore/bragi/insight',
-    body: ({ insight_id, statement_md, insight_date, evidence_ref }) => ({
-          insight_id, statement_md, insight_date, evidence_ref,
+    body: ({ insight_id, statement_md, insight_date, evidence_ref, subject_id }) => ({
+          insight_id, statement_md, insight_date, evidence_ref, subject_id,
         }),
   });
 
