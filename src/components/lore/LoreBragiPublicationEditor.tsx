@@ -12,6 +12,7 @@ import { MultiChip } from './LoreAdrEditor';
 import TipTapField from './TipTapField';
 import BragiSkinPreview, { type BragiSkin } from './BragiSkinPreview';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { wrapHeader } from './mobileLayout';
 import type { RubricRow } from './LoreBragiRubricManager';
 import { usePickerFailures } from './loadState';
 import { PickerLoadWarning } from './EmptyState';
@@ -493,7 +494,8 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
   return (
     <div style={S.shell}>
-      <div style={S.head}>
+      {/* AH-08: шапка без переноса уводила «Сохранить» за край на телефоне. */}
+      <div style={{ ...S.head, ...wrapHeader(narrow) }}>
         <span style={S.title}>
           {readOnly
             ? t('bragi.publicationEditor.titleView', 'Просмотр публикации')
@@ -501,7 +503,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
               ? t('bragi.publicationEditor.titleEdit', 'Редактирование публикации')
               : t('bragi.publicationEditor.titleNew', 'Новая публикация')}
         </span>
-        <div style={S.headBtns}>
+        <div style={{ ...S.headBtns, flexWrap: 'wrap', marginLeft: 'auto' }}>
           <div style={S.viewModeGroup}>
             <button
               type="button" style={viewMode === 'side' ? S.viewModeBtnOn : S.viewModeBtn}

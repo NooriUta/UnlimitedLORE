@@ -399,6 +399,9 @@
     "unresolvedRevExcluded": "unresolvable (run w/o started_ts, D-1)"
   },
   "lore": {
+    "mobile": {
+      "back": "back"
+    },
     "adrEditor": {
       "errIdRequired": "ADR ID is required",
       "errNameRequired": "Name is required",

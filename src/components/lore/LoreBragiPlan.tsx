@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import LoreBragiPublicationEditor from './LoreBragiPublicationEditor';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { bragiPlanLayout } from './mobileLayout';
 
 interface CalendarRow {
   variant_id: string;
@@ -42,6 +44,8 @@ function isSameDay(a: Date, b: Date): boolean {
 
 export default function LoreBragiPlan() {
   const { t } = useTranslation();
+  // AH-08: 1.7fr 1fr + паддинги карточки оставляли ячейке календаря ≈20px.
+  const L = bragiPlanLayout(useIsNarrow());
   const [rows, setRows] = useState<CalendarRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -105,8 +109,8 @@ export default function LoreBragiPlan() {
   return (
     <div>
       <div style={S.desc}>{t('bragi.plan.desc', '2-месячный контент-пуш · VC + Habr + Telegram · стадия соцкапитала.')}</div>
-      <div style={S.grid2}>
-        <div style={S.card}>
+      <div style={{ ...S.grid2, gridTemplateColumns: L.gridCols }}>
+        <div style={{ ...S.card, padding: L.cardPad }}>
           <h2 style={S.cardH2}>
             {t('bragi.plan.calendarTitle', 'календарь публикаций')} <span style={S.meta}>{monthLabel(cursor)}</span>
           </h2>
@@ -120,10 +124,10 @@ export default function LoreBragiPlan() {
               <span key={ch} style={S.legendItem}><span style={legendDotStyle(col)} />{ch}</span>
             ))}
           </div>
-          <div style={S.calHead}>
+          <div style={{ ...S.calHead, gridTemplateColumns: L.calCols, gap: L.calGap }}>
             {WEEKDAY_KEYS.map(w => <span key={w}>{t('bragi.plan.weekday.' + w, WEEKDAY_FALLBACK[w])}</span>)}
           </div>
-          <div style={S.cal}>
+          <div style={{ ...S.cal, gridTemplateColumns: L.calCols, gap: L.calGap }}>
             {cells.map((c, i) => {
               const dateStr = ymd(c.date);
               const items = byDate.get(dateStr) ?? [];
@@ -131,14 +135,15 @@ export default function LoreBragiPlan() {
               return (
                 <div
                   key={i}
-                  style={cellStyle(c.otherMonth, isToday)}
+                  style={{ ...cellStyle(c.otherMonth, isToday), padding: L.cellPad, minHeight: L.cellMinH, minWidth: 0 }}
                   onClick={() => setCreatingDate(dateStr)}
                   title={t('bragi.plan.cellTitle', 'Запланировать публикацию на эту дату')}
                 >
                   <div style={dnumStyle(isToday)}>{c.date.getDate()}</div>
                   {items.map(it => (
-                    <div key={it.variant_id} style={pchipStyle(CHANNEL_COLOR[it.channel_id[0]] ?? 'var(--t3)')}>
-                      {it.channel_id[0] ?? '—'} · {it.title[0] ?? it.variant_id}
+                    <div key={it.variant_id} style={pchipStyle(CHANNEL_COLOR[it.channel_id[0]] ?? 'var(--t3)')}
+                        title={`${it.channel_id[0] ?? '—'} · ${it.title[0] ?? it.variant_id}`}>
+                      {L.compactChips ? (it.channel_id[0] ?? '—').slice(0, 2) : <>{it.channel_id[0] ?? '—'} · {it.title[0] ?? it.variant_id}</>}
                     </div>
                   ))}
                   {items.length === 0 && !c.otherMonth && <div style={S.addHint}>+</div>}
@@ -147,7 +152,7 @@ export default function LoreBragiPlan() {
             })}
           </div>
         </div>
-        <div style={S.card}>
+        <div style={{ ...S.card, padding: L.cardPad }}>
           <h2 style={S.cardH2}>{t('bragi.plan.cadenceTitle', 'ритм')}</h2>
           <div style={{ fontSize: 'var(--fs-md)', lineHeight: 1.9, color: 'var(--t2)' }}>
             {CADENCE_KEYS.map(c => (

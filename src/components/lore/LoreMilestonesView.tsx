@@ -11,6 +11,8 @@ import LoreSkeleton from './LoreSkeleton';
 import TipTapField from './TipTapField';
 import { useProjectScope, sliceParamsForProject } from '../../context/ProjectScopeContext';
 import { useUrlId } from '../../hooks/useUrlState';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { milestonesTwoCol } from './mobileLayout';
 
 const TODAY = new Date();
 const RU_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -88,6 +90,8 @@ interface EditState { label: string; date_display: string; week: string; priorit
 
 export default function LoreMilestonesView({ onError, onNavigateToSprint }: Props) {
   const { t } = useTranslation();
+  // AH-08: детали вехи — две колонки 1fr 1fr; на телефоне — одна.
+  const twoCol = { ...S.twoCol, ...milestonesTwoCol(useIsNarrow()) };
   const { project } = useProjectScope();
   const [milestones, setMilestones] = useState<LoreMilestone[]>([]);
   const [sprints, setSprints]       = useState<LoreSprintRow[]>([]);
@@ -345,7 +349,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
             </>
           )}
 
-          <div style={S.twoCol}>
+          <div style={twoCol}>
             {/* Sprints */}
             <div style={S.col}>
               <div style={S.colTitle}>{t('lore.milestonesView.milestoneSprints', 'Спринты вехи · {{count}}', { count: selIds.length })}</div>
