@@ -10,7 +10,11 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -81,8 +85,30 @@ public class LoreQgActionsPoller {
     @ConfigProperty(name = "lore.qg.actions-projects")
     java.util.Optional<String> projectsConfig;
 
-    /** Разрешённый список проектов; пусто — переменная не задана. */
+    /**
+     * Значение конфига (фолбэк). Источник №1 — настройка админки
+     * {@link #SETTING_CODE}, читается на каждом заходе ({@link #currentProjects()}).
+     */
     String projectsCsv = "";
+
+    /** Ключ настройки в админке (dict_type=app_setting, значение — label_ru). */
+    static final String SETTING_CODE = "qg.actions_projects";
+
+    static final String SOURCE_SETTING = "настройка app_setting/" + SETTING_CODE;
+    static final String SOURCE_CONFIG  = "конфиг lore.qg.actions-projects";
+    static final String SOURCE_NONE    = "не задан";
+
+    /** Slug git-проекта: {@code owner/repo}, буквы/цифры/._- в обеих частях. */
+    private static final Pattern SLUG = Pattern.compile("[A-Za-z0-9._-]+/[A-Za-z0-9._-]+");
+
+    /**
+     * Итог резолва: что опрашивать, что отброшено как мусор и откуда взято.
+     * Непустой {@code rejected} — повод для WARN, а не молчаливого пропуска.
+     */
+    record Projects(List<String> projects, List<String> rejected, String source) {}
+
+    /** Подпись последнего резолва — чтобы одно и то же не повторять в лог каждые N минут. */
+    private String lastResolution;
 
     /** Сколько последних прогонов забирать за один заход. */
     @ConfigProperty(name = "lore.qg.actions-page-size", defaultValue = "30")
@@ -94,17 +120,19 @@ public class LoreQgActionsPoller {
     @Inject
     LoreQgRunWriter writer;
 
+    /** Чтение настройки — тем же клиентом, что и {@code LoreAssetResource.setting}. */
+    @Inject
+    LoreIngestService ingestService;
+
     private ScheduledExecutorService poller;
 
     @PostConstruct
     void start() {
         projectsCsv = projectsConfig == null ? "" : projectsConfig.orElse("");
         if (!loreEnabled || !pollEnabled) return;
-        if (projectsCsv == null || projectsCsv.isBlank()) {
-            LOG.warn("[LORE QG] опрос прогонов Actions включён, но lore.qg.actions-projects пуст — "
-                + "записей канала 1 не будет. Это НЕ то же самое, что «прогонов не было».");
-            return;
-        }
+        // QG-09: расписание запускается ВСЕГДА, даже при пустом конфиге — список
+        // теперь задаётся в админке и может появиться без рестарта. Пустоту
+        // каждый заход проверяет сам и говорит о ней (pollQuietly).
         poller = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "lore-qg-actions-poll");
             t.setDaemon(true);
@@ -114,8 +142,67 @@ public class LoreQgActionsPoller {
         // может быть ещё не поднят, а стартовать с предупреждения об ошибке —
         // приучать не читать предупреждения.
         poller.scheduleAtFixedRate(this::pollQuietly, pollMinutes, pollMinutes, TimeUnit.MINUTES);
-        LOG.infof("[LORE QG] опрос прогонов Actions включён, раз в %d мин, проекты: %s",
-            pollMinutes, projectsCsv);
+        LOG.infof("[LORE QG] опрос прогонов Actions включён, раз в %d мин; проекты — настройка %s "
+            + "в админке, иначе конфиг lore.qg.actions-projects (сейчас: «%s»)",
+            pollMinutes, SETTING_CODE, projectsCsv);
+    }
+
+    /**
+     * SPRINT_QG_REBUILD/QG-09: список проектов задаётся в админке. Порядок:
+     * непустая активная настройка → она; иначе конфиг (обратная совместимость
+     * с {@code LORE_QG_ACTIONS_PROJECTS}); иначе пусто.
+     *
+     * <p>Непустая настройка побеждает, даже если в ней один мусор: владелец явно
+     * задал список, и тихо подменить его конфигом значило бы опрашивать не то,
+     * что он видит в админке. Мусор при этом назван в {@code rejected}.
+     *
+     * <p>Чистая функция — без базы и Quarkus, правило проверяет
+     * {@code QgActionsProjectsResolveTest}.
+     */
+    static Projects resolveProjects(String setting, String config) {
+        List<String> fromSetting = items(setting);
+        if (!fromSetting.isEmpty()) return validate(fromSetting, SOURCE_SETTING);
+        List<String> fromConfig = items(config);
+        if (!fromConfig.isEmpty()) return validate(fromConfig, SOURCE_CONFIG);
+        return new Projects(List.of(), List.of(), SOURCE_NONE);
+    }
+
+    private static List<String> items(String csv) {
+        if (csv == null) return List.of();
+        List<String> out = new ArrayList<>();
+        for (String s : csv.split(",")) {
+            String v = s.trim();
+            if (!v.isEmpty()) out.add(v);
+        }
+        return out;
+    }
+
+    private static Projects validate(List<String> items, String source) {
+        List<String> ok = new ArrayList<>();
+        List<String> bad = new ArrayList<>();
+        for (String s : items) (SLUG.matcher(s).matches() ? ok : bad).add(s);
+        return new Projects(List.copyOf(ok), List.copyOf(bad), source);
+    }
+
+    /**
+     * Список на ТЕКУЩИЙ заход: правка в админке подхватывается со следующего
+     * цикла, без рестарта. Отказ чтения настройки — WARN и конфиг: опрос не
+     * падает и не молчит, а неизвестность настройки не выдаётся за её отсутствие.
+     */
+    Projects currentProjects() {
+        String setting;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT label_ru FROM KnowDictEntry WHERE dict_type='app_setting' AND code=:c AND is_active=true",
+                Map.of("c", SETTING_CODE));
+            Object v = rows.isEmpty() ? null : rows.get(0).get("label_ru");
+            setting = v == null ? null : v.toString();
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QG] настройка %s не прочитана (%s) — на этот заход берём конфиг lore.qg.actions-projects",
+                SETTING_CODE, LoreUpstream.detail(e));
+            setting = null;
+        }
+        return resolveProjects(setting, projectsCsv);
     }
 
     @PreDestroy
@@ -124,9 +211,29 @@ public class LoreQgActionsPoller {
     }
 
     private void pollQuietly() {
-        for (String slug : projectsCsv.split(",")) {
-            String s = slug.trim();
-            if (s.isEmpty()) continue;
+        Projects p;
+        try {
+            p = currentProjects();
+        } catch (RuntimeException e) {
+            // Исключение из расписания убило бы scheduleAtFixedRate навсегда.
+            LOG.warnf("[LORE QG] список проектов для опроса Actions не определён: %s", e.getMessage());
+            return;
+        }
+        String sig = p.source() + "|" + p.projects() + "|" + p.rejected();
+        boolean changed = !sig.equals(lastResolution);
+        lastResolution = sig;
+        if (changed) {
+            for (String bad : p.rejected())
+                LOG.warnf("[LORE QG] «%s» из %s — не slug вида owner/repo, пропущен", bad, p.source());
+            if (p.projects().isEmpty()) {
+                LOG.warnf("[LORE QG] опрос прогонов Actions включён, но список проектов пуст (%s; задаётся "
+                    + "настройкой %s в админке или lore.qg.actions-projects) — записей канала 1 не будет. "
+                    + "Это НЕ то же самое, что «прогонов не было».", p.source(), SETTING_CODE);
+            } else {
+                LOG.infof("[LORE QG] опрос прогонов Actions: проекты %s (%s)", p.projects(), p.source());
+            }
+        }
+        for (String s : p.projects()) {
             try {
                 pollProject(s);
             } catch (Exception e) {
