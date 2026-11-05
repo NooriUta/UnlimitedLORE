@@ -75,7 +75,11 @@ final class WorkQuality {
         List<String> hints = new ArrayList<>();
         for (Finding f : r.findings()) {
             if (f.ok()) continue;
-            (f.required() ? missing : hints).add(f.code() + " — " + f.message());
+            // У missing ключ сам говорит «не хватает»; у hints — нет, а сообщение
+            // сформулировано как условие («Оценка сходится…»). Без пометки
+            // непройденная подсказка читалась как вердикт (MT-TASK-SHAPE-2).
+            if (f.required()) missing.add(f.code() + " — " + f.message());
+            else hints.add(f.code() + " — не выполнено: " + f.message());
         }
         if (!missing.isEmpty()) out.put("missing", missing);
         if (!hints.isEmpty()) out.put("hints", hints);
