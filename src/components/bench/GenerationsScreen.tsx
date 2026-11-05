@@ -7,7 +7,7 @@ import type {
 } from '../../utils/muninnData';
 import { dedupe, filterRevAtRunTime, fmtF1, generationDeltas, groupRevChains, num, pickLocale, strArr } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
-import { MuninnSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink, campaignTone, hypothesisTone } from './shared';
+import { MartSliceWarning, MuninnSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink, campaignTone, hypothesisTone } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -76,6 +76,7 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
     <div data-testid="bench-generations">
       <ScreenTitle text={t('bench.gen.title', 'Parse generations — snapshot deltas tied to conclusions and hypotheses')}
                    hint={t('bench.gen.hint', 'F1 deltas need model+prompt pins; pairs must exist in both generations')} />
+      <MartSliceWarning slices={{ drift, campaigns, hypotheses, findings, substrate_revs_all: revsAll }} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <Field label={t('bench.model', 'Model')}>
           <MuninnSelect value={model} onChange={setModel} options={models.map(m => ({ value: m, label: m }))} />
@@ -128,7 +129,8 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
                 </div>
                 {i === 0 && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.gen.baseline', 'baseline generation')}</span>}
                 {i > 0 && pinned && drift.loading && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>}
-                {i > 0 && !drift.loading && genDeltas.length === 0 && (
+                {i > 0 && drift.error && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--dng)' }}>{drift.error}</span>}
+                {i > 0 && !drift.loading && !drift.error && genDeltas.length === 0 && (
                   <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.gen.noPairs', 'no (substrate, task) pairs measured in both generations under these pins')}</span>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

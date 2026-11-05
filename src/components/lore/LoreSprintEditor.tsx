@@ -15,6 +15,8 @@ import {
 } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
 import TipTapField from './TipTapField';
+import { usePickerFailures } from './loadState';
+import { PickerLoadWarning } from './EmptyState';
 
 const SPRINT_STATUSES = [
   'todo', 'planned', 'backlog', 'design', 'active', 'partial',
@@ -50,15 +52,16 @@ export default function LoreSprintEditor({ onSaved, onCancel }: LoreSprintEditor
   const [errMsg, setErrMsg]     = useState<string | null>(null);
   const [compList, setCompList] = useState<Array<{ id: string; label: string }>>([]);
   const [projList, setProjList] = useState<Array<{ id: string; label: string }>>([]);
+  const [pickFail, fail] = usePickerFailures();
 
   useEffect(() => {
     fetchLoreSlice<LoreComponent>('components')
       .then(rows => setCompList(rows.map(r => ({ id: r.component_id, label: r.full_name || r.component_id }))))
-      .catch(() => {});
+      .catch(fail(t('lore.pickerList.components', 'компоненты')));
     fetchLoreSlice<GitProjectRow>('git_projects')
       .then(rows => setProjList(rows.map(r => ({ id: r.slug, label: r.name }))))
-      .catch(() => {});
-  }, []);
+      .catch(fail(t('lore.pickerList.projects', 'проекты')));
+  }, [fail, t]);
 
   const set = <K extends keyof FormState>(key: K) => (v: FormState[K]) =>
     setForm(f => ({ ...f, [key]: v }));
@@ -112,6 +115,7 @@ export default function LoreSprintEditor({ onSaved, onCancel }: LoreSprintEditor
       </div>
 
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
+      <PickerLoadWarning failed={pickFail} />
 
       <div style={S.row4}>
         {fieldRow(t('lore.sprintEditor.fields.sprintId', 'Sprint ID'), (

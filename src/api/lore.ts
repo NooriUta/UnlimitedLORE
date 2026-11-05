@@ -1159,6 +1159,8 @@ export interface LoreRelease {
   sprint_count: number | null;
   pr_count: number | null;
   git_project: string | null;
+  /** AL-96: ребро BELONGS_TO_PROJECT — каноничный проект релиза (решение владельца 04.11.2026). */
+  projects?: (string | null)[] | null;
   /** AL-112: hosts[] проекта релиза (JSON string of RepoHost[], ADR-018) — remote'ы primary|mirror. */
   project_hosts?: string | null;
 }

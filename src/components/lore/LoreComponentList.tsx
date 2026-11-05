@@ -5,6 +5,8 @@ import { dictColor } from './DictionaryProvider';
 import { fetchLoreSlice, type LoreComponent } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
+import { LoadError } from './EmptyState';
+import { loadFailureOf } from './loadState';
 
 export const AREA_COLOR: Record<string, string> = {
   platform:      'var(--acc)',
@@ -99,6 +101,9 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
   const { t } = useTranslation();
   const [rows, setRows]         = useState<LoreComponent[]>([]);
   const [loading, setLoading]   = useState(true);
+  // AH-07 (зона 4): сбой загрузки рисовался «Компоненты не найдены.»
+  const [loadErr, setLoadErr]   = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   function toggleArea(area: string) {
@@ -107,11 +112,17 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
 
   useEffect(() => {
     const ctrl = new AbortController();
+    setLoadErr(null);
     fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal)
       .then(r => { setRows(r); setLoading(false); })
-      .catch(e => { onError(e); setLoading(false); });
+      .catch(e => {
+        const f = loadFailureOf(e);
+        if (f === null) return;
+        if (f.k === 'error' && !f.pageLevel) setLoadErr(f.text); else onError(e);
+        setLoading(false);
+      });
     return () => ctrl.abort();
-  }, [onError]);
+  }, [onError, reloadKey]);
 
   useEffect(() => {
     const c: Record<string, number> = {};
@@ -177,6 +188,10 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
   }, [rows, isFiltered, shown]);
 
   if (loading) return <LoreSkeleton />;
+  if (loadErr) return (
+    <LoadError text={t('lore.componentList.loadError', 'Компоненты не загрузились: {{reason}}', { reason: loadErr })}
+      onRetry={() => { setLoading(true); setReloadKey(k => k + 1); }} retryLabel={t('lore.loadRetry', 'Повторить')} />
+  );
 
   const renderRow = (r: LoreComponent, indent = 0, dimmed = false) => {
     const area   = compArea(r);
@@ -231,7 +246,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
               style={{ ...S.sectionHdr, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
               {...a11yClick(() => toggleArea(thisArea))}
             >
-              <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
               {curArea}
             </div>
           );

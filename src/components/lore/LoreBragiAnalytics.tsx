@@ -5,6 +5,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
+import { LoadError } from './EmptyState';
+import { settleSlices } from './loadState';
 
 interface AggRow { object_type: string; object_id: string; metric: string; agg_value: number; n: number }
 
@@ -28,25 +30,38 @@ export default function LoreBragiAnalytics() {
   const [aiShare, setAiShare] = useState<AggRow[]>([]);
   const [recent, setRecent] = useState<BragiMetricPoint[]>([]);
 
+  // AH-07 (зона 4): при сбое любого из шести запросов `.catch` снимал «загрузку»
+  // и оставлял начальные нули — экран показывал «0 показов, 0 переходов» и
+  // «замеров пока нет», хотя метрики могли быть. Теперь каждый запрос сам по
+  // себе: упавшая карточка — «—» с пометкой, упавшая секция — LoadError.
+  const [failed, setFailed] = useState<Record<string, string>>({});
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      sumMetric('views'),
-      sumMetric('clicks'),
-      sumMetric('demo_conv'),
-      fetchBragiMetrics({ object_id: 'KW-08', metric: 'position', limit: '1' }),
-      fetchBragiMetrics({ object_type: 'competitor', metric: 'ai_share', agg: 'sum' }) as unknown as Promise<AggRow[]>,
-      fetchBragiMetrics({ limit: '30' }),
-    ]).then(([v, c, d, posRows, share, rec]) => {
+    setLoading(true);
+    settleSlices({
+      views:    sumMetric('views'),
+      clicks:   sumMetric('clicks'),
+      demo:     sumMetric('demo_conv'),
+      position: fetchBragiMetrics({ object_id: 'KW-08', metric: 'position', limit: '1' }),
+      aiShare:  fetchBragiMetrics({ object_type: 'competitor', metric: 'ai_share', agg: 'sum' }) as unknown as Promise<AggRow[]>,
+      recent:   fetchBragiMetrics({ limit: '30' }),
+    }).then(({ values: v, failed: f }) => {
       if (cancelled) return;
-      setViews(v); setClicks(c); setDemo(d);
-      setPosition(posRows[0]?.value ?? null);
-      setAiShare(share.sort((a, b) => b.agg_value - a.agg_value));
-      setRecent(rec);
+      setViews(v.views ?? 0); setClicks(v.clicks ?? 0); setDemo(v.demo ?? 0);
+      setPosition(v.position?.[0]?.value ?? null);
+      setAiShare((v.aiShare ?? []).sort((a, b) => b.agg_value - a.agg_value));
+      setRecent(v.recent ?? []);
+      setFailed(f as Record<string, string>);
       setLoading(false);
-    }).catch(() => { if (!cancelled) setLoading(false); });
+    });
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
+
+  const retry = () => setReloadKey(k => k + 1);
+  const kpiVal = (key: string, shown: React.ReactNode) => failed[key]
+    ? <span title={failed[key]} style={{ color: 'var(--dng)' }}>— <span style={S.kpiErr}>{t('bragi.analytics.kpiFailed', 'не загрузилось')}</span></span>
+    : shown;
 
   if (loading) return <div style={S.hint}>{t('bragi.analytics.loading', 'загрузка…')}</div>;
 
@@ -56,15 +71,16 @@ export default function LoreBragiAnalytics() {
     <div>
       <div style={S.desc}>{t('bragi.analytics.desc', 'воронка (Метрика), позиции (Keys.so), доля в ИИ (Трекер ИИ), конкуренты.')}</div>
       <div style={S.kpis}>
-        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.views', 'показы/просмотры')}</div><div style={S.kpiVal}>{views.toLocaleString('ru-RU')}</div></div>
-        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.clicks', 'переходы')}</div><div style={S.kpiVal}>{clicks.toLocaleString('ru-RU')}</div></div>
-        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.demo', 'демо')}</div><div style={S.kpiVal}>{demo}</div></div>
-        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.position', 'ср. позиция бренда')}</div><div style={S.kpiVal}>{position ?? '—'}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.views', 'показы/просмотры')}</div><div style={S.kpiVal}>{kpiVal('views', views.toLocaleString('ru-RU'))}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.clicks', 'переходы')}</div><div style={S.kpiVal}>{kpiVal('clicks', clicks.toLocaleString('ru-RU'))}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.demo', 'демо')}</div><div style={S.kpiVal}>{kpiVal('demo', demo)}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.position', 'ср. позиция бренда')}</div><div style={S.kpiVal}>{kpiVal('position', position ?? '—')}</div></div>
       </div>
 
       <div style={S.card}>
         <h2 style={S.cardH2}>{t('bragi.analytics.aiShare.title', 'доля в ИИ vs конкуренты')}</h2>
-        {aiShare.length === 0 ? <div style={S.hint}>{t('bragi.analytics.aiShare.empty', 'замеров пока нет')}</div> : aiShare.map(r => {
+        {failed.aiShare ? <LoadError text={t('bragi.analytics.loadError', 'не загрузилось: {{reason}}', { reason: failed.aiShare })} onRetry={retry} retryLabel={t('lore.loadRetry', 'Повторить')} />
+          : aiShare.length === 0 ? <div style={S.hint}>{t('bragi.analytics.aiShare.empty', 'замеров пока нет')}</div> : aiShare.map(r => {
           const isBrand = r.object_id === 'COMP-SEIDR';
           return (
             <div key={r.object_id} style={S.shareRow}>
@@ -81,8 +97,9 @@ export default function LoreBragiAnalytics() {
       </div>
 
       <div style={S.card}>
-        <h2 style={S.cardH2}>{t('bragi.analytics.recent.title', 'последние замеры')} <span style={S.meta}>{recent.length}</span></h2>
-        {recent.length === 0 ? <div style={S.hint}>{t('bragi.analytics.recent.empty', 'замеров пока нет')}</div> : (
+        <h2 style={S.cardH2}>{t('bragi.analytics.recent.title', 'последние замеры')} {!failed.recent && <span style={S.meta}>{recent.length}</span>}</h2>
+        {failed.recent ? <LoadError text={t('bragi.analytics.loadError', 'не загрузилось: {{reason}}', { reason: failed.recent })} onRetry={retry} retryLabel={t('lore.loadRetry', 'Повторить')} />
+          : recent.length === 0 ? <div style={S.hint}>{t('bragi.analytics.recent.empty', 'замеров пока нет')}</div> : (
           <div style={S.tableWrap}>
           <table style={S.table}>
             <thead>
@@ -116,6 +133,7 @@ const S: Record<string, React.CSSProperties> = {
   kpis:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 18 },
   kpi:     { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 10, padding: '14px 16px' },
   kpiLab:  { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
+  kpiErr:  { fontFamily: 'var(--font)', fontWeight: 400, fontSize: 'var(--fs-xs)' },
   kpiVal:  { fontFamily: 'var(--display)', fontWeight: 700, fontSize: 'var(--fs-2xl)', marginTop: 8, lineHeight: 1 },
   card:    { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '16px 18px', marginBottom: 16 },
   cardH2:  { fontFamily: 'var(--font)', fontWeight: 600, fontSize: 'var(--fs-lg)', margin: '0 0 12px', display: 'flex',

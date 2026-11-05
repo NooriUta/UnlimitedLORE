@@ -666,7 +666,8 @@
           "clickToOpen": "(клик — список)",
           "truncated": "показаны первые {{n}} из {{total}} — остальное не выведено, а не отсутствует"
         }
-      }
+      },
+      "loadError": "Аналитика не загрузилась: {{reason}}"
     },
     "artifactDoc": {
       "loading": "Загрузка {{id}}…",
@@ -690,7 +691,8 @@
       "edit": "✎ Редактировать",
       "htmlLegacyWarning": "⚠ Этот документ сейчас хранится как HTML. Если вы сохраните текст здесь (даже в одном из полей), отображение переключится на Markdown и текущий HTML-контент перестанет показываться (он не удаляется, просто больше не используется).",
       "save": "Сохранить",
-      "saving": "Сохранение…"
+      "saving": "Сохранение…",
+      "metricsLoadError": "Метрики гейта не загрузились: {{reason}}"
     },
     "artifactList": {
       "kindSpec": "Спеки",
@@ -708,7 +710,8 @@
     },
     "componentList": {
       "sprintCountTitle": "Привязанных спринтов",
-      "empty": "Компоненты не найдены."
+      "empty": "Компоненты не найдены.",
+      "loadError": "Компоненты не загрузились: {{reason}}"
     },
     "componentPassport": {
       "mermaidRendering": "Рендеринг диаграммы…",
@@ -759,7 +762,8 @@
         "draft": "черновик",
         "archived": "архив",
         "deprecated": "устарел"
-      }
+      },
+      "loadError": "Модуль {{componentId}} не загрузился: {{reason}}"
     },
     "componentTree": {
       "loading": "Загрузка компонентов…",
@@ -1062,7 +1066,8 @@
       "addTask": "+ задача",
       "sprintsWithoutMilestones": "Спринты без вех · {{count}}",
       "allSprintsLinked": "Все спринты привязаны к вехам ✓",
-      "intoMilestonePlaceholder": "→ в веху…"
+      "intoMilestonePlaceholder": "→ в веху…",
+      "tasksPartial": "Задачи загружены не полностью: {{failed}} из {{total}} пачек упали — {{reason}}"
     },
     "modulePassport": {
       "loading": "Загрузка модуля…",
@@ -1238,7 +1243,8 @@
         "openSprintTitle": "Открыть {{sprintId}}",
         "taskLink": "→ задача {{taskUid}}",
         "taskCreated": "→ задача создана"
-      }
+      },
+      "metricsLoadError": "Метрики прогонов не загрузились — «нет прогона» ниже может быть неправдой: {{reason}}"
     },
     "qualityGateList": {
       "export": {
@@ -1465,7 +1471,8 @@
       "filtersToggle": "фильтр по статусу/типу",
       "wcUc": "реализует сценарий",
       "wcJtd": "вспомогательная работа",
-      "wcEnb": "enabler — обоснование в ADR"
+      "wcEnb": "enabler — обоснование в ADR",
+      "loadError": "Спринт {{sprintId}} не загрузился: {{reason}}"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID обязателен",
@@ -1572,7 +1579,9 @@
         "flat": "подряд",
         "kind": "по типам",
         "project": "по проектам"
-      }
+      },
+      "loadError": "Не удалось загрузить ленту: {{reason}}",
+      "retry": "Повторить"
     },
     "page": {
       "disabled": {
@@ -2262,7 +2271,20 @@
       "usageWarn": "{{n}} сущностей несут этот код.",
       "usageWarn2": "Изменение цвета/иконки поменяет их вид во всём LORE; деактивация потребует подтверждения.",
       "usersNote": "Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).",
-      "viewerGives": "Только чтение LORE. В администрирование не пускает"
+      "viewerGives": "Только чтение LORE. В администрирование не пускает",
+      "agentsLoadError": "Агенты графа не загрузились: {{reason}}",
+      "matrixLoadError": "Матрица делегирования не загрузилась — «пишет» неизвестно (?), а не 0: {{reason}}",
+      "unknownLoadFailed": "не загрузилось",
+      "profilesLoadError": "Справочник профилей агентов не загрузился — выбрать профиль сейчас не из чего: {{reason}}",
+      "projectRolesLoadError": "Роли в проектах не загрузились: {{reason}}",
+      "projectsLoadFailedOpt": "проекты не загрузились",
+      "projectsLoadError": "Проекты не загрузились: {{reason}}",
+      "projectUsersPartial": "участники части проектов ({{n}}) не загрузились",
+      "projectRolesUnknown": "? не загрузилось",
+      "membersLoadError": "Участники проекта не загрузились: {{reason}}",
+      "retry": "повторить",
+      "sourceLoadError": "Не загрузилось ({{src}}): {{reason}} — пустая таблица ниже не значит «данных нет»",
+      "claudeRulesLoadError": "Документ не загрузился: {{reason}}"
     },
     "oqBoard": {
       "ansFailed": "Не удалось загрузить решение #{{id}} — клик повторит",
@@ -2348,7 +2370,22 @@
     "errorToast": {
       "title": "Не удалось:",
       "close": "Закрыть"
-    }
+    },
+    "pickerLoadFailed": "Не загрузились списки для выбора: {{lists}}. Это сбой, а не пустота — выбрать из них сейчас нельзя, обновите позже.",
+    "pickerList": {
+      "adrs": "ADR",
+      "components": "компоненты",
+      "projects": "проекты",
+      "pages": "страницы",
+      "keywords": "ключевые слова",
+      "channels": "площадки",
+      "rubrics": "рубрики",
+      "sprints": "спринты",
+      "releases": "релизы",
+      "milestones": "вехи"
+    },
+    "sliceLoadFailed": "Не загрузились срезы: {{lists}}. Это сбой, а не нули — показатели, которые от них зависят, неполны.",
+    "loadRetry": "Повторить"
   },
   "bragi": {
     "analytics": {
@@ -2371,7 +2408,9 @@
         "colMetric": "метрика",
         "colValue": "значение",
         "colSource": "источник"
-      }
+      },
+      "loadError": "не загрузилось: {{reason}}",
+      "kpiFailed": "не загрузилось"
     },
     "extras": {
       "loadError": "не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите",
@@ -2594,7 +2633,8 @@
       "filtersLabel": "Фильтры",
       "rubricLabel": "Рубрика",
       "statusLabel": "Статус",
-      "todoBadge": "{{n}} todo"
+      "todoBadge": "{{n}} todo",
+      "metricsLoadError": "замеры не загрузились: {{reason}}"
     },
     "rubricManager": {
       "errId": "ID рубрики обязателен",

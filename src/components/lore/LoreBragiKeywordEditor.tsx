@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import type { RubricRow } from './LoreBragiRubricManager';
+import { usePickerFailures } from './loadState';
+import { PickerLoadWarning } from './EmptyState';
 
 interface PageRow { page_id: string; url: string | null; title: string | null }
 
@@ -42,10 +44,11 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rub
   const [pageId, setPageId] = useState('');
   const [saving, setSaving] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [pickFail, fail] = usePickerFailures();
 
   useEffect(() => {
-    fetchLoreSlice<PageRow>('bragi_pages').then(setPages).catch(() => {});
-  }, []);
+    fetchLoreSlice<PageRow>('bragi_pages').then(setPages).catch(fail(t('lore.pickerList.pages', 'страницы')));
+  }, [fail, t]);
 
   // Pages are joined by URL in the slice, not id — resolve the matching
   // page_id from the current page_url so the select can preselect it.
@@ -91,6 +94,7 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rub
       </div>
 
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
+      <PickerLoadWarning failed={pickFail} />
 
       <div style={S.row4}>
         <Field label={t('bragi.keywordEditor.keywordId', 'Keyword ID')} grow={1}>

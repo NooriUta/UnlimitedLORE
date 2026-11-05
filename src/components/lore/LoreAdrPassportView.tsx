@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TipTapField from './TipTapField';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { fetchLoreSlice, loreMutate, type LoreAdrPassport, type LoreDecisionRow, type LoreQuestionRow } from '../../api/lore';
@@ -408,9 +409,10 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
             <datalist id="lore-decform-comps">
               {compIds.map(c => <option key={c} value={c} />)}
             </datalist>
-            <textarea style={{ ...S.decInput, minHeight: 40, resize: 'vertical' as const }}
+            {/* AH-10: тело решения — Markdown, поэтому TipTapField, а не голая textarea. */}
+            <TipTapField minHeight={60} enableImages={false} enableHtmlMode={false}
               placeholder={decEditId === '__new__' ? 'Тело решения (опц.)' : 'Тело — оставьте пустым, чтобы не менять'}
-              value={decForm.body_md} onChange={e => setDecForm(f => ({ ...f, body_md: e.target.value }))} />
+              value={decForm.body_md} onChange={md => setDecForm(f => ({ ...f, body_md: md }))} />
             {/* T43: multi component + multi project (edges) — for an existing decision. */}
             {decEditId !== '__new__' && (() => {
               const dr = decisions.find(d => d.decision_id === decEditId);

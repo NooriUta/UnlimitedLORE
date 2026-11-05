@@ -666,7 +666,8 @@
           "clickToOpen": "(click — list)",
           "truncated": "showing the first {{n}} of {{total}} — the rest is omitted, not absent"
         }
-      }
+      },
+      "loadError": "Analytics failed to load: {{reason}}"
     },
     "artifactDoc": {
       "loading": "Loading {{id}}…",
@@ -690,7 +691,8 @@
       "edit": "✎ Edit",
       "htmlLegacyWarning": "⚠ This document is currently stored as HTML. If you save text here (even in a single field), the display will switch to Markdown and the current HTML content will stop showing (it is not deleted, just no longer used).",
       "save": "Save",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "metricsLoadError": "Gate metrics failed to load: {{reason}}"
     },
     "artifactList": {
       "kindSpec": "Specs",
@@ -708,7 +710,8 @@
     },
     "componentList": {
       "sprintCountTitle": "Linked sprints",
-      "empty": "No components found."
+      "empty": "No components found.",
+      "loadError": "Components failed to load: {{reason}}"
     },
     "componentPassport": {
       "mermaidRendering": "Rendering diagram…",
@@ -759,7 +762,8 @@
         "draft": "draft",
         "archived": "archived",
         "deprecated": "deprecated"
-      }
+      },
+      "loadError": "Module {{componentId}} failed to load: {{reason}}"
     },
     "componentTree": {
       "loading": "Loading components…",
@@ -1062,7 +1066,8 @@
       "addTask": "+ task",
       "sprintsWithoutMilestones": "Sprints without milestones · {{count}}",
       "allSprintsLinked": "All sprints are linked to milestones ✓",
-      "intoMilestonePlaceholder": "→ into milestone…"
+      "intoMilestonePlaceholder": "→ into milestone…",
+      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}"
     },
     "modulePassport": {
       "loading": "Loading module…",
@@ -1238,7 +1243,8 @@
         "openSprintTitle": "Open {{sprintId}}",
         "taskLink": "→ task {{taskUid}}",
         "taskCreated": "→ task created"
-      }
+      },
+      "metricsLoadError": "Run metrics failed to load — \"no run\" below may be untrue: {{reason}}"
     },
     "qualityGateList": {
       "export": {
@@ -1465,7 +1471,8 @@
       "filtersToggle": "filter by status/type",
       "wcUc": "realizes a scenario",
       "wcJtd": "supporting job",
-      "wcEnb": "enabler — justified by an ADR"
+      "wcEnb": "enabler — justified by an ADR",
+      "loadError": "Sprint {{sprintId}} failed to load: {{reason}}"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID is required",
@@ -1572,7 +1579,9 @@
         "flat": "flat",
         "kind": "by type",
         "project": "by project"
-      }
+      },
+      "loadError": "Could not load the feed: {{reason}}",
+      "retry": "Retry"
     },
     "page": {
       "disabled": {
@@ -2262,7 +2271,20 @@
       "usageWarn": "{{n}} entities carry this code.",
       "usageWarn2": "Changing the color/icon will change how they look across all of LORE; deactivating requires confirmation.",
       "usersNote": "People are Keycloak realm roles (the \"people\" axis). LORE stores no passwords: the user sets it in KC. The super-admin role is assigned only in the KC console (outside the bridge, D11).",
-      "viewerGives": "Read-only access to LORE. Does not allow into administration"
+      "viewerGives": "Read-only access to LORE. Does not allow into administration",
+      "agentsLoadError": "Graph agents failed to load: {{reason}}",
+      "matrixLoadError": "Delegation matrix failed to load — \"writes\" is unknown (?), not 0: {{reason}}",
+      "unknownLoadFailed": "failed to load",
+      "profilesLoadError": "Agent profile dictionary failed to load — there is nothing to pick a profile from: {{reason}}",
+      "projectRolesLoadError": "Project roles failed to load: {{reason}}",
+      "projectsLoadFailedOpt": "projects failed to load",
+      "projectsLoadError": "Projects failed to load: {{reason}}",
+      "projectUsersPartial": "members of some projects ({{n}}) failed to load",
+      "projectRolesUnknown": "? failed to load",
+      "membersLoadError": "Project members failed to load: {{reason}}",
+      "retry": "retry",
+      "sourceLoadError": "Failed to load ({{src}}): {{reason}} — an empty table below does not mean \"no data\"",
+      "claudeRulesLoadError": "Document failed to load: {{reason}}"
     },
     "oqBoard": {
       "ansFailed": "Failed to load decision #{{id}} — click to retry",
@@ -2348,7 +2370,22 @@
     "errorToast": {
       "title": "Failed:",
       "close": "Close"
-    }
+    },
+    "pickerLoadFailed": "Picker lists failed to load: {{lists}}. This is a failure, not emptiness — you cannot pick from them right now; refresh later.",
+    "pickerList": {
+      "adrs": "ADRs",
+      "components": "components",
+      "projects": "projects",
+      "pages": "pages",
+      "keywords": "keywords",
+      "channels": "channels",
+      "rubrics": "rubrics",
+      "sprints": "sprints",
+      "releases": "releases",
+      "milestones": "milestones"
+    },
+    "sliceLoadFailed": "Failed to load: {{lists}}. This is a failure, not zeros — figures that depend on them are incomplete.",
+    "loadRetry": "Retry"
   },
   "bragi": {
     "analytics": {
@@ -2371,7 +2408,9 @@
         "colMetric": "metric",
         "colValue": "value",
         "colSource": "source"
-      }
+      },
+      "loadError": "failed to load: {{reason}}",
+      "kpiFailed": "failed to load"
     },
     "extras": {
       "loadError": "failed to load — data may still exist, check your session/network and reload",
@@ -2594,7 +2633,8 @@
       "filtersLabel": "Filters",
       "rubricLabel": "Rubric",
       "statusLabel": "Status",
-      "todoBadge": "{{n}} todo"
+      "todoBadge": "{{n}} todo",
+      "metricsLoadError": "metrics failed to load: {{reason}}"
     },
     "rubricManager": {
       "errId": "Category ID is required",

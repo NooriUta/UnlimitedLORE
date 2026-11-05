@@ -2,6 +2,10 @@
 
 interface Props {
   runs: RunMeta[];
+  /** AH-07: исход загрузки — сбой не рисуется как «прогонов не было». */
+  state?: 'loading' | 'error' | 'empty' | 'ok';
+  error?: string;
+  onRetry?: () => void;
   activeId: string | null;
   onPick: (id: string) => void;
 }
@@ -28,7 +32,16 @@ function fmtDur(ms?: number): string {
   return `${Math.floor(ms / 60_000)}m ${Math.floor((ms % 60_000) / 1000)}s`;
 }
 
-export function RunsList({ runs, activeId, onPick }: Props) {
+export function RunsList({ runs, activeId, onPick, state, error, onRetry }: Props) {
+  if (state === 'error') {
+    return (
+      <div className="error" role="alert">
+        Не удалось загрузить историю прогонов: {error}
+        {onRetry && <> <button onClick={onRetry}>↻</button></>}
+      </div>
+    );
+  }
+  if (state === 'loading') return <div className="muted">Загружаю…</div>;
   if (runs.length === 0) {
     return <div className="muted">Прогонов ещё не было</div>;
   }

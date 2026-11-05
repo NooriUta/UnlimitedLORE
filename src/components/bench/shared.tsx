@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CapabilityRow, StructuralZero } from '../../utils/muninnData';
 import { f1Band, fmtF1 } from '../../utils/muninnData';
+import { SliceLoadWarning } from '../lore/EmptyState';
+import { sliceFailures } from '../lore/loadState';
 
 /**
  * One bad fact must never white-screen the whole panel: a render error inside
@@ -84,6 +86,19 @@ export function hypothesisTone(status: string | undefined): BadgeTone {
   if (status === 'registered_bet') return 'warn';
   if (status === 'open') return 'info';
   return 'neutral';
+}
+
+/**
+ * AH-07 (зона 4): экран из нескольких срезов витрины проверял только первый —
+ * упавший вспомогательный срез становился `rows ?? []`, и экран рисовал нули,
+ * пустые чипы и «нет данных». Здесь перечислены упавшие срезы, повтор — только их.
+ */
+export function MartSliceWarning({ slices }: {
+  slices: Record<string, { error: string | null; reload: () => void } | null | undefined>;
+}) {
+  const failed = sliceFailures(slices);
+  const retry = () => { for (const [n, sl] of Object.entries(slices)) if (failed[n]) sl?.reload(); };
+  return <SliceLoadWarning failed={failed} onRetry={retry} />;
 }
 
 export function PanelMsg({ kind, text, onRetry }: {

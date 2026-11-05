@@ -4,7 +4,7 @@
 // a variant expands it (full text + live BragiMetric points for that variant).
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
+import { fetchLoreSlice, fetchBragiMetrics, describeLoreError, type BragiMetricPoint } from '../../api/lore';
 import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData, countOpenTodos } from './LoreBragiPublicationEditor';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
 
@@ -70,6 +70,8 @@ export default function LoreBragiPublications() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<BragiMetricPoint[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
+  // AH-07: сбой замеров рисовался как «замеров пока нет».
+  const [metricsErr, setMetricsErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingRow, setEditingRow] = useState<PublicationRow | null>(null);
   const [showMainText, setShowMainText] = useState<string | null>(null);
@@ -145,9 +147,10 @@ export default function LoreBragiPublications() {
     if (expanded === variantId) { setExpanded(null); return; }
     setExpanded(variantId);
     setMetricsLoading(true);
+    setMetricsErr(null);
     fetchBragiMetrics({ object_id: objectId, limit: '20' })
       .then(setMetrics)
-      .catch(() => setMetrics([]))
+      .catch(e => { setMetrics([]); setMetricsErr(describeLoreError(e).text); })
       .finally(() => setMetricsLoading(false));
   };
 
@@ -310,6 +313,8 @@ export default function LoreBragiPublications() {
                     <div style={S.expandMetricsLabel}>{t('bragi.publications.channelMetricsLabel', 'метрики площадки')}</div>
                     {metricsLoading ? (
                       <div style={S.hint}>{t('bragi.publications.loadingMetrics', 'загрузка метрик…')}</div>
+                    ) : metricsErr ? (
+                      <div role="alert" style={{ ...S.hint, color: 'var(--dng)' }}>{t('bragi.publications.metricsLoadError', 'замеры не загрузились: {{reason}}', { reason: metricsErr })}</div>
                     ) : metrics.length === 0 ? (
                       <div style={S.hint}>{t('bragi.publications.noMetricsYet', 'замеров пока нет')}</div>
                     ) : (

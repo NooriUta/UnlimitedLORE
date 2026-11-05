@@ -17,6 +17,8 @@ import {
   type LoreKnowDoc,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
+import { LoadError } from './EmptyState';
+import { loadFailureOf } from './loadState';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
 import { MartProse } from '../bench/MartProse';
@@ -246,6 +248,9 @@ export default function LoreComponentPassport({
   const [docs, setDocs]       = useState<LoreKnowDocRow[]>([]);
   const [sprints, setSprints] = useState<ComponentSprintRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // AH-07 (зона 4): сбой загрузки рисовался «Не найден: <id>».
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [editing, setEditing]           = useState(false);
   const [saving, setSaving]             = useState(false);
@@ -284,10 +289,11 @@ export default function LoreComponentPassport({
 
   // ── Data load ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    setLoading(true); setComp(null); setAdrs([]); setSpecs([]); setQgs([]); setDocs([]);
+    setLoading(true); setLoadErr(null); setComp(null); setAdrs([]); setSpecs([]); setQgs([]); setDocs([]);
     setSprints([]); setUcs([]); setEditing(false); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
     setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
     const ctrl = new AbortController();
+    let compLoaded = false;
 
     Promise.all([
       fetchLoreSlice<LoreComponentDetail>('component',      { id: componentId },        ctrl.signal),
@@ -301,6 +307,7 @@ export default function LoreComponentPassport({
     ])
       .then(([compRows, adrRows, specRows, qgRows, docRows, ucRows]) => {
         const c = compRows[0] ?? null;
+        compLoaded = true;
         setComp(c); setAdrs(adrRows); setSpecs(specRows); setQgs(qgRows);
         setDocs(docRows.filter(d => d.component_id === componentId));
         setUcs(ucRows);
@@ -316,9 +323,15 @@ export default function LoreComponentPassport({
         return fetchLoreSlice<ComponentSprintRow>('component_sprints', { pattern: `%${key}%`, cid: componentId }, ctrl.signal);
       })
       .then(rows => setSprints(rows ?? []))
-      .catch(e => { onError(e); setLoading(false); });
+      .catch(e => {
+        const f = loadFailureOf(e);
+        if (f === null) return;
+        // карточка уже есть — упал хвост (спринты): toast, как и раньше
+        if (f.k === 'error' && !f.pageLevel && !compLoaded) setLoadErr(f.text); else onError(e);
+        setLoading(false);
+      });
     return () => ctrl.abort();
-  }, [componentId, onError]);
+  }, [componentId, onError, reloadKey]);
 
   // ── Doc content load ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -382,6 +395,10 @@ export default function LoreComponentPassport({
   };
 
   if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>{t('lore.componentPassport.loading', 'Загрузка')} {componentId}…</div>;
+  if (!comp && loadErr) return (
+    <LoadError text={t('lore.componentPassport.loadError', 'Модуль {{componentId}} не загрузился: {{reason}}', { componentId, reason: loadErr })}
+      onRetry={() => setReloadKey(k => k + 1)} retryLabel={t('lore.loadRetry', 'Повторить')} />
+  );
   if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>{t('lore.componentPassport.notFound', 'Не найден:')} {componentId}</div>;
 
   const color   = areaColor(compArea(comp));

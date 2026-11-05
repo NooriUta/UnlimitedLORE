@@ -102,7 +102,19 @@ export function describeFetchFailure(what: string, e: unknown): string {
     'upsert-инструменты повторять безопасно, metric_log/qg_run_log — только после проверки)';
 }
 
-/** fetch с таймаутом, причиной сбоя в тексте ошибки и одним повтором при ошибке соединения. */
+/**
+ * Обрыв уже открытого соединения: простаивавший keep-alive сокет закрыт сервером
+ * или прокси (undici: UND_ERR_SOCKET «other side closed»). Запрос мог дойти —
+ * поэтому повтор только для чтения (GET/HEAD), где он ничего не задвоит.
+ */
+const OPEN_SOCKET_RESET = new Set(['UND_ERR_SOCKET', 'ECONNRESET', 'EPIPE']);
+
+function isReadOnly(init: RequestInit): boolean {
+  const m = (init.method ?? 'GET').toUpperCase();
+  return m === 'GET' || m === 'HEAD';
+}
+
+/** fetch с таймаутом, причиной сбоя в тексте ошибки и одним безопасным повтором. */
 export async function loreFetch(
   what: string, url: string, init: RequestInit = {}, f: typeof fetch = fetch,
 ): Promise<Response> {
@@ -111,7 +123,8 @@ export async function loreFetch(
       return await f(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
     } catch (e) {
       const { code } = causeOf(e);
-      if (attempt === 1 && code && CONNECT_PHASE.has(code)) {
+      const retriable = !!code && (CONNECT_PHASE.has(code) || (OPEN_SOCKET_RESET.has(code) && isReadOnly(init)));
+      if (attempt === 1 && retriable) {
         await new Promise((r) => setTimeout(r, 300));
         continue;
       }

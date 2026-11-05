@@ -738,7 +738,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         end:   addWeeks(w0, sec.end_week),
         type: 'background',
         className: 'sec',
-        style: `background-color:${sec.color}14;border-color:${sec.color}40;`,
+        style: `background-color:color-mix(in srgb, ${sec.color} 8%, transparent);border-color:color-mix(in srgb, ${sec.color} 25%, transparent);`,
       } as TimelineItem);
     }
 
