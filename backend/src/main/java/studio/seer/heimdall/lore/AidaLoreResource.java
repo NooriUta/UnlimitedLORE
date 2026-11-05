@@ -445,6 +445,10 @@ public class AidaLoreResource extends LoreResourceBase {
             }
 
             for (Map<String, Object> sp : specs) {
+                String spid0 = firstStr(sp.get("spec_id"));
+                List<String> project0 = projectList(sp.get("projects"));
+                // Как у решений: карта проекта заполняется ДО проверки даты.
+                if (spid0 != null && !project0.isEmpty()) specProject.put(spid0, project0);
                 String date = dayOf(sp.get("date_created"));
                 if (date == null) continue;
                 String title = firstStr(sp.get("title"));
@@ -597,7 +601,7 @@ public class AidaLoreResource extends LoreResourceBase {
      * группу «без проекта» и терялась под фильтром — created это уже чинили
      * (ADRPROJ-01), changed оставался.
      */
-    private static void emitChanged(List<Map<String, Object>> items,
+    static void emitChanged(List<Map<String, Object>> items,
                                     List<Map<String, Object>> hist,
                                     String idField, String kind,
                                     Map<String, String> createdDay,
@@ -611,7 +615,12 @@ public class AidaLoreResource extends LoreResourceBase {
             if (date.equals(createdDay.get(id))) continue;       // это создание, не правка
             if (!seen.add(kind + "|" + id + "|" + date)) continue; // дедуп по дню
             String title = (titles != null && titles.get(id) != null) ? titles.get(id) : id;
-            List<String> project = projects == null ? List.<String>of() : projects.getOrDefault(id, List.of());
+            // Проект — со строки истории (её вершины), карта — запас для строк без
+            // своего ребра (решения: их «история» — отметка правки на вершине).
+            // Только карта ломалась: её заполняют срезы «появилось», обрезанные
+            // по новизне, и старая сущность, исправленная сегодня, шла «без проекта».
+            List<String> project = projectList(h.get("projects"));
+            if (project.isEmpty() && projects != null) project = projects.getOrDefault(id, List.of());
             items.add(newsItem(kind, date, timeOf(h.get("valid_from")), title, "changed", null, project, id));
         }
     }
