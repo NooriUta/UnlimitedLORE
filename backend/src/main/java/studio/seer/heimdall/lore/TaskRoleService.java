@@ -81,6 +81,7 @@ public class TaskRoleService {
             if (profile == null) profile = mapped.profile();
             if (model == null) model = mapped.model();
         }
+        identity = agentIdByName(identity, agentNames());
 
         List<String> known = TaskRoleWriter.candidates(peopleOfTaskProject(uid), declaredAgents());
         List<String> holders = currentHolders(uid, role);
@@ -213,8 +214,37 @@ public class TaskRoleService {
      * @return причина отказа либо {@code null}, если писать можно
      */
     public String refuseCreateForAgent(String sprintId, String author, String executor) {
+        Map<String, String> names = agentNames();
+        author = agentIdByName(author, names);
+        executor = agentIdByName(executor, names);
         return TaskRoleWriter.refuseCreate(author, executor,
             TaskRoleWriter.candidates(peopleOfSprintProject(sprintId), declaredAgents()));
+    }
+
+    /**
+     * MT-TASK-MV-HISTORY ч.2 (Völva 05.11.2026): отображаемое имя агентной личности
+     * («Claude Code (full)») — им роли показываются при чтении — сводится к её actor_id.
+     * Иначе прочитанное нельзя записать обратно: отказ «не заявлена» при заявленной
+     * личности. Только ТОЧНОЕ совпадение имени (с обрезкой пробелов) — опечатку не угадываем.
+     */
+    static String agentIdByName(String identity, Map<String, String> nameToId) {
+        if (identity == null) return null;
+        String id = nameToId.get(identity.strip());
+        return id != null ? id : identity;
+    }
+
+    /** name → actor_id заявленных агентов; имя, встречающееся дважды, не сводится (неоднозначно). */
+    Map<String, String> agentNames() {
+        Map<String, String> out = new java.util.HashMap<>();
+        java.util.Set<String> dup = new java.util.HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name, actor_id FROM KnowActor WHERE name IS NOT NULL", Map.of())) {
+            Object n = r.get("name"), a = r.get("actor_id");
+            if (n == null || a == null) continue;
+            String key = String.valueOf(n).strip();
+            if (out.putIfAbsent(key, String.valueOf(a)) != null) dup.add(key);
+        }
+        dup.forEach(out::remove);
+        return out;
     }
 
     /** Заявленные агентные личности. Спрашиваем граф, а не таблицу сопоставления. */
