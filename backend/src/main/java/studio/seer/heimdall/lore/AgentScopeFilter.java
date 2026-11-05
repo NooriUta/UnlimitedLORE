@@ -306,10 +306,17 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         if (READ_METHODS.contains(ctx.getMethod())) return;
         if (identity == null || identity.isAnonymous()) return;  // отказ — забота первой оси
 
-        String scope = agentScope();
-        if (scope == null) return;                      // человек, а не агент
+        String tokenScope = agentScope();
+        if (tokenScope == null) return;                 // человек, а не агент
 
         String path = ctx.getUriInfo().getPath();
+        // AO-07: агент full может заявить профиль на действии — запись решает его матрица.
+        Effective eff = effectiveScope(tokenScope, ctx.getHeaderString(ACT_AS_HEADER));
+        if (eff.refusal() != null) {
+            deny(ctx, tokenScope, ACT_AS_HEADER, eff.refusal());
+            return;
+        }
+        String scope = eff.scope();
         Denial d = decide(scope, path);
         if (d != null) {
             deny(ctx, scope, d.what(), d.why());
@@ -476,6 +483,52 @@ public class AgentScopeFilter implements ContainerRequestFilter {
             .entity(new LoreResourceBase.LoreError("AGENT_SCOPE_FORBIDDEN",
                 "профиль agent-" + scope + " не пишет в '" + family + "': " + why))
             .build());
+    }
+
+    /** Заголовок заявки профиля на действии (AO-07, путь «full заявляет роль»). */
+    static final String ACT_AS_HEADER = "X-Lore-Act-As";
+
+    /** Действующий профиль записи либо причина отказа. */
+    record Effective(String scope, String refusal) {}
+
+    /** Все профили, известные матрице (значения FAMILY_AGENTS, подпутей и грантов). */
+    static Set<String> knownProfiles() {
+        Set<String> all = new java.util.TreeSet<>();
+        FAMILY_AGENTS.values().forEach(all::addAll);
+        SUBPATH_AGENTS.values().forEach(all::addAll);
+        SUBPATH_GRANTS.values().forEach(all::addAll);
+        HUMAN_ONLY_EXEMPT.values().forEach(all::addAll);
+        return all;
+    }
+
+    /**
+     * AO-07, решение владельца 04.11 «оба пути»: «если full, то сам агент заявляет
+     * роль, либо при регистрации только роль».
+     *
+     * <ul>
+     *   <li>Заявки нет — профиль из токена, как раньше.</li>
+     *   <li>Токен {@code full} + заявка известного профиля — запись решает матрица
+     *       ЗАЯВЛЕННОГО профиля. Заявка только сужает: full и так может всё.</li>
+     *   <li>Профиль, закреплённый регистрацией (свой клиент), заголовком не меняется —
+     *       иначе заголовок стал бы способом сменить права. Повтор своего — не смена.</li>
+     *   <li>Неизвестный заявленный профиль — отказ с его именем, а не тихое
+     *       игнорирование: опечатка дала бы агенту права full.</li>
+     * </ul>
+     */
+    static Effective effectiveScope(String tokenScope, String declared) {
+        if (declared == null || declared.isBlank()) return new Effective(tokenScope, null);
+        String d = declared.trim();
+        if (d.startsWith("agent-")) d = d.substring("agent-".length());
+        if (AMBIGUOUS_SCOPE.equals(tokenScope))
+            return new Effective(tokenScope, "токен с двумя профилями — заявка не принимается");
+        if (d.equals(tokenScope)) return new Effective(tokenScope, null);
+        if (!"full".equals(tokenScope))
+            return new Effective(tokenScope, "профиль agent-" + tokenScope
+                + " закреплён регистрацией клиента; заявить '" + d + "' нельзя");
+        if (!knownProfiles().contains(d) || "full".equals(d))
+            return new Effective(tokenScope, "неизвестный профиль '" + d + "' в " + ACT_AS_HEADER
+                + "; известны: " + String.join(", ", knownProfiles()));
+        return new Effective(d, null);
     }
 
     /** Для preflight/тестов: какие семейства реально под контролем. */
