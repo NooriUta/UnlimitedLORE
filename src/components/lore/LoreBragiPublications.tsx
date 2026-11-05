@@ -8,6 +8,8 @@ import { fetchLoreSlice, fetchBragiMetrics, describeLoreError, type BragiMetricP
 import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData, countOpenTodos } from './LoreBragiPublicationEditor';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
 import { useUrlSet } from '../../hooks/useUrlState';
+import { MartProse } from '../bench/MartProse';
+import { a11yClick } from './a11y';
 
 interface PublicationRow {
   publication_id: string;
@@ -260,9 +262,9 @@ export default function LoreBragiPublications() {
                 {pub.rubric_names[0] && <span style={S.rubricChip}>{pub.rubric_names[0]}</span>}
                 {pub.topic && <span>{t('bragi.publications.keywordPrefix', 'ключ ·')} {pub.topic}</span>}
                 {pub.main_text_md && (
-                  <span style={S.mainTextLink} onClick={() => setShowMainText(showMainText === pub.publication_id ? null : pub.publication_id)}>
+                  <button type="button" className="lore-tap" style={S.mainTextLink} aria-expanded={showMainText === pub.publication_id} onClick={() => setShowMainText(showMainText === pub.publication_id ? null : pub.publication_id)}>
                     {t('bragi.publications.mainTextToggle', 'main-текст')} {showMainText === pub.publication_id ? '▲' : '▼'}
-                  </span>
+                  </button>
                 )}
                 <span style={S.statusTag}>
                   <span style={statusDotStyle(STATUS_COLOR[pub.status_general ?? ''] ?? 'var(--t3)')} />
@@ -270,7 +272,7 @@ export default function LoreBragiPublications() {
                 </span>
               </div>
               {showMainText === pub.publication_id && (
-                <div style={S.mainTextBox}>{pub.main_text_md}</div>
+                <MartProse text={pub.main_text_md} style={S.mainTextBox} />
               )}
             </div>
           </div>
@@ -280,7 +282,8 @@ export default function LoreBragiPublications() {
               <div key={vid}>
                 <div
                   style={S.variantChip}
-                  onClick={() => toggleVariant(vid, vid)}
+                  {...a11yClick(() => toggleVariant(vid, vid))}
+                  aria-expanded={expanded === vid}
                 >
                   <Thumb src={pub.variant_asset_urls[i]} style={S.thumbSm} />
                   <div>
@@ -298,11 +301,13 @@ export default function LoreBragiPublications() {
                 {expanded === vid && (
                   <div style={S.expandBox}>
                     {pub.variant_texts[i] ? (
-                      <div style={S.expandText}>{pub.variant_texts[i]}</div>
+                      <MartProse text={pub.variant_texts[i]} style={S.expandText} />
                     ) : (
                       <>
                         <div style={S.sameAsMainTag}>{t('bragi.publications.sameAsMainText', 'как в main-тексте')}</div>
-                        <div style={S.expandText}>{pub.main_text_md ?? t('bragi.publications.textNotSet', 'текст не задан')}</div>
+                        {pub.main_text_md
+                          ? <MartProse text={pub.main_text_md} style={S.expandText} />
+                          : <div style={S.expandText}>{t('bragi.publications.textNotSet', 'текст не задан')}</div>}
                       </>
                     )}
                     {pub.variant_urls[i] && (
@@ -361,7 +366,7 @@ const S: Record<string, React.CSSProperties> = {
   editBtn:   { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--b3)',
                borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
   pubmeta:   { fontSize: 'var(--fs-base)', color: 'var(--t3)', marginTop: 5, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
-  mainTextLink: { color: 'var(--acc)', cursor: 'pointer' },
+  mainTextLink: { color: 'var(--acc)', cursor: 'pointer', background: 'transparent', border: 'none', padding: 0, font: 'inherit' },
   rubricChip: { fontSize: 'var(--fs-sm)', color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', borderRadius: 6, padding: '1px 8px' },
   todoBadge:  { fontSize: 'var(--fs-sm)', color: 'var(--wrn)', background: 'color-mix(in srgb, var(--wrn) 14%, transparent)',
