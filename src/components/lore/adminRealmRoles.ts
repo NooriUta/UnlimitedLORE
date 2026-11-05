@@ -37,3 +37,30 @@ export function isRemovableRealmRole(name: string): boolean {
 export function isAdminRealmRole(name: string): boolean {
   return ADMIN_FIRST.includes(name);
 }
+
+// AH-05 (прототип admin-v2): карточка человека показывает realm-роли ПОСТРОЧНО —
+// строка на каждую роль realm (а не только на выданные), у строки одно действие.
+// Действия выводятся из тех же правил, что addableRealmRoles/isRemovableRealmRole:
+// построчный вид не имеет права разойтись с тем, что примет бэкенд.
+export type RealmRoleAction = 'remove' | 'add' | 'addAdmin' | 'kcOnly';
+export interface RealmRoleRow { name: string; description: string | null; has: boolean; action: RealmRoleAction }
+
+export function realmRoleRows(realm: RealmRole[] | null, held: string[] | null | undefined): {
+  rows: RealmRoleRow[]; fallback: boolean; hiddenService: number;
+} {
+  const src = realm ?? FALLBACK;
+  const have = new Set(held ?? []);
+  const byName = new Map(src.filter(r => !isKeycloakServiceRole(r.name)).map(r => [r.name, r]));
+  // Роль человека, которой нет в списке realm (запасной минимум, рассинхрон KC), не прячем.
+  for (const h of visibleRealmRoles(held)) if (!byName.has(h)) byName.set(h, { name: h, description: null, grantable: false });
+  const addable = new Set(addableRealmRoles(realm, held).map(r => r.name));
+  const rows = visibleRealmRoles([...byName.keys()]).map(name => {
+    const r = byName.get(name)!;
+    const has = have.has(name);
+    const action: RealmRoleAction = has
+      ? (isRemovableRealmRole(name) ? 'remove' : 'kcOnly')
+      : addable.has(name) ? (name === 'admin' ? 'addAdmin' : 'add') : 'kcOnly';
+    return { name, description: r.description, has, action };
+  });
+  return { rows, fallback: realm === null, hiddenService: src.filter(r => isKeycloakServiceRole(r.name)).length };
+}

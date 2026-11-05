@@ -6,6 +6,7 @@ import { AUTH_ENABLED } from '../../../auth/session';
 import { useRole } from '../../../auth/useRole';
 import type { DictRow, Preflight, Denial } from './types';
 import { S } from './adminStyles';
+import { readiness } from './adminShellModel';
 
 // AL-38: реестр известных app_setting-ключей. Сейчас приложение НЕ читает ни одного —
 // реестр пуст, и это честно: всё, что лежит в dict_type=app_setting, попадает в
@@ -38,23 +39,25 @@ export function SettingsTab({ dicts, preflight, onError, reload }: {
   }
 
   const pf = preflight;
-  const checks: { ok: boolean; title: string; sub: string }[] = pf ? [
+  // AH-05: те же проверки считает красный счётчик «Настроек» в навигации (readiness).
+  const rd = pf ? readiness(pf) : null;
+  const checks: { ok: boolean; title: string; sub: string }[] = pf && rd ? [
     {
-      ok: pf.admin_count > 0,
+      ok: rd.admins,
       title: t('lore.admin.chkAdmins', 'Есть хотя бы один человек с ролью admin'),
       sub: pf.admin_count === -1
         ? t('lore.admin.chkAdminsUnknown', 'Число админов неизвестно: KC-мост не настроен или не ответил.')
         : t('lore.admin.chkAdminsN', 'Сейчас: {{n}}. Заведите себя на вкладке «Люди» и назначьте admin.', { n: pf.admin_count }),
     },
     {
-      ok: pf.kc_configured && pf.kc_reachable,
+      ok: rd.kc,
       title: t('lore.admin.chkKc', 'Keycloak доступен'),
       sub: pf.kc_configured
         ? (pf.kc_reachable ? t('lore.admin.chkKcOk', 'Мост отвечает.') : `KC не ответил: ${pf.kc_error}`)
         : t('lore.admin.chkKcOff', 'KC_ADMIN_CLIENT_SECRET не задан.'),
     },
     {
-      ok: pf.agent_scope_enforced,
+      ok: rd.scope,
       title: t('lore.admin.chkScope', 'Права агентов проверяются на бэкенде'),
       sub: t('lore.admin.chkScopeSub', 'AgentScopeFilter ещё не включён (AL-17): после включения auth агенты пройдут в любое семейство.'),
     },
