@@ -1308,12 +1308,25 @@ final class LoreSchemaMigrations {
         // любого из них → не удаляется ничего, WARN с числами, старт не
         // валится. Бэкап перед шагом снимает раннер (upgrade-путь). Ни один шаг
         // и ни инициализатор эти типы не создают — requiredLiveTypes их не ждёт.
-        new Step(54, 17, "java__drop_planitem_types_if_unused", List.of())
+        new Step(54, 17, "java__drop_planitem_types_if_unused", List.of()),
+
+        // RM-P17, хвост V52 (решение владельца 05.11.2026: «1 ок» — вариант «б»):
+        // у семи задач SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-A…G даты создания в
+        // корпусе нет нигде, V52 честно оставил их NULL. Владелец разрешил взять
+        // ближайший факт — момент мержа PR #204, которым эти задачи сделаны.
+        // Только перечисленные задачи и только открытые строки с valid_from IS NULL;
+        // источник — в valid_from_source. SQL пуст — работа в javaStep(55).
+        new Step(55, 17, "java__dali_p1_valid_from_from_pr204", List.of())
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
     static final String MILESTONE_OLD_ID = "M2 ✓ core";
     static final String MILESTONE_NEW_ID = "M2";
+
+    /** RM-P17 (V55): задачи без даты в корпусе и момент мержа PR #204 (Forgejo, merged_at). */
+    static final List<String> DALI_P1_TASKS = List.of("A", "B", "C", "D", "E", "F", "G").stream()
+        .map(s -> "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-" + s).toList();
+    static final String PR204_MERGED_AT = "2026-07-21T18:16:07Z";
 
     /**
      * RM-X1: поля, в которых строкой может лежать id вехи. Сверено grep-ом по
