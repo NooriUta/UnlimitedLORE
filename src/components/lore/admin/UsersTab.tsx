@@ -346,9 +346,12 @@ function PersonCard({ u, narrow, preflight, realmRoles, busy, opError, confirmAd
         {opError && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>{opError}</div>}
         <div>
           <h4 style={S.blkH}>
-            {t('lore.admin.realmRolesH', 'Realm-роли · все роли realm')}
+            {t('lore.admin.realmRolesH', 'Глобальные роли')}
             <span style={{ fontFamily: 'var(--mono)', letterSpacing: 0 }}>{rr.rows.length}</span>
           </h4>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 6 }}>
+            {t('lore.admin.realmRolesHint', 'Действуют во всех проектах. Выдаются здесь, кроме super-admin — только в консоли Keycloak. Роли в отдельных проектах — блок ниже.')}
+          </div>
           {rr.fallback && (
             <div style={S.warn}>{t('lore.admin.realmRolesFallback', 'Список ролей realm не загрузился — показан запасной минимум admin/viewer и роли самого человека. Это не весь realm.')}</div>
           )}
