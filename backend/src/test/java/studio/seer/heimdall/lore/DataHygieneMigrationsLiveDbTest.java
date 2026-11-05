@@ -278,4 +278,31 @@ class DataHygieneMigrationsLiveDbTest {
         sql("DELETE FROM KnowMilestone WHERE milestone_id IN ['" + OLD_MS + "', '" + NEW_MS + "']");
         assertNotNull(LoreArcadeDbTestResource.BASE_URL);
     }
+
+    // ── V55 (RM-P17, вариант «б» владельца 05.11.2026) ─────────────────────
+
+    private static final String DALI_SPRINT = "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26";
+    private static final String DALI_P1_A = DALI_SPRINT + "/P1-A";
+
+    @Test
+    @Order(100)
+    void v55_fillsDaliP1FromPr204MergedAt() throws Exception {
+        post("/lore/sprint/create", "{\"sprint_id\":\"" + DALI_SPRINT + "\",\"name\":\"V55 проба\"}");
+        post("/lore/task", "{\"sprint_id\":\"" + DALI_SPRINT + "\",\"task_id\":\"P1-A\",\"title\":\"проба V55\"}");
+        nullOpenValidFrom(DALI_P1_A);
+        assertNull(sql(openOf(DALI_P1_A)).get(0).get("valid_from"), "положительный контроль: дата снята");
+
+        assertTrue(runner.backfillDaliP1FromPr204() >= 1, "V55 не заполнил ни одной строки");
+        Map<String, Object> a = sql(openOf(DALI_P1_A)).get(0);
+        assertEquals(LoreSchemaMigrations.PR204_MERGED_AT, a.get("valid_from"));
+        assertEquals("pr#204.merged_at", a.get("valid_from_source"));
+    }
+
+    @Test
+    @Order(101)
+    void v55_secondRunAndOtherTasksUntouched() throws Exception {
+        assertEquals(0, runner.backfillDaliP1FromPr204(), "повторный прогон снова что-то заполнил");
+        // Чужая задача без даты (C из V52) по-прежнему NULL: V55 узкий по замыслу.
+        assertNull(sql(openOf(TASK_C)).get(0).get("valid_from"), "V55 тронул задачу вне списка");
+    }
 }

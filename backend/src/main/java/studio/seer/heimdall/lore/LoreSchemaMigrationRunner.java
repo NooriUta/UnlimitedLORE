@@ -487,6 +487,34 @@ public class LoreSchemaMigrationRunner {
         if (version == 52) { backfillOpenTaskHistValidFrom(); dropTestStateTaskHist(); }
         if (version == 53) renameMilestoneM2Core();
         if (version == 54) dropPlanItemTypesIfUnused();
+        if (version == 55) backfillDaliP1FromPr204();
+    }
+
+    /**
+     * V55 (RM-P17, вариант «б» владельца 05.11.2026): семь задач DALI P1-* без
+     * даты создания в корпусе получают момент мержа PR #204. Узко по замыслу:
+     * только перечисленные задачи, только открытые строки с valid_from IS NULL —
+     * общее правило V52 («чужая дата — выдумка») для остальных не меняется.
+     * Идемпотентен: заполненные строки повторно не выбираются.
+     *
+     * @return сколько строк заполнено
+     */
+    int backfillDaliP1FromPr204() {
+        int filled = 0;
+        for (String uid : LoreSchemaMigrations.DALI_P1_TASKS) {
+            for (Map<String, Object> h : ingest.queryPublic(
+                    "SELECT @rid AS rid FROM (SELECT expand(out('HAS_STATE')) FROM KnowTask WHERE task_uid = :u) "
+                    + "WHERE valid_to IS NULL AND valid_from IS NULL", Map.of("u", uid))) {
+                String rid = str(h.get("rid"));
+                command("UPDATE " + rid + " SET valid_from = :vf, valid_from_source = :src",
+                    Map.of("vf", LoreSchemaMigrations.PR204_MERGED_AT, "src", "pr#204.merged_at"));
+                filled++;
+                LOG.infof("[LORE MIGRATE] V55 %s (%s): valid_from := %s (источник pr#204.merged_at)",
+                    uid, rid, LoreSchemaMigrations.PR204_MERGED_AT);
+            }
+        }
+        LOG.infof("[LORE MIGRATE] V55 задач DALI P1-* заполнено строк: %d", filled);
+        return filled;
     }
 
     // ── V52 (RM-P17) ────────────────────────────────────────────────────────
