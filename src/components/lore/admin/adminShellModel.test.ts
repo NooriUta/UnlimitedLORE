@@ -14,23 +14,24 @@ const PF_OK: Preflight = {
   admin_count: 2, agent_scope_enforced: true, can_enable_auth: true, hint: '',
 };
 
-describe('где я (телефон): группа › вкладка · N/9', () => {
-  it('каждая вкладка знает свою группу, цвет группы и позицию среди 9', () => {
-    expect(ALL_TABS).toHaveLength(9);
+describe('где я (телефон): группа › вкладка · N/11', () => {
+  it('каждая вкладка знает свою группу, цвет группы и позицию среди 11', () => {
+    expect(ALL_TABS).toHaveLength(11);
     ALL_TABS.forEach((k, i) => {
       const w = whereAmI(k);
       const g = NAV_GROUPS.find(x => x.tabs.some(([t]) => t === k))!;
       expect(w.pos).toBe(i + 1);
-      expect(w.total).toBe(9);
+      expect(w.total).toBe(11);
       expect(w.group).toBe(g.label);
       expect(w.color).toBe(g.rail);
     });
   });
 
-  it('строка — «группа › вкладка · N/9»', () => {
-    expect(whereAmILine(whereAmI('users'))).toBe('Доступ › Люди · 1/9');
-    expect(whereAmILine(whereAmI('claudeRules'))).toBe('Справочники › Правила CLAUDE · 7/9');
-    expect(whereAmILine(whereAmI('quick'))).toBe('Система › Быстрые команды · 9/9');
+  it('строка — «группа › вкладка · N/11»', () => {
+    expect(whereAmILine(whereAmI('users'))).toBe('Доступ › Люди · 1/11');
+    expect(whereAmILine(whereAmI('claudeRules'))).toBe('Справочники › Правила CLAUDE · 7/11');
+    expect(whereAmILine(whereAmI('quick'))).toBe('Система › Быстрые команды · 11/11');
+    expect(whereAmILine(whereAmI('mcpApi'))).toBe('MCP › Инструменты MCP · 8/11');
   });
 
   it('у каждой группы есть подпись риска', () => {
