@@ -62,6 +62,15 @@ class DateTimeFormatProbeLiveDbTest {
         return post("/api/v1/query/" + db, "{\"language\":\"sql\",\"command\":" + jsonStr(q) + "}");
     }
 
+    /** Значение ts первой строки ответа "200 {json}" — точно, а не подстрокой. */
+    static String tsOf(String resp) {
+        String json = resp.substring(resp.indexOf(' ') + 1);
+        io.vertx.core.json.JsonArray rows = new io.vertx.core.json.JsonObject(json).getJsonArray("result");
+        assertNotNull(rows, "нет result в ответе: " + resp);
+        assertFalse(rows.isEmpty(), "пустой result: " + resp);
+        return String.valueOf(rows.getJsonObject(0).getValue("ts"));
+    }
+
     static String jsonStr(String s) {
         return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
@@ -103,20 +112,30 @@ class DateTimeFormatProbeLiveDbTest {
             assertTrue(ins.startsWith("200"), "ISO-Z строка в DATETIME принята (" + db + "): " + ins);
         }
         String before = query(A, "SELECT ts FROM Probe");
-        System.out.println("[RM-P13 probe] default format output: " + before);
+        String defVal = tsOf(before);
+        // Вид выдачи ПО УМОЛЧАНИЮ — на него опирается нормализация на бэкенде (вариант
+        // «база в формате по умолчанию, ISO-Z формирует бэкенд»). Точная форма, не подстрока.
+        assertTrue(defVal.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?"),
+            "формат по умолчанию — «yyyy-MM-dd HH:mm:ss[.fraction]». Факт: " + defVal);
 
         // допущение 1: ALTER DATABASE меняет вид выдачи
         // двойные кавычки SQL-строки: в формате сами одинарные ('T', 'Z')
         String alter = sql(A, "ALTER DATABASE `arcadedb.dateTimeFormat` \"" + ISO_FMT + "\"");
         assertTrue(alter.startsWith("200"), "ALTER DATABASE dateTimeFormat принят: " + alter);
         String afterA = query(A, "SELECT ts FROM Probe");
-        assertTrue(afterA.contains("2026-11-04T19:56:10.171Z"),
-            "после ALTER выдача базы A — ISO-8601 с Z. Факт: " + afterA + " | до ALTER: " + before);
+        // ЗАМЕР 05.11.2026 (CI, ArcadeDB 26.10.2): после ALTER выдача —
+        // «2026-11-04T19:56:10.171Z.171», не ISO: expandFormatToPrecision дописывает .SSS к
+        // формату, не кончающемуся на S. Поэтому V56 (RM-P13) формат базы НЕ трогает, а ISO-Z
+        // дописывает бэкенд (LoreTimeFormatResponseFilter). Этот тест фиксирует ПРИЧИНУ
+        // решения: если новая версия движка отдаст ровно ISO — он упадёт и скажет, что
+        // решение можно пересмотреть. Точное значение, не contains (contains пропускал хвост).
+        assertEquals("2026-11-04T19:56:10.171Z.171", tsOf(afterA),
+            "поведение ALTER dateTimeFormat изменилось — пересмотреть решение RM-P13 «формат базы не трогаем». "
+            + "По умолчанию было: " + defVal);
 
         // допущение 2: соседняя база не задета
         String afterB = query(B, "SELECT ts FROM Probe");
-        assertFalse(afterB.contains("2026-11-04T19:56:10.171Z"),
-            "ALTER базы A НЕ должен менять выдачу базы B. Факт B: " + afterB);
+        assertEquals(defVal, tsOf(afterB), "ALTER базы A НЕ должен менять выдачу базы B");
 
         // контроль: min()/max() по DATETIME работают (по строке-дате — 500)
         String mm = query(A, "SELECT min(ts) AS mn, max(ts) AS mx FROM Probe");
