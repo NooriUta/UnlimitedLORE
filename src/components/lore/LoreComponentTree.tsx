@@ -8,6 +8,8 @@ import { specTitle } from './LoreSpecView';
 // name, two different colors depending which surface you were looking at.
 // Reuse the one source of truth instead.
 import { areaColor } from './LoreComponentList';
+import { LoadError, SliceLoadWarning } from './EmptyState';
+import { pageLevelError, settleSlices } from './loadState';
 
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, padding: '4px 0' },
@@ -60,18 +62,28 @@ export default function LoreComponentTree({ onError, selectedId, selectedSpec, o
   const [specs, setSpecs] = useState<LoreSpecRow[]>([]);
   const [open, setOpen]   = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  // AH-07 (зона 4): сбой любого из двух срезов давал «Компоненты не найдены.»
+  // (а сбой одних спек ронял и дерево). Срезы теперь независимы.
+  const [failed, setFailed] = useState<Record<string, string>>({});
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     setLoading(true);
     const ctrl = new AbortController();
-    Promise.all([
-      fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal),
-      fetchLoreSlice<LoreSpecRow>('specs', undefined, ctrl.signal),
-    ])
-      .then(([cs, sp]) => { setRows(cs); setSpecs(sp); setLoading(false); })
-      .catch(e => { onError(e); setLoading(false); });
+    settleSlices({
+      components: fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal),
+      specs:      fetchLoreSlice<LoreSpecRow>('specs', undefined, ctrl.signal),
+    }).then(({ values: v, failed: f, errors }) => {
+      if (ctrl.signal.aborted) return;
+      const pageErr = pageLevelError(errors);
+      if (pageErr) onError(pageErr);
+      setRows(v.components ?? []); setSpecs(v.specs ?? []);
+      setFailed(f as Record<string, string>);
+      setLoading(false);
+    });
     return () => ctrl.abort();
-  }, [onError]);
+  }, [onError, reloadKey]);
+  const retry = () => setReloadKey(k => k + 1);
 
   // selecting a component reveals its specs inline
   useEffect(() => {
@@ -79,6 +91,10 @@ export default function LoreComponentTree({ onError, selectedId, selectedSpec, o
   }, [selectedId]);
 
   if (loading) return <div style={S.empty}>{t('lore.componentTree.loading', 'Загрузка компонентов…')}</div>;
+  if (failed.components) return (
+    <LoadError text={t('lore.componentList.loadError', 'Компоненты не загрузились: {{reason}}', { reason: failed.components })}
+      onRetry={retry} retryLabel={t('lore.loadRetry', 'Повторить')} />
+  );
   if (!rows.length) return <div style={S.empty}>{t('lore.componentTree.empty', 'Компоненты не найдены.')}</div>;
 
   const byParent: Record<string, LoreComponent[]> = {};
@@ -146,6 +162,7 @@ export default function LoreComponentTree({ onError, selectedId, selectedSpec, o
   const roots = rows.filter(c => !c.parent_id);
   return (
     <div style={S.root}>
+      <SliceLoadWarning failed={failed} onRetry={retry} />
       {roots.map(c => renderNode(c, 0))}
     </div>
   );

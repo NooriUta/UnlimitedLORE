@@ -9,7 +9,7 @@ import {
   advisorCells, advisorDisclaimers, advisorSpread, buildCellSql, defaultRunId,
   engineGaps, fmtF1, formatUsd, num, pickLocale,
 } from '../../utils/muninnData';
-import { MuninnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
+import { MartSliceWarning, MuninnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -66,6 +66,7 @@ export function AdvisorScreen({ runs, subLabel }: {
     <div data-testid="bench-advisor">
       <ScreenTitle text={t('bench.adv.title', 'Strategy advisor — task → optimal substrate')}
                    hint={t('bench.adv.hint', 'the §1 decision map live from the mart; every number carries evidence links and a reproducing SQL')} />
+      <MartSliceWarning slices={{ 'facts·sib1': sib1, 'facts·sib2': sib2, cases_dim: casesDim, golds, substrates, hypotheses }} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.run', 'Run')}>
           <MuninnSelect value={run} onChange={setRun}

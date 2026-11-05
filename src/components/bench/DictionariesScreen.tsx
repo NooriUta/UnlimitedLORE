@@ -6,7 +6,7 @@ import type {
 } from '../../utils/muninnData';
 import { pickLocale, short } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
-import { PanelMsg, ScreenTitle } from './shared';
+import { MartSliceWarning, PanelMsg, ScreenTitle } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -37,6 +37,7 @@ export function DictionariesScreen() {
     <div>
       <ScreenTitle text={t('bench.dict.title', 'Dictionaries — the vocabulary of the experiment')}
                    hint={t('bench.dict.hint', 'tasks, levels, hop kinds and the method decisions behind how we measure')} />
+      <MartSliceWarning slices={{ levels, hop_kinds: hopKinds, decisions, aspects, categories, detailed_categories: dCats, gold_shapes: goldShapes, aspect_origins: origins }} />
 
       <div className="analytics-card" style={{ marginBottom: 12 }}>
         <div className="analytics-card-title">{t('bench.dict.tasks', 'Tasks')}</div>

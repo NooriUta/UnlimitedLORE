@@ -6,7 +6,7 @@ import {
   REV_SERIES_SEP, buildCellSql, dedupe, f1CellBg, filterRevAtRunTime, fmtF1, groupRevChains,
   pivotDrift, short, splitRevSeries,
 } from '../../utils/muninnData';
-import { MuninnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
+import { MartSliceWarning, MuninnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
 
 function shortSnapshot(id: string): string {
   // DALI_vCANONICAL_2026-06-10_2120 → vCANONICAL 06-10
@@ -72,6 +72,7 @@ export function DriftScreen({ runs, snapshots, subLabel }: {
     <div data-testid="bench-drift">
       <ScreenTitle text={t('bench.secDrift', 'Drift — substrate × task across parse snapshots')}
                    hint={t('bench.secDriftHint', '▲ gain / ▼ drop vs previous snapshot (Δ in tooltip); — = not measured under these pins')} />
+      <MartSliceWarning slices={{ tasks: taskSlice, substrate_revs_all: revsAll }} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.model', 'Model')}>
           <MuninnSelect value={model} onChange={setModel}

@@ -21,6 +21,9 @@ const ARG = String.raw`(?:\(\s*_?\w*\s*\)|_?\w+)`;
 const EMPTY = String.raw`(?:\[\]|\{\}|new Map\(\)|0|null)`;
 
 const SWALLOW = new RegExp(String.raw`\.catch\(\s*${ARG}\s*=>\s*\{\s*\}\s*\)`, 'g');
+/** AH-07 (зона 4): `.catch(() => [] as T[])` — та же подмена, только значением: упавший срез
+ *  вливается в Promise.all пустым, и экран рисует нули. */
+const AS_EMPTY_VALUE = new RegExp(String.raw`\.catch\(\s*${ARG}\s*=>\s*(?:\[\]|new Map\(\)|0|null|\(\{\}\))(?:\s+as\s+[^)]+)?\s*\)`, 'g');
 const AS_EMPTY = new RegExp(String.raw`\.catch\(\s*${ARG}\s*=>\s*set[A-Z]\w*\(\s*${EMPTY}\s*\)\s*\)`, 'g');
 
 function offendersOf(re: RegExp): string[] {
@@ -46,9 +49,11 @@ describe('AH-07 · сбой загрузки не выдаётся за пуст
       'p.catch(() => setCount(0))',
       'p.catch(() => setDoc(null))',
       'p.catch(() => setMatrix({}))',
+      'p.catch(() => [] as T[])',
+      'p.catch(() => null)',
     ];
     for (const s of bad) {
-      expect(s.match(new RegExp(SWALLOW.source)) || s.match(new RegExp(AS_EMPTY.source)), s).toBeTruthy();
+      expect(s.match(new RegExp(SWALLOW.source)) || s.match(new RegExp(AS_EMPTY.source)) || s.match(new RegExp(AS_EMPTY_VALUE.source)), s).toBeTruthy();
     }
     const ok = [
       'p.catch(() => { /* бейдж просто не покажется */ })',
@@ -56,7 +61,7 @@ describe('AH-07 · сбой загрузки не выдаётся за пуст
       'p.catch(e => setError(e))',
     ];
     for (const s of ok) {
-      expect(s.match(new RegExp(SWALLOW.source)) || s.match(new RegExp(AS_EMPTY.source)), s).toBeFalsy();
+      expect(s.match(new RegExp(SWALLOW.source)) || s.match(new RegExp(AS_EMPTY.source)) || s.match(new RegExp(AS_EMPTY_VALUE.source)), s).toBeFalsy();
     }
   });
 
@@ -66,5 +71,9 @@ describe('AH-07 · сбой загрузки не выдаётся за пуст
 
   it('нет `.catch(() => setX([] | {} | new Map() | 0 | null))`', () => {
     expect(offendersOf(AS_EMPTY), 'сбой нарисуется как «пусто» — заведите состояние ошибки и покажите LoadError').toEqual([]);
+  });
+
+  it('нет `.catch(() => [] | null | 0)` — подмены упавшего среза пустым значением', () => {
+    expect(offendersOf(AS_EMPTY_VALUE), 'упавший срез станет пустым массивом и нулями — Promise.allSettled + settleSlices(), упавшее показать').toEqual([]);
   });
 });

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMartSlice } from '../../hooks/useMuninn';
 import type { CampaignRow, FindingRow, HypothesisRow, RunRow } from '../../utils/muninnData';
 import { dedupe, formatTokens, formatUsd, num, pickLocale, strArr } from '../../utils/muninnData';
-import { PanelMsg, StatusBadge, campaignTone, hypothesisTone } from './shared';
+import { MartSliceWarning, PanelMsg, StatusBadge, campaignTone, hypothesisTone } from './shared';
 import { MartProse } from './MartProse';
 
 /** Column headers inside data grid (Scope / Runs / Cost). */
@@ -171,6 +171,7 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
 
   return (
     <div data-testid="bench-campaigns">
+      <MartSliceWarning slices={{ hypotheses, findings }} />
 
       {/* ── status filter chips ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>

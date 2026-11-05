@@ -9,7 +9,8 @@ import {
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { FilterBar, type FilterTagData } from './FilterPrimitives';
-import { EmptyState } from './EmptyState';
+import { EmptyState, SliceLoadWarning } from './EmptyState';
+import { pageLevelError, settleSlices } from './loadState';
 
 // Unified knowledge listing under «Компоненты»: ADR / specs / runbooks / docs /
 // quality-gates in one flat, typed, component-linked list. Replaces the per-component
@@ -178,6 +179,8 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
   const [items, setItems]     = useState<Artifact[]>([]);
   const [comps, setComps]     = useState<LoreComponent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed]   = useState<Record<string, string>>({});
+  const [reloadKey, setReloadKey] = useState(0);
   // T34: unified "include" semantics (empty = show all, same as ADR/sprint/
   // component/QG filters) — was inverted ("exclude": start with every kind
   // enabled, toggle OFF to hide), the one outlier in the app. `enabled.size
@@ -197,19 +200,26 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
     setLoading(true);
     const ctrl = new AbortController();
     // Resilient load: a slice that errors (e.g. a not-yet-ingested type → 502)
-    // contributes nothing rather than failing the whole list.
-    const safe = <T,>(p: Promise<T[]>): Promise<T[]> => p.catch(() => [] as T[]);
+    // does not fail the whole list. AH-07 (зона 4): но и не притворяется пустым —
+    // раньше catch с пустым массивом молча вычёркивал тип, и «ADR не найдены»
+    // было неотличимо от «ADR не загрузились». Упавшие типы — в баннере.
     const want = (k: ArtifactKind) => !kindsFilter || kindsFilter.has(k);
-    Promise.all([
-      want('adr')     ? safe(fetchLoreSlice<LoreAdrRow>('adrs', undefined, ctrl.signal))          : Promise.resolve([]),
-      want('spec')    ? safe(fetchLoreSlice<LoreSpecRow>('specs', undefined, ctrl.signal))         : Promise.resolve([]),
-      want('runbook') ? safe(fetchLoreSlice<RunbookRow>('runbooks', undefined, ctrl.signal))        : Promise.resolve([]),
-      want('doc')     ? safe(fetchLoreSlice<LoreKnowDocRow>('docs', undefined, ctrl.signal))        : Promise.resolve([]),
-      want('qg')      ? safe(fetchLoreSlice<QgRow>('quality_gates', undefined, ctrl.signal))        : Promise.resolve([]),
-      safe(fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal)),
-    ])
-      .then(([adrs, specs, runbooks, docs, qgs, components]) => {
+    const none = <T,>(): Promise<T[]> => Promise.resolve([]);
+    settleSlices({
+      adrs:          want('adr')     ? fetchLoreSlice<LoreAdrRow>('adrs', undefined, ctrl.signal)         : none<LoreAdrRow>(),
+      specs:         want('spec')    ? fetchLoreSlice<LoreSpecRow>('specs', undefined, ctrl.signal)       : none<LoreSpecRow>(),
+      runbooks:      want('runbook') ? fetchLoreSlice<RunbookRow>('runbooks', undefined, ctrl.signal)     : none<RunbookRow>(),
+      docs:          want('doc')     ? fetchLoreSlice<LoreKnowDocRow>('docs', undefined, ctrl.signal)     : none<LoreKnowDocRow>(),
+      quality_gates: want('qg')      ? fetchLoreSlice<QgRow>('quality_gates', undefined, ctrl.signal)     : none<QgRow>(),
+      components:    fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal),
+    })
+      .then(({ values: v, failed: f, errors }) => {
         if (ctrl.signal.aborted) return;
+        const pageErr = pageLevelError(errors);
+        if (pageErr) onError(pageErr);
+        setFailed(f as Record<string, string>);
+        const adrs = v.adrs ?? [], specs = v.specs ?? [], runbooks = v.runbooks ?? [];
+        const docs = v.docs ?? [], qgs = v.quality_gates ?? [], components = v.components ?? [];
         const all: Artifact[] = [
           ...adrs.map(r => ({ kind: 'adr' as const, id: r.adr_id, title: r.adr_id, component: r.component ?? null, date: r.date_created ?? null })),
           ...specs.map(r => ({ kind: 'spec' as const, id: r.spec_id, title: (r.title && r.title.trim()) || r.spec_id.replace(/[_-]+/g, ' '), component: r.component_id ?? null, date: null })),
@@ -225,10 +235,9 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
           ...qgs.map(r => ({ kind: 'qg' as const, id: r.qg_id, title: r.name || r.qg_id, component: r.component_id ?? null, date: r.date_created ?? null })),
         ];
         setItems(all); setComps(components); setLoading(false);
-      })
-      .catch(e => { onError(e); setLoading(false); });
+      });
     return () => ctrl.abort();
-  }, [onError, kindsFilter]);
+  }, [onError, kindsFilter, reloadKey]);
 
   const nameOf = useMemo(() => {
     const m: Record<string, string> = {};
@@ -386,6 +395,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
   return (
     <div style={S.root}>
       {headerContainer ? createPortal(header, headerContainer) : header}
+      <SliceLoadWarning failed={failed} onRetry={() => setReloadKey(k => k + 1)} />
 
       <div style={S.list}>
         {shown.length === 0

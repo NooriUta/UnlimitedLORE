@@ -5,7 +5,7 @@ import type {
   CampaignRow, ModelRow, PhaseRow, PriceEpochRow, RunRow,
 } from '../../utils/muninnData';
 import { formatTokens, formatUsd, num, runCostAt, strArr } from '../../utils/muninnData';
-import { PanelMsg, ScreenTitle, StatusBadge } from './shared';
+import { MartSliceWarning, PanelMsg, ScreenTitle, StatusBadge } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -83,6 +83,8 @@ export function FinanceScreen({ runs }: { runs: RunRow[] }) {
 
   if (models.unavailable) return <PanelMsg kind="info" text={t('bench.unavailable', 'Experiment mart is unavailable')} onRetry={models.reload} />;
   if (models.error) return <PanelMsg kind="error" text={models.error} onRetry={models.reload} />;
+  // AH-07: без price_epochs экран висел на «Loading…» вечно — сбой показываем.
+  if (epochs.error) return <PanelMsg kind="error" text={epochs.error} onRetry={epochs.reload} />;
   if (!models.rows || !epochs.rows) return <PanelMsg kind="loading" text={t('bench.loading', 'Loading…')} />;
 
   const recomputed = Object.values(picked).some(Boolean);
@@ -112,6 +114,7 @@ export function FinanceScreen({ runs }: { runs: RunRow[] }) {
     <div data-testid="bench-finance">
       <ScreenTitle text={t('bench.fin.title', 'Finance — what the experiment cost, with price provenance')}
                    hint={t('bench.fin.hint', 'every number resolves to ExpPriceEpoch (SCD2) — no price lives in the page code (Fin-1)')} />
+      <MartSliceWarning slices={{ campaigns, phases }} />
 
       {/* F1 + F2: total with provenance and the epoch switcher */}
       <div className="analytics-card" style={{ marginBottom: 12 }}>

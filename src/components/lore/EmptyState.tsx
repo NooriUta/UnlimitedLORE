@@ -66,3 +66,33 @@ export function PickerLoadWarning({ failed }: { failed: Record<string, string> }
     </div>
   );
 }
+
+// AH-07 (зона 4): экран из пачки срезов, часть которых упала. Загруженное
+// показывается, а упавшие перечислены здесь — иначе их место займут нули и
+// пустые таблицы, неотличимые от «данных нет».
+export function SliceLoadWarning({ failed, onRetry }: { failed: Record<string, string>; onRetry?: () => void }) {
+  const { t } = useTranslation();
+  const names = Object.keys(failed);
+  if (names.length === 0) return null;
+  return (
+    <div role="alert" style={{
+      margin: '6px 0', padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', color: 'var(--dng)',
+      border: '1px solid color-mix(in srgb, var(--dng) 40%, transparent)',
+      background: 'color-mix(in srgb, var(--dng) 8%, transparent)',
+      display: 'flex', alignItems: 'flex-start', gap: 8,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div>{t('lore.sliceLoadFailed', 'Не загрузились срезы: {{lists}}. Это сбой, а не нули — показатели, которые от них зависят, неполны.', { lists: names.join(', ') })}</div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', wordBreak: 'break-word' }}>
+          {names.map(n => `${n}: ${failed[n]}`).join(' · ')}
+        </div>
+      </div>
+      {onRetry && (
+        <button onClick={onRetry} style={{
+          background: 'none', border: '1px solid var(--bd)', borderRadius: 999, color: 'var(--t2)',
+          padding: '2px 10px', cursor: 'pointer', font: 'inherit', fontSize: 'var(--fs-xs)', flexShrink: 0,
+        }}>{t('lore.loadRetry', 'Повторить')}</button>
+      )}
+    </div>
+  );
+}
