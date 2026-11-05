@@ -786,7 +786,10 @@ public class AidaLoreResource extends LoreResourceBase {
         });
 
         LoreSlices.Composed composed;
+        final SlicePage page;
         try {
+            // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
+            page = SlicePage.extract(given);
             composed = LoreSlices.compose(id, given, allowedProjectsOrNull(role));
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
@@ -811,7 +814,11 @@ public class AidaLoreResource extends LoreResourceBase {
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
-            .map(res -> noStore(Response.ok(sliceBody(redactIfNoRole(id, res, allowedForRedact)))))
+            .map(res -> {
+                Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
+                SlicePage.apply(out, page);
+                return noStore(Response.ok(out));
+            })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)

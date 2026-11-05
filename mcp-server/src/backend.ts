@@ -222,7 +222,7 @@ export async function loreSlice(
 export async function loreSliceWithMeta(
   slice: string,
   params?: Record<string, string>,
-): Promise<{ rows: unknown[]; meta?: SliceMeta }> {
+): Promise<{ rows: unknown[]; meta?: SliceMeta; page?: SlicePage }> {
   const qs =
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
@@ -232,10 +232,23 @@ export async function loreSliceWithMeta(
   });
   if (!res.ok) throw new Error(`GET /lore/slice/${slice} → ${res.status} ${await detail(res)}`);
   const body = (await res.json()) as SliceBody;
-  return { rows: Array.isArray(body.rows) ? body.rows : [], meta: sliceMetaOf(body) };
+  return { rows: Array.isArray(body.rows) ? body.rows : [], meta: sliceMetaOf(body), page: slicePageOf(body) };
 }
 
-type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string };
+type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string; page?: unknown };
+export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean };
+
+/**
+ * SE-01: страница выдачи (limit/offset у любого слайса). Бэкенд кладёт её в `page`;
+ * без проброса агент принял бы страницу за полный список.
+ */
+export function slicePageOf(body: SliceBody): SlicePage | undefined {
+  const p = body.page;
+  if (!p || typeof p !== 'object') return undefined;
+  const o = p as Record<string, unknown>;
+  if (typeof o.total !== 'number' || typeof o.has_more !== 'boolean') return undefined;
+  return { limit: typeof o.limit === 'number' ? o.limit : null, offset: typeof o.offset === 'number' ? o.offset : 0, total: o.total, has_more: o.has_more };
+}
 export type SliceMeta = { truncated: boolean | string; limit?: number; hint?: string };
 
 /**
