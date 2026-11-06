@@ -1387,13 +1387,13 @@ final class LoreSchemaMigrations {
         // текстовыми ссылками context_md (истина в рёбрах, D5). Направление:
         // фича → фича, на которую она опирается.
         new Step(60, 17, "feature_builds_on", List.of(
-            "CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS EXTENDS E")),
+            "CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS")),
 
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3 (Q-MINILORE-TASK-PR-EDGE, владелица
         // «ок» 06.11.2026): задача → PR, который её закрыл, — РЕБРОМ, а не текстом
         // note_md. Релиз находит свои задачи через PR → SHIPPED_IN.
         new Step(61, 17, "task_closed_by", List.of(
-            "CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS EXTENDS E"))
+            "CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

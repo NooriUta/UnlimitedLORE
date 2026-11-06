@@ -22,7 +22,7 @@ class TaskClosedByPrTest {
                 () -> new AssertionError("шаг схемы task_closed_by не зарегистрирован"));
         assertEquals(61, step.version());
         assertEquals(17, step.compatMajor());
-        assertEquals(List.of("CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS EXTENDS E"), step.sql());
+        assertEquals(List.of("CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS"), step.sql());
     }
 
     @Test

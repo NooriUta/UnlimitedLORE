@@ -23,7 +23,7 @@ class FeatureBuildsOnTest {
                 () -> new AssertionError("шаг схемы feature_builds_on не зарегистрирован"));
         assertEquals(60, step.version());
         assertEquals(17, step.compatMajor(), "аддитивно");
-        assertEquals(List.of("CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS EXTENDS E"), step.sql());
+        assertEquals(List.of("CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS"), step.sql());
     }
 
     @Test
