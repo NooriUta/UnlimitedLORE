@@ -37,7 +37,7 @@ final class VolvaEmbedSigner {
                            boolean configured, boolean callerIsAgent, Set<String> allowedProjects) {
         if (!configured)
             return new Decision("not_configured", null,
-                "встраивание Völva не настроено: нет ключа подписи или адреса Völva (LORE_VOLVA_EMBED_SECRET, LORE_VOLVA_SITE_URL)");
+                "встраивание Völva не настроено: нет ключа подписи или адреса Völva (LORE_VOLVA_EMBED_SECRET, LORE_VOLVA_EMBED_SITE_URL)");
         Integer q = chart == null ? null : questions.get(chart);
         if (q == null)
             return new Decision("unknown_chart", null, "график «" + chart + "» не в белом списке: " + questions.keySet());
@@ -70,6 +70,75 @@ final class VolvaEmbedSigner {
         } catch (java.security.GeneralSecurityException e) {
             throw new IllegalStateException("HmacSHA256 недоступен", e);
         }
+    }
+
+    // ── Ресурсы: вопрос (проект заперт) или дашборд (фильтр «Проект» редактируемый) ──
+
+    /** Ресурс встройки. locked=false — фильтры меняются внутри iframe, параметров в подписи нет. */
+    record Chart(String resource, int id, boolean locked) {}
+
+    /**
+     * «имя:id» — вопрос с запертым project; «имя:вид:id[:unlocked]» — вопрос или
+     * дашборд; unlocked — редактируемые фильтры (дашборд 4 «Спринты», слово
+     * владелицы «проект выбирать dropdown»). Неразборчивое — пропускается.
+     */
+    static Map<String, Chart> parseCharts(String raw) {
+        Map<String, Chart> out = new LinkedHashMap<>();
+        if (raw == null) return out;
+        for (String item : raw.split(",")) {
+            String[] p = item.trim().split(":");
+            try {
+                if (p.length == 2) out.put(p[0].trim(), new Chart("question", Integer.parseInt(p[1].trim()), true));
+                else if ((p.length == 3 || p.length == 4) && ("question".equals(p[1].trim()) || "dashboard".equals(p[1].trim())))
+                    out.put(p[0].trim(), new Chart(p[1].trim(), Integer.parseInt(p[2].trim()),
+                        !(p.length == 4 && "unlocked".equals(p[3].trim()))));
+            } catch (NumberFormatException ignored) { }
+        }
+        return out;
+    }
+
+    record ChartDecision(String code, Chart chart, String message) {
+        boolean ok() { return "ok".equals(code); }
+    }
+
+    /**
+     * Решение для ресурса. Незапертый (редактируемый фильтр «Проект») показывает
+     * ВСЕ проекты — поэтому выдаётся только тому, кто и так видит все проекты
+     * ({@code allowedProjects == null}: admin, superadmin, выключенный auth).
+     * Иначе это обход проектного скоупа и нарушение п.3 приёмки спринта.
+     */
+    static ChartDecision decideChart(String chartName, String project, Map<String, Chart> charts,
+                                     boolean configured, boolean callerIsAgent, Set<String> allowedProjects) {
+        if (!configured)
+            return new ChartDecision("not_configured", null,
+                "встраивание Völva не настроено: нет ключа подписи или адреса Völva (LORE_VOLVA_EMBED_SECRET, LORE_VOLVA_EMBED_SITE_URL)");
+        Chart c = chartName == null ? null : charts.get(chartName);
+        if (c == null)
+            return new ChartDecision("unknown_chart", null, "график «" + chartName + "» не в белом списке: " + charts.keySet());
+        if (callerIsAgent)
+            return new ChartDecision("agent_refused", null,
+                "подпись выдаётся только под пользователя: служебный клиент с правом «читает всё» получил бы незапертый график");
+        if (!c.locked()) {
+            if (allowedProjects != null)
+                return new ChartDecision("unlocked_needs_full_scope", null,
+                    "график «" + chartName + "» с выбором проекта показывает все проекты — он доступен только тем, кто видит все "
+                    + "проекты; возьмите график с запертым проектом");
+            return new ChartDecision("ok", c, null);
+        }
+        Decision d = decide(chartName, project, Map.of(chartName, c.id()), true, false, allowedProjects);
+        return new ChartDecision(d.code(), d.ok() ? c : null, d.message());
+    }
+
+    /** Payload: у запертого ресурса — проект в params; у незапертого params пусты. */
+    static String payload(Chart c, String project, long expEpochSeconds) {
+        String params = c.locked() ? "{\"project\":\"" + project + "\"}" : "{}";
+        return "{\"resource\":{\"" + c.resource() + "\":" + c.id() + "},\"params\":" + params
+            + ",\"exp\":" + expEpochSeconds + "}";
+    }
+
+    static String embedUrl(String siteUrl, Chart c, String jwt) {
+        String base = siteUrl.endsWith("/") ? siteUrl.substring(0, siteUrl.length() - 1) : siteUrl;
+        return base + "/embed/" + c.resource() + "/" + jwt;
     }
 
     static String embedUrl(String siteUrl, String jwt) {

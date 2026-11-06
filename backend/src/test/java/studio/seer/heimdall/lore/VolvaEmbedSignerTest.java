@@ -81,6 +81,49 @@ class VolvaEmbedSignerTest {
         assertEquals(Map.of(), VolvaEmbedSigner.parseQuestions("garbage"));
     }
 
+    // ── Дашборд 4 «Спринты (встройка в LORE)»: фильтр «Проект» РЕДАКТИРУЕМЫЙ ──
+    // (слово владелицы «проект выбирать dropdown»). Внутри видны ВСЕ проекты —
+    // для пользователя с ролью в одном проекте это обход проектного скоупа и
+    // нарушение п.3 приёмки спринта. Правило: незапертый ресурс выдаётся только
+    // тому, кто и так видит все проекты (allowed == null: admin/superadmin/auth off).
+
+    static final Map<String, VolvaEmbedSigner.Chart> CHARTS = VolvaEmbedSigner.parseCharts(
+        "sprints_timeline:44, sprints_without_dates:45, sprints_dashboard:dashboard:4:unlocked");
+
+    @Test
+    void chartListKnowsQuestionsAndDashboards() {
+        assertEquals(new VolvaEmbedSigner.Chart("question", 44, true), CHARTS.get("sprints_timeline"));
+        assertEquals(new VolvaEmbedSigner.Chart("dashboard", 4, false), CHARTS.get("sprints_dashboard"));
+    }
+
+    @Test
+    void unlockedDashboardOnlyForThoseWhoSeeEveryProject() {
+        assertEquals("unlocked_needs_full_scope",
+            VolvaEmbedSigner.decideChart("sprints_dashboard", null, CHARTS, true, false, Set.of("NooriUta/volva")).code(),
+            "пользователь одного проекта не получает дашборд со всеми проектами");
+        var admin = VolvaEmbedSigner.decideChart("sprints_dashboard", null, CHARTS, true, false, null);
+        assertEquals("ok", admin.code(), "admin/superadmin видит всё и так");
+        assertEquals("dashboard", admin.chart().resource());
+    }
+
+    @Test
+    void unlockedPayloadCarriesNoParams() {
+        assertEquals("{\"resource\":{\"dashboard\":4},\"params\":{},\"exp\":1800000000}",
+            VolvaEmbedSigner.payload(new VolvaEmbedSigner.Chart("dashboard", 4, false), null, 1_800_000_000L));
+    }
+
+    @Test
+    void lockedChartStillRequiresAnAllowedProject() {
+        assertEquals("forbidden_project",
+            VolvaEmbedSigner.decideChart("sprints_timeline", "NooriUta/AIDA", CHARTS, true, false, Set.of("NooriUta/volva")).code());
+    }
+
+    @Test
+    void dashboardUrlUsesItsOwnPath() {
+        assertEquals("https://volva.example/embed/dashboard/a.b.c",
+            VolvaEmbedSigner.embedUrl("https://volva.example/", new VolvaEmbedSigner.Chart("dashboard", 4, false), "a.b.c"));
+    }
+
     @Test
     void urlIsSiteSlashEmbedQuestionSlashJwt() {
         assertEquals("https://volva.example/embed/question/a.b.c",

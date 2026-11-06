@@ -107,8 +107,8 @@ public class AidaLoreResource extends LoreResourceBase {
     @ConfigProperty(name = "lore.volva.embed.site-url")
     java.util.Optional<String> volvaSiteUrl;
 
-    @ConfigProperty(name = "lore.volva.embed.questions")
-    java.util.Optional<String> volvaQuestions;
+    @ConfigProperty(name = "lore.volva.embed.charts")
+    java.util.Optional<String> volvaCharts;
 
     @ConfigProperty(name = "lore.volva.embed.ttl-seconds", defaultValue = "600")
     long volvaTtlSeconds;
@@ -130,23 +130,25 @@ public class AidaLoreResource extends LoreResourceBase {
             && volvaSiteUrl.isPresent() && !volvaSiteUrl.get().isBlank();
         boolean agent = callerClientId() != null;
         java.util.Set<String> allowed = agent ? null : callerAllowedProjects(role);
-        VolvaEmbedSigner.Decision d = VolvaEmbedSigner.decide(chart, project,
-            VolvaEmbedSigner.parseQuestions(volvaQuestions.orElse("")), configured, agent, allowed);
+        VolvaEmbedSigner.ChartDecision d = VolvaEmbedSigner.decideChart(chart, project,
+            VolvaEmbedSigner.parseCharts(volvaCharts.orElse("")), configured, agent, allowed);
         if (!d.ok()) {
             Response.Status st = switch (d.code()) {
                 case "not_configured" -> Response.Status.SERVICE_UNAVAILABLE;
                 case "unknown_chart" -> Response.Status.NOT_FOUND;
                 case "project_required" -> Response.Status.BAD_REQUEST;
+                case "unlocked_needs_full_scope" -> Response.Status.FORBIDDEN;
                 default -> Response.Status.FORBIDDEN;
             };
             return noStore(Response.status(st).entity(new LoreError(d.code().toUpperCase(java.util.Locale.ROOT), d.message())));
         }
         long exp = java.time.Instant.now().getEpochSecond() + volvaTtlSeconds;
-        String jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.question(), project, exp), secret.get());
+        String jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, exp), secret.get());
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("chart", chart);
-        out.put("project", project);
-        out.put("url", VolvaEmbedSigner.embedUrl(volvaSiteUrl.get(), jwt));
+        out.put("project", d.chart().locked() ? project : null);
+        out.put("locked", d.chart().locked());
+        out.put("url", VolvaEmbedSigner.embedUrl(volvaSiteUrl.get(), d.chart(), jwt));
         out.put("expires_at", java.time.Instant.ofEpochSecond(exp).toString());
         LOG.debugf("[LORE EMBED] chart=%s project=%s exp=%d", chart, project, exp); // без адреса: в нём JWT
         return noStore(Response.ok(out));
