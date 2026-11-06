@@ -396,6 +396,28 @@ class LoreScopeEnforcedLiveDbTest {
     }
 
     @Test
+    @Order(23)
+    @TestSecurity(user = "al95-viewer", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = VIEWER_SUB))
+    void explicitIdOutsideScopeSaysSoInsteadOfLookingMissing() {
+        // MT-MCP-TRUTH A12: question_by_id по ЯВНОМУ id чужого вопроса отдавал
+        // пустоту — неотличимо от «такого нет». Теперь: строк нет (содержимое
+        // не раскрывается), но ответ говорит «вне скоупа».
+        var hidden = given().contentType("application/json")
+            .when().get("/lore/slice/question_by_id?id=" + Q_HIDDEN)
+            .then().statusCode(200).extract().jsonPath();
+        assertTrue(hidden.getList("rows").isEmpty(), "содержимое чужого вопроса раскрыто");
+        assertTrue("outside_scope".equals(hidden.getString("outside_scope.verdict")),
+            "пустой ответ на существующий id обязан сказать «вне скоупа»: " + hidden.prettify());
+        // Положительный контроль: несуществующий id — честное «не найдено», без отметки.
+        var missing = given().contentType("application/json")
+            .when().get("/lore/slice/question_by_id?id=Q-AL95-NO-SUCH-QUESTION")
+            .then().statusCode(200).extract().jsonPath();
+        assertTrue(missing.getList("rows").isEmpty());
+        assertTrue(missing.get("outside_scope") == null, "отсутствующий id не должен выглядеть «вне скоупа»");
+    }
+
+    @Test
     @Order(24)
     @TestSecurity(user = "al95-root", roles = {"super-admin"})
     @JwtSecurity(claims = @Claim(key = "sub", value = "al95-root-sub-without-any-role"))

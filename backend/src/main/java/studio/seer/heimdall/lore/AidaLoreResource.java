@@ -809,6 +809,33 @@ public class AidaLoreResource extends LoreResourceBase {
         return allowed != null && allowed.isEmpty() && LoreSlices.PROJECT_SCOPED.containsKey(id);
     }
 
+    /**
+     * MT-MCP-TRUTH A12 (06.11.2026): адресный срез под скоупом — обязательный
+     * параметр ровно {@code id}, и срез проектно-скоуплен. Именно у них пустой
+     * ответ читается как «записи нет», хотя запись может быть вне скоупа.
+     */
+    static boolean isScopedByIdSlice(String sliceId) {
+        LoreSlices.SliceDef def = LoreSlices.get(sliceId);
+        return def != null && List.of("id").equals(def.required())
+            && LoreSlices.PROJECT_SCOPED.containsKey(sliceId);
+    }
+
+    static boolean isEmptyResult(List<?> rows) { return rows == null || rows.isEmpty(); }
+
+    /**
+     * Отметка «запись есть, но вне ваших проектов». Только факт существования —
+     * содержимое не раскрывается (тот же уровень, что 409 «id занят» у записи).
+     * {@code null} — записи нет вовсе: это честное «не найдено».
+     */
+    static Map<String, Object> outsideScopeMarker(String id, boolean existsUnscoped) {
+        if (!existsUnscoped) return null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("verdict", "outside_scope");
+        m.put("reason", "запись с таким id существует, но вне ваших проектов — пустой ответ не значит «нет»");
+        return m;
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
         // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
@@ -896,9 +923,26 @@ public class AidaLoreResource extends LoreResourceBase {
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
-            .map(res -> {
+            // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
+            // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
+            .chain(res -> {
+                String explicitId = given.get("id");
+                if (rowScope == null || explicitId == null || !isScopedByIdSlice(id) || !isEmptyResult(res.result()))
+                    return Uni.createFrom().item(new Object[] {res, null});
+                LoreSlices.Composed unscoped = LoreSlices.compose(id, given);
+                MartQuery probe = new MartQuery("sql", unscoped.sql(),
+                    unscoped.params().isEmpty() ? null : unscoped.params(), -1);
+                return client.query(db, basicAuth(), probe)
+                    .map(p -> new Object[] {res, outsideScopeMarker(explicitId, !isEmptyResult(p.result()))})
+                    .onFailure().recoverWithItem(ex -> new Object[] {res, null});
+            })
+            .map(pair -> {
+                studio.seer.heimdall.bench.MartResult res = (studio.seer.heimdall.bench.MartResult) pair[0];
+                @SuppressWarnings("unchecked")
+                Map<String, Object> outside = (Map<String, Object>) pair[1];
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
                 if (scopeMarker != null) out.put("scope", scopeMarker);
+                if (outside != null) out.put("outside_scope", outside);
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {
