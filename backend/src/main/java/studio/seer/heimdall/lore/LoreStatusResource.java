@@ -35,7 +35,36 @@ public class LoreStatusResource extends LoreResourceBase {
     @jakarta.inject.Inject
     UcReadinessCalculator readiness; // PL-15 (D17): готовность сценария — из задач
 
-    public record StatusUpdateRequest(String entity_type, String id, String status) {}
+    /** QG-16: reason — причина блокировки спринта (текст), пишется на открывшуюся строку истории. */
+    public record StatusUpdateRequest(String entity_type, String id, String status, String reason) {
+        public StatusUpdateRequest(String entity_type, String id, String status) { this(entity_type, id, status, null); }
+    }
+
+    /**
+     * SPRINT_QG_REBUILD/QG-16, владелица 06.11: «главное чтобы инструмент знал
+     * причину». Блокировка спринта без текста причины не отклоняется (объяснением
+     * может служить и незакрытая зависимость, и открытый вопрос — их видит гейт
+     * QG-LORE-BLOCKED-REASON), но ответ говорит об этом прямо, а не молчит.
+     */
+    /**
+     * SPRINT_QG_REBUILD/QG-17, владелица 06.11: «связь не должна сниматься, но должна
+     * помечаться как solved». Задача закрыта (done|cancelled) — входящие GATES получают
+     * solved_at; задача снова открыта — метка снимается. Ребро не удаляется никогда.
+     */
+    static String gatesSolvedSql(String status) {
+        boolean closed = "done".equals(status) || "cancelled".equals(status);
+        return closed
+            ? "UPDATE GATES SET solved_at = :now WHERE @in.task_uid = :id AND solved_at IS NULL"
+            : "UPDATE GATES SET solved_at = null WHERE @in.task_uid = :id AND solved_at IS NOT NULL";
+    }
+
+    static String blockReasonHint(String entityType, String status, String reason) {
+        if (!"sprint".equals(entityType) || !"blocked".equals(status)) return null;
+        if (reason != null && !reason.isBlank()) return null;
+        return "блокировка без причины: передайте reason (текст) — или объяснением должна служить "
+            + "незакрытая зависимость (DEPENDS_ON) либо открытый вопрос; иначе гейт QG-LORE-BLOCKED-REASON "
+            + "покажет спринт как «блокировка без объяснения»";
+    }
     record StatusRevision(String valid_from, String plan_version) {}
     public record StatusUpdateResponse(
         boolean ok, String entity_type, String id,
@@ -99,7 +128,7 @@ public class LoreStatusResource extends LoreResourceBase {
                                             "[LORE STATUS] sprint=%s plan-field restore failed (status flip itself succeeded): %s",
                                             req.id(), ex.getMessage()))
                                         .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
-                                        .replaceWith(resp)));
+                                        .chain(__ -> withBlockReason(resp, req, nsid))));
             // ADR-LORE-014 §4: →done is gated — refuse self-acceptance (reviewer_agent
             // unset or equal to executor_agent) BEFORE the SCD2 flip. Every other task
             // transition is ungated (RBAC-only, per the ADR's "one hard-gate" decision).
@@ -149,6 +178,15 @@ public class LoreStatusResource extends LoreResourceBase {
             return Uni.createFrom().item(() -> {
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.id());
                     readiness.recomputeForTask(req.id());
+                    // QG-17: связь «вопрос держит задачу» не снимается, а помечается решённой.
+                    try {
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            gatesSolvedSql(req.status()), Map.of("id", req.id(), "now", now)))
+                            .await().indefinitely();
+                    } catch (Exception ex) {
+                        LOG.warnf("[LORE STATUS] task=%s GATES solved_at не обновлён (статус сменён): %s",
+                            req.id(), ex.getMessage());
+                    }
                     return r;
                 })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
@@ -161,6 +199,31 @@ public class LoreStatusResource extends LoreResourceBase {
                         req.id(), ex.getMessage()))
                     .onFailure().recoverWithItem((Void) null)
                     .replaceWith(rr));
+        });
+    }
+
+    /**
+     * QG-16: причина блокировки — на ТОЛЬКО ЧТО открытую строку истории (state_uid = nsid).
+     * Новая строка открывается на каждую смену статуса и block_reason не переносит
+     * (его нет в SPRINT_PLAN_FIELDS), поэтому при разблокировке причина уходит
+     * вместе с состоянием, которому принадлежала.
+     */
+    private Uni<Response> withBlockReason(Response resp, StatusUpdateRequest req, String nsid) {
+        if (!"blocked".equals(req.status())) return Uni.createFrom().item(resp);
+        String hint = blockReasonHint("sprint", req.status(), req.reason());
+        Uni<Void> write = hint != null ? Uni.createFrom().voidItem()
+            : writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowSprintHist SET block_reason = :r WHERE state_uid = :nsid",
+                    Map.of("r", req.reason().trim(), "nsid", nsid)))
+                .replaceWithVoid();
+        return write.map(__ -> {
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            if (resp.getEntity() instanceof StatusUpdateResponse s) {
+                out.put("ok", s.ok()); out.put("entity_type", s.entity_type()); out.put("id", s.id());
+                out.put("old_status", s.old_status()); out.put("new_status", s.new_status()); out.put("revision", s.revision());
+            }
+            if (hint != null) out.put("hint", hint); else out.put("block_reason", req.reason().trim());
+            return noStore(Response.ok(out));
         });
     }
 

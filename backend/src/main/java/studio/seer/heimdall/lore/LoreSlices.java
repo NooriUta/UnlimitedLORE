@@ -631,9 +631,25 @@ public final class LoreSlices {
             "FROM KnowQuestion WHERE out('RAISED_IN').sprint_id CONTAINS :id ORDER BY question_id",
             List.of("id"), Map.of(), "");
 
+        // SPRINT_QG_REBUILD/QG-16, проверка 5 (предложение координатора, переслано владелицей
+        // 06.11): открытый вопрос держит (GATES) задачу, которая уже закрыта. Механизм gates
+        // задуман самоочищающимся, но связь при закрытии задачи не снимается — вопрос
+        // числится блокером того, что уже сделано (замер 06.11: минимум 8, среди них blocker).
+        slice("questions_gating_closed_tasks",
+            "SELECT question_id, title, status, priority, owner, " +
+            "out('GATES')[out('HAS_STATE')[valid_to IS NULL AND (" +
+                LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") +
+            ")].size() > 0].task_uid AS closed_tasks, " +
+            "out('GATES').task_uid AS gated_tasks " +
+            "FROM KnowQuestion WHERE status <> 'closed' AND out('GATES')[out('HAS_STATE')[valid_to IS NULL AND (" +
+                LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") +
+            ")].size() > 0].size() > 0",
+            List.of(), Map.of(), " ORDER BY question_id");
+
         slice("gating_questions_of_task",
             "SELECT question_id, title, status, priority " +
-            "FROM KnowQuestion WHERE out('GATES').task_uid CONTAINS :id AND status <> 'closed' ORDER BY question_id",
+            // QG-17: решённая связь (solved_at — задача уже закрыта) больше не блокер.
+            "FROM KnowQuestion WHERE outE('GATES')[solved_at IS NULL].inV().task_uid CONTAINS :id AND status <> 'closed' ORDER BY question_id",
             List.of("id"), Map.of(), "");
 
         // ── §3 Sprints ───────────────────────────────────────────────────────
@@ -1674,10 +1690,31 @@ public final class LoreSlices {
 
         // Sprints that ever passed through a BLOCKED state — for blocked/reopen rate.
         // Frontend dedups by sprint_id and divides by total sprints.
+        // SPRINT_QG_REBUILD/QG-16: строка на СПРИНТ и только по открытой строке истории.
+        // Прежний срез перебирал KnowSprintHist целиком — давал по строке на каждую
+        // blocked-ревизию (дубли ×2/×3) и вечно числил заблокированным спринт, который
+        // когда-то им был. Колонки — объяснение блокировки: текст (status_set reason),
+        // незакрытые зависимости, открытые вопросы; их читает гейт QG-LORE-BLOCKED-REASON.
+        // Аналитика (LoreAnalytics «Blocked rate») читает этот срез как «спринты, КОГДА-ЛИБО
+        // бывшие заблокированными» — смысл сохранён, убраны только дубли: строка на спринт,
+        // а не на каждую blocked-ревизию истории (было ×2/×3, по срезу нельзя было посчитать).
         slice("blocked_sprints",
-            "SELECT in('HAS_STATE').sprint_id[0] AS sprint_id " +
-            "FROM KnowSprintHist WHERE status_raw LIKE '%BLOCK%'",
-            List.of(), Map.of(), "");
+            "SELECT sprint_id FROM KnowSprint WHERE out('HAS_STATE')[status_raw LIKE '%BLOCK%'].size() > 0",
+            List.of(), Map.of(), " ORDER BY sprint_id");
+
+        // Заблокированные СЕЙЧАС (открытая строка истории) — с объяснением блокировки.
+        slice("blocked_sprints_reason",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
+            "out('HAS_STATE')[valid_to IS NULL].block_reason[0] AS block_reason, " +
+            "in('PART_OF').size() AS task_count, " +
+            "out('DEPENDS_ON').sprint_id AS deps, " +
+            "out('DEPENDS_ON')[out('HAS_STATE')[valid_to IS NULL AND (" +
+                LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") +
+            ")].size() = 0].sprint_id AS open_deps, " +
+            "in('RAISED_IN')[status <> 'closed'].question_id AS open_questions " +
+            "FROM KnowSprint WHERE out('HAS_STATE')[valid_to IS NULL AND status_raw LIKE '%BLOCK%'].size() > 0",
+            List.of(), Map.of(), " ORDER BY sprint_id");
 
         // Task done-transitions for throughput. valid_from = when task became DONE.
         // states = total HAS_STATE rows of the task: states>1 means real progression
