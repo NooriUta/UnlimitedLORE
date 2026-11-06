@@ -1406,7 +1406,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
-            ROLE_HOLDERS + ", task_type, work_class, actual_days, bookkeeping " +
+            ROLE_HOLDERS + ", task_type, work_class, actual_days, bookkeeping, " +
+            "out('CLOSED_BY').pr_uid AS closed_by_prs " +
             "FROM KnowTask WHERE task_uid IN :task_uids " +
             "ORDER BY task_uid",
             List.of("task_uids"), Map.of(), "");
@@ -2150,6 +2151,15 @@ public final class LoreSlices {
             "FROM KnowPR WHERE out('SHIPPED_IN').release_uid CONTAINS :ruid ORDER BY pr_number",
             List.of("ruid"), Map.of(), "");
 
+        // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задачи релиза — через PR, который
+        // их закрыл (CLOSED_BY), и релиз этого PR (SHIPPED_IN). Не разбор note_md.
+        slice("release_tasks_by_tag",
+            "SELECT task_uid, title, out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('CLOSED_BY').pr_uid AS closed_by_prs " +
+            "FROM KnowTask WHERE out('CLOSED_BY').out('SHIPPED_IN').release_id CONTAINS :tag",
+            List.of("tag"), Map.of(), " ORDER BY task_uid");
+
         slice("release_prs_by_tag",
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag ORDER BY pr_number",
@@ -2474,6 +2484,8 @@ public final class LoreSlices {
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.
+        Map.entry("release_tasks_by_tag", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // AN-06: срез I — строка на uc-задачу, проект через её спринт.
         Map.entry("reeng_load", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("backlog_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),

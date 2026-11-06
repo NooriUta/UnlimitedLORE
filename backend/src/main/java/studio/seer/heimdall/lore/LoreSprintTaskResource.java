@@ -1333,6 +1333,107 @@ public class LoreSprintTaskResource extends LoreResourceBase {
 
     public record TaskAdrRequest(String task_uid, String adr_id, String action) {}
 
+    // ── D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача → PR (CLOSED_BY) ───────
+    //
+    // Q-MINILORE-TASK-PR-EDGE, владелица «ок» 06.11.2026: связь задачи с PR —
+    // ребром, а не текстом. Тогда релиз находит задачи через PR → SHIPPED_IN
+    // (срез release_tasks_by_tag), а не разбором note_md.
+
+    /** Ссылка на PR: проект (слаг KnowGitProject) и номер. Ключ KnowPR — «slug#N», как у моста Forgejo. */
+    public record PrRef(String gitProject, int number) {
+        String uid() { return gitProject + "#" + number; }
+    }
+
+    /**
+     * «owner/repo#N» — как есть; «#N» или «N» — только вместе с проектом.
+     * Голый номер без проекта неоднозначен (#38 есть и в LORE, и в Völva) —
+     * null, а не догадка.
+     */
+    static PrRef parsePrRef(String target, String project) {
+        if (target == null) return null;
+        String t = target.strip();
+        java.util.regex.Matcher full = java.util.regex.Pattern.compile("^([\\w.-]+/[\\w.-]+)#(\\d+)$").matcher(t);
+        if (full.matches()) {
+            int n = Integer.parseInt(full.group(2));
+            return n > 0 ? new PrRef(full.group(1), n) : null;
+        }
+        java.util.regex.Matcher bare = java.util.regex.Pattern.compile("^#?(\\d+)$").matcher(t);
+        if (bare.matches() && project != null && !project.isBlank()) {
+            int n = Integer.parseInt(bare.group(1));
+            return n > 0 ? new PrRef(project.strip(), n) : null;
+        }
+        return null;
+    }
+
+    public record TaskPrRequest(String task_uid, String pr, String project, String action) {}
+
+    @POST
+    @Path("task/pr")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkTaskPr(TaskPrRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.task_uid() == null || req.pr() == null)
+            return badParams("task_uid and pr required");
+        if (!SAFE_ID.matcher(req.task_uid()).matches())
+            return badParams("task_uid contains illegal characters");
+        PrRef ref = parsePrRef(req.pr(), req.project());
+        if (ref == null)
+            return badParams("pr must be \"owner/repo#N\", or \"#N\"/\"N\" together with project — "
+                + "a bare number is ambiguous across repositories");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            // Обе стороны — ДО записи: CREATE EDGE в пустую выборку — тихий no-op.
+            if (ingestService.queryPublic("SELECT task_uid FROM KnowTask WHERE task_uid=:t LIMIT 1",
+                    Map.of("t", req.task_uid())).isEmpty())
+                return badParams("task not found: " + req.task_uid());
+            if (ingestService.queryPublic("SELECT slug FROM KnowGitProject WHERE slug=:s LIMIT 1",
+                    Map.of("s", ref.gitProject())).isEmpty())
+                return badParams("git project not registered: " + ref.gitProject()
+                    + " (list: query_slice slice=\"git_projects\")");
+
+            List<Map<String, Object>> existing = ingestService.queryPublic(
+                "SELECT @rid FROM CLOSED_BY WHERE @out.task_uid=:t AND @in.pr_uid=:p",
+                Map.of("t", req.task_uid(), "p", ref.uid()));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("task_uid", req.task_uid());
+            out.put("pr_uid", ref.uid());
+            if (remove) {
+                for (Map<String, Object> e : existing) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM CLOSED_BY WHERE @rid=" + e.get("@rid"), null)).await().indefinitely();
+                }
+                out.put("outcome", existing.isEmpty() ? LoreOutcome.UNCHANGED : LoreOutcome.DELETED);
+                return noStore(Response.ok(out));
+            }
+            if (!existing.isEmpty()) {
+                out.put("outcome", LoreOutcome.UNCHANGED);
+                return noStore(Response.ok(out));
+            }
+            // PR мог влиться мимо моста — заводим вершину тем же ключом, что мост Forgejo.
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowPR SET pr_uid=:uid, pr_number=:n, git_project=:gp UPSERT WHERE pr_uid=:uid",
+                Map.of("uid", ref.uid(), "n", ref.number(), "gp", ref.gitProject()))).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                String.format("CREATE EDGE CLOSED_BY FROM (SELECT FROM KnowTask WHERE task_uid='%s') "
+                    + "TO (SELECT FROM KnowPR WHERE pr_uid='%s') IF NOT EXISTS",
+                    req.task_uid(), ref.uid().replace("'", "")), null)).await().indefinitely();
+            // Исход — по факту ребра в графе, а не по факту выполнения команды.
+            boolean made = !ingestService.queryPublic(
+                "SELECT @rid FROM CLOSED_BY WHERE @out.task_uid=:t AND @in.pr_uid=:p",
+                Map.of("t", req.task_uid(), "p", ref.uid())).isEmpty();
+            out.put("outcome", made ? LoreOutcome.CREATED : LoreOutcome.NOOP);
+            if (!made) { out.put("ok", false); out.put("reason", "ребро CLOSED_BY не появилось в графе"); }
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE TASK PR] %s → %s: %s", req.task_uid(), req.pr(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     @POST
     @Path("task/adr")
     @Consumes(MediaType.APPLICATION_JSON)
