@@ -59,6 +59,23 @@ public class AidaLoreResource extends LoreResourceBase {
     boolean scopeEnforce;
 
     /**
+     * AL-91: служебные читатели ВСЕГО корпуса — client_id через запятую, точным
+     * совпадением. Решение 06.11 (владелица отдала выбор шлюзу miniLORE, тот
+     * выбрал «служебный читатель всего»): видимость miniLORE не держится на
+     * владельце-человеке. Действует ТОЛЬКО на чтение (callerAllowedProjects);
+     * право записи не расширяет. Расширять список — отдельным решением.
+     */
+    @ConfigProperty(name = "lore.scope.read-all-clients", defaultValue = "lore-reader-minilore")
+    String readAllClients;
+
+    /** AL-91: клиент в списке служебных читателей всего корпуса — точным совпадением, не префиксом. */
+    static boolean readsWholeCorpus(String clientId, String list) {
+        if (clientId == null || clientId.isBlank() || list == null) return false;
+        for (String c : list.split(",")) if (c.trim().equals(clientId)) return true;
+        return false;
+    }
+
+    /**
      * Обнулять ли ТЕЛО документа читателю без роли в его проекте.
      *
      * <p>Решение владелицы 19.10.2026: «достаточно обнулять текст самого
@@ -961,6 +978,8 @@ public class AidaLoreResource extends LoreResourceBase {
         // ПОРЯДОК СУЩЕСТВЕННЫЙ: агент опознаётся ДО роли. См. bypassesScope().
         String clientId = callerClientId();
         if (clientId != null) {
+            // AL-91: служебный читатель всего корпуса — без ограничения, только здесь (чтение).
+            if (readsWholeCorpus(clientId, readAllClients)) return null;
             // ЧТЕНИЕ — по проектам владельца, БЕЗ сужения матрицей D4 (решение
             // владельца 2026-08-01: «читать всё в пределах своих проектов,
             // изменять — в пределах роли»). D4 отвечает, что агенту позволено
