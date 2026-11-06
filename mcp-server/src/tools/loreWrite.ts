@@ -240,9 +240,10 @@ export function registerLoreWrite(server: McpServer): void {
       entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
       id: z.string().describe('entity id (e.g. sprint_id, task_uid, phase_uid "SPRINT_X/PHASE_A")'),
       status: LORE_STATUS,
+      reason: z.string().optional().describe('QG-16: sprint + status=blocked only — WHY it is blocked, plain text (stored on the new SCD2 state, gone on unblock). Omitted on a blocked sprint → the answer carries a hint and gate QG-LORE-BLOCKED-REASON lists it unless an open dependency or open question explains it'),
     },
     path: '/lore/status',
-    body: ({ entity_type, id, status }) => ({ entity_type, id, status }),
+    body: ({ entity_type, id, status, reason }) => ({ entity_type, id, status, reason: reason ?? null }),
   });
 
   definePostTool(server, {

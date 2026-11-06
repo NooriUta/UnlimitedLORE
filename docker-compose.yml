@@ -213,6 +213,9 @@ services:
       # updateSchema из секрет-сервиса (ключи ARCADEDB_API_TOKEN и
       # ARCADEDB_API_TOKEN_BENCH). Отката token→basic нет намеренно.
       - lore.mart.auth=${LORE_MART_AUTH:-basic}
+      # AL-91: проектный скоуп чтения. По умолчанию выключен; включение — решение
+      # владелицы и только когда служебный читатель miniLORE заведён в граф ролей.
+      - lore.scope.enforce=${LORE_SCOPE_ENFORCE:-false}
       # SELF-PROVISION: на ЧИСТОЙ/внешней БД одного lore.migrate МАЛО. Ядро
       # (KnowTask/KnowSprint/KnowADR + Hist + рёбра) создаёт ТОЛЬКО инициализатор
       # под lore.bootstrap — миграции его не заводят, они добирают продуктовый

@@ -264,6 +264,8 @@ jobs:
           # ТОЛЬКО после того, как ARCADEDB_API_TOKEN(_BENCH) лежат в Infisical:
           # отката на root нет, без токена readiness не поднимется (шаг ниже упадёт).
           LORE_MART_AUTH: ${{ vars.LORE_MART_AUTH || 'basic' }}
+          # AL-91: проектный скоуп чтения — переменная репозитория, по умолчанию выключен.
+          LORE_SCOPE_ENFORCE: ${{ vars.LORE_SCOPE_ENFORCE || 'false' }}
         run: docker compose up -d --no-deps lore-backend
 
       - name: Deploy frontend
