@@ -129,8 +129,16 @@ render() { # render <md> <out> <tag> <fg> <gh>
     my $product = esc($ENV{PRODUCT_NAME} // "LORE");
     my $links = join(" · ", grep { $_ } ($fg ? "<a href=\"" . esc($fg) . "\">Forgejo</a>" : ""), ($gh ? "<a href=\"" . esc($gh) . "\">GitHub</a>" : ""));
     my $t = esc($title ne "" ? $title : $tag);
-    my $kpis = $features ? "<div class=\"kpis\"><div class=\"kpi\"><b>$features</b><span>изменений</span></div>"
-      . "<div class=\"kpi\"><b>$sections</b><span>разделов</span></div></div>" : "";
+    # Склонение: «1 раздел», «2 раздела», «5 разделов» (находка seidr-site 06.11 —
+    # «1 разделов» на собранной странице бросалось в глаза первым).
+    my $plural = sub { my ($n, $one, $few, $many) = @_;
+      my ($m10, $m100) = ($n % 10, $n % 100);
+      return $many if $m100 >= 11 && $m100 <= 14;
+      return $one  if $m10 == 1;
+      return $few  if $m10 >= 2 && $m10 <= 4;
+      $many };
+    my $kpis = $features ? "<div class=\"kpis\"><div class=\"kpi\"><b>$features</b><span>" . $plural->($features, "изменение", "изменения", "изменений") . "</span></div>"
+      . "<div class=\"kpi\"><b>$sections</b><span>" . $plural->($sections, "раздел", "раздела", "разделов") . "</span></div></div>" : "";
     print <<"HTML";
 <!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>$product $tag</title>
@@ -217,7 +225,8 @@ MD
   chk '<a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&amp;passport=SPRINT_QG_REBUILD">SPRINT_QG_REBUILD/QG-16</a>'
   chk '<a href="https://f/o/r/pulls/796">#796</a>'
   chk '<li>обычный пункт без метки</li>'
-  chk '<div class="kpi"><b>1</b><span>изменений</span>'
+  chk '<div class="kpi"><b>1</b><span>изменение</span>'   # склонение: 1 изменение
+  chk '<div class="kpi"><b>2</b><span>раздела</span>'     # 2 раздела («Раздел», «Возможности»)
   chk '<title>LORE v9.9.9</title>'                 # по умолчанию — как было
   # PRODUCT_NAME и не-ASCII из окружения: «Völva», а не «VÃ¶lva»
   PRODUCT_NAME='Völva' render "$d/n.md" "$d/v.html" v9.9.9 "" "" || { echo "FAIL: render с PRODUCT_NAME упал"; fail=1; }
