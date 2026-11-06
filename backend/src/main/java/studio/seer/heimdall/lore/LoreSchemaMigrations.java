@@ -1387,7 +1387,7 @@ final class LoreSchemaMigrations {
         // текстовыми ссылками context_md (истина в рёбрах, D5). Направление:
         // фича → фича, на которую она опирается.
         new Step(60, 17, "feature_builds_on", List.of(
-            "CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS EXTENDS E"))
+            "CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
