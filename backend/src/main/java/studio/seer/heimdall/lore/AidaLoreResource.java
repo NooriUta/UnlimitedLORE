@@ -59,6 +59,23 @@ public class AidaLoreResource extends LoreResourceBase {
     boolean scopeEnforce;
 
     /**
+     * AL-91: служебные читатели ВСЕГО корпуса — client_id через запятую, точным
+     * совпадением. Решение 06.11 (владелица отдала выбор шлюзу miniLORE, тот
+     * выбрал «служебный читатель всего»): видимость miniLORE не держится на
+     * владельце-человеке. Действует ТОЛЬКО на чтение (callerAllowedProjects);
+     * право записи не расширяет. Расширять список — отдельным решением.
+     */
+    @ConfigProperty(name = "lore.scope.read-all-clients", defaultValue = "lore-reader-minilore")
+    String readAllClients;
+
+    /** AL-91: клиент в списке служебных читателей всего корпуса — точным совпадением, не префиксом. */
+    static boolean readsWholeCorpus(String clientId, String list) {
+        if (clientId == null || clientId.isBlank() || list == null) return false;
+        for (String c : list.split(",")) if (c.trim().equals(clientId)) return true;
+        return false;
+    }
+
+    /**
      * Обнулять ли ТЕЛО документа читателю без роли в его проекте.
      *
      * <p>Решение владелицы 19.10.2026: «достаточно обнулять текст самого
@@ -755,6 +772,21 @@ public class AidaLoreResource extends LoreResourceBase {
         return res;
     }
 
+    /** AL-91: признак построчного скоупа в ответе среза; null — скоуп к срезу не применялся. */
+    static Map<String, Object> scopeMeta(String id, java.util.Set<String> allowed) {
+        if (allowed == null || !LoreSlices.PROJECT_SCOPED.containsKey(id)) return null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("applied", true);
+        m.put("projects", allowed.size());
+        m.put("note", "выдача сужена проектным скоупом — строки вне разрешённых проектов не показаны");
+        return m;
+    }
+
+    /** AL-91: скоупный срез при пустом множестве разрешённых проектов — отказ, а не пустой список. */
+    static boolean scopeDenies(String id, java.util.Set<String> allowed) {
+        return allowed != null && allowed.isEmpty() && LoreSlices.PROJECT_SCOPED.containsKey(id);
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
         // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
@@ -804,10 +836,12 @@ public class AidaLoreResource extends LoreResourceBase {
 
         LoreSlices.Composed composed;
         final SlicePage page;
+        java.util.Set<String> rowScope;
         try {
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
-            composed = LoreSlices.compose(id, given, allowedProjectsOrNull(role));
+            rowScope = allowedProjectsOrNull(role);
+            composed = LoreSlices.compose(id, given, rowScope);
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
@@ -827,12 +861,22 @@ public class AidaLoreResource extends LoreResourceBase {
         // потока. Прошли только пути, которые до графа не доходят вовсе
         // (superadmin и выключенный auth) — из них двух можно было сделать
         // вывод «работает».
+        // AL-91 (условие шлюза miniLORE): пустое множество разрешённых проектов —
+        // явный отказ, а не 200 с пустым списком: «нет прав» не должно выглядеть
+        // как «ничего нет».
+        if (scopeDenies(id, rowScope)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта (не заведён в граф ролей или роль не выдана) — срез " + id + " не отдаётся пустым"))));
+        }
+        final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
         java.util.Set<String> allowedForRedact =
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
             .map(res -> {
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
+                if (scopeMarker != null) out.put("scope", scopeMarker);
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {
@@ -934,6 +978,8 @@ public class AidaLoreResource extends LoreResourceBase {
         // ПОРЯДОК СУЩЕСТВЕННЫЙ: агент опознаётся ДО роли. См. bypassesScope().
         String clientId = callerClientId();
         if (clientId != null) {
+            // AL-91: служебный читатель всего корпуса — без ограничения, только здесь (чтение).
+            if (readsWholeCorpus(clientId, readAllClients)) return null;
             // ЧТЕНИЕ — по проектам владельца, БЕЗ сужения матрицей D4 (решение
             // владельца 2026-08-01: «читать всё в пределах своих проектов,
             // изменять — в пределах роли»). D4 отвечает, что агенту позволено
