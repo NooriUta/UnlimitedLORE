@@ -55,5 +55,20 @@
       </#if>
     </form>
 
+    <#-- Внешние провайдеры входа (брокеринг omilore→seer, decision:D-2026-REALM-BROKERING-SEER-OMILORE,
+         06.11.2026). Стандартная тема Keycloak рисует их секцией "socialProviders", но template.ftl
+         этой темы такую секцию не вызывает — поэтому блок стоит здесь, внутри form. Без провайдеров
+         не рисуется вовсе. Подпись берётся из провайдера (displayName, «Войти через AIDA» задана в
+         самом Keycloak) — текст в теме не дублируется, иначе два места разойдутся.
+         Блок подготовила сессия Völva (C:/AIDA/tmp-scripts/kc-theme-idp-block/README.md). -->
+    <#if realm.password && social?? && social.providers?has_content>
+      <div id="kc-social-providers" style="margin-top: 20px;">
+        <#list social.providers as p>
+          <a id="social-${p.alias}" class="btn btn-primary" href="${p.loginUrl}"
+             style="display: block; text-align: center; margin-top: 8px;">${p.displayName!p.alias}</a>
+        </#list>
+      </div>
+    </#if>
+
   </#if>
 </@layout.registrationLayout>
