@@ -86,6 +86,8 @@ jobs:
       # без явной передачи деплой поднимал бы бэкенд с ПУСТЫМИ секретами — оба
       # моста молча уходили бы в 503 «not configured» при зелёном деплое.
       LORE_SECRETS_PROVIDER: infisical
+      # SPRINT_VIZ_EMBED/VE-2: адрес Völva для подписи встройки (ключ — из Infisical, LORE_VOLVA_EMBED_SECRET).
+      LORE_VOLVA_EMBED_SITE_URL: https://volva.odal.seidrstudio.pro
       LORE_SECRETS_URL: http://infisical:18080
       LORE_SECRETS_CLIENT_ID: ${{ secrets.LORE_SECRETS_CLIENT_ID }}
       LORE_SECRETS_CLIENT_SECRET: ${{ secrets.LORE_SECRETS_CLIENT_SECRET }}

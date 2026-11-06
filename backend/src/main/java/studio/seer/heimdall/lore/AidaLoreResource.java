@@ -95,6 +95,63 @@ public class AidaLoreResource extends LoreResourceBase {
     @Inject
     ProjectRbacService projectRbac;
 
+    // ── SPRINT_VIZ_EMBED/VE-2: подпись ссылки встройки Völva ─────────────────
+    // Ключ — через SecretProvider (env | Infisical), как KC_ADMIN_CLIENT_SECRET;
+    // в код и в переменные сборки не попадает. Адрес и белый список графиков —
+    // Optional: пустая строка в @ConfigProperty String роняет старт приложения.
+    static final String VOLVA_EMBED_SECRET_KEY = "LORE_VOLVA_EMBED_SECRET";
+
+    @Inject
+    SecretProvider secrets;
+
+    @ConfigProperty(name = "lore.volva.embed.site-url")
+    java.util.Optional<String> volvaSiteUrl;
+
+    @ConfigProperty(name = "lore.volva.embed.questions")
+    java.util.Optional<String> volvaQuestions;
+
+    @ConfigProperty(name = "lore.volva.embed.ttl-seconds", defaultValue = "600")
+    long volvaTtlSeconds;
+
+    /**
+     * Подписанный адрес встройки графика Völva для ПОЛЬЗОВАТЕЛЯ: проект берётся
+     * из запроса, но выдаётся только в пределах проектов вызывающего; служебный
+     * клиент отказ. Адрес (в нём JWT) не логируется. Срок жизни — ttl-seconds.
+     */
+    @GET
+    @Path("embed/volva/{chart}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response volvaEmbed(@PathParam("chart") String chart, @QueryParam("project") String project,
+                               @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        java.util.Optional<String> secret = secrets.get(VOLVA_EMBED_SECRET_KEY);
+        boolean configured = secret.isPresent() && !secret.get().isBlank()
+            && volvaSiteUrl.isPresent() && !volvaSiteUrl.get().isBlank();
+        boolean agent = callerClientId() != null;
+        java.util.Set<String> allowed = agent ? null : callerAllowedProjects(role);
+        VolvaEmbedSigner.Decision d = VolvaEmbedSigner.decide(chart, project,
+            VolvaEmbedSigner.parseQuestions(volvaQuestions.orElse("")), configured, agent, allowed);
+        if (!d.ok()) {
+            Response.Status st = switch (d.code()) {
+                case "not_configured" -> Response.Status.SERVICE_UNAVAILABLE;
+                case "unknown_chart" -> Response.Status.NOT_FOUND;
+                case "project_required" -> Response.Status.BAD_REQUEST;
+                default -> Response.Status.FORBIDDEN;
+            };
+            return noStore(Response.status(st).entity(new LoreError(d.code().toUpperCase(java.util.Locale.ROOT), d.message())));
+        }
+        long exp = java.time.Instant.now().getEpochSecond() + volvaTtlSeconds;
+        String jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.question(), project, exp), secret.get());
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("chart", chart);
+        out.put("project", project);
+        out.put("url", VolvaEmbedSigner.embedUrl(volvaSiteUrl.get(), jwt));
+        out.put("expires_at", java.time.Instant.ofEpochSecond(exp).toString());
+        LOG.debugf("[LORE EMBED] chart=%s project=%s exp=%d", chart, project, exp); // без адреса: в нём JWT
+        return noStore(Response.ok(out));
+    }
+
     // SAFE_ID, ENTITY_TYPES/PLAN_STATUSES/ADR_STATUSES/SCD2_STATUS_RAW, the
     // ArcadeDB clients, config, and shared helpers all live in LoreResourceBase
     // now (B2 God-class split) — every write-path domain (release/adr/spec/
