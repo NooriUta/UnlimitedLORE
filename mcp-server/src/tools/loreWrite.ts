@@ -138,12 +138,16 @@ function definePostTool<S extends z.ZodRawShape>(
     after?: (args: ShapeOutput<S>) => Promise<Record<string, unknown>>;
     /** Сироты 05.11: true = проекта нет ни в вызове, ни у сессии — отказ ДО записи. */
     missingProject?: (args: ShapeOutput<S>) => boolean;
+    /** Отказ ДО записи с объяснением, что делать вместо (MT-MCP-TRUTH A1): строка — текст отказа. */
+    refuse?: (args: ShapeOutput<S>) => string | null;
   },
 ): void {
   // The SDK's server.tool overloads don't unify cleanly with a generic shape, so
   // the registration is cast. Per-call-site type safety comes from `def.body`
   // being checked against `S`; runtime validation is the zod `schema` itself.
   const handler = async (args: ShapeOutput<S>) => {
+    const refusal = def.refuse?.(args);
+    if (refusal) return { content: [{ type: 'text' as const, text: refusal }], isError: true };
     if (def.missingProject?.(args)) return projectRequired();
     try {
       const res = await lorePost(def.path, def.body(args));
@@ -1216,17 +1220,30 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   // ── Open questions (KnowQuestion, ADR-020/021) ────────────────────────────
+  // MT-MCP-TRUTH A1–A2 (06.11.2026): `closed` раньше отбивался схемой голым
+  // «Invalid enum value», и агент выбирал `dropped` как ближайшее по смыслу —
+  // четыре доказательства ушли в заметки. Теперь `closed` проходит схему и
+  // получает отказ, который сам говорит, что делать.
+  const QUESTION_CLOSE_GUIDANCE =
+    'Вопрос не закрывается статусом: closed ставится САМ, когда решение отвечает на вопрос. ' +
+    'Сделай так: 1) decision_new — решение с доказательством (коммит, PR, замер, слово владелицы); ' +
+    '2) question_link rel="answers" target_id=<decision_id> — вопрос станет closed. ' +
+    'Одно решение может закрыть несколько вопросов (по связи answers на каждый) — для ревизии это одна запись вместо N. ' +
+    'Не путай с dropped: dropped = «решили НЕ отвечать», а «устарел, и вот доказательство» = closed через решение.';
+  const CLOSED_VS_DROPPED =
+    ' closed vs dropped: closed = answered/obsolete WITH a decision (set only via question_link rel="answers"; ' +
+    'one decision may answer several questions); dropped = decided NOT to answer. Never use dropped for "obsolete".';
   definePostTool(server, {
     name: 'question_new',
     description: 'Create or update a KnowQuestion — an OPEN QUESTION (ADR-020/021), the "what have we not answered yet" ' +
       'register. Upserts by question_id, vertex-only (no history). status="deferred" REQUIRES a trigger; ' +
       'status="closed" is set automatically when a decision answers it (question_link rel="answers"), never here. ' +
-      'RBAC: architect + analyst + pm + full.',
+      'RBAC: architect + analyst + pm + full.' + CLOSED_VS_DROPPED,
     schema: {
       question_id:  z.string().describe('e.g. "Q-M1", "OQ7", "Q-MT3"'),
       title:        z.string().optional().describe('the question itself'),
       body_md:      z.string().optional().describe('context, options, closing criterion'),
-      status:       z.enum(['open', 'deferred', 'dropped']).optional().describe('open|deferred|dropped (closed is set via answers link)'),
+      status:       z.enum(['open', 'deferred', 'dropped', 'closed']).optional().describe('open|deferred|dropped (closed is set via answers link)'),
       trigger:      z.string().optional().describe('REQUIRED when status="deferred": reactivation condition (may be a date)'),
       component_id: z.string().optional(),
       due_date:     z.string().optional().describe('YYYY-MM-DD — the answer deadline (drives overdue)'),
@@ -1241,6 +1258,7 @@ export function registerLoreWrite(server: McpServer): void {
       status: a.status ?? null, trigger: a.trigger ?? null, component_id: a.component_id ?? null,
       due_date: a.due_date ?? null, priority: a.priority ?? null, owner: a.owner ?? null, raised_by: a.raised_by ?? null,
     }),
+    refuse: (a) => (a.status === 'closed' ? QUESTION_CLOSE_GUIDANCE : null),
     after: (a) => inlineProject('question', a.question_id, a.project),
     missingProject: (a) => projectMissing(a.project),
   });
@@ -1249,12 +1267,12 @@ export function registerLoreWrite(server: McpServer): void {
     name: 'question_set',
     description: 'Update fields of an existing KnowQuestion (partial — omitted fields untouched). Same path as ' +
       'question_new. Use to change status/priority/due_date/owner. status="deferred" still requires a trigger; ' +
-      'do NOT set status="closed" here (link an answering decision instead).',
+      'do NOT set status="closed" here (link an answering decision instead).' + CLOSED_VS_DROPPED,
     schema: {
       question_id:  z.string(),
       title:        z.string().optional(),
       body_md:      z.string().optional(),
-      status:       z.enum(['open', 'deferred', 'dropped']).optional(),
+      status:       z.enum(['open', 'deferred', 'dropped', 'closed']).optional(),
       trigger:      z.string().optional(),
       component_id: z.string().optional(),
       due_date:     z.string().optional(),
@@ -1262,6 +1280,7 @@ export function registerLoreWrite(server: McpServer): void {
       owner:        z.string().optional(),
       raised_by:    z.string().optional(),
     },
+    refuse: (a) => (a.status === 'closed' ? QUESTION_CLOSE_GUIDANCE : null),
     path: '/lore/question',
     body: (a) => ({
       question_id: a.question_id, title: a.title ?? null, body_md: a.body_md ?? null,

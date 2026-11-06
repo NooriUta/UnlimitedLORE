@@ -593,6 +593,25 @@ public final class LoreSlices {
             List.of(), Map.of(), " ORDER BY status_rank, question_id");
 
 
+        // SPRINT_LORE_MEASURE_TRUTH/MT-MCP-TRUTH A4 · A8 · A10 (06.11.2026): гигиена
+        // вопросов — сырые факты по открытым и отложенным. decision_candidates —
+        // решения, чьи refs_raw упоминают id вопроса (решение есть, связи answers нет);
+        // trigger отложенных на виду (A8); raised_sprint_status — вопрос в закрытом
+        // спринте или ни в каком (A10).
+        // БЕЗ ORDER BY — намеренно: замер прода 06.11 — с ORDER BY ArcadeDB теряет
+        // корреляцию $parent.$current в LET, условие вырождается в LIKE '%%', и
+        // каждому вопросу приписываются все решения (186/186). Без него — 35/204.
+        // LIMIT и условие скоупа корреляцию не ломают. Сортирует потребитель.
+        slice("question_hygiene",
+            "SELECT question_id, title, status, owner, priority, due_date, `trigger`, opened_date, " +
+            "out('RAISED_IN').sprint_id AS raised_sprints, " +
+            "out('RAISED_IN')[@type='KnowSprint'].out('HAS_STATE')[valid_to IS NULL].status_raw AS raised_sprint_status, " +
+            "$d.decision_id AS decision_candidates " +
+            "FROM KnowQuestion " +
+            "LET $d = (SELECT decision_id FROM KnowDecision WHERE refs_raw LIKE ('%' + $parent.$current.question_id + '%')) " +
+            "WHERE status IN ['open', 'deferred']",
+            List.of(), Map.of(), "");
+
         // Адресные формы по id (SL-01, запрос сессии miniLORE через владельца).
         //
         // Шлюз miniLORE открывает записи по идентификатору. У сценариев адресной
@@ -2418,6 +2437,8 @@ public final class LoreSlices {
         Map.entry("open_questions", QUESTION_SCOPE),
         // D-2026-LORE-QUESTIONS-SLICE-RENAME: новое имя того же среза — тот же скоуп.
         Map.entry("questions", QUESTION_SCOPE),
+        // MT-MCP-TRUTH A4/A8/A10: гигиена вопросов видна тем же, кому видны сами вопросы.
+        Map.entry("question_hygiene", QUESTION_SCOPE),
         // AL-SCOPE-HOLES (06.11.2026): выпадающий список проектов — по самому slug («=» — скалярное поле).
         Map.entry("git_projects", "=slug"),
         // Задачи — проект через спринт.

@@ -29,6 +29,34 @@ public class LoreQuestionResource extends LoreResourceBase {
 
     private static final java.util.Set<String> STATUSES = java.util.Set.of("open", "deferred", "closed", "dropped");
 
+    /**
+     * MT-MCP-TRUTH A1–A2 (06.11.2026): отказ на closed руками обязан объяснять
+     * механику. Прежний текст её не называл, и агент ставил dropped как
+     * ближайшее по смыслу — четыре доказательства ушли в заметки вместо решения.
+     */
+    static final String CLOSE_GUIDANCE =
+        "status='closed' не ставится руками: вопрос закрывается САМ, когда решение отвечает на него. "
+        + "Сделай: decision_new с доказательством (коммит, PR, замер, слово владелицы), затем "
+        + "question_link rel=answers (POST /lore/question/answers) — статус станет closed. "
+        + "Одно решение может закрыть несколько вопросов — по связи answers на каждый. "
+        + "Не путай с dropped: dropped = «решили НЕ отвечать»; «устарел, и вот доказательство» = closed через решение.";
+
+    /**
+     * MT-MCP-TRUTH A6: одна личность владелицы — пять написаний в owner
+     * (omiloreadmin 74, owner 21, владелец 19, владелица 9, alexa 4 на 06.11).
+     * Синонимы сводятся при записи; прочие значения (сессии, агенты, составные)
+     * не трогаются — их смысл решает человек, а не словарь.
+     */
+    static final String OWNER_IDENTITY = "omiloreadmin";
+    private static final java.util.Set<String> OWNER_ALIASES =
+        java.util.Set.of("omiloreadmin", "owner", "владелец", "владелица", "alexa");
+
+    static String normalizeOwner(String owner) {
+        if (owner == null) return null;
+        String t = owner.strip();
+        return OWNER_ALIASES.contains(t.toLowerCase(java.util.Locale.ROOT)) ? OWNER_IDENTITY : owner;
+    }
+
     public record QuestionCreateRequest(
         String question_id, String title, String body_md, String status,
         String trigger, String component_id, String due_date, String priority,
@@ -49,7 +77,7 @@ public class LoreQuestionResource extends LoreResourceBase {
             return badParams("status must be one of open|deferred|closed|dropped");
         // closed is a consequence of an ANSWERS link, never set by hand.
         if ("closed".equals(req.status()))
-            return badParams("status='closed' is set automatically via /question/answers, not directly");
+            return badParams(CLOSE_GUIDANCE);
         // deferred without a trigger is exactly the rot ADR-021 warns against.
         if ("deferred".equals(req.status()) && (req.trigger() == null || req.trigger().isBlank()))
             return badParams("status='deferred' requires a non-empty trigger");
@@ -72,7 +100,7 @@ public class LoreQuestionResource extends LoreResourceBase {
             putIf(sql, p, "component_id", ":comp",  req.component_id());
             putIf(sql, p, "due_date",     ":due",   req.due_date());
             putIf(sql, p, "priority",     ":prio",  req.priority());
-            putIf(sql, p, "owner",        ":owner", req.owner());
+            putIf(sql, p, "owner",        ":owner", normalizeOwner(req.owner()));
             putIf(sql, p, "raised_by",    ":rb",    req.raised_by());
             putIf(sql, p, "opened_date",  ":od",    req.opened_date());
             putIf(sql, p, "closed_date",  ":cd",    req.closed_date());
