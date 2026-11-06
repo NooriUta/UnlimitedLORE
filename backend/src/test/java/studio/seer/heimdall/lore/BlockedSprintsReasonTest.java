@@ -64,4 +64,34 @@ class BlockedSprintsReasonTest {
         assertNull(LoreStatusResource.blockReasonHint("sprint", "active", null));
         assertNull(LoreStatusResource.blockReasonHint("task", "blocked", null), "причина — у спринтов");
     }
+
+    @Test
+    void openQuestionGatingAClosedTaskIsListed() {
+        // Проверка 5: открытый вопрос держит задачу, которая уже done/cancelled.
+        String s = sql("questions_gating_closed_tasks");
+        assertTrue(s.contains("FROM KnowQuestion WHERE status <> 'closed'"), s);
+        assertTrue(s.contains("out('GATES')[out('HAS_STATE')[valid_to IS NULL AND ("), "закрытость — по ТЕКУЩЕМУ состоянию задачи: " + s);
+        assertTrue(s.contains(LoreStatusVocabulary.anySql("status_raw", "done", "cancelled")), s);
+        assertTrue(s.contains(" AS closed_tasks") && s.contains(" AS owner"), s);
+    }
+
+    @Test
+    void closingATaskMarksItsGatesSolvedAndReopeningUnmarks() {
+        // QG-17: ребро не снимается, только метка.
+        String done = LoreStatusResource.gatesSolvedSql("done");
+        assertTrue(done.startsWith("UPDATE GATES SET solved_at = :now"), done);
+        assertEquals(done, LoreStatusResource.gatesSolvedSql("cancelled"));
+        String reopen = LoreStatusResource.gatesSolvedSql("active");
+        assertTrue(reopen.contains("solved_at = null"), reopen);
+        for (String q : new String[] {done, reopen}) {
+            assertFalse(q.toUpperCase().contains("DELETE"), "связь не удаляется: " + q);
+            assertTrue(q.contains("@in.task_uid = :id"), q);
+        }
+    }
+
+    @Test
+    void gatingQuestionsOfTaskIgnoreSolvedLinks() {
+        String s = LoreSlices.compose("gating_questions_of_task", Map.of("id", "SPRINT_X/T-1")).sql();
+        assertTrue(s.contains("outE('GATES')[solved_at IS NULL]"), s);
+    }
 }

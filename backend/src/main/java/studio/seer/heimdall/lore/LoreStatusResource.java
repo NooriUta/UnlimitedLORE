@@ -46,6 +46,18 @@ public class LoreStatusResource extends LoreResourceBase {
      * может служить и незакрытая зависимость, и открытый вопрос — их видит гейт
      * QG-LORE-BLOCKED-REASON), но ответ говорит об этом прямо, а не молчит.
      */
+    /**
+     * SPRINT_QG_REBUILD/QG-17, владелица 06.11: «связь не должна сниматься, но должна
+     * помечаться как solved». Задача закрыта (done|cancelled) — входящие GATES получают
+     * solved_at; задача снова открыта — метка снимается. Ребро не удаляется никогда.
+     */
+    static String gatesSolvedSql(String status) {
+        boolean closed = "done".equals(status) || "cancelled".equals(status);
+        return closed
+            ? "UPDATE GATES SET solved_at = :now WHERE @in.task_uid = :id AND solved_at IS NULL"
+            : "UPDATE GATES SET solved_at = null WHERE @in.task_uid = :id AND solved_at IS NOT NULL";
+    }
+
     static String blockReasonHint(String entityType, String status, String reason) {
         if (!"sprint".equals(entityType) || !"blocked".equals(status)) return null;
         if (reason != null && !reason.isBlank()) return null;
@@ -166,6 +178,15 @@ public class LoreStatusResource extends LoreResourceBase {
             return Uni.createFrom().item(() -> {
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.id());
                     readiness.recomputeForTask(req.id());
+                    // QG-17: связь «вопрос держит задачу» не снимается, а помечается решённой.
+                    try {
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            gatesSolvedSql(req.status()), Map.of("id", req.id(), "now", now)))
+                            .await().indefinitely();
+                    } catch (Exception ex) {
+                        LOG.warnf("[LORE STATUS] task=%s GATES solved_at не обновлён (статус сменён): %s",
+                            req.id(), ex.getMessage());
+                    }
                     return r;
                 })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())

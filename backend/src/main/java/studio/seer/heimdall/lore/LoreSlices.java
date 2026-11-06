@@ -631,9 +631,25 @@ public final class LoreSlices {
             "FROM KnowQuestion WHERE out('RAISED_IN').sprint_id CONTAINS :id ORDER BY question_id",
             List.of("id"), Map.of(), "");
 
+        // SPRINT_QG_REBUILD/QG-16, проверка 5 (предложение координатора, переслано владелицей
+        // 06.11): открытый вопрос держит (GATES) задачу, которая уже закрыта. Механизм gates
+        // задуман самоочищающимся, но связь при закрытии задачи не снимается — вопрос
+        // числится блокером того, что уже сделано (замер 06.11: минимум 8, среди них blocker).
+        slice("questions_gating_closed_tasks",
+            "SELECT question_id, title, status, priority, owner, " +
+            "out('GATES')[out('HAS_STATE')[valid_to IS NULL AND (" +
+                LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") +
+            ")].size() > 0].task_uid AS closed_tasks, " +
+            "out('GATES').task_uid AS gated_tasks " +
+            "FROM KnowQuestion WHERE status <> 'closed' AND out('GATES')[out('HAS_STATE')[valid_to IS NULL AND (" +
+                LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") +
+            ")].size() > 0].size() > 0",
+            List.of(), Map.of(), " ORDER BY question_id");
+
         slice("gating_questions_of_task",
             "SELECT question_id, title, status, priority " +
-            "FROM KnowQuestion WHERE out('GATES').task_uid CONTAINS :id AND status <> 'closed' ORDER BY question_id",
+            // QG-17: решённая связь (solved_at — задача уже закрыта) больше не блокер.
+            "FROM KnowQuestion WHERE outE('GATES')[solved_at IS NULL].inV().task_uid CONTAINS :id AND status <> 'closed' ORDER BY question_id",
             List.of("id"), Map.of(), "");
 
         // ── §3 Sprints ───────────────────────────────────────────────────────
