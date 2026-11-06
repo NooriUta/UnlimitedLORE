@@ -122,7 +122,7 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
 
   const load = useCallback(() => {
     setLoading(true);
-    fetchLoreSlice<LoreQuestionRow>('open_questions')
+    fetchLoreSlice<LoreQuestionRow>('questions')
       .then(r => { setRows(r); setLoading(false); })
       .catch(e => { onError(e); setLoading(false); });
   }, [onError]);
