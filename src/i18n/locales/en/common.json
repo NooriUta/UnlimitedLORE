@@ -1095,7 +1095,17 @@
       "sprintsWithoutMilestones": "Sprints without milestones · {{count}}",
       "allSprintsLinked": "All sprints are linked to milestones ✓",
       "intoMilestonePlaceholder": "→ into milestone…",
-      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}"
+      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}",
+      "noForecast": "The product has no forecast milestones: no plan yet, not «all done»",
+      "frozenSummary": "History — {{count}} frozen milestones (not counted as open work)",
+      "noProductTag": "no product",
+      "allProducts": "All",
+      "withoutProduct": "No product",
+      "productsField": "Product",
+      "unlinkProduct": "unlink product",
+      "linkProductPlaceholder": "+ product…",
+      "unplannedTitle": "Unplanned — open sprints without a milestone · {{count}}",
+      "allOpenPlanned": "Every open sprint is in a milestone ✓"
     },
     "modulePassport": {
       "loading": "Loading module…",
