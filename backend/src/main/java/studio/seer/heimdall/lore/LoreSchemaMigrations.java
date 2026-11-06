@@ -1365,7 +1365,35 @@ final class LoreSchemaMigrations {
         // в ответ №15 не входили и пережили V54. На проде 05.11 оба пусты (0 строк),
         // код их не создаёт и не читает. Тот же механизм: только при нулевом счёте,
         // иначе WARN и ничего не удаляется. Бэкап перед шагом снимает раннер.
-        new Step(57, 17, "java__drop_planitem_leftovers_if_unused", List.of())
+        new Step(57, 17, "java__drop_planitem_leftovers_if_unused", List.of()),
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-ACTUAL (06.11.2026): факт трудоёмкости
+        // рядом с оценкой. Калибровка показала: факт выводился только из истории
+        // статусов, а у 75% закрытых задач рабочего статуса нет — измеримых пар 14%.
+        // Поле на ВЕРШИНЕ (как work_class): факт не версионируется. Тип объявлен
+        // заранее (урок RM-P12 — необъявленное поле получает тип от первого пишущего).
+        new Step(58, 17, "task_actual_days", List.of(
+            "CREATE PROPERTY KnowTask.actual_days IF NOT EXISTS DOUBLE")),
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-BOOKKEEPING (06.11.2026): «запись задним
+        // числом» — задача заведена и закрыта как учёт уже сделанной работы. Её
+        // done_date — дата простановки статуса, не работы; аналитика скорости её
+        // исключает и говорит, сколько исключила. Вершина, не Hist (как work_class).
+        new Step(59, 17, "task_bookkeeping", List.of(
+            "CREATE PROPERTY KnowTask.bookkeeping IF NOT EXISTS BOOLEAN")),
+
+        // SPRINT_LORE_PRODUCT_BACKLOG/AN-09 · decision:D-2026-LORE-FEATURE-BUILDS-ON-EDGE
+        // (06.11.2026): линейка фич «опирается на → открывает дорогу» — ребром, а не
+        // текстовыми ссылками context_md (истина в рёбрах, D5). Направление:
+        // фича → фича, на которую она опирается.
+        new Step(60, 17, "feature_builds_on", List.of(
+            "CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS")),
+
+        // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3 (Q-MINILORE-TASK-PR-EDGE, владелица
+        // «ок» 06.11.2026): задача → PR, который её закрыл, — РЕБРОМ, а не текстом
+        // note_md. Релиз находит свои задачи через PR → SHIPPED_IN.
+        new Step(61, 17, "task_closed_by", List.of(
+            "CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

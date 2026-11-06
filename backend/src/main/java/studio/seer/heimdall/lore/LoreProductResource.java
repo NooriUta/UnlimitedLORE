@@ -1279,6 +1279,19 @@ public class LoreProductResource extends LoreResourceBase {
 
     public record FeatureLinkRequest(String feature_id, String rel, String target_id, String action) {}
 
+    /** Ребро для rel feature_link; null — rel неизвестен. */
+    static String featureEdgeOf(String rel) {
+        return switch (rel == null ? "" : rel) {
+            case "pain" -> "ADDRESSES";
+            case "gain" -> "PROMISES";
+            case "job" -> "HELPS_WITH";
+            case "milestone" -> "TARGETS_MILESTONE";
+            case "component" -> "BELONGS_TO";
+            case "builds_on" -> "BUILDS_ON";
+            default -> null;
+        };
+    }
+
     @POST
     @Path("feature/link")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -1288,7 +1301,7 @@ public class LoreProductResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.feature_id() == null || req.feature_id().isBlank()
                 || req.rel() == null || req.target_id() == null || req.target_id().isBlank())
-            return badParams("feature_id, rel (pain|gain|job|milestone|component), target_id required");
+            return badParams("feature_id, rel (pain|gain|job|milestone|component|builds_on), target_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, toSql;
@@ -1320,7 +1333,14 @@ public class LoreProductResource extends LoreResourceBase {
                     toSql = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
                     inField = "component_id";
                 }
-                default -> { return badParams("rel must be pain|gain|job|milestone|component"); }
+                case "builds_on" -> { // AN-09: фича опирается на другую фичу (D-2026-LORE-FEATURE-BUILDS-ON-EDGE)
+                    if (req.feature_id().equals(req.target_id()))
+                        return badParams("builds_on: фича не может опираться сама на себя");
+                    edge = "BUILDS_ON";
+                    toSql = "(SELECT FROM KnowUseCase WHERE uc_id=:tid)";
+                    inField = "uc_id";
+                }
+                default -> { return badParams("rel must be pain|gain|job|milestone|component|builds_on"); }
             }
                         // Проба ДО обеих веток. Имена ключевых полей у концов берутся из тех
                         // же подзапросов, что и запись, — иначе проба спрашивала бы про
@@ -1331,7 +1351,7 @@ public class LoreProductResource extends LoreResourceBase {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
-                    "OR @in.milestone_id=:tid OR @in.component_id=:tid", p))
+                    "OR @in.milestone_id=:tid OR @in.component_id=:tid OR @in.uc_id=:tid", p))
                     .await().indefinitely();
                 return unlinkOutcome(Map.of("ok", true, "feature_id", req.feature_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);

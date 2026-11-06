@@ -12,6 +12,7 @@ import { useUrlState } from '../../hooks/useUrlState';
 import { LoadError, SliceLoadWarning } from './EmptyState';
 import { pageLevelError, settleSlices } from './loadState';
 import { scrollStrip, stripItem } from './mobileLayout';
+import { isBookkeeping, isoWeekKey, taskThroughputOf, TASK_THROUGHPUT_CUTOFF } from './taskThroughput';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -164,15 +165,6 @@ function parseDoneDate(s: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// ISO week key "YYYY-Www"
-function isoWeekKey(d: Date): string {
-  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const thu = new Date(tmp);
-  thu.setUTCDate(thu.getUTCDate() - (tmp.getUTCDay() + 6) % 7 + 3);
-  const jan4 = new Date(Date.UTC(thu.getUTCFullYear(), 0, 4));
-  const w    = 1 + Math.round((thu.getTime() - jan4.getTime()) / 604800000);
-  return `${thu.getUTCFullYear()}-W${String(w).padStart(2, '0')}`;
-}
 
 // ── shared primitives ─────────────────────────────────────────────────────
 
@@ -391,7 +383,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [chartProj,       setChartProj]       = useState<string>('all');
   const [chartMilestone,  setChartMilestone]  = useState<string>('all');
   const [chartComp,       setChartComp]       = useState<string>('all');
-  const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }[]>([]);
+  const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null; bookkeeping?: boolean | boolean[] | null }[]>([]);
   const [taskStarts, setTaskStarts] = useState<{ task_id: string; valid_from: string | null }[]>([]);
   const [techRows,   setTechRows]   = useState<LoreTechRow[]>([]);
 
@@ -846,28 +838,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return { ever: everBlocked.size, total, nowBlocked, ids: [...everBlocked] };
   }, [blockedRows, sprintRows, data]);
 
-  // Task throughput by ISO week — real closures only:
-  // valid_from >= LORE go-live (12 июн; раньше = массовый импорт) AND states>1
-  // (>1 hist state = реальная прогрессия, а не «рождена done»/архивный дамп).
-  const TASK_THROUGHPUT_CUTOFF = '2026-06-12';
-  const taskThroughput = useMemo(() => {
-    const map = new Map<string, number>();
-    let counted = 0;
-    taskDone.forEach(t => {
-      const st = Array.isArray(t.states) ? t.states[0] : t.states;
-      const raw = String(t.valid_from ?? '');
-      if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;        // skip epoch/garbage
-      const day = raw.slice(0, 10);
-      if (day < TASK_THROUGHPUT_CUTOFF) return;            // skip import era
-      if (!st || st <= 1) return;                          // skip archived "born done"
-      const wk = isoWeekKey(new Date(day));
-      map.set(wk, (map.get(wk) ?? 0) + 1); counted++;
-    });
-    const weeks = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12)
-      .map(([key, count]) => ({ key, label: `W${key.split('-W')[1]}`, count }));
-    const avg = weeks.length ? Math.round(counted / weeks.length) : 0;
-    return { weeks, counted, avg };
-  }, [taskDone]);
+  // Task throughput by ISO week — real closures only (отсечки и исключение
+  // записей задним числом — taskThroughput.ts, MT-CAL-BOOKKEEPING).
+  const taskThroughput = useMemo(() => taskThroughputOf(taskDone), [taskDone]);
 
   // Эффективность потока: сколько задача ДЕЛАЛАСЬ против того, сколько ЖИЛА.
   //
@@ -899,6 +872,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       const raw = String(t.valid_from ?? ''); if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;
       const done = raw.slice(0, 10);
       if (done < TASK_THROUGHPUT_CUTOFF || !(st && st > 1) || !ef || ef <= 0) return;
+      if (isBookkeeping(t)) return;                     // MT-CAL-BOOKKEEPING: запись задним числом — не поток
       const cr = created.get(t.task_id); if (!cr) return;
       const dur = Math.max(0, Math.round((new Date(done).getTime() - new Date(cr).getTime()) / 86400000));
       n++; work += ef; elapsed += dur;
@@ -1674,7 +1648,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={S.panelTitle} title={t('lore.analytics.flow.throughputHint', 'Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done».')}>
             Throughput задач <span style={S.dim}>· закрыто/нед</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн
+            {taskThroughput.bookkeepingExcluded > 0 && (
+              <span title={t('lore.analytics.flow.bookkeepingExcludedHint')}> · {t('lore.analytics.flow.bookkeepingExcluded', { n: taskThroughput.bookkeepingExcluded })}</span>
+            )}
+          </span>
         </div>
         {taskThroughput.weeks.length === 0 ? <div style={S.empty}>Нет данных за период.</div> : (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 90 }}>

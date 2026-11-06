@@ -51,6 +51,31 @@ public class UcReadinessCalculator {
     /** Предел подъёма по иерархии — страховка от кольца в данных (цикл отбивается на записи, но данные могли прийти раньше защиты). */
     private static final int MAX_DEPTH = 20;
 
+    /**
+     * Факты для правила готовности одного сценария.
+     *
+     * <p>Статус задачи живёт на ОТКРЫТОЙ HAS_STATE (SCD2 копит строки, у текущей
+     * valid_to IS NULL), а не на вершине KnowTask — свойства status_raw у вершины
+     * в схеме нет вовсе. Фильтр по вершине молча давал task_done=0 всегда.
+     *
+     * <p>«Закрыто» и «отменено» — из единого словаря статусов (LoreStatusVocabulary,
+     * QG-13), якорем в начале строки. Прежняя подстрока {@code '%DONE%'} считала
+     * закрытой «⬜ TODO — (V1 ✅ DONE…)». Отменённые считаются отдельно: отмена — не
+     * работа (находка AN-06, 06.11.2026).
+     */
+    static final String READINESS_SQL =
+        "SELECT status, shipped_at, " +
+        "in('REALIZES').size() AS task_total, " +
+        "in('REALIZES').out('HAS_STATE')[valid_to IS NULL AND (" +
+            LoreStatusVocabulary.anySql("status_raw", "done") + ")].size() AS task_done, " +
+        "in('REALIZES').out('HAS_STATE')[valid_to IS NULL AND (" +
+            LoreStatusVocabulary.anySql("status_raw", "cancelled") + ")].size() AS task_cancelled, " +
+        "out('DECOMPOSES_INTO').size() AS kid_total, " +
+        "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS kid_shipped, " +
+        "out('DECOMPOSES_INTO')[status = 'in_rework'].size() AS kid_rework, " +
+        "in('DECOMPOSES_INTO').uc_id AS parents " +
+        "FROM KnowUseCase WHERE uc_id = :id";
+
     @Inject LoreIngestService ingest;
     @Inject @RestClient LoreCommandClient writeClient;
     @Inject MartCredentials credentials;
@@ -88,22 +113,7 @@ public class UcReadinessCalculator {
             LOG.warnf("[LORE READINESS] обход иерархии от %s превысил %d уровней — вероятен цикл в данных", ucId, MAX_DEPTH);
             return;
         }
-        List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT status, shipped_at, " +
-            "in('REALIZES').size() AS task_total, " +
-            // Статус задачи живёт на ОТКРЫТОЙ HAS_STATE (SCD2 копит строки, у
-            // текущей valid_to IS NULL), а не на вершине KnowTask — свойства
-            // status_raw у вершины в схеме нет вовсе. Фильтр по вершине молча
-            // давал task_done=0 всегда, и ни один сценарий не доходил до
-            // shipped: D17 систематически недосчитывал выпуск.
-            // Набор «закрыто» тот же, что у normalize(): DONE | CLOSED | ЗАВЕРШ.
-            "in('REALIZES').out('HAS_STATE')[valid_to IS NULL AND (status_raw LIKE '%DONE%' " +
-            "OR status_raw LIKE '%CLOSED%' OR status_raw LIKE '%ЗАВЕРШ%')].size() AS task_done, " +
-            "out('DECOMPOSES_INTO').size() AS kid_total, " +
-            "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS kid_shipped, " +
-            "out('DECOMPOSES_INTO')[status = 'in_rework'].size() AS kid_rework, " +
-            "in('DECOMPOSES_INTO').uc_id AS parents " +
-            "FROM KnowUseCase WHERE uc_id = :id", Map.of("id", ucId));
+        List<Map<String, Object>> rows = ingest.queryPublic(READINESS_SQL, Map.of("id", ucId));
         if (rows.isEmpty()) return;
         Map<String, Object> r = rows.get(0);
 
@@ -113,7 +123,7 @@ public class UcReadinessCalculator {
         if ("dropped".equals(stored)) return;
 
         String computed = compute(
-            num(r.get("task_total")), num(r.get("task_done")),
+            num(r.get("task_total")), num(r.get("task_done")), num(r.get("task_cancelled")),
             num(r.get("kid_total")), num(r.get("kid_shipped")), num(r.get("kid_rework")),
             str(r.get("shipped_at")) != null);
 
@@ -154,6 +164,19 @@ public class UcReadinessCalculator {
     static String compute(int taskTotal, int taskDone,
                           int kidTotal, int kidShipped, int kidRework,
                           boolean wasShipped) {
+        return compute(taskTotal, taskDone, 0, kidTotal, kidShipped, kidRework, wasShipped);
+    }
+
+    /**
+     * Находка среза I (AN-06, 06.11.2026): отмена — не работа. Отменённая задача
+     * не входит ни в «всего», ни в «закрыто»; иначе выпущенный сценарий с
+     * отменённой задачей не выходит из in_rework никогда (на проде так стояли
+     * UC-KNOW-DECISION, UC-KNOW-FIND, UC-TOOLS-LAZY-NAMES).
+     */
+    static String compute(int taskTotalAll, int taskDone, int taskCancelled,
+                          int kidTotal, int kidShipped, int kidRework,
+                          boolean wasShipped) {
+        int taskTotal = Math.max(0, taskTotalAll - taskCancelled);
         if (taskTotal == 0 && kidTotal == 0) return null;
 
         boolean tasksDone = taskTotal > 0 && taskDone == taskTotal;

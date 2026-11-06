@@ -283,6 +283,13 @@ public class LoreMilestoneResource extends LoreResourceBase {
         }
     }
 
+    /** Open (valid_to IS NULL) hist rows of a milestone, with their goal text. */
+    private List<Map<String, Object>> openGoalHist(String milestoneId) {
+        return ingestService.queryPublic(
+            "SELECT @rid, goal_md FROM (SELECT expand(out('HAS_STATE')) FROM KnowMilestone " +
+            "WHERE milestone_id=:mid) WHERE valid_to IS NULL", Map.of("mid", milestoneId));
+    }
+
     // ── Write-path: upsert milestone (create / edit label, week, date, goal) ──
 
     public record MilestoneRequest(String milestone_id, String label, Integer week,
@@ -312,21 +319,38 @@ public class LoreMilestoneResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 msql.toString(), p)).await().indefinitely();
             // Goal text lives in the current HAS_STATE hist row — update it if provided.
+            // MS-GOAL: a milestone created through this endpoint has NO hist row, and
+            // the old code then skipped the write silently and still answered ok:true —
+            // 29 goals were lost that way on 06.11.2026. The first goal now opens the
+            // row (INSERT hist + HAS_STATE edge in one sqlscript), and the answer reports
+            // the FACT read back from the graph, not the absence of an exception.
+            Boolean goalWritten = null;
             if (req.goal_md() != null) {
-                List<Map<String, Object>> hist = ingestService.queryPublic(
-                    "SELECT @rid FROM (SELECT expand(out('HAS_STATE')) FROM KnowMilestone " +
-                    "WHERE milestone_id=:mid) WHERE valid_to IS NULL", Map.of("mid", req.milestone_id()));
+                List<Map<String, Object>> hist = openGoalHist(req.milestone_id());
                 if (!hist.isEmpty()) {
                     String rid = hist.get(0).get("@rid").toString();
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "UPDATE " + rid + " SET goal_md=:g", Map.of("g", req.goal_md()))).await().indefinitely();
+                } else {
+                    Map<String, Object> hp = new java.util.HashMap<>();
+                    hp.put("mid", req.milestone_id());
+                    hp.put("g", req.goal_md());
+                    hp.put("nsid", java.util.UUID.randomUUID().toString());
+                    hp.put("now", java.time.Instant.now().toString());
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                        "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g;"
+                        + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowMilestone WHERE milestone_id=:mid) "
+                        + "TO (SELECT FROM KnowMilestoneHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 }
+                List<Map<String, Object>> after = openGoalHist(req.milestone_id());
+                goalWritten = after.size() == 1 && req.goal_md().equals(after.get(0).get("goal_md"));
             }
             if (req.goal_md() != null)
                 hashStamper.stampOpenHist("KnowMilestoneHist", "KnowMilestone", "milestone_id", req.milestone_id());
             Map<String, Object> out = new java.util.LinkedHashMap<>();
-            out.put("ok", true);
+            out.put("ok", goalWritten == null || goalWritten);
             out.put("milestone_id", req.milestone_id());
+            if (goalWritten != null) out.put("goal_written", goalWritten);
             // Вердикт полноты (ADR-LORE-039): веха без даты не ложится на план.
             WorkQuality.Result quality = milestoneQuality(req.milestone_id());
             if (quality != null) out.put("quality", WorkQuality.compact(quality));

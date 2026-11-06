@@ -479,6 +479,11 @@ public class LoreSearchResource extends LoreResourceBase {
         // Пустой список, а не отсутствие ключа: потребителю не приходится
         // различать «поле не пришло» и «предупреждений нет».
         out.put("warnings", warnings);
+        // MT-MCP-TRUTH A11: исход словом — по одним hits «упало» неотличимо от «пусто».
+        // Частично опрошенные и сканированные ветки — не отказ, в счёт не идут.
+        long failedBranches = warnings.stream().filter(w -> w.containsKey("error")
+            && !w.containsKey("partial") && !w.containsKey("scanned")).count();
+        out.put("outcome", outcomeOf(active.size(), (int) failedBranches, hits.size()));
         out.put("total_collected", hits.size());
         out.put("capped_at", BRANCH_CAP);
         // SRCH-09: во что превратился запрос. Пользователь ввёл слово, а в
@@ -784,11 +789,34 @@ public class LoreSearchResource extends LoreResourceBase {
      * exact: "фраза целиком";
      * fuzzy: токены от 5 букв получают ~ (устойчивость к опечаткам).
      */
+    /** Слова, которые Lucene читает как операторы ТОЛЬКО в верхнем регистре. */
+    static final java.util.Set<String> LUCENE_OPERATOR_WORDS = java.util.Set.of("AND", "OR", "NOT", "TO");
+
+    /**
+     * MT-MCP-TRUTH A11: исход поиска словом, а не голыми hits. Упали все ветки —
+     * «failed» (не «пусто»); упала часть — «partial_failure»: и пустая, и
+     * непустая выдача тогда недостоверна по охвату. Ни одной ветки по фильтру
+     * не было — это «empty», а не сбой.
+     */
+    static String outcomeOf(int activeBranches, int failedBranches, int hits) {
+        if (activeBranches > 0 && failedBranches >= activeBranches) return "failed";
+        if (failedBranches > 0) return "partial_failure";
+        return hits > 0 ? "found" : "empty";
+    }
+
     static String buildLuceneQuery(String q, String mode) {
         String cleaned = q.replaceAll("[+\\-!(){}\\[\\]^\"~*?:\\\\/&|]", " ").trim();
         if (cleaned.isBlank()) return "";
         if ("exact".equals(mode)) return "\"" + cleaned + "\"";
         String[] tokens = cleaned.split("\\s+");
+        // MT-MCP-TRUTH A11 (06.11.2026): слова-операторы Lucene из ВВОДА — термы.
+        // «Q-CI-LOGS-NOT-PERSISTED» после вырезания дефисов давал токен NOT, и
+        // разбор падал во всех ветвях — ответ hits:[] был неотличим от пустой
+        // базы. Анализатор приводит термы к нижнему регистру, поэтому «not»
+        // ищет то же слово, но оператором уже не является.
+        for (int k = 0; k < tokens.length; k++) {
+            if (LUCENE_OPERATOR_WORDS.contains(tokens[k])) tokens[k] = tokens[k].toLowerCase(java.util.Locale.ROOT);
+        }
         List<String> parts = new ArrayList<>();
         for (int i = 0; i < tokens.length; i++) {
             String t = tokens[i];
