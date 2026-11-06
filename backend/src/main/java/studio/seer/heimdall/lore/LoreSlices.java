@@ -1122,6 +1122,26 @@ public final class LoreSlices {
         // uc/jtd/enb по effort_days с фолбэком на счёт по штукам и обязан честно
         // помечать, какая доля считана по штукам (строки с effort_days = null).
         // work_class = null — легальная строка (неклассифицированное — тоже сигнал).
+        // SPRINT_LORE_PRODUCT_BACKLOG/AN-06 · ADR-LORE-030 §2 срез I «реинжиниринг-нагрузка».
+        // decision:D-2026-LORE-REENG-SHIPPED-IN-REWORK: uc-задача к выпущенному сценарию
+        // переводит его в in_rework, shipped_at сохраняется. Сырые факты, как у
+        // invest_profile: строка на uc-задачу сценария, который хоть раз выпускался.
+        // Эпизод (задача заведена ПОСЛЕ shipped_at) и его длительность считает
+        // потребитель (reengLoad.ts) — min по датам состояний в SQL не берём:
+        // агрегаты по датам в ArcadeDB уже роняли слайсы (ClassCastException).
+        // Запрос проверен read-only на проде 06.11.
+        slice("reeng_load",
+            "SELECT task_uid, " +
+            "out('REALIZES').uc_id[0]      AS uc_id, " +
+            "out('REALIZES').title[0]      AS uc_title, " +
+            "out('REALIZES').status[0]     AS uc_status, " +
+            "out('REALIZES').shipped_at[0] AS shipped_at, " +
+            "out('HAS_STATE').valid_from   AS state_dates, " +
+            "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
+            "out('HAS_STATE')[valid_to IS NULL].valid_from[0] AS status_since " +
+            "FROM KnowTask WHERE out('REALIZES')[shipped_at IS NOT NULL].size() > 0",
+            List.of(), Map.of(), " ORDER BY task_uid");
+
         slice("invest_profile",
             "SELECT task_uid, work_class, task_type, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
@@ -2403,6 +2423,8 @@ public final class LoreSlices {
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        // AN-06: срез I — строка на uc-задачу, проект через её спринт.
+        Map.entry("reeng_load", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("backlog_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("all_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("task_status_by_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
