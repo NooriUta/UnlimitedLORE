@@ -41,15 +41,34 @@ final class VolvaEmbedSigner {
         Integer q = chart == null ? null : questions.get(chart);
         if (q == null)
             return new Decision("unknown_chart", null, "график «" + chart + "» не в белом списке: " + questions.keySet());
-        if (project == null || !SLUG.matcher(project).matches())
+        java.util.List<String> projects = projectList(project);
+        if (projects.isEmpty() || projects.stream().anyMatch(p -> !SLUG.matcher(p).matches()))
             return new Decision("project_required", null,
-                "нужен проект вида owner/repo — встройка запирает график на одном проекте");
+                "нужен проект вида owner/repo (или список через запятую) — встройка запирает график на проектах");
         if (callerIsAgent)
             return new Decision("agent_refused", null,
                 "подпись выдаётся только под пользователя: служебный клиент с правом «читает всё» получил бы незапертый график");
-        if (allowedProjects != null && !allowedProjects.contains(project))
-            return new Decision("forbidden_project", null, "проект " + project + " вне ваших проектов");
+        if (allowedProjects != null) {
+            // Чужой проект в списке — отказ ЦЕЛИКОМ: молчаливое выкидывание сделало
+            // бы подмену похожей на успех.
+            for (String p : projects)
+                if (!allowedProjects.contains(p))
+                    return new Decision("forbidden_project", null, "проект " + p + " вне ваших проектов");
+        }
         return new Decision("ok", q, null);
+    }
+
+    /** Мультивыбор: «a,b» → [a, b]; пустые элементы отбрасываются, порядок сохраняется. */
+    static java.util.List<String> projectList(String raw) {
+        if (raw == null) return java.util.List.of();
+        return java.util.Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).distinct().toList();
+    }
+
+    /** Значение запертого project в payload: один — строкой, несколько — массивом (Völva: project IN ({{project}})). */
+    static String projectJson(String raw) {
+        java.util.List<String> ps = projectList(raw);
+        if (ps.size() == 1) return "\"" + ps.get(0) + "\"";
+        return ps.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(",", "[", "]"));
     }
 
     static String payload(int question, String project, long expEpochSeconds) {
@@ -131,7 +150,7 @@ final class VolvaEmbedSigner {
 
     /** Payload: у запертого ресурса — проект в params; у незапертого params пусты. */
     static String payload(Chart c, String project, long expEpochSeconds) {
-        String params = c.locked() ? "{\"project\":\"" + project + "\"}" : "{}";
+        String params = c.locked() ? "{\"project\":" + projectJson(project) + "}" : "{}";
         return "{\"resource\":{\"" + c.resource() + "\":" + c.id() + "},\"params\":" + params
             + ",\"exp\":" + expEpochSeconds + "}";
     }

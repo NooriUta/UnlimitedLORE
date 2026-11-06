@@ -118,6 +118,33 @@ class VolvaEmbedSignerTest {
             VolvaEmbedSigner.decideChart("sprints_timeline", "NooriUta/AIDA", CHARTS, true, false, Set.of("NooriUta/volva")).code());
     }
 
+    // ── Мультивыбор (слово владелицы; Völva: project IN ({{project}}), список в JWT) ──
+    // Запирается СПИСОК: выбранные ∩ проекты пользователя. Любой чужой в списке —
+    // отказ целиком, а не молчаливое выкидывание: иначе подмена выглядела бы успехом.
+
+    @Test
+    void lockedListOfOwnProjectsIsSigned() {
+        var d = VolvaEmbedSigner.decideChart("sprints_timeline", "NooriUta/volva,NooriUta/UnlimitedLORE", CHARTS, true, false,
+            Set.of("NooriUta/volva", "NooriUta/UnlimitedLORE"));
+        assertEquals("ok", d.code());
+        assertEquals("{\"resource\":{\"question\":44},\"params\":{\"project\":[\"NooriUta/volva\",\"NooriUta/UnlimitedLORE\"]},\"exp\":1800000000}",
+            VolvaEmbedSigner.payload(d.chart(), "NooriUta/volva,NooriUta/UnlimitedLORE", 1_800_000_000L));
+    }
+
+    @Test
+    void oneForeignProjectInTheListRefusesTheWholeRequest() {
+        assertEquals("forbidden_project", VolvaEmbedSigner.decideChart("sprints_timeline",
+            "NooriUta/volva,NooriUta/AIDA", CHARTS, true, false, Set.of("NooriUta/volva")).code());
+        assertEquals("project_required", VolvaEmbedSigner.decideChart("sprints_timeline",
+            "NooriUta/volva,x') OR ('1'='1", CHARTS, true, false, null).code(), "мусор в списке — отказ до подписи");
+    }
+
+    @Test
+    void singleProjectStaysAString() {
+        assertEquals("{\"resource\":{\"question\":44},\"params\":{\"project\":\"NooriUta/volva\"},\"exp\":1800000000}",
+            VolvaEmbedSigner.payload(new VolvaEmbedSigner.Chart("question", 44, true), "NooriUta/volva", 1_800_000_000L));
+    }
+
     @Test
     void dashboardUrlUsesItsOwnPath() {
         assertEquals("https://volva.example/embed/dashboard/a.b.c",
