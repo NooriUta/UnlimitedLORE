@@ -31,8 +31,16 @@ set -uo pipefail
 export LC_ALL=C.UTF-8
 
 render() { # render <md> <out> <tag> <fg> <gh>
-  MD="$1" TAG="$3" FG="${4:-}" GH="${5:-}" LORE_URL="${LORE_URL:-https://lore.odal.seidrstudio.pro}" perl -CSD -Mutf8 -e '
+  # PRODUCT_NAME — имя продукта в <title> (по умолчанию LORE; у LORE поведение не
+  # меняется). Ручка заведена в источнике по находке Völva при порте 06.11: иначе
+  # копии скрипта расходятся с источником навсегда.
+  MD="$1" TAG="$3" FG="${4:-}" GH="${5:-}" LORE_URL="${LORE_URL:-https://lore.odal.seidrstudio.pro}" \
+  PRODUCT_NAME="${PRODUCT_NAME:-LORE}" perl -CSD -Mutf8 -e '
     use strict; use warnings;
+    # %ENV приходит БАЙТАМИ: -CSD декодирует потоки, а не окружение. Без этого
+    # не-ASCII значение (имя продукта, заголовок) печаталось бы как «VÃ¶lva» —
+    # найдено сессией Völva при порте 06.11.
+    utf8::decode($ENV{$_}) for grep { defined $ENV{$_} } qw(MD TAG FG GH LORE_URL PRODUCT_NAME);
     open(my $fh, "<:encoding(UTF-8)", $ENV{MD}) or die "нет файла $ENV{MD}\n";
     my @lines = <$fh>; close $fh; chomp @lines;
     # Репозиторий — из адреса релиза …/<owner>/<repo>/releases/tag/<tag>; иначе ссылок на PR не строим.
@@ -118,13 +126,14 @@ render() { # render <md> <out> <tag> <fg> <gh>
     }
     $flush_para->(); $close_list->(); $flush_tbl->(); $close_card->();
     my ($tag, $fg, $gh) = ($ENV{TAG}, $ENV{FG}, $ENV{GH});
+    my $product = esc($ENV{PRODUCT_NAME} // "LORE");
     my $links = join(" · ", grep { $_ } ($fg ? "<a href=\"" . esc($fg) . "\">Forgejo</a>" : ""), ($gh ? "<a href=\"" . esc($gh) . "\">GitHub</a>" : ""));
     my $t = esc($title ne "" ? $title : $tag);
     my $kpis = $features ? "<div class=\"kpis\"><div class=\"kpi\"><b>$features</b><span>изменений</span></div>"
       . "<div class=\"kpi\"><b>$sections</b><span>разделов</span></div></div>" : "";
     print <<"HTML";
 <!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LORE $tag</title>
+<title>$product $tag</title>
 <style>
 :root{--bg:#faf6ee;--bg2:#fff;--bg3:#f3ecdf;--bd:#e4d9c6;--t1:#241c12;--t2:#5a4c39;--t3:#8a7a62;--acc:#b4690e;--acc-soft:#f6e3c4;
 --was:#a3402d;--now:#2f6f9a;--why:#3d7a3a;--r:10px;
@@ -209,6 +218,10 @@ MD
   chk '<a href="https://f/o/r/pulls/796">#796</a>'
   chk '<li>обычный пункт без метки</li>'
   chk '<div class="kpi"><b>1</b><span>изменений</span>'
+  chk '<title>LORE v9.9.9</title>'                 # по умолчанию — как было
+  # PRODUCT_NAME и не-ASCII из окружения: «Völva», а не «VÃ¶lva»
+  PRODUCT_NAME='Völva' render "$d/n.md" "$d/v.html" v9.9.9 "" "" || { echo "FAIL: render с PRODUCT_NAME упал"; fail=1; }
+  grep -qF '<title>Völva v9.9.9</title>' "$d/v.html" || { echo "FAIL: PRODUCT_NAME не дошёл или испорчен кодировкой: $(grep -o '<title>[^<]*' "$d/v.html")"; fail=1; }
   grep -q '\*\*\|^#' <<<"$h" && { echo "FAIL: осталась сырая разметка"; fail=1; }
   # теги ul и div сбалансированы
   [ "$(grep -o '<ul>' <<<"$h" | wc -l)" = "$(grep -o '</ul>' <<<"$h" | wc -l)" ] || { echo "FAIL: <ul> не сбалансирован"; fail=1; }
