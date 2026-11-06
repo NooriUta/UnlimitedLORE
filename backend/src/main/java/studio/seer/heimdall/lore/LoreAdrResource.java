@@ -877,7 +877,7 @@ public class LoreAdrResource extends LoreResourceBase {
         if (hits == 0) return null;
         return "в теле найден раздел с открытыми вопросами (" + hits + ") — реестр ОВ это отдельная сущность "
             + "(ADR-LORE-020): заведите их через question_new + question_link(rel:\"raised_in\", target=" + req.adr_id()
-            + "), иначе они не попадут в слайс open_questions, не будут видны просроченными и их нельзя закрыть решением (ANSWERS). "
+            + "), иначе они не попадут в слайс questions, не будут видны просроченными и их нельзя закрыть решением (ANSWERS). "
             + "Раздел в теле оставляйте только как обзор, не как реестр.";
     }
 }

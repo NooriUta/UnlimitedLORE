@@ -562,7 +562,17 @@ public final class LoreSlices {
         // ── ADR-020/021 T25: open-questions register (ОВ) ─────────────────────
         // Derived overdue/blocking/age are computed on the client from the raw
         // fields (status/due_date + gating_tasks) — never stored.
-        slice("open_questions",
+        //
+        // decision:D-2026-LORE-QUESTIONS-SLICE-RENAME (06.11.2026): срез звался
+        // open_questions, а отдавал ВСЕ вопросы — 126 из 244 строк закрыты, и
+        // потребители MCP читали закрытые как открытые. Владелица: «переназовите
+        // просто вопросы и группируйте по статусу». Теперь `questions`, группы
+        // open · deferred · closed · dropped (ранг — CASE, замерено на проде
+        // 06.11: ArcadeDB сортирует по псевдониму), `open_questions` — синоним
+        // на переход для UI, MCP и miniLORE. Неизвестный статус — в конец (4),
+        // а не молча в середину.
+        for (String questionsId : List.of("questions", "open_questions"))
+        slice(questionsId,
             // `trigger` В ОБРАТНЫХ КАВЫЧКАХ — зарезервированное слово SQL ArcadeDB
             // (голое имя даёт CommandSQLParsingException, тот же капкан, что в
             // write-path LoreQuestionResource).
@@ -576,9 +586,11 @@ public final class LoreSlices {
             "out('GATES').task_uid      AS gating_tasks, " +
             "out('RAISED_IN').adr_id    AS raised_adr, " +
             "out('RAISED_IN').sprint_id AS raised_sprint, " +
-            "in('ANSWERS').decision_id  AS answered_by " +
+            "in('ANSWERS').decision_id  AS answered_by, " +
+            "CASE status WHEN 'open' THEN 0 WHEN 'deferred' THEN 1 WHEN 'closed' THEN 2 " +
+            "WHEN 'dropped' THEN 3 ELSE 4 END AS status_rank " +
             "FROM KnowQuestion",
-            List.of(), Map.of(), " ORDER BY question_id");
+            List.of(), Map.of(), " ORDER BY status_rank, question_id");
 
 
         // Адресные формы по id (SL-01, запрос сессии miniLORE через владельца).
@@ -2393,6 +2405,9 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
         // Вопрос: своё ребро ИЛИ проект места, где он поднят (RAISED_IN → ADR/спринт).
         Map.entry("open_questions",
+            "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        // D-2026-LORE-QUESTIONS-SLICE-RENAME: новое имя того же среза — тот же скоуп.
+        Map.entry("questions",
             "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
         // AL-SCOPE-HOLES (06.11.2026): выпадающий список проектов — по самому slug («=» — скалярное поле).
         Map.entry("git_projects", "=slug"),
