@@ -2413,6 +2413,11 @@ public final class LoreSlices {
     // его же вопрос, поднятый в его же ADR («не проходит редактирование с обрезкой
     // прав по проектам»). Проверка «хотя бы один путь ведёт в разрешённый проект»
     // сохраняет смысл скоупа и не наказывает за неполноту рёбер.
+    /** Скоуп вопросов: своё ребро | RAISED_IN | компонент → спринты → проект (D-2026-LORE-QUESTION-VISIBILITY-INHERIT-OR-LANE). */
+    static final String QUESTION_SCOPE =
+        "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"
+        + "|out('BELONGS_TO').in('BELONGS_TO')[@type='KnowSprint'].out('BELONGS_TO_PROJECT').slug";
+
     static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
         Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
@@ -2425,12 +2430,16 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("decisions_of_adr",
             "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
-        // Вопрос: своё ребро ИЛИ проект места, где он поднят (RAISED_IN → ADR/спринт).
-        Map.entry("open_questions",
-            "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        // Вопрос: своё ребро ИЛИ место, где поднят (RAISED_IN → ADR/спринт), ИЛИ —
+        // decision:D-2026-LORE-QUESTION-VISIBILITY-INHERIT-OR-LANE (06.11.2026) —
+        // компонент вопроса, который через СПРИНТЫ принадлежит проекту (компонент
+        // достигает проекта только через спринты). Не нашёлся ни одним путём —
+        // «полоса вне проектов»: её видят admin и superadmin (bypassesScope),
+        // остальным она не показывается. Замер прода 06.11: без проекта 120 открытых,
+        // наследование через компонент открывает 80, в полосе остаётся 40.
+        Map.entry("open_questions", QUESTION_SCOPE),
         // D-2026-LORE-QUESTIONS-SLICE-RENAME: новое имя того же среза — тот же скоуп.
-        Map.entry("questions",
-            "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("questions", QUESTION_SCOPE),
         // AL-SCOPE-HOLES (06.11.2026): выпадающий список проектов — по самому slug («=» — скалярное поле).
         Map.entry("git_projects", "=slug"),
         // Задачи — проект через спринт.
