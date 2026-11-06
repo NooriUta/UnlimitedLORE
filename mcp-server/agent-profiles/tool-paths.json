@@ -252,7 +252,8 @@
     "/lore/task/adr",
     "/lore/task/component",
     "/lore/task/file",
-    "/lore/task/phase"
+    "/lore/task/phase",
+    "/lore/task/pr"
   ],
   "task_mv": [
     "/lore/task/move"
