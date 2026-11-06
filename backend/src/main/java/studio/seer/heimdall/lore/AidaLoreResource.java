@@ -345,8 +345,16 @@ public class AidaLoreResource extends LoreResourceBase {
     public Response news(@QueryParam("limit") Integer limitParam,
                          @QueryParam("since") String since,
                          @QueryParam("before") String before,
-                         @QueryParam("days") Integer daysParam) {
+                         @QueryParam("days") Integer daysParam,
+                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
+        // AL-SCOPE-HOLES: лента собирала события всех проектов мимо скоупа.
+        java.util.Set<String> newsScope = allowedProjectsOrNull(role);
+        if (newsScope != null && newsScope.isEmpty()) {
+            return noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — лента не отдаётся пустой")));
+        }
         int limit = (limitParam == null || limitParam <= 0) ? 60 : limitParam;
         // ОКНО ПО ВРЕМЕНИ важнее счётчика (решение владельца: «выводи всё за неделю
         // как минимум»). Лента, обрезанная по числу строк, в активный день теряет
@@ -563,6 +571,7 @@ public class AidaLoreResource extends LoreResourceBase {
             // Окно недели отдаётся ЦЕЛИКОМ, limit режет только хвост за окном:
             // «выводи всё за неделю как минимум» — обрезка по числу строк в активный
             // день съедала вчерашнее (120 записей умещались в полдня).
+            if (newsScope != null) items = scopeNews(items, newsScope);
             String windowStart = Instant.now().minus(java.time.Duration.ofDays(days)).toString().substring(0, 10);
             List<Map<String, Object>> inWindow = new ArrayList<>(), older = new ArrayList<>();
             for (Map<String, Object> it : items) {
@@ -773,6 +782,19 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     /** AL-91: признак построчного скоупа в ответе среза; null — скоуп к срезу не применялся. */
+/**
+     * AL-SCOPE-HOLES: событие ленты видно, если ХОТЯ БЫ ОДИН его проект разрешён (как у
+     * срезов). Событие без проекта скоупом отсекается — правило то же, что у срезов: иначе
+     * «ничьё» было бы видно всем.
+     */
+    static List<Map<String, Object>> scopeNews(List<Map<String, Object>> items, java.util.Set<String> allowed) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> it : items) {
+            for (String p : projectList(it.get("projects"))) if (allowed.contains(p)) { out.add(it); break; }
+        }
+        return out;
+    }
+
     static Map<String, Object> scopeMeta(String id, java.util.Set<String> allowed) {
         if (allowed == null || !LoreSlices.PROJECT_SCOPED.containsKey(id)) return null;
         Map<String, Object> m = new LinkedHashMap<>();

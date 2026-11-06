@@ -2393,7 +2393,159 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
         // Вопрос: своё ребро ИЛИ проект места, где он поднят (RAISED_IN → ADR/спринт).
         Map.entry("open_questions",
-            "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug")
+            "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        // AL-SCOPE-HOLES (06.11.2026): выпадающий список проектов — по самому slug («=» — скалярное поле).
+        Map.entry("git_projects", "=slug"),
+        // Задачи — проект через спринт.
+        Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("backlog_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("all_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_status_by_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("unlinked_enb_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("unlinked_uc_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("invest_profile", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("history_task", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_done_dates", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_created_dates", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_starts", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("phases_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        // Спринты мимо sprints.
+        Map.entry("timeline_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("sprint_tree", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("sprint_deps_of", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("sprint_done_dates", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("component_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("product_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("release_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("release_sprints_by_tag", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("blocked_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("blocked_sprints_reason", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("roadmap_unplanned", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("history_sprint", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("sprint_starts", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug"),
+        // ADR, решения, спеки, релизы мимо скоупных списков.
+        Map.entry("adr", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("timeline_adrs", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("timeline_specs", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("timeline_releases", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("releases_since", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("adr_history", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("adr_history_all", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("spec_history_all", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("decision", "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("timeline_decisions", "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("release_decisions", "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("decision_history_all", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug|in('HAS_STATE').out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        // Вопросы — своё ребро или место, где подняты.
+        Map.entry("question_by_id", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("questions_of_adr", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("questions_of_sprint", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("gating_questions_of_task", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("questions_gating_closed_tasks", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        // Продуктовый слой: сценарии и акторы несут BELONGS_TO_PROJECT.
+        Map.entry("features", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("uc_by_id", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("use_cases_of_component", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("use_cases_of_feature", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("shipped_dynamics", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("feature_vp_analytics", "out('BELONGS_TO_PROJECT').slug")
+        // actors / actor_load — НЕ здесь: AL-106, агенты видны всем (см. SHARED_SLICES).
+    );
+
+    /**
+     * AL-SCOPE-HOLES: срезы, которые ЗАКОННО не режутся проектным скоупом — с причиной.
+     * Сторож ScopeCoverageGuardTest требует, чтобы каждый срез был скоупным, общим или
+     * «ждёт решения»: иначе новый срез тихо уезжает мимо скоупа (так было с 132 из 141).
+     */
+    static final Map<String, String> SHARED_SLICES = Map.ofEntries(
+        Map.entry("user_project_roles", "по нему miniLORE делит выдачу по людям (D-2026-LORE-MINILORE-READER-READS-ALL)"),
+        Map.entry("project_users", "то же: участники проекта для разделения по людям"),
+        Map.entry("components", "справочник компонентов — общий"),
+        Map.entry("component", "паспорт компонента — общий справочник"),
+        Map.entry("components_in_area", "справочник компонентов — общий"),
+        Map.entry("dictionary", "справочники — общие"),
+        Map.entry("history_dict", "история справочника — общая"),
+        Map.entry("products", "продукты — общий справочник"),
+        Map.entry("tags_usage", "теги — общие"),
+        Map.entry("jobs", "работа (JTBD) — глобальная вершина по построению (AL-113)"),
+        Map.entry("pains", "боли сегмента — общий продуктовый профиль"),
+        Map.entry("gains", "выгоды сегмента — общий продуктовый профиль"),
+        Map.entry("agent_owners", "реестр агентов и владельцев — служебный"),
+        Map.entry("agent_sessions", "журнал сессий агентов — служебный"),
+        Map.entry("actor_identity_orphans", "сторож учёток — служебный"),
+        Map.entry("projects_without_role", "сторож ролей — служебный"),
+        Map.entry("project_role_events", "журнал смены ролей — служебный"),
+        Map.entry("entities_without_project", "сторож сирот — по определению сущности БЕЗ проекта"),
+        Map.entry("scope_orphans", "сторож сирот скоупа — по определению без проекта"),
+        Map.entry("history_hygiene", "сторож истории — служебный"),
+        Map.entry("asset_orphans", "сторож ассетов — служебный"),
+        Map.entry("tech_registry", "реестр технологий — общий"),
+        Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
+        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем")
+    );
+
+    /**
+     * AL-SCOPE-HOLES: проектные по смыслу, но пока НЕ под скоупом — нужно решение владелицы
+     * (общая это поверхность или проектная) либо путь до проекта нетривиален. Явный
+     * список, а не умолчание: каждая запись — открытая дыра, видимая в коде.
+     */
+    static final Map<String, String> SCOPE_PENDING = Map.ofEntries(
+        Map.entry("search", "сложный SQL (подзапрос); вместе с эндпоинтом /lore/search — отдельным шагом"),
+        Map.entry("product_hygiene", "агрегат по подзапросу — скоуп внутрь подзапроса"),
+        Map.entry("strategic_coverage", "агрегат по подзапросу — скоуп внутрь подзапроса"),
+        Map.entry("milestones", "вехи M0…M7 не связаны с проектами (MT-GOALS) — решение о модели вех"),
+        Map.entry("roadmap", "то же: веха без проекта"),
+        Map.entry("uc_actors", "ребро HAS_ACTOR — путь через сценарий"),
+        Map.entry("actor_pairs", "ребро FILLS_ROLE — служебное, решение"),
+        Map.entry("sprint_deps", "ребро DEPENDS_ON — путь через @out"),
+        Map.entry("files_of_task", "KnowFile — путь через задачу"),
+        Map.entry("task_roles", "ребро ROLE_HELD_BY — путь через задачу"),
+        Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
+        Map.entry("release_prs", "KnowPR — путь через релиз"),
+        Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
+        Map.entry("findings", "находки — решение владелицы"),
+        Map.entry("finding_by_id", "находки — решение владелицы"),
+        Map.entry("quality_gates", "QG — общие или проектные (SPRINT_QG_REBUILD/QG-04)"),
+        Map.entry("quality_gate_by_id", "QG — QG-04"),
+        Map.entry("qg_metrics", "QG — QG-04"),
+        Map.entry("qg_job_tasks", "QG — QG-04"),
+        Map.entry("qg_recommendations", "QG — QG-04"),
+        Map.entry("qg_violations", "QG — QG-04"),
+        Map.entry("qg_pending_recs", "QG — QG-04"),
+        Map.entry("qg_routine_runs", "QG — QG-04"),
+        Map.entry("qg_metrics_latest", "QG — QG-04"),
+        Map.entry("qg_run_metrics", "QG — QG-04"),
+        Map.entry("qg_run_history", "QG — QG-04"),
+        Map.entry("routine_latest", "рутины QG — QG-04"),
+        Map.entry("routine_last_run", "рутины QG — QG-04"),
+        Map.entry("routine_outputs", "рутины QG — QG-04"),
+        Map.entry("routine_output_by_type", "рутины QG — QG-04"),
+        Map.entry("plan_config", "план студии — общий или проектный, решение"),
+        Map.entry("plan_tracks", "план — решение"),
+        Map.entry("plan_sections", "план — решение"),
+        Map.entry("plan_checkpoints", "план — решение"),
+        Map.entry("plan_versions", "план — решение"),
+        Map.entry("bragi_overview", "BRAGI — маркетинг студии, общий или проектный — решение"),
+        Map.entry("bragi_publications", "BRAGI — решение"),
+        Map.entry("bragi_calendar", "BRAGI — решение"),
+        Map.entry("bragi_keys", "BRAGI — решение"),
+        Map.entry("bragi_rubrics", "BRAGI — решение"),
+        Map.entry("bragi_analytics", "BRAGI — решение"),
+        Map.entry("bragi_competitors", "BRAGI — решение"),
+        Map.entry("bragi_insights", "BRAGI — решение"),
+        Map.entry("bragi_integrations", "BRAGI — решение"),
+        Map.entry("bragi_channels", "BRAGI — решение"),
+        Map.entry("bragi_pages", "BRAGI — решение"),
+        Map.entry("requests_by_caller", "телеметрия обращений — админская, решение"),
+        Map.entry("requests_total", "телеметрия — решение"),
+        Map.entry("logins_recent", "журнал входов — админский, решение"),
+        Map.entry("logins_by_user", "журнал входов — решение"),
+        Map.entry("sessions_recent", "журнал сессий — решение")
     );
 
     /**
@@ -2460,7 +2612,7 @@ public final class LoreSlices {
             StringBuilder or = new StringBuilder();
             for (String tr : traversals) {
                 if (or.length() > 0) or.append(" OR ");
-                or.append(tr).append(" CONTAINS :__scope0");
+                or.append(scopeClause(tr, "__scope0"));
             }
             condition = "(" + or + ")";
         } else {
@@ -2471,7 +2623,7 @@ public final class LoreSlices {
                 params.put(key, slug);
                 for (String tr : traversals) {
                     if (or.length() > 0) or.append(" OR ");
-                    or.append(tr).append(" CONTAINS :").append(key);
+                    or.append(scopeClause(tr, key));
                 }
             }
             condition = "(" + or + ")";
@@ -2482,8 +2634,13 @@ public final class LoreSlices {
         SliceDef def = SLICES.get(id);
         String suffix = def.suffix();
         String head = suffix.isEmpty() || !sql.endsWith(suffix) ? sql : sql.substring(0, sql.length() - suffix.length());
+        // AL-SCOPE-HOLES: у части срезов ORDER BY/LIMIT записан в самом запросе, а не
+        // в хвосте — условие, дописанное после него, ломало бы SQL.
+        int cut = trailingClauseStart(head);
+        String tail = cut < 0 ? "" : head.substring(cut);
+        if (cut >= 0) head = head.substring(0, cut);
         String connector = containsWhere(head) ? " AND " : " WHERE ";
-        return new Composed(head + connector + condition + suffix, params);
+        return new Composed(head + connector + condition + tail + suffix, params);
     }
 
     /**
@@ -2570,6 +2727,26 @@ public final class LoreSlices {
      * ни один из них не содержит слова WHERE внутри литерала. Если такой
      * появится, честнее будет завести ему явный флаг, чем городить парсер.
      */
+    /** «=field» — скалярное поле (равенство); иначе — обход рёбер (CONTAINS). */
+    static String scopeClause(String traversal, String key) {
+        return traversal.startsWith("=")
+            ? traversal.substring(1) + " = :" + key
+            : traversal + " CONTAINS :" + key;
+    }
+
+    /** Начало завершающего ORDER BY или LIMIT верхнего уровня (вне скобок); -1 — нет. */
+    static int trailingClauseStart(String sql) {
+        String u = sql.toUpperCase(java.util.Locale.ROOT);
+        int depth = 0, found = -1;
+        for (int i = 0; i < u.length(); i++) {
+            char c = u.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (depth == 0 && found < 0 && (u.startsWith(" ORDER BY ", i) || u.startsWith(" LIMIT ", i))) found = i;
+        }
+        return found;
+    }
+
     private static boolean containsWhere(String sql) {
         return sql.toUpperCase(java.util.Locale.ROOT).contains(" WHERE ");
     }
