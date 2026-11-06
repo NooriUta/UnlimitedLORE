@@ -123,8 +123,51 @@ export function sessionExpired(): void {
   notify();
 }
 
+/**
+ * AL-SWITCH-USER: отметка «следующий вход обязан спросить логин».
+ *
+ * Вход без `prompt=login` при живой SSO-сессии Keycloak молча впускает ТОГО ЖЕ
+ * человека — выйти и войти другим было нельзя (владелица 06.11: «я зависла, не
+ * могу теперь под собой зайти»). Отметку ставят осознанный выход и «войти под
+ * другим пользователем»; она одноразовая — следующий обычный вход снова тихий.
+ * sessionStorage, а не localStorage: отметка не должна пережить закрытие вкладки.
+ */
+export const FORCE_LOGIN_KEY = 'lore.forceLogin';
+
+/** sessionStorage, если он есть: в части окружений (тесты, встраивание) его нет — тогда отметка просто не ставится. */
+function forceLoginStore(): Storage | null {
+  try { return typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : null; } catch { return null; }
+}
+
+export function takeLoginPrompt(storage: Storage | null): 'login' | undefined {
+  if (!storage) return undefined;
+  if (storage.getItem(FORCE_LOGIN_KEY) === null) return undefined;
+  storage.removeItem(FORCE_LOGIN_KEY);
+  return 'login';
+}
+
 export function login(returnTo?: string): Promise<void> {
-  return getUserManager().signinRedirect({ state: returnTo ?? location.pathname + location.search });
+  const prompt = takeLoginPrompt(forceLoginStore());
+  return getUserManager().signinRedirect({
+    state: returnTo ?? location.pathname + location.search,
+    ...(prompt ? { prompt } : {}),
+  });
+}
+
+/**
+ * «Войти под другим пользователем» — одним кликом, без выхода и возврата.
+ * `prompt=login` заставляет Keycloak показать форму логина даже при живой
+ * SSO-сессии; вход новой учёткой эту сессию заменяет. Локальная сессия гасится
+ * заранее, чтобы до возврата из Keycloak не отправлялся токен прежнего человека.
+ */
+export async function switchUser(): Promise<void> {
+  const mgr = getUserManager();
+  sessionLost = false;
+  await mgr.removeUser();
+  currentUser = null;
+  notify();
+  forceLoginStore()?.setItem(FORCE_LOGIN_KEY, '1');
+  await login('/lore');
 }
 
 /**
@@ -138,6 +181,9 @@ export function login(returnTo?: string): Promise<void> {
 export async function logout(): Promise<void> {
   const mgr = getUserManager();
   sessionLost = false;
+  // AL-SWITCH-USER: после осознанного выхода следующий вход спрашивает логин —
+  // даже если выход в Keycloak не прошёл и его SSO-сессия осталась жива.
+  forceLoginStore()?.setItem(FORCE_LOGIN_KEY, '1');
   try {
     await mgr.signoutRedirect();
   } catch {

@@ -6,7 +6,7 @@ import { SHELL_TABS, type ShellTab } from './shellNav';
 import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { projectPickerInMore, whereAmILabel } from './shellLayout';
-import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '../../auth/session';
+import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt, switchUser } from '../../auth/session';
 import { Modal } from '@mantine/core';
 import { LoreSearchScreen } from '../lore/LoreSearchScreen';
 import { useIsAdmin } from '../../auth/useRole';
@@ -492,6 +492,13 @@ function AppShellBody() {
                   {sessionLeft && <> · {t('shell.sessionUntil', 'сессия до')} {sessionLeft}</>}
                 </div>
                 <div style={ddSep} />
+                {/* AL-SWITCH-USER: войти другой учёткой одним кликом — Keycloak спросит логин */}
+                <button type="button" role="menuitem"
+                  style={ddItem(false)}
+                  onClick={() => { setOpenDD(null); void switchUser(); }}>
+                  <span style={{ width: 15, textAlign: 'center' }}>⇄</span>
+                  {t('shell.switchUser', 'Войти под другим пользователем')}
+                </button>
                 <button type="button" role="menuitem"
                   style={{ ...ddItem(false), color: 'var(--dng)' }}
                   onClick={() => { setOpenDD(null); void logout(); }}>
