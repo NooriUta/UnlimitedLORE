@@ -134,6 +134,7 @@ export function registerLoreRead(server: McpServer): void {
   server.tool(
     'search',
     'Cross-entity ranked search over the whole LORE corpus (GET /lore/search, ADR-LORE-033). ' +
+      'READ outcome FIRST: found | empty | partial_failure | failed — hits:[] with outcome=failed means the search did NOT run (see warnings), not that nothing exists. ' +
       'Finds by Russian morphology (запрос «релиз» находит «релиза»), prefix-as-you-type and ' +
       'body text (*Hist rows collapse to their parent entity). Returns {hits[], by_type, ' +
       'by_component, took_ms}; each hit carries type, ref_id, title, score, snippet, ' +
