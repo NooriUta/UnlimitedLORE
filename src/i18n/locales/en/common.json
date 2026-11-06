@@ -41,7 +41,8 @@
     "profile": "Profile",
     "searchPlaceholder": "id, title, text…",
     "role": "role",
-    "sessionUntil": "session until"
+    "sessionUntil": "session until",
+    "switchUser": "Sign in as another user"
   },
   "nav": {
     "lore": "LORE",

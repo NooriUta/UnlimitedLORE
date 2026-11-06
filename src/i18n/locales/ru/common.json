@@ -41,7 +41,8 @@
     "profile": "Профиль",
     "searchPlaceholder": "id, название, текст…",
     "role": "роль",
-    "sessionUntil": "сессия до"
+    "sessionUntil": "сессия до",
+    "switchUser": "Войти под другим пользователем"
   },
   "nav": {
     "lore": "LORE",

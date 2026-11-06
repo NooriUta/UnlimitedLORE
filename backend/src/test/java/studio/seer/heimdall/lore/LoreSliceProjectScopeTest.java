@@ -124,7 +124,8 @@ class LoreSliceProjectScopeTest {
     void скоупируемыеСлайсыВсеЗнаютПроСвоёРебро() {
         for (var e : LoreSlices.PROJECT_SCOPED.entrySet()) {
             assertNotNull(LoreSlices.get(e.getKey()), "слайс " + e.getKey() + " должен существовать");
-            assertTrue(e.getValue().contains("BELONGS_TO_PROJECT"),
+            // «=field» — сам срез и есть проект (git_projects: равенство по slug), ребра нет по построению.
+            assertTrue(e.getValue().contains("BELONGS_TO_PROJECT") || e.getValue().equals("=slug"),
                 "скоуп " + e.getKey() + " обязан идти по ребру проекта");
         }
     }
