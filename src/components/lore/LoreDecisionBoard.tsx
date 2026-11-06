@@ -11,6 +11,8 @@ import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
 import { resolveStatusMeta, statusLabel } from './lore-status';
 import { useUrlId } from '../../hooks/useUrlState';
+import { useSearchParams } from 'react-router-dom';
+import { readDeepLink } from '../../api/searchRoutes';
 import { GameIcon } from './GameIcon';
 
 // Distinct marker for orphan decisions (no parent ADR) — used both on the
@@ -67,6 +69,19 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
   // AH-09: раскрытое решение в URL (?dec=id) — лента новостей и ссылка
   // открывают борд на нём.
   const [expanded,       setExpanded]       = useUrlId('dec');
+  // Ссылка из поиска несёт passport=<id> (SRCH-08), а доска читала только ?dec=:
+  // раздел открывался, решение — нет (находка CICDGitHub/Völva 06.11). Читаем
+  // passport, пока ?dec= не задан; разбор общий — readDeepLink.
+  const [urlParams] = useSearchParams();
+  const linkedDecision = readDeepLink(urlParams)?.id ?? null;
+  // Один раз на ссылку: иначе свёрнутое пользователем решение тут же
+  // разворачивалось бы снова, пока passport остаётся в адресе.
+  const appliedLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!linkedDecision || appliedLinkRef.current === linkedDecision) return;
+    appliedLinkRef.current = linkedDecision;
+    if (!expanded) setExpanded(linkedDecision);
+  }, [expanded, linkedDecision, setExpanded]);
   const linkedRef = useRef<string | null>(null);
   const [detail,         setDetail]         = useState<Record<string, LoreDecisionPassport>>({});
   const [loadingDetail,  setLoadingDetail]  = useState<string | null>(null);
