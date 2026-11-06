@@ -47,7 +47,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // research spikes, internal tooling) — excluded from deploy-lag/unreleased-burn
     // metrics in LoreAnalytics, which would otherwise flag them as perpetually overdue.
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
-        String context_md, String plan_id, Double effort_days, Boolean no_release_required) {}
+        String context_md, String plan_id, Double effort_days, Boolean no_release_required,
+        String context_append, String outcome_append) {}
     // author/executor/reviewer_agent (ADR-LORE-014 §4): free-text identity of who
     // owns/does/accepts the task — on the vertex, not Hist (see LoreSchemaInitializer
     // comment for why: immune to the note_md/effort_days carry-forward bug class).
@@ -67,7 +68,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
         String work_class, String uc_id,
         String author_agent, String executor_agent, String reviewer_agent, String task_type,
-        Double actual_days, Boolean bookkeeping) {}
+        Double actual_days, Boolean bookkeeping, String note_append) {}
     // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
     // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
     // а не когда кто-то откроет срез гигиены через неделю.
@@ -823,19 +824,28 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (req.actual_days() != null && (req.actual_days().isNaN() || req.actual_days() < 0)) {
                 errors.add("skipped (actual_days must be non-negative): " + req.task_uid()); continue;
             }
+            String appendRefusal = appendConflict("note_md", req.note_md(), "note_append", req.note_append());
+            if (appendRefusal != null) { errors.add("skipped (" + req.task_uid() + "): " + appendRefusal); continue; }
             {
-                Integer open = (req.note_md() != null || req.effort_days() != null)
-                    ? openStateRows(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely() : 1;
-                String refusal = noOpenStateRefusal(req.task_uid(), req.note_md(), req.effort_days(), open);
+                // Дописка тоже пишет заметку — открытая строка истории нужна и ей.
+                String noteProbe = req.note_md() != null ? req.note_md() : req.note_append();
+                Integer open = (noteProbe != null || req.effort_days() != null)
+                    ? openStateRows(req.task_uid(), noteProbe, req.effort_days()).await().indefinitely() : 1;
+                String refusal = noOpenStateRefusal(req.task_uid(), noteProbe, req.effort_days(), open);
                 if (refusal != null) { errors.add("skipped (NO_OPEN_STATE): " + refusal); continue; }
             }
             try {
+                // MT-NOTE-APPEND: дописка читает текущую заметку (открытая строка истории,
+                // иначе вершина) и пишет склейку — вызывающему не нужно передавать всё поле.
+                String note = req.note_append() != null
+                    ? appendText(currentTaskNote(req.task_uid()), req.note_append())
+                    : req.note_md();
                 writeClient.command(db, basicAuth(),
-                    taskVertexUpdate(req.task_uid(), req.title(), req.note_md(), req.effort_days(), req.actual_days(), req.bookkeeping(),
+                    taskVertexUpdate(req.task_uid(), req.title(), note, req.effort_days(), req.actual_days(), req.bookkeeping(),
                         req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
                     .await().indefinitely();
-                mirrorTaskHist(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely();
-                if (req.note_md() != null)
+                mirrorTaskHist(req.task_uid(), note, req.effort_days()).await().indefinitely();
+                if (note != null)
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.task_uid());
                 relinkRealizes(req.task_uid(), req.uc_id());
                 // Роли ребром и в пакетной правке: иначе пакет молча терял бы то,
@@ -981,20 +991,34 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             return Uni.createFrom().item(badParams("actual_days must be a non-negative number of person-days"));
         }
         final String uid = req.task_uid();
+        String appendRefusal = appendConflict("note_md", req.note_md(), "note_append", req.note_append());
+        if (appendRefusal != null) return Uni.createFrom().item(badParams(appendRefusal));
+        // MT-NOTE-APPEND: текущая заметка читается, если её трогают — и для дописки,
+        // и чтобы вернуть прежнее значение в ответе (п.2: до того, как оно исчезнет).
+        final boolean touchesNote = req.note_md() != null || req.note_append() != null;
+        final String[] previous = new String[1];
+        final String[] note = new String[1];
         // MT-MCP-TRUTH Б6: заметка/оценка обязаны лечь в ОТКРЫТУЮ строку истории;
-        // её нет — отказ до записи, а не ok:true при невидимой правке.
-        return openStateRows(uid, req.note_md(), req.effort_days()).chain(openRows -> {
-        String refusal = noOpenStateRefusal(uid, req.note_md(), req.effort_days(), openRows);
+        // её нет — отказ до записи, а не ok:true при невидимой правке. Дописка — тоже запись заметки.
+        final String noteProbe = req.note_md() != null ? req.note_md() : req.note_append();
+        return openStateRows(uid, noteProbe, req.effort_days()).chain(openRows -> {
+        String refusal = noOpenStateRefusal(uid, noteProbe, req.effort_days(), openRows);
         if (refusal != null) return Uni.createFrom().item(noStore(Response.status(Response.Status.CONFLICT)
             .entity(new LoreError("NO_OPEN_STATE", refusal))));
-        return writeClient.command(db, basicAuth(),
-                taskVertexUpdate(uid, req.title(), req.note_md(), req.effort_days(), req.actual_days(), req.bookkeeping(),
-                    req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
+        return Uni.createFrom().item(() -> {
+                if (touchesNote) previous[0] = currentTaskNote(uid);
+                note[0] = req.note_append() != null ? appendText(previous[0], req.note_append()) : req.note_md();
+                return Boolean.TRUE;
+            })
+            .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+            .chain(__ -> writeClient.command(db, basicAuth(),
+                taskVertexUpdate(uid, req.title(), note[0], req.effort_days(), req.actual_days(), req.bookkeeping(),
+                    req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class())))
             // The vertex note_md/effort_days above are denormalisations the UI never reads.
             // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
             // were actually supplied, so a title-only edit never wipes note/effort.
-            .chain(__ -> mirrorTaskHist(uid, req.note_md(), req.effort_days()))
+            .chain(__ -> mirrorTaskHist(uid, note[0], req.effort_days()))
             // Переподвес REALIZES идёт ЦЕПОЧКОЙ, а не блокирующим вызовом внутри
             // map: этот путь реактивный, и await на IO-потоке даёт 502.
             .chain(__ -> relinkRealizesUni(uid, req.uc_id()))
@@ -1006,11 +1030,18 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // записывался, а на нём стоит обнаружение дрейфа в reconcile.
             // Приём тот же, что в LoreStatusResource: уйти на рабочий пул.
             .chain(__ -> Uni.createFrom().item(() -> {
-                    if (req.note_md() != null)
+                    if (note[0] != null)
                         hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
                     Map<String, Object> body = new LinkedHashMap<>();
                     body.put("ok", true);
                     body.put("task_uid", uid);
+                    // MT-NOTE-APPEND п.2: прежняя заметка — в ответ; null = её не было.
+                    if (touchesNote) {
+                        Map<String, Object> prev = new LinkedHashMap<>();
+                        prev.put("note_md", previous[0]);
+                        body.put("previous", prev);
+                        if (req.note_append() != null) body.put("note_mode", "appended");
+                    }
                     body.put("quality", WorkQuality.compact(taskQuality(uid)));
                     // Роли — ребром, исход по каждой в ответе (TR-05).
                     Map<String, Object> roles = applyRoles(uid,
@@ -1115,6 +1146,40 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
     }
 
+    // ── MT-NOTE-APPEND (06.11.2026): дописывание вместо перезаписи целиком ──
+    //
+    // note_md / context_md / outcome_md заменялись только целиком; прежней версии
+    // нет нигде, опечатка при перезаписи необратима. Владелица: «все мучаются с
+    // этим перезаписываниями». decision:D-2026-NOTE-APPEND-IS-WORTH-FIXING.
+
+    /**
+     * Текущая заметка задачи: открытая строка истории (её читают срезы), иначе вершина.
+     * Блокирующий — вызывать только с рабочего пула.
+     */
+    private String currentTaskNote(String uid) {
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT out('HAS_STATE')[valid_to IS NULL].note_md[0] AS hn, note_md AS vn FROM KnowTask WHERE task_uid=:u",
+            Map.of("u", uid));
+        if (rows.isEmpty()) return null;
+        Object hn = rows.get(0).get("hn");
+        Object vn = rows.get(0).get("vn");
+        if (hn != null && !String.valueOf(hn).isBlank()) return String.valueOf(hn);
+        return vn == null ? null : String.valueOf(vn);
+    }
+
+    /** Дописка: пустое поле — запись; иначе прежнее (без хвостовых пустот) + пустая строка + новое. */
+    static String appendText(String current, String addition) {
+        if (current == null || current.isBlank()) return addition;
+        return current.stripTrailing() + "\n\n" + addition;
+    }
+
+    /** Поле целиком и дописка в одном вызове — отказ, а не угадывание, что из двух имелось в виду. */
+    static String appendConflict(String fullName, String full, String appendName, String append) {
+        if (full == null || append == null) return null;
+        return "передано и " + fullName + " (заменить целиком), и " + appendName
+            + " (дописать в конец) — выберите одно: что из двух имелось в виду, сервер не угадывает";
+    }
+
     // ── Write-path: update KnowSprint vertex fields ──────────────────────────
 
     @POST
@@ -1129,11 +1194,29 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             return badParams("sprint_id required");
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
             return badParams("sprint_id contains illegal characters");
+        String conflict = appendConflict("context_md", req.context_md(), "context_append", req.context_append());
+        if (conflict == null) conflict = appendConflict("outcome_md", req.outcome_md(), "outcome_append", req.outcome_append());
+        if (conflict != null) return badParams(conflict);
+        // MT-NOTE-APPEND п.2: прежние значения текстов — в ответ, до того как они исчезнут.
+        Map<String, Object> previous = new LinkedHashMap<>();
+        String contextNew = req.context_md();
+        String outcomeNew = req.outcome_md();
+        if (req.context_md() != null || req.outcome_md() != null || req.context_append() != null || req.outcome_append() != null) {
+            List<Map<String, Object>> cur = ingestService.queryPublic(
+                "SELECT context_md, outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
+            if (cur.isEmpty()) return badParams("sprint not found: " + req.sprint_id());
+            String ctx0 = cur.get(0).get("context_md") == null ? null : String.valueOf(cur.get(0).get("context_md"));
+            String out0 = cur.get(0).get("outcome_md") == null ? null : String.valueOf(cur.get(0).get("outcome_md"));
+            if (req.context_append() != null) contextNew = appendText(ctx0, req.context_append());
+            if (req.outcome_append() != null) outcomeNew = appendText(out0, req.outcome_append());
+            if (contextNew != null) previous.put("context_md", ctx0);
+            if (outcomeNew != null) previous.put("outcome_md", out0);
+        }
         StringBuilder sb = new StringBuilder("UPDATE KnowSprint SET ");
         Map<String, Object> p = new LinkedHashMap<>();
         if (req.name()       != null) { sb.append("name=:name, ");            p.put("name",       req.name()); }
-        if (req.outcome_md() != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    req.outcome_md()); }
-        if (req.context_md() != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        req.context_md()); }
+        if (outcomeNew != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    outcomeNew); }
+        if (contextNew != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        contextNew); }
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
         if (req.effort_days()!= null) { sb.append("effort_days=:effort, ");  p.put("effort",     req.effort_days()); }
         if (req.no_release_required() != null) { sb.append("no_release_required=:nrr, "); p.put("nrr", req.no_release_required()); }
@@ -1152,6 +1235,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 set + " WHERE sprint_id=:sid", p)).await().indefinitely();
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
+            if (!previous.isEmpty()) out.put("previous", previous);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT UPDATE] %s: %s", req.sprint_id(), e.getMessage());

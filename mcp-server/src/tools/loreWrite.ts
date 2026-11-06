@@ -473,12 +473,17 @@ export function registerLoreWrite(server: McpServer): void {
       'string, existing ones skipped; pass pr_replace=true to discard existing pr_refs first instead of ' +
       'appending, e.g. to fix entries baked with the wrong repo). Does NOT change status — use status_set. ' +
       'Does NOT change priority/planned dates — use sprint_plan_set (SCD2 close-open). ' +
-      'RULE: always fill context_md when you know WHY the sprint exists. Mutates system_aida_lore.',
+      'RULE: always fill context_md when you know WHY the sprint exists. context_md/outcome_md REPLACE the ' +
+      'whole text; context_append/outcome_append ADD to its end without resending it (MT-NOTE-APPEND); both ' +
+      'for one field is refused; the answer returns metadata.previous — the text before the write. ' +
+      'Mutates system_aida_lore.',
     {
       sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
       name:        z.string().optional(),
       outcome_md:  z.string().optional().describe('sprint outcome / retrospective in Markdown'),
       context_md:  z.string().optional().describe('background context — WHY the sprint exists, key decisions, links to ADRs/docs, related sprints'),
+      context_append: z.string().optional().describe('text to ADD to the end of context_md (blank line between); not together with context_md'),
+      outcome_append: z.string().optional().describe('text to ADD to the end of outcome_md (blank line between); not together with outcome_md'),
       plan_id:     z.string().optional(),
       effort_days: z.number().optional().describe('actual effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
       pr_numbers:  z.array(z.number().int()).optional().describe('PR numbers to append to pr_refs, e.g. [420, 421]'),
@@ -486,16 +491,18 @@ export function registerLoreWrite(server: McpServer): void {
       pr_repo_url: z.string().optional().describe('full base URL for PR links, e.g. "https://github.com/NooriUta/UnlimitedLORE/pull" — takes precedence over pr_git_project'),
       pr_replace:  z.boolean().optional().describe('discard existing pr_refs before adding pr_numbers, instead of appending'),
     },
-    async ({ sprint_id, name, outcome_md, context_md, plan_id, effort_days, pr_numbers, pr_git_project, pr_repo_url, pr_replace }) => {
+    async ({ sprint_id, name, outcome_md, context_md, context_append, outcome_append, plan_id, effort_days, pr_numbers, pr_git_project, pr_repo_url, pr_replace }) => {
       try {
         const results: Record<string, unknown> = {};
         const hasMeta = name !== undefined || outcome_md !== undefined || context_md !== undefined
+          || context_append !== undefined || outcome_append !== undefined
           || plan_id !== undefined || effort_days !== undefined;
         if (hasMeta) {
           results.metadata = await lorePost('/lore/sprint/update', {
             sprint_id,
             name: name ?? null, outcome_md: outcome_md ?? null,
             context_md: context_md ?? null, plan_id: plan_id ?? null,
+            context_append: context_append ?? null, outcome_append: outcome_append ?? null,
             effort_days: effort_days ?? null,
           });
         }
@@ -1769,13 +1776,17 @@ export function registerLoreWrite(server: McpServer): void {
       'leave it unchanged. reviewer_agent must differ from executor_agent before the task can move to ' +
       'done (ADR-LORE-014 §4 hard gate, enforced in status_set, not here). ' +
       'Mutates the shared system_aida_lore.\n\n' +
-      'Single: pass task_uid + title (+ optional note_md, effort_days, author/executor/reviewer_agent).\n' +
+      'NOTE: note_md REPLACES the whole note; note_append ADDS text to its end (blank line between) without ' +
+      'resending it — use note_append to add a paragraph (MT-NOTE-APPEND). Passing both is refused. The answer ' +
+      'returns previous.note_md — the text before the write.\n' +
+      'Single: pass task_uid + title (+ optional note_md | note_append, effort_days, author/executor/reviewer_agent).\n' +
       'Batch:  pass tasks=[{task_uid, title, ...}, ...] — all processed in one call, ' +
       'errors collected per-item without aborting the rest.',
     {
       task_uid:       z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
       title:          z.string().optional().describe('single-mode: new title'),
       note_md:        z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
+      note_append:    z.string().optional().describe('single-mode: text to ADD to the end of the existing note (blank line between); the note is not resent. Mutually exclusive with note_md'),
       effort_days:    z.number().optional().describe('single-mode: estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
       actual_days:    z.number().min(0).optional().describe('single-mode: ACTUAL effort spent, person-days (same unit as effort_days). Set it when closing the task — without the fact, estimates cannot be calibrated (MT-CAL-ACTUAL). Omit to leave unchanged.'),
       bookkeeping:    z.boolean().optional().describe('single-mode: true = record of work already done (excluded from throughput/estimate analytics); false clears it; omit to leave unchanged'),
@@ -1789,6 +1800,7 @@ export function registerLoreWrite(server: McpServer): void {
         task_uid:       z.string(),
         title:          z.string(),
         note_md:        z.string().optional(),
+        note_append:    z.string().optional(),
         effort_days:    z.number().optional(),
         actual_days:    z.number().min(0).optional(),
         bookkeeping:    z.boolean().optional(),
@@ -1800,19 +1812,19 @@ export function registerLoreWrite(server: McpServer): void {
         uc_id:          z.string().optional(),
       })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, actual_days, bookkeeping, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id, tasks }) => {
+    async ({ task_uid, title, note_md, note_append, effort_days, actual_days, bookkeeping, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
             tasks.map(t => ({
-              task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null, actual_days: t.actual_days ?? null, bookkeeping: t.bookkeeping ?? null,
+              task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, note_append: t.note_append ?? null, effort_days: t.effort_days ?? null, actual_days: t.actual_days ?? null, bookkeeping: t.bookkeeping ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
               task_type: t.task_type ?? null, work_class: t.work_class ?? null, uc_id: t.uc_id ?? null,
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', {
-          task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null, actual_days: actual_days ?? null, bookkeeping: bookkeeping ?? null,
+          task_uid, title, note_md: note_md ?? null, note_append: note_append ?? null, effort_days: effort_days ?? null, actual_days: actual_days ?? null, bookkeeping: bookkeeping ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
           task_type: task_type ?? null, work_class: work_class ?? null, uc_id: uc_id ?? null,
         }));

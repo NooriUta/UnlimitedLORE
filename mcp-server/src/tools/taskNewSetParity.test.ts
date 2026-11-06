@@ -20,7 +20,9 @@ vi.mock('../backend.js', () => ({
 
 const { registerLoreWrite } = await import('./loreWrite.js');
 
-const NOT_FOR_CREATE = new Set(['task_uid', 'tasks']);
+// note_append (MT-NOTE-APPEND): дописка к СУЩЕСТВУЮЩЕЙ заметке — у создаваемой
+// задачи заметки ещё нет, при создании её задаёт note_md.
+const NOT_FOR_CREATE = new Set(['task_uid', 'tasks', 'note_append']);
 
 describe('task_new принимает всё, что task_set пишет о задаче', () => {
   const tools = collect(registerLoreWrite);
