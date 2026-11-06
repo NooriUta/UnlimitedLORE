@@ -557,6 +557,8 @@ export interface LoreMilestone {
   // 62+ sprints, and was retired.
   direct_sprint_ids?: string[] | null;
   priority?: string | null;
+  // RM-S2: продукты вехи (TARGETS_PRODUCT). Пустой список — незаполненность.
+  products?: string[] | null;
 }
 
 export interface LoreComponent {
@@ -1012,6 +1014,22 @@ export async function linkSprintMilestone(
   if (!res.ok) return parseError(res);
   assertJson(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }>;
+}
+
+/** RM-U3: link or unlink a milestone to a product roadmap (POST /lore/milestone/product). */
+export async function linkMilestoneProduct(
+  milestoneId: string,
+  productCode: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean; milestone_id: string; product_code: string; action: string; outcome?: string }> {
+  const res = await fetch(`${LORE_BASE}/milestone/product`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ milestone_id: milestoneId, product_code: productCode, action }),
+  });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ ok: boolean; milestone_id: string; product_code: string; action: string; outcome?: string }>;
 }
 
 // ── Tech registry (SPRINT_TECH_REGISTRY) ───────────────────────────────────

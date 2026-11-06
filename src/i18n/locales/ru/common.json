@@ -1090,7 +1090,17 @@
       "sprintsWithoutMilestones": "Спринты без вех · {{count}}",
       "allSprintsLinked": "Все спринты привязаны к вехам ✓",
       "intoMilestonePlaceholder": "→ в веху…",
-      "tasksPartial": "Задачи загружены не полностью: {{failed}} из {{total}} пачек упали — {{reason}}"
+      "tasksPartial": "Задачи загружены не полностью: {{failed}} из {{total}} пачек упали — {{reason}}",
+      "noForecast": "У продукта нет вех-прогнозов: план не заведён, а не «всё сделано»",
+      "frozenSummary": "История — {{count}} замороженных вех (в счёт открытой работы не входят)",
+      "noProductTag": "без продукта",
+      "allProducts": "Все",
+      "withoutProduct": "Без продукта",
+      "productsField": "Продукт",
+      "unlinkProduct": "отвязать продукт",
+      "linkProductPlaceholder": "+ продукт…",
+      "unplannedTitle": "Вне плана — открытые спринты без вехи · {{count}}",
+      "allOpenPlanned": "Каждый открытый спринт стоит в вехе ✓"
     },
     "modulePassport": {
       "loading": "Загрузка модуля…",
