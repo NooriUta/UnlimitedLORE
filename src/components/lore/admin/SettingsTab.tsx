@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { loreMutate } from '../../../api/lore';
+import { loreMutate, fetchVolvaEmbed, LoreHttpError } from '../../../api/lore';
 import { loadKcObj } from '../kc-state';
 import { AUTH_ENABLED } from '../../../auth/session';
 import { useRole } from '../../../auth/useRole';
@@ -22,6 +22,19 @@ interface KnownSetting {
   placeholder: string;
 }
 const KNOWN_SETTINGS: KnownSetting[] = [
+  // Слой графиков (решение владелицы 06.11.2026): свои графики на ECharts или
+  // встройка Völva — либо то, либо другое. Читает charts/chartLayer.ts на каждом
+  // показе графика; по умолчанию echarts.
+  {
+    key: 'charts.layer',
+    placeholder: 'echarts',
+    text: t => ({
+      type: t('lore.admin.settingTypeChartLayer', 'echarts | volva'),
+      def: 'echarts',
+      descr: t('lore.admin.settingChartLayerDescr', 'Чем рисуются графики LORE: echarts — сам LORE из своих данных; volva — встроенные графики Völva (нужна карточка в Völva и белый список lore.volva.embed.charts на бэкенде).'),
+      hint: t('lore.admin.settingChartLayerHint', 'Одна настройка на весь LORE, действует сразу после сохранения (после обновления страницы). Если в слое Völva графика нет, вместо пустой рамки показывается «не настроено».'),
+    }),
+  },
   // SPRINT_QG_REBUILD/QG-09: читает LoreQgActionsPoller на каждом заходе
   // (настройка → иначе LORE_QG_ACTIONS_PROJECTS → иначе пусто).
   {
@@ -269,6 +282,8 @@ export function SettingsTab({ dicts, preflight, onError, reload }: {
         </div>
       )}
 
+      <VolvaIntegrationCheck />
+
       <h3 style={{ ...h3, marginTop: 18 }}>{t('lore.admin.denialsH', 'Последние отказы доступа')}</h3>
       <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 6 }}>
         {t('lore.admin.denialsSrc', 'Источник: память процесса с последнего рестарта (кольцевой буфер, AL-45). Долговременный аудит по осям — AL-20.')}
@@ -286,6 +301,50 @@ export function SettingsTab({ dicts, preflight, onError, reload }: {
           : t('lore.admin.authOffLine', 'выключен — dev-режим, роль из конфига (VITE_LORE_ROLE)')} · {t('lore.admin.roleNow', 'текущая роль')}: <b>{role}</b>
       </div>
       <div style={{ ...S.card, opacity: 0.75, overflowWrap: 'anywhere' }}><b>LORE_ACTIVE_PROJECT:</b> {t('lore.admin.setProj', 'сессионный дефолт проекта MCP-процесса (env, ADR-LORE-017) — задаётся в .mcp.json/OpenCode-конфиге, из UI не читается')}</div>
+    </div>
+  );
+}
+
+/**
+ * Проверка интеграции Völva (решение владелицы 06.11.2026, «и там же проверка
+ * интеграции»): запрос подписанного адреса пилотного графика у бэкенда LORE.
+ * Исход — по коду ответа, а не «нажали и тишина»: не настроено ≠ нет графика ≠
+ * нет доступа ≠ ошибка. Адрес целиком не показывается — в нём JWT.
+ */
+export function volvaCheckVerdict(e: unknown): { ok: false; kind: 'not_configured' | 'unknown_chart' | 'forbidden' | 'error'; detail: string } {
+  if (e instanceof LoreHttpError) {
+    if (e.status === 503) return { ok: false, kind: 'not_configured', detail: e.detail || e.code };
+    if (e.status === 404) return { ok: false, kind: 'unknown_chart', detail: e.detail || e.code };
+    if (e.status === 401 || e.status === 403) return { ok: false, kind: 'forbidden', detail: e.detail || e.code };
+  }
+  return { ok: false, kind: 'error', detail: e instanceof Error ? e.message : String(e) };
+}
+
+function VolvaIntegrationCheck() {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<null | { ok: true; origin: string; expires: string } | ReturnType<typeof volvaCheckVerdict>>(null);
+  async function run() {
+    setBusy(true); setRes(null);
+    try {
+      const r = await fetchVolvaEmbed('velocity');
+      setRes({ ok: true, origin: new URL(r.url).origin, expires: r.expires_at });
+    } catch (e) { setRes(volvaCheckVerdict(e)); }
+    finally { setBusy(false); }
+  }
+  const msg = !res ? null
+    : res.ok ? t('lore.admin.volvaCheckOk', 'Готово: адрес выдан, ведёт на {{origin}}, действует до {{expires}}.', { origin: res.origin, expires: res.expires })
+    : res.kind === 'not_configured' ? t('lore.admin.volvaCheckNotConfigured', 'Не настроено: на бэкенде нет секрета LORE_VOLVA_EMBED_SECRET или адреса lore.volva.embed.site-url. ({{d}})', { d: res.detail })
+    : res.kind === 'unknown_chart' ? t('lore.admin.volvaCheckUnknown', 'Графика velocity нет в белом списке lore.volva.embed.charts. ({{d}})', { d: res.detail })
+    : res.kind === 'forbidden' ? t('lore.admin.volvaCheckForbidden', 'Нет доступа к подписи встройки. ({{d}})', { d: res.detail })
+    : t('lore.admin.volvaCheckError', 'Ошибка проверки: {{d}}', { d: res.detail });
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button style={S.primary} disabled={busy} onClick={run}>{busy ? '…' : t('lore.admin.volvaCheckBtn', 'Проверить интеграцию Völva')}</button>
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{t('lore.admin.volvaCheckNote', 'Запрашивает подписанный адрес пилотного графика velocity — тот же путь, что у слоя Völva.')}</span>
+      </div>
+      {msg && <div role="status" style={{ ...S.card, marginTop: 6, color: res && res.ok ? 'var(--suc)' : 'var(--dng)', overflowWrap: 'anywhere' }}>{msg}</div>}
     </div>
   );
 }
