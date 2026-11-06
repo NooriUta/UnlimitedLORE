@@ -28,8 +28,7 @@ class TaskActualDaysTest {
                 () -> new AssertionError("шаг схемы task_actual_days не зарегистрирован"));
         assertEquals(17, step.compatMajor(), "аддитивный шаг — major не растёт");
         assertEquals(List.of("CREATE PROPERTY KnowTask.actual_days IF NOT EXISTS DOUBLE"), step.sql());
-        int max = LoreSchemaMigrations.STEPS.stream().mapToInt(LoreSchemaMigrations.Step::version).max().orElseThrow();
-        assertEquals(max, step.version(), "шаг последний в списке");
+        assertEquals(58, step.version(), "V58 — версия закреплена: «шаг последний» ломался бы каждым следующим шагом");
     }
 
     @Test
@@ -42,12 +41,12 @@ class TaskActualDaysTest {
 
     @Test
     void vertexUpdateWritesTheFactOnlyWhenSupplied() {
-        var with = LoreSprintTaskResource.taskVertexUpdate("S/T-1", "t", null, null, 1.5,
+        var with = LoreSprintTaskResource.taskVertexUpdate("S/T-1", "t", null, null, 1.5, null,
             null, null, null, null, null);
         assertTrue(with.command().contains("actual_days = :act"), with.command());
         assertEquals(1.5, with.params().get("act"));
 
-        var without = LoreSprintTaskResource.taskVertexUpdate("S/T-1", "t", null, null, null,
+        var without = LoreSprintTaskResource.taskVertexUpdate("S/T-1", "t", null, null, null, null,
             null, null, null, null, null);
         assertFalse(without.command().contains("actual_days"),
             "правка без факта не стирает записанный факт: " + without.command());
