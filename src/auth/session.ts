@@ -155,19 +155,44 @@ export function login(returnTo?: string): Promise<void> {
 }
 
 /**
- * «Войти под другим пользователем» — одним кликом, без выхода и возврата.
- * `prompt=login` заставляет Keycloak показать форму логина даже при живой
- * SSO-сессии; вход новой учёткой эту сессию заменяет. Локальная сессия гасится
- * заранее, чтобы до возврата из Keycloak не отправлялся токен прежнего человека.
+ * «Войти под другим пользователем» — отметка «экран входа после возврата из
+ * Keycloak сам начинает вход». Одноразовая, в sessionStorage, как и FORCE_LOGIN_KEY.
+ */
+export const SWITCH_USER_KEY = 'lore.switchUser';
+
+export function takeSwitchUser(storage: Storage | null): boolean {
+  if (!storage || storage.getItem(SWITCH_USER_KEY) === null) return false;
+  storage.removeItem(SWITCH_USER_KEY);
+  return true;
+}
+
+/**
+ * «Войти под другим пользователем» — одним кликом.
+ *
+ * Приёмка 06.11 показала: погасить пользователя только у себя мало. SSO-сессия
+ * Keycloak остаётся жива, и prompt=login при живой сессии даёт «Please
+ * re-authenticate» ТОГО ЖЕ человека — поля логина нет, сменить учётку нельзя.
+ * Поэтому сначала настоящий выход из Keycloak (signoutRedirect с id_token_hint),
+ * а после возврата экран входа по отметке SWITCH_USER_KEY сам начинает вход
+ * с prompt=login — уже без сессии, с полной формой.
  */
 export async function switchUser(): Promise<void> {
   const mgr = getUserManager();
+  const store = forceLoginStore();
   sessionLost = false;
-  await mgr.removeUser();
-  currentUser = null;
-  notify();
-  forceLoginStore()?.setItem(FORCE_LOGIN_KEY, '1');
-  await login('/lore');
+  store?.setItem(FORCE_LOGIN_KEY, '1');
+  store?.setItem(SWITCH_USER_KEY, '1');
+  try {
+    await mgr.signoutRedirect();
+  } catch {
+    // Keycloak недоступен: гасим сессию локально и идём на вход сразу —
+    // автозапуск после возврата не понадобится, отметку снимаем.
+    takeSwitchUser(store);
+    await mgr.removeUser();
+    currentUser = null;
+    notify();
+    await login('/lore');
+  }
 }
 
 /**

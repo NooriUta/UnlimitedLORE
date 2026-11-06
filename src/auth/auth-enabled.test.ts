@@ -19,6 +19,8 @@ const kc = {
   silentRenewFails: true,
   signoutFails: false,
   removeUserCalled: false,
+  signoutCalled: false,
+  signinCalls: [] as unknown[],
 };
 
 vi.mock('oidc-client-ts', () => {
@@ -33,8 +35,8 @@ vi.mock('oidc-client-ts', () => {
       if (kc.silentRenewFails) throw new Error('silent renew failed');
       return kc.storedUser;
     }
-    async signinRedirect() {}
-    async signoutRedirect() { if (kc.signoutFails) throw new Error('keycloak unreachable'); }
+    async signinRedirect(args?: unknown) { kc.signinCalls.push(args); }
+    async signoutRedirect() { kc.signoutCalled = true; if (kc.signoutFails) throw new Error('keycloak unreachable'); }
     async removeUser() { kc.removeUserCalled = true; }
   }
   class WebStorageStateStore {}
@@ -64,6 +66,8 @@ beforeEach(() => {
   kc.silentRenewFails = true;
   kc.signoutFails = false;
   kc.removeUserCalled = false;
+  kc.signoutCalled = false;
+  kc.signinCalls = [];
 });
 
 describe('authHeaders при включённом auth', () => {
@@ -156,5 +160,47 @@ describe('logout', () => {
     expect(kc.removeUserCalled).toBe(true);
     expect(s.hasValidSession()).toBe(false);
     expect(s.authHeaders()).toEqual({});
+  });
+});
+
+// SPRINT_LORE_PROJECT_SCOPE/AL-SWITCH-USER, приёмка на стенде 06.11: «войти под
+// другим» гасил пользователя только у себя, SSO-сессия Keycloak оставалась жива,
+// и prompt=login при живой сессии давал «Please re-authenticate» ТОГО ЖЕ человека —
+// без поля логина. Правило: смена пользователя обязана завершить сессию в Keycloak.
+describe('switchUser', () => {
+  function memStorage(): Storage {
+    const m = new Map<string, string>();
+    return {
+      get length() { return m.size; }, clear: () => m.clear(),
+      getItem: k => (m.has(k) ? m.get(k)! : null), key: i => [...m.keys()][i] ?? null,
+      removeItem: k => { m.delete(k); }, setItem: (k, v) => { m.set(k, String(v)); },
+    };
+  }
+
+  it('завершает SSO-сессию Keycloak, а после возврата вход сразу спрашивает логин', async () => {
+    kc.storedUser = validUser;
+    const s = await loadSession();
+    const ss = memStorage();
+    vi.stubGlobal('window', { localStorage: {}, sessionStorage: ss });
+    await s.initSession();
+    await s.switchUser();
+    expect(kc.signoutCalled).toBe(true);          // выход из Keycloak, не только локально
+    expect(s.takeSwitchUser(ss)).toBe(true);      // экран входа после возврата сам начнёт вход
+    expect(s.takeSwitchUser(ss)).toBe(false);     // отметка одноразовая
+    expect(s.takeLoginPrompt(ss)).toBe('login');  // и этот вход спросит логин
+  });
+
+  it('при недоступном Keycloak гасит сессию локально и всё равно идёт на вход с prompt=login', async () => {
+    kc.storedUser = validUser;
+    kc.signoutFails = true;
+    const s = await loadSession();
+    const ss = memStorage();
+    vi.stubGlobal('window', { localStorage: {}, sessionStorage: ss });
+    await s.initSession();
+    await s.switchUser();
+    expect(kc.removeUserCalled).toBe(true);
+    expect(s.hasValidSession()).toBe(false);
+    expect(kc.signinCalls).toEqual([expect.objectContaining({ prompt: 'login' })]);
+    expect(s.takeSwitchUser(ss)).toBe(false);     // повторного автозапуска входа не будет
   });
 });
