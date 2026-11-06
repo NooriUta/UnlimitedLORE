@@ -22,6 +22,18 @@ interface KnownSetting {
   placeholder: string;
 }
 const KNOWN_SETTINGS: KnownSetting[] = [
+  // Адрес Völva для ссылок «решение ↔ документ» (SPRINT_VOLVA_DATASTORY/DS-LINK-1,
+  // DS-LINK-2). Читает volvaLinks.ts; пусто — кнопки в карточке решения нет.
+  {
+    key: 'volva.url',
+    placeholder: 'https://volva.odal.seidrstudio.pro',
+    text: t => ({
+      type: t('lore.admin.settingTypeUrl', 'адрес https://…'),
+      def: t('lore.admin.settingVolvaUrlDef', '— (кнопки Völva в карточке решения нет)'),
+      descr: t('lore.admin.settingVolvaUrlDescr', 'Адрес Völva для ссылок из LORE: «Документы в Völva» и «Документ к решению» в карточке решения. Открываются в сессии пользователя, с его правами в Völva.'),
+      hint: t('lore.admin.settingVolvaUrlHint', 'Только http(s). Действует после обновления страницы.'),
+    }),
+  },
   // Слой графиков (решение владелицы 06.11.2026): свои графики на ECharts или
   // встройка Völva — либо то, либо другое. Читает charts/chartLayer.ts на каждом
   // показе графика; по умолчанию echarts.

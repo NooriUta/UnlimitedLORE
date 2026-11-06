@@ -814,7 +814,10 @@
       "parentOrphan": "Независимые",
       "projectLabel": "Проект",
       "noProject": "без проекта",
-      "statusLabel": "Статус"
+      "statusLabel": "Статус",
+      "volvaDocs": "Документы в Völva ↗",
+      "volvaNewDoc": "+ Документ к решению в Völva ↗",
+      "volvaNotConnected": "Völva не подключена: адрес задаётся настройкой volva.url в админке."
     },
     "docView": {
       "filterPlaceholder": "Фильтр документов…",
@@ -2520,7 +2523,11 @@
       "volvaCheckForbidden": "Нет доступа к подписи встройки. ({{d}})",
       "volvaCheckError": "Ошибка проверки: {{d}}",
       "volvaCheckBtn": "Проверить интеграцию Völva",
-      "volvaCheckNote": "Запрашивает подписанный адрес пилотного графика velocity — тот же путь, что у слоя Völva."
+      "volvaCheckNote": "Запрашивает подписанный адрес пилотного графика velocity — тот же путь, что у слоя Völva.",
+      "settingTypeUrl": "адрес https://…",
+      "settingVolvaUrlDef": "— (кнопки Völva в карточке решения нет)",
+      "settingVolvaUrlDescr": "Адрес Völva для ссылок из LORE: «Документы в Völva» и «Документ к решению» в карточке решения. Открываются в сессии пользователя, с его правами в Völva.",
+      "settingVolvaUrlHint": "Только http(s). Действует после обновления страницы."
     },
     "oqBoard": {
       "ansFailed": "Не удалось загрузить решение #{{id}} — клик повторит",
