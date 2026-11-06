@@ -818,6 +818,10 @@ public final class LoreSlices {
             "out('ADDRESSES').pain_id AS pain_ids, " +
             "out('PROMISES').gain_id  AS gain_ids, " +
             "out('HELPS_WITH').job_id AS job_ids, " + // Остервальдер: третья ось профиля
+            // AN-09 (D-2026-LORE-FEATURE-BUILDS-ON-EDGE): линейка — обе стороны ребра,
+            // чтобы граф строился без второго запроса.
+            "out('BUILDS_ON').uc_id AS builds_on_ids, " +
+            "in('BUILDS_ON').uc_id AS enables_ids, " +
             "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id " +
             // Корень = верхние уровни шкалы. Узлы без goal_level сюда не попадают
             // и не теряются: их видно линтером качества (goal_level обязателен).

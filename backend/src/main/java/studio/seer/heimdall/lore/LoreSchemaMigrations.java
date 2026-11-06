@@ -1380,7 +1380,14 @@ final class LoreSchemaMigrations {
         // done_date — дата простановки статуса, не работы; аналитика скорости её
         // исключает и говорит, сколько исключила. Вершина, не Hist (как work_class).
         new Step(59, 17, "task_bookkeeping", List.of(
-            "CREATE PROPERTY KnowTask.bookkeeping IF NOT EXISTS BOOLEAN"))
+            "CREATE PROPERTY KnowTask.bookkeeping IF NOT EXISTS BOOLEAN")),
+
+        // SPRINT_LORE_PRODUCT_BACKLOG/AN-09 · decision:D-2026-LORE-FEATURE-BUILDS-ON-EDGE
+        // (06.11.2026): линейка фич «опирается на → открывает дорогу» — ребром, а не
+        // текстовыми ссылками context_md (истина в рёбрах, D5). Направление:
+        // фича → фича, на которую она опирается.
+        new Step(60, 17, "feature_builds_on", List.of(
+            "CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS EXTENDS E"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
