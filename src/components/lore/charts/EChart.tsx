@@ -1,13 +1,13 @@
 // ECharts в LORE: только нужные части (tree-shaking) — столбцы, линии, сетка,
-// подсказка, легенда, canvas. Тема — из токенов LORE: цвета разрешаются через
+// подсказка, легенда, SVG-рендер (как в Völva: чётко на любом масштабе). Тема — из токенов LORE: цвета разрешаются через
 // вычисленный стиль, потому что canvas не понимает var(--…) и color-mix().
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
+import { SVGRenderer } from 'echarts/renderers';
 
-echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, SVGRenderer]);
 
 /** CSS-цвет (в т.ч. var(--x) и color-mix) → то, что понимает canvas. */
 export function resolveCssColor(css: string): string {
@@ -33,7 +33,7 @@ export default function EChart({ option, height = 140, ariaLabel }: Props) {
 
   useEffect(() => {
     if (!hostRef.current) return;
-    const chart = echarts.init(hostRef.current, undefined, { renderer: 'canvas' });
+    const chart = echarts.init(hostRef.current, undefined, { renderer: 'svg' });
     chartRef.current = chart;
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => chart.resize()) : null;
     ro?.observe(hostRef.current);

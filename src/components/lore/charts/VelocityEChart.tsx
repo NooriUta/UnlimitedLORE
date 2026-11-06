@@ -11,6 +11,8 @@ export default function VelocityEChart({ weeks, stacks }: { weeks: VelocityWeek[
     muted: resolveCssColor('color-mix(in srgb,var(--acc) 30%,var(--b3))'),
     text: resolveCssColor('var(--t3)'),
     grid: resolveCssColor('var(--bd)'),
+    tooltipBg: resolveCssColor('var(--bg2)'),
+    tooltipText: resolveCssColor('var(--t1)'),
   }), [weeks, stacks, mode]); // eslint-disable-line react-hooks/exhaustive-deps
   const peak = Math.max(0, ...weeks.map(w => w.count));
   return <EChart option={option} height={stacks && stacks.length ? 150 : 130}

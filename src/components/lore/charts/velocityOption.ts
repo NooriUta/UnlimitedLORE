@@ -6,13 +6,14 @@
  */
 export interface VelocityWeek { key: string; label: string; count: number; isCurrent: boolean }
 export interface VelocityStack { label: string; color: string; counts: Record<string, number> }
-export interface VelocityPalette { accent: string; muted: string; text: string; grid: string }
+export interface VelocityPalette { accent: string; muted: string; text: string; grid: string; tooltipBg?: string; tooltipText?: string }
 export function velocityOption(weeks: VelocityWeek[], stacks: VelocityStack[] | undefined, resolve: (css: string) => string, pal: VelocityPalette): any {
   const labels = weeks.map(w => w.label);
   const base = {
     animation: false,
     grid: { left: 28, right: 8, top: 18, bottom: 22, containLabel: false },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    textStyle: { fontFamily: 'Manrope, sans-serif' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: pal.tooltipBg, borderColor: pal.grid, textStyle: { color: pal.tooltipText, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 } },
     xAxis: { type: 'category', data: labels, axisLabel: { color: pal.text, fontSize: 9 }, axisLine: { lineStyle: { color: pal.grid } }, axisTick: { show: false } },
     yAxis: { type: 'value', minInterval: 1, axisLabel: { color: pal.text, fontSize: 9 }, splitLine: { lineStyle: { color: pal.grid } } },
   };
