@@ -781,6 +781,7 @@ public final class LoreSlices {
             // (ADR-LORE-015, T14) — plain vertex fields.
             ROLE_HOLDERS + ", task_type, " +
             // ADR-LORE-022: ЗАЧЕМ-ось + какой UC задача реализует (REALIZES).
+            "actual_days, " +
             "work_class, out('REALIZES').uc_id AS realizes_uc " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
@@ -1333,7 +1334,7 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
             // (ADR-LORE-015, T14) — plain vertex fields.
-            ROLE_HOLDERS + ", task_type " +
+            ROLE_HOLDERS + ", task_type, actual_days " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
@@ -1350,7 +1351,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
-            ROLE_HOLDERS + ", task_type, work_class " +
+            ROLE_HOLDERS + ", task_type, work_class, actual_days " +
             "FROM KnowTask WHERE task_uid IN :task_uids " +
             "ORDER BY task_uid",
             List.of("task_uids"), Map.of(), "");

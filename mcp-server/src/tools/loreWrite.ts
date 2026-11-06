@@ -260,6 +260,7 @@ export function registerLoreWrite(server: McpServer): void {
       title: z.string(),
       note_md: z.string().optional().describe('optional Markdown note'),
       effort_days: z.number().nonnegative().optional().describe('estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125) — same field task_set writes, set at creation so the task is born with its estimate'),
+      actual_days: z.number().nonnegative().optional().describe('actual effort already spent, person-days — for tasks recorded after the work was done (bookkeeping); same field task_set writes (MT-CAL-ACTUAL)'),
       phase_uid: z.string().optional()
         .describe('optional phase to attach to, e.g. "SPRINT_X/PHASE_A" (must belong to the same sprint; create via sprint_phase_new first)'),
       author_agent: z.string().optional().describe('кто поставил задачу. С TR-05 это РЕБРО, а не поле: значение обязано быть заявленной личностью (человек с ролью в проекте задачи либо агентная личность). Незаявленное — отказ со списком кандидатов, а не тихая запись строки'),
@@ -270,9 +271,9 @@ export function registerLoreWrite(server: McpServer): void {
       uc_id: z.string().optional().describe('D16: the use case this task realizes. Creates the REALIZES edge ATOMICALLY with the task — no second call, no window where the task exists unlinked. A non-existent uc_id is a 400, not a silent no-op.'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, effort_days, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id }) => ({
+    body: ({ sprint_id, task_id, title, note_md, effort_days, actual_days, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id }) => ({
           sprint_id, task_id, title,
-          note_md: note_md ?? null, effort_days: effort_days ?? null, phase_uid: phase_uid ?? null,
+          note_md: note_md ?? null, effort_days: effort_days ?? null, phase_uid: phase_uid ?? null, actual_days: actual_days ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
           reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
           work_class: work_class ?? null, uc_id: uc_id ?? null,
@@ -1684,6 +1685,7 @@ export function registerLoreWrite(server: McpServer): void {
       title:          z.string().optional().describe('single-mode: new title'),
       note_md:        z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
       effort_days:    z.number().optional().describe('single-mode: estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
+      actual_days:    z.number().min(0).optional().describe('single-mode: ACTUAL effort spent, person-days (same unit as effort_days). Set it when closing the task — without the fact, estimates cannot be calibrated (MT-CAL-ACTUAL). Omit to leave unchanged.'),
       author_agent:   z.string().optional().describe('single-mode: кто поставил задачу — записывается ребром ROLE_HELD_BY; незаявленная личность отвергается со списком кандидатов'),
       executor_agent: z.string().optional().describe('single-mode: who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
@@ -1695,6 +1697,7 @@ export function registerLoreWrite(server: McpServer): void {
         title:          z.string(),
         note_md:        z.string().optional(),
         effort_days:    z.number().optional(),
+        actual_days:    z.number().min(0).optional(),
         author_agent:   z.string().optional(),
         executor_agent: z.string().optional(),
         reviewer_agent: z.string().optional(),
@@ -1703,19 +1706,19 @@ export function registerLoreWrite(server: McpServer): void {
         uc_id:          z.string().optional(),
       })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, actual_days, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
             tasks.map(t => ({
-              task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null,
+              task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null, actual_days: t.actual_days ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
               task_type: t.task_type ?? null, work_class: t.work_class ?? null, uc_id: t.uc_id ?? null,
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', {
-          task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null,
+          task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null, actual_days: actual_days ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
           task_type: task_type ?? null, work_class: work_class ?? null, uc_id: uc_id ?? null,
         }));
