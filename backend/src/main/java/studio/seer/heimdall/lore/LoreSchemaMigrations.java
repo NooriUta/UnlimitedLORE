@@ -1373,7 +1373,14 @@ final class LoreSchemaMigrations {
         // Поле на ВЕРШИНЕ (как work_class): факт не версионируется. Тип объявлен
         // заранее (урок RM-P12 — необъявленное поле получает тип от первого пишущего).
         new Step(58, 17, "task_actual_days", List.of(
-            "CREATE PROPERTY KnowTask.actual_days IF NOT EXISTS DOUBLE"))
+            "CREATE PROPERTY KnowTask.actual_days IF NOT EXISTS DOUBLE")),
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-BOOKKEEPING (06.11.2026): «запись задним
+        // числом» — задача заведена и закрыта как учёт уже сделанной работы. Её
+        // done_date — дата простановки статуса, не работы; аналитика скорости её
+        // исключает и говорит, сколько исключила. Вершина, не Hist (как work_class).
+        new Step(59, 17, "task_bookkeeping", List.of(
+            "CREATE PROPERTY KnowTask.bookkeeping IF NOT EXISTS BOOLEAN"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

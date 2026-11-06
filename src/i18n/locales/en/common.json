@@ -493,6 +493,8 @@
         "releaseCadenceHint": "Release pace per project: frequency = releases in the last 30 days ÷ (30/7) = releases per week. Median = median gap in days between the project's consecutive releases.",
         "releasePerWeekHint": "Releases per week over the last 30 days",
         "throughputBarHint": "{{label}}: {{count}} tasks",
+        "bookkeepingExcluded": "bookkeeping records excluded: {{n}}",
+        "bookkeepingExcludedHint": "Tasks flagged bookkeeping were created and closed to record work already done: their close date is when the status was set, not when the work happened. They are excluded from throughput and flow efficiency.",
         "throughputHint": "Tasks closed per ISO week (KnowTaskHist → DONE). Counted since Jun 12 (earlier is bulk import) and only tasks with real status progression (states>1), excluding archival tasks \"born done\"."
       },
       "overview": {
