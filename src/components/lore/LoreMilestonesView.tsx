@@ -6,7 +6,7 @@ import {
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
 } from '../../api/lore';
 import {
-  NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, unplannedOfProduct, type ProductRow,
+  NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, unplannedOfProduct, unplannedShare, isStreamSprint, type ProductRow,
 } from './milestoneProducts';
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
@@ -117,6 +117,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   const [newTask, setNewTask]       = useState<{ sprint_id: string; title: string }>({ sprint_id: '', title: '' });
   const [addOpen, setAddOpen]       = useState(false);
   const [draft, setDraft]           = useState<EditState & { milestone_id: string }>({ milestone_id: '', label: '', date_display: '', week: '', priority: '', goal_md: '' });
+  // RM-U3: продукт — поле первого класса и в форме создания; по умолчанию — выбранный сверху.
+  const [draftProduct, setDraftProduct] = useState('');
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -141,6 +143,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
       .sort((a, b) => a.sprint_id.localeCompare(b.sprint_id)),
   [milestones, sprints, product, products]);
   const shown = useMemo(() => milestonesOfProduct(milestones, product, products), [milestones, product, products]);
+  const share = useMemo(() => unplannedShare(sprints, milestones, product, products), [sprints, milestones, product, products]);
   const productLabel = useMemo(() => new Map(products.map(p => [p.code, p.label_ru || p.code])), [products]);
 
   const avgVelocity = useMemo(() => {
@@ -334,13 +337,26 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               </div>
             </Field>
             <Field caption={t('lore.milestonesView.field.priority', 'Приоритет')} w={80}><select style={{ ...S.in, width: '100%' }} value={draft.priority} onChange={e => setDraft({ ...draft, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p} value={p}>{p || '—'}</option>)}</select></Field>
+            <Field caption={t('lore.milestonesView.productsField', 'Продукт')} w={170}>
+              <select style={{ ...S.in, width: '100%', borderColor: (draftProduct || (product && product !== NO_PRODUCT)) ? 'var(--bd)' : 'var(--wrn)' }}
+                value={draftProduct || (product && product !== NO_PRODUCT ? product : '')} onChange={e => setDraftProduct(e.target.value)}>
+                <option value="">{t('lore.milestonesView.noProductTag', 'без продукта')}</option>
+                {products.map(p => <option key={p.code} value={p.code}>{p.label_ru || p.code}</option>)}
+              </select>
+            </Field>
           </div>
+          {!(draftProduct || (product && product !== NO_PRODUCT)) && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--wrn)' }}>{t('lore.milestonesView.noProductHint', 'Веха без продукта считается незаполненной: карта принадлежит продукту.')}</div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
             <button style={S.btn} onClick={() => setAddOpen(false)}>{t('lore.milestonesView.cancel', '× Отмена')}</button>
             <button style={S.btnPrimary} disabled={!draft.milestone_id.trim() || busy === 'create'}
               onClick={() => run('create', async () => {
-                await upsertMilestone({ milestone_id: draft.milestone_id.trim(), label: draft.label || draft.milestone_id, week: draft.week ? parseInt(draft.week) : null, date_display: draft.date_display || null, priority: draft.priority || null });
-                setAddOpen(false); setDraft({ milestone_id: '', label: '', date_display: '', week: '', priority: '', goal_md: '' });
+                const mid = draft.milestone_id.trim();
+                await upsertMilestone({ milestone_id: mid, label: draft.label || draft.milestone_id, week: draft.week ? parseInt(draft.week) : null, date_display: draft.date_display || null, priority: draft.priority || null });
+                const pc = draftProduct || (product && product !== NO_PRODUCT ? product : '');
+                if (pc) await linkMilestoneProduct(mid, pc, 'add');
+                setAddOpen(false); setDraft({ milestone_id: '', label: '', date_display: '', week: '', priority: '', goal_md: '' }); setDraftProduct('');
               })}>{busy === 'create' ? '…' : t('lore.milestonesView.createMilestone', 'Создать веху')}</button>
           </div>
         </div>
@@ -496,6 +512,10 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
           <GameIcon slug="hourglass" size={12} style={{ color: orphans.length ? 'var(--wrn)' : 'var(--t3)' }} />
           {t('lore.milestonesView.unplannedTitle', 'Вне плана — открытые спринты без вехи · {{count}}', { count: orphans.length })}
         </div>
+        {/* RM-U6 / RM-V4: доля числом и деление «поток / забыли» — рядом, не за скроллом */}
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>
+          {t('lore.milestonesView.unplannedShare', '{{unplanned}} из {{open}} открытых спринтов ({{pct}}%) · поток: {{stream}} · правда забыли: {{forgotten}}', share)}
+        </div>
         {orphans.length === 0
           ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--suc)' }}>{t('lore.milestonesView.allOpenPlanned', 'Каждый открытый спринт стоит в вехе ✓')}</div>
           : (
@@ -508,6 +528,10 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                     <span style={S.sprId} onClick={() => onNavigateToSprint?.(s.sprint_id)} role={onNavigateToSprint ? 'button' : undefined}>{s.sprint_id}</span>
                     <span style={S.sprName}>{s.name}</span>
                     {proj && <span style={S.projTag}>{proj}</span>}
+                    <span style={{ ...S.projTag, color: isStreamSprint(s.sprint_id) ? 'var(--inf)' : 'var(--wrn)' }}
+                      title={isStreamSprint(s.sprint_id) ? t('lore.milestonesView.streamHint', 'поток: уборка, апгрейды, CI, зависимости — вне вех по своей природе') : t('lore.milestonesView.forgottenHint', 'похоже, забыли поставить в план')}>
+                      {isStreamSprint(s.sprint_id) ? t('lore.milestonesView.streamTag', 'поток') : t('lore.milestonesView.forgottenTag', 'забыли')}
+                    </span>
                     <select style={{ ...S.in, fontSize: 'var(--fs-2xs)', padding: '2px 4px', flexShrink: 0 }} value=""
                       onChange={e => { const mid = e.target.value; if (mid) run('assign' + s.sprint_id, () => linkSprintMilestone(s.sprint_id, mid, 'add')); }}>
                       <option value="">{t('lore.milestonesView.intoMilestonePlaceholder', '→ в веху…')}</option>
