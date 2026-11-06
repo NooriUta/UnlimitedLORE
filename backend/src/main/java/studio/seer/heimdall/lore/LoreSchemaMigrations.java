@@ -1365,7 +1365,15 @@ final class LoreSchemaMigrations {
         // в ответ №15 не входили и пережили V54. На проде 05.11 оба пусты (0 строк),
         // код их не создаёт и не читает. Тот же механизм: только при нулевом счёте,
         // иначе WARN и ничего не удаляется. Бэкап перед шагом снимает раннер.
-        new Step(57, 17, "java__drop_planitem_leftovers_if_unused", List.of())
+        new Step(57, 17, "java__drop_planitem_leftovers_if_unused", List.of()),
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-ACTUAL (06.11.2026): факт трудоёмкости
+        // рядом с оценкой. Калибровка показала: факт выводился только из истории
+        // статусов, а у 75% закрытых задач рабочего статуса нет — измеримых пар 14%.
+        // Поле на ВЕРШИНЕ (как work_class): факт не версионируется. Тип объявлен
+        // заранее (урок RM-P12 — необъявленное поле получает тип от первого пишущего).
+        new Step(58, 17, "task_actual_days", List.of(
+            "CREATE PROPERTY KnowTask.actual_days IF NOT EXISTS DOUBLE"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

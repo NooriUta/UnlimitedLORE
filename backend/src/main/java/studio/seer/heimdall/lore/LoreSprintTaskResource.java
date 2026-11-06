@@ -59,13 +59,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // с оценкой, без второго вызова и без упрёка чекера качества «missing: effort_days».
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md,
         String phase_uid, String author_agent, String executor_agent, String reviewer_agent,
-        String task_type, String work_class, String uc_id, Double effort_days) {}
+        String task_type, String work_class, String uc_id, Double effort_days, Double actual_days) {}
     // effort_days: fractional, granular to the hour (1 day = 8 working hours,
     // so the smallest meaningful increment is 0.125). Was Integer — too coarse
     // to estimate sub-day tasks.
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
         String work_class, String uc_id,
-        String author_agent, String executor_agent, String reviewer_agent, String task_type) {}
+        String author_agent, String executor_agent, String reviewer_agent, String task_type,
+        Double actual_days) {}
     // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
     // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
     // а не когда кто-то откроет срез гигиены через неделю.
@@ -279,6 +280,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (req.effort_days() != null && (req.effort_days().isNaN() || req.effort_days() < 0)) {
             return Uni.createFrom().item(badParams("effort_days must be a non-negative number of person-days (or omitted)"));
         }
+        if (req.actual_days() != null && (req.actual_days().isNaN() || req.actual_days() < 0)) {
+            return Uni.createFrom().item(badParams("actual_days must be a non-negative number of person-days (or omitted)"));
+        }
         final String sid   = req.sprint_id();
         final String tid   = req.task_id();
         final String uid   = sid + "/" + tid;
@@ -322,7 +326,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     ? null : req.work_class(); // null легален (D3: не каждая задача несёт класс)
                 StringBuilder script = new StringBuilder()
                     .append("INSERT INTO KnowTask SET task_uid = :uid, task_id = :tid, title = :title, ")
-                    .append("note_md = :note, effort_days = :eff, order_index = :oi, src = 'manual', task_type = :tt, work_class = :wc;")
+                    .append("note_md = :note, effort_days = :eff, order_index = :oi, src = 'manual', task_type = :tt, work_class = :wc, actual_days = :act;")
                     .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
                     .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
@@ -331,7 +335,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
                 Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
                     "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType, "wc", workClass,
-                    "eff", req.effort_days());
+                    "eff", req.effort_days(), "act", req.actual_days());
                 // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
                 if (phase != null) {
                     script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
@@ -814,9 +818,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (!SAFE_ID.matcher(req.task_uid()).matches()) {
                 errors.add("skipped (illegal task_uid): " + req.task_uid()); continue;
             }
+            if (req.actual_days() != null && (req.actual_days().isNaN() || req.actual_days() < 0)) {
+                errors.add("skipped (actual_days must be non-negative): " + req.task_uid()); continue;
+            }
             try {
                 writeClient.command(db, basicAuth(),
-                    taskVertexUpdate(req.task_uid(), req.title(), req.note_md(), req.effort_days(),
+                    taskVertexUpdate(req.task_uid(), req.title(), req.note_md(), req.effort_days(), req.actual_days(),
                         req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
                     .await().indefinitely();
                 mirrorTaskHist(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely();
@@ -875,8 +882,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
      * so a title-only edit never wipes note_md/effort_days denormalised on the vertex
      * (the UI reads the hist row, but the vertex copy must stay consistent too).
      */
-    private static LoreCommandClient.LoreCommand taskVertexUpdate(
-            String uid, String title, String noteMd, Double effortDays,
+    static LoreCommandClient.LoreCommand taskVertexUpdate(
+            String uid, String title, String noteMd, Double effortDays, Double actualDays,
             String authorAgent, String executorAgent, String reviewerAgent, String taskType,
             String workClass) {
         StringBuilder sql = new StringBuilder("UPDATE KnowTask SET title = :title");
@@ -885,6 +892,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         p.put("title", title.trim());
         if (noteMd != null)     { sql.append(", note_md = :note");     p.put("note", noteMd); }
         if (effortDays != null) { sql.append(", effort_days = :eff");  p.put("eff", effortDays); }
+        // MT-CAL-ACTUAL: факт — только на вершине (как work_class), без Hist: он не
+        // версионируется, и carry-forward при смене статуса его не касается.
+        if (actualDays != null) { sql.append(", actual_days = :act");  p.put("act", actualDays); }
         // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type (ADR-LORE-015,
         // T14) — vertex fields, only touched when supplied so a title-only edit never
         // wipes an existing owner/type.
@@ -932,9 +942,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.task_uid()).matches()) {
             return Uni.createFrom().item(badParams("task_uid contains illegal characters"));
         }
+        if (req.actual_days() != null && (req.actual_days().isNaN() || req.actual_days() < 0)) {
+            return Uni.createFrom().item(badParams("actual_days must be a non-negative number of person-days"));
+        }
         final String uid = req.task_uid();
         return writeClient.command(db, basicAuth(),
-                taskVertexUpdate(uid, req.title(), req.note_md(), req.effort_days(),
+                taskVertexUpdate(uid, req.title(), req.note_md(), req.effort_days(), req.actual_days(),
                     req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
             // The vertex note_md/effort_days above are denormalisations the UI never reads.
             // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
