@@ -22,6 +22,7 @@ import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreSprintEditor    from '../components/lore/LoreSprintEditor';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
+import { readDeepLink } from '../api/searchRoutes';
 import LoreOpenQuestionsBoard from '../components/lore/LoreOpenQuestionsBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
@@ -233,15 +234,19 @@ export default function LorePage() {
   const section   = (params.get('section') as Section) || 'plan';
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
-  const spec      = params.get('spec')      || '';
+  // Находка CICDGitHub/Völva 06.11: поиск вёл в «Знания» с passport=<id>, а
+  // раздел читал ?spec= и «doc:<id>» — запись не открывалась. Разбор теперь один
+  // (readDeepLink) и проверяется туда-обратно с searchHitHref по всем типам.
+  const deepLink  = readDeepLink(params);
+  const spec      = section === 'knowledge' && deepLink?.kind === 'spec' ? deepLink.id : (params.get('spec') || '');
   const ucParam   = params.get('uc')        || '';   // PL-16: раскрытый узел дерева US→задачи
   // T19: Knowledge doc/runbook deep-links are unified onto `passport` as
   // "<kind>:<id>" (like every other section's passport). Legacy ?kind=&art=
   // is still read so old bookmarks keep working. `spec` keeps its own param —
   // it's shared with the Components section's spec drill-down, not a
   // Knowledge-only quirk.
-  const kSel = section === 'knowledge' && /^(doc|runbook):/.test(passport)
-    ? { kind: passport.slice(0, passport.indexOf(':')) as DocKind, id: passport.slice(passport.indexOf(':') + 1) }
+  const kSel = section === 'knowledge' && (deepLink?.kind === 'doc' || deepLink?.kind === 'runbook')
+    ? { kind: deepLink.kind as DocKind, id: deepLink.id }
     : null;
   const artKind   = (kSel?.kind ?? ((params.get('kind') as DocKind | '') || '')) as DocKind | '';
   const artId     = kSel?.id ?? (params.get('art') || '');
