@@ -823,6 +823,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (req.actual_days() != null && (req.actual_days().isNaN() || req.actual_days() < 0)) {
                 errors.add("skipped (actual_days must be non-negative): " + req.task_uid()); continue;
             }
+            {
+                Integer open = (req.note_md() != null || req.effort_days() != null)
+                    ? openStateRows(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely() : 1;
+                String refusal = noOpenStateRefusal(req.task_uid(), req.note_md(), req.effort_days(), open);
+                if (refusal != null) { errors.add("skipped (NO_OPEN_STATE): " + refusal); continue; }
+            }
             try {
                 writeClient.command(db, basicAuth(),
                     taskVertexUpdate(req.task_uid(), req.title(), req.note_md(), req.effort_days(), req.actual_days(), req.bookkeeping(),
@@ -877,6 +883,31 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     private void relinkRealizes(String uid, String ucId) {
         if (ucId == null) return;
         relinkRealizesUni(uid, ucId).await().indefinitely();
+    }
+
+    /**
+     * MT-MCP-TRUTH Б6 (06.11.2026): замер прода — у 24 задач нет открытой строки
+     * истории (единственная закрыта). task_set с note_md/effort_days писал вершину,
+     * зеркало в историю не находило строку, ответ был ok:true, а срезы, читающие
+     * открытую строку, правку не показывали. Правка полей вершины (title, тип,
+     * класс) открытой строки не требует. null — писать можно.
+     */
+    static String noOpenStateRefusal(String uid, String noteMd, Double effortDays, int openRows) {
+        if (noteMd == null && effortDays == null) return null;
+        if (openRows > 0) return null;
+        return "у задачи " + uid + " нет открытой строки истории: note_md/effort_days легли бы только на "
+            + "вершину, а срезы читают их из истории — правка была бы невидима при ok:true. "
+            + "Сначала status_set (откроет строку текущим статусом), затем повтори task_set.";
+    }
+
+    /** Число открытых строк истории задачи; спрашивается только если правке нужна история. */
+    private Uni<Integer> openStateRows(String uid, String noteMd, Double effortDays) {
+        if (noteMd == null && effortDays == null) return Uni.createFrom().item(1);
+        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "SELECT out('HAS_STATE')[valid_to IS NULL].size() AS n FROM KnowTask WHERE task_uid = :u",
+                Map.of("u", uid)))
+            .map(r -> r.result() instanceof java.util.List<?> rows && !rows.isEmpty()
+                    && rows.get(0) instanceof Map<?, ?> m && m.get("n") instanceof Number n ? n.intValue() : 1);
     }
 
     /**
@@ -950,6 +981,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             return Uni.createFrom().item(badParams("actual_days must be a non-negative number of person-days"));
         }
         final String uid = req.task_uid();
+        // MT-MCP-TRUTH Б6: заметка/оценка обязаны лечь в ОТКРЫТУЮ строку истории;
+        // её нет — отказ до записи, а не ok:true при невидимой правке.
+        return openStateRows(uid, req.note_md(), req.effort_days()).chain(openRows -> {
+        String refusal = noOpenStateRefusal(uid, req.note_md(), req.effort_days(), openRows);
+        if (refusal != null) return Uni.createFrom().item(noStore(Response.status(Response.Status.CONFLICT)
+            .entity(new LoreError("NO_OPEN_STATE", refusal))));
         return writeClient.command(db, basicAuth(),
                 taskVertexUpdate(uid, req.title(), req.note_md(), req.effort_days(), req.actual_days(), req.bookkeeping(),
                     req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
@@ -987,6 +1024,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
             });
+        });
     }
 
     // ── Write-path: append PR numbers to open KnowSprintHist.pr_refs ───────────
