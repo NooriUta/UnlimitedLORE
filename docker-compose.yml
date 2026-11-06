@@ -166,6 +166,11 @@ services:
       # "not configured", остальной LORE работает как обычно (pluggable).
       # Секрет читается через SecretProvider (D15): env | infisical.
       - KC_ADMIN_CLIENT_SECRET=${KC_ADMIN_CLIENT_SECRET:-}
+      # SPRINT_VIZ_EMBED/VE-2: адрес Völva для подписанных ссылок встройки. Ключ подписи
+      # (LORE_VOLVA_EMBED_SECRET) бэкенд берёт через SecretProvider — env или Infisical.
+      # Пусто → /lore/embed/volva/* отвечает 503 «не настроено».
+      - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      - LORE_VOLVA_EMBED_SECRET=${LORE_VOLVA_EMBED_SECRET:-}
       # НЕ ${KC_ADMIN_URL}: в .env он localhost (для host-скриптов), а внутри
       # контейнера localhost = сам контейнер. Ходим через kc:host-gateway.
       - kc.admin.url=http://kc:18180/kc
