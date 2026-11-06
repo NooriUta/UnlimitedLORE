@@ -2453,9 +2453,8 @@ public final class LoreSlices {
         Map.entry("use_cases_of_component", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("use_cases_of_feature", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("shipped_dynamics", "out('BELONGS_TO_PROJECT').slug"),
-        Map.entry("feature_vp_analytics", "out('BELONGS_TO_PROJECT').slug"),
-        Map.entry("actors", "out('BELONGS_TO_PROJECT').slug"),
-        Map.entry("actor_load", "out('BELONGS_TO_PROJECT').slug")
+        Map.entry("feature_vp_analytics", "out('BELONGS_TO_PROJECT').slug")
+        // actors / actor_load — НЕ здесь: AL-106, агенты видны всем (см. SHARED_SLICES).
     );
 
     /**
@@ -2485,7 +2484,9 @@ public final class LoreSlices {
         Map.entry("scope_orphans", "сторож сирот скоупа — по определению без проекта"),
         Map.entry("history_hygiene", "сторож истории — служебный"),
         Map.entry("asset_orphans", "сторож ассетов — служебный"),
-        Map.entry("tech_registry", "реестр технологий — общий")
+        Map.entry("tech_registry", "реестр технологий — общий"),
+        Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
+        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем")
     );
 
     /**
