@@ -755,6 +755,21 @@ public class AidaLoreResource extends LoreResourceBase {
         return res;
     }
 
+    /** AL-91: признак построчного скоупа в ответе среза; null — скоуп к срезу не применялся. */
+    static Map<String, Object> scopeMeta(String id, java.util.Set<String> allowed) {
+        if (allowed == null || !LoreSlices.PROJECT_SCOPED.containsKey(id)) return null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("applied", true);
+        m.put("projects", allowed.size());
+        m.put("note", "выдача сужена проектным скоупом — строки вне разрешённых проектов не показаны");
+        return m;
+    }
+
+    /** AL-91: скоупный срез при пустом множестве разрешённых проектов — отказ, а не пустой список. */
+    static boolean scopeDenies(String id, java.util.Set<String> allowed) {
+        return allowed != null && allowed.isEmpty() && LoreSlices.PROJECT_SCOPED.containsKey(id);
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
         // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
@@ -804,10 +819,12 @@ public class AidaLoreResource extends LoreResourceBase {
 
         LoreSlices.Composed composed;
         final SlicePage page;
+        java.util.Set<String> rowScope;
         try {
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
-            composed = LoreSlices.compose(id, given, allowedProjectsOrNull(role));
+            rowScope = allowedProjectsOrNull(role);
+            composed = LoreSlices.compose(id, given, rowScope);
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
@@ -827,12 +844,22 @@ public class AidaLoreResource extends LoreResourceBase {
         // потока. Прошли только пути, которые до графа не доходят вовсе
         // (superadmin и выключенный auth) — из них двух можно было сделать
         // вывод «работает».
+        // AL-91 (условие шлюза miniLORE): пустое множество разрешённых проектов —
+        // явный отказ, а не 200 с пустым списком: «нет прав» не должно выглядеть
+        // как «ничего нет».
+        if (scopeDenies(id, rowScope)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта (не заведён в граф ролей или роль не выдана) — срез " + id + " не отдаётся пустым"))));
+        }
+        final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
         java.util.Set<String> allowedForRedact =
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
             .map(res -> {
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
+                if (scopeMarker != null) out.put("scope", scopeMarker);
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {
