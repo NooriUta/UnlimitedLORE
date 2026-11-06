@@ -632,12 +632,12 @@ export function registerLoreWrite(server: McpServer): void {
       'rel="relieves"/"delivers"). rel="job": HELPS_WITH — the feature claims to help with a customer job ' +
       '(performing it is the UCs\' job, see uc_link rel="performs"). rel="milestone": TARGETS_MILESTONE — the ' +
       'strategic goal the feature refines (KAOS reading: milestone = goal, feature = refinement, UCs = ' +
-      'operationalisations). rel="component": BELONGS_TO. linked:false in the response = edge NOT created ' +
+      'operationalisations). rel="component": BELONGS_TO. rel="builds_on": BUILDS_ON — this feature BUILDS ON the target feature (product lineage «builds on → opens the way», AN-09 / D-2026-LORE-FEATURE-BUILDS-ON-EDGE; truth lives in the edge, not in context_md links; self-loop is a 400). linked:false in the response = edge NOT created ' +
       '(target missing) — never a silent no-op.',
     schema: {
       feature_id: z.string(),
-      rel:        z.enum(['pain', 'gain', 'job', 'milestone', 'component']),
-      target_id:  z.string().describe('pain_id | gain_id | job_id | milestone_id | component_id, matching rel'),
+      rel:        z.enum(['pain', 'gain', 'job', 'milestone', 'component', 'builds_on']),
+      target_id:  z.string().describe('pain_id | gain_id | job_id | milestone_id | component_id | feature (uc_id) for builds_on, matching rel'),
       action:     z.enum(['add', 'remove']).default('add'),
     },
     path: '/lore/feature/link',
