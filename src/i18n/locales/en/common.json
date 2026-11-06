@@ -2465,7 +2465,13 @@
       "authOnLine": "on (JWT, role from seer_roles)",
       "authOffLine": "off — dev mode, role from config (VITE_LORE_ROLE)",
       "thTag": "tag",
-      "tagSearch": "tag…"
+      "tagSearch": "tag…",
+      "newTypeLabel": "New dictionary type",
+      "newTypePlaceholder": "new type: release_kind",
+      "newTypeOpen": "Open",
+      "newTypeCreate": "Create type",
+      "newTypeBad": "code: lowercase latin, digits and \"_\", starting with a letter",
+      "newTypeHint": "the type appears together with its first entry"
     },
     "oqBoard": {
       "ansFailed": "Failed to load decision #{{id}} — click to retry",
@@ -2625,7 +2631,25 @@
         "colTakeaway": "takeaway",
         "emptyState": "no published variants yet",
         "emptyFiltered": "nothing found under this filter",
-        "filtersLabel": "Filters"
+        "filtersLabel": "Filters",
+        "fewPoints": "too few points: no measurement in this window",
+        "windowLabel": "window from publication date",
+        "winLifetime": "lifetime",
+        "win72h": "first 72 h",
+        "win7d": "first 7 days",
+        "colInsight": "takeaway",
+        "insightChip": "insight → {{id}}",
+        "fixInsight": "+ record takeaway",
+        "insightsFailed": "insights failed to load — next number unknown",
+        "periodFrom": "published from",
+        "periodTo": "to",
+        "groupLabel": "group",
+        "groupNone": "none",
+        "groupChannel": "by channel",
+        "groupRubric": "by rubric",
+        "groupNoKey": "— no value",
+        "groupCount": "{{n}} items",
+        "sparkLabel": "views over time"
       },
       "insights": {
         "loading": "loading…",
@@ -2645,6 +2669,22 @@
         "colLastCalled": "last call",
         "editBtn": "✎ edit",
         "empty": "no integrations yet"
+      },
+      "insightForm": {
+        "linkFailed": "takeaway {{id}} saved, link not set: {{err}}",
+        "evidenceTitle": "evidence filled in from the row",
+        "placeholder": "what the numbers showed and what follows from it",
+        "statementLabel": "takeaway",
+        "ledTo": "leads to",
+        "ledNone": "nothing yet",
+        "ledTask": "a task",
+        "ledAdr": "an ADR",
+        "taskPlaceholder": "SPRINT_X/CODE",
+        "adrPlaceholder": "ADR-LORE-0NN",
+        "targetLabel": "where it leads",
+        "saving": "saving…",
+        "save": "record",
+        "cancel": "cancel"
       }
     },
     "integrationEditor": {

@@ -1,5 +1,53 @@
 import { describe, it, expect } from 'vitest';
-import { ratioPct, median, channelCtrMedians, benchmarkArrow } from './bragiAnalytics';
+import { ratioPct, median, channelCtrMedians, benchmarkArrow, snapshotValue } from './bragiAnalytics';
+
+// V2-04: точка MetricSnapshot для views/clicks/demo_conv — НАКОПИТЕЛЬНЫЙ снимок
+// («всего к моменту ts»): так пишут оба живых источника (скриншот счётчика,
+// отчёт Метрики). Значит «за всё время» = последний снимок, окно 72 ч / 7 д =
+// последний снимок не позже published_at + окна. Сумма точек — ошибка: второй
+// замер того же объекта задваивал цифру.
+describe('snapshotValue', () => {
+  const pts = [
+    { metric: 'views', value: 10, ts: '2026-07-01T12:00:00Z' },
+    { metric: 'views', value: 40, ts: '2026-07-03T10:00:00Z' },
+    { metric: 'views', value: 90, ts: '2026-07-20T09:00:00Z' },
+    { metric: 'clicks', value: 3, ts: '2026-07-02T09:00:00Z' },
+  ];
+  const pub = '2026-07-01T09:00:00Z';
+
+  it('за всё время — последний снимок, а не сумма', () => {
+    expect(snapshotValue(pts, 'views', pub, null)).toEqual({ value: 90, points: 3 });
+  });
+
+  it('окно 72 ч — последний снимок не позже published_at + 72 ч', () => {
+    expect(snapshotValue(pts, 'views', pub, 72)).toEqual({ value: 40, points: 2 });
+  });
+
+  it('окно 7 д', () => {
+    expect(snapshotValue(pts, 'views', pub, 24 * 7)).toEqual({ value: 40, points: 2 });
+  });
+
+  it('в окне нет ни одного снимка — null («мало точек»), а не 0', () => {
+    expect(snapshotValue([{ metric: 'views', value: 5, ts: '2026-07-10T00:00:00Z' }], 'views', pub, 72))
+      .toEqual({ value: null, points: 0 });
+  });
+
+  it('метрики нет вовсе — null, не 0', () => {
+    expect(snapshotValue(pts, 'demo_conv', pub, null)).toEqual({ value: null, points: 0 });
+  });
+
+  it('порядок точек на входе не важен', () => {
+    expect(snapshotValue([...pts].reverse(), 'views', pub, null).value).toBe(90);
+  });
+
+  it('дата публикации без времени — окно от начала дня (UTC)', () => {
+    expect(snapshotValue(pts, 'views', '2026-07-01', 72).value).toBe(40);
+  });
+
+  it('у окна нет даты публикации — честное «не посчитать», а не lifetime', () => {
+    expect(snapshotValue(pts, 'views', null, 72)).toEqual({ value: null, points: 0 });
+  });
+});
 
 // V2-03: CTR/демо-rate + медиана канала. Негативные кейсы (деление на ноль,
 // пустой массив, единственный замер) несут основную нагрузку — вычислить

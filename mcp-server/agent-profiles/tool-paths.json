@@ -265,7 +265,8 @@
     "/lore/task/edit/batch"
   ],
   "tech_set": [
-    "/lore/spec"
+    "/lore/spec",
+    "/lore/spec/link"
   ],
   "uc_link": [
     "/lore/uc/link"

@@ -40,6 +40,9 @@ public final class LoreSlices {
     static final Pattern VALUE_RE =
         Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}", Pattern.UNICODE_CHARACTER_CLASS);
 
+    /** MT-03: с этой даты заведения enb-задача обязана нести JUSTIFIED_BY (раньше — вне правила). Константа времени компиляции. */
+    static final String ENB_RULE_SINCE = "2026-08-01";
+
     private static final Map<String, SliceDef> SLICES = new LinkedHashMap<>();
 
     /**
@@ -433,7 +436,9 @@ public final class LoreSlices {
         // показывает факт правки, не диф.
         slice("adr_history_all",
             "SELECT in('HAS_STATE').adr_id[0] AS adr_id, valid_from, valid_to, " +
-            "content_hash, source_commit " +
+            "content_hash, source_commit, " +
+            // Проект вершины — событию «изменено» в ленте (см. NewsChangedCarriesProjectTest).
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
@@ -441,7 +446,8 @@ public final class LoreSlices {
         // спек и решений — такая же новость, как правка ADR. Свёртку «одна строка
         // на (id, день)» делает потребитель (/news), здесь только сырые ревизии.
         slice("spec_history_all",
-            "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash " +
+            "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash, " +
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowSpecHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
@@ -939,9 +945,18 @@ public final class LoreSlices {
         // Зеркало дисциплины D16 для второго класса: enb-задача обязана нести
         // JUSTIFIED_BY. Advisory, как и unlinked_uc_tasks — список нарушений,
         // а не гейт записи (гейт задушил бы ввод, TOC-раздел ADR-022).
+        //
+        // MT-03 (05.11.2026, рекомендация 2): правило считается от даты — с
+        // ENB_RULE_SINCE. Хвост июня–июля (класс проставлен задним числом, ADR не
+        // подбирали) объявлен вне правила: он делал список нечитаемым (632 строки),
+        // а само правило по свежим задачам работает (август — 55 %, и растёт).
+        // Отсечка по САМОЙ РАННЕЙ строке истории = дате заведения: «нет ни одной
+        // строки старше даты». По текущей строке нельзя — правка июльской задачи
+        // вернула бы её в список. Строки истории без valid_from не мешают.
         slice("unlinked_enb_tasks",
             "SELECT task_uid, task_id, title, work_class, out('PART_OF').sprint_id[0] AS sprint_id " +
             "FROM KnowTask WHERE work_class = 'enb' AND out('JUSTIFIED_BY').size() = 0 " +
+            "AND out('HAS_STATE')[valid_from < date('" + ENB_RULE_SINCE + "', 'yyyy-MM-dd')].size() = 0 " +
             "ORDER BY task_uid",
             List.of(), Map.of(), "");
 
@@ -2115,7 +2130,9 @@ public final class LoreSlices {
             "SELECT variant_id, status, published_at, url, " +
             "in('HAS_VARIANT').publication_id AS publication_id, " +
             "in('HAS_VARIANT').title AS title, " +
-            "out('IN_CHANNEL').channel_id AS channel_id " +
+            "out('IN_CHANNEL').channel_id AS channel_id, " +
+            // V2-06: группировка ретро по рубрике — рубрика живёт на публикации.
+            "in('HAS_VARIANT').out('IN_RUBRIC').name AS rubric_names " +
             "FROM BragiVariant WHERE published_at IS NOT NULL",
             List.of(), Map.of(), " ORDER BY published_at");
 
@@ -2205,7 +2222,7 @@ public final class LoreSlices {
         // returns whatever field exists on the target (adr_id null on a task row
         // and vice versa), so both arrays below are safe to project together.
         slice("bragi_insights",
-            "SELECT insight_id, statement_md, insight_date, evidence_ref, " +
+            "SELECT insight_id, statement_md, insight_date, evidence_ref, subject_id, " +
             "out('LED_TO').task_uid AS led_tasks, " +
             "out('LED_TO').adr_id AS led_adrs " +
             "FROM BragiInsight",

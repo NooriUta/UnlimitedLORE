@@ -536,6 +536,9 @@ public class LoreSchemaInitializer {
         // и не участвует в графовых рёбрах; ссылка на обоснование хранится текстом
         // (диапазон дат/метрика/объект), не рёбрами.
         "CREATE PROPERTY BragiInsight.evidence_ref   IF NOT EXISTS STRING",
+        // V2-05: о какой строке ретро вывод — id вариации или публикации. Поле, а
+        // не текст обоснования: чип строки находит инсайт точным равенством.
+        "CREATE PROPERTY BragiInsight.subject_id     IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON BragiInsight (insight_id) UNIQUE",
 
         "CREATE VERTEX TYPE BragiIntegration IF NOT EXISTS",
