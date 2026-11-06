@@ -64,17 +64,16 @@ final class VolvaEmbedSigner {
         return java.util.Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).distinct().toList();
     }
 
-    /** Значение запертого project в payload: один — строкой, несколько — массивом (Völva: project IN ({{project}})). */
+    /** Значение запертого project — всегда массив (контракт Völva: project IN ({{project}}), пример ["NooriUta/volva"]). */
     static String projectJson(String raw) {
         java.util.List<String> ps = projectList(raw);
-        if (ps.size() == 1) return "\"" + ps.get(0) + "\"";
         return ps.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(",", "[", "]"));
     }
 
     static String payload(int question, String project, long expEpochSeconds) {
         // Слаг проверен регэкспом выше: кавычек и обратных слэшей в нём нет.
-        return "{\"resource\":{\"question\":" + question + "},\"params\":{\"project\":\"" + project
-            + "\"},\"exp\":" + expEpochSeconds + "}";
+        return "{\"resource\":{\"question\":" + question + "},\"params\":{\"project\":" + projectJson(project)
+            + "},\"exp\":" + expEpochSeconds + "}";
     }
 
     /** HS256; ключ — байты СТРОКИ ключа, как подписывает сам Metabase. */

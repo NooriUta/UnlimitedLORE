@@ -48,7 +48,7 @@ class VolvaEmbedSignerTest {
     @Test
     void payloadLocksTheProjectAndExpires() {
         String json = VolvaEmbedSigner.payload(44, "NooriUta/volva", 1_800_000_000L);
-        assertEquals("{\"resource\":{\"question\":44},\"params\":{\"project\":\"NooriUta/volva\"},\"exp\":1800000000}", json);
+        assertEquals("{\"resource\":{\"question\":44},\"params\":{\"project\":[\"NooriUta/volva\"]},\"exp\":1800000000}", json);
     }
 
     @Test
@@ -140,8 +140,9 @@ class VolvaEmbedSignerTest {
     }
 
     @Test
-    void singleProjectStaysAString() {
-        assertEquals("{\"resource\":{\"question\":44},\"params\":{\"project\":\"NooriUta/volva\"},\"exp\":1800000000}",
+    void singleProjectIsStillAList() {
+        // Контракт Völva: вопрос 44 — project IN ({{project}}), значение всегда массивом.
+        assertEquals("{\"resource\":{\"question\":44},\"params\":{\"project\":[\"NooriUta/volva\"]},\"exp\":1800000000}",
             VolvaEmbedSigner.payload(new VolvaEmbedSigner.Chart("question", 44, true), "NooriUta/volva", 1_800_000_000L));
     }
 
