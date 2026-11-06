@@ -19,9 +19,11 @@ interface Props {
   state: VolvaEmbedState;
   title: string;
   minHeight?: number;
+  /** Открытый параметр product карточки (сужение картинки, не граница прав). */
+  products?: string[];
 }
 
-export default function VolvaEmbedFrame({ state, title, minHeight = 240 }: Props) {
+export default function VolvaEmbedFrame({ state, title, minHeight = 240, products }: Props) {
   const { t } = useTranslation();
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(minHeight);
@@ -38,8 +40,9 @@ export default function VolvaEmbedFrame({ state, title, minHeight = 240 }: Props
 
   const signedUrl = state.kind === 'ready' ? state.signedUrl : null;
   const origin = useMemo(() => (signedUrl ? embedOrigin(signedUrl) : null), [signedUrl]);
+  const productKey = products ? products.join(',') : '';
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const src = useMemo(() => (signedUrl ? embedSrc(signedUrl, theme) : null), [signedUrl, themeKey]);
+  const src = useMemo(() => (signedUrl ? embedSrc(signedUrl, theme, products) : null), [signedUrl, themeKey, productKey]);
 
   useEffect(() => {
     if (!origin) return;

@@ -6,13 +6,17 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchVolvaEmbed, LoreHttpError } from '../../../api/lore';
 import { useDictionary } from '../DictionaryProvider';
+import { useProjectScope } from '../../../context/ProjectScopeContext';
 import VolvaEmbedFrame, { type VolvaEmbedState } from '../VolvaEmbedFrame';
 import { readChartLayer } from './chartLayer';
 
 interface Props {
   /** Имя графика в белом списке встройки Völva (lore.volva.embed.charts). */
   volvaChart: string;
+  /** Проект(ы) — граница прав; по умолчанию текущий проект LORE. */
   volvaProject?: string;
+  /** Коды продуктов (открытый параметр карточки); пусто — все продукты. */
+  volvaProducts?: string[];
   title: string;
   /** Слой ECharts — рисует LORE. */
   children: ReactNode;
@@ -23,16 +27,18 @@ export function useChartLayer() {
   return readChartLayer(entries);
 }
 
-export default function LoreChart({ volvaChart, volvaProject, title, children }: Props) {
+export default function LoreChart({ volvaChart, volvaProject, volvaProducts, title, children }: Props) {
   const { t } = useTranslation();
   const layer = useChartLayer();
+  const { project: scopeProject } = useProjectScope();
+  const project = volvaProject ?? scopeProject ?? undefined;
   const [state, setState] = useState<VolvaEmbedState>({ kind: 'loading' });
 
   useEffect(() => {
     if (layer !== 'volva') return;
     const ctrl = new AbortController();
     setState({ kind: 'loading' });
-    fetchVolvaEmbed(volvaChart, volvaProject, ctrl.signal)
+    fetchVolvaEmbed(volvaChart, project, ctrl.signal)
       .then(r => setState({ kind: 'ready', signedUrl: r.url }))
       .catch(e => {
         if (ctrl.signal.aborted) return;
@@ -40,13 +46,13 @@ export default function LoreChart({ volvaChart, volvaProject, title, children }:
         else setState({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
       });
     return () => ctrl.abort();
-  }, [layer, volvaChart, volvaProject]);
+  }, [layer, volvaChart, project]);
 
   if (layer === 'echarts') return <>{children}</>;
   return (
     <div>
       <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginBottom: 4 }}>{t('lore.charts.volvaLayer', 'Слой Völva (настройка charts.layer в админке)')}</div>
-      <VolvaEmbedFrame state={state} title={title} minHeight={160} />
+      <VolvaEmbedFrame state={state} title={title} minHeight={160} products={volvaProducts ?? []} />
     </div>
   );
 }

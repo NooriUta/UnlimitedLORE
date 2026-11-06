@@ -15,14 +15,23 @@ export const EMBED_PALETTES = ['amber-forest', 'lichen', 'slate', 'juniper', 'wa
 export type EmbedPalette = typeof EMBED_PALETTES[number];
 export interface EmbedTheme { palette: EmbedPalette; mode: 'light' | 'dark' }
 
-/** Адрес фрейма: подписанный URL (JWT в пути не трогаем) + оформление в hash. */
-export function embedSrc(signedUrl: string, theme: EmbedTheme): string {
+/**
+ * Адрес фрейма: подписанный URL (JWT в пути не трогаем) + оформление в hash.
+ * products — открытый (не запертый) параметр карточки: граница прав — project
+ * в токене, а продукт лишь сужает картинку (контракт карточки 47 от Völva,
+ * 07.11.2026: у запертого параметра обязано быть непустое значение). Пусто —
+ * «все продукты», без ?product. В рамке поле фильтра скрыто (hide_parameters).
+ */
+export function embedSrc(signedUrl: string, theme: EmbedTheme, products?: string[]): string {
   const base = signedUrl.split('#')[0];
+  const url = new URL(base);
+  (products ?? []).filter(Boolean).forEach(p => url.searchParams.append('product', p));
   const hash = new URLSearchParams({
     theme: 'transparent', palette: theme.palette, mode: theme.mode,
     bordered: 'false', titled: 'false', locale: 'ru',
   });
-  return `${base}#${hash.toString()}`;
+  if (products !== undefined) hash.set('hide_parameters', 'product');
+  return `${url.toString()}#${hash.toString()}`;
 }
 
 /** Палитра и режим по атрибутам <html> LORE: data-theme (нет → amber-forest), data-mode (нет → dark). */

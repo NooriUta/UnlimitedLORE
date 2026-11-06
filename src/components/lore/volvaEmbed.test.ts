@@ -37,6 +37,17 @@ describe('встроенный график Völva', () => {
     expect(themeFromAttrs('neon', 'light')).toEqual({ palette: 'amber-forest', mode: 'light' });
   });
 
+  it('продукт — открытым параметром в адресе рамки, не в токене; «все» — без ?product (карточка 47, 07.11.2026)', () => {
+    const s = embedSrc(SIGNED, { palette: 'amber-forest', mode: 'dark' }, ['VOLVA', 'HOUND']);
+    const [beforeHash, hash] = s.split('#');
+    const u = new URL(beforeHash);
+    expect(u.pathname).toBe(new URL(SIGNED).pathname);            // токен в пути не тронут
+    expect(u.searchParams.getAll('product')).toEqual(['VOLVA', 'HOUND']);
+    expect(new URLSearchParams(hash).get('hide_parameters')).toBe('product');
+    const all = embedSrc(SIGNED, { palette: 'amber-forest', mode: 'dark' }, []);
+    expect(new URL(all.split('#')[0]).searchParams.has('product')).toBe(false);
+  });
+
   it('origin берётся из подписанного адреса', () => {
     expect(embedOrigin(SIGNED)).toBe('https://volva.odal.seidrstudio.pro');
     expect(embedOrigin('не адрес')).toBeNull();
