@@ -202,10 +202,14 @@ jobs:
           docker run --rm $STUBS \
             -e LORE_PUBLIC_URL=https://lore.example.org \
             -e LORE_OIDC_ORIGIN=https://auth.example.org \
+            -e LORE_VOLVA_ORIGIN=https://volva.example.org \
             lore-app:ci nginx -T > /tmp/nginx-configured.conf
           grep -q "return 301 https://lore.example.org" /tmp/nginx-configured.conf || {
             echo "ОШИБКА: LORE_PUBLIC_URL не подставилась в редирект"; exit 1; }
           grep -q "connect-src 'self' https://auth.example.org" /tmp/nginx-configured.conf || {
             echo "ОШИБКА: LORE_OIDC_ORIGIN не подставилась в CSP"; exit 1; }
+          # SPRINT_VIZ_EMBED/EMB-L1: origin Völva — в frame-src, иначе встройка блокируется молча.
+          grep -q "frame-src 'self' https://auth.example.org https://volva.example.org" /tmp/nginx-configured.conf || {
+            echo "ОШИБКА: LORE_VOLVA_ORIGIN не подставилась в frame-src CSP"; exit 1; }
           echo "ok: обе переменные подставились, синтаксис принят"
 

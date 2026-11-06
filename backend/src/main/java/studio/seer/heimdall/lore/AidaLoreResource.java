@@ -95,6 +95,65 @@ public class AidaLoreResource extends LoreResourceBase {
     @Inject
     ProjectRbacService projectRbac;
 
+    // ── SPRINT_VIZ_EMBED/VE-2: подпись ссылки встройки Völva ─────────────────
+    // Ключ — через SecretProvider (env | Infisical), как KC_ADMIN_CLIENT_SECRET;
+    // в код и в переменные сборки не попадает. Адрес и белый список графиков —
+    // Optional: пустая строка в @ConfigProperty String роняет старт приложения.
+    static final String VOLVA_EMBED_SECRET_KEY = "LORE_VOLVA_EMBED_SECRET";
+
+    @Inject
+    SecretProvider secrets;
+
+    @ConfigProperty(name = "lore.volva.embed.site-url")
+    java.util.Optional<String> volvaSiteUrl;
+
+    @ConfigProperty(name = "lore.volva.embed.charts")
+    java.util.Optional<String> volvaCharts;
+
+    @ConfigProperty(name = "lore.volva.embed.ttl-seconds", defaultValue = "600")
+    long volvaTtlSeconds;
+
+    /**
+     * Подписанный адрес встройки графика Völva для ПОЛЬЗОВАТЕЛЯ: проект берётся
+     * из запроса, но выдаётся только в пределах проектов вызывающего; служебный
+     * клиент отказ. Адрес (в нём JWT) не логируется. Срок жизни — ttl-seconds.
+     */
+    @GET
+    @Path("embed/volva/{chart}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response volvaEmbed(@PathParam("chart") String chart, @QueryParam("project") String project,
+                               @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        java.util.Optional<String> secret = secrets.get(VOLVA_EMBED_SECRET_KEY);
+        boolean configured = secret.isPresent() && !secret.get().isBlank()
+            && volvaSiteUrl.isPresent() && !volvaSiteUrl.get().isBlank();
+        boolean agent = callerClientId() != null;
+        java.util.Set<String> allowed = agent ? null : callerAllowedProjects(role);
+        VolvaEmbedSigner.ChartDecision d = VolvaEmbedSigner.decideChart(chart, project,
+            VolvaEmbedSigner.parseCharts(volvaCharts.orElse("")), configured, agent, allowed);
+        if (!d.ok()) {
+            Response.Status st = switch (d.code()) {
+                case "not_configured" -> Response.Status.SERVICE_UNAVAILABLE;
+                case "unknown_chart" -> Response.Status.NOT_FOUND;
+                case "project_required" -> Response.Status.BAD_REQUEST;
+                case "unlocked_needs_full_scope" -> Response.Status.FORBIDDEN;
+                default -> Response.Status.FORBIDDEN;
+            };
+            return noStore(Response.status(st).entity(new LoreError(d.code().toUpperCase(java.util.Locale.ROOT), d.message())));
+        }
+        long exp = java.time.Instant.now().getEpochSecond() + volvaTtlSeconds;
+        String jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, exp), secret.get());
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("chart", chart);
+        out.put("project", d.chart().locked() ? project : null);
+        out.put("locked", d.chart().locked());
+        out.put("url", VolvaEmbedSigner.embedUrl(volvaSiteUrl.get(), d.chart(), jwt));
+        out.put("expires_at", java.time.Instant.ofEpochSecond(exp).toString());
+        LOG.debugf("[LORE EMBED] chart=%s project=%s exp=%d", chart, project, exp); // без адреса: в нём JWT
+        return noStore(Response.ok(out));
+    }
+
     // SAFE_ID, ENTITY_TYPES/PLAN_STATUSES/ADR_STATUSES/SCD2_STATUS_RAW, the
     // ArcadeDB clients, config, and shared helpers all live in LoreResourceBase
     // now (B2 God-class split) — every write-path domain (release/adr/spec/
@@ -809,6 +868,33 @@ public class AidaLoreResource extends LoreResourceBase {
         return allowed != null && allowed.isEmpty() && LoreSlices.PROJECT_SCOPED.containsKey(id);
     }
 
+    /**
+     * MT-MCP-TRUTH A12 (06.11.2026): адресный срез под скоупом — обязательный
+     * параметр ровно {@code id}, и срез проектно-скоуплен. Именно у них пустой
+     * ответ читается как «записи нет», хотя запись может быть вне скоупа.
+     */
+    static boolean isScopedByIdSlice(String sliceId) {
+        LoreSlices.SliceDef def = LoreSlices.get(sliceId);
+        return def != null && List.of("id").equals(def.required())
+            && LoreSlices.PROJECT_SCOPED.containsKey(sliceId);
+    }
+
+    static boolean isEmptyResult(List<?> rows) { return rows == null || rows.isEmpty(); }
+
+    /**
+     * Отметка «запись есть, но вне ваших проектов». Только факт существования —
+     * содержимое не раскрывается (тот же уровень, что 409 «id занят» у записи).
+     * {@code null} — записи нет вовсе: это честное «не найдено».
+     */
+    static Map<String, Object> outsideScopeMarker(String id, boolean existsUnscoped) {
+        if (!existsUnscoped) return null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("verdict", "outside_scope");
+        m.put("reason", "запись с таким id существует, но вне ваших проектов — пустой ответ не значит «нет»");
+        return m;
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
         // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
@@ -896,9 +982,26 @@ public class AidaLoreResource extends LoreResourceBase {
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
-            .map(res -> {
+            // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
+            // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
+            .chain(res -> {
+                String explicitId = given.get("id");
+                if (rowScope == null || explicitId == null || !isScopedByIdSlice(id) || !isEmptyResult(res.result()))
+                    return Uni.createFrom().item(new Object[] {res, null});
+                LoreSlices.Composed unscoped = LoreSlices.compose(id, given);
+                MartQuery probe = new MartQuery("sql", unscoped.sql(),
+                    unscoped.params().isEmpty() ? null : unscoped.params(), -1);
+                return client.query(db, basicAuth(), probe)
+                    .map(p -> new Object[] {res, outsideScopeMarker(explicitId, !isEmptyResult(p.result()))})
+                    .onFailure().recoverWithItem(ex -> new Object[] {res, null});
+            })
+            .map(pair -> {
+                studio.seer.heimdall.bench.MartResult res = (studio.seer.heimdall.bench.MartResult) pair[0];
+                @SuppressWarnings("unchecked")
+                Map<String, Object> outside = (Map<String, Object>) pair[1];
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
                 if (scopeMarker != null) out.put("scope", scopeMarker);
+                if (outside != null) out.put("outside_scope", outside);
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {

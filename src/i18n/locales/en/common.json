@@ -477,6 +477,11 @@
       "tracedBy": "Scenarios referring to it",
       "justifies": "Tasks justified by it"
     },
+    "embed": {
+      "notConfigured": "Völva chart embedding is not configured on this installation (no Völva address) — the chart is not shown; this is not \"no data\".",
+      "error": "The Völva chart did not load: {{message}}",
+      "loading": "Loading the Völva chart…"
+    },
     "analytics": {
       "flow": {
         "leadTime": {
@@ -654,9 +659,14 @@
         "qualityNorm": "normalized score/max of its own rigor",
         "qualityBelow": "below threshold: {{n}} UC",
         "qualityClick": "(click — list)",
-        "laterTitle": "C · G — coming later",
+        "laterTitle": "C — coming later",
         "laterC": "C · shipped dynamics / lead time — once shipped_at accumulates (ADR-029)",
-        "laterG": "G · lineup graph \"builds on → unlocks\" — once \"Place in lineup\" is filled",
+        "lineageTitle": "G · Lineage graph",
+        "lineageMeta": "builds on → opens the way · BUILDS_ON edge",
+        "lineageSummary": "{{edges}} links, {{linked}} of {{total}} features in the lineage",
+        "lineageFoundations": "lineage foundations: {{list}}",
+        "lineageIsolated": "features with no lineage links: {{n}}",
+        "lineageEmpty": "no BUILDS_ON links yet — add them via feature_link rel=builds_on",
         "reengTitle": "I · Rework load",
         "reengMeta": "return to a shipped use case = a uc task created after shipped_at",
         "reengSummary": "in rework: {{n}} of {{total}} shipped use cases with tasks",
@@ -1090,7 +1100,17 @@
       "sprintsWithoutMilestones": "Sprints without milestones · {{count}}",
       "allSprintsLinked": "All sprints are linked to milestones ✓",
       "intoMilestonePlaceholder": "→ into milestone…",
-      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}"
+      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}",
+      "noForecast": "The product has no forecast milestones: no plan yet, not «all done»",
+      "frozenSummary": "History — {{count}} frozen milestones (not counted as open work)",
+      "noProductTag": "no product",
+      "allProducts": "All",
+      "withoutProduct": "No product",
+      "productsField": "Product",
+      "unlinkProduct": "unlink product",
+      "linkProductPlaceholder": "+ product…",
+      "unplannedTitle": "Unplanned — open sprints without a milestone · {{count}}",
+      "allOpenPlanned": "Every open sprint is in a milestone ✓"
     },
     "modulePassport": {
       "loading": "Loading module…",

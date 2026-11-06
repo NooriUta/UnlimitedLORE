@@ -166,6 +166,11 @@ services:
       # "not configured", остальной LORE работает как обычно (pluggable).
       # Секрет читается через SecretProvider (D15): env | infisical.
       - KC_ADMIN_CLIENT_SECRET=${KC_ADMIN_CLIENT_SECRET:-}
+      # SPRINT_VIZ_EMBED/VE-2: адрес Völva для подписанных ссылок встройки. Ключ подписи
+      # (LORE_VOLVA_EMBED_SECRET) бэкенд берёт через SecretProvider — env или Infisical.
+      # Пусто → /lore/embed/volva/* отвечает 503 «не настроено».
+      - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      - LORE_VOLVA_EMBED_SECRET=${LORE_VOLVA_EMBED_SECRET:-}
       # НЕ ${KC_ADMIN_URL}: в .env он localhost (для host-скриптов), а внутри
       # контейнера localhost = сам контейнер. Ходим через kc:host-gateway.
       - kc.admin.url=http://kc:18180/kc
@@ -275,6 +280,8 @@ services:
       # Значения для НАШЕГО стенда приходят из окружения (см. lore-cd.yml).
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
       LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
+      # SPRINT_VIZ_EMBED/EMB-L1: origin Völva для встроенных графиков; пусто — выключено.
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
     ports:
       - "4400:80"
     # host.docker.internal is auto-provided by Docker Desktop but NOT by plain
