@@ -204,6 +204,24 @@ const projectRequired = () => ({
   isError: true,
 });
 
+// MT-MCP-TRUTH A9 (06.11.2026): дубли вопросов не ловились при заведении
+// (Q-HND030-GRAN / -GRANULARITY, -PATH-STORAGE / -PATHSTORE). После записи —
+// поиск по заголовку среди вопросов (морфология, /lore/search), кандидаты в
+// ответе. Решает агент, но видит сразу. Сбой поиска не роняет запись.
+export async function similarQuestions(questionId: string, title?: string): Promise<Record<string, unknown>> {
+  if (!title || title.trim().length < 2) return {};
+  try {
+    const res = await loreGet('/lore/search', { q: title.slice(0, 160), types: 'question', limit: '6' }) as { hits?: { ref_id?: string; title?: string }[] };
+    const hits = (res.hits ?? []).filter(h => h.ref_id && h.ref_id !== questionId)
+      .slice(0, 5).map(h => ({ ref_id: h.ref_id, title: h.title }));
+    return hits.length
+      ? { similar_questions: hits, similar_hint: 'Похожие вопросы уже есть — если это дубль, закрой один решением со связью answers на оба, не заводи третий.' }
+      : {};
+  } catch (e) {
+    return { similar_questions_error: String((e as Error).message ?? e) };
+  }
+}
+
 export async function inlineProject(kind: ProjectKind, id: string, explicit?: string): Promise<Record<string, unknown>> {
   const project = explicit ?? ACTIVE_PROJECT;
   if (!project) return {};
@@ -1259,7 +1277,8 @@ export function registerLoreWrite(server: McpServer): void {
       due_date: a.due_date ?? null, priority: a.priority ?? null, owner: a.owner ?? null, raised_by: a.raised_by ?? null,
     }),
     refuse: (a) => (a.status === 'closed' ? QUESTION_CLOSE_GUIDANCE : null),
-    after: (a) => inlineProject('question', a.question_id, a.project),
+    after: (a) => Promise.all([inlineProject('question', a.question_id, a.project), similarQuestions(a.question_id, a.title)])
+      .then(([p, s]) => ({ ...p, ...s })),
     missingProject: (a) => projectMissing(a.project),
   });
 
