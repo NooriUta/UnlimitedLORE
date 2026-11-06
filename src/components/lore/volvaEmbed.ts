@@ -8,13 +8,27 @@
 //  - отправитель шлёт с targetOrigin "*", а в адресе фрейма лежит JWT, поэтому
 //    сообщению доверяем лишь при origin, равном origin подписанного адреса.
 
-export type EmbedTheme = 'night' | 'transparent';
+// VE-4 (Völva PR #49, 07.11.2026): статическая встройка принимает палитру AIDA
+// и режим в hash — #theme=transparent&palette=<id>&mode=light|dark. Фон
+// прозрачный (берётся у LORE), акценты и оси — в палитре страницы.
+export const EMBED_PALETTES = ['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark', 'rosewood'] as const;
+export type EmbedPalette = typeof EMBED_PALETTES[number];
+export interface EmbedTheme { palette: EmbedPalette; mode: 'light' | 'dark' }
 
 /** Адрес фрейма: подписанный URL (JWT в пути не трогаем) + оформление в hash. */
 export function embedSrc(signedUrl: string, theme: EmbedTheme): string {
   const base = signedUrl.split('#')[0];
-  const hash = new URLSearchParams({ theme, bordered: 'false', titled: 'false', locale: 'ru' });
+  const hash = new URLSearchParams({
+    theme: 'transparent', palette: theme.palette, mode: theme.mode,
+    bordered: 'false', titled: 'false', locale: 'ru',
+  });
   return `${base}#${hash.toString()}`;
+}
+
+/** Палитра и режим по атрибутам <html> LORE: data-theme (нет → amber-forest), data-mode (нет → dark). */
+export function themeFromAttrs(dataTheme: string | null, dataMode: string | null): EmbedTheme {
+  const palette = (EMBED_PALETTES as readonly string[]).includes(dataTheme ?? '') ? dataTheme as EmbedPalette : 'amber-forest';
+  return { palette, mode: dataMode === 'light' ? 'light' : 'dark' };
 }
 
 /** Origin, с которого единственно принимаются сообщения фрейма. */
@@ -38,8 +52,9 @@ export function frameHeightFromMessage(
   return typeof h === 'number' && Number.isFinite(h) && h > 0 ? Math.ceil(h) : null;
 }
 
-/** Тема встройки по теме LORE: тёмная → night, светлая → transparent (фон берётся у LORE). */
+/** Тема встройки по текущей теме LORE. */
 export function themeForHost(): EmbedTheme {
-  const mode = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-mode') : null;
-  return mode === 'light' ? 'transparent' : 'night';
+  if (typeof document === 'undefined') return themeFromAttrs(null, null);
+  const el = document.documentElement;
+  return themeFromAttrs(el.getAttribute('data-theme'), el.getAttribute('data-mode'));
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { embedSrc, frameHeightFromMessage, embedOrigin } from './volvaEmbed';
+import { embedSrc, frameHeightFromMessage, embedOrigin, themeFromAttrs } from './volvaEmbed';
 
 // SPRINT_VIZ_EMBED/EMB-L2 · рецепт Völva (VE-5, 06.11.2026):
 // высоту Metabase шлёт сам — postMessage({metabase:{type:"frame", frame:{height}}}, "*");
@@ -10,19 +10,31 @@ const SIGNED = 'https://volva.odal.seidrstudio.pro/embed/question/eyJhbGciOi.pay
 
 describe('встроенный график Völva', () => {
   it('тема и оформление уходят через hash, JWT не трогается', () => {
-    const s = embedSrc(SIGNED, 'night');
+    const s = embedSrc(SIGNED, { palette: 'juniper', mode: 'dark' });
     expect(s.startsWith(SIGNED + '#')).toBe(true);
     const h = new URLSearchParams(s.split('#')[1]);
-    expect(h.get('theme')).toBe('night');
+    // VE-4 (Völva PR #49): фон прозрачный, акценты и оси — в палитре страницы
+    expect(h.get('theme')).toBe('transparent');
+    expect(h.get('palette')).toBe('juniper');
+    expect(h.get('mode')).toBe('dark');
     expect(h.get('bordered')).toBe('false');
     expect(h.get('titled')).toBe('false');
     expect(h.get('locale')).toBe('ru');
   });
 
   it('прежний hash заменяется, а не дописывается вторым', () => {
-    const s = embedSrc(SIGNED + '#theme=transparent', 'night');
+    const s = embedSrc(SIGNED + '#theme=night', { palette: 'amber-forest', mode: 'light' });
     expect(s.split('#')).toHaveLength(2);
-    expect(s).toContain('theme=night');
+    expect(s).toContain('theme=transparent');
+    expect(s).toContain('mode=light');
+  });
+
+  it('палитра и режим — из атрибутов страницы LORE: без data-theme — amber-forest, без data-mode — dark', () => {
+    expect(themeFromAttrs(null, null)).toEqual({ palette: 'amber-forest', mode: 'dark' });
+    expect(themeFromAttrs('slate', 'light')).toEqual({ palette: 'slate', mode: 'light' });
+    expect(themeFromAttrs('warm-dark', 'dark')).toEqual({ palette: 'warm-dark', mode: 'dark' });
+    // неизвестная палитра не уходит в адрес мусором — откат к палитре по умолчанию
+    expect(themeFromAttrs('neon', 'light')).toEqual({ palette: 'amber-forest', mode: 'light' });
   });
 
   it('origin берётся из подписанного адреса', () => {

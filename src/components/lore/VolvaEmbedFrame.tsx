@@ -26,18 +26,20 @@ export default function VolvaEmbedFrame({ state, title, minHeight = 240 }: Props
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(minHeight);
   const [theme, setTheme] = useState<EmbedTheme>(themeForHost);
+  const themeKey = `${theme.palette}/${theme.mode}`;
 
   // Тема LORE меняется атрибутом на <html> — перечитываем.
   useEffect(() => {
     if (typeof MutationObserver === 'undefined') return;
     const mo = new MutationObserver(() => setTheme(themeForHost()));
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] });
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode', 'data-theme'] });
     return () => mo.disconnect();
   }, []);
 
   const signedUrl = state.kind === 'ready' ? state.signedUrl : null;
   const origin = useMemo(() => (signedUrl ? embedOrigin(signedUrl) : null), [signedUrl]);
-  const src = useMemo(() => (signedUrl ? embedSrc(signedUrl, theme) : null), [signedUrl, theme]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const src = useMemo(() => (signedUrl ? embedSrc(signedUrl, theme) : null), [signedUrl, themeKey]);
 
   useEffect(() => {
     if (!origin) return;
