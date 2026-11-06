@@ -85,10 +85,16 @@ server {
     # Забыть frame-src особенно неприятно: логин пройдёт, а сессия начнёт молча
     # отваливаться через несколько минут, и причина будет выглядеть как угодно,
     # только не как CSP.
+    #
+    # SPRINT_VIZ_EMBED/EMB-L1 (06.11.2026): origin Völva — тоже в frame-src, иначе
+    # встроенный график Völva браузер блокирует молча и страница показывает
+    # пустую рамку. LORE_VOLVA_ORIGIN — ровно один origin; пусто → встраивание
+    # выключено, о чём говорит скрипт старта. Встречная сторона — frame-ancestors
+    # у самой Völva (VE-3), нужны обе.
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN} ${LORE_VOLVA_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
 
     # Trailing slash is deliberate: a bare `location /bench` prefix would also
     # match the SPA route `/benchmark` (and `/lore` would match a hard-reload of
@@ -116,7 +122,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN} ${LORE_VOLVA_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
         try_files /index.html =404;
     }
 
@@ -135,7 +141,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN} ${LORE_VOLVA_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
     }
 
     location /lore/ {

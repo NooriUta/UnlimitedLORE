@@ -148,6 +148,9 @@ jobs:
       CORS_ORIGINS: http://localhost:4400,http://127.0.0.1:4400,http://192.168.3.131:4400,http://lore.odal.seidrstudio.pro:4400,https://lore.odal.seidrstudio.pro
       LORE_PUBLIC_URL: https://lore.odal.seidrstudio.pro
       LORE_OIDC_ORIGIN: https://odal.seidrstudio.pro
+      # SPRINT_VIZ_EMBED/EMB-L1: origin Völva для встроенных графиков (frame-src CSP).
+      # Назван самой Völva 06.11: site-url стенда, резолв в 192.168.3.131, /api/health 200.
+      LORE_VOLVA_ORIGIN: https://volva.odal.seidrstudio.pro
       # ── HTTPS на LAN ─────────────────────────────────────────────────────
       # Оверлей подключается ТОЛЬКО здесь, а не в основном compose: сеть
       # `headscale-net` существует лишь на ci-server, и объявление её в

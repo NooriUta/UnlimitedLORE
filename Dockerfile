@@ -37,7 +37,8 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Фильтр сужает подстановку до наших LORE_*.
 ENV NGINX_ENVSUBST_FILTER="^LORE_" \
     LORE_PUBLIC_URL="" \
-    LORE_OIDC_ORIGIN=""
+    LORE_OIDC_ORIGIN="" \
+    LORE_VOLVA_ORIGIN=""
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/30-lore-public-url.sh /docker-entrypoint.d/30-lore-public-url.sh
 RUN chmod +x /docker-entrypoint.d/30-lore-public-url.sh

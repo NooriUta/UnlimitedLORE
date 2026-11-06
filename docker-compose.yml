@@ -275,6 +275,8 @@ services:
       # Значения для НАШЕГО стенда приходят из окружения (см. lore-cd.yml).
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
       LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
+      # SPRINT_VIZ_EMBED/EMB-L1: origin Völva для встроенных графиков; пусто — выключено.
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
     ports:
       - "4400:80"
     # host.docker.internal is auto-provided by Docker Desktop but NOT by plain

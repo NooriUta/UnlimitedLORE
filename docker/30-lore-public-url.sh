@@ -33,3 +33,10 @@ if [ -z "$LORE_OIDC_ORIGIN" ]; then
 else
     echo "[LORE] origin Keycloak в CSP: $LORE_OIDC_ORIGIN"
 fi
+
+if [ -z "$LORE_VOLVA_ORIGIN" ]; then
+    echo "[LORE] LORE_VOLVA_ORIGIN не задана — встраивание графиков Völva выключено (frame-src без Völva)."
+    echo "[LORE]   Чтобы включить: LORE_VOLVA_ORIGIN=https://volva.example.org — ровно один origin."
+else
+    echo "[LORE] origin Völva в frame-src CSP: $LORE_VOLVA_ORIGIN"
+fi
