@@ -1110,7 +1110,13 @@
       "unlinkProduct": "unlink product",
       "linkProductPlaceholder": "+ product…",
       "unplannedTitle": "Unplanned — open sprints without a milestone · {{count}}",
-      "allOpenPlanned": "Every open sprint is in a milestone ✓"
+      "allOpenPlanned": "Every open sprint is in a milestone ✓",
+      "noProductHint": "A milestone without a product counts as incomplete: the roadmap belongs to a product.",
+      "unplannedShare": "{{unplanned}} of {{open}} open sprints ({{pct}}%) · stream: {{stream}} · really forgotten: {{forgotten}}",
+      "streamHint": "stream: housekeeping, upgrades, CI, dependencies — outside milestones by nature",
+      "forgottenHint": "looks like it was never put into the plan",
+      "streamTag": "stream",
+      "forgottenTag": "forgotten"
     },
     "modulePassport": {
       "loading": "Loading module…",
@@ -1219,7 +1225,9 @@
         "oct": "Oct",
         "nov": "Nov",
         "dec": "Dec"
-      }
+      },
+      "product": "Product",
+      "productEmpty": "This product has no dated sprints on the plan with the current filters. That is not «all done»: either the sprints have no planned dates or the toggles hide them. The product milestone map is in «Milestones»."
     },
     "qgDetail": {
       "sparkline": {

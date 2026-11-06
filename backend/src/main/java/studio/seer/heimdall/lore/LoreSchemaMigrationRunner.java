@@ -1407,6 +1407,15 @@ public class LoreSchemaMigrationRunner {
      */
     private void normalizeHistValidFrom() {
         for (String type : LoreSchemaMigrations.V42_HIST_VALID_FROM_TEXT) {
+            // Типа нет — приводить нечего, но и молчать нельзя. 06.11.2026 (CI #828)
+            // на перегруженном хосте DDL инициализатора не уложился в таймаут,
+            // KnowFindingHist не создался, и этот SELECT уронил СТАРТ приложения
+            // («Type with name 'KnowFindingHist' was not found») — вместо одной
+            // строки предупреждения. Тот же приём, что у шагов V47 и V54 (typeExists).
+            if (!typeExists(type)) {
+                LOG.warnf("[LORE MIGRATE] V41 %s: типа нет в схеме — приведение пропущено", type);
+                continue;
+            }
             int seen = 0, fixed = 0, unknown = 0;
             String unknownSample = null;
             while (true) {

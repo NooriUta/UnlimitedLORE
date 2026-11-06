@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, productScope, unplannedOfProduct,
+  sprintInProduct, hiddenAsPast, isStreamSprint, unplannedShare,
   type ProductRow,
 } from './milestoneProducts';
 
@@ -54,5 +55,54 @@ describe('milestoneProducts', () => {
     expect(unplannedOfProduct(S, M, 'MIDGARD', P).map(s => s.sprint_id)).toEqual(['SPRINT_OTHER']);
     // без выбора продукта — все открытые без вехи
     expect(unplannedOfProduct(S, M, null, P).map(s => s.sprint_id).sort()).toEqual(['SPRINT_FREE', 'SPRINT_OTHER']);
+  });
+});
+
+/**
+ * Доделка RM-P5 / RM-U2 / RM-U6 / RM-V4 (06.11.2026, «а почему до конца не
+ * доделаешь задачи?»): фильтр продукта на Ганте, просрочка не прячется,
+ * «вне плана» числом и с делением «поток / забыли».
+ */
+describe('milestoneProducts · доделка плана', () => {
+  const sp2 = (id: string, comps: string[]) => ({ sprint_id: id, name: id, status_raw: '📋 PLANNED', components: comps });
+
+  it('спринт входит в продукт через компоненты, подпродукты — в карту родителя', () => {
+    expect(sprintInProduct(sp2('A', ['HND']), 'AIDA', P)).toBe(true);
+    expect(sprintInProduct(sp2('A', ['HND']), 'HOUND', P)).toBe(true);
+    expect(sprintInProduct(sp2('A', ['DALI']), 'HOUND', P)).toBe(false);
+    expect(sprintInProduct(sp2('A', ['GLADSHEIM']), 'AIDA', P)).toBe(false);
+    expect(sprintInProduct(sp2('A', ['GLADSHEIM']), null, P)).toBe(true);
+    // «Без продукта» — ни один компонент спринта не принадлежит ни одному продукту
+    expect(sprintInProduct(sp2('A', ['NOWHERE']), NO_PRODUCT, P)).toBe(true);
+    expect(sprintInProduct(sp2('A', ['HND']), NO_PRODUCT, P)).toBe(false);
+  });
+
+  it('«Прошлые» прячет только закрытое прошлое; открытая просрочка видна всегда', () => {
+    const today = new Date('2026-11-06');
+    const past = new Date('2026-10-01');
+    const future = new Date('2026-12-01');
+    expect(hiddenAsPast(past, today, true, true)).toBe(true);    // закрыт и прошёл — прячем
+    expect(hiddenAsPast(past, today, false, true)).toBe(false);  // открыт и просрочен — НЕ прячем
+    expect(hiddenAsPast(future, today, true, true)).toBe(false);
+    expect(hiddenAsPast(past, today, true, false)).toBe(false);  // тумблер «Прошлые» включён
+  });
+
+  it('поток (уборка, апгрейды, CI, зависимости) отделяется от «правда забыли»', () => {
+    for (const id of ['SPRINT_HOUSEKEEPING_NOV26', 'SPRINT_ARCADEDB_26_11_ALL', 'SPRINT_DEPS_JUNE26', 'SPRINT_BACKUP_STRATEGY', 'SPRINT_LORE_DB_UPGRADE_REGRESSION', 'SPRINT_CI_SELECTIVE_FAST', 'SPRINT_SECURITY_DEPS_MAY26'])
+      expect(isStreamSprint(id)).toBe(true);
+    for (const id of ['SPRINT_DALI_UC3_UC4', 'SPRINT_ODIN_VEC_ARCH', 'SPRINT_BOKVIT_FOUNDATION'])
+      expect(isStreamSprint(id)).toBe(false);
+  });
+
+  it('доля «вне плана» — от открытых спринтов продукта, с делением', () => {
+    const M = [ms('M-AIDA-A1', ['AIDA'], ['SPRINT_IN'])];
+    const S = [
+      sp('SPRINT_IN', '📋 PLANNED', ['DALI']),
+      sp('SPRINT_HOUSEKEEPING_X', '📋 PLANNED', ['DALI']),
+      sp('SPRINT_FORGOT', '📋 PLANNED', ['HND']),
+      sp('SPRINT_OLD', '✅ DONE', ['DALI']),
+    ];
+    expect(unplannedShare(S, M, 'AIDA', P)).toEqual({ open: 3, unplanned: 2, stream: 1, forgotten: 1, pct: 67 });
+    expect(unplannedShare(S, M, 'MIDGARD', P)).toEqual({ open: 0, unplanned: 0, stream: 0, forgotten: 0, pct: 0 });
   });
 });

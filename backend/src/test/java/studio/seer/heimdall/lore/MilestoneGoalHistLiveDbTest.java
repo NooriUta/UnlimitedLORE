@@ -98,6 +98,10 @@ class MilestoneGoalHistLiveDbTest {
 
     @AfterAll
     static void cleanup() throws Exception {
+        // Тестовая БД не поднялась (Quarkus не стартовал) — убирать нечего. Без этой
+        // проверки уборка падала «URI with undefined scheme» и в сводке CI становилась
+        // третьим «упавшим тестом», заслоняя настоящую причину (CI #828, 06.11.2026).
+        if (LoreArcadeDbTestResource.BASE_URL == null) return;
         for (String mid : List.of(MS_NEW, MS_LATER)) {
             // строки истории — через подзапрос по вехе; потом сама веха (рёбра уходят с вершинами)
             sql("DELETE FROM KnowMilestoneHist WHERE in('HAS_STATE').milestone_id CONTAINS '" + mid + "'");
