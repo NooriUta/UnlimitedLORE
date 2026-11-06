@@ -44,7 +44,8 @@ class BlockedSprintsReasonTest {
     @Test
     void reasonSliceCarriesTheExplanation() {
         String s = sql("blocked_sprints_reason");
-        for (String col : new String[] {"name", "block_reason", "task_count", "deps", "open_deps", "open_questions"}) {
+        assertTrue(s.contains("SELECT sprint_id, name, "), "name выбирается без псевдонима: " + s);
+        for (String col : new String[] {"block_reason", "task_count", "deps", "open_deps", "open_questions"}) {
             assertTrue(s.contains(" AS " + col), "колонка " + col + ": " + s);
         }
     }
@@ -72,7 +73,8 @@ class BlockedSprintsReasonTest {
         assertTrue(s.contains("FROM KnowQuestion WHERE status <> 'closed'"), s);
         assertTrue(s.contains("out('GATES')[out('HAS_STATE')[valid_to IS NULL AND ("), "закрытость — по ТЕКУЩЕМУ состоянию задачи: " + s);
         assertTrue(s.contains(LoreStatusVocabulary.anySql("status_raw", "done", "cancelled")), s);
-        assertTrue(s.contains(" AS closed_tasks") && s.contains(" AS owner"), s);
+        assertTrue(s.contains(" AS closed_tasks"), s);
+        assertTrue(s.contains("SELECT question_id, title, status, priority, owner, "), "owner — без псевдонима: " + s);
     }
 
     @Test
