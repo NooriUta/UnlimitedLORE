@@ -50,12 +50,63 @@ public class LoreSchemaInitializer {
      */
     public void ensureReady() { /* всё делает @PostConstruct при создании бина */ }
 
+    /**
+     * D-2026-LORE-AUTO-BOOTSTRAP-EMPTY-DB: ядро поднималось ТОЛЬКО флагом, а про
+     * флаг знал лишь наш compose — чужая установка вставала с битым продуктовым
+     * слоем. Ядровые типы, по которым база считается инициализированной.
+     */
+    static final List<String> CORE_TYPES = List.of("KnowTask", "KnowSprint", "KnowADR");
+
+    /** Итог решения на этом старте. Читать ТОЛЬКО геттером: поле через CDI-прокси — null/false. */
+    private volatile boolean bootstrapped;
+
+    /** Поднималось ли ядро на этом старте (флагом или потому, что база пуста). */
+    public boolean bootstrapped() { return bootstrapped; }
+
+    /**
+     * Поднимать ли ядро. {@code coreTypesPresent == null} — проба не ответила:
+     * это «не смогли проверить», а не «пусто», и DDL наудачу по недоступной базе
+     * не гоняется (остановит предохранитель старта, а не тишина).
+     */
+    static boolean shouldBootstrap(boolean flag, Boolean coreTypesPresent) {
+        return flag || Boolean.FALSE.equals(coreTypesPresent);
+    }
+
+    /** Разбор ответа {@code SELECT name FROM schema:types}: есть ли хоть один ядровой тип. */
+    static Boolean coreTypesPresent(Object result) {
+        if (!(result instanceof List<?> rows)) return null;
+        for (Object r : rows) {
+            if (r instanceof java.util.Map<?, ?> m && CORE_TYPES.contains(String.valueOf(m.get("name")))) return true;
+        }
+        return false;
+    }
+
+    private Boolean probeCoreTypes() {
+        try {
+            var res = client.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sql", "SELECT name FROM schema:types"))
+                .await().indefinitely();
+            return coreTypesPresent(res == null ? null : res.result());
+        } catch (Exception e) {
+            LOG.warnf("[LORE] проба ядровых типов в %s не ответила: %s — автоподъём ядра не выполняется", db, e.getMessage());
+            return null;
+        }
+    }
+
     @PostConstruct
     void init() {
-        if (!enabled || !bootstrap) {
-            LOG.info("[LORE] schema init skipped (lore.enabled/lore.bootstrap off — shared DB already initialized)");
+        if (!enabled) {
+            LOG.info("[LORE] schema init skipped (lore.enabled off)");
             return;
         }
+        Boolean present = bootstrap ? null : probeCoreTypes();
+        if (!shouldBootstrap(bootstrap, present)) {
+            LOG.infof("[LORE] schema init skipped (ядро есть: %s; lore.bootstrap off)",
+                present == null ? "не проверено" : "да");
+            return;
+        }
+        if (!bootstrap) LOG.warnf("[LORE] в %s нет ядровых типов %s — ядро поднимается без флага (D-2026-LORE-AUTO-BOOTSTRAP-EMPTY-DB)", db, CORE_TYPES);
+        bootstrapped = true;
         LOG.infof("[LORE] Initializing schema in %s", db);
         // Свежесозданная БД первые мгновения отвечает 500 на команды — DDL,
         // запущенный сразу после create database, молча падал на ПЕРВЫХ типах
