@@ -4,6 +4,16 @@
 
     <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
 
+      <#-- AL-SWITCH-USER: экран повторной проверки (живая SSO-сессия + prompt=login)
+           прячет поле логина. Без ссылки на перезапуск входа сменить учётку
+           отсюда нельзя — в стандартной теме она есть, в нашей пропала. -->
+      <#if usernameHidden?? && url.loginRestartFlowUrl??>
+        <div class="form-group" id="kc-attempted-user">
+          <span>${(auth.attemptedUsername)!''}</span>
+          <a id="reset-login" href="${url.loginRestartFlowUrl}">${msg("loreSwitchUser")}</a>
+        </div>
+      </#if>
+
       <#if !usernameHidden??>
         <div class="form-group">
           <label for="username">${msg("usernameOrEmail")}</label>
