@@ -222,6 +222,53 @@ export async function similarQuestions(questionId: string, title?: string): Prom
   }
 }
 
+// MT-MCP-TRUTH A13 (06.11.2026): слаг исторический (NooriUta/volva при репо
+// AIDA/volva), неверный давал тихий noop. Переименовывать нельзя — подсказываем
+// ближайший: регистр → то же имя репозитория у другого владельца → опечатка
+// (расстояние ≤ 2). Ничего похожего — null, а не случайный слаг.
+export function nearestSlug(slug: string, registry: string[]): string | null {
+  const low = slug.toLowerCase();
+  const exact = registry.find(s => s.toLowerCase() === low);
+  if (exact) return exact;
+  const repo = low.split('/').pop() ?? low;
+  const sameRepo = registry.filter(s => (s.toLowerCase().split('/').pop() ?? '') === repo);
+  if (sameRepo.length === 1) return sameRepo[0];
+  let best: string | null = null, bestD = 3;
+  for (const s of registry) {
+    const d = editDistance(low, s.toLowerCase());
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return best;
+}
+
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0]; dp[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j];
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[b.length];
+}
+
+async function slugHint(project: string): Promise<Record<string, unknown>> {
+  try {
+    const res = await loreGet('/lore/slice/git_projects', { fields: 'slug', limit: '1000' }) as { rows?: { slug?: string }[] } | { slug?: string }[];
+    const rows = Array.isArray(res) ? res : (res.rows ?? []);
+    const slugs = rows.map(r => r.slug).filter((s): s is string => !!s);
+    if (slugs.includes(project)) return {};
+    const near = nearestSlug(project, slugs);
+    return near
+      ? { did_you_mean: near, project_hint: `слага «${project}» нет в реестре — ближайший «${near}». Повтори с project="${near}".` }
+      : { project_hint: `слага «${project}» нет в реестре; список — query_slice slice="git_projects"` };
+  } catch {
+    return {};
+  }
+}
+
 export async function inlineProject(kind: ProjectKind, id: string, explicit?: string): Promise<Record<string, unknown>> {
   const project = explicit ?? ACTIVE_PROJECT;
   if (!project) return {};
@@ -234,7 +281,9 @@ export async function inlineProject(kind: ProjectKind, id: string, explicit?: st
     // он тоже false (ребро не создавалось, потому что уже было), и по нему
     // повтор выглядел бы провалом.
     const failed = r?.outcome !== undefined ? r.outcome === 'noop' : r?.linked === false;
-    return { project, project_source: source, project_linked: !failed, project_link: r };
+    // A13: noop из-за неверного слага — назвать ближайший, а не оставить догадываться.
+    const hint = failed ? await slugHint(project) : {};
+    return { project, project_source: source, project_linked: !failed, project_link: r, ...hint };
   } catch (e) {
     // Сущность УЖЕ записана — ошибку ребра не прячем и не роняем запись целиком.
     return { project, project_source: source, project_linked: false,
