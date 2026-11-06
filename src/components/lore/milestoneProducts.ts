@@ -77,3 +77,49 @@ export function unplannedOfProduct<S extends SprintLike>(
   }
   return open.filter(s => (s.components ?? []).some(c => comps.has(c)));
 }
+
+/**
+ * Спринт принадлежит продукту через свои компоненты (IN_PRODUCT); подпродукты
+ * входят в карту родителя. `null` — без фильтра; NO_PRODUCT — ни один компонент
+ * спринта не принадлежит ни одному продукту (незаполненность, её видно).
+ */
+export function sprintInProduct(s: { components: string[] | null }, code: string | null, products: ProductRow[]): boolean {
+  if (!code) return true;
+  const comps = s.components ?? [];
+  if (code === NO_PRODUCT) {
+    const all = new Set(products.flatMap(p => p.components ?? []));
+    return !comps.some(c => all.has(c));
+  }
+  const scope = productScope(code, products);
+  const own = new Set(products.filter(p => scope.has(p.code)).flatMap(p => p.components ?? []));
+  return comps.some(c => own.has(c));
+}
+
+/**
+ * Тумблер «Прошлые» выключен → прячем только ЗАКРЫТОЕ прошлое. Открытый спринт
+ * с прошедшим сроком — это просрочка, а не архив: раньше он пропадал вместе с
+ * закрытыми, и план выглядел чище, чем есть (на стенде 06.11 — «1 / 76 баров»).
+ */
+export function hiddenAsPast(plannedEnd: Date, today: Date, isClosed: boolean, cropPast: boolean): boolean {
+  return cropPast && isClosed && plannedEnd < today;
+}
+
+/**
+ * «Поток» — работа вне вех по своей природе: уборка, апгрейды СУБД и
+ * зависимостей, регрессы, CI, безопасность, бэкапы (RM-V4). Остальное без вехи —
+ * «правда забыли». Признака в модели нет, поэтому — по имени спринта.
+ */
+const STREAM = /HOUSEKEEPING|DEPS|UPGRADE|REGRESSION|ARCADEDB_\d|ARCADE_\d|(^|_)CI(_|$)|SECURITY|BACKUP|VAULT|INFRA_BACKLOG|HYGIENE/i;
+export function isStreamSprint(sprintId: string): boolean {
+  return STREAM.test(sprintId);
+}
+
+/** RM-U6: доля «вне плана» от открытых спринтов продукта, с делением поток / забыли. */
+export function unplannedShare<S extends SprintLike & { components: string[] | null }>(
+  sprints: S[], ms: MilestoneLike[], code: string | null, products: ProductRow[],
+): { open: number; unplanned: number; stream: number; forgotten: number; pct: number } {
+  const open = sprints.filter(s => !CLOSED.test(s.status_raw ?? '') && sprintInProduct(s, code, products)).length;
+  const un = unplannedOfProduct(sprints, ms, code, products);
+  const stream = un.filter(s => isStreamSprint(s.sprint_id)).length;
+  return { open, unplanned: un.length, stream, forgotten: un.length - stream, pct: open ? Math.round(un.length / open * 100) : 0 };
+}
