@@ -895,6 +895,11 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> castRows(Object rows) {
+        return (List<Map<String, Object>>) rows;
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
         // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
@@ -1000,6 +1005,9 @@ public class AidaLoreResource extends LoreResourceBase {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> outside = (Map<String, Object>) pair[1];
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
+                // S1-06: аддитивное поле категории статуса — ДО SlicePage.apply,
+                // чтобы fields=…,status_category проецировалось как обычная колонка.
+                out.put("rows", LoreStatusCategory.enrich(id, castRows(out.get("rows"))));
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (outside != null) out.put("outside_scope", outside);
                 try {
