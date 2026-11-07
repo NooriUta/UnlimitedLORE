@@ -46,6 +46,17 @@ node dist/index.js # speaks MCP over stdio
 The backend (`UnlimitedLORE/backend`, port 9100) must be running, and it needs
 `ARCADEDB_ROOT_PASSWORD` to reach ArcadeDB.
 
+## Contract snapshot (S0-01)
+
+`src/tools/contract.test.ts` calls every tool (backend stubbed) and compares its
+parameters and response shape with `src/tools/contract.snapshot.json`. A changed
+parameter, a dropped tool or a missing response field fails CI on every PR. When
+the change is intentional, regenerate and commit the snapshot together with it:
+
+```bash
+UPDATE_MCP_CONTRACT=1 npx vitest run src/tools/contract.test.ts
+```
+
 ## Register in Claude Code
 
 The repo root ships `.mcp.json`:
