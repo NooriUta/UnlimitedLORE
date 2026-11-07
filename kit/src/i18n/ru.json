@@ -296,5 +296,15 @@
   "kit.burn.scope": "объём",
   "kit.burn.peak": "пик",
   "kit.burn.aria.burndown": "Burndown: остаток {remaining} из {scope}, закрыто {done}",
-  "kit.burn.aria.burnup": "Burnup: закрыто {done} из {scope}, остаток {remaining}"
+  "kit.burn.aria.burnup": "Burnup: закрыто {done} из {scope}, остаток {remaining}",
+  "kit.read.section": "Режим чтения",
+  "kit.read.settings": "Настройки чтения",
+  "kit.read.size": "Размер текста",
+  "kit.read.size.s": "Мелкий",
+  "kit.read.size.m": "Обычный",
+  "kit.read.size.l": "Крупный",
+  "kit.read.size.xl": "Очень крупный",
+  "kit.read.collapseMenu": "Сворачивать меню при чтении",
+  "kit.read.expand": "Блок на весь экран",
+  "kit.read.rail": "Свойства"
 }

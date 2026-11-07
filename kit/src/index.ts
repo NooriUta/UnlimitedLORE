@@ -48,3 +48,6 @@ export * from './palette';
 export * from './views/tree';
 // Burnup/burndown спринта — свёрнут под таблицей задач (SPRINT_UXR_S5_RECORD_TASKS/S5-03).
 export * from './charts';
+// Режим чтения: колонка ~680 px, широкие блоки с ⤢, Aa, ушко правой колонки,
+// меню по настройке (SPRINT_UXR_S5_RECORD_TASKS/S5-05).
+export * from './reading';
