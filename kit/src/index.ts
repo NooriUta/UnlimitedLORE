@@ -35,3 +35,6 @@ export { installErrorScreen, showErrorScreen, type ErrorScreenOptions } from './
 export { describeError, isBenignError } from './resilience/errorText';
 export { useHotkeys, type HotkeyHandler } from './resilience/useHotkeys';
 export { setUrlParams, useUrlParam } from './resilience/useUrlParam';
+// Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) и палитра Ctrl+K / поиск «/» (K-07).
+export type * from './core/contract';
+export * from './palette';

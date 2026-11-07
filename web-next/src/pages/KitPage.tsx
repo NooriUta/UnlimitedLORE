@@ -3,23 +3,25 @@
 // своих элементов здесь нет — витрина показывает ровно то, что получит любой
 // экран v2. Её axe-прогон (KitPage.test.tsx) — гейт a11y фронтового CI.
 // Эталон вида — docs/prototypes/ux-redesign-shell-v4.tpl.html (как картинка).
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  Skeleton, StatusStar, Tabs, Toolbar, Tooltip, Truncated,
-  type Density, type Mode,
+  CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
+  Skeleton, StatusStar, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
+import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 
-const SECTIONS = ['tokens', 'elements', 'states', 'shell', 'content'] as const;
+const SECTIONS = ['tokens', 'elements', 'states', 'shell', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
   elements: 'kitPage.sec.elements',
   states: 'kitPage.sec.states',
   shell: 'kitPage.sec.shell',
+  palette: 'kitPage.sec.palette',
   content: 'kitPage.sec.content',
 };
 
@@ -54,6 +56,29 @@ export default function KitPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [earOpen, setEarOpen] = useState(false);
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
+  // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
+  const palette = useKitPalette();
+  const recent = useMemo(() => createRecentList(createSafeStorage(), { key: 'seidr.kit.vitrine.recent' }), []);
+  const [openedRecord, setOpenedRecord] = useState<string | null>(null);
+  const paletteCtx = useMemo<KitCtx>(() => ({
+    data: PALETTE_DEMO_DATA,
+    config: {
+      modules: [],
+      menu: { groups: [] },
+      kinds: PALETTE_DEMO_KINDS,
+      statuses: { items: [] },
+      palette: {
+        commands: [
+          { id: 'toggle-mode', title: t('kitPage.pal.cmdMode'), run: () => setMode(m => (m === 'dark' ? 'light' : 'dark')) },
+          { id: 'toggle-density', title: t('kitPage.pal.cmdDensity'), run: () => setDensity(d => (d === 'compact' ? 'comfortable' : 'compact')) },
+          { id: 'open-sheet', title: t('kitPage.pal.cmdSheet'), run: () => setSheetOpen(true) },
+        ],
+      },
+    },
+    href: id => `#rec=${encodeURIComponent(id)}`,
+    esc: s => s,
+    md: s => s,
+  }), [t]);
 
   return (
     // Тема и плотность витрины — атрибутами на её корне: селекторы seidr.css
@@ -169,6 +194,28 @@ export default function KitPage() {
           <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('kitPage.sh.sheetTitle')}>
             <p>{t('kitPage.sh.sheetBody')}</p>
           </Sheet>
+        </section>
+
+        <section id="kit-palette" className="kitp__sec" aria-labelledby="kit-palette-h">
+          <h2 id="kit-palette-h" className="kitp__h2">{t('kitPage.sec.palette')}</h2>
+          <p>{t('kitPage.pal.lead')}</p>
+          <div className="kitp__row">
+            <button type="button" className="sk-btn" aria-keyshortcuts="Control+K" onClick={palette.openPalette}>
+              {t('kitPage.pal.open')}<Kbd keys={['Ctrl', 'K']} />
+            </button>
+            <button type="button" className="sk-btn" aria-keyshortcuts="/" onClick={palette.openSearch}>
+              {t('kitPage.pal.search')}<Kbd keys={['/']} />
+            </button>
+            {openedRecord && <Pill variant="id">{openedRecord}</Pill>}
+          </div>
+          <CommandPalette
+            open={palette.open}
+            mode={palette.mode}
+            onClose={palette.close}
+            ctx={paletteCtx}
+            recent={recent}
+            onOpenRecord={r => setOpenedRecord(r.id)}
+          />
         </section>
 
         <section id="kit-content" className="kitp__sec" aria-labelledby="kit-content-h">

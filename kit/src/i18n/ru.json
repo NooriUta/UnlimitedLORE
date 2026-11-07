@@ -154,5 +154,20 @@
   "kit.block.crashed": "Блок «{block}» упал при отрисовке",
   "kit.block.crashed.hint": "Остальной экран работает. Это не «пусто»: блок не отрисован.",
   "kit.block.unverified": "Блок «{block}»: полноту проверить нечем",
-  "kit.block.unverified.hint": "0 записей, но выдача обрезана или без метаданных — это не проверенный ноль."
+  "kit.block.unverified.hint": "0 записей, но выдача обрезана или без метаданных — это не проверенный ноль.",
+  "kit.palette.title": "Палитра: записи и команды",
+  "kit.palette.searchTitle": "Поиск по записям",
+  "kit.palette.placeholderAll": "Запись или команда…",
+  "kit.palette.placeholderRecords": "Название или код записи…",
+  "kit.palette.recent": "Недавние",
+  "kit.palette.records": "Записи",
+  "kit.palette.commands": "Команды",
+  "kit.palette.command": "команда",
+  "kit.palette.emptyRecent": "Недавних пока нет — начните вводить название или код",
+  "kit.palette.notFound": "Ничего не найдено по «{query}» среди загруженных записей",
+  "kit.palette.truncated": "Поиск только по загруженному: {returned} из {total} — выдача обрезана сервером",
+  "kit.palette.truncatedUnknown": "Поиск только по загруженным {returned}: выдача обрезана сервером, полный объём неизвестен",
+  "kit.palette.more": "Показано {shown} из {total} — уточните запрос",
+  "kit.palette.commandFailed": "Команда «{title}» не выполнилась: {reason}",
+  "kit.palette.hint": "↑↓ — выбор · Enter — открыть · Esc — закрыть"
 }

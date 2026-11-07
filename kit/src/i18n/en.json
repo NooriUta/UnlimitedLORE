@@ -154,5 +154,20 @@
   "kit.block.crashed": "Block “{block}” crashed while rendering",
   "kit.block.crashed.hint": "The rest of the screen works. This is not “empty”: the block was not rendered.",
   "kit.block.unverified": "Block “{block}”: completeness can’t be checked",
-  "kit.block.unverified.hint": "0 records, but the result is truncated or has no metadata — this is not a verified zero."
+  "kit.block.unverified.hint": "0 records, but the result is truncated or has no metadata — this is not a verified zero.",
+  "kit.palette.title": "Palette: records and commands",
+  "kit.palette.searchTitle": "Search records",
+  "kit.palette.placeholderAll": "Record or command…",
+  "kit.palette.placeholderRecords": "Record title or code…",
+  "kit.palette.recent": "Recent",
+  "kit.palette.records": "Records",
+  "kit.palette.commands": "Commands",
+  "kit.palette.command": "command",
+  "kit.palette.emptyRecent": "No recent items yet — start typing a title or code",
+  "kit.palette.notFound": "Nothing found for “{query}” among loaded records",
+  "kit.palette.truncated": "Searching loaded data only: {returned} of {total} — the server truncated the result",
+  "kit.palette.truncatedUnknown": "Searching the loaded {returned} only: the server truncated the result, full size unknown",
+  "kit.palette.more": "Showing {shown} of {total} — refine the query",
+  "kit.palette.commandFailed": "Command “{title}” failed: {reason}",
+  "kit.palette.hint": "↑↓ select · Enter open · Esc close"
 }
