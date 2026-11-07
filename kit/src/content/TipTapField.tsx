@@ -258,14 +258,18 @@ export function TipTapField({
     },
   });
 
+  // isDestroyed: при повторном подключении эффектов (Suspense, StrictMode)
+  // React зовёт их со ссылкой на редактор, который useEditor уже уничтожил, —
+  // у него нет схемы, и getText() падает «reading 'nodes'» (S4-00e).
   useEffect(() => {
-    editor?.setEditable(editable);
+    if (!editor || editor.isDestroyed) return;
+    editor.setEditable(editable);
   }, [editable, editor]);
 
   // Внешнее значение применяется, когда разошлось с содержимым; в фокусе не
   // вмешиваемся (дралось бы с кареткой). emitUpdate:false — не эхо родителю.
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     const current = getMarkdown(editor);
     if (value === current) return;
     if (value === '' || !editor.isFocused) editor.commands.setContent(value, { emitUpdate: false });
