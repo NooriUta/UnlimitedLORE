@@ -46,3 +46,5 @@ export * from './palette';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
 // Вид «Дерево / книга» — третий в list.views (K-09).
 export * from './views/tree';
+// Burnup/burndown спринта — свёрнут под таблицей задач (SPRINT_UXR_S5_RECORD_TASKS/S5-03).
+export * from './charts';
