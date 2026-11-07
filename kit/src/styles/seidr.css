@@ -2276,3 +2276,35 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-shell__ear { align-self: start; margin-top: 8px; }
 /* Колонка свойств открыта — тексту чуть меньше правого поля. */
 .sk-read--rail .sk-read__main { padding-right: 8px; }
+
+/* ---------- Peek записи (SPRINT_UXR_S5_RECORD_TASKS/S5-12) ----------
+   Справа: шапка с «Читать целиком», затем задачи, затем текст. Текст — превью:
+   высота ограничена, полное чтение — по кнопке. */
+.sk-peek { display: flex; flex-direction: column; }
+.sk-peek .sk-sheet__body { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.sk-peek__read { flex: none; text-decoration: none; color: var(--bg0); background: var(--acc); border-color: var(--acc); }
+.sk-peek__read:hover { color: var(--bg0); background: color-mix(in srgb, var(--acc) 85%, var(--t1)); }
+.sk-peek__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.sk-peek__tasks, .sk-peek__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-peek__h {
+  display: flex; align-items: baseline; gap: 8px; margin: 0;
+  color: var(--t3); font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+}
+.sk-peek__count { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t2); text-transform: none; letter-spacing: 0; }
+.sk-peek__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sk-peek__task {
+  display: flex; align-items: center; gap: var(--gap); min-width: 0;
+  min-height: max(var(--tap), var(--row-h));
+  padding: 0 var(--pad-x);
+  border-bottom: 1px solid var(--bd);
+}
+.sk-peek__task:hover { background: var(--bg2); }
+.sk-peek__task[data-missing='true'] { border-left: 2px dashed var(--bd); }
+.sk-peek__ref { flex: 1 1 auto; min-width: 0; }
+.sk-peek__ref > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-peek__missing { color: var(--wrn); font-size: var(--fs-xs); }
+.sk-peek__more { margin: 0; padding: 4px var(--pad-x); color: var(--t3); font-size: var(--fs-sm); }
+.sk-peek__body {
+  max-height: 40vh; overflow: hidden;
+  mask-image: linear-gradient(to bottom, var(--bg0) 75%, transparent);
+}

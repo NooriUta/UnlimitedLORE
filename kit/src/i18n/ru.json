@@ -314,5 +314,14 @@
   "kit.read.size.xl": "Очень крупный",
   "kit.read.collapseMenu": "Сворачивать меню при чтении",
   "kit.read.expand": "Блок на весь экран",
-  "kit.read.rail": "Свойства"
+  "kit.read.rail": "Свойства",
+  "kit.peek.readFull": "Читать целиком",
+  "kit.peek.tasks": "Задачи",
+  "kit.peek.tasks.progress": "{done} из {total} готово",
+  "kit.peek.tasks.empty": "Задач нет",
+  "kit.peek.tasks.emptyHint": "В выборке нет задач этой записи — это проверенный ноль, а не сбой.",
+  "kit.peek.tasks.failed": "Задачи не загрузились",
+  "kit.peek.tasks.truncated": "Выборка обрезана сервером — задач может быть больше",
+  "kit.peek.tasks.more": "ещё {n} — в полном чтении",
+  "kit.peek.text": "Текст"
 }
