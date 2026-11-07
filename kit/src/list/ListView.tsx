@@ -46,6 +46,13 @@ export interface ListViewProps {
   urlState?: boolean | UrlWindow;
   /** Начальное состояние (URL важнее). */
   initial?: Partial<ListState>;
+  /**
+   * Управляемое состояние (S4-08, сохранённые виды): задано — список рисует
+   * его и не держит своего; правки уходят в onStateChange, URL пишется так же.
+   */
+  state?: ListState;
+  /** Каждая правка фильтра, группировки, порядка или вида — и в управляемом режиме, и в обычном. */
+  onStateChange?: (state: ListState) => void;
   budget?: Partial<typeof LIST_BUDGET>;
   className?: string;
 }
@@ -151,13 +158,21 @@ function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, className,
+  state: stateProp, onStateChange,
 }: ListViewProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const labels = useLabels(config, lang);
   const budget = { ...LIST_BUDGET, ...budgetPart };
   const win = resolveWin(urlState);
-  const [state, setState] = useState<ListState>(() => initialState(win, initial));
+  const [ownState, setState] = useState<ListState>(() => initialState(win, initial));
+  const state = stateProp ?? ownState;
+  // Управляемый режим: состояние пришло снаружи (выбор вида) — URL догоняет.
+  const controlledKey = stateProp ? JSON.stringify(writeListState(stateProp)) : null;
+  useEffect(() => {
+    if (win && stateProp) pushUrlState(writeListState(stateProp), { win, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controlledKey]);
   const [ui, setUi] = useState<{ by: string | null; view: ListViewKind; open: Record<string, boolean>; more: Record<string, number> }>(
     { by: state.group, view: state.view, open: {}, more: {} },
   );
@@ -172,11 +187,14 @@ export function ListView({
   const columns = listCfg?.columns ?? ['title+id', 'status'];
 
   const update = (patch: Partial<ListState>) => {
-    setState(prev => {
-      const next = { ...prev, ...patch };
-      if (win) pushUrlState(writeListState(next), { win, replace: true });
-      return next;
-    });
+    if (stateProp) {
+      onStateChange?.({ ...stateProp, ...patch });
+      return;
+    }
+    const next = { ...ownState, ...patch };
+    if (win) pushUrlState(writeListState(next), { win, replace: true });
+    setState(next);
+    onStateChange?.(next);
   };
 
   const ctx: KitCtx = useMemo(() => ({

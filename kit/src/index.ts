@@ -45,3 +45,6 @@ export * from './palette';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
 // Вид «Дерево / книга» — третий в list.views (K-09).
 export * from './views/tree';
+// Сохранённые виды списка: сохранить / сохранить как / сбросить, командные виды
+// по умолчанию; хранилище — контракт S2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-08).
+export * from './views/saved';
