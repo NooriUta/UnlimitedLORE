@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  describeLoreError, fetchLoreSlice, loreMutate,
+  describeLoreError, fetchLoreSlice, fetchSectionCount, loreMutate, LORE_TIMEOUT_MS,
   LoreConflictError, LoreDisabledError, LoreHttpError, LoreNotFoundError, LoreUpstreamError,
 } from './lore';
 
@@ -23,7 +23,7 @@ function mockFetch(status: number, body: unknown, contentType = 'application/jso
   }));
 }
 
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 describe('транспорт LORE: какая ошибка какой', () => {
   it('403 с HTML-телом от прокси — ошибка с кодом 403, а не «LORE недоступен»', async () => {
@@ -97,5 +97,47 @@ describe('describeLoreError: что сказать человеку', () => {
   it('у ошибки всегда есть текст для человека', () => {
     expect(describeLoreError(new LoreHttpError(500, 'X', 'boom')).text).toContain('500');
     expect(describeLoreError('строка').text).toBe('строка');
+  });
+});
+
+// SPRINT_UXR_S1_HONEST_API/S1-04: срок подключён к транспорту lore.ts, а не только
+// лежит в loreTimeout.ts. Повисший fetch → вид 'timeout' на месте, не 'unknown'.
+describe('транспорт LORE: срок ответа (S1-04)', () => {
+  it('fetchLoreSlice, на который не ответили за LORE_TIMEOUT_MS, — ошибка timeout на месте', async () => {
+    vi.useFakeTimers();
+    // AbortSignal.timeout живёт на внутренних таймерах Node — подменяем его сигналом
+    // на фейковом setTimeout, чтобы срок шёл по advanceTimersByTime.
+    vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms: number) => {
+      const c = new AbortController();
+      setTimeout(() => c.abort(new DOMException('signal timed out', 'TimeoutError')), ms);
+      return c.signal;
+    });
+    vi.stubGlobal('location', { origin: 'http://lore.test' });
+    vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => new Promise((_res, rej) => {
+      init?.signal?.addEventListener('abort', () => rej(init.signal?.reason), { once: true });
+    })));
+    const p = fetchLoreSlice('sprints').catch(x => x);
+    vi.advanceTimersByTime(LORE_TIMEOUT_MS);
+    const e = await p;
+    expect(describeLoreError(e)).toMatchObject({ kind: 'timeout', pageLevel: false });
+  });
+
+  it('голый DOMException TimeoutError (срок истёк при чтении тела) — тоже timeout', () => {
+    expect(describeLoreError(new DOMException('x', 'TimeoutError')).kind).toBe('timeout');
+  });
+});
+
+// SPRINT_UXR_S1_HONEST_API/S1-07: счётчик секции не выдаёт отказ за ноль.
+describe('fetchSectionCount (S1-07)', () => {
+  it('отдаёт SectionCount как есть', async () => {
+    mockFetch(200, { section: 'sprints', open: 3, closed: 5, byCategory: {}, scope: null, filters: {}, completeness: 'complete' });
+    await expect(fetchSectionCount('sprints')).resolves.toMatchObject({ open: 3, closed: 5 });
+  });
+
+  it('403 SCOPE_EMPTY и 400 NOT_COUNTABLE — ошибка, а не 0', async () => {
+    mockFetch(403, { error: 'SCOPE_EMPTY', detail: 'нет проектов' });
+    await expect(fetchSectionCount('sprints')).rejects.toBeInstanceOf(LoreHttpError);
+    mockFetch(400, { error: 'NOT_COUNTABLE', detail: 'нет статуса' });
+    await expect(fetchSectionCount('components')).rejects.toBeInstanceOf(LoreHttpError);
   });
 });
