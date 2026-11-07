@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { sourceOf } from '../test/sourceOf';
 
 /**
  * SPRINT_LORE_ADMIN_HOUSEKEEPING/AH-10 (хвосты) · тап-цели и кликабельность вне админки.
@@ -13,13 +14,12 @@ import { describe, expect, it } from 'vitest';
  *      <button> (или span/div с role="button" через a11yClick), а не голый span/div;
  *   3) стрелка-приглашение «→ …» без обработчика — мёртвая ссылка.
  */
-const tsx = import.meta.glob('../**/*.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const css = import.meta.glob('./tokens.css', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-const src = (tail: string) => {
-  const hit = Object.entries(tsx).find(([p]) => p.endsWith(tail));
-  if (!hit) throw new Error(`исходник не найден: ${tail}`);
-  return hit[1];
-};
+// SPRINT_UXR_S0_SAFETY/S0-07: исходник ищется по объявленному компоненту, а не по
+// пути — перенос файла в другую папку гвард не роняет (src/test/sourceOf.ts).
+// Что тулбар TipTap реально рисует кнопки .lore-tap — рендер-тест
+// TipTapField.tapTargets.render.test.tsx, а не поиск строки.
+const src = sourceOf;
 
 /** Открывающие теги <span …>/<div …> (с учётом `=>` и `{…}` внутри атрибутов). */
 function openTags(source: string, tags: string[]): string[] {
@@ -56,15 +56,16 @@ export function deadArrowLinks(source: string): string[] {
   return [...source.matchAll(re)].filter(m => !/onClick=/.test(m[1])).map(m => m[0]);
 }
 
-const CLICK_FILES = [
-  '/components/layout/AppShell.tsx',
-  '/components/lore/TipTapField.tsx',
-  '/pages/LorePage.tsx',
-  '/components/lore/LoreBragiPlan.tsx',
-  '/components/lore/LoreBragiScreen.tsx',
-  '/components/lore/LoreBragiExtras.tsx',
-  '/components/lore/LoreReleasesBoard.tsx',
-  '/components/lore/LoreBragiPublications.tsx',
+// Компоненты, где элемент с onClick обязан быть контролом (ищутся по имени, не по пути).
+const CLICK_COMPONENTS = [
+  'AppShell',
+  'TipTapField',
+  'LorePage',
+  'LoreBragiPlan',
+  'LoreBragiScreen',
+  'LoreBragiInsights',
+  'LoreReleasesBoard',
+  'LoreBragiPublications',
 ];
 
 describe('AH-10 · общее правило тап-целей в tokens.css', () => {
@@ -80,22 +81,18 @@ describe('AH-10 · общее правило тап-целей в tokens.css', (
 });
 
 describe('AH-10 · мелкие контролы вне админки подключены к правилу', () => {
+  // TipTapField (класс + отсутствие инлайна 22px) — рендером, см. шапку файла.
   const USES: [string, RegExp][] = [
-    ['/components/layout/AppShell.tsx', /className="lore-tap"/],
-    ['/components/lore/TipTapField.tsx', /className="lore-tap"/],
-    ['/pages/LorePage.tsx', /className="lore-tap-main"/],
-    ['/components/lore/LoreBragiPlan.tsx', /className="lore-tap"/],
+    ['AppShell', /className="lore-tap"/],
+    ['LorePage', /className="lore-tap-main"/],
+    ['LoreBragiPlan', /className="lore-tap"/],
   ];
-  for (const [file, re] of USES) it(file, () => { expect(src(file)).toMatch(re); });
-
-  it('тулбар TipTap не прибит к 22px инлайном (инлайн бьёт класс)', () => {
-    expect(src('/components/lore/TipTapField.tsx')).not.toMatch(/minWidth:\s*22\b/);
-  });
+  for (const [name, re] of USES) it(name, () => { expect(src(name)).toMatch(re); });
 });
 
 describe('AH-10 · кликабельный span/div — только с role="button"', () => {
-  for (const file of CLICK_FILES) {
-    it(file, () => { expect(clickableNonButtons(src(file))).toEqual([]); });
+  for (const name of CLICK_COMPONENTS) {
+    it(name, () => { expect(clickableNonButtons(src(name))).toEqual([]); });
   }
   it('детектор ловит нарушение и пропускает разрешённое', () => {
     expect(clickableNonButtons('<span style={S.x} onClick={() => go(a > b)}>✕</span>')).toHaveLength(1);
@@ -108,8 +105,8 @@ describe('AH-10 · кликабельный span/div — только с role="b
 });
 
 describe('AH-10 · BRAGI: стрелка «→ …» без обработчика — мёртвая ссылка', () => {
-  for (const file of ['/components/lore/LoreBragiScreen.tsx', '/components/lore/LoreBragiExtras.tsx']) {
-    it(file, () => { expect(deadArrowLinks(src(file))).toEqual([]); });
+  for (const name of ['LoreBragiScreen', 'LoreBragiInsights']) {
+    it(name, () => { expect(deadArrowLinks(src(name))).toEqual([]); });
   }
   it('детектор', () => {
     expect(deadArrowLinks(`<span style={S.m}>{t('a.b', 'связи → Forseti')}</span>`)).toHaveLength(1);
@@ -117,7 +114,7 @@ describe('AH-10 · BRAGI: стрелка «→ …» без обработчик
     expect(deadArrowLinks(`<span style={S.m}>{t('a.b', 'просто текст')}</span>`)).toEqual([]);
   });
   it('чипы инсайтов ведут в паспорт через общую карту ссылок', () => {
-    expect(src('/components/lore/LoreBragiExtras.tsx')).toMatch(/searchHitHref\('task'/);
-    expect(src('/components/lore/LoreBragiExtras.tsx')).toMatch(/searchHitHref\('adr'/);
+    expect(src('LoreBragiInsights')).toMatch(/searchHitHref\('task'/);
+    expect(src('LoreBragiInsights')).toMatch(/searchHitHref\('adr'/);
   });
 });
