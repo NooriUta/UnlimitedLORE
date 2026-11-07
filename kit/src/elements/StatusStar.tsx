@@ -15,11 +15,13 @@ export interface StatusStarProps {
   showLabel?: boolean;
   /** Открыть палитру смены статуса — делает звезду кнопкой. */
   onOpen?: () => void;
+  /** Палитра открыта — aria-expanded у кнопки (только вместе с onOpen). */
+  expanded?: boolean;
   size?: number;
   className?: string;
 }
 
-export function StatusStar({ status, label, showLabel, onOpen, size = 14, className }: StatusStarProps) {
+export function StatusStar({ status, label, showLabel, onOpen, expanded, size = 14, className }: StatusStarProps) {
   const meta = statusMeta(status);
   const style = { '--star-c': meta.color } as CSSProperties;
   const cls = ['sk-star', onOpen ? 'sk-star--btn' : '', className].filter(Boolean).join(' ');
@@ -37,7 +39,7 @@ export function StatusStar({ status, label, showLabel, onOpen, size = 14, classN
   };
   if (onOpen) {
     return (
-      <button type="button" {...common} aria-label={label} aria-haspopup="menu" title={label} onClick={onOpen}>
+      <button type="button" {...common} aria-label={label} aria-haspopup="menu" aria-expanded={expanded ?? false} title={label} onClick={onOpen}>
         {body}
       </button>
     );

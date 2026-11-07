@@ -46,5 +46,8 @@
   "kitPage.md.html": "HTML — sandbox only",
   "kitPage.md.htmlTitle": "Sample HTML fragment",
   "kitPage.md.sample": "## Decision\n\n**Markdown** text with a list:\n\n- item one\n- [x] item two\n\n| field | value |\n|---|---|\n| status | in progress |\n\n```mermaid\ngraph LR; A[Task] --> B[PR] --> C[Release]\n```\n",
-  "kitPage.md.htmlSample": "<h3>Fragment</h3><p>HTML renders in an iframe with sandbox and CSP — host scripts are out of its reach.</p>"
+  "kitPage.md.htmlSample": "<h3>Fragment</h3><p>HTML renders in an iframe with sandbox and CSP — host scripts are out of its reach.</p>",
+  "sprintTasks.title": "Tasks",
+  "sprintTasks.caption": "Sprint {id} tasks",
+  "sprintTasks.back": "Back to LORE"
 }

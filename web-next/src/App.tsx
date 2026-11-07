@@ -15,6 +15,7 @@ import { ErrorBoundary, Pill, Skeleton, StorageBanner } from '@seidr/kit';
 import './App.css';
 import { PersonalSettings } from './settings/PersonalSettings';
 import { storage } from './storage/safe';
+import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPassport';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
@@ -25,9 +26,33 @@ export function routeOf(path: string): 'kit' | 'home' {
   return path.replace(/\/+$/, '') === '/kit' ? 'kit' : 'home';
 }
 
-export default function App({ path }: { path?: string } = {}) {
+/**
+ * Паспорт спринта по URL (S5-02): ?section=sprints&passport=ID[&tab=…].
+ * Паспорта открываются из списков S4 тем же адресом. Неизвестная вкладка —
+ * «Задачи» (первая и по умолчанию: задачи спринта видны за 2 клика).
+ */
+export function sprintPassportOf(search: string): { sprintId: string; tab: SprintTab } | null {
+  const p = new URLSearchParams(search);
+  const id = p.get('passport')?.trim();
+  if (p.get('section') !== 'sprints' || !id) return null;
+  const tab = (SPRINT_TABS as readonly string[]).includes(p.get('tab') ?? '') ? (p.get('tab') as SprintTab) : 'tasks';
+  return { sprintId: id, tab };
+}
+
+export default function App({ path, search }: { path?: string; search?: string } = {}) {
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
   if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  const passport = sprintPassportOf(search ?? (typeof window === 'undefined' ? '' : window.location.search));
+  if (passport) {
+    return (
+      <ErrorBoundary lang="ru">
+        <StorageBanner storage={storage} lang="ru" />
+        <main data-lore-app="v2">
+          <SprintPassport sprintId={passport.sprintId} tab={passport.tab} />
+        </main>
+      </ErrorBoundary>
+    );
+  }
   return (
     <ErrorBoundary lang="ru">
       <StorageBanner storage={storage} lang="ru" />
