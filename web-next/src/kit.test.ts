@@ -46,6 +46,21 @@ describe('web-next ← @seidr/kit', () => {
     expect(cfg).toMatch(/dedupe:\s*\[[^\]]*'react'/);
   });
 
+  // K-04: в образе kit/node_modules нет (Dockerfile копирует только src), так
+  // что каждый пакет, который импортирует код kit (его peerDependencies), обязан
+  // быть зависимостью web-next и стоять в dedupe — иначе сборка образа не найдёт
+  // его от /app/kit/src, хотя локально (где kit/node_modules есть) всё зелёное.
+  it('каждая peer-зависимость kit — в dependencies web-next и в dedupe vite', () => {
+    const kitPkg = JSON.parse(readFileSync(resolve(webNext, '../kit/package.json'), 'utf8'));
+    const pkg = JSON.parse(read('package.json'));
+    const cfg = read('vite.config.ts');
+    const dedupe = /dedupe:\s*\[([^\]]*)\]/.exec(cfg)?.[1] ?? '';
+    const peers = Object.keys(kitPkg.peerDependencies ?? {});
+    expect(peers).toContain('marked'); // положительный контроль чтения
+    expect(peers.filter(p => !pkg.dependencies[p])).toEqual([]);
+    expect(peers.filter(p => !dedupe.includes(`'${p}'`))).toEqual([]);
+  });
+
   it('tsc берёт типы React для исходников kit из web-next, а не ищет вверх от kit/', () => {
     const ts = read('tsconfig.json');
     expect(ts).toMatch(/"react":\s*\["\.\/node_modules\/@types\/react"\]/);

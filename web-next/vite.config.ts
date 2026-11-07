@@ -28,7 +28,7 @@ export default defineConfig({
       '@tiptap/core', '@tiptap/react', '@tiptap/pm', '@tiptap/starter-kit', '@tiptap/extension-image',
       '@tiptap/extension-table', '@tiptap/extension-task-list', '@tiptap/extension-task-item',
       '@tiptap/extension-mention', '@tiptap/suggestion', 'tiptap-markdown',
-      'marked', 'mermaid', '@mermaid-js/layout-elk', 'bpmn-js', 'dompurify',
+      'marked', 'katex', 'mermaid', '@mermaid-js/layout-elk', 'bpmn-js', 'dompurify',
     ],
   },
   // PostCSS — пустой и явный: иначе vite ищет конфиг вверх по дереву и берёт
