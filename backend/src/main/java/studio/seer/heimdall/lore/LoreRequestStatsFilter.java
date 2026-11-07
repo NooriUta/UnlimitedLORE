@@ -64,6 +64,11 @@ public class LoreRequestStatsFilter implements ContainerResponseFilter {
         }
 
         stats.record(caller, axis, whatOf(req));
+        // AO-01: мутирующий вызов — точкой в журнал действий, вместе с исходом.
+        if (LoreRequestStats.isJournalled(req.getMethod())) {
+            String entity = LoreAuditLogFilter.entityIdOf(res.getEntity());
+            stats.journalAction(caller, axis, family, entity != null ? entity : req.getUriInfo().getPath(), res.getStatus());
+        }
         if (stats.touchSession(axis + ":" + caller)) stats.recordSessionStart(caller, axis);
     }
 

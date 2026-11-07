@@ -12,7 +12,7 @@
 // чужой интерфейс. Расхождение этих двух экранов читается как «меня увели не
 // туда» — то есть как фишинг.
 import { useEffect, useState } from 'react';
-import { login, wasSessionLost } from './session';
+import { login, takeSwitchUser, wasSessionLost } from './session';
 import { applyStoredTheme } from '../theme/prefs';
 import { BrandIllustration } from '../components/layout/BrandIllustration';
 
@@ -40,6 +40,14 @@ export default function LoginScreen() {
   // самом Keycloak. Владелец: cookie с темой должна доезжать сюда так же,
   // как AppShell уже пишет её при выборе палитры (см. theme/prefs.ts).
   useEffect(() => { applyStoredTheme(); }, []);
+
+  // AL-SWITCH-USER: вернулись из выхода Keycloak по «войти под другим» —
+  // начинаем вход сразу, второй клик человеку не нужен.
+  useEffect(() => {
+    let store: Storage | null = null;
+    try { store = window.sessionStorage; } catch { store = null; }
+    if (takeSwitchUser(store)) void go();
+  }, []);
 
   async function go(): Promise<void> {
     setGoing(true);

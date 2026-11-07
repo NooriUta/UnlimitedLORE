@@ -54,3 +54,41 @@ export function benchmarkArrow(value: number | null, channelMedian: number | und
   if (value < channelMedian) return '▼';
   return null;
 }
+
+/** Окно ретроспективы: null — «за всё время», иначе часы от даты публикации. */
+export type RetroWindowHours = null | 72 | 168;
+
+/**
+ * V2-04: значение метрики в окне, исходя из того, что точка MetricSnapshot для
+ * views/clicks/demo_conv — НАКОПИТЕЛЬНЫЙ снимок («всего к моменту ts»).
+ *
+ * - окно null («за всё время») — последний снимок;
+ * - окно N часов — последний снимок не позже published_at + N ч. Посты разного
+ *   возраста сравниваются в одинаковых окнах, а не «старое всегда больше»;
+ * - снимка в окне нет — value null («мало точек»), а не 0: ноль утверждал бы,
+ *   что просмотров не было, хотя их просто не замерили;
+ * - у окна нет даты публикации — тоже null: подменить окно на «всё время»
+ *   значило бы показать цифру не того окна, которое выбрано.
+ * `points` — сколько снимков попало в окно (для подписи «мало точек»).
+ */
+export function snapshotValue(
+  points: { metric: string; value: number; ts: string }[],
+  metric: string,
+  publishedAt: string | null,
+  windowHours: RetroWindowHours | number,
+): { value: number | null; points: number } {
+  let limit = Infinity;
+  if (windowHours !== null) {
+    const start = publishedAt ? Date.parse(/T/.test(publishedAt) ? publishedAt : `${publishedAt}T00:00:00Z`) : NaN;
+    if (Number.isNaN(start)) return { value: null, points: 0 };
+    limit = start + windowHours * 3600_000;
+  }
+  const inWindow = points
+    .filter(p => p.metric === metric)
+    .map(p => ({ v: p.value, t: Date.parse(p.ts) }))
+    .filter(p => !Number.isNaN(p.t) && p.t <= limit)
+    .sort((a, b) => a.t - b.t);
+  return inWindow.length === 0
+    ? { value: null, points: 0 }
+    : { value: inWindow[inWindow.length - 1].v, points: inWindow.length };
+}

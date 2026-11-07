@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import {
-  fetchLoreSlice, linkSprintMilestone, upsertMilestone, createLoreTask, describeLoreError,
+  fetchLoreSlice, linkSprintMilestone, linkMilestoneProduct, upsertMilestone, createLoreTask, describeLoreError, updateLoreSprint,
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
 } from '../../api/lore';
+import {
+  NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, unplannedOfProduct, unplannedShare, isStreamSprint, productRepos, productServes, type ProductRow,
+} from './milestoneProducts';
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import LoreSkeleton from './LoreSkeleton';
@@ -96,6 +99,9 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   const [milestones, setMilestones] = useState<LoreMilestone[]>([]);
   const [sprints, setSprints]       = useState<LoreSprintRow[]>([]);
   const [doneDates, setDoneDates]   = useState<LoreSprintDoneDate[]>([]);
+  const [products, setProducts]     = useState<ProductRow[]>([]);
+  // RM-U2: выбранный продукт — в URL (?product=CODE), как и выбранная веха.
+  const [product, setProduct]       = useUrlId('product');
   const [loading, setLoading]       = useState(true);
   const [reload, setReload]         = useState(0);
   // AH-09: выбранная веха в URL (?ms=id).
@@ -111,6 +117,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   const [newTask, setNewTask]       = useState<{ sprint_id: string; title: string }>({ sprint_id: '', title: '' });
   const [addOpen, setAddOpen]       = useState(false);
   const [draft, setDraft]           = useState<EditState & { milestone_id: string }>({ milestone_id: '', label: '', date_display: '', week: '', priority: '', goal_md: '' });
+  // RM-U3: продукт — поле первого класса и в форме создания; по умолчанию — выбранный сверху.
+  const [draftProduct, setDraftProduct] = useState('');
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -118,7 +126,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
       fetchLoreSlice<LoreMilestone>('milestones', undefined, ctrl.signal),
       fetchLoreSlice<LoreSprintRow>('sprints', sliceParamsForProject(project), ctrl.signal),
       fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
-    ]).then(([ms, sp, dd]) => { setMilestones(ms); setSprints(sp); setDoneDates(dd); setLoading(false); })
+      fetchLoreSlice<ProductRow>('products', undefined, ctrl.signal),
+    ]).then(([ms, sp, dd, pr]) => { setMilestones(ms); setSprints(sp); setDoneDates(dd); setProducts(pr); setLoading(false); })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
     return () => ctrl.abort();
   }, [onError, reload, project]);
@@ -126,11 +135,16 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   const doneSet = useMemo(() => new Set(sprints.filter(isDone).map(s => s.sprint_id)), [sprints]);
   const byId    = useMemo(() => new Map(sprints.map(s => [s.sprint_id, s])), [sprints]);
   const selM    = useMemo(() => milestones.find(m => m.milestone_id === selId) ?? null, [milestones, selId]);
-  const orphans = useMemo(() => {
-    const linked = new Set<string>();
-    milestones.forEach(m => msIds(m).forEach(id => linked.add(id)));
-    return sprints.filter(s => !linked.has(s.sprint_id)).sort((a, b) => a.sprint_id.localeCompare(b.sprint_id));
-  }, [milestones, sprints]);
+  // RM-U6: «вне плана» — открытые спринты выбранного продукта без вехи.
+  // Раньше здесь были ВСЕ спринты без вехи, включая закрытые, — и полоса
+  // показывала историю как незапланированную работу.
+  const orphans = useMemo(() =>
+    unplannedOfProduct(sprints, milestones, product, products)
+      .sort((a, b) => a.sprint_id.localeCompare(b.sprint_id)),
+  [milestones, sprints, product, products]);
+  const shown = useMemo(() => milestonesOfProduct(milestones, product, products), [milestones, product, products]);
+  const share = useMemo(() => unplannedShare(sprints, milestones, product, products), [sprints, milestones, product, products]);
+  const productLabel = useMemo(() => new Map(products.map(p => [p.code, p.label_ru || p.code])), [products]);
 
   const avgVelocity = useMemo(() => {
     const wk = new Map<string, number>();
@@ -141,20 +155,32 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
   const rows = useMemo(() => {
     let foundCurrent = false;
-    return [...milestones].sort((a, b) => (a.week ?? 0) - (b.week ?? 0)).map(m => {
+    return [...shown].sort((a, b) => (a.week ?? 0) - (b.week ?? 0)).map(m => {
       const ids = msIds(m);
       const done = ids.filter(i => doneSet.has(i)).length;
       const open = ids.length - done;
       const goalDone = (m.goal_md ?? '').includes('✅');
+      const frozen = isFrozenMilestone(m.milestone_id);
       let status: 'done' | 'current' | 'future';
-      if ((ids.length > 0 && open === 0) || goalDone) status = 'done';
+      // Замороженная веха не может быть «текущей»: она история, а не план.
+      if ((ids.length > 0 && open === 0) || goalDone || frozen) status = 'done';
       else if (!foundCurrent) { status = 'current'; foundCurrent = true; }
       else status = 'future';
       const dleft = status === 'done' ? null : daysLeftOf(m.date_display);
       const projects = [...new Set(ids.flatMap(id => (byId.get(id)?.git_projects ?? []).map(projShort)).filter(Boolean))];
-      return { m, ids, done, open, status, dleft, projects };
+      return { m, ids, done, open, status, dleft, projects, frozen };
     });
-  }, [milestones, doneSet, byId]);
+  }, [shown, doneSet, byId]);
+  const planRows   = rows.filter(r => !r.frozen);
+  const frozenRows = rows.filter(r => r.frozen);
+  // Продукты верхнего уровня, за каждым — его подпродукты (они живут внутри карты родителя).
+  const productChips = useMemo(() => {
+    const top = products.filter(p => !(p.parent_code ?? []).length);
+    return top.flatMap(p => [
+      { code: p.code, sub: false },
+      ...(p.sub_products ?? []).filter(c => productLabel.has(c)).map(c => ({ code: c, sub: true })),
+    ]);
+  }, [products, productLabel]);
 
   function selectMilestone(m: LoreMilestone) {
     if (selId === m.milestone_id) { setSelId(null); return; }
@@ -206,6 +232,77 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
   if (loading) return <LoreSkeleton />;
 
+  const renderCard = ({ m, ids, done, open, status, dleft, projects }: typeof rows[number]) => {
+        const col = status === 'done' ? 'var(--suc)' : status === 'current' ? 'var(--acc)' : 'var(--t2)';
+        const p = pct(done, ids.length);
+        const isSel = selId === m.milestone_id;
+        // Risk block: нед_нужно = open / avgVelocity; дн_осталось = dleft; дефицит = нужно - осталось
+        const riskBlock = (() => {
+          if (status === 'done' || open === 0 || !avgVelocity || dleft == null) return null;
+          const weeksNeeded = open / avgVelocity;
+          const daysNeeded  = Math.round(weeksNeeded * 7);
+          const deficit     = daysNeeded - Math.max(0, dleft);
+          const riskLevel   = deficit > 7 ? 'high' : deficit > 0 ? 'mid' : 'ok';
+          const riskCol     = riskLevel === 'high' ? 'var(--dng)' : riskLevel === 'mid' ? 'var(--wrn)' : 'var(--suc)';
+          const riskLabel   = riskLevel === 'ok' ? t('lore.milestonesView.risk.onTime', '✓ в срок') : t('lore.milestonesView.risk.deficitDays', '⚠ −{{days}} дн', { days: deficit });
+          return { weeksNeeded, daysNeeded, deficit, riskLevel, riskCol, riskLabel };
+        })();
+        return (
+          <button key={m.milestone_id} onClick={() => selectMilestone(m)}
+            style={{ ...S.card, borderColor: isSel ? 'var(--acc)' : status === 'current' ? 'color-mix(in srgb,var(--acc) 40%,var(--bd))' : 'var(--bd)',
+              boxShadow: isSel ? '0 0 0 1px var(--acc)' : 'none' }}>
+            <div style={S.cardHead}>
+              <span style={{ fontSize: 'var(--fs-base)', color: col }}>{status === 'done' ? '✓' : status === 'current' ? '▶' : '○'}</span>
+              <span style={S.mLabel}>{m.label}</span>
+              {m.priority && <span style={{ ...S.prio, color: m.priority === 'P0' ? 'var(--dng)' : m.priority === 'P1' ? 'var(--wrn)' : 'var(--inf)' }}>{m.priority}</span>}
+              {dleft != null && <span style={{ ...S.dl, color: dleft < 0 ? 'var(--dng)' : dleft <= 7 ? 'var(--wrn)' : 'var(--t3)' }}>{dleft >= 0 ? t('lore.milestonesView.daysLeft', '{{days}}д', { days: dleft }) : t('lore.milestonesView.overdue', 'просроч.')}</span>}
+              {riskBlock && (
+                <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', fontWeight: 600, color: riskBlock.riskCol,
+                  background: `color-mix(in srgb, ${riskBlock.riskCol} 12%, transparent)`,
+                  borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' as const }}>
+                  {riskBlock.riskLabel}
+                </span>
+              )}
+            </div>
+            <div style={S.dim2}>{m.date_display}{m.week != null ? ` · w${m.week}` : ''}</div>
+            <div style={S.progRow}>
+              <div style={S.bar}><div style={{ height: '100%', width: `${p}%`, background: col, borderRadius: 3 }} /></div>
+              <span style={S.progNum}>{done}/{ids.length} · {p}%</span>
+            </div>
+            {riskBlock && (
+              <div style={{ marginTop: 4, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                <span>{t('lore.milestonesView.risk.remaining', 'осталось')} <b style={{ color: 'var(--t2)' }}>{t('lore.milestonesView.risk.sp', '{{count}} Sp', { count: open })}</b></span>
+                <span>{t('lore.milestonesView.risk.needed', 'нужно')} <b style={{ color: riskBlock.riskCol }}>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: riskBlock.daysNeeded })}</b> @ {t('lore.milestonesView.risk.spPerWeek', '{{velocity}} Sp/нед', { velocity: avgVelocity.toFixed(1) })}</span>
+                {riskBlock.deficit > 0
+                  ? <span style={{ color: riskBlock.riskCol }}>{t('lore.milestonesView.risk.deficit', 'дефицит')} <b>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: riskBlock.deficit })}</b></span>
+                  : <span style={{ color: 'var(--suc)' }}>{t('lore.milestonesView.risk.buffer', 'запас')} <b>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: -riskBlock.deficit })}</b></span>}
+              </div>
+            )}
+            <div style={S.projWrap}>
+              {(m.products ?? []).length === 0
+                ? <span style={{ ...S.projTag, color: 'var(--wrn)' }}>{t('lore.milestonesView.noProductTag', 'без продукта')}</span>
+                : (m.products ?? []).map(c => <span key={c} style={{ ...S.projTag, color: 'var(--acc)' }}>{productLabel.get(c) ?? c}</span>)}
+              {projects.map(pr => <span key={pr} style={S.projTag}>{pr}</span>)}
+            </div>
+          </button>
+        );
+  };
+
+  // RM-U2: продукт — первая ось карты; подпродукты идут сразу за родителем.
+  const chip = (code: string | null, label: string, sub = false) => (
+    <button key={code ?? '__all'} onClick={() => { setProduct(code); setSelId(null); }}
+      style={{ ...S.chip, ...(sub ? { marginLeft: 6 } : null), ...(product === code ? S.chipOn : null) }}>
+      {label}
+    </button>
+  );
+  const productBar = (
+    <div style={S.chipBar}>
+      {chip(null, t('lore.milestonesView.allProducts', 'Все'))}
+      {productChips.map(c => chip(c.code, productLabel.get(c.code) ?? c.code, c.sub))}
+      {chip(NO_PRODUCT, t('lore.milestonesView.withoutProduct', 'Без продукта'))}
+    </div>
+  );
+
   const sel = selM ? rows.find(r => r.m.milestone_id === selM.milestone_id) : null;
   const selIds = selM ? msIds(selM) : [];
 
@@ -240,71 +337,78 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               </div>
             </Field>
             <Field caption={t('lore.milestonesView.field.priority', 'Приоритет')} w={80}><select style={{ ...S.in, width: '100%' }} value={draft.priority} onChange={e => setDraft({ ...draft, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p} value={p}>{p || '—'}</option>)}</select></Field>
+            <Field caption={t('lore.milestonesView.productsField', 'Продукт')} w={170}>
+              <select style={{ ...S.in, width: '100%', borderColor: (draftProduct || (product && product !== NO_PRODUCT)) ? 'var(--bd)' : 'var(--wrn)' }}
+                value={draftProduct || (product && product !== NO_PRODUCT ? product : '')} onChange={e => setDraftProduct(e.target.value)}>
+                <option value="">{t('lore.milestonesView.noProductTag', 'без продукта')}</option>
+                {products.map(p => <option key={p.code} value={p.code}>{p.label_ru || p.code}</option>)}
+              </select>
+            </Field>
           </div>
+          {!(draftProduct || (product && product !== NO_PRODUCT)) && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--wrn)' }}>{t('lore.milestonesView.noProductHint', 'Веха без продукта считается незаполненной: карта принадлежит продукту.')}</div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
             <button style={S.btn} onClick={() => setAddOpen(false)}>{t('lore.milestonesView.cancel', '× Отмена')}</button>
             <button style={S.btnPrimary} disabled={!draft.milestone_id.trim() || busy === 'create'}
               onClick={() => run('create', async () => {
-                await upsertMilestone({ milestone_id: draft.milestone_id.trim(), label: draft.label || draft.milestone_id, week: draft.week ? parseInt(draft.week) : null, date_display: draft.date_display || null, priority: draft.priority || null });
-                setAddOpen(false); setDraft({ milestone_id: '', label: '', date_display: '', week: '', priority: '', goal_md: '' });
+                const mid = draft.milestone_id.trim();
+                await upsertMilestone({ milestone_id: mid, label: draft.label || draft.milestone_id, week: draft.week ? parseInt(draft.week) : null, date_display: draft.date_display || null, priority: draft.priority || null });
+                const pc = draftProduct || (product && product !== NO_PRODUCT ? product : '');
+                if (pc) await linkMilestoneProduct(mid, pc, 'add');
+                setAddOpen(false); setDraft({ milestone_id: '', label: '', date_display: '', week: '', priority: '', goal_md: '' }); setDraftProduct('');
               })}>{busy === 'create' ? '…' : t('lore.milestonesView.createMilestone', 'Создать веху')}</button>
           </div>
         </div>
       </Modal>
 
       {/* Master: simple cards — name, deadline, bar, projects */}
+      {productBar}
+      {/* WK-02: репозитории продукта с ролью связи — развивает или только пользуется */}
+      {(() => {
+        const row = product && product !== NO_PRODUCT ? products.find(p => p.code === product) : undefined;
+        const repos = row ? productRepos(row) : [];
+        if (!row) return null;
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+            <span>{t('lore.milestonesView.reposTitle', 'Репозитории продукта:')}</span>
+            {repos.length === 0
+              ? <span>{t('lore.milestonesView.reposNone', 'не привязаны')}</span>
+              : repos.map(r => (
+                <span key={r.slug} style={{ ...S.projTag, color: r.role === 'consumer' ? 'var(--inf)' : r.role === 'owner' ? 'var(--t1)' : 'var(--wrn)' }}
+                  title={r.role === 'consumer' ? t('lore.milestonesView.repoConsumerHint', 'продукт пользуется репозиторием, но не развивает его')
+                    : r.role === 'owner' ? t('lore.milestonesView.repoOwnerHint', 'продукт развивает этот репозиторий')
+                    : t('lore.milestonesView.repoNoRoleHint', 'роль связи не размечена — см. срез product_hygiene')}>
+                  {r.slug} · {r.role === 'consumer' ? t('lore.milestonesView.repoConsumer', 'пользуется')
+                    : r.role === 'owner' ? t('lore.milestonesView.repoOwner', 'развивает')
+                    : t('lore.milestonesView.repoNoRole', 'роль ?')}
+                </span>
+              ))}
+            {(() => {
+              // WK-03: «кого считаем · кого продаём · кого поддерживаем» — только непустые виды
+              const sv = productServes(row);
+              const parts = ([['count', t('lore.milestonesView.servesCount', 'считаем')], ['sell', t('lore.milestonesView.servesSell', 'продаём')], ['support', t('lore.milestonesView.servesSupport', 'поддерживаем')]] as const)
+                .filter(([k]) => sv[k].length > 0)
+                .map(([k, label]) => `${label}: ${sv[k].map(c => productLabel.get(c) ?? c).join(', ')}`);
+              return parts.length ? <span style={{ marginLeft: 8 }}>· {t('lore.milestonesView.servesTitle', 'служит')} — {parts.join(' · ')}</span> : null;
+            })()}
+          </div>
+        );
+      })()}
       <div style={S.cards}>
-        {rows.map(({ m, ids, done, open, status, dleft, projects }) => {
-          const col = status === 'done' ? 'var(--suc)' : status === 'current' ? 'var(--acc)' : 'var(--t2)';
-          const p = pct(done, ids.length);
-          const isSel = selId === m.milestone_id;
-          // Risk block: нед_нужно = open / avgVelocity; дн_осталось = dleft; дефицит = нужно - осталось
-          const riskBlock = (() => {
-            if (status === 'done' || open === 0 || !avgVelocity || dleft == null) return null;
-            const weeksNeeded = open / avgVelocity;
-            const daysNeeded  = Math.round(weeksNeeded * 7);
-            const deficit     = daysNeeded - Math.max(0, dleft);
-            const riskLevel   = deficit > 7 ? 'high' : deficit > 0 ? 'mid' : 'ok';
-            const riskCol     = riskLevel === 'high' ? 'var(--dng)' : riskLevel === 'mid' ? 'var(--wrn)' : 'var(--suc)';
-            const riskLabel   = riskLevel === 'ok' ? t('lore.milestonesView.risk.onTime', '✓ в срок') : t('lore.milestonesView.risk.deficitDays', '⚠ −{{days}} дн', { days: deficit });
-            return { weeksNeeded, daysNeeded, deficit, riskLevel, riskCol, riskLabel };
-          })();
-          return (
-            <button key={m.milestone_id} onClick={() => selectMilestone(m)}
-              style={{ ...S.card, borderColor: isSel ? 'var(--acc)' : status === 'current' ? 'color-mix(in srgb,var(--acc) 40%,var(--bd))' : 'var(--bd)',
-                boxShadow: isSel ? '0 0 0 1px var(--acc)' : 'none' }}>
-              <div style={S.cardHead}>
-                <span style={{ fontSize: 'var(--fs-base)', color: col }}>{status === 'done' ? '✓' : status === 'current' ? '▶' : '○'}</span>
-                <span style={S.mLabel}>{m.label}</span>
-                {m.priority && <span style={{ ...S.prio, color: m.priority === 'P0' ? 'var(--dng)' : m.priority === 'P1' ? 'var(--wrn)' : 'var(--inf)' }}>{m.priority}</span>}
-                {dleft != null && <span style={{ ...S.dl, color: dleft < 0 ? 'var(--dng)' : dleft <= 7 ? 'var(--wrn)' : 'var(--t3)' }}>{dleft >= 0 ? t('lore.milestonesView.daysLeft', '{{days}}д', { days: dleft }) : t('lore.milestonesView.overdue', 'просроч.')}</span>}
-                {riskBlock && (
-                  <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', fontWeight: 600, color: riskBlock.riskCol,
-                    background: `color-mix(in srgb, ${riskBlock.riskCol} 12%, transparent)`,
-                    borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' as const }}>
-                    {riskBlock.riskLabel}
-                  </span>
-                )}
-              </div>
-              <div style={S.dim2}>{m.date_display}{m.week != null ? ` · w${m.week}` : ''}</div>
-              <div style={S.progRow}>
-                <div style={S.bar}><div style={{ height: '100%', width: `${p}%`, background: col, borderRadius: 3 }} /></div>
-                <span style={S.progNum}>{done}/{ids.length} · {p}%</span>
-              </div>
-              {riskBlock && (
-                <div style={{ marginTop: 4, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-                  <span>{t('lore.milestonesView.risk.remaining', 'осталось')} <b style={{ color: 'var(--t2)' }}>{t('lore.milestonesView.risk.sp', '{{count}} Sp', { count: open })}</b></span>
-                  <span>{t('lore.milestonesView.risk.needed', 'нужно')} <b style={{ color: riskBlock.riskCol }}>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: riskBlock.daysNeeded })}</b> @ {t('lore.milestonesView.risk.spPerWeek', '{{velocity}} Sp/нед', { velocity: avgVelocity.toFixed(1) })}</span>
-                  {riskBlock.deficit > 0
-                    ? <span style={{ color: riskBlock.riskCol }}>{t('lore.milestonesView.risk.deficit', 'дефицит')} <b>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: riskBlock.deficit })}</b></span>
-                    : <span style={{ color: 'var(--suc)' }}>{t('lore.milestonesView.risk.buffer', 'запас')} <b>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: -riskBlock.deficit })}</b></span>}
-                </div>
-              )}
-              {projects.length > 0 && <div style={S.projWrap}>{projects.map(pr => <span key={pr} style={S.projTag}>{pr}</span>)}</div>}
-            </button>
-          );
-        })}
+        {planRows.map(renderCard)}
+        {planRows.length === 0 && (
+          <div style={S.muted}>{t('lore.milestonesView.noForecast', 'У продукта нет вех-прогнозов: план не заведён, а не «всё сделано»')}</div>
+        )}
       </div>
+      {frozenRows.length > 0 && (
+        <details>
+          <summary style={{ ...S.dim, cursor: 'pointer' }}>
+            {t('lore.milestonesView.frozenSummary', 'История — {{count}} замороженных вех (в счёт открытой работы не входят)', { count: frozenRows.length })}
+          </summary>
+          <div style={{ ...S.cards, marginTop: 8, opacity: 0.85 }}>{frozenRows.map(renderCard)}</div>
+        </details>
+      )}
 
       {/* Detail: header edit + sprints + planned tasks for the selected milestone */}
       {selM && sel && (
@@ -348,6 +452,26 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               </Field>
             </>
           )}
+
+          {/* RM-U3: продукт — поле первого класса паспорта вехи. Веха без
+              продукта — незаполненность, и она видна, а не выводится из пустоты. */}
+          <div style={{ ...S.detailHead, gap: 4 }}>
+            <span style={S.colTitle}>{t('lore.milestonesView.productsField', 'Продукт')}</span>
+            {(selM.products ?? []).length === 0 && <span style={{ ...S.projTag, color: 'var(--wrn)' }}>{t('lore.milestonesView.noProductTag', 'без продукта')}</span>}
+            {(selM.products ?? []).map(c => (
+              <span key={c} style={{ ...S.projTag, color: 'var(--acc)', display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                {productLabel.get(c) ?? c}
+                <button style={S.x} disabled={busy === 'pr' + c} title={t('lore.milestonesView.unlinkProduct', 'отвязать продукт')}
+                  onClick={() => run('pr' + c, () => linkMilestoneProduct(selM.milestone_id, c, 'remove'))}>×</button>
+              </span>
+            ))}
+            <select style={{ ...S.in, fontSize: 'var(--fs-2xs)', padding: '2px 4px' }} value=""
+              onChange={e => { const c = e.target.value; if (c) run('pr+' + c, () => linkMilestoneProduct(selM.milestone_id, c, 'add')); }}>
+              <option value="">{t('lore.milestonesView.linkProductPlaceholder', '+ продукт…')}</option>
+              {products.filter(p => !(selM.products ?? []).includes(p.code)).map(p =>
+                <option key={p.code} value={p.code}>{p.label_ru || p.code}</option>)}
+            </select>
+          </div>
 
           <div style={twoCol}>
             {/* Sprints */}
@@ -417,10 +541,14 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
       <section style={{ ...S.detail, borderColor: orphans.length ? 'color-mix(in srgb,var(--wrn) 40%,var(--bd))' : 'var(--bd)' }}>
         <div style={{ ...S.colTitle, color: orphans.length ? 'var(--wrn)' : 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <GameIcon slug="hourglass" size={12} style={{ color: orphans.length ? 'var(--wrn)' : 'var(--t3)' }} />
-          {t('lore.milestonesView.sprintsWithoutMilestones', 'Спринты без вех · {{count}}', { count: orphans.length })}
+          {t('lore.milestonesView.unplannedTitle', 'Вне плана — открытые спринты без вехи · {{count}}', { count: orphans.length })}
+        </div>
+        {/* RM-U6 / RM-V4: доля числом и деление «поток / забыли» — рядом, не за скроллом */}
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>
+          {t('lore.milestonesView.unplannedShare', '{{unplanned}} из {{open}} открытых спринтов ({{pct}}%) · поток: {{stream}} · намеренно: {{intentional}} · правда забыли: {{forgotten}}', share)}
         </div>
         {orphans.length === 0
-          ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--suc)' }}>{t('lore.milestonesView.allSprintsLinked', 'Все спринты привязаны к вехам ✓')}</div>
+          ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--suc)' }}>{t('lore.milestonesView.allOpenPlanned', 'Каждый открытый спринт стоит в вехе ✓')}</div>
           : (
             <div style={{ ...S.sprList, maxHeight: 320 }}>
               {orphans.map(s => {
@@ -431,10 +559,31 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                     <span style={S.sprId} onClick={() => onNavigateToSprint?.(s.sprint_id)} role={onNavigateToSprint ? 'button' : undefined}>{s.sprint_id}</span>
                     <span style={S.sprName}>{s.name}</span>
                     {proj && <span style={S.projTag}>{proj}</span>}
+                    {isStreamSprint(s.sprint_id)
+                      ? <span style={{ ...S.projTag, color: 'var(--inf)' }} title={t('lore.milestonesView.streamHint', 'поток: уборка, апгрейды, CI, зависимости — вне вех по своей природе')}>
+                          {t('lore.milestonesView.streamTag', 'поток')}
+                        </span>
+                      : (
+                        // RM-U6: «забыли» ⇄ «намеренно» — один клик, флаг спринта unplanned_intentional
+                        <button type="button" disabled={busy === 'intent' + s.sprint_id}
+                          style={{ ...S.projTag, cursor: 'pointer', color: s.unplanned_intentional ? 'var(--t2)' : 'var(--wrn)' }}
+                          title={s.unplanned_intentional
+                            ? t('lore.milestonesView.intentionalHint', 'вне плана намеренно: не считается забытым, но остаётся в доле вне плана. Нажмите, чтобы снять пометку')
+                            : `${t('lore.milestonesView.forgottenHint', 'похоже, забыли поставить в план')} · ${t('lore.milestonesView.markIntentional', 'Пометить «вне плана намеренно»: спринт перестанет считаться забытым, но останется в доле вне плана')}`}
+                          onClick={() => {
+                            const v = !s.unplanned_intentional;
+                            run('intent' + s.sprint_id, async () => {
+                              await updateLoreSprint(s.sprint_id, { unplanned_intentional: v });
+                              setSprints(xs => xs.map(x => x.sprint_id === s.sprint_id ? { ...x, unplanned_intentional: v } : x));
+                            });
+                          }}>
+                          {s.unplanned_intentional ? t('lore.milestonesView.intentionalTag', 'намеренно') : t('lore.milestonesView.forgottenTag', 'забыли')}
+                        </button>
+                      )}
                     <select style={{ ...S.in, fontSize: 'var(--fs-2xs)', padding: '2px 4px', flexShrink: 0 }} value=""
                       onChange={e => { const mid = e.target.value; if (mid) run('assign' + s.sprint_id, () => linkSprintMilestone(s.sprint_id, mid, 'add')); }}>
                       <option value="">{t('lore.milestonesView.intoMilestonePlaceholder', '→ в веху…')}</option>
-                      {milestones.map(m => <option key={m.milestone_id} value={m.milestone_id}>{m.milestone_id}</option>)}
+                      {milestones.filter(m => !isFrozenMilestone(m.milestone_id)).map(m => <option key={m.milestone_id} value={m.milestone_id}>{m.milestone_id}</option>)}
                     </select>
                   </div>
                 );
@@ -481,5 +630,8 @@ const S = {
   editBox: { display: 'flex', flexDirection: 'column' as const, gap: 6, padding: 8, background: 'var(--b2)', borderRadius: 8 },
   row:     { display: 'flex', gap: 6, flexWrap: 'wrap' as const },
   btn:     { fontSize: 'var(--fs-xs)', padding: '3px 8px', borderRadius: 4, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)', cursor: 'pointer' },
+  chipBar: { display: 'flex', flexWrap: 'wrap' as const, gap: 4, alignItems: 'center' },
+  chip:    { fontSize: 'var(--fs-sm)', padding: '2px 9px', borderRadius: 999, border: '1px solid var(--bd)', background: 'var(--b2)', color: 'var(--t2)', cursor: 'pointer', whiteSpace: 'nowrap' as const },
+  chipOn:  { borderColor: 'var(--acc)', color: 'var(--acc)', background: 'color-mix(in srgb,var(--acc) 12%,var(--b2))', fontWeight: 700 },
   btnPrimary: { fontSize: 'var(--fs-xs)', padding: '4px 12px', borderRadius: 4, border: '1px solid color-mix(in srgb,var(--acc) 35%,transparent)', background: 'color-mix(in srgb,var(--acc) 12%,transparent)', color: 'var(--acc)', cursor: 'pointer', fontWeight: 600 },
 };

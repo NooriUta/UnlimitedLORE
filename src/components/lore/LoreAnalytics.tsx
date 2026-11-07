@@ -12,6 +12,9 @@ import { useUrlState } from '../../hooks/useUrlState';
 import { LoadError, SliceLoadWarning } from './EmptyState';
 import { pageLevelError, settleSlices } from './loadState';
 import { scrollStrip, stripItem } from './mobileLayout';
+import LoreChart from './charts/LoreChart';
+import VelocityEChart from './charts/VelocityEChart';
+import { isBookkeeping, isoWeekKey, taskThroughputOf, TASK_THROUGHPUT_CUTOFF } from './taskThroughput';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -164,15 +167,6 @@ function parseDoneDate(s: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// ISO week key "YYYY-Www"
-function isoWeekKey(d: Date): string {
-  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const thu = new Date(tmp);
-  thu.setUTCDate(thu.getUTCDate() - (tmp.getUTCDay() + 6) % 7 + 3);
-  const jan4 = new Date(Date.UTC(thu.getUTCFullYear(), 0, 4));
-  const w    = 1 + Math.round((thu.getTime() - jan4.getTime()) / 604800000);
-  return `${thu.getUTCFullYear()}-W${String(w).padStart(2, '0')}`;
-}
 
 // ── shared primitives ─────────────────────────────────────────────────────
 
@@ -242,59 +236,9 @@ function SprintRowItem({ s, onNavigate }: { s: LoreAnalyticsSprint; onNavigate?:
   );
 }
 
-// ── Velocity chart (SVG) ──────────────────────────────────────────────────
+// ── Velocity chart: ECharts / Völva (charts/VelocityEChart, charts/LoreChart) ──
 
-type VelocityWeek = { key: string; label: string; count: number; isCurrent: boolean };
 type VelocityStack = { label: string; color: string; counts: Record<string, number> }; // per-week counts
-
-function VelocityChart({ weeks, stacks }: { weeks: VelocityWeek[]; stacks?: VelocityStack[] }) {
-  const maxVal = Math.max(...weeks.map(w => w.count), 1);
-  const W = 600, H = 90, pad = 4;
-  const barW = Math.floor((W - pad * (weeks.length + 1)) / weeks.length);
-
-  return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H + 24}`} style={{ display: 'block', overflow: 'visible' }}
-      role="img" aria-label={`График скорости по неделям: ${weeks.length} нед., пик ${maxVal} за неделю`}>
-      {weeks.map((w, i) => {
-        const x = pad + i * (barW + pad);
-        const totalH = Math.max(2, Math.round((w.count / maxVal) * H));
-        const baseCol = w.isCurrent ? 'var(--acc)' : 'color-mix(in srgb,var(--acc) 30%,var(--b3))';
-
-        if (!stacks || stacks.length === 0) {
-          const y = H - totalH;
-          return (
-            <g key={w.key}>
-              <rect x={x} y={y} width={barW} height={totalH} fill={baseCol} rx={2} />
-              {w.count > 0 && <text x={x + barW / 2} y={Math.max(y - 3, 10)} textAnchor="middle" fontSize={8} fill="var(--t2)">{w.count}</text>}
-              <text x={x + barW / 2} y={H + 14} textAnchor="middle" fontSize={7} fill={w.isCurrent ? 'var(--acc)' : 'var(--t3)'}>{w.label}</text>
-            </g>
-          );
-        }
-
-        // stacked rendering
-        let yOffset = H;
-        const segments = stacks.map(s => {
-          const cnt = s.counts[w.key] ?? 0;
-          const segH = cnt > 0 ? Math.max(1, Math.round((cnt / maxVal) * H)) : 0;
-          yOffset -= segH;
-          return { color: s.color, segH, y: yOffset };
-        }).filter(s => s.segH > 0);
-
-        const topY = segments.length ? segments[segments.length - 1].y : H - totalH;
-        return (
-          <g key={w.key}>
-            {segments.map((seg, si) => (
-              <rect key={si} x={x} y={seg.y} width={barW} height={seg.segH} fill={seg.color}
-                rx={si === segments.length - 1 ? 2 : 0} />
-            ))}
-            {w.count > 0 && <text x={x + barW / 2} y={Math.max(topY - 3, 10)} textAnchor="middle" fontSize={8} fill="var(--t2)">{w.count}</text>}
-            <text x={x + barW / 2} y={H + 14} textAnchor="middle" fontSize={7} fill={w.isCurrent ? 'var(--acc)' : 'var(--t3)'}>{w.label}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
 
 // ── Cumulative sparkline (SVG) ────────────────────────────────────────────
 
@@ -391,7 +335,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [chartProj,       setChartProj]       = useState<string>('all');
   const [chartMilestone,  setChartMilestone]  = useState<string>('all');
   const [chartComp,       setChartComp]       = useState<string>('all');
-  const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }[]>([]);
+  const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null; bookkeeping?: boolean | boolean[] | null }[]>([]);
   const [taskStarts, setTaskStarts] = useState<{ task_id: string; valid_from: string | null }[]>([]);
   const [techRows,   setTechRows]   = useState<LoreTechRow[]>([]);
 
@@ -846,28 +790,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return { ever: everBlocked.size, total, nowBlocked, ids: [...everBlocked] };
   }, [blockedRows, sprintRows, data]);
 
-  // Task throughput by ISO week — real closures only:
-  // valid_from >= LORE go-live (12 июн; раньше = массовый импорт) AND states>1
-  // (>1 hist state = реальная прогрессия, а не «рождена done»/архивный дамп).
-  const TASK_THROUGHPUT_CUTOFF = '2026-06-12';
-  const taskThroughput = useMemo(() => {
-    const map = new Map<string, number>();
-    let counted = 0;
-    taskDone.forEach(t => {
-      const st = Array.isArray(t.states) ? t.states[0] : t.states;
-      const raw = String(t.valid_from ?? '');
-      if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;        // skip epoch/garbage
-      const day = raw.slice(0, 10);
-      if (day < TASK_THROUGHPUT_CUTOFF) return;            // skip import era
-      if (!st || st <= 1) return;                          // skip archived "born done"
-      const wk = isoWeekKey(new Date(day));
-      map.set(wk, (map.get(wk) ?? 0) + 1); counted++;
-    });
-    const weeks = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12)
-      .map(([key, count]) => ({ key, label: `W${key.split('-W')[1]}`, count }));
-    const avg = weeks.length ? Math.round(counted / weeks.length) : 0;
-    return { weeks, counted, avg };
-  }, [taskDone]);
+  // Task throughput by ISO week — real closures only (отсечки и исключение
+  // записей задним числом — taskThroughput.ts, MT-CAL-BOOKKEEPING).
+  const taskThroughput = useMemo(() => taskThroughputOf(taskDone), [taskDone]);
 
   // Эффективность потока: сколько задача ДЕЛАЛАСЬ против того, сколько ЖИЛА.
   //
@@ -899,6 +824,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       const raw = String(t.valid_from ?? ''); if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;
       const done = raw.slice(0, 10);
       if (done < TASK_THROUGHPUT_CUTOFF || !(st && st > 1) || !ef || ef <= 0) return;
+      if (isBookkeeping(t)) return;                     // MT-CAL-BOOKKEEPING: запись задним числом — не поток
       const cr = created.get(t.task_id); if (!cr) return;
       const dur = Math.max(0, Math.round((new Date(done).getTime() - new Date(cr).getTime()) / 86400000));
       n++; work += ef; elapsed += dur;
@@ -1533,21 +1459,14 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               )}
             </div>
           </div>
-          {/* project legend */}
-          {chartVelocityStacks.length > 1 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 6 }}>
-              {chartVelocityStacks.map(s => (
-                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{s.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <VelocityChart
-            weeks={chartVelocityWeeks.length ? chartVelocityWeeks : velocityWeeks}
-            stacks={chartVelocityStacks.length > 1 ? chartVelocityStacks : undefined}
-          />
+          {/* Слой графиков — настройка charts.layer в админке: ECharts (по умолчанию) или Völva.
+              Легенду проектов рисует сам ECharts. */}
+          <LoreChart volvaChart="velocity" title={t('lore.charts.velocityTitle', 'Скорость по неделям')}>
+            <VelocityEChart
+              weeks={chartVelocityWeeks.length ? chartVelocityWeeks : velocityWeeks}
+              stacks={chartVelocityStacks.length > 1 ? chartVelocityStacks : undefined}
+            />
+          </LoreChart>
         </section>
 
         <section style={S.panel}>
@@ -1674,7 +1593,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={S.panelTitle} title={t('lore.analytics.flow.throughputHint', 'Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done».')}>
             Throughput задач <span style={S.dim}>· закрыто/нед</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн
+            {taskThroughput.bookkeepingExcluded > 0 && (
+              <span title={t('lore.analytics.flow.bookkeepingExcludedHint')}> · {t('lore.analytics.flow.bookkeepingExcluded', { n: taskThroughput.bookkeepingExcluded })}</span>
+            )}
+          </span>
         </div>
         {taskThroughput.weeks.length === 0 ? <div style={S.empty}>Нет данных за период.</div> : (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 90 }}>

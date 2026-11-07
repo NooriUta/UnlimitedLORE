@@ -252,7 +252,8 @@
     "/lore/task/adr",
     "/lore/task/component",
     "/lore/task/file",
-    "/lore/task/phase"
+    "/lore/task/phase",
+    "/lore/task/pr"
   ],
   "task_mv": [
     "/lore/task/move"
@@ -265,7 +266,8 @@
     "/lore/task/edit/batch"
   ],
   "tech_set": [
-    "/lore/spec"
+    "/lore/spec",
+    "/lore/spec/link"
   ],
   "uc_link": [
     "/lore/uc/link"

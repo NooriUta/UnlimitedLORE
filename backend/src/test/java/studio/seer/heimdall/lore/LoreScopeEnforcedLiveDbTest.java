@@ -147,6 +147,19 @@ class LoreScopeEnforcedLiveDbTest {
         }
     }
 
+    /**
+     * AL-91 (условие шлюза miniLORE 06.11.2026): у вызывающего без единого
+     * разрешённого проекта скоупный срез — ОТКАЗ 403 SCOPE_EMPTY, а не 200 с
+     * пустым списком. Прежде этот кейс проверялся пустой выдачей — и пустая
+     * выдача была неотличима от «записей нет».
+     */
+    private void deniedAsEmptyScope(String slice) {
+        given().contentType("application/json")
+            .when().get("/lore/slice/" + slice)
+            .then().statusCode(403)
+            .body("error", org.hamcrest.Matchers.equalTo("SCOPE_EMPTY"));
+    }
+
     /** Идентификаторы спринтов в выдаче слайса {@code sprints} без параметров. */
     private List<String> sprintIds() {
         return given().contentType("application/json")
@@ -227,10 +240,8 @@ class LoreScopeEnforcedLiveDbTest {
         // Fail-closed: пустое множество разрешённых проектов даёт заведомо
         // ложное условие, а не отсутствие фильтра (LoreSliceProjectScopeTest
         // проверяет это на уровне SQL — здесь на уровне выдачи).
-        var ids = sprintIds();
-        assertFalse(ids.contains(S_ALPHA));
-        assertFalse(ids.contains(S_HIDDEN));
-        assertFalse(ids.contains(S_BOTH));
+        // AL-91: уже не пустая выдача, а явный отказ — fail-closed сохранён.
+        deniedAsEmptyScope("sprints");
     }
 
     // ── Требование владелицы 19.10.2026: спеки, доки и ранбуки ──────────────
@@ -274,12 +285,10 @@ class LoreScopeEnforcedLiveDbTest {
         // ВООБЩЕ. Положительная половина (роль есть → видно) закреплена
         // соседним тестом; без неё «не видно» ничего не значило бы — пустая
         // выдача могла бы означать, что записей просто нет.
-        assertFalse(idsOf("specs", "spec_id").contains(SPEC_ALPHA));
-        assertFalse(idsOf("specs", "spec_id").contains(SPEC_HIDDEN));
-        assertFalse(idsOf("docs", "doc_id").contains(DOC_ALPHA));
-        assertFalse(idsOf("docs", "doc_id").contains(DOC_HIDDEN));
-        assertFalse(idsOf("runbooks", "runbook_id").contains(RB_ALPHA));
-        assertFalse(idsOf("runbooks", "runbook_id").contains(RB_HIDDEN));
+        // AL-91: роли нет — отказ SCOPE_EMPTY по каждому из трёх срезов.
+        deniedAsEmptyScope("specs");
+        deniedAsEmptyScope("docs");
+        deniedAsEmptyScope("runbooks");
     }
 
     // ── AL-120: косвенная связь — проект через РОДИТЕЛЯ ─────────────────────
@@ -384,6 +393,28 @@ class LoreScopeEnforcedLiveDbTest {
             "вопрос, поднятый в ADR своего проекта, обязан быть виден (AL-120)");
         assertFalse(ids.contains(Q_HIDDEN),
             "вопрос, поднятый в ADR чужого проекта, виден — косвенный путь пропускает лишнее");
+    }
+
+    @Test
+    @Order(23)
+    @TestSecurity(user = "al95-viewer", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = VIEWER_SUB))
+    void explicitIdOutsideScopeSaysSoInsteadOfLookingMissing() {
+        // MT-MCP-TRUTH A12: question_by_id по ЯВНОМУ id чужого вопроса отдавал
+        // пустоту — неотличимо от «такого нет». Теперь: строк нет (содержимое
+        // не раскрывается), но ответ говорит «вне скоупа».
+        var hidden = given().contentType("application/json")
+            .when().get("/lore/slice/question_by_id?id=" + Q_HIDDEN)
+            .then().statusCode(200).extract().jsonPath();
+        assertTrue(hidden.getList("rows").isEmpty(), "содержимое чужого вопроса раскрыто");
+        assertTrue("outside_scope".equals(hidden.getString("outside_scope.verdict")),
+            "пустой ответ на существующий id обязан сказать «вне скоупа»: " + hidden.prettify());
+        // Положительный контроль: несуществующий id — честное «не найдено», без отметки.
+        var missing = given().contentType("application/json")
+            .when().get("/lore/slice/question_by_id?id=Q-AL95-NO-SUCH-QUESTION")
+            .then().statusCode(200).extract().jsonPath();
+        assertTrue(missing.getList("rows").isEmpty());
+        assertTrue(missing.get("outside_scope") == null, "отсутствующий id не должен выглядеть «вне скоупа»");
     }
 
     @Test

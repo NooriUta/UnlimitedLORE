@@ -489,6 +489,7 @@ public class LoreSchemaMigrationRunner {
         if (version == 54) dropPlanItemTypesIfUnused();
         if (version == 55) backfillDaliP1FromPr204();
         if (version == 56) histTimeToDatetime();
+        if (version == 57) dropPlanItemLeftoversIfUnused();
     }
 
     /**
@@ -1075,16 +1076,29 @@ public class LoreSchemaMigrationRunner {
      * @return список снятых типов
      */
     List<String> dropPlanItemTypesIfUnused() {
+        return dropTypesIfUnused("V54", LoreSchemaMigrations.PLANITEM_TYPES, List.of("ON_TRACK", "CONTRIBUTES_TO"));
+    }
+
+    /**
+     * V57 (T-14, хвост V54): StatusPlanItem и REPRESENTS — те же правила, что у
+     * V54: всё или ничего, только при нулевом счёте, упавший DROP не валит старт.
+     */
+    List<String> dropPlanItemLeftoversIfUnused() {
+        return dropTypesIfUnused("V57", LoreSchemaMigrations.PLANITEM_LEFTOVER_TYPES, List.of("REPRESENTS"));
+    }
+
+    /** Общее тело V54/V57: {@code edges} — какие из типов рёбра (для разбора концов в WARN). */
+    private List<String> dropTypesIfUnused(String step, List<String> types, List<String> edges) {
         Map<String, Long> counts = new LinkedHashMap<>();
-        for (String t : LoreSchemaMigrations.PLANITEM_TYPES)
+        for (String t : types)
             if (typeExists(t)) counts.put(t, countOf("SELECT count(*) AS n FROM `" + t + "`", Map.of()));
         if (counts.isEmpty()) {
-            LOG.infof("[LORE MIGRATE] V54 типов %s в схеме нет — снимать нечего", LoreSchemaMigrations.PLANITEM_TYPES);
+            LOG.infof("[LORE MIGRATE] %s типов %s в схеме нет — снимать нечего", step, types);
             return List.of();
         }
         if (counts.values().stream().anyMatch(n -> n > 0)) {
             StringBuilder ends = new StringBuilder();
-            for (String edge : List.of("ON_TRACK", "CONTRIBUTES_TO")) {
+            for (String edge : edges) {
                 if (counts.getOrDefault(edge, 0L) == 0) continue;
                 try {
                     Map<String, Integer> pairs = new LinkedHashMap<>();
@@ -1096,8 +1110,8 @@ public class LoreSchemaMigrationRunner {
                     ends.append(' ').append(edge).append("{концы неизвестны: ").append(q.getMessage()).append('}');
                 }
             }
-            LOG.warnf("[LORE MIGRATE] V54 ПРОПУЩЕН: типы PlanItem используются, ничего не удалено. Счётчики %s;%s",
-                counts, ends);
+            LOG.warnf("[LORE MIGRATE] %s ПРОПУЩЕН: типы PlanItem используются, ничего не удалено. Счётчики %s;%s",
+                step, counts, ends);
             return List.of();
         }
         List<String> dropped = new ArrayList<>();
@@ -1105,13 +1119,13 @@ public class LoreSchemaMigrationRunner {
             try {
                 exec("DROP TYPE `" + t + "`");
             } catch (RuntimeException e) {
-                LOG.warnf("[LORE MIGRATE] V54 DROP TYPE %s не прошёл (тип пуст, оставлен): %s", t, e.getMessage());
+                LOG.warnf("[LORE MIGRATE] %s DROP TYPE %s не прошёл (тип пуст, оставлен): %s", step, t, e.getMessage());
                 continue;
             }
-            if (typeExists(t)) LOG.warnf("[LORE MIGRATE] V54 DROP TYPE %s ответил успехом, а тип остался", t);
+            if (typeExists(t)) LOG.warnf("[LORE MIGRATE] %s DROP TYPE %s ответил успехом, а тип остался", step, t);
             else dropped.add(t);
         }
-        LOG.infof("[LORE MIGRATE] V54 сняты пустые типы PlanItem: %s (были %s)", dropped, counts.keySet());
+        LOG.infof("[LORE MIGRATE] %s сняты пустые типы PlanItem: %s (были %s)", step, dropped, counts.keySet());
         return dropped;
     }
 
@@ -1393,6 +1407,15 @@ public class LoreSchemaMigrationRunner {
      */
     private void normalizeHistValidFrom() {
         for (String type : LoreSchemaMigrations.V42_HIST_VALID_FROM_TEXT) {
+            // Типа нет — приводить нечего, но и молчать нельзя. 06.11.2026 (CI #828)
+            // на перегруженном хосте DDL инициализатора не уложился в таймаут,
+            // KnowFindingHist не создался, и этот SELECT уронил СТАРТ приложения
+            // («Type with name 'KnowFindingHist' was not found») — вместо одной
+            // строки предупреждения. Тот же приём, что у шагов V47 и V54 (typeExists).
+            if (!typeExists(type)) {
+                LOG.warnf("[LORE MIGRATE] V41 %s: типа нет в схеме — приведение пропущено", type);
+                continue;
+            }
             int seen = 0, fixed = 0, unknown = 0;
             String unknownSample = null;
             while (true) {

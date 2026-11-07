@@ -123,8 +123,76 @@ export function sessionExpired(): void {
   notify();
 }
 
+/**
+ * AL-SWITCH-USER: отметка «следующий вход обязан спросить логин».
+ *
+ * Вход без `prompt=login` при живой SSO-сессии Keycloak молча впускает ТОГО ЖЕ
+ * человека — выйти и войти другим было нельзя (владелица 06.11: «я зависла, не
+ * могу теперь под собой зайти»). Отметку ставят осознанный выход и «войти под
+ * другим пользователем»; она одноразовая — следующий обычный вход снова тихий.
+ * sessionStorage, а не localStorage: отметка не должна пережить закрытие вкладки.
+ */
+export const FORCE_LOGIN_KEY = 'lore.forceLogin';
+
+/** sessionStorage, если он есть: в части окружений (тесты, встраивание) его нет — тогда отметка просто не ставится. */
+function forceLoginStore(): Storage | null {
+  try { return typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : null; } catch { return null; }
+}
+
+export function takeLoginPrompt(storage: Storage | null): 'login' | undefined {
+  if (!storage) return undefined;
+  if (storage.getItem(FORCE_LOGIN_KEY) === null) return undefined;
+  storage.removeItem(FORCE_LOGIN_KEY);
+  return 'login';
+}
+
 export function login(returnTo?: string): Promise<void> {
-  return getUserManager().signinRedirect({ state: returnTo ?? location.pathname + location.search });
+  const prompt = takeLoginPrompt(forceLoginStore());
+  return getUserManager().signinRedirect({
+    state: returnTo ?? location.pathname + location.search,
+    ...(prompt ? { prompt } : {}),
+  });
+}
+
+/**
+ * «Войти под другим пользователем» — отметка «экран входа после возврата из
+ * Keycloak сам начинает вход». Одноразовая, в sessionStorage, как и FORCE_LOGIN_KEY.
+ */
+export const SWITCH_USER_KEY = 'lore.switchUser';
+
+export function takeSwitchUser(storage: Storage | null): boolean {
+  if (!storage || storage.getItem(SWITCH_USER_KEY) === null) return false;
+  storage.removeItem(SWITCH_USER_KEY);
+  return true;
+}
+
+/**
+ * «Войти под другим пользователем» — одним кликом.
+ *
+ * Приёмка 06.11 показала: погасить пользователя только у себя мало. SSO-сессия
+ * Keycloak остаётся жива, и prompt=login при живой сессии даёт «Please
+ * re-authenticate» ТОГО ЖЕ человека — поля логина нет, сменить учётку нельзя.
+ * Поэтому сначала настоящий выход из Keycloak (signoutRedirect с id_token_hint),
+ * а после возврата экран входа по отметке SWITCH_USER_KEY сам начинает вход
+ * с prompt=login — уже без сессии, с полной формой.
+ */
+export async function switchUser(): Promise<void> {
+  const mgr = getUserManager();
+  const store = forceLoginStore();
+  sessionLost = false;
+  store?.setItem(FORCE_LOGIN_KEY, '1');
+  store?.setItem(SWITCH_USER_KEY, '1');
+  try {
+    await mgr.signoutRedirect();
+  } catch {
+    // Keycloak недоступен: гасим сессию локально и идём на вход сразу —
+    // автозапуск после возврата не понадобится, отметку снимаем.
+    takeSwitchUser(store);
+    await mgr.removeUser();
+    currentUser = null;
+    notify();
+    await login('/lore');
+  }
 }
 
 /**
@@ -138,6 +206,9 @@ export function login(returnTo?: string): Promise<void> {
 export async function logout(): Promise<void> {
   const mgr = getUserManager();
   sessionLost = false;
+  // AL-SWITCH-USER: после осознанного выхода следующий вход спрашивает логин —
+  // даже если выход в Keycloak не прошёл и его SSO-сессия осталась жива.
+  forceLoginStore()?.setItem(FORCE_LOGIN_KEY, '1');
   try {
     await mgr.signoutRedirect();
   } catch {

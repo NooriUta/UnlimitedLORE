@@ -9,6 +9,12 @@
 # абзац длиннее лимита — по строкам; строка длиннее лимита — по символам.
 # Меряем символы, а не байты: кириллица — 2 байта на символ.
 #
+# 06.11.2026: разрез переписан с awk на perl -CSD. В образе раннера awk — это
+# mawk, его length() считает БАЙТЫ, а gawk есть только на машине разработчика:
+# самопроверка проходила локально и падала в CI. Найдено сессией Völva при
+# порте скрипта; воспроизведено на ci-server (mawk 1.3.4: «три абзаца не в два
+# куска», «разрез не по абзацу», выход 1).
+#
 #   tg-split.sh <file> <outdir> [limit]  — пишет outdir/part-001.txt …, печатает число кусков
 #   tg-split.sh --selftest
 set -uo pipefail
@@ -17,23 +23,36 @@ export LC_ALL=C.UTF-8
 split_file() { # split_file <file> <outdir> <limit>
   local file="$1" out="$2" limit="$3"
   mkdir -p "$out"; rm -f "$out"/part-*.txt
-  awk -v limit="$limit" -v out="$out" '
-    function flush() { if (buf != "") { n++; f = sprintf("%s/part-%03d.txt", out, n); printf "%s", buf > f; close(f); buf = "" } }
-    function add(piece, sep,   cand) {
-      cand = (buf == "" ? piece : buf sep piece)
-      if (length(cand) <= limit) { buf = cand; return }
-      flush()
-      while (length(piece) > limit) { buf = substr(piece, 1, limit); flush(); piece = substr(piece, limit + 1) }
-      buf = piece
+  LIMIT="$limit" OUT="$out" perl -CSD -e '
+    use strict; use warnings;
+    my ($limit, $out) = ($ENV{LIMIT}, $ENV{OUT});
+    utf8::decode($out);                       # %ENV приходит байтами, -CSD декодирует только потоки
+    local $/; my $text = <STDIN>; $text = "" unless defined $text;
+    $text =~ s/\A\n+//; $text =~ s/\n+\z//;   # как RS="" у awk: пустые строки по краям не абзац
+    my ($n, $buf) = (0, "");
+    my $flush = sub {
+      return if $buf eq "";
+      $n++;
+      my $f = sprintf("%s/part-%03d.txt", $out, $n);
+      open(my $fh, ">:encoding(UTF-8)", $f) or die "не открыть $f\n";
+      print $fh $buf; close $fh; $buf = "";
+    };
+    my $add = sub {
+      my ($piece, $sep) = @_;
+      my $cand = $buf eq "" ? $piece : $buf . $sep . $piece;
+      if (length($cand) <= $limit) { $buf = $cand; return }
+      $flush->();
+      while (length($piece) > $limit) { $buf = substr($piece, 0, $limit); $flush->(); $piece = substr($piece, $limit) }
+      $buf = $piece;
+    };
+    for my $para (split /\n{2,}/, $text) {
+      if (length($para) <= $limit) { $add->($para, "\n\n"); next }
+      my $first = 1;
+      for my $line (split /\n/, $para) { $add->($line, $first ? "\n\n" : "\n"); $first = 0 }
     }
-    BEGIN { RS = ""; FS = "\n"; n = 0; buf = "" }
-    {
-      if (length($0) <= limit) { add($0, "\n\n"); next }
-      first = 1
-      for (i = 1; i <= NF; i++) { add($i, first ? "\n\n" : "\n"); first = 0 }
-    }
-    END { flush(); print n }
-  ' "$file"
+    $flush->();
+    print "$n\n";
+  ' < "$file"
 }
 
 selftest() {
@@ -43,6 +62,7 @@ selftest() {
   [ "$(split_file "$d/a.md" "$d/a" 100)" = 1 ] || { echo "FAIL: короткий не одним куском"; fail=1; }
   [ "$(cat "$d/a/part-001.txt")" = "$(printf 'Заголовок\n\nабзац')" ] || { echo "FAIL: короткий изменён"; fail=1; }
   # 2) три абзаца по 40 символов при лимите 90 — два куска, разрез по абзацу
+  #    (кириллица: в байтах абзац 80, и счёт байтами дал бы три куска — так ловится mawk)
   local p; p=$(printf 'ж%.0s' $(seq 1 40))
   printf '%s\n\n%s\n\n%s' "$p" "$p" "$p" > "$d/b.md"
   [ "$(split_file "$d/b.md" "$d/b" 90)" = 2 ] || { echo "FAIL: три абзаца не в два куска"; fail=1; }

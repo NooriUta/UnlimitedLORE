@@ -81,4 +81,22 @@ class TaskShapeReportTest {
         assertTrue(compact.containsKey("shape"));
         assertTrue(String.valueOf(compact.get("hints")).contains("shape_steps"));
     }
+
+    /**
+     * MT-TASK-SHAPE-2, «замечено»: в {@code hints} едут только НЕпройденные
+     * подсказки, а подписаны они формулировкой условия — «shape_estimate — Оценка
+     * сходится с составом» при {@code estimate_fits:false} читалось как вердикт
+     * «сходится». Подсказка обязана говорить, что условие не выполнено.
+     */
+    @Test
+    void hintsReadAsUnmetConditions() {
+        var shape = TaskShape.analyze("x", null, "dev", 0.5, "📋 PLANNED", 1L);
+        var shaped = WorkQuality.evaluateTask("📋 PLANNED", 0.5, "jtd", List.of("C"), List.of("P"), null, null, shape);
+        @SuppressWarnings("unchecked")
+        var hints = (List<String>) WorkQuality.compact(shaped).get("hints");
+        assertNotNull(hints, "положительный контроль: у пустой заметки подсказки есть");
+        assertFalse(hints.isEmpty(), "положительный контроль: у пустой заметки подсказки есть");
+        for (String h : hints)
+            assertTrue(h.contains(" — не выполнено: "), "подсказка читается как вердикт, а не как пропуск: " + h);
+    }
 }

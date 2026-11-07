@@ -50,12 +50,63 @@ public class LoreSchemaInitializer {
      */
     public void ensureReady() { /* всё делает @PostConstruct при создании бина */ }
 
+    /**
+     * D-2026-LORE-AUTO-BOOTSTRAP-EMPTY-DB: ядро поднималось ТОЛЬКО флагом, а про
+     * флаг знал лишь наш compose — чужая установка вставала с битым продуктовым
+     * слоем. Ядровые типы, по которым база считается инициализированной.
+     */
+    static final List<String> CORE_TYPES = List.of("KnowTask", "KnowSprint", "KnowADR");
+
+    /** Итог решения на этом старте. Читать ТОЛЬКО геттером: поле через CDI-прокси — null/false. */
+    private volatile boolean bootstrapped;
+
+    /** Поднималось ли ядро на этом старте (флагом или потому, что база пуста). */
+    public boolean bootstrapped() { return bootstrapped; }
+
+    /**
+     * Поднимать ли ядро. {@code coreTypesPresent == null} — проба не ответила:
+     * это «не смогли проверить», а не «пусто», и DDL наудачу по недоступной базе
+     * не гоняется (остановит предохранитель старта, а не тишина).
+     */
+    static boolean shouldBootstrap(boolean flag, Boolean coreTypesPresent) {
+        return flag || Boolean.FALSE.equals(coreTypesPresent);
+    }
+
+    /** Разбор ответа {@code SELECT name FROM schema:types}: есть ли хоть один ядровой тип. */
+    static Boolean coreTypesPresent(Object result) {
+        if (!(result instanceof List<?> rows)) return null;
+        for (Object r : rows) {
+            if (r instanceof java.util.Map<?, ?> m && CORE_TYPES.contains(String.valueOf(m.get("name")))) return true;
+        }
+        return false;
+    }
+
+    private Boolean probeCoreTypes() {
+        try {
+            var res = client.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sql", "SELECT name FROM schema:types"))
+                .await().indefinitely();
+            return coreTypesPresent(res == null ? null : res.result());
+        } catch (Exception e) {
+            LOG.warnf("[LORE] проба ядровых типов в %s не ответила: %s — автоподъём ядра не выполняется", db, e.getMessage());
+            return null;
+        }
+    }
+
     @PostConstruct
     void init() {
-        if (!enabled || !bootstrap) {
-            LOG.info("[LORE] schema init skipped (lore.enabled/lore.bootstrap off — shared DB already initialized)");
+        if (!enabled) {
+            LOG.info("[LORE] schema init skipped (lore.enabled off)");
             return;
         }
+        Boolean present = bootstrap ? null : probeCoreTypes();
+        if (!shouldBootstrap(bootstrap, present)) {
+            LOG.infof("[LORE] schema init skipped (ядро есть: %s; lore.bootstrap off)",
+                present == null ? "не проверено" : "да");
+            return;
+        }
+        if (!bootstrap) LOG.warnf("[LORE] в %s нет ядровых типов %s — ядро поднимается без флага (D-2026-LORE-AUTO-BOOTSTRAP-EMPTY-DB)", db, CORE_TYPES);
+        bootstrapped = true;
         LOG.infof("[LORE] Initializing schema in %s", db);
         // Свежесозданная БД первые мгновения отвечает 500 на команды — DDL,
         // запущенный сразу после create database, молча падал на ПЕРВЫХ типах
@@ -94,7 +145,7 @@ public class LoreSchemaInitializer {
     }
 
     // ── Vertex types ──────────────────────────────────────────────────────────
-    private static final List<String> DDL = List.of(
+    static final List<String> DDL = List.of(
         // ArcadeDB's own base types — NOT auto-present on a freshly `create
         // database`'d instance (only discovered via C5's testcontainer run
         // against a genuinely empty DB; the shared system_aida_lore has had
@@ -279,7 +330,13 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowSprint      (sprint_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSpec        (spec_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowFinding     (finding_id)   UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowRelease     (release_id)   UNIQUE",
+        // REL-UID-01: номер версии повторяется между проектами (v1.4.1 у сайта и
+        // у монорепо) — уникален ключ «проект#версия», а голый номер — только
+        // для поиска. Прод так и живёт (16 общих номеров на 07.11.2026); здесь
+        // приводим к нему свежую установку, которая отказала бы второму проекту.
+        "CREATE PROPERTY KnowRelease.release_uid      IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowRelease     (release_id)   NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowRelease     (release_uid)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowMilestone   (milestone_id) UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowPhase       (phase_uid)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowTask        (task_uid)     UNIQUE",
@@ -536,6 +593,9 @@ public class LoreSchemaInitializer {
         // и не участвует в графовых рёбрах; ссылка на обоснование хранится текстом
         // (диапазон дат/метрика/объект), не рёбрами.
         "CREATE PROPERTY BragiInsight.evidence_ref   IF NOT EXISTS STRING",
+        // V2-05: о какой строке ретро вывод — id вариации или публикации. Поле, а
+        // не текст обоснования: чип строки находит инсайт точным равенством.
+        "CREATE PROPERTY BragiInsight.subject_id     IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON BragiInsight (insight_id) UNIQUE",
 
         "CREATE VERTEX TYPE BragiIntegration IF NOT EXISTS",
@@ -607,6 +667,8 @@ public class LoreSchemaInitializer {
         // unreleased-burn metrics when true (docs-only/research/tooling sprints
         // that never ship a versioned release).
         "CREATE PROPERTY KnowSprint.no_release_required   IF NOT EXISTS BOOLEAN",
+        // RM-U6: спринт вне вех осознанно — снимается из «правда забыли» на карте вех.
+        "CREATE PROPERTY KnowSprint.unplanned_intentional IF NOT EXISTS BOOLEAN",
         "CREATE PROPERTY KnowSprintHist.planned_start_date IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.planned_end_date   IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.track_id           IF NOT EXISTS STRING",

@@ -30,6 +30,10 @@ import {
 import { areaColor, compArea } from './LoreComponentList';
 import { useProjectScope, sliceParamsForProject } from '../../context/ProjectScopeContext';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { useUrlId } from '../../hooks/useUrlState';
+import {
+  NO_PRODUCT, milestonesOfProduct, sprintInProduct, hiddenAsPast, type ProductRow,
+} from './milestoneProducts';
 import { GameIcon } from './GameIcon';
 import { clamp, dragHandleTouch, startPointerDrag } from './pointerDrag';
 import { statusMeta, taskTick } from './lore-status';
@@ -170,7 +174,11 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const [sections, setSections] = useState<LorePlanSection[]>([]);
   const [sprints,  setSprints]  = useState<LoreSprintRow[]>([]);
   const [cps,      setCps]      = useState<LorePlanCheckpoint[]>([]);
-  const [mss,      setMss]      = useState<LoreMilestone[]>([]);
+  const [mssAll,   setMss]      = useState<LoreMilestone[]>([]);
+  // RM-P5 / RM-U2: карта по продукту — тот же ?product=, что и на экране вех.
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [product,  setProduct]  = useUrlId('product');
+  const mss = useMemo(() => milestonesOfProduct(mssAll, product, products), [mssAll, product, products]);
   const [releases, setReleases] = useState<LoreRelease[]>([]);
 
   const [doneBySprint, setDoneBySprint] = useState<Map<string, string>>(new Map());
@@ -214,8 +222,10 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
       fetchLoreSlice<LoreSprintRow>('sprints',            sliceParamsForProject(project), ctrl.signal),
       fetchLoreSlice<LoreComponent>('components',         undefined, ctrl.signal),
+      fetchLoreSlice<ProductRow>('products',             undefined, ctrl.signal),
     ])
-      .then(([cfgs, secs, chkps, milestones, rels, dones, sprintRows, components]) => {
+      .then(([cfgs, secs, chkps, milestones, rels, dones, sprintRows, components, prods]) => {
+        setProducts(prods);
         setConfig(cfgs[0] ?? null);
         setComps(components);
         setSections(secs);
@@ -749,12 +759,14 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       if (!sprint.planned_start_date || !sprint.planned_end_date) continue;  // unpositioned → skip
       const start = new Date(sprint.planned_start_date);
       const end   = new Date(sprint.planned_end_date);
-      if (cropPast && end < today) continue;
+      if (!sprintInProduct(sprint, product, products)) continue;
 
       const raw = statusBySprint.get(sprint.sprint_id);
       const effStatus = raw ? taskTick(raw).status : 'todo';
       if (effStatus === 'cancelled') continue;
       const isDone = effStatus === 'done';
+      // Открытая просрочка видна всегда; «Прошлые» прячут только закрытое прошлое.
+      if (hiddenAsPast(end, today, isDone, cropPast)) continue;
       if (!showDone && isDone) continue;
       if (!showActive && !isDone) continue;
 
@@ -821,7 +833,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     ds.clear();
     ds.add(next);
   }, [sprints, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
-      showDone, showActive, cropPast, board, t]);
+      showDone, showActive, cropPast, board, t, product, products]);
 
   // ── Drag-resize the bottom detail panel ──────────────────────────────────────
   // AH-08: ручка слушала только мышь — пальцем панель не тянулась. Pointer
@@ -851,8 +863,9 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const shownBars = sprints.filter(s => {
     if (s.planned_start_date == null || s.planned_end_date == null) return false;
     if (effStatusOf(s) === 'cancelled') return false;
-    if (cropPast && new Date(s.planned_end_date) < today) return false;
+    if (!sprintInProduct(s, product, products)) return false;
     const isDone = effStatusOf(s) === 'done';
+    if (hiddenAsPast(new Date(s.planned_end_date), today, isDone, cropPast)) return false;
     if (!showDone && isDone) return false;
     if (!showActive && !isDone) return false;
     return true;
@@ -863,6 +876,28 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
 
   return (
     <div style={S.root}>
+
+      {/* ── RM-U2: продукт — первая ось плана; подпродукты внутри родителя ── */}
+      <div style={{ ...S.toolbar, gap: 4 }}>
+        <span style={S.prodLbl}>{t('lore.planBoard.product', 'Продукт')}</span>
+        {[{ code: null as string | null, label: t('lore.milestonesView.allProducts', 'Все'), sub: false },
+          ...products.filter(p => !(p.parent_code ?? []).length).flatMap(p => [
+            { code: p.code as string | null, label: p.label_ru || p.code, sub: false },
+            ...(p.sub_products ?? []).map(c => ({ code: c as string | null, label: products.find(x => x.code === c)?.label_ru || c, sub: true })),
+          ]),
+          { code: NO_PRODUCT as string | null, label: t('lore.milestonesView.withoutProduct', 'Без продукта'), sub: false },
+        ].map(c => (
+          <button key={c.code ?? '__all'} onClick={() => setProduct(c.code)}
+            style={{ ...S.prodChip, ...(c.sub ? { marginLeft: 6 } : null), ...(product === c.code ? S.prodChipOn : null) }}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+      {product && shownBars === 0 && (
+        <div role="status" style={{ ...S.empty, padding: '8px 12px' }}>
+          {t('lore.planBoard.productEmpty', 'У этого продукта на плане нет спринтов с датами при текущих фильтрах. Это не «всё сделано»: либо у спринтов нет плановых дат, либо их скрывают тумблеры. Карта вех продукта — в разделе «Вехи».')}
+        </div>
+      )}
 
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
       <div style={S.toolbar}>
@@ -1105,6 +1140,9 @@ const S = {
     position: 'relative' as const,
   },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  prodLbl: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginRight: 2 },
+  prodChip: { fontSize: 'var(--fs-xs)', padding: '1px 8px', borderRadius: 999, border: '1px solid var(--b3)', background: 'var(--b2)', color: 'var(--t2)', cursor: 'pointer', whiteSpace: 'nowrap' as const },
+  prodChipOn: { borderColor: 'var(--acc)', color: 'var(--acc)', fontWeight: 700, background: 'color-mix(in srgb,var(--acc) 12%,var(--b2))' },
   toolbar: {
     display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
     padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,

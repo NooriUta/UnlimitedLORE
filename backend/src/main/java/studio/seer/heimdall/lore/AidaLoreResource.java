@@ -59,6 +59,23 @@ public class AidaLoreResource extends LoreResourceBase {
     boolean scopeEnforce;
 
     /**
+     * AL-91: служебные читатели ВСЕГО корпуса — client_id через запятую, точным
+     * совпадением. Решение 06.11 (владелица отдала выбор шлюзу miniLORE, тот
+     * выбрал «служебный читатель всего»): видимость miniLORE не держится на
+     * владельце-человеке. Действует ТОЛЬКО на чтение (callerAllowedProjects);
+     * право записи не расширяет. Расширять список — отдельным решением.
+     */
+    @ConfigProperty(name = "lore.scope.read-all-clients", defaultValue = "lore-reader-minilore")
+    String readAllClients;
+
+    /** AL-91: клиент в списке служебных читателей всего корпуса — точным совпадением, не префиксом. */
+    static boolean readsWholeCorpus(String clientId, String list) {
+        if (clientId == null || clientId.isBlank() || list == null) return false;
+        for (String c : list.split(",")) if (c.trim().equals(clientId)) return true;
+        return false;
+    }
+
+    /**
      * Обнулять ли ТЕЛО документа читателю без роли в его проекте.
      *
      * <p>Решение владелицы 19.10.2026: «достаточно обнулять текст самого
@@ -77,6 +94,65 @@ public class AidaLoreResource extends LoreResourceBase {
 
     @Inject
     ProjectRbacService projectRbac;
+
+    // ── SPRINT_VIZ_EMBED/VE-2: подпись ссылки встройки Völva ─────────────────
+    // Ключ — через SecretProvider (env | Infisical), как KC_ADMIN_CLIENT_SECRET;
+    // в код и в переменные сборки не попадает. Адрес и белый список графиков —
+    // Optional: пустая строка в @ConfigProperty String роняет старт приложения.
+    static final String VOLVA_EMBED_SECRET_KEY = "LORE_VOLVA_EMBED_SECRET";
+
+    @Inject
+    SecretProvider secrets;
+
+    @ConfigProperty(name = "lore.volva.embed.site-url")
+    java.util.Optional<String> volvaSiteUrl;
+
+    @ConfigProperty(name = "lore.volva.embed.charts")
+    java.util.Optional<String> volvaCharts;
+
+    @ConfigProperty(name = "lore.volva.embed.ttl-seconds", defaultValue = "600")
+    long volvaTtlSeconds;
+
+    /**
+     * Подписанный адрес встройки графика Völva для ПОЛЬЗОВАТЕЛЯ: проект берётся
+     * из запроса, но выдаётся только в пределах проектов вызывающего; служебный
+     * клиент отказ. Адрес (в нём JWT) не логируется. Срок жизни — ttl-seconds.
+     */
+    @GET
+    @Path("embed/volva/{chart}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response volvaEmbed(@PathParam("chart") String chart, @QueryParam("project") String project,
+                               @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        java.util.Optional<String> secret = secrets.get(VOLVA_EMBED_SECRET_KEY);
+        boolean configured = secret.isPresent() && !secret.get().isBlank()
+            && volvaSiteUrl.isPresent() && !volvaSiteUrl.get().isBlank();
+        boolean agent = callerClientId() != null;
+        java.util.Set<String> allowed = agent ? null : callerAllowedProjects(role);
+        VolvaEmbedSigner.ChartDecision d = VolvaEmbedSigner.decideChart(chart, project,
+            VolvaEmbedSigner.parseCharts(volvaCharts.orElse("")), configured, agent, allowed);
+        if (!d.ok()) {
+            Response.Status st = switch (d.code()) {
+                case "not_configured" -> Response.Status.SERVICE_UNAVAILABLE;
+                case "unknown_chart" -> Response.Status.NOT_FOUND;
+                case "project_required" -> Response.Status.BAD_REQUEST;
+                case "unlocked_needs_full_scope" -> Response.Status.FORBIDDEN;
+                default -> Response.Status.FORBIDDEN;
+            };
+            return noStore(Response.status(st).entity(new LoreError(d.code().toUpperCase(java.util.Locale.ROOT), d.message())));
+        }
+        long exp = java.time.Instant.now().getEpochSecond() + volvaTtlSeconds;
+        String jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, exp), secret.get());
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("chart", chart);
+        out.put("project", d.chart().locked() ? project : null);
+        out.put("locked", d.chart().locked());
+        out.put("url", VolvaEmbedSigner.embedUrl(volvaSiteUrl.get(), d.chart(), jwt));
+        out.put("expires_at", java.time.Instant.ofEpochSecond(exp).toString());
+        LOG.debugf("[LORE EMBED] chart=%s project=%s exp=%d", chart, project, exp); // без адреса: в нём JWT
+        return noStore(Response.ok(out));
+    }
 
     // SAFE_ID, ENTITY_TYPES/PLAN_STATUSES/ADR_STATUSES/SCD2_STATUS_RAW, the
     // ArcadeDB clients, config, and shared helpers all live in LoreResourceBase
@@ -328,8 +404,16 @@ public class AidaLoreResource extends LoreResourceBase {
     public Response news(@QueryParam("limit") Integer limitParam,
                          @QueryParam("since") String since,
                          @QueryParam("before") String before,
-                         @QueryParam("days") Integer daysParam) {
+                         @QueryParam("days") Integer daysParam,
+                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
+        // AL-SCOPE-HOLES: лента собирала события всех проектов мимо скоупа.
+        java.util.Set<String> newsScope = allowedProjectsOrNull(role);
+        if (newsScope != null && newsScope.isEmpty()) {
+            return noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — лента не отдаётся пустой")));
+        }
         int limit = (limitParam == null || limitParam <= 0) ? 60 : limitParam;
         // ОКНО ПО ВРЕМЕНИ важнее счётчика (решение владельца: «выводи всё за неделю
         // как минимум»). Лента, обрезанная по числу строк, в активный день теряет
@@ -445,6 +529,10 @@ public class AidaLoreResource extends LoreResourceBase {
             }
 
             for (Map<String, Object> sp : specs) {
+                String spid0 = firstStr(sp.get("spec_id"));
+                List<String> project0 = projectList(sp.get("projects"));
+                // Как у решений: карта проекта заполняется ДО проверки даты.
+                if (spid0 != null && !project0.isEmpty()) specProject.put(spid0, project0);
                 String date = dayOf(sp.get("date_created"));
                 if (date == null) continue;
                 String title = firstStr(sp.get("title"));
@@ -542,6 +630,7 @@ public class AidaLoreResource extends LoreResourceBase {
             // Окно недели отдаётся ЦЕЛИКОМ, limit режет только хвост за окном:
             // «выводи всё за неделю как минимум» — обрезка по числу строк в активный
             // день съедала вчерашнее (120 записей умещались в полдня).
+            if (newsScope != null) items = scopeNews(items, newsScope);
             String windowStart = Instant.now().minus(java.time.Duration.ofDays(days)).toString().substring(0, 10);
             List<Map<String, Object>> inWindow = new ArrayList<>(), older = new ArrayList<>();
             for (Map<String, Object> it : items) {
@@ -597,7 +686,7 @@ public class AidaLoreResource extends LoreResourceBase {
      * группу «без проекта» и терялась под фильтром — created это уже чинили
      * (ADRPROJ-01), changed оставался.
      */
-    private static void emitChanged(List<Map<String, Object>> items,
+    static void emitChanged(List<Map<String, Object>> items,
                                     List<Map<String, Object>> hist,
                                     String idField, String kind,
                                     Map<String, String> createdDay,
@@ -611,7 +700,12 @@ public class AidaLoreResource extends LoreResourceBase {
             if (date.equals(createdDay.get(id))) continue;       // это создание, не правка
             if (!seen.add(kind + "|" + id + "|" + date)) continue; // дедуп по дню
             String title = (titles != null && titles.get(id) != null) ? titles.get(id) : id;
-            List<String> project = projects == null ? List.<String>of() : projects.getOrDefault(id, List.of());
+            // Проект — со строки истории (её вершины), карта — запас для строк без
+            // своего ребра (решения: их «история» — отметка правки на вершине).
+            // Только карта ломалась: её заполняют срезы «появилось», обрезанные
+            // по новизне, и старая сущность, исправленная сегодня, шла «без проекта».
+            List<String> project = projectList(h.get("projects"));
+            if (project.isEmpty() && projects != null) project = projects.getOrDefault(id, List.of());
             items.add(newsItem(kind, date, timeOf(h.get("valid_from")), title, "changed", null, project, id));
         }
     }
@@ -746,6 +840,61 @@ public class AidaLoreResource extends LoreResourceBase {
         return res;
     }
 
+    /** AL-91: признак построчного скоупа в ответе среза; null — скоуп к срезу не применялся. */
+/**
+     * AL-SCOPE-HOLES: событие ленты видно, если ХОТЯ БЫ ОДИН его проект разрешён (как у
+     * срезов). Событие без проекта скоупом отсекается — правило то же, что у срезов: иначе
+     * «ничьё» было бы видно всем.
+     */
+    static List<Map<String, Object>> scopeNews(List<Map<String, Object>> items, java.util.Set<String> allowed) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> it : items) {
+            for (String p : projectList(it.get("projects"))) if (allowed.contains(p)) { out.add(it); break; }
+        }
+        return out;
+    }
+
+    static Map<String, Object> scopeMeta(String id, java.util.Set<String> allowed) {
+        if (allowed == null || !LoreSlices.PROJECT_SCOPED.containsKey(id)) return null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("applied", true);
+        m.put("projects", allowed.size());
+        m.put("note", "выдача сужена проектным скоупом — строки вне разрешённых проектов не показаны");
+        return m;
+    }
+
+    /** AL-91: скоупный срез при пустом множестве разрешённых проектов — отказ, а не пустой список. */
+    static boolean scopeDenies(String id, java.util.Set<String> allowed) {
+        return allowed != null && allowed.isEmpty() && LoreSlices.PROJECT_SCOPED.containsKey(id);
+    }
+
+    /**
+     * MT-MCP-TRUTH A12 (06.11.2026): адресный срез под скоупом — обязательный
+     * параметр ровно {@code id}, и срез проектно-скоуплен. Именно у них пустой
+     * ответ читается как «записи нет», хотя запись может быть вне скоупа.
+     */
+    static boolean isScopedByIdSlice(String sliceId) {
+        LoreSlices.SliceDef def = LoreSlices.get(sliceId);
+        return def != null && List.of("id").equals(def.required())
+            && LoreSlices.PROJECT_SCOPED.containsKey(sliceId);
+    }
+
+    static boolean isEmptyResult(List<?> rows) { return rows == null || rows.isEmpty(); }
+
+    /**
+     * Отметка «запись есть, но вне ваших проектов». Только факт существования —
+     * содержимое не раскрывается (тот же уровень, что 409 «id занят» у записи).
+     * {@code null} — записи нет вовсе: это честное «не найдено».
+     */
+    static Map<String, Object> outsideScopeMarker(String id, boolean existsUnscoped) {
+        if (!existsUnscoped) return null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("verdict", "outside_scope");
+        m.put("reason", "запись с таким id существует, но вне ваших проектов — пустой ответ не значит «нет»");
+        return m;
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
         // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
@@ -795,10 +944,12 @@ public class AidaLoreResource extends LoreResourceBase {
 
         LoreSlices.Composed composed;
         final SlicePage page;
+        java.util.Set<String> rowScope;
         try {
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
-            composed = LoreSlices.compose(id, given, allowedProjectsOrNull(role));
+            rowScope = allowedProjectsOrNull(role);
+            composed = LoreSlices.compose(id, given, rowScope);
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
@@ -818,12 +969,39 @@ public class AidaLoreResource extends LoreResourceBase {
         // потока. Прошли только пути, которые до графа не доходят вовсе
         // (superadmin и выключенный auth) — из них двух можно было сделать
         // вывод «работает».
+        // AL-91 (условие шлюза miniLORE): пустое множество разрешённых проектов —
+        // явный отказ, а не 200 с пустым списком: «нет прав» не должно выглядеть
+        // как «ничего нет».
+        if (scopeDenies(id, rowScope)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта (не заведён в граф ролей или роль не выдана) — срез " + id + " не отдаётся пустым"))));
+        }
+        final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
         java.util.Set<String> allowedForRedact =
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
-            .map(res -> {
+            // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
+            // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
+            .chain(res -> {
+                String explicitId = given.get("id");
+                if (rowScope == null || explicitId == null || !isScopedByIdSlice(id) || !isEmptyResult(res.result()))
+                    return Uni.createFrom().item(new Object[] {res, null});
+                LoreSlices.Composed unscoped = LoreSlices.compose(id, given);
+                MartQuery probe = new MartQuery("sql", unscoped.sql(),
+                    unscoped.params().isEmpty() ? null : unscoped.params(), -1);
+                return client.query(db, basicAuth(), probe)
+                    .map(p -> new Object[] {res, outsideScopeMarker(explicitId, !isEmptyResult(p.result()))})
+                    .onFailure().recoverWithItem(ex -> new Object[] {res, null});
+            })
+            .map(pair -> {
+                studio.seer.heimdall.bench.MartResult res = (studio.seer.heimdall.bench.MartResult) pair[0];
+                @SuppressWarnings("unchecked")
+                Map<String, Object> outside = (Map<String, Object>) pair[1];
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
+                if (scopeMarker != null) out.put("scope", scopeMarker);
+                if (outside != null) out.put("outside_scope", outside);
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {
@@ -925,6 +1103,8 @@ public class AidaLoreResource extends LoreResourceBase {
         // ПОРЯДОК СУЩЕСТВЕННЫЙ: агент опознаётся ДО роли. См. bypassesScope().
         String clientId = callerClientId();
         if (clientId != null) {
+            // AL-91: служебный читатель всего корпуса — без ограничения, только здесь (чтение).
+            if (readsWholeCorpus(clientId, readAllClients)) return null;
             // ЧТЕНИЕ — по проектам владельца, БЕЗ сужения матрицей D4 (решение
             // владельца 2026-08-01: «читать всё в пределах своих проектов,
             // изменять — в пределах роли»). D4 отвечает, что агенту позволено

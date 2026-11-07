@@ -96,8 +96,12 @@ public class LoreComponentSeeder {
 
     @PostConstruct
     void seed() {
-        if (!enabled || !bootstrap) return;
+        if (!enabled) return;
         bootstrapFirst.ensureReady();
+        // D-2026-LORE-AUTO-BOOTSTRAP-EMPTY-DB: сидер идёт вслед за ядром — и по флагу,
+        // и когда инициализатор поднял ядро сам на пустой базе. Геттер, не поле:
+        // поле внедрённого бина через прокси читается как false.
+        if (!bootstrap && !bootstrapFirst.bootstrapped()) return;
         migrationsFirst.ensureReady();
         LOG.infof("[LORE] Seeding %d LoreComponent entries", COMPONENTS.size());
         int upserted = 0;

@@ -130,6 +130,20 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+/**
+ * Подписанный адрес встройки графика Völva (SPRINT_VIZ_EMBED/VE-2,
+ * GET /lore/embed/volva/{chart}). Ошибки не глотаются: 503 not_configured и
+ * 404 unknown_chart рамка показывает честно, а не пустым местом.
+ */
+export async function fetchVolvaEmbed(chart: string, project?: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }> {
+  const url = new URL(`${LORE_BASE}/embed/volva/${encodeURIComponent(chart)}`, location.origin);
+  if (project) url.searchParams.set('project', project);
+  const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ url: string; expires_at: string }>;
+}
+
 // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ───────────────────────
 // One row per (dict_type, code). Read via fetchLoreSlice('dictionary', …) and
 // cached in DictionaryProvider; consumers use the useDictionary hook.
@@ -514,6 +528,8 @@ export interface LoreSprintRow {
   planned_end_date: string | null;
   milestone_ids?: string[] | null;
   no_release_required: boolean | null;
+  /** RM-U6: «вне плана намеренно» — не считается «забытым», в доле вне плана остаётся. */
+  unplanned_intentional?: boolean | null;
 }
 
 export interface LoreSprintDoneDate {
@@ -557,6 +573,8 @@ export interface LoreMilestone {
   // 62+ sprints, and was retired.
   direct_sprint_ids?: string[] | null;
   priority?: string | null;
+  // RM-S2: продукты вехи (TARGETS_PRODUCT). Пустой список — незаполненность.
+  products?: string[] | null;
 }
 
 export interface LoreComponent {
@@ -1014,6 +1032,22 @@ export async function linkSprintMilestone(
   return res.json() as Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }>;
 }
 
+/** RM-U3: link or unlink a milestone to a product roadmap (POST /lore/milestone/product). */
+export async function linkMilestoneProduct(
+  milestoneId: string,
+  productCode: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean; milestone_id: string; product_code: string; action: string; outcome?: string }> {
+  const res = await fetch(`${LORE_BASE}/milestone/product`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ milestone_id: milestoneId, product_code: productCode, action }),
+  });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ ok: boolean; milestone_id: string; product_code: string; action: string; outcome?: string }>;
+}
+
 // ── Tech registry (SPRINT_TECH_REGISTRY) ───────────────────────────────────
 // Stored as one KnowSpec per (component, tech) pair via the existing /lore/spec
 // upsert path — spec_id "SPEC-TECH-<COMPONENT>-<TECH>" — same convention as the
@@ -1096,7 +1130,7 @@ export async function upsertMilestone(
 
 export async function updateLoreSprint(
   sprintId: string,
-  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null },
+  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null; unplanned_intentional?: boolean | null },
 ): Promise<{ ok: boolean; sprint_id: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/update`, {
     method: 'POST',

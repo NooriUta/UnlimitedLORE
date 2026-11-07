@@ -41,7 +41,8 @@
     "profile": "Профиль",
     "searchPlaceholder": "id, название, текст…",
     "role": "роль",
-    "sessionUntil": "сессия до"
+    "sessionUntil": "сессия до",
+    "switchUser": "Войти под другим пользователем"
   },
   "nav": {
     "lore": "LORE",
@@ -476,6 +477,11 @@
       "tracedBy": "На него ссылаются сценарии",
       "justifies": "Им обоснованы задачи"
     },
+    "embed": {
+      "notConfigured": "Встраивание графиков Völva не настроено на этой установке (нет адреса Völva) — график не показан, это не «данных нет».",
+      "error": "График Völva не загрузился: {{message}}",
+      "loading": "Загружаем график Völva…"
+    },
     "analytics": {
       "flow": {
         "leadTime": {
@@ -492,6 +498,8 @@
         "releaseCadenceHint": "Темп релизов по каждому проекту: частота = релизы за последние 30 дней ÷ (30/7) = релизов в неделю. Медиана = медианный разрыв в днях между соседними релизами проекта.",
         "releasePerWeekHint": "Релизов в неделю за последние 30 дней",
         "throughputBarHint": "{{label}}: {{count}} задач",
+        "bookkeepingExcluded": "исключено записей задним числом: {{n}}",
+        "bookkeepingExcludedHint": "Задачи с флагом bookkeeping заведены и закрыты как учёт уже сделанной работы: их дата закрытия — дата простановки статуса, а не работы. В пропускную способность и эффективность потока они не входят.",
         "throughputHint": "Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done»."
       },
       "overview": {
@@ -651,10 +659,23 @@
         "qualityNorm": "нормировано score/max своего веса",
         "qualityBelow": "ниже порога: {{n}} UC",
         "qualityClick": "(клик — список)",
-        "laterTitle": "C · G · I — включаются позже",
+        "laterTitle": "C — включается позже",
         "laterC": "C · shipped-динамика / lead time — после накопления shipped_at (ADR-029)",
-        "laterG": "G · граф линейки «опирается → открывает» — после наполнения «Мест в линейке»",
-        "laterI": "I · реинжиниринг-нагрузка — после in_rework (ADR-029)",
+        "lineageTitle": "G · Граф линейки",
+        "lineageMeta": "опирается на → открывает дорогу · ребро BUILDS_ON",
+        "lineageSummary": "связей {{edges}}, фич в линейке {{linked}} из {{total}}",
+        "lineageFoundations": "основания линейки: {{list}}",
+        "lineageIsolated": "фич без связей в линейке: {{n}}",
+        "lineageEmpty": "связей BUILDS_ON пока нет — заводятся через feature_link rel=builds_on",
+        "reengTitle": "I · Реинжиниринг-нагрузка",
+        "reengMeta": "возврат к выпущенному = uc-задача, заведённая после shipped_at",
+        "reengSummary": "в переделке: {{n}} из {{total}} выпущенных сценариев с задачами",
+        "reengMedian": "· медиана закрытой переделки {{d}} дн",
+        "reengRow": "задач после выпуска {{tasks}}, открыто {{open}}, выпущен {{since}}",
+        "reengOldest": "старейшая открытая {{d}} дн",
+        "reengStale": "статус «переделка» без открытой работы после выпуска: {{n}} ({{list}}) — вычислитель готовности расходится с фактами",
+        "reengUndated": "задач без дат состояний: {{n}} — не смогли проверить, в счёт не вошли",
+        "reengEmpty": "выпущенных сценариев с задачами нет",
         "laterH": "H · RBAC-матрица живёт в реестре акторов —",
         "actorsLink": "открыть",
         "selfCheck": {
@@ -793,7 +814,10 @@
       "parentOrphan": "Независимые",
       "projectLabel": "Проект",
       "noProject": "без проекта",
-      "statusLabel": "Статус"
+      "statusLabel": "Статус",
+      "volvaDocs": "Документы в Völva ↗",
+      "volvaNewDoc": "+ Документ к решению в Völva ↗",
+      "volvaNotConnected": "Völva не подключена: адрес задаётся настройкой volva.url в админке."
     },
     "docView": {
       "filterPlaceholder": "Фильтр документов…",
@@ -1035,6 +1059,18 @@
       "assignToMilestoneOption": "→ в веху…"
     },
     "milestonesView": {
+      "reposTitle": "Репозитории продукта:",
+      "servesTitle": "служит",
+      "servesCount": "считаем",
+      "servesSell": "продаём",
+      "servesSupport": "поддерживаем",
+      "reposNone": "не привязаны",
+      "repoOwner": "развивает",
+      "repoConsumer": "пользуется",
+      "repoNoRole": "роль ?",
+      "repoOwnerHint": "продукт развивает этот репозиторий",
+      "repoConsumerHint": "продукт пользуется репозиторием, но не развивает его",
+      "repoNoRoleHint": "роль связи не размечена — см. срез product_hygiene",
       "title": "Вехи проекта",
       "countSummary": "{{count}} вех · avg velocity {{velocity}} Sp/нед",
       "cancel": "× Отмена",
@@ -1079,7 +1115,26 @@
       "sprintsWithoutMilestones": "Спринты без вех · {{count}}",
       "allSprintsLinked": "Все спринты привязаны к вехам ✓",
       "intoMilestonePlaceholder": "→ в веху…",
-      "tasksPartial": "Задачи загружены не полностью: {{failed}} из {{total}} пачек упали — {{reason}}"
+      "tasksPartial": "Задачи загружены не полностью: {{failed}} из {{total}} пачек упали — {{reason}}",
+      "noForecast": "У продукта нет вех-прогнозов: план не заведён, а не «всё сделано»",
+      "frozenSummary": "История — {{count}} замороженных вех (в счёт открытой работы не входят)",
+      "noProductTag": "без продукта",
+      "allProducts": "Все",
+      "withoutProduct": "Без продукта",
+      "productsField": "Продукт",
+      "unlinkProduct": "отвязать продукт",
+      "linkProductPlaceholder": "+ продукт…",
+      "unplannedTitle": "Вне плана — открытые спринты без вехи · {{count}}",
+      "allOpenPlanned": "Каждый открытый спринт стоит в вехе ✓",
+      "noProductHint": "Веха без продукта считается незаполненной: карта принадлежит продукту.",
+      "unplannedShare": "{{unplanned}} из {{open}} открытых спринтов ({{pct}}%) · поток: {{stream}} · намеренно: {{intentional}} · правда забыли: {{forgotten}}",
+      "intentionalTag": "намеренно",
+      "intentionalHint": "вне плана намеренно: не считается забытым, но остаётся в доле вне плана. Нажмите, чтобы снять пометку",
+      "markIntentional": "Пометить «вне плана намеренно»: спринт перестанет считаться забытым, но останется в доле вне плана",
+      "streamHint": "поток: уборка, апгрейды, CI, зависимости — вне вех по своей природе",
+      "forgottenHint": "похоже, забыли поставить в план",
+      "streamTag": "поток",
+      "forgottenTag": "забыли"
     },
     "modulePassport": {
       "loading": "Загрузка модуля…",
@@ -1140,7 +1195,6 @@
         "toggleHide": "легенда"
       },
       "card": {
-        "registerTooltip": "Создать KnowSprint, связать план-элемент (REPRESENTS) и завести начальный статус",
         "registering": "Регистрирую…",
         "registerSprint": "＋ Запланировать спринт",
         "plan": "План",
@@ -1189,7 +1243,9 @@
         "oct": "Окт",
         "nov": "Ноя",
         "dec": "Дек"
-      }
+      },
+      "product": "Продукт",
+      "productEmpty": "У этого продукта на плане нет спринтов с датами при текущих фильтрах. Это не «всё сделано»: либо у спринтов нет плановых дат, либо их скрывают тумблеры. Карта вех продукта — в разделе «Вехи»."
     },
     "qgDetail": {
       "sparkline": {
@@ -2466,7 +2522,27 @@
       "authOnLine": "включён (JWT, роль из seer_roles)",
       "authOffLine": "выключен — dev-режим, роль из конфига (VITE_LORE_ROLE)",
       "thTag": "тег",
-      "tagSearch": "тег…"
+      "tagSearch": "тег…",
+      "newTypeLabel": "Новый тип справочника",
+      "newTypePlaceholder": "новый тип: release_kind",
+      "newTypeOpen": "Открыть",
+      "newTypeCreate": "Завести тип",
+      "newTypeBad": "код — строчная латиница, цифры и «_», с буквы в начале",
+      "newTypeHint": "тип появится вместе с первой записью",
+      "settingTypeChartLayer": "echarts | volva",
+      "settingChartLayerDescr": "Чем рисуются графики LORE: echarts — сам LORE из своих данных; volva — встроенные графики Völva (нужна карточка в Völva и белый список lore.volva.embed.charts на бэкенде).",
+      "settingChartLayerHint": "Одна настройка на весь LORE, действует сразу после сохранения (после обновления страницы). Если в слое Völva графика нет, вместо пустой рамки показывается «не настроено».",
+      "volvaCheckOk": "Готово: адрес выдан, ведёт на {{origin}}, действует до {{expires}}.",
+      "volvaCheckNotConfigured": "Не настроено: на бэкенде нет секрета LORE_VOLVA_EMBED_SECRET или адреса lore.volva.embed.site-url. ({{d}})",
+      "volvaCheckUnknown": "Графика velocity нет в белом списке lore.volva.embed.charts. ({{d}})",
+      "volvaCheckForbidden": "Нет доступа к подписи встройки. ({{d}})",
+      "volvaCheckError": "Ошибка проверки: {{d}}",
+      "volvaCheckBtn": "Проверить интеграцию Völva",
+      "volvaCheckNote": "Запрашивает подписанный адрес пилотного графика velocity — тот же путь, что у слоя Völva.",
+      "settingTypeUrl": "адрес https://…",
+      "settingVolvaUrlDef": "— (кнопки Völva в карточке решения нет)",
+      "settingVolvaUrlDescr": "Адрес Völva для ссылок из LORE: «Документы в Völva» и «Документ к решению» в карточке решения. Открываются в сессии пользователя, с его правами в Völva.",
+      "settingVolvaUrlHint": "Только http(s). Действует после обновления страницы."
     },
     "oqBoard": {
       "ansFailed": "Не удалось загрузить решение #{{id}} — клик повторит",
@@ -2567,7 +2643,11 @@
       "milestones": "вехи"
     },
     "sliceLoadFailed": "Не загрузились срезы: {{lists}}. Это сбой, а не нули — показатели, которые от них зависят, неполны.",
-    "loadRetry": "Повторить"
+    "loadRetry": "Повторить",
+    "charts": {
+      "volvaLayer": "Слой Völva (настройка charts.layer в админке)",
+      "velocityTitle": "Скорость по неделям"
+    }
   },
   "bragi": {
     "analytics": {
@@ -2626,7 +2706,25 @@
         "colTakeaway": "вывод",
         "emptyState": "опубликованных вариаций пока нет",
         "emptyFiltered": "ничего не найдено под этим фильтром",
-        "filtersLabel": "Фильтры"
+        "filtersLabel": "Фильтры",
+        "fewPoints": "мало точек: в этом окне нет ни одного замера",
+        "windowLabel": "окно от даты публикации",
+        "winLifetime": "за всё время",
+        "win72h": "первые 72 ч",
+        "win7d": "первые 7 дней",
+        "colInsight": "вывод",
+        "insightChip": "инсайт → {{id}}",
+        "fixInsight": "+ зафиксировать вывод",
+        "insightsFailed": "инсайты не загрузились — номер следующего неизвестен",
+        "periodFrom": "опубликовано с",
+        "periodTo": "по",
+        "groupLabel": "группировать",
+        "groupNone": "нет",
+        "groupChannel": "по каналу",
+        "groupRubric": "по рубрике",
+        "groupNoKey": "— без значения",
+        "groupCount": "{{n}} шт.",
+        "sparkLabel": "динамика просмотров"
       },
       "insights": {
         "loading": "загрузка…",
@@ -2646,6 +2744,22 @@
         "colLastCalled": "последний вызов",
         "editBtn": "✎ редактировать",
         "empty": "интеграций пока нет"
+      },
+      "insightForm": {
+        "linkFailed": "вывод {{id}} записан, связь не поставлена: {{err}}",
+        "evidenceTitle": "обоснование подставлено из строки",
+        "placeholder": "что показали цифры и что из этого следует",
+        "statementLabel": "вывод",
+        "ledTo": "ведёт к",
+        "ledNone": "пока ни к чему",
+        "ledTask": "задаче",
+        "ledAdr": "ADR",
+        "taskPlaceholder": "SPRINT_X/CODE",
+        "adrPlaceholder": "ADR-LORE-0NN",
+        "targetLabel": "куда ведёт",
+        "saving": "записываю…",
+        "save": "зафиксировать",
+        "cancel": "отмена"
       }
     },
     "integrationEditor": {

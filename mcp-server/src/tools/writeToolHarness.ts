@@ -7,6 +7,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export type Tool = {
   name: string;
+  description?: string;
   schema: Record<string, z.ZodTypeAny>;
   handler: (a: Record<string, unknown>) => Promise<unknown>;
 };
@@ -18,8 +19,9 @@ export function collect(register: (s: McpServer) => void): Tool[] {
     tool: (...args: unknown[]) => {
       const name = args[0] as string;
       const handler = args[args.length - 1] as Tool['handler'];
+      const description = typeof args[1] === 'string' ? (args[1] as string) : undefined;
       const schema = args.find((a, i) => i > 0 && i < args.length - 1 && typeof a === 'object' && a !== null) as Tool['schema'] | undefined;
-      tools.push({ name, schema: schema ?? {}, handler });
+      tools.push({ name, description, schema: schema ?? {}, handler });
     },
   } as unknown as McpServer;
   register(server);

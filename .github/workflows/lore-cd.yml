@@ -86,6 +86,8 @@ jobs:
       # без явной передачи деплой поднимал бы бэкенд с ПУСТЫМИ секретами — оба
       # моста молча уходили бы в 503 «not configured» при зелёном деплое.
       LORE_SECRETS_PROVIDER: infisical
+      # SPRINT_VIZ_EMBED/VE-2: адрес Völva для подписи встройки (ключ — из Infisical, LORE_VOLVA_EMBED_SECRET).
+      LORE_VOLVA_EMBED_SITE_URL: https://volva.odal.seidrstudio.pro
       LORE_SECRETS_URL: http://infisical:18080
       LORE_SECRETS_CLIENT_ID: ${{ secrets.LORE_SECRETS_CLIENT_ID }}
       LORE_SECRETS_CLIENT_SECRET: ${{ secrets.LORE_SECRETS_CLIENT_SECRET }}
@@ -148,6 +150,9 @@ jobs:
       CORS_ORIGINS: http://localhost:4400,http://127.0.0.1:4400,http://192.168.3.131:4400,http://lore.odal.seidrstudio.pro:4400,https://lore.odal.seidrstudio.pro
       LORE_PUBLIC_URL: https://lore.odal.seidrstudio.pro
       LORE_OIDC_ORIGIN: https://odal.seidrstudio.pro
+      # SPRINT_VIZ_EMBED/EMB-L1: origin Völva для встроенных графиков (frame-src CSP).
+      # Назван самой Völva 06.11: site-url стенда, резолв в 192.168.3.131, /api/health 200.
+      LORE_VOLVA_ORIGIN: https://volva.odal.seidrstudio.pro
       # ── HTTPS на LAN ─────────────────────────────────────────────────────
       # Оверлей подключается ТОЛЬКО здесь, а не в основном compose: сеть
       # `headscale-net` существует лишь на ci-server, и объявление её в
@@ -264,6 +269,8 @@ jobs:
           # ТОЛЬКО после того, как ARCADEDB_API_TOKEN(_BENCH) лежат в Infisical:
           # отката на root нет, без токена readiness не поднимется (шаг ниже упадёт).
           LORE_MART_AUTH: ${{ vars.LORE_MART_AUTH || 'basic' }}
+          # AL-91: проектный скоуп чтения — переменная репозитория, по умолчанию выключен.
+          LORE_SCOPE_ENFORCE: ${{ vars.LORE_SCOPE_ENFORCE || 'false' }}
         run: docker compose up -d --no-deps lore-backend
 
       - name: Deploy frontend

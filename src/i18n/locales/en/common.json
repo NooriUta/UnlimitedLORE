@@ -41,7 +41,8 @@
     "profile": "Profile",
     "searchPlaceholder": "id, title, text…",
     "role": "role",
-    "sessionUntil": "session until"
+    "sessionUntil": "session until",
+    "switchUser": "Sign in as another user"
   },
   "nav": {
     "lore": "LORE",
@@ -476,6 +477,11 @@
       "tracedBy": "Scenarios referring to it",
       "justifies": "Tasks justified by it"
     },
+    "embed": {
+      "notConfigured": "Völva chart embedding is not configured on this installation (no Völva address) — the chart is not shown; this is not \"no data\".",
+      "error": "The Völva chart did not load: {{message}}",
+      "loading": "Loading the Völva chart…"
+    },
     "analytics": {
       "flow": {
         "leadTime": {
@@ -492,6 +498,8 @@
         "releaseCadenceHint": "Release pace per project: frequency = releases in the last 30 days ÷ (30/7) = releases per week. Median = median gap in days between the project's consecutive releases.",
         "releasePerWeekHint": "Releases per week over the last 30 days",
         "throughputBarHint": "{{label}}: {{count}} tasks",
+        "bookkeepingExcluded": "bookkeeping records excluded: {{n}}",
+        "bookkeepingExcludedHint": "Tasks flagged bookkeeping were created and closed to record work already done: their close date is when the status was set, not when the work happened. They are excluded from throughput and flow efficiency.",
         "throughputHint": "Tasks closed per ISO week (KnowTaskHist → DONE). Counted since Jun 12 (earlier is bulk import) and only tasks with real status progression (states>1), excluding archival tasks \"born done\"."
       },
       "overview": {
@@ -651,10 +659,23 @@
         "qualityNorm": "normalized score/max of its own rigor",
         "qualityBelow": "below threshold: {{n}} UC",
         "qualityClick": "(click — list)",
-        "laterTitle": "C · G · I — enabled later",
+        "laterTitle": "C — coming later",
         "laterC": "C · shipped dynamics / lead time — once shipped_at accumulates (ADR-029)",
-        "laterG": "G · lineup graph \"builds on → unlocks\" — once \"Place in lineup\" is filled",
-        "laterI": "I · rework load — once in_rework lands (ADR-029)",
+        "lineageTitle": "G · Lineage graph",
+        "lineageMeta": "builds on → opens the way · BUILDS_ON edge",
+        "lineageSummary": "{{edges}} links, {{linked}} of {{total}} features in the lineage",
+        "lineageFoundations": "lineage foundations: {{list}}",
+        "lineageIsolated": "features with no lineage links: {{n}}",
+        "lineageEmpty": "no BUILDS_ON links yet — add them via feature_link rel=builds_on",
+        "reengTitle": "I · Rework load",
+        "reengMeta": "return to a shipped use case = a uc task created after shipped_at",
+        "reengSummary": "in rework: {{n}} of {{total}} shipped use cases with tasks",
+        "reengMedian": "· median closed rework {{d}} d",
+        "reengRow": "tasks after ship {{tasks}}, open {{open}}, shipped {{since}}",
+        "reengOldest": "oldest open {{d}} d",
+        "reengStale": "status \"rework\" without open work after ship: {{n}} ({{list}}) — readiness calculator disagrees with the facts",
+        "reengUndated": "tasks without state dates: {{n}} — could not check, not counted",
+        "reengEmpty": "no shipped use cases with tasks",
         "laterH": "H · the RBAC matrix lives in the actor registry —",
         "actorsLink": "open",
         "selfCheck": {
@@ -793,7 +814,10 @@
       "parentOrphan": "Independent",
       "projectLabel": "Project",
       "noProject": "no project",
-      "statusLabel": "Status"
+      "statusLabel": "Status",
+      "volvaDocs": "Documents in Völva ↗",
+      "volvaNewDoc": "+ Document for this decision in Völva ↗",
+      "volvaNotConnected": "Völva is not connected: set the address with the volva.url setting in admin."
     },
     "docView": {
       "filterPlaceholder": "Filter documents…",
@@ -1035,6 +1059,18 @@
       "assignToMilestoneOption": "→ to milestone…"
     },
     "milestonesView": {
+      "reposTitle": "Product repositories:",
+      "servesTitle": "serves",
+      "servesCount": "we account for",
+      "servesSell": "we sell",
+      "servesSupport": "we support",
+      "reposNone": "none linked",
+      "repoOwner": "develops",
+      "repoConsumer": "uses",
+      "repoNoRole": "role ?",
+      "repoOwnerHint": "the product develops this repository",
+      "repoConsumerHint": "the product uses this repository but does not develop it",
+      "repoNoRoleHint": "link role is not set — see the product_hygiene slice",
       "title": "Project milestones",
       "countSummary": "{{count}} milestones · avg velocity {{velocity}} Sp/wk",
       "cancel": "× Cancel",
@@ -1079,7 +1115,26 @@
       "sprintsWithoutMilestones": "Sprints without milestones · {{count}}",
       "allSprintsLinked": "All sprints are linked to milestones ✓",
       "intoMilestonePlaceholder": "→ into milestone…",
-      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}"
+      "tasksPartial": "Tasks loaded partially: {{failed}} of {{total}} batches failed — {{reason}}",
+      "noForecast": "The product has no forecast milestones: no plan yet, not «all done»",
+      "frozenSummary": "History — {{count}} frozen milestones (not counted as open work)",
+      "noProductTag": "no product",
+      "allProducts": "All",
+      "withoutProduct": "No product",
+      "productsField": "Product",
+      "unlinkProduct": "unlink product",
+      "linkProductPlaceholder": "+ product…",
+      "unplannedTitle": "Unplanned — open sprints without a milestone · {{count}}",
+      "allOpenPlanned": "Every open sprint is in a milestone ✓",
+      "noProductHint": "A milestone without a product counts as incomplete: the roadmap belongs to a product.",
+      "unplannedShare": "{{unplanned}} of {{open}} open sprints ({{pct}}%) · stream: {{stream}} · intentional: {{intentional}} · really forgotten: {{forgotten}}",
+      "intentionalTag": "intentional",
+      "intentionalHint": "intentionally outside the plan: not counted as forgotten, still counted in the unplanned share. Click to clear the mark",
+      "markIntentional": "Mark as intentionally outside the plan: the sprint stops counting as forgotten but stays in the unplanned share",
+      "streamHint": "stream: housekeeping, upgrades, CI, dependencies — outside milestones by nature",
+      "forgottenHint": "looks like it was never put into the plan",
+      "streamTag": "stream",
+      "forgottenTag": "forgotten"
     },
     "modulePassport": {
       "loading": "Loading module…",
@@ -1140,7 +1195,6 @@
         "toggleHide": "legend"
       },
       "card": {
-        "registerTooltip": "Create a KnowSprint, link the plan item (REPRESENTS), and set an initial status",
         "registering": "Registering…",
         "registerSprint": "＋ Schedule sprint",
         "plan": "Plan",
@@ -1189,7 +1243,9 @@
         "oct": "Oct",
         "nov": "Nov",
         "dec": "Dec"
-      }
+      },
+      "product": "Product",
+      "productEmpty": "This product has no dated sprints on the plan with the current filters. That is not «all done»: either the sprints have no planned dates or the toggles hide them. The product milestone map is in «Milestones»."
     },
     "qgDetail": {
       "sparkline": {
@@ -2466,7 +2522,27 @@
       "authOnLine": "on (JWT, role from seer_roles)",
       "authOffLine": "off — dev mode, role from config (VITE_LORE_ROLE)",
       "thTag": "tag",
-      "tagSearch": "tag…"
+      "tagSearch": "tag…",
+      "newTypeLabel": "New dictionary type",
+      "newTypePlaceholder": "new type: release_kind",
+      "newTypeOpen": "Open",
+      "newTypeCreate": "Create type",
+      "newTypeBad": "code: lowercase latin, digits and \"_\", starting with a letter",
+      "newTypeHint": "the type appears together with its first entry",
+      "settingTypeChartLayer": "echarts | volva",
+      "settingChartLayerDescr": "What draws LORE charts: echarts — LORE itself from its own data; volva — embedded Völva charts (needs a Völva card and the lore.volva.embed.charts allow-list on the backend).",
+      "settingChartLayerHint": "One setting for all of LORE, applies after saving (on page reload). If the Völva layer has no such chart, «not configured» is shown instead of an empty frame.",
+      "volvaCheckOk": "OK: a signed URL was issued, it points to {{origin}} and is valid until {{expires}}.",
+      "volvaCheckNotConfigured": "Not configured: the backend has no LORE_VOLVA_EMBED_SECRET secret or lore.volva.embed.site-url address. ({{d}})",
+      "volvaCheckUnknown": "The velocity chart is not in the lore.volva.embed.charts allow-list. ({{d}})",
+      "volvaCheckForbidden": "No access to embed signing. ({{d}})",
+      "volvaCheckError": "Check failed: {{d}}",
+      "volvaCheckBtn": "Check Völva integration",
+      "volvaCheckNote": "Requests a signed URL for the pilot velocity chart — the same path the Völva layer uses.",
+      "settingTypeUrl": "https://… address",
+      "settingVolvaUrlDef": "— (no Völva buttons on the decision card)",
+      "settingVolvaUrlDescr": "Völva address for links from LORE: «Documents in Völva» and «Document for this decision» on the decision card. They open in the user's own session, with their Völva rights.",
+      "settingVolvaUrlHint": "http(s) only. Applies after page reload."
     },
     "oqBoard": {
       "ansFailed": "Failed to load decision #{{id}} — click to retry",
@@ -2567,7 +2643,11 @@
       "milestones": "milestones"
     },
     "sliceLoadFailed": "Failed to load: {{lists}}. This is a failure, not zeros — figures that depend on them are incomplete.",
-    "loadRetry": "Retry"
+    "loadRetry": "Retry",
+    "charts": {
+      "volvaLayer": "Völva layer (charts.layer setting in admin)",
+      "velocityTitle": "Velocity by week"
+    }
   },
   "bragi": {
     "analytics": {
@@ -2626,7 +2706,25 @@
         "colTakeaway": "takeaway",
         "emptyState": "no published variants yet",
         "emptyFiltered": "nothing found under this filter",
-        "filtersLabel": "Filters"
+        "filtersLabel": "Filters",
+        "fewPoints": "too few points: no measurement in this window",
+        "windowLabel": "window from publication date",
+        "winLifetime": "lifetime",
+        "win72h": "first 72 h",
+        "win7d": "first 7 days",
+        "colInsight": "takeaway",
+        "insightChip": "insight → {{id}}",
+        "fixInsight": "+ record takeaway",
+        "insightsFailed": "insights failed to load — next number unknown",
+        "periodFrom": "published from",
+        "periodTo": "to",
+        "groupLabel": "group",
+        "groupNone": "none",
+        "groupChannel": "by channel",
+        "groupRubric": "by rubric",
+        "groupNoKey": "— no value",
+        "groupCount": "{{n}} items",
+        "sparkLabel": "views over time"
       },
       "insights": {
         "loading": "loading…",
@@ -2646,6 +2744,22 @@
         "colLastCalled": "last call",
         "editBtn": "✎ edit",
         "empty": "no integrations yet"
+      },
+      "insightForm": {
+        "linkFailed": "takeaway {{id}} saved, link not set: {{err}}",
+        "evidenceTitle": "evidence filled in from the row",
+        "placeholder": "what the numbers showed and what follows from it",
+        "statementLabel": "takeaway",
+        "ledTo": "leads to",
+        "ledNone": "nothing yet",
+        "ledTask": "a task",
+        "ledAdr": "an ADR",
+        "taskPlaceholder": "SPRINT_X/CODE",
+        "adrPlaceholder": "ADR-LORE-0NN",
+        "targetLabel": "where it leads",
+        "saving": "saving…",
+        "save": "record",
+        "cancel": "cancel"
       }
     },
     "integrationEditor": {

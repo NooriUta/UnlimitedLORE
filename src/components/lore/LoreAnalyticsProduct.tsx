@@ -17,6 +17,9 @@ import {
   type LoreSelfCheckRun, type LoreSelfCheckFinding,
 } from '../../api/lore';
 import { investShares, investCoverage, mergeActorLoad, vpFit, type VpFit } from './analyticsProduct';
+import { featureLineageOf, type LineageRow } from './featureLineage';
+import { MartProse } from '../bench/MartProse';
+import { reengLoadOf, type ReengRow } from './reengLoad';
 import { useProjectScope } from '../../context/ProjectScopeContext';
 import { GameIcon } from './GameIcon';
 import { ListSearch, FilterChips } from './product/shared';
@@ -39,6 +42,11 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
   const [invest, setInvest] = useState<LoreInvestProfileRow[]>([]);
   const [actorLoad, setActorLoad] = useState<LoreActorLoadRow[]>([]);
   const [quality, setQuality] = useState<{ threshold: number; rows: LoreUcQualityAllRow[] } | null>(null);
+  // AN-09 · срез G «граф линейки» (D-2026-LORE-FEATURE-BUILDS-ON-EDGE)
+  const [lineageRows, setLineageRows] = useState<LineageRow[]>([]);
+  // AN-06 · срез I «реинжиниринг-нагрузка» (D-2026-LORE-REENG-SHIPPED-IN-REWORK)
+  const [reeng, setReeng] = useState<ReengRow[]>([]);
+  const [openReeng, setOpenReeng] = useState(false);
   const [loading, setLoading] = useState(true);
   // По срезу на исход: падение одного не гасит остальные (урок AL-85).
   const [failed, setFailed] = useState<string[]>([]);
@@ -87,7 +95,9 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
       Promise.all(actorSlugs.map(slug =>
         fetchLoreSlice<LoreActorLoadRow>('actor_load', { project: slug }, ctrl.signal))),
       fetchUcQualityAll(ctrl.signal),
-    ]).then(([vp, hyg, cov, inv, act, q]) => {
+      fetchLoreSlice<LineageRow>('features', { fields: 'uc_id,title,builds_on_ids,enables_ids' }, ctrl.signal),
+      fetchLoreSlice<ReengRow>('reeng_load', undefined, ctrl.signal),
+    ]).then(([vp, hyg, cov, inv, act, q, lin, re]) => {
       if (ctrl.signal.aborted) return;
       const bad: string[] = [];
       if (vp.status === 'fulfilled') setVpRows(vp.value); else bad.push('VP');
@@ -96,15 +106,21 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
       if (inv.status === 'fulfilled') setInvest(inv.value); else bad.push('D');
       if (act.status === 'fulfilled') setActorLoad(mergeActorLoad(act.value)); else bad.push('A');
       if (q.status === 'fulfilled') setQuality(q.value); else bad.push('F');
+      if (lin.status === 'fulfilled') setLineageRows(lin.value); else bad.push('G');
+      if (re.status === 'fulfilled') setReeng(re.value); else bad.push('I');
       setFailed(bad);
       if (bad.length) onError(
-        [vp, hyg, cov, inv, act, q].find(r => r.status === 'rejected' && (r as PromiseRejectedResult).reason)
-          ? ([vp, hyg, cov, inv, act, q].find(r => r.status === 'rejected') as PromiseRejectedResult).reason
+        [vp, hyg, cov, inv, act, q, lin, re].find(r => r.status === 'rejected' && (r as PromiseRejectedResult).reason)
+          ? ([vp, hyg, cov, inv, act, q, lin, re].find(r => r.status === 'rejected') as PromiseRejectedResult).reason
           : new Error('product analytics load failed'));
       setLoading(false);
     });
     return () => ctrl.abort();
   }, [project, projects, onError]);
+
+  const lineage = useMemo(() => featureLineageOf(lineageRows), [lineageRows]);
+  // AN-06: эпизоды переделки выпущенных сценариев — расчёт в reengLoad.ts (с тестом).
+  const reengLoad = useMemo(() => reengLoadOf(reeng, new Date().toISOString().slice(0, 10)), [reeng]);
 
   const fits = useMemo(() => {
     const m = new Map<string, VpFit>();
@@ -467,15 +483,68 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
             ))}
           </div>
         </div>
+
+        {/* G · Граф линейки (AN-09, D-2026-LORE-FEATURE-BUILDS-ON-EDGE) */}
+        <div style={S.panel}>
+          <div style={S.panelHead}>
+            <b>{t('lore.analytics.product.lineageTitle')}</b>
+            <span style={S.meta}>{t('lore.analytics.product.lineageMeta')}</span>
+          </div>
+          <div style={S.list}>
+            <div style={S.listRow}>
+              <span>{t('lore.analytics.product.lineageSummary', { edges: lineage.edges.length, linked: lineage.linked, total: lineageRows.length })}</span>
+            </div>
+            {lineage.foundations.length > 0 && (
+              <div style={S.listRow}><span style={S.dim}>{t('lore.analytics.product.lineageFoundations', { list: lineage.foundations.join(', ') })}</span></div>
+            )}
+            {lineage.isolated.length > 0 && (
+              <div style={{ ...S.listRow, color: 'var(--wrn)' }} title={lineage.isolated.join(', ')}>
+                {t('lore.analytics.product.lineageIsolated', { n: lineage.isolated.length })}
+              </div>
+            )}
+            {lineage.mermaid
+              ? <MartProse text={'```mermaid\n' + lineage.mermaid + '\n```'} />
+              : <div style={S.hint}>{t('lore.analytics.product.lineageEmpty')}</div>}
+          </div>
+        </div>
+
+        {/* I · Реинжиниринг-нагрузка (AN-06, D-2026-LORE-REENG-SHIPPED-IN-REWORK) */}
+        <div style={S.panel}>
+          <div style={S.panelHead}>
+            <b>{t('lore.analytics.product.reengTitle')}</b>
+            <span style={S.meta}>{t('lore.analytics.product.reengMeta')}</span>
+          </div>
+          <div style={S.list}>
+            <div style={{ ...S.listRow, cursor: reengLoad.ucs.length ? 'pointer' : 'default' }} onClick={() => setOpenReeng(o => !o)}>
+              <span style={{ color: reengLoad.ucs.length ? 'var(--wrn)' : 'var(--suc)' }}>{reengLoad.ucs.length ? '↺' : '✓'}</span>
+              <span>{t('lore.analytics.product.reengSummary', { n: reengLoad.ucs.length, total: reengLoad.shippedSeen })}</span>
+              {reengLoad.medianClosedDays !== null && <span style={S.dim}>{t('lore.analytics.product.reengMedian', { d: reengLoad.medianClosedDays })}</span>}
+              {reengLoad.ucs.length > 0 && <span style={S.dim}>{t('lore.analytics.product.qualityClick')}</span>}
+            </div>
+            {reengLoad.reworkWithoutOpen.length > 0 && (
+              <div style={{ ...S.listRow, color: 'var(--wrn)' }} title={reengLoad.reworkWithoutOpen.join(', ')}>
+                {t('lore.analytics.product.reengStale', { n: reengLoad.reworkWithoutOpen.length, list: reengLoad.reworkWithoutOpen.join(', ') })}
+              </div>
+            )}
+            {reengLoad.undated > 0 && (
+              <div style={{ ...S.listRow, color: 'var(--wrn)' }}>{t('lore.analytics.product.reengUndated', { n: reengLoad.undated })}</div>
+            )}
+            {openReeng && reengLoad.ucs.map(u => (
+              <div key={u.uc_id} style={{ ...S.listRow, paddingLeft: 18 }}>
+                <span style={{ ...S.link, ...S.mono }} onClick={() => goFeature(u.uc_id)}>{u.uc_id}</span>
+                <span style={S.dim}>{t('lore.analytics.product.reengRow', { tasks: u.tasks, open: u.open, since: u.shipped_at })}{u.oldestOpenDays !== null ? ' · ' + t('lore.analytics.product.reengOldest', { d: u.oldestOpenDays }) : ''} · {u.uc_title}</span>
+              </div>
+            ))}
+            {reengLoad.shippedSeen === 0 && <div style={S.hint}>{t('lore.analytics.product.reengEmpty')}</div>}
+          </div>
+        </div>
       </div>
 
-      {/* ── C · G · I — включаются позже; H — ссылка ── */}
+      {/* ── C — включается позже; G (AN-09) и I (AN-06) включены; H — ссылка ── */}
       <div style={{ ...S.panel, opacity: 0.75 }}>
         <div style={S.panelHead}><b>{t('lore.analytics.product.laterTitle', 'C · G · I — включаются позже')}</b></div>
         <div style={{ ...S.list, color: 'var(--t3)', fontSize: 'var(--fs-sm)' }}>
           <div>{t('lore.analytics.product.laterC', 'C · shipped-динамика / lead time — после накопления shipped_at (ADR-029)')}</div>
-          <div>{t('lore.analytics.product.laterG', 'G · граф линейки «опирается → открывает» — после наполнения «Мест в линейке»')}</div>
-          <div>{t('lore.analytics.product.laterI', 'I · реинжиниринг-нагрузка — после in_rework (ADR-029)')}</div>
           <div>
             {t('lore.analytics.product.laterH', 'H · RBAC-матрица живёт в реестре акторов —')}{' '}
             <span style={S.link} onClick={() => navigate('/lore?section=actors')}>{t('lore.analytics.product.actorsLink', 'открыть')}</span>

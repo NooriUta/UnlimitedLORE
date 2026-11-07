@@ -1358,7 +1358,50 @@ final class LoreSchemaMigrations {
         // javaStep(56); SQL пуст. Разбор движка — в javadoc
         // LoreSchemaMigrationRunner.histTimeToDatetime. Аддитивный (major 17):
         // форма записи для пишущих путей не меняется — они и так шлют ISO-Z.
-        new Step(56, 17, "java__hist_valid_time_datetime", List.of())
+        new Step(56, 17, "java__hist_valid_time_datetime", List.of()),
+
+        // T-14, хвост V54 (решение владельца 05.11.2026: «удаляй из спек из базы и
+        // закрывай задачу, это уже архивная история»): StatusPlanItem и REPRESENTS
+        // в ответ №15 не входили и пережили V54. На проде 05.11 оба пусты (0 строк),
+        // код их не создаёт и не читает. Тот же механизм: только при нулевом счёте,
+        // иначе WARN и ничего не удаляется. Бэкап перед шагом снимает раннер.
+        new Step(57, 17, "java__drop_planitem_leftovers_if_unused", List.of()),
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-ACTUAL (06.11.2026): факт трудоёмкости
+        // рядом с оценкой. Калибровка показала: факт выводился только из истории
+        // статусов, а у 75% закрытых задач рабочего статуса нет — измеримых пар 14%.
+        // Поле на ВЕРШИНЕ (как work_class): факт не версионируется. Тип объявлен
+        // заранее (урок RM-P12 — необъявленное поле получает тип от первого пишущего).
+        new Step(58, 17, "task_actual_days", List.of(
+            "CREATE PROPERTY KnowTask.actual_days IF NOT EXISTS DOUBLE")),
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-BOOKKEEPING (06.11.2026): «запись задним
+        // числом» — задача заведена и закрыта как учёт уже сделанной работы. Её
+        // done_date — дата простановки статуса, не работы; аналитика скорости её
+        // исключает и говорит, сколько исключила. Вершина, не Hist (как work_class).
+        new Step(59, 17, "task_bookkeeping", List.of(
+            "CREATE PROPERTY KnowTask.bookkeeping IF NOT EXISTS BOOLEAN")),
+
+        // SPRINT_LORE_PRODUCT_BACKLOG/AN-09 · decision:D-2026-LORE-FEATURE-BUILDS-ON-EDGE
+        // (06.11.2026): линейка фич «опирается на → открывает дорогу» — ребром, а не
+        // текстовыми ссылками context_md (истина в рёбрах, D5). Направление:
+        // фича → фича, на которую она опирается.
+        new Step(60, 17, "feature_builds_on", List.of(
+            "CREATE EDGE TYPE BUILDS_ON IF NOT EXISTS")),
+
+        // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3 (Q-MINILORE-TASK-PR-EDGE, владелица
+        // «ок» 06.11.2026): задача → PR, который её закрыл, — РЕБРОМ, а не текстом
+        // note_md. Релиз находит свои задачи через PR → SHIPPED_IN.
+        new Step(61, 17, "task_closed_by", List.of(
+            "CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS")),
+
+        // SPRINT_LORE_WORK_ANY_KIND/WK-03 · decision:D-2026-LORE-SERVES-EDGE: сервисный
+        // продукт служит технологическому — считаем (count), продаём (sell),
+        // поддерживаем (support). Продукт → продукт, вид — свойство ребра; без
+        // EXTENDS E — на проде базового типа нет (см. V43).
+        new Step(62, 17, "product_serves", List.of(
+            "CREATE EDGE TYPE SERVES IF NOT EXISTS",
+            "CREATE PROPERTY SERVES.kind IF NOT EXISTS STRING"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
@@ -1384,6 +1427,9 @@ final class LoreSchemaMigrations {
      * счёте порядок не существенен, но так DROP не упрётся в живое ребро.
      */
     static final List<String> PLANITEM_TYPES = List.of("ON_TRACK", "CONTRIBUTES_TO", "PlanItemHist", "PlanItem");
+
+    /** T-14, V57: что пережило V54 (замер прода 05.11.2026 — оба пусты). Рёбра раньше вершин. */
+    static final List<String> PLANITEM_LEFTOVER_TYPES = List.of("REPRESENTS", "StatusPlanItem");
 
     /**
      * Одна строка справочника продуктов. Идиома UPSERT та же, что у
