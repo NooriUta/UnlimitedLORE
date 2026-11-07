@@ -14,3 +14,6 @@ export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
 export { pushUrlState, readUrlState, type UrlWindow } from './resilience/urlState';
+// Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) и палитра Ctrl+K / поиск «/» (K-07).
+export type * from './core/contract';
+export * from './palette';

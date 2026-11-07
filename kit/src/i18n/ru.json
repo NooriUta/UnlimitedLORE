@@ -50,5 +50,20 @@
   "kit.md.mentionEmpty": "ничего не найдено — акторы заводятся в разделе «Клиент»",
   "kit.storage.unavailable": "Хранилище недоступно — отметки не сохранятся",
   "kit.error.title": "Что-то сломалось",
-  "kit.error.retry": "Повторить"
+  "kit.error.retry": "Повторить",
+  "kit.palette.title": "Палитра: записи и команды",
+  "kit.palette.searchTitle": "Поиск по записям",
+  "kit.palette.placeholderAll": "Запись или команда…",
+  "kit.palette.placeholderRecords": "Название или код записи…",
+  "kit.palette.recent": "Недавние",
+  "kit.palette.records": "Записи",
+  "kit.palette.commands": "Команды",
+  "kit.palette.command": "команда",
+  "kit.palette.emptyRecent": "Недавних пока нет — начните вводить название или код",
+  "kit.palette.notFound": "Ничего не найдено по «{query}» среди загруженных записей",
+  "kit.palette.truncated": "Поиск только по загруженному: {returned} из {total} — выдача обрезана сервером",
+  "kit.palette.truncatedUnknown": "Поиск только по загруженным {returned}: выдача обрезана сервером, полный объём неизвестен",
+  "kit.palette.more": "Показано {shown} из {total} — уточните запрос",
+  "kit.palette.commandFailed": "Команда «{title}» не выполнилась: {reason}",
+  "kit.palette.hint": "↑↓ — выбор · Enter — открыть · Esc — закрыть"
 }

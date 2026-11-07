@@ -676,6 +676,112 @@ code, pre, kbd, samp { font-family: var(--mono); }
   .sk-sheet--right, .sk-sheet--left { width: 100vw; }
 }
 
+/* ---------- Палитра Ctrl+K и поиск «/» (SPRINT_UXR_S10_SEIDR_KIT/K-07) ----------
+   Модалка сверху по центру, как в прототипе v4. Строка выдачи — цель касания:
+   на сенсоре не ниже 44px (--tap), на десктопе плотная. */
+.sk-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-palette {
+  position: fixed;
+  z-index: 81;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 94vw);
+  max-height: 70vh;
+  background: var(--bg1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg0) 70%, transparent);
+  overflow: hidden;
+}
+.sk-palette__head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--t2);
+}
+.sk-palette__input {
+  flex: 1;
+  min-width: 0;
+  min-height: max(var(--tap), 30px);
+  border: 0;
+  background: none;
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-md);
+}
+.sk-palette__input:focus { outline: none; }
+.sk-palette__input::placeholder { color: var(--t3); }
+.sk-palette__trunc,
+.sk-palette__fail {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
+  border-bottom: 1px solid var(--bd);
+}
+.sk-palette__trunc { color: var(--t1); background: color-mix(in srgb, var(--wrn) 10%, transparent); }
+.sk-palette__fail { color: var(--t1); background: color-mix(in srgb, var(--dng) 14%, transparent); }
+.sk-palette__list { overflow: auto; padding: 4px 0; }
+.sk-palette__group + .sk-palette__group { border-top: 1px solid var(--bd); margin-top: 4px; padding-top: 4px; }
+.sk-palette__grouphead {
+  padding: 4px 12px 2px;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-palette__opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  color: var(--t1);
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+.sk-palette__opt--active {
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--acc);
+}
+.sk-palette__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-palette__kind { color: var(--t3); font-size: var(--fs-xs); }
+.sk-palette__id {
+  padding: 0 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+}
+.sk-palette__empty { padding: 14px 12px; color: var(--t2); font-size: var(--fs-sm); }
+.sk-palette__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 10px;
+  border-top: 1px solid var(--bd);
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+}
+.sk-palette__more { color: var(--wrn); }
+.sk-palette__hint { margin-left: auto; }
+@media (pointer: coarse) {
+  .sk-palette__hint { display: none; }
+}
+@media (max-width: 720px) {
+  .sk-palette { top: 0; width: 100vw; max-height: 85vh; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+}
+
 /* ---------- Tabs ---------- */
 .sk-tabs-root { display: flex; flex-direction: column; min-width: 0; }
 .sk-tabs {

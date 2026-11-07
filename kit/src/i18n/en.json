@@ -50,5 +50,20 @@
   "kit.md.mentionEmpty": "nothing found — actors are created in the “Client” section",
   "kit.storage.unavailable": "Storage unavailable — your marks will not be saved",
   "kit.error.title": "Something went wrong",
-  "kit.error.retry": "Retry"
+  "kit.error.retry": "Retry",
+  "kit.palette.title": "Palette: records and commands",
+  "kit.palette.searchTitle": "Search records",
+  "kit.palette.placeholderAll": "Record or command…",
+  "kit.palette.placeholderRecords": "Record title or code…",
+  "kit.palette.recent": "Recent",
+  "kit.palette.records": "Records",
+  "kit.palette.commands": "Commands",
+  "kit.palette.command": "command",
+  "kit.palette.emptyRecent": "No recent items yet — start typing a title or code",
+  "kit.palette.notFound": "Nothing found for “{query}” among loaded records",
+  "kit.palette.truncated": "Searching loaded data only: {returned} of {total} — the server truncated the result",
+  "kit.palette.truncatedUnknown": "Searching the loaded {returned} only: the server truncated the result, full size unknown",
+  "kit.palette.more": "Showing {shown} of {total} — refine the query",
+  "kit.palette.commandFailed": "Command “{title}” failed: {reason}",
+  "kit.palette.hint": "↑↓ select · Enter open · Esc close"
 }
