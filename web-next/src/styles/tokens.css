@@ -1,0 +1,72 @@
+/* LORE v2 — токены темы. Значения AMBER FOREST и шкала --fs-* взяты из v1
+   (src/styles/tokens.css) на 07.11.2026: v1 заморожен, и v2 не импортирует его
+   файлы, чтобы правка одного веба не меняла другой. Остальные темы и
+   компонентные классы v2 заводит своими задачами. */
+:root {
+  --bg0: #141108;
+  --bg1: #1c1810;
+  --bg2: #252019;
+  --bg3: #302a20;
+  --bd:  #42382a;
+  --bdh: #584c38;
+  --t1:  #ede5d0;
+  --t2:  #a6997f;
+  --t3:  #9c937b;
+  --acc: #A8B860;
+  --suc: #7DBF78;
+  --wrn: #D4922A;
+  --inf: #88B8A8;
+  --dng: #C85848;
+  --font:    'Manrope', sans-serif;
+  --mono:    'IBM Plex Mono', monospace;
+  --display: 'Unbounded', sans-serif;
+
+  --fs-2xs:  9px;
+  --fs-xs:   10px;
+  --fs-sm:   11px;
+  --fs-base: 12px;
+  --fs-md:   13px;
+  --fs-lg:   14px;
+  --fs-xl:   20px;
+  --fs-2xl:  24px;
+  --fs-touch-input: 16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font);
+  background-color: var(--bg0);
+  color: var(--t1);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+
+.shell-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  letter-spacing: .04em;
+}
+
+.shell-tag {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--acc);
+  border: 1px solid var(--acc);
+  border-radius: 999px;
+  padding: 0 6px;
+  text-transform: uppercase;
+}
