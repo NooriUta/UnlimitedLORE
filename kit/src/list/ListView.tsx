@@ -20,10 +20,14 @@ import { pushUrlState, readUrlState } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 import {
-  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, boardColumns, fieldValue, groupRecords,
-  quickCounts, readListState, shownOf, sortRecords, valueKey, writeListState,
+  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, boardColumns, groupRecords,
+  quickCounts, readListState, shownOf, sortRecords, valuesOf, writeListState,
 } from './listModel';
-import type { ListGroup, ListState, ListViewKind } from './listModel';
+import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
+import { applyFilterSet, describeFieldFilter, facetOf, toFilterSet } from './filterModel';
+import type { FieldFilter } from './filterModel';
+import { FacetFilter, ValueIconMark } from './FacetFilter';
+import type { ValueIcon } from './FacetFilter';
 
 export interface ListBulkAction {
   id: string;
@@ -47,6 +51,11 @@ export interface ListViewProps {
   /** Начальное состояние (URL важнее). */
   initial?: Partial<ListState>;
   budget?: Partial<typeof LIST_BUDGET>;
+  /**
+   * Иконка значения поля в фасетах и ячейках (S4-05). undefined — по умолчанию
+   * (статус и вид — из конфига), null — без иконки. Подпись остаётся всегда.
+   */
+  valueIcon?: (key: string, value: string) => ValueIcon | null | undefined;
   className?: string;
 }
 
@@ -80,6 +89,8 @@ function initialState(win: UrlWindow | null, initial: Partial<ListState> | undef
   if (params.has('lg')) s.group = parsed.group;
   if (params.has('ls')) s.sort = parsed.sort;
   if (params.has('lf')) s.filters = parsed.filters;
+  if (params.has('lo')) s.ops = parsed.ops;
+  if (params.has('lt')) s.text = parsed.text;
   return s;
 }
 
@@ -150,7 +161,7 @@ function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, className,
+  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, valueIcon, className,
 }: ListViewProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -184,16 +195,30 @@ export function ListView({
   }), [data, config, href, ctxPart]);
 
   const records = data.records;
-  const fieldFilters: KitFilter[] = Object.entries(state.filters)
-    .filter(([, v]) => v.length > 0).map(([k, v]) => ({ [k]: v }));
+  // S4-05: поля (есть / нет / пусто / не пусто) и текст — одним набором
+  const filterSet = useMemo(() => toFilterSet(state),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(state.filters), JSON.stringify(state.ops), state.text]);
   const activeQuick = quick.find(q => q.id === state.quick) ?? null;
-  const allFilters = activeQuick ? [...fieldFilters, activeQuick.filter] : fieldFilters;
-  const counts = useMemo(() => quickCounts(records, quick, fieldFilters),
+  const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
+  const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
+  const counts = useMemo(() => quickCounts(pool, quick, []), [pool, quick]);
+  const filtered = useMemo(() => sortRecords(applyFilters(pool, quickFilters), state.sort, config),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [records, quick, JSON.stringify(state.filters)]);
-  const filtered = useMemo(() => sortRecords(applyFilters(records, allFilters), state.sort, config),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [records, config, JSON.stringify(allFilters), state.sort]);
+    [pool, config, JSON.stringify(quickFilters), state.sort]);
+  const iconOf = (key: string, v: string): ValueIcon | null | undefined => {
+    const own = valueIcon?.(key, v);
+    if (own !== undefined) return own;
+    if (key === 'status') {
+      const s = labels.statuses.get(v);
+      return s ? { icon: s.icon, color: s.color } : null;
+    }
+    if (key === 'kind') {
+      const k = config.kinds[v];
+      return k ? { icon: k.icon } : null;
+    }
+    return null;
+  };
   const edgeCount = useMemo(() => {
     const m = new Map<string, number>();
     for (const e of data.edges) {
@@ -235,28 +260,42 @@ export function ListView({
       ? t('kit.list.shownTruncated', { shown: shown.shown, total: shown.total, loaded: shown.loaded })
       : t('kit.list.shownUnknown', { shown: shown.shown, loaded: shown.loaded });
 
-  const hasFilter = fieldFilters.length > 0 || activeQuick !== null;
+  const hasFilter = Object.keys(filterSet.fields).length > 0 || !!filterSet.text || activeQuick !== null;
+  const opTitles = Object.fromEntries((['any', 'not', 'empty', 'nonempty'] as FilterOp[])
+    .map(op => [op, t(`kit.list.op.${op}` as KitKey)])) as Record<FilterOp, string>;
   const descParts: string[] = [];
-  for (const [k, vs] of Object.entries(state.filters)) {
-    if (vs.length) descParts.push(`${labels.keyTitle(k)}: ${vs.map(v => labels.valueTitle(k, v)).join(' | ')}`);
+  for (const [k, f] of Object.entries(filterSet.fields)) {
+    descParts.push(`${labels.keyTitle(k)}: ${describeFieldFilter(f, opTitles, v => labels.valueTitle(k, v))}`);
   }
+  if (filterSet.text) descParts.push(`${t('kit.list.desc.text')}: «${filterSet.text}»`);
   if (activeQuick) descParts.push(`${t('kit.list.quick')}: ${activeQuick.title}`);
+  const resetFilters = () => update({ filters: {}, ops: {}, text: '', quick: null });
   const desc = [
     `${t('kit.list.desc.filter')}: ${descParts.length ? descParts.join(' · ') : t('kit.list.filterNone')}`,
     view === 'list' ? `${t('kit.list.desc.group')}: ${state.group ? labels.keyTitle(state.group) : t('kit.list.groupNone')}` : null,
     `${t('kit.list.desc.sort')}: ${state.sort ? `${labels.keyTitle(state.sort.key)} ${state.sort.dir === 'desc' ? '↓' : '↑'}` : t('kit.list.sortNone')}`,
   ].filter(Boolean).join(' · ');
 
-  const filterOptions = (key: string) => {
-    const m = new Map<string, number>();
-    for (const r of records) {
-      const v = valueKey(fieldValue(r, key));
-      m.set(v, (m.get(v) ?? 0) + 1);
-    }
-    const order = new Map(config.statuses.items.map((s, i) => [s.code, i]));
-    return [...m].sort((a, b) => key === 'status'
-      ? (order.get(a[0]) ?? Infinity) - (order.get(b[0]) ?? Infinity)
-      : b[1] - a[1] || a[0].localeCompare(b[0]));
+  const statusOrder = new Map(config.statuses.items.map((s, i) => [s.code, i]));
+  const statusCompare = (a: string, b: string) => (statusOrder.get(a) ?? Infinity) - (statusOrder.get(b) ?? Infinity) || a.localeCompare(b);
+  const fieldFilterOf = (k: string): FieldFilter => ({ op: state.ops[k] ?? 'any', values: state.filters[k] ?? [] });
+  const setFieldFilter = (k: string, f: FieldFilter) => {
+    const filters = { ...state.filters };
+    const ops = { ...state.ops };
+    if (f.values.length) filters[k] = f.values; else delete filters[k];
+    if (f.op !== 'any') ops[k] = f.op; else delete ops[k];
+    update({ filters, ops });
+  };
+  const valueCell = (key: string, r: KitRecord): ReactNode => {
+    const vs = valuesOf(r, key);
+    if (!vs.length) return '—';
+    return (
+      <span className="sk-list__vals">
+        {vs.map(v => (
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} />{labels.valueTitle(key, v)}</span>
+        ))}
+      </span>
+    );
   };
 
   const checkbox = (r: KitRecord) => (
@@ -276,7 +315,7 @@ export function ListView({
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
       case 'updated_at': return r.updated_at ? <span className="sk-list__mono">{r.updated_at.slice(0, 10)}</span> : '—';
       case 'edges_count': return <span className="sk-list__mono">{edgeCount.get(r.id) ?? 0}</span>;
-      default: return valueKey(fieldValue(r, col)) || '—';
+      default: return valueCell(col, r);
     }
   };
   const colTitle = (col: string): ReactNode => {
@@ -308,7 +347,7 @@ export function ListView({
       <EmptyState
         title={t('kit.list.emptyFiltered')}
         hint={t('kit.list.emptyFilteredHint')}
-        action={hasFilter ? <button type="button" className="sk-btn" onClick={() => update({ filters: {}, quick: null })}>{t('kit.list.reset')}</button> : undefined}
+        action={hasFilter ? <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button> : undefined}
       />
     );
   } else if (view === 'board') {
@@ -430,28 +469,27 @@ export function ListView({
       </div>
 
       <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls">
-        {filterKeys.map(k => {
-          const value = state.filters[k]?.[0];
-          return (
-            <label key={k} className="sk-list__field">
-              <span className="sk-list__label">{labels.keyTitle(k)}</span>
-              <select
-                aria-label={labels.keyTitle(k)}
-                className="sk-list__select"
-                value={value ?? '\u0000all'}
-                onChange={e => {
-                  const v = e.target.value;
-                  const next = { ...state.filters };
-                  if (v === '\u0000all') delete next[k]; else next[k] = [v];
-                  update({ filters: next });
-                }}
-              >
-                <option value={'\u0000all'}>{t('kit.list.filterAll')}</option>
-                {filterOptions(k).map(([v, n]) => <option key={v} value={v}>{`${labels.valueTitle(k, v)} · ${n}`}</option>)}
-              </select>
-            </label>
-          );
-        })}
+        <input
+          type="search"
+          className="sk-list__search"
+          aria-label={t('kit.list.text')}
+          placeholder={t('kit.list.textPlaceholder')}
+          value={state.text}
+          onChange={e => update({ text: e.target.value })}
+        />
+        {filterKeys.map(k => (
+          <FacetFilter
+            key={k}
+            title={labels.keyTitle(k)}
+            filter={fieldFilterOf(k)}
+            facet={facetOf(records, filterSet, k)}
+            valueTitle={v => labels.valueTitle(k, v)}
+            valueIcon={v => iconOf(k, v)}
+            compare={k === 'status' ? statusCompare : undefined}
+            onChange={f => setFieldFilter(k, f)}
+            lang={lang}
+          />
+        ))}
         {view === 'list' && groupings.length > 0 && (
           <label className="sk-list__field">
             <span className="sk-list__label">{t('kit.list.group')}</span>
@@ -492,7 +530,7 @@ export function ListView({
       <p className="sk-list__desc" data-testid="kit-list-desc">
         <span>{desc}</span>
         {hasFilter && (
-          <button type="button" className="sk-btn" onClick={() => update({ filters: {}, quick: null })}>{t('kit.list.reset')}</button>
+          <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>
         )}
       </p>
       <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
