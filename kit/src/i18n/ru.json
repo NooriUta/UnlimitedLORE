@@ -222,5 +222,18 @@
   "kit.appr.journal.selfApproved": "согласовал сам — нарушение правила двух людей",
   "kit.appr.journal.agent": "агент",
   "kit.appr.journal.empty": "Журнал пуст (проверено)",
-  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль."
+  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль.",
+  "kit.list.groupFields": "Поля",
+  "kit.list.groupRels": "Разрезы по связям",
+  "kit.list.relIn": "{edge} (входящие)",
+  "kit.list.noLink": "без связи «{edge}»",
+  "kit.list.linkMissing": "не загружена: {id}",
+  "kit.list.multi": "В нескольких группах сразу: {n} — сумма по группам больше показанного",
+  "kit.list.lane": "Дорожка «{title}»: {n}",
+  "kit.timeline.label": "Таймлайн",
+  "kit.timeline.range": "Шкала: {min} — {max}",
+  "kit.timeline.undated": "Без дат, не на шкале: {n}",
+  "kit.timeline.empty": "Нет записей с датами",
+  "kit.timeline.emptyHint": "Записи есть, но ни у одной нет даты в поле «{field}».",
+  "kit.timeline.bar": "{title}: {start} — {end}"
 }

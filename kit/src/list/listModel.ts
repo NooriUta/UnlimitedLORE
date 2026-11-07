@@ -68,6 +68,12 @@ export interface ListGroup {
   /** «Прочие»: слитые группы сверх топ-N. */
   other?: boolean;
   groupCount?: number;
+  /** Разрез по связи (S4-06): подпись группы — заголовок связанной записи. */
+  title?: string;
+  /** Разрез по связи: связанная запись не загружена — подпись не выдумывается. */
+  missing?: boolean;
+  /** Разрез по связи: записи без связи этого типа. */
+  none?: boolean;
 }
 
 function statusOrder(config: KitConfig): Map<string, number> {
@@ -81,7 +87,7 @@ function statusOrder(config: KitConfig): Map<string, number> {
  */
 export function groupRecords(
   records: readonly KitRecord[], by: string | null, config: KitConfig,
-  budget: Pick<typeof LIST_BUDGET, 'maxGroups' | 'topGroups'> = LIST_BUDGET,
+  budget: { maxGroups: number; topGroups: number } = LIST_BUDGET,
 ): ListGroup[] {
   if (!by) return [{ key: '', records: [...records] }];
   const map = new Map<string, KitRecord[]>();

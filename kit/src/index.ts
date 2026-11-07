@@ -45,3 +45,5 @@ export * from './palette';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
 // Вид «Дерево / книга» — третий в list.views (K-09).
 export * from './views/tree';
+// Таймлайн с дорожками той же общей группировки (S4-06).
+export * from './views/timeline';

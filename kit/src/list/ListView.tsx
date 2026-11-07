@@ -20,9 +20,11 @@ import { pushUrlState, readUrlState } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 import {
-  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, boardColumns, fieldValue, groupRecords,
+  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, readListState, shownOf, sortRecords, valueKey, writeListState,
 } from './listModel';
+import { boardLanes, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
+import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf } from './groupLabel';
 import type { ListGroup, ListState, ListViewKind } from './listModel';
 
 export interface ListBulkAction {
@@ -50,13 +52,6 @@ export interface ListViewProps {
   className?: string;
 }
 
-const BUILTIN_KEY_TITLES: Record<string, KitKey> = {
-  title: 'kit.list.col.title',
-  id: 'kit.list.col.id',
-  status: 'kit.list.col.status',
-  kind: 'kit.list.col.kind',
-  updated_at: 'kit.list.col.updated',
-};
 const SORT_KEYS = ['title', 'id', 'status', 'updated_at'] as const;
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'board'];
 
@@ -87,23 +82,9 @@ function initialState(win: UrlWindow | null, initial: Partial<ListState> | undef
 function useLabels(config: KitConfig, lang: KitLang) {
   return useMemo(() => {
     const statuses = new Map(config.statuses.items.map(s => [s.code, s]));
-    const fieldTitles = new Map<string, string>();
-    for (const k of Object.values(config.kinds)) for (const f of k.fields ?? []) fieldTitles.set(f.key, f.title);
-    const keyTitle = (key: string): string => {
-      const builtin = BUILTIN_KEY_TITLES[key];
-      if (builtin) return kitT(lang, builtin);
-      const bare = key.startsWith('fields.') ? key.slice(7) : key;
-      return fieldTitles.get(bare) ?? fieldTitles.get(key) ?? bare;
-    };
-    const valueTitle = (key: string, v: string): string => {
-      if (key === 'status') {
-        const s = statuses.get(v);
-        return s ? s.title : kitT(lang, 'kit.list.unknownStatus', { code: v || '∅' });
-      }
-      if (v === '') return kitT(lang, 'kit.list.noValue');
-      if (key === 'kind') return config.kinds[v]?.title ?? v;
-      return v;
-    };
+    // Подписи — общие с дорожками доски и таймлайна (groupLabel, S4-06).
+    const keyTitle = (key: string): string => groupKeyTitle(config, lang, key);
+    const valueTitle = (key: string, v: string): string => fieldValueTitle(config, lang, key, v);
     return { statuses, keyTitle, valueTitle };
   }, [config, lang]);
 }
@@ -168,7 +149,8 @@ export function ListView({
   const view: ListViewKind = views.includes(state.view) ? state.view : (views[0] ?? 'list');
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
-  const groupings = listCfg?.groupings ?? [];
+  const groupOpts = useMemo(() => groupingOptions(config), [config]);
+  const hasGroupings = groupOpts.fields.length + groupOpts.relations.length > 0;
   const columns = listCfg?.columns ?? ['title+id', 'status'];
 
   const update = (patch: Partial<ListState>) => {
@@ -203,10 +185,14 @@ export function ListView({
     return m;
   }, [data.edges]);
 
-  const groupBy = view === 'board' ? 'status' : state.group;
-  const groups: ListGroup[] = view === 'board' ? boardColumns(filtered, config) : groupRecords(filtered, groupBy, config, budget);
-  const collapsedByDefault = view === 'list' && groups.some(g => g.other);
-  const cur = ui.by === groupBy && ui.view === view ? ui : { by: groupBy, view, open: {}, more: {} };
+  // Общая группировка (S4-06): один ключ lg — группы списка и дорожки доски.
+  const groupKey = parseGroupKey(state.group).type === 'none' ? null : state.group;
+  const lanes = view === 'board' ? boardLanes(filtered, groupKey, config, data, budget) : [];
+  const laned = view === 'board' && groupKey !== null && groupKey !== 'status';
+  const groups: ListGroup[] = view === 'board' ? lanes.map(l => l.lane) : groupBy(filtered, groupKey, config, data, budget);
+  const multi = (view === 'list' || laned) && groupKey ? multiGroupCount(groups) : 0;
+  const collapsedByDefault = (view === 'list' || laned) && groups.some(g => g.other);
+  const cur = ui.by === groupKey && ui.view === view ? ui : { by: groupKey, view, open: {}, more: {} };
   const isOpen = (k: string) => cur.open[k] ?? !collapsedByDefault;
   const limitOf = (k: string) => cur.more[k] ?? budget.perGroup;
   const toggleGroup = (k: string) => setUi({ ...cur, open: { ...cur.open, [k]: !isOpen(k) } });
@@ -222,10 +208,7 @@ export function ListView({
   const toggleAll = () => setSelected(allShownSelected ? new Set() : new Set(filtered.map(r => r.id)));
   const selectable = columns.includes('select');
 
-  const groupTitle = (g: ListGroup): string => {
-    if (g.other) return t('kit.list.others', { groups: g.groupCount ?? 0 });
-    return groupBy ? labels.valueTitle(groupBy, g.key) : '';
-  };
+  const groupTitle = (g: ListGroup): string => groupTitleOf(config, lang, groupKey, g);
 
   const errors = (data.meta.errors ?? []).filter(e => e.block === 'records' || e.block === 'list');
   const shown = shownOf(data.meta, records.length, filtered.length);
@@ -243,7 +226,7 @@ export function ListView({
   if (activeQuick) descParts.push(`${t('kit.list.quick')}: ${activeQuick.title}`);
   const desc = [
     `${t('kit.list.desc.filter')}: ${descParts.length ? descParts.join(' · ') : t('kit.list.filterNone')}`,
-    view === 'list' ? `${t('kit.list.desc.group')}: ${state.group ? labels.keyTitle(state.group) : t('kit.list.groupNone')}` : null,
+    view === 'list' || (view === 'board' && hasGroupings) ? `${t('kit.list.desc.group')}: ${groupKey ? labels.keyTitle(groupKey) : t('kit.list.groupNone')}` : null,
     `${t('kit.list.desc.sort')}: ${state.sort ? `${labels.keyTitle(state.sort.key)} ${state.sort.dir === 'desc' ? '↓' : '↑'}` : t('kit.list.sortNone')}`,
   ].filter(Boolean).join(' · ');
 
@@ -293,10 +276,10 @@ export function ListView({
     }
   };
 
-  const moreButton = (g: ListGroup, limit: number) => {
+  const moreButton = (g: ListGroup, limit: number, key: string = g.key) => {
     const rest = g.records.length - limit;
     return rest > 0
-      ? <button type="button" className="sk-btn" onClick={() => showMore(g.key)}>{t('kit.list.more', { n: rest })}</button>
+      ? <button type="button" className="sk-btn" onClick={() => showMore(key)}>{t('kit.list.more', { n: rest })}</button>
       : null;
   };
 
@@ -312,25 +295,30 @@ export function ListView({
       />
     );
   } else if (view === 'board') {
-    body = (
+    // В дорожке имя колонки несёт имя дорожки — иначе «готово: 1» в каждой
+    // дорожке даёт одинаковые landmark-и (axe landmark-unique).
+    const columnsOf = (cols: ListGroup[], lane: ListGroup | null, heading: 'h3' | 'h4') => (
       <div className="sk-board">
-        {groups.map(g => {
-          const limit = limitOf(g.key);
+        {cols.map(g => {
+          const mk = lane === null ? g.key : `${lane.key}\u0001${g.key}`;
+          const limit = limitOf(mk);
+          const Head = heading;
           const s = labels.statuses.get(g.key);
           const title = labels.valueTitle('status', g.key);
+          const name = lane === null ? title : `${groupTitle(lane)} · ${title}`;
           return (
             <section
               key={g.key}
               className={`sk-board__col${g.unknown ? ' is-unknown' : ''}`}
-              aria-label={t('kit.list.column', { title, n: g.records.length })}
+              aria-label={t('kit.list.column', { title: name, n: g.records.length })}
               data-status={g.key}
               style={{ '--st-c': s?.color ?? 'var(--t3)' } as CSSProperties}
             >
-              <h3 className="sk-board__head">
+              <Head className="sk-board__head">
                 <GameIcon slug={s?.icon ?? 'help'} size={14} />
                 <span className="sk-board__title">{title}</span>
                 <span className="sk-board__count">{g.records.length}</span>
-              </h3>
+              </Head>
               <ul className="sk-board__cards">
                 {g.records.slice(0, limit).map(r => (
                   <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
@@ -343,14 +331,42 @@ export function ListView({
                   </li>
                 ))}
               </ul>
-              {moreButton(g, limit)}
+              {moreButton(g, limit, mk)}
             </section>
           );
         })}
       </div>
     );
+    body = laned
+      ? (
+        <div className="sk-board__lanes">
+          {lanes.map(({ lane, columns: cols }) => {
+            const open = isOpen(lane.key);
+            const title = groupTitle(lane);
+            return (
+              <section
+                key={lane.key}
+                className="sk-board__lane"
+                data-lane-key={lane.key}
+                data-other={lane.other ? 'true' : undefined}
+                aria-label={t('kit.list.lane', { title, n: lane.records.length })}
+              >
+                <h3 className="sk-board__lanehead">
+                  <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(lane.key)}>
+                    <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                    <span className={lane.missing || lane.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{title}</span>
+                    <span className="sk-list__gcount">{lane.records.length}</span>
+                  </button>
+                </h3>
+                {open && columnsOf(cols, lane, 'h4')}
+              </section>
+            );
+          })}
+        </div>
+      )
+      : columnsOf(lanes[0]?.columns ?? [], null, 'h3');
   } else {
-    const grouped = groupBy !== null;
+    const grouped = groupKey !== null;
     body = (
       <div className="sk-list__scroll">
         <table className="sk-list__table">
@@ -367,7 +383,7 @@ export function ListView({
                     <th colSpan={columns.length} scope="rowgroup">
                       <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
                         <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
-                        <span className={g.unknown ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
+                        <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
                         <span className="sk-list__gcount">{g.records.length}</span>
                       </button>
                     </th>
@@ -452,17 +468,30 @@ export function ListView({
             </label>
           );
         })}
-        {view === 'list' && groupings.length > 0 && (
+        {(view === 'list' || view === 'board') && hasGroupings && (
           <label className="sk-list__field">
             <span className="sk-list__label">{t('kit.list.group')}</span>
             <select
               aria-label={t('kit.list.group')}
               className="sk-list__select"
-              value={state.group ?? ''}
+              value={groupKey ?? ''}
               onChange={e => update({ group: e.target.value || null })}
             >
               <option value="">{t('kit.list.groupNone')}</option>
-              {groupings.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)}
+              {groupOpts.relations.length === 0
+                ? groupOpts.fields.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)
+                : (
+                  <>
+                    {groupOpts.fields.length > 0 && (
+                      <optgroup label={t('kit.list.groupFields')}>
+                        {groupOpts.fields.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)}
+                      </optgroup>
+                    )}
+                    <optgroup label={t('kit.list.groupRels')}>
+                      {groupOpts.relations.map(p => <option key={p.key} value={p.key}>{labels.keyTitle(p.key)}</option>)}
+                    </optgroup>
+                  </>
+                )}
             </select>
           </label>
         )}
@@ -496,6 +525,7 @@ export function ListView({
         )}
       </p>
       <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
+      {multi > 0 && <p className="sk-list__multi" data-testid="kit-list-multi">{t('kit.list.multi', { n: multi })}</p>}
 
       {selected.size > 0 && (
         <div className="sk-list__selbar" data-testid="kit-list-selbar" role="group" aria-label={t('kit.list.bulk')}>
