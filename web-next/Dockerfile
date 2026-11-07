@@ -4,9 +4,9 @@
 #
 # Контекст сборки — КОРЕНЬ репозитория, а не web-next/:
 #   docker build -f web-next/Dockerfile -t lore-app-next .
-# Из корня нужен ровно один файл — nginx.conf.template: прокси /lore/ и /bench/
-# у v2 обязан быть тем же, что у v1 (через него ходят MCP и телефон), а
-# вынос шаблона в общий для обоих фронтов — задача S3-02.
+# Из корня нужны ровно два файла, общие с v1 (S3-02): nginx.conf.template —
+# прокси /lore/ и /bench/ у v2 обязан быть тем же, что у v1 (через него ходят
+# MCP и телефон), — и скрипт старта docker/30-lore-public-url.sh.
 #
 # Копирование только поимённое. Корневой .dockerignore отсекает node_modules
 # лишь в корне, web-next/node_modules под него не попадает — `COPY web-next/ .`
@@ -39,4 +39,10 @@ ENV NGINX_ENVSUBST_FILTER="^LORE_" \
     LORE_OIDC_ORIGIN="" \
     LORE_VOLVA_ORIGIN=""
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+# Общий с v1 скрипт старта (S3-02): подсказывает, каких LORE_* не хватает для
+# входа по OIDC. LORE_FRONT метит его строки как «[LORE v2]»; в шаблоне nginx
+# ${LORE_FRONT} нет, поэтому envsubst её никуда не подставляет.
+ENV LORE_FRONT=v2
+COPY docker/30-lore-public-url.sh /docker-entrypoint.d/30-lore-public-url.sh
+RUN chmod +x /docker-entrypoint.d/30-lore-public-url.sh
 EXPOSE 80
