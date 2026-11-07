@@ -306,15 +306,19 @@ jobs:
       # SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00d: axe на витрине /kit — отдельным
       # шагом, чтобы a11y-гейт был виден в сводке по имени, а не тонул среди
       # прочих тестов. Витрина собрана из всех элементов Seiðr-kit: потерянное
-      # имя/роль/ARIA у любого элемента валит именно этот шаг. Контраст в jsdom
-      # не считается — его меряет браузерный прогон (S4-12).
+      # имя/роль/ARIA у любого элемента валит именно этот шаг.
+      # S4-12: здесь же оболочка и списки — весь каталог src/a11y/ (axe на ru/en,
+      # skip link, цели касания ≥44px через --tap). Новый экран v2 кладёт туда
+      # свой *.a11y.test.tsx и попадает под гейт без правки этого шага.
+      # Контраст WCAG AA в обеих темах axe в jsdom не считает — его гейт на
+      # токенах (kit/src/styles/contrast.test.ts) в шаге «Seiðr-kit (kit)» выше.
       # Тот же scope-гард, что у установки web-next выше: без него пуш, не
       # трогающий v2 (например, хотфикс src/ #857), запускал npx vitest без
       # node_modules — npx тянул чужой vitest и падал на vite.config.ts.
-      - name: LORE v2 — axe на /kit (витрина Seiðr-kit)
+      - name: LORE v2 — a11y (axe) на /kit, оболочке и списках
         if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next
-        run: npx vitest run src/pages/KitPage.test.tsx
+        run: npx vitest run src/pages/KitPage.test.tsx src/a11y/
 
       # Контекст — корень репозитория: образу нужен общий nginx.conf.template
       # (прокси /lore/ тот же, что у v1). Прокси раннера пробрасывается так же,

@@ -49,4 +49,24 @@ describe('CI: axe на /kit', () => {
     expect(step).toMatch(/working-directory: web-next/);
     expect(step).toMatch(/vitest run src\/pages\/KitPage\.test\.tsx/);
   });
+
+  // S4-12: тот же шаг гоняет оболочку и списки — весь каталог src/a11y/, чтобы
+  // новый экран v2 попадал под гейт своим *.a11y.test.tsx без правки workflow.
+  it('тот же шаг гоняет каталог src/a11y/ (оболочка и списки, S4-12)', () => {
+    const ci = read(resolve(repo, '.github/workflows/frontend-ci.yml'));
+    const job = ci.split(/^ {2}web-next:\s*$/m)[1] ?? '';
+    const step = job.split(/- name: /).find(s => /KitPage\.test\.tsx/.test(s)) ?? '';
+    expect(step).toMatch(/vitest run src\/pages\/KitPage\.test\.tsx src\/a11y\/?(\s|$)/);
+    expect(step).toMatch(/^[^\n]*(оболоч|shell)/i);
+  });
+
+  it('в src/a11y/ — только *.a11y.test.tsx, и каждый реально зовёт axe', () => {
+    const dir = resolve(src, 'a11y');
+    const files = readdirSync(dir);
+    expect(files.length).toBeGreaterThan(0);
+    for (const f of files) {
+      expect(f).toMatch(/\.a11y\.test\.tsx$/);
+      expect(read(resolve(dir, f)), f).toMatch(/axe\.run\(/);
+    }
+  });
 });

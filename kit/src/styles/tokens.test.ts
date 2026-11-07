@@ -58,6 +58,28 @@ describe('S4-00a · сам разбор видит токены (иначе св
   });
 });
 
+/**
+ * S4-12 (SPRINT_UXR_S4_UI_SHELL_LISTS): единственное ОБЪЯВЛЕННОЕ расхождение с v1 —
+ * токены, которые в v1 не дотягивали до WCAG AA 4.5:1 (гейт — contrast.test.ts).
+ * v1 заморожен (D-2026-UXR-V2-FOLDER-V1-FROZEN), чинить там нельзя, поэтому v2
+ * держит исправленное значение, а реестр — оба: v1 обязан по-прежнему иметь
+ * старое (правка v1 всплывёт здесь), v2 — новое. Любое другое расхождение
+ * по-прежнему валит сверку.
+ */
+const AA_V2_FIXES: Record<string, Record<string, { v1: string; v2: string }>> = {
+  ':root': { '--dng': { v1: '#c85848', v2: '#cf6c5e' } },
+  "[data-mode='light']": { '--acc': { v1: '#6b7a2a', v2: '#677528' } },
+  "[data-theme='slate']": { '--dng': { v1: '#c85848', v2: '#cc6455' } },
+  "[data-theme='lichen']": { '--dng': { v1: '#c05848', v2: '#c66758' } },
+  "[data-theme='lichen'][data-mode='light']": { '--acc': { v1: '#3a8035', v2: '#397d34' } },
+  "[data-theme='juniper']": { '--dng': { v1: '#c05040', v2: '#ca6c5f' } },
+  "[data-theme='juniper'][data-mode='light']": {
+    '--acc': { v1: '#1a8060', v2: '#197d5e' },
+    '--suc': { v1: '#289850', v2: '#217e42' },
+  },
+  "[data-theme='warm-dark']": { '--dng': { v1: '#c85848', v2: '#cc6455' } },
+};
+
 describe('S4-00a · палитры v2 = палитры v1', () => {
   for (const p of PALETTES) {
     for (const mode of MODES) {
@@ -70,7 +92,13 @@ describe('S4-00a · палитры v2 = палитры v1', () => {
         // amber-forest dark живёт в :root; остальные палитры обязаны
         // перекрыть ВСЁ ядро, иначе протечёт значение умолчания.
         const pick = (m: Record<string, string>) => Object.fromEntries(CORE.filter(k => k in m).map(k => [k, m[k]]));
-        expect(pick(b!)).toEqual(pick(a!));
+        const fixes = AA_V2_FIXES[sel] ?? {};
+        const expected = pick(a!);
+        for (const [k, f] of Object.entries(fixes)) {
+          expect(a![k], `${sel} ${k}: в v1 уже не ${f.v1} — пересмотрите реестр AA_V2_FIXES`).toBe(f.v1);
+          expected[k] = f.v2;
+        }
+        expect(pick(b!)).toEqual(expected);
         if (sel !== ':root' && sel !== "[data-mode='light']") expect(Object.keys(pick(b!)).sort()).toEqual([...CORE].sort());
       });
     }
