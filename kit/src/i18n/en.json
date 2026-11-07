@@ -222,5 +222,15 @@
   "kit.appr.journal.selfApproved": "self-approved — four-eyes rule broken",
   "kit.appr.journal.agent": "agent",
   "kit.appr.journal.empty": "Journal is empty (checked)",
-  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero."
+  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero.",
+  "kit.read.section": "Reading mode",
+  "kit.read.settings": "Reading settings",
+  "kit.read.size": "Text size",
+  "kit.read.size.s": "Small",
+  "kit.read.size.m": "Normal",
+  "kit.read.size.l": "Large",
+  "kit.read.size.xl": "Extra large",
+  "kit.read.collapseMenu": "Collapse menu while reading",
+  "kit.read.expand": "Block full screen",
+  "kit.read.rail": "Properties"
 }

@@ -222,5 +222,15 @@
   "kit.appr.journal.selfApproved": "согласовал сам — нарушение правила двух людей",
   "kit.appr.journal.agent": "агент",
   "kit.appr.journal.empty": "Журнал пуст (проверено)",
-  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль."
+  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль.",
+  "kit.read.section": "Режим чтения",
+  "kit.read.settings": "Настройки чтения",
+  "kit.read.size": "Размер текста",
+  "kit.read.size.s": "Мелкий",
+  "kit.read.size.m": "Обычный",
+  "kit.read.size.l": "Крупный",
+  "kit.read.size.xl": "Очень крупный",
+  "kit.read.collapseMenu": "Сворачивать меню при чтении",
+  "kit.read.expand": "Блок на весь экран",
+  "kit.read.rail": "Свойства"
 }

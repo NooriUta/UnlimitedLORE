@@ -45,3 +45,6 @@ export * from './palette';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
 // Вид «Дерево / книга» — третий в list.views (K-09).
 export * from './views/tree';
+// Режим чтения: колонка ~680 px, широкие блоки с ⤢, Aa, ушко правой колонки,
+// меню по настройке (SPRINT_UXR_S5_RECORD_TASKS/S5-05).
+export * from './reading';
