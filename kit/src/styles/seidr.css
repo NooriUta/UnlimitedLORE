@@ -1919,3 +1919,46 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-appr-log__change { max-width: 320px; overflow-wrap: anywhere; color: var(--t2); }
 .sk-appr-log__pending { color: var(--wrn); }
 .sk-appr-log__bad { color: var(--dng); font-weight: 600; }
+
+/* ═══════════ burnup/burndown спринта (SPRINT_UXR_S5_RECORD_TASKS/S5-03) ═══════════
+   Свёрнут под таблицей задач: заголовок-кнопка с итогом, график — по раскрытию.
+   Высота графика фиксирована (тянется только ширина). */
+.sk-burn { display: flex; flex-direction: column; min-width: 0; border-top: 1px solid var(--bd); color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }
+.sk-burn__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.sk-burn__toggle {
+  display: inline-flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0;
+  min-height: max(var(--tap), 28px); padding: 0 var(--pad-x);
+  border: 0; background: transparent; color: var(--t2); cursor: pointer; text-align: left;
+  font-family: var(--mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em;
+}
+.sk-burn__toggle:hover { color: var(--acc); }
+.sk-burn__toggle:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-burn__chev { color: var(--t3); }
+.sk-burn__title { white-space: nowrap; }
+.sk-burn__badge { padding: 0 8px; border-radius: var(--r-pill); border: 1px solid var(--bd); text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.sk-burn__badge--dim { color: var(--t3); }
+.sk-burn__badge--acc { color: var(--acc); border-color: var(--acc); }
+.sk-burn__badge--wrn { color: var(--wrn); border-color: var(--wrn); }
+.sk-burn__badge--dng { color: var(--dng); border-color: var(--dng); }
+.sk-burn__modes { display: inline-flex; gap: 4px; }
+.sk-burn__mode {
+  min-height: max(var(--tap), 24px); min-width: var(--tap); padding: 0 10px;
+  border: 1px solid var(--bd); border-radius: var(--r-pill); background: var(--bg2); color: var(--t2);
+  font-size: var(--fs-xs); font-weight: 600; cursor: pointer;
+}
+.sk-burn__mode[aria-pressed='true'] { color: var(--acc); border-color: var(--acc); background: var(--bg1); }
+.sk-burn__mode:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-burn__panel { display: flex; flex-direction: column; gap: 4px; padding: 4px var(--pad-x) 8px; }
+.sk-burn__key { white-space: nowrap; }
+.sk-burn__legend { display: flex; flex-wrap: wrap; gap: 10px; font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); }
+.sk-burn__key--remaining, .sk-burn__key--remaining b { color: var(--acc); }
+.sk-burn__key--done, .sk-burn__key--done b { color: var(--suc); }
+.sk-burn__key--scope, .sk-burn__key--ideal { color: var(--t3); }
+.sk-burn__svg { display: block; }
+.sk-burn__line { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.sk-burn__line--remaining { stroke: var(--acc); stroke-width: 1.6; }
+.sk-burn__line--done { stroke: var(--suc); stroke-width: 1.6; }
+.sk-burn__line--scope { stroke: var(--t3); stroke-width: 1; stroke-dasharray: 4 3; }
+.sk-burn__line--ideal { stroke: var(--bd); stroke-width: 1; stroke-dasharray: 2 3; }
+.sk-burn__axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-burn__note { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
