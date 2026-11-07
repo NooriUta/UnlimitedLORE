@@ -2123,3 +2123,35 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-news__mult,
 .sk-news__gn { font-family: var(--mono); color: var(--acc); }
 .sk-news__unread { color: var(--acc); font-weight: 700; text-transform: uppercase; font-size: var(--fs-2xs); }
+
+/* S7A-03: число метрики — кнопка-фильтр ленты; свёртки по типам/событиям — чипы. */
+.sk-news__num {
+  min-width: max(var(--tap), 20px);
+  min-height: max(var(--tap), 20px);
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px dashed currentColor;
+  border-radius: var(--r-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.sk-news__num:hover { background: var(--bg2); }
+.sk-news__num:focus-visible,
+.sk-news__chip:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-news__bd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 6px; }
+.sk-news__bdi { display: inline-flex; align-items: center; gap: 4px; }
+.sk-news__chip {
+  min-height: max(var(--tap), 20px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg2);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+span.sk-news__chip { display: inline-flex; align-items: center; cursor: default; }
+.sk-news__chip[aria-pressed='true'] { border-color: var(--acc); color: var(--acc); }

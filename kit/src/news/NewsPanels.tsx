@@ -8,7 +8,8 @@ import { useKitLang } from '../i18n';
 import type { KitLang } from '../i18n';
 import { newsT, type NewsKey } from './i18n';
 import {
-  NEWS_MATRIX_COLS, axisLabel, newsGroupLabel, pairText, pctText, shortDay, signTone, signed, type NewsQuery,
+  NEWS_MATRIX_COLS, axisLabel, drillLabel, groupDrillId, metricDrill, newsGroupLabel, pairText, pctText, shortDay,
+  signTone, signed, type NewsDrillMetric, type NewsQuery,
 } from './model';
 import {
   NEWS_TASK_AXES, type NewsAxis, type NewsDelta, type NewsFilterAxis, type NewsPair, type NewsResponse,
@@ -26,6 +27,8 @@ interface PanelsProps {
 }
 
 type T = (k: NewsKey, vars?: Record<string, string | number>) => string;
+/** Обработчик клика по числу или undefined, если сузить нечем (нет примеров). */
+type Drill = (metric: string, total: number, examples: readonly string[]) => (() => void) | undefined;
 
 const FILTERABLE = new Set<string>(['type', 'project', 'component', 'sprint', 'milestone', 'author', 'kind']);
 
@@ -40,14 +43,27 @@ export function NewsPanels({ data, query, update, sections, fixed }: PanelsProps
     }
     update({ filters: next });
   };
+  /** Свёртка по типу/событию: клик ставит фильтр оси, клик по активному — снимает. */
+  const toggleFilter = (ax: NewsFilterAxis, v: string) => {
+    const next = { ...query.filters };
+    if (next[ax]?.length === 1 && next[ax]![0] === v) delete next[ax]; else next[ax] = [v];
+    update({ filters: next });
+  };
+  /** Клик по числу метрики (S7A-03): сузить ленту до элементов, из которых оно сложено. */
+  const drill: Drill = (metric, total, examples) => {
+    const d = metricDrill(metric, total, examples);
+    return d ? () => update({ els: d.els, drill: d.drill }) : undefined;
+  };
   return (
     <>
-      {sections.includes('metrics') && <Metrics data={data} t={t} lang={lang} />}
+      {sections.includes('metrics') && (
+        <Metrics data={data} t={t} lang={lang} query={query} fixed={fixed} onToggle={toggleFilter} drill={drill} />
+      )}
       {sections.includes('groups') && <Groups data={data} t={t} lang={lang} onFilter={applyFilter} />}
       {sections.includes('matrix') && data.matrix && (
         <Matrix data={data} t={t} lang={lang} cols={query.matrix} onCols={n => update({ matrix: n })} onFilter={applyFilter} />
       )}
-      {sections.includes('burn') && <Burn data={data} t={t} lang={lang} axis={query.group} onFilter={applyFilter} />}
+      {sections.includes('burn') && <Burn data={data} t={t} lang={lang} axis={query.group} onFilter={applyFilter} drill={drill} />}
       {sections.includes('knowledge') && <Knowledge data={data} t={t} />}
     </>
   );
@@ -60,12 +76,32 @@ function SigmaUnion({ sum, total, t }: { sum: NewsPair; total: NewsPair; t: T })
   return <span className="sk-news__su" title={t('sigmaUnion.hint')} data-testid="news-sigma-ne-union">{t('sigmaUnion')}</span>;
 }
 
-function Delta({ d, t, lang }: { d?: NewsDelta; t: T; lang: KitLang }) {
+/**
+ * Дельта к прошлому такому же периоду P⁻ (§7.5): знак, процент (только когда
+ * сервер его прислал — при f(P⁻) ≥ 5) и в подсказке — границы P⁻ и «было».
+ */
+function Delta({ d, t, lang, prev }: { d?: NewsDelta; t: T; lang: KitLang; prev?: { from: string; to: string } }) {
   if (!d) return null;
+  const title = prev
+    ? t('delta.prevRange', { from: prev.from.slice(0, 10), to: prev.to.slice(0, 10), prev: d.previous })
+    : t('delta.prev');
   return (
-    <span className="sk-news__delta" title={t('delta.prev')} data-tone={signTone(d.delta)}>
+    <span className="sk-news__delta" title={title} data-tone={signTone(d.delta)} data-testid="news-delta">
       {signed(d.delta)}{d.pct !== null ? ` · ${pctText(d.pct, lang)}` : ''}
     </span>
+  );
+}
+
+/** Число-кнопка: клик сужает ленту (S7A-03). Без обработчика — просто число. */
+function Num({ value, label, onClick, testId, t }: {
+  value: ReactNode; label: string; onClick?: () => void; testId?: string; t: T;
+}) {
+  if (!onClick) return <>{value}</>;
+  return (
+    <button type="button" className="sk-news__num" data-testid={testId} onClick={onClick}
+      aria-label={t('drill.open', { metric: label, n: String(value) })} title={t('drill.hint')}>
+      {value}
+    </button>
   );
 }
 
@@ -103,36 +139,46 @@ function Panel({ id, title, children, extra }: { id: string; title: string; chil
 
 // ── метрики периода ──
 
-function Metrics({ data, t, lang }: { data: NewsResponse; t: T; lang: KitLang }) {
+function Metrics({ data, t, lang, query, fixed, onToggle, drill }: {
+  data: NewsResponse; t: T; lang: KitLang; query: NewsQuery; fixed: Set<string>;
+  onToggle: (ax: NewsFilterAxis, v: string) => void; drill: Drill;
+}) {
   const m = data.metrics;
   const d = m.delta;
+  const prev = d.previous;
   const tasks = m.tasks;
+  const dl = (k: NewsDelta | undefined) => <Delta d={k} t={t} lang={lang} prev={prev} />;
+  const num = (metric: NewsDrillMetric, value: number, examples: readonly string[], shown: ReactNode = value) => (
+    <Num value={shown} label={drillLabel(metric, lang)} onClick={drill(metric, value, examples)} t={t} />
+  );
   return (
     <Panel id="news-metrics" title={t('metrics')}>
       <div className="sk-news__kpis">
-        <Kpi id="events" label={t('kpi.events')} value={pairText(m.counts.total)}><Delta d={d.events} t={t} lang={lang} /></Kpi>
+        <Kpi id="events" label={t('kpi.events')} value={pairText(m.counts.total)}>{dl(d.events)}{dl(d.elements)}</Kpi>
         {tasks.available ? (
           <>
             <Kpi id="burn" label={t('kpi.burn')} value={signed(tasks.all.burn)} tone={signTone(tasks.all.burn)}>
-              <Delta d={d.burn} t={t} lang={lang} />
+              {dl(d.burn)}
             </Kpi>
             <Kpi id="burn-dict" label={t('kpi.burnDict')} value={signed(tasks.all.burn_dict)} />
             <Kpi id="ship-correction" label={t('kpi.shipCorrection')} value={signed(tasks.all.ship_correction)} />
-            <Kpi id="waiting" label={t('kpi.waiting')} value={`${tasks.all.waiting_t0} → ${tasks.all.waiting_t1}`} tone="wrn">
-              <Delta d={d.waiting_t1} t={t} lang={lang} />
+            <Kpi id="waiting" label={t('kpi.waiting')} tone="wrn"
+              value={<>{`${tasks.all.waiting_t0} → `}{num('waiting', tasks.all.waiting_t1, tasks.all.examples.waiting)}</>}>
+              {dl(d.waiting_t1)}
             </Kpi>
             <Kpi id="ship-unknown" label={t('kpi.shipUnknown')} value={tasks.all.ship_unknown} tone="wrn" />
-            <Kpi id="shipped" label={t('kpi.shipped')} value={tasks.all.shipped}>
-              <Delta d={d.shipped} t={t} lang={lang} />
+            <Kpi id="shipped" label={t('kpi.shipped')} value={num('shipped', tasks.all.shipped, tasks.all.examples.shipped)}>
+              {dl(d.shipped)}
             </Kpi>
+            <Kpi id="closed" label={t('kpi.closed')} value={num('closed', tasks.all.closed, tasks.all.examples.closed)} />
             <Kpi id="median" label={t('kpi.median')} value={tasks.wait_median_days ?? '—'} />
             <Kpi id="react" label={t('kpi.react')}
-              value={`${tasks.all.react.events} · ${tasks.all.react.elements}${tasks.all.react.rate !== null
-                ? ` · ${pctText(Math.round(tasks.all.react.rate * 1000) / 10, lang)}` : ''}`}>
-              <Delta d={d.react_events} t={t} lang={lang} />
+              value={<>{`${tasks.all.react.events} · `}{num('react', tasks.all.react.elements, tasks.all.react.examples)}{
+                tasks.all.react.rate !== null ? ` · ${pctText(Math.round(tasks.all.react.rate * 1000) / 10, lang)}` : ''}</>}>
+              {dl(d.react_events)}
             </Kpi>
             <Kpi id="added" label={t('kpi.added')}
-              value={`${tasks.all.added} = ${tasks.all.added_new} + ${tasks.all.added_react}`} />
+              value={<>{num('added', tasks.all.added, tasks.all.examples.added)}{` = ${tasks.all.added_new} + ${tasks.all.added_react}`}</>} />
           </>
         ) : (
           <Unmeasurable id="burn" label={t('kpi.burn')} u={tasks} t={t} />
@@ -141,7 +187,43 @@ function Metrics({ data, t, lang }: { data: NewsResponse; t: T; lang: KitLang })
           ? <Kpi id="agents" label={t('kpi.agents')} value={`${m.agents.events.events} / ${m.agents.events.elements}`} />
           : <Unmeasurable id="agents" label={t('kpi.agents')} u={m.agents} t={t} />}
       </div>
+      <Breakdown axis="type" pairs={m.counts.by_type} deltas={d.by_type} prev={prev}
+        query={query} fixed={fixed} onToggle={onToggle} t={t} lang={lang} />
+      <Breakdown axis="kind" pairs={m.counts.by_kind} query={query} fixed={fixed} onToggle={onToggle} t={t} lang={lang} />
     </Panel>
+  );
+}
+
+/**
+ * Свёртка периода по типу записи или событию: пара из counts.by_*, дельта —
+ * из delta.by_type (по событиям сервер дельту не шлёт — и мы не рисуем).
+ * Клик по свёртке — фильтр ленты по этой оси.
+ */
+function Breakdown({ axis, pairs, deltas, prev, query, fixed, onToggle, t, lang }: {
+  axis: 'type' | 'kind'; pairs: Record<string, NewsPair>; deltas?: Record<string, NewsDelta>;
+  prev?: { from: string; to: string }; query: NewsQuery; fixed: Set<string>;
+  onToggle: (ax: NewsFilterAxis, v: string) => void; t: T; lang: KitLang;
+}) {
+  const keys = Object.keys(pairs);
+  if (!keys.length) return null;
+  const canFilter = !fixed.has(axis);
+  return (
+    <div className="sk-news__bd" role="group" aria-label={t(axis === 'type' ? 'breakdown.type' : 'breakdown.kind')}
+      data-testid={`news-breakdown-${axis}`}>
+      <span className="sk-list__label">{t(axis === 'type' ? 'breakdown.type' : 'breakdown.kind')}</span>
+      {keys.map(k => {
+        const label = `${newsGroupLabel(axis, k, lang)} · ${pairText(pairs[k])}`;
+        const on = query.filters[axis]?.length === 1 && query.filters[axis]![0] === k;
+        return (
+          <span key={k} className="sk-news__bdi" data-testid={`news-bd-${axis}-${k}`}>
+            {canFilter
+              ? <button type="button" className="sk-news__chip" aria-pressed={on} onClick={() => onToggle(axis, k)}>{label}</button>
+              : <span className="sk-news__chip">{label}</span>}
+            {deltas?.[k] && <Delta d={deltas[k]} t={t} lang={lang} prev={prev} />}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -296,8 +378,9 @@ function Matrix({ data, t, lang, cols, onCols, onFilter }: {
 
 // ── сгорание задач спринтов ──
 
-function Burn({ data, t, lang, axis, onFilter }: {
+function Burn({ data, t, lang, axis, onFilter, drill }: {
   data: NewsResponse; t: T; lang: KitLang; axis: NewsAxis; onFilter: (f: Partial<Record<NewsAxis, string>>) => void;
+  drill: Drill;
 }) {
   const tasks = data.metrics.tasks;
   const available = tasks.available ? NEWS_TASK_AXES.filter(a => tasks.by_axis[a]) : [];
@@ -349,8 +432,16 @@ function Burn({ data, t, lang, axis, onFilter }: {
                     {num(g.total.burn)}
                     {num(g.own.burn)}
                     {num(g.shared.burn)}
-                    <td className="is-num" data-tone="wrn">{g.total.waiting_t1}</td>
-                    <td className="is-num">{g.total.shipped}</td>
+                    <td className="is-num" data-tone="wrn">
+                      <Num value={g.total.waiting_t1} t={t} testId="news-burn-drill-waiting"
+                        label={drillLabel(groupDrillId('waiting', cur, g.key), lang)}
+                        onClick={drill(groupDrillId('waiting', cur, g.key), g.total.waiting_t1, g.total.examples.waiting)} />
+                    </td>
+                    <td className="is-num">
+                      <Num value={g.total.shipped} t={t} testId="news-burn-drill-shipped"
+                        label={drillLabel(groupDrillId('shipped', cur, g.key), lang)}
+                        onClick={drill(groupDrillId('shipped', cur, g.key), g.total.shipped, g.total.examples.shipped)} />
+                    </td>
                     {num(g.total.ship_correction, 't2')}
                   </tr>
                 ))}

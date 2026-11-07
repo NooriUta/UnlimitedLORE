@@ -17,7 +17,7 @@ import { useLoadState } from '../states/useLoadState';
 import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
 import { newsT, type NewsKey } from './i18n';
 import {
-  DEFAULT_NEWS_QUERY, NEWS_KIND_META, NEWS_TYPE_META, axisLabel, buildNewsParams, eventAxisValues, kindLabel,
+  DEFAULT_NEWS_QUERY, NEWS_KIND_META, NEWS_TYPE_META, axisLabel, buildNewsParams, drillLabel, eventAxisValues, kindLabel,
   newsGroupLabel, newsHref, parseNewsResponse, readNewsQuery, shortDay, shortProject, typeLabel, utcClock,
   writeNewsQuery, type NewsPeriod, type NewsQuery, type NewsScope, type NewsZone,
 } from './model';
@@ -209,7 +209,13 @@ function Controls({ query: q, update, data, lang, fixed }: ControlsProps) {
     const vs = q.filters[ax];
     if (vs?.length) descParts.push(`${axisLabel(ax, lang)}: ${vs.map(v => newsGroupLabel(ax, v, lang)).join(' | ')}`);
   }
-  if (q.els.length) descParts.push(q.els.join(' | '));
+  // Клик по числу метрики (S7A-03): подпись называет метрику, а не сырые ключи.
+  if (q.els.length) {
+    descParts.push(q.drill
+      ? t('drill.desc', { metric: drillLabel(q.drill.metric, lang), shown: q.els.length, total: q.drill.total })
+      : q.els.join(' | '));
+  }
+  const drillPartial = q.drill && q.els.length && q.els.length < q.drill.total ? q.drill : null;
   const hasFilter = descParts.length > 0;
   const axisOpt = (a: NewsAxis) => (a === 'author' && authorPending ? `${axisLabel(a, lang)} (${t('axis.author.pending')})` : axisLabel(a, lang));
 
@@ -264,8 +270,13 @@ function Controls({ query: q, update, data, lang, fixed }: ControlsProps) {
           {`${t('desc.group')}: ${axisLabel(q.group, lang)}${q.sub ? ` → ${axisLabel(q.sub, lang)}` : ''} · `}
           {`${t('desc.order')}: ${q.order === 'asc' ? t('order.asc') : t('order.desc')}`}
         </span>
-        {hasFilter && <button type="button" className="sk-btn" onClick={() => update({ filters: {}, els: [] })}>{t('reset')}</button>}
+        {hasFilter && <button type="button" className="sk-btn" onClick={() => update({ filters: {}, els: [], drill: null })}>{t('reset')}</button>}
       </p>
+      {drillPartial && (
+        <p className="sk-news__banner" data-tone="wrn" data-testid="news-drill-partial">
+          {t('drill.partial', { shown: q.els.length, total: drillPartial.total })}
+        </p>
+      )}
     </div>
   );
 }

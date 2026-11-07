@@ -23,11 +23,53 @@ export interface NewsQuery {
   matrix: number;
   filters: Partial<Record<NewsFilterAxis, string[]>>;
   els: string[];
+  /**
+   * Откуда взят els (S7A-03): метрика, по числу которой кликнули, и её итог.
+   * Только подпись — на сервер не уходит. Примеры к числу сервер присылает не
+   * больше 10, и «показано k из N» — сравнение двух присланных чисел.
+   */
+  drill: NewsDrill | null;
 }
 
+export interface NewsDrill { metric: string; total: number }
+
 export const DEFAULT_NEWS_QUERY: NewsQuery = {
-  period: 'week', zone: 'local', group: 'project', sub: null, order: 'desc', matrix: 6, filters: {}, els: [],
+  period: 'week', zone: 'local', group: 'project', sub: null, order: 'desc', matrix: 6, filters: {}, els: [], drill: null,
 };
+
+/**
+ * Клик по числу метрики (S7A-03): примеры элементов, приложенные сервером к
+ * числу, → фильтр els «тип:id». Нечем сузить (0 или нет примеров) — null:
+ * пустой els значит «без фильтра», то есть вся лента под видом метрики.
+ */
+export function metricDrill(
+  metric: string, total: number, examples: readonly string[], type = 'task',
+): { els: string[]; drill: NewsDrill } | null {
+  if (!total || !examples.length) return null;
+  return { els: examples.map(id => `${type}:${id}`), drill: { metric, total } };
+}
+
+function readDrill(v: string | null): NewsDrill | null {
+  const m = v ? /^(.+):(\d+)$/.exec(v) : null;
+  return m ? { metric: m[1], total: Number(m[2]) } : null;
+}
+
+/** Метрики, по числу которых можно кликнуть (S7A-03): id → подпись числа. */
+export const NEWS_DRILL_METRICS = ['shipped', 'waiting', 'added', 'closed', 'react'] as const;
+export type NewsDrillMetric = (typeof NEWS_DRILL_METRICS)[number];
+
+/** id метрики группы сгорания: «waiting@project=AIDA/X» — число одной группы. */
+export function groupDrillId(metric: NewsDrillMetric, axis: string, key: string): string {
+  return `${metric}@${axis}=${key}`;
+}
+
+/** Подпись метрики разворота для строки фильтра: «Доехало S» или «Ждёт выкатки Y · X». */
+export function drillLabel(metric: string, lang: KitLang): string {
+  const m = /^(\w+)(?:@(\w+)=(.+))?$/.exec(metric);
+  const base = m?.[1] ?? metric;
+  const label = (NEWS_DRILL_METRICS as readonly string[]).includes(base) ? newsT(lang, `kpi.${base}` as NewsKey) : base;
+  return m?.[2] && m[3] ? `${label} · ${newsGroupLabel(m[2], m[3], lang)}` : label;
+}
 
 /**
  * Фиксированный разрез ленты (вкладка «Активность» паспорта, S7A-06). У
@@ -79,6 +121,7 @@ export function writeNewsQuery(q: NewsQuery, prefix: string): Record<string, str
     [`${prefix}m`]: q.matrix === d.matrix ? null : String(q.matrix),
     [`${prefix}f`]: f || null,
     [`${prefix}e`]: q.els.length ? q.els.join('|') : null,
+    [`${prefix}d`]: q.drill && q.els.length ? `${q.drill.metric}:${q.drill.total}` : null,
   };
 }
 
@@ -89,6 +132,7 @@ export function readNewsQuery(sp: URLSearchParams, prefix: string): NewsQuery {
   const zone = g('z');
   const order = g('o');
   const m = Number(g('m'));
+  const els = (g('e') ?? '').split('|').filter(Boolean);
   const filters: NewsQuery['filters'] = {};
   for (const part of (g('f') ?? '').split(';')) {
     const i = part.indexOf(':');
@@ -105,7 +149,9 @@ export function readNewsQuery(sp: URLSearchParams, prefix: string): NewsQuery {
     order: order === 'asc' || order === 'desc' ? order : d.order,
     matrix: Number.isInteger(m) && m > 0 ? m : d.matrix,
     filters,
-    els: (g('e') ?? '').split('|').filter(Boolean),
+    els,
+    // Подпись метрики без самого els не восстанавливаем: она врала бы о фильтре.
+    drill: els.length ? readDrill(g('d')) : null,
   };
 }
 
