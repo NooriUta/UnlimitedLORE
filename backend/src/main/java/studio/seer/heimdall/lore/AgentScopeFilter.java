@@ -73,7 +73,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     // выдать себе (своему владельцу) любую роль в любом проекте.
     // "project" (AL-84/ADR-LORE-025-D17) переехал в FAMILY_AGENTS ниже, поправка
     // 2026-08-11 (решение владельца) — см. комментарий там.
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user");
+    // "news" (SPRINT_UXR_S7A_NEWS/S7A-04): единственная запись семейства — PUT
+    // /lore/news/v2/read-mark, общая черта «прочитано». По §8 спеки новостей она
+    // «сдвигается только действием пользователя»; агент, двигающий общую черту,
+    // прятал бы владелице непрочитанное.
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "news");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
