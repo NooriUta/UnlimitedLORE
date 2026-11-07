@@ -2,3 +2,4 @@
 export * from './Sheet';
 export * from './Tabs';
 export * from './Ear';
+export * from './KitShell';

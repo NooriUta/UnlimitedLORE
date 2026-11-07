@@ -50,5 +50,20 @@
   "kit.md.mentionEmpty": "nothing found — actors are created in the “Client” section",
   "kit.storage.unavailable": "Storage unavailable — your marks will not be saved",
   "kit.error.title": "Something went wrong",
-  "kit.error.retry": "Retry"
+  "kit.error.retry": "Retry",
+  "kit.shell.modules": "Modules",
+  "kit.shell.sections": "Sections",
+  "kit.shell.menu": "Menu",
+  "kit.shell.skip": "Skip to content",
+  "kit.shell.planned": "soon",
+  "kit.shell.plannedHint": "Module is planned — not available yet",
+  "kit.shell.menuEmpty": "The config has no menu groups",
+  "kit.shell.myViews": "My views",
+  "kit.shell.myViewsEmpty": "No views yet — save the current one",
+  "kit.shell.saveView": "Save view",
+  "kit.shell.viewTitle": "{item} · view {n}",
+  "kit.shell.removeView": "Remove view “{title}”",
+  "kit.shell.recent": "Recent",
+  "kit.shell.recentEmpty": "Nothing yet — open a record",
+  "kit.shell.recentMissing": "not in the export"
 }
