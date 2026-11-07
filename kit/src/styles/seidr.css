@@ -1312,6 +1312,72 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-radius: var(--r-md);
 }
 
+/* ---------- MdInlineEdit: правка MD на месте (S5-06) ----------
+   Чтение — sk-prose; правка — только кнопкой ✎ (≥ --tap), внутри
+   переключатель «код / превью / рядом» и кнопки ≥ --tap. */
+.sk-mdedit { position: relative; min-width: 0; }
+.sk-mdedit[data-state="read"] { padding-right: calc(max(var(--tap), 24px) + 4px); }
+.sk-mdedit__pen { position: absolute; top: 0; right: 0; }
+.sk-mdedit__empty { margin: 0; color: var(--t3); font-size: var(--fs-sm); font-style: italic; }
+.sk-mdedit.is-editing { display: flex; flex-direction: column; gap: 6px; }
+.sk-mdedit__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.sk-mdedit__modes {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+}
+.sk-mdedit__mode {
+  min-height: max(var(--tap), 24px);
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-mdedit__mode:hover { color: var(--t1); }
+.sk-mdedit__mode.is-on {
+  color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 18%, transparent);
+  border-color: color-mix(in srgb, var(--acc) 35%, transparent);
+}
+.sk-mdedit__mode[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.sk-mdedit__mode:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-mdedit__actions { display: inline-flex; gap: 6px; }
+.sk-btn--primary { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 22%, var(--bg2)); color: var(--t1); }
+.sk-btn:disabled { opacity: .55; cursor: default; }
+.sk-mdedit__note { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+.sk-mdedit__err {
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--dng) 45%, transparent);
+  border-radius: var(--r-sm);
+  color: var(--dng);
+  font-size: var(--fs-xs);
+}
+.sk-mdedit__source {
+  min-height: 160px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-sm);
+}
+.sk-mdedit__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
+.sk-mdedit__live {
+  min-height: 160px;
+  padding: 7px 9px;
+  overflow: auto;
+  border: 1px dashed var(--bd);
+  border-radius: var(--r-sm);
+  background: var(--bg1);
+}
+@media (max-width: 720px) {
+  .sk-mdedit__split { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ---------- SandboxedHtmlFrame: HTML только в песочнице ---------- */
 .sk-frame {
   display: block;

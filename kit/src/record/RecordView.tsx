@@ -8,7 +8,8 @@
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
 import { useId } from 'react';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
 import { Tabs, type TabItem } from '../shell/Tabs';
 import { EmptyState } from '../states/StateViews';
@@ -22,6 +23,17 @@ import { RecordRef, renderOut, valueText } from './fmt';
 
 export const RECORD_TABS = { overview: 'overview', links: 'links', graph: 'graph', journal: 'journal' } as const;
 
+/**
+ * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
+ * или совместимый. Пропом, а не импортом: главная точка входа kit не тянет
+ * TipTap экранам, где правки нет.
+ */
+export interface MdEditorSlotProps {
+  value: string;
+  label: string;
+  onSave?: (markdown: string) => Promise<void> | void;
+}
+
 export interface RecordViewProps {
   record: KitRecord;
   ctx: KitCtx;
@@ -29,9 +41,30 @@ export interface RecordViewProps {
   tab: string;
   onTab: (tab: string) => void;
   className?: string;
+  /**
+   * Правка MD на месте (S5-06). Кнопка ✎ появляется у тела и md-полей, только
+   * если есть куда сохранять (config.hooks.onSave) и роль может править
+   * (roles[role].canEdit; без roles — может). Иначе — чтение как прежде.
+   */
+  mdEditor?: ComponentType<MdEditorSlotProps>;
 }
 
-function FieldValue({ type, value, ctx }: { type: string; value: unknown; ctx: KitCtx }): ReactNode {
+/** Сохранение поля записи через hooks.onSave; undefined — правки нет. */
+type FieldSaver = ((field: string, from: unknown) => (to: string) => Promise<void>) | undefined;
+
+function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
+  const onSave = ctx.config.hooks?.onSave;
+  if (!onSave || !rolePerms(ctx.config, ctx.role).canEdit) return undefined;
+  return (field, from) => to => onSave({ type: record.kind, id: record.id, field, from, to });
+}
+
+interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver> }
+
+function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string }): ReactNode {
+  if (type === 'md' && edit && fieldKey) {
+    const text = value === null || value === undefined ? '' : valueText(value);
+    return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} />;
+  }
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
   if (type === 'ref') {
@@ -43,7 +76,7 @@ function FieldValue({ type, value, ctx }: { type: string; value: unknown; ctx: K
   return <span>{valueText(value)}</span>;
 }
 
-function Fields({ record, kind, ctx, lang }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang }) {
+function Fields({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang; edit?: EditSlot }) {
   const fields = kind.fields ?? [];
   if (fields.length === 0) return null;
   return (
@@ -52,7 +85,7 @@ function Fields({ record, kind, ctx, lang }: { record: KitRecord; kind: KindConf
         {fields.map(f => (
           <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
             <dt>{f.title}</dt>
-            <dd><FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} /></dd>
+            <dd><FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} /></dd>
           </div>
         ))}
       </dl>
@@ -60,8 +93,13 @@ function Fields({ record, kind, ctx, lang }: { record: KitRecord; kind: KindConf
   );
 }
 
-function Overview({ record, kind, ctx, lang }: { record: KitRecord; kind: KindConfig | undefined; ctx: KitCtx; lang: KitLang }) {
+function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: KindConfig | undefined; ctx: KitCtx; lang: KitLang; edit?: EditSlot }) {
   if (kind?.overview) return <>{renderOut(kind.overview(record, ctx), ctx)}</>;
+  // Тело с правом на правку: тот же рендер чтения + ✎; пустое — «Текста нет»
+  // и ✎, а не тупик без способа написать.
+  if (edit) {
+    return <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} />;
+  }
   if (record.body_md?.trim()) return <>{ctx.md(record.body_md)}</>;
   return <EmptyState compact title={kitT(lang, 'kit.record.body.empty')} hint={kitT(lang, 'kit.record.body.emptyHint')} />;
 }
@@ -71,8 +109,10 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, mdEditor }: RecordViewProps) {
   const lang = useKitLang();
+  const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
+  const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver } : undefined;
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
   const kindTabs = kind?.tabs ?? [];
@@ -92,11 +132,11 @@ export function RecordView({ record, ctx, tab, onTab, className }: RecordViewPro
     panel = (
       <div className="sk-rec-overview">
         <BlockBoundary block="overview" label={kitT(lang, 'kit.record.tab.overview')} lang={lang} resetKey={reset}>
-          <Overview record={record} kind={kind} ctx={ctx} lang={lang} />
+          <Overview record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
         </BlockBoundary>
         {kind && (
           <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
-            <Fields record={record} kind={kind} ctx={ctx} lang={lang} />
+            <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
           </BlockBoundary>
         )}
       </div>

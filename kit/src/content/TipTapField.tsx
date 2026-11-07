@@ -11,14 +11,10 @@
 // упоминания по «@», изменение размера картинки, внешнее значение применяется,
 // когда разошлось с содержимым и поле не в фокусе.
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import { TableKit } from '@tiptap/extension-table';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 import Mention from '@tiptap/extension-mention';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
-import { Markdown } from 'tiptap-markdown';
+import { getMarkdown, mdExtensions, MdImage } from './tiptapMd';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
@@ -32,8 +28,6 @@ export interface MentionItem {
   label: string;
 }
 
-const TABLE_EXTENSIONS = [TableKit.configure({ table: { resizable: false } })];
-const TASKLIST_EXTENSIONS = [TaskList, TaskItem.configure({ nested: true })];
 
 interface MentionState {
   items: MentionItem[];
@@ -145,17 +139,12 @@ function ResizableImageView({ node, updateAttributes, selected, editor }: NodeVi
   );
 }
 
+// Строчная, как MdImage (tiptapMd.ts): `![a](u)` остаётся внутри абзаца.
 const ResizableImage = Image.extend({
   addNodeView() {
     return ReactNodeViewRenderer(ResizableImageView);
   },
-});
-
-// tiptap-markdown@0.9 не объявляет тип storage для TipTap v3 — узкий каст в одном месте.
-function getMarkdown(editor: Editor): string {
-  const storage = editor.storage as unknown as { markdown?: { getMarkdown: () => string } };
-  return storage.markdown?.getMarkdown() ?? editor.getText();
-}
+}).configure({ inline: true });
 
 /** Файлы-картинки из drop/paste: items (скриншот из буфера) и files, без дублей и не-картинок. */
 export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
@@ -217,13 +206,13 @@ export function TipTapField({
   const [draft, setDraft] = useState(value);
 
   const editor = useEditor({
+    // Набор — общий с проверкой круга (tiptapMd.ts, S5-07): поле сохраняет
+    // ровно то, что проверено «Markdown → TipTap → Markdown без потерь».
+    // Без загрузчика картинка всё равно есть узлом (без кнопки вставки):
+    // уже вставленная не выпадает из текста при сохранении.
     extensions: [
-      StarterKit,
-      ...(enableImages ? [ResizableImage] : []),
-      ...TABLE_EXTENSIONS,
-      ...TASKLIST_EXTENSIONS,
+      ...mdExtensions(enableImages ? ResizableImage : MdImage),
       ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : []),
-      Markdown.configure({ html: false, tightLists: true }),
     ],
     content: value,
     editable,

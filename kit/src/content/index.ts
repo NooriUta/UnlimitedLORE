@@ -7,3 +7,6 @@ export * from './sandboxFrameTheme';
 export * from './SandboxedHtmlFrame';
 export * from './MartProse';
 export * from './TipTapField';
+// S5-06/S5-07: правка на месте и круг «Markdown → TipTap → Markdown».
+export * from './tiptapMd';
+export * from './MdInlineEdit';

@@ -123,6 +123,7 @@
   "kit.record.verdict.ok": "All checks passed",
   "kit.record.blockError": "Block “{block}” failed to render",
   "kit.record.blockError.hint": "Only this block is broken — the rest of the record works.",
+  "kit.record.body": "Text",
   "kit.record.body.empty": "No text",
   "kit.record.body.emptyHint": "The record has no body — a verified zero, not a failure.",
   "kit.record.fields": "Fields",
@@ -222,5 +223,19 @@
   "kit.appr.journal.selfApproved": "self-approved — four-eyes rule broken",
   "kit.appr.journal.agent": "agent",
   "kit.appr.journal.empty": "Journal is empty (checked)",
-  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero."
+  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero.",
+  "kit.mdedit.edit": "Edit “{field}”",
+  "kit.mdedit.editing": "Editing “{field}”",
+  "kit.mdedit.empty": "No text",
+  "kit.mdedit.modes": "Edit view",
+  "kit.mdedit.mode.code": "Code",
+  "kit.mdedit.mode.preview": "Preview",
+  "kit.mdedit.mode.split": "Side by side",
+  "kit.mdedit.source": "markdown source",
+  "kit.mdedit.live": "Live render",
+  "kit.mdedit.save": "Save",
+  "kit.mdedit.saving": "Saving…",
+  "kit.mdedit.cancel": "Cancel",
+  "kit.mdedit.saveFailed": "Not saved: {reason}. Your draft is kept.",
+  "kit.mdedit.lossy": "Preview would distort this text (raw HTML or non-markdown construct) — editing in code only."
 }
