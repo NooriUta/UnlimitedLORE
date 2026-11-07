@@ -65,6 +65,7 @@
   "shell.sec.news": "Новости",
   "shell.sec.settings": "Настройки",
   "shell.unbuilt.hint": "Раздел «{section}» переносится в v2 своей задачей. До тех пор он работает в прежнем LORE — переключатель в разделе «Настройки».",
+  "shell.settings.hint": "Тема, текст, плотность и что LORE помнит — в меню аватара справа в шапке.",
   "status.backlog": "Бэклог",
   "status.todo": "К работе",
   "status.planned": "Запланирован",

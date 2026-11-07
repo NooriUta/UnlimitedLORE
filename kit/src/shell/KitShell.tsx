@@ -69,6 +69,8 @@ export interface KitShellProps {
   narrow?: boolean;
   onNavigate?: (nav: KitNav) => void;
   onOpenRecord?: (id: string) => void;
+  /** Слот аккаунта справа в шапке — меню аватара (AvatarMenu, S4-02). */
+  account?: ReactNode;
   children?: ReactNode;
 }
 
@@ -135,7 +137,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, children,
+  onNavigate, onOpenRecord, account, children,
 }: KitShellProps) {
   const lang = useKitLang();
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
@@ -285,6 +287,7 @@ export function KitShell({
               );
             })}
           </nav>
+          {account && <div className="sk-shell__account">{account}</div>}
         </header>
         <div className="sk-shell__body">
           {!narrow && <div className="sk-shell__side">{menu()}</div>}

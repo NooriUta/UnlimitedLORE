@@ -8,3 +8,4 @@ export * from './statusMeta';
 export * from './Kbd';
 export * from './Tooltip';
 export * from './Toolbar';
+export * from './Segmented';

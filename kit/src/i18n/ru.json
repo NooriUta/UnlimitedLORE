@@ -224,5 +224,9 @@
   "kit.appr.journal.selfApproved": "согласовал сам — нарушение правила двух людей",
   "kit.appr.journal.agent": "агент",
   "kit.appr.journal.empty": "Журнал пуст (проверено)",
-  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль."
+  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль.",
+  "kit.avatar.title": "Личные настройки",
+  "kit.avatar.open": "{name} — личные настройки",
+  "kit.avatar.openAnon": "Пользователь не опознан — личные настройки",
+  "kit.avatar.anon": "Пользователь не опознан"
 }

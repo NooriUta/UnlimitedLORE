@@ -117,6 +117,30 @@
 }
 
 /* ---------- плотность: просторная ---------- */
+/* ---------- размер текста (личная настройка S4-02, text_size) ----------
+   Шкала сдвигается целиком, ступени сохраняют порядок; md — :root выше.
+   --fs-touch-input не трогаем: это порог iOS, а не вкус пользователя. */
+[data-text-size='sm'] {
+  --fs-2xs:  8px;
+  --fs-xs:   9px;
+  --fs-sm:   10px;
+  --fs-base: 11px;
+  --fs-md:   12px;
+  --fs-lg:   13px;
+  --fs-xl:   18px;
+  --fs-2xl:  22px;
+}
+[data-text-size='lg'] {
+  --fs-2xs:  10px;
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-md:   15px;
+  --fs-lg:   16px;
+  --fs-xl:   22px;
+  --fs-2xl:  26px;
+}
+
 [data-density='comfortable'] {
   --row-h: 32px;
   --pad-x: 12px;
@@ -1034,6 +1058,94 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline: 2px solid var(--acc);
   outline-offset: -2px;
 }
+.sk-shell__account { display: flex; align-items: center; margin-left: auto; padding-left: 4px; flex-shrink: 0; }
+
+/* ---------- AvatarMenu (S4-02): аватар в шапке и лист личного ---------- */
+.sk-avatar {
+  display: inline-grid;
+  place-items: center;
+  min-width: max(var(--tap), 32px);
+  min-height: max(var(--tap), 32px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  cursor: pointer;
+}
+.sk-avatar__face {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--acc);
+  color: var(--bg0);
+  box-shadow: 0 0 0 1px var(--bd);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.sk-avatar__face--big { width: 40px; height: 40px; font-size: var(--fs-sm); }
+.sk-avatar:hover .sk-avatar__face { box-shadow: 0 0 0 2px var(--acc); }
+.sk-avatar:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-avatar__initials { line-height: 1; }
+.sk-avatar-sheet .sk-sheet__body { display: flex; flex-direction: column; gap: 2px; }
+.sk-avatar__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-avatar__who-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-avatar__name { color: var(--t1); font-size: var(--fs-md); }
+.sk-avatar__sub { color: var(--t2); font-size: var(--fs-2xs); }
+
+/* ---------- Segmented и SettingRow (S4-02): строки личных настроек ---------- */
+.sk-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: var(--fs-xs);
+}
+.sk-setting__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-setting__label { color: var(--t1); }
+.sk-setting__hint { color: var(--t2); font-size: var(--fs-2xs); }
+.sk-setting__ctl { flex-shrink: 0; }
+.sk-seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+}
+.sk-seg__btn {
+  min-height: max(var(--tap), 24px);
+  min-width: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sk-seg__btn:hover { color: var(--t1); }
+.sk-seg__btn.is-on { background: color-mix(in srgb, var(--acc) 22%, transparent); color: var(--t1); box-shadow: inset 0 -2px 0 var(--acc); }
+.sk-seg__btn:disabled { opacity: .55; cursor: progress; }
+.sk-seg__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+@media (max-width: 720px) {
+  .sk-setting { flex-wrap: wrap; }
+  .sk-setting__ctl { width: 100%; }
+}
 .sk-shell__body {
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
@@ -1619,6 +1731,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   background: var(--bg1);
 }
 .sk-board__col.is-unknown { border-style: dashed; }
+/* Цветные полоски выключены (личная настройка S4-02, stripes): кромка — как рамка. */
+[data-stripes='off'] .sk-board__col { border-top: 1px solid var(--bd); }
 .sk-board__head {
   display: flex;
   align-items: center;

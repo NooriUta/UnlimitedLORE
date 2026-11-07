@@ -9,19 +9,26 @@
 import { useMemo, type ComponentType, type ReactNode } from 'react';
 import { KitShell, NotBuilt, useKitLang, useKitShell, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
-import { PersonalSettings } from '../settings/PersonalSettings';
+import { switchNavUrl } from '../nav/navVersion';
+import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
 const SCREENS: Partial<Record<V2Section, ComponentType>> = {
-  // Личные настройки (S3-07) и ссылка на витрину kit (S4-00d) — раньше жили
-  // на заглушке корня, с S4-01 — раздел «Настройки».
-  settings: () => (
-    <>
-      <PersonalSettings />
-      <a className="shell-link" href="/kit">Seiðr-kit</a>
-    </>
-  ),
+  // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —
+  // раздел «Настройки» (S4-01). Сами личные настройки — под аватаром в шапке
+  // (S4-02, AccountMenu в слоте account): здесь на них только указатель.
+  settings: function SettingsScreen() {
+    const lang = useKitLang();
+    const targetUrl = typeof location === 'undefined' ? null : switchNavUrl(location, 'v1');
+    return (
+      <>
+        <p className="setting-hint">{appT(lang, 'shell.settings.hint')}</p>
+        <NavSwitch lang={lang} targetUrl={targetUrl} />
+        <a className="shell-link" href="/kit">Seiðr-kit</a>
+      </>
+    );
+  },
 };
 
 export interface V2ShellProps {
@@ -30,9 +37,11 @@ export interface V2ShellProps {
   narrow?: boolean;
   /** Метка после имени в шапке (версия v2). */
   brandTag?: ReactNode;
+  /** Слот аккаунта справа в шапке (меню аватара, S4-02). */
+  account?: ReactNode;
 }
 
-export function V2Shell({ storage, win, narrow, brandTag }: V2ShellProps) {
+export function V2Shell({ storage, win, narrow, brandTag, account }: V2ShellProps) {
   const lang = useKitLang();
   const config = useMemo(() => v2Config(lang), [lang]);
   return (
@@ -41,6 +50,7 @@ export function V2Shell({ storage, win, narrow, brandTag }: V2ShellProps) {
       brand={appT(lang, 'shell.brand')}
       brandIcon="compass"
       brandTag={brandTag}
+      account={account}
       storage={storage}
       storageKey="lore-v2.shell"
       win={win}

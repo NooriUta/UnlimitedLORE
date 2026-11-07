@@ -65,6 +65,7 @@
   "shell.sec.news": "News",
   "shell.sec.settings": "Settings",
   "shell.unbuilt.hint": "The “{section}” section is moving to v2 in its own task. Until then it works in the previous LORE — the switch is under “Settings”.",
+  "shell.settings.hint": "Theme, text, density and what LORE remembers live in the avatar menu at the right of the header.",
   "status.backlog": "Backlog",
   "status.todo": "To do",
   "status.planned": "Planned",
