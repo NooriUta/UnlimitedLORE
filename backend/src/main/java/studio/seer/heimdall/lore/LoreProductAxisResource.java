@@ -36,13 +36,16 @@ public class LoreProductAxisResource extends LoreResourceBase {
 
     /** Роли компонента в продукте. Пусто = owner (кто делает). */
     private static final List<String> ROLES = List.of("owner", "consumer");
+    /** WK-03 (decision:D-2026-LORE-SERVES-EDGE): как сервисный продукт служит другому. */
+    private static final List<String> SERVES_KINDS = List.of("count", "sell", "support");
 
     public record ProductLinkRequest(
         String product_code,
-        String rel,        // component | project | parent
+        String rel,        // component | project | parent | serves
         String target_id,
         String role,       // rel=component|project: owner (умолчание) | consumer — WK-02 распространил роль на проект
-        String action      // add (умолчание) | remove
+        String action,     // add (умолчание) | remove
+        String kind        // только для rel=serves: count | sell | support (WK-03)
     ) {}
 
     @POST
@@ -58,8 +61,14 @@ public class LoreProductAxisResource extends LoreResourceBase {
         final String rel = req.rel().trim().toLowerCase();
         final String action = req.action() == null || req.action().isBlank()
             ? "add" : req.action().trim().toLowerCase();
-        if (!List.of("component", "project", "parent").contains(rel))
-            return badParams("rel must be one of: component, project, parent");
+        if (!List.of("component", "project", "parent", "serves").contains(rel))
+            return badParams("rel must be one of: component, project, parent, serves");
+        // WK-03: у SERVES вид обязателен — пара продуктов может служить друг
+        // другу несколькими способами сразу (продаём И поддерживаем), поэтому
+        // уникальна тройка «откуда, куда, вид», а не пара.
+        final String kind = req.kind() == null ? null : req.kind().trim().toLowerCase();
+        if ("serves".equals(rel) && (kind == null || !SERVES_KINDS.contains(kind)))
+            return badParams("rel=serves requires kind: " + String.join(", ", SERVES_KINDS));
         if (!List.of("add", "remove").contains(action))
             return badParams("action must be add or remove");
 
@@ -71,6 +80,7 @@ public class LoreProductAxisResource extends LoreResourceBase {
         final String edgeType = switch (rel) {
             case "component" -> "IN_PRODUCT";
             case "parent"    -> "PARENT_PRODUCT";
+            case "serves"    -> "SERVES";
             default          -> "BELONGS_TO_PROJECT";
         };
         // Направление рёбер выбрано по образцу уже существующих, чтобы обход
@@ -90,6 +100,12 @@ public class LoreProductAxisResource extends LoreResourceBase {
                 fromSql = productSelect(code);
                 toSql = productSelect(target);
             }
+            case "serves" -> {
+                if (code.equals(target))
+                    return badParams("product cannot serve itself");
+                fromSql = productSelect(code);
+                toSql = productSelect(target);
+            }
             default -> {
                 fromSql = productSelect(code);
                 toSql = String.format(
@@ -106,7 +122,7 @@ public class LoreProductAxisResource extends LoreResourceBase {
                 return badParams("product '" + code + "' not found (dict_type='product')");
             final String targetSelect = "component".equals(rel)
                 ? String.format("SELECT FROM LoreComponent WHERE component_id='%s'", target)
-                : "parent".equals(rel)
+                : "parent".equals(rel) || "serves".equals(rel)
                     ? productSelect(target)
                     : String.format("SELECT FROM KnowGitProject WHERE slug='%s'", target);
             if (countOf(targetSelect) == 0)
@@ -162,7 +178,7 @@ public class LoreProductAxisResource extends LoreResourceBase {
             // DBR-17: пара читается ДО записи. Повтор той же связи раньше снимал и
             // ставил ребро заново и отвечал «added» — исход описывал выполненные
             // команды, а не произошедшее.
-            final List<Map<String, Object>> pairBefore = pairRows(edgeType, rel, code, target);
+            final List<Map<String, Object>> pairBefore = pairRows(edgeType, rel, code, target, kind);
             final Object prevRole = pairBefore.isEmpty() ? null : pairBefore.get(0).get("role");
 
             Map<String, Object> body = new java.util.LinkedHashMap<>();
@@ -177,6 +193,7 @@ public class LoreProductAxisResource extends LoreResourceBase {
                 if (same) {
                     body.put("action", "already_linked");
                     if (hasRole) body.put("role", roleValue);
+                    if (kind != null) body.put("kind", kind);
                     if ("parent".equals(rel)) body.put("previous_parent_removed", false);
                     body.put("outcome", LoreOutcome.UNCHANGED);
                     body.put("hint", "связь уже была — повторять вызов не нужно");
@@ -186,12 +203,12 @@ public class LoreProductAxisResource extends LoreResourceBase {
 
             int removed = "parent".equals(rel)
                 ? dropAllParents(code)
-                : dropEdges(edgeType, rel, code, target);
+                : dropEdges(edgeType, rel, code, target, kind);
 
             if ("remove".equals(action)) {
                 body.put("action", "removed");
                 body.put("edges_removed", removed);
-                boolean gone = pairRows(edgeType, rel, code, target).isEmpty();
+                boolean gone = pairRows(edgeType, rel, code, target, kind).isEmpty();
                 body.put("outcome", !gone ? LoreOutcome.NOOP
                     : pairBefore.isEmpty() ? LoreOutcome.UNCHANGED : LoreOutcome.DELETED);
                 if (!gone) body.put("reason", "DELETE выполнен, но ребро " + edgeType + " осталось");
@@ -200,13 +217,15 @@ public class LoreProductAxisResource extends LoreResourceBase {
             }
 
             final String set = hasRole
-                ? String.format(" SET role='%s'", roleValue) : "";
+                ? String.format(" SET role='%s'", roleValue)
+                : "serves".equals(rel) ? String.format(" SET kind='%s'", kind) : "";
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 String.format("CREATE EDGE %s FROM (%s) TO (%s)%s", edgeType, fromSql, toSql, set),
                 Map.of())).await().indefinitely();
 
             body.put("action", "added");
             if (hasRole) body.put("role", roleValue);
+            if (kind != null) body.put("kind", kind);
             // Для parent исходов ТРИ, а не два, и они обязаны быть различимы.
             // «Ничего не изменилось», «сменили родителя» и «поставили первого» —
             // разные события: смена молча переносит целое поддерево продуктов,
@@ -219,7 +238,7 @@ public class LoreProductAxisResource extends LoreResourceBase {
             } else if (replaced) {
                 body.put("previous_role", prevRole);
             }
-            if (pairRows(edgeType, rel, code, target).isEmpty()) {
+            if (pairRows(edgeType, rel, code, target, kind).isEmpty()) {
                 body.put("outcome", LoreOutcome.NOOP);
                 body.put("reason", "ребро " + edgeType + " не создано: " + code + " или " + target + " не найден(ы)");
             } else {
@@ -345,14 +364,17 @@ public class LoreProductAxisResource extends LoreResourceBase {
      * Рёбра между парой (с ролью — для IN_PRODUCT). Сбой чтения летит наверх:
      * «не смогли проверить» нельзя выдать за «связи нет» (DBR-17).
      */
-    private List<Map<String, Object>> pairRows(String edgeType, String rel, String code, String target) {
+    private List<Map<String, Object>> pairRows(String edgeType, String rel, String code, String target, String kind) {
         return ingestService.queryPublic(
             "SELECT @rid AS rid" + ("component".equals(rel) || "project".equals(rel) ? ", role" : "") + " FROM " + edgeType
-            + " WHERE " + pairWhere(rel, code, target), Map.of());
+            + " WHERE " + pairWhere(rel, code, target, kind), Map.of());
     }
 
-    private static String pairWhere(String rel, String code, String target) {
+    private static String pairWhere(String rel, String code, String target, String kind) {
         return switch (rel) {
+            case "serves" -> String.format(
+                "@out.code='%s' AND @out.dict_type='product' AND @in.code='%s' AND @in.dict_type='product' AND kind='%s'",
+                code, target, kind);
             case "component" -> String.format(
                 "@out.component_id='%s' AND @in.code='%s' AND @in.dict_type='product'", target, code);
             case "parent" -> String.format(
@@ -367,8 +389,8 @@ public class LoreProductAxisResource extends LoreResourceBase {
      * запрос ПО ТИПУ РЕБРА, а не обходом: обход отдал бы список и сравнение с
      * ним через [0] показало бы многосвязное под одним случайным значением.
      */
-    private int dropEdges(String edgeType, String rel, String code, String target) {
-        String where = pairWhere(rel, code, target);
+    private int dropEdges(String edgeType, String rel, String code, String target, String kind) {
+        String where = pairWhere(rel, code, target, kind);
         int n = 0;
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(

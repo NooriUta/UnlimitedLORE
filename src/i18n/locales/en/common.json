@@ -1060,6 +1060,10 @@
     },
     "milestonesView": {
       "reposTitle": "Product repositories:",
+      "servesTitle": "serves",
+      "servesCount": "we account for",
+      "servesSell": "we sell",
+      "servesSupport": "we support",
       "reposNone": "none linked",
       "repoOwner": "develops",
       "repoConsumer": "uses",

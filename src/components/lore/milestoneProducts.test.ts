@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, productScope, unplannedOfProduct,
-  sprintInProduct, hiddenAsPast, isStreamSprint, unplannedShare, productRepos,
+  sprintInProduct, hiddenAsPast, isStreamSprint, unplannedShare, productRepos, productServes,
   type ProductRow,
 } from './milestoneProducts';
 
@@ -129,5 +129,11 @@ describe('milestoneProducts · доделка плана', () => {
     // старый ответ бэкенда без ролей — роли неизвестны, а не «owner»
     expect(productRepos({ ...row, git_project_roles: undefined })[0]).toEqual({ slug: 'NooriUta/seidr-site', role: null });
     expect(productRepos({ ...row, git_projects: null })).toEqual([]);
+  });
+
+  it('кому продукт служит — по видам, неизвестный вид не подставляется (WK-03)', () => {
+    expect(productServes({ serves_codes: ['MIDGARD', 'AIDA', 'AIDA', 'DW', 'X'], serves_kinds: ['sell', 'sell', 'support', 'sell', 'advertise'] }))
+      .toEqual({ count: [], sell: ['AIDA', 'DW', 'MIDGARD'], support: ['AIDA'] });
+    expect(productServes({})).toEqual({ count: [], sell: [], support: [] });
   });
 });

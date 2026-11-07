@@ -145,7 +145,7 @@ public class LoreSchemaInitializer {
     }
 
     // ── Vertex types ──────────────────────────────────────────────────────────
-    private static final List<String> DDL = List.of(
+    static final List<String> DDL = List.of(
         // ArcadeDB's own base types — NOT auto-present on a freshly `create
         // database`'d instance (only discovered via C5's testcontainer run
         // against a genuinely empty DB; the shared system_aida_lore has had
@@ -330,7 +330,13 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowSprint      (sprint_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSpec        (spec_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowFinding     (finding_id)   UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowRelease     (release_id)   UNIQUE",
+        // REL-UID-01: номер версии повторяется между проектами (v1.4.1 у сайта и
+        // у монорепо) — уникален ключ «проект#версия», а голый номер — только
+        // для поиска. Прод так и живёт (16 общих номеров на 07.11.2026); здесь
+        // приводим к нему свежую установку, которая отказала бы второму проекту.
+        "CREATE PROPERTY KnowRelease.release_uid      IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowRelease     (release_id)   NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowRelease     (release_uid)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowMilestone   (milestone_id) UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowPhase       (phase_uid)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowTask        (task_uid)     UNIQUE",

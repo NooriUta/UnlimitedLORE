@@ -1393,7 +1393,15 @@ final class LoreSchemaMigrations {
         // «ок» 06.11.2026): задача → PR, который её закрыл, — РЕБРОМ, а не текстом
         // note_md. Релиз находит свои задачи через PR → SHIPPED_IN.
         new Step(61, 17, "task_closed_by", List.of(
-            "CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS"))
+            "CREATE EDGE TYPE CLOSED_BY IF NOT EXISTS")),
+
+        // SPRINT_LORE_WORK_ANY_KIND/WK-03 · decision:D-2026-LORE-SERVES-EDGE: сервисный
+        // продукт служит технологическому — считаем (count), продаём (sell),
+        // поддерживаем (support). Продукт → продукт, вид — свойство ребра; без
+        // EXTENDS E — на проде базового типа нет (см. V43).
+        new Step(62, 17, "product_serves", List.of(
+            "CREATE EDGE TYPE SERVES IF NOT EXISTS",
+            "CREATE PROPERTY SERVES.kind IF NOT EXISTS STRING"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
