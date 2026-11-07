@@ -1737,6 +1737,25 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-journal__to { color: var(--suc); text-decoration: none; }
 .sk-rec-journal__approved { color: var(--t3); font-size: var(--fs-xs); }
 
+/* ── Чтение записи целиком (SPRINT_UXR_S5_RECORD_TASKS/S5-04): листалка
+   «‹ x из y ›» над записью, свойства — колонкой за ушком справа. На узком
+   экране колонка уходит под запись во всю ширину. */
+.sk-rec-pager { display: inline-flex; align-items: center; gap: 2px; font-family: var(--mono); font-size: var(--fs-sm); color: var(--t2); }
+.sk-rec-pager__btn { font-size: var(--fs-lg); line-height: 1; color: var(--t1); }
+.sk-rec-pager__pos { min-width: 7ch; padding: 0 4px; text-align: center; white-space: nowrap; }
+.sk-rec-pager__pos[data-missing] { color: var(--wrn); }
+.sk-rec-reader { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 var(--gap); min-width: 0; }
+.sk-rec-reader[data-aside="open"] { grid-template-columns: minmax(0, 1fr) auto minmax(220px, 300px); }
+.sk-rec-reader__main { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.sk-rec-reader__bar { display: flex; align-items: center; justify-content: flex-end; gap: var(--gap); }
+.sk-rec-reader__ear { position: sticky; top: var(--gap); }
+.sk-rec-reader__aside { min-width: 0; padding: 8px 10px; border-left: 1px solid var(--bd); background: var(--bg1); font-size: var(--fs-base); color: var(--t1); }
+.sk-rec-reader__aside[hidden] { display: none; }
+@media (max-width: 720px) {
+  .sk-rec-reader, .sk-rec-reader[data-aside="open"] { grid-template-columns: minmax(0, 1fr) auto; }
+  .sk-rec-reader__aside { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--bd); }
+}
+
 /* ═══ K-06 — честность блоков (errBlock ≠ «пусто (проверено)») ═══ */
 /* Обёртка блока: несёт data-block, сама вида не имеет. */
 .sk-errblock { display: block; min-width: 0; }
