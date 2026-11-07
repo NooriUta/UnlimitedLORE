@@ -7,6 +7,7 @@ import { Editor } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import { markdownBaseExtensions, markdownSerializerExtension } from './markdownLossless';
+import type { MathNodeOptions } from './tiptapMath';
 import { marked } from './markdown';
 
 /**
@@ -23,8 +24,12 @@ export const MdImage = Image.configure({ inline: true });
  * `image` — поле с загрузчиком подставляет свой (с ручкой размера), без
  * загрузчика — простой, чтобы уже вставленная картинка не выпадала из текста.
  */
-export function mdExtensions(image: AnyExtension = MdImage, extra: AnyExtension[] = []): AnyExtension[] {
-  return [...markdownBaseExtensions(), image, ...extra, markdownSerializerExtension()];
+export function mdExtensions(
+  image: AnyExtension = MdImage,
+  extra: AnyExtension[] = [],
+  math: Partial<MathNodeOptions> = {},
+): AnyExtension[] {
+  return [...markdownBaseExtensions(math), image, ...extra, markdownSerializerExtension()];
 }
 
 // tiptap-markdown@0.9 не объявляет тип storage для TipTap v3 — узкий каст в одном месте.

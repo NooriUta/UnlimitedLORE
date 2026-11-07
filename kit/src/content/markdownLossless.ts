@@ -25,7 +25,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { Markdown } from 'tiptap-markdown';
-import { INLINE_DISPLAY, INLINE_MATH } from './markdownMath';
+import { MathBlock, MathInline, MathSafeText, type MathNodeOptions } from './tiptapMath';
 
 // --- минимальные типы markdown-it / prosemirror-markdown, которыми пользуемся ---
 interface MdToken { content: string; meta: unknown; map: [number, number] | null }
@@ -303,11 +303,18 @@ export function losslessMarkdownLayer(): AnyExtension[] {
  * таблицы, чек-листы и слой без-потерь. Без Markdown — его добавляет
  * вызывающий последним (TipTapField вставляет перед ним картинки и упоминания).
  */
-export function markdownBaseExtensions(): AnyExtension[] {
+export function markdownBaseExtensions(opts: Partial<MathNodeOptions> = {}): AnyExtension[] {
+  const promptTex = opts.promptTex ?? null;
   return [
     // Явный протокол lore: — иначе Link отбрасывает адрес ссылки на актора,
     // спринт, задачу (и упоминание, записанное как [@имя](lore:actor/id)).
-    StarterKit.configure({ link: { protocols: ['lore'], openOnClick: false } }),
+    // Text — свой (MathSafeText, S5-13): доллары, которые при повторном
+    // разборе стали бы формулой, пишутся экранированными.
+    StarterKit.configure({ text: false, link: { protocols: ['lore'], openOnClick: false } }),
+    MathSafeText,
+    // Формулы $…$ / $…$ — KaTeX прямо в редакторе (S5-13); двойной клик — правка.
+    MathInline.configure({ promptTex }),
+    MathBlock.configure({ promptTex }),
     TableKit.configure({ table: false }),
     MdTable.configure({ resizable: false }),
     TaskList,

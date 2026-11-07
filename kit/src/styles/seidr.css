@@ -1250,6 +1250,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   background: var(--acc);
   cursor: nwse-resize;
 }
+/* S5-13 · формула KaTeX в редакторе: атом, двойной клик — правка исходника. */
+.sk-md__math { cursor: pointer; border-radius: var(--r-md); }
+.sk-md__math--block { display: block; margin: 6px 0; overflow-x: auto; }
+.sk-md__math.ProseMirror-selectednode { outline: 1px solid var(--acc); outline-offset: 2px; }
+.sk-md__math:hover { background: var(--bg2); }
 .sk-md__mentions {
   position: fixed;
   z-index: 400;

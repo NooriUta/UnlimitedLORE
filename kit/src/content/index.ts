@@ -12,3 +12,5 @@ export * from './markdownRoundTrip';
 // S5-06/S5-07: правка на месте и круг «Markdown → TipTap → Markdown».
 export * from './tiptapMd';
 export * from './MdInlineEdit';
+// S5-13 · формулы в поле правки (узлы TipTap + правила markdown-it).
+export { MathInline, MathBlock, MathSafeText, escapeMathDollars, installMathMarkdownIt } from './tiptapMath';

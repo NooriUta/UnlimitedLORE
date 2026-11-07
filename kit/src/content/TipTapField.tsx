@@ -206,15 +206,21 @@ export function TipTapField({
   mentionItemsRef.current = mentionItems ?? [];
   const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');
   const [draft, setDraft] = useState(value);
+  // Подпись берётся в момент вызова: расширения фиксируются при создании редактора.
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const promptTex = (tex: string) => window.prompt(kitT(langRef.current, 'kit.md.mathPrompt'), tex);
 
   const editor = useEditor({
     extensions: [
       // Набор и сериализатор — общие с тестом S5-07 «MD → TipTap → MD без
       // потерь» (markdownLossless через tiptapMd.mdExtensions): поле не может
-      // разойтись с тем, что проверено. Картинка — узлом всегда (S5-06).
+      // разойтись с тем, что проверено. Картинка — узлом всегда (S5-06);
+      // формулы — KaTeX-узлы S5-13, двойной клик — правка через promptTex.
       ...mdExtensions(
         enableImages ? ResizableImage : MdImage,
         mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : [],
+        { promptTex },
       ),
     ],
     content: value,
@@ -325,6 +331,13 @@ export function TipTapField({
 
   const run = (fn: (e: Editor) => void) => () => { if (editor) fn(editor); };
 
+  // Вставка строчной формулы: исходник TeX спрашиваем, как URL ссылки.
+  const insertMath = () => {
+    if (!editor) return;
+    const tex = window.prompt(t('kit.md.mathPrompt'), '');
+    if (tex && tex.trim()) editor.chain().focus().insertContent({ type: 'mathInline', attrs: { tex: tex.trim() } }).run();
+  };
+
   return (
     <div className="sk-md">
       {editable && editor && (
@@ -347,6 +360,7 @@ export function TipTapField({
           <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
           <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
           <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
+          <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
           <Sep />
           {editor.isActive('table') ? (
             <>
