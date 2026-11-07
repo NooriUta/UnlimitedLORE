@@ -19,6 +19,8 @@ import { RecordLinks, recordLinks } from './RecordLinks';
 import { RecordGraph } from './RecordGraph';
 import { RecordJournal, recordJournal } from './RecordJournal';
 import { RecordRef, renderOut, valueText } from './fmt';
+import { RecordFacts } from './RecordFacts';
+import type { RecordFactsSpec } from './facts';
 
 export const RECORD_TABS = { overview: 'overview', links: 'links', graph: 'graph', journal: 'journal' } as const;
 
@@ -29,6 +31,11 @@ export interface RecordViewProps {
   tab: string;
   onTab: (tab: string) => void;
   className?: string;
+  /**
+   * S5-01: строка-вердикт под заголовком — статус · задачи x/y · просрочено ·
+   * свежесть. Не передан — строки нет (как в K-04).
+   */
+  facts?: RecordFactsSpec;
 }
 
 function FieldValue({ type, value, ctx }: { type: string; value: unknown; ctx: KitCtx }): ReactNode {
@@ -71,7 +78,7 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts }: RecordViewProps) {
   const lang = useKitLang();
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
@@ -119,10 +126,16 @@ export function RecordView({ record, ctx, tab, onTab, className }: RecordViewPro
   return (
     <article className={['sk-rec', className].filter(Boolean).join(' ')} aria-labelledby={titleId} data-kind={record.kind}>
       <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} />
+      {facts && (
+        <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
+          <RecordFacts record={record} ctx={ctx} spec={facts} lang={lang}
+            onTasks={facts.tasksTab && kindTabs.some(t => t.key === facts.tasksTab) ? () => onTab(facts.tasksTab!) : undefined} />
+        </BlockBoundary>
+      )}
       <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
         <RecordVerdict record={record} ctx={ctx} lang={lang} />
       </BlockBoundary>
-      <Tabs items={items} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
+      <Tabs className="sk-rec__tabs" items={items} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
         {panel}
       </Tabs>
     </article>
