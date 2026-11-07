@@ -85,6 +85,73 @@ class LoreStatusesConsistencyTest {
         }
     }
 
+    /** S1-06: статусы спек/решений — зеркала фолбэков записи. */
+    @Test
+    void specAndDecisionStatusesMatchCanonical() throws Exception {
+        JsonNode c = loadCanonical();
+        assertEquals(new TreeSet<>(array(c, "specStatuses")),
+                     new TreeSet<>(LoreSpecResource.SPEC_STATUSES_FALLBACK),
+                     "SPEC_STATUSES_FALLBACK drift vs shared/lore-statuses.json");
+        assertEquals(new TreeSet<>(array(c, "decisionStatuses")),
+                     new TreeSet<>(LoreDecisionResource.DECISION_STATUSES_FALLBACK),
+                     "DECISION_STATUSES_FALLBACK drift vs shared/lore-statuses.json");
+    }
+
+    private static java.util.Map<String, String> map(JsonNode node) {
+        java.util.Map<String, String> out = new java.util.TreeMap<>();
+        node.fields().forEachRemaining(e -> out.put(e.getKey(), e.getValue().asText()));
+        return out;
+    }
+
+    /**
+     * SPRINT_UXR_S1_HONEST_API/S1-06. Таблица «статус → категория» —
+     * {@code statusCategories}; Java-зеркало {@link LoreStatusCategory}.
+     */
+    @Test
+    void statusCategoriesMatchCanonical() throws Exception {
+        JsonNode sc = loadCanonical().get("statusCategories");
+        assertNotNull(sc, "statusCategories missing from canonical JSON");
+        assertEquals(new TreeSet<>(array(sc, "categories")), new TreeSet<>(LoreStatusCategory.CATEGORIES),
+            "набор категорий разошёлся с каноном");
+        assertEquals(new TreeSet<>(array(sc, "closed")), new TreeSet<>(LoreStatusCategory.CLOSED),
+            "закрытые категории разошлись с каноном");
+        assertEquals(new TreeSet<>(array(sc.get("plan"), "appliesTo")), new TreeSet<>(LoreStatusCategory.PLAN_TYPES));
+        assertEquals(new TreeSet<>(array(sc.get("doc"), "appliesTo")), new TreeSet<>(LoreStatusCategory.DOC_TYPES));
+        assertEquals(map(sc.get("plan").get("map")), new java.util.TreeMap<>(LoreStatusCategory.PLAN_MAP),
+            "таблица plan разошлась с каноном");
+        assertEquals(map(sc.get("doc").get("map")), new java.util.TreeMap<>(LoreStatusCategory.DOC_MAP),
+            "таблица doc разошлась с каноном");
+    }
+
+    /** Покрытие: у каждого статуса, который тип может нести, есть категория — и она из оси. */
+    @Test
+    void statusCategoriesCoverEveryStatus() throws Exception {
+        JsonNode c = loadCanonical();
+        JsonNode sc = c.get("statusCategories");
+        Set<String> cats = array(sc, "categories");
+
+        Set<String> plan = new TreeSet<>(array(c, "planStatuses"));
+        c.get("statusMatch").fieldNames().forEachRemaining(plan::add);
+        Set<String> planKeys = map(sc.get("plan").get("map")).keySet();
+        for (String s : plan) {
+            org.junit.jupiter.api.Assertions.assertTrue(planKeys.contains(s), "plan: нет категории у статуса " + s);
+        }
+
+        Set<String> doc = new TreeSet<>(array(c, "adrStatuses"));
+        doc.addAll(array(c, "specStatuses"));
+        doc.addAll(array(c, "decisionStatuses"));
+        org.junit.jupiter.api.Assertions.assertTrue(doc.contains("deprecated"), "deprecated обязан быть в shared");
+        Set<String> docKeys = map(sc.get("doc").get("map")).keySet();
+        for (String s : doc) {
+            org.junit.jupiter.api.Assertions.assertTrue(docKeys.contains(s), "doc: нет категории у статуса " + s);
+        }
+
+        for (String v : map(sc.get("plan").get("map")).values())
+            org.junit.jupiter.api.Assertions.assertTrue(cats.contains(v), "plan: категория вне оси " + v);
+        for (String v : map(sc.get("doc").get("map")).values())
+            org.junit.jupiter.api.Assertions.assertTrue(cats.contains(v), "doc: категория вне оси " + v);
+    }
+
     /**
      * SPRINT_QG_REBUILD/QG-13. Ось ЧТЕНИЯ — {@code statusMatch} — появилась
      * позже остальных и по той же причине, по какой появились они: словарь
