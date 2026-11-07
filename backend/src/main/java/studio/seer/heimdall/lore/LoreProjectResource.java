@@ -80,7 +80,7 @@ public class LoreProjectResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE PROJECT CREATE] %s: %s", req.slug(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

@@ -6,6 +6,10 @@
 // In prod lore.enabled=false → backend returns 404 LORE_DISABLED → LoreDisabledError.
 
 import { authHeaders, sessionExpired } from '../auth/session';
+import { loreFetch, describeLoreTimeout } from './loreTimeout';
+import type { SectionCount } from './contracts/s1';
+
+export { LoreTimeoutError, isLoreTimeout, LORE_TIMEOUT_MS } from './loreTimeout';
 
 const LORE_BASE = '/lore';
 
@@ -58,7 +62,7 @@ function assertJson(res: Response): void {
 }
 
 export type LoreErrorKind =
-  | 'aborted' | 'disabled' | 'unreachable' | 'notFound' | 'conflict' | 'forbidden' | 'http' | 'unknown';
+  | 'aborted' | 'disabled' | 'unreachable' | 'notFound' | 'conflict' | 'forbidden' | 'http' | 'timeout' | 'unknown';
 
 /**
  * AH-07: что сказать человеку про ошибку. `pageLevel` — только «выключен» и
@@ -68,6 +72,10 @@ export type LoreErrorKind =
 export function describeLoreError(err: unknown): { kind: LoreErrorKind; status?: number; text: string; pageLevel: boolean } {
   const text = err instanceof Error ? err.message : String(err);
   if (err instanceof Error && err.name === 'AbortError') return { kind: 'aborted', text, pageLevel: false };
+  // S1-04: истёкший срок — свой вид, на месте; голый DOMException TimeoutError (срок
+  // истёк при чтении res.json()) иначе ушёл бы в 'unknown' с английским текстом.
+  const to = describeLoreTimeout(err);
+  if (to) return to;
   if (err instanceof LoreDisabledError) return { kind: 'disabled', text, pageLevel: true };
   if (err instanceof LoreUpstreamError) return { kind: 'unreachable', text, pageLevel: true };
   if (err instanceof LoreNotFoundError) return { kind: 'notFound', status: 404, text, pageLevel: false };
@@ -123,7 +131,7 @@ export async function fetchLoreSlice<T>(
   // работало, потому что бэкенд отдавал слайсы анониму. С закрытием чтения такой
   // запрос стал бы 401 на каждом экране, то есть выглядел бы как «LORE сломался»,
   // а не как «не хватает токена».
-  const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(url.toString(), { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   const body = (await res.json()) as { rows?: T[] };
@@ -138,7 +146,7 @@ export async function fetchLoreSlice<T>(
 export async function fetchVolvaEmbed(chart: string, project?: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }> {
   const url = new URL(`${LORE_BASE}/embed/volva/${encodeURIComponent(chart)}`, location.origin);
   if (project) url.searchParams.set('project', project);
-  const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(url.toString(), { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   return res.json() as Promise<{ url: string; expires_at: string }>;
@@ -176,7 +184,7 @@ export async function loreMutate<T = { ok: boolean; [k: string]: unknown }>(
   body: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  const res = await fetch(`${LORE_BASE}${path}`, {
+  const res = await loreFetch(`${LORE_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body),
@@ -199,7 +207,7 @@ export async function fetchBragiMetrics(
 ): Promise<BragiMetricPoint[]> {
   const url = new URL(`${LORE_BASE}/bragi/metric/query`, location.origin);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(url.toString(), { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   const body = (await res.json()) as { rows?: BragiMetricPoint[] };
@@ -215,7 +223,7 @@ export interface LoreSliceDescriptor {
 }
 
 export async function fetchLoreSliceCatalog(signal?: AbortSignal): Promise<LoreSliceDescriptor[]> {
-  const res = await fetch(`${LORE_BASE}/slices`, { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(`${LORE_BASE}/slices`, { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   const body = (await res.json()) as { slices?: LoreSliceDescriptor[] };
@@ -227,7 +235,7 @@ export async function fetchLoreSliceCatalog(signal?: AbortSignal): Promise<LoreS
 // смотрели в разные базы одновременно; признак нельзя подделать конфигом
 // клиента, потому что он вообще не приходит с клиента.
 export async function fetchLoreEnv(signal?: AbortSignal): Promise<{ db: string } | null> {
-  const res = await fetch(`${LORE_BASE}/env`, { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(`${LORE_BASE}/env`, { signal, headers: { ...authHeaders() } });
   if (!res.ok) return null;
   return (await res.json()) as { db: string };
 }
@@ -259,7 +267,7 @@ export interface LoreAnalytics {
 }
 
 export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnalytics> {
-  const res = await fetch(`${LORE_BASE}/analytics`, { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(`${LORE_BASE}/analytics`, { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   return (await res.json()) as LoreAnalytics;
@@ -289,7 +297,7 @@ export interface LoreNewsItem {
 }
 
 export async function fetchLoreNews(limit = 60, signal?: AbortSignal): Promise<LoreNewsItem[]> {
-  const res = await fetch(`${LORE_BASE}/news?limit=${limit}`, { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(`${LORE_BASE}/news?limit=${limit}`, { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   const body = (await res.json()) as { items?: LoreNewsItem[] };
@@ -361,7 +369,7 @@ export async function fetchLoreSearch(p: LoreSearchParams, signal?: AbortSignal)
   if (p.limit) qs.set('limit', String(p.limit));
   if (p.offset) qs.set('offset', String(p.offset));
   if (p.mode) qs.set('mode', p.mode);
-  const res = await fetch(`${LORE_BASE}/search?${qs}`, { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(`${LORE_BASE}/search?${qs}`, { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   return (await res.json()) as LoreSearchResult;
@@ -474,7 +482,7 @@ export interface AdrWritePayload {
 }
 
 export async function createLoreAdr(payload: AdrWritePayload): Promise<{ ok: boolean; adr_id: string; hist_created: boolean }> {
-  const res = await fetch(`${LORE_BASE}/adr`, {
+  const res = await loreFetch(`${LORE_BASE}/adr`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
@@ -612,7 +620,7 @@ export interface ComponentUpdatePayload {
 }
 
 export async function updateLoreComponent(payload: ComponentUpdatePayload): Promise<{ ok: boolean; component_id: string }> {
-  const res = await fetch('/lore/component/update', {
+  const res = await loreFetch('/lore/component/update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
@@ -827,7 +835,7 @@ export async function postLoreStatus(
   id: string,
   status: LorePlanItemStatus,
 ): Promise<LoreStatusUpdateResponse> {
-  const res = await fetch(`${LORE_BASE}/status`, {
+  const res = await loreFetch(`${LORE_BASE}/status`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -843,11 +851,11 @@ export async function postLoreStatus(
 export async function uploadBragiAsset(file: File): Promise<{ ok: boolean; file_url: string; size_bytes: number }> {
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${LORE_BASE}/bragi/asset/upload`, {
+  const res = await loreFetch(`${LORE_BASE}/bragi/asset/upload`, {
     method: 'POST',
     headers: { ...authHeaders() },
     body: form,
-  });
+  }, 120_000);
   if (!res.ok) return parseError(res);
   assertJson(res);
   return res.json() as Promise<{ ok: boolean; file_url: string; size_bytes: number }>;
@@ -860,7 +868,7 @@ export async function attachBragiAsset(p: {
   asset_id: string; file_url?: string; asset_type?: string; alt?: string; size_bytes?: number;
   attach_to_publication_id?: string; attach_to_variant_id?: string;
 }): Promise<{ ok: boolean; asset_id: string; attached_to: string }> {
-  const res = await fetch(`${LORE_BASE}/bragi/asset`, {
+  const res = await loreFetch(`${LORE_BASE}/bragi/asset`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
@@ -876,7 +884,7 @@ export async function createBragiCampaign(p: {
   campaign_id: string; utm_source?: string; utm_medium?: string; utm_campaign?: string;
   target_url?: string; period?: string; variant_id?: string;
 }): Promise<{ ok: boolean; campaign_id: string; linked_variant: boolean }> {
-  const res = await fetch(`${LORE_BASE}/bragi/campaign`, {
+  const res = await loreFetch(`${LORE_BASE}/bragi/campaign`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
@@ -894,7 +902,7 @@ export async function linkBragiForseti(p: {
   target_type: 'task' | 'sprint' | 'release'; target_id: string;
   git_project?: string; action?: 'add' | 'remove';
 }): Promise<{ ok: boolean; entity_id: string; target_id: string; action: string }> {
-  const res = await fetch(`${LORE_BASE}/bragi/link`, {
+  const res = await loreFetch(`${LORE_BASE}/bragi/link`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
@@ -918,7 +926,7 @@ export async function createLoreTask(
   noteMd?: string | null,
   taskType?: string | null,
 ): Promise<LoreTaskWriteResponse> {
-  const res = await fetch(`${LORE_BASE}/task`, {
+  const res = await loreFetch(`${LORE_BASE}/task`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
@@ -952,7 +960,7 @@ export async function editLoreTask(
   // effort_days / agent fields: null (or omitted) = leave unchanged (backend only
   // writes a field when it's non-null; ADR-LORE-014 §4 / ADR-LORE-015 fields live
   // on the vertex).
-  const res = await fetch(`${LORE_BASE}/task/edit`, {
+  const res = await loreFetch(`${LORE_BASE}/task/edit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
@@ -976,7 +984,7 @@ export async function linkTaskComponent(
   componentId: string,
   action: 'add' | 'remove' = 'add',
 ): Promise<{ ok: boolean; task_uid: string; component_id: string; action: string }> {
-  const res = await fetch(`${LORE_BASE}/task/component`, {
+  const res = await loreFetch(`${LORE_BASE}/task/component`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ task_uid: taskUid, component_id: componentId, action }),
@@ -991,7 +999,7 @@ export async function linkSprintComponent(
   componentId: string,
   action: 'add' | 'remove' = 'add',
 ): Promise<{ ok: boolean; sprint_id: string; component_id: string; action: string }> {
-  const res = await fetch(`${LORE_BASE}/sprint/component`, {
+  const res = await loreFetch(`${LORE_BASE}/sprint/component`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, component_id: componentId, action }),
@@ -1006,7 +1014,7 @@ export async function linkSprintProject(
   gitProject: string,
   action: 'add' | 'remove' = 'add',
 ): Promise<{ ok: boolean; sprint_id: string; git_project: string; action: string }> {
-  const res = await fetch(`${LORE_BASE}/sprint/project`, {
+  const res = await loreFetch(`${LORE_BASE}/sprint/project`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, git_project: gitProject, action }),
@@ -1022,7 +1030,7 @@ export async function linkSprintMilestone(
   milestoneId: string,
   action: 'add' | 'remove' = 'add',
 ): Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }> {
-  const res = await fetch(`${LORE_BASE}/milestone/sprint`, {
+  const res = await loreFetch(`${LORE_BASE}/milestone/sprint`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, milestone_id: milestoneId, action }),
@@ -1038,7 +1046,7 @@ export async function linkMilestoneProduct(
   productCode: string,
   action: 'add' | 'remove' = 'add',
 ): Promise<{ ok: boolean; milestone_id: string; product_code: string; action: string; outcome?: string }> {
-  const res = await fetch(`${LORE_BASE}/milestone/product`, {
+  const res = await loreFetch(`${LORE_BASE}/milestone/product`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ milestone_id: milestoneId, product_code: productCode, action }),
@@ -1084,7 +1092,7 @@ export async function upsertTech(p: TechUpsertPayload): Promise<{ ok: boolean; s
     p.source_url && `- **Источник:** ${p.source_url}`,
     `- **Проверено:** ${p.checked_at ?? today}`,
   ].filter(Boolean);
-  const res = await fetch(`${LORE_BASE}/spec`, {
+  const res = await loreFetch(`${LORE_BASE}/spec`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
@@ -1104,7 +1112,7 @@ export async function linkSprintRelease(
   gitProject: string,
   action: 'add' | 'remove' = 'add',
 ): Promise<{ ok: boolean }> {
-  const res = await fetch(`${LORE_BASE}/release/${action === 'remove' ? 'unlink' : 'link'}`, {
+  const res = await loreFetch(`${LORE_BASE}/release/${action === 'remove' ? 'unlink' : 'link'}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ release_id: releaseId, git_project: gitProject, sprint_ids: [sprintId] }),
@@ -1118,7 +1126,7 @@ export async function linkSprintRelease(
 export async function upsertMilestone(
   m: { milestone_id: string; label?: string; week?: number | null; date_display?: string | null; goal_md?: string | null; priority?: string | null },
 ): Promise<{ ok: boolean; milestone_id: string }> {
-  const res = await fetch(`${LORE_BASE}/milestone`, {
+  const res = await loreFetch(`${LORE_BASE}/milestone`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(m),
@@ -1132,7 +1140,7 @@ export async function updateLoreSprint(
   sprintId: string,
   fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null; unplanned_intentional?: boolean | null },
 ): Promise<{ ok: boolean; sprint_id: string }> {
-  const res = await fetch(`${LORE_BASE}/sprint/update`, {
+  const res = await loreFetch(`${LORE_BASE}/sprint/update`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),
@@ -1155,7 +1163,7 @@ export async function updateSprintPlan(
     track_id?: string | null;
   },
 ): Promise<{ ok: boolean; sprint_id: string }> {
-  const res = await fetch(`${LORE_BASE}/sprint/plan`, {
+  const res = await loreFetch(`${LORE_BASE}/sprint/plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),
@@ -1170,7 +1178,7 @@ export async function createLoreSprint(payload: {
   sprint_id: string; name: string; status?: string; plan_id?: string;
   priority?: string; outcome_md?: string; context_md?: string;
 }): Promise<{ ok: boolean; sprint_id: string; created: boolean }> {
-  const res = await fetch(`${LORE_BASE}/sprint/create`, {
+  const res = await loreFetch(`${LORE_BASE}/sprint/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
@@ -1269,7 +1277,7 @@ export async function updateLoreDoc(
   docId: string,
   fields: { title?: string; content_md_en?: string; content_md_ru?: string },
 ): Promise<{ ok: boolean; doc_id: string }> {
-  const res = await fetch(`${LORE_BASE}/doc`, {
+  const res = await loreFetch(`${LORE_BASE}/doc`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ doc_id: docId, ...fields }),
@@ -1286,7 +1294,7 @@ export async function updateLoreRunbook(
   runbookId: string,
   fields: { content_md?: string },
 ): Promise<{ ok: boolean; runbook_id: string }> {
-  const res = await fetch(`${LORE_BASE}/runbook`, {
+  const res = await loreFetch(`${LORE_BASE}/runbook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ runbook_id: runbookId, ...fields }),
@@ -1301,7 +1309,7 @@ export async function updateLoreQualityGate(
   qgId: string,
   fields: { content_md?: string },
 ): Promise<{ ok: boolean; qg_id: string }> {
-  const res = await fetch(`${LORE_BASE}/quality-gate`, {
+  const res = await loreFetch(`${LORE_BASE}/quality-gate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ qg_id: qgId, ...fields }),
@@ -1602,7 +1610,7 @@ export interface LoreUcQualityAllRow {
 export async function fetchUcQualityAll(signal?: AbortSignal): Promise<{
   threshold: number; rows: LoreUcQualityAllRow[];
 }> {
-  const res = await fetch(`${LORE_BASE}/uc/quality/all`, { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(`${LORE_BASE}/uc/quality/all`, { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   const body = (await res.json()) as { threshold?: number; rows?: LoreUcQualityAllRow[] };
@@ -1645,7 +1653,7 @@ export interface LoreSelfCheckRun {
 }
 
 export async function fetchLoreSelfCheck(signal?: AbortSignal): Promise<LoreSelfCheckRun> {
-  const res = await fetch(`${LORE_BASE}/product/self-check`, { signal, headers: { ...authHeaders() } });
+  const res = await loreFetch(`${LORE_BASE}/product/self-check`, { signal, headers: { ...authHeaders() } });
   if (!res.ok) return parseError(res);
   assertJson(res);
   return (await res.json()) as LoreSelfCheckRun;
@@ -1669,10 +1677,30 @@ export interface TaskRoleCandidates {
 export async function fetchTaskRoleCandidates(
   taskUid: string, signal?: AbortSignal,
 ): Promise<TaskRoleCandidates> {
-  const res = await fetch(
+  const res = await loreFetch(
     `${LORE_BASE}/task/role-candidates?task_uid=${encodeURIComponent(taskUid)}`,
     { headers: { ...authHeaders() }, signal });
   if (!res.ok) return parseError(res);
   assertJson(res);
   return res.json() as Promise<TaskRoleCandidates>;
+}
+
+/**
+ * SPRINT_UXR_S1_HONEST_API/S1-07: счётчик секции по одному правилу — открытые в
+ * скоупе с текущими фильтрами, закрытые отдельно (GET /lore/slice/{id}/count).
+ * Боевая замена stubFetchSectionCounts. 400 NOT_COUNTABLE / 403 SCOPE_EMPTY /
+ * 502 LORE_UPSTREAM выходят ошибкой, а не нулём: «не смогли посчитать» ≠ «0».
+ * Для меню — Promise.all по секциям.
+ */
+export async function fetchSectionCount(
+  sliceId: string,
+  filters: Record<string, string> = {},
+  signal?: AbortSignal,
+): Promise<SectionCount> {
+  const qs = new URLSearchParams(filters).toString();
+  const res = await loreFetch(`${LORE_BASE}/slice/${encodeURIComponent(sliceId)}/count?${qs}`,
+    { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<SectionCount>;
 }

@@ -385,6 +385,6 @@ public class LoreQuestionResource extends LoreResourceBase {
 
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
-            .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+            .entity(LoreUpstream.error(e)));
     }
 }

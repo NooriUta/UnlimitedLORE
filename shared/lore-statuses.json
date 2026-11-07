@@ -19,6 +19,21 @@
     "deferred",
     "superseded"
   ],
+  "_docStatusesComment": "SPRINT_UXR_S1_HONEST_API/S1-06. specStatuses and decisionStatuses mirror the write-time fallbacks LoreSpecResource.SPEC_STATUSES_FALLBACK and LoreDecisionResource.DECISION_STATUSES_FALLBACK (the live list is the KnowDictEntry dictionary; these are the startup safety net). Listed here so statusCategories can be checked for coverage of EVERY status a type may carry: `deprecated` (spec) was the one missing from this file.",
+  "specStatuses": [
+    "proposed",
+    "accepted",
+    "deprecated",
+    "superseded"
+  ],
+  "decisionStatuses": [
+    "proposed",
+    "accepted",
+    "deferred",
+    "superseded",
+    "fixed",
+    "done"
+  ],
   "entityTypes": [
     "plan_item",
     "sprint",
@@ -135,5 +150,57 @@
     "ready_for_deploy": "🚀 READY FOR DEPLOY",
     "backlog": "🟣 BACKLOG",
     "design": "🔬 DESIGN"
+  },
+  "_statusCategoriesComment": "SPRINT_UXR_S1_HONEST_API/S1-06. One axis of status categories for all types (decision:D-2026-UXR-STATUS-AXIS, SPEC-LORE-UXR-S1-CONTRACTS contract 2). Closed = only the `closed` categories. `accepted` on ADR/spec/decision is in_force (\"действует\") and OPEN: the naive mapping hid 180 of 241 accepted ADRs as closed. An unrecognized status is `unknown` and counts as OPEN: do not hide what was not recognized. Case and surrounding whitespace do not matter. plan.map keys cover planStatuses AND the statusMatch canons (free-text status_raw is read through statusMatch first). Decision `fixed`/`done` are S1-06 assumptions (in_force/finished), absent from the spec table. Mirrors: backend LoreStatusCategory (LoreStatusesConsistencyTest); the UI copy is guarded on the frontend side (check:statuses, S1-06 step 4).",
+  "statusCategories": {
+    "categories": [
+      "not_started",
+      "in_progress",
+      "in_force",
+      "finished",
+      "withdrawn",
+      "unknown"
+    ],
+    "closed": [
+      "finished",
+      "withdrawn"
+    ],
+    "plan": {
+      "appliesTo": [
+        "task",
+        "sprint"
+      ],
+      "map": {
+        "todo": "not_started",
+        "planned": "not_started",
+        "backlog": "not_started",
+        "design": "not_started",
+        "deferred": "not_started",
+        "active": "in_progress",
+        "in_progress": "in_progress",
+        "partial": "in_progress",
+        "blocked": "in_progress",
+        "ready_for_deploy": "in_progress",
+        "done": "finished",
+        "cancelled": "withdrawn"
+      }
+    },
+    "doc": {
+      "appliesTo": [
+        "adr",
+        "spec",
+        "decision"
+      ],
+      "map": {
+        "draft": "not_started",
+        "deferred": "not_started",
+        "proposed": "in_progress",
+        "accepted": "in_force",
+        "fixed": "in_force",
+        "done": "finished",
+        "deprecated": "withdrawn",
+        "superseded": "withdrawn"
+      }
+    }
   }
 }
