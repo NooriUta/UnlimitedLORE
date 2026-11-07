@@ -6,7 +6,7 @@ import {
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
 } from '../../api/lore';
 import {
-  NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, unplannedOfProduct, unplannedShare, isStreamSprint, productRepos, type ProductRow,
+  NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, unplannedOfProduct, unplannedShare, isStreamSprint, productRepos, productServes, type ProductRow,
 } from './milestoneProducts';
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
@@ -384,6 +384,14 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                     : t('lore.milestonesView.repoNoRole', 'роль ?')}
                 </span>
               ))}
+            {(() => {
+              // WK-03: «кого считаем · кого продаём · кого поддерживаем» — только непустые виды
+              const sv = productServes(row);
+              const parts = ([['count', t('lore.milestonesView.servesCount', 'считаем')], ['sell', t('lore.milestonesView.servesSell', 'продаём')], ['support', t('lore.milestonesView.servesSupport', 'поддерживаем')]] as const)
+                .filter(([k]) => sv[k].length > 0)
+                .map(([k, label]) => `${label}: ${sv[k].map(c => productLabel.get(c) ?? c).join(', ')}`);
+              return parts.length ? <span style={{ marginLeft: 8 }}>· {t('lore.milestonesView.servesTitle', 'служит')} — {parts.join(' · ')}</span> : null;
+            })()}
           </div>
         );
       })()}

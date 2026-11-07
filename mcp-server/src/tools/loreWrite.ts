@@ -1866,22 +1866,26 @@ export function registerLoreWrite(server: McpServer): void {
       'edge type from the component tree on purpose — the product tree and the component tree are ' +
       'different trees, a sub-product can sit in the middle of another component\'s subtree. ' +
       'rel="project": BELONGS_TO_PROJECT edge to a git project (a product spans several repos, and ' +
-      'a monorepo holds several products). Idempotent on add: the existing edge for that exact pair ' +
+      'a monorepo holds several products). rel="serves" (WK-03, D-2026-LORE-SERVES-EDGE): SERVES edge ' +
+      'from a SERVICE product to the product it serves, with REQUIRED kind="count" (we account for it) | ' +
+      '"sell" (we sell it) | "support" (we support it); one pair may carry several kinds. Idempotent on add: the existing edge for that exact pair ' +
       'is dropped first, so a repeat never accumulates duplicates. Both ends are checked — a missing ' +
       'one is a 400, not a silent no-op that would answer ok:true on unwritten work. ' +
       'Mutates the shared system_aida_lore.',
     schema: {
       product_code: z.string().describe('product dictionary code, e.g. "AIDA", "HOUND", "OMILORE"'),
-      rel: z.enum(['component', 'project', 'parent']),
-      target_id: z.string().describe('component_id (rel="component") | git project slug (rel="project") | parent product code (rel="parent")'),
+      rel: z.enum(['component', 'project', 'parent', 'serves']),
+      target_id: z.string().describe('component_id (rel="component") | git project slug (rel="project") | parent product code (rel="parent") | served product code (rel="serves")'),
       role: z.enum(['owner', 'consumer']).optional()
         .describe('rel="component" | rel="project": owner (default) = builds/develops it, consumer = only uses it (WK-02). A repeat with a different role answers outcome="updated" with previous_role'),
       action: z.enum(['add', 'remove']).optional().describe('default "add"'),
+      kind: z.enum(['count', 'sell', 'support']).optional()
+        .describe('rel="serves" only, required there: count = we account for it, sell = we sell it, support = we support it'),
     },
     path: '/lore/product/link',
-    body: ({ product_code, rel, target_id, role, action }) => ({
+    body: ({ product_code, rel, target_id, role, action, kind }) => ({
           product_code, rel, target_id,
-          role: role ?? null, action: action ?? 'add',
+          role: role ?? null, action: action ?? 'add', kind: kind ?? null,
         }),
   });
 

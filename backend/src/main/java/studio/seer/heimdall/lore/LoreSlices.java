@@ -2392,7 +2392,10 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
             // WK-02: роль связи продукт → проект параллельным списком; out() и
             // outE() обходят одни и те же рёбра в одном порядке.
-            "outE('BELONGS_TO_PROJECT').role AS git_project_roles " +
+            "outE('BELONGS_TO_PROJECT').role AS git_project_roles, " +
+            // WK-03: кому продукт служит и как — параллельные списки, как роли выше.
+            "out('SERVES').code AS serves_codes, " +
+            "outE('SERVES').kind AS serves_kinds " +
             "FROM KnowDictEntry WHERE dict_type = 'product'",
             List.of(), Map.of(), " ORDER BY sort_order, code");
 
