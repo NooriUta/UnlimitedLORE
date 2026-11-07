@@ -37,6 +37,12 @@ export interface ListViewProps {
   data: KitData;
   /** Ссылка на запись (заголовок становится ссылкой). */
   href?: (id: string) => string;
+  /**
+   * Открыть запись (S4-13, B-09). Без href заголовок становится кнопкой —
+   * строка открывается и мышью, и с клавиатуры (Tab → Enter/Space); с href
+   * вызывается при переходе по ссылке. Ни href, ни onOpen — заголовок текстом.
+   */
+  onOpen?: (id: string) => void;
   /** Части контекста хуков (роль, пользователь, md…); data/config берутся из пропсов. */
   ctx?: Partial<KitCtx>;
   /** Массовые действия с выбранными — через хуки приложения. */
@@ -143,14 +149,18 @@ function VerdictCell({ r, ctx, lang }: { r: KitRecord; ctx: KitCtx; lang: KitLan
   );
 }
 
-function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
-  return href
-    ? <a className="sk-list__title" href={href(r.id)}>{r.title}</a>
-    : <span className="sk-list__title">{r.title}</span>;
+type Opener = { href?: (id: string) => string; onOpen?: (id: string) => void };
+
+// B-09: открываемое мышью открывается и с клавиатуры — ссылка или кнопка,
+// а не <span> с обработчиком клика на строке.
+function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
+  if (href) return <a className="sk-list__title" href={href(r.id)} onClick={onOpen ? () => onOpen(r.id) : undefined}>{r.title}</a>;
+  if (onOpen) return <button type="button" className="sk-list__title sk-list__title--btn" onClick={() => onOpen(r.id)}>{r.title}</button>;
+  return <span className="sk-list__title">{r.title}</span>;
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, className,
+  config, data, href, onOpen, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, className,
 }: ListViewProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -268,8 +278,8 @@ export function ListView({
   const cell = (col: string, r: KitRecord): ReactNode => {
     switch (col) {
       case 'select': return checkbox(r);
-      case 'title+id': return <><Title r={r} href={href} /> <Pill variant="id">{r.id}</Pill></>;
-      case 'title': return <Title r={r} href={href} />;
+      case 'title+id': return <><Title r={r} href={href} onOpen={onOpen} /> <Pill variant="id">{r.id}</Pill></>;
+      case 'title': return <Title r={r} href={href} onOpen={onOpen} />;
       case 'id': return <Pill variant="id">{r.id}</Pill>;
       case 'status': return <StatusCell code={r.status} labels={labels} />;
       case 'kind': return labels.valueTitle('kind', r.kind);
@@ -336,7 +346,7 @@ export function ListView({
                   <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
                     {selectable && checkbox(r)}
                     <span className="sk-board__body">
-                      <Title r={r} href={href} />
+                      <Title r={r} href={href} onOpen={onOpen} />
                       <Pill variant="id">{r.id}</Pill>
                       {columns.includes('verdict') && <VerdictCell r={r} ctx={ctx} lang={lang} />}
                     </span>

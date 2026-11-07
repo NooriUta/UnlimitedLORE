@@ -19,7 +19,9 @@ export { matchHotkey, parseHotkey, type HotkeySpec, type KeyLike } from './resil
 export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
-export { pushUrlState, readUrlState, type UrlWindow } from './resilience/urlState';
+export { pushUrlState, readUrlState, sectionScopedPatch, type UrlWindow } from './resilience/urlState';
+// S4-13 (B-08): «пользователь набирает текст» — одна проверка на весь kit.
+export { isEditableTarget } from './resilience/editable';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT): KitConfig, KitData, KitRecord… — только типы.
 // Контракт ядра (K-01…K-11) и listView (SPRINT_UXR_S10_SEIDR_KIT/K-03).
 export * from './list';

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import { matchHotkey } from '../resilience/hotkeys';
+import { isEditableTarget } from '../resilience/editable';
 import type { KitConfig, KitRecord } from './contract';
 import { StatusIcon } from './StatusIcon';
 import { StatusPopover } from './StatusPopover';
@@ -28,10 +29,8 @@ export interface StatusChipProps {
   className?: string;
 }
 
-function isTyping(t: EventTarget | null): boolean {
-  if (!(t instanceof HTMLElement)) return false;
-  return t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
-}
+// S4-13 (B-08): «набирает текст» — одна проверка на весь kit.
+const isTyping = isEditableTarget;
 
 export function StatusChip({ record, config, save, role, hotkey, compact, onChange, className }: StatusChipProps) {
   const lang = useKitLang();

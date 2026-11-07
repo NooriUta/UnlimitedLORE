@@ -1510,6 +1510,23 @@ code, pre, kbd, samp { font-family: var(--mono); }
   overflow-wrap: anywhere;
 }
 a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
+/* S4-13 (B-09): строка без ссылки, но открываемая, — кнопка в порядке Tab;
+   выглядит как заголовок, цель не меньше --tap на сенсоре. */
+.sk-list__title--btn {
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: start;
+  cursor: pointer;
+  min-height: var(--tap, auto);
+}
+.sk-list__title--btn:hover { color: var(--acc); text-decoration: underline; }
+.sk-list__title:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
 .sk-list__mono { font-family: var(--mono); color: var(--t2); }
 .sk-list__check {
   display: inline-flex;

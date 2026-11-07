@@ -15,6 +15,7 @@ import { GameIcon, SECTION_ICONS } from '../elements/GameIcon';
 import { Kbd } from '../elements/Kbd';
 import { kitT, useKitLang } from '../i18n';
 import { matchHotkey } from '../resilience/hotkeys';
+import { isEditableTarget } from '../resilience/editable';
 import { itemKey, searchPalette, type PaletteItem, type PaletteMode, type RecentList } from './paletteModel';
 
 // ── горячие клавиши ───────────────────────────────────────────────────────
@@ -22,11 +23,8 @@ import { itemKey, searchPalette, type PaletteItem, type PaletteMode, type Recent
 export const PALETTE_HOTKEY = 'Mod+K';
 export const SEARCH_HOTKEY = '/';
 
-function isEditable(t: EventTarget | null): boolean {
-  if (!(t instanceof HTMLElement)) return false;
-  if (t.isContentEditable) return true;
-  return t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT';
-}
+// S4-13 (B-08): «/» из абзаца TipTap — набор текста; проверка общая на kit.
+const isEditable = isEditableTarget;
 
 export interface KitPaletteState {
   open: boolean;

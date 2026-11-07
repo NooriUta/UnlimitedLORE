@@ -167,7 +167,12 @@ function TreeBody({ data, config, href, onOpen, defaultLevel = 1, urlSync, class
         if (row.expanded && !filter) toggle(row.node.id, false);
         else if (row.node.parentId) moveFocus(row.node.parentId);
         break;
-      case 'Enter': onOpen?.(row.node.id); break;
+      // S4-13 (B-09): только с href Enter молчал — строка открывалась мышью
+      // (ссылка в заголовке), но не с клавиатуры. Без onOpen — переход по ссылке.
+      case 'Enter':
+        if (onOpen) onOpen(row.node.id);
+        else target.querySelector<HTMLAnchorElement>('a.sk-tree__title')?.click();
+        break;
       default: return;
     }
     e.preventDefault();
