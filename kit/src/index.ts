@@ -48,3 +48,5 @@ export * from './views/tree';
 // Выбор нескольких проектов в шапке: поиск, «все мои», «только этот», лист на
 // телефоне (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-03).
 export * from './picker';
+// Таймлайн с дорожками той же общей группировки (S4-06).
+export * from './views/timeline';

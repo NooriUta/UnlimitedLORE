@@ -1944,6 +1944,73 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   gap: 4px;
   min-width: 0;
 }
+
+/* ── Общая группировка (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-06): дорожки доски,
+   строка «в нескольких группах», таймлайн с дорожками. ── */
+.sk-list__multi { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+.sk-board__lanes { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-board__lane {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg0);
+  padding: 0 4px 4px;
+}
+.sk-board__lanehead { margin: 0; font-size: var(--fs-sm); }
+
+.sk-tl { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-tl__range { margin: 0; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-tl__lane {
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  padding: 4px 6px;
+}
+.sk-tl__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--t1);
+}
+.sk-tl__head.is-unknown .sk-tl__title { color: var(--wrn); font-style: italic; }
+.sk-tl__count { margin-left: auto; font-family: var(--mono); color: var(--t3); }
+.sk-tl__track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sk-tl__bar {
+  position: relative;
+  min-width: 6px;
+  min-height: max(var(--tap), var(--row-h));
+  display: flex;
+  align-items: center;
+  border-left: 2px solid var(--st-c);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--st-c) 18%, var(--bg2));
+  overflow: hidden;
+}
+.sk-tl__label {
+  padding: 0 6px;
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-tl__undated { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+
 @media (max-width: 720px) {
   .sk-board { grid-auto-flow: row; grid-auto-columns: auto; }
   .sk-list__select { max-width: 100%; }

@@ -261,5 +261,18 @@
   "kit.list.facetNoValues": "No values under the other filters",
   "kit.list.facetNoMatch": "Nothing found",
   "kit.list.facetPanel": "Filter “{field}”",
-  "kit.list.facetDone": "Done"
+  "kit.list.facetDone": "Done",
+  "kit.list.groupFields": "Fields",
+  "kit.list.groupRels": "Relation cuts",
+  "kit.list.relIn": "{edge} (incoming)",
+  "kit.list.noLink": "no “{edge}” link",
+  "kit.list.linkMissing": "not loaded: {id}",
+  "kit.list.multi": "In several groups at once: {n} — group totals exceed the shown count",
+  "kit.list.lane": "Lane “{title}”: {n}",
+  "kit.timeline.label": "Timeline",
+  "kit.timeline.range": "Scale: {min} — {max}",
+  "kit.timeline.undated": "Undated, not on the scale: {n}",
+  "kit.timeline.empty": "No dated records",
+  "kit.timeline.emptyHint": "Records exist, but none has a date in “{field}”.",
+  "kit.timeline.bar": "{title}: {start} — {end}"
 }
