@@ -14,6 +14,8 @@ import { useUrlId } from '../../hooks/useUrlState';
 import { useSearchParams } from 'react-router-dom';
 import { readDeepLink } from '../../api/searchRoutes';
 import { GameIcon } from './GameIcon';
+import { useDictionary } from './DictionaryProvider';
+import { readVolvaUrl, volvaDecisionDocsUrl } from './volvaLinks';
 
 // Distinct marker for orphan decisions (no parent ADR) — used both on the
 // filter chip and on each orphan row, so orphans are spottable in the list.
@@ -62,6 +64,8 @@ const dimLbl = {
 
 export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) {
   const { t } = useTranslation();
+  // DS-LINK-1/2: адрес Völva — настройка volva.url в админке LORE.
+  const volvaBase = readVolvaUrl(useDictionary('app_setting').entries);
   // MOB: compact date (MM-DD) on narrow — frees width for the decision text.
   const narrow = useIsNarrow(720);
   const [rows,           setRows]           = useState<LoreDecisionRow[]>([]);
@@ -278,6 +282,24 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
                   {!det.body_md && !det.rationale_md && !hasLinks && (
                     <span style={S.meta}>{t('lore.decisionBoard.noAdditionalData', 'Дополнительных данных нет.')}</span>
                   )}
+                  {/* SPRINT_VOLVA_DATASTORY/DS-LINK-1, DS-LINK-2: документы Völva к решению —
+                      открываются в сессии пользователя, с его правами. */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }} onClick={e => e.stopPropagation()}>
+                    {volvaBase ? (
+                      <>
+                        <a style={{ ...S.chip, textDecoration: 'none' }} target="_blank" rel="noopener noreferrer"
+                          href={volvaDecisionDocsUrl(volvaBase, d.decision_id)}>
+                          {t('lore.decisionBoard.volvaDocs', 'Документы в Völva ↗')}
+                        </a>
+                        <a style={{ ...S.chip, textDecoration: 'none' }} target="_blank" rel="noopener noreferrer"
+                          href={volvaDecisionDocsUrl(volvaBase, d.decision_id, { title: d.title, text: det.body_md ?? '' })}>
+                          {t('lore.decisionBoard.volvaNewDoc', '+ Документ к решению в Völva ↗')}
+                        </a>
+                      </>
+                    ) : (
+                      <span style={S.meta}>{t('lore.decisionBoard.volvaNotConnected', 'Völva не подключена: адрес задаётся настройкой volva.url в админке.')}</span>
+                    )}
+                  </div>
                 </>
               )}
             </div>
