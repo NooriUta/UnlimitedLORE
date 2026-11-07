@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lore.seidrstudio.pro/schemas/seidr-kit/kit-data.schema.json",
+  "title": "Seiðr-kit · KitData (window.X_DATA)",
+  "description": "Формат данных kit (SPRINT_UXR_S10_SEIDR_KIT/K-01): то, что сервер приложения отдаёт и что single-file HTML кладёт в window.X_DATA. Всё, что относится к записи, но не входит в контракт (summary, verdict, review…), лежит в fields.",
+  "type": "object",
+  "required": ["records", "edges", "journal", "meta"],
+  "properties": {
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "title", "status", "fields"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "minLength": 1, "description": "Ключ KitConfig.kinds" },
+          "title": { "type": "string" },
+          "status": { "type": "string", "description": "Код из KitConfig.statuses.items" },
+          "fields": { "type": "object" },
+          "body_md": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "type"],
+        "properties": {
+          "from": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1, "description": "Ключ KitConfig.edges" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "journal": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["at", "who", "record_id", "field"],
+        "properties": {
+          "at": { "type": "string", "format": "date-time" },
+          "who": { "type": "string", "minLength": 1 },
+          "is_agent": { "type": "boolean" },
+          "record_id": { "type": "string", "minLength": 1 },
+          "field": { "type": "string", "minLength": 1 },
+          "from": {},
+          "to": {},
+          "approved_by": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["generated_at"],
+      "properties": {
+        "generated_at": { "type": "string", "format": "date-time" },
+        "scope": { "type": "string" },
+        "total": { "type": "integer", "minimum": 0 },
+        "returned": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" },
+        "errors": {
+          "description": "Честные ошибки блоков: блок не загрузился ≠ блок пуст.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["block", "reason"],
+            "properties": {
+              "block": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
