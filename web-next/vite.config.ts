@@ -18,11 +18,22 @@ export default defineConfig({
   // копию React, и хуки упали бы «Invalid hook call». @iconify/react (S4-00b) —
   // peer kit: реестр иконок у него модульный, и вторая копия не видела бы
   // набор, зарегистрированный приложением.
+  // MD/HTML-элементы kit (@seidr/kit/content, S4-00d) — тоже peer: TipTap и
+  // ProseMirror держат состояние в модуле (две копии @tiptap/pm = «схема из
+  // чужого экземпляра»), а в образе у kit своего node_modules нет вовсе —
+  // импорт из исходников kit обязан разрешаться от web-next.
   resolve: {
-    dedupe: ['react', 'react-dom', '@iconify/react'],
+    dedupe: [
+      'react', 'react-dom', '@iconify/react',
+      '@tiptap/core', '@tiptap/react', '@tiptap/pm', '@tiptap/starter-kit', '@tiptap/extension-image',
+      '@tiptap/extension-table', '@tiptap/extension-task-list', '@tiptap/extension-task-item',
+      '@tiptap/extension-mention', '@tiptap/suggestion', 'tiptap-markdown',
+      'marked', 'mermaid', '@mermaid-js/layout-elk', 'bpmn-js', 'dompurify',
+    ],
   },
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    setupFiles: ['src/test/setup.ts'],
     env: { VITE_LORE_AUTH_ENABLED: 'false' },
   },
   server: {

@@ -63,6 +63,16 @@
   --st-blocked:          #e0685a;
   --st-cancelled:        #808080;
 
+  /* ── «бумага» диаграмм MartProse (S4-00d) ──
+     Диаграммы mermaid/bpmn рисуются на светлой подложке при любой теме: их
+     линии и подписи рассчитаны на светлый фон (v1, палитра «Лес» MartProse).
+     Значения — копия v1; вторая палитра диаграммы берёт токены темы. */
+  --diagram-bg:   #f4f7ee;
+  --diagram-node: #cde498;
+  --diagram-fg:   #14210a;
+  --diagram-text: #1c1c1c;
+  --diagram-line: #4c6138;
+
   /* ── гарнитуры: текст Manrope, моно IBM Plex Mono, заголовки Unbounded 800 ── */
   --font:    'Manrope', sans-serif;
   --mono:    'IBM Plex Mono', monospace;
@@ -715,4 +725,221 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-ear:focus-visible {
   outline: 2px solid var(--acc);
   outline-offset: 1px;
+}
+
+/* ═══════════ MD/HTML-элементы (S4-00d) ═══════════
+   TipTapField (sk-md), MartProse (sk-prose), SandboxedHtmlFrame (sk-frame).
+   Копии v1 переведены с инлайна и CSS-из-JS сюда: один слой, только токены. */
+
+/* ---------- TipTapField: правка MD ---------- */
+.sk-md {
+  border: 1px solid var(--bd);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--bg1);
+}
+.sk-md__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--bd);
+}
+.sk-md__btn {
+  height: max(22px, var(--tap));
+  min-width: max(22px, var(--tap));
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  line-height: 1;
+}
+.sk-md__btn:hover { color: var(--t1); border-color: var(--bd); }
+.sk-md__btn.is-on {
+  color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 18%, transparent);
+  border-color: color-mix(in srgb, var(--acc) 35%, transparent);
+}
+.sk-md__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-md__sep { width: 1px; align-self: stretch; margin: 2px 1px; background: var(--bd); }
+.sk-md__err {
+  padding: 4px 9px;
+  color: var(--dng);
+  font-size: var(--fs-xs);
+  border-bottom: 1px solid var(--bd);
+}
+.sk-md__box {
+  position: relative;
+  padding: 7px 9px;
+  color: var(--t1);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+}
+.sk-md__doc { overflow-y: auto; outline: none; }
+.sk-md__placeholder {
+  position: absolute;
+  top: 7px;
+  left: 9px;
+  color: var(--t3);
+  pointer-events: none;
+}
+.sk-md__source {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  background: var(--bg1);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+}
+.sk-md__source:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-md .ProseMirror img { display: block; max-width: 100%; height: auto; margin: 8px 0; border-radius: var(--r-md); }
+.sk-md .ProseMirror table { width: 100%; margin: 8px 0; border-collapse: collapse; table-layout: fixed; }
+.sk-md .ProseMirror th,
+.sk-md .ProseMirror td { padding: 4px 7px; border: 1px solid var(--bd); vertical-align: top; text-align: left; }
+.sk-md .ProseMirror th { background: var(--bg2); font-weight: 600; }
+.sk-md .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 4px; }
+.sk-md .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 6px; }
+.sk-md .ProseMirror ul[data-type="taskList"] li > label { flex: none; margin-top: 3px; }
+.sk-md .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+/* Маркеры списков рисуются снаружи строки — без отступа срезаются краем (v1). */
+.sk-md .ProseMirror ul,
+.sk-md .ProseMirror ol { margin: 6px 0; padding-left: 22px; }
+.sk-md .ProseMirror li { margin: 2px 0; }
+.sk-md .ProseMirror li > p { margin: 0; }
+.sk-md .ProseMirror h1,
+.sk-md .ProseMirror h2,
+.sk-md .ProseMirror h3 { margin: 12px 0 4px; line-height: 1.25; }
+.sk-md .ProseMirror > :first-child { margin-top: 0; }
+.sk-md .ProseMirror p { margin: 4px 0; }
+.sk-md .ProseMirror blockquote { margin: 8px 0; padding: 2px 12px; border-left: 3px solid var(--acc); color: var(--t2); }
+.sk-md .ProseMirror hr { margin: 12px 0; border: none; border-top: 1px solid var(--bd); }
+.sk-md .ProseMirror pre { margin: 8px 0; padding: 8px 10px; overflow-x: auto; background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); }
+.sk-md .ProseMirror pre code { padding: 0; background: none; border: none; }
+.sk-md .ProseMirror code { padding: 0 4px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 3px; }
+.sk-md__img {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  vertical-align: top;
+}
+.sk-md__img img { display: block; width: 100%; height: auto; margin: 0; border-radius: var(--r-md); }
+.sk-md__img-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--bg0);
+  border-radius: 50%;
+  background: var(--acc);
+  cursor: nwse-resize;
+}
+.sk-md__mentions {
+  position: fixed;
+  z-index: 400;
+  min-width: 220px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 3px;
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-md__mention {
+  display: block;
+  width: 100%;
+  min-height: max(var(--tap), 24px);
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+.sk-md__mention.is-on { background: var(--bg3); }
+.sk-md__mention-id { margin-left: 6px; color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-md__mention-empty { padding: 6px 9px; color: var(--t3); font-size: var(--fs-xs); }
+
+/* ---------- MartProse: чтение MD ---------- */
+.sk-prose { color: var(--t2); font-size: var(--fs-md); line-height: 1.55; }
+.sk-prose h1,
+.sk-prose h2 { margin: 1em 0 .4em; color: var(--t1); font-size: var(--fs-lg); font-weight: 600; }
+.sk-prose h3,
+.sk-prose h4 { margin: .8em 0 .3em; color: var(--t1); font-size: var(--fs-md); font-weight: 600; }
+.sk-prose p { margin: 0 0 .7em; }
+.sk-prose p:last-child { margin-bottom: 0; }
+.sk-prose ul,
+.sk-prose ol { margin: 0 0 .7em; padding-left: 1.5em; }
+.sk-prose li { margin-bottom: .2em; }
+.sk-prose strong { color: var(--t1); font-weight: 600; }
+.sk-prose a { color: var(--acc); text-decoration: underline; text-underline-offset: 2px; }
+.sk-prose blockquote { margin: 0 0 .7em; padding: 2px 10px; border-left: 3px solid var(--acc); background: var(--bg1); }
+.sk-prose code { padding: 0 4px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 3px; font-family: var(--mono); font-size: var(--fs-sm); }
+.sk-prose pre { margin: 0 0 .8em; padding: 10px 12px; overflow-x: auto; background: var(--bg0); border: 1px solid var(--bd); border-radius: var(--r-md); }
+.sk-prose pre code { padding: 0; background: none; border: none; }
+.sk-prose table { margin: 0 0 .8em; border-collapse: collapse; font-size: var(--fs-base); }
+.sk-prose th { padding: 4px 10px; background: var(--bg2); border: 1px solid var(--bd); color: var(--t1); font-weight: 600; text-align: left; }
+.sk-prose td { padding: 4px 10px; border: 1px solid var(--bd); font-variant-numeric: tabular-nums; }
+.sk-prose hr { margin: 1em 0; border: none; border-top: 1px solid var(--bd); }
+.sk-prose__diagram { position: relative; margin: 0 0 .8em; }
+.sk-prose__palette {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 1;
+  min-height: max(var(--tap), 20px);
+  padding: 2px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg1);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+}
+.sk-prose__palette:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-prose__mermaid { overflow-x: auto; padding: 10px; border-radius: var(--r-md); }
+.sk-prose__mermaid--paper { background: var(--diagram-bg); color: var(--diagram-text); }
+.sk-prose__mermaid--theme { background: var(--bg1); color: var(--t1); border: 1px solid var(--bd); }
+/* mermaid красит подписи <text> из глобального init — в палитре темы явно
+   ставим цвет текста темы (селектор по элементу: классы срезает санитайзер). */
+.sk-prose__mermaid--theme svg text { fill: var(--t1) !important; }
+.sk-prose__diagram-wait { min-height: 24px; margin: 0 0 .8em; }
+.sk-prose__diagram-err {
+  margin: 0 0 .8em;
+  padding: 4px 8px;
+  border: 1px solid var(--dng);
+  border-radius: var(--r-sm);
+  color: var(--dng);
+  font-family: var(--mono);
+  font-size: var(--fs-base);
+}
+.sk-prose__diagram-err summary { color: var(--t3); cursor: pointer; }
+.sk-prose__diagram-err pre { margin: 4px 0 0; color: var(--t2); white-space: pre-wrap; }
+.sk-prose__bpmn {
+  height: 420px;
+  margin: 0 0 .8em;
+  background: var(--diagram-bg);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+}
+
+/* ---------- SandboxedHtmlFrame: HTML только в песочнице ---------- */
+.sk-frame {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
 }

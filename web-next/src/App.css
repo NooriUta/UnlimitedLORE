@@ -17,3 +17,12 @@
   letter-spacing: .04em;
 }
 /* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
+
+/* Ссылка на витрину /kit (S4-00d): цель касания — не меньше --tap. */
+.shell-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 24px);
+  margin-left: auto;
+  font-size: var(--fs-sm);
+}
