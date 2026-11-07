@@ -94,11 +94,33 @@ public class LoreSpecResource extends LoreResourceBase {
             boolean bodyProvided = req.content_md() != null || req.version() != null
                 || req.summary() != null || req.status() != null;
             boolean histWritten = false;
+            // S2-13: смена статуса спеки — новая версия истории через единый сервис
+            // (раньше статус правился на открытой строке на месте, и прежний терялся).
+            // Тела ниже лягут в открытую версию — уже со свежим статусом.
+            if (req.status() != null && !req.status().isBlank()) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> cur = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "SELECT status_raw, status FROM KnowSpecHist " +
+                        "WHERE in('HAS_STATE').spec_id CONTAINS :id AND valid_to IS NULL LIMIT 1",
+                        Map.of("id", req.spec_id())))
+                    .await().indefinitely().result();
+                String was = cur == null || cur.isEmpty() ? null
+                    : StatusHistoryService.statusOf(StatusHistoryService.KINDS.get("spec"), cur.get(0), null);
+                if (was == null || !was.equals(req.status())) {
+                    StatusHistoryService.Outcome so = StatusHistoryService.transition(
+                        statusDb(), "spec", req.spec_id(), null, req.status(), changeAuthor());
+                    if (so instanceof StatusHistoryService.Outcome.Conflict c)
+                        throw new Scd2Guard.ConflictException(c.detail(), c.current());
+                }
+                histWritten = true;
+            }
             if (bodyProvided) {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "SELECT @rid as rid, content_md, version, summary, status FROM KnowSpecHist " +
+                        "SELECT @rid as rid, content_md, version, summary, status"
+                            + StatusHistoryService.STATUS_FIELDS_SELECT + " FROM KnowSpecHist " +
                         "WHERE in('HAS_STATE').spec_id[0] = :id AND valid_to IS NULL LIMIT 1",
                         Map.of("id", req.spec_id())))
                     .await().indefinitely().result();
@@ -112,15 +134,17 @@ public class LoreSpecResource extends LoreResourceBase {
                     hp.put("content", req.content_md() != null ? req.content_md() : histRows.get(0).get("content_md"));
                     hp.put("version", req.version()    != null ? req.version()    : histRows.get(0).get("version"));
                     hp.put("summary", req.summary()    != null ? req.summary()    : histRows.get(0).get("summary"));
-                    hp.put("status",  req.status()     != null ? req.status()     : histRows.get(0).get("status"));
+                    // S2-13: статус уже записан версией выше — правка тела его только переносит.
+                    hp.put("status",  histRows.get(0).get("status"));
                     // S2-09: закрыть, только если версия ЕЩЁ открыта; иначе выход до записи и 409.
                     hp.put("oldrid", hp.get("rid"));
                     changeAuthor().bind(hp); // S2-12
+                    String carryStatus = StatusHistoryService.carryStatusSet(histRows.get(0), hp);
                     Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         Scd2Guard.guardedClose("KnowSpecHist", false) +
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
                         "content_md=:content, version=:version, summary=:summary, status=:status" +
-                        ChangeAuthor.SET_SQL + ";" +
+                        carryStatus + ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
                         "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely().result();
                     if (Scd2Guard.isConflict(cpRes))
@@ -136,7 +160,7 @@ public class LoreSpecResource extends LoreResourceBase {
                     if (req.content_md() != null) { hsql.append(", content_md=:content"); hp.put("content", req.content_md()); }
                     if (req.version() != null)    { hsql.append(", version=:version");    hp.put("version", req.version()); }
                     if (req.summary() != null)    { hsql.append(", summary=:summary");    hp.put("summary", req.summary()); }
-                    if (req.status() != null)     { hsql.append(", status=:status");      hp.put("status",  req.status()); }
+                    // S2-13: статус на месте больше не правится — его пишет версия выше.
                     hsql.append(" WHERE @rid=:rid");
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         hsql.toString(), hp)).await().indefinitely();

@@ -158,7 +158,10 @@ public class LoreStatusResource extends LoreResourceBase {
             // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
             case "phase"     -> updateScd2Status("phase", "KnowPhase", "KnowPhaseHist",
                                     "phase_uid", req.id(), req.status(), now, nsid, req.expected(), author);
-            case "adr"       -> updateAdrStatusDirect(req.id(), req.status().toUpperCase(), now);
+            // S2-13: статус ADR — новая версия KnowADRHist (раньше — голый UPDATE поля
+            // вершины, в истории его не было; §7.3 новостей считался диапазоном).
+            case "adr"       -> updateScd2Status("adr", "KnowADR", "KnowADRHist",
+                                    "adr_id", req.id(), req.status(), now, nsid, req.expected(), author);
             default          -> Uni.createFrom().item(noStore(Response.status(501)
                                     .entity(new LoreError("NOT_IMPLEMENTED",
                                         req.entity_type() + " not supported yet"))));
@@ -279,86 +282,24 @@ public class LoreStatusResource extends LoreResourceBase {
                                            String keyField, String id, String token,
                                            String now, String nsid, String expected,
                                            ChangeAuthor author) {
+        // S2-13: единственный путь смены статуса — StatusHistoryService.transition.
+        // vertexType/histType/keyField остаются в сигнатуре ради вызывающих
+        // (task/move, авто-вывод спринта); тип элемента определяет реестр сервиса.
+        // Сервис сам проверяет существование вершины (404 вместо осиротевшей
+        // строки), закрывает версию условно (409, S2-09), переносит ВСЕ поля
+        // открытой строки и пишет автора (S2-12) — одним sqlscript.
         final ChangeAuthor by = author == null ? ChangeAuthor.UNKNOWN : author;
-        final String newRaw = SCD2_STATUS_RAW.getOrDefault(token, token);
-        // Guard: the entity vertex must exist. Without this an unknown id — e.g. a
-        // bare task_id "T40" instead of the full task_uid "SPRINT_X/T40" — slips
-        // through: the CREATE EDGE FROM (SELECT ... WHERE keyField=:id) matches
-        // nothing, so an ORPHAN hist row gets inserted yet the call still reports
-        // ok:true (a silent no-op that leaves the status unchanged). Fail loud.
-        MartQuery existsQ = new MartQuery("sql",
-            "SELECT count(*) AS n FROM " + vertexType + " WHERE " + keyField + " = :id",
-            Map.of("id", id), -1);
-        return client.query(db, basicAuth(), existsQ).chain(exRes -> {
-            List<Map<String, Object>> exRows = exRes.result() != null ? exRes.result() : List.of();
-            long cnt = exRows.isEmpty() ? 0L : ((Number) exRows.get(0).getOrDefault("n", 0)).longValue();
-            if (cnt == 0) {
-                return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
-                    .entity(new LoreError("NOT_FOUND", entityType + " '" + id + "' not found — id must be the full "
-                        + keyField + " (a task needs \"SPRINT_X/T05\", not a bare task_id)"))));
-            }
-        MartQuery readQ = new MartQuery("sql",
-            "SELECT @rid AS rid, status_raw, valid_from FROM " + histType +
-            " WHERE in('HAS_STATE')." + keyField + " CONTAINS :id AND valid_to IS NULL LIMIT 1",
-            Map.of("id", id), -1);
-
-        return client.query(db, basicAuth(), readQ)
-            .chain(res -> {
-                List<Map<String, Object>> rows =
-                    res.result() != null ? res.result() : List.of();
-                final String oldRid    = rows.isEmpty() ? null
-                    : String.valueOf(rows.get(0).getOrDefault("rid", ""));
-                final String oldStatus = rows.isEmpty() ? null
-                    : (String) rows.get(0).get("status_raw");
-
-                // S2-09: «было» названо и не совпало с открытой версией — отказ до записи.
-                if (!Scd2Guard.statusMatches(expected, oldStatus)) {
-                    return Uni.createFrom().item(Scd2Guard.conflict(
-                        entityType + " '" + id + "': expected status '" + expected
-                            + "', but the open version is '" + oldStatus + "' — re-read and retry",
-                        rows.isEmpty() ? Map.of() : rows.get(0)));
-                }
-                final boolean guarded = oldRid != null && oldRid.startsWith("#");
-                final boolean checkStatus = guarded && expected != null && !expected.isBlank() && oldStatus != null;
-
-                // A1: close-old + open-new + HAS_STATE edge + denormalize run as one
-                // atomic sqlscript (ArcadeDB implicit transaction). A partial SCD2
-                // transition can no longer leave two open hist rows, or an entity
-                // whose denormalized status_raw disagrees with its open hist row.
-                // vertexType/histType/keyField come from the internal type switch,
-                // never user input; id is bound as a parameter.
-                StringBuilder script = new StringBuilder();
-                Map<String, Object> p = new java.util.HashMap<>();
-                p.put("nsid", nsid); p.put("ns", newRaw); p.put("now", now); p.put("id", id);
-                by.bind(p);
-                if (guarded) {
-                    // S2-09: закрыть, только если версия ЕЩЁ открыта (и, при expected,
-                    // в прежнем статусе); иначе скрипт выходит до первой записи.
-                    script.append(Scd2Guard.guardedClose(histType, checkStatus));
-                    p.put("oldrid", oldRid);
-                    if (checkStatus) p.put("expected_raw", oldStatus);
-                }
-                script.append("INSERT INTO ").append(histType)
-                      .append(" SET state_uid = :nsid, status_raw = :ns, valid_from = :now")
-                      .append(ChangeAuthor.SET_SQL).append(";")
-                      .append("CREATE EDGE HAS_STATE FROM (SELECT FROM ").append(vertexType)
-                      .append(" WHERE ").append(keyField).append(" = :id) ")
-                      .append("TO (SELECT FROM ").append(histType).append(" WHERE state_uid = :nsid);")
-                      .append("UPDATE ").append(vertexType)
-                      .append(" SET status_raw = :ns WHERE ").append(keyField).append(" = :id;");
-
-                return writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
-                    .chain(r -> Scd2Guard.isConflict(r.result())
-                        ? client.query(db, basicAuth(), readQ).map(cur -> Scd2Guard.conflict(
-                            entityType + " '" + id + "': the version read (" + oldStatus
-                                + ") was closed by a concurrent write — re-read and retry",
-                            cur.result() == null || cur.result().isEmpty() ? Map.of() : cur.result().get(0)))
-                        : Uni.createFrom().item(noStore(Response.ok(new StatusUpdateResponse(
-                            true, entityType, id, oldStatus, newRaw,
-                            new StatusRevision(now, null))))));
-                });
-        })
+        final StatusHistoryService.Db sdb = statusDb();
+        return Uni.createFrom().item(() -> StatusHistoryService.transition(
+                    sdb, entityType, id, expected, token, by, now, nsid))
+            .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+            .map(o -> {
+                Response err = statusOutcomeError(o);
+                if (err != null) return err;
+                StatusHistoryService.Outcome.Ok ok = (StatusHistoryService.Outcome.Ok) o;
+                return noStore(Response.ok(new StatusUpdateResponse(
+                    true, entityType, id, ok.oldStatus(), ok.newStatus(), new StatusRevision(now, null))));
+            })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE STATUS] %s=%s: %s", entityType, id, ex.getMessage());
                 if (Scd2Guard.isConcurrentModification(ex)) {
@@ -662,18 +603,6 @@ public class LoreStatusResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(ex)));
         });
-    }
-
-    // LH-44: direct status setter for KnowADR (no SCD2 hist row — status is a plain field)
-    private Uni<Response> updateAdrStatusDirect(String adrId, String status, String now) {
-        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowADR SET status=:status WHERE adr_id=:id",
-                Map.of("status", status, "id", adrId)))
-            .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
-                true, "adr", adrId, null, status, new StatusRevision(now, null)))))
-            .onFailure().recoverWithItem(ex ->
-                noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(LoreUpstream.error(ex))));
     }
 
     /**

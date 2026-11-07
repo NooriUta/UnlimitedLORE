@@ -254,6 +254,10 @@ final class LoreSchemaMigrations {
         "KnowSprintHist",
         "KnowDictEntryHist");
 
+    /** S2-13: Hist-типы, чей статус ведёт StatusHistoryService (V67). Объявлен ДО STEPS: статика инициализируется по порядку. */
+    static final List<String> STATUS_HIST_TYPES = List.of(
+        "KnowTaskHist", "KnowSprintHist", "KnowPhaseHist", "KnowADRHist", "KnowSpecHist", "KnowDecisionHist");
+
     /** RM-P13 (V56): свойства времени SCD2-строки, которые приводятся к DATETIME. */
     static final List<String> HIST_TIME_FIELDS = List.of("valid_from", "valid_to");
 
@@ -1494,7 +1498,29 @@ final class LoreSchemaMigrations {
             .flatMap(h -> java.util.stream.Stream.of(
                 "CREATE PROPERTY " + h + ".changed_by IF NOT EXISTS STRING",
                 "CREATE PROPERTY " + h + ".changed_by_kind IF NOT EXISTS STRING"))
-            .toList())
+            .toList()),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-13: единая схема статуса в истории всех типов
+        // со статусом (StatusHistoryService.KINDS). status_raw — сам статус версии
+        // (у ADR/спек/решений история его раньше не несла), status_category — ось
+        // D-2026-UXR-STATUS-AXIS на момент записи, status_known_from — с какого
+        // момента статус версии ИЗВЕСТЕН (у сервиса = valid_from; у бэкфилла V68 —
+        // момент бэкфилла), status_backfilled — статус положен бэкфиллом, а не
+        // переходом. Только новые необязательные свойства, major 17.
+        new Step(67, 17, "status_history_unified", STATUS_HIST_TYPES.stream()
+            .flatMap(h -> java.util.stream.Stream.of(
+                "CREATE PROPERTY " + h + ".status_raw IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".status_category IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".status_known_from IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".status_backfilled IF NOT EXISTS BOOLEAN"))
+            .toList()),
+
+        // S2-13: бэкфилл статуса в истории ADR, спек и решений
+        // (StatusHistoryService.backfill): открытой версии без статуса — текущий
+        // статус вершины с пометкой «известен с момента бэкфилла»; элементу без
+        // истории — одна версия с той же пометкой. Новых версий у тех, у кого они
+        // есть, не открывает; valid_from/valid_to существующих строк не трогает.
+        new Step(68, 17, "java__status_history_backfill", List.of())
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

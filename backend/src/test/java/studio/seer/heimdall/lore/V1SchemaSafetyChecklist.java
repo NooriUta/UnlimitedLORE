@@ -59,7 +59,15 @@ final class V1SchemaSafetyChecklist {
      * Пусто: в S2 Java-шагов нет. Добавлять строку только вместе с тестом,
      * доказывающим аддитивность именно этого шага.
      */
-    static final Map<String, String> JAVA_STEPS_REVIEWED = Map.of();
+    static final Map<String, String> JAVA_STEPS_REVIEWED = Map.of(
+        // S2-13, V68. Доказательство — StatusHistoryServiceTest
+        // (backfill_writes_only_v67_properties_and_never_moves_version_dates):
+        // UPDATE ставит только свойства V67 с условием «ещё не стоит»; INSERT
+        // открывает версию лишь элементу без истории (v1 такие строки читает как
+        // обычные версии без статуса); valid_from/valid_to существующих строк и
+        // поля v1 не трогаются.
+        "java__status_history_backfill",
+        "только новые свойства V67 на открытых версиях + первая версия у элементов без истории");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

@@ -90,20 +90,29 @@ public class LoreAdrResource extends LoreResourceBase {
                 upsertSql.append(", file_path=:file_path");
                 upsertP.put("file_path", req.file_path());
             }
-            if (resolvedStatus != null) {
-                upsertSql.append(", status=:status");
-                upsertP.put("status", resolvedStatus);
-            }
             upsertSql.append(" UPSERT WHERE adr_id=:adr_id");
             writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sql", upsertSql.toString(), upsertP))
                 .await().indefinitely();
 
+            // S2-13: статус — НЕ полем вершины, а новой версией истории через единый
+            // сервис (у нового ADR это и есть его первая версия; тела ниже лягут в
+            // неё же правкой на месте). Тот же статус повторно версию не открывает.
+            Object prevStatus = isNewAdr ? null : existingAdr.get(0).get("status");
+            if (resolvedStatus != null && (isNewAdr || prevStatus == null
+                    || !resolvedStatus.equalsIgnoreCase(String.valueOf(prevStatus)))) {
+                StatusHistoryService.Outcome so = StatusHistoryService.transition(
+                    statusDb(), "adr", req.adr_id(), null, resolvedStatus, changeAuthor());
+                if (so instanceof StatusHistoryService.Outcome.Conflict c)
+                    throw new Scd2Guard.ConflictException(c.detail(), c.current());
+            }
+
             // Step 2: check for an existing open SCD2 hist row
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "SELECT @rid as rid, state_uid, context_md, decision_md, consequences_md FROM KnowADRHist " +
+                    "SELECT @rid as rid, state_uid, context_md, decision_md, consequences_md"
+                        + StatusHistoryService.STATUS_FIELDS_SELECT + " FROM KnowADRHist " +
                     "WHERE in('HAS_STATE').adr_id[0] = :id AND valid_to IS NULL LIMIT 1",
                     Map.of("id", req.adr_id())))
                 .await().indefinitely().result();
@@ -138,10 +147,12 @@ public class LoreAdrResource extends LoreResourceBase {
                     // S2-09: закрыть, только если версия ЕЩЁ открыта; иначе выход до записи и 409.
                     cp.put("oldrid", rid);
                     changeAuthor().bind(cp); // S2-12
+                    // S2-13: правка тела статус не меняет — он переносится в новую версию.
+                    String carryStatus = StatusHistoryService.carryStatusSet(histRows.get(0), cp);
                     Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         Scd2Guard.guardedClose("KnowADRHist", false) +
                         "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                        "context_md=:ctx, decision_md=:dec, consequences_md=:con" + ChangeAuthor.SET_SQL + ";" +
+                        "context_md=:ctx, decision_md=:dec, consequences_md=:con" + carryStatus + ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
                         "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely().result();
                     if (Scd2Guard.isConflict(cpRes))
@@ -183,9 +194,17 @@ public class LoreAdrResource extends LoreResourceBase {
                 histP.put("now",  now);
                 histP.put("id",   req.adr_id());
                 changeAuthor().bind(histP); // S2-12
+                // S2-13: первая версия существующего ADR без истории несёт его текущий
+                // статус — известный с этого момента, не раньше.
+                String firstStatus = "";
+                if (prevStatus != null) {
+                    histP.put("st_raw", String.valueOf(prevStatus));
+                    histP.put("st_cat", LoreStatusCategory.of("adr", prevStatus));
+                    firstStatus = ", status_raw=:st_raw, status_category=:st_cat, status_known_from=:now";
+                }
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                     "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                    "context_md=:ctx, decision_md=:dec, consequences_md=:con" + ChangeAuthor.SET_SQL + ";" +
+                    "context_md=:ctx, decision_md=:dec, consequences_md=:con" + firstStatus + ChangeAuthor.SET_SQL + ";" +
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
                     "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);",
                     histP)).await().indefinitely();

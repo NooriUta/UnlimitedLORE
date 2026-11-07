@@ -185,6 +185,38 @@ public abstract class LoreResourceBase {
         return ChangeAuthor.of(identity);
     }
 
+    /**
+     * S2-13: доступ {@link StatusHistoryService} к БД ресурса. Блокирующий — звать
+     * с worker-потока (синхронные ресурсы уже на нём; реактивные — через
+     * runSubscriptionOn, см. LoreStatusResource.updateScd2Status).
+     */
+    StatusHistoryService.Db statusDb() {
+        return new StatusHistoryService.Db() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public java.util.List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                Object r = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params))
+                    .await().indefinitely().result();
+                return r instanceof java.util.List<?> l ? (java.util.List<Map<String, Object>>) l : java.util.List.of();
+            }
+            @Override
+            public Object script(String sql, Map<String, Object> params) {
+                return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript", sql, params))
+                    .await().indefinitely().result();
+            }
+        };
+    }
+
+    /** S2-13: исход перехода статуса → HTTP-ответ (409/404/400) или null для Ok. */
+    static Response statusOutcomeError(StatusHistoryService.Outcome o) {
+        if (o instanceof StatusHistoryService.Outcome.Conflict c) return Scd2Guard.conflict(c.detail(), c.current());
+        if (o instanceof StatusHistoryService.Outcome.NotFound n)
+            return noStore(Response.status(Response.Status.NOT_FOUND).entity(new LoreError("NOT_FOUND", n.detail())));
+        if (o instanceof StatusHistoryService.Outcome.BadType b)
+            return noStore(Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("BAD_PARAMS", b.detail())));
+        return null;
+    }
+
     String callerKcSub() {
         if (identity == null
                 || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) {
