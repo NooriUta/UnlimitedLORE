@@ -1,0 +1,217 @@
+{
+  "_about": "Снимок форм ответов LORE, которыми пользуется шлюз miniLORE (MINILORE_SRV) ради телефона. SPRINT_UXR_S0_SAFETY/S0-02. Список маршрутов — SPEC-MINILORE-PHONE-API 0.2.1, раздел 2 (строки 2-9) и 2A (/dictionary); происхождение каждого среза — в поле source. Ключ, пропавший из ответа среза, роняет MiniLorePhoneContractTest. Добавленный ключ разрешён: телефон его не читает, ломать сборку не за что.",
+  "spec": "SPEC-MINILORE-PHONE-API",
+  "spec_version": "0.2.1",
+  "slices": {
+    "sprints": {
+      "routes": ["#2 GET /dashboard/current", "#3 GET /news"],
+      "source": "SPEC-MINILORE-PHONE-API #2; вход /lore/news (sprint_id, name, git_projects, created_date)",
+      "params": {},
+      "keys": ["sprint_id", "name", "created_date", "priority", "valid_from", "status_raw", "pr_refs", "release_ids", "release_dates", "done_date", "git_projects", "components", "milestone_ids", "planned_start_date", "planned_end_date"]
+    },
+    "releases": {
+      "routes": ["#2 GET /dashboard/current"],
+      "source": "SPEC-LORE-PRODUCT-LAYER-FOR-GATEWAY §6: release_uid — единственный уникальный ключ релиза",
+      "params": {},
+      "keys": ["release_id", "release_uid", "git_tag", "version", "release_date", "is_current", "git_project", "projects"]
+    },
+    "releases_since": {
+      "routes": ["#2 GET /dashboard/current"],
+      "source": "LoreSlices: окно релизов по дате для счётчиков «за N дней» (miniLORE CO-45)",
+      "params": {"from": "2026-01-01"},
+      "keys": ["release_id", "git_tag", "release_date", "is_current", "git_project", "projects"]
+    },
+    "release_tasks_by_tag": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задачи релиза через PR",
+      "params": {"tag": "AIDA/miniLORE#v1.0.0"},
+      "keys": ["task_uid", "title", "sprint_id", "status_raw", "closed_by_prs"]
+    },
+    "timeline_releases": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news; окно релизов найдено сессией miniLORE-шлюза 31.08.2026",
+      "params": {},
+      "keys": ["release_id", "git_tag", "release_date", "is_current", "git_project"]
+    },
+    "sprint_done_dates": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news",
+      "params": {},
+      "keys": ["sprint_id", "done_date"]
+    },
+    "timeline_decisions": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news (updated_at — событие «изменено» решения, SE-02)",
+      "params": {},
+      "keys": ["decision_id", "title", "date_created", "updated_at", "projects", "adr_projects"]
+    },
+    "timeline_adrs": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news",
+      "params": {},
+      "keys": ["adr_id", "date_created", "component", "projects"]
+    },
+    "timeline_specs": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news; AL-113 — спеки с датой по запросу miniLORE",
+      "params": {},
+      "keys": ["spec_id", "title", "date_created", "component", "projects"]
+    },
+    "task_done_dates": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news; AL-119 — task_uid по запросу miniLORE (task_id неуникален)",
+      "params": {},
+      "keys": ["task_uid", "task_id", "valid_from", "states", "effort_days", "bookkeeping"]
+    },
+    "task_created_dates": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news; ML-NEWS — событие «заведена» по запросу серверной сессии miniLORE",
+      "params": {},
+      "keys": ["task_uid", "sprint_id", "valid_from"]
+    },
+    "adr_history_all": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news; AL-113 — правки ADR батчем",
+      "params": {},
+      "keys": ["adr_id", "valid_from", "valid_to", "content_hash", "source_commit", "projects"]
+    },
+    "spec_history_all": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news",
+      "params": {},
+      "keys": ["spec_id", "valid_from", "valid_to", "content_hash", "projects"]
+    },
+    "all_tasks": {
+      "routes": ["#3 GET /news"],
+      "source": "вход /lore/news (заголовок задачи по task_uid)",
+      "params": {},
+      "keys": ["task_uid", "task_id", "title", "priority", "component_id", "task_type", "author_agent", "executor_agent", "reviewer_agent", "status_raw", "sprint_id", "sprint_title", "note_md", "effort_days"]
+    },
+    "tasks_of_sprint": {
+      "routes": ["#4 GET /sprint/:sprintId/tasks"],
+      "source": "SPEC-MINILORE-PHONE-API #4; роли — ключи *_agent сохранены ради мобильного клиента (TR-05)",
+      "params": {"sprint_id": "SPRINT_UXR_S0_SAFETY"},
+      "keys": ["task_uid", "task_id", "title", "order_index", "phase_uid", "status_raw", "effort_days", "note_md", "component_ids", "author_agent", "executor_agent", "reviewer_agent", "task_type", "actual_days", "bookkeeping", "work_class", "realizes_uc"]
+    },
+    "tasks_by_uids": {
+      "routes": ["#4 GET /sprint/:sprintId/tasks", "#8 GET /entity/:type/:id"],
+      "source": "SE-16: пакетное чтение задач по task_uid",
+      "params": {"task_uids": "SPRINT_UXR_S0_SAFETY/S0-01,SPRINT_UXR_S0_SAFETY/S0-02"},
+      "keys": ["task_uid", "task_id", "title", "sprint_id", "status_raw", "effort_days", "note_md", "component_ids", "author_agent", "executor_agent", "reviewer_agent", "task_type", "work_class", "actual_days", "bookkeeping", "closed_by_prs"]
+    },
+    "search": {
+      "routes": ["#5 GET /search"],
+      "source": "SPEC-MINILORE-PHONE-API #5 — плоская палитра для прежних потребителей (основной путь — GET /lore/search)",
+      "params": {"pattern": "miniLORE"},
+      "keys": ["type", "ref_id", "title"]
+    },
+    "adrs": {
+      "routes": ["#6 GET /adrs"],
+      "source": "SPEC-MINILORE-PHONE-API #6",
+      "params": {},
+      "keys": ["adr_id", "name", "status", "date_created", "component", "components", "tags", "git_projects", "decision_count"]
+    },
+    "adr": {
+      "routes": ["#6 GET /adrs", "#8 GET /entity/:type/:id"],
+      "source": "SPEC-MINILORE-PHONE-API #6/#8 — карточка ADR",
+      "params": {"id": "ADR-MINILORE-001"},
+      "keys": ["adr_id", "name", "status", "date_created", "context_md", "decision_md", "consequences_md", "sprint_id", "components", "depends_on_ids", "implemented_in_ids", "release_ids", "supersedes_ids", "superseded_by_ids", "tags", "git_projects"]
+    },
+    "adr_history": {
+      "routes": ["#6 GET /adrs"],
+      "source": "AL-113 — правки ADR по запросу miniLORE 2026-08-16",
+      "params": {"id": "ADR-MINILORE-001"},
+      "keys": ["valid_from", "valid_to", "content_hash", "source_commit", "context_md", "decision_md", "consequences_md"]
+    },
+    "specs": {
+      "routes": ["#7 GET /specs"],
+      "source": "SPEC-MINILORE-PHONE-API #7; AL-113",
+      "params": {},
+      "keys": ["spec_id", "title", "component_id", "version", "summary", "status", "projects"]
+    },
+    "spec_by_id": {
+      "routes": ["#7 GET /specs", "#8 GET /entity/:type/:id"],
+      "source": "SPEC-MINILORE-PHONE-API #7/#8 — карточка спеки",
+      "params": {"id": "SPEC-MINILORE-PHONE-API"},
+      "keys": ["spec_id", "title", "content_md", "summary", "version", "status", "valid_from", "component_id", "projects"]
+    },
+    "decisions": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "LoreSlices: свежие D-2026-MINILORE-… не попадали в выдачу, хотя search их находил",
+      "params": {},
+      "keys": ["decision_id", "title", "date_created", "status_raw", "component_id", "components", "projects", "tags", "parent_adr"]
+    },
+    "decision": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "SPEC-MINILORE-PHONE-API #8 — карточка решения",
+      "params": {"id": "D-2026-MINILORE-FIVE-HUNDRED-NAMES-THE-DOOR"},
+      "keys": ["decision_id", "title", "date_created", "status_raw", "body_md", "rationale_md", "adr_refs", "sprint_refs", "pr_refs", "release_refs", "projects", "components", "component_id", "parent_adr", "tags", "supersedes_ids"]
+    },
+    "uc_by_id": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "SL-01 — адресная форма сценария по запросу сессии miniLORE; SPEC-LORE-PRODUCT-LAYER-FOR-GATEWAY §1",
+      "params": {"id": "UC-X"},
+      "keys": ["uc_id", "title", "body_md", "context_md", "scenario_md", "acceptance_md", "status", "goal_level", "rigor", "priority", "date_created", "shipped_at", "parent_uc_id", "component_id", "component_ids", "projects", "child_uc_ids", "parent_uc_ids", "actor_ids", "pain_ids", "gain_ids", "job_ids", "task_uids"]
+    },
+    "question_by_id": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "SL-01; SPEC-LORE-PRODUCT-LAYER-FOR-GATEWAY §4 — вопрос в любом статусе",
+      "params": {"id": "Q-X"},
+      "keys": ["question_id", "title", "body_md", "status", "trigger", "due_date", "priority", "owner", "raised_by", "opened_date", "closed_date", "component_id", "components", "projects", "gating_tasks", "raised_adr", "raised_sprint", "answered_by"]
+    },
+    "open_questions": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "D-2026-LORE-QUESTIONS-SLICE-RENAME: синоним questions оставлен на переход для miniLORE",
+      "params": {},
+      "keys": ["question_id", "title", "status", "trigger", "component_id", "due_date", "priority", "components", "projects"]
+    },
+    "doc_by_id": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "SPEC-MINILORE-PHONE-API #8 — карточка документа",
+      "params": {"id": "prompt_minilore_gateway_handoff"},
+      "keys": ["doc_id", "title", "kind", "content_md_ru", "content_md_en", "content_html", "parent_doc_id", "child_ids", "component_id", "projects", "valid_from"]
+    },
+    "runbook_by_id": {
+      "routes": ["#8 GET /entity/:type/:id"],
+      "source": "SPEC-MINILORE-PHONE-API #8 — карточка ранбука",
+      "params": {"id": "RUNBOOK-MINILORE-SRV"},
+      "keys": ["runbook_id", "name", "area", "date_created", "content_md", "valid_from", "adr_ids", "projects"]
+    },
+    "dictionary": {
+      "routes": ["2A GET /dictionary", "#9 GET /projects/colors"],
+      "source": "SPEC-MINILORE-PHONE-API 2A — подписи из словаря LORE; D-2026-MINILORE-FIVE-HUNDRED-NAMES-THE-DOOR (502 на срез dictionary)",
+      "params": {},
+      "keys": ["dict_type", "code", "label_ru", "label_en", "color", "icon", "sort_order", "is_active"]
+    },
+    "git_projects": {
+      "routes": ["#9 GET /projects/colors"],
+      "source": "SPEC-LORE-PRODUCT-LAYER-FOR-GATEWAY §5 — проект опознаётся слагом owner/repo",
+      "params": {},
+      "keys": ["slug", "name"]
+    },
+    "products": {
+      "routes": ["#9 GET /projects/colors"],
+      "source": "RM-P6: продукт — запись справочника с цветом и иконкой",
+      "params": {},
+      "keys": ["code", "label_ru", "label_en", "color", "icon", "git_projects"]
+    },
+    "user_project_roles": {
+      "routes": ["выдача по людям"],
+      "source": "LoreSlices: по нему miniLORE делит выдачу по людям (D-2026-LORE-MINILORE-READER-READS-ALL)",
+      "params": {"kc_sub": "x"},
+      "keys": ["kc_sub", "display_name", "projects", "roles"]
+    }
+  },
+  "endpoints": [
+    {"route": "#3 GET /news", "method": "GET", "path": "/lore/news", "resource": "studio.seer.heimdall.lore.AidaLoreResource"},
+    {"route": "#5 GET /search", "method": "GET", "path": "/lore/search", "resource": "studio.seer.heimdall.lore.LoreSearchResource"},
+    {"route": "срезы (#2, #4, #6-#9, 2A)", "method": "GET", "path": "/lore/slice/{id}", "resource": "studio.seer.heimdall.lore.AidaLoreResource"},
+    {"route": "каталог срезов", "method": "GET", "path": "/lore/slices", "resource": "studio.seer.heimdall.lore.AidaLoreResource"}
+  ],
+  "news_item": {
+    "_about": "Строка ленты GET /lore/news → items[]. projects — ВСЕГДА (пустой список тоже); project — первый из projects ради старых сборок; ref {type,id} — куда открыть карточку.",
+    "always": ["kind", "event", "date", "title", "projects"],
+    "when_present": ["time", "detail", "project", "ref"],
+    "ref_keys": ["type", "id"]
+  }
+}
