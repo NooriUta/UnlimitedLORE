@@ -38,3 +38,7 @@ export { setUrlParams, useUrlParam } from './resilience/useUrlParam';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) и палитра Ctrl+K / поиск «/» (K-07).
 export type * from './core/contract';
 export * from './palette';
+// Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
+export type * from './core/contract';
+// Вид «Дерево / книга» — третий в list.views (K-09).
+export * from './views/tree';
