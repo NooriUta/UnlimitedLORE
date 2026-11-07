@@ -23,6 +23,24 @@ jobs:
     runs-on: lore-only
     steps:
       - uses: actions/checkout@v7
+        with:
+          # S3-10: ci-scope.sh сравнивает base...HEAD — нужна история, а
+          # checkout по умолчанию мелкий (depth 1). Репозиторий ~10 МБ.
+          fetch-depth: 0
+
+      # SPRINT_UXR_S3_V2_INFRA/S3-10 (D-2026-UXR-V2-FOLDER-V1-FROZEN): что гонять —
+      # по изменённым путям. Правка web-next/ не гоняет v1 и MCP; правка
+      # backend/ / mcp-server/ гоняет всё. Тяжёлые шаги ниже стоят под флагами
+      # v1 / mcp. Шаги, а не job целиком: job остаётся и зеленеет, так что
+      # обязательный чек не повисает «ожидается», а пропуск виден в логе.
+      # Дифф не вычислился — гоняется всё (см. ci-scope.sh).
+      - name: Scope by changed paths (S3-10)
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: bash .github/scripts/ci-scope.sh ci
 
       # Раннер получает HTTP_PROXY из своей конфигурации, и она переезжает вместе
       # с ним. После переноса раннеров на ci-server прокси остался прописанным
@@ -99,6 +117,7 @@ jobs:
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
       - name: LORE frontend — install + typecheck + test + build
+        if: steps.scope.outputs.v1 == 'true'
         run: |
           bash .github/scripts/npm-retry.sh ci
           npm run check:statuses
@@ -107,6 +126,7 @@ jobs:
           npm run build
 
       - name: MCP server — install + typecheck + test + build
+        if: steps.scope.outputs.mcp == 'true'
         working-directory: mcp-server
         run: |
           bash ../.github/scripts/npm-retry.sh ci
@@ -121,6 +141,7 @@ jobs:
       # «Не удалось проверить» ≠ «уязвимостей нет»: если audit не ответил (реестр,
       # прокси, таймаут — локально 04.11 он висел минутами), это говорится вслух.
       - name: npm audit (informational)
+        if: steps.scope.outputs.v1 == 'true' || steps.scope.outputs.mcp == 'true'
         continue-on-error: true
         timeout-minutes: 4
         run: |
@@ -146,6 +167,7 @@ jobs:
       # резолвится на Linux-демоне: нужен --add-host, иначе build-arg указывает
       # в никуда. Та же правка, что в backend-ci.yml.
       - name: Docker image build (frontend + nginx)
+        if: steps.scope.outputs.v1 == 'true'
         run: |
           # CIM-02: наблюдаемость registry-mirror базовых образов до сборки.
           bash .github/scripts/registry-mirror-probe.sh || true
@@ -171,6 +193,7 @@ jobs:
       # с nginx; `sh -c` тихо пропустил бы подстановку, и проверка стала бы
       # проверкой шаблона, а не результата.
       - name: nginx config — рендер шаблона и отсутствие вшитых адресов
+        if: steps.scope.outputs.v1 == 'true'
         run: |
           # pipefail обязателен: ниже `nginx -T` стоит в конвейере, и без него
           # шаг видел бы только код grep — то есть синтаксическая ошибка в
@@ -219,10 +242,24 @@ jobs:
   # не должен прятаться за красным v1 (и наоборот) — в сводке это два чека.
   # Фильтр по путям (правка web-next → только v2, правка бэкенда → оба веба)
   # и заморозка образа v1 в CD — задача S3-10, здесь job бежит всегда.
+  # S3-10 (сделано): job бежит всегда, но его шаги — под флагом v2 из
+  # ci-scope.sh: v2 гоняется при правке web-next/, общего шаблона nginx и
+  # бэкенда/MCP/контрактов (тесты обоих вебов); при правке только src/ (v1) — нет.
   web-next:
     runs-on: lore-only
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # S3-10: дифф base...HEAD для ci-scope.sh
+
+      # S3-10: что гонять — по путям (разбор — у такого же шага в `build`).
+      - name: Scope by changed paths (S3-10)
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: bash .github/scripts/ci-scope.sh ci
 
       # Те же три шага подготовки, что у `build` (разбор причин — там):
       # живой прокси или его снятие, зеркало Nexus, Node из образа раннера.
@@ -245,6 +282,7 @@ jobs:
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
       - name: LORE v2 (web-next) — install + typecheck + test + build
+        if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next
         run: |
           bash ../.github/scripts/npm-retry.sh ci
@@ -256,6 +294,7 @@ jobs:
       # (прокси /lore/ тот же, что у v1). Прокси раннера пробрасывается так же,
       # как в сборке образа v1 выше.
       - name: Docker image build (v2, web-next + nginx)
+        if: steps.scope.outputs.v2 == 'true'
         run: |
           ARGS="--add-host=host.docker.internal:host-gateway"
           for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
@@ -269,6 +308,7 @@ jobs:
       # синтаксис собранного конфига (`nginx -T`, апстримы объявлены заглушками,
       # как в проверке v1) и наличие бандла v2 в корне сайта.
       - name: v2 image — nginx config + bundle
+        if: steps.scope.outputs.v2 == 'true'
         run: |
           set -eo pipefail
           STUBS="--add-host lore-backend:127.0.0.1 --add-host host.docker.internal:127.0.0.1"
@@ -288,6 +328,7 @@ jobs:
       # YAML не разбирает). Без оверлея Traefik — его сеть есть только на
       # ci-server.
       - name: compose — сервис lore-app-next описан и разбирается
+        if: steps.scope.outputs.v2 == 'true'
         run: |
           set -eo pipefail
           docker compose -f docker-compose.yml config -q
