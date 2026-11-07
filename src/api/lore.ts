@@ -528,6 +528,8 @@ export interface LoreSprintRow {
   planned_end_date: string | null;
   milestone_ids?: string[] | null;
   no_release_required: boolean | null;
+  /** RM-U6: «вне плана намеренно» — не считается «забытым», в доле вне плана остаётся. */
+  unplanned_intentional?: boolean | null;
 }
 
 export interface LoreSprintDoneDate {
@@ -1128,7 +1130,7 @@ export async function upsertMilestone(
 
 export async function updateLoreSprint(
   sprintId: string,
-  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null },
+  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null; unplanned_intentional?: boolean | null },
 ): Promise<{ ok: boolean; sprint_id: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/update`, {
     method: 'POST',

@@ -102,7 +102,19 @@ describe('milestoneProducts · доделка плана', () => {
       sp('SPRINT_FORGOT', '📋 PLANNED', ['HND']),
       sp('SPRINT_OLD', '✅ DONE', ['DALI']),
     ];
-    expect(unplannedShare(S, M, 'AIDA', P)).toEqual({ open: 3, unplanned: 2, stream: 1, forgotten: 1, pct: 67 });
-    expect(unplannedShare(S, M, 'MIDGARD', P)).toEqual({ open: 0, unplanned: 0, stream: 0, forgotten: 0, pct: 0 });
+    expect(unplannedShare(S, M, 'AIDA', P)).toEqual({ open: 3, unplanned: 2, stream: 1, intentional: 0, forgotten: 1, pct: 67 });
+    expect(unplannedShare(S, M, 'MIDGARD', P)).toEqual({ open: 0, unplanned: 0, stream: 0, intentional: 0, forgotten: 0, pct: 0 });
+  });
+
+  it('«вне плана намеренно» снимает спринт из «забыли», но оставляет в доле (RM-U6, 07.11.2026)', () => {
+    const M = [ms('M-AIDA-A1', ['AIDA'], ['SPRINT_IN'])];
+    const S = [
+      sp('SPRINT_IN', '📋 PLANNED', ['DALI']),
+      { ...sp('SPRINT_SPIKE', '📋 PLANNED', ['DALI']), unplanned_intentional: true },
+      sp('SPRINT_FORGOT', '📋 PLANNED', ['HND']),
+      { ...sp('SPRINT_HOUSEKEEPING_Y', '📋 PLANNED', ['DALI']), unplanned_intentional: true },
+    ];
+    // поток по имени не считается дважды: HOUSEKEEPING — поток, а не «намеренно»
+    expect(unplannedShare(S, M, 'AIDA', P)).toEqual({ open: 4, unplanned: 3, stream: 1, intentional: 1, forgotten: 1, pct: 75 });
   });
 });

@@ -48,7 +48,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // metrics in LoreAnalytics, which would otherwise flag them as perpetually overdue.
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
         String context_md, String plan_id, Double effort_days, Boolean no_release_required,
-        String context_append, String outcome_append) {}
+        String context_append, String outcome_append, Boolean unplanned_intentional) {}
     // author/executor/reviewer_agent (ADR-LORE-014 §4): free-text identity of who
     // owns/does/accepts the task — on the vertex, not Hist (see LoreSchemaInitializer
     // comment for why: immune to the note_md/effort_days carry-forward bug class).
@@ -1220,6 +1220,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
         if (req.effort_days()!= null) { sb.append("effort_days=:effort, ");  p.put("effort",     req.effort_days()); }
         if (req.no_release_required() != null) { sb.append("no_release_required=:nrr, "); p.put("nrr", req.no_release_required()); }
+        // RM-U6: «вне плана намеренно» — флаг вершины, как no_release_required (история не нужна).
+        if (req.unplanned_intentional() != null) { sb.append("unplanned_intentional=:ui, "); p.put("ui", req.unplanned_intentional()); }
         // trim() is load-bearing: the base StringBuilder is seeded with a
         // trailing space ("...SET "), so when zero fields are appended the
         // regex below (which only strips a trailing comma) leaves that space
