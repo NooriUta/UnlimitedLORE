@@ -281,6 +281,16 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
+      # Seiðr-kit (kit/, D-2026-UXR-KIT-REACT): отдельный пакет со своими
+      # тестами (сверка токенов с v1, STYLE-01, тема). Тесты web-next их не
+      # запускают — поэтому свой шаг, и до web-next: сломанный kit ломает v2.
+      - name: Seiðr-kit (kit) — install + typecheck + test
+        working-directory: kit
+        run: |
+          bash ../.github/scripts/npm-retry.sh ci
+          npm run typecheck
+          npm test
+
       - name: LORE v2 (web-next) — install + typecheck + test + build
         if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next
