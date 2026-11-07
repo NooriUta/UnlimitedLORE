@@ -1628,6 +1628,142 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__qicon { display: inline-flex; color: var(--t2); }
 .sk-list__desclabel { color: var(--t3); }
 .sk-list__desctail { color: var(--t2); }
+/* ── Фильтры listView (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-05): поиск текста,
+   фасет поля — кнопка-pill с итогом и панель «есть / нет / пусто / не пусто»
+   со значениями (иконка + подпись + счётчик). Цели — не меньше --tap. ── */
+.sk-list__search {
+  min-height: max(var(--tap), 22px);
+  width: 200px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-list__search::placeholder { color: var(--t3); }
+.sk-facet { position: relative; display: inline-flex; }
+.sk-facet__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 22px);
+  max-width: 260px;
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+}
+.sk-facet__btn.is-active {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+}
+.sk-facet__sum {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sk-facet__chev { color: var(--t3); }
+.sk-facet__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 240px;
+  max-width: min(360px, 92vw);
+  max-height: 60vh;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-facet__panel[hidden] { display: none; }
+.sk-facet__ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+}
+.sk-facet__op {
+  flex: 1 1 auto;
+  min-height: max(var(--tap), 22px);
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.sk-facet__op.is-on {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--t1);
+}
+.sk-facet__find {
+  min-height: max(var(--tap), 22px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-facet__opts { display: flex; flex-direction: column; }
+.sk-facet__opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 6px;
+  border-radius: var(--r-md);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-facet__opt:hover { background: var(--bg2); }
+.sk-facet__vt {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sk-facet__n {
+  font-family: var(--mono);
+  color: var(--t2);
+  font-size: var(--fs-2xs);
+}
+.sk-facet__empty {
+  margin: 0;
+  padding: 4px 6px;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-facet__foot { display: flex; justify-content: flex-end; }
+.sk-facet__btn:focus-visible,
+.sk-facet__op:focus-visible,
+.sk-facet__find:focus-visible,
+.sk-facet__opt input:focus-visible,
+.sk-list__search:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.sk-list__vals { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; }
+.sk-list__val { display: inline-flex; align-items: center; gap: 3px; }
+.sk-list__vicon { display: inline-flex; flex-shrink: 0; }
 .sk-list__desc {
   display: flex;
   flex-wrap: wrap;
@@ -1811,6 +1947,11 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 @media (max-width: 720px) {
   .sk-board { grid-auto-flow: row; grid-auto-columns: auto; }
   .sk-list__select { max-width: 100%; }
+  .sk-list__search { width: 100%; }
+  /* на телефоне панель фасета — во всю ширину под кнопкой, не за краем экрана */
+  .sk-list__controls { position: relative; }
+  .sk-facet { position: static; }
+  .sk-facet__panel { left: 8px; right: 8px; max-width: none; }
 }
 
 /* ── Каркас записи (SPRINT_UXR_S10_SEIDR_KIT/K-04): шапка, вердикт, вкладки,

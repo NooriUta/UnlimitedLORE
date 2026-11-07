@@ -246,5 +246,20 @@
   "kit.scope.mineUnknown": "Could not check your projects — “All mine” is unavailable",
   "kit.scope.mineNone": "You have no role in any project — nothing to pick for “All mine”",
   "kit.scope.count": "Selected: {n}",
-  "kit.scope.countAll": "No filter — all projects shown"
+  "kit.scope.countAll": "No filter — all projects shown",
+  "kit.list.text": "Text in ID or title",
+  "kit.list.textPlaceholder": "Find in list…",
+  "kit.list.desc.text": "Text",
+  "kit.list.op": "Condition",
+  "kit.list.op.any": "is",
+  "kit.list.op.not": "is not",
+  "kit.list.op.empty": "empty",
+  "kit.list.op.nonempty": "not empty",
+  "kit.list.facetAll": "all",
+  "kit.list.facetMany": "{first} +{n}",
+  "kit.list.facetFind": "Find value",
+  "kit.list.facetNoValues": "No values under the other filters",
+  "kit.list.facetNoMatch": "Nothing found",
+  "kit.list.facetPanel": "Filter “{field}”",
+  "kit.list.facetDone": "Done"
 }

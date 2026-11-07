@@ -246,5 +246,20 @@
   "kit.scope.mineUnknown": "Не смогли проверить ваши проекты — «Все мои» недоступно",
   "kit.scope.mineNone": "У вас нет роли ни в одном проекте — «Все мои» выбрать нечего",
   "kit.scope.count": "Выбрано: {n}",
-  "kit.scope.countAll": "Фильтра нет — показаны все проекты"
+  "kit.scope.countAll": "Фильтра нет — показаны все проекты",
+  "kit.list.text": "Текст в ID или названии",
+  "kit.list.textPlaceholder": "Найти в списке…",
+  "kit.list.desc.text": "Текст",
+  "kit.list.op": "Условие",
+  "kit.list.op.any": "есть",
+  "kit.list.op.not": "нет",
+  "kit.list.op.empty": "пусто",
+  "kit.list.op.nonempty": "не пусто",
+  "kit.list.facetAll": "все",
+  "kit.list.facetMany": "{first} +{n}",
+  "kit.list.facetFind": "Найти значение",
+  "kit.list.facetNoValues": "Под прочими фильтрами значений нет",
+  "kit.list.facetNoMatch": "Ничего не нашлось",
+  "kit.list.facetPanel": "Фильтр «{field}»",
+  "kit.list.facetDone": "Готово"
 }
