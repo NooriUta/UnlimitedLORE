@@ -1059,6 +1059,14 @@
       "assignToMilestoneOption": "→ to milestone…"
     },
     "milestonesView": {
+      "reposTitle": "Product repositories:",
+      "reposNone": "none linked",
+      "repoOwner": "develops",
+      "repoConsumer": "uses",
+      "repoNoRole": "role ?",
+      "repoOwnerHint": "the product develops this repository",
+      "repoConsumerHint": "the product uses this repository but does not develop it",
+      "repoNoRoleHint": "link role is not set — see the product_hygiene slice",
       "title": "Project milestones",
       "countSummary": "{{count}} milestones · avg velocity {{velocity}} Sp/wk",
       "cancel": "× Cancel",

@@ -16,6 +16,26 @@ export interface ProductRow {
   parent_code: string[] | null;
   sub_products: string[] | null;
   components: string[] | null;
+  /** BELONGS_TO_PROJECT продукта → репозитории; роли — параллельным списком (WK-02). */
+  git_projects?: (string | null)[] | null;
+  git_project_roles?: (string | null)[] | null;
+}
+
+export type ProductRepoRole = 'owner' | 'consumer';
+
+/**
+ * WK-02 (decision:D-2026-LORE-PRODUCT-PROJECT-ROLE): репозитории продукта с
+ * ролью связи — owner развивает, consumer пользуется. Связь без роли отдаётся
+ * как null, а не «owner»: «не размечено» и «развивает» — разные ответы.
+ */
+export function productRepos(p: Pick<ProductRow, 'git_projects' | 'git_project_roles'>): { slug: string; role: ProductRepoRole | null }[] {
+  const slugs = p.git_projects ?? [];
+  const roles = p.git_project_roles ?? [];
+  return slugs.flatMap((slug, i) => {
+    if (!slug) return [];
+    const r = roles[i];
+    return [{ slug, role: r === 'owner' || r === 'consumer' ? r : null }];
+  });
 }
 
 interface MilestoneLike { milestone_id: string; products?: string[] | null; direct_sprint_ids?: string[] | null }

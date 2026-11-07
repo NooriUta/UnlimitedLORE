@@ -379,7 +379,7 @@ public class LoreStatusResource extends LoreResourceBase {
     // A sprint should not sit in `planned` while its tasks are already moving.
     // After every task status flip we recompute the parent sprint's effective
     // status and PROMOTE it (SCD2, persisted) when warranted:
-    //   • all tasks done                          → sprint `done`
+    //   • no open tasks left, at least one done   → sprint `done`
     //   • any task in progress AND sprint is one of
     //     planned / todo / backlog                → sprint `active` (in progress)
     // Deliberate/terminal sprint states are never overridden: blocked,
@@ -388,8 +388,11 @@ public class LoreStatusResource extends LoreResourceBase {
     // done). Best-effort: a failure here never fails the task status change.
     private static final java.util.Set<String> SPRINT_AUTO_GUARD =
         java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy");
+    // MT-SPRINT-STATUS-FOLLOWS-TASKS (decision:D-2026-SPRINT-STATUS-FOLLOWS-LAST-TASK):
+    // «в работе» — только задачи, над которыми работают. "done" здесь был
+    // дефектом: закрытие задачи открывало спринт (VE-1, 06.11.2026).
     private static final java.util.Set<String> TASK_PROGRESS =
-        java.util.Set.of("done", "active", "partial", "ready_for_deploy");
+        java.util.Set.of("active", "partial", "ready_for_deploy");
     private static final java.util.Set<String> SPRINT_PROMOTABLE =
         java.util.Set.of("planned", "todo", "backlog");
 
@@ -429,15 +432,20 @@ public class LoreStatusResource extends LoreResourceBase {
      *  token the sprint should be promoted to, or null for "leave unchanged". */
     static String deriveSprintTarget(String currentToken, List<String> taskTokens) {
         if (currentToken != null && SPRINT_AUTO_GUARD.contains(currentToken)) return null;
-        int total = 0, done = 0, progress = 0;
+        int total = 0, done = 0, cancelled = 0, progress = 0;
         for (String tok : taskTokens) {
             if (tok == null) continue;
             total++;
             if (tok.equals("done")) done++;
+            if (tok.equals("cancelled")) cancelled++;
             if (TASK_PROGRESS.contains(tok)) progress++;
         }
         String target = null;
-        if (total > 0 && done == total) target = "done";
+        // Открытых задач не осталось и хоть одна сделана → DONE. Отменённая
+        // задача закрыта, но не «сделана»: спринт из одних отменённых сюда не
+        // попадает — оговорка решения, ждёт слова владелицы (не подменять
+        // отменённое сделанным).
+        if (total > 0 && done + cancelled == total && done > 0) target = "done";
         else if (progress > 0 && (currentToken == null || SPRINT_PROMOTABLE.contains(currentToken))) target = "active";
         if (target == null || target.equals(currentToken)) return null;
         return target;
