@@ -7,6 +7,8 @@ import SandboxedHtmlFrame from './SandboxedHtmlFrame';
 import TipTapField from './TipTapField';
 import { GameIcon } from './GameIcon';
 import { ARTIFACT_KINDS_META } from './LoreArtifactList';
+import { bodyStateOf, canEditBody } from './bodyState';
+import { RedactedBody } from './RedactedBody';
 
 // Generic single-artifact viewer for runbooks / docs / quality-gates opened from
 // the unified list. Markdown bodies render via MartProse; KnowDoc HTML fragments
@@ -25,7 +27,11 @@ interface RawRow {
   content_md?: string | null; content_html?: string | null;
   content_md_en?: string | null; content_md_ru?: string | null;
   component_id?: string | null; sprint_id?: string | null;
+  // S1-05: doc_by_id/runbook_by_id обнуляют тело без роли в проекте записи.
+  body_redacted?: boolean | null; body_redacted_reason?: string | null;
 }
+
+const BODY_FIELDS = ['content_md', 'content_html', 'content_md_en', 'content_md_ru'] as const;
 
 interface QgMetricRow { metric_id: string; name: string; threshold: string; }
 
@@ -192,6 +198,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
     }
   };
 
+  const body = bodyStateOf(row, BODY_FIELDS);
   const title = row.name || row.title || id;
   const date  = row.date_created || row.valid_from;
   const kindMeta = ARTIFACT_KINDS_META.find(k => k.kind === kind);
@@ -213,7 +220,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
         {row.status && <span style={S.statusChip}>{row.status}</span>}
         <span style={S.title}>{title}</span>
         {row.component_id && <span style={S.comp}>{row.component_id}</span>}
-        {!editing && (
+        {!editing && canEditBody(body) && (
           <button style={S.editBtn} onClick={startEdit}>{t('lore.artifactDoc.edit', '✎ Редактировать')}</button>
         )}
       </div>
@@ -295,6 +302,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
           </div>
         </>
       ) : (() => {
+        if (body.k === 'redacted') return <RedactedBody reason={body.reason} />;
         const hasEn = !!row.content_md_en;
         const hasRu = !!row.content_md_ru;
         if (hasEn || hasRu) {
