@@ -312,3 +312,167 @@ code, pre, kbd, samp { font-family: var(--mono); }
 @media (pointer: coarse) {
   input, select, textarea { font-size: var(--fs-touch-input); }
 }
+
+/* ═══════════ базовые элементы (S4-00b) ═══════════
+   Классы sk-* — общие для React-компонентов kit и голого HTML. Только токены:
+   цвет — var(--…)/color-mix, размер шрифта — var(--fs-*). Цели касания —
+   max(var(--tap), …): на десктопе плотно, на сенсоре не меньше 44px. */
+
+/* ---------- иконка ---------- */
+.sk-icon { display: inline-block; flex-shrink: 0; vertical-align: middle; }
+.sk-icon--missing {
+  border: 1px dashed var(--bd);
+  border-radius: var(--r-sm);
+}
+
+/* ---------- Pill / Chip ---------- */
+.sk-pill {
+  --pill-c: var(--t2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--pill-c) 45%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--pill-c) 12%, transparent);
+  color: var(--pill-c);
+  font-size: var(--fs-xs);
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-pill--id {
+  --pill-c: var(--acc);
+  font-family: var(--mono);
+  letter-spacing: .02em;
+}
+.sk-pill--filter {
+  min-height: max(var(--tap), 20px);
+  padding: 0;
+  background: var(--bg2);
+  border-color: var(--bd);
+  color: var(--t2);
+}
+.sk-pill--filter.is-on {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--t1);
+}
+.sk-pill__main,
+.sk-pill__x {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: var(--fs-xs);
+  border-radius: var(--r-pill);
+}
+.sk-pill__main { padding: 0 8px; }
+.sk-pill__x {
+  justify-content: center;
+  min-width: max(var(--tap), 18px);
+  padding: 0 4px;
+  color: var(--t3);
+}
+.sk-pill__x:hover { color: var(--dng); }
+.sk-pill__main:focus-visible,
+.sk-pill__x:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* ---------- IconButton ---------- */
+.sk-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), 24px);
+  min-height: max(var(--tap), 24px);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t2);
+}
+.sk-iconbtn:hover { background: var(--bg3); color: var(--t1); }
+.sk-iconbtn.is-on { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 50%, transparent); }
+.sk-iconbtn:disabled { opacity: .45; cursor: default; }
+.sk-iconbtn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* ---------- StatusStar ---------- */
+.sk-star {
+  --star-c: var(--t3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--star-c);
+  font-size: var(--fs-sm);
+}
+.sk-star__label { color: var(--t1); }
+.sk-star--btn {
+  min-width: max(var(--tap), 20px);
+  min-height: max(var(--tap), 20px);
+  justify-content: center;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: none;
+}
+.sk-star--btn:hover { border-color: var(--star-c); }
+.sk-star--btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* ---------- Kbd ---------- */
+.sk-kbd { display: inline-flex; gap: 2px; margin-left: 6px; }
+.sk-kbd kbd {
+  padding: 0 4px;
+  border: 1px solid var(--bd);
+  border-bottom-width: 2px;
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  line-height: 14px;
+}
+@media (pointer: coarse) {
+  .sk-kbd { display: none; }
+}
+
+/* ---------- Tooltip ---------- */
+.sk-tip-wrap { position: relative; display: inline-flex; }
+.sk-tip {
+  position: absolute;
+  left: 50%;
+  z-index: 60;
+  transform: translateX(-50%);
+  max-width: 260px;
+  padding: 3px 8px;
+  border: 1px solid var(--bdh);
+  border-radius: var(--r-sm);
+  background: var(--bg3);
+  color: var(--t1);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.sk-tip--top { bottom: calc(100% + 4px); }
+.sk-tip--bottom { top: calc(100% + 4px); }
+
+/* ---------- Toolbar ---------- */
+.sk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.sk-toolbar--vertical { flex-direction: column; align-items: stretch; }

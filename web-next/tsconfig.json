@@ -23,7 +23,9 @@
       "react": ["./node_modules/@types/react"],
       "react/*": ["./node_modules/@types/react/*"],
       "react-dom": ["./node_modules/@types/react-dom"],
-      "react-dom/*": ["./node_modules/@types/react-dom/*"]
+      "react-dom/*": ["./node_modules/@types/react-dom/*"],
+      // То же для @iconify/react — peer kit с S4-00b (GameIcon).
+      "@iconify/react/offline": ["./node_modules/@iconify/react/dist/offline.d.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]
