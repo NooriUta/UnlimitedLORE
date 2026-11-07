@@ -213,3 +213,69 @@ jobs:
             echo "ОШИБКА: LORE_VOLVA_ORIGIN не подставилась в frame-src CSP"; exit 1; }
           echo "ok: обе переменные подставились, синтаксис принят"
 
+  # SPRINT_UXR_S3_V2_INFRA/S3-01 (D-2026-UXR-V2-FOLDER-V1-FROZEN): LORE v2 —
+  # каталог web-next/ со своим package.json, vite.config и Dockerfile. Отдельный
+  # job, а не шаги в `build`: у v2 свои зависимости и свой образ, и красный v2
+  # не должен прятаться за красным v1 (и наоборот) — в сводке это два чека.
+  # Фильтр по путям (правка web-next → только v2, правка бэкенда → оба веба)
+  # и заморозка образа v1 в CD — задача S3-10, здесь job бежит всегда.
+  web-next:
+    runs-on: lore-only
+    steps:
+      - uses: actions/checkout@v7
+
+      # Те же три шага подготовки, что у `build` (разбор причин — там):
+      # живой прокси или его снятие, зеркало Nexus, Node из образа раннера.
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
+      - name: Use Nexus mirror (npm)
+        run: bash .github/scripts/use-nexus.sh
+
+      - name: Set up Node.js (github-hosted)
+        if: runner.environment == 'github-hosted'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Use runner-image Node (self-hosted)
+        if: runner.environment != 'github-hosted'
+        run: |
+          command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
+          echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
+
+      - name: LORE v2 (web-next) — install + typecheck + test + build
+        working-directory: web-next
+        run: |
+          bash ../.github/scripts/npm-retry.sh ci
+          npm run typecheck
+          npm test
+          npm run build
+
+      # Контекст — корень репозитория: образу нужен общий nginx.conf.template
+      # (прокси /lore/ тот же, что у v1). Прокси раннера пробрасывается так же,
+      # как в сборке образа v1 выше.
+      - name: Docker image build (v2, web-next + nginx)
+        run: |
+          ARGS="--add-host=host.docker.internal:host-gateway"
+          for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
+            eval "val=\${$v:-}"
+            [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
+          done
+          # shellcheck disable=SC2086
+          docker build $ARGS -f web-next/Dockerfile -t lore-app-next:ci .
+
+      # Образ должен реально отдавать v2 через nginx, а не просто собраться:
+      # синтаксис собранного конфига (`nginx -T`, апстримы объявлены заглушками,
+      # как в проверке v1) и наличие бандла v2 в корне сайта.
+      - name: v2 image — nginx config + bundle
+        run: |
+          set -eo pipefail
+          STUBS="--add-host lore-backend:127.0.0.1 --add-host host.docker.internal:127.0.0.1"
+          # shellcheck disable=SC2086
+          docker run --rm $STUBS lore-app-next:ci nginx -T > /dev/null
+          docker run --rm --entrypoint sh lore-app-next:ci -c \
+            'grep -q "<title>LORE v2</title>" /usr/share/nginx/html/index.html' || {
+            echo "ОШИБКА: в образе lore-app-next нет бандла v2"; exit 1; }
+          echo "ok: nginx-конфиг принят, бандл v2 на месте"
+
