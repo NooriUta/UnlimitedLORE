@@ -1026,6 +1026,64 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     /**
+     * S1-07: счётчик секции по одному правилу — «открытые · в скоупе · с текущими
+     * фильтрами», закрытые отдельно ({@link LoreSectionCount}). Тот же путь, что у
+     * {@link #slice}: те же параметры-фильтры, тот же проектный скоуп и тот же
+     * отказ SCOPE_EMPTY; страница (limit/offset/fields) игнорируется — считается
+     * вся отфильтрованная выдача. Срез без поля статуса — 400 NOT_COUNTABLE.
+     */
+    @GET
+    @Path("slice/{id}/count")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Uni<Response> sliceCount(@PathParam("id") String id, @Context UriInfo uriInfo,
+                                    @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return Uni.createFrom().item(disabled());
+        if (LoreSlices.get(id) == null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
+                .entity(new LoreError("UNKNOWN_SLICE", id))));
+        }
+        if (!LoreSectionCount.isCountable(id)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("NOT_COUNTABLE", "срез " + id + " не несёт статуса — открытых/закрытых "
+                    + "у него нет; считаемые: " + String.join(",", LoreSectionCount.countableSlices())))));
+        }
+        Map<String, String> given = new LinkedHashMap<>();
+        uriInfo.getQueryParameters().forEach((k, v) -> {
+            if (v != null && !v.isEmpty()) given.put(k, v.get(0));
+        });
+        final Map<String, String> filters = LoreSectionCount.filtersOf(given);
+        LoreSlices.Composed composed;
+        java.util.Set<String> rowScope;
+        try {
+            rowScope = allowedProjectsOrNull(role);
+            composed = LoreSlices.compose(id, new LinkedHashMap<>(filters), rowScope);
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
+        }
+        if (scopeDenies(id, rowScope)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — счётчик среза " + id + " не отдаётся нулём"))));
+        }
+        final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
+        MartQuery body = new MartQuery("sql", composed.sql(),
+            composed.params().isEmpty() ? null : composed.params(), -1);
+        return client.query(db, basicAuth(), body)
+            .map(res -> {
+                Map<String, Object> out = sliceBody(res);
+                if (scopeMarker != null) out.put("scope", scopeMarker);
+                return noStore(Response.ok(LoreSectionCount.count(id, out, filters)));
+            })
+            .onFailure().recoverWithItem(ex -> {
+                LOG.warnf("[LORE FAILED] slice-count=%s: %s", id, ex.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("LORE_UPSTREAM", String.valueOf(ex.getMessage()))));
+            });
+    }
+
+    /**
      * AL-94: множество проектов, которыми ограничен read вызывающего, либо
      * {@code null} — «без ограничения».
      *
