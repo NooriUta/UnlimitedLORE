@@ -1103,7 +1103,7 @@ public class AidaLoreResource extends LoreResourceBase {
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice-count=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", String.valueOf(ex.getMessage()))));
+                    .entity(LoreUpstream.error(ex)));
             });
     }
 
