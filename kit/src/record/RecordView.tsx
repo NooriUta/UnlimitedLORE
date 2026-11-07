@@ -22,8 +22,9 @@ import { RecordJournal, recordJournal } from './RecordJournal';
 import { RecordRef, renderOut, valueText } from './fmt';
 import { RecordFacts } from './RecordFacts';
 import type { RecordFactsSpec } from './facts';
+import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
 
-export const RECORD_TABS = { overview: 'overview', links: 'links', graph: 'graph', journal: 'journal' } as const;
+export const RECORD_TABS = { overview: 'overview', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
 
 /**
  * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
@@ -54,6 +55,8 @@ export interface RecordViewProps {
    * (roles[role].canEdit; без roles — может). Иначе — чтение как прежде.
    */
   mdEditor?: ComponentType<MdEditorSlotProps>;
+  /** Источник вкладки «История» (S5-11); нет — вкладки нет (истории у вида может не быть). */
+  history?: RecordHistorySource;
 }
 
 /** Сохранение поля записи через hooks.onSave; undefined — правки нет. */
@@ -116,7 +119,7 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history }: RecordViewProps) {
   const lang = useKitLang();
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
   const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver } : undefined;
@@ -129,6 +132,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: recordLinks(record.id, ctx.data.edges).length },
     { id: RECORD_TABS.graph, label: kitT(lang, 'kit.record.tab.graph') },
     { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: recordJournal(record.id, ctx.data.journal).length },
+    ...(history ? [{ id: RECORD_TABS.history, label: kitT(lang, 'kit.record.tab.history'), count: historyCount(history) }] : []),
   ];
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
   const reset = `${record.id}:${current}`;
@@ -147,6 +151,12 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
           </BlockBoundary>
         )}
       </div>
+    );
+  } else if (current === RECORD_TABS.history && history) {
+    panel = (
+      <BlockBoundary block="history" label={kitT(lang, 'kit.record.tab.history')} lang={lang} resetKey={reset}>
+        <RecordHistory record={record} source={history} lang={lang} />
+      </BlockBoundary>
     );
   } else if (custom) {
     panel = (

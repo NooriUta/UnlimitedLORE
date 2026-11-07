@@ -76,5 +76,6 @@
   "record.status.cancelled": "Cancelled",
   "sprintTasks.title": "Tasks",
   "sprintTasks.caption": "Sprint {id} tasks",
-  "sprintTasks.back": "Back to LORE"
+  "sprintTasks.back": "Back to LORE",
+  "history.legacySlice": "Shared history (S2) is not enabled on the server yet — showing the version chain from slice {slice}; it carries no edit authors."
 }

@@ -76,5 +76,6 @@
   "record.status.cancelled": "Отменено",
   "sprintTasks.title": "Задачи",
   "sprintTasks.caption": "Задачи спринта {id}",
-  "sprintTasks.back": "К LORE"
+  "sprintTasks.back": "К LORE",
+  "history.legacySlice": "Общая история (S2) на сервере ещё не включена — показана цепочка версий из слайса {slice}; авторов правок в нём нет."
 }
