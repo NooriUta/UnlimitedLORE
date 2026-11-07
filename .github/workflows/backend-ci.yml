@@ -59,6 +59,12 @@ jobs:
       - name: Самопроверка гейта подъёма ArcadeDB
         run: bash .github/scripts/ygg-upgrade-gate.sh --selftest
 
+      # SPRINT_UXR_S0_SAFETY/S0-03: проба /lore/version после деплоя живёт в LORE CD
+      # (только preprod), а её разбор ответа и контроль «неверный порт → красный»
+      # проверяем здесь, на каждом PR — иначе поломку пробы увидели бы лишь на выкатке.
+      - name: Самопроверка пробы /lore/version (S0-03)
+        run: bash .github/scripts/version-probe.sh --selftest
+
       # См. подробный комментарий в frontend-ci.yml — там же зафиксировано, что
       # прокси на ci-server НУЖЕН (прямой выход деградирован: минуты вместо
       # секунд, apk add curl отваливается по таймауту) и что проверка сделана

@@ -575,6 +575,24 @@ jobs:
           fi
           echo "бандл из index отдаётся: $js ($jcode, $jtype)"
 
+      # SPRINT_UXR_S0_SAFETY/S0-03: путь ПОЛЬЗОВАТЕЛЯ, а не изнутри контейнеров.
+      # Все проверки выше идут docker exec'ом или по сети compose и не видят
+      # опубликованный порт :4400, location /lore/ в nginx и приём токена
+      # бэкендом. Проба стучится в http://127.0.0.1:4400/lore/version из
+      # одноразового контейнера в сети ХОСТА (своё 127.0.0.1 у раннера — он сам)
+      # с service-токеном (client_credentials) и требует 200 + JSON с commit.
+      # Если выкатывался бэкенд — commit обязан совпасть с этим коммитом, иначе
+      # отвечает старый образ. Логика и самопроверка — в скрипте (--selftest
+      # гоняется в backend CI на каждом PR, включая контроль «неверный порт → красный»).
+      # Нет секретов LORE_CD_PROBE_CLIENT_* — шаг КРАСНЫЙ (BLOCKED), не пропуск.
+      - name: Проба /lore/version через :4400 (S0-03)
+        env:
+          PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
+          PROBE_CLIENT_SECRET: ${{ secrets.LORE_CD_PROBE_CLIENT_SECRET }}
+          PROBE_CURL: docker run --rm --network host curlimages/curl:latest curl
+          EXPECT_COMMIT: ${{ steps.which.outputs.backend == 'true' && github.sha || '' }}
+        run: bash .github/scripts/version-probe.sh http://127.0.0.1:4400
+
       # ── Keycloak-тема LORE ────────────────────────────────────────────────
       #
       # Тема живёт в этом репозитории (backend/keycloak/themes/lore), а
