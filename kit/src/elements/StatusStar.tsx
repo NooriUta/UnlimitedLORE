@@ -40,6 +40,8 @@ export interface StatusStarProps {
   titleOf?: (code: string) => string;
   /** id записи — для useStatusChange (сброс состояния при смене записи). */
   recordId?: string;
+  /** Палитра открыта — aria-expanded у кнопки (только вместе с onOpen). */
+  expanded?: boolean;
   size?: number;
   className?: string;
 }
@@ -79,7 +81,7 @@ export function StatusStar(props: StatusStarProps) {
   return props.onPick ? <PickableStar {...props} onPick={props.onPick} /> : <PlainStar {...props} />;
 }
 
-function PlainStar({ status, label: labelProp, titleOf, showLabel, onOpen, size = 14, className }: StatusStarProps) {
+function PlainStar({ status, label: labelProp, titleOf, showLabel, onOpen, expanded, size = 14, className }: StatusStarProps) {
   const lang = useKitLang();
   const code = status ?? '';
   const label = labelProp ?? kitT(lang, 'kit.status.label', { title: titleOf ? titleOf(code) : code || '—' });
@@ -87,7 +89,7 @@ function PlainStar({ status, label: labelProp, titleOf, showLabel, onOpen, size 
   const body = <Body status={code} label={label} showLabel={showLabel} size={size} />;
   if (onOpen) {
     return (
-      <button type="button" {...attrs} aria-label={label} aria-haspopup="menu" title={label} onClick={onOpen}>
+      <button type="button" {...attrs} aria-label={label} aria-haspopup="menu" aria-expanded={expanded ?? false} title={label} onClick={onOpen}>
         {body}
       </button>
     );

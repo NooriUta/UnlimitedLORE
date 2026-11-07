@@ -12,6 +12,7 @@ export type * from './core/contract';
 export * from './record';
 // Контракт ядра (типы, без кода) — и отсюда; хуки вида — `@seidr/kit/core`.
 export * from './approval';
+export * from './tasks';
 // MD/HTML-элементы (TipTapField, MartProse, SandboxedHtmlFrame, S4-00d) — НЕ
 // отсюда, а отдельной точкой входа `@seidr/kit/content`: они тянут TipTap,
 // mermaid и bpmn-js, и экрану без MD-полей платить за них незачем.
@@ -58,5 +59,10 @@ export * from './views/timeline';
 // Сохранённые виды списка: сохранить / сохранить как / сбросить, командные виды
 // по умолчанию; хранилище — контракт S2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-08).
 export * from './views/saved';
+// Burnup/burndown спринта — свёрнут под таблицей задач (SPRINT_UXR_S5_RECORD_TASKS/S5-03).
+export * from './charts';
+// Режим чтения: колонка ~680 px, широкие блоки с ⤢, Aa, ушко правой колонки,
+// меню по настройке (SPRINT_UXR_S5_RECORD_TASKS/S5-05).
+export * from './reading';
 // Новости v2: лента, разрезы, метрики сервера (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06).
 export * from './news';

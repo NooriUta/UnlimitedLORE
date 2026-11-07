@@ -117,3 +117,14 @@
   gap: 4px;
   margin-left: auto;
 }
+/* Паспорт спринта, вкладка «Задачи» (SPRINT_UXR_S5_RECORD_TASKS/S5-02):
+   только раскладка; таблица и её вид — TaskTable из Seiðr-kit (seidr.css). */
+.sprint-passport {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--pad-y) var(--pad-x);
+}
+.sprint-passport__head { display: flex; align-items: center; gap: var(--gap); }
+.sprint-passport__head .shell-link { margin-left: 0; }
+.sprint-tasks { padding-top: 8px; }

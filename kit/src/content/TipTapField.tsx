@@ -10,15 +10,14 @@
 // Поведение — как в v1: таблицы, чек-листы, режимы источника md/html,
 // упоминания по «@», изменение размера картинки, внешнее значение применяется,
 // когда разошлось с содержимым и поле не в фокусе.
+// S5-07: набор расширений — общий с тестом «MD → TipTap → MD без потерь»
+// (markdownLossless.ts): [[ссылки]], формулы, «:::», комментарии, `\|` в
+// ячейках, ссылки lore: и переносы строк переживают сохранение.
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import { TableKit } from '@tiptap/extension-table';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 import Mention from '@tiptap/extension-mention';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
-import { Markdown } from 'tiptap-markdown';
+import { getMarkdown, mdExtensions, MdImage } from './tiptapMd';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
@@ -31,9 +30,6 @@ export interface MentionItem {
   id: string;
   label: string;
 }
-
-const TABLE_EXTENSIONS = [TableKit.configure({ table: { resizable: false } })];
-const TASKLIST_EXTENSIONS = [TaskList, TaskItem.configure({ nested: true })];
 
 interface MentionState {
   items: MentionItem[];
@@ -145,17 +141,12 @@ function ResizableImageView({ node, updateAttributes, selected, editor }: NodeVi
   );
 }
 
+// Строчная, как MdImage (tiptapMd.ts): `![a](u)` остаётся внутри абзаца.
 const ResizableImage = Image.extend({
   addNodeView() {
     return ReactNodeViewRenderer(ResizableImageView);
   },
-});
-
-// tiptap-markdown@0.9 не объявляет тип storage для TipTap v3 — узкий каст в одном месте.
-function getMarkdown(editor: Editor): string {
-  const storage = editor.storage as unknown as { markdown?: { getMarkdown: () => string } };
-  return storage.markdown?.getMarkdown() ?? editor.getText();
-}
+}).configure({ inline: true });
 
 /** Файлы-картинки из drop/paste: items (скриншот из буфера) и files, без дублей и не-картинок. */
 export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
@@ -215,15 +206,22 @@ export function TipTapField({
   mentionItemsRef.current = mentionItems ?? [];
   const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');
   const [draft, setDraft] = useState(value);
+  // Подпись берётся в момент вызова: расширения фиксируются при создании редактора.
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const promptTex = (tex: string) => window.prompt(kitT(langRef.current, 'kit.md.mathPrompt'), tex);
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      ...(enableImages ? [ResizableImage] : []),
-      ...TABLE_EXTENSIONS,
-      ...TASKLIST_EXTENSIONS,
-      ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : []),
-      Markdown.configure({ html: false, tightLists: true }),
+      // Набор и сериализатор — общие с тестом S5-07 «MD → TipTap → MD без
+      // потерь» (markdownLossless через tiptapMd.mdExtensions): поле не может
+      // разойтись с тем, что проверено. Картинка — узлом всегда (S5-06);
+      // формулы — KaTeX-узлы S5-13, двойной клик — правка через promptTex.
+      ...mdExtensions(
+        enableImages ? ResizableImage : MdImage,
+        mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : [],
+        { promptTex },
+      ),
     ],
     content: value,
     editable,
@@ -333,6 +331,13 @@ export function TipTapField({
 
   const run = (fn: (e: Editor) => void) => () => { if (editor) fn(editor); };
 
+  // Вставка строчной формулы: исходник TeX спрашиваем, как URL ссылки.
+  const insertMath = () => {
+    if (!editor) return;
+    const tex = window.prompt(t('kit.md.mathPrompt'), '');
+    if (tex && tex.trim()) editor.chain().focus().insertContent({ type: 'mathInline', attrs: { tex: tex.trim() } }).run();
+  };
+
   return (
     <div className="sk-md">
       {editable && editor && (
@@ -355,6 +360,7 @@ export function TipTapField({
           <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
           <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
           <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
+          <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
           <Sep />
           {editor.isActive('table') ? (
             <>

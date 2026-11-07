@@ -6,4 +6,18 @@ export * from './RecordGraph';
 export * from './RecordJournal';
 export * from './BlockBoundary';
 export * from './useRecordTab';
-export { egoGraph, edgeColor, toCssColor, verdictTone, type EgoGraph, type EgoNode, type EgoSector } from './graph';
+// S5-01: строка-вердикт шапки (статус · задачи x/y · просрочено · свежесть).
+export * from './RecordFacts';
+export {
+  recordFacts, utcDay, tasksTone, dueTone,
+  type RecordFactsSpec, type RecordFactsResult, type TasksFact, type DueFact, type FreshFact, type FactTone,
+} from './facts';
+export * from './RecordPeek';
+// Вкладка «История» (SPRINT_UXR_S5_RECORD_TASKS/S5-11): версии SCD2, автор, сравнение, возврат.
+export * from './RecordHistory';
+export * from './history';
+// Чтение записи целиком: листалка «‹ x из y ›» и свойства в ушке (SPRINT_UXR_S5_RECORD_TASKS/S5-04).
+export * from './RecordPager';
+export * from './RecordReader';
+export { egoGraph, edgeColor, toCssColor, typesAround, verdictTone, type EgoGraph, type EgoNode, type EgoOptions, type EgoSector } from './graph';
+export * from './graphState';

@@ -18,8 +18,9 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/unbounded/800.css';
 import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
-import { ErrorBoundary, Pill, Skeleton, resolvePrefs, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { ErrorBoundary, Pill, Skeleton, StorageBanner, resolvePrefs, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
+import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPassport';
 import { createLocalS2Client } from './api/me';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
@@ -35,6 +36,8 @@ import { themeSource } from './storage/themeSource';
 const KitPage = lazy(() => import('./pages/KitPage'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
 const NewsPage = lazy(() => import('./news/NewsPage'));
+// Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
+const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
 
 // Личное пользователя (/lore/me/*, контракт S2) — до S2-04 на заглушке с
 // хранением в браузере (S4-02). Первый раз — с темой, выбранной в v1/seer-prefs.
@@ -43,18 +46,37 @@ const meClient = createLocalS2Client(appStorage, {
   seed: { palette: initialTheme.palette, mode: initialTheme.mode, density: initialTheme.density },
 });
 
-export type Route = 'kit' | 'news' | 'home' | ListScreenId;
+export type Route = 'kit' | 'news' | 'task' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /** Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01). */
 const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs: 'adr' };
 
-/** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
-export function routeOf(path: string): Route {
+/**
+ * Путь без хвостового «/»: /kit и /kit/ — одна страница; /news — новости v2
+ * (S7A-02). Паспорт записи — в query (?section=…&passport=…), как у v1: из
+ * списков S4 запись открывается по URL. S5-04: ?section=tasks&passport=SPRINT/CODE — задача.
+ */
+export function routeOf(path: string, search = ''): Route {
   const p = path.replace(/\/+$/, '');
   if (p === '/kit') return 'kit';
   if (p === '/news') return 'news';
+  const q = new URLSearchParams(search);
+  if (q.get('section') === 'tasks' && q.get('passport')) return 'task';
   return LIST_ROUTES[p] ?? 'home';
+}
+
+/**
+ * Паспорт спринта по URL (S5-02): ?section=sprints&passport=ID[&tab=…].
+ * Паспорта открываются из списков S4 тем же адресом. Неизвестная вкладка —
+ * «Задачи» (первая и по умолчанию: задачи спринта видны за 2 клика).
+ */
+export function sprintPassportOf(search: string): { sprintId: string; tab: SprintTab } | null {
+  const p = new URLSearchParams(search);
+  const id = p.get('passport')?.trim();
+  if (p.get('section') !== 'sprints' || !id) return null;
+  const tab = (SPRINT_TABS as readonly string[]).includes(p.get('tab') ?? '') ? (p.get('tab') as SprintTab) : 'tasks';
+  return { sprintId: id, tab };
 }
 
 /** /sprints → /?sec=sprint (замена записи истории, без перезагрузки): экран
@@ -68,6 +90,8 @@ function redirectListRoute(route: ListScreenId, w: UrlWindow | undefined) {
 
 export interface AppProps {
   path?: string;
+  /** Query (паспорта S5); по умолчанию — из win/window. */
+  search?: string;
   /** Окно для URL-состояния оболочки (тесты); по умолчанию window. */
   win?: UrlWindow;
   /** Хранилище оболочки (тесты); по умолчанию storage/safe. */
@@ -76,15 +100,36 @@ export interface AppProps {
   narrow?: boolean;
 }
 
-export default function App({ path, win, storage = appStorage, narrow }: AppProps = {}) {
+export default function App({ path, search, win, storage = appStorage, narrow }: AppProps = {}) {
   const lang = useKitLang();
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
-  const route = routeOf(current);
+  const query = search ?? win?.location.search ?? (typeof window === 'undefined' ? '' : window.location.search);
+  const route = routeOf(current, query);
   if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
   if (route === 'news') {
     return (
       <ErrorBoundary lang="ru">
         <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
+  // Паспорта S5 (задача, спринт) — пока отдельные страницы по URL, вне оболочки.
+  if (route === 'task') {
+    return (
+      <ErrorBoundary lang="ru">
+        <StorageBanner storage={storage} lang="ru" />
+        <Suspense fallback={<Skeleton />}><TaskReadPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
+  const passport = sprintPassportOf(query);
+  if (passport) {
+    return (
+      <ErrorBoundary lang="ru">
+        <StorageBanner storage={storage} lang="ru" />
+        <main data-lore-app="v2">
+          <SprintPassport sprintId={passport.sprintId} tab={passport.tab} />
+        </main>
       </ErrorBoundary>
     );
   }

@@ -4,7 +4,10 @@
 // у useSettings (контракт S2 /lore/me/settings); здесь только строки выбора
 // из kit (SettingRow + Segmented). Пока идёт сохранение — выбор недоступен,
 // неудача — честная плашка, а не тихая «успешная» смена.
-import { GameIcon, LoadError, PALETTES, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
+// Режим чтения kit (S5-05: размер текста, «сворачивать меню при чтении» —
+// D-2026-UXR-READ-COLLAPSE) — блоком ReadingSettings: его читает ReadingView.
+// Пока у него своё хранилище kit, а не /lore/me/settings — сведение в одно — отдельной задачей.
+import { GameIcon, KitLangProvider, LoadError, PALETTES, ReadingSettings, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
 import type { UserSettings } from '../api/contracts/s2';
 import { t, type Lang, type MessageKey } from '../i18n/messages';
 import { switchNavUrl } from '../nav/navVersion';
@@ -101,6 +104,11 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
           <span>{t(lang, 'settings.memory.open')}</span>
         </button>
       )}
+      <div className="setting-row" data-reading-settings>
+        <KitLangProvider lang={lang}>
+          <ReadingSettings />
+        </KitLangProvider>
+      </div>
     </section>
   );
 }

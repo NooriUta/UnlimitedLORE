@@ -25,6 +25,7 @@ import { StorageBanner } from '../resilience/StorageBanner';
 import { pushUrlState, readUrlState, sectionScopedPatch } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { Sheet } from './Sheet';
+import { Ear } from './Ear';
 
 /** Где пользователь: модуль, пункт меню, вид пункта. */
 export interface KitNav {
@@ -48,6 +49,10 @@ export interface KitShellApi {
   views: KitSavedView[];
   saveView: (title?: string) => void;
   removeView: (id: string) => void;
+  /** Меню свёрнуто в ушко (режим чтения, S5-05 · D-2026-UXR-READ-COLLAPSE). */
+  menuCollapsed: boolean;
+  /** Стабильная ссылка: свернуть/раскрыть меню (на узком экране меню и так в drawer). */
+  setMenuCollapsed: (collapsed: boolean) => void;
 }
 
 export interface KitShellProps {
@@ -98,6 +103,11 @@ function toneOf(tone: string | undefined): string | undefined {
 }
 
 const ShellContext = createContext<KitShellApi | null>(null);
+
+/** API оболочки или null вне <KitShell> — для блоков, работающих и без оболочки (режим чтения). */
+export function useOptionalKitShell(): KitShellApi | null {
+  return useContext(ShellContext);
+}
 
 /** API оболочки для содержимого: где мы, навигация, «Недавние», «Мои виды». */
 export function useKitShell(): KitShellApi {
@@ -163,6 +173,7 @@ export function KitShell({
   // S4-01: свёрнутые группы меню — id групп; переживают перезагрузку.
   const [collapsed, setCollapsed] = useState<string[]>(() => readList<string>(storage, `${storageKey}.collapsed`));
   const [drawer, setDrawer] = useState(false);
+  const [menuCollapsed, setMenuCollapsed] = useState(false);
   const navRef = useRef(nav);
   navRef.current = nav;
 
@@ -239,8 +250,8 @@ export function KitShell({
   }, [storage, storageKey]);
 
   const api = useMemo<KitShellApi>(
-    () => ({ nav, navigate, openRecord, recent, views, saveView, removeView }),
-    [nav, navigate, openRecord, recent, views, saveView, removeView],
+    () => ({ nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed }),
+    [nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed],
   );
 
   const activeModule = config.modules.find(m => m.id === nav.module) ?? config.modules[0];
@@ -266,7 +277,7 @@ export function KitShell({
 
   return (
     <ShellContext.Provider value={api}>
-      <div className={['sk-shell', narrow ? 'sk-shell--narrow' : ''].filter(Boolean).join(' ')}>
+      <div className={['sk-shell', narrow ? 'sk-shell--narrow' : '', !narrow && menuCollapsed ? 'sk-shell--menu-collapsed' : ''].filter(Boolean).join(' ')}>
         <header className="sk-shell__top">
           <a className="sk-shell__skip" href={`#${mainId}`}>{kitT(lang, 'kit.shell.skip')}</a>
           {narrow && (
@@ -309,7 +320,16 @@ export function KitShell({
           {account && <div className="sk-shell__account">{account}</div>}
         </header>
         <div className="sk-shell__body">
-          {!narrow && <div className="sk-shell__side">{menu()}</div>}
+          {!narrow && !menuCollapsed && <div className="sk-shell__side">{menu()}</div>}
+          {!narrow && menuCollapsed && (
+            <Ear
+              side="left"
+              className="sk-shell__ear"
+              label={kitT(lang, 'kit.shell.menu')}
+              expanded={false}
+              onToggle={() => setMenuCollapsed(false)}
+            />
+          )}
           <main id={mainId} className="sk-shell__main" tabIndex={-1}>
             <StorageBanner storage={storage} lang={lang} />
             {children}

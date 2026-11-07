@@ -49,6 +49,16 @@ describe('S3-07: переключатель «новая навигация»', 
   });
 });
 
+describe('S5-05: настройки режима чтения в личных настройках', () => {
+  it('размер текста и «сворачивать меню при чтении» — блоком kit ReadingSettings', () => {
+    const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
+    const html = renderToString(<PersonalSettings lang="ru" state={ok} onChange={() => {}} navTargetUrl={null} />);
+    expect(html).toContain('data-reading-settings');
+    expect(html).toContain('Сворачивать меню при чтении');
+    expect(html).toContain('Размер текста');
+  });
+});
+
 describe('S3-07: словари ru/en v2 совпадают по ключам', () => {
   it('у каждого ключа есть обе локали и непустой текст', () => {
     const ru = Object.keys(MESSAGES.ru).sort();
