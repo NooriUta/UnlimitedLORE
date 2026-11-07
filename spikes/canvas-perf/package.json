@@ -1,0 +1,22 @@
+{
+  "name": "spike-canvas-perf",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "SPRINT_UXR_S7C_WHY_CANVAS/S7C-07 — замер React Flow: N стикеров на телефоне",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "summarize": "node summarize.cjs",
+    "measure": "node measure.cjs"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.11.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.3",
+    "vite": "^8.3.5"
+  }
+}
