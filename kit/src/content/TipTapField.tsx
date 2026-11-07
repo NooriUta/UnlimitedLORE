@@ -10,19 +10,18 @@
 // Поведение — как в v1: таблицы, чек-листы, режимы источника md/html,
 // упоминания по «@», изменение размера картинки, внешнее значение применяется,
 // когда разошлось с содержимым и поле не в фокусе.
+// S5-07: набор расширений — общий с тестом «MD → TipTap → MD без потерь»
+// (markdownLossless.ts): [[ссылки]], формулы, «:::», комментарии, `\|` в
+// ячейках, ссылки lore: и переносы строк переживают сохранение.
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import { TableKit } from '@tiptap/extension-table';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 import Mention from '@tiptap/extension-mention';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
-import { Markdown } from 'tiptap-markdown';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
+import { markdownBaseExtensions, markdownSerializerExtension } from './markdownLossless';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 
@@ -31,9 +30,6 @@ export interface MentionItem {
   id: string;
   label: string;
 }
-
-const TABLE_EXTENSIONS = [TableKit.configure({ table: { resizable: false } })];
-const TASKLIST_EXTENSIONS = [TaskList, TaskItem.configure({ nested: true })];
 
 interface MentionState {
   items: MentionItem[];
@@ -218,12 +214,12 @@ export function TipTapField({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      // Набор и сериализатор — общие с тестом S5-07 «MD → TipTap → MD без
+      // потерь» (markdownLossless): поле не может разойтись с тем, что проверено.
+      ...markdownBaseExtensions(),
       ...(enableImages ? [ResizableImage] : []),
-      ...TABLE_EXTENSIONS,
-      ...TASKLIST_EXTENSIONS,
       ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : []),
-      Markdown.configure({ html: false, tightLists: true }),
+      markdownSerializerExtension(),
     ],
     content: value,
     editable,
