@@ -829,6 +829,29 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-bottom: 1px solid var(--bd);
 }
 .sk-palette__trunc { color: var(--t1); background: color-mix(in srgb, var(--wrn) 10%, transparent); }
+/* S4-14: цель Ctrl+K (запись или выделение) — chip под полем; строка серверного поиска. */
+.sk-palette__target {
+  margin: 0;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-palette__targetchip {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--acc) 50%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+  font-size: var(--fs-xs);
+}
+.sk-palette__remote {
+  margin: 0;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-palette[aria-busy="true"] .sk-palette__list { opacity: .6; pointer-events: none; }
 .sk-palette__fail { color: var(--t1); background: color-mix(in srgb, var(--dng) 14%, transparent); }
 .sk-palette__list { overflow: auto; padding: 4px 0; }
 .sk-palette__group + .sk-palette__group { border-top: 1px solid var(--bd); margin-top: 4px; padding-top: 4px; }

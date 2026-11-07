@@ -15,7 +15,10 @@ import { GameIcon, SECTION_ICONS } from '../elements/GameIcon';
 import { Kbd } from '../elements/Kbd';
 import { kitT, useKitLang } from '../i18n';
 import { matchHotkey } from '../resilience/hotkeys';
-import { itemKey, searchPalette, type PaletteItem, type PaletteMode, type RecentList } from './paletteModel';
+import {
+  actionsFor, hotkeyKeys, itemKey, mergeRemote, normalizeQuery, searchPalette, targetIds,
+  type PaletteAction, type PaletteItem, type PaletteMode, type PaletteRemoteSearch, type PaletteTarget, type RecentList,
+} from './paletteModel';
 
 // ── горячие клавиши ───────────────────────────────────────────────────────
 
@@ -77,7 +80,22 @@ export interface CommandPaletteProps {
   onOpenRecord?: (r: KitRecord) => void;
   /** Сколько строк выдачи показывать (по умолчанию 30). */
   limit?: number;
+  /** S4-14: над чем Ctrl+K — открытая запись или выделение списка (S4-10). */
+  target?: PaletteTarget | null;
+  /** S4-14: действия над целью; показываются только применимые к ней. */
+  actions?: readonly PaletteAction[];
+  /** S4-14: поиск на сервере (в LORE — слайс search); без него ищем только загруженное. */
+  remote?: PaletteRemoteSearch;
+  /** Пауза перед серверным запросом, мс (по умолчанию 200): не дёргать сервер на каждую букву. */
+  remoteDelayMs?: number;
 }
+
+/** Короче — на сервер не ходим: одна буква совпадает почти со всем. */
+export const REMOTE_MIN_CHARS = 2;
+
+type RemoteState =
+  | { query: string; status: 'ok'; records: KitRecord[]; partial: boolean }
+  | { query: string; status: 'error'; reason: string };
 
 export function CommandPalette(props: CommandPaletteProps) {
   if (!props.open) return null;
@@ -86,7 +104,7 @@ export function CommandPalette(props: CommandPaletteProps) {
   return <PaletteDialog {...props} />;
 }
 
-function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }: CommandPaletteProps) {
+function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, target, actions, remote, remoteDelayMs = 200 }: CommandPaletteProps) {
   const lang = useKitLang();
   const uid = useId();
   const listId = `${uid}-list`;
@@ -95,23 +113,69 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }:
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [remoteState, setRemoteState] = useState<RemoteState | null>(null);
 
+  const applicable = useMemo(() => actionsFor(target, actions ?? []), [target, actions]);
   const result = useMemo(
-    () => searchPalette({ query, data: ctx.data, config: ctx.config, mode, recent: recent.list(), limit }),
-    [query, ctx.data, ctx.config, mode, recent, limit],
+    () => searchPalette({ query, data: ctx.data, config: ctx.config, mode, recent: recent.list(), limit, actions: applicable }),
+    [query, ctx.data, ctx.config, mode, recent, limit, applicable],
   );
+
+  // Серверный поиск: ключ — нормализованный запрос. «Ищу» выводится из того,
+  // что ответа на ЭТОТ запрос ещё нет, — без синхронного setState в эффекте.
+  const remoteQuery = remote ? normalizeQuery(query) : '';
+  const wantRemote = remoteQuery.length >= REMOTE_MIN_CHARS;
+  useEffect(() => {
+    if (!remote || !wantRemote) return;
+    const ac = new AbortController();
+    const timer = setTimeout(() => {
+      remote(remoteQuery, ac.signal).then(
+        r => { if (!ac.signal.aborted) setRemoteState({ query: remoteQuery, status: 'ok', records: r.records, partial: !!r.partial }); },
+        (e: unknown) => {
+          if (ac.signal.aborted) return;
+          setRemoteState({ query: remoteQuery, status: 'error', reason: e instanceof Error ? e.message : String(e) });
+        },
+      );
+    }, remoteDelayMs);
+    return () => { clearTimeout(timer); ac.abort(); };
+  }, [remote, remoteQuery, wantRemote, remoteDelayMs]);
+  const remoteNow = wantRemote && remoteState?.query === remoteQuery ? remoteState : null;
+  const remoteLoading = wantRemote && !remoteNow;
+  const remoteRecords = useMemo(() => (remoteNow?.status === 'ok' ? remoteNow.records : []), [remoteNow]);
+  const remoteItems = useMemo(
+    () => (result.section === 'results' ? mergeRemote(result.items, remoteRecords, ctx.config) : []),
+    [result, remoteRecords, ctx.config],
+  );
+
+  const ids = targetIds(target);
+  const targetLabel = !target || ids.length === 0 ? null
+    : target.type === 'record'
+      ? kitT(lang, 'kit.palette.targetRecord', { id: target.record.id })
+      : kitT(lang, 'kit.palette.targetSelection', { n: ids.length });
+  const actionsLabel = target?.type === 'record'
+    ? kitT(lang, 'kit.palette.actionsRecord', { id: ids[0] ?? '' })
+    : kitT(lang, 'kit.palette.actionsSelection', { n: ids.length });
 
   // Видимый порядок = порядок навигации стрелками: недавние одной группой,
   // выдача — записи, затем команды.
   const groups = useMemo(() => {
-    if (result.section === 'recent') return [{ id: 'recent', label: kitT(lang, 'kit.palette.recent'), items: result.items }];
+    const acts = result.items.filter(i => i.type === 'action');
+    const actionsGroup = { id: 'actions', label: actionsLabel, items: acts };
+    if (result.section === 'recent') {
+      return [actionsGroup, { id: 'recent', label: kitT(lang, 'kit.palette.recent'), items: result.items.filter(i => i.type !== 'action') }]
+        .filter(g => g.items.length > 0);
+    }
     const recs = result.items.filter(i => i.type === 'record');
     const cmds = result.items.filter(i => i.type === 'command');
+    const server: PaletteItem[] = remoteItems;
     return [
+      actionsGroup,
       { id: 'records', label: kitT(lang, 'kit.palette.records'), items: recs },
+      { id: 'server', label: kitT(lang, 'kit.palette.server'), items: server },
       { id: 'commands', label: kitT(lang, 'kit.palette.commands'), items: cmds },
     ].filter(g => g.items.length > 0);
-  }, [result, lang]);
+  }, [result, lang, actionsLabel, remoteItems]);
   const flat = useMemo(() => groups.flatMap(g => g.items), [groups]);
   const optionId = (i: number) => `${uid}-opt-${i}`;
   const current = Math.min(active, Math.max(flat.length - 1, 0));
@@ -131,7 +195,32 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }:
     el?.scrollIntoView?.({ block: 'nearest' });
   }, [current]);
 
+  async function runAction(id: string) {
+    const act = applicable.find(a => a.id === id);
+    if (!act || busy) return;
+    setFailure(null);
+    try {
+      const pending = act.run(targetIds(target), ctx) as Promise<void> | undefined;
+      if (pending && typeof pending.then === 'function') {
+        setBusy(true);
+        await pending;
+      }
+    } catch (e) {
+      // Отказ — палитра остаётся открытой и говорит причину; цель не трогаем.
+      setBusy(false);
+      setFailure(kitT(lang, 'kit.palette.actionFailed', { title: act.title, reason: e instanceof Error ? e.message : String(e) }));
+      return;
+    }
+    setBusy(false);
+    onClose();
+  }
+
   function activate(item: PaletteItem) {
+    if (item.type === 'action') {
+      // Действие зависит от цели — в «недавние» не пишется.
+      void runAction(item.id);
+      return;
+    }
     if (item.type === 'command') {
       const cmd = ctx.config.palette?.commands?.find(c => c.id === item.id);
       if (!cmd) return;
@@ -146,7 +235,7 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }:
       onClose();
       return;
     }
-    const rec = ctx.data.records.find(r => r.id === item.id);
+    const rec = ctx.data.records.find(r => r.id === item.id) ?? remoteRecords.find(r => r.id === item.id);
     if (!rec) return;
     recent.push(item);
     onClose();
@@ -193,14 +282,16 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }:
 
   let note: string | null = null;
   if (flat.length === 0) {
-    note = q ? kitT(lang, 'kit.palette.notFound', { query: q }) : kitT(lang, 'kit.palette.emptyRecent');
+    note = !q ? kitT(lang, 'kit.palette.emptyRecent')
+      : remoteNow?.status === 'ok' ? kitT(lang, 'kit.palette.notFoundAnywhere', { query: q })
+        : kitT(lang, 'kit.palette.notFound', { query: q });
   }
 
   let index = -1;
   return createPortal(
     <>
       <div className="sk-palette-backdrop" aria-hidden="true" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label={title} className="sk-palette" data-mode={mode}>
+      <div role="dialog" aria-modal="true" aria-label={title} aria-busy={busy} className="sk-palette" data-mode={mode}>
         <div className="sk-palette__head">
           <GameIcon slug={mode === 'all' ? SECTION_ICONS.commands : SECTION_ICONS.search} size={16} />
           <input
@@ -222,6 +313,11 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }:
           />
           <Kbd keys={['Esc']} />
         </div>
+        {targetLabel && mode === 'all' && (
+          <p className="sk-palette__target" data-testid="kit-palette-target">
+            <span className="sk-palette__targetchip">{targetLabel}</span>
+          </p>
+        )}
 
         {meta.truncated && (
           <p className="sk-palette__trunc">
@@ -231,6 +327,14 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }:
           </p>
         )}
         {failure && <div role="alert" className="sk-palette__fail">{failure}</div>}
+        {remoteNow?.status === 'error' && (
+          <div role="alert" className="sk-palette__fail">{kitT(lang, 'kit.palette.remoteFailed', { reason: remoteNow.reason })}</div>
+        )}
+        {(remoteLoading || (remoteNow?.status === 'ok' && remoteNow.partial)) && (
+          <p className="sk-palette__remote" data-testid="kit-palette-remote" aria-live="polite">
+            {kitT(lang, remoteLoading ? 'kit.palette.remoteLoading' : 'kit.palette.remotePartial')}
+          </p>
+        )}
 
         {flat.length > 0 ? (
           <div ref={list} id={listId} role="listbox" aria-label={title} className="sk-palette__list">
@@ -256,9 +360,12 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30 }:
                     >
                       <GameIcon slug={item.type === 'record' ? item.icon : SECTION_ICONS.commands} size={15} />
                       <span className="sk-palette__title">{item.title}</span>
-                      {item.type === 'record'
-                        ? <><span className="sk-palette__kind">{item.kindTitle}</span><span className="sk-palette__id">{item.id}</span></>
-                        : <span className="sk-palette__kind">{kitT(lang, 'kit.palette.command')}</span>}
+                      {item.type === 'record' && <><span className="sk-palette__kind">{item.kindTitle}</span><span className="sk-palette__id">{item.id}</span></>}
+                      {item.type === 'command' && <span className="sk-palette__kind">{kitT(lang, 'kit.palette.command')}</span>}
+                      {item.type === 'action' && <>
+                        <span className="sk-palette__kind">{kitT(lang, 'kit.palette.action')}</span>
+                        {item.hotkey && <Kbd keys={hotkeyKeys(item.hotkey)} />}
+                      </>}
                     </div>
                   );
                 })}

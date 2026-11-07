@@ -14,6 +14,7 @@ import { lazy, Suspense } from 'react';
 import { ErrorBoundary, Pill, Skeleton, StorageBanner } from '@seidr/kit';
 import './App.css';
 import { PersonalSettings } from './settings/PersonalSettings';
+import { LorePalette } from './palette/LorePalette';
 import { storage } from './storage/safe';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
@@ -35,6 +36,9 @@ export default function App({ path }: { path?: string } = {}) {
         <h1 className="shell-title">LORE</h1>
         <Pill variant="id">v2</Pill>
         <a className="shell-link" href="/kit">Seiðr-kit</a>
+        {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.
+            Экраны списков передадут сюда свои ctx, target (выделение S4-10) и действия. */}
+        <LorePalette storage={storage} trigger />
       </main>
       {/* S3-07: личные настройки — переход v2 → v1 по флагу «новая навигация». */}
       <PersonalSettings />
