@@ -8,3 +8,6 @@ export * from './FacetFilter';
 export * from './grouping';
 // Составные объекты (S4-09): прогресс «x/y» для колонки progress:<поле>.
 export * from './progress';
+// Выделение: режим выбора, долгое нажатие (S4-10).
+export * from './listSelection';
+export * from './useLongPress';
