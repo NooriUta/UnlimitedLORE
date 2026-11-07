@@ -24,6 +24,32 @@ export default defineConfig({
     // По умолчанию Vitest отдаёт любой CSS пустой строкой — тест правила был бы
     // «красным» на пустом входе и ничего не проверял бы.
     css: { include: [/tokens\.css/] },
+    // S0-05: два проекта. `unit` — прежние *.test.ts в node, как и было (окружение
+    // не меняется, чтобы `typeof document` в проверенном коде не перевернулся).
+    // `render` — *.test.tsx в jsdom + testing-library, с общим setup (i18n, стабы
+    // matchMedia/ResizeObserver, cleanup). Рендер-тест = файл .test.tsx.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['src/**/*.{test,spec}.ts'],
+          // S0-07: extends:true склеивает include с корневым (ts+tsx) — без exclude
+          // рендер-тесты .tsx шли ещё и в node и падали «document is not defined».
+          exclude: ['src/**/*.{test,spec}.tsx', 'node_modules/**'],
+          environment: 'node',
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'render',
+          include: ['src/**/*.{test,spec}.tsx'],
+          environment: 'jsdom',
+          setupFiles: ['src/test/setup.ts'],
+        },
+      },
+    ],
   },
   build: {
     rollupOptions: {
