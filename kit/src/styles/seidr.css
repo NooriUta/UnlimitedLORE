@@ -42,7 +42,7 @@
   --suc: #7dbf78;
   --wrn: #d4922a;
   --inf: #88b8a8;
-  --dng: #c85848;
+  --dng: #cf6c5e;
 
   /* Псевдонимы — те же, что у v1, чтобы перенесённые элементы не переписывать. */
   --danger: var(--dng);
@@ -65,10 +65,10 @@
   --st-planned:          #d8b23a;
   --st-design:           #c08cc0;
   --st-todo:             #9aa6ae;
-  --st-backlog:          #7c8896;
+  --st-backlog:          #7d8997;
   --st-deferred:         #8892a0;
   --st-blocked:          #e0685a;
-  --st-cancelled:        #808080;
+  --st-cancelled:        #888888;
 
   /* ── «бумага» диаграмм MartProse (S4-00d) ──
      Диаграммы mermaid/bpmn рисуются на светлой подложке при любой теме: их
@@ -122,6 +122,30 @@
 }
 
 /* ---------- плотность: просторная ---------- */
+/* ---------- размер текста (личная настройка S4-02, text_size) ----------
+   Шкала сдвигается целиком, ступени сохраняют порядок; md — :root выше.
+   --fs-touch-input не трогаем: это порог iOS, а не вкус пользователя. */
+[data-text-size='sm'] {
+  --fs-2xs:  8px;
+  --fs-xs:   9px;
+  --fs-sm:   10px;
+  --fs-base: 11px;
+  --fs-md:   12px;
+  --fs-lg:   13px;
+  --fs-xl:   18px;
+  --fs-2xl:  22px;
+}
+[data-text-size='lg'] {
+  --fs-2xs:  10px;
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-md:   15px;
+  --fs-lg:   16px;
+  --fs-xl:   22px;
+  --fs-2xl:  26px;
+}
+
 [data-density='comfortable'] {
   --row-h: 32px;
   --pad-x: 12px;
@@ -149,18 +173,18 @@
   --t1:  #1e1a12;
   --t2:  #5c5240;
   --t3:  #76694f;
-  --acc: #6b7a2a;
+  --acc: #677528;
   --suc: #3d7a38;
   --wrn: #a06010;
   --inf: #3a7060;
   --dng: #c03030;
 
   /* Статусы темнее — текст статуса читается на белом. */
-  --st-done:             #2e8b40;
-  --st-ready_for_deploy: #1e8c99;
-  --st-active:           #2d74c4;
-  --st-partial:          #c26a18;
-  --st-planned:          #9a7a10;
+  --st-done:             #297d3a;
+  --st-ready_for_deploy: #1a7884;
+  --st-active:           #2b6eba;
+  --st-partial:          #a55a14;
+  --st-planned:          #866a0e;
   --st-design:           #8e5a8e;
   --st-todo:             #5a6670;
   --st-backlog:          #47535f;
@@ -184,7 +208,7 @@
   --suc: #60c090;
   --wrn: #d09030;
   --inf: #7aaccf;
-  --dng: #c85848;
+  --dng: #cc6455;
 }
 [data-theme='slate'][data-mode='light'] {
   color-scheme: light;
@@ -219,7 +243,7 @@
   --suc: #60c880;
   --wrn: #c0a030;
   --inf: #70b0a8;
-  --dng: #c05848;
+  --dng: #c66758;
 }
 [data-theme='lichen'][data-mode='light'] {
   color-scheme: light;
@@ -232,7 +256,7 @@
   --t1:  #182418;
   --t2:  #3a6040;
   --t3:  #517655;
-  --acc: #3a8035;
+  --acc: #397d34;
   --suc: #287840;
   --wrn: #8a6010;
   --inf: #286860;
@@ -254,7 +278,7 @@
   --suc: #7ad08a;
   --wrn: #c89030;
   --inf: #60a8b8;
-  --dng: #c05040;
+  --dng: #ca6c5f;
 }
 [data-theme='juniper'][data-mode='light'] {
   color-scheme: light;
@@ -267,8 +291,8 @@
   --t1:  #102820;
   --t2:  #286050;
   --t3:  #487669;
-  --acc: #1a8060;
-  --suc: #289850;
+  --acc: #197d5e;
+  --suc: #217e42;
   --wrn: #806018;
   --inf: #1a6878;
   --dng: #c03030;
@@ -289,7 +313,7 @@
   --suc: #80c060;
   --wrn: #e08020;
   --inf: #90b8a0;
-  --dng: #c85848;
+  --dng: #cc6455;
 }
 [data-theme='warm-dark'][data-mode='light'] {
   color-scheme: light;
@@ -556,6 +580,55 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-spop__cancel:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
+/* ---------- Палитра звезды по циклу + третий шаг (S4-07) ---------- */
+.sk-star-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sk-star__err { color: var(--dng); font-size: var(--fs-xs); }
+.sk-spal { min-width: 220px; }
+.sk-spal__group { display: flex; flex-direction: column; gap: 2px; }
+.sk-spal__group + .sk-spal__group { margin-top: 2px; padding-top: 2px; border-top: 1px solid var(--bd); }
+.sk-spal__cat {
+  padding: 2px 8px 0;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-spal__final { color: var(--t3); }
+.sk-sconf {
+  --schip-c: var(--t3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px;
+}
+.sk-sconf__q { margin: 0; padding: 4px 6px; color: var(--t1); font-size: var(--fs-sm); }
+.sk-sconf__do, .sk-sconf__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-sconf__do {
+  border: 1px solid var(--schip-c);
+  background: color-mix(in srgb, var(--schip-c) 16%, transparent);
+  color: var(--t1);
+}
+.sk-sconf__back { border: 1px solid var(--bd); background: none; color: var(--t2); }
+.sk-sconf__do:focus-visible, .sk-sconf__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
 /* ---------- Kbd ---------- */
 .sk-kbd { display: inline-flex; gap: 2px; margin-left: 6px; }
 .sk-kbd kbd {
@@ -704,6 +777,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-color: color-mix(in srgb, var(--wrn) 50%, transparent);
   background: color-mix(in srgb, var(--wrn) 7%, transparent);
 }
+/* S4-01: экран не собран — информационный тон, не «пусто» и не тревога. */
+.sk-state--unbuilt {
+  --state-c: var(--inf);
+  border-color: color-mix(in srgb, var(--inf) 45%, transparent);
+}
 
 /* ---------- Truncated ---------- */
 .sk-trunc {
@@ -834,6 +912,29 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-bottom: 1px solid var(--bd);
 }
 .sk-palette__trunc { color: var(--t1); background: color-mix(in srgb, var(--wrn) 10%, transparent); }
+/* S4-14: цель Ctrl+K (запись или выделение) — chip под полем; строка серверного поиска. */
+.sk-palette__target {
+  margin: 0;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-palette__targetchip {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--acc) 50%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+  font-size: var(--fs-xs);
+}
+.sk-palette__remote {
+  margin: 0;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-palette[aria-busy="true"] .sk-palette__list { opacity: .6; pointer-events: none; }
 .sk-palette__fail { color: var(--t1); background: color-mix(in srgb, var(--dng) 14%, transparent); }
 .sk-palette__list { overflow: auto; padding: 4px 0; }
 .sk-palette__group + .sk-palette__group { border-top: 1px solid var(--bd); margin-top: 4px; padding-top: 4px; }
@@ -1034,6 +1135,94 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline: 2px solid var(--acc);
   outline-offset: -2px;
 }
+.sk-shell__account { display: flex; align-items: center; margin-left: auto; padding-left: 4px; flex-shrink: 0; }
+
+/* ---------- AvatarMenu (S4-02): аватар в шапке и лист личного ---------- */
+.sk-avatar {
+  display: inline-grid;
+  place-items: center;
+  min-width: max(var(--tap), 32px);
+  min-height: max(var(--tap), 32px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  cursor: pointer;
+}
+.sk-avatar__face {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--acc);
+  color: var(--bg0);
+  box-shadow: 0 0 0 1px var(--bd);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.sk-avatar__face--big { width: 40px; height: 40px; font-size: var(--fs-sm); }
+.sk-avatar:hover .sk-avatar__face { box-shadow: 0 0 0 2px var(--acc); }
+.sk-avatar:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-avatar__initials { line-height: 1; }
+.sk-avatar-sheet .sk-sheet__body { display: flex; flex-direction: column; gap: 2px; }
+.sk-avatar__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-avatar__who-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-avatar__name { color: var(--t1); font-size: var(--fs-md); }
+.sk-avatar__sub { color: var(--t2); font-size: var(--fs-2xs); }
+
+/* ---------- Segmented и SettingRow (S4-02): строки личных настроек ---------- */
+.sk-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: var(--fs-xs);
+}
+.sk-setting__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-setting__label { color: var(--t1); }
+.sk-setting__hint { color: var(--t2); font-size: var(--fs-2xs); }
+.sk-setting__ctl { flex-shrink: 0; }
+.sk-seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+}
+.sk-seg__btn {
+  min-height: max(var(--tap), 24px);
+  min-width: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sk-seg__btn:hover { color: var(--t1); }
+.sk-seg__btn.is-on { background: color-mix(in srgb, var(--acc) 22%, transparent); color: var(--t1); box-shadow: inset 0 -2px 0 var(--acc); }
+.sk-seg__btn:disabled { opacity: .55; cursor: progress; }
+.sk-seg__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+@media (max-width: 720px) {
+  .sk-setting { flex-wrap: wrap; }
+  .sk-setting__ctl { width: 100%; }
+}
 .sk-shell__body {
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
@@ -1064,6 +1253,39 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-shell__grp--wrn .sk-shell__grp-title { color: var(--wrn); }
 .sk-shell__grp--dng .sk-shell__grp-title { color: var(--dng); }
 .sk-shell__grp--inf .sk-shell__grp-title { color: var(--inf); }
+/* S4-01: сворачиваемая группа — заголовок-кнопка на всю ширину; цель касания
+   на сенсоре не меньше --tap (44px), на десктопе плотно. */
+.sk-shell__grp-title:has(.sk-shell__grp-toggle) { padding: 0; }
+.sk-shell__grp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: max(var(--tap), 24px);
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sk-shell__grp-toggle:hover { background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.sk-shell__grp-toggle:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-shell__caret {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform .12s ease;
+}
+.sk-shell__grp--collapsed .sk-shell__caret { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) { .sk-shell__caret { transition: none; } }
 .sk-shell__list { margin: 0; padding: 0; list-style: none; }
 .sk-shell__row { display: flex; align-items: center; gap: 2px; }
 .sk-shell__item {
@@ -1542,6 +1764,178 @@ code, pre, kbd, samp { font-family: var(--mono); }
   color: var(--t1);
   font-size: var(--fs-sm);
 }
+/* Строка [Фильтр][Группировка][Порядок] (S4-04): три сегмента-рамки. */
+.sk-list__seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-list__seglabel {
+  float: left;
+  padding: 0;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-list__segicon { color: var(--t3); }
+.sk-list__segcount {
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--acc);
+  color: var(--bg0);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  text-align: center;
+}
+.sk-list__qicon { display: inline-flex; color: var(--t2); }
+.sk-list__desclabel { color: var(--t3); }
+.sk-list__desctail { color: var(--t2); }
+/* ── Фильтры listView (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-05): поиск текста,
+   фасет поля — кнопка-pill с итогом и панель «есть / нет / пусто / не пусто»
+   со значениями (иконка + подпись + счётчик). Цели — не меньше --tap. ── */
+.sk-list__search {
+  min-height: max(var(--tap), 22px);
+  width: 200px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-list__search::placeholder { color: var(--t3); }
+.sk-facet { position: relative; display: inline-flex; }
+.sk-facet__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 22px);
+  max-width: 260px;
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+}
+.sk-facet__btn.is-active {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+}
+.sk-facet__sum {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sk-facet__chev { color: var(--t3); }
+.sk-facet__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 240px;
+  max-width: min(360px, 92vw);
+  max-height: 60vh;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-facet__panel[hidden] { display: none; }
+.sk-facet__ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+}
+.sk-facet__op {
+  flex: 1 1 auto;
+  min-height: max(var(--tap), 22px);
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.sk-facet__op.is-on {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--t1);
+}
+.sk-facet__find {
+  min-height: max(var(--tap), 22px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-facet__opts { display: flex; flex-direction: column; }
+.sk-facet__opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 6px;
+  border-radius: var(--r-md);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-facet__opt:hover { background: var(--bg2); }
+.sk-facet__vt {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sk-facet__n {
+  font-family: var(--mono);
+  color: var(--t2);
+  font-size: var(--fs-2xs);
+}
+.sk-facet__empty {
+  margin: 0;
+  padding: 4px 6px;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-facet__foot { display: flex; justify-content: flex-end; }
+.sk-facet__btn:focus-visible,
+.sk-facet__op:focus-visible,
+.sk-facet__find:focus-visible,
+.sk-facet__opt input:focus-visible,
+.sk-list__search:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.sk-list__vals { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; }
+.sk-list__val { display: inline-flex; align-items: center; gap: 3px; }
+.sk-list__vicon { display: inline-flex; flex-shrink: 0; }
 .sk-list__desc {
   display: flex;
   flex-wrap: wrap;
@@ -1603,6 +1997,19 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-list__row:hover { background: var(--bg2); }
 .sk-list__row.is-selected { background: color-mix(in srgb, var(--acc) 10%, transparent); }
+/* S4-11: курсор строки — видимый фокус, клавиатурный слой поверх щелчка. */
+.sk-list__row:focus-visible,
+.sk-board__card:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-list__row[data-cursor='true'] { box-shadow: inset 2px 0 0 var(--acc); }
+/* Строка-таб-стоп (S4-11) — тоже цель касания (S4-12): на сенсоре не ниже --tap;
+   на широком экране --tap = 0, плотность списка не меняется. У tr height — минимум. */
+.sk-list__row { height: var(--tap); }
+.sk-board__card { min-height: var(--tap); }
+.sk-list__actions { display: inline-flex; align-items: center; gap: 2px; }
+.sk-list__action { display: inline-flex; align-items: center; }
+/* Подсказка клавиши действия — только у строки под курсором: клавиша бьёт по ней. */
+.sk-list__row:not([data-cursor='true']) .sk-list__actions .sk-kbd,
+.sk-board__card:not([data-cursor='true']) .sk-list__actions .sk-kbd { display: none; }
 .sk-list__title {
   color: var(--t1);
   font-weight: 600;
@@ -1610,6 +2017,23 @@ code, pre, kbd, samp { font-family: var(--mono); }
   overflow-wrap: anywhere;
 }
 a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
+/* S4-13 (B-09): строка без ссылки, но открываемая, — кнопка в порядке Tab;
+   выглядит как заголовок, цель не меньше --tap на сенсоре. */
+.sk-list__title--btn {
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: start;
+  cursor: pointer;
+  min-height: var(--tap, auto);
+}
+.sk-list__title--btn:hover { color: var(--acc); text-decoration: underline; }
+.sk-list__title:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
 .sk-list__mono { font-family: var(--mono); color: var(--t2); }
 .sk-list__check {
   display: inline-flex;
@@ -1661,6 +2085,64 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__gcount { margin-left: auto; font-family: var(--mono); color: var(--t3); }
 .sk-list__morerow td { padding: 4px var(--pad-x); }
 
+/* Составные объекты (S4-09): раскрытие строки и прогресс «x/y».
+   Кнопка раскрытия — цель касания не меньше --tap (44px на сенсоре). */
+.sk-list__xcell { width: 1%; padding-left: 0; padding-right: 0; text-align: center; }
+.sk-list__xbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), var(--row-h));
+  min-height: max(var(--tap), var(--row-h));
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t3);
+  font-size: var(--fs-sm);
+}
+.sk-list__xbtn:hover { color: var(--acc); background: var(--bg2); }
+.sk-list__xbtn[aria-expanded='true'] { color: var(--acc); }
+.sk-list__xbtn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-list__xrow > .sk-list__xbody {
+  padding: var(--pad-y) var(--pad-x) var(--pad-y) calc(var(--pad-x) * 3);
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.sk-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--t2);
+  white-space: nowrap;
+}
+.sk-progress__text { font-variant-numeric: tabular-nums; }
+.sk-progress__bar {
+  position: relative;
+  width: 48px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg3);
+}
+.sk-progress__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p, 0%);
+  border-radius: 999px;
+  background: var(--acc);
+}
+.sk-progress[data-progress='complete'] { color: var(--suc); }
+.sk-progress[data-progress='complete'] .sk-progress__bar::after { background: var(--suc); }
+.sk-progress[data-progress='partial'] { color: var(--wrn); }
+.sk-progress[data-progress='error'] { color: var(--dng); border-bottom: 1px dashed var(--dng); }
+.sk-progress[data-progress='loading'],
+.sk-progress[data-progress='none'],
+.sk-progress[data-progress='empty'] { color: var(--t3); }
+
 .sk-board {
   display: grid;
   grid-auto-flow: column;
@@ -1681,6 +2163,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   background: var(--bg1);
 }
 .sk-board__col.is-unknown { border-style: dashed; }
+/* Цветные полоски выключены (личная настройка S4-02, stripes): кромка — как рамка. */
+[data-stripes='off'] .sk-board__col { border-top: 1px solid var(--bd); }
 .sk-board__head {
   display: flex;
   align-items: center;
@@ -1720,9 +2204,122 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   gap: 4px;
   min-width: 0;
 }
+
+/* ── Общая группировка (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-06): дорожки доски,
+   строка «в нескольких группах», таймлайн с дорожками. ── */
+.sk-list__multi { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+.sk-board__lanes { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-board__lane {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg0);
+  padding: 0 4px 4px;
+}
+.sk-board__lanehead { margin: 0; font-size: var(--fs-sm); }
+
+.sk-tl { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-tl__range { margin: 0; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-tl__lane {
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  padding: 4px 6px;
+}
+.sk-tl__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--t1);
+}
+.sk-tl__head.is-unknown .sk-tl__title { color: var(--wrn); font-style: italic; }
+.sk-tl__count { margin-left: auto; font-family: var(--mono); color: var(--t3); }
+.sk-tl__track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sk-tl__bar {
+  position: relative;
+  min-width: 6px;
+  min-height: max(var(--tap), var(--row-h));
+  display: flex;
+  align-items: center;
+  border-left: 2px solid var(--st-c);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--st-c) 18%, var(--bg2));
+  overflow: hidden;
+}
+.sk-tl__label {
+  padding: 0 6px;
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-tl__undated { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+
 @media (max-width: 720px) {
   .sk-board { grid-auto-flow: row; grid-auto-columns: auto; }
   .sk-list__select { max-width: 100%; }
+  .sk-list__search { width: 100%; }
+  /* на телефоне панель фасета — во всю ширину под кнопкой, не за краем экрана */
+  .sk-list__controls { position: relative; }
+  .sk-facet { position: static; }
+  .sk-facet__panel { left: 8px; right: 8px; max-width: none; }
+}
+
+/* ---------- выделение списка (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-10) ----------
+   Долгое нажатие / «Выбрать» включают режим выбора: панель действий встаёт на
+   место шапки. Удержание пальца не выделяет текст и не открывает меню ссылки. */
+.sk-list[data-selecting='true'] .sk-list__row,
+.sk-list[data-selecting='true'] .sk-board__card { cursor: pointer; }
+@media (pointer: coarse) {
+  .sk-list__row,
+  .sk-board__card {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+.sk-list__selmode { color: var(--t1); }
+.sk-list__selcount { font-weight: 700; color: var(--t1); }
+.sk-list__selbusy { color: var(--t2); font-size: var(--fs-xs); }
+.sk-list__seldone { margin-left: auto; }
+.sk-list__selbar .sk-btn {
+  min-height: max(var(--tap), 22px);
+}
+.sk-list__selerr {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 2px 8px;
+  border-left: 3px solid var(--dng);
+  color: var(--t1);
+  background: color-mix(in srgb, var(--dng) 10%, transparent);
+  font-size: var(--fs-xs);
+}
+@media (max-width: 720px), (pointer: coarse) {
+  .sk-list[data-selecting='true'] .sk-list__bar,
+  .sk-list[data-selecting='true'] .sk-list__controls,
+  .sk-list[data-selecting='true'] .sk-list__desc { display: none; }
+  .sk-list__selbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg1);
+  }
 }
 
 /* ── Каркас записи (SPRINT_UXR_S10_SEIDR_KIT/K-04): шапка, вердикт, вкладки,
@@ -2470,6 +3067,228 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   max-height: 40vh; overflow: hidden;
   mask-image: linear-gradient(to bottom, var(--bg0) 75%, transparent);
 }
+
+/* ---------- Выбор проектов в шапке (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-03) ----------
+   Кнопка-чип в шапке; панель — поповер у кнопки на широком экране и лист
+   снизу (sk-sheet--bottom) на телефоне. Строка проекта и «только этот» —
+   цели касания ≥ --tap; на листе — не меньше 44px независимо от указателя. */
+.sk-shell__top-end { display: flex; align-items: center; gap: 4px; min-width: 0; margin-left: auto; }
+/* Вместе со слотом аккаунта (S4-02) правый край один: аватар встаёт сразу за выбором проектов. */
+.sk-shell__top-end + .sk-shell__account { margin-left: 0; }
+.sk-scope { position: relative; display: inline-flex; min-width: 0; }
+.sk-scope__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 320px;
+  min-height: max(var(--tap), 30px);
+  padding: 0 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-scope__trigger:hover { border-color: var(--acc); }
+.sk-scope__trigger[aria-expanded="true"] { border-color: var(--acc); color: var(--acc); }
+.sk-scope__trigger:focus-visible,
+.sk-scope__act:focus-visible,
+.sk-scope__only:focus-visible,
+.sk-scope__search:focus-visible,
+.sk-scope__check:focus-within {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.sk-scope__name {
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-scope__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sk-scope__value[data-kind="all"] { color: var(--t2); font-weight: 400; }
+.sk-scope__pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  width: min(360px, 94vw);
+  max-height: min(480px, 70vh);
+  overflow: auto;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg0) 70%, transparent);
+}
+/* В правом краю шапки поповер раскрывается влево — не за экран. */
+.sk-shell__top-end .sk-scope__pop { left: auto; right: 0; }
+.sk-scope__body { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.sk-scope__search {
+  width: 100%;
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+}
+.sk-scope__actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-scope__act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.sk-scope__act:hover { border-color: var(--acc); color: var(--acc); }
+.sk-scope__act[aria-pressed="true"] { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 14%, transparent); color: var(--acc); }
+.sk-scope__act[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.sk-scope__act[aria-disabled="true"]:hover { border-color: var(--bd); color: var(--t1); }
+.sk-scope__note { margin: 0; color: var(--t2); font-size: var(--fs-xs); }
+.sk-scope__note--wrn { color: var(--wrn); }
+.sk-scope__list { margin: 0; padding: 0; list-style: none; }
+.sk-scope__row { display: flex; align-items: center; gap: 4px; border-radius: var(--r-md); }
+.sk-scope__row:hover { background: var(--bg2); }
+.sk-scope__row--missing .sk-scope__title { color: var(--t2); font-style: italic; }
+.sk-scope__check {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: max(var(--tap), 30px);
+  padding: 0 6px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.sk-scope__check input { accent-color: var(--acc); margin: 0; }
+.sk-scope__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.sk-scope__id { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-scope__tag {
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--acc);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sk-scope__tag--wrn { background: color-mix(in srgb, var(--wrn) 14%, transparent); color: var(--wrn); }
+.sk-scope__only {
+  flex-shrink: 0;
+  min-height: max(var(--tap), 28px);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t3);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+.sk-scope__only:hover { color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, transparent); }
+.sk-scope__count { margin: 0; color: var(--t3); font-size: var(--fs-2xs); }
+.sk-scope__sheet .sk-scope__body { padding: 4px 0 12px; }
+.sk-scope__sheet .sk-scope__check,
+.sk-scope__sheet .sk-scope__only,
+.sk-scope__sheet .sk-scope__act,
+.sk-scope__sheet .sk-scope__search { min-height: max(var(--tap), 44px); }
+/* ---------- Сохранённые виды списка (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-08) ----------
+   Панель «Вид ▾ · изменён · Сохранить · Сохранить как… · Сбросить» над списком.
+   Цели касания — через --tap (на сенсоре ≥44px), шрифты — шкала --fs-*. */
+.sk-saved { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.sk-views,
+.sk-views__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  color: var(--t1);
+  font-size: var(--fs-base);
+}
+.sk-views__form {
+  flex-basis: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+}
+.sk-views__field { display: inline-flex; align-items: center; gap: 4px; }
+.sk-views__label {
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-views__select,
+.sk-views__input {
+  min-height: max(var(--tap), 22px);
+  max-width: 240px;
+  padding: 0 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-views__select:focus-visible,
+.sk-views__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-views__dirty {
+  padding: 1px 8px;
+  border: 1px solid var(--wrn);
+  border-radius: var(--r-pill);
+  color: var(--wrn);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-views .sk-btn:disabled { opacity: .5; cursor: not-allowed; }
+.sk-views__remove { color: var(--dng); }
+.sk-views__hint { color: var(--t3); font-size: var(--fs-sm); }
+/* ═══════════ S4-12: цели касания ≥ 44px у оболочки и списков ═══════════
+   SPRINT_UXR_S4_UI_SHELL_LISTS/S4-12. Гейт — web-next/src/a11y/: у каждого
+   интерактивного элемента оболочки и списков есть правило с высотой от --tap.
+   На десктопе --tap = 0 и плотный UI не меняется; на сенсоре и узком экране
+   ссылки-заголовки строк, фильтр дерева, ссылка «к содержимому» и кнопки
+   пилюль-фильтров вырастают до 44px. Заголовок дерева однострочный
+   (многоточие), поэтому растёт через line-height, а не flex. */
+.sk-shell__skip {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 24px);
+}
+.sk-pill__main,
+.sk-pill__x { min-height: max(var(--tap), 18px); }
+.sk-tree__filter { min-height: var(--tap); }
+@media (pointer: coarse), (max-width: 768px) {
+  a.sk-list__title {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+  .sk-tree__title {
+    align-self: stretch;
+    min-height: var(--tap);
+    line-height: var(--tap);
+  }
+}
+
 
 /* ── Новости v2: лента, разрезы, метрики (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06) ──
    Числа — моно; «ждёт выкатки» и «не смогли» — --wrn; Σ≠∪ — пилюля --acc.

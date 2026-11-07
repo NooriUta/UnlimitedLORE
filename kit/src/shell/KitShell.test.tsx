@@ -226,3 +226,67 @@ describe('KitShell — телефон: меню в drawer', () => {
     }
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-01 — меню по смыслу со сворачиванием групп.
+describe('KitShell — сворачивание групп меню (S4-01)', () => {
+  const toggle = (name: string) => within(screen.getByRole('heading', { name })).getByRole('button');
+
+  it('заголовок группы — кнопка-раскрывашка; свёрнуто — пункты спрятаны, текущий остаётся', async () => {
+    const { container } = render(<KitShell config={CONFIG} win={fakeWin()} storage={createSafeStorage(memStorage)} narrow={false}><Opener /></KitShell>);
+    const work = toggle('Работа');
+    expect(work.getAttribute('aria-expanded')).toBe('true');
+    expect(work.className).toMatch(/\bsk-shell__grp-toggle\b/);
+    const listId = work.getAttribute('aria-controls')!;
+    expect(document.getElementById(listId)).toBeTruthy();
+    fireEvent.click(work);
+    expect(work.getAttribute('aria-expanded')).toBe('false');
+    // Текущий раздел (Спринты) не пропадает из вида — «где я» видно всегда.
+    expect(screen.getByRole('button', { name: 'Спринты' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.queryByRole('button', { name: 'Задачи' })).toBeNull();
+    expect(await axeViolations(container)).toEqual([]);
+    fireEvent.click(work);
+    expect(screen.getByRole('button', { name: 'Задачи' })).toBeTruthy();
+  });
+
+  it('свёрнутая группа без текущего пункта прячет все пункты; выбор запоминается в хранилище', () => {
+    const storage = createSafeStorage(memStorage);
+    const { unmount } = render(<KitShell config={CONFIG} win={fakeWin()} storage={storage} storageKey="t" narrow={false} />);
+    fireEvent.click(toggle('Решения'));
+    expect(screen.queryByRole('button', { name: 'ADR' })).toBeNull();
+    expect(storage.get('t.collapsed')).toBe(JSON.stringify(['decide']));
+    unmount();
+    render(<KitShell config={CONFIG} win={fakeWin()} storage={storage} storageKey="t" narrow={false} />);
+    expect(toggle('Решения').getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: 'ADR' })).toBeNull();
+    expect(toggle('Работа').getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('«Мои виды» и «Недавние» не сворачиваются — служебные группы без раскрывашки', () => {
+    render(<KitShell config={CONFIG} win={fakeWin()} storage={createSafeStorage(memStorage)} narrow={false} />);
+    expect(within(screen.getByRole('heading', { name: 'Мои виды' })).queryByRole('button')).toBeNull();
+    expect(within(screen.getByRole('heading', { name: 'Недавние' })).queryByRole('button')).toBeNull();
+  });
+
+  it('тон группы в форме токена var(--wrn) (как требует валидатор конфига) красит группу так же, как wrn', () => {
+    const groups = CONFIG.menu.groups.map(g => ({ ...g, tone: g.tone ? `var(--${g.tone})` : undefined }));
+    render(<KitShell config={{ ...CONFIG, menu: { ...CONFIG.menu, groups } }} win={fakeWin()} storage={createSafeStorage(memStorage)} narrow={false} />);
+    const grp = screen.getByRole('heading', { name: 'Решения' }).closest('.sk-shell__grp')!;
+    expect(grp.className).toMatch(/\bsk-shell__grp--wrn\b/);
+  });
+
+  it('метка рядом с именем приложения (brandTag) — в шапке, после имени', () => {
+    const { container } = render(<KitShell config={CONFIG} brand="LORE" brandTag={<span data-testid="tag">v2</span>} win={fakeWin()} storage={createSafeStorage(memStorage)} narrow={false} />);
+    const brand = container.querySelector('.sk-shell__brand')!;
+    expect(brand.textContent).toBe('LOREv2');
+    expect(within(brand as HTMLElement).getByTestId('tag')).toBeTruthy();
+  });
+
+  it('сворачивание работает и в drawer на телефоне', () => {
+    render(<KitShell config={CONFIG} win={fakeWin()} storage={createSafeStorage(memStorage)} narrow />);
+    fireEvent.click(screen.getByRole('button', { name: 'Меню' }));
+    const dlg = screen.getByRole('dialog');
+    const t = within(within(dlg).getByRole('heading', { name: 'Решения' })).getByRole('button');
+    fireEvent.click(t);
+    expect(within(dlg).queryByRole('button', { name: 'ADR' })).toBeNull();
+  });
+});

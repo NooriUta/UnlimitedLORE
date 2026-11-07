@@ -1,28 +1,28 @@
-/* Каркас оболочки v2 (S3-01). Токены, тема и база документа — в Seiðr-kit
-   (@seidr/kit/styles/seidr.css); здесь только раскладка, и только var(--…). */
-.shell {
+/* Каркас v2. Токены, тема и база документа — в Seiðr-kit
+   (@seidr/kit/styles/seidr.css); оболочка (шапка, меню, drawer) — KitShell kit
+   (S4-01). Здесь только раскладка экрана раздела, и только var(--…). */
+.v2-screen {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--gap);
-  min-height: var(--tap);
   padding: var(--pad-y) var(--pad-x);
-  border-bottom: 1px solid var(--bd);
-  background: var(--bg1);
 }
 
-.shell-title {
+.v2-screen__title {
+  margin: 0;
   font-family: var(--display);
   font-weight: var(--display-weight);
   font-size: var(--fs-lg);
   letter-spacing: .04em;
 }
 
-/* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
+/* Правый край шапки: выбор проектов (S4-03, kit ScopePicker). */
+.shell-end { margin-left: auto; min-width: 0; }
 
-/* Личные настройки (S3-07). */
+/* Личные настройки (S3-07 → S4-02): в листе аватара. */
 .settings {
   max-width: 560px;
-  padding: 12px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -60,17 +60,63 @@
 
 .setting-hint { font-size: var(--fs-xs); color: var(--t3); }
 .setting-hint-warn { color: var(--wrn); }
-/* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
 
-/* Ссылка на витрину /kit (S4-00d): цель касания — не меньше --tap. */
+/* Ссылка на витрину /kit (S4-00d; с S4-01 — в разделе «Настройки»): цель
+   касания — не меньше --tap. */
 .shell-link {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   min-height: max(var(--tap), 24px);
-  margin-left: auto;
   font-size: var(--fs-sm);
 }
 
+/* Аватар — справа в шапке (S4-02). */
+.shell-account { display: flex; align-items: center; }
+
+.settings-note { font-size: var(--fs-2xs); color: var(--t2); }
+.settings-note--warn { color: var(--wrn); }
+.settings-error { font-size: var(--fs-xs); color: var(--dng); }
+.settings-error code { font-family: var(--mono); color: var(--t2); }
+.settings-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.settings-link:hover { border-color: var(--acc); }
+.settings-link:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* «Что LORE помнит обо мне» (S4-02). */
+.memory-head { display: flex; align-items: center; gap: 4px; }
+.memory-cat { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--bd); }
+.memory-cat__head { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.memory-cat__title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--t2);
+}
+.memory-list { list-style: none; margin: 0; padding: 0; }
+.memory-item { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); }
+.memory-item__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.memory-item__hits { font-family: var(--mono); color: var(--t2); font-size: var(--fs-2xs); }
+.memory-actions { display: flex; justify-content: flex-end; padding-top: 4px; }
+/* Палитра (S4-14): кнопки «Поиск»/«Команды» справа в шапке; цель касания — kit IconButton (--tap). */
+.palette-trigger {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
 /* Паспорт спринта, вкладка «Задачи» (SPRINT_UXR_S5_RECORD_TASKS/S5-02):
    только раскладка; таблица и её вид — TaskTable из Seiðr-kit (seidr.css). */
 .sprint-passport {

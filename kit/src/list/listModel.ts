@@ -34,12 +34,31 @@ export function valueKey(v: unknown): string {
   return JSON.stringify(v);
 }
 
-/** Строка — равенство, массив — любое из; '' совпадает с отсутствующим значением. */
+/**
+ * Значения поля списком (S4-05): массив — его непустые элементы (поле «Релиз» =
+ * release_ids), скаляр — одно значение; null / '' / [] / нет поля — пусто.
+ */
+export function valuesOf(r: KitRecord, key: string): string[] {
+  const v = fieldValue(r, key);
+  const list: unknown[] = Array.isArray(v) ? v : [v];
+  const out: string[] = [];
+  for (const x of list) {
+    const k = valueKey(x);
+    if (k !== '' && !out.includes(k)) out.push(k);
+  }
+  return out;
+}
+
+/**
+ * Строка — равенство, массив — любое из; '' совпадает с отсутствующим значением.
+ * Поле-массив подходит, если любой его элемент среди искомых (S4-05).
+ */
 export function matchFilter(r: KitRecord, f: KitFilter): boolean {
   for (const [key, want] of Object.entries(f)) {
-    const have = valueKey(fieldValue(r, key));
+    const have = valuesOf(r, key);
     const wants = Array.isArray(want) ? want : [want];
-    if (!wants.includes(have)) return false;
+    const ok = have.length === 0 ? wants.includes('') : have.some(h => wants.includes(h));
+    if (!ok) return false;
   }
   return true;
 }
@@ -68,6 +87,12 @@ export interface ListGroup {
   /** «Прочие»: слитые группы сверх топ-N. */
   other?: boolean;
   groupCount?: number;
+  /** Разрез по связи (S4-06): подпись группы — заголовок связанной записи. */
+  title?: string;
+  /** Разрез по связи: связанная запись не загружена — подпись не выдумывается. */
+  missing?: boolean;
+  /** Разрез по связи: записи без связи этого типа. */
+  none?: boolean;
 }
 
 function statusOrder(config: KitConfig): Map<string, number> {
@@ -81,7 +106,7 @@ function statusOrder(config: KitConfig): Map<string, number> {
  */
 export function groupRecords(
   records: readonly KitRecord[], by: string | null, config: KitConfig,
-  budget: Pick<typeof LIST_BUDGET, 'maxGroups' | 'topGroups'> = LIST_BUDGET,
+  budget: { maxGroups: number; topGroups: number } = LIST_BUDGET,
 ): ListGroup[] {
   if (!by) return [{ key: '', records: [...records] }];
   const map = new Map<string, KitRecord[]>();
@@ -158,28 +183,47 @@ export function shownOf(meta: KitMeta | null | undefined, loaded: number, shown:
 
 export type ListViewKind = 'list' | 'board' | 'tree';
 
+/** Условие фильтра поля (S4-05): есть / нет / пусто / не пусто. */
+export type FilterOp = 'any' | 'not' | 'empty' | 'nonempty';
+export const FILTER_OPS: readonly FilterOp[] = ['any', 'not', 'empty', 'nonempty'];
+
 export interface ListState {
   view: ListViewKind;
   quick: string | null;
   group: string | null;
   sort: ListSort | null;
   filters: Record<string, string[]>;
+  /** Условие по полю; нет записи — «есть» (S4-05). */
+  ops: Record<string, FilterOp>;
+  /** Текст в ID или названии — внутри этого списка (S4-05). */
+  text: string;
 }
 
-export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {} };
+export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
 
-/** Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание), lf (фильтры). */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf'] as const;
+/**
+ * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
+ * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст).
+ */
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
+  const o = Object.entries(s.ops ?? {}).filter(([, v]) => v !== 'any');
+  const text = s.text ?? '';
   return {
     lv: s.view === 'list' ? null : s.view,
     lq: s.quick,
     lg: s.group,
     ls: s.sort ? `${s.sort.dir === 'desc' ? '-' : ''}${s.sort.key}` : null,
     lf: f.length ? JSON.stringify(Object.fromEntries(f)) : null,
+    lo: o.length ? JSON.stringify(Object.fromEntries(o)) : null,
+    lt: text.trim() ? text : null,
   };
+}
+
+function isFilterOp(v: unknown): v is FilterOp {
+  return (FILTER_OPS as readonly unknown[]).includes(v);
 }
 
 export function readListState(p: URLSearchParams): ListState {
@@ -197,11 +241,63 @@ export function readListState(p: URLSearchParams): ListState {
       }
     } catch { /* битый URL — фильтр по умолчанию, а не падение экрана */ }
   }
+  let ops: Record<string, FilterOp> = {};
+  const lo = p.get('lo');
+  if (lo) {
+    try {
+      const raw = JSON.parse(lo) as unknown;
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        ops = Object.fromEntries(Object.entries(raw as Record<string, unknown>)
+          .filter((e): e is [string, FilterOp] => isFilterOp(e[1])));
+      }
+    } catch { /* битый URL — условия по умолчанию */ }
+  }
   return {
     view: lv === 'board' || lv === 'tree' ? lv : 'list',
     quick: p.get('lq'),
     group: p.get('lg'),
     sort: ls ? { key: ls.replace(/^-/, ''), dir: ls.startsWith('-') ? 'desc' : 'asc' } : null,
     filters,
+    ops,
+    text: p.get('lt') ?? '',
   };
+}
+
+/* ---------- движок списка v2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-04) ---------- */
+
+/** Встроенные ключи порядка: есть у любой записи контракта. */
+export const BUILTIN_SORT_KEYS = ['title', 'id', 'status', 'updated_at'] as const;
+
+/** Колонки-виджеты: не поле записи, по ним не сортируют. */
+const NON_FIELD_COLUMNS = new Set(['select', 'title+id', 'verdict', 'edges_count', 'kind']);
+
+/**
+ * Ключи порядка из конфига: встроенные + поля колонок, фильтров и группировок
+ * (в этом порядке, без дублей). Экран, показавший колонку «Приоритет», должен
+ * уметь по ней упорядочить — без отдельной настройки в каждом экране.
+ */
+export function sortKeysOf(config: KitConfig): string[] {
+  const out: string[] = [...BUILTIN_SORT_KEYS];
+  const seen = new Set<string>(out);
+  const l = config.list;
+  for (const k of [...(l?.columns ?? []), ...(l?.filters ?? []), ...(l?.groupings ?? [])]) {
+    if (NON_FIELD_COLUMNS.has(k) || seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+  }
+  return out;
+}
+
+/**
+ * Быстрая иконка «Быстро»: фильтр ровно по одному статусу словаря — иконка
+ * этого статуса (одно правило на все экраны, а не иконка в каждом конфиге).
+ * Иное — null: приложение может задать свою (проп quickIcons).
+ */
+export function quickIconOf(q: QuickItem, config: KitConfig): string | null {
+  const keys = Object.keys(q.filter);
+  if (keys.length !== 1 || keys[0] !== 'status') return null;
+  const v = q.filter.status;
+  const code = Array.isArray(v) ? (v.length === 1 ? v[0] : null) : v;
+  if (code === null || code === undefined) return null;
+  return config.statuses.items.find(s => s.code === code)?.icon ?? null;
 }

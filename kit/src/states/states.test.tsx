@@ -7,7 +7,7 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-li
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { axeViolations } from '../test/axe';
 import {
-  EmptyState, Forbidden, KitLangProvider, LoadError, LoadStateView, Skeleton, Truncated,
+  EmptyState, Forbidden, KitLangProvider, LoadError, LoadStateView, NotBuilt, Skeleton, Truncated,
   hasGameIcon, registerGameIcons, useLoadState, STATE_ICONS,
 } from '../index';
 
@@ -61,6 +61,24 @@ describe('EmptyState / LoadError / Forbidden — три разных исход�
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
     expect(await axeViolations(container)).toEqual([]);
+  });
+
+  // S4-01: раздел есть в меню, но экран ещё не собран — не «пусто» и не «ошибка».
+  it('не собрано — свой исход data-state=unbuilt, «это не пусто», без role=alert', async () => {
+    const { container } = render(<NotBuilt />);
+    const el = container.querySelector('[data-state="unbuilt"]')!;
+    expect(el).toBeTruthy();
+    expect(el.textContent).toMatch(/ещё не собран/i);
+    expect(el.textContent).toMatch(/не «пусто»/);
+    expect(el.getAttribute('role')).toBeNull();
+    expect(await axeViolations(container)).toEqual([]);
+    expect(hasGameIcon(STATE_ICONS.unbuilt)).toBe(true);
+  });
+
+  it('не собрано — по-английски и со своим заголовком', () => {
+    render(<KitLangProvider lang="en"><NotBuilt hint="Opens in LORE v1 for now" /></KitLangProvider>);
+    expect(screen.getByText(/not built yet/i)).toBeTruthy();
+    expect(screen.getByText('Opens in LORE v1 for now')).toBeTruthy();
   });
 
   it('ошибка без onRetry — кнопки нет (не обещаем то, чего нет)', () => {
