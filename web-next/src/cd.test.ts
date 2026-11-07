@@ -52,7 +52,9 @@ describe('lore-cd.yml: второй образ (lore-app-next)', () => {
 
   it('флаг frontend_next выводится из выбора сервиса (both и frontend-next)', () => {
     const which = steps().find((s) => s.name === 'Resolve which services to touch');
-    expect(which?.body).toMatch(/frontend_next=/);
+    // S3-10: выбор вынесен в ci-scope.sh (режим cd) — флаг пишет скрипт.
+    expect(which?.body).toMatch(/ci-scope\.sh cd\b/);
+    expect(read('.github/scripts/ci-scope.sh')).toMatch(/emit frontend_next /);
   });
 
   it('образ v2 собирается тем же скриптом с повтором и под своим флагом', () => {
