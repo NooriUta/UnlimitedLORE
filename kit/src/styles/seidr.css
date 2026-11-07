@@ -996,3 +996,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ═══ K-10 — хуки рендера по виду записи (overview / tabs) ═══ */
+/* Строка-HTML хука (после санитайзера) читается как тело записи. */
+.sk-hook { color: var(--t1); font-size: var(--fs-base); line-height: 1.5; min-width: 0; }
+/* errBlock: упал один хук — рамка ошибки только вокруг его блока. */
+.sk-errblock { border: 1px solid var(--dng); border-radius: 6px; background: var(--bg1); }

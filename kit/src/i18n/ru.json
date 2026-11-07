@@ -50,5 +50,7 @@
   "kit.md.mentionEmpty": "ничего не найдено — акторы заводятся в разделе «Клиент»",
   "kit.storage.unavailable": "Хранилище недоступно — отметки не сохранятся",
   "kit.error.title": "Что-то сломалось",
-  "kit.error.retry": "Повторить"
+  "kit.error.retry": "Повторить",
+  "kit.hook.error.title": "Блок «{block}» не отрисовался",
+  "kit.hook.error.hint": "Ошибка в хуке вида записи — остальная карточка работает"
 }

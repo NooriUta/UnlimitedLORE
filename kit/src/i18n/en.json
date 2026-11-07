@@ -50,5 +50,7 @@
   "kit.md.mentionEmpty": "nothing found — actors are created in the “Client” section",
   "kit.storage.unavailable": "Storage unavailable — your marks will not be saved",
   "kit.error.title": "Something went wrong",
-  "kit.error.retry": "Retry"
+  "kit.error.retry": "Retry",
+  "kit.hook.error.title": "Block “{block}” failed to render",
+  "kit.hook.error.hint": "Error in the record kind hook — the rest of the card still works"
 }
