@@ -70,3 +70,44 @@ describe('экран MCP API — полнота справочника инст�
     expect(names.filter((n, i) => names.indexOf(n) !== i)).toEqual([]);
   });
 });
+
+// SPRINT_UXR_S0_SAFETY/S0-01: контрактный снимок MCP (mcp-server/src/tools/contract.snapshot.json)
+// фиксирует параметры и форму ответа каждого инструмента; сверку с живым кодом
+// делает mcp-server/src/tools/contract.test.ts. Здесь — что снимок, экран и
+// сервер говорят об ОДНОМ наборе инструментов: инструмент, попавший на экран
+// мимо снимка, ушёл бы в API без зафиксированного контракта.
+const CONTRACT_SRC = import.meta.glob('../../../mcp-server/src/tools/contract.snapshot.json', {
+  query: '?raw', import: 'default', eager: true,
+}) as Record<string, string>;
+
+type ContractEntry = { input: Record<string, string>; output: unknown };
+
+function contract(): Record<string, ContractEntry> {
+  const raw = Object.values(CONTRACT_SRC)[0];
+  return raw ? (JSON.parse(raw) as Record<string, ContractEntry>) : {};
+}
+
+/** Инструменты снимка без bench_* — они документируются на /benchmark?tab=mcp. */
+const contractToolNames = () => Object.keys(contract()).filter(n => !n.startsWith('bench_')).sort();
+
+describe('экран MCP API — контрактный снимок MCP (S0-01)', () => {
+  it('положительный контроль: снимок найден и несёт вход и форму ответа', () => {
+    const c = contract();
+    expect(Object.keys(CONTRACT_SRC)).toHaveLength(1);
+    expect(Object.keys(c).length).toBeGreaterThan(60);
+    expect(c.task_new?.input.sprint_id).toBe('string');
+    expect(JSON.stringify(c.query_slice?.output)).toContain('"type":"text"');
+  });
+
+  it('каждый инструмент сервера зафиксирован в контрактном снимке', () => {
+    const inContract = new Set(contractToolNames());
+    const missing = serverToolNames().filter(n => !inContract.has(n));
+    expect(missing, `нет в contract.snapshot.json (UPDATE_MCP_CONTRACT=1 в mcp-server): ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('каждый инструмент снимка описан на экране', () => {
+    const screen = new Set(screenToolNames());
+    const undocumented = contractToolNames().filter(n => !screen.has(n));
+    expect(undocumented, `нет на экране MCP API: ${undocumented.join(', ')}`).toEqual([]);
+  });
+});

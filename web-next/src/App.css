@@ -1,0 +1,72 @@
+/* Каркас оболочки v2 (S3-01). Токены, тема и база документа — в Seiðr-kit
+   (@seidr/kit/styles/seidr.css); здесь только раскладка, и только var(--…). */
+.shell {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  min-height: var(--tap);
+  padding: var(--pad-y) var(--pad-x);
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+
+.shell-title {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-lg);
+  letter-spacing: .04em;
+}
+
+/* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
+
+/* Личные настройки (S3-07). */
+.settings {
+  max-width: 560px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--t2);
+}
+
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--bd);
+  border-radius: 4px;
+  background: var(--bg1);
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+
+.setting-toggle { accent-color: var(--acc); }
+.setting-toggle:disabled, .setting-toggle:disabled + span { cursor: not-allowed; opacity: .6; }
+
+.setting-hint { font-size: var(--fs-xs); color: var(--t3); }
+.setting-hint-warn { color: var(--wrn); }
+/* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
+
+/* Ссылка на витрину /kit (S4-00d): цель касания — не меньше --tap. */
+.shell-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 24px);
+  margin-left: auto;
+  font-size: var(--fs-sm);
+}

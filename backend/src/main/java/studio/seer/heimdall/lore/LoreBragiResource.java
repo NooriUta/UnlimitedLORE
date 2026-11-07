@@ -111,7 +111,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI PUBLICATION] %s: %s", req.publication_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -172,7 +172,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI VARIANT] %s: %s", req.variant_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -222,7 +222,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI ASSET] %s: %s", req.asset_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -324,7 +324,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI KEYWORD] %s: %s", req.keyword_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -365,7 +365,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI CHANNEL] %s: %s", req.channel_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -397,7 +397,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI RUBRIC] %s: %s", req.rubric_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -443,7 +443,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI RUBRIC LINK] %s: %s", req.entity_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -464,7 +464,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI KEYWORD SEARCH] %s: %s", q, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -499,7 +499,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI PAGE] %s: %s", req.page_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -543,7 +543,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI CAMPAIGN] %s: %s", req.campaign_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -618,7 +618,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI LINK] %s -%s-> %s: %s", req.entity_id(), req.edge_type(), req.target_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -666,7 +666,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI METRIC] %s/%s: %s", req.object_id(), req.metric(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -729,7 +729,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI METRIC QUERY] %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -775,7 +775,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI INTEGRATION] %s: %s", req.integration_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -810,7 +810,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI INSIGHT] %s: %s", req.insight_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -842,7 +842,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI INSIGHT LINK] %s -> %s: %s", req.insight_id(), req.target_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -902,7 +902,7 @@ public class LoreBragiResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[BRAGI INTEGRATION SYNC] %s: %s", req.integration_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

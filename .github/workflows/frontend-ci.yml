@@ -23,6 +23,24 @@ jobs:
     runs-on: lore-only
     steps:
       - uses: actions/checkout@v7
+        with:
+          # S3-10: ci-scope.sh сравнивает base...HEAD — нужна история, а
+          # checkout по умолчанию мелкий (depth 1). Репозиторий ~10 МБ.
+          fetch-depth: 0
+
+      # SPRINT_UXR_S3_V2_INFRA/S3-10 (D-2026-UXR-V2-FOLDER-V1-FROZEN): что гонять —
+      # по изменённым путям. Правка web-next/ не гоняет v1 и MCP; правка
+      # backend/ / mcp-server/ гоняет всё. Тяжёлые шаги ниже стоят под флагами
+      # v1 / mcp. Шаги, а не job целиком: job остаётся и зеленеет, так что
+      # обязательный чек не повисает «ожидается», а пропуск виден в логе.
+      # Дифф не вычислился — гоняется всё (см. ci-scope.sh).
+      - name: Scope by changed paths (S3-10)
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: bash .github/scripts/ci-scope.sh ci
 
       # Раннер получает HTTP_PROXY из своей конфигурации, и она переезжает вместе
       # с ним. После переноса раннеров на ci-server прокси остался прописанным
@@ -99,6 +117,7 @@ jobs:
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
       - name: LORE frontend — install + typecheck + test + build
+        if: steps.scope.outputs.v1 == 'true'
         run: |
           bash .github/scripts/npm-retry.sh ci
           npm run check:statuses
@@ -107,6 +126,7 @@ jobs:
           npm run build
 
       - name: MCP server — install + typecheck + test + build
+        if: steps.scope.outputs.mcp == 'true'
         working-directory: mcp-server
         run: |
           bash ../.github/scripts/npm-retry.sh ci
@@ -121,6 +141,7 @@ jobs:
       # «Не удалось проверить» ≠ «уязвимостей нет»: если audit не ответил (реестр,
       # прокси, таймаут — локально 04.11 он висел минутами), это говорится вслух.
       - name: npm audit (informational)
+        if: steps.scope.outputs.v1 == 'true' || steps.scope.outputs.mcp == 'true'
         continue-on-error: true
         timeout-minutes: 4
         run: |
@@ -146,6 +167,7 @@ jobs:
       # резолвится на Linux-демоне: нужен --add-host, иначе build-arg указывает
       # в никуда. Та же правка, что в backend-ci.yml.
       - name: Docker image build (frontend + nginx)
+        if: steps.scope.outputs.v1 == 'true'
         run: |
           # CIM-02: наблюдаемость registry-mirror базовых образов до сборки.
           bash .github/scripts/registry-mirror-probe.sh || true
@@ -171,6 +193,7 @@ jobs:
       # с nginx; `sh -c` тихо пропустил бы подстановку, и проверка стала бы
       # проверкой шаблона, а не результата.
       - name: nginx config — рендер шаблона и отсутствие вшитых адресов
+        if: steps.scope.outputs.v1 == 'true'
         run: |
           # pipefail обязателен: ниже `nginx -T` стоит в конвейере, и без него
           # шаг видел бы только код grep — то есть синтаксическая ошибка в
@@ -212,4 +235,139 @@ jobs:
           grep -q "frame-src 'self' https://auth.example.org https://volva.example.org" /tmp/nginx-configured.conf || {
             echo "ОШИБКА: LORE_VOLVA_ORIGIN не подставилась в frame-src CSP"; exit 1; }
           echo "ok: обе переменные подставились, синтаксис принят"
+
+  # SPRINT_UXR_S3_V2_INFRA/S3-01 (D-2026-UXR-V2-FOLDER-V1-FROZEN): LORE v2 —
+  # каталог web-next/ со своим package.json, vite.config и Dockerfile. Отдельный
+  # job, а не шаги в `build`: у v2 свои зависимости и свой образ, и красный v2
+  # не должен прятаться за красным v1 (и наоборот) — в сводке это два чека.
+  # Фильтр по путям (правка web-next → только v2, правка бэкенда → оба веба)
+  # и заморозка образа v1 в CD — задача S3-10, здесь job бежит всегда.
+  # S3-10 (сделано): job бежит всегда, но его шаги — под флагом v2 из
+  # ci-scope.sh: v2 гоняется при правке web-next/, общего шаблона nginx и
+  # бэкенда/MCP/контрактов (тесты обоих вебов); при правке только src/ (v1) — нет.
+  web-next:
+    runs-on: lore-only
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # S3-10: дифф base...HEAD для ci-scope.sh
+
+      # S3-10: что гонять — по путям (разбор — у такого же шага в `build`).
+      - name: Scope by changed paths (S3-10)
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: bash .github/scripts/ci-scope.sh ci
+
+      # Те же три шага подготовки, что у `build` (разбор причин — там):
+      # живой прокси или его снятие, зеркало Nexus, Node из образа раннера.
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
+      - name: Use Nexus mirror (npm)
+        run: bash .github/scripts/use-nexus.sh
+
+      - name: Set up Node.js (github-hosted)
+        if: runner.environment == 'github-hosted'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Use runner-image Node (self-hosted)
+        if: runner.environment != 'github-hosted'
+        run: |
+          command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
+          echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
+
+      # Seiðr-kit (kit/, D-2026-UXR-KIT-REACT): отдельный пакет со своими
+      # тестами (сверка токенов с v1, STYLE-01, тема). Тесты web-next их не
+      # запускают — поэтому свой шаг, и до web-next: сломанный kit ломает v2.
+      # S4-00e: здесь же единый CSS-слой — снимок голого HTML
+      # (kit/demo/seidr-bare.html, toMatchFileSnapshot; CI=true не пишет снимок,
+      # а валит расхождение) и «у каждого класса kit есть правило в seidr.css».
+      - name: Seiðr-kit (kit) — install + typecheck + test
+        working-directory: kit
+        run: |
+          bash ../.github/scripts/npm-retry.sh ci
+          npm run typecheck
+          npm test
+
+      - name: LORE v2 (web-next) — install + typecheck + test + build
+        if: steps.scope.outputs.v2 == 'true'
+        working-directory: web-next
+        run: |
+          bash ../.github/scripts/npm-retry.sh ci
+          npm run typecheck
+          npm test
+          npm run build
+
+      # SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00d: axe на витрине /kit — отдельным
+      # шагом, чтобы a11y-гейт был виден в сводке по имени, а не тонул среди
+      # прочих тестов. Витрина собрана из всех элементов Seiðr-kit: потерянное
+      # имя/роль/ARIA у любого элемента валит именно этот шаг. Контраст в jsdom
+      # не считается — его меряет браузерный прогон (S4-12).
+      # Тот же scope-гард, что у установки web-next выше: без него пуш, не
+      # трогающий v2 (например, хотфикс src/ #857), запускал npx vitest без
+      # node_modules — npx тянул чужой vitest и падал на vite.config.ts.
+      - name: LORE v2 — axe на /kit (витрина Seiðr-kit)
+        if: steps.scope.outputs.v2 == 'true'
+        working-directory: web-next
+        run: npx vitest run src/pages/KitPage.test.tsx
+
+      # Контекст — корень репозитория: образу нужен общий nginx.conf.template
+      # (прокси /lore/ тот же, что у v1). Прокси раннера пробрасывается так же,
+      # как в сборке образа v1 выше.
+      - name: Docker image build (v2, web-next + nginx)
+        if: steps.scope.outputs.v2 == 'true'
+        run: |
+          ARGS="--add-host=host.docker.internal:host-gateway"
+          for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
+            eval "val=\${$v:-}"
+            [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
+          done
+          # shellcheck disable=SC2086
+          docker build $ARGS -f web-next/Dockerfile -t lore-app-next:ci .
+
+      # Образ должен реально отдавать v2 через nginx, а не просто собраться:
+      # синтаксис собранного конфига (`nginx -T`, апстримы объявлены заглушками,
+      # как в проверке v1) и наличие бандла v2 в корне сайта.
+      - name: v2 image — nginx config + bundle
+        if: steps.scope.outputs.v2 == 'true'
+        run: |
+          set -eo pipefail
+          STUBS="--add-host lore-backend:127.0.0.1 --add-host host.docker.internal:127.0.0.1"
+          # shellcheck disable=SC2086
+          docker run --rm $STUBS lore-app-next:ci nginx -T > /dev/null
+          docker run --rm --entrypoint sh lore-app-next:ci -c \
+            'grep -q "<title>LORE v2</title>" /usr/share/nginx/html/index.html' || {
+            echo "ОШИБКА: в образе lore-app-next нет бандла v2"; exit 1; }
+          echo "ok: nginx-конфиг принят, бандл v2 на месте"
+          # Общий скрипт старта (S3-02) реально лежит в образе v2 и метит лог.
+          # Вывод — в переменную, а не `| grep -q`: grep -q закрывает трубу на
+          # первом совпадении, docker run ловит EPIPE и при pipefail роняет шаг
+          # при живом скрипте.
+          # shellcheck disable=SC2086
+          start_log=$(docker run --rm $STUBS lore-app-next:ci nginx -t 2>&1) || {
+            echo "ОШИБКА: nginx -t в образе v2 упал:"; echo "$start_log"; exit 1; }
+          printf '%s\n' "$start_log" | grep -q '^\[LORE v2\]' || {
+            echo "ОШИБКА: скрипт старта 30-lore-public-url.sh не отработал в образе v2. Вывод старта:"
+            echo "$start_log"; exit 1; }
+          echo "ok: общий скрипт старта отработал с меткой [LORE v2]"
+
+      # S3-02: сервис lore-app-next в compose. Синтаксис и слияние проверяет сам
+      # docker compose (текстовый тест в web-next/src/front-shared.test.ts
+      # YAML не разбирает). Без оверлея Traefik — его сеть есть только на
+      # ci-server.
+      - name: compose — сервис lore-app-next описан и разбирается
+        if: steps.scope.outputs.v2 == 'true'
+        run: |
+          set -eo pipefail
+          docker compose -f docker-compose.yml config -q
+          docker compose -f docker-compose.yml config --services | grep -qx lore-app-next || {
+            echo "ОШИБКА: в docker-compose.yml нет сервиса lore-app-next"; exit 1; }
+          docker compose -f docker-compose.yml config lore-app-next | grep -q 'dockerfile: web-next/Dockerfile' || {
+            echo "ОШИБКА: lore-app-next собирается не из web-next/Dockerfile"; exit 1; }
+          echo "ok: compose видит lore-app-next из web-next/Dockerfile"
 

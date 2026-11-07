@@ -854,7 +854,7 @@ public class LoreProductResource extends LoreResourceBase {
         } catch (RuntimeException e) {
             LOG.warnf("[LORE INVEST-COVERAGE] %s", LoreUpstream.detail(e));
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
         }
     }
 
@@ -914,7 +914,7 @@ public class LoreProductResource extends LoreResourceBase {
         } catch (RuntimeException e) {
             LOG.warnf("[LORE FIT-GAPS] %s", LoreUpstream.detail(e));
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
         }
     }
 
@@ -1803,7 +1803,7 @@ public class LoreProductResource extends LoreResourceBase {
 
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
-            .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+            .entity(LoreUpstream.error(e)));
     }
 
     // ── MT-10: самопроверка корпуса ───────────────────────────────────────────

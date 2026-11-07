@@ -36,11 +36,17 @@ on:
   workflow_dispatch:
     inputs:
       service:
+        # both — всё: бэкенд и оба фронта (имя историческое, со времён одного
+        # фронта; не переименовано, чтобы не ломать сохранённые запуски).
+        # frontend — v1 (lore-app), frontend-next — v2 (lore-app-next, S3-06).
+        # S3-10: v1 заморожен — both теперь = бэкенд + v2, без v1; v1
+        # пересобирается ТОЛЬКО выбором frontend (хотфикс). Пуш в preprod
+        # выкатывает по изменённым путям (ci-scope.sh cd).
         description: 'Service to redeploy'
         required: false
         default: 'both'
         type: choice
-        options: [both, backend, frontend]
+        options: [both, backend, frontend, frontend-next]
 
 concurrency:
   group: lore-cd-${{ github.ref }}
@@ -195,6 +201,10 @@ jobs:
       LORE_PLUGIN_MIRROR: http://192.168.3.131:8081/repository/gradle-plugins-proxy/
     steps:
       - uses: actions/checkout@v7
+        with:
+          # S3-10: выбор сервисов по путям — ci-scope.sh сравнивает
+          # event.before...HEAD, нужна история. Репозиторий ~10 МБ.
+          fetch-depth: 0
 
       - name: Verify required secrets are configured
         run: |
@@ -216,12 +226,28 @@ jobs:
             exit 1
           fi
 
+      # SPRINT_UXR_S3_V2_INFRA/S3-10 (D-2026-UXR-V2-FOLDER-V1-FROZEN): выкатка
+      # по путям и заморозка v1. Логика в ci-scope.sh (режим cd):
+      #   * пуш в preprod — по диффу: web-next/ → только v2; backend/, shared/,
+      #     compose, CI → бэкенд + v2; только документация/MCP → бэкенд не
+      #     трогается. v1 (lore-app) по пушу НЕ выкатывается никогда — правка
+      #     src/ печатает ::warning:: с подсказкой про ручной хотфикс;
+      #   * ручной запуск: both = бэкенд + v2 (v1 сюда больше НЕ входит),
+      #     frontend = хотфикс v1, backend / frontend-next — по одному.
+      # Дифф не вычислился — выкатываются бэкенд и v2 (как прежний «both»).
       - name: Resolve which services to touch
         id: which
-        run: |
-          svc="${{ github.event.inputs.service || 'both' }}"
-          echo "backend=$([ "$svc" != frontend ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "frontend=$([ "$svc" != backend ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SERVICE: ${{ github.event.inputs.service || '' }}
+          BEFORE: ${{ github.event.before }}
+        run: bash .github/scripts/ci-scope.sh cd
+
+      # S3-10: образ v1 закрепляется ДО любых сборок: запоминаем, на каком образе
+      # работает lore-app, и ставим тег lore-app:v1-frozen (если его ещё нет).
+      # После выкатки шаг «v1 не тронут» сверяет, что образ тот же.
+      - name: Pin LORE v1 image (lore-app frozen)
+        run: bash .github/scripts/v1-freeze.sh pin
 
       # Диагностика доставки флага (AL-53) — почему auth не включается, хотя
       # флаги стоят в env выше. Логика в скрипте, а не здесь: bash внутри `run:`
@@ -236,6 +262,13 @@ jobs:
       - name: Build frontend image
         if: steps.which.outputs.frontend == 'true'
         run: bash .github/scripts/compose-build-retry.sh lore-app
+
+      # SPRINT_UXR_S3_V2_INFRA/S3-06 (ADR-LORE-045): второй образ — LORE v2 из
+      # web-next/ (сервис lore-app-next). Отдельным шагом, а не вторым именем в
+      # той же команде: упавший v2 должен быть виден как упавший v2.
+      - name: Build frontend image (v2, lore-app-next)
+        if: steps.which.outputs.frontend_next == 'true'
+        run: bash .github/scripts/compose-build-retry.sh lore-app-next
 
       # DBR-06: накатка схемы — отдельный ВИДИМЫЙ шаг, а не побочный эффект
       # старта. Тот же образ, root-кред (LORE_MART_AUTH=basic), процесс
@@ -276,6 +309,23 @@ jobs:
       - name: Deploy frontend
         if: steps.which.outputs.frontend == 'true'
         run: docker compose up -d --no-deps lore-app
+
+      # v2 рядом с v1, а не вместо: свой `up --no-deps`, lore-app не трогается.
+      - name: Deploy frontend (v2, lore-app-next)
+        if: steps.which.outputs.frontend_next == 'true'
+        run: docker compose up -d --no-deps lore-app-next
+
+      # S3-10: v1 заморожен — проверяем фактом, а не обещанием. Если этот прогон
+      # v1 не выкатывал, lore-app обязан работать на том же образе, что до
+      # выкатки (сменился или пропал — деплой красный).
+      - name: LORE v1 not touched (frozen image unchanged)
+        if: steps.which.outputs.frontend != 'true'
+        run: bash .github/scripts/v1-freeze.sh verify
+
+      # Хотфикс v1 (ручной запуск service=frontend): тег переезжает на новый образ.
+      - name: Re-pin LORE v1 image after hotfix
+        if: steps.which.outputs.frontend == 'true'
+        run: bash .github/scripts/v1-freeze.sh repin
 
       # Real verification, not "the command exited 0" — matches the manual
       # check this session ran by hand after every deploy this sprint.
@@ -574,6 +624,75 @@ jobs:
             exit 1
           fi
           echo "бандл из index отдаётся: $js ($jcode, $jtype)"
+
+      # SPRINT_UXR_S0_SAFETY/S0-03: путь ПОЛЬЗОВАТЕЛЯ, а не изнутри контейнеров.
+      # Все проверки выше идут docker exec'ом или по сети compose и не видят
+      # опубликованный порт :4400, location /lore/ в nginx и приём токена
+      # бэкендом. Проба стучится в http://127.0.0.1:4400/lore/version из
+      # одноразового контейнера в сети ХОСТА (своё 127.0.0.1 у раннера — он сам)
+      # с service-токеном (client_credentials) и требует 200 + JSON с commit.
+      # Если выкатывался бэкенд — commit обязан совпасть с этим коммитом, иначе
+      # отвечает старый образ. Логика и самопроверка — в скрипте (--selftest
+      # гоняется в backend CI на каждом PR, включая контроль «неверный порт → красный»).
+      # Нет секретов LORE_CD_PROBE_CLIENT_* — шаг КРАСНЫЙ (BLOCKED), не пропуск.
+      - name: Проба /lore/version через :4400 (S0-03)
+        env:
+          PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
+          PROBE_CLIENT_SECRET: ${{ secrets.LORE_CD_PROBE_CLIENT_SECRET }}
+          PROBE_CURL: docker run --rm --network host curlimages/curl:latest curl
+          EXPECT_COMMIT: ${{ steps.which.outputs.backend == 'true' && github.sha || '' }}
+        run: bash .github/scripts/version-probe.sh http://127.0.0.1:4400
+
+      # S3-06: то же, что «Verify frontend» выше, для v2, плюс «это именно v2»: оба образа собираются с одного
+      # шаблона nginx, и перепутанный бандл (v1 в образе v2) прошёл бы проверку
+      # «200 + бандл отдаётся» молча.
+      - name: Verify frontend v2 serves
+        if: steps.which.outputs.frontend_next == 'true'
+        run: |
+          cid=$(docker compose ps -q lore-app-next)
+          [ -n "$cid" ] || { echo "::error::контейнер lore-app-next не найден после up"; exit 1; }
+          page=$(docker exec "$cid" curl -s http://127.0.0.1/)
+          echo "$page" | grep -q '<title>LORE v2</title>' || {
+            echo "::error::lore-app-next отдаёт не index v2 (нет <title>LORE v2</title>)"; exit 1; }
+          js=$(echo "$page" | grep -o 'src="/assets/[^"]*\.js"' | head -1 | cut -d'"' -f2)
+          [ -n "$js" ] || { echo "::error::в index v2 нет ни одного /assets/*.js"; exit 1; }
+          jcode=$(docker exec "$cid" curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1$js")
+          jtype=$(docker exec "$cid" curl -s -o /dev/null -w "%{content_type}" "http://127.0.0.1$js")
+          case "$jcode:$jtype" in
+            200:*javascript*) echo "v2 OK: index v2, бандл $js ($jcode, $jtype)" ;;
+            *) echo "::error::index v2 ссылается на $js, а он отдаётся как HTTP $jcode ($jtype)"; exit 1 ;;
+          esac
+
+      # ── Пробы снаружи контейнеров (S3-06) ─────────────────────────────────
+      # Шаги выше смотрят ИЗНУТРИ контейнера. Здесь — путь клиента: через
+      # nginx до бэкенда. Логика и разбор исходов — в post-deploy-probe.sh
+      # (bash в `run:` уже ломал разбор workflow парсером Forgejo).
+      #
+      # :4400/lore/version — ровно тот адрес, по которому ходит MCP
+      # (LORE_BACKEND_URL). Коммит сверяется, только если бэкенд выкатывался в
+      # этом прогоне: иначе там законно работает прежняя сборка.
+      - name: Probe :4400/lore/version (адрес MCP, через nginx v1)
+        env:
+          WANT_COMMIT: ${{ steps.which.outputs.backend == 'true' && github.sha || '' }}
+        run: bash .github/scripts/post-deploy-probe.sh version "v1 :4400" http://192.168.3.131:4400/lore/version "$WANT_COMMIT"
+
+      # /lore/ через nginx v2 — общий шаблон обязан проксировать и у второго
+      # фронта (через него пойдёт телефон с new.lore). Адрес внутри сети
+      # compose: опубликованный порт v2 (4402) — деталь для ручного захода.
+      - name: Probe /lore/version через nginx v2
+        if: steps.which.outputs.frontend_next == 'true'
+        run: PROBE_NETWORK="${COMPOSE_PROJECT_NAME}_default" bash .github/scripts/post-deploy-probe.sh version "v2 nginx" http://lore-app-next/lore/version
+
+      # new.lore (D-2026-UXR-V2-HOST): отдаётся ли по публичному имени именно
+      # v2. DNS, сертификат и роутер — S3-03/04 (другая сессия); до их
+      # готовности там v1 через временный роутер, поэтому строгость —
+      # переменной репозитория: warn по умолчанию (громко, деплой зелёный),
+      # required после S3-04 (не v2 → деплой красный).
+      - name: Probe new.lore (публичный адрес v2)
+        if: steps.which.outputs.frontend_next == 'true'
+        env:
+          LORE_V2_PUBLIC_PROBE: ${{ vars.LORE_V2_PUBLIC_PROBE || 'warn' }}
+        run: bash .github/scripts/post-deploy-probe.sh v2-page https://new.lore.odal.seidrstudio.pro/
 
       # ── Keycloak-тема LORE ────────────────────────────────────────────────
       #

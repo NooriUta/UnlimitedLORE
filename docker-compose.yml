@@ -298,6 +298,49 @@ services:
       # См. комментарий выше — тот же случай зашитого Windows-пути.
       - ${TYR_RUNS_DIR:-./docs/tyr-runs}:/tyr-runs:ro
 
+  # LORE v2 (SPRINT_UXR_S3_V2_INFRA/S3-02, D-2026-UXR-V2-FOLDER-V1-FROZEN):
+  # новый веб из web-next/ РЯДОМ с v1, а не вместо. Отдаётся тем же общим
+  # шаблоном nginx.conf.template и тем же скриптом старта, что lore-app, —
+  # прокси /lore/ и /bench/ у обоих фронтов один, отличается только бандл.
+  #
+  # Блоки ниже сознательно ПОВТОРЯЮТ lore-app, а не берут его YAML-якорем:
+  # v1 заморожен, его описание не трогаем. Синхронность сторожит
+  # web-next/src/front-shared.test.ts — новая LORE_*-переменная шаблона без
+  # записи здесь валит тест, а не старт контейнера на стенде.
+  #
+  # Публикация через Traefik (метки, имя, сертификат) — S3-03/04/05, в
+  # оверлее docker-compose.traefik.yml; здесь только порт для прямого захода.
+  # CD (lore-cd.yml) собирает и поднимает его с S3-06 и пробует после выкатки;
+  # заморозка образа v1 и выкатка по путям — S3-10.
+  lore-app-next:
+    restart: unless-stopped          # см. комментарий у minio
+    build:
+      context: .
+      dockerfile: web-next/Dockerfile
+      args:
+        # build-time, как у lore-app: Vite впекает их в бандл.
+        VITE_LORE_AUTH_ENABLED: ${VITE_LORE_AUTH_ENABLED:-}
+        VITE_OIDC_ISSUER: ${VITE_OIDC_ISSUER:-}
+        VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
+    environment:
+      # Runtime-подстановка в общий шаблон nginx — смысл каждой см. у lore-app.
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
+      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
+      # Метка в логе скрипта старта: «[LORE v2] …», чтобы по docker logs было
+      # видно, чей это контейнер. В шаблон nginx НЕ попадает.
+      LORE_FRONT: v2
+    ports:
+      # 4400 — v1, 4401 — dev-сервер v2 (vite), поэтому контейнер v2 на 4402.
+      - "${LORE_APP_NEXT_PORT:-4402}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      lore-backend:
+        condition: service_healthy
+    volumes:
+      - ${TYR_RUNS_DIR:-./docs/tyr-runs}:/tyr-runs:ro
+
 volumes:
   lore-minio-data:
 

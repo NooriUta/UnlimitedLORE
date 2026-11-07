@@ -50,6 +50,24 @@ jobs:
       ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # S3-10: ci-scope.sh сравнивает base...HEAD — нужна история (по
+          # умолчанию checkout мелкий). Репозиторий ~10 МБ.
+          fetch-depth: 0
+
+      # SPRINT_UXR_S3_V2_INFRA/S3-10 (D-2026-UXR-V2-FOLDER-V1-FROZEN): бэкенд
+      # гоняется по путям. Правка только web-next/ (v2), только src/ (v1) или
+      # только документации не поднимает тест-БД, gradle и образ бэкенда; правка
+      # backend/, mcp-server/, shared/, контрактов S0 и CI — поднимает. Тяжёлые
+      # шаги ниже под флагом backend; job остаётся и зеленеет, чтобы обязательный
+      # чек не повисал «ожидается». Дифф не вычислился — гоняется всё.
+      - name: Scope by changed paths (S3-10)
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: bash .github/scripts/ci-scope.sh ci
 
       # Гейт подъёма ArcadeDB (.github/scripts/ygg-upgrade-gate.sh) живёт вне CI —
       # ему нужны прод-тома. Но его классификатор расхождений проверяем здесь, на
@@ -58,6 +76,12 @@ jobs:
       # чтобы его провал не терялся за падением сборки.
       - name: Самопроверка гейта подъёма ArcadeDB
         run: bash .github/scripts/ygg-upgrade-gate.sh --selftest
+
+      # SPRINT_UXR_S0_SAFETY/S0-03: проба /lore/version после деплоя живёт в LORE CD
+      # (только preprod), а её разбор ответа и контроль «неверный порт → красный»
+      # проверяем здесь, на каждом PR — иначе поломку пробы увидели бы лишь на выкатке.
+      - name: Самопроверка пробы /lore/version (S0-03)
+        run: bash .github/scripts/version-probe.sh --selftest
 
       # См. подробный комментарий в frontend-ci.yml — там же зафиксировано, что
       # прокси на ci-server НУЖЕН (прямой выход деградирован: минуты вместо
@@ -105,6 +129,7 @@ jobs:
       # кандидата :2480 НЕТ намеренно: тихий откат на прод вернул бы ровно то,
       # от чего уходим, — недоступный CI-контейнер должен краснеть.
       - name: Point live-DB tests at the standing test DB (self-hosted) / Testcontainers (github-hosted)
+        if: steps.scope.outputs.backend == 'true'
         shell: bash
         run: |
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
@@ -197,12 +222,14 @@ jobs:
         run: bash .github/scripts/gradle-retry.sh --selftest
 
       - name: Gradle build (Quarkus backend)
+        if: steps.scope.outputs.backend == 'true'
         working-directory: backend
         run: bash ../.github/scripts/gradle-retry.sh build --no-daemon
 
       # `build` already runs the test task; kept explicit so a future test
       # regression is obvious in the log even if `build` is later narrowed.
       - name: Gradle test (Quarkus backend)
+        if: steps.scope.outputs.backend == 'true'
         working-directory: backend
         run: bash ../.github/scripts/gradle-retry.sh test --no-daemon
 
@@ -218,6 +245,7 @@ jobs:
       #   2. retry the build twice — a dropped handshake is transient, and the
       #      layer cache makes the retry cheap.
       - name: Docker image build (backend)
+        if: steps.scope.outputs.backend == 'true'
         run: |
           # CIM-02: наблюдаемость registry-mirror базовых образов до сборки.
           bash .github/scripts/registry-mirror-probe.sh || true

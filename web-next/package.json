@@ -1,0 +1,50 @@
+{
+  "name": "lore-app-next",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
+    "@fontsource/unbounded": "^5.3.0",
+    "@iconify-json/game-icons": "^1.2.4",
+    "@iconify/react": "^6.0.4",
+    "@mermaid-js/layout-elk": "^0.2.3",
+    "@seidr/kit": "file:../kit",
+    "@tiptap/core": "3.32.2",
+    "@tiptap/extension-image": "3.32.2",
+    "@tiptap/extension-mention": "3.32.2",
+    "@tiptap/extension-table": "3.32.2",
+    "@tiptap/extension-task-item": "3.32.2",
+    "@tiptap/extension-task-list": "3.32.2",
+    "@tiptap/pm": "3.32.2",
+    "@tiptap/react": "3.32.2",
+    "@tiptap/starter-kit": "3.32.2",
+    "@tiptap/suggestion": "3.32.2",
+    "bpmn-js": "^18.31.1",
+    "dompurify": "^3.4.17",
+    "katex": "^0.18.10",
+    "marked": "18.0.6",
+    "mermaid": "^11.17.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tiptap-markdown": "^0.9.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "axe-core": "^4.14.0",
+    "jsdom": "^26.1.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}

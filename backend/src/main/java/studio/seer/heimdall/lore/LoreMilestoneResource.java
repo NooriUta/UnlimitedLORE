@@ -77,7 +77,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT MILESTONE] %s / %s: %s", req.sprint_id(), req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -159,7 +159,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
             LOG.warnf("[LORE MILESTONE PRODUCT] %s / %s: %s",
                 req.milestone_id(), req.product_code(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -256,7 +256,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE SPRINTS] %s: %s", req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -358,7 +358,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE] %s: %s", req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

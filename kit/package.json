@@ -1,0 +1,132 @@
+{
+  "name": "@seidr/kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Seiðr-kit: общие токены, тема и элементы UI на React (SPRINT_UXR_S10_SEIDR_KIT, D-2026-UXR-KIT-REACT)",
+  "exports": {
+    ".": "./src/index.ts",
+    "./content": "./src/content/index.ts",
+    "./core": "./src/core/index.ts",
+    "./demo/lore": "./demo/lore.ts",
+    "./demo/datawanderers": "./demo/datawanderers.ts",
+    "./styles/seidr.css": "./src/styles/seidr.css",
+    "./style-guard": "./src/tokens/styleGuard.ts",
+    "./demo/*": "./demo/*.ts"
+  },
+  "sideEffects": [
+    "*.css",
+    "./src/content/markdown.ts",
+    "./src/content/MartProse.tsx"
+  ],
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@iconify/react": "^6.0.2",
+    "@mermaid-js/layout-elk": "^0.2.3",
+    "@tiptap/core": "3.32.2",
+    "@tiptap/extension-image": "3.32.2",
+    "@tiptap/extension-mention": "3.32.2",
+    "@tiptap/extension-table": "3.32.2",
+    "@tiptap/extension-task-item": "3.32.2",
+    "@tiptap/extension-task-list": "3.32.2",
+    "@tiptap/pm": "3.32.2",
+    "@tiptap/react": "3.32.2",
+    "@tiptap/starter-kit": "3.32.2",
+    "@tiptap/suggestion": "3.32.2",
+    "bpmn-js": "^18.22.1",
+    "dompurify": "^3.4.17",
+    "marked": "18.0.6",
+    "mermaid": "^11.16.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tiptap-markdown": "^0.9.0",
+    "katex": "^0.18.2"
+  },
+  "peerDependenciesMeta": {
+    "@mermaid-js/layout-elk": {
+      "optional": true
+    },
+    "@tiptap/core": {
+      "optional": true
+    },
+    "@tiptap/extension-image": {
+      "optional": true
+    },
+    "@tiptap/extension-mention": {
+      "optional": true
+    },
+    "@tiptap/extension-table": {
+      "optional": true
+    },
+    "@tiptap/extension-task-item": {
+      "optional": true
+    },
+    "@tiptap/extension-task-list": {
+      "optional": true
+    },
+    "@tiptap/pm": {
+      "optional": true
+    },
+    "@tiptap/react": {
+      "optional": true
+    },
+    "@tiptap/starter-kit": {
+      "optional": true
+    },
+    "@tiptap/suggestion": {
+      "optional": true
+    },
+    "bpmn-js": {
+      "optional": true
+    },
+    "dompurify": {
+      "optional": true
+    },
+    "marked": {
+      "optional": true
+    },
+    "mermaid": {
+      "optional": true
+    },
+    "tiptap-markdown": {
+      "optional": true
+    },
+    "katex": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@iconify-json/game-icons": "^1.2.4",
+    "@iconify/react": "^6.0.4",
+    "@mermaid-js/layout-elk": "^0.2.3",
+    "@testing-library/react": "^16.3.3",
+    "@tiptap/core": "3.32.2",
+    "@tiptap/extension-image": "3.32.2",
+    "@tiptap/extension-mention": "3.32.2",
+    "@tiptap/extension-table": "3.32.2",
+    "@tiptap/extension-task-item": "3.32.2",
+    "@tiptap/extension-task-list": "3.32.2",
+    "@tiptap/pm": "3.32.2",
+    "@tiptap/react": "3.32.2",
+    "@tiptap/starter-kit": "3.32.2",
+    "@tiptap/suggestion": "3.32.2",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "axe-core": "^4.14.0",
+    "bpmn-js": "^18.31.1",
+    "dompurify": "^3.4.17",
+    "jsdom": "^26.1.0",
+    "marked": "18.0.6",
+    "mermaid": "^11.17.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tiptap-markdown": "^0.9.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.0",
+    "katex": "^0.18.10"
+  }
+}

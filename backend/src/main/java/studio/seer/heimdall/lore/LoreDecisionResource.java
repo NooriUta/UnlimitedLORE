@@ -187,7 +187,7 @@ public class LoreDecisionResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -343,6 +343,6 @@ public class LoreDecisionResource extends LoreResourceBase {
 
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
-            .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+            .entity(LoreUpstream.error(e)));
     }
 }
