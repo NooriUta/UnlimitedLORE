@@ -4,6 +4,8 @@ import { renderToString } from 'react-dom/server';
 import App from '../App';
 import { NavSwitch } from './NavSwitch';
 import { MESSAGES } from '../i18n/messages';
+import { PersonalSettings } from './PersonalSettings';
+import { DEFAULT_SETTINGS } from '../api/contracts/s2';
 
 describe('S3-07: переключатель «новая навигация»', () => {
   it('в v2 включён и подписан ru-строкой', () => {
@@ -25,9 +27,35 @@ describe('S3-07: переключатель «новая навигация»', 
     expect(html).toContain(MESSAGES.ru['settings.nav.unavailable']);
   });
 
-  it('личные настройки входят в оболочку v2', () => {
-    const html = renderToString(<App />);
+  it('раздел «Настройки» (S4-01, ?sec=settings) — переключатель навигации и витрина kit', () => {
+    const win = {
+      location: { pathname: '/', search: '?sec=settings', hash: '' },
+      history: { pushState: () => {}, replaceState: () => {} },
+    };
+    const html = renderToString(<App path="/" win={win} />);
     expect(html).toContain('data-nav-switch="v2"');
+    expect(html).toContain('href="/kit"');
+  });
+
+  // S4-02: личные настройки переехали под аватар в шапке — переключатель
+  // навигации остаётся в их списке (и при сбое чтения остальных настроек).
+  it('личные настройки входят в оболочку v2 — под аватаром, с переключателем навигации', () => {
+    expect(renderToString(<App />)).toContain('sk-avatar');
+    const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
+    for (const state of [ok, { status: 'error' as const, error: new Error('x') }]) {
+      const html = renderToString(<PersonalSettings lang="ru" state={state} onChange={() => {}} navTargetUrl={null} />);
+      expect(html).toContain('data-nav-switch="v2"');
+    }
+  });
+});
+
+describe('S5-05: настройки режима чтения в личных настройках', () => {
+  it('размер текста и «сворачивать меню при чтении» — блоком kit ReadingSettings', () => {
+    const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
+    const html = renderToString(<PersonalSettings lang="ru" state={ok} onChange={() => {}} navTargetUrl={null} />);
+    expect(html).toContain('data-reading-settings');
+    expect(html).toContain('Сворачивать меню при чтении');
+    expect(html).toContain('Размер текста');
   });
 });
 

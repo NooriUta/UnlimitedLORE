@@ -22,7 +22,8 @@ const { registerLoreWrite } = await import('./loreWrite.js');
 
 // note_append (MT-NOTE-APPEND): дописка к СУЩЕСТВУЮЩЕЙ заметке — у создаваемой
 // задачи заметки ещё нет, при создании её задаёт note_md.
-const NOT_FOR_CREATE = new Set(['task_uid', 'tasks', 'note_append']);
+// expected (S2-09): «было» для оптимистической блокировки — у создания «было» нет.
+const NOT_FOR_CREATE = new Set(['task_uid', 'tasks', 'note_append', 'expected']);
 
 describe('task_new принимает всё, что task_set пишет о задаче', () => {
   const tools = collect(registerLoreWrite);

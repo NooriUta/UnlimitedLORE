@@ -50,6 +50,26 @@ map "$lore_bare_ip:${LORE_PUBLIC_URL}" $lore_redirect_to_https {
     "~^1:.+"    1;
 }
 
+# ── Куда ходят /lore/ и /bench/ (v2 на отдельной машине) ─────────────────────
+# Пусто (v1 и v2 на одной машине с бэкендом) — прежний lore-backend:9100 из
+# сети compose. На машине без бэкенда (lore-host) — адрес ПО ИМЕНИ, например
+# https://lore.odal.seidrstudio.pro (SPEC-INFRA-ADDRESS-BY-NAME: IP и
+# host-gateway запрещены). Литерал в proxy_pass резолвился бы на старте, и
+# nginx без сервиса lore-backend не поднялся бы вовсе ([emerg] host not
+# found); через переменную имя резолвится на запросе (resolver ниже).
+map "${LORE_BACKEND_URL}" $lore_backend {
+    ""          http://lore-backend:9100;
+    default     "${LORE_BACKEND_URL}";
+}
+
+# Host, с которым идём к бэкенду. Пусто — как раньше, $host. Когда бэкенд за
+# Traefik по имени, Host обязан быть ЕГО именем: с Host=new.lore Traefik
+# вернул бы запрос обратно в этот же контейнер — петля.
+map "${LORE_BACKEND_HOST}" $lore_backend_host {
+    ""          $host;
+    default     "${LORE_BACKEND_HOST}";
+}
+
 server {
     listen 80;
     root /usr/share/nginx/html;
@@ -156,15 +176,17 @@ server {
     }
 
     location /lore/ {
-        proxy_pass http://lore-backend:9100;
-        proxy_set_header Host $host;
+        proxy_pass $lore_backend;
+        proxy_set_header Host $lore_backend_host;
+        proxy_ssl_server_name on;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
     location /bench/ {
-        proxy_pass http://lore-backend:9100;
-        proxy_set_header Host $host;
+        proxy_pass $lore_backend;
+        proxy_set_header Host $lore_backend_host;
+        proxy_ssl_server_name on;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
