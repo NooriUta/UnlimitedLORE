@@ -986,7 +986,31 @@ public class AidaLoreResource extends LoreResourceBase {
         java.util.Set<String> allowedForRedact =
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
+        // S1-09: записи, намеренно лишённые проекта (claude-rules, infra), скоуп не режет —
+        // подтягиваются вторым запросом без скоупа и вливаются в выдачу (ScopeExemptRows).
+        final Map<String, String> exemptGiven = ScopeExemptRows.exemptParams(id, given, rowScope);
+        final LoreSlices.Composed exemptQuery;
+        try {
+            exemptQuery = exemptGiven == null ? null : LoreSlices.compose(id, exemptGiven);
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
+        }
+
         return client.query(db, basicAuth(), body)
+            .chain(res -> {
+                if (exemptQuery == null) return Uni.createFrom().item(res);
+                MartQuery extra = new MartQuery("sql", exemptQuery.sql(),
+                    exemptQuery.params().isEmpty() ? null : exemptQuery.params(), -1);
+                // Сбой второго запроса — это сбой выдачи, а не «исключённых нет»:
+                // молча отдать урезанный список значило бы повторить исходный дефект.
+                return client.query(db, basicAuth(), extra).map(x -> {
+                    ScopeExemptRows.Merged m = ScopeExemptRows.merge(id, res.result(), x.result());
+                    ScopeExemptRows.annotate(scopeMarker, id, m.added());
+                    return new studio.seer.heimdall.bench.MartResult(m.rows(), res.returned(),
+                        res.limit(), res.truncated());
+                });
+            })
             // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
             // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
             .chain(res -> {
