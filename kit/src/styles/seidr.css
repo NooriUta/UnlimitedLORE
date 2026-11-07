@@ -1732,6 +1732,60 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-journal__to { color: var(--suc); text-decoration: none; }
 .sk-rec-journal__approved { color: var(--t3); font-size: var(--fs-xs); }
 
+/* ---------- S5-11 · вкладка «История»: версии, автор, сравнение, возврат ---------- */
+.sk-rec-history { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.sk-rec-history__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sk-rec-history__row { border-bottom: 1px solid var(--bd); }
+.sk-rec-history__row[data-author='agent'] { border-left: 2px solid var(--inf); }
+.sk-rec-history__pick {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--gap); width: 100%;
+  min-height: max(var(--tap), var(--row-h)); padding: 3px var(--pad-x);
+  border: 0; background: transparent; color: var(--t1); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer;
+}
+.sk-rec-history__pick:hover { background: var(--bg1); }
+.sk-rec-history__pick[aria-pressed='true'] { background: var(--bg2); box-shadow: inset 2px 0 0 var(--acc); }
+.sk-rec-history__pick:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-rec-history__at { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-rec-history__who { display: inline-flex; align-items: center; gap: 4px; }
+.sk-rec-history__author { --pill-c: var(--t3); }
+.sk-rec-history__author[data-kind='agent'] { --pill-c: var(--inf); }
+.sk-rec-history__author[data-kind='human'] { --pill-c: var(--suc); }
+.sk-rec-history__name { color: var(--t1); }
+.sk-rec-history__owner { color: var(--t3); font-size: var(--fs-xs); }
+.sk-rec-history__current { --pill-c: var(--acc); }
+.sk-rec-history__changed { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); word-break: break-word; }
+.sk-rec-history__anomaly { border-left-color: var(--dng); }
+.sk-rec-history__panel { display: flex; flex-direction: column; gap: var(--gap); padding: var(--pad-x); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+.sk-rec-history__bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.sk-rec-history__cmp { color: var(--t3); font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.sk-rec-history__select {
+  min-height: max(var(--tap), 24px); padding: 0 8px;
+  border: 1px solid var(--bd); border-radius: var(--r); background: var(--bg2); color: var(--t1); font: inherit; font-size: var(--fs-sm);
+}
+.sk-rec-history__select:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-rec-history__diff { min-width: 0; }
+.sk-rec-history__same { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
+.sk-rec-history__fields { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.sk-rec-history__drow { display: grid; grid-template-columns: minmax(8em, max-content) 1fr; gap: 4px var(--gap); }
+.sk-rec-history__drow dd { margin: 0; min-width: 0; }
+.sk-rec-history__field { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); }
+.sk-rec-history__change { display: flex; flex-direction: column; gap: 2px; }
+.sk-rec-history__from, .sk-rec-history__to { display: block; padding: 2px 6px; border-radius: var(--r-md); text-decoration: none; }
+.sk-rec-history__from { color: var(--dng); background: color-mix(in srgb, var(--dng) 10%, transparent); }
+.sk-rec-history__to { color: var(--suc); background: color-mix(in srgb, var(--suc) 10%, transparent); }
+.sk-rec-history__drow[data-change='added'] .sk-rec-history__from,
+.sk-rec-history__drow[data-change='removed'] .sk-rec-history__to { color: var(--t3); background: transparent; }
+.sk-rec-history__val { white-space: pre-wrap; word-break: break-word; font-size: var(--fs-sm); }
+.sk-rec-history__restore { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.sk-rec-history__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.sk-rec-history__confirm p { margin: 0; color: var(--t2); font-size: var(--fs-sm); flex-basis: 100%; }
+.sk-rec-history__go { border-color: var(--acc); color: var(--acc); }
+.sk-rec-history__why { color: var(--t3); font-size: var(--fs-xs); }
+.sk-rec-history__ok { margin: 0; color: var(--suc); font-size: var(--fs-sm); }
+.sk-rec-history__fail { margin: 0; color: var(--dng); font-size: var(--fs-sm); }
+.sk-rec-history__restore .sk-btn:disabled, .sk-rec-history__confirm .sk-btn:disabled { opacity: .5; cursor: not-allowed; }
+@media (pointer: coarse) { .sk-rec-history__select { font-size: var(--fs-touch-input); } }
+
 /* ═══ K-06 — честность блоков (errBlock ≠ «пусто (проверено)») ═══ */
 /* Обёртка блока: несёт data-block, сама вида не имеет. */
 .sk-errblock { display: block; min-width: 0; }

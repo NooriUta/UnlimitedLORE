@@ -53,5 +53,6 @@
   "kitPage.md.html": "HTML — только в песочнице",
   "kitPage.md.htmlTitle": "Пример HTML-фрагмента",
   "kitPage.md.sample": "## Решение\n\nТекст **markdown** со списком:\n\n- пункт один\n- [x] пункт два\n\n| поле | значение |\n|---|---|\n| статус | в работе |\n\n```mermaid\ngraph LR; A[Задача] --> B[PR] --> C[Релиз]\n```\n",
-  "kitPage.md.htmlSample": "<h3>Фрагмент</h3><p>HTML рисуется в iframe с sandbox и CSP — скрипты хоста ему недоступны.</p>"
+  "kitPage.md.htmlSample": "<h3>Фрагмент</h3><p>HTML рисуется в iframe с sandbox и CSP — скрипты хоста ему недоступны.</p>",
+  "history.legacySlice": "Общая история (S2) на сервере ещё не включена — показана цепочка версий из слайса {slice}; авторов правок в нём нет."
 }

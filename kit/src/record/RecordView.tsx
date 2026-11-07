@@ -19,8 +19,9 @@ import { RecordLinks, recordLinks } from './RecordLinks';
 import { RecordGraph } from './RecordGraph';
 import { RecordJournal, recordJournal } from './RecordJournal';
 import { RecordRef, renderOut, valueText } from './fmt';
+import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
 
-export const RECORD_TABS = { overview: 'overview', links: 'links', graph: 'graph', journal: 'journal' } as const;
+export const RECORD_TABS = { overview: 'overview', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
 
 export interface RecordViewProps {
   record: KitRecord;
@@ -29,6 +30,8 @@ export interface RecordViewProps {
   tab: string;
   onTab: (tab: string) => void;
   className?: string;
+  /** Источник вкладки «История» (S5-11); нет — вкладки нет (истории у вида может не быть). */
+  history?: RecordHistorySource;
 }
 
 function FieldValue({ type, value, ctx }: { type: string; value: unknown; ctx: KitCtx }): ReactNode {
@@ -71,7 +74,7 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, history }: RecordViewProps) {
   const lang = useKitLang();
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
@@ -82,6 +85,7 @@ export function RecordView({ record, ctx, tab, onTab, className }: RecordViewPro
     { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: recordLinks(record.id, ctx.data.edges).length },
     { id: RECORD_TABS.graph, label: kitT(lang, 'kit.record.tab.graph') },
     { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: recordJournal(record.id, ctx.data.journal).length },
+    ...(history ? [{ id: RECORD_TABS.history, label: kitT(lang, 'kit.record.tab.history'), count: historyCount(history) }] : []),
   ];
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
   const reset = `${record.id}:${current}`;
@@ -100,6 +104,12 @@ export function RecordView({ record, ctx, tab, onTab, className }: RecordViewPro
           </BlockBoundary>
         )}
       </div>
+    );
+  } else if (current === RECORD_TABS.history && history) {
+    panel = (
+      <BlockBoundary block="history" label={kitT(lang, 'kit.record.tab.history')} lang={lang} resetKey={reset}>
+        <RecordHistory record={record} source={history} lang={lang} />
+      </BlockBoundary>
     );
   } else if (custom) {
     panel = (
