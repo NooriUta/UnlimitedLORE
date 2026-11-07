@@ -1878,6 +1878,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__row:focus-visible,
 .sk-board__card:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 .sk-list__row[data-cursor='true'] { box-shadow: inset 2px 0 0 var(--acc); }
+/* Строка-таб-стоп (S4-11) — тоже цель касания (S4-12): на сенсоре не ниже --tap;
+   на широком экране --tap = 0, плотность списка не меняется. У tr height — минимум. */
+.sk-list__row { height: var(--tap); }
+.sk-board__card { min-height: var(--tap); }
 .sk-list__actions { display: inline-flex; align-items: center; gap: 2px; }
 .sk-list__action { display: inline-flex; align-items: center; }
 /* Подсказка клавиши действия — только у строки под курсором: клавиша бьёт по ней. */
@@ -1890,6 +1894,23 @@ code, pre, kbd, samp { font-family: var(--mono); }
   overflow-wrap: anywhere;
 }
 a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
+/* S4-13 (B-09): строка без ссылки, но открываемая, — кнопка в порядке Tab;
+   выглядит как заголовок, цель не меньше --tap на сенсоре. */
+.sk-list__title--btn {
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: start;
+  cursor: pointer;
+  min-height: var(--tap, auto);
+}
+.sk-list__title--btn:hover { color: var(--acc); text-decoration: underline; }
+.sk-list__title:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
 .sk-list__mono { font-family: var(--mono); color: var(--t2); }
 .sk-list__check {
   display: inline-flex;

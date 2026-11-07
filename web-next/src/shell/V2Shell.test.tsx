@@ -81,6 +81,16 @@ describe('оболочка v2 (S4-01)', () => {
     expect(container.querySelector('[data-state="unbuilt"]')).toBeNull();
   });
 
+  it('выбор проектов (?proj=) переживает смену раздела, фильтры раздела — нет (S4-03 × S4-13)', () => {
+    const win = fakeWin('?mod=forseti&sec=news&proj=p1,p2&lf=x');
+    render(<App path="/" win={win} storage={mem()} narrow={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Задачи' }));
+    const p = new URLSearchParams(win.location.search);
+    expect(p.get('sec')).toBe('task');
+    expect(p.get('proj')).toBe('p1,p2');
+    expect(p.get('lf')).toBeNull();
+  });
+
   it('старый адрес /sprints ведёт в раздел оболочки ?sec=sprint', () => {
     const win = fakeWin();
     const { container } = render(<App path="/sprints" win={win} storage={mem()} narrow={false} />);

@@ -22,7 +22,7 @@ import type { KitLang } from '../i18n';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { SafeStorage } from '../resilience/safeStorage';
 import { StorageBanner } from '../resilience/StorageBanner';
-import { pushUrlState, readUrlState } from '../resilience/urlState';
+import { pushUrlState, readUrlState, sectionScopedPatch } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { Sheet } from './Sheet';
 
@@ -73,6 +73,12 @@ export interface KitShellProps {
   topEnd?: ReactNode;
   /** Слот аккаунта справа в шапке — меню аватара (AvatarMenu, S4-02). */
   account?: ReactNode;
+  /**
+   * Глобальные параметры URL, которые переживают смену раздела/модуля
+   * (S4-13, B-07). Остальное — q, фильтры, вкладка — принадлежит разделу и
+   * снимается при переходе. Смена вида внутри раздела ничего не снимает.
+   */
+  keepParams?: readonly string[];
   children?: ReactNode;
 }
 
@@ -143,7 +149,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, topEnd, account, children,
+  onNavigate, onOpenRecord, topEnd, account, keepParams, children,
 }: KitShellProps) {
   const lang = useKitLang();
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
@@ -173,12 +179,18 @@ export function KitShell({
   }, [config, urlWin]);
 
   const navigate = useCallback((patch: Partial<KitNav>) => {
-    const next = { ...navRef.current, ...patch };
+    const prev = navRef.current;
+    const next = { ...prev, ...patch };
     navRef.current = next;
     setNav(next);
-    if (urlWin) pushUrlState({ mod: next.module, sec: next.item, view: next.view }, { win: urlWin });
+    if (urlWin) {
+      const navParams = { mod: next.module, sec: next.item, view: next.view };
+      // B-07: другой раздел/модуль — параметры прежнего раздела снимаются.
+      const leaving = next.module !== prev.module || next.item !== prev.item;
+      pushUrlState(leaving ? sectionScopedPatch(readUrlState(urlWin), navParams, keepParams) : navParams, { win: urlWin });
+    }
     onNavigate?.(next);
-  }, [onNavigate, urlWin]);
+  }, [keepParams, onNavigate, urlWin]);
 
   const openRecord = useCallback((id: string) => {
     setRecent(prev => {

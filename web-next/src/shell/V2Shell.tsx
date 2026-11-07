@@ -16,6 +16,9 @@ import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 
 const SprintsPage = lazy(() => import('../sprints/SprintsPage'));
 
+/** Глобальные параметры URL v2 — не снимаются при смене раздела. */
+export const V2_KEEP_PARAMS = ['proj'] as const;
+
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
 const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   // Списки на движке kit; заголовок — у раздела оболочки. Спринты — экран S4-09
@@ -60,6 +63,8 @@ export function V2Shell({ storage, win, narrow, brandTag, topEnd, account }: V2S
       brandIcon="compass"
       brandTag={brandTag}
       topEnd={topEnd}
+      // Выбор проектов (S4-03, ?proj=) — глобальный: переживает смену раздела (S4-13, B-07).
+      keepParams={V2_KEEP_PARAMS}
       account={account}
       storage={storage}
       storageKey="lore-v2.shell"
