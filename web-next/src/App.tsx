@@ -19,15 +19,26 @@ import { storage } from './storage/safe';
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
+// Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
+const NewsPage = lazy(() => import('./news/NewsPage'));
 
 /** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
-export function routeOf(path: string): 'kit' | 'home' {
-  return path.replace(/\/+$/, '') === '/kit' ? 'kit' : 'home';
+export function routeOf(path: string): 'kit' | 'news' | 'home' {
+  const p = path.replace(/\/+$/, '');
+  return p === '/kit' ? 'kit' : p === '/news' ? 'news' : 'home';
 }
 
 export default function App({ path }: { path?: string } = {}) {
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
-  if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  const route = routeOf(current);
+  if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  if (route === 'news') {
+    return (
+      <ErrorBoundary lang="ru">
+        <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
   return (
     <ErrorBoundary lang="ru">
       <StorageBanner storage={storage} lang="ru" />
