@@ -281,6 +281,19 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
+      # Seiðr-kit (kit/, D-2026-UXR-KIT-REACT): отдельный пакет со своими
+      # тестами (сверка токенов с v1, STYLE-01, тема). Тесты web-next их не
+      # запускают — поэтому свой шаг, и до web-next: сломанный kit ломает v2.
+      # S4-00e: здесь же единый CSS-слой — снимок голого HTML
+      # (kit/demo/seidr-bare.html, toMatchFileSnapshot; CI=true не пишет снимок,
+      # а валит расхождение) и «у каждого класса kit есть правило в seidr.css».
+      - name: Seiðr-kit (kit) — install + typecheck + test
+        working-directory: kit
+        run: |
+          bash ../.github/scripts/npm-retry.sh ci
+          npm run typecheck
+          npm test
+
       - name: LORE v2 (web-next) — install + typecheck + test + build
         if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next
@@ -289,6 +302,15 @@ jobs:
           npm run typecheck
           npm test
           npm run build
+
+      # SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00d: axe на витрине /kit — отдельным
+      # шагом, чтобы a11y-гейт был виден в сводке по имени, а не тонул среди
+      # прочих тестов. Витрина собрана из всех элементов Seiðr-kit: потерянное
+      # имя/роль/ARIA у любого элемента валит именно этот шаг. Контраст в jsdom
+      # не считается — его меряет браузерный прогон (S4-12).
+      - name: LORE v2 — axe на /kit (витрина Seiðr-kit)
+        working-directory: web-next
+        run: npx vitest run src/pages/KitPage.test.tsx
 
       # Контекст — корень репозитория: образу нужен общий nginx.conf.template
       # (прокси /lore/ тот же, что у v1). Прокси раннера пробрасывается так же,

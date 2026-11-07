@@ -15,7 +15,26 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    // Исходники kit (../kit) тянут `react`: без этого tsc ищет типы вверх от
+    // kit/ и в образе (где kit/node_modules нет) их не находит, а локально
+    // молча берёт чужую копию из корня репо. Проверено --traceResolution (S4-00a).
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"],
+      // То же для @iconify/react — peer kit с S4-00b (GameIcon).
+      "@iconify/react/offline": ["./node_modules/@iconify/react/dist/offline.d.ts"],
+      // То же для peer-ов @seidr/kit/content (S4-00d): TipTap, mermaid, bpmn-js…
+      "@tiptap/*": ["./node_modules/@tiptap/*"],
+      "tiptap-markdown": ["./node_modules/tiptap-markdown"],
+      "marked": ["./node_modules/marked"],
+      "mermaid": ["./node_modules/mermaid"],
+      "@mermaid-js/layout-elk": ["./node_modules/@mermaid-js/layout-elk"],
+      "bpmn-js/*": ["./node_modules/bpmn-js/*"],
+      "dompurify": ["./node_modules/dompurify"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }
