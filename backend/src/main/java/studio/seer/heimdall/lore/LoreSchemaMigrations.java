@@ -1401,7 +1401,51 @@ final class LoreSchemaMigrations {
         // EXTENDS E — на проде базового типа нет (см. V43).
         new Step(62, 17, "product_serves", List.of(
             "CREATE EDGE TYPE SERVES IF NOT EXISTS",
-            "CREATE PROPERTY SERVES.kind IF NOT EXISTS STRING"))
+            "CREATE PROPERTY SERVES.kind IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-04 · decision:D-2026-UXR-VIEWS-SERVER (07.11.2026):
+        // виды, избранное, недавние и личные настройки — на сервере, видны с любого
+        // устройства. Только НОВЫЕ типы (v1 их не знает и не задевает — ADR-LORE-045,
+        // аддитивно: major 17). Владелец — kc_sub полем, а не ребром к KnowUser:
+        // вершина KnowUser заводится лишь при выдаче проектной роли, а помнить
+        // настройки нужно любому вошедшему. version — оптимистическая блокировка
+        // (S2-09): правка по устаревшей версии получает 409, а не затирает чужую.
+        new Step(63, 17, "user_views_prefs", List.of(
+            "CREATE VERTEX TYPE KnowSavedView IF NOT EXISTS",
+            "CREATE PROPERTY KnowSavedView.view_uid IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.name IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.section IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.query IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.visibility IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.roles IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.is_team_default IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowSavedView.is_personal_default IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowSavedView.row_version IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowSavedView.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.updated_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowSavedView (view_uid) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowSavedView (owner_sub) NOTUNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowSavedView (section) NOTUNIQUE",
+            "CREATE VERTEX TYPE KnowUserFavorite IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserFavorite.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserFavorite.ref_type IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserFavorite.ref_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserFavorite.added_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserFavorite (owner_sub, ref_type, ref_id) UNIQUE",
+            "CREATE VERTEX TYPE KnowUserRecent IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserRecent.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.ref_type IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.ref_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.visited_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.visits IF NOT EXISTS INTEGER",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserRecent (owner_sub, ref_type, ref_id) UNIQUE",
+            "CREATE VERTEX TYPE KnowUserSettings IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserSettings.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserSettings.settings_json IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserSettings.row_version IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowUserSettings.updated_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserSettings (owner_sub) UNIQUE"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
