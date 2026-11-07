@@ -135,9 +135,28 @@ describe('общий шаблон nginx на оба фронта', () => {
 
   it('шаблон не привязан к одному фронту: прокси /lore/ и /bench/ на lore-backend', () => {
     const t = template();
-    expect(t).toMatch(/location \/lore\/ \{\n\s+proxy_pass http:\/\/lore-backend:9100;/);
-    expect(t).toMatch(/location \/bench\/ \{\n\s+proxy_pass http:\/\/lore-backend:9100;/);
+    expect(t).toMatch(/location \/lore\/ \{\r?\n\s+proxy_pass \$lore_backend;/);
+    expect(t).toMatch(/location \/bench\/ \{\r?\n\s+proxy_pass \$lore_backend;/);
     expect(t).toMatch(/ОБЩИЙ для обоих фронтов/);
+  });
+
+  // v2 на отдельной машине (lore-host): сервиса lore-backend там нет, а литерал
+  // в proxy_pass резолвится на СТАРТЕ — nginx падал бы с [emerg] host not found.
+  // Адрес бэкенда — переменная; пусто = прежний lore-backend:9100 (v1 не меняется).
+  it('адрес бэкенда — LORE_BACKEND_URL, пусто = lore-backend:9100', () => {
+    const t = template();
+    expect(t).toMatch(/map "\$\{LORE_BACKEND_URL\}" \$lore_backend \{[^}]*""\s+http:\/\/lore-backend:9100;[^}]*default\s+"\$\{LORE_BACKEND_URL\}";/);
+    expect(t).not.toMatch(/proxy_pass http:\/\/lore-backend:9100;/);
+  });
+
+  it('Host к бэкенду — LORE_BACKEND_HOST, пусто = $host (иначе Traefik вернёт запрос в v2 — петля)', () => {
+    const t = template();
+    expect(t).toMatch(/map "\$\{LORE_BACKEND_HOST\}" \$lore_backend_host \{[^}]*""\s+\$host;[^}]*default\s+"\$\{LORE_BACKEND_HOST\}";/);
+    for (const loc of ['lore', 'bench']) {
+      const block = t.split(`location /${loc}/ {`)[1].split('}')[0];
+      expect(block, loc).toMatch(/proxy_set_header Host \$lore_backend_host;/);
+      expect(block, loc).toMatch(/proxy_ssl_server_name on;/);
+    }
   });
 
   it('скрипт старта метит лог v2, а вывод v1 оставляет прежним «[LORE]»', () => {
