@@ -37,6 +37,8 @@
   "kit.md.taskList": "checklist",
   "kit.md.blockquote": "quote",
   "kit.md.hr": "divider",
+  "kit.md.math": "LaTeX formula (KaTeX)",
+  "kit.md.mathPrompt": "LaTeX formula (without $; empty — remove):",
   "kit.md.addColumn": "+ column",
   "kit.md.addRow": "+ row",
   "kit.md.deleteTable": "delete table",

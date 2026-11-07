@@ -7,3 +7,5 @@ export * from './sandboxFrameTheme';
 export * from './SandboxedHtmlFrame';
 export * from './MartProse';
 export * from './TipTapField';
+// S5-13 · формулы в поле правки (узлы TipTap + правила markdown-it).
+export { MathInline, MathBlock, MathSafeText, escapeMathDollars, installMathMarkdownIt } from './tiptapMath';

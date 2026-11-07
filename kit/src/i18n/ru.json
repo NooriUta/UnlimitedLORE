@@ -37,6 +37,8 @@
   "kit.md.taskList": "чек-лист",
   "kit.md.blockquote": "цитата",
   "kit.md.hr": "разделитель",
+  "kit.md.math": "формула LaTeX (KaTeX)",
+  "kit.md.mathPrompt": "Формула LaTeX (без $; пусто — удалить):",
   "kit.md.addColumn": "+ столбец",
   "kit.md.addRow": "+ строка",
   "kit.md.deleteTable": "удалить таблицу",

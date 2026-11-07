@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
+import { MathBlock, MathInline, MathSafeText } from './tiptapMath';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 
@@ -215,10 +216,20 @@ export function TipTapField({
   mentionItemsRef.current = mentionItems ?? [];
   const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');
   const [draft, setDraft] = useState(value);
+  // Подпись берётся в момент вызова: расширения фиксируются при создании редактора.
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const promptTex = (tex: string) => window.prompt(kitT(langRef.current, 'kit.md.mathPrompt'), tex);
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      // Text — свой (MathSafeText): запись в markdown экранирует доллары,
+      // которые иначе стали бы формулой (S5-13).
+      StarterKit.configure({ text: false }),
+      MathSafeText,
+      // Формулы $…$ / $…$ — KaTeX прямо в редакторе (S5-13); двойной клик — правка.
+      MathInline.configure({ promptTex }),
+      MathBlock.configure({ promptTex }),
       ...(enableImages ? [ResizableImage] : []),
       ...TABLE_EXTENSIONS,
       ...TASKLIST_EXTENSIONS,
@@ -333,6 +344,13 @@ export function TipTapField({
 
   const run = (fn: (e: Editor) => void) => () => { if (editor) fn(editor); };
 
+  // Вставка строчной формулы: исходник TeX спрашиваем, как URL ссылки.
+  const insertMath = () => {
+    if (!editor) return;
+    const tex = window.prompt(t('kit.md.mathPrompt'), '');
+    if (tex && tex.trim()) editor.chain().focus().insertContent({ type: 'mathInline', attrs: { tex: tex.trim() } }).run();
+  };
+
   return (
     <div className="sk-md">
       {editable && editor && (
@@ -355,6 +373,7 @@ export function TipTapField({
           <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
           <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
           <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
+          <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
           <Sep />
           {editor.isActive('table') ? (
             <>
