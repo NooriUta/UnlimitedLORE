@@ -84,6 +84,13 @@ tasks.named('test') {
         exceptionFormat 'full'
         showStackTraces = true
     }
+    // PL-01 (ADR-LORE-046 §2): stdout тестов Gradle в консоль не печатает, а
+    // строка ресурса тест-БД — единственный счётчик «сколько раз за прогон
+    // схема строилась с нуля» (fresh) против «переиспользована» (reuse).
+    // Без проброса замер «до/после» пришлось бы выводить из длительности.
+    onOutput { desc, event ->
+        if (event.message.contains('[LORE TEST DB]')) logger.lifecycle(event.message.trim())
+    }
 }
 
 // Описания подагентов — ВХОДНЫЕ ДАННЫЕ тестов, а не посторонние файлы.
