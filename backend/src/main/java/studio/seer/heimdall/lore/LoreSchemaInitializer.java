@@ -661,6 +661,8 @@ public class LoreSchemaInitializer {
         // unreleased-burn metrics when true (docs-only/research/tooling sprints
         // that never ship a versioned release).
         "CREATE PROPERTY KnowSprint.no_release_required   IF NOT EXISTS BOOLEAN",
+        // RM-U6: спринт вне вех осознанно — снимается из «правда забыли» на карте вех.
+        "CREATE PROPERTY KnowSprint.unplanned_intentional IF NOT EXISTS BOOLEAN",
         "CREATE PROPERTY KnowSprintHist.planned_start_date IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.planned_end_date   IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.track_id           IF NOT EXISTS STRING",
