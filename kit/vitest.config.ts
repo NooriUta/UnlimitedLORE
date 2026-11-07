@@ -5,6 +5,9 @@ import { defineConfig } from 'vitest/config';
 // Элементы (S4-00b) рендерятся в jsdom — файл объявляет это сам строкой
 // `// @vitest-environment jsdom`, остальные тесты остаются в node.
 export default defineConfig({
+  // PostCSS — пустой и явный: иначе vite ищет конфиг вверх по дереву и берёт
+  // корневой postcss.config.cjs v1 (Mantine-пресет), которого в джобе v2 нет.
+  css: { postcss: {} },
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     setupFiles: ['src/test/setup.ts'],

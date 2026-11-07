@@ -47,5 +47,8 @@
   "kit.md.modeHtml": "режим HTML-источника",
   "kit.md.resize": "изменить размер",
   "kit.md.mentions": "Упоминания",
-  "kit.md.mentionEmpty": "ничего не найдено — акторы заводятся в разделе «Клиент»"
+  "kit.md.mentionEmpty": "ничего не найдено — акторы заводятся в разделе «Клиент»",
+  "kit.storage.unavailable": "Хранилище недоступно — отметки не сохранятся",
+  "kit.error.title": "Что-то сломалось",
+  "kit.error.retry": "Повторить"
 }

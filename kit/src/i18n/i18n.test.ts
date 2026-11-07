@@ -26,3 +26,12 @@ describe('локали Seiðr-kit', () => {
     for (const k of Object.keys(ru) as (keyof typeof ru)[]) expect(ph(en[k]), k).toEqual(ph(ru[k]));
   });
 });
+
+describe('локали Seiðr-kit · устойчивость (S4-00f)', () => {
+  it('kitT отдаёт строки error boundary и плашки хранилища', () => {
+    expect(kitT('en', 'kit.error.retry')).toBe('Retry');
+    expect(kitT('ru', 'kit.error.retry')).toBe('Повторить');
+    expect(kitT('de' as 'ru', 'kit.error.retry')).toBe('Повторить');
+    expect(kitT('ru', 'kit.storage.unavailable')).toContain('Хранилище');
+  });
+});

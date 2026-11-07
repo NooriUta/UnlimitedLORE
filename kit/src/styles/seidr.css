@@ -956,3 +956,43 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-radius: var(--r-sm);
   background: transparent;
 }
+
+/* ═══ S4-00f — устойчивость v2 (плашка хранилища, экран ошибки) ═══ */
+/* ── Плашка (S4-00f: «хранилище недоступно — отметки не сохранятся») ── */
+.sk-banner {
+  padding: 6px 12px;
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg2);
+  color: var(--t1);
+}
+.sk-banner--warn { border-left: 3px solid var(--wrn); }
+
+/* ── Экран ошибки (S4-00f: ошибка на экран вместо белого листа) ── */
+.sk-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 24px auto;
+  max-width: 720px;
+  padding: 16px;
+  background: var(--bg1);
+  border: 1px solid var(--dng);
+  border-radius: 8px;
+}
+.sk-error__title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  color: var(--dng);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-error__message {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--t2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

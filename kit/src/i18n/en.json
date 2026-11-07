@@ -47,5 +47,8 @@
   "kit.md.modeHtml": "HTML source mode",
   "kit.md.resize": "resize",
   "kit.md.mentions": "Mentions",
-  "kit.md.mentionEmpty": "nothing found — actors are created in the “Client” section"
+  "kit.md.mentionEmpty": "nothing found — actors are created in the “Client” section",
+  "kit.storage.unavailable": "Storage unavailable — your marks will not be saved",
+  "kit.error.title": "Something went wrong",
+  "kit.error.retry": "Retry"
 }
