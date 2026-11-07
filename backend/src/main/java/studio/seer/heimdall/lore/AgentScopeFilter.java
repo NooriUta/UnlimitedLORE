@@ -186,6 +186,14 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // только полный профиль, а остальные о своих пробелах не знают.
         Map.entry("quality",   Set.of("full", "architect", "developer", "pm", "marketer",
                                       "analyst", "product-analyst", "tester")),
+        // link (SPRINT_UXR_S2_GRAPH_MEMORY/S2-06, D-2026-UXR-LINK-MENTION-EDGE) — «Связать»
+        // из упоминаний: ребро между двумя любыми записями каталога LoreLinkTypes.
+        // Здесь — ВХОД для всех, кто пишет хоть одну сущность каталога; настоящее
+        // решение принимает LoreLinkResource по семейству ИСХОДНОЙ записи ребра
+        // (ребро «принадлежит» записи, из которой выходит, как у adr_link/task_link)
+        // через decide() этой же матрицы — второго списка прав нет.
+        Map.entry("link",      Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
         // ── Найдено сверкой таблицы с реальными путями записи (AL-62) ────────
         // Три семейства имели живой POST под /lore, но в матрице отсутствовали,
         // то есть попадали в ветку «неизвестное — пропускаю». Права выставлены
