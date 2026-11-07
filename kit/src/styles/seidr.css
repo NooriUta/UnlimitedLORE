@@ -1624,3 +1624,12 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-journal__from { color: var(--dng); text-decoration: line-through; }
 .sk-rec-journal__to { color: var(--suc); text-decoration: none; }
 .sk-rec-journal__approved { color: var(--t3); font-size: var(--fs-xs); }
+/* ═══ K-06 — честность блоков (errBlock ≠ «пусто (проверено)») ═══ */
+/* Обёртка блока: несёт data-block, сама вида не имеет. */
+.sk-errblock { display: block; min-width: 0; }
+/* 0 записей без проверенной полноты — ни ошибка, ни «пусто»: тон предупреждения. */
+.sk-state--unverified {
+  --state-c: var(--wrn);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--wrn) 50%, transparent);
+}

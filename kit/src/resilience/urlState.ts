@@ -3,6 +3,9 @@
 // частоты вызовов. Тогда параметры пишутся в location.hash
 // («#section=admin&tab=rules»), а чтение сливает query и hash — hash
 // побеждает, потому что после фолбэка он свежее.
+// K-06 (SPRINT_UXR_S10_SEIDR_KIT): снятый параметр, который ещё лежит в query,
+// пишется в «#» пустым («#tab=») — пустое значение в hash означает «снято»,
+// иначе старое ?tab=… воскресало бы при чтении.
 
 export interface UrlWindow {
   location: { pathname: string; search: string; hash: string };
@@ -17,7 +20,10 @@ function hashParams(hash: string): URLSearchParams | null {
 
 export function readUrlState(win: UrlWindow = window): URLSearchParams {
   const out = new URLSearchParams(win.location.search);
-  hashParams(win.location.hash)?.forEach((v, k) => out.set(k, v));
+  hashParams(win.location.hash)?.forEach((v, k) => {
+    if (v === '') out.delete(k);
+    else out.set(k, v);
+  });
   return out;
 }
 
@@ -40,7 +46,12 @@ export function pushUrlState(
     else win.history.pushState(null, '', url);
     return 'history';
   } catch {
-    win.location.hash = `#${query}`;
+    // Снятое, но оставшееся в query, — пустым значением (см. шапку файла).
+    const hashed = new URLSearchParams(params);
+    new URLSearchParams(win.location.search).forEach((_v, k) => {
+      if (!params.has(k)) hashed.set(k, '');
+    });
+    win.location.hash = `#${hashed.toString()}`;
     return 'hash';
   }
 }

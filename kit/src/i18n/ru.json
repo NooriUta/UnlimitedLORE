@@ -148,5 +148,11 @@
   "kit.status.none": "Нет допустимых переходов из этого статуса",
   "kit.status.saving": "Сохранение…",
   "kit.status.saveFailed": "Не сохранено, статус возвращён: {reason}",
-  "kit.status.undo": "Вернуть «{title}»"
+  "kit.status.undo": "Вернуть «{title}»",
+  "kit.block.error": "Блок «{block}»: не смогли проверить",
+  "kit.block.error.hint": "Это не «пусто (проверено)»: данные блока не получены.",
+  "kit.block.crashed": "Блок «{block}» упал при отрисовке",
+  "kit.block.crashed.hint": "Остальной экран работает. Это не «пусто»: блок не отрисован.",
+  "kit.block.unverified": "Блок «{block}»: полноту проверить нечем",
+  "kit.block.unverified.hint": "0 записей, но выдача обрезана или без метаданных — это не проверенный ноль."
 }

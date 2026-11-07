@@ -35,3 +35,18 @@ describe('горячие клавиши по e.code', () => {
     expect(parseHotkey('Escape').code).toBe('Escape');
   });
 });
+
+// SPRINT_UXR_S10_SEIDR_KIT/K-06: клавиши статусов «1…N» из конфига и «?».
+describe('K-06 · клавиши по e.code: цифры и «?»', () => {
+  it('«1» срабатывает и с основного ряда, и с цифрового блока', () => {
+    expect(matchHotkey(ev({ key: '1', code: 'Digit1' }), '1')).toBe(true);
+    expect(matchHotkey(ev({ key: '1', code: 'Numpad1' }), '1')).toBe(true);
+    expect(matchHotkey(ev({ key: '2', code: 'Numpad2' }), '1')).toBe(false);
+  });
+
+  it('«?» — это Shift+Slash в любой раскладке (в русской e.key = «,»)', () => {
+    expect(parseHotkey('?')).toEqual({ code: 'Slash', mod: false, shift: true, alt: false });
+    expect(matchHotkey(ev({ key: ',', code: 'Slash', shiftKey: true }), '?')).toBe(true);
+    expect(matchHotkey(ev({ key: '/', code: 'Slash' }), '?')).toBe(false);
+  });
+});

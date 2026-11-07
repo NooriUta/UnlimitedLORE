@@ -148,5 +148,11 @@
   "kit.status.none": "No allowed transitions from this status",
   "kit.status.saving": "Saving…",
   "kit.status.saveFailed": "Not saved, status reverted: {reason}",
-  "kit.status.undo": "Revert to “{title}”"
+  "kit.status.undo": "Revert to “{title}”",
+  "kit.block.error": "Block “{block}”: Couldn’t check",
+  "kit.block.error.hint": "This is not “empty (checked)”: the block’s data was not received.",
+  "kit.block.crashed": "Block “{block}” crashed while rendering",
+  "kit.block.crashed.hint": "The rest of the screen works. This is not “empty”: the block was not rendered.",
+  "kit.block.unverified": "Block “{block}”: completeness can’t be checked",
+  "kit.block.unverified.hint": "0 records, but the result is truncated or has no metadata — this is not a verified zero."
 }
