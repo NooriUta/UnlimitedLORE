@@ -575,6 +575,55 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-spop__cancel:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
+/* ---------- Палитра звезды по циклу + третий шаг (S4-07) ---------- */
+.sk-star-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sk-star__err { color: var(--dng); font-size: var(--fs-xs); }
+.sk-spal { min-width: 220px; }
+.sk-spal__group { display: flex; flex-direction: column; gap: 2px; }
+.sk-spal__group + .sk-spal__group { margin-top: 2px; padding-top: 2px; border-top: 1px solid var(--bd); }
+.sk-spal__cat {
+  padding: 2px 8px 0;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-spal__final { color: var(--t3); }
+.sk-sconf {
+  --schip-c: var(--t3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px;
+}
+.sk-sconf__q { margin: 0; padding: 4px 6px; color: var(--t1); font-size: var(--fs-sm); }
+.sk-sconf__do, .sk-sconf__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-sconf__do {
+  border: 1px solid var(--schip-c);
+  background: color-mix(in srgb, var(--schip-c) 16%, transparent);
+  color: var(--t1);
+}
+.sk-sconf__back { border: 1px solid var(--bd); background: none; color: var(--t2); }
+.sk-sconf__do:focus-visible, .sk-sconf__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
 /* ---------- Kbd ---------- */
 .sk-kbd { display: inline-flex; gap: 2px; margin-left: 6px; }
 .sk-kbd kbd {

@@ -4,6 +4,8 @@ export * from './Pill';
 export * from './IconButton';
 export * from './GameIcon';
 export * from './StatusStar';
+export * from './StatusPalette';
+export * from './StatusConfirm';
 export * from './statusMeta';
 export * from './Kbd';
 export * from './Tooltip';

@@ -24,6 +24,8 @@ export interface StatusChipProps {
   hotkey?: boolean;
   /** Только иконка (плотный список); имя для чтения остаётся. */
   compact?: boolean;
+  /** S4-07: завершающие статусы (done/cancelled) — третьим шагом, с подтверждением. */
+  confirmFinal?: boolean;
   onChange?: (to: string) => void;
   className?: string;
 }
@@ -33,7 +35,7 @@ function isTyping(t: EventTarget | null): boolean {
   return t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
 }
 
-export function StatusChip({ record, config, save, role, hotkey, compact, onChange, className }: StatusChipProps) {
+export function StatusChip({ record, config, save, role, hotkey, compact, confirmFinal, onChange, className }: StatusChipProps) {
   const lang = useKitLang();
   const saveFn = useMemo(() => save ?? resolveSave(config.hooks), [save, config.hooks]);
   const st = useStatusChange(record, saveFn, onChange);
@@ -119,6 +121,7 @@ export function StatusChip({ record, config, save, role, hotkey, compact, onChan
           id={popId}
           statuses={config.statuses}
           current={st.status}
+          confirmFinal={confirmFinal}
           onPick={pick}
           onCancel={() => close(true)}
         />
