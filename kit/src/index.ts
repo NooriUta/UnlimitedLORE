@@ -39,6 +39,9 @@ export {
 export { installErrorScreen, showErrorScreen, type ErrorScreenOptions } from './resilience/errorScreen';
 export { describeError, isBenignError } from './resilience/errorText';
 export { useHotkeys, type HotkeyHandler } from './resilience/useHotkeys';
+// Клавиатура как слой (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-11): клавиши действий
+// (Kbd + aria-keyshortcuts из одной строки) и ловушка фокуса всплывающих окон.
+export * from './keyboard';
 export { setUrlParams, useUrlParam } from './resilience/useUrlParam';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) и палитра Ctrl+K / поиск «/» (K-07).
 export * from './palette';

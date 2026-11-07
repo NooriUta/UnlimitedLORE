@@ -3,11 +3,14 @@
 // Как в прототипе v4: фокус внутрь при открытии, ловушка Tab, Esc и подложка
 // закрывают, фокус возвращается на кнопку-открыватель. Рендер — порталом в
 // body: модалка не должна зависеть от overflow/z-index того, кто её открыл.
-import { useEffect, useId, useRef } from 'react';
-import type { KeyboardEvent, ReactNode } from 'react';
+// S4-11: ловушка фокуса — общий хук kit (useFocusTrap), тот же, что у меню
+// статуса и окон приложений.
+import { useId, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { IconButton } from '../elements/IconButton';
 import { kitT, useKitLang } from '../i18n';
+import { focusables, useFocusTrap } from '../keyboard/focusTrap';
 
 export type SheetSide = 'right' | 'left' | 'bottom';
 
@@ -23,63 +26,22 @@ export interface SheetProps {
   className?: string;
 }
 
-const FOCUSABLE = [
-  'a[href]', 'button:not([disabled])', 'input:not([disabled]):not([type="hidden"])',
-  'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-function focusables(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(el => !el.hasAttribute('hidden'));
-}
-
 export function Sheet({ open, onClose, title, side = 'right', actions, children, className }: SheetProps) {
   const lang = useKitLang();
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const opener = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
-      ? document.activeElement
-      : null;
-    const root = panel.current;
-    if (root) {
-      // Первый элемент тела, а не «Закрыть»: открыли ради содержимого.
-      const all = focusables(root);
+  const onKeyDown = useFocusTrap(panel, {
+    active: open,
+    onEscape: onClose,
+    // Первый элемент тела, а не «Закрыть»: открыли ради содержимого.
+    initialFocus: root => {
       const body = root.querySelector<HTMLElement>('.sk-sheet__body');
-      const first = (body && focusables(body)[0]) ?? all[0] ?? root;
-      first.focus();
-    }
-    return () => {
-      if (opener && opener.isConnected) opener.focus();
-    };
-  }, [open]);
+      return body ? focusables(body)[0] : null;
+    },
+  });
 
   if (!open) return null;
-
-  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      onClose();
-      return;
-    }
-    if (e.key !== 'Tab' || !panel.current) return;
-    const list = focusables(panel.current);
-    if (list.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = list[0];
-    const last = list[list.length - 1];
-    const active = document.activeElement;
-    if (e.shiftKey && (active === first || !panel.current.contains(active))) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && (active === last || !panel.current.contains(active))) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
 
   return createPortal(
     <>

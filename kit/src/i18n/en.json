@@ -113,6 +113,7 @@
   "kit.list.col.verdict": "Verdict",
   "kit.list.col.updated": "Updated",
   "kit.list.col.edges": "Links",
+  "kit.list.col.actions": "Actions",
   "kit.list.verdictError": "verdict failed",
   "kit.list.column": "{title}: {n}",
   "kit.list.removeChip": "Remove: {what}",

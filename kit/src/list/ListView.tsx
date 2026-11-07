@@ -15,11 +15,23 @@
 // касание строки переключает её, Esc/«Готово» выходят. Панель действий встаёт
 // на место шапки (на телефоне шапку скрывает CSS). Действие получает только
 // показанные выбранные; Promise — панель занята, отказ — причина в role=alert.
-import { Fragment, useEffect, useMemo, useState } from 'react';
+// Клавиатура как слой (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-11): строки — один
+// таб-стоп с курсором (↑/↓, J/K, Home/End), Enter открывает, X выделяет, Esc
+// снимает выделение; действия строки и действия над выделением — по своей
+// клавише. Клавиши по e.code (русская раскладка), слушатель — на корне списка,
+// а не на window: два списка на экране не делят клавиши. У каждой клавиши —
+// кнопка с aria-keyshortcuts и подсказкой Kbd; в поле ввода клавиша — текст.
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
+import { IconButton } from '../elements/IconButton';
+import { Kbd } from '../elements/Kbd';
 import { Pill } from '../elements/Pill';
+import {
+  LIST_RESERVED_KEYS, ariaKeyshortcuts, assertKeymap, findAction, isMacPlatform, kbdKeys,
+} from '../keyboard/keymap';
+import { matchHotkey } from '../resilience/hotkeys';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
 import { describeError } from '../resilience/errorText';
@@ -50,6 +62,8 @@ export interface ListBulkAction {
    * он идёт; отказ виден в панели с причиной, выбор при этом сохраняется.
    */
   run: (ids: string[]) => void | Promise<unknown>;
+  /** Клавиша над выделением (S4-11): «Shift+D», «Delete»… Не из занятых слоем списка. */
+  hotkey?: string;
 }
 
 /**
@@ -63,6 +77,17 @@ export interface ListExpand {
   can?: (r: KitRecord) => boolean;
 }
 
+/** Действие строки (S4-11): кнопка-иконка в строке и, по желанию, клавиша над строкой под курсором. */
+export interface ListRowAction {
+  id: string;
+  title: string;
+  /** Слаг game-icons. */
+  icon: string;
+  hotkey?: string;
+  /** Получает [id строки]. */
+  run: (ids: string[]) => void;
+}
+
 export interface ListViewProps {
   config: KitConfig;
   data: KitData;
@@ -72,6 +97,10 @@ export interface ListViewProps {
   ctx?: Partial<KitCtx>;
   /** Массовые действия с выбранными — через хуки приложения. */
   bulkActions?: ListBulkAction[];
+  /** Действия строки — кнопки в колонке «Действия», клавиши над строкой под курсором (S4-11). */
+  rowActions?: ListRowAction[];
+  /** Enter на строке; по умолчанию — переход по ссылке заголовка (href). */
+  onOpen?: (id: string) => void;
   onSelectionChange?: (ids: string[]) => void;
   /** Состояние в URL: по умолчанию window, false — только в памяти, объект — свой (тесты, iframe). */
   urlState?: boolean | UrlWindow;
@@ -181,6 +210,17 @@ function VerdictCell({ r, ctx, lang }: { r: KitRecord; ctx: KitCtx; lang: KitLan
   );
 }
 
+/** Поле набора текста: там клавиша — буква, а не команда. Чекбокс и радио — не набор. */
+function isTypingTarget(el: HTMLElement | null): boolean {
+  if (!el || typeof el.tagName !== 'string') return false;
+  if (el.tagName === 'INPUT') {
+    const type = (el as HTMLInputElement).type;
+    return type !== 'checkbox' && type !== 'radio';
+  }
+  return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable === true
+    || el.getAttribute?.('contenteditable') === 'true';
+}
+
 function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
   return href
     ? <a className="sk-list__title" href={href(r.id)}>{r.title}</a>
@@ -188,9 +228,14 @@ function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, quickIcons, valueIcon, expand, className,
-  state: stateProp, onStateChange,
+  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, onSelectionChange, urlState, initial, budget: budgetPart,
+  quickIcons, valueIcon, expand, className, state: stateProp, onStateChange,
 }: ListViewProps) {
+  // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
+  assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
+  const mac = isMacPlatform();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const labels = useLabels(config, lang);
@@ -228,8 +273,10 @@ export function ListView({
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
   const hasGroupings = groupOpts.fields.length + groupOpts.relations.length > 0;
   const baseColumns = listCfg?.columns ?? ['title+id', 'status'];
-  // Чекбоксы — колонкой конфига или в режиме выбора (тогда первой колонкой).
-  const columns = mode && !baseColumns.includes('select') ? ['select', ...baseColumns] : baseColumns;
+  // Чекбоксы — колонкой конфига или в режиме выбора (тогда первой колонкой, S4-10);
+  // действия строки (S4-11) — последней колонкой.
+  const withSelect = mode && !baseColumns.includes('select') ? ['select', ...baseColumns] : baseColumns;
+  const columns = rowActions?.length && !withSelect.includes('actions') ? [...withSelect, 'actions'] : withSelect;
 
   const update = (patch: Partial<ListState>) => {
     if (stateProp) {
@@ -315,9 +362,96 @@ export function ListView({
     e.preventDefault();
     toggleSel(id);
   };
-  const onRootKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.key === 'Escape' && selecting) { e.stopPropagation(); exitSelection(); }
+
+  // S4-11: курсор — по видимым строкам в порядке экрана (свёрнутые группы и
+  // хвост за «ещё N» не в счёт). Один таб-стоп: курсорная строка 0, прочие −1.
+  const visibleIds: string[] = [];
+  for (const g of groups) {
+    if (view === 'list' && groupKey !== null && !isOpen(g.key)) continue;
+    for (const r of g.records.slice(0, limitOf(g.key))) visibleIds.push(r.id);
+  }
+  const cursorId = cursor !== null && visibleIds.includes(cursor) ? cursor : (visibleIds[0] ?? null);
+  const focusRow = (id: string) => {
+    setCursor(id);
+    const el = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-record-id]') ?? [])]
+      .find(n => n.dataset.recordId === id);
+    el?.focus();
   };
+  const rowProps = (r: KitRecord) => ({
+    tabIndex: r.id === cursorId ? 0 : -1,
+    'data-cursor': r.id === cursorId ? 'true' : undefined,
+    onFocus: () => { if (cursor !== r.id) setCursor(r.id); },
+  });
+  const keyHint = (spec: string) => <Kbd keys={kbdKeys(spec, { mac })} />;
+
+  const onListKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented) return;
+    const target = e.target as HTMLElement;
+    if (isTypingTarget(target)) return;
+    // Esc — выход из режима выбора (S4-10) и снятие выделения (S4-11).
+    if (matchHotkey(e, 'Escape') || e.key === 'Escape') {
+      if (!selecting) return;
+      e.preventDefault();
+      e.stopPropagation();
+      exitSelection();
+      return;
+    }
+    const bulk = selIds.length > 0 ? findAction(bulkActions ?? [], e) : undefined;
+    if (bulk) {
+      e.preventDefault();
+      runBulk(bulk);
+      return;
+    }
+    const rowEl = target.closest<HTMLElement>('[data-record-id]');
+    const id = rowEl && rootRef.current?.contains(rowEl) ? rowEl.dataset.recordId ?? null : null;
+    if (id === null) return;
+    const at = visibleIds.indexOf(id);
+    const move = (to: number) => {
+      e.preventDefault();
+      const next = visibleIds[Math.max(0, Math.min(visibleIds.length - 1, to))];
+      if (next !== undefined) focusRow(next);
+    };
+    if (matchHotkey(e, 'ArrowDown') || matchHotkey(e, 'J')) return move(at + 1);
+    if (matchHotkey(e, 'ArrowUp') || matchHotkey(e, 'K')) return move(at - 1);
+    if (matchHotkey(e, 'Home')) return move(0);
+    if (matchHotkey(e, 'End')) return move(visibleIds.length - 1);
+    if (matchHotkey(e, 'Enter')) {
+      // Enter на ссылке/кнопке внутри строки — их собственное действие.
+      if (target !== rowEl) return;
+      e.preventDefault();
+      if (onOpen) onOpen(id);
+      else rowEl.querySelector<HTMLElement>('a.sk-list__title')?.click();
+      return;
+    }
+    if (matchHotkey(e, 'X')) {
+      if (!selectable) return;
+      e.preventDefault();
+      toggleSel(id);
+      return;
+    }
+    const act = findAction(rowActions ?? [], e);
+    if (act) {
+      e.preventDefault();
+      act.run([id]);
+    }
+  };
+
+  const rowActionsCell = (r: KitRecord) => (
+    <span className="sk-list__actions">
+      {rowActions?.map(a => (
+        <span key={a.id} className="sk-list__action">
+          <IconButton
+            icon={a.icon}
+            label={a.title}
+            shortcut={a.hotkey ? ariaKeyshortcuts(a.hotkey) : undefined}
+            onClick={() => a.run([r.id])}
+          />
+          {a.hotkey && keyHint(a.hotkey)}
+        </span>
+      ))}
+    </span>
+  );
+
   const runBulk = (a: ListBulkAction) => {
     if (busy !== null || selIds.length === 0) return;
     setBulkError(null);
@@ -407,7 +541,7 @@ export function ListView({
 
   const checkbox = (r: KitRecord) => (
     <label className="sk-list__check">
-      <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} aria-label={t('kit.list.select', { title: r.title })} />
+      <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} aria-label={t('kit.list.select', { title: r.title })} aria-keyshortcuts="X" />
     </label>
   );
 
@@ -422,6 +556,7 @@ export function ListView({
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
       case 'updated_at': return r.updated_at ? <span className="sk-list__mono">{r.updated_at.slice(0, 10)}</span> : '—';
       case 'edges_count': return <span className="sk-list__mono">{edgeCount.get(r.id) ?? 0}</span>;
+      case 'actions': return rowActionsCell(r);
       default:
         if (col.startsWith('progress:')) return <ProgressCell value={fieldValue(r, col.slice(9))} />;
         return valueCell(col, r);
@@ -437,6 +572,7 @@ export function ListView({
       case 'title+id': return t('kit.list.col.title');
       case 'verdict': return t('kit.list.col.verdict');
       case 'edges_count': return t('kit.list.col.edges');
+      case 'actions': return t('kit.list.col.actions');
       default: return labels.keyTitle(col.startsWith('progress:') ? col.slice(9) : col);
     }
   };
@@ -486,13 +622,14 @@ export function ListView({
               </Head>
               <ul className="sk-board__cards">
                 {g.records.slice(0, limit).map(r => (
-                  <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} onClick={e => onRecordClick(e, r.id)}>
+                  <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
                     {selectable && checkbox(r)}
                     <span className="sk-board__body">
                       <Title r={r} href={href} />
                       <Pill variant="id">{r.id}</Pill>
                       {columns.includes('verdict') && <VerdictCell r={r} ctx={ctx} lang={lang} />}
                     </span>
+                    {rowActions?.length ? rowActionsCell(r) : null}
                   </li>
                 ))}
               </ul>
@@ -589,6 +726,7 @@ export function ListView({
                       className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`}
                       data-record-id={r.id}
                       aria-selected={selectable ? selected.has(r.id) : undefined}
+                      {...rowProps(r)}
                       onClick={e => onRecordClick(e, r.id)}
                     >
                       {expandCell(r)}
@@ -610,10 +748,11 @@ export function ListView({
 
   return (
     <div
+      ref={rootRef}
       className={['sk-list', className].filter(Boolean).join(' ')}
       data-view={view}
       data-selecting={selecting ? 'true' : undefined}
-      onKeyDown={onRootKeyDown}
+      onKeyDown={onListKeyDown}
       {...longPress}
     >
       {/* Панель действий — на месте шапки: первой, на телефоне шапку заменяет (CSS, S4-10). */}
@@ -624,12 +763,19 @@ export function ListView({
             {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: filtered.length })}
           </button>
           {bulkActions?.map(a => (
-            <button key={a.id} type="button" className="sk-btn" disabled={busy !== null || selIds.length === 0} onClick={() => runBulk(a)}>
-              {a.title}
+            <button
+              key={a.id}
+              type="button"
+              className="sk-btn"
+              disabled={busy !== null || selIds.length === 0}
+              aria-keyshortcuts={a.hotkey ? ariaKeyshortcuts(a.hotkey) : undefined}
+              onClick={() => runBulk(a)}
+            >
+              {a.title}{a.hotkey && keyHint(a.hotkey)}
             </button>
           ))}
           {busy !== null && <span className="sk-list__selbusy">{t('kit.list.bulkRunning')}</span>}
-          <button type="button" className="sk-btn sk-list__seldone" onClick={exitSelection}>{t('kit.list.done')}</button>
+          <button type="button" className="sk-btn sk-list__seldone" aria-keyshortcuts="Escape" onClick={exitSelection}>{t('kit.list.done')}{keyHint('Escape')}</button>
           {bulkError && (
             <p className="sk-list__selerr" role="alert">{t('kit.list.bulkFailed', { title: bulkError.title, reason: bulkError.reason })}</p>
           )}

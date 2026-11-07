@@ -6,7 +6,9 @@
 // S4-07: пункты — в порядке жизненного цикла (statusTargets); с confirmFinal
 // завершающий статус (категория done/cancelled) — третий шаг, StatusConfirm;
 // Esc в подтверждении — назад к меню.
+// S4-11: общая ловушка фокуса (Tab по кругу, Esc), см. useFocusTrap.
 import { useEffect, useRef, useState } from 'react';
+import { useFocusTrap } from '../keyboard/focusTrap';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Kbd } from '../elements/Kbd';
 import { StatusConfirm } from '../elements/StatusConfirm';
@@ -58,14 +60,20 @@ export function StatusPopover({ statuses, current, onPick, onCancel, confirmFina
     setConfirming(null);
   };
 
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.code === 'Escape' || e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (confirming !== null) back();
-      else onCancel();
-      return;
-    }
+  const rootRef = useRef<HTMLDivElement>(null);
+  // S4-11: общая ловушка фокуса — первый пункт при открытии, Tab по кругу
+  // (пункты ↔ «Отмена»), Esc = отмена (в подтверждении S4-07 — назад к меню).
+  // Фокус на чип возвращает сам чип (StatusChip.close): при щелчке мимо фокус
+  // должен остаться там, куда щёлкнули.
+  const trap = useFocusTrap(rootRef, {
+    onEscape: () => { if (confirming !== null) back(); else onCancel(); },
+    restoreFocus: false,
+    initialFocus: root => root.querySelector<HTMLElement>('[role="menuitem"]'),
+  });
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
+    trap(e);
+    if (e.defaultPrevented || e.key === 'Tab') return;
     if (confirming !== null) return;
     if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
       const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
@@ -89,7 +97,7 @@ export function StatusPopover({ statuses, current, onPick, onCancel, confirmFina
 
   if (pending) {
     return (
-      <div className={cls} id={id} onKeyDown={onKeyDown}>
+      <div ref={rootRef} className={cls} id={id} onKeyDown={onKeyDown}>
         <StatusConfirm
           title={pending.title}
           code={pending.code}
@@ -103,7 +111,7 @@ export function StatusPopover({ statuses, current, onPick, onCancel, confirmFina
   }
 
   return (
-    <div className={cls} id={id} onKeyDown={onKeyDown}>
+    <div ref={rootRef} className={cls} id={id} onKeyDown={onKeyDown}>
       {targets.length ? (
         <div ref={menuRef} role="menu" aria-label={kitT(lang, 'kit.status.menu')} className="sk-spop__menu">
           {targets.map(({ item, key }) => {
