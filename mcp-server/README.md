@@ -31,7 +31,8 @@ experiment mart — documented on `/benchmark?tab=mcp` instead.
 
 | Var | Default | Meaning |
 |-----|---------|---------|
-| `LORE_BACKEND_URL` | `http://localhost:9100` | UnlimitedLORE backend base URL |
+| `LORE_BACKEND_URL` | `http://localhost:9100` | UnlimitedLORE backend base URL (на стенде — прямой маршрут `https://lore.odal.seidrstudio.pro/_backend`, S2-08) |
+| `LORE_BACKEND_FALLBACK_URL` | — | Запасной адрес (nginx фронта `:4400`); используется, только если до основного запрос не дошёл (соединение/TLS, либо ответил SPA) |
 | `LORE_SEER_ROLE` | `admin` | `X-Seer-Role` header for write tools |
 
 ## Build & run
