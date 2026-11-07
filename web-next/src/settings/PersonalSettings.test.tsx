@@ -25,9 +25,14 @@ describe('S3-07: переключатель «новая навигация»', 
     expect(html).toContain(MESSAGES.ru['settings.nav.unavailable']);
   });
 
-  it('личные настройки входят в оболочку v2', () => {
-    const html = renderToString(<App />);
+  it('личные настройки входят в оболочку v2 (с S4-01 — раздел «Настройки», ?sec=settings)', () => {
+    const win = {
+      location: { pathname: '/', search: '?sec=settings', hash: '' },
+      history: { pushState: () => {}, replaceState: () => {} },
+    };
+    const html = renderToString(<App path="/" win={win} />);
     expect(html).toContain('data-nav-switch="v2"');
+    expect(html).toContain('href="/kit"');
   });
 });
 

@@ -7,6 +7,8 @@
   "kit.state.error.retry": "Повторить",
   "kit.state.forbidden.title": "Нет прав",
   "kit.state.forbidden.hint": "Данные скрыты правами — это не «пусто».",
+  "kit.state.unbuilt.title": "Экран ещё не собран",
+  "kit.state.unbuilt.hint": "Данные здесь не запрашивались — это не «пусто» и не сбой.",
   "kit.state.truncated.paged": "Показано {from}–{to} из {total}",
   "kit.state.truncated.capped": "Показано {shown}: выдача обрезана сервером на {limit} строк — сузьте запрос",
   "kit.state.truncated.unknown": "Показано {shown}: полноту выдачи проверить нечем",

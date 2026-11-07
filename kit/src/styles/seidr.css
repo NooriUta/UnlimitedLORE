@@ -699,6 +699,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-color: color-mix(in srgb, var(--wrn) 50%, transparent);
   background: color-mix(in srgb, var(--wrn) 7%, transparent);
 }
+/* S4-01: экран не собран — информационный тон, не «пусто» и не тревога. */
+.sk-state--unbuilt {
+  --state-c: var(--inf);
+  border-color: color-mix(in srgb, var(--inf) 45%, transparent);
+}
 
 /* ---------- Truncated ---------- */
 .sk-trunc {
@@ -1059,6 +1064,39 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-shell__grp--wrn .sk-shell__grp-title { color: var(--wrn); }
 .sk-shell__grp--dng .sk-shell__grp-title { color: var(--dng); }
 .sk-shell__grp--inf .sk-shell__grp-title { color: var(--inf); }
+/* S4-01: сворачиваемая группа — заголовок-кнопка на всю ширину; цель касания
+   на сенсоре не меньше --tap (44px), на десктопе плотно. */
+.sk-shell__grp-title:has(.sk-shell__grp-toggle) { padding: 0; }
+.sk-shell__grp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: max(var(--tap), 24px);
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sk-shell__grp-toggle:hover { background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.sk-shell__grp-toggle:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-shell__caret {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform .12s ease;
+}
+.sk-shell__grp--collapsed .sk-shell__caret { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) { .sk-shell__caret { transition: none; } }
 .sk-shell__list { margin: 0; padding: 0; list-style: none; }
 .sk-shell__row { display: flex; align-items: center; gap: 2px; }
 .sk-shell__item {

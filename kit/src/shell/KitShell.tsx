@@ -57,6 +57,8 @@ export interface KitShellProps {
   /** Имя приложения в шапке; по умолчанию — заголовок первого модуля. */
   brand?: string;
   brandIcon?: string;
+  /** Метка после имени приложения (версия, стенд) — например, Pill variant="id". */
+  brandTag?: ReactNode;
   /** Хранилище видов и недавних; по умолчанию localStorage с откатом в память. */
   storage?: SafeStorage;
   /** Префикс ключей хранилища — у каждого приложения свой. */
@@ -73,6 +75,17 @@ export interface KitShellProps {
 const NARROW_QUERY = '(max-width: 720px)';
 const RECENT_LIMIT = 8;
 const TONES = new Set(['acc', 'suc', 'wrn', 'dng', 'inf']);
+
+/**
+ * Тон группы: и голое имя токена (acc), и форма var(--acc), которую требует
+ * валидатор конфига (validateKitConfig) — иначе валидный конфиг терял цвет.
+ */
+function toneOf(tone: string | undefined): string | undefined {
+  if (!tone) return undefined;
+  const t = tone.trim();
+  const name = /^var\(--([a-z0-9-]+)\)$/.exec(t)?.[1] ?? t;
+  return TONES.has(name) ? name : undefined;
+}
 
 const ShellContext = createContext<KitShellApi | null>(null);
 
@@ -121,7 +134,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 }
 
 export function KitShell({
-  config, data, brand, brandIcon, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
+  config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
   onNavigate, onOpenRecord, children,
 }: KitShellProps) {
   const lang = useKitLang();
@@ -133,6 +146,8 @@ export function KitShell({
   const [nav, setNav] = useState<KitNav>(() => resolveNav(config, urlWin ? readUrlState(urlWin) : new URLSearchParams()));
   const [recent, setRecent] = useState<string[]>(() => readList<string>(storage, `${storageKey}.recent`));
   const [views, setViews] = useState<KitSavedView[]>(() => readList<KitSavedView>(storage, `${storageKey}.views`));
+  // S4-01: свёрнутые группы меню — id групп; переживают перезагрузку.
+  const [collapsed, setCollapsed] = useState<string[]>(() => readList<string>(storage, `${storageKey}.collapsed`));
   const [drawer, setDrawer] = useState(false);
   const navRef = useRef(nav);
   navRef.current = nav;
@@ -195,6 +210,14 @@ export function KitShell({
     });
   }, [storage, storageKey]);
 
+  const toggleGroup = useCallback((id: string) => {
+    setCollapsed(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      storage.set(`${storageKey}.collapsed`, JSON.stringify(next));
+      return next;
+    });
+  }, [storage, storageKey]);
+
   const api = useMemo<KitShellApi>(
     () => ({ nav, navigate, openRecord, recent, views, saveView, removeView }),
     [nav, navigate, openRecord, recent, views, saveView, removeView],
@@ -211,6 +234,8 @@ export function KitShell({
       recent={recent}
       titles={titles}
       views={views}
+      collapsed={collapsed}
+      onToggleGroup={toggleGroup}
       onItem={(id, view) => { navigate({ item: id, view: view ?? null }); onPick?.(); }}
       onView={v => { navigate({ module: v.module, item: v.item, view: v.view }); onPick?.(); }}
       onRecent={id => { openRecord(id); onPick?.(); }}
@@ -236,6 +261,7 @@ export function KitShell({
           <div className="sk-shell__brand">
             <GameIcon slug={brandIcon ?? activeModule?.icon} size={16} />
             <span className="sk-shell__brand-text">{brand ?? config.modules[0]?.title ?? ''}</span>
+            {brandTag}
           </div>
           <nav className="sk-shell__mods" aria-label={kitT(lang, 'kit.shell.modules')}>
             {config.modules.map(m => {
@@ -284,6 +310,8 @@ interface ShellMenuProps {
   recent: string[];
   titles: Map<string, string>;
   views: KitSavedView[];
+  collapsed: string[];
+  onToggleGroup: (id: string) => void;
   onItem: (id: string, view: string | undefined) => void;
   onView: (v: KitSavedView) => void;
   onRecent: (id: string) => void;
@@ -291,18 +319,51 @@ interface ShellMenuProps {
   onRemoveView: (id: string) => void;
 }
 
-function Group({ title, tone, children }: { title: string; tone?: string; children: ReactNode }) {
+interface GroupProps {
+  title: string;
+  tone?: string;
+  children: ReactNode | ((listId: string) => ReactNode);
+  /** Задан — группа сворачивается: заголовок становится кнопкой-раскрывашкой (S4-01). */
+  expanded?: boolean;
+  onToggle?: () => void;
+}
+
+function Group({ title, tone, children, expanded, onToggle }: GroupProps) {
   const headId = useId();
-  const cls = ['sk-shell__grp', tone && TONES.has(tone) ? `sk-shell__grp--${tone}` : ''].filter(Boolean).join(' ');
+  const listId = useId();
+  const toneName = toneOf(tone);
+  const collapsible = onToggle !== undefined;
+  const cls = [
+    'sk-shell__grp',
+    toneName ? `sk-shell__grp--${toneName}` : '',
+    collapsible && !expanded ? 'sk-shell__grp--collapsed' : '',
+  ].filter(Boolean).join(' ');
   return (
     <section className={cls} aria-labelledby={headId} data-tone={tone}>
-      <h2 id={headId} className="sk-shell__grp-title">{title}</h2>
-      {children}
+      <h2 id={headId} className="sk-shell__grp-title">
+        {collapsible
+          ? (
+            <button
+              type="button"
+              className="sk-shell__grp-toggle"
+              aria-expanded={expanded ? 'true' : 'false'}
+              aria-controls={listId}
+              onClick={onToggle}
+            >
+              <span className="sk-shell__caret" aria-hidden="true" />
+              <span className="sk-shell__label">{title}</span>
+            </button>
+          )
+          : title}
+      </h2>
+      {typeof children === 'function' ? children(listId) : children}
     </section>
   );
 }
 
-function ShellMenu({ config, lang, nav, recent, titles, views, onItem, onView, onRecent, onSaveView, onRemoveView }: ShellMenuProps) {
+function ShellMenu({
+  config, lang, nav, recent, titles, views, collapsed, onToggleGroup, onItem, onView, onRecent, onSaveView, onRemoveView,
+}: ShellMenuProps) {
   const { groups, myViews, recent: showRecent } = config.menu;
   return (
     <nav className="sk-shell__side-nav" aria-label={kitT(lang, 'kit.shell.sections')}>
@@ -362,10 +423,15 @@ function ShellMenu({ config, lang, nav, recent, titles, views, onItem, onView, o
         </Group>
       )}
       {groups.length === 0 && <p className="sk-shell__note">{kitT(lang, 'kit.shell.menuEmpty')}</p>}
-      {groups.map(g => (
-        <Group key={g.id} title={g.title} tone={g.tone}>
-          <ul className="sk-shell__list">
-            {g.items.map(i => (
+      {groups.map(g => {
+        const expanded = !collapsed.includes(g.id);
+        // Свёрнутая группа прячет пункты, кроме текущего: «где я» видно всегда.
+        const shown = expanded ? g.items : g.items.filter(i => i.id === nav.item);
+        return (
+        <Group key={g.id} title={g.title} tone={g.tone} expanded={expanded} onToggle={() => onToggleGroup(g.id)}>
+          {listId => (
+          <ul id={listId} className="sk-shell__list">
+            {shown.map(i => (
               <li key={i.id}>
                 <button
                   type="button"
@@ -379,8 +445,10 @@ function ShellMenu({ config, lang, nav, recent, titles, views, onItem, onView, o
               </li>
             ))}
           </ul>
+          )}
         </Group>
-      ))}
+        );
+      })}
     </nav>
   );
 }
