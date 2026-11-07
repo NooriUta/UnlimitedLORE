@@ -9,13 +9,20 @@
 // Честность: статус вне словаря виден как «вне словаря», ошибка блока из
 // meta.errors — errBlock с причиной, исключение вердикта — ошибка только в
 // своей ячейке, проверенный ноль ≠ «фильтр всё отсеял».
+//
+// Выделение (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-10): долгое нажатие на строку или
+// карточку (телефон) либо кнопка «Выбрать» включают режим выбора — чекбоксы,
+// касание строки переключает её, Esc/«Готово» выходят. Панель действий встаёт
+// на место шапки (на телефоне шапку скрывает CSS). Действие получает только
+// показанные выбранные; Promise — панель занята, отказ — причина в role=alert.
 import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
+import { describeError } from '../resilience/errorText';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
@@ -24,12 +31,18 @@ import {
   quickCounts, readListState, shownOf, sortRecords, valueKey, writeListState,
 } from './listModel';
 import type { ListGroup, ListState, ListViewKind } from './listModel';
+import { selectAllShown, toggleId, visibleSelection } from './listSelection';
+import { useLongPress } from './useLongPress';
 
 export interface ListBulkAction {
   id: string;
   title: string;
-  /** Хук действия: получает id выбранных записей. Сохранение — забота приложения. */
-  run: (ids: string[]) => void;
+  /**
+   * Хук действия: получает id выбранных и ПОКАЗАННЫХ записей (скрытое фильтром
+   * не уходит). Сохранение — забота приложения. Promise — панель занята, пока
+   * он идёт; отказ виден в панели с причиной, выбор при этом сохраняется.
+   */
+  run: (ids: string[]) => void | Promise<unknown>;
 }
 
 export interface ListViewProps {
@@ -162,6 +175,10 @@ export function ListView({
     { by: state.group, view: state.view, open: {}, more: {} },
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  // Режим выбора (S4-10): включается долгим нажатием или кнопкой «Выбрать».
+  const [mode, setMode] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [bulkError, setBulkError] = useState<{ title: string; reason: string } | null>(null);
 
   const listCfg = config.list;
   const views = (listCfg?.views ?? ['list']).filter(v => VIEWS_RENDERED.includes(v));
@@ -169,7 +186,9 @@ export function ListView({
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
   const groupings = listCfg?.groupings ?? [];
-  const columns = listCfg?.columns ?? ['title+id', 'status'];
+  const baseColumns = listCfg?.columns ?? ['title+id', 'status'];
+  // Чекбоксы — колонкой конфига или в режиме выбора (тогда первой колонкой).
+  const columns = mode && !baseColumns.includes('select') ? ['select', ...baseColumns] : baseColumns;
 
   const update = (patch: Partial<ListState>) => {
     setState(prev => {
@@ -212,15 +231,47 @@ export function ListView({
   const toggleGroup = (k: string) => setUi({ ...cur, open: { ...cur.open, [k]: !isOpen(k) } });
   const showMore = (k: string) => setUi({ ...cur, more: { ...cur.more, [k]: limitOf(k) + budget.perGroup } });
 
-  useEffect(() => { onSelectionChange?.([...selected]); }, [selected, onSelectionChange]);
-  const toggleSel = (id: string) => setSelected(prev => {
-    const n = new Set(prev);
-    if (n.has(id)) n.delete(id); else n.add(id);
-    return n;
-  });
-  const allShownSelected = filtered.length > 0 && filtered.every(r => selected.has(r.id));
-  const toggleAll = () => setSelected(allShownSelected ? new Set() : new Set(filtered.map(r => r.id)));
+  // Выбранное — только среди показанного: фильтр спрятал запись — действие её не тронет.
+  const selIds = visibleSelection(selected, filtered);
+  const selKey = selIds.join('\u0000');
+  useEffect(() => { onSelectionChange?.(selKey ? selKey.split('\u0000') : []); }, [selKey, onSelectionChange]);
+  const toggleSel = (id: string) => { setBulkError(null); setSelected(prev => toggleId(prev, id)); };
+  const allShownSelected = filtered.length > 0 && selIds.length === filtered.length;
+  const toggleAll = () => { setBulkError(null); setSelected(prev => selectAllShown(prev, filtered)); };
   const selectable = columns.includes('select');
+  const selecting = mode || selIds.length > 0;
+  const exitSelection = () => { setMode(false); setSelected(new Set()); setBulkError(null); };
+  const longPress = useLongPress(id => {
+    setMode(true);
+    setBulkError(null);
+    setSelected(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
+  });
+  // В режиме выбора касание строки переключает её, а ссылка заголовка не уводит.
+  const onRecordClick = (e: ReactMouseEvent, id: string) => {
+    if (!selecting) return;
+    if ((e.target as Element).closest('input, label, button, select, textarea')) return;
+    e.preventDefault();
+    toggleSel(id);
+  };
+  const onRootKeyDown = (e: ReactKeyboardEvent) => {
+    if (e.key === 'Escape' && selecting) { e.stopPropagation(); exitSelection(); }
+  };
+  const runBulk = (a: ListBulkAction) => {
+    if (busy !== null || selIds.length === 0) return;
+    setBulkError(null);
+    const fail = (err: unknown) => setBulkError({ title: a.title, reason: describeError(err) });
+    let res: void | Promise<unknown>;
+    try {
+      res = a.run([...selIds]);
+    } catch (err) {
+      fail(err);
+      return;
+    }
+    if (res && typeof res.then === 'function') {
+      setBusy(a.id);
+      res.then(() => setBusy(null), (err: unknown) => { setBusy(null); fail(err); });
+    }
+  };
 
   const groupTitle = (g: ListGroup): string => {
     if (g.other) return t('kit.list.others', { groups: g.groupCount ?? 0 });
@@ -333,7 +384,7 @@ export function ListView({
               </h3>
               <ul className="sk-board__cards">
                 {g.records.slice(0, limit).map(r => (
-                  <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
+                  <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} onClick={e => onRecordClick(e, r.id)}>
                     {selectable && checkbox(r)}
                     <span className="sk-board__body">
                       <Title r={r} href={href} />
@@ -374,7 +425,13 @@ export function ListView({
                   </tr>
                 )}
                 {open && g.records.slice(0, limit).map(r => (
-                  <tr key={r.id} className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
+                  <tr
+                    key={r.id}
+                    className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`}
+                    data-record-id={r.id}
+                    aria-selected={selectable ? selected.has(r.id) : undefined}
+                    onClick={e => onRecordClick(e, r.id)}
+                  >
                     {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
                   </tr>
                 ))}
@@ -390,7 +447,33 @@ export function ListView({
   }
 
   return (
-    <div className={['sk-list', className].filter(Boolean).join(' ')} data-view={view}>
+    <div
+      className={['sk-list', className].filter(Boolean).join(' ')}
+      data-view={view}
+      data-selecting={selecting ? 'true' : undefined}
+      onKeyDown={onRootKeyDown}
+      {...longPress}
+    >
+      {/* Панель действий — на месте шапки: первой, на телефоне шапку заменяет (CSS, S4-10). */}
+      {selecting && (
+        <div className="sk-list__selbar" data-testid="kit-list-selbar" role="group" aria-label={t('kit.list.bulk')} aria-busy={busy !== null}>
+          <span className="sk-list__selcount">{t('kit.list.selected', { n: selIds.length })}</span>
+          <button type="button" className="sk-btn" onClick={toggleAll} disabled={filtered.length === 0}>
+            {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: filtered.length })}
+          </button>
+          {bulkActions?.map(a => (
+            <button key={a.id} type="button" className="sk-btn" disabled={busy !== null || selIds.length === 0} onClick={() => runBulk(a)}>
+              {a.title}
+            </button>
+          ))}
+          {busy !== null && <span className="sk-list__selbusy">{t('kit.list.bulkRunning')}</span>}
+          <button type="button" className="sk-btn sk-list__seldone" onClick={exitSelection}>{t('kit.list.done')}</button>
+          {bulkError && (
+            <p className="sk-list__selerr" role="alert">{t('kit.list.bulkFailed', { title: bulkError.title, reason: bulkError.reason })}</p>
+          )}
+        </div>
+      )}
+
       {errors.map(e => (
         <LoadError key={e.block} compact title={t('kit.list.blockError', { block: e.block })} hint={e.reason} />
       ))}
@@ -411,6 +494,11 @@ export function ListView({
               </button>
             ))}
           </div>
+        )}
+        {!selecting && (bulkActions?.length ?? 0) > 0 && (
+          <button type="button" className="sk-list__dir sk-list__selmode" onClick={() => { setMode(true); setBulkError(null); }}>
+            {t('kit.list.selectMode')}
+          </button>
         )}
         {quick.length > 0 && (
           <div role="group" aria-label={t('kit.list.quick')} className="sk-list__quick">
@@ -496,16 +584,6 @@ export function ListView({
         )}
       </p>
       <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
-
-      {selected.size > 0 && (
-        <div className="sk-list__selbar" data-testid="kit-list-selbar" role="group" aria-label={t('kit.list.bulk')}>
-          <span>{t('kit.list.selected', { n: selected.size })}</span>
-          {bulkActions?.map(a => (
-            <button key={a.id} type="button" className="sk-btn" onClick={() => a.run([...selected])}>{a.title}</button>
-          ))}
-          <button type="button" className="sk-btn" onClick={() => setSelected(new Set())}>{t('kit.list.clearSelection')}</button>
-        </div>
-      )}
 
       {body}
     </div>

@@ -1625,6 +1625,47 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   .sk-list__select { max-width: 100%; }
 }
 
+/* ---------- выделение списка (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-10) ----------
+   Долгое нажатие / «Выбрать» включают режим выбора: панель действий встаёт на
+   место шапки. Удержание пальца не выделяет текст и не открывает меню ссылки. */
+.sk-list[data-selecting='true'] .sk-list__row,
+.sk-list[data-selecting='true'] .sk-board__card { cursor: pointer; }
+@media (pointer: coarse) {
+  .sk-list__row,
+  .sk-board__card {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+.sk-list__selmode { color: var(--t1); }
+.sk-list__selcount { font-weight: 700; color: var(--t1); }
+.sk-list__selbusy { color: var(--t2); font-size: var(--fs-xs); }
+.sk-list__seldone { margin-left: auto; }
+.sk-list__selbar .sk-btn {
+  min-height: max(var(--tap), 22px);
+}
+.sk-list__selerr {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 2px 8px;
+  border-left: 3px solid var(--dng);
+  color: var(--t1);
+  background: color-mix(in srgb, var(--dng) 10%, transparent);
+  font-size: var(--fs-xs);
+}
+@media (max-width: 720px), (pointer: coarse) {
+  .sk-list[data-selecting='true'] .sk-list__bar,
+  .sk-list[data-selecting='true'] .sk-list__controls,
+  .sk-list[data-selecting='true'] .sk-list__desc { display: none; }
+  .sk-list__selbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg1);
+  }
+}
+
 /* ── Каркас записи (SPRINT_UXR_S10_SEIDR_KIT/K-04): шапка, вердикт, вкладки,
    «Связи», локальный граф, «Журнал». Цвет типа ребра/статуса/вердикта приходит
    из конфига в --edge-c/--pill-c/--verdict-c/--node-c (токен темы). ── */
