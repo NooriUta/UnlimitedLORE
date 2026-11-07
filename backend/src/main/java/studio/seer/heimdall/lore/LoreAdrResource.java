@@ -75,12 +75,19 @@ public class LoreAdrResource extends LoreResourceBase {
             // context_md/decision_md/consequences_md bug fixed above, 2026-07-02.
             StringBuilder upsertSql = new StringBuilder("UPDATE KnowADR SET adr_id=:adr_id, name=:name");
             Map<String, Object> upsertP = mapOfNullable("adr_id", req.adr_id(), "name", req.name());
-            if (req.date_created() != null) {
+            // S2-10: у НОВОГО ADR рядом с датой — полный ISO-момент создания, если он
+            // известен (CreationMoment.resolve); правка существующего его не трогает.
+            if (isNewAdr) {
+                CreationMoment.Resolved cm = CreationMoment.resolve(req.date_created(), Instant.parse(now));
+                upsertSql.append(", date_created=:date_created");
+                upsertP.put("date_created", cm.date());
+                if (cm.moment() != null) {
+                    upsertSql.append(", created_at=:created_at");
+                    upsertP.put("created_at", cm.moment());
+                }
+            } else if (req.date_created() != null) {
                 upsertSql.append(", date_created=:date_created");
                 upsertP.put("date_created", req.date_created());
-            } else if (isNewAdr) {
-                upsertSql.append(", date_created=:date_created");
-                upsertP.put("date_created", java.time.LocalDate.now().toString());
             }
             if (req.component_id() != null) {
                 upsertSql.append(", component_id=:component_id");

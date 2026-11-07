@@ -124,7 +124,16 @@ public class LoreSpecResource extends LoreResourceBase {
                         "WHERE in('HAS_STATE').spec_id[0] = :id AND valid_to IS NULL LIMIT 1",
                         Map.of("id", req.spec_id())))
                     .await().indefinitely().result();
-                if (histRows != null && !histRows.isEmpty() && Boolean.TRUE.equals(req.checkpoint())) {
+                // S2-10: номер версии спеки — свойство ВЕРСИИ истории. Новый номер
+                // (при уже записанном другом) открывает новую строку и без checkpoint:
+                // правка на месте стирала прежний номер, и разбивка по semver была
+                // невозможна (news-proof 07.11). Первый номер у легаси-строки без
+                // version — дописывается на месте: прежнего номера там нет, терять нечего.
+                Object openVersion = histRows == null || histRows.isEmpty() ? null : histRows.get(0).get("version");
+                boolean versionChanged = req.version() != null && openVersion != null
+                    && !req.version().equals(String.valueOf(openVersion));
+                if (histRows != null && !histRows.isEmpty()
+                        && (Boolean.TRUE.equals(req.checkpoint()) || versionChanged)) {
                     // LH-02: close the open row + open a fresh one, carrying forward fields
                     // not being changed — the previous edition survives as a closed row.
                     String nsid = UUID.randomUUID().toString();

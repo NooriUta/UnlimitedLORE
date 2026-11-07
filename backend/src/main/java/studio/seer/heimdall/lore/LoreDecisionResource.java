@@ -75,10 +75,12 @@ public class LoreDecisionResource extends LoreResourceBase {
         // ДО записи: после UPSERT «была ли запись раньше» уже неотличимо от
         // «появилась сейчас», и правка стала бы неотличима от создания.
         boolean existedBefore;
+        boolean knownNew = false; // S2-10: «новое» доказано пробой, а не выведено из её сбоя
         try {
             existedBefore = !ingestService.queryPublic(
                 "SELECT decision_id FROM KnowDecision WHERE decision_id = :did LIMIT 1",
                 Map.of("did", req.decision_id())).isEmpty();
+            knownNew = !existedBefore;
         } catch (Exception probeFailed) {
             // Не молча: не сумев спросить, мы НЕ ЗНАЕМ, правка это или создание.
             // Считать «создание» безопаснее — лишнего события в ленте не будет,
@@ -95,7 +97,16 @@ public class LoreDecisionResource extends LoreResourceBase {
             p.put("did", req.decision_id());
             p.put("title", req.title().trim());
             if (req.body_md() != null)      { dsql.append(", body_md=:body");      p.put("body", req.body_md()); }
-            if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
+            if (knownNew) {
+                // S2-10: у НОВОГО решения рядом с датой — полный ISO-момент создания,
+                // если он известен (CreationMoment.resolve). Дата в прошлом момента не
+                // получает; правка существующего решения его не трогает. При сбое
+                // пробы — прежнее поведение (дата только присланная): иначе момент
+                // «сейчас» лёг бы на решение, которое, возможно, давно существует.
+                CreationMoment.Resolved cm = CreationMoment.resolve(req.date_created(), java.time.Instant.now());
+                dsql.append(", date_created=:date"); p.put("date", cm.date());
+                if (cm.moment() != null) { dsql.append(", created_at=:cat"); p.put("cat", cm.moment()); }
+            } else if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
             if (req.refs_raw() != null)     { dsql.append(", refs_raw=:refs");     p.put("refs", req.refs_raw()); }
             if (req.component_id() != null) { dsql.append(", component_id=:comp"); p.put("comp", req.component_id()); }
             // S2-13: статус (status_raw — поле, которое читают слайсы decisions/

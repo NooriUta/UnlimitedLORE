@@ -1520,7 +1520,24 @@ final class LoreSchemaMigrations {
         // статус вершины с пометкой «известен с момента бэкфилла»; элементу без
         // истории — одна версия с той же пометкой. Новых версий у тех, у кого они
         // есть, не открывает; valid_from/valid_to существующих строк не трогает.
-        new Step(68, 17, "java__status_history_backfill", List.of())
+        new Step(68, 17, "java__status_history_backfill", List.of()),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-10 (остаток после S2-12/S2-13).
+        // 1) Полный ISO-момент рядом с датой (CreationMoment.FIELDS): created_at у
+        //    ADR и решений, released_at у релиза. Дата (date_created/release_date)
+        //    остаётся как была — её читают v1, timeline_* и контракты S0. Момент
+        //    пишется один раз при создании и только когда известен; у старых
+        //    записей его нет — это и есть пометка «время неизвестно» (UPDATE-пометки
+        //    чек-лист v1 не пускает).
+        // 2) KnowSpecHist.version объявлено явно: номер версии спеки — свойство
+        //    ВЕРСИИ истории (смена номера открывает новую строку, LoreSpecResource),
+        //    до сих пор писалось без объявления.
+        // Только новые необязательные STRING, major 17.
+        new Step(69, 17, "creation_moment_and_spec_hist_version", List.of(
+            "CREATE PROPERTY KnowADR.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDecision.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRelease.released_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpecHist.version IF NOT EXISTS STRING"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
