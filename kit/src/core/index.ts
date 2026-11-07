@@ -20,3 +20,11 @@ export {
 export const KIT_CONFIG_SCHEMA = configSchema;
 /** JSON-схема данных kit — window.X_DATA / ответ сервера (draft 2020-12). */
 export const KIT_DATA_SCHEMA = dataSchema;
+// Ядро Seiðr-kit (SPRINT_UXR_S10_SEIDR_KIT): контракт и общие механизмы записей.
+export type * from './contract';
+export * from './statusModel';
+export * from './statusSave';
+export * from './useStatusChange';
+export * from './StatusIcon';
+export * from './StatusPopover';
+export * from './StatusChip';

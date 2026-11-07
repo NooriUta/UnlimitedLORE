@@ -141,5 +141,12 @@
   "kit.record.journal.emptyHint": "Изменений этой записи в выборке нет.",
   "kit.record.journal.agent": "агент",
   "kit.record.journal.approved": "согласовал(а) {who}",
-  "kit.record.journal.failed": "Журнал не загрузился"
+  "kit.record.journal.failed": "Журнал не загрузился",
+  "kit.status.label": "Статус: {title}",
+  "kit.status.menu": "Сменить статус",
+  "kit.status.cancel": "Отмена",
+  "kit.status.none": "Нет допустимых переходов из этого статуса",
+  "kit.status.saving": "Сохранение…",
+  "kit.status.saveFailed": "Не сохранено, статус возвращён: {reason}",
+  "kit.status.undo": "Вернуть «{title}»"
 }

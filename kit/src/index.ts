@@ -23,3 +23,6 @@ export type * from './core/contract';
 // Контракт ядра (K-01…K-11) и listView (SPRINT_UXR_S10_SEIDR_KIT/K-03).
 export type * from './core/contract';
 export * from './list';
+// Ядро: контракт KitConfig/KitData и смена статуса «2 касания» с хуками
+// сохранения (SPRINT_UXR_S10_SEIDR_KIT/K-05).
+export * from './core';

@@ -141,5 +141,12 @@
   "kit.record.journal.emptyHint": "The data has no changes for this record.",
   "kit.record.journal.agent": "agent",
   "kit.record.journal.approved": "approved by {who}",
-  "kit.record.journal.failed": "Journal failed to load"
+  "kit.record.journal.failed": "Journal failed to load",
+  "kit.status.label": "Status: {title}",
+  "kit.status.menu": "Change status",
+  "kit.status.cancel": "Cancel",
+  "kit.status.none": "No allowed transitions from this status",
+  "kit.status.saving": "Saving…",
+  "kit.status.saveFailed": "Not saved, status reverted: {reason}",
+  "kit.status.undo": "Revert to “{title}”"
 }
