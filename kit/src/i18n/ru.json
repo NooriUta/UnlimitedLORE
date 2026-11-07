@@ -196,5 +196,7 @@
   "kit.tree.noMatchHint": "Фильтр проверил все {total} узлов — совпадений нет.",
   "kit.tree.notConfigured": "Вид «Дерево» не настроен",
   "kit.tree.notConfiguredHint": "Нужны tree в list.views и описание list.tree (поля parent и order).",
-  "kit.tree.truncated": "Выдача обрезана: в дереве {shown} из {total} — ветви могут быть неполными"
+  "kit.tree.truncated": "Выдача обрезана: в дереве {shown} из {total} — ветви могут быть неполными",
+  "kit.hook.error.title": "Блок «{block}» не отрисовался",
+  "kit.hook.error.hint": "Ошибка в хуке вида записи — остальная карточка работает"
 }

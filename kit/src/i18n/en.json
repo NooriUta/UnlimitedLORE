@@ -196,5 +196,7 @@
   "kit.tree.noMatchHint": "The filter checked all {total} nodes — no matches.",
   "kit.tree.notConfigured": "Tree view is not configured",
   "kit.tree.notConfiguredHint": "Needs tree in list.views and a list.tree spec (parent and order fields).",
-  "kit.tree.truncated": "Result truncated: the tree has {shown} of {total} — branches may be incomplete"
+  "kit.tree.truncated": "Result truncated: the tree has {shown} of {total} — branches may be incomplete",
+  "kit.hook.error.title": "Block “{block}” failed to render",
+  "kit.hook.error.hint": "Error in the record kind hook — the rest of the card still works"
 }
