@@ -146,7 +146,9 @@ public class AidaLoreResource extends LoreResourceBase {
         String jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, exp), secret.get());
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("chart", chart);
-        out.put("project", d.chart().locked() ? project : null);
+        // S0-04: project — ВСЕГДА массив, ровно то, что заперто в подписи
+        // (нормализованный список), а не эхо сырого запроса; у незапертого — [].
+        out.put("project", d.chart().locked() ? VolvaEmbedSigner.projectList(project) : java.util.List.of());
         out.put("locked", d.chart().locked());
         out.put("url", VolvaEmbedSigner.embedUrl(volvaSiteUrl.get(), d.chart(), jwt));
         out.put("expires_at", java.time.Instant.ofEpochSecond(exp).toString());
