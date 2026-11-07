@@ -7,6 +7,8 @@
   "kit.state.error.retry": "Retry",
   "kit.state.forbidden.title": "No access",
   "kit.state.forbidden.hint": "The data is hidden by permissions — this is not “empty”.",
+  "kit.state.unbuilt.title": "This screen is not built yet",
+  "kit.state.unbuilt.hint": "No data was requested here — this is neither “empty” nor a failure.",
   "kit.state.truncated.paged": "Showing {from}–{to} of {total}",
   "kit.state.truncated.capped": "Showing {shown}: the server cut the result at {limit} rows — narrow the query",
   "kit.state.truncated.unknown": "Showing {shown}: there is no way to check whether the result is complete",

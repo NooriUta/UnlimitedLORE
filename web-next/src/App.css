@@ -1,23 +1,20 @@
-/* Каркас оболочки v2 (S3-01). Токены, тема и база документа — в Seiðr-kit
-   (@seidr/kit/styles/seidr.css); здесь только раскладка, и только var(--…). */
-.shell {
+/* Каркас v2. Токены, тема и база документа — в Seiðr-kit
+   (@seidr/kit/styles/seidr.css); оболочка (шапка, меню, drawer) — KitShell kit
+   (S4-01). Здесь только раскладка экрана раздела, и только var(--…). */
+.v2-screen {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--gap);
-  min-height: var(--tap);
   padding: var(--pad-y) var(--pad-x);
-  border-bottom: 1px solid var(--bd);
-  background: var(--bg1);
 }
 
-.shell-title {
+.v2-screen__title {
+  margin: 0;
   font-family: var(--display);
   font-weight: var(--display-weight);
   font-size: var(--fs-lg);
   letter-spacing: .04em;
 }
-
-/* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
 
 /* Личные настройки (S3-07). */
 .settings {
@@ -60,13 +57,13 @@
 
 .setting-hint { font-size: var(--fs-xs); color: var(--t3); }
 .setting-hint-warn { color: var(--wrn); }
-/* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
 
-/* Ссылка на витрину /kit (S4-00d): цель касания — не меньше --tap. */
+/* Ссылка на витрину /kit (S4-00d; с S4-01 — в разделе «Настройки»): цель
+   касания — не меньше --tap. */
 .shell-link {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   min-height: max(var(--tap), 24px);
-  margin-left: auto;
   font-size: var(--fs-sm);
 }

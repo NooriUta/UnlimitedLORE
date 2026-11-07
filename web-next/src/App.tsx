@@ -1,20 +1,22 @@
 // LORE v2 — оболочка нового веба (SPRINT_UXR_S3_V2_INFRA/S3-01).
-// Пока только каркас: каталог, сборка и образ. Навигация и экраны v2 приходят
-// своими задачами UXR; v1 (корневой src/) заморожен и отсюда не импортируется.
+// v1 (корневой src/) заморожен и отсюда не импортируется.
 // Токены, тема и общие элементы — из Seiðr-kit (kit/, D-2026-UXR-KIT-REACT,
 // SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00a, S4-00b): своей копии web-next не держит.
-// /kit — витрина kit (S4-00d); маршрут — путь URL, без роутера: экран один.
+// /kit — витрина kit (S4-00d); маршрут — путь URL, без роутера.
 // Устойчивость (ошибка на экран, плашка хранилища) — S4-00f.
+// Корень — оболочка v2 на KitShell (S4-01): приложения наверху, меню по смыслу,
+// drawer на телефоне; раздел — в URL (?mod=…&sec=…). Плашку хранилища рисует
+// сама оболочка (StorageBanner kit) — по тому же хранилищу storage/safe.
 import '@fontsource/manrope/400.css';
 import '@fontsource/manrope/600.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/unbounded/800.css';
 import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
-import { ErrorBoundary, Pill, Skeleton, StorageBanner } from '@seidr/kit';
+import { ErrorBoundary, Pill, Skeleton, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
-import { PersonalSettings } from './settings/PersonalSettings';
-import { storage } from './storage/safe';
+import { V2Shell } from './shell/V2Shell';
+import { storage as appStorage } from './storage/safe';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
@@ -25,19 +27,26 @@ export function routeOf(path: string): 'kit' | 'home' {
   return path.replace(/\/+$/, '') === '/kit' ? 'kit' : 'home';
 }
 
-export default function App({ path }: { path?: string } = {}) {
+export interface AppProps {
+  path?: string;
+  /** Окно для URL-состояния оболочки (тесты); по умолчанию window. */
+  win?: UrlWindow;
+  /** Хранилище оболочки (тесты); по умолчанию storage/safe. */
+  storage?: SafeStorage;
+  /** Принудительно узкий/широкий режим (тесты); по умолчанию — по ширине экрана. */
+  narrow?: boolean;
+}
+
+export default function App({ path, win, storage = appStorage, narrow }: AppProps = {}) {
+  const lang = useKitLang();
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
   if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
   return (
-    <ErrorBoundary lang="ru">
-      <StorageBanner storage={storage} lang="ru" />
-      <main data-lore-app="v2" className="shell">
-        <h1 className="shell-title">LORE</h1>
-        <Pill variant="id">v2</Pill>
-        <a className="shell-link" href="/kit">Seiðr-kit</a>
-      </main>
-      {/* S3-07: личные настройки — переход v2 → v1 по флагу «новая навигация». */}
-      <PersonalSettings />
+    <ErrorBoundary lang={lang}>
+      <div data-lore-app="v2" className="v2-app">
+        {/* Метка версии — ID-пилюля kit в шапке: v2 нельзя спутать с v1. */}
+        <V2Shell storage={storage} win={win} narrow={narrow} brandTag={<Pill variant="id">v2</Pill>} />
+      </div>
     </ErrorBoundary>
   );
 }
