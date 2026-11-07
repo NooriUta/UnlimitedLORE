@@ -643,7 +643,7 @@ jobs:
           EXPECT_COMMIT: ${{ steps.which.outputs.backend == 'true' && github.sha || '' }}
         run: bash .github/scripts/version-probe.sh http://127.0.0.1:4400
 
-      # S3-06: то же для v2, плюс «это именно v2»: оба образа собираются с одного
+      # S3-06: то же, что «Verify frontend» выше, для v2, плюс «это именно v2»: оба образа собираются с одного
       # шаблона nginx, и перепутанный бандл (v1 в образе v2) прошёл бы проверку
       # «200 + бандл отдаётся» молча.
       - name: Verify frontend v2 serves
