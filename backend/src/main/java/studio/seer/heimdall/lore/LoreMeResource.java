@@ -407,6 +407,8 @@ public class LoreMeResource extends LoreResourceBase {
             }
             // Вид в чужом избранном после удаления — висячая ссылка; снимаем вместе с видом.
             exec("DELETE FROM KnowUserFavorite WHERE ref_type='view' AND ref_id=:u", Map.of("u", req.view_uid()));
+            // S2-05: и из «частых видов» памяти — привычка к несуществующему виду бессмысленна.
+            exec("DELETE FROM KnowUserHabit WHERE kind='frequent_views' AND habit_key=:u", Map.of("u", req.view_uid()));
             return noStore(Response.ok(Map.of("ok", true, "outcome", LoreOutcome.DELETED, "view_uid", req.view_uid())));
         } catch (Exception e) {
             return upstream("view delete", e);
@@ -488,11 +490,20 @@ public class LoreMeResource extends LoreResourceBase {
         if (me == null) return noIdentity();
         int lim = limit == null ? LoreMePrefs.RECENT_CAP : Math.max(1, Math.min(limit, LoreMePrefs.RECENT_CAP));
         try {
+            // S2-05: старше срока хранения не отдаётся; remembering=false — пустой
+            // список значит «не запоминаю», а не «ничего не открывали».
             List<Map<String, Object>> rows = ingestService.queryPublic(
                 "SELECT ref_type, ref_id, visited_at, visits FROM KnowUserRecent WHERE owner_sub = :me "
-                + "ORDER BY visited_at DESC LIMIT " + lim, Map.of("me", me));
-            return noStore(Response.ok(Map.of("ok", true, "recent", rows, "count", rows.size(),
-                "cap", LoreMePrefs.RECENT_CAP)));
+                + "AND visited_at >= :cut ORDER BY visited_at DESC LIMIT " + lim,
+                Map.of("me", me, "cut", LoreMemory.cutoff(Instant.now())));
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("ok", true);
+            body.put("recent", rows);
+            body.put("count", rows.size());
+            body.put("cap", LoreMePrefs.RECENT_CAP);
+            body.put("remembering", LoreMemoryResource.remembering(ingestService, me));
+            body.put("retention_days", LoreMemory.RETENTION_DAYS);
+            return noStore(Response.ok(body));
         } catch (Exception e) {
             return upstream("recent list", e);
         }
@@ -514,19 +525,28 @@ public class LoreMeResource extends LoreResourceBase {
         p.put("i", req.ref_id());
         p.put("at", now());
         try {
+            // S2-05 «не запоминать»: честный отказ записи, а не молчаливое «ок».
+            if (!LoreMemoryResource.remembering(ingestService, me))
+                return noStore(Response.ok(Map.of("ok", true, "recorded", false, "reason", "not_remembering",
+                    "outcome", LoreOutcome.NOOP)));
             List<Map<String, Object>> prev = ingestService.queryPublic(
-                "SELECT visits FROM KnowUserRecent WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i",
+                "SELECT visits, visited_at FROM KnowUserRecent WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i",
                 Map.of("me", me, "t", req.ref_type(), "i", req.ref_id()));
             p.put("v", (prev.isEmpty() ? 0 : intOf(prev.get(0).get("visits"))) + 1);
             exec("UPDATE KnowUserRecent SET owner_sub=:me, ref_type=:t, ref_id=:i, visited_at=:at, visits=:v "
                 + "UPSERT WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i", p);
+            // first_seen (S2-05) — только у новой записи; у старых строк S2-04 его нет,
+            // память тогда честно показывает first_seen = last_seen.
+            if (prev.isEmpty())
+                exec("UPDATE KnowUserRecent SET first_seen=:at WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i "
+                    + "AND first_seen IS NULL", p);
             // Хвост сверх предела — срезаем сразу: «недавние» не копятся бессрочно.
             List<Map<String, Object>> tail = ingestService.queryPublic(
                 "SELECT @rid AS rid FROM KnowUserRecent WHERE owner_sub = :me ORDER BY visited_at DESC SKIP "
                 + LoreMePrefs.RECENT_CAP, Map.of("me", me));
             for (Map<String, Object> t : tail)
                 exec("DELETE FROM KnowUserRecent WHERE @rid = " + t.get("rid"), Map.of());
-            return noStore(Response.ok(Map.of("ok", true,
+            return noStore(Response.ok(Map.of("ok", true, "recorded", true,
                 "outcome", prev.isEmpty() ? LoreOutcome.CREATED : LoreOutcome.UPDATED,
                 "visits", p.get("v"), "trimmed", tail.size())));
         } catch (Exception e) {
