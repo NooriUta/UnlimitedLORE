@@ -111,6 +111,8 @@
   "kit.list.col.edges": "Связи",
   "kit.list.verdictError": "вердикт не посчитан",
   "kit.list.column": "{title}: {n}",
+  "kit.list.removeChip": "Убрать: {what}",
+  "kit.list.segActive": "активных условий: {n}",
   "kit.record.tabs": "Вкладки записи",
   "kit.record.tab.overview": "Обзор",
   "kit.record.tab.links": "Связи",

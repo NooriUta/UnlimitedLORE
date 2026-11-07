@@ -3,6 +3,8 @@
 // Токены, тема и общие элементы — из Seiðr-kit (kit/, D-2026-UXR-KIT-REACT,
 // SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00a, S4-00b): своей копии web-next не держит.
 // /kit — витрина kit (S4-00d); маршрут — путь URL, без роутера.
+// Экраны списков (S4-04) — разделы оболочки (?sec=sprint|adr); старые адреса
+// /sprints и /adrs ведут туда же.
 // Устойчивость (ошибка на экран, плашка хранилища) — S4-00f.
 // Корень — оболочка v2 на KitShell (S4-01): приложения наверху, меню по смыслу,
 // drawer на телефоне; раздел — в URL (?mod=…&sec=…). Плашку хранилища рисует
@@ -20,7 +22,9 @@ import './App.css';
 import { createLocalS2Client } from './api/me';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
+import type { ListScreenId } from './lists/screens';
 import { V2Shell } from './shell/V2Shell';
+import type { V2Section } from './shell/v2Config';
 import { storage as appStorage } from './storage/safe';
 import { themeSource } from './storage/themeSource';
 
@@ -35,9 +39,26 @@ const meClient = createLocalS2Client(appStorage, {
   seed: { palette: initialTheme.palette, mode: initialTheme.mode, density: initialTheme.density },
 });
 
+export type Route = 'kit' | 'home' | ListScreenId;
+
+const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
+/** Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01). */
+const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs: 'adr' };
+
 /** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
-export function routeOf(path: string): 'kit' | 'home' {
-  return path.replace(/\/+$/, '') === '/kit' ? 'kit' : 'home';
+export function routeOf(path: string): Route {
+  const p = path.replace(/\/+$/, '');
+  if (p === '/kit') return 'kit';
+  return LIST_ROUTES[p] ?? 'home';
+}
+
+/** /sprints → /?sec=sprint (замена записи истории, без перезагрузки): экран
+ *  списка живёт в разделе оболочки, отдельной страницы у него нет. */
+function redirectListRoute(route: ListScreenId, w: UrlWindow | undefined) {
+  if (!w || new URLSearchParams(w.location.search).has('sec')) return;
+  const params = new URLSearchParams(w.location.search);
+  params.set('sec', LIST_SECTION[route]);
+  w.history.replaceState(null, '', `/?${params.toString()}${w.location.hash}`);
 }
 
 export interface AppProps {
@@ -53,7 +74,9 @@ export interface AppProps {
 export default function App({ path, win, storage = appStorage, narrow }: AppProps = {}) {
   const lang = useKitLang();
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
-  if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  const route = routeOf(current);
+  if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  if (route !== 'home') redirectListRoute(route, win ?? (typeof window === 'undefined' ? undefined : window));
   return (
     <ErrorBoundary lang={lang}>
       <div data-lore-app="v2" className="v2-app">

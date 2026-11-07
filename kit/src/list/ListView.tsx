@@ -21,7 +21,7 @@ import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 import {
   DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, boardColumns, fieldValue, groupRecords,
-  quickCounts, readListState, shownOf, sortRecords, valueKey, writeListState,
+  quickCounts, quickIconOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, writeListState,
 } from './listModel';
 import type { ListGroup, ListState, ListViewKind } from './listModel';
 
@@ -47,6 +47,11 @@ export interface ListViewProps {
   /** Начальное состояние (URL важнее). */
   initial?: Partial<ListState>;
   budget?: Partial<typeof LIST_BUDGET>;
+  /**
+   * Свои иконки «Быстро» (id → слаг game-icons). Без них «Быстро» по одному
+   * статусу берёт иконку статуса из словаря (S4-04), прочие — без иконки.
+   */
+  quickIcons?: Record<string, string>;
   className?: string;
 }
 
@@ -57,7 +62,6 @@ const BUILTIN_KEY_TITLES: Record<string, KitKey> = {
   kind: 'kit.list.col.kind',
   updated_at: 'kit.list.col.updated',
 };
-const SORT_KEYS = ['title', 'id', 'status', 'updated_at'] as const;
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'board'];
 
 function esc(s: string): string {
@@ -150,7 +154,7 @@ function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, className,
+  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, quickIcons, className,
 }: ListViewProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -236,16 +240,34 @@ export function ListView({
       : t('kit.list.shownUnknown', { shown: shown.shown, loaded: shown.loaded });
 
   const hasFilter = fieldFilters.length > 0 || activeQuick !== null;
-  const descParts: string[] = [];
+  // Строка-описание (S4-04): каждое условие — свой снимаемый чип, а не сплошной
+  // текст: «что сейчас отсеивает записи» видно и снимается по одному.
+  const chips: { id: string; text: string; remove: () => void }[] = [];
   for (const [k, vs] of Object.entries(state.filters)) {
-    if (vs.length) descParts.push(`${labels.keyTitle(k)}: ${vs.map(v => labels.valueTitle(k, v)).join(' | ')}`);
+    if (!vs.length) continue;
+    chips.push({
+      id: `f:${k}`,
+      text: `${labels.keyTitle(k)}: ${vs.map(v => labels.valueTitle(k, v)).join(' | ')}`,
+      remove: () => {
+        const next = { ...state.filters };
+        delete next[k];
+        update({ filters: next });
+      },
+    });
   }
-  if (activeQuick) descParts.push(`${t('kit.list.quick')}: ${activeQuick.title}`);
-  const desc = [
-    `${t('kit.list.desc.filter')}: ${descParts.length ? descParts.join(' · ') : t('kit.list.filterNone')}`,
+  if (activeQuick) {
+    chips.push({ id: 'q', text: `${t('kit.list.quick')}: ${activeQuick.title}`, remove: () => update({ quick: null }) });
+  }
+  const descTail = [
     view === 'list' ? `${t('kit.list.desc.group')}: ${state.group ? labels.keyTitle(state.group) : t('kit.list.groupNone')}` : null,
     `${t('kit.list.desc.sort')}: ${state.sort ? `${labels.keyTitle(state.sort.key)} ${state.sort.dir === 'desc' ? '↓' : '↑'}` : t('kit.list.sortNone')}`,
   ].filter(Boolean).join(' · ');
+  const filterCount = fieldFilters.length;
+  const segCount = (n: number) => (n > 0
+    ? <span className="sk-list__segcount" data-testid="kit-list-segcount" title={t('kit.list.segActive', { n })}>{n}</span>
+    : null);
+  const sortKeys = sortKeysOf(config);
+  if (state.sort && !sortKeys.includes(state.sort.key)) sortKeys.push(state.sort.key);
 
   const filterOptions = (key: string) => {
     const m = new Map<string, number>();
@@ -415,21 +437,32 @@ export function ListView({
         {quick.length > 0 && (
           <div role="group" aria-label={t('kit.list.quick')} className="sk-list__quick">
             <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
-            {quick.map(q => (
-              <Pill
-                key={q.id}
-                variant="filter"
-                pressed={state.quick === q.id}
-                onToggle={on => update({ quick: on ? q.id : null })}
-              >
-                <span>{q.title}</span> <span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
-              </Pill>
-            ))}
+            {quick.map(q => {
+              const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
+              return (
+                <Pill
+                  key={q.id}
+                  variant="filter"
+                  pressed={state.quick === q.id}
+                  onToggle={on => update({ quick: on ? q.id : null })}
+                >
+                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={14} /></span>}
+                  <span>{q.title}</span> <span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
+                </Pill>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls">
+      {/* Строка [Фильтр][Группировка][Порядок] (S4-04): три сегмента fieldset+legend —
+          имя сегмента не спорит с подписью селекта внутри. */}
+      <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls" data-testid="kit-list-controls">
+        {filterKeys.length > 0 && (
+        <fieldset className="sk-list__seg" data-seg="filter">
+          <legend className="sk-list__seglabel">{t('kit.list.desc.filter')}</legend>
+          <GameIcon slug="funnel" size={14} className="sk-list__segicon" />
+          {segCount(filterCount)}
         {filterKeys.map(k => {
           const value = state.filters[k]?.[0];
           return (
@@ -452,22 +485,28 @@ export function ListView({
             </label>
           );
         })}
-        {view === 'list' && groupings.length > 0 && (
-          <label className="sk-list__field">
-            <span className="sk-list__label">{t('kit.list.group')}</span>
-            <select
-              aria-label={t('kit.list.group')}
-              className="sk-list__select"
-              value={state.group ?? ''}
-              onChange={e => update({ group: e.target.value || null })}
-            >
-              <option value="">{t('kit.list.groupNone')}</option>
-              {groupings.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)}
-            </select>
-          </label>
+        </fieldset>
         )}
-        <label className="sk-list__field">
-          <span className="sk-list__label">{t('kit.list.sort')}</span>
+        {view === 'list' && groupings.length > 0 && (
+          <fieldset className="sk-list__seg" data-seg="group">
+          <legend className="sk-list__seglabel">{t('kit.list.group')}</legend>
+          <GameIcon slug="stack" size={14} className="sk-list__segicon" />
+          {segCount(state.group ? 1 : 0)}
+          <select
+            aria-label={t('kit.list.group')}
+            className="sk-list__select"
+            value={state.group ?? ''}
+            onChange={e => update({ group: e.target.value || null })}
+          >
+            <option value="">{t('kit.list.groupNone')}</option>
+            {groupings.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)}
+          </select>
+          </fieldset>
+        )}
+        <fieldset className="sk-list__seg" data-seg="sort">
+          <legend className="sk-list__seglabel">{t('kit.list.sort')}</legend>
+          <GameIcon slug="histogram" size={14} className="sk-list__segicon" />
+          {segCount(state.sort ? 1 : 0)}
           <select
             aria-label={t('kit.list.sort')}
             className="sk-list__select"
@@ -475,26 +514,40 @@ export function ListView({
             onChange={e => update({ sort: e.target.value ? { key: e.target.value, dir: state.sort?.dir ?? 'asc' } : null })}
           >
             <option value="">{t('kit.list.sortNone')}</option>
-            {SORT_KEYS.map(k => <option key={k} value={k}>{labels.keyTitle(k)}</option>)}
+            {sortKeys.map(k => <option key={k} value={k}>{labels.keyTitle(k)}</option>)}
           </select>
-        </label>
-        <button
-          type="button"
-          className="sk-list__dir"
-          aria-pressed={state.sort?.dir === 'desc'}
-          disabled={!state.sort}
-          onClick={() => state.sort && update({ sort: { ...state.sort, dir: state.sort.dir === 'desc' ? 'asc' : 'desc' } })}
-        >
-          {t('kit.list.sortDesc')}
-        </button>
+          <button
+            type="button"
+            className="sk-list__dir"
+            aria-pressed={state.sort?.dir === 'desc'}
+            disabled={!state.sort}
+            onClick={() => state.sort && update({ sort: { ...state.sort, dir: state.sort.dir === 'desc' ? 'asc' : 'desc' } })}
+          >
+            {t('kit.list.sortDesc')}
+          </button>
+        </fieldset>
       </div>
 
-      <p className="sk-list__desc" data-testid="kit-list-desc">
-        <span>{desc}</span>
+      <div className="sk-list__desc" data-testid="kit-list-desc">
+        <span className="sk-list__desclabel">{t('kit.list.desc.filter')}:</span>
+        {chips.length === 0 && <span>{t('kit.list.filterNone')}</span>}
+        {chips.map(c => (
+          <Pill
+            key={c.id}
+            variant="filter"
+            pressed
+            onToggle={on => { if (!on) c.remove(); }}
+            onRemove={c.remove}
+            removeLabel={t('kit.list.removeChip', { what: c.text })}
+          >
+            {c.text}
+          </Pill>
+        ))}
+        <span className="sk-list__desctail">· {descTail}</span>
         {hasFilter && (
           <button type="button" className="sk-btn" onClick={() => update({ filters: {}, quick: null })}>{t('kit.list.reset')}</button>
         )}
-      </p>
+      </div>
       <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
 
       {selected.size > 0 && (

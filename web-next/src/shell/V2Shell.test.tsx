@@ -62,13 +62,30 @@ describe('оболочка v2 (S4-01)', () => {
   it('выбор раздела пишется в URL и меняет экран; несобранный экран — «не собран», а не «пусто»', () => {
     const win = fakeWin();
     const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'ADR' }));
-    expect(new URLSearchParams(win.location.search).get('sec')).toBe('adr');
-    expect(screen.getByRole('heading', { level: 1, name: 'ADR' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Новости' }));
+    expect(new URLSearchParams(win.location.search).get('sec')).toBe('news');
+    expect(screen.getByRole('heading', { level: 1, name: 'Новости' })).toBeTruthy();
     const main = screen.getByRole('main');
     expect(main.querySelector('[data-state="unbuilt"]')).toBeTruthy();
     expect(main.querySelector('[data-state="empty"]')).toBeNull();
-    expect(container.querySelector('[data-section="adr"]')).toBeTruthy();
+    expect(container.querySelector('[data-section="news"]')).toBeTruthy();
+  });
+
+  it('списки (S4-04) — экраны разделов: ADR открывает список kit под одним заголовком раздела', () => {
+    const win = fakeWin();
+    const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ADR' }));
+    expect(new URLSearchParams(win.location.search).get('sec')).toBe('adr');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(container.querySelector('[data-section="adr"] [data-screen="adrs"]')).toBeTruthy();
+    expect(container.querySelector('[data-state="unbuilt"]')).toBeNull();
+  });
+
+  it('старый адрес /sprints ведёт в раздел оболочки ?sec=sprint', () => {
+    const win = fakeWin();
+    const { container } = render(<App path="/sprints" win={win} storage={mem()} narrow={false} />);
+    expect(new URLSearchParams(win.location.search).get('sec')).toBe('sprint');
+    expect(container.querySelector('[data-section="sprint"]')).toBeTruthy();
   });
 
   it('раздел из URL открывается сразу: ?sec=settings — личные настройки (переход v2 → v1)', () => {

@@ -111,6 +111,8 @@
   "kit.list.col.edges": "Links",
   "kit.list.verdictError": "verdict failed",
   "kit.list.column": "{title}: {n}",
+  "kit.list.removeChip": "Remove: {what}",
+  "kit.list.segActive": "active conditions: {n}",
   "kit.record.tabs": "Record tabs",
   "kit.record.tab.overview": "Overview",
   "kit.record.tab.links": "Links",

@@ -10,11 +10,15 @@ import { useMemo, type ComponentType, type ReactNode } from 'react';
 import { KitShell, NotBuilt, useKitLang, useKitShell, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { switchNavUrl } from '../nav/navVersion';
+import { ListScreen } from '../pages/ListScreen';
 import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
 const SCREENS: Partial<Record<V2Section, ComponentType>> = {
+  // Списки на движке kit (S4-04); заголовок — у раздела оболочки.
+  sprint: () => <ListScreen screen="sprints" heading={false} />,
+  adr: () => <ListScreen screen="adrs" heading={false} />,
   // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —
   // раздел «Настройки» (S4-01). Сами личные настройки — под аватаром в шапке
   // (S4-02, AccountMenu в слоте account): здесь на них только указатель.
