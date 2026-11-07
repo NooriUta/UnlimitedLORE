@@ -2504,3 +2504,57 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-scope__sheet .sk-scope__only,
 .sk-scope__sheet .sk-scope__act,
 .sk-scope__sheet .sk-scope__search { min-height: max(var(--tap), 44px); }
+/* ---------- Сохранённые виды списка (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-08) ----------
+   Панель «Вид ▾ · изменён · Сохранить · Сохранить как… · Сбросить» над списком.
+   Цели касания — через --tap (на сенсоре ≥44px), шрифты — шкала --fs-*. */
+.sk-saved { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.sk-views,
+.sk-views__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  color: var(--t1);
+  font-size: var(--fs-base);
+}
+.sk-views__form {
+  flex-basis: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+}
+.sk-views__field { display: inline-flex; align-items: center; gap: 4px; }
+.sk-views__label {
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-views__select,
+.sk-views__input {
+  min-height: max(var(--tap), 22px);
+  max-width: 240px;
+  padding: 0 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-views__select:focus-visible,
+.sk-views__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-views__dirty {
+  padding: 1px 8px;
+  border: 1px solid var(--wrn);
+  border-radius: var(--r-pill);
+  color: var(--wrn);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-views .sk-btn:disabled { opacity: .5; cursor: not-allowed; }
+.sk-views__remove { color: var(--dng); }
+.sk-views__hint { color: var(--t3); font-size: var(--fs-sm); }

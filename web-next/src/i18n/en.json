@@ -112,5 +112,9 @@
   "lists.status.accepted": "In force",
   "lists.status.rejected": "Rejected",
   "lists.status.deprecated": "Deprecated",
-  "lists.status.superseded": "Superseded"
+  "lists.status.superseded": "Superseded",
+  "views.team.sprintsByStatus": "All by status",
+  "views.team.sprintsActive": "In progress",
+  "views.team.adrsByStatus": "All by status",
+  "views.team.adrsProposed": "Under review"
 }

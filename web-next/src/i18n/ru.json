@@ -112,5 +112,9 @@
   "lists.status.accepted": "Действует",
   "lists.status.rejected": "Отклонён",
   "lists.status.deprecated": "Устарел",
-  "lists.status.superseded": "Заменён"
+  "lists.status.superseded": "Заменён",
+  "views.team.sprintsByStatus": "Все по статусу",
+  "views.team.sprintsActive": "В работе",
+  "views.team.adrsByStatus": "Все по статусу",
+  "views.team.adrsProposed": "На рассмотрении"
 }
