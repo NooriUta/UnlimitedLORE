@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
@@ -45,8 +46,13 @@ export default defineConfig({
         test: {
           name: 'render',
           include: ['src/**/*.{test,spec}.tsx'],
+          // Без exclude extends:true склеивает include с корневым, и все *.test.ts шли
+          // второй раз — в jsdom, с рендер-setup.
+          exclude: ['src/**/*.{test,spec}.ts', 'node_modules/**'],
           environment: 'jsdom',
-          setupFiles: ['src/test/setup.ts'],
+          // Путь от файла конфига, а не от cwd: Vitest, запущенный из подпапки без
+          // своего конфига (mcp-server), иначе ищет setup у себя и падает.
+          setupFiles: [fileURLToPath(new URL('./src/test/setup.ts', import.meta.url))],
         },
       },
     ],
