@@ -58,3 +58,23 @@ describe('состояние в URL', () => {
     expect([...readUrlState(fakeWindow({ hash: '#top' }).w).keys()]).toEqual([]);
   });
 });
+
+// SPRINT_UXR_S10_SEIDR_KIT/K-06: снятие параметра в режиме «#» обязано
+// перекрыть query — иначе старое значение из ?tab=… «воскресает» при чтении.
+describe('K-06 · состояние в «#»: снятие параметра', () => {
+  it('pushState бросает, параметр есть в query — после снятия readUrlState его не видит', () => {
+    const { w } = fakeWindow({ throwOnPush: true, search: '?section=admin&tab=rules' });
+    expect(pushUrlState({ tab: null }, { win: w })).toBe('hash');
+    expect(readUrlState(w).get('tab')).toBeNull();
+    expect(readUrlState(w).get('section')).toBe('admin');
+  });
+
+  it('следующая запись в «#» после снятия держит и новое, и снятое', () => {
+    const { w } = fakeWindow({ throwOnPush: true, search: '?tab=rules' });
+    pushUrlState({ tab: null }, { win: w });
+    pushUrlState({ sel: 'K-06' }, { win: w });
+    const p = readUrlState(w);
+    expect(p.get('tab')).toBeNull();
+    expect(p.get('sel')).toBe('K-06');
+  });
+});

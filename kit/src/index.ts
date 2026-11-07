@@ -14,3 +14,12 @@ export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
 export { pushUrlState, readUrlState, type UrlWindow } from './resilience/urlState';
+// K-06 (SPRINT_UXR_S10_SEIDR_KIT): сквозная устойчивость оболочки.
+export {
+  blockOutcome, ErrBlock, ErrBlockBoundary, KitBlock, KitSlot, UnverifiedBlock,
+  type BlockOutcome, type ErrBlockProps, type KitBlockProps, type KitSlotProps,
+} from './resilience/errBlock';
+export { installErrorScreen, showErrorScreen, type ErrorScreenOptions } from './resilience/errorScreen';
+export { describeError, isBenignError } from './resilience/errorText';
+export { useHotkeys, type HotkeyHandler } from './resilience/useHotkeys';
+export { setUrlParams, useUrlParam } from './resilience/useUrlParam';

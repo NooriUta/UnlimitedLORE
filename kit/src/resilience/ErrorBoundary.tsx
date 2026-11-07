@@ -1,22 +1,10 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { kitT, type KitLang } from '../i18n';
+import { describeError as describe, isBenignError } from './errorText';
 
 // Ошибка на экран вместо белого листа (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00f).
 // Ловит ошибки рендера (getDerivedStateFromError) и то, что React не видит:
 // window 'error' (обработчики событий, таймеры) и 'unhandledrejection'.
-
-/** Сообщения браузера, которые не означают падения приложения. */
-const BENIGN = [/^ResizeObserver loop/i];
-
-function describe(err: unknown): string {
-  if (err instanceof Error) return err.message || err.name;
-  if (typeof err === 'string') return err;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return String(err);
-  }
-}
 
 interface Props {
   children: ReactNode;
@@ -55,9 +43,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private onWindowError = (e: ErrorEvent) => {
-    const msg = e.message ?? '';
-    if (!e.error && BENIGN.some((re) => re.test(msg))) return;
-    this.report(e.error ?? msg);
+    if (isBenignError(e.message, e.error)) return;
+    this.report(e.error ?? e.message ?? '');
   };
 
   private onRejection = (e: Event) => {
