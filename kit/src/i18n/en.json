@@ -1,0 +1,16 @@
+{
+  "kit.state.loading": "Loading…",
+  "kit.state.empty.title": "Empty (checked)",
+  "kit.state.empty.hint": "The query ran and returned no records. This is a verified zero, not a failure.",
+  "kit.state.error.title": "Could not load",
+  "kit.state.error.hint": "This is not “empty”: the data was not received. Retry or check the connection.",
+  "kit.state.error.retry": "Retry",
+  "kit.state.forbidden.title": "No access",
+  "kit.state.forbidden.hint": "The data is hidden by permissions — this is not “empty”.",
+  "kit.state.truncated.paged": "Showing {from}–{to} of {total}",
+  "kit.state.truncated.capped": "Showing {shown}: the server cut the result at {limit} rows — narrow the query",
+  "kit.state.truncated.unknown": "Showing {shown}: there is no way to check whether the result is complete",
+  "kit.state.truncated.unverified": "0 rows, but the requested fields could not be checked — this may be a typo, not missing data",
+  "kit.state.truncated.more": "Show more",
+  "kit.sheet.close": "Close"
+}

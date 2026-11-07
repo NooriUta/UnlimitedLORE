@@ -3,3 +3,6 @@
 // отдельно: `import '@seidr/kit/styles/seidr.css'` (или <link> в голом HTML).
 export * from './tokens/prefs';
 export * from './elements';
+export * from './i18n';
+export * from './states';
+export * from './shell';

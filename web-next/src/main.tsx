@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { applyTheme, registerGameIcons, resolvePrefs } from '@seidr/kit';
+import { KitLangProvider, applyTheme, registerGameIcons, resolvePrefs } from '@seidr/kit';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import App from './App';
 
@@ -17,8 +17,14 @@ applyTheme(document.documentElement, resolvePrefs({
   cookie: document.cookie,
 }));
 
+// Язык подписей kit (состояния, «Закрыть», S4-00c) — по <html lang>, один раз
+// на приложение. Своих переводов этих строк web-next не держит.
+const kitLang = document.documentElement.lang === 'en' ? 'en' : 'ru';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <KitLangProvider lang={kitLang}>
+      <App />
+    </KitLangProvider>
   </StrictMode>,
 );
