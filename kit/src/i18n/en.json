@@ -318,5 +318,13 @@
   "kit.views.forbiddenHint": "Views are hidden by permissions — this is not “empty”. The list works.",
   "kit.views.empty": "No views yet — set up the list and save it as a view",
   "kit.views.saveError": "View not saved",
-  "kit.views.removeError": "View not deleted"
+  "kit.views.removeError": "View not deleted",
+  "kit.list.expand": "Expand: {title}",
+  "kit.list.collapse": "Collapse: {title}",
+  "kit.list.col.expand": "Expand",
+  "kit.progress.label": "Done {done} of {total}",
+  "kit.progress.partial": "Done {done} of {total} — count incomplete",
+  "kit.progress.error": "Not counted: {reason}",
+  "kit.progress.loading": "Counting…",
+  "kit.progress.none": "Not counted"
 }

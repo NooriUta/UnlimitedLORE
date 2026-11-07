@@ -3,7 +3,7 @@
 // движке списка kit и реальном API (здесь — подменённый fetch): строка
 // [Фильтр][Группировка][Порядок], описание чипами, честные состояния.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import { ListScreen } from './ListScreen';
@@ -41,7 +41,11 @@ describe('ListScreen — спринты', () => {
     expect(screen.getByRole('group', { name: 'Группировка' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Порядок' })).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText('Статус'), { target: { value: 'active' } });
+    // Фильтр поля — фасет kit (S4-05): кнопка «Статус…» и флажок значения.
+    const statusBtn = within(screen.getByTestId('kit-list-controls')).getByRole('button', { name: /^Статус/ });
+    fireEvent.click(statusBtn);
+    fireEvent.click(within(document.getElementById(statusBtn.getAttribute('aria-controls')!)!).getByRole('checkbox', { name: /В работе/ }));
+    fireEvent.click(statusBtn);
     expect(rowIds(container)).toEqual(['S_A']);
     expect(screen.getByRole('button', { name: 'Убрать: Статус: В работе' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Убрать: Статус: В работе' }));

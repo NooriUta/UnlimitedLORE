@@ -318,5 +318,13 @@
   "kit.views.forbiddenHint": "Виды скрыты правами — это не «пусто». Список работает.",
   "kit.views.empty": "Видов пока нет — настройте список и сохраните как вид",
   "kit.views.saveError": "Вид не сохранён",
-  "kit.views.removeError": "Вид не удалён"
+  "kit.views.removeError": "Вид не удалён",
+  "kit.list.expand": "Раскрыть: {title}",
+  "kit.list.collapse": "Свернуть: {title}",
+  "kit.list.col.expand": "Раскрыть",
+  "kit.progress.label": "Готово {done} из {total}",
+  "kit.progress.partial": "Готово {done} из {total} — посчитано не всё",
+  "kit.progress.error": "Не посчитано: {reason}",
+  "kit.progress.loading": "Считается…",
+  "kit.progress.none": "Не посчитано"
 }

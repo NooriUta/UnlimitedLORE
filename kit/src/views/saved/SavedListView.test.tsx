@@ -5,7 +5,7 @@
 // командный вид по умолчанию. Состояния хранилища — честные (ошибка ≠ нет прав
 // ≠ пусто), цели касания — классами kit (--tap).
 import { beforeAll, describe, expect, it } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '../../elements/GameIcon';
 import { axeViolations } from '../../test/axe';
@@ -36,7 +36,19 @@ const team: KitSavedListView = {
   query: listStateToQuery({ ...DEFAULT_LIST_STATE, filters: { status: ['done'] } }),
 };
 const rows = (c: HTMLElement) => c.querySelectorAll('[data-record-id]');
-const statusSelect = () => screen.getByLabelText('Статус') as HTMLSelectElement;
+// Фильтр поля — фасет (S4-05): кнопка «Статус…» и флажки значений. pickStatus
+// оставляет отмеченным ровно одно значение — как прежний выбор в селекте.
+const STATUS_TITLE: Record<string, string> = { todo: 'к работе', done: 'готово' };
+function pickStatus(code: string) {
+  const btn = within(screen.getByTestId('kit-list-controls')).getByRole('button', { name: /^Статус/ });
+  if (btn.getAttribute('aria-expanded') !== 'true') fireEvent.click(btn);
+  const panel = document.getElementById(btn.getAttribute('aria-controls')!)!;
+  for (const box of within(panel).queryAllByRole('checkbox') as HTMLInputElement[]) {
+    if (box.checked) fireEvent.click(box);
+  }
+  fireEvent.click(within(panel).getByRole('checkbox', { name: new RegExp(STATUS_TITLE[code]) }));
+  fireEvent.click(btn);
+}
 const viewSelect = () => screen.getByLabelText('Вид') as HTMLSelectElement;
 
 function setup(store: KitViewStore = createMemoryViewStore({ user: 'u-1', teamViews: [team] })) {
@@ -51,11 +63,12 @@ describe('ListView — управляемое состояние (для вид�
       <ListView config={cfg} data={data} urlState={false} state={{ ...DEFAULT_LIST_STATE, filters: { status: ['todo'] } }} onStateChange={s => seen.push(s)} />,
     );
     expect(rows(container)).toHaveLength(1);
-    fireEvent.change(statusSelect(), { target: { value: 'done' } });
-    expect(seen).toEqual([{ ...DEFAULT_LIST_STATE, filters: { status: ['done'] } }]);
+    fireEvent.click(within(screen.getByTestId('kit-list-controls')).getByRole('button', { name: /^Статус/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /готово/ }));
+    expect(seen).toEqual([{ ...DEFAULT_LIST_STATE, filters: { status: ['todo', 'done'] } }]);
     expect(rows(container)).toHaveLength(1); // пока родитель не применил
-    rerender(<ListView config={cfg} data={data} urlState={false} state={{ ...DEFAULT_LIST_STATE, filters: { status: ['done'] } }} onStateChange={() => {}} />);
-    expect(rows(container)).toHaveLength(2);
+    rerender(<ListView config={cfg} data={data} urlState={false} state={{ ...DEFAULT_LIST_STATE, filters: { status: ['todo', 'done'] } }} onStateChange={() => {}} />);
+    expect(rows(container)).toHaveLength(3);
   });
 });
 
@@ -72,7 +85,7 @@ describe('сохранить как / сохранить / восстанови�
   it('«Сохранить как» создаёт новый вид с текущими фильтром и группировкой', async () => {
     const { store } = setup();
     await waitFor(() => expect(viewSelect().value).toBe('team-done'));
-    fireEvent.change(statusSelect(), { target: { value: 'todo' } });
+    pickStatus('todo');
     expect(screen.getByTestId('kit-views-dirty')).toBeTruthy();
     // на командном виде «Сохранить» недоступно — только «как»
     expect((screen.getByRole('button', { name: 'Сохранить' }) as HTMLButtonElement).disabled).toBe(true);
@@ -97,7 +110,7 @@ describe('сохранить как / сохранить / восстанови�
     const myId = (await store.list('tasks'))[1].id;
     fireEvent.change(viewSelect(), { target: { value: myId } });
     expect(rows(container)).toHaveLength(3);
-    fireEvent.change(statusSelect(), { target: { value: 'todo' } });
+    pickStatus('todo');
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Сохранить' })); });
     expect((await store.list('tasks'))[1].query).toBe(listStateToQuery({ ...DEFAULT_LIST_STATE, filters: { status: ['todo'] } }));
     // уйти на командный и вернуться — состояние вида восстановлено
@@ -105,7 +118,7 @@ describe('сохранить как / сохранить / восстанови�
     expect(rows(container)).toHaveLength(2);
     fireEvent.change(viewSelect(), { target: { value: myId } });
     expect(rows(container)).toHaveLength(1);
-    expect(statusSelect().value).toBe('todo');
+    expect(screen.getByTestId('kit-list-desc').textContent).toContain('Статус: к работе');
   });
 });
 
@@ -116,7 +129,7 @@ describe('сбросить', () => {
     const { container } = setup(store);
     await waitFor(() => expect(viewSelect().value).toBe('team-done'));
     fireEvent.change(viewSelect(), { target: { value: mine.id } });
-    fireEvent.change(statusSelect(), { target: { value: 'todo' } });
+    pickStatus('todo');
     expect(rows(container)).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Сбросить' }));
     expect(viewSelect().value).toBe(mine.id);
@@ -161,7 +174,7 @@ describe('честные состояния хранилища', () => {
     const store: KitViewStore = { ...base, create: () => Promise.reject(Object.assign(new Error('down'), { status: 503 })) };
     setup(store);
     await waitFor(() => expect(viewSelect().value).toBe('team-done'));
-    fireEvent.change(statusSelect(), { target: { value: 'todo' } });
+    pickStatus('todo');
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить как…' }));
     fireEvent.change(screen.getByLabelText('Имя вида'), { target: { value: 'X' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Создать вид' })); });

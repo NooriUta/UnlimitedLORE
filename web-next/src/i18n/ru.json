@@ -71,7 +71,7 @@
   "status.planned": "Запланирован",
   "status.proposed": "Предложено",
   "status.in_progress": "В работе",
-  "status.active": "Активен",
+  "status.active": "В работе",
   "status.blocked": "Заблокировано",
   "status.done": "Готово",
   "status.accepted": "Принято",
@@ -116,5 +116,15 @@
   "views.team.sprintsByStatus": "Все по статусу",
   "views.team.sprintsActive": "В работе",
   "views.team.adrsByStatus": "Все по статусу",
-  "views.team.adrsProposed": "На рассмотрении"
+  "views.team.adrsProposed": "На рассмотрении",
+  "sprints.title": "Спринты",
+  "sprints.col.tasks": "Задачи",
+  "sprints.kind.task": "Задачи",
+  "sprints.tasks.label": "Задачи спринта {id}",
+  "sprints.tasks.empty": "В спринте нет задач",
+  "sprints.tasks.emptyHint": "Проверено: задач в этом спринте нет — это не сбой загрузки.",
+  "status.design": "Проектирование",
+  "status.partial": "Частично",
+  "status.ready_for_deploy": "К выкатке",
+  "status.deferred": "Отложено"
 }

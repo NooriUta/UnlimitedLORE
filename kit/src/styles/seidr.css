@@ -1932,6 +1932,64 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__gcount { margin-left: auto; font-family: var(--mono); color: var(--t3); }
 .sk-list__morerow td { padding: 4px var(--pad-x); }
 
+/* Составные объекты (S4-09): раскрытие строки и прогресс «x/y».
+   Кнопка раскрытия — цель касания не меньше --tap (44px на сенсоре). */
+.sk-list__xcell { width: 1%; padding-left: 0; padding-right: 0; text-align: center; }
+.sk-list__xbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), var(--row-h));
+  min-height: max(var(--tap), var(--row-h));
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t3);
+  font-size: var(--fs-sm);
+}
+.sk-list__xbtn:hover { color: var(--acc); background: var(--bg2); }
+.sk-list__xbtn[aria-expanded='true'] { color: var(--acc); }
+.sk-list__xbtn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-list__xrow > .sk-list__xbody {
+  padding: var(--pad-y) var(--pad-x) var(--pad-y) calc(var(--pad-x) * 3);
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.sk-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--t2);
+  white-space: nowrap;
+}
+.sk-progress__text { font-variant-numeric: tabular-nums; }
+.sk-progress__bar {
+  position: relative;
+  width: 48px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg3);
+}
+.sk-progress__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p, 0%);
+  border-radius: 999px;
+  background: var(--acc);
+}
+.sk-progress[data-progress='complete'] { color: var(--suc); }
+.sk-progress[data-progress='complete'] .sk-progress__bar::after { background: var(--suc); }
+.sk-progress[data-progress='partial'] { color: var(--wrn); }
+.sk-progress[data-progress='error'] { color: var(--dng); border-bottom: 1px dashed var(--dng); }
+.sk-progress[data-progress='loading'],
+.sk-progress[data-progress='none'],
+.sk-progress[data-progress='empty'] { color: var(--t3); }
+
 .sk-board {
   display: grid;
   grid-auto-flow: column;

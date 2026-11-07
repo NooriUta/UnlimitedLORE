@@ -9,7 +9,7 @@
 // Честность: статус вне словаря виден как «вне словаря», ошибка блока из
 // meta.errors — errBlock с причиной, исключение вердикта — ошибка только в
 // своей ячейке, проверенный ноль ≠ «фильтр всё отсеял».
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
@@ -19,8 +19,9 @@ import type { KitKey, KitLang } from '../i18n';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
+import { ProgressCell } from './progress';
 import {
-  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters,
+  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
@@ -36,6 +37,17 @@ export interface ListBulkAction {
   title: string;
   /** Хук действия: получает id выбранных записей. Сохранение — забота приложения. */
   run: (ids: string[]) => void;
+}
+
+/**
+ * Раскрытие строки (S4-09, составные объекты): под записью — её вложенное
+ * содержимое (у спринта — задачи). Рисуется только у раскрытой строки, так что
+ * приложение может грузить вложенное лениво, по раскрытию.
+ */
+export interface ListExpand {
+  render: (r: KitRecord) => ReactNode;
+  /** Можно ли раскрыть запись; по умолчанию — да. */
+  can?: (r: KitRecord) => boolean;
 }
 
 export interface ListViewProps {
@@ -70,6 +82,8 @@ export interface ListViewProps {
    * (статус и вид — из конфига), null — без иконки. Подпись остаётся всегда.
    */
   valueIcon?: (key: string, value: string) => ValueIcon | null | undefined;
+  /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
+  expand?: ListExpand;
   className?: string;
 }
 
@@ -83,6 +97,14 @@ function resolveWin(urlState: ListViewProps['urlState']): UrlWindow | null {
   if (urlState === false) return null;
   if (urlState && typeof urlState === 'object') return urlState;
   return typeof window === 'undefined' ? null : window;
+}
+
+/** Раскрытые строки в URL: lx=id1,id2 (id кодирует URLSearchParams). */
+const EXPAND_PARAM = 'lx';
+function initialExpanded(win: UrlWindow | null): Set<string> {
+  if (!win) return new Set();
+  const raw = readUrlState(win).get(EXPAND_PARAM);
+  return new Set(raw ? raw.split(',').filter(Boolean) : []);
 }
 
 function initialState(win: UrlWindow | null, initial: Partial<ListState> | undefined): ListState {
@@ -153,7 +175,7 @@ function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, quickIcons, valueIcon, className,
+  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, quickIcons, valueIcon, expand, className,
   state: stateProp, onStateChange,
 }: ListViewProps) {
   const lang = useKitLang();
@@ -173,6 +195,13 @@ export function ListView({
     { by: state.group, view: state.view, open: {}, more: {} },
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(() => initialExpanded(win));
+  const toggleExpand = (id: string) => setExpanded(prev => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    if (win) pushUrlState({ [EXPAND_PARAM]: n.size ? [...n].join(',') : null }, { win, replace: true });
+    return n;
+  });
 
   const listCfg = config.list;
   const views = (listCfg?.views ?? ['list']).filter(v => VIEWS_RENDERED.includes(v));
@@ -342,7 +371,9 @@ export function ListView({
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
       case 'updated_at': return r.updated_at ? <span className="sk-list__mono">{r.updated_at.slice(0, 10)}</span> : '—';
       case 'edges_count': return <span className="sk-list__mono">{edgeCount.get(r.id) ?? 0}</span>;
-      default: return valueCell(col, r);
+      default:
+        if (col.startsWith('progress:')) return <ProgressCell value={fieldValue(r, col.slice(9))} />;
+        return valueCell(col, r);
     }
   };
   const colTitle = (col: string): ReactNode => {
@@ -355,7 +386,7 @@ export function ListView({
       case 'title+id': return t('kit.list.col.title');
       case 'verdict': return t('kit.list.col.verdict');
       case 'edges_count': return t('kit.list.col.edges');
-      default: return labels.keyTitle(col);
+      default: return labels.keyTitle(col.startsWith('progress:') ? col.slice(9) : col);
     }
   };
 
@@ -450,11 +481,40 @@ export function ListView({
       : columnsOf(lanes[0]?.columns ?? [], null, 'h3');
   } else {
     const grouped = groupKey !== null;
+    const span = columns.length + (expand ? 1 : 0);
+    const xid = (id: string) => `sk-lx-${id.replace(/[^\w-]/g, '_')}`;
+    const expandCell = (r: KitRecord) => {
+      if (!expand) return null;
+      if (expand.can && !expand.can(r)) return <td className="sk-list__td sk-list__xcell" />;
+      const open = expanded.has(r.id);
+      return (
+        <td className="sk-list__td sk-list__xcell">
+          <button
+            type="button"
+            className="sk-list__xbtn"
+            aria-expanded={open}
+            aria-controls={open ? xid(r.id) : undefined}
+            aria-label={t(open ? 'kit.list.collapse' : 'kit.list.expand', { title: r.title })}
+            onClick={() => toggleExpand(r.id)}
+          >
+            <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+          </button>
+        </td>
+      );
+    };
+    const expandRow = (r: KitRecord) => {
+      if (!expand || !expanded.has(r.id) || (expand.can && !expand.can(r))) return null;
+      return (
+        <tr className="sk-list__xrow" data-expand-of={r.id}>
+          <td colSpan={span} id={xid(r.id)} className="sk-list__xbody">{expand.render(r)}</td>
+        </tr>
+      );
+    };
     body = (
       <div className="sk-list__scroll">
         <table className="sk-list__table">
           <thead>
-            <tr>{columns.map(c => <th key={c} scope="col" className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{colTitle(c)}</th>)}</tr>
+            <tr>{expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}{columns.map(c => <th key={c} scope="col" className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{colTitle(c)}</th>)}</tr>
           </thead>
           {groups.map(g => {
             const open = !grouped || isOpen(g.key);
@@ -463,7 +523,7 @@ export function ListView({
               <tbody key={g.key}>
                 {grouped && (
                   <tr className="sk-list__ghead" data-group-key={g.key} data-other={g.other ? 'true' : undefined}>
-                    <th colSpan={columns.length} scope="rowgroup">
+                    <th colSpan={span} scope="rowgroup">
                       <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
                         <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
                         <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
@@ -473,12 +533,16 @@ export function ListView({
                   </tr>
                 )}
                 {open && g.records.slice(0, limit).map(r => (
-                  <tr key={r.id} className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
-                    {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
-                  </tr>
+                  <Fragment key={r.id}>
+                    <tr className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
+                      {expandCell(r)}
+                      {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
+                    </tr>
+                    {expandRow(r)}
+                  </Fragment>
                 ))}
                 {open && g.records.length > limit && (
-                  <tr className="sk-list__morerow"><td colSpan={columns.length}>{moreButton(g, limit)}</td></tr>
+                  <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit)}</td></tr>
                 )}
               </tbody>
             );

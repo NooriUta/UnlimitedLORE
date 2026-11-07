@@ -4,7 +4,7 @@
 // спринтов и ADR есть командные виды по умолчанию, личные виды переживают
 // перезагрузку в кэше lore.v2.*, экран собирается из kit (SavedListView).
 import { describe, expect, it } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { SavedListView, queryToListState, teamDefault } from '@seidr/kit';
 import type { KitConfig, KitData } from '@seidr/kit';
 import { LORE_VIEW_SECTIONS, LORE_VIEWS_API, createLoreViewStub, loreTeamViews } from './loreViews';
@@ -98,7 +98,11 @@ describe('экран: kit SavedListView + заглушка LORE', () => {
     const { container } = render(<SavedListView config={cfg} data={data} store={store} section="sprints" user="kc-1" urlState={false} />);
     const viewSel = () => screen.getByLabelText('Вид') as HTMLSelectElement;
     await waitFor(() => expect(viewSel().value).toBe(team.id));
-    fireEvent.change(screen.getByLabelText('Статус'), { target: { value: 'done' } });
+    // Фильтр поля — фасет kit (S4-05): кнопка «Статус…» и флажок значения.
+    const statusBtn = within(screen.getByTestId('kit-list-controls')).getByRole('button', { name: /^Статус/ });
+    fireEvent.click(statusBtn);
+    fireEvent.click(within(document.getElementById(statusBtn.getAttribute('aria-controls')!)!).getByRole('checkbox', { name: /Готово/ }));
+    fireEvent.click(statusBtn);
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить как…' }));
     fireEvent.change(screen.getByLabelText('Имя вида'), { target: { value: 'Готовые' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Создать вид' })); });

@@ -71,7 +71,7 @@
   "status.planned": "Planned",
   "status.proposed": "Proposed",
   "status.in_progress": "In progress",
-  "status.active": "Active",
+  "status.active": "In progress",
   "status.blocked": "Blocked",
   "status.done": "Done",
   "status.accepted": "Accepted",
@@ -116,5 +116,15 @@
   "views.team.sprintsByStatus": "All by status",
   "views.team.sprintsActive": "In progress",
   "views.team.adrsByStatus": "All by status",
-  "views.team.adrsProposed": "Under review"
+  "views.team.adrsProposed": "Under review",
+  "sprints.title": "Sprints",
+  "sprints.col.tasks": "Tasks",
+  "sprints.kind.task": "Tasks",
+  "sprints.tasks.label": "Tasks of sprint {id}",
+  "sprints.tasks.empty": "No tasks in the sprint",
+  "sprints.tasks.emptyHint": "Checked: this sprint has no tasks — not a loading failure.",
+  "status.design": "Design",
+  "status.partial": "Partial",
+  "status.ready_for_deploy": "Ready for deploy",
+  "status.deferred": "Deferred"
 }

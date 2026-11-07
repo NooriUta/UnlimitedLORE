@@ -6,3 +6,5 @@ export * from './filterModel';
 export * from './FacetFilter';
 // Общая группировка: группы списка, дорожки доски и таймлайна, разрезы связей (S4-06).
 export * from './grouping';
+// Составные объекты (S4-09): прогресс «x/y» для колонки progress:<поле>.
+export * from './progress';
