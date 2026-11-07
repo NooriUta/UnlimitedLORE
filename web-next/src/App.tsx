@@ -20,14 +20,34 @@ import { storage } from './storage/safe';
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
 
-/** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
-export function routeOf(path: string): 'kit' | 'home' {
-  return path.replace(/\/+$/, '') === '/kit' ? 'kit' : 'home';
+// Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
+const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
+
+/**
+ * Путь без хвостового «/»: /kit и /kit/ — одна страница. Паспорт записи —
+ * в query (?section=…&passport=…), как у v1: из списков S4 запись
+ * открывается по URL. S5-04: ?section=tasks&passport=SPRINT/CODE — задача.
+ */
+export function routeOf(path: string, search = ''): 'kit' | 'task' | 'home' {
+  if (path.replace(/\/+$/, '') === '/kit') return 'kit';
+  const q = new URLSearchParams(search);
+  if (q.get('section') === 'tasks' && q.get('passport')) return 'task';
+  return 'home';
 }
 
-export default function App({ path }: { path?: string } = {}) {
+export default function App({ path, search }: { path?: string; search?: string } = {}) {
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
-  if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  const query = search ?? (typeof window === 'undefined' ? '' : window.location.search);
+  const route = routeOf(current, query);
+  if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  if (route === 'task') {
+    return (
+      <ErrorBoundary lang="ru">
+        <StorageBanner storage={storage} lang="ru" />
+        <Suspense fallback={<Skeleton />}><TaskReadPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
   return (
     <ErrorBoundary lang="ru">
       <StorageBanner storage={storage} lang="ru" />
