@@ -284,6 +284,9 @@ jobs:
       # Seiðr-kit (kit/, D-2026-UXR-KIT-REACT): отдельный пакет со своими
       # тестами (сверка токенов с v1, STYLE-01, тема). Тесты web-next их не
       # запускают — поэтому свой шаг, и до web-next: сломанный kit ломает v2.
+      # S4-00e: здесь же единый CSS-слой — снимок голого HTML
+      # (kit/demo/seidr-bare.html, toMatchFileSnapshot; CI=true не пишет снимок,
+      # а валит расхождение) и «у каждого класса kit есть правило в seidr.css».
       - name: Seiðr-kit (kit) — install + typecheck + test
         working-directory: kit
         run: |

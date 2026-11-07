@@ -14,6 +14,13 @@
    (тёмная и светлая), шкала и шрифты сверяются с v1 значение-в-значение. Правка
    цвета в v1 без правки здесь (и наоборот) валит тест.
 
+   S4-00e — общий слой для v2, прототипов и kit. Голый HTML и прототипы
+   (docs/prototypes) берут его тегом link с href ../../kit/src/styles/seidr.css;
+   пример — снимок kit/demo/seidr-bare.html (генерирует bare-html.test.tsx).
+   Правила слоя (single-layer.test.ts): своих CSS у kit больше нет, @import и
+   url() здесь нельзя (голый HTML их не догрузит), у каждого класса sk-… из
+   компонентов есть селектор в этом файле; CSS web-next — только раскладка.
+
    Шрифтовые файлы (Manrope, IBM Plex Mono, Unbounded 800) приложение грузит
    само (@fontsource) — CDN-@import здесь заблокировал бы CSP style-src 'self'.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -353,6 +360,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Варианты по умолчанию — явным правилом: у каждого класса kit есть селектор
+   в этом файле (S4-00e, single-layer.test.ts + снимок голого HTML). */
+.sk-pill--value { --pill-c: var(--t2); }
 .sk-pill--id {
   --pill-c: var(--acc);
   font-family: var(--mono);
@@ -485,6 +495,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   gap: 2px;
   flex-wrap: wrap;
 }
+.sk-toolbar--horizontal { flex-direction: row; }
 .sk-toolbar--vertical { flex-direction: column; align-items: stretch; }
 
 /* ═══════════ честные состояния (S4-00c) ═══════════
@@ -603,6 +614,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-size: var(--fs-sm);
 }
 .sk-trunc__icon { color: var(--wrn); }
+.sk-trunc__text { min-width: 0; overflow-wrap: anywhere; }
 .sk-trunc__hint { color: var(--t2); font-size: var(--fs-xs); }
 .sk-trunc .sk-btn { margin-left: auto; }
 
@@ -665,6 +677,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 
 /* ---------- Tabs ---------- */
+.sk-tabs-root { display: flex; flex-direction: column; min-width: 0; }
 .sk-tabs {
   display: flex;
   flex-wrap: wrap;
