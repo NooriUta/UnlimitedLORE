@@ -41,4 +41,14 @@ class AgentActionJournalTest {
         assertEquals("SPRINT_X/T1", LoreAuditLogFilter.entityIdOf(Map.of("ok", true, "task_uid", "SPRINT_X/T1")));
         assertNull(LoreAuditLogFilter.entityIdOf("not a map"));
     }
+
+    /** Стенд 07.11: status_set отвечает record'ом — в журнал попал путь /lore/status вместо id задачи. */
+    record Echo(boolean ok, String entity_type, String id, String old_status) {}
+    record NoId(boolean ok, String note) {}
+
+    @Test
+    void entityIdComesFromARecordResponseToo() {
+        assertEquals("SPRINT_X/T1", LoreAuditLogFilter.entityIdOf(new Echo(true, "task", "SPRINT_X/T1", "📋 PLANNED")));
+        assertNull(LoreAuditLogFilter.entityIdOf(new NoId(true, "x")));
+    }
 }

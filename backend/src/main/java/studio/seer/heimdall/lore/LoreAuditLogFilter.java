@@ -95,16 +95,35 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
         return r == null || r.isBlank() ? "unknown" : r;
     }
 
-    /** Первый ключ вида *_id / *_uid / "id" в ответе-Map — иначе null. */
+    /**
+     * Первое поле вида *_id / *_uid / "id" в ответе — иначе null. Ответ бывает
+     * Map или Java-record (status_set отвечает StatusUpdateResponse): раньше
+     * разбирался только Map, и журнал действий (AO-01) писал путь вместо id —
+     * «кто менял эту задачу» по смене статуса не отвечалось (стенд, 07.11.2026).
+     */
     static String entityIdOf(Object entity) {
-        if (!(entity instanceof Map<?, ?> m)) return null;
-        for (Map.Entry<?, ?> e : m.entrySet()) {
-            if (!(e.getKey() instanceof String k)) continue;
-            if (k.equals("id") || k.endsWith("_id") || k.endsWith("_uid")) {
-                Object v = e.getValue();
-                if (v != null) return String.valueOf(v);
+        if (entity instanceof Map<?, ?> m) {
+            for (Map.Entry<?, ?> e : m.entrySet()) {
+                if (!(e.getKey() instanceof String k)) continue;
+                if (isIdKey(k) && e.getValue() != null) return String.valueOf(e.getValue());
+            }
+            return null;
+        }
+        if (entity != null && entity.getClass().isRecord()) {
+            for (var c : entity.getClass().getRecordComponents()) {
+                if (!isIdKey(c.getName())) continue;
+                try {
+                    Object v = c.getAccessor().invoke(entity);
+                    if (v != null) return String.valueOf(v);
+                } catch (ReflectiveOperationException | RuntimeException ignored) {
+                    // разбор best-effort: не смогли прочитать поле — пробуем следующее
+                }
             }
         }
         return null;
+    }
+
+    private static boolean isIdKey(String k) {
+        return k.equals("id") || k.endsWith("_id") || k.endsWith("_uid");
     }
 }
