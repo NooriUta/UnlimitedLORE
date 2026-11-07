@@ -1913,6 +1913,7 @@
   },
   "sprint_plan_set": {
     "input": {
+      "expected": "{planned_end_date:string|null?,planned_start_date:string|null?,priority:string|null?,status:string?,track_id:string|null?}?",
       "planned_end_date": "string?",
       "planned_start_date": "string?",
       "priority": "string?",
@@ -1971,6 +1972,7 @@
   "status_set": {
     "input": {
       "entity_type": "enum(checkpoint|phase|sprint|task)",
+      "expected": "string?",
       "id": "string",
       "reason": "string?",
       "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo)"
@@ -2085,12 +2087,13 @@
       "bookkeeping": "boolean?",
       "effort_days": "number?",
       "executor_agent": "string?",
+      "expected": "{actual_days:number|null?,effort_days:number|null?,note_md:string|null?,status:string?,task_type:string|null?,title:string?,work_class:string|null?}?",
       "note_append": "string?",
       "note_md": "string?",
       "reviewer_agent": "string?",
       "task_type": "string?",
       "task_uid": "string?",
-      "tasks": "{actual_days:number?,author_agent:string?,bookkeeping:boolean?,effort_days:number?,executor_agent:string?,note_append:string?,note_md:string?,reviewer_agent:string?,task_type:string?,task_uid:string,title:string,uc_id:string?,work_class:enum(enb|jtd|uc)?}[]?",
+      "tasks": "{actual_days:number?,author_agent:string?,bookkeeping:boolean?,effort_days:number?,executor_agent:string?,expected:{actual_days:number|null?,effort_days:number|null?,note_md:string|null?,status:string?,task_type:string|null?,title:string?,work_class:string|null?}?,note_append:string?,note_md:string?,reviewer_agent:string?,task_type:string?,task_uid:string,title:string,uc_id:string?,work_class:enum(enb|jtd|uc)?}[]?",
       "title": "string?",
       "uc_id": "string?",
       "work_class": "enum(enb|jtd|uc)?"
