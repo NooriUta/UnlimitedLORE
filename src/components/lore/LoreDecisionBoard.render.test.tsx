@@ -18,7 +18,9 @@ const row = (id: string, title: string, parent: string | null): LoreDecisionRow 
 });
 
 describe('LoreDecisionBoard (render)', () => {
-  beforeEach(() => fetchLoreSlice.mockReset());
+  // Тело в фигурных скобках: стрелка-выражение вернула бы mock, и Vitest вызвал бы его
+  // как teardown-хук после теста (отклонённый промис мока валит тест).
+  beforeEach(() => { fetchLoreSlice.mockReset(); });
 
   it('загружает срез decisions и рисует решения', async () => {
     fetchLoreSlice.mockResolvedValue([

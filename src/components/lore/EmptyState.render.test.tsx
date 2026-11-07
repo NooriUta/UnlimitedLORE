@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
-import { renderUi } from '../../test/render';
+import { renderUi, renderedNodes } from '../../test/render';
 import { EmptyState, LoadError, SliceLoadWarning } from './EmptyState';
 
 // S0-05: честные пустые состояния — «пусто» и «не смогли загрузить» рисуются по-разному.
@@ -21,7 +21,7 @@ describe('EmptyState / LoadError (render)', () => {
 
   it('SliceLoadWarning перечисляет упавшие срезы и молчит, когда их нет', () => {
     const { container, rerender } = renderUi(<SliceLoadWarning failed={{}} />);
-    expect(container).toBeEmptyDOMElement();
+    expect(renderedNodes(container)).toHaveLength(0);
     rerender(<SliceLoadWarning failed={{ sprints: '500' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent('sprints: 500');
   });

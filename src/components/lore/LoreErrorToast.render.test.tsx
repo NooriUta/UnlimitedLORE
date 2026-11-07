@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
-import { renderUi } from '../../test/render';
+import { renderUi, renderedNodes } from '../../test/render';
 import { LoreErrorToast } from './LoreErrorToast';
 
 describe('LoreErrorToast (render)', () => {
   it('нет текста — ничего не рисует; есть — alert с текстом и закрытием', () => {
     const onClose = vi.fn();
     const { container, rerender } = renderUi(<LoreErrorToast text={null} onClose={onClose} />);
-    expect(container).toBeEmptyDOMElement();
+    expect(renderedNodes(container)).toHaveLength(0);
 
     rerender(<LoreErrorToast text="409 Conflict" onClose={onClose} />);
     const alert = screen.getByRole('alert');

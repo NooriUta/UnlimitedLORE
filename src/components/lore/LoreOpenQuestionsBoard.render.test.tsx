@@ -20,7 +20,9 @@ const q = (id: string, title: string, status: string): LoreQuestionRow => ({
 });
 
 describe('LoreOpenQuestionsBoard (render)', () => {
-  beforeEach(() => fetchLoreSlice.mockReset());
+  // Тело в фигурных скобках: стрелка-выражение вернула бы mock, и Vitest вызвал бы его
+  // как teardown-хук после теста (отклонённый промис мока валит тест).
+  beforeEach(() => { fetchLoreSlice.mockReset(); });
 
   it('загружает срез questions и рисует вопросы', async () => {
     fetchLoreSlice.mockImplementation((slice: string) =>
