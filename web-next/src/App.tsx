@@ -13,6 +13,7 @@ import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary, Pill, Skeleton, StorageBanner } from '@seidr/kit';
 import './App.css';
+import { ProjectScope } from './scope/ProjectScope';
 import { PersonalSettings } from './settings/PersonalSettings';
 import { storage } from './storage/safe';
 
@@ -35,6 +36,8 @@ export default function App({ path }: { path?: string } = {}) {
         <h1 className="shell-title">LORE</h1>
         <Pill variant="id">v2</Pill>
         <a className="shell-link" href="/kit">Seiðr-kit</a>
+        {/* S4-03: выбор нескольких проектов — в шапке, выбор в URL (?proj=). */}
+        <div className="shell-end"><ProjectScope /></div>
       </main>
       {/* S3-07: личные настройки — переход v2 → v1 по флагу «новая навигация». */}
       <PersonalSettings />

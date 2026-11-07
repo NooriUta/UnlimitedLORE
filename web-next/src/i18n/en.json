@@ -53,5 +53,8 @@
   "kitPage.md.html": "HTML — sandbox only",
   "kitPage.md.htmlTitle": "Sample HTML fragment",
   "kitPage.md.sample": "## Decision\n\n**Markdown** text with a list:\n\n- item one\n- [x] item two\n\n| field | value |\n|---|---|\n| status | in progress |\n\n```mermaid\ngraph LR; A[Task] --> B[PR] --> C[Release]\n```\n",
-  "kitPage.md.htmlSample": "<h3>Fragment</h3><p>HTML renders in an iframe with sandbox and CSP — host scripts are out of its reach.</p>"
+  "kitPage.md.htmlSample": "<h3>Fragment</h3><p>HTML renders in an iframe with sandbox and CSP — host scripts are out of its reach.</p>",
+  "scope.mine.noUser": "sign-in is not wired into v2 yet — your roles are unknown",
+  "scope.mine.notRegistered": "you are not registered in the LORE role graph",
+  "scope.mine.rolesError": "the roles slice did not respond"
 }

@@ -8,4 +8,10 @@ describe('LORE v2 — оболочка', () => {
     expect(html).toContain('LORE');
     expect(html).toContain('data-lore-app="v2"');
   });
+
+  it('S4-03: в шапке — выбор нескольких проектов', () => {
+    const html = renderToString(<App />);
+    expect(html).toContain('sk-scope__trigger');
+    expect(html).toMatch(/Проекты/);
+  });
 });

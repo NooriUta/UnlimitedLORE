@@ -19,6 +19,9 @@
 
 /* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */
 
+/* Правый край шапки: выбор проектов (S4-03, kit ScopePicker). */
+.shell-end { margin-left: auto; min-width: 0; }
+
 /* Личные настройки (S3-07). */
 .settings {
   max-width: 560px;

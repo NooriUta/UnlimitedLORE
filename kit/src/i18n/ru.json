@@ -222,5 +222,21 @@
   "kit.appr.journal.selfApproved": "согласовал сам — нарушение правила двух людей",
   "kit.appr.journal.agent": "агент",
   "kit.appr.journal.empty": "Журнал пуст (проверено)",
-  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль."
+  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль.",
+  "kit.scope.label": "Проекты",
+  "kit.scope.all": "Все проекты",
+  "kit.scope.mine": "Все мои",
+  "kit.scope.mineTag": "мой",
+  "kit.scope.summary.mine": "Все мои ({n})",
+  "kit.scope.summary.many": "Проектов: {n}",
+  "kit.scope.search": "Найти проект",
+  "kit.scope.noMatch": "Ничего не найдено по «{q}»",
+  "kit.scope.only": "только этот",
+  "kit.scope.onlyLabel": "Только {title}",
+  "kit.scope.missing": "нет в списке",
+  "kit.scope.empty": "Проектов нет (проверено)",
+  "kit.scope.mineUnknown": "Не смогли проверить ваши проекты — «Все мои» недоступно",
+  "kit.scope.mineNone": "У вас нет роли ни в одном проекте — «Все мои» выбрать нечего",
+  "kit.scope.count": "Выбрано: {n}",
+  "kit.scope.countAll": "Фильтра нет — показаны все проекты"
 }

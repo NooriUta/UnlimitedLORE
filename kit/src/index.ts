@@ -45,3 +45,6 @@ export * from './palette';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
 // Вид «Дерево / книга» — третий в list.views (K-09).
 export * from './views/tree';
+// Выбор нескольких проектов в шапке: поиск, «все мои», «только этот», лист на
+// телефоне (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-03).
+export * from './picker';
