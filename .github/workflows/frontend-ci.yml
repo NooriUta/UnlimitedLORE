@@ -319,8 +319,15 @@ jobs:
             echo "ОШИБКА: в образе lore-app-next нет бандла v2"; exit 1; }
           echo "ok: nginx-конфиг принят, бандл v2 на месте"
           # Общий скрипт старта (S3-02) реально лежит в образе v2 и метит лог.
-          docker run --rm $STUBS lore-app-next:ci nginx -t 2>&1 | grep -q '^\[LORE v2\]' || {
-            echo "ОШИБКА: скрипт старта 30-lore-public-url.sh не отработал в образе v2"; exit 1; }
+          # Вывод — в переменную, а не `| grep -q`: grep -q закрывает трубу на
+          # первом совпадении, docker run ловит EPIPE и при pipefail роняет шаг
+          # при живом скрипте.
+          # shellcheck disable=SC2086
+          start_log=$(docker run --rm $STUBS lore-app-next:ci nginx -t 2>&1) || {
+            echo "ОШИБКА: nginx -t в образе v2 упал:"; echo "$start_log"; exit 1; }
+          printf '%s\n' "$start_log" | grep -q '^\[LORE v2\]' || {
+            echo "ОШИБКА: скрипт старта 30-lore-public-url.sh не отработал в образе v2. Вывод старта:"
+            echo "$start_log"; exit 1; }
           echo "ok: общий скрипт старта отработал с меткой [LORE v2]"
 
       # S3-02: сервис lore-app-next в compose. Синтаксис и слияние проверяет сам
