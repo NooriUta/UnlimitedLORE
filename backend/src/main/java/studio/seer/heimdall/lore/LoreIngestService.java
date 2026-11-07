@@ -617,6 +617,8 @@ public class LoreIngestService {
     // UPSERT — new releases are seeded elsewhere; a non-existent id updates 0 rows.
     private static final Pattern RELEASE_HEADER = Pattern.compile(
         "^## (v[\\d.]+(?:\\s*/\\s*v[\\d.]+)?)\\s*[—–-]\\s*(\\d{4}-\\d{2}-\\d{2})(.*)");
+    /** Проект, чей индекс релизов разбирается (RELEASE_PROD_INDEX.md лежит в aida-root). */
+    static final String RELEASE_INDEX_PROJECT = "NooriUta/AIDA";
     private static final Pattern REL_CURRENT  = Pattern.compile("⭐\\s*CURRENT", Pattern.CASE_INSENSITIVE);
     private static final Pattern REL_PREV      = Pattern.compile("(ранее|previously)\\s+CURRENT", Pattern.CASE_INSENSITIVE);
     private static final Pattern REL_DESC      = Pattern.compile("\\(([^)]{4,})\\)\\s*$");
@@ -656,9 +658,12 @@ public class LoreIngestService {
                     params.put("release_date",   date);
                     params.put("description_md", nullToEmpty(description));
                     // is_current is a boolean literal — ArcadeDB rejects boolean params in SET.
+                    // REL-UID-01: RELEASE_PROD_INDEX.md — индекс релизов монорепо AIDA.
+                    // Номер версии без проекта задевал и одноимённые релизы других
+                    // проектов (v1.7.0 есть и у LORE), поэтому правим только релизы AIDA.
                     exec("UPDATE KnowRelease SET release_date=:release_date, " +
                             "is_current=" + isCurrent + ", description_md=:description_md " +
-                            "WHERE release_id=:release_id", params);
+                            "WHERE release_id=:release_id AND (git_project IS NULL OR git_project='" + RELEASE_INDEX_PROJECT + "')", params);
                     count++;
                 }
             }

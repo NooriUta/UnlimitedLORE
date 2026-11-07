@@ -236,7 +236,9 @@ public class LoreReleaseResource extends LoreResourceBase {
             p.put("now", now);
             String script = set.toString() + ";"
                 + "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now;"
-                + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_id=:rid) "
+                // REL-UID-01: по release_uid, а не по номеру — иначе строка
+                // истории цеплялась ко ВСЕМ релизам с тем же номером в других проектах.
+                + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_uid=:ruid) "
                 + "TO (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid);";
             writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sqlscript", script, p)).await().indefinitely();
@@ -310,18 +312,17 @@ public class LoreReleaseResource extends LoreResourceBase {
             if (set.equals("UPDATE KnowRelease SET")) {
                 return badParams("at least one field (git_tag, release_date, description_md, is_current) required");
             }
-            // Prefer release_uid lookup when git_project is known for multi-repo safety
+            // REL-UID-01: релиз адресуется ТОЛЬКО парой «проект#версия». Проект
+            // известен всегда (ugp — явный или проект релизов по умолчанию, иначе
+            // отказ выше); прежняя ветка «WHERE release_id=…» без проекта правила
+            // разом все релизы с этим номером во всех проектах.
+            p.put("rkey", ugp + "#" + req.release_id());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                set + " WHERE release_uid=:rkey", p)).await().indefinitely();
             if (req.git_project() != null && !req.git_project().isBlank()) {
-                p.put("rkey", req.git_project() + "#" + req.release_id());
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    set + " WHERE release_uid=:rkey", p)).await().indefinitely();
                 // PS-20: смена git_project → перевесить ребро BELONGS_TO_PROJECT на
                 // новый проект (иначе поле и ребро расходятся, как нашёл аудит AL-96).
                 relinkReleaseProjectEdge(req.git_project() + "#" + req.release_id(), req.git_project());
-            } else {
-                p.put("rid", req.release_id());
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    set + " WHERE release_id=:rid", p)).await().indefinitely();
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());

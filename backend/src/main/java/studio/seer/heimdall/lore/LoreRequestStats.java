@@ -57,6 +57,22 @@ public class LoreRequestStats {
     static final String M_REQUESTS = "lore.requests";
     /** Метрика «началась сессия вызывающего» — см. {@link #touchSession}. */
     static final String M_SESSION  = "lore.session_start";
+    /**
+     * AO-01: журнал мутирующих действий — по точке на вызов, не счётчиком.
+     * Отвечает на «кто создал/изменил эту сущность»: кто (source), ось
+     * (segment), семейство (object_type), сущность (object_id), код ответа
+     * (value) — упавшие вызовы видны наравне с успешными. Читающие вызовы не
+     * пишутся: их на порядок больше, и они ничего не меняют.
+     *
+     * <p>Ретеншен (решено до первой записи, как требует sealed TIMESERIES):
+     * точки живут столько же, сколько остальной MetricSnapshot, — бессрочно,
+     * отдельного срока у типа нет. Объём — одна точка на запись в LORE.
+     */
+    static final String M_ACTION   = "lore.action";
+
+    static boolean isJournalled(String method) {
+        return method != null && !AgentScopeFilter.READ_METHODS.contains(method.toUpperCase());
+    }
 
     @ConfigProperty(name = "lore.stats.enabled", defaultValue = "true")
     boolean statsEnabled;
@@ -130,6 +146,36 @@ public class LoreRequestStats {
         Instant now = Instant.now();
         Instant prev = lastSeen.put(caller, now);
         return prev == null || Duration.between(prev, now).toMinutes() >= sessionGapMinutes;
+    }
+
+    /**
+     * AO-01: одна точка журнала, асинхронно — запись журнала не задерживает
+     * сам вызов и не имеет права его уронить. Сбой точки — строка в логе.
+     */
+    void journalAction(String caller, String axis, String family, String entityOrPath, int status) {
+        if (!statsEnabled || !loreEnabled) return;
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "INSERT INTO MetricSnapshot SET ts=:ts, object_type=:fam, object_id=:oid, "
+                + "metric=:metric, source=:src, segment=:seg, value=:v",
+                Map.of("ts", System.currentTimeMillis(),
+                    "fam", family == null ? "" : family,
+                    "oid", trim256(entityOrPath),
+                    "metric", M_ACTION,
+                    "src", trim256(caller),
+                    "seg", axis == null ? "" : axis,
+                    "v", (double) status)))
+                .subscribe().with(ok -> { }, e ->
+                    LOG.warnf("[LORE ACTION] точка %s %s не записана: %s", family, entityOrPath, LoreUpstream.detail(e)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ACTION] точка %s %s не записана: %s", family, entityOrPath, LoreUpstream.detail(e));
+        }
+    }
+
+    /** Тег TIMESERIES ограничен длиной — длинный путь/имя ужимаем, а не роняем точку. */
+    private static String trim256(String s) {
+        if (s == null) return "";
+        return s.length() > 200 ? s.substring(0, 200) : s;
     }
 
     void recordSessionStart(String caller, String axis) {

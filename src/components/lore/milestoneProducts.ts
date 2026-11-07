@@ -19,6 +19,28 @@ export interface ProductRow {
   /** BELONGS_TO_PROJECT продукта → репозитории; роли — параллельным списком (WK-02). */
   git_projects?: (string | null)[] | null;
   git_project_roles?: (string | null)[] | null;
+  /** WK-03: SERVES продукт → продукт; вид — параллельным списком. */
+  serves_codes?: (string | null)[] | null;
+  serves_kinds?: (string | null)[] | null;
+}
+
+export type ServesKind = 'count' | 'sell' | 'support';
+
+/**
+ * WK-03 (decision:D-2026-LORE-SERVES-EDGE): кому продукт служит и как,
+ * сгруппировано по виду — «кого считаем · кого продаём · кого поддерживаем».
+ * Неизвестный вид не выдумывается в один из трёх — такая связь пропускается.
+ */
+export function productServes(p: Pick<ProductRow, 'serves_codes' | 'serves_kinds'>): Record<ServesKind, string[]> {
+  const out: Record<ServesKind, string[]> = { count: [], sell: [], support: [] };
+  const codes = p.serves_codes ?? [];
+  const kinds = p.serves_kinds ?? [];
+  codes.forEach((c, i) => {
+    const k = kinds[i];
+    if (c && (k === 'count' || k === 'sell' || k === 'support') && !out[k].includes(c)) out[k].push(c);
+  });
+  (Object.keys(out) as ServesKind[]).forEach(k => out[k].sort());
+  return out;
 }
 
 export type ProductRepoRole = 'owner' | 'consumer';

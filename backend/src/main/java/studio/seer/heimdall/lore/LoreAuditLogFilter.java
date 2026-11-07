@@ -96,7 +96,7 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
     }
 
     /** Первый ключ вида *_id / *_uid / "id" в ответе-Map — иначе null. */
-    private static String entityIdOf(Object entity) {
+    static String entityIdOf(Object entity) {
         if (!(entity instanceof Map<?, ?> m)) return null;
         for (Map.Entry<?, ?> e : m.entrySet()) {
             if (!(e.getKey() instanceof String k)) continue;

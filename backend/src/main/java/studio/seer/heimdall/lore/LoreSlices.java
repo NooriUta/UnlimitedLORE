@@ -2147,7 +2147,8 @@ public final class LoreSlices {
             "SELECT sprint_id, name, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_id CONTAINS :tag",
-            List.of("tag"), Map.of(), " LIMIT 50");
+            // REL-UID-01: номер версии общий у разных проектов — project сужает до своего.
+            List.of("tag"), Map.of("project", " WHERE out('IMPLEMENTED_IN_RELEASE').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " LIMIT 50");
 
         // PRs shipped in a given release via the SHIPPED_IN edge (KnowPR → KnowRelease).
         // Prefer ruid for multi-project safety.
@@ -2163,12 +2164,12 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('CLOSED_BY').pr_uid AS closed_by_prs " +
             "FROM KnowTask WHERE out('CLOSED_BY').out('SHIPPED_IN').release_id CONTAINS :tag",
-            List.of("tag"), Map.of(), " ORDER BY task_uid");
+            List.of("tag"), Map.of("project", " WHERE out('CLOSED_BY').out('SHIPPED_IN').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY task_uid");
 
         slice("release_prs_by_tag",
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
-            "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag ORDER BY pr_number",
-            List.of("tag"), Map.of(), "");
+            "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag",
+            List.of("tag"), Map.of("project", " WHERE out('SHIPPED_IN').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY pr_number");
 
         // ── §13 ClRoutine* slices (Phase 6 v1.3) ─────────────────────────────
         slice("routine_latest",
@@ -2291,6 +2292,16 @@ public final class LoreSlices {
             "GROUP BY object_id, segment, source",
             List.of(), Map.of(), " ORDER BY calls DESC LIMIT 200");
 
+        // AO-01: журнал мутирующих действий — «кто создал/изменил эту сущность».
+        // Код ответа в value: упавшие вызовы видны наравне с успешными.
+        slice("agent_actions",
+            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, " +
+            "segment AS axis, value AS status FROM MetricSnapshot WHERE metric = 'lore.action'",
+            List.of(), Map.of(
+                "entity_id", " WHERE object_id = :entity_id",
+                "caller", " WHERE source = :caller"),
+            " ORDER BY ts DESC LIMIT 500");
+
         // Тот же ряд, свёрнутый до вызывающего: «кто вообще сколько зовёт»,
         // без разбивки по эндпоинтам — верхний уровень ответа.
         slice("requests_total",
@@ -2392,7 +2403,10 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
             // WK-02: роль связи продукт → проект параллельным списком; out() и
             // outE() обходят одни и те же рёбра в одном порядке.
-            "outE('BELONGS_TO_PROJECT').role AS git_project_roles " +
+            "outE('BELONGS_TO_PROJECT').role AS git_project_roles, " +
+            // WK-03: кому продукт служит и как — параллельные списки, как роли выше.
+            "out('SERVES').code AS serves_codes, " +
+            "outE('SERVES').kind AS serves_kinds " +
             "FROM KnowDictEntry WHERE dict_type = 'product'",
             List.of(), Map.of(), " ORDER BY sort_order, code");
 
@@ -2636,6 +2650,7 @@ public final class LoreSlices {
         Map.entry("bragi_pages", "BRAGI — решение"),
         Map.entry("requests_by_caller", "телеметрия обращений — админская, решение"),
         Map.entry("requests_total", "телеметрия — решение"),
+        Map.entry("agent_actions", "журнал действий (AO-01) — админский, как телеметрия; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")
