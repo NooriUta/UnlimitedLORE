@@ -20,17 +20,21 @@ import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPass
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
+// Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
+const NewsPage = lazy(() => import('./news/NewsPage'));
 
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
 const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
 
 /**
- * Путь без хвостового «/»: /kit и /kit/ — одна страница. Паспорт записи —
- * в query (?section=…&passport=…), как у v1: из списков S4 запись
- * открывается по URL. S5-04: ?section=tasks&passport=SPRINT/CODE — задача.
+ * Путь без хвостового «/»: /kit и /kit/ — одна страница; /news — новости v2
+ * (S7A-02). Паспорт записи — в query (?section=…&passport=…), как у v1: из
+ * списков S4 запись открывается по URL. S5-04: ?section=tasks&passport=SPRINT/CODE — задача.
  */
-export function routeOf(path: string, search = ''): 'kit' | 'task' | 'home' {
-  if (path.replace(/\/+$/, '') === '/kit') return 'kit';
+export function routeOf(path: string, search = ''): 'kit' | 'news' | 'task' | 'home' {
+  const p = path.replace(/\/+$/, '');
+  if (p === '/kit') return 'kit';
+  if (p === '/news') return 'news';
   const q = new URLSearchParams(search);
   if (q.get('section') === 'tasks' && q.get('passport')) return 'task';
   return 'home';
@@ -54,6 +58,13 @@ export default function App({ path, search }: { path?: string; search?: string }
   const query = search ?? (typeof window === 'undefined' ? '' : window.location.search);
   const route = routeOf(current, query);
   if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  if (route === 'news') {
+    return (
+      <ErrorBoundary lang="ru">
+        <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
   if (route === 'task') {
     return (
       <ErrorBoundary lang="ru">
