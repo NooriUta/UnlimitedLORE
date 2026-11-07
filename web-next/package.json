@@ -28,6 +28,7 @@
     "@tiptap/suggestion": "3.32.2",
     "bpmn-js": "^18.31.1",
     "dompurify": "^3.4.17",
+    "katex": "^0.18.10",
     "marked": "18.0.6",
     "mermaid": "^11.17.2",
     "react": "^19.2.7",

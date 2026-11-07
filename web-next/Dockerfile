@@ -21,6 +21,8 @@ FROM node:26-alpine AS build
 WORKDIR /app/web-next
 COPY kit/package.json /app/kit/package.json
 COPY kit/src /app/kit/src
+# Демо-конфиги и фикстуры kit (K-03): страницы /kit/demo/* импортируют @seidr/kit/demo/*.
+COPY kit/demo /app/kit/demo
 COPY web-next/package.json web-next/package-lock.json ./
 RUN npm ci
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./

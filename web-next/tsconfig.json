@@ -30,6 +30,7 @@
       "@tiptap/*": ["./node_modules/@tiptap/*"],
       "tiptap-markdown": ["./node_modules/tiptap-markdown"],
       "marked": ["./node_modules/marked"],
+      "katex": ["./node_modules/katex"],
       "mermaid": ["./node_modules/mermaid"],
       "@mermaid-js/layout-elk": ["./node_modules/@mermaid-js/layout-elk"],
       "bpmn-js/*": ["./node_modules/bpmn-js/*"],
