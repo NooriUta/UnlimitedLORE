@@ -227,6 +227,8 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       if (!isObj(e)) { c.err(p, 'type', `${p} должно быть объектом`); continue; }
       c.str(e, 'label', p);
       c.color(e, 'color', p, true);
+      // S5-10: структурный слой графа (принадлежность/иерархия) — скрыт по умолчанию.
+      c.enumOf(e, 'layer', p, ['structural'], false);
     }
   }
 

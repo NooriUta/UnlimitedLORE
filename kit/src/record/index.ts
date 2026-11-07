@@ -17,3 +17,5 @@ export { egoGraph, edgeColor, toCssColor, verdictTone, type EgoGraph, type EgoNo
 // Чтение записи целиком: листалка «‹ x из y ›» и свойства в ушке (SPRINT_UXR_S5_RECORD_TASKS/S5-04).
 export * from './RecordPager';
 export * from './RecordReader';
+export { egoGraph, edgeColor, toCssColor, typesAround, verdictTone, type EgoGraph, type EgoNode, type EgoOptions, type EgoSector } from './graph';
+export * from './graphState';

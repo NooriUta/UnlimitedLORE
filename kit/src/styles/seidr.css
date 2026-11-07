@@ -1815,6 +1815,20 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-graph__label { fill: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); pointer-events: none; }
 .sk-rec-graph__legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .sk-rec-graph__legend li { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-sm); }
+/* S5-10: настройки графа — глубина, слой структурных связей, фильтр типов.
+   Кнопки — pill-фильтры kit (≥ --tap на касании); подпись ребра — текстом
+   на рёбрах центра, с обводкой фоном, чтобы читалась поверх линий. */
+.sk-rec-graph__ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.sk-rec-graph__depth { display: inline-flex; align-items: center; gap: 4px; }
+.sk-rec-graph__ctl-label { color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; }
+.sk-rec-graph__legend .sk-pill__main,
+.sk-rec-graph__layer .sk-pill__main { display: inline-flex; align-items: center; gap: 4px; }
+.sk-rec-graph__legend .sk-pill--filter:not(.is-on) .sk-rec-dot { background: transparent; box-shadow: inset 0 0 0 1px var(--edge-c, var(--t3)); }
+.sk-rec-graph__edge[data-structural='true'] { stroke-dasharray: 4 3; opacity: .55; }
+.sk-rec-graph__edge-label {
+  fill: var(--t2); font-size: var(--fs-2xs); pointer-events: none;
+  paint-order: stroke; stroke: var(--bg1); stroke-width: 3px; stroke-linejoin: round;
+}
 
 .sk-rec-journal { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .sk-rec-journal__row {
