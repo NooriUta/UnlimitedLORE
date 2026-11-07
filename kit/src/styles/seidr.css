@@ -996,3 +996,128 @@ code, pre, kbd, samp { font-family: var(--mono); }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ═══ K-09 — вид «Дерево / книга» (третий в list.views) ═══
+   Плоский role=tree: отступ уровня — --tree-depth (ставит компонент),
+   строка-контекст (предок совпадения под фильтром) приглушена, цели касания —
+   max(var(--tap), …), как у остальных элементов kit. */
+.sk-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-base);
+  color: var(--t1);
+}
+.sk-tree__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-tree__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 220px;
+  min-height: max(var(--tap), 26px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t3);
+}
+.sk-tree__search:focus-within { border-color: var(--acc); }
+.sk-tree__filter {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  outline: none;
+}
+.sk-tree__levels { display: inline-flex; gap: 2px; }
+.sk-tree__lvl {
+  min-width: max(var(--tap), 26px);
+  min-height: max(var(--tap), 26px);
+  padding: 0 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+.sk-tree__lvl:hover:not(:disabled) { border-color: var(--acc); color: var(--t1); }
+.sk-tree__lvl:disabled { opacity: .45; cursor: default; }
+.sk-tree__lvl:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-tree__summary {
+  color: var(--t3);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-tree__trunc {
+  margin: 0;
+  padding: 4px 8px;
+  border-left: 3px solid var(--wrn);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+}
+.sk-tree__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sk-tree__row {
+  --tree-depth: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 26px);
+  padding: 0 8px 0 calc(var(--tree-depth) * 18px + 2px);
+  border-bottom: 1px solid color-mix(in srgb, var(--bd) 50%, transparent);
+}
+.sk-tree__row:hover { background: var(--bg2); }
+.sk-tree__row:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-tree__row.is-context { opacity: .6; }
+.sk-tree__toggle .sk-icon { transition: transform .12s ease; }
+.sk-tree__toggle.is-open .sk-icon { transform: rotate(90deg); }
+.sk-tree__spacer {
+  display: inline-block;
+  flex-shrink: 0;
+  width: max(var(--tap), 24px);
+}
+.sk-tree__kind { color: var(--t3); }
+.sk-tree__title {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t1);
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+a.sk-tree__title:hover,
+button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
+.sk-tree__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.sk-tree__count {
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}

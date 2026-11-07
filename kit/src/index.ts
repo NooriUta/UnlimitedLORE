@@ -14,3 +14,7 @@ export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
 export { pushUrlState, readUrlState, type UrlWindow } from './resilience/urlState';
+// Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
+export type * from './core/contract';
+// Вид «Дерево / книга» — третий в list.views (K-09).
+export * from './views/tree';
