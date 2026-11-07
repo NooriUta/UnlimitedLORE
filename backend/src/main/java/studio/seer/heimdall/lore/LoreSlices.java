@@ -2473,6 +2473,17 @@ public final class LoreSlices {
         "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"
         + "|out('BELONGS_TO').in('BELONGS_TO')[@type='KnowSprint'].out('BELONGS_TO_PROJECT').slug";
 
+    /**
+     * S1-08: проект некорневого сценария НАСЛЕДУЕТСЯ по DECOMPOSES_INTO (своего ребра у
+     * детей нет). Шкала Коберна — 4 уровня, до корня максимум 3 шага. Без этого скоуп
+     * отсекал детей: use_cases_of_feature отдавал 0 при uc_total = 5.
+     */
+    static final String UC_INHERITED_SCOPE =
+        "out('BELONGS_TO_PROJECT').slug"
+        + "|in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug"
+        + "|in('DECOMPOSES_INTO').in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug"
+        + "|in('DECOMPOSES_INTO').in('DECOMPOSES_INTO').in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug";
+
     static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
         Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
@@ -2556,10 +2567,10 @@ public final class LoreSlices {
         Map.entry("questions_gating_closed_tasks", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
         // Продуктовый слой: сценарии и акторы несут BELONGS_TO_PROJECT.
         Map.entry("features", "out('BELONGS_TO_PROJECT').slug"),
-        Map.entry("uc_by_id", "out('BELONGS_TO_PROJECT').slug"),
-        Map.entry("use_cases_of_component", "out('BELONGS_TO_PROJECT').slug"),
-        Map.entry("use_cases_of_feature", "out('BELONGS_TO_PROJECT').slug"),
-        Map.entry("shipped_dynamics", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("uc_by_id", UC_INHERITED_SCOPE),
+        Map.entry("use_cases_of_component", UC_INHERITED_SCOPE),
+        Map.entry("use_cases_of_feature", UC_INHERITED_SCOPE),
+        Map.entry("shipped_dynamics", UC_INHERITED_SCOPE),
         Map.entry("feature_vp_analytics", "out('BELONGS_TO_PROJECT').slug")
         // actors / actor_load — НЕ здесь: AL-106, агенты видны всем (см. SHARED_SLICES).
     );

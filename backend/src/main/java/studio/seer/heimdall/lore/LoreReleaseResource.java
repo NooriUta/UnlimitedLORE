@@ -255,7 +255,7 @@ public class LoreReleaseResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE CREATE] %s: %s", req.release_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -334,7 +334,7 @@ public class LoreReleaseResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE UPDATE] %s: %s", req.release_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -450,7 +450,7 @@ public class LoreReleaseResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE LINK] %s: %s", req.release_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
         // Несделанное — ошибка, симметрично CIM-03 у unlink: ok:true при
         // непривязанном читался бы как «привязано».
@@ -531,7 +531,7 @@ public class LoreReleaseResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE UNLINK] %s: %s", req.release_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", errors.isEmpty());
@@ -659,7 +659,7 @@ public class LoreReleaseResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE PROJECT MOVE] %s %s: %s", req.entity_type(), req.id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

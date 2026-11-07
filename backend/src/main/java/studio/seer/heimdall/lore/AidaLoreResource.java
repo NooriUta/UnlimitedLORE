@@ -377,7 +377,7 @@ public class AidaLoreResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ANALYTICS] %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -645,7 +645,7 @@ public class AidaLoreResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE NEWS] %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -897,6 +897,11 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> castRows(Object rows) {
+        return (List<Map<String, Object>>) rows;
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         // RM-P13: время наружу приводит LoreTimeFormatResponseFilter — одна точка
         // на все JSON-ответы; здесь строки до выдачи ни с чем не сравниваются.
@@ -983,7 +988,31 @@ public class AidaLoreResource extends LoreResourceBase {
         java.util.Set<String> allowedForRedact =
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
+        // S1-09: записи, намеренно лишённые проекта (claude-rules, infra), скоуп не режет —
+        // подтягиваются вторым запросом без скоупа и вливаются в выдачу (ScopeExemptRows).
+        final Map<String, String> exemptGiven = ScopeExemptRows.exemptParams(id, given, rowScope);
+        final LoreSlices.Composed exemptQuery;
+        try {
+            exemptQuery = exemptGiven == null ? null : LoreSlices.compose(id, exemptGiven);
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
+        }
+
         return client.query(db, basicAuth(), body)
+            .chain(res -> {
+                if (exemptQuery == null) return Uni.createFrom().item(res);
+                MartQuery extra = new MartQuery("sql", exemptQuery.sql(),
+                    exemptQuery.params().isEmpty() ? null : exemptQuery.params(), -1);
+                // Сбой второго запроса — это сбой выдачи, а не «исключённых нет»:
+                // молча отдать урезанный список значило бы повторить исходный дефект.
+                return client.query(db, basicAuth(), extra).map(x -> {
+                    ScopeExemptRows.Merged m = ScopeExemptRows.merge(id, res.result(), x.result());
+                    ScopeExemptRows.annotate(scopeMarker, id, m.added());
+                    return new studio.seer.heimdall.bench.MartResult(m.rows(), res.returned(),
+                        res.limit(), res.truncated());
+                });
+            })
             // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
             // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
             .chain(res -> {
@@ -1002,6 +1031,9 @@ public class AidaLoreResource extends LoreResourceBase {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> outside = (Map<String, Object>) pair[1];
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
+                // S1-06: аддитивное поле категории статуса — ДО SlicePage.apply,
+                // чтобы fields=…,status_category проецировалось как обычная колонка.
+                out.put("rows", LoreStatusCategory.enrich(id, castRows(out.get("rows"))));
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (outside != null) out.put("outside_scope", outside);
                 try {
@@ -1015,7 +1047,65 @@ public class AidaLoreResource extends LoreResourceBase {
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", String.valueOf(ex.getMessage()))));
+                    .entity(LoreUpstream.error(ex)));
+            });
+    }
+
+    /**
+     * S1-07: счётчик секции по одному правилу — «открытые · в скоупе · с текущими
+     * фильтрами», закрытые отдельно ({@link LoreSectionCount}). Тот же путь, что у
+     * {@link #slice}: те же параметры-фильтры, тот же проектный скоуп и тот же
+     * отказ SCOPE_EMPTY; страница (limit/offset/fields) игнорируется — считается
+     * вся отфильтрованная выдача. Срез без поля статуса — 400 NOT_COUNTABLE.
+     */
+    @GET
+    @Path("slice/{id}/count")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Uni<Response> sliceCount(@PathParam("id") String id, @Context UriInfo uriInfo,
+                                    @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return Uni.createFrom().item(disabled());
+        if (LoreSlices.get(id) == null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
+                .entity(new LoreError("UNKNOWN_SLICE", id))));
+        }
+        if (!LoreSectionCount.isCountable(id)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("NOT_COUNTABLE", "срез " + id + " не несёт статуса — открытых/закрытых "
+                    + "у него нет; считаемые: " + String.join(",", LoreSectionCount.countableSlices())))));
+        }
+        Map<String, String> given = new LinkedHashMap<>();
+        uriInfo.getQueryParameters().forEach((k, v) -> {
+            if (v != null && !v.isEmpty()) given.put(k, v.get(0));
+        });
+        final Map<String, String> filters = LoreSectionCount.filtersOf(given);
+        LoreSlices.Composed composed;
+        java.util.Set<String> rowScope;
+        try {
+            rowScope = allowedProjectsOrNull(role);
+            composed = LoreSlices.compose(id, new LinkedHashMap<>(filters), rowScope);
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
+        }
+        if (scopeDenies(id, rowScope)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — счётчик среза " + id + " не отдаётся нулём"))));
+        }
+        final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
+        MartQuery body = new MartQuery("sql", composed.sql(),
+            composed.params().isEmpty() ? null : composed.params(), -1);
+        return client.query(db, basicAuth(), body)
+            .map(res -> {
+                Map<String, Object> out = sliceBody(res);
+                if (scopeMarker != null) out.put("scope", scopeMarker);
+                return noStore(Response.ok(LoreSectionCount.count(id, out, filters)));
+            })
+            .onFailure().recoverWithItem(ex -> {
+                LOG.warnf("[LORE FAILED] slice-count=%s: %s", id, ex.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(LoreUpstream.error(ex)));
             });
     }
 

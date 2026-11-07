@@ -72,7 +72,7 @@ public class LoreComponentResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -140,7 +140,7 @@ public class LoreComponentResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT CREATE] %s: %s", req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -244,7 +244,7 @@ public class LoreComponentResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT DELETE] %s: %s", cid, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -342,7 +342,7 @@ public class LoreComponentResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT LINK-PARENT] %s→%s: %s", req.component_id(), req.parent_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 }

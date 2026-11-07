@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSpec, type LoreSpecPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
+import { bodyStateOf, type RedactableRow } from './bodyState';
+import { RedactedBody } from './RedactedBody';
 
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, padding: '12px 20px' },
@@ -55,6 +57,9 @@ export default function LoreSpecView({ specId, onError, onBack, onNavigateCompon
   if (loading) return <div style={S.empty}>{t('lore.specView.loading', 'Загрузка {{specId}}…', { specId })}</div>;
   if (!data)   return <div style={S.empty}>{t('lore.specView.notFound', 'Спека не найдена: {{specId}}', { specId })}</div>;
 
+  // S1-05: spec_by_id обнуляет content_md и summary без роли в проекте спеки.
+  const body = bodyStateOf(data as LoreSpecPassport & RedactableRow, ['content_md']);
+
   return (
     <div className="lore-spec-view-root" style={S.root}>
       <button style={S.back} onClick={onBack}>{t('lore.specView.backButton', '← К списку')}</button>
@@ -75,9 +80,11 @@ export default function LoreSpecView({ specId, onError, onBack, onNavigateCompon
 
       {data.summary && <div style={S.summary}>{data.summary}</div>}
 
-      {data.content_md
-        ? <MartProse text={data.content_md} />
-        : <div style={S.empty}>{t('lore.specView.emptyContent', 'Контент пуст.')}</div>}
+      {body.k === 'redacted'
+        ? <RedactedBody reason={body.reason} />
+        : data.content_md
+          ? <MartProse text={data.content_md} />
+          : <div style={S.empty}>{t('lore.specView.emptyContent', 'Контент пуст.')}</div>}
 
       {data.file_path && <div style={S.path}>{data.file_path}</div>}
     </div>

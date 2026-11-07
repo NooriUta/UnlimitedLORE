@@ -108,7 +108,7 @@ public class LoreDocResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -155,7 +155,7 @@ public class LoreDocResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DOC DELETE] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -217,7 +217,7 @@ public class LoreDocResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DOC PARENT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -276,7 +276,7 @@ public class LoreDocResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DOC COMPONENT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -326,7 +326,7 @@ public class LoreDocResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DOC PROJECT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -373,7 +373,7 @@ public class LoreDocResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DOC SPRINT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 }
