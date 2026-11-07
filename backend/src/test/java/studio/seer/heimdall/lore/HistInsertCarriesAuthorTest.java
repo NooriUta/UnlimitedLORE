@@ -110,6 +110,20 @@ class HistInsertCarriesAuthorTest {
         assertTrue(v.get(0).contains("KnowADRHist"), v.toString());
     }
 
+    /** Схема: поля автора объявлены на КАЖДОЙ цепочке SCD2 (V66), не только на тех, что пишут REST-пути. */
+    @Test
+    void schemaDeclaresAuthorOnEveryHistChain() {
+        LoreSchemaMigrations.Step s = LoreSchemaMigrations.STEPS.stream()
+            .filter(x -> "hist_change_author".equals(x.name())).findFirst()
+            .orElseThrow(() -> new AssertionError("нет шага схемы hist_change_author (S2-12)"));
+        assertEquals(66, s.version(), "номер шага — сразу после батча S2 (V65)");
+        assertEquals(17, s.compatMajor(), "аддитивно, major не поднимается");
+        for (String hist : LoreSlices.HIST_PARENT.keySet()) {
+            assertTrue(s.sql().contains("CREATE PROPERTY " + hist + ".changed_by IF NOT EXISTS STRING"), hist);
+            assertTrue(s.sql().contains("CREATE PROPERTY " + hist + ".changed_by_kind IF NOT EXISTS STRING"), hist);
+        }
+    }
+
     @Test
     void insertWithAuthorPasses() {
         String src = "\"INSERT INTO KnowTaskHist SET state_uid=:nsid, valid_from=:now\" + ChangeAuthor.SET_SQL + \";\"";

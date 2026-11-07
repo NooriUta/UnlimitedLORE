@@ -35,7 +35,8 @@ class TaskCreateEffortDaysTest {
         String body = src.substring(at, src.indexOf("@Path(\"task/move\")", at));
         assertTrue(body.contains("INSERT INTO KnowTask SET") && body.contains("effort_days = :eff, order_index"),
             "вершина KnowTask получает effort_days при создании");
-        assertTrue(body.contains("valid_from = :now, note_md = :note, effort_days = :eff;"),
+        // S2-12: за effort_days в том же SET идёт автор версии (ChangeAuthor.SET_SQL).
+        assertTrue(body.contains("valid_from = :now, note_md = :note, effort_days = :eff\").append(ChangeAuthor.SET_SQL)"),
             "открытая KnowTaskHist получает effort_days при создании");
         assertTrue(body.contains("\"eff\", req.effort_days()"), "параметр :eff передан в скрипт");
     }

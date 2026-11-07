@@ -97,11 +97,23 @@ class HistChangeAuthorLiveDbTest {
 
     /** Полный набор путей одним вызывающим; возвращает id-шники для проверки. */
     private void exerciseAllPaths(String sid, String adr, String spec) {
+        exerciseAllPaths(sid, adr, spec, true);
+    }
+
+    /**
+     * withTask=false — для агента: создание задачи агентом закрыто гейтом ролей
+     * (TaskRoleWriter.refuseCreate — автор и исполнитель из ролей проекта), это
+     * ортогонально автору версии. Смена статуса задачи идёт тем же
+     * updateScd2Status, что и спринта, — его агентская ветка покрыта спринтом.
+     */
+    private void exerciseAllPaths(String sid, String adr, String spec, boolean withTask) {
         post("/lore/sprint/create", "{\"sprint_id\":\"" + sid + "\"}");
         post("/lore/status", "{\"entity_type\":\"sprint\",\"id\":\"" + sid + "\",\"status\":\"active\"}");
         post("/lore/sprint/plan", "{\"sprint_id\":\"" + sid + "\",\"priority\":\"high\"}");
-        post("/lore/task", "{\"sprint_id\":\"" + sid + "\",\"task_id\":\"T1\",\"title\":\"author probe\"}");
-        post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + sid + "/T1\",\"status\":\"active\"}");
+        if (withTask) {
+            post("/lore/task", "{\"sprint_id\":\"" + sid + "\",\"task_id\":\"T1\",\"title\":\"author probe\"}");
+            post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + sid + "/T1\",\"status\":\"active\"}");
+        }
         post("/lore/phase", "{\"sprint_id\":\"" + sid + "\",\"phase_key\":\"A\"}");
         post("/lore/adr", "{\"adr_id\":\"" + adr + "\",\"name\":\"author probe\",\"context_md\":\"v1\"}");
         post("/lore/adr", "{\"adr_id\":\"" + adr + "\",\"name\":\"author probe\",\"context_md\":\"v2\",\"checkpoint\":true}");
@@ -110,12 +122,18 @@ class HistChangeAuthorLiveDbTest {
     }
 
     private void assertAllPathsBy(String sid, String adr, String spec, String by, String kind) {
+        assertAllPathsBy(sid, adr, spec, by, kind, true);
+    }
+
+    private void assertAllPathsBy(String sid, String adr, String spec, String by, String kind, boolean withTask) {
         List<Map<String, Object>> sprint = hist("KnowSprintHist", "sprint_id", sid);
         assertEquals(3, sprint.size(), "create + status + plan = три версии спринта: " + sprint);
         allBy(sprint, by, kind, "спринт");
-        List<Map<String, Object>> task = hist("KnowTaskHist", "task_uid", sid + "/T1");
-        assertEquals(2, task.size(), "create + status = две версии задачи: " + task);
-        allBy(task, by, kind, "задача");
+        if (withTask) {
+            List<Map<String, Object>> task = hist("KnowTaskHist", "task_uid", sid + "/T1");
+            assertEquals(2, task.size(), "create + status = две версии задачи: " + task);
+            allBy(task, by, kind, "задача");
+        }
         allBy(hist("KnowPhaseHist", "phase_uid", sid + "/PHASE_A"), by, kind, "фаза");
         List<Map<String, Object>> a = hist("KnowADRHist", "adr_id", adr);
         assertEquals(2, a.size(), "первая версия + checkpoint ADR: " + a);
@@ -146,8 +164,8 @@ class HistChangeAuthorLiveDbTest {
         @Claim(key = "client_id", value = AGENT_CLIENT),
         @Claim(key = "sub", value = "s212-agent-sub")})
     void agentTokenStampsEveryNewVersionAsAgentClient() {
-        exerciseAllPaths("SPRINT_S212_AGENT", "ADR-S212-AGENT", "SPEC-S212-AGENT");
-        assertAllPathsBy("SPRINT_S212_AGENT", "ADR-S212-AGENT", "SPEC-S212-AGENT", AGENT_CLIENT, "agent");
+        exerciseAllPaths("SPRINT_S212_AGENT", "ADR-S212-AGENT", "SPEC-S212-AGENT", false);
+        assertAllPathsBy("SPRINT_S212_AGENT", "ADR-S212-AGENT", "SPEC-S212-AGENT", AGENT_CLIENT, "agent", false);
     }
 
     // ── 3. Положительный контроль: без токена — «неизвестно», а не «человек» ──

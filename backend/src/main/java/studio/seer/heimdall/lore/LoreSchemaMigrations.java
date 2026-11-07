@@ -1482,7 +1482,19 @@ final class LoreSchemaMigrations {
             "CREATE EDGE TYPE REFERENCES IF NOT EXISTS",
             "CREATE PROPERTY REFERENCES.origin IF NOT EXISTS STRING",
             "CREATE PROPERTY REFERENCES.created_at IF NOT EXISTS STRING",
-            "CREATE PROPERTY REFERENCES.created_by IF NOT EXISTS STRING"))
+            "CREATE PROPERTY REFERENCES.created_by IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-12: автор версии истории. Каждая новая
+        // версия любой цепочки SCD2 несёт changed_by (kc_sub человека / client_id
+        // агента) и changed_by_kind (human|agent|unknown) из ПРОВЕРЕННОГО токена
+        // (ChangeAuthor). Необязательные STRING на всех двенадцати *Hist — старые
+        // версии остаются без автора («неизвестно»), v1 поле не знает и не задевает.
+        // Только аддитивно, major 17 (чек-лист S2-07 предусматривал ровно эту форму).
+        new Step(66, 17, "hist_change_author", HIST_VALID_FROM_TEMPORAL.stream()
+            .flatMap(h -> java.util.stream.Stream.of(
+                "CREATE PROPERTY " + h + ".changed_by IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".changed_by_kind IF NOT EXISTS STRING"))
+            .toList())
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
