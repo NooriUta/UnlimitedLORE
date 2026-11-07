@@ -15,19 +15,35 @@ import { ErrorBoundary, Pill, Skeleton, StorageBanner } from '@seidr/kit';
 import './App.css';
 import { PersonalSettings } from './settings/PersonalSettings';
 import { storage } from './storage/safe';
+import { useAppT } from './i18n';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
+// S4-09: экран «Спринты» — список kit с «задачи x/y» и раскрытием строки.
+const SprintsPage = lazy(() => import('./sprints/SprintsPage'));
 
 /** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
-export function routeOf(path: string): 'kit' | 'home' {
-  return path.replace(/\/+$/, '') === '/kit' ? 'kit' : 'home';
+export function routeOf(path: string): 'kit' | 'sprints' | 'home' {
+  const p = path.replace(/\/+$/, '');
+  if (p === '/kit') return 'kit';
+  if (p === '/sprints') return 'sprints';
+  return 'home';
 }
 
 export default function App({ path }: { path?: string } = {}) {
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
-  if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  const route = routeOf(current);
+  const t = useAppT();
+  if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  if (route === 'sprints') {
+    return (
+      <ErrorBoundary lang="ru">
+        <StorageBanner storage={storage} lang="ru" />
+        <main data-lore-app="v2"><Suspense fallback={<Skeleton />}><SprintsPage /></Suspense></main>
+      </ErrorBoundary>
+    );
+  }
   return (
     <ErrorBoundary lang="ru">
       <StorageBanner storage={storage} lang="ru" />
@@ -35,6 +51,7 @@ export default function App({ path }: { path?: string } = {}) {
         <h1 className="shell-title">LORE</h1>
         <Pill variant="id">v2</Pill>
         <a className="shell-link" href="/kit">Seiðr-kit</a>
+        <a className="shell-link" href="/sprints">{t('sprints.title')}</a>
       </main>
       {/* S3-07: личные настройки — переход v2 → v1 по флагу «новая навигация». */}
       <PersonalSettings />

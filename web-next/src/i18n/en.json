@@ -53,5 +53,22 @@
   "kitPage.md.html": "HTML — sandbox only",
   "kitPage.md.htmlTitle": "Sample HTML fragment",
   "kitPage.md.sample": "## Decision\n\n**Markdown** text with a list:\n\n- item one\n- [x] item two\n\n| field | value |\n|---|---|\n| status | in progress |\n\n```mermaid\ngraph LR; A[Task] --> B[PR] --> C[Release]\n```\n",
-  "kitPage.md.htmlSample": "<h3>Fragment</h3><p>HTML renders in an iframe with sandbox and CSP — host scripts are out of its reach.</p>"
+  "kitPage.md.htmlSample": "<h3>Fragment</h3><p>HTML renders in an iframe with sandbox and CSP — host scripts are out of its reach.</p>",
+  "sprints.title": "Sprints",
+  "sprints.col.tasks": "Tasks",
+  "sprints.kind.task": "Tasks",
+  "sprints.tasks.label": "Tasks of sprint {id}",
+  "sprints.tasks.empty": "No tasks in the sprint",
+  "sprints.tasks.emptyHint": "Checked: this sprint has no tasks — not a loading failure.",
+  "status.backlog": "Backlog",
+  "status.todo": "To do",
+  "status.planned": "Planned",
+  "status.design": "Design",
+  "status.active": "In progress",
+  "status.partial": "Partial",
+  "status.blocked": "Blocked",
+  "status.ready_for_deploy": "Ready for deploy",
+  "status.done": "Done",
+  "status.cancelled": "Cancelled",
+  "status.deferred": "Deferred"
 }
