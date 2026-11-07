@@ -5,6 +5,9 @@ mcp-server/node_modules/
 # build output
 dist/
 mcp-server/dist/
+# Выдача Seiðr-kit — файлы в репо (SPRINT_UXR_S10_SEIDR_KIT/K-08): бандл для
+# single-file HTML коммитится, пересборка — `npm run build:bundle` в kit/.
+!/kit/dist/
 
 # java / gradle (backend)
 backend/build/

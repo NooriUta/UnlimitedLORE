@@ -50,5 +50,13 @@
   "kit.md.mentionEmpty": "ничего не найдено — акторы заводятся в разделе «Клиент»",
   "kit.storage.unavailable": "Хранилище недоступно — отметки не сохранятся",
   "kit.error.title": "Что-то сломалось",
-  "kit.error.retry": "Повторить"
+  "kit.error.retry": "Повторить",
+  "kit.mount.records": "Записи",
+  "kit.mount.tabs": "Вкладки записи",
+  "kit.mount.overview": "Обзор",
+  "kit.mount.generatedAt": "данные на {at}",
+  "kit.mount.notChecked": "Не смогли проверить: {block}",
+  "kit.mount.blockFailed": "Блок не отрисовался",
+  "kit.mount.blockFailedHint": "Сломан только этот блок — остальная запись показана.",
+  "kit.mount.badConfig": "Конфиг kit не подходит к контракту"
 }

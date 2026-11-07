@@ -50,5 +50,13 @@
   "kit.md.mentionEmpty": "nothing found — actors are created in the “Client” section",
   "kit.storage.unavailable": "Storage unavailable — your marks will not be saved",
   "kit.error.title": "Something went wrong",
-  "kit.error.retry": "Retry"
+  "kit.error.retry": "Retry",
+  "kit.mount.records": "Records",
+  "kit.mount.tabs": "Record tabs",
+  "kit.mount.overview": "Overview",
+  "kit.mount.generatedAt": "data as of {at}",
+  "kit.mount.notChecked": "Could not check: {block}",
+  "kit.mount.blockFailed": "Block failed to render",
+  "kit.mount.blockFailedHint": "Only this block is broken — the rest of the record is shown.",
+  "kit.mount.badConfig": "Kit config does not match the contract"
 }
