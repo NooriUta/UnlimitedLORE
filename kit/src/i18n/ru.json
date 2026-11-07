@@ -1,0 +1,16 @@
+{
+  "kit.state.loading": "Загрузка…",
+  "kit.state.empty.title": "Пусто (проверено)",
+  "kit.state.empty.hint": "Запрос выполнен: записей нет. Это проверенный ноль, а не сбой.",
+  "kit.state.error.title": "Не смогли загрузить",
+  "kit.state.error.hint": "Это не «пусто»: данные не получены. Повторите или проверьте связь.",
+  "kit.state.error.retry": "Повторить",
+  "kit.state.forbidden.title": "Нет прав",
+  "kit.state.forbidden.hint": "Данные скрыты правами — это не «пусто».",
+  "kit.state.truncated.paged": "Показано {from}–{to} из {total}",
+  "kit.state.truncated.capped": "Показано {shown}: выдача обрезана сервером на {limit} строк — сузьте запрос",
+  "kit.state.truncated.unknown": "Показано {shown}: полноту выдачи проверить нечем",
+  "kit.state.truncated.unverified": "0 строк, но поля запроса проверить не на чем — это может быть опечатка, а не отсутствие данных",
+  "kit.state.truncated.more": "Показать ещё",
+  "kit.sheet.close": "Закрыть"
+}

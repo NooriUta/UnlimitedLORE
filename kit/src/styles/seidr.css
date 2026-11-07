@@ -476,3 +476,243 @@ code, pre, kbd, samp { font-family: var(--mono); }
   flex-wrap: wrap;
 }
 .sk-toolbar--vertical { flex-direction: column; align-items: stretch; }
+
+/* ═══════════ честные состояния (S4-00c) ═══════════
+   «Пусто» ≠ «ошибка» ≠ «нет прав» ≠ «обрезано»: у каждого свой тон-токен и
+   data-state. Пусто — нейтрально, ошибка — --dng, нет прав и обрезано — --wrn. */
+
+/* Текст только для чтения скринридером (подпись скелета и т.п.). */
+.sk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- кнопка действия (Повторить, Показать ещё) ---------- */
+.sk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.sk-btn:hover { border-color: var(--acc); }
+.sk-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* ---------- Skeleton ---------- */
+.sk-skel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--pad-y) 0;
+}
+.sk-skel__line {
+  display: block;
+  height: 10px;
+  border-radius: var(--r-sm);
+  background: var(--bg3);
+  animation: sk-pulse 1.4s ease-in-out infinite;
+}
+.sk-skel__line:nth-child(3n + 2) { width: 92%; }
+.sk-skel__line:nth-child(3n + 3) { width: 78%; }
+.sk-skel__line:nth-child(3n + 1) { width: 64%; }
+@keyframes sk-pulse { 50% { opacity: .4; } }
+@media (prefers-reduced-motion: reduce) {
+  .sk-skel__line { animation: none; }
+}
+
+/* ---------- EmptyState / LoadError / Forbidden ---------- */
+.sk-state {
+  --state-c: var(--t3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  border: 1px dashed var(--bd);
+  border-radius: var(--r-lg);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+.sk-state--compact { padding: 8px; flex-direction: row; flex-wrap: wrap; justify-content: center; text-align: left; }
+.sk-state__icon { color: var(--state-c); }
+.sk-state__title { color: var(--t1); font-size: var(--fs-md); font-weight: 700; }
+.sk-state__hint { max-width: 56ch; }
+.sk-state__detail {
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+.sk-state__action { margin-top: 4px; display: flex; gap: var(--gap); }
+.sk-state--empty { --state-c: var(--t3); }
+.sk-state--error {
+  --state-c: var(--dng);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--dng) 55%, transparent);
+  background: color-mix(in srgb, var(--dng) 8%, transparent);
+}
+.sk-state--forbidden {
+  --state-c: var(--wrn);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--wrn) 50%, transparent);
+  background: color-mix(in srgb, var(--wrn) 7%, transparent);
+}
+
+/* ---------- Truncated ---------- */
+.sk-trunc {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-trunc__icon { color: var(--wrn); }
+.sk-trunc__hint { color: var(--t2); font-size: var(--fs-xs); }
+.sk-trunc .sk-btn { margin-left: auto; }
+
+/* ═══════════ оболочки (S4-00c): Sheet/Drawer, Tabs, Ear ═══════════ */
+
+/* ---------- Sheet / Drawer ---------- */
+.sk-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-sheet {
+  position: fixed;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--bg1);
+  border: 1px solid var(--bd);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg0) 70%, transparent);
+}
+.sk-sheet:focus { outline: none; }
+.sk-sheet--right { top: 0; right: 0; bottom: 0; width: min(520px, 94vw); border-width: 0 0 0 1px; }
+.sk-sheet--left { top: 0; left: 0; bottom: 0; width: min(360px, 94vw); border-width: 0 1px 0 0; }
+.sk-sheet--bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 85vh;
+  border-width: 1px 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+.sk-sheet__head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: 6px 8px 6px 12px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.sk-sheet__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-md);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sk-sheet__body { padding: 8px 12px; }
+@media (max-width: 720px) {
+  .sk-sheet--right, .sk-sheet--left { width: 100vw; }
+}
+
+/* ---------- Tabs ---------- */
+.sk-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-tab:hover { color: var(--t1); border-color: var(--bdh); }
+.sk-tab[aria-selected='true'] {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--t1);
+  font-weight: 700;
+}
+.sk-tab:disabled { opacity: .45; cursor: default; }
+.sk-tab:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-tabpanel { padding-top: 6px; }
+.sk-tabpanel:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+/* ---------- Ear («ушко») ---------- */
+.sk-ear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), 28px);
+  min-height: 110px;
+  padding: 12px 0;
+  writing-mode: vertical-rl;
+  border: 1px solid var(--bd);
+  background: var(--bg1);
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.sk-ear--right { border-radius: var(--r-lg) 0 0 var(--r-lg); }
+.sk-ear--left { border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.sk-ear:hover { color: var(--acc); border-color: var(--acc); }
+.sk-ear:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
