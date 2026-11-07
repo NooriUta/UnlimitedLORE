@@ -1482,7 +1482,15 @@ final class LoreSchemaMigrations {
             "CREATE EDGE TYPE REFERENCES IF NOT EXISTS",
             "CREATE PROPERTY REFERENCES.origin IF NOT EXISTS STRING",
             "CREATE PROPERTY REFERENCES.created_at IF NOT EXISTS STRING",
-            "CREATE PROPERTY REFERENCES.created_by IF NOT EXISTS STRING"))
+            "CREATE PROPERTY REFERENCES.created_by IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S7A_NEWS/S7A-04 (спека новостей §8, решение 07.11 п.12): черта
+        // «прочитано до сюда» — на сервере, одна общая, сдвигается только PUT
+        // человека. Новый тип, v1 его не знает — аддитивно, major 17. Номер 70, а
+        // не 66: 66–69 заняты шагами S2 (S2-10/S2-12/S2-13), ещё не влитыми в
+        // develop; раннер накатывает недостающие шаги по множеству, разрыв в
+        // ordinal допустим. DDL живёт рядом с хранилищем, чтобы не было двух правд.
+        new Step(70, 17, "news_read_mark", LoreNewsReadMarkStore.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

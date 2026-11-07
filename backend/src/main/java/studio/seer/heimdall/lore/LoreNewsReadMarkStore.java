@@ -11,15 +11,14 @@ import java.util.function.BiFunction;
  * общая (§8, решение 07.11 п.12). Не тает: сдвигается только действием
  * пользователя (PUT), никаких счётчиков и уведомлений.
  *
- * <p><b>Схема ещё не развёрнута — намеренно.</b> Тип {@link #TYPE} нужен
- * шагом {@code LoreSchemaMigrations}, но номер шага берётся на сборке ПОСЛЕ
- * мержа SPRINT_UXR_S2_GRAPH_MEMORY: S2 добавляет свои шаги, и номер, занятый
- * сейчас, столкнулся бы с ними (ordinal ledger неизменяем). Готовый DDL —
- * {@link #SCHEMA_SQL}; TODO(S7A-04, сборка после S2): завести
- * {@code new Step(N, …, "news_read_mark", SCHEMA_SQL)}.
+ * <p>Тип {@link #TYPE} заводит шаг V70 {@code news_read_mark} реестра
+ * {@code LoreSchemaMigrations} — DDL берётся отсюда, {@link #SCHEMA_SQL}.
+ * Выпущенный шаг неизменяем: правка этого списка меняет checksum V70 и роняет
+ * старт (дрейф-гард) — нужна правка схемы → новый шаг.
  *
- * <p>До этого чтение и запись честно отвечают {@code state=unavailable}
- * (тип не найден), а не «черты нет» — пустое и недоступное не смешиваются.
+ * <p>Пока шаг не накатан (или хранилище недоступно), чтение и запись честно
+ * отвечают {@code state=unavailable} с причиной, а не «черты нет» — пустое и
+ * недоступное не смешиваются (S7A-07).
  */
 final class LoreNewsReadMarkStore {
 
@@ -63,7 +62,7 @@ final class LoreNewsReadMarkStore {
             return at == null ? new State("unavailable", null, "mark_at не разобран: " + rows.get(0).get("mark_at"))
                 : new State("ok", at, null);
         } catch (Exception e) {
-            return new State("unset", null, null); // TEMP обратная проверка S7A-07 — откатывается следующим коммитом
+            return new State("unavailable", null, String.valueOf(e.getMessage()));
         }
     }
 

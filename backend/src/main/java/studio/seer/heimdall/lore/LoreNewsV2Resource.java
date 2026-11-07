@@ -139,6 +139,7 @@ public class LoreNewsV2Resource extends LoreResourceBase {
         for (String ax : new String[]{groupBy, sub})
             if (ax != null && !NewsV2Engine.AXES.contains(ax))
                 return new Built(null, badParams("group_by/sub: ожидается одна из осей " + NewsV2Engine.AXES));
+        if (limit != null && limit < 1) return new Built(null, badParams("limit: ожидается целое ≥ 1"));
         Instant now = Instant.now();
         Instant[] period = period(from, to, days, zone, now);
         if (period == null) return new Built(null, badParams("from/to: ожидается ISO-момент или день YYYY-MM-DD, from < to"));

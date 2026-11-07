@@ -860,6 +860,9 @@ public final class NewsV2Engine {
         LocalDate today = localDay(in.now());
         List<Map<String, Object>> out = new ArrayList<>();
         for (Row r : rows) {
+            // S7A-07: meta.truncated обещает обрезку — значит лента режется здесь же.
+            // Режется только список строк; числа считаются по всему периоду.
+            if (q.limit() != null && out.size() >= q.limit()) break;
             List<Event> evs = r.events().stream().filter(e -> matches(e, q)).toList();
             if (evs.isEmpty()) continue;
             Event last = evs.get(evs.size() - 1), first = evs.get(0);
