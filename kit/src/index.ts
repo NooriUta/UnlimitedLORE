@@ -14,3 +14,6 @@ export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
 export { pushUrlState, readUrlState, type UrlWindow } from './resilience/urlState';
+// Ядро: контракт KitConfig/KitData и смена статуса «2 касания» с хуками
+// сохранения (SPRINT_UXR_S10_SEIDR_KIT/K-05).
+export * from './core';

@@ -50,5 +50,12 @@
   "kit.md.mentionEmpty": "ничего не найдено — акторы заводятся в разделе «Клиент»",
   "kit.storage.unavailable": "Хранилище недоступно — отметки не сохранятся",
   "kit.error.title": "Что-то сломалось",
-  "kit.error.retry": "Повторить"
+  "kit.error.retry": "Повторить",
+  "kit.status.label": "Статус: {title}",
+  "kit.status.menu": "Сменить статус",
+  "kit.status.cancel": "Отмена",
+  "kit.status.none": "Нет допустимых переходов из этого статуса",
+  "kit.status.saving": "Сохранение…",
+  "kit.status.saveFailed": "Не сохранено, статус возвращён: {reason}",
+  "kit.status.undo": "Вернуть «{title}»"
 }
