@@ -64,6 +64,11 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
         BASE_URL = baseUrl;
         awaitReady(baseUrl);
         recreateDatabase(baseUrl);
+        // PL-01 проба: счётчик полных инициализаций схемы за прогон (System
+        // property — переживает смену загрузчика классов между приложениями).
+        int n = Integer.getInteger("lore.test.db.starts", 0) + 1;
+        System.setProperty("lore.test.db.starts", Integer.toString(n));
+        System.out.println("[LORE TEST DB] инициализация схемы №" + n + " за прогон (fresh)");
 
         return Map.of(
             "quarkus.rest-client.mart-api.url", baseUrl,
