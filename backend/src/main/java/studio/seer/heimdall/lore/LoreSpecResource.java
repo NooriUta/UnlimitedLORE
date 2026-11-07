@@ -115,10 +115,12 @@ public class LoreSpecResource extends LoreResourceBase {
                     hp.put("status",  req.status()     != null ? req.status()     : histRows.get(0).get("status"));
                     // S2-09: закрыть, только если версия ЕЩЁ открыта; иначе выход до записи и 409.
                     hp.put("oldrid", hp.get("rid"));
+                    changeAuthor().bind(hp); // S2-12
                     Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         Scd2Guard.guardedClose("KnowSpecHist", false) +
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
-                        "content_md=:content, version=:version, summary=:summary, status=:status;" +
+                        "content_md=:content, version=:version, summary=:summary, status=:status" +
+                        ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
                         "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely().result();
                     if (Scd2Guard.isConflict(cpRes))
@@ -146,10 +148,12 @@ public class LoreSpecResource extends LoreResourceBase {
                     hp.put("id", req.spec_id());
                     hp.put("nsid", nsid);
                     hp.put("now", Instant.now().toString());
+                    changeAuthor().bind(hp); // S2-12
                     // A1: hist INSERT + HAS_STATE edge as one atomic sqlscript.
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
-                        "content_md=:content, version=:version, summary=:summary, status=:status;" +
+                        "content_md=:content, version=:version, summary=:summary, status=:status" +
+                        ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
                         "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 }

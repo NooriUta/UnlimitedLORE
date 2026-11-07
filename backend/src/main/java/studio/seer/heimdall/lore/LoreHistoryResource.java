@@ -69,7 +69,7 @@ public class LoreHistoryResource extends LoreResourceBase {
         List<Map<String, Object>> rows = LoreEntityHistory.scope(type, raw, allowed);
 
         Map<String, Object> attribution = new LinkedHashMap<>();
-        attribution.put("source", "journal lore.action (AO-01) ± valid_from");
+        attribution.put("source", "changed_by версии (S2-12); у версий без автора — journal lore.action (AO-01) ± valid_from");
         List<Map<String, Object>> journal = List.of();
         if (!rows.isEmpty()) {
             try {

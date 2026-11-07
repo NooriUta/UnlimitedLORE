@@ -137,10 +137,11 @@ public class LoreAdrResource extends LoreResourceBase {
                     cp.put("con", req.consequences_md() != null ? req.consequences_md() : histRows.get(0).get("consequences_md"));
                     // S2-09: закрыть, только если версия ЕЩЁ открыта; иначе выход до записи и 409.
                     cp.put("oldrid", rid);
+                    changeAuthor().bind(cp); // S2-12
                     Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         Scd2Guard.guardedClose("KnowADRHist", false) +
                         "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                        "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
+                        "context_md=:ctx, decision_md=:dec, consequences_md=:con" + ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
                         "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely().result();
                     if (Scd2Guard.isConflict(cpRes))
@@ -181,9 +182,10 @@ public class LoreAdrResource extends LoreResourceBase {
                 histP.put("nsid", nsid);
                 histP.put("now",  now);
                 histP.put("id",   req.adr_id());
+                changeAuthor().bind(histP); // S2-12
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                     "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                    "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
+                    "context_md=:ctx, decision_md=:dec, consequences_md=:con" + ChangeAuthor.SET_SQL + ";" +
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
                     "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);",
                     histP)).await().indefinitely();

@@ -234,8 +234,9 @@ public class LoreReleaseResource extends LoreResourceBase {
             // failure. Reuses :rid (already bound above) for the edge.
             p.put("nsid", nsid);
             p.put("now", now);
+            changeAuthor().bind(p); // S2-12
             String script = set.toString() + ";"
-                + "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now;"
+                + "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now" + ChangeAuthor.SET_SQL + ";"
                 // REL-UID-01: по release_uid, а не по номеру — иначе строка
                 // истории цеплялась ко ВСЕМ релизам с тем же номером в других проектах.
                 + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_uid=:ruid) "

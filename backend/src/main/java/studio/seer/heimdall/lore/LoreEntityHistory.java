@@ -24,8 +24,10 @@ import java.util.TreeMap;
  * <p><b>Почему SQL на тип, а не unionall всех цепочек.</b> Тип известен из
  * запроса: unionall сканировал бы двенадцать таблиц ради одной.
  *
- * <p><b>Автор правки.</b> На строке истории автора нет (и миграцией он сюда не
- * добавляется — задача без миграции). Источник факта «кто звал» уже есть:
+ * <p><b>Автор правки.</b> С S2-12 версия несёт автора сама ({@code changed_by},
+ * {@code changed_by_kind} из проверенного токена, {@link ChangeAuthor}) — тогда
+ * {@code source="hist"} и журнал не нужен. Для старых версий без автора
+ * (и версий, записанных без токена) остаётся прежний путь. Источник факта «кто звал» уже есть:
  * журнал действий AO-01 ({@code MetricSnapshot}, {@code metric='lore.action'}) —
  * точка на каждый мутирующий вызов с осью из ТОКЕНА ({@code agent|human|unauth}),
  * вызывающим и кодом ответа. Строка истории сопоставляется с ближайшей УСПЕШНОЙ
@@ -94,7 +96,7 @@ final class LoreEntityHistory {
         String idExpr = "dict_entry".equals(type) ? "code" : "in('HAS_STATE')." + parent.idField() + "[0]";
         StringBuilder sb = new StringBuilder("SELECT '").append(type).append("' AS entity_type, '")
             .append(hist).append("' AS hist_type, ").append(idExpr).append(" AS ref_id, state_uid, ")
-            .append("valid_from, valid_to, content_hash, source_commit, status_raw");
+            .append("valid_from, valid_to, content_hash, source_commit, status_raw, changed_by, changed_by_kind");
         if ("dict_entry".equals(type)) sb.append(", dict_type");
         String p = projectsExpr(type);
         if (p != null) sb.append(", ").append(p).append(" AS projects");
@@ -125,7 +127,8 @@ final class LoreEntityHistory {
 
     /**
      * Каждой строке — поле {@code author}: {@code kind} (agent|human|unauth|ingest|unknown),
-     * {@code caller}, {@code source} (journal|ingest|none), {@code commit}, {@code reason}.
+     * {@code caller}, {@code source} (hist|journal|ingest|none), {@code commit}, {@code reason};
+     * при {@code source=hist} — ещё {@code kc_sub} (человек) или {@code client_id} (агент).
      * Входные карты не меняются.
      */
     static List<Map<String, Object>> attribute(List<Map<String, Object>> rows, List<Map<String, Object>> journal) {
@@ -151,7 +154,17 @@ final class LoreEntityHistory {
                 }
             }
             Object commit = r.get("source_commit");
-            if (best != null) {
+            Object rowKind = r.get("changed_by_kind");
+            Object rowBy = r.get("changed_by");
+            if (rowBy != null && (ChangeAuthor.KIND_HUMAN.equals(rowKind) || ChangeAuthor.KIND_AGENT.equals(rowKind))) {
+                // S2-12: автор записан в самой версии из проверенного токена — это факт,
+                // журнал и догадки по времени не нужны.
+                author.put("kind", rowKind.toString());
+                author.put("caller", rowBy.toString());
+                author.put("source", "hist");
+                // Форма контракта S2 HistoryAuthor: человек — kc_sub, агент — client_id.
+                author.put(ChangeAuthor.KIND_HUMAN.equals(rowKind) ? "kc_sub" : "client_id", rowBy.toString());
+            } else if (best != null) {
                 Object axis = best.get("segment");
                 author.put("kind", axis == null || axis.toString().isBlank() ? "unknown" : axis.toString());
                 author.put("caller", best.get("source"));

@@ -177,6 +177,14 @@ public abstract class LoreResourceBase {
      * сервис-аккаунта: у последнего sub есть, но KnowUser с таким sub не
      * заводится, права агента идут по {@link #callerClientId()}.
      */
+    /**
+     * S2-12: автор новой версии истории — из проверенного токена, не из тела запроса.
+     * Снимать в начале обработки запроса (до асинхронных цепочек) и передавать дальше.
+     */
+    ChangeAuthor changeAuthor() {
+        return ChangeAuthor.of(identity);
+    }
+
     String callerKcSub() {
         if (identity == null
                 || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) {
