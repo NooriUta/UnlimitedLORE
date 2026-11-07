@@ -41,7 +41,7 @@ public class LoreProductAxisResource extends LoreResourceBase {
         String product_code,
         String rel,        // component | project | parent
         String target_id,
-        String role,       // только для rel=component: owner (умолчание) | consumer
+        String role,       // rel=component|project: owner (умолчание) | consumer — WK-02 распространил роль на проект
         String action      // add (умолчание) | remove
     ) {}
 
@@ -153,7 +153,10 @@ public class LoreProductAxisResource extends LoreResourceBase {
             // на отклонённом вызове.
             final String roleValue = req.role() == null || req.role().isBlank()
                 ? "owner" : req.role().trim().toLowerCase();
-            if ("add".equals(action) && "component".equals(rel) && !ROLES.contains(roleValue))
+            // WK-02 (decision:D-2026-LORE-PRODUCT-PROJECT-ROLE): роль живёт и на
+            // связи продукт → проект — owner развивает, consumer пользуется.
+            final boolean hasRole = "component".equals(rel) || "project".equals(rel);
+            if ("add".equals(action) && hasRole && !ROLES.contains(roleValue))
                 return badParams("role must be one of: " + String.join(", ", ROLES));
 
             // DBR-17: пара читается ДО записи. Повтор той же связи раньше снимал и
@@ -170,10 +173,10 @@ public class LoreProductAxisResource extends LoreResourceBase {
 
             if ("add".equals(action)) {
                 boolean same = "parent".equals(rel) ? target.equals(prevParent)
-                    : !pairBefore.isEmpty() && (!"component".equals(rel) || roleValue.equals(prevRole));
+                    : !pairBefore.isEmpty() && (!hasRole || roleValue.equals(prevRole));
                 if (same) {
                     body.put("action", "already_linked");
-                    if ("component".equals(rel)) body.put("role", roleValue);
+                    if (hasRole) body.put("role", roleValue);
                     if ("parent".equals(rel)) body.put("previous_parent_removed", false);
                     body.put("outcome", LoreOutcome.UNCHANGED);
                     body.put("hint", "связь уже была — повторять вызов не нужно");
@@ -196,14 +199,14 @@ public class LoreProductAxisResource extends LoreResourceBase {
                 return noStore(Response.ok(body));
             }
 
-            final String set = "component".equals(rel)
+            final String set = hasRole
                 ? String.format(" SET role='%s'", roleValue) : "";
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 String.format("CREATE EDGE %s FROM (%s) TO (%s)%s", edgeType, fromSql, toSql, set),
                 Map.of())).await().indefinitely();
 
             body.put("action", "added");
-            if ("component".equals(rel)) body.put("role", roleValue);
+            if (hasRole) body.put("role", roleValue);
             // Для parent исходов ТРИ, а не два, и они обязаны быть различимы.
             // «Ничего не изменилось», «сменили родителя» и «поставили первого» —
             // разные события: смена молча переносит целое поддерево продуктов,
@@ -344,7 +347,7 @@ public class LoreProductAxisResource extends LoreResourceBase {
      */
     private List<Map<String, Object>> pairRows(String edgeType, String rel, String code, String target) {
         return ingestService.queryPublic(
-            "SELECT @rid AS rid" + ("component".equals(rel) ? ", role" : "") + " FROM " + edgeType
+            "SELECT @rid AS rid" + ("component".equals(rel) || "project".equals(rel) ? ", role" : "") + " FROM " + edgeType
             + " WHERE " + pairWhere(rel, code, target), Map.of());
     }
 

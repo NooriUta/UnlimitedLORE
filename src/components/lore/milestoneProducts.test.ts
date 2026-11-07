@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, productScope, unplannedOfProduct,
-  sprintInProduct, hiddenAsPast, isStreamSprint, unplannedShare,
+  sprintInProduct, hiddenAsPast, isStreamSprint, unplannedShare, productRepos,
   type ProductRow,
 } from './milestoneProducts';
 
@@ -116,5 +116,18 @@ describe('milestoneProducts · доделка плана', () => {
     ];
     // поток по имени не считается дважды: HOUSEKEEPING — поток, а не «намеренно»
     expect(unplannedShare(S, M, 'AIDA', P)).toEqual({ open: 4, unplanned: 3, stream: 1, intentional: 1, forgotten: 1, pct: 75 });
+  });
+
+  it('репозитории продукта с ролью связи: owner развивает, consumer пользуется, без роли — честно null (WK-02)', () => {
+    const row = { code: 'HARPA', label_ru: 'HARPA', parent_code: [], sub_products: [], components: [],
+      git_projects: ['NooriUta/seidr-site', 'NooriUta/UnlimitedLORE', 'AIDA/x'], git_project_roles: ['owner', 'consumer', null] };
+    expect(productRepos(row)).toEqual([
+      { slug: 'NooriUta/seidr-site', role: 'owner' },
+      { slug: 'NooriUta/UnlimitedLORE', role: 'consumer' },
+      { slug: 'AIDA/x', role: null },
+    ]);
+    // старый ответ бэкенда без ролей — роли неизвестны, а не «owner»
+    expect(productRepos({ ...row, git_project_roles: undefined })[0]).toEqual({ slug: 'NooriUta/seidr-site', role: null });
+    expect(productRepos({ ...row, git_projects: null })).toEqual([]);
   });
 });

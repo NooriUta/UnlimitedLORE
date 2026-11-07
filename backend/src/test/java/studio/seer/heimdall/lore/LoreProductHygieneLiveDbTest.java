@@ -82,4 +82,41 @@ class LoreProductHygieneLiveDbTest {
             .body("rows.findAll { it.finding == 'uc_without_acceptance' }.ref_id",
                 hasItem("UC-HYG-NOACC"));
     }
+
+    /**
+     * WK-02 (decision:D-2026-LORE-PRODUCT-PROJECT-ROLE): у связи продукт → проект
+     * есть роль. Смена роли — «updated» с прежней ролью, повтор — «unchanged»,
+     * срез products отдаёт роль рядом со слагом, размеченная связь в гигиену
+     * (product_project_without_role) не попадает — и сам срез с новой веткой жив.
+     */
+    @Test
+    @Order(3)
+    void productProjectLinkCarriesRole() {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"slug\":\"HygTest/wk02-repo\"}")
+        .when().post("/lore/project").then().statusCode(200);
+        post("/lore/dict/entry", "{\"dict_type\":\"product\",\"code\":\"WK02TEST\",\"label_ru\":\"Продукт WK-02\"}");
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"product_code\":\"WK02TEST\",\"rel\":\"project\",\"target_id\":\"HygTest/wk02-repo\",\"role\":\"consumer\"}")
+        .when().post("/lore/product/link").then().statusCode(200)
+            .body("outcome", equalTo("created")).body("role", equalTo("consumer"));
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"product_code\":\"WK02TEST\",\"rel\":\"project\",\"target_id\":\"HygTest/wk02-repo\",\"role\":\"owner\"}")
+        .when().post("/lore/product/link").then().statusCode(200)
+            .body("outcome", equalTo("updated")).body("previous_role", equalTo("consumer"));
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"product_code\":\"WK02TEST\",\"rel\":\"project\",\"target_id\":\"HygTest/wk02-repo\",\"role\":\"owner\"}")
+        .when().post("/lore/product/link").then().statusCode(200)
+            .body("outcome", equalTo("unchanged"));
+
+        given().when().get("/lore/slice/products")
+        .then().statusCode(200)
+            .body("rows.find { it.code == 'WK02TEST' }.git_projects", hasItem("HygTest/wk02-repo"))
+            .body("rows.find { it.code == 'WK02TEST' }.git_project_roles", hasItem("owner"));
+
+        given().when().get("/lore/slice/product_hygiene")
+        .then().statusCode(200)
+            .body("rows.findAll { it.finding == 'product_project_without_role' }.ref_id", not(hasItem("WK02TEST")));
+    }
 }

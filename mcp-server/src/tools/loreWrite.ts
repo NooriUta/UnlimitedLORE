@@ -1875,7 +1875,7 @@ export function registerLoreWrite(server: McpServer): void {
       rel: z.enum(['component', 'project', 'parent']),
       target_id: z.string().describe('component_id (rel="component") | git project slug (rel="project") | parent product code (rel="parent")'),
       role: z.enum(['owner', 'consumer']).optional()
-        .describe('rel="component" only: owner (default) = builds it, consumer = uses it'),
+        .describe('rel="component" | rel="project": owner (default) = builds/develops it, consumer = only uses it (WK-02). A repeat with a different role answers outcome="updated" with previous_role'),
       action: z.enum(['add', 'remove']).optional().describe('default "add"'),
     },
     path: '/lore/product/link',
