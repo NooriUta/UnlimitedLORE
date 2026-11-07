@@ -12,7 +12,10 @@
     "./demo/datawanderers": "./demo/datawanderers.ts",
     "./styles/seidr.css": "./src/styles/seidr.css",
     "./style-guard": "./src/tokens/styleGuard.ts",
-    "./demo/*": "./demo/*.ts"
+    "./demo/*": "./demo/*.ts",
+    "./mount": "./src/bundle/mount.tsx",
+    "./dist/seidr-kit.js": "./dist/seidr-kit.js",
+    "./dist/seidr-kit.css": "./dist/seidr-kit.css"
   },
   "sideEffects": [
     "*.css",
@@ -21,7 +24,8 @@
   ],
   "scripts": {
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:bundle": "vite build -c vite.bundle.config.ts"
   },
   "peerDependencies": {
     "@iconify/react": "^6.0.2",
