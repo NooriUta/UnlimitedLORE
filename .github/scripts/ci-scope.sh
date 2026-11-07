@@ -22,7 +22,10 @@
 # Режимы:
 #   ci        → v1, v2, backend, mcp (true/false) + reason
 #   cd        → backend, frontend (v1), frontend_next (v2) + reason
-#   guard-v1  → код 1, если PR трогает src/** без метки v1-hotfix
+#   guard-v1  → ПРЕДУПРЕЖДЕНИЕ (код 0), если PR трогает src/** без метки
+#               v1-hotfix: ::warning:: на файл + блок в $GITHUB_STEP_SUMMARY.
+#               Не блок — решение владелицы 07.11.2026 («ставь не обязательным,
+#               но чтобы потом не забыть»); напоминание SPRINT_UXR_S8_SWITCH/S8-06.
 #
 # Вход (env):
 #   CI_SCOPE_FILES  — список путей через перевод строки; если задана (даже
@@ -142,10 +145,18 @@ case "$MODE" in
     ;;
 
   guard-v1)
+    # ПРЕДУПРЕЖДЕНИЕ, НЕ БЛОК. Решение владелицы 07.11.2026: «ставь не
+    # обязательным, но чтобы потом не забыть». Гард всегда выходит с кодом 0,
+    # но кричит: ::warning:: на каждый тронутый файл src/**, блок в сводке шага
+    # и раздельный счёт тестовых/продуктовых файлов. Вернуть блок (или снять
+    # гард) — разбор в SPRINT_UXR_S8_SWITCH/S8-06 при переключении на v2.
+    summary() { [ -n "${GITHUB_STEP_SUMMARY:-}" ] && printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; return 0; }
     changed_files
     if [ "$FILES_OK" != 1 ]; then
-      echo "::error::заморозка v1 НЕ ПРОВЕРЕНА: список изменений PR не получен ($FILES_WHY). Не проверено ≠ чисто."
-      exit 2
+      echo "::warning::заморозка v1 НЕ ПРОВЕРЕНА: список изменений PR не получен ($FILES_WHY). Не проверено ≠ чисто (гард предупреждающий, PR не блокируется)."
+      summary "### ⚠ Заморозка v1 НЕ ПРОВЕРЕНА"
+      summary "Список изменений PR не получен ($FILES_WHY). Не проверено ≠ чисто. Разбор — SPRINT_UXR_S8_SWITCH/S8-06."
+      exit 0
     fi
     hits="$(printf '%s\n' "$FILES" | grep -E '^src/' || true)"
     if [ -z "$hits" ]; then
@@ -159,9 +170,28 @@ case "$MODE" in
       printf '%s\n' "$hits" | sed 's/^/  · /'
       exit 0
     fi
-    echo "::error::LORE v1 (src/) заморожен (D-2026-UXR-V2-FOLDER-V1-FROZEN): правки идут в web-next/. Если это осознанный хотфикс v1 — повесьте на PR метку v1-hotfix (проверка перезапустится сама). Тронуто:"
+    # Тестовые: *.test.ts(x) и всё под src/test/. Остальное — продуктовые.
+    n_test=0 n_prod=0
+    while IFS= read -r f; do
+      case "$f" in
+        src/test/*|*.test.ts|*.test.tsx) n_test=$((n_test + 1)); kind="тест" ;;
+        *)                                n_prod=$((n_prod + 1)); kind="продукт" ;;
+      esac
+      echo "::warning file=$f::LORE v1 (src/) заморожен (D-2026-UXR-V2-FOLDER-V1-FROZEN), файл тронут без метки v1-hotfix ($kind) — разбор в SPRINT_UXR_S8_SWITCH/S8-06"
+    done <<< "$hits"
+    BANNER="⚠ v1 заморожен (D-2026-UXR-V2-FOLDER-V1-FROZEN): PR трогает src/ без метки v1-hotfix — разбор в SPRINT_UXR_S8_SWITCH/S8-06"
+    echo "$BANNER"
+    echo "Тронуто src/: тестовых: $n_test, продуктовых: $n_prod. Новая работа — в web-next/; осознанный хотфикс v1 — метка v1-hotfix."
     printf '%s\n' "$hits" | sed 's/^/  · /'
-    exit 1
+    summary "### $BANNER"
+    summary ""
+    summary "- тестовых: $n_test (*.test.ts(x), src/test/**)"
+    summary "- продуктовых: $n_prod"
+    summary ""
+    summary "Гард предупреждающий (решение владелицы 07.11.2026), PR не блокирует. Осознанный хотфикс v1 — метка v1-hotfix."
+    summary ""
+    while IFS= read -r f; do summary "- \`$f\`"; done <<< "$hits"
+    exit 0
     ;;
 
   cd)

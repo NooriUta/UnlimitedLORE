@@ -5,7 +5,8 @@
 //   * CI и CD — по путям: правка web-next/ гоняет и выкатывает только v2,
 //     правка backend/ / mcp-server/ / контрактов — бэкенд, контракты S0 и тесты
 //     ОБОИХ вебов;
-//   * src/** в PR без метки v1-hotfix — красный PR.
+//   * src/** в PR без метки v1-hotfix — громкое предупреждение, НЕ блок
+//     (решение владелицы 07.11.2026; разбор — SPRINT_UXR_S8_SWITCH/S8-06).
 //
 // Почему тест: решение «что гонять» принимает скрипт, и ошибка в нём молчит —
 // пропущенные тесты выглядят как зелёные. Поэтому проверяется и разбор путей
@@ -106,7 +107,7 @@ describe('backend-ci.yml: бэкенд гоняется по путям', () => 
   });
 });
 
-describe('v1-freeze-guard.yml: src/** без метки v1-hotfix — красный PR', () => {
+describe('v1-freeze-guard.yml: src/** без метки v1-hotfix — предупреждение', () => {
   const G = '.github/workflows/v1-freeze-guard.yml';
   it('файл есть', () => expect(existsSync(resolve(repo, G))).toBe(true));
   it('перепроверяется при снятии/навешивании метки и на новых коммитах', () => {
@@ -121,6 +122,11 @@ describe('v1-freeze-guard.yml: src/** без метки v1-hotfix — красн
     expect(g).toMatch(/ci-scope\.sh guard-v1/);
     expect(g).toMatch(/PR_LABELS: \$\{\{ toJSON\(github\.event\.pull_request\.labels\.\*\.name\) \}\}/);
     expect(g).toMatch(/fetch-depth: 0/);
+  });
+  it('комментарий ссылается на решение и задачу-напоминание S8-06', () => {
+    const g = read(G);
+    expect(g).toMatch(/D-2026-UXR-V2-FOLDER-V1-FROZEN/);
+    expect(g).toMatch(/SPRINT_UXR_S8_SWITCH\/S8-06/);
   });
 });
 
@@ -261,32 +267,63 @@ describe.skipIf(!bashBin)('ci-scope.sh ci: что гонять', () => {
   });
 });
 
-describe.skipIf(!bashBin)('ci-scope.sh guard-v1: заморозка src/', () => {
-  it('src/** без метки → красный, с подсказкой про v1-hotfix', () => {
-    const r = scope(['src/App.tsx'], 'guard-v1', { PR_LABELS: '["bug"]' });
-    expect(r.code).toBe(1);
-    expect(r.out).toMatch(/::error::.*v1-hotfix/);
-    expect(r.out).toContain('src/App.tsx');
+describe.skipIf(!bashBin)('ci-scope.sh guard-v1: заморозка src/ — предупреждение, не блок (S8-06)', () => {
+  // Решение владелицы 07.11.2026: «ставь не обязательным, но чтобы потом не забыть».
+  // Гард не роняет PR, но говорит громко: ::warning:: на каждый файл, блок в
+  // сводке шага и счёт тестовых и продуктовых файлов раздельно.
+  const sumf = join(stubDir, 'summary.md');
+  const guard = (files: string[], labels: string) => {
+    writeFileSync(sumf, '');
+    const r = scope(files, 'guard-v1', { PR_LABELS: labels, GITHUB_STEP_SUMMARY: sumf.replace(/\\/g, '/') });
+    return { ...r, summary: readFileSync(sumf, 'utf8') };
+  };
+  const BANNER = '⚠ v1 заморожен (D-2026-UXR-V2-FOLDER-V1-FROZEN): PR трогает src/ без метки v1-hotfix — разбор в SPRINT_UXR_S8_SWITCH/S8-06';
+
+  it('продуктовый src/** без метки → зелёный, но ::warning:: на каждый файл и блок в сводке', () => {
+    const r = guard(['src/App.tsx', 'src/lib/x.ts'], '["bug"]');
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/::error/);
+    expect(r.out).toMatch(/::warning file=src\/App\.tsx::/);
+    expect(r.out).toMatch(/::warning file=src\/lib\/x\.ts::/);
+    expect(r.summary).toContain(BANNER);
+    expect(r.summary).toMatch(/тестовых: 0/);
+    expect(r.summary).toMatch(/продуктовых: 2/);
   });
 
-  it('src/** с меткой v1-hotfix → зелёный', () => {
-    expect(scope(['src/App.tsx'], 'guard-v1', { PR_LABELS: '["bug","v1-hotfix"]' }).code).toBe(0);
+  it('тестовые файлы (*.test.ts(x), src/test/**) считаются отдельно от продуктовых', () => {
+    const r = guard(['src/a.test.ts', 'src/b/C.test.tsx', 'src/test/setup.ts', 'src/D.tsx'], '[]');
+    expect(r.code).toBe(0);
+    expect(r.summary).toMatch(/тестовых: 3/);
+    expect(r.summary).toMatch(/продуктовых: 1/);
+    expect(r.out).toMatch(/тестовых: 3, продуктовых: 1/);
   });
 
-  it('метка-тёзка (v1-hotfix-later) не считается', () => {
-    expect(scope(['src/App.tsx'], 'guard-v1', { PR_LABELS: '["v1-hotfix-later"]' }).code).toBe(1);
+  it('src/** с меткой v1-hotfix → без предупреждения', () => {
+    const r = guard(['src/App.tsx'], '["bug","v1-hotfix"]');
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/::warning/);
+    expect(r.summary).not.toContain('v1 заморожен');
   });
 
-  it('без src/ → зелёный при любых метках', () => {
-    expect(scope(['web-next/src/App.tsx', 'backend/x.java'], 'guard-v1', { PR_LABELS: '[]' }).code).toBe(0);
+  it('метка-тёзка (v1-hotfix-later) не считается → предупреждение', () => {
+    const r = guard(['src/App.tsx'], '["v1-hotfix-later"]');
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/::warning file=src\/App\.tsx::/);
   });
 
-  it('дифф не вычислился → красный (не проверено ≠ чисто)', () => {
+  it('без src/ (web-next, backend) → ни предупреждения, ни блока в сводке', () => {
+    const r = guard(['web-next/src/App.tsx', 'backend/x.java'], '[]');
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/::warning/);
+    expect(r.summary).not.toContain('v1 заморожен');
+  });
+
+  it('дифф не вычислился → не блок, но громко «НЕ ПРОВЕРЕНА» (не проверено ≠ чисто)', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'lore-guard-nogit-'));
     try {
       const r = run('.github/scripts/ci-scope.sh', ['guard-v1'], { EVENT_NAME: 'pull_request', BASE_REF: 'develop', PR_LABELS: '[]' }, tmp);
-      expect(r.code).toBe(2);
-      expect(r.out).toMatch(/::error::/);
+      expect(r.code).toBe(0);
+      expect(r.out).toMatch(/::warning::.*НЕ ПРОВЕРЕНА/);
     } finally { rmSync(tmp, { recursive: true, force: true }); }
   });
 });
