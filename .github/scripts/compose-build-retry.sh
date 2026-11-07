@@ -27,6 +27,23 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
+# S3-06: имя сервиса сверяется с compose ДО сборки. Сервисов-фронтов теперь
+# два (lore-app — v1, lore-app-next — v2), и опечатка в имени в этом проекте уже
+# стоила молчаливого no-op (фронт называется lore-app, не frontend). Здесь
+# неверное имя ушло бы в три попытки с паузами и откатом от зеркала — то есть
+# выглядело бы как сетевой отказ. Отказ сразу и с именем — дешевле.
+if ! known="$(docker compose config --services 2>&1)"; then
+  echo "::error::docker compose config не разобрал конфигурацию — сборка не начата: $known"
+  exit 2
+fi
+for svc in "$@"; do
+  case "$svc" in -*) continue ;; esac   # флаги compose build (--no-cache и т.п.)
+  if ! printf '%s\n' "$known" | grep -qx -- "$svc"; then
+    echo "::error::сервиса '$svc' нет в compose (есть: $(printf '%s' "$known" | tr '\n' ' ')) — сборка не начата"
+    exit 2
+  fi
+done
+
 # CIM-02: сделать состояние registry-mirror базовых образов наблюдаемым до
 # сборки — мёртвое зеркало :8083 когда-то положило все image-сборки немым
 # отказом (CIM-01). Проба ничего не роняет: сборку не останавливает.
