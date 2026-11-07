@@ -37,11 +37,13 @@ export interface V2ShellProps {
   narrow?: boolean;
   /** Метка после имени в шапке (версия v2). */
   brandTag?: ReactNode;
+  /** Правый край шапки — выбор проектов (S4-03). */
+  topEnd?: ReactNode;
   /** Слот аккаунта справа в шапке (меню аватара, S4-02). */
   account?: ReactNode;
 }
 
-export function V2Shell({ storage, win, narrow, brandTag, account }: V2ShellProps) {
+export function V2Shell({ storage, win, narrow, brandTag, topEnd, account }: V2ShellProps) {
   const lang = useKitLang();
   const config = useMemo(() => v2Config(lang), [lang]);
   return (
@@ -50,6 +52,7 @@ export function V2Shell({ storage, win, narrow, brandTag, account }: V2ShellProp
       brand={appT(lang, 'shell.brand')}
       brandIcon="compass"
       brandTag={brandTag}
+      topEnd={topEnd}
       account={account}
       storage={storage}
       storageKey="lore-v2.shell"

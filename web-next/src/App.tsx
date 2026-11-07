@@ -8,6 +8,7 @@
 // drawer на телефоне; раздел — в URL (?mod=…&sec=…). Плашку хранилища рисует
 // сама оболочка (StorageBanner kit) — по тому же хранилищу storage/safe.
 // Личные настройки — под аватаром в шапке (S4-02, слот account KitShell).
+// Выбор нескольких проектов — правый край шапки (S4-03, слот topEnd), выбор в URL (?proj=).
 import '@fontsource/manrope/400.css';
 import '@fontsource/manrope/600.css';
 import '@fontsource/ibm-plex-mono/400.css';
@@ -17,6 +18,7 @@ import { lazy, Suspense } from 'react';
 import { ErrorBoundary, Pill, Skeleton, resolvePrefs, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
 import { createLocalS2Client } from './api/me';
+import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
 import { V2Shell } from './shell/V2Shell';
 import { storage as appStorage } from './storage/safe';
@@ -57,6 +59,7 @@ export default function App({ path, win, storage = appStorage, narrow }: AppProp
       <div data-lore-app="v2" className="v2-app">
         {/* Метка версии — ID-пилюля kit в шапке: v2 нельзя спутать с v1. */}
         <V2Shell storage={storage} win={win} narrow={narrow} brandTag={<Pill variant="id">v2</Pill>}
+          topEnd={<ProjectScope />}
           account={<AccountMenu client={meClient} lang={lang} />}
         />
       </div>

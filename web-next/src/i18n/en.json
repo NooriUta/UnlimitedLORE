@@ -77,5 +77,8 @@
   "status.accepted": "Accepted",
   "status.cancelled": "Cancelled",
   "status.superseded": "Superseded",
-  "status.rejected": "Rejected"
+  "status.rejected": "Rejected",
+  "scope.mine.noUser": "sign-in is not wired into v2 yet — your roles are unknown",
+  "scope.mine.notRegistered": "you are not registered in the LORE role graph",
+  "scope.mine.rolesError": "the roles slice did not respond"
 }

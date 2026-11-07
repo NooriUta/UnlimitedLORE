@@ -16,6 +16,9 @@
   letter-spacing: .04em;
 }
 
+/* Правый край шапки: выбор проектов (S4-03, kit ScopePicker). */
+.shell-end { margin-left: auto; min-width: 0; }
+
 /* Личные настройки (S3-07 → S4-02): в листе аватара. */
 .settings {
   max-width: 560px;

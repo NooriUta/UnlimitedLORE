@@ -228,5 +228,21 @@
   "kit.avatar.title": "Personal settings",
   "kit.avatar.open": "{name} — personal settings",
   "kit.avatar.openAnon": "User not identified — personal settings",
-  "kit.avatar.anon": "User not identified"
+  "kit.avatar.anon": "User not identified",
+  "kit.scope.label": "Projects",
+  "kit.scope.all": "All projects",
+  "kit.scope.mine": "All mine",
+  "kit.scope.mineTag": "mine",
+  "kit.scope.summary.mine": "All mine ({n})",
+  "kit.scope.summary.many": "{n} projects",
+  "kit.scope.search": "Find a project",
+  "kit.scope.noMatch": "Nothing found for “{q}”",
+  "kit.scope.only": "only this",
+  "kit.scope.onlyLabel": "Only {title}",
+  "kit.scope.missing": "not in the list",
+  "kit.scope.empty": "No projects (checked)",
+  "kit.scope.mineUnknown": "Could not check your projects — “All mine” is unavailable",
+  "kit.scope.mineNone": "You have no role in any project — nothing to pick for “All mine”",
+  "kit.scope.count": "Selected: {n}",
+  "kit.scope.countAll": "No filter — all projects shown"
 }

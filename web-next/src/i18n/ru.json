@@ -77,5 +77,8 @@
   "status.accepted": "Принято",
   "status.cancelled": "Отменено",
   "status.superseded": "Заменено",
-  "status.rejected": "Отклонено"
+  "status.rejected": "Отклонено",
+  "scope.mine.noUser": "вход в v2 ещё не подключён — ваши роли не узнать",
+  "scope.mine.notRegistered": "вы не заведены в графе ролей LORE",
+  "scope.mine.rolesError": "слайс ролей не ответил"
 }

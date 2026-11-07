@@ -2071,3 +2071,143 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-appr-log__change { max-width: 320px; overflow-wrap: anywhere; color: var(--t2); }
 .sk-appr-log__pending { color: var(--wrn); }
 .sk-appr-log__bad { color: var(--dng); font-weight: 600; }
+
+/* ---------- Выбор проектов в шапке (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-03) ----------
+   Кнопка-чип в шапке; панель — поповер у кнопки на широком экране и лист
+   снизу (sk-sheet--bottom) на телефоне. Строка проекта и «только этот» —
+   цели касания ≥ --tap; на листе — не меньше 44px независимо от указателя. */
+.sk-shell__top-end { display: flex; align-items: center; gap: 4px; min-width: 0; margin-left: auto; }
+/* Вместе со слотом аккаунта (S4-02) правый край один: аватар встаёт сразу за выбором проектов. */
+.sk-shell__top-end + .sk-shell__account { margin-left: 0; }
+.sk-scope { position: relative; display: inline-flex; min-width: 0; }
+.sk-scope__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 320px;
+  min-height: max(var(--tap), 30px);
+  padding: 0 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-scope__trigger:hover { border-color: var(--acc); }
+.sk-scope__trigger[aria-expanded="true"] { border-color: var(--acc); color: var(--acc); }
+.sk-scope__trigger:focus-visible,
+.sk-scope__act:focus-visible,
+.sk-scope__only:focus-visible,
+.sk-scope__search:focus-visible,
+.sk-scope__check:focus-within {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+.sk-scope__name {
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-scope__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sk-scope__value[data-kind="all"] { color: var(--t2); font-weight: 400; }
+.sk-scope__pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  width: min(360px, 94vw);
+  max-height: min(480px, 70vh);
+  overflow: auto;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg0) 70%, transparent);
+}
+/* В правом краю шапки поповер раскрывается влево — не за экран. */
+.sk-shell__top-end .sk-scope__pop { left: auto; right: 0; }
+.sk-scope__body { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.sk-scope__search {
+  width: 100%;
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+}
+.sk-scope__actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-scope__act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.sk-scope__act:hover { border-color: var(--acc); color: var(--acc); }
+.sk-scope__act[aria-pressed="true"] { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 14%, transparent); color: var(--acc); }
+.sk-scope__act[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.sk-scope__act[aria-disabled="true"]:hover { border-color: var(--bd); color: var(--t1); }
+.sk-scope__note { margin: 0; color: var(--t2); font-size: var(--fs-xs); }
+.sk-scope__note--wrn { color: var(--wrn); }
+.sk-scope__list { margin: 0; padding: 0; list-style: none; }
+.sk-scope__row { display: flex; align-items: center; gap: 4px; border-radius: var(--r-md); }
+.sk-scope__row:hover { background: var(--bg2); }
+.sk-scope__row--missing .sk-scope__title { color: var(--t2); font-style: italic; }
+.sk-scope__check {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: max(var(--tap), 30px);
+  padding: 0 6px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.sk-scope__check input { accent-color: var(--acc); margin: 0; }
+.sk-scope__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.sk-scope__id { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-scope__tag {
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--acc);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sk-scope__tag--wrn { background: color-mix(in srgb, var(--wrn) 14%, transparent); color: var(--wrn); }
+.sk-scope__only {
+  flex-shrink: 0;
+  min-height: max(var(--tap), 28px);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--t3);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+.sk-scope__only:hover { color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, transparent); }
+.sk-scope__count { margin: 0; color: var(--t3); font-size: var(--fs-2xs); }
+.sk-scope__sheet .sk-scope__body { padding: 4px 0 12px; }
+.sk-scope__sheet .sk-scope__check,
+.sk-scope__sheet .sk-scope__only,
+.sk-scope__sheet .sk-scope__act,
+.sk-scope__sheet .sk-scope__search { min-height: max(var(--tap), 44px); }

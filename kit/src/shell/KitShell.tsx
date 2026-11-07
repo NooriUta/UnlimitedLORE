@@ -69,6 +69,8 @@ export interface KitShellProps {
   narrow?: boolean;
   onNavigate?: (nav: KitNav) => void;
   onOpenRecord?: (id: string) => void;
+  /** Правый край шапки: выбор проектов (S4-03), профиль… */
+  topEnd?: ReactNode;
   /** Слот аккаунта справа в шапке — меню аватара (AvatarMenu, S4-02). */
   account?: ReactNode;
   children?: ReactNode;
@@ -109,7 +111,11 @@ function readList<T>(storage: SafeStorage, key: string): T[] {
   }
 }
 
-function useNarrow(force: boolean | undefined): boolean {
+/**
+ * Узкий экран (телефон, ≤720px) — один порог на весь kit: оболочка уводит меню
+ * в drawer, выбор проектов (S4-03) — в лист снизу. force задан — без matchMedia.
+ */
+export function useNarrow(force?: boolean): boolean {
   const [matches, setMatches] = useState(() => {
     if (force !== undefined || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia(NARROW_QUERY).matches;
@@ -137,7 +143,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, account, children,
+  onNavigate, onOpenRecord, topEnd, account, children,
 }: KitShellProps) {
   const lang = useKitLang();
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
@@ -287,6 +293,7 @@ export function KitShell({
               );
             })}
           </nav>
+          {topEnd && <div className="sk-shell__top-end">{topEnd}</div>}
           {account && <div className="sk-shell__account">{account}</div>}
         </header>
         <div className="sk-shell__body">
