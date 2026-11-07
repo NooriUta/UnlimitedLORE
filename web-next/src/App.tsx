@@ -11,6 +11,7 @@
 // сама оболочка (StorageBanner kit) — по тому же хранилищу storage/safe.
 // Личные настройки — под аватаром в шапке (S4-02, слот account KitShell).
 // Выбор нескольких проектов — правый край шапки (S4-03, слот topEnd), выбор в URL (?proj=).
+// Палитра поиска и команд (S4-14) — там же, кнопками «Поиск»/«Команды».
 import '@fontsource/manrope/400.css';
 import '@fontsource/manrope/600.css';
 import '@fontsource/ibm-plex-mono/400.css';
@@ -22,6 +23,7 @@ import './App.css';
 import { createLocalS2Client } from './api/me';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
+import { LorePalette } from './palette/LorePalette';
 import type { ListScreenId } from './lists/screens';
 import { V2Shell } from './shell/V2Shell';
 import type { V2Section } from './shell/v2Config';
@@ -82,7 +84,14 @@ export default function App({ path, win, storage = appStorage, narrow }: AppProp
       <div data-lore-app="v2" className="v2-app">
         {/* Метка версии — ID-пилюля kit в шапке: v2 нельзя спутать с v1. */}
         <V2Shell storage={storage} win={win} narrow={narrow} brandTag={<Pill variant="id">v2</Pill>}
-          topEnd={<ProjectScope />}
+          topEnd={(
+            <>
+              <ProjectScope />
+              {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.
+                  Экраны списков передадут сюда свои ctx, target (выделение S4-10) и действия. */}
+              <LorePalette storage={storage} trigger />
+            </>
+          )}
           account={<AccountMenu client={meClient} lang={lang} />}
         />
       </div>

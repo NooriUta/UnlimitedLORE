@@ -4,7 +4,7 @@
 //
 // Поиск — по загруженным данным: если сервер обрезал выдачу (meta.truncated),
 // палитра говорит это словами, а не делает вид, что искала по всему.
-import type { KitConfig, KitData } from '../core/contract';
+import type { KitConfig, KitCtx, KitData, KitRecord } from '../core/contract';
 import type { SafeStorage } from '../resilience/safeStorage';
 
 /** all — Ctrl+K: записи и команды; records — «/»: только записи. */
@@ -18,6 +18,8 @@ export interface PaletteRecordItem {
   kindTitle: string;
   icon: string | undefined;
   status: string;
+  /** remote — найдена сервером (S4-14), среди загруженных её нет. */
+  origin?: 'remote';
 }
 
 export interface PaletteCommandItem {
@@ -26,7 +28,15 @@ export interface PaletteCommandItem {
   title: string;
 }
 
-export type PaletteItem = PaletteRecordItem | PaletteCommandItem;
+/** Действие над целью палитры — записью или выделением (S4-14). */
+export interface PaletteActionItem {
+  type: 'action';
+  id: string;
+  title: string;
+  hotkey?: string;
+}
+
+export type PaletteItem = PaletteRecordItem | PaletteCommandItem | PaletteActionItem;
 
 export interface PaletteResult {
   /** recent — пустой запрос (недавние); results — выдача по запросу. */
@@ -76,6 +86,80 @@ function recordItem(r: KitData['records'][number], config: KitConfig): PaletteRe
   return { type: 'record', id: r.id, title: r.title, kind: r.kind, kindTitle: kind?.title ?? r.kind, icon: kind?.icon, status: r.status };
 }
 
+// ── цель: запись или выделение (S4-14) ────────────────────────────────────
+
+/**
+ * Над чем работает Ctrl+K: открытая запись или выделение списка (S4-10).
+ * null — цели нет, палитра показывает только записи и общие команды.
+ */
+export type PaletteTarget =
+  | { type: 'record'; record: KitRecord }
+  | { type: 'selection'; ids: readonly string[] };
+
+/**
+ * Команда над целью. В отличие от config.palette.commands (контракт ядра,
+ * run(ctx)), получает id цели: одной записи или всего выделения по порядку.
+ * Promise — палитра ждёт (aria-busy), отказ показывает причиной.
+ */
+export interface PaletteAction {
+  id: string;
+  title: string;
+  /** record — только над записью; selection — только над выделением; any — над обеими. */
+  scope: 'record' | 'selection' | 'any';
+  /** Клавиша того же действия в списке (слой клавиатуры, S4-11) — для подсказки Kbd. */
+  hotkey?: string;
+  run: (ids: string[], ctx: KitCtx) => void | Promise<void>;
+}
+
+export function targetIds(target: PaletteTarget | null | undefined): string[] {
+  if (!target) return [];
+  return target.type === 'record' ? [target.record.id] : [...target.ids];
+}
+
+/** Действия, применимые к цели. Пустое выделение — не цель: действовать не над чем. */
+export function actionsFor(target: PaletteTarget | null | undefined, actions: readonly PaletteAction[]): PaletteAction[] {
+  if (!target || targetIds(target).length === 0) return [];
+  const want = target.type === 'record' ? 'record' : 'selection';
+  return actions.filter(a => a.scope === 'any' || a.scope === want);
+}
+
+/** «Mod+Shift+C» → ['Ctrl','Shift','C'] для Kbd. */
+export function hotkeyKeys(spec: string): string[] {
+  return spec.split('+').map(p => p.trim()).filter(Boolean).map(p => {
+    const l = p.toLowerCase();
+    if (l === 'mod' || l === 'ctrl' || l === 'cmd' || l === 'meta') return 'Ctrl';
+    if (l === 'shift') return 'Shift';
+    if (l === 'alt' || l === 'option') return 'Alt';
+    return p.length === 1 ? p.toUpperCase() : p;
+  });
+}
+
+const actionItem = (a: PaletteAction): PaletteActionItem => ({ type: 'action', id: a.id, title: a.title, hotkey: a.hotkey });
+
+// ── серверный поиск (S4-14) ───────────────────────────────────────────────
+
+export interface PaletteRemoteResult {
+  /** Найденное сервером — в форме записи контракта (status может быть пустым). */
+  records: KitRecord[];
+  /** true — сервер мог отдать не всё (потолок выдачи); палитра говорит это словами. */
+  partial?: boolean;
+}
+
+/** Поиск на сервере; отказ — Error с причиной, палитра покажет её как есть. */
+export type PaletteRemoteSearch = (query: string, signal: AbortSignal) => Promise<PaletteRemoteResult>;
+
+/** Серверные записи, которых нет в локальной выдаче, — в порядке сервера. */
+export function mergeRemote(local: readonly PaletteItem[], remote: readonly KitRecord[], config: KitConfig): PaletteRecordItem[] {
+  const seen = new Set(local.filter(i => i.type === 'record').map(i => i.id));
+  const out: PaletteRecordItem[] = [];
+  for (const r of remote) {
+    if (seen.has(r.id)) continue;
+    seen.add(r.id);
+    out.push({ ...recordItem(r, config), origin: 'remote' });
+  }
+  return out;
+}
+
 export interface SearchInput {
   query: string;
   data: KitData;
@@ -84,16 +168,20 @@ export interface SearchInput {
   /** Ключи недавних, свежие первыми (RecentList.list()). */
   recent: readonly string[];
   limit?: number;
+  /** Действия над целью (уже отфильтрованные actionsFor); только в режиме all. */
+  actions?: readonly PaletteAction[];
 }
 
-export function searchPalette({ query, data, config, mode, recent, limit = 30 }: SearchInput): PaletteResult {
+export function searchPalette({ query, data, config, mode, recent, limit = 30, actions = [] }: SearchInput): PaletteResult {
   const commands = mode === 'all' ? (config.palette?.commands ?? []) : [];
+  const acts = mode === 'all' ? actions : [];
   const q = normalizeQuery(query);
 
   if (!q) {
     const byId = new Map(data.records.map(r => [r.id, r]));
     const cmdById = new Map(commands.map(c => [c.id, c]));
-    const items: PaletteItem[] = [];
+    // Действия над целью — первыми: ради них Ctrl+K и открыт над выделением.
+    const items: PaletteItem[] = acts.map(actionItem);
     for (const key of recent) {
       const sep = key.indexOf(':');
       const type = key.slice(0, sep);
@@ -106,6 +194,11 @@ export function searchPalette({ query, data, config, mode, recent, limit = 30 }:
 
   const tokens = q.split(' ');
   const scored: { item: PaletteItem; s: number; i: number }[] = [];
+  const base = data.records.length + commands.length;
+  acts.forEach((a, i) => {
+    const s = score(tokens, a.id, a.title);
+    if (s > 0) scored.push({ item: actionItem(a), s, i: base + i });
+  });
   data.records.forEach((r, i) => {
     const s = score(tokens, r.id, r.title);
     if (s > 0) scored.push({ item: recordItem(r, config), s, i });

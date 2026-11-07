@@ -111,3 +111,9 @@
 .memory-item__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .memory-item__hits { font-family: var(--mono); color: var(--t2); font-size: var(--fs-2xs); }
 .memory-actions { display: flex; justify-content: flex-end; padding-top: 4px; }
+/* Палитра (S4-14): кнопки «Поиск»/«Команды» справа в шапке; цель касания — kit IconButton (--tap). */
+.palette-trigger {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
