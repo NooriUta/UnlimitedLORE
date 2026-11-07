@@ -1471,7 +1471,18 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowUserMemoryPref.remembering IF NOT EXISTS BOOLEAN",
             "CREATE PROPERTY KnowUserMemoryPref.updated_at IF NOT EXISTS STRING",
             "CREATE INDEX IF NOT EXISTS ON KnowUserMemoryPref (owner_sub) UNIQUE",
-            "CREATE PROPERTY KnowUserRecent.first_seen IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowUserRecent.first_seen IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-06 · decision:D-2026-UXR-LINK-MENTION-EDGE:
+        // запасной тип связи для «Связать» из упоминаний — «упоминает», когда
+        // подходящего типизированного ребра для пары нет (LoreLinkTypes). Аудит
+        // живёт на самом ребре: откуда пришло (origin), когда и кто поставил.
+        // Без EXTENDS E — на проде базового типа нет (см. V43). Только аддитивно.
+        new Step(65, 17, "references_edge", List.of(
+            "CREATE EDGE TYPE REFERENCES IF NOT EXISTS",
+            "CREATE PROPERTY REFERENCES.origin IF NOT EXISTS STRING",
+            "CREATE PROPERTY REFERENCES.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY REFERENCES.created_by IF NOT EXISTS STRING"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
