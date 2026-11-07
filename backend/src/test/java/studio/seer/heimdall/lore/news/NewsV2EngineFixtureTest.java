@@ -387,6 +387,30 @@ class NewsV2EngineFixtureTest {
         assertEquals("empty", meta2.get("state"));
     }
 
+    /**
+     * S7A-07: meta.truncated — честный флаг. Раньше limit только поднимал флаг,
+     * а лента приходила целиком: «обрезано» при необрезанной выдаче — та же
+     * неправда, что «пусто» при недоступном источнике. Обрезается только
+     * список строк; числа (total, метрики) считаются по всему периоду.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void limitCutsTheFeedAndTruncatedTellsTheTruth() {
+        NewsV2Engine e = engine();
+        int all = ((List<Object>) e.compute(NewsV2.Query.none()).get("events")).size();
+        assertTrue(all > 3, "фикстура обязана давать больше строк, чем limit");
+        Map<String, Object> cut = e.compute(new NewsV2.Query(null, null, null, null, null, null, null, null,
+            "project", null, null, 3, null));
+        Map<String, Object> meta = (Map<String, Object>) cut.get("meta");
+        assertEquals(3, ((List<Object>) cut.get("events")).size(), "limit режет ленту");
+        assertEquals(true, meta.get("truncated"));
+        assertEquals(22, ((Map<String, Object>) meta.get("total")).get("events"), "числа считаются по всему периоду, не по странице");
+        Map<String, Object> wide = e.compute(new NewsV2.Query(null, null, null, null, null, null, null, null,
+            "project", null, null, all, null));
+        assertEquals(all, ((List<Object>) wide.get("events")).size());
+        assertEquals(false, ((Map<String, Object>) wide.get("meta")).get("truncated"));
+    }
+
     @Test
     void deterministicOutput() {
         assertEquals(engine().compute(NewsV2.Query.none()).toString(), engine().compute(NewsV2.Query.none()).toString());

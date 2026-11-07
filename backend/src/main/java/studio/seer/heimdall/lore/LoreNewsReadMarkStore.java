@@ -63,7 +63,7 @@ final class LoreNewsReadMarkStore {
             return at == null ? new State("unavailable", null, "mark_at не разобран: " + rows.get(0).get("mark_at"))
                 : new State("ok", at, null);
         } catch (Exception e) {
-            return new State("unavailable", null, String.valueOf(e.getMessage()));
+            return new State("unset", null, null); // TEMP обратная проверка S7A-07 — откатывается следующим коммитом
         }
     }
 
