@@ -13,8 +13,14 @@
 # утащил бы в образ локальные (возможно, виндовые) бинарники. И ни одного
 # файла v1 (src/, корневой package.json) в образе v2 быть не должно — это
 # сторожит web-next/src/infra.test.ts.
+#
+# Seiðr-kit (kit/, D-2026-UXR-KIT-REACT, S4-00a) — зависимость file:../kit,
+# поэтому раскладка повторяет репозиторий: /app/kit рядом с /app/web-next.
+# Тоже поимённо: kit/node_modules (локальный, для тестов kit) в образ не идёт.
 FROM node:26-alpine AS build
-WORKDIR /app
+WORKDIR /app/web-next
+COPY kit/package.json /app/kit/package.json
+COPY kit/src /app/kit/src
 COPY web-next/package.json web-next/package-lock.json ./
 RUN npm ci
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./
@@ -31,7 +37,7 @@ ENV VITE_LORE_AUTH_ENABLED=$VITE_LORE_AUTH_ENABLED \
 RUN npm run build
 
 FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/web-next/dist /usr/share/nginx/html
 # Те же правила подстановки, что у v1: фильтр сужает envsubst до наших LORE_*,
 # иначе собственные переменные nginx ($host, $uri…) могли бы обнулиться.
 ENV NGINX_ENVSUBST_FILTER="^LORE_" \

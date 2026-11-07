@@ -1,0 +1,28 @@
+/* Каркас оболочки v2 (S3-01). Токены, тема и база документа — в Seiðr-kit
+   (@seidr/kit/styles/seidr.css); здесь только раскладка, и только var(--…). */
+.shell {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  min-height: var(--tap);
+  padding: var(--pad-y) var(--pad-x);
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+
+.shell-title {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-lg);
+  letter-spacing: .04em;
+}
+
+.shell-tag {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--acc);
+  border: 1px solid var(--acc);
+  border-radius: var(--r-pill);
+  padding: 0 6px;
+  text-transform: uppercase;
+}

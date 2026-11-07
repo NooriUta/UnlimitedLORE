@@ -68,4 +68,15 @@ describe('CI: образ v2 собирается', () => {
     expect(job).toMatch(/npm run build/);
     expect(job).toMatch(/docker build \$ARGS -f web-next\/Dockerfile -t lore-app-next:ci \./);
   });
+
+  // S4-00a, D-2026-UXR-KIT-REACT: kit — отдельный пакет со своими тестами;
+  // тесты web-next их не запускают, поэтому у kit свой шаг в том же джобе.
+  it('job ставит, проверяет типы и тестирует Seiðr-kit (kit/)', () => {
+    const job = ci().split(/^ {2}web-next:\s*$/m)[1] ?? '';
+    const step = job.split(/- name: /).find(s => /working-directory: kit\b/.test(s)) ?? '';
+    expect(step, 'нет шага с working-directory: kit').not.toBe('');
+    expect(step).toMatch(/npm-retry\.sh ci/);
+    expect(step).toMatch(/npm run typecheck/);
+    expect(step).toMatch(/npm test/);
+  });
 });

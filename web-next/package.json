@@ -12,6 +12,7 @@
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/manrope": "^5.3.0",
     "@fontsource/unbounded": "^5.3.0",
+    "@seidr/kit": "file:../kit",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

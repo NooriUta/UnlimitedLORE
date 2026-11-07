@@ -15,7 +15,16 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    // Исходники kit (../kit) тянут `react`: без этого tsc ищет типы вверх от
+    // kit/ и в образе (где kit/node_modules нет) их не находит, а локально
+    // молча берёт чужую копию из корня репо. Проверено --traceResolution (S4-00a).
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }
