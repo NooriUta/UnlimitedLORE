@@ -2148,7 +2148,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_id CONTAINS :tag",
             // REL-UID-01: номер версии общий у разных проектов — project сужает до своего.
-            List.of("tag"), Map.of("project", " WHERE out('IMPLEMENTED_IN_RELEASE').git_project CONTAINS :project"), " LIMIT 50");
+            List.of("tag"), Map.of("project", " WHERE out('IMPLEMENTED_IN_RELEASE').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " LIMIT 50");
 
         // PRs shipped in a given release via the SHIPPED_IN edge (KnowPR → KnowRelease).
         // Prefer ruid for multi-project safety.
@@ -2164,12 +2164,12 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('CLOSED_BY').pr_uid AS closed_by_prs " +
             "FROM KnowTask WHERE out('CLOSED_BY').out('SHIPPED_IN').release_id CONTAINS :tag",
-            List.of("tag"), Map.of("project", " WHERE out('CLOSED_BY').out('SHIPPED_IN').git_project CONTAINS :project"), " ORDER BY task_uid");
+            List.of("tag"), Map.of("project", " WHERE out('CLOSED_BY').out('SHIPPED_IN').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY task_uid");
 
         slice("release_prs_by_tag",
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag",
-            List.of("tag"), Map.of("project", " WHERE git_project = :project"), " ORDER BY pr_number");
+            List.of("tag"), Map.of("project", " WHERE out('SHIPPED_IN').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY pr_number");
 
         // ── §13 ClRoutine* slices (Phase 6 v1.3) ─────────────────────────────
         slice("routine_latest",
