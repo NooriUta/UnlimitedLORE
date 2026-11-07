@@ -186,6 +186,13 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // только полный профиль, а остальные о своих пробелах не знают.
         Map.entry("quality",   Set.of("full", "architect", "developer", "pm", "marketer",
                                       "analyst", "product-analyst", "tester")),
+        // me (SPRINT_UXR_S2_GRAPH_MEMORY/S2-04, D-2026-UXR-VIEWS-SERVER) — личный слой:
+        // виды, избранное, недавние, настройки. «Видимость — сам пользователь и его
+        // агенты»: агент пишет ОТ ИМЕНИ своего владельца (LoreMeResource берёт владельца
+        // по OWNED_BY), поэтому открыто всем профилям. Строкой, а не пропуском
+        // «неизвестного семейства» — чтобы решение было видно, а не подразумевалось.
+        Map.entry("me",        Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
         // ── Найдено сверкой таблицы с реальными путями записи (AL-62) ────────
         // Три семейства имели живой POST под /lore, но в матрице отсутствовали,
         // то есть попадали в ветку «неизвестное — пропускаю». Права выставлены
