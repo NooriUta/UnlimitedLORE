@@ -1873,6 +1873,37 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 /* errBlock: упал один хук — рамка ошибки только вокруг его блока. */
 .sk-errblock { border: 1px solid var(--dng); border-radius: 6px; background: var(--bg1); }
 
+/* ---------- S5-01: строка-вердикт шапки и липкие вкладки записи ----------
+   Статус · задачи x/y · просрочено · свежесть — одной строкой под заголовком;
+   цвет факта — тон через --fact-c. Полоса вкладок записи прилипает к верху
+   прокрутки (--rec-sticky-top — отступ под шапку экрана, задаёт экран). */
+.sk-rec-facts { min-width: 0; }
+.sk-rec-facts__list { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--gap); margin: 0; padding: 0; list-style: none; }
+.sk-rec-facts__item { --fact-c: var(--t2); display: inline-flex; align-items: center; gap: 4px; color: var(--fact-c); font-size: var(--fs-sm); }
+.sk-rec-facts__item + .sk-rec-facts__item::before { content: '·'; color: var(--t3); margin-right: 2px; }
+.sk-rec-facts__item[data-fact='tasks'], .sk-rec-facts__item[data-fact='due'] { font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-rec-facts__text { color: inherit; }
+.sk-rec-facts__btn {
+  display: inline-flex; align-items: center;
+  min-height: max(var(--tap), 24px);
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--fact-c) 40%, transparent);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--fact-c);
+  font: inherit;
+  cursor: pointer;
+}
+.sk-rec-facts__btn:hover { background: var(--bg2); }
+.sk-rec-facts__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-rec__tabs > .sk-tabs {
+  position: sticky;
+  top: var(--rec-sticky-top, 0px);
+  z-index: 2;
+  background: var(--rec-sticky-bg, var(--bg0));
+  padding-top: 4px;
+}
+
 /* ---------- K-11: роли и согласование двумя людьми ---------- */
 .sk-appr-ro { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sk-appr-ro__hint { font-size: var(--fs-xs); color: var(--wrn); }
