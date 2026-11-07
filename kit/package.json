@@ -11,7 +11,8 @@
     "./demo/lore": "./demo/lore.ts",
     "./demo/datawanderers": "./demo/datawanderers.ts",
     "./styles/seidr.css": "./src/styles/seidr.css",
-    "./style-guard": "./src/tokens/styleGuard.ts"
+    "./style-guard": "./src/tokens/styleGuard.ts",
+    "./demo/*": "./demo/*.ts"
   },
   "sideEffects": [
     "*.css",
@@ -44,22 +45,54 @@
     "tiptap-markdown": "^0.9.0"
   },
   "peerDependenciesMeta": {
-    "@mermaid-js/layout-elk": { "optional": true },
-    "@tiptap/core": { "optional": true },
-    "@tiptap/extension-image": { "optional": true },
-    "@tiptap/extension-mention": { "optional": true },
-    "@tiptap/extension-table": { "optional": true },
-    "@tiptap/extension-task-item": { "optional": true },
-    "@tiptap/extension-task-list": { "optional": true },
-    "@tiptap/pm": { "optional": true },
-    "@tiptap/react": { "optional": true },
-    "@tiptap/starter-kit": { "optional": true },
-    "@tiptap/suggestion": { "optional": true },
-    "bpmn-js": { "optional": true },
-    "dompurify": { "optional": true },
-    "marked": { "optional": true },
-    "mermaid": { "optional": true },
-    "tiptap-markdown": { "optional": true }
+    "@mermaid-js/layout-elk": {
+      "optional": true
+    },
+    "@tiptap/core": {
+      "optional": true
+    },
+    "@tiptap/extension-image": {
+      "optional": true
+    },
+    "@tiptap/extension-mention": {
+      "optional": true
+    },
+    "@tiptap/extension-table": {
+      "optional": true
+    },
+    "@tiptap/extension-task-item": {
+      "optional": true
+    },
+    "@tiptap/extension-task-list": {
+      "optional": true
+    },
+    "@tiptap/pm": {
+      "optional": true
+    },
+    "@tiptap/react": {
+      "optional": true
+    },
+    "@tiptap/starter-kit": {
+      "optional": true
+    },
+    "@tiptap/suggestion": {
+      "optional": true
+    },
+    "bpmn-js": {
+      "optional": true
+    },
+    "dompurify": {
+      "optional": true
+    },
+    "marked": {
+      "optional": true
+    },
+    "mermaid": {
+      "optional": true
+    },
+    "tiptap-markdown": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@iconify-json/game-icons": "^1.2.4",
