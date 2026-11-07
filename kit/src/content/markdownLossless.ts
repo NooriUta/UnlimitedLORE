@@ -68,14 +68,11 @@ const WIKILINK = /^\[\[[^[\]\n]+\]\]/;
 function rawInlineRule(state: MdInlineState, silent: boolean): boolean {
   const rest = state.src.slice(state.pos, state.posMax);
   let raw: string | null = null;
-  let kind: MdRawKind = 'math';
+  let kind: MdRawKind = 'escape';
+  // Формулы $…$ / $$…$$ здесь не разбираются: это узлы KaTeX S5-13
+  // (tiptapMath: math_inline / math_block), исходник TeX пишется байт-в-байт.
   if (rest.startsWith('\\$')) { raw = '\\$'; kind = 'escape'; }
   else if (rest.startsWith('[[')) { const m = WIKILINK.exec(rest); if (m) { raw = m[0]; kind = 'wikilink'; } }
-  else if (rest.startsWith('$')) {
-    // Те же правила долларов, что у marked (markdownMath): «$5» — не формула.
-    const m = INLINE_DISPLAY.exec(rest) ?? INLINE_MATH.exec(rest);
-    if (m) raw = m[0];
-  }
   if (raw === null) return false;
   if (!silent) {
     const token = state.push('md_raw', '', 0);

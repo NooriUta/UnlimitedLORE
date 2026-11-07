@@ -140,6 +140,11 @@ function rawAtoms(md: string): Array<[string, string]> {
   const out: Array<[string, string]> = [];
   editor.state.doc.descendants(n => {
     if (n.type.name === 'mdRaw' || n.type.name === 'mdRawBlock') out.push([String(n.attrs.kind), String(n.attrs.raw)]);
+    // Формула — не атом-исходник, а узел KaTeX S5-13 (mathInline/mathBlock), исходник в tex.
+    if (n.type.name === 'mathInline' || n.type.name === 'mathBlock') {
+      const d = n.type.name === 'mathBlock' || n.attrs.display ? '$$' : '$';
+      out.push(['math', d + String(n.attrs.tex) + d]);
+    }
   });
   editor.destroy();
   return out;

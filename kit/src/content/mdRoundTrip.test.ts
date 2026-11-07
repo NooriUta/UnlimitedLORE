@@ -36,11 +36,13 @@ describe('S5-07 · Markdown → TipTap → Markdown без потерь', () => 
     });
   }
 
-  it('мягкий перенос внутри абзаца — не потеря: текст склеен пробелом, рендер тот же', () => {
+  it('мягкий перенос внутри абзаца — не потеря: слой S5-07 сохраняет перенос байт-в-байт', () => {
     const md = '> цитата\n> вторая строка цитаты\n\nабзац\nс переносом';
     const out = roundTripMd(md);
-    expect(norm(out)).not.toBe(norm(md)); // текст действительно другой…
-    expect(sameMd(out, md)).toBe(true); // …а читатель видит то же
+    // С общим слоем без-потерь (markdownLossless, S5-07) перенос — свой узел,
+    // а не пробел: совпадает уже текст, а не только рендер.
+    expect(norm(out)).toBe(norm(md));
+    expect(sameMd(out, md)).toBe(true);
     expect(isLosslessMd(md)).toBe(true);
   });
 
