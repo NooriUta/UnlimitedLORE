@@ -130,6 +130,20 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+/**
+ * Подписанный адрес встройки графика Völva (SPRINT_VIZ_EMBED/VE-2,
+ * GET /lore/embed/volva/{chart}). Ошибки не глотаются: 503 not_configured и
+ * 404 unknown_chart рамка показывает честно, а не пустым местом.
+ */
+export async function fetchVolvaEmbed(chart: string, project?: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }> {
+  const url = new URL(`${LORE_BASE}/embed/volva/${encodeURIComponent(chart)}`, location.origin);
+  if (project) url.searchParams.set('project', project);
+  const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ url: string; expires_at: string }>;
+}
+
 // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ───────────────────────
 // One row per (dict_type, code). Read via fetchLoreSlice('dictionary', …) and
 // cached in DictionaryProvider; consumers use the useDictionary hook.

@@ -814,7 +814,10 @@
       "parentOrphan": "Независимые",
       "projectLabel": "Проект",
       "noProject": "без проекта",
-      "statusLabel": "Статус"
+      "statusLabel": "Статус",
+      "volvaDocs": "Документы в Völva ↗",
+      "volvaNewDoc": "+ Документ к решению в Völva ↗",
+      "volvaNotConnected": "Völva не подключена: адрес задаётся настройкой volva.url в админке."
     },
     "docView": {
       "filterPlaceholder": "Фильтр документов…",
@@ -2510,7 +2513,21 @@
       "newTypeOpen": "Открыть",
       "newTypeCreate": "Завести тип",
       "newTypeBad": "код — строчная латиница, цифры и «_», с буквы в начале",
-      "newTypeHint": "тип появится вместе с первой записью"
+      "newTypeHint": "тип появится вместе с первой записью",
+      "settingTypeChartLayer": "echarts | volva",
+      "settingChartLayerDescr": "Чем рисуются графики LORE: echarts — сам LORE из своих данных; volva — встроенные графики Völva (нужна карточка в Völva и белый список lore.volva.embed.charts на бэкенде).",
+      "settingChartLayerHint": "Одна настройка на весь LORE, действует сразу после сохранения (после обновления страницы). Если в слое Völva графика нет, вместо пустой рамки показывается «не настроено».",
+      "volvaCheckOk": "Готово: адрес выдан, ведёт на {{origin}}, действует до {{expires}}.",
+      "volvaCheckNotConfigured": "Не настроено: на бэкенде нет секрета LORE_VOLVA_EMBED_SECRET или адреса lore.volva.embed.site-url. ({{d}})",
+      "volvaCheckUnknown": "Графика velocity нет в белом списке lore.volva.embed.charts. ({{d}})",
+      "volvaCheckForbidden": "Нет доступа к подписи встройки. ({{d}})",
+      "volvaCheckError": "Ошибка проверки: {{d}}",
+      "volvaCheckBtn": "Проверить интеграцию Völva",
+      "volvaCheckNote": "Запрашивает подписанный адрес пилотного графика velocity — тот же путь, что у слоя Völva.",
+      "settingTypeUrl": "адрес https://…",
+      "settingVolvaUrlDef": "— (кнопки Völva в карточке решения нет)",
+      "settingVolvaUrlDescr": "Адрес Völva для ссылок из LORE: «Документы в Völva» и «Документ к решению» в карточке решения. Открываются в сессии пользователя, с его правами в Völva.",
+      "settingVolvaUrlHint": "Только http(s). Действует после обновления страницы."
     },
     "oqBoard": {
       "ansFailed": "Не удалось загрузить решение #{{id}} — клик повторит",
@@ -2611,7 +2628,11 @@
       "milestones": "вехи"
     },
     "sliceLoadFailed": "Не загрузились срезы: {{lists}}. Это сбой, а не нули — показатели, которые от них зависят, неполны.",
-    "loadRetry": "Повторить"
+    "loadRetry": "Повторить",
+    "charts": {
+      "volvaLayer": "Слой Völva (настройка charts.layer в админке)",
+      "velocityTitle": "Скорость по неделям"
+    }
   },
   "bragi": {
     "analytics": {

@@ -814,7 +814,10 @@
       "parentOrphan": "Independent",
       "projectLabel": "Project",
       "noProject": "no project",
-      "statusLabel": "Status"
+      "statusLabel": "Status",
+      "volvaDocs": "Documents in Völva ↗",
+      "volvaNewDoc": "+ Document for this decision in Völva ↗",
+      "volvaNotConnected": "Völva is not connected: set the address with the volva.url setting in admin."
     },
     "docView": {
       "filterPlaceholder": "Filter documents…",
@@ -2510,7 +2513,21 @@
       "newTypeOpen": "Open",
       "newTypeCreate": "Create type",
       "newTypeBad": "code: lowercase latin, digits and \"_\", starting with a letter",
-      "newTypeHint": "the type appears together with its first entry"
+      "newTypeHint": "the type appears together with its first entry",
+      "settingTypeChartLayer": "echarts | volva",
+      "settingChartLayerDescr": "What draws LORE charts: echarts — LORE itself from its own data; volva — embedded Völva charts (needs a Völva card and the lore.volva.embed.charts allow-list on the backend).",
+      "settingChartLayerHint": "One setting for all of LORE, applies after saving (on page reload). If the Völva layer has no such chart, «not configured» is shown instead of an empty frame.",
+      "volvaCheckOk": "OK: a signed URL was issued, it points to {{origin}} and is valid until {{expires}}.",
+      "volvaCheckNotConfigured": "Not configured: the backend has no LORE_VOLVA_EMBED_SECRET secret or lore.volva.embed.site-url address. ({{d}})",
+      "volvaCheckUnknown": "The velocity chart is not in the lore.volva.embed.charts allow-list. ({{d}})",
+      "volvaCheckForbidden": "No access to embed signing. ({{d}})",
+      "volvaCheckError": "Check failed: {{d}}",
+      "volvaCheckBtn": "Check Völva integration",
+      "volvaCheckNote": "Requests a signed URL for the pilot velocity chart — the same path the Völva layer uses.",
+      "settingTypeUrl": "https://… address",
+      "settingVolvaUrlDef": "— (no Völva buttons on the decision card)",
+      "settingVolvaUrlDescr": "Völva address for links from LORE: «Documents in Völva» and «Document for this decision» on the decision card. They open in the user's own session, with their Völva rights.",
+      "settingVolvaUrlHint": "http(s) only. Applies after page reload."
     },
     "oqBoard": {
       "ansFailed": "Failed to load decision #{{id}} — click to retry",
@@ -2611,7 +2628,11 @@
       "milestones": "milestones"
     },
     "sliceLoadFailed": "Failed to load: {{lists}}. This is a failure, not zeros — figures that depend on them are incomplete.",
-    "loadRetry": "Retry"
+    "loadRetry": "Retry",
+    "charts": {
+      "volvaLayer": "Völva layer (charts.layer setting in admin)",
+      "velocityTitle": "Velocity by week"
+    }
   },
   "bragi": {
     "analytics": {
