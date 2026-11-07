@@ -205,3 +205,42 @@ export function readListState(p: URLSearchParams): ListState {
     filters,
   };
 }
+
+/* ---------- движок списка v2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-04) ---------- */
+
+/** Встроенные ключи порядка: есть у любой записи контракта. */
+export const BUILTIN_SORT_KEYS = ['title', 'id', 'status', 'updated_at'] as const;
+
+/** Колонки-виджеты: не поле записи, по ним не сортируют. */
+const NON_FIELD_COLUMNS = new Set(['select', 'title+id', 'verdict', 'edges_count', 'kind']);
+
+/**
+ * Ключи порядка из конфига: встроенные + поля колонок, фильтров и группировок
+ * (в этом порядке, без дублей). Экран, показавший колонку «Приоритет», должен
+ * уметь по ней упорядочить — без отдельной настройки в каждом экране.
+ */
+export function sortKeysOf(config: KitConfig): string[] {
+  const out: string[] = [...BUILTIN_SORT_KEYS];
+  const seen = new Set<string>(out);
+  const l = config.list;
+  for (const k of [...(l?.columns ?? []), ...(l?.filters ?? []), ...(l?.groupings ?? [])]) {
+    if (NON_FIELD_COLUMNS.has(k) || seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+  }
+  return out;
+}
+
+/**
+ * Быстрая иконка «Быстро»: фильтр ровно по одному статусу словаря — иконка
+ * этого статуса (одно правило на все экраны, а не иконка в каждом конфиге).
+ * Иное — null: приложение может задать свою (проп quickIcons).
+ */
+export function quickIconOf(q: QuickItem, config: KitConfig): string | null {
+  const keys = Object.keys(q.filter);
+  if (keys.length !== 1 || keys[0] !== 'status') return null;
+  const v = q.filter.status;
+  const code = Array.isArray(v) ? (v.length === 1 ? v[0] : null) : v;
+  if (code === null || code === undefined) return null;
+  return config.statuses.items.find(s => s.code === code)?.icon ?? null;
+}
