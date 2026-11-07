@@ -6,7 +6,7 @@ import {
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
 } from '../../api/lore';
 import {
-  NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, unplannedOfProduct, unplannedShare, isStreamSprint, type ProductRow,
+  NO_PRODUCT, isFrozenMilestone, milestonesOfProduct, unplannedOfProduct, unplannedShare, isStreamSprint, productRepos, type ProductRow,
 } from './milestoneProducts';
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
@@ -364,6 +364,29 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
       {/* Master: simple cards — name, deadline, bar, projects */}
       {productBar}
+      {/* WK-02: репозитории продукта с ролью связи — развивает или только пользуется */}
+      {(() => {
+        const row = product && product !== NO_PRODUCT ? products.find(p => p.code === product) : undefined;
+        const repos = row ? productRepos(row) : [];
+        if (!row) return null;
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+            <span>{t('lore.milestonesView.reposTitle', 'Репозитории продукта:')}</span>
+            {repos.length === 0
+              ? <span>{t('lore.milestonesView.reposNone', 'не привязаны')}</span>
+              : repos.map(r => (
+                <span key={r.slug} style={{ ...S.projTag, color: r.role === 'consumer' ? 'var(--inf)' : r.role === 'owner' ? 'var(--t1)' : 'var(--wrn)' }}
+                  title={r.role === 'consumer' ? t('lore.milestonesView.repoConsumerHint', 'продукт пользуется репозиторием, но не развивает его')
+                    : r.role === 'owner' ? t('lore.milestonesView.repoOwnerHint', 'продукт развивает этот репозиторий')
+                    : t('lore.milestonesView.repoNoRoleHint', 'роль связи не размечена — см. срез product_hygiene')}>
+                  {r.slug} · {r.role === 'consumer' ? t('lore.milestonesView.repoConsumer', 'пользуется')
+                    : r.role === 'owner' ? t('lore.milestonesView.repoOwner', 'развивает')
+                    : t('lore.milestonesView.repoNoRole', 'роль ?')}
+                </span>
+              ))}
+          </div>
+        );
+      })()}
       <div style={S.cards}>
         {planRows.map(renderCard)}
         {planRows.length === 0 && (

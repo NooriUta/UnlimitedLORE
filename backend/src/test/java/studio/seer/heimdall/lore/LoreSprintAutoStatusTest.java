@@ -73,4 +73,34 @@ class LoreSprintAutoStatusTest {
         // already done → no-op
         assertNull(LoreStatusResource.deriveSprintTarget("done", List.of("done", "done")));
     }
+
+    // ── MT-SPRINT-STATUS-FOLLOWS-TASKS (D-2026-SPRINT-STATUS-FOLLOWS-LAST-TASK, 06.11.2026) ──
+    // «перевод статусов задач нужно смотреть если это последняя сделанная или
+    // отменённая и ничего нет — то переводить в done».
+
+    @Test
+    void closing_a_task_never_opens_the_sprint() {
+        // Дефект 06.11: VE-1 закрыли → спринт из planned ушёл в IN PROGRESS.
+        assertNull(LoreStatusResource.deriveSprintTarget("planned", List.of("done", "planned")));
+        assertNull(LoreStatusResource.deriveSprintTarget("todo", List.of("done", "todo", "planned")));
+    }
+
+    @Test
+    void no_open_tasks_left_and_something_done_means_done() {
+        // отменённая задача — закрытая, но не «сделанная»: спринт всё равно DONE, раз сделана хоть одна
+        assertEquals("done", LoreStatusResource.deriveSprintTarget("planned", List.of("done", "cancelled")));
+        assertEquals("done", LoreStatusResource.deriveSprintTarget("active", List.of("cancelled", "done", "cancelled")));
+    }
+
+    @Test
+    void all_cancelled_is_left_to_the_owner() {
+        // оговорка из решения: «всё отменено» — не DONE (отменённое не подменяет сделанное); до её слова не трогаем
+        assertNull(LoreStatusResource.deriveSprintTarget("planned", List.of("cancelled", "cancelled", "cancelled")));
+    }
+
+    @Test
+    void work_starting_still_opens_the_sprint() {
+        assertEquals("active", LoreStatusResource.deriveSprintTarget("planned", List.of("active")));
+        assertEquals("active", LoreStatusResource.deriveSprintTarget("planned", List.of("done", "partial", "planned")));
+    }
 }

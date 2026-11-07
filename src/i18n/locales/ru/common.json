@@ -1059,6 +1059,14 @@
       "assignToMilestoneOption": "→ в веху…"
     },
     "milestonesView": {
+      "reposTitle": "Репозитории продукта:",
+      "reposNone": "не привязаны",
+      "repoOwner": "развивает",
+      "repoConsumer": "пользуется",
+      "repoNoRole": "роль ?",
+      "repoOwnerHint": "продукт развивает этот репозиторий",
+      "repoConsumerHint": "продукт пользуется репозиторием, но не развивает его",
+      "repoNoRoleHint": "роль связи не размечена — см. срез product_hygiene",
       "title": "Вехи проекта",
       "countSummary": "{{count}} вех · avg velocity {{velocity}} Sp/нед",
       "cancel": "× Отмена",

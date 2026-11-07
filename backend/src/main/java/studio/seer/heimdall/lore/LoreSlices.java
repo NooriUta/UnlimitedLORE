@@ -1029,7 +1029,7 @@ public final class LoreSlices {
         // её отсутствие — не нарушение (ADR-032 §1).
         slice("product_hygiene",
             "SELECT finding, entity_type, ref_id, title, sprint_id " +
-            "FROM (SELECT expand(unionall($ut, $et, $ua, $pr)) LET " +
+            "FROM (SELECT expand(unionall($ut, $et, $ua, $pr, $pp)) LET " +
             "$ut = (SELECT 'uc_task_without_realizes' AS finding, 'task' AS entity_type, " +
             "       task_uid AS ref_id, title, out('PART_OF').sprint_id[0] AS sprint_id " +
             "       FROM KnowTask WHERE work_class = 'uc' AND out('REALIZES').size() = 0), " +
@@ -1045,7 +1045,12 @@ public final class LoreSlices {
             "       AND (acceptance_md IS NULL OR acceptance_md = '')), " +
             "$pr = (SELECT 'pain_without_relief' AS finding, 'pain' AS entity_type, " +
             "       pain_id AS ref_id, title " +
-            "       FROM KnowPain WHERE in('RELIEVES').size() = 0)" +
+            "       FROM KnowPain WHERE in('RELIEVES').size() = 0), " +
+            // WK-02: связь продукт → проект без роли — не размечено, развивает
+            // продукт репозиторий или только пользуется им.
+            "$pp = (SELECT 'product_project_without_role' AS finding, 'product' AS entity_type, " +
+            "       @out.code AS ref_id, @in.slug AS title " +
+            "       FROM BELONGS_TO_PROJECT WHERE @out.dict_type = 'product' AND role IS NULL)" +
             ") ORDER BY finding, ref_id",
             List.of(), Map.of(), "");
 
@@ -2384,7 +2389,10 @@ public final class LoreSlices {
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +
-            "out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+            // WK-02: роль связи продукт → проект параллельным списком; out() и
+            // outE() обходят одни и те же рёбра в одном порядке.
+            "outE('BELONGS_TO_PROJECT').role AS git_project_roles " +
             "FROM KnowDictEntry WHERE dict_type = 'product'",
             List.of(), Map.of(), " ORDER BY sort_order, code");
 
