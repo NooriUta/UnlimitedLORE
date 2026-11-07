@@ -222,5 +222,14 @@
   "kit.appr.journal.selfApproved": "согласовал сам — нарушение правила двух людей",
   "kit.appr.journal.agent": "агент",
   "kit.appr.journal.empty": "Журнал пуст (проверено)",
-  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль."
+  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль.",
+  "kit.peek.readFull": "Читать целиком",
+  "kit.peek.tasks": "Задачи",
+  "kit.peek.tasks.progress": "{done} из {total} готово",
+  "kit.peek.tasks.empty": "Задач нет",
+  "kit.peek.tasks.emptyHint": "В выборке нет задач этой записи — это проверенный ноль, а не сбой.",
+  "kit.peek.tasks.failed": "Задачи не загрузились",
+  "kit.peek.tasks.truncated": "Выборка обрезана сервером — задач может быть больше",
+  "kit.peek.tasks.more": "ещё {n} — в полном чтении",
+  "kit.peek.text": "Текст"
 }

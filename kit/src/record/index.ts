@@ -6,4 +6,5 @@ export * from './RecordGraph';
 export * from './RecordJournal';
 export * from './BlockBoundary';
 export * from './useRecordTab';
+export * from './RecordPeek';
 export { egoGraph, edgeColor, toCssColor, verdictTone, type EgoGraph, type EgoNode, type EgoSector } from './graph';
