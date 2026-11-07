@@ -1445,7 +1445,33 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowUserSettings.settings_json IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowUserSettings.row_version IF NOT EXISTS INTEGER",
             "CREATE PROPERTY KnowUserSettings.updated_at IF NOT EXISTS STRING",
-            "CREATE INDEX IF NOT EXISTS ON KnowUserSettings (owner_sub) UNIQUE"))
+            "CREATE INDEX IF NOT EXISTS ON KnowUserSettings (owner_sub) UNIQUE")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-05 «что LORE помнит обо мне» — вслед за V63
+        // (виды S2-04), чтобы не спорить с ним номером. Только новые типы и одно
+        // новое поле у KnowUserRecent (S2-04) — аддитивно, major 17, v1 не задет.
+        // KnowUserHabit — частые виды (ключ = view_uid вида S2-04) и частые срезы
+        // (раздел?запрос); KnowUserMemoryPref — флаг «не запоминать» на человека.
+        // Владелец — kc_sub полем, как в V63. Срок хранения (90 дней) — по last_seen.
+        new Step(64, 17, "user_memory", List.of(
+            "CREATE VERTEX TYPE KnowUserHabit IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserHabit.memory_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.kind IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.habit_key IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.label IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.hits IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowUserHabit.first_seen IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.last_seen IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserHabit (memory_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserHabit (owner_sub, kind, habit_key) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserHabit (owner_sub) NOTUNIQUE",
+            "CREATE VERTEX TYPE KnowUserMemoryPref IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserMemoryPref.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserMemoryPref.remembering IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowUserMemoryPref.updated_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserMemoryPref (owner_sub) UNIQUE",
+            "CREATE PROPERTY KnowUserRecent.first_seen IF NOT EXISTS STRING"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
