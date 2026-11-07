@@ -31,7 +31,14 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: 'unit', include: ['src/**/*.{test,spec}.ts'], environment: 'node' },
+        test: {
+          name: 'unit',
+          include: ['src/**/*.{test,spec}.ts'],
+          // S0-07: extends:true склеивает include с корневым (ts+tsx) — без exclude
+          // рендер-тесты .tsx шли ещё и в node и падали «document is not defined».
+          exclude: ['src/**/*.{test,spec}.tsx', 'node_modules/**'],
+          environment: 'node',
+        },
       },
       {
         extends: true,
