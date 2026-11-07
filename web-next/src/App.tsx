@@ -11,14 +11,23 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/unbounded/800.css';
 import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
-import { ErrorBoundary, Pill, Skeleton, StorageBanner } from '@seidr/kit';
+import { ErrorBoundary, Pill, Skeleton, StorageBanner, resolvePrefs, useKitLang } from '@seidr/kit';
 import './App.css';
-import { PersonalSettings } from './settings/PersonalSettings';
+import { createLocalS2Client } from './api/me';
+import { AccountMenu } from './settings/AccountMenu';
 import { storage } from './storage/safe';
+import { themeSource } from './storage/themeSource';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
+
+// Личное пользователя (/lore/me/*, контракт S2) — до S2-04 на заглушке с
+// хранением в браузере (S4-02). Первый раз — с темой, выбранной в v1/seer-prefs.
+const initialTheme = resolvePrefs(themeSource());
+const meClient = createLocalS2Client(storage, {
+  seed: { palette: initialTheme.palette, mode: initialTheme.mode, density: initialTheme.density },
+});
 
 /** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
 export function routeOf(path: string): 'kit' | 'home' {
@@ -26,6 +35,7 @@ export function routeOf(path: string): 'kit' | 'home' {
 }
 
 export default function App({ path }: { path?: string } = {}) {
+  const lang = useKitLang();
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
   if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
   return (
@@ -35,9 +45,9 @@ export default function App({ path }: { path?: string } = {}) {
         <h1 className="shell-title">LORE</h1>
         <Pill variant="id">v2</Pill>
         <a className="shell-link" href="/kit">Seiðr-kit</a>
+        {/* S4-02: личные настройки (и флаг «новая навигация», S3-07) — под аватаром. */}
+        <div className="shell-account"><AccountMenu client={meClient} lang={lang} /></div>
       </main>
-      {/* S3-07: личные настройки — переход v2 → v1 по флагу «новая навигация». */}
-      <PersonalSettings />
     </ErrorBoundary>
   );
 }

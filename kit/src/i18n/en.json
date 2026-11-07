@@ -222,5 +222,9 @@
   "kit.appr.journal.selfApproved": "self-approved — four-eyes rule broken",
   "kit.appr.journal.agent": "agent",
   "kit.appr.journal.empty": "Journal is empty (checked)",
-  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero."
+  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero.",
+  "kit.avatar.title": "Personal settings",
+  "kit.avatar.open": "{name} — personal settings",
+  "kit.avatar.openAnon": "User not identified — personal settings",
+  "kit.avatar.anon": "User not identified"
 }
