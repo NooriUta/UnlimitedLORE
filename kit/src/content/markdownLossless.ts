@@ -307,7 +307,7 @@ export function markdownBaseExtensions(): AnyExtension[] {
   return [
     // Явный протокол lore: — иначе Link отбрасывает адрес ссылки на актора,
     // спринт, задачу (и упоминание, записанное как [@имя](lore:actor/id)).
-    StarterKit.configure({ link: { protocols: ['lore'] } }),
+    StarterKit.configure({ link: { protocols: ['lore'], openOnClick: false } }),
     TableKit.configure({ table: false }),
     MdTable.configure({ resizable: false }),
     TaskList,

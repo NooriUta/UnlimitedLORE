@@ -10,11 +10,11 @@ import { TableKit } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
-import { markdownBaseExtensions, markdownSerializerExtension } from './markdownLossless';
+import { mdExtensions } from './tiptapMd';
 
-/** Набор MD-редактора kit — как в TipTapField. */
+/** Набор MD-редактора kit — ровно как в TipTapField (tiptapMd.mdExtensions, S5-06). */
 export function markdownExtensions(): AnyExtension[] {
-  return [...markdownBaseExtensions(), markdownSerializerExtension()];
+  return mdExtensions();
 }
 
 /**

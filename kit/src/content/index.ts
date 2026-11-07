@@ -9,3 +9,6 @@ export * from './MartProse';
 export * from './TipTapField';
 export * from './markdownLossless';
 export * from './markdownRoundTrip';
+// S5-06/S5-07: правка на месте и круг «Markdown → TipTap → Markdown».
+export * from './tiptapMd';
+export * from './MdInlineEdit';

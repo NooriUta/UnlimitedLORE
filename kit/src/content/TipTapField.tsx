@@ -17,11 +17,11 @@ import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from
 import Image from '@tiptap/extension-image';
 import Mention from '@tiptap/extension-mention';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
+import { getMarkdown, mdExtensions, MdImage } from './tiptapMd';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
-import { markdownBaseExtensions, markdownSerializerExtension } from './markdownLossless';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 
@@ -141,17 +141,12 @@ function ResizableImageView({ node, updateAttributes, selected, editor }: NodeVi
   );
 }
 
+// Строчная, как MdImage (tiptapMd.ts): `![a](u)` остаётся внутри абзаца.
 const ResizableImage = Image.extend({
   addNodeView() {
     return ReactNodeViewRenderer(ResizableImageView);
   },
-});
-
-// tiptap-markdown@0.9 не объявляет тип storage для TipTap v3 — узкий каст в одном месте.
-function getMarkdown(editor: Editor): string {
-  const storage = editor.storage as unknown as { markdown?: { getMarkdown: () => string } };
-  return storage.markdown?.getMarkdown() ?? editor.getText();
-}
+}).configure({ inline: true });
 
 /** Файлы-картинки из drop/paste: items (скриншот из буфера) и files, без дублей и не-картинок. */
 export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
@@ -215,11 +210,12 @@ export function TipTapField({
   const editor = useEditor({
     extensions: [
       // Набор и сериализатор — общие с тестом S5-07 «MD → TipTap → MD без
-      // потерь» (markdownLossless): поле не может разойтись с тем, что проверено.
-      ...markdownBaseExtensions(),
-      ...(enableImages ? [ResizableImage] : []),
-      ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : []),
-      markdownSerializerExtension(),
+      // потерь» (markdownLossless через tiptapMd.mdExtensions): поле не может
+      // разойтись с тем, что проверено. Картинка — узлом всегда (S5-06).
+      ...mdExtensions(
+        enableImages ? ResizableImage : MdImage,
+        mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : [],
+      ),
     ],
     content: value,
     editable,

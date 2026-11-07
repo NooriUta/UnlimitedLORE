@@ -123,6 +123,7 @@
   "kit.record.verdict.ok": "Все проверки пройдены",
   "kit.record.blockError": "Блок «{block}» не отрисовался",
   "kit.record.blockError.hint": "Сломан только этот блок — остальная запись работает.",
+  "kit.record.body": "Текст",
   "kit.record.body.empty": "Текста нет",
   "kit.record.body.emptyHint": "У записи нет тела — это проверенный ноль, а не сбой.",
   "kit.record.fields": "Поля",
@@ -323,5 +324,19 @@
   "kit.peek.tasks.failed": "Задачи не загрузились",
   "kit.peek.tasks.truncated": "Выборка обрезана сервером — задач может быть больше",
   "kit.peek.tasks.more": "ещё {n} — в полном чтении",
-  "kit.peek.text": "Текст"
+  "kit.peek.text": "Текст",
+  "kit.mdedit.edit": "Править «{field}»",
+  "kit.mdedit.editing": "Правка «{field}»",
+  "kit.mdedit.empty": "Текста нет",
+  "kit.mdedit.modes": "Вид правки",
+  "kit.mdedit.mode.code": "Код",
+  "kit.mdedit.mode.preview": "Превью",
+  "kit.mdedit.mode.split": "Рядом",
+  "kit.mdedit.source": "исходник markdown",
+  "kit.mdedit.live": "Живой рендер",
+  "kit.mdedit.save": "Сохранить",
+  "kit.mdedit.saving": "Сохраняю…",
+  "kit.mdedit.cancel": "Отмена",
+  "kit.mdedit.saveFailed": "Не сохранилось: {reason}. Черновик на месте.",
+  "kit.mdedit.lossy": "Превью исказит этот текст (сырой HTML или конструкция вне markdown) — правка только в коде."
 }
