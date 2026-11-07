@@ -58,3 +58,5 @@ export * from './views/timeline';
 // Сохранённые виды списка: сохранить / сохранить как / сбросить, командные виды
 // по умолчанию; хранилище — контракт S2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-08).
 export * from './views/saved';
+// Новости v2: лента, разрезы, метрики сервера (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06).
+export * from './news';

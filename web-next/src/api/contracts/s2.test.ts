@@ -91,6 +91,20 @@ describe('S2-01 · реестр эндпоинтов', () => {
     expect(S2_ENDPOINTS.some(e => e.versioned)).toBe(true);
   });
 
+  it('память (S2-05) — пути и методы как у бэкенда LoreMemoryResource: только GET/POST', () => {
+    const mem = S2_ENDPOINTS.filter(e => e.contract === 'memory').map(e => `${e.method} ${e.path}`);
+    expect(mem).toEqual(expect.arrayContaining([
+      'GET /lore/me/memory',
+      'POST /lore/me/memory/delete',
+      'POST /lore/me/memory/remembering',
+      'POST /lore/me/memory/hit',
+    ]));
+    expect(mem.filter(k => /^(DELETE|PUT|PATCH) /.test(k))).toEqual([]);
+    const hit = S2_ENDPOINTS.find(e => e.method === 'POST' && e.path === '/lore/me/memory/hit');
+    expect(hit?.agents).toBe('none');
+    expect(hit?.errors).toEqual(expect.arrayContaining(['UNAUTHENTICATED', 'BAD_PARAMS', 'NOT_FOUND', 'AGENT_SCOPE_FORBIDDEN']));
+  });
+
   it('пары method+path уникальны', () => {
     const keys = S2_ENDPOINTS.map(e => `${e.method} ${e.path}`);
     expect(new Set(keys).size).toBe(keys.length);

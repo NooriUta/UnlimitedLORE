@@ -62,13 +62,13 @@ describe('оболочка v2 (S4-01)', () => {
   it('выбор раздела пишется в URL и меняет экран; несобранный экран — «не собран», а не «пусто»', () => {
     const win = fakeWin();
     const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Новости' }));
-    expect(new URLSearchParams(win.location.search).get('sec')).toBe('news');
-    expect(screen.getByRole('heading', { level: 1, name: 'Новости' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Задачи' }));
+    expect(new URLSearchParams(win.location.search).get('sec')).toBe('task');
+    expect(screen.getByRole('heading', { level: 1, name: 'Задачи' })).toBeTruthy();
     const main = screen.getByRole('main');
     expect(main.querySelector('[data-state="unbuilt"]')).toBeTruthy();
     expect(main.querySelector('[data-state="empty"]')).toBeNull();
-    expect(container.querySelector('[data-section="news"]')).toBeTruthy();
+    expect(container.querySelector('[data-section="task"]')).toBeTruthy();
   });
 
   it('списки (S4-04) — экраны разделов: ADR открывает список kit под одним заголовком раздела', () => {
@@ -82,11 +82,11 @@ describe('оболочка v2 (S4-01)', () => {
   });
 
   it('выбор проектов (?proj=) переживает смену раздела, фильтры раздела — нет (S4-03 × S4-13)', () => {
-    const win = fakeWin('?mod=forseti&sec=news&proj=p1,p2&lf=x');
+    const win = fakeWin('?mod=forseti&sec=task&proj=p1,p2&lf=x');
     render(<App path="/" win={win} storage={mem()} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Задачи' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Новости' }));
     const p = new URLSearchParams(win.location.search);
-    expect(p.get('sec')).toBe('task');
+    expect(p.get('sec')).toBe('news');
     expect(p.get('proj')).toBe('p1,p2');
     expect(p.get('lf')).toBeNull();
   });

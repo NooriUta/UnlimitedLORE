@@ -135,12 +135,17 @@ public class LoreAdrResource extends LoreResourceBase {
                     cp.put("ctx", req.context_md()      != null ? req.context_md()      : histRows.get(0).get("context_md"));
                     cp.put("dec", req.decision_md()     != null ? req.decision_md()     : histRows.get(0).get("decision_md"));
                     cp.put("con", req.consequences_md() != null ? req.consequences_md() : histRows.get(0).get("consequences_md"));
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                        "UPDATE KnowADRHist SET valid_to=:now WHERE @rid=:rid;" +
+                    // S2-09: закрыть, только если версия ЕЩЁ открыта; иначе выход до записи и 409.
+                    cp.put("oldrid", rid);
+                    Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                        Scd2Guard.guardedClose("KnowADRHist", false) +
                         "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
                         "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
-                        "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely();
+                        "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely().result();
+                    if (Scd2Guard.isConflict(cpRes))
+                        throw new Scd2Guard.ConflictException("adr '" + req.adr_id()
+                            + "': the body version read was closed by a concurrent write — re-read and retry", Map.of());
                     histCreated = true;
                 } else {
                 // Step 3a: update body fields on the existing open hist row (amend-in-place) — SAME
@@ -300,8 +305,12 @@ public class LoreAdrResource extends LoreResourceBase {
             }
             hashStamper.stampOpenHist("KnowADRHist", "KnowADR", "adr_id", req.adr_id());
             return noStore(Response.ok(out));
+        } catch (Scd2Guard.ConflictException c) {
+            return c.response(); // S2-09
         } catch (Exception e) {
             LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());
+            if (Scd2Guard.isConcurrentModification(e))
+                return Scd2Guard.conflict("adr '" + req.adr_id() + "': concurrent write — re-read and retry", Map.of());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }

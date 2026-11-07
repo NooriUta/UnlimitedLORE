@@ -114,9 +114,55 @@ function isReadOnly(init: RequestInit): boolean {
   return m === 'GET' || m === 'HEAD';
 }
 
-/** fetch с таймаутом, причиной сбоя в тексте ошибки и одним безопасным повтором. */
+// ── S2-08: прямой адрес бэкенда + запасной через nginx фронта ──────────────
+//
+// LORE_BACKEND_URL — прямой маршрут Traefik к бэкенду (…/_backend), не зависящий
+// от того, какой фронт держит :4400. LORE_BACKEND_FALLBACK_URL — прежний адрес
+// через nginx фронта (http://192.168.3.131:4400). Переход на запасной — только
+// когда запрос до бэкенда заведомо НЕ дошёл: соединение/TLS не установлены, либо
+// маршрута нет и ответил SPA фронта (text/html). Обрыв открытого соединения и
+// любые ответы самого бэкенда (401/403/5xx JSON) отдаются как есть.
+const FALLBACK = (process.env.LORE_BACKEND_FALLBACK_URL ?? '').trim().replace(/\/$/, '') || undefined;
+
+export type BackendBases = { primary: string; fallback?: string };
+
+/** TLS-рукопожатие не прошло — запрос не отправлен, повтор по другому адресу безопасен. */
+function isTlsSetupFailure(code: string | undefined): boolean {
+  return !!code && (code.startsWith('ERR_TLS_') || code.startsWith('CERT_') ||
+    code === 'DEPTH_ZERO_SELF_SIGNED_CERT' || code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
+    code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY');
+}
+
+/** fetch с таймаутом, причиной сбоя, одним безопасным повтором и запасным адресом (S2-08). */
 export async function loreFetch(
   what: string, url: string, init: RequestInit = {}, f: typeof fetch = fetch,
+  bases: BackendBases = { primary: BASE, fallback: FALLBACK },
+): Promise<Response> {
+  const fallbackUrl = bases.fallback && bases.fallback !== bases.primary && url.startsWith(bases.primary)
+    ? bases.fallback + url.slice(bases.primary.length)
+    : undefined;
+  if (!fallbackUrl) return fetchWithRetry(what, url, init, f);
+  let res: Response;
+  try {
+    res = await fetchWithRetry(what, url, init, f);
+  } catch (e) {
+    const { code } = causeOf((e as Error).cause);
+    if (!(code && (CONNECT_PHASE.has(code) || isTlsSetupFailure(code)))) throw e;
+    try {
+      return await fetchWithRetry(`${what} (запасной ${bases.fallback})`, fallbackUrl, init, f);
+    } catch (e2) {
+      throw new Error(`${(e as Error).message}; запасной ${bases.fallback}: ${(e2 as Error).message}`, { cause: e2 });
+    }
+  }
+  // Маршрут /_backend не применён (или снят) → запрос попал в SPA фронта, а не в бэкенд.
+  if ((res.headers.get('content-type') ?? '').toLowerCase().startsWith('text/html')) {
+    return fetchWithRetry(`${what} (запасной ${bases.fallback})`, fallbackUrl, init, f);
+  }
+  return res;
+}
+
+async function fetchWithRetry(
+  what: string, url: string, init: RequestInit, f: typeof fetch,
 ): Promise<Response> {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -355,3 +401,4 @@ export async function loreUpload(
 }
 
 export const BACKEND_URL = BASE;
+export const BACKEND_FALLBACK_URL = FALLBACK;

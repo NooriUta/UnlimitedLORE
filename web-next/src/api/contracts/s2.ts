@@ -401,9 +401,12 @@ export const S2_ENDPOINTS: readonly S2Endpoint[] = [
   { contract: 'settings', task: 'S2-04', method: 'PATCH', path: '/lore/me/settings', versioned: true, errors: [...R, 'BAD_PARAMS', 'CONFLICT', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
 
   { contract: 'memory', task: 'S2-05', method: 'GET', path: '/lore/me/memory', errors: [...R, 'FORBIDDEN'], agents: 'own' },
-  { contract: 'memory', task: 'S2-05', method: 'DELETE', path: '/lore/me/memory', query: ['kind'], errors: [...R, 'BAD_PARAMS', 'FORBIDDEN'], agents: 'own' },
-  { contract: 'memory', task: 'S2-05', method: 'DELETE', path: '/lore/me/memory/{memory_id}', errors: [...R, 'NOT_FOUND', 'FORBIDDEN'], agents: 'own' },
-  { contract: 'memory', task: 'S2-05', method: 'PUT', path: '/lore/me/memory/remembering', errors: [...R, 'BAD_PARAMS', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
+  // Стирание — одним POST, как на бэкенде (LoreMemoryResource): тело {kind?} стирает категорию
+  // (пустое — всё), тело {memory_id} — одну запись (recent:<type>:<id> | mem-<uuid>).
+  { contract: 'memory', task: 'S2-05', method: 'POST', path: '/lore/me/memory/delete', errors: [...R, 'BAD_PARAMS', 'NOT_FOUND', 'FORBIDDEN'], agents: 'own' },
+  { contract: 'memory', task: 'S2-05', method: 'POST', path: '/lore/me/memory/remembering', errors: [...R, 'BAD_PARAMS', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
+  // Учёт привычки: тело {kind: 'frequent_views'|'frequent_slices', key, label?}.
+  { contract: 'memory', task: 'S2-05', method: 'POST', path: '/lore/me/memory/hit', errors: [...R, 'BAD_PARAMS', 'NOT_FOUND', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
   { contract: 'memory', task: 'S2-05', method: 'GET', path: '/lore/me/recent', query: ['limit'], errors: R, agents: 'own' },
   { contract: 'memory', task: 'S2-05', method: 'POST', path: '/lore/me/recent', errors: [...R, 'BAD_PARAMS'], agents: 'none' },
 ];

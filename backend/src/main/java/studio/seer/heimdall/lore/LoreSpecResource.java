@@ -113,12 +113,17 @@ public class LoreSpecResource extends LoreResourceBase {
                     hp.put("version", req.version()    != null ? req.version()    : histRows.get(0).get("version"));
                     hp.put("summary", req.summary()    != null ? req.summary()    : histRows.get(0).get("summary"));
                     hp.put("status",  req.status()     != null ? req.status()     : histRows.get(0).get("status"));
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                        "UPDATE KnowSpecHist SET valid_to=:now WHERE @rid=:rid;" +
+                    // S2-09: закрыть, только если версия ЕЩЁ открыта; иначе выход до записи и 409.
+                    hp.put("oldrid", hp.get("rid"));
+                    Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                        Scd2Guard.guardedClose("KnowSpecHist", false) +
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
                         "content_md=:content, version=:version, summary=:summary, status=:status;" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
-                        "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
+                        "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely().result();
+                    if (Scd2Guard.isConflict(cpRes))
+                        throw new Scd2Guard.ConflictException("spec '" + req.spec_id()
+                            + "': the body version read was closed by a concurrent write — re-read and retry", Map.of());
                 } else if (histRows != null && !histRows.isEmpty()) {
                     // Match by @rid — state_uid can be null on legacy rows (same silent
                     // no-op class as the ADR fix, 162cc18).
@@ -166,8 +171,12 @@ public class LoreSpecResource extends LoreResourceBase {
             WorkQuality.Result quality = specQuality(req.spec_id());
             if (quality != null) out.put("quality", WorkQuality.compact(quality));
             return noStore(Response.ok(out));
+        } catch (Scd2Guard.ConflictException c) {
+            return c.response(); // S2-09
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
+            if (Scd2Guard.isConcurrentModification(e))
+                return Scd2Guard.conflict("spec '" + req.spec_id() + "': concurrent write — re-read and retry", Map.of());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }

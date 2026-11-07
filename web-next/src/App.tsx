@@ -33,6 +33,8 @@ import { themeSource } from './storage/themeSource';
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
+// Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
+const NewsPage = lazy(() => import('./news/NewsPage'));
 
 // Личное пользователя (/lore/me/*, контракт S2) — до S2-04 на заглушке с
 // хранением в браузере (S4-02). Первый раз — с темой, выбранной в v1/seer-prefs.
@@ -41,7 +43,7 @@ const meClient = createLocalS2Client(appStorage, {
   seed: { palette: initialTheme.palette, mode: initialTheme.mode, density: initialTheme.density },
 });
 
-export type Route = 'kit' | 'home' | ListScreenId;
+export type Route = 'kit' | 'news' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /** Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01). */
@@ -51,6 +53,7 @@ const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs:
 export function routeOf(path: string): Route {
   const p = path.replace(/\/+$/, '');
   if (p === '/kit') return 'kit';
+  if (p === '/news') return 'news';
   return LIST_ROUTES[p] ?? 'home';
 }
 
@@ -78,7 +81,14 @@ export default function App({ path, win, storage = appStorage, narrow }: AppProp
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
   const route = routeOf(current);
   if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
-  if (route !== 'home') redirectListRoute(route, win ?? (typeof window === 'undefined' ? undefined : window));
+  if (route === 'news') {
+    return (
+      <ErrorBoundary lang="ru">
+        <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
+  if (route === 'sprints' || route === 'adrs') redirectListRoute(route, win ?? (typeof window === 'undefined' ? undefined : window));
   return (
     <ErrorBoundary lang={lang}>
       <div data-lore-app="v2" className="v2-app">

@@ -369,9 +369,15 @@ jobs:
         run: |
           set -eo pipefail
           docker compose -f docker-compose.yml config -q
-          docker compose -f docker-compose.yml config --services | grep -qx lore-app-next || {
-            echo "ОШИБКА: в docker-compose.yml нет сервиса lore-app-next"; exit 1; }
-          docker compose -f docker-compose.yml config lore-app-next | grep -q 'dockerfile: web-next/Dockerfile' || {
+          # Вывод сначала в переменную, потом grep по here-string: `compose … | grep -q` под
+          # pipefail ложно краснеет — grep -q выходит на первом совпадении,
+          # compose получает SIGPIPE на следующей строке, и pipefail отдаёт его
+          # код. Так упал PR #865 (S2-08) при живом сервисе lore-app-next.
+          services=$(docker compose -f docker-compose.yml config --services)
+          grep -qx lore-app-next <<<"$services" || {
+            echo "ОШИБКА: в docker-compose.yml нет сервиса lore-app-next"; echo "$services"; exit 1; }
+          next_cfg=$(docker compose -f docker-compose.yml config lore-app-next)
+          grep -q 'dockerfile: web-next/Dockerfile' <<<"$next_cfg" || {
             echo "ОШИБКА: lore-app-next собирается не из web-next/Dockerfile"; exit 1; }
           echo "ok: compose видит lore-app-next из web-next/Dockerfile"
 
