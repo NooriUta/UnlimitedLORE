@@ -16,13 +16,4 @@
   font-size: var(--fs-lg);
   letter-spacing: .04em;
 }
-
-.shell-tag {
-  font-family: var(--mono);
-  font-size: var(--fs-xs);
-  color: var(--acc);
-  border: 1px solid var(--acc);
-  border-radius: var(--r-pill);
-  padding: 0 6px;
-  text-transform: uppercase;
-}
+/* Метка версии — ID-пилюля kit (S4-00b), своей разметки пилюли здесь нет. */

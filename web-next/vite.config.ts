@@ -15,9 +15,11 @@ export default defineConfig({
   // Seiðr-kit (../kit, D-2026-UXR-KIT-REACT) подключён ссылкой file:../kit и
   // разрешается в свой реальный путь. Локально у kit есть свой node_modules
   // (для его тестов) — без dedupe его импорт `react` взял бы оттуда вторую
-  // копию React, и хуки упали бы «Invalid hook call».
+  // копию React, и хуки упали бы «Invalid hook call». @iconify/react (S4-00b) —
+  // peer kit: реестр иконок у него модульный, и вторая копия не видела бы
+  // набор, зарегистрированный приложением.
   resolve: {
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', '@iconify/react'],
   },
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
