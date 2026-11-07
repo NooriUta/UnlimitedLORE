@@ -309,7 +309,7 @@ public class LoreStatusResource extends LoreResourceBase {
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE STATUS] %s=%s: %s", entityType, id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
+                    .entity(LoreUpstream.error(ex)));
             });
     }
 
@@ -571,7 +571,7 @@ public class LoreStatusResource extends LoreResourceBase {
         }).onFailure().recoverWithItem(ex -> {
             LOG.warnf("[LORE SPRINT PLAN] %s: %s", sid, ex.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
+                .entity(LoreUpstream.error(ex)));
         });
     }
 
@@ -584,7 +584,7 @@ public class LoreStatusResource extends LoreResourceBase {
                 true, "adr", adrId, null, status, new StatusRevision(now, null)))))
             .onFailure().recoverWithItem(ex ->
                 noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
+                    .entity(LoreUpstream.error(ex))));
     }
 
     /**

@@ -49,6 +49,25 @@ describe('транспорт LORE: какая ошибка какой', () => {
     expect((e as Error).message).toBe('500 SLICE_FAILED: boom');
   });
 
+  // SPRINT_UXR_S1_HONEST_API/S1-03 (B-05): «база лежит» ≠ «запрос упал».
+  // Сервер отдаёт оба как 502, различает код: LORE_UPSTREAM — до базы не
+  // достучались (уровень страницы), LORE_QUERY_FAILED — упал один запрос
+  // (уровень блока; остальные блоки страницы живы).
+  it('502 LORE_QUERY_FAILED — ошибка блока, а не «LORE недоступен» на всю страницу', async () => {
+    mockFetch(502, { error: 'LORE_QUERY_FAILED', detail: 'Index not found' });
+    const e = await fetchLoreSlice('sprints').catch(x => x);
+    expect(e).toBeInstanceOf(LoreHttpError);
+    expect(e).not.toBeInstanceOf(LoreUpstreamError);
+    expect(describeLoreError(e)).toMatchObject({ kind: 'http', status: 502, pageLevel: false });
+  });
+
+  it('502 LORE_UPSTREAM — по-прежнему «недоступен» уровня страницы', async () => {
+    mockFetch(502, { error: 'LORE_UPSTREAM', detail: 'Connection refused' });
+    const e = await fetchLoreSlice('sprints').catch(x => x);
+    expect(e).toBeInstanceOf(LoreUpstreamError);
+    expect(describeLoreError(e).pageLevel).toBe(true);
+  });
+
   it('сбой сохранения с не-JSON телом тоже не «недоступен»', async () => {
     mockFetch(413, '<html>too large</html>', 'text/html');
     await expect(loreMutate('/task', {})).rejects.toBeInstanceOf(LoreHttpError);

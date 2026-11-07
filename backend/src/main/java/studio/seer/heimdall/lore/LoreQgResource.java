@@ -64,7 +64,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -108,7 +108,7 @@ public class LoreQgResource extends LoreResourceBase {
             LOG.warnf("[LORE QG RUN] %s: %s",
                 req != null ? req.routine_name() : "<null>", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -160,7 +160,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG JOB-TASK] %s: %s", req.job_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -224,7 +224,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG REC] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -275,7 +275,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG PROMOTE] probe %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
         // Default target: a weekly rotating housekeeping sprint (ISO week), not one
         // never-closing bucket. Explicit req.sprint_id() still wins (backward-compat
@@ -422,7 +422,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG PROMOTE] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

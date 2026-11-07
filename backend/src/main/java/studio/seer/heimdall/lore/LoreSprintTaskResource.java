@@ -137,7 +137,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT CREATE] %s: %s", req.sprint_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -417,7 +417,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 }
                 LOG.warnf("[LORE TASK CREATE] %s: %s", uid, ex.getMessage());
                 return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
+                    .entity(LoreUpstream.error(ex))));
             });
     }
 
@@ -635,7 +635,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE TASK MOVE] %s → %s: %s", oldUid, targetSid, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -728,7 +728,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE PHASE CREATE] %s: %s", uid, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
+                    .entity(LoreUpstream.error(ex)));
             });
     }
 
@@ -800,7 +800,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE TASK PHASE] %s / %s: %s", req.task_uid(), req.phase_uid(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1053,7 +1053,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK EDIT] %s: %s", uid, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
+                    .entity(LoreUpstream.error(ex)));
             });
         });
     }
@@ -1142,7 +1142,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT REFS] %s: %s", req.sprint_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1242,7 +1242,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT UPDATE] %s: %s", req.sprint_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1307,7 +1307,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT PROJECT] %s / %s: %s", req.sprint_id(), req.git_project(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1376,7 +1376,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT COMPONENT] %s / %s: %s", req.sprint_id(), req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1440,7 +1440,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE TASK COMPONENT] %s / %s: %s", req.task_uid(), req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1554,7 +1554,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE TASK PR] %s → %s: %s", req.task_uid(), req.pr(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1611,7 +1611,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE TASK ADR] %s / %s: %s", req.task_uid(), req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1682,7 +1682,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE TASK FILE] %s / %s: %s", req.task_uid(), req.file_path(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -1753,7 +1753,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT DEP] %s → %s: %s", req.from_sprint(), req.to_sprint(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

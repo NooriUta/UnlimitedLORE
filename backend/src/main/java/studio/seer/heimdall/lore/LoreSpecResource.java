@@ -169,7 +169,7 @@ public class LoreSpecResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -319,7 +319,7 @@ public class LoreSpecResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC LINK] %s %s %s: %s", req.spec_id(), rel, req.target_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -349,7 +349,7 @@ public class LoreSpecResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC DELETE] %s: %s", req.spec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 }
