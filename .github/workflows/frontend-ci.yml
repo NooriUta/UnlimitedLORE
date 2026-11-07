@@ -308,7 +308,11 @@ jobs:
       # прочих тестов. Витрина собрана из всех элементов Seiðr-kit: потерянное
       # имя/роль/ARIA у любого элемента валит именно этот шаг. Контраст в jsdom
       # не считается — его меряет браузерный прогон (S4-12).
+      # Тот же scope-гард, что у установки web-next выше: без него пуш, не
+      # трогающий v2 (например, хотфикс src/ #857), запускал npx vitest без
+      # node_modules — npx тянул чужой vitest и падал на vite.config.ts.
       - name: LORE v2 — axe на /kit (витрина Seiðr-kit)
+        if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next
         run: npx vitest run src/pages/KitPage.test.tsx
 
