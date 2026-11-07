@@ -1503,6 +1503,15 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-list__row:hover { background: var(--bg2); }
 .sk-list__row.is-selected { background: color-mix(in srgb, var(--acc) 10%, transparent); }
+/* S4-11: курсор строки — видимый фокус, клавиатурный слой поверх щелчка. */
+.sk-list__row:focus-visible,
+.sk-board__card:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-list__row[data-cursor='true'] { box-shadow: inset 2px 0 0 var(--acc); }
+.sk-list__actions { display: inline-flex; align-items: center; gap: 2px; }
+.sk-list__action { display: inline-flex; align-items: center; }
+/* Подсказка клавиши действия — только у строки под курсором: клавиша бьёт по ней. */
+.sk-list__row:not([data-cursor='true']) .sk-list__actions .sk-kbd,
+.sk-board__card:not([data-cursor='true']) .sk-list__actions .sk-kbd { display: none; }
 .sk-list__title {
   color: var(--t1);
   font-weight: 600;

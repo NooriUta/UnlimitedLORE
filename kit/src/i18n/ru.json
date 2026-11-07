@@ -107,6 +107,7 @@
   "kit.list.col.verdict": "Вердикт",
   "kit.list.col.updated": "Изменено",
   "kit.list.col.edges": "Связи",
+  "kit.list.col.actions": "Действия",
   "kit.list.verdictError": "вердикт не посчитан",
   "kit.list.column": "{title}: {n}",
   "kit.record.tabs": "Вкладки записи",

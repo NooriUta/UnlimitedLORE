@@ -9,11 +9,24 @@
 // Честность: статус вне словаря виден как «вне словаря», ошибка блока из
 // meta.errors — errBlock с причиной, исключение вердикта — ошибка только в
 // своей ячейке, проверенный ноль ≠ «фильтр всё отсеял».
-import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+//
+// Клавиатура как слой (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-11): строки — один
+// таб-стоп с курсором (↑/↓, J/K, Home/End), Enter открывает, X выделяет, Esc
+// снимает выделение; действия строки и действия над выделением — по своей
+// клавише. Клавиши по e.code (русская раскладка), слушатель — на корне списка,
+// а не на window: два списка на экране не делят клавиши. У каждой клавиши —
+// кнопка с aria-keyshortcuts и подсказкой Kbd; в поле ввода клавиша — текст.
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
+import { IconButton } from '../elements/IconButton';
+import { Kbd } from '../elements/Kbd';
 import { Pill } from '../elements/Pill';
+import {
+  LIST_RESERVED_KEYS, ariaKeyshortcuts, assertKeymap, findAction, isMacPlatform, kbdKeys,
+} from '../keyboard/keymap';
+import { matchHotkey } from '../resilience/hotkeys';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
@@ -30,6 +43,19 @@ export interface ListBulkAction {
   title: string;
   /** Хук действия: получает id выбранных записей. Сохранение — забота приложения. */
   run: (ids: string[]) => void;
+  /** Клавиша над выделением (S4-11): «Shift+D», «Delete»… Не из занятых слоем списка. */
+  hotkey?: string;
+}
+
+/** Действие строки (S4-11): кнопка-иконка в строке и, по желанию, клавиша над строкой под курсором. */
+export interface ListRowAction {
+  id: string;
+  title: string;
+  /** Слаг game-icons. */
+  icon: string;
+  hotkey?: string;
+  /** Получает [id строки]. */
+  run: (ids: string[]) => void;
 }
 
 export interface ListViewProps {
@@ -41,6 +67,10 @@ export interface ListViewProps {
   ctx?: Partial<KitCtx>;
   /** Массовые действия с выбранными — через хуки приложения. */
   bulkActions?: ListBulkAction[];
+  /** Действия строки — кнопки в колонке «Действия», клавиши над строкой под курсором (S4-11). */
+  rowActions?: ListRowAction[];
+  /** Enter на строке; по умолчанию — переход по ссылке заголовка (href). */
+  onOpen?: (id: string) => void;
   onSelectionChange?: (ids: string[]) => void;
   /** Состояние в URL: по умолчанию window, false — только в памяти, объект — свой (тесты, iframe). */
   urlState?: boolean | UrlWindow;
@@ -143,6 +173,17 @@ function VerdictCell({ r, ctx, lang }: { r: KitRecord; ctx: KitCtx; lang: KitLan
   );
 }
 
+/** Поле набора текста: там клавиша — буква, а не команда. Чекбокс и радио — не набор. */
+function isTypingTarget(el: HTMLElement | null): boolean {
+  if (!el || typeof el.tagName !== 'string') return false;
+  if (el.tagName === 'INPUT') {
+    const type = (el as HTMLInputElement).type;
+    return type !== 'checkbox' && type !== 'radio';
+  }
+  return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable === true
+    || el.getAttribute?.('contenteditable') === 'true';
+}
+
 function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
   return href
     ? <a className="sk-list__title" href={href(r.id)}>{r.title}</a>
@@ -150,8 +191,13 @@ function Title({ r, href }: { r: KitRecord; href?: (id: string) => string }) {
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, onSelectionChange, urlState, initial, budget: budgetPart, className,
+  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, onSelectionChange, urlState, initial, budget: budgetPart, className,
 }: ListViewProps) {
+  // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
+  assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
+  const mac = isMacPlatform();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const labels = useLabels(config, lang);
@@ -169,7 +215,8 @@ export function ListView({
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
   const groupings = listCfg?.groupings ?? [];
-  const columns = listCfg?.columns ?? ['title+id', 'status'];
+  const baseColumns = listCfg?.columns ?? ['title+id', 'status'];
+  const columns = rowActions?.length && !baseColumns.includes('actions') ? [...baseColumns, 'actions'] : baseColumns;
 
   const update = (patch: Partial<ListState>) => {
     setState(prev => {
@@ -222,6 +269,93 @@ export function ListView({
   const toggleAll = () => setSelected(allShownSelected ? new Set() : new Set(filtered.map(r => r.id)));
   const selectable = columns.includes('select');
 
+  // S4-11: курсор — по видимым строкам в порядке экрана (свёрнутые группы и
+  // хвост за «ещё N» не в счёт). Один таб-стоп: курсорная строка 0, прочие −1.
+  const visibleIds: string[] = [];
+  for (const g of groups) {
+    if (view === 'list' && groupBy !== null && !isOpen(g.key)) continue;
+    for (const r of g.records.slice(0, limitOf(g.key))) visibleIds.push(r.id);
+  }
+  const cursorId = cursor !== null && visibleIds.includes(cursor) ? cursor : (visibleIds[0] ?? null);
+  const focusRow = (id: string) => {
+    setCursor(id);
+    const el = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-record-id]') ?? [])]
+      .find(n => n.dataset.recordId === id);
+    el?.focus();
+  };
+  const rowProps = (r: KitRecord) => ({
+    tabIndex: r.id === cursorId ? 0 : -1,
+    'data-cursor': r.id === cursorId ? 'true' : undefined,
+    onFocus: () => { if (cursor !== r.id) setCursor(r.id); },
+  });
+  const keyHint = (spec: string) => <Kbd keys={kbdKeys(spec, { mac })} />;
+
+  const onListKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented) return;
+    const target = e.target as HTMLElement;
+    if (isTypingTarget(target)) return;
+    if (matchHotkey(e, 'Escape')) {
+      if (selected.size === 0) return;
+      e.preventDefault();
+      setSelected(new Set());
+      return;
+    }
+    const bulk = selected.size > 0 ? findAction(bulkActions ?? [], e) : undefined;
+    if (bulk) {
+      e.preventDefault();
+      bulk.run([...selected]);
+      return;
+    }
+    const rowEl = target.closest<HTMLElement>('[data-record-id]');
+    const id = rowEl && rootRef.current?.contains(rowEl) ? rowEl.dataset.recordId ?? null : null;
+    if (id === null) return;
+    const at = visibleIds.indexOf(id);
+    const move = (to: number) => {
+      e.preventDefault();
+      const next = visibleIds[Math.max(0, Math.min(visibleIds.length - 1, to))];
+      if (next !== undefined) focusRow(next);
+    };
+    if (matchHotkey(e, 'ArrowDown') || matchHotkey(e, 'J')) return move(at + 1);
+    if (matchHotkey(e, 'ArrowUp') || matchHotkey(e, 'K')) return move(at - 1);
+    if (matchHotkey(e, 'Home')) return move(0);
+    if (matchHotkey(e, 'End')) return move(visibleIds.length - 1);
+    if (matchHotkey(e, 'Enter')) {
+      // Enter на ссылке/кнопке внутри строки — их собственное действие.
+      if (target !== rowEl) return;
+      e.preventDefault();
+      if (onOpen) onOpen(id);
+      else rowEl.querySelector<HTMLElement>('a.sk-list__title')?.click();
+      return;
+    }
+    if (matchHotkey(e, 'X')) {
+      if (!selectable) return;
+      e.preventDefault();
+      toggleSel(id);
+      return;
+    }
+    const act = findAction(rowActions ?? [], e);
+    if (act) {
+      e.preventDefault();
+      act.run([id]);
+    }
+  };
+
+  const rowActionsCell = (r: KitRecord) => (
+    <span className="sk-list__actions">
+      {rowActions?.map(a => (
+        <span key={a.id} className="sk-list__action">
+          <IconButton
+            icon={a.icon}
+            label={a.title}
+            shortcut={a.hotkey ? ariaKeyshortcuts(a.hotkey) : undefined}
+            onClick={() => a.run([r.id])}
+          />
+          {a.hotkey && keyHint(a.hotkey)}
+        </span>
+      ))}
+    </span>
+  );
+
   const groupTitle = (g: ListGroup): string => {
     if (g.other) return t('kit.list.others', { groups: g.groupCount ?? 0 });
     return groupBy ? labels.valueTitle(groupBy, g.key) : '';
@@ -261,7 +395,7 @@ export function ListView({
 
   const checkbox = (r: KitRecord) => (
     <label className="sk-list__check">
-      <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} aria-label={t('kit.list.select', { title: r.title })} />
+      <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} aria-label={t('kit.list.select', { title: r.title })} aria-keyshortcuts="X" />
     </label>
   );
 
@@ -276,6 +410,7 @@ export function ListView({
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
       case 'updated_at': return r.updated_at ? <span className="sk-list__mono">{r.updated_at.slice(0, 10)}</span> : '—';
       case 'edges_count': return <span className="sk-list__mono">{edgeCount.get(r.id) ?? 0}</span>;
+      case 'actions': return rowActionsCell(r);
       default: return valueKey(fieldValue(r, col)) || '—';
     }
   };
@@ -289,6 +424,7 @@ export function ListView({
       case 'title+id': return t('kit.list.col.title');
       case 'verdict': return t('kit.list.col.verdict');
       case 'edges_count': return t('kit.list.col.edges');
+      case 'actions': return t('kit.list.col.actions');
       default: return labels.keyTitle(col);
     }
   };
@@ -333,13 +469,14 @@ export function ListView({
               </h3>
               <ul className="sk-board__cards">
                 {g.records.slice(0, limit).map(r => (
-                  <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
+                  <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)}>
                     {selectable && checkbox(r)}
                     <span className="sk-board__body">
                       <Title r={r} href={href} />
                       <Pill variant="id">{r.id}</Pill>
                       {columns.includes('verdict') && <VerdictCell r={r} ctx={ctx} lang={lang} />}
                     </span>
+                    {rowActions?.length ? rowActionsCell(r) : null}
                   </li>
                 ))}
               </ul>
@@ -374,7 +511,7 @@ export function ListView({
                   </tr>
                 )}
                 {open && g.records.slice(0, limit).map(r => (
-                  <tr key={r.id} className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>
+                  <tr key={r.id} className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)}>
                     {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
                   </tr>
                 ))}
@@ -390,7 +527,7 @@ export function ListView({
   }
 
   return (
-    <div className={['sk-list', className].filter(Boolean).join(' ')} data-view={view}>
+    <div ref={rootRef} className={['sk-list', className].filter(Boolean).join(' ')} data-view={view} onKeyDown={onListKeyDown}>
       {errors.map(e => (
         <LoadError key={e.block} compact title={t('kit.list.blockError', { block: e.block })} hint={e.reason} />
       ))}
@@ -501,9 +638,19 @@ export function ListView({
         <div className="sk-list__selbar" data-testid="kit-list-selbar" role="group" aria-label={t('kit.list.bulk')}>
           <span>{t('kit.list.selected', { n: selected.size })}</span>
           {bulkActions?.map(a => (
-            <button key={a.id} type="button" className="sk-btn" onClick={() => a.run([...selected])}>{a.title}</button>
+            <button
+              key={a.id}
+              type="button"
+              className="sk-btn"
+              aria-keyshortcuts={a.hotkey ? ariaKeyshortcuts(a.hotkey) : undefined}
+              onClick={() => a.run([...selected])}
+            >
+              {a.title}{a.hotkey && keyHint(a.hotkey)}
+            </button>
           ))}
-          <button type="button" className="sk-btn" onClick={() => setSelected(new Set())}>{t('kit.list.clearSelection')}</button>
+          <button type="button" className="sk-btn" aria-keyshortcuts="Escape" onClick={() => setSelected(new Set())}>
+            {t('kit.list.clearSelection')}{keyHint('Escape')}
+          </button>
         </div>
       )}
 

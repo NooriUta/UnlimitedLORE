@@ -3,7 +3,8 @@
 // клавиша 1…9 (свой hotkey статуса важнее номера). Esc и «Отмена» закрывают
 // без выбора. Клавиши — по e.code (работают в русской раскладке, S4-00f).
 // Пункты — только допустимые переходы (allow); если их нет — честный текст.
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useFocusTrap } from '../keyboard/focusTrap';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Kbd } from '../elements/Kbd';
 import { kitT, useKitLang } from '../i18n';
@@ -31,18 +32,20 @@ export function StatusPopover({ statuses, current, onPick, onCancel, id, classNa
   const lang = useKitLang();
   const targets = statusTargets(statuses, current);
   const menuRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-  }, []);
+  // S4-11: общая ловушка фокуса — первый пункт при открытии, Tab по кругу
+  // (пункты ↔ «Отмена»), Esc = отмена. Фокус на чип возвращает сам чип
+  // (StatusChip.close): при щелчке мимо фокус должен остаться там, куда щёлкнули.
+  const trap = useFocusTrap(rootRef, {
+    onEscape: onCancel,
+    restoreFocus: false,
+    initialFocus: root => root.querySelector<HTMLElement>('[role="menuitem"]'),
+  });
 
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.code === 'Escape' || e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onCancel();
-      return;
-    }
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
+    trap(e);
+    if (e.defaultPrevented || e.key === 'Tab') return;
     if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
       const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
       if (!items.length) return;
@@ -61,7 +64,7 @@ export function StatusPopover({ statuses, current, onPick, onCancel, id, classNa
   };
 
   return (
-    <div className={['sk-spop', className].filter(Boolean).join(' ')} id={id} onKeyDown={onKeyDown}>
+    <div ref={rootRef} className={['sk-spop', className].filter(Boolean).join(' ')} id={id} onKeyDown={onKeyDown}>
       {targets.length ? (
         <div ref={menuRef} role="menu" aria-label={kitT(lang, 'kit.status.menu')} className="sk-spop__menu">
           {targets.map(({ item, key }) => (
