@@ -1624,6 +1624,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   .sk-board { grid-auto-flow: row; grid-auto-columns: auto; }
   .sk-list__select { max-width: 100%; }
 }
+
 /* ── Каркас записи (SPRINT_UXR_S10_SEIDR_KIT/K-04): шапка, вердикт, вкладки,
    «Связи», локальный граф, «Журнал». Цвет типа ребра/статуса/вердикта приходит
    из конфига в --edge-c/--pill-c/--verdict-c/--node-c (токен темы). ── */
@@ -1730,6 +1731,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-journal__from { color: var(--dng); text-decoration: line-through; }
 .sk-rec-journal__to { color: var(--suc); text-decoration: none; }
 .sk-rec-journal__approved { color: var(--t3); font-size: var(--fs-xs); }
+
 /* ═══ K-06 — честность блоков (errBlock ≠ «пусто (проверено)») ═══ */
 /* Обёртка блока: несёт data-block, сама вида не имеет. */
 .sk-errblock { display: block; min-width: 0; }
@@ -1738,6 +1740,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   --state-c: var(--wrn);
   border-style: dashed;
   border-color: color-mix(in srgb, var(--wrn) 50%, transparent);
+}
+
 /* ═══ K-09 — вид «Дерево / книга» (третий в list.views) ═══
    Плоский role=tree: отступ уровня — --tree-depth (ставит компонент),
    строка-контекст (предок совпадения под фильтром) приглушена, цели касания —
@@ -1862,11 +1866,13 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
   font-family: var(--mono);
   font-size: var(--fs-xs);
 }
+
 /* ═══ K-10 — хуки рендера по виду записи (overview / tabs) ═══ */
 /* Строка-HTML хука (после санитайзера) читается как тело записи. */
 .sk-hook { color: var(--t1); font-size: var(--fs-base); line-height: 1.5; min-width: 0; }
 /* errBlock: упал один хук — рамка ошибки только вокруг его блока. */
 .sk-errblock { border: 1px solid var(--dng); border-radius: 6px; background: var(--bg1); }
+
 /* ---------- K-11: роли и согласование двумя людьми ---------- */
 .sk-appr-ro { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sk-appr-ro__hint { font-size: var(--fs-xs); color: var(--wrn); }
@@ -1913,6 +1919,7 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-appr-log__change { max-width: 320px; overflow-wrap: anywhere; color: var(--t2); }
 .sk-appr-log__pending { color: var(--wrn); }
 .sk-appr-log__bad { color: var(--dng); font-weight: 600; }
+
 /* ── SeidrKit.mount — экран выдачи для single-file HTML (SPRINT_UXR_S10_SEIDR_KIT/K-08) ──
    Список записей + карточка выбранной по контракту ядра. Цели касания ≥44px. */
 .sk-mount { display: flex; flex-direction: column; gap: var(--gap); padding: 12px; min-height: 100%; background: var(--bg0); color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }

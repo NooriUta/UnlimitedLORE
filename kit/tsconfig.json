@@ -28,6 +28,7 @@
   "include": [
     "src",
     "demo",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "vite.bundle.config.ts"
   ]
 }

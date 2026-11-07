@@ -39,7 +39,7 @@ export function datawanderersData(): KitData {
       id: `${kind.toLowerCase()}-${String(i).padStart(3, '0')}`,
       kind,
       title: `${kind} №${i}`,
-      status: pick(r, ['', '', 'fix', 'ok'] as const),
+      status: pick(r, ['none', 'none', 'fix', 'ok'] as const),
       fields: {
         disc: pick(r, DW_DISC),
         quality: bad ? 'bad' : 'ok',

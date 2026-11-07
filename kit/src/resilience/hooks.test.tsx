@@ -135,7 +135,7 @@ describe('installErrorScreen: window.onerror на экран без React', () =
     expect(el.textContent).toContain('<img src=x');
     const el2 = document.createElement('div');
     installErrorScreen(el2)();
-    window.dispatchEvent(new ErrorEvent('error', { message: 'x', error: new Error('x') }));
+    window.dispatchEvent(new ErrorEvent('error', { message: 'x' }));
     expect(el2.childElementCount).toBe(0);
   });
 });

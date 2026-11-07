@@ -17,7 +17,7 @@ describe('K-08 · kit/dist/seidr-kit.js монтируется в DOM', () => {
     const el = document.createElement('div');
     document.body.appendChild(el);
     const handle = mod.SeidrKit.mount(el, {
-      modules: [{ id: 'method', title: 'Методология', icon: 'scroll-unfurled' }],
+      modules: [{ id: 'method', title: 'Методология', icon: 'app-only-icon' }],
       menu: { groups: [] },
       kinds: { Quiz: { title: 'Квизы', icon: 'rune-stone', overview: (r: { fields: { q: string } }) => `Вопрос: ${r.fields.q}` } },
       statuses: { items: [{ code: 'ok', title: 'согласовано', category: 'done', icon: 'check-mark', color: '--suc' }] },
@@ -31,9 +31,10 @@ describe('K-08 · kit/dist/seidr-kit.js монтируется в DOM', () => {
     expect(el.textContent).toContain('Вопрос: ᚠ?');
     expect(el.querySelector('[data-kit-meta-error="quality"]')?.textContent).toContain('таймаут');
     // Свои иконки kit (состояния) — во встроенном подмножестве, не заглушки.
-    // Иконки конфига приложение даёт само — без них честная заглушка data-missing.
+    // Иконки конфига приложение даёт само — без них честная заглушка data-missing
+    // (слаги, которых нет в коде kit: упомянутый в kit слаг попадает в бандл).
     const missing = [...el.querySelectorAll('[data-missing]')].map(n => n.getAttribute('data-missing')).sort();
-    expect(missing).toEqual(['rune-stone', 'scroll-unfurled']);
+    expect(missing).toEqual(['app-only-icon', 'rune-stone']);
     handle.unmount();
     expect(el.innerHTML).toBe('');
   }, 60000);

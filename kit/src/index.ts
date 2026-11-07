@@ -12,7 +12,6 @@ export type * from './core/contract';
 export * from './record';
 // Контракт ядра (типы, без кода) — и отсюда; хуки вида — `@seidr/kit/core`.
 export * from './approval';
-export type * from './core/contract';
 // MD/HTML-элементы (TipTapField, MartProse, SandboxedHtmlFrame, S4-00d) — НЕ
 // отсюда, а отдельной точкой входа `@seidr/kit/content`: они тянут TipTap,
 // mermaid и bpmn-js, и экрану без MD-полей платить за них незачем.
@@ -22,13 +21,16 @@ export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
 export { pushUrlState, readUrlState, type UrlWindow } from './resilience/urlState';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT): KitConfig, KitData, KitRecord… — только типы.
-export type * from './core/contract';
 // Контракт ядра (K-01…K-11) и listView (SPRINT_UXR_S10_SEIDR_KIT/K-03).
-export type * from './core/contract';
 export * from './list';
 // Ядро: контракт KitConfig/KitData и смена статуса «2 касания» с хуками
 // сохранения (SPRINT_UXR_S10_SEIDR_KIT/K-05).
-export * from './core';
+export * from './core/statusModel';
+export * from './core/statusSave';
+export * from './core/useStatusChange';
+export * from './core/StatusIcon';
+export * from './core/StatusPopover';
+export * from './core/StatusChip';
 // K-06 (SPRINT_UXR_S10_SEIDR_KIT): сквозная устойчивость оболочки.
 export {
   blockOutcome, ErrBlock, ErrBlockBoundary, KitBlock, KitSlot, UnverifiedBlock,
@@ -39,9 +41,7 @@ export { describeError, isBenignError } from './resilience/errorText';
 export { useHotkeys, type HotkeyHandler } from './resilience/useHotkeys';
 export { setUrlParams, useUrlParam } from './resilience/useUrlParam';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) и палитра Ctrl+K / поиск «/» (K-07).
-export type * from './core/contract';
 export * from './palette';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
-export type * from './core/contract';
 // Вид «Дерево / книга» — третий в list.views (K-09).
 export * from './views/tree';
