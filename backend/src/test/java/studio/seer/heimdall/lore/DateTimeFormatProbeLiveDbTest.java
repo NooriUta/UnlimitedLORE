@@ -37,8 +37,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class DateTimeFormatProbeLiveDbTest {
 
-    static final String A = "lore_rmp13_probe_a";
-    static final String B = "lore_rmp13_probe_b";
+    // Имена пробных баз — от базы ПРОГОНА (LORE_TEST_DB_NAME: lore_ci_pr_859,
+    // lore_ci_push_develop…), а не общие на весь CI-сервер. С общими именами два
+    // параллельных прогона (push в develop + PR develop→preprod, 07.11.2026)
+    // сносили базы друг друга: один падал на create, другой ловил 404
+    // «Database not found» посреди теста.
+    static final String RUN = System.getenv().getOrDefault("LORE_TEST_DB_NAME", "lore");
+    static final String A = RUN + "_rmp13_probe_a";
+    static final String B = RUN + "_rmp13_probe_b";
     static final String ISO_FMT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
     static String url;
     static String auth;
