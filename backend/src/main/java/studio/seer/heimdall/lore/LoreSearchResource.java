@@ -991,7 +991,7 @@ public class LoreSearchResource extends LoreResourceBase {
             // Скоуп не посчитан — отвечать «без скоупа» нельзя: это был бы обход.
             LOG.warnf("[LORE BACKLINKS] скоуп не посчитан: %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", "проектный скоуп не посчитан: " + LoreUpstream.detail(e))));
+                .entity(LoreUpstream.error(e, "проектный скоуп не посчитан: " + LoreUpstream.detail(e))));
         }
         if (allowed != null && allowed.isEmpty()) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
@@ -1014,7 +1014,7 @@ public class LoreSearchResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE BACKLINKS] %s/%s: цель не прочитана: %s", type, id, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
         }
         if (!visibleUnder(projectsOf(tgt, scopePaths(target).size()), allowed)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
@@ -1024,7 +1024,7 @@ public class LoreSearchResource extends LoreResourceBase {
         String rid = String.valueOf(tgt.get("rid"));
         if (!RID.matcher(rid).matches()) {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", "база вернула не rid: " + rid)));
+                .entity(new LoreError(LoreUpstream.QUERY_FAILED, "база вернула не rid: " + rid)));
         }
 
         // ── входящие рёбра ──
@@ -1039,7 +1039,7 @@ public class LoreSearchResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE BACKLINKS] %s/%s: рёбра не прочитаны: %s", type, id, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
         }
         boolean capped = edges.size() > BACKLINK_EDGE_CAP;
         if (capped) edges = edges.subList(0, BACKLINK_EDGE_CAP);

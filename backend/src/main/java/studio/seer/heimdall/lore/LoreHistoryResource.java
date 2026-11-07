@@ -64,7 +64,7 @@ public class LoreHistoryResource extends LoreResourceBase {
         } catch (RuntimeException e) {
             LOG.warnf("[LORE HISTORY] %s/%s: %s", type, id, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", String.valueOf(e.getMessage()))));
+                .entity(LoreUpstream.error(e)));
         }
         List<Map<String, Object>> rows = LoreEntityHistory.scope(type, raw, allowed);
 
