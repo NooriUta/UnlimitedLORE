@@ -61,6 +61,39 @@ services:
       # Порт ВНУТРИ контейнера (nginx слушает 80), не опубликованный 4400.
       traefik.http.services.lore.loadbalancer.server.port: "80"
 
+  # SPRINT_UXR_S2_GRAPH_MEMORY/S2-08: прямой адрес бэкенда для MCP — мимо nginx фронта.
+  #
+  # ЗАЧЕМ. MCP ходил в бэкенд через nginx lore-app (:4400 → /lore/ → lore-backend).
+  # Кто держит :4400 и lore.odal — тот и держит MCP: при двух фронтах (v1 и v2)
+  # смена фронта роняла бы запись агентов. Теперь MCP идёт
+  #   https://lore.odal.seidrstudio.pro/_backend/lore/…  → Traefik → lore-backend:9100
+  # и от фронта не зависит. :4400 остаётся запасным (LORE_BACKEND_FALLBACK_URL в MCP).
+  #
+  # ПОЧЕМУ ПУТЬ, А НЕ ИМЯ. Новое имя требует DNS-записи (подстановочной *.odal нет),
+  # а lore.odal уже резолвится и имеет сертификат. Префикс `/_backend` фронт не
+  # использует; правило длиннее `Host(...)` фронта, а приоритет задан явно.
+  #
+  # ПОЧЕМУ НЕ ПОРТ НА LAN. Опубликованный 9100 открыл бы ВСЁ, что слушает бэкенд,
+  # включая анонимные /q/metrics и /q/health, и гнал бы bearer-токен открытым
+  # текстом. Маршрут пропускает ровно то же, что nginx: /lore/ и /bench/, по TLS.
+  # Аутентификация прежняя — её делает сам бэкенд (OIDC), прокси её не добавляет
+  # и не снимает: без токена /_backend/lore/version отвечает 401, как и :4400.
+  lore-backend:
+    networks:
+      - default
+      - headscale-net
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: headscale-net
+      traefik.http.routers.lore-backend-direct.rule: "Host(`lore.odal.seidrstudio.pro`) && (PathPrefix(`/_backend/lore/`) || PathPrefix(`/_backend/bench/`))"
+      traefik.http.routers.lore-backend-direct.priority: "1000"
+      traefik.http.routers.lore-backend-direct.entrypoints: websecure
+      traefik.http.routers.lore-backend-direct.tls.certresolver: regru
+      traefik.http.routers.lore-backend-direct.middlewares: lore-backend-strip
+      traefik.http.middlewares.lore-backend-strip.stripprefix.prefixes: /_backend
+      traefik.http.routers.lore-backend-direct.service: lore-backend-direct
+      traefik.http.services.lore-backend-direct.loadbalancer.server.port: "9100"
+
 networks:
   headscale-net:
     external: true
