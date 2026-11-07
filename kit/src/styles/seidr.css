@@ -1950,3 +1950,108 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-appr-log__change { max-width: 320px; overflow-wrap: anywhere; color: var(--t2); }
 .sk-appr-log__pending { color: var(--wrn); }
 .sk-appr-log__bad { color: var(--dng); font-weight: 600; }
+/* ── Задачи спринта таблицей (SPRINT_UXR_S5_RECORD_TASKS/S5-02) ──
+   Плотная IDE-таблица: шапка uppercase моно, атрибуты в строке, группы —
+   полосой-заголовком с числом задач. На узком экране таблица скроллится
+   вбок, а не ломает колонки. Цели касания — max(var(--tap), …). */
+.sk-tasks { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sk-tasks__bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-tasks__wrap { overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+.sk-tasks__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); color: var(--t1); }
+.sk-tasks__th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--t3);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--bd);
+  white-space: nowrap;
+}
+.sk-tasks__gth {
+  text-align: left;
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--acc);
+  background: var(--bg0);
+  border-top: 1px solid var(--bd);
+}
+.sk-tasks__gth--fault { color: var(--wrn); }
+.sk-tasks__gcount { margin-left: 8px; color: var(--t3); font-weight: 400; }
+.sk-tasks__row { border-top: 1px solid var(--bd); }
+.sk-tasks__row:hover { background: var(--bg2); }
+.sk-tasks__row.is-editing { background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.sk-tasks__row.is-busy { opacity: .6; }
+.sk-tasks__td { padding: 4px 8px; vertical-align: middle; }
+.sk-tasks__td--status { position: relative; width: 1%; }
+.sk-tasks__td--title { min-width: 220px; }
+.sk-tasks__td--effort { font-family: var(--mono); text-align: right; white-space: nowrap; }
+.sk-tasks__td--actions { width: 1%; white-space: nowrap; }
+.sk-tasks__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); white-space: nowrap; }
+a.sk-tasks__id { text-decoration: none; display: inline-flex; align-items: center; min-height: max(var(--tap), 20px); }
+a.sk-tasks__id:hover { text-decoration: underline; }
+a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
+.sk-tasks__none { color: var(--t3); }
+.sk-tasks__menu {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+}
+.sk-tasks__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--t1);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.sk-tasks__menu-item:hover { background: var(--bg3); }
+.sk-tasks__menu-item:focus-visible { background: var(--bg3); outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-tasks__menu-item[aria-checked="true"] { color: var(--acc); font-weight: 600; }
+.sk-tasks__input {
+  width: 100%;
+  min-width: 64px;
+  min-height: max(var(--tap), 24px);
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  color: var(--t1);
+  background: var(--bg0);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-sm);
+}
+.sk-tasks__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 0; }
+.sk-tasks__input[aria-invalid="true"] { border-color: var(--dng); }
+.sk-tasks__actions { display: inline-flex; gap: 4px; }
+.sk-tasks__btn--ghost { background: transparent; }
+.sk-tasks__err {
+  padding: 4px 8px 8px;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--dng);
+  white-space: pre-wrap;
+}

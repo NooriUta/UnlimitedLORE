@@ -12,6 +12,7 @@ export type * from './core/contract';
 export * from './record';
 // Контракт ядра (типы, без кода) — и отсюда; хуки вида — `@seidr/kit/core`.
 export * from './approval';
+export * from './tasks';
 // MD/HTML-элементы (TipTapField, MartProse, SandboxedHtmlFrame, S4-00d) — НЕ
 // отсюда, а отдельной точкой входа `@seidr/kit/content`: они тянут TipTap,
 // mermaid и bpmn-js, и экрану без MD-полей платить за них незачем.

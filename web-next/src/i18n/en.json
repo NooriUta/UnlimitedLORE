@@ -73,5 +73,8 @@
   "record.status.rejected": "Rejected",
   "record.status.missed": "Missed",
   "record.status.superseded": "Superseded",
-  "record.status.cancelled": "Cancelled"
+  "record.status.cancelled": "Cancelled",
+  "sprintTasks.title": "Tasks",
+  "sprintTasks.caption": "Sprint {id} tasks",
+  "sprintTasks.back": "Back to LORE"
 }
