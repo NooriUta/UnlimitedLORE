@@ -1919,32 +1919,3 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-appr-log__change { max-width: 320px; overflow-wrap: anywhere; color: var(--t2); }
 .sk-appr-log__pending { color: var(--wrn); }
 .sk-appr-log__bad { color: var(--dng); font-weight: 600; }
-
-/* ── SeidrKit.mount — экран выдачи для single-file HTML (SPRINT_UXR_S10_SEIDR_KIT/K-08) ──
-   Список записей + карточка выбранной по контракту ядра. Цели касания ≥44px. */
-.sk-mount { display: flex; flex-direction: column; gap: var(--gap); padding: 12px; min-height: 100%; background: var(--bg0); color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }
-.sk-mount__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
-.sk-mount__h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--fs-lg); text-transform: uppercase; letter-spacing: .04em; }
-.sk-mount__h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: var(--fs-md); }
-.sk-mount__meta { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
-.sk-mount__icon { color: var(--acc); flex: none; }
-.sk-mount__split { display: grid; grid-template-columns: minmax(220px, 320px) 1fr; gap: 12px; align-items: start; }
-@media (max-width: 720px) { .sk-mount__split { grid-template-columns: 1fr; } }
-.sk-mount__list { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--bg1); padding: 4px; }
-.sk-mount__item { display: flex; align-items: center; gap: var(--gap); min-height: 44px; padding: 0 var(--pad-x); border: 1px solid transparent; border-radius: var(--r-lg); background: transparent; color: var(--t1); font: inherit; text-align: left; cursor: pointer; }
-.sk-mount__item:hover { background: var(--bg2); }
-.sk-mount__item:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
-.sk-mount__item.is-on { border-color: var(--acc); background: var(--bg2); }
-.sk-mount__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sk-mount__card { display: flex; flex-direction: column; gap: var(--gap); border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--bg1); padding: 12px; min-width: 0; }
-.sk-mount__cardhead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
-.sk-mount__tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--bd); }
-.sk-mount__tab { min-height: 44px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--t2); font: inherit; text-transform: uppercase; letter-spacing: .04em; font-size: var(--fs-xs); cursor: pointer; }
-.sk-mount__tab[aria-selected="true"] { color: var(--acc); border-bottom-color: var(--acc); }
-.sk-mount__tab:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
-.sk-mount__block { min-width: 0; }
-.sk-mount__text { margin: 0; color: var(--t1); white-space: pre-wrap; }
-.sk-mount__fields { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
-.sk-mount__field { display: contents; }
-.sk-mount__field dt { color: var(--t3); text-transform: uppercase; letter-spacing: .04em; font-size: var(--fs-xs); }
-.sk-mount__field dd { margin: 0; color: var(--t1); min-width: 0; overflow-wrap: anywhere; }

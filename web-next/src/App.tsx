@@ -19,31 +19,15 @@ import { storage } from './storage/safe';
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
-// Демо kit на фикстурах (SPRINT_UXR_S10_SEIDR_KIT/K-03): /kit/demo/lore, /kit/demo/datawanderers.
-const KitDemoPage = lazy(() => import('./pages/KitDemoPage'));
-
-export type Route = 'kit' | 'kit-demo-lore' | 'kit-demo-datawanderers' | 'home';
 
 /** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
-export function routeOf(path: string): Route {
-  const p = path.replace(/\/+$/, '');
-  if (p === '/kit') return 'kit';
-  if (p === '/kit/demo/lore') return 'kit-demo-lore';
-  if (p === '/kit/demo/datawanderers') return 'kit-demo-datawanderers';
-  return 'home';
+export function routeOf(path: string): 'kit' | 'home' {
+  return path.replace(/\/+$/, '') === '/kit' ? 'kit' : 'home';
 }
 
 export default function App({ path }: { path?: string } = {}) {
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
-  const route = routeOf(current);
-  if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
-  if (route === 'kit-demo-lore' || route === 'kit-demo-datawanderers') {
-    return (
-      <ErrorBoundary lang="ru">
-        <Suspense fallback={<Skeleton />}><KitDemoPage which={route === 'kit-demo-lore' ? 'lore' : 'datawanderers'} /></Suspense>
-      </ErrorBoundary>
-    );
-  }
+  if (routeOf(current) === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
   return (
     <ErrorBoundary lang="ru">
       <StorageBanner storage={storage} lang="ru" />

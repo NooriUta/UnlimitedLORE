@@ -222,13 +222,5 @@
   "kit.appr.journal.selfApproved": "self-approved — four-eyes rule broken",
   "kit.appr.journal.agent": "agent",
   "kit.appr.journal.empty": "Journal is empty (checked)",
-  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero.",
-  "kit.mount.records": "Records",
-  "kit.mount.tabs": "Record tabs",
-  "kit.mount.overview": "Overview",
-  "kit.mount.generatedAt": "data as of {at}",
-  "kit.mount.notChecked": "Could not check: {block}",
-  "kit.mount.blockFailed": "Block failed to render",
-  "kit.mount.blockFailedHint": "Only this block is broken — the rest of the record is shown.",
-  "kit.mount.badConfig": "Kit config does not match the contract"
+  "kit.appr.journal.emptyHint": "This record has no edits — a checked zero."
 }

@@ -222,13 +222,5 @@
   "kit.appr.journal.selfApproved": "согласовал сам — нарушение правила двух людей",
   "kit.appr.journal.agent": "агент",
   "kit.appr.journal.empty": "Журнал пуст (проверено)",
-  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль.",
-  "kit.mount.records": "Записи",
-  "kit.mount.tabs": "Вкладки записи",
-  "kit.mount.overview": "Обзор",
-  "kit.mount.generatedAt": "данные на {at}",
-  "kit.mount.notChecked": "Не смогли проверить: {block}",
-  "kit.mount.blockFailed": "Блок не отрисовался",
-  "kit.mount.blockFailedHint": "Сломан только этот блок — остальная запись показана.",
-  "kit.mount.badConfig": "Конфиг kit не подходит к контракту"
+  "kit.appr.journal.emptyHint": "По этой записи нет ни одной правки — это проверенный ноль."
 }

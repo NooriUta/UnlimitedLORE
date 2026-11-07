@@ -53,9 +53,5 @@
   "kitPage.md.html": "HTML — только в песочнице",
   "kitPage.md.htmlTitle": "Пример HTML-фрагмента",
   "kitPage.md.sample": "## Решение\n\nТекст **markdown** со списком:\n\n- пункт один\n- [x] пункт два\n\n| поле | значение |\n|---|---|\n| статус | в работе |\n\n```mermaid\ngraph LR; A[Задача] --> B[PR] --> C[Релиз]\n```\n",
-  "kitPage.md.htmlSample": "<h3>Фрагмент</h3><p>HTML рисуется в iframe с sandbox и CSP — скрипты хоста ему недоступны.</p>",
-  "kitDemo.nav": "Демо kit",
-  "kitDemo.showcase": "Витрина",
-  "kitDemo.lore": "LORE · задачи и ADR",
-  "kitDemo.datawanderers": "Дата-странники · Методология"
+  "kitPage.md.htmlSample": "<h3>Фрагмент</h3><p>HTML рисуется в iframe с sandbox и CSP — скрипты хоста ему недоступны.</p>"
 }
