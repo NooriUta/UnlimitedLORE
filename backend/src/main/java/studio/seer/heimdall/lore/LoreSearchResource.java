@@ -253,6 +253,7 @@ public class LoreSearchResource extends LoreResourceBase {
         // где не смог посмотреть. Ни одной успешной ветки — это 502, а не 404.
         int probed = 0;
         List<String> branchErrors = new ArrayList<>();
+        Throwable lastBranchFailure = null; // S1-03: классифицировать «база лежит» vs «запрос упал»
         for (Branch b : BRANCHES) {
             if (b.indexName() == null) continue;
             List<Map<String, Object>> src;
@@ -262,6 +263,7 @@ public class LoreSearchResource extends LoreResourceBase {
                     Map.of("ref", ref));
                 probed++;
             } catch (Exception e) {
+                lastBranchFailure = e;
                 String why = LoreUpstream.detail(e);
                 LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), why);
                 branchErrors.add(b.type() + ": " + why);
@@ -283,7 +285,7 @@ public class LoreSearchResource extends LoreResourceBase {
             } catch (Exception e) {
                 LOG.warnf("[LORE SIMILAR] %s: %s", ref, e.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", String.valueOf(e.getMessage()))));
+                    .entity(LoreUpstream.error(e)));
             }
 
             List<Map<String, Object>> hits = new ArrayList<>();
@@ -313,7 +315,7 @@ public class LoreSearchResource extends LoreResourceBase {
         // Ни одной опрошенной ветки — отказ БД, и говорить о данных нельзя.
         if (probed == 0) {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", "ни одна ветка не опрошена: "
+                .entity(LoreUpstream.error(lastBranchFailure, "ни одна ветка не опрошена: "
                     + String.join("; ", branchErrors))));
         }
         // Часть веток упала — «не найдено» остаётся возможным ответом (в

@@ -71,7 +71,7 @@ public class LoreRunbookResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE RUNBOOK ADR LINK] %s: %s", req.runbook_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -119,7 +119,7 @@ public class LoreRunbookResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE RUNBOOK PROJECT] %s: %s", req.runbook_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -201,7 +201,7 @@ public class LoreRunbookResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE RUNBOOK UPSERT] %s: %s", req.runbook_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 }

@@ -303,7 +303,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -419,7 +419,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR LINK] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -487,7 +487,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR PROJECT] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -534,7 +534,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR COMPONENT] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -581,7 +581,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR DEPENDS_ON] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -628,7 +628,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR SUPERSEDES] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -680,7 +680,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR TAG] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -719,7 +719,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR RENAME] %s → %s: %s", req.adr_id(), req.new_adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -761,7 +761,7 @@ public class LoreAdrResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE ADR DELETE] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
