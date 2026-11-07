@@ -68,7 +68,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
         String work_class, String uc_id,
         String author_agent, String executor_agent, String reviewer_agent, String task_type,
-        Double actual_days, Boolean bookkeeping, String note_append) {}
+        Double actual_days, Boolean bookkeeping, String note_append, java.util.Map<String, Object> expected) {}
     // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
     // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
     // а не когда кто-то откроет срез гигиены через неделю.
@@ -826,6 +826,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             }
             String appendRefusal = appendConflict("note_md", req.note_md(), "note_append", req.note_append());
             if (appendRefusal != null) { errors.add("skipped (" + req.task_uid() + "): " + appendRefusal); continue; }
+            if (req.expected() != null && !req.expected().isEmpty()) {
+                // S2-09: «было» не совпало — пункт пропускается с CONFLICT, остальные идут.
+                Response c = taskExpectedConflict(req.task_uid(), req.expected());
+                if (c != null) {
+                    errors.add("skipped (CONFLICT): " + ((Map<?, ?>) c.getEntity()).get("detail"));
+                    continue;
+                }
+            }
             {
                 // Дописка тоже пишет заметку — открытая строка истории нужна и ей.
                 String noteProbe = req.note_md() != null ? req.note_md() : req.note_append();
@@ -1001,7 +1009,13 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         // MT-MCP-TRUTH Б6: заметка/оценка обязаны лечь в ОТКРЫТУЮ строку истории;
         // её нет — отказ до записи, а не ok:true при невидимой правке. Дописка — тоже запись заметки.
         final String noteProbe = req.note_md() != null ? req.note_md() : req.note_append();
-        return openStateRows(uid, noteProbe, req.effort_days()).chain(openRows -> {
+        // S2-09: «было» (expected) названо и не совпало с текущим — 409 до любой записи.
+        Uni<Response> pre = (req.expected() == null || req.expected().isEmpty())
+            ? Uni.createFrom().nullItem()
+            : Uni.createFrom().item(() -> taskExpectedConflict(uid, req.expected()))
+                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
+        return pre.chain(conflict -> conflict != null ? Uni.createFrom().item(conflict) :
+            openStateRows(uid, noteProbe, req.effort_days()).chain(openRows -> {
         String refusal = noOpenStateRefusal(uid, noteProbe, req.effort_days(), openRows);
         if (refusal != null) return Uni.createFrom().item(noStore(Response.status(Response.Status.CONFLICT)
             .entity(new LoreError("NO_OPEN_STATE", refusal))));
@@ -1055,7 +1069,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex)));
             });
-        });
+        }));
     }
 
     // ── Write-path: append PR numbers to open KnowSprintHist.pr_refs ───────────
@@ -1165,6 +1179,36 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         Object vn = rows.get(0).get("vn");
         if (hn != null && !String.valueOf(hn).isBlank()) return String.valueOf(hn);
         return vn == null ? null : String.valueOf(vn);
+    }
+
+    /**
+     * S2-09: сверка «было» (expected) с текущим состоянием задачи. Ключи: title,
+     * note_md, effort_days, actual_days, status (+ любые поля вершины). Заметка и
+     * оценка — с открытой строки истории (их читают срезы), иначе с вершины.
+     * Возвращает 409 CONFLICT с текущим состоянием или null. Блокирующий — с рабочего пула.
+     */
+    Response taskExpectedConflict(String uid, Map<String, Object> expected) {
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT title, note_md AS vn, effort_days AS ve, actual_days, task_type, work_class, " +
+            "out('HAS_STATE')[valid_to IS NULL].note_md[0] AS hn, " +
+            "out('HAS_STATE')[valid_to IS NULL].effort_days[0] AS he, " +
+            "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw " +
+            "FROM KnowTask WHERE task_uid=:u", Map.of("u", uid));
+        if (rows.isEmpty()) return null; // неизвестная задача — пусть обычный путь скажет своё
+        Map<String, Object> r = rows.get(0);
+        Map<String, Object> cur = new LinkedHashMap<>();
+        cur.put("title", r.get("title"));
+        Object hn = r.get("hn");
+        cur.put("note_md", hn != null && !String.valueOf(hn).isBlank() ? hn : r.get("vn"));
+        cur.put("effort_days", r.get("he") != null ? r.get("he") : r.get("ve"));
+        cur.put("actual_days", r.get("actual_days"));
+        cur.put("task_type", r.get("task_type"));
+        cur.put("work_class", r.get("work_class"));
+        cur.put("status_raw", r.get("status_raw"));
+        String mismatch = Scd2Guard.firstMismatch(expected, cur);
+        if (mismatch == null) return null;
+        return Scd2Guard.conflict("task '" + uid + "': expected " + mismatch + " = '" + expected.get(mismatch)
+            + "' does not match the current value — re-read and retry", cur);
     }
 
     /** Дописка: пустое поле — запись; иначе прежнее (без хвостовых пустот) + пустая строка + новое. */
