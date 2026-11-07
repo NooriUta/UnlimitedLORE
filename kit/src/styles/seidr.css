@@ -740,6 +740,164 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 
+/* ---------- KitShell (K-02): модули сверху, меню групп, drawer на телефоне ----------
+   Вынос из прототипа v4 (.top/.apps/.side/.sgrp/.sitem). Узкий экран — меню
+   в Sheet слева (рисует компонент), подписи модулей прячутся, имя — aria-label. */
+.sk-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-base);
+}
+.sk-shell__top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.sk-shell__skip {
+  position: absolute;
+  left: -9999px;
+  top: 6px;
+  z-index: 80;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  background: var(--acc);
+  color: var(--bg0);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.sk-shell__skip:focus { left: 8px; }
+.sk-shell__brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+  color: var(--acc);
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-md);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sk-shell__brand-text { overflow: hidden; text-overflow: ellipsis; }
+.sk-shell__side-nav { display: flex; flex-direction: column; }
+.sk-shell__mods {
+  display: flex;
+  align-self: stretch;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sk-shell__mod {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: max(var(--tap), 36px);
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.sk-shell__mod:hover { color: var(--t1); }
+.sk-shell__mod[aria-current="page"] { color: var(--t1); border-bottom-color: var(--acc); }
+.sk-shell__mod[aria-current="page"] .sk-icon { color: var(--acc); }
+.sk-shell__mod[aria-disabled="true"] { opacity: .55; cursor: default; }
+.sk-shell__mod:focus-visible,
+.sk-shell__item:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
+.sk-shell__body {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-height: 0;
+}
+.sk-shell--narrow .sk-shell__body { grid-template-columns: minmax(0, 1fr); }
+.sk-shell__side {
+  overflow: auto;
+  padding: 6px;
+  border-right: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.sk-shell__main { min-width: 0; overflow: auto; }
+.sk-shell__main:focus { outline: none; }
+.sk-shell__grp + .sk-shell__grp { margin-top: 10px; }
+.sk-shell__grp-title {
+  margin: 0;
+  padding: 6px 8px 4px;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.sk-shell__grp--acc .sk-shell__grp-title { color: var(--acc); }
+.sk-shell__grp--suc .sk-shell__grp-title { color: var(--suc); }
+.sk-shell__grp--wrn .sk-shell__grp-title { color: var(--wrn); }
+.sk-shell__grp--dng .sk-shell__grp-title { color: var(--dng); }
+.sk-shell__grp--inf .sk-shell__grp-title { color: var(--inf); }
+.sk-shell__list { margin: 0; padding: 0; list-style: none; }
+.sk-shell__row { display: flex; align-items: center; gap: 2px; }
+.sk-shell__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: max(var(--tap), 28px);
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.sk-shell__item:hover { background: color-mix(in srgb, var(--acc) 10%, transparent); }
+.sk-shell__item[aria-current] {
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--acc);
+  font-weight: 700;
+}
+.sk-shell__item--action { color: var(--acc); }
+.sk-shell__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-shell__id { color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-shell__tag {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  color: var(--t2);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+}
+.sk-shell__note { margin: 0; padding: 2px 8px 4px; color: var(--t2); font-size: var(--fs-2xs); }
+@media (max-width: 720px) {
+  .sk-shell__top { gap: 2px; padding: 0 4px; }
+  .sk-shell__brand-text { display: none; }
+  .sk-shell__mod { padding: 0 10px; }
+  .sk-shell__mod .sk-shell__label { display: none; }
+}
+
 /* ═══════════ MD/HTML-элементы (S4-00d) ═══════════
    TipTapField (sk-md), MartProse (sk-prose), SandboxedHtmlFrame (sk-frame).
    Копии v1 переведены с инлайна и CSS-из-JS сюда: один слой, только токены. */

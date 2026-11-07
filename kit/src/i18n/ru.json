@@ -50,5 +50,20 @@
   "kit.md.mentionEmpty": "ничего не найдено — акторы заводятся в разделе «Клиент»",
   "kit.storage.unavailable": "Хранилище недоступно — отметки не сохранятся",
   "kit.error.title": "Что-то сломалось",
-  "kit.error.retry": "Повторить"
+  "kit.error.retry": "Повторить",
+  "kit.shell.modules": "Модули",
+  "kit.shell.sections": "Разделы",
+  "kit.shell.menu": "Меню",
+  "kit.shell.skip": "Перейти к содержимому",
+  "kit.shell.planned": "скоро",
+  "kit.shell.plannedHint": "Модуль запланирован — пока недоступен",
+  "kit.shell.menuEmpty": "В конфиге нет групп меню",
+  "kit.shell.myViews": "Мои виды",
+  "kit.shell.myViewsEmpty": "Видов пока нет — сохраните текущий",
+  "kit.shell.saveView": "Сохранить вид",
+  "kit.shell.viewTitle": "{item} · вид {n}",
+  "kit.shell.removeView": "Удалить вид «{title}»",
+  "kit.shell.recent": "Недавние",
+  "kit.shell.recentEmpty": "Пока пусто — откройте запись",
+  "kit.shell.recentMissing": "нет в выгрузке"
 }
