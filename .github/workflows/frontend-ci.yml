@@ -278,4 +278,22 @@ jobs:
             'grep -q "<title>LORE v2</title>" /usr/share/nginx/html/index.html' || {
             echo "ОШИБКА: в образе lore-app-next нет бандла v2"; exit 1; }
           echo "ok: nginx-конфиг принят, бандл v2 на месте"
+          # Общий скрипт старта (S3-02) реально лежит в образе v2 и метит лог.
+          docker run --rm $STUBS lore-app-next:ci nginx -t 2>&1 | grep -q '^\[LORE v2\]' || {
+            echo "ОШИБКА: скрипт старта 30-lore-public-url.sh не отработал в образе v2"; exit 1; }
+          echo "ok: общий скрипт старта отработал с меткой [LORE v2]"
+
+      # S3-02: сервис lore-app-next в compose. Синтаксис и слияние проверяет сам
+      # docker compose (текстовый тест в web-next/src/front-shared.test.ts
+      # YAML не разбирает). Без оверлея Traefik — его сеть есть только на
+      # ci-server.
+      - name: compose — сервис lore-app-next описан и разбирается
+        run: |
+          set -eo pipefail
+          docker compose -f docker-compose.yml config -q
+          docker compose -f docker-compose.yml config --services | grep -qx lore-app-next || {
+            echo "ОШИБКА: в docker-compose.yml нет сервиса lore-app-next"; exit 1; }
+          docker compose -f docker-compose.yml config lore-app-next | grep -q 'dockerfile: web-next/Dockerfile' || {
+            echo "ОШИБКА: lore-app-next собирается не из web-next/Dockerfile"; exit 1; }
+          echo "ok: compose видит lore-app-next из web-next/Dockerfile"
 
