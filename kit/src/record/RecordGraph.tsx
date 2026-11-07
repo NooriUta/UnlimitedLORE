@@ -2,11 +2,20 @@
 // секторам типа ребра, кольца по глубине (config.graph.depth/limit). Узел —
 // ссылка на запись с целью касания ≥44px; цвет узла — по типу ребра или по
 // вердикту (config.graph.colorBy). Обрезка лимитом сказана словами.
+//
+// S5-10 (SPRINT_UXR_S5_RECORD_TASKS): над графом — глубина 1–3, фильтр типов
+// рёбер (кнопки-чипы с подписью словами и счётом) и слой структурных связей
+// (config.edges[type].layer === 'structural', скрыт по умолчанию). Состояние —
+// в URL (useGraphState). У ребра — подпись из config.edges (title на любом
+// ребре, видимый текст — на рёбрах центра). «Фильтры скрыли всё» — отдельное
+// честное состояние с кнопкой сброса, а не «связей нет».
 import type { CSSProperties } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { EmptyState, LoadError } from '../states/StateViews';
+import { Pill } from '../elements/Pill';
 import { kitT, type KitLang } from '../i18n';
-import { edgeColor, egoGraph, verdictTone } from './graph';
+import { edgeColor, egoGraph, typesAround, verdictTone } from './graph';
+import { GRAPH_DEPTHS, allowedEdgeTypes, edgeLabel, isStructural, useGraphState } from './graphState';
 import { blockError } from './RecordLinks';
 
 /** Радиус кольца глубины и цель касания — в px viewBox (1 ед. = 1 px). */
@@ -26,14 +35,71 @@ function nodeColor(r: KitRecord | undefined, sector: string, ctx: KitCtx): strin
 }
 
 export function RecordGraph({ record, ctx, lang }: { record: KitRecord; ctx: KitCtx; lang: KitLang }) {
+  const { state, setDepth, toggleType, setStructural, reset } = useGraphState(ctx.config);
   const failed = blockError(ctx, 'edges');
   if (failed !== undefined) return <LoadError compact title={kitT(lang, 'kit.record.links.failed')} error={failed} />;
-  const depth = ctx.config.graph?.depth ?? 1;
-  const limit = ctx.config.graph?.limit ?? 60;
-  const g = egoGraph(record.id, ctx.data, { depth, limit });
-  if (g.nodes.length === 0) {
+
+  const around = typesAround(record.id, ctx.data, state.depth);
+  if (around.length === 0) {
     return <EmptyState compact title={kitT(lang, 'kit.record.graph.empty')} hint={kitT(lang, 'kit.record.links.emptyHint')} />;
   }
+  const structuralAround = around.filter(t => isStructural(ctx.config, t.type));
+  const chips = around.filter(t => state.structural || !isStructural(ctx.config, t.type));
+  const allowed = allowedEdgeTypes(around.map(t => t.type), ctx.config, state);
+  const limit = ctx.config.graph?.limit ?? 60;
+  const g = egoGraph(record.id, ctx.data, { depth: state.depth, limit, types: allowed });
+  const off = new Set(state.off);
+
+  const controls = (
+    <div className="sk-rec-graph__ctl" role="group" aria-label={kitT(lang, 'kit.record.graph.controls')}>
+      <div className="sk-rec-graph__depth" role="group" aria-label={kitT(lang, 'kit.record.graph.depth')}>
+        <span className="sk-rec-graph__ctl-label" aria-hidden="true">{kitT(lang, 'kit.record.graph.depth')}</span>
+        {GRAPH_DEPTHS.map(d => (
+          <Pill key={d} variant="filter" pressed={state.depth === d} onToggle={() => setDepth(d)}
+            title={kitT(lang, 'kit.record.graph.depthHint', { n: d })}>
+            {String(d)}
+          </Pill>
+        ))}
+      </div>
+      {structuralAround.length > 0 && (
+        <Pill variant="filter" pressed={state.structural} onToggle={setStructural}
+          className="sk-rec-graph__layer" title={kitT(lang, 'kit.record.graph.structuralHint')}>
+          <span>{kitT(lang, 'kit.record.graph.structural')}</span>
+          <span className="sk-rec-links__count">{structuralAround.reduce((n, t) => n + t.count, 0)}</span>
+        </Pill>
+      )}
+    </div>
+  );
+
+  const legend = (
+    <div className="sk-rec-graph__legend" role="group" data-testid="kit-graph-legend" aria-label={kitT(lang, 'kit.record.graph.legend')}>
+      {chips.map(t => (
+        <Pill key={t.type} variant="filter" pressed={!off.has(t.type)} onToggle={() => toggleType(t.type)} title={t.type}>
+          <span className="sk-rec-dot" aria-hidden="true" style={{ '--edge-c': edgeColor(ctx.config, t.type) } as CSSProperties} />
+          <span>{edgeLabel(ctx.config, t.type)}</span>
+          <span className="sk-rec-links__count">{t.count}</span>
+        </Pill>
+      ))}
+    </div>
+  );
+
+  if (g.nodes.length === 0) {
+    const onlyStructural = around.every(t => isStructural(ctx.config, t.type));
+    return (
+      <div className="sk-rec-graph" data-testid="kit-graph">
+        {controls}
+        {legend}
+        <EmptyState compact title={kitT(lang, 'kit.record.graph.filtered')}
+          hint={kitT(lang, 'kit.record.graph.filteredHint', { total: around.reduce((n, t) => n + t.count, 0) })}
+          action={(
+            <button type="button" className="sk-btn" onClick={() => reset(state.structural || onlyStructural)}>
+              {kitT(lang, 'kit.record.graph.reset')}
+            </button>
+          )} />
+      </div>
+    );
+  }
+
   const maxDepth = Math.max(...g.nodes.map(n => n.depth));
   const half = RING * maxDepth + HIT + 24;
   const pos = new Map<string, { x: number; y: number }>([[g.center.id, { x: 0, y: 0 }]]);
@@ -42,6 +108,8 @@ export function RecordGraph({ record, ctx, lang }: { record: KitRecord; ctx: Kit
 
   return (
     <div className="sk-rec-graph" data-testid="kit-graph">
+      {controls}
+      {legend}
       {g.truncated && (
         <p className="sk-rec-note" role="note">
           {kitT(lang, 'kit.record.graph.shown', { shown: g.nodes.length, total: g.total, limit })}
@@ -61,9 +129,24 @@ export function RecordGraph({ record, ctx, lang }: { record: KitRecord; ctx: Kit
         {g.links.map(l => {
           const a = pos.get(l.from)!;
           const b = pos.get(l.to)!;
+          const text = edgeLabel(ctx.config, l.type);
+          const key = `${l.type}:${l.from}:${l.to}`;
           return (
-            <line key={`${l.type}:${l.from}:${l.to}`} className="sk-rec-graph__edge" data-type={l.type}
-              x1={a.x} y1={a.y} x2={b.x} y2={b.y} style={{ stroke: edgeColor(ctx.config, l.type) }} />
+            <g key={key} data-edge={key} data-type={l.type}>
+              <title>{`${l.from} — ${text} → ${l.to}`}</title>
+              <line className="sk-rec-graph__edge" data-structural={isStructural(ctx.config, l.type) ? 'true' : undefined}
+                x1={a.x} y1={a.y} x2={b.x} y2={b.y} style={{ stroke: edgeColor(ctx.config, l.type) }} />
+            </g>
+          );
+        })}
+        {g.links.filter(l => l.from === g.center.id || l.to === g.center.id).map(l => {
+          const a = pos.get(l.from)!;
+          const b = pos.get(l.to)!;
+          return (
+            <text key={`lbl:${l.type}:${l.from}:${l.to}`} className="sk-rec-graph__edge-label" aria-hidden="true"
+              x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4} textAnchor="middle">
+              {edgeLabel(ctx.config, l.type)}
+            </text>
           );
         })}
         <g className="sk-rec-graph__node sk-rec-graph__node--center" data-node={g.center.id} data-center="true">
@@ -83,15 +166,6 @@ export function RecordGraph({ record, ctx, lang }: { record: KitRecord; ctx: Kit
           );
         })}
       </svg>
-      <ul className="sk-rec-graph__legend" data-testid="kit-graph-legend" aria-label={kitT(lang, 'kit.record.graph.legend')}>
-        {g.sectors.map(s => (
-          <li key={s.type} style={{ '--edge-c': edgeColor(ctx.config, s.type) } as CSSProperties}>
-            <span className="sk-rec-dot" aria-hidden="true" />
-            <span>{ctx.config.edges?.[s.type]?.label ?? s.type}</span>
-            <span className="sk-rec-links__count">{s.count}</span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

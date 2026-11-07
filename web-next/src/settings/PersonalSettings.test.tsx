@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import App from '../App';
 import { NavSwitch } from './NavSwitch';
+import { PersonalSettings } from './PersonalSettings';
 import { MESSAGES } from '../i18n/messages';
 
 describe('S3-07: переключатель «новая навигация»', () => {
@@ -28,6 +29,15 @@ describe('S3-07: переключатель «новая навигация»', 
   it('личные настройки входят в оболочку v2', () => {
     const html = renderToString(<App />);
     expect(html).toContain('data-nav-switch="v2"');
+  });
+});
+
+describe('S5-05: настройки режима чтения в личных настройках', () => {
+  it('размер текста и «сворачивать меню при чтении» — блоком kit ReadingSettings', () => {
+    const html = renderToString(<PersonalSettings lang="ru" />);
+    expect(html).toContain('data-reading-settings');
+    expect(html).toContain('Сворачивать меню при чтении');
+    expect(html).toContain('Размер текста');
   });
 });
 

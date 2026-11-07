@@ -141,7 +141,7 @@
 </svg>
 <span class="sk-star__label" aria-hidden="true">Статус: cancelled</span>
 </span>
-<button type="button" class="sk-star sk-star--btn" style="--star-c: var(--st-active);" data-status="active" data-category="active" aria-label="Открыть" aria-haspopup="menu" title="Открыть">
+<button type="button" class="sk-star sk-star--btn" style="--star-c: var(--st-active);" data-status="active" data-category="active" aria-label="Открыть" aria-haspopup="menu" aria-expanded="false" title="Открыть">
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--game-icons sk-icon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 512 512">
 <path fill="currentColor" d="M463 20.3L315.6 75.65L368.5 109C274 228 137.3 301.3 21.8 329.2l32.72 59.6C184.3 346.5 321.7 270.2 410.2 135.4l40.3 25.4zm7.7 116.7l-4.8 54.8l-51.3-32.4c-1.8 2.7-3.7 5.3-5.6 8V487h78V137zM320.1 265c-12.7 11-25.8 21.4-39.1 31.2V487h78V265zm-123.7 84c-14.4 7.6-28.8 14.6-43.4 21.2V487h78V349zM25 393v94h78v-94h-5.68c-14.82 5.5-29.63 10.6-44.35 15.3l-7.06 2.2l-9.6-17.5z">
 </path>
@@ -293,6 +293,7 @@
 <button type="button" class="sk-md__btn" title="чек-лист" aria-label="чек-лист" aria-pressed="false">☑</button>
 <button type="button" class="sk-md__btn" title="цитата" aria-label="цитата" aria-pressed="false">❝</button>
 <button type="button" class="sk-md__btn" title="разделитель" aria-label="разделитель">—</button>
+<button type="button" class="sk-md__btn" title="формула LaTeX (KaTeX)" aria-label="формула LaTeX (KaTeX)">∑</button>
 <span class="sk-md__sep" aria-hidden="true">
 </span>
 <button type="button" class="sk-md__btn" title="вставить таблицу" aria-label="вставить таблицу">⊞</button>
@@ -305,7 +306,7 @@
 <div contenteditable="true" role="textbox" aria-label="Правка MD" aria-multiline="true" translate="no" class="tiptap ProseMirror sk-md__doc" style="min-height: 140px; max-height: 260px;" tabindex="0">
 <h2>Заголовок</h2>
 <p>Текст с <strong>жирным</strong>, <code>кодом</code> и <a target="_blank" rel="noopener noreferrer nofollow" href="https://example.org">ссылкой</a>.</p>
-<ul data-type="taskList">
+<ul data-tight="true" data-type="taskList">
 <li data-checked="false">
 <label>
 <input aria-label="Task item checkbox for empty task item" type="checkbox">
@@ -323,7 +324,7 @@
 <p>пункт один</p>
 </li>
 </ul>
-<ul data-type="taskList">
+<ul data-tight="true" data-type="taskList">
 <li data-checked="true">
 <label>
 <input aria-label="Task item checkbox for пункт два" type="checkbox">

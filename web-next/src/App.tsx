@@ -15,6 +15,7 @@ import { ErrorBoundary, Pill, Skeleton, StorageBanner } from '@seidr/kit';
 import './App.css';
 import { PersonalSettings } from './settings/PersonalSettings';
 import { storage } from './storage/safe';
+import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPassport';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
@@ -22,20 +23,64 @@ const KitPage = lazy(() => import('./pages/KitPage'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
 const NewsPage = lazy(() => import('./news/NewsPage'));
 
-/** Путь без хвостового «/»: /kit и /kit/ — одна страница. */
-export function routeOf(path: string): 'kit' | 'news' | 'home' {
+// Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
+const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
+
+/**
+ * Путь без хвостового «/»: /kit и /kit/ — одна страница; /news — новости v2
+ * (S7A-02). Паспорт записи — в query (?section=…&passport=…), как у v1: из
+ * списков S4 запись открывается по URL. S5-04: ?section=tasks&passport=SPRINT/CODE — задача.
+ */
+export function routeOf(path: string, search = ''): 'kit' | 'news' | 'task' | 'home' {
   const p = path.replace(/\/+$/, '');
-  return p === '/kit' ? 'kit' : p === '/news' ? 'news' : 'home';
+  if (p === '/kit') return 'kit';
+  if (p === '/news') return 'news';
+  const q = new URLSearchParams(search);
+  if (q.get('section') === 'tasks' && q.get('passport')) return 'task';
+  return 'home';
 }
 
-export default function App({ path }: { path?: string } = {}) {
+/**
+ * Паспорт спринта по URL (S5-02): ?section=sprints&passport=ID[&tab=…].
+ * Паспорта открываются из списков S4 тем же адресом. Неизвестная вкладка —
+ * «Задачи» (первая и по умолчанию: задачи спринта видны за 2 клика).
+ */
+export function sprintPassportOf(search: string): { sprintId: string; tab: SprintTab } | null {
+  const p = new URLSearchParams(search);
+  const id = p.get('passport')?.trim();
+  if (p.get('section') !== 'sprints' || !id) return null;
+  const tab = (SPRINT_TABS as readonly string[]).includes(p.get('tab') ?? '') ? (p.get('tab') as SprintTab) : 'tasks';
+  return { sprintId: id, tab };
+}
+
+export default function App({ path, search }: { path?: string; search?: string } = {}) {
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
-  const route = routeOf(current);
+  const query = search ?? (typeof window === 'undefined' ? '' : window.location.search);
+  const route = routeOf(current, query);
   if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
   if (route === 'news') {
     return (
       <ErrorBoundary lang="ru">
         <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
+  if (route === 'task') {
+    return (
+      <ErrorBoundary lang="ru">
+        <StorageBanner storage={storage} lang="ru" />
+        <Suspense fallback={<Skeleton />}><TaskReadPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
+  const passport = sprintPassportOf(query);
+  if (passport) {
+    return (
+      <ErrorBoundary lang="ru">
+        <StorageBanner storage={storage} lang="ru" />
+        <main data-lore-app="v2">
+          <SprintPassport sprintId={passport.sprintId} tab={passport.tab} />
+        </main>
       </ErrorBoundary>
     );
   }
