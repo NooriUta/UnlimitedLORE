@@ -45,3 +45,5 @@ export * from './palette';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT) — только типы.
 // Вид «Дерево / книга» — третий в list.views (K-09).
 export * from './views/tree';
+// Новости v2: лента, разрезы, метрики сервера (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06).
+export * from './news';
