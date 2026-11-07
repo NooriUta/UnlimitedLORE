@@ -11,6 +11,10 @@ const bench = process.env.VITE_BENCH_API_URL ?? 'http://localhost:9100';
 
 export default defineConfig({
   plugins: [react()],
+  // Seiðr-kit (@seidr/kit → file:../kit) — исходники вне web-next. React в
+  // бандле обязан быть один: kit/node_modules (его devDeps для тестов) не
+  // должен подсунуть вторую копию, а в образе kit/node_modules нет вовсе.
+  resolve: { dedupe: ['react', 'react-dom'] },
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     env: { VITE_LORE_AUTH_ENABLED: 'false' },
@@ -18,6 +22,7 @@ export default defineConfig({
   server: {
     // v1 в dev на :4400 — v2 рядом, а не вместо.
     port: 4401,
+    fs: { allow: ['.', '../kit'] },
     proxy: {
       '/lore/': { target: api, changeOrigin: true },
       '/bench/': { target: bench, changeOrigin: true },

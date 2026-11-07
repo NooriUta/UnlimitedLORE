@@ -244,6 +244,16 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
+      # Seiðr-kit (kit/, D-2026-UXR-KIT-REACT) — общий React-пакет, который v2
+      # импортирует как file:../kit. Его тесты бегут здесь же, до сборки v2:
+      # красный kit = красный v2.
+      - name: Seiðr-kit (kit) — install + typecheck + test
+        working-directory: kit
+        run: |
+          bash ../.github/scripts/npm-retry.sh ci
+          npm run typecheck
+          npm test
+
       - name: LORE v2 (web-next) — install + typecheck + test + build
         working-directory: web-next
         run: |

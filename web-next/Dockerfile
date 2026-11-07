@@ -14,6 +14,12 @@
 # файла v1 (src/, корневой package.json) в образе v2 быть не должно — это
 # сторожит web-next/src/infra.test.ts.
 FROM node:26-alpine AS build
+# Seiðr-kit (D-2026-UXR-KIT-REACT): web-next зависит от "@seidr/kit": "file:../kit",
+# из /app это /kit. Копируются только package.json и исходники — kit/node_modules
+# (devDeps для тестов kit) в образ не нужен: React берётся из /app/node_modules
+# (resolve.dedupe в vite.config.ts).
+COPY kit/package.json /kit/package.json
+COPY kit/src /kit/src
 WORKDIR /app
 COPY web-next/package.json web-next/package-lock.json ./
 RUN npm ci

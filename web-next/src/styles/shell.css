@@ -1,0 +1,27 @@
+/* LORE v2 — классы оболочки. Токены и база — из Seiðr-kit
+   (@seidr/kit/styles/seidr.css), здесь только то, что принадлежит самой v2. */
+.shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+
+.shell-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  letter-spacing: .04em;
+}
+
+.shell-tag {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--acc);
+  border: 1px solid var(--acc);
+  border-radius: 999px;
+  padding: 0 6px;
+  text-transform: uppercase;
+}

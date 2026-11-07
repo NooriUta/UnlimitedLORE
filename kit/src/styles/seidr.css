@@ -1,0 +1,102 @@
+/* Seiðr-kit — единый CSS-слой (D-2026-UXR-KIT-REACT, S4-00e: один файл,
+   подключается и React-приложениями, и голым HTML).
+   Токены AMBER FOREST и шкала --fs-* перенесены из web-next/src/styles/tokens.css
+   (а туда — из v1 src/styles/tokens.css на 07.11.2026; v1 заморожен и
+   отсюда не импортируется). Остальные темы и элементы kit дописывают
+   задачи S4-00a/b/c/e. */
+:root {
+  --bg0: #141108;
+  --bg1: #1c1810;
+  --bg2: #252019;
+  --bg3: #302a20;
+  --bd:  #42382a;
+  --bdh: #584c38;
+  --t1:  #ede5d0;
+  --t2:  #a6997f;
+  --t3:  #9c937b;
+  --acc: #A8B860;
+  --suc: #7DBF78;
+  --wrn: #D4922A;
+  --inf: #88B8A8;
+  --dng: #C85848;
+  --font:    'Manrope', sans-serif;
+  --mono:    'IBM Plex Mono', monospace;
+  --display: 'Unbounded', sans-serif;
+
+  --fs-2xs:  9px;
+  --fs-xs:   10px;
+  --fs-sm:   11px;
+  --fs-base: 12px;
+  --fs-md:   13px;
+  --fs-lg:   14px;
+  --fs-xl:   20px;
+  --fs-2xl:  24px;
+  --fs-touch-input: 16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font);
+  background-color: var(--bg0);
+  color: var(--t1);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Кнопка (минимум для экрана ошибки; полный набор — S4-00b) ── */
+.sk-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--bg0);
+  background: var(--acc);
+  border: 1px solid var(--acc);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.sk-btn:focus-visible { outline: 2px solid var(--t1); outline-offset: 2px; }
+
+/* ── Плашка (S4-00f: «хранилище недоступно — отметки не сохранятся») ── */
+.sk-banner {
+  padding: 6px 12px;
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg2);
+  color: var(--t1);
+}
+.sk-banner--warn { border-left: 3px solid var(--wrn); }
+
+/* ── Экран ошибки (S4-00f: ошибка на экран вместо белого листа) ── */
+.sk-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 24px auto;
+  max-width: 720px;
+  padding: 16px;
+  background: var(--bg1);
+  border: 1px solid var(--dng);
+  border-radius: 8px;
+}
+.sk-error__title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  color: var(--dng);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-error__message {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--t2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

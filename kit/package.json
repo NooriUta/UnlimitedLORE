@@ -1,0 +1,31 @@
+{
+  "name": "@seidr/kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Seiðr-kit: общие элементы, токены и CSS-слой приложений Seiðr (D-2026-UXR-KIT-REACT, SPRINT_UXR_S10_SEIDR_KIT)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/seidr.css": "./src/styles/seidr.css"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^27.0.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.0"
+  }
+}
