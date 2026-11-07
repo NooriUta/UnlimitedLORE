@@ -76,7 +76,12 @@ export function clearV2(storage: Storage | null = browserStorage()): void {
 
 // ── Общая cookie платформы seer-prefs ───────────────────────────────────────
 
-export interface SharedPrefs { theme?: string; palette?: string }
+/**
+ * theme/palette — внешний вид (формат v1, src/theme/prefs.ts).
+ * nav — флаг «новая навигация» (S3-07): какую версию LORE пользователь выбрал.
+ * Строка, а не union: cookie пишут обе версии и тема входа, проверяет читатель.
+ */
+export interface SharedPrefs { theme?: string; palette?: string; nav?: string }
 
 export interface CookieJar { read(): string; write(cookie: string): void }
 
