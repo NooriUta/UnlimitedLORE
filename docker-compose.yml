@@ -282,6 +282,8 @@ services:
       LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
       # SPRINT_VIZ_EMBED/EMB-L1: origin Völva для встроенных графиков; пусто — выключено.
       LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
+      LORE_BACKEND_URL: ${LORE_BACKEND_URL:-}
+      LORE_BACKEND_HOST: ${LORE_BACKEND_HOST:-}
     ports:
       - "4400:80"
     # host.docker.internal is auto-provided by Docker Desktop but NOT by plain
@@ -327,6 +329,8 @@ services:
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
       LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
       LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
+      LORE_BACKEND_URL: ${LORE_BACKEND_URL:-}
+      LORE_BACKEND_HOST: ${LORE_BACKEND_HOST:-}
       # Метка в логе скрипта старта: «[LORE v2] …», чтобы по docker logs было
       # видно, чей это контейнер. В шаблон nginx НЕ попадает.
       LORE_FRONT: v2
