@@ -97,6 +97,11 @@ public class LoreDictResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DICT] %s/%s: %s", req.dict_type(), req.code(), e.getMessage());
+            // S2-09: close-open словаря уже множественный (valid_to IS NULL в самом UPDATE,
+            // без отдельного чтения rid) — гонку двух скриптов режет MVCC; это 409, не 502.
+            if (Scd2Guard.isConcurrentModification(e))
+                return Scd2Guard.conflict("dict '" + req.dict_type() + "/" + req.code()
+                    + "': concurrent write — re-read and retry", Map.of());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }
