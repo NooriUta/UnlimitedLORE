@@ -114,12 +114,20 @@ export function isStreamSprint(sprintId: string): boolean {
   return STREAM.test(sprintId);
 }
 
-/** RM-U6: доля «вне плана» от открытых спринтов продукта, с делением поток / забыли. */
-export function unplannedShare<S extends SprintLike & { components: string[] | null }>(
+/**
+ * RM-U6: доля «вне плана» от открытых спринтов продукта, с делением
+ * поток / намеренно / забыли. «Вне плана намеренно» — флаг спринта
+ * (unplanned_intentional, ставится в карточке спринта): снимает его из
+ * «правда забыли», но в доле вне плана он остаётся — карта не должна
+ * выглядеть собранней, чем есть. Поток по имени считается потоком, даже
+ * если флаг тоже стоит, — чтобы один спринт не попадал в две корзины.
+ */
+export function unplannedShare<S extends SprintLike & { components: string[] | null; unplanned_intentional?: boolean | null }>(
   sprints: S[], ms: MilestoneLike[], code: string | null, products: ProductRow[],
-): { open: number; unplanned: number; stream: number; forgotten: number; pct: number } {
+): { open: number; unplanned: number; stream: number; intentional: number; forgotten: number; pct: number } {
   const open = sprints.filter(s => !CLOSED.test(s.status_raw ?? '') && sprintInProduct(s, code, products)).length;
   const un = unplannedOfProduct(sprints, ms, code, products);
   const stream = un.filter(s => isStreamSprint(s.sprint_id)).length;
-  return { open, unplanned: un.length, stream, forgotten: un.length - stream, pct: open ? Math.round(un.length / open * 100) : 0 };
+  const intentional = un.filter(s => !isStreamSprint(s.sprint_id) && s.unplanned_intentional === true).length;
+  return { open, unplanned: un.length, stream, intentional, forgotten: un.length - stream - intentional, pct: open ? Math.round(un.length / open * 100) : 0 };
 }

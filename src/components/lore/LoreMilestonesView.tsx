@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import {
-  fetchLoreSlice, linkSprintMilestone, linkMilestoneProduct, upsertMilestone, createLoreTask, describeLoreError,
+  fetchLoreSlice, linkSprintMilestone, linkMilestoneProduct, upsertMilestone, createLoreTask, describeLoreError, updateLoreSprint,
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
 } from '../../api/lore';
 import {
@@ -514,7 +514,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
         </div>
         {/* RM-U6 / RM-V4: доля числом и деление «поток / забыли» — рядом, не за скроллом */}
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>
-          {t('lore.milestonesView.unplannedShare', '{{unplanned}} из {{open}} открытых спринтов ({{pct}}%) · поток: {{stream}} · правда забыли: {{forgotten}}', share)}
+          {t('lore.milestonesView.unplannedShare', '{{unplanned}} из {{open}} открытых спринтов ({{pct}}%) · поток: {{stream}} · намеренно: {{intentional}} · правда забыли: {{forgotten}}', share)}
         </div>
         {orphans.length === 0
           ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--suc)' }}>{t('lore.milestonesView.allOpenPlanned', 'Каждый открытый спринт стоит в вехе ✓')}</div>
@@ -528,10 +528,27 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                     <span style={S.sprId} onClick={() => onNavigateToSprint?.(s.sprint_id)} role={onNavigateToSprint ? 'button' : undefined}>{s.sprint_id}</span>
                     <span style={S.sprName}>{s.name}</span>
                     {proj && <span style={S.projTag}>{proj}</span>}
-                    <span style={{ ...S.projTag, color: isStreamSprint(s.sprint_id) ? 'var(--inf)' : 'var(--wrn)' }}
-                      title={isStreamSprint(s.sprint_id) ? t('lore.milestonesView.streamHint', 'поток: уборка, апгрейды, CI, зависимости — вне вех по своей природе') : t('lore.milestonesView.forgottenHint', 'похоже, забыли поставить в план')}>
-                      {isStreamSprint(s.sprint_id) ? t('lore.milestonesView.streamTag', 'поток') : t('lore.milestonesView.forgottenTag', 'забыли')}
-                    </span>
+                    {isStreamSprint(s.sprint_id)
+                      ? <span style={{ ...S.projTag, color: 'var(--inf)' }} title={t('lore.milestonesView.streamHint', 'поток: уборка, апгрейды, CI, зависимости — вне вех по своей природе')}>
+                          {t('lore.milestonesView.streamTag', 'поток')}
+                        </span>
+                      : (
+                        // RM-U6: «забыли» ⇄ «намеренно» — один клик, флаг спринта unplanned_intentional
+                        <button type="button" disabled={busy === 'intent' + s.sprint_id}
+                          style={{ ...S.projTag, cursor: 'pointer', color: s.unplanned_intentional ? 'var(--t2)' : 'var(--wrn)' }}
+                          title={s.unplanned_intentional
+                            ? t('lore.milestonesView.intentionalHint', 'вне плана намеренно: не считается забытым, но остаётся в доле вне плана. Нажмите, чтобы снять пометку')
+                            : `${t('lore.milestonesView.forgottenHint', 'похоже, забыли поставить в план')} · ${t('lore.milestonesView.markIntentional', 'Пометить «вне плана намеренно»: спринт перестанет считаться забытым, но останется в доле вне плана')}`}
+                          onClick={() => {
+                            const v = !s.unplanned_intentional;
+                            run('intent' + s.sprint_id, async () => {
+                              await updateLoreSprint(s.sprint_id, { unplanned_intentional: v });
+                              setSprints(xs => xs.map(x => x.sprint_id === s.sprint_id ? { ...x, unplanned_intentional: v } : x));
+                            });
+                          }}>
+                          {s.unplanned_intentional ? t('lore.milestonesView.intentionalTag', 'намеренно') : t('lore.milestonesView.forgottenTag', 'забыли')}
+                        </button>
+                      )}
                     <select style={{ ...S.in, fontSize: 'var(--fs-2xs)', padding: '2px 4px', flexShrink: 0 }} value=""
                       onChange={e => { const mid = e.target.value; if (mid) run('assign' + s.sprint_id, () => linkSprintMilestone(s.sprint_id, mid, 'add')); }}>
                       <option value="">{t('lore.milestonesView.intoMilestonePlaceholder', '→ в веху…')}</option>
