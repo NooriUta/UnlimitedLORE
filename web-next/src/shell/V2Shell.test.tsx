@@ -53,10 +53,11 @@ describe('оболочка v2 (S4-01)', () => {
   it('меню по смыслу: группы-раскрывашки; по умолчанию — первый раздел, его экран озаглавлен', () => {
     render(<App path="/" win={fakeWin()} storage={mem()} narrow={false} />);
     const side = screen.getByRole('navigation', { name: 'Разделы' });
-    const work = within(within(side).getByRole('heading', { name: 'Работа' })).getByRole('button');
-    expect(work.getAttribute('aria-expanded')).toBe('true');
-    expect(within(side).getByRole('button', { name: 'Спринты' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('heading', { level: 1, name: 'Спринты' })).toBeTruthy();
+    // S4-23: «Новости» — первая группа меню, по умолчанию открыт их экран.
+    const feed = within(within(side).getByRole('heading', { name: 'Лента' })).getByRole('button');
+    expect(feed.getAttribute('aria-expanded')).toBe('true');
+    expect(within(side).getByRole('button', { name: 'Новости' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('heading', { level: 1, name: 'Новости' })).toBeTruthy();
   });
 
   it('выбор раздела пишется в URL и меняет экран; несобранный экран — «не собран», а не «пусто»', () => {

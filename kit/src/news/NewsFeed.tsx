@@ -127,12 +127,15 @@ export function NewsFeed({
     );
   }
 
+  const Root = title === null ? 'div' : 'section';
   const mark = data?.meta.read_mark;
   const markOk = mark?.state === 'ok' || mark?.state === 'none';
   const since = data?.metrics.since_mark;
 
   return (
-    <section className={['sk-news', className].filter(Boolean).join(' ')} aria-label={title ?? t('title')}>
+    // title=null — лента внутри раздела, который уже назван своим h1: второй
+    // ориентир с тем же именем (axe landmark-unique) не нужен — просто блок.
+    <Root className={['sk-news', className].filter(Boolean).join(' ')} {...(title === null ? {} : { 'aria-label': title ?? t('title') })}>
       <header className="sk-news__head">
         {title !== null && <h2 className="sk-news__title">{title ?? t('title')}</h2>}
         {source.kind === 'fixture' && (
@@ -163,7 +166,7 @@ export function NewsFeed({
       </header>
       <Controls query={q} update={update} data={data} lang={lang} fixed={fixedAxes} />
       {body}
-    </section>
+    </Root>
   );
 }
 
