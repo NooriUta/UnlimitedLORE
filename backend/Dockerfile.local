@@ -128,14 +128,24 @@ COPY gradle ./gradle
 # run 3989 упал на этом шаге трижды: таймаут 60 с и 502). Пустое значение —
 # поведение прежнее; compose-build-retry.sh снимает зеркало, если оно не отвечает.
 ARG LORE_GRADLE_DIST_MIRROR=""
-RUN chmod +x gradlew \
+# Вариант 3 владелицы (08.11): пока Nexus без админа, дистрибутив держится в
+# ПОСТОЯННОМ кэше BuildKit на хосте сборки (переживает джобы и сброс этого
+# слоя) — одна внешняя загрузка, дальше локально. Кэш монтируется только на
+# время RUN, поэтому: кэш → слой до --version (обёртка видит готовый
+# дистрибутив и не качает), слой → кэш после (первая загрузка сохраняется).
+RUN --mount=type=cache,id=lore-gradle-wrapper-dists,target=/gradle-dists-cache \
+    chmod +x gradlew \
  && if [ -n "$LORE_GRADLE_DIST_MIRROR" ]; then \
       p=gradle/wrapper/gradle-wrapper.properties; \
       f="$(sed -n 's#^distributionUrl=.*/##p' "$p")"; \
       sed -i "s#^distributionUrl=.*#distributionUrl=${LORE_GRADLE_DIST_MIRROR%/}/$f#" "$p"; \
       echo "дистрибутив Gradle: ${LORE_GRADLE_DIST_MIRROR%/}/$f"; \
     fi \
- && ./gradlew --no-daemon --version
+ && mkdir -p /root/.gradle/wrapper/dists \
+ && cp -a /gradle-dists-cache/. /root/.gradle/wrapper/dists/ \
+ && echo "кэш дистрибутивов Gradle: $(ls /gradle-dists-cache | tr '\n' ' ')" \
+ && ./gradlew --no-daemon --version \
+ && cp -a /root/.gradle/wrapper/dists/. /gradle-dists-cache/
 
 # Compile + assemble the Quarkus app. Tests run in CI (they need a live
 # ArcadeDB), so the image build stays hermetic with -x test.

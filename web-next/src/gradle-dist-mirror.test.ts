@@ -23,6 +23,18 @@ describe('PL-12: дистрибутив Gradle в образе бэкенда �
     expect(d).toMatch(/if \[ -n "\$LORE_GRADLE_DIST_MIRROR" \]/);
   });
 
+  // Вариант 3 владелицы (08.11): Nexus пока без админа — дистрибутив держится в
+  // постоянном кэше BuildKit на 131 (переживает джобы и сброс слоя): одна
+  // внешняя загрузка, дальше локально. Кэш → слой ДО --version, слой → кэш после.
+  it('Dockerfile.local: дистрибутив в постоянном cache mount BuildKit', () => {
+    const d = read('backend/Dockerfile.local');
+    const run = d.slice(d.indexOf('ARG LORE_GRADLE_DIST_MIRROR'), d.indexOf('./gradlew --no-daemon --version') + 40);
+    expect(run).toMatch(/RUN --mount=type=cache,id=lore-gradle-wrapper-dists,target=\/gradle-dists-cache/);
+    expect(run).toMatch(/cp -a \/gradle-dists-cache\/\. \/root\/\.gradle\/wrapper\/dists\//);
+    const after = d.slice(d.indexOf('./gradlew --no-daemon --version'));
+    expect(after.slice(0, 200)).toMatch(/cp -a \/root\/\.gradle\/wrapper\/dists\/\. \/gradle-dists-cache\//);
+  });
+
   it('compose прокидывает зеркало в build-args бэкенда', () => {
     expect(read('docker-compose.yml')).toMatch(/LORE_GRADLE_DIST_MIRROR: \$\{LORE_GRADLE_DIST_MIRROR:-\}/);
   });
