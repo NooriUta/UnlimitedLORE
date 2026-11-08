@@ -291,9 +291,40 @@ jobs:
       # LORE-ygg 131, окружение preprod в Infisical не пустое (без отката на prod).
       # В dry-run печатает все отказы и не роняет шаг. Логика — в скрипте.
       - name: Ворота препрода (база, Infisical preprod, порты) — громко, без отката на prod
+        id: gates
         env:
           DRY_RUN: ${{ steps.mode.outputs.live == 'true' && 'false' || 'true' }}
+          # Нет базы препрода — не отказ, а сигнал db_missing: её создаст шаг ниже.
+          PREPROD_DB_AUTOCREATE: "true"
         run: bash .github/scripts/preprod-gates.sh
+
+      # PL-04 (решение владелицы 08.11): базы препрода нет — создаём её из СНИМКА
+      # ПРОДА, а не пустой. Только эту базу (TARGET_DB=LORE_DB, имя *_preprod
+      # проверяет скрипт); другие базы LORE-ygg 131 (midgard_datahub, *_frozen_*,
+      # минилор) не трогаются. CREATE_ONLY=true: существующую базу CD не
+      # перезаливает никогда — обновление снимка только ручным workflow
+      # «LORE preprod DB refresh». В dry-run — только проверки доступа (ssh до
+      # lore-host, бэкенд прода, место на 131), без снимка.
+      - name: SSH до lore-host — для снимка прода (только если базы препрода нет)
+        if: steps.gates.outputs.db_missing == 'true'
+        env:
+          LORE_HOST: lore-host.seidrstudio.pro
+          LORE_HOST_USER: nooriuta
+          LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
+          LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
+        run: bash .github/scripts/lore-host-deploy.sh ssh
+
+      - name: База препрода — создать из снимка прода, если её нет
+        if: steps.gates.outputs.db_missing == 'true'
+        env:
+          TARGET_DB: ${{ env.LORE_DB }}
+          CREATE_ONLY: "true"
+          DRY_RUN: ${{ steps.mode.outputs.live == 'true' && 'false' || 'true' }}
+        run: bash scripts/preprod-db-refresh.sh
+
+      - name: Убрать ключ lore-host
+        if: always()
+        run: rm -f ~/.ssh/lore_host
 
       # SPRINT_UXR_S3_V2_INFRA/S3-10 (D-2026-UXR-V2-FOLDER-V1-FROZEN): выкатка
       # по путям и заморозка v1. Логика в ci-scope.sh (режим cd):

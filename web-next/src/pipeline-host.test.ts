@@ -129,6 +129,19 @@ describe('PL-04: lore-cd.yml катит ПРЕПРОД, а не прод', () =>
     expect(gate).toBeLessThan(build);
   });
 
+  it('нет базы препрода — создаётся из снимка прода (CREATE_ONLY), до сборок', () => {
+    const gate = cdSteps().find((s) => /preprod-gates\.sh\b/.test(s.body));
+    expect(gate!.body).toMatch(/id: gates/);
+    expect(gate!.body).toMatch(/PREPROD_DB_AUTOCREATE: "true"/);
+    const i = cdSteps().findIndex((s) => /scripts\/preprod-db-refresh\.sh/.test(s.body));
+    expect(i, 'нет шага создания базы из снимка').toBeGreaterThan(-1);
+    const s = cdSteps()[i];
+    expect(s.body).toMatch(/if: steps\.gates\.outputs\.db_missing == 'true'/);
+    expect(s.body).toMatch(/CREATE_ONLY: "true"/);
+    expect(s.body).toMatch(/TARGET_DB: \$\{\{ env\.LORE_DB \}\}/);
+    expect(i).toBeLessThan(cdSteps().findIndex((x) => /compose-build-retry\.sh/.test(x.body)));
+  });
+
   it('индексы лечатся в базе препрода, а не в system_aida_lore', () => {
     const heal = cdSteps().find((s) => /db-heal\.sh/.test(s.body));
     expect(heal!.body).toMatch(/DB_NAME: \$\{\{ env\.LORE_DB \}\}/);

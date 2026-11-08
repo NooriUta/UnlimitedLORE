@@ -29,6 +29,8 @@
 #   TARGET_DB               по умолчанию system_aida_lore_preprod
 #   SOURCE_DB               по умолчанию system_aida_lore (на lore-host)
 #   DRY_RUN=true            только проверки доступа и состояния, ничего не меняет
+#   CREATE_ONLY=true        режим LORE CD: только создать ОТСУТСТВУЮЩУЮ базу из
+#                           снимка; есть — выход 0 без изменений
 set -uo pipefail
 
 TARGET_DB="${TARGET_DB:-system_aida_lore_preprod}"
@@ -76,6 +78,12 @@ dbs="$(acurl "$API/databases")" || die "ArcadeDB 131 ($API) не ответил 
 echo "$dbs" | head -c 600; echo
 case "$dbs" in *"\"$TARGET_DB\""*) had_target=yes ;; *) had_target=no ;; esac
 echo "база $TARGET_DB на 131: $had_target"
+# CREATE_ONLY=true — режим LORE CD: только СОЗДАТЬ отсутствующую базу из снимка
+# прода. Существующую CD не перезаливает никогда (это делает ручной workflow).
+if [ "${CREATE_ONLY:-false}" = true ] && [ "$had_target" = yes ]; then
+  echo "база $TARGET_DB уже есть — в режиме CREATE_ONLY не трогаю"
+  exit 0
+fi
 docker exec "$LOCAL_YGG" sh -c "command -v unzip >/dev/null && df -h $DB_DIR | tail -1" || die "в $LOCAL_YGG нет unzip или каталога $DB_DIR"
 
 say "lore-host: бэкенд прода и база $SOURCE_DB"

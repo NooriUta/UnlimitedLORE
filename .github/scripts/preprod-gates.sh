@@ -107,6 +107,12 @@ elif ! dbs="$(curl -sf -m 10 -u "root:${ARCADEDB_ROOT_PASSWORD:-}" "http://$GW:2
 else
   if printf '%s' "$dbs" | grep -q "\"$db\""; then
     ok "база $db есть на LORE-ygg 131"
+    [ -n "${GITHUB_OUTPUT:-}" ] && echo "db_missing=false" >> "$GITHUB_OUTPUT"
+  elif [ "${PREPROD_DB_AUTOCREATE:-false}" = "true" ]; then
+    # Решение владелицы 08.11: нет базы — CD создаёт её из СНИМКА ПРОДА
+    # (scripts/preprod-db-refresh.sh, CREATE_ONLY=true), а не пустую.
+    echo "::warning::базы $db на LORE-ygg 131 нет — следующий шаг создаст её из снимка прода (только эту базу)"
+    [ -n "${GITHUB_OUTPUT:-}" ] && echo "db_missing=true" >> "$GITHUB_OUTPUT"
   else
     fail "базы $db на LORE-ygg 131 нет. Залейте снимок прода: workflow «LORE preprod DB refresh» (ручной запуск, confirm=$db). Пустую базу CD не создаёт намеренно."
   fi
