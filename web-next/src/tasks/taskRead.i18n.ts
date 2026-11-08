@@ -7,6 +7,7 @@ import { useKitLang, type KitLang } from '@seidr/kit';
 const ru = {
   'task.kind': 'Задачи',
   'task.loading': 'Загружаем задачу',
+  'task.crumbs.sprint': 'Спринт {id}',
   'task.error.title': 'Задачу не удалось загрузить',
   'task.error.hint': 'Сервер LORE не ответил — это сбой, а не «задачи нет».',
   'task.forbidden.title': 'Нет доступа к задачам спринта',
@@ -47,6 +48,7 @@ export type TaskReadKey = keyof typeof ru;
 const en: Record<TaskReadKey, string> = {
   'task.kind': 'Tasks',
   'task.loading': 'Loading the task',
+  'task.crumbs.sprint': 'Sprint {id}',
   'task.error.title': 'The task could not be loaded',
   'task.error.hint': 'The LORE server did not answer — this is a failure, not “no task”.',
   'task.forbidden.title': 'No access to the sprint tasks',

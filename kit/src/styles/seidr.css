@@ -2581,7 +2581,51 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-reader { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 var(--gap); min-width: 0; }
 .sk-rec-reader[data-aside="open"] { grid-template-columns: minmax(0, 1fr) auto minmax(220px, 300px); }
 .sk-rec-reader__main { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
-.sk-rec-reader__bar { display: flex; align-items: center; justify-content: flex-end; gap: var(--gap); }
+/* Строка над записью (S4-28): крошки слева, листалка/инструменты/«Свойства» справа. */
+.sk-rec-reader__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-rec-reader__crumbs { min-width: 0; }
+.sk-rec-reader__props[aria-expanded='true'] { border-color: var(--acc); color: var(--t1); }
+.sk-rec-reader__tools { display: inline-flex; align-items: center; gap: var(--gap); margin-left: auto; }
+
+/* ---------- Крошки записи (S4-28): «← Раздел · фильтр / ID» ---------- */
+.sk-crumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+}
+.sk-crumbs__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 22px);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acc);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-crumbs__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-crumbs__ctx { color: var(--t2); }
+.sk-crumbs__sep { color: var(--t3); }
+.sk-crumbs__cur { font-family: var(--mono); color: var(--t1); white-space: nowrap; }
+@media (max-width: 720px) {
+  .sk-crumbs__ctx { display: none; }
+}
 .sk-rec-reader__ear { position: sticky; top: var(--gap); }
 .sk-rec-reader__aside { min-width: 0; padding: 8px 10px; border-left: 1px solid var(--bd); background: var(--bg1); font-size: var(--fs-base); color: var(--t1); }
 .sk-rec-reader__aside[hidden] { display: none; }
