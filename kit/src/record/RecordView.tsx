@@ -7,7 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
@@ -73,6 +73,16 @@ export interface RecordViewProps {
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
   placement?: 'right' | 'bottom' | 'full';
+  /**
+   * S4-30: «Свойства» в режиме «на весь экран» — открыты или свёрнуты.
+   *
+   * `defaultPropsOpen` — умолчание для неуправляемого режима (настройка
+   * приложения). `propsOpen` + `onPropsOpenChange` — управляемый режим, когда
+   * выбор хранит приложение: kit сам ничего не хранит.
+   */
+  propsOpen?: boolean;
+  defaultPropsOpen?: boolean;
+  onPropsOpenChange?: (open: boolean) => void;
   /**
    * Куда идёт вычисляемое (связи, граф, журнал, история). 'tabs' (по умолчанию,
    * владелица 08.11: «пока как в MVP») — вкладками основного блока в любом месте;
@@ -176,7 +186,7 @@ function propsSummary(record: KitRecord, kind: KindConfig): string {
     .join(' · ');
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs' }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
@@ -204,7 +214,29 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // Снизу — свойства колонкой справа; во весь экран — свёрткой под шапкой и рейкой у края, как v4 (S4-CONTENT-V4).
   const propsSide = hasProps && placement === 'bottom';
   const propsRow = hasProps && placement === 'full';
-  const [propsOpen, setPropsOpen] = useState(false);
+  // S4-30: «Свойства» в режиме «на весь экран» — свёрнутая строка под шапкой.
+  // Раньше она всегда стартовала свёрнутой; теперь это настройка. Образец —
+  // тот же, что у BurnChart: неуправляемый режим с умолчанием плюс
+  // управляемый, когда выбор хранит приложение. kit сам ничего не хранит.
+  const [propsOpenInner, setPropsOpenInner] = useState(defaultPropsOpen ?? false);
+  const propsOpen = propsOpenControlled ?? propsOpenInner;
+  // <details> меняет своё open сам, и React не возвращает его обратно, если
+  // проп не менялся. В управляемом режиме это сделало бы управление обманом:
+  // человек щёлкнул, приложение не сохранило, а строка осталась раскрытой.
+  // Поэтому в управляемом режиме состояние элемента приводим к пропу.
+  const propsRowRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (propsOpenControlled === undefined) return;
+    const el = propsRowRef.current;
+    if (el && el.open !== propsOpenControlled) el.open = propsOpenControlled;
+  });
+  const setPropsOpen = (open: boolean) => {
+    // В управляемом режиме своё состояние не двигаем: пока приложение не
+    // ответило новым значением, интерфейс показывает то, что оно задало —
+    // иначе вид и настройка разойдутся.
+    if (propsOpenControlled === undefined) setPropsOpenInner(open);
+    onPropsOpenChange?.(open);
+  };
   // Ширина текста во весь экран — настройка наверху (владелица 08.11), запоминается в браузере.
   const [width, setWidthState] = useState<RecWidth>(() => readWidth());
   const setWidth = (w: RecWidth) => { setWidthState(w); try { localStorage.setItem(WIDTH_KEY, w); } catch { /* приватный режим — живём в памяти */ } };
@@ -335,7 +367,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
           <RecordVerdict record={record} ctx={ctx} lang={lang} />
         </BlockBoundary>
         {propsRow && kind && (
-          <details className="sk-rec-propsrow" open={propsOpen} onToggle={e => setPropsOpen((e.currentTarget as HTMLDetailsElement).open)}>
+          <details ref={propsRowRef} className="sk-rec-propsrow" open={propsOpen} onToggle={e => setPropsOpen((e.currentTarget as HTMLDetailsElement).open)}>
             <summary className="sk-rec-propsrow__sum">
               <span className="sk-rec-propsrow__label">{kitT(lang, 'kit.record.tab.props')}</span>
               {propsSummary(record, kind) && <span className="sk-rec-propsrow__vals"> · {propsSummary(record, kind)}</span>}

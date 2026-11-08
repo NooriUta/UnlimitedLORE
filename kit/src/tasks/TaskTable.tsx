@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, Ref } from 'react';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
-import type { KitDictItem } from '../core/contract';
+import type { KitConfig, KitDictItem } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
 import { kitT, useKitLang, type KitKey, type KitLang } from '../i18n';
@@ -39,6 +39,16 @@ export interface TaskTableProps {
    * разные вещи, и путать их нельзя.
    */
   dict?: { taskType?: readonly KitDictItem[]; workClass?: readonly KitDictItem[] };
+  /**
+   * Статусы из конфигурации (S4-STATUS-AXIS-CONFIG). Есть — меню строится по
+   * ним: подписи, иконки, цвета и разрешённые переходы `allow`. Нет —
+   * умолчанием служит `TASK_STATUSES`.
+   *
+   * Это чинит найденное расхождение: раньше таблица читала захардкоженный
+   * список, а паспорт — конфигурацию, и при переходе на модель они разошлись
+   * бы молча.
+   */
+  statuses?: KitConfig['statuses']['items'];
   className?: string;
 }
 
@@ -60,6 +70,50 @@ function groupLabel(lang: KitLang, g: TaskGroup): string {
 }
 
 const dash = '—';
+
+interface MenuStatus { code: string; label: string; icon: string; color: string }
+
+/**
+ * Пункты меню смены статуса (S4-STATUS-AXIS-CONFIG).
+ *
+ * Конфигурация есть — читаем её: подписи, иконки, цвета и разрешённые
+ * переходы. Нет — умолчанием служит `TASK_STATUSES`, чтобы kit оставался
+ * работоспособным без модели (витрина, прототипы, другое приложение).
+ *
+ * Два правила, которые здесь важнее кода:
+ *   • `allow` не задан — предлагаем ВСЕ: запрет не выдумываем, его решает
+ *     сервер, а не интерфейс;
+ *   • статус записи, которого нет в конфигурации, не прячем — он виден как
+ *     есть. Спрятать значило бы скрыть сбой данных.
+ */
+function menuStatuses(
+  items: KitConfig['statuses']['items'] | undefined,
+  current: string,
+  lang: KitLang,
+): MenuStatus[] {
+  if (!items || items.length === 0) {
+    return TASK_STATUSES.map(code => {
+      const m = statusMeta(code);
+      return { code, label: kitT(lang, `kit.tasks.status.${code}` as KitKey), icon: m.icon, color: m.color };
+    });
+  }
+  const cur = items.find(s => s.code === current);
+  const allow = cur?.allow;
+  const shown = allow && allow.length > 0
+    ? items.filter(s => s.code === current || allow.includes(s.code))
+    : items;
+  const out: MenuStatus[] = shown.map(s => ({
+    code: s.code,
+    label: s.title,
+    icon: s.icon || statusMeta(s.code).icon,
+    color: s.color || statusMeta(s.code).color,
+  }));
+  if (current && !items.some(s => s.code === current)) {
+    const m = statusMeta(current);
+    out.unshift({ code: current, label: taskStatusName(lang, current), icon: m.icon, color: m.color });
+  }
+  return out;
+}
 
 /** Статья справочника по коду. Нет справочника или нет кода — undefined. */
 function dictEntry(items: readonly KitDictItem[] | undefined, code: string | null): KitDictItem | undefined {
@@ -100,7 +154,7 @@ function ClassCell({ code, items, t }: CellProps) {
   return <span className="sk-tasks__cls">{text}</span>;
 }
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, className }: TaskTableProps) {
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, className }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const groups = groupTasks(tasks, groupBy, phases);
@@ -167,6 +221,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   effortText={task.effortDays == null ? null : fmt.format(task.effortDays)}
                   colCount={cols.length}
                   dict={dict}
+                  statuses={statuses}
                   onStatusChange={onStatusChange}
                   onSave={onSave}
                   href={hrefFor?.(task)}
@@ -188,12 +243,13 @@ interface RowProps {
   effortText: string | null;
   colCount: number;
   dict?: TaskTableProps['dict'];
+  statuses?: TaskTableProps['statuses'];
   onStatusChange?: TaskTableProps['onStatusChange'];
   onSave?: TaskTableProps['onSave'];
   href?: string;
 }
 
-function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, dict, onStatusChange, onSave, href }: RowProps) {
+function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, dict, statuses, onStatusChange, onSave, href }: RowProps) {
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -334,24 +390,21 @@ function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, dict,
                 if (!next || !statusCell.current?.contains(next)) setMenuOpen(false);
               }}
             >
-              {TASK_STATUSES.map(s => {
-                const m = statusMeta(s);
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={s === current}
-                    tabIndex={-1}
-                    className="sk-tasks__menu-item"
-                    data-status={s}
-                    onClick={() => void pick(s)}
-                  >
-                    <GameIcon slug={m.icon} size={14} color={m.color} />
-                    <span>{t(`kit.tasks.status.${s}` as KitKey)}</span>
-                  </button>
-                );
-              })}
+              {menuStatuses(statuses, current, lang).map(s => (
+                <button
+                  key={s.code}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={s.code === current}
+                  tabIndex={-1}
+                  className="sk-tasks__menu-item"
+                  data-status={s.code}
+                  onClick={() => void pick(s.code)}
+                >
+                  <GameIcon slug={s.icon} size={14} color={s.color} />
+                  <span>{s.label}</span>
+                </button>
+              ))}
             </div>
           )}
         </td>
