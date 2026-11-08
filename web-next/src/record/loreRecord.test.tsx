@@ -89,7 +89,7 @@ describe('S5-01 · шапка паспорта спринта', () => {
   it('статус словами локали, задачи 1/3, просрочено, свежесть', () => {
     view();
     const line = screen.getByTestId('kit-facts');
-    expect(line.textContent).toContain('Активно'); // код плана active (status_raw in_progress → planStatusOf)
+    expect(line.textContent).toContain('В работе'); // код плана active (status_raw in_progress → planStatusOf), подпись как v1
     expect(line.textContent).toContain('1/3');
     expect(line.textContent).toContain('Просрочено на 2 дн');
     expect(line.textContent).toContain('1 дн назад');
@@ -104,7 +104,7 @@ describe('S5-01 · шапка паспорта спринта', () => {
   it('английская локаль: статус и факты по-английски', () => {
     view('en');
     const line = screen.getByTestId('kit-facts');
-    expect(line.textContent).toContain('Active');
+    expect(line.textContent).toContain('In progress');
     expect(line.textContent).toContain('Overdue by 2 d');
   });
 });

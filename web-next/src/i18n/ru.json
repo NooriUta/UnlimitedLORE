@@ -158,7 +158,7 @@
   "record.status.fixed": "Исправлено",
   "record.status.reached": "Достигнуто",
   "record.status.accepted": "Принято",
-  "record.status.active": "Активно",
+  "record.status.active": "В работе",
   "record.status.in_progress": "В работе",
   "record.status.upcoming": "Скоро",
   "record.status.partial": "Частично",
