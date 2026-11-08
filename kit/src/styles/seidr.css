@@ -1554,6 +1554,8 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-prose li { margin-bottom: .2em; }
 .sk-prose strong { color: var(--t1); font-weight: 600; }
 .sk-prose a { color: var(--acc); text-decoration: underline; text-underline-offset: 2px; }
+/* Вики-ссылка [[ID]] — рамкой, без скобок (владелица 08.11). */
+.sk-wref { display: inline-block; padding: 0 5px; border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent); border-radius: var(--r-sm); background: color-mix(in srgb, var(--acc) 8%, transparent); color: var(--acc); font-family: var(--mono); font-size: .9em; line-height: 1.35; white-space: nowrap; }
 .sk-prose blockquote { margin: 0 0 .7em; padding: 2px 10px; border-left: 3px solid var(--acc); background: var(--bg1); }
 .sk-prose code { padding: 0 4px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 3px; font-family: var(--mono); font-size: var(--fs-sm); }
 .sk-prose pre { margin: 0 0 .8em; padding: 10px 12px; overflow-x: auto; background: var(--bg0); border: 1px solid var(--bd); border-radius: var(--r-md); }
