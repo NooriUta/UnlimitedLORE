@@ -381,6 +381,7 @@
   "kit.record.facts.freshToday": "Updated today",
   "kit.record.facts.freshUnknown": "Freshness unknown",
   "kit.record.pager.label": "Page through list records",
+  "kit.record.crumbs.label": "Path to the record",
   "kit.record.pager.pos": "{pos} of {total}",
   "kit.record.pager.missing": "not in the list of {total}",
   "kit.record.pager.prev": "Previous: {id}",

@@ -94,7 +94,10 @@ describe('S5-04 · RecordReader — текст, листание, свойств
   it('свёрнуто: ушко «Свойства» с aria-expanded=false, содержимое не отрисовано', () => {
     const onAside = vi.fn();
     reader(false, onAside);
-    const ear = screen.getByRole('button', { name: 'Свойства' });
+    // S4-28: «Свойства» — и ушко, и кнопка в строке над записью; управляют одной колонкой.
+    const [bar, ear] = screen.getAllByRole('button', { name: 'Свойства' });
+    expect(bar.getAttribute('aria-controls')).toBe(ear.getAttribute('aria-controls'));
+    expect(bar.getAttribute('aria-expanded')).toBe(ear.getAttribute('aria-expanded'));
     expect(ear.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('исполнитель: agent-1')).toBeNull();
     fireEvent.click(ear);
@@ -104,7 +107,10 @@ describe('S5-04 · RecordReader — текст, листание, свойств
   it('раскрыто: колонка свойств связана с ушком (aria-controls) и подписана', () => {
     const onAside = vi.fn();
     reader(true, onAside);
-    const ear = screen.getByRole('button', { name: 'Свойства' });
+    // S4-28: «Свойства» — и ушко, и кнопка в строке над записью; управляют одной колонкой.
+    const [bar, ear] = screen.getAllByRole('button', { name: 'Свойства' });
+    expect(bar.getAttribute('aria-controls')).toBe(ear.getAttribute('aria-controls'));
+    expect(bar.getAttribute('aria-expanded')).toBe(ear.getAttribute('aria-expanded'));
     expect(ear.getAttribute('aria-expanded')).toBe('true');
     const aside = screen.getByRole('complementary', { name: 'Свойства' });
     expect(ear.getAttribute('aria-controls')).toBe(aside.id);

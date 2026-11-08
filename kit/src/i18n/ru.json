@@ -381,6 +381,7 @@
   "kit.record.facts.freshToday": "Обновлено сегодня",
   "kit.record.facts.freshUnknown": "Свежесть неизвестна",
   "kit.record.pager.label": "Листать записи списка",
+  "kit.record.crumbs.label": "Путь к записи",
   "kit.record.pager.pos": "{pos} из {total}",
   "kit.record.pager.missing": "нет в списке из {total}",
   "kit.record.pager.prev": "Предыдущая: {id}",

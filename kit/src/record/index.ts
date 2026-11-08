@@ -18,6 +18,8 @@ export * from './RecordHistory';
 export * from './history';
 // Чтение записи целиком: листалка «‹ x из y ›» и свойства в ушке (SPRINT_UXR_S5_RECORD_TASKS/S5-04).
 export * from './RecordPager';
+// Крошки записи — слева в строке над записью (S4-28).
+export * from './RecordCrumbs';
 export * from './RecordReader';
 export { egoGraph, edgeColor, toCssColor, typesAround, verdictTone, type EgoGraph, type EgoNode, type EgoOptions, type EgoSector } from './graph';
 export * from './graphState';
