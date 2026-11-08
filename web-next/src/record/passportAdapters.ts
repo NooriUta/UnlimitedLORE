@@ -83,7 +83,11 @@ async function loadSprint(id: string, lang: KitLang, slice: Slice, now: string):
         { key: 'no_release', title: f(lang, 'noRelease'), type: 'text', section: appT(lang, 'pp.sec.plan') },
         { key: 'components', title: f(lang, 'components'), type: 'ref', section: appT(lang, 'pp.sec.modules') },
       ],
-      tabs: [{ key: 'tasks', title: appT(lang, 'pp.tab.tasks'), render: (r, ctx) => ctx.data.edges.filter(e => e.from === r.id && e.type === 'HAS_TASK').map(e => ctx.data.records.find(x => x.id === e.to)?.title ?? e.to).join(' · ') || appT(lang, 'pp.noTasks') }],
+      // Связи по видам UML (D-2026-LORE-RECORD-RELATION-UML): задачи — композиция (дочки спринта).
+      relations: [
+        { key: 'tasks', label: appT(lang, 'pp.tab.tasks'), relation: 'composition', rel: 'HAS_TASK', dir: 'out' },
+        { key: 'projects', label: f(lang, 'projects'), relation: 'attribute', rel: 'BELONGS_TO_PROJECT', dir: 'out' },
+      ],
     },
     Task: { title: appT(lang, 'pp.kind.task'), icon: 'checkbox-tree' },
   });
@@ -165,7 +169,17 @@ async function loadAdr(id: string, lang: KitLang, slice: Slice, now: string): Pr
         { key: 'tags', title: f(lang, 'tags'), type: 'text' },
         { key: 'file_path', title: f(lang, 'file'), type: 'text' },
       ],
-      tabs: [{ key: 'decisions', title: appT(lang, 'pp.tab.decisions'), render: () => decRecords.map(d => d.title).join(' · ') || appT(lang, 'pp.noDecisions') }],
+      // Связи по видам UML: решения — агрегация; зависимости — ассоциация («просто ассоциация — это
+      // зависимости»), «заменяет / заменён» — тоже ассоциация (владелица 08.11); JUSTIFIED_BY — реализация.
+      relations: [
+        { key: 'decisions', label: appT(lang, 'pp.tab.decisions'), relation: 'aggregation', rel: 'DECIDED_IN', dir: 'in' },
+        { key: 'dependsOn', label: appT(lang, 'pp.rel.dependsOn'), relation: 'association', rel: 'DEPENDS_ON', dir: 'out' },
+        { key: 'blocks', label: appT(lang, 'pp.rel.blocks'), relation: 'association', rel: 'DEPENDS_ON', dir: 'in' },
+        { key: 'supersedes', label: appT(lang, 'pp.rel.supersedes'), relation: 'association', rel: 'SUPERSEDES', dir: 'out' },
+        { key: 'supersededBy', label: appT(lang, 'pp.rel.supersededBy'), relation: 'association', rel: 'SUPERSEDES', dir: 'in' },
+        { key: 'justifies', label: appT(lang, 'pp.rel.justifies'), relation: 'realization', rel: 'JUSTIFIED_BY', dir: 'in' },
+        { key: 'projects', label: f(lang, 'projects'), relation: 'attribute', rel: 'BELONGS_TO_PROJECT', dir: 'out' },
+      ],
     },
     decision: { title: appT(lang, 'pp.kind.decision'), icon: 'gavel' },
   });

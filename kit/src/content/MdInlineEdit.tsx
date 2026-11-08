@@ -158,6 +158,15 @@ export function MdInlineEdit({
   if (!editing) {
     return (
       <section className={['sk-mdedit', className].filter(Boolean).join(' ')} data-state="read">
+        {/* S4-CONTENT-V4 (прототип v4): как править — строкой над текстом; «Режим исходника» — сразу в код. */}
+        {onSave && (
+          <div className="sk-mdedit__hint">
+            <span className="sk-mdedit__hint-text">{t('kit.mdedit.hint')}</span>
+            <button type="button" className="sk-mdedit__src-btn" onClick={() => { choose('code'); open(); }}>
+              {t('kit.mdedit.sourceMode')}
+            </button>
+          </div>
+        )}
         {onSave && (
           <IconButton
             ref={penRef}

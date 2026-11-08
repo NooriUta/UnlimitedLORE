@@ -31,13 +31,15 @@ const tabNames = () => screen.getAllByRole('tab').map(t => t.textContent?.replac
 describe('по умолчанию (владелица 08.11, «пока как в MVP») — вычисляемое вкладками основного блока', () => {
   it.each(['bottom', 'full'] as const)('%s: колонки слева нет; связи, граф, журнал — вкладками', p => {
     const { container } = view(p);
-    expect(tabNames()).toEqual(['Текст', 'Связи', 'Граф', 'Журнал']);
+    // Прототип v4 (S4-CONTENT-V4, 08.11): первая вкладка записи — «Контент», не «Текст».
+    expect(tabNames()).toEqual(['Контент', 'Связи', 'Граф', 'Журнал']);
     expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
   });
 });
 
 describe('снизу / на весь экран — свойства колонкой справа (владелица 08.11)', () => {
-  it.each(['bottom', 'full'] as const)('%s: контент и свойства видны сразу, без переключения вкладок', p => {
+  // во весь экран свойства свёрткой и рейкой (S4-CONTENT-V4, fullV4.test.tsx)
+  it.each(['bottom'] as const)('%s: контент и свойства видны сразу, без переключения вкладок', p => {
     const { container } = view(p);
     expect(screen.getByText('Текст спеки')).toBeTruthy();
     const side = container.querySelector('aside[data-zone="props"]') as HTMLElement;
@@ -47,13 +49,13 @@ describe('снизу / на весь экран — свойства колон�
     expect(container.querySelector('.sk-rec__content')?.nextElementSibling).toBe(side);
   });
   it('на другой вкладке колонка свойств остаётся', () => {
-    const { container } = view('full', 'links');
+    const { container } = view('bottom', 'links');
     expect(container.querySelector('aside[data-zone="props"] [data-testid="kit-fields"]')).not.toBeNull();
   });
 });
 
 describe('aroundAs="column": снизу / на весь экран — вычисляемое колонкой слева', () => {
-  it.each(['bottom', 'full'] as const)('%s: слева — связи, граф, журнал; в центре — Текст; справа — свойства', p => {
+  it.each(['bottom'] as const)('%s: слева — связи, граф, журнал; в центре — Текст; справа — свойства', p => {
     const { container } = view(p, 'overview', 'column');
     expect(screen.queryAllByRole('tab')).toHaveLength(0); // одна вкладка — ряд не рисуем
     expect(screen.getByText('Текст спеки')).toBeTruthy();

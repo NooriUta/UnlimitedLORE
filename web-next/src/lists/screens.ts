@@ -90,7 +90,9 @@ function sprintsConfig(lang: KitLang): KitConfig {
       ]),
     },
     list: {
-      views: ['list', 'board'],
+      // S4-22: один набор данных — любой вид; таймлайн по плановым датам спринта.
+      views: ['list', 'cards', 'board', 'feed', 'timeline'],
+      timeline: { start: 'planned_start', end: 'planned_end' },
       // S4-27: вид раздела по умолчанию — «открытые, закрытые внизу» (прототип v4).
       showClosed: 'below',
       quick: [
@@ -101,7 +103,8 @@ function sprintsConfig(lang: KitLang): KitConfig {
       ],
       filters: ['status', 'project', 'components', 'release'],
       groupings: ['status', 'project', 'priority', 'milestone'],
-      columns: ['title+id', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
+      // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
+      columns: ['id', 'title', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
     },
   };
 }
@@ -130,7 +133,7 @@ function adrsConfig(lang: KitLang): KitConfig {
       ]),
     },
     list: {
-      views: ['list', 'board'],
+      views: ['list', 'cards', 'board', 'feed'],
       showClosed: 'below',
       quick: [
         { id: 'proposed', title: appT(lang, 'lists.status.proposed'), filter: { status: 'proposed' } },
@@ -139,7 +142,7 @@ function adrsConfig(lang: KitLang): KitConfig {
       ],
       filters: ['status', 'component', 'project'],
       groupings: ['status', 'component', 'project'],
-      columns: ['title+id', 'status', 'component', 'decisions', 'updated_at'],
+      columns: ['id', 'title', 'status', 'component', 'decisions', 'updated_at'],
     },
   };
 }

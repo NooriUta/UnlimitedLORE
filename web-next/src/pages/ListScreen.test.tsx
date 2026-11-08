@@ -117,3 +117,16 @@ describe('ListScreen — ADR и честные состояния', () => {
     await waitFor(() => expect(container.querySelector('[data-state="empty"]')).toBeTruthy());
   });
 });
+
+describe('код и название — разными колонками, как в v4 (владелица 08.11)', () => {
+  it('спринты: первая колонка — ID, вторая — Название; ячейки раздельные', async () => {
+    const fetchImpl = vi.fn(async () => json(200, { rows: sprints }));
+    const { container } = render(<ListScreen screen="sprints" fetchImpl={fetchImpl} urlState={false} />);
+    await waitFor(() => expect(rowIds(container).length).toBeGreaterThan(0));
+    const heads = [...container.querySelectorAll('th.sk-list__th')].map(th => th.className.match(/sk-list__c-(\S+)/)?.[1]).filter(Boolean); // без колонки раскрытия ▸
+    expect(heads.slice(0, 2)).toEqual(['id', 'title']);
+    const row = container.querySelector('[data-record-id="S_A"]')!;
+    expect(row.querySelector('td.sk-list__c-id')!.textContent).toBe('S_A');
+    expect(row.querySelector('td.sk-list__c-title')!.textContent).toBe('Альфа');
+  });
+});
