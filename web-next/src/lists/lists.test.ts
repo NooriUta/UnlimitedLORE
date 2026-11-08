@@ -84,3 +84,20 @@ describe('конфиги экранов списков', () => {
     }
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-27: в прототипе v4 вид раздела по умолчанию —
+// «открытые, закрытые внизу». kit нейтрален (умолчание «все»), поэтому режим
+// задают конфиги разделов LORE. Что закрыто, решает словарь: у ADR «принято» — открытое.
+describe('конфиги разделов: закрытые — внизу, свёрнуты', () => {
+  it('спринты и ADR включают list.showClosed = below', () => {
+    for (const id of ['sprints', 'adrs'] as const) {
+      expect(LIST_SCREENS[id].config('ru').list?.showClosed, id).toBe('below');
+    }
+  });
+  it('у ADR «принято» и «предложено» — открытые категории, «отклонено» — закрытая', () => {
+    const cat = (code: string) => LIST_SCREENS.adrs.config('ru').statuses.items.find(s => s.code === code)?.category;
+    expect(cat('accepted')).toBe('active');
+    expect(cat('proposed')).toBe('active');
+    expect(cat('rejected')).toBe('cancelled');
+  });
+});

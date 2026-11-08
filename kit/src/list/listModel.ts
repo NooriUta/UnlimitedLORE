@@ -4,7 +4,7 @@
 //
 // Бюджет — правила SPRINT_UXR_S9_SCALE_OPT: S9-01 «не больше 50 строк на
 // группу · ещё N», S9-02 «при >20 группах — топ-10 + Прочие, свёрнуто».
-import type { KitConfig, KitFilter, KitMeta, KitRecord } from '../core/contract';
+import type { KitConfig, KitFilter, KitMeta, KitRecord, KitShowClosed } from '../core/contract';
 
 export const LIST_BUDGET = { perGroup: 50, maxGroups: 20, topGroups: 10 } as const;
 
@@ -197,15 +197,20 @@ export interface ListState {
   ops: Record<string, FilterOp>;
   /** Текст в ID или названии — внутри этого списка (S4-05). */
   text: string;
+  /** Подгруппа — вторая ступень группировки (S4-26); только в списке, без группы не действует. */
+  group2?: string | null;
+  /** Режим закрытых (S4-27); null — из конфига (list.showClosed), иначе «все». */
+  closed?: KitShowClosed | null;
 }
 
 export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
 
 /**
  * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
- * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст).
+ * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
+ * lg2 (подгруппа, S4-26).
  */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt'] as const;
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
@@ -219,6 +224,8 @@ export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[numb
     lf: f.length ? JSON.stringify(Object.fromEntries(f)) : null,
     lo: o.length ? JSON.stringify(Object.fromEntries(o)) : null,
     lt: text.trim() ? text : null,
+    lc: s.closed ?? null,
+    lg2: s.group && s.group2 && s.group2 !== s.group ? s.group2 : null,
   };
 }
 
@@ -260,7 +267,62 @@ export function readListState(p: URLSearchParams): ListState {
     filters,
     ops,
     text: p.get('lt') ?? '',
+    closed: isShowClosed(p.get('lc')) ? (p.get('lc') as KitShowClosed) : undefined,
+    group2: p.get('lg2') ?? undefined,
   };
+}
+
+/* ---------- закрытые (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-27) ---------- */
+
+export const SHOW_CLOSED_MODES: readonly KitShowClosed[] = ['below', 'all', 'days30', 'hide'];
+/** Умолчание kit — «все»: kit нейтрален для чужих приложений; разделы LORE включают «внизу» конфигом. */
+export const DEFAULT_SHOW_CLOSED: KitShowClosed = 'all';
+const CLOSED_CATEGORIES = new Set(['done', 'cancelled']);
+const DAY_MS = 86_400_000;
+
+export function isShowClosed(v: unknown): v is KitShowClosed {
+  return typeof v === 'string' && (SHOW_CLOSED_MODES as readonly string[]).includes(v);
+}
+
+/** Режим закрытых: состояние списка важнее конфига, конфиг — умолчания kit. */
+export function showClosedOf(state: Pick<ListState, 'closed'>, config: KitConfig): KitShowClosed {
+  return state.closed ?? config.list?.showClosed ?? DEFAULT_SHOW_CLOSED;
+}
+
+export interface ClosedSplit {
+  /** Записи основной выдачи (в below — только открытые). */
+  open: KitRecord[];
+  /** Закрытые для группы «Закрытые N» — только в режиме below. */
+  closed: KitRecord[];
+  /** Сколько закрытых убрано режимом (hide, days30) — показывается числом. */
+  hidden: number;
+}
+
+/**
+ * Делит выдачу по режиму закрытых. Закрытые — категории done и cancelled
+ * словаря статусов (у ADR «принято» — active, это решает конфиг). «За 30 дней»
+ * считаются от момента выдачи (meta.generated_at), а не от часов браузера:
+ * один ответ сервера — один список. Нет даты у закрытой записи — она не
+ * «свежая», в days30 скрывается и попадает в счётчик скрытых.
+ */
+export function splitClosed(records: readonly KitRecord[], mode: KitShowClosed, config: KitConfig, asOf?: string): ClosedSplit {
+  const cat = new Map(config.statuses.items.map(s => [s.code, s.category]));
+  const isClosed = (r: KitRecord) => CLOSED_CATEGORIES.has(cat.get(r.status) ?? '');
+  if (mode === 'all') return { open: [...records], closed: [], hidden: 0 };
+  const open: KitRecord[] = [];
+  const closed: KitRecord[] = [];
+  let hidden = 0;
+  const now = asOf ? Date.parse(asOf) : NaN;
+  for (const r of records) {
+    if (!isClosed(r)) { open.push(r); continue; }
+    if (mode === 'below') { closed.push(r); continue; }
+    if (mode === 'days30') {
+      const t = r.updated_at ? Date.parse(r.updated_at) : NaN;
+      if (Number.isFinite(now) && Number.isFinite(t) && now - t <= 30 * DAY_MS) { open.push(r); continue; }
+    }
+    hidden++;
+  }
+  return { open, closed, hidden };
 }
 
 /* ---------- движок списка v2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-04) ---------- */

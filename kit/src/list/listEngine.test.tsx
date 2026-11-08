@@ -88,9 +88,11 @@ describe('строка [Фильтр][Группировка][Порядок]', 
 
   it('группировка применяется; значение видно в самом контроле, текстом не дублируется (S4-21)', () => {
     const { container } = render(<ListView config={cfg} data={data(rs())} urlState={false} />);
-    fireEvent.change(screen.getByLabelText('Группировка'), { target: { value: 'area' } });
+    // S4-26: группировка — поповер со значением в кнопке.
+    fireEvent.click(screen.getByRole('button', { name: /^Группировка:/ }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Группировка' })).getByRole('radio', { name: 'Область' }));
     expect(container.querySelectorAll('[data-group-key]')).toHaveLength(2);
-    expect((screen.getByLabelText('Группировка') as HTMLSelectElement).value).toBe('area');
+    expect(screen.getByRole('button', { name: /^Группировка:/ }).textContent).toContain('Область');
     expect(screen.queryByTestId('kit-list-desc')).toBeNull();
   });
 });
