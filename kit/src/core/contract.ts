@@ -4,10 +4,21 @@
 // (батч-поставка сливает одинаковые копии). Схема, валидатор и примеры — рядом:
 // schema/*.schema.json, validate.ts, kit/demo/*.config.ts.
 import type * as React from 'react';
+import type { LoreStatusCategory } from './statusAxis';
 
 /** S4-27: закрытые (категории done/cancelled) — внизу свёрнуто / все / за 30 дней / скрыть. */
 export type KitShowClosed = 'below' | 'all' | 'days30' | 'hide';
-export interface KitConfig { modules: {id:string; title:string; icon:string; status?:'planned'|'active'}[]; menu: {groups:{id:string; title:string; tone?:string; items:{id:string; title:string; icon?:string; view?:string}[]}[]; myViews?:boolean; recent?:boolean}; kinds: Record<string, KindConfig>; edges?: Record<string,{label:string; color:string; layer?:'structural'}>; graph?: {depth:1|2|3; limit:number; colorBy?:'verdict'|'type'}; statuses: {items:{code:string; title:string; category:'todo'|'active'|'done'|'cancelled'; icon:string; color:string; hotkey?:string; allow?:string[]}[]; selfApprove?:boolean; undo?:boolean; bulk?:boolean}; roles?: Record<string,{canEdit:boolean; canStatus:boolean}>; verdict?: (r:KitRecord, ctx:KitCtx)=>KitVerdict; list?: {views:('list'|'cards'|'board'|'tree'|'feed'|'timeline')[]; /** Вид «Таймлайн» (S4-22): поля даты начала и конца (ключи fields). */ timeline?:{start:string; end?:string}; quick?:{id:string; title:string; filter:KitFilter}[]; filters?:string[]; groupings?:string[]; columns?:string[]; tree?:{parent:string; order:string; rollup?:'verdict'|'status'}; showClosed?:KitShowClosed}; palette?: {commands?:{id:string; title:string; run:(ctx:KitCtx)=>void}[]}; hooks?: KitHooks }
+export interface KitConfig { modules: {id:string; title:string; icon:string; status?:'planned'|'active'}[]; menu: {groups:{id:string; title:string; tone?:string; items:{id:string; title:string; icon?:string; view?:string}[]}[]; myViews?:boolean; recent?:boolean}; kinds: Record<string, KindConfig>; edges?: Record<string,{label:string; color:string; layer?:'structural'}>; graph?: {depth:1|2|3; limit:number; colorBy?:'verdict'|'type'}; statuses: {items:{code:string; title:string; category:KitStatusCategoryInput; icon:string; color:string; hotkey?:string; allow?:string[]}[]; selfApprove?:boolean; undo?:boolean; bulk?:boolean}; roles?: Record<string,{canEdit:boolean; canStatus:boolean}>; verdict?: (r:KitRecord, ctx:KitCtx)=>KitVerdict; list?: {views:('list'|'cards'|'board'|'tree'|'feed'|'timeline')[]; /** Вид «Таймлайн» (S4-22): поля даты начала и конца (ключи fields). */ timeline?:{start:string; end?:string}; quick?:{id:string; title:string; filter:KitFilter}[]; filters?:string[]; groupings?:string[]; columns?:string[]; tree?:{parent:string; order:string; rollup?:'verdict'|'status'}; showClosed?:KitShowClosed}; palette?: {commands?:{id:string; title:string; run:(ctx:KitCtx)=>void}[]}; hooks?: KitHooks }
+/**
+ * Категория статуса в конфигурации (S4-STATUS-AXIS-CONFIG).
+ *
+ * Принимаем ось владелицы (D-2026-UXR-STATUS-AXIS, шесть значений) и прежние
+ * четыре значения kit — конфиги, написанные до решения, должны продолжать
+ * работать. К оси приводит `normalizeAxisCategory`; сужать её нельзя, иначе
+ * «действует» молча станет «завершено».
+ */
+export type KitStatusCategoryInput = LoreStatusCategory | 'todo' | 'active' | 'done' | 'cancelled';
+
 /**
  * Статья справочника LORE (срез `dictionary`, S4-36). `task_type` даёт иконку
  * и цвет, `work_class` — код и цвет. Своих иконок и цветов kit не выдумывает
