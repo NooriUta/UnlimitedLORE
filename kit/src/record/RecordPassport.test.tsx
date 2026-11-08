@@ -31,7 +31,8 @@ const tabNames = () => screen.getAllByRole('tab').map(t => t.textContent?.replac
 describe('по умолчанию (владелица 08.11, «пока как в MVP») — вычисляемое вкладками основного блока', () => {
   it.each(['bottom', 'full'] as const)('%s: колонки слева нет; связи, граф, журнал — вкладками', p => {
     const { container } = view(p);
-    expect(tabNames()).toEqual(['Текст', 'Связи', 'Граф', 'Журнал']);
+    // Прототип v4 (S4-CONTENT-V4, 08.11): первая вкладка записи — «Контент», не «Текст».
+    expect(tabNames()).toEqual(['Контент', 'Связи', 'Граф', 'Журнал']);
     expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
   });
 });

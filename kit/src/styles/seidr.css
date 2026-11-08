@@ -4005,3 +4005,19 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-ptrig__text,
   .sk-ptrig .sk-kbd { display: none; }
 }
+
+/* S4-CONTENT-V4 (прототип v4): строка-подсказка правки над текстом. */
+.sk-mdedit__hint { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 0 0 8px; font-size: var(--fs-2xs); color: var(--t3); }
+.sk-mdedit__src-btn { font: inherit; font-size: var(--fs-xs); color: var(--t2); background: none; border: 1px solid var(--bd); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+.sk-mdedit__src-btn:hover { color: var(--t1); border-color: var(--acc); }
+
+.sk-mdedit__hint-text { flex: 1 1 auto; min-width: 0; text-align: right; }
+
+/* S4-CONTENT-V4 п.5 (прототип v4): текст записи внизу и во весь экран — колонкой чтения,
+   как режим чтения S5-05 (--read-col ~680 px, кегль --read-fs); в узкой панели справа — как есть. */
+.sk-rec-reader [data-placement='bottom'] .sk-mdedit,
+.sk-rec-reader [data-placement='full'] .sk-mdedit {
+  max-width: var(--read-col);
+  margin-inline: auto;
+  font-size: var(--read-fs, var(--fs-md));
+}

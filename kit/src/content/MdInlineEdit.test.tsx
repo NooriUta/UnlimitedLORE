@@ -174,3 +174,18 @@ describe('S5-06 · MdInlineEdit — правка', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-CONTENT-V4 (прототип v4): над текстом, который можно править,
+// строка-подсказка «как править» и кнопка «Режим исходника» — сразу в код. Без onSave подсказки нет.
+describe('S4-CONTENT-V4 · подсказка правки над текстом', () => {
+  it('при onSave — подсказка и «Режим исходника» открывает правку в коде; без onSave их нет', () => {
+    const { unmount } = render(<KitLangProvider lang="ru"><MdInlineEdit value="Абзац" label="Описание" onSave={vi.fn()} /></KitLangProvider>);
+    expect(screen.getByText(/правка на месте/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Режим исходника' }));
+    expect(modeBtn(/Код/).getAttribute('aria-checked')).toBe('true');
+    unmount();
+    render(<KitLangProvider lang="ru"><MdInlineEdit value="Абзац" label="Описание" /></KitLangProvider>);
+    expect(screen.queryByText(/правка на месте/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Режим исходника' })).toBeNull();
+  });
+});
