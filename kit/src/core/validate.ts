@@ -8,6 +8,7 @@
 // разошлось с контрактом или с конфигом (неизвестный ключ, висячее ребро,
 // returned ≠ числу записей). Ничего не роняется: на любой вход — список.
 import type { KitConfig, KitData } from './contract';
+import { LORE_STATUS_AXIS } from './statusAxis';
 
 export interface KitIssue {
   /** Путь в стиле JS: `statuses.items[0].color`. */
@@ -42,7 +43,14 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d
 const CONFIG_KEYS = ['modules', 'menu', 'kinds', 'edges', 'graph', 'statuses', 'roles', 'verdict', 'list', 'palette', 'hooks'];
 const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at'];
 const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
-const STATUS_CATEGORIES = ['todo', 'active', 'done', 'cancelled'];
+/**
+ * Категории статуса: ось владелицы (D-2026-UXR-STATUS-AXIS, шесть значений)
+ * плюс прежние четыре — старые конфиги должны проходить проверку.
+ *
+ * До S4-STATUS-AXIS-CONFIG здесь были только старые четыре, и конфигурация
+ * с осью из модели не прошла бы проверку вовсе.
+ */
+const STATUS_CATEGORIES = [...LORE_STATUS_AXIS, 'todo', 'active', 'done', 'cancelled'];
 const FIELD_TYPES = ['text', 'md', 'enum', 'ref', 'date', 'number'];
 
 export interface ValidateConfigOptions {
