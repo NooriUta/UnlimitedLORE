@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S4-36 · строка задачи в паспорте спринта — варианты</title>
+<style>
+/* Токены — :root kit/src/styles/seidr.css (тёмная amber-forest). Цвета и шрифты из v1 (S4-25). */
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bd:#42382a;--bdh:#5a4c38;--t1:#ede5d0;--t2:#a6997f;--t3:#7a6f5c;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--dng:#cf6c5e;--inf:#88b8a8;
+--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--r-sm:4px;--r-md:6px;--r-lg:10px;--r-pill:999px;
+--font:Manrope,system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--display:Unbounded,var(--font)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--font);font-size:var(--fs-base);line-height:1.45}
+main{max-width:1240px;margin:0 auto;padding:16px}
+h1.page{font-family:var(--display);font-weight:800;font-size:var(--fs-xl);margin:0 0 4px}
+h2{font-family:var(--display);font-weight:800;font-size:var(--fs-lg);margin:24px 0 6px}
+.lead{color:var(--t2);margin:0 0 14px}
+.note{color:var(--t2);font-size:var(--fs-sm);margin:6px 0 0}
+code,.mono{font-family:var(--mono)}
+.box{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);overflow:auto;padding:10px 12px}
+.scroll{overflow-x:auto}
+
+/* ---------- общие части строки ---------- */
+.row{display:flex;align-items:center;gap:8px;min-height:30px;padding:3px 6px;border-radius:var(--r-sm);white-space:nowrap}
+.row + .row{border-top:1px solid var(--bd)}
+.row:hover{background:var(--bg2)}
+.st{width:14px;height:14px;border-radius:var(--r-sm);flex:0 0 auto}
+.st.wip{background:var(--inf)}.st.done{background:var(--suc)}.st.todo{background:var(--t3)}.st.blk{background:var(--dng)}
+.ic{width:16px;height:16px;flex:0 0 auto;display:grid;place-items:center}
+.ic svg{width:14px;height:14px;display:block}
+.cls{display:inline-flex;align-items:center;height:16px;padding:0 5px;border:1px solid currentColor;border-radius:var(--r-sm);font:700 var(--fs-2xs)/1 var(--mono);letter-spacing:.04em;flex:0 0 auto}
+.cls.enb{color:var(--inf)}.cls.uc{color:var(--acc)}.cls.unknown{color:var(--wrn);border-style:dashed}
+.code{color:var(--acc);font-family:var(--mono);font-size:var(--fs-sm);flex:0 0 auto}
+.ttl{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.who{color:var(--t2);font-size:var(--fs-sm);flex:0 0 auto}
+.eff{color:var(--t1);font-family:var(--mono);font-size:var(--fs-sm);flex:0 0 auto;min-width:46px;text-align:right}
+.sep{color:var(--t3);flex:0 0 auto}
+.initials{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:var(--r-pill);background:var(--bg2);border:1px solid var(--bd);color:var(--t2);font:700 var(--fs-2xs)/1 var(--mono);flex:0 0 auto}
+
+/* ---------- заголовки вариантов ---------- */
+.vhead{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.vname{font-weight:800}
+.vwhy{color:var(--t2);font-size:var(--fs-sm)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;color:var(--t2);font-size:var(--fs-sm)}
+.legend b{color:var(--t1)}
+table.dict{border-collapse:collapse;font-size:var(--fs-sm);margin-top:6px}
+table.dict th,table.dict td{border:1px solid var(--bd);padding:4px 8px;text-align:left}
+table.dict th{color:var(--t2);text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.06em}
+.ask{border-left:2px solid var(--acc);padding:6px 10px;margin:10px 0;background:var(--bg1);border-radius:0 var(--r-sm) var(--r-sm) 0}
+</style></head>
+<body><main>
+
+<h1 class="page">S4-36 · строка задачи в паспорте спринта</h1>
+<p class="lead">Три варианта строки. Иконка типа и плашка класса работы берутся из словаря LORE <code>dictionary</code>, а не придумываются: <code>task_type</code> даёт иконку и цвет, <code>work_class</code> — код и цвет. Значение, которого в словаре нет, показывается честно, а не прячется.</p>
+
+<h2>Как сейчас в v2</h2>
+<div class="box scroll">
+  <div class="row">
+    <span class="st wip"></span>
+    <span class="code">PL-01</span>
+    <span class="ttl">Тестовая база: схема один раз за прогон — первый класс fresh-путь</span>
+    <span class="who">1д 4ч</span><span class="sep">·</span>
+    <span class="who">Claude Code (full)</span><span class="sep">·</span>
+    <span class="who">dev</span>
+  </div>
+</div>
+<p class="note">Тип задачи — простым словом в последней колонке, класса работы нет вовсе. Именно это и доделываем.</p>
+
+<h2>Вариант A — как в v1, дословно</h2>
+<div class="vhead"><span class="vname">A</span><span class="vwhy">всё слева: статус, тип, класс, код — глаз читает строку одним движением, как в старом интерфейсе</span></div>
+<div class="box scroll">
+  <div class="row">
+    <span class="st wip"></span>
+    <span class="ic" title="Тип: разработка"><svg viewBox="0 0 24 24" fill="none" stroke="#a8b860" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 1-5 5L4 17v3h3l5.7-5.7a4 4 0 0 1 5-5l-2.5-2.5z"/></svg></span>
+    <span class="cls enb">ENB</span>
+    <span class="code">PL-01</span>
+    <span class="ttl">Тестовая база: схема один раз за прогон — первый класс fresh-путь</span>
+    <span class="who">omiloreadmin</span><span class="sep">·</span>
+    <span class="who">Claude Code (full)</span>
+    <span class="eff">1д 4ч</span>
+  </div>
+  <div class="row">
+    <span class="st done"></span>
+    <span class="ic" title="Тип: тест"><svg viewBox="0 0 24 24" fill="none" stroke="#7dbf78" stroke-width="2" stroke-linecap="round"><path d="M9 3h6M10 3v6L5 19a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-10V3"/></svg></span>
+    <span class="cls uc">UC</span>
+    <span class="code">PL-02</span>
+    <span class="ttl">Бэкенд-CI на две джобы: «сервер» и «накат схемы»</span>
+    <span class="who">omiloreadmin</span><span class="sep">·</span>
+    <span class="who">Claude Code (full)</span>
+    <span class="eff">1д</span>
+  </div>
+  <div class="row">
+    <span class="st blk"></span>
+    <span class="ic" title="Тип «migration» в словаре не найден"><svg viewBox="0 0 24 24" fill="none" stroke="#d4922a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M12 8v5M12 16h.01"/></svg></span>
+    <span class="cls unknown" title="Класса «ops-x» нет в словаре work_class">OPS-X</span>
+    <span class="code">PL-10</span>
+    <span class="ttl">Препрод не должен получать root ArcadeDB — своя учётка</span>
+    <span class="who">omiloreadmin</span><span class="sep">·</span>
+    <span class="who">Claude Code (full)</span>
+    <span class="eff">4ч</span>
+  </div>
+</div>
+<p class="note">Третья строка — тот самый честный случай: значения <code>migration</code> и <code>ops-x</code> в словаре нет. Иконка становится пунктирным знаком вопроса, плашка — пунктирной, в подсказке написано прямо: «нет в словаре». Строка не притворяется, что всё в порядке, и не прячет задачу.</p>
+
+<h2>Вариант B — исполнитель инициалами</h2>
+<div class="vhead"><span class="vname">B</span><span class="vwhy">то же, но имена свёрнуты в кружок — строка короче, на узком экране название не обрезается</span></div>
+<div class="box scroll">
+  <div class="row">
+    <span class="st wip"></span>
+    <span class="ic" title="Тип: разработка"><svg viewBox="0 0 24 24" fill="none" stroke="#a8b860" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 1-5 5L4 17v3h3l5.7-5.7a4 4 0 0 1 5-5l-2.5-2.5z"/></svg></span>
+    <span class="cls enb">ENB</span>
+    <span class="code">PL-01</span>
+    <span class="ttl">Тестовая база: схема один раз за прогон — первый класс fresh-путь</span>
+    <span class="initials" title="Исполнитель: Claude Code (full)">CC</span>
+    <span class="initials" title="Ревьюер: omiloreadmin">OA</span>
+    <span class="eff">1д 4ч</span>
+  </div>
+  <div class="row">
+    <span class="st done"></span>
+    <span class="ic" title="Тип: тест"><svg viewBox="0 0 24 24" fill="none" stroke="#7dbf78" stroke-width="2" stroke-linecap="round"><path d="M9 3h6M10 3v6L5 19a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-10V3"/></svg></span>
+    <span class="cls uc">UC</span>
+    <span class="code">PL-02</span>
+    <span class="ttl">Бэкенд-CI на две джобы: «сервер» и «накат схемы»</span>
+    <span class="initials" title="Исполнитель: Claude Code (full)">CC</span>
+    <span class="initials" title="Ревьюер: omiloreadmin">OA</span>
+    <span class="eff">1д</span>
+  </div>
+</div>
+<p class="note">Минус честный: инициалы «CC» и «OA» надо навести, чтобы понять, кто это. На телефоне выигрывает, на большом экране теряет.</p>
+
+<h2>Вариант C — класс словом, без плашки</h2>
+<div class="vhead"><span class="vname">C</span><span class="vwhy">класс работы цветным словом, без рамки — тише, меньше «пилюль» в строке</span></div>
+<div class="box scroll">
+  <div class="row">
+    <span class="st wip"></span>
+    <span class="ic" title="Тип: разработка"><svg viewBox="0 0 24 24" fill="none" stroke="#a8b860" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 1-5 5L4 17v3h3l5.7-5.7a4 4 0 0 1 5-5l-2.5-2.5z"/></svg></span>
+    <span class="code">PL-01</span>
+    <span class="ttl">Тестовая база: схема один раз за прогон — первый класс fresh-путь</span>
+    <span class="who" style="color:var(--inf);font-family:var(--mono)">enb</span><span class="sep">·</span>
+    <span class="who">Claude Code (full)</span>
+    <span class="eff">1д 4ч</span>
+  </div>
+</div>
+<p class="note">Спокойнее, но класс работы перестаёт цепляться взглядом — а в v1 он как раз был заметным якорем слева.</p>
+
+<h2>Что приходит из словаря</h2>
+<table class="dict">
+  <tr><th>Словарь</th><th>Что берём</th><th>Куда ставим</th></tr>
+  <tr><td><code>task_type</code></td><td>иконка + цвет</td><td>значок слева, подпись — в подсказке и для чтения с экрана</td></tr>
+  <tr><td><code>work_class</code></td><td>код + цвет</td><td>плашка <span class="cls enb">ENB</span> после значка</td></tr>
+  <tr><td>—</td><td>значения нет в словаре</td><td>пунктир + прямая подсказка «нет в словаре»</td></tr>
+</table>
+<p class="note">Своих иконок и цветов не придумываю: правило S4-25 — только из v1 и словарей LORE.</p>
+
+<div class="ask">
+  <b>Что выбрать.</b> Моя рекомендация — <b>вариант A</b>: он повторяет v1, а значит тебе не придётся переучивать глаз, и класс работы остаётся заметным якорем слева. Вариант B взять как поведение на узком экране: те же данные, но имена сворачиваются в инициалы. Вариант C предлагаю не брать — он теряет то, ради чего и затевалось.
+</div>
+
+<p class="note">Прототип самодостаточный: это один файл, без сборки и без обращения к серверу. Данные в нём — из твоего скрина спринта SPRINT_LORE_PIPELINE_HOST.</p>
+
+</main></body></html>
