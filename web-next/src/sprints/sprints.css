@@ -1,21 +1,6 @@
-/* Экран «Спринты» v2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-09). Только токены
-   Seiðr; цели касания — через --tap kit (≥44px на сенсоре). */
-.sprints-page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  padding: var(--pad-y) var(--pad-x);
-  min-width: 0;
-}
-.sprints-page__title {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: var(--fs-xl);
-  letter-spacing: .02em;
-  text-transform: uppercase;
-  color: var(--t1);
-}
+/* Задачи в раскрытой строке спринта (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-09). Только токены
+   Seiðr; цели касания — через --tap kit (≥44px на сенсоре). Экран «Спринты» —
+   общий ListScreen (S4-22), своей разметки страницы больше нет. */
 .sprint-tasks__list {
   display: flex;
   flex-direction: column;

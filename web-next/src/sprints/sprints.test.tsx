@@ -14,7 +14,6 @@ import { createLoreClient, type LoreClient } from './loreClient';
 import { STATUS_MATCH, planStatusOf, PLAN_STATUSES } from './taskStatus';
 import { countProgress, loadSprintProgress } from './sprintProgress';
 import { SprintTasks } from './SprintTasks';
-import { SprintsPage } from './SprintsPage';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -162,39 +161,5 @@ describe('маршрут /sprints', () => {
   });
 });
 
-describe('экран «Спринты»: колонка «задачи x/y» и раскрытие', () => {
-  it('x/y в строке спринта, раскрытие показывает задачи первыми', async () => {
-    const f = fakeFetch(url => {
-      const slice = url.pathname.split('/').pop();
-      if (slice === 'sprints') {
-        return jsonRes({ rows: [
-          { sprint_id: 'SP', name: 'Спринт SP', status_raw: '🔄 IN PROGRESS' },
-          { sprint_id: 'SQ', name: 'Спринт SQ', status_raw: '✅ DONE' },
-        ], page: { limit: 500, offset: 0, total: 2, has_more: false } });
-      }
-      if (slice === 'tasks_of_sprints_batch') {
-        return jsonRes({ rows: [task('SP', 'T1', '✅ DONE'), task('SP', 'T2', '📋 PLANNED'), task('SQ', 'T1', '✅ DONE')] });
-      }
-      return jsonRes({ rows: [task('SP', 'T1', '✅ DONE'), task('SP', 'T2', '📋 PLANNED')] });
-    });
-    const { container } = render(<SprintsPage client={client(f)} urlState={false} />);
-    await waitFor(() => expect(container.querySelector('[data-record-id="SP"] [data-progress="ok"]')).toBeTruthy());
-    expect(screen.getByRole('columnheader', { name: 'Задачи' })).toBeTruthy();
-    expect(container.querySelector('[data-record-id="SP"] [data-progress]')!.textContent).toContain('1/2');
-    expect(container.querySelector('[data-record-id="SQ"] [data-progress="complete"]')!.textContent).toContain('1/1');
-
-    // одно касание — раскрыть; задачи — первым блоком раскрытой строки
-    fireEvent.click(screen.getByRole('button', { name: 'Раскрыть: Спринт SP' }));
-    const xrow = container.querySelector('[data-expand-of="SP"] td')!;
-    const tasks = await within(xrow as HTMLElement).findByRole('list', { name: 'Задачи спринта SP' });
-    // задачи — первым блоком раскрытой строки
-    expect(xrow.firstElementChild?.getAttribute('data-sprint-tasks')).toBe('SP');
-    expect(xrow.firstElementChild?.firstElementChild).toBe(tasks);
-  });
-
-  it('сбой списка спринтов — ошибка, а не «пусто»', async () => {
-    const f = fakeFetch(() => jsonRes({ error: 'LORE_UPSTREAM', detail: 'down' }, 502));
-    render(<SprintsPage client={client(f)} urlState={false} />);
-    expect(await screen.findByRole('button', { name: /Повторить/ })).toBeTruthy();
-  });
-});
+// Экран «Спринты» (x/y, раскрытие, сбой списка) — теперь общий ListScreen:
+// паритет — web-next/src/pages/ListScreen.sprints.test.tsx (S4-22).

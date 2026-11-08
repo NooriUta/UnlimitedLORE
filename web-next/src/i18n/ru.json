@@ -92,6 +92,7 @@
   "lists.field.component": "Компонент",
   "lists.field.release": "Релиз",
   "lists.field.milestone": "Веха",
+  "lists.field.tasks": "Задачи",
   "lists.field.priority": "Приоритет",
   "lists.field.tags": "Теги",
   "lists.field.decisions": "Решений",
