@@ -438,6 +438,8 @@
   "kit.tasks.col.executor": "Исполнитель",
   "kit.tasks.col.reviewer": "Ревьюер",
   "kit.tasks.col.type": "Тип",
+  "kit.tasks.col.class": "Класс",
+  "kit.tasks.dict.unknown": "{code} · нет в словаре",
   "kit.tasks.col.actions": "Действия",
   "kit.tasks.groupBy": "Группировка",
   "kit.tasks.groupBy.phase": "По фазе",

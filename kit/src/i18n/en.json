@@ -438,6 +438,8 @@
   "kit.tasks.col.executor": "Executor",
   "kit.tasks.col.reviewer": "Reviewer",
   "kit.tasks.col.type": "Type",
+  "kit.tasks.col.class": "Class",
+  "kit.tasks.dict.unknown": "{code} · not in the dictionary",
   "kit.tasks.col.actions": "Actions",
   "kit.tasks.groupBy": "Grouping",
   "kit.tasks.groupBy.phase": "By phase",
