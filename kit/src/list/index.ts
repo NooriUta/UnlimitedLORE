@@ -13,3 +13,5 @@ export * from './listSelection';
 export * from './useLongPress';
 // Шапка экрана: заголовок · виды · действие одной строкой (S4-22, S4-23).
 export * from './ScreenHead';
+// «Вид ⌄»: режим закрытых и прочие настройки вида (S4-27).
+export * from './ViewMenu';

@@ -196,7 +196,8 @@
             "rollup": { "enum": ["verdict", "status"] }
           },
           "additionalProperties": false
-        }
+        },
+        "showClosed": { "enum": ["below", "all", "days30", "hide"] }
       },
       "additionalProperties": false
     },

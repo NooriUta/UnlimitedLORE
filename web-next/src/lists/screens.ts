@@ -70,6 +70,8 @@ function sprintsConfig(lang: KitLang): KitConfig {
     },
     list: {
       views: ['list', 'board'],
+      // S4-27: вид раздела по умолчанию — «открытые, закрытые внизу» (прототип v4).
+      showClosed: 'below',
       quick: [
         { id: 'active', title: appT(lang, 'lists.status.active'), filter: { status: 'active' } },
         { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
@@ -108,6 +110,7 @@ function adrsConfig(lang: KitLang): KitConfig {
     },
     list: {
       views: ['list', 'board'],
+      showClosed: 'below',
       quick: [
         { id: 'proposed', title: appT(lang, 'lists.status.proposed'), filter: { status: 'proposed' } },
         { id: 'accepted', title: appT(lang, 'lists.status.accepted'), filter: { status: 'accepted' } },

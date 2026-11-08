@@ -324,6 +324,7 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       c.str(tree, 'order', 'list.tree');
       c.enumOf(tree, 'rollup', 'list.tree', ['verdict', 'status'], false);
     }
+    c.enumOf(list, 'showClosed', 'list', ['below', 'all', 'days30', 'hide'], false);
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
     if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');
