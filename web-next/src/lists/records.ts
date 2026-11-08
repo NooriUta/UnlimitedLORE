@@ -3,6 +3,7 @@
 // которого kit честно пишет «Показано N из M» / «обрезано» / «всего неизвестно».
 import type { KitData, KitRecord } from '@seidr/kit';
 import type { SliceBody } from '../api/loreClient';
+import { planStatusOf } from '../sprints/taskStatus';
 
 type Row = Record<string, unknown>;
 
@@ -28,7 +29,8 @@ export function sprintRecord(row: Row): KitRecord {
     id,
     kind: 'sprint',
     title: str(row.name) || id,
-    status: normStatus(row.status_raw),
+    // Только словарём (planStatusOf): наивная склейка давала «вне словаря: in_progress» (08.11).
+    status: planStatusOf(typeof row.status_raw === 'string' ? row.status_raw : null),
     fields: {
       project: joined(row.git_projects),
       components: joined(row.components),
