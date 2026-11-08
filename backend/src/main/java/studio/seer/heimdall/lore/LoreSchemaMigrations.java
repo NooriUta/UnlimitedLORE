@@ -1549,7 +1549,12 @@ final class LoreSchemaMigrations {
         // (запись мимо SCD2, 14 на проде) — одна версия с пометкой status_backfilled
         // и valid_from = момент бэкфилла, без выдуманных дат. Та же логика, что V68
         // (StatusHistoryService.backfill), только для типа task.
-        new Step(71, 17, "java__task_history_backfill", List.of())
+        new Step(71, 17, "java__task_history_backfill", List.of()),
+
+        // SPRINT_UXR_S5_RECORD_TASKS/S5-09: черновик правки MD-поля на сервере —
+        // новый тип KnowUserDraft, владелец kc_sub полем (как V63). Аддитивно,
+        // major 17, v1 о нём не знает. DDL живёт рядом с логикой (LoreMeDrafts).
+        new Step(72, 17, "user_drafts", LoreMeDrafts.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
