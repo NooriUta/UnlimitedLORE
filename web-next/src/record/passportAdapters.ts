@@ -64,19 +64,24 @@ async function loadSprint(id: string, lang: KitLang, slice: Slice, now: string):
     priority: str(row.priority) || null, projects: arr(row.git_projects), components: arr(row.components),
     releases: arr(row.release_ids), milestones: arr(row.milestone_ids),
     planned_start: str(row.planned_start_date) || null, planned_end_date: str(row.planned_end_date) || null,
+    created: str(row.created_date).slice(0, 10) || null,
+    no_release: row.no_release_required === true ? appT(lang, 'pp.yes') : null,
   });
   data.edges.push(...refsTo(id, arr(row.git_projects), 'BELONGS_TO_PROJECT'), ...refsTo(id, arr(row.components), 'BELONGS_TO'));
   const config = baseConfig(lang, {
     Sprint: {
       title: appT(lang, 'pp.kind.sprint'), icon: 'sprint',
       fields: [
+        // Как в v1 (S4-36): сверху — общее; «Планирование» и «Модули» — разделами.
         { key: 'priority', title: f(lang, 'priority'), type: 'enum' },
         { key: 'projects', title: f(lang, 'projects'), type: 'ref' },
-        { key: 'components', title: f(lang, 'components'), type: 'ref' },
         { key: 'releases', title: f(lang, 'releases'), type: 'ref' },
-        { key: 'milestones', title: f(lang, 'milestones'), type: 'ref' },
-        { key: 'planned_start', title: f(lang, 'plannedStart'), type: 'date' },
-        { key: 'planned_end_date', title: f(lang, 'plannedEnd'), type: 'date' },
+        { key: 'created', title: f(lang, 'created'), type: 'date', section: appT(lang, 'pp.sec.plan') },
+        { key: 'milestones', title: f(lang, 'milestones'), type: 'ref', section: appT(lang, 'pp.sec.plan') },
+        { key: 'planned_start', title: f(lang, 'plannedStart'), type: 'date', section: appT(lang, 'pp.sec.plan') },
+        { key: 'planned_end_date', title: f(lang, 'plannedEnd'), type: 'date', section: appT(lang, 'pp.sec.plan') },
+        { key: 'no_release', title: f(lang, 'noRelease'), type: 'text', section: appT(lang, 'pp.sec.plan') },
+        { key: 'components', title: f(lang, 'components'), type: 'ref', section: appT(lang, 'pp.sec.modules') },
       ],
       tabs: [{ key: 'tasks', title: appT(lang, 'pp.tab.tasks'), render: (r, ctx) => ctx.data.edges.filter(e => e.from === r.id && e.type === 'HAS_TASK').map(e => ctx.data.records.find(x => x.id === e.to)?.title ?? e.to).join(' · ') || appT(lang, 'pp.noTasks') }],
     },

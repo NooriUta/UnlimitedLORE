@@ -71,3 +71,20 @@ describe('lore.record/1 → kit', () => {
     expect(fromLoreRecord(c, 'ru').data.meta.errors).toEqual([{ block: 'tasks', reason: 'boom' }]);
   });
 });
+
+describe('S4-36: паспорт спринта — разделы «Планирование» и «Модули», как в v1', () => {
+  it('поля спринта несут раздел, раздел проходит через объект контракта до kit', async () => {
+    const row = { ...SPRINT, created_date: '2026-11-07', milestone_ids: ['M1'], planned_start_date: '2026-11-08', no_release_required: true, components: ['LORE'] };
+    const c = await contractOf('sprint', 'SPRINT_A', { sprints: [row], tasks_of_sprint: [] });
+    const sec = (k: string) => c.schema.fields.find(f => f.key === k)?.section;
+    expect(sec('created')).toBe('Планирование');
+    expect(sec('milestones')).toBe('Планирование');
+    expect(sec('planned_end_date')).toBe('Планирование');
+    expect(sec('no_release')).toBe('Планирование');
+    expect(sec('components')).toBe('Модули');
+    expect(c.values.created).toBe('2026-11-07');
+    expect(c.values.no_release).toBe('да');
+    const k = fromLoreRecord(JSON.parse(JSON.stringify(c)) as LoreRecord1, 'ru');
+    expect(k.config.kinds.sprint.fields?.find(f => f.key === 'created')?.section).toBe('Планирование');
+  });
+});

@@ -14,6 +14,8 @@ export interface LoreField {
   key: string; label: string; kind: FieldKind;
   required: boolean; editable: boolean; multi?: boolean;
   group: 'head' | 'body' | 'props';
+  /** Раздел внутри «Свойств» (S4-36): «Планирование», «Модули». */
+  section?: string;
 }
 export interface LoreTab { key: string; label: string; zone: 'record' | 'around'; rel?: string; dir?: 'out' | 'in'; count?: number }
 export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string }
@@ -59,6 +61,7 @@ export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang
   const props: LoreField[] = (kind?.fields ?? []).map(f => ({
     key: f.key, label: f.title, kind: f.type, required: req.includes(f.key), editable: true,
     ...(f.type === 'ref' && Array.isArray(r.fields[f.key]) ? { multi: true } : {}),
+    ...(f.section ? { section: f.section } : {}),
     group: 'props' as const,
   }));
   props.sort((a, b) => Number(b.required) - Number(a.required));
@@ -122,7 +125,7 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),
   }));
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind })), ...(tabs.length ? { tabs } : {}) },
+    [type]: { title: c.schema.label, icon: c.schema.icon, fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   const data: KitData = { records: [record, ...others], edges, journal: [], meta: { generated_at: c.meta.loaded_at, ...(errors.length ? { errors } : {}) } };

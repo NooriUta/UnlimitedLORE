@@ -3841,6 +3841,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
 .sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 24px; align-items: start; }
 .sk-rec__content { min-width: 0; }
+/* Разделы «Свойств» (S4-36): подзаголовок как в v1 — «Планирование», «Модули». */
+.sk-rec-fields__sec { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--bd); }
+.sk-rec-fields__sechead { margin: 0 0 6px; color: var(--t2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .sk-rec__props { position: sticky; top: 0; min-width: 0; padding: 4px 0 0 16px; border-left: 1px solid var(--bd); }
 .sk-rec__props .sk-rec-fields { margin: 0; }
 .sk-rec__around {

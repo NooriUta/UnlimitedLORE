@@ -120,16 +120,24 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
 function Fields({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang; edit?: EditSlot }) {
   const fields = kind.fields ?? [];
   if (fields.length === 0) return null;
+  const row = (f: (typeof fields)[number]) => (
+    <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
+      <dt>{f.title}</dt>
+      <dd><FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} /></dd>
+    </div>
+  );
+  // Поля без раздела — первыми; разделы (section) — подзаголовками в порядке появления (S4-36).
+  const plain = fields.filter(f => !f.section);
+  const sections = [...new Set(fields.map(f => f.section).filter((s): s is string => !!s))];
   return (
     <section className="sk-rec-fields" aria-label={kitT(lang, 'kit.record.fields')}>
-      <dl data-testid="kit-fields">
-        {fields.map(f => (
-          <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
-            <dt>{f.title}</dt>
-            <dd><FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} /></dd>
-          </div>
-        ))}
-      </dl>
+      <dl data-testid="kit-fields">{plain.map(row)}</dl>
+      {sections.map(s => (
+        <div key={s} role="group" aria-label={s} className="sk-rec-fields__sec">
+          <h3 className="sk-rec-fields__sechead">{s}</h3>
+          <dl>{fields.filter(f => f.section === s).map(row)}</dl>
+        </div>
+      ))}
     </section>
   );
 }
