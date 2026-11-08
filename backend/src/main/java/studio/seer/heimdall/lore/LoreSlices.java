@@ -1394,7 +1394,10 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
             // (ADR-LORE-015, T14) — plain vertex fields.
-            ROLE_HOLDERS + ", task_type, actual_days, bookkeeping " +
+            ROLE_HOLDERS + ", task_type, actual_days, bookkeeping, " +
+            // 08.11.2026: паритет с tasks_of_sprint (TasksBatchSliceParityTest) — ЗАЧЕМ-ось
+            // и UC (ADR-LORE-022) нужны строке задачи в списке/на доске v2.
+            "work_class, out('REALIZES').uc_id AS realizes_uc " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
