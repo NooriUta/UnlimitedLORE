@@ -2483,6 +2483,24 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 /* S4-30: «Состояние данных». Три состояния выглядят по-разному намеренно —
    «проверено», «не смогли проверить» и «обрезано» это разные утверждения, и
    общая серая строка их бы слила. */
+/* K-13: фолбэк чтения Markdown без сборки — исходник и причина вместо
+   пустоты. Пустое место неотличимо от «в записи ничего не написано». */
+.sk-prose__fallback {
+  padding: 8px 10px;
+  border: 1px dashed var(--wrn);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-prose__fallback-why { margin: 0 0 6px; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-prose__fallback-src {
+  margin: 0;
+  overflow-x: auto;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+
 .sk-ds {
   display: flex;
   flex-direction: column;
@@ -2507,6 +2525,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-ds__truncated { margin: 0; color: var(--wrn); }
 /* Непрочитанное — предупреждающим цветом: по такому блоку нельзя делать выводы. */
 .sk-ds__failed { color: var(--dng); }
+/* «Нет прав» — не ошибка чтения: ждать нечего, надо просить доступ. */
+.sk-ds__forbidden { color: var(--wrn); }
 .sk-ds__list { margin: 2px 0 0; padding-left: 18px; }
 .sk-ds__list b { font-family: var(--mono); font-weight: 700; }
 

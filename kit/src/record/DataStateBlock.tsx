@@ -52,6 +52,17 @@ export function DataStateBlock({ meta, className }: DataStateBlockProps) {
         </div>
       )}
 
+      {s.forbidden.length > 0 && (
+        <div className="sk-ds__forbidden" data-testid="ds-forbidden">
+          <span className="sk-ds__label">{t('kit.ds.forbidden')}</span>
+          <ul className="sk-ds__list">
+            {s.forbidden.map(f => (
+              <li key={f.block}><b>{f.block}</b> — {f.reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {(truncatedText || s.truncatedBlocks.length > 0) && (
         <p className="sk-ds__truncated" data-testid="ds-truncated">
           <span className="sk-ds__label">{t('kit.ds.truncated')}</span>{' '}

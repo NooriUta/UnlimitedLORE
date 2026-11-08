@@ -17,6 +17,15 @@ export interface DataState {
   checked: string[];
   /** Блоки, которые не прочитались, с причиной. */
   failed: FailedBlock[];
+  /**
+   * Блоки, закрытые правами.
+   *
+   * Отдельно от `failed` намеренно: «не смогли прочитать» и «нет прав» —
+   * разные ответы. При ошибке человек ждёт, что починится и данные появятся;
+   * при запрете ждать нечего, надо просить доступ. Слить их — значит
+   * заставить перезагружать страницу впустую.
+   */
+  forbidden: FailedBlock[];
   /** Блоки, выдача которых обрезана. */
   truncatedBlocks: string[];
   /** Обрезана выдача целиком: сколько показано и, если известно, из скольких. */
@@ -25,8 +34,29 @@ export interface DataState {
   hasAnything: boolean;
 }
 
-/** Состояние блока, как его отдаёт сервер. */
-interface SourceRow { block?: unknown; state?: unknown; reason?: unknown }
+/**
+ * Состояние блока, как его отдаёт сервер (форма согласована с серверной
+ * сессией 08.11.2026): `source` и необязательная `part`, состояние
+ * ok / error / truncated / forbidden, причина и числа у обрезанных.
+ * Прежнее имя `block` принимается, чтобы переход ничего не ломал.
+ */
+interface SourceRow {
+  source?: unknown;
+  block?: unknown;
+  part?: unknown;
+  state?: unknown;
+  reason?: unknown;
+  total?: unknown;
+  has_more?: unknown;
+}
+
+/** Имя блока для показа: «источник · часть», если часть названа. */
+function nameOf(r: SourceRow): string {
+  const src = typeof r.source === 'string' && r.source ? r.source : (typeof r.block === 'string' ? r.block : '');
+  const part = typeof r.part === 'string' && r.part ? r.part : '';
+  if (!src) return '';
+  return part ? `${src} · ${part}` : src;
+}
 
 /**
  * Откуда берём сводку. Бэкенд заводит `meta.data_state` (договорённость с
@@ -49,16 +79,23 @@ function rows(meta: KitMeta): SourceRow[] {
 export function dataStateOf(meta: KitMeta): DataState {
   const checked: string[] = [];
   const failed: FailedBlock[] = [];
+  const forbidden: FailedBlock[] = [];
   const truncatedBlocks: string[] = [];
   const seen = new Set<string>();
 
   for (const r of rows(meta)) {
-    const block = typeof r.block === 'string' ? r.block : '';
+    const block = nameOf(r);
     if (!block) continue;
     const state = typeof r.state === 'string' ? r.state : '';
     const reason = typeof r.reason === 'string' ? r.reason : '';
     if (state === 'ok') { checked.push(block); continue; }
     if (state === 'truncated') { truncatedBlocks.push(block); continue; }
+    // «Нет прав» — не ошибка чтения: ждать нечего, надо просить доступ.
+    if (state === 'forbidden') {
+      forbidden.push({ block, reason: reason || 'нет прав' });
+      seen.add(block);
+      continue;
+    }
     // Сервер называет сбой «error», прежнее имя было «failed» — принимаем оба.
     if (state === 'error' || state === 'failed') {
       failed.push({ block, reason: reason || 'причина не названа' });
@@ -86,8 +123,9 @@ export function dataStateOf(meta: KitMeta): DataState {
   return {
     checked,
     failed,
+    forbidden,
     truncatedBlocks,
     truncated,
-    hasAnything: failed.length > 0 || truncatedBlocks.length > 0 || truncated !== undefined,
+    hasAnything: failed.length > 0 || forbidden.length > 0 || truncatedBlocks.length > 0 || truncated !== undefined,
   };
 }

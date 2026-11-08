@@ -574,5 +574,6 @@
   "kit.ds.failed": "Could not check:",
   "kit.ds.truncated": "Truncated:",
   "kit.ds.shownOf": "{n} of {total} shown",
-  "kit.ds.shown": "{n} shown, the total is unknown"
+  "kit.ds.shown": "{n} shown, the total is unknown",
+  "kit.ds.forbidden": "No access:"
 }

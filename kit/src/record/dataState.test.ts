@@ -75,4 +75,28 @@ describe('S4-30 · состояние данных', () => {
     expect(s.failed[0].block).toBe('x');
     expect(s.failed[0].reason).toMatch(/что-то новое/);
   });
+
+  it('«нет прав» — своя группа, не ошибка чтения', () => {
+    // При ошибке человек ждёт, что починится; при запрете ждать нечего.
+    const s = dataStateOf({ generated_at: 'x', data_state: [
+      { source: 'edges', state: 'forbidden' },
+      { source: 'tasks', state: 'error', reason: 'таймаут' },
+    ] } as never);
+    expect(s.forbidden).toEqual([{ block: 'edges', reason: 'нет прав' }]);
+    expect(s.failed).toEqual([{ block: 'tasks', reason: 'таймаут' }]);
+  });
+
+  it('имя источника с частью читается как «источник · часть»', () => {
+    const s = dataStateOf({ generated_at: 'x', data_state: [
+      { source: 'record', part: 'tasks', state: 'error', reason: 'HTTP 500' },
+    ] } as never);
+    expect(s.failed[0].block).toBe('record · tasks');
+  });
+
+  it('поле source — новое имя, block — прежнее; оба принимаются', () => {
+    const bySource = dataStateOf({ generated_at: 'x', data_state: [{ source: 'a', state: 'ok' }] } as never);
+    const byBlock = dataStateOf({ generated_at: 'x', data_state: [{ block: 'a', state: 'ok' }] } as never);
+    expect(bySource.checked).toEqual(['a']);
+    expect(byBlock.checked).toEqual(['a']);
+  });
 });
