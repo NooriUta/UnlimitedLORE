@@ -4064,19 +4064,18 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-dock[data-placement='full'] .sk-rec[data-width] { --rec-col: 100%; --rec-frame: 100%; }
   .sk-rec-widthbar { display: none; }
 }
-/* Мера чтения в доке (справа и снизу). Было: ширина контейнера, поэтому
-   строка в доке выходила вдвое длиннее, чем во весь экран (~920 против ~680),
-   и менялась от вкладки к вкладке — замечание владелицы «ширина линии в
-   паспорте считается от ширины экрана, а не контекста». Теперь мера одна и
-   своя, а min(100%, …) оставляет её мерой ОТ КОНТЕКСТА: в узкой панели справа
-   колонка не вылезает за панель. */
-.sk-dock[data-placement='bottom'], .sk-dock[data-placement='right'] { --rec-col: min(100%, var(--read-col)); }
+/* Мера чтения в доке снизу — ОТ ДИСПЛЕЯ (поправка владелицы 09.11: «у тебя она
+   уже была мерой от контекста, а должна быть от дисплея»). Раньше меры не было
+   вовсе: строка шла по ширине контейнера, поэтому в доке выходила вдвое
+   длиннее, чем во весь экран (~920 против ~680), и менялась от вкладки к
+   вкладке — ширина контейнера зависит от того, открыта ли колонка свойств.
+   Мера в vw этого не делает: пока окно то же, строка та же. 92vw — не «мера от
+   контекста», а потолок для телефона, где 680 px просто не влезает.
+   Узкая панель справа остаётся как есть (прежнее решение): там своей меры нет,
+   колонка и так узкая. */
 .sk-dock[data-placement='bottom'] .sk-rec-head,
-.sk-dock[data-placement='right'] .sk-rec-head,
 .sk-dock[data-placement='bottom'] .sk-rec-propsrow,
-.sk-dock[data-placement='right'] .sk-rec-propsrow,
-.sk-dock[data-placement='bottom'] .sk-tabpanel > *,
-.sk-dock[data-placement='right'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
 
 /* Линия вкладок — во всю рамку (~1200 px), а шапка, свойства и текст — узкой колонкой по центру:
    владелица 08.11 «выглядит классно, чем всё вписанное в одну ширину» (как v4). */
@@ -4154,7 +4153,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    список короткий: аудит 08.11 намерил «343 px прозрачного backdrop — пустая
    треть экрана». Затемнять список нельзя — он живой (решение владелицы 08.11),
    поэтому убрана пустота, а не видимость списка. */
-.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); }
+.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); --rec-col: min(var(--read-col), 92vw); }
 .sk-dock__backdrop {
   min-height: 0;
   overflow: auto;
@@ -4168,7 +4167,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 .sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
-.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; --rec-frame: 66%; --rec-col: 66%; }
+/* Рамка во весь экран — 66vw, а не 66 %: теперь слой внутри оболочки накрывает
+   область содержимого, и процент считался бы от неё, то есть от контекста.
+   Владелица 09.11: мера должна быть от дисплея. Проценты колонки (56/66/82 %
+   ниже) берутся от этой рамки, то есть тоже от дисплея. */
+.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; --rec-frame: 66vw; --rec-col: 66%; }
 /* Внутри оболочки «во весь экран» накрывает область содержимого, а не окно:
    шапка и меню остаются на месте, и проценты ниже начинают считаться от
    контекста, а не от ширины экрана (замечание владелицы по v1.17.4). Сам по

@@ -65,18 +65,28 @@ describe('модальность — свойство использования
   });
 });
 
-describe('одна мера чтения в доке и во весь экран', () => {
-  it('в доке у текста есть своя мера, а не ширина контейнера', () => {
-    const rule = ruleOf(".sk-dock[data-placement='bottom'], .sk-dock[data-placement='right']");
+// Поправка владелицы 09.11: «наоборот, у тебя она уже была мерой от контекста,
+// а должна быть от дисплея». Строка не должна зависеть от того, открыта ли
+// колонка свойств и как широк контейнер вкладки: пока окно то же — строка та
+// же. Поэтому мера в vw, а не в процентах контейнера.
+describe('мера чтения — от дисплея', () => {
+  it('в доке снизу мера задана от окна, а не от контейнера', () => {
+    const rule = ruleOf(".sk-dock[data-placement='bottom']");
     expect(rule).toMatch(/--rec-col:/);
-    // min(100%, …) — мера от контекста: в узкой панели колонка не вылезает.
-    expect(rule).toMatch(/min\(100%/);
-    expect(rule).toMatch(/var\(--read-col/);
+    expect(rule).toMatch(/vw/);
+    expect(rule, 'процентов контейнера в мере быть не должно').not.toMatch(/min\(100%/);
   });
 
   it('мера не зависит от вкладки: одно правило на шапку, свойства и содержимое вкладки', () => {
-    const sel = ".sk-dock[data-placement='bottom'] .sk-tabpanel > *,\n.sk-dock[data-placement='right'] .sk-tabpanel > *";
-    expect(css).toContain(sel);
+    expect(css).toContain(".sk-dock[data-placement='bottom'] .sk-tabpanel > *");
+  });
+
+  it('узкая панель справа остаётся как есть — своей меры там нет', () => {
+    expect(ruleOf(".sk-dock[data-placement='right']")).not.toMatch(/--rec-col:/);
+  });
+
+  it('рамка во весь экран — тоже от дисплея (vw), иначе процент считался бы от области содержимого', () => {
+    expect(ruleOf(".sk-dock[data-placement='full']")).toMatch(/--rec-frame:\s*66vw/);
   });
 
   it('пропорции во весь экран (выбор владелицы 08.11) не тронуты', () => {
