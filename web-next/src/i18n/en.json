@@ -158,7 +158,7 @@
   "record.status.fixed": "Fixed",
   "record.status.reached": "Reached",
   "record.status.accepted": "Accepted",
-  "record.status.active": "Active",
+  "record.status.active": "In progress",
   "record.status.in_progress": "In progress",
   "record.status.upcoming": "Upcoming",
   "record.status.partial": "Partial",
