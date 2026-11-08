@@ -15,3 +15,6 @@ export * from './useLongPress';
 export * from './ScreenHead';
 // «Вид ⌄»: режим закрытых и прочие настройки вида (S4-27).
 export * from './ViewMenu';
+export * from './ColumnsChoice';
+export * from './columnsUrl';
+export * from './columnWidths';

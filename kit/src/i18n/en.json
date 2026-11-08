@@ -60,6 +60,9 @@
   "kit.shell.planned": "soon",
   "kit.shell.plannedHint": "Module is planned — not available yet",
   "kit.shell.menuEmpty": "The config has no menu groups",
+  "kit.shell.menuMode.toRail": "Menu: collapse to icon rail",
+  "kit.shell.menuMode.toHidden": "Menu: hide to the ear",
+  "kit.shell.menuMode.toOpen": "Menu: expand",
   "kit.shell.myViews": "My views",
   "kit.shell.myViewsEmpty": "No views yet — save the current one",
   "kit.shell.saveView": "Save view",
@@ -438,6 +441,8 @@
   "kit.tasks.col.executor": "Executor",
   "kit.tasks.col.reviewer": "Reviewer",
   "kit.tasks.col.type": "Type",
+  "kit.tasks.col.class": "Class",
+  "kit.tasks.dict.unknown": "{code} · not in the dictionary",
   "kit.tasks.col.actions": "Actions",
   "kit.tasks.groupBy": "Grouping",
   "kit.tasks.groupBy.phase": "By phase",
@@ -565,5 +570,11 @@
   "kit.record.width": "Text width",
   "kit.record.width.s": "narrower",
   "kit.record.width.m": "medium",
-  "kit.record.width.l": "wider"
+  "kit.record.width.l": "wider",
+  "kit.tasks.counters.progress": "Closed out of total",
+  "kit.tasks.counters.effort": "Total estimate, d",
+  "kit.list.cols.title": "Columns",
+  "kit.list.cols.hint": "«Record» cannot be turned off. Order — arrows, width — the header edge.",
+  "kit.list.cols.up": "{title}: up",
+  "kit.list.cols.down": "{title}: down"
 }

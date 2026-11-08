@@ -253,8 +253,52 @@ public class ForgejoBridge {
         return GREEN;
     }
 
+    /**
+     * MT-CI-STATUS-NULL: комбинированный commit-status Forgejo → контекст→state.
+     * Для SHA без статусов Forgejo отдаёт {@code "statuses": null}; Vert.x
+     * {@code getJsonArray(key, def)} отдаёт def только при отсутствии ключа, поэтому
+     * null проверяется явно — «ранов нет» (NO_RUN/STALLED), а не сбой (UNKNOWN).
+     * Forgejo кладёт статусы новее→старше; первый на контекст = актуальный.
+     */
+    static Map<String, String> statusesByContext(JsonObject combined) {
+        Map<String, String> byCtx = new java.util.HashMap<>();
+        JsonArray statuses = combined == null ? null : combined.getJsonArray("statuses");
+        if (statuses == null) return byCtx;
+        for (int i = 0; i < statuses.size(); i++) {
+            JsonObject s = statuses.getJsonObject(i);
+            if (s == null) continue;
+            String ctx = s.getString("context");
+            String st = s.getString("status");
+            byCtx.putIfAbsent(ctx == null ? "" : ctx, st == null ? "" : st);
+        }
+        return byCtx;
+    }
+
     /** true только когда merge разрешён (§10: только из GREEN). */
     static boolean mergeAllowed(String gateStatus) { return GREEN.equals(gateStatus); }
+
+    /**
+     * S2-14: поля KnowPR из ответа Forgejo {@code GET /repos/{o}/{r}/pulls/{n}} —
+     * title, url (html_url), merged_at, head_ref, base_ref. Отсутствующее или пустое
+     * поле в карту НЕ попадает: «не влит» (merged_at = null) не должно выглядеть как
+     * пустая дата, а UPDATE по карте не затирает уже записанное пустотой.
+     */
+    static Map<String, Object> prFields(JsonObject pr) {
+        Map<String, Object> f = new java.util.LinkedHashMap<>();
+        if (pr == null) return f;
+        putText(f, "title", pr.getValue("title"));
+        putText(f, "url", pr.getValue("html_url"));
+        putText(f, "merged_at", pr.getValue("merged_at"));
+        Object head = pr.getValue("head");
+        if (head instanceof JsonObject h) putText(f, "head_ref", h.getValue("ref"));
+        Object base = pr.getValue("base");
+        if (base instanceof JsonObject b) putText(f, "base_ref", b.getValue("ref"));
+        return f;
+    }
+
+    private static void putText(Map<String, Object> f, String key, Object v) {
+        if (v instanceof String s && !s.isBlank()) f.put(key, s);
+    }
 
     /**
      * SE-09: цеплять ли PR к автоматически выбранному релизу после слияния.

@@ -77,6 +77,8 @@ export interface SprintTaskApiRow {
   executor_agent?: string | null;
   reviewer_agent?: string | null;
   task_type?: string | null;
+  /** S4-36: класс работы; срез отдаёт его рядом с типом задачи. */
+  work_class?: string | null;
   [k: string]: unknown;
 }
 
@@ -101,6 +103,7 @@ export function toTaskRow(r: SprintTaskApiRow): TaskRowData {
     executor: r.executor_agent ?? null,
     reviewer: r.reviewer_agent ?? null,
     taskType: r.task_type ?? null,
+    workClass: r.work_class ?? null,
     order: r.order_index ?? 0,
   };
 }
