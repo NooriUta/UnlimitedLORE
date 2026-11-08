@@ -534,5 +534,11 @@
   "kit.auth.expired.title": "Сессия истекла.",
   "kit.auth.expired.hint": "Сервер не принял вход — данные на экране могли не обновиться. Несохранённое останется на месте до входа.",
   "kit.auth.error.title": "Вход не удался",
-  "kit.auth.error.hint": "Keycloak не подтвердил вход — это не «пусто». Войдите снова."
+  "kit.auth.error.hint": "Keycloak не подтвердил вход — это не «пусто». Войдите снова.",
+  "kit.record.dock.full": "Паспорт на весь экран",
+  "kit.record.dock.exitFull": "Выйти из полного экрана",
+  "kit.record.view": "Вид паспорта",
+  "kit.record.view.content": "Контент",
+  "kit.record.view.props": "Свойства",
+  "kit.record.view.analytics": "Аналитика"
 }

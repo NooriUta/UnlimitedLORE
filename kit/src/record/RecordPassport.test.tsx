@@ -5,8 +5,8 @@
 // слева — вычисляемое (связи, граф, журнал, история), только чтение.
 // «Панелью справа» — левой колонки нет, всё вкладками одного блока: сначала
 // вкладки записи, затем вычисляемые с пометкой зоны.
-import { beforeAll, describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '../elements/GameIcon';
 import type { KitConfig, KitCtx, KitRecord } from '../core/contract';
@@ -24,39 +24,84 @@ const ctx: KitCtx = {
   config, data: { records: [rec, { id: 'P', kind: 'spec', title: 'Проект', status: 'proposed', fields: {} }], edges: [{ from: 'S-1', to: 'P', type: 'BELONGS_TO_PROJECT' }], journal: [], meta: { generated_at: '2026-11-08T00:00:00Z' } },
   href: id => `#${id}`, esc: s => s, md: s => s,
 };
-const view = (placement: 'right' | 'bottom' | 'full', tab = 'overview') =>
-  render(<RecordView record={rec} ctx={ctx} tab={tab} onTab={() => {}} placement={placement} />);
+const view = (placement: 'right' | 'bottom' | 'full', tab = 'overview', aroundAs?: 'tabs' | 'column') =>
+  render(<RecordView record={rec} ctx={ctx} tab={tab} onTab={() => {}} placement={placement} aroundAs={aroundAs} />);
 const tabNames = () => screen.getAllByRole('tab').map(t => t.textContent?.replace(/\d+$/, ''));
 
-describe('снизу / на весь экран — две зоны', () => {
-  it.each(['bottom', 'full'] as const)('%s: вкладки записи справа — Текст, Свойства; аналитика — колонкой слева', p => {
+describe('по умолчанию (владелица 08.11, «пока как в MVP») — вычисляемое вкладками основного блока', () => {
+  it.each(['bottom', 'full'] as const)('%s: колонки слева нет; связи, граф, журнал — вкладками', p => {
     const { container } = view(p);
-    expect(tabNames()).toEqual(['Текст', 'Свойства']);
+    expect(tabNames()).toEqual(['Текст', 'Связи', 'Граф', 'Журнал']);
+    expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
+  });
+});
+
+describe('снизу / на весь экран — свойства колонкой справа (владелица 08.11)', () => {
+  it.each(['bottom', 'full'] as const)('%s: контент и свойства видны сразу, без переключения вкладок', p => {
+    const { container } = view(p);
+    expect(screen.getByText('Текст спеки')).toBeTruthy();
+    const side = container.querySelector('aside[data-zone="props"]') as HTMLElement;
+    expect(side).not.toBeNull();
+    expect(within(side).getByTestId('kit-fields').textContent).toContain('1.0');
+    expect(container.querySelector('.sk-rec')?.classList.contains('sk-rec--props-side')).toBe(true);
+    // колонка справа — после основного блока в порядке документа
+    expect(container.querySelector('.sk-rec__main')?.nextElementSibling).toBe(side);
+  });
+  it('на другой вкладке колонка свойств остаётся', () => {
+    const { container } = view('full', 'links');
+    expect(container.querySelector('aside[data-zone="props"] [data-testid="kit-fields"]')).not.toBeNull();
+  });
+});
+
+describe('aroundAs="column": снизу / на весь экран — вычисляемое колонкой слева', () => {
+  it.each(['bottom', 'full'] as const)('%s: слева — связи, граф, журнал; в центре — Текст; справа — свойства', p => {
+    const { container } = view(p, 'overview', 'column');
+    expect(screen.queryAllByRole('tab')).toHaveLength(0); // одна вкладка — ряд не рисуем
+    expect(screen.getByText('Текст спеки')).toBeTruthy();
     const around = container.querySelector('[data-zone="around"]')!;
     expect(around.tagName).toBe('ASIDE');
     expect(within(around as HTMLElement).getByRole('heading', { name: /Связи/ })).toBeTruthy();
     expect(within(around as HTMLElement).getByRole('heading', { name: /Граф/ })).toBeTruthy();
     expect(within(around as HTMLElement).getByRole('heading', { name: /Журнал/ })).toBeTruthy();
+    expect(container.querySelector('aside[data-zone="props"]')).not.toBeNull();
     expect(container.querySelector('.sk-rec')?.getAttribute('data-placement')).toBe(p);
-  });
-
-  it('«Текст» — только тело; поля — во вкладке «Свойства»', () => {
-    const { unmount } = view('bottom');
-    expect(screen.getByText('Текст спеки')).toBeTruthy();
-    expect(screen.queryByTestId('kit-fields')).toBeNull();
-    unmount();
-    view('bottom', 'props');
-    expect(screen.getByTestId('kit-fields').textContent).toContain('1.0');
   });
 });
 
-describe('панелью справа — всё вкладками', () => {
-  it('сначала вкладки записи, затем вычисляемые с пометкой зоны; колонки нет', () => {
+describe('панелью справа — переключатель видов над шапкой (владелица 08.11)', () => {
+  const sw = () => screen.getByRole('group', { name: 'Вид паспорта' });
+  const pressed = () => within(sw()).getAllByRole('button').filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent);
+  it('«Контент · Свойства · Аналитика» стоит над заголовком', () => {
+    view('right');
+    expect(within(sw()).getAllByRole('button').map(b => b.textContent)).toEqual(['Контент', 'Свойства', 'Аналитика']);
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(sw().compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+  it('Контент: текст, без вкладок «Свойства» и аналитики', () => {
     const { container } = view('right');
-    expect(tabNames()).toEqual(['Текст', 'Свойства', 'Связи', 'Граф', 'Журнал']);
+    expect(pressed()).toEqual(['Контент']);
+    expect(screen.getByText('Текст спеки')).toBeTruthy();
+    expect(screen.queryAllByRole('tab').map(t => t.textContent)).not.toContain('Свойства');
     expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
-    const around = screen.getAllByRole('tab').filter(t => t.getAttribute('data-zone') === 'around').map(t => t.textContent?.replace(/\d+$/, ''));
-    expect(around).toEqual(['Связи', 'Граф', 'Журнал']);
+    expect(container.querySelector('aside[data-zone="props"]')).toBeNull();
+  });
+  it('Свойства: поля записи', () => {
+    view('right', 'props');
+    expect(pressed()).toEqual(['Свойства']);
+    expect(screen.getByTestId('kit-fields').textContent).toContain('1.0');
+  });
+  it('Аналитика: вкладки Связи, Граф, Журнал', () => {
+    view('right', 'links');
+    expect(pressed()).toEqual(['Аналитика']);
+    expect(tabNames()).toEqual(['Связи', 'Граф', 'Журнал']);
+  });
+  it('переключение вида ведёт на первую вкладку вида', () => {
+    const onTab = vi.fn();
+    render(<RecordView record={rec} ctx={ctx} tab="overview" onTab={onTab} placement="right" />);
+    fireEvent.click(within(sw()).getByRole('button', { name: 'Аналитика' }));
+    expect(onTab).toHaveBeenLastCalledWith('links');
+    fireEvent.click(within(sw()).getByRole('button', { name: 'Свойства' }));
+    expect(onTab).toHaveBeenLastCalledWith('props');
   });
 });
 
@@ -77,5 +122,23 @@ describe('RecordDock — место паспорта', () => {
     rerender(<RecordDock placement="full" backdrop={<span>список</span>}><p>паспорт</p></RecordDock>);
     expect(container.querySelector('.sk-dock__backdrop')).toBeNull();
     expect(screen.getByText('паспорт')).toBeTruthy();
+  });
+  it('full — настоящий полный экран: слой поверх страницы, выход кнопкой и Esc', async () => {
+    const { RecordDock } = await import('./RecordDock');
+    const onExit = vi.fn();
+    const { container } = render(<RecordDock placement="full" onExitFull={onExit}><p>паспорт</p></RecordDock>);
+    const dock = container.querySelector('.sk-dock')!;
+    expect(dock.getAttribute('role')).toBe('dialog');
+    expect(dock.getAttribute('aria-modal')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Выйти из полного экрана' }));
+    expect(onExit).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onExit).toHaveBeenCalledTimes(2);
+  });
+  it('right/bottom — не диалог и без кнопки выхода', async () => {
+    const { RecordDock } = await import('./RecordDock');
+    const { container } = render(<RecordDock placement="bottom" onExitFull={() => {}}><p>паспорт</p></RecordDock>);
+    expect(container.querySelector('.sk-dock')?.getAttribute('role')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Выйти из полного экрана' })).toBeNull();
   });
 });

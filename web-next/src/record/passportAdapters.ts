@@ -24,7 +24,7 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export interface PassportLoad { record: KitRecord; data: KitData; config: KitConfig; facts?: typeof SPRINT_FACTS }
 
 /** Конфиг вида: поля, статусы LORE, подписи рёбер. */
-function baseConfig(lang: KitLang, kinds: KitConfig['kinds']): KitConfig {
+export function baseConfig(lang: KitLang, kinds: KitConfig['kinds']): KitConfig {
   return {
     modules: [], menu: { groups: [] }, kinds,
     edges: loreEdgesConfig(lang),

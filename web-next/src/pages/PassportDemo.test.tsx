@@ -67,13 +67,23 @@ describe('адаптер на реальных строках', () => {
 });
 
 describe('страница', () => {
-  it('снизу: вкладки записи справа, «Вокруг записи» колонкой; панелью справа — всё вкладками', async () => {
+  it('снизу — вычисляемое вкладками, свойства колонкой справа; панелью справа — переключатель видов над шапкой (08.11)', async () => {
     const { container } = render(<PassportDemo fetchImpl={fakeFetch()} />);
     await screen.findByRole('heading', { level: 1, name: /Hound Phase D/ });
-    expect(container.querySelector('aside[data-zone="around"]')).not.toBeNull();
-    fireEvent.click(within(screen.getByRole('group', { name: 'Где открыт' })).getByRole('button', { name: 'панелью справа' }));
-    await waitFor(() => expect(container.querySelector('aside[data-zone="around"]')).toBeNull());
+    expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
     expect(screen.getAllByRole('tab').some(t => t.getAttribute('data-zone') === 'around')).toBe(true);
+    expect(container.querySelector('aside[data-zone="props"]')).not.toBeNull();
+    fireEvent.click(within(screen.getByRole('group', { name: 'Где открыт' })).getByRole('button', { name: 'панелью справа' }));
+    await waitFor(() => expect(container.querySelector('aside[data-zone="props"]')).toBeNull());
+    const modes = screen.getByRole('group', { name: 'Вид паспорта' });
+    expect(within(modes).getAllByRole('button').map(b => b.textContent)).toEqual(['Контент', 'Свойства', 'Аналитика']);
     expect(new URLSearchParams(window.location.search).get('place')).toBe('right');
+  });
+  it('паспорт рисуется из объекта lore.record/1, сам объект виден на странице', async () => {
+    render(<PassportDemo fetchImpl={fakeFetch()} />);
+    await screen.findByRole('heading', { level: 1, name: /Hound Phase D/ });
+    const box = screen.getByTestId('pp-contract');
+    const obj = JSON.parse(box.querySelector('pre')!.textContent!) as { contract: string; record: { id: string }; meta: { facade: string } };
+    expect(obj).toMatchObject({ contract: 'lore.record/1', record: { id: 'PLAN_HOUND_D4_PARITY' }, meta: { facade: 'client-emulated' } });
   });
 });
