@@ -230,5 +230,11 @@
   "pp.contract.noLinks": "No links",
   "pp.contract.title": "lore.record/1 contract object",
   "pp.contract.hint": "Exactly what kit receives. The facade is emulated on the client (meta.facade); required fields come first in Properties.",
-  "pp.contract.show": "Show object"
+  "pp.contract.show": "Show object",
+  "pp.contract.editNoVersion": "Text is edited in place; no version check yet — two people editing at once are not protected (ADR-LORE-047, item 4).",
+  "pp.yes": "yes",
+  "pp.sec.plan": "Planning",
+  "pp.sec.modules": "Modules",
+  "pp.field.created": "Created",
+  "pp.field.noRelease": "No release required"
 }
