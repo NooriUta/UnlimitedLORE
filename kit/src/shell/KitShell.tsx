@@ -76,6 +76,8 @@ export interface KitShellProps {
   onNavigate?: (nav: KitNav) => void;
   onOpenRecord?: (id: string) => void;
   /** Правый край шапки: выбор проектов (S4-03), профиль… */
+  /** Сразу за приложениями (S4-23): охват проектов, как в прототипе v4. */
+  topStart?: ReactNode;
   topEnd?: ReactNode;
   /** Слот аккаунта справа в шапке — меню аватара (AvatarMenu, S4-02). */
   account?: ReactNode;
@@ -160,7 +162,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, topEnd, account, keepParams, children,
+  onNavigate, onOpenRecord, topStart, topEnd, account, keepParams, children,
 }: KitShellProps) {
   const lang = useKitLang();
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
@@ -317,6 +319,7 @@ export function KitShell({
               );
             })}
           </nav>
+          {topStart && <div className="sk-shell__top-start">{topStart}</div>}
           {topEnd && <div className="sk-shell__top-end">{topEnd}</div>}
           {account && <div className="sk-shell__account">{account}</div>}
         </header>

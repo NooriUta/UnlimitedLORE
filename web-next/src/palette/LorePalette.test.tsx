@@ -112,12 +112,13 @@ describe('S4-14 · Ctrl+K над выделением', () => {
 describe('S4-14 · кнопки для сенсора (у каждой клавиши есть кнопка)', () => {
   it('trigger: «Поиск» открывает «/», «Команды» — Ctrl+K; клавиши в aria-keyshortcuts', () => {
     show({ fetchImpl: vi.fn(), trigger: true });
-    const search = screen.getByRole('button', { name: 'Поиск' });
+    // S4-23: кнопки подписаны текстом и клавишей — «Поиск по LORE… (/)», «Команды (Ctrl K)».
+    const search = screen.getByRole('button', { name: /^Поиск по LORE/ });
     expect(search.getAttribute('aria-keyshortcuts')).toBe('/');
     fireEvent.click(search);
     expect(screen.getByRole('dialog').getAttribute('data-mode')).toBe('records');
     fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape', code: 'Escape' });
-    const cmds = screen.getByRole('button', { name: 'Команды' });
+    const cmds = screen.getByRole('button', { name: /^Команды/ });
     expect(cmds.getAttribute('aria-keyshortcuts')).toBe('Control+K');
     fireEvent.click(cmds);
     expect(screen.getByRole('dialog').getAttribute('data-mode')).toBe('all');

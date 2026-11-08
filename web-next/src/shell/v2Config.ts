@@ -43,17 +43,19 @@ export function v2Config(lang: KitLang): KitConfig {
   return {
     modules: [
       { id: 'forseti', title: 'Forseti', icon: 'compass', status: 'active' },
+      // S4-23: порядок как в прототипе v4 и в v1 (shellNav): Forseti · BRAGI · MUNINN · TYR.
+      { id: 'bragi', title: 'BRAGI', icon: 'harp', status: 'planned' },
       { id: 'muninn', title: 'MUNINN', icon: 'raven', status: 'planned' },
       { id: 'tyr', title: 'TYR', icon: 'scales', status: 'planned' },
-      { id: 'bragi', title: 'BRAGI', icon: 'harp', status: 'planned' },
     ],
     menu: {
       myViews: true,
       recent: true,
       groups: [
+        // S4-23: «Новости» — первой группой: с них начинается день.
+        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', items: [item('news', ICON_CANON.sectionNews)] },
         { id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)', items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask)] },
         { id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)', items: [item('adr', 'scroll-quill')] },
-        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', items: [item('news', ICON_CANON.sectionNews)] },
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
     },
