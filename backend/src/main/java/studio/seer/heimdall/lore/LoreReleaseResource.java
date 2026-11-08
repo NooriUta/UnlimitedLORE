@@ -26,6 +26,10 @@ public class LoreReleaseResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreReleaseResource.class);
 
+    // S2-14: обогащение KnowPR (title / url / merged_at) из Forgejo при release_link.
+    @jakarta.inject.Inject
+    ForgejoBridge forgejo;
+
     // ── Release write-path records ────────────────────────────────────────────
     public record ReleaseCreateRequest(
         String release_id, String release_date, String git_tag,
@@ -364,7 +368,9 @@ public class LoreReleaseResource extends LoreResourceBase {
         // а не исполненные CREATE EDGE. Раньше несуществующий спринт давал
         // ok:true, sprints_linked:1 при нуле рёбер: CREATE EDGE по пустой выборке
         // в ArcadeDB — тихий no-op.
-        int sprintsLinked = 0, prsLinked = 0, created = 0;
+        int sprintsLinked = 0, prsLinked = 0, created = 0, prsEnriched = 0;
+        List<Integer> linkedPrs = new java.util.ArrayList<>();
+        List<String> prDetailsMissing = new java.util.ArrayList<>();
         List<String> errors = new java.util.ArrayList<>();
         List<String> noops = new java.util.ArrayList<>();
         try {
@@ -432,6 +438,7 @@ public class LoreReleaseResource extends LoreResourceBase {
                     String prUid = gp + "#" + prNum;
                     if (edgeExists("SHIPPED_IN", "pr_uid", prUid, "release_uid", ruid)) {
                         prsLinked++;
+                        linkedPrs.add(prNum);
                         continue;
                     }
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -446,11 +453,23 @@ public class LoreReleaseResource extends LoreResourceBase {
                     if (edgeExists("SHIPPED_IN", "pr_uid", prUid, "release_uid", ruid)) {
                         prsLinked++;
                         created++;
+                        linkedPrs.add(prNum);
                     } else {
                         noops.add("PR #" + prNum + " не привязан");
                     }
                 } catch (Exception e) {
                     errors.add("pr #" + prNum + ": " + e.getMessage());
+                }
+            }
+            // S2-14: и новые, и уже привязанные PR дозаполняются из Forgejo — повторный
+            // release_link по старому релизу и есть дозаполнение. Связь от сбоя
+            // обогащения не откатывается, но сбой виден в pr_details_missing.
+            if (!linkedPrs.isEmpty()) {
+                java.util.Optional<ForgejoBridge.Repo> repo = forgejo.resolve(gp);
+                for (Integer prNum : linkedPrs) {
+                    String why = enrichPr(repo, gp + "#" + prNum, prNum);
+                    if (why == null) prsEnriched++;
+                    else prDetailsMissing.add("PR #" + prNum + ": " + why);
                 }
             }
         } catch (Exception e) {
@@ -474,14 +493,44 @@ public class LoreReleaseResource extends LoreResourceBase {
                 + (noops.isEmpty() ? "" : ". CREATE EDGE по пустой выборке в ArcadeDB — тихий no-op."));
         } else {
             out.put("outcome", created > 0 ? LoreOutcome.CREATED : LoreOutcome.UNCHANGED);
-            if (created == 0) out.put("hint", "связи уже были — повторять вызов не нужно");
+            if (created == 0) out.put("hint", prsEnriched > 0
+                ? "связи уже были; поля PR дозаполнены из Forgejo"
+                : "связи уже были — повторять вызов не нужно");
         }
+        if (prsLinked > 0) out.put("prs_enriched", prsEnriched);
+        if (!prDetailsMissing.isEmpty()) out.put("pr_details_missing", prDetailsMissing);
         // Проект берём тем же правилом, что и внутри try (та переменная не видна
         // здесь по области видимости) — дефолт обязан совпадать, иначе вердикт
         // ушёл бы искать релиз не в том репозитории.
         out.put("quality", WorkQuality.compact(releaseQuality(req.release_id(), projectOf(req.git_project()))));
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
+    }
+
+    /**
+     * S2-14: дописать KnowPR полями из Forgejo. null — дописано; иначе причина,
+     * почему нет (проект без primary-хоста, ответ Forgejo не 2xx, пустой ответ,
+     * исключение). Ключи SET — только из фиксированного набора ForgejoBridge.prFields.
+     */
+    private String enrichPr(java.util.Optional<ForgejoBridge.Repo> repo, String prUid, int prNum) {
+        if (repo.isEmpty()) return "у проекта нет primary-хоста Forgejo в hosts[] — поля не подтянуты";
+        try {
+            java.net.http.HttpResponse<String> r = forgejo.api(repo.get(), "GET",
+                "/repos/" + repo.get().path() + "/pulls/" + prNum, null);
+            if (r.statusCode() >= 300) return "Forgejo ответил " + r.statusCode() + " — поля не подтянуты";
+            Map<String, Object> f = ForgejoBridge.prFields(new io.vertx.core.json.JsonObject(r.body()));
+            if (f.isEmpty()) return "в ответе Forgejo нет полей PR — поля не подтянуты";
+            StringBuilder set = new StringBuilder();
+            for (String k : f.keySet()) set.append(set.length() == 0 ? "" : ", ").append(k).append("=:").append(k);
+            Map<String, Object> p = new LinkedHashMap<>(f);
+            p.put("uid", prUid);
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowPR SET " + set + " WHERE pr_uid=:uid", p)).await().indefinitely();
+            return null;
+        } catch (Exception e) {
+            LOG.warnf("[LORE RELEASE LINK] обогащение %s: %s", prUid, e.getMessage());
+            return "сбой обращения к Forgejo: " + e.getMessage();
+        }
     }
 
     // ── Write-path: unlink sprint or PR from a release ───────────────────────────
