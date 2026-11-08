@@ -57,13 +57,15 @@ export interface V2ShellProps {
   narrow?: boolean;
   /** Метка после имени в шапке (версия v2). */
   brandTag?: ReactNode;
-  /** Правый край шапки — выбор проектов (S4-03). */
+  /** Сразу за приложениями — охват проектов (S4-23). */
+  topStart?: ReactNode;
+  /** Правый край шапки — поиск и команды. */
   topEnd?: ReactNode;
   /** Слот аккаунта справа в шапке (меню аватара, S4-02). */
   account?: ReactNode;
 }
 
-export function V2Shell({ storage, win, narrow, brandTag, topEnd, account }: V2ShellProps) {
+export function V2Shell({ storage, win, narrow, brandTag, topStart, topEnd, account }: V2ShellProps) {
   const lang = useKitLang();
   const config = useMemo(() => v2Config(lang), [lang]);
   return (
@@ -72,6 +74,7 @@ export function V2Shell({ storage, win, narrow, brandTag, topEnd, account }: V2S
       brand={appT(lang, 'shell.brand')}
       brandIcon="compass"
       brandTag={brandTag}
+      topStart={topStart}
       topEnd={topEnd}
       // Выбор проектов (S4-03, ?proj=) — глобальный: переживает смену раздела (S4-13, B-07).
       keepParams={V2_KEEP_PARAMS}

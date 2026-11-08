@@ -6,6 +6,7 @@
 // «Релиз»: у спринтов — release_ids слайса спринтов. Слайсы задач релиза не
 // отдают (tasks_of_sprint / all_tasks), поэтому релиз задачи наследуется от
 // её спринта на клиенте — новая серверная колонка не нужна.
+import { ICON_CANON } from '@seidr/kit';
 import { inheritField } from '@seidr/kit';
 import type { KitRecord, ValueIcon } from '@seidr/kit';
 
@@ -30,16 +31,16 @@ export const TASK_FILTERS: readonly string[] = [
 ];
 
 const PRIORITY_ICONS: Record<string, ValueIcon> = {
-  P0: { icon: 'fire', color: 'var(--dng)' },
-  P1: { icon: 'arrow-flights', color: 'var(--wrn)' },
-  P2: { icon: 'plain-arrow', color: 'var(--t2)' },
-  P3: { icon: 'feather', color: 'var(--t3)' },
+  P0: { icon: ICON_CANON.prioP0, color: 'var(--dng)' },
+  P1: { icon: ICON_CANON.prioP1, color: 'var(--wrn)' },
+  P2: { icon: ICON_CANON.prioP2, color: 'var(--t2)' },
+  P3: { icon: ICON_CANON.prioP3, color: 'var(--t3)' },
 };
 
 const FIELD_ICONS: Record<string, ValueIcon> = {
   [LORE_FILTER_FIELDS.release]: { icon: 'open-book', color: 'var(--suc)' },
   [LORE_FILTER_FIELDS.component]: { icon: 'cog', color: 'var(--inf)' },
-  [LORE_FILTER_FIELDS.project]: { icon: 'stone-tower', color: 'var(--acc)' },
+  [LORE_FILTER_FIELDS.project]: { icon: ICON_CANON.fieldProject, color: 'var(--acc)' },
   [LORE_FILTER_FIELDS.milestone]: { icon: 'crossed-axes', color: 'var(--wrn)' },
   [LORE_FILTER_FIELDS.sprint]: { icon: 'sprint', color: 'var(--acc)' },
 };
@@ -51,7 +52,7 @@ const FIELD_ICONS: Record<string, ValueIcon> = {
 export function loreValueIcon(key: string, value: string): ValueIcon | null | undefined {
   if (key === 'status' || key === 'kind') return undefined;
   if (!value) return null;
-  if (key === LORE_FILTER_FIELDS.priority) return PRIORITY_ICONS[value] ?? { icon: 'plain-arrow', color: 'var(--t2)' };
+  if (key === LORE_FILTER_FIELDS.priority) return PRIORITY_ICONS[value] ?? { icon: ICON_CANON.prioP2, color: 'var(--t2)' };
   return FIELD_ICONS[key] ?? null;
 }
 

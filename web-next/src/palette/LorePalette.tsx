@@ -5,10 +5,9 @@
 // здесь только склейка с API LORE. Своей копии палитры web-next не держит.
 import { useMemo } from 'react';
 import {
-  CommandPalette, IconButton, SECTION_ICONS, createRecentList, useKitLang, useKitPalette,
+  CommandPalette, PaletteTriggers, createRecentList, useKitLang, useKitPalette,
   type KitCtx, type KitData, type KitRecord, type PaletteAction, type PaletteTarget, type SafeStorage,
 } from '@seidr/kit';
-import { appT } from '../i18n';
 import { copyActions, loreRemoteSearch, searchKinds, type ClipboardLike } from './paletteSource';
 
 export interface LorePaletteProps {
@@ -75,10 +74,8 @@ export function LorePalette({
   return (
     <>
       {trigger && (
-        <span className="palette-trigger">
-          <IconButton icon={SECTION_ICONS.search} label={appT(lang, 'palette.trigger.search')} shortcut="/" onClick={palette.openSearch} />
-          <IconButton icon={SECTION_ICONS.commands} label={appT(lang, 'palette.trigger.commands')} shortcut="Control+K" onClick={palette.openPalette} />
-        </span>
+        // S4-23: поиск строкой и «Команды» с подписью и клавишами — деталь kit.
+        <PaletteTriggers onSearch={palette.openSearch} onCommands={palette.openPalette} />
       )}
       <CommandPalette
         open={palette.open}

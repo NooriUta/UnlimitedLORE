@@ -508,3 +508,16 @@ describe('PL-11: тесты с реальными процессами несу�
     for (const h of heads) expect(h).toMatch(/\{ timeout: SPAWN_TIMEOUT \}/);
   });
 });
+
+// Решение владелицы 08.11: бэкенд препрода ходит в ArcadeDB 131 под root (basic).
+// Токен lore-backend на 131 выдан только на system_aida_lore — на базу препрода
+// он давал 403 при старте (CD run на preprod-75bc50fe, бэкенд в рестарт-цикле).
+// Переменная репозитория vars.LORE_MART_AUTH препрод больше не переключает.
+describe('PL-04: бэкенд препрода — basic (root), а не токен прода', () => {
+  it('Deploy backend: LORE_MART_AUTH жёстко basic, без vars.LORE_MART_AUTH', () => {
+    const w = read('.github/workflows/lore-cd.yml');
+    const step = w.slice(w.indexOf('- name: Deploy backend'), w.indexOf('docker compose up -d --no-deps lore-backend'));
+    expect(step).toMatch(/LORE_MART_AUTH: basic\b/);
+    expect(step).not.toMatch(/vars\.LORE_MART_AUTH/);
+  });
+});

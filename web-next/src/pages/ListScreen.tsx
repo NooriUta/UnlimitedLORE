@@ -4,7 +4,7 @@
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
 import { useEffect, useMemo, useState } from 'react';
-import { Forbidden, ListView, LoadError, ScreenHead, Skeleton, useKitLang, useLoadState } from '@seidr/kit';
+import { Forbidden, ICON_CANON, ListView, LoadError, ScreenHead, Skeleton, useKitLang, useLoadState } from '@seidr/kit';
 import type { KitProgressInput, UrlWindow } from '@seidr/kit';
 import { fetchSlice } from '../api/loreClient';
 import { useAppT } from '../i18n';
@@ -90,6 +90,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         data={shownData ?? data}
         urlState={urlState}
         quickIcons={def.quickIcons}
+        // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
+        viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
         expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
       />

@@ -21,6 +21,7 @@
 // клавише. Клавиши по e.code (русская раскладка), слушатель — на корне списка,
 // а не на window: два списка на экране не делят клавиши. У каждой клавиши —
 // кнопка с aria-keyshortcuts и подсказкой Kbd; в поле ввода клавиша — текст.
+import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
@@ -893,7 +894,7 @@ export function ListView({
         {!head && viewMenu}
         <fieldset className="sk-list__seg" data-seg="filter">
           <legend className="sk-list__seglabel">{t('kit.list.desc.filter')}</legend>
-          <GameIcon slug="funnel" size={14} className="sk-list__segicon" />
+          <GameIcon slug={ICON_CANON.segFilter} size={14} className="sk-list__segicon" />
           {segCount(filterCount)}
           <input
             type="search"
@@ -920,7 +921,7 @@ export function ListView({
         {(view === 'list' || view === 'board') && hasGroupings && (
           <fieldset className="sk-list__seg" data-seg="group">
           <legend className="sk-list__seglabel">{t('kit.list.group')}</legend>
-          <GameIcon slug="stack" size={14} className="sk-list__segicon" />
+          <GameIcon slug={ICON_CANON.segGroup} size={14} className="sk-list__segicon" />
           {segCount(groupKey ? 1 : 0)}
           <GroupMenu
             group={groupKey}
@@ -935,7 +936,7 @@ export function ListView({
         )}
         <fieldset className="sk-list__seg" data-seg="sort">
           <legend className="sk-list__seglabel">{t('kit.list.sort')}</legend>
-          <GameIcon slug="histogram" size={14} className="sk-list__segicon" />
+          <GameIcon slug={ICON_CANON.segSort} size={14} className="sk-list__segicon" />
           {segCount(state.sort ? 1 : 0)}
           <select
             aria-label={t('kit.list.sort')}

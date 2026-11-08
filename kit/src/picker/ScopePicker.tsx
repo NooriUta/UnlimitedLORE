@@ -14,6 +14,7 @@
 //
 // Компонент «глупый»: список, выбор и состояние даёт приложение (откуда — из
 // слайсов LORE, из URL), здесь — только вид и действия.
+import { ICON_CANON } from '../elements/iconCanon';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
@@ -56,9 +57,10 @@ export interface ScopePickerProps {
   className?: string;
 }
 
-function summaryText(lang: KitLang, s: ScopeSummary): string {
+/** Скрытое — числом (S4-23): «Все проекты · 23», если число проектов известно. */
+function summaryText(lang: KitLang, s: ScopeSummary, total = 0): string {
   switch (s.kind) {
-    case 'all': return kitT(lang, 'kit.scope.all');
+    case 'all': return total > 0 ? kitT(lang, 'kit.scope.allN', { n: total }) : kitT(lang, 'kit.scope.all');
     case 'mine': return kitT(lang, 'kit.scope.summary.mine', { n: s.count });
     case 'one': return s.title;
     case 'many': return kitT(lang, 'kit.scope.summary.many', { n: s.count });
@@ -76,7 +78,7 @@ export function ScopePicker(props: ScopePickerProps) {
 }
 
 function ScopePickerInner({
-  label, icon = 'stack', options, value, onChange, state = 'ok', error, onRetry, completeness,
+  label, icon = ICON_CANON.scopeAll, options, value, onChange, state = 'ok', error, onRetry, completeness,
   forbiddenReason, mine = 'known', mineHint, narrow: narrowProp, lang = 'ru', className,
 }: ScopePickerProps) {
   const narrow = useNarrow(narrowProp);
@@ -85,7 +87,7 @@ function ScopePickerInner({
   const trigger = useRef<HTMLButtonElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const summary = summarizeScope(value, options, mine === 'known');
-  const sumText = summaryText(lang, summary);
+  const sumText = summaryText(lang, summary, options.length);
 
   const close = (refocus = true) => {
     setOpen(false);
@@ -132,6 +134,7 @@ function ScopePickerInner({
         <GameIcon slug={icon} size={14} />
         <span className="sk-scope__name">{name}</span>
         <span className="sk-scope__value" data-kind={summary.kind}>{sumText}</span>
+        <span className="sk-scope__chev" aria-hidden="true">▾</span>
       </button>
       {open && narrow && (
         <Sheet open onClose={() => setOpen(false)} title={name} side="bottom" className="sk-scope__sheet">
@@ -273,7 +276,7 @@ function ScopeBody({
           aria-pressed={value.length === 0}
           onClick={() => onChange([])}
         >
-          <GameIcon slug="stack" size={13} />
+          <GameIcon slug={ICON_CANON.scopeAll} size={13} />
           {kitT(lang, 'kit.scope.all')}
         </button>
       </div>

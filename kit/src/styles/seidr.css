@@ -2454,8 +2454,42 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
    «Связи», локальный граф, «Журнал». Цвет типа ребра/статуса/вердикта приходит
    из конфига в --edge-c/--pill-c/--verdict-c/--node-c (токен темы). ── */
 .sk-rec { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }
-.sk-rec-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--bd); }
-.sk-rec-head__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+/* Шапка записи (S4-29, прототип v4): надзаголовок «тип · ID» → H1 → строка статуса. */
+.sk-rec-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; }
+.sk-rec-head__over {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-rec-head__dot { color: var(--t3); }
+.sk-rec-head__id { font-family: var(--mono); color: var(--t2); text-transform: none; letter-spacing: .02em; }
+.sk-rec-head__status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+/* Статус записи — пилюля С РАМКОЙ: словарь форм v4 «рамка = кликабельно/значимо». */
+.sk-rec-head__status .sk-rec-status,
+.sk-rec-facts .sk-rec-status { border: 1px solid var(--pill-c, var(--bd)); }
+.sk-rec-loaded { display: inline-flex; align-items: center; gap: 4px; color: var(--t3); font-size: var(--fs-xs); }
+.sk-rec-loaded__btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: max(var(--tap), 22px);
+  min-height: max(var(--tap), 22px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--acc);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-rec-loaded__btn:hover { background: var(--bg2); }
+.sk-rec-loaded__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-rec-facts__tail { margin-left: auto; }
 .sk-rec-head__kind { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
 .sk-rec-head__time { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
 .sk-rec-head__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1.2; color: var(--t1); word-break: break-word; }
@@ -3789,3 +3823,35 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-auth .sk-auth-expired { position: static; transform: none; }
 .sk-auth-expired__icon { color: var(--wrn); }
 .sk-auth-expired__text { min-width: 0; flex: 1; }
+
+/* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */
+.sk-shell__top-start { display: flex; align-items: center; min-width: 0; }
+.sk-scope__chev { color: var(--t3); font-size: var(--fs-xs); }
+.sk-ptrig { display: inline-flex; align-items: center; gap: var(--gap); }
+.sk-ptrig__search,
+.sk-ptrig__cmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  background: var(--bg2);
+  color: var(--t2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-ptrig__search { min-width: 220px; justify-content: flex-start; }
+.sk-ptrig__search .sk-kbd { margin-left: auto; }
+.sk-ptrig__text { white-space: nowrap; }
+.sk-ptrig__search:hover,
+.sk-ptrig__cmd:hover { border-color: var(--bdh); color: var(--t1); }
+.sk-ptrig__search:focus-visible,
+.sk-ptrig__cmd:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+@media (max-width: 720px) {
+  .sk-ptrig__search { min-width: 0; }
+  .sk-ptrig__text,
+  .sk-ptrig .sk-kbd { display: none; }
+}

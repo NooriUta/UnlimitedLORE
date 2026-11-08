@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import type { KitRecord } from '@seidr/kit';
-import { applyFilterSet, facetOf } from '@seidr/kit';
+import { applyFilterSet, facetOf, hasGameIcon, registerGameIcons } from '@seidr/kit';
 import { LORE_FILTER_FIELDS, SPRINT_FILTERS, TASK_FILTERS, loreValueIcon, tasksWithSprintRelease } from './loreFilters';
 
 const rec = (id: string, kind: string, fields: Record<string, unknown>): KitRecord =>
@@ -20,15 +20,16 @@ describe('поля фильтров LORE', () => {
   });
 });
 
-describe('иконки значений — как в прототипе v4, слаги есть в game-icons', () => {
-  const icons = (gameIcons as { icons: Record<string, unknown>; aliases?: Record<string, unknown> });
-  const known = (slug: string) => slug in icons.icons || slug in (icons.aliases ?? {});
+// S4-25: иконки — выбор владелицы (SPEC-LORE-UXR-ICONS): проект — castle, P0 — lucide:flame.
+describe('иконки значений — по канону S4-25, есть в зарегистрированных наборах', () => {
+  registerGameIcons(gameIcons);
+  const known = (slug: string) => hasGameIcon(slug);
   it.each([
     [LORE_FILTER_FIELDS.release, 'v1.2.0', 'open-book', 'var(--suc)'],
     [LORE_FILTER_FIELDS.component, 'LORE-ygg', 'cog', 'var(--inf)'],
-    [LORE_FILTER_FIELDS.project, 'NooriUta/UnlimitedLORE', 'stone-tower', 'var(--acc)'],
+    [LORE_FILTER_FIELDS.project, 'NooriUta/UnlimitedLORE', 'castle', 'var(--acc)'],
     [LORE_FILTER_FIELDS.milestone, 'M1', 'crossed-axes', 'var(--wrn)'],
-    [LORE_FILTER_FIELDS.priority, 'P0', 'fire', 'var(--dng)'],
+    [LORE_FILTER_FIELDS.priority, 'P0', 'lucide:flame', 'var(--dng)'],
   ])('%s=%s → %s', (key, value, icon, color) => {
     expect(loreValueIcon(key, value)).toEqual({ icon, color });
     expect(known(icon)).toBe(true);

@@ -10,6 +10,7 @@
 //     задачами S4; до тех пор раздел честно говорит «экран не собран».
 //   • Статусы — коды LORE; иконка и цвет из общей таблицы kit (statusMeta), чтобы
 //     v2 и kit не разошлись; подпись — из локалей web-next.
+import { ICON_CANON } from '@seidr/kit';
 import { statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 
@@ -42,25 +43,27 @@ export function v2Config(lang: KitLang): KitConfig {
   return {
     modules: [
       { id: 'forseti', title: 'Forseti', icon: 'compass', status: 'active' },
+      // S4-23: порядок как в прототипе v4 и в v1 (shellNav): Forseti · BRAGI · MUNINN · TYR.
+      { id: 'bragi', title: 'BRAGI', icon: 'harp', status: 'planned' },
       { id: 'muninn', title: 'MUNINN', icon: 'raven', status: 'planned' },
       { id: 'tyr', title: 'TYR', icon: 'scales', status: 'planned' },
-      { id: 'bragi', title: 'BRAGI', icon: 'harp', status: 'planned' },
     ],
     menu: {
       myViews: true,
       recent: true,
       groups: [
-        { id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)', items: [item('sprint', 'sprint'), item('task', 'checklist')] },
+        // S4-23: «Новости» — первой группой: с них начинается день.
+        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', items: [item('news', ICON_CANON.sectionNews)] },
+        { id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)', items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask)] },
         { id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)', items: [item('adr', 'scroll-quill')] },
-        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', items: [item('news', 'newspaper')] },
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
     },
     kinds: {
       sprint: { title: t('shell.sec.sprint'), icon: 'sprint' },
-      task: { title: t('shell.sec.task'), icon: 'checklist' },
+      task: { title: t('shell.sec.task'), icon: ICON_CANON.sectionTask },
       adr: { title: t('shell.sec.adr'), icon: 'scroll-quill' },
-      news: { title: t('shell.sec.news'), icon: 'newspaper' },
+      news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
     },
     statuses: {
       items: STATUSES.map(([code, category, allow]) => {

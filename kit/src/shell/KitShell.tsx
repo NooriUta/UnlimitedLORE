@@ -12,6 +12,7 @@
 //
 // Пустое — честно: пустые «Недавние»/«Мои виды»/меню подписаны, запись,
 // которой нет в выгрузке, помечена, а не выброшена молча.
+import { ICON_CANON } from '../elements/iconCanon';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { KitConfig, KitData } from '../core/contract';
@@ -75,6 +76,8 @@ export interface KitShellProps {
   onNavigate?: (nav: KitNav) => void;
   onOpenRecord?: (id: string) => void;
   /** Правый край шапки: выбор проектов (S4-03), профиль… */
+  /** Сразу за приложениями (S4-23): охват проектов, как в прототипе v4. */
+  topStart?: ReactNode;
   topEnd?: ReactNode;
   /** Слот аккаунта справа в шапке — меню аватара (AvatarMenu, S4-02). */
   account?: ReactNode;
@@ -159,7 +162,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, topEnd, account, keepParams, children,
+  onNavigate, onOpenRecord, topStart, topEnd, account, keepParams, children,
 }: KitShellProps) {
   const lang = useKitLang();
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
@@ -282,7 +285,7 @@ export function KitShell({
           <a className="sk-shell__skip" href={`#${mainId}`}>{kitT(lang, 'kit.shell.skip')}</a>
           {narrow && (
             <IconButton
-              icon="hamburger-menu"
+              icon={ICON_CANON.ctlMenu}
               label={kitT(lang, 'kit.shell.menu')}
               aria-expanded={drawer}
               aria-haspopup="dialog"
@@ -316,6 +319,7 @@ export function KitShell({
               );
             })}
           </nav>
+          {topStart && <div className="sk-shell__top-start">{topStart}</div>}
           {topEnd && <div className="sk-shell__top-end">{topEnd}</div>}
           {account && <div className="sk-shell__account">{account}</div>}
         </header>
@@ -421,7 +425,7 @@ function ShellMenu({
                   aria-current={v.module === nav.module && v.item === nav.item && v.view === nav.view ? 'true' : undefined}
                   onClick={() => onView(v)}
                 >
-                  <GameIcon slug="round-star" size={14} />
+                  <GameIcon slug={ICON_CANON.myViews} size={14} />
                   <span className="sk-shell__label">{v.title}</span>
                 </button>
                 <IconButton
@@ -434,7 +438,7 @@ function ShellMenu({
             ))}
             <li>
               <button type="button" className="sk-shell__item sk-shell__item--action" onClick={onSaveView}>
-                <GameIcon slug="save" size={14} />
+                <GameIcon slug={ICON_CANON.saveView} size={14} />
                 <span className="sk-shell__label">{kitT(lang, 'kit.shell.saveView')}</span>
               </button>
             </li>
@@ -450,7 +454,7 @@ function ShellMenu({
               return (
                 <li key={id}>
                   <button type="button" className="sk-shell__item" onClick={() => onRecent(id)}>
-                    <GameIcon slug="back-forth" size={14} />
+                    <GameIcon slug={ICON_CANON.recent} size={14} />
                     <span className="sk-shell__label">
                       {title ?? <span className="sk-shell__id">{id}</span>}
                     </span>

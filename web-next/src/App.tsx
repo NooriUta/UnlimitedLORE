@@ -140,9 +140,10 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
       <div data-lore-app="v2" className="v2-app">
         {/* Метка версии — ID-пилюля kit в шапке: v2 нельзя спутать с v1. */}
         <V2Shell storage={storage} win={win} narrow={narrow} brandTag={<Pill variant="id">v2</Pill>}
+          // S4-23: охват проектов — сразу за приложениями, как в прототипе v4.
+          topStart={<ProjectScope />}
           topEnd={(
             <>
-              <ProjectScope />
               {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.
                   Экраны списков передадут сюда свои ctx, target (выделение S4-10) и действия. */}
               <LorePalette storage={storage} trigger />

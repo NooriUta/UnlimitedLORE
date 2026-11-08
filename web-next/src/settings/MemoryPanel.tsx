@@ -3,6 +3,7 @@
 // флаг «запоминать». Честные состояния: загрузка, сбой (с «повторить»),
 // чужая память (403 — «нет прав»), пустой раздел — проверенный ноль, а при
 // выключенной памяти пустота подписана как «не запоминаю».
+import { ICON_CANON } from '@seidr/kit';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, Forbidden, IconButton, LoadError, Segmented, SettingRow, Skeleton, classifyError } from '@seidr/kit';
 import type { MemoryKind, MemoryResponse } from '../api/contracts/s2';
@@ -83,7 +84,7 @@ export function MemoryPanel({ client, lang, onBack }: MemoryPanelProps) {
                 <h4 className="memory-cat__title">{kindTitle}</h4>
                 {cat.items.length > 0 && (
                   <IconButton
-                    icon="trash-can"
+                    icon={ICON_CANON.ctlDelete}
                     label={`${t(lang, 'settings.memory.forgetKind')}: ${kindTitle}`}
                     disabled={busy}
                     onClick={() => act(() => client.forgetAll(cat.kind))}

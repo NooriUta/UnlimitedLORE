@@ -1,6 +1,7 @@
 // Модель экрана новостей v2 (SPRINT_UXR_S7A_NEWS/S7A-02): запрос, состояние в
 // URL, проверка контракта, подписи и ссылки. Ни одной метрики: всё считает
 // сервер (SPEC-LORE-UXR-NEWS-ALGORITHMS 1.3.0), здесь — только форма.
+import { ICON_CANON } from '../elements/iconCanon';
 import type { KitLang } from '../i18n';
 import type { PillTone } from '../elements/Pill';
 import { newsT, type NewsKey } from './i18n';
@@ -191,11 +192,11 @@ export const NEWS_KIND_META: Record<string, { icon: string; tone: PillTone }> = 
   created: { icon: 'sprout', tone: 'suc' },
   changed: { icon: 'pencil', tone: 'inf' },
   status: { icon: 'pencil', tone: 't2' },
-  version: { icon: 'stack', tone: 'inf' },
-  ready: { icon: 'rocket', tone: 'wrn' },
-  reactivated: { icon: 'backward-time', tone: 'dng' },
+  version: { icon: ICON_CANON.newsVersion, tone: 'inf' },
+  ready: { icon: ICON_CANON.newsReady, tone: 'wrn' },
+  reactivated: { icon: ICON_CANON.newsReactivated, tone: 'dng' },
   closed: { icon: 'check-mark', tone: 'suc' },
-  cancelled: { icon: 'cancel', tone: 't3' },
+  cancelled: { icon: ICON_CANON.newsCancelled, tone: 't3' },
   released: { icon: 'upgrade', tone: 'acc' },
 };
 

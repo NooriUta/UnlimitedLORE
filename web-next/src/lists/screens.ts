@@ -2,6 +2,7 @@
 // Каждый экран — только конфиг kit (контракт kit/src/core/contract.ts) +
 // слайс + маппинг строки; рисует всё движок списка kit (ListView). Нового
 // экрана-списка (задачи, новости — MVP D-2026-UXR-MVP) хватит ещё одной записи.
+import { ICON_CANON } from '@seidr/kit';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { statusMeta } from '@seidr/kit';
@@ -146,7 +147,8 @@ function adrsConfig(lang: KitLang): KitConfig {
 export const LIST_SCREENS = {
   sprints: {
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
-    map: sprintRecord, config: sprintsConfig, quickIcons: { 'no-release': 'wave-crest' },
+    map: sprintRecord, config: sprintsConfig, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
+    quickIcons: {},
     // Задачи x/y и раскрытие строки с задачами — как было у SprintsPage (S4-09).
     nested: {
       progressField: 'tasks',
@@ -156,7 +158,7 @@ export const LIST_SCREENS = {
   },
   adrs: {
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
-    map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': 'laurel-crown' },
+    map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
 } as const satisfies Record<string, ListScreenDef>;
 
