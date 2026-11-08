@@ -172,7 +172,11 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     const place = open.place;
     content = (
       // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
-      <RecordDock placement={place} onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
+      // modal={false} внутри оболочки: «во весь экран» накрывает область
+      // содержимого, шапка и меню остаются видимыми и рабочими (замечание
+      // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
+      <RecordDock placement={place} modal={shell == null}
+        onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
         <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
           <ListPassport key={open.id} type={PASSPORT_OF[screen]} id={open.id} placement={place} fetchImpl={fetchImpl}
             backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}

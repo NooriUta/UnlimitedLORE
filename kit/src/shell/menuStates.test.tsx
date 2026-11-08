@@ -79,7 +79,13 @@ function Probe() {
 }
 
 const root = () => document.querySelector('.sk-shell')!;
-const toggle = () => screen.getByRole('button', { name: /Меню:/ });
+/**
+ * Кнопка переключения В ШАПКЕ. Их теперь две: вторая — в самой колонке меню,
+ * с видимой подписью (замечание владелицы «левое меню не имеет свойства к
+ * сворачиванию»: кнопка была только здесь, иконкой без подписи, и не
+ * находилась). Поэтому выбираем явно, а не «первую подходящую».
+ */
+const toggle = () => within(document.querySelector('.sk-shell__top') as HTMLElement).getByRole('button', { name: /Меню:/ });
 
 describe('S4-MENU-STATES · три состояния левого меню', () => {
   it('по умолчанию открыто: ни рейки, ни свёрнутого, меню видно', () => {
