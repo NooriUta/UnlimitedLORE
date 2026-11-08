@@ -7,6 +7,7 @@ import type { KitConfig, KitData, KitEdge, KitLang, KitRecord } from '@seidr/kit
 import { appT, type AppKey } from '../i18n';
 import type { SliceBody } from '../api/loreSlice';
 import { loreEdgesConfig } from './loreEdges';
+import { planStatusOf } from '../sprints/taskStatus';
 import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type SprintTaskSliceRow } from './loreRecord';
 
 export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec'] as const;
@@ -58,14 +59,13 @@ async function loadSprint(id: string, lang: KitLang, slice: Slice, now: string):
   let tasks: SprintTaskSliceRow[] | { error: string };
   try { tasks = (await slice<SprintTaskSliceRow>('tasks_of_sprint', { sprint_id: id })).rows; } catch (e) { tasks = { error: errText(e) }; }
   const { record, data } = sprintKitData(row as unknown as SprintSliceRow, tasks, now);
-  record.status = norm(row.status_raw);
+  record.status = planStatusOf(str(row.status_raw));
   Object.assign(record.fields, {
     priority: str(row.priority) || null, projects: arr(row.git_projects), components: arr(row.components),
     releases: arr(row.release_ids), milestones: arr(row.milestone_ids),
     planned_start: str(row.planned_start_date) || null, planned_end_date: str(row.planned_end_date) || null,
   });
   data.edges.push(...refsTo(id, arr(row.git_projects), 'BELONGS_TO_PROJECT'), ...refsTo(id, arr(row.components), 'BELONGS_TO'));
-  for (const t of data.records) t.status = norm(t.status);
   const config = baseConfig(lang, {
     Sprint: {
       title: appT(lang, 'pp.kind.sprint'), icon: 'sprint',
@@ -90,7 +90,7 @@ async function loadTask(uid: string, lang: KitLang, slice: Slice, now: string): 
   if (!row) throw new Error(appT(lang, 'pp.notFound', { id: uid }));
   const sprint = str(row.sprint_id);
   const record: KitRecord = {
-    id: uid, kind: 'task', title: str(row.title) || uid, status: norm(row.status_raw),
+    id: uid, kind: 'task', title: str(row.title) || uid, status: planStatusOf(str(row.status_raw)),
     body_md: str(row.note_md) || undefined,
     fields: {
       sprint: sprint || null, components: arr(row.component_ids), effort: row.effort_days ?? null, actual: row.actual_days ?? null,
