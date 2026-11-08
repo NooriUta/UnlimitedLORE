@@ -3,7 +3,7 @@
 // на file:// и при частых вызовах (Safari/Chrome режут лимитом) — выбор
 // вкладки не должен теряться и не должен ронять приложение.
 import { describe, expect, it } from 'vitest';
-import { pushUrlState, readUrlState, type UrlWindow } from './urlState';
+import { pushUrlState, readUrlState, urlStateHref, type UrlWindow } from './urlState';
 
 function fakeWindow(opts: { throwOnPush?: boolean; search?: string; hash?: string } = {}) {
   const pushed: string[] = [];
@@ -76,5 +76,40 @@ describe('K-06 · состояние в «#»: снятие параметра',
     const p = readUrlState(w);
     expect(p.get('tab')).toBeNull();
     expect(p.get('sel')).toBe('K-06');
+  });
+});
+
+// ── адрес строкой и снятие якоря (находки P1 аудита 08.11.2026) ───────────────
+// «Пункты — кнопки, 0 <a href>»: чтобы пункт стал ссылкой, адрес нужно знать до
+// перехода — urlStateHref. «Кнопка "← Спринты" док закрывает, но в адресе
+// остаются place=bottom#SPRINT_…»: оставшийся якорь не косметика — по такому
+// адресу запись откроется снова.
+describe('адрес строкой и якорь', () => {
+  it('положительный контроль: адрес ссылки совпадает с тем, что запишет переход', () => {
+    const { w, pushed } = fakeWindow({ search: '?sec=sprint' });
+    const href = urlStateHref(w, { sec: 'adr' });
+    pushUrlState({ sec: 'adr' }, { win: w });
+    expect(pushed).toEqual([href]);
+  });
+
+  it('якорь сохраняется по умолчанию — «#top» это закладка на месте в тексте', () => {
+    const { w } = fakeWindow({ search: '?sec=sprint', hash: '#top' });
+    expect(urlStateHref(w, { sec: 'adr' })).toBe('/lore?sec=adr#top');
+  });
+
+  it('anchor: null снимает якорь — мусор после выхода из дока', () => {
+    const { w } = fakeWindow({ search: '?open=S-1&place=bottom', hash: '#S-1/S4-01' });
+    expect(urlStateHref(w, { open: null, place: null }, { anchor: null })).toBe('/lore');
+  });
+
+  it('переход тоже умеет снимать якорь', () => {
+    const { w, pushed } = fakeWindow({ search: '?open=S-1&place=bottom', hash: '#S-1' });
+    pushUrlState({ open: null, place: null }, { win: w, anchor: null });
+    expect(pushed).toEqual(['/lore']);
+  });
+
+  it('параметры из «#» уже слиты в query — второй раз якорем не приклеиваются', () => {
+    const { w } = fakeWindow({ search: '', hash: '#sec=adr' });
+    expect(urlStateHref(w, { tab: 'x' })).toBe('/lore?sec=adr&tab=x');
   });
 });

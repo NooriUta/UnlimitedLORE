@@ -250,5 +250,10 @@
   "sprintBurn.loading": "Считаем историю спринта…",
   "sprintBurn.empty": "Истории по спринту нет",
   "sprintBurn.failed": "Историю спринта не смогли прочитать",
-  "sprintBurn.partial": "История неполная — цифры ниже считаны по обрезанной выдаче"
+  "sprintBurn.partial": "История неполная — цифры ниже считаны по обрезанной выдаче",
+  "outsideShell.demo": "Демо вне приложения.",
+  "outsideShell.standalone": "Страница открыта вне оболочки LORE.",
+  "outsideShell.missing": "Здесь нет шапки, меню, поиска и команд.",
+  "outsideShell.back": "Вернуться в LORE",
+  "palette.goSection": "Перейти: {section}"
 }

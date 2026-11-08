@@ -1,0 +1,17 @@
+/* Метка «вне оболочки» (S4-17). Только токены kit: своих цветов и размеров
+   шрифта у v2 нет. Полоса заметная, но не кричащая — это пояснение, а не
+   ошибка. */
+.outside-shell {
+  margin: 0;
+  padding: var(--pad-y, 6px) var(--pad-x, 10px);
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg3);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+.outside-shell__what { color: var(--t1); font-weight: 700; }
+.outside-shell__missing { color: var(--t2); }
+.outside-shell__back { color: var(--acc); }
+.outside-shell__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }

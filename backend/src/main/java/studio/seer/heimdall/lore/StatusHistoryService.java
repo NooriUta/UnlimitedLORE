@@ -148,6 +148,9 @@ final class StatusHistoryService {
             script.append(Scd2Guard.guardedClose(k.hist(), checkStatus));
             p.put("oldrid", oldRid);
             if (checkStatus) p.put("expected_raw", expectedRaw);
+        } else {
+            // S2-15: «открытой не видно» проверяется ещё раз внутри скрипта.
+            script.append(Scd2Guard.guardedNoOpen(k.hist(), k.key(), "id"));
         }
 
         StringBuilder set = new StringBuilder();
@@ -308,8 +311,21 @@ final class StatusHistoryService {
      * valid_from/valid_to не трогаются никогда.
      */
     static List<BackfillCount> backfill(Db db, String now) {
+        return backfill(db, now, BACKFILL_TYPES);
+    }
+
+    /**
+     * S2-11 (V71): задачи без единой версии истории — записи мимо SCD2 (прямой
+     * SQL, 14 задач на проде 07.11). Та же ветка «версии нет вовсе»: одна версия,
+     * текущий статус вершины, пометка {@code status_backfilled}, valid_from =
+     * момент бэкфилла. Открытые версии задач всегда несут status_raw, поэтому
+     * ветка пометки для них — ноль строк.
+     */
+    static final List<String> TASK_BACKFILL_TYPES = List.of("task");
+
+    static List<BackfillCount> backfill(Db db, String now, List<String> types) {
         List<BackfillCount> out = new ArrayList<>();
-        for (String type : BACKFILL_TYPES) {
+        for (String type : types) {
             Kind k = KINDS.get(type);
             int stamped = 0, opened = 0;
             String mirror = k.histMirror() == null ? "" : ", " + k.histMirror() + " AS mirror";

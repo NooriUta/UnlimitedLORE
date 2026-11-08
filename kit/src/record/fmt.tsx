@@ -40,12 +40,25 @@ export function StatusPill({ code, ctx, unknownTitle }: { code: string; ctx: Kit
 }
 
 /** Ссылка на запись: заголовок, если запись в выборке, иначе id. */
+/**
+ * Ссылка на запись: название и код.
+ *
+ * Код печатается ОДИН раз. У проекта и у многих компонентов название и есть
+ * код (`NooriUta/UnlimitedLORE`), и прежняя пара «название + код» выводила один
+ * и тот же текст дважды: в свойствах это выглядело как наложение подписей
+ * (находка P0 аудита 08.11.2026), в «Связях» — как дубль («FORseti … FORseti»).
+ * Правило общее: название показывается, только когда говорит что-то помимо
+ * кода; сравнение — без учёта регистра и крайних пробелов.
+ */
 export function RecordRef({ id, ctx }: { id: string; ctx: KitCtx }) {
   const r = findRecord(ctx, id);
+  const title = r?.title?.trim();
+  const same = !!title && title.toLocaleLowerCase() === id.trim().toLocaleLowerCase();
+  const head = title && !same ? title : id;
   return (
     <a className="sk-rec-ref" href={ctx.href(id)} data-missing={r ? undefined : 'true'}>
-      <span>{r ? r.title : id}</span>
-      {r && <span className="sk-pill sk-pill--id">{id}</span>}
+      <span className="sk-rec-ref__name">{head}</span>
+      {r && !same && title && <span className="sk-pill sk-pill--id">{id}</span>}
     </a>
   );
 }

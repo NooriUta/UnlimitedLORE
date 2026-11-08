@@ -89,7 +89,7 @@ describe('S4-MENU-STATES · три состояния левого меню', ()
     expect(root().className).not.toMatch(/sk-shell--menu-rail/);
     expect(root().className).not.toMatch(/sk-shell--menu-collapsed/);
     const side = screen.getByRole('navigation', { name: 'Разделы' });
-    expect(within(side).getByRole('button', { name: 'Спринты' })).toBeTruthy();
+    expect(within(side).getByRole('link', { name: 'Спринты' })).toBeTruthy();
   });
 
   it('кнопка переключения ходит по кругу: открыто → рейка → ушко → открыто', () => {
@@ -116,8 +116,8 @@ describe('S4-MENU-STATES · три состояния левого меню', ()
     render(<KitShell config={CONFIG} data={DATA} win={fakeWin()} storage={createSafeStorage(() => storage)} narrow={false}><Probe /></KitShell>);
     fireEvent.click(toggle());
     const side = screen.getByRole('navigation', { name: 'Разделы' });
-    expect(within(side).getByRole('button', { name: 'Спринты' })).toBeTruthy();
-    expect(within(side).getByRole('button', { name: 'Задачи' })).toBeTruthy();
+    expect(within(side).getByRole('link', { name: 'Спринты' })).toBeTruthy();
+    expect(within(side).getByRole('link', { name: 'Задачи' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Меню' })).toBeNull();
   });
 

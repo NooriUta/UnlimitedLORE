@@ -119,6 +119,11 @@
   /* ── цель касания: на десктопе 0 (плотный UI не растёт), на сенсоре ≥44 ── */
   --tap: 0px;
 
+  /* ── высота шапки оболочки: одним числом для шапки и для «залипания» левого
+     меню под ней (S4-MENU-STATES, находка P1 аудита 08.11). Два отдельных
+     числа разъезжаются при первой же правке высоты. ── */
+  --sk-top-h: 44px;
+
   /* ── режим чтения (S5-05): колонка текста ~680 px (50–80 знаков, WCAG 1.4.8),
      широкие блоки — до --read-wide, но не шире области чтения ── */
   --read-col:  680px;
@@ -1104,11 +1109,17 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-size: var(--fs-base);
 }
 .sk-shell__top {
-  position: relative;
+  /* Шапка липнет к верху: без этого «залипшее» меню (ниже) оказывалось бы под
+     уехавшей шапкой с зазором в 44 px ниоткуда. z-index ниже накладок (док во
+     весь экран и палитра — 60): шапка держится над содержимым, но не над
+     модальным слоем. */
+  position: sticky;
+  top: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
   gap: 4px;
-  min-height: 44px;
+  min-height: var(--sk-top-h);
   padding: 0 8px;
   border-bottom: 1px solid var(--bd);
   background: var(--bg1);
@@ -1269,6 +1280,14 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-shell--narrow .sk-shell__body { grid-template-columns: minmax(0, 1fr); }
 .sk-shell__side {
+  /* Меню не уезжает со страницей (находка P1 аудита 08.11: «position: static,
+     высота 2467 px при окне 1000 — до "Настройки" не добраться, не прокрутив
+     всю страницу»). align-self: start обязателен: растянутый элемент сетки
+     никогда не «залипает». */
+  position: sticky;
+  top: var(--sk-top-h);
+  align-self: start;
+  max-height: calc(100dvh - var(--sk-top-h));
   overflow: auto;
   padding: 6px;
   border-right: 1px solid var(--bd);
@@ -2480,6 +2499,56 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 /* ── Каркас записи (SPRINT_UXR_S10_SEIDR_KIT/K-04): шапка, вердикт, вкладки,
    «Связи», локальный граф, «Журнал». Цвет типа ребра/статуса/вердикта приходит
    из конфига в --edge-c/--pill-c/--verdict-c/--node-c (токен темы). ── */
+/* S4-30: «Состояние данных». Три состояния выглядят по-разному намеренно —
+   «проверено», «не смогли проверить» и «обрезано» это разные утверждения, и
+   общая серая строка их бы слила. */
+/* K-13: фолбэк чтения Markdown без сборки — исходник и причина вместо
+   пустоты. Пустое место неотличимо от «в записи ничего не написано». */
+.sk-prose__fallback {
+  padding: 8px 10px;
+  border: 1px dashed var(--wrn);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-prose__fallback-why { margin: 0 0 6px; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-prose__fallback-src {
+  margin: 0;
+  overflow-x: auto;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+
+.sk-ds {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  font-size: var(--fs-sm);
+}
+.sk-ds__head {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-ds__label { color: var(--t3); }
+.sk-ds__checked { margin: 0; color: var(--t2); }
+.sk-ds__truncated { margin: 0; color: var(--wrn); }
+/* Непрочитанное — предупреждающим цветом: по такому блоку нельзя делать выводы. */
+.sk-ds__failed { color: var(--dng); }
+/* «Нет прав» — не ошибка чтения: ждать нечего, надо просить доступ. */
+.sk-ds__forbidden { color: var(--wrn); }
+.sk-ds__list { margin: 2px 0 0; padding-left: 18px; }
+.sk-ds__list b { font-family: var(--mono); font-weight: 700; }
+
 .sk-rec { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }
 /* Шапка записи (S4-29, прототип v4): надзаголовок «тип · ID» → H1 → строка статуса. */
 .sk-rec-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; }
@@ -2552,13 +2621,21 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
 .sk-rec-fields__none { color: var(--t3); }
 .sk-rec-fields__mono { font-family: var(--mono); }
-.sk-rec-fields__refs { display: inline-flex; flex-wrap: wrap; gap: var(--gap); }
+/* Набор ссылок и сама ссылка сжимаются до своей колонки: inline-flex без
+   min-width: 0 не уходит ниже содержимого, и длинный код проекта вылезал за
+   край панели свойств 320 px — это и видно как наложение подписей (находка P0
+   аудита 08.11.2026). */
+.sk-rec-fields__refs { display: inline-flex; flex-wrap: wrap; gap: var(--gap); min-width: 0; max-width: 100%; }
 
 .sk-rec-ref {
   display: inline-flex; align-items: center; gap: 4px;
   min-height: max(var(--tap), 20px);
+  min-width: 0; max-width: 100%;
   color: var(--acc); text-decoration: none;
 }
+/* Длинный код переносится, а не выезжает: обрезать его многоточием нельзя —
+   код записи читают целиком. */
+.sk-rec-ref__name { min-width: 0; overflow-wrap: anywhere; }
 .sk-rec-ref:hover { text-decoration: underline; }
 .sk-rec-ref:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
 .sk-rec-ref[data-missing='true'] { color: var(--t3); }
@@ -4035,6 +4112,13 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   min-width: 0;
 }
 .sk-rec__zone { margin: 0; color: var(--inf); font: 700 var(--fs-xs)/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+/* Тот же заголовок зоны, но кнопкой-свёрткой: вид не меняется, появляется
+   только указатель и клавиатурный фокус (находка P1 аудита 08.11 — свойства
+   сворачиваются и в доке, не только во весь экран). */
+.sk-rec__zone--fold { padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.sk-rec__zone--fold::before { content: '▾ '; }
+.sk-rec__zone--fold:hover { color: var(--acc); }
+.sk-rec__zone--fold:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
 .sk-rec__around-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .sk-rec__around-head { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--t3); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .sk-tab[data-zone='around'] { color: var(--inf); }
@@ -4058,7 +4142,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   background: var(--bg0);
 }
 .sk-dock[data-placement='right'] { grid-template-columns: minmax(0, 1fr) min(560px, 45%); }
-.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, 2fr) minmax(0, 3fr); }
+/* Доля списка — по его содержимому, но не больше 40 % высоты дока; остальное
+   забирает паспорт. Жёсткие 2fr/3fr оставляли над паспортом пустое поле, когда
+   список короткий: аудит 08.11 намерил «343 px прозрачного backdrop — пустая
+   треть экрана». Затемнять список нельзя — он живой (решение владелицы 08.11),
+   поэтому убрана пустота, а не видимость списка. */
+.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); }
 .sk-dock__backdrop {
   min-height: 0;
   overflow: auto;

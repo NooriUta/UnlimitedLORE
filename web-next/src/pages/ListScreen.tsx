@@ -5,7 +5,8 @@
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  Forbidden, ICON_CANON, ListView, LoadError, RecordDock, ScreenHead, Skeleton, pushUrlState, readUrlState,
+  Forbidden, ICON_CANON, ListView, LoadError, RecordDock, ScreenHead, Skeleton, pushUrlState, readUrlState, urlStateHref,
+  useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
 import type { KitProgressInput, RecordPlacement, UrlWindow } from '@seidr/kit';
@@ -25,6 +26,17 @@ const PASSPORT_OF: Record<ListScreenId, PassportType> = { sprints: 'sprint', adr
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 type OpenRecord = { id: string | null; place: RecordPlacement };
 
+/**
+ * Адрес записи для «Недавнего» оболочки: текущий раздел плюс ?open=<id>.
+ * Место (place) не берём — запись откроется там, где человек её смотрит сейчас.
+ */
+function recordHrefOf(urlState: ListScreenProps['urlState'], id: string): string | undefined {
+  const win: UrlWindow | undefined = urlState === false ? undefined
+    : typeof urlState === 'object' ? urlState
+      : typeof window === 'undefined' ? undefined : window;
+  return win ? urlStateHref(win, { open: id, place: null }, { anchor: null }) : undefined;
+}
+
 /** Открытая запись и место — в URL (?open=&place=), как всё состояние v2; urlState=false — в памяти. */
 function useOpenRecord(urlState: ListScreenProps['urlState']) {
   const win: UrlWindow | undefined = urlState === false ? undefined
@@ -40,9 +52,19 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
   });
   const set = (next: OpenRecord) => {
     setOpen(next);
-    if (win) pushUrlState({ open: next.id, place: next.place !== 'right' ? next.place : null }, { replace: true, win });
+    if (!win) return;
+    // Закрыли запись — в адресе не остаётся ни места, ни якоря (находка P1
+    // аудита 08.11: «док закрывается, но в адресе остаются place=bottom
+    // #SPRINT_…»). Это не косметика: по такому адресу запись откроется снова,
+    // и «закрыл» перестаёт совпадать с «дал ссылку на список». Фильтры списка
+    // при этом не трогаем — они принадлежат списку, а не записи.
+    const closed = next.id == null;
+    const patch = { open: next.id, place: closed || next.place === 'right' ? null : next.place };
+    pushUrlState(patch, { replace: true, win, ...(closed ? { anchor: null } : {}) });
   };
-  return [open, set] as const;
+  /** Адрес списка без открытой записи — им крошка «←» становится ссылкой. */
+  const backHref = win ? urlStateHref(win, { open: null, place: null }, { anchor: null }) : undefined;
+  return [open, set, backHref] as const;
 }
 
 export interface ListScreenProps {
@@ -67,7 +89,12 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
   const lang = useKitLang();
   const t = useAppT();
-  const [open, setOpen] = useOpenRecord(urlState);
+  const [open, setOpen, backHref] = useOpenRecord(urlState);
+  // Оболочка ведёт «Недавнее», но узнать об открытии записи сама не может:
+  // список открывает паспорт своим состоянием (?open=…). Отсюда и находка P1
+  // аудита 08.11 — «"Недавние" пусто даже после открытия записи». Экран живёт
+  // и вне оболочки (тесты, демо), поэтому доступ необязательный.
+  const shell = useOptionalKitShell();
   const config = useMemo(() => def.config(lang), [def, lang]);
   const result = useLoadState(
     signal => fetchSlice(def.slice, undefined, { signal, fetchImpl }),
@@ -127,7 +154,15 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
         expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
-        onOpen={id => setOpen({ ...open, id })}
+        onOpen={id => {
+          setOpen({ ...open, id });
+          // Название — из загруженных строк, адрес — тот же, что в адресной
+          // строке сейчас: «Недавнее» становится рабочей ссылкой, а не кодом.
+          shell?.openRecord(id, {
+            title: data?.records.find(r => r.id === id)?.title,
+            href: recordHrefOf(urlState, id),
+          });
+        }}
         recordPlace={{ value: open.place, onChange: place => setOpen({ ...open, place }) }}
       />
     );
@@ -140,7 +175,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       <RecordDock placement={place} onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
         <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
           <ListPassport key={open.id} type={PASSPORT_OF[screen]} id={open.id} placement={place} fetchImpl={fetchImpl}
-            backLabel={t(def.titleKey)} onBack={() => setOpen({ ...open, id: null })}
+            backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}
             ids={ids} onGo={id => setOpen({ ...open, id })}
             onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} />
         </Suspense>

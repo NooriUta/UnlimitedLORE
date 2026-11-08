@@ -120,6 +120,26 @@ class StatusHistoryServiceTest {
         assertFalse(p.containsKey("c_status"));
     }
 
+    // S2-15: «открытой версии не видно» — это снимок на момент чтения, а не факт на
+    // момент записи. Соседний писатель мог как раз закрыть старую строку и ещё не
+    // вставить свою: тогда план без защиты открывал вторую версию (CI #925: одна
+    // закрытая, две открытые). Скрипт обязан сам проверить, что открытой нет.
+    @Test
+    void no_visible_open_version_is_still_guarded_inside_the_script() {
+        for (StatusHistoryService.Kind k : StatusHistoryService.KINDS.values()) {
+            FakeDb db = new FakeDb();
+            db.vertex = row("cur", "x");
+            db.open = null;
+            StatusHistoryService.transition(db, k.type(), "ID-1", null, "done", AGENT, "t", "n");
+            String s = db.scripts.get(0);
+            int guard = s.indexOf("valid_to IS NULL");
+            int insert = s.indexOf("INSERT INTO " + k.hist());
+            assertTrue(guard >= 0 && guard < insert,
+                k.type() + ": проверка «открытой версии нет» до вставки: " + s);
+            assertTrue(s.contains(Scd2Guard.CONFLICT_MARK), k.type() + ": при найденной открытой — маркер конфликта: " + s);
+        }
+    }
+
     @Test
     void expected_mismatch_is_a_conflict_without_any_write() {
         FakeDb db = new FakeDb();
@@ -202,6 +222,40 @@ class StatusHistoryServiceTest {
         assertEquals("unknown", params.get(1).get("changed_by_kind"));
         for (String s : scripts) assertFalse(s.contains("KnowTaskHist") || s.contains("KnowSprintHist"),
             "задачи — предмет S2-11");
+    }
+
+    // S2-11 (V71): задачи без единой версии истории (запись мимо SCD2) получают одну
+    // честную версию — текущий статус, известен с момента бэкфилла, без выдуманных дат.
+    @Test
+    void task_backfill_opens_one_honest_version_for_tasks_without_history() {
+        List<String> scripts = new ArrayList<>();
+        List<Map<String, Object>> params = new ArrayList<>();
+        StatusHistoryService.Db db = new StatusHistoryService.Db() {
+            @Override public List<Map<String, Object>> query(String sql, Map<String, Object> p) {
+                if (sql.contains("FROM KnowTask WHERE status_raw IS NOT NULL AND out('HAS_STATE').size() = 0"))
+                    return List.of(row("id", "SPRINT_SITE_SEO_PRERENDER/PRE-03", "cur", "✅ DONE"),
+                                   row("id", "SPRINT_DALI_DIALECTS_LORE_VIZ/DLG-08", "cur", "PARTIAL"));
+                return List.of();
+            }
+            @Override public Object script(String sql, Map<String, Object> p) {
+                scripts.add(sql); params.add(new HashMap<>(p)); return List.of();
+            }
+        };
+        var counts = StatusHistoryService.backfill(db, "2026-11-08T23:00:00Z", StatusHistoryService.TASK_BACKFILL_TYPES);
+        assertEquals(List.of("task"), counts.stream().map(StatusHistoryService.BackfillCount::type).toList());
+        assertEquals(2, counts.get(0).opened());
+        assertEquals(2, scripts.size());
+        for (int i = 0; i < 2; i++) {
+            String s = scripts.get(i);
+            assertTrue(s.startsWith("INSERT INTO KnowTaskHist"), s);
+            assertTrue(s.contains("status_backfilled = true"), "пометка «время восстановлено»: " + s);
+            assertTrue(s.contains("out('HAS_STATE').size() = 0"), "повтор не откроет вторую: " + s);
+            assertEquals("2026-11-08T23:00:00Z", params.get(i).get("now"), "дата — момент бэкфилла, не выдуманная");
+            assertEquals("unknown", params.get(i).get("changed_by_kind"));
+        }
+        assertEquals("in_progress", params.get(1).get("cat"), "PARTIAL без эмодзи всё равно встаёт на ось");
+        // По умолчанию (V68) задачи по-прежнему не трогаются.
+        assertFalse(StatusHistoryService.BACKFILL_TYPES.contains("task"));
     }
 
     /** Разбор V68 на аддитивность (V1SchemaSafetyChecklist.JAVA_STEPS_REVIEWED). */

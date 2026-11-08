@@ -14,3 +14,4 @@ export * from './tiptapMd';
 export * from './MdInlineEdit';
 // S5-13 · формулы в поле правки (узлы TipTap + правила markdown-it).
 export { MathInline, MathBlock, MathSafeText, escapeMathDollars, installMathMarkdownIt } from './tiptapMath';
+export * from './markdownBare';

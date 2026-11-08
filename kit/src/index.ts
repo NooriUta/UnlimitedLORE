@@ -5,6 +5,9 @@ export * from './tokens/prefs';
 export * from './elements';
 export * from './i18n';
 export * from './states';
+// Модель LORE: загрузчик с подключаемым источником и сторож «данные не
+// пробивают поведение» (ADR-LORE-048, K-MODEL-LOADER).
+export * from './model';
 export * from './shell';
 // Контракт ядра kit (SPRINT_UXR_S10_SEIDR_KIT) и каркас записи (K-04). Тело
 // записи рендерит ctx.md — MD-элементы по-прежнему из `@seidr/kit/content`.
@@ -20,7 +23,7 @@ export { matchHotkey, parseHotkey, type HotkeySpec, type KeyLike } from './resil
 export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
-export { pushUrlState, readUrlState, sectionScopedPatch, type UrlWindow } from './resilience/urlState';
+export { pushUrlState, readUrlState, sectionScopedPatch, urlStateHref, type UrlWindow } from './resilience/urlState';
 // S4-13 (B-08): «пользователь набирает текст» — одна проверка на весь kit.
 export { isEditableTarget } from './resilience/editable';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT): KitConfig, KitData, KitRecord… — только типы.
