@@ -41,6 +41,34 @@ export interface KitSavedView extends KitNav {
   title: string;
 }
 
+/**
+ * Состояние левого меню (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-MENU-STATES):
+ * открыто — колонка с подписями; rail — только иконки; hidden — ушко на краю.
+ */
+export type KitMenuMode = 'open' | 'rail' | 'hidden';
+
+const MENU_MODES: readonly KitMenuMode[] = ['open', 'rail', 'hidden'];
+
+function isMenuMode(v: unknown): v is KitMenuMode {
+  return typeof v === 'string' && (MENU_MODES as readonly string[]).includes(v);
+}
+
+/** Кнопка ходит по кругу: открыто → рейка → ушко → открыто. */
+function nextMenuMode(m: KitMenuMode): KitMenuMode {
+  return m === 'open' ? 'rail' : m === 'rail' ? 'hidden' : 'open';
+}
+
+/**
+ * Подпись кнопки — что случится по нажатию, а не где мы сейчас. Ключи
+ * перечислены по ветвям, а не таблицей: kitT принимает только известный ключ,
+ * и literal-тип должен доживать до вызова.
+ */
+function menuModeLabel(lang: KitLang, m: KitMenuMode): string {
+  if (m === 'open') return kitT(lang, 'kit.shell.menuMode.toRail');
+  if (m === 'rail') return kitT(lang, 'kit.shell.menuMode.toHidden');
+  return kitT(lang, 'kit.shell.menuMode.toOpen');
+}
+
 export interface KitShellApi {
   nav: KitNav;
   navigate: (patch: Partial<KitNav>) => void;
@@ -50,10 +78,21 @@ export interface KitShellApi {
   views: KitSavedView[];
   saveView: (title?: string) => void;
   removeView: (id: string) => void;
-  /** Меню свёрнуто в ушко (режим чтения, S5-05 · D-2026-UXR-READ-COLLAPSE). */
+  /**
+   * Меню свёрнуто до ушка — видимый итог: либо выбран режим hidden, либо меню
+   * убрано на время чтения (S5-05 · D-2026-UXR-READ-COLLAPSE).
+   */
   menuCollapsed: boolean;
-  /** Стабильная ссылка: свернуть/раскрыть меню (на узком экране меню и так в drawer). */
+  /**
+   * Стабильная ссылка: убрать/вернуть меню на время чтения. В хранилище НЕ
+   * пишет — это действие приложения, а не выбор человека, поэтому перезагрузку
+   * не переживает и выбранный режим (например рейку) не затирает.
+   */
   setMenuCollapsed: (collapsed: boolean) => void;
+  /** Выбранное человеком состояние меню (S4-MENU-STATES). */
+  menuMode: KitMenuMode;
+  /** Выбрать состояние меню: запоминается в хранилище. */
+  setMenuMode: (mode: KitMenuMode) => void;
 }
 
 export interface KitShellProps {
@@ -176,7 +215,13 @@ export function KitShell({
   // S4-01: свёрнутые группы меню — id групп; переживают перезагрузку.
   const [collapsed, setCollapsed] = useState<string[]>(() => readList<string>(storage, `${storageKey}.collapsed`));
   const [drawer, setDrawer] = useState(false);
-  const [menuCollapsed, setMenuCollapsed] = useState(false);
+  // S4-MENU-STATES: выбор человека — переживает перезагрузку.
+  const [menuMode, setMenuModeState] = useState<KitMenuMode>(() => {
+    const raw = storage.get(`${storageKey}.menuMode`);
+    return isMenuMode(raw) ? raw : 'open';
+  });
+  // Меню, убранное на время чтения (S5-05) — состояние сеанса, не выбор.
+  const [readCollapsed, setReadCollapsed] = useState(false);
   const navRef = useRef(nav);
   navRef.current = nav;
 
@@ -252,9 +297,23 @@ export function KitShell({
     });
   }, [storage, storageKey]);
 
+  // Что видно на самом деле: чтение временно перебивает выбор, но не стирает его.
+  const effMenuMode: KitMenuMode = readCollapsed ? 'hidden' : menuMode;
+  const menuCollapsed = effMenuMode === 'hidden';
+
+  const setMenuMode = useCallback((mode: KitMenuMode) => {
+    setReadCollapsed(false);
+    setMenuModeState(mode);
+    storage.set(`${storageKey}.menuMode`, mode);
+  }, [storage, storageKey]);
+
+  const setMenuCollapsed = useCallback((collapsed: boolean) => {
+    setReadCollapsed(collapsed);
+  }, []);
+
   const api = useMemo<KitShellApi>(
-    () => ({ nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed }),
-    [nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed],
+    () => ({ nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed, menuMode, setMenuMode }),
+    [nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed, menuMode, setMenuMode],
   );
 
   const activeModule = config.modules.find(m => m.id === nav.module) ?? config.modules[0];
@@ -280,7 +339,12 @@ export function KitShell({
 
   return (
     <ShellContext.Provider value={api}>
-      <div className={['sk-shell', narrow ? 'sk-shell--narrow' : '', !narrow && menuCollapsed ? 'sk-shell--menu-collapsed' : ''].filter(Boolean).join(' ')}>
+      <div className={[
+        'sk-shell',
+        narrow ? 'sk-shell--narrow' : '',
+        !narrow && effMenuMode === 'hidden' ? 'sk-shell--menu-collapsed' : '',
+        !narrow && effMenuMode === 'rail' ? 'sk-shell--menu-rail' : '',
+      ].filter(Boolean).join(' ')}>
         <header className="sk-shell__top">
           <a className="sk-shell__skip" href={`#${mainId}`}>{kitT(lang, 'kit.shell.skip')}</a>
           {narrow && (
@@ -290,6 +354,15 @@ export function KitShell({
               aria-expanded={drawer}
               aria-haspopup="dialog"
               onClick={() => setDrawer(true)}
+            />
+          )}
+          {/* S4-MENU-STATES: на узком экране меню и так в drawer — кнопка не нужна. */}
+          {!narrow && (
+            <IconButton
+              icon={ICON_CANON.ctlMenu}
+              label={menuModeLabel(lang, effMenuMode)}
+              className="sk-shell__menu-toggle"
+              onClick={() => setMenuMode(nextMenuMode(effMenuMode))}
             />
           )}
           <div className="sk-shell__brand">
@@ -331,7 +404,8 @@ export function KitShell({
               className="sk-shell__ear"
               label={kitT(lang, 'kit.shell.menu')}
               expanded={false}
-              onToggle={() => setMenuCollapsed(false)}
+              // Убрано на время чтения — вернуть выбор; выбран hidden — раскрыть.
+              onToggle={() => (readCollapsed ? setReadCollapsed(false) : setMenuMode('open'))}
             />
           )}
           <main id={mainId} className="sk-shell__main" tabIndex={-1}>
