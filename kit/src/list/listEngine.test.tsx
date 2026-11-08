@@ -67,7 +67,7 @@ describe('строка [Фильтр][Группировка][Порядок]', 
     render(<ListView config={cfg} data={data(rs())} urlState={false} />);
     const bar = screen.getByTestId('kit-list-controls');
     // fieldset + legend: имя сегмента не спорит с подписью селекта внутри
-    const segs = within(bar).getAllByRole('group').map(g => g.querySelector('legend')?.textContent);
+    const segs = [...bar.querySelectorAll('fieldset')].map(g => g.querySelector('legend')?.textContent);
     expect(segs).toEqual(['Фильтр', 'Группировка', 'Порядок']);
     expect(screen.getByRole('group', { name: 'Порядок' })).toBeTruthy();
   });
@@ -86,11 +86,14 @@ describe('строка [Фильтр][Группировка][Порядок]', 
     expect(ids(container)).toEqual(['a', 'c', 'b']);
   });
 
-  it('группировка применяется и попадает в описание', () => {
+  it('группировка применяется; значение видно в самом контроле, текстом не дублируется (S4-21)', () => {
     const { container } = render(<ListView config={cfg} data={data(rs())} urlState={false} />);
-    fireEvent.change(screen.getByLabelText('Группировка'), { target: { value: 'area' } });
+    // S4-26: группировка — поповер со значением в кнопке.
+    fireEvent.click(screen.getByRole('button', { name: /^Группировка:/ }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Группировка' })).getByRole('radio', { name: 'Область' }));
     expect(container.querySelectorAll('[data-group-key]')).toHaveLength(2);
-    expect(screen.getByTestId('kit-list-desc').textContent).toContain('группировка: Область');
+    expect(screen.getByRole('button', { name: /^Группировка:/ }).textContent).toContain('Область');
+    expect(screen.queryByTestId('kit-list-desc')).toBeNull();
   });
 });
 

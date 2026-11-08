@@ -29,7 +29,9 @@ services:
   # Одноразовый: отрабатывает и выходит. Идемпотентен — повторный запуск на
   # готовом хранилище ничего не меняет и не падает.
   minio-init:
-    image: minio/mc:latest
+    # PL-04 (08.11.2026): образа minio/mc больше нет ни на Docker Hub, ни на
+    # Quay — клиент mc той же версии лежит внутри minio/minio (/usr/bin/mc).
+    image: minio/minio:latest
     depends_on:
       - minio
     restart: "no"
@@ -88,6 +90,8 @@ services:
         # Пустое значение = зеркала нет, поведение прежнее (см. Dockerfile).
         LORE_MAVEN_MIRROR: ${LORE_MAVEN_MIRROR:-}
         LORE_PLUGIN_MIRROR: ${LORE_PLUGIN_MIRROR:-}
+        # PL-12: дистрибутив Gradle через Nexus (raw-proxy на services.gradle.org).
+        LORE_GRADLE_DIST_MIRROR: ${LORE_GRADLE_DIST_MIRROR:-}
         # Прокси — запасной путь на случай, если зеркало недоступно, и
         # единственный для того, что через него не идёт: сам дистрибутив Gradle
         # (~130 МБ) обёртка тянет с services.gradle.org, и в чистом базовом

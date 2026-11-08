@@ -229,7 +229,8 @@ describe('S4-02 · меню аватара — личные настройки �
     await act(async () => { fireEvent.click(within(g).getByRole('button', { name: ru['settings.density.comfortable'] })); });
     await waitFor(() => expect(within(dlg).getByRole('alert').textContent).toContain(ru['settings.saveFailed']));
     expect(root.hasAttribute('data-density')).toBe(false);
-    expect(within(g).getByRole('button', { name: ru['settings.density.compact'] }).getAttribute('aria-pressed')).toBe('true');
+    // Откат — к умолчанию roomy (S4-21).
+    expect(within(g).getByRole('button', { name: ru['settings.density.roomy'] }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('409 (настройки поменяла другая вкладка) — перечитали current и повторили поверх него', async () => {

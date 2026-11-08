@@ -45,6 +45,22 @@ describe('web-next/Dockerfile: свой образ', () => {
     expect(text).not.toMatch(/^COPY (\.\/)?package(-lock)?\.json/m);
   });
 
+  // PR #882 (08.11): правка kit/src сбросила кэш слоя `npm ci` — он стоял ПОСЛЕ
+  // `COPY kit/src`. Свежая установка в образе прошла без optional-модуля
+  // @rolldown/binding-linux-x64-musl, и `vite build` упал «Cannot find native
+  // binding». Установка зависимостей не должна зависеть от исходников kit:
+  // kit — file:-зависимость (симлинк), npm ci нужен только его package.json.
+  // Тогда слой установки меняется лишь при смене манифестов.
+  it('npm ci — до копирования исходников kit: слой установки зависит только от манифестов', () => {
+    const lines = df().split('\n');
+    const at = (re: RegExp) => lines.findIndex(l => re.test(l));
+    const ci = at(/^RUN npm ci\b/);
+    expect(ci, 'RUN npm ci').toBeGreaterThan(-1);
+    expect(at(/^COPY kit\/package\.json /)).toBeLessThan(ci);
+    expect(at(/^COPY kit\/src /)).toBeGreaterThan(ci);
+    expect(at(/^COPY kit\/demo /)).toBeGreaterThan(ci);
+  });
+
   it('отдаётся nginx с тем же прокси /lore/, что у v1 (MCP и телефон ходят через него)', () => {
     const text = df();
     expect(text).toMatch(/FROM nginx:alpine/);

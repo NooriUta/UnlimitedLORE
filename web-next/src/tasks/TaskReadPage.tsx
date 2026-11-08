@@ -6,7 +6,7 @@
 // Состояние — в URL: ?section=tasks&passport=SPRINT/CODE&tab=…&props=1.
 import { useMemo } from 'react';
 import {
-  EmptyState, Forbidden, LoadError, RecordPager, RecordReader, Skeleton,
+  EmptyState, Forbidden, LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton,
   useKitLang, useLoadState, useUrlParam, type KitCtx,
 } from '@seidr/kit';
 import { MartProse } from '@seidr/kit/content';
@@ -102,6 +102,8 @@ export function TaskReadPage({ fetchImpl, headers }: TaskReadPageProps) {
         ctx={ctx}
         tab={tabParam ?? 'overview'}
         onTab={t => setTab(t === 'overview' ? null : t)}
+        // S4-28: паспорт — продолжение списка: крошки к спринту в одной строке с листалкой.
+        crumbs={<RecordCrumbs back={{ label: tt('task.crumbs.sprint', { id: p.sprintId }), href: passportHref(p.sprintId) }} current={row.task_id} />}
         pager={<RecordPager ids={ids} current={record.id} hotkeys onGo={id => setPassport(id)} />}
         aside={<TaskProps record={record} ctx={ctx} />}
         asideOpen={propsParam === '1'}

@@ -147,7 +147,7 @@ describe('панель действий вместо шапки', () => {
     expect(css).toMatch(/--fs-base/); // положительный контроль
     const media = /@media \(max-width: 720px\), \(pointer: coarse\) \{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('S4-10')));
     expect(media, 'media-блок S4-10').toBeTruthy();
-    expect(media![1]).toMatch(/\.sk-list\[data-selecting='true'\] \.sk-list__bar[\s\S]*display:\s*none/);
+    expect(media![1]).toMatch(/\.sk-list\[data-selecting='true'\] \.sk-shead[\s\S]*display:\s*none/);
     expect(media![1]).toMatch(/\.sk-list\[data-selecting='true'\] \.sk-list__controls/);
     expect(media![1]).toMatch(/\.sk-list__selbar\s*\{[^}]*position:\s*sticky/);
     expect(css).toMatch(/\.sk-list__selbar \.sk-btn\s*\{[^}]*min-height:\s*max\(var\(--tap\)/);

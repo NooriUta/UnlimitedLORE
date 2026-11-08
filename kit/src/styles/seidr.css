@@ -106,11 +106,15 @@
   --r-xl:   14px;
   --r-pill: 999px;
 
-  /* ── плотность: компактная по умолчанию ── */
-  --row-h: 24px;
-  --pad-x: 8px;
-  --pad-y: 2px;
-  --gap:   6px;
+  /* ── плотность: roomy по умолчанию (владелица 08.11, S4-21) ──
+     --row-h — высота контролов (кнопки, поля); --list-row-h — строка списка.
+     Раздельно: строка списка растёт до вида прототипа v4, контролы — нет. */
+  --row-h: 26px;
+  --list-row-h: 44px;
+  --list-title-lines: 2;
+  --pad-x: 10px;
+  --pad-y: 4px;
+  --gap:   8px;
 
   /* ── цель касания: на десктопе 0 (плотный UI не растёт), на сенсоре ≥44 ── */
   --tap: 0px;
@@ -146,8 +150,20 @@
   --fs-2xl:  26px;
 }
 
+/* compact — прежняя плотность IDE (до S4-21): строка 24 px, название в одну строку. */
+[data-density='compact'] {
+  --row-h: 24px;
+  --list-row-h: 24px;
+  --list-title-lines: 1;
+  --pad-x: 8px;
+  --pad-y: 2px;
+  --gap:   6px;
+}
+
 [data-density='comfortable'] {
   --row-h: 32px;
+  --list-row-h: 32px;
+  --list-title-lines: 2;
   --pad-x: 12px;
   --pad-y: 6px;
   --gap:   10px;
@@ -1022,6 +1038,22 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 .sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
+   подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
+.sk-tabs--underline { gap: 2px; padding: 0; }
+.sk-tabs--underline .sk-tab {
+  margin-bottom: -1px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: var(--fs-sm);
+}
+.sk-tabs--underline .sk-tab:hover { border-bottom-color: var(--bdh); }
+.sk-tabs--underline .sk-tab[aria-selected='true'] {
+  border-bottom-color: var(--acc);
+  background: none;
+}
 .sk-tabpanel { padding-top: 6px; }
 .sk-tabpanel:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 
@@ -1705,6 +1737,89 @@ code, pre, kbd, samp { font-family: var(--mono); }
   gap: var(--gap);
 }
 .sk-list__bar { justify-content: space-between; }
+/* «Показано N из M» — в конце единственной полосы, прижато вправо. */
+.sk-list__controls > .sk-list__shown { margin-left: auto; }
+.sk-list__view { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
+.sk-shead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap) 12px;
+  min-width: 0;
+}
+.sk-shead__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--t1);
+}
+.sk-shead__views { display: inline-flex; align-items: center; gap: var(--gap); }
+.sk-shead__actions { display: inline-flex; gap: var(--gap); margin-left: auto; }
+
+/* ---------- «Вид ⌄» (S4-27): поповер дополнительных настроек вида ---------- */
+.sk-vmenu { position: relative; display: inline-flex; }
+.sk-vmenu__btn { display: inline-flex; align-items: center; gap: 4px; }
+.sk-vmenu__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  width: min(420px, 90vw);
+  padding: 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-vmenu__title {
+  margin: 0;
+  color: var(--t3);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-vmenu__seg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.sk-vmenu__label { width: 100%; color: var(--t2); font-size: var(--fs-xs); font-weight: 600; }
+.sk-vmenu__hint { margin: 0; color: var(--t2); font-size: var(--fs-xs); line-height: 1.45; }
+/* Поповер «Группировка» (S4-26): значение в кнопке, разделы-радиогруппы, ✓ у выбранного. */
+.sk-gmenu { position: relative; display: inline-flex; }
+.sk-gmenu__btn { display: inline-flex; align-items: center; gap: 4px; }
+.sk-gmenu__btn b { color: var(--t1); font-weight: 700; }
+.sk-gmenu__panel { width: min(360px, 90vw); }
+.sk-gmenu__sec { display: flex; flex-direction: column; gap: 2px; }
+.sk-gmenu__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  text-align: start;
+  cursor: pointer;
+}
+.sk-gmenu__opt:hover { background: var(--bg2); }
+.sk-gmenu__opt.is-on { background: color-mix(in srgb, var(--acc) 14%, transparent); font-weight: 700; }
+.sk-gmenu__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-gmenu__check { color: var(--acc); }
+/* Подгруппа — строка-заголовок с отступом внутри группы. */
+.sk-list__ghead--sub .sk-list__gbtn { padding-left: calc(var(--pad-x) + 16px); }
+.sk-list__ghead--sub .sk-list__gtitle { font-weight: 600; color: var(--t2); }
+.sk-list__closedhidden { color: var(--t3); font-size: var(--fs-xs); }
 .sk-list__views {
   padding: 2px;
   border: 1px solid var(--bd);
@@ -1745,8 +1860,14 @@ code, pre, kbd, samp { font-family: var(--mono); }
   letter-spacing: .06em;
   text-transform: uppercase;
 }
+/* Число быстрого фильтра — отдельный бейдж, а не продолжение подписи («Действует100»). */
 .sk-list__qcount {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
   font-family: var(--mono);
+  font-size: var(--fs-2xs);
   color: var(--acc);
 }
 .sk-list__field {
@@ -1982,15 +2103,17 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-bottom: 1px solid var(--bd);
   background: var(--bg1);
   color: var(--t3);
-  font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: 700;
   letter-spacing: .06em;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
 }
+/* У ячейки таблицы height работает как минимум: строка растёт по содержимому
+   (название в --list-title-lines строк), но не ниже --list-row-h. */
 .sk-list__td {
-  height: var(--row-h);
+  height: var(--list-row-h);
   padding: var(--pad-y) var(--pad-x);
   border-bottom: 1px solid color-mix(in srgb, var(--bd) 60%, transparent);
   vertical-align: middle;
@@ -2011,6 +2134,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__row:not([data-cursor='true']) .sk-list__actions .sk-kbd,
 .sk-board__card:not([data-cursor='true']) .sk-list__actions .sk-kbd { display: none; }
 .sk-list__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--list-title-lines);
+  line-clamp: var(--list-title-lines);
+  overflow: hidden;
   color: var(--t1);
   font-weight: 600;
   text-decoration: none;
@@ -2311,7 +2439,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   font-size: var(--fs-xs);
 }
 @media (max-width: 720px), (pointer: coarse) {
-  .sk-list[data-selecting='true'] .sk-list__bar,
+  .sk-list[data-selecting='true'] .sk-shead,
   .sk-list[data-selecting='true'] .sk-list__controls,
   .sk-list[data-selecting='true'] .sk-list__desc { display: none; }
   .sk-list__selbar {
@@ -2453,7 +2581,51 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-reader { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 var(--gap); min-width: 0; }
 .sk-rec-reader[data-aside="open"] { grid-template-columns: minmax(0, 1fr) auto minmax(220px, 300px); }
 .sk-rec-reader__main { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
-.sk-rec-reader__bar { display: flex; align-items: center; justify-content: flex-end; gap: var(--gap); }
+/* Строка над записью (S4-28): крошки слева, листалка/инструменты/«Свойства» справа. */
+.sk-rec-reader__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-rec-reader__crumbs { min-width: 0; }
+.sk-rec-reader__props[aria-expanded='true'] { border-color: var(--acc); color: var(--t1); }
+.sk-rec-reader__tools { display: inline-flex; align-items: center; gap: var(--gap); margin-left: auto; }
+
+/* ---------- Крошки записи (S4-28): «← Раздел · фильтр / ID» ---------- */
+.sk-crumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+}
+.sk-crumbs__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 22px);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acc);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-crumbs__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-crumbs__ctx { color: var(--t2); }
+.sk-crumbs__sep { color: var(--t3); }
+.sk-crumbs__cur { font-family: var(--mono); color: var(--t1); white-space: nowrap; }
+@media (max-width: 720px) {
+  .sk-crumbs__ctx { display: none; }
+}
 .sk-rec-reader__ear { position: sticky; top: var(--gap); }
 .sk-rec-reader__aside { min-width: 0; padding: 8px 10px; border-left: 1px solid var(--bd); background: var(--bg1); font-size: var(--fs-base); color: var(--t1); }
 .sk-rec-reader__aside[hidden] { display: none; }

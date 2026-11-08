@@ -20,11 +20,14 @@
 FROM node:26-alpine AS build
 WORKDIR /app/web-next
 COPY kit/package.json /app/kit/package.json
+COPY web-next/package.json web-next/package-lock.json ./
+# Установка — только по манифестам: kit — file:-зависимость (симлинк), его
+# исходники npm ci не нужны. Правка kit/src не должна сбрасывать этот слой
+# (PR #882: свежий npm ci в образе потерял @rolldown/binding-linux-x64-musl).
+RUN npm ci
 COPY kit/src /app/kit/src
 # Демо-конфиги и фикстуры kit (K-03): страницы /kit/demo/* импортируют @seidr/kit/demo/*.
 COPY kit/demo /app/kit/demo
-COPY web-next/package.json web-next/package-lock.json ./
-RUN npm ci
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./
 COPY web-next/src ./src
 

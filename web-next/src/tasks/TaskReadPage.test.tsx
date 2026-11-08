@@ -82,13 +82,24 @@ describe('S5-04 · TaskReadPage', () => {
   it('ушко «Свойства» раскрывает свойства задачи и запоминает это в URL', async () => {
     render(<TaskReadPage fetchImpl={fetchOf(okRoute)} />);
     await screen.findByText('2 из 3');
-    const ear = screen.getByRole('button', { name: 'Свойства' });
+    // S4-28: «Свойства» — ушко и кнопка в строке над записью, одно раскрытие.
+    const [, ear] = screen.getAllByRole('button', { name: 'Свойства' });
     expect(ear.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(ear);
     expect(params().get('props')).toBe('1');
     const aside = await screen.findByRole('complementary', { name: 'Свойства' });
     expect(within(aside).getByText('fleet-s5')).toBeTruthy();
     expect(within(aside).getByText('FORSETI')).toBeTruthy();
+  });
+
+  // S4-28: паспорт — продолжение списка: крошки «← Спринт SPRINT_A / T-2» в одной строке с листалкой.
+  it('крошки ведут в паспорт спринта; ID задачи — текущая страница; листалка в той же строке', async () => {
+    render(<TaskReadPage fetchImpl={fetchOf(okRoute)} />);
+    await screen.findByText('2 из 3');
+    const nav = screen.getByRole('navigation', { name: 'Путь к записи' });
+    expect(within(nav).getByRole('link').getAttribute('href')).toBe('?section=sprints&passport=SPRINT_A');
+    expect(within(nav).getByText('T-2').getAttribute('aria-current')).toBe('page');
+    expect(nav.closest('[data-testid="kit-rec-bar"]')?.textContent).toContain('2 из 3');
   });
 
   it('журнал задачи — из history_task', async () => {

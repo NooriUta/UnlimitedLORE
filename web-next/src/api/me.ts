@@ -25,6 +25,20 @@ interface StoredSettings {
   settings: Partial<UserSettings>;
   version: number;
   updated_at?: string | null;
+  /** Схема снимка; нет — снимок до S4-21. */
+  schema?: number;
+}
+
+/**
+ * Схема 2 (S4-21): плотность по умолчанию стала roomy. Снимок хранит ВСЕ
+ * настройки, поэтому 'compact' в снимке схемы 1 — прежнее умолчание, а не
+ * выбор человека: читаем его как roomy. После первой записи стоит метка 2,
+ * и явный compact дальше уважается. comfortable был только выбором — не трогаем.
+ */
+const SETTINGS_SCHEMA_VERSION = 2;
+function migrate(settings: Partial<UserSettings>, schema: number | undefined): Partial<UserSettings> {
+  if ((schema ?? 1) < 2 && settings.density === 'compact') return { ...settings, density: 'roomy' };
+  return settings;
 }
 
 export interface LocalS2Options {
@@ -44,7 +58,8 @@ function readStored(storage: SafeStorage): StoredSettings | null {
   try {
     const v = JSON.parse(raw) as Partial<StoredSettings> | null;
     if (!v || typeof v !== 'object' || typeof v.version !== 'number' || v.version < 1) return null;
-    return { settings: v.settings && typeof v.settings === 'object' ? v.settings : {}, version: v.version, updated_at: v.updated_at ?? null };
+    const settings = v.settings && typeof v.settings === 'object' ? v.settings : {};
+    return { settings: migrate(settings, v.schema), version: v.version, updated_at: v.updated_at ?? null, schema: SETTINGS_SCHEMA_VERSION };
   } catch {
     return null;
   }
@@ -82,7 +97,7 @@ export function createLocalS2Client(storage: SafeStorage, opts: LocalS2Options =
       if (bad.length) throw new S2HttpError(400, { error: 'BAD_PARAMS', detail: `недопустимые ключи: ${bad.join(', ')}` });
       const cur = current();
       if (req.expected_version !== cur.version) throw new S2ConflictError<SettingsResponse>(cur);
-      const next: StoredSettings = { settings: { ...cur.settings, ...req.patch }, version: cur.version + 1, updated_at: now() };
+      const next: StoredSettings = { settings: { ...cur.settings, ...req.patch }, version: cur.version + 1, updated_at: now(), schema: SETTINGS_SCHEMA_VERSION };
       storage.set(SETTINGS_KEY, JSON.stringify(next));
       return current();
     },

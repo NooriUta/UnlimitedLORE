@@ -12,6 +12,10 @@ import { RecordView, type RecordViewProps } from './RecordView';
 export interface RecordReaderProps extends RecordViewProps {
   /** Листалка — обычно <RecordPager/>. */
   pager?: ReactNode;
+  /** Крошки — обычно <RecordCrumbs/> (S4-28): слева в той же строке, что листалка. */
+  crumbs?: ReactNode;
+  /** Прочие инструменты строки (Aa, развернуть…) — справа, перед «Свойства». */
+  tools?: ReactNode;
   /** Содержимое колонки свойств; нет — нет ни колонки, ни ушка. */
   aside?: ReactNode;
   /** Подпись ушка и колонки; по умолчанию «Свойства». */
@@ -20,7 +24,7 @@ export interface RecordReaderProps extends RecordViewProps {
   onAside: (open: boolean) => void;
 }
 
-export function RecordReader({ pager, aside, asideLabel, asideOpen, onAside, className, ...view }: RecordReaderProps) {
+export function RecordReader({ pager, crumbs, tools, aside, asideLabel, asideOpen, onAside, className, ...view }: RecordReaderProps) {
   const lang = useKitLang();
   const asideId = useId();
   const label = asideLabel ?? kitT(lang, 'kit.record.aside.props');
@@ -29,7 +33,23 @@ export function RecordReader({ pager, aside, asideLabel, asideOpen, onAside, cla
     <div className={['sk-rec-reader', className].filter(Boolean).join(' ')}
       data-aside={hasAside ? (asideOpen ? 'open' : 'closed') : undefined} data-testid="kit-rec-reader">
       <div className="sk-rec-reader__main">
-        {pager && <div className="sk-rec-reader__bar">{pager}</div>}
+        {/* Одна строка над записью (S4-28): крошки слева; листалка, инструменты и
+            «Свойства» справа. «Свойства» — то же раскрытие, что ушко (ушко остаётся). */}
+        {(crumbs || pager || tools) && (
+          <div className="sk-rec-reader__bar" data-testid="kit-rec-bar">
+            <div className="sk-rec-reader__crumbs">{crumbs}</div>
+            <div className="sk-rec-reader__tools">
+              {pager}
+              {tools}
+              {hasAside && (
+                <button type="button" className="sk-list__dir sk-rec-reader__props" aria-expanded={asideOpen} aria-controls={asideId}
+                  onClick={() => onAside(!asideOpen)}>
+                  {label}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <RecordView {...view} />
       </div>
       {hasAside && (

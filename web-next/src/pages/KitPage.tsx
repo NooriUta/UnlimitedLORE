@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
   Skeleton, StatusStar, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
-  type Density, type KitCtx, type Mode,
+  DENSITIES, type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
@@ -48,7 +48,7 @@ function writeTab(tab: TabId): void {
 export default function KitPage() {
   const t = useAppT();
   const [mode, setMode] = useState<Mode>('dark');
-  const [density, setDensity] = useState<Density>('compact');
+  const [density, setDensity] = useState<Density>('roomy');
   const [filterOn, setFilterOn] = useState(true);
   const [filterShown, setFilterShown] = useState(true);
   const [fav, setFav] = useState(false);
@@ -70,7 +70,7 @@ export default function KitPage() {
       palette: {
         commands: [
           { id: 'toggle-mode', title: t('kitPage.pal.cmdMode'), run: () => setMode(m => (m === 'dark' ? 'light' : 'dark')) },
-          { id: 'toggle-density', title: t('kitPage.pal.cmdDensity'), run: () => setDensity(d => (d === 'compact' ? 'comfortable' : 'compact')) },
+          { id: 'toggle-density', title: t('kitPage.pal.cmdDensity'), run: () => setDensity(d => DENSITIES[(DENSITIES.indexOf(d) + 1) % DENSITIES.length]) },
           { id: 'open-sheet', title: t('kitPage.pal.cmdSheet'), run: () => setSheetOpen(true) },
         ],
       },
@@ -83,13 +83,14 @@ export default function KitPage() {
   return (
     // Тема и плотность витрины — атрибутами на её корне: селекторы seidr.css
     // ([data-mode], [data-density]) переопределяют токены во всём поддереве.
-    <div className="kitp" data-lore-page="kit" data-mode={mode === 'light' ? 'light' : undefined} data-density={density === 'comfortable' ? 'comfortable' : undefined}>
+    <div className="kitp" data-lore-page="kit" data-mode={mode === 'light' ? 'light' : undefined} data-density={density === 'roomy' ? undefined : density}>
       <header className="kitp__head">
         <h1 className="kitp__title">{t('kitPage.title')}</h1>
         <p className="kitp__lead">{t('kitPage.lead')}</p>
         <Toolbar label={t('kitPage.theme')}>
           <Pill variant="filter" pressed={mode === 'dark'} onToggle={() => setMode('dark')}>{t('kitPage.mode.dark')}</Pill>
           <Pill variant="filter" pressed={mode === 'light'} onToggle={() => setMode('light')}>{t('kitPage.mode.light')}</Pill>
+          <Pill variant="filter" pressed={density === 'roomy'} onToggle={() => setDensity('roomy')}>{t('kitPage.density.roomy')}</Pill>
           <Pill variant="filter" pressed={density === 'compact'} onToggle={() => setDensity('compact')}>{t('kitPage.density.compact')}</Pill>
           <Pill variant="filter" pressed={density === 'comfortable'} onToggle={() => setDensity('comfortable')}>{t('kitPage.density.comfortable')}</Pill>
         </Toolbar>

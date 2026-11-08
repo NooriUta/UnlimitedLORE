@@ -10,6 +10,7 @@ import type { KitConfig, KitRecord } from '@seidr/kit';
 import { appT, useAppT, type AppKey } from '../i18n';
 import { defaultLoreClient, type LoreClient, type SliceBody } from './loreClient';
 import { planStatusOf, planStatuses } from './taskStatus';
+import './sprints.css';
 
 export interface SprintTaskRow {
   task_uid: string;
@@ -56,7 +57,8 @@ export function SprintTasks({ sprintId, client = defaultLoreClient }: { sprintId
               };
               return (
                 <li key={r.task_uid} className="sprint-tasks__item">
-                  <StatusChip record={rec} config={config} save={save} />
+                  {/* Вложенная строка под ▸ — статус только иконкой, имя в подсказке (владелица 08.11). */}
+                  <StatusChip record={rec} config={config} save={save} compact />
                   <Pill variant="id">{r.task_id}</Pill>
                   <span className="sprint-tasks__title">{rec.title}</span>
                 </li>

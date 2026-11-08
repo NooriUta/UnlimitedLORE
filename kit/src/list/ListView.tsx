@@ -43,6 +43,7 @@ import { ProgressCell } from './progress';
 import {
   DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
+  SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
 import { boardLanes, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
@@ -53,6 +54,9 @@ import { FacetFilter, ValueIconMark } from './FacetFilter';
 import type { ValueIcon } from './FacetFilter';
 import { selectAllShown, toggleId, visibleSelection } from './listSelection';
 import { useLongPress } from './useLongPress';
+import { ScreenHead } from './ScreenHead';
+import { ViewMenu } from './ViewMenu';
+import { GroupMenu } from './GroupMenu';
 
 export interface ListBulkAction {
   id: string;
@@ -132,10 +136,27 @@ export interface ListViewProps {
   valueIcon?: (key: string, value: string) => ValueIcon | null | undefined;
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
+  /**
+   * Шапка экрана (S4-22, S4-23): задана — список сам рисует ScreenHead с
+   * заголовком, а виды переезжают в её строку. Нет — виды остаются в полосе фильтров.
+   */
+  head?: ListHead;
+  /** Иконки видов (вид → слаг game-icons). Задаёт приложение: иконки — из канона LORE v1 (S4-25). */
+  viewIcons?: Partial<Record<ListViewKind, string>>;
   className?: string;
 }
 
+/** Шапка экрана списка: заголовок, его id и иконка, первичное действие. */
+export interface ListHead {
+  title: ReactNode;
+  titleId?: string;
+  icon?: string;
+  actions?: ReactNode;
+}
+
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'board'];
+/** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
+const CLOSED_KEY = '__closed__';
 
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -167,6 +188,8 @@ function initialState(win: UrlWindow | null, initial: Partial<ListState> | undef
   if (params.has('lf')) s.filters = parsed.filters;
   if (params.has('lo')) s.ops = parsed.ops;
   if (params.has('lt')) s.text = parsed.text;
+  if (params.has('lc')) s.closed = parsed.closed;
+  if (params.has('lg2')) s.group2 = parsed.group2;
   return s;
 }
 
@@ -232,7 +255,7 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, expand, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, expand, head, viewIcons, className, state: stateProp, onStateChange,
 }: ListViewProps) {
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
   assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
@@ -305,9 +328,16 @@ export function ListView({
   const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
   const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
   const counts = useMemo(() => quickCounts(pool, quick, []), [pool, quick]);
-  const filtered = useMemo(() => sortRecords(applyFilters(pool, quickFilters), state.sort, config),
+  const sortedAll = useMemo(() => sortRecords(applyFilters(pool, quickFilters), state.sort, config),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pool, config, JSON.stringify(quickFilters), state.sort]);
+  // Закрытые (S4-27): на доске статусы — колонки, поэтому «внизу» там = «все».
+  const closedMode = showClosedOf(state, config);
+  const split = useMemo(
+    () => splitClosed(sortedAll, view === 'board' && closedMode === 'below' ? 'all' : closedMode, config, data.meta.generated_at),
+    [sortedAll, view, closedMode, config, data.meta.generated_at],
+  );
+  const filtered = useMemo(() => [...split.open, ...split.closed], [split]);
   const iconOf = (key: string, v: string): ValueIcon | null | undefined => {
     const own = valueIcon?.(key, v);
     if (own !== undefined) return own;
@@ -332,24 +362,32 @@ export function ListView({
 
   // Общая группировка (S4-06): один ключ lg — группы списка и дорожки доски.
   const groupKey = parseGroupKey(state.group).type === 'none' ? null : state.group;
+  // Подгруппа (S4-26): только в списке, только при группе и не равная ей.
+  const subKey = view === 'list' && groupKey && state.group2 && state.group2 !== groupKey && parseGroupKey(state.group2).type !== 'none' ? state.group2 : null;
   const lanes = view === 'board' ? boardLanes(filtered, groupKey, config, data, budget) : [];
+  // «Закрытые N» — одна группа в конце списка, а не внутри статусов или полей.
+  const closedGroup: ListGroup | null = view === 'list' && split.closed.length > 0 ? { key: CLOSED_KEY, records: split.closed } : null;
   const laned = view === 'board' && groupKey !== null && groupKey !== 'status';
-  const groups: ListGroup[] = view === 'board' ? lanes.map(l => l.lane) : groupBy(filtered, groupKey, config, data, budget);
+  const groups: ListGroup[] = view === 'board'
+    ? lanes.map(l => l.lane)
+    : [...groupBy(split.open, groupKey, config, data, budget), ...(closedGroup ? [closedGroup] : [])];
   const multi = (view === 'list' || laned) && groupKey ? multiGroupCount(groups) : 0;
   const collapsedByDefault = (view === 'list' || laned) && groups.some(g => g.other);
   const cur = ui.by === groupKey && ui.view === view ? ui : { by: groupKey, view, open: {}, more: {} };
-  const isOpen = (k: string) => cur.open[k] ?? !collapsedByDefault;
+  const isOpen = (k: string) => cur.open[k] ?? (k === CLOSED_KEY ? false : !collapsedByDefault);
   const limitOf = (k: string) => cur.more[k] ?? budget.perGroup;
   const toggleGroup = (k: string) => setUi({ ...cur, open: { ...cur.open, [k]: !isOpen(k) } });
   const showMore = (k: string) => setUi({ ...cur, more: { ...cur.more, [k]: limitOf(k) + budget.perGroup } });
 
   // Выбранное — только среди показанного: фильтр спрятал запись — действие её не тронет.
-  const selIds = visibleSelection(selected, filtered);
+  // Свёрнутая группа «Закрытые N» (S4-27) тоже не показана: её строки не выбираются «всем списком».
+  const pickable = closedGroup && !isOpen(CLOSED_KEY) ? split.open : filtered;
+  const selIds = visibleSelection(selected, pickable);
   const selKey = selIds.join('\u0000');
   useEffect(() => { onSelectionChange?.(selKey ? selKey.split('\u0000') : []); }, [selKey, onSelectionChange]);
   const toggleSel = (id: string) => { setBulkError(null); setSelected(prev => toggleId(prev, id)); };
-  const allShownSelected = filtered.length > 0 && selIds.length === filtered.length;
-  const toggleAll = () => { setBulkError(null); setSelected(prev => selectAllShown(prev, filtered)); };
+  const allShownSelected = pickable.length > 0 && selIds.length === pickable.length;
+  const toggleAll = () => { setBulkError(null); setSelected(prev => selectAllShown(prev, pickable)); };
   const selectable = columns.includes('select');
   const selecting = mode || selIds.length > 0;
   const exitSelection = () => { setMode(false); setSelected(new Set()); setBulkError(null); };
@@ -472,7 +510,7 @@ export function ListView({
     }
   };
 
-  const groupTitle = (g: ListGroup): string => groupTitleOf(config, lang, groupKey, g);
+  const groupTitle = (g: ListGroup): string => (g.key === CLOSED_KEY ? t('kit.list.closed.group') : groupTitleOf(config, lang, groupKey, g));
 
   const errors = (data.meta.errors ?? []).filter(e => e.block === 'records' || e.block === 'list');
   const shown = shownOf(data.meta, records.length, filtered.length);
@@ -509,10 +547,35 @@ export function ListView({
     chips.push({ id: 'q', text: `${t('kit.list.quick')}: ${activeQuick.title}`, remove: () => update({ quick: null }) });
   }
   const resetFilters = () => update({ filters: {}, ops: {}, text: '', quick: null });
-  const descTail = [
-    view === 'list' || (view === 'board' && hasGroupings) ? `${t('kit.list.desc.group')}: ${groupKey ? labels.keyTitle(groupKey) : t('kit.list.groupNone')}` : null,
-    `${t('kit.list.desc.sort')}: ${state.sort ? `${labels.keyTitle(state.sort.key)} ${state.sort.dir === 'desc' ? '↓' : '↑'}` : t('kit.list.sortNone')}`,
-  ].filter(Boolean).join(' · ');
+  // «Вид ⌄» (S4-27): режим закрытых — часть состояния списка и сохранённого вида.
+  const viewMenu = (
+    <ViewMenu
+      closed={closedMode}
+      modes={SHOW_CLOSED_MODES}
+      onClosed={c => update({ closed: c })}
+    />
+  );
+  // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
+  const viewsSwitch = views.length > 1 ? (
+    <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
+      {views.map(v => {
+        const icon = viewIcons?.[v];
+        return (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={view === v}
+            className={`sk-list__view${view === v ? ' is-on' : ''}`}
+            onClick={() => update({ view: v })}
+          >
+            {icon && <GameIcon slug={icon} size={14} />}
+            <span>{t(`kit.list.view.${v}` as KitKey)}</span>
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
   const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0);
   const segCount = (n: number) => (n > 0
     ? <span className="sk-list__segcount" data-testid="kit-list-segcount" title={t('kit.list.segActive', { n })}>{n}</span>
@@ -569,7 +632,7 @@ export function ListView({
     switch (col) {
       case 'select': return (
         <label className="sk-list__check">
-          <input type="checkbox" checked={allShownSelected} onChange={toggleAll} aria-label={t('kit.list.selectAll', { n: filtered.length })} />
+          <input type="checkbox" checked={allShownSelected} onChange={toggleAll} aria-label={t('kit.list.selectAll', { n: pickable.length })} />
         </label>
       );
       case 'title+id': return t('kit.list.col.title');
@@ -701,30 +764,8 @@ export function ListView({
         </tr>
       );
     };
-    body = (
-      <div className="sk-list__scroll">
-        <table className="sk-list__table">
-          <thead>
-            <tr>{expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}{columns.map(c => <th key={c} scope="col" className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{colTitle(c)}</th>)}</tr>
-          </thead>
-          {groups.map(g => {
-            const open = !grouped || isOpen(g.key);
-            const limit = limitOf(g.key);
-            return (
-              <tbody key={g.key}>
-                {grouped && (
-                  <tr className="sk-list__ghead" data-group-key={g.key} data-other={g.other ? 'true' : undefined}>
-                    <th colSpan={span} scope="rowgroup">
-                      <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
-                        <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
-                        <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
-                        <span className="sk-list__gcount">{g.records.length}</span>
-                      </button>
-                    </th>
-                  </tr>
-                )}
-                {open && g.records.slice(0, limit).map(r => (
-                  <Fragment key={r.id}>
+    const rowsOf = (rs: KitRecord[]) => rs.map(r => (
+      <Fragment key={r.id}>
                     <tr
                       className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`}
                       data-record-id={r.id}
@@ -737,10 +778,62 @@ export function ListView({
                     </tr>
                     {expandRow(r)}
                   </Fragment>
-                ))}
-                {open && g.records.length > limit && (
-                  <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit)}</td></tr>
+    ));
+    body = (
+      <div className="sk-list__scroll">
+        <table className="sk-list__table">
+          <thead>
+            <tr>{expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}{columns.map(c => <th key={c} scope="col" className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{colTitle(c)}</th>)}</tr>
+          </thead>
+          {groups.map(g => {
+            const headed = grouped || g.key === CLOSED_KEY;
+            const open = !headed || isOpen(g.key);
+            const limit = limitOf(g.key);
+            return (
+              <tbody key={g.key}>
+                {headed && (
+                  <tr className="sk-list__ghead" data-group-key={g.key} data-other={g.other ? 'true' : undefined}>
+                    <th colSpan={span} scope="rowgroup">
+                      <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
+                        <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                        <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
+                        <span className="sk-list__gcount">{g.records.length}</span>
+                      </button>
+                    </th>
+                  </tr>
                 )}
+                {open && (subKey && g.key !== CLOSED_KEY
+                  // Подгруппа (S4-26): вторая ступень внутри группы — своя строка-заголовок со счётчиком.
+                  ? groupBy(g.records, subKey, config, data, budget).map(sg => {
+                    const k = g.key + '' + sg.key;
+                    const sOpen = isOpen(k);
+                    const sLimit = limitOf(k);
+                    return (
+                      <Fragment key={k}>
+                        <tr className="sk-list__ghead sk-list__ghead--sub" data-subgroup-key={sg.key}>
+                          <th colSpan={span} scope="rowgroup">
+                            <button type="button" className="sk-list__gbtn" aria-expanded={sOpen} onClick={() => toggleGroup(k)}>
+                              <span className="sk-list__chev" aria-hidden="true">{sOpen ? '▾' : '▸'}</span>
+                              <span className={sg.unknown || sg.missing || sg.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitleOf(config, lang, subKey, sg)}</span>
+                              <span className="sk-list__gcount">{sg.records.length}</span>
+                            </button>
+                          </th>
+                        </tr>
+                        {sOpen && rowsOf(sg.records.slice(0, sLimit))}
+                        {sOpen && sg.records.length > sLimit && (
+                          <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(sg, sLimit, k)}</td></tr>
+                        )}
+                      </Fragment>
+                    );
+                  })
+                  : (
+                    <>
+                      {rowsOf(g.records.slice(0, limit))}
+                      {g.records.length > limit && (
+                        <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit)}</td></tr>
+                      )}
+                    </>
+                  ))}
               </tbody>
             );
           })}
@@ -762,8 +855,8 @@ export function ListView({
       {selecting && (
         <div className="sk-list__selbar" data-testid="kit-list-selbar" role="group" aria-label={t('kit.list.bulk')} aria-busy={busy !== null}>
           <span className="sk-list__selcount">{t('kit.list.selected', { n: selIds.length })}</span>
-          <button type="button" className="sk-btn" onClick={toggleAll} disabled={filtered.length === 0}>
-            {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: filtered.length })}
+          <button type="button" className="sk-btn" onClick={toggleAll} disabled={pickable.length === 0}>
+            {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: pickable.length })}
           </button>
           {bulkActions?.map(a => (
             <button
@@ -789,53 +882,15 @@ export function ListView({
         <LoadError key={e.block} compact title={t('kit.list.blockError', { block: e.block })} hint={e.reason} />
       ))}
 
-      <div className="sk-list__bar">
-        {views.length > 1 && (
-          <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
-            {views.map(v => (
-              <button
-                key={v}
-                type="button"
-                role="radio"
-                aria-checked={view === v}
-                className={`sk-list__view${view === v ? ' is-on' : ''}`}
-                onClick={() => update({ view: v })}
-              >
-                {t(`kit.list.view.${v}` as KitKey)}
-              </button>
-            ))}
-          </div>
-        )}
-        {!selecting && (bulkActions?.length ?? 0) > 0 && (
-          <button type="button" className="sk-list__dir sk-list__selmode" onClick={() => { setMode(true); setBulkError(null); }}>
-            {t('kit.list.selectMode')}
-          </button>
-        )}
-        {quick.length > 0 && (
-          <div role="group" aria-label={t('kit.list.quick')} className="sk-list__quick">
-            <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
-            {quick.map(q => {
-              const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
-              return (
-                <Pill
-                  key={q.id}
-                  variant="filter"
-                  pressed={state.quick === q.id}
-                  onToggle={on => update({ quick: on ? q.id : null })}
-                >
-                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={14} /></span>}
-                  <span>{q.title}</span> <span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
-                </Pill>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {head && <ScreenHead title={head.title} titleId={head.titleId} icon={head.icon} views={<>{viewsSwitch}{viewMenu}</>} actions={head.actions} />}
 
-      {/* Строка [Фильтр][Группировка][Порядок] (S4-04): три сегмента fieldset+legend —
-          имя сегмента не спорит с подписью внутри. В сегменте фильтра — поиск по
-          тексту и фасеты полей (S4-05). */}
+      {/* Одна полоса управления (S4-21/S4-23, правило S7A-12): [виды, если нет шапки]
+          [Фильтр][Группировка][Порядок] · «Быстро» · «Показано N из M». Сегменты —
+          fieldset+legend: имя сегмента не спорит с подписью внутри. В сегменте
+          фильтра — поиск по тексту и фасеты полей (S4-05). */}
       <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls" data-testid="kit-list-controls">
+        {!head && viewsSwitch}
+        {!head && viewMenu}
         <fieldset className="sk-list__seg" data-seg="filter">
           <legend className="sk-list__seglabel">{t('kit.list.desc.filter')}</legend>
           <GameIcon slug="funnel" size={14} className="sk-list__segicon" />
@@ -867,28 +922,15 @@ export function ListView({
           <legend className="sk-list__seglabel">{t('kit.list.group')}</legend>
           <GameIcon slug="stack" size={14} className="sk-list__segicon" />
           {segCount(groupKey ? 1 : 0)}
-          <select
-            aria-label={t('kit.list.group')}
-            className="sk-list__select"
-            value={groupKey ?? ''}
-            onChange={e => update({ group: e.target.value || null })}
-          >
-            <option value="">{t('kit.list.groupNone')}</option>
-            {groupOpts.relations.length === 0
-              ? groupOpts.fields.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)
-              : (
-                <>
-                  {groupOpts.fields.length > 0 && (
-                    <optgroup label={t('kit.list.groupFields')}>
-                      {groupOpts.fields.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)}
-                    </optgroup>
-                  )}
-                  <optgroup label={t('kit.list.groupRels')}>
-                    {groupOpts.relations.map(p => <option key={p.key} value={p.key}>{labels.keyTitle(p.key)}</option>)}
-                  </optgroup>
-                </>
-              )}
-          </select>
+          <GroupMenu
+            group={groupKey}
+            sub={subKey}
+            options={groupOpts}
+            withSub={view === 'list'}
+            keyTitle={labels.keyTitle}
+            onGroup={g => update({ group: g, ...(g === null || g === state.group2 ? { group2: null } : {}) })}
+            onSub={g => update({ group2: g })}
+          />
           </fieldset>
         )}
         <fieldset className="sk-list__seg" data-seg="sort">
@@ -914,11 +956,42 @@ export function ListView({
             {t('kit.list.sortDesc')}
           </button>
         </fieldset>
+        {quick.length > 0 && (
+          <div role="group" aria-label={t('kit.list.quick')} className="sk-list__quick">
+            <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
+            {quick.map(q => {
+              const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
+              return (
+                <Pill
+                  key={q.id}
+                  variant="filter"
+                  pressed={state.quick === q.id}
+                  onToggle={on => update({ quick: on ? q.id : null })}
+                >
+                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={14} /></span>}
+                  <span>{q.title}</span><span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
+                </Pill>
+              );
+            })}
+          </div>
+        )}
+        {!selecting && (bulkActions?.length ?? 0) > 0 && (
+          <button type="button" className="sk-list__dir sk-list__selmode" onClick={() => { setMode(true); setBulkError(null); }}>
+            {t('kit.list.selectMode')}
+          </button>
+        )}
+        <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
+        {/* Скрытое — числом (S4-27): сколько закрытых убрал режим «скрыть» или «за 30 дней». */}
+        {split.hidden > 0 && (
+          <span className="sk-list__closedhidden" data-testid="kit-list-closed-hidden">{t('kit.list.closed.hidden', { n: split.hidden })}</span>
+        )}
       </div>
 
+      {/* Эхо условий — только когда есть что снять: каждое условие — снимаемый чип.
+          Группировка и порядок видны в своих контролах и текстом не дублируются. */}
+      {chips.length > 0 && (
       <div className="sk-list__desc" data-testid="kit-list-desc">
         <span className="sk-list__desclabel">{t('kit.list.desc.filter')}:</span>
-        {chips.length === 0 && <span>{t('kit.list.filterNone')}</span>}
         {chips.map(c => (
           <Pill
             key={c.id}
@@ -931,12 +1004,9 @@ export function ListView({
             {c.text}
           </Pill>
         ))}
-        <span className="sk-list__desctail">· {descTail}</span>
-        {hasFilter && (
-          <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>
-        )}
+        <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>
       </div>
-      <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
+      )}
       {multi > 0 && <p className="sk-list__multi" data-testid="kit-list-multi">{t('kit.list.multi', { n: multi })}</p>}
 
       {body}

@@ -34,7 +34,8 @@ describe('ListScreen — спринты', () => {
   it('грузит слайс sprints, рисует строки и строку управления; фильтр и порядок работают', async () => {
     const fetchImpl = vi.fn(async () => json(200, { rows: sprints }));
     const { container } = render(<ListScreen screen="sprints" fetchImpl={fetchImpl} urlState={false} />);
-    await waitFor(() => expect(rowIds(container)).toHaveLength(3));
+    // S4-27: спринты — «закрытые внизу, свёрнуты»: S_C (готово) в группе «Закрытые 1».
+    await waitFor(() => expect(rowIds(container)).toHaveLength(2));
     expect(String((fetchImpl.mock.calls[0] as unknown[])[0])).toContain('/lore/slice/sprints');
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Спринты');
     expect(screen.getByRole('group', { name: 'Фильтр' })).toBeTruthy();
@@ -52,13 +53,16 @@ describe('ListScreen — спринты', () => {
 
     fireEvent.change(screen.getByLabelText('Порядок'), { target: { value: 'priority' } });
     fireEvent.click(screen.getByRole('button', { name: 'по убыванию' }));
-    expect(rowIds(container)).toEqual(['S_C', 'S_B', 'S_A']);
+    // Порядок — внутри открытых; закрытые — своей группой в конце (S4-27).
+    fireEvent.click(screen.getByRole('button', { name: /Закрытые\s*1/ }));
+    expect(rowIds(container)).toEqual(['S_B', 'S_A', 'S_C']);
     expect(screen.getByTestId('kit-list-shown').textContent).toBe('Показано 3 из 3');
   });
 
   it('«Быстро» с иконкой статуса', async () => {
     const { container } = render(<ListScreen screen="sprints" fetchImpl={async () => json(200, { rows: sprints })} urlState={false} />);
-    await waitFor(() => expect(rowIds(container)).toHaveLength(3));
+    // S4-27: спринты — «закрытые внизу, свёрнуты»: S_C (готово) в группе «Закрытые 1».
+    await waitFor(() => expect(rowIds(container)).toHaveLength(2));
     expect(container.querySelector('.sk-list__quick [data-quick-icon="progression"]')).toBeTruthy();
   });
 
@@ -66,7 +70,8 @@ describe('ListScreen — спринты', () => {
     const { container } = render(
       <ListScreen screen="sprints" fetchImpl={async () => json(200, { rows: sprints, truncated: true, limit: 3 })} urlState={false} />,
     );
-    await waitFor(() => expect(rowIds(container)).toHaveLength(3));
+    // S4-27: спринты — «закрытые внизу, свёрнуты»: S_C (готово) в группе «Закрытые 1».
+    await waitFor(() => expect(rowIds(container)).toHaveLength(2));
     expect(screen.getByTestId('kit-list-shown').getAttribute('data-kind')).toBe('unknown_total');
   });
 
@@ -102,7 +107,8 @@ describe('ListScreen — ADR и честные состояния', () => {
     await waitFor(() => expect(container.querySelector('[data-state="error"]')).toBeTruthy());
     expect(container.querySelector('[data-state="error"]')?.textContent).toContain('boom');
     fireEvent.click(screen.getByRole('button', { name: /Повторить/ }));
-    await waitFor(() => expect(rowIds(container)).toHaveLength(3));
+    // S4-27: спринты — «закрытые внизу, свёрнуты»: S_C (готово) в группе «Закрытые 1».
+    await waitFor(() => expect(rowIds(container)).toHaveLength(2));
   });
 
   it('проверенный ноль — «пусто»', async () => {

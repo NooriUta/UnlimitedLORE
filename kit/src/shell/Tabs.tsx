@@ -25,9 +25,14 @@ export interface TabsProps {
   /** Содержимое выбранной вкладки; нет — вкладки работают как переключатель вида, без панели. */
   children?: ReactNode;
   className?: string;
+  /**
+   * Форма вкладок (S4-21): «pill» — прежняя, по умолчанию; «underline» — подчёркивание,
+   * словарь форм прототипа v4 (вкладки записи). API и клавиатура одинаковы.
+   */
+  variant?: 'pill' | 'underline';
 }
 
-export function Tabs({ items, value, onChange, label, children, className }: TabsProps) {
+export function Tabs({ items, value, onChange, label, children, className, variant = 'pill' }: TabsProps) {
   const base = useId();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const hasPanel = children !== undefined;
@@ -59,7 +64,7 @@ export function Tabs({ items, value, onChange, label, children, className }: Tab
 
   return (
     <div className={['sk-tabs-root', className].filter(Boolean).join(' ')}>
-      <div role="tablist" aria-label={label} className="sk-tabs">
+      <div role="tablist" aria-label={label} className={variant === 'underline' ? 'sk-tabs sk-tabs--underline' : 'sk-tabs'}>
         {items.map(item => {
           const selected = item.id === value;
           return (

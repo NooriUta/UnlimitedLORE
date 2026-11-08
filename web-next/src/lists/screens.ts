@@ -2,8 +2,13 @@
 // Каждый экран — только конфиг kit (контракт kit/src/core/contract.ts) +
 // слайс + маппинг строки; рисует всё движок списка kit (ListView). Нового
 // экрана-списка (задачи, новости — MVP D-2026-UXR-MVP) хватит ещё одной записи.
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { statusMeta } from '@seidr/kit';
-import type { KitConfig, KitLang, KitRecord } from '@seidr/kit';
+import type { KitConfig, KitLang, KitProgressInput, KitRecord } from '@seidr/kit';
+import type { LoreClient } from '../sprints/loreClient';
+import { loadSprintProgress } from '../sprints/sprintProgress';
+import { SprintTasks } from '../sprints/SprintTasks';
 import { appT } from '../i18n';
 import type { AppKey } from '../i18n';
 import { adrRecord, sprintRecord } from './records';
@@ -41,6 +46,20 @@ export interface ListScreenDef {
   config: (lang: KitLang) => KitConfig;
   /** Свои быстрые иконки «Быстро», которым не подходит иконка статуса. */
   quickIcons: Record<string, string>;
+  /**
+   * Вложенное (S4-09, перенесено на общий путь в S4-22): колонка прогресса,
+   * которая догружается после списка, и раскрытие строки. Раздел подключает
+   * это описанием, а не своей страницей.
+   */
+  nested?: ListNested;
+}
+
+export interface ListNested {
+  /** Поле записи с прогрессом «x/y» (колонка progress:<поле>). */
+  progressField: string;
+  loadProgress: (client: LoreClient, ids: readonly string[], signal: AbortSignal) => Promise<Map<string, KitProgressInput>>;
+  /** Содержимое раскрытой строки; грузится лениво — по раскрытию. */
+  render: (id: string, client: LoreClient) => ReactNode;
 }
 
 const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'modules' | 'menu'>;
@@ -57,6 +76,7 @@ function sprintsConfig(lang: KitLang): KitConfig {
           { key: 'release', title: f(lang, 'release'), type: 'ref' },
           { key: 'milestone', title: f(lang, 'milestone'), type: 'ref' },
           { key: 'priority', title: f(lang, 'priority'), type: 'number' },
+          { key: 'tasks', title: f(lang, 'tasks'), type: 'number' },
         ],
       },
     },
@@ -70,6 +90,8 @@ function sprintsConfig(lang: KitLang): KitConfig {
     },
     list: {
       views: ['list', 'board'],
+      // S4-27: вид раздела по умолчанию — «открытые, закрытые внизу» (прототип v4).
+      showClosed: 'below',
       quick: [
         { id: 'active', title: appT(lang, 'lists.status.active'), filter: { status: 'active' } },
         { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
@@ -78,7 +100,7 @@ function sprintsConfig(lang: KitLang): KitConfig {
       ],
       filters: ['status', 'project', 'components', 'release'],
       groupings: ['status', 'project', 'priority', 'milestone'],
-      columns: ['title+id', 'status', 'project', 'priority', 'release', 'updated_at'],
+      columns: ['title+id', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
     },
   };
 }
@@ -108,6 +130,7 @@ function adrsConfig(lang: KitLang): KitConfig {
     },
     list: {
       views: ['list', 'board'],
+      showClosed: 'below',
       quick: [
         { id: 'proposed', title: appT(lang, 'lists.status.proposed'), filter: { status: 'proposed' } },
         { id: 'accepted', title: appT(lang, 'lists.status.accepted'), filter: { status: 'accepted' } },
@@ -124,6 +147,12 @@ export const LIST_SCREENS = {
   sprints: {
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     map: sprintRecord, config: sprintsConfig, quickIcons: { 'no-release': 'wave-crest' },
+    // Задачи x/y и раскрытие строки с задачами — как было у SprintsPage (S4-09).
+    nested: {
+      progressField: 'tasks',
+      loadProgress: loadSprintProgress,
+      render: (id, client) => createElement(SprintTasks, { sprintId: id, client }),
+    },
   },
   adrs: {
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',

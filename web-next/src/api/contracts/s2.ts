@@ -268,7 +268,8 @@ export interface UserSettings {
   /** Палитра темы — те же коды, что в cookie seer-prefs (palette). */
   palette: string;
   mode: 'dark' | 'light';
-  density: 'compact' | 'comfortable';
+  /** roomy — умолчание с S4-21 (владелица 08.11): строка списка как в прототипе v4. */
+  density: 'roomy' | 'compact' | 'comfortable';
   single_key_shortcuts: boolean;
   stripes: boolean;
   /** Флаг «новая навигация»; cookie seer-prefs.nav остаётся кэшем для перехода между хостами. */
@@ -281,7 +282,7 @@ export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   text_size: 'md',
   palette: 'amber',
   mode: 'dark',
-  density: 'compact',
+  density: 'roomy',
   single_key_shortcuts: true,
   stripes: true,
   nav_version: 'v2',
@@ -296,7 +297,7 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   text_size: oneOf('sm', 'md', 'lg'),
   palette: v => typeof v === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(v),
   mode: oneOf('dark', 'light'),
-  density: oneOf('compact', 'comfortable'),
+  density: oneOf('roomy', 'compact', 'comfortable'),
   single_key_shortcuts: bool,
   stripes: bool,
   nav_version: oneOf('v1', 'v2'),
