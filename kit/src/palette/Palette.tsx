@@ -120,6 +120,23 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
     [query, ctx.data, ctx.config, mode, recent, limit, applicable],
   );
 
+  // Esc закрывает палитру, где бы ни был фокус — находка P0 аудита навигации
+  // 08.11.2026: «диалог остаётся видимым и при Esc на document, и при Esc в
+  // поле». Клавиша была привязана к полю ввода, а фокус в нём держится не
+  // всегда: щелчок по строке выдачи, по заголовку или по подложке уводит его,
+  // и Esc проваливался в страницу. Обработчик поля остаётся (он гасит событие,
+  // чтобы Esc не уехал в док под палитрой) — этот отвечает за остальные случаи.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' && e.code !== 'Escape') return;
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   // Серверный поиск: ключ — нормализованный запрос. «Ищу» выводится из того,
   // что ответа на ЭТОТ запрос ещё нет, — без синхронного setState в эффекте.
   const remoteQuery = remote ? normalizeQuery(query) : '';

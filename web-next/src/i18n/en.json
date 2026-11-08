@@ -250,5 +250,9 @@
   "sprintBurn.loading": "Reading sprint history…",
   "sprintBurn.empty": "No sprint history",
   "sprintBurn.failed": "Could not read the sprint history",
-  "sprintBurn.partial": "History is incomplete — the numbers below come from a truncated response"
+  "sprintBurn.partial": "History is incomplete — the numbers below come from a truncated response",
+  "outsideShell.demo": "Demo outside the app.",
+  "outsideShell.standalone": "This page is open outside the LORE shell.",
+  "outsideShell.missing": "No header, menu, search or commands here.",
+  "outsideShell.back": "Back to LORE"
 }

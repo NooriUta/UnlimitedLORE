@@ -2552,13 +2552,21 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
 .sk-rec-fields__none { color: var(--t3); }
 .sk-rec-fields__mono { font-family: var(--mono); }
-.sk-rec-fields__refs { display: inline-flex; flex-wrap: wrap; gap: var(--gap); }
+/* Набор ссылок и сама ссылка сжимаются до своей колонки: inline-flex без
+   min-width: 0 не уходит ниже содержимого, и длинный код проекта вылезал за
+   край панели свойств 320 px — это и видно как наложение подписей (находка P0
+   аудита 08.11.2026). */
+.sk-rec-fields__refs { display: inline-flex; flex-wrap: wrap; gap: var(--gap); min-width: 0; max-width: 100%; }
 
 .sk-rec-ref {
   display: inline-flex; align-items: center; gap: 4px;
   min-height: max(var(--tap), 20px);
+  min-width: 0; max-width: 100%;
   color: var(--acc); text-decoration: none;
 }
+/* Длинный код переносится, а не выезжает: обрезать его многоточием нельзя —
+   код записи читают целиком. */
+.sk-rec-ref__name { min-width: 0; overflow-wrap: anywhere; }
 .sk-rec-ref:hover { text-decoration: underline; }
 .sk-rec-ref:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
 .sk-rec-ref[data-missing='true'] { color: var(--t3); }
