@@ -23,3 +23,5 @@ export * from './RecordCrumbs';
 export * from './RecordReader';
 export { egoGraph, edgeColor, toCssColor, typesAround, verdictTone, type EgoGraph, type EgoNode, type EgoOptions, type EgoSector } from './graph';
 export * from './graphState';
+// Место паспорта: справа / снизу / на весь экран (S4-33).
+export * from './RecordDock';
