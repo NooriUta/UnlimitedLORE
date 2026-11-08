@@ -171,7 +171,7 @@
       "type": "object",
       "required": ["views"],
       "properties": {
-        "views": { "type": "array", "minItems": 1, "items": { "enum": ["list", "board", "tree"] } },
+        "views": { "type": "array", "minItems": 1, "items": { "enum": ["list", "cards", "board", "tree", "feed", "timeline"] } },
         "quick": {
           "type": "array",
           "items": {
@@ -195,6 +195,15 @@
             "parent": { "type": "string", "minLength": 1 },
             "order": { "type": "string", "minLength": 1 },
             "rollup": { "enum": ["verdict", "status"] }
+          },
+          "additionalProperties": false
+        },
+        "timeline": {
+          "type": "object",
+          "required": ["start"],
+          "properties": {
+            "start": { "type": "string", "minLength": 1 },
+            "end": { "type": "string", "minLength": 1 }
           },
           "additionalProperties": false
         },

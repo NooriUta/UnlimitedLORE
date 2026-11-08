@@ -37,6 +37,7 @@ export function sprintRecord(row: Row): KitRecord {
       release: joined(row.release_ids),
       milestone: joined(row.milestone_ids),
       priority: num(row.priority),
+      planned_start: str(row.planned_start_date),
       planned_end: str(row.planned_end_date),
       done_date: str(row.done_date),
     },

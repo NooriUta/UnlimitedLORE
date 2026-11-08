@@ -2281,6 +2281,20 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-progress[data-progress='none'],
 .sk-progress[data-progress='empty'] { color: var(--t3); }
 
+/* Карточки и лента (S4-22): те же записи, другой вид. */
+.sk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.sk-cards__card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+.sk-cards__card.is-selected { border-color: var(--acc); }
+.sk-cards__head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.sk-cards__title { min-width: 0; font-size: var(--fs-md); }
+.sk-cards__fields { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; margin: 0; font-size: var(--fs-sm); }
+.sk-cards__fields dt { color: var(--t3); }
+.sk-cards__fields dd { margin: 0; min-width: 0; }
+.sk-feed { display: flex; flex-direction: column; gap: 12px; }
+.sk-feed__day { min-width: 0; }
+.sk-feed__date { margin: 0 0 4px; color: var(--t3); font: 700 var(--fs-xs)/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.sk-feed__items { margin: 0; padding: 0; list-style: none; }
+.sk-feed__item { display: flex; align-items: center; gap: 8px; min-height: max(var(--tap), var(--row-h)); padding: 2px 4px; border-bottom: 1px solid var(--bd); }
 .sk-board {
   display: grid;
   grid-auto-flow: column;

@@ -41,7 +41,7 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d
 
 const CONFIG_KEYS = ['modules', 'menu', 'kinds', 'edges', 'graph', 'statuses', 'roles', 'verdict', 'list', 'palette', 'hooks'];
 const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at'];
-const LIST_VIEWS = ['list', 'board', 'tree'];
+const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
 const STATUS_CATEGORIES = ['todo', 'active', 'done', 'cancelled'];
 const FIELD_TYPES = ['text', 'md', 'enum', 'ref', 'date', 'number'];
 
@@ -326,6 +326,9 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       c.enumOf(tree, 'rollup', 'list.tree', ['verdict', 'status'], false);
     }
     c.enumOf(list, 'showClosed', 'list', ['below', 'all', 'days30', 'hide'], false);
+    const timeline = c.obj(list, 'timeline', 'list', false);
+    if (timeline) c.str(timeline, 'start', 'list.timeline');
+    if (views?.includes('timeline') && !timeline) c.err('list.timeline', 'timeline-config', 'вид timeline требует list.timeline {start}');
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
     if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');

@@ -90,7 +90,9 @@ function sprintsConfig(lang: KitLang): KitConfig {
       ]),
     },
     list: {
-      views: ['list', 'board'],
+      // S4-22: один набор данных — любой вид; таймлайн по плановым датам спринта.
+      views: ['list', 'cards', 'board', 'feed', 'timeline'],
+      timeline: { start: 'planned_start', end: 'planned_end' },
       // S4-27: вид раздела по умолчанию — «открытые, закрытые внизу» (прототип v4).
       showClosed: 'below',
       quick: [
@@ -130,7 +132,7 @@ function adrsConfig(lang: KitLang): KitConfig {
       ]),
     },
     list: {
-      views: ['list', 'board'],
+      views: ['list', 'cards', 'board', 'feed'],
       showClosed: 'below',
       quick: [
         { id: 'proposed', title: appT(lang, 'lists.status.proposed'), filter: { status: 'proposed' } },
