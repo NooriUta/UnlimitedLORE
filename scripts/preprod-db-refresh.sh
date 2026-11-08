@@ -77,6 +77,11 @@ say "131: LORE-ygg и базы"
 dbs="$(acurl "$API/databases")" || die "ArcadeDB 131 ($API) не ответил под root"
 echo "$dbs" | head -c 600; echo
 case "$dbs" in *"\"$TARGET_DB\""*) had_target=yes ;; *) had_target=no ;; esac
+# Каталог без открытой базы (остаток прерванной заливки) — тоже «есть»: его
+# переименуем в _bak, иначе mkdir упадёт.
+if [ "$had_target" = no ] && docker exec "$LOCAL_YGG" test -d "$DB_DIR/$TARGET_DB" 2>/dev/null; then
+  had_target=yes; echo "каталог $DB_DIR/$TARGET_DB есть, а базы в списке сервера нет — остаток прерванной заливки"
+fi
 echo "база $TARGET_DB на 131: $had_target"
 # CREATE_ONLY=true — режим LORE CD: только СОЗДАТЬ отсутствующую базу из снимка
 # прода. Существующую CD не перезаливает никогда (это делает ручной workflow).
@@ -130,8 +135,13 @@ if [ "$had_target" = yes ]; then
 fi
 say "131: распаковка снимка в $DB_DIR/$TARGET_DB"
 docker cp "$SNAP" "$LOCAL_YGG:/tmp/snap.zip" || die "архив не скопирован в $LOCAL_YGG"
-docker exec "$LOCAL_YGG" sh -c "set -e; mkdir '$DB_DIR/$TARGET_DB'; cd '$DB_DIR/$TARGET_DB'; unzip -q /tmp/snap.zip; rm -f /tmp/snap.zip; ls | head -5" \
-  || die "распаковка не удалась — прежняя база лежит как ${TARGET_DB}_bak_$TS, бэкенд препрода остановлен"
+if [ "$had_target" = yes ]; then prev_note="прежняя база лежит как ${TARGET_DB}_bak_$TS"; else prev_note="прежней базы не было"; fi
+unzip_ok=yes
+docker exec "$LOCAL_YGG" sh -c "set -e; mkdir '$DB_DIR/$TARGET_DB'; cd '$DB_DIR/$TARGET_DB'; unzip -q /tmp/snap.zip; ls | head -5" || unzip_ok=no
+# docker cp кладёт архив от root, а LORE-ygg работает под arcadedb: убирать — от root,
+# и неудача уборки не роняет распаковку (run 3973, 08.11).
+docker exec -u 0 "$LOCAL_YGG" rm -f /tmp/snap.zip || echo "::warning::/tmp/snap.zip в $LOCAL_YGG не удалён"
+[ "$unzip_ok" = yes ] || die "распаковка в $DB_DIR/$TARGET_DB не удалась — $prev_note; бэкенд препрода остановлен"
 r_open="$(server_cmd "open database $TARGET_DB")"
 echo "open database: $(printf '%s' "$r_open" | head -c 200)"
 
