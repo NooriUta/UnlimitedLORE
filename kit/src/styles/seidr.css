@@ -1791,6 +1791,34 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-vmenu__seg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .sk-vmenu__label { width: 100%; color: var(--t2); font-size: var(--fs-xs); font-weight: 600; }
 .sk-vmenu__hint { margin: 0; color: var(--t2); font-size: var(--fs-xs); line-height: 1.45; }
+/* Поповер «Группировка» (S4-26): значение в кнопке, разделы-радиогруппы, ✓ у выбранного. */
+.sk-gmenu { position: relative; display: inline-flex; }
+.sk-gmenu__btn { display: inline-flex; align-items: center; gap: 4px; }
+.sk-gmenu__btn b { color: var(--t1); font-weight: 700; }
+.sk-gmenu__panel { width: min(360px, 90vw); }
+.sk-gmenu__sec { display: flex; flex-direction: column; gap: 2px; }
+.sk-gmenu__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t1);
+  font-size: var(--fs-sm);
+  text-align: start;
+  cursor: pointer;
+}
+.sk-gmenu__opt:hover { background: var(--bg2); }
+.sk-gmenu__opt.is-on { background: color-mix(in srgb, var(--acc) 14%, transparent); font-weight: 700; }
+.sk-gmenu__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-gmenu__check { color: var(--acc); }
+/* Подгруппа — строка-заголовок с отступом внутри группы. */
+.sk-list__ghead--sub .sk-list__gbtn { padding-left: calc(var(--pad-x) + 16px); }
+.sk-list__ghead--sub .sk-list__gtitle { font-weight: 600; color: var(--t2); }
 .sk-list__closedhidden { color: var(--t3); font-size: var(--fs-xs); }
 .sk-list__views {
   padding: 2px;

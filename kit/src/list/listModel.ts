@@ -197,6 +197,8 @@ export interface ListState {
   ops: Record<string, FilterOp>;
   /** Текст в ID или названии — внутри этого списка (S4-05). */
   text: string;
+  /** Подгруппа — вторая ступень группировки (S4-26); только в списке, без группы не действует. */
+  group2?: string | null;
   /** Режим закрытых (S4-27); null — из конфига (list.showClosed), иначе «все». */
   closed?: KitShowClosed | null;
 }
@@ -205,9 +207,10 @@ export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group:
 
 /**
  * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
- * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27).
+ * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
+ * lg2 (подгруппа, S4-26).
  */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc'] as const;
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
@@ -222,6 +225,7 @@ export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[numb
     lo: o.length ? JSON.stringify(Object.fromEntries(o)) : null,
     lt: text.trim() ? text : null,
     lc: s.closed ?? null,
+    lg2: s.group && s.group2 && s.group2 !== s.group ? s.group2 : null,
   };
 }
 
@@ -264,6 +268,7 @@ export function readListState(p: URLSearchParams): ListState {
     ops,
     text: p.get('lt') ?? '',
     closed: isShowClosed(p.get('lc')) ? (p.get('lc') as KitShowClosed) : undefined,
+    group2: p.get('lg2') ?? undefined,
   };
 }
 

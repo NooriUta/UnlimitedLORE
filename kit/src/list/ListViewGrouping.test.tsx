@@ -43,14 +43,17 @@ const data: KitData = {
   meta: { generated_at: '2026-11-07T00:00:00Z' },
 };
 
-const groupSelect = () => screen.getByRole('combobox', { name: 'Группировка' }) as HTMLSelectElement;
+// S4-26: группировка — поповер, значение в кнопке «Группировка: … ▾» (был select).
+const groupButton = () => screen.getByRole('button', { name: /^Группировка:/ });
+const openGroupMenu = () => { fireEvent.click(groupButton()); return screen.getByRole('dialog', { name: 'Группировка' }); };
 
 describe('выбор группы — поля и пресеты разрезов по связям', () => {
   it('разрезы по связям — отдельной группой опций с подписью из config.edges', () => {
     render(<ListView config={cfg} data={{ ...data, records }} urlState={false} />);
-    const groups = groupSelect().querySelectorAll('optgroup');
-    expect([...groups].map(g => g.label)).toEqual(['Поля', 'Разрезы по связям']);
-    expect(within(groups[1] as HTMLElement).getByRole('option').textContent).toBe('спринт');
+    const dlg = openGroupMenu();
+    const rels = within(dlg).getByRole('radiogroup', { name: 'Разрезы по связям' });
+    expect(within(rels).getAllByRole('radio').map(r => r.textContent)).toEqual(['спринт']);
+    expect(within(dlg).getByRole('radiogroup', { name: /одна на список/ })).toBeTruthy();
   });
 
   it('разрез «спринт» в списке: группа = спринт, запись в двух — в обеих, без связи — «без связи», не загруженный — помечен', () => {
@@ -72,7 +75,7 @@ describe('выбор группы — поля и пресеты разрезо�
     expect(lanes.map(l => l.getAttribute('data-lane-key'))).toEqual(['S1', 'S9', '']);
     // в дорожке — колонки всех статусов
     expect(lanes[0].querySelectorAll('.sk-board__col')).toHaveLength(2);
-    expect(groupSelect().value).toBe('rel:IN_SPRINT');
+    expect(groupButton().textContent).toContain('спринт');
   });
 
   it('доска без группировки — прежняя доска без дорожек', () => {

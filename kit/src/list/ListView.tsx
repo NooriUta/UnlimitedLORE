@@ -56,6 +56,7 @@ import { selectAllShown, toggleId, visibleSelection } from './listSelection';
 import { useLongPress } from './useLongPress';
 import { ScreenHead } from './ScreenHead';
 import { ViewMenu } from './ViewMenu';
+import { GroupMenu } from './GroupMenu';
 
 export interface ListBulkAction {
   id: string;
@@ -188,6 +189,7 @@ function initialState(win: UrlWindow | null, initial: Partial<ListState> | undef
   if (params.has('lo')) s.ops = parsed.ops;
   if (params.has('lt')) s.text = parsed.text;
   if (params.has('lc')) s.closed = parsed.closed;
+  if (params.has('lg2')) s.group2 = parsed.group2;
   return s;
 }
 
@@ -360,6 +362,8 @@ export function ListView({
 
   // Общая группировка (S4-06): один ключ lg — группы списка и дорожки доски.
   const groupKey = parseGroupKey(state.group).type === 'none' ? null : state.group;
+  // Подгруппа (S4-26): только в списке, только при группе и не равная ей.
+  const subKey = view === 'list' && groupKey && state.group2 && state.group2 !== groupKey && parseGroupKey(state.group2).type !== 'none' ? state.group2 : null;
   const lanes = view === 'board' ? boardLanes(filtered, groupKey, config, data, budget) : [];
   // «Закрытые N» — одна группа в конце списка, а не внутри статусов или полей.
   const closedGroup: ListGroup | null = view === 'list' && split.closed.length > 0 ? { key: CLOSED_KEY, records: split.closed } : null;
@@ -760,6 +764,21 @@ export function ListView({
         </tr>
       );
     };
+    const rowsOf = (rs: KitRecord[]) => rs.map(r => (
+      <Fragment key={r.id}>
+                    <tr
+                      className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`}
+                      data-record-id={r.id}
+                      aria-selected={selectable ? selected.has(r.id) : undefined}
+                      {...rowProps(r)}
+                      onClick={e => onRecordClick(e, r.id)}
+                    >
+                      {expandCell(r)}
+                      {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
+                    </tr>
+                    {expandRow(r)}
+                  </Fragment>
+    ));
     body = (
       <div className="sk-list__scroll">
         <table className="sk-list__table">
@@ -783,24 +802,38 @@ export function ListView({
                     </th>
                   </tr>
                 )}
-                {open && g.records.slice(0, limit).map(r => (
-                  <Fragment key={r.id}>
-                    <tr
-                      className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`}
-                      data-record-id={r.id}
-                      aria-selected={selectable ? selected.has(r.id) : undefined}
-                      {...rowProps(r)}
-                      onClick={e => onRecordClick(e, r.id)}
-                    >
-                      {expandCell(r)}
-                      {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
-                    </tr>
-                    {expandRow(r)}
-                  </Fragment>
-                ))}
-                {open && g.records.length > limit && (
-                  <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit)}</td></tr>
-                )}
+                {open && (subKey && g.key !== CLOSED_KEY
+                  // Подгруппа (S4-26): вторая ступень внутри группы — своя строка-заголовок со счётчиком.
+                  ? groupBy(g.records, subKey, config, data, budget).map(sg => {
+                    const k = g.key + '' + sg.key;
+                    const sOpen = isOpen(k);
+                    const sLimit = limitOf(k);
+                    return (
+                      <Fragment key={k}>
+                        <tr className="sk-list__ghead sk-list__ghead--sub" data-subgroup-key={sg.key}>
+                          <th colSpan={span} scope="rowgroup">
+                            <button type="button" className="sk-list__gbtn" aria-expanded={sOpen} onClick={() => toggleGroup(k)}>
+                              <span className="sk-list__chev" aria-hidden="true">{sOpen ? '▾' : '▸'}</span>
+                              <span className={sg.unknown || sg.missing || sg.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitleOf(config, lang, subKey, sg)}</span>
+                              <span className="sk-list__gcount">{sg.records.length}</span>
+                            </button>
+                          </th>
+                        </tr>
+                        {sOpen && rowsOf(sg.records.slice(0, sLimit))}
+                        {sOpen && sg.records.length > sLimit && (
+                          <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(sg, sLimit, k)}</td></tr>
+                        )}
+                      </Fragment>
+                    );
+                  })
+                  : (
+                    <>
+                      {rowsOf(g.records.slice(0, limit))}
+                      {g.records.length > limit && (
+                        <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit)}</td></tr>
+                      )}
+                    </>
+                  ))}
               </tbody>
             );
           })}
@@ -889,28 +922,15 @@ export function ListView({
           <legend className="sk-list__seglabel">{t('kit.list.group')}</legend>
           <GameIcon slug="stack" size={14} className="sk-list__segicon" />
           {segCount(groupKey ? 1 : 0)}
-          <select
-            aria-label={t('kit.list.group')}
-            className="sk-list__select"
-            value={groupKey ?? ''}
-            onChange={e => update({ group: e.target.value || null })}
-          >
-            <option value="">{t('kit.list.groupNone')}</option>
-            {groupOpts.relations.length === 0
-              ? groupOpts.fields.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)
-              : (
-                <>
-                  {groupOpts.fields.length > 0 && (
-                    <optgroup label={t('kit.list.groupFields')}>
-                      {groupOpts.fields.map(g => <option key={g} value={g}>{labels.keyTitle(g)}</option>)}
-                    </optgroup>
-                  )}
-                  <optgroup label={t('kit.list.groupRels')}>
-                    {groupOpts.relations.map(p => <option key={p.key} value={p.key}>{labels.keyTitle(p.key)}</option>)}
-                  </optgroup>
-                </>
-              )}
-          </select>
+          <GroupMenu
+            group={groupKey}
+            sub={subKey}
+            options={groupOpts}
+            withSub={view === 'list'}
+            keyTitle={labels.keyTitle}
+            onGroup={g => update({ group: g, ...(g === null || g === state.group2 ? { group2: null } : {}) })}
+            onSub={g => update({ group2: g })}
+          />
           </fieldset>
         )}
         <fieldset className="sk-list__seg" data-seg="sort">
