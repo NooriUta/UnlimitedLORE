@@ -6,13 +6,15 @@
 # с тем же именем, и оба сидят в общей сети unlimitedlore_default, где бэкенд зовёт его `minio:9000`.
 # Если MinIO поднят под другим именем проекта — поправь networks ниже на его сеть (external).
 #
-# Образы — того же коммита, что на 131 в момент стопа записи (сейчас 07a8c740): иначе бэкенд на
-# старте мигрирует перенесённую базу, и откат на 131 получит базу новее кода.
+# Теги образов — снимок прода на 08.11.2026 (v1.17.2, a2dc70bc). На сервере их при каждом релизе
+# переписывает .github/scripts/lore-host-deploy.sh (только строки image:, с бэкапом
+# docker-compose.yml.bak-<тег>); остальное — эталон, сверенный с продом построчно 08.11.
+# При переезде 07.11 стояли образы 07a8c740 — того же коммита, что на 131 в момент стопа записи.
 name: unlimitedlore
 
 services:
   lore-backend:
-    image: unlimitedlore-lore-backend:07a8c740
+    image: unlimitedlore-lore-backend:a2dc70bc
     restart: unless-stopped
     ports:
       - "127.0.0.1:9100:9100"        # только localhost; снаружи — через Traefik 131 по имени
@@ -61,7 +63,7 @@ services:
       start_period: 40s
 
   lore-app:
-    image: unlimitedlore-lore-app:07a8c740
+    image: unlimitedlore-lore-app:a2dc70bc
     restart: unless-stopped
     environment:
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-https://lore.odal.seidrstudio.pro}
