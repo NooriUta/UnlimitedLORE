@@ -104,7 +104,7 @@ describe('KitShell — меню групп по смыслу', () => {
     expect(within(side).getByRole('heading', { name: 'Работа' })).toBeTruthy();
     const grp = within(side).getByRole('heading', { name: 'Решения' }).closest('.sk-shell__grp')!;
     expect(grp.className).toMatch(/\bsk-shell__grp--wrn\b/);
-    expect(within(side).getByRole('button', { name: 'Спринты' }).getAttribute('aria-current')).toBe('page');
+    expect(within(side).getByRole('link', { name: 'Спринты' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByTestId('nav').textContent).toBe('lore/sprints/list');
     expect(screen.getByRole('main')).toBeTruthy();
     expect(await axeViolations(container)).toEqual([]);
@@ -114,10 +114,10 @@ describe('KitShell — меню групп по смыслу', () => {
     const win = fakeWin();
     const onNavigate = vi.fn();
     render(<KitShell config={CONFIG} win={win} storage={createSafeStorage(memStorage)} narrow={false} onNavigate={onNavigate}><Opener /></KitShell>);
-    fireEvent.click(screen.getByRole('button', { name: 'Задачи' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Задачи' }));
     expect(onNavigate).toHaveBeenLastCalledWith({ module: 'lore', item: 'tasks', view: 'board' });
-    expect(screen.getByRole('button', { name: 'Задачи' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('button', { name: 'Спринты' }).getAttribute('aria-current')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Задачи' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Спринты' }).getAttribute('aria-current')).toBeNull();
     const q = new URLSearchParams(win.location.search);
     expect([q.get('mod'), q.get('sec'), q.get('view')]).toEqual(['lore', 'tasks', 'board']);
   });
@@ -162,14 +162,14 @@ describe('KitShell — «Недавние» и «Мои виды»', () => {
     render(<KitShell config={CONFIG} win={fakeWin()} storage={createSafeStorage(memStorage)} narrow={false} onNavigate={onNavigate}><Opener /></KitShell>);
     const views = () => screen.getByRole('heading', { name: 'Мои виды' }).closest('.sk-shell__grp') as HTMLElement;
     expect(views().textContent).toContain('Видов пока нет');
-    fireEvent.click(screen.getByRole('button', { name: 'Задачи' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Задачи' }));
     fireEvent.click(within(views()).getByRole('button', { name: 'Сохранить вид' }));
-    const saved = within(views()).getByRole('button', { name: 'Задачи · вид 1' });
-    fireEvent.click(screen.getByRole('button', { name: 'ADR' }));
+    const saved = within(views()).getByRole('link', { name: 'Задачи · вид 1' });
+    fireEvent.click(screen.getByRole('link', { name: 'ADR' }));
     fireEvent.click(saved);
     expect(onNavigate).toHaveBeenLastCalledWith({ module: 'lore', item: 'tasks', view: 'board' });
     fireEvent.click(within(views()).getByRole('button', { name: 'Удалить вид «Задачи · вид 1»' }));
-    expect(within(views()).queryByRole('button', { name: 'Задачи · вид 1' })).toBeNull();
+    expect(within(views()).queryByRole('link', { name: 'Задачи · вид 1' })).toBeNull();
   });
 
   it('myViews/recent выключены в конфиге — групп нет', () => {
@@ -182,7 +182,7 @@ describe('KitShell — «Недавние» и «Мои виды»', () => {
     render(<KitShell config={CONFIG} win={fakeWin()} storage={createSafeStorage(() => null)} narrow={false} />);
     expect(screen.getByRole('status').textContent).toMatch(/не сохран/i);
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить вид' }));
-    expect(screen.getByRole('button', { name: 'Спринты · вид 1' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Спринты · вид 1' })).toBeTruthy();
   });
 });
 
@@ -198,7 +198,7 @@ describe('KitShell — телефон: меню в drawer', () => {
     expect(burger.getAttribute('aria-expanded')).toBe('true');
     expect(within(dlg).getByRole('navigation', { name: 'Разделы' })).toBeTruthy();
     expect(await axeViolations(document.body)).toEqual([]);
-    fireEvent.click(within(dlg).getByRole('button', { name: 'ADR' }));
+    fireEvent.click(within(dlg).getByRole('link', { name: 'ADR' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByTestId('nav').textContent).toBe('lore/adr/null');
     expect(document.activeElement).toBe(burger);
@@ -241,23 +241,23 @@ describe('KitShell — сворачивание групп меню (S4-01)', ()
     fireEvent.click(work);
     expect(work.getAttribute('aria-expanded')).toBe('false');
     // Текущий раздел (Спринты) не пропадает из вида — «где я» видно всегда.
-    expect(screen.getByRole('button', { name: 'Спринты' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Спринты' }).getAttribute('aria-current')).toBe('page');
     expect(screen.queryByRole('button', { name: 'Задачи' })).toBeNull();
     expect(await axeViolations(container)).toEqual([]);
     fireEvent.click(work);
-    expect(screen.getByRole('button', { name: 'Задачи' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Задачи' })).toBeTruthy();
   });
 
   it('свёрнутая группа без текущего пункта прячет все пункты; выбор запоминается в хранилище', () => {
     const storage = createSafeStorage(memStorage);
     const { unmount } = render(<KitShell config={CONFIG} win={fakeWin()} storage={storage} storageKey="t" narrow={false} />);
     fireEvent.click(toggle('Решения'));
-    expect(screen.queryByRole('button', { name: 'ADR' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'ADR' })).toBeNull();
     expect(storage.get('t.collapsed')).toBe(JSON.stringify(['decide']));
     unmount();
     render(<KitShell config={CONFIG} win={fakeWin()} storage={storage} storageKey="t" narrow={false} />);
     expect(toggle('Решения').getAttribute('aria-expanded')).toBe('false');
-    expect(screen.queryByRole('button', { name: 'ADR' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'ADR' })).toBeNull();
     expect(toggle('Работа').getAttribute('aria-expanded')).toBe('true');
   });
 
@@ -287,6 +287,6 @@ describe('KitShell — сворачивание групп меню (S4-01)', ()
     const dlg = screen.getByRole('dialog');
     const t = within(within(dlg).getByRole('heading', { name: 'Решения' })).getByRole('button');
     fireEvent.click(t);
-    expect(within(dlg).queryByRole('button', { name: 'ADR' })).toBeNull();
+    expect(within(dlg).queryByRole('link', { name: 'ADR' })).toBeNull();
   });
 });

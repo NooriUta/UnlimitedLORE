@@ -254,5 +254,6 @@
   "outsideShell.demo": "Демо вне приложения.",
   "outsideShell.standalone": "Страница открыта вне оболочки LORE.",
   "outsideShell.missing": "Здесь нет шапки, меню, поиска и команд.",
-  "outsideShell.back": "Вернуться в LORE"
+  "outsideShell.back": "Вернуться в LORE",
+  "palette.goSection": "Перейти: {section}"
 }

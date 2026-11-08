@@ -18,6 +18,7 @@
 //     паспорт вместе с несохранённым текстом.
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
 import { RecordDock } from './RecordDock';
 
 const esc = (init: KeyboardEventInit = {}) => fireEvent.keyDown(document, { key: 'Escape', code: 'Escape', ...init });
@@ -73,5 +74,35 @@ describe('Esc в доке — находка P0 аудита 08.11', () => {
     unmount();
     esc();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+// Аудит 08.11, находка P1: «Док: сверху 343 px прозрачного backdrop, ниже
+// панель 515 px — пустая треть экрана, список обрывается без затемнения».
+//
+// Пропорции 2fr/3fr были заданы жёстко, поэтому короткий список оставлял над
+// паспортом пустое поле — «дыру». Затемнять список нельзя: владелица 08.11
+// решила, что список под паспортом живой (своя прокрутка, щелчок по другой
+// записи). Значит убираем пустоту: доля списка — по его содержимому, но не
+// больше 40 % высоты дока; остальное забирает паспорт.
+describe('док снизу: пустой трети нет', () => {
+  const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
+  const ruleOf = (sel: string) => {
+    const start = css.indexOf(`\n${sel} {`);
+    return start < 0 ? '' : css.slice(css.indexOf('{', start) + 1, css.indexOf('}', start));
+  };
+
+  it('положительный контроль: правило дока снизу найдено', () => {
+    expect(ruleOf(".sk-dock[data-placement='bottom']")).not.toBe('');
+  });
+
+  it('доля списка — по содержимому, с потолком; остальное паспорту', () => {
+    const rule = ruleOf(".sk-dock[data-placement='bottom']");
+    expect(rule).toMatch(/fit-content\(/);
+    expect(rule).not.toMatch(/2fr/);
+  });
+
+  it('список под паспортом не затемняется — он живой (решение владелицы 08.11)', () => {
+    expect(ruleOf('.sk-dock__backdrop')).not.toMatch(/opacity|filter|background/);
   });
 });

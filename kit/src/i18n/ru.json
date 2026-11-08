@@ -576,5 +576,11 @@
   "kit.list.cols.title": "Колонки",
   "kit.list.cols.hint": "«Запись» не выключается. Порядок — стрелками, ширина — краем заголовка.",
   "kit.list.cols.up": "{title}: выше",
-  "kit.list.cols.down": "{title}: ниже"
+  "kit.list.cols.down": "{title}: ниже",
+  "kit.record.relkind.composition": "состав: часть не живёт без целого",
+  "kit.record.relkind.aggregation": "набор: часть живёт сама",
+  "kit.record.relkind.association": "зависимость",
+  "kit.record.relkind.attribute": "свойство",
+  "kit.record.relkind.realization": "реализация",
+  "kit.record.relkind.generalization": "обобщение"
 }

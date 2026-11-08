@@ -178,8 +178,13 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
     const acts = result.items.filter(i => i.type === 'action');
     const actionsGroup = { id: 'actions', label: actionsLabel, items: acts };
     if (result.section === 'recent') {
-      return [actionsGroup, { id: 'recent', label: kitT(lang, 'kit.palette.recent'), items: result.items.filter(i => i.type !== 'action') }]
-        .filter(g => g.items.length > 0);
+      // Команды — отдельной группой под недавними: открытая палитра без
+      // истории обязана что-то предлагать (находка P1 аудита 08.11).
+      return [
+        actionsGroup,
+        { id: 'recent', label: kitT(lang, 'kit.palette.recent'), items: result.items.filter(i => i.type !== 'action') },
+        { id: 'commands', label: kitT(lang, 'kit.palette.commands'), items: result.commands ?? [] },
+      ].filter(g => g.items.length > 0);
     }
     const recs = result.items.filter(i => i.type === 'record');
     const cmds = result.items.filter(i => i.type === 'command');
@@ -296,7 +301,13 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
   const q = query.trim();
 
   let note: string | null = null;
-  if (flat.length === 0) {
+  // «Недавних пока нет» говорится и тогда, когда команды есть: это два разных
+  // сообщения. Команды — что палитра умеет; пустая история — что в ней пока
+  // ничего. Если прятать подсказку за наличием команд, человек не отличит
+  // «ещё ничего не открывал» от «историю не запоминаем» (находка P1 аудита
+  // 08.11 добавила команды — подсказку она не отменяет).
+  const noRecent = !q && result.items.filter(i => i.type !== 'action').length === 0;
+  if (flat.length === 0 || noRecent) {
     note = !q ? kitT(lang, 'kit.palette.emptyRecent')
       : remoteNow?.status === 'ok' ? kitT(lang, 'kit.palette.notFoundAnywhere', { query: q })
         : kitT(lang, 'kit.palette.notFound', { query: q });
@@ -351,7 +362,11 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
           </p>
         )}
 
-        {flat.length > 0 ? (
+        {/* Подсказка и список — не «или-или»: «недавних пока нет» остаётся
+            верным, даже когда ниже перечислены команды (находка P1 аудита
+            08.11 добавила команды, но пустую историю это не отменяет). */}
+        {note && <div role="status" className="sk-palette__empty">{note}</div>}
+        {flat.length > 0 && (
           <div ref={list} id={listId} role="listbox" aria-label={title} className="sk-palette__list">
             {groups.map(g => (
               <div key={g.id} role="group" aria-label={g.label} className="sk-palette__group">
@@ -387,8 +402,6 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
               </div>
             ))}
           </div>
-        ) : (
-          <div role="status" className="sk-palette__empty">{note}</div>
         )}
 
         <div className="sk-palette__foot">

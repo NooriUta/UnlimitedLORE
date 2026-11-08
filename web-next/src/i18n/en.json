@@ -254,5 +254,6 @@
   "outsideShell.demo": "Demo outside the app.",
   "outsideShell.standalone": "This page is open outside the LORE shell.",
   "outsideShell.missing": "No header, menu, search or commands here.",
-  "outsideShell.back": "Back to LORE"
+  "outsideShell.back": "Back to LORE",
+  "palette.goSection": "Go to: {section}"
 }

@@ -28,7 +28,7 @@ import { createLocalS2Client } from './api/me';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
-import { LorePalette } from './palette/LorePalette';
+import { SectionPalette } from './palette/SectionPalette';
 import { OutsideShell } from './pages/OutsideShell';
 import type { ListScreenId } from './lists/screens';
 import { V2Shell } from './shell/V2Shell';
@@ -168,8 +168,10 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
           topEnd={(
             <>
               {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.
-                  Экраны списков передадут сюда свои ctx, target (выделение S4-10) и действия. */}
-              <LorePalette storage={storage} trigger />
+                  Команды разделов — SectionPalette: внутри оболочки она знает navigate
+                  (находка P1 аудита 08.11: палитра была пуста). Экраны списков передадут
+                  сюда свои ctx, target (выделение S4-10) и действия. */}
+              <SectionPalette storage={storage} />
             </>
           )}
           account={(
