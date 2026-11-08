@@ -160,6 +160,13 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
+type RecWidth = 's' | 'm' | 'l';
+const WIDTHS: readonly RecWidth[] = ['s', 'm', 'l'];
+const WIDTH_KEY = 'seidr-kit:rec-width';
+function readWidth(): RecWidth {
+  try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' ? v : 'm'; } catch { return 'm'; }
+}
+
 /** Свёртка «Свойства · …» (v4): непустые значения полей одной строкой. */
 function propsSummary(record: KitRecord, kind: KindConfig): string {
   return (kind.fields ?? [])
@@ -198,6 +205,9 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const propsSide = hasProps && placement === 'bottom';
   const propsRow = hasProps && placement === 'full';
   const [propsOpen, setPropsOpen] = useState(false);
+  // Ширина текста во весь экран — настройка наверху (владелица 08.11), запоминается в браузере.
+  const [width, setWidthState] = useState<RecWidth>(() => readWidth());
+  const setWidth = (w: RecWidth) => { setWidthState(w); try { localStorage.setItem(WIDTH_KEY, w); } catch { /* приватный режим — живём в памяти */ } };
   const recordItems: TabItem[] = [
     { id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' : undefined },
     ...(hasProps && !propsSide && !propsRow ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
@@ -301,6 +311,17 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const mainBlock = (
     <>
         {switcher}
+        {placement === 'full' && (
+          <div className="sk-rec-widthbar">
+            <div role="radiogroup" aria-label={kitT(lang, 'kit.record.width')} className="sk-rec-widthbar__seg">
+              {WIDTHS.map(w => (
+                <button key={w} type="button" role="radio" aria-checked={width === w} className="sk-rec-widthbar__opt" onClick={() => setWidth(w)}>
+                  {kitT(lang, `kit.record.width.${w}` as 'kit.record.width.s')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
         <RelationLines record={record} ctx={ctx} defs={rels} />
         {facts && (
@@ -354,7 +375,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const cols = aside;
   const cls = ['sk-rec', aside ? 'sk-rec--zones' : '', className].filter(Boolean).join(' ');
   return (
-    <article className={cls} aria-labelledby={titleId} data-kind={record.kind} data-placement={placement}>
+    <article className={cls} aria-labelledby={titleId} data-kind={record.kind} data-placement={placement} data-width={placement === 'full' ? width : undefined}>
       {cols ? (<>{around}<div className="sk-rec__main">{mainBlock}</div></>) : mainBlock}
     </article>
   );

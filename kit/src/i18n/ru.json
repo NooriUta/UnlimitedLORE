@@ -559,5 +559,9 @@
   "kit.record.rel.linkBtn": "Привязать",
   "kit.record.rel.idPlaceholder": "ID записи",
   "kit.record.rail": "Разделы паспорта",
-  "kit.record.rail.analytics": "Аналитика"
+  "kit.record.rail.analytics": "Аналитика",
+  "kit.record.width": "Ширина текста",
+  "kit.record.width.s": "уже",
+  "kit.record.width.m": "средне",
+  "kit.record.width.l": "шире"
 }

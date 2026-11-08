@@ -559,5 +559,9 @@
   "kit.record.rel.linkBtn": "Link",
   "kit.record.rel.idPlaceholder": "Record ID",
   "kit.record.rail": "Passport sections",
-  "kit.record.rail.analytics": "Analytics"
+  "kit.record.rail.analytics": "Analytics",
+  "kit.record.width": "Text width",
+  "kit.record.width.s": "narrower",
+  "kit.record.width.m": "medium",
+  "kit.record.width.l": "wider"
 }
