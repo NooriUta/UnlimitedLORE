@@ -3870,6 +3870,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec-rail { position: absolute; top: 50%; right: 0; display: flex; flex-direction: column; gap: 4px; transform: translateY(-50%); }
 .sk-rec-rail__btn { padding: 10px 4px; border: 1px solid var(--bd); border-right: 0; border-radius: var(--r-md) 0 0 var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; writing-mode: vertical-rl; cursor: pointer; }
 .sk-rec-rail__btn:hover { border-color: var(--acc); color: var(--t1); }
+/* Во весь экран — воздушнее и по центру (владелица 08.11): колонка ~920 px, поля, свободное межстрочие. */
+.sk-dock[data-placement='full'] .sk-rec { max-width: 920px; margin: 0 auto; padding: 8px 32px 48px; }
+.sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
+.sk-dock[data-placement='full'] .sk-rec-head { margin-bottom: 10px; }
+.sk-dock[data-placement='full'] .sk-tabpanel { padding-top: 16px; }
 /* Связи по видам UML (паспорт): ◆ композиция, ◇ агрегация, ⇢ зависимость, ▷ реализация, △ обобщение. */
 .sk-tab__mark { margin-right: 2px; color: var(--acc); font-family: var(--mono); }
 .sk-rel { display: flex; flex-direction: column; gap: 8px; }

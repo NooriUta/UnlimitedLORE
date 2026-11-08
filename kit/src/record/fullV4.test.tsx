@@ -60,3 +60,13 @@ describe('S4-CONTENT-V4 (kit): паспорт во весь экран как v4
     expect(ruleOf(".sk-tabs--underline .sk-tab[aria-selected='true']")).toMatch(/border-bottom-color:\s*var\(--acc\)/);
   });
 });
+
+describe('во весь экран — воздушнее и по центру (владелица 08.11)', () => {
+  it('паспорт во весь экран — колонкой по центру, с полями; текст с большим межстрочием', () => {
+    const r = ruleOf(".sk-dock[data-placement='full'] .sk-rec");
+    expect(r).toMatch(/max-width:/);
+    expect(r).toMatch(/margin:\s*0 auto/);
+    expect(r).toMatch(/padding:/);
+    expect(ruleOf(".sk-dock[data-placement='full'] .sk-prose")).toMatch(/line-height:\s*1\.7/);
+  });
+});
