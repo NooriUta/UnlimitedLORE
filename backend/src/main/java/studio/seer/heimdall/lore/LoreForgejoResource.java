@@ -1,6 +1,5 @@
 package studio.seer.heimdall.lore;
 
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -363,14 +362,7 @@ public class LoreForgejoResource extends LoreResourceBase {
             if (r.statusCode() >= 300)
                 return new CiProbe(Map.of(), ageSeconds, true,
                     "Forgejo ответил " + r.statusCode() + " на статусы " + ref);
-            JsonObject combined = new JsonObject(r.body());
-            JsonArray statuses = combined.getJsonArray("statuses", new JsonArray());
-            // Forgejo кладёт статусы новее→старше; первый на контекст = актуальный.
-            Map<String, String> byCtx = new HashMap<>();
-            for (int i = 0; i < statuses.size(); i++) {
-                JsonObject s = statuses.getJsonObject(i);
-                byCtx.putIfAbsent(str(s.getString("context")), str(s.getString("status")));
-            }
+            Map<String, String> byCtx = ForgejoBridge.statusesByContext(new JsonObject(r.body()));
             return new CiProbe(byCtx, ageSeconds, false, null);
         } catch (Exception e) {
             LOG.warnf("[FORGEJO CI] %s@%s: %s", repo.path(), ref, e.getMessage());
