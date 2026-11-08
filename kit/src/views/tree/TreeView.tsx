@@ -8,6 +8,7 @@
 // (один tabIndex=0), стрелки ↑↓←→, Home/End, Enter — открыть запись.
 // Честные состояния: «не настроен» ≠ «пусто» ≠ «под фильтр ничего не попало»;
 // обрезанная выдача — явная плашка; сбой вердикта гасит только свою строку.
+import { ICON_CANON } from '../../elements/iconCanon';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import type { KitConfig, KitCtx, KitData, KitRecord } from '../../core/contract';
@@ -298,7 +299,7 @@ function TreeItem({ row, config, filtered, tabbable, href, onOpen, onToggle, onF
     >
       {hasKids && !filtered ? (
         <IconButton
-          icon="play-button"
+          icon={ICON_CANON.ctlTreeToggle}
           iconSize={12}
           tabIndex={-1}
           className={['sk-tree__toggle', row.expanded ? 'is-open' : ''].filter(Boolean).join(' ')}

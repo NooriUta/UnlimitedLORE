@@ -7,6 +7,7 @@
 // Режим чтения kit (S5-05: размер текста, «сворачивать меню при чтении» —
 // D-2026-UXR-READ-COLLAPSE) — блоком ReadingSettings: его читает ReadingView.
 // Пока у него своё хранилище kit, а не /lore/me/settings — сведение в одно — отдельной задачей.
+import { ICON_CANON } from '@seidr/kit';
 import { GameIcon, KitLangProvider, LoadError, PALETTES, ReadingSettings, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
 import type { UserSettings } from '../api/contracts/s2';
 import { t, type Lang, type MessageKey } from '../i18n/messages';
@@ -100,7 +101,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
       <NavSwitch lang={lang} targetUrl={targetUrl} />
       {onOpenMemory && (
         <button type="button" className="settings-link" onClick={onOpenMemory}>
-          <GameIcon slug="eye-target" size={14} />
+          <GameIcon slug={ICON_CANON.ctlReading} size={14} />
           <span>{t(lang, 'settings.memory.open')}</span>
         </button>
       )}

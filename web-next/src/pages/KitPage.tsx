@@ -3,6 +3,7 @@
 // своих элементов здесь нет — витрина показывает ровно то, что получит любой
 // экран v2. Её axe-прогон (KitPage.test.tsx) — гейт a11y фронтового CI.
 // Эталон вида — docs/prototypes/ux-redesign-shell-v4.tpl.html (как картинка).
+import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
@@ -145,7 +146,7 @@ export default function KitPage() {
           <h3 className="kitp__h3">{t('kitPage.el.buttons')}</h3>
           <div className="kitp__row">
             <IconButton icon={SECTION_ICONS.search} label={t('kitPage.el.search')} shortcut="Control+K" />
-            <IconButton icon="round-star" label={t('kitPage.el.favorite')} pressed={fav} onClick={() => setFav(f => !f)} />
+            <IconButton icon={ICON_CANON.myViews} label={t('kitPage.el.favorite')} pressed={fav} onClick={() => setFav(f => !f)} />
             {Object.entries(SECTION_ICONS).slice(0, 8).map(([name, slug]) => <GameIcon key={name} slug={slug} size={18} label={name} />)}
           </div>
           <h3 className="kitp__h3">{t('kitPage.el.statuses')}</h3>

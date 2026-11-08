@@ -12,6 +12,7 @@
 //
 // Пустое — честно: пустые «Недавние»/«Мои виды»/меню подписаны, запись,
 // которой нет в выгрузке, помечена, а не выброшена молча.
+import { ICON_CANON } from '../elements/iconCanon';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { KitConfig, KitData } from '../core/contract';
@@ -282,7 +283,7 @@ export function KitShell({
           <a className="sk-shell__skip" href={`#${mainId}`}>{kitT(lang, 'kit.shell.skip')}</a>
           {narrow && (
             <IconButton
-              icon="hamburger-menu"
+              icon={ICON_CANON.ctlMenu}
               label={kitT(lang, 'kit.shell.menu')}
               aria-expanded={drawer}
               aria-haspopup="dialog"
@@ -421,7 +422,7 @@ function ShellMenu({
                   aria-current={v.module === nav.module && v.item === nav.item && v.view === nav.view ? 'true' : undefined}
                   onClick={() => onView(v)}
                 >
-                  <GameIcon slug="round-star" size={14} />
+                  <GameIcon slug={ICON_CANON.myViews} size={14} />
                   <span className="sk-shell__label">{v.title}</span>
                 </button>
                 <IconButton
@@ -434,7 +435,7 @@ function ShellMenu({
             ))}
             <li>
               <button type="button" className="sk-shell__item sk-shell__item--action" onClick={onSaveView}>
-                <GameIcon slug="save" size={14} />
+                <GameIcon slug={ICON_CANON.saveView} size={14} />
                 <span className="sk-shell__label">{kitT(lang, 'kit.shell.saveView')}</span>
               </button>
             </li>
@@ -450,7 +451,7 @@ function ShellMenu({
               return (
                 <li key={id}>
                   <button type="button" className="sk-shell__item" onClick={() => onRecent(id)}>
-                    <GameIcon slug="back-forth" size={14} />
+                    <GameIcon slug={ICON_CANON.recent} size={14} />
                     <span className="sk-shell__label">
                       {title ?? <span className="sk-shell__id">{id}</span>}
                     </span>
