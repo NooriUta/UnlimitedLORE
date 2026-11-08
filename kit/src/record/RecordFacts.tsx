@@ -15,6 +15,8 @@ export interface RecordFactsProps {
   lang: KitLang;
   /** Открыть вкладку задач; нет — «задачи x/y» показывается текстом. */
   onTasks?: () => void;
+  /** Последний пункт строки (S4-29): «получено N мин ↻». */
+  tail?: ReactNode;
 }
 
 function Fact({ name, tone, children }: { name: string; tone: FactTone; children: ReactNode }) {
@@ -35,7 +37,7 @@ function dueText(d: DueFact, lang: KitLang): string {
   return kitT(lang, 'kit.record.facts.noDue');
 }
 
-export function RecordFacts({ record, ctx, spec, lang, onTasks }: RecordFactsProps) {
+export function RecordFacts({ record, ctx, spec, lang, onTasks, tail }: RecordFactsProps) {
   const f = recordFacts(record, ctx, spec);
   const t = f.tasks;
   return (
@@ -72,6 +74,7 @@ export function RecordFacts({ record, ctx, spec, lang, onTasks }: RecordFactsPro
             <span className="sk-rec-facts__text">{kitT(lang, 'kit.record.facts.freshUnknown')}</span>
           )}
         </Fact>
+        {tail && <li className="sk-rec-facts__item sk-rec-facts__tail">{tail}</li>}
       </ul>
     </section>
   );
