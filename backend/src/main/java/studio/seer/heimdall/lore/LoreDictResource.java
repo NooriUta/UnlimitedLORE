@@ -152,11 +152,12 @@ public class LoreDictResource extends LoreResourceBase {
         hp.put("code", code);
         hp.put("nsid", UUID.randomUUID().toString());
         hp.put("now", Instant.now().toString());
+        changeAuthor().bind(hp); // S2-12: автор версии — из токена (справочник правит человек)
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
             "UPDATE KnowDictEntryHist SET valid_to=:now WHERE dict_type=:dt AND code=:code AND valid_to IS NULL;" +
             "INSERT INTO KnowDictEntryHist SET dict_type=:dt, code=:code, state_uid=:nsid, valid_from=:now, " +
             "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
-            "is_active=:is_active, is_extensible=:is_extensible;" +
+            "is_active=:is_active, is_extensible=:is_extensible" + ChangeAuthor.SET_SQL + ";" +
             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
             "TO (SELECT FROM KnowDictEntryHist WHERE state_uid=:nsid);",
             hp)).await().indefinitely();

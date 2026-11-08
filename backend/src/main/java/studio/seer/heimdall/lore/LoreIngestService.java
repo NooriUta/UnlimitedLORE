@@ -70,7 +70,9 @@ public class LoreIngestService {
      */
     public CreateSprintResult createSprint(String sprintId, String name, String status,
                                            String planId,
-                                           String priority, String outcomeMd, String contextMd) {
+                                           String priority, String outcomeMd, String contextMd,
+                                           ChangeAuthor author) {
+        final ChangeAuthor by = author == null ? ChangeAuthor.UNKNOWN : author; // S2-12
         String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "todo" : status, "📋 PLANNED");
         String nm = (name != null && !name.isBlank()) ? name : sprintId;
 
@@ -107,8 +109,10 @@ public class LoreIngestService {
                 Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
             String priSet = "";
             if (priority != null && !priority.isBlank()) { priSet = ", priority=:pri"; hp.put("pri", priority); }
+            by.bind(hp);
             execScript(
-                "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now" + priSet + ";" +
+                "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now" + priSet
+                    + ChangeAuthor.SET_SQL + ";" +
                 "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
                 "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su);" +
                 "UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp;",

@@ -109,7 +109,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
         try {
             LoreIngestService.CreateSprintResult r = ingestService.createSprint(
-                req.sprint_id(), req.name(), status, req.plan_id(), req.priority(), req.outcome_md(), req.context_md());
+                req.sprint_id(), req.name(), status, req.plan_id(), req.priority(), req.outcome_md(), req.context_md(),
+                changeAuthor());
             // ADR-LORE-017 §Решение 2: sprint_new gets the same optional project param
             // release_new/release_link/sprint_link(rel:"project") already have — brings
             // Tier-1 write coverage in line, no separate call needed for the common case
@@ -252,6 +253,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.task_id()).matches()) {
             return Uni.createFrom().item(badParams("sprint_id / task_id contain illegal characters"));
         }
+        final ChangeAuthor by = changeAuthor(); // S2-12: снят до асинхронной цепочки
         // Решение владельца 30.08.2026: агент не создаёт задачу без ролей —
         // отказ, а не запись с пропуском. Проверка стоит ДО первой команды в
         // базу: иначе задача легла бы, а отказ пришёл после, и «не создана»
@@ -332,13 +334,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
                     .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
-                    .append("valid_from = :now, note_md = :note, effort_days = :eff;")
+                    .append("valid_from = :now, note_md = :note, effort_days = :eff").append(ChangeAuthor.SET_SQL).append(";")
                     .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
                 Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
                     "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType, "wc", workClass,
                     "eff", req.effort_days(), "act", req.actual_days(),
                     "bk", req.bookkeeping() != null && req.bookkeeping());
+                by.bind(p);
                 // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
                 if (phase != null) {
                     script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
@@ -552,6 +555,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         final String now = Instant.now().toString();
         final String nsid = UUID.randomUUID().toString();   // new task's PLANNED hist
         final String cnsid = UUID.randomUUID().toString();  // source's CANCELLED hist
+        final ChangeAuthor by = changeAuthor();             // S2-12: автор обеих версий
         try {
             List<Map<String, Object>> src = ingestService.queryPublic(
                 "SELECT task_id, title, task_type, author_agent, executor_agent, reviewer_agent, " +
@@ -600,13 +604,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .append("task_type=:tt, author_agent=:author, executor_agent=:executor, reviewer_agent=:reviewer;")
                 .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowSprint WHERE sprint_id=:sid);")
                 .append("INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw=:st, valid_from=:now, note_md=:note")
-                .append(effort != null ? ", effort_days=:eff;" : ";")
+                .append(effort != null ? ", effort_days=:eff" : "")
+                .append(ChangeAuthor.SET_SQL).append(";")
                 .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid);");
             Map<String, Object> p = mapOfNullable("uid", newUid, "tid", tid, "title", title,
                 "note", note, "oi", order, "sid", targetSid, "nsid", nsid, "now", now,
                 "tt", taskType, "author", author, "executor", executor, "reviewer", reviewer,
                 "st", carriedStatus);
             if (effort != null) p.put("eff", effort);
+            by.bind(p);
             for (Object c : comps) {
                 if (c == null) continue;
                 script.append(String.format(
@@ -619,7 +625,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // Cancel the source — reuse the /lore/status flip + #88 note carry-forward.
             Map<String, Object> carry = statusResource.readTaskHistCarryFields(oldUid).await().indefinitely();
             var resp = statusResource.updateScd2Status("task", "KnowTask", "KnowTaskHist", "task_uid",
-                oldUid, "cancelled", now, cnsid).await().indefinitely();
+                oldUid, "cancelled", now, cnsid, by).await().indefinitely();
             if (resp.getStatus() < 300) {
                 statusResource.restoreTaskHistFields(cnsid, (String) carry.get("note_md"),
                     carry.get("effort_days") == null ? null : ((Number) carry.get("effort_days")).doubleValue())
@@ -659,6 +665,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (req == null || req.sprint_id() == null || req.phase_key() == null || req.phase_key().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, phase_key required"));
         }
+        final ChangeAuthor by = changeAuthor(); // S2-12: снят до асинхронной цепочки
         final String key = req.phase_key().trim().toUpperCase();
         if (!SAFE_ID.matcher(req.sprint_id()).matches()
                 || !key.matches("[A-Z0-9_\\-]{1,20}")) {
@@ -713,11 +720,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
                             "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
-                            "valid_from = :now;" +
+                            "valid_from = :now" + ChangeAuthor.SET_SQL + ";" +
                             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid);";
                         Map<String, Object> p = mapOfNullable("uid", uid, "pid", display, "name", name,
                             "summary", summary, "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                        by.bind(p);
                         return writeClient.command(db, basicAuth(),
                                 new LoreCommandClient.LoreCommand("sqlscript", script, p))
                             .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true,

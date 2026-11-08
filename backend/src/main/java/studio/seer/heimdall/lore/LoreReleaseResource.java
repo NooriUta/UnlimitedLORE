@@ -198,8 +198,12 @@ public class LoreReleaseResource extends LoreResourceBase {
         try {
             String gp = projectOf(req.git_project());
             if (gp == null) return badParams(NO_PROJECT);
-            String rdate = req.release_date() != null ? req.release_date()
-                                                      : java.time.LocalDate.now().toString();
+            // S2-10: рядом с датой релиза — полный ISO-момент (released_at), если он
+            // известен: даты нет / сегодня → «сейчас», ISO-момент → он; дата в
+            // прошлом момента не получает (CreationMoment.resolve).
+            Instant createdNow = Instant.now();
+            CreationMoment.Resolved rm = CreationMoment.resolve(req.release_date(), createdNow);
+            String rdate = rm.date();
             // ADR-LORE-025 (OP-04): текущий релиз самоисцеляется. Если пайплайн
             // прислал is_current явно — уважаем как есть (переопределение). Если
             // не прислал — самый свежий по дате автоматически становится текущим,
@@ -214,7 +218,7 @@ public class LoreReleaseResource extends LoreResourceBase {
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + gp + "'",
                     null)).await().indefinitely();
             }
-            String now  = Instant.now().toString();
+            String now  = createdNow.toString();
             String nsid = UUID.randomUUID().toString();
             // Build SET clause dynamically — ArcadeDB rejects null param bindings
             Map<String, Object> p = new LinkedHashMap<>();
@@ -223,6 +227,7 @@ public class LoreReleaseResource extends LoreResourceBase {
                 "INSERT INTO KnowRelease SET release_id=:rid, is_current=" + cur);
             if (req.git_tag()        != null) { set.append(", git_tag=:tag");          p.put("tag",   req.git_tag()); }
             set.append(", release_date=:date"); p.put("date", rdate);
+            if (rm.moment() != null) { set.append(", released_at=:rat"); p.put("rat", rm.moment()); }
             if (req.type()           != null) { set.append(", `type`=:rtype");       p.put("rtype", req.type()); }
             if (req.description_md() != null) { set.append(", description_md=:dmd"); p.put("dmd", req.description_md()); }
             if (req.week()           != null) { set.append(", week=:week");          p.put("week",  req.week()); }
@@ -234,8 +239,9 @@ public class LoreReleaseResource extends LoreResourceBase {
             // failure. Reuses :rid (already bound above) for the edge.
             p.put("nsid", nsid);
             p.put("now", now);
+            changeAuthor().bind(p); // S2-12
             String script = set.toString() + ";"
-                + "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now;"
+                + "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now" + ChangeAuthor.SET_SQL + ";"
                 // REL-UID-01: по release_uid, а не по номеру — иначе строка
                 // истории цеплялась ко ВСЕМ релизам с тем же номером в других проектах.
                 + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_uid=:ruid) "

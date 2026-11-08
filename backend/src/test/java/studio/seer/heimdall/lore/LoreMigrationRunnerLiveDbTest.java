@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * есть что терять; см. RUNBOOK-LORE-SCHEMA-UPGRADE.
  */
 @QuarkusTest
-@QuarkusTestResource(value = LoreArcadeDbTestResource.class, restrictToAnnotatedClass = true)
+// PL-01: класс меняет схему/ledger или доказывает fresh-путь — всегда чистая база.
+@QuarkusTestResource(value = LoreArcadeDbFreshTestResource.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class LoreMigrationRunnerLiveDbTest {
 
