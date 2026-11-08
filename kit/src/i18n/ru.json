@@ -569,5 +569,9 @@
   "kit.record.width.m": "средне",
   "kit.record.width.l": "шире",
   "kit.tasks.counters.progress": "Закрыто из всего",
-  "kit.tasks.counters.effort": "Сумма оценок, д"
+  "kit.tasks.counters.effort": "Сумма оценок, д",
+  "kit.list.cols.title": "Колонки",
+  "kit.list.cols.hint": "«Запись» не выключается. Порядок — стрелками, ширина — краем заголовка.",
+  "kit.list.cols.up": "{title}: выше",
+  "kit.list.cols.down": "{title}: ниже"
 }
