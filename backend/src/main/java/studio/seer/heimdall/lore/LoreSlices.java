@@ -657,6 +657,42 @@ public final class LoreSlices {
             "FROM KnowQuestion WHERE out('RAISED_IN').adr_id CONTAINS :id ORDER BY question_id",
             List.of("id"), Map.of(), "");
 
+        // ── lore.record/1 (ADR-LORE-047, SPEC-LORE-UXR-RECORD-CONTRACT 0.3) ──
+        // Части паспорта, которых не было срезом: вопросы задачи (RAISED_IN →
+        // задача, aggregation), задачи по ADR и ADR задачи (JUSTIFIED_BY,
+        // realization). Форма строк — как у соседних *_of_adr.
+        slice("questions_of_task",
+            "SELECT question_id, title, status, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowQuestion WHERE out('RAISED_IN').task_uid CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY question_id");
+
+        slice("tasks_of_adr",
+            "SELECT task_uid, task_id, title, out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, task_type, work_class " +
+            "FROM KnowTask WHERE out('JUSTIFIED_BY').adr_id CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY task_uid");
+
+        slice("adrs_of_task",
+            "SELECT adr_id, name, status, date_created " +
+            "FROM KnowADR WHERE in('JUSTIFIED_BY').task_uid CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY adr_id");
+
+        // D-2026-LORE-SPRINT-CLOSE-NEEDS-TASKS-CLOSED: сторож закрытия (SprintCloseGuard)
+        // не трогает уже закрытые спринты — этот срез их перечисляет. Закрытый спринт —
+        // открытая строка истории done/cancelled; открытая задача — ни done, ни cancelled.
+        // Фазы тоже PART_OF спринта, поэтому дети фильтруются по типу.
+        slice("closed_sprints_with_open_tasks",
+            "SELECT sprint_id, name, out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
+            "in('PART_OF')[@type = 'KnowTask'].task_uid AS task_uids, " +
+            "in('PART_OF')[@type = 'KnowTask'].out('HAS_STATE')[valid_to IS NULL].status_raw AS task_statuses " +
+            "FROM KnowSprint WHERE out('HAS_STATE')[valid_to IS NULL AND (" +
+            LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") + ")].size() > 0 " +
+            "AND in('PART_OF')[@type = 'KnowTask'].out('HAS_STATE')[valid_to IS NULL AND " +
+            LoreStatusVocabulary.noneSql("status_raw", "done", "cancelled") + "].size() > 0",
+            List.of(), Map.of(), " ORDER BY sprint_id");
+
         slice("questions_of_sprint",
             "SELECT question_id, title, status, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, out('BELONGS_TO').component_id AS components " +
             "FROM KnowQuestion WHERE out('RAISED_IN').sprint_id CONTAINS :id ORDER BY question_id",
@@ -721,7 +757,7 @@ public final class LoreSlices {
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
-            "SELECT sprint_id, name, context_md, created_date, no_release_required, " +
+            "SELECT sprint_id, name, context_md, outcome_md, created_date, no_release_required, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
@@ -1415,7 +1451,10 @@ public final class LoreSlices {
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             ROLE_HOLDERS + ", task_type, work_class, actual_days, bookkeeping, " +
-            "out('CLOSED_BY').pr_uid AS closed_by_prs " +
+            "out('CLOSED_BY').pr_uid AS closed_by_prs, " +
+            // lore.record/1 (ADR-LORE-047): паспорт задачи читает фазу и UC с той же строки.
+            "out('IN_PHASE').phase_uid[0] AS phase_uid, " +
+            "out('REALIZES').uc_id AS realizes_uc " +
             "FROM KnowTask WHERE task_uid IN :task_uids " +
             "ORDER BY task_uid",
             List.of("task_uids"), Map.of(), "");
@@ -2565,6 +2604,10 @@ public final class LoreSlices {
         // Вопросы — своё ребро или место, где подняты.
         Map.entry("question_by_id", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("questions_of_adr", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("questions_of_task", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("tasks_of_adr", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("adrs_of_task", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("closed_sprints_with_open_tasks", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("questions_of_sprint", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("gating_questions_of_task", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("questions_gating_closed_tasks", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),

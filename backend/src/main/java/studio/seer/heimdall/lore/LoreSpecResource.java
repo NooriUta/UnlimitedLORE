@@ -33,7 +33,9 @@ public class LoreSpecResource extends LoreResourceBase {
         // of amending the open row in place, preserving the previous edition.
         Boolean checkpoint,
         // DS-4: статус спеки — код словаря spec_status (V50), на открытой ревизии.
-        String status) {}
+        String status,
+        // ADR-LORE-047 A3: версия записи паспорта (record.version); не совпала — 409 VERSION_CONFLICT.
+        String expected_version) {}
 
     /** DS-4: страховка на пустой словарь — канон в spec_status (V50). */
     static final List<String> SPEC_STATUSES_FALLBACK =
@@ -61,6 +63,8 @@ public class LoreSpecResource extends LoreResourceBase {
             return badParams("spec_id required");
         if (!SAFE_ID.matcher(req.spec_id()).matches())
             return badParams("spec_id contains illegal characters");
+        Response stale = versionConflict("spec", req.spec_id(), req.expected_version());
+        if (stale != null) return stale;
         // DS-4: только значение словаря — свободный текст снова растащил бы статус
         // по написаниям («Предложение», «proposal», «draft»), как было у решений.
         if (req.status() != null && !req.status().isBlank()) {

@@ -48,7 +48,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // metrics in LoreAnalytics, which would otherwise flag them as perpetually overdue.
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
         String context_md, String plan_id, Double effort_days, Boolean no_release_required,
-        String context_append, String outcome_append, Boolean unplanned_intentional) {}
+        String context_append, String outcome_append, Boolean unplanned_intentional,
+        // ADR-LORE-047 A3: версия записи паспорта (record.version); не совпала — 409 VERSION_CONFLICT.
+        String expected_version) {}
     // author/executor/reviewer_agent (ADR-LORE-014 §4): free-text identity of who
     // owns/does/accepts the task — on the vertex, not Hist (see LoreSchemaInitializer
     // comment for why: immune to the note_md/effort_days carry-forward bug class).
@@ -68,7 +70,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
         String work_class, String uc_id,
         String author_agent, String executor_agent, String reviewer_agent, String task_type,
-        Double actual_days, Boolean bookkeeping, String note_append, java.util.Map<String, Object> expected) {}
+        Double actual_days, Boolean bookkeeping, String note_append, java.util.Map<String, Object> expected,
+        // ADR-LORE-047 A3: версия записи паспорта (record.version); не совпала — 409 VERSION_CONFLICT.
+        String expected_version) {}
     // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
     // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
     // а не когда кто-то откроет срез гигиены через неделю.
@@ -1018,9 +1022,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         // её нет — отказ до записи, а не ok:true при невидимой правке. Дописка — тоже запись заметки.
         final String noteProbe = req.note_md() != null ? req.note_md() : req.note_append();
         // S2-09: «было» (expected) названо и не совпало с текущим — 409 до любой записи.
-        Uni<Response> pre = (req.expected() == null || req.expected().isEmpty())
+        // ADR-LORE-047 A3: expected_version — та же проверка «до записи», по версии записи.
+        final boolean checksExpected = req.expected() != null && !req.expected().isEmpty();
+        final boolean checksVersion = req.expected_version() != null && !req.expected_version().isBlank();
+        Uni<Response> pre = (!checksExpected && !checksVersion)
             ? Uni.createFrom().nullItem()
-            : Uni.createFrom().item(() -> taskExpectedConflict(uid, req.expected()))
+            : Uni.createFrom().item(() -> {
+                    Response v = checksVersion ? versionConflict("task", uid, req.expected_version()) : null;
+                    return v != null ? v : checksExpected ? taskExpectedConflict(uid, req.expected()) : null;
+                })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
         return pre.chain(conflict -> conflict != null ? Uni.createFrom().item(conflict) :
             openStateRows(uid, noteProbe, req.effort_days()).chain(openRows -> {
@@ -1249,6 +1259,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         String conflict = appendConflict("context_md", req.context_md(), "context_append", req.context_append());
         if (conflict == null) conflict = appendConflict("outcome_md", req.outcome_md(), "outcome_append", req.outcome_append());
         if (conflict != null) return badParams(conflict);
+        Response stale = versionConflict("sprint", req.sprint_id(), req.expected_version());
+        if (stale != null) return stale;
         // MT-NOTE-APPEND п.2: прежние значения текстов — в ответ, до того как они исчезнут.
         Map<String, Object> previous = new LinkedHashMap<>();
         String contextNew = req.context_md();
