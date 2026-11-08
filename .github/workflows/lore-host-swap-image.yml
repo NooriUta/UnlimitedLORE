@@ -1,0 +1,92 @@
+# Разовая замена образа ОДНОГО фронта на lore-host (прод) — SPRINT_LORE_PIPELINE_HOST/PL-05 (заготовка).
+# Ручной запуск. Ничего не собирает: образ уже собран на ci-server (раннер видит его докер)
+# и сверен по Id. Сейчас разрешена только v2 (lore-app-next) — бэкенд и v1 этим не трогаются.
+#
+# Шаги: проверка образа → docker save | ssh docker load (+сверка Id) → бэкап compose →
+# замена строки image → compose up -d → проба бандла по Host: new.lore.
+# Откат: на lore-host  cp docker-compose.yml.bak-<tag> docker-compose.yml && docker compose up -d
+#
+# Адрес lore-host — по имени (SPEC-INFRA-ADDRESS-BY-NAME), ключ хоста закреплён отпечатком,
+# ключ CD — секрет организации LORE_HOST_SSH_KEY (вход только с 192.168.3.131).
+name: lore-host swap v2 image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "тег образа unlimitedlore-lore-app-next (например 70b16d11)"
+        required: true
+      expected_id:
+        description: "ожидаемый Id образа (sha256:…) — сверка до и после переноса"
+        required: true
+      expected_bundle:
+        description: "ожидаемый бандл (например index-CUl36pau.js) — проба после up"
+        required: true
+      dry_run:
+        description: "true — только проверки, без docker load / up"
+        required: false
+        default: "false"
+
+jobs:
+  swap:
+    runs-on: ubuntu-latest
+    env:
+      LORE_HOST: lore-host.seidrstudio.pro
+      LORE_HOST_USER: nooriuta
+      LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
+      IMAGE: unlimitedlore-lore-app-next:${{ inputs.tag }}
+      REMOTE_DIR: /home/nooriuta/lore-app-next
+    steps:
+      - name: Образ есть на раннере и Id совпадает
+        run: |
+          got=$(docker image inspect "$IMAGE" --format '{{.Id}}' 2>/dev/null || true)
+          echo "образ $IMAGE: ${got:-НЕТ}"
+          if [ "$got" != "${{ inputs.expected_id }}" ]; then
+            echo "::error::Id образа не совпал (или образа нет): ждали ${{ inputs.expected_id }}, есть ${got:-ничего}"
+            exit 1
+          fi
+
+      - name: SSH-ключ и ключ хоста
+        env:
+          KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::секрет LORE_HOST_SSH_KEY пуст"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/lore_host && chmod 600 ~/.ssh/lore_host
+          ssh-keyscan -t ed25519 "$LORE_HOST" 2>/dev/null > /tmp/kh
+          got=$(ssh-keygen -lf /tmp/kh | awk '{print $2}')
+          [ "$got" = "$LORE_HOST_FP" ] || { echo "::error::отпечаток хоста $got ≠ $LORE_HOST_FP"; exit 1; }
+          cp /tmp/kh ~/.ssh/known_hosts
+          echo "R=ssh -i $HOME/.ssh/lore_host -o BatchMode=yes -o StrictHostKeyChecking=yes $LORE_HOST_USER@$LORE_HOST" >> "$GITHUB_ENV"
+
+      - name: Что сейчас на lore-host
+        run: |
+          $R "cd $REMOTE_DIR && grep -n 'image:' docker-compose.yml && docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep lore-app-next"
+
+      - name: Перенос образа (docker save | load) и сверка Id
+        if: inputs.dry_run != 'true'
+        run: |
+          docker save "$IMAGE" | $R "docker load"
+          rid=$($R "docker image inspect '$IMAGE' --format '{{.Id}}'")
+          echo "на lore-host: $rid"
+          [ "$rid" = "${{ inputs.expected_id }}" ] || { echo "::error::Id на lore-host не совпал"; exit 1; }
+
+      - name: Бэкап compose, замена image, up
+        if: inputs.dry_run != 'true'
+        run: |
+          $R "set -e; cd $REMOTE_DIR; cp docker-compose.yml docker-compose.yml.bak-${{ inputs.tag }}; \
+              sed -i -E 's#^([[:space:]]*image:[[:space:]]*)unlimitedlore-lore-app-next:[A-Za-z0-9._-]+#\1$IMAGE#' docker-compose.yml; \
+              grep -n 'image:' docker-compose.yml; \
+              grep -q '$IMAGE' docker-compose.yml || { echo 'замена image не прошла'; cp docker-compose.yml.bak-${{ inputs.tag }} docker-compose.yml; exit 1; }; \
+              docker compose up -d; sleep 5; docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep lore-app-next"
+
+      - name: Проба — бандл на lore-host:4402 (Host new.lore)
+        run: |
+          b=$($R "curl -s --max-time 10 -H 'Host: new.lore.odal.seidrstudio.pro' http://127.0.0.1:4402/ | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1")
+          echo "бандл: ${b:-нет}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then exit 0; fi
+          [ "$b" = "assets/${{ inputs.expected_bundle }}" ] || { echo "::error::бандл $b ≠ ${{ inputs.expected_bundle }} — откат: cp docker-compose.yml.bak-${{ inputs.tag }} docker-compose.yml && docker compose up -d"; exit 1; }
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/lore_host
