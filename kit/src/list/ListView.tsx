@@ -59,6 +59,8 @@ import { ScreenHead } from './ScreenHead';
 import { ViewMenu } from './ViewMenu';
 import { GroupMenu } from './GroupMenu';
 import { SortMenu } from './SortMenu';
+import { TimelineLanes } from '../views/timeline';
+import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
 
 export interface ListBulkAction {
@@ -162,7 +164,7 @@ export interface ListHead {
   actions?: ReactNode;
 }
 
-const VIEWS_RENDERED: ListViewKind[] = ['list', 'board'];
+const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
 /** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
 const CLOSED_KEY = '__closed__';
 
@@ -671,6 +673,56 @@ export function ListView({
         action={hasFilter ? <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button> : undefined}
       />
     );
+  } else if (view === 'cards') {
+    // Карточки (S4-22): сетка auto-fit; на карточке — название, ID, статус и поля колонок.
+    const extra = columns.filter(c0 => c0.startsWith('fields.'));
+    body = (
+      <ul className="sk-cards">
+        {filtered.map(r => (
+          <li key={r.id} className={`sk-cards__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
+            <div className="sk-cards__head">{cell('status', r)}<Pill variant="id">{r.id}</Pill></div>
+            <div className="sk-cards__title"><Title r={r} href={href} onOpen={onOpen} /></div>
+            {extra.length > 0 && (
+              <dl className="sk-cards__fields">
+                {extra.map(k => <div key={k}><dt>{colTitle(k)}</dt><dd>{cell(k, r)}</dd></div>)}
+              </dl>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  } else if (view === 'feed') {
+    // Лента (S4-22): по дням изменения, новые сверху; без даты — в конце.
+    const byDay = new Map<string, KitRecord[]>();
+    for (const r of [...filtered].sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))) {
+      const d = r.updated_at ? r.updated_at.slice(0, 10) : '';
+      byDay.set(d, [...(byDay.get(d) ?? []), r]);
+    }
+    body = (
+      <div className="sk-feed">
+        {[...byDay.entries()].map(([d, items]) => (
+          <section key={d || 'none'} className="sk-feed__day" data-day={d || 'none'} aria-label={d || t('kit.list.feed.undated')}>
+            <h3 className="sk-feed__date">{d || t('kit.list.feed.undated')}</h3>
+            <ul className="sk-feed__items">
+              {items.map(r => (
+                <li key={r.id} className="sk-feed__item" data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
+                  {cell('status', r)}<Title r={r} href={href} onOpen={onOpen} /><Pill variant="id">{r.id}</Pill>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    );
+  } else if (view === 'timeline') {
+    // Таймлайн (S4-22): дорожки той же группировки, что у списка и доски.
+    const tl = listCfg?.timeline;
+    body = tl
+      ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} />
+      : <EmptyState title={t('kit.list.timeline.noConfig')} />;
+  } else if (view === 'tree') {
+    // Дерево (S4-22): иерархия по list.tree над теми же отфильтрованными записями.
+    body = <TreeView config={config} data={{ ...data, records: filtered }} href={href} onOpen={onOpen} />;
   } else if (view === 'board') {
     // В дорожке имя колонки несёт имя дорожки — иначе «готово: 1» в каждой
     // дорожке даёт одинаковые landmark-и (axe landmark-unique).

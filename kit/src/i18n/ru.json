@@ -545,5 +545,10 @@
   "kit.list.place.label": "Паспорт открывается",
   "kit.list.place.right": "панелью справа",
   "kit.list.place.bottom": "снизу",
-  "kit.list.place.full": "на весь экран"
+  "kit.list.place.full": "на весь экран",
+  "kit.list.view.cards": "Карточки",
+  "kit.list.view.feed": "Лента",
+  "kit.list.view.timeline": "Таймлайн",
+  "kit.list.feed.undated": "без даты",
+  "kit.list.timeline.noConfig": "Для таймлайна у раздела не задано поле даты"
 }

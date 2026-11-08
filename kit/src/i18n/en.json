@@ -545,5 +545,10 @@
   "kit.list.place.label": "Passport opens",
   "kit.list.place.right": "as a right panel",
   "kit.list.place.bottom": "at the bottom",
-  "kit.list.place.full": "full screen"
+  "kit.list.place.full": "full screen",
+  "kit.list.view.cards": "Cards",
+  "kit.list.view.feed": "Feed",
+  "kit.list.view.timeline": "Timeline",
+  "kit.list.feed.undated": "no date",
+  "kit.list.timeline.noConfig": "This section has no date field for the timeline"
 }
