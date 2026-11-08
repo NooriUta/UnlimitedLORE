@@ -160,6 +160,10 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
   let user: OidcUserLike | null = null;
   let state: AuthState = { status: enabled ? 'loading' : 'disabled', user: null, interrupted: false, loggedOut: false };
   let renewing: Promise<OidcUserLike | null> | null = null;
+  // S4-34: oidc-client-ts шлёт userLoaded ВНУТРИ signinRedirectCallback, до возврата.
+  // Пока идёт callback, событие вход не объявляет: иначе AuthGate нарисует App на
+  // адресе callback («/»), а возврат на исходный путь придёт уже после рендера.
+  let inCallback = false;
   const listeners = new Set<() => void>();
 
   const set = (next: Partial<AuthState>) => {
@@ -179,7 +183,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
     if (mgr) return mgr;
     if (!opts.manager) throw new Error('вход включён, но менеджер OIDC не задан (VITE_OIDC_ISSUER?)');
     mgr = opts.manager();
-    mgr.events.addUserLoaded(u => { if (valid(u)) signedIn(u); });
+    mgr.events.addUserLoaded(u => { if (!inCallback && valid(u)) signedIn(u); });
     mgr.events.addUserUnloaded(() => {
       user = null;
       if (state.status === 'signed_in') set({ status: 'signed_out', user: null });
@@ -240,7 +244,9 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
       const l = where();
       try {
         if (isCallbackUrl(l, redirectPath)) {
-          const u = await manager().signinRedirectCallback(l.href);
+          inCallback = true;
+          let u: OidcUserLike;
+          try { u = await manager().signinRedirectCallback(l.href); } finally { inCallback = false; }
           replaceUrl(safeReturn(u.state, redirectPath));
           signedIn(u);
           return;
