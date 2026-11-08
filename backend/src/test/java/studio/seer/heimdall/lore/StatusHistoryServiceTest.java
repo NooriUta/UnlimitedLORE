@@ -224,6 +224,40 @@ class StatusHistoryServiceTest {
             "задачи — предмет S2-11");
     }
 
+    // S2-11 (V71): задачи без единой версии истории (запись мимо SCD2) получают одну
+    // честную версию — текущий статус, известен с момента бэкфилла, без выдуманных дат.
+    @Test
+    void task_backfill_opens_one_honest_version_for_tasks_without_history() {
+        List<String> scripts = new ArrayList<>();
+        List<Map<String, Object>> params = new ArrayList<>();
+        StatusHistoryService.Db db = new StatusHistoryService.Db() {
+            @Override public List<Map<String, Object>> query(String sql, Map<String, Object> p) {
+                if (sql.contains("FROM KnowTask WHERE status_raw IS NOT NULL AND out('HAS_STATE').size() = 0"))
+                    return List.of(row("id", "SPRINT_SITE_SEO_PRERENDER/PRE-03", "cur", "✅ DONE"),
+                                   row("id", "SPRINT_DALI_DIALECTS_LORE_VIZ/DLG-08", "cur", "PARTIAL"));
+                return List.of();
+            }
+            @Override public Object script(String sql, Map<String, Object> p) {
+                scripts.add(sql); params.add(new HashMap<>(p)); return List.of();
+            }
+        };
+        var counts = StatusHistoryService.backfill(db, "2026-11-08T23:00:00Z", StatusHistoryService.TASK_BACKFILL_TYPES);
+        assertEquals(List.of("task"), counts.stream().map(StatusHistoryService.BackfillCount::type).toList());
+        assertEquals(2, counts.get(0).opened());
+        assertEquals(2, scripts.size());
+        for (int i = 0; i < 2; i++) {
+            String s = scripts.get(i);
+            assertTrue(s.startsWith("INSERT INTO KnowTaskHist"), s);
+            assertTrue(s.contains("status_backfilled = true"), "пометка «время восстановлено»: " + s);
+            assertTrue(s.contains("out('HAS_STATE').size() = 0"), "повтор не откроет вторую: " + s);
+            assertEquals("2026-11-08T23:00:00Z", params.get(i).get("now"), "дата — момент бэкфилла, не выдуманная");
+            assertEquals("unknown", params.get(i).get("changed_by_kind"));
+        }
+        assertEquals("in_progress", params.get(1).get("cat"), "PARTIAL без эмодзи всё равно встаёт на ось");
+        // По умолчанию (V68) задачи по-прежнему не трогаются.
+        assertFalse(StatusHistoryService.BACKFILL_TYPES.contains("task"));
+    }
+
     /** Разбор V68 на аддитивность (V1SchemaSafetyChecklist.JAVA_STEPS_REVIEWED). */
     @Test
     void backfill_writes_only_v67_properties_and_never_moves_version_dates() {
