@@ -1047,16 +1047,19 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-tabs--underline { gap: 2px; padding: 0; }
 .sk-tabs--underline .sk-tab {
   margin-bottom: -1px;
-  padding: 0 12px;
+  padding: 0 14px;
+  min-height: 34px;
   border: 0;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
 }
 .sk-tabs--underline .sk-tab:hover { border-bottom-color: var(--bdh); }
 .sk-tabs--underline .sk-tab[aria-selected='true'] {
   border-bottom-color: var(--acc);
   background: none;
+  color: var(--t1);
+  font-weight: 600;
 }
 .sk-tabpanel { padding-top: 6px; }
 .sk-tabpanel:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
@@ -2513,7 +2516,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 }
 .sk-rec-loaded__btn:hover { background: var(--bg2); }
 .sk-rec-loaded__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
-.sk-rec-facts__tail { margin-left: auto; }
+/* «получено N мин ↻» — в строке фактов, как v4 (S4-CONTENT-V4), а не в правом углу. */
+.sk-rec-facts__tail { color: var(--t3); }
 .sk-rec-head__kind { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
 .sk-rec-head__time { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
 .sk-rec-head__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1.2; color: var(--t1); word-break: break-word; }
@@ -3857,6 +3861,39 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
 .sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 24px; align-items: start; }
 .sk-rec__content { min-width: 0; }
+/* Во весь экран (v4): свойства свёрткой под шапкой и вертикальная рейка у правого края. */
+.sk-rec-propsrow { margin: 6px 0 4px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+.sk-rec-propsrow__sum { padding: 6px 10px; cursor: pointer; color: var(--t2); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk-rec-propsrow__label { color: var(--t1); font-weight: 600; }
+.sk-rec-propsrow__vals { color: var(--t2); }
+.sk-rec-propsrow > .sk-rec-fields { padding: 4px 10px 8px; }
+.sk-rec-rail { position: absolute; top: 50%; right: 0; display: flex; flex-direction: column; gap: 4px; transform: translateY(-50%); }
+.sk-rec-rail__btn { padding: 10px 4px; border: 1px solid var(--bd); border-right: 0; border-radius: var(--r-md) 0 0 var(--r-md); background: none; color: var(--t2); font: inherit; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; writing-mode: vertical-rl; cursor: pointer; }
+.sk-rec-rail__btn:hover { border-color: var(--t3); color: var(--t1); }
+/* Во весь экран — воздушнее и по центру (владелица 08.11): колонка ~920 px, поля, свободное межстрочие. */
+.sk-dock[data-placement='full'] .sk-rec { max-width: var(--rec-frame); margin: 0 auto; padding: 8px 32px 48px; }
+/* Пропорции эталона v4 (владелица 08.11: «посмотри на скриншоте хорошие проценты и соблюдай»):
+   линия вкладок ~66% области, шапка и текст ~66% линии. Ширина текста — настройка наверху. */
+.sk-dock[data-placement='full'] .sk-rec[data-width='s'] { --rec-col: 56%; }
+.sk-dock[data-placement='full'] .sk-rec[data-width='m'] { --rec-col: 66%; }
+.sk-dock[data-placement='full'] .sk-rec[data-width='l'] { --rec-col: 82%; }
+.sk-rec-widthbar { display: flex; justify-content: flex-end; margin: 0 0 4px; }
+.sk-rec-widthbar__seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); }
+.sk-rec-widthbar__opt { min-height: max(var(--tap), 22px); padding: 0 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--t2); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.sk-rec-widthbar__opt[aria-checked='true'] { background: color-mix(in srgb, var(--acc) 18%, transparent); color: var(--t1); font-weight: 600; }
+@media (max-width: 900px) {
+  .sk-dock[data-placement='full'] .sk-rec[data-width] { --rec-col: 100%; --rec-frame: 100%; }
+  .sk-rec-widthbar { display: none; }
+}
+/* Линия вкладок — во всю рамку (~1200 px), а шапка, свойства и текст — узкой колонкой по центру:
+   владелица 08.11 «выглядит классно, чем всё вписанное в одну ширину» (как v4). */
+.sk-dock[data-placement='full'] .sk-rec-head,
+.sk-dock[data-placement='full'] .sk-rec-facts,
+.sk-dock[data-placement='full'] .sk-rec-propsrow,
+.sk-dock[data-placement='full'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+.sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
+.sk-dock[data-placement='full'] .sk-rec-head { margin-bottom: 10px; }
+.sk-dock[data-placement='full'] .sk-tabpanel { padding-top: 16px; }
 /* Связи по видам UML (паспорт): ◆ композиция, ◇ агрегация, ⇢ зависимость, ▷ реализация, △ обобщение. */
 .sk-tab__mark { margin-right: 2px; color: var(--acc); font-family: var(--mono); }
 .sk-rel { display: flex; flex-direction: column; gap: 8px; }
@@ -3926,7 +3963,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 .sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
-.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; }
+.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; --rec-frame: 66%; --rec-col: 66%; }
 .sk-dock[data-placement='full'] .sk-dock__panel { padding: 48px 20px 12px; }
 .sk-dock__close { position: sticky; top: 0; float: right; z-index: 1; min-width: max(var(--tap), 28px); min-height: max(var(--tap), 28px); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 .sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }
