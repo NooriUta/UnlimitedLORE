@@ -567,5 +567,7 @@
   "kit.record.width": "Ширина текста",
   "kit.record.width.s": "уже",
   "kit.record.width.m": "средне",
-  "kit.record.width.l": "шире"
+  "kit.record.width.l": "шире",
+  "kit.tasks.counters.progress": "Закрыто из всего",
+  "kit.tasks.counters.effort": "Сумма оценок, д"
 }

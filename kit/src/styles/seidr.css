@@ -3003,6 +3003,24 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
   border-top: 1px solid var(--bd);
 }
 .sk-tasks__gth--fault { color: var(--wrn); }
+
+/* S4-36: счётчики в шапке спринта — ряд значков со счётом, «закрыто из
+   всего» и сумма оценок, как в v1. */
+.sk-tc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: var(--fs-sm);
+  color: var(--t2);
+}
+.sk-tc__group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sk-tc__item { display: inline-flex; align-items: center; gap: 3px; }
+.sk-tc__n { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t1); }
+.sk-tc__progress,
+.sk-tc__effort { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t1); }
+.sk-tc__progress { padding-left: 8px; border-left: 1px solid var(--bd); }
 .sk-tasks__gcount { margin-left: 8px; color: var(--t3); font-weight: 400; }
 .sk-tasks__row { border-top: 1px solid var(--bd); }
 .sk-tasks__row:hover { background: var(--bg2); }

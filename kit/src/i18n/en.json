@@ -567,5 +567,7 @@
   "kit.record.width": "Text width",
   "kit.record.width.s": "narrower",
   "kit.record.width.m": "medium",
-  "kit.record.width.l": "wider"
+  "kit.record.width.l": "wider",
+  "kit.tasks.counters.progress": "Closed out of total",
+  "kit.tasks.counters.effort": "Total estimate, d"
 }

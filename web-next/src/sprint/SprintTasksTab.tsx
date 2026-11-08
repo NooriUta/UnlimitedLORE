@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { loreFetch } from '../auth/session';
 import {
-  LoadStateView, pushUrlState, readUrlState, TaskTable, TASK_GROUP_BYS, useLoadState,
+  LoadStateView, pushUrlState, readUrlState, TaskCounters, TaskTable, TASK_GROUP_BYS, useLoadState,
   type TaskGroupBy, type TaskPatch, type TaskRowData, type TaskStatus, type UrlWindow,
 } from '@seidr/kit';
 import { useAppT } from '../i18n';
@@ -73,7 +73,11 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
     <section className="sprint-tasks" aria-label={t('sprintTasks.title')}>
       <LoadStateView result={result}>
         {data => (
-          <TaskTable
+          <>
+            {/* S4-36: счётчики по тем же строкам, что и таблица — иначе шапка
+                и таблица могут показать разное. */}
+            <TaskCounters tasks={data.rows.map(r => (patches[r.uid] ? { ...r, ...patches[r.uid] } : r))} />
+            <TaskTable
             tasks={data.rows.map(r => (patches[r.uid] ? { ...r, ...patches[r.uid] } : r))}
             phases={data.phases}
             groupBy={groupBy}
@@ -82,7 +86,8 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             onSave={onSave}
             hrefFor={task => taskPassportHref(sprintId, task.id)}
             label={t('sprintTasks.caption', { id: sprintId })}
-          />
+            />
+          </>
         )}
       </LoadStateView>
     </section>
