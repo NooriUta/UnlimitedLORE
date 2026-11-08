@@ -44,6 +44,20 @@ final class Scd2Guard {
             + "IF ($closed.size() = 0) { RETURN \"" + CONFLICT_MARK + "\"; }";
     }
 
+    /**
+     * S2-15: начало sqlscript, когда открытой версии при чтении НЕ было видно.
+     * «Не видно» — снимок на момент чтения: соседний писатель мог закрыть старую
+     * строку и ещё не вставить свою. Без этой проверки вставка открывала вторую
+     * версию (CI #925: одна закрытая, две открытые). Если открытая версия у
+     * сущности уже есть — {@link #CONFLICT_MARK} до любой записи.
+     * Параметр — {@code :<idParam>}; histType/key — из внутреннего реестра, не из запроса.
+     */
+    static String guardedNoOpen(String histType, String key, String idParam) {
+        return "LET opened = SELECT FROM " + histType + " WHERE valid_to IS NULL"
+            + " AND in('HAS_STATE')." + key + " CONTAINS :" + idParam + ";"
+            + "IF ($opened.size() > 0) { RETURN \"" + CONFLICT_MARK + "\"; }";
+    }
+
     /** Вернул ли guarded-скрипт маркер конфликта (ничего не записано). */
     static boolean isConflict(Object result) {
         if (!(result instanceof List<?> l) || l.isEmpty()) return false;
