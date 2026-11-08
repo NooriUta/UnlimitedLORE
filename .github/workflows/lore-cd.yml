@@ -410,11 +410,13 @@ jobs:
       - name: Deploy backend
         if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         env:
-          # DBR-01: способ входа рантайма — переменная репозитория (Settings →
-          # Actions → Variables). Не задана — basic, как было. token включать
-          # ТОЛЬКО после того, как ARCADEDB_API_TOKEN(_BENCH) лежат в Infisical:
-          # отката на root нет, без токена readiness не поднимется (шаг ниже упадёт).
-          LORE_MART_AUTH: ${{ vars.LORE_MART_AUTH || 'basic' }}
+          # Препрод ходит в ArcadeDB 131 под root (basic) — решение владелицы
+          # 08.11.2026. Токен lore-backend на 131 выдан только на system_aida_lore:
+          # на базу препрода он давал 403 при старте, бэкенд уходил в рестарт-цикл.
+          # Прежняя переменная репозитория vars.LORE_MART_AUTH (DBR-01, стенд
+          # прода на 131) препрод больше не переключает: прод живёт на lore-host
+          # со своим входом. Свой токен на базу препрода — позже, если понадобится.
+          LORE_MART_AUTH: basic
           # AL-91: проектный скоуп чтения — переменная репозитория, по умолчанию выключен.
           LORE_SCOPE_ENFORCE: ${{ vars.LORE_SCOPE_ENFORCE || 'false' }}
         run: docker compose up -d --no-deps lore-backend
