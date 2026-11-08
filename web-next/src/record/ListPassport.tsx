@@ -29,6 +29,13 @@ export interface ListPassportProps {
   backLabel?: string;
   /** Крошки «←» — вернуться к списку (закрыть паспорт). */
   onBack?: () => void;
+  /**
+   * Адрес списка без открытой записи: крошка становится ссылкой — её можно
+   * открыть в новой вкладке и скопировать (находка P1 аудита 08.11: «крошка —
+   * кнопка, не ссылка»). Нет адреса — остаётся кнопка, поддельную ссылку не
+   * рисуем.
+   */
+  backHref?: string;
   /** id записей списка в порядке показа — для листалки. */
   ids?: readonly string[];
   /** Перейти к соседней записи листалкой. */
@@ -37,7 +44,7 @@ export interface ListPassportProps {
   onFull?: () => void;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, onBack, ids = [], onGo, onFull }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   const [tab, setTab] = useState('overview');
@@ -58,7 +65,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEdit}
       placement={placement} loadedAt={contract?.meta.loaded_at} onReload={pp.reload}
       className="list-passport"
-      crumbs={backLabel ? <RecordCrumbs back={{ label: backLabel, onClick: onBack }} current={view.record.id} /> : undefined}
+      crumbs={backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view.record.id} /> : undefined}
       pager={onGo && ids.length > 0 ? <RecordPager ids={ids} current={view.record.id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined}
       tools={onFull ? <button type="button" className="sk-iconbtn list-passport__full" aria-label={t('pp.place.full')} title={t('pp.place.full')} onClick={onFull}>⤢</button> : undefined}
       asideOpen={false} onAside={() => {}} />

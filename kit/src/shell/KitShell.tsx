@@ -13,6 +13,7 @@
 // Пустое — честно: пустые «Недавние»/«Мои виды»/меню подписаны, запись,
 // которой нет в выгрузке, помечена, а не выброшена молча.
 import { ICON_CANON } from '../elements/iconCanon';
+import { navClick } from '../core/navClick';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { KitConfig, KitData } from '../core/contract';
@@ -23,7 +24,7 @@ import type { KitLang } from '../i18n';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { SafeStorage } from '../resilience/safeStorage';
 import { StorageBanner } from '../resilience/StorageBanner';
-import { pushUrlState, readUrlState, sectionScopedPatch } from '../resilience/urlState';
+import { pushUrlState, readUrlState, sectionScopedPatch, urlStateHref } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { Sheet } from './Sheet';
 import { Ear } from './Ear';
@@ -72,8 +73,18 @@ function menuModeLabel(lang: KitLang, m: KitMenuMode): string {
 export interface KitShellApi {
   nav: KitNav;
   navigate: (patch: Partial<KitNav>) => void;
-  /** Открыть запись: попадает в «Недавние», уходит в onOpenRecord. */
-  openRecord: (id: string) => void;
+  /**
+   * Открыть запись: попадает в «Недавние», уходит в onOpenRecord.
+   *
+   * Название и адрес необязательны, но без них «Недавнее» получается
+   * неполным: оболочка берёт названия из data, которую приложение передаёт не
+   * всегда, а адрес записи знает только приложение — раздел, в котором запись
+   * живёт, оболочке неизвестен. Без адреса пункт остаётся кнопкой и работает
+   * через onOpenRecord; с адресом становится ссылкой, которую можно открыть в
+   * новой вкладке (находки P1 аудита 08.11: «Недавние пусто даже после
+   * открытия записи» и «пункты — кнопки, 0 <a href>»).
+   */
+  openRecord: (id: string, meta?: { title?: string; href?: string }) => void;
   recent: string[];
   views: KitSavedView[];
   saveView: (title?: string) => void;
@@ -114,6 +125,12 @@ export interface KitShellProps {
   narrow?: boolean;
   onNavigate?: (nav: KitNav) => void;
   onOpenRecord?: (id: string) => void;
+  /**
+   * Адрес записи — чтобы «Недавнее» было ссылкой, а не кнопкой (находка P1
+   * аудита 08.11). Адрес записи знает приложение, не оболочка; не передан —
+   * пункт остаётся кнопкой: поддельная ссылка хуже кнопки.
+   */
+  recordHref?: (id: string) => string;
   /** Правый край шапки: выбор проектов (S4-03), профиль… */
   /** Сразу за приложениями (S4-23): охват проектов, как в прототипе v4. */
   topStart?: ReactNode;
@@ -156,6 +173,30 @@ export function useKitShell(): KitShellApi {
   const api = useContext(ShellContext);
   if (!api) throw new Error('useKitShell: вызван вне <KitShell> — оболочки нет, навигации нет');
   return api;
+}
+
+/** Что помним об открытой записи: как её звать и куда она открывается. */
+interface RecentMeta { title?: string; href?: string }
+
+function readRecentMeta(storage: SafeStorage, storageKey: string): Record<string, RecentMeta> {
+  const raw = storage.get(`${storageKey}.recentMeta`);
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+    const out: Record<string, RecentMeta> = {};
+    for (const [k, m] of Object.entries(v as Record<string, unknown>)) {
+      if (!m || typeof m !== 'object') continue;
+      const { title, href } = m as Record<string, unknown>;
+      const row: RecentMeta = {};
+      if (typeof title === 'string') row.title = title;
+      if (typeof href === 'string') row.href = href;
+      if (row.title || row.href) out[k] = row;
+    }
+    return out;
+  } catch {
+    return {};
+  }
 }
 
 function readList<T>(storage: SafeStorage, key: string): T[] {
@@ -201,7 +242,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, topStart, topEnd, account, keepParams, children,
+  onNavigate, onOpenRecord, recordHref, topStart, topEnd, account, keepParams, children,
 }: KitShellProps) {
   const lang = useKitLang();
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
@@ -211,6 +252,11 @@ export function KitShell({
 
   const [nav, setNav] = useState<KitNav>(() => resolveNav(config, urlWin ? readUrlState(urlWin) : new URLSearchParams()));
   const [recent, setRecent] = useState<string[]>(() => readList<string>(storage, `${storageKey}.recent`));
+  // Название и адрес открытых записей — рядом со списком недавних, чтобы после
+  // перезагрузки список не превращался в набор нерабочих кодов.
+  const [recentMeta, setRecentMeta] = useState<Record<string, RecentMeta>>(
+    () => readRecentMeta(storage, storageKey),
+  );
   const [views, setViews] = useState<KitSavedView[]>(() => readList<KitSavedView>(storage, `${storageKey}.views`));
   // S4-01: свёрнутые группы меню — id групп; переживают перезагрузку.
   const [collapsed, setCollapsed] = useState<string[]>(() => readList<string>(storage, `${storageKey}.collapsed`));
@@ -251,10 +297,24 @@ export function KitShell({
     onNavigate?.(next);
   }, [keepParams, onNavigate, urlWin]);
 
-  const openRecord = useCallback((id: string) => {
+  const openRecord = useCallback((id: string, meta?: { title?: string; href?: string }) => {
+    let kept: string[] = [];
     setRecent(prev => {
       const next = [id, ...prev.filter(x => x !== id)].slice(0, RECENT_LIMIT);
       storage.set(`${storageKey}.recent`, JSON.stringify(next));
+      kept = next;
+      return next;
+    });
+    setRecentMeta(prev => {
+      // Помним только тех, кто остался в списке: иначе карта растёт без
+      // предела, а старые имена переживают сами записи.
+      const next: Record<string, RecentMeta> = {};
+      for (const key of kept) {
+        const was = prev[key] ?? {};
+        const now = key === id ? { title: meta?.title ?? was.title, href: meta?.href ?? was.href } : was;
+        if (now.title || now.href) next[key] = now;
+      }
+      storage.set(`${storageKey}.recentMeta`, JSON.stringify(next));
       return next;
     });
     onOpenRecord?.(id);
@@ -317,7 +377,30 @@ export function KitShell({
   );
 
   const activeModule = config.modules.find(m => m.id === nav.module) ?? config.modules[0];
-  const titles = useMemo(() => new Map((data?.records ?? []).map(r => [r.id, r.title])), [data]);
+  const titles = useMemo(() => {
+    // Сначала запомненные при открытии, поверх — названия из данных экрана:
+    // данные свежее, запомненное — то, что осталось от прошлых сеансов.
+    const m = new Map<string, string>();
+    for (const [id, meta] of Object.entries(recentMeta)) if (meta.title) m.set(id, meta.title);
+    for (const r of data?.records ?? []) if (r.title) m.set(r.id, r.title);
+    return m;
+  }, [data, recentMeta]);
+
+  /**
+   * Адрес пункта меню — тот же, что запишет navigate (находка P1 аудита 08.11:
+   * «пункты — кнопки, 0 <a href>»). Раздел и так живёт в URL, поэтому адрес не
+   * придумывается, а берётся из той же логики: уход в другой раздел снимает
+   * параметры прежнего (B-07) и якорь — это и есть «мусор place=…#SPRINT_…»,
+   * который аудит нашёл после выхода из дока.
+   */
+  const itemHref = useCallback((id: string, view: string | null | undefined) => {
+    if (!urlWin) return undefined;
+    const navParams = { mod: nav.module, sec: id, view: view ?? null };
+    const leaving = id !== nav.item;
+    return leaving
+      ? urlStateHref(urlWin, sectionScopedPatch(readUrlState(urlWin), navParams, keepParams), { anchor: null })
+      : urlStateHref(urlWin, navParams);
+  }, [keepParams, nav.item, nav.module, urlWin]);
 
   const menu = (onPick?: () => void) => (
     <ShellMenu
@@ -334,6 +417,8 @@ export function KitShell({
       onRecent={id => { openRecord(id); onPick?.(); }}
       onSaveView={() => saveView()}
       onRemoveView={removeView}
+      itemHref={itemHref}
+      recordHref={id => recentMeta[id]?.href ?? recordHref?.(id)}
     />
   );
 
@@ -437,6 +522,10 @@ interface ShellMenuProps {
   onRecent: (id: string) => void;
   onSaveView: () => void;
   onRemoveView: (id: string) => void;
+  /** Адрес раздела/вида — пункт меню рисуется ссылкой (находка P1 аудита 08.11). */
+  itemHref: (id: string, view: string | null | undefined) => string | undefined;
+  /** Адрес записи для «Недавнего»; вернул undefined — пункт остаётся кнопкой. */
+  recordHref?: (id: string) => string | undefined;
 }
 
 interface GroupProps {
@@ -483,6 +572,7 @@ function Group({ title, tone, children, expanded, onToggle }: GroupProps) {
 
 function ShellMenu({
   config, lang, nav, recent, titles, views, collapsed, onToggleGroup, onItem, onView, onRecent, onSaveView, onRemoveView,
+  itemHref, recordHref,
 }: ShellMenuProps) {
   const { groups, myViews, recent: showRecent } = config.menu;
   return (
@@ -493,15 +583,15 @@ function ShellMenu({
           <ul className="sk-shell__list">
             {views.map(v => (
               <li key={v.id} className="sk-shell__row">
-                <button
-                  type="button"
+                <a
                   className="sk-shell__item"
+                  href={itemHref(v.item ?? '', v.view) ?? '#'}
                   aria-current={v.module === nav.module && v.item === nav.item && v.view === nav.view ? 'true' : undefined}
-                  onClick={() => onView(v)}
+                  onClick={navClick(() => onView(v))}
                 >
                   <GameIcon slug={ICON_CANON.myViews} size={14} />
                   <span className="sk-shell__label">{v.title}</span>
-                </button>
+                </a>
                 <IconButton
                   icon="cross-mark"
                   iconSize={12}
@@ -525,17 +615,35 @@ function ShellMenu({
           <ul className="sk-shell__list">
             {recent.map(id => {
               const title = titles.get(id);
+              // Адрес есть — ссылка; нет — кнопка. Поддельную ссылку («#») не
+              // рисуем: она обещает путь, которого нет.
+              const href = recordHref?.(id);
               return (
                 <li key={id}>
-                  <button type="button" className="sk-shell__item" onClick={() => onRecent(id)}>
-                    <GameIcon slug={ICON_CANON.recent} size={14} />
-                    <span className="sk-shell__label">
-                      {title ?? <span className="sk-shell__id">{id}</span>}
-                    </span>
-                    {title
-                      ? <span className="sk-shell__id">{id}</span>
-                      : <span className="sk-shell__tag">{kitT(lang, 'kit.shell.recentMissing')}</span>}
-                  </button>
+                  {/* Ссылка — только когда приложение дало адрес записи; иначе кнопка. */}
+                  {href
+                    ? (
+                      <a className="sk-shell__item" href={href} onClick={navClick(() => onRecent(id))}>
+                        <GameIcon slug={ICON_CANON.recent} size={14} />
+                        <span className="sk-shell__label">
+                          {title ?? <span className="sk-shell__id">{id}</span>}
+                        </span>
+                        {title
+                          ? <span className="sk-shell__id">{id}</span>
+                          : <span className="sk-shell__tag">{kitT(lang, 'kit.shell.recentMissing')}</span>}
+                      </a>
+                    )
+                    : (
+                      <button type="button" className="sk-shell__item" onClick={() => onRecent(id)}>
+                        <GameIcon slug={ICON_CANON.recent} size={14} />
+                        <span className="sk-shell__label">
+                          {title ?? <span className="sk-shell__id">{id}</span>}
+                        </span>
+                        {title
+                          ? <span className="sk-shell__id">{id}</span>
+                          : <span className="sk-shell__tag">{kitT(lang, 'kit.shell.recentMissing')}</span>}
+                      </button>
+                    )}
                 </li>
               );
             })}
@@ -553,15 +661,15 @@ function ShellMenu({
           <ul id={listId} className="sk-shell__list">
             {shown.map(i => (
               <li key={i.id}>
-                <button
-                  type="button"
+                <a
                   className="sk-shell__item"
+                  href={itemHref(i.id, i.view) ?? '#'}
                   aria-current={i.id === nav.item ? 'page' : undefined}
-                  onClick={() => onItem(i.id, i.view)}
+                  onClick={navClick(() => onItem(i.id, i.view))}
                 >
                   {i.icon && <GameIcon slug={i.icon} size={14} />}
                   <span className="sk-shell__label">{i.title}</span>
-                </button>
+                </a>
               </li>
             ))}
           </ul>

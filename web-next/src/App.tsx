@@ -28,7 +28,8 @@ import { createLocalS2Client } from './api/me';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
-import { LorePalette } from './palette/LorePalette';
+import { SectionPalette } from './palette/SectionPalette';
+import { OutsideShell } from './pages/OutsideShell';
 import type { ListScreenId } from './lists/screens';
 import { V2Shell } from './shell/V2Shell';
 import type { V2Section } from './shell/v2Config';
@@ -112,8 +113,21 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
   const query = search ?? win?.location.search ?? (typeof window === 'undefined' ? '' : window.location.search);
   const route = routeOf(current, query);
-  if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
-  if (route === 'passport') return <ErrorBoundary lang={lang}><Suspense fallback={<Skeleton />}><PassportDemo /></Suspense></ErrorBoundary>;
+  // Страницы вне оболочки подписаны (S4-17, находка P0 аудита 08.11): без
+  // шапки и меню LORE выглядит сломанным, и отличить витрину от поломки
+  // человек не может, пока ему не сказали. Витрины — «демо вне приложения»,
+  // паспорта по прямому адресу — «вне оболочки», и у каждой ссылка назад.
+  if (route === 'kit') {
+    return <><OutsideShell kind="demo" /><Suspense fallback={<Skeleton />}><KitPage /></Suspense></>;
+  }
+  if (route === 'passport') {
+    return (
+      <ErrorBoundary lang={lang}>
+        <OutsideShell kind="demo" />
+        <Suspense fallback={<Skeleton />}><PassportDemo /></Suspense>
+      </ErrorBoundary>
+    );
+  }
   if (route === 'news') {
     return (
       <ErrorBoundary lang="ru">
@@ -126,6 +140,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
     return (
       <ErrorBoundary lang="ru">
         <StorageBanner storage={storage} lang="ru" />
+        <OutsideShell kind="standalone" />
         <Suspense fallback={<Skeleton />}><TaskReadPage /></Suspense>
       </ErrorBoundary>
     );
@@ -135,6 +150,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
     return (
       <ErrorBoundary lang="ru">
         <StorageBanner storage={storage} lang="ru" />
+        <OutsideShell kind="standalone" back="/?sec=sprint" />
         <main data-lore-app="v2">
           <SprintPassport sprintId={passport.sprintId} tab={passport.tab} />
         </main>
@@ -152,8 +168,10 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
           topEnd={(
             <>
               {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.
-                  Экраны списков передадут сюда свои ctx, target (выделение S4-10) и действия. */}
-              <LorePalette storage={storage} trigger />
+                  Команды разделов — SectionPalette: внутри оболочки она знает navigate
+                  (находка P1 аудита 08.11: палитра была пуста). Экраны списков передадут
+                  сюда свои ctx, target (выделение S4-10) и действия. */}
+              <SectionPalette storage={storage} />
             </>
           )}
           account={(

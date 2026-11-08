@@ -36,7 +36,7 @@ const okFetch = (async () => new Response(JSON.stringify(slice), { status: 200, 
 describe('раздел ADR: заголовок — шапка экрана kit', () => {
   it('в оболочке — один h1 «ADR», и он внутри ScreenHead раздела', () => {
     const { container } = render(<App path="/" win={fakeWin()} storage={mem()} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'ADR' }));
+    fireEvent.click(screen.getByRole('link', { name: 'ADR' }));
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
     expect(h1s[0].textContent).toBe('ADR');

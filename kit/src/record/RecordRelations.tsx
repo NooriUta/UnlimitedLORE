@@ -17,6 +17,21 @@ import { RecordRef } from './fmt';
 export const RELATION_MARK: Record<KitRelation, string> = {
   composition: '◆', aggregation: '◇', association: '⇢', attribute: '·', realization: '▷', generalization: '△',
 };
+/**
+ * Название вида связи словами — подсказка у значка. Аудит 08.11 отметил «◆» у
+ * вкладки «Задачи» как случайный глиф: сам значок осмысленный (вид связи из
+ * модели), но молчащий.
+ *
+ * Вид связи приходит из модели, то есть может оказаться незнакомым. Тогда
+ * подсказки нет вовсе — печатать ключ локали или выдумывать название хуже, чем
+ * промолчать: значок останется без объяснения, но ничего ложного не скажет.
+ */
+export function relationName(lang: KitLang, relation: string): string | undefined {
+  const key = `kit.record.relkind.${relation}` as 'kit.record.relkind.composition';
+  const name = kitT(lang, key);
+  return name === undefined || name === key ? undefined : name;
+}
+
 /** Виды, которые kit рисует отдельной вкладкой на каждую связь. */
 export const OWN_TAB: readonly KitRelation[] = ['composition', 'aggregation'];
 /** Виды, сведённые в одну общую вкладку: id вкладки и ключ подписи. */

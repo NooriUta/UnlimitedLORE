@@ -77,7 +77,7 @@ describe('B-07 · параметры раздела не перетекают в
   it('смена раздела снимает q, фильтры списка/дерева и вкладку записи', () => {
     const win = fakeWin(LEAKY);
     render(<KitShell config={SHELL} win={win} storage={createSafeStorage(memStorage)} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'ADR' }));
+    fireEvent.click(screen.getByRole('link', { name: 'ADR' }));
     const p = new URLSearchParams(win.location.search);
     expect(p.get('sec')).toBe('adr');
     for (const k of ['q', 'lf', 'lq', 'tq', 'tab']) expect(p.get(k), k).toBeNull();
@@ -96,7 +96,7 @@ describe('B-07 · параметры раздела не перетекают в
   it('объявленные глобальные параметры (keepParams) переживают смену раздела', () => {
     const win = fakeWin(LEAKY);
     render(<KitShell config={SHELL} win={win} storage={createSafeStorage(memStorage)} narrow={false} keepParams={['lang']} />);
-    fireEvent.click(screen.getByRole('button', { name: 'ADR' }));
+    fireEvent.click(screen.getByRole('link', { name: 'ADR' }));
     const p = new URLSearchParams(win.location.search);
     expect(p.get('lang')).toBe('en');
     expect(p.get('q')).toBeNull();

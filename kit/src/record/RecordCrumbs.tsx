@@ -6,6 +6,7 @@
 // остаётся «← ID».
 import type { ReactNode } from 'react';
 import { kitT, useKitLang } from '../i18n';
+import { navClick } from '../core/navClick';
 
 export interface RecordCrumbsBack {
   /** Подпись раздела: «Спринты», «Спеки». */
@@ -37,7 +38,13 @@ export function RecordCrumbs({ back, context, current, className }: RecordCrumbs
   return (
     <nav className={['sk-crumbs', className].filter(Boolean).join(' ')} aria-label={kitT(lang, 'kit.record.crumbs.label')}>
       {back.href
-        ? <a className="sk-crumbs__back" href={back.href} onClick={back.onClick}>{inner}</a>
+        // Ссылка ведёт на список и щелчок обрабатывает приложение — но только
+        // обычный: Ctrl/⌘/Shift/Alt и средняя кнопка уходят браузеру, иначе
+        // «открыть в новой вкладке» снова не работает (находка P1 аудита 08.11).
+        ? (
+          <a className="sk-crumbs__back" href={back.href}
+            onClick={back.onClick ? navClick(back.onClick) : undefined}>{inner}</a>
+        )
         : <button type="button" className="sk-crumbs__back" onClick={back.onClick}>{inner}</button>}
       <span className="sk-crumbs__sep" aria-hidden="true">/</span>
       <span className="sk-crumbs__cur" aria-current="page">{current}</span>

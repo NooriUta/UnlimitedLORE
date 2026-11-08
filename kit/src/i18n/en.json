@@ -583,5 +583,11 @@
   "kit.list.cols.title": "Columns",
   "kit.list.cols.hint": "«Record» cannot be turned off. Order — arrows, width — the header edge.",
   "kit.list.cols.up": "{title}: up",
-  "kit.list.cols.down": "{title}: down"
+  "kit.list.cols.down": "{title}: down",
+  "kit.record.relkind.composition": "composition: the part does not exist without the whole",
+  "kit.record.relkind.aggregation": "aggregation: the part exists on its own",
+  "kit.record.relkind.association": "dependency",
+  "kit.record.relkind.attribute": "attribute",
+  "kit.record.relkind.realization": "realization",
+  "kit.record.relkind.generalization": "generalization"
 }
