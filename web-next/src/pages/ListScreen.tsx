@@ -3,15 +3,47 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
-import { useEffect, useMemo, useState } from 'react';
-import { Forbidden, ICON_CANON, ListView, LoadError, ScreenHead, Skeleton, useKitLang, useLoadState } from '@seidr/kit';
-import type { KitProgressInput, UrlWindow } from '@seidr/kit';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import {
+  Forbidden, ICON_CANON, ListView, LoadError, RecordDock, ScreenHead, Skeleton, pushUrlState, readUrlState,
+  useKitLang, useLoadState,
+} from '@seidr/kit';
+import type { KitProgressInput, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { fetchSlice } from '../api/loreClient';
 import { useAppT } from '../i18n';
 import { LIST_SCREENS, type ListScreenDef, type ListScreenId } from '../lists/screens';
 import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
+import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
+
+// Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
+// до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
+const ListPassport = lazy(() => import('../record/ListPassport'));
+/** Тип паспорта по экрану списка. */
+const PASSPORT_OF: Record<ListScreenId, PassportType> = { sprints: 'sprint', adrs: 'adr' };
+const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
+type OpenRecord = { id: string | null; place: RecordPlacement };
+
+/** Открытая запись и место — в URL (?open=&place=), как всё состояние v2; urlState=false — в памяти. */
+function useOpenRecord(urlState: ListScreenProps['urlState']) {
+  const win: UrlWindow | undefined = urlState === false ? undefined
+    : typeof urlState === 'object' ? urlState
+      : typeof window === 'undefined' ? undefined : window;
+  const [open, setOpen] = useState<OpenRecord>(() => {
+    if (!win) return { id: null, place: 'right' };
+    const p = readUrlState(win);
+    const id = p.get('open');
+    const raw = p.get('place') ?? '';
+    const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : 'right';
+    return { id: id || null, place };
+  });
+  const set = (next: OpenRecord) => {
+    setOpen(next);
+    if (win) pushUrlState({ open: next.id, place: next.place !== 'right' ? next.place : null }, { replace: true, win });
+  };
+  return [open, set] as const;
+}
 
 export interface ListScreenProps {
   screen: ListScreenId;
@@ -35,6 +67,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
   const lang = useKitLang();
   const t = useAppT();
+  const [open, setOpen] = useOpenRecord(urlState);
   const config = useMemo(() => def.config(lang), [def, lang]);
   const result = useLoadState(
     signal => fetchSlice(def.slice, undefined, { signal, fetchImpl }),
@@ -94,7 +127,21 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
         expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
+        onOpen={id => setOpen({ ...open, id })}
+        recordPlace={{ value: open.place, onChange: place => setOpen({ ...open, place }) }}
       />
+    );
+  }
+
+  if (open.id && ready) {
+    const place = open.place;
+    content = (
+      // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
+      <RecordDock placement={place} onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
+        <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+          <ListPassport key={open.id} type={PASSPORT_OF[screen]} id={open.id} placement={place} fetchImpl={fetchImpl} />
+        </Suspense>
+      </RecordDock>
     );
   }
 

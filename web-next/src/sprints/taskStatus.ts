@@ -40,6 +40,8 @@ export function planStatusOf(raw: string | null | undefined): ReadStatus {
   if (!s) return 'unknown';
   const lower = s.toLowerCase();
   if ((PLAN_STATUSES as readonly string[]).includes(lower)) return lower as PlanStatus;
+  // Голый канонический код словаря («in_progress», «deferred») — тоже статус, не «вне словаря».
+  if (Object.prototype.hasOwnProperty.call(STATUS_MATCH, lower)) return CANON_TO_CODE[lower] ?? (lower as ReadStatus);
   for (const [canon, m] of Object.entries(STATUS_MATCH)) {
     if (s.startsWith(m.marker)) return CANON_TO_CODE[canon] ?? (canon as ReadStatus);
   }

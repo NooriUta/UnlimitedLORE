@@ -6,6 +6,7 @@
 // импортируется, D-2026-UXR-V2-FOLDER-V1-FROZEN).
 import { KNOWN_STATUSES, statusMeta, type KitConfig, type KitData, type KitLang, type KitRecord, type RecordFactsSpec } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
+import { planStatusOf } from '../sprints/taskStatus';
 
 export const SPRINT_KIND = 'Sprint';
 export const TASK_KIND = 'Task';
@@ -80,7 +81,7 @@ export function sprintKitData(
     id: sprint.sprint_id,
     kind: SPRINT_KIND,
     title: sprint.name,
-    status: (sprint.status_raw ?? '').toLowerCase(),
+    status: planStatusOf(sprint.status_raw),
     fields: { planned_end_date: sprint.planned_end_date },
     body_md: sprint.context_md ?? undefined,
     updated_at: sprint.valid_from ?? undefined,
@@ -91,7 +92,7 @@ export function sprintKitData(
     id: taskRecordId(sprint.sprint_id, t.task_id),
     kind: TASK_KIND,
     title: t.title ?? t.task_id,
-    status: (t.status_raw ?? '').toLowerCase(),
+    status: planStatusOf(t.status_raw),
     fields: { order_index: t.order_index },
   }));
   return {

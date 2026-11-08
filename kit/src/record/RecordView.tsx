@@ -12,6 +12,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
 import { Tabs, type TabItem } from '../shell/Tabs';
+import { Segmented } from '../elements/Segmented';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
 import { BlockBoundary } from './BlockBoundary';
@@ -70,6 +71,12 @@ export interface RecordViewProps {
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
   placement?: 'right' | 'bottom' | 'full';
+  /**
+   * Куда идёт вычисляемое (связи, граф, журнал, история). 'tabs' (по умолчанию,
+   * владелица 08.11: «пока как в MVP») — вкладками основного блока в любом месте;
+   * 'column' — колонкой слева при bottom/full (раскладка S4-33, отложена, не удалена).
+   */
+  aroundAs?: 'tabs' | 'column';
 }
 
 /** Часы с шагом в минуту — для «получено N мин»; выключены — не тикают. */
@@ -113,16 +120,24 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
 function Fields({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang; edit?: EditSlot }) {
   const fields = kind.fields ?? [];
   if (fields.length === 0) return null;
+  const row = (f: (typeof fields)[number]) => (
+    <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
+      <dt>{f.title}</dt>
+      <dd><FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} /></dd>
+    </div>
+  );
+  // Поля без раздела — первыми; разделы (section) — подзаголовками в порядке появления (S4-36).
+  const plain = fields.filter(f => !f.section);
+  const sections = [...new Set(fields.map(f => f.section).filter((s): s is string => !!s))];
   return (
     <section className="sk-rec-fields" aria-label={kitT(lang, 'kit.record.fields')}>
-      <dl data-testid="kit-fields">
-        {fields.map(f => (
-          <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
-            <dt>{f.title}</dt>
-            <dd><FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} /></dd>
-          </div>
-        ))}
-      </dl>
+      <dl data-testid="kit-fields">{plain.map(row)}</dl>
+      {sections.map(s => (
+        <div key={s} role="group" aria-label={s} className="sk-rec-fields__sec">
+          <h3 className="sk-rec-fields__sechead">{s}</h3>
+          <dl>{fields.filter(f => f.section === s).map(row)}</dl>
+        </div>
+      ))}
     </section>
   );
 }
@@ -143,7 +158,7 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs' }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
@@ -154,9 +169,12 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const kindTabs = kind?.tabs ?? [];
   const zoned = placement !== undefined;
   const hasProps = zoned && (kind?.fields?.length ?? 0) > 0;
+  // Снизу и на весь экран свойства — колонкой справа рядом с контентом (владелица 08.11):
+  // читать и заполнять текст и свойства сразу, без переключений. Панелью справа (узко) — вкладкой.
+  const propsSide = hasProps && (placement === 'bottom' || placement === 'full');
   const recordItems: TabItem[] = [
     { id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' : undefined },
-    ...(hasProps ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
+    ...(hasProps && !propsSide ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
     ...kindTabs.map(t => ({ id: t.key, label: t.title, zone: zoned ? 'record' as const : undefined })),
   ];
   const aroundItems: TabItem[] = [
@@ -165,10 +183,28 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: recordJournal(record.id, ctx.data.journal).length },
     ...(history ? [{ id: RECORD_TABS.history, label: kitT(lang, 'kit.record.tab.history'), count: historyCount(history) }] : []),
   ].map(i => (zoned ? { ...i, zone: 'around' as const } : i));
-  // bottom/full — вычисляемое уходит в колонку слева; right и без placement — вкладками.
-  const aside = placement === 'bottom' || placement === 'full';
+  // По умолчанию всё вкладками; колонка слева — только aroundAs='column' при bottom/full.
+  const aside = aroundAs === 'column' && (placement === 'bottom' || placement === 'full');
   const items: TabItem[] = aside ? recordItems : [...recordItems, ...aroundItems];
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
+  // Панелью справа (узко) — переключатель видов над шапкой, как «таблица / доска» (владелица 08.11):
+  // Контент (текст и вкладки типа) · Свойства · Аналитика (связи, граф, журнал, история).
+  const modes = placement === 'right';
+  type Mode = 'content' | 'props' | 'analytics';
+  const mode: Mode = current === RECORD_TABS.props ? 'props' : aroundItems.some(i => i.id === current) ? 'analytics' : 'content';
+  const contentItems = recordItems.filter(i => i.id !== RECORD_TABS.props);
+  const shown: TabItem[] = !modes ? items : mode === 'analytics' ? aroundItems : mode === 'content' ? contentItems : [];
+  const firstOf: Record<Mode, string> = { content: RECORD_TABS.overview, props: RECORD_TABS.props, analytics: aroundItems[0].id };
+  const switcher = modes ? (
+    <div className="sk-rec__modes">
+      <Segmented<Mode> label={kitT(lang, 'kit.record.view')} value={mode} onChange={m => onTab(firstOf[m])}
+        options={[
+          { value: 'content', label: kitT(lang, 'kit.record.view.content') },
+          ...(hasProps ? [{ value: 'props' as const, label: kitT(lang, 'kit.record.view.props') }] : []),
+          { value: 'analytics', label: kitT(lang, 'kit.record.view.analytics') },
+        ]} />
+    </div>
+  ) : null;
   const reset = `${record.id}:${current}`;
   const custom = kindTabs.find(t => t.key === current);
 
@@ -186,7 +222,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         )}
       </div>
     );
-  } else if (current === RECORD_TABS.props && kind) {
+  } else if (current === RECORD_TABS.props && kind && !propsSide) {
     panel = (
       <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
         <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
@@ -213,8 +249,24 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     );
   }
 
+  const tabsBlock = shown.length > 1 ? (
+    <Tabs className="sk-rec__tabs" variant="underline" items={shown} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
+      {panel}
+    </Tabs>
+  ) : <div className="sk-rec__panel">{panel}</div>;
+  // Снизу / на весь экран: шапка на всю ширину, под ней в одном ряду вкладки и «Свойства» —
+  // свойства начинаются вровень с контентом, а не с заголовком (владелица 08.11).
+  const propsAside = propsSide && kind ? (
+    <aside className="sk-rec__props" data-zone="props" aria-label={kitT(lang, 'kit.record.tab.props')}>
+      <p className="sk-rec__zone">{kitT(lang, 'kit.record.tab.props')}</p>
+      <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
+        <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+      </BlockBoundary>
+    </aside>
+  ) : null;
   const mainBlock = (
     <>
+        {switcher}
         <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
         {facts && (
           <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
@@ -226,9 +278,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
           <RecordVerdict record={record} ctx={ctx} lang={lang} />
         </BlockBoundary>
-        <Tabs className="sk-rec__tabs" variant="underline" items={items} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
-          {panel}
-        </Tabs>
+        {propsAside ? <div className="sk-rec__body"><div className="sk-rec__content">{tabsBlock}</div>{propsAside}</div> : tabsBlock}
     </>
   );
   const around = aside ? (
@@ -248,9 +298,11 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     </aside>
   ) : null;
 
+  const cols = aside;
+  const cls = ['sk-rec', aside ? 'sk-rec--zones' : '', className].filter(Boolean).join(' ');
   return (
-    <article className={['sk-rec', aside ? 'sk-rec--zones' : '', className].filter(Boolean).join(' ')} aria-labelledby={titleId} data-kind={record.kind} data-placement={placement}>
-      {aside ? (<>{around}<div className="sk-rec__main">{mainBlock}</div></>) : mainBlock}
+    <article className={cls} aria-labelledby={titleId} data-kind={record.kind} data-placement={placement}>
+      {cols ? (<>{around}<div className="sk-rec__main">{mainBlock}</div></>) : mainBlock}
     </article>
   );
 }

@@ -363,3 +363,13 @@ export function quickIconOf(q: QuickItem, config: KitConfig): string | null {
   if (code === null || code === undefined) return null;
   return config.statuses.items.find(s => s.code === code)?.icon ?? null;
 }
+
+/** Цвет быстрого фильтра по одному статусу — цвет статуса из словаря (владелица 08.11); прочее — null. */
+export function quickColorOf(q: QuickItem, config: KitConfig): string | null {
+  const keys = Object.keys(q.filter);
+  if (keys.length !== 1 || keys[0] !== 'status') return null;
+  const v = q.filter.status;
+  const code = Array.isArray(v) ? (v.length === 1 ? v[0] : null) : v;
+  if (code === null || code === undefined) return null;
+  return config.statuses.items.find(s => s.code === code)?.color ?? null;
+}

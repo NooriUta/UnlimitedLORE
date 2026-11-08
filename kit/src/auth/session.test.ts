@@ -241,3 +241,33 @@ describe('S3-18 · выход', () => {
     expect(s.headers()).toEqual({});
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-34 (08.11.2026, прод v1.17.0): глубокая ссылка v2 с первого
+// открытия показала «Новости», хотя адрес был /kit/passport. Причина: oidc-client-ts
+// внутри signinRedirectCallback сначала шлёт событие userLoaded и только потом
+// возвращает пользователя. На событие подписан signedIn → AuthGate рисует App, пока адрес
+// ещё «/» (callback); replaceUrl на исходный путь приходит позже, а App адрес повторно
+// не читает. Правило: «вошли» объявляется только ПОСЛЕ возврата на исходный адрес.
+describe('S4-34 · возврат из Keycloak: адрес до объявления «вошли»', () => {
+  it('userLoaded во время callback не объявляет вход раньше replaceUrl', async () => {
+    const order: string[] = [];
+    let m!: ReturnType<typeof fakeManager>;
+    m = fakeManager({
+      callback: async () => {
+        const u = user({ state: '/kit/passport?type=sprint&place=full' });
+        m.fireLoaded(u); // как oidc-client-ts: событие ДО возврата из signinRedirectCallback
+        return u;
+      },
+    });
+    const s = createAuthSession({
+      enabled: true, manager: () => m, now: () => NOW,
+      location: loc('https://new.lore.example/?state=st-1&code=c-1'),
+      replaceUrl: url => { order.push(`replace ${url}`); },
+    });
+    s.subscribe(() => { if (s.getState().status === 'signed_in') order.push('signed_in'); });
+    await s.init();
+    expect(order[0]).toBe('replace /kit/passport?type=sprint&place=full');
+    expect(order).toContain('signed_in');
+    expect(s.getState().status).toBe('signed_in');
+  });
+});

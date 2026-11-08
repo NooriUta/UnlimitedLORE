@@ -43,7 +43,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { ProgressCell } from './progress';
 import {
   DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
-  quickCounts, quickIconOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
+  quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
@@ -58,6 +58,8 @@ import { useLongPress } from './useLongPress';
 import { ScreenHead } from './ScreenHead';
 import { ViewMenu } from './ViewMenu';
 import { GroupMenu } from './GroupMenu';
+import { SortMenu } from './SortMenu';
+import type { RecordPlacement } from '../record/RecordDock';
 
 export interface ListBulkAction {
   id: string;
@@ -106,6 +108,11 @@ export interface ListViewProps {
    * Enter на строке под курсором (S4-11) — тоже onOpen, без него — ссылка заголовка.
    */
   onOpen?: (id: string) => void;
+  /**
+   * Где открывается паспорт записи (владелица 08.11): настройка использования, живёт в «Вид»
+   * списка, а не полосой над паспортом. Без неё раздела в «Вид» нет — место задаёт приложение.
+   */
+  recordPlace?: { value: RecordPlacement; onChange: (p: RecordPlacement) => void };
   /** Части контекста хуков (роль, пользователь, md…); data/config берутся из пропсов. */
   ctx?: Partial<KitCtx>;
   /** Массовые действия с выбранными — через хуки приложения. */
@@ -255,7 +262,7 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, onSelectionChange, urlState, initial, budget: budgetPart,
+  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, expand, head, viewIcons, className, state: stateProp, onStateChange,
 }: ListViewProps) {
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
@@ -554,6 +561,8 @@ export function ListView({
       closed={closedMode}
       modes={SHOW_CLOSED_MODES}
       onClosed={c => update({ closed: c })}
+      place={recordPlace?.value}
+      onPlace={recordPlace?.onChange}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
@@ -931,6 +940,7 @@ export function ListView({
             keyTitle={labels.keyTitle}
             onGroup={g => update({ group: g, ...(g === null || g === state.group2 ? { group2: null } : {}) })}
             onSub={g => update({ group2: g })}
+            bare
           />
           </fieldset>
         )}
@@ -938,15 +948,12 @@ export function ListView({
           <legend className="sk-list__seglabel">{t('kit.list.sort')}</legend>
           <GameIcon slug={ICON_CANON.segSort} size={14} className="sk-list__segicon" />
           {segCount(state.sort ? 1 : 0)}
-          <select
-            aria-label={t('kit.list.sort')}
-            className="sk-list__select"
-            value={state.sort?.key ?? ''}
-            onChange={e => update({ sort: e.target.value ? { key: e.target.value, dir: state.sort?.dir ?? 'asc' } : null })}
-          >
-            <option value="">{t('kit.list.sortNone')}</option>
-            {sortKeys.map(k => <option key={k} value={k}>{labels.keyTitle(k)}</option>)}
-          </select>
+          <SortMenu
+            value={state.sort?.key ?? null}
+            keys={sortKeys}
+            keyTitle={labels.keyTitle}
+            onChange={k => update({ sort: k ? { key: k, dir: state.sort?.dir ?? 'asc' } : null })}
+          />
           <button
             type="button"
             className="sk-list__dir"
@@ -962,6 +969,7 @@ export function ListView({
             <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
             {quick.map(q => {
               const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
+              const qColor = quickColorOf(q, config);
               return (
                 <Pill
                   key={q.id}
@@ -969,7 +977,7 @@ export function ListView({
                   pressed={state.quick === q.id}
                   onToggle={on => update({ quick: on ? q.id : null })}
                 >
-                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={14} /></span>}
+                  {icon && <span className="sk-list__qicon" data-quick-icon={icon} style={qColor ? { color: qColor } : undefined}><GameIcon slug={icon} size={12} /></span>}
                   <span>{q.title}</span><span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
                 </Pill>
               );

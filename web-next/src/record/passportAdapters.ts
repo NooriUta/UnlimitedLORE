@@ -7,6 +7,7 @@ import type { KitConfig, KitData, KitEdge, KitLang, KitRecord } from '@seidr/kit
 import { appT, type AppKey } from '../i18n';
 import type { SliceBody } from '../api/loreSlice';
 import { loreEdgesConfig } from './loreEdges';
+import { planStatusOf } from '../sprints/taskStatus';
 import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type SprintTaskSliceRow } from './loreRecord';
 
 export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec'] as const;
@@ -23,7 +24,7 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export interface PassportLoad { record: KitRecord; data: KitData; config: KitConfig; facts?: typeof SPRINT_FACTS }
 
 /** Конфиг вида: поля, статусы LORE, подписи рёбер. */
-function baseConfig(lang: KitLang, kinds: KitConfig['kinds']): KitConfig {
+export function baseConfig(lang: KitLang, kinds: KitConfig['kinds']): KitConfig {
   return {
     modules: [], menu: { groups: [] }, kinds,
     edges: loreEdgesConfig(lang),
@@ -58,25 +59,29 @@ async function loadSprint(id: string, lang: KitLang, slice: Slice, now: string):
   let tasks: SprintTaskSliceRow[] | { error: string };
   try { tasks = (await slice<SprintTaskSliceRow>('tasks_of_sprint', { sprint_id: id })).rows; } catch (e) { tasks = { error: errText(e) }; }
   const { record, data } = sprintKitData(row as unknown as SprintSliceRow, tasks, now);
-  record.status = norm(row.status_raw);
+  record.status = planStatusOf(str(row.status_raw));
   Object.assign(record.fields, {
     priority: str(row.priority) || null, projects: arr(row.git_projects), components: arr(row.components),
     releases: arr(row.release_ids), milestones: arr(row.milestone_ids),
     planned_start: str(row.planned_start_date) || null, planned_end_date: str(row.planned_end_date) || null,
+    created: str(row.created_date).slice(0, 10) || null,
+    no_release: row.no_release_required === true ? appT(lang, 'pp.yes') : null,
   });
   data.edges.push(...refsTo(id, arr(row.git_projects), 'BELONGS_TO_PROJECT'), ...refsTo(id, arr(row.components), 'BELONGS_TO'));
-  for (const t of data.records) t.status = norm(t.status);
   const config = baseConfig(lang, {
     Sprint: {
       title: appT(lang, 'pp.kind.sprint'), icon: 'sprint',
       fields: [
+        // Как в v1 (S4-36): сверху — общее; «Планирование» и «Модули» — разделами.
         { key: 'priority', title: f(lang, 'priority'), type: 'enum' },
         { key: 'projects', title: f(lang, 'projects'), type: 'ref' },
-        { key: 'components', title: f(lang, 'components'), type: 'ref' },
         { key: 'releases', title: f(lang, 'releases'), type: 'ref' },
-        { key: 'milestones', title: f(lang, 'milestones'), type: 'ref' },
-        { key: 'planned_start', title: f(lang, 'plannedStart'), type: 'date' },
-        { key: 'planned_end_date', title: f(lang, 'plannedEnd'), type: 'date' },
+        { key: 'created', title: f(lang, 'created'), type: 'date', section: appT(lang, 'pp.sec.plan') },
+        { key: 'milestones', title: f(lang, 'milestones'), type: 'ref', section: appT(lang, 'pp.sec.plan') },
+        { key: 'planned_start', title: f(lang, 'plannedStart'), type: 'date', section: appT(lang, 'pp.sec.plan') },
+        { key: 'planned_end_date', title: f(lang, 'plannedEnd'), type: 'date', section: appT(lang, 'pp.sec.plan') },
+        { key: 'no_release', title: f(lang, 'noRelease'), type: 'text', section: appT(lang, 'pp.sec.plan') },
+        { key: 'components', title: f(lang, 'components'), type: 'ref', section: appT(lang, 'pp.sec.modules') },
       ],
       tabs: [{ key: 'tasks', title: appT(lang, 'pp.tab.tasks'), render: (r, ctx) => ctx.data.edges.filter(e => e.from === r.id && e.type === 'HAS_TASK').map(e => ctx.data.records.find(x => x.id === e.to)?.title ?? e.to).join(' · ') || appT(lang, 'pp.noTasks') }],
     },
@@ -90,7 +95,7 @@ async function loadTask(uid: string, lang: KitLang, slice: Slice, now: string): 
   if (!row) throw new Error(appT(lang, 'pp.notFound', { id: uid }));
   const sprint = str(row.sprint_id);
   const record: KitRecord = {
-    id: uid, kind: 'task', title: str(row.title) || uid, status: norm(row.status_raw),
+    id: uid, kind: 'task', title: str(row.title) || uid, status: planStatusOf(str(row.status_raw)),
     body_md: str(row.note_md) || undefined,
     fields: {
       sprint: sprint || null, components: arr(row.component_ids), effort: row.effort_days ?? null, actual: row.actual_days ?? null,
@@ -122,12 +127,12 @@ async function loadTask(uid: string, lang: KitLang, slice: Slice, now: string): 
 async function loadAdr(id: string, lang: KitLang, slice: Slice, now: string): Promise<PassportLoad> {
   const row = (await slice<Row>('adr', { id })).rows[0];
   if (!row) throw new Error(appT(lang, 'pp.notFound', { id }));
-  const sec = (k: string, md: unknown) => (str(md).trim() ? `## ${appT(lang, `pp.adr.${k}` as AppKey)}\n\n${str(md).trim()}` : '');
   const record: KitRecord = {
     id, kind: 'adr', title: str(row.name) || id, status: norm(row.status),
-    body_md: [sec('context', row.context_md), sec('decision', row.decision_md), sec('consequences', row.consequences_md)].filter(Boolean).join('\n\n') || undefined,
     updated_at: str(row.hist_valid_from) || undefined,
     fields: {
+      // Текст ADR — тремя разделами, как в v1, а не склейкой через «## Контекст» (08.11).
+      context_md: str(row.context_md).trim() || null, decision_md: str(row.decision_md).trim() || null, consequences_md: str(row.consequences_md).trim() || null,
       date: str(row.date_created) || null, components: arr(row.components), projects: arr(row.git_projects), tags: arr(row.tags).join(', ') || null,
       depends_on: arr(row.depends_on_ids), supersedes: arr(row.supersedes_ids), file_path: str(row.file_path) || null,
     },
@@ -149,6 +154,9 @@ async function loadAdr(id: string, lang: KitLang, slice: Slice, now: string): Pr
     adr: {
       title: 'ADR', icon: 'scroll-quill',
       fields: [
+        { key: 'context_md', title: appT(lang, 'pp.adr.context'), type: 'md' },
+        { key: 'decision_md', title: appT(lang, 'pp.adr.decision'), type: 'md' },
+        { key: 'consequences_md', title: appT(lang, 'pp.adr.consequences'), type: 'md' },
         { key: 'date', title: f(lang, 'date'), type: 'date' },
         { key: 'projects', title: f(lang, 'projects'), type: 'ref' },
         { key: 'components', title: f(lang, 'components'), type: 'ref' },

@@ -43,7 +43,7 @@ function ctxOf(data: KitCtx['data'], lang: 'ru' | 'en' = 'ru'): KitCtx {
 describe('S5-01 · sprintKitData — строки слайсов → запись kit', () => {
   it('спринт — запись Sprint, задачи — записи Task с id «спринт/код», рёбра HAS_TASK', () => {
     const { record, data } = sprintKitData(SPRINT, TASKS, NOW);
-    expect(record).toMatchObject({ id: SPRINT.sprint_id, kind: 'Sprint', title: 'Паспорта записей', status: 'in_progress', updated_at: SPRINT.valid_from, body_md: '## Цель' });
+    expect(record).toMatchObject({ id: SPRINT.sprint_id, kind: 'Sprint', title: 'Паспорта записей', status: 'active', updated_at: SPRINT.valid_from, body_md: '## Цель' });
     expect(record.fields.planned_end_date).toBe('2026-11-05');
     expect(taskRecordId(SPRINT.sprint_id, 'S5-01')).toBe('SPRINT_UXR_S5_RECORD_TASKS/S5-01');
     expect(data.records.map(r => r.id)).toContain('SPRINT_UXR_S5_RECORD_TASKS/S5-02');
@@ -89,7 +89,7 @@ describe('S5-01 · шапка паспорта спринта', () => {
   it('статус словами локали, задачи 1/3, просрочено, свежесть', () => {
     view();
     const line = screen.getByTestId('kit-facts');
-    expect(line.textContent).toContain('В работе');
+    expect(line.textContent).toContain('В работе'); // код плана active (status_raw in_progress → planStatusOf), подпись как v1
     expect(line.textContent).toContain('1/3');
     expect(line.textContent).toContain('Просрочено на 2 дн');
     expect(line.textContent).toContain('1 дн назад');
