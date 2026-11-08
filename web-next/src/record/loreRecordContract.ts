@@ -4,7 +4,7 @@
 // (fromLoreRecord). Когда фасад появится на бэкенде, toLoreRecord уходит, fromLoreRecord остаётся.
 // Честность: эмуляция помечена в meta.facade; упавший блок — meta.sources[].state='error', не «пусто».
 import { createElement } from 'react';
-import type { KitConfig, KitCtx, KitData, KitEdge, KitLang, KitRecord } from '@seidr/kit';
+import type { KitConfig, KitCtx, KitData, KitEdge, KitLang, KitRecord, KitRelation } from '@seidr/kit';
 import { appT } from '../i18n';
 import { baseConfig, type PassportLoad } from './passportAdapters';
 import { SPRINT_FACTS } from './loreRecord';
@@ -19,12 +19,14 @@ export interface LoreField {
   section?: string;
 }
 export interface LoreTab { key: string; label: string; zone: 'record' | 'around'; rel?: string; dir?: 'out' | 'in'; count?: number }
+/** Связь типа по виду UML (D-2026-LORE-RECORD-RELATION-UML) — kit рисует и управляет по виду. */
+export interface LoreRelation { key: string; label: string; relation: KitRelation; rel: string; dir: 'out' | 'in'; count: number }
 export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string }
 export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number }
 export interface LoreRecord1 {
   contract: 'lore.record/1';
   record: { type: string; id: string; title: string; status: string; version: number | null; updated_at: string | null; updated_by: string | null };
-  schema: { type: string; label: string; icon: string; fields: LoreField[]; tabs: LoreTab[] };
+  schema: { type: string; label: string; icon: string; fields: LoreField[]; tabs: LoreTab[]; relations: LoreRelation[] };
   values: Record<string, unknown>;
   links: LoreLink[];
   facts: { tasks?: { done: number; total: number } | { error: string }; due?: string | null } | null;
@@ -102,6 +104,7 @@ export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang
         ...props,
       ],
       tabs,
+      relations: (kind?.relations ?? []).map(d => ({ ...d, count: links.filter(l => l.rel === d.rel && l.dir === d.dir).length })),
     },
     values: JSON.parse(JSON.stringify(values)) as Record<string, unknown>,
     links,
@@ -141,7 +144,7 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),
   }));
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(overview ? { overview } : {}), fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...(tabs.length ? { tabs } : {}) },
+    [type]: { title: c.schema.label, icon: c.schema.icon, ...(overview ? { overview } : {}), relations: c.schema.relations.map(({ count: _n, ...d }) => d), fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   const data: KitData = { records: [record, ...others], edges, journal: [], meta: { generated_at: c.meta.loaded_at, ...(errors.length ? { errors } : {}) } };

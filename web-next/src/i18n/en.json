@@ -236,5 +236,10 @@
   "pp.sec.plan": "Planning",
   "pp.sec.modules": "Modules",
   "pp.field.created": "Created",
-  "pp.field.noRelease": "No release required"
+  "pp.field.noRelease": "No release required",
+  "pp.rel.dependsOn": "Depends on",
+  "pp.rel.blocks": "Blocks",
+  "pp.rel.supersedes": "Supersedes",
+  "pp.rel.supersededBy": "Superseded by",
+  "pp.rel.justifies": "Justifies tasks"
 }

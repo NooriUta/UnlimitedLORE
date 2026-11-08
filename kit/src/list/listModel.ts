@@ -181,7 +181,7 @@ export function shownOf(meta: KitMeta | null | undefined, loaded: number, shown:
 
 /* ---------- состояние в URL ---------- */
 
-export type ListViewKind = 'list' | 'board' | 'tree';
+export type ListViewKind = 'list' | 'cards' | 'board' | 'tree' | 'feed' | 'timeline';
 
 /** Условие фильтра поля (S4-05): есть / нет / пусто / не пусто. */
 export type FilterOp = 'any' | 'not' | 'empty' | 'nonempty';
@@ -260,7 +260,7 @@ export function readListState(p: URLSearchParams): ListState {
     } catch { /* битый URL — условия по умолчанию */ }
   }
   return {
-    view: lv === 'board' || lv === 'tree' ? lv : 'list',
+    view: lv === 'board' || lv === 'tree' || lv === 'cards' || lv === 'feed' || lv === 'timeline' ? lv : 'list',
     quick: p.get('lq'),
     group: p.get('lg'),
     sort: ls ? { key: ls.replace(/^-/, ''), dir: ls.startsWith('-') ? 'desc' : 'asc' } : null,
