@@ -1,0 +1,78 @@
+# LORE на lore-host (192.168.3.143): бэкенд + v1 — SPRINT_UXR_S3_V2_INFRA/S3-17, Ш2 переезда.
+# Каталог: /home/nooriuta/UnlimitedLORE-deploy. Адреса только ПО ИМЕНИ (SPEC-INFRA-ADDRESS-BY-NAME):
+# ни host-gateway, ни IP. Секретов в файле нет — значения в .env рядом (chmod 600), имена см. ниже.
+#
+# Имя проекта `unlimitedlore` — как на 131 — сознательно: MinIO живёт отдельным compose-проектом
+# с тем же именем, и оба сидят в общей сети unlimitedlore_default, где бэкенд зовёт его `minio:9000`.
+# Если MinIO поднят под другим именем проекта — поправь networks ниже на его сеть (external).
+#
+# Образы — того же коммита, что на 131 в момент стопа записи (сейчас 07a8c740): иначе бэкенд на
+# старте мигрирует перенесённую базу, и откат на 131 получит базу новее кода.
+name: unlimitedlore
+
+services:
+  lore-backend:
+    image: unlimitedlore-lore-backend:07a8c740
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9100:9100"        # только localhost; снаружи — через Traefik 131 по имени
+    networks: [default, lore-ygg-net]
+    environment:
+      - MART_ARCADE_URL=http://LORE-ygg:2480
+      - ARCADEDB_USER=${ARCADEDB_USER:-root}
+      - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
+      - LORE_AUTH_ENABLED
+      - LORE_OIDC_ISSUER
+      - KC_ADMIN_CLIENT_SECRET=${KC_ADMIN_CLIENT_SECRET:-}
+      - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      - LORE_VOLVA_EMBED_SECRET=${LORE_VOLVA_EMBED_SECRET:-}
+      - kc.admin.url=https://odal.seidrstudio.pro/kc
+      - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
+      - CORS_ORIGINS
+      - lore.secrets.provider=${LORE_SECRETS_PROVIDER:-env}
+      - lore.secrets.url=https://secrets.seidrstudio.pro
+      - lore.secrets.client-id=${LORE_SECRETS_CLIENT_ID:-}
+      - lore.secrets.client-secret=${LORE_SECRETS_CLIENT_SECRET:-}
+      - lore.secrets.project-id=${LORE_SECRETS_PROJECT_ID:-}
+      - lore.secrets.environment=${LORE_SECRETS_ENVIRONMENT:-prod}
+      - lore.secrets.scope=${LORE_SECRETS_SCOPE:-/lore}
+      - FORGEJO_API_TOKEN=${FORGEJO_API_TOKEN:-}
+      - lore.forgejo.base-override=https://git.seidrstudio.pro
+      - lore.migrate=${LORE_MIGRATE:-false}
+      - lore.migrate.only=${LORE_MIGRATE_ONLY:-false}
+      - lore.mart.auth=${LORE_MART_AUTH:-basic}
+      - lore.scope.enforce=${LORE_SCOPE_ENFORCE:-false}
+      - lore.bootstrap=${LORE_BOOTSTRAP:-false}
+      - BENCH_ROOT=/bench-data
+      - TEAM_DOCS_ROOT=/team-docs
+      - S3_ENDPOINT=http://minio:9000
+      - S3_BUCKET=${S3_BUCKET:-bragi-assets}
+      - S3_ACCESS_KEY=${MINIO_USER:-aida}
+      - S3_SECRET_KEY=${MINIO_PASSWORD:-aidapassword}
+      - S3_REGION=us-east-1
+    volumes:
+      - ./docs/bench-data:/bench-data:ro
+      - ./docs:/team-docs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9100/q/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  lore-app:
+    image: unlimitedlore-lore-app:07a8c740
+    restart: unless-stopped
+    environment:
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-https://lore.odal.seidrstudio.pro}
+      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-https://odal.seidrstudio.pro}
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-https://volva.odal.seidrstudio.pro}
+    ports:
+      - "4400:80"
+    depends_on:
+      lore-backend:
+        condition: service_healthy
+
+networks:
+  lore-ygg-net:
+    external: true
