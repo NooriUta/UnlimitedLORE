@@ -37,7 +37,8 @@ const open = () => { fireEvent.click(trigger()); return screen.getByRole('dialog
 describe('кнопка-значение и поповер', () => {
   it('значение — в кнопке; поповер: раздел группировки с ✓ у выбранного и пояснение', () => {
     render(<ListView config={cfg} data={data} urlState={false} />);
-    expect(trigger().textContent).toMatch(/Группировка: без группировки/);
+    expect(trigger().getAttribute('aria-label')).toMatch(/Группировка: без группировки/); // 08.11: подпись — в рамке сегмента, в кнопке только значение
+    expect(trigger().textContent).toMatch(/без группировки/);
     const dlg = open();
     const g = within(dlg).getByRole('radiogroup', { name: /одна на список, доску и таймлайн/ });
     expect(within(g).getByRole('radio', { name: /без группировки/ }).getAttribute('aria-checked')).toBe('true');
@@ -50,7 +51,7 @@ describe('кнопка-значение и поповер', () => {
     const dlg = open();
     fireEvent.click(within(dlg).getByRole('radio', { name: /Статус/ }));
     expect(container.querySelectorAll('[data-group-key]')).toHaveLength(2);
-    expect(trigger().textContent).toMatch(/Группировка: Статус/);
+    expect(trigger().getAttribute('aria-label')).toMatch(/Группировка: Статус/);
     expect(within(dlg).getByRole('radiogroup', { name: /Подгруппа · внутри «Статус»/ })).toBeTruthy();
   });
 });

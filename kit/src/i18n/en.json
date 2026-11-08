@@ -534,5 +534,16 @@
   "kit.auth.expired.title": "Session expired.",
   "kit.auth.expired.hint": "The server rejected the sign-in — data on screen may be stale. Unsaved work stays until you sign in.",
   "kit.auth.error.title": "Sign-in failed",
-  "kit.auth.error.hint": "Keycloak did not confirm the sign-in — this is not “empty”. Sign in again."
+  "kit.auth.error.hint": "Keycloak did not confirm the sign-in — this is not “empty”. Sign in again.",
+  "kit.record.dock.full": "Passport full screen",
+  "kit.record.dock.exitFull": "Exit full screen",
+  "kit.record.view": "Passport view",
+  "kit.record.view.content": "Content",
+  "kit.record.view.props": "Properties",
+  "kit.record.view.analytics": "Analytics",
+  "kit.record.dock.close": "Close passport",
+  "kit.list.place.label": "Passport opens",
+  "kit.list.place.right": "as a right panel",
+  "kit.list.place.bottom": "at the bottom",
+  "kit.list.place.full": "full screen"
 }

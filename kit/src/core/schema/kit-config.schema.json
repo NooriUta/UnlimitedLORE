@@ -91,7 +91,8 @@
               "properties": {
                 "key": { "type": "string", "minLength": 1 },
                 "title": { "$ref": "#/$defs/title" },
-                "type": { "enum": ["text", "md", "enum", "ref", "date", "number"] }
+                "type": { "enum": ["text", "md", "enum", "ref", "date", "number"] },
+                "section": { "type": "string", "minLength": 1 }
               },
               "additionalProperties": false
             }

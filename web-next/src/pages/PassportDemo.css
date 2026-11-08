@@ -5,3 +5,7 @@
 .pp-demo__pick { display: inline-flex; align-items: center; gap: 6px; color: var(--t3); font-size: var(--fs-xs); }
 .pp-demo__pick select { max-width: 420px; min-height: max(var(--tap), 28px); padding: 0 8px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t1); font-size: var(--fs-sm); }
 .pp-demo__list { margin: 0; padding-left: 0; list-style: none; font-family: var(--mono); font-size: var(--fs-xs); line-height: 2.4; }
+.pp-demo__contract { border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+.pp-demo__contract > summary { padding: 6px 10px; cursor: pointer; color: var(--t1); font-size: var(--fs-sm); font-weight: 700; }
+.pp-demo__contract > p { margin: 0 10px 6px; color: var(--t3); font-size: var(--fs-xs); }
+.pp-demo__json { max-height: 420px; overflow: auto; margin: 0; padding: 8px 10px; border-top: 1px solid var(--bd); font-family: var(--mono); font-size: var(--fs-xs); white-space: pre; }
