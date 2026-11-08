@@ -3839,9 +3839,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__modes { display: flex; margin: 0 0 6px; }
 .sk-rec__panel { min-width: 0; }
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
-.sk-rec--props-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 16px; align-items: start; }
-.sk-rec--props-side.sk-rec--zones { grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(240px, 320px); }
-.sk-rec__props { position: sticky; top: 0; min-width: 0; padding-left: 12px; border-left: 1px solid var(--bd); }
+.sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 24px; align-items: start; }
+.sk-rec__content { min-width: 0; }
+.sk-rec__props { position: sticky; top: 0; min-width: 0; padding: 4px 0 0 16px; border-left: 1px solid var(--bd); }
 .sk-rec__props .sk-rec-fields { margin: 0; }
 .sk-rec__around {
   display: flex;
@@ -3859,23 +3859,47 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-tab[data-zone='around'] { color: var(--inf); }
 @media (max-width: 720px) {
   .sk-rec--zones { grid-template-columns: 1fr; }
-  .sk-rec--props-side, .sk-rec--props-side.sk-rec--zones { grid-template-columns: 1fr; }
+  .sk-rec__body { grid-template-columns: 1fr; }
   .sk-rec__props { position: static; padding-left: 0; border-left: 0; border-top: 1px solid var(--bd); }
   .sk-rec__around { order: 2; border-right: 0; border-top: 1px solid var(--bd); }
 }
 
 /* ---------- Место паспорта (S4-33): панелью справа / снизу / на весь экран ---------- */
-.sk-dock { position: relative; min-height: 640px; border: 1px solid var(--bd); border-radius: var(--r-lg); overflow: hidden; background: var(--bg0); }
-.sk-dock__backdrop { padding: 10px 14px; color: var(--t3); opacity: .6; }
-.sk-dock__panel { position: absolute; overflow: auto; padding: 12px 14px; background: var(--bg1); box-shadow: 0 10px 30px color-mix(in srgb, var(--bg0) 70%, transparent); }
-.sk-dock[data-placement='right'] .sk-dock__panel { top: 0; right: 0; bottom: 0; width: min(480px, 92%); border-left: 1px solid var(--bd); }
-.sk-dock[data-placement='bottom'] .sk-dock__panel { left: 0; right: 0; bottom: 0; height: 72%; border-top: 1px solid var(--bd); }
-.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; min-height: 0; border: 0; border-radius: 0; }
-.sk-dock[data-placement='full'] .sk-dock__panel { inset: 0; padding: 48px 20px 12px; }
+/* Док паспорта (08.11): сетка на высоту окна, у списка и паспорта — своя прокрутка,
+   страница целиком не крутится; список под паспортом живой. */
+.sk-dock {
+  display: grid;
+  height: var(--dock-h, calc(100dvh - 140px));
+  min-height: 360px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--bg0);
+}
+.sk-dock[data-placement='right'] { grid-template-columns: minmax(0, 1fr) min(560px, 45%); }
+.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, 2fr) minmax(0, 3fr); }
+.sk-dock__backdrop {
+  min-height: 0;
+  overflow: auto;
+}
+.sk-dock__panel {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px;
+  background: var(--bg1);
+}
+.sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
+.sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
+.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; }
+.sk-dock[data-placement='full'] .sk-dock__panel { padding: 48px 20px 12px; }
+.sk-dock__close { position: sticky; top: 0; float: right; z-index: 1; min-width: max(var(--tap), 28px); min-height: max(var(--tap), 28px); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-md); cursor: pointer; }
+.sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }
 .sk-dock__exit { position: absolute; top: 8px; right: 16px; z-index: 1; min-height: max(var(--tap), 28px); padding: 0 12px; border: 1px solid var(--bd); border-radius: var(--r-pill); background: var(--bg2); color: var(--t1); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 .sk-dock__exit:hover { border-color: var(--acc); }
 @media (max-width: 720px) {
-  .sk-dock__panel { inset: 0 !important; width: auto !important; height: auto !important; }
+  .sk-dock[data-placement] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
+  .sk-dock[data-placement] .sk-dock__backdrop { display: none; }
 }
 
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */

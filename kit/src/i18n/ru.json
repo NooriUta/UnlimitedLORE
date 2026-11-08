@@ -540,5 +540,10 @@
   "kit.record.view": "Вид паспорта",
   "kit.record.view.content": "Контент",
   "kit.record.view.props": "Свойства",
-  "kit.record.view.analytics": "Аналитика"
+  "kit.record.view.analytics": "Аналитика",
+  "kit.record.dock.close": "Закрыть паспорт",
+  "kit.list.place.label": "Паспорт открывается",
+  "kit.list.place.right": "панелью справа",
+  "kit.list.place.bottom": "снизу",
+  "kit.list.place.full": "на весь экран"
 }

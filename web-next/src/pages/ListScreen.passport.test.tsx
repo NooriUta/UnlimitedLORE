@@ -5,7 +5,7 @@
 // в демо /kit/passport. Теперь щелчок по записи открывает её паспорт поверх списка;
 // место (справа / снизу / весь экран) переключается, «Закрыть» возвращает к списку.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import { ListScreen } from './ListScreen';
@@ -37,7 +37,10 @@ describe('паспорт записи открывается из живого �
     });
     expect(dock.getAttribute('data-placement')).toBe('right');
     await waitFor(() => expect(container.querySelector('[data-testid="kit-rec-dock"] article[data-kind]')).toBeTruthy(), { timeout: 8000 }); // ленивый чанк MartProse/mermaid
-    fireEvent.click(screen.getByRole('button', { name: /весь экран/i }));
+    // Место — в «Вид» списка (08.11), а не полосой над паспортом.
+    expect(container.querySelector('[data-testid="list-passport-bar"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Вид/ }));
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Паспорт открывается' })).getByRole('radio', { name: 'на весь экран' }));
     expect(container.querySelector('[data-testid="kit-rec-dock"]')!.getAttribute('data-placement')).toBe('full');
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть паспорт' }));
     expect(container.querySelector('[data-testid="kit-rec-dock"]')).toBeNull();

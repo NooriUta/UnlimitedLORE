@@ -6,6 +6,7 @@
 // возвращается на кнопку. Выбор — radiogroup, применяется сразу.
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KitShowClosed } from '../core/contract';
+import type { RecordPlacement } from '../record/RecordDock';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey } from '../i18n';
 import { useFocusTrap } from '../keyboard/focusTrap';
@@ -14,9 +15,14 @@ export interface ViewMenuProps {
   closed: KitShowClosed;
   modes: readonly KitShowClosed[];
   onClosed: (mode: KitShowClosed) => void;
+  /** Где открывается паспорт записи — настройка использования, а не элемент паспорта (владелица 08.11). Без onPlace раздела нет. */
+  place?: RecordPlacement;
+  onPlace?: (p: RecordPlacement) => void;
 }
 
-export function ViewMenu({ closed, modes, onClosed }: ViewMenuProps) {
+const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
+
+export function ViewMenu({ closed, modes, onClosed, place, onPlace }: ViewMenuProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [open, setOpen] = useState(false);
@@ -71,6 +77,17 @@ export function ViewMenu({ closed, modes, onClosed }: ViewMenuProps) {
             ))}
           </div>
           <p className="sk-vmenu__hint">{t('kit.list.closed.hint')}</p>
+          {onPlace && (
+            <div role="radiogroup" aria-label={t('kit.list.place.label')} className="sk-vmenu__seg">
+              <span className="sk-vmenu__label" aria-hidden="true">{t('kit.list.place.label')}</span>
+              {PLACES.map(p => (
+                <button key={p} type="button" role="radio" aria-checked={p === place}
+                  className={`sk-list__view${p === place ? ' is-on' : ''}`} onClick={() => onPlace(p)}>
+                  {t(`kit.list.place.${p}` as KitKey)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </span>

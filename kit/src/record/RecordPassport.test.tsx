@@ -43,9 +43,8 @@ describe('снизу / на весь экран — свойства колон�
     const side = container.querySelector('aside[data-zone="props"]') as HTMLElement;
     expect(side).not.toBeNull();
     expect(within(side).getByTestId('kit-fields').textContent).toContain('1.0');
-    expect(container.querySelector('.sk-rec')?.classList.contains('sk-rec--props-side')).toBe(true);
-    // колонка справа — после основного блока в порядке документа
-    expect(container.querySelector('.sk-rec__main')?.nextElementSibling).toBe(side);
+    expect(side.parentElement?.classList.contains('sk-rec__body')).toBe(true); // 08.11: вровень с контентом, под шапкой
+    expect(container.querySelector('.sk-rec__content')?.nextElementSibling).toBe(side);
   });
   it('на другой вкладке колонка свойств остаётся', () => {
     const { container } = view('full', 'links');

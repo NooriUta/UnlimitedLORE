@@ -186,7 +186,6 @@
   "pp.place.right": "панелью справа",
   "pp.place.bottom": "снизу",
   "pp.place.full": "на весь экран",
-  "pp.close": "Закрыть паспорт",
   "pp.loading": "Загружаем паспорт",
   "pp.notFound": "Запись {id} не найдена",
   "pp.noTasks": "Задач нет",

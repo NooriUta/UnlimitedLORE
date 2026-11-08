@@ -241,6 +241,21 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     );
   }
 
+  const tabsBlock = shown.length > 1 ? (
+    <Tabs className="sk-rec__tabs" variant="underline" items={shown} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
+      {panel}
+    </Tabs>
+  ) : <div className="sk-rec__panel">{panel}</div>;
+  // Снизу / на весь экран: шапка на всю ширину, под ней в одном ряду вкладки и «Свойства» —
+  // свойства начинаются вровень с контентом, а не с заголовком (владелица 08.11).
+  const propsAside = propsSide && kind ? (
+    <aside className="sk-rec__props" data-zone="props" aria-label={kitT(lang, 'kit.record.tab.props')}>
+      <p className="sk-rec__zone">{kitT(lang, 'kit.record.tab.props')}</p>
+      <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
+        <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+      </BlockBoundary>
+    </aside>
+  ) : null;
   const mainBlock = (
     <>
         {switcher}
@@ -255,11 +270,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
           <RecordVerdict record={record} ctx={ctx} lang={lang} />
         </BlockBoundary>
-        {shown.length > 1 ? (
-          <Tabs className="sk-rec__tabs" variant="underline" items={shown} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
-            {panel}
-          </Tabs>
-        ) : <div className="sk-rec__panel">{panel}</div>}
+        {propsAside ? <div className="sk-rec__body"><div className="sk-rec__content">{tabsBlock}</div>{propsAside}</div> : tabsBlock}
     </>
   );
   const around = aside ? (
@@ -279,19 +290,11 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     </aside>
   ) : null;
 
-  const propsAside = propsSide && kind ? (
-    <aside className="sk-rec__props" data-zone="props" aria-label={kitT(lang, 'kit.record.tab.props')}>
-      <p className="sk-rec__zone">{kitT(lang, 'kit.record.tab.props')}</p>
-      <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
-        <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
-      </BlockBoundary>
-    </aside>
-  ) : null;
-  const cols = aside || propsAside;
-  const cls = ['sk-rec', aside ? 'sk-rec--zones' : '', propsAside ? 'sk-rec--props-side' : '', className].filter(Boolean).join(' ');
+  const cols = aside;
+  const cls = ['sk-rec', aside ? 'sk-rec--zones' : '', className].filter(Boolean).join(' ');
   return (
     <article className={cls} aria-labelledby={titleId} data-kind={record.kind} data-placement={placement}>
-      {cols ? (<>{around}<div className="sk-rec__main">{mainBlock}</div>{propsAside}</>) : mainBlock}
+      {cols ? (<>{around}<div className="sk-rec__main">{mainBlock}</div></>) : mainBlock}
     </article>
   );
 }

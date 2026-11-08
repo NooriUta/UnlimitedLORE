@@ -540,5 +540,10 @@
   "kit.record.view": "Passport view",
   "kit.record.view.content": "Content",
   "kit.record.view.props": "Properties",
-  "kit.record.view.analytics": "Analytics"
+  "kit.record.view.analytics": "Analytics",
+  "kit.record.dock.close": "Close passport",
+  "kit.list.place.label": "Passport opens",
+  "kit.list.place.right": "as a right panel",
+  "kit.list.place.bottom": "at the bottom",
+  "kit.list.place.full": "full screen"
 }

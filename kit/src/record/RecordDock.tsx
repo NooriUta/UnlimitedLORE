@@ -16,9 +16,11 @@ export interface RecordDockProps {
   className?: string;
   /** Выход из полного экрана (кнопка и Esc). Без него кнопки нет — выход за приложением. */
   onExitFull?: () => void;
+  /** Закрыть паспорт — кнопка дока, а не полоса над паспортом (владелица 08.11). */
+  onClose?: () => void;
 }
 
-export function RecordDock({ placement, backdrop, children, className, onExitFull }: RecordDockProps) {
+export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose }: RecordDockProps) {
   const lang = useKitLang();
   const full = placement === 'full';
   useEffect(() => {
@@ -30,11 +32,17 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
   return (
     <div className={['sk-dock', className].filter(Boolean).join(' ')} data-placement={placement} data-testid="kit-rec-dock"
       {...(full ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': kitT(lang, 'kit.record.dock.full') } : {})}>
-      {!full && backdrop && <div className="sk-dock__backdrop" aria-hidden="true">{backdrop}</div>}
+      {/* Список под паспортом живой: своя прокрутка, щелчок по другой записи (08.11). */}
+      {!full && backdrop && <div className="sk-dock__backdrop">{backdrop}</div>}
       {full && onExitFull && (
         <button type="button" className="sk-dock__exit" onClick={onExitFull} title="Esc">{kitT(lang, 'kit.record.dock.exitFull')}</button>
       )}
-      <section className="sk-dock__panel">{children}</section>
+      <section className="sk-dock__panel">
+        {onClose && (
+          <button type="button" className="sk-dock__close" onClick={onClose} aria-label={kitT(lang, 'kit.record.dock.close')} title={kitT(lang, 'kit.record.dock.close')}>×</button>
+        )}
+        {children}
+      </section>
     </div>
   );
 }

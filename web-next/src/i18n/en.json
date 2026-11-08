@@ -186,7 +186,6 @@
   "pp.place.right": "right panel",
   "pp.place.bottom": "bottom",
   "pp.place.full": "full screen",
-  "pp.close": "Close passport",
   "pp.loading": "Loading the passport",
   "pp.notFound": "Record {id} not found",
   "pp.noTasks": "No tasks",
