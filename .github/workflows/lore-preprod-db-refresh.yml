@@ -1,0 +1,66 @@
+name: LORE preprod DB refresh (prod snapshot → ci-server)
+
+# Снимок базы прода (lore-host) → system_aida_lore_preprod на LORE-ygg 131 —
+# SPRINT_LORE_PIPELINE_HOST/PL-04 (ADR-LORE-046: «своя копия базы, снимок прода,
+# обновляется по запросу»). Логика — scripts/preprod-db-refresh.sh.
+#
+# ТОЛЬКО ручной запуск и только с подтверждением: поле confirm обязано
+# совпасть с именем базы препрода. По умолчанию dry_run=true — проверки доступа
+# и состояния без единой правки. Прежняя база препрода не удаляется, а
+# переименовывается в <база>_bak_<время>. Прод только читается (BACKUP DATABASE
+# оставляет ещё один архив в каталоге бэкапов LORE-ygg lore-host).
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Подтверждение: впишите system_aida_lore_preprod'
+        required: true
+        type: string
+      dry_run:
+        description: 'true — только проверки, ничего не менять'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+
+concurrency:
+  group: lore-cd-preprod   # тот же замок, что у LORE CD: не заливать базу посреди выкатки препрода
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_DB: system_aida_lore_preprod
+      LORE_HOST: lore-host.seidrstudio.pro
+      LORE_HOST_USER: nooriuta
+      LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
+      ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Подтверждение
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "$TARGET_DB" ]; then
+            echo "::error::confirm='$CONFIRM' ≠ $TARGET_DB — снимок не заливается"; exit 1
+          fi
+          echo "подтверждено: $TARGET_DB, dry_run=$DRY_RUN"
+
+      - name: SSH-ключ CD и закреплённый ключ хоста
+        env:
+          LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
+        run: bash .github/scripts/lore-host-deploy.sh ssh
+
+      - name: Снимок прода → база препрода
+        run: bash scripts/preprod-db-refresh.sh
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/lore_host

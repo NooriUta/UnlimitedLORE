@@ -13,6 +13,44 @@ name: LORE Release (publish on tag)
 #
 # Тег — и есть событие релиза, поэтому триггер по тегу, а не по ветке: релизы
 # режутся на develop, и привязка к ветке ничего бы не дала.
+#
+# ── PL-05 (08.11.2026): тег выкатывает ПРОД на lore-host ────────────────────
+# SPRINT_LORE_PIPELINE_HOST/PL-05, ADR-LORE-046, D-2026-UXR-CD-PREPROD-PROD-SPLIT.
+# Джоб deploy-prod (рядом с publish, независимо от него) везёт на lore-host ТОТ ЖЕ
+# образ, что прошёл препрод на ci-server (lore-cd.yml помечает его
+# unlimitedlore-<сервис>:<sha8> после всех проб). Сборки здесь нет: образа на 131
+# нет — красный. Логика по шагам — .github/scripts/lore-host-deploy.sh:
+#   1. resolve — тег → коммит препрода (тот же коммит или родитель merge с тем же
+#      деревом) → три образа :sha8 на 131, их Id, коммит сборки бэкенда (метка
+#      revision), версия схемы кода, бандлы v1/v2 из образов;
+#   2. ssh — ключ LORE_HOST_SSH_KEY, отпечаток хоста закреплён;
+#   3. state — каталоги, compose, контейнеры, версия схемы прода (только чтение);
+#   4. ship — docker save | ssh docker load, сверка Id;
+#   5. compose — бэкап docker-compose.yml.bak-<тег> в /home/nooriuta/UnlimitedLORE-deploy
+#      и /home/nooriuta/lore-app-next, замена ТОЛЬКО тегов образов; .env не трогается;
+#   6. db — код новее схемы прода → BACKUP DATABASE кредом работающего бэкенда и
+#      накатка отдельным `compose run` (LORE_MIGRATE_ONLY, LORE_MART_AUTH=basic);
+#   7. up — compose up -d: бэкенд (ждём healthy) → v1 → v2;
+#   8. theme — тема KC из дерева тега → /home/nooriuta/keycloak/themes/lore;
+#   9. probe — бандлы v1/v2 на lore.odal и new.lore, /lore/version = коммит
+#      сборки, в логе «схема сверена: БД vN = код vN».
+# Ручной запуск: tag + dry_run=true — только 1–3 и план, без публикации релиза;
+# deploy=true — боевая выкатка указанного тега (так же делается ОТКАТ на прошлый
+# тег: его образы :sha8 лежат на 131 и на lore-host). Только dispatch tag без
+# флагов — как раньше: перепубликация, прод не трогается.
+#
+# ОТКАТ (руками на lore-host, если пробы красные или прод сломан):
+#   cd /home/nooriuta/UnlimitedLORE-deploy && cp docker-compose.yml.bak-<тег> docker-compose.yml \
+#     && docker compose up -d lore-backend lore-app
+#   cd /home/nooriuta/lore-app-next && cp docker-compose.yml.bak-<тег> docker-compose.yml \
+#     && docker compose up -d
+#   Прежние образы на lore-host остаются (docker load их не удаляет). База: шаги
+#   миграций только вперёд (ADR-LORE-023). Аддитивные шаги старый код переживает
+#   (форвард-совместимый режим); иначе — бэкап, снятый шагом db перед накаткой
+#   (/home/arcadedb/backups/system_aida_lore/ в LORE-ygg на lore-host),
+#   разворачивается распаковкой в каталог баз (restore по file:// запрещён).
+#   Тема KC: ручной запуск этого workflow с tag=<прошлый тег>, deploy=true
+#   перевыкатит и образы, и тему прошлого тега.
 
 on:
   push:
@@ -29,6 +67,22 @@ on:
         description: 'Тег для (пере)публикации, напр. v1.0.58'
         required: true
         type: string
+      dry_run:
+        # PL-05: true — только проверки выкатки на lore-host (resolve, ssh, состояние,
+        # план). Релиз НЕ публикуется, Telegram/зеркало не трогаются, прод не меняется.
+        description: 'true — проверить выкатку прода, ничего не меняя'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      deploy:
+        # PL-05: true — боевая выкатка тега на lore-host (повтор или откат на
+        # прошлый тег). По умолчанию ручной запуск прод НЕ трогает.
+        description: 'true — выкатить этот тег на прод (lore-host)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 permissions:
   contents: write        # нужно для создания Release
@@ -40,6 +94,8 @@ concurrency:
 jobs:
   publish:
     name: Publish Forgejo release from RELEASE-<tag>.md
+    # PL-05: dry-run выкатки прода ничего не публикует (ни релиз, ни зеркало, ни Telegram).
+    if: github.event_name == 'push' || inputs.dry_run != 'true'
     # AL-88 (2026-07-30): пробовали выделенный раннер lore-only — см. тот же
     # комментарий в backend-ci.yml про необъяснённый сбой. Откачено к общему пулу.
     runs-on: ubuntu-latest
@@ -501,3 +557,99 @@ jobs:
         run: |
           echo "::error::оповещение о релизе в Telegram НЕ доставлено (см. шаг Notify release). Релиз опубликован; проверьте выход xray для api.telegram.org (~/xray/refresh-vpn.sh на ci-server)."
           exit 1
+
+  # ── PL-05: выкатка прода на lore-host ───────────────────────────────────────
+  # Рядом с publish, а не после него: публикация описания и выкатка — разные
+  # действия с разными предусловиями (как зеркало и токен, SE-12). Порядок шагов,
+  # что они меняют и как откатить — в шапке файла; логика — lore-host-deploy.sh.
+  # Меняющие шаги стоят под steps.mode.outputs.live == 'true': dry-run проходит
+  # только resolve / ssh / state / plan.
+  deploy-prod:
+    name: Deploy prod to lore-host (same :sha8 images as preprod)
+    if: github.event_name == 'push' || inputs.dry_run == 'true' || inputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    env:
+      # Адрес — по имени (SPEC-INFRA-ADDRESS-BY-NAME), ключ хоста закреплён
+      # отпечатком: keyscan без сверки — доверие первому ответившему.
+      LORE_HOST: lore-host.seidrstudio.pro
+      LORE_HOST_USER: nooriuta
+      LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
+      DEPLOY_STATE: /tmp/lore-deploy.env
+      # Проба /lore/version по токену пробы (client_credentials), как в CD.
+      LORE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
+      PROBE_CLIENT_SECRET: ${{ secrets.LORE_CD_PROBE_CLIENT_SECRET }}
+      PROBE_CURL: docker run --rm --network host curlimages/curl:latest curl
+      PROBE_ATTEMPTS: "12"
+      PROBE_DELAY: "10"
+    steps:
+      # Скрипты — из ref workflow, содержимое релиза (дерево, тема, версия схемы) —
+      # из тега через git: так dry-run со своей ветки проверяет любой тег.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Режим (live / dry-run), тег и его место в main
+        id: mode
+        env:
+          INPUT_TAG: ${{ inputs.tag || '' }}
+          DRY: ${{ inputs.dry_run || 'false' }}
+        run: |
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+          if [ "$GITHUB_EVENT_NAME" = push ] || [ "$DRY" != "true" ]; then live=true; else live=false; fi
+          echo "live=$live" >> "$GITHUB_OUTPUT"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          if [ "$live" = true ]; then echo "DRY_RUN=false" >> "$GITHUB_ENV"; else echo "DRY_RUN=true" >> "$GITHUB_ENV"; fi
+          git fetch -q --tags origin "+refs/heads/main:refs/remotes/origin/main" || true
+          git rev-parse -q --verify "refs/tags/$TAG^{commit}" >/dev/null || { echo "::error::тега $TAG нет"; exit 1; }
+          if git merge-base --is-ancestor "refs/tags/$TAG" origin/main 2>/dev/null; then
+            echo "тег $TAG содержится в main"
+          elif [ "$live" = true ]; then
+            echo "::error::тег $TAG НЕ содержится в main — на прод едет только релиз из main (ADR-LORE-046)"; exit 1
+          else
+            echo "::warning::dry-run: тег $TAG не в main — боевой прогон упал бы здесь"
+          fi
+          echo "режим: live=$live, тег $TAG"
+          [ "$live" = true ] || echo "::notice::DRY-RUN: только resolve / ssh / state / plan — прод не меняется"
+
+      - name: Образы тега на 131 (прошли препрод), без пересборки
+        run: bash .github/scripts/lore-host-deploy.sh resolve
+
+      - name: SSH-ключ CD и закреплённый ключ хоста
+        env:
+          LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
+        run: bash .github/scripts/lore-host-deploy.sh ssh
+
+      - name: Что сейчас на lore-host (только чтение)
+        run: bash .github/scripts/lore-host-deploy.sh state
+
+      - name: План выкатки (только чтение)
+        run: bash .github/scripts/lore-host-deploy.sh plan
+
+      - name: Перенос образов (docker save | ssh docker load) и сверка Id
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/lore-host-deploy.sh ship
+
+      - name: Бэкап compose (*.bak-<тег>) и замена тегов образов
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/lore-host-deploy.sh compose
+
+      - name: База прода — бэкап и накатка, если тег несёт миграции
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/lore-host-deploy.sh db
+
+      - name: compose up -d по сервисам (бэкенд → v1 → v2)
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/lore-host-deploy.sh up
+
+      - name: Тема Keycloak → /home/nooriuta/keycloak/themes/lore
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/lore-host-deploy.sh theme
+
+      - name: Пробы прода (бандлы, /lore/version, БД vN = код vN)
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/lore-host-deploy.sh probe
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/lore_host
