@@ -63,7 +63,7 @@ public class LoreRecordResource extends LoreResourceBase {
     }
 
     /** Исход чтения одного среза: строки, либо состояние отказа с причиной. */
-    record Read(List<Map<String, Object>> rows, String state, String error) {
+    record Read(List<Map<String, Object>> rows, String state, String error, Throwable cause) {
         boolean ok() { return "ok".equals(state); }
     }
 
@@ -106,7 +106,7 @@ public class LoreRecordResource extends LoreResourceBase {
         if ("denied".equals(main.state()))
             return noStore(Response.status(Response.Status.FORBIDDEN).entity(new LoreError("SCOPE_EMPTY", main.error())));
         if (!main.ok())
-            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(new LoreError("LORE_UPSTREAM", main.error())));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(main.cause(), main.error())));
         if (main.rows().isEmpty())
             return noStore(Response.status(Response.Status.NOT_FOUND).entity(new LoreError("NOT_FOUND",
                 type + " '" + id + "' не найден" + (scope != null ? " (или вне проектного скоупа)" : ""))));
@@ -226,13 +226,13 @@ public class LoreRecordResource extends LoreResourceBase {
     /** Чтение среза тем же compose и скоупом, что у /lore/slice. */
     private Read read(String slice, Map<String, String> given, Set<String> scope) {
         if (AidaLoreResource.scopeDenies(slice, scope))
-            return new Read(List.of(), "denied", "проектный скоуп: у вызывающего нет разрешённых проектов — срез " + slice);
+            return new Read(List.of(), "denied", "проектный скоуп: у вызывающего нет разрешённых проектов — срез " + slice, null);
         try {
             LoreSlices.Composed c = LoreSlices.compose(slice, given, scope);
-            return new Read(ingestService.queryPublic(c.sql(), c.params()), "ok", null);
+            return new Read(ingestService.queryPublic(c.sql(), c.params()), "ok", null, null);
         } catch (RuntimeException e) {
             LOG.warnf("[LORE RECORD] slice=%s %s: %s", slice, given, e.getMessage());
-            return new Read(List.of(), "error", slice + ": " + e.getMessage());
+            return new Read(List.of(), "error", slice + ": " + e.getMessage(), e);
         }
     }
 
