@@ -48,7 +48,7 @@ describe('lore.record/1 — из слайсов', () => {
     expect(c.meta.sources).toContainEqual({ block: 'tasks', state: 'error', reason: 'SNAPSHOT_MISS: нет в снимке' });
     expect(c.facts?.tasks).toEqual({ error: 'SNAPSHOT_MISS: нет в снимке' });
     expect(c.meta.facade).toBe('client-emulated');
-    expect(c.perms.can_edit).toBe(false);
+    expect(c.perms.can_edit).toBe(true); // S4-24: текст спринта правится на месте (ADR-LORE-047 п. 14.1)
     expect(c.perms.reason).toBeTruthy();
   });
 });

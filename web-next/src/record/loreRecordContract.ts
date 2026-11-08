@@ -7,6 +7,7 @@ import type { KitConfig, KitData, KitEdge, KitLang, KitRecord } from '@seidr/kit
 import { appT } from '../i18n';
 import { baseConfig, type PassportLoad } from './passportAdapters';
 import { SPRINT_FACTS } from './loreRecord';
+import { ADR_BODY_READONLY, EDITABLE_BODY } from './passportSave';
 
 export type FieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number';
 export interface LoreField {
@@ -39,6 +40,15 @@ const TAB_REL: Record<string, { rel: string; dir: 'out' | 'in' }> = {
   tasks: { rel: 'HAS_TASK', dir: 'out' },
   decisions: { rel: 'DECIDED_IN', dir: 'in' },
 };
+
+/** Право править (ADR-LORE-047 п. 14.1): текст спринта, задачи, спеки — существующими путями записи; ADR — пока нет. */
+function permsOf(type: string, lang: KitLang): LoreRecord1['perms'] {
+  const canEdit = (EDITABLE_BODY as readonly string[]).includes(type);
+  return {
+    can_edit: canEdit, can_status: false, can_create: false, status_next: [],
+    reason: canEdit ? appT(lang, 'pp.contract.editNoVersion') : type === 'adr' ? ADR_BODY_READONLY : appT(lang, 'pp.contract.readonly'),
+  };
+}
 
 /** Эмуляция фасада: загрузка из слайсов → объект контракта (только данные, без функций). */
 export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang = 'ru'): LoreRecord1 {
@@ -85,7 +95,7 @@ export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang
     values: JSON.parse(JSON.stringify(values)) as Record<string, unknown>,
     links,
     facts,
-    perms: { can_edit: false, can_status: false, can_create: false, status_next: [], reason: appT(lang, 'pp.contract.readonly') },
+    perms: permsOf(type, lang),
     meta: {
       loaded_at: loadedAt,
       facade: 'client-emulated',
@@ -111,9 +121,10 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     key: t.key, title: t.label,
     render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),
   }));
-  const config: KitConfig = baseConfig(lang, {
+  const config0: KitConfig = baseConfig(lang, {
     [type]: { title: c.schema.label, icon: c.schema.icon, fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind })), ...(tabs.length ? { tabs } : {}) },
   });
+  const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   const data: KitData = { records: [record, ...others], edges, journal: [], meta: { generated_at: c.meta.loaded_at, ...(errors.length ? { errors } : {}) } };
   return { record, data, config, ...(c.facts?.tasks ? { facts: SPRINT_FACTS } : {}) };
 }

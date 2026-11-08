@@ -230,5 +230,6 @@
   "pp.contract.noLinks": "Связей нет",
   "pp.contract.title": "Объект контракта lore.record/1",
   "pp.contract.hint": "Ровно это получает kit. Фасад эмулирован на клиенте (meta.facade), обязательные поля — первыми в «Свойствах».",
-  "pp.contract.show": "Показать объект"
+  "pp.contract.show": "Показать объект",
+  "pp.contract.editNoVersion": "Текст правится на месте; проверки версии ещё нет — одновременная правка двоих не защищена (ADR-LORE-047, п. 4)."
 }
