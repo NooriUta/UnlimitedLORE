@@ -57,9 +57,10 @@ export interface ScopePickerProps {
   className?: string;
 }
 
-function summaryText(lang: KitLang, s: ScopeSummary): string {
+/** Скрытое — числом (S4-23): «Все проекты · 23», если число проектов известно. */
+function summaryText(lang: KitLang, s: ScopeSummary, total = 0): string {
   switch (s.kind) {
-    case 'all': return kitT(lang, 'kit.scope.all');
+    case 'all': return total > 0 ? kitT(lang, 'kit.scope.allN', { n: total }) : kitT(lang, 'kit.scope.all');
     case 'mine': return kitT(lang, 'kit.scope.summary.mine', { n: s.count });
     case 'one': return s.title;
     case 'many': return kitT(lang, 'kit.scope.summary.many', { n: s.count });
@@ -86,7 +87,7 @@ function ScopePickerInner({
   const trigger = useRef<HTMLButtonElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const summary = summarizeScope(value, options, mine === 'known');
-  const sumText = summaryText(lang, summary);
+  const sumText = summaryText(lang, summary, options.length);
 
   const close = (refocus = true) => {
     setOpen(false);
@@ -133,6 +134,7 @@ function ScopePickerInner({
         <GameIcon slug={icon} size={14} />
         <span className="sk-scope__name">{name}</span>
         <span className="sk-scope__value" data-kind={summary.kind}>{sumText}</span>
+        <span className="sk-scope__chev" aria-hidden="true">▾</span>
       </button>
       {open && narrow && (
         <Sheet open onClose={() => setOpen(false)} title={name} side="bottom" className="sk-scope__sheet">

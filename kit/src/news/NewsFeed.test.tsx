@@ -415,3 +415,13 @@ describe('S7A-02 · доступность', () => {
     expect(screen.getByRole('button', { name: 'Mark as read' })).toBeTruthy();
   });
 });
+
+// S4-23: «Новости» стали первым разделом v2 — лента внутри раздела (title=null) не должна
+// давать второй ориентир с тем же именем, что h1 раздела (axe landmark-unique).
+describe('лента внутри раздела (title=null)', () => {
+  it('корень — не именованный region, а блок', async () => {
+    const { container } = await mount(src(), { title: null });
+    expect(container.querySelector('section.sk-news')).toBeNull();
+    expect(container.querySelector('div.sk-news')).not.toBeNull();
+  });
+});
