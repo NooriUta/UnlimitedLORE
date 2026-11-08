@@ -257,6 +257,29 @@ public class ForgejoBridge {
     static boolean mergeAllowed(String gateStatus) { return GREEN.equals(gateStatus); }
 
     /**
+     * S2-14: поля KnowPR из ответа Forgejo {@code GET /repos/{o}/{r}/pulls/{n}} —
+     * title, url (html_url), merged_at, head_ref, base_ref. Отсутствующее или пустое
+     * поле в карту НЕ попадает: «не влит» (merged_at = null) не должно выглядеть как
+     * пустая дата, а UPDATE по карте не затирает уже записанное пустотой.
+     */
+    static Map<String, Object> prFields(JsonObject pr) {
+        Map<String, Object> f = new java.util.LinkedHashMap<>();
+        if (pr == null) return f;
+        putText(f, "title", pr.getValue("title"));
+        putText(f, "url", pr.getValue("html_url"));
+        putText(f, "merged_at", pr.getValue("merged_at"));
+        Object head = pr.getValue("head");
+        if (head instanceof JsonObject h) putText(f, "head_ref", h.getValue("ref"));
+        Object base = pr.getValue("base");
+        if (base instanceof JsonObject b) putText(f, "base_ref", b.getValue("ref"));
+        return f;
+    }
+
+    private static void putText(Map<String, Object> f, String key, Object v) {
+        if (v instanceof String s && !s.isBlank()) f.put(key, s);
+    }
+
+    /**
      * SE-09: цеплять ли PR к автоматически выбранному релизу после слияния.
      *
      * <p>Признак «вышел» — тег в РЕПОЗИТОРИИ, а не поле тега у релиза: план
