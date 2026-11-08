@@ -3267,6 +3267,18 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 /* Меню оболочки, свёрнутое на время чтения (D-2026-UXR-READ-COLLAPSE). */
 .sk-shell--menu-collapsed .sk-shell__body { grid-template-columns: auto minmax(0, 1fr); }
 .sk-shell__ear { align-self: start; margin-top: 8px; }
+
+/* S4-MENU-STATES: третье состояние меню — рейка иконок. Колонка узкая, подписи
+   скрыты, иконка по центру; цель касания остаётся во всю ширину рейки. */
+.sk-shell--menu-rail .sk-shell__body { grid-template-columns: var(--sk-rail, 56px) minmax(0, 1fr); }
+.sk-shell--menu-rail .sk-shell__label,
+.sk-shell--menu-rail .sk-shell__id,
+.sk-shell--menu-rail .sk-shell__tag,
+.sk-shell--menu-rail .sk-shell__grp-title,
+.sk-shell--menu-rail .sk-shell__note { display: none; }
+.sk-shell--menu-rail .sk-shell__item { justify-content: center; padding-inline: 0; }
+.sk-shell--menu-rail .sk-shell__side { padding: 6px 2px; }
+.sk-shell__menu-toggle { flex: 0 0 auto; }
 /* Колонка свойств открыта — тексту чуть меньше правого поля. */
 .sk-read--rail .sk-read__main { padding-right: 8px; }
 
