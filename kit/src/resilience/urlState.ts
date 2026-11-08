@@ -55,3 +55,27 @@ export function pushUrlState(
     return 'hash';
   }
 }
+
+// ── параметры раздела (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-13, баг B-07) ──────
+// Параметры URL по умолчанию принадлежат РАЗДЕЛУ: запрос q, фильтры списка
+// (lf/lq/lg/ls/lv), дерева (tq/tlvl), вкладка и запись. Переход в другой
+// раздел или модуль оставляет только навигацию (`nav`) и явно объявленные
+// глобальные параметры (`keep`). Иначе q и фильтры прежнего раздела молча
+// фильтровали соседний — пользователь видел «пусто» без фильтра на экране.
+
+/**
+ * Патч для pushUrlState при смене раздела: `nav` — новые значения навигации,
+ * все остальные параметры текущего URL, кроме `keep`, снимаются (null).
+ */
+export function sectionScopedPatch(
+  current: URLSearchParams,
+  nav: Record<string, string | null | undefined>,
+  keep: readonly string[] = [],
+): Record<string, string | null | undefined> {
+  const patch: Record<string, string | null | undefined> = {};
+  const keepSet = new Set(keep);
+  current.forEach((_v, k) => {
+    if (!(k in nav) && !keepSet.has(k)) patch[k] = null;
+  });
+  return { ...patch, ...nav };
+}

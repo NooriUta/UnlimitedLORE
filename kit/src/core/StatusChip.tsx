@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import { matchHotkey } from '../resilience/hotkeys';
+import { isEditableTarget } from '../resilience/editable';
 import type { KitConfig, KitRecord } from './contract';
 import { StatusIcon } from './StatusIcon';
 import { StatusPopover } from './StatusPopover';
@@ -24,16 +25,16 @@ export interface StatusChipProps {
   hotkey?: boolean;
   /** Только иконка (плотный список); имя для чтения остаётся. */
   compact?: boolean;
+  /** S4-07: завершающие статусы (done/cancelled) — третьим шагом, с подтверждением. */
+  confirmFinal?: boolean;
   onChange?: (to: string) => void;
   className?: string;
 }
 
-function isTyping(t: EventTarget | null): boolean {
-  if (!(t instanceof HTMLElement)) return false;
-  return t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
-}
+// S4-13 (B-08): «набирает текст» — одна проверка на весь kit.
+const isTyping = isEditableTarget;
 
-export function StatusChip({ record, config, save, role, hotkey, compact, onChange, className }: StatusChipProps) {
+export function StatusChip({ record, config, save, role, hotkey, compact, confirmFinal, onChange, className }: StatusChipProps) {
   const lang = useKitLang();
   const saveFn = useMemo(() => save ?? resolveSave(config.hooks), [save, config.hooks]);
   const st = useStatusChange(record, saveFn, onChange);
@@ -119,6 +120,7 @@ export function StatusChip({ record, config, save, role, hotkey, compact, onChan
           id={popId}
           statuses={config.statuses}
           current={st.status}
+          confirmFinal={confirmFinal}
           onPick={pick}
           onCancel={() => close(true)}
         />

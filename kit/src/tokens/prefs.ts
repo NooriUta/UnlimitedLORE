@@ -113,3 +113,35 @@ export function applyTheme(el: AttrTarget, p: ThemePrefs): void {
     else el.setAttribute(k, v);
   }
 }
+
+// ── Вид для чтения: размер текста и цветные полоски (S4-02) ─────────────────
+// Личные настройки пользователя (контракт S2: text_size, stripes). Как и
+// плотность, это атрибуты корня; значения шкалы живут только в seidr.css.
+
+export type TextSize = 'sm' | 'md' | 'lg';
+
+/** md — умолчание (шкала v1 как есть). */
+export const TEXT_SIZES: readonly TextSize[] = ['sm', 'md', 'lg'];
+
+export interface DisplayPrefs {
+  textSize: TextSize;
+  /** Цветные полоски статусов (кромки колонок доски и т. п.). */
+  stripes: boolean;
+}
+
+export const DEFAULT_DISPLAY: DisplayPrefs = { textSize: 'md', stripes: true };
+
+/** null = атрибут снять: умолчания живут в :root. */
+export function displayAttrs(p: DisplayPrefs): Record<'data-text-size' | 'data-stripes', string | null> {
+  return {
+    'data-text-size': p.textSize === DEFAULT_DISPLAY.textSize ? null : p.textSize,
+    'data-stripes': p.stripes ? null : 'off',
+  };
+}
+
+export function applyDisplay(el: AttrTarget, p: DisplayPrefs): void {
+  for (const [k, v] of Object.entries(displayAttrs(p))) {
+    if (v === null) el.removeAttribute(k);
+    else el.setAttribute(k, v);
+  }
+}

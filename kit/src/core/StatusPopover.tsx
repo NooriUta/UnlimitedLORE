@@ -3,19 +3,28 @@
 // клавиша 1…9 (свой hotkey статуса важнее номера). Esc и «Отмена» закрывают
 // без выбора. Клавиши — по e.code (работают в русской раскладке, S4-00f).
 // Пункты — только допустимые переходы (allow); если их нет — честный текст.
-import { useEffect, useRef } from 'react';
+// S4-07: пункты — в порядке жизненного цикла (statusTargets); с confirmFinal
+// завершающий статус (категория done/cancelled) — третий шаг, StatusConfirm;
+// Esc в подтверждении — назад к меню.
+// S4-11: общая ловушка фокуса (Tab по кругу, Esc), см. useFocusTrap.
+import { useEffect, useRef, useState } from 'react';
+import { useFocusTrap } from '../keyboard/focusTrap';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Kbd } from '../elements/Kbd';
+import { StatusConfirm } from '../elements/StatusConfirm';
+import { isFinalCategory } from '../elements/statusMeta';
 import { kitT, useKitLang } from '../i18n';
 import { matchHotkey } from '../resilience/hotkeys';
 import { StatusIcon } from './StatusIcon';
-import { statusColor, statusTargets, type KitStatuses } from './statusModel';
+import { findStatus, statusColor, statusTargets, type KitStatuses } from './statusModel';
 
 export interface StatusPopoverProps {
   statuses: KitStatuses;
   current: string;
   onPick: (code: string) => void;
   onCancel: () => void;
+  /** S4-07: завершающие статусы (done/cancelled) — только после подтверждения. */
+  confirmFinal?: boolean;
   id?: string;
   className?: string;
 }
@@ -27,22 +36,45 @@ function keyMatches(e: ReactKeyboardEvent, key: string): boolean {
   return matchHotkey(e, key);
 }
 
-export function StatusPopover({ statuses, current, onPick, onCancel, id, className }: StatusPopoverProps) {
+export function StatusPopover({ statuses, current, onPick, onCancel, confirmFinal, id, className }: StatusPopoverProps) {
   const lang = useKitLang();
   const targets = statusTargets(statuses, current);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [focusCode, setFocusCode] = useState<string | null>(null);
 
   useEffect(() => {
-    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-  }, []);
+    if (confirming !== null) return;
+    const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+    (items.find((el) => el.dataset.status === focusCode) ?? items[0])?.focus();
+  }, [confirming, focusCode]);
 
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.code === 'Escape' || e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onCancel();
-      return;
-    }
+  const choose = (code: string) => {
+    const item = findStatus(statuses, code);
+    if (confirmFinal && item && isFinalCategory(item.category)) setConfirming(code);
+    else onPick(code);
+  };
+
+  const back = () => {
+    setFocusCode(confirming);
+    setConfirming(null);
+  };
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  // S4-11: общая ловушка фокуса — первый пункт при открытии, Tab по кругу
+  // (пункты ↔ «Отмена»), Esc = отмена (в подтверждении S4-07 — назад к меню).
+  // Фокус на чип возвращает сам чип (StatusChip.close): при щелчке мимо фокус
+  // должен остаться там, куда щёлкнули.
+  const trap = useFocusTrap(rootRef, {
+    onEscape: () => { if (confirming !== null) back(); else onCancel(); },
+    restoreFocus: false,
+    initialFocus: root => root.querySelector<HTMLElement>('[role="menuitem"]'),
+  });
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
+    trap(e);
+    if (e.defaultPrevented || e.key === 'Tab') return;
+    if (confirming !== null) return;
     if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
       const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
       if (!items.length) return;
@@ -56,31 +88,55 @@ export function StatusPopover({ statuses, current, onPick, onCancel, id, classNa
     if (hit) {
       e.preventDefault();
       e.stopPropagation();
-      onPick(hit.item.code);
+      choose(hit.item.code);
     }
   };
 
+  const cls = ['sk-spop', className].filter(Boolean).join(' ');
+  const pending = confirming !== null ? findStatus(statuses, confirming) : undefined;
+
+  if (pending) {
+    return (
+      <div ref={rootRef} className={cls} id={id} onKeyDown={onKeyDown}>
+        <StatusConfirm
+          title={pending.title}
+          code={pending.code}
+          icon={pending.icon}
+          color={statusColor(pending.color)}
+          onConfirm={() => onPick(pending.code)}
+          onBack={back}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={['sk-spop', className].filter(Boolean).join(' ')} id={id} onKeyDown={onKeyDown}>
+    <div ref={rootRef} className={cls} id={id} onKeyDown={onKeyDown}>
       {targets.length ? (
         <div ref={menuRef} role="menu" aria-label={kitT(lang, 'kit.status.menu')} className="sk-spop__menu">
-          {targets.map(({ item, key }) => (
-            <button
-              key={item.code}
-              type="button"
-              role="menuitem"
-              className="sk-spop__item"
-              data-status={item.code}
-              data-category={item.category}
-              style={{ '--schip-c': statusColor(item.color) } as CSSProperties}
-              aria-keyshortcuts={key || undefined}
-              onClick={() => onPick(item.code)}
-            >
-              <StatusIcon icon={item.icon} />
-              <span className="sk-spop__title">{item.title}</span>
-              {key && <Kbd keys={[key]} />}
-            </button>
-          ))}
+          {targets.map(({ item, key }) => {
+            const final = Boolean(confirmFinal) && isFinalCategory(item.category);
+            return (
+              <button
+                key={item.code}
+                type="button"
+                role="menuitem"
+                className="sk-spop__item"
+                data-status={item.code}
+                data-category={item.category}
+                data-final={final ? 'true' : undefined}
+                title={final ? kitT(lang, 'kit.status.finalHint') : undefined}
+                style={{ '--schip-c': statusColor(item.color) } as CSSProperties}
+                aria-keyshortcuts={key || undefined}
+                onClick={() => choose(item.code)}
+              >
+                <StatusIcon icon={item.icon} />
+                <span className="sk-spop__title">{item.title}</span>
+                {final && <span className="sk-spal__final" aria-hidden="true">…</span>}
+                {key && <Kbd keys={[key]} />}
+              </button>
+            );
+          })}
         </div>
       ) : (
         <p className="sk-spop__none">{kitT(lang, 'kit.status.none')}</p>

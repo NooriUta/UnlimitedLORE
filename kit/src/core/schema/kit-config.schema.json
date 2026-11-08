@@ -108,7 +108,8 @@
         "required": ["label", "color"],
         "properties": {
           "label": { "$ref": "#/$defs/title" },
-          "color": { "$ref": "#/$defs/colorToken" }
+          "color": { "$ref": "#/$defs/colorToken" },
+          "layer": { "description": "structural — принадлежность/иерархия: в графе отдельный слой, скрыт по умолчанию (S5-10).", "enum": ["structural"] }
         },
         "additionalProperties": false
       }

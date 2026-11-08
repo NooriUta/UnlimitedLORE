@@ -5,16 +5,12 @@
 // откуда угодно (палитра Mod+K открывается и из поиска).
 import { useEffect, useRef } from 'react';
 import { matchHotkey, parseHotkey } from './hotkeys';
+import { isEditableTarget } from './editable';
 
 export type HotkeyHandler = (e: KeyboardEvent) => void;
 
-function isTyping(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  if (!el || typeof el.tagName !== 'string') return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true
-    || el.getAttribute?.('contenteditable') === 'true';
-}
+// S4-13 (B-08): одна проверка на весь kit — видит и потомка contenteditable.
+const isTyping = isEditableTarget;
 
 export function useHotkeys(bindings: Record<string, HotkeyHandler>, opts: { enabled?: boolean } = {}): void {
   const ref = useRef(bindings);

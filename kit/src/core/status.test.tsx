@@ -247,3 +247,48 @@ describe('StatusChip — чип статуса в списке и в запис�
     expect(screen.getByRole('button', { name: /Статус: не смотрели/ })).toBeTruthy();
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-07 — то же правило для чипа ядра: порядок
+// жизненного цикла и третий шаг для завершающих (включается confirmFinal,
+// чтобы конфиги K-05 без него вели себя как прежде).
+describe('S4-07 · порядок цикла и третий шаг в ядре', () => {
+  it('statusTargets — категории в порядке цикла todo → active → done → cancelled', () => {
+    const shuffled: KitConfig['statuses'] = { items: [statuses.items[3], statuses.items[2], statuses.items[1], statuses.items[0]] };
+    expect(statusTargets(shuffled, 'ghost').map(t => t.item.code)).toEqual(['todo', 'active', 'done', 'cancelled']);
+  });
+
+  it('confirmFinal: завершающий пункт просит подтверждения, обычный — нет', () => {
+    const onPick = vi.fn();
+    render(<StatusPopover statuses={statuses} current="todo" onPick={onPick} onCancel={() => {}} confirmFinal />);
+    fireEvent.keyDown(screen.getByRole('menu'), { code: 'Digit2', key: '2' });
+    expect(onPick).not.toHaveBeenCalled();
+    const ok = screen.getByRole('button', { name: 'Поставить «Отменено»' });
+    expect(document.activeElement).toBe(ok);
+    fireEvent.click(ok);
+    expect(onPick).toHaveBeenCalledWith('cancelled');
+  });
+
+  it('confirmFinal: Esc в подтверждении — назад к меню, не отмена', () => {
+    const onPick = vi.fn();
+    const onCancel = vi.fn();
+    render(<StatusPopover statuses={statuses} current="todo" onPick={onPick} onCancel={onCancel} confirmFinal />);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Отменено/ }));
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Поставить «Отменено»' }), { code: 'Escape', key: 'Escape' });
+    expect(screen.getByRole('menu')).toBeTruthy();
+    expect(onCancel).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('menuitem', { name: /В работе/ }));
+    expect(onPick).toHaveBeenCalledWith('active');
+  });
+
+  it('StatusChip пробрасывает confirmFinal: 3 касания до «Готово»', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    render(<StatusChip record={rec('active')} config={config} save={save} confirmFinal />);
+    fireEvent.click(screen.getByRole('button', { name: /Статус:/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Готово/ }));
+    expect(save).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Поставить «Готово»' }));
+    });
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ from: 'active', to: 'done' }));
+  });
+});

@@ -120,7 +120,9 @@ describe('строка «фильтр / группировка / порядок�
   it('описывает активные фильтры словами словаря; «Сбросить» снимает всё', () => {
     const rs = [rec('1', 'todo'), rec('2', 'done')];
     const { container } = render(<ListView config={cfg} data={data(rs)} urlState={false} />);
-    fireEvent.change(screen.getByLabelText('Статус'), { target: { value: 'done' } });
+    // S4-05: фильтр поля — фасет (условие + значения со счётчиком), а не голый select
+    fireEvent.click(screen.getByRole('button', { name: /^Статус/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /^готово/ }));
     const desc = screen.getByTestId('kit-list-desc');
     expect(desc.textContent).toContain('Статус: готово');
     expect(rows(container)).toHaveLength(1);
