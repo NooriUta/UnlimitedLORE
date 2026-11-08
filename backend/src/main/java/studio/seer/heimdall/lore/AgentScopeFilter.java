@@ -77,7 +77,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     // /lore/news/v2/read-mark, общая черта «прочитано». По §8 спеки новостей она
     // «сдвигается только действием пользователя»; агент, двигающий общую черту,
     // прятал бы владелице непрочитанное.
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "news");
+    // "record" (ADR-LORE-047 A2): POST /lore/record/{type}/{id}/relation — путь привязки
+    // паспорта v2 в UI. Он ведёт в обработчики РАЗНЫХ семейств (sprint, task, adr, spec,
+    // question), и строка матрицы для него расширила бы профиль, которому семейство цели
+    // закрыто. Агенты привязывают через свои *_link (MCP) — там матрица по семейству цели.
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "news", "record");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути

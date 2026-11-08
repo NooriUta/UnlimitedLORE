@@ -41,6 +41,10 @@ class SprintDoneGuardLiveDbTest {
         // унаследованная задача, заведённая ДО закрытия
         admin().body("{\"sprint_id\":\"" + CLOSED + "\",\"task_id\":\"OLD-1\",\"title\":\"унаследованная\"}")
             .post("/lore/task").then().statusCode(200);
+        // A5 (ADR-LORE-047, D-2026-LORE-SPRINT-CLOSE-NEEDS-TASKS-CLOSED): спринт с открытой
+        // задачей не закрывается — унаследованную сперва отменяем.
+        admin().body("{\"entity_type\":\"task\",\"id\":\"" + CLOSED + "/OLD-1\",\"status\":\"cancelled\"}")
+            .post("/lore/status").then().statusCode(200);
         admin().body("{\"entity_type\":\"sprint\",\"id\":\"" + CLOSED + "\",\"status\":\"done\"}")
             .post("/lore/status").then().statusCode(200);
 
@@ -62,7 +66,7 @@ class SprintDoneGuardLiveDbTest {
         assertTrue(taskIds(OPEN).contains("MV-1"), "задача осталась в открытом: " + taskIds(OPEN));
 
         // status_set унаследованной задачи в закрытом спринте — РАЗРЕШЁН
-        admin().body("{\"entity_type\":\"task\",\"id\":\"" + CLOSED + "/OLD-1\",\"status\":\"cancelled\"}")
+        admin().body("{\"entity_type\":\"task\",\"id\":\"" + CLOSED + "/OLD-1\",\"status\":\"active\"}")
             .post("/lore/status").then().statusCode(200);
     }
 }

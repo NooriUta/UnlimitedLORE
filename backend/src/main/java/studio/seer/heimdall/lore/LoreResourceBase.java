@@ -249,6 +249,22 @@ public abstract class LoreResourceBase {
         return "admin".equals(role) || "superadmin".equals(role);
     }
 
+    /**
+     * ADR-LORE-047 A3: {@code expected_version} назван и не совпал с версией записи
+     * (valid_from открытой строки истории) — 409 VERSION_CONFLICT с текущей версией.
+     * Не назван — {@code null}: старые клиенты (MCP, v1, miniLORE) пишут как раньше.
+     * Записи нет — тоже {@code null}: «не найдено» скажет обычный путь. Блокирующий.
+     */
+    Response versionConflict(String type, String id, String expected) {
+        if (expected == null || expected.isBlank() || id == null) return null;
+        List<Map<String, Object>> rows = ingestService.queryPublic(LoreRecordVersion.sql(type), Map.of("id", id));
+        if (rows.isEmpty()) return null;
+        Object cur = rows.get(0).get("version");
+        if (LoreRecordVersion.matches(expected, cur)) return null;
+        return noStore(Response.status(Response.Status.CONFLICT).entity(LoreRecordVersion.conflictBody(
+            type, id, expected, LoreRecordVersion.normalize(cur), rows.get(0).get("updated_by"))));
+    }
+
     Response badParams(String msg) {
         return noStore(Response.status(Response.Status.BAD_REQUEST)
             .entity(new LoreError("BAD_PARAMS", msg)));
