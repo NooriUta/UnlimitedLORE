@@ -187,8 +187,10 @@ public class LoreRunbookResource extends LoreResourceBase {
                 // A1: one atomic sqlscript so a failed edge leaves no orphan hist row.
                 Map<String, Object> hp = mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md());
                 hp.put("id", req.runbook_id());
+                changeAuthor().bind(hp); // S2-12
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt;" +
+                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt" +
+                    ChangeAuthor.SET_SQL + ";" +
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRunbook WHERE runbook_id=:id) " +
                     "TO (SELECT FROM KnowRunbookHist WHERE state_uid=:nsid);", hp))
                     .await().indefinitely();

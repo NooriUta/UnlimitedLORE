@@ -337,8 +337,10 @@ public class LoreMilestoneResource extends LoreResourceBase {
                     hp.put("g", req.goal_md());
                     hp.put("nsid", java.util.UUID.randomUUID().toString());
                     hp.put("now", java.time.Instant.now().toString());
+                    changeAuthor().bind(hp); // S2-12
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                        "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g;"
+                        "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g"
+                        + ChangeAuthor.SET_SQL + ";"
                         + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowMilestone WHERE milestone_id=:mid) "
                         + "TO (SELECT FROM KnowMilestoneHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 }
