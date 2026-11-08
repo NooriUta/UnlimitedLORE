@@ -568,5 +568,11 @@
   "kit.record.width": "Text width",
   "kit.record.width.s": "narrower",
   "kit.record.width.m": "medium",
-  "kit.record.width.l": "wider"
+  "kit.record.width.l": "wider",
+  "kit.ds.title": "Data state",
+  "kit.ds.checked": "Checked:",
+  "kit.ds.failed": "Could not check:",
+  "kit.ds.truncated": "Truncated:",
+  "kit.ds.shownOf": "{n} of {total} shown",
+  "kit.ds.shown": "{n} shown, the total is unknown"
 }

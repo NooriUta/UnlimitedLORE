@@ -27,3 +27,4 @@ export * from './graphState';
 export * from './RecordDock';
 export * from './RecordRelations';
 export * from './dataState';
+export * from './DataStateBlock';

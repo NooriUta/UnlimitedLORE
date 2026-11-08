@@ -2480,6 +2480,36 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 /* ── Каркас записи (SPRINT_UXR_S10_SEIDR_KIT/K-04): шапка, вердикт, вкладки,
    «Связи», локальный граф, «Журнал». Цвет типа ребра/статуса/вердикта приходит
    из конфига в --edge-c/--pill-c/--verdict-c/--node-c (токен темы). ── */
+/* S4-30: «Состояние данных». Три состояния выглядят по-разному намеренно —
+   «проверено», «не смогли проверить» и «обрезано» это разные утверждения, и
+   общая серая строка их бы слила. */
+.sk-ds {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  font-size: var(--fs-sm);
+}
+.sk-ds__head {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-ds__label { color: var(--t3); }
+.sk-ds__checked { margin: 0; color: var(--t2); }
+.sk-ds__truncated { margin: 0; color: var(--wrn); }
+/* Непрочитанное — предупреждающим цветом: по такому блоку нельзя делать выводы. */
+.sk-ds__failed { color: var(--dng); }
+.sk-ds__list { margin: 2px 0 0; padding-left: 18px; }
+.sk-ds__list b { font-family: var(--mono); font-weight: 700; }
+
 .sk-rec { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }
 /* Шапка записи (S4-29, прототип v4): надзаголовок «тип · ID» → H1 → строка статуса. */
 .sk-rec-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; }
