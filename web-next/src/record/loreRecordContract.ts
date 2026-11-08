@@ -49,12 +49,18 @@ const TAB_REL: Record<string, { rel: string; dir: 'out' | 'in' }> = {
   decisions: { rel: 'DECIDED_IN', dir: 'in' },
 };
 
-/** Право править (ADR-LORE-047 п. 14.1): текст спринта, задачи, спеки — существующими путями записи; ADR — пока нет. */
+/**
+ * Право править (ADR-LORE-047 п. 14.1): текст спринта, задачи и спеки —
+ * существующими путями записи; у ADR правятся разделы по отдельности (S4-24),
+ * а склеенное тело — нет.
+ */
 function permsOf(type: string, lang: KitLang): LoreRecord1['perms'] {
-  const canEdit = (EDITABLE_BODY as readonly string[]).includes(type);
+  const canEdit = (EDITABLE_BODY as readonly string[]).includes(type) || type === 'adr';
   return {
     can_edit: canEdit, can_status: false, can_create: false, status_next: [],
-    reason: canEdit ? appT(lang, 'pp.contract.editNoVersion') : type === 'adr' ? ADR_BODY_READONLY : appT(lang, 'pp.contract.readonly'),
+    // У ADR причина говорит не «нельзя», а «по разделам»: разница важная,
+    // иначе человек решит, что ADR не правится вовсе.
+    reason: type === 'adr' ? ADR_BODY_READONLY : canEdit ? appT(lang, 'pp.contract.editNoVersion') : appT(lang, 'pp.contract.readonly'),
   };
 }
 
