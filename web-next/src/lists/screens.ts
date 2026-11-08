@@ -103,7 +103,8 @@ function sprintsConfig(lang: KitLang): KitConfig {
       ],
       filters: ['status', 'project', 'components', 'release'],
       groupings: ['status', 'project', 'priority', 'milestone'],
-      columns: ['title+id', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
+      // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
+      columns: ['id', 'title', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
     },
   };
 }
@@ -141,7 +142,7 @@ function adrsConfig(lang: KitLang): KitConfig {
       ],
       filters: ['status', 'component', 'project'],
       groupings: ['status', 'component', 'project'],
-      columns: ['title+id', 'status', 'component', 'decisions', 'updated_at'],
+      columns: ['id', 'title', 'status', 'component', 'decisions', 'updated_at'],
     },
   };
 }
