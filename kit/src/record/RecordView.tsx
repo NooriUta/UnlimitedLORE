@@ -70,6 +70,12 @@ export interface RecordViewProps {
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
   placement?: 'right' | 'bottom' | 'full';
+  /**
+   * Куда идёт вычисляемое (связи, граф, журнал, история). 'tabs' (по умолчанию,
+   * владелица 08.11: «пока как в MVP») — вкладками основного блока в любом месте;
+   * 'column' — колонкой слева при bottom/full (раскладка S4-33, отложена, не удалена).
+   */
+  aroundAs?: 'tabs' | 'column';
 }
 
 /** Часы с шагом в минуту — для «получено N мин»; выключены — не тикают. */
@@ -143,7 +149,7 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs' }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
@@ -165,8 +171,8 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: recordJournal(record.id, ctx.data.journal).length },
     ...(history ? [{ id: RECORD_TABS.history, label: kitT(lang, 'kit.record.tab.history'), count: historyCount(history) }] : []),
   ].map(i => (zoned ? { ...i, zone: 'around' as const } : i));
-  // bottom/full — вычисляемое уходит в колонку слева; right и без placement — вкладками.
-  const aside = placement === 'bottom' || placement === 'full';
+  // По умолчанию всё вкладками; колонка слева — только aroundAs='column' при bottom/full.
+  const aside = aroundAs === 'column' && (placement === 'bottom' || placement === 'full');
   const items: TabItem[] = aside ? recordItems : [...recordItems, ...aroundItems];
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
   const reset = `${record.id}:${current}`;

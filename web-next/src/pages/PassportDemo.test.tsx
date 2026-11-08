@@ -67,10 +67,11 @@ describe('адаптер на реальных строках', () => {
 });
 
 describe('страница', () => {
-  it('снизу: вкладки записи справа, «Вокруг записи» колонкой; панелью справа — всё вкладками', async () => {
+  it('снизу и панелью справа — всё вкладками основного блока, колонки слева нет («пока как в MVP», 08.11)', async () => {
     const { container } = render(<PassportDemo fetchImpl={fakeFetch()} />);
     await screen.findByRole('heading', { level: 1, name: /Hound Phase D/ });
-    expect(container.querySelector('aside[data-zone="around"]')).not.toBeNull();
+    expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
+    expect(screen.getAllByRole('tab').some(t => t.getAttribute('data-zone') === 'around')).toBe(true);
     fireEvent.click(within(screen.getByRole('group', { name: 'Где открыт' })).getByRole('button', { name: 'панелью справа' }));
     await waitFor(() => expect(container.querySelector('aside[data-zone="around"]')).toBeNull());
     expect(screen.getAllByRole('tab').some(t => t.getAttribute('data-zone') === 'around')).toBe(true);

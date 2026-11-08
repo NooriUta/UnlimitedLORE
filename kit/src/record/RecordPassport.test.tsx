@@ -24,13 +24,22 @@ const ctx: KitCtx = {
   config, data: { records: [rec, { id: 'P', kind: 'spec', title: 'Проект', status: 'proposed', fields: {} }], edges: [{ from: 'S-1', to: 'P', type: 'BELONGS_TO_PROJECT' }], journal: [], meta: { generated_at: '2026-11-08T00:00:00Z' } },
   href: id => `#${id}`, esc: s => s, md: s => s,
 };
-const view = (placement: 'right' | 'bottom' | 'full', tab = 'overview') =>
-  render(<RecordView record={rec} ctx={ctx} tab={tab} onTab={() => {}} placement={placement} />);
+const view = (placement: 'right' | 'bottom' | 'full', tab = 'overview', aroundAs?: 'tabs' | 'column') =>
+  render(<RecordView record={rec} ctx={ctx} tab={tab} onTab={() => {}} placement={placement} aroundAs={aroundAs} />);
 const tabNames = () => screen.getAllByRole('tab').map(t => t.textContent?.replace(/\d+$/, ''));
 
-describe('снизу / на весь экран — две зоны', () => {
-  it.each(['bottom', 'full'] as const)('%s: вкладки записи справа — Текст, Свойства; аналитика — колонкой слева', p => {
+describe('по умолчанию (владелица 08.11, «пока как в MVP») — всё вкладками основного блока', () => {
+  it.each(['right', 'bottom', 'full'] as const)('%s: колонки нет, вычисляемое — вкладками после вкладок записи', p => {
     const { container } = view(p);
+    expect(tabNames()).toEqual(['Текст', 'Свойства', 'Связи', 'Граф', 'Журнал']);
+    expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
+    expect(container.querySelector('.sk-rec--zones')).toBeNull();
+  });
+});
+
+describe('aroundAs="column": снизу / на весь экран — две зоны', () => {
+  it.each(['bottom', 'full'] as const)('%s: вкладки записи справа — Текст, Свойства; аналитика — колонкой слева', p => {
+    const { container } = view(p, 'overview', 'column');
     expect(tabNames()).toEqual(['Текст', 'Свойства']);
     const around = container.querySelector('[data-zone="around"]')!;
     expect(around.tagName).toBe('ASIDE');
@@ -41,11 +50,11 @@ describe('снизу / на весь экран — две зоны', () => {
   });
 
   it('«Текст» — только тело; поля — во вкладке «Свойства»', () => {
-    const { unmount } = view('bottom');
+    const { unmount } = view('bottom', 'overview', 'column');
     expect(screen.getByText('Текст спеки')).toBeTruthy();
     expect(screen.queryByTestId('kit-fields')).toBeNull();
     unmount();
-    view('bottom', 'props');
+    view('bottom', 'props', 'column');
     expect(screen.getByTestId('kit-fields').textContent).toContain('1.0');
   });
 });
