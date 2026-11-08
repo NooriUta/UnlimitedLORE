@@ -76,4 +76,11 @@ describe('страница', () => {
     expect(screen.getAllByRole('tab').some(t => t.getAttribute('data-zone') === 'around')).toBe(true);
     expect(new URLSearchParams(window.location.search).get('place')).toBe('right');
   });
+  it('паспорт рисуется из объекта lore.record/1, сам объект виден на странице', async () => {
+    render(<PassportDemo fetchImpl={fakeFetch()} />);
+    await screen.findByRole('heading', { level: 1, name: /Hound Phase D/ });
+    const box = screen.getByTestId('pp-contract');
+    const obj = JSON.parse(box.querySelector('pre')!.textContent!) as { contract: string; record: { id: string }; meta: { facade: string } };
+    expect(obj).toMatchObject({ contract: 'lore.record/1', record: { id: 'PLAN_HOUND_D4_PARITY' }, meta: { facade: 'client-emulated' } });
+  });
 });
