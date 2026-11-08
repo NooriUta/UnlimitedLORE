@@ -37,6 +37,11 @@ describe('паспорт записи открывается из живого �
     });
     expect(dock.getAttribute('data-placement')).toBe('right');
     await waitFor(() => expect(container.querySelector('[data-testid="kit-rec-dock"] article[data-kind]')).toBeTruthy(), { timeout: 8000 }); // ленивый чанк MartProse/mermaid
+    // S4-CONTENT-V4 п.1 (прототип v4): строка над записью — крошки «← Спринты / ID» и листалка по списку.
+    const bar = container.querySelector('[data-testid="kit-rec-dock"] [data-testid="kit-rec-bar"]');
+    expect(bar, 'строка крошек над паспортом').toBeTruthy();
+    expect(bar!.textContent).toContain('Спринты');
+    expect(bar!.querySelector('[data-testid="kit-rec-pager"]')).toBeTruthy();
     // Место — в «Вид» списка (08.11), а не полосой над паспортом.
     expect(container.querySelector('[data-testid="list-passport-bar"]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /^Вид/ }));

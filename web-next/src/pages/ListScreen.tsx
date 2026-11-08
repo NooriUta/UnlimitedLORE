@@ -139,7 +139,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
       <RecordDock placement={place} onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
         <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
-          <ListPassport key={open.id} type={PASSPORT_OF[screen]} id={open.id} placement={place} fetchImpl={fetchImpl} />
+          <ListPassport key={open.id} type={PASSPORT_OF[screen]} id={open.id} placement={place} fetchImpl={fetchImpl}
+            backLabel={t(def.titleKey)} onBack={() => setOpen({ ...open, id: null })}
+            ids={ids} onGo={id => setOpen({ ...open, id })}
+            onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} />
         </Suspense>
       </RecordDock>
     );
