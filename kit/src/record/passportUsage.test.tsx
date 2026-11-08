@@ -54,7 +54,8 @@ describe('1) у списка и паспорта — своя прокрутка
 });
 
 describe('2) свойства — рядом с контентом, от одного верха', () => {
-  it.each(['bottom', 'full'] as const)('%s: шапка на всю ширину; вкладки и «Свойства» — в одном ряду под ней', p => {
+  // во весь экран свойства свёрткой и рейкой (S4-CONTENT-V4, fullV4.test.tsx)
+  it.each(['bottom'] as const)('%s: шапка на всю ширину; вкладки и «Свойства» — в одном ряду под ней', p => {
     const { container } = render(<RecordView record={rec} ctx={ctx} tab="overview" onTab={() => {}} placement={p} />);
     const body = container.querySelector('.sk-rec__body') as HTMLElement;
     expect(body).not.toBeNull();

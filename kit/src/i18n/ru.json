@@ -557,5 +557,7 @@
   "kit.record.rel.unlink": "Отвязать: {title}",
   "kit.record.rel.link": "Привязать: {label}",
   "kit.record.rel.linkBtn": "Привязать",
-  "kit.record.rel.idPlaceholder": "ID записи"
+  "kit.record.rel.idPlaceholder": "ID записи",
+  "kit.record.rail": "Разделы паспорта",
+  "kit.record.rail.analytics": "Аналитика"
 }

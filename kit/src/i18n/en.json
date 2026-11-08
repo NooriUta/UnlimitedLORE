@@ -557,5 +557,7 @@
   "kit.record.rel.unlink": "Unlink: {title}",
   "kit.record.rel.link": "Link: {label}",
   "kit.record.rel.linkBtn": "Link",
-  "kit.record.rel.idPlaceholder": "Record ID"
+  "kit.record.rel.idPlaceholder": "Record ID",
+  "kit.record.rail": "Passport sections",
+  "kit.record.rail.analytics": "Analytics"
 }
