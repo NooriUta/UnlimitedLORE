@@ -12,7 +12,10 @@ import {
   LoadStateView, pushUrlState, readUrlState, TaskCounters, TaskTable, TASK_GROUP_BYS, useLoadState,
   type TaskGroupBy, type TaskPatch, type TaskRowData, type TaskStatus, type UrlWindow,
 } from '@seidr/kit';
+import { useKitLang } from '@seidr/kit';
 import { useAppT } from '../i18n';
+import { sliceFetcher } from '../api/loreSlice';
+import { loadTaskDicts, type TaskDicts } from './taskDicts';
 import { editTask, loadSprintTasks, setTaskStatus, type SprintTasksData } from './sprintTasksApi';
 
 export const GROUP_PARAM = 'group';
@@ -46,6 +49,17 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
   useEffect(() => { setPatches({}); }, [sprintId]);
 
   const result = useLoadState<SprintTasksData>(signal => loadSprintTasks(sprintId, signal, f), [sprintId]);
+
+  // Справочники — украшение строки, а не её условие: грузим отдельно и молча.
+  // Не пришли — kit покажет исходные коды и ничего о них не утверждает.
+  const lang = useKitLang();
+  const [dicts, setDicts] = useState<TaskDicts>({});
+  useEffect(() => {
+    let live = true;
+    const slice = sliceFetcher();
+    void loadTaskDicts(lang, (s, p) => slice(s, p)).then(d => { if (live) setDicts(d); });
+    return () => { live = false; };
+  }, [lang]);
 
   const onGroupByChange = useCallback((by: TaskGroupBy) => {
     setGroupBy(by);
@@ -84,6 +98,7 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             onGroupByChange={onGroupByChange}
             onStatusChange={onStatusChange}
             onSave={onSave}
+            dict={dicts}
             hrefFor={task => taskPassportHref(sprintId, task.id)}
             label={t('sprintTasks.caption', { id: sprintId })}
             />
