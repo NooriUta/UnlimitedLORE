@@ -43,7 +43,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { ProgressCell } from './progress';
 import {
   DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
-  quickCounts, quickIconOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
+  quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
@@ -58,6 +58,7 @@ import { useLongPress } from './useLongPress';
 import { ScreenHead } from './ScreenHead';
 import { ViewMenu } from './ViewMenu';
 import { GroupMenu } from './GroupMenu';
+import { SortMenu } from './SortMenu';
 
 export interface ListBulkAction {
   id: string;
@@ -931,6 +932,7 @@ export function ListView({
             keyTitle={labels.keyTitle}
             onGroup={g => update({ group: g, ...(g === null || g === state.group2 ? { group2: null } : {}) })}
             onSub={g => update({ group2: g })}
+            bare
           />
           </fieldset>
         )}
@@ -938,15 +940,12 @@ export function ListView({
           <legend className="sk-list__seglabel">{t('kit.list.sort')}</legend>
           <GameIcon slug={ICON_CANON.segSort} size={14} className="sk-list__segicon" />
           {segCount(state.sort ? 1 : 0)}
-          <select
-            aria-label={t('kit.list.sort')}
-            className="sk-list__select"
-            value={state.sort?.key ?? ''}
-            onChange={e => update({ sort: e.target.value ? { key: e.target.value, dir: state.sort?.dir ?? 'asc' } : null })}
-          >
-            <option value="">{t('kit.list.sortNone')}</option>
-            {sortKeys.map(k => <option key={k} value={k}>{labels.keyTitle(k)}</option>)}
-          </select>
+          <SortMenu
+            value={state.sort?.key ?? null}
+            keys={sortKeys}
+            keyTitle={labels.keyTitle}
+            onChange={k => update({ sort: k ? { key: k, dir: state.sort?.dir ?? 'asc' } : null })}
+          />
           <button
             type="button"
             className="sk-list__dir"
@@ -962,6 +961,7 @@ export function ListView({
             <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
             {quick.map(q => {
               const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
+              const qColor = quickColorOf(q, config);
               return (
                 <Pill
                   key={q.id}
@@ -969,7 +969,7 @@ export function ListView({
                   pressed={state.quick === q.id}
                   onToggle={on => update({ quick: on ? q.id : null })}
                 >
-                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={14} /></span>}
+                  {icon && <span className="sk-list__qicon" data-quick-icon={icon} style={qColor ? { color: qColor } : undefined}><GameIcon slug={icon} size={12} /></span>}
                   <span>{q.title}</span><span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
                 </Pill>
               );

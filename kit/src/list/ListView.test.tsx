@@ -133,10 +133,11 @@ describe('строка «фильтр / группировка / порядок�
     expect(screen.getByTestId('kit-list-shown').textContent).toBe('Показано 2 из 2');
   });
 
-  it('порядок меняется селектом и направлением', () => {
+  it('порядок меняется меню и направлением', () => {
     const rs = [rec('b', 'todo'), rec('a', 'todo'), rec('c', 'todo')];
     const { container } = render(<ListView config={cfg} data={data(rs)} urlState={false} initial={{ group: null }} />);
-    fireEvent.change(screen.getByLabelText('Порядок'), { target: { value: 'title' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Порядок:/ }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Порядок' })).getByRole('radio', { name: /^Запись|^Название/ }));
     expect([...rows(container)].map(r => r.getAttribute('data-record-id'))).toEqual(['a', 'b', 'c']);
     fireEvent.click(screen.getByRole('button', { name: 'по убыванию' }));
     expect([...rows(container)].map(r => r.getAttribute('data-record-id'))).toEqual(['c', 'b', 'a']);

@@ -22,9 +22,11 @@ export interface GroupMenuProps {
   /** Смена группы; подгруппу, ставшую лишней (нет группы или совпала с ней), снимает ВЫЗЫВАЮЩИЙ одной правкой. */
   onGroup: (key: string | null) => void;
   onSub: (key: string | null) => void;
+  /** В рамке сегмента с подписью «Группировка» (08.11): в кнопке только значение, имя — в aria-label. */
+  bare?: boolean;
 }
 
-export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onSub }: GroupMenuProps) {
+export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onSub, bare }: GroupMenuProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [open, setOpen] = useState(false);
@@ -64,8 +66,9 @@ export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onS
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={() => setOpen(o => !o)}
+        aria-label={bare ? `${t('kit.list.group')}: ${value}` : undefined}
       >
-        {t('kit.list.group')}: <b>{value}</b> <span aria-hidden="true">▾</span>
+        {bare ? <b>{value}</b> : <>{t('kit.list.group')}: <b>{value}</b></>} <span aria-hidden="true">▾</span>
       </button>
       {open && (
         <div ref={panelRef} id={id} role="dialog" aria-label={t('kit.list.group')} className="sk-vmenu__panel sk-gmenu__panel" onKeyDown={onKeyDown}>
