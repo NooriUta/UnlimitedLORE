@@ -59,6 +59,7 @@ import { ScreenHead } from './ScreenHead';
 import { ViewMenu } from './ViewMenu';
 import { GroupMenu } from './GroupMenu';
 import { SortMenu } from './SortMenu';
+import type { RecordPlacement } from '../record/RecordDock';
 
 export interface ListBulkAction {
   id: string;
@@ -107,6 +108,11 @@ export interface ListViewProps {
    * Enter на строке под курсором (S4-11) — тоже onOpen, без него — ссылка заголовка.
    */
   onOpen?: (id: string) => void;
+  /**
+   * Где открывается паспорт записи (владелица 08.11): настройка использования, живёт в «Вид»
+   * списка, а не полосой над паспортом. Без неё раздела в «Вид» нет — место задаёт приложение.
+   */
+  recordPlace?: { value: RecordPlacement; onChange: (p: RecordPlacement) => void };
   /** Части контекста хуков (роль, пользователь, md…); data/config берутся из пропсов. */
   ctx?: Partial<KitCtx>;
   /** Массовые действия с выбранными — через хуки приложения. */
@@ -256,7 +262,7 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
 }
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, onSelectionChange, urlState, initial, budget: budgetPart,
+  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, expand, head, viewIcons, className, state: stateProp, onStateChange,
 }: ListViewProps) {
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
@@ -555,6 +561,8 @@ export function ListView({
       closed={closedMode}
       modes={SHOW_CLOSED_MODES}
       onClosed={c => update({ closed: c })}
+      place={recordPlace?.value}
+      onPlace={recordPlace?.onChange}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
