@@ -6,8 +6,8 @@
 // Экраны разделов подключаются в SCREENS своими задачами S4 (списки спринтов,
 // ADR…). Раздел без экрана честно говорит «экран не собран» (NotBuilt kit), а
 // не рисует «пусто»: данных он не запрашивал.
-import { lazy, Suspense, useMemo, type ComponentType, type ReactNode } from 'react';
-import { KitShell, NewsFeed, NotBuilt, Skeleton, useKitLang, useKitShell, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { useMemo, type ComponentType, type ReactNode } from 'react';
+import { KitShell, NewsFeed, NotBuilt, useKitLang, useKitShell, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { switchNavUrl } from '../nav/navVersion';
 import { ListScreen } from '../pages/ListScreen';
@@ -15,7 +15,6 @@ import { newsSource } from '../news/source';
 import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 
-const SprintsPage = lazy(() => import('../sprints/SprintsPage'));
 
 /** Глобальные параметры URL v2 — не снимаются при смене раздела. */
 export const V2_KEEP_PARAMS = ['proj'] as const;
@@ -24,13 +23,14 @@ export const V2_KEEP_PARAMS = ['proj'] as const;
 const SECTION_TITLE_ID = 'v2-screen-title';
 
 /** Разделы, где h1 рисует сам экран (шапка экрана kit, S4-23), а не оболочка. */
-const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>(['adr']);
+const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>(['sprint', 'adr']);
 
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
 const SCREENS: Partial<Record<V2Section, ComponentType>> = {
-  // Списки на движке kit; заголовок — у раздела оболочки. Спринты — экран S4-09
-  // («задачи x/y», раскрытие строки), ADR — экран списка S4-04.
-  sprint: () => <Suspense fallback={<Skeleton />}><SprintsPage heading={false} /></Suspense>,
+  // Списки — один путь сборки (S4-22): общий ListScreen + описание экрана,
+  // заголовок — шапка экрана kit (S4-23). Спринты раньше были своей страницей.
+  // «Задачи x/y» и раскрытие с задачами — описанием экрана (lists/screens.ts, nested).
+  sprint: () => <ListScreen screen="sprints" titleId={SECTION_TITLE_ID} />,
   // S4-23: заголовок ADR — шапка экрана kit (ScreenHead): виды в строке заголовка.
   adr: () => <ListScreen screen="adrs" titleId={SECTION_TITLE_ID} />,
   // Лента новостей kit (SPRINT_UXR_S7A_NEWS/S7A-02); свой заголовок — у раздела.

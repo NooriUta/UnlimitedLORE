@@ -10,6 +10,7 @@ import type { KitConfig, KitRecord } from '@seidr/kit';
 import { appT, useAppT, type AppKey } from '../i18n';
 import { defaultLoreClient, type LoreClient, type SliceBody } from './loreClient';
 import { planStatusOf, planStatuses } from './taskStatus';
+import './sprints.css';
 
 export interface SprintTaskRow {
   task_uid: string;

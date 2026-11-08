@@ -92,6 +92,7 @@
   "lists.field.component": "Component",
   "lists.field.release": "Release",
   "lists.field.milestone": "Milestone",
+  "lists.field.tasks": "Tasks",
   "lists.field.priority": "Priority",
   "lists.field.tags": "Tags",
   "lists.field.decisions": "Decisions",
