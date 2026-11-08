@@ -157,6 +157,20 @@ public final class LoreSlices {
     static final String DONE_STATUS_SQL = LoreStatusVocabulary.anySql("status_raw", "done");
 
     /**
+     * S2-11: дата закрытия спринта — момент ПЕРЕХОДА в «выполнен». Правка плана
+     * закрытого спринта открывает новую DONE-версию, и {@code [done].valid_from[0]}
+     * мог указать на неё — дата плыла. {@code status_known_from} ставится только
+     * сменой статуса и переносится правками (StatusHistoryService, правка плана),
+     * поэтому у открытой DONE-версии он и есть момент закрытия. Старые версии без
+     * этого поля (до S2-13) — прежнее выражение.
+     */
+    // Цепочка фильтров [..][..], а не AND: проекция без « AND » — сторож склейки
+    // фильтров слайса (LoreSliceComposeFiltersTest) различает AND только по тексту.
+    static final String DONE_DATE_SQL =
+        "ifnull(out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL
+            + "].status_known_from[0], out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0])";
+
+    /**
      * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
      * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
      */
@@ -739,7 +753,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
-            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date, " +
+            DONE_DATE_SQL + " AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
@@ -806,7 +820,7 @@ public final class LoreSlices {
         // см. DONE_STATUS_SQL про то, почему якорь, а не подстрока.
         slice("sprint_done_dates",
             "SELECT sprint_id, " +
-            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date " +
+            DONE_DATE_SQL + " AS done_date " +
             "FROM KnowSprint " +
             "WHERE out('HAS_STATE')[" + DONE_STATUS_SQL + "].size() > 0",
             List.of(), Map.of(), "");
