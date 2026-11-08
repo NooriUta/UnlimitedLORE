@@ -1,7 +1,7 @@
 // SPRINT_UXR_S3_V2_INFRA/S3-06: LORE CD собирает и выкатывает ВТОРОЙ образ
 // (lore-app-next, v2) рядом с lore-app (v1) и после деплоя ПРОБУЕТ результат
-// снаружи: :4400/lore/version (адрес, по которому ходит MCP) и
-// new.lore.odal.seidrstudio.pro (D-2026-UXR-V2-HOST).
+// снаружи (PL-04: на именах и портах ПРЕПРОДА — :4410, preprod.new.lore) и
+// preprod.new.lore.odal.seidrstudio.pro (D-2026-UXR-V2-HOST, D-2026-UXR-CD-PREPROD-PROD-SPLIT).
 //
 // Почему тест здесь, а не «посмотрим на стенде»: CD бежит только по пушу в
 // preprod. Забытый шаг выкатки v2 или проба, которая «зелёная» при любом
@@ -77,19 +77,21 @@ describe('lore-cd.yml: второй образ (lore-app-next)', () => {
     expect(s!.body).toMatch(/\/assets\//);
   });
 
-  it('после деплоя — проба :4400/lore/version (адрес MCP) со сверкой коммита', () => {
-    const s = steps().find((x) => /post-deploy-probe\.sh version\b.*:4400\/lore\/version/.test(x.body));
-    expect(s, 'нет пробы :4400/lore/version').toBeDefined();
-    expect(s!.body).toMatch(/github\.sha/);
+  it('после деплоя — проба опубликованного порта препрода :4410/lore/version со сверкой коммита образа', () => {
+    // PL-04: :4400 на ci-server — пересыльщик MCP на ПРОД; v1 препрода опубликован на :4410.
+    const s = steps().find((x) => /post-deploy-probe\.sh version\b.*:4410\/lore\/version/.test(x.body));
+    expect(s, 'нет пробы :4410/lore/version').toBeDefined();
+    // коммит — из метки revision работающего образа (PL-08: у перетегированного образа commit ≠ sha пуша)
+    expect(s!.body).toMatch(/steps\.pinned\.outputs\.backend_revision/);
   });
 
   it('после деплоя — проба /lore/ через nginx v2 (прокси общего шаблона)', () => {
     expect(stepIndex(/post-deploy-probe\.sh version\b.*lore-app-next\/lore\/version/)).toBeGreaterThan(-1);
   });
 
-  it('после деплоя — проба new.lore: отдаётся именно v2', () => {
-    const s = steps().find((x) => /post-deploy-probe\.sh v2-page\s+https:\/\/new\.lore\.odal\.seidrstudio\.pro/.test(x.body));
-    expect(s, 'нет пробы new.lore').toBeDefined();
+  it('после деплоя — проба preprod.new.lore: отдаётся именно v2', () => {
+    const s = steps().find((x) => /post-deploy-probe\.sh v2-page\s+https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body));
+    expect(s, 'нет пробы preprod.new.lore').toBeDefined();
     // строгость — переменной репозитория, а не правкой workflow
     expect(s!.body).toMatch(/LORE_V2_PUBLIC_PROBE: \$\{\{ vars\.LORE_V2_PUBLIC_PROBE/);
   });

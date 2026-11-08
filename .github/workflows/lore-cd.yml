@@ -1,4 +1,21 @@
-name: LORE CD (ci-server stand)
+name: LORE CD (preprod on ci-server)
+
+# ── PL-04 (08.11.2026): это ПРЕПРОД, а не прод ──────────────────────────────
+# SPRINT_LORE_PIPELINE_HOST/PL-04, ADR-LORE-046, D-2026-UXR-CD-PREPROD-PROD-SPLIT.
+# Прод LORE с 07.11 живёт на lore-host (lore.odal → :4400, new.lore → :4402) и
+# выкатывается ТОЛЬКО релизом по тегу (lore-release.yml, PL-05). Этот workflow
+# катит на ci-server препрод:
+#   • compose-проект lore-preprod, оверлей docker-compose.preprod.yml (свои порты
+#     4410/4412/9110/19000/19001 через !override; :4400 на 131 — пересыльщик
+#     прод-MCP, :9100/:9000 — заняты);
+#   • имена preprod.lore.odal / preprod.new.lore.odal (CoreDNS 131 → .131,
+#     сертификат — резолвер regru);
+#   • база system_aida_lore_preprod (снимок прода, заливает preprod-db-refresh) и
+#     окружение Infisical preprod — без отката на prod;
+#   • образы unlimitedlore-<сервис>:<sha8> с меткой revision — их и везёт релиз;
+#   • темы Keycloak здесь больше нет: KC живёт на lore-host, тема едет релизом.
+# Вход — тот же KC-клиент lore-app (D-2026-LORE-PREPROD-NO-EXTRA-KC-CLIENT).
+# Ниже — история стенда; упоминания «стенда :4400» относятся ко времени до PL-04.
 
 # Continuous deployment to the docker-compose stand on ci-server (lore-backend
 # :9100 / lore-app :4400). До 2026-07-18 это был стенд на ноуте разработчика —
@@ -47,9 +64,18 @@ on:
         default: 'both'
         type: choice
         options: [both, backend, frontend, frontend-next]
+      dry_run:
+        # PL-04: true — только ворота и разбор (что было бы собрано, какие
+        # порты/имена/база), без сборок, выкаток, пометок образов и Telegram.
+        # Безопасно запускать с любой ветки.
+        description: 'true — только проверки, ничего не менять'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 concurrency:
-  group: lore-cd-${{ github.ref }}
+  group: lore-cd-preprod   # PL-04: одна цель — препрод; прогоны с разных веток не гонятся друг с другом
   cancel-in-progress: false   # never cancel a deploy in flight — queue instead
 
 permissions:
@@ -57,7 +83,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Build + deploy to local Docker stand
+    name: Build + deploy preprod (ci-server, lore-preprod)
     # AL-88 (2026-07-30): tried a dedicated runner (label "lore-only",
     # registered on ci-server, forgejo-runner-lore container) instead of the
     # shared pool, to stop queueing behind Shuttle/Hound/aida-root jobs — but
@@ -98,8 +124,13 @@ jobs:
       LORE_SECRETS_CLIENT_ID: ${{ secrets.LORE_SECRETS_CLIENT_ID }}
       LORE_SECRETS_CLIENT_SECRET: ${{ secrets.LORE_SECRETS_CLIENT_SECRET }}
       LORE_SECRETS_PROJECT_ID: ${{ secrets.LORE_SECRETS_PROJECT_ID }}
-      LORE_SECRETS_ENVIRONMENT: prod
+      # PL-04: своё окружение препрода. Пустое/несуществующее — шаг ворот
+      # (preprod-gates.sh) красный, отката на prod НЕТ.
+      LORE_SECRETS_ENVIRONMENT: preprod
       LORE_SECRETS_SCOPE: /
+      # PL-04: база препрода — снимок прода на LORE-ygg 131 (preprod-db-refresh).
+      # В compose приходит свойством lore.db (оверлей docker-compose.preprod.yml).
+      LORE_DB: system_aida_lore_preprod
       # Пароль служебной учётки MinIO для соседей (ADR-INFRA-SHARED-COMPONENTS).
       # Передаётся по той же причине, что и ARCADEDB_ROOT_PASSWORD: .env здесь
       # нет, а compose читает окружение. Без этой строки секрет в Forgejo будет
@@ -115,9 +146,13 @@ jobs:
       # Имя compose-проекта прибито ЯВНО. Иначе оно выводится из каталога
       # checkout'а раннера, и деплой создал бы ВТОРОЙ параллельный стенд: он
       # либо упёрся бы в занятый порт 4400, либо развёл два набора контейнеров
-      # и named-volume minio. Живой стенд поднят как проект `unlimitedlore` —
-      # под этим именем его и обновляем.
-      COMPOSE_PROJECT_NAME: unlimitedlore
+      # и named-volume minio.
+      # PL-04: препрод — ОТДЕЛЬНЫЙ проект `lore-preprod`. Прежний `unlimitedlore`
+      # на 131 — остатки старого стенда (MinIO, v2 на :4402), их CD не трогает.
+      COMPOSE_PROJECT_NAME: lore-preprod
+      # PL-04: свой тег заморозки v1 у препрода (v1-freeze.sh) — общий
+      # lore-app:v1-frozen принадлежал старому стенду (проект unlimitedlore).
+      FROZEN_TAG: unlimitedlore-lore-app:v1-frozen-preprod
       # ── Аутентификация (RUNBOOK-AUTH-OMILORE) ────────────────────────────
       # ВСЕ пять флипаются вместе. Включённый фронт при выключенном бэкенде шлёт
       # токен, который никто не проверяет; обратное — бэкенд требует токен,
@@ -153,8 +188,11 @@ jobs:
       # поэтому localhost-адреса перечислены здесь заново — иначе отвалилась бы
       # запись при обращении к стенду с самого хоста. Порт обязателен: Quarkus
       # сравнивает Origin буквально.
-      CORS_ORIGINS: http://localhost:4400,http://127.0.0.1:4400,http://192.168.3.131:4400,http://lore.odal.seidrstudio.pro:4400,https://lore.odal.seidrstudio.pro
-      LORE_PUBLIC_URL: https://lore.odal.seidrstudio.pro
+      # PL-04: адреса ПРЕПРОДА — имена preprod.* и опубликованные порты 4410/4412.
+      CORS_ORIGINS: http://localhost:4410,http://127.0.0.1:4410,http://192.168.3.131:4410,http://localhost:4412,http://127.0.0.1:4412,http://192.168.3.131:4412,https://preprod.lore.odal.seidrstudio.pro,https://preprod.new.lore.odal.seidrstudio.pro
+      LORE_PUBLIC_URL: https://preprod.lore.odal.seidrstudio.pro
+      # У v2 свой канонический адрес (оверлей подставляет его lore-app-next).
+      LORE_PUBLIC_URL_V2: https://preprod.new.lore.odal.seidrstudio.pro
       LORE_OIDC_ORIGIN: https://odal.seidrstudio.pro
       # SPRINT_VIZ_EMBED/EMB-L1: origin Völva для встроенных графиков (frame-src CSP).
       # Назван самой Völva 06.11: site-url стенда, резолв в 192.168.3.131, /api/health 200.
@@ -177,7 +215,10 @@ jobs:
       #
       # Проверялось вечером 19.07: с выключенным оверлеем стенд отвечал 200 по
       # :4400 и выглядел рабочим, но получить сессию было неоткуда.
-      COMPOSE_FILE: docker-compose.yml:docker-compose.traefik.yml
+      #
+      # PL-04: вместо оверлея прода (Host lore.odal) — оверлей ПРЕПРОДА: свои
+      # порты через !override, метки Traefik на preprod.*, образы :sha8, lore.db.
+      COMPOSE_FILE: docker-compose.yml:docker-compose.preprod.yml
       # ── Зеркало Nexus для Gradle внутри сборки образа ─────────────────────
       # Адрес именно LAN-ый, а не host.docker.internal: на Linux-демоне это имя
       # само не резолвится, и build-arg указывал бы в пустоту — ровно та
@@ -206,6 +247,25 @@ jobs:
           # event.before...HEAD, нужна история. Репозиторий ~10 МБ.
           fetch-depth: 0
 
+      # PL-04: режим прогона и тег образов. live=false — dry-run (ручной запуск
+      # с dry_run=true): каждый меняющий шаг ниже стоит под
+      # steps.mode.outputs.live == 'true'. Тег образов — первые 8 знаков коммита:
+      # по нему релиз (PL-05) найдёт на 131 то, что прошло препрод.
+      - name: Режим прогона (live / dry-run) и тег образов :sha8
+        id: mode
+        env:
+          DRY: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          if [ "$DRY" = "true" ]; then live=false; else live=true; fi
+          echo "live=$live" >> "$GITHUB_OUTPUT"
+          # Два тега: рабочий preprod-<sha8> (им compose собирает и поднимает) и
+          # релизный <sha8> — его ставит шаг «Пометить образы» ПОСЛЕ всех проб,
+          # поэтому образ, не прошедший пробы, релизу не достанется.
+          echo "LORE_IMAGE_TAG=preprod-${GITHUB_SHA::8}" >> "$GITHUB_ENV"
+          echo "LORE_SHA8=${GITHUB_SHA::8}" >> "$GITHUB_ENV"
+          echo "режим: live=$live, тег образов: preprod-${GITHUB_SHA::8} → после проб ${GITHUB_SHA::8}, ref: ${GITHUB_REF_NAME}"
+          [ "$live" = true ] || echo "::notice::DRY-RUN: только проверки — без сборок, выкаток, пометок образов и оповещений"
+
       - name: Verify required secrets are configured
         run: |
           # Учётка Infisical проверяется ЗДЕСЬ, а не «по факту работы»: без неё
@@ -225,6 +285,15 @@ jobs:
             echo "::error::secrets.ARCADEDB_ROOT_PASSWORD is not set on this repo — deploy would silently break the backend's ArcadeDB auth (see comment above). Add it in Forgejo: Settings -> Actions -> Secrets."
             exit 1
           fi
+
+      # PL-04: ворота препрода ДО любых сборок — база/окружение/проект не прод,
+      # оверлей собирается и не занимает прод-порты, база препрода есть на
+      # LORE-ygg 131, окружение preprod в Infisical не пустое (без отката на prod).
+      # В dry-run печатает все отказы и не роняет шаг. Логика — в скрипте.
+      - name: Ворота препрода (база, Infisical preprod, порты) — громко, без отката на prod
+        env:
+          DRY_RUN: ${{ steps.mode.outputs.live == 'true' && 'false' || 'true' }}
+        run: bash .github/scripts/preprod-gates.sh
 
       # SPRINT_UXR_S3_V2_INFRA/S3-10 (D-2026-UXR-V2-FOLDER-V1-FROZEN): выкатка
       # по путям и заморозка v1. Логика в ci-scope.sh (режим cd):
@@ -247,6 +316,7 @@ jobs:
       # работает lore-app, и ставим тег lore-app:v1-frozen (если его ещё нет).
       # После выкатки шаг «v1 не тронут» сверяет, что образ тот же.
       - name: Pin LORE v1 image (lore-app frozen)
+        if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/v1-freeze.sh pin
 
       # Диагностика доставки флага (AL-53) — почему auth не включается, хотя
@@ -256,18 +326,18 @@ jobs:
         run: bash .github/scripts/build-args-probe.sh
 
       - name: Build backend image
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         run: bash .github/scripts/compose-build-retry.sh lore-backend
 
       - name: Build frontend image
-        if: steps.which.outputs.frontend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend == 'true'
         run: bash .github/scripts/compose-build-retry.sh lore-app
 
       # SPRINT_UXR_S3_V2_INFRA/S3-06 (ADR-LORE-045): второй образ — LORE v2 из
       # web-next/ (сервис lore-app-next). Отдельным шагом, а не вторым именем в
       # той же команде: упавший v2 должен быть виден как упавший v2.
       - name: Build frontend image (v2, lore-app-next)
-        if: steps.which.outputs.frontend_next == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         run: bash .github/scripts/compose-build-retry.sh lore-app-next
 
       # DBR-06: накатка схемы — отдельный ВИДИМЫЙ шаг, а не побочный эффект
@@ -276,7 +346,7 @@ jobs:
       # деплой останавливается ДО подмены работающего контейнера. Рантайм ниже
       # стартует без накатки (lore.migrate=false) и сверяет версию схемы.
       - name: Migrate schema (separate step, root)
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         env:
           LORE_MIGRATE: "true"
           LORE_MIGRATE_ONLY: "true"
@@ -294,8 +364,16 @@ jobs:
             || { echo "::error::процесс вышел с 0, но строки о завершённой накатке нет — накатка не подтверждена"; tail -60 /tmp/migrate.log; exit 1; }
           echo "накатка подтверждена"
 
+      # PL-04: у препрода свой MinIO (порты 19000/19001, том lore-preprod_*).
+      # Бэкенд поднимается с --no-deps, поэтому MinIO сам не стартует — без этого
+      # шага первая выкатка препрода дала бы бэкенд без хранилища (S3 → 503).
+      # Идемпотентно: работающий MinIO не пересоздаётся, minio-init — разовый.
+      - name: MinIO препрода (свой, идемпотентно)
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
+        run: docker compose up -d minio minio-init
+
       - name: Deploy backend
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         env:
           # DBR-01: способ входа рантайма — переменная репозитория (Settings →
           # Actions → Variables). Не задана — basic, как было. token включать
@@ -307,24 +385,43 @@ jobs:
         run: docker compose up -d --no-deps lore-backend
 
       - name: Deploy frontend
-        if: steps.which.outputs.frontend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend == 'true'
         run: docker compose up -d --no-deps lore-app
 
       # v2 рядом с v1, а не вместо: свой `up --no-deps`, lore-app не трогается.
       - name: Deploy frontend (v2, lore-app-next)
-        if: steps.which.outputs.frontend_next == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         run: docker compose up -d --no-deps lore-app-next
+
+      # PL-04: v1 заморожен и по пушу не собирается, но на препроде он нужен —
+      # релиз везёт на прод все три образа, прошедшие препрод. Если v1 в проекте
+      # lore-preprod ещё не запущен (первая выкатка), поднимаем его ОБРАЗОМ ПРОДА:
+      # unlimitedlore-lore-app:<vars.LORE_PREPROD_V1_SEED, по умолчанию latest> —
+      # на 131 это последняя сборка v1 старого стенда (07a8c740 = прод v1).
+      # Уже запущен — шаг ничего не делает. Образа нет — красный с подсказкой.
+      - name: Препрод v1 — засев образом прода, если v1 ещё не запущен
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend != 'true'
+        env:
+          SEED: ${{ vars.LORE_PREPROD_V1_SEED || 'latest' }}
+        run: |
+          if [ -n "$(docker compose ps -q lore-app)" ]; then echo "v1 препрода уже работает — засев не нужен"; exit 0; fi
+          src="unlimitedlore-lore-app:$SEED"
+          id=$(docker image inspect -f '{{.Id}}' "$src" 2>/dev/null) || {
+            echo "::error::v1 на препроде не запущен, а образа $src для засева нет. Задайте vars.LORE_PREPROD_V1_SEED (тег образа v1 прода) или соберите v1: LORE CD, service=frontend."; exit 1; }
+          docker tag "$id" "unlimitedlore-lore-app:${LORE_IMAGE_TAG}"
+          echo "::notice::v1 препрода засеян образом $src ($id)"
+          docker compose up -d --no-deps lore-app
 
       # S3-10: v1 заморожен — проверяем фактом, а не обещанием. Если этот прогон
       # v1 не выкатывал, lore-app обязан работать на том же образе, что до
       # выкатки (сменился или пропал — деплой красный).
       - name: LORE v1 not touched (frozen image unchanged)
-        if: steps.which.outputs.frontend != 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend != 'true'
         run: bash .github/scripts/v1-freeze.sh verify
 
       # Хотфикс v1 (ручной запуск service=frontend): тег переезжает на новый образ.
       - name: Re-pin LORE v1 image after hotfix
-        if: steps.which.outputs.frontend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend == 'true'
         run: bash .github/scripts/v1-freeze.sh repin
 
       # Real verification, not "the command exited 0" — matches the manual
@@ -352,7 +449,7 @@ jobs:
       # причина там же, в логе: миграция не прошла, приложение отказалось
       # стартовать, docker перезапустил контейнер по кругу.
       - name: Wait for backend health
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         run: |
           cid=$(docker compose ps -q lore-backend)
           for i in $(seq 1 60); do
@@ -376,7 +473,7 @@ jobs:
       # причина (какая проверка DOWN и почему), а «DOWN» без причины одинаково
       # выглядит при упавшей БД, неверном креде и несуществующей базе.
       - name: Verify backend readiness (DB reachable with our credential)
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         run: |
           cid=$(docker compose ps -q lore-backend)
           body=""; code=""
@@ -407,11 +504,12 @@ jobs:
       # Автолечение отключается переменной LORE_DB_AUTOHEAL=false: тогда шаг
       # остаётся отчётом и деплой продолжается с предупреждением, а не тихо.
       - name: Heal DB indexes after upgrade
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         env:
           DB_USER: root
           DB_PASS: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
-          DB_NAME: system_aida_lore
+          # PL-04: база препрода, а не прод-имя по умолчанию.
+          DB_NAME: ${{ env.LORE_DB }}
           # Реестр FT лежит В РЕПОЗИТОРИИ, а не в build/: образ собирается
           # внутри docker, gradle на раннере не запускается, и артефакта сборки
           # здесь не бывает. Копию сверяет SliceSqlDumpTest — разойтись с
@@ -479,7 +577,7 @@ jobs:
       # KC-мост — именно так выглядел бы зелёный деплой без учётки Infisical.
       # Поэтому проверяем ФАКТ: preflight должен сказать, что KC настроен.
       - name: Verify KC bridge actually got its secret
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         run: |
           cid=$(docker compose ps -q lore-backend)
           # Проверка enforcement (auth реально требует токен) зависит от
@@ -575,7 +673,7 @@ jobs:
       # Решает HTTP-КОД группы (200 = UP, 503 = DOWN), а не поиск подстроки в
       # теле: шесть ложных провалов AL-88 были ровно grep-ом по JSON.
       - name: Verify bridges actually work (DBR-18)
-        if: steps.which.outputs.backend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.backend == 'true'
         run: |
           out=$(docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" curlimages/curl:latest \
             sh -c 'curl -s -m 30 -w "\n%{http_code}" http://lore-backend:9100/q/health/group/bridges || printf "\n000"')
@@ -598,7 +696,7 @@ jobs:
           esac
 
       - name: Verify frontend serves
-        if: steps.which.outputs.frontend == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend == 'true'
         run: |
           cid=$(docker compose ps -q lore-app)
           code=$(docker exec "$cid" curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/)
@@ -635,19 +733,33 @@ jobs:
       # отвечает старый образ. Логика и самопроверка — в скрипте (--selftest
       # гоняется в backend CI на каждом PR, включая контроль «неверный порт → красный»).
       # Нет секретов LORE_CD_PROBE_CLIENT_* — шаг КРАСНЫЙ (BLOCKED), не пропуск.
-      - name: Проба /lore/version через :4400 (S0-03)
+      #
+      # PL-04: коммит СБОРКИ работающего бэкенда — из метки revision образа.
+      # Проба /lore/version сверяет commit ВСЕГДА, а не только когда бэкенд
+      # выкатывался: у перетегированного образа commit ≠ sha пуша (PL-08).
+      - name: Коммит сборки бэкенда препрода (метка revision)
+        id: pinned
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/preprod-pin-sha.sh revision
+
+      # PL-04: путь пользователя — по ИМЕНИ препрода через Traefik 131 (сертификат
+      # regru). Первый сертификат выписывается DNS-01 — до 2 минут повторов на 000.
+      - name: Проба /lore/version по имени препрода (S0-03)
+        if: steps.mode.outputs.live == 'true'
         env:
           PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
           PROBE_CLIENT_SECRET: ${{ secrets.LORE_CD_PROBE_CLIENT_SECRET }}
           PROBE_CURL: docker run --rm --network host curlimages/curl:latest curl
-          EXPECT_COMMIT: ${{ steps.which.outputs.backend == 'true' && github.sha || '' }}
-        run: bash .github/scripts/version-probe.sh http://127.0.0.1:4400
+          PROBE_ATTEMPTS: "12"
+          PROBE_DELAY: "10"
+          EXPECT_COMMIT: ${{ steps.pinned.outputs.backend_revision }}
+        run: bash .github/scripts/version-probe.sh https://preprod.lore.odal.seidrstudio.pro
 
       # S3-06: то же, что «Verify frontend» выше, для v2, плюс «это именно v2»: оба образа собираются с одного
       # шаблона nginx, и перепутанный бандл (v1 в образе v2) прошёл бы проверку
       # «200 + бандл отдаётся» молча.
       - name: Verify frontend v2 serves
-        if: steps.which.outputs.frontend_next == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         run: |
           cid=$(docker compose ps -q lore-app-next)
           [ -n "$cid" ] || { echo "::error::контейнер lore-app-next не найден после up"; exit 1; }
@@ -668,19 +780,20 @@ jobs:
       # nginx до бэкенда. Логика и разбор исходов — в post-deploy-probe.sh
       # (bash в `run:` уже ломал разбор workflow парсером Forgejo).
       #
-      # :4400/lore/version — ровно тот адрес, по которому ходит MCP
-      # (LORE_BACKEND_URL). Коммит сверяется, только если бэкенд выкатывался в
-      # этом прогоне: иначе там законно работает прежняя сборка.
-      - name: Probe :4400/lore/version (адрес MCP, через nginx v1)
+      # PL-04: опубликованный порт v1 ПРЕПРОДА (:4410). Прежняя проба :4400 —
+      # адрес MCP — теперь смотрит на пересыльщик прод-MCP и препроду не
+      # принадлежит. Коммит — из метки образа (шаг pinned).
+      - name: Probe :4410/lore/version (опубликованный порт v1 препрода)
+        if: steps.mode.outputs.live == 'true'
         env:
-          WANT_COMMIT: ${{ steps.which.outputs.backend == 'true' && github.sha || '' }}
-        run: bash .github/scripts/post-deploy-probe.sh version "v1 :4400" http://192.168.3.131:4400/lore/version "$WANT_COMMIT"
+          WANT_COMMIT: ${{ steps.pinned.outputs.backend_revision }}
+        run: bash .github/scripts/post-deploy-probe.sh version "v1 :4410" http://192.168.3.131:4410/lore/version "$WANT_COMMIT"
 
       # /lore/ через nginx v2 — общий шаблон обязан проксировать и у второго
       # фронта (через него пойдёт телефон с new.lore). Адрес внутри сети
       # compose: опубликованный порт v2 (4402) — деталь для ручного захода.
       - name: Probe /lore/version через nginx v2
-        if: steps.which.outputs.frontend_next == 'true'
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         run: PROBE_NETWORK="${COMPOSE_PROJECT_NAME}_default" bash .github/scripts/post-deploy-probe.sh version "v2 nginx" http://lore-app-next/lore/version
 
       # new.lore (D-2026-UXR-V2-HOST): отдаётся ли по публичному имени именно
@@ -688,100 +801,31 @@ jobs:
       # готовности там v1 через временный роутер, поэтому строгость —
       # переменной репозитория: warn по умолчанию (громко, деплой зелёный),
       # required после S3-04 (не v2 → деплой красный).
-      - name: Probe new.lore (публичный адрес v2)
-        if: steps.which.outputs.frontend_next == 'true'
+      # PL-04: публичное имя v2 ПРЕПРОДА.
+      - name: Probe preprod.new.lore (публичный адрес v2 препрода)
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         env:
           LORE_V2_PUBLIC_PROBE: ${{ vars.LORE_V2_PUBLIC_PROBE || 'warn' }}
-        run: bash .github/scripts/post-deploy-probe.sh v2-page https://new.lore.odal.seidrstudio.pro/
+        run: bash .github/scripts/post-deploy-probe.sh v2-page https://preprod.new.lore.odal.seidrstudio.pro/
 
-      # ── Keycloak-тема LORE ────────────────────────────────────────────────
-      #
-      # Тема живёт в этом репозитории (backend/keycloak/themes/lore), а
-      # раскатывалась руками — то есть репозиторий и стенд расходились молча.
-      #
-      # Шаг СОЗНАТЕЛЬНО последний: Keycloak — общий сервис, на нём висят
-      # seer/heimdall/volva. Падение выката темы не должно откатывать уже
-      # поднятое приложение, но и пропускаться молча тоже не должно — поэтому
-      # шаг блокирующий, но стоит после проверок бэкенда и фронта.
-      #
-      # Что он НЕ делает, и это главное:
-      #   • не перезапускает Keycloak — контейнер поднят в `start-dev`, кэш тем
-      #     выключен, файлы подхватываются на лету (проверено 2026-08-02: после
-      #     копирования страница входа сразу отдала новый lore.css, 12210 байт
-      #     против прежних 7310, без рестарта);
-      #   • не трогает темы seer/heimdall/volva — пишет РОВНО в каталог темы
-      #     lore, полученный из docker inspect;
-      #   • не трогает compose и не пересоздаёт контейнер.
-      #
-      # Почему через helper-контейнер, а не docker cp: все четыре mount'а темы
-      # смонтированы READ-ONLY (rw=false), и `docker cp` в них отвечает
-      # «mounted volume is marked read-only». Пишем в ХОСТОВЫЙ каталог, смонтировав
-      # его себе на запись; исходники приходят tar'ом по stdin, поэтому путь
-      # внутри раннера роли не играет (у docker-демона свой взгляд на пути).
-      #
-      # Путь берётся из `docker inspect`, а не прибит: переедет каталог тем —
-      # выкат поедет за ним, а не запишет в мёртвое место.
-      - name: Deploy Keycloak theme (lore only)
-        run: |
-          set -e
-          THEME_SRC=backend/keycloak/themes/lore
-          [ -f "$THEME_SRC/login/theme.properties" ] || {
-            echo "::error::в репозитории нет $THEME_SRC/login/theme.properties — выкат темы не с чего делать"; exit 1; }
+      # PL-04: по ИМЕНИ препрода отдаётся бандл ровно того контейнера, что работает
+      # в проекте lore-preprod (а не старого стенда и не чужого маршрута Traefik).
+      # Тот же скрипт сверяет прод в релизе — там ожидаемое берётся из образа.
+      - name: Проба бандла v1 по имени препрода
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/bundle-probe.sh "v1 препрод" container:lore-app https://preprod.lore.odal.seidrstudio.pro/
 
-          if ! docker inspect keycloak >/dev/null 2>&1; then
-            echo "::error::контейнер keycloak не найден — тема не выкачена. Это общий сервис платформы, LORE его не поднимает."
-            exit 1
-          fi
+      - name: Проба бандла v2 по имени препрода
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/bundle-probe.sh "v2 препрод" container:lore-app-next https://preprod.new.lore.odal.seidrstudio.pro/
 
-          # Гард ровно против той поломки, что случилась с темой volva 2026-08-02:
-          # файлы легли на хост, а внутри контейнера их не было — тема
-          # «выкачена» и не применилась. Без mount'а docker cp/копирование
-          # ушло бы в слой контейнера и исчезло при пересоздании.
-          HOST_DIR=$(docker inspect keycloak \
-            --format '{{range .Mounts}}{{if eq .Destination "/opt/keycloak/themes/lore"}}{{.Source}}{{end}}{{end}}')
-          if [ -z "$HOST_DIR" ]; then
-            echo "::error::/opt/keycloak/themes/lore не примонтирован в контейнер keycloak."
-            echo "::error::Добавьте bind-mount в docker-compose.override.yml Keycloak (рядом с seer/heimdall/volva) и пересоздайте контейнер."
-            exit 1
-          fi
-          echo "каталог темы на хосте: $HOST_DIR"
-
-          # Копирование, а не rm -rf + cp: каталог общий с платформой, и
-          # сносить его целиком — рисковать чужими файлами, если там когда-то
-          # окажется что-то ещё. Удалённые в репозитории файлы при этом
-          # останутся на стенде — осознанный размен в пользу безопасности.
-          tar czf - -C backend/keycloak/themes lore \
-            | docker run --rm -i -v "$HOST_DIR:/dst" alpine:3 sh -c '
-                set -e
-                mkdir -p /tmp/in && tar xzf - -C /tmp/in
-                test -f /tmp/in/lore/login/theme.properties || { echo "в архиве нет темы"; exit 1; }
-                cp -a /tmp/in/lore/. /dst/
-              '
-          echo "файлы скопированы"
-
-          # Проверка ФАКТОМ, а не кодом возврата: контейнер обязан видеть
-          # ровно тот css, что лежит в репозитории. Сверка по размеру ловит и
-          # «скопировалось не туда», и «скопировалось наполовину».
-          WANT=$(wc -c < "$THEME_SRC/login/resources/css/lore.css")
-          #
-          # Путь передаётся АРГУМЕНТОМ, а не через `<`: перенаправление ввода
-          # выполняет шелл РАННЕРА, а не контейнер, поэтому
-          # `docker exec … wc -c < /opt/…` искал файл на файловой системе
-          # раннера. Первая редакция шага именно так и упала — «контейнер видит
-          # 0 байт» при успешно скопированной теме (проверено сразу после:
-          # в контейнере лежали все 13 файлов и css на 12210 байт).
-          # Проверка, которая врёт про свой предмет, хуже отсутствующей:
-          # она обвиняет выкат в том, чего он не делал.
-          GOT=$(docker exec keycloak wc -c /opt/keycloak/themes/lore/login/resources/css/lore.css 2>&1) || {
-            echo "::error::не удалось прочитать css внутри контейнера: $GOT"
-            exit 1
-          }
-          GOT=${GOT%% *}
-          if [ "$WANT" != "$GOT" ]; then
-            echo "::error::контейнер видит lore.css в $GOT байт, а в репозитории $WANT — тема не доехала"
-            exit 1
-          fi
-          echo "тема применена: lore.css $GOT байт, рестарт Keycloak не потребовался"
+      # PL-04 → PL-05: ПОСЛЕДНИМ, после всех проб — тег unlimitedlore-<сервис>:<sha8>
+      # на образы, работающие в lore-preprod (собранное сейчас и не тронутое).
+      # По нему релиз найдёт на 131 то, что прошло препрод; не прошедшее пробы
+      # тега не получает.
+      - name: Пометить образы препрода :sha8 (их везёт релиз)
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/preprod-pin-sha.sh tag
 
       # Telegram notifications — same pattern as aida-root's cd.yml (secrets.
       # TELEGRAM_TOKEN/TELEGRAM_CHAT_ID, silent no-op if unset so this doesn't
@@ -809,13 +853,13 @@ jobs:
       # результат мержа PR develop→preprod); нет номера — строка опускается,
       # а не рисуется битой.
       - name: Notify success
-        if: success()
+        if: success() && steps.mode.outputs.live == 'true'
         continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           PUBLIC_REPO: https://git.seidrstudio.pro/AIDA/UnlimitedLORE
-          STAND_URL: https://lore.odal.seidrstudio.pro
+          STAND_URL: https://preprod.lore.odal.seidrstudio.pro
         run: |
           [ -z "${TG_TOKEN}" ] && exit 0
           RUN_URL="${PUBLIC_REPO}/actions/runs/${{ github.run_number }}"
@@ -828,7 +872,7 @@ jobs:
           PR_LINE=""
           [ -n "$PR_NUM" ]   && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
           [ -n "$PR_TITLE" ] && PR_LINE=$(printf "\nЧто: %s%s" "$PR_TITLE" "$PR_LINE")
-          MSG=$(printf "✅ LORE CD: стенд обновлён\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nСтенд: %s\nРелизы: %s/releases\nRun: %s" \
+          MSG=$(printf "✅ LORE CD: препрод обновлён\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nПрепрод: %s\nРелизы: %s/releases\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
             "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" \
             "$STAND_URL" "$PUBLIC_REPO" "$RUN_URL")
@@ -848,7 +892,7 @@ jobs:
           exit 0
 
       - name: Notify failure
-        if: failure()
+        if: failure() && steps.mode.outputs.live == 'true'
         continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -864,7 +908,7 @@ jobs:
           PR_LINE=""
           [ -n "$PR_NUM" ]   && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
           [ -n "$PR_TITLE" ] && PR_LINE=$(printf "\nЧто: %s%s" "$PR_TITLE" "$PR_LINE")
-          MSG=$(printf "❌ LORE CD: деплой УПАЛ\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nRun: %s" \
+          MSG=$(printf "❌ LORE CD: выкатка препрода УПАЛА\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
             "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" "$RUN_URL")
           jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \

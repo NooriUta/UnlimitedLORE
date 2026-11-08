@@ -1,0 +1,106 @@
+# ПРЕПРОД LORE на ci-server (192.168.3.131) — SPRINT_LORE_PIPELINE_HOST/PL-04, ADR-LORE-046,
+# D-2026-UXR-CD-PREPROD-PROD-SPLIT.
+#
+# Подключается ТОЛЬКО из lore-cd.yml:
+#   COMPOSE_PROJECT_NAME=lore-preprod
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.preprod.yml
+# Оверлей docker-compose.traefik.yml (Host lore.odal) с ним НЕ сочетается: прод живёт
+# на lore-host, и метка препрода на прод-имени — ровно та ошибка, от которой этот
+# файл и отделён.
+#
+# Порты — свои, через `!override` (Compose ≥ 2.24): обычное слияние списков
+# ДОБАВИЛО бы порты к базовым, и препрод попытался бы занять :4400 и :9100 —
+# на 131 их держат пересыльщики прод-MCP (lore4400-forward) и MinIO 131.
+# Базовый docker-compose.yml не трогаем: front-shared.test держит у v1 "4400:80".
+#
+#   v1 lore-app       4410 → 80     https://preprod.lore.odal.seidrstudio.pro
+#   v2 lore-app-next  4412 → 80     https://preprod.new.lore.odal.seidrstudio.pro
+#   бэкенд            127.0.0.1:9110 → 9100
+#   MinIO препрода    19000 → 9000, консоль 127.0.0.1:19001 → 9001
+#
+# Имена препрода резолвятся CoreDNS 131 в 192.168.3.131 (публично — NXDOMAIN, так
+# задумано); сертификат — резолвер Traefik `regru` (ACME DNS-01), публичная A-запись
+# не нужна. Роутеры названы `lore-preprod*`: имена роутеров Traefik глобальны на
+# весь docker-провайдер, совпадение с чужим роутером молча склеило бы маршруты.
+#
+# Образы именуются как на проде (unlimitedlore-<сервис>), тег — первые 8 знаков
+# коммита пуша (LORE_IMAGE_TAG), метка org.opencontainers.image.revision — коммит
+# СБОРКИ. Релиз (lore-release.yml, PL-05) ищет на 131 ровно эти :sha8 и сверяет
+# /lore/version прода по метке: у перетегированного образа commit ≠ sha тега (PL-08).
+#
+# База — LORE_DB (свойство lore.db), обязательна: без неё compose не соберётся,
+# и бэкенд препрода не уйдёт молча в system_aida_lore по умолчанию.
+
+services:
+  minio:
+    ports: !override
+      - "19000:9000"
+      - "127.0.0.1:19001:9001"
+
+  lore-backend:
+    image: unlimitedlore-lore-backend:${LORE_IMAGE_TAG:?LORE_IMAGE_TAG не задан — тег образов препрода (первые 8 знаков коммита)}
+    build:
+      labels:
+        org.opencontainers.image.revision: ${LORE_BUILD_COMMIT:-}
+    ports: !override
+      - "127.0.0.1:9110:9100"
+    networks:
+      - default
+      - headscale-net
+    environment:
+      - lore.db=${LORE_DB:?LORE_DB не задан — база препрода (system_aida_lore_preprod)}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: headscale-net
+      # Прямой путь к бэкенду мимо nginx — как у прода в docker-compose.traefik.yml.
+      traefik.http.routers.lore-preprod-backend-direct.rule: "Host(`preprod.lore.odal.seidrstudio.pro`) && (PathPrefix(`/_backend/lore/`) || PathPrefix(`/_backend/bench/`))"
+      traefik.http.routers.lore-preprod-backend-direct.priority: "1000"
+      traefik.http.routers.lore-preprod-backend-direct.entrypoints: websecure
+      traefik.http.routers.lore-preprod-backend-direct.tls.certresolver: regru
+      traefik.http.routers.lore-preprod-backend-direct.middlewares: lore-preprod-backend-strip
+      traefik.http.middlewares.lore-preprod-backend-strip.stripprefix.prefixes: /_backend
+      traefik.http.routers.lore-preprod-backend-direct.service: lore-preprod-backend-direct
+      traefik.http.services.lore-preprod-backend-direct.loadbalancer.server.port: "9100"
+
+  lore-app:
+    image: unlimitedlore-lore-app:${LORE_IMAGE_TAG:?LORE_IMAGE_TAG не задан}
+    build:
+      labels:
+        org.opencontainers.image.revision: ${LORE_BUILD_COMMIT:-}
+    ports: !override
+      - "4410:80"
+    networks:
+      - default
+      - headscale-net
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: headscale-net
+      traefik.http.routers.lore-preprod.rule: Host(`preprod.lore.odal.seidrstudio.pro`)
+      traefik.http.routers.lore-preprod.entrypoints: websecure
+      traefik.http.routers.lore-preprod.tls.certresolver: regru
+      traefik.http.services.lore-preprod.loadbalancer.server.port: "80"
+
+  lore-app-next:
+    image: unlimitedlore-lore-app-next:${LORE_IMAGE_TAG:?LORE_IMAGE_TAG не задан}
+    build:
+      labels:
+        org.opencontainers.image.revision: ${LORE_BUILD_COMMIT:-}
+    ports: !override
+      - "4412:80"
+    networks:
+      - default
+      - headscale-net
+    environment:
+      # Свой канонический адрес у v2: база отдаёт обоим фронтам один LORE_PUBLIC_URL.
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL_V2:?LORE_PUBLIC_URL_V2 не задан — адрес v2 препрода}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: headscale-net
+      traefik.http.routers.lore-preprod-next.rule: Host(`preprod.new.lore.odal.seidrstudio.pro`)
+      traefik.http.routers.lore-preprod-next.entrypoints: websecure
+      traefik.http.routers.lore-preprod-next.tls.certresolver: regru
+      traefik.http.services.lore-preprod-next.loadbalancer.server.port: "80"
+
+networks:
+  headscale-net:
+    external: true
