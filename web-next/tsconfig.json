@@ -34,7 +34,9 @@
       "mermaid": ["./node_modules/mermaid"],
       "@mermaid-js/layout-elk": ["./node_modules/@mermaid-js/layout-elk"],
       "bpmn-js/*": ["./node_modules/bpmn-js/*"],
-      "dompurify": ["./node_modules/dompurify"]
+      "dompurify": ["./node_modules/dompurify"],
+      // Вход kit (@seidr/kit/auth, S3-18) — тот же случай: peer oidc-client-ts.
+      "oidc-client-ts": ["./node_modules/oidc-client-ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

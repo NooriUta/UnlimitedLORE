@@ -3,7 +3,7 @@
 // S2: чтение, ушко, текст, тема, плотность, клавиши, полоски, «что помнит».
 // Хранение — по контракту SPEC-LORE-UXR-S2-CONTRACTS (/lore/me/settings,
 // /lore/me/memory) через заглушку той же поверхности S2Client; бэкенд не нужен.
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import gameIcons from '@iconify-json/game-icons/icons.json';
@@ -296,5 +296,21 @@ describe('S4-02 · аватар живёт в оболочке v2', () => {
     expect(html).toContain('sk-avatar');
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).not.toContain('data-nav-switch="v2"');
+  });
+});
+
+describe('S3-18 · выход из меню аватара', () => {
+  it('кнопка «Выйти» есть, когда приложению есть чем выходить, и зовёт onLogout', async () => {
+    const onLogout = vi.fn();
+    render(<AccountMenu client={client()} root={document.createElement('div')} lang="ru" jar={jar()} name="volva" onLogout={onLogout} />);
+    const dlg = await openMenu();
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Выйти' }));
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('вход выключен (нет onLogout) — кнопки выхода нет: не обещаем того, чего нет', async () => {
+    render(<AccountMenu client={client()} root={document.createElement('div')} lang="ru" jar={jar()} />);
+    const dlg = await openMenu();
+    expect(within(dlg).queryByRole('button', { name: 'Выйти' })).toBeNull();
   });
 });

@@ -3584,3 +3584,36 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-act__agent { --pill-c: var(--inf); }
 .sk-act__unread { --pill-c: var(--acc); }
 .sk-act__future { --pill-c: var(--t3); }
+
+/* ---------- Вход (S3-18) ---------- */
+.sk-auth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap);
+  padding: 32px 12px;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+}
+.sk-auth__note { color: var(--t1); }
+.sk-auth-expired {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 1000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  max-width: min(640px, calc(100vw - 24px));
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 55%, transparent);
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-auth .sk-auth-expired { position: static; transform: none; }
+.sk-auth-expired__icon { color: var(--wrn); }
+.sk-auth-expired__text { min-width: 0; flex: 1; }

@@ -6,6 +6,7 @@
 // метаданными полноты S1 (truncated/limit/hint, page{…}, outside_scope), иначе
 // kit (useLoadState → Truncated) не отличит полную выдачу от обрезанной.
 import type { SliceCompletenessMeta } from '@seidr/kit';
+import { loreFetch } from '../auth/session';
 
 const LORE_BASE = '/lore';
 
@@ -44,7 +45,7 @@ export async function fetchSlice<T>(
 ): Promise<SliceBody<T>> {
   const qs = new URLSearchParams(params).toString();
   const url = `${LORE_BASE}/slice/${encodeURIComponent(slice)}${qs ? `?${qs}` : ''}`;
-  const doFetch = opts.fetchImpl ?? fetch;
+  const doFetch = opts.fetchImpl ?? loreFetch;
   const res = await doFetch(url, { signal: opts.signal, headers: { Accept: 'application/json', ...opts.headers } });
   if (!isJson(res)) {
     // Страница прокси/SPA вместо JSON — это сбой, а не «пусто».

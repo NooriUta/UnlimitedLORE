@@ -498,5 +498,15 @@
   "kit.mdedit.saving": "Saving…",
   "kit.mdedit.cancel": "Cancel",
   "kit.mdedit.saveFailed": "Not saved: {reason}. Your draft is kept.",
-  "kit.mdedit.lossy": "Preview would distort this text (raw HTML or non-markdown construct) — editing in code only."
+  "kit.mdedit.lossy": "Preview would distort this text (raw HTML or non-markdown construct) — editing in code only.",
+  "kit.auth.loading": "Checking sign-in…",
+  "kit.auth.redirecting": "You are not signed in — redirecting to Keycloak…",
+  "kit.auth.loggedOut": "You have signed out of LORE.",
+  "kit.auth.login": "Sign in",
+  "kit.auth.relogin": "Sign in again",
+  "kit.auth.logout": "Sign out",
+  "kit.auth.expired.title": "Session expired.",
+  "kit.auth.expired.hint": "The server rejected the sign-in — data on screen may be stale. Unsaved work stays until you sign in.",
+  "kit.auth.error.title": "Sign-in failed",
+  "kit.auth.error.hint": "Keycloak did not confirm the sign-in — this is not “empty”. Sign in again."
 }

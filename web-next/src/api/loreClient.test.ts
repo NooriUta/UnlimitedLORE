@@ -3,6 +3,7 @@
 // есть; ошибка несёт HTTP-статус, чтобы kit различил «нет прав» и «сбой».
 import { describe, expect, it, vi } from 'vitest';
 import { classifyError } from '@seidr/kit';
+import { createAuthSession, type OidcUserLike, type UserManagerLike } from '@seidr/kit/auth';
 import { LoreApiError, fetchSlice } from './loreClient';
 
 const json = (status: number, body: unknown) =>
@@ -15,7 +16,7 @@ describe('fetchSlice', () => {
     expect(body).toEqual({ rows: [{ a: 1 }], truncated: 'unknown', hint: 'h' });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('http://h/lore/slice/sprints?project=x');
-    expect((init.headers as Record<string, string>)['X-Seer-Role']).toBe('admin');
+    expect(new Headers(init.headers).get('X-Seer-Role')).toBe('admin');
   });
 
   it('тело без rows — ноль строк, а не падение', async () => {
@@ -54,19 +55,56 @@ describe('fetchSlice', () => {
     expect(err.code).toBe('NON_JSON');
   });
 
-  it('с включённым входом — Bearer из сохранённой OIDC-сессии; протухшая — без заголовка', async () => {
-    const store = new Map<string, string>([
-      ['oidc.user:https://kc/realms/x:lore-app', JSON.stringify({ access_token: 'T', expires_at: 4_000_000_000 })],
-    ]);
-    const storage = { length: store.size, key: (i: number) => [...store.keys()][i] ?? null, getItem: (k: string) => store.get(k) ?? null };
-    const fetchImpl = vi.fn(async () => json(200, { rows: [] }));
-    await fetchSlice('adrs', undefined, { fetchImpl, base: 'http://h', authEnabled: true, storage, now: () => 1_000_000_000_000 });
-    let init = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1];
-    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer T');
-    expect((init.headers as Record<string, string>)['X-Seer-Role']).toBeUndefined();
+  // S3-18: у v2 свой вход (kit auth). Токен v1 (oidc.user:* на чужом origin) не читаем.
+  const NOW = 1_800_000_000_000;
+  const mgr = (stored: OidcUserLike | null) => {
+    const m = {
+      getUser: vi.fn(async () => stored),
+      signinRedirect: vi.fn(async () => {}),
+      signinRedirectCallback: vi.fn(),
+      signinSilent: vi.fn(async () => null),
+      signoutRedirect: vi.fn(async () => {}),
+      removeUser: vi.fn(async () => {}),
+      events: { addUserLoaded: () => {}, addUserUnloaded: () => {}, addSilentRenewError: () => {} },
+    };
+    return m as typeof m & UserManagerLike;
+  };
+  const loc = () => ({ href: 'http://h/?sec=adr', origin: 'http://h', pathname: '/', search: '?sec=adr', hash: '' });
 
-    await fetchSlice('adrs', undefined, { fetchImpl, base: 'http://h', authEnabled: true, storage, now: () => 5_000_000_000_000 });
-    init = (fetchImpl.mock.calls[1] as unknown as [string, RequestInit])[1];
-    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+  it('S3-18: вход включён, сессии нет — ведёт на вход и НЕ шлёт запрос без Authorization', async () => {
+    const m = mgr(null);
+    const session = createAuthSession({ enabled: true, manager: () => m, location: loc, now: () => NOW });
+    await session.init();
+    const fetchImpl = vi.fn(async () => json(200, { rows: [] }));
+    const err = await fetchSlice('adrs', undefined, { fetchImpl, base: 'http://h', session }).catch(e => e);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(m.signinRedirect).toHaveBeenCalledWith({ state: '/?sec=adr' });
+    expect(err.status).toBe(401);
+    expect(classifyError(err)).toBe('error');
+  });
+
+  it('S3-18: с токеном своей сессии — Authorization: Bearer, без dev-роли', async () => {
+    const session = createAuthSession({
+      enabled: true, manager: () => mgr({ access_token: 'T2', expires_at: NOW / 1000 + 600 }), location: loc, now: () => NOW,
+    });
+    await session.init();
+    const fetchImpl = vi.fn(async () => json(200, { rows: [] }));
+    await fetchSlice('adrs', undefined, { fetchImpl, base: 'http://h', session });
+    const init = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer T2');
+    expect(new Headers(init.headers).get('X-Seer-Role')).toBeNull();
+  });
+
+  it('S3-18: 401 от API — сессия «истекла», ошибка с 401, а не пустой список', async () => {
+    const session = createAuthSession({
+      enabled: true, manager: () => mgr({ access_token: 'T3', expires_at: NOW / 1000 + 600 }), location: loc, now: () => NOW,
+    });
+    await session.init();
+    const err = await fetchSlice('adrs', undefined, {
+      fetchImpl: async () => json(401, { error: 'UNAUTHENTICATED' }), base: 'http://h', session,
+    }).catch(e => e);
+    expect(err).toBeInstanceOf(LoreApiError);
+    expect(err.status).toBe(401);
+    expect(session.getState().status).toBe('expired');
   });
 });

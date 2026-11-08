@@ -498,5 +498,15 @@
   "kit.mdedit.saving": "Сохраняю…",
   "kit.mdedit.cancel": "Отмена",
   "kit.mdedit.saveFailed": "Не сохранилось: {reason}. Черновик на месте.",
-  "kit.mdedit.lossy": "Превью исказит этот текст (сырой HTML или конструкция вне markdown) — правка только в коде."
+  "kit.mdedit.lossy": "Превью исказит этот текст (сырой HTML или конструкция вне markdown) — правка только в коде.",
+  "kit.auth.loading": "Проверяем вход…",
+  "kit.auth.redirecting": "Вы не вошли — переходим ко входу через Keycloak…",
+  "kit.auth.loggedOut": "Вы вышли из LORE.",
+  "kit.auth.login": "Войти",
+  "kit.auth.relogin": "Войти снова",
+  "kit.auth.logout": "Выйти",
+  "kit.auth.expired.title": "Сессия истекла.",
+  "kit.auth.expired.hint": "Сервер не принял вход — данные на экране могли не обновиться. Несохранённое останется на месте до входа.",
+  "kit.auth.error.title": "Вход не удался",
+  "kit.auth.error.hint": "Keycloak не подтвердил вход — это не «пусто». Войдите снова."
 }

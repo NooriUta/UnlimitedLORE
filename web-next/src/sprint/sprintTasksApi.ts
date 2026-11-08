@@ -10,6 +10,7 @@
 // Ошибки не глотаются: LoreHttpError несёт HTTP-статус, kit по нему отличает
 // «нет прав» (403) от сбоя, а errorDetail показывает «HTTP 409 · текст».
 import type { TaskPatch, TaskPhase, TaskRowData, TaskStatus, SliceCompletenessMeta } from '@seidr/kit';
+import { loreFetch } from '../auth/session';
 
 const LORE = '/lore';
 
@@ -111,7 +112,7 @@ function toPhase(r: SprintPhaseApiRow): TaskPhase {
 /** Ответ для useLoadState: rows — задачи, метаданные полноты — из слайса задач. */
 export type SprintTasksData = SliceCompletenessMeta & { rows: TaskRowData[]; phases: TaskPhase[] };
 
-export async function loadSprintTasks(sprintId: string, signal?: AbortSignal, f: typeof fetch = fetch): Promise<SprintTasksData> {
+export async function loadSprintTasks(sprintId: string, signal?: AbortSignal, f: typeof fetch = loreFetch): Promise<SprintTasksData> {
   const p = { sprint_id: sprintId };
   // Сбой любого из двух — сбой загрузки: «задачи без фаз» при упавшем слайсе
   // фаз было бы враньём о структуре спринта.
@@ -124,7 +125,7 @@ export async function loadSprintTasks(sprintId: string, signal?: AbortSignal, f:
   return { ...meta, rows: (t.rows ?? []).map(toTaskRow), phases: (ph.rows ?? []).map(toPhase) };
 }
 
-export async function setTaskStatus(taskUid: string, status: TaskStatus, f: typeof fetch = fetch): Promise<void> {
+export async function setTaskStatus(taskUid: string, status: TaskStatus, f: typeof fetch = loreFetch): Promise<void> {
   await post('/status', { entity_type: 'task', id: taskUid, status }, f);
 }
 
@@ -132,7 +133,7 @@ export async function setTaskStatus(taskUid: string, status: TaskStatus, f: type
  * POST /lore/task/edit. title обязателен всегда (бэкенд отказывает без него) —
  * неизменённый уходит текущим; остальные поля null = «не трогать».
  */
-export async function editTask(task: TaskRowData, patch: TaskPatch, f: typeof fetch = fetch): Promise<void> {
+export async function editTask(task: TaskRowData, patch: TaskPatch, f: typeof fetch = loreFetch): Promise<void> {
   await post('/task/edit', {
     task_uid: task.uid,
     title: patch.title ?? task.title ?? '',

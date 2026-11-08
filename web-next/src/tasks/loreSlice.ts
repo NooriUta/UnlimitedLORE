@@ -4,6 +4,7 @@
 // заведёт, этот файл заменяется им. Ошибка — с HTTP-статусом: экран рисует
 // 403 как «нет доступа», прочее — как сбой с повтором, и никогда — как «пусто».
 import type { SliceCompletenessMeta } from '@seidr/kit';
+import { loreFetch } from '../auth/session';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -27,7 +28,7 @@ export type SliceBody<T> = { rows: T[] } & SliceCompletenessMeta;
 export async function fetchSlice<T>(slice: string, params: Record<string, string>, opts: SliceOptions = {}): Promise<SliceBody<T>> {
   const q = new URLSearchParams(params).toString();
   const url = `/lore/slice/${encodeURIComponent(slice)}${q ? `?${q}` : ''}`;
-  const f = opts.fetchImpl ?? ((i: string, init?: RequestInit) => fetch(i, init));
+  const f = opts.fetchImpl ?? loreFetch;
   const res = await f(url, { signal: opts.signal, headers: { Accept: 'application/json', ...(opts.headers?.() ?? {}) } });
   if (!res.ok) {
     let code = '';

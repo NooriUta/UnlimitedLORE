@@ -17,6 +17,7 @@
 // v1-клиент (src/api/lore.ts) v2 не импортирует (v1 заморожен,
 // D-2026-UXR-V2-FOLDER-V1-FROZEN); общего клиента v2 пока нет.
 import { diffVersions, type KitHistory, type KitHistoryVersion, type KitRestoreRequest } from '@seidr/kit';
+import { loreFetch } from '../auth/session';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -61,7 +62,7 @@ export interface HistoryResult {
   slice?: string;
 }
 
-const fetchOf = (o: HistoryOptions): FetchLike => o.fetchImpl ?? ((i, init) => fetch(i, init));
+const fetchOf = (o: HistoryOptions): FetchLike => o.fetchImpl ?? loreFetch;
 
 async function errorBody(res: Response): Promise<{ error?: string; detail?: string }> {
   try {

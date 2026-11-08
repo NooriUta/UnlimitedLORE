@@ -11,6 +11,7 @@
 // Отказы — словами и с кодом: 403 SCOPE_EMPTY («нет прав») не должен выглядеть
 // как пустая выдача, 502 — как «ничего не нашлось».
 import type { KitLang } from '@seidr/kit';
+import { loreFetch } from '../auth/session';
 import { appT } from '../i18n';
 
 export interface SearchSliceRow {
@@ -69,7 +70,7 @@ async function failure(res: Response, lang: KitLang): Promise<never> {
 
 export async function fetchSearchSlice(pattern: string, opts: SearchSliceOptions = {}): Promise<SearchSliceResult> {
   const lang = opts.lang ?? 'ru';
-  const doFetch = opts.fetchImpl ?? fetch;
+  const doFetch = opts.fetchImpl ?? loreFetch;
   const qs = new URLSearchParams({ pattern });
   const res = await doFetch(`/lore/slice/search?${qs}`, {
     signal: opts.signal,

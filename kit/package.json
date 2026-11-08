@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./content": "./src/content/index.ts",
     "./activity": "./src/activity/index.ts",
+    "./auth": "./src/auth/index.ts",
     "./core": "./src/core/index.ts",
     "./demo/lore": "./demo/lore.ts",
     "./demo/datawanderers": "./demo/datawanderers.ts",
@@ -39,12 +40,13 @@
     "@tiptap/suggestion": "3.32.2",
     "bpmn-js": "^18.22.1",
     "dompurify": "^3.4.17",
+    "katex": "^0.18.2",
     "marked": "18.0.6",
     "mermaid": "^11.16.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tiptap-markdown": "^0.9.0",
-    "katex": "^0.18.2"
+    "oidc-client-ts": "^3.5.0"
   },
   "peerDependenciesMeta": {
     "@mermaid-js/layout-elk": {
@@ -97,6 +99,9 @@
     },
     "katex": {
       "optional": true
+    },
+    "oidc-client-ts": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -121,13 +126,14 @@
     "bpmn-js": "^18.31.1",
     "dompurify": "^3.4.17",
     "jsdom": "^26.1.0",
+    "katex": "^0.18.10",
     "marked": "18.0.6",
     "mermaid": "^11.17.2",
+    "oidc-client-ts": "^3.5.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tiptap-markdown": "^0.9.0",
     "typescript": "~6.0.3",
-    "vitest": "^5.1.0",
-    "katex": "^0.18.10"
+    "vitest": "^5.1.0"
   }
 }
