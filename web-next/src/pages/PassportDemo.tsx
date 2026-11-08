@@ -72,7 +72,7 @@ export default function PassportDemo({ fetchImpl }: { fetchImpl?: typeof fetch }
           <pre className="pp-demo__json">{JSON.stringify(contract, null, 2)}</pre>
         </details>
       )}
-      <RecordDock placement={st.place} backdrop={<ul className="pp-demo__list">{(list.data ?? []).slice(0, 14).map(o => <li key={o.id}>{o.id}</li>)}</ul>}>
+      <RecordDock placement={st.place} onExitFull={() => set({ place: 'bottom' })} backdrop={<ul className="pp-demo__list">{(list.data ?? []).slice(0, 14).map(o => <li key={o.id}>{o.id}</li>)}</ul>}>
         {pp.state === 'error' ? <LoadError error={pp.error} onRetry={pp.reload} />
           : !view || !ctx ? <Skeleton lines={8} label={t('pp.loading')} />
             : (
