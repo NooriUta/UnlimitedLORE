@@ -43,7 +43,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { ProgressCell } from './progress';
 import {
   DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
-  quickCounts, quickIconOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
+  quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
@@ -961,6 +961,7 @@ export function ListView({
             <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
             {quick.map(q => {
               const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
+              const qColor = quickColorOf(q, config);
               return (
                 <Pill
                   key={q.id}
@@ -968,7 +969,7 @@ export function ListView({
                   pressed={state.quick === q.id}
                   onToggle={on => update({ quick: on ? q.id : null })}
                 >
-                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={12} /></span>}
+                  {icon && <span className="sk-list__qicon" data-quick-icon={icon} style={qColor ? { color: qColor } : undefined}><GameIcon slug={icon} size={12} /></span>}
                   <span>{q.title}</span><span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
                 </Pill>
               );

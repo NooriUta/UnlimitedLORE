@@ -46,8 +46,7 @@ describe('типографика полосы: один кегль (шрифты
     const start = css.indexOf(`\n${sel} {`);
     if (start < 0) return null;
     const body = css.slice(css.indexOf('{', start) + 1, css.indexOf('}', start));
-    const m = [null, body];
-    return m?.[1].match(/font-size:\s*([^;]+);/)?.[1].trim() ?? null;
+    return body.match(/font-size:\s*([^;]+);/)?.[1].trim() ?? null;
   };
   const STRIP = ['.sk-list__quick .sk-pill', '.sk-list__seglabel', '.sk-list__label', '.sk-list__segcount', '.sk-list__qcount', '.sk-list__search', '.sk-list__dir', '.sk-facet__btn', '.sk-facet__op', '.sk-list__shown'];
   it('положительный контроль: разбор находит размер правила', () => {
@@ -64,6 +63,9 @@ describe('типографика полосы: один кегль (шрифты
     const start = css.indexOf(`\n${sel} {`);
     return start < 0 ? '' : css.slice(css.indexOf('{', start) + 1, css.indexOf('}', start));
   };
+  it('(ж) моно-значения ячеек (дата, ID, числа) не переносятся: «2026-07-03» в одну строку (08.11)', () => {
+    expect(ruleOf('.sk-list__mono')).toMatch(/white-space:\s*nowrap/);
+  });
   it('(е) фасет — скруглённые углы, но не «эллипс», как в MVP (08.11)', () => {
     expect(ruleOf('.sk-facet__ops')).toMatch(/border-radius:\s*var\(--r-md\)/);
     expect(ruleOf('.sk-facet__op')).toMatch(/border-radius:\s*var\(--r-sm\)/);
@@ -82,5 +84,15 @@ describe('«Быстро» — иконка 12 px, как в v1', () => {
     const icon = container.querySelector('.sk-list__qicon > *') as HTMLElement | null;
     expect(icon).not.toBeNull(); // положительный контроль: иконка нарисована (или заглушка того же размера)
     expect(icon!.getAttribute('width') ?? icon!.style.width.replace('px', '')).toBe('12');
+  });
+  it('у быстрого фильтра по статусу иконка — цветом статуса из словаря (владелица 08.11)', () => {
+    // и при своей иконке экрана (quickIcons), и при иконке статуса по умолчанию
+    for (const quickIcons of [{ done: 'check-mark' }, undefined]) {
+      const { container, unmount } = render(<ListView config={cfg} data={data(rs())} urlState={false} quickIcons={quickIcons} />);
+      const wrap = container.querySelector('[data-quick-icon]') as HTMLElement | null;
+      expect(wrap).not.toBeNull();
+      expect(wrap!.style.color).toBe('var(--suc)');
+      unmount();
+    }
   });
 });

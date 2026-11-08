@@ -2166,7 +2166,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   outline: 2px solid var(--acc);
   outline-offset: 1px;
 }
-.sk-list__mono { font-family: var(--mono); color: var(--t2); }
+.sk-list__mono { font-family: var(--mono); color: var(--t2); white-space: nowrap; }
 .sk-list__check {
   display: inline-flex;
   align-items: center;
