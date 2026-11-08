@@ -39,7 +39,8 @@ describe('lore.record/1 — из слайсов', () => {
   it('связи — списком links с направлением, вкладка задач спринта считает их', async () => {
     const c = await contractOf('sprint', 'SPRINT_A', { sprints: [SPRINT], tasks_of_sprint: [{ task_id: 'A-1', title: 'Задача', status_raw: 'DONE', order_index: 1 }] });
     expect(c.links).toContainEqual({ rel: 'HAS_TASK', dir: 'out', id: 'SPRINT_A/A-1', type: 'Task', title: 'Задача', status: 'done' });
-    expect(c.schema.tabs.find(t => t.key === 'tasks')).toMatchObject({ zone: 'record', rel: 'HAS_TASK', count: 1 });
+    // Задачи спринта — композиция (дочки), по виду UML; вкладку рисует kit (D-2026-LORE-RECORD-RELATION-UML).
+    expect(c.schema.relations.find(r => r.key === 'tasks')).toMatchObject({ relation: 'composition', rel: 'HAS_TASK', dir: 'out', count: 1 });
     expect(c.facts).toEqual({ tasks: { done: 1, total: 1 }, due: '2026-11-12' });
   });
 
@@ -60,7 +61,7 @@ describe('lore.record/1 → kit', () => {
     expect(k.record).toMatchObject({ id: 'SPRINT_A', kind: 'sprint', title: 'Спринт А', body_md: 'контекст' });
     expect(k.record.fields.planned_end_date).toBe('2026-11-12');
     expect(k.config.kinds.sprint.fields?.map(f => f.key)).toEqual(c.schema.fields.filter(f => f.group === 'props').map(f => f.key));
-    expect(k.config.kinds.sprint.tabs?.map(t => t.key)).toEqual(['tasks']);
+    expect(k.config.kinds.sprint.relations?.find(r => r.key === 'tasks')?.relation).toBe('composition');
     expect(k.data.edges).toContainEqual({ from: 'SPRINT_A', to: 'SPRINT_A/A-1', type: 'HAS_TASK' });
     expect(k.data.records.find(r => r.id === 'SPRINT_A/A-1')?.status).toBe('done');
     expect(k.facts).toBeDefined();
@@ -105,5 +106,18 @@ describe('ADR — разделы как в v1: «Контекст», «Реше�
     const ov = k.config.kinds.adr.overview;
     expect(typeof ov).toBe('function');
     expect(k.config.kinds.adr.fields?.map(f => f.key)).not.toContain('decision_md');
+  });
+});
+
+describe('ADR — связи по видам UML (слова владелицы 08.11)', () => {
+  it('решения — агрегация; «зависит от / блокирует» и «заменяет / заменён» — ассоциация; JUSTIFIED_BY — реализация', async () => {
+    const ADR = { adr_id: 'ADR-1', name: 'А', status: 'ACCEPTED', context_md: 'к', components: [], git_projects: [], depends_on_ids: ['ADR-2'], supersedes_ids: ['ADR-0'], superseded_by_ids: [], justified_task_uids: ['S/T-1'], tags: [] };
+    const c = toLoreRecord(await loadPassport('adr', 'ADR-1', 'ru', fake({ adr: [ADR], decisions_of_adr: [{ decision_id: 'D-1', title: 'Р', status: 'accepted' }] }), NOW), NOW);
+    const rel = (k: string) => c.schema.relations.find(r => r.key === k);
+    expect(rel('decisions')).toMatchObject({ relation: 'aggregation', rel: 'DECIDED_IN', dir: 'in', count: 1 });
+    expect(rel('dependsOn')).toMatchObject({ relation: 'association', count: 1 });
+    expect(rel('supersedes')).toMatchObject({ relation: 'association', rel: 'SUPERSEDES', count: 1 });
+    expect(rel('justifies')).toMatchObject({ relation: 'realization', count: 1 });
+    expect(c.schema.relations.some(r => r.relation === 'generalization')).toBe(false);
   });
 });

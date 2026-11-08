@@ -550,5 +550,12 @@
   "kit.list.view.feed": "Feed",
   "kit.list.view.timeline": "Timeline",
   "kit.list.feed.undated": "no date",
-  "kit.list.timeline.noConfig": "This section has no date field for the timeline"
+  "kit.list.timeline.noConfig": "This section has no date field for the timeline",
+  "kit.record.rel.deps": "Dependencies",
+  "kit.record.rel.realization": "Realization",
+  "kit.record.rel.empty": "No links",
+  "kit.record.rel.unlink": "Unlink: {title}",
+  "kit.record.rel.link": "Link: {label}",
+  "kit.record.rel.linkBtn": "Link",
+  "kit.record.rel.idPlaceholder": "Record ID"
 }

@@ -24,6 +24,8 @@ import { RecordRef, renderOut, valueText } from './fmt';
 import { RecordFacts } from './RecordFacts';
 import type { RecordFactsSpec } from './facts';
 import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
+import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, relationTargets } from './RecordRelations';
+import type { KitRelationDef } from '../core/contract';
 
 export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
 
@@ -167,6 +169,18 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
   const kindTabs = kind?.tabs ?? [];
+  // Связи по видам UML: композиция и агрегация — своя вкладка; зависимости (и ассоциация) —
+  // одна вкладка; реализация — одна; обобщение — строкой в шапке.
+  const rels: KitRelationDef[] = kind?.relations ?? [];
+  const relTabs: { id: string; label: string; relation: string; defs: KitRelationDef[] }[] = [];
+  for (const d of rels) {
+    if (OWN_TAB.includes(d.relation)) { relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] }); continue; }
+    const sh = SHARED_TAB[d.relation];
+    if (!sh) continue;
+    const ex = relTabs.find(x => x.id === sh.id);
+    if (ex) ex.defs.push(d); else relTabs.push({ id: sh.id, label: kitT(lang, sh.label), relation: d.relation, defs: [d] });
+  }
+  const relCount = (defs: KitRelationDef[]) => defs.reduce((n, d) => n + relationTargets(record, ctx, d).length, 0);
   const zoned = placement !== undefined;
   const hasProps = zoned && (kind?.fields?.length ?? 0) > 0;
   // Снизу и на весь экран свойства — колонкой справа рядом с контентом (владелица 08.11):
@@ -176,6 +190,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     { id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' : undefined },
     ...(hasProps && !propsSide ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
     ...kindTabs.map(t => ({ id: t.key, label: t.title, zone: zoned ? 'record' as const : undefined })),
+    ...relTabs.map(rt => ({ id: rt.id, label: rt.label, count: relCount(rt.defs), relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], zone: zoned ? 'record' as const : undefined })),
   ];
   const aroundItems: TabItem[] = [
     { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: recordLinks(record.id, ctx.data.edges).length },
@@ -207,6 +222,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   ) : null;
   const reset = `${record.id}:${current}`;
   const custom = kindTabs.find(t => t.key === current);
+  const relTab = relTabs.find(rt => rt.id === current);
 
   let panel: ReactNode;
   if (current === RECORD_TABS.overview) {
@@ -232,6 +248,12 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     panel = (
       <BlockBoundary block="history" label={kitT(lang, 'kit.record.tab.history')} lang={lang} resetKey={reset}>
         <RecordHistory record={record} source={history} lang={lang} />
+      </BlockBoundary>
+    );
+  } else if (relTab) {
+    panel = (
+      <BlockBoundary block={`rel:${relTab.id}`} label={relTab.label} lang={lang} resetKey={reset}>
+        <RecordRelations record={record} ctx={ctx} defs={relTab.defs} lang={lang} />
       </BlockBoundary>
     );
   } else if (custom) {
@@ -268,6 +290,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     <>
         {switcher}
         <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
+        <RelationLines record={record} ctx={ctx} defs={rels} />
         {facts && (
           <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
             <RecordFacts record={record} ctx={ctx} spec={facts} lang={lang}

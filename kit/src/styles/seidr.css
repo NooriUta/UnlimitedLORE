@@ -3857,6 +3857,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
 .sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 24px; align-items: start; }
 .sk-rec__content { min-width: 0; }
+/* Связи по видам UML (паспорт): ◆ композиция, ◇ агрегация, ⇢ зависимость, ▷ реализация, △ обобщение. */
+.sk-tab__mark { margin-right: 2px; color: var(--acc); font-family: var(--mono); }
+.sk-rel { display: flex; flex-direction: column; gap: 8px; }
+.sk-rel__groups { display: flex; flex-direction: column; gap: 14px; }
+.sk-rel__group { display: flex; flex-direction: column; gap: 6px; }
+.sk-rel__head { margin: 0; color: var(--t2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.sk-rel__list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.sk-rel__item { display: flex; align-items: center; gap: 8px; min-height: max(var(--tap), var(--row-h)); padding: 2px 4px; border-bottom: 1px solid var(--bd); }
+.sk-rel__empty { color: var(--t3); font-size: var(--fs-sm); }
+.sk-rel__mark { color: var(--acc); font-family: var(--mono); }
+.sk-rel__unlink { margin-left: auto; min-width: max(var(--tap), 24px); min-height: max(var(--tap), 24px); border: 1px solid var(--bd); border-radius: var(--r-sm); background: none; color: var(--t3); cursor: pointer; }
+.sk-rel__unlink:hover { border-color: var(--dng); color: var(--dng); }
+.sk-rel__add { display: flex; gap: 6px; align-items: center; }
+.sk-rel__add input { min-height: max(var(--tap), 26px); padding: 0 8px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1); font: inherit; font-size: var(--fs-sm); }
+.sk-rel__line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-rel__linelabel { color: var(--t3); }
 /* Разделы «Свойств» (S4-36): подзаголовок как в v1 — «Планирование», «Модули». */
 .sk-rec-fields__sec { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--bd); }
 .sk-rec-fields__sechead { margin: 0 0 6px; color: var(--t2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }

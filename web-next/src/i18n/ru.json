@@ -236,5 +236,10 @@
   "pp.sec.plan": "Планирование",
   "pp.sec.modules": "Модули",
   "pp.field.created": "Создан",
-  "pp.field.noRelease": "Не требует релиза"
+  "pp.field.noRelease": "Не требует релиза",
+  "pp.rel.dependsOn": "Зависит от",
+  "pp.rel.blocks": "Блокирует",
+  "pp.rel.supersedes": "Заменяет",
+  "pp.rel.supersededBy": "Заменён",
+  "pp.rel.justifies": "Обосновывает задачи"
 }

@@ -550,5 +550,12 @@
   "kit.list.view.feed": "Лента",
   "kit.list.view.timeline": "Таймлайн",
   "kit.list.feed.undated": "без даты",
-  "kit.list.timeline.noConfig": "Для таймлайна у раздела не задано поле даты"
+  "kit.list.timeline.noConfig": "Для таймлайна у раздела не задано поле даты",
+  "kit.record.rel.deps": "Зависимости",
+  "kit.record.rel.realization": "Реализация",
+  "kit.record.rel.empty": "Связей нет",
+  "kit.record.rel.unlink": "Отвязать: {title}",
+  "kit.record.rel.link": "Привязать: {label}",
+  "kit.record.rel.linkBtn": "Привязать",
+  "kit.record.rel.idPlaceholder": "ID записи"
 }

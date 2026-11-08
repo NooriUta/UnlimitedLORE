@@ -16,6 +16,9 @@ export interface TabItem {
   disabled?: boolean;
   /** Зона (S4-33): «around» — вычисляемое вокруг записи, рисуется другим тоном. */
   zone?: 'record' | 'around';
+  /** Вид связи UML (паспорт по связям): значок у вкладки и data-relation. */
+  relation?: string;
+  mark?: string;
 }
 
 export interface TabsProps {
@@ -82,10 +85,12 @@ export function Tabs({ items, value, onChange, label, children, className, varia
               disabled={item.disabled}
               className="sk-tab"
               data-zone={item.zone}
+              data-relation={item.relation}
               onClick={() => go(item.id)}
               onKeyDown={e => onKeyDown(e, item.id)}
             >
               {item.icon && <GameIcon slug={item.icon} size={13} />}
+              {item.mark && <span className="sk-tab__mark" data-relation-mark aria-hidden="true">{item.mark}</span>}
               <span>{item.label}</span>
               {item.count !== undefined && <span className="sk-tab__count">{item.count}</span>}
             </button>
