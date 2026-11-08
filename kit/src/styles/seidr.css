@@ -3855,6 +3855,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-dock[data-placement='full'] .sk-dock__panel { inset: 0; }
 @media (max-width: 720px) {
   .sk-dock__panel { inset: 0 !important; width: auto !important; height: auto !important; }
+}
+
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */
 .sk-shell__top-start { display: flex; align-items: center; min-width: 0; }
 .sk-scope__chev { color: var(--t3); font-size: var(--fs-xs); }
