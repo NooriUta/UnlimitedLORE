@@ -151,7 +151,13 @@ public class LoreNewsV2Resource extends LoreResourceBase {
             NewsV2.Query q = new NewsV2.Query(csv(type), csv(project), csv(component), csv(sprint), csv(milestone),
                 csv(author), csv(kind), csv(els), groupBy == null ? "project" : groupBy, sub, matrix, limit,
                 "ok".equals(mark.state()) ? mark.at() : null);
-            Map<String, Object> out = new NewsV2Engine(input, LoreNewsV2Collector.authors(), LoreNewsV2Collector.statusHistory())
+            // S7A-01: автор и история статуса — из истории SCD2 (S2-12/S2-13), а не заглушки.
+            java.util.function.BiFunction<String, Map<String, Object>, List<Map<String, Object>>> rows =
+                (sql, params) -> LoreTimeFormat.isoUtcRows(ingestService.queryPublic(sql, params));
+            StatusHistoryTimeline timeline = StatusHistoryTimeline.load(rows);
+            HistAuthorIndex authorIndex = HistAuthorIndex.load(rows);
+            Map<String, Object> out = new NewsV2Engine(input,
+                    LoreNewsV2Collector.authors(timeline, authorIndex), timeline)
                 .compute(q);
             @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
             meta.put("read_mark", mark.toMap());
