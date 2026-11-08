@@ -409,7 +409,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
    в этом файле (S4-00e, single-layer.test.ts + снимок голого HTML). */
 .sk-pill--value { --pill-c: var(--t2); }
 .sk-pill--id {
+  /* Код записи — без пилюли, только цветом, как в v1 (владелица 08.11). */
   --pill-c: var(--acc);
+  padding: 0;
+  border-color: transparent;
+  background: none;
   font-family: var(--mono);
   letter-spacing: .02em;
 }
@@ -513,7 +517,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   gap: 4px;
   padding: 1px 8px;
   border: 1px solid color-mix(in srgb, var(--schip-c) 45%, transparent);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm); /* квадрат со скруглением, как в v1 (08.11) */
   background: color-mix(in srgb, var(--schip-c) 12%, transparent);
   color: var(--schip-c);
   font-size: var(--fs-sm);

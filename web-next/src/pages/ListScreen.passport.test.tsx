@@ -36,7 +36,7 @@ describe('паспорт записи открывается из живого �
       return d;
     });
     expect(dock.getAttribute('data-placement')).toBe('right');
-    await waitFor(() => expect(container.querySelector('[data-testid="kit-rec-dock"] article[data-kind]')).toBeTruthy());
+    await waitFor(() => expect(container.querySelector('[data-testid="kit-rec-dock"] article[data-kind]')).toBeTruthy(), { timeout: 8000 }); // ленивый чанк MartProse/mermaid
     fireEvent.click(screen.getByRole('button', { name: /весь экран/i }));
     expect(container.querySelector('[data-testid="kit-rec-dock"]')!.getAttribute('data-placement')).toBe('full');
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть паспорт' }));
