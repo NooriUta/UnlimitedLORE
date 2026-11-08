@@ -253,6 +253,27 @@ public class ForgejoBridge {
         return GREEN;
     }
 
+    /**
+     * MT-CI-STATUS-NULL: комбинированный commit-status Forgejo → контекст→state.
+     * Для SHA без статусов Forgejo отдаёт {@code "statuses": null}; Vert.x
+     * {@code getJsonArray(key, def)} отдаёт def только при отсутствии ключа, поэтому
+     * null проверяется явно — «ранов нет» (NO_RUN/STALLED), а не сбой (UNKNOWN).
+     * Forgejo кладёт статусы новее→старше; первый на контекст = актуальный.
+     */
+    static Map<String, String> statusesByContext(JsonObject combined) {
+        Map<String, String> byCtx = new java.util.HashMap<>();
+        JsonArray statuses = combined == null ? null : combined.getJsonArray("statuses");
+        if (statuses == null) return byCtx;
+        for (int i = 0; i < statuses.size(); i++) {
+            JsonObject s = statuses.getJsonObject(i);
+            if (s == null) continue;
+            String ctx = s.getString("context");
+            String st = s.getString("status");
+            byCtx.putIfAbsent(ctx == null ? "" : ctx, st == null ? "" : st);
+        }
+        return byCtx;
+    }
+
     /** true только когда merge разрешён (§10: только из GREEN). */
     static boolean mergeAllowed(String gateStatus) { return GREEN.equals(gateStatus); }
 
