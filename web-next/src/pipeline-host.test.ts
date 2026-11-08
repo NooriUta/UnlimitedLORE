@@ -278,6 +278,19 @@ describe('PL-04: снимок прода → база препрода (толь
     expect(s).toMatch(/_bak_\$TS/);
     expect(s).not.toMatch(/drop database/i);
   });
+
+  // 08.11, первый реальный прогон (run 3973): `docker cp` кладёт архив от root, а
+  // LORE-ygg работает под arcadedb — `rm /tmp/snap.zip` внутри set -e ронял уже
+  // УДАВШУЮСЯ распаковку, а сообщение врало про «прежнюю базу», которой не было.
+  it('архив в контейнере убирается от root и не роняет распаковку; сообщение — по факту', () => {
+    const s = code(read('scripts/preprod-db-refresh.sh'));
+    const unzipLine = s.split('\n').find((l) => /unzip -q/.test(l)) ?? '';
+    expect(unzipLine).not.toMatch(/rm -f/);
+    expect(s).toMatch(/docker exec -u 0 "\$LOCAL_YGG" rm -f \/tmp\/snap\.zip/);
+    expect(s).not.toMatch(/die "распаковка не удалась — прежняя база лежит как/);
+    // остаток прерванной заливки (каталог без открытой базы) считается «есть» → в _bak
+    expect(s).toMatch(/docker exec "\$LOCAL_YGG" test -d "\$DB_DIR\/\$TARGET_DB"/);
+  });
 });
 
 // ── поведение скриптов ───────────────────────────────────────────────────────
