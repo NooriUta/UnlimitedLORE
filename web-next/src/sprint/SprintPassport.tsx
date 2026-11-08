@@ -4,6 +4,7 @@
 // за 2 клика. Вкладка — в URL (?tab=…), как требует D-2026-UXR (состояние в URL).
 import { Pill, pushUrlState, Tabs } from '@seidr/kit';
 import { useAppT } from '../i18n';
+import { SprintBurnLine } from './SprintBurnLine';
 import { SprintTasksTab } from './SprintTasksTab';
 
 export const SPRINT_TABS = ['tasks'] as const;
@@ -17,6 +18,8 @@ export function SprintPassport({ sprintId, tab }: { sprintId: string; tab: Sprin
         <a className="shell-link" href="/">{t('sprintTasks.back')}</a>
         <Pill variant="id">{sprintId}</Pill>
       </header>
+      {/* S4-36: burn-down строкой под шапкой — место как в v1. */}
+      <SprintBurnLine sprintId={sprintId} />
       <Tabs
         items={[{ id: 'tasks', label: t('sprintTasks.title'), icon: 'checkbox-tree' }]}
         value={tab}

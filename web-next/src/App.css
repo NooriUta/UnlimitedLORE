@@ -127,4 +127,28 @@
 }
 .sprint-passport__head { display: flex; align-items: center; gap: var(--gap); }
 .sprint-passport__head .shell-link { margin-left: 0; }
+
+/* S4-36: burn-down строкой, как в v1 — цифры в линию под шапкой спринта. */
+.sprint-burn { margin: 0 0 var(--gap); }
+.sprint-burn__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--t2);
+}
+.sprint-burn__name { letter-spacing: .06em; color: var(--t3); }
+.sprint-burn__pair b { color: var(--t1); font-weight: 700; }
+.sprint-burn--loading,
+.sprint-burn--empty { margin: 0 0 var(--gap); font-size: var(--fs-sm); color: var(--t3); }
+/* Неполная история — видимая строка, а не сноска: цифры ниже посчитаны
+   по обрезанной выдаче и без этой пометки выглядят как полные. */
+.sprint-burn__partial {
+  margin: 0 0 4px;
+  font-size: var(--fs-sm);
+  color: var(--wrn);
+}
 .sprint-tasks { padding-top: 8px; }

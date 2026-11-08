@@ -3003,6 +3003,81 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
   border-top: 1px solid var(--bd);
 }
 .sk-tasks__gth--fault { color: var(--wrn); }
+
+/* S4-35: выбор колонок — раздел «Колонки» меню «Вид», по прототипу
+   владелицы s4-35-columns.html. */
+.sk-cols { min-width: 220px; }
+.sk-cols__head {
+  margin: 0 0 4px;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-cols__hint { margin: 0 0 6px; color: var(--t3); font-size: var(--fs-sm); }
+.sk-cols__list { margin: 0; padding: 0; list-style: none; }
+.sk-cols__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 26px);
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+}
+.sk-cols__row:hover { background: var(--bg2); }
+.sk-cols__label { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; cursor: pointer; }
+.sk-cols__row.is-locked .sk-cols__label { cursor: default; color: var(--t2); }
+.sk-cols__moves { display: inline-flex; gap: 2px; margin-left: auto; }
+.sk-cols__move {
+  min-width: max(var(--tap), 22px);
+  min-height: max(var(--tap), 22px);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sk-cols__move:hover { border-color: var(--acc); color: var(--t1); }
+
+/* S4-36: значки в углу карточки на доске — чтобы при переключении вида
+   сведения о записи не пропадали. Не больше трёх, статус не дублируем. */
+.sk-board__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.sk-board__badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-2xs);
+  color: var(--t2);
+}
+
+/* S4-36: счётчики в шапке спринта — ряд значков со счётом, «закрыто из
+   всего» и сумма оценок, как в v1. */
+.sk-tc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: var(--fs-sm);
+  color: var(--t2);
+}
+.sk-tc__group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sk-tc__item { display: inline-flex; align-items: center; gap: 3px; }
+.sk-tc__n { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t1); }
+.sk-tc__progress,
+.sk-tc__effort { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t1); }
+.sk-tc__progress { padding-left: 8px; border-left: 1px solid var(--bd); }
 .sk-tasks__gcount { margin-left: 8px; color: var(--t3); font-weight: 400; }
 .sk-tasks__row { border-top: 1px solid var(--bd); }
 .sk-tasks__row:hover { background: var(--bg2); }
@@ -3013,6 +3088,28 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-tasks__td--title { min-width: 220px; }
 .sk-tasks__td--effort { font-family: var(--mono); text-align: right; white-space: nowrap; }
 .sk-tasks__td--actions { width: 1%; white-space: nowrap; }
+/* S4-36: тип задачи иконкой, класс работы плашкой — как в v1. Цвет плашки
+   приходит из словаря в --cls-c; своего цвета kit не выбирает (S4-25). */
+.sk-tasks__td--type,
+.sk-tasks__td--cls { white-space: nowrap; }
+.sk-tasks__cls {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  padding: 0 5px;
+  border: 1px solid var(--cls-c, var(--bd));
+  border-radius: var(--r-sm);
+  color: var(--cls-c, var(--t2));
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+/* Значения нет в словаре — пунктир и предупреждающий цвет: видно, что это
+   не настоящий класс, а то, что мы честно не смогли опознать. */
+.sk-tasks__cls--unknown { border-style: dashed; color: var(--wrn); }
+.sk-tasks__dict-raw { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-tasks__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); white-space: nowrap; }
 a.sk-tasks__id { text-decoration: none; display: inline-flex; align-items: center; min-height: max(var(--tap), 20px); }
 a.sk-tasks__id:hover { text-decoration: underline; }
