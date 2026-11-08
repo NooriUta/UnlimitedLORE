@@ -294,6 +294,8 @@ describe('PL-04: снимок прода → база препрода (толь
 });
 
 // ── поведение скриптов ───────────────────────────────────────────────────────
+// PL-11: потолок для тестов с реальными git/bash (см. охранный тест в конце файла).
+const SPAWN_TIMEOUT = 30_000;
 const bashBin = process.platform === 'win32'
   ? ['C:/Program Files/Git/bin/bash.exe'].find((p) => existsSync(p))
   : 'bash';
@@ -357,7 +359,7 @@ function miniRepo() {
   return { d, pre, pre8: pre.slice(0, 8), tag8: git(d, 'rev-parse', 'HEAD').slice(0, 8) };
 }
 
-describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', () => {
+describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', { timeout: SPAWN_TIMEOUT }, () => {
   const S = '.github/scripts/lore-host-deploy.sh';
 
   it('находит образы препрода по родителю merge-коммита с тем же деревом', () => {
@@ -409,7 +411,7 @@ describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', () => {
   });
 });
 
-describe.skipIf(!bashBin)('lore-host-deploy.sh: замена тегов в compose', () => {
+describe.skipIf(!bashBin)('lore-host-deploy.sh: замена тегов в compose', { timeout: SPAWN_TIMEOUT }, () => {
   const S = '.github/scripts/lore-host-deploy.sh';
   const compose = [
     'services:',
@@ -446,7 +448,7 @@ describe.skipIf(!bashBin)('lore-host-deploy.sh: замена тегов в compo
   });
 });
 
-describe.skipIf(!bashBin)('preprod-db-refresh.sh: в прод и в замороженные копии не заливает', () => {
+describe.skipIf(!bashBin)('preprod-db-refresh.sh: в прод и в замороженные копии не заливает', { timeout: SPAWN_TIMEOUT }, () => {
   const S = 'scripts/preprod-db-refresh.sh';
   it.each(['system_aida_lore', 'system_aida_lore_frozen_20261107', 'some_db'])('TARGET_DB=%s — отказ до любых действий', (db) => {
     const r = run(S, [], { TARGET_DB: db, ARCADEDB_ROOT_PASSWORD: 'x', R: 'false' });
@@ -467,7 +469,7 @@ describe('скрипты трубы: проверки не врут из-за SI
   });
 });
 
-describe.skipIf(!bashBin)('preprod-gates.sh: защита от прода', () => {
+describe.skipIf(!bashBin)('preprod-gates.sh: защита от прода', { timeout: SPAWN_TIMEOUT }, () => {
   const S = '.github/scripts/preprod-gates.sh';
   const base = { PREPROD_GATES_ONLY: 'guards', LORE_DB: 'system_aida_lore_preprod', LORE_SECRETS_ENVIRONMENT: 'preprod', COMPOSE_PROJECT_NAME: 'lore-preprod' };
 
@@ -491,5 +493,18 @@ describe.skipIf(!bashBin)('preprod-gates.sh: защита от прода', () =
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/::error::/);
     expect(r.out).toMatch(/упал бы/);
+  });
+});
+
+// PL-11 (08.11): тесты, гоняющие настоящие git/bash, в одиночку идут ~1,8 с, а в
+// полном прогоне под нагрузкой всех воркеров упирались в дефолтные 5 с vitest
+// (замер: 1 из 3 полных прогонов — 5206 мс, тот же тест). Каждый такой describe
+// обязан нести явный потолок SPAWN_TIMEOUT — потолок от зависания, не норма.
+describe('PL-11: тесты с реальными процессами несут явный таймаут', () => {
+  it('каждый describe.skipIf(!bashBin) объявлен с { timeout: SPAWN_TIMEOUT }', () => {
+    const src = read('web-next/src/pipeline-host.test.ts');
+    const heads = src.split('\n').filter((l) => /^describe\.skipIf\(!bashBin\)\(/.test(l));
+    expect(heads.length).toBeGreaterThan(0);
+    for (const h of heads) expect(h).toMatch(/\{ timeout: SPAWN_TIMEOUT \}/);
   });
 });
