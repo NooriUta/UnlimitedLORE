@@ -122,7 +122,20 @@ RUN set -eu; \
 # re-resolve every dependency.
 COPY gradlew gradlew.bat settings.gradle build.gradle gradle.properties ./
 COPY gradle ./gradle
-RUN chmod +x gradlew && ./gradlew --no-daemon --version
+# PL-12 (08.11.2026): дистрибутив Gradle (~140 МБ) — тоже через Nexus. Зеркала
+# выше покрывают только зависимости, а обёртка качала дистрибутив напрямую:
+# services.gradle.org → редирект на GitHub, канал до которого рваный (CD препрода
+# run 3989 упал на этом шаге трижды: таймаут 60 с и 502). Пустое значение —
+# поведение прежнее; compose-build-retry.sh снимает зеркало, если оно не отвечает.
+ARG LORE_GRADLE_DIST_MIRROR=""
+RUN chmod +x gradlew \
+ && if [ -n "$LORE_GRADLE_DIST_MIRROR" ]; then \
+      p=gradle/wrapper/gradle-wrapper.properties; \
+      f="$(sed -n 's#^distributionUrl=.*/##p' "$p")"; \
+      sed -i "s#^distributionUrl=.*#distributionUrl=${LORE_GRADLE_DIST_MIRROR%/}/$f#" "$p"; \
+      echo "дистрибутив Gradle: ${LORE_GRADLE_DIST_MIRROR%/}/$f"; \
+    fi \
+ && ./gradlew --no-daemon --version
 
 # Compile + assemble the Quarkus app. Tests run in CI (they need a live
 # ArcadeDB), so the image build stays hermetic with -x test.
