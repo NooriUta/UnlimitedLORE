@@ -128,7 +128,9 @@ describe('строка «фильтр / группировка / порядок�
     expect(rows(container)).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Сбросить фильтр' }));
     expect(rows(container)).toHaveLength(2);
-    expect(screen.getByTestId('kit-list-desc').textContent).toContain('все записи');
+    // S4-21: нечего снимать — эха нет вовсе (раньше висело «все записи»), «Показано» на месте.
+    expect(screen.queryByTestId('kit-list-desc')).toBeNull();
+    expect(screen.getByTestId('kit-list-shown').textContent).toBe('Показано 2 из 2');
   });
 
   it('порядок меняется селектом и направлением', () => {

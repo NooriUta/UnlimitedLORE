@@ -8,22 +8,6 @@
   min-width: 0;
 }
 
-.list-screen__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--acc);
-}
-
-.list-screen__title {
-  margin: 0;
-  color: var(--t1);
-  font-family: var(--display);
-  font-weight: var(--display-weight);
-  font-size: var(--fs-lg);
-  letter-spacing: .04em;
-}
-
 .list-screen__warn {
   margin: 0;
   padding: 4px 8px 4px 22px;

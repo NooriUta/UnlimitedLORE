@@ -11,3 +11,5 @@ export * from './progress';
 // Выделение: режим выбора, долгое нажатие (S4-10).
 export * from './listSelection';
 export * from './useLongPress';
+// Шапка экрана: заголовок · виды · действие одной строкой (S4-22, S4-23).
+export * from './ScreenHead';

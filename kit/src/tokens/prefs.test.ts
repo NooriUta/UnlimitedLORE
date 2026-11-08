@@ -8,8 +8,8 @@ const store = (m: Record<string, string>) => (k: string) => m[k] ?? null;
 const cookie = (v: object) => `a=1; seer-prefs=${encodeURIComponent(JSON.stringify(v))}; b=2`;
 
 describe('resolvePrefs', () => {
-  it('умолчание: amber-forest, тёмная, компактная', () => {
-    expect(resolvePrefs({})).toEqual({ palette: 'amber-forest', mode: 'dark', density: 'compact' });
+  it('умолчание: amber-forest, тёмная, roomy (решение владелицы 08.11, S4-21)', () => {
+    expect(resolvePrefs({})).toEqual({ palette: 'amber-forest', mode: 'dark', density: 'roomy' });
   });
 
   it('свой localStorage v1 важнее общей cookie', () => {
@@ -26,15 +26,16 @@ describe('resolvePrefs', () => {
     expect(resolvePrefs({ local: store({ 'lore-palette': 'нет-такой' }), cookie: 'seer-prefs=%7Bbroken' }).palette).toBe('amber-forest');
   });
 
-  it('плотность: своя настройка v2, неизвестное значение = компактная', () => {
+  it('плотность: своя настройка v2, неизвестное значение = roomy', () => {
     expect(resolvePrefs({ local: store({ 'lore-density': 'comfortable' }) }).density).toBe('comfortable');
-    expect(resolvePrefs({ local: store({ 'lore-density': 'huge' }) }).density).toBe('compact');
+    expect(resolvePrefs({ local: store({ 'lore-density': 'huge' }) }).density).toBe('roomy');
+    expect(resolvePrefs({ local: store({ 'lore-density': 'compact' }) }).density).toBe('compact');
   });
 });
 
 describe('themeAttrs / applyTheme', () => {
   it('умолчания не ставят атрибутов-переопределений (работает :root)', () => {
-    expect(themeAttrs({ palette: 'amber-forest', mode: 'dark', density: 'compact' }))
+    expect(themeAttrs({ palette: 'amber-forest', mode: 'dark', density: 'roomy' }))
       .toEqual({ 'data-theme': 'amber-forest', 'data-mode': null, 'data-density': null });
   });
 
