@@ -20,12 +20,19 @@ const SprintsPage = lazy(() => import('../sprints/SprintsPage'));
 /** Глобальные параметры URL v2 — не снимаются при смене раздела. */
 export const V2_KEEP_PARAMS = ['proj'] as const;
 
+/** id заголовка раздела: им подписан раздел, кто бы ни рисовал h1 — оболочка или шапка экрана. */
+const SECTION_TITLE_ID = 'v2-screen-title';
+
+/** Разделы, где h1 рисует сам экран (шапка экрана kit, S4-23), а не оболочка. */
+const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>(['adr']);
+
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
 const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   // Списки на движке kit; заголовок — у раздела оболочки. Спринты — экран S4-09
   // («задачи x/y», раскрытие строки), ADR — экран списка S4-04.
   sprint: () => <Suspense fallback={<Skeleton />}><SprintsPage heading={false} /></Suspense>,
-  adr: () => <ListScreen screen="adrs" heading={false} />,
+  // S4-23: заголовок ADR — шапка экрана kit (ScreenHead): виды в строке заголовка.
+  adr: () => <ListScreen screen="adrs" titleId={SECTION_TITLE_ID} />,
   // Лента новостей kit (SPRINT_UXR_S7A_NEWS/S7A-02); свой заголовок — у раздела.
   news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} />,
   // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —
@@ -91,8 +98,8 @@ function SectionScreen() {
   const title = appT(lang, `shell.sec.${section}` as AppKey);
   const Screen = SCREENS[section];
   return (
-    <section className="v2-screen" data-section={section} aria-labelledby="v2-screen-title">
-      <h1 id="v2-screen-title" className="v2-screen__title">{title}</h1>
+    <section className="v2-screen" data-section={section} aria-labelledby={SECTION_TITLE_ID}>
+      {!(Screen && OWN_HEAD.has(section)) && <h1 id={SECTION_TITLE_ID} className="v2-screen__title">{title}</h1>}
       {Screen ? <Screen /> : <NotBuilt hint={appT(lang, 'shell.unbuilt.hint', { section: title })} />}
     </section>
   );

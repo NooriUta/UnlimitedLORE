@@ -91,7 +91,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         PALETTES.map(p => ({ value: p.id as string, label: p.label })),
         v => onChange({ palette: v }))}
       {row('density', 'settings.density.label', s.density,
-        opts(lang, [['compact', 'settings.density.compact'], ['comfortable', 'settings.density.comfortable']] as const),
+        opts(lang, [['roomy', 'settings.density.roomy'], ['compact', 'settings.density.compact'], ['comfortable', 'settings.density.comfortable']] as const),
         v => onChange({ density: v }))}
       {row('single_key_shortcuts', 'settings.keys.label', onOff(s.single_key_shortcuts), onOffOpts,
         v => onChange({ single_key_shortcuts: v === 'on' }), 'settings.keys.hint')}

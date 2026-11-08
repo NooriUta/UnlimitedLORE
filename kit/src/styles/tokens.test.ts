@@ -128,14 +128,15 @@ describe('S4-00a · шкала и шрифты = v1', () => {
 });
 
 describe('S4-00a · плотность и касание', () => {
-  it('плотность: компактная по умолчанию, у каждого режима свой блок', () => {
-    expect(DENSITIES[0]).toBe('compact');
+  it('плотность: roomy по умолчанию (:root), у каждого режима свой блок', () => {
+    expect(DENSITIES[0]).toBe('roomy');
     const root = v2.get(':root')!;
     for (const k of ['--row-h', '--pad-x', '--pad-y', '--gap']) expect(root[k], k).toBeDefined();
     for (const d of DENSITIES.slice(1)) {
       const b = v2.get(`[data-density='${d}']`);
       expect(b, `нет блока плотности ${d}`).toBeDefined();
-      expect(Number.parseFloat(b!['--row-h'])).toBeGreaterThan(Number.parseFloat(root['--row-h']));
+      // roomy — самая просторная строка списка: остальные режимы плотнее.
+      expect(Number.parseFloat(b!['--list-row-h'])).toBeLessThan(Number.parseFloat(root['--list-row-h']));
     }
   });
 

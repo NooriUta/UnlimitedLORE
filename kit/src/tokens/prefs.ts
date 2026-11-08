@@ -9,7 +9,7 @@
 
 export type Palette = 'amber-forest' | 'lichen' | 'slate' | 'juniper' | 'warm-dark';
 export type Mode = 'dark' | 'light';
-export type Density = 'compact' | 'comfortable';
+export type Density = 'roomy' | 'compact' | 'comfortable';
 
 export interface ThemePrefs {
   palette: Palette;
@@ -28,10 +28,14 @@ export const PALETTES: readonly { id: Palette; label: string; swatch: string }[]
 
 export const MODES: readonly Mode[] = ['dark', 'light'];
 
-/** Первая — умолчание: плотный IDE-подобный UI (base 12). */
-export const DENSITIES: readonly Density[] = ['compact', 'comfortable'];
+/**
+ * Первая — умолчание. roomy — решение владелицы 08.11 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-21):
+ * строка списка как в прототипе v4 (~44 px, название до 2 строк), base 12 сохраняется.
+ * compact — прежняя плотность (24 px), comfortable — промежуточная.
+ */
+export const DENSITIES: readonly Density[] = ['roomy', 'compact', 'comfortable'];
 
-export const DEFAULT_PREFS: ThemePrefs = { palette: 'amber-forest', mode: 'dark', density: 'compact' };
+export const DEFAULT_PREFS: ThemePrefs = { palette: 'amber-forest', mode: 'dark', density: 'roomy' };
 
 export const STORAGE_KEYS = {
   palette: 'lore-palette',

@@ -106,11 +106,15 @@
   --r-xl:   14px;
   --r-pill: 999px;
 
-  /* ── плотность: компактная по умолчанию ── */
-  --row-h: 24px;
-  --pad-x: 8px;
-  --pad-y: 2px;
-  --gap:   6px;
+  /* ── плотность: roomy по умолчанию (владелица 08.11, S4-21) ──
+     --row-h — высота контролов (кнопки, поля); --list-row-h — строка списка.
+     Раздельно: строка списка растёт до вида прототипа v4, контролы — нет. */
+  --row-h: 26px;
+  --list-row-h: 44px;
+  --list-title-lines: 2;
+  --pad-x: 10px;
+  --pad-y: 4px;
+  --gap:   8px;
 
   /* ── цель касания: на десктопе 0 (плотный UI не растёт), на сенсоре ≥44 ── */
   --tap: 0px;
@@ -146,8 +150,20 @@
   --fs-2xl:  26px;
 }
 
+/* compact — прежняя плотность IDE (до S4-21): строка 24 px, название в одну строку. */
+[data-density='compact'] {
+  --row-h: 24px;
+  --list-row-h: 24px;
+  --list-title-lines: 1;
+  --pad-x: 8px;
+  --pad-y: 2px;
+  --gap:   6px;
+}
+
 [data-density='comfortable'] {
   --row-h: 32px;
+  --list-row-h: 32px;
+  --list-title-lines: 2;
   --pad-x: 12px;
   --pad-y: 6px;
   --gap:   10px;
@@ -1022,6 +1038,22 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 .sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
+   подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
+.sk-tabs--underline { gap: 2px; padding: 0; }
+.sk-tabs--underline .sk-tab {
+  margin-bottom: -1px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: var(--fs-sm);
+}
+.sk-tabs--underline .sk-tab:hover { border-bottom-color: var(--bdh); }
+.sk-tabs--underline .sk-tab[aria-selected='true'] {
+  border-bottom-color: var(--acc);
+  background: none;
+}
 .sk-tabpanel { padding-top: 6px; }
 .sk-tabpanel:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 
@@ -1705,6 +1737,30 @@ code, pre, kbd, samp { font-family: var(--mono); }
   gap: var(--gap);
 }
 .sk-list__bar { justify-content: space-between; }
+/* «Показано N из M» — в конце единственной полосы, прижато вправо. */
+.sk-list__controls > .sk-list__shown { margin-left: auto; }
+.sk-list__view { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
+.sk-shead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap) 12px;
+  min-width: 0;
+}
+.sk-shead__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--t1);
+}
+.sk-shead__views { display: inline-flex; }
+.sk-shead__actions { display: inline-flex; gap: var(--gap); margin-left: auto; }
 .sk-list__views {
   padding: 2px;
   border: 1px solid var(--bd);
@@ -1745,8 +1801,14 @@ code, pre, kbd, samp { font-family: var(--mono); }
   letter-spacing: .06em;
   text-transform: uppercase;
 }
+/* Число быстрого фильтра — отдельный бейдж, а не продолжение подписи («Действует100»). */
 .sk-list__qcount {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
   font-family: var(--mono);
+  font-size: var(--fs-2xs);
   color: var(--acc);
 }
 .sk-list__field {
@@ -1982,15 +2044,17 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-bottom: 1px solid var(--bd);
   background: var(--bg1);
   color: var(--t3);
-  font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: 700;
   letter-spacing: .06em;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
 }
+/* У ячейки таблицы height работает как минимум: строка растёт по содержимому
+   (название в --list-title-lines строк), но не ниже --list-row-h. */
 .sk-list__td {
-  height: var(--row-h);
+  height: var(--list-row-h);
   padding: var(--pad-y) var(--pad-x);
   border-bottom: 1px solid color-mix(in srgb, var(--bd) 60%, transparent);
   vertical-align: middle;
@@ -2011,6 +2075,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__row:not([data-cursor='true']) .sk-list__actions .sk-kbd,
 .sk-board__card:not([data-cursor='true']) .sk-list__actions .sk-kbd { display: none; }
 .sk-list__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--list-title-lines);
+  line-clamp: var(--list-title-lines);
+  overflow: hidden;
   color: var(--t1);
   font-weight: 600;
   text-decoration: none;
@@ -2311,7 +2380,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   font-size: var(--fs-xs);
 }
 @media (max-width: 720px), (pointer: coarse) {
-  .sk-list[data-selecting='true'] .sk-list__bar,
+  .sk-list[data-selecting='true'] .sk-shead,
   .sk-list[data-selecting='true'] .sk-list__controls,
   .sk-list[data-selecting='true'] .sk-list__desc { display: none; }
   .sk-list__selbar {

@@ -53,6 +53,7 @@ import { FacetFilter, ValueIconMark } from './FacetFilter';
 import type { ValueIcon } from './FacetFilter';
 import { selectAllShown, toggleId, visibleSelection } from './listSelection';
 import { useLongPress } from './useLongPress';
+import { ScreenHead } from './ScreenHead';
 
 export interface ListBulkAction {
   id: string;
@@ -132,7 +133,22 @@ export interface ListViewProps {
   valueIcon?: (key: string, value: string) => ValueIcon | null | undefined;
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
+  /**
+   * Шапка экрана (S4-22, S4-23): задана — список сам рисует ScreenHead с
+   * заголовком, а виды переезжают в её строку. Нет — виды остаются в полосе фильтров.
+   */
+  head?: ListHead;
+  /** Иконки видов (вид → слаг game-icons). Задаёт приложение: иконки — из канона LORE v1 (S4-25). */
+  viewIcons?: Partial<Record<ListViewKind, string>>;
   className?: string;
+}
+
+/** Шапка экрана списка: заголовок, его id и иконка, первичное действие. */
+export interface ListHead {
+  title: ReactNode;
+  titleId?: string;
+  icon?: string;
+  actions?: ReactNode;
 }
 
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'board'];
@@ -232,7 +248,7 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, expand, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, expand, head, viewIcons, className, state: stateProp, onStateChange,
 }: ListViewProps) {
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
   assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
@@ -509,10 +525,27 @@ export function ListView({
     chips.push({ id: 'q', text: `${t('kit.list.quick')}: ${activeQuick.title}`, remove: () => update({ quick: null }) });
   }
   const resetFilters = () => update({ filters: {}, ops: {}, text: '', quick: null });
-  const descTail = [
-    view === 'list' || (view === 'board' && hasGroupings) ? `${t('kit.list.desc.group')}: ${groupKey ? labels.keyTitle(groupKey) : t('kit.list.groupNone')}` : null,
-    `${t('kit.list.desc.sort')}: ${state.sort ? `${labels.keyTitle(state.sort.key)} ${state.sort.dir === 'desc' ? '↓' : '↑'}` : t('kit.list.sortNone')}`,
-  ].filter(Boolean).join(' · ');
+  // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
+  const viewsSwitch = views.length > 1 ? (
+    <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
+      {views.map(v => {
+        const icon = viewIcons?.[v];
+        return (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={view === v}
+            className={`sk-list__view${view === v ? ' is-on' : ''}`}
+            onClick={() => update({ view: v })}
+          >
+            {icon && <GameIcon slug={icon} size={14} />}
+            <span>{t(`kit.list.view.${v}` as KitKey)}</span>
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
   const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0);
   const segCount = (n: number) => (n > 0
     ? <span className="sk-list__segcount" data-testid="kit-list-segcount" title={t('kit.list.segActive', { n })}>{n}</span>
@@ -789,53 +822,14 @@ export function ListView({
         <LoadError key={e.block} compact title={t('kit.list.blockError', { block: e.block })} hint={e.reason} />
       ))}
 
-      <div className="sk-list__bar">
-        {views.length > 1 && (
-          <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
-            {views.map(v => (
-              <button
-                key={v}
-                type="button"
-                role="radio"
-                aria-checked={view === v}
-                className={`sk-list__view${view === v ? ' is-on' : ''}`}
-                onClick={() => update({ view: v })}
-              >
-                {t(`kit.list.view.${v}` as KitKey)}
-              </button>
-            ))}
-          </div>
-        )}
-        {!selecting && (bulkActions?.length ?? 0) > 0 && (
-          <button type="button" className="sk-list__dir sk-list__selmode" onClick={() => { setMode(true); setBulkError(null); }}>
-            {t('kit.list.selectMode')}
-          </button>
-        )}
-        {quick.length > 0 && (
-          <div role="group" aria-label={t('kit.list.quick')} className="sk-list__quick">
-            <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
-            {quick.map(q => {
-              const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
-              return (
-                <Pill
-                  key={q.id}
-                  variant="filter"
-                  pressed={state.quick === q.id}
-                  onToggle={on => update({ quick: on ? q.id : null })}
-                >
-                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={14} /></span>}
-                  <span>{q.title}</span> <span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
-                </Pill>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {head && <ScreenHead title={head.title} titleId={head.titleId} icon={head.icon} views={viewsSwitch} actions={head.actions} />}
 
-      {/* Строка [Фильтр][Группировка][Порядок] (S4-04): три сегмента fieldset+legend —
-          имя сегмента не спорит с подписью внутри. В сегменте фильтра — поиск по
-          тексту и фасеты полей (S4-05). */}
+      {/* Одна полоса управления (S4-21/S4-23, правило S7A-12): [виды, если нет шапки]
+          [Фильтр][Группировка][Порядок] · «Быстро» · «Показано N из M». Сегменты —
+          fieldset+legend: имя сегмента не спорит с подписью внутри. В сегменте
+          фильтра — поиск по тексту и фасеты полей (S4-05). */}
       <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls" data-testid="kit-list-controls">
+        {!head && viewsSwitch}
         <fieldset className="sk-list__seg" data-seg="filter">
           <legend className="sk-list__seglabel">{t('kit.list.desc.filter')}</legend>
           <GameIcon slug="funnel" size={14} className="sk-list__segicon" />
@@ -914,11 +908,38 @@ export function ListView({
             {t('kit.list.sortDesc')}
           </button>
         </fieldset>
+        {quick.length > 0 && (
+          <div role="group" aria-label={t('kit.list.quick')} className="sk-list__quick">
+            <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
+            {quick.map(q => {
+              const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
+              return (
+                <Pill
+                  key={q.id}
+                  variant="filter"
+                  pressed={state.quick === q.id}
+                  onToggle={on => update({ quick: on ? q.id : null })}
+                >
+                  {icon && <span className="sk-list__qicon" data-quick-icon={icon}><GameIcon slug={icon} size={14} /></span>}
+                  <span>{q.title}</span><span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
+                </Pill>
+              );
+            })}
+          </div>
+        )}
+        {!selecting && (bulkActions?.length ?? 0) > 0 && (
+          <button type="button" className="sk-list__dir sk-list__selmode" onClick={() => { setMode(true); setBulkError(null); }}>
+            {t('kit.list.selectMode')}
+          </button>
+        )}
+        <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
       </div>
 
+      {/* Эхо условий — только когда есть что снять: каждое условие — снимаемый чип.
+          Группировка и порядок видны в своих контролах и текстом не дублируются. */}
+      {chips.length > 0 && (
       <div className="sk-list__desc" data-testid="kit-list-desc">
         <span className="sk-list__desclabel">{t('kit.list.desc.filter')}:</span>
-        {chips.length === 0 && <span>{t('kit.list.filterNone')}</span>}
         {chips.map(c => (
           <Pill
             key={c.id}
@@ -931,12 +952,9 @@ export function ListView({
             {c.text}
           </Pill>
         ))}
-        <span className="sk-list__desctail">· {descTail}</span>
-        {hasFilter && (
-          <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>
-        )}
+        <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>
       </div>
-      <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
+      )}
       {multi > 0 && <p className="sk-list__multi" data-testid="kit-list-multi">{t('kit.list.multi', { n: multi })}</p>}
 
       {body}
