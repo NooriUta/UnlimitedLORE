@@ -60,11 +60,19 @@ final class LoreNewsV2Collector {
         this.query = query;
     }
 
-    /** TODO(S2-12): автор версии — заменить на чтение из истории, когда S2-12 его положит. */
-    static AuthorResolver authors() { return AuthorResolver.UNKNOWN; }
-
-    /** TODO(S2-10/S2-13): история статуса ADR/решений — заменить, когда S2-13 её даст. */
-    static KnowledgeStatusHistory statusHistory() { return KnowledgeStatusHistory.NONE; }
+    /**
+     * S7A-01: автор события — из истории (S2-12 пишет changed_by/changed_by_kind в
+     * каждую версию). Сначала история статусов ({@link StatusHistoryTimeline}: задачи,
+     * спринты, фазы, ADR, спеки, решения), где автора нет — индекс по всем цепочкам
+     * Hist ({@link HistAuthorIndex}). Нигде нет — честное «неизвестно», без догадки.
+     */
+    static AuthorResolver authors(StatusHistoryTimeline timeline, HistAuthorIndex index) {
+        return (type, id, at) -> {
+            AuthorResolver.Author a = timeline.authorOf(type, id, at);
+            if (a != null && (a.who() != null || a.agent() != null)) return a;
+            return index.authorOf(type, id, at, AuthorResolver.Author::new);
+        };
+    }
 
     private List<Map<String, Object>> read(String source, String sql, boolean critical) {
         try {
