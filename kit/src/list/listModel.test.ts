@@ -127,15 +127,15 @@ describe('shownOf — «Показано N из M» из meta (формат K-01
 describe('состояние списка в URL', () => {
   it('туда и обратно', () => {
     const st = { view: 'board' as const, quick: 'bad', group: 'fields.disc', sort: { key: 'title', dir: 'desc' as const },
-      filters: { status: ['fix', ''], 'fields.disc': ['Сон о числах'] } };
+      filters: { status: ['fix', ''], 'fields.disc': ['Сон о числах'] }, ops: {}, text: '' };
     const patch = writeListState(st);
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(patch)) if (v != null) params.set(k, v);
     expect(readListState(new URLSearchParams(params.toString()))).toEqual(st);
   });
   it('пустое состояние — ключи удаляются, чтение даёт значения по умолчанию', () => {
-    const patch = writeListState({ view: 'list', quick: null, group: null, sort: null, filters: {} });
+    const patch = writeListState({ view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' });
     expect(Object.values(patch).every(v => v === null)).toBe(true);
-    expect(readListState(new URLSearchParams())).toEqual({ view: 'list', quick: null, group: null, sort: null, filters: {} });
+    expect(readListState(new URLSearchParams())).toEqual({ view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' });
   });
 });

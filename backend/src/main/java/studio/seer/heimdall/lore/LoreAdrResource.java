@@ -75,12 +75,19 @@ public class LoreAdrResource extends LoreResourceBase {
             // context_md/decision_md/consequences_md bug fixed above, 2026-07-02.
             StringBuilder upsertSql = new StringBuilder("UPDATE KnowADR SET adr_id=:adr_id, name=:name");
             Map<String, Object> upsertP = mapOfNullable("adr_id", req.adr_id(), "name", req.name());
-            if (req.date_created() != null) {
+            // S2-10: у НОВОГО ADR рядом с датой — полный ISO-момент создания, если он
+            // известен (CreationMoment.resolve); правка существующего его не трогает.
+            if (isNewAdr) {
+                CreationMoment.Resolved cm = CreationMoment.resolve(req.date_created(), Instant.parse(now));
+                upsertSql.append(", date_created=:date_created");
+                upsertP.put("date_created", cm.date());
+                if (cm.moment() != null) {
+                    upsertSql.append(", created_at=:created_at");
+                    upsertP.put("created_at", cm.moment());
+                }
+            } else if (req.date_created() != null) {
                 upsertSql.append(", date_created=:date_created");
                 upsertP.put("date_created", req.date_created());
-            } else if (isNewAdr) {
-                upsertSql.append(", date_created=:date_created");
-                upsertP.put("date_created", java.time.LocalDate.now().toString());
             }
             if (req.component_id() != null) {
                 upsertSql.append(", component_id=:component_id");
@@ -90,20 +97,29 @@ public class LoreAdrResource extends LoreResourceBase {
                 upsertSql.append(", file_path=:file_path");
                 upsertP.put("file_path", req.file_path());
             }
-            if (resolvedStatus != null) {
-                upsertSql.append(", status=:status");
-                upsertP.put("status", resolvedStatus);
-            }
             upsertSql.append(" UPSERT WHERE adr_id=:adr_id");
             writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sql", upsertSql.toString(), upsertP))
                 .await().indefinitely();
 
+            // S2-13: статус — НЕ полем вершины, а новой версией истории через единый
+            // сервис (у нового ADR это и есть его первая версия; тела ниже лягут в
+            // неё же правкой на месте). Тот же статус повторно версию не открывает.
+            Object prevStatus = isNewAdr ? null : existingAdr.get(0).get("status");
+            if (resolvedStatus != null && (isNewAdr || prevStatus == null
+                    || !resolvedStatus.equalsIgnoreCase(String.valueOf(prevStatus)))) {
+                StatusHistoryService.Outcome so = StatusHistoryService.transition(
+                    statusDb(), "adr", req.adr_id(), null, resolvedStatus, changeAuthor());
+                if (so instanceof StatusHistoryService.Outcome.Conflict c)
+                    throw new Scd2Guard.ConflictException(c.detail(), c.current());
+            }
+
             // Step 2: check for an existing open SCD2 hist row
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "SELECT @rid as rid, state_uid, context_md, decision_md, consequences_md FROM KnowADRHist " +
+                    "SELECT @rid as rid, state_uid, context_md, decision_md, consequences_md"
+                        + StatusHistoryService.STATUS_FIELDS_SELECT + " FROM KnowADRHist " +
                     "WHERE in('HAS_STATE').adr_id[0] = :id AND valid_to IS NULL LIMIT 1",
                     Map.of("id", req.adr_id())))
                 .await().indefinitely().result();
@@ -135,12 +151,20 @@ public class LoreAdrResource extends LoreResourceBase {
                     cp.put("ctx", req.context_md()      != null ? req.context_md()      : histRows.get(0).get("context_md"));
                     cp.put("dec", req.decision_md()     != null ? req.decision_md()     : histRows.get(0).get("decision_md"));
                     cp.put("con", req.consequences_md() != null ? req.consequences_md() : histRows.get(0).get("consequences_md"));
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                        "UPDATE KnowADRHist SET valid_to=:now WHERE @rid=:rid;" +
+                    // S2-09: закрыть, только если версия ЕЩЁ открыта; иначе выход до записи и 409.
+                    cp.put("oldrid", rid);
+                    changeAuthor().bind(cp); // S2-12
+                    // S2-13: правка тела статус не меняет — он переносится в новую версию.
+                    String carryStatus = StatusHistoryService.carryStatusSet(histRows.get(0), cp);
+                    Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                        Scd2Guard.guardedClose("KnowADRHist", false) +
                         "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                        "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
+                        "context_md=:ctx, decision_md=:dec, consequences_md=:con" + carryStatus + ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
-                        "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely();
+                        "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely().result();
+                    if (Scd2Guard.isConflict(cpRes))
+                        throw new Scd2Guard.ConflictException("adr '" + req.adr_id()
+                            + "': the body version read was closed by a concurrent write — re-read and retry", Map.of());
                     histCreated = true;
                 } else {
                 // Step 3a: update body fields on the existing open hist row (amend-in-place) — SAME
@@ -176,9 +200,18 @@ public class LoreAdrResource extends LoreResourceBase {
                 histP.put("nsid", nsid);
                 histP.put("now",  now);
                 histP.put("id",   req.adr_id());
+                changeAuthor().bind(histP); // S2-12
+                // S2-13: первая версия существующего ADR без истории несёт его текущий
+                // статус — известный с этого момента, не раньше.
+                String firstStatus = "";
+                if (prevStatus != null) {
+                    histP.put("st_raw", String.valueOf(prevStatus));
+                    histP.put("st_cat", LoreStatusCategory.of("adr", prevStatus));
+                    firstStatus = ", status_raw=:st_raw, status_category=:st_cat, status_known_from=:now";
+                }
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                     "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                    "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
+                    "context_md=:ctx, decision_md=:dec, consequences_md=:con" + firstStatus + ChangeAuthor.SET_SQL + ";" +
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
                     "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);",
                     histP)).await().indefinitely();
@@ -300,8 +333,12 @@ public class LoreAdrResource extends LoreResourceBase {
             }
             hashStamper.stampOpenHist("KnowADRHist", "KnowADR", "adr_id", req.adr_id());
             return noStore(Response.ok(out));
+        } catch (Scd2Guard.ConflictException c) {
+            return c.response(); // S2-09
         } catch (Exception e) {
             LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());
+            if (Scd2Guard.isConcurrentModification(e))
+                return Scd2Guard.conflict("adr '" + req.adr_id() + "': concurrent write — re-read and retry", Map.of());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }

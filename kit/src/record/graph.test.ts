@@ -1,7 +1,7 @@
 // SPRINT_UXR_S10_SEIDR_KIT/K-04 · локальный граф записи: ego + секторы по типу ребра.
 import { describe, expect, it } from 'vitest';
 import type { KitConfig, KitData, KitEdge, KitRecord } from '../core/contract';
-import { egoGraph, edgeColor, toCssColor, verdictTone } from './graph';
+import { egoGraph, edgeColor, toCssColor, typesAround, verdictTone } from './graph';
 
 const rec = (id: string, kind = 'task'): KitRecord => ({ id, kind, title: `T ${id}`, status: 'todo', fields: {} });
 const data = (edges: KitEdge[], ids: string[]): KitData => ({
@@ -107,5 +107,30 @@ describe('K-04 · цвета графа — только токены', () => {
     expect(verdictTone({ score: 3, max: 5, failed: ['x'], hints: [] })).toBe('wrn');
     expect(verdictTone({ score: 1, max: 5, failed: ['x'], hints: [] })).toBe('dng');
     expect(verdictTone(undefined)).toBe('t3');
+  });
+});
+
+describe('S5-10 · egoGraph — фильтр типов рёбер', () => {
+  const edges: KitEdge[] = [
+    { from: 'A', to: 'B', type: 'PREREQ' },
+    { from: 'A', to: 'D', type: 'SUBTOPIC' },
+    { from: 'D', to: 'F', type: 'PREREQ' },
+  ];
+  const d = data(edges, ['A', 'B', 'D', 'F']);
+
+  it('types — обход только по разрешённым рёбрам; через выключенное не идём', () => {
+    const g = egoGraph('A', d, { depth: 2, limit: 50, types: new Set(['PREREQ']) });
+    expect(g.nodes.map(n => n.id)).toEqual(['B']);
+    expect(g.links.every(l => l.type === 'PREREQ')).toBe(true);
+  });
+
+  it('без types — все типы, как раньше', () => {
+    const g = egoGraph('A', d, { depth: 2, limit: 50 });
+    expect(g.nodes.map(n => n.id).sort()).toEqual(['B', 'D', 'F']);
+  });
+
+  it('typesAround — типы рёбер в пределах глубины со счётом, без учёта фильтра', () => {
+    expect(typesAround('A', d, 2)).toEqual([{ type: 'PREREQ', count: 2 }, { type: 'SUBTOPIC', count: 1 }]);
+    expect(typesAround('A', d, 1)).toEqual([{ type: 'PREREQ', count: 1 }, { type: 'SUBTOPIC', count: 1 }]);
   });
 });

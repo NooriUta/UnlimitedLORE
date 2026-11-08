@@ -14,6 +14,7 @@ export const STATE_ICONS = {
   error: 'unplugged',
   forbidden: 'padlock',
   truncated: 'scissors',
+  unbuilt: 'sands-of-time',
 } as const satisfies Record<string, string>;
 
 export interface SkeletonProps {
@@ -43,7 +44,7 @@ export function Skeleton({ lines = 3, label, className }: SkeletonProps) {
 }
 
 interface BoxProps {
-  kind: 'empty' | 'error' | 'forbidden';
+  kind: 'empty' | 'error' | 'forbidden' | 'unbuilt';
   icon: string;
   title: string;
   hint?: ReactNode;
@@ -74,6 +75,26 @@ export interface StateTextProps {
   action?: ReactNode;
   compact?: boolean;
   className?: string;
+}
+
+/**
+ * Экран ещё не собран (S4-01): раздел есть в меню, но данных здесь не
+ * запрашивали вовсе — это не «пусто» и не «ошибка», и подавать его под их
+ * видом значит соврать. Обычный текст, без role=alert.
+ */
+export function NotBuilt({ title, hint, action, compact, className }: StateTextProps) {
+  const lang = useKitLang();
+  return (
+    <StateBox
+      kind="unbuilt"
+      icon={STATE_ICONS.unbuilt}
+      title={title ?? kitT(lang, 'kit.state.unbuilt.title')}
+      hint={hint ?? kitT(lang, 'kit.state.unbuilt.hint')}
+      action={action}
+      compact={compact}
+      className={className}
+    />
+  );
 }
 
 /** Проверенный ноль: запрос выполнен, записей нет. */

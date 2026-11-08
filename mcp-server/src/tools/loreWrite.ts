@@ -112,9 +112,32 @@ export function compactVerdicts(data: unknown): unknown {
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(compactVerdicts(data), null, 2) }],
 });
-const err = (e: unknown) => ({
-  content: [{ type: 'text' as const, text: `ERROR: ${(e as Error).message ?? String(e)}` }],
-  isError: true,
+// SPRINT_UXR_S2_GRAPH_MEMORY/S2-09: 409 CONFLICT оптимистической блокировки SCD2 —
+// не «сломалось», а «запись уже другая». Подсказка говорит, что делать дальше.
+export const CONFLICT_HINT =
+  'CONFLICT: the record changed since it was read (another session wrote first) — nothing was written. ' +
+  'Re-read it ("current" above is the state now) and retry; pass expected = the value you based the change on.';
+const err = (e: unknown) => {
+  const msg = (e as Error).message ?? String(e);
+  const conflict = /→ 409 /.test(msg) && msg.includes('"CONFLICT"');
+  return {
+    content: [{ type: 'text' as const, text: `ERROR: ${msg}${conflict ? `\n${CONFLICT_HINT}` : ''}` }],
+    isError: true,
+  };
+};
+
+/** S2-09: «было» для полей записи — сервер сверяет с текущей версией, расхождение → 409 CONFLICT. */
+const EXPECTED_STATUS_DESC = 'S2-09 optimistic lock: the status you saw ("was"), token or raw. ' +
+  'If the open version differs, nothing is written and the answer is 409 CONFLICT with "current". ' +
+  'Omit = only the "version still open" guard applies.';
+const TASK_EXPECTED = z.object({
+  title:       z.string().optional(),
+  note_md:     z.string().nullable().optional(),
+  effort_days: z.number().nullable().optional(),
+  actual_days: z.number().nullable().optional(),
+  task_type:   z.string().nullable().optional(),
+  work_class:  z.string().nullable().optional(),
+  status:      z.string().optional(),
 });
 
 // zod v4 dropped z.objectOutputType — z.infer<z.ZodObject<S>> is the direct
@@ -312,9 +335,13 @@ export function registerLoreWrite(server: McpServer): void {
       id: z.string().describe('entity id (e.g. sprint_id, task_uid, phase_uid "SPRINT_X/PHASE_A")'),
       status: LORE_STATUS,
       reason: z.string().optional().describe('QG-16: sprint + status=blocked only — WHY it is blocked, plain text (stored on the new SCD2 state, gone on unblock). Omitted on a blocked sprint → the answer carries a hint and gate QG-LORE-BLOCKED-REASON lists it unless an open dependency or open question explains it'),
+      expected: z.string().optional().describe(EXPECTED_STATUS_DESC),
     },
     path: '/lore/status',
-    body: ({ entity_type, id, status, reason }) => ({ entity_type, id, status, reason: reason ?? null }),
+    body: ({ entity_type, id, status, reason, expected }) => ({
+      entity_type, id, status, reason: reason ?? null,
+      ...(expected === undefined ? {} : { expected }),
+    }),
   });
 
   definePostTool(server, {
@@ -942,8 +969,16 @@ export function registerLoreWrite(server: McpServer): void {
       planned_start_date: z.string().optional().describe('YYYY-MM-DD'),
       planned_end_date:   z.string().optional().describe('YYYY-MM-DD'),
       track_id:           z.string().optional(),
+      expected: z.object({
+        priority:           z.string().nullable().optional(),
+        planned_start_date: z.string().nullable().optional(),
+        planned_end_date:   z.string().nullable().optional(),
+        track_id:           z.string().nullable().optional(),
+        status:             z.string().optional(),
+      }).optional().describe('S2-09 optimistic lock: the plan values you saw ("was"). Any mismatch with the open ' +
+        'version → nothing written, 409 CONFLICT with "current". Omit = only the "version still open" guard applies.'),
     },
-    async ({ sprint_id, priority, planned_start_date, planned_end_date, track_id }) => {
+    async ({ sprint_id, priority, planned_start_date, planned_end_date, track_id, expected }) => {
       try {
         return json(await lorePost('/lore/sprint/plan', {
           sprint_id,
@@ -951,6 +986,7 @@ export function registerLoreWrite(server: McpServer): void {
           planned_start_date: planned_start_date ?? null,
           planned_end_date: planned_end_date ?? null,
           track_id: track_id ?? null,
+          ...(expected === undefined ? {} : { expected }),
         }));
       } catch (e) { return err(e); }
     },
@@ -1796,6 +1832,9 @@ export function registerLoreWrite(server: McpServer): void {
       task_type:      z.string().optional().describe('single-mode: ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content)'),
       work_class:     z.enum(['uc', 'jtd', 'enb']).optional().describe('single-mode: ADR-LORE-022 WHY-axis, orthogonal to task_type'),
       uc_id:          z.string().optional().describe('single-mode: re-point the REALIZES edge at this use case. Omit = leave the link alone; empty string = detach.'),
+      expected:       TASK_EXPECTED.optional().describe('single-mode, S2-09 optimistic lock: the values you saw ("was") — ' +
+        'title / note_md / effort_days / actual_days / task_type / work_class / status. Any mismatch → nothing written, ' +
+        '409 CONFLICT with "current" (batch: the item is skipped with CONFLICT). Omit = no check.'),
       tasks: z.array(z.object({
         task_uid:       z.string(),
         title:          z.string(),
@@ -1810,9 +1849,10 @@ export function registerLoreWrite(server: McpServer): void {
         task_type:      z.string().optional(),
         work_class:     z.enum(['uc', 'jtd', 'enb']).optional(),
         uc_id:          z.string().optional(),
-      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
+        expected:       TASK_EXPECTED.optional(),
+      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?, expected?}'),
     },
-    async ({ task_uid, title, note_md, note_append, effort_days, actual_days, bookkeeping, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id, tasks }) => {
+    async ({ task_uid, title, note_md, note_append, effort_days, actual_days, bookkeeping, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id, expected, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
@@ -1820,6 +1860,7 @@ export function registerLoreWrite(server: McpServer): void {
               task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, note_append: t.note_append ?? null, effort_days: t.effort_days ?? null, actual_days: t.actual_days ?? null, bookkeeping: t.bookkeeping ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
               task_type: t.task_type ?? null, work_class: t.work_class ?? null, uc_id: t.uc_id ?? null,
+              ...(t.expected === undefined ? {} : { expected: t.expected }),
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
@@ -1827,6 +1868,7 @@ export function registerLoreWrite(server: McpServer): void {
           task_uid, title, note_md: note_md ?? null, note_append: note_append ?? null, effort_days: effort_days ?? null, actual_days: actual_days ?? null, bookkeeping: bookkeeping ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
           task_type: task_type ?? null, work_class: work_class ?? null, uc_id: uc_id ?? null,
+          ...(expected === undefined ? {} : { expected }),
         }));
       } catch (e) { return err(e); }
     },

@@ -15,7 +15,11 @@ describe('web-next · устойчивость из Seiðr-kit', () => {
   it('оболочка завёрнута в ErrorBoundary kit и подключает StorageBanner', () => {
     const app = read('App.tsx');
     expect(app).toMatch(/<ErrorBoundary/);
-    expect(app).toMatch(/<StorageBanner/);
+    // S4-01: плашку хранилища рисует KitShell (внутри — StorageBanner kit) по
+    // хранилищу storage/safe, которое App передаёт в оболочку v2.
+    expect(app).toMatch(/from '\.\/storage\/safe'/);
+    expect(app).toMatch(/<V2Shell storage=\{storage\}/);
+    expect(read('shell/V2Shell.tsx')).toMatch(/<KitShell[\s\S]*?storage=\{storage\}/);
     expect(renderToString(<App path="/" />)).toContain('data-lore-app="v2"');
   });
 

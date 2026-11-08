@@ -37,9 +37,22 @@ const round = (n: number) => Math.round(n * 1000) / 1000;
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 const edgeKey = (e: KitEdge) => `${e.type}\u0000${e.from}\u0000${e.to}`;
 
-export function egoGraph(centerId: string, data: KitData, opts: { depth: number; limit: number }): EgoGraph {
+export interface EgoOptions {
+  depth: number;
+  limit: number;
+  /**
+   * S5-10: разрешённые типы рёбер (фильтр вкладки и слой структурных связей).
+   * Обход идёт только по ним — через выключенное ребро сосед не достижим.
+   * Нет — все типы.
+   */
+  types?: ReadonlySet<string>;
+}
+
+export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): EgoGraph {
   const byId = new Map(data.records.map(r => [r.id, r] as const));
-  const edges = [...data.edges].filter(e => e.from !== e.to).sort((a, b) => cmp(edgeKey(a), edgeKey(b)));
+  const edges = [...data.edges]
+    .filter(e => e.from !== e.to && (!opts.types || opts.types.has(e.type)))
+    .sort((a, b) => cmp(edgeKey(a), edgeKey(b)));
   const adj = new Map<string, { other: string; edge: KitEdge }[]>();
   const add = (k: string, v: { other: string; edge: KitEdge }) => {
     const list = adj.get(k);
@@ -113,6 +126,19 @@ export function egoGraph(centerId: string, data: KitData, opts: { depth: number;
     total: all.length,
     truncated: all.length > shown.length,
   };
+}
+
+/**
+ * S5-10: какие типы рёбер есть вокруг записи в пределах глубины — без учёта
+ * фильтра и лимита (из этого строятся кнопки фильтра, и выключенный тип не
+ * пропадает из списка). count — число рёбер этого типа между достижимыми
+ * узлами. Порядок — по типу.
+ */
+export function typesAround(centerId: string, data: KitData, depth: number): { type: string; count: number }[] {
+  const g = egoGraph(centerId, data, { depth, limit: Number.MAX_SAFE_INTEGER });
+  const counts = new Map<string, number>();
+  for (const l of g.links) counts.set(l.type, (counts.get(l.type) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => cmp(a[0], b[0])).map(([type, count]) => ({ type, count }));
 }
 
 /**

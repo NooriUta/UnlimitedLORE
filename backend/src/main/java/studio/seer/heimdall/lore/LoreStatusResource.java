@@ -36,8 +36,10 @@ public class LoreStatusResource extends LoreResourceBase {
     UcReadinessCalculator readiness; // PL-15 (D17): готовность сценария — из задач
 
     /** QG-16: reason — причина блокировки спринта (текст), пишется на открывшуюся строку истории. */
-    public record StatusUpdateRequest(String entity_type, String id, String status, String reason) {
-        public StatusUpdateRequest(String entity_type, String id, String status) { this(entity_type, id, status, null); }
+    /** S2-09: expected — «было» (токен или status_raw); не совпало с открытой версией → 409 CONFLICT. */
+    public record StatusUpdateRequest(String entity_type, String id, String status, String reason, String expected) {
+        public StatusUpdateRequest(String entity_type, String id, String status) { this(entity_type, id, status, null, null); }
+        public StatusUpdateRequest(String entity_type, String id, String status, String reason) { this(entity_type, id, status, reason, null); }
     }
 
     /**
@@ -107,6 +109,8 @@ public class LoreStatusResource extends LoreResourceBase {
         }
         String now  = Instant.now().toString();
         String nsid = UUID.randomUUID().toString();
+        // S2-12: автор версии — из проверенного токена, снят до асинхронной цепочки.
+        final ChangeAuthor author = changeAuthor();
         Uni<Response> flip = switch (req.entity_type()) {
             // Read the currently-open row's plan fields (priority/planned_*/track_id)
             // BEFORE the SCD2 flip, then restore them onto the freshly-opened row —
@@ -114,7 +118,7 @@ public class LoreStatusResource extends LoreResourceBase {
             // so without this a status change would silently wipe planning data.
             case "sprint"    -> readSprintPlanFields(req.id())
                                   .chain(fields -> updateScd2Status("sprint", "KnowSprint", "KnowSprintHist",
-                                    "sprint_id", req.id(), req.status(), now, nsid)
+                                    "sprint_id", req.id(), req.status(), now, nsid, req.expected(), author)
                                   .chain(resp -> resp.getStatus() >= 300
                                     ? Uni.createFrom().item(resp)
                                     // Best-effort: the status flip above already succeeded and is
@@ -139,7 +143,7 @@ public class LoreStatusResource extends LoreResourceBase {
                                     ? Uni.createFrom().item(gate)
                                     : readTaskHistCarryFields(req.id())
                                         .chain(fields -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
-                                          "task_uid", req.id(), req.status(), now, nsid)
+                                          "task_uid", req.id(), req.status(), now, nsid, req.expected(), author)
                                         .chain(resp -> resp.getStatus() >= 300
                                           ? Uni.createFrom().item(resp)
                                           : restoreTaskHistFields(nsid,
@@ -153,8 +157,11 @@ public class LoreStatusResource extends LoreResourceBase {
                                               .replaceWith(resp))));
             // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
             case "phase"     -> updateScd2Status("phase", "KnowPhase", "KnowPhaseHist",
-                                    "phase_uid", req.id(), req.status(), now, nsid);
-            case "adr"       -> updateAdrStatusDirect(req.id(), req.status().toUpperCase(), now);
+                                    "phase_uid", req.id(), req.status(), now, nsid, req.expected(), author);
+            // S2-13: статус ADR — новая версия KnowADRHist (раньше — голый UPDATE поля
+            // вершины, в истории его не было; §7.3 новостей считался диапазоном).
+            case "adr"       -> updateScd2Status("adr", "KnowADR", "KnowADRHist",
+                                    "adr_id", req.id(), req.status(), now, nsid, req.expected(), author);
             default          -> Uni.createFrom().item(noStore(Response.status(501)
                                     .entity(new LoreError("NOT_IMPLEMENTED",
                                         req.entity_type() + " not supported yet"))));
@@ -193,7 +200,7 @@ public class LoreStatusResource extends LoreResourceBase {
                 // A sprint shouldn't stay in `planned` once its tasks are moving —
                 // recompute + persist the parent sprint's status. Best-effort: a
                 // failure here is logged, never turned into a failed task change.
-                .chain(rr -> autoDeriveSprintStatus(req.id())
+                .chain(rr -> autoDeriveSprintStatus(req.id(), author)
                     .onFailure().invoke(ex -> LOG.warnf(
                         "[LORE STATUS] sprint auto-derive failed for task=%s (task flip itself succeeded): %s",
                         req.id(), ex.getMessage()))
@@ -246,68 +253,59 @@ public class LoreStatusResource extends LoreResourceBase {
     Uni<Response> updateScd2Status(String entityType, String vertexType, String histType,
                                            String keyField, String id, String token,
                                            String now, String nsid) {
-        final String newRaw = SCD2_STATUS_RAW.getOrDefault(token, token);
-        // Guard: the entity vertex must exist. Without this an unknown id — e.g. a
-        // bare task_id "T40" instead of the full task_uid "SPRINT_X/T40" — slips
-        // through: the CREATE EDGE FROM (SELECT ... WHERE keyField=:id) matches
-        // nothing, so an ORPHAN hist row gets inserted yet the call still reports
-        // ok:true (a silent no-op that leaves the status unchanged). Fail loud.
-        MartQuery existsQ = new MartQuery("sql",
-            "SELECT count(*) AS n FROM " + vertexType + " WHERE " + keyField + " = :id",
-            Map.of("id", id), -1);
-        return client.query(db, basicAuth(), existsQ).chain(exRes -> {
-            List<Map<String, Object>> exRows = exRes.result() != null ? exRes.result() : List.of();
-            long cnt = exRows.isEmpty() ? 0L : ((Number) exRows.get(0).getOrDefault("n", 0)).longValue();
-            if (cnt == 0) {
-                return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
-                    .entity(new LoreError("NOT_FOUND", entityType + " '" + id + "' not found — id must be the full "
-                        + keyField + " (a task needs \"SPRINT_X/T05\", not a bare task_id)"))));
-            }
-        MartQuery readQ = new MartQuery("sql",
-            "SELECT @rid AS rid, status_raw FROM " + histType +
-            " WHERE in('HAS_STATE')." + keyField + " CONTAINS :id AND valid_to IS NULL LIMIT 1",
-            Map.of("id", id), -1);
+        return updateScd2Status(entityType, vertexType, histType, keyField, id, token, now, nsid, null, changeAuthor());
+    }
 
-        return client.query(db, basicAuth(), readQ)
-            .chain(res -> {
-                List<Map<String, Object>> rows =
-                    res.result() != null ? res.result() : List.of();
-                final String oldRid    = rows.isEmpty() ? null
-                    : String.valueOf(rows.get(0).getOrDefault("rid", ""));
-                final String oldStatus = rows.isEmpty() ? null
-                    : (String) rows.get(0).get("status_raw");
+    /** S2-12: то же от имени явного автора (task/move, авто-вывод статуса спринта). */
+    Uni<Response> updateScd2Status(String entityType, String vertexType, String histType,
+                                           String keyField, String id, String token,
+                                           String now, String nsid, ChangeAuthor author) {
+        return updateScd2Status(entityType, vertexType, histType, keyField, id, token, now, nsid, null, author);
+    }
 
-                // A1: close-old + open-new + HAS_STATE edge + denormalize run as one
-                // atomic sqlscript (ArcadeDB implicit transaction). A partial SCD2
-                // transition can no longer leave two open hist rows, or an entity
-                // whose denormalized status_raw disagrees with its open hist row.
-                // vertexType/histType/keyField come from the internal type switch,
-                // never user input; id is bound as a parameter.
-                StringBuilder script = new StringBuilder();
-                Map<String, Object> p = new java.util.HashMap<>();
-                p.put("nsid", nsid); p.put("ns", newRaw); p.put("now", now); p.put("id", id);
-                if (oldRid != null && oldRid.startsWith("#")) {
-                    script.append("UPDATE ").append(histType)
-                          .append(" SET valid_to = :now WHERE @rid = :oldrid;");
-                    p.put("oldrid", oldRid);
-                }
-                script.append("INSERT INTO ").append(histType)
-                      .append(" SET state_uid = :nsid, status_raw = :ns, valid_from = :now;")
-                      .append("CREATE EDGE HAS_STATE FROM (SELECT FROM ").append(vertexType)
-                      .append(" WHERE ").append(keyField).append(" = :id) ")
-                      .append("TO (SELECT FROM ").append(histType).append(" WHERE state_uid = :nsid);")
-                      .append("UPDATE ").append(vertexType)
-                      .append(" SET status_raw = :ns WHERE ").append(keyField).append(" = :id;");
+    /**
+     * S2-09: то же с оптимистической блокировкой. Закрытие открытой версии условно
+     * (ещё открыта; при expected — ещё и прежний статус); иначе 409 CONFLICT с
+     * текущим состоянием и без единой записи.
+     */
+    Uni<Response> updateScd2Status(String entityType, String vertexType, String histType,
+                                           String keyField, String id, String token,
+                                           String now, String nsid, String expected) {
+        return updateScd2Status(entityType, vertexType, histType, keyField, id, token, now, nsid, expected, changeAuthor());
+    }
 
-                return writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
-                    .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
-                        true, entityType, id, oldStatus, newRaw,
-                        new StatusRevision(now, null)))));
-                });
-        })
+    /**
+     * S2-09 + S2-12: оптимистическая блокировка и автор новой версии. author — из
+     * проверенного токена ({@link ChangeAuthor#of}), снятый в начале запроса.
+     */
+    Uni<Response> updateScd2Status(String entityType, String vertexType, String histType,
+                                           String keyField, String id, String token,
+                                           String now, String nsid, String expected,
+                                           ChangeAuthor author) {
+        // S2-13: единственный путь смены статуса — StatusHistoryService.transition.
+        // vertexType/histType/keyField остаются в сигнатуре ради вызывающих
+        // (task/move, авто-вывод спринта); тип элемента определяет реестр сервиса.
+        // Сервис сам проверяет существование вершины (404 вместо осиротевшей
+        // строки), закрывает версию условно (409, S2-09), переносит ВСЕ поля
+        // открытой строки и пишет автора (S2-12) — одним sqlscript.
+        final ChangeAuthor by = author == null ? ChangeAuthor.UNKNOWN : author;
+        final StatusHistoryService.Db sdb = statusDb();
+        return Uni.createFrom().item(() -> StatusHistoryService.transition(
+                    sdb, entityType, id, expected, token, by, now, nsid))
+            .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+            .map(o -> {
+                Response err = statusOutcomeError(o);
+                if (err != null) return err;
+                StatusHistoryService.Outcome.Ok ok = (StatusHistoryService.Outcome.Ok) o;
+                return noStore(Response.ok(new StatusUpdateResponse(
+                    true, entityType, id, ok.oldStatus(), ok.newStatus(), new StatusRevision(now, null))));
+            })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE STATUS] %s=%s: %s", entityType, id, ex.getMessage());
+                if (Scd2Guard.isConcurrentModification(ex)) {
+                    return Scd2Guard.conflict(entityType + " '" + id
+                        + "': concurrent write to the same version — re-read and retry", Map.of());
+                }
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex)));
             });
@@ -453,6 +451,11 @@ public class LoreStatusResource extends LoreResourceBase {
 
     /** Recompute + persist the parent sprint's status after a task flip (best-effort). */
     Uni<Void> autoDeriveSprintStatus(String taskUid) {
+        return autoDeriveSprintStatus(taskUid, changeAuthor());
+    }
+
+    /** S2-12: авто-вывод статуса спринта пишет версию от имени того, кто сменил задачу. */
+    Uni<Void> autoDeriveSprintStatus(String taskUid, ChangeAuthor author) {
         MartQuery ctxQ = new MartQuery("sql",
             "SELECT out('PART_OF').sprint_id[0] AS sid, " +
             "out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS sprint_status " +
@@ -478,7 +481,7 @@ public class LoreStatusResource extends LoreResourceBase {
                 final String nsid2 = UUID.randomUUID().toString();
                 LOG.infof("[LORE STATUS] sprint=%s auto %s→%s (task %s changed)", sid, curToken, target, taskUid);
                 return readSprintPlanFields(sid).chain(fields ->
-                    updateScd2Status("sprint", "KnowSprint", "KnowSprintHist", "sprint_id", sid, target, now2, nsid2)
+                    updateScd2Status("sprint", "KnowSprint", "KnowSprintHist", "sprint_id", sid, target, now2, nsid2, author)
                         .chain(resp -> resp.getStatus() >= 300
                             ? Uni.createFrom().voidItem()
                             : restoreSprintPlanFields(nsid2, fields).replaceWithVoid()));
@@ -493,8 +496,14 @@ public class LoreStatusResource extends LoreResourceBase {
     // caller didn't explicitly override. priority moves here exclusively;
     // updateSprint() no longer accepts it (see its handler).
 
+    /** S2-09: expected — «было» по полям плана (priority, planned_start_date, planned_end_date, track_id, status); расхождение → 409. */
     public record SprintPlanRequest(String sprint_id, String priority, String planned_start_date,
-        String planned_end_date, String track_id) {}
+        String planned_end_date, String track_id, Map<String, Object> expected) {
+        public SprintPlanRequest(String sprint_id, String priority, String planned_start_date,
+                String planned_end_date, String track_id) {
+            this(sprint_id, priority, planned_start_date, planned_end_date, track_id, null);
+        }
+    }
 
     @POST
     @Path("sprint/plan")
@@ -514,6 +523,7 @@ public class LoreStatusResource extends LoreResourceBase {
         final String sid  = req.sprint_id();
         final String now  = Instant.now().toString();
         final String nsid = UUID.randomUUID().toString();
+        final ChangeAuthor author = changeAuthor(); // S2-12: снят до асинхронной цепочки
 
         // + context_md/outcome_md/content_hash (2026-07-17): этот close-open нёс тот же
         // carry-forward баг, что и статус-флип, — тела спринта терялись при правке плана.
@@ -529,6 +539,12 @@ public class LoreStatusResource extends LoreResourceBase {
                 return Uni.createFrom().item(badParams("sprint has no open hist row: " + sid));
             Map<String, Object> cur = rows.get(0);
             String oldRid = String.valueOf(cur.getOrDefault("rid", ""));
+            // S2-09: «было» не совпало с открытой версией — отказ до записи.
+            String mismatch = Scd2Guard.firstMismatch(req.expected(), cur);
+            if (mismatch != null)
+                return Uni.createFrom().item(Scd2Guard.conflict("sprint '" + sid + "': expected "
+                    + mismatch + " = '" + req.expected().get(mismatch) + "' does not match the open version — re-read and retry",
+                    cur));
 
             Map<String, Object> next = new LinkedHashMap<>();
             next.put("status_raw",           cur.get("status_raw"));
@@ -541,27 +557,38 @@ public class LoreStatusResource extends LoreResourceBase {
             next.put("outcome_md",           cur.get("outcome_md"));
             next.put("content_hash",         cur.get("content_hash"));
 
-            Uni<LoreCommandClient.LoreCommandResult> closeOld = oldRid.startsWith("#")
-                ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowSprintHist SET valid_to = :now WHERE @rid = :rid",
-                    Map.of("now", now, "rid", oldRid)))
-                : Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
-
-            Map<String, Object> insertParams = new LinkedHashMap<>(next);
+            Map<String, Object> insertParams = new java.util.HashMap<>(next);
             insertParams.put("nsid", nsid);
             insertParams.put("now", now);
+            insertParams.put("sid", sid);
+            author.bind(insertParams);
 
-            return closeOld
-                .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
+            // S2-09: close-open одним sqlscript (раньше — три отдельные команды без
+            // атомарности) с условным закрытием: версия должна быть ЕЩЁ открыта,
+            // иначе выход до первой записи и 409.
+            StringBuilder script = new StringBuilder();
+            if (oldRid.startsWith("#")) {
+                script.append(Scd2Guard.guardedClose("KnowSprintHist", false));
+                insertParams.put("oldrid", oldRid);
+            }
+            script.append("INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
                     "planned_end_date = :planned_end_date, " +
                     "track_id = :track_id, pr_refs = :pr_refs, " +
-                    "context_md = :context_md, outcome_md = :outcome_md, content_hash = :content_hash",
-                    insertParams)))
-                .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
-                    "KnowSprint", "KnowSprintHist", "sprint_id", sid, nsid)))
-                .map(__ -> {
+                    "context_md = :context_md, outcome_md = :outcome_md, content_hash = :content_hash" +
+                    ChangeAuthor.SET_SQL + ";")
+                .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) ")
+                .append("TO (SELECT FROM KnowSprintHist WHERE state_uid = :nsid);");
+
+            return writeClient.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sqlscript", script.toString(), insertParams))
+                .chain(r -> !Scd2Guard.isConflict(r.result())
+                    ? Uni.createFrom().item((Response) null)
+                    : client.query(db, basicAuth(), readQ).map(again -> Scd2Guard.conflict(
+                        "sprint '" + sid + "': the plan version read was closed by a concurrent write — re-read and retry",
+                        again.result() == null || again.result().isEmpty() ? Map.of() : again.result().get(0))))
+                .map(conflict -> {
+                    if (conflict != null) return conflict;
                     Map<String, Object> out = new LinkedHashMap<>(next);
                     out.put("ok", true);
                     out.put("sprint_id", sid);
@@ -570,21 +597,12 @@ public class LoreStatusResource extends LoreResourceBase {
                 });
         }).onFailure().recoverWithItem(ex -> {
             LOG.warnf("[LORE SPRINT PLAN] %s: %s", sid, ex.getMessage());
+            if (Scd2Guard.isConcurrentModification(ex))
+                return Scd2Guard.conflict("sprint '" + sid
+                    + "': concurrent write to the same plan version — re-read and retry", Map.of());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(ex)));
         });
-    }
-
-    // LH-44: direct status setter for KnowADR (no SCD2 hist row — status is a plain field)
-    private Uni<Response> updateAdrStatusDirect(String adrId, String status, String now) {
-        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowADR SET status=:status WHERE adr_id=:id",
-                Map.of("status", status, "id", adrId)))
-            .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
-                true, "adr", adrId, null, status, new StatusRevision(now, null)))))
-            .onFailure().recoverWithItem(ex ->
-                noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(LoreUpstream.error(ex))));
     }
 
     /**

@@ -68,7 +68,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
         String work_class, String uc_id,
         String author_agent, String executor_agent, String reviewer_agent, String task_type,
-        Double actual_days, Boolean bookkeeping, String note_append) {}
+        Double actual_days, Boolean bookkeeping, String note_append, java.util.Map<String, Object> expected) {}
     // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
     // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
     // а не когда кто-то откроет срез гигиены через неделю.
@@ -109,7 +109,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
         try {
             LoreIngestService.CreateSprintResult r = ingestService.createSprint(
-                req.sprint_id(), req.name(), status, req.plan_id(), req.priority(), req.outcome_md(), req.context_md());
+                req.sprint_id(), req.name(), status, req.plan_id(), req.priority(), req.outcome_md(), req.context_md(),
+                changeAuthor());
             // ADR-LORE-017 §Решение 2: sprint_new gets the same optional project param
             // release_new/release_link/sprint_link(rel:"project") already have — brings
             // Tier-1 write coverage in line, no separate call needed for the common case
@@ -252,6 +253,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.task_id()).matches()) {
             return Uni.createFrom().item(badParams("sprint_id / task_id contain illegal characters"));
         }
+        final ChangeAuthor by = changeAuthor(); // S2-12: снят до асинхронной цепочки
         // Решение владельца 30.08.2026: агент не создаёт задачу без ролей —
         // отказ, а не запись с пропуском. Проверка стоит ДО первой команды в
         // базу: иначе задача легла бы, а отказ пришёл после, и «не создана»
@@ -332,13 +334,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
                     .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
-                    .append("valid_from = :now, note_md = :note, effort_days = :eff;")
+                    .append("valid_from = :now, note_md = :note, effort_days = :eff").append(ChangeAuthor.SET_SQL).append(";")
                     .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
                 Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
                     "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType, "wc", workClass,
                     "eff", req.effort_days(), "act", req.actual_days(),
                     "bk", req.bookkeeping() != null && req.bookkeeping());
+                by.bind(p);
                 // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
                 if (phase != null) {
                     script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
@@ -552,6 +555,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         final String now = Instant.now().toString();
         final String nsid = UUID.randomUUID().toString();   // new task's PLANNED hist
         final String cnsid = UUID.randomUUID().toString();  // source's CANCELLED hist
+        final ChangeAuthor by = changeAuthor();             // S2-12: автор обеих версий
         try {
             List<Map<String, Object>> src = ingestService.queryPublic(
                 "SELECT task_id, title, task_type, author_agent, executor_agent, reviewer_agent, " +
@@ -600,13 +604,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .append("task_type=:tt, author_agent=:author, executor_agent=:executor, reviewer_agent=:reviewer;")
                 .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowSprint WHERE sprint_id=:sid);")
                 .append("INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw=:st, valid_from=:now, note_md=:note")
-                .append(effort != null ? ", effort_days=:eff;" : ";")
+                .append(effort != null ? ", effort_days=:eff" : "")
+                .append(ChangeAuthor.SET_SQL).append(";")
                 .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid);");
             Map<String, Object> p = mapOfNullable("uid", newUid, "tid", tid, "title", title,
                 "note", note, "oi", order, "sid", targetSid, "nsid", nsid, "now", now,
                 "tt", taskType, "author", author, "executor", executor, "reviewer", reviewer,
                 "st", carriedStatus);
             if (effort != null) p.put("eff", effort);
+            by.bind(p);
             for (Object c : comps) {
                 if (c == null) continue;
                 script.append(String.format(
@@ -619,7 +625,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // Cancel the source — reuse the /lore/status flip + #88 note carry-forward.
             Map<String, Object> carry = statusResource.readTaskHistCarryFields(oldUid).await().indefinitely();
             var resp = statusResource.updateScd2Status("task", "KnowTask", "KnowTaskHist", "task_uid",
-                oldUid, "cancelled", now, cnsid).await().indefinitely();
+                oldUid, "cancelled", now, cnsid, by).await().indefinitely();
             if (resp.getStatus() < 300) {
                 statusResource.restoreTaskHistFields(cnsid, (String) carry.get("note_md"),
                     carry.get("effort_days") == null ? null : ((Number) carry.get("effort_days")).doubleValue())
@@ -659,6 +665,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (req == null || req.sprint_id() == null || req.phase_key() == null || req.phase_key().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, phase_key required"));
         }
+        final ChangeAuthor by = changeAuthor(); // S2-12: снят до асинхронной цепочки
         final String key = req.phase_key().trim().toUpperCase();
         if (!SAFE_ID.matcher(req.sprint_id()).matches()
                 || !key.matches("[A-Z0-9_\\-]{1,20}")) {
@@ -713,11 +720,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
                             "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
-                            "valid_from = :now;" +
+                            "valid_from = :now" + ChangeAuthor.SET_SQL + ";" +
                             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid);";
                         Map<String, Object> p = mapOfNullable("uid", uid, "pid", display, "name", name,
                             "summary", summary, "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                        by.bind(p);
                         return writeClient.command(db, basicAuth(),
                                 new LoreCommandClient.LoreCommand("sqlscript", script, p))
                             .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true,
@@ -826,6 +834,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             }
             String appendRefusal = appendConflict("note_md", req.note_md(), "note_append", req.note_append());
             if (appendRefusal != null) { errors.add("skipped (" + req.task_uid() + "): " + appendRefusal); continue; }
+            if (req.expected() != null && !req.expected().isEmpty()) {
+                // S2-09: «было» не совпало — пункт пропускается с CONFLICT, остальные идут.
+                Response c = taskExpectedConflict(req.task_uid(), req.expected());
+                if (c != null) {
+                    errors.add("skipped (CONFLICT): " + ((Map<?, ?>) c.getEntity()).get("detail"));
+                    continue;
+                }
+            }
             {
                 // Дописка тоже пишет заметку — открытая строка истории нужна и ей.
                 String noteProbe = req.note_md() != null ? req.note_md() : req.note_append();
@@ -1001,7 +1017,13 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         // MT-MCP-TRUTH Б6: заметка/оценка обязаны лечь в ОТКРЫТУЮ строку истории;
         // её нет — отказ до записи, а не ok:true при невидимой правке. Дописка — тоже запись заметки.
         final String noteProbe = req.note_md() != null ? req.note_md() : req.note_append();
-        return openStateRows(uid, noteProbe, req.effort_days()).chain(openRows -> {
+        // S2-09: «было» (expected) названо и не совпало с текущим — 409 до любой записи.
+        Uni<Response> pre = (req.expected() == null || req.expected().isEmpty())
+            ? Uni.createFrom().nullItem()
+            : Uni.createFrom().item(() -> taskExpectedConflict(uid, req.expected()))
+                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
+        return pre.chain(conflict -> conflict != null ? Uni.createFrom().item(conflict) :
+            openStateRows(uid, noteProbe, req.effort_days()).chain(openRows -> {
         String refusal = noOpenStateRefusal(uid, noteProbe, req.effort_days(), openRows);
         if (refusal != null) return Uni.createFrom().item(noStore(Response.status(Response.Status.CONFLICT)
             .entity(new LoreError("NO_OPEN_STATE", refusal))));
@@ -1055,7 +1077,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex)));
             });
-        });
+        }));
     }
 
     // ── Write-path: append PR numbers to open KnowSprintHist.pr_refs ───────────
@@ -1165,6 +1187,36 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         Object vn = rows.get(0).get("vn");
         if (hn != null && !String.valueOf(hn).isBlank()) return String.valueOf(hn);
         return vn == null ? null : String.valueOf(vn);
+    }
+
+    /**
+     * S2-09: сверка «было» (expected) с текущим состоянием задачи. Ключи: title,
+     * note_md, effort_days, actual_days, status (+ любые поля вершины). Заметка и
+     * оценка — с открытой строки истории (их читают срезы), иначе с вершины.
+     * Возвращает 409 CONFLICT с текущим состоянием или null. Блокирующий — с рабочего пула.
+     */
+    Response taskExpectedConflict(String uid, Map<String, Object> expected) {
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT title, note_md AS vn, effort_days AS ve, actual_days, task_type, work_class, " +
+            "out('HAS_STATE')[valid_to IS NULL].note_md[0] AS hn, " +
+            "out('HAS_STATE')[valid_to IS NULL].effort_days[0] AS he, " +
+            "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw " +
+            "FROM KnowTask WHERE task_uid=:u", Map.of("u", uid));
+        if (rows.isEmpty()) return null; // неизвестная задача — пусть обычный путь скажет своё
+        Map<String, Object> r = rows.get(0);
+        Map<String, Object> cur = new LinkedHashMap<>();
+        cur.put("title", r.get("title"));
+        Object hn = r.get("hn");
+        cur.put("note_md", hn != null && !String.valueOf(hn).isBlank() ? hn : r.get("vn"));
+        cur.put("effort_days", r.get("he") != null ? r.get("he") : r.get("ve"));
+        cur.put("actual_days", r.get("actual_days"));
+        cur.put("task_type", r.get("task_type"));
+        cur.put("work_class", r.get("work_class"));
+        cur.put("status_raw", r.get("status_raw"));
+        String mismatch = Scd2Guard.firstMismatch(expected, cur);
+        if (mismatch == null) return null;
+        return Scd2Guard.conflict("task '" + uid + "': expected " + mismatch + " = '" + expected.get(mismatch)
+            + "' does not match the current value — re-read and retry", cur);
     }
 
     /** Дописка: пустое поле — запись; иначе прежнее (без хвостовых пустот) + пустая строка + новое. */

@@ -45,7 +45,9 @@ COPY --from=build /app/web-next/dist /usr/share/nginx/html
 ENV NGINX_ENVSUBST_FILTER="^LORE_" \
     LORE_PUBLIC_URL="" \
     LORE_OIDC_ORIGIN="" \
-    LORE_VOLVA_ORIGIN=""
+    LORE_VOLVA_ORIGIN="" \
+    LORE_BACKEND_URL="" \
+    LORE_BACKEND_HOST=""
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 # Общий с v1 скрипт старта (S3-02): подсказывает, каких LORE_* не хватает для
 # входа по OIDC. LORE_FRONT метит его строки как «[LORE v2]»; в шаблоне nginx

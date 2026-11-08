@@ -29,6 +29,8 @@ export default defineConfig({
       '@tiptap/extension-table', '@tiptap/extension-task-list', '@tiptap/extension-task-item',
       '@tiptap/extension-mention', '@tiptap/suggestion', 'tiptap-markdown',
       'marked', 'katex', 'mermaid', '@mermaid-js/layout-elk', 'bpmn-js', 'dompurify',
+      // Вход kit (@seidr/kit/auth, S3-18): в образе у kit нет node_modules.
+      'oidc-client-ts',
     ],
   },
   // PostCSS — пустой и явный: иначе vite ищет конфиг вверх по дереву и берёт
@@ -38,6 +40,9 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     setupFiles: ['src/test/setup.ts'],
     env: { VITE_LORE_AUTH_ENABLED: 'false' },
+    // PL-09: в CI контейнер джоба ограничен --memory=6g; без потолка vitest берёт
+    // воркеров по числу ядер хоста (24) — OOM, код 137. Локально — по умолчанию.
+    maxWorkers: process.env.CI ? 4 : undefined,
   },
   server: {
     // v1 в dev на :4400 — v2 рядом, а не вместо.
