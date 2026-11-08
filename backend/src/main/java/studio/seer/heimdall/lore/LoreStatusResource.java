@@ -67,6 +67,22 @@ public class LoreStatusResource extends LoreResourceBase {
             + "незакрытая зависимость (DEPENDS_ON) либо открытый вопрос; иначе гейт QG-LORE-BLOCKED-REASON "
             + "покажет спринт как «блокировка без объяснения»";
     }
+    /**
+     * Сторож закрытия спринта ({@link SprintCloseGuard}): переход в done/cancelled при
+     * открытых задачах — 409 SPRINT_HAS_OPEN_TASKS; иначе {@code null}. Блокирующее
+     * чтение — на рабочем пуле.
+     */
+    Uni<Response> sprintCloseRefusal(String sprintId, String status) {
+        if (!SprintCloseGuard.closing(status)) return Uni.createFrom().nullItem();
+        return Uni.createFrom().item(() -> {
+                List<Map<String, Object>> open = SprintCloseGuard.openTasks(
+                    ingestService.queryPublic(SprintCloseGuard.TASKS_SQL, Map.of("sid", sprintId)));
+                return open.isEmpty() ? null : noStore(Response.status(Response.Status.CONFLICT)
+                    .entity(SprintCloseGuard.conflictBody(sprintId, status, open)));
+            })
+            .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
+    }
+
     record StatusRevision(String valid_from, String plan_version) {}
     public record StatusUpdateResponse(
         boolean ok, String entity_type, String id,
@@ -116,7 +132,11 @@ public class LoreStatusResource extends LoreResourceBase {
             // BEFORE the SCD2 flip, then restore them onto the freshly-opened row —
             // updateScd2Status's INSERT only carries state_uid/status_raw/valid_from,
             // so without this a status change would silently wipe planning data.
-            case "sprint"    -> readSprintPlanFields(req.id())
+            // D-2026-LORE-SPRINT-CLOSE-NEEDS-TASKS-CLOSED (ADR-LORE-047 A5): закрыть или
+            // отменить спринт с открытыми задачами нельзя — 409 со списком до любой записи.
+            case "sprint"    -> sprintCloseRefusal(req.id(), req.status()).chain(refusal -> refusal != null
+                                  ? Uni.createFrom().item(refusal)
+                                  : readSprintPlanFields(req.id())
                                   .chain(fields -> updateScd2Status("sprint", "KnowSprint", "KnowSprintHist",
                                     "sprint_id", req.id(), req.status(), now, nsid, req.expected(), author)
                                   .chain(resp -> resp.getStatus() >= 300
@@ -132,7 +152,7 @@ public class LoreStatusResource extends LoreResourceBase {
                                             "[LORE STATUS] sprint=%s plan-field restore failed (status flip itself succeeded): %s",
                                             req.id(), ex.getMessage()))
                                         .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
-                                        .chain(__ -> withBlockReason(resp, req, nsid))));
+                                        .chain(__ -> withBlockReason(resp, req, nsid)))));
             // ADR-LORE-014 §4: →done is gated — refuse self-acceptance (reviewer_agent
             // unset or equal to executor_agent) BEFORE the SCD2 flip. Every other task
             // transition is ungated (RBAC-only, per the ADR's "one hard-gate" decision).
