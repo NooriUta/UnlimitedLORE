@@ -240,6 +240,16 @@ public final class LoreSlices {
                 .append(parent.idField()).append("[0] AS ref_id, state_uid FROM ")
                 .append(hist).append(" WHERE valid_to IS NULL AND valid_from IS NULL)");
         }
+        // S2-11: задача или спринт без ЕДИНОЙ версии истории — запись мимо SCD2
+        // (найдено 07.11: 14 задач, их O(t) не определить). Пустой срез без этой
+        // ветки читался бы как «история в порядке».
+        vars.append(", $nt, $ns");
+        lets.append(", $nt = (SELECT 'entity_without_history' AS finding, 'task' AS entity_type, "
+                + "'KnowTaskHist' AS hist_type, task_uid AS ref_id, null AS state_uid FROM KnowTask "
+                + "WHERE out('HAS_STATE').size() = 0)")
+            .append(", $ns = (SELECT 'entity_without_history' AS finding, 'sprint' AS entity_type, "
+                + "'KnowSprintHist' AS hist_type, sprint_id AS ref_id, null AS state_uid FROM KnowSprint "
+                + "WHERE out('HAS_STATE').size() = 0)");
         return "SELECT finding, entity_type, hist_type, ref_id, state_uid "
             + "FROM (SELECT expand(unionall(" + vars + ")) LET " + lets + ") "
             + "ORDER BY entity_type, ref_id";
