@@ -49,5 +49,10 @@ describe('паспорт записи открывается из живого �
     expect(container.querySelector('[data-testid="kit-rec-dock"]')!.getAttribute('data-placement')).toBe('full');
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть паспорт' }));
     expect(container.querySelector('[data-testid="kit-rec-dock"]')).toBeNull();
-  });
+    // Бюджет теста 15 с — больше, чем ожидание ленивого чанка внутри (8 с).
+    // С умолчанием в 5 с тест не мог дождаться собственного waitFor и падал
+    // под нагрузкой: он монтирует весь ListScreen и ждёт MartProse/mermaid.
+    // Проверено двумя сессиями: в одиночку проходит, красный только в полном
+    // прогоне. «Flaky» не называем — для этого нужно ≥10 прогонов со счётом.
+  }, 15000);
 });

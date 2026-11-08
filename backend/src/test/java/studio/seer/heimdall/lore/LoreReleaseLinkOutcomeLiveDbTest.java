@@ -122,6 +122,11 @@ class LoreReleaseLinkOutcomeLiveDbTest {
         assertEquals(200, first.statusCode(), body);
         assertEquals("created", first.jsonPath().getString("outcome"), body);
         assertEquals(1, first.jsonPath().getInt("prs_linked"), body);
+        // S2-14: у тестового проекта нет primary-хоста Forgejo — поля PR не подтянуть.
+        // Это честно видно в ответе, а не пустыми полями молча; связь при этом есть.
+        assertEquals(0, first.jsonPath().getInt("prs_enriched"), body);
+        String missing = String.valueOf(first.jsonPath().getList("pr_details_missing"));
+        org.junit.jupiter.api.Assertions.assertTrue(missing.contains("PR #990002"), body);
         admin().body(Map.of("release_id", REL, "git_project", GP, "pr_numbers", List.of(990002)))
             .when().post("/lore/release/link")
             .then().log().ifValidationFails().statusCode(200).body("outcome", equalTo("unchanged"));

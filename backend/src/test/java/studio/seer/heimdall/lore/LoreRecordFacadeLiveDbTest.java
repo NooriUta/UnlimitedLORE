@@ -80,6 +80,11 @@ class LoreRecordFacadeLiveDbTest {
         assertEquals("dev", t.getString("values.task_type"));
         assertNotNull(t.getString("record.version"));
         assertTrue(t.getList("meta.sources.block").containsAll(List.of("questions", "adrs")), t.getList("meta.sources.block").toString());
+        // S4-30: по каждому прочитанному источнику — своё состояние; на здоровой базе все ok.
+        List<String> dsParts = t.getList("meta.data_state.part");
+        assertTrue(dsParts.containsAll(List.of("questions", "adrs")), "data_state: " + t.getList("meta.data_state"));
+        assertTrue(t.getList("meta.data_state.source").contains("version"), "сбой версии тоже должен быть виден");
+        assertTrue(t.getList("meta.data_state.state").stream().allMatch("ok"::equals), "data_state: " + t.getList("meta.data_state"));
 
         admin().body("{\"adr_id\":\"ADR-REC-1\",\"name\":\"проба\",\"status\":\"proposed\",\"context_md\":\"к\",\"decision_md\":\"р\"}")
             .post("/lore/adr").then().statusCode(200);
@@ -98,6 +103,7 @@ class LoreRecordFacadeLiveDbTest {
         assertNull(n.get("record.version"));
         assertEquals("dev", n.getString("values.task_type"));
         assertEquals(true, n.getBoolean("perms.can_create"));
+        assertTrue(n.getList("meta.data_state").isEmpty(), "новая запись ничего не читала — список пуст");
 
         admin().get("/lore/record/task/NOPE_SPRINT/NOPE").then().statusCode(404);
         admin().get("/lore/record/decision/D-1").then().statusCode(400);

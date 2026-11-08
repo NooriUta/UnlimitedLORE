@@ -441,6 +441,8 @@
   "kit.tasks.col.executor": "Исполнитель",
   "kit.tasks.col.reviewer": "Ревьюер",
   "kit.tasks.col.type": "Тип",
+  "kit.tasks.col.class": "Класс",
+  "kit.tasks.dict.unknown": "{code} · нет в словаре",
   "kit.tasks.col.actions": "Действия",
   "kit.tasks.groupBy": "Группировка",
   "kit.tasks.groupBy.phase": "По фазе",
@@ -575,5 +577,11 @@
   "kit.ds.truncated": "Обрезано:",
   "kit.ds.shownOf": "показано {n} из {total}",
   "kit.ds.shown": "показано {n}, сколько всего — неизвестно",
-  "kit.ds.forbidden": "Нет прав:"
+  "kit.ds.forbidden": "Нет прав:",
+  "kit.tasks.counters.progress": "Закрыто из всего",
+  "kit.tasks.counters.effort": "Сумма оценок, д",
+  "kit.list.cols.title": "Колонки",
+  "kit.list.cols.hint": "«Запись» не выключается. Порядок — стрелками, ширина — краем заголовка.",
+  "kit.list.cols.up": "{title}: выше",
+  "kit.list.cols.down": "{title}: ниже"
 }

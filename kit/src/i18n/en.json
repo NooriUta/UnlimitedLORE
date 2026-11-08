@@ -441,6 +441,8 @@
   "kit.tasks.col.executor": "Executor",
   "kit.tasks.col.reviewer": "Reviewer",
   "kit.tasks.col.type": "Type",
+  "kit.tasks.col.class": "Class",
+  "kit.tasks.dict.unknown": "{code} · not in the dictionary",
   "kit.tasks.col.actions": "Actions",
   "kit.tasks.groupBy": "Grouping",
   "kit.tasks.groupBy.phase": "By phase",
@@ -575,5 +577,11 @@
   "kit.ds.truncated": "Truncated:",
   "kit.ds.shownOf": "{n} of {total} shown",
   "kit.ds.shown": "{n} shown, the total is unknown",
-  "kit.ds.forbidden": "No access:"
+  "kit.ds.forbidden": "No access:",
+  "kit.tasks.counters.progress": "Closed out of total",
+  "kit.tasks.counters.effort": "Total estimate, d",
+  "kit.list.cols.title": "Columns",
+  "kit.list.cols.hint": "«Record» cannot be turned off. Order — arrows, width — the header edge.",
+  "kit.list.cols.up": "{title}: up",
+  "kit.list.cols.down": "{title}: down"
 }

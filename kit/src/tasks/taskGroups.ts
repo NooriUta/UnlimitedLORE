@@ -17,6 +17,8 @@ export interface TaskRowData {
   executor: string | null;
   reviewer: string | null;
   taskType: string | null;
+  /** work_class — класс работы (S4-36): плашка из словаря `work_class`. */
+  workClass: string | null;
   /** order_index — порядок в спринте. */
   order: number;
 }
