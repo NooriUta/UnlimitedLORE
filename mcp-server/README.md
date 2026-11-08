@@ -31,7 +31,8 @@ experiment mart — documented on `/benchmark?tab=mcp` instead.
 
 | Var | Default | Meaning |
 |-----|---------|---------|
-| `LORE_BACKEND_URL` | `http://localhost:9100` | UnlimitedLORE backend base URL |
+| `LORE_BACKEND_URL` | `http://localhost:9100` | UnlimitedLORE backend base URL (на стенде — прямой маршрут `https://lore.odal.seidrstudio.pro/_backend`, S2-08) |
+| `LORE_BACKEND_FALLBACK_URL` | — | Запасной адрес (nginx фронта `:4400`); используется, только если до основного запрос не дошёл (соединение/TLS, либо ответил SPA) |
 | `LORE_SEER_ROLE` | `admin` | `X-Seer-Role` header for write tools |
 
 ## Build & run
@@ -45,6 +46,17 @@ node dist/index.js # speaks MCP over stdio
 
 The backend (`UnlimitedLORE/backend`, port 9100) must be running, and it needs
 `ARCADEDB_ROOT_PASSWORD` to reach ArcadeDB.
+
+## Contract snapshot (S0-01)
+
+`src/tools/contract.test.ts` calls every tool (backend stubbed) and compares its
+parameters and response shape with `src/tools/contract.snapshot.json`. A changed
+parameter, a dropped tool or a missing response field fails CI on every PR. When
+the change is intentional, regenerate and commit the snapshot together with it:
+
+```bash
+UPDATE_MCP_CONTRACT=1 npx vitest run src/tools/contract.test.ts
+```
 
 ## Register in Claude Code
 

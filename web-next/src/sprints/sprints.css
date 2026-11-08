@@ -1,0 +1,24 @@
+/* Задачи в раскрытой строке спринта (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-09). Только токены
+   Seiðr; цели касания — через --tap kit (≥44px на сенсоре). Экран «Спринты» —
+   общий ListScreen (S4-22), своей разметки страницы больше нет. */
+.sprint-tasks__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sprint-tasks__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: max(var(--tap), var(--row-h));
+  border-bottom: 1px solid color-mix(in srgb, var(--bd) 60%, transparent);
+  font-size: var(--fs-sm);
+}
+.sprint-tasks__item:last-child { border-bottom: 0; }
+.sprint-tasks__title {
+  min-width: 0;
+  color: var(--t1);
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,2258 @@
+{
+  "actor_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "actor_id": "string",
+      "rel": "enum(fills_role)",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "actor_new": {
+    "input": {
+      "actor_id": "string",
+      "body_md": "string?",
+      "kind": "enum(agent|human-role|system)?",
+      "machine_id": "string?",
+      "name": "string?",
+      "project": "string?",
+      "projects": "string[]?",
+      "session_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "adr_del": {
+    "input": {
+      "adr_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "adr_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "adr_id": "string",
+      "git_project": "string?",
+      "rel": "enum(component|depends_on|project|release|sprint|supersedes|tag)",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "adr_new": {
+    "input": {
+      "adr_id": "string",
+      "checkpoint": "boolean?",
+      "component_id": "string?",
+      "component_ids": "string[]?",
+      "consequences_md": "string?",
+      "context_md": "string?",
+      "date_created": "string?",
+      "decision_md": "string?",
+      "depends_on_ids": "string[]?",
+      "file_path": "string?",
+      "name": "string",
+      "project": "string?",
+      "status": "enum(ACCEPTED|DEPRECATED|PROPOSED|SUPERSEDED)?",
+      "supersedes_ids": "string[]?",
+      "tags": "string[]?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "adr_rename": {
+    "input": {
+      "adr_id": "string",
+      "new_adr_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "adr_set": {
+    "input": {
+      "adr_id": "string",
+      "checkpoint": "boolean?",
+      "component_id": "string?",
+      "component_ids": "string[]?",
+      "consequences_md": "string?",
+      "context_md": "string?",
+      "date_created": "string?",
+      "decision_md": "string?",
+      "depends_on_ids": "string[]?",
+      "file_path": "string?",
+      "name": "string",
+      "status": "enum(ACCEPTED|DEPRECATED|PROPOSED|SUPERSEDED)?",
+      "supersedes_ids": "string[]?",
+      "tags": "string[]?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "agent_session_log": {
+    "input": {
+      "actor_id": "string?",
+      "dialogue_name": "string?",
+      "entrypoint": "enum(claude-desktop|cli)?",
+      "machine_id": "string?",
+      "project": "string?",
+      "session_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "asset_up": {
+    "input": {
+      "alt": "string?",
+      "base64_data": "string",
+      "content_type": "string",
+      "entity_id": "string",
+      "entity_type": "enum(actor|adr|component|decision|doc|feature|milestone|question|runbook|spec|sprint|task|uc)",
+      "filename": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bench_list_slices": {
+    "input": {},
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "slices": []
+          }
+        }
+      ]
+    }
+  },
+  "bench_query_slice": {
+    "input": {
+      "params": "record<string>?",
+      "slice": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bench_status": {
+    "input": {},
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "ok": "boolean"
+          }
+        }
+      ]
+    }
+  },
+  "bragi_asset_attach": {
+    "input": {
+      "alt": "string?",
+      "asset_id": "string",
+      "asset_type": "string?",
+      "attach_to_publication_id": "string?",
+      "attach_to_variant_id": "string?",
+      "file_url": "string?",
+      "size_bytes": "number?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_asset_up": {
+    "input": {
+      "base64_data": "string",
+      "content_type": "string?",
+      "filename": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_campaign_new": {
+    "input": {
+      "campaign_id": "string",
+      "period": "string?",
+      "target_url": "string?",
+      "utm_campaign": "string?",
+      "utm_medium": "string?",
+      "utm_source": "string?",
+      "variant_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_channel_set": {
+    "input": {
+      "channel_id": "string",
+      "channel_type": "string?",
+      "funnel_role": "string?",
+      "rules_md": "string?",
+      "url_handle": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_integration_new": {
+    "input": {
+      "endpoint": "string?",
+      "integration_id": "string",
+      "last_called_at": "string?",
+      "purpose": "string?",
+      "scope": "string?",
+      "secret_ref": "string?",
+      "service": "string?",
+      "status": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_keyword_set": {
+    "input": {
+      "cluster": "string?",
+      "freq_broad": "number?",
+      "freq_exact": "number?",
+      "intent": "string?",
+      "keyword_id": "string",
+      "measured_at": "string?",
+      "page_id": "string?",
+      "phrase": "string?",
+      "region_engine": "string?",
+      "rubric_id": "string?",
+      "source": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "entity_id": "string",
+      "entity_type": "enum(keyword|publication|variant)",
+      "git_project": "string?",
+      "rel": "enum(produced_by|rubric|shipped_in)",
+      "target_id": "string",
+      "target_type": "enum(sprint|task)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_page_set": {
+    "input": {
+      "deployed_at": "string?",
+      "description": "string?",
+      "page_id": "string",
+      "page_type": "string?",
+      "title": "string?",
+      "url": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_pub_new": {
+    "input": {
+      "annotation_md": "string?",
+      "keyword_ids": "string[]?",
+      "main_text_md": "string?",
+      "publication_id": "string",
+      "rubric_id": "string?",
+      "status_general": "string?",
+      "title": "string?",
+      "todo_md": "string?",
+      "topic": "string?",
+      "type": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_rubric_set": {
+    "input": {
+      "description": "string?",
+      "name": "string?",
+      "order_index": "number?",
+      "rubric_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_search": {
+    "input": {
+      "q": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_sync": {
+    "input": {
+      "integration_id": "string",
+      "metrics": "{metric:string,object_id:string,object_type:string,segment:string?,ts:string?,value:number}[]"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "bragi_variant_new": {
+    "input": {
+      "annotation_md": "string?",
+      "asset_id": "string?",
+      "channel_id": "string?",
+      "publication_id": "string?",
+      "published_at": "string?",
+      "status": "string?",
+      "text_md": "string?",
+      "todo_md": "string?",
+      "url": "string?",
+      "variant_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "claude_rules_pull": {
+    "input": {
+      "doc_id": "string",
+      "overwrite": "boolean?",
+      "path": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "bytes": "number",
+            "doc_id": "string",
+            "written": "string"
+          }
+        }
+      ]
+    }
+  },
+  "claude_rules_push": {
+    "input": {
+      "doc_id": "string",
+      "path": "string",
+      "sort_order": "number?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "bytes": "number",
+            "from": "string",
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "component_del": {
+    "input": {
+      "component_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "component_new": {
+    "input": {
+      "area": "string?",
+      "component_id": "string",
+      "full_name": "string?",
+      "game_icon": "string?",
+      "owner": "string?",
+      "parent_id": "string?",
+      "team": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "component_set": {
+    "input": {
+      "area": "string?",
+      "component_id": "string",
+      "full_name": "string?",
+      "game_icon": "string?",
+      "owner": "string?",
+      "parent_id": "string?",
+      "team": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "decision_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "decision_id": "string",
+      "rel": "enum(component|project)",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "decision_new": {
+    "input": {
+      "adr_id": "string?",
+      "body_md": "string?",
+      "component_id": "string?",
+      "date_created": "string?",
+      "decision_id": "string",
+      "project": "string?",
+      "refs_raw": "string?",
+      "status": "string?",
+      "tags": "string[]?",
+      "title": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "decision_set": {
+    "input": {
+      "decision_id": "string",
+      "status": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "dict_set": {
+    "input": {
+      "code": "string",
+      "color": "string?",
+      "dict_type": "string",
+      "icon": "string?",
+      "is_active": "boolean?",
+      "is_extensible": "boolean?",
+      "label_en": "string?",
+      "label_ru": "string?",
+      "sort_order": "number?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "doc_del": {
+    "input": {
+      "doc_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "doc_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "doc_id": "string",
+      "rel": "enum(component|parent|project|sprint)",
+      "target_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "doc_new": {
+    "input": {
+      "component_id": "string?",
+      "content_html": "string?",
+      "content_md_en": "string?",
+      "content_md_ru": "string?",
+      "doc_id": "string",
+      "file_path": "string?",
+      "has_ext_deps": "boolean?",
+      "kind": "string?",
+      "parent_doc_id": "string?",
+      "project": "string?",
+      "sort_order": "number?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "feature_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "feature_id": "string",
+      "rel": "enum(builds_on|component|gain|job|milestone|pain)",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "feature_new": {
+    "input": {
+      "body_md": "string?",
+      "component_id": "string?",
+      "context_md": "string?",
+      "feature_id": "string",
+      "goal_level": "enum(cloud|kite)?",
+      "project": "string?",
+      "status": "enum(active|dropped|proposed)?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "forgejo_branch_protection": {
+    "input": {
+      "branch": "string?",
+      "git_project": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "forgejo_ci_status": {
+    "input": {
+      "git_project": "string",
+      "ref": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "forgejo_pr_merge": {
+    "input": {
+      "git_project": "string",
+      "number": "number",
+      "release_id": "string?",
+      "sprint_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "forgejo_pr_new": {
+    "input": {
+      "base": "string?",
+      "body_md": "string?",
+      "git_project": "string",
+      "head": "string",
+      "release_id": "string?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "forgejo_pr_status": {
+    "input": {
+      "git_project": "string",
+      "number": "number"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "gain_new": {
+    "input": {
+      "body_md": "string?",
+      "gain_id": "string",
+      "metric_md": "string?",
+      "rank": "enum(desired|essential|expected|unexpected)?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "insight_link": {
+    "input": {
+      "insight_id": "string",
+      "rel": "enum(adr|task)",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "insight_new": {
+    "input": {
+      "evidence_ref": "string?",
+      "insight_date": "string?",
+      "insight_id": "string",
+      "statement_md": "string?",
+      "subject_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "job_new": {
+    "input": {
+      "body_md": "string?",
+      "importance": "enum(high|low|normal)?",
+      "job_id": "string",
+      "kind": "enum(emotional|functional|social|supporting)?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "list_slices": {
+    "input": {},
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "slices": []
+          }
+        }
+      ]
+    }
+  },
+  "lore_version": {
+    "input": {},
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "backend": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "drift": {
+              "reason": "string",
+              "verdict": "string"
+            },
+            "mcp": {
+              "built_at": "string",
+              "commit": "string"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "metric_get": {
+    "input": {
+      "agg": "enum(avg|count|max|min|sum)?",
+      "from": "string?",
+      "limit": "number?",
+      "metric": "string?",
+      "object_id": "string?",
+      "object_type": "string?",
+      "to": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "metric_log": {
+    "input": {
+      "metric": "string",
+      "object_id": "string",
+      "object_type": "string",
+      "segment": "string?",
+      "source": "string?",
+      "ts": "string?",
+      "value": "number"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "milestone_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "milestone_id": "string",
+      "rel": "literal(\"product\")",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "milestone_new": {
+    "input": {
+      "date_display": "string?",
+      "goal_md": "string?",
+      "label": "string?",
+      "milestone_id": "string",
+      "priority": "string?",
+      "week": "number?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "milestone_set": {
+    "input": {
+      "date_display": "string?",
+      "goal_md": "string?",
+      "label": "string?",
+      "milestone_id": "string",
+      "priority": "string?",
+      "week": "number?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "milestone_sprints": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "milestone_id": "string",
+      "sprint_ids": "string[]"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "pain_new": {
+    "input": {
+      "body_md": "string?",
+      "pain_id": "string",
+      "severity": "enum(high|low|normal)?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "product_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "kind": "enum(count|sell|support)?",
+      "product_code": "string",
+      "rel": "enum(component|parent|project|serves)",
+      "role": "enum(consumer|owner)?",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "project_actor_new": {
+    "input": {
+      "actor_id": "string",
+      "body_md": "string?",
+      "kind": "enum(automation|human-role|system)?",
+      "name": "string?",
+      "project": "string?",
+      "projects": "string[]?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "project_new": {
+    "input": {
+      "default_branch": "string?",
+      "hosts": "{base_url:string,default_branch:string?,file_url_template:string,pr_url_template:string,remote:string,role:enum(mirror|primary)}[]?",
+      "name": "string?",
+      "slug": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "project_role_set": {
+    "input": {
+      "action": "enum(remove|set)?",
+      "display_name": "string?",
+      "kc_sub": "string",
+      "project": "string",
+      "role": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "qg_job_new": {
+    "input": {
+      "inv_id": "string?",
+      "job_id": "string",
+      "note_md": "string?",
+      "qg_id": "string",
+      "run_date": "string?",
+      "severity": "enum(blocker|major|minor)?",
+      "status": "enum(open|resolved)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "qg_new": {
+    "input": {
+      "component_id": "string?",
+      "content_md": "string?",
+      "description": "string?",
+      "name": "string",
+      "qg_id": "string",
+      "sprint_id": "string?",
+      "status": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "qg_run_log": {
+    "input": {
+      "channel": "enum(actions|app_job)?",
+      "commit_sha": "string?",
+      "finished_at": "string?",
+      "flags": "string?",
+      "metrics": "{key:string,model:string?,not_measured_reason:enum(budget_exhausted|no_changes|no_evidence|not_implemented|script_absent|source_missing|source_unreachable|stand_absent|tool_disabled)?,source:string?,status:enum(FAIL|NOT_MEASURED|PASS|SKIP|WARN)?,target:number?,unit:string?,value:number}[]?",
+      "model": "string?",
+      "pr_number": "number?",
+      "routine_name": "string",
+      "run_date": "string",
+      "run_id": "string?",
+      "source_url": "string?",
+      "started_at": "string?",
+      "status": "enum(FAIL|OK|PARTIAL|WARN)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "quality_check": {
+    "input": {
+      "ids": "string[]",
+      "type": "enum(adr|component|decision|milestone|question|release|spec|sprint|task)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "query_slice": {
+    "input": {
+      "params": "record<string>?",
+      "slice": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": []
+        }
+      ]
+    }
+  },
+  "question_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "question_id": "string",
+      "rel": "enum(answers|component|gates|project|raised_in)",
+      "target_id": "string",
+      "target_type": "enum(adr|sprint|task)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "question_new": {
+    "input": {
+      "body_md": "string?",
+      "component_id": "string?",
+      "due_date": "string?",
+      "owner": "string?",
+      "priority": "enum(blocker|high|low|normal)?",
+      "project": "string?",
+      "question_id": "string",
+      "raised_by": "string?",
+      "status": "enum(closed|deferred|dropped|open)?",
+      "title": "string?",
+      "trigger": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "question_set": {
+    "input": {
+      "body_md": "string?",
+      "component_id": "string?",
+      "due_date": "string?",
+      "owner": "string?",
+      "priority": "enum(blocker|high|low|normal)?",
+      "question_id": "string",
+      "raised_by": "string?",
+      "status": "enum(closed|deferred|dropped|open)?",
+      "title": "string?",
+      "trigger": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "rec_new": {
+    "input": {
+      "body_md": "string?",
+      "component_id": "string?",
+      "effort_days": "number?",
+      "fix_cmd": "string?",
+      "how_to_verify": "string?",
+      "inv_id": "string?",
+      "job_id": "string",
+      "priority": "enum(P0|P1|P2)?",
+      "qg_id": "string?",
+      "rec_id": "string",
+      "severity": "enum(critical|high|low|medium)?",
+      "status": "enum(dismissed|pending|promoted)?",
+      "tags": "string?",
+      "title": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "rec_promote": {
+    "input": {
+      "note_md": "string?",
+      "rec_id": "string",
+      "sprint_id": "string?",
+      "task_type": "string?",
+      "task_uid": "string?",
+      "title": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "release_link": {
+    "input": {
+      "git_project": "string",
+      "ids": "number | string[]",
+      "rel": "enum(pr|sprint)",
+      "release_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "release_mv": {
+    "input": {
+      "entity_type": "enum(pr|release)",
+      "git_project": "string",
+      "id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "release_new": {
+    "input": {
+      "description_md": "string?",
+      "git_project": "string?",
+      "git_tag": "string?",
+      "is_current": "boolean?",
+      "release_date": "string?",
+      "release_id": "string",
+      "type": "enum(major|minor|patch)?",
+      "week": "number?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "release_set": {
+    "input": {
+      "description_md": "string?",
+      "git_project": "string?",
+      "git_tag": "string?",
+      "is_current": "boolean?",
+      "release_date": "string?",
+      "release_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "release_unlink": {
+    "input": {
+      "git_project": "string",
+      "pr_numbers": "number[]?",
+      "release_id": "string",
+      "sprint_ids": "string[]?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "runbook_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "adr_id": "string?",
+      "project": "string?",
+      "rel": "enum(adr|project)?",
+      "runbook_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "runbook_new": {
+    "input": {
+      "area": "string?",
+      "content_md": "string?",
+      "date_created": "string?",
+      "name": "string",
+      "project": "string?",
+      "runbook_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "search": {
+    "input": {
+      "components": "string?",
+      "limit": "number?",
+      "mode": "enum(exact|fuzzy|smart)?",
+      "offset": "number?",
+      "projects": "string?",
+      "q": "string",
+      "types": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "search_similar": {
+    "input": {
+      "limit": "number?",
+      "ref": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "spec_del": {
+    "input": {
+      "spec_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "spec_link": {
+    "input": {
+      "mode": "enum(add|remove|replace)?",
+      "rel": "enum(component|project)?",
+      "spec_id": "string",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "spec_new": {
+    "input": {
+      "checkpoint": "boolean?",
+      "component_id": "string?",
+      "content_md": "string?",
+      "file_path": "string?",
+      "project": "string?",
+      "spec_id": "string",
+      "status": "string?",
+      "summary": "string?",
+      "title": "string",
+      "version": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "spec_set": {
+    "input": {
+      "checkpoint": "boolean?",
+      "component_id": "string?",
+      "content_md": "string?",
+      "file_path": "string?",
+      "spec_id": "string",
+      "status": "string?",
+      "summary": "string?",
+      "title": "string",
+      "version": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "sprint_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "kind": "enum(gate|hard|informs|soft)?",
+      "reason": "string?",
+      "rel": "enum(component|dep|milestone|project)",
+      "sprint_id": "string",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "sprint_new": {
+    "input": {
+      "context_md": "string?",
+      "name": "string",
+      "outcome_md": "string?",
+      "plan_id": "string?",
+      "priority": "string?",
+      "project": "string?",
+      "sprint_id": "string",
+      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "sprint_phase_new": {
+    "input": {
+      "name": "string?",
+      "order_index": "number?",
+      "phase_key": "string",
+      "sprint_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "sprint_plan_set": {
+    "input": {
+      "expected": "{planned_end_date:string|null?,planned_start_date:string|null?,priority:string|null?,status:string?,track_id:string|null?}?",
+      "planned_end_date": "string?",
+      "planned_start_date": "string?",
+      "priority": "string?",
+      "sprint_id": "string",
+      "track_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "sprint_set": {
+    "input": {
+      "context_append": "string?",
+      "context_md": "string?",
+      "effort_days": "number?",
+      "name": "string?",
+      "outcome_append": "string?",
+      "outcome_md": "string?",
+      "plan_id": "string?",
+      "pr_git_project": "string?",
+      "pr_numbers": "number[]?",
+      "pr_replace": "boolean?",
+      "pr_repo_url": "string?",
+      "sprint_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "metadata": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "pr_refs": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "sprint_id": "string"
+          }
+        }
+      ]
+    }
+  },
+  "status_set": {
+    "input": {
+      "entity_type": "enum(checkpoint|phase|sprint|task)",
+      "expected": "string?",
+      "id": "string",
+      "reason": "string?",
+      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "status_set_batch": {
+    "input": {
+      "entity_type": "enum(checkpoint|phase|sprint|task)",
+      "ids": "string[]",
+      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "task_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "project": "string?",
+      "rel": "enum(adr|component|file|phase|pr)",
+      "summary_md": "string?",
+      "target_id": "string?",
+      "task_uid": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "task_mv": {
+    "input": {
+      "new_task_id": "string?",
+      "target_sprint_id": "string",
+      "task_uid": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "task_new": {
+    "input": {
+      "actual_days": "number?",
+      "author_agent": "string?",
+      "bookkeeping": "boolean?",
+      "effort_days": "number?",
+      "executor_agent": "string?",
+      "note_md": "string?",
+      "phase_uid": "string?",
+      "reviewer_agent": "string?",
+      "sprint_id": "string",
+      "task_id": "string",
+      "task_type": "string?",
+      "title": "string",
+      "uc_id": "string?",
+      "work_class": "enum(enb|jtd|uc)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "task_set": {
+    "input": {
+      "actual_days": "number?",
+      "author_agent": "string?",
+      "bookkeeping": "boolean?",
+      "effort_days": "number?",
+      "executor_agent": "string?",
+      "expected": "{actual_days:number|null?,effort_days:number|null?,note_md:string|null?,status:string?,task_type:string|null?,title:string?,work_class:string|null?}?",
+      "note_append": "string?",
+      "note_md": "string?",
+      "reviewer_agent": "string?",
+      "task_type": "string?",
+      "task_uid": "string?",
+      "tasks": "{actual_days:number?,author_agent:string?,bookkeeping:boolean?,effort_days:number?,executor_agent:string?,expected:{actual_days:number|null?,effort_days:number|null?,note_md:string|null?,status:string?,task_type:string|null?,title:string?,work_class:string|null?}?,note_append:string?,note_md:string?,reviewer_agent:string?,task_type:string?,task_uid:string,title:string,uc_id:string?,work_class:enum(enb|jtd|uc)?}[]?",
+      "title": "string?",
+      "uc_id": "string?",
+      "work_class": "enum(enb|jtd|uc)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "task_shape": {
+    "input": {
+      "project": "string?",
+      "rows": "boolean?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "tech_set": {
+    "input": {
+      "checked_at": "string?",
+      "component_id": "string",
+      "license": "string?",
+      "our_release": "string?",
+      "project": "string?",
+      "release_date": "string?",
+      "source_url": "string?",
+      "tech_name": "string",
+      "usage": "string?",
+      "version": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "uc_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "actor_role": "enum(primary|supporting)?",
+      "rel": "enum(actor|adr|component|decision|delivers|extends|includes|performs|project|relieves|task)",
+      "target_id": "string",
+      "uc_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "uc_new": {
+    "input": {
+      "acceptance_md": "string?",
+      "goal_level": "enum(cloud|kite|sea-level|subfunction)?",
+      "parent_uc_id": "string?",
+      "priority": "enum(high|low|normal)?",
+      "project": "string?",
+      "rigor": "enum(casual|fully-dressed)?",
+      "scenario_md": "string?",
+      "status": "enum(active|dropped|proposed|shipped)?",
+      "title": "string?",
+      "uc_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "project": "string",
+            "project_link": {
+              "id": "string",
+              "ok": "boolean",
+              "rows": []
+            },
+            "project_linked": "boolean",
+            "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "uc_quality": {
+    "input": {
+      "uc_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "vp_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "rel": "enum(blocks|desired_by|felt_by|performed_by|success_of)",
+      "source_id": "string",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  }
+}

@@ -400,6 +400,9 @@
     "unresolvedRevExcluded": "unresolvable (run w/o started_ts, D-1)"
   },
   "lore": {
+    "bodyRedacted": {
+      "title": "Content is hidden by access rights: you have no role in this record's project. This is not an empty document."
+    },
     "mobile": {
       "back": "back"
     },

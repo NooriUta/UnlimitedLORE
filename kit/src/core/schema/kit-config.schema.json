@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lore.seidrstudio.pro/schemas/seidr-kit/kit-config.schema.json",
+  "title": "Seiðr-kit · KitConfig",
+  "description": "Конфиг приложения на Seiðr-kit (SPRINT_UXR_S10_SEIDR_KIT/K-01). Описывает сериализуемую часть KitConfig из kit/src/core/contract.ts. Поля-функции (verdict, overview, tabs[].render, palette.commands[].run, hooks.*) JSON не выражает: они помечены x-kit-type=function и проверяются валидатором validateKitConfig.",
+  "type": "object",
+  "required": ["modules", "menu", "kinds", "statuses"],
+  "properties": {
+    "modules": {
+      "description": "Модули сверху (как Forseti · BRAGI в LORE). status=planned — честный «в разработке».",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "icon"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "title": { "$ref": "#/$defs/title" },
+          "icon": { "$ref": "#/$defs/iconSlug" },
+          "status": { "enum": ["planned", "active"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "menu": {
+      "description": "Меню слева: группы по смыслу/риску, а не по таблицам. Пункт ведёт на вид записей (id = ключ kinds) или на экран (view).",
+      "type": "object",
+      "required": ["groups"],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "items"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "title": { "$ref": "#/$defs/title" },
+              "tone": { "$ref": "#/$defs/colorToken" },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "title"],
+                  "properties": {
+                    "id": { "$ref": "#/$defs/id" },
+                    "title": { "$ref": "#/$defs/title" },
+                    "icon": { "$ref": "#/$defs/iconSlug" },
+                    "view": { "type": "string", "minLength": 1 }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "myViews": { "type": "boolean" },
+        "recent": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "kinds": {
+      "description": "Виды записей: ключ — KitRecord.kind.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["title", "icon"],
+        "properties": {
+          "title": { "$ref": "#/$defs/title" },
+          "icon": { "$ref": "#/$defs/iconSlug" },
+          "overview": { "description": "(r, ctx) => ReactNode | string; допускается и готовая строка", "x-kit-type": "function|string" },
+          "tabs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["key", "title", "render"],
+              "properties": {
+                "key": { "$ref": "#/$defs/id" },
+                "title": { "$ref": "#/$defs/title" },
+                "render": { "description": "(r, ctx) => ReactNode | string; исключение рисуется ошибкой только этого блока", "x-kit-type": "function" }
+              }
+            }
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["key", "title", "type"],
+              "properties": {
+                "key": { "type": "string", "minLength": 1 },
+                "title": { "$ref": "#/$defs/title" },
+                "type": { "enum": ["text", "md", "enum", "ref", "date", "number"] }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "description": "Типы рёбер: подпись и цвет-токен.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["label", "color"],
+        "properties": {
+          "label": { "$ref": "#/$defs/title" },
+          "color": { "$ref": "#/$defs/colorToken" },
+          "layer": { "description": "structural — принадлежность/иерархия: в графе отдельный слой, скрыт по умолчанию (S5-10).", "enum": ["structural"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "graph": {
+      "type": "object",
+      "required": ["depth", "limit"],
+      "properties": {
+        "depth": { "enum": [1, 2, 3] },
+        "limit": { "type": "integer", "minimum": 1 },
+        "colorBy": { "enum": ["verdict", "type"] }
+      },
+      "additionalProperties": false
+    },
+    "statuses": {
+      "description": "Словарь статусов. Код непуст и URL-безопасен; allow — разрешённые переходы (коды этого же словаря).",
+      "type": "object",
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["code", "title", "category", "icon", "color"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+              "title": { "$ref": "#/$defs/title" },
+              "category": { "enum": ["todo", "active", "done", "cancelled"] },
+              "icon": { "$ref": "#/$defs/iconSlug" },
+              "color": { "$ref": "#/$defs/colorToken" },
+              "hotkey": { "type": "string", "minLength": 1 },
+              "allow": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": false
+          }
+        },
+        "selfApprove": { "type": "boolean" },
+        "undo": { "type": "boolean" },
+        "bulk": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["canEdit", "canStatus"],
+        "properties": {
+          "canEdit": { "type": "boolean" },
+          "canStatus": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "verdict": { "description": "(r, ctx) => KitVerdict {score, max, failed[], hints[]}", "x-kit-type": "function" },
+    "list": {
+      "type": "object",
+      "required": ["views"],
+      "properties": {
+        "views": { "type": "array", "minItems": 1, "items": { "enum": ["list", "board", "tree"] } },
+        "quick": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "filter"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "title": { "$ref": "#/$defs/title" },
+              "filter": { "$ref": "#/$defs/filter" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "filters": { "type": "array", "items": { "type": "string" } },
+        "groupings": { "type": "array", "items": { "type": "string" } },
+        "columns": { "type": "array", "items": { "type": "string" } },
+        "tree": {
+          "type": "object",
+          "required": ["parent", "order"],
+          "properties": {
+            "parent": { "type": "string", "minLength": 1 },
+            "order": { "type": "string", "minLength": 1 },
+            "rollup": { "enum": ["verdict", "status"] }
+          },
+          "additionalProperties": false
+        },
+        "showClosed": { "enum": ["below", "all", "days30", "hide"] }
+      },
+      "additionalProperties": false
+    },
+    "palette": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "run"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "title": { "$ref": "#/$defs/title" },
+              "run": { "description": "(ctx) => void", "x-kit-type": "function" }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "hooks": {
+      "type": "object",
+      "properties": {
+        "onSave": { "description": "({type, id, field, from, to}) => Promise<void>", "x-kit-type": "function" },
+        "onActivate": { "description": "(v) => Promise<void>", "x-kit-type": "function" },
+        "onRollback": { "description": "(v) => Promise<void>", "x-kit-type": "function" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "iconSlug": {
+      "description": "Слаг game-icons (Iconify), например compass, scroll-quill.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "colorToken": {
+      "description": "Цвет — только токен темы Seiðr: var(--acc) и т. п.; сырые hex/rgb запрещены.",
+      "type": "string",
+      "pattern": "^var\\(--(acc|suc|wrn|dng|inf|t1|t2|t3|bd|bdh|st-active|st-backlog|st-blocked|st-cancelled|st-deferred|st-design|st-done|st-partial|st-planned|st-todo)\\)$"
+    },
+    "filter": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "array", "items": { "type": "string" } }
+        ]
+      }
+    }
+  }
+}

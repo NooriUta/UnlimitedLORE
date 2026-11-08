@@ -490,6 +490,33 @@ public class LoreSchemaMigrationRunner {
         if (version == 55) backfillDaliP1FromPr204();
         if (version == 56) histTimeToDatetime();
         if (version == 57) dropPlanItemLeftoversIfUnused();
+        if (version == 68) backfillStatusHistory();
+    }
+
+    /**
+     * V68 (S2-13): статус в истории ADR, спек и решений — логика и её юнит-тест в
+     * {@link StatusHistoryService#backfill}. Идемпотентен: повтор находит ноль строк.
+     */
+    private void backfillStatusHistory() {
+        String now = Instant.now().toString();
+        StatusHistoryService.Db sdb = new StatusHistoryService.Db() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                Object r = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql,
+                        params == null || params.isEmpty() ? null : params)).await().indefinitely().result();
+                return r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+            }
+            @Override
+            public Object script(String sql, Map<String, Object> params) {
+                return client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript", sql, params))
+                    .await().indefinitely().result();
+            }
+        };
+        for (StatusHistoryService.BackfillCount c : StatusHistoryService.backfill(sdb, now)) {
+            LOG.infof("[LORE MIGRATE] V68 статус в истории %s: открытым версиям проставлен — %d, "
+                + "открыто первых версий — %d (известен с %s)", c.type(), c.stamped(), c.opened(), now);
+        }
     }
 
     /**

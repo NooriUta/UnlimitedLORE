@@ -64,7 +64,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -108,7 +108,7 @@ public class LoreQgResource extends LoreResourceBase {
             LOG.warnf("[LORE QG RUN] %s: %s",
                 req != null ? req.routine_name() : "<null>", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -160,7 +160,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG JOB-TASK] %s: %s", req.job_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -224,7 +224,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG REC] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -275,7 +275,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG PROMOTE] probe %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
         // Default target: a weekly rotating housekeeping sprint (ISO week), not one
         // never-closing bucket. Explicit req.sprint_id() still wins (backward-compat
@@ -291,7 +291,8 @@ public class LoreQgResource extends LoreResourceBase {
                     today.get(wf.weekOfWeekBasedYear()), today.get(wf.weekBasedYear())),
                 "active", null, null, null,
                 "Автосоздан при первом промоуте QG-рекомендации на этой ISO-неделе " +
-                "(lore/qg/promote). Явный sprint_id в вызове переопределяет этот дефолт.");
+                "(lore/qg/promote). Явный sprint_id в вызове переопределяет этот дефолт.",
+                changeAuthor());
         }
         String stateUid = java.util.UUID.randomUUID().toString();
         String nowTs    = java.time.Instant.now().toString();
@@ -385,8 +386,10 @@ public class LoreQgResource extends LoreResourceBase {
             linkComponentEdge("KnowTask", "task_uid", taskUid, compId);
             // Insert KnowTaskHist row with TODO status
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='⬜ TODO', valid_from=:now",
-                Map.of("nsid", stateUid, "now", nowTs))).await().indefinitely();
+                "INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='⬜ TODO', valid_from=:now"
+                    + ChangeAuthor.SET_SQL,
+                changeAuthor().bind(new java.util.HashMap<>(Map.of("nsid", stateUid, "now", nowTs)))))
+                .await().indefinitely();
             // Link HAS_STATE: KnowTask → KnowTaskHist
             writeClient.command(db, basicAuth(), linkStateCmd(
                 "KnowTask", "KnowTaskHist", "task_uid", taskUid, stateUid)).await().indefinitely();
@@ -422,7 +425,7 @@ public class LoreQgResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE QG PROMOTE] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

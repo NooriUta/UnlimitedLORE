@@ -254,6 +254,10 @@ final class LoreSchemaMigrations {
         "KnowSprintHist",
         "KnowDictEntryHist");
 
+    /** S2-13: Hist-типы, чей статус ведёт StatusHistoryService (V67). Объявлен ДО STEPS: статика инициализируется по порядку. */
+    static final List<String> STATUS_HIST_TYPES = List.of(
+        "KnowTaskHist", "KnowSprintHist", "KnowPhaseHist", "KnowADRHist", "KnowSpecHist", "KnowDecisionHist");
+
     /** RM-P13 (V56): свойства времени SCD2-строки, которые приводятся к DATETIME. */
     static final List<String> HIST_TIME_FIELDS = List.of("valid_from", "valid_to");
 
@@ -1401,7 +1405,145 @@ final class LoreSchemaMigrations {
         // EXTENDS E — на проде базового типа нет (см. V43).
         new Step(62, 17, "product_serves", List.of(
             "CREATE EDGE TYPE SERVES IF NOT EXISTS",
-            "CREATE PROPERTY SERVES.kind IF NOT EXISTS STRING"))
+            "CREATE PROPERTY SERVES.kind IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-04 · decision:D-2026-UXR-VIEWS-SERVER (07.11.2026):
+        // виды, избранное, недавние и личные настройки — на сервере, видны с любого
+        // устройства. Только НОВЫЕ типы (v1 их не знает и не задевает — ADR-LORE-045,
+        // аддитивно: major 17). Владелец — kc_sub полем, а не ребром к KnowUser:
+        // вершина KnowUser заводится лишь при выдаче проектной роли, а помнить
+        // настройки нужно любому вошедшему. version — оптимистическая блокировка
+        // (S2-09): правка по устаревшей версии получает 409, а не затирает чужую.
+        new Step(63, 17, "user_views_prefs", List.of(
+            "CREATE VERTEX TYPE KnowSavedView IF NOT EXISTS",
+            "CREATE PROPERTY KnowSavedView.view_uid IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.name IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.section IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.query IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.visibility IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.roles IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.is_team_default IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowSavedView.is_personal_default IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowSavedView.row_version IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowSavedView.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSavedView.updated_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowSavedView (view_uid) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowSavedView (owner_sub) NOTUNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowSavedView (section) NOTUNIQUE",
+            "CREATE VERTEX TYPE KnowUserFavorite IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserFavorite.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserFavorite.ref_type IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserFavorite.ref_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserFavorite.added_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserFavorite (owner_sub, ref_type, ref_id) UNIQUE",
+            "CREATE VERTEX TYPE KnowUserRecent IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserRecent.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.ref_type IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.ref_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.visited_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserRecent.visits IF NOT EXISTS INTEGER",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserRecent (owner_sub, ref_type, ref_id) UNIQUE",
+            "CREATE VERTEX TYPE KnowUserSettings IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserSettings.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserSettings.settings_json IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserSettings.row_version IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowUserSettings.updated_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserSettings (owner_sub) UNIQUE")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-05 «что LORE помнит обо мне» — вслед за V63
+        // (виды S2-04), чтобы не спорить с ним номером. Только новые типы и одно
+        // новое поле у KnowUserRecent (S2-04) — аддитивно, major 17, v1 не задет.
+        // KnowUserHabit — частые виды (ключ = view_uid вида S2-04) и частые срезы
+        // (раздел?запрос); KnowUserMemoryPref — флаг «не запоминать» на человека.
+        // Владелец — kc_sub полем, как в V63. Срок хранения (90 дней) — по last_seen.
+        new Step(64, 17, "user_memory", List.of(
+            "CREATE VERTEX TYPE KnowUserHabit IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserHabit.memory_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.kind IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.habit_key IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.label IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.hits IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowUserHabit.first_seen IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserHabit.last_seen IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserHabit (memory_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserHabit (owner_sub, kind, habit_key) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserHabit (owner_sub) NOTUNIQUE",
+            "CREATE VERTEX TYPE KnowUserMemoryPref IF NOT EXISTS",
+            "CREATE PROPERTY KnowUserMemoryPref.owner_sub IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUserMemoryPref.remembering IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowUserMemoryPref.updated_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUserMemoryPref (owner_sub) UNIQUE",
+            "CREATE PROPERTY KnowUserRecent.first_seen IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-06 · decision:D-2026-UXR-LINK-MENTION-EDGE:
+        // запасной тип связи для «Связать» из упоминаний — «упоминает», когда
+        // подходящего типизированного ребра для пары нет (LoreLinkTypes). Аудит
+        // живёт на самом ребре: откуда пришло (origin), когда и кто поставил.
+        // Без EXTENDS E — на проде базового типа нет (см. V43). Только аддитивно.
+        new Step(65, 17, "references_edge", List.of(
+            "CREATE EDGE TYPE REFERENCES IF NOT EXISTS",
+            "CREATE PROPERTY REFERENCES.origin IF NOT EXISTS STRING",
+            "CREATE PROPERTY REFERENCES.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY REFERENCES.created_by IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-12: автор версии истории. Каждая новая
+        // версия любой цепочки SCD2 несёт changed_by (kc_sub человека / client_id
+        // агента) и changed_by_kind (human|agent|unknown) из ПРОВЕРЕННОГО токена
+        // (ChangeAuthor). Необязательные STRING на всех двенадцати *Hist — старые
+        // версии остаются без автора («неизвестно»), v1 поле не знает и не задевает.
+        // Только аддитивно, major 17 (чек-лист S2-07 предусматривал ровно эту форму).
+        new Step(66, 17, "hist_change_author", HIST_VALID_FROM_TEMPORAL.stream()
+            .flatMap(h -> java.util.stream.Stream.of(
+                "CREATE PROPERTY " + h + ".changed_by IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".changed_by_kind IF NOT EXISTS STRING"))
+            .toList()),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-13: единая схема статуса в истории всех типов
+        // со статусом (StatusHistoryService.KINDS). status_raw — сам статус версии
+        // (у ADR/спек/решений история его раньше не несла), status_category — ось
+        // D-2026-UXR-STATUS-AXIS на момент записи, status_known_from — с какого
+        // момента статус версии ИЗВЕСТЕН (у сервиса = valid_from; у бэкфилла V68 —
+        // момент бэкфилла), status_backfilled — статус положен бэкфиллом, а не
+        // переходом. Только новые необязательные свойства, major 17.
+        new Step(67, 17, "status_history_unified", STATUS_HIST_TYPES.stream()
+            .flatMap(h -> java.util.stream.Stream.of(
+                "CREATE PROPERTY " + h + ".status_raw IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".status_category IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".status_known_from IF NOT EXISTS STRING",
+                "CREATE PROPERTY " + h + ".status_backfilled IF NOT EXISTS BOOLEAN"))
+            .toList()),
+
+        // S2-13: бэкфилл статуса в истории ADR, спек и решений
+        // (StatusHistoryService.backfill): открытой версии без статуса — текущий
+        // статус вершины с пометкой «известен с момента бэкфилла»; элементу без
+        // истории — одна версия с той же пометкой. Новых версий у тех, у кого они
+        // есть, не открывает; valid_from/valid_to существующих строк не трогает.
+        new Step(68, 17, "java__status_history_backfill", List.of()),
+
+        // SPRINT_UXR_S2_GRAPH_MEMORY/S2-10 (остаток после S2-12/S2-13).
+        // 1) Полный ISO-момент рядом с датой (CreationMoment.FIELDS): created_at у
+        //    ADR и решений, released_at у релиза. Дата (date_created/release_date)
+        //    остаётся как была — её читают v1, timeline_* и контракты S0. Момент
+        //    пишется один раз при создании и только когда известен; у старых
+        //    записей его нет — это и есть пометка «время неизвестно» (UPDATE-пометки
+        //    чек-лист v1 не пускает).
+        // 2) KnowSpecHist.version объявлено явно: номер версии спеки — свойство
+        //    ВЕРСИИ истории (смена номера открывает новую строку, LoreSpecResource),
+        //    до сих пор писалось без объявления.
+        // Только новые необязательные STRING, major 17.
+        new Step(69, 17, "creation_moment_and_spec_hist_version", List.of(
+            "CREATE PROPERTY KnowADR.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDecision.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRelease.released_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpecHist.version IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S7A_NEWS/S7A-04 (спека новостей §8, решение 07.11 п.12): черта
+        // «прочитано до сюда» — на сервере, одна общая, сдвигается только PUT
+        // человека. Новый тип, v1 его не знает — аддитивно, major 17. Вслед за
+        // шагами S2 (66–69). DDL живёт рядом с хранилищем, чтобы не было двух правд.
+        new Step(70, 17, "news_read_mark", LoreNewsReadMarkStore.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

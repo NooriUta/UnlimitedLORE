@@ -1,0 +1,365 @@
+// Модель listView kit (SPRINT_UXR_S10_SEIDR_KIT/K-03): чистые функции без
+// React — фильтр, «Быстро»-счётчики, группы с бюджетом S9, порядок, честное
+// «Показано N из M» и состояние в URL. Компонент (ListView.tsx) только рисует.
+//
+// Бюджет — правила SPRINT_UXR_S9_SCALE_OPT: S9-01 «не больше 50 строк на
+// группу · ещё N», S9-02 «при >20 группах — топ-10 + Прочие, свёрнуто».
+import type { KitConfig, KitFilter, KitMeta, KitRecord, KitShowClosed } from '../core/contract';
+
+export const LIST_BUDGET = { perGroup: 50, maxGroups: 20, topGroups: 10 } as const;
+
+const TOP_LEVEL = new Set(['id', 'kind', 'title', 'status', 'updated_at', 'body_md']);
+
+function walk(obj: unknown, path: string[]): unknown {
+  let cur = obj;
+  for (const p of path) {
+    if (cur === null || typeof cur !== 'object') return undefined;
+    cur = (cur as Record<string, unknown>)[p];
+  }
+  return cur;
+}
+
+/** Значение поля записи: верхний уровень, `fields.a.b` или голое имя поля. */
+export function fieldValue(r: KitRecord, key: string): unknown {
+  if (TOP_LEVEL.has(key)) return (r as unknown as Record<string, unknown>)[key];
+  const path = key.startsWith('fields.') ? key.slice(7).split('.') : key.split('.');
+  return walk(r.fields, path);
+}
+
+/** Строковый ключ значения для сравнения и группировки ('' — «нет значения»). */
+export function valueKey(v: unknown): string {
+  if (v === undefined || v === null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return JSON.stringify(v);
+}
+
+/**
+ * Значения поля списком (S4-05): массив — его непустые элементы (поле «Релиз» =
+ * release_ids), скаляр — одно значение; null / '' / [] / нет поля — пусто.
+ */
+export function valuesOf(r: KitRecord, key: string): string[] {
+  const v = fieldValue(r, key);
+  const list: unknown[] = Array.isArray(v) ? v : [v];
+  const out: string[] = [];
+  for (const x of list) {
+    const k = valueKey(x);
+    if (k !== '' && !out.includes(k)) out.push(k);
+  }
+  return out;
+}
+
+/**
+ * Строка — равенство, массив — любое из; '' совпадает с отсутствующим значением.
+ * Поле-массив подходит, если любой его элемент среди искомых (S4-05).
+ */
+export function matchFilter(r: KitRecord, f: KitFilter): boolean {
+  for (const [key, want] of Object.entries(f)) {
+    const have = valuesOf(r, key);
+    const wants = Array.isArray(want) ? want : [want];
+    const ok = have.length === 0 ? wants.includes('') : have.some(h => wants.includes(h));
+    if (!ok) return false;
+  }
+  return true;
+}
+
+/** Все фильтры через И. */
+export function applyFilters(records: readonly KitRecord[], filters: readonly KitFilter[]): KitRecord[] {
+  const fs = filters.filter(f => Object.keys(f).length > 0);
+  return fs.length ? records.filter(r => fs.every(f => matchFilter(r, f))) : [...records];
+}
+
+export interface QuickItem { id: string; title: string; filter: KitFilter }
+
+/** Счётчик каждого «Быстро» по выдаче с учётом прочих фильтров. */
+export function quickCounts(records: readonly KitRecord[], quick: readonly QuickItem[], base: readonly KitFilter[]): Record<string, number> {
+  const pool = applyFilters(records, base);
+  const out: Record<string, number> = {};
+  for (const q of quick) out[q.id] = pool.filter(r => matchFilter(r, q.filter)).length;
+  return out;
+}
+
+export interface ListGroup {
+  key: string;
+  records: KitRecord[];
+  /** Статус вне словаря — сбой данных виден, а не прячется в первой категории. */
+  unknown?: boolean;
+  /** «Прочие»: слитые группы сверх топ-N. */
+  other?: boolean;
+  groupCount?: number;
+  /** Разрез по связи (S4-06): подпись группы — заголовок связанной записи. */
+  title?: string;
+  /** Разрез по связи: связанная запись не загружена — подпись не выдумывается. */
+  missing?: boolean;
+  /** Разрез по связи: записи без связи этого типа. */
+  none?: boolean;
+}
+
+function statusOrder(config: KitConfig): Map<string, number> {
+  return new Map(config.statuses.items.map((s, i) => [s.code, i]));
+}
+
+/**
+ * Группы по ключу. Статус — порядком словаря (вне словаря — в конце, unknown);
+ * прочие ключи — по размеру, при равенстве — по значению. Больше maxGroups —
+ * топ-topGroups по размеру + одна группа «Прочие».
+ */
+export function groupRecords(
+  records: readonly KitRecord[], by: string | null, config: KitConfig,
+  budget: { maxGroups: number; topGroups: number } = LIST_BUDGET,
+): ListGroup[] {
+  if (!by) return [{ key: '', records: [...records] }];
+  const map = new Map<string, KitRecord[]>();
+  for (const r of records) {
+    const k = valueKey(fieldValue(r, by));
+    const arr = map.get(k);
+    if (arr) arr.push(r); else map.set(k, [r]);
+  }
+  let groups: ListGroup[] = [...map].map(([key, rs]) => ({ key, records: rs }));
+  if (by === 'status') {
+    const order = statusOrder(config);
+    for (const g of groups) if (!order.has(g.key)) g.unknown = true;
+    groups.sort((a, b) => (order.get(a.key) ?? Infinity) - (order.get(b.key) ?? Infinity) || a.key.localeCompare(b.key));
+    return groups;
+  }
+  groups.sort((a, b) => b.records.length - a.records.length || a.key.localeCompare(b.key));
+  if (groups.length > budget.maxGroups) {
+    const rest = groups.slice(budget.topGroups);
+    groups = [
+      ...groups.slice(0, budget.topGroups),
+      { key: '\u0000other', records: rest.flatMap(g => g.records), other: true, groupCount: rest.length },
+    ];
+  }
+  return groups;
+}
+
+/** Колонки доски: все статусы словаря (пустые тоже), «вне словаря» — если есть. */
+export function boardColumns(records: readonly KitRecord[], config: KitConfig): ListGroup[] {
+  const byStatus = new Map(groupRecords(records, 'status', config).map(g => [g.key, g]));
+  const cols: ListGroup[] = config.statuses.items.map(s => byStatus.get(s.code) ?? { key: s.code, records: [] });
+  for (const g of byStatus.values()) if (g.unknown) cols.push(g);
+  return cols;
+}
+
+export interface ListSort { key: string; dir: 'asc' | 'desc' }
+
+/** Порядок без мутации входа; статус — порядком словаря. */
+export function sortRecords(records: readonly KitRecord[], sort: ListSort | null, config: KitConfig): KitRecord[] {
+  const out = [...records];
+  if (!sort) return out;
+  const order = statusOrder(config);
+  const sign = sort.dir === 'desc' ? -1 : 1;
+  const cmp = (a: KitRecord, b: KitRecord): number => {
+    if (sort.key === 'status') return (order.get(a.status) ?? Infinity) - (order.get(b.status) ?? Infinity);
+    const va = fieldValue(a, sort.key);
+    const vb = fieldValue(b, sort.key);
+    if (typeof va === 'number' && typeof vb === 'number') return va - vb;
+    return valueKey(va).localeCompare(valueKey(vb), 'ru', { numeric: true });
+  };
+  // стабильно: при равенстве — исходный порядок
+  return out.map((r, i) => [r, i] as const).sort((a, b) => sign * cmp(a[0], b[0]) || a[1] - b[1]).map(x => x[0]);
+}
+
+export type ShownLine =
+  | { kind: 'complete'; shown: number; loaded: number; total: number }
+  | { kind: 'truncated'; shown: number; loaded: number; total: number }
+  | { kind: 'unknown_total'; shown: number; loaded: number };
+
+/**
+ * «Показано N из M» по meta (формат K-01). N — подошло под фильтр среди
+ * загруженного; M — серверный итог. Выдача обрезана, если так сказал сервер или
+ * итог больше загруженного (флаг потеряли — «полной» не верим). Обрезано без
+ * итога — M неизвестен и не выдумывается.
+ */
+export function shownOf(meta: KitMeta | null | undefined, loaded: number, shown: number): ShownLine {
+  const total = typeof meta?.total === 'number' ? meta.total : undefined;
+  const truncated = meta?.truncated === true || (total !== undefined && total > loaded);
+  if (!truncated) return { kind: 'complete', shown, loaded, total: total ?? loaded };
+  if (total === undefined) return { kind: 'unknown_total', shown, loaded };
+  return { kind: 'truncated', shown, loaded, total };
+}
+
+/* ---------- состояние в URL ---------- */
+
+export type ListViewKind = 'list' | 'board' | 'tree';
+
+/** Условие фильтра поля (S4-05): есть / нет / пусто / не пусто. */
+export type FilterOp = 'any' | 'not' | 'empty' | 'nonempty';
+export const FILTER_OPS: readonly FilterOp[] = ['any', 'not', 'empty', 'nonempty'];
+
+export interface ListState {
+  view: ListViewKind;
+  quick: string | null;
+  group: string | null;
+  sort: ListSort | null;
+  filters: Record<string, string[]>;
+  /** Условие по полю; нет записи — «есть» (S4-05). */
+  ops: Record<string, FilterOp>;
+  /** Текст в ID или названии — внутри этого списка (S4-05). */
+  text: string;
+  /** Подгруппа — вторая ступень группировки (S4-26); только в списке, без группы не действует. */
+  group2?: string | null;
+  /** Режим закрытых (S4-27); null — из конфига (list.showClosed), иначе «все». */
+  closed?: KitShowClosed | null;
+}
+
+export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
+
+/**
+ * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
+ * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
+ * lg2 (подгруппа, S4-26).
+ */
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2'] as const;
+
+export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
+  const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
+  const o = Object.entries(s.ops ?? {}).filter(([, v]) => v !== 'any');
+  const text = s.text ?? '';
+  return {
+    lv: s.view === 'list' ? null : s.view,
+    lq: s.quick,
+    lg: s.group,
+    ls: s.sort ? `${s.sort.dir === 'desc' ? '-' : ''}${s.sort.key}` : null,
+    lf: f.length ? JSON.stringify(Object.fromEntries(f)) : null,
+    lo: o.length ? JSON.stringify(Object.fromEntries(o)) : null,
+    lt: text.trim() ? text : null,
+    lc: s.closed ?? null,
+    lg2: s.group && s.group2 && s.group2 !== s.group ? s.group2 : null,
+  };
+}
+
+function isFilterOp(v: unknown): v is FilterOp {
+  return (FILTER_OPS as readonly unknown[]).includes(v);
+}
+
+export function readListState(p: URLSearchParams): ListState {
+  const lv = p.get('lv');
+  const ls = p.get('ls');
+  let filters: Record<string, string[]> = {};
+  const lf = p.get('lf');
+  if (lf) {
+    try {
+      const raw = JSON.parse(lf) as unknown;
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        filters = Object.fromEntries(Object.entries(raw as Record<string, unknown>)
+          .filter(([, v]) => Array.isArray(v))
+          .map(([k, v]) => [k, (v as unknown[]).map(String)]));
+      }
+    } catch { /* битый URL — фильтр по умолчанию, а не падение экрана */ }
+  }
+  let ops: Record<string, FilterOp> = {};
+  const lo = p.get('lo');
+  if (lo) {
+    try {
+      const raw = JSON.parse(lo) as unknown;
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        ops = Object.fromEntries(Object.entries(raw as Record<string, unknown>)
+          .filter((e): e is [string, FilterOp] => isFilterOp(e[1])));
+      }
+    } catch { /* битый URL — условия по умолчанию */ }
+  }
+  return {
+    view: lv === 'board' || lv === 'tree' ? lv : 'list',
+    quick: p.get('lq'),
+    group: p.get('lg'),
+    sort: ls ? { key: ls.replace(/^-/, ''), dir: ls.startsWith('-') ? 'desc' : 'asc' } : null,
+    filters,
+    ops,
+    text: p.get('lt') ?? '',
+    closed: isShowClosed(p.get('lc')) ? (p.get('lc') as KitShowClosed) : undefined,
+    group2: p.get('lg2') ?? undefined,
+  };
+}
+
+/* ---------- закрытые (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-27) ---------- */
+
+export const SHOW_CLOSED_MODES: readonly KitShowClosed[] = ['below', 'all', 'days30', 'hide'];
+/** Умолчание kit — «все»: kit нейтрален для чужих приложений; разделы LORE включают «внизу» конфигом. */
+export const DEFAULT_SHOW_CLOSED: KitShowClosed = 'all';
+const CLOSED_CATEGORIES = new Set(['done', 'cancelled']);
+const DAY_MS = 86_400_000;
+
+export function isShowClosed(v: unknown): v is KitShowClosed {
+  return typeof v === 'string' && (SHOW_CLOSED_MODES as readonly string[]).includes(v);
+}
+
+/** Режим закрытых: состояние списка важнее конфига, конфиг — умолчания kit. */
+export function showClosedOf(state: Pick<ListState, 'closed'>, config: KitConfig): KitShowClosed {
+  return state.closed ?? config.list?.showClosed ?? DEFAULT_SHOW_CLOSED;
+}
+
+export interface ClosedSplit {
+  /** Записи основной выдачи (в below — только открытые). */
+  open: KitRecord[];
+  /** Закрытые для группы «Закрытые N» — только в режиме below. */
+  closed: KitRecord[];
+  /** Сколько закрытых убрано режимом (hide, days30) — показывается числом. */
+  hidden: number;
+}
+
+/**
+ * Делит выдачу по режиму закрытых. Закрытые — категории done и cancelled
+ * словаря статусов (у ADR «принято» — active, это решает конфиг). «За 30 дней»
+ * считаются от момента выдачи (meta.generated_at), а не от часов браузера:
+ * один ответ сервера — один список. Нет даты у закрытой записи — она не
+ * «свежая», в days30 скрывается и попадает в счётчик скрытых.
+ */
+export function splitClosed(records: readonly KitRecord[], mode: KitShowClosed, config: KitConfig, asOf?: string): ClosedSplit {
+  const cat = new Map(config.statuses.items.map(s => [s.code, s.category]));
+  const isClosed = (r: KitRecord) => CLOSED_CATEGORIES.has(cat.get(r.status) ?? '');
+  if (mode === 'all') return { open: [...records], closed: [], hidden: 0 };
+  const open: KitRecord[] = [];
+  const closed: KitRecord[] = [];
+  let hidden = 0;
+  const now = asOf ? Date.parse(asOf) : NaN;
+  for (const r of records) {
+    if (!isClosed(r)) { open.push(r); continue; }
+    if (mode === 'below') { closed.push(r); continue; }
+    if (mode === 'days30') {
+      const t = r.updated_at ? Date.parse(r.updated_at) : NaN;
+      if (Number.isFinite(now) && Number.isFinite(t) && now - t <= 30 * DAY_MS) { open.push(r); continue; }
+    }
+    hidden++;
+  }
+  return { open, closed, hidden };
+}
+
+/* ---------- движок списка v2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-04) ---------- */
+
+/** Встроенные ключи порядка: есть у любой записи контракта. */
+export const BUILTIN_SORT_KEYS = ['title', 'id', 'status', 'updated_at'] as const;
+
+/** Колонки-виджеты: не поле записи, по ним не сортируют. */
+const NON_FIELD_COLUMNS = new Set(['select', 'title+id', 'verdict', 'edges_count', 'kind']);
+
+/**
+ * Ключи порядка из конфига: встроенные + поля колонок, фильтров и группировок
+ * (в этом порядке, без дублей). Экран, показавший колонку «Приоритет», должен
+ * уметь по ней упорядочить — без отдельной настройки в каждом экране.
+ */
+export function sortKeysOf(config: KitConfig): string[] {
+  const out: string[] = [...BUILTIN_SORT_KEYS];
+  const seen = new Set<string>(out);
+  const l = config.list;
+  for (const k of [...(l?.columns ?? []), ...(l?.filters ?? []), ...(l?.groupings ?? [])]) {
+    if (NON_FIELD_COLUMNS.has(k) || seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+  }
+  return out;
+}
+
+/**
+ * Быстрая иконка «Быстро»: фильтр ровно по одному статусу словаря — иконка
+ * этого статуса (одно правило на все экраны, а не иконка в каждом конфиге).
+ * Иное — null: приложение может задать свою (проп quickIcons).
+ */
+export function quickIconOf(q: QuickItem, config: KitConfig): string | null {
+  const keys = Object.keys(q.filter);
+  if (keys.length !== 1 || keys[0] !== 'status') return null;
+  const v = q.filter.status;
+  const code = Array.isArray(v) ? (v.length === 1 ? v[0] : null) : v;
+  if (code === null || code === undefined) return null;
+  return config.statuses.items.find(s => s.code === code)?.icon ?? null;
+}

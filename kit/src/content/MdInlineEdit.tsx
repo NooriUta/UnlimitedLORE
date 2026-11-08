@@ -1,0 +1,244 @@
+// MdInlineEdit (SPRINT_UXR_S5_RECORD_TASKS/S5-06) — правка markdown-поля на
+// месте, встроенная в режим чтения.
+//
+//  - Чтение — MartProse (тот же рендер, что у всей записи). Правка
+//    открывается ТОЛЬКО кнопкой ✎: касание по тексту на телефоне — прокрутка,
+//    выделение, переход по ссылке, а не случайный вход в правку.
+//  - Внутри — переключатель «код / превью / рядом»: код — исходник markdown,
+//    превью — визуальная правка TipTap (TipTapField), рядом — исходник и
+//    живой рендер чтения бок о бок.
+//  - Страховка — круг S5-07 (tiptapMd.ts): если текст не переживает
+//    «Markdown → TipTap → Markdown» без потерь (сырой HTML и т.п.), превью
+//    закрыто с видимой причиной, правка идёт в коде. Молча испортить тело
+//    записи хуже, чем честно сказать «здесь только код».
+//  - Черновик — строка markdown, единственный источник: переключение режимов
+//    без правки текст не трогает (TipTap пишет в черновик только на правку).
+//  - Сохранение — onSave вызывающего (kit не знает API). Сбой — видимая
+//    ошибка, правка и черновик остаются. Esc выходит только без правок.
+import { ICON_CANON } from '../elements/iconCanon';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
+import { MartProse } from './MartProse';
+import { TipTapField, type MentionItem } from './TipTapField';
+import { isLosslessMd, sameMd } from './tiptapMd';
+import { IconButton } from '../elements/IconButton';
+import { kitT, type KitKey } from '../i18n';
+import { useKitLang } from '../i18n/lang';
+import { describeError } from '../resilience/errorText';
+
+export type MdEditMode = 'code' | 'preview' | 'split';
+export const MD_EDIT_MODES: readonly MdEditMode[] = ['code', 'preview', 'split'];
+
+export interface MdInlineEditProps {
+  /** Текущее значение поля (markdown). */
+  value: string;
+  /** Имя поля («Описание», «Тело») — для кнопки ✎ и подписей полей ввода. */
+  label: string;
+  /** Сохранение. Не задано — поле только для чтения, кнопки ✎ нет. */
+  onSave?: (markdown: string) => Promise<void> | void;
+  /** Вид правки, управляемый (например, из URL экрана). */
+  mode?: MdEditMode;
+  onMode?: (mode: MdEditMode) => void;
+  /** Вид правки по умолчанию для неуправляемого режима. */
+  defaultMode?: MdEditMode;
+  /** Текст пустого поля; по умолчанию — «Текста нет». */
+  emptyText?: string;
+  /** Загрузчик картинок для превью (TipTapField). */
+  onUploadImage?: (file: File) => Promise<{ url: string }>;
+  /** Упоминания по «@» в превью. */
+  mentionItems?: MentionItem[];
+  className?: string;
+}
+
+const MODE_KEY: Record<MdEditMode, KitKey> = {
+  code: 'kit.mdedit.mode.code',
+  preview: 'kit.mdedit.mode.preview',
+  split: 'kit.mdedit.mode.split',
+};
+
+export function MdInlineEdit({
+  value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
+  emptyText, onUploadImage, mentionItems, className,
+}: MdInlineEditProps) {
+  const lang = useKitLang();
+  const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
+  const srcId = useId();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [ownMode, setOwnMode] = useState<MdEditMode>(defaultMode);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Сохранённое показываем сразу, пока вызывающий не принёс новое value.
+  const [saved, setSaved] = useState<{ base: string; md: string } | null>(null);
+  const penRef = useRef<HTMLButtonElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const wasEditing = useRef(false);
+
+  const shown = saved && saved.base === value ? saved.md : value;
+  // Проверка круга — один раз на вход в правку (по исходному тексту), а не на
+  // каждую букву: превью не должно «мигать» доступностью посреди набора.
+  const [lossless, setLossless] = useState(true);
+  const wanted = modeProp ?? ownMode;
+  const mode: MdEditMode = wanted === 'preview' && !lossless ? 'code' : wanted;
+  const dirty = draft !== shown;
+
+  useEffect(() => {
+    if (editing) groupRef.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
+    else if (wasEditing.current) penRef.current?.focus();
+    wasEditing.current = editing;
+  }, [editing]);
+
+  const open = () => {
+    setDraft(shown);
+    setLossless(isLosslessMd(shown));
+    setError(null);
+    setEditing(true);
+  };
+  const close = () => { setEditing(false); setError(null); };
+
+  const choose = (m: MdEditMode) => {
+    if (m === 'preview' && !lossless) return;
+    if (modeProp === undefined) setOwnMode(m);
+    onMode?.(m);
+  };
+
+  const save = async () => {
+    if (!onSave || saving) return;
+    if (!dirty) { close(); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(draft);
+      setSaved({ base: value, md: draft });
+      setEditing(false);
+    } catch (e) {
+      setError(describeError(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // TipTap сообщает своё каноническое написание (мягкие переносы склеены и
+  // т.п.) и при служебных транзакциях, не только на правку. Черновик меняем
+  // лишь когда изменился СМЫСЛ (рендер чтения): иначе простое переключение
+  // «код → превью → код» переписывало бы текст автора (поймано тестом).
+  const fromTipTap = (md: string) => {
+    setDraft(prev => (sameMd(prev, md) ? prev : md));
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void save(); return; }
+    // Esc без правок — выход; с правками черновик не выбрасывается молча.
+    if (e.key === 'Escape' && !dirty && !saving) { e.preventDefault(); close(); }
+  };
+
+  const onGroupKey = (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const avail = MD_EDIT_MODES.filter(m => m !== 'preview' || lossless);
+    const i = avail.indexOf(mode);
+    const next = avail[(i + (e.key === 'ArrowRight' ? 1 : avail.length - 1)) % avail.length];
+    choose(next);
+    groupRef.current?.querySelector<HTMLElement>(`[data-mode="${next}"]`)?.focus();
+  };
+
+  const srcLabel = `${label} · ${t('kit.mdedit.source')}`;
+  const source = (
+    <textarea
+      id={srcId}
+      className="sk-md__source sk-mdedit__source"
+      value={draft}
+      aria-label={srcLabel}
+      spellCheck
+      onChange={e => setDraft(e.target.value)}
+    />
+  );
+  const preview = useMemo(() => <MartProse text={draft} />, [draft]);
+
+  if (!editing) {
+    return (
+      <section className={['sk-mdedit', className].filter(Boolean).join(' ')} data-state="read">
+        {onSave && (
+          <IconButton
+            ref={penRef}
+            className="sk-mdedit__pen"
+            icon={ICON_CANON.ctlEdit}
+            label={t('kit.mdedit.edit', { field: label })}
+            onClick={open}
+          />
+        )}
+        {shown.trim()
+          ? <MartProse text={shown} />
+          : <p className="sk-mdedit__empty">{emptyText ?? t('kit.mdedit.empty')}</p>}
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className={['sk-mdedit', 'is-editing', className].filter(Boolean).join(' ')}
+      data-state="edit"
+      aria-label={t('kit.mdedit.editing', { field: label })}
+      onKeyDown={onKeyDown}
+    >
+      <div className="sk-mdedit__bar">
+        <div
+          ref={groupRef}
+          className="sk-mdedit__modes"
+          role="radiogroup"
+          aria-label={t('kit.mdedit.modes')}
+          onKeyDown={onGroupKey}
+        >
+          {MD_EDIT_MODES.map(m => {
+            const off = m === 'preview' && !lossless;
+            const on = m === mode;
+            return (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                data-mode={m}
+                className={`sk-mdedit__mode${on ? ' is-on' : ''}`}
+                aria-checked={on}
+                aria-disabled={off || undefined}
+                tabIndex={on ? 0 : -1}
+                title={off ? t('kit.mdedit.lossy') : undefined}
+                onClick={() => choose(m)}
+              >{t(MODE_KEY[m])}</button>
+            );
+          })}
+        </div>
+        <span className="sk-mdedit__actions">
+          <button type="button" className="sk-btn" onClick={close} disabled={saving}>{t('kit.mdedit.cancel')}</button>
+          <button
+            type="button"
+            className="sk-btn sk-btn--primary"
+            onClick={() => void save()}
+            disabled={saving}
+            aria-keyshortcuts="Control+Enter"
+            aria-busy={saving || undefined}
+          >{saving ? t('kit.mdedit.saving') : t('kit.mdedit.save')}</button>
+        </span>
+      </div>
+      {!lossless && <p className="sk-mdedit__note">{t('kit.mdedit.lossy')}</p>}
+      {error && <div className="sk-mdedit__err" role="alert">{t('kit.mdedit.saveFailed', { reason: error })}</div>}
+      {mode === 'code' && source}
+      {mode === 'preview' && (
+        <TipTapField
+          value={draft}
+          onChange={fromTipTap}
+          ariaLabel={label}
+          onUploadImage={onUploadImage}
+          mentionItems={mentionItems}
+          minHeight={160}
+        />
+      )}
+      {mode === 'split' && (
+        <div className="sk-mdedit__split">
+          {source}
+          <div className="sk-mdedit__live" aria-label={t('kit.mdedit.live')} role="region">{preview}</div>
+        </div>
+      )}
+    </section>
+  );
+}

@@ -27,11 +27,44 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
+# S3-06: имя сервиса сверяется с compose ДО сборки. Сервисов-фронтов теперь
+# два (lore-app — v1, lore-app-next — v2), и опечатка в имени в этом проекте уже
+# стоила молчаливого no-op (фронт называется lore-app, не frontend). Здесь
+# неверное имя ушло бы в три попытки с паузами и откатом от зеркала — то есть
+# выглядело бы как сетевой отказ. Отказ сразу и с именем — дешевле.
+if ! known="$(docker compose config --services 2>&1)"; then
+  echo "::error::docker compose config не разобрал конфигурацию — сборка не начата: $known"
+  exit 2
+fi
+for svc in "$@"; do
+  case "$svc" in -*) continue ;; esac   # флаги compose build (--no-cache и т.п.)
+  if ! printf '%s\n' "$known" | grep -qx -- "$svc"; then
+    echo "::error::сервиса '$svc' нет в compose (есть: $(printf '%s' "$known" | tr '\n' ' ')) — сборка не начата"
+    exit 2
+  fi
+done
+
 # CIM-02: сделать состояние registry-mirror базовых образов наблюдаемым до
 # сборки — мёртвое зеркало :8083 когда-то положило все image-сборки немым
 # отказом (CIM-01). Проба ничего не роняет: сборку не останавливает.
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 bash "$SELF_DIR/registry-mirror-probe.sh" || true
+
+# PL-12: зеркало дистрибутива Gradle проверяется ДО сборки — тем самым файлом,
+# который попросит обёртка. Не отдаёт (репозиторий не заведён, Nexus лежит) —
+# снимается сразу, без траты попытки: иначе первая попытка ушла бы на 404, а её
+# откат снял бы заодно и рабочие зеркала зависимостей.
+if [ -n "${LORE_GRADLE_DIST_MIRROR:-}" ]; then
+  props="$SELF_DIR/../../backend/gradle/wrapper/gradle-wrapper.properties"
+  dist="$(sed -n 's#^distributionUrl=.*/##p' "$props" 2>/dev/null | tr -d '\r')"
+  probe="${LORE_GRADLE_DIST_MIRROR%/}/$dist"
+  if [ -n "$dist" ] && curl -sf --noproxy '*' -m 300 -o /dev/null -r 0-0 "$probe"; then
+    echo "зеркало дистрибутива Gradle отвечает: $probe"
+  else
+    echo "::warning::зеркало дистрибутива Gradle ($probe) не отвечает — дистрибутив пойдёт напрямую"
+    export LORE_GRADLE_DIST_MIRROR=""
+  fi
+fi
 
 attempt=1
 while : ; do
@@ -56,6 +89,10 @@ while : ; do
   if [ -n "${LORE_MAVEN_MIRROR:-}" ]; then
     export LORE_MAVEN_MIRROR="" LORE_PLUGIN_MIRROR=""
     echo "::warning::сборка с зеркалом Nexus не удалась — следующая попытка пойдёт напрямую"
+  fi
+  if [ -n "${LORE_GRADLE_DIST_MIRROR:-}" ]; then
+    export LORE_GRADLE_DIST_MIRROR=""
+    echo "::warning::сборка с зеркалом дистрибутива Gradle не удалась — следующая попытка качает его напрямую"
   fi
 
   if [ "$attempt" -ge "$ATTEMPTS" ]; then

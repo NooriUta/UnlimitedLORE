@@ -1,0 +1,83 @@
+/* Витрина /kit (S4-00d): только раскладка страницы и только var(--…).
+   Вид самих элементов — в seidr.css kit; здесь своих элементов нет. */
+.kitp {
+  min-height: 100%;
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-base);
+}
+.kitp__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.kitp__title {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-xl);
+  letter-spacing: .02em;
+}
+.kitp__lead { max-width: 72ch; color: var(--t2); }
+.kitp__nav { display: flex; flex-wrap: wrap; gap: 4px; }
+.kitp__navlink {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-pill);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.kitp__navlink:hover { color: var(--acc); border-color: var(--acc); text-decoration: none; }
+.kitp__navlink:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.kitp__main { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+.kitp__sec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  scroll-margin-top: 8px;
+}
+.kitp__h2 {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-lg);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.kitp__h3 {
+  margin-top: 6px;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.kitp__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.kitp__swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--gap);
+  list-style: none;
+}
+.kitp__swatch { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); }
+.kitp__chip { width: 22px; height: 22px; border: 1px solid var(--bdh); border-radius: var(--r-sm); flex-shrink: 0; }
+.kitp__scale { display: flex; flex-direction: column; gap: 2px; list-style: none; }
+.kitp__tok { display: inline-block; min-width: 9ch; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.kitp__display { font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-lg); }
+.kitp__mono { font-family: var(--mono); }
+.kitp__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--gap); }
+.kitp__panel { padding: 8px 0; color: var(--t2); }
+.kitp__earcol { padding: 8px; border: 1px solid var(--bd); border-radius: var(--r-md); }
+.kitp__split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }

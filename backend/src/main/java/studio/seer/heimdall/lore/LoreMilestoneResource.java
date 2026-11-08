@@ -77,7 +77,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT MILESTONE] %s / %s: %s", req.sprint_id(), req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -159,7 +159,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
             LOG.warnf("[LORE MILESTONE PRODUCT] %s / %s: %s",
                 req.milestone_id(), req.product_code(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -256,7 +256,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE SPRINTS] %s: %s", req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -337,8 +337,10 @@ public class LoreMilestoneResource extends LoreResourceBase {
                     hp.put("g", req.goal_md());
                     hp.put("nsid", java.util.UUID.randomUUID().toString());
                     hp.put("now", java.time.Instant.now().toString());
+                    changeAuthor().bind(hp); // S2-12
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                        "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g;"
+                        "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g"
+                        + ChangeAuthor.SET_SQL + ";"
                         + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowMilestone WHERE milestone_id=:mid) "
                         + "TO (SELECT FROM KnowMilestoneHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 }
@@ -358,7 +360,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE] %s: %s", req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 

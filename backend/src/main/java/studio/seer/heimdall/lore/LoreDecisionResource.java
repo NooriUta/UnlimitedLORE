@@ -75,10 +75,12 @@ public class LoreDecisionResource extends LoreResourceBase {
         // ДО записи: после UPSERT «была ли запись раньше» уже неотличимо от
         // «появилась сейчас», и правка стала бы неотличима от создания.
         boolean existedBefore;
+        boolean knownNew = false; // S2-10: «новое» доказано пробой, а не выведено из её сбоя
         try {
             existedBefore = !ingestService.queryPublic(
                 "SELECT decision_id FROM KnowDecision WHERE decision_id = :did LIMIT 1",
                 Map.of("did", req.decision_id())).isEmpty();
+            knownNew = !existedBefore;
         } catch (Exception probeFailed) {
             // Не молча: не сумев спросить, мы НЕ ЗНАЕМ, правка это или создание.
             // Считать «создание» безопаснее — лишнего события в ленте не будет,
@@ -95,14 +97,21 @@ public class LoreDecisionResource extends LoreResourceBase {
             p.put("did", req.decision_id());
             p.put("title", req.title().trim());
             if (req.body_md() != null)      { dsql.append(", body_md=:body");      p.put("body", req.body_md()); }
-            if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
+            if (knownNew) {
+                // S2-10: у НОВОГО решения рядом с датой — полный ISO-момент создания,
+                // если он известен (CreationMoment.resolve). Дата в прошлом момента не
+                // получает; правка существующего решения его не трогает. При сбое
+                // пробы — прежнее поведение (дата только присланная): иначе момент
+                // «сейчас» лёг бы на решение, которое, возможно, давно существует.
+                CreationMoment.Resolved cm = CreationMoment.resolve(req.date_created(), java.time.Instant.now());
+                dsql.append(", date_created=:date"); p.put("date", cm.date());
+                if (cm.moment() != null) { dsql.append(", created_at=:cat"); p.put("cat", cm.moment()); }
+            } else if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
             if (req.refs_raw() != null)     { dsql.append(", refs_raw=:refs");     p.put("refs", req.refs_raw()); }
             if (req.component_id() != null) { dsql.append(", component_id=:comp"); p.put("comp", req.component_id()); }
-            // status_raw — то же поле, где лежат статусы сида и которое читают
-            // слайсы decisions/decisions_of_adr; имя status было бы второй правдой.
-            if (req.status() != null && !req.status().isBlank()) {
-                dsql.append(", status_raw=:st"); p.put("st", req.status());
-            }
+            // S2-13: статус (status_raw — поле, которое читают слайсы decisions/
+            // decisions_of_adr) пишется НЕ здесь, а версией истории через единый
+            // сервис сразу после UPSERT — см. ниже.
             // Отметка правки ставится ТОЛЬКО существовавшей записи: у новой
             // «изменено» совпало бы с «создано» по дню и дало бы в ленте два
             // события об одном факте.
@@ -116,6 +125,22 @@ public class LoreDecisionResource extends LoreResourceBase {
             dsql.append(" UPSERT WHERE decision_id=:did");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dsql.toString(), p)).await().indefinitely();
+            // S2-13: статус — версией KnowDecisionHist (у решений истории не было вовсе).
+            // Тот же статус повторно версию не открывает.
+            if (req.status() != null && !req.status().isBlank()) {
+                java.util.List<Map<String, Object>> cur = ingestService.queryPublic(
+                    "SELECT status_raw, out('HAS_STATE').size() AS versions FROM KnowDecision WHERE decision_id=:d",
+                    Map.of("d", req.decision_id()));
+                Object was = cur.isEmpty() ? null : cur.get(0).get("status_raw");
+                Object versions = cur.isEmpty() ? null : cur.get(0).get("versions");
+                boolean hasHistory = versions instanceof Number n && n.intValue() > 0;
+                if (!hasHistory || was == null || !req.status().equals(String.valueOf(was))) {
+                    StatusHistoryService.Outcome so = StatusHistoryService.transition(
+                        statusDb(), "decision", req.decision_id(), null, req.status(), changeAuthor());
+                    Response err = statusOutcomeError(so);
+                    if (err != null) return err;
+                }
+            }
             // Default date_created=today only where missing (fresh insert without explicit date).
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowDecision SET date_created=:d WHERE decision_id=:did AND date_created IS NULL",
@@ -187,7 +212,7 @@ public class LoreDecisionResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -242,9 +267,11 @@ public class LoreDecisionResource extends LoreResourceBase {
                 return noStore(Response.status(Response.Status.NOT_FOUND)
                     .entity(new LoreError("NOT_FOUND", "решение " + req.decision_id() + " не найдено")));
             Object old = rows.get(0).get("status_raw");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowDecision SET status_raw=:s WHERE decision_id=:d",
-                Map.of("s", req.status(), "d", req.decision_id()))).await().indefinitely();
+            // S2-13: смена статуса — новая версия истории через единый сервис.
+            StatusHistoryService.Outcome so = StatusHistoryService.transition(
+                statusDb(), "decision", req.decision_id(), null, req.status(), changeAuthor());
+            Response err = statusOutcomeError(so);
+            if (err != null) return err;
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("decision_id", req.decision_id());
@@ -343,6 +370,6 @@ public class LoreDecisionResource extends LoreResourceBase {
 
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
-            .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+            .entity(LoreUpstream.error(e)));
     }
 }

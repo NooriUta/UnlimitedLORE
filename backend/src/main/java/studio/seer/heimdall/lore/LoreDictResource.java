@@ -97,8 +97,13 @@ public class LoreDictResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DICT] %s/%s: %s", req.dict_type(), req.code(), e.getMessage());
+            // S2-09: close-open словаря уже множественный (valid_to IS NULL в самом UPDATE,
+            // без отдельного чтения rid) — гонку двух скриптов режет MVCC; это 409, не 502.
+            if (Scd2Guard.isConcurrentModification(e))
+                return Scd2Guard.conflict("dict '" + req.dict_type() + "/" + req.code()
+                    + "': concurrent write — re-read and retry", Map.of());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 
@@ -147,11 +152,12 @@ public class LoreDictResource extends LoreResourceBase {
         hp.put("code", code);
         hp.put("nsid", UUID.randomUUID().toString());
         hp.put("now", Instant.now().toString());
+        changeAuthor().bind(hp); // S2-12: автор версии — из токена (справочник правит человек)
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
             "UPDATE KnowDictEntryHist SET valid_to=:now WHERE dict_type=:dt AND code=:code AND valid_to IS NULL;" +
             "INSERT INTO KnowDictEntryHist SET dict_type=:dt, code=:code, state_uid=:nsid, valid_from=:now, " +
             "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
-            "is_active=:is_active, is_extensible=:is_extensible;" +
+            "is_active=:is_active, is_extensible=:is_extensible" + ChangeAuthor.SET_SQL + ";" +
             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
             "TO (SELECT FROM KnowDictEntryHist WHERE state_uid=:nsid);",
             hp)).await().indefinitely();
@@ -198,7 +204,7 @@ public class LoreDictResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE IN_AREA backfill] %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+                .entity(LoreUpstream.error(e)));
         }
     }
 }

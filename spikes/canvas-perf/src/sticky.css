@@ -1,0 +1,16 @@
+/* Спайк вне дизайн-системы: стиль стикера приближён к Seiðr, но без токенов kit/ —
+   цель — стоимость DOM/рендера, а не внешний вид. */
+.sticky {
+  width: 160px;
+  height: 100px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #3a2f1c;
+  border: 1px solid #6b5228;
+  color: #f2e6cf;
+  font: 12px/1.35 Manrope, system-ui, sans-serif;
+  overflow: hidden;
+}
+.sticky b { display: block; font-size: 11px; color: #e0a43a; margin-bottom: 4px; }
+.sticky.lod { background: #6b5228; }

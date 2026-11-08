@@ -1,3 +1,14 @@
+# ── Шаблон ОБЩИЙ для обоих фронтов (SPRINT_UXR_S3_V2_INFRA/S3-02) ────────────
+# Его кладут в образ И корневой Dockerfile (v1, сервис lore-app), И
+# web-next/Dockerfile (v2, сервис lore-app-next). Прокси /lore/ и /bench/,
+# редирект на HTTPS и CSP у двух фронтов обязаны совпадать: через /lore/ ходят
+# MCP и телефон, и какой фронт ответил — им безразлично.
+# Отсюда правило для любой правки: она должна быть верна для ОБОИХ образов.
+# Новая подстановка LORE_X здесь требует ENV-дефолта LORE_X="" в обоих Dockerfile и
+# строки в environment обоих сервисов compose — иначе envsubst её не
+# подставит, nginx примет её за свою неизвестную переменную и не стартует
+# (у того фронта, где забыли). Сторожит web-next/src/front-shared.test.ts.
+
 # ── Кому отдавать редирект на HTTPS (AL-71) ──────────────────────────────────
 # Файл подключается внутрь http{}, поэтому map объявляется здесь, до server{}.
 #
@@ -37,6 +48,26 @@ map $host $lore_bare_ip {
 map "$lore_bare_ip:${LORE_PUBLIC_URL}" $lore_redirect_to_https {
     default     0;
     "~^1:.+"    1;
+}
+
+# ── Куда ходят /lore/ и /bench/ (v2 на отдельной машине) ─────────────────────
+# Пусто (v1 и v2 на одной машине с бэкендом) — прежний lore-backend:9100 из
+# сети compose. На машине без бэкенда (lore-host) — адрес ПО ИМЕНИ, например
+# https://lore.odal.seidrstudio.pro (SPEC-INFRA-ADDRESS-BY-NAME: IP и
+# host-gateway запрещены). Литерал в proxy_pass резолвился бы на старте, и
+# nginx без сервиса lore-backend не поднялся бы вовсе ([emerg] host not
+# found); через переменную имя резолвится на запросе (resolver ниже).
+map "${LORE_BACKEND_URL}" $lore_backend {
+    ""          http://lore-backend:9100;
+    default     "${LORE_BACKEND_URL}";
+}
+
+# Host, с которым идём к бэкенду. Пусто — как раньше, $host. Когда бэкенд за
+# Traefik по имени, Host обязан быть ЕГО именем: с Host=new.lore Traefik
+# вернул бы запрос обратно в этот же контейнер — петля.
+map "${LORE_BACKEND_HOST}" $lore_backend_host {
+    ""          $host;
+    default     "${LORE_BACKEND_HOST}";
 }
 
 server {
@@ -145,15 +176,17 @@ server {
     }
 
     location /lore/ {
-        proxy_pass http://lore-backend:9100;
-        proxy_set_header Host $host;
+        proxy_pass $lore_backend;
+        proxy_set_header Host $lore_backend_host;
+        proxy_ssl_server_name on;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
     location /bench/ {
-        proxy_pass http://lore-backend:9100;
-        proxy_set_header Host $host;
+        proxy_pass $lore_backend;
+        proxy_set_header Host $lore_backend_host;
+        proxy_ssl_server_name on;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }

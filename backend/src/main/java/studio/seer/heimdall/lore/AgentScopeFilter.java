@@ -73,7 +73,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     // выдать себе (своему владельцу) любую роль в любом проекте.
     // "project" (AL-84/ADR-LORE-025-D17) переехал в FAMILY_AGENTS ниже, поправка
     // 2026-08-11 (решение владельца) — см. комментарий там.
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user");
+    // "news" (SPRINT_UXR_S7A_NEWS/S7A-04): единственная запись семейства — PUT
+    // /lore/news/v2/read-mark, общая черта «прочитано». По §8 спеки новостей она
+    // «сдвигается только действием пользователя»; агент, двигающий общую черту,
+    // прятал бы владелице непрочитанное.
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "news");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
@@ -185,6 +189,21 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // мочь любой, кто эту запись заводит, — иначе линтер учит дисциплине
         // только полный профиль, а остальные о своих пробелах не знают.
         Map.entry("quality",   Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
+        // me (SPRINT_UXR_S2_GRAPH_MEMORY/S2-04, D-2026-UXR-VIEWS-SERVER) — личный слой:
+        // виды, избранное, недавние, настройки. «Видимость — сам пользователь и его
+        // агенты»: агент пишет ОТ ИМЕНИ своего владельца (LoreMeResource берёт владельца
+        // по OWNED_BY), поэтому открыто всем профилям. Строкой, а не пропуском
+        // «неизвестного семейства» — чтобы решение было видно, а не подразумевалось.
+        Map.entry("me",        Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
+        // link (SPRINT_UXR_S2_GRAPH_MEMORY/S2-06, D-2026-UXR-LINK-MENTION-EDGE) — «Связать»
+        // из упоминаний: ребро между двумя любыми записями каталога LoreLinkTypes.
+        // Здесь — ВХОД для всех, кто пишет хоть одну сущность каталога; настоящее
+        // решение принимает LoreLinkResource по семейству ИСХОДНОЙ записи ребра
+        // (ребро «принадлежит» записи, из которой выходит, как у adr_link/task_link)
+        // через decide() этой же матрицы — второго списка прав нет.
+        Map.entry("link",      Set.of("full", "architect", "developer", "pm", "marketer",
                                       "analyst", "product-analyst", "tester")),
         // ── Найдено сверкой таблицы с реальными путями записи (AL-62) ────────
         // Три семейства имели живой POST под /lore, но в матрице отсутствовали,

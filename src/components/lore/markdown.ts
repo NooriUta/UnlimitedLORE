@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { markedMath } from './markdownMath';
 
 // T14: single source of truth for marked's global config. Was set
 // independently in MartProse.tsx and BragiSkinPreview.tsx (both {gfm: true,
@@ -8,6 +9,8 @@ import { marked } from 'marked';
 // renderer in the app imports `marked` from here instead of 'marked'
 // directly, so there is exactly one place this is configured.
 marked.setOptions({ gfm: true, breaks: false });
+// S0-09: формулы LaTeX ($…$, $$…$$, ```math) — KaTeX, см. markdownMath.ts.
+marked.use(markedMath());
 
 export { marked };
 

@@ -253,6 +253,7 @@ public class LoreSearchResource extends LoreResourceBase {
         // где не смог посмотреть. Ни одной успешной ветки — это 502, а не 404.
         int probed = 0;
         List<String> branchErrors = new ArrayList<>();
+        Throwable lastBranchFailure = null; // S1-03: классифицировать «база лежит» vs «запрос упал»
         for (Branch b : BRANCHES) {
             if (b.indexName() == null) continue;
             List<Map<String, Object>> src;
@@ -262,6 +263,7 @@ public class LoreSearchResource extends LoreResourceBase {
                     Map.of("ref", ref));
                 probed++;
             } catch (Exception e) {
+                lastBranchFailure = e;
                 String why = LoreUpstream.detail(e);
                 LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), why);
                 branchErrors.add(b.type() + ": " + why);
@@ -283,7 +285,7 @@ public class LoreSearchResource extends LoreResourceBase {
             } catch (Exception e) {
                 LOG.warnf("[LORE SIMILAR] %s: %s", ref, e.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", String.valueOf(e.getMessage()))));
+                    .entity(LoreUpstream.error(e)));
             }
 
             List<Map<String, Object>> hits = new ArrayList<>();
@@ -313,7 +315,7 @@ public class LoreSearchResource extends LoreResourceBase {
         // Ни одной опрошенной ветки — отказ БД, и говорить о данных нельзя.
         if (probed == 0) {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", "ни одна ветка не опрошена: "
+                .entity(LoreUpstream.error(lastBranchFailure, "ни одна ветка не опрошена: "
                     + String.join("; ", branchErrors))));
         }
         // Часть веток упала — «не найдено» остаётся возможным ответом (в
@@ -865,6 +867,293 @@ public class LoreSearchResource extends LoreResourceBase {
             }
         });
         return out;
+    }
+
+    // ── SPRINT_UXR_S2_GRAPH_MEMORY/S2-02: обратные связи ─────────────────────
+
+    /**
+     * Структурные рёбра — не «ссылка на запись», а её устройство: HAS_STATE
+     * ведёт к строке истории SCD2, HAS_STATUS — к словарю статусов,
+     * BELONGS_TO_PROJECT — к проекту. Покажи их, и у любого хаба-проекта
+     * «обратными связями» станет весь корпус. Список называется в ответе
+     * ({@code excluded_edges}), чтобы отсутствие было объяснено, а не угадано.
+     */
+    static final Set<String> STRUCTURAL_EDGES = Set.of("HAS_STATE", "HAS_STATUS", "BELONGS_TO_PROJECT");
+
+    /** Потолок входящих рёбер за один запрос; выше — {@code complete:false} и {@code capped_at}. */
+    static final int BACKLINK_EDGE_CAP = 5000;
+
+    /** Rid подставляется в текст запроса — только если он именно rid (получен из БД, но проверяем форму). */
+    private static final java.util.regex.Pattern RID = java.util.regex.Pattern.compile("#\\d+:\\d+");
+
+    /** Ссылка на скоуп слайсов: тот же резолвер, тот же флаг {@code lore.scope.enforce}. */
+    @jakarta.inject.Inject
+    AidaLoreResource sliceScope;
+
+    /**
+     * Пути до слагов проекта для проверки скоупа — те же, что у слайсов
+     * ({@link LoreSlices#PROJECT_SCOPED}): решение видно и по своему ребру, и
+     * по родительскому ADR; вопрос — по своему ребру, месту, где поднят, и
+     * компоненту через спринты. Остальные типы — по выражению фасета ветки.
+     */
+    static List<String> scopePaths(Branch b) {
+        return switch (b.type()) {
+            case "decision" -> List.of(DIRECT_PROJ, "out('DECIDED_IN')." + DIRECT_PROJ);
+            case "question" -> List.of(LoreSlices.QUESTION_SCOPE.split("\\|"));
+            default -> b.projExpr() == null ? List.of() : List.of(b.projExpr());
+        };
+    }
+
+    static Branch branchByType(String type) {
+        for (Branch b : BRANCHES) if (b.type().equals(type)) return b;
+        return null;
+    }
+
+    /** Класс вершины → ветка. Первая по порядку: у каждого класса ветка одна (PL-28). */
+    static Branch branchByClass(String vertexClass) {
+        for (Branch b : BRANCHES) if (b.vertexClass().equals(vertexClass)) return b;
+        return null;
+    }
+
+    private static String projectColumns(Branch b) {
+        StringBuilder sb = new StringBuilder();
+        List<String> paths = scopePaths(b);
+        for (int i = 0; i < paths.size(); i++) sb.append(", ").append(paths.get(i)).append(" AS p").append(i);
+        return sb.toString();
+    }
+
+    /** Слаги проектов строки по всем путям скоупа (прямой | через родителя). */
+    static Set<String> projectsOf(Map<String, Object> row, int paths) {
+        Set<String> out = new LinkedHashSet<>();
+        for (int i = 0; i < paths; i++) {
+            Object v = row.get("p" + i);
+            if (v instanceof java.util.Collection<?> c) {
+                for (Object o : c) if (o != null) out.add(String.valueOf(o));
+            } else if (v != null) {
+                out.add(String.valueOf(v));
+            }
+        }
+        return out;
+    }
+
+    /** Виден ли объект под скоупом: хотя бы один путь ведёт в разрешённый проект (как у слайсов). */
+    static boolean visibleUnder(Set<String> projects, Set<String> allowed) {
+        if (allowed == null) return true;
+        for (String p : projects) if (allowed.contains(p)) return true;
+        return false;
+    }
+
+    /**
+     * {@code GET /lore/backlinks?type&id[&limit]} — «кто ссылается на X»: входящие
+     * рёбра записи одним запросом, а не обратным полем, дописанным в отдельный
+     * слайс под каждый тип (вкладка «Граф», D-2026-UXR-LOCAL-GRAPH).
+     *
+     * <p><b>Что считается обратной связью.</b> Входящее ребро, которое:
+     * <ul>
+     *   <li>не структурное ({@link #STRUCTURAL_EDGES});</li>
+     *   <li>открыто в смысле SCD2 — у самого ребра нет {@code valid_to}
+     *       (ROLE_HELD_BY закрывается так при смене держателя), и источник не
+     *       закрытая строка истории.</li>
+     * </ul>
+     *
+     * <p><b>Скоуп — как у слайсов.</b> Пустое множество разрешённых проектов —
+     * 403 {@code SCOPE_EMPTY}, а не пустой список; цель вне скоупа — 403
+     * {@code OUTSIDE_SCOPE}; источник вне скоупа скрывается и считается в
+     * {@code hidden_by_scope}: «не показано» не должно выглядеть как «нет».
+     * Источник неизвестного класса (не из таблицы веток) под скоупом скрыт —
+     * проверить его проект нечем, и правило fail-closed то же, что у слайсов.
+     *
+     * <p><b>Хабы.</b> Группировка по типу ребра; {@code limit} режет items
+     * группы, но не её {@code count} — у ADR с сотней задач честно видно «100,
+     * показано 20». Рёбер больше {@link #BACKLINK_EDGE_CAP} — {@code complete:false}.
+     */
+    @GET
+    @Path("backlinks")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response backlinks(@QueryParam("type") String type,
+                              @QueryParam("id") String id,
+                              @QueryParam("limit") Integer limitParam,
+                              @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        long t0 = System.nanoTime();
+        List<String> knownTypes = BRANCHES.stream().map(Branch::type).toList();
+        if (type == null || type.isBlank()) return badParams("type required: one of " + knownTypes);
+        Branch target = branchByType(type.trim());
+        if (target == null) return badParams("unknown type «" + type + "»: one of " + knownTypes);
+        if (id == null || id.isBlank()) return badParams("id required");
+        if (id.length() > 200) return badParams("id is longer than 200 characters");
+        int limit = limitParam == null || limitParam < 1 ? 20 : Math.min(limitParam, 200);
+
+        Set<String> allowed;
+        try {
+            allowed = sliceScope.allowedProjectsOrNull(role);
+        } catch (RuntimeException e) {
+            // Скоуп не посчитан — отвечать «без скоупа» нельзя: это был бы обход.
+            LOG.warnf("[LORE BACKLINKS] скоуп не посчитан: %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(LoreUpstream.error(e, "проектный скоуп не посчитан: " + LoreUpstream.detail(e))));
+        }
+        if (allowed != null && allowed.isEmpty()) {
+            return noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — обратные связи не отдаются пустыми")));
+        }
+
+        // ── цель ──
+        Map<String, Object> tgt;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT @rid AS rid, " + target.titleField() + " AS title" + projectColumns(target)
+                + " FROM " + target.vertexClass() + " WHERE " + target.idField() + " = :id LIMIT 1",
+                Map.of("id", id));
+            if (rows.isEmpty()) {
+                return noStore(Response.status(Response.Status.NOT_FOUND)
+                    .entity(new LoreError("NOT_FOUND", type + " «" + id + "» не найден")));
+            }
+            tgt = rows.get(0);
+        } catch (Exception e) {
+            LOG.warnf("[LORE BACKLINKS] %s/%s: цель не прочитана: %s", type, id, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
+        }
+        if (!visibleUnder(projectsOf(tgt, scopePaths(target).size()), allowed)) {
+            return noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("OUTSIDE_SCOPE", type + " «" + id + "» существует, но вне разрешённых "
+                    + "вызывающему проектов")));
+        }
+        String rid = String.valueOf(tgt.get("rid"));
+        if (!RID.matcher(rid).matches()) {
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError(LoreUpstream.QUERY_FAILED, "база вернула не rid: " + rid)));
+        }
+
+        // ── входящие рёбра ──
+        List<Map<String, Object>> edges;
+        try {
+            // rid — литерал из предыдущего ответа БД (форма проверена выше).
+            edges = ingestService.queryPublic(
+                "SELECT @type AS edge, @out AS src, @out.@type AS src_class FROM "
+                + "(SELECT expand(inE()) FROM " + rid + ") "
+                + "WHERE valid_to IS NULL AND @out.valid_to IS NULL LIMIT " + (BACKLINK_EDGE_CAP + 1),
+                Map.of());
+        } catch (Exception e) {
+            LOG.warnf("[LORE BACKLINKS] %s/%s: рёбра не прочитаны: %s", type, id, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
+        }
+        boolean capped = edges.size() > BACKLINK_EDGE_CAP;
+        if (capped) edges = edges.subList(0, BACKLINK_EDGE_CAP);
+
+        // ── источники: по классу одним запросом ──
+        Map<String, Set<String>> ridsByClass = new LinkedHashMap<>();
+        List<Map<String, Object>> kept = new ArrayList<>();
+        for (Map<String, Object> e : edges) {
+            String edge = String.valueOf(e.get("edge"));
+            if (STRUCTURAL_EDGES.contains(edge)) continue;
+            String src = String.valueOf(e.get("src"));
+            if (!RID.matcher(src).matches()) continue;
+            kept.add(e);
+            ridsByClass.computeIfAbsent(String.valueOf(e.get("src_class")), k -> new LinkedHashSet<>()).add(src);
+        }
+
+        Map<String, Map<String, Object>> sources = new HashMap<>(); // rid → {type, ref_id, title, projects}
+        List<Map<String, Object>> warnings = new ArrayList<>();
+        for (Map.Entry<String, Set<String>> en : ridsByClass.entrySet()) {
+            Branch b = branchByClass(en.getKey());
+            if (b == null) continue; // класс вне таблицы веток — идёт без кода (см. ниже)
+            int paths = scopePaths(b).size();
+            List<String> rids = new ArrayList<>(en.getValue());
+            for (int from = 0; from < rids.size(); from += 500) {
+                List<String> chunk = rids.subList(from, Math.min(rids.size(), from + 500));
+                try {
+                    for (Map<String, Object> r : ingestService.queryPublic(
+                            "SELECT @rid AS rid, " + b.idField() + " AS ref_id, " + b.titleField() + " AS title"
+                            + projectColumns(b) + " FROM " + b.vertexClass()
+                            + " WHERE @rid IN [" + String.join(", ", chunk) + "]", Map.of())) {
+                        Map<String, Object> s = new LinkedHashMap<>();
+                        s.put("type", b.type());
+                        s.put("ref_id", r.get("ref_id"));
+                        s.put("title", r.get("title"));
+                        s.put("__projects", projectsOf(r, paths));
+                        sources.put(String.valueOf(r.get("rid")), s);
+                    }
+                } catch (Exception ex) {
+                    // Источники одного класса не прочитаны — остальное отдаём, но
+                    // называем дыру: молча выпавшая группа выглядела бы как «связей нет».
+                    LOG.warnf("[LORE BACKLINKS] %s/%s: источники %s не прочитаны: %s",
+                        type, id, b.vertexClass(), ex.getMessage());
+                    warnings.add(Map.of("source_class", b.vertexClass(), "error", LoreUpstream.detail(ex)));
+                }
+            }
+        }
+
+        // ── группировка ──
+        Map<String, List<Map<String, Object>>> byEdgeItems = new java.util.TreeMap<>();
+        int hidden = 0;
+        int unread = 0;
+        for (Map<String, Object> e : kept) {
+            String src = String.valueOf(e.get("src"));
+            String srcClass = String.valueOf(e.get("src_class"));
+            Map<String, Object> s = sources.get(src);
+            Branch known = branchByClass(srcClass);
+            if (known != null && s == null) { unread++; continue; } // класс известен, строка не прочитана
+            @SuppressWarnings("unchecked")
+            Set<String> projects = s == null ? Set.of() : (Set<String>) s.get("__projects");
+            if (!visibleUnder(projects, allowed)) { hidden++; continue; }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("type", s == null ? null : s.get("type"));
+            item.put("ref_id", s == null ? null : s.get("ref_id"));
+            item.put("title", s == null ? null : s.get("title"));
+            item.put("source_class", srcClass);
+            byEdgeItems.computeIfAbsent(String.valueOf(e.get("edge")), k -> new ArrayList<>()).add(item);
+        }
+
+        List<Map<String, Object>> groups = new ArrayList<>();
+        Map<String, Integer> byEdge = new LinkedHashMap<>();
+        int total = 0;
+        for (Map.Entry<String, List<Map<String, Object>>> en : byEdgeItems.entrySet()) {
+            List<Map<String, Object>> items = new ArrayList<>(en.getValue());
+            // Детерминированный порядок: тип источника, затем код.
+            items.sort(java.util.Comparator
+                .comparing((Map<String, Object> m) -> String.valueOf(m.get("type")))
+                .thenComparing(m -> String.valueOf(m.get("ref_id"))));
+            Map<String, Object> g = new LinkedHashMap<>();
+            g.put("edge", en.getKey());
+            g.put("count", items.size());
+            g.put("items", items.size() > limit ? items.subList(0, limit) : items);
+            g.put("truncated", items.size() > limit);
+            groups.add(g);
+            byEdge.put(en.getKey(), items.size());
+            total += items.size();
+        }
+        groups.sort(java.util.Comparator
+            .comparing((Map<String, Object> g) -> -((Integer) g.get("count")))
+            .thenComparing(g -> String.valueOf(g.get("edge"))));
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("type", target.type());
+        out.put("id", id);
+        out.put("title", tgt.get("title"));
+        out.put("total", total);
+        out.put("groups", groups);
+        out.put("by_edge", byEdge);
+        out.put("hidden_by_scope", hidden);
+        out.put("excluded_edges", new java.util.TreeSet<>(STRUCTURAL_EDGES));
+        out.put("limit", limit);
+        boolean complete = !capped && warnings.isEmpty() && unread == 0;
+        out.put("complete", complete);
+        if (capped) out.put("capped_at", BACKLINK_EDGE_CAP);
+        if (unread > 0) out.put("unread_sources", unread);
+        if (!warnings.isEmpty()) out.put("warnings", warnings);
+        if (allowed != null) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("applied", true);
+            m.put("projects", allowed.size());
+            m.put("note", "выдача сужена проектным скоупом — источники вне разрешённых проектов не показаны");
+            out.put("scope", m);
+        }
+        out.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
+        return noStore(Response.ok(out));
     }
 
     private static Set<String> csv(String s) {

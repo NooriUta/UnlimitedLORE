@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerLoreRead } from './tools/loreRead.js';
 import { registerLoreWrite } from './tools/loreWrite.js';
-import { BACKEND_URL } from './backend.js';
+import { BACKEND_FALLBACK_URL, BACKEND_URL } from './backend.js';
 import { registerMuninn } from './tools/muninn.js';
 import { registerClaudeRules } from './tools/claudeRules.js';
 import { registerForgejo, forgejoConfigured } from './tools/forgejo.js';
@@ -41,7 +41,7 @@ registerVersion(server);
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`[aida-lore-mcp] ready — backend ${BACKEND_URL}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
+  console.error(`[aida-lore-mcp] ready — backend ${BACKEND_URL}${BACKEND_FALLBACK_URL ? ` (запасной ${BACKEND_FALLBACK_URL})` : ''}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
   // После connect и без await: предупреждение не должно задерживать готовность
   // и не должно ронять старт, если бэкенд недоступен.
   void warnIfStale();

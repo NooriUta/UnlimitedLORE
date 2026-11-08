@@ -1,0 +1,36 @@
+/* Экран списка v2 (S4-04): только раскладка, и только токены; список, чипы и
+   состояния — классы sk-* единого слоя kit (seidr.css). */
+.list-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--pad-y) var(--pad-x);
+  min-width: 0;
+}
+
+.list-screen__warn {
+  margin: 0;
+  padding: 4px 8px 4px 22px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  color: var(--t1);
+  font-size: var(--fs-xs);
+}
+
+.shell-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.shell-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--t2);
+}
+
+.shell-nav a[aria-current='page'] {
+  color: var(--acc);
+}
