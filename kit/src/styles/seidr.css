@@ -3004,6 +3004,25 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 }
 .sk-tasks__gth--fault { color: var(--wrn); }
 
+/* S4-36: значки в углу карточки на доске — чтобы при переключении вида
+   сведения о записи не пропадали. Не больше трёх, статус не дублируем. */
+.sk-board__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.sk-board__badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-2xs);
+  color: var(--t2);
+}
+
 /* S4-36: счётчики в шапке спринта — ряд значков со счётом, «закрыто из
    всего» и сумма оценок, как в v1. */
 .sk-tc {
