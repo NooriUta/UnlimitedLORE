@@ -57,7 +57,9 @@ describe('адаптер на реальных строках', () => {
   it('ADR: тело из трёх секций, заголовок без имени — ID, решения и «обосновывает» — связями', async () => {
     const p = await loadPassport('adr', 'ADR-LORE-014', 'ru', slice(fakeFetch()));
     expect(p.record.title).toBe('ADR-LORE-014');
-    expect(p.record.body_md).toMatch(/Контекст[\s\S]*Решение[\s\S]*Следствия/);
+    // 08.11: текст ADR — тремя разделами, как в v1, а не склейкой через «## Контекст»
+    expect(p.record.body_md).toBeUndefined();
+    expect([p.record.fields.context_md, p.record.fields.decision_md, p.record.fields.consequences_md]).toEqual(['Контекст', 'Решение', 'Следствия']);
     expect(p.data.edges.map(e => e.type).sort()).toEqual(['BELONGS_TO_PROJECT', 'DECIDED_IN', 'DEPENDS_ON', 'JUSTIFIED_BY']);
   });
   it('упал слайс решений — ошибка блока, а не «решений нет»', async () => {

@@ -127,12 +127,12 @@ async function loadTask(uid: string, lang: KitLang, slice: Slice, now: string): 
 async function loadAdr(id: string, lang: KitLang, slice: Slice, now: string): Promise<PassportLoad> {
   const row = (await slice<Row>('adr', { id })).rows[0];
   if (!row) throw new Error(appT(lang, 'pp.notFound', { id }));
-  const sec = (k: string, md: unknown) => (str(md).trim() ? `## ${appT(lang, `pp.adr.${k}` as AppKey)}\n\n${str(md).trim()}` : '');
   const record: KitRecord = {
     id, kind: 'adr', title: str(row.name) || id, status: norm(row.status),
-    body_md: [sec('context', row.context_md), sec('decision', row.decision_md), sec('consequences', row.consequences_md)].filter(Boolean).join('\n\n') || undefined,
     updated_at: str(row.hist_valid_from) || undefined,
     fields: {
+      // Текст ADR — тремя разделами, как в v1, а не склейкой через «## Контекст» (08.11).
+      context_md: str(row.context_md).trim() || null, decision_md: str(row.decision_md).trim() || null, consequences_md: str(row.consequences_md).trim() || null,
       date: str(row.date_created) || null, components: arr(row.components), projects: arr(row.git_projects), tags: arr(row.tags).join(', ') || null,
       depends_on: arr(row.depends_on_ids), supersedes: arr(row.supersedes_ids), file_path: str(row.file_path) || null,
     },
@@ -154,6 +154,9 @@ async function loadAdr(id: string, lang: KitLang, slice: Slice, now: string): Pr
     adr: {
       title: 'ADR', icon: 'scroll-quill',
       fields: [
+        { key: 'context_md', title: appT(lang, 'pp.adr.context'), type: 'md' },
+        { key: 'decision_md', title: appT(lang, 'pp.adr.decision'), type: 'md' },
+        { key: 'consequences_md', title: appT(lang, 'pp.adr.consequences'), type: 'md' },
         { key: 'date', title: f(lang, 'date'), type: 'date' },
         { key: 'projects', title: f(lang, 'projects'), type: 'ref' },
         { key: 'components', title: f(lang, 'components'), type: 'ref' },

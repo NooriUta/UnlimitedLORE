@@ -88,3 +88,22 @@ describe('S4-36: паспорт спринта — разделы «Планир
     expect(k.config.kinds.sprint.fields?.find(f => f.key === 'created')?.section).toBe('Планирование');
   });
 });
+
+describe('ADR — разделы как в v1: «Контекст», «Решение», «Следствия» отдельными блоками с подписью', () => {
+  const ADR = { adr_id: 'ADR-1', name: 'А', status: 'ACCEPTED', context_md: '## Проблема\nк', decision_md: 'р', consequences_md: '', components: [], git_projects: [], depends_on_ids: [], supersedes_ids: [], superseded_by_ids: [], justified_task_uids: [], tags: [] };
+  it('в объекте — три поля текста группы body, а не одно склеенное с «## Контекст»', async () => {
+    const c = toLoreRecord(await loadPassport('adr', 'ADR-1', 'ru', fake({ adr: [ADR], decisions_of_adr: [] }), NOW), NOW);
+    const body = c.schema.fields.filter(f => f.group === 'body').map(f => [f.key, f.label]);
+    expect(body).toEqual([['context_md', 'Контекст'], ['decision_md', 'Решение'], ['consequences_md', 'Следствия']]);
+    expect(c.values.context_md).toBe('## Проблема\nк');
+    expect(c.values.body_md ?? null).toBeNull();
+    expect(c.schema.fields.filter(f => f.group === 'props').map(f => f.key)).not.toContain('context_md');
+  });
+  it('kit рисует непустые разделы по порядку, каждый со своей подписью', async () => {
+    const c = toLoreRecord(await loadPassport('adr', 'ADR-1', 'ru', fake({ adr: [ADR], decisions_of_adr: [] }), NOW), NOW);
+    const k = fromLoreRecord(JSON.parse(JSON.stringify(c)) as LoreRecord1, 'ru');
+    const ov = k.config.kinds.adr.overview;
+    expect(typeof ov).toBe('function');
+    expect(k.config.kinds.adr.fields?.map(f => f.key)).not.toContain('decision_md');
+  });
+});
