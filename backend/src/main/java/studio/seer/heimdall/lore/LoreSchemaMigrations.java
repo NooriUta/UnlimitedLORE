@@ -1537,7 +1537,13 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowADR.created_at IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowDecision.created_at IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowRelease.released_at IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSpecHist.version IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowSpecHist.version IF NOT EXISTS STRING")),
+
+        // SPRINT_UXR_S7A_NEWS/S7A-04 (спека новостей §8, решение 07.11 п.12): черта
+        // «прочитано до сюда» — на сервере, одна общая, сдвигается только PUT
+        // человека. Новый тип, v1 его не знает — аддитивно, major 17. Вслед за
+        // шагами S2 (66–69). DDL живёт рядом с хранилищем, чтобы не было двух правд.
+        new Step(70, 17, "news_read_mark", LoreNewsReadMarkStore.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

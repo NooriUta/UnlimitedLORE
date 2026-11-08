@@ -48,7 +48,8 @@ class AgentScopeFilterTest {
         // user добавлен AL-82: назначение проектной роли человеку — тот же класс.
         // project СНЯТ поправкой 2026-08-11 (AL-84/ADR-LORE-025-D17) — переехал в
         // FAMILY_AGENTS с единственным допущенным профилем full, см. тест ниже.
-        assertEquals(Set.of("dict", "kc", "admin", "user"), AgentScopeFilter.humanOnlyFamilies());
+        // news добавлен S7A-04: общая черта «прочитано» сдвигается только человеком (§8).
+        assertEquals(Set.of("dict", "kc", "admin", "user", "news"), AgentScopeFilter.humanOnlyFamilies());
     }
 
     @Test
