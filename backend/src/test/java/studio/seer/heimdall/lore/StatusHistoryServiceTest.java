@@ -120,6 +120,26 @@ class StatusHistoryServiceTest {
         assertFalse(p.containsKey("c_status"));
     }
 
+    // S2-15: «открытой версии не видно» — это снимок на момент чтения, а не факт на
+    // момент записи. Соседний писатель мог как раз закрыть старую строку и ещё не
+    // вставить свою: тогда план без защиты открывал вторую версию (CI #925: одна
+    // закрытая, две открытые). Скрипт обязан сам проверить, что открытой нет.
+    @Test
+    void no_visible_open_version_is_still_guarded_inside_the_script() {
+        for (StatusHistoryService.Kind k : StatusHistoryService.KINDS.values()) {
+            FakeDb db = new FakeDb();
+            db.vertex = row("cur", "x");
+            db.open = null;
+            StatusHistoryService.transition(db, k.type(), "ID-1", null, "done", AGENT, "t", "n");
+            String s = db.scripts.get(0);
+            int guard = s.indexOf("valid_to IS NULL");
+            int insert = s.indexOf("INSERT INTO " + k.hist());
+            assertTrue(guard >= 0 && guard < insert,
+                k.type() + ": проверка «открытой версии нет» до вставки: " + s);
+            assertTrue(s.contains(Scd2Guard.CONFLICT_MARK), k.type() + ": при найденной открытой — маркер конфликта: " + s);
+        }
+    }
+
     @Test
     void expected_mismatch_is_a_conflict_without_any_write() {
         FakeDb db = new FakeDb();

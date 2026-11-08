@@ -590,6 +590,9 @@ public class LoreStatusResource extends LoreResourceBase {
             if (oldRid.startsWith("#")) {
                 script.append(Scd2Guard.guardedClose("KnowSprintHist", false));
                 insertParams.put("oldrid", oldRid);
+            } else {
+                // S2-15: открытой версии не было видно — проверить внутри скрипта.
+                script.append(Scd2Guard.guardedNoOpen("KnowSprintHist", "sprint_id", "sid"));
             }
             script.append("INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +

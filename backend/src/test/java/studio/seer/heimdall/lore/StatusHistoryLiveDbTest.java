@@ -153,6 +153,26 @@ class StatusHistoryLiveDbTest {
             "правка тела не стирает статус из истории: " + cur);
     }
 
+    // ── S2-15: устаревший план «открытой версии нет» не открывает вторую ──
+
+    @Test
+    @TestSecurity(user = "s213", roles = {"admin"})
+    @JwtSecurity(claims = {@Claim(key = "sub", value = SUB)})
+    void stalePlanWithoutOpenVersionDoesNotOpenASecondOne() {
+        String id = "ADR-S215-STALE";
+        post("/lore/adr", "{\"adr_id\":\"" + id + "\",\"name\":\"s215\"}");
+        assertEquals(1, hist("KnowADRHist", "adr_id", id).size());
+        // План построен так, будто открытой версии не видно (окно соседнего писателя
+        // между закрытием и вставкой), а она на самом деле есть.
+        StatusHistoryService.Plan plan = StatusHistoryService.plan(StatusHistoryService.KINDS.get("adr"), id,
+            null, "ACCEPTED", null, ChangeAuthor.UNKNOWN, "2026-11-08T23:00:00Z", "S215-NSID");
+        List<Map<String, Object>> res = command("sqlscript", plan.script(), plan.params());
+        assertTrue(Scd2Guard.isConflict(res), "скрипт отказал маркером конфликта: " + res);
+        List<Map<String, Object>> rows = hist("KnowADRHist", "adr_id", id);
+        assertEquals(1, rows.size(), "вторая версия не открыта: " + rows);
+        open(rows);
+    }
+
     // ── Гонка: две смены с одним «было» — одна версия и один 409 ──
 
     @Test
