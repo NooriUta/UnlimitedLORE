@@ -13,7 +13,7 @@ const fake = (rows: Rows) => async <T,>(name: string): Promise<SliceBody<T>> => 
   return { rows: (r ?? []) as T[] };
 };
 
-const TASK = { task_uid: 'SPRINT_A/A-1', task_id: 'A-1', sprint_id: 'SPRINT_A', title: 'Задача', status_raw: 'IN_PROGRESS', note_md: 'тело', effort_days: 2, component_ids: ['LORE'] };
+const TASK = { task_uid: 'SPRINT_A/A-1', task_id: 'A-1', sprint_id: 'SPRINT_A', title: 'Задача', status_raw: '🔄 IN PROGRESS', note_md: 'тело', effort_days: 2, component_ids: ['LORE'] };
 const SPRINT = { sprint_id: 'SPRINT_A', name: 'Спринт А', status_raw: 'IN_PROGRESS', planned_end_date: '2026-11-12', valid_from: NOW, context_md: 'контекст', git_projects: ['NooriUta/UnlimitedLORE'] };
 
 async function contractOf(type: 'task' | 'sprint', id: string, rows: Rows): Promise<LoreRecord1> {
@@ -25,7 +25,7 @@ describe('lore.record/1 — из слайсов', () => {
     const c = await contractOf('task', TASK.task_uid, { tasks_by_uids: [TASK] });
     expect(JSON.parse(JSON.stringify(c))).toEqual(c);
     expect(c.contract).toBe('lore.record/1');
-    expect(c.record).toMatchObject({ type: 'task', id: 'SPRINT_A/A-1', title: 'Задача', status: 'in_progress' });
+    expect(c.record).toMatchObject({ type: 'task', id: 'SPRINT_A/A-1', title: 'Задача', status: 'active' }); // канон словаря (planStatusOf, #900)
   });
 
   it('обязательные свойства — первыми; у задачи без спринта не сохранить', async () => {
