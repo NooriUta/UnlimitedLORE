@@ -7,7 +7,7 @@
 // Честные состояния: загрузка ≠ ошибка ≠ нет прав ≠ «история не ведётся» ≠
 // «правок нет». Возврат — в два касания (кнопка → «Вернуть»), отказ сервера —
 // alert с причиной, а не тихий откат.
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KitRecord } from '../core/contract';
 import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
 import { errorDetail } from '../states/loadState';
@@ -78,8 +78,15 @@ function HistoryBody({ record, history, source, lang }: { record: KitRecord; his
   const compareId = useId();
 
   // Другой набор версий (перезагрузка после возврата) — выбор снова на текущей.
+  // Сброс — только при НАСТОЯЩЕЙ смене набора. На монтировании выбор уже
+  // стоит на текущей (useState): эффект там лишний и опасен — если щелчок по
+  // старой версии успел раньше пассивного эффекта (медленный CI), эффект
+  // затирал выбор пользователя («Вернуть как новую версию» пропадала).
   const sig = keys.join('|');
+  const seenSig = useRef(sig);
   useEffect(() => {
+    if (seenSig.current === sig) return;
+    seenSig.current = sig;
     setSelected(currentKey);
     setBase(compareBase(versions, currentKey));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- набор версий меняется по ключам, а не по ссылке массива

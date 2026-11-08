@@ -24,7 +24,7 @@ import { RecordFacts } from './RecordFacts';
 import type { RecordFactsSpec } from './facts';
 import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
 
-export const RECORD_TABS = { overview: 'overview', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
+export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
 
 /**
  * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
@@ -63,6 +63,13 @@ export interface RecordViewProps {
   onReload?: () => void;
   /** «Сейчас» для «получено N мин» (тесты); по умолчанию — часы с шагом в минуту. */
   now?: number;
+  /**
+   * Где открыт паспорт (S4-33, решение владелицы 08.11). Задан — раскладка по зонам:
+   * «Текст» и «Свойства» — вкладки записи (без них изменения не сохранить);
+   * связи, граф, журнал, история — вычисляемое: при bottom/full — колонкой
+   * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
+   */
+  placement?: 'right' | 'bottom' | 'full';
 }
 
 /** Часы с шагом в минуту — для «получено N мин»; выключены — не тикают. */
@@ -136,7 +143,7 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
@@ -145,14 +152,22 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
   const kindTabs = kind?.tabs ?? [];
-  const items: TabItem[] = [
-    { id: RECORD_TABS.overview, label: kitT(lang, 'kit.record.tab.overview') },
-    ...kindTabs.map(t => ({ id: t.key, label: t.title })),
+  const zoned = placement !== undefined;
+  const hasProps = zoned && (kind?.fields?.length ?? 0) > 0;
+  const recordItems: TabItem[] = [
+    { id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' : undefined },
+    ...(hasProps ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
+    ...kindTabs.map(t => ({ id: t.key, label: t.title, zone: zoned ? 'record' as const : undefined })),
+  ];
+  const aroundItems: TabItem[] = [
     { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: recordLinks(record.id, ctx.data.edges).length },
     { id: RECORD_TABS.graph, label: kitT(lang, 'kit.record.tab.graph') },
     { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: recordJournal(record.id, ctx.data.journal).length },
     ...(history ? [{ id: RECORD_TABS.history, label: kitT(lang, 'kit.record.tab.history'), count: historyCount(history) }] : []),
-  ];
+  ].map(i => (zoned ? { ...i, zone: 'around' as const } : i));
+  // bottom/full — вычисляемое уходит в колонку слева; right и без placement — вкладками.
+  const aside = placement === 'bottom' || placement === 'full';
+  const items: TabItem[] = aside ? recordItems : [...recordItems, ...aroundItems];
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
   const reset = `${record.id}:${current}`;
   const custom = kindTabs.find(t => t.key === current);
@@ -164,12 +179,18 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         <BlockBoundary block="overview" label={kitT(lang, 'kit.record.tab.overview')} lang={lang} resetKey={reset}>
           <Overview record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
         </BlockBoundary>
-        {kind && (
+        {kind && !zoned && (
           <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
             <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
           </BlockBoundary>
         )}
       </div>
+    );
+  } else if (current === RECORD_TABS.props && kind) {
+    panel = (
+      <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
+        <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+      </BlockBoundary>
     );
   } else if (current === RECORD_TABS.history && history) {
     panel = (
@@ -192,22 +213,44 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     );
   }
 
-  return (
-    <article className={['sk-rec', className].filter(Boolean).join(' ')} aria-labelledby={titleId} data-kind={record.kind}>
-      <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
-      {facts && (
-        <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
-          <RecordFacts record={record} ctx={ctx} spec={facts} lang={lang}
-            onTasks={facts.tasksTab && kindTabs.some(t => t.key === facts.tasksTab) ? () => onTab(facts.tasksTab!) : undefined}
-            tail={loaded} />
+  const mainBlock = (
+    <>
+        <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
+        {facts && (
+          <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
+            <RecordFacts record={record} ctx={ctx} spec={facts} lang={lang}
+              onTasks={facts.tasksTab && kindTabs.some(t => t.key === facts.tasksTab) ? () => onTab(facts.tasksTab!) : undefined}
+              tail={loaded} />
+          </BlockBoundary>
+        )}
+        <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
+          <RecordVerdict record={record} ctx={ctx} lang={lang} />
         </BlockBoundary>
-      )}
-      <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
-        <RecordVerdict record={record} ctx={ctx} lang={lang} />
-      </BlockBoundary>
-      <Tabs className="sk-rec__tabs" variant="underline" items={items} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
-        {panel}
-      </Tabs>
+        <Tabs className="sk-rec__tabs" variant="underline" items={items} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
+          {panel}
+        </Tabs>
+    </>
+  );
+  const around = aside ? (
+    <aside className="sk-rec__around" data-zone="around" aria-label={kitT(lang, 'kit.record.around')}>
+      <p className="sk-rec__zone">{kitT(lang, 'kit.record.around')}</p>
+      {aroundItems.map(i => {
+        const Body = i.id === RECORD_TABS.links ? RecordLinks : i.id === RECORD_TABS.graph ? RecordGraph : i.id === RECORD_TABS.journal ? RecordJournal : null;
+        return (
+          <section key={i.id} className="sk-rec__around-block" data-block={i.id}>
+            <h2 className="sk-rec__around-head">{i.label}{i.count !== undefined && <span className="sk-tab__count">{i.count}</span>}</h2>
+            <BlockBoundary block={i.id} label={i.label} lang={lang} resetKey={record.id}>
+              {Body ? <Body record={record} ctx={ctx} lang={lang} /> : history ? <RecordHistory record={record} source={history} lang={lang} /> : null}
+            </BlockBoundary>
+          </section>
+        );
+      })}
+    </aside>
+  ) : null;
+
+  return (
+    <article className={['sk-rec', aside ? 'sk-rec--zones' : '', className].filter(Boolean).join(' ')} aria-labelledby={titleId} data-kind={record.kind} data-placement={placement}>
+      {aside ? (<>{around}<div className="sk-rec__main">{mainBlock}</div></>) : mainBlock}
     </article>
   );
 }
