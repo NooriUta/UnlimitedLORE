@@ -67,6 +67,20 @@ class LoreMePrefsTest {
         assertEquals(false, d.get("new_navigation"), "новая навигация — только по явному выбору");
     }
 
+    // S5-14: v2 (kit prefs) хранит палитру и плотность «roomy» — сервер обязан их
+    // принимать, иначе живой клиент получает 400, а значения остаются в браузере.
+    @Test
+    void v2PaletteAndRoomyDensityAreAccepted() {
+        assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("density", "roomy")));
+        for (String p : List.of("amber-forest", "lichen", "slate", "juniper", "warm-dark"))
+            assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("palette", p)), "палитра kit " + p);
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("palette", "neon")).size(),
+            "неизвестная палитра отбивается по имени");
+        Map<String, Object> d = LoreMePrefs.defaults();
+        assertEquals("roomy", d.get("density"), "умолчание плотности — решение владелицы 08.11 (S4-21)");
+        assertEquals("amber-forest", d.get("palette"), "умолчание палитры — как у kit и v1");
+    }
+
     @Test
     void unknownKeyAndWrongTypeAreRejectedByName() {
         Map<String, Object> bad = new HashMap<>();
