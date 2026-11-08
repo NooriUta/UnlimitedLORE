@@ -3823,3 +3823,36 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-auth .sk-auth-expired { position: static; transform: none; }
 .sk-auth-expired__icon { color: var(--wrn); }
 .sk-auth-expired__text { min-width: 0; flex: 1; }
+
+/* ---------- Паспорт по зонам (S4-33): запись справа, вычисляемое — колонкой слева ---------- */
+.sk-rec--zones { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.sk-rec__main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.sk-rec__around {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--bd);
+  background: color-mix(in srgb, var(--bg0) 40%, var(--bg1));
+  font-size: var(--fs-sm);
+  min-width: 0;
+}
+.sk-rec__zone { margin: 0; color: var(--inf); font: 700 var(--fs-xs)/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.sk-rec__around-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-rec__around-head { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--t3); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.sk-tab[data-zone='around'] { color: var(--inf); }
+@media (max-width: 720px) {
+  .sk-rec--zones { grid-template-columns: 1fr; }
+  .sk-rec__around { order: 2; border-right: 0; border-top: 1px solid var(--bd); }
+}
+
+/* ---------- Место паспорта (S4-33): панелью справа / снизу / на весь экран ---------- */
+.sk-dock { position: relative; min-height: 640px; border: 1px solid var(--bd); border-radius: var(--r-lg); overflow: hidden; background: var(--bg0); }
+.sk-dock__backdrop { padding: 10px 14px; color: var(--t3); opacity: .6; }
+.sk-dock__panel { position: absolute; overflow: auto; padding: 12px 14px; background: var(--bg1); box-shadow: 0 10px 30px color-mix(in srgb, var(--bg0) 70%, transparent); }
+.sk-dock[data-placement='right'] .sk-dock__panel { top: 0; right: 0; bottom: 0; width: min(480px, 92%); border-left: 1px solid var(--bd); }
+.sk-dock[data-placement='bottom'] .sk-dock__panel { left: 0; right: 0; bottom: 0; height: 72%; border-top: 1px solid var(--bd); }
+.sk-dock[data-placement='full'] .sk-dock__panel { inset: 0; }
+@media (max-width: 720px) {
+  .sk-dock__panel { inset: 0 !important; width: auto !important; height: auto !important; }
+}

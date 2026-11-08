@@ -14,6 +14,8 @@ export interface TabItem {
   /** Счётчик (моно) — сколько записей во вкладке. */
   count?: number;
   disabled?: boolean;
+  /** Зона (S4-33): «around» — вычисляемое вокруг записи, рисуется другим тоном. */
+  zone?: 'record' | 'around';
 }
 
 export interface TabsProps {
@@ -79,6 +81,7 @@ export function Tabs({ items, value, onChange, label, children, className, varia
               tabIndex={item.id === focusId ? 0 : -1}
               disabled={item.disabled}
               className="sk-tab"
+              data-zone={item.zone}
               onClick={() => go(item.id)}
               onKeyDown={e => onKeyDown(e, item.id)}
             >

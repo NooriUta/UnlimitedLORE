@@ -35,6 +35,8 @@ import { themeSource } from './storage/themeSource';
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
 const KitPage = lazy(() => import('./pages/KitPage'));
+// Демо паспортов на реальных объектах (S4-33) — свой чанк: MartProse, граф.
+const PassportDemo = lazy(() => import('./pages/PassportDemo'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
 const NewsPage = lazy(() => import('./news/NewsPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
@@ -47,7 +49,7 @@ const meClient = createLocalS2Client(appStorage, {
   seed: { palette: initialTheme.palette, mode: initialTheme.mode, density: initialTheme.density },
 });
 
-export type Route = 'kit' | 'news' | 'task' | 'home' | ListScreenId;
+export type Route = 'kit' | 'passport' | 'news' | 'task' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /** Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01). */
@@ -61,6 +63,7 @@ const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs:
 export function routeOf(path: string, search = ''): Route {
   const p = path.replace(/\/+$/, '');
   if (p === '/kit') return 'kit';
+  if (p === '/kit/passport') return 'passport';
   if (p === '/news') return 'news';
   const q = new URLSearchParams(search);
   if (q.get('section') === 'tasks' && q.get('passport')) return 'task';
@@ -107,6 +110,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   const query = search ?? win?.location.search ?? (typeof window === 'undefined' ? '' : window.location.search);
   const route = routeOf(current, query);
   if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
+  if (route === 'passport') return <ErrorBoundary lang={lang}><Suspense fallback={<Skeleton />}><PassportDemo /></Suspense></ErrorBoundary>;
   if (route === 'news') {
     return (
       <ErrorBoundary lang="ru">

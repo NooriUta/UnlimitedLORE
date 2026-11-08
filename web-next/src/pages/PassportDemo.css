@@ -1,0 +1,7 @@
+/* Демо паспортов (S4-33): только раскладка страницы и только токены; паспорт и его место — классы kit. */
+.pp-demo { display: flex; flex-direction: column; gap: var(--gap); padding: 12px 16px; min-width: 0; }
+.pp-demo__lead { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.pp-demo__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.pp-demo__pick { display: inline-flex; align-items: center; gap: 6px; color: var(--t3); font-size: var(--fs-xs); }
+.pp-demo__pick select { max-width: 420px; min-height: max(var(--tap), 28px); padding: 0 8px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t1); font-size: var(--fs-sm); }
+.pp-demo__list { margin: 0; padding-left: 0; list-style: none; font-family: var(--mono); font-size: var(--fs-xs); line-height: 2.4; }
