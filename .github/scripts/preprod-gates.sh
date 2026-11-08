@@ -83,9 +83,12 @@ else
       case " $pubs " in *" $p "*) ;; *) fail "препрод не публикует :$p — оверлей препрода не применился" ;; esac
     done
   fi
-  printf '%s' "$cfg" | grep -qE 'Host\(`(lore|new\.lore)\.odal' \
+  # here-string, а не `printf | grep -q`: при pipefail ранний выход grep -q даёт
+  # SIGPIPE у printf, и проверка на большом конфиге «не находит» найденное
+  # (так и упал второй dry-run: lore.db был в конфиге).
+  grep -qE 'Host\(`(lore|new\.lore)\.odal' <<< "$cfg" \
     && fail "в итоговом compose есть метка Traefik на прод-имя (lore.odal/new.lore)"
-  printf '%s' "$cfg" | grep -q "lore.db=$db\|lore.db: $db" \
+  grep -q "lore.db=$db\|lore.db: $db" <<< "$cfg" \
     && ok "бэкенд получит lore.db=$db" \
     || fail "в итоговом compose бэкенд не получает lore.db=$db"
 fi
@@ -105,7 +108,7 @@ if [ -z "$GW" ]; then
 elif ! dbs="$(curl -sf -m 10 -u "root:${ARCADEDB_ROOT_PASSWORD:-}" "http://$GW:2480/api/v1/databases" 2>&1)"; then
   fail "ArcadeDB http://$GW:2480 не ответил под root — наличие базы $db не проверено"
 else
-  if printf '%s' "$dbs" | grep -q "\"$db\""; then
+  if grep -q "\"$db\"" <<< "$dbs"; then
     ok "база $db есть на LORE-ygg 131"
     [ -n "${GITHUB_OUTPUT:-}" ] && echo "db_missing=false" >> "$GITHUB_OUTPUT"
   elif [ "${PREPROD_DB_AUTOCREATE:-false}" = "true" ]; then

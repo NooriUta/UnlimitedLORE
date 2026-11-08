@@ -442,6 +442,18 @@ describe.skipIf(!bashBin)('preprod-db-refresh.sh: в прод и в заморо
   });
 });
 
+describe('скрипты трубы: проверки не врут из-за SIGPIPE', () => {
+  // pipefail + `printf "$big" | grep -q` — grep выходит на первом совпадении,
+  // printf получает SIGPIPE, и «найдено» читается как «не найдено». Так упал
+  // второй dry-run PL-04 (lore.db в конфиге был). Только here-string.
+  it.each([
+    '.github/scripts/preprod-gates.sh', '.github/scripts/lore-host-deploy.sh',
+    '.github/scripts/bundle-probe.sh', '.github/scripts/preprod-pin-sha.sh', 'scripts/preprod-db-refresh.sh',
+  ])('%s', (f) => {
+    expect(code(read(f))).not.toMatch(/printf '%s' "\$\w+" \| grep -q/);
+  });
+});
+
 describe.skipIf(!bashBin)('preprod-gates.sh: защита от прода', () => {
   const S = '.github/scripts/preprod-gates.sh';
   const base = { PREPROD_GATES_ONLY: 'guards', LORE_DB: 'system_aida_lore_preprod', LORE_SECRETS_ENVIRONMENT: 'preprod', COMPOSE_PROJECT_NAME: 'lore-preprod' };

@@ -80,7 +80,7 @@ remote_backup() {
   [ -n "$cid" ] || die "бэкенд прода не запущен — бэкап его кредом невозможен, накатка отменена"
   # shellcheck disable=SC2016 # переменные раскрываются ВНУТРИ контейнера бэкенда
   out="$(docker exec "$cid" sh -c 'curl -s -m 600 -u "$ARCADEDB_USER:$ARCADEDB_ROOT_PASSWORD" -H "Content-Type: application/json" -d "{\"language\":\"sql\",\"command\":\"BACKUP DATABASE\"}" "$MART_ARCADE_URL/api/v1/command/'"$db"'"')"
-  printf '%s' "$out" | grep -q '"result":"OK"' || die "BACKUP DATABASE $db не подтверждён: $(printf '%s' "$out" | head -c 300)"
+  grep -q '"result":"OK"' <<< "$out" || die "BACKUP DATABASE $db не подтверждён: $(printf '%s' "$out" | head -c 300)"
   echo "бэкап $db: $(printf '%s' "$out" | sed -nE 's/.*"backupFile":"([^"]*)".*/\1/p')"
 }
 
@@ -187,13 +187,19 @@ plan() {
   load
   echo "── план выкатки $TAG (ничего не меняется)"
   local s img id rid
+  if [ -z "${SRC8:-}" ]; then
+    echo "  resolve не прошёл — образы, замена тегов и решение по базе не определены; ниже только текущее состояние прода"
+    CODE_SCHEMA=""
+  fi
   for s in $SERVICES; do
+    [ -n "${SRC8:-}" ] || break
     img="$(img_of "$s" "${SRC8:-?}")"; id="$(eval echo "\${ID_$(var_of "$s"):-}")"
     rid="$(r "docker image inspect '$img' --format '{{.Id}}' 2>/dev/null || true")"
     if [ -n "$id" ] && [ "$rid" = "$id" ]; then echo "  $img: уже на lore-host ($id)"; else echo "  $img: будет перевезён (на 131: ${id:-?}, на lore-host: ${rid:-нет})"; fi
   done
   echo "  compose: бэкап docker-compose.yml.bak-$TAG в $DIR_BE и $DIR_NEXT, замена тегов на :${SRC8:-?}"
-  if [ -z "${PROD_SCHEMA:-}" ]; then echo "  база: версия прода неизвестна → бэкап $PROD_DB и накатка (безопасная сторона)"
+  if [ -z "${CODE_SCHEMA:-}" ]; then echo "  база: прод v${PROD_SCHEMA:-?}, версия схемы кода не определена (resolve)"
+  elif [ -z "${PROD_SCHEMA:-}" ]; then echo "  база: версия прода неизвестна → бэкап $PROD_DB и накатка (безопасная сторона)"
   elif [ "${CODE_SCHEMA:-0}" -gt "$PROD_SCHEMA" ]; then echo "  база: прод v$PROD_SCHEMA < код v$CODE_SCHEMA → бэкап $PROD_DB и накатка отдельным compose run"
   elif [ "${CODE_SCHEMA:-0}" -eq "$PROD_SCHEMA" ]; then echo "  база: прод v$PROD_SCHEMA = код v$CODE_SCHEMA → накатка не нужна"
   else echo "  база: прод v$PROD_SCHEMA НОВЕЕ кода v${CODE_SCHEMA:-?} (откат на старый тег) — накатки нет, форвард-совместимый режим"; fi

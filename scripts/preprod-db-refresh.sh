@@ -102,7 +102,7 @@ fi
 # ── 2. снимок прода ─────────────────────────────────────────────────────────
 say "lore-host: BACKUP DATABASE $SOURCE_DB"
 out="$(r "docker exec $bcid sh -c 'curl -s -m 600 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"BACKUP DATABASE\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'")"
-printf '%s' "$out" | grep -q '"result":"OK"' || die "BACKUP DATABASE на проде не подтверждён: $(printf '%s' "$out" | head -c 300)"
+grep -q '"result":"OK"' <<< "$out" || die "BACKUP DATABASE на проде не подтверждён: $(printf '%s' "$out" | head -c 300)"
 bfile="$(printf '%s' "$out" | sed -nE 's/.*"backupFile":"([^"]*)".*/\1/p')"
 [ -n "$bfile" ] || die "имя файла бэкапа не прочитано из ответа: $(printf '%s' "$out" | head -c 300)"
 bpath="$(r "docker exec $REMOTE_YGG sh -c 'find /home/arcadedb -name \"$(basename "$bfile")\" -type f | head -1'")"
