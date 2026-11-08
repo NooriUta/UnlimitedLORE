@@ -115,6 +115,17 @@ describe('раскрытая строка: задачи спринта и ста
     expect(JSON.parse(String(post.init?.body))).toEqual({ entity_type: 'task', id: 'SP/T1', status: 'active' });
   });
 
+  // Владелица 08.11: «в шевронах дерева, если есть статус, не надо к иконке ещё и слова
+  // приписывать — только подсказку». Вложенная строка под ▸ — иконка статуса, имя — в подсказке.
+  it('во вложенных строках статус — только иконка, слово — в подсказке и для чтения', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [task('SP', 'T1', '✅ DONE')], page: { has_more: false, fields_checked: true } }));
+    render(<SprintTasks sprintId="SP" client={client(f)} />);
+    const list = await screen.findByRole('list', { name: 'Задачи спринта SP' });
+    const chip = within(list).getByRole('button', { name: /^Статус: / });
+    expect(chip.querySelector('.sk-schip__title')).toBeNull();
+    expect(chip.getAttribute('title')).toMatch(/^Статус: /);
+  });
+
   it('отказ сохранения — откат и причина на экране', async () => {
     const f = fakeFetch(url => url.pathname === '/lore/status'
       ? jsonRes({ error: 'FORBIDDEN', detail: 'admin role required' }, 403)

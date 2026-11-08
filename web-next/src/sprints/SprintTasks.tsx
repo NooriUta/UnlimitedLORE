@@ -56,7 +56,8 @@ export function SprintTasks({ sprintId, client = defaultLoreClient }: { sprintId
               };
               return (
                 <li key={r.task_uid} className="sprint-tasks__item">
-                  <StatusChip record={rec} config={config} save={save} />
+                  {/* Вложенная строка под ▸ — статус только иконкой, имя в подсказке (владелица 08.11). */}
+                  <StatusChip record={rec} config={config} save={save} compact />
                   <Pill variant="id">{r.task_id}</Pill>
                   <span className="sprint-tasks__title">{rec.title}</span>
                 </li>
