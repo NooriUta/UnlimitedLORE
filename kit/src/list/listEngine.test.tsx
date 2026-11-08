@@ -80,7 +80,8 @@ describe('строка [Фильтр][Группировка][Порядок]', 
 
   it('порядок — по полю конфига (Приоритет), направление переключается', () => {
     const { container } = render(<ListView config={cfg} data={data(rs())} urlState={false} />);
-    fireEvent.change(screen.getByLabelText('Порядок'), { target: { value: 'fields.prio' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Порядок:/ }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Порядок' })).getByRole('radio', { name: 'Приоритет' }));
     expect(ids(container)).toEqual(['b', 'c', 'a']);
     fireEvent.click(screen.getByRole('button', { name: 'по убыванию' }));
     expect(ids(container)).toEqual(['a', 'c', 'b']);

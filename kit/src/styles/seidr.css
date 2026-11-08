@@ -1739,6 +1739,8 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__bar { justify-content: space-between; }
 /* «Показано N из M» — в конце единственной полосы, прижато вправо. */
 .sk-list__controls > .sk-list__shown { margin-left: auto; }
+/* Быстрые фильтры — тем же кеглем, что вся полоса (08.11, «шрифты скачут»). */
+.sk-list__quick .sk-pill { font-size: var(--fs-sm); }
 .sk-list__view { display: inline-flex; align-items: center; gap: 4px; }
 
 /* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
@@ -1855,20 +1857,21 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-list__label {
   color: var(--t3);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
 /* Число быстрого фильтра — отдельный бейдж, а не продолжение подписи («Действует100»). */
 .sk-list__qcount {
-  margin-left: 4px;
-  padding: 0 6px;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  /* Как в v1 (LoreAnalytics chipCount): число простым текстом — моно, приглушённое,
+     без шарика: шарик с паддингом был выше самой пилюли (владелица 08.11). */
+  margin-left: 2px;
   font-family: var(--mono);
-  font-size: var(--fs-2xs);
-  color: var(--acc);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  color: var(--t2);
+  opacity: .75;
 }
 .sk-list__field {
   display: inline-flex;
@@ -1902,7 +1905,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   float: left;
   padding: 0;
   color: var(--t3);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -1915,10 +1918,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
   background: var(--acc);
   color: var(--bg0);
   font-family: var(--mono);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-sm);
   text-align: center;
 }
-.sk-list__qicon { display: inline-flex; color: var(--t2); }
+.sk-list__qicon { display: inline-flex; margin-right: 4px; color: var(--t2); }
 .sk-list__desclabel { color: var(--t3); }
 .sk-list__desctail { color: var(--t2); }
 /* ── Фильтры listView (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-05): поиск текста,
@@ -1986,7 +1989,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--bd);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-md);
   background: var(--bg2);
 }
 .sk-facet__op {
@@ -1994,11 +1997,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
   min-height: max(var(--tap), 22px);
   padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
   background: none;
   color: var(--t2);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: 600;
+  white-space: nowrap;
 }
 .sk-facet__op.is-on {
   border-color: var(--acc);
@@ -2069,7 +2073,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__shown {
   margin: 0;
   color: var(--t2);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
 }
 .sk-list__shown[data-kind='truncated'],
 .sk-list__shown[data-kind='unknown_total'] {

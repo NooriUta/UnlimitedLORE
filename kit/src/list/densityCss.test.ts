@@ -52,9 +52,9 @@ describe('формы контролов', () => {
     expect(rule(".sk-tabs--underline .sk-tab[aria-selected='true']")).toMatch(/border-bottom-color:\s*var\(--acc\)/);
   });
 
-  it('число быстрого фильтра — бейдж с отступом от подписи', () => {
+  it('число быстрого фильтра — с отступом от подписи, простым текстом как в v1 (владелица 08.11: шарик был выше пилюли)', () => {
     const b = rule('.sk-list__qcount');
     expect(b).toMatch(/margin-left:/);
-    expect(b).toMatch(/border-radius:\s*var\(--r-pill\)/);
+    expect(b).not.toMatch(/background|border-radius/);
   });
 });

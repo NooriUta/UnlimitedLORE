@@ -51,7 +51,8 @@ describe('ListScreen — спринты', () => {
     expect(screen.getByRole('button', { name: 'Убрать: Статус: В работе' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Убрать: Статус: В работе' }));
 
-    fireEvent.change(screen.getByLabelText('Порядок'), { target: { value: 'priority' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Порядок:/ })); // 08.11: меню kit вместо системного списка
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Порядок' })).getByRole('radio', { name: 'Приоритет' }));
     fireEvent.click(screen.getByRole('button', { name: 'по убыванию' }));
     // Порядок — внутри открытых; закрытые — своей группой в конце (S4-27).
     fireEvent.click(screen.getByRole('button', { name: /Закрытые\s*1/ }));
