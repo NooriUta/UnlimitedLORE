@@ -29,7 +29,9 @@ services:
   # Одноразовый: отрабатывает и выходит. Идемпотентен — повторный запуск на
   # готовом хранилище ничего не меняет и не падает.
   minio-init:
-    image: minio/mc:latest
+    # PL-04 (08.11.2026): образа minio/mc больше нет ни на Docker Hub, ни на
+    # Quay — клиент mc той же версии лежит внутри minio/minio (/usr/bin/mc).
+    image: minio/minio:latest
     depends_on:
       - minio
     restart: "no"
