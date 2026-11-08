@@ -124,6 +124,30 @@ class LoreModelTest {
         assertFalse(d.containsKey("app_setting"), "настройки приложения — не перечень значений");
     }
 
+    // «У типа нет статусов» ≠ «тип ещё не описан» (замечание kit-сессии 08.11).
+    @Test
+    void describedStatusTypesAreListedAndTheRestIsMarkedMissing() {
+        Map<String, Object> m = LoreModel.build(taskDict());
+        assertEquals(List.of("task", "sprint", "adr", "spec", "decision"), m.get("statuses_known"));
+        assertTrue(String.valueOf(m.get("missing")).contains("statuses:*"),
+            "пока описаны не все типы, раздел statuses помечен неполным");
+    }
+
+    // Порядок — часть контракта: по нему строится меню выбора.
+    @Test
+    void orderIsPartOfTheContract() {
+        List<Map<String, Object>> rows = new ArrayList<>(taskDict());
+        rows.add(dict("work_class", "jtd", "JTD", null, "#C0A36E", 20));
+        rows.add(dict("work_class", "uc", "UC", null, "#5AB4E8", 10));
+        rows.add(dict("area", "api", "API", null, null, 20));
+        Map<String, Object> m = LoreModel.build(rows);
+        @SuppressWarnings("unchecked") Map<String, Object> d = (Map<String, Object>) m.get("dictionaries");
+        assertEquals(List.of("area", "task_status", "work_class"), List.copyOf(d.keySet()), "справочники по алфавиту");
+        @SuppressWarnings("unchecked") List<Map<String, Object>> wc = (List<Map<String, Object>>) d.get("work_class");
+        assertEquals(List.of("uc", "jtd"), wc.stream().map(x -> x.get("code")).toList(), "статьи по order");
+        assertEquals("todo", entries(m, "task").get(0).get("code"), "статусы — в порядке жизненного цикла");
+    }
+
     @Test
     void partialModelSaysWhatIsMissingAndLeaksNoSystemFields() {
         Map<String, Object> m = LoreModel.build(taskDict());

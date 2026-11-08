@@ -33,6 +33,20 @@ import java.util.TreeMap;
  * {@code perms.status_next} ответа {@code /lore/record}. {@code allow: null} —
  * переходы для типа не заданы (неизвестно), а не «запрещено всё».
  *
+ * <p><b>Контракт для потребителя</b> (сверено с kit-сессией 08.11):
+ * <ul>
+ *   <li>{@code statuses_known} — типы, чьи статусы описаны. Типа в этом списке нет —
+ *       значит он <i>ещё не описан</i>, а не «у него нет статусов»; пока описаны
+ *       не все типы, в {@code missing} стоит раздел {@code "statuses:*"}.</li>
+ *   <li>Машиночитаемы только флаги статьи ({@code in_dictionary}, {@code in_lifecycle},
+ *       {@code active}). {@code warnings} — текст для человека; разбирать его
+ *       строками нельзя — формулировки меняются.</li>
+ *   <li>Порядок — часть контракта: справочники по алфавиту {@code dict_type},
+ *       статьи внутри — по {@code order}, затем по {@code code}; статусные статьи —
+ *       в порядке жизненного цикла, затем статьи справочника вне цикла. По этому
+ *       порядку строится меню выбора.</li>
+ * </ul>
+ *
  * <p>Чистая функция: вход — строки справочника, выход — документ. Без БД и сети.
  */
 final class LoreModel {
@@ -80,10 +94,13 @@ final class LoreModel {
                 byType.getOrDefault(e.getValue(), List.of()), warnings));
         }
 
+        // Хеш версии считается по content, в котором format уже есть; в документ format
+        // кладётся первым ради читаемости — это не второе значение, дублирования в хеше нет.
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("format", FORMAT);
         content.put("partial", true);
-        content.put("missing", List.of("types", "surfaces"));
+        content.put("missing", List.of("types", "surfaces", "statuses:*"));
+        content.put("statuses_known", List.copyOf(STATUS_DICTS.keySet()));
         content.put("statuses", statuses);
         content.put("dictionaries", dictionaries);
         content.put("warnings", warnings);
