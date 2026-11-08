@@ -5,6 +5,9 @@ export * from './tokens/prefs';
 export * from './elements';
 export * from './i18n';
 export * from './states';
+// Модель LORE: загрузчик с подключаемым источником и сторож «данные не
+// пробивают поведение» (ADR-LORE-048, K-MODEL-LOADER).
+export * from './model';
 export * from './shell';
 // Контракт ядра kit (SPRINT_UXR_S10_SEIDR_KIT) и каркас записи (K-04). Тело
 // записи рендерит ctx.md — MD-элементы по-прежнему из `@seidr/kit/content`.
