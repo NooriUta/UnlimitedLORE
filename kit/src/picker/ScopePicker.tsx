@@ -14,6 +14,7 @@
 //
 // Компонент «глупый»: список, выбор и состояние даёт приложение (откуда — из
 // слайсов LORE, из URL), здесь — только вид и действия.
+import { ICON_CANON } from '../elements/iconCanon';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
@@ -76,7 +77,7 @@ export function ScopePicker(props: ScopePickerProps) {
 }
 
 function ScopePickerInner({
-  label, icon = 'stack', options, value, onChange, state = 'ok', error, onRetry, completeness,
+  label, icon = ICON_CANON.scopeAll, options, value, onChange, state = 'ok', error, onRetry, completeness,
   forbiddenReason, mine = 'known', mineHint, narrow: narrowProp, lang = 'ru', className,
 }: ScopePickerProps) {
   const narrow = useNarrow(narrowProp);
@@ -273,7 +274,7 @@ function ScopeBody({
           aria-pressed={value.length === 0}
           onClick={() => onChange([])}
         >
-          <GameIcon slug="stack" size={13} />
+          <GameIcon slug={ICON_CANON.scopeAll} size={13} />
           {kitT(lang, 'kit.scope.all')}
         </button>
       </div>

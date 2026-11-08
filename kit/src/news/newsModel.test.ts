@@ -7,6 +7,7 @@ import {
   DEFAULT_NEWS_QUERY, NEWS_FIXTURE, NEWS_KIND_META, NEWS_TYPE_META, NewsContractError, buildNewsParams,
   newsDict, newsHref, newsGroupLabel, parseNewsResponse, readNewsQuery, utcClock, writeNewsQuery,
 } from './index';
+import { hasGameIcon, registerGameIcons } from '../elements/GameIcon';
 
 describe('S7A-02 · запрос GET /lore/news/v2', () => {
   it('по умолчанию: неделя, пояс, разрез по проектам, матрица 6, без limit (окно целиком, паритет 14)', () => {
@@ -122,11 +123,12 @@ describe('S7A-02 · подписи и ссылки', () => {
     expect(newsHref(by('release'))).toBe('/lore?section=releases&rel=NooriUta%2FUnlimitedLORE%23v1.17.0');
   });
 
-  it('иконки типов (паритет 2) и событий (паритет 1) есть в наборе game-icons', () => {
-    const icons = (gameIcons as { icons: Record<string, unknown> }).icons;
+  // S4-25: события «отменено» и «вернули в работу» — lucide (выбор владелицы), проверка — по реестру GameIcon.
+  it('иконки типов (паритет 2) и событий (паритет 1) есть в зарегистрированных наборах', () => {
+    registerGameIcons(gameIcons);
     const slugs = [...Object.values(NEWS_TYPE_META), ...Object.values(NEWS_KIND_META)].map(m => m.icon);
     expect(slugs.length).toBeGreaterThan(10);
-    expect(slugs.filter(s => !(s in icons))).toEqual([]);
+    expect(slugs.filter(s => !hasGameIcon(s))).toEqual([]);
     expect(NEWS_TYPE_META.release.icon).toBe('open-book');
     expect(NEWS_TYPE_META.adr.icon).toBe('scroll-quill');
     expect(NEWS_TYPE_META.decision.icon).toBe('gavel');

@@ -11,3 +11,5 @@ export * from './Kbd';
 export * from './Tooltip';
 export * from './Toolbar';
 export * from './Segmented';
+// Канон иконок (S4-25) и вшитый lucide.
+export * from './iconCanon';

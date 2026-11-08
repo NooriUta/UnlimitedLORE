@@ -8,8 +8,15 @@
 import type { CSSProperties } from 'react';
 import { addCollection, Icon } from '@iconify/react/offline';
 import type { IconifyJSON } from '@iconify/react/offline';
+import { LUCIDE_ICONS } from './lucideIcons';
+import { ICON_CANON } from './iconCanon';
 
 const known = new Set<string>();
+
+// S4-25: второй набор v1 — lucide. Вшиты только выбранные иконки (~9 КБ),
+// поэтому kit регистрирует их сам; слаг — «lucide:имя».
+addCollection(LUCIDE_ICONS);
+for (const name of [...Object.keys(LUCIDE_ICONS.icons), ...Object.keys(LUCIDE_ICONS.aliases ?? {})]) known.add(`lucide:${name}`);
 
 /** Зарегистрировать набор game-icons (`@iconify-json/game-icons/icons.json`). */
 export function registerGameIcons(data: unknown): void {
@@ -19,7 +26,7 @@ export function registerGameIcons(data: unknown): void {
   for (const name of Object.keys(set.aliases ?? {})) known.add(name);
 }
 
-/** Есть ли слаг в зарегистрированном наборе. */
+/** Есть ли слаг в зарегистрированном наборе (game-icons без префикса или «lucide:имя»). */
 export function hasGameIcon(slug: string): boolean {
   return known.has(slug);
 }
@@ -34,18 +41,18 @@ export const SECTION_ICONS = {
   tyr: 'scales',
   bragi: 'harp',
   // v1 берёт 'town-crier', но в наборе game-icons такого слага нет — иконка
-  // раздела «Новости» в v1 молча пустая. Здесь — newspaper (как в прототипе v4).
-  news: 'newspaper',
+  // раздела «Новости» в v1 молча пустая. Выбор владелицы (S4-25) — из словаря.
+  news: ICON_CANON.sectionNews,
   value: 'bullseye',
-  plan: 'sprint',
-  knowledge: 'scroll-quill',
+  plan: ICON_CANON.plan,
+  knowledge: ICON_CANON.knowledge,
   tech: 'gears',
   control: 'checkered-flag',
-  filter: 'funnel',
+  filter: ICON_CANON.segFilter,
   search: 'magnifying-glass',
-  commands: 'lightning-trio',
-  views: 'round-star',
-  team: 'three-friends',
+  commands: ICON_CANON.commands,
+  views: ICON_CANON.views,
+  // «Командные» — без иконки (S4-25); подбор вне наборов — S4-32.
 } as const satisfies Record<string, string>;
 
 export interface GameIconProps {
@@ -75,7 +82,7 @@ export function GameIcon({ slug, size = 15, label, color, className, style }: Ga
   }
   return (
     <Icon
-      icon={`game-icons:${slug}`}
+      icon={slug.includes(':') ? slug : `game-icons:${slug}`}
       width={size}
       height={size}
       className={cls}

@@ -15,6 +15,7 @@
 //    без правки текст не трогает (TipTap пишет в черновик только на правку).
 //  - Сохранение — onSave вызывающего (kit не знает API). Сбой — видимая
 //    ошибка, правка и черновик остаются. Esc выходит только без правок.
+import { ICON_CANON } from '../elements/iconCanon';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { MartProse } from './MartProse';
@@ -161,7 +162,7 @@ export function MdInlineEdit({
           <IconButton
             ref={penRef}
             className="sk-mdedit__pen"
-            icon="quill-ink"
+            icon={ICON_CANON.ctlEdit}
             label={t('kit.mdedit.edit', { field: label })}
             onClick={open}
           />

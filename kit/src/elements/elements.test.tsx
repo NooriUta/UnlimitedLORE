@@ -8,7 +8,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { axeViolations } from '../test/axe';
 import {
   GameIcon, IconButton, KNOWN_STATUSES, Kbd, Pill, Chip, SECTION_ICONS, STATUS_CATEGORIES,
-  StatusStar, Toolbar, Tooltip, registerGameIcons, statusMeta,
+  StatusStar, Toolbar, Tooltip, hasGameIcon, registerGameIcons, statusMeta,
 } from '../index';
 
 beforeAll(() => {
@@ -115,9 +115,10 @@ describe('GameIcon — game-icons через Iconify (офлайн), канон�
     expect(container.querySelector('svg')).toBeNull();
   });
 
-  it('канонические слаги разделов существуют в наборе game-icons', () => {
-    const known = new Set(Object.keys((gameIcons as { icons: Record<string, unknown> }).icons));
-    const missing = Object.entries(SECTION_ICONS).filter(([, slug]) => !known.has(slug));
+  // S4-25: второй набор v1 — lucide (слаг «lucide:имя», вшит в kit); проверка — по реестру GameIcon.
+  it('канонические слаги разделов есть в зарегистрированных наборах (game-icons + lucide)', () => {
+    registerGameIcons(gameIcons);
+    const missing = Object.entries(SECTION_ICONS).filter(([, slug]) => !hasGameIcon(slug));
     expect(missing).toEqual([]);
     expect(SECTION_ICONS.projects).toBe('compass');
   });
