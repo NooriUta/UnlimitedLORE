@@ -31,3 +31,4 @@ export * from './StatusChip';
 // рендера по виду записи (K-10). Отдельная точка входа `@seidr/kit/core`:
 // умолчание ctx.md — MartProse, а он тянет mermaid/bpmn-js.
 export * from './kindHooks';
+export * from './statusAxis';

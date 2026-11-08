@@ -103,6 +103,26 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
     /** Режим «чистая база»: переопределяет {@link LoreArcadeDbFreshTestResource}. */
     boolean forceFresh() { return false; }
 
+    /**
+     * Встроенный сервер вместо контейнера: явно {@code LORE_TEST_DB_EMBEDDED=true},
+     * явно выключен {@code =false}; без настройки — когда Docker недоступен
+     * (машина без Docker раньше не могла гонять live-DB тесты вовсе).
+     */
+    boolean embeddedMode() {
+        String v = env.apply("LORE_TEST_DB_EMBEDDED");
+        if ("true".equalsIgnoreCase(v)) return true;
+        if ("false".equalsIgnoreCase(v)) return false;
+        return !dockerAvailable();
+    }
+
+    static boolean dockerAvailable() {
+        try {
+            return org.testcontainers.DockerClientFactory.instance().isDockerAvailable();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     record Conn(String baseUrl, String db, String password) {
         String key() { return baseUrl + "|" + db; }
     }
@@ -119,12 +139,21 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
     @Override
     public Map<String, String> start() {
         String externalUrl = env.apply("LORE_TEST_DB_URL");
-        boolean external = externalUrl != null && !externalUrl.isBlank();
+        boolean externalUrlSet = externalUrl != null && !externalUrl.isBlank();
+        boolean embedded = !externalUrlSet && embeddedMode();
+        // «Постоянная» база — переживает классы в пределах прогона: внешняя по URL
+        // или встроенный сервер (один на JVM). Для неё работает reuse-путь.
+        boolean external = externalUrlSet || embedded;
         String baseUrl;
-        if (external) {
+        if (externalUrlSet) {
             baseUrl = externalUrl.replaceAll("/+$", "");
             TEST_DB = orDefault(env.apply("LORE_TEST_DB_NAME"), "lore_ci_test");
             ROOT_PASSWORD = orDefault(env.apply("LORE_TEST_DB_PASSWORD"), "playwithdata");
+        } else if (embedded) {
+            baseUrl = LoreEmbeddedArcadeDb.url(ROOT_PASSWORD_CONTAINER);
+            TEST_DB = "lore_embedded_test";
+            ROOT_PASSWORD = ROOT_PASSWORD_CONTAINER;
+            log("встроенный сервер ArcadeDB: " + baseUrl + " (без Docker и без общей базы)");
         } else {
             arcade = new GenericContainer<>(DockerImageName.parse("arcadedata/arcadedb:26.10.2"))
                 .withEnv("JAVA_OPTS", "-Darcadedb.server.rootPassword=" + ROOT_PASSWORD_CONTAINER)

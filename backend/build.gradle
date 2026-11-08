@@ -64,6 +64,13 @@ dependencies {
     // for SCD2-transition and A1-rollback tests — not part of the Quarkus
     // platform BOM, so pinned directly.
     testImplementation 'org.testcontainers:testcontainers:2.0.5'
+
+    // Встроенный сервер ArcadeDB для live-DB тестов без Docker и без общей базы
+    // (предложение владелицы 08.11; режим embedded в LoreArcadeDbTestResource).
+    // Только тесты: приложение по-прежнему ходит в ArcadeDB по REST
+    // (ADR-YGG-REST-ONLY), коллизии ANTLR из ADR-DA-011 здесь нет — в бэкенде LORE
+    // ANTLR не подключён. Версия — та же, что у образа контейнерного режима.
+    testImplementation 'com.arcadedb:arcadedb-server:26.10.2'
 }
 
 compileJava.options.encoding     = 'UTF-8'

@@ -23,15 +23,26 @@ function fakeFetch(routes: Record<string, { status?: number; body: unknown }>) {
 const apiTask = {
   task_uid: 'u1', task_id: 'S5-02', title: 'Вкладка задач', order_index: 2, phase_uid: 'ph-1',
   status_raw: 'todo', effort_days: 1.5, note_md: null, component_ids: null,
-  executor_agent: 'claude', reviewer_agent: null, task_type: 'feature',
+  executor_agent: 'claude', reviewer_agent: null, task_type: 'feature', work_class: 'enb',
 };
 
 describe('toTaskRow', () => {
   it('переводит строку слайса в строку таблицы', () => {
     expect(toTaskRow(apiTask)).toEqual({
       uid: 'u1', id: 'S5-02', title: 'Вкладка задач', status: 'todo', phase: 'ph-1',
-      effortDays: 1.5, executor: 'claude', reviewer: null, taskType: 'feature', order: 2,
+      effortDays: 1.5, executor: 'claude', reviewer: null, taskType: 'feature', workClass: 'enb', order: 2,
     });
+  });
+
+  // S4-36: класс работы приезжает из того же среза, что и тип задачи. Без него
+  // строка не покажет плашку, а отсутствие класса — обычное дело (не ошибка).
+  it('класса работы нет в срезе — null, а не пустая строка', () => {
+    const { work_class: _omit, ...withoutClass } = apiTask;
+    expect(toTaskRow(withoutClass).workClass).toBeNull();
+  });
+
+  it('класс работы не теряется и не переименовывается', () => {
+    expect(toTaskRow({ ...apiTask, work_class: 'uc' }).workClass).toBe('uc');
   });
 });
 

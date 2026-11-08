@@ -5,9 +5,10 @@
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
 import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, Ref } from 'react';
+import type { CSSProperties, KeyboardEvent, Ref } from 'react';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
+import type { KitDictItem } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
 import { kitT, useKitLang, type KitKey, type KitLang } from '../i18n';
@@ -31,6 +32,13 @@ export interface TaskTableProps {
   hrefFor?: (task: TaskRowData) => string;
   /** Имя таблицы (caption). */
   label: string;
+  /**
+   * Справочники LORE для строки задачи (S4-36): тип задачи рисуется иконкой,
+   * класс работы — плашкой. Нет справочника — показываем исходные значения и
+   * ничего о них не утверждаем: «словаря нет» и «значения нет в словаре» —
+   * разные вещи, и путать их нельзя.
+   */
+  dict?: { taskType?: readonly KitDictItem[]; workClass?: readonly KitDictItem[] };
   className?: string;
 }
 
@@ -53,7 +61,46 @@ function groupLabel(lang: KitLang, g: TaskGroup): string {
 
 const dash = '—';
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, className }: TaskTableProps) {
+/** Статья справочника по коду. Нет справочника или нет кода — undefined. */
+function dictEntry(items: readonly KitDictItem[] | undefined, code: string | null): KitDictItem | undefined {
+  if (!items || !code) return undefined;
+  return items.find(i => i.code === code);
+}
+
+type CellProps = {
+  code: string | null;
+  items: readonly KitDictItem[] | undefined;
+  t: (k: KitKey, v?: Record<string, string | number>) => string;
+};
+
+/**
+ * Тип задачи (S4-36): иконка из справочника. Значения нет в справочнике —
+ * печатаем исходный код и прямо говорим об этом; справочника нет вовсе —
+ * печатаем код молча, судить не о чем.
+ */
+function TypeCell({ code, items, t }: CellProps) {
+  if (!code) return <span className="sk-tasks__none">{dash}</span>;
+  const item = dictEntry(items, code);
+  if (item?.icon) return <GameIcon slug={item.icon} size={14} label={item.title} color={item.color} />;
+  if (item) return <span className="sk-tasks__dict-raw" title={item.title}>{item.title}</span>;
+  if (items) return <span className="sk-tasks__dict-raw" title={t('kit.tasks.dict.unknown', { code })}>{code}</span>;
+  return <span className="sk-tasks__dict-raw">{code}</span>;
+}
+
+/** Класс работы (S4-36): плашка кодом, как в v1. Цвет — из справочника. */
+function ClassCell({ code, items, t }: CellProps) {
+  if (!code) return <span className="sk-tasks__none">{dash}</span>;
+  const item = dictEntry(items, code);
+  const text = code.toUpperCase();
+  if (item) {
+    const style = item.color ? ({ '--cls-c': item.color } as CSSProperties) : undefined;
+    return <span className="sk-tasks__cls" title={item.title} style={style}>{text}</span>;
+  }
+  if (items) return <span className="sk-tasks__cls sk-tasks__cls--unknown" title={t('kit.tasks.dict.unknown', { code })}>{text}</span>;
+  return <span className="sk-tasks__cls">{text}</span>;
+}
+
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, className }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const groups = groupTasks(tasks, groupBy, phases);
@@ -62,15 +109,18 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
   const phaseById = new Map(phases.map(p => [p.uid, p]));
   const fmt = new Intl.NumberFormat(lang === 'en' ? 'en' : 'ru', { maximumFractionDigits: 2 });
 
+  // Порядок как в v1 (S4-36, эталон — скрин владелицы): статус, тип, класс
+  // работы и код идут слева единым якорем, дальше название и всё остальное.
   const cols: { key: string; label: string }[] = [
     { key: 'status', label: t('kit.tasks.col.status') },
+    { key: 'type', label: t('kit.tasks.col.type') },
+    { key: 'cls', label: t('kit.tasks.col.class') },
     { key: 'id', label: t('kit.tasks.col.id') },
     { key: 'title', label: t('kit.tasks.col.title') },
     ...(showPhase ? [{ key: 'phase', label: t('kit.tasks.col.phase') }] : []),
     { key: 'effort', label: t('kit.tasks.col.effort') },
     { key: 'executor', label: t('kit.tasks.col.executor') },
     { key: 'reviewer', label: t('kit.tasks.col.reviewer') },
-    { key: 'type', label: t('kit.tasks.col.type') },
     ...(onSave ? [{ key: 'actions', label: t('kit.tasks.col.actions') }] : []),
   ];
 
@@ -116,6 +166,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   phaseText={task.phase ? (phaseById.get(task.phase)?.id ?? task.phase) : null}
                   effortText={task.effortDays == null ? null : fmt.format(task.effortDays)}
                   colCount={cols.length}
+                  dict={dict}
                   onStatusChange={onStatusChange}
                   onSave={onSave}
                   href={hrefFor?.(task)}
@@ -136,12 +187,13 @@ interface RowProps {
   phaseText: string | null;
   effortText: string | null;
   colCount: number;
+  dict?: TaskTableProps['dict'];
   onStatusChange?: TaskTableProps['onStatusChange'];
   onSave?: TaskTableProps['onSave'];
   href?: string;
 }
 
-function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, onStatusChange, onSave, href }: RowProps) {
+function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, dict, onStatusChange, onSave, href }: RowProps) {
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -303,6 +355,12 @@ function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, onSta
             </div>
           )}
         </td>
+        <td className="sk-tasks__td sk-tasks__td--type">
+          <TypeCell code={task.taskType} items={dict?.taskType} t={t} />
+        </td>
+        <td className="sk-tasks__td sk-tasks__td--cls">
+          <ClassCell code={task.workClass} items={dict?.workClass} t={t} />
+        </td>
         <td className="sk-tasks__td">
           {href ? <a className="sk-tasks__id" href={href}>{task.id}</a> : <span className="sk-tasks__id">{task.id}</span>}
         </td>
@@ -319,7 +377,6 @@ function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, onSta
         <td className="sk-tasks__td">
           {draft ? input('reviewer', 'kit.tasks.col.reviewer') : val(task.reviewer)}
         </td>
-        <td className="sk-tasks__td">{val(task.taskType)}</td>
         {onSave && (
           <td className="sk-tasks__td sk-tasks__td--actions">
             {draft ? (

@@ -13,7 +13,7 @@ const phases: TaskPhase[] = [
 function task(id: string, over: Partial<TaskRowData> = {}): TaskRowData {
   return {
     uid: `u-${id}`, id, title: `Задача ${id}`, status: 'todo', phase: null,
-    effortDays: null, executor: null, reviewer: null, taskType: null, order: 0, ...over,
+    effortDays: null, executor: null, reviewer: null, taskType: null, workClass: null, order: 0, ...over,
   };
 }
 

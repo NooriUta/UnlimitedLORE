@@ -241,5 +241,14 @@
   "pp.rel.blocks": "Блокирует",
   "pp.rel.supersedes": "Заменяет",
   "pp.rel.supersededBy": "Заменён",
-  "pp.rel.justifies": "Обосновывает задачи"
+  "pp.rel.justifies": "Обосновывает задачи",
+  "sprintBurn.title": "BURN-DOWN",
+  "sprintBurn.remaining": "остаток",
+  "sprintBurn.done": "закрыто",
+  "sprintBurn.scope": "объём",
+  "sprintBurn.peak": "пик",
+  "sprintBurn.loading": "Считаем историю спринта…",
+  "sprintBurn.empty": "Истории по спринту нет",
+  "sprintBurn.failed": "Историю спринта не смогли прочитать",
+  "sprintBurn.partial": "История неполная — цифры ниже считаны по обрезанной выдаче"
 }
