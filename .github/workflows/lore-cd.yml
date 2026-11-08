@@ -240,6 +240,10 @@ jobs:
       # проверяет, что зеркало реально отдаёт .jar, а не просто отвечает.
       LORE_MAVEN_MIRROR: http://192.168.3.131:8081/repository/maven-central-proxy/
       LORE_PLUGIN_MIRROR: http://192.168.3.131:8081/repository/gradle-plugins-proxy/
+      # PL-12: дистрибутив Gradle — raw-proxy на services.gradle.org/distributions.
+      # Не отвечает (репозиторий не заведён, Nexus лежит) — compose-build-retry.sh
+      # снимает его до сборки, и обёртка качает напрямую, как раньше.
+      LORE_GRADLE_DIST_MIRROR: http://192.168.3.131:8081/repository/gradle-dist-proxy/
     steps:
       - uses: actions/checkout@v7
         with:

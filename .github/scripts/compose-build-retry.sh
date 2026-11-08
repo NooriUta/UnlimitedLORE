@@ -50,6 +50,22 @@ done
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 bash "$SELF_DIR/registry-mirror-probe.sh" || true
 
+# PL-12: зеркало дистрибутива Gradle проверяется ДО сборки — тем самым файлом,
+# который попросит обёртка. Не отдаёт (репозиторий не заведён, Nexus лежит) —
+# снимается сразу, без траты попытки: иначе первая попытка ушла бы на 404, а её
+# откат снял бы заодно и рабочие зеркала зависимостей.
+if [ -n "${LORE_GRADLE_DIST_MIRROR:-}" ]; then
+  props="$SELF_DIR/../../backend/gradle/wrapper/gradle-wrapper.properties"
+  dist="$(sed -n 's#^distributionUrl=.*/##p' "$props" 2>/dev/null | tr -d '\r')"
+  probe="${LORE_GRADLE_DIST_MIRROR%/}/$dist"
+  if [ -n "$dist" ] && curl -sf --noproxy '*' -m 300 -o /dev/null -r 0-0 "$probe"; then
+    echo "зеркало дистрибутива Gradle отвечает: $probe"
+  else
+    echo "::warning::зеркало дистрибутива Gradle ($probe) не отвечает — дистрибутив пойдёт напрямую"
+    export LORE_GRADLE_DIST_MIRROR=""
+  fi
+fi
+
 attempt=1
 while : ; do
   echo "::group::docker compose build $* (попытка $attempt из $ATTEMPTS)"
@@ -73,6 +89,10 @@ while : ; do
   if [ -n "${LORE_MAVEN_MIRROR:-}" ]; then
     export LORE_MAVEN_MIRROR="" LORE_PLUGIN_MIRROR=""
     echo "::warning::сборка с зеркалом Nexus не удалась — следующая попытка пойдёт напрямую"
+  fi
+  if [ -n "${LORE_GRADLE_DIST_MIRROR:-}" ]; then
+    export LORE_GRADLE_DIST_MIRROR=""
+    echo "::warning::сборка с зеркалом дистрибутива Gradle не удалась — следующая попытка качает его напрямую"
   fi
 
   if [ "$attempt" -ge "$ATTEMPTS" ]; then
