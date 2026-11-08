@@ -8,6 +8,8 @@
 // Узкий модуль под экран спринтов; когда у v2 появится общий клиент (каркас S4),
 // этот переедет в него без смены интерфейса.
 
+import { loreFetch } from '../auth/session';
+
 export interface SliceBody<T> {
   rows: T[];
   truncated?: boolean | 'unknown';
@@ -61,7 +63,7 @@ async function toError(res: Response): Promise<LoreError> {
 }
 
 export function createLoreClient(opts: LoreClientOptions = {}): LoreClient {
-  const doFetch = opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
+  const doFetch = opts.fetch ?? loreFetch;
   const origin = opts.origin ?? (typeof location === 'undefined' ? 'http://localhost' : location.origin);
   const headers = () => opts.headers?.() ?? {};
   return {

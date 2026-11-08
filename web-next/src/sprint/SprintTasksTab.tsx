@@ -7,6 +7,7 @@
 // засоряет историю «назад»). Запись подтверждённая: строка меняется после
 // ответа сервера, отказ рисуется в строке (это делает TaskTable).
 import { useCallback, useEffect, useState } from 'react';
+import { loreFetch } from '../auth/session';
 import {
   LoadStateView, pushUrlState, readUrlState, TaskTable, TASK_GROUP_BYS, useLoadState,
   type TaskGroupBy, type TaskPatch, type TaskRowData, type TaskStatus, type UrlWindow,
@@ -37,7 +38,7 @@ export interface SprintTasksTabProps {
 
 export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps) {
   const t = useAppT();
-  const f = fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
+  const f = fetchImpl ?? loreFetch;
   const [groupBy, setGroupBy] = useState<TaskGroupBy>(() => groupFromUrl(win));
   // Подтверждённые сервером правки поверх загруженных строк — без перезагрузки
   // всей вкладки (перезагрузка мигала бы скелетом на каждое касание).

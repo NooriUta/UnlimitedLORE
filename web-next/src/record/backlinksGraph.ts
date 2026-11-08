@@ -18,6 +18,7 @@
 // 'edges' (kit рисует LoadError, а не «связей нет»); обрезка per_edge,
 // completeness=partial, потолок вызовов или упавший сосед глубже — meta.truncated.
 import type { KitData, KitEdge, KitRecord } from '@seidr/kit';
+import { loreFetch } from '../auth/session';
 
 // ── Подмножество контракта S2 (s2.ts, контракт 1) ───────────────────────────
 
@@ -146,7 +147,7 @@ export async function loadBacklinksGraph(
  * GET /lore/backlinks по контракту S2. Токен и базовый адрес — забота fetchFn
  * (обёртка авторизации приложения); не-2xx — ошибка «код ERROR: detail».
  */
-export function fetchBacklinksHttp(fetchFn: (url: string, init?: RequestInit) => Promise<Response> = fetch): BacklinksFetcher {
+export function fetchBacklinksHttp(fetchFn: (url: string, init?: RequestInit) => Promise<Response> = loreFetch): BacklinksFetcher {
   return async q => {
     const p = new URLSearchParams({ type: q.type, id: q.id });
     if (q.per_edge != null) p.set('per_edge', String(q.per_edge));

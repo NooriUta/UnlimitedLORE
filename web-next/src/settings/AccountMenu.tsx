@@ -4,7 +4,7 @@
 // применяются к корню документа — тема, текст, плотность и прочее действуют
 // с первого экрана. Хранение — S2Client (до S2-04 — заглушка api/me.ts).
 import { useCallback, useState } from 'react';
-import { AvatarMenu, type AttrTarget } from '@seidr/kit';
+import { AvatarMenu, kitT, type AttrTarget } from '@seidr/kit';
 import type { UserSettings } from '../api/contracts/s2';
 import type { S2Client } from '../api/contracts/s2.stubs';
 import { t, type Lang } from '../i18n/messages';
@@ -25,9 +25,11 @@ export interface AccountMenuProps {
   name?: string | null;
   subtitle?: string;
   navTargetUrl?: string | null;
+  /** Выход (S3-18); нет — вход выключен, кнопки «Выйти» нет. */
+  onLogout?: () => void;
 }
 
-export function AccountMenu({ client, lang, root, jar, name, subtitle, navTargetUrl }: AccountMenuProps) {
+export function AccountMenu({ client, lang, root, jar, name, subtitle, navTargetUrl, onLogout }: AccountMenuProps) {
   const [view, setView] = useState<'settings' | 'memory'>('settings');
   const apply = useCallback((s: UserSettings) => {
     const target = root ?? (typeof document === 'undefined' ? null : document.documentElement);
@@ -54,6 +56,11 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
           />
         )
         : <MemoryPanel client={client} lang={lang} onBack={() => setView('settings')} />}
+      {onLogout && (
+        <div className="memory-actions">
+          <button type="button" className="sk-btn" onClick={onLogout}>{kitT(lang, 'kit.auth.logout')}</button>
+        </div>
+      )}
     </AvatarMenu>
   );
 }

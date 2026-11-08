@@ -22,6 +22,7 @@ import { ErrorBoundary, Pill, Skeleton, StorageBanner, resolvePrefs, useKitLang,
 import './App.css';
 import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPassport';
 import { createLocalS2Client } from './api/me';
+import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
 import { LorePalette } from './palette/LorePalette';
@@ -147,7 +148,14 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
               <LorePalette storage={storage} trigger />
             </>
           )}
-          account={<AccountMenu client={meClient} lang={lang} />}
+          account={(
+            <AccountMenu
+              client={meClient}
+              lang={lang}
+              name={v2Auth.getState().user?.name}
+              onLogout={v2Auth.enabled ? () => { void v2Auth.logout(); } : undefined}
+            />
+          )}
         />
       </div>
     </ErrorBoundary>

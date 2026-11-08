@@ -2,7 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KitLangProvider, applyTheme, registerGameIcons, resolvePrefs } from '@seidr/kit';
 import gameIcons from '@iconify-json/game-icons/icons.json';
+import { AuthGate } from '@seidr/kit/auth';
 import App from './App';
+import { v2Auth } from './auth/session';
 import { themeSource } from './storage/themeSource';
 
 // Иконки game-icons — весь набор офлайн, до первого рендера (S4-00b): CSP
@@ -19,10 +21,17 @@ applyTheme(document.documentElement, resolvePrefs(themeSource()));
 // на приложение. Своих переводов этих строк web-next не держит.
 const kitLang = document.documentElement.lang === 'en' ? 'en' : 'ru';
 
+// Свой вход v2 (S3-18): сессия поднимается до приложения — callback Keycloak,
+// сохранённый пользователь, тихое продление. Пока не поднялась, AuthGate
+// показывает скелет; нет сессии — уводит на вход; вход выключен — как раньше.
+void v2Auth.init();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <KitLangProvider lang={kitLang}>
-      <App />
+      <AuthGate session={v2Auth}>
+        <App />
+      </AuthGate>
     </KitLangProvider>
   </StrictMode>,
 );
