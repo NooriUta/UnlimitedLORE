@@ -7,7 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
@@ -15,7 +15,7 @@ import { Tabs, type TabItem } from '../shell/Tabs';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
 import { BlockBoundary } from './BlockBoundary';
-import { RecordHead, RecordVerdict } from './RecordHead';
+import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { RecordLinks, recordLinks } from './RecordLinks';
 import { RecordGraph } from './RecordGraph';
 import { RecordJournal, recordJournal } from './RecordJournal';
@@ -57,6 +57,23 @@ export interface RecordViewProps {
   mdEditor?: ComponentType<MdEditorSlotProps>;
   /** Источник вкладки «История» (S5-11); нет — вкладки нет (истории у вида может не быть). */
   history?: RecordHistorySource;
+  /** Когда экран получил данные (S4-29): «получено N мин» в строке статуса. */
+  loadedAt?: string;
+  /** Перезапросить данные — кнопка ↻ рядом с «получено». */
+  onReload?: () => void;
+  /** «Сейчас» для «получено N мин» (тесты); по умолчанию — часы с шагом в минуту. */
+  now?: number;
+}
+
+/** Часы с шагом в минуту — для «получено N мин»; выключены — не тикают. */
+function useMinuteClock(on: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!on) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [on]);
+  return now;
 }
 
 /** Сохранение поля записи через hooks.onSave; undefined — правки нет. */
@@ -119,8 +136,10 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp }: RecordViewProps) {
   const lang = useKitLang();
+  const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
+  const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
   const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver } : undefined;
   const titleId = useId();
@@ -175,17 +194,18 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
 
   return (
     <article className={['sk-rec', className].filter(Boolean).join(' ')} aria-labelledby={titleId} data-kind={record.kind}>
-      <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} />
+      <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
       {facts && (
         <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
           <RecordFacts record={record} ctx={ctx} spec={facts} lang={lang}
-            onTasks={facts.tasksTab && kindTabs.some(t => t.key === facts.tasksTab) ? () => onTab(facts.tasksTab!) : undefined} />
+            onTasks={facts.tasksTab && kindTabs.some(t => t.key === facts.tasksTab) ? () => onTab(facts.tasksTab!) : undefined}
+            tail={loaded} />
         </BlockBoundary>
       )}
       <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
         <RecordVerdict record={record} ctx={ctx} lang={lang} />
       </BlockBoundary>
-      <Tabs className="sk-rec__tabs" items={items} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
+      <Tabs className="sk-rec__tabs" variant="underline" items={items} value={current} onChange={onTab} label={kitT(lang, 'kit.record.tabs')}>
         {panel}
       </Tabs>
     </article>
