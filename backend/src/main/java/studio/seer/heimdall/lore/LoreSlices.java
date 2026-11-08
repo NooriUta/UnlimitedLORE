@@ -164,9 +164,11 @@ public final class LoreSlices {
      * поэтому у открытой DONE-версии он и есть момент закрытия. Старые версии без
      * этого поля (до S2-13) — прежнее выражение.
      */
+    // Цепочка фильтров [..][..], а не AND: проекция без « AND » — сторож склейки
+    // фильтров слайса (LoreSliceComposeFiltersTest) различает AND только по тексту.
     static final String DONE_DATE_SQL =
-        "ifnull(out('HAS_STATE')[valid_to IS NULL AND status_known_from IS NOT NULL AND (" + DONE_STATUS_SQL
-            + ")].status_known_from[0], out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0])";
+        "ifnull(out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL
+            + "].status_known_from[0], out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0])";
 
     /**
      * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
