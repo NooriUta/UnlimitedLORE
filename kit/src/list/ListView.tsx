@@ -43,7 +43,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { ProgressCell } from './progress';
 import {
   DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
-  quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valuesOf, writeListState,
+  quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
@@ -655,6 +655,30 @@ export function ListView({
     }
   };
 
+  /**
+   * Значки в углу карточки на доске (S4-36). Сверено с прототипом v4
+   * (cardHtml): карточка несёт не только название и код, иначе при
+   * переключении вида часть сведений пропадает.
+   *
+   * Статус не показываем — колонки доски и есть статусы. Пустые значения не
+   * рисуем: пустой значок хуже отсутствующего. Не больше трёх, иначе угол
+   * карточки превращается в таблицу.
+   */
+  const boardBadges = (r: KitRecord): ReactNode => {
+    const keys = columns
+      .filter(c0 => c0.startsWith('fields.'))
+      .filter(c0 => valueKey(fieldValue(r, c0)) !== '')
+      .slice(0, 3);
+    if (keys.length === 0) return null;
+    return (
+      <span className="sk-board__badges" data-testid="board-badges">
+        {keys.map(k => (
+          <span key={k} className="sk-board__badge" title={labels.keyTitle(k)}>{cell(k, r)}</span>
+        ))}
+      </span>
+    );
+  };
+
   const moreButton = (g: ListGroup, limit: number, key: string = g.key) => {
     const rest = g.records.length - limit;
     return rest > 0
@@ -757,6 +781,7 @@ export function ListView({
                       <Pill variant="id">{r.id}</Pill>
                       {columns.includes('verdict') && <VerdictCell r={r} ctx={ctx} lang={lang} />}
                     </span>
+                    {boardBadges(r)}
                     {rowActions?.length ? rowActionsCell(r) : null}
                   </li>
                 ))}

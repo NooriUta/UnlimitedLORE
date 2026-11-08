@@ -20,9 +20,9 @@ const phases: TaskPhase[] = [
 ];
 
 const tasks: TaskRowData[] = [
-  { uid: 'u1', id: 'S5-01', title: 'Паспорт спринта', status: 'active', phase: 'ph-1', effortDays: 2, executor: 'claude', reviewer: 'owner', taskType: 'feature', order: 1 },
-  { uid: 'u2', id: 'S5-02', title: 'Вкладка задач', status: 'todo', phase: 'ph-2', effortDays: 1.5, executor: null, reviewer: null, taskType: null, order: 2 },
-  { uid: 'u3', id: 'S5-03', title: 'Готовое', status: 'done', phase: 'ph-2', effortDays: null, executor: 'codex', reviewer: 'claude', taskType: 'bug', order: 3 },
+  { uid: 'u1', id: 'S5-01', title: 'Паспорт спринта', status: 'active', phase: 'ph-1', effortDays: 2, executor: 'claude', reviewer: 'owner', taskType: 'feature', workClass: 'enb', order: 1 },
+  { uid: 'u2', id: 'S5-02', title: 'Вкладка задач', status: 'todo', phase: 'ph-2', effortDays: 1.5, executor: null, reviewer: null, taskType: null, workClass: null, order: 2 },
+  { uid: 'u3', id: 'S5-03', title: 'Готовое', status: 'done', phase: 'ph-2', effortDays: null, executor: 'codex', reviewer: 'claude', taskType: 'bug', workClass: 'uc', order: 3 },
 ];
 
 describe('TaskTable · атрибуты видны в строке', () => {

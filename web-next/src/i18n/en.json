@@ -241,5 +241,14 @@
   "pp.rel.blocks": "Blocks",
   "pp.rel.supersedes": "Supersedes",
   "pp.rel.supersededBy": "Superseded by",
-  "pp.rel.justifies": "Justifies tasks"
+  "pp.rel.justifies": "Justifies tasks",
+  "sprintBurn.title": "BURN-DOWN",
+  "sprintBurn.remaining": "remaining",
+  "sprintBurn.done": "done",
+  "sprintBurn.scope": "scope",
+  "sprintBurn.peak": "peak",
+  "sprintBurn.loading": "Reading sprint history…",
+  "sprintBurn.empty": "No sprint history",
+  "sprintBurn.failed": "Could not read the sprint history",
+  "sprintBurn.partial": "History is incomplete — the numbers below come from a truncated response"
 }
