@@ -1564,7 +1564,11 @@ final class LoreSchemaMigrations {
         // SPRINT_UXR_S5_RECORD_TASKS/S5-09 (kit 09.11): версия записи в черновике —
         // строкой, как record.version в /lore/record. Прежнее base_version объявлено
         // INTEGER и строку не примет — новое свойство, аддитивно, major 17.
-        new Step(74, 17, "user_drafts_record_version", LoreMeDrafts.SCHEMA_SQL_V74)
+        new Step(74, 17, "user_drafts_record_version", LoreMeDrafts.SCHEMA_SQL_V74),
+
+        // SPRINT_UXR_S7B_ADMIN/S7B-15, ADR-MINILORE-007 (поправка 09.11): harness актора-агента —
+        // свойство, справочник harness, заполнение по имени только при однозначном совпадении.
+        new Step(75, 17, "actor_harness", LoreActorHarness.SCHEMA_SQL_V75)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

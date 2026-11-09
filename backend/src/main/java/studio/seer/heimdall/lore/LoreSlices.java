@@ -1361,7 +1361,7 @@ public final class LoreSlices {
             + "WHERE (client_id IS NULL OR client_id = '') AND out('OWNED_BY').size() = 0",
             List.of(), Map.of(), " ORDER BY actor_id");
         slice("agent_owners",
-            "SELECT actor_id, name, client_id, agent_role, machine_id, session_id, " +
+            "SELECT actor_id, name, client_id, agent_role, machine_id, session_id, harness, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
             "out('OWNED_BY').display_name AS owner_display_name " +
             "FROM KnowActor WHERE kind = 'agent'",
