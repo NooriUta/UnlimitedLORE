@@ -42,7 +42,7 @@ import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 import { ProgressCell } from './progress';
 import {
-  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
+  CHIPS_INLINE, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
@@ -354,6 +354,8 @@ export function ListView({
    * так же. Так же сделан поиск по значениям внутри фасета.
    */
   const [groupFind, setGroupFind] = useState('');
+  /** Раскрыта ли свёртка «+N» в строке условий (S9-12). Местное, не в адресе. */
+  const [chipsOpen, setChipsOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => initialExpanded(win));
   const toggleExpand = (id: string) => setExpanded(prev => {
     const n = new Set(prev);
@@ -1263,7 +1265,14 @@ export function ListView({
       {chips.length > 0 && (
       <div className="sk-list__desc" data-testid="kit-list-desc">
         <span className="sk-list__desclabel">{t('kit.list.desc.filter')}:</span>
-        {chips.map(c => (
+        {/*
+          Строка условий держится в одну строку: выше порога остальные
+          сворачиваются в «+N» (S9-12). Спрятанные не исчезают — «+N»
+          раскрывает их НА МЕСТЕ, и каждое по-прежнему снимается по одному,
+          иначе «что сейчас отсеивает записи» перестанет быть видно, а это и
+          есть смысл строки-описания.
+        */}
+        {(chipsOpen ? chips : chips.slice(0, CHIPS_INLINE)).map(c => (
           <Pill
             key={c.id}
             variant="filter"
@@ -1275,6 +1284,16 @@ export function ListView({
             {c.text}
           </Pill>
         ))}
+        {chips.length > CHIPS_INLINE && (
+          <button
+            type="button"
+            className="sk-list__chipmore"
+            aria-expanded={chipsOpen}
+            onClick={() => setChipsOpen(v => !v)}
+          >
+            {chipsOpen ? t('kit.list.chipsLess') : t('kit.list.chipsMore', { n: chips.length - CHIPS_INLINE })}
+          </button>
+        )}
         <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>
       </div>
       )}

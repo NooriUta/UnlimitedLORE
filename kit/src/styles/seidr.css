@@ -1402,6 +1402,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-weight: 700;
 }
 .sk-shell__item--action { color: var(--acc); }
+/* «Все виды (+N)» — свёртка, а не вид: приглушена, чтобы не путаться с ними
+   (S9-12). */
+.sk-shell__viewsmore { color: var(--t2); }
+.sk-shell__viewsmore:hover { color: var(--t1); }
 .sk-shell__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-shell__id { color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); }
 .sk-shell__tag {
@@ -2151,13 +2155,32 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__vicon { display: inline-flex; flex-shrink: 0; }
 .sk-list__desc {
   display: flex;
-  flex-wrap: wrap;
+  /* S9-12: строка условий — в одну строку. Лишние условия сворачиваются в «+N»
+     самим списком (CHIPS_INLINE), поэтому переносить нечего; раскрытая свёртка
+     переносится намеренно — иначе спрятанное стало бы недоступным. */
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--gap);
   margin: 0;
   color: var(--t2);
   font-size: var(--fs-xs);
+  overflow-x: auto;
 }
+.sk-list__desc:has(.sk-list__chipmore[aria-expanded='true']) { flex-wrap: wrap; overflow-x: visible; }
+/* «+N условий» — не чип: это управление свёрткой, и выглядеть оно должно иначе,
+   чтобы его не сняли вместо условия. */
+.sk-list__chipmore {
+  flex: 0 0 auto;
+  min-height: max(var(--tap), 20px);
+  padding: 0 8px;
+  border: 1px dashed var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sk-list__chipmore:hover { color: var(--t1); border-color: var(--acc); }
 .sk-list__shown {
   margin: 0;
   color: var(--t2);
