@@ -4613,6 +4613,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rel__add input { min-height: max(var(--tap), 26px); padding: 0 8px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1); font: inherit; font-size: var(--fs-sm); }
 .sk-rel__line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 0; color: var(--t2); font-size: var(--fs-sm); }
 .sk-rel__linelabel { color: var(--t3); }
+/* Разделы ТЕЛА записи (S5-06): приходят данными, рисует их kit — поэтому у
+   каждого есть ✎ и черновик. Своей раскладки у обёртки нет: разделы идут
+   обычным потоком, как и склеенное тело до них. */
+.sk-rec-sections { min-width: 0; }
 /* Разделы «Свойств» (S4-36): подзаголовок как в v1 — «Планирование», «Модули». */
 .sk-rec-fields__sec { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--bd); }
 .sk-rec-fields__sechead { margin: 0 0 6px; color: var(--t2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }

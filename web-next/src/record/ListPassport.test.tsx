@@ -43,9 +43,17 @@ describe('правка на месте в паспорте', () => {
     await waitFor(() => expect(f.mock.calls.filter(c => String(c[0]).includes('/lore/slice/sprints')).length).toBeGreaterThan(1));
   }, 15000);
 
-  it('ADR: кнопки ✎ нет — тело склеено из разделов', async () => {
+  it('ADR: правятся РАЗДЕЛЫ по отдельности, а склеенное тело — нет', async () => {
+    // Прежде этот тест требовал, чтобы ✎ не было ВОВСЕ, — и тем закреплял
+    // дефект: разделы печатались текстом своим рисовальщиком, обходя редактор
+    // kit, и править ADR было нельзя ничем. Правило же было другое и записано
+    // в самом коде прав (`permsOf`): «у ADR правятся разделы по отдельности
+    // (S4-24), а склеенное тело — нет». Теперь так и есть: разделы приходят
+    // данными, kit даёт ✎ каждому, а «Текст» целиком не предлагается, потому
+    // что пути записи для него на сервере нет.
     render(<ListPassport type="adr" id="ADR-1" placement="bottom" fetchImpl={fake() as unknown as typeof fetch} />);
     await screen.findByRole('heading', { level: 1, name: 'Решение' }, { timeout: 8000 });
-    expect(screen.queryByRole('button', { name: /^Править/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Править «Текст»/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Править «Решение»/ })).toBeTruthy();
   }, 15000);
 });
