@@ -47,7 +47,8 @@ import {
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
-import { boardLanes, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
+import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
+import { FIND_FROM as GROUP_FIND_FROM } from './FacetFilter';
 import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf } from './groupLabel';
 import { applyFilterSet, describeFieldFilter, facetOf, toFilterSet } from './filterModel';
 import type { FieldFilter } from './filterModel';
@@ -345,6 +346,14 @@ export function ListView({
     { by: state.group, view: state.view, open: {}, more: {} },
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  /**
+   * Поиск по группам (S9-02) — состояние местное, не в адресе.
+   *
+   * Это средство найти нужную группу глазами, а не вид списка: им не делятся
+   * ссылкой, и в адрес оно не идёт — там живёт то, что команда должна увидеть
+   * так же. Так же сделан поиск по значениям внутри фасета.
+   */
+  const [groupFind, setGroupFind] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(() => initialExpanded(win));
   const toggleExpand = (id: string) => setExpanded(prev => {
     const n = new Set(prev);
@@ -456,11 +465,36 @@ export function ListView({
   // «Закрытые N» — одна группа в конце списка, а не внутри статусов или полей.
   const closedGroup: ListGroup | null = view === 'list' && split.closed.length > 0 ? { key: CLOSED_KEY, records: split.closed } : null;
   const laned = view === 'board' && groupKey !== null && groupKey !== 'status';
-  const groups: ListGroup[] = view === 'board'
+  // Поиск по группам (S9-02). Ищем по ВСЕМ группам, а не по показанным: нужный
+  // релиз с большой долей вероятности лежит в «Прочих», и поиск по десяти
+  // видимым был бы обманом. Поэтому при поиске бюджет снимается, найденное
+  // фильтруется по названию и режется тем же правилом (`capGroups`).
+  const find = groupFind.trim().toLocaleLowerCase();
+  const rawGroups: ListGroup[] = view === 'board'
     ? lanes.map(l => l.lane)
-    : [...groupBy(split.open, groupKey, config, data, budget), ...(closedGroup ? [closedGroup] : [])];
+    : groupBy(split.open, groupKey, config, data, find ? { ...budget, maxGroups: Number.MAX_SAFE_INTEGER } : budget);
+  const foundGroups = find
+    ? capGroups(rawGroups.filter(g => groupTitleOf(config, lang, groupKey, g).toLocaleLowerCase().includes(find)), budget)
+    : rawGroups;
+  const groups: ListGroup[] = view === 'board'
+    ? foundGroups
+    : [...foundGroups, ...(closedGroup ? [closedGroup] : [])];
   const multi = (view === 'list' || laned) && groupKey ? multiGroupCount(groups) : 0;
-  const collapsedByDefault = (view === 'list' || laned) && groups.some(g => g.other);
+  /**
+   * Свёрнуты ли группы при первом показе.
+   *
+   * Было: свёрнуто только когда появилась группа «Прочие». Пятнадцать релизов
+   * порога не достигают, «Прочих» нет — и все пятнадцать стояли раскрытыми, то
+   * есть та же стена строк, из которой S9-02 и выросла, только ниже.
+   *
+   * Теперь группировку можно назвать свёрнутой по умолчанию
+   * (`list.collapsedGroupings`) — у LORE это релиз и спринт, где групп всегда
+   * много. Имена живут в конфиге приложения, а не в kit: какие разрезы
+   * «широкие», знает приложение.
+   */
+  const collapsedGroupings = listCfg?.collapsedGroupings ?? [];
+  const collapsedByDefault = (view === 'list' || laned)
+    && (groups.some(g => g.other) || (groupKey !== null && collapsedGroupings.includes(groupKey)));
   const cur = ui.by === groupKey && ui.view === view ? ui : { by: groupKey, view, open: {}, more: {} };
   const isOpen = (k: string) => cur.open[k] ?? (k === CLOSED_KEY ? false : !collapsedByDefault);
   const limitOf = (k: string) => cur.more[k] ?? budget.perGroup;
@@ -992,6 +1026,20 @@ export function ListView({
               })}
             </tr>
           </thead>
+          {/*
+            Поиск не нашёл ни одной группы — говорим это словами и повторяем
+            запрос. Пустая таблица с одной шапкой читается как «данные есть, но
+            их не видно», а здесь дело в запросе, и его надо показать.
+          */}
+          {find && foundGroups.length === 0 && (
+            <tbody>
+              <tr>
+                <td colSpan={span} className="sk-list__gfind-empty" role="status">
+                  {t('kit.list.groupFindEmpty', { q: groupFind.trim() })}
+                </td>
+              </tr>
+            </tbody>
+          )}
           {groups.map(g => {
             const headed = grouped || g.key === CLOSED_KEY;
             const open = !headed || isOpen(g.key);
@@ -1139,6 +1187,23 @@ export function ListView({
             onSub={g => update({ group2: g })}
             bare
           />
+          {/*
+            Поиск по группам появляется, когда их столько, что глазами искать
+            уже долго. Порог тот же, что у поиска по значениям внутри фасета
+            (GROUP_FIND_FROM = FIND_FROM): два разных числа для одного и того же
+            «их стало много» расходились бы без причины.
+          */}
+          {groupKey !== null && (rawGroups.length >= GROUP_FIND_FROM || find) && (
+            <input
+              type="search"
+              role="searchbox"
+              className="sk-list__gfind"
+              aria-label={t('kit.list.groupFind')}
+              placeholder={t('kit.list.groupFindPlaceholder')}
+              value={groupFind}
+              onChange={e => setGroupFind(e.target.value)}
+            />
+          )}
           </fieldset>
         )}
         <fieldset className="sk-list__seg" data-seg="sort">
