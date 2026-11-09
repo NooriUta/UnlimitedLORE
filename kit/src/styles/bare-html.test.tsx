@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, DiffPreview, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 
@@ -127,6 +127,34 @@ function Samples() {
         {/* Секрет в снимке — в состоянии «ещё не показан»: значение в снимок
             попадать не должно даже в демонстрационном виде (K2-SECRET-ONCE). */}
         <SecretOnce value="не-показано-в-снимке" label="Секрет" />
+        {/* Дифф в снимке — со всеми тремя видами строк И со всеми тремя
+            исходами проверки: именно их различимость одним CSS-слоем и надо
+            видеть глазами (K2-DIFF). */}
+        <DiffPreview
+          label="Что изменится"
+          rows={[
+            { id: 'a', kind: 'add', text: 'строка добавится', detail: 'подробность', check: { state: 'checked' } },
+            { id: 'b', kind: 'remove', text: 'строка снимется', check: { state: 'checked' } },
+            { id: 'c', kind: 'same', text: 'строка уже есть', check: { state: 'checked' } },
+            { id: 'd', kind: 'add', text: 'строка не проверена', check: { state: 'unverified', reason: 'источник не ответил' } },
+            { id: 'e', kind: 'add', text: 'смотреть не дали', check: { state: 'forbidden', reason: 'нужна роль администратора' } },
+          ]}
+          onApply={noop}
+        />
+        {/* Пачка в снимке — с частичным исходом: именно он не должен выглядеть
+            успехом (K2-BATCH-UNDO). Часы в снимке подставлены, чтобы остаток
+            не менялся от прогона к прогону. */}
+        <BatchUndo
+          batch={{
+            id: 'op-1',
+            applied: 2,
+            total: 3,
+            failed: [{ id: 'x', text: 'третья строка', reason: 'источник отказал: 409' }],
+            undoUntil: 10_000,
+          }}
+          now={() => 0}
+          onUndo={noop}
+        />
       </section>
       <section className="bare__sec" data-kit="content">
         <h2 className="bare__h2">MD / HTML</h2>

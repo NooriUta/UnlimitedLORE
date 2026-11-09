@@ -390,5 +390,18 @@
   "kitPage.flow.manual2": "Forgejo: доступ к репозиторию",
   "kitPage.flow.doneSaid": "Мастер завершён — приложение выполнило бы действие.",
   "kitPage.flow.secretHead": "Секрет, который показывают один раз",
-  "kitPage.flow.secretLabel": "Показательное значение"
+  "kitPage.flow.secretLabel": "Показательное значение",
+  "kitPage.flow.diffHead": "Что изменится перед применением",
+  "kitPage.flow.diffLabel": "Что изменится",
+  "kitPage.flow.diffAdd": "Строка добавится",
+  "kitPage.flow.diffRemove": "Строка снимется",
+  "kitPage.flow.diffSame": "Строка уже есть",
+  "kitPage.flow.diffUnver": "Строку проверить не удалось",
+  "kitPage.flow.diffUnverWhy": "источник не ответил",
+  "kitPage.flow.diffForbid": "Смотреть не дали",
+  "kitPage.flow.diffForbidWhy": "нужна роль администратора",
+  "kitPage.flow.diffApplied": "Приложение получило {n} строк(и) — дальше их применяет пачкой с окном отмены.",
+  "kitPage.flow.batchHead": "Пачка: окно отмены и частичный отказ",
+  "kitPage.flow.batchFail": "Одна строка не применилась",
+  "kitPage.flow.batchFailWhy": "источник отказал: 409"
 }
