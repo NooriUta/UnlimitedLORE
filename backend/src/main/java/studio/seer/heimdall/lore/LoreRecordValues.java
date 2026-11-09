@@ -222,6 +222,52 @@ final class LoreRecordValues {
         return v;
     }
 
+    /** Kit 09.11: счётчик в форме вычисляемого поля {value, known, of} — у счёта known = of. */
+    static Map<String, Object> countOf(int n) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("value", n);
+        m.put("known", n);
+        m.put("of", n);
+        return m;
+    }
+
+    private static int intOf(Object v) {
+        if (v instanceof Number n) return n.intValue();
+        try { return v == null ? 0 : Integer.parseInt(String.valueOf(v)); } catch (NumberFormatException e) { return 0; }
+    }
+
+    /** Kit 09.11: паспорт вехи (срез {@code milestone_by_id}), только чтение. */
+    static Map<String, Object> milestone(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("label")) != null ? str(r.get("label")) : str(r.get("milestone_id")));
+        v.put("code", str(r.get("milestone_id")));
+        v.put("week", str(r.get("week")));
+        v.put("date", str(r.get("date_display")));
+        v.put("priority", str(r.get("priority")));
+        v.put("products", arr(r.get("products")));
+        v.put("goal_md", str(r.get("goal_md")));
+        v.put("decisions_md", str(r.get("decisions_md")));
+        v.put("sprints_total", countOf(arr(r.get("direct_sprint_ids")).size()));
+        return v;
+    }
+
+    /** Kit 09.11: паспорт релиза (срез {@code release_by_id}), только чтение. */
+    static Map<String, Object> release(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        String tag = str(r.get("release_id")) != null ? str(r.get("release_id")) : str(r.get("git_tag"));
+        v.put("title", str(r.get("version")) != null ? str(r.get("version")) : tag);
+        v.put("code", tag);
+        v.put("type", str(r.get("type")));
+        v.put("date", str(r.get("release_date")));
+        v.put("is_current", r.get("is_current") == null ? null : String.valueOf(r.get("is_current")));
+        v.put("week", str(r.get("week")));
+        v.put("projects", arr(r.get("projects")));
+        v.put("description_md", str(r.get("description_md")));
+        v.put("sprints_total", countOf(intOf(r.get("sprint_count"))));
+        v.put("prs_total", countOf(intOf(r.get("pr_count"))));
+        return v;
+    }
+
     /** Kit 09.11: паспорт вопроса (срез {@code question_by_id}), только чтение. */
     static Map<String, Object> question(Map<String, Object> r) {
         Map<String, Object> v = new LinkedHashMap<>();

@@ -52,6 +52,9 @@ public class LoreRecordResource extends LoreResourceBase {
     /** Главный срез записи типа и имя его параметра. */
     record Source(String slice, String param, boolean list) {}
 
+    /** release_uid «проект#тег» (AIDA/UnlimitedLORE#v1.17.4): как SAFE_ID, плюс «#». */
+    static final java.util.regex.Pattern RELEASE_UID = java.util.regex.Pattern.compile("[A-Za-z0-9_./\\-]{1,100}#[A-Za-z0-9_.\\-]{1,60}");
+
     static Source sourceOf(String type) {
         return switch (type) {
             case "sprint" -> new Source("sprint_tree", "id", false);
@@ -60,6 +63,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "spec" -> new Source("spec_by_id", "id", false);
             case "decision" -> new Source("decision", "id", false);
             case "question" -> new Source("question_by_id", "id", false);
+            case "milestone" -> new Source("milestone_by_id", "id", false);
+            case "release" -> new Source("release_by_id", "id", false);
             default -> null;
         };
     }
@@ -81,7 +86,9 @@ public class LoreRecordResource extends LoreResourceBase {
         if (!LoreRecordRegistry.TYPES.contains(type))
             return noStore(Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("UNKNOWN_TYPE",
                 "тип паспорта '" + type + "' не заведён; есть: " + LoreRecordRegistry.TYPES)));
-        if (!NEW_ID.equals(id) && !SAFE_ID.matcher(id).matches())
+        // Ключ релиза — release_uid «проект#тег»: «#» допустим только у релиза.
+        boolean idOk = "release".equals(type) ? RELEASE_UID.matcher(id).matches() : SAFE_ID.matcher(id).matches();
+        if (!NEW_ID.equals(id) && !idOk)
             return badParams("id contains illegal characters");
         Set<String> scope;
         try {
@@ -121,6 +128,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "adr" -> LoreRecordValues.adr(row);
             case "decision" -> LoreRecordValues.decision(row);
             case "question" -> LoreRecordValues.question(row);
+            case "milestone" -> LoreRecordValues.milestone(row);
+            case "release" -> LoreRecordValues.release(row);
             default -> LoreRecordValues.spec(row);
         };
         String status = switch (type) {

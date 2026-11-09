@@ -1545,6 +1545,27 @@ public final class LoreSlices {
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
 
+        // Kit 09.11: паспорт вехи (только чтение) — та же проекция, что у milestones, по id.
+        slice("milestone_by_id",
+            "SELECT milestone_id, label, week, date_display, priority, " +
+            "out('HAS_STATE').goal_md[0]      AS goal_md, " +
+            "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
+            "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids, " +
+            "out('TARGETS_PRODUCT').code       AS products " +
+            "FROM KnowMilestone WHERE milestone_id = :id",
+            List.of("id"), Map.of(), "");
+
+        // Kit 09.11: паспорт релиза (только чтение). Ключ — release_uid («проект#тег»):
+        // release_id один и тот же в разных проектах.
+        slice("release_by_id",
+            "SELECT release_id, release_uid, git_tag, version, week, type, " +
+            "release_date, is_current, description_md, git_project, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
+            "in('SHIPPED_IN').size() AS pr_count " +
+            "FROM KnowRelease WHERE release_uid = :id",
+            List.of("id"), Map.of(), "");
+
         // ── RM-S2: дорожная карта продукта ───────────────────────────────────
         // Карта принадлежит ПРОДУКТУ (D-2026-LORE-PRODUCT-IS-OWN-ENTITY): «я хочу
         // создать продукты, и у них будет roadmap, а не проекты — у нас и так
@@ -2638,6 +2659,7 @@ public final class LoreSlices {
         Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("releases",  "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("release_by_id", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("docs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("runbooks",  "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("specs",     "out('BELONGS_TO_PROJECT').slug"),
@@ -2773,6 +2795,7 @@ public final class LoreSlices {
         Map.entry("product_hygiene", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("strategic_coverage", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("milestones", "вехи M0…M7 не связаны с проектами (MT-GOALS) — решение о модели вех"),
+        Map.entry("milestone_by_id", "то же: паспорт вехи, веха без проекта"),
         Map.entry("roadmap", "то же: веха без проекта"),
         Map.entry("uc_actors", "ребро HAS_ACTOR — путь через сценарий"),
         Map.entry("actor_pairs", "ребро FILLS_ROLE — служебное, решение"),
