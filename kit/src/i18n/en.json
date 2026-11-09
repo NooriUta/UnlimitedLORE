@@ -595,5 +595,9 @@
   "kit.mdedit.draft.discard": "Discard",
   "kit.mdedit.draft.stale": "the record changed after the draft, the text may diverge",
   "kit.mdedit.draft.loadFailed": "draft not read: {reason}",
-  "kit.mdedit.draft.saveFailed": "draft not saved: {reason}"
+  "kit.mdedit.draft.saveFailed": "draft not saved: {reason}",
+  "kit.list.cols.width": "Width of column «{title}»",
+  "kit.record.history.more": "Show more",
+  "kit.record.history.moreBusy": "Loading…",
+  "kit.record.history.moreFailed": "Not loaded: {reason}. The versions shown are still here."
 }

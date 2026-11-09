@@ -12,7 +12,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { KitShell, createSafeStorage, registerGameIcons, type UrlWindow } from '@seidr/kit';
+import { KitShell, createSafeStorage, registerGameIcons, useKitShell, type UrlWindow } from '@seidr/kit';
 import { v2Config } from '../shell/v2Config';
 import { SectionPalette } from './SectionPalette';
 
@@ -87,5 +87,46 @@ describe('палитра знает разделы', () => {
     act(() => { fireEvent.change(input, { target: { value: 'adr' } }); });
     const dlg = screen.getByRole('dialog');
     expect(within(dlg).getByText(/ADR/)).toBeTruthy();
+  });
+});
+
+// Вторая половина находки аудита про «Недавнее»: палитра вела СВОЙ список и
+// наполнялся он только тем, что открыли через саму палитру. Открытое из списка
+// в неё не попадало — два списка недавнего, две правды о том, где человек был.
+describe('«Недавнее» палитры — список оболочки', () => {
+  function Opener() {
+    const api = useKitShell();
+    return (
+      <button type="button" onClick={() => api.openRecord('SPRINT_A', { title: 'Спринт А', href: '/?open=SPRINT_A' })}>
+        открыть запись
+      </button>
+    );
+  }
+
+  const mountWithOpener = () => {
+    const win = fakeWin();
+    const storage = mem();
+    render(
+      <KitShell config={v2Config('ru')} win={win} storage={storage} narrow={false}
+        topEnd={<SectionPalette storage={storage} />}>
+        <Opener />
+      </KitShell>,
+    );
+    return win;
+  };
+
+  it('до открытия — честное «недавних пока нет»', () => {
+    mountWithOpener();
+    openPalette();
+    expect(screen.getByRole('status').textContent).toMatch(/Недавних пока нет/);
+  });
+
+  it('открытая в приложении запись видна в палитре', () => {
+    mountWithOpener();
+    act(() => { screen.getByRole('button', { name: 'открыть запись' }).click(); });
+    openPalette();
+    const dlg = screen.getByRole('dialog');
+    // Код виден и заголовком, и пилюлей кода — палитра о записи знает только его.
+    expect(within(dlg).getAllByText('SPRINT_A').length).toBeGreaterThan(0);
   });
 });
