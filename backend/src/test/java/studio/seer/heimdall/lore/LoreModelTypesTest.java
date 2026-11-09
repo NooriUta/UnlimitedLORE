@@ -7,6 +7,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -106,5 +107,51 @@ class LoreModelTypesTest {
         } else if (o instanceof List<?> l) {
             for (Object x : l) assertNoAtKeys(x);
         }
+    }
+
+    /**
+     * Владелица 09.11: «ширина колонок — под контент и важность этого контента; где
+     * контента много — „ещё“ или многоточие с подсказкой» — это контракт модели, а не
+     * ручной конфиг kit. У каждого поля — display {priority 1..3, width, overflow}.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void everyFieldCarriesDisplayHintsByImportanceAndContent() {
+        Map<String, Object> types = LoreModelTypes.build(schema());
+        for (String t : LoreRecordRegistry.TYPES)
+            for (Map<String, Object> f : fields(type(types, t))) {
+                Map<String, Object> d = (Map<String, Object>) f.get("display");
+                assertNotNull(d, t + "." + f.get("key") + ": нет display");
+                assertTrue(List.of(1, 2, 3).contains(d.get("priority")), t + "." + f.get("key") + " priority " + d);
+                assertTrue(LoreModelTypes.WIDTHS.contains(d.get("width")), t + "." + f.get("key") + " width " + d);
+                assertTrue(LoreModelTypes.OVERFLOWS.contains(d.get("overflow")), t + "." + f.get("key") + " overflow " + d);
+            }
+        Map<String, Object> title = fields(type(types, "task")).stream().filter(f -> "title".equals(f.get("key"))).findFirst().orElseThrow();
+        assertEquals(Map.of("priority", 1, "width", "fill", "overflow", "ellipsis"), title.get("display"),
+            "название — самое важное, тянется, длинное — многоточием с подсказкой");
+        for (Map<String, Object> f : fields(type(types, "sprint")))
+            if ("ref".equals(f.get("kind")) && Boolean.TRUE.equals(f.get("multi")))
+                assertEquals("more", ((Map<String, Object>) f.get("display")).get("overflow"),
+                    "многозначная ссылка — «ещё N», а не обрезанная склейка: " + f.get("key"));
+    }
+
+    /** Владелица 09.11: «оценка и размер спринтов суммарно по дням и задач — важный элемент, а его нет». */
+    @Test
+    @SuppressWarnings("unchecked")
+    void sprintDeclaresComputedTotals() {
+        List<Map<String, Object>> computed = (List<Map<String, Object>>) type(LoreModelTypes.build(schema()), "sprint").get("computed");
+        assertNotNull(computed, "у спринта объявлены вычисляемые поля");
+        Map<String, Map<String, Object>> byKey = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> c : computed) byKey.put(String.valueOf(c.get("key")), c);
+        assertTrue(byKey.keySet().containsAll(List.of("tasks_total", "effort_days_total", "actual_days_total", "effort_known")), byKey.keySet().toString());
+        Map<String, Object> effort = (Map<String, Object>) byKey.get("effort_days_total").get("rule");
+        assertEquals("tasks", effort.get("from"));
+        assertEquals("sum", effort.get("fn"));
+        assertEquals("effort_days", effort.get("field"));
+        assertEquals(List.of("withdrawn"), effort.get("exclude_categories"), "отменённые не считаются — как в прогрессе");
+        assertEquals(1, ((Map<String, Object>) byKey.get("effort_days_total").get("display")).get("priority"));
+        assertTrue(LoreModelTypes.build(schema()).values().stream()
+                .allMatch(t -> ((Map<String, Object>) t).containsKey("computed")),
+            "computed есть у каждого типа, хотя бы пустым: пусто = «вычисляемых нет», а не «не смотрели»");
     }
 }
