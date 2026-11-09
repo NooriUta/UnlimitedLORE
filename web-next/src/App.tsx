@@ -61,7 +61,7 @@ export type Route = 'kit' | 'passport' | 'news' | 'task' | 'home' | ListScreenId
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /** Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01). */
-const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs: 'adr' };
+const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs: 'adr', tasks: 'task' };
 
 /**
  * Путь без хвостового «/»: /kit и /kit/ — одна страница; /news — новости v2
