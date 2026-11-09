@@ -33,6 +33,68 @@ public class LoreAccessResource extends LoreResourceBase {
     @ConfigProperty(name = "lore.scope.enforce", defaultValue = "false")
     boolean scopeEnforce;
 
+    @jakarta.inject.Inject
+    ProjectRbacService rbac;
+
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-12 — скоуп агентов.
+     * <ul>
+     *   <li>{@code ?client_id=&agent_scope=} — агент: владелец, проекты на чтение
+     *       (все проекты владельца — {@link ProjectRbacService#visibleProjectsForAgent})
+     *       и на запись (где роль владельца делегирует профиль, D4 —
+     *       {@link ProjectRbacService#allowedProjectsForAgent}). Без владельца — пусто с причиной.</li>
+     *   <li>{@code ?kc_sub=} — человек: его агенты и «агенты видят ваши N проектов».</li>
+     * </ul>
+     */
+    @GET
+    @jakarta.ws.rs.Path("agents")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response agents(@QueryParam("client_id") String clientId, @QueryParam("agent_scope") String agentScope,
+                           @QueryParam("kc_sub") String kcSub) {
+        if (!enabled) return disabled();
+        try {
+            if (clientId != null && !clientId.isBlank()) {
+                if (!SAFE_ID.matcher(clientId).matches()) return badParams("client_id contains illegal characters");
+                String owner = rbac.ownerKcSub(clientId);
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("client_id", clientId);
+                body.put("owner_kc_sub", owner);
+                body.put("visible", owner == null ? List.of() : rbac.visibleProjectsForAgent(clientId).stream().sorted().toList());
+                body.put("agent_scope", agentScope);
+                body.put("writable", owner == null || agentScope == null ? List.of()
+                    : rbac.allowedProjectsForAgent(clientId, agentScope).stream().sorted().toList());
+                body.put("inherited_from", owner);
+                if (owner == null)
+                    body.put("reason", "у клиента нет владельца в графе (KnowActor kind=agent + OWNED_BY) — проекты не наследуются");
+                return noStore(Response.ok(body));
+            }
+            if (kcSub != null && !kcSub.isBlank()) {
+                if (!SAFE_ID.matcher(kcSub).matches()) return badParams("kc_sub contains illegal characters");
+                List<Map<String, Object>> agents = new ArrayList<>();
+                for (Map<String, Object> r : ingestService.queryPublic(
+                        "SELECT actor_id, name, client_id FROM KnowActor WHERE kind = 'agent' "
+                        + "AND out('OWNED_BY').kc_sub CONTAINS :sub ORDER BY actor_id", Map.of("sub", kcSub))) {
+                    Map<String, Object> a = new LinkedHashMap<>();
+                    a.put("actor_id", r.get("actor_id"));
+                    a.put("name", r.get("name"));
+                    a.put("client_id", r.get("client_id"));
+                    agents.add(a);
+                }
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("kc_sub", kcSub);
+                body.put("agents", agents);
+                body.put("count", agents.size());
+                body.put("visible_projects", rbac.allowedProjectsForUser(kcSub).size());
+                body.put("note", "агенты читают все проекты владельца; пишут — по матрице D4 роли владельца");
+                return noStore(Response.ok(body));
+            }
+            return badParams("client_id or kc_sub required");
+        } catch (Exception e) {
+            LOG.warnf("[LORE ACCESS AGENTS] %s/%s: %s", clientId, kcSub, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response access(@QueryParam("kc_sub") String kcSub, @QueryParam("project") String project,
