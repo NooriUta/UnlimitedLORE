@@ -35,6 +35,18 @@ function fake(body: unknown, status = 200) {
 const mount = (f: typeof fetch) => render(<KitLangProvider lang="ru"><AgentsScreen fetchImpl={f} /></KitLangProvider>);
 
 describe('модель агентов', () => {
+  it('владелец приходит массивом (как отдаёт agent_owners) — читается, а не «не указан»', () => {
+    const d = parseAgents({ rows: [{ ...ROWS[0], owner_kc_sub: ['u1'], owner_display_name: ['omiloreadmin'] }] } as never);
+    expect(d.rows[0].owner_display_name).toBe('omiloreadmin');
+    expect(d.rows[0].owner_kc_sub).toBe('u1');
+  });
+
+  it('два владельца — оба видны; для правки берётся первый', () => {
+    const d = parseAgents({ rows: [{ ...ROWS[0], owner_kc_sub: ['u1', 'u2'], owner_display_name: ['a', 'b'] }] } as never);
+    expect(d.rows[0].owner_display_name).toBe('a, b');
+    expect(d.rows[0].owner_kc_subs).toEqual(['u1', 'u2']);
+  });
+
   it('harness и машина читаются; пустая строка — null, а не «»', () => {
     const d = parseAgents({ rows: [{ ...ROWS[0], machine_id: '' }], harness_registry: REG } as never);
     expect(d.rows[0].harness).toBe('claude-code');
