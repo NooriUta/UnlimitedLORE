@@ -71,3 +71,27 @@ describe('S3-07: словари ru/en v2 совпадают по ключам', 
     }
   });
 });
+
+// S5-14: сервер может хранить значение, которого в v2 нет (theme: system,
+// text_size: xl). Показать умолчание и промолчать значило бы соврать о том,
+// что выбрано, поэтому расхождение видно на экране настроек.
+describe('S5-14: расхождение перевода настроек видно', () => {
+  const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
+
+  it('предупреждение перевода печатается текстом', () => {
+    const html = renderToString(
+      <PersonalSettings lang="ru" state={{ ...ok, warnings: ['theme: сервер хранит «system», такого значения в v2 нет — показано умолчание'] }}
+        onChange={() => {}} onRetry={() => {}} onOpenMemory={() => {}} navTargetUrl={null} />,
+    );
+    expect(html).toContain('system');
+    expect(html).toContain('settings-warn');
+  });
+
+  it('расхождений нет — блока нет (пустой список не рисуем)', () => {
+    const html = renderToString(
+      <PersonalSettings lang="ru" state={{ ...ok, warnings: [] }}
+        onChange={() => {}} onRetry={() => {}} onOpenMemory={() => {}} navTargetUrl={null} />,
+    );
+    expect(html).not.toContain('settings-warn');
+  });
+});
