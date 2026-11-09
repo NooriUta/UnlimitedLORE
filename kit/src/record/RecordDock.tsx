@@ -18,20 +18,45 @@ export interface RecordDockProps {
   onExitFull?: () => void;
   /** Закрыть паспорт — кнопка дока, а не полоса над паспортом (владелица 08.11). */
   onClose?: () => void;
+  /**
+   * Модальный ли слой «во весь экран». По умолчанию да — витрина и демо
+   * открывают его поверх окна. Внутри оболочки шапка и меню остаются видимыми
+   * и рабочими (замечание владелицы по v1.17.4), и тогда aria-modal был бы
+   * ложью: скринридер объявил бы шапку и меню несуществующими.
+   */
+  modal?: boolean;
 }
 
-export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose }: RecordDockProps) {
+export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose, modal = true }: RecordDockProps) {
   const lang = useKitLang();
   const full = placement === 'full';
+  // Esc выходит из слоя — находка P0 аудита навигации 08.11.2026: «Esc не
+  // закрывает ни палитру, ни док». Слушатель висел только в полном экране, и в
+  // доке справа/снизу клавиши не было вовсе.
+  //
+  // Полный экран и закрытие — разные действия: из полного экрана Esc
+  // возвращает запись в док, и только если возвращать некуда (onExitFull не
+  // передан), закрывает её. Иначе одна клавиша и уводила бы из режима, и
+  // теряла запись — выбрать, что именно случилось, человек бы не смог.
+  //
+  // Уже обработанное событие (defaultPrevented) не трогаем: Esc во вложенном
+  // редакторе отменяет правку, и закрывать паспорт вместе с несохранённым
+  // текстом нельзя.
   useEffect(() => {
-    if (!full || !onExitFull) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onExitFull(); };
+    const exit = full && onExitFull ? onExitFull : onClose;
+    if (!exit) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' && e.code !== 'Escape') return;
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      exit();
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [full, onExitFull]);
+  }, [full, onExitFull, onClose]);
   return (
     <div className={['sk-dock', className].filter(Boolean).join(' ')} data-placement={placement} data-testid="kit-rec-dock"
-      {...(full ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': kitT(lang, 'kit.record.dock.full') } : {})}>
+      {...(full && modal ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': kitT(lang, 'kit.record.dock.full') } : {})}>
       {/* Список под паспортом живой: своя прокрутка, щелчок по другой записи (08.11). */}
       {!full && backdrop && <div className="sk-dock__backdrop">{backdrop}</div>}
       {full && onExitFull && (

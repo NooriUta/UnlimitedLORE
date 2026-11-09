@@ -1,0 +1,17 @@
+/*
+ * Оговорка палитры: запись найдена, а раздела для её типа в v2 ещё нет
+ * (аудит 09.11, D-01).
+ *
+ * Вид тот же, что у предупреждений списка (`list-screen__warn`): это один и тот
+ * же разговор с человеком — «данные есть, но показать их пока негде», — и
+ * выглядеть он должен одинаково, а не каждым экраном по-своему.
+ */
+.section-palette__note {
+  margin: 4px 0 0;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  color: var(--t1);
+  font-size: var(--fs-xs);
+}

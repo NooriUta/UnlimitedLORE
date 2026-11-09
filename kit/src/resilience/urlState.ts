@@ -27,9 +27,45 @@ export function readUrlState(win: UrlWindow = window): URLSearchParams {
   return out;
 }
 
+/**
+ * Тот же адрес, что записал бы {@link pushUrlState}, но строкой и без перехода.
+ *
+ * Нужен ссылкам: аудит навигации 08.11.2026 отметил, что все 11 пунктов меню и
+ * крошка — `<button>`, поэтому их «нельзя открыть в новой вкладке, скопировать
+ * адрес, средний клик; для скринридера это кнопки-действия, а не навигация».
+ * Чтобы пункт стал `<a href>`, адрес нужно знать ДО перехода — отсюда эта
+ * функция. Переход остаётся за pushUrlState: ссылка ведёт туда же, куда клик.
+ *
+ * `anchor: null` снимает якорь — им закрывается «мусор #… после выхода из
+ * дока» (та же находка аудита).
+ */
+export function urlStateHref(
+  win: UrlWindow,
+  patch: Record<string, string | null | undefined>,
+  opts: { anchor?: string | null } = {},
+): string {
+  const params = readUrlState(win);
+  for (const [k, v] of Object.entries(patch)) {
+    if (v == null) params.delete(k);
+    else params.set(k, v);
+  }
+  const query = params.toString();
+  const keepAnchor = hashParams(win.location.hash) ? '' : win.location.hash;
+  const anchor = opts.anchor === undefined ? keepAnchor : (opts.anchor ?? '');
+  return `${win.location.pathname}${query ? `?${query}` : ''}${anchor}`;
+}
+
+/**
+ * Записать состояние в URL.
+ *
+ * `anchor: null` снимает якорь. Это понадобилось находке P1 аудита 08.11:
+ * «кнопка "← Спринты" док закрывает, но в адресе остаются place=bottom
+ * #SPRINT_…». Оставшийся якорь — не косметика: по такому адресу запись
+ * откроется снова.
+ */
 export function pushUrlState(
   patch: Record<string, string | null | undefined>,
-  opts: { replace?: boolean; win?: UrlWindow } = {},
+  opts: { replace?: boolean; win?: UrlWindow; anchor?: string | null } = {},
 ): 'history' | 'hash' {
   const win = opts.win ?? window;
   const params = readUrlState(win);
@@ -37,10 +73,7 @@ export function pushUrlState(
     if (v == null) params.delete(k);
     else params.set(k, v);
   }
-  const query = params.toString();
-  // Якорь (#top) сохраняем; параметры из hash уже слиты в query.
-  const anchor = hashParams(win.location.hash) ? '' : win.location.hash;
-  const url = `${win.location.pathname}${query ? `?${query}` : ''}${anchor}`;
+  const url = urlStateHref(win, patch, opts.anchor === undefined ? {} : { anchor: opts.anchor });
   try {
     if (opts.replace) win.history.replaceState(null, '', url);
     else win.history.pushState(null, '', url);

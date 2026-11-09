@@ -68,11 +68,12 @@ public class LoreNewsV2Resource extends LoreResourceBase {
                            @QueryParam("component") String component, @QueryParam("sprint") String sprint,
                            @QueryParam("milestone") String milestone, @QueryParam("author") String author,
                            @QueryParam("kind") String kind, @QueryParam("els") String els,
+                           @QueryParam("who") String who,
                            @QueryParam("group_by") String groupBy, @QueryParam("sub") String sub,
                            @QueryParam("matrix") Integer matrix, @QueryParam("limit") Integer limit,
                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Built b = build(from, to, days, tz, type, project, component, sprint, milestone, author, kind, els, groupBy, sub, matrix, limit, role);
+        Built b = build(from, to, days, tz, type, project, component, sprint, milestone, author, kind, els, who, groupBy, sub, matrix, limit, role);
         if (b.error != null) return b.error;
         return noStore(Response.ok(b.response));
     }
@@ -86,9 +87,10 @@ public class LoreNewsV2Resource extends LoreResourceBase {
                                @QueryParam("component") String component, @QueryParam("sprint") String sprint,
                                @QueryParam("milestone") String milestone, @QueryParam("author") String author,
                                @QueryParam("kind") String kind, @QueryParam("els") String els,
+                               @QueryParam("who") String who,
                                @Context UriInfo uri, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Built b = build(from, to, days, tz, type, project, component, sprint, milestone, author, kind, els, null, null, null, null, role);
+        Built b = build(from, to, days, tz, type, project, component, sprint, milestone, author, kind, els, who, null, null, null, null, role);
         if (b.error != null) return b.error;
         String self = uri == null ? "urn:lore:news:v2" : uri.getRequestUri().toString();
         String xml = NewsAtomWriter.write(b.response, self, null);
@@ -126,7 +128,7 @@ public class LoreNewsV2Resource extends LoreResourceBase {
     private record Built(Map<String, Object> response, Response error) {}
 
     private Built build(String from, String to, Integer days, String tz, String type, String project, String component,
-                        String sprint, String milestone, String author, String kind, String els,
+                        String sprint, String milestone, String author, String kind, String els, String who,
                         String groupBy, String sub, Integer matrix, Integer limit, String role) {
         Set<String> scope = lore.allowedProjectsOrNull(role);
         if (scope != null && scope.isEmpty())
@@ -150,8 +152,14 @@ public class LoreNewsV2Resource extends LoreResourceBase {
             LoreNewsReadMarkStore.State mark = store().get();
             NewsV2.Query q = new NewsV2.Query(csv(type), csv(project), csv(component), csv(sprint), csv(milestone),
                 csv(author), csv(kind), csv(els), groupBy == null ? "project" : groupBy, sub, matrix, limit,
-                "ok".equals(mark.state()) ? mark.at() : null);
-            Map<String, Object> out = new NewsV2Engine(input, LoreNewsV2Collector.authors(), LoreNewsV2Collector.statusHistory())
+                "ok".equals(mark.state()) ? mark.at() : null, csv(who));
+            // S7A-01: автор и история статуса — из истории SCD2 (S2-12/S2-13), а не заглушки.
+            java.util.function.BiFunction<String, Map<String, Object>, List<Map<String, Object>>> rows =
+                (sql, params) -> LoreTimeFormat.isoUtcRows(ingestService.queryPublic(sql, params));
+            StatusHistoryTimeline timeline = StatusHistoryTimeline.load(rows);
+            HistAuthorIndex authorIndex = HistAuthorIndex.load(rows);
+            Map<String, Object> out = new NewsV2Engine(input,
+                    LoreNewsV2Collector.authors(timeline, authorIndex), timeline)
                 .compute(q);
             @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
             meta.put("read_mark", mark.toMap());

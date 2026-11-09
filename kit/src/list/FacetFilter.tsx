@@ -37,7 +37,9 @@ export interface FacetFilterProps {
   lang: KitLang;
 }
 
-const FIND_FROM = 10;
+/** Порог «их стало много»: с этого числа значений появляется поиск. Тот же
+ *  порог у поиска по группам списка (S9-02) — одно число на один смысл. */
+export const FIND_FROM = 10;
 
 export function FacetFilter({ title, filter, facet, valueTitle, valueIcon, compare, onChange, lang }: FacetFilterProps) {
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);

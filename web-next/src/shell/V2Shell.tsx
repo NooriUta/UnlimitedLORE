@@ -14,6 +14,7 @@ import { ListScreen } from '../pages/ListScreen';
 import { newsSource } from '../news/source';
 import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
+import { useModelStatuses } from './useModelStatuses';
 
 
 /** Глобальные параметры URL v2 — не снимаются при смене раздела. */
@@ -23,7 +24,11 @@ export const V2_KEEP_PARAMS = ['proj'] as const;
 const SECTION_TITLE_ID = 'v2-screen-title';
 
 /** Разделы, где h1 рисует сам экран (шапка экрана kit, S4-23), а не оболочка. */
-const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>(['sprint', 'adr']);
+const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>([
+  'sprint', 'adr', 'task',
+  // S4-V2-SECTIONS: у всех разделов-списков заголовок рисует шапка экрана kit.
+  'milestone', 'release', 'decision', 'spec', 'question', 'component', 'tech', 'feature',
+]);
 
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
 const SCREENS: Partial<Record<V2Section, ComponentType>> = {
@@ -33,6 +38,22 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   sprint: () => <ListScreen screen="sprints" titleId={SECTION_TITLE_ID} />,
   // S4-23: заголовок ADR — шапка экрана kit (ScreenHead): виды в строке заголовка.
   adr: () => <ListScreen screen="adrs" titleId={SECTION_TITLE_ID} />,
+  // S4-V2-SECTIONS: пункт «Задачи» был в меню с самого начала, а экрана под ним
+  // не было — раздел отвечал «экран не собран». Источник — open_tasks (all_tasks
+  // несёт note_md и даёт миллионы символов), и это сказано на экране словами.
+  task: () => <ListScreen screen="tasks" titleId={SECTION_TITLE_ID} />,
+  // S4-V2-SECTIONS, восемь оставшихся разделов v1. Все — тем же путём: общий
+  // ListScreen + описание экрана в lists/screens.ts, своей страницы ни у кого.
+  // У семи из восьми паспорта нет (фасад отдаёт sprint, task, adr, spec), и
+  // щелчок по строке говорит это словами, а не открывает пустой паспорт.
+  milestone: () => <ListScreen screen="milestones" titleId={SECTION_TITLE_ID} />,
+  release: () => <ListScreen screen="releases" titleId={SECTION_TITLE_ID} />,
+  decision: () => <ListScreen screen="decisions" titleId={SECTION_TITLE_ID} />,
+  spec: () => <ListScreen screen="specs" titleId={SECTION_TITLE_ID} />,
+  question: () => <ListScreen screen="questions" titleId={SECTION_TITLE_ID} />,
+  component: () => <ListScreen screen="components" titleId={SECTION_TITLE_ID} />,
+  tech: () => <ListScreen screen="tech" titleId={SECTION_TITLE_ID} />,
+  feature: () => <ListScreen screen="features" titleId={SECTION_TITLE_ID} />,
   // Лента новостей kit (SPRINT_UXR_S7A_NEWS/S7A-02); свой заголовок — у раздела.
   news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} />,
   // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —
@@ -67,7 +88,11 @@ export interface V2ShellProps {
 
 export function V2Shell({ storage, win, narrow, brandTag, topStart, topEnd, account }: V2ShellProps) {
   const lang = useKitLang();
-  const config = useMemo(() => v2Config(lang), [lang]);
+  // Словарь статусов — из модели (S4-STATUS-AXIS-CONFIG): он данные приложения,
+  // а не код клиента. Модель недоступна — остаётся рукописное умолчание, и
+  // причина названа словами в `notes`, а не замолчана.
+  const statuses = useModelStatuses();
+  const config = useMemo(() => v2Config(lang, statuses.items), [lang, statuses.items]);
   return (
     <KitShell
       config={config}

@@ -21,19 +21,19 @@ import '@fontsource/ibm-plex-mono/700.css';
 import '@fontsource/unbounded/800.css';
 import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
-import { ErrorBoundary, Pill, Skeleton, StorageBanner, resolvePrefs, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { ErrorBoundary, Pill, Skeleton, StorageBanner, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
 import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPassport';
-import { createLocalS2Client } from './api/me';
+import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
-import { LorePalette } from './palette/LorePalette';
+import { SectionPalette } from './palette/SectionPalette';
+import { OutsideShell } from './pages/OutsideShell';
 import type { ListScreenId } from './lists/screens';
 import { V2Shell } from './shell/V2Shell';
 import type { V2Section } from './shell/v2Config';
 import { storage as appStorage } from './storage/safe';
-import { themeSource } from './storage/themeSource';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
@@ -45,18 +45,33 @@ const NewsPage = lazy(() => import('./news/NewsPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
 const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
 
-// Личное пользователя (/lore/me/*, контракт S2) — до S2-04 на заглушке с
-// хранением в браузере (S4-02). Первый раз — с темой, выбранной в v1/seer-prefs.
-const initialTheme = resolvePrefs(themeSource());
-const meClient = createLocalS2Client(appStorage, {
-  seed: { palette: initialTheme.palette, mode: initialTheme.mode, density: initialTheme.density },
-});
+// Личное пользователя (/lore/me/*, контракт S2) — боевой сервер
+// (SPRINT_UXR_S5_RECORD_TASKS/S5-14). Прежняя заглушка держала настройки в
+// браузере, и владелица, работая с телефона, своих настроек там не видела:
+// браузерное хранилище с устройства на устройство не ездит.
+//
+// Отката в браузер НЕТ намеренно. Сервер ответил «не опознан» или не ответил —
+// экран настроек честно скажет об этом; молчаливый откат к локальной копии
+// выглядел бы как «настройки сохранены», а на другом устройстве их бы не было.
+// Тема первого экрана от этого не зависит: её ставит main.tsx из cookie
+// seer-prefs ещё до запроса, а ответ сервера её потом уточняет.
+const meClient = createLiveS2Client();
 
 export type Route = 'kit' | 'passport' | 'news' | 'task' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
-/** Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01). */
-const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs: 'adr' };
+/**
+ * Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01).
+ *
+ * Карта ПОЛНАЯ по экранам намеренно: у каждого экрана списка есть свой раздел
+ * оболочки, и `Record` держит это равенство — добавив экран и забыв раздел,
+ * сборка не пройдёт (S4-V2-SECTIONS).
+ */
+const LIST_SECTION: Record<ListScreenId, V2Section> = {
+  sprints: 'sprint', adrs: 'adr', tasks: 'task',
+  decisions: 'decision', specs: 'spec', questions: 'question', milestones: 'milestone',
+  releases: 'release', components: 'component', tech: 'tech', features: 'feature',
+};
 
 /**
  * Путь без хвостового «/»: /kit и /kit/ — одна страница; /news — новости v2
@@ -112,8 +127,21 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
   const query = search ?? win?.location.search ?? (typeof window === 'undefined' ? '' : window.location.search);
   const route = routeOf(current, query);
-  if (route === 'kit') return <Suspense fallback={<Skeleton />}><KitPage /></Suspense>;
-  if (route === 'passport') return <ErrorBoundary lang={lang}><Suspense fallback={<Skeleton />}><PassportDemo /></Suspense></ErrorBoundary>;
+  // Страницы вне оболочки подписаны (S4-17, находка P0 аудита 08.11): без
+  // шапки и меню LORE выглядит сломанным, и отличить витрину от поломки
+  // человек не может, пока ему не сказали. Витрины — «демо вне приложения»,
+  // паспорта по прямому адресу — «вне оболочки», и у каждой ссылка назад.
+  if (route === 'kit') {
+    return <><OutsideShell kind="demo" /><Suspense fallback={<Skeleton />}><KitPage /></Suspense></>;
+  }
+  if (route === 'passport') {
+    return (
+      <ErrorBoundary lang={lang}>
+        <OutsideShell kind="demo" />
+        <Suspense fallback={<Skeleton />}><PassportDemo /></Suspense>
+      </ErrorBoundary>
+    );
+  }
   if (route === 'news') {
     return (
       <ErrorBoundary lang="ru">
@@ -126,6 +154,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
     return (
       <ErrorBoundary lang="ru">
         <StorageBanner storage={storage} lang="ru" />
+        <OutsideShell kind="standalone" />
         <Suspense fallback={<Skeleton />}><TaskReadPage /></Suspense>
       </ErrorBoundary>
     );
@@ -135,6 +164,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
     return (
       <ErrorBoundary lang="ru">
         <StorageBanner storage={storage} lang="ru" />
+        <OutsideShell kind="standalone" back="/?sec=sprint" />
         <main data-lore-app="v2">
           <SprintPassport sprintId={passport.sprintId} tab={passport.tab} />
         </main>
@@ -152,8 +182,10 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
           topEnd={(
             <>
               {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.
-                  Экраны списков передадут сюда свои ctx, target (выделение S4-10) и действия. */}
-              <LorePalette storage={storage} trigger />
+                  Команды разделов — SectionPalette: внутри оболочки она знает navigate
+                  (находка P1 аудита 08.11: палитра была пуста). Экраны списков передадут
+                  сюда свои ctx, target (выделение S4-10) и действия. */}
+              <SectionPalette storage={storage} />
             </>
           )}
           account={(

@@ -157,6 +157,28 @@ public final class LoreSlices {
     static final String DONE_STATUS_SQL = LoreStatusVocabulary.anySql("status_raw", "done");
 
     /**
+     * S7B-02: семейства записи, относящиеся к админке (журнал действий админки).
+     * Человеческие семейства (AgentScopeFilter.HUMAN_ONLY без контентных news/record)
+     * и управление проектами и их ролями.
+     */
+    static final java.util.Set<String> ADMIN_FAMILIES =
+        java.util.Set.of("dict", "kc", "admin", "user", "project", "project-actor");
+
+    /**
+     * S2-11: дата закрытия спринта — момент ПЕРЕХОДА в «выполнен». Правка плана
+     * закрытого спринта открывает новую DONE-версию, и {@code [done].valid_from[0]}
+     * мог указать на неё — дата плыла. {@code status_known_from} ставится только
+     * сменой статуса и переносится правками (StatusHistoryService, правка плана),
+     * поэтому у открытой DONE-версии он и есть момент закрытия. Старые версии без
+     * этого поля (до S2-13) — прежнее выражение.
+     */
+    // Цепочка фильтров [..][..], а не AND: проекция без « AND » — сторож склейки
+    // фильтров слайса (LoreSliceComposeFiltersTest) различает AND только по тексту.
+    static final String DONE_DATE_SQL =
+        "ifnull(out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL
+            + "].status_known_from[0], out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0])";
+
+    /**
      * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
      * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
      */
@@ -240,6 +262,16 @@ public final class LoreSlices {
                 .append(parent.idField()).append("[0] AS ref_id, state_uid FROM ")
                 .append(hist).append(" WHERE valid_to IS NULL AND valid_from IS NULL)");
         }
+        // S2-11: задача или спринт без ЕДИНОЙ версии истории — запись мимо SCD2
+        // (найдено 07.11: 14 задач, их O(t) не определить). Пустой срез без этой
+        // ветки читался бы как «история в порядке».
+        vars.append(", $nt, $ns");
+        lets.append(", $nt = (SELECT 'entity_without_history' AS finding, 'task' AS entity_type, "
+                + "'KnowTaskHist' AS hist_type, task_uid AS ref_id, null AS state_uid FROM KnowTask "
+                + "WHERE out('HAS_STATE').size() = 0)")
+            .append(", $ns = (SELECT 'entity_without_history' AS finding, 'sprint' AS entity_type, "
+                + "'KnowSprintHist' AS hist_type, sprint_id AS ref_id, null AS state_uid FROM KnowSprint "
+                + "WHERE out('HAS_STATE').size() = 0)");
         return "SELECT finding, entity_type, hist_type, ref_id, state_uid "
             + "FROM (SELECT expand(unionall(" + vars + ")) LET " + lets + ") "
             + "ORDER BY entity_type, ref_id";
@@ -729,7 +761,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
-            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date, " +
+            DONE_DATE_SQL + " AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
@@ -796,7 +828,7 @@ public final class LoreSlices {
         // см. DONE_STATUS_SQL про то, почему якорь, а не подстрока.
         slice("sprint_done_dates",
             "SELECT sprint_id, " +
-            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date " +
+            DONE_DATE_SQL + " AS done_date " +
             "FROM KnowSprint " +
             "WHERE out('HAS_STATE')[" + DONE_STATUS_SQL + "].size() > 0",
             List.of(), Map.of(), "");
@@ -1283,6 +1315,17 @@ public final class LoreSlices {
             "FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-11: вся матрица «проект × люди» одним запросом —
+        // строка на человека, его проекты и роль на ребре (те же пары, что у
+        // user_project_roles, но без обязательного kc_sub: N запросов на экран не нужны).
+        // Правка ячейки — POST /lore/user/role и /lore/user/role/batch.
+        slice("role_matrix",
+            "SELECT kc_sub, display_name, " +
+            "out('HAS_PROJECT_ROLE').slug AS projects, " +
+            "outE('HAS_PROJECT_ROLE').role AS roles " +
+            "FROM KnowUser",
+            List.of(), Map.of(), " ORDER BY display_name");   // без потолка: SliceCapAndCardParityTest
+
         // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
         // ревью доступа, что у project_users. Один агент — один живой
         // OWNED_BY (out()/outE() без индекса ok — единственная строка).
@@ -1436,6 +1479,18 @@ public final class LoreSlices {
             "work_class, out('REALIZES').uc_id AS realizes_uc " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
+            List.of("sprint_ids"), Map.of(), "");
+
+        // Владелица 09.11: итоги спринта (задач, оценка, факт). Лёгкая проекция БЕЗ
+        // note_md — ради сумм тела не нужны (у tasks_of_sprints_batch это 3,6 МБ на
+        // 20 спринтов). Строки задач AidaLoreResource сворачивает в строку на спринт
+        // функцией LoreSprintTotals — той же, что кормит паспорт.
+        slice("sprint_totals",
+            "SELECT out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "actual_days " +
+            "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids",
             List.of("sprint_ids"), Map.of(), "");
 
         // SE-01, шаг 1 (пункт 4 mig_gen, 05.11.2026): заметки задач по списку uid.
@@ -2114,6 +2169,27 @@ public final class LoreSlices {
                 "work_class", " WHERE work_class = :work_class")),
             " ORDER BY sprint_id, task_uid");
 
+        // Аудит UX 09.11, D-30 (SPRINT_UXR_S9_SCALE_OPT/S9-01): закрытые задачи для
+        // порционной подгрузки в разделе «Задачи» v2 — та же облегчённая проекция и
+        // фильтры, что у open_tasks. Порции — общие limit/offset (SlicePage, page.has_more),
+        // потолка нет. «done ИЛИ cancelled» — через OR, поэтому В СКОБКАХ: фильтры
+        // дописываются через AND и без скобок легли бы только на последнюю ветку.
+        slice("closed_tasks",
+            "SELECT task_uid, task_id, title, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('TAGGED_WITH').component_id AS component_ids, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
+            "FROM KnowTask " +
+            "WHERE (" + LoreStatusVocabulary.anySql(OPEN_TASK_STATUS_EXPR, "done", "cancelled") + ")",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+                "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint",
+                "component", " WHERE out('TAGGED_WITH').component_id CONTAINS :component",
+                "work_class", " WHERE work_class = :work_class")),
+            " ORDER BY sprint_id, task_uid");
+
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
             "SELECT finding_id, type, verified, source_sprint " +
@@ -2344,6 +2420,19 @@ public final class LoreSlices {
                 "caller", " WHERE source = :caller"),
             " ORDER BY ts DESC LIMIT 500");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-02: журнал действий АДМИНКИ — тот же ряд AO-01,
+        // только админские семейства (ADMIN_FAMILIES). «Кто» — caller, «человек или
+        // агент» — axis, «что» — family + entity_id, «когда» — ts, исход — status (код
+        // ответа): отказы видны наравне с успехом.
+        slice("admin_actions",
+            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, " +
+            "segment AS axis, value AS status FROM MetricSnapshot WHERE metric = 'lore.action' " +
+            "AND object_type IN [" + String.join(", ", ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()) + "]",
+            List.of(), Map.of(
+                "family", " WHERE object_type = :family",
+                "caller", " WHERE source = :caller"),
+            " ORDER BY ts DESC LIMIT 500");
+
         // Тот же ряд, свёрнутый до вызывающего: «кто вообще сколько зовёт»,
         // без разбивки по эндпоинтам — верхний уровень ответа.
         slice("requests_total",
@@ -2351,6 +2440,25 @@ public final class LoreSlices {
             "FROM MetricSnapshot WHERE metric = 'lore.requests' " +
             "GROUP BY object_id, segment",
             List.of(), Map.of(), " ORDER BY calls DESC LIMIT 100");
+
+        // SPRINT_UXR_S7B_ADMIN/S7B-07: подключения MCP и их честное «здоровье».
+        // MCP-сервер работает у агента на машине; LORE видит только его вызовы,
+        // поэтому здоровье — наблюдённое: профиль агента (caller), сколько звал,
+        // когда в последний раз (last_seen, epoch millis). Агента, который не звал
+        // ни разу, здесь нет — это «не видели», а не «здоров».
+        // GROUP BY — в хвосте: фильтры дописываются после базы, а не после группировки.
+        slice("mcp_connections",
+            "SELECT object_id AS caller, sum(value) AS calls, max(ts) AS last_seen " +
+            "FROM MetricSnapshot WHERE metric = 'lore.requests' AND segment = 'agent'",
+            List.of(), Map.of("caller", " WHERE object_id = :caller"),
+            " GROUP BY object_id ORDER BY last_seen DESC LIMIT 100");
+
+        // Сбои агентских записей: ответ с кодом ≥ 400 (AO-01 пишет код в value).
+        slice("mcp_failures",
+            "SELECT source AS caller, count(*) AS failures, max(ts) AS last_failure " +
+            "FROM MetricSnapshot WHERE metric = 'lore.action' AND segment = 'agent' AND value >= 400",
+            List.of(), Map.of("caller", " WHERE source = :caller"),
+            " GROUP BY source ORDER BY last_failure DESC LIMIT 100");
 
         // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
         // Отличать от sessions_recent намеренно: здесь наблюдённый факт входа,
@@ -2558,7 +2666,9 @@ public final class LoreSlices {
         Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("closed_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.
         Map.entry("release_tasks_by_tag", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // AN-06: срез I — строка на uc-задачу, проект через её спринт.
@@ -2708,6 +2818,10 @@ public final class LoreSlices {
         Map.entry("requests_by_caller", "телеметрия обращений — админская, решение"),
         Map.entry("requests_total", "телеметрия — решение"),
         Map.entry("agent_actions", "журнал действий (AO-01) — админский, как телеметрия; решение"),
+        Map.entry("admin_actions", "журнал действий админки (S7B-02) — тот же ряд AO-01, админский; решение"),
+        Map.entry("role_matrix", "матрица ролей проект × люди (S7B-11) — админская, как project_users для всех; решение"),
+        Map.entry("mcp_connections", "подключения MCP (S7B-07) — телеметрия агентов, админская; решение"),
+        Map.entry("mcp_failures", "сбои записей агентов (S7B-07) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")

@@ -96,7 +96,8 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> values = LoreRecordValues.defaults(type);
         Map<String, Object> rec = recordHead(type, null, "", (String) values.get("status"), null);
         Map<String, Object> out = envelope(rec, values, List.of(), List.of(),
-            LoreRecordPerms.of(type, role, identified, null, 0, specStatuses(type)), Map.of(), type, List.of());
+            LoreRecordPerms.of(type, role, identified, null, 0, specStatuses(type)), Map.of(), type, List.of(),
+            List.of());
         return noStore(Response.ok(out));
     }
 
@@ -128,6 +129,9 @@ public class LoreRecordResource extends LoreResourceBase {
         List<Map<String, Object>> parts = new ArrayList<>();
         List<Map<String, Object>> links = new ArrayList<>();
         Map<String, Object> facts = new LinkedHashMap<>();
+        // S4-30: что с каждым прочитанным источником (meta.data_state).
+        List<Map<String, Object>> dataState = new ArrayList<>();
+        dataState.add(LoreRecordDataState.entry(src.slice(), null, main));
         int openTasks = 0;
 
         LoreRecordRegistry.TypeDef def = LoreRecordRegistry.get(type);
@@ -144,6 +148,7 @@ public class LoreRecordResource extends LoreResourceBase {
             Map<String, Object> part = LoreRecordRegistry.partJson(p);
             part.put("state", r.state());
             if (r.error() != null) part.put("error", r.error());
+            dataState.add(LoreRecordDataState.entry(p.slice(), p.key(), r));
             List<Map<String, Object>> items = new ArrayList<>();
             if (r.ok()) {
                 if ("tasks".equals(p.key())) items = taskItems;
@@ -174,6 +179,17 @@ public class LoreRecordResource extends LoreResourceBase {
                     tf.put("total", taskItems.size());
                     tf.put("open", openTasks);
                     facts.put("tasks", tf);
+                    // Владелица 09.11: итоги спринта — та же функция, что у среза sprint_totals
+                    // (одно число — один источник). Строкам части задач проставляется sprint_id.
+                    List<Map<String, Object>> rowsWithSprint = new ArrayList<>();
+                    for (Map<String, Object> t : tasksRead.rows()) {
+                        Map<String, Object> c = new LinkedHashMap<>(t);
+                        c.put("sprint_id", id);
+                        rowsWithSprint.add(c);
+                    }
+                    Map<String, Object> totals = LoreSprintTotals.aggregate(rowsWithSprint, List.of(id)).get(0);
+                    for (String k : List.of("tasks_total", "effort_days_total", "actual_days_total"))
+                        values.put(k, totals.get(k));
                 }
             }
             case "task" -> {
@@ -181,6 +197,7 @@ public class LoreRecordResource extends LoreResourceBase {
                 links.addAll(LoreRecordValues.links("REALIZES", "out", "use_case", LoreRecordValues.arr(row.get("realizes_uc"))));
                 Read adrs = read("adrs_of_task", Map.of("id", id), scope);
                 blocks.add("adrs");
+                dataState.add(LoreRecordDataState.entry("adrs_of_task", "adrs", adrs));
                 if (adrs.ok()) for (Map<String, Object> a : adrs.rows())
                     links.add(LoreRecordValues.link("JUSTIFIED_BY", "out", LoreRecordValues.str(a.get("adr_id")), "adr",
                         LoreRecordValues.str(a.get("name")), LoreRecordValues.docToken(a.get("status"))));
@@ -199,15 +216,19 @@ public class LoreRecordResource extends LoreResourceBase {
         }
 
         String version = null;
+        String versionError = null;
         try {
             List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordVersion.sql(type), Map.of("id", id));
             if (!v.isEmpty()) version = LoreRecordVersion.normalize(v.get(0).get("version"));
         } catch (RuntimeException e) {
-            facts.put("version_error", e.getMessage());
+            versionError = e.getMessage();
+            facts.put("version_error", versionError);
         }
+        dataState.add(LoreRecordDataState.version(versionError));
         Map<String, Object> rec = recordHead(type, id, (String) values.get("title"), status, version);
         Map<String, Object> out = envelope(rec, values, parts, links,
-            LoreRecordPerms.of(type, role, identified, status, openTasks, specStatuses(type)), facts, type, blocks);
+            LoreRecordPerms.of(type, role, identified, status, openTasks, specStatuses(type)), facts, type, blocks,
+            dataState);
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());
@@ -249,7 +270,8 @@ public class LoreRecordResource extends LoreResourceBase {
     private static Map<String, Object> envelope(Map<String, Object> rec, Map<String, Object> values,
                                                 List<Map<String, Object>> parts, List<Map<String, Object>> links,
                                                 Map<String, Object> perms, Map<String, Object> facts,
-                                                String type, List<String> blocks) {
+                                                String type, List<String> blocks,
+                                                List<Map<String, Object>> dataState) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("contract", CONTRACT);
         out.put("record", rec);
@@ -264,6 +286,7 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("facade", "server");
         meta.put("sources", sources);
+        meta.put("data_state", new ArrayList<>(dataState));
         out.put("meta", meta);
         return out;
     }

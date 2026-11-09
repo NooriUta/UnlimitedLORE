@@ -12,6 +12,7 @@
 // Это подсказка интерфейса, а не защита: окончательную проверку делает сервер
 // потребителя («Дата-странники»), не kit и не бэкенд LORE.
 import type { KitConfig, KitCtx, KitJournalEntry, KitRecord } from '../core/contract';
+import { normalizeAxisCategory } from '../core/statusAxis';
 
 export interface RolePerms {
   canEdit: boolean;
@@ -57,7 +58,11 @@ export function checkTransition(ctx: ApprovalCtx, record: KitRecord, to: string)
   if (!item) return { ok: false, reason: 'unknown-status' };
   if (to === record.status) return { ok: false, reason: 'same' };
   if (item.allow && (ctx.role === undefined || !item.allow.includes(ctx.role))) return { ok: false, reason: 'role' };
-  const fourEyes = ctx.config.statuses.selfApprove === false && item.category === 'done';
+  // Закрытие определяем по оси, а не по слову 'done': модель присылает
+  // 'finished', и сравнение со старым словом бесшумно отключило бы двойное
+  // подтверждение — ничего бы не упало, просто правило перестало бы работать.
+  const fourEyes = ctx.config.statuses.selfApprove === false
+    && normalizeAxisCategory(item.category) === 'finished';
   if (!fourEyes) return { ok: true, fourEyes: false };
   const pending = pendingProposal(ctx.data.journal, record.id);
   if (!pending) return { ok: true, fourEyes: true };

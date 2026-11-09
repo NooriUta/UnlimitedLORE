@@ -19,6 +19,8 @@ export interface TabItem {
   /** Вид связи UML (паспорт по связям): значок у вкладки и data-relation. */
   relation?: string;
   mark?: string;
+  /** Что значит значок связи: подсказка у глифа — иначе он «случайный» (P2 аудита 08.11). */
+  markTitle?: string;
 }
 
 export interface TabsProps {
@@ -90,7 +92,11 @@ export function Tabs({ items, value, onChange, label, children, className, varia
               onKeyDown={e => onKeyDown(e, item.id)}
             >
               {item.icon && <GameIcon slug={item.icon} size={13} />}
-              {item.mark && <span className="sk-tab__mark" data-relation-mark aria-hidden="true">{item.mark}</span>}
+              {item.mark && (
+                // aria-hidden: для чтения вслух глиф бесполезен, подпись вкладки уже сказана.
+                // title — для глаз: «◆» без объяснения выглядит случайным символом.
+                <span className="sk-tab__mark" data-relation-mark aria-hidden="true" title={item.markTitle}>{item.mark}</span>
+              )}
               <span>{item.label}</span>
               {item.count !== undefined && <span className="sk-tab__count">{item.count}</span>}
             </button>

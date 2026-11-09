@@ -52,7 +52,15 @@ export interface TaskGroup {
 export const TASK_STATUSES = [
   'todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled',
 ] as const;
-export type TaskStatus = (typeof TASK_STATUSES)[number];
+/**
+ * Код статуса задачи.
+ *
+ * С S4-STATUS-AXIS-CONFIG статусы приходят из конфигурации (а в неё — из
+ * модели), поэтому список перестал быть закрытым: `TASK_STATUSES` остались
+ * умолчанием, когда конфигурации нет. `string & {}` сохраняет подсказку
+ * известных кодов и при этом не врёт, будто других не бывает.
+ */
+export type TaskStatus = (typeof TASK_STATUSES)[number] | (string & {});
 
 const byOrder = (a: TaskRowData, b: TaskRowData) => a.order - b.order || a.id.localeCompare(b.id);
 

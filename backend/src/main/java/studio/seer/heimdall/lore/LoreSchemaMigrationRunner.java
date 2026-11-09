@@ -491,6 +491,42 @@ public class LoreSchemaMigrationRunner {
         if (version == 56) histTimeToDatetime();
         if (version == 57) dropPlanItemLeftoversIfUnused();
         if (version == 68) backfillStatusHistory();
+        if (version == 71) backfillTaskHistory();
+    }
+
+    /**
+     * V71 (S2-11): задачам без единой версии истории — одна честная версия
+     * ({@link StatusHistoryService#TASK_BACKFILL_TYPES}). Идемпотентен.
+     *
+     * @return сколько версий открыто
+     */
+    int backfillTaskHistory() {
+        String now = Instant.now().toString();
+        int opened = 0;
+        for (StatusHistoryService.BackfillCount c
+                : StatusHistoryService.backfill(statusDb(), now, StatusHistoryService.TASK_BACKFILL_TYPES)) {
+            LOG.infof("[LORE MIGRATE] V71 задачам без истории открыто версий — %d (время восстановлено: %s)",
+                c.opened(), now);
+            opened += c.opened();
+        }
+        return opened;
+    }
+
+    private StatusHistoryService.Db statusDb() {
+        return new StatusHistoryService.Db() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                Object r = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql,
+                        params == null || params.isEmpty() ? null : params)).await().indefinitely().result();
+                return r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+            }
+            @Override
+            public Object script(String sql, Map<String, Object> params) {
+                return client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript", sql, params))
+                    .await().indefinitely().result();
+            }
+        };
     }
 
     /**

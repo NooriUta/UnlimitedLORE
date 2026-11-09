@@ -47,7 +47,25 @@ export interface MdInlineEditProps {
   onUploadImage?: (file: File) => Promise<{ url: string }>;
   /** Упоминания по «@» в превью. */
   mentionItems?: MentionItem[];
+  /**
+   * Черновик поля на сервере (S5-09). kit про API не знает — получает три
+   * действия: прочитать, сохранить, снять. Нет слота — поле работает как
+   * раньше, без единого вызова.
+   */
+  drafts?: MdDraftSlot;
   className?: string;
+}
+
+/** Черновик поля: что умеет вызывающий (web-next: /lore/me/drafts). */
+export interface MdDraftSlot {
+  /** Черновик поля или null, если его нет. Бросает — «не прочитали», а не «нет». */
+  load: () => Promise<{ text: string; savedAt: string; stale?: boolean } | null>;
+  /** Сохранить черновик; зовётся с паузой, а не на каждую букву. */
+  save: (text: string) => Promise<void> | void;
+  /** Снять черновик: после сохранения записи и по «Отбросить». */
+  remove: () => Promise<void> | void;
+  /** Пауза перед сохранением, мс (по умолчанию 1500). */
+  delayMs?: number;
 }
 
 const MODE_KEY: Record<MdEditMode, KitKey> = {
@@ -58,7 +76,7 @@ const MODE_KEY: Record<MdEditMode, KitKey> = {
 
 export function MdInlineEdit({
   value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
-  emptyText, onUploadImage, mentionItems, className,
+  emptyText, onUploadImage, mentionItems, drafts, className,
 }: MdInlineEditProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -70,6 +88,14 @@ export function MdInlineEdit({
   const [error, setError] = useState<string | null>(null);
   // Сохранённое показываем сразу, пока вызывающий не принёс новое value.
   const [saved, setSaved] = useState<{ base: string; md: string } | null>(null);
+  // ── черновик на сервере (S5-09) ───────────────────────────────────────
+  // Предложение восстановить видно СРАЗУ при открытии записи: иначе про
+  // черновик узнаёт только тот, кто и так собрался править.
+  const [pending, setPending] = useState<{ text: string; savedAt: string; stale?: boolean } | null>(null);
+  const [draftNote, setDraftNote] = useState<string | null>(null);
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
+
   const penRef = useRef<HTMLButtonElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
   const wasEditing = useRef(false);
@@ -82,11 +108,57 @@ export function MdInlineEdit({
   const mode: MdEditMode = wanted === 'preview' && !lossless ? 'code' : wanted;
   const dirty = draft !== shown;
 
+  // Читаем черновик один раз на значение поля: value меняется только когда
+  // запись перечитали, и тогда черновик надо сверить заново.
+  useEffect(() => {
+    const slot = draftsRef.current;
+    if (!slot) return;
+    let live = true;
+    void (async () => {
+      try {
+        const d = await slot.load();
+        if (!live) return;
+        setDraftNote(null);
+        // Черновик, совпадающий с текстом записи, предлагать нечего.
+        setPending(d && d.text !== value ? d : null);
+      } catch (e) {
+        // «Не прочитали» ≠ «нет»: молчать здесь значит потерять правку.
+        if (live) { setPending(null); setDraftNote(t('kit.mdedit.draft.loadFailed', { reason: describeError(e) })); }
+      }
+    })();
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   useEffect(() => {
     if (editing) groupRef.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
     else if (wasEditing.current) penRef.current?.focus();
     wasEditing.current = editing;
   }, [editing]);
+
+  // Автосохранение черновика: с паузой, а не на каждую букву. Текст, равный
+  // записи, — не черновик: снимаем, иначе всплывёт поверх сохранённого.
+  useEffect(() => {
+    const slot = draftsRef.current;
+    if (!slot || !editing) return;
+    if (draft === shown) {
+      const id = setTimeout(() => { void Promise.resolve(slot.remove()).catch(() => {}); }, slot.delayMs ?? 1500);
+      return () => clearTimeout(id);
+    }
+    const id = setTimeout(() => {
+      void (async () => {
+        try {
+          await slot.save(draft);
+          setDraftNote(null);
+        } catch (e) {
+          // Текст в поле остаётся: сбой записи черновика не причина его терять.
+          setDraftNote(t('kit.mdedit.draft.saveFailed', { reason: describeError(e) }));
+        }
+      })();
+    }, slot.delayMs ?? 1500);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, editing, shown]);
 
   const open = () => {
     setDraft(shown);
@@ -111,6 +183,15 @@ export function MdInlineEdit({
       await onSave(draft);
       setSaved({ base: value, md: draft });
       setEditing(false);
+      // Запись сохранена — черновик больше не нужен и не должен всплывать
+      // поверх сохранённого текста.
+      setPending(null);
+      try {
+        await draftsRef.current?.remove();
+      } catch {
+        // Снять черновик не удалось — запись всё равно сохранена; об этом
+        // скажет следующее чтение черновика, выдумывать тут нечего.
+      }
     } catch (e) {
       setError(describeError(e));
     } finally {
@@ -155,9 +236,48 @@ export function MdInlineEdit({
   );
   const preview = useMemo(() => <MartProse text={draft} />, [draft]);
 
+  const restore = () => {
+    if (!pending) return;
+    setDraft(pending.text);
+    setLossless(isLosslessMd(pending.text));
+    setError(null);
+    setEditing(true);
+    setPending(null);
+  };
+  const discard = () => {
+    setPending(null);
+    void Promise.resolve(draftsRef.current?.remove()).catch(() => {});
+  };
+  // Время сохранения — местное «ЧЧ:ММ»: подпись из слов владелицы
+  // «Восстановить черновик от HH:MM».
+  const savedTime = (iso: string) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime())
+      ? iso
+      : d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  };
+  const draftBar = (pending || draftNote) && (
+    <div className="sk-mdedit__draft" role="status">
+      {pending && (
+        <>
+          <span className="sk-mdedit__draft-text">
+            {t('kit.mdedit.draft.restore', { time: savedTime(pending.savedAt) })}
+            {/* Запись правили после черновика: слияние по блокам — S5-08, */}
+            {/* поэтому молча накладывать старый текст на новый нельзя. */}
+            {pending.stale ? ` · ${t('kit.mdedit.draft.stale')}` : ''}
+          </span>
+          <button type="button" className="sk-btn" onClick={restore}>{t('kit.mdedit.draft.restoreBtn')}</button>
+          <button type="button" className="sk-btn" onClick={discard}>{t('kit.mdedit.draft.discard')}</button>
+        </>
+      )}
+      {draftNote && <span className="sk-mdedit__draft-note">{draftNote}</span>}
+    </div>
+  );
+
   if (!editing) {
     return (
       <section className={['sk-mdedit', className].filter(Boolean).join(' ')} data-state="read">
+        {draftBar}
         {/* S4-CONTENT-V4 (прототип v4): как править — строкой над текстом; «Режим исходника» — сразу в код. */}
         {onSave && (
           <div className="sk-mdedit__hint">
@@ -190,6 +310,7 @@ export function MdInlineEdit({
       aria-label={t('kit.mdedit.editing', { field: label })}
       onKeyDown={onKeyDown}
     >
+      {draftBar}
       <div className="sk-mdedit__bar">
         <div
           ref={groupRef}

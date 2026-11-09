@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Цифры дня — варианты</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<!-- SPRINT_UXR_S7A_NEWS/S7A-12: варианты заголовка дня без «ещё ▾». Только раскладка, числа подставные. -->
+<style>
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--bdh:#584c38;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;--g-news:#d4a84a;
+--font:'Manrope',sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif;--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px}
+@media (pointer:coarse),(max-width:600px){:root{--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:16px}}
+:root[data-theme="light"]{--bg0:#f6f1e4;--bg1:#efe8d6;--bg2:#e6dcc4;--bg3:#dccfb2;--bd:#c9b994;--t1:#2a2316;--t2:#5e523b;--t3:#6d6148}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-base)/1.4 var(--font)}
+main{max-width:860px;margin:0 auto;padding:12px 16px 60px}
+h1{font:800 var(--fs-lg) var(--head);margin:6px 0}
+.lead{color:var(--t2);font-size:var(--fs-sm);margin:0 0 10px}
+.var{border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin:14px 0;background:var(--bg1)}
+.var h2{margin:0 0 2px;font:800 var(--fs-md) var(--head);color:var(--g-news)}
+.var p.why{margin:0 0 8px;font-size:var(--fs-xs);color:var(--t2)}
+.var p.why b{color:var(--t1)}
+iconify-icon{display:inline-block;vertical-align:-2px}
+.date{font:700 var(--fs-sm) var(--mono);color:var(--t2);padding:6px 0 4px;border-bottom:1px solid var(--bd);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.row{display:flex;gap:10px;padding:6px 2px;border-bottom:1px solid var(--bg2);font-size:var(--fs-md)}
+.row small{display:block;font:700 var(--fs-2xs) var(--mono);color:var(--suc);text-transform:uppercase}
+.mono{font-family:var(--mono)}
+/* общие кубики */
+.cubes{display:flex;gap:6px;flex-wrap:wrap;padding:6px 0}
+.cube{display:grid;grid-template-columns:auto auto;column-gap:4px;align-items:center;background:var(--bg2);border:1px solid var(--bdh);border-radius:6px;padding:3px 8px 2px}
+.cube b{font:700 var(--fs-md) var(--mono)}
+.cube i{grid-column:1/-1;font-style:normal;font-size:var(--fs-2xs);color:var(--t3);white-space:nowrap}
+/* A: тихие кубики в том же ряду */
+.cube.q{background:none;border-color:transparent;padding-left:4px;padding-right:4px}
+.cube.q b{font-size:var(--fs-sm);color:var(--t2)!important}
+.vsep{width:1px;background:var(--bd);margin:2px 2px}
+/* B: строка-сноска */
+.foot{display:flex;gap:4px 12px;flex-wrap:wrap;font:600 var(--fs-2xs) var(--mono);color:var(--t3);padding:0 0 6px}
+.foot span{display:inline-flex;gap:3px;align-items:center}
+/* C: полоса баланса */
+.bal{display:flex;align-items:center;gap:8px;padding:8px 0 4px}
+.bal .bar{flex:1;display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--bg3);max-width:360px}
+.bal .bar span{display:block;height:100%}
+.bal .lbl{font:700 var(--fs-xs) var(--mono);white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 6px}
+.chip{display:inline-flex;gap:4px;align-items:center;border:1px solid currentColor;border-radius:999px;padding:0 8px;font:700 var(--fs-xs) var(--mono)}
+.chip.q{border-color:var(--bd);color:var(--t3)}
+/* D: одна фраза */
+.say{font-size:var(--fs-md);padding:6px 0 2px}
+.say b{font-family:var(--mono)}
+/* E: неделя-полоска над лентой */
+.spark{display:flex;align-items:flex-end;gap:3px;height:34px}
+.spark span{width:18px;border-radius:2px 2px 0 0}
+.spark .z{height:1px;background:var(--bd)}
+.ideas li{margin:4px 0;font-size:var(--fs-sm);color:var(--t2)}
+.ideas b{color:var(--t1)}
+</style>
+</head>
+<body><main id="m"></main>
+<script>
+// Данные одного дня (подставные): задачи заведено 3, закрыто 5, готово 2, реактивировано 1, релиз 1;
+// прочее появилось 2, изменено 4; итог 18 событий · 14 элементов; Δ 14; типы: задачи 11, ADR 2, решения 2, спеки 2, релиз 1.
+const ic=(s,c,z=13)=>`<iconify-icon icon="${s.includes(':')?s:'game-icons:'+s}" width="${z}" style="color:${c}"></iconify-icon>`;
+const C={burn:['flame','var(--suc)','+2','сгорание'],cr:['sprout','var(--suc)','3','заведено задач'],cl:['check-mark','var(--suc)','5','закрыто'],rd:['wave-crest','var(--wrn)','2','готово к выкатке'],re:['lucide:undo-2','var(--dng)','1','реактивировано'],rel:['upgrade','var(--acc)','1','релиз']};
+const I={tot:['','var(--g-news)','18 · 14','события · эл.'],oth:['sprout','var(--t2)','2','появилось прочего'],ch:['pencil','var(--inf)','4','изменено'],d:['','var(--g-news)','Δ 14','уникальных']};
+const types=[['sprint',11],['scroll-quill',2],['gavel',2],['spell-book',2],['open-book',1]];
+const cube=([i,c,v,l],q)=>`<span class="cube ${q?'q':''}">${i?ic(i,q?'var(--t3)':c,12):''}<b style="color:${c}">${v}</b><i>${l}</i></span>`;
+const date=`<div class="date">сегодня · 2026-11-08</div>`;
+const rows=`<div class="row">${ic('sprint','var(--t2)',16)}<div>Колонки списка из настройки<small>${ic('check-mark','var(--suc)',11)} закрыто · 17:26 · S7A-12</small></div></div>`;
+const typesHtml=types.map(([s,n])=>`<span>${ic(s,'var(--t3)',11)}${n}</span>`).join('');
+let h=`<h1>Цифры дня — 5 вариантов</h1><p class="lead">Один и тот же день. Критичные (твой набор): сгорание, заведено задач, закрыто, готово к выкатке, реактивировано, релиз. Информационные: итог, появилось прочего, изменено, Δ, типы. Нигде нет «ещё ▾».</p>`;
+h+=`<section class="var"><h2>A. Всё в одном ряду, тише</h2><p class="why">Критичные — кубиками, информационные — <b>тем же рядом</b> за тонкой чертой, без рамки и серым. Ничего не спрятано, глаз сначала цепляет яркое.</p>${date}<div class="cubes">${Object.values(C).map(x=>cube(x)).join('')}<span class="vsep"></span>${Object.values(I).map(x=>cube(x,1)).join('')}</div>${rows}</section>`;
+h+=`<section class="var"><h2>B. Кубики + строка-сноска</h2><p class="why">Критичные — кубиками. Под ними <b>одна мелкая строка</b> информационных, как в v1: иконка и число. Самый плотный по высоте.</p>${date}<div class="cubes">${Object.values(C).map(x=>cube(x)).join('')}</div><div class="foot"><span>18 · 14 событий · эл.</span><span>${ic('sprout','var(--t3)',11)}2 прочего</span><span>${ic('pencil','var(--t3)',11)}4 изменено</span><span>Δ 14</span>${typesHtml}</div>${rows}</section>`;
+h+=`<section class="var"><h2>C. Полоса баланса + чипы</h2><p class="why">Сгорание видно <b>картинкой</b>: зелёное «закрыто» против серого «заведено» в одной полосе. Остальное — чипами: критичные цветные, информационные серые. Кубиков нет совсем.</p>${date}<div class="bal"><span class="lbl" style="color:var(--suc)">${ic('flame','var(--suc)',12)} +2</span><div class="bar"><span style="width:62%;background:var(--suc)"></span><span style="width:38%;background:var(--t3)"></span></div><span class="lbl" style="color:var(--t3)">5 закрыто · 3 заведено</span></div><div class="chips"><span class="chip" style="color:var(--wrn)">${ic('wave-crest','var(--wrn)',11)}2 готово</span><span class="chip" style="color:var(--dng)">${ic('lucide:undo-2','var(--dng)',11)}1 вернулось</span><span class="chip" style="color:var(--acc)">${ic('upgrade','var(--acc)',11)}1 релиз</span><span class="chip q">18 · 14</span><span class="chip q">${ic('pencil','var(--t3)',11)}4</span><span class="chip q">Δ 14</span></div>${rows}</section>`;
+h+=`<section class="var"><h2>D. Одна фраза — как новость</h2><p class="why">День начинается <b>фразой-итогом</b>, а не таблицей: читается как заголовок новости. Числа внутри фразы кликабельны (фильтр). Информационные — серой сноской.</p>${date}<div class="say">Выгребаем: ${ic('flame','var(--suc)',13)}<b style="color:var(--suc)">+2</b> — закрыто <b>5</b>, заведено <b>3</b>, к выкатке <b style="color:var(--wrn)">2</b>, вернулась <b style="color:var(--dng)">1</b>, вышел релиз <b style="color:var(--acc)">v0.9.9</b>.</div><div class="foot"><span>18 · 14 событий · эл.</span><span>${ic('pencil','var(--t3)',11)}4 изменено</span><span>Δ 14</span>${typesHtml}</div>${rows}</section>`;
+h+=`<section class="var"><h2>E. A или B + неделя над лентой</h2><p class="why">Добавка к любому варианту: над лентой вместо строки метрик — <b>столбики сгорания по дням недели</b> (из ответа сервера, tasks.days). Нажатие на столбик — прыжок к дню.</p><div class="spark">${[1,-1,2,0,3,1,2].map(v=>v===0?'<span class="z"></span>':`<span style="height:${Math.abs(v)*10}px;background:${v>0?'var(--suc)':'var(--dng)'}" title="${v>0?'+':''}${v}"></span>`).join('')}<span class="mono" style="font-size:var(--fs-xs);color:var(--t3);width:auto;padding-left:8px">${ic('flame','var(--suc)',12)} +8 за неделю</span></div></section>`;
+h+=`<section class="var"><h2>Что ещё можно сделать</h2><ul class="ideas">
+<li><b>Тревога заметнее:</b> день с реактивацией или отрицательным сгоранием — тонкая красная черта слева у заголовка дня; спокойный день — без акцентов.</li>
+<li><b>Агентские серии свёрнуты:</b> «агент · 12 изменений» одной строкой с раскрытием (свёртка серий уже есть в ответе — series).</li>
+<li><b>Главное — первым:</b> внутри дня сначала релизы и реактивации, потом остальное по времени.</li>
+<li><b>Счётчик непрочитанного на чипах типов</b> — не цифрой-уведомлением, а точкой: «тут есть новое».</li>
+<li><b>Свайп по дню на телефоне</b> — свернуть/развернуть; долгое нажатие на кубик — фильтр ленты по нему.</li>
+</ul></section>`;
+document.getElementById('m').innerHTML=h;
+</script></body></html>

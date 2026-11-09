@@ -5,10 +5,11 @@
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent, Ref } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
-import type { KitDictItem } from '../core/contract';
+import { ColumnsChoice } from '../list/ColumnsChoice';
+import type { KitConfig, KitDictItem } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
 import { kitT, useKitLang, type KitKey, type KitLang } from '../i18n';
@@ -39,6 +40,23 @@ export interface TaskTableProps {
    * разные вещи, и путать их нельзя.
    */
   dict?: { taskType?: readonly KitDictItem[]; workClass?: readonly KitDictItem[] };
+  /**
+   * Статусы из конфигурации (S4-STATUS-AXIS-CONFIG). Есть — меню строится по
+   * ним: подписи, иконки, цвета и разрешённые переходы `allow`. Нет —
+   * умолчанием служит `TASK_STATUSES`.
+   *
+   * Это чинит найденное расхождение: раньше таблица читала захардкоженный
+   * список, а паспорт — конфигурацию, и при переходе на модель они разошлись
+   * бы молча.
+   */
+  statuses?: KitConfig['statuses']['items'];
+  /**
+   * Набор колонок в порядке показа (S4-35, «наши любимые общие колонки»).
+   * Не задан — прежний полный набор v1. Незнакомые ключи отбрасываются.
+   */
+  columns?: readonly string[];
+  /** Передан — в полосе появляется выбор колонок, как у списков. */
+  onColumnsChange?: (cols: string[]) => void;
   className?: string;
 }
 
@@ -60,6 +78,50 @@ function groupLabel(lang: KitLang, g: TaskGroup): string {
 }
 
 const dash = '—';
+
+interface MenuStatus { code: string; label: string; icon: string; color: string }
+
+/**
+ * Пункты меню смены статуса (S4-STATUS-AXIS-CONFIG).
+ *
+ * Конфигурация есть — читаем её: подписи, иконки, цвета и разрешённые
+ * переходы. Нет — умолчанием служит `TASK_STATUSES`, чтобы kit оставался
+ * работоспособным без модели (витрина, прототипы, другое приложение).
+ *
+ * Два правила, которые здесь важнее кода:
+ *   • `allow` не задан — предлагаем ВСЕ: запрет не выдумываем, его решает
+ *     сервер, а не интерфейс;
+ *   • статус записи, которого нет в конфигурации, не прячем — он виден как
+ *     есть. Спрятать значило бы скрыть сбой данных.
+ */
+function menuStatuses(
+  items: KitConfig['statuses']['items'] | undefined,
+  current: string,
+  lang: KitLang,
+): MenuStatus[] {
+  if (!items || items.length === 0) {
+    return TASK_STATUSES.map(code => {
+      const m = statusMeta(code);
+      return { code, label: kitT(lang, `kit.tasks.status.${code}` as KitKey), icon: m.icon, color: m.color };
+    });
+  }
+  const cur = items.find(s => s.code === current);
+  const allow = cur?.allow;
+  const shown = allow && allow.length > 0
+    ? items.filter(s => s.code === current || allow.includes(s.code))
+    : items;
+  const out: MenuStatus[] = shown.map(s => ({
+    code: s.code,
+    label: s.title,
+    icon: s.icon || statusMeta(s.code).icon,
+    color: s.color || statusMeta(s.code).color,
+  }));
+  if (current && !items.some(s => s.code === current)) {
+    const m = statusMeta(current);
+    out.unshift({ code: current, label: taskStatusName(lang, current), icon: m.icon, color: m.color });
+  }
+  return out;
+}
 
 /** Статья справочника по коду. Нет справочника или нет кода — undefined. */
 function dictEntry(items: readonly KitDictItem[] | undefined, code: string | null): KitDictItem | undefined {
@@ -100,39 +162,92 @@ function ClassCell({ code, items, t }: CellProps) {
   return <span className="sk-tasks__cls">{text}</span>;
 }
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, className }: TaskTableProps) {
+/**
+ * Колонки строки задачи — порядок v1 (S4-36, эталон: скрин владелицы):
+ * статус, тип, класс работы и код слева единым якорем, дальше название и
+ * остальное. Набор выбирается, как в списках (S4-35), кроме «Названия»:
+ * таблица без записи бессмысленна, поэтому оно заперто — то же правило, что
+ * у «Записи» в списках.
+ */
+export const TASK_COLUMNS = [
+  { key: 'status', labelKey: 'kit.tasks.col.status' },
+  { key: 'type', labelKey: 'kit.tasks.col.type' },
+  { key: 'cls', labelKey: 'kit.tasks.col.class' },
+  { key: 'id', labelKey: 'kit.tasks.col.id' },
+  { key: 'title', labelKey: 'kit.tasks.col.title', locked: true },
+  { key: 'phase', labelKey: 'kit.tasks.col.phase' },
+  { key: 'effort', labelKey: 'kit.tasks.col.effort' },
+  { key: 'executor', labelKey: 'kit.tasks.col.executor' },
+  { key: 'reviewer', labelKey: 'kit.tasks.col.reviewer' },
+] as const satisfies readonly { key: string; labelKey: KitKey; locked?: boolean }[];
+
+export const TASK_COLUMN_KEYS: readonly string[] = TASK_COLUMNS.map(c => c.key);
+
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, className }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
+  const [colsOpen, setColsOpen] = useState(false);
   const groups = groupTasks(tasks, groupBy, phases);
   const showPhase = groupBy !== 'phase';
   const showGroupHeads = groupBy !== 'none';
   const phaseById = new Map(phases.map(p => [p.uid, p]));
   const fmt = new Intl.NumberFormat(lang === 'en' ? 'en' : 'ru', { maximumFractionDigits: 2 });
 
-  // Порядок как в v1 (S4-36, эталон — скрин владелицы): статус, тип, класс
-  // работы и код идут слева единым якорем, дальше название и всё остальное.
+  // Доступные колонки: «Фаза» недоступна при группировке по фазе — она уже в
+  // заголовке группы, второй раз это шум.
+  const available = TASK_COLUMNS.filter(c => c.key !== 'phase' || showPhase);
+  const availableKeys = available.map(c => c.key as string);
+  const lockedKey = TASK_COLUMNS.find(c => 'locked' in c && c.locked)!.key as string;
+  // Набор не задан — прежний полный, чтобы паритет с v1 не пропал молча.
+  // Незнакомая колонка (например из старого адреса) отбрасывается: пустой
+  // столбец хуже отсутствующего.
+  const chosen = columns
+    ? columns.filter(k => availableKeys.includes(k))
+    : availableKeys;
+  // «Название» не снимается: таблица без записи бессмысленна. Если его в
+  // наборе нет, оно встаёт на своё место по порядку типа, а не в конец.
+  const shownKeys = chosen.includes(lockedKey)
+    ? chosen
+    : [...chosen, lockedKey].sort((a, b) => availableKeys.indexOf(a) - availableKeys.indexOf(b));
+  const labelOf = (key: string) => {
+    const col = available.find(c => c.key === key);
+    return col ? t(col.labelKey) : key;
+  };
   const cols: { key: string; label: string }[] = [
-    { key: 'status', label: t('kit.tasks.col.status') },
-    { key: 'type', label: t('kit.tasks.col.type') },
-    { key: 'cls', label: t('kit.tasks.col.class') },
-    { key: 'id', label: t('kit.tasks.col.id') },
-    { key: 'title', label: t('kit.tasks.col.title') },
-    ...(showPhase ? [{ key: 'phase', label: t('kit.tasks.col.phase') }] : []),
-    { key: 'effort', label: t('kit.tasks.col.effort') },
-    { key: 'executor', label: t('kit.tasks.col.executor') },
-    { key: 'reviewer', label: t('kit.tasks.col.reviewer') },
+    ...shownKeys.map(key => ({ key, label: labelOf(key) })),
     ...(onSave ? [{ key: 'actions', label: t('kit.tasks.col.actions') }] : []),
   ];
 
   return (
     <div className={['sk-tasks', className].filter(Boolean).join(' ')}>
-      {onGroupByChange && (
-        <div className="sk-tasks__bar" role="group" aria-label={t('kit.tasks.groupBy')}>
-          {TASK_GROUP_BYS.map(by => (
-            <Pill key={by} variant="filter" pressed={by === groupBy} onToggle={() => { if (by !== groupBy) onGroupByChange(by); }}>
-              {t(`kit.tasks.groupBy.${by}` as KitKey)}
-            </Pill>
-          ))}
+      {(onGroupByChange || onColumnsChange) && (
+        <div className="sk-tasks__bar">
+          {onColumnsChange && (
+            // Выбор колонок — тот же компонент, что у списков (S4-35):
+            // «общие колонки» значит и общий способ их выбирать.
+            <span className="sk-tasks__cols">
+              <button type="button" className="sk-btn sk-tasks__btn--ghost" aria-expanded={colsOpen}
+                onClick={() => setColsOpen(o => !o)}>{t('kit.list.cols.title')}</button>
+              {colsOpen && (
+                <div className="sk-tasks__colspop">
+                  <ColumnsChoice
+                    all={available.map(c => ({ key: c.key as string, title: t(c.labelKey), locked: 'locked' in c ? c.locked : undefined }))}
+                    chosen={shownKeys}
+                    onChange={onColumnsChange}
+                  />
+                </div>
+              )}
+            </span>
+          )}
+          {onGroupByChange && (
+            <span className="sk-tasks__groupby" role="group" aria-label={t('kit.tasks.groupBy')}>
+              {TASK_GROUP_BYS.map(by => (
+                <Pill key={by} variant="filter" pressed={by === groupBy} onToggle={() => { if (by !== groupBy) onGroupByChange(by); }}>
+                  {t(`kit.tasks.groupBy.${by}` as KitKey)}
+                </Pill>
+              ))}
+            </span>
+          )}
         </div>
       )}
       <div className="sk-tasks__wrap">
@@ -166,7 +281,9 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   phaseText={task.phase ? (phaseById.get(task.phase)?.id ?? task.phase) : null}
                   effortText={task.effortDays == null ? null : fmt.format(task.effortDays)}
                   colCount={cols.length}
+                  colKeys={cols.map(c => c.key)}
                   dict={dict}
+                  statuses={statuses}
                   onStatusChange={onStatusChange}
                   onSave={onSave}
                   href={hrefFor?.(task)}
@@ -187,13 +304,16 @@ interface RowProps {
   phaseText: string | null;
   effortText: string | null;
   colCount: number;
+  /** Какие ячейки рисовать и в каком порядке (S4-35). */
+  colKeys: readonly string[];
   dict?: TaskTableProps['dict'];
+  statuses?: TaskTableProps['statuses'];
   onStatusChange?: TaskTableProps['onStatusChange'];
   onSave?: TaskTableProps['onSave'];
   href?: string;
 }
 
-function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, dict, onStatusChange, onSave, href }: RowProps) {
+function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, href }: RowProps) {
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -310,10 +430,12 @@ function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, dict,
   );
   const val = (v: string | null) => (v == null || v === '' ? <span className="sk-tasks__none">{dash}</span> : v);
 
-  return (
-    <>
-      <tr className={`sk-tasks__row${draft ? ' is-editing' : ''}${busy ? ' is-busy' : ''}`} data-task={task.id} aria-busy={busy || undefined}>
-        <td ref={statusCell} className="sk-tasks__td sk-tasks__td--status">
+  // Ячейки по ключу колонки (S4-35): порядок и состав задаёт таблица, а строка
+  // только знает, как рисуется каждая. Раньше ячейки шли жёсткой
+  // последовательностью JSX, и набор колонок изменить было нельзя.
+  const cells: Record<string, ReactNode> = {
+    status: (
+      <td key="status" ref={statusCell} className="sk-tasks__td sk-tasks__td--status">
           <StatusStar
             status={task.status}
             label={t('kit.tasks.statusLabel', { name: statusName.toLowerCase() })}
@@ -334,49 +456,67 @@ function TaskRow({ task, lang, showPhase, phaseText, effortText, colCount, dict,
                 if (!next || !statusCell.current?.contains(next)) setMenuOpen(false);
               }}
             >
-              {TASK_STATUSES.map(s => {
-                const m = statusMeta(s);
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={s === current}
-                    tabIndex={-1}
-                    className="sk-tasks__menu-item"
-                    data-status={s}
-                    onClick={() => void pick(s)}
-                  >
-                    <GameIcon slug={m.icon} size={14} color={m.color} />
-                    <span>{t(`kit.tasks.status.${s}` as KitKey)}</span>
-                  </button>
-                );
-              })}
+              {menuStatuses(statuses, current, lang).map(s => (
+                <button
+                  key={s.code}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={s.code === current}
+                  tabIndex={-1}
+                  className="sk-tasks__menu-item"
+                  data-status={s.code}
+                  onClick={() => void pick(s.code)}
+                >
+                  <GameIcon slug={s.icon} size={14} color={s.color} />
+                  <span>{s.label}</span>
+                </button>
+              ))}
             </div>
           )}
-        </td>
-        <td className="sk-tasks__td sk-tasks__td--type">
-          <TypeCell code={task.taskType} items={dict?.taskType} t={t} />
-        </td>
-        <td className="sk-tasks__td sk-tasks__td--cls">
-          <ClassCell code={task.workClass} items={dict?.workClass} t={t} />
-        </td>
-        <td className="sk-tasks__td">
-          {href ? <a className="sk-tasks__id" href={href}>{task.id}</a> : <span className="sk-tasks__id">{task.id}</span>}
-        </td>
-        <td className="sk-tasks__td sk-tasks__td--title">
-          {draft ? input('title', 'kit.tasks.col.title', firstInput) : val(task.title)}
-        </td>
-        {showPhase && <td className="sk-tasks__td">{val(phaseText)}</td>}
-        <td className="sk-tasks__td sk-tasks__td--effort">
-          {draft ? input('effort', 'kit.tasks.col.effort', undefined, true) : val(effortText)}
-        </td>
-        <td className="sk-tasks__td">
-          {draft ? input('executor', 'kit.tasks.col.executor') : val(task.executor)}
-        </td>
-        <td className="sk-tasks__td">
-          {draft ? input('reviewer', 'kit.tasks.col.reviewer') : val(task.reviewer)}
-        </td>
+      </td>
+    ),
+    type: (
+      <td key="type" className="sk-tasks__td sk-tasks__td--type">
+        <TypeCell code={task.taskType} items={dict?.taskType} t={t} />
+      </td>
+    ),
+    cls: (
+      <td key="cls" className="sk-tasks__td sk-tasks__td--cls">
+        <ClassCell code={task.workClass} items={dict?.workClass} t={t} />
+      </td>
+    ),
+    id: (
+      <td key="id" className="sk-tasks__td">
+        {href ? <a className="sk-tasks__id" href={href}>{task.id}</a> : <span className="sk-tasks__id">{task.id}</span>}
+      </td>
+    ),
+    title: (
+      <td key="title" className="sk-tasks__td sk-tasks__td--title">
+        {draft ? input('title', 'kit.tasks.col.title', firstInput) : val(task.title)}
+      </td>
+    ),
+    phase: <td key="phase" className="sk-tasks__td">{val(phaseText)}</td>,
+    effort: (
+      <td key="effort" className="sk-tasks__td sk-tasks__td--effort">
+        {draft ? input('effort', 'kit.tasks.col.effort', undefined, true) : val(effortText)}
+      </td>
+    ),
+    executor: (
+      <td key="executor" className="sk-tasks__td">
+        {draft ? input('executor', 'kit.tasks.col.executor') : val(task.executor)}
+      </td>
+    ),
+    reviewer: (
+      <td key="reviewer" className="sk-tasks__td">
+        {draft ? input('reviewer', 'kit.tasks.col.reviewer') : val(task.reviewer)}
+      </td>
+    ),
+  };
+
+  return (
+    <>
+      <tr className={`sk-tasks__row${draft ? ' is-editing' : ''}${busy ? ' is-busy' : ''}`} data-task={task.id} aria-busy={busy || undefined}>
+        {colKeys.map(k => cells[k]).filter(Boolean)}
         {onSave && (
           <td className="sk-tasks__td sk-tasks__td--actions">
             {draft ? (

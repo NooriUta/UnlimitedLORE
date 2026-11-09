@@ -24,9 +24,54 @@ describe('сохранение текста записи — существую�
     await savePassportField('spec', { id: 'SPEC-X', title: 'Спека' }, 'body_md', 'тело', f as unknown as typeof fetch);
     expect(calls(f)).toEqual([{ url: '/lore/spec', body: { spec_id: 'SPEC-X', title: 'Спека', content_md: 'тело' } }]);
   });
-  it('ADR: тело склеено из трёх разделов — не сохраняем и говорим почему, сеть не трогаем', async () => {
+  it('ADR: тело целиком по-прежнему не сохраняем — разделы правятся по отдельности', async () => {
     const f = vi.fn(async () => ok());
     await expect(savePassportField('adr', { id: 'ADR-1', title: 'A' }, 'body_md', 'x', f as unknown as typeof fetch)).rejects.toThrow(/раздел/);
+    expect(f).not.toHaveBeenCalled();
+  });
+});
+
+// S4-24: ADR правится по разделам — каждый своим полем через /lore/adr.
+// Поле name обязательно: сервер перезаписывает запись целиком, и без имени
+// ADR остался бы безымянным.
+describe('ADR по разделам (S4-24)', () => {
+  it('контекст уходит своим полем, имя обязательно', async () => {
+    const f = vi.fn(async () => ok());
+    await savePassportField('adr', { id: 'ADR-LORE-047', title: 'Контракт записи' }, 'context_md', 'новый контекст', f as unknown as typeof fetch);
+    expect(calls(f)).toEqual([{ url: '/lore/adr', body: { adr_id: 'ADR-LORE-047', name: 'Контракт записи', context_md: 'новый контекст' } }]);
+  });
+
+  it('решение и следствия — тем же путём, каждый своим полем', async () => {
+    const f = vi.fn(async () => ok());
+    await savePassportField('adr', { id: 'A', title: 'И' }, 'decision_md', 'решили так', f as unknown as typeof fetch);
+    await savePassportField('adr', { id: 'A', title: 'И' }, 'consequences_md', 'отсюда следует', f as unknown as typeof fetch);
+    expect(calls(f).map(c => Object.keys(c.body).filter(k => k.endsWith('_md')))).toEqual([['decision_md'], ['consequences_md']]);
+  });
+
+  it('соседние разделы не затираются: шлём только изменённый', async () => {
+    const f = vi.fn(async () => ok());
+    await savePassportField('adr', { id: 'A', title: 'И' }, 'context_md', 'только контекст', f as unknown as typeof fetch);
+    const body = calls(f)[0].body as Record<string, unknown>;
+    expect(body).not.toHaveProperty('decision_md');
+    expect(body).not.toHaveProperty('consequences_md');
+  });
+
+  it('без имени не отправляем вовсе: безымянный ADR хуже несохранённого', async () => {
+    const f = vi.fn(async () => ok());
+    await expect(savePassportField('adr', { id: 'A', title: '  ' }, 'context_md', 'текст', f as unknown as typeof fetch))
+      .rejects.toThrow(/имя|name/i);
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it('пустой раздел — это очистка, а не отказ: разделы бывают пустыми', async () => {
+    const f = vi.fn(async () => ok());
+    await savePassportField('adr', { id: 'A', title: 'И' }, 'consequences_md', '', f as unknown as typeof fetch);
+    expect(calls(f)[0].body).toMatchObject({ consequences_md: '' });
+  });
+
+  it('незнакомое поле ADR не отправляем — молча не портим запись', async () => {
+    const f = vi.fn(async () => ok());
+    await expect(savePassportField('adr', { id: 'A', title: 'И' }, 'status', 'accepted', f as unknown as typeof fetch)).rejects.toThrow();
     expect(f).not.toHaveBeenCalled();
   });
   it('ошибка сервера доходит до паспорта со статусом, а не «сохранено»', async () => {
@@ -49,9 +94,12 @@ describe('контракт: право править — по типу, с че
     }
     expect(EDITABLE_BODY).toEqual(['sprint', 'task', 'spec']);
   });
-  it('ADR — только чтение с причиной', () => {
+  it('ADR правится — но по разделам, и причина говорит именно это (S4-24)', () => {
+    // Раньше здесь стояло can_edit: false. С S4-24 разделы ADR правятся,
+    // и причина объясняет «по разделам», а не «нельзя»: иначе человек решит,
+    // что ADR не правится вовсе, и пойдёт править мимо интерфейса.
     const c = toLoreRecord(load('adr'), '2026-11-08T00:00:00Z');
-    expect(c.perms.can_edit).toBe(false);
+    expect(c.perms.can_edit).toBe(true);
     expect(c.perms.reason).toMatch(/раздел/);
   });
 });

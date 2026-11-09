@@ -80,6 +80,11 @@ class LoreRecordFacadeLiveDbTest {
         assertEquals("dev", t.getString("values.task_type"));
         assertNotNull(t.getString("record.version"));
         assertTrue(t.getList("meta.sources.block").containsAll(List.of("questions", "adrs")), t.getList("meta.sources.block").toString());
+        // S4-30: по каждому прочитанному источнику — своё состояние; на здоровой базе все ok.
+        List<String> dsParts = t.getList("meta.data_state.part");
+        assertTrue(dsParts.containsAll(List.of("questions", "adrs")), "data_state: " + t.getList("meta.data_state"));
+        assertTrue(t.getList("meta.data_state.source").contains("version"), "сбой версии тоже должен быть виден");
+        assertTrue(t.getList("meta.data_state.state").stream().allMatch("ok"::equals), "data_state: " + t.getList("meta.data_state"));
 
         admin().body("{\"adr_id\":\"ADR-REC-1\",\"name\":\"проба\",\"status\":\"proposed\",\"context_md\":\"к\",\"decision_md\":\"р\"}")
             .post("/lore/adr").then().statusCode(200);
@@ -98,6 +103,7 @@ class LoreRecordFacadeLiveDbTest {
         assertNull(n.get("record.version"));
         assertEquals("dev", n.getString("values.task_type"));
         assertEquals(true, n.getBoolean("perms.can_create"));
+        assertTrue(n.getList("meta.data_state").isEmpty(), "новая запись ничего не читала — список пуст");
 
         admin().get("/lore/record/task/NOPE_SPRINT/NOPE").then().statusCode(404);
         admin().get("/lore/record/decision/D-1").then().statusCode(400);
@@ -177,6 +183,21 @@ class LoreRecordFacadeLiveDbTest {
             .post("/lore/spec").then().statusCode(409);
         admin().body("{\"spec_id\":\"SPEC-REC-VER\",\"content_md\":\"b\",\"expected_version\":\"" + pv + "\"}")
             .post("/lore/spec").then().statusCode(200);
+
+        // S5-08 (kit 09.11): у ADR защиты не было — правка раздела молча ложилась поверх
+        // чужой. Тело ADR — три раздела, каждый своим запросом: одновременная правка
+        // двух разделов — самый вероятный конфликт.
+        admin().body("{\"adr_id\":\"ADR-REC-VER\",\"name\":\"a\",\"status\":\"proposed\",\"context_md\":\"c\"}")
+            .post("/lore/adr").then().statusCode(200);
+        String av = record("adr", "ADR-REC-VER").getString("record.version");
+        var ac = admin().body("{\"adr_id\":\"ADR-REC-VER\",\"decision_md\":\"d\",\"expected_version\":\"stale\"}")
+            .post("/lore/adr").then().statusCode(409).extract().jsonPath();
+        assertEquals("VERSION_CONFLICT", ac.getString("error"));
+        assertEquals(av, ac.getString("current.version"));
+        admin().body("{\"adr_id\":\"ADR-REC-VER\",\"decision_md\":\"d\",\"expected_version\":\"" + av + "\"}")
+            .post("/lore/adr").then().statusCode(200);
+        // без expected_version — как раньше (MCP adr_new, v1)
+        admin().body("{\"adr_id\":\"ADR-REC-VER\",\"consequences_md\":\"e\"}").post("/lore/adr").then().statusCode(200);
     }
 
     @Test
@@ -196,5 +217,24 @@ class LoreRecordFacadeLiveDbTest {
         String outcome = given().get("/lore/slice/sprint_tree?id=" + sid).then().statusCode(200)
             .extract().jsonPath().getString("rows[0].outcome_md");
         assertEquals("итог", outcome);
+    }
+
+    /**
+     * Владелица 09.11: итоги спринта в паспорте — те же ключи и та же функция
+     * (LoreSprintTotals), что у среза sprint_totals: одно число — один источник.
+     */
+    @Test
+    void sprintPassportCarriesServerTotalsLikeTheList() {
+        final String sid = "SPRINT_REC_TOTALS";
+        sprint(sid);
+        task(sid, "T-1");
+        task(sid, "T-2");
+        JsonPath r = record("sprint", sid);
+        assertEquals(2, r.getInt("values.tasks_total.of"), "задач в спринте");
+        assertEquals(0, r.getInt("values.tasks_total.done"));
+        assertEquals(0, r.getInt("values.effort_days_total.known"), "оценок не задавали");
+        assertNull(r.get("values.effort_days_total.value"), "нет оценок — null, а не 0");
+        JsonPath list = given().get("/lore/slice/sprint_totals?sprint_ids=" + sid).then().statusCode(200).extract().jsonPath();
+        assertEquals(r.getMap("values.tasks_total"), list.getMap("rows[0].tasks_total"), "паспорт и список — одно число");
     }
 }

@@ -9,9 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
+import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -102,5 +105,38 @@ class LoreHistHygieneLiveDbTest {
         given().when().get("/lore/slice/history_hygiene")
         .then().statusCode(200)
             .body("rows.ref_id", not(hasItem(TASK)));
+    }
+
+    // ── S2-11: задача без единой версии (запись мимо SCD2) ──
+
+    @Inject
+    LoreSchemaMigrationRunner runner;
+
+    private static final String BARE = SPRINT + "/HH-BARE";
+
+    @Test
+    @Order(4)
+    void taskWithoutAnyHistoryIsCaughtAndV71HealsIt() {
+        // Как на проде (PRE-03, DLG-08): вершина есть, HAS_STATE нет, статус сырой.
+        ingest.queryPublic("INSERT INTO KnowTask SET task_uid = :uid, task_id = 'HH-BARE', "
+            + "title = 'мимо SCD2', status_raw = 'PARTIAL'", Map.of("uid", BARE));
+
+        given().when().get("/lore/slice/history_hygiene")
+        .then().statusCode(200)
+            .body("rows.findAll { it.finding == 'entity_without_history' }.ref_id", hasItem(BARE));
+
+        assertTrue(runner.backfillTaskHistory() >= 1, "V71 открыл версию задаче без истории");
+        assertEquals(0, runner.backfillTaskHistory(), "повтор — ноль, вторая версия не открывается");
+
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT valid_from, valid_to, status_backfilled, status_raw FROM KnowTaskHist "
+            + "WHERE in('HAS_STATE').task_uid CONTAINS :uid", Map.of("uid", BARE));
+        assertEquals(1, rows.size(), rows.toString());
+        assertEquals(true, rows.get(0).get("status_backfilled"), "честная пометка «время восстановлено»");
+        assertEquals("PARTIAL", rows.get(0).get("status_raw"));
+
+        given().when().get("/lore/slice/history_hygiene")
+        .then().statusCode(200)
+            .body("rows.ref_id", not(hasItem(BARE)));
     }
 }

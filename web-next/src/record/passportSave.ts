@@ -11,12 +11,75 @@ import type { PassportType } from './passportAdapters';
 /** Типы, у которых текст записи уже правится на месте. */
 export const EDITABLE_BODY: readonly PassportType[] = ['sprint', 'task', 'spec'];
 
-/** Почему тело ADR пока не правится — та же строка уходит в perms.reason. */
-export const ADR_BODY_READONLY = 'ADR: текст собран из трёх разделов (контекст, решение, следствия) — правка по разделам будет отдельно';
+/**
+ * Типы, у которых сервер ПРОВЕРЯЕТ версию при записи (S5-08).
+ *
+ * Сверено по коду: `expected_version` есть у правки спринта, задачи, спеки и —
+ * с 09.11, PR #969 — ADR; все через `LoreResourceBase.versionConflict`.
+ *
+ * Список остаётся явным, а не «все типы»: он существует затем, чтобы экран
+ * говорил правду. Утром ADR в нём не было, и это было важно — обещать защиту
+ * там, где её нет, хуже, чем честно сказать «проверки пока нет». Появится
+ * новый тип без проверки — его сюда не добавят, и ничего не соврётся.
+ */
+export const VERSION_CHECKED: readonly PassportType[] = ['sprint', 'task', 'spec', 'adr'];
+
+/**
+ * Запись изменили, пока её правили (409 VERSION_CONFLICT).
+ *
+ * Отдельный тип, а не «HTTP 409»: это единственный отказ, после которого
+ * человеку надо не повторить попытку, а ПЕРЕЧИТАТЬ запись. Текст правки в
+ * ошибку не попадает — он остаётся в поле, и терять его нельзя.
+ */
+export class VersionConflict extends LoreHttpError {
+  constructor(
+    readonly currentVersion: string | null,
+    readonly updatedBy: string | null,
+    detail: string,
+  ) {
+    super(409, 'VERSION_CONFLICT', detail);
+    this.name = 'VersionConflict';
+  }
+}
+
+/** Сообщение о расхождении: что случилось и что делать. */
+function conflictText(updatedBy: string | null, detail: string): string {
+  const who = updatedBy ? ` (правил: ${updatedBy})` : '';
+  // Серверный detail оставляем в хвосте: он называет версии, и это пригодится
+  // при разборе. Но первым идёт то, что человеку делать.
+  const tail = detail ? ` · ${detail}` : '';
+  return `запись изменили, пока вы её правили${who} — перечитайте её и повторите правку; ваш текст остался в поле${tail}`;
+}
+
+/**
+ * Почему тело ADR целиком не правится — та же строка уходит в perms.reason.
+ *
+ * Сами разделы с S4-24 правятся по отдельности (см. ADR_SECTIONS); запрет
+ * остаётся только на склеенное тело: одним полем его не сохранить, не
+ * затерев разделы.
+ */
+export const ADR_BODY_READONLY = 'ADR правится по разделам: контекст, решение, следствия — каждый отдельно, склеенное тело не сохраняется';
 
 type Ref = { id: string; title: string };
 
+/**
+ * Разделы ADR, которые правятся по отдельности (S4-24).
+ *
+ * Тремя разделами — требование владелицы, как в v1. Каждый уходит своим
+ * полем, соседние не отправляются вовсе: сервер перезаписывает запись
+ * целиком, и отправить соседний раздел «как есть» значило бы затереть чужую
+ * правку, сделанную между чтением и сохранением.
+ */
+export const ADR_SECTIONS = ['context_md', 'decision_md', 'consequences_md'] as const;
+
 function payload(type: PassportType, rec: Ref, field: string, to: unknown): { path: string; body: Record<string, unknown> } {
+  if (type === 'adr' && (ADR_SECTIONS as readonly string[]).includes(field)) {
+    // Имя обязательно: сервер перезаписывает запись, и без него ADR остался
+    // бы безымянным. Лучше не сохранить, чем сохранить безымянным.
+    const name = rec.title.trim();
+    if (!name) throw new Error('у ADR не заполнено имя — без него правка раздела не отправляется');
+    return { path: '/lore/adr', body: { adr_id: rec.id, name, [field]: typeof to === 'string' ? to : '' } };
+  }
   if (field !== 'body_md') throw new Error(`поле «${field}» пока не правится в паспорте`);
   const text = typeof to === 'string' ? to : '';
   if (type === 'sprint') return { path: '/lore/sprint/update', body: { sprint_id: rec.id, context_md: text } };
@@ -25,13 +88,36 @@ function payload(type: PassportType, rec: Ref, field: string, to: unknown): { pa
   throw new Error(ADR_BODY_READONLY);
 }
 
-/** Сохранить поле записи. Ошибка сервера — LoreHttpError со статусом (kit покажет «HTTP 403 · …»). */
-export async function savePassportField(type: PassportType, rec: Ref, field: string, to: unknown, fetchImpl: typeof fetch = loreFetch): Promise<void> {
+/**
+ * Сохранить поле записи. Ошибка сервера — `LoreHttpError` со статусом (kit
+ * покажет «HTTP 403 · …»); расхождение версий — `VersionConflict`.
+ *
+ * `expectedVersion` — `record.version` на момент ЧТЕНИЯ записи (S5-08).
+ * Отправляется только там, где сервер её проверяет (`VERSION_CHECKED`), и
+ * только непустой: сервер пропускает проверку при пустом значении
+ * (`versionConflict` возвращает null), и тогда мы считали бы себя
+ * защищёнными, не будучи защищёнными.
+ */
+export async function savePassportField(
+  type: PassportType, rec: Ref, field: string, to: unknown,
+  fetchImpl: typeof fetch = loreFetch, expectedVersion?: string | null,
+): Promise<void> {
   const { path, body } = payload(type, rec, field, to);
-  const res = await fetchImpl(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
+  const checked = (VERSION_CHECKED as readonly string[]).includes(type);
+  const version = typeof expectedVersion === 'string' ? expectedVersion.trim() : '';
+  const withVersion = checked && version ? { ...body, expected_version: version } : body;
+  const res = await fetchImpl(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(withVersion) });
   if (!res.ok) {
-    let code = ''; let detail = '';
-    try { const b = (await res.json()) as { error?: string; detail?: string }; code = b.error ?? ''; detail = b.detail ?? ''; } catch { /* тело не разобрали — остаётся статус */ }
+    let code = ''; let detail = ''; let current: { version?: unknown; updated_by?: unknown } = {};
+    try {
+      const b = (await res.json()) as { error?: string; detail?: string; current?: { version?: unknown; updated_by?: unknown } };
+      code = b.error ?? ''; detail = b.detail ?? ''; current = b.current ?? {};
+    } catch { /* тело не разобрали — остаётся статус */ }
+    if (res.status === 409) {
+      const cur = typeof current.version === 'string' && current.version ? current.version : null;
+      const who = typeof current.updated_by === 'string' && current.updated_by ? current.updated_by : null;
+      throw new VersionConflict(cur, who, conflictText(who, detail));
+    }
     throw new LoreHttpError(res.status, code || res.statusText || 'HTTP', detail);
   }
 }

@@ -23,7 +23,7 @@
 // кнопка с aria-keyshortcuts и подсказкой Kbd; в поле ввода клавиша — текст.
 import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
@@ -42,12 +42,13 @@ import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 import { ProgressCell } from './progress';
 import {
-  DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
+  CHIPS_INLINE, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
-import { boardLanes, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
+import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
+import { FIND_FROM as GROUP_FIND_FROM } from './FacetFilter';
 import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf } from './groupLabel';
 import { applyFilterSet, describeFieldFilter, facetOf, toFilterSet } from './filterModel';
 import type { FieldFilter } from './filterModel';
@@ -62,6 +63,8 @@ import { SortMenu } from './SortMenu';
 import { TimelineLanes } from '../views/timeline';
 import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
+import { MIN_COL_W, clampWidth, readWidths, widthsFor, writeWidths, type ColumnWidths, type WidthStore } from './columnWidths';
+import { columnsFromUrl, columnsToUrlValue } from './columnsUrl';
 
 export interface ListBulkAction {
   id: string;
@@ -153,6 +156,20 @@ export interface ListViewProps {
   head?: ListHead;
   /** Иконки видов (вид → слаг game-icons). Задаёт приложение: иконки — из канона LORE v1 (S4-25). */
   viewIcons?: Partial<Record<ListViewKind, string>>;
+  /**
+   * Личная ширина колонок (S4-35, «ширина личная, набор командный»). Задано —
+   * у заголовков появляются ручки, ширина живёт в личном хранилище и НЕ идёт в
+   * адрес: ссылкой делятся, а ширина своя. Не задано — ручек нет: показывать
+   * то, чем нельзя управлять, незачем.
+   */
+  widths?: {
+    /** Ключ раздела в хранилище: у списка задач и списка ADR ширины свои. */
+    screen: string;
+    /** Хранилище; нет — ширина живёт до перезагрузки (приватный режим). */
+    store?: WidthStore;
+    /** Телефон: ширины не применяются вовсе — там карточки. */
+    narrow?: boolean;
+  };
   className?: string;
 }
 
@@ -163,6 +180,9 @@ export interface ListHead {
   icon?: string;
   actions?: ReactNode;
 }
+
+/** Колонка, которую нельзя снять: список без названия записи нечитаем (S4-35). */
+const COLS_LOCKED = 'title+id';
 
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
 /** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
@@ -263,14 +283,51 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
   return <span className="sk-list__title">{r.title}</span>;
 }
 
+/**
+ * Минимальная ширина отдельных колонок (S4-35): «Запись» уже 220 px читается
+ * хуже, чем вовсе без неё — название переносится в кашу. Остальным хватает
+ * общего MIN_COL_W.
+ */
+const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title: 220 };
+
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, expand, head, viewIcons, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, expand, head, viewIcons, widths, className, state: stateProp, onStateChange,
 }: ListViewProps) {
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
   assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
   const mac = isMacPlatform();
   const rootRef = useRef<HTMLDivElement>(null);
+  // Ширины колонок (S4-35). Читаются один раз: хранилище личное, и чужие
+  // правки в нём по ходу жизни экрана нас не касаются.
+  const [colW, setColW] = useState<ColumnWidths>(
+    () => (widths?.store ? readWidths(widths.store, widths.screen) : {}),
+  );
+  const appliedW = widths ? widthsFor(colW, LIST_COL_MIN, widths.narrow) : {};
+  /** Потянуть ширину: считаем от текущей ширины заголовка, а не от нуля. */
+  const onGrip = (col: string) => (e: ReactPointerEvent<HTMLElement>) => {
+    const th = (e.currentTarget as HTMLElement).closest('th');
+    if (!th) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = appliedW[col] ?? th.getBoundingClientRect().width ?? MIN_COL_W;
+    let last = startW;
+    const move = (ev: PointerEvent) => {
+      const next = clampWidth(col, startW + (ev.clientX - startX), LIST_COL_MIN);
+      if (next === undefined) return;
+      last = next;
+      setColW(w => ({ ...w, [col]: next }));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      // Пишем один раз по отпусканию, а не на каждое движение: хранилище —
+      // не журнал перетаскивания.
+      if (widths?.store) writeWidths(widths.store, widths.screen, { ...colW, [col]: last });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
   const [cursor, setCursor] = useState<string | null>(null);
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -289,6 +346,16 @@ export function ListView({
     { by: state.group, view: state.view, open: {}, more: {} },
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  /**
+   * Поиск по группам (S9-02) — состояние местное, не в адресе.
+   *
+   * Это средство найти нужную группу глазами, а не вид списка: им не делятся
+   * ссылкой, и в адрес оно не идёт — там живёт то, что команда должна увидеть
+   * так же. Так же сделан поиск по значениям внутри фасета.
+   */
+  const [groupFind, setGroupFind] = useState('');
+  /** Раскрыта ли свёртка «+N» в строке условий (S9-12). Местное, не в адресе. */
+  const [chipsOpen, setChipsOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => initialExpanded(win));
   const toggleExpand = (id: string) => setExpanded(prev => {
     const n = new Set(prev);
@@ -308,7 +375,29 @@ export function ListView({
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
   const hasGroupings = groupOpts.fields.length + groupOpts.relations.length > 0;
-  const baseColumns = listCfg?.columns ?? ['title+id', 'status'];
+  /**
+   * Имя колонки ТЕКСТОМ — для выбора колонок и подписей: у «выбрать все»
+   * заголовок это галочка, и в список выбора такое не положишь.
+   */
+  const columnTitleText = (col: string): string => {
+    if (col === 'title+id') return t('kit.list.col.title');
+    if (col === 'verdict') return t('kit.list.col.verdict');
+    if (col === 'edges_count') return t('kit.list.col.edges');
+    if (col === 'actions') return t('kit.list.col.actions');
+    return labels.keyTitle(col.startsWith('progress:') ? col.slice(9) : col);
+  };
+  const configColumns = listCfg?.columns ?? ['title+id', 'status'];
+  // Набор колонок — командный: живёт в адресе, им делятся ссылкой (S4-35,
+  // решение владелицы 08.11). Незнакомый ключ из адреса отбрасывается, «Запись»
+  // возвращается на место: список без названия записи нечитаем.
+  const colsFromUrl = win ? columnsFromUrl(win.location.search, configColumns, COLS_LOCKED) : undefined;
+  const [colsOwn, setColsOwn] = useState<string[] | undefined>(colsFromUrl);
+  const chosenColumns = colsOwn ?? configColumns;
+  const baseColumns = chosenColumns;
+  const setColumns = (next: string[]) => {
+    setColsOwn(next);
+    if (win) pushUrlState({ cols: columnsToUrlValue(next) }, { replace: true, win: win });
+  };
   // Чекбоксы — колонкой конфига или в режиме выбора (тогда первой колонкой, S4-10);
   // действия строки (S4-11) — последней колонкой.
   const withSelect = mode && !baseColumns.includes('select') ? ['select', ...baseColumns] : baseColumns;
@@ -378,11 +467,36 @@ export function ListView({
   // «Закрытые N» — одна группа в конце списка, а не внутри статусов или полей.
   const closedGroup: ListGroup | null = view === 'list' && split.closed.length > 0 ? { key: CLOSED_KEY, records: split.closed } : null;
   const laned = view === 'board' && groupKey !== null && groupKey !== 'status';
-  const groups: ListGroup[] = view === 'board'
+  // Поиск по группам (S9-02). Ищем по ВСЕМ группам, а не по показанным: нужный
+  // релиз с большой долей вероятности лежит в «Прочих», и поиск по десяти
+  // видимым был бы обманом. Поэтому при поиске бюджет снимается, найденное
+  // фильтруется по названию и режется тем же правилом (`capGroups`).
+  const find = groupFind.trim().toLocaleLowerCase();
+  const rawGroups: ListGroup[] = view === 'board'
     ? lanes.map(l => l.lane)
-    : [...groupBy(split.open, groupKey, config, data, budget), ...(closedGroup ? [closedGroup] : [])];
+    : groupBy(split.open, groupKey, config, data, find ? { ...budget, maxGroups: Number.MAX_SAFE_INTEGER } : budget);
+  const foundGroups = find
+    ? capGroups(rawGroups.filter(g => groupTitleOf(config, lang, groupKey, g).toLocaleLowerCase().includes(find)), budget)
+    : rawGroups;
+  const groups: ListGroup[] = view === 'board'
+    ? foundGroups
+    : [...foundGroups, ...(closedGroup ? [closedGroup] : [])];
   const multi = (view === 'list' || laned) && groupKey ? multiGroupCount(groups) : 0;
-  const collapsedByDefault = (view === 'list' || laned) && groups.some(g => g.other);
+  /**
+   * Свёрнуты ли группы при первом показе.
+   *
+   * Было: свёрнуто только когда появилась группа «Прочие». Пятнадцать релизов
+   * порога не достигают, «Прочих» нет — и все пятнадцать стояли раскрытыми, то
+   * есть та же стена строк, из которой S9-02 и выросла, только ниже.
+   *
+   * Теперь группировку можно назвать свёрнутой по умолчанию
+   * (`list.collapsedGroupings`) — у LORE это релиз и спринт, где групп всегда
+   * много. Имена живут в конфиге приложения, а не в kit: какие разрезы
+   * «широкие», знает приложение.
+   */
+  const collapsedGroupings = listCfg?.collapsedGroupings ?? [];
+  const collapsedByDefault = (view === 'list' || laned)
+    && (groups.some(g => g.other) || (groupKey !== null && collapsedGroupings.includes(groupKey)));
   const cur = ui.by === groupKey && ui.view === view ? ui : { by: groupKey, view, open: {}, more: {} };
   const isOpen = (k: string) => cur.open[k] ?? (k === CLOSED_KEY ? false : !collapsedByDefault);
   const limitOf = (k: string) => cur.more[k] ?? budget.perGroup;
@@ -565,6 +679,15 @@ export function ListView({
       onClosed={c => update({ closed: c })}
       place={recordPlace?.value}
       onPlace={recordPlace?.onChange}
+      columns={{
+        all: configColumns
+          // «Выбрать все» и «Действия» — не колонки данных: они появляются от
+          // режима выбора и прав, и выбором ими не управляют.
+          .filter(c => c !== 'select' && c !== 'actions')
+          .map(c => ({ key: c, title: columnTitleText(c), locked: c === COLS_LOCKED })),
+        chosen: chosenColumns.filter(c => c !== 'select' && c !== 'actions'),
+      }}
+      onColumns={setColumns}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
@@ -640,6 +763,7 @@ export function ListView({
         return valueCell(col, r);
     }
   };
+
   const colTitle = (col: string): ReactNode => {
     switch (col) {
       case 'select': return (
@@ -870,8 +994,54 @@ export function ListView({
       <div className="sk-list__scroll">
         <table className="sk-list__table">
           <thead>
-            <tr>{expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}{columns.map(c => <th key={c} scope="col" className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{colTitle(c)}</th>)}</tr>
+            <tr>
+              {expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}
+              {columns.map(c => {
+                const head = colTitle(c);
+                return (
+                <th
+                  key={c}
+                  scope="col"
+                  className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}
+                  style={appliedW[c] === undefined ? undefined : { width: `${appliedW[c]}px` }}
+                >
+                  {head}
+                  {widths && !widths.narrow && (
+                    // Ручка — только когда ширинами управляют: иначе это
+                    // украшение, которое ничего не делает.
+                    <span
+                      className="sk-list__grip"
+                      data-grip={c}
+                      // aria-hidden: ручка — приспособление для мыши, и
+                      // клавиатурного изменения ширины у неё НЕТ. Объявить её
+                      // скринридеру значило бы обещать управление, которого
+                      // нет; к тому же её подпись подмешивалась в имя колонки,
+                      // и «Задачи» читались как «Задачи Ширина колонки
+                      // Задачи» (поймано тестом списка спринтов).
+                      aria-hidden="true"
+                      title={t('kit.list.cols.width', { title: typeof head === 'string' ? head : c })}
+                      onPointerDown={onGrip(c)}
+                    />
+                  )}
+                </th>
+                );
+              })}
+            </tr>
           </thead>
+          {/*
+            Поиск не нашёл ни одной группы — говорим это словами и повторяем
+            запрос. Пустая таблица с одной шапкой читается как «данные есть, но
+            их не видно», а здесь дело в запросе, и его надо показать.
+          */}
+          {find && foundGroups.length === 0 && (
+            <tbody>
+              <tr>
+                <td colSpan={span} className="sk-list__gfind-empty" role="status">
+                  {t('kit.list.groupFindEmpty', { q: groupFind.trim() })}
+                </td>
+              </tr>
+            </tbody>
+          )}
           {groups.map(g => {
             const headed = grouped || g.key === CLOSED_KEY;
             const open = !headed || isOpen(g.key);
@@ -1019,6 +1189,23 @@ export function ListView({
             onSub={g => update({ group2: g })}
             bare
           />
+          {/*
+            Поиск по группам появляется, когда их столько, что глазами искать
+            уже долго. Порог тот же, что у поиска по значениям внутри фасета
+            (GROUP_FIND_FROM = FIND_FROM): два разных числа для одного и того же
+            «их стало много» расходились бы без причины.
+          */}
+          {groupKey !== null && (rawGroups.length >= GROUP_FIND_FROM || find) && (
+            <input
+              type="search"
+              role="searchbox"
+              className="sk-list__gfind"
+              aria-label={t('kit.list.groupFind')}
+              placeholder={t('kit.list.groupFindPlaceholder')}
+              value={groupFind}
+              onChange={e => setGroupFind(e.target.value)}
+            />
+          )}
           </fieldset>
         )}
         <fieldset className="sk-list__seg" data-seg="sort">
@@ -1078,7 +1265,14 @@ export function ListView({
       {chips.length > 0 && (
       <div className="sk-list__desc" data-testid="kit-list-desc">
         <span className="sk-list__desclabel">{t('kit.list.desc.filter')}:</span>
-        {chips.map(c => (
+        {/*
+          Строка условий держится в одну строку: выше порога остальные
+          сворачиваются в «+N» (S9-12). Спрятанные не исчезают — «+N»
+          раскрывает их НА МЕСТЕ, и каждое по-прежнему снимается по одному,
+          иначе «что сейчас отсеивает записи» перестанет быть видно, а это и
+          есть смысл строки-описания.
+        */}
+        {(chipsOpen ? chips : chips.slice(0, CHIPS_INLINE)).map(c => (
           <Pill
             key={c.id}
             variant="filter"
@@ -1090,6 +1284,16 @@ export function ListView({
             {c.text}
           </Pill>
         ))}
+        {chips.length > CHIPS_INLINE && (
+          <button
+            type="button"
+            className="sk-list__chipmore"
+            aria-expanded={chipsOpen}
+            onClick={() => setChipsOpen(v => !v)}
+          >
+            {chipsOpen ? t('kit.list.chipsLess') : t('kit.list.chipsMore', { n: chips.length - CHIPS_INLINE })}
+          </button>
+        )}
         <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>
       </div>
       )}

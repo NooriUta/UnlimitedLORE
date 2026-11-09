@@ -19,7 +19,7 @@ export interface PaletteRecordItem {
   icon: string | undefined;
   status: string;
   /** remote — найдена сервером (S4-14), среди загруженных её нет. */
-  origin?: 'remote';
+  origin?: 'remote' | 'recent-only';
 }
 
 export interface PaletteCommandItem {
@@ -44,6 +44,14 @@ export interface PaletteResult {
   items: PaletteItem[];
   /** Сколько найдено до обрезки limit. */
   total: number;
+  /**
+   * Команды при пустом запросе — отдельной группой под недавними
+   * (находка P1 аудита 08.11: «содержимое палитры — "Недавних пока нет": ни
+   * команд, ни разделов»). Открытая палитра без истории обязана что-то
+   * предлагать, иначе она выглядит сломанной. В выдаче по запросу команды
+   * идут вместе с остальным — там важен вес, а не группа.
+   */
+  commands?: PaletteItem[];
 }
 
 /** Ключ элемента в списке недавних и в DOM: «record:T-1», «command:new-task». */
@@ -187,9 +195,29 @@ export function searchPalette({ query, data, config, mode, recent, limit = 30, a
       const type = key.slice(0, sep);
       const id = key.slice(sep + 1);
       if (type === 'record' && byId.has(id)) items.push(recordItem(byId.get(id)!, config));
+      // Запись в недавних есть, а в выгрузке экрана её нет — показываем код и
+      // помечаем, что о ней известно только это. Прежде такой пункт молча
+      // пропадал, и палитра выглядела пустой, хотя человек точно открывал
+      // записи (находка P1 аудита 08.11, вторая половина).
+      else if (type === 'record' && id) {
+        items.push({
+          type: 'record', id, title: id, kind: '', kindTitle: '', icon: undefined, status: '',
+          origin: 'recent-only',
+        });
+      }
       else if (type === 'command' && cmdById.has(id)) items.push({ type: 'command', id, title: cmdById.get(id)!.title });
     }
-    return { section: 'recent', items: items.slice(0, limit), total: items.length };
+    // Команды, которых ещё нет в недавних: показываем, что палитра умеет.
+    const shownIds = new Set(items.filter(i => i.type === 'command').map(i => i.id));
+    const rest: PaletteItem[] = commands
+      .filter(c => !shownIds.has(c.id))
+      .map(c => ({ type: 'command' as const, id: c.id, title: c.title }));
+    return {
+      section: 'recent',
+      items: items.slice(0, limit),
+      total: items.length,
+      commands: rest.slice(0, limit),
+    };
   }
 
   const tokens = q.split(' ');

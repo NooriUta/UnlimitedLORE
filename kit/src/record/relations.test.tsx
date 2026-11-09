@@ -9,7 +9,7 @@
 //  realization ▷ — «Реализация»: что реализует / обосновывает;
 //  generalization — строкой в шапке («заменяет X»).
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { KitConfig, KitCtx, KitRecord } from '../core/contract';
 import { RecordView } from './RecordView';
 
@@ -47,12 +47,16 @@ describe('паспорт по видам связей', () => {
     const names = tabNames();
     expect(names).toEqual(expect.arrayContaining(['composition:Части1', 'aggregation:Решения2', 'association:Зависимости2', 'realization:Реализация1']));
   });
-  it('визуализация вида: значок UML у вкладки и у строк (◆ ◇ ⇢ ▷)', () => {
+  // Значок вида связи остался у вкладки и у заголовка раздела, но ушёл из
+  // строк: связи теперь таблица (замечание владелицы по v1.17.4 — «наши
+  // любимые общие колонки»), а внутри одной таблицы вид связи у всех строк
+  // один и тот же. Повторять его в каждой строке — шум, а не сведения.
+  it('визуализация вида: значок UML у вкладки; строки — таблицей со своими кодами', () => {
     view('decisions');
     const tab = screen.getAllByRole('tab').find(t => t.getAttribute('data-relation') === 'aggregation')!;
     expect(tab.querySelector('[data-relation-mark]')?.textContent).toBe('◇');
     const rows = screen.getByTestId('kit-relation-list');
-    expect(within(rows).getAllByRole('listitem').map(li => li.getAttribute('data-record-id'))).toEqual(['D-1', 'D-2']);
+    expect(within(rows).getAllByRole('row').slice(1).map(tr => tr.getAttribute('data-record-id'))).toEqual(['D-1', 'D-2']);
   });
   it('зависимости — двумя разделами: «Зависит от» и «Блокирует»', () => {
     view('rel:association');
@@ -66,13 +70,20 @@ describe('паспорт по видам связей', () => {
     expect(tabNames().some(n => n?.startsWith('attribute'))).toBe(false); // поля-ссылки — в «Свойствах»
   });
 
-  it('управление: агрегацию и зависимость можно отвязать и привязать — через hooks.onRelation', () => {
+  // Проверка та же, но с ожиданием ответа. Причина: вызов хука стал
+  // асинхронным намеренно — отказ привязки раньше проглатывался (`void
+  // call(...)`), и неудача выглядела как успех. Теперь группа ждёт ответ,
+  // чтобы напечатать причину и не терять введённый код, поэтому второй вызов
+  // случается на следующий тик, а не в том же.
+  it('управление: агрегацию и зависимость можно отвязать и привязать — через hooks.onRelation', async () => {
     const onRelation = vi.fn(async () => {});
     view('decisions', config(onRelation));
-    fireEvent.click(screen.getByRole('button', { name: 'Отвязать: Решение 1' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Отвязать: Решение 1' })); });
     expect(onRelation).toHaveBeenCalledWith({ type: 'adr', id: 'ADR-1', rel: 'DECIDED_IN', dir: 'in', target: 'D-1', action: 'remove' });
-    fireEvent.change(screen.getByRole('textbox', { name: 'Привязать: Решения' }), { target: { value: 'D-9' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Привязать' }));
+    await act(async () => {
+      fireEvent.change(screen.getByRole('textbox', { name: 'Привязать: Решения' }), { target: { value: 'D-9' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Привязать' }));
+    });
     expect(onRelation).toHaveBeenLastCalledWith({ type: 'adr', id: 'ADR-1', rel: 'DECIDED_IN', dir: 'in', target: 'D-9', action: 'add' });
   });
   it('композицию отвязать нельзя — дочь без родителя не живёт', () => {

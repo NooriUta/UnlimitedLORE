@@ -5,7 +5,8 @@
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  Forbidden, ICON_CANON, ListView, LoadError, RecordDock, ScreenHead, Skeleton, pushUrlState, readUrlState,
+  Forbidden, ICON_CANON, ListView, LoadError, RecordDock, ScreenHead, Skeleton, pushUrlState, readUrlState, urlStateHref,
+  useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
 import type { KitProgressInput, RecordPlacement, UrlWindow } from '@seidr/kit';
@@ -13,17 +14,65 @@ import { fetchSlice } from '../api/loreClient';
 import { useAppT } from '../i18n';
 import { LIST_SCREENS, type ListScreenDef, type ListScreenId } from '../lists/screens';
 import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
+import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
+import { loreValueIcon } from '../lists/loreFilters';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
 const ListPassport = lazy(() => import('../record/ListPassport'));
-/** Тип паспорта по экрану списка. */
-const PASSPORT_OF: Record<ListScreenId, PassportType> = { sprints: 'sprint', adrs: 'adr' };
+/**
+ * Тип паспорта по экрану списка — карта ЧАСТИЧНАЯ (S4-V2-SECTIONS).
+ *
+ * Фасад записи отдаёт ровно четыре типа (`LoreRecordRegistry.TYPES` = sprint,
+ * task, adr, spec), а разделов в v2 одиннадцать. Для остальных паспорта нет, и
+ * раньше карта была полной — то есть обещала паспорт каждому разделу. Открыв
+ * строку в «Технологиях», человек получил бы пустой паспорт и решил бы, что
+ * данные потерялись.
+ *
+ * Поэтому отсутствие ключа — это утверждение, а не пробел: «паспорта у этого
+ * типа ещё нет», и оно говорится словами (ниже, `NoPassport`). Карта растёт
+ * вместе с фасадом: появился тип на сервере — появилась строка здесь.
+ */
+const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
+  sprints: 'sprint', adrs: 'adr', tasks: 'task', specs: 'spec',
+};
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 type OpenRecord = { id: string | null; place: RecordPlacement };
+
+/**
+ * «Паспорта у этого типа ещё нет» — ответ на щелчок по строке в разделе без
+ * паспорта (S4-V2-SECTIONS).
+ *
+ * Почему ответ, а не тишина: щелчок — это вопрос, и он задан. Молчаливая
+ * строка читалась бы как «сломалось», пустой паспорт — как «данные пропали».
+ * Названы обе вещи: чего нет (паспорт типа) и что есть (список и фильтры).
+ * Код записи печатается — по нему её можно найти в LORE другим путём.
+ */
+function NoPassport({ id, section, onBack }: { id: string; section: string; onBack: () => void }) {
+  const t = useAppT();
+  return (
+    <div className="list-screen__nopassport" role="status">
+      <p className="list-screen__nopassport-head">{t('lists.noPassport.head', { section })}</p>
+      <p className="list-screen__nopassport-id">{id}</p>
+      <p className="list-screen__nopassport-note">{t('lists.noPassport.note')}</p>
+      <button type="button" className="sk-btn" onClick={onBack}>{t('lists.noPassport.back')}</button>
+    </div>
+  );
+}
+
+/**
+ * Адрес записи для «Недавнего» оболочки: текущий раздел плюс ?open=<id>.
+ * Место (place) не берём — запись откроется там, где человек её смотрит сейчас.
+ */
+function recordHrefOf(urlState: ListScreenProps['urlState'], id: string): string | undefined {
+  const win: UrlWindow | undefined = urlState === false ? undefined
+    : typeof urlState === 'object' ? urlState
+      : typeof window === 'undefined' ? undefined : window;
+  return win ? urlStateHref(win, { open: id, place: null }, { anchor: null }) : undefined;
+}
 
 /** Открытая запись и место — в URL (?open=&place=), как всё состояние v2; urlState=false — в памяти. */
 function useOpenRecord(urlState: ListScreenProps['urlState']) {
@@ -40,9 +89,24 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
   });
   const set = (next: OpenRecord) => {
     setOpen(next);
-    if (win) pushUrlState({ open: next.id, place: next.place !== 'right' ? next.place : null }, { replace: true, win });
+    if (!win) return;
+    // Закрыли запись — в адресе не остаётся ни места, ни якоря (находка P1
+    // аудита 08.11: «док закрывается, но в адресе остаются place=bottom
+    // #SPRINT_…»). Это не косметика: по такому адресу запись откроется снова,
+    // и «закрыл» перестаёт совпадать с «дал ссылку на список». Фильтры списка
+    // при этом не трогаем — они принадлежат списку, а не записи.
+    const closed = next.id == null;
+    // Вкладка принадлежит ЗАПИСИ, поэтому при закрытии снимается вместе с ней
+    // (D-21): иначе `tab=history` останется в адресе списка и следующая
+    // открытая запись покажется не с начала, а с чужой вкладки.
+    const patch = { open: next.id, place: closed || next.place === 'right' ? null : next.place, ...(closed ? { tab: null } : {}) };
+    pushUrlState(patch, { replace: true, win, ...(closed ? { anchor: null } : {}) });
   };
-  return [open, set] as const;
+  /** Адрес списка без открытой записи — им крошка «←» становится ссылкой. */
+  const backHref = win ? urlStateHref(win, { open: null, place: null, tab: null }, { anchor: null }) : undefined;
+  // Окно отдаём наружу: паспорт пишет в адрес свою вкладку, и писать он обязан
+  // в ТО ЖЕ окно, где живут `open` и `place` (D-21).
+  return [open, set, backHref, win] as const;
 }
 
 export interface ListScreenProps {
@@ -67,7 +131,12 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
   const lang = useKitLang();
   const t = useAppT();
-  const [open, setOpen] = useOpenRecord(urlState);
+  const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
+  // Оболочка ведёт «Недавнее», но узнать об открытии записи сама не может:
+  // список открывает паспорт своим состоянием (?open=…). Отсюда и находка P1
+  // аудита 08.11 — «"Недавние" пусто даже после открытия записи». Экран живёт
+  // и вне оболочки (тесты, демо), поэтому доступ необязательный.
+  const shell = useOptionalKitShell();
   const config = useMemo(() => def.config(lang), [def, lang]);
   const result = useLoadState(
     signal => fetchSlice(def.slice, undefined, { signal, fetchImpl }),
@@ -79,7 +148,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (body ? sliceToKitData(body, def.map, new Date().toISOString()) : null),
     [body, def],
   );
-  const warnings = body ? sliceWarnings(body) : [];
+  // Предупреждения выдачи плюс оговорка самого раздела (S4-V2-SECTIONS): где
+  // срез по природе отдаёт НЕ ВСЁ, «Показано N из N» — правда про выдачу, но не
+  // про корпус, и без слов человек решит, что остального у него нет.
+  const warnings = [...(def.note ? [def.note] : []), ...(body ? sliceWarnings(body) : [])];
 
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
   // упавшая пачка — «?» с причиной (это решает loadProgress), а не 0/0.
@@ -123,11 +195,27 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         data={shownData ?? data}
         urlState={urlState}
         quickIcons={def.quickIcons}
+        // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
+        // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
+        // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
+        valueIcon={loreValueIcon}
         // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
+        // Личная ширина колонок (S4-35, «ширина личная, набор командный»):
+        // ключ раздела свой у каждого списка, хранилище — общее v2 с откатом
+        // в память (приватный режим ширину просто не запомнит).
+        widths={{ screen: screen, store: appStorage }}
         expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
-        onOpen={id => setOpen({ ...open, id })}
+        onOpen={id => {
+          setOpen({ ...open, id });
+          // Название — из загруженных строк, адрес — тот же, что в адресной
+          // строке сейчас: «Недавнее» становится рабочей ссылкой, а не кодом.
+          shell?.openRecord(id, {
+            title: data?.records.find(r => r.id === id)?.title,
+            href: recordHrefOf(urlState, id),
+          });
+        }}
         recordPlace={{ value: open.place, onChange: place => setOpen({ ...open, place }) }}
       />
     );
@@ -135,15 +223,26 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
 
   if (open.id && ready) {
     const place = open.place;
+    const passportType = PASSPORT_OF[screen];
     content = (
       // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
-      <RecordDock placement={place} onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
-        <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
-          <ListPassport key={open.id} type={PASSPORT_OF[screen]} id={open.id} placement={place} fetchImpl={fetchImpl}
-            backLabel={t(def.titleKey)} onBack={() => setOpen({ ...open, id: null })}
-            ids={ids} onGo={id => setOpen({ ...open, id })}
-            onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} />
-        </Suspense>
+      // modal={false} внутри оболочки: «во весь экран» накрывает область
+      // содержимого, шапка и меню остаются видимыми и рабочими (замечание
+      // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
+      <RecordDock placement={place} modal={shell == null}
+        onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
+        {passportType ? (
+          <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+            <ListPassport key={open.id} type={passportType} id={open.id} placement={place} fetchImpl={fetchImpl}
+              backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}
+              ids={ids} onGo={id => setOpen({ ...open, id })}
+              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} />
+          </Suspense>
+        ) : (
+          // Паспорта у типа нет — это говорится словами и на месте щелчка, а не
+          // прячется: пустой паспорт выглядел бы как потерянные данные.
+          <NoPassport id={open.id} section={t(def.titleKey)} onBack={() => setOpen({ ...open, id: null })} />
+        )}
       </RecordDock>
     );
   }

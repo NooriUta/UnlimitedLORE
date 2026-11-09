@@ -36,6 +36,8 @@ async function mount(source: NewsSource, lang: 'ru' | 'en' = 'ru') {
     </KitLangProvider>,
   );
   await screen.findByTestId('news-feed-days');
+  // S7A-12: метрики периода свёрнуты под «все метрики» — одно действие от ленты.
+  fireEvent.click(screen.getByTestId('news-strip-toggle'));
   return r;
 }
 

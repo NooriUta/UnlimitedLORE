@@ -74,8 +74,14 @@ describe('во весь экран — воздушнее и по центру (
 describe('во весь экран — линия вкладок шире текста (владелица 08.11: «выглядит классно, чем всё в одну ширину»)', () => {
   it('рамка и колонка — переменными в процентах («делай процентами и переменными — разные браузеры»)', () => {
     const vars = ruleOf(".sk-dock[data-placement='full']");
-    expect(vars).toMatch(/--rec-frame:\s*\d+%/);
-    expect(vars).toMatch(/--rec-col:\s*\d+%/);
+    // Поправка владелицы 09.11: мера должна считаться ОТ ДИСПЛЕЯ. Рамка стала
+    // 66vw вместо 66 %, потому что слой теперь внутри оболочки и процент
+    // считался бы от области содержимого, то есть от контекста. Это та же
+    // «доля окна» переменной, что и раньше, — требование «процентами и
+    // переменными, разные браузеры» не нарушено, поэтому тест принимает обе
+    // формы доли: % и vw.
+    expect(vars).toMatch(/--rec-frame:\s*\d+(%|vw)/);
+    expect(vars).toMatch(/--rec-col:\s*\d+(%|vw)/);
     expect(ruleOf(".sk-dock[data-placement='full'] .sk-rec")).toMatch(/max-width:\s*var\(--rec-frame\)/);
     const narrow = ruleOf(".sk-dock[data-placement='full'] .sk-rec-head,\n.sk-dock[data-placement='full'] .sk-rec-facts,\n.sk-dock[data-placement='full'] .sk-rec-propsrow,\n.sk-dock[data-placement='full'] .sk-tabpanel > *");
     expect(narrow).toMatch(/max-width:\s*var\(--rec-col\)/);

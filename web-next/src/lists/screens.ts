@@ -10,9 +10,14 @@ import type { KitConfig, KitLang, KitProgressInput, KitRecord } from '@seidr/kit
 import type { LoreClient } from '../sprints/loreClient';
 import { loadSprintProgress } from '../sprints/sprintProgress';
 import { SprintTasks } from '../sprints/SprintTasks';
+import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import type { AppKey } from '../i18n';
-import { adrRecord, sprintRecord } from './records';
+import {
+  FEATURE_ROOTS_NOTE, OPEN_ONLY_NOTE,
+  adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord,
+  questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
+} from './records';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
 
@@ -47,6 +52,14 @@ export interface ListScreenDef {
   config: (lang: KitLang) => KitConfig;
   /** Свои быстрые иконки «Быстро», которым не подходит иконка статуса. */
   quickIcons: Record<string, string>;
+  /**
+   * Оговорка про выдачу раздела — печатается на экране (S4-V2-SECTIONS).
+   *
+   * Нужна там, где срез по своей природе отдаёт НЕ ВСЁ: «Показано N из N»
+   * тогда правда про выдачу, но не про корпус, и без слов человек решит, что
+   * остального у него нет.
+   */
+  note?: string;
   /**
    * Вложенное (S4-09, перенесено на общий путь в S4-22): колонка прогресса,
    * которая догружается после списка, и раскрытие строки. Раздел подключает
@@ -101,7 +114,9 @@ function sprintsConfig(lang: KitLang): KitConfig {
         { id: 'planned', title: appT(lang, 'lists.status.planned'), filter: { status: 'planned' } },
         { id: 'no-release', title: appT(lang, 'lists.quick.noRelease'), filter: { release: '' } },
       ],
-      filters: ['status', 'project', 'components', 'release'],
+      // Имена фасетов — из общего набора loreFilters (S4-05): пока они жили
+      // строками здесь и ключами там, наборы разошлись молча.
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
       groupings: ['status', 'project', 'priority', 'milestone'],
       // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
       columns: ['id', 'title', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
@@ -140,12 +155,235 @@ function adrsConfig(lang: KitLang): KitConfig {
         { id: 'accepted', title: appT(lang, 'lists.status.accepted'), filter: { status: 'accepted' } },
         { id: 'no-decisions', title: appT(lang, 'lists.quick.noDecisions'), filter: { decisions: '0' } },
       ],
-      filters: ['status', 'component', 'project'],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
       groupings: ['status', 'component', 'project'],
       columns: ['id', 'title', 'status', 'component', 'decisions', 'updated_at'],
     },
   };
 }
+
+/**
+ * Раздел «Задачи» (S4-V2-SECTIONS). Пункт в меню был с самого начала, экрана
+ * под ним не было.
+ *
+ * Источник — `open_tasks`, а не `all_tasks`: второй несёт `note_md`, и на живом
+ * замере весь корпус дал 4 млн символов на 57 730 строк (SE-01 в `LoreSlices`).
+ * Цена выбора названа словами (`OPEN_ONLY_NOTE`): закрытых задач в этой выдаче
+ * не бывает, поэтому режим «закрытые внизу» разделу не ставится — обещать
+ * сортировку того, чего нет, нельзя.
+ */
+function tasksConfig(lang: KitLang): KitConfig {
+  return {
+    ...BASE,
+    kinds: {
+      task: {
+        title: appT(lang, 'lists.tasks.title'), icon: ICON_CANON.sectionTask,
+        fields: [
+          { key: 'sprint', title: f(lang, 'sprint'), type: 'ref' },
+          { key: 'components', title: f(lang, 'components'), type: 'ref' },
+          { key: 'effort', title: f(lang, 'effort'), type: 'number' },
+        ],
+      },
+    },
+    statuses: {
+      items: statusItems(lang, [
+        ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
+        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'],
+        ['done', 'done'], ['cancelled', 'cancelled'],
+      ]),
+    },
+    list: {
+      views: ['list', 'cards', 'board'],
+      // Закрытых в выдаче не бывает — режим «закрытые внизу» был бы обманом.
+      showClosed: 'hide',
+      quick: [
+        { id: 'active', title: appT(lang, 'lists.status.active'), filter: { status: 'active' } },
+        { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
+        { id: 'no-sprint', title: appT(lang, 'lists.quick.noSprint'), filter: { sprint: '' } },
+      ],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
+      groupings: ['status', LORE_FILTER_FIELDS.sprint],
+      // Спринтов много — разрез по спринту свёрнут с первого показа (S9-02).
+      collapsedGroupings: [LORE_FILTER_FIELDS.sprint],
+      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort'],
+    },
+  };
+}
+
+/**
+ * Описатель раздела (S4-V2-SECTIONS). Восемь оставшихся разделов отличаются
+ * только ДАННЫМИ — поля, статусы, фасеты, колонки, — поэтому они и задаются
+ * данными, а не восемью копиями одной функции. Это та же доктрина, что в
+ * модели: «раздел — данные, а не экран».
+ *
+ * `statuses` необязателен: его ОТСУТСТВИЕ означает «у этого типа статусной оси
+ * нет» (вехи, релизы, компоненты, технологии). Пустой словарь kit теперь
+ * принимает (K-14), а фиктивный статус рисовал бы чип, которого у записи нет.
+ */
+interface SectionSpec {
+  kind: string;
+  titleKey: AppKey;
+  icon: string;
+  fields: [key: string, type: 'text' | 'ref' | 'number' | 'date'][];
+  statuses?: [code: string, category: Category][];
+  views?: NonNullable<KitConfig['list']>['views'];
+  showClosed?: NonNullable<KitConfig['list']>['showClosed'];
+  quick?: [id: string, titleKey: AppKey, filter: Record<string, string>][];
+  filters: string[];
+  groupings: string[];
+  collapsedGroupings?: string[];
+  columns: string[];
+}
+
+function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
+  return {
+    ...BASE,
+    kinds: {
+      [spec.kind]: {
+        title: appT(lang, spec.titleKey), icon: spec.icon,
+        fields: spec.fields.map(([key, type]) => ({ key, title: f(lang, key), type })),
+      },
+    },
+    statuses: { items: statusItems(lang, spec.statuses ?? []) },
+    list: {
+      views: spec.views ?? ['list', 'cards'],
+      ...(spec.showClosed ? { showClosed: spec.showClosed } : {}),
+      ...(spec.quick ? { quick: spec.quick.map(([id, titleKey, filter]) => ({ id, title: appT(lang, titleKey), filter })) } : {}),
+      filters: spec.filters,
+      groupings: spec.groupings,
+      ...(spec.collapsedGroupings ? { collapsedGroupings: spec.collapsedGroupings } : {}),
+      columns: spec.columns,
+    },
+  };
+}
+
+/** Решения: статусов девять видов, у 46 строк из 778 статуса нет вовсе. */
+const decisionsSpec: SectionSpec = {
+  kind: 'decision', titleKey: 'lists.decisions.title', icon: 'gavel',
+  fields: [['component', 'ref'], ['components', 'ref'], ['project', 'ref'], ['tags', 'text'], ['adr', 'ref']],
+  // Ось — объявленный словарь `decisionStatuses`, не «что встретилось в данных».
+  // В корпусе есть 2 строки `rejected` и одна «🚫 CANCELLED» (статус ЗАДАЧИ в
+  // поле решения) — их здесь НЕТ намеренно: вне оси → «неизвестно» на экране,
+  // то есть грязь видна, а не замазана похожим кодом.
+  statuses: [
+    ['deferred', 'todo'], ['proposed', 'active'],
+    ['accepted', 'done'], ['fixed', 'done'], ['done', 'done'],
+    ['superseded', 'cancelled'],
+  ],
+  views: ['list', 'cards', 'board', 'feed'],
+  showClosed: 'below',
+  quick: [['proposed', 'lists.status.proposed', { status: 'proposed' }], ['no-adr', 'lists.quick.noAdr', { adr: '' }]],
+  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  groupings: ['status', LORE_FILTER_FIELDS.component, 'fields.adr'],
+  columns: ['id', 'title', 'status', 'component', 'adr', 'updated_at'],
+};
+
+/**
+ * Спеки: статус пуст у 353 строк из 390 (90%). Поэтому разрез по умолчанию —
+ * компонент: группировка по статусу сложила бы почти всё в «неизвестно».
+ */
+const specsSpec: SectionSpec = {
+  kind: 'spec', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
+  fields: [['component', 'ref'], ['version', 'text'], ['path', 'text'], ['project', 'ref']],
+  statuses: [['proposed', 'active'], ['accepted', 'done'], ['deprecated', 'cancelled'], ['superseded', 'cancelled']],
+  views: ['list', 'cards'],
+  quick: [['no-status', 'lists.quick.noStatus', { status: '' }], ['no-version', 'lists.quick.noVersion', { version: '' }]],
+  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  groupings: [LORE_FILTER_FIELDS.component, 'status'],
+  columns: ['id', 'title', 'status', 'component', 'version'],
+};
+
+/** Вопросы: группировка по статусу — прямая просьба владелицы (06.11). */
+const questionsSpec: SectionSpec = {
+  kind: 'question', titleKey: 'lists.questions.title', icon: 'help',
+  fields: [
+    ['component', 'ref'], ['components', 'ref'], ['project', 'ref'], ['priority', 'text'],
+    ['owner', 'text'], ['due', 'date'], ['gates', 'ref'], ['adr', 'ref'],
+  ],
+  statuses: [['deferred', 'todo'], ['open', 'active'], ['closed', 'done'], ['dropped', 'cancelled']],
+  views: ['list', 'cards', 'board'],
+  showClosed: 'below',
+  quick: [
+    ['open', 'lists.status.open', { status: 'open' }],
+    ['deferred', 'lists.status.deferred', { status: 'deferred' }],
+    ['gating', 'lists.quick.gating', { gates: '*' }],
+  ],
+  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, 'fields.owner'],
+  groupings: ['status', LORE_FILTER_FIELDS.component, 'fields.owner'],
+  columns: ['id', 'title', 'status', 'component', 'owner', 'due'],
+};
+
+/** Вехи: СТАТУСА НЕТ — ни колонки, ни фасета статуса (K-14). */
+const milestonesSpec: SectionSpec = {
+  kind: 'milestone', titleKey: 'lists.milestones.title', icon: 'crossed-axes',
+  fields: [['week', 'number'], ['when', 'text'], ['priority', 'text'], ['products', 'ref'], ['sprints', 'ref']],
+  views: ['list', 'cards'],
+  quick: [['critical', 'lists.quick.critical', { priority: 'critical' }], ['no-sprints', 'lists.quick.noSprints', { sprints: '' }]],
+  filters: [LORE_FILTER_FIELDS.priority, 'fields.products'],
+  groupings: ['fields.products', LORE_FILTER_FIELDS.priority],
+  columns: ['id', 'title', 'when', 'priority', 'products', 'sprints'],
+};
+
+/** Релизы: СТАТУСА НЕТ; есть вид (релиз/хотфикс) и признак текущего. */
+const releasesSpec: SectionSpec = {
+  kind: 'release', titleKey: 'lists.releases.title', icon: 'open-book',
+  fields: [
+    ['version', 'text'], ['type', 'text'], ['week', 'number'], ['current', 'text'],
+    ['project', 'ref'], ['sprints', 'number'], ['prs', 'number'],
+  ],
+  views: ['list', 'cards', 'feed', 'timeline'],
+  quick: [['current', 'lists.quick.current', { current: 'true' }], ['hotfix', 'lists.quick.hotfix', { type: 'hotfix' }]],
+  filters: [LORE_FILTER_FIELDS.project, 'fields.type'],
+  groupings: [LORE_FILTER_FIELDS.project, 'fields.type'],
+  columns: ['id', 'title', 'version', 'type', 'project', 'sprints', 'prs', 'updated_at'],
+};
+
+/** Компоненты: СТАТУСА НЕТ — это справочник. */
+const componentsSpec: SectionSpec = {
+  kind: 'component', titleKey: 'lists.components.title', icon: 'cog',
+  fields: [
+    ['area', 'text'], ['parent', 'ref'], ['owner', 'text'], ['team', 'text'],
+    ['children', 'ref'], ['tech', 'ref'], ['project', 'ref'], ['adrs', 'number'], ['specs', 'number'],
+  ],
+  views: ['list', 'cards'],
+  quick: [['no-owner', 'lists.quick.noOwner', { owner: '' }]],
+  filters: ['fields.area', LORE_FILTER_FIELDS.project, 'fields.owner'],
+  groupings: ['fields.area', 'fields.owner'],
+  columns: ['id', 'title', 'area', 'owner', 'adrs', 'specs'],
+};
+
+/** Технологии: СТАТУСА НЕТ — это реестр версий (спеки SPEC-TECH-*). */
+const techSpec: SectionSpec = {
+  kind: 'tech', titleKey: 'lists.tech.title', icon: 'gears',
+  fields: [['version', 'text'], ['component', 'ref'], ['checked', 'date']],
+  views: ['list', 'cards'],
+  quick: [['no-version', 'lists.quick.noVersion', { version: '' }]],
+  filters: [LORE_FILTER_FIELDS.component],
+  groupings: [LORE_FILTER_FIELDS.component],
+  columns: ['id', 'title', 'version', 'component', 'checked'],
+};
+
+/**
+ * Фичи: статусы свои (shipped / active / in_rework и пусто) — не ось задач.
+ * Колонка «сценариев x/y» берёт готовые числа среза, без догрузки.
+ */
+const featuresSpec: SectionSpec = {
+  kind: 'feature', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
+  fields: [
+    ['components', 'ref'], ['project', 'ref'], ['level', 'text'],
+    ['milestone', 'ref'], ['parent', 'ref'], ['shipped', 'date'], ['ucs', 'number'],
+  ],
+  statuses: [['active', 'active'], ['in_rework', 'active'], ['shipped', 'done']],
+  views: ['list', 'cards', 'board'],
+  showClosed: 'below',
+  quick: [
+    ['active', 'lists.status.active', { status: 'active' }],
+    ['no-milestone', 'lists.quick.noMilestone', { milestone: '' }],
+  ],
+  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, 'fields.level'],
+  groupings: ['status', 'fields.level', LORE_FILTER_FIELDS.component],
+  columns: ['id', 'title', 'status', 'progress:ucs', 'level', 'components', 'milestone'],
+};
 
 export const LIST_SCREENS = {
   sprints: {
@@ -162,6 +400,49 @@ export const LIST_SCREENS = {
   adrs: {
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
+  },
+  tasks: {
+    slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
+    map: taskListRecord, config: tasksConfig, quickIcons: {},
+    // Срез отдаёт только открытые задачи — это сказано словами на экране.
+    note: OPEN_ONLY_NOTE,
+  },
+  decisions: {
+    slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
+    map: decisionRecord, config: lang => sectionConfig(lang, decisionsSpec), quickIcons: {},
+  },
+  specs: {
+    slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
+    map: specRecord, config: lang => sectionConfig(lang, specsSpec), quickIcons: {},
+  },
+  questions: {
+    // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
+    // отдаёт все вопросы, несмотря на имя (182 закрытых из 262).
+    slice: 'questions', titleKey: 'lists.questions.title', icon: 'help',
+    map: questionRecord, config: lang => sectionConfig(lang, questionsSpec), quickIcons: {},
+  },
+  milestones: {
+    slice: 'milestones', titleKey: 'lists.milestones.title', icon: 'crossed-axes',
+    map: milestoneRecord, config: lang => sectionConfig(lang, milestonesSpec), quickIcons: {},
+  },
+  releases: {
+    slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',
+    map: releaseRecord, config: lang => sectionConfig(lang, releasesSpec), quickIcons: {},
+  },
+  components: {
+    slice: 'components', titleKey: 'lists.components.title', icon: 'cog',
+    map: componentRecord, config: lang => sectionConfig(lang, componentsSpec), quickIcons: {},
+  },
+  tech: {
+    slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',
+    map: techRecord, config: lang => sectionConfig(lang, techSpec), quickIcons: {},
+  },
+  features: {
+    slice: 'features', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
+    map: featureRecord, config: lang => sectionConfig(lang, featuresSpec), quickIcons: {},
+    // Срез режет выдачу до верхних уровней шкалы целей, и это надо сказать:
+    // иначе «Показано 8 из 8» прочтётся как «сценариев у нас восемь».
+    note: FEATURE_ROOTS_NOTE,
   },
 } as const satisfies Record<string, ListScreenDef>;
 

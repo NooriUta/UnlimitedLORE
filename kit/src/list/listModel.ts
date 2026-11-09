@@ -5,8 +5,22 @@
 // Бюджет — правила SPRINT_UXR_S9_SCALE_OPT: S9-01 «не больше 50 строк на
 // группу · ещё N», S9-02 «при >20 группах — топ-10 + Прочие, свёрнуто».
 import type { KitConfig, KitFilter, KitMeta, KitRecord, KitShowClosed } from '../core/contract';
+import { isClosedCategory, normalizeAxisCategory } from '../core/statusAxis';
 
 export const LIST_BUDGET = { perGroup: 50, maxGroups: 20, topGroups: 10 } as const;
+
+/**
+ * Сколько условий фильтра показывать в строке-описании до свёртки «+N»
+ * (SPRINT_UXR_S9_SCALE_OPT/S9-12).
+ *
+ * Это ПОРОГ, а не расчёт по ширине: мерить ширину нечем там, где правило должно
+ * быть проверяемым, а строка обязана держаться в одну строку и на 412 px.
+ * Три условия вида «Поле: значение» такую строку уже заполняют.
+ *
+ * Число одно на оба размера экрана и живёт здесь: захочется другое — меняется
+ * одна строка, а не разметка.
+ */
+export const CHIPS_INLINE = 3;
 
 const TOP_LEVEL = new Set(['id', 'kind', 'title', 'status', 'updated_at', 'body_md']);
 
@@ -277,7 +291,19 @@ export function readListState(p: URLSearchParams): ListState {
 export const SHOW_CLOSED_MODES: readonly KitShowClosed[] = ['below', 'all', 'days30', 'hide'];
 /** Умолчание kit — «все»: kit нейтрален для чужих приложений; разделы LORE включают «внизу» конфигом. */
 export const DEFAULT_SHOW_CLOSED: KitShowClosed = 'all';
-const CLOSED_CATEGORIES = new Set(['done', 'cancelled']);
+/**
+ * Что считать закрытым — решает ось из шести значений
+ * (D-2026-UXR-STATUS-AXIS, S4-STATUS-AXIS-CONFIG), а не жёсткий список.
+ *
+ * Раньше здесь стояло {done, cancelled} — старая ось kit. Как только модель
+ * начала бы присылать finished/withdrawn, ни одна запись не попала бы в
+ * «закрытые»: ничего не упало бы, просто закрытые перестали бы сворачиваться,
+ * и понять почему было бы нельзя.
+ *
+ * `in_force` закрытым не считается: принятый ADR живой. `unknown` — тоже:
+ * непонятное должно оставаться на виду.
+ */
+const isClosedStatusCategory = (raw: unknown) => isClosedCategory(normalizeAxisCategory(raw));
 const DAY_MS = 86_400_000;
 
 export function isShowClosed(v: unknown): v is KitShowClosed {
@@ -307,7 +333,7 @@ export interface ClosedSplit {
  */
 export function splitClosed(records: readonly KitRecord[], mode: KitShowClosed, config: KitConfig, asOf?: string): ClosedSplit {
   const cat = new Map(config.statuses.items.map(s => [s.code, s.category]));
-  const isClosed = (r: KitRecord) => CLOSED_CATEGORIES.has(cat.get(r.status) ?? '');
+  const isClosed = (r: KitRecord) => isClosedStatusCategory(cat.get(r.status));
   if (mode === 'all') return { open: [...records], closed: [], hidden: 0 };
   const open: KitRecord[] = [];
   const closed: KitRecord[] = [];

@@ -56,7 +56,10 @@ final class LoreMePrefs {
         m.put("right_column", oneOf("auto", "auto", "shown", "hidden"));     // правая колонка
         m.put("text_size", oneOf("m", "s", "m", "l", "xl"));                 // размер текста
         m.put("theme", oneOf("dark", "dark", "light", "system"));            // тема
-        m.put("density", oneOf("compact", "compact", "comfortable"));        // плотность
+        // плотность: roomy — умолчание v2 (решение владелицы 08.11, SPRINT_UXR_S4_UI_SHELL_LISTS/S4-21)
+        m.put("density", oneOf("roomy", "roomy", "compact", "comfortable"));
+        // палитра темы — коды kit/tokens/prefs.ts PALETTES (те же, что cookie seer-prefs v1)
+        m.put("palette", oneOf("amber-forest", "amber-forest", "lichen", "slate", "juniper", "warm-dark"));
         m.put("single_key_shortcuts", bool(false));                          // однобуквенные клавиши
         m.put("stripes", bool(false));                                       // полоски в таблицах
         m.put("new_navigation", bool(false));                                // флаг «новая навигация»

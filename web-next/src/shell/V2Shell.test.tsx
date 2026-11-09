@@ -56,26 +56,52 @@ describe('оболочка v2 (S4-01)', () => {
     // S4-23: «Новости» — первая группа меню, по умолчанию открыт их экран.
     const feed = within(within(side).getByRole('heading', { name: 'Лента' })).getByRole('button');
     expect(feed.getAttribute('aria-expanded')).toBe('true');
-    expect(within(side).getByRole('button', { name: 'Новости' }).getAttribute('aria-current')).toBe('page');
+    expect(within(side).getByRole('link', { name: 'Новости' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('heading', { level: 1, name: 'Новости' })).toBeTruthy();
   });
 
-  it('выбор раздела пишется в URL и меняет экран; несобранный экран — «не собран», а не «пусто»', () => {
+  // Переписано 09.11: «Задачи» были здесь примером НЕСОБРАННОГО экрана, а
+  // теперь раздел собран (S4-V2-SECTIONS). Примера под рукой больше нет — все
+  // пять разделов меню собраны, и это само по себе проверяемое утверждение.
+  // Механизм честного «не собран» остался для будущих разделов (SCREENS
+  // объявлен Partial), поэтому здесь проверяем, что НИ ОДИН раздел меню его не
+  // показывает, и заодно — что «Задачи» открывают именно список задач.
+  it('выбор раздела пишется в URL и меняет экран; ни один раздел меню не «не собран»', () => {
     const win = fakeWin();
     const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Задачи' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Задачи' }));
     expect(new URLSearchParams(win.location.search).get('sec')).toBe('task');
     expect(screen.getByRole('heading', { level: 1, name: 'Задачи' })).toBeTruthy();
     const main = screen.getByRole('main');
-    expect(main.querySelector('[data-state="unbuilt"]')).toBeTruthy();
-    expect(main.querySelector('[data-state="empty"]')).toBeNull();
-    expect(container.querySelector('[data-section="task"]')).toBeTruthy();
+    expect(main.querySelector('[data-state="unbuilt"]')).toBeNull();
+    expect(container.querySelector('[data-section="task"] [data-screen="tasks"]')).toBeTruthy();
+  });
+
+  /**
+   * Каждый пункт меню открывает собранный экран — все тринадцать (S4-V2-SECTIONS).
+   *
+   * Проверка обходит пункты, а не перечисляет их: раздел добавляют в меню
+   * (`v2Config`) и забывают экран (`V2Shell.SCREENS`) — тогда пункт есть, а под
+   * ним «экран не собран». Снаружи это выглядит как сломанная навигация, и
+   * прежние проверки по одному разделу такого не поймали бы: они смотрели на
+   * «Задачи» и ADR, а промахнуться можно было в любом из одиннадцати.
+   */
+  it('ни один пункт меню не ведёт на «экран не собран» — обходим все', () => {
+    const win = fakeWin();
+    const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
+    const names = screen.getAllByRole('link').map(a => a.textContent?.trim() ?? '').filter(Boolean);
+    // Положительный контроль: пунктов действительно много, обход не пустой.
+    expect(names.length).toBeGreaterThanOrEqual(13);
+    for (const name of names) {
+      fireEvent.click(screen.getByRole('link', { name }));
+      expect(container.querySelector('[data-state="unbuilt"]'), `раздел «${name}»: экран не собран`).toBeNull();
+    }
   });
 
   it('списки (S4-04) — экраны разделов: ADR открывает список kit под одним заголовком раздела', () => {
     const win = fakeWin();
     const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'ADR' }));
+    fireEvent.click(screen.getByRole('link', { name: 'ADR' }));
     expect(new URLSearchParams(win.location.search).get('sec')).toBe('adr');
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(container.querySelector('[data-section="adr"] [data-screen="adrs"]')).toBeTruthy();
@@ -85,7 +111,7 @@ describe('оболочка v2 (S4-01)', () => {
   it('выбор проектов (?proj=) переживает смену раздела, фильтры раздела — нет (S4-03 × S4-13)', () => {
     const win = fakeWin('?mod=forseti&sec=task&proj=p1,p2&lf=x');
     render(<App path="/" win={win} storage={mem()} narrow={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Новости' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Новости' }));
     const p = new URLSearchParams(win.location.search);
     expect(p.get('sec')).toBe('news');
     expect(p.get('proj')).toBe('p1,p2');
@@ -102,7 +128,7 @@ describe('оболочка v2 (S4-01)', () => {
   it('раздел из URL открывается сразу: ?sec=settings — личные настройки (переход v2 → v1)', () => {
     const { container } = render(<App path="/" win={fakeWin('?mod=forseti&sec=settings')} storage={mem()} narrow={false} />);
     expect(container.querySelector('[data-nav-switch="v2"]')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Настройки' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Настройки' }).getAttribute('aria-current')).toBe('page');
   });
 
   it('телефон: меню в drawer; выбор раздела закрывает drawer', async () => {
@@ -111,7 +137,7 @@ describe('оболочка v2 (S4-01)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Меню' }));
     const dlg = screen.getByRole('dialog');
     expect(await axeViolations(document.body)).toEqual([]);
-    fireEvent.click(within(dlg).getByRole('button', { name: 'Задачи' }));
+    fireEvent.click(within(dlg).getByRole('link', { name: 'Задачи' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByRole('heading', { level: 1, name: 'Задачи' })).toBeTruthy();
   });

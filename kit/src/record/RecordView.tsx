@@ -7,7 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
@@ -16,6 +16,7 @@ import { Segmented } from '../elements/Segmented';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
 import { BlockBoundary } from './BlockBoundary';
+import { DataStateBlock } from './DataStateBlock';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { RecordLinks, recordLinks } from './RecordLinks';
 import { RecordGraph } from './RecordGraph';
@@ -24,7 +25,8 @@ import { RecordRef, renderOut, valueText } from './fmt';
 import { RecordFacts } from './RecordFacts';
 import type { RecordFactsSpec } from './facts';
 import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
-import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, relationTargets } from './RecordRelations';
+import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, relationName, relationTargets } from './RecordRelations';
+import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
 
 export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
@@ -38,6 +40,11 @@ export interface MdEditorSlotProps {
   value: string;
   label: string;
   onSave?: (markdown: string) => Promise<void> | void;
+  /**
+   * Черновик ЭТОГО поля на сервере (S5-09). Слот даёт приложение: адрес и
+   * версия записи — его забота, kit про API не знает.
+   */
+  drafts?: MdDraftSlot;
 }
 
 export interface RecordViewProps {
@@ -58,6 +65,12 @@ export interface RecordViewProps {
    * (roles[role].canEdit; без roles — может). Иначе — чтение как прежде.
    */
   mdEditor?: ComponentType<MdEditorSlotProps>;
+  /**
+   * Черновик по ключу поля (S5-09): вернул слот — у поля появится
+   * «Восстановить черновик от ЧЧ:ММ» и автосохранение. Не передан — поля
+   * работают как раньше, без единого вызова.
+   */
+  mdDrafts?: (field: string) => MdDraftSlot | undefined;
   /** Источник вкладки «История» (S5-11); нет — вкладки нет (истории у вида может не быть). */
   history?: RecordHistorySource;
   /** Когда экран получил данные (S4-29): «получено N мин» в строке статуса. */
@@ -73,6 +86,16 @@ export interface RecordViewProps {
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
   placement?: 'right' | 'bottom' | 'full';
+  /**
+   * S4-30: «Свойства» в режиме «на весь экран» — открыты или свёрнуты.
+   *
+   * `defaultPropsOpen` — умолчание для неуправляемого режима (настройка
+   * приложения). `propsOpen` + `onPropsOpenChange` — управляемый режим, когда
+   * выбор хранит приложение: kit сам ничего не хранит.
+   */
+  propsOpen?: boolean;
+  defaultPropsOpen?: boolean;
+  onPropsOpenChange?: (open: boolean) => void;
   /**
    * Куда идёт вычисляемое (связи, граф, журнал, история). 'tabs' (по умолчанию,
    * владелица 08.11: «пока как в MVP») — вкладками основного блока в любом месте;
@@ -101,12 +124,12 @@ function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
   return (field, from) => to => onSave({ type: record.kind, id: record.id, field, from, to });
 }
 
-interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver> }
+interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver>; drafts?: (field: string) => MdDraftSlot | undefined }
 
 function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string }): ReactNode {
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
-    return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} />;
+    return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} drafts={edit.drafts?.(fieldKey)} />;
   }
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
@@ -149,7 +172,7 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
   // Тело с правом на правку: тот же рендер чтения + ✎; пустое — «Текста нет»
   // и ✎, а не тупик без способа написать.
   if (edit) {
-    return <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} />;
+    return <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} drafts={edit.drafts?.('body_md')} />;
   }
   if (record.body_md?.trim()) return <>{ctx.md(record.body_md)}</>;
   return <EmptyState compact title={kitT(lang, 'kit.record.body.empty')} hint={kitT(lang, 'kit.record.body.emptyHint')} />;
@@ -176,12 +199,12 @@ function propsSummary(record: KitRecord, kind: KindConfig): string {
     .join(' · ');
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs' }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
-  const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver } : undefined;
+  const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver, drafts: mdDrafts } : undefined;
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
   const kindTabs = kind?.tabs ?? [];
@@ -202,9 +225,36 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // Снизу и на весь экран свойства — колонкой справа рядом с контентом (владелица 08.11):
   // читать и заполнять текст и свойства сразу, без переключений. Панелью справа (узко) — вкладкой.
   // Снизу — свойства колонкой справа; во весь экран — свёрткой под шапкой и рейкой у края, как v4 (S4-CONTENT-V4).
-  const propsSide = hasProps && placement === 'bottom';
-  const propsRow = hasProps && placement === 'full';
-  const [propsOpen, setPropsOpen] = useState(false);
+  // S4-30: «Свойства» в режиме «на весь экран» — свёрнутая строка под шапкой.
+  // Раньше она всегда стартовала свёрнутой; теперь это настройка. Образец —
+  // тот же, что у BurnChart: неуправляемый режим с умолчанием плюс
+  // управляемый, когда выбор хранит приложение. kit сам ничего не хранит.
+  //
+  // Находка P1 аудита 08.11: в доке панель свойств была постоянной, а во весь
+  // экран — свёрткой, то есть одна запись вела себя двумя способами. Теперь
+  // свойства сворачиваются везде; умолчание сохраняет прежний вид каждого
+  // режима: в доке раскрыто, во весь экран свёрнуто — молча ничего не прячем.
+  const [propsOpenInner, setPropsOpenInner] = useState(defaultPropsOpen ?? placement === 'bottom');
+  const propsOpen = propsOpenControlled ?? propsOpenInner;
+  const propsSide = hasProps && placement === 'bottom' && propsOpen;
+  const propsRow = hasProps && (placement === 'full' || (placement === 'bottom' && !propsOpen));
+  // <details> меняет своё open сам, и React не возвращает его обратно, если
+  // проп не менялся. В управляемом режиме это сделало бы управление обманом:
+  // человек щёлкнул, приложение не сохранило, а строка осталась раскрытой.
+  // Поэтому в управляемом режиме состояние элемента приводим к пропу.
+  const propsRowRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (propsOpenControlled === undefined) return;
+    const el = propsRowRef.current;
+    if (el && el.open !== propsOpenControlled) el.open = propsOpenControlled;
+  });
+  const setPropsOpen = (open: boolean) => {
+    // В управляемом режиме своё состояние не двигаем: пока приложение не
+    // ответило новым значением, интерфейс показывает то, что оно задало —
+    // иначе вид и настройка разойдутся.
+    if (propsOpenControlled === undefined) setPropsOpenInner(open);
+    onPropsOpenChange?.(open);
+  };
   // Ширина текста во весь экран — настройка наверху (владелица 08.11), запоминается в браузере.
   const [width, setWidthState] = useState<RecWidth>(() => readWidth());
   const setWidth = (w: RecWidth) => { setWidthState(w); try { localStorage.setItem(WIDTH_KEY, w); } catch { /* приватный режим — живём в памяти */ } };
@@ -212,7 +262,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     { id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' : undefined },
     ...(hasProps && !propsSide && !propsRow ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
     ...kindTabs.map(t => ({ id: t.key, label: t.title, zone: zoned ? 'record' as const : undefined })),
-    ...relTabs.map(rt => ({ id: rt.id, label: rt.label, count: relCount(rt.defs), relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], zone: zoned ? 'record' as const : undefined })),
+    ...relTabs.map(rt => ({ id: rt.id, label: rt.label, count: relCount(rt.defs), relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], markTitle: relationName(lang, rt.relation), zone: zoned ? 'record' as const : undefined })),
   ];
   const aroundItems: TabItem[] = [
     { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: recordLinks(record.id, ctx.data.edges).length },
@@ -302,7 +352,11 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // свойства начинаются вровень с контентом, а не с заголовком (владелица 08.11).
   const propsAside = propsSide && kind ? (
     <aside className="sk-rec__props" data-zone="props" aria-label={kitT(lang, 'kit.record.tab.props')}>
-      <p className="sk-rec__zone">{kitT(lang, 'kit.record.tab.props')}</p>
+      {/* Заголовок зоны — кнопка свёртки: то же действие, что «▸ Свойства» во
+          весь экран (находка P1 аудита 08.11 про два поведения). */}
+      <button type="button" className="sk-rec__zone sk-rec__zone--fold" aria-expanded="true" onClick={() => setPropsOpen(false)}>
+        {kitT(lang, 'kit.record.tab.props')}
+      </button>
       <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
         <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
       </BlockBoundary>
@@ -334,8 +388,15 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
           <RecordVerdict record={record} ctx={ctx} lang={lang} />
         </BlockBoundary>
+        {/*
+          S4-30: что проверено, что не смогли, что обрезано — над содержимым.
+          Источник — meta той же выдачи, из которой нарисована запись, поэтому
+          подключать это экранам вручную не нужно (и нельзя: однажды забудут).
+          Сказать нечего — блока нет, компонент возвращает null сам.
+        */}
+        <DataStateBlock meta={ctx.data.meta} />
         {propsRow && kind && (
-          <details className="sk-rec-propsrow" open={propsOpen} onToggle={e => setPropsOpen((e.currentTarget as HTMLDetailsElement).open)}>
+          <details ref={propsRowRef} className="sk-rec-propsrow" open={propsOpen} onToggle={e => setPropsOpen((e.currentTarget as HTMLDetailsElement).open)}>
             <summary className="sk-rec-propsrow__sum">
               <span className="sk-rec-propsrow__label">{kitT(lang, 'kit.record.tab.props')}</span>
               {propsSummary(record, kind) && <span className="sk-rec-propsrow__vals"> · {propsSummary(record, kind)}</span>}

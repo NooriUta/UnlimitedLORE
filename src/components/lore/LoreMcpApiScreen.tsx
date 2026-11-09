@@ -204,6 +204,9 @@ const TOOLS: ToolDoc[] = [
   { name: 'claude_rules_pull', kind: 'read', entity: 'ClaudeRules', backend: 'GET /lore/slice/doc_by_id',
     params: 'doc_id, path?, overwrite?',
     desc: 'Получить док правил из LORE: с path — записать Markdown в файл (так свежая сессия получает правила проекта), без path — вернуть текст. Существующий файл без overwrite:true не перезаписывается; док с пустым телом на диск не пишется — иначе затёр бы рабочие правила.' },
+  { name: 'claude_rules_diff', kind: 'read', entity: 'ClaudeRules', backend: 'GET /lore/slice/doc_by_id',
+    params: 'path, doc_id',
+    desc: 'Сравнить локальный CLAUDE.md с доком правил в LORE, ничего не меняя (S7B-06): in_sync, added (только в файле), removed (только в доке) и изменённые строки с +/−. CRLF = LF. Нет дока или файла — ошибка, а не «совпадает». Запускать перед push/pull, чтобы видеть, какая сторона впереди.' },
   // ── QG-рутина: прогон → job-task → рекомендация → задача ──────────────────
   { name: 'qg_run_log', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/run',
     params: 'routine_name, run_date, status, metrics[]?, started_at?, finished_at?, flags?, run_id?',
