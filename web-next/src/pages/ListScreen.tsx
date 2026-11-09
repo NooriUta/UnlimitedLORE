@@ -9,7 +9,7 @@ import {
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { KitProgressInput, RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { RecordPlacement, UrlWindow } from '@seidr/kit';
 import { fetchSlice } from '../api/loreClient';
 import { useAppT } from '../i18n';
 import { LIST_SCREENS, type ListScreenDef, type ListScreenId } from '../lists/screens';
@@ -156,25 +156,28 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
   // упавшая пачка — «?» с причиной (это решает loadProgress), а не 0/0.
   const ids = useMemo(() => data?.records.map(r => r.id) ?? [], [data]);
-  const [progress, setProgress] = useState<Map<string, KitProgressInput> | null>(null);
+  const [late, setLate] = useState<Map<string, Record<string, unknown>> | null>(null);
   useEffect(() => {
     if (!nested || !ids.length) return;
     const ctl = new AbortController();
-    setProgress(null);
-    nested.loadProgress(client, ids, ctl.signal).then(
-      m => { if (!ctl.signal.aborted) setProgress(m); },
+    setLate(null);
+    nested.load(client, ids, ctl.signal).then(
+      m => { if (!ctl.signal.aborted) setLate(m); },
       () => { /* отмена: экран ушёл или список перезагрузился */ },
     );
     return () => ctl.abort();
   }, [nested, client, ids]);
   const shownData = useMemo(() => {
     if (!data || !nested) return data;
-    const field = nested.progressField;
+    // Пока значений нет — «…» в КАЖДОМ догружаемом поле, а не пустая ячейка:
+    // «считаем» и «нечего показать» — разные утверждения (S4-09).
+    const waiting: Record<string, unknown> = {};
+    for (const f of nested.lateFields) waiting[f] = { loading: true };
     return {
       ...data,
-      records: data.records.map(r => ({ ...r, fields: { ...r.fields, [field]: progress?.get(r.id) ?? { loading: true } } })),
+      records: data.records.map(r => ({ ...r, fields: { ...r.fields, ...waiting, ...(late?.get(r.id) ?? {}) } })),
     };
-  }, [data, nested, progress]);
+  }, [data, nested, late]);
 
   const headId = titleId ?? `list-screen-${screen}`;
   // Иконка заголовка — из канона LORE v1 (S4-25): def.icon = иконка раздела v1.

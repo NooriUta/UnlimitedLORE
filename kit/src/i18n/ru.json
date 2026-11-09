@@ -607,5 +607,14 @@
   "kit.list.cols.width": "Ширина колонки «{title}»",
   "kit.record.history.more": "Показать ещё",
   "kit.record.history.moreBusy": "Загружаю…",
-  "kit.record.history.moreFailed": "Не догрузилось: {reason}. Показанные версии на месте."
+  "kit.record.history.moreFailed": "Не догрузилось: {reason}. Показанные версии на месте.",
+  "kit.sum.full": "Итого {value} — заполнено у всех {of}",
+  "kit.sum.partial": "Итого {value}, но заполнено у {known} из {of}",
+  "kit.sum.cover": "у {known} из {of}",
+  "kit.sum.empty": "Не заполнено ни у одной из {of}",
+  "kit.sum.emptyShort": "не заполнено",
+  "kit.sum.error": "Не посчитано: {reason}",
+  "kit.sum.loading": "Считаем…",
+  "kit.sum.none": "Не посчитано",
+  "kit.sum.cut": "складывали не всё: выдачу обрезали"
 }

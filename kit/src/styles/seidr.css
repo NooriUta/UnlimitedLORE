@@ -2402,6 +2402,20 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-progress[data-progress='none'],
 .sk-progress[data-progress='empty'] { color: var(--t3); }
 
+/* Сумма с охватом (S4-09): «12,5 д» или «12,5 д · у 9 из 14». Охват виден в
+   строке, а не только в подсказке: на телефоне наведения нет, и спрятанная
+   туда оговорка там не существует. */
+.sk-sum { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sk-sum__value { color: var(--t1); }
+.sk-sum__cover { color: var(--t3); font-size: var(--fs-2xs); }
+.sk-sum[data-sum='partial'] .sk-sum__value { color: var(--wrn); }
+.sk-sum[data-sum='error'] { color: var(--dng); border-bottom: 1px dashed var(--dng); }
+.sk-sum[data-sum='loading'],
+.sk-sum[data-sum='none'] { color: var(--t3); }
+/* «Не заполнено» — словами и приглушённо: это не ошибка и не ноль. */
+.sk-sum[data-sum='empty'] { color: var(--t3); font-size: var(--fs-2xs); font-style: italic; }
+
+
 /* Карточки и лента (S4-22): те же записи, другой вид. */
 .sk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
 .sk-cards__card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
