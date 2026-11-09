@@ -13,8 +13,9 @@ import {
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
 import { useAppT } from '../i18n';
-import { loadPassport, type PassportType } from './passportAdapters';
-import { fromLoreRecord, toLoreRecord } from './loreRecordContract';
+import { type PassportType } from './passportAdapters';
+import { fromLoreRecord } from './loreRecordContract';
+import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
@@ -65,8 +66,16 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       : Promise.resolve(NOT_TRACKED)),
     [type, id, fetchImpl, histLimit],
   );
-  const pp = useLoadState(() => loadPassport(type, id, lang, slice), [type, id, lang, slice]);
-  const contract = useMemo(() => (pp.data ? toLoreRecord(pp.data, new Date().toISOString(), lang) : null), [pp.data, lang]);
+  // Источник паспорта — боевой фасад /lore/record (S4-MODEL-PASSPORT-LIST).
+  // Вместе с ним приходит `record.version` (без неё нет защиты от затирания,
+  // S5-08), настоящие `perms` и состояние блоков. Фасад не ответил — паспорт
+  // собирается из срезов, и причина НАЗВАНА строкой в состоянии данных:
+  // молчаливый откат выглядел бы настоящим паспортом без версии.
+  const pp = useLoadState(
+    () => loadRecordContract(type, id, lang, slice, { fetchImpl }),
+    [type, id, lang, slice, fetchImpl],
+  );
+  const contract = pp.data ?? null;
   const view = useMemo(() => (contract ? fromLoreRecord(contract, lang) : null), [contract, lang]);
   if (pp.state === 'error') return <LoadError error={pp.error} onRetry={pp.reload} />;
   if (!view) return <Skeleton lines={8} label={t('pp.loading')} />;
