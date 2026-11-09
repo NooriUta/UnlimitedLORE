@@ -13,6 +13,13 @@ import { loreFetch } from '../auth/session';
 export interface SliceBody<T> {
   rows: T[];
   truncated?: boolean | 'unknown';
+  /**
+   * Обрезал ли сервер СЛАГАЕМЫЕ у свёрнутого среза (`sprint_totals`): тогда
+   * суммы неполные. Отдельное поле, а не `truncated`, потому что его смысл не
+   * должен зависеть от того, где считается свёртка. Есть только у срезов,
+   * которые что-то сворачивают.
+   */
+  inputs_truncated?: boolean;
   limit?: number;
   hint?: string;
   page?: { limit?: number | null; offset?: number; total?: number; has_more?: boolean; fields_checked?: boolean; warning?: string };

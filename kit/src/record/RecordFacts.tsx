@@ -5,7 +5,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { kitT, type KitLang } from '../i18n';
-import { StatusPill } from './fmt';
+import { StatusSlot } from './StatusSlot';
 import { dueTone, recordFacts, tasksTone, type DueFact, type FactTone, type RecordFactsSpec, type TasksFact } from './facts';
 
 export interface RecordFactsProps {
@@ -44,7 +44,7 @@ export function RecordFacts({ record, ctx, spec, lang, onTasks, tail }: RecordFa
     <section className="sk-rec-facts" data-testid="kit-facts" aria-label={kitT(lang, 'kit.record.facts')}>
       <ul className="sk-rec-facts__list">
         <Fact name="status" tone="t2">
-          <StatusPill code={record.status} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
+          <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
         </Fact>
         {t && (
           <Fact name="tasks" tone={tasksTone(t)}>

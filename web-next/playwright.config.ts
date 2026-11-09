@@ -21,7 +21,7 @@ export default defineConfig({
     url: `http://127.0.0.1:${PORT}/news`,
     reuseExistingServer: true,
     timeout: 120_000,
-    env: { VITE_LORE_AUTH_ENABLED: 'false' },
+    env: { VITE_LORE_AUTH_ENABLED: 'false', VITE_NEWS_FIXTURE: 'true' },
   },
   projects: [
     { name: 'phone-412', use: { viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true } },

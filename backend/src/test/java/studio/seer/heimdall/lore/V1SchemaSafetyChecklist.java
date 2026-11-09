@@ -73,7 +73,12 @@ final class V1SchemaSafetyChecklist {
         // LoreHistHygieneLiveDbTest: только INSERT первой версии задаче без
         // HAS_STATE, с условием «версий нет»; существующие строки не трогаются.
         "java__task_history_backfill",
-        "только первая версия у задач без истории (INSERT, существующее не трогается)");
+        "только первая версия у задач без истории (INSERT, существующее не трогается)",
+        // S7B-15, V76. Доказательство — LoreActorHarnessTest.backfillPlanAssignsOnlyUnambiguous:
+        // UPDATE ставит только новое свойство V75 harness с условием «ещё не стоит»;
+        // поля v1 не трогаются.
+        "java__actor_harness_backfill",
+        "только новое свойство V75 harness у агентов, где оно пусто и имя однозначно");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

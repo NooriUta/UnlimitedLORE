@@ -12,7 +12,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import { createLoreClient, type LoreClient } from './loreClient';
 import { STATUS_MATCH, planStatusOf, PLAN_STATUSES } from './taskStatus';
-import { countProgress, loadSprintProgress } from './sprintProgress';
+import { ABSENT_NUMBERS, ABSENT_ROW, UNKNOWN_STATE, loadSprintTotals } from './sprintTotals';
 import { SprintTasks } from './SprintTasks';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -59,34 +59,158 @@ describe('статус задачи из status_raw — словарь shared/lo
   });
 });
 
-describe('прогресс «x/y»', () => {
-  it('x — готовые, y — все, кроме отменённых', () => {
-    expect(countProgress([
-      { status_raw: '✅ DONE' }, { status_raw: '📋 PLANNED' }, { status_raw: '🚫 CANCELLED' }, { status_raw: '🔄 IN PROGRESS' },
-    ])).toEqual({ done: 1, total: 3 });
-    expect(countProgress([])).toEqual({ done: 0, total: 0 });
+/**
+ * Переписано 09.11 вместе со сменой источника (S4-09, просьба владелицы про
+ * суммарную оценку). Прежние проверки стояли на `loadSprintProgress`, который
+ * считал x/y НА КЛИЕНТЕ по `tasks_of_sprints_batch`; модуль заменён на
+ * `loadSprintTotals` поверх среза `sprint_totals`. Почему заменён, а не добавлен
+ * рядом: одно число, посчитанное в двух местах, расходится — у kit это уже
+ * случилось со статусными цветами в трёх местах (K-14). Плюс прежний срез нёс
+ * `note_md` — 3,6 МБ на двадцать спринтов ради трёх чисел.
+ *
+ * Что проверки СОХРАНИЛИ дословно по смыслу: пачки по 20, упавшая пачка метит
+ * только свои спринты, обрезанная выдача не выдаёт себя за полный подсчёт.
+ * Что добавили: суммы, «не заполнено» вместо нуля и отсутствие строки.
+ */
+describe('итоги спринта: задач x/y, оценка Σ, факт Σ — считает сервер', () => {
+  /** Строка итогов в форме сервера (LoreSprintTotals). */
+  const totals = (sprint: string, o: {
+    done?: number; of?: number;
+    effort?: number | null; effortKnown?: number;
+    actual?: number | null; actualKnown?: number;
+    state?: string;
+  }): Json => ({
+    sprint_id: sprint,
+    state: o.state ?? 'ok',
+    tasks_total: { value: o.of ?? 0, known: o.of ?? 0, of: o.of ?? 0, done: o.done ?? 0 },
+    effort_days_total: { value: o.effort ?? null, known: o.effortKnown ?? 0, of: o.of ?? 0 },
+    actual_days_total: { value: o.actual ?? null, known: o.actualKnown ?? 0, of: o.of ?? 0 },
   });
 
-  it('одним пакетным слайсом на 20 спринтов; упавшая пачка — «не посчитано», не 0/0', async () => {
+  it('положительный контроль: прогресс и обе суммы приходят из одного запроса', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 1, of: 2, effort: 3.5, effortKnown: 2 })] }));
+    const res = await loadSprintTotals(client(f), ['S0']);
+    // Один запрос, а не три: три числа едут одной строкой.
+    expect(f.calls).toHaveLength(1);
+    expect(f.calls[0].url.pathname).toBe('/lore/slice/sprint_totals');
+    expect(res.get('S0')).toEqual({
+      tasks: { done: 1, total: 2 },
+      effort_total: { value: 3.5, known: 2, of: 2 },
+      actual_total: { value: null, known: 0, of: 2 },
+    });
+  });
+
+  it('пачки по 20; упавшая пачка метит ТОЛЬКО свои спринты, а не весь ответ', async () => {
     const ids = Array.from({ length: 25 }, (_, i) => `S${i}`);
     const f = fakeFetch(url => {
       const list = (url.searchParams.get('sprint_ids') ?? '').split(',');
       if (list.includes('S24')) return jsonRes({ error: 'LORE_UPSTREAM', detail: 'down' }, 502);
-      return jsonRes({ rows: [task('S0', 'T1', '✅ DONE'), task('S0', 'T2', '📋 PLANNED')] });
+      return jsonRes({ rows: list.map(id => totals(id, { done: 1, of: 2, effort: 1, effortKnown: 1 })) });
     });
-    const res = await loadSprintProgress(client(f), ids);
-    expect(f.calls.map(c => c.url.pathname)).toEqual(['/lore/slice/tasks_of_sprints_batch', '/lore/slice/tasks_of_sprints_batch']);
+    const res = await loadSprintTotals(client(f), ids);
+    expect(f.calls.map(c => c.url.pathname)).toEqual(['/lore/slice/sprint_totals', '/lore/slice/sprint_totals']);
     expect(f.calls[0].url.searchParams.get('sprint_ids')!.split(',')).toHaveLength(20);
-    expect(res.get('S0')).toEqual({ done: 1, total: 2 });
-    expect(res.get('S1')).toEqual({ done: 0, total: 0 });
-    expect(res.get('S24')).toMatchObject({ error: expect.stringContaining('502') });
+    expect(res.get('S0')).toMatchObject({ tasks: { done: 1, total: 2 } });
+    // Упавшая пачка: причина названа во ВСЕХ трёх полях, иначе часть строки
+    // выглядела бы посчитанной.
+    expect(res.get('S24')).toEqual({
+      tasks: { error: expect.stringContaining('502') },
+      effort_total: { error: expect.stringContaining('502') },
+      actual_total: { error: expect.stringContaining('502') },
+    });
   });
 
-  it('обрезанная выдача пачки — partial, а не полный подсчёт', async () => {
-    const f = fakeFetch(() => jsonRes({ rows: [task('S0', 'T1', '✅ DONE')], truncated: true, limit: 1 }));
-    const res = await loadSprintProgress(client(f), ['S0', 'S1']);
-    expect(res.get('S0')).toEqual({ done: 1, total: 1, partial: true });
-    expect(res.get('S1')).toEqual({ done: 0, total: 0, partial: true });
+  it('обрезанная выдача: сумма помечена — иначе занижение выглядело бы точным', async () => {
+    // Признак обрезки в ответе относится к СТРОКАМ ЗАДАЧ (тело собирается до
+    // свёртки), то есть часть слагаемых сервер не видел.
+    const f = fakeFetch(() => jsonRes({
+      rows: [totals('S0', { done: 1, of: 1, effort: 2, effortKnown: 1 })], truncated: true, limit: 1,
+    }));
+    const res = await loadSprintTotals(client(f), ['S0']);
+    expect(res.get('S0')).toEqual({
+      tasks: { done: 1, total: 1, partial: true },
+      effort_total: { value: 2, known: 1, of: 1, cut: true },
+      actual_total: { value: null, known: 0, of: 1, cut: true },
+    });
+  });
+
+  /** Помечена ли сумма спринта S0 как «складывали не всё». */
+  const cutOf = (m: Map<string, Record<string, unknown>>): boolean =>
+    (m.get('S0')?.effort_total as { cut?: boolean } | undefined)?.cut === true;
+
+  /**
+   * Признак берётся из СВОЕГО поля сервера `inputs_truncated` (#995), а не из
+   * чужого `truncated`. Прежний путь держался на порядке кода: тело ответа
+   * собиралось до свёртки, поэтому `truncated` случайно означал нужное. Своё
+   * поле не зависит от того, где считается свёртка.
+   */
+  it('inputs_truncated: true — суммы помечены', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: true }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(true);
+  });
+
+  it('inputs_truncated: false главнее прежнего признака — он про другое', async () => {
+    // `truncated` после свёртки относится к строкам ИТОГОВ, а не к слагаемым.
+    // Если сервер прямо говорит «слагаемые целы», верим ему, а не догадке.
+    const f = fakeFetch(() => jsonRes({
+      rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: false, truncated: true,
+    }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(false);
+  });
+
+  it('страница с продолжением обрезкой НЕ считается — она режет строки итогов', async () => {
+    // Исправление прежнего поведения: `SlicePage.apply` работает ПОСЛЕ свёртки,
+    // то есть режет строки «по одной на спринт». Суммы в отданных строках полны.
+    const f = fakeFetch(() => jsonRes({
+      rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: false, page: { has_more: true, total: 9 },
+    }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(false);
+  });
+
+  it('поля нет (сервер старее #995) — читается прежний признак, а не «не обрезано»', async () => {
+    // Считать отсутствие ключа за «целы» было бы молчаливым допущением.
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], truncated: 'unknown' }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(true);
+  });
+
+  it('полная выдача признака обрезки НЕ несёт', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: false }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(false);
+  });
+
+  it('спринта нет в ответе — причина словами, а не тихий ноль', async () => {
+    // Строка на КАЖДЫЙ запрошенный спринт — обещание сервера. Не выполнено —
+    // говорим это: пустота прочиталась бы как «задач ноль».
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 1, of: 1 })] }));
+    const res = await loadSprintTotals(client(f), ['S0', 'S1']);
+    expect(res.get('S0')).toMatchObject({ tasks: { done: 1, total: 1 } });
+    expect(res.get('S1')).toEqual({
+      tasks: { error: ABSENT_ROW }, effort_total: { error: ABSENT_ROW }, actual_total: { error: ABSENT_ROW },
+    });
+  });
+
+  it('чужое состояние строки — причина словами, а не числа наугад', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [{ ...totals('S0', { done: 1, of: 2 }), state: 'skipped' }] }));
+    const res = await loadSprintTotals(client(f), ['S0']);
+    expect(res.get('S0')).toEqual({
+      tasks: { error: UNKNOWN_STATE }, effort_total: { error: UNKNOWN_STATE }, actual_total: { error: UNKNOWN_STATE },
+    });
+  });
+
+  it('числа итогов не пришли — «не посчитано», а не 0/0 и не ноль', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [{ sprint_id: 'S0', state: 'ok' }] }));
+    const res = await loadSprintTotals(client(f), ['S0']);
+    expect(res.get('S0')).toEqual({
+      tasks: { error: ABSENT_NUMBERS }, effort_total: { error: ABSENT_NUMBERS }, actual_total: { error: ABSENT_NUMBERS },
+    });
+  });
+
+  it('пустой спринт: 0/0 — это ЧИСЛА, а не отказ', async () => {
+    // «Задач ноль» сервер выражает числами, и это другое утверждение, чем
+    // «спринт не посчитали».
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 0 })] }));
+    const res = await loadSprintTotals(client(f), ['S0']);
+    expect(res.get('S0')).toMatchObject({ tasks: { done: 0, total: 0 }, effort_total: { known: 0, of: 0 } });
   });
 });
 
