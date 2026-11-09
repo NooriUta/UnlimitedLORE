@@ -51,6 +51,14 @@ export interface MdEditorSlotProps {
    * версия записи — его забота, kit про API не знает.
    */
   drafts?: MdDraftSlot;
+  /**
+   * Показывать подсказку «как править». Подсказка — свойство ЗАПИСИ, а не
+   * каждого поля: когда разделы тела стали править по отдельности, она
+   * размножилась по числу разделов, и запись стала похожа на форму (слова
+   * владелицы 09.11.2026: «верни типтап редактирование, вы ухудшили user
+   * experience»). Поэтому её показывает только ПЕРВЫЙ редактор записи.
+   */
+  hint?: boolean;
 }
 
 export interface RecordViewProps {
@@ -213,6 +221,12 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
   const sections = kind?.bodySections ?? [];
   if (sections.length) {
     const body = record.body_md?.trim();
+    // Подсказка «как править» — ОДНА на запись (слова владелицы 09.11.2026:
+    // «верни типтап редактирование, вы ухудшили user experience»): когда она
+    // шла у каждого раздела, у ADR их становилось три, и документ выглядел
+    // формой. Её показывает тело, а если тела нет — первый раздел, которому
+    // редактор действительно достался.
+    const hintAt = body || !edit ? -1 : sections.findIndex(s => s.editable !== false);
     return (
       <div className="sk-rec-sections">
         {/* Тело записи, если оно есть, идёт первым — до разделов.
@@ -222,10 +236,10 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
             путь, которого на сервере нет. Пишут в разделы. */}
         {body && (
           edit
-            ? <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} drafts={edit.drafts?.('body_md')} />
+            ? <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} drafts={edit.drafts?.('body_md')} hint />
             : <>{ctx.md(record.body_md ?? '')}</>
         )}
-        {sections.map(s => {
+        {sections.map((s, si) => {
           const raw = record.fields[s.key];
           const text = typeof raw === 'string' ? raw : raw === null || raw === undefined ? '' : valueText(raw);
           // Раздел может быть только для чтения САМ ПО СЕБЕ: сервер не даёт
@@ -241,7 +255,7 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
             <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
               <h2 className="sk-rec-fields__sechead">{s.title}</h2>
               {may
-                ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} />
+                ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} hint={si === hintAt} />
                 : <>{ctx.md(text)}</>}
             </section>
           );

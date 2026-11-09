@@ -13,6 +13,9 @@ import {
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
 import { knownRecordHref } from '../nav/loreRoutes';
+import { SprintBurnLine } from '../sprint/SprintBurnLine';
+import { SprintTasksTab } from '../sprint/SprintTasksTab';
+import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
 import { fromLoreRecord } from './loreRecordContract';
@@ -174,14 +177,24 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
     pp.reload();
   };
+  // Спринт: вкладка «Задачи» с таблицей задач (группировка, статус в строке, правка)
+  // и строкой сгорания — то, что раньше было только на отдельной странице вне оболочки.
+  const baseConfig = type === 'sprint'
+    ? withSprintTasksTab(view.config, view.record.kind, t('sprintTasks.title'), r => (
+      <>
+        <SprintBurnLine sprintId={r.id} />
+        <SprintTasksTab sprintId={r.id} fetchImpl={fetchImpl} win={win} />
+      </>
+    ))
+    : view.config;
   const ctx: KitCtx = { config: {
-    ...view.config,
+    ...baseConfig,
     // Цикл статусов из модели ГЛАВНЕЕ умолчания приложения: умолчание —
     // внутренняя таблица kit со всеми осями сразу, из-за неё в меню задачи и
     // были чужие статусы и два «В работе». Пусто — модель не ответила, и
     // причина уже названа в строке замечаний.
-    statuses: statuses.items.length ? { ...view.config.statuses, items: statuses.items } : view.config.statuses,
-    hooks: { ...view.config.hooks, onSave, onRelation },
+    statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
+    hooks: { ...baseConfig.hooks, onSave, onRelation },
   }, data: view.data, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
