@@ -45,7 +45,68 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
+/** Строки без хвостовых \r: CRLF файла на Windows против LF дока — не расхождение. */
+function lines(s: string): string[] {
+  const l = s.replace(/\r\n?/g, '\n').split('\n');
+  if (l.length > 0 && l[l.length - 1] === '') l.pop();
+  return l;
+}
+
+/**
+ * Построчный дифф по LCS: `-` — строка только в доке (from), `+` — только в файле (to).
+ * Общие строки не выводятся — ответ должен быть коротким, а правила бывают на сотни строк.
+ */
+export function lineDiff(from: string[], to: string[]): string[] {
+  const n = from.length, m = to.length;
+  const lcs: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      lcs[i][j] = from[i] === to[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+  const out: string[] = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (from[i] === to[j]) { i++; j++; }
+    else if (lcs[i + 1][j] >= lcs[i][j + 1]) out.push('-' + from[i++]);
+    else out.push('+' + to[j++]);
+  }
+  while (i < n) out.push('-' + from[i++]);
+  while (j < m) out.push('+' + to[j++]);
+  return out;
+}
+
 export function registerClaudeRules(server: McpServer): void {
+  server.tool(
+    'claude_rules_diff',
+    'Compare a local CLAUDE.md with its claude-rules doc in LORE without changing either. ' +
+      'Returns in_sync, counts of added (only in the file) and removed (only in the doc) lines, ' +
+      'and the changed lines prefixed "+"/"-". Line endings are normalised (CRLF = LF). ' +
+      'Run it before claude_rules_push / claude_rules_pull to see which side is ahead.',
+    {
+      path: z.string().describe('Absolute path to the local CLAUDE.md'),
+      doc_id: z.string().describe('Doc id, e.g. "claude_rules_unlimitedlore" or "claude_rules_global"'),
+    },
+    async ({ path, doc_id }) => {
+      try {
+        // Обе стороны обязаны прочитаться: отсутствующий док — не «всё добавлено»,
+        // отсутствующий файл — не «всё удалено». Это «не смогли сравнить», и это ошибка.
+        const file = await readFile(path, 'utf8');
+        const rows = (await loreSlice('doc_by_id', { id: doc_id })) as DocRow[];
+        if (!Array.isArray(rows) || rows.length === 0) {
+          return err(new Error(`док ${doc_id} не найден — сравнивать не с чем; загрузить файл: claude_rules_push`));
+        }
+        const doc = rows[0].content_md_ru ?? rows[0].content_md_en ?? '';
+        const diff = lineDiff(lines(doc), lines(file));
+        const added = diff.filter((l) => l.startsWith('+')).length;
+        return json({
+          doc_id, path, in_sync: diff.length === 0, added, removed: diff.length - added,
+          file_bytes: Buffer.byteLength(file, 'utf8'), doc_bytes: Buffer.byteLength(doc, 'utf8'), diff,
+        });
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
   server.tool(
     'claude_rules_push',
     'Load a local CLAUDE.md into LORE as a claude-rules doc (upsert). Reads the file from disk ' +
