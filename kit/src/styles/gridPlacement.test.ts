@@ -37,6 +37,13 @@ const placed = (body: string): boolean =>
  */
 const GRIDS: readonly { grid: string; children: readonly string[] }[] = [
   {
+    // Та сетка, на которой дефект и вылез: «левое меню во всю стену». Клетки у
+    // колонки и содержимого расставила сессия релиза (её Playwright-тест
+    // web-next/e2e/shell-layout.spec.ts ловит ВИД, этот сторож — условие).
+    grid: '.sk-shell__body',
+    children: ['.sk-shell__side', '.sk-shell__main', '.sk-shell__resize'],
+  },
+  {
     grid: '.sk-rec__body',
     children: ['.sk-rec__content', '.sk-rec__props', '.sk-rec__resize'],
   },
