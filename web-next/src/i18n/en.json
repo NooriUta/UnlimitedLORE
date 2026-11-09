@@ -259,5 +259,6 @@
   "outsideShell.standalone": "This page is open outside the LORE shell.",
   "outsideShell.missing": "No header, menu, search or commands here.",
   "outsideShell.back": "Back to LORE",
-  "palette.goSection": "Go to: {section}"
+  "palette.goSection": "Go to: {section}",
+  "palette.noSection": "Record {id} found, but v2 has no section for type “{type}” yet — nowhere to open it"
 }

@@ -259,5 +259,6 @@
   "outsideShell.standalone": "Страница открыта вне оболочки LORE.",
   "outsideShell.missing": "Здесь нет шапки, меню, поиска и команд.",
   "outsideShell.back": "Вернуться в LORE",
-  "palette.goSection": "Перейти: {section}"
+  "palette.goSection": "Перейти: {section}",
+  "palette.noSection": "Запись {id} найдена, но раздела для типа «{type}» в v2 пока нет — открыть её негде"
 }
