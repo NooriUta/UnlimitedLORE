@@ -152,17 +152,26 @@ describe('S5-06 · склеенное тело и разделы не споря
     expect(screen.getByRole('button', { name: /Править «Заметка»/ })).toBeTruthy();
   });
 
-  it('тело НЕ пустое — показано и правится, разделы идут после него', () => {
+  it('тело НЕ показывается отдельным блоком: оно КОПИЯ раздела (прод v1.17.8)', () => {
+    // Находка серверной сессии: у задачи заметка выходила ДВАЖДЫ — разделом
+    // «Текст» и разделом «Заметка», оба с ✎. Сервер отдаёт тело записи копией
+    // одного из разделов для старых клиентов (у задачи это заметка, у спринта
+    // контекст, у спеки содержимое), и kit рисовал её ещё и своим блоком.
+    // Прежний тест требовал как раз этого второго блока — то есть закреплял
+    // удвоение.
     const onSave = vi.fn(async () => {});
     const { container } = render(
       <RecordView
-        record={{ ...record, body_md: 'Общий текст' }}
+        record={{ ...record, body_md: 'Заметка руками' }}
         ctx={ctxWith({ hooks: { onSave } })} tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
       />,
     );
-    expect(screen.getByRole('button', { name: /Править «Текст»/ })).toBeTruthy();
-    const order = [...container.querySelectorAll('.sk-rec-sections > *')].map(n => n.className);
-    expect(order[0]).not.toContain('sk-rec-fields__sec');
+    expect(screen.queryByRole('button', { name: /Править «Текст»/ })).toBeNull();
+    // Текст виден ОДИН раз — как раздел «Заметка», и правится как раздел.
+    expect(screen.getAllByText('Заметка руками')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Править «Заметка»/ })).toBeTruthy();
+    const first = [...container.querySelectorAll('.sk-rec-sections > *')][0];
+    expect(first?.className).toContain('sk-rec-fields__sec');
   });
 });
 
