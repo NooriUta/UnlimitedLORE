@@ -63,6 +63,7 @@ import { TimelineLanes } from '../views/timeline';
 import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
 import { MIN_COL_W, clampWidth, readWidths, widthsFor, writeWidths, type ColumnWidths, type WidthStore } from './columnWidths';
+import { columnsFromUrl, columnsToUrlValue } from './columnsUrl';
 
 export interface ListBulkAction {
   id: string;
@@ -178,6 +179,9 @@ export interface ListHead {
   icon?: string;
   actions?: ReactNode;
 }
+
+/** Колонка, которую нельзя снять: список без названия записи нечитаем (S4-35). */
+const COLS_LOCKED = 'title+id';
 
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
 /** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
@@ -360,7 +364,29 @@ export function ListView({
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
   const hasGroupings = groupOpts.fields.length + groupOpts.relations.length > 0;
-  const baseColumns = listCfg?.columns ?? ['title+id', 'status'];
+  /**
+   * Имя колонки ТЕКСТОМ — для выбора колонок и подписей: у «выбрать все»
+   * заголовок это галочка, и в список выбора такое не положишь.
+   */
+  const columnTitleText = (col: string): string => {
+    if (col === 'title+id') return t('kit.list.col.title');
+    if (col === 'verdict') return t('kit.list.col.verdict');
+    if (col === 'edges_count') return t('kit.list.col.edges');
+    if (col === 'actions') return t('kit.list.col.actions');
+    return labels.keyTitle(col.startsWith('progress:') ? col.slice(9) : col);
+  };
+  const configColumns = listCfg?.columns ?? ['title+id', 'status'];
+  // Набор колонок — командный: живёт в адресе, им делятся ссылкой (S4-35,
+  // решение владелицы 08.11). Незнакомый ключ из адреса отбрасывается, «Запись»
+  // возвращается на место: список без названия записи нечитаем.
+  const colsFromUrl = win ? columnsFromUrl(win.location.search, configColumns, COLS_LOCKED) : undefined;
+  const [colsOwn, setColsOwn] = useState<string[] | undefined>(colsFromUrl);
+  const chosenColumns = colsOwn ?? configColumns;
+  const baseColumns = chosenColumns;
+  const setColumns = (next: string[]) => {
+    setColsOwn(next);
+    if (win) pushUrlState({ cols: columnsToUrlValue(next) }, { replace: true, win: win });
+  };
   // Чекбоксы — колонкой конфига или в режиме выбора (тогда первой колонкой, S4-10);
   // действия строки (S4-11) — последней колонкой.
   const withSelect = mode && !baseColumns.includes('select') ? ['select', ...baseColumns] : baseColumns;
@@ -617,6 +643,15 @@ export function ListView({
       onClosed={c => update({ closed: c })}
       place={recordPlace?.value}
       onPlace={recordPlace?.onChange}
+      columns={{
+        all: configColumns
+          // «Выбрать все» и «Действия» — не колонки данных: они появляются от
+          // режима выбора и прав, и выбором ими не управляют.
+          .filter(c => c !== 'select' && c !== 'actions')
+          .map(c => ({ key: c, title: columnTitleText(c), locked: c === COLS_LOCKED })),
+        chosen: chosenColumns.filter(c => c !== 'select' && c !== 'actions'),
+      }}
+      onColumns={setColumns}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
@@ -692,6 +727,7 @@ export function ListView({
         return valueCell(col, r);
     }
   };
+
   const colTitle = (col: string): ReactNode => {
     switch (col) {
       case 'select': return (

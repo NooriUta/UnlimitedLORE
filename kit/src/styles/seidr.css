@@ -1836,6 +1836,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 /* ---------- «Вид ⌄» (S4-27): поповер дополнительных настроек вида ---------- */
 .sk-vmenu { position: relative; display: inline-flex; }
 .sk-vmenu__btn { display: inline-flex; align-items: center; gap: 4px; }
+/* Раздел «Колонки» в поповере «Вид» (S4-35): по прототипу владелицы выбор
+   колонок живёт здесь же, где «Закрытые» и «Паспорт открывается». */
+.sk-vmenu__cols { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bd); }
+
 .sk-vmenu__panel {
   position: absolute;
   top: calc(100% + 4px);
