@@ -24,6 +24,9 @@ final class LoreRoleMatrix {
 
     @SuppressWarnings("unchecked")
     static void fold(Map<String, Object> body) {
+        // Kit 09.11: «не спрашивали» ≠ «спросили, роли нет». Какие источники опрошены — в теле;
+        // Keycloak/Forgejo появятся здесь, когда их начнут опрашивать.
+        body.put("sources_asked", List.of("graph"));
         if (!(body.get("rows") instanceof List<?> rows)) return;
         for (Object o : rows) {
             if (!(o instanceof Map<?, ?> raw)) continue;

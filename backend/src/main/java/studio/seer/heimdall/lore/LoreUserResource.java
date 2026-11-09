@@ -196,7 +196,16 @@ public class LoreUserResource extends LoreResourceBase {
             List<Map<String, Object>> items = new java.util.ArrayList<>();
             int applied = 0, failed = 0;
             for (Map<String, Object> p : plan) {
-                if ("unchanged".equals(p.get("kind"))) continue;
+                // Kit 09.11: итог у КАЖДОЙ строки плана — пачка не атомарна, и клиент не должен
+                // считать успех вычитанием. «Уже так» — своя строка с result=unchanged.
+                if ("unchanged".equals(p.get("kind"))) {
+                    Map<String, Object> same = new java.util.LinkedHashMap<>();
+                    same.put("project", p.get("project"));
+                    same.put("kind", "unchanged");
+                    same.put("result", "unchanged");
+                    items.add(same);
+                    continue;
+                }
                 boolean remove = "remove".equals(p.get("kind"));
                 Response r = setUserRole(new UserRoleRequest(req.kc_sub(), req.display_name(),
                     String.valueOf(p.get("project")), remove ? null : String.valueOf(p.get("after")),
@@ -208,6 +217,7 @@ public class LoreUserResource extends LoreResourceBase {
                 Object entity = r.getEntity();
                 if (entity instanceof Map<?, ?> m && m.get("outcome") != null) item.put("outcome", m.get("outcome"));
                 if (entity instanceof LoreError le) item.put("error", le);
+                item.put("result", r.getStatus() == 200 ? "applied" : "failed");
                 if (r.getStatus() == 200) applied++; else failed++;
                 items.add(item);
             }
