@@ -1159,6 +1159,13 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  /* ОДНА колонка, которая не растягивается содержимым (S9-12, замер 09.11 в
+     настоящем браузере: при окне 412 px колонка оболочки была 692 px, и вся
+     страница прокручивалась боком — с ней уезжали «Группировка», «Порядок» и
+     шапка). Колонок здесь не объявляли, а неявная колонка сетки — auto, то
+     есть по max-content: широкая таблица списка раздвигала не свою полосу
+     прокрутки, а оболочку. minmax(0, 1fr) запрещает это по построению. */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
   background: var(--bg0);
   color: var(--t1);
@@ -1359,6 +1366,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   /* 232px — умолчание; личную ширину (S4-30) оболочка подставляет переменной. */
   grid-template-columns: var(--side-w, 232px) minmax(0, 1fr);
   min-height: 0;
+  /* Без min-width: 0 минимальная ширина элемента сетки равна его
+     СОДЕРЖИМОМУ, и строка оболочки снова распирается таблицей. */
+  min-width: 0;
 }
 /* Ручка границы меню сидит в той же клетке сетки, что и колонка, прижатая к её
    правому краю — то есть ровно на линии border-right колонки. Так не пришлось
@@ -1800,6 +1810,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-mdedit__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
 .sk-mdedit__live {
   min-height: 160px;
+  min-width: 0;
   padding: 7px 9px;
   overflow: auto;
   border: 1px dashed var(--bd);
@@ -2300,6 +2311,14 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-list__scroll {
   overflow-x: auto;
+  /* S9-12, вторая половина (замер серверной сессии на проде v1.17.8: при
+     экране 393 px страница имела scrollWidth 730 — обрезались верхняя панель,
+     «Группировка», «Порядок»). `overflow-x: auto` сам по себе не спасает: у
+     элемента внутри flex/grid минимальная ширина равна СОДЕРЖИМОМУ, пока не
+     сказано min-width: 0. Таблица с десятком колонок шире телефона всегда,
+     поэтому без этих двух строк она раздвигала не себя, а всю страницу. */
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--bd);
   border-radius: var(--r-md);
 }
@@ -2567,6 +2586,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   grid-auto-flow: column;
   grid-auto-columns: minmax(220px, 1fr);
   gap: var(--gap);
+  min-width: 0;
   overflow-x: auto;
   padding-bottom: 4px;
 }
@@ -3317,7 +3337,8 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 }
 /* Группировка — своей группой, чтобы у неё осталось имя для чтения вслух. */
 .sk-tasks__groupby { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-.sk-tasks__wrap { overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+/* min-width: 0 — иначе бокс с прокруткой раздвигает полосу, а не себя (S9-12). */
+.sk-tasks__wrap { min-width: 0; overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-tasks__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); color: var(--t1); }
 .sk-tasks__th {
   position: sticky;
@@ -3688,6 +3709,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 }
 .sk-read__rail {
   width: 280px;
+  min-width: 0;
   max-height: 100vh;
   overflow: auto;
   padding: 8px 10px;
@@ -3702,7 +3724,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   max-height: none;
   border-radius: 0;
 }
-.sk-read__full-body { overflow: auto; }
+.sk-read__full-body { min-width: 0; overflow: auto; }
 .sk-read__full-body table { display: table; }
 
 /* Меню оболочки, свёрнутое на время чтения (D-2026-UXR-READ-COLLAPSE). */
@@ -4095,7 +4117,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-news__delta { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); }
 .sk-news__delta[data-tone='suc'] { color: var(--suc); }
 .sk-news__delta[data-tone='dng'] { color: var(--dng); }
-.sk-news__scroll { overflow-x: auto; }
+.sk-news__scroll { min-width: 0; overflow-x: auto; }
 .sk-news__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .sk-news__table th,
 .sk-news__table td { padding: var(--pad-y) var(--pad-x); border-bottom: 1px solid var(--bd); text-align: left; white-space: nowrap; }

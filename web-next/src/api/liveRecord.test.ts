@@ -22,12 +22,29 @@ import { fetchLoreRecord, recordFromServer, RecordNotFound, RecordForbidden, Rec
 
 const LOADED = '2026-11-09T04:00:00.000Z';
 
+/**
+ * Часть в СЫРОМ виде сервера — нарочно не клиентский `LorePart`.
+ *
+ * Тип нужен только затем, чтобы `count: null` (а сервер присылает именно null
+ * при не-ok) не выводился как `number` из первого примера фикстуры. Проверяем
+ * ответ сервера, а не свой тип: в этом и смысл слоя перевода.
+ */
+type RawPart = {
+  key: string; label: string; type?: string; rel: string; dir: string;
+  owned?: boolean; relation?: string; state: string; error?: string;
+  count: number | null; items: unknown[];
+};
+
 /** Ответ сервера на спринт — ключи и вложенность как в LoreRecordResource. */
 const sprintBody = () => ({
   contract: 'lore.record/1',
   record: { type: 'sprint', id: 'SPRINT_A', title: 'Спринт А', status: 'active', version: '2026-11-08T10:00:00Z' },
   values: { title: 'Спринт А', status: 'active', context_md: 'контекст', track: 'UXR' },
-  parts: [{ key: 'tasks', label: 'Задачи', items: [{ id: 'SPRINT_A/A-1', title: 'Задача', status: 'done' }] }],
+  parts: [{
+    key: 'tasks', label: 'Задачи', type: 'task', rel: 'PART_OF', dir: 'in', owned: true,
+    relation: 'composition', state: 'ok', count: 1,
+    items: [{ id: 'SPRINT_A/A-1', title: 'Задача', status: 'done', values: { code: 'A-1', effort: 1 } }],
+  }] as RawPart[],
   links: [
     { rel: 'HAS_TASK', dir: 'out', id: 'SPRINT_A/A-1', type: 'task', title: 'Задача', status: 'done' },
     { rel: 'DEPENDS_ON', dir: 'out', id: 'SPRINT_B', type: 'sprint', title: 'Спринт Б', status: 'active' },
@@ -43,8 +60,9 @@ const sprintBody = () => ({
     ],
     layout: {},
     relations: [
-      { key: 'tasks', label: 'Задачи', relation: 'aggregation', rel: 'HAS_TASK', dir: 'out', target_type: 'task', place: 'link_tab', manageable: false },
-      { key: 'depends_on', label: 'Зависит от', relation: 'dependency', rel: 'DEPENDS_ON', dir: 'out', target_type: 'sprint', place: 'links', manageable: true },
+      { key: 'tasks', label: 'Задачи', relation: 'composition', rel: 'PART_OF', dir: 'in', target_type: 'task', place: 'part', manageable: false },
+      { key: 'projects', label: 'Проекты', relation: 'association', rel: 'IN_PROJECT', dir: 'out', target_type: 'git_project', place: 'prop', manageable: true },
+      { key: 'depends_on', label: 'Зависит от', relation: 'dependency', rel: 'DEPENDS_ON', dir: 'out', target_type: 'sprint', place: 'link_tab', manageable: true },
     ],
   },
   meta: {
@@ -86,11 +104,18 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect(c.meta.sources.find(s => s.block === 'tasks_of_sprint · tasks')?.state).toBe('ok');
   });
 
-  it('вкладки строит клиент по relations[].place: модель вкладок не знает', () => {
+  // Фикстура приведена к ПОДТВЕРЖДЁННЫМ значениям place (серверная сессия
+  // сверила по коду 09.11.2026): у задач — "part", у проектов — "prop", у
+  // зависимостей — "link_tab". Прежде здесь стояли мои догадки («links» и
+  // «link_tab» у задач), и тест закреплял их, а не поведение сервера.
+  it('вкладка связей — только у place "link_tab"; часть вкладкой связей не становится', () => {
     const c = recordFromServer(sprintBody(), LOADED);
-    expect(c.schema.tabs.map(t => [t.key, t.zone, t.rel])).toEqual([['tasks', 'record', 'HAS_TASK']]);
-    // «links» — не вкладка: это связи, они живут своим блоком.
-    expect(c.schema.tabs.find(t => t.key === 'depends_on')).toBeUndefined();
+    expect(c.schema.tabs.map(t => [t.key, t.zone, t.rel])).toEqual([['depends_on', 'record', 'DEPENDS_ON']]);
+    // Задачи — ЧАСТЬ: их элементы приходят в parts[], а не в links, и вкладку
+    // по ним рисует паспорт из части. Вкладка связей тут показала бы пусто.
+    expect(c.schema.tabs.find(t => t.key === 'tasks')).toBeUndefined();
+    // Свойство (проекты) вкладкой не бывает вовсе.
+    expect(c.schema.tabs.find(t => t.key === 'projects')).toBeUndefined();
   });
 
   it('счётчик связи считается из links — сервер его не присылает', () => {
@@ -111,9 +136,68 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect(c.schema.fields.find(f => f.key === 'track')?.section).toBe('Планирование');
   });
 
-  it('факты задач берутся сервером, лишний «open» не теряет done/total', () => {
+  // Раньше этот тест требовал, чтобы «open» ОТБРАСЫВАЛСЯ. Так было написано,
+  // пока клиент считал задачи сам; с дефекта прода v1.17.8 («Задач нет» при 48
+  // задачах) числа сервера сильнее пересчёта, и open — одно из них. Считать его
+  // как total − done нельзя: отменённые задачи в total не входят.
+  it('факты задач берутся у сервера целиком — вместе с open', () => {
     const c = recordFromServer(sprintBody(), LOADED);
-    expect(c.facts?.tasks).toEqual({ done: 1, total: 1 });
+    expect(c.facts?.tasks).toEqual({ done: 1, total: 1, open: 0 });
+  });
+
+  // Дефект прода v1.17.8 (CJM соседней сессии по живому ответу
+  // /lore/record/sprint/SPRINT_AIDA_PREPROD_MIGRATION): «Задач нет», «Фазы 0»,
+  // «Проекты 0». ПРИЧИНА — этот слой: задачи и фазы приходят в parts[], а
+  // перевод их молча терял, как и слово place у связей.
+  it('части записи (parts) переводятся, а не теряются', () => {
+    const c = recordFromServer(sprintBody(), LOADED);
+    const tasks = c.parts?.find(x => x.key === 'tasks');
+    expect(tasks, 'часть «Задачи» в ответе была — должна дойти').toBeDefined();
+    expect(tasks!.items.map(i => i.id)).toEqual(['SPRINT_A/A-1']);
+    expect(tasks!.state).toBe('ok');
+    expect(tasks!.count).toBe(1);
+  });
+
+  it('место связи (place) доносится: по нему решают — свойство, часть или вкладка', () => {
+    const c = recordFromServer(sprintBody(), LOADED);
+    const by = (k: string) => c.schema.relations.find(r => r.key === k);
+    expect(by('tasks')?.place).toBe('part');
+    expect(by('projects')?.place).toBe('prop');
+    expect(by('depends_on')?.place).toBe('link_tab');
+    expect(by('tasks')?.target_type).toBe('task');
+  });
+
+  it('у части число берётся у неё самой: её элементы в links не приходят', () => {
+    const body = sprintBody();
+    // Как на проде: задачи есть, а в links их нет — там только вкладки связей.
+    body.links = body.links.filter(l => l.rel !== 'HAS_TASK');
+    const c = recordFromServer(body, LOADED);
+    expect(c.schema.relations.find(r => r.key === 'tasks')?.count).toBe(1);
+  });
+
+  it('часть не прочиталась: denied и error различимы, count не ноль, а null', () => {
+    const body = sprintBody();
+    body.parts = [
+      { key: 'tasks', label: 'Задачи', rel: 'PART_OF', dir: 'in', state: 'denied', error: 'tasks_of_sprint: нет разрешённых проектов', count: null, items: [] },
+      { key: 'phases', label: 'Фазы', rel: 'PART_OF', dir: 'in', state: 'error', error: 'phases_of_sprint: 502', count: null, items: [] },
+    ] as RawPart[];
+    const c = recordFromServer(body, LOADED);
+    const t = c.parts!.find(x => x.key === 'tasks')!;
+    const f = c.parts!.find(x => x.key === 'phases')!;
+    expect(t.state).toBe('denied');
+    expect(t.count).toBeNull();
+    expect(t.error).toContain('разрешённых');
+    expect(f.state).toBe('error');
+    expect(f.error).toContain('502');
+  });
+
+  it('незнакомое state у части — названная ошибка, а не «всё хорошо»', () => {
+    const body = sprintBody();
+    body.parts = [{ key: 'tasks', label: 'Задачи', rel: 'PART_OF', dir: 'in', state: 'partially_maybe', count: null, items: [] }] as RawPart[];
+    const c = recordFromServer(body, LOADED);
+    const t = c.parts!.find(x => x.key === 'tasks')!;
+    expect(t.state).toBe('error');
+    expect(t.error).toContain('partially_maybe');
   });
 
   it('объект остаётся данными: ни одной функции, иначе kit нарисует не из контракта', () => {
