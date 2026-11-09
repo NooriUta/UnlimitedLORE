@@ -21,10 +21,10 @@ import '@fontsource/ibm-plex-mono/700.css';
 import '@fontsource/unbounded/800.css';
 import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
-import { ErrorBoundary, Pill, Skeleton, StorageBanner, resolvePrefs, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { ErrorBoundary, Pill, Skeleton, StorageBanner, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
 import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPassport';
-import { createLocalS2Client } from './api/me';
+import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
 import { AccountMenu } from './settings/AccountMenu';
@@ -34,7 +34,6 @@ import type { ListScreenId } from './lists/screens';
 import { V2Shell } from './shell/V2Shell';
 import type { V2Section } from './shell/v2Config';
 import { storage as appStorage } from './storage/safe';
-import { themeSource } from './storage/themeSource';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
@@ -46,12 +45,17 @@ const NewsPage = lazy(() => import('./news/NewsPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
 const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
 
-// Личное пользователя (/lore/me/*, контракт S2) — до S2-04 на заглушке с
-// хранением в браузере (S4-02). Первый раз — с темой, выбранной в v1/seer-prefs.
-const initialTheme = resolvePrefs(themeSource());
-const meClient = createLocalS2Client(appStorage, {
-  seed: { palette: initialTheme.palette, mode: initialTheme.mode, density: initialTheme.density },
-});
+// Личное пользователя (/lore/me/*, контракт S2) — боевой сервер
+// (SPRINT_UXR_S5_RECORD_TASKS/S5-14). Прежняя заглушка держала настройки в
+// браузере, и владелица, работая с телефона, своих настроек там не видела:
+// браузерное хранилище с устройства на устройство не ездит.
+//
+// Отката в браузер НЕТ намеренно. Сервер ответил «не опознан» или не ответил —
+// экран настроек честно скажет об этом; молчаливый откат к локальной копии
+// выглядел бы как «настройки сохранены», а на другом устройстве их бы не было.
+// Тема первого экрана от этого не зависит: её ставит main.tsx из cookie
+// seer-prefs ещё до запроса, а ответ сервера её потом уточняет.
+const meClient = createLiveS2Client();
 
 export type Route = 'kit' | 'passport' | 'news' | 'task' | 'home' | ListScreenId;
 

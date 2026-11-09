@@ -3092,7 +3092,25 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
    полосой-заголовком с числом задач. На узком экране таблица скроллится
    вбок, а не ломает колонки. Цели касания — max(var(--tap), …). */
 .sk-tasks { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.sk-tasks__bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-tasks__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* Выбор колонок таблицы задач (S4-35 «общие колонки»): кнопка в полосе,
+   панель — тот же ColumnsChoice, что у списков. Поповер, а не вкладка: полоса
+   задач и так узкая. */
+.sk-tasks__cols { position: relative; display: inline-flex; }
+.sk-tasks__colspop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 240px;
+  padding: 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+}
+/* Группировка — своей группой, чтобы у неё осталось имя для чтения вслух. */
+.sk-tasks__groupby { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .sk-tasks__wrap { overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-tasks__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); color: var(--t1); }
 .sk-tasks__th {
@@ -4240,6 +4258,13 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rel__head { margin: 0; color: var(--t2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .sk-rel__list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .sk-rel__item { display: flex; align-items: center; gap: 8px; min-height: max(var(--tap), var(--row-h)); padding: 2px 4px; border-bottom: 1px solid var(--bd); }
+/* Связи таблицей с общими колонками списка (S4-37, замечание владелицы по
+   v1.17.4). Своих правил вида таблица не заводит: всё от .sk-list__table —
+   иначе «общие колонки» выглядели бы похожими, а не теми же. Здесь только
+   место: во вкладке таблица занимает всю ширину. */
+.sk-rel__table { width: 100%; }
+/* Вид записи, которого нет в справочнике видов: показываем код как есть. */
+.sk-rel__raw { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rel__empty { color: var(--t3); font-size: var(--fs-sm); }
 .sk-rel__mark { color: var(--acc); font-family: var(--mono); }
 .sk-rel__unlink { margin-left: auto; min-width: max(var(--tap), 24px); min-height: max(var(--tap), 24px); border: 1px solid var(--bd); border-radius: var(--r-sm); background: none; color: var(--t3); cursor: pointer; }
@@ -4367,6 +4392,24 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 
 /* S4-CONTENT-V4 (прототип v4): строка-подсказка правки над текстом. */
 .sk-mdedit__hint { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 0 0 8px; font-size: var(--fs-2xs); color: var(--t3); }
+/* Полоса черновика (S5-09): «Восстановить черновик от ЧЧ:ММ» и сбои записи
+   черновика. Предупреждение, а не ошибка: текст записи на месте, просто
+   где-то лежит несохранённая правка. */
+.sk-mdedit__draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  font-size: var(--fs-xs);
+  color: var(--t2);
+}
+.sk-mdedit__draft-text { color: var(--t1); }
+.sk-mdedit__draft-note { color: var(--wrn); }
 .sk-mdedit__src-btn { font: inherit; font-size: var(--fs-xs); color: var(--t2); background: none; border: 1px solid var(--bd); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
 .sk-mdedit__src-btn:hover { color: var(--t1); border-color: var(--acc); }
 

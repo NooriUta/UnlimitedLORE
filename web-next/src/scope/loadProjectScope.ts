@@ -35,18 +35,36 @@ export interface LoadProjectScopeInput {
   fetch: Fetch;
   /** kc_sub вошедшего пользователя; нет — «мои» не проверить. */
   sub?: string | null;
+  /**
+   * «Мои проекты» прямо с сервера (SPRINT_UXR_S7B_ADMIN/S7B-14,
+   * GET /lore/me/projects). Это лучший источник, чем срез по kc_sub: сервер
+   * сам знает, кто спрашивает, и отвечает 401, когда не опознан, — то есть
+   * «не знаем, чьи проекты» перестаёт быть догадкой по отсутствию kc_sub.
+   * Не передан — остаётся прежний путь через срез user_project_roles.
+   */
+  me?: (signal?: AbortSignal) => Promise<readonly string[]>;
   signal?: AbortSignal;
 }
 
-export async function loadProjectScope({ fetch, sub, signal }: LoadProjectScopeInput): Promise<ProjectScopeData> {
-  const rolesP: Promise<{ ids: Set<string> } | MineReason> = sub
+export async function loadProjectScope({ fetch, sub, me, signal }: LoadProjectScopeInput): Promise<ProjectScopeData> {
+  // Сервер знает мои проекты сам (S7B-14). Пустой список — «ролей нет», а не
+  // «не опознан»: это разные ответы, и путать их нельзя.
+  const meP: Promise<{ ids: Set<string> } | MineReason> | null = me
+    ? me(signal).then(
+      list => (list.length === 0 ? 'not-registered' as const : { ids: new Set(list) }),
+      (e: unknown) => (String(e).includes('401') || String(e).includes('NO_IDENTITY')
+        ? 'no-user' as const
+        : 'roles-error' as const),
+    )
+    : null;
+  const rolesP: Promise<{ ids: Set<string> } | MineReason> = meP ?? (sub
     ? fetch<UserRolesRow>('user_project_roles', { kc_sub: sub }, signal).then(
         b => (b.rows.length === 0
           ? 'not-registered' as const
           : { ids: new Set(b.rows.flatMap(r => r.projects ?? []).filter((p): p is string => !!p)) }),
         () => 'roles-error' as const,
       )
-    : Promise.resolve('no-user' as const);
+    : Promise.resolve('no-user' as const));
 
   const [body, roles] = await Promise.all([fetch<GitProjectRow>('git_projects', {}, signal), rolesP]);
   const { rows, ...meta } = body;

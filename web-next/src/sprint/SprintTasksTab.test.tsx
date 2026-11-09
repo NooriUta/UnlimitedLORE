@@ -172,3 +172,38 @@ describe('SprintTasksTab · честные состояния', () => {
     expect(document.body.textContent).toMatch(/обрезана сервером на 2/);
   });
 });
+
+// Замечание владелицы по v1.17.4: «задачи в паспорте спринта — общей таблицей
+// с колонками S4-35… наши любимые общие колонки». Выбор колонок у списков был
+// с S4-35, а в таблице задач набор был зашит. Набор живёт в адресе: им делятся
+// ссылкой, как видом списка.
+describe('S4-36 · набор колонок задач', () => {
+  it('набор из адреса применяется, незнакомый ключ отбрасывается', async () => {
+    const { impl } = ok();
+    render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={fakeWin('?tcols=id,title,выдумка')} />);
+    const table = await screen.findByRole('table', { name: /Задачи спринта/ });
+    // «Действия» — не колонка набора: она появляется от права правки, и её
+    // выбором не управляют (иначе правку можно было бы спрятать от себя).
+    expect(within(table).getAllByRole('columnheader').map(th => th.textContent?.trim())).toEqual(['ID', 'Задача', 'Действия']);
+  });
+
+  it('набора в адресе нет — прежние колонки v1, паритет не пропадает молча', async () => {
+    const { impl } = ok();
+    render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={fakeWin()} />);
+    const table = await screen.findByRole('table', { name: /Задачи спринта/ });
+    const heads = within(table).getAllByRole('columnheader').map(th => th.textContent?.trim());
+    expect(heads).toContain('Статус');
+    expect(heads).toContain('Класс');
+    expect(heads).toContain('Ревьюер');
+  });
+
+  it('выбор колонки пишется в адрес, а не только в память вкладки', async () => {
+    const { impl } = ok();
+    const win = fakeWin('?tcols=id,title');
+    render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={win} />);
+    await screen.findByRole('table', { name: /Задачи спринта/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Колонки' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Статус' }));
+    expect(decodeURIComponent(win.pushes[win.pushes.length - 1])).toMatch(/tcols=status,id,title/);
+  });
+});

@@ -13,6 +13,7 @@ import { useState } from 'react';
 import type { KitCtx, KitRecord, KitRelation, KitRelationDef } from '../core/contract';
 import { kitT, type KitLang } from '../i18n';
 import { RecordRef } from './fmt';
+import { RelationTable } from './RelationTable';
 
 export const RELATION_MARK: Record<KitRelation, string> = {
   composition: '◆', aggregation: '◇', association: '⇢', attribute: '·', realization: '▷', generalization: '△',
@@ -55,24 +56,23 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
 }) {
   const [draft, setDraft] = useState('');
   const ids = relationTargets(record, ctx, def);
-  const byId = new Map(ctx.data.records.map(x => [x.id, x]));
   const manage = onRelation && canManage(def);
   const call = (target: string, action: 'add' | 'remove') => onRelation?.({ type: record.kind, id: record.id, rel: def.rel, dir: def.dir, target, action });
-  const list = (
-    <ul className="sk-rel__list" data-testid={single ? 'kit-relation-list' : undefined}>
-      {ids.length === 0 && <li className="sk-rel__empty">{kitT(lang, 'kit.record.rel.empty')}</li>}
-      {ids.map(id => (
-        <li key={id} className="sk-rel__item" data-record-id={id}>
-          <span className="sk-rel__mark" data-relation-mark aria-hidden="true">{RELATION_MARK[def.relation]}</span>
-          <RecordRef id={id} ctx={ctx} />
-          {manage && (
-            <button type="button" className="sk-rel__unlink" onClick={() => void call(id, 'remove')}
-              aria-label={kitT(lang, 'kit.record.rel.unlink', { title: byId.get(id)?.title ?? id })}>×</button>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
+  // Связи — таблицей с общими колонками списка (замечание владелицы по
+  // v1.17.4: «связи пока там, где я хотела бы видеть таблицы… наши любимые
+  // общие колонки»). Пустую таблицу не рисуем: о пустоте говорим словами,
+  // иначе одна шапка выглядит как «данные есть, но их не видно».
+  const list = ids.length === 0
+    ? <p className="sk-rel__empty" data-testid={single ? 'kit-relation-list' : undefined}>{kitT(lang, 'kit.record.rel.empty')}</p>
+    : (
+      <RelationTable
+        ctx={ctx}
+        lang={lang}
+        ids={ids}
+        onUnlink={manage ? (target: string) => void call(target, 'remove') : undefined}
+        testId={single ? 'kit-relation-list' : undefined}
+      />
+    );
   const form = manage && (
     <form className="sk-rel__add" onSubmit={e => { e.preventDefault(); const v = draft.trim(); if (v) { void call(v, 'add'); setDraft(''); } }}>
       <input type="text" value={draft} onChange={e => setDraft(e.target.value)} placeholder={kitT(lang, 'kit.record.rel.idPlaceholder')}

@@ -77,6 +77,9 @@
 .settings-note { font-size: var(--fs-2xs); color: var(--t2); }
 .settings-note--warn { color: var(--wrn); }
 .settings-error { font-size: var(--fs-xs); color: var(--dng); }
+/* Расхождения перевода настроек с сервером (S5-14): предупреждение, а не
+   ошибка — значение показано, просто не то, что хранит сервер. */
+.settings-warn { margin: 0; padding-left: 16px; font-size: var(--fs-xs); color: var(--wrn); }
 .settings-error code { font-family: var(--mono); color: var(--t2); }
 .settings-link {
   display: inline-flex;
