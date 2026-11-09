@@ -1050,6 +1050,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
 .sk-tabs--underline { gap: 2px; padding: 0; }
+/* Линия вкладок записи не висит в воздухе: свой отступ сверху, как в прототипе
+   v4 (.tabs padding 10px 16px 0). Аудит 08.11: «между шапкой записи,
+   вкладками и текстом нет ни линии, ни фона, только 8 px зазора». */
+.sk-rec__tabs > .sk-tabs--underline { padding: 10px 2px 0; }
 .sk-tabs--underline .sk-tab {
   margin-bottom: -1px;
   padding: 0 14px;
@@ -1152,6 +1156,30 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-shell__brand-text { overflow: hidden; text-overflow: ellipsis; }
 .sk-shell__side-nav { display: flex; flex-direction: column; }
+/* Кнопка сворачивания в самой колонке меню (замечание владелицы по v1.17.4:
+   «левое меню не имеет свойства к сворачиванию» — кнопка была только в шапке,
+   иконкой без подписи). Вид — как у пункта меню, чтобы не спорила с ними. */
+.sk-shell__sidefold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: max(var(--tap), 24px);
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: none;
+  color: var(--t3);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+}
+.sk-shell__sidefold:hover { color: var(--acc); }
+.sk-shell__sidefold:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-shell--menu-rail .sk-shell__sidefold { justify-content: center; padding-inline: 0; }
 .sk-shell__mods {
   display: flex;
   align-self: stretch;
@@ -1293,7 +1321,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-right: 1px solid var(--bd);
   background: var(--bg1);
 }
-.sk-shell__main { min-width: 0; overflow: auto; }
+/* position: relative — система координат для дока «во весь экран» внутри
+   оболочки: замечание владелицы «"развернуть на всю страницу" скрывает даже
+   верхнее меню, чего не было в прототипе». «Весь экран» внутри приложения
+   значит «вся область содержимого». */
+.sk-shell__main { position: relative; min-width: 0; overflow: auto; }
 .sk-shell__main:focus { outline: none; }
 .sk-shell__grp + .sk-shell__grp { margin-top: 10px; }
 .sk-shell__grp-title {
@@ -1765,6 +1797,15 @@ code, pre, kbd, samp { font-family: var(--mono); }
   gap: var(--gap);
 }
 .sk-list__bar { justify-content: space-between; }
+/* Полоса фильтров отделена от таблицы линией и своим отступом — как в
+   прототипе v4 (.fbar: padding 4px 14px 8px + border-bottom). В релизе линия
+   потерялась при переносе, и аудит 08.11 намерил: «у блоков нет своих отступов
+   и рамок, разделяет только зазор 8 px — шапка экрана и фильтры читаются как
+   одна серая масса». */
+.sk-list__controls {
+  padding-bottom: var(--gap);
+  border-bottom: 1px solid var(--bd);
+}
 /* «Показано N из M» — в конце единственной полосы, прижато вправо. */
 .sk-list__controls > .sk-list__shown { margin-left: auto; }
 /* Быстрые фильтры — тем же кеглем, что вся полоса (08.11, «шрифты скачут»). */
@@ -2133,7 +2174,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   top: 0;
   padding: var(--pad-y) var(--pad-x);
   border-bottom: 1px solid var(--bd);
-  background: var(--bg1);
+  /* Шапка таблицы — своя полоса (прототип v4: .list th background bg3), иначе
+     она сливается со строками и таблица начинается «ниоткуда». */
+  background: var(--bg3);
   color: var(--t3);
   font-size: var(--fs-xs);
   font-weight: 700;
@@ -4071,6 +4114,19 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-dock[data-placement='full'] .sk-rec[data-width] { --rec-col: 100%; --rec-frame: 100%; }
   .sk-rec-widthbar { display: none; }
 }
+/* Мера чтения в доке снизу — ОТ ДИСПЛЕЯ (поправка владелицы 09.11: «у тебя она
+   уже была мерой от контекста, а должна быть от дисплея»). Раньше меры не было
+   вовсе: строка шла по ширине контейнера, поэтому в доке выходила вдвое
+   длиннее, чем во весь экран (~920 против ~680), и менялась от вкладки к
+   вкладке — ширина контейнера зависит от того, открыта ли колонка свойств.
+   Мера в vw этого не делает: пока окно то же, строка та же. 92vw — не «мера от
+   контекста», а потолок для телефона, где 680 px просто не влезает.
+   Узкая панель справа остаётся как есть (прежнее решение): там своей меры нет,
+   колонка и так узкая. */
+.sk-dock[data-placement='bottom'] .sk-rec-head,
+.sk-dock[data-placement='bottom'] .sk-rec-propsrow,
+.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+
 /* Линия вкладок — во всю рамку (~1200 px), а шапка, свойства и текст — узкой колонкой по центру:
    владелица 08.11 «выглядит классно, чем всё вписанное в одну ширину» (как v4). */
 .sk-dock[data-placement='full'] .sk-rec-head,
@@ -4147,7 +4203,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    список короткий: аудит 08.11 намерил «343 px прозрачного backdrop — пустая
    треть экрана». Затемнять список нельзя — он живой (решение владелицы 08.11),
    поэтому убрана пустота, а не видимость списка. */
-.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); }
+.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); --rec-col: min(var(--read-col), 92vw); }
 .sk-dock__backdrop {
   min-height: 0;
   overflow: auto;
@@ -4161,7 +4217,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 .sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
-.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; --rec-frame: 66%; --rec-col: 66%; }
+/* Рамка во весь экран — 66vw, а не 66 %: теперь слой внутри оболочки накрывает
+   область содержимого, и процент считался бы от неё, то есть от контекста.
+   Владелица 09.11: мера должна быть от дисплея. Проценты колонки (56/66/82 %
+   ниже) берутся от этой рамки, то есть тоже от дисплея. */
+.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; --rec-frame: 66vw; --rec-col: 66%; }
+/* Внутри оболочки «во весь экран» накрывает область содержимого, а не окно:
+   шапка и меню остаются на месте, и проценты ниже начинают считаться от
+   контекста, а не от ширины экрана (замечание владелицы по v1.17.4). Сам по
+   себе (витрина /kit/passport) док остаётся слоем поверх окна. */
+.sk-shell__main .sk-dock[data-placement='full'] { position: absolute; inset: 0; }
 .sk-dock[data-placement='full'] .sk-dock__panel { padding: 48px 20px 12px; }
 .sk-dock__close { position: sticky; top: 0; float: right; z-index: 1; min-width: max(var(--tap), 28px); min-height: max(var(--tap), 28px); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 .sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }

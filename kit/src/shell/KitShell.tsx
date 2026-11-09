@@ -482,7 +482,25 @@ export function KitShell({
           {account && <div className="sk-shell__account">{account}</div>}
         </header>
         <div className="sk-shell__body">
-          {!narrow && !menuCollapsed && <div className="sk-shell__side">{menu()}</div>}
+          {!narrow && !menuCollapsed && (
+            <div className="sk-shell__side">
+              {/* Сворачивание — в самой колонке и с видимой подписью: замечание
+                  владелицы «до сих пор левое меню не имеет свойства к
+                  сворачиванию». Кнопка была только в шапке, иконкой без
+                  подписи, рядом с брендом — работала, но не находилась.
+                  Подпись говорит, ЧТО СЛУЧИТСЯ по нажатию; в рейке её скрывает
+                  то же правило, что прячет подписи пунктов. */}
+              <button
+                type="button"
+                className="sk-shell__sidefold"
+                onClick={() => setMenuMode(nextMenuMode(effMenuMode))}
+              >
+                <GameIcon slug={ICON_CANON.ctlMenu} size={13} />
+                <span className="sk-shell__label">{menuModeLabel(lang, effMenuMode)}</span>
+              </button>
+              {menu()}
+            </div>
+          )}
           {!narrow && menuCollapsed && (
             <Ear
               side="left"
