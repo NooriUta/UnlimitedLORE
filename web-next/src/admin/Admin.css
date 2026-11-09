@@ -26,3 +26,17 @@
   background: var(--bg1); color: var(--t1); font: 600 var(--fs-xs) var(--mono);
 }
 .adm-select[data-none] { color: var(--wrn); border-style: dashed; }
+/* Разделы админки и «Кто где» (UC-8) */
+.adm-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--bd); margin-bottom: 8px; }
+.adm-tab {
+  min-height: max(var(--tap, 24px), 24px); padding: 0 12px; border: 0; border-bottom: 2px solid transparent;
+  background: none; color: var(--t2); font: 600 var(--fs-sm) var(--font); cursor: pointer;
+}
+.adm-tab[aria-current='page'] { color: var(--t1); border-bottom-color: var(--acc); }
+.adm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.adm-list details { border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); padding: 2px 8px; }
+.adm-list summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-height: max(var(--tap, 24px), 24px); cursor: pointer; }
+.adm-count { color: var(--t3); font: 600 var(--fs-xs) var(--mono); }
+.adm-me { color: var(--acc); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; margin-left: 6px; }
+.adm-sub { margin: 4px 0; color: var(--t2); font-size: var(--fs-xs); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.adm-table tr[data-me] th, .adm-table tr[data-me] td { background: var(--bg2); }
