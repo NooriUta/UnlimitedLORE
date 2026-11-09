@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { routeOf } from '../App';
 
 describe('S5-04 · маршрут задачи в App', () => {
-  it('?section=tasks&passport=… — экран чтения задачи', () => {
-    expect(routeOf('/', '?section=tasks&passport=SPRINT_A%2FT-1')).toBe('task');
+  it('?section=tasks&passport=… — уже не отдельный экран: оболочка (App переписывает адрес в раздел «Задачи»)', () => {
+    expect(routeOf('/', '?section=tasks&passport=SPRINT_A%2FT-1')).toBe('home');
   });
   it('раздел задач без паспорта — не экран задачи (это список S4)', () => {
     expect(routeOf('/', '?section=tasks')).toBe('home');

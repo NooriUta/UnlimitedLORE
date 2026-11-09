@@ -1,27 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import App, { sprintPassportOf } from './App';
+import type { UrlWindow } from '@seidr/kit';
+import App from './App';
 
-// S5-02: паспорт спринта открывается из списков по URL (?section=…&passport=…);
-// вкладка «Задачи» — первая и по умолчанию.
-describe('LORE v2 — маршрут паспорта спринта', () => {
-  it('?section=sprints&passport=ID — паспорт спринта, вкладка tasks по умолчанию', () => {
-    expect(sprintPassportOf('?section=sprints&passport=SPRINT_X')).toEqual({ sprintId: 'SPRINT_X', tab: 'tasks' });
-    expect(sprintPassportOf('?section=sprints&passport=SPRINT_X&tab=tasks&group=status')).toEqual({ sprintId: 'SPRINT_X', tab: 'tasks' });
+// Старые адреса отдельных страниц паспорта (S5-02 спринт, S5-04 задача) открывают
+// оболочку с записью во весь экран («да» владелицы 09.11): меню больше не пропадает.
+describe('LORE v2 — старый адрес паспорта ведёт в оболочку', () => {
+  const fakeWin = (search: string) => {
+    const calls: string[] = [];
+    const w = {
+      location: { pathname: '/', search, hash: '' },
+      history: { pushState: () => {}, replaceState: (_s: unknown, _t: string, url: string) => { calls.push(url); } },
+    };
+    return { w: w as unknown as UrlWindow, calls };
+  };
+
+  it('спринт: адрес переписывается в раздел «Спринты», рисуется оболочка, а не страница вне неё', () => {
+    const { w, calls } = fakeWin('?section=sprints&passport=SPRINT_X');
+    const html = renderToString(<App path="/" search="?section=sprints&passport=SPRINT_X" win={w} />);
+    expect(calls).toEqual(['/?mod=forseti&sec=sprint&open=SPRINT_X&place=full&tab=tasks']);
+    expect(html).toContain('sk-shell');
+    expect(html).not.toContain('outside-shell');
   });
 
-  it('без passport или в другом разделе — не паспорт спринта', () => {
-    expect(sprintPassportOf('?section=sprints')).toBeNull();
-    expect(sprintPassportOf('?section=adrs&passport=ADR-1')).toBeNull();
-    expect(sprintPassportOf('')).toBeNull();
+  it('задача: адрес переписывается в раздел «Задачи» во весь экран', () => {
+    const { w, calls } = fakeWin('?section=tasks&passport=SPRINT_A%2FT-1');
+    renderToString(<App path="/" search="?section=tasks&passport=SPRINT_A%2FT-1" win={w} />);
+    expect(calls).toEqual(['/?mod=forseti&sec=task&open=SPRINT_A%2FT-1&place=full']);
   });
 
-  it('оболочка с таким адресом рисует вкладку «Задачи» спринта', () => {
-    const html = renderToString(<App path="/" search="?section=sprints&passport=SPRINT_X" />);
-    expect(html).toContain('data-lore-app="v2"');
-    expect(html).toContain('SPRINT_X');
-    expect(html).toContain('role="tab"');
-    expect(html).toContain('Задачи');
+  it('обычный адрес не переписывается', () => {
+    const { w, calls } = fakeWin('?mod=forseti&sec=adr');
+    renderToString(<App path="/" search="?mod=forseti&sec=adr" win={w} />);
+    expect(calls).toEqual([]);
   });
 });
 
