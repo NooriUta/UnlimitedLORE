@@ -585,4 +585,41 @@ describe('S7A-12 · строка ленты: код — переход, без �
     expect(marks[1].getAttribute('title')).toBe('ready_for_deploy');
     expect((marks[1] as HTMLElement).style.getPropertyValue('--st-c')).toMatch(/var\(--/);
   });
+
+  // Прод v1.17.7 (владелица 09.11: «статусы задач там имеют не те иконки, которые в
+  // задачах и спринтах»): сервер отдаёт from/to сырым status_raw («✅ DONE»), а
+  // таблица kit ждёт код — статус выходил «неизвестным» (иконка help) с эмодзи рядом.
+  it('сырой статус сервера («✅ DONE», «🚀 READY FOR DEPLOY») читается в код, а не в «неизвестно»', async () => {
+    const data = clone();
+    const ev = data.events.find(e => e.key === 'task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07')!;
+    ev.from = '✅ DONE';
+    ev.to = '🚀 READY FOR DEPLOY';
+    await mount(src({}, data));
+    const marks = within(firstRow(ev.key)).getByTestId('news-status').querySelectorAll('[data-status]');
+    expect([...marks].map(m => m.getAttribute('data-status'))).toEqual(['done', 'ready_for_deploy']);
+    expect([...marks].map(m => m.getAttribute('data-category'))).not.toContain('unknown');
+    // Подпись — код без эмодзи; сырой текст сервера — в подсказке.
+    expect(marks[0].textContent).toBe('done');
+    expect(marks[0].getAttribute('title')).toBe('✅ DONE');
+  });
+
+  it('приложение подставляет свой читатель статуса — тот же, что у задач и спринтов', async () => {
+    const data = clone();
+    const ev = data.events.find(e => e.key === 'task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07')!;
+    ev.to = '✅ MERGED — влито';
+    await mount(src({}, data), { statusOf: raw => (raw?.startsWith('✅') ? 'done' : 'unknown') });
+    const marks = within(firstRow(ev.key)).getByTestId('news-status').querySelectorAll('[data-status]');
+    expect(marks[1].getAttribute('data-status')).toBe('done');
+  });
+});
+
+// Владелица 09.11: «почему новости не на всю ширину… плотно прилегали к левому краю».
+describe('ширина ленты', () => {
+  it('у .sk-news нет своего max-width — лента занимает всю область содержимого', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
+    const rules = [...css.matchAll(/(^|\n)\.sk-news\s*\{([^}]*)\}/g)].map(m => m[2]);
+    expect(rules.length).toBeGreaterThan(0);
+    expect(rules.filter(r => /max-width/.test(r))).toEqual([]);
+  });
 });
