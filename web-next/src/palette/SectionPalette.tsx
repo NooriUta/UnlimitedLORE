@@ -18,6 +18,7 @@ import { useKitShell, useKitLang, type KitConfig, type SafeStorage } from '@seid
 import { appT } from '../i18n';
 import { v2Config } from '../shell/v2Config';
 import { LorePalette } from './LorePalette';
+import { shellRecentList } from './shellRecent';
 
 export interface SectionPaletteProps {
   storage: SafeStorage;
@@ -27,7 +28,8 @@ export interface SectionPaletteProps {
 
 export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
   const lang = useKitLang();
-  const { navigate } = useKitShell();
+  const api = useKitShell();
+  const { navigate } = api;
   const config = useMemo(() => v2Config(lang), [lang]);
 
   const ctx = useMemo(() => {
@@ -40,5 +42,9 @@ export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
     return { config: withCommands };
   }, [config, lang, navigate]);
 
-  return <LorePalette storage={storage} ctx={ctx} fetchImpl={fetchImpl} trigger />;
+  // «Недавнее» палитры — список оболочки: открытое из списка видно и там, и
+  // тут. Аудит 08.11 нашёл обе половины по отдельности; это вторая.
+  const recent = useMemo(() => shellRecentList(api, storage), [api, storage]);
+
+  return <LorePalette storage={storage} ctx={ctx} recent={recent} fetchImpl={fetchImpl} trigger />;
 }

@@ -88,9 +88,18 @@ describe('K-07 · без запроса — недавние', () => {
     expect(r.items.map(i => i.id)).toEqual(['T-1']);
   });
 
-  it('недавняя запись, которой больше нет в данных, пропускается', () => {
+  // Было: такой пункт молча пропускался. Из-за этого палитра выглядела
+  // пустой у человека, который точно открывал записи — просто на другом
+  // экране, и в выгрузке ЭТОГО экрана их нет (находка P1 аудита 08.11, вторая
+  // половина: «Недавних пока нет»). Теперь пункт остаётся: виден код, а
+  // origin: 'recent-only' говорит, что больше о записи ничего не известно.
+  // Пропускать — значит прятать то, что человек делал.
+  it('недавняя запись вне выгрузки остаётся, с пометкой «известен только код»', () => {
     const r = searchPalette({ query: '', data, config, mode: 'all', recent: ['record:GONE', 'record:T-1'] });
-    expect(r.items.map(i => i.id)).toEqual(['T-1']);
+    expect(r.items.map(i => i.id)).toEqual(['GONE', 'T-1']);
+    const gone = r.items.find(i => i.id === 'GONE');
+    expect(gone && gone.type === 'record' ? gone.origin : null).toBe('recent-only');
+    expect(gone && gone.type === 'record' ? gone.kindTitle : 'x').toBe('');
   });
 });
 
