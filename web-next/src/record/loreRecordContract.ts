@@ -179,5 +179,19 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
       ...(errors.length ? { errors } : {}),
     } as KitData['meta'],
   };
-  return { record, data, config, ...(c.facts?.tasks ? { facts: SPRINT_FACTS } : {}) };
+  return { record, data, config, ...(c.facts?.tasks ? { facts: sprintFactsFor(c.links) } : {}) };
+}
+
+/**
+ * Связь «спринт ↔ задача» в той форме, в какой её прислали.
+ *
+ * Серверный фасад /lore/record (с v1.17.5) отдаёт задачи спринта связью
+ * PART_OF «in» (задача → спринт), прежняя эмуляция из срезов — HAS_TASK «out».
+ * Вердикт искал только HAS_TASK, и паспорт спринта писал «Задач нет» при 16
+ * задачах (владелица 09.11.2026). Берём ту форму, что пришла; PART_OF к не
+ * задаче (спринт в вехе) задачей не считается.
+ */
+function sprintFactsFor(links: LoreLink[]): typeof SPRINT_FACTS {
+  const facade = links.some(l => l.rel === 'PART_OF' && l.dir === 'in' && l.type === 'task');
+  return facade ? { ...SPRINT_FACTS, childEdge: 'PART_OF', childDir: 'in' } : SPRINT_FACTS;
 }
