@@ -46,6 +46,9 @@ class RoleMatrixSliceTest {
         assertEquals("checked", rows.get(1).get("state"), "у строки своё состояние: граф прочитан");
         assertTrue(rows.get(0).containsKey("projects"), "старые поля не убраны — обратная совместимость");
         assertEquals(java.util.List.of("checked", "unavailable", "forbidden"), LoreRoleMatrix.STATES);
+        // Kit 09.11: «не спрашивали» ≠ «спросили, роли нет». Список опрошенных источников — в теле:
+        // по нему kit говорит «Keycloak не спрашивали», а не рисует пустую ячейку как «нет роли».
+        assertEquals(java.util.List.of("graph"), body.get("sources_asked"));
     }
 
     @Test
