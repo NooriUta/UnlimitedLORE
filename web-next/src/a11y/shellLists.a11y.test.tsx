@@ -175,6 +175,13 @@ function describeEl(el: Element): string {
 function smallTargets(root: ParentNode): string[] {
   const out = new Set<string>();
   for (const el of root.querySelectorAll(INTERACTIVE)) {
+    // Граница зоны (role="separator", S4-30) — исключение, и названное.
+    // Это линия между блоками, а не кнопка: её размер и ЕСТЬ толщина границы.
+    // Растянуть невидимую полосу до 44px значит накрыть ею правый край меню и
+    // съесть нажатия по самим пунктам. На сенсоре границы нет вовсе (правило
+    // ниже это проверяет), а управление с клавиатуры у неё есть — стрелки,
+    // Home, End; именно это и есть доступность здесь, а не размер цели.
+    if (el.matches('[role="separator"]')) continue;
     // Чекбокс/радио внутри <label> — цель вся подпись (она и кликабельна).
     const label = el.matches('input') ? el.closest('label') : null;
     if (hasTapRule(el) || (label && hasTapRule(label))) continue;
@@ -184,6 +191,14 @@ function smallTargets(root: ParentNode): string[] {
 }
 
 describe('S4-12 · цели касания ≥ 44px (var(--tap)) у оболочки и списков', () => {
+  // Исключение для границ зон держится не на слове, а на этом утверждении:
+  // граница пропущена выше ТОЛЬКО потому, что на сенсоре её нет. Уберут
+  // правило — исключение станет неправдой, и тест это скажет.
+  it('граница зоны (S4-30) на сенсоре скрыта — потому и не цель касания', () => {
+    const coarse = /@media\s*\(pointer:\s*coarse\)\s*\{[^}]*\.sk-resize\s*\{[^}]*display:\s*none/;
+    expect(seidrCss.replace(/\/\*[\s\S]*?\*\//g, '')).toMatch(coarse);
+  });
+
   it('разбор CSS не слепой: правило IconButton с --tap находится', () => {
     const btn = document.createElement('button');
     btn.className = 'sk-iconbtn';
