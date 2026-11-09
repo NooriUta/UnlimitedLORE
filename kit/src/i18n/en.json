@@ -582,5 +582,11 @@
   "kit.record.relkind.association": "dependency",
   "kit.record.relkind.attribute": "attribute",
   "kit.record.relkind.realization": "realization",
-  "kit.record.relkind.generalization": "generalization"
+  "kit.record.relkind.generalization": "generalization",
+  "kit.mdedit.draft.restore": "Restore draft from {time}",
+  "kit.mdedit.draft.restoreBtn": "Restore",
+  "kit.mdedit.draft.discard": "Discard",
+  "kit.mdedit.draft.stale": "the record changed after the draft, the text may diverge",
+  "kit.mdedit.draft.loadFailed": "draft not read: {reason}",
+  "kit.mdedit.draft.saveFailed": "draft not saved: {reason}"
 }
