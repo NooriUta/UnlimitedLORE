@@ -39,7 +39,9 @@ final class LoreModelTypes {
         "spec", new Graph("KnowSpec", "KnowSpecHist", "spec_id"),
         // Kit 09.11: вершины без истории SCD2 — hist = null.
         "decision", new Graph("KnowDecision", null, "decision_id"),
-        "question", new Graph("KnowQuestion", null, "question_id"));
+        "question", new Graph("KnowQuestion", null, "question_id"),
+        "milestone", new Graph("KnowMilestone", null, "milestone_id"),
+        "release", new Graph("KnowRelease", null, "release_uid"));
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
     static final Map<String, Map<String, String>> ALIASES = Map.of(
@@ -49,7 +51,9 @@ final class LoreModelTypes {
         "adr", Map.of("title", "name", "status", "status"),
         "spec", Map.of("status", "status", "body_md", "content_md"),
         "decision", Map.of("status", "status_raw", "code", "decision_id", "date", "date_created"),
-        "question", Map.of("code", "question_id", "opened", "opened_date", "closed", "closed_date"));
+        "question", Map.of("code", "question_id", "opened", "opened_date", "closed", "closed_date"),
+        "milestone", Map.of("title", "label", "code", "milestone_id", "date", "date_display"),
+        "release", Map.of("code", "release_id", "date", "release_date", "description_md", "description_md"));
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
@@ -175,17 +179,28 @@ final class LoreModelTypes {
         m.put("kind", kind);
         m.put("shape", "value_known_of");
         m.put("source", "server");
-        m.put("rule_text", LoreSprintTotals.RULE);
+        m.put("rule_text", RULE_TEXT.getOrDefault(key, LoreSprintTotals.RULE));
         m.put("display", d);
         return m;
     }
+
+    /** Правило словами для счётчиков, которые считаются не по задачам спринта. */
+    private static final Map<String, String> RULE_TEXT = Map.of(
+        "sprints_total", "Спринты, связанные с записью ребром (TARGETS_MILESTONE у вехи, IMPLEMENTED_IN_RELEASE у релиза); у счёта known = of.",
+        "prs_total", "PR, привязанные к релизу ребром SHIPPED_IN; у счёта known = of.");
 
     /** Тип → вычисляемые поля. Нет записи — пустой список («вычисляемых нет»). */
     static final Map<String, List<Map<String, Object>>> COMPUTED = Map.of(
         "sprint", List.of(
             computed("tasks_total", "Задач", "count", new Object[]{1, "xs", "none"}),
             computed("effort_days_total", "Оценка, дн", "days", new Object[]{1, "xs", "none"}),
-            computed("actual_days_total", "Факт, дн", "days", new Object[]{2, "xs", "none"})));
+            computed("actual_days_total", "Факт, дн", "days", new Object[]{2, "xs", "none"})),
+        // Kit 09.11: у вехи и релиза нужны вычисляемые поля, а не статусы.
+        "milestone", List.of(
+            computed("sprints_total", "Спринтов", "count", new Object[]{1, "xs", "none"})),
+        "release", List.of(
+            computed("sprints_total", "Спринтов", "count", new Object[]{1, "xs", "none"}),
+            computed("prs_total", "PR", "count", new Object[]{2, "xs", "none"})));
 
     @SuppressWarnings("unchecked")
     private static List<String> candidates(String key, Map<String, Object> f, Map<String, String> aliases) {

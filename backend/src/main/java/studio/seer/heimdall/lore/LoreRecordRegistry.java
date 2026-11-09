@@ -33,13 +33,13 @@ final class LoreRecordRegistry {
     private LoreRecordRegistry() {}
 
     /** Типы паспорта v2 — в порядке показа. */
-    static final List<String> TYPES = List.of("sprint", "task", "adr", "spec", "decision", "question");
+    static final List<String> TYPES = List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release");
 
     /**
      * Kit 09.11: типы с паспортом только на чтение — путей записи в фасаде у них пока нет.
      * Поля не правятся, perms ничего не обещают: кнопка без пути сохранения хуже её отсутствия.
      */
-    static final java.util.Set<String> READ_ONLY = java.util.Set.of("decision", "question");
+    static final java.util.Set<String> READ_ONLY = java.util.Set.of("decision", "question", "milestone", "release");
 
     /** Куда пишется поле: эндпоинт существующего пути записи и имя поля в его теле. */
     record Write(String endpoint, String field) {}
@@ -385,6 +385,40 @@ final class LoreRecordRegistry {
                 rel("gates", "Блокирует задачи", "GATES", "out", "task", "association", "links", false),
                 rel("answeredBy", "Ответ — решения", "ANSWERS", "in", "decision", "association", "links", false),
                 rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
+                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
+
+        // ── Веха (только чтение, kit 09.11) ───────────────────────────────────
+        TYPE_DEFS.put("milestone", new TypeDef("milestone", "Веха", "pp.kind.milestone", "flag-objective",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("code", "Код", null, "text", null, null),
+                prop("week", "Неделя", null, "text", null, null),
+                prop("date", "Срок", "pp.field.date", "text", null, null),
+                prop("priority", "Приоритет", "pp.field.priority", "enum", "priority", null),
+                prop("products", "Продукты", null, "text", null, null)),
+            List.of(
+                new Body("goal_md", "Цель", null, false, null),
+                new Body("decisions_md", "Решения", null, false, null)),
+            List.of(new PropSection(null, List.of("week", "date", "priority", "products"))),
+            List.of(), List.of(), List.of(),
+            List.of(rel("sprints", "Спринты", "TARGETS_MILESTONE", "in", "sprint", "aggregation", "links", false))));
+
+        // ── Релиз (только чтение, kit 09.11) ─────────────────────────────────
+        TYPE_DEFS.put("release", new TypeDef("release", "Релиз", "pp.kind.release", "rocket",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("code", "Тег", null, "text", null, null),
+                prop("type", "Вид", null, "enum", null, null),
+                prop("date", "Дата", "pp.field.date", "date", null, null),
+                prop("is_current", "Текущий", null, "text", null, null),
+                prop("week", "Неделя", null, "text", null, null),
+                ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false)),
+            List.of(new Body("description_md", "Описание", "pp.field.body", false, null)),
+            List.of(new PropSection(null, List.of("type", "date", "is_current", "week", "projects"))),
+            List.of(), List.of(), List.of(),
+            List.of(
+                rel("sprints", "Спринты", "IMPLEMENTED_IN_RELEASE", "in", "sprint", "realization", "links", false),
+                rel("prs", "PR", "SHIPPED_IN", "in", "pr", "realization", "links", false),
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
 
         // ── Дети без своего паспорта: фаза, вопрос, решение — поля для колонок parts ──
