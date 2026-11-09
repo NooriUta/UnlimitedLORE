@@ -106,7 +106,7 @@ class LoreRecordFacadeLiveDbTest {
         assertTrue(n.getList("meta.data_state").isEmpty(), "новая запись ничего не читала — список пуст");
 
         admin().get("/lore/record/task/NOPE_SPRINT/NOPE").then().statusCode(404);
-        admin().get("/lore/record/decision/D-1").then().statusCode(400);
+        admin().get("/lore/record/milestone/M-1").then().statusCode(400);   // тип без паспорта (решение заведено 09.11)
     }
 
     @Test

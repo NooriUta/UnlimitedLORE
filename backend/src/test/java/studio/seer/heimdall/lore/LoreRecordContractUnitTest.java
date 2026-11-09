@@ -33,6 +33,7 @@ class LoreRecordContractUnitTest {
     @Test
     void versionSqlForEveryPassportType() {
         for (String t : LoreRecordRegistry.TYPES) {
+            if (LoreRecordRegistry.READ_ONLY.contains(t)) continue;   // без истории SCD2 — версии нет, фасад её не спрашивает
             String sql = LoreRecordVersion.sql(t);
             assertTrue(sql.contains("valid_to IS NULL") && sql.contains("valid_from"), t + ": " + sql);
         }
