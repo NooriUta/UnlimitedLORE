@@ -2169,6 +2169,20 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-collapse: collapse;
   font-size: var(--fs-sm);
 }
+/* Ручка ширины колонки (S4-35, «ширина личная»). Узкая зона у правого края
+   заголовка: курсор меняется, но саму ручку не видно — она не украшение. */
+.sk-list__grip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+.sk-list__grip:hover { background: var(--bd); }
+
 .sk-list__th {
   position: sticky;
   top: 0;

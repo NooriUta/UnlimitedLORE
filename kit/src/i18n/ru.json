@@ -588,5 +588,6 @@
   "kit.mdedit.draft.discard": "Отбросить",
   "kit.mdedit.draft.stale": "запись изменили после черновика, текст может разойтись",
   "kit.mdedit.draft.loadFailed": "черновик не прочитан: {reason}",
-  "kit.mdedit.draft.saveFailed": "черновик не сохранён: {reason}"
+  "kit.mdedit.draft.saveFailed": "черновик не сохранён: {reason}",
+  "kit.list.cols.width": "Ширина колонки «{title}»"
 }
