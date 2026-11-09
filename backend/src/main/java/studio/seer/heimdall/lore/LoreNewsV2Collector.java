@@ -52,6 +52,11 @@ final class LoreNewsV2Collector {
         "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, " +
         "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
         "FROM KnowSpecHist WHERE valid_from IS NOT NULL";
+    /** S7A-01: вопросы для ленты — лёгкая проекция без body_md (условие 9 SPEC-LORE-KIT-CONTRACT-CONDITIONS). */
+    static final String SQL_QUESTIONS =
+        "SELECT question_id, title, status, opened_date, closed_date, " +
+        "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects, " +
+        "out('RAISED_IN').sprint_id[0] AS raised_sprint FROM KnowQuestion";
 
     private final BiFunction<String, Map<String, Object>, List<Map<String, Object>>> query;
     private final List<SourceError> errors = new ArrayList<>();
@@ -249,8 +254,24 @@ final class LoreNewsV2Collector {
             List<String> c = s.get("component_id") == null ? List.of() : List.of(str(s.get("component_id")));
             events.add(ev("spec", id, "version", vf, null, p, c, null, List.of(), null, null, str(s.get("title")), "spec_history"));
         }
-        // TODO(S7A-01, новые типы §1): вехи, вопросы, компоненты — у вех нет даты
-        // создания в срезе milestones; добавить, когда появится источник даты.
+        // ── вопросы (S7A-01, новые типы §1): «открыт» и «закрыт»; дата без времени — днём ──
+        for (Map<String, Object> q : read("questions", SQL_QUESTIONS, false)) {
+            String id = str(q.get("question_id"));
+            if (id == null) continue;
+            List<String> p = sortedSet(q.get("projects"));
+            List<String> c = sortedSet(q.get("components"));
+            String sprint = str(q.get("raised_sprint"));
+            for (String[] k : new String[][]{{"opened_date", "created"}, {"closed_date", "closed"}}) {
+                Instant at = instant(q.get(k[0]));
+                LocalDate d = at == null ? day(q.get(k[0])) : null;
+                boolean in = at != null ? !at.isBefore(from) && at.isBefore(t1)
+                    : d != null && !d.isBefore(fromDay) && !d.isAfter(toDay);
+                if (in) events.add(ev("question", id, k[1], at, d, p, c, sprint, List.of(), null,
+                    str(q.get("status")), str(q.get("title")), "questions." + k[0]));
+            }
+        }
+        // TODO(S7A-01, новые типы §1): вехи и компоненты — у них нет даты создания
+        // ни в одном источнике; добавить, когда появится источник даты.
 
         return new NewsV2.Input(t0, t1, now, zone, tasks, sprints, events, knowledge, List.copyOf(errors), scope);
     }

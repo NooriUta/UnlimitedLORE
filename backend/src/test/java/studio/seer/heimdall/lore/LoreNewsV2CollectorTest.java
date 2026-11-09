@@ -56,6 +56,35 @@ class LoreNewsV2CollectorTest {
         assertTrue(in.otherEvents().stream().anyMatch(e -> e.type().equals("sprint") && e.kind().equals("created")));
     }
 
+    /**
+     * S7A-01, новые типы §1: вопросы в ленте — «открыт» по opened_date, «закрыт» по closed_date,
+     * только в окне. Читается лёгкая проекция без body_md (SPEC-LORE-KIT-CONTRACT-CONDITIONS,
+     * условие 9: срез questions везёт 576 КБ тел, ленте они не нужны).
+     */
+    @Test
+    void questionsBecomeOpenedAndClosedEventsWithoutBodies() {
+        List<String> seen = new ArrayList<>();
+        LoreNewsV2Collector c = new LoreNewsV2Collector((sql, p) -> {
+            seen.add(sql);
+            if (sql.equals(LoreNewsV2Collector.SQL_QUESTIONS)) return List.of(
+                row("question_id", "Q-1", "title", "Открыт в окне", "status", "open",
+                    "opened_date", "2026-11-03T10:00:00.000Z", "projects", List.of("P1")),
+                row("question_id", "Q-2", "title", "Закрыт в окне", "status", "closed",
+                    "opened_date", "2026-10-01T10:00:00.000Z", "closed_date", "2026-11-05", "projects", List.of("P1")),
+                row("question_id", "Q-3", "title", "Вне окна", "status", "open",
+                    "opened_date", "2026-09-01T10:00:00.000Z", "projects", List.of("P1")));
+            return List.of();
+        });
+        NewsV2.Input in = c.collect(T0, T1, T1, ZoneId.of("Europe/Moscow"), null);
+        List<NewsV2.Event> q = in.otherEvents().stream().filter(e -> e.type().equals("question")).toList();
+        assertTrue(q.stream().anyMatch(e -> e.el().equals("Q-1") && e.kind().equals("created")), String.valueOf(q));
+        assertTrue(q.stream().anyMatch(e -> e.el().equals("Q-2") && e.kind().equals("closed") && e.at() == null
+            && e.day().toString().equals("2026-11-05")), "закрытие — только дата, время не выдумывается: " + q);
+        assertFalse(q.stream().anyMatch(e -> e.el().equals("Q-2") && e.kind().equals("created")), "открыт до окна");
+        assertFalse(q.stream().anyMatch(e -> e.el().equals("Q-3")), "вне окна");
+        assertFalse(LoreNewsV2Collector.SQL_QUESTIONS.contains("body_md"), "тела вопросов ленте не нужны");
+    }
+
     @Test
     void instantParsesIsoZAndRenderedFormButNotDateOnly() {
         assertEquals(Instant.parse("2026-11-03T10:00:00Z"), LoreNewsV2Collector.instant("2026-11-03T10:00:00.000Z"));
