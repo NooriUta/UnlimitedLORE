@@ -43,6 +43,17 @@ export interface KitSavedView extends KitNav {
 }
 
 /**
+ * Сколько видов закреплено в меню до свёртки «Все виды»
+ * (SPRINT_UXR_S9_SCALE_OPT/S9-12).
+ *
+ * Пять — число из задачи владелицы, не подбор. Остальные не исчезают: пункт
+ * «Все виды (N)» раскрывает их на месте. Отдельного окна со списком видов нет
+ * намеренно — это была бы новая поверхность, то есть решение о виде, которого
+ * задача не требует.
+ */
+export const PINNED_VIEWS = 5;
+
+/**
  * Состояние левого меню (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-MENU-STATES):
  * открыто — колонка с подписями; rail — только иконки; hidden — ушко на краю.
  */
@@ -592,6 +603,9 @@ function ShellMenu({
   config, lang, nav, recent, titles, views, collapsed, onToggleGroup, onItem, onView, onRecent, onSaveView, onRemoveView,
   itemHref, recordHref,
 }: ShellMenuProps) {
+  // Раскрыты ли все виды (S9-12). Местное: это способ дотянуться до своего
+  // вида, а не состояние, которым делятся ссылкой.
+  const [allViews, setAllViews] = useState(false);
   const { groups, myViews, recent: showRecent } = config.menu;
   return (
     <nav className="sk-shell__side-nav" aria-label={kitT(lang, 'kit.shell.sections')}>
@@ -599,7 +613,7 @@ function ShellMenu({
         <Group title={kitT(lang, 'kit.shell.myViews')}>
           {views.length === 0 && <p className="sk-shell__note">{kitT(lang, 'kit.shell.myViewsEmpty')}</p>}
           <ul className="sk-shell__list">
-            {views.map(v => (
+            {(allViews ? views : views.slice(0, PINNED_VIEWS)).map(v => (
               <li key={v.id} className="sk-shell__row">
                 <a
                   className="sk-shell__item"
@@ -618,6 +632,23 @@ function ShellMenu({
                 />
               </li>
             ))}
+            {views.length > PINNED_VIEWS && (
+              <li>
+                <button
+                  type="button"
+                  className="sk-shell__item sk-shell__item--action sk-shell__viewsmore"
+                  aria-expanded={allViews}
+                  onClick={() => setAllViews(v => !v)}
+                >
+                  <GameIcon slug={ICON_CANON.myViews} size={14} />
+                  <span className="sk-shell__label">
+                    {allViews
+                      ? kitT(lang, 'kit.shell.viewsLess')
+                      : kitT(lang, 'kit.shell.viewsAll', { n: views.length - PINNED_VIEWS })}
+                  </span>
+                </button>
+              </li>
+            )}
             <li>
               <button type="button" className="sk-shell__item sk-shell__item--action" onClick={onSaveView}>
                 <GameIcon slug={ICON_CANON.saveView} size={14} />

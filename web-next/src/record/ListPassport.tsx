@@ -86,7 +86,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // Версия на момент ЧТЕНИЯ записи (S5-08): сервер сверит её и откажет
     // 409-м, если запись успели изменить. Без неё сохранение затирало чужую
     // правку молча. У ADR проверки на сервере нет — там версия не уходит, и
-    // это сказано в коде, а не замолчано (ADR_NO_VERSION_CHECK).
+    // С PR #969 проверку принимают все четыре типа, включая ADR.
     await savePassportField(type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl, contract?.record.version ?? null);
     pp.reload();
   };

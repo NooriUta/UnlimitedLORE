@@ -15,11 +15,12 @@
 //      (`versionConflict` возвращает null). Значит отправить «пусто» и считать
 //      себя защищённым нельзя: запрос без версии — это обычная перезапись.
 //
-//   2. **У ADR проверки нет вообще.** В `LoreAdrResource` нет ни одного
-//      упоминания `expected_version`, то есть раздел ADR сохранится поверх
-//      чужой правки, даже если версию послать. Выдавать это за защиту нельзя —
-//      поэтому тип честно перечислен в `VERSION_CHECKED`, а у ADR признак
-//      отсутствует.
+//   2. **Какие типы проверяются — список явный.** Утром 09.11 у ADR проверки
+//      НЕ БЫЛО (`LoreAdrResource` не знал `expected_version`), и тип честно не
+//      входил в `VERSION_CHECKED`: обещать защиту там, где её нет, хуже, чем
+//      сказать «проверки пока нет». К вечеру серверная сессия её добавила (PR
+//      #969), и список пополнился — но остался явным, чтобы следующий тип без
+//      проверки не попал в него молча.
 import { describe, expect, it } from 'vitest';
 import { LoreHttpError } from '../api/loreSlice';
 import { VERSION_CHECKED, VersionConflict, savePassportField } from './passportSave';
@@ -68,16 +69,19 @@ describe('S5-08 · версия уходит на сервер', () => {
     expect(s.calls[0].body.expected_version).toBe(V_NOW);
   });
 
-  it('у ADR версия НЕ отправляется: сервер её не проверяет, и обещать защиту нельзя', async () => {
+  // Переписано в тот же день: утром у ADR проверки версии на сервере НЕ БЫЛО,
+  // и тест держал именно это — версия не отправлялась, чтобы не выглядело
+  // защитой. Серверная сессия добавила `expected_version` в POST /lore/adr
+  // (PR #969, сверено по коду, а не по сообщению), и теперь правда другая.
+  it('у ADR версия тоже уходит — с #969 сервер её проверяет', async () => {
     const { calls, impl } = spy();
     await savePassportField('adr', { id: 'ADR-1', title: 'Решение' }, 'decision_md', 'текст', impl, V_NOW);
     expect(calls[0].path).toBe('/lore/adr');
-    expect(calls[0].body).not.toHaveProperty('expected_version');
+    expect(calls[0].body.expected_version).toBe(V_NOW);
   });
 
   it('список проверяемых типов назван прямо — по нему экран говорит правду', () => {
-    expect([...VERSION_CHECKED]).toEqual(['sprint', 'task', 'spec']);
-    expect(VERSION_CHECKED).not.toContain('adr');
+    expect([...VERSION_CHECKED]).toEqual(['sprint', 'task', 'spec', 'adr']);
   });
 
   it('пустая версия не отправляется: сервер пропустил бы проверку, а мы бы считали себя защищёнными', async () => {

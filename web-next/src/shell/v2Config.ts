@@ -29,6 +29,22 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
   ['in_progress', 'active', ['done', 'blocked', 'todo']],
   ['active', 'active', ['done', 'cancelled']],
   ['blocked', 'active', ['in_progress', 'cancelled']],
+  // Эти четыре кода были ПОТЕРЯНЫ: подписи для них в локалях есть
+  // («Частично», «К выкатке», «Проектирование», «Отложено»), а записи в
+  // словаре не было — и kit было нечем рисовать чип.
+  //
+  // Так и появились «задачи без статусов» из аудита 09.11 (D-03): по замеру
+  // серверной сессии в корпусе 55 задач «🟡 PARTIAL» и 34 «🚀 READY FOR
+  // DEPLOY», и у всех чип выходил пустым. Сервер при этом статус отдавал
+  // всегда (null у нуля задач из 4802), и оба словаря клиента строку узнавали
+  // правильно — ломалось на последнем шаге, в словаре конфига.
+  //
+  // Сторож `tasks/twoVocabularies.probe.test.ts` держит правило: код, который
+  // может получиться из данных, обязан быть здесь.
+  ['partial', 'active', ['done', 'blocked', 'cancelled']],
+  ['ready_for_deploy', 'active', ['done', 'blocked']],
+  ['design', 'todo', ['todo', 'planned', 'cancelled']],
+  ['deferred', 'todo', ['todo', 'cancelled']],
   ['done', 'done', ['in_progress']],
   ['accepted', 'done', ['superseded']],
   ['cancelled', 'cancelled', ['backlog']],
@@ -36,7 +52,19 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
   ['rejected', 'cancelled', ['proposed']],
 ];
 
-export function v2Config(lang: KitLang): KitConfig {
+/**
+ * Статьи словаря статусов, пришедшие из модели (S4-STATUS-AXIS-CONFIG).
+ *
+ * Передали — словарь берётся оттуда, и рукописный `STATUSES` ниже не
+ * используется вовсе. Не передали (модель недоступна, старый сервер, витрина
+ * без сети) — остаётся рукописный, и это НЕ молчаливый откат: тот, кто грузит
+ * модель, обязан показать причину (`statusesFromModel` отдаёт её словами).
+ *
+ * Зачем так: словарь статусов — дело приложения и его данных, а не кода
+ * клиента. Рукописный список уже стоил находки аудита 09.11 — четыре кода в
+ * него не попали, и у 89 задач корпуса чип выходил пустым.
+ */
+export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items']): KitConfig {
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
     ({ id, title: t(`shell.sec.${id}` as AppKey), icon, ...(view ? { view } : {}) });
@@ -66,10 +94,13 @@ export function v2Config(lang: KitLang): KitConfig {
       news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
     },
     statuses: {
-      items: STATUSES.map(([code, category, allow]) => {
-        const meta = statusMeta(code);
-        return { code, title: t(`status.${code}` as AppKey), category, icon: meta.icon, color: meta.color, allow };
-      }),
+      // Словарь из модели главнее: он данные, а рукописный список — умолчание.
+      items: statusesFromModel?.length
+        ? statusesFromModel
+        : STATUSES.map(([code, category, allow]) => {
+          const meta = statusMeta(code);
+          return { code, title: t(`status.${code}` as AppKey), category, icon: meta.icon, color: meta.color, allow };
+        }),
       // →done в LORE идёт через reviewer-гейт: себе не одобряют.
       selfApprove: false,
       undo: true,

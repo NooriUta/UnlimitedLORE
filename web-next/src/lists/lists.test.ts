@@ -74,8 +74,11 @@ describe('sliceToKitData — полнота из метаданных S1', () =>
 });
 
 describe('конфиги экранов списков', () => {
-  it('спринты и ADR; иконки статусов, вида и «Быстро» есть в наборе game-icons', () => {
-    expect(Object.keys(LIST_SCREENS)).toEqual(['sprints', 'adrs']);
+  // 09.11: добавлен раздел «Задачи» (S4-V2-SECTIONS) — пункт в меню был с самого
+  // начала, а экрана под ним не было. Список экранов перечислен явно намеренно:
+  // так видно, когда появляется новый, и его иконки тоже проверяются.
+  it('спринты, ADR и задачи; иконки статусов, вида и «Быстро» есть в наборе game-icons', () => {
+    expect(Object.keys(LIST_SCREENS)).toEqual(['sprints', 'adrs', 'tasks']);
     for (const lang of ['ru', 'en'] as const) {
       for (const s of Object.values(LIST_SCREENS)) {
         const c = s.config(lang);

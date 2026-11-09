@@ -208,7 +208,7 @@ describe('S7A-02 · строка «фильтр / группировка / по�
     await mount(src());
     openFilters();
     const values = screen.getAllByTestId(/^news-group-opt-/).map(o => o.dataset.testid!.replace('news-group-opt-', ''));
-    expect(values).toEqual(['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'day']);
+    expect(values).toEqual(['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'who', 'day']);
     expect(screen.getByTestId('news-group-opt-author').textContent).toMatch(/автор.*S2-12/i);
   });
 
@@ -459,5 +459,93 @@ describe('лента внутри раздела (title=null)', () => {
     const { container } = await mount(src(), { title: null });
     expect(container.querySelector('section.sk-news')).toBeNull();
     expect(container.querySelector('div.sk-news')).not.toBeNull();
+  });
+});
+
+describe('S7A-12 v2 · мини-график, быстрые фильтры, день — полоса баланса (выбор владелицы 09.11)', () => {
+  it('мини-график: столбик на каждый день периода из tasks.days; день без данных — «нет данных», а не ноль', async () => {
+    await mount(src());
+    const spark = screen.getByTestId('news-spark');
+    expect(within(spark).getAllByRole('button').length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByTestId('news-spark-2026-11-07').dataset.tone).toBe('suc');
+    expect(screen.getByTestId('news-spark-2026-11-05').dataset.state).toBe('zero');
+    const none = screen.getByTestId('news-spark-2026-11-08');
+    expect(none.dataset.state).toBe('none');
+    expect(none.getAttribute('aria-label')).toMatch(/нет данных/);
+  });
+
+  it('мини-график: нажатие на столбик раскрывает свёрнутый день', async () => {
+    await mount(src());
+    expect(dayBtn('2026-11-05').getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(screen.getByTestId('news-spark-2026-11-05'));
+    await waitFor(() => expect(dayBtn('2026-11-05').getAttribute('aria-expanded')).toBe('true'));
+  });
+
+  it('мини-графика нет, если сгорание не посчитано (не рисуем пустые нули)', async () => {
+    const data = clone();
+    (data.metrics as { tasks: unknown }).tasks = { available: false, reason: 'нет источника' };
+    await mount(src({}, data));
+    expect(screen.queryByTestId('news-spark')).toBeNull();
+  });
+
+  it('быстрые фильтры наверху: Проект/Компонент/Кто — одно нажатие открывает варианты, выбор уходит на сервер', async () => {
+    const s = src();
+    await mount(s);
+    for (const a of ['project', 'component', 'who']) expect(screen.getByTestId(`news-facet-${a}`)).toBeTruthy();
+    const btn = screen.getByTestId('news-facet-project');
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+    const pop = screen.getByTestId('news-facet-pop-project');
+    fireEvent.click(within(pop).getAllByRole('button')[0]);
+    await waitFor(() => expect(last(s).has('project')).toBe(true));
+    expect(screen.queryByTestId('news-facet-pop-project')).toBeNull();
+    expect(screen.getByTestId('news-facet-project').dataset.on).toBe('true');
+  });
+
+  it('«Кто» — вид (люди/агенты) и конкретное имя со счётом сервера by_who; выбор имени уходит параметром who', async () => {
+    const data = clone();
+    data.metrics.counts.by_who = { volva: { events: 4, elements: 3 }, '(unknown)': { events: 1, elements: 1 } };
+    const s = src({}, data);
+    await mount(s);
+    fireEvent.click(screen.getByTestId('news-facet-who'));
+    expect(within(screen.getByTestId('news-facet-opts-author')).getAllByRole('button').length).toBe(3);
+    const names = screen.getByTestId('news-facet-opts-who');
+    expect(names.textContent).toContain('автор неизвестен');
+    const volva = within(names).getByRole('button', { name: /volva/ });
+    expect(volva.textContent).toContain('4 · 3');
+    fireEvent.click(volva);
+    await waitFor(() => expect(last(s).get('who')).toBe('volva'));
+    expect(screen.getByTestId('news-facet-who').textContent).toContain('volva');
+  });
+
+  it('«Кто» без by_who (старый сервер) — имена из строк ленты, без чисел; Esc закрывает', async () => {
+    await mount(src());
+    fireEvent.click(screen.getByTestId('news-facet-who'));
+    const names = screen.getByTestId('news-facet-opts-who');
+    // В фикстуре who не заполнен ни у одной строки — честно «автор неизвестен», без выдуманного числа.
+    const unknown = within(names).getByRole('button', { name: /автор неизвестен/ });
+    expect(unknown.querySelector('.sk-news__n')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('news-facet-pop-who')).toBeNull();
+  });
+
+  it('фиксированный разрез паспорта не даёт снять себя быстрым фильтром', async () => {
+    await mount(src(), { scope: { project: 'UnlimitedLORE' } });
+    expect(screen.queryByTestId('news-facet-project')).toBeNull();
+    expect(screen.getByTestId('news-facet-component')).toBeTruthy();
+  });
+
+  it('счёт на чипе типа подписан «за период» — это не размер корпуса', async () => {
+    await mount(src());
+    expect(screen.getByTestId('news-type-chip-task').getAttribute('title')).toMatch(/за период/);
+  });
+
+  it('день — полоса «закрыто против заведено» с подписью для читалки', async () => {
+    await mount(src());
+    const d = day('2026-11-07');
+    const bar = d.querySelector('.sk-news__balbar')!;
+    expect(bar.getAttribute('role')).toBe('img');
+    expect(bar.getAttribute('aria-label')).toMatch(/закрыто · \d+ заведено задач/);
+    expect(within(d).getByTestId('news-cube-burn').textContent).toContain('+2');
   });
 });
