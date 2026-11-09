@@ -62,8 +62,9 @@ class LoreActorHarnessTest {
             Map.of("actor_id", "AGENT-PM-msbt4bye", "name", "Claude Code (pm)")));
         assertEquals(List.of(
             new LoreActorHarness.Assign("AGENT-FULL_KIMI-mw8ykenh", "kimi-code"),
+            new LoreActorHarness.Assign("AGENT-FULL_VASILISK-mw85b6r4", "codex"),
             new LoreActorHarness.Assign("AGENT-PM-msbt4bye", "claude-code")), plan,
-            "Kimi (full) — kimi-code; vasilisk не Claude, harness не угадываем — остаётся null");
+            "Kimi (full) — kimi-code; vasilisk — codex (владелица 09.11), имя «Claude Code» не в счёт");
     }
 
     @Test
