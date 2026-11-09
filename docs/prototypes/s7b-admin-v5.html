@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Админка LORE v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<style>
+/* Прототип админки v5 (SPRINT_UXR_S7B_ADMIN, сессия S7A-12, 09.11.2026).
+   Просьба владелицы: «подробнейший прототип админки с пояснениями что где куда».
+   Основа: SPEC-ADMIN-LORE-UC 1.2.0 §8 (UC-1…UC-8), FEAT-ADMIN-ONE-INTERFACE,
+   прототип v4 (схема «три вопроса»). Данные — демо, помечены. */
+:root{
+  --bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;
+  --t1:#efe6d2;--t2:#b8ab90;--t3:#7f735c;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#d9a441;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--r:6px;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--t1:#2a241a;--t2:#5d523f;--t3:#8a7d64;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#a8741a;--dng:#b0412d;--inf:#2f6d93;}}
+:root[data-theme="light"]{--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--t1:#2a241a;--t2:#5d523f;--t3:#8a7d64;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#a8741a;--dng:#b0412d;--inf:#2f6d93;}
+:root[data-theme="dark"]{--bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--t1:#efe6d2;--t2:#b8ab90;--t3:#7f735c;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#d9a441;--dng:#d0644f;--inf:#6fa3c4;}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 Manrope,system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+h1,h2,h3{font-family:Unbounded,sans-serif;font-weight:800;margin:0}
+h1{font-size:var(--fs-lg);letter-spacing:.02em}
+h2{font-size:var(--fs-xl);margin-bottom:4px}
+h3{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:14px 0 6px}
+.mono{font-family:var(--mono)}
+.muted{color:var(--t3)}
+a{color:var(--acc)}
+/* шапка */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);position:sticky;top:0;z-index:10}
+.top .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);white-space:nowrap;color:var(--t2)}
+.chip.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd))}
+.chip.w{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 50%,var(--bd))}
+.chip.d{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+.chip.i{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 50%,var(--bd))}
+.chip.dash{border-style:dashed}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);font-weight:700;color:var(--t1);background:var(--bg3)}
+.btn.pri{background:color-mix(in srgb,var(--acc) 22%,transparent);border-color:var(--acc);color:var(--acc)}
+.btn.dng{border-color:var(--dng);color:var(--dng)}
+.tog{display:inline-flex;gap:6px;align-items:center;font-size:var(--fs-xs);color:var(--t2)}
+/* раскладка */
+.wrap{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 45px)}
+nav.side{border-right:1px solid var(--bd);padding:10px 8px;background:var(--bg2);position:sticky;top:45px;align-self:start;max-height:calc(100vh - 45px);overflow:auto}
+.grp{margin-bottom:12px}
+.grp .gh{display:flex;gap:6px;align-items:center;padding:4px 8px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:700}
+.grp .gh .risk{margin-left:auto;text-transform:none;letter-spacing:0}
+.grp button{display:flex;width:100%;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--r);color:var(--t2);text-align:left;font-size:var(--fs-sm)}
+.grp button:hover{background:var(--bg3)}
+.grp button.on{background:var(--bg3);color:var(--t1);box-shadow:inset 2px 0 0 var(--acc)}
+.grp button .st{margin-left:auto;font-size:var(--fs-2xs)}
+main{padding:16px;min-width:0;max-width:1100px}
+section.scr{display:none}
+section.scr.on{display:block}
+.lead{color:var(--t2);margin:2px 0 10px;max-width:820px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+/* экран-макет */
+.mock{border:1px solid var(--bd);border-radius:10px;background:var(--bg2);padding:12px;position:relative}
+.mock .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.inp{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:4px 8px;color:var(--t2);min-width:160px;font-size:var(--fs-sm)}
+.steps{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;counter-reset:s}
+.steps span{counter-increment:s;display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);color:var(--t3)}
+.steps span::before{content:counter(s);display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--bg3);font-family:var(--mono);font-size:var(--fs-2xs)}
+.steps span.done{color:var(--suc)}
+.steps span.done::before{content:"✓";background:color-mix(in srgb,var(--suc) 25%,transparent)}
+.steps span.cur{color:var(--t1);border-color:var(--acc)}
+.steps span.cur::before{background:var(--acc);color:var(--bg)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.box{border:1px solid var(--bd);border-radius:var(--r);padding:10px;background:var(--bg)}
+.box h4{margin:0 0 6px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--t3)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:var(--fs-sm)}
+.kv dt{color:var(--t3)}.kv dd{margin:0}
+.tblw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top}
+.role{display:inline-block;padding:1px 8px;border-radius:999px;font-size:var(--fs-xs);white-space:nowrap}
+.role.owner{background:color-mix(in srgb,var(--acc) 22%,transparent);color:var(--acc)}
+.role.editor{background:color-mix(in srgb,var(--suc) 20%,transparent);color:var(--suc)}
+.role.reader{background:color-mix(in srgb,var(--inf) 20%,transparent);color:var(--inf)}
+.role.none{color:var(--t3);border:1px dashed var(--bd)}
+.chain{list-style:none;padding:0;margin:0}
+.chain li{display:flex;gap:8px;padding:5px 0;border-bottom:1px dashed var(--bd)}
+.chain li:last-child{border:0}
+.chain .v{margin-left:auto;font-family:var(--mono);font-size:var(--fs-xs)}
+.diff{font-family:var(--mono);font-size:var(--fs-xs);border:1px solid var(--bd);border-radius:var(--r);padding:8px;background:var(--bg)}
+.diff .a{color:var(--suc)}.diff .r{color:var(--dng)}
+.code{font-family:var(--mono);font-size:var(--fs-xs);background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:8px;white-space:pre-wrap;word-break:break-all;color:var(--t2)}
+.check{list-style:none;padding:0;margin:0}
+.check li{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--bd)}
+.check li:last-child{border:0}
+.check .ic{flex:none;width:18px;text-align:center}
+.check .where{margin-left:auto;flex:none}
+.hint{font-size:var(--fs-xs);color:var(--t3);margin-top:2px}
+.attn{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.attn .box{display:flex;flex-direction:column;gap:4px}
+.attn .n{font:800 var(--fs-2xl) Unbounded,sans-serif}
+.attn .box.d .n{color:var(--dng)}.attn .box.w .n{color:var(--wrn)}.attn .box.ok .n{color:var(--suc)}
+.toast{display:flex;gap:10px;align-items:center;border:1px solid var(--acc);border-radius:var(--r);padding:6px 10px;background:color-mix(in srgb,var(--acc) 10%,var(--bg));font-size:var(--fs-sm)}
+/* пояснения */
+.pin{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--acc);color:var(--bg);font:700 var(--fs-2xs) var(--mono);vertical-align:middle;margin:0 2px}
+body.nopins .pin{display:none}
+.notes{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+body.nopins .notes{display:none}
+.notes li{display:grid;grid-template-columns:auto 1fr;gap:8px;border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:var(--r);padding:8px 10px;background:var(--bg2)}
+.notes li b{color:var(--t1)}
+.notes .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.foot{margin-top:12px;border-top:1px solid var(--bd);padding-top:8px;display:grid;gap:4px;font-size:var(--fs-xs);color:var(--t2)}
+/* карта */
+.mmd{overflow-x:auto;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);padding:8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.map{width:100%}
+.map td:first-child{white-space:nowrap}
+/* телефон / планшет вертикально */
+@media (max-width:860px){
+  .wrap{grid-template-columns:1fr}
+  nav.side{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--bd);display:flex;gap:10px;overflow-x:auto;padding:8px 16px}
+  .grp{flex:none;margin:0}
+  .grp button{white-space:nowrap}
+  main{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Админка LORE · v5</h1>
+  <span class="chip w dash">прототип · данные демо</span>
+  <span class="sp"></span>
+  <span class="chip ok"><iconify-icon icon="game-icons:padlock"></iconify-icon>вход включён</span>
+  <span class="chip ok">Keycloak жив</span>
+  <span class="chip i">админов 2</span>
+  <span class="chip">v1.17.6</span>
+  <label class="tog"><input type="checkbox" id="pins" checked> пояснения</label>
+</header>
+<div class="wrap">
+<nav class="side" id="nav"></nav>
+<main id="main">
+
+<!-- ═══════════════ 0. КАРТА ═══════════════ -->
+<section class="scr" data-id="map" data-grp="Как читать" data-t="Карта админки" data-st="—">
+  <h2>Карта: что где и куда ведёт</h2>
+  <p class="lead">Админка — <b>один интерфейс</b> вместо трёх (LORE, Keycloak, Forgejo; плюс хранилище секретов).
+  Слева меню сгруппировано <b>по намерению и риску</b>, а не по таблицам базы: сначала «что я хочу сделать» (сценарии), потом «опасное» (доступ), потом справочники и система.
+  Каждый сценарий — мастер от намерения до проверки «заработало», с честным списком «что осталось сделать руками в другом месте».</p>
+  <div class="legend">
+    <span class="chip ok">✓ в develop</span>
+    <span class="chip i">◐ в работе</span>
+    <span class="chip w">⏳ ждёт сервер</span>
+    <span class="chip dash">□ только прототип</span>
+    <span class="chip"><span class="pin">1</span> номер пояснения под экраном</span>
+  </div>
+  <div class="mmd"><pre class="mermaid">
+---
+config:
+  layout: elk
+---
+flowchart TB
+  IN(["Аватар → «Админка»"]) --> HOME["Главная: что требует внимания"]
+  HOME --> G1
+  subgraph G1["1 · ЛЮДИ И АГЕНТЫ — сценарии"]
+    direction TB
+    UC1["Подключить человека · UC-1 □"] ~~~ UC2["Дать человеку агента · UC-2 ⏳"] ~~~ UC7["Новый ноутбук · UC-7 ⏳"] ~~~ UC8["Кто где · UC-8 ✓"] ~~~ AG["Агенты: harness ✓ · машина ◐"]
+  end
+  G1 ~~~ G2
+  subgraph G2["2 · ДОСТУП — опасное"]
+    direction TB
+    UC3["Почему не видит / 403 · UC-3 ◐"] ~~~ UC4["Отключить человека · UC-4 □"] ~~~ UC6["Сменить секрет агента · UC-6 □"] ~~~ MX["Матрица проект × люди ◐"]
+  end
+  G2 ~~~ G3
+  subgraph G3["3 · ПРОЕКТЫ"]
+    direction TB
+    UC5["Проект «как у похожего» · UC-5 □"]
+  end
+  G3 ~~~ G4
+  subgraph G4["4 · ЯЗЫК ГРАФА"]
+    direction TB
+    DIC["Справочники и правила CLAUDE ◐"]
+  end
+  G4 ~~~ G5
+  subgraph G5["5 · СИСТЕМА"]
+    direction TB
+    EXT["Внешние системы: Keycloak, секреты, Forgejo □"] ~~~ SYS["Состояние, MCP, журнал ◐"]
+  end
+</pre></div>
+
+  <h3>Куда идти — по намерению</h3>
+  <div class="tblw"><table class="map">
+    <thead><tr><th>Я хочу…</th><th>Куда</th><th>Что получу</th><th>Готово?</th></tr></thead>
+    <tbody>
+      <tr><td>Пустить нового соавтора</td><td><a href="#uc1">Подключить человека</a></td><td>учётка проверена, проекты «как у …», роль, дифф, список «руками»</td><td><span class="chip dash">□</span></td></tr>
+      <tr><td>Завести агента человеку</td><td><a href="#uc2">Дать агента</a></td><td>секрет один раз, готовый <span class="mono">.mcp.json</span>, проверка первым вызовом</td><td><span class="chip w">⏳</span></td></tr>
+      <tr><td>Подключить новый ноутбук под Claude</td><td><a href="#uc7">Новый ноутбук</a></td><td>агент машины наследует ваши права, команда <span class="mono">claude mcp add</span>, чек-лист</td><td><span class="chip w">⏳</span></td></tr>
+      <tr><td>Понять, в скольких проектах человек и кто его агенты</td><td><a href="#uc8">Кто где</a></td><td>число проектов, роль в каждом, агенты</td><td><span class="chip ok">✓</span></td></tr>
+      <tr><td>Поставить агенту harness / машину</td><td><a href="#agents">Агенты</a></td><td>выбор из реестра, «не задан» видно сразу</td><td><span class="chip ok">✓</span> / <span class="chip i">◐</span></td></tr>
+      <tr><td>Разобраться, почему агенту 403</td><td><a href="#uc3">Почему не видит</a></td><td>цепочка причин, как решает сервер, кнопка исправления</td><td><span class="chip i">◐</span></td></tr>
+      <tr><td>Закрыть доступ ушедшему</td><td><a href="#uc4">Отключить человека</a></td><td>всё, что за ним числится, снятие пачкой с откатом</td><td><span class="chip dash">□</span></td></tr>
+      <tr><td>Сменить секрет без простоя</td><td><a href="#uc6">Сменить секрет</a></td><td>новый рядом со старым → переход виден → старый отозван</td><td><span class="chip dash">□</span></td></tr>
+      <tr><td>Завести проект и раздать доступ</td><td><a href="#uc5">Проект как у похожего</a></td><td>копия матрицы назначений + репозиторий Forgejo</td><td><span class="chip dash">□</span></td></tr>
+      <tr><td>Понять, где что настраивается вне LORE</td><td><a href="#ext">Внешние системы</a></td><td>что делается здесь, что там, с подсказкой и ссылкой</td><td><span class="chip dash">□</span></td></tr>
+    </tbody></table></div>
+
+  <h3>Общие правила для всех экранов</h3>
+  <ol class="notes" style="display:grid">
+    <li><span class="pin">A</span><div><b>Опасное — через дифф «было → станет».</b> Перед снятием ролей, отзывом секрета, отключением — список изменений и ввод логина для подтверждения. После — плашка «Отменить» 10 секунд и запись в журнал.</div></li>
+    <li><span class="pin">B</span><div><b>Последнюю администрирующую учётку снять нельзя.</b> Не «подтвердите», а кнопка недоступна с объяснением — это блокирует сервер.</div></li>
+    <li><span class="pin">C</span><div><b>«Не смогли проверить» ≠ «пусто».</b> Если Keycloak, Forgejo или срез недоступны — это видно отдельной плашкой с причиной, а не пустым списком.</div></li>
+    <li><span class="pin">D</span><div><b>Пароли человека админка не показывает и не пересылает.</b> Владелица выдаёт их лично. Секрет агента показывается один раз при выдаче.</div></li>
+    <li><span class="pin">E</span><div><b>Состояние — в адресе.</b> Раздел и выбор (<span class="mono">/admin?adm=who&amp;who=projects</span>) — ссылкой можно поделиться, «назад» работает.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ ГЛАВНАЯ ═══════════════ -->
+<section class="scr" data-id="home" data-grp="Как читать" data-t="Главная" data-st="□">
+  <h2>Главная: что требует внимания</h2>
+  <p class="lead">Первое, что видно при входе. Не «вся информация», а только то, что сломано или недоделано, — каждая карточка ведёт в сценарий, который это чинит.</p>
+  <div class="meta"><span class="chip dash">□ только прототип</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-01</span></div>
+  <div class="mock">
+    <div class="bar"><span class="chip ok">вход включён</span><span class="chip ok">Keycloak жив</span><span class="chip i">админов 2 · последний защищён</span><span class="pin">1</span></div>
+    <div class="attn">
+      <div class="box w"><span class="n">3</span><span>агента без машины</span><span class="hint">не понять, с какого ноутбука они ходят</span><button class="btn">Привязать →</button><span class="pin">2</span></div>
+      <div class="box d"><span class="n">2</span><span>отказа 403 за сутки</span><span class="hint">lore-mcp-ci → release_new</span><button class="btn">Почему →</button><span class="pin">3</span></div>
+      <div class="box w"><span class="n">1</span><span>человек без проектов</span><span class="hint">учётка есть, ролей нет</span><button class="btn">Подключить →</button></div>
+      <div class="box ok"><span class="n">8</span><span>агентов с harness</span><span class="hint">все из реестра</span></div>
+    </div>
+    <h3>Быстрый старт <span class="pin">4</span></h3>
+    <div class="bar">
+      <button class="btn pri">＋ Подключить человека</button>
+      <button class="btn pri">＋ Новый ноутбук</button>
+      <button class="btn">Почему не видит?</button>
+      <button class="btn">Кто где</button>
+    </div>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Строка состояния системы.</b> Вход (auth) включён ли, жив ли Keycloak, сколько администрирующих учёток. Небезопасное состояние (вход выключен, KC недоступен) — красным и крупнее всего остального.<div class="tags"><span class="chip">источник: /lore/admin/state</span><span class="chip">UC-C1</span></div></div></li>
+    <li><span class="pin">2</span><div><b>Карточки «требует внимания».</b> Только ненулевые проблемы. Число — кнопка: ведёт в нужный экран уже с фильтром («агенты без машины»).<div class="tags"><span class="chip">agent_owners</span><span class="chip">role_matrix</span></div></div></li>
+    <li><span class="pin">3</span><div><b>Отказы доступа.</b> Сколько 403 получили агенты за сутки; клик — в «Почему не видит» с уже выбранным агентом и инструментом.<div class="tags"><span class="chip">mcp_failures</span><span class="chip">UC-3</span></div></div></li>
+    <li><span class="pin">4</span><div><b>Быстрый старт — четыре частых намерения.</b> Остальное — в меню слева. Любой сценарий ≤ 3 нажатий от входа.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-1 ═══════════════ -->
+<section class="scr" data-id="uc1" data-grp="Люди и агенты" data-t="Подключить человека" data-st="□">
+  <h2>Подключить человека · UC-1</h2>
+  <p class="lead">Мастер от «хочу пустить соавтора» до «он видит свои проекты». Главная экономия — проекты и роли копируются «как у похожего», а не раздаются по одной.</p>
+  <div class="meta"><span class="chip dash">□ прототип</span><span class="chip">UC-ADMIN-PERSON-ADD</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-05</span></div>
+  <div class="mock">
+    <div class="steps"><span class="done">Учётка</span><span class="cur">Проекты</span><span>Роль</span><span>Проверка</span><span>Руками</span><span class="pin">1</span></div>
+    <div class="grid2">
+      <div class="box"><h4>Шаг 1 · учётка в Keycloak <span class="pin">2</span></h4>
+        <div class="inp">✉ anna@…</div>
+        <p><span class="chip ok">найдена</span> <span class="mono">sub 7c1e…</span> — вход возможен</p>
+        <p class="hint">Не найдена → кнопка «Завести в Keycloak» (ждёт сервер), либо подсказка: где завести руками.</p>
+      </div>
+      <div class="box"><h4>Шаг 2 · проекты «как у…» <span class="pin">3</span></h4>
+        <div class="inp">как у: <b>volva</b> ▾</div>
+        <ul class="check" style="margin-top:6px">
+          <li><span class="ic">☑</span>NooriUta/UnlimitedLORE<span class="where role editor">editor</span></li>
+          <li><span class="ic">☑</span>AIDA/miniLORE<span class="where role editor">editor</span></li>
+          <li><span class="ic">☐</span>NooriUta/volva<span class="where role owner">owner</span></li>
+        </ul>
+        <p class="hint">Снимите галочку — проект не копируется. Роль можно сменить кликом по чипу.</p>
+      </div>
+      <div class="box"><h4>Шаг 4 · что изменится <span class="pin">4</span></h4>
+        <div class="diff"><div class="a">+ anna · UnlimitedLORE · editor</div><div class="a">+ anna · miniLORE · editor</div><div class="muted">  realm-роль: lore-user (уже есть)</div></div>
+        <p><button class="btn pri">Применить 2 изменения</button></p>
+      </div>
+      <div class="box"><h4>Шаг 5 · осталось руками <span class="pin">5</span></h4>
+        <ul class="check">
+          <li><span class="ic">🔑</span><div>Выдать пароль лично<div class="hint">админка его не видит и не пересылает</div></div></li>
+          <li><span class="ic">⎇</span><div>Forgejo: доступ к репо<div class="hint">если не забрано в «Внешние системы»</div></div><a class="where" href="#ext">→</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Полоса шагов.</b> Видно, где вы и сколько осталось. Шаги можно пройти назад, состояние мастера — в адресе.</div></li>
+    <li><span class="pin">2</span><div><b>Учётка.</b> Ищем по почте/логину в Keycloak. Найдена — показываем sub. Не найдена — «завести» (сервер пока умеет только проверить) или подсказка, где завести вручную.<div class="tags"><span class="chip">user_project_roles</span><span class="chip w">заведение в KC — ждёт сервер</span></div></div></li>
+    <li><span class="pin">3</span><div><b>Копия «как у похожего».</b> Выбираете человека с похожей работой — его проекты и роли предлагаются галочками. Это то, на чём ушли часы: раньше роли раздавались по одной.<div class="tags"><span class="chip">role_matrix</span></div></div></li>
+    <li><span class="pin">4</span><div><b>Дифф до применения.</b> Зелёное — добавится. Одна кнопка на всю пачку; после — «Отменить» 10 секунд и одна запись в журнале на пачку.<div class="tags"><span class="chip">POST /lore/user/role/batch (dry_run, undo)</span></div></div></li>
+    <li><span class="pin">5</span><div><b>«Осталось руками».</b> То, что админка сделать не может, — отдельными строками со ссылкой туда, где это делается.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-2 ═══════════════ -->
+<section class="scr" data-id="uc2" data-grp="Люди и агенты" data-t="Дать человеку агента" data-st="⏳">
+  <h2>Дать человеку агента · UC-2</h2>
+  <p class="lead">Профиль агента выбирается словами («читает всё, пишет задачи и статусы»), а не набором ролей. Агент видит проекты владельца — раздавать ему проекты отдельно не нужно.</p>
+  <div class="meta"><span class="chip w">⏳ ждёт сервер</span><span class="chip">UC-ADMIN-AGENT-GIVE</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-12</span></div>
+  <div class="mock">
+    <div class="steps"><span class="done">Чей</span><span class="done">Профиль</span><span class="cur">Секрет</span><span>Проверка</span></div>
+    <div class="grid2">
+      <div class="box"><h4>Профиль словами <span class="pin">1</span></h4>
+        <ul class="check">
+          <li><span class="ic">◉</span><div><b>Разработчик</b><div class="hint">читает всё, пишет задачи, статусы, PR-связи</div></div></li>
+          <li><span class="ic">○</span><div>Тестировщик<div class="hint">задачи тестов, статусы, гейты качества</div></div></li>
+          <li><span class="ic">○</span><div>Маркетолог<div class="hint">BRAGI, спеки, доки</div></div></li>
+        </ul>
+        <p class="hint">Проекты: <b>наследует от владельца (5)</b> — менять не нужно.</p>
+      </div>
+      <div class="box"><h4>Секрет — показан один раз <span class="pin">2</span></h4>
+        <div class="code">lore_sk_••••••••••••••••3f9a   <button class="btn">копировать</button></div>
+        <p class="hint">Закроете окно — секрет больше не покажется, только перевыпуск.</p>
+        <h4 style="margin-top:8px">Готовый .mcp.json <span class="pin">3</span></h4>
+        <div class="code">{ "mcpServers": { "aida-lore": { "url": "https://lore…/mcp", "headers": { "Authorization": "Bearer …" } } } }</div>
+      </div>
+      <div class="box"><h4>Проверка <span class="pin">4</span></h4>
+        <p><span class="chip i">◐ ждём первый вызов…</span></p>
+        <p class="hint">Как только агент обратится к LORE — здесь появится «✓ 14:02 query_slice tasks_of_sprint».</p>
+      </div>
+    </div>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Профиль, а не роли.</b> Три–четыре понятных профиля вместо матрицы прав. Под капотом — делегирование по SPEC-RBAC-OMILORE-AGENTS.<div class="tags"><span class="chip">/lore/admin/access/agents</span></div></div></li>
+    <li><span class="pin">2</span><div><b>Секрет один раз.</b> Как у GitHub-токенов: показали, скопировали, закрыли. Повторно не показывается — только «перевыпустить» (UC-6).</div></li>
+    <li><span class="pin">3</span><div><b>Готовый конфиг.</b> Копируется целиком, руками ничего не собирать.</div></li>
+    <li><span class="pin">4</span><div><b>Проверка «заработало».</b> Мастер не заканчивается на «выдано» — он ждёт первый вызов агента и показывает его.<div class="tags"><span class="chip">mcp_connections</span><span class="chip w">выдача секрета из панели — ждёт сервер</span></div></div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-7 ═══════════════ -->
+<section class="scr" data-id="uc7" data-grp="Люди и агенты" data-t="Новый ноутбук" data-st="⏳">
+  <h2>Новый ноутбук — отдельная учётка под Claude · UC-7</h2>
+  <p class="lead">Ваши слова: «я купил новый ноут, нужно там завести отдельную учётку под Claude, вчера мучались часа 3». Здесь это один мастер: имя машины → агент машины сразу наследует ваши права → команда для вставки → проверка → чек-лист остального.</p>
+  <div class="meta"><span class="chip w">⏳ ждёт сервер: машина агента</span><span class="chip">UC-ADMIN-NEW-MACHINE</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-16</span></div>
+  <div class="mock">
+    <div class="steps"><span class="done">Машина</span><span class="done">Агент</span><span class="cur">Подключить</span><span>Проверка</span><span>Остальное</span></div>
+    <div class="grid2">
+      <div class="box"><h4>Имя машины <span class="pin">1</span></h4>
+        <div class="inp">💻 <b>huawei-matebook</b></div>
+        <p class="hint">Имя занято другой машиной → отказ сразу, с подсказкой, чья она.</p>
+        <dl class="kv"><dt>агент</dt><dd class="mono">minilore-link-huawei-matebook</dd><dt>владелец</dt><dd>вы</dd><dt>harness</dt><dd>Claude ▾</dd><dt>проекты</dt><dd>как у вас (5) — наследует</dd></dl>
+      </div>
+      <div class="box"><h4>Вставить на новой машине <span class="pin">2</span></h4>
+        <div class="code">claude mcp add aida-lore --transport http https://lore…/mcp --header "Authorization: Bearer lore_sk_…"</div>
+        <p><button class="btn">копировать команду</button> <button class="btn">скачать .mcp.json</button></p>
+      </div>
+      <div class="box"><h4>Проверка <span class="pin">3</span></h4>
+        <ul class="check">
+          <li><span class="ic" style="color:var(--suc)">✓</span>первый вызов с этой машины · 14:07</li>
+          <li><span class="ic" style="color:var(--suc)">✓</span>проект по умолчанию тот же: UnlimitedLORE</li>
+        </ul>
+      </div>
+      <div class="box"><h4>Остальное — по строке со статусом <span class="pin">4</span></h4>
+        <ul class="check">
+          <li><span class="ic" style="color:var(--suc)">✓</span>LORE MCP</li>
+          <li><span class="ic" style="color:var(--wrn)">!</span><div>Forgejo: ключ / tea login<div class="hint">tea login add --name seidr --url https://git.seidrstudio.pro</div></div><button class="where btn">копировать</button></li>
+          <li><span class="ic" style="color:var(--wrn)">!</span><div>minilore-link (канал до телефона)<div class="hint">распаковать дистрибутив, указать имя машины</div></div></li>
+          <li><span class="ic muted">?</span><div>Секреты (Infisical)<div class="hint">не смогли проверить — нет доступа из LORE</div></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Машина = агент с полем machine_id.</b> Отдельной сущности «машина» нет (ADR-MINILORE-007). Агент машины получает ваши проекты по наследованию — <b>ни одного вопроса о ролях</b>. Второй ноутбук — те же шаги.<div class="tags"><span class="chip">POST /lore/actor/owner (machine_id)</span><span class="chip w">сервер делает сейчас</span></div></div></li>
+    <li><span class="pin">2</span><div><b>Одна команда.</b> Готовая строка для <span class="mono">claude mcp add</span> и файл <span class="mono">.mcp.json</span> — на выбор.</div></li>
+    <li><span class="pin">3</span><div><b>Проверка с машины.</b> Мастер ждёт первый вызов именно с этого агента и сверяет проект по умолчанию.<div class="tags"><span class="chip">mcp_connections</span></div></div></li>
+    <li><span class="pin">4</span><div><b>Чек-лист «остальное».</b> Каждая внешняя вещь — отдельной строкой: ✓ проверено, ! нужно сделать (с готовой командой), ? не смогли проверить. Это и есть «мини-подсказки, что сделать в другом месте».</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-8 ═══════════════ -->
+<section class="scr" data-id="uc8" data-grp="Люди и агенты" data-t="Кто где" data-st="✓">
+  <h2>Кто где · UC-8</h2>
+  <p class="lead">Ваши слова: «фокус на в скольких человек участвует, и со стороны проекта — кто ты в нём и кто в нём твои агенты». Две стороны одной таблицы, переключатель в адресе.</p>
+  <div class="meta"><span class="chip ok">✓ в develop · PR #1024</span><span class="chip">UC-ADMIN-WHO-WHERE</span><span class="chip">/admin?adm=who</span></div>
+  <div class="mock">
+    <div class="bar"><span class="chip i">Люди</span><span class="chip">Проекты</span><span class="pin">1</span></div>
+    <div class="tblw"><table>
+      <thead><tr><th>Человек</th><th>Проектов</th><th>Роль в каждом</th><th>Его агенты</th></tr></thead>
+      <tbody>
+        <tr><td><b>omiloreadmin</b> <span class="chip i">вы</span></td><td class="mono">5 <span class="pin">2</span></td><td><span class="role owner">UnlimitedLORE · owner</span> <span class="role owner">miniLORE · owner</span> <span class="muted">+3</span></td><td class="mono">lore-mcp-ci, minilore-link-desk, +5 <span class="pin">3</span></td></tr>
+        <tr><td><b>volva</b></td><td class="mono">2</td><td><span class="role editor">UnlimitedLORE · editor</span> <span class="role owner">volva · owner</span></td><td class="mono">vasilisk</td></tr>
+        <tr><td><b>demo</b></td><td class="mono">1</td><td><span class="role reader">UnlimitedLORE · reader</span></td><td class="muted">—</td></tr>
+      </tbody></table></div>
+    <p><span class="chip w dash">агенты без владельца: 1 — kimi-test</span> <span class="pin">4</span></p>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Люди / Проекты.</b> «Люди» — от человека к проектам; «Проекты» — от проекта к людям, у смотрящего пометка «вы: роль».</div></li>
+    <li><span class="pin">2</span><div><b>Число проектов</b> — первым, крупно: отвечает на «в скольких участвует».<div class="tags"><span class="chip">role_matrix</span></div></div></li>
+    <li><span class="pin">3</span><div><b>Его агенты.</b> Агент видит все проекты своего владельца, поэтому в проекте показаны агенты каждого участника.<div class="tags"><span class="chip">agent_owners</span></div></div></li>
+    <li><span class="pin">4</span><div><b>Не теряем молча.</b> Агент, чей владелец не нашёлся среди людей, — отдельной плашкой. Если агентов не удалось прочитать — люди и роли всё равно видны, причина написана.</div></li>
+  </ol>
+  <div class="foot">Дальше: из любой строки — «почему так?» (UC-3) и «поправить» (UC-1 / UC-4). Пока не подключено.</div>
+</section>
+
+<!-- ═══════════════ АГЕНТЫ ═══════════════ -->
+<section class="scr" data-id="agents" data-grp="Люди и агенты" data-t="Агенты" data-st="✓">
+  <h2>Агенты: harness и машина</h2>
+  <p class="lead">Ваши слова: «данные по harness нужны уже вчера». Каждый агент: чей, на чём работает (harness), с какой машины.</p>
+  <div class="meta"><span class="chip ok">✓ harness в develop · #999 #1001 #1006</span><span class="chip i">◐ машина — S7B-16</span><span class="chip">/admin?adm=agents</span></div>
+  <div class="mock">
+    <div class="bar"><span class="chip">все 9</span><span class="chip w dash">без harness 1</span><span class="chip w dash">без машины 3</span><span class="pin">1</span></div>
+    <div class="tblw"><table>
+      <thead><tr><th>Агент</th><th>Владелец</th><th>Harness</th><th>Машина</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">lore-mcp-ci</td><td>omiloreadmin</td><td><span class="chip">Claude ▾</span> <span class="pin">2</span></td><td class="mono">ci-server</td></tr>
+        <tr><td class="mono">vasilisk</td><td>volva</td><td><span class="chip">Codex ▾</span></td><td><span class="chip w dash">не привязана ▾</span> <span class="pin">3</span></td></tr>
+        <tr><td class="mono">kimi-dash</td><td>omiloreadmin</td><td><span class="chip">Kimi ▾</span></td><td class="mono">desk</td></tr>
+        <tr><td class="mono">new-agent</td><td>omiloreadmin</td><td><span class="chip w dash">не задан ▾</span></td><td><span class="chip w dash">не привязана ▾</span></td></tr>
+      </tbody></table></div>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Фильтры-чипы с числами.</b> «Без harness», «без машины» — сразу видно, что не заполнено.</div></li>
+    <li><span class="pin">2</span><div><b>Harness — выбор из закрытого реестра</b> (справочник harness), не разбор имени агента. Сохранение сразу, «—» сбрасывает.<div class="tags"><span class="chip">dictionary?dict_type=harness</span><span class="chip">POST /lore/actor/owner</span></div></div></li>
+    <li><span class="pin">3</span><div><b>Машина.</b> Тот же выпадающий выбор; две разные машины с одним именем сервер не даст. Агенты lore-mcp-* на одной машине делят имя законно.<div class="tags"><span class="chip w">machine_id — сервер делает сейчас</span></div></div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-3 ═══════════════ -->
+<section class="scr" data-id="uc3" data-grp="Доступ" data-t="Почему не видит" data-st="◐">
+  <h2>Почему не видит / 403 · UC-3</h2>
+  <p class="lead">Самый частый вопрос после включения входа. Три поля: кто, что, где → цепочка причин ровно так, как решает сервер → одна кнопка исправления.</p>
+  <div class="meta"><span class="chip i">◐ следующий — API сервера есть</span><span class="chip">UC-ADMIN-ACCESS-WHY</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-10</span></div>
+  <div class="mock">
+    <div class="bar"><span class="inp">кто: <b>lore-mcp-ci</b></span><span class="inp">что: <b>release_new</b></span><span class="inp">где: <b>AIDA/miniLORE</b></span><span class="pin">1</span></div>
+    <div class="box"><h4>Цепочка (как решает сервер) <span class="pin">2</span></h4>
+      <ul class="chain">
+        <li><span>1. Токен агента</span><span class="v" style="color:var(--suc)">✓ lore-mcp-ci</span></li>
+        <li><span>2. Владелец агента</span><span class="v" style="color:var(--suc)">✓ omiloreadmin</span></li>
+        <li><span>3. Проект в скоупе владельца</span><span class="v" style="color:var(--dng)">✗ miniLORE: нет роли</span></li>
+        <li><span>4. Семейство «release» в профиле</span><span class="v muted">не проверялось</span></li>
+      </ul>
+    </div>
+    <p style="margin-top:8px"><b style="color:var(--dng)">Итог: отказано на шаге 3.</b> <button class="btn pri">Дать omiloreadmin роль editor в miniLORE</button> <span class="pin">3</span></p>
+    <p class="muted">Обратный вопрос: <a href="#">кто видит AIDA/miniLORE?</a> <span class="pin">4</span></p>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Кто / что / где.</b> Заполняется сам, если пришли из карточки 403 на главной.</div></li>
+    <li><span class="pin">2</span><div><b>Цепочка сервера.</b> Не «правила вообще», а прогон конкретного запроса: каждое звено ✓/✗, после первого ✗ — «не проверялось».<div class="tags"><span class="chip">/lore/admin/access</span><span class="chip">mcp_failures</span></div></div></li>
+    <li><span class="pin">3</span><div><b>Исправление одной кнопкой</b> — с диффом и «Отменить». Если исправление опасное (выдать owner) — подтверждение вводом логина.</div></li>
+    <li><span class="pin">4</span><div><b>Обратный вопрос</b> «кто видит проект X» — тот же экран, развёрнутый наоборот.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-4 ═══════════════ -->
+<section class="scr" data-id="uc4" data-grp="Доступ" data-t="Отключить человека" data-st="□">
+  <h2>Отключить человека · UC-4</h2>
+  <p class="lead">Уход или компрометация. Сначала видно всё, что за человеком числится, потом снимается одной пачкой — и одной пачкой откатывается.</p>
+  <div class="meta"><span class="chip dash">□ прототип</span><span class="chip">UC-ADMIN-PERSON-OFF</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-13</span></div>
+  <div class="mock">
+    <div class="grid2">
+      <div class="box"><h4>За anna числится <span class="pin">1</span></h4>
+        <ul class="check"><li><span class="ic">👤</span>учётка Keycloak</li><li><span class="ic">▦</span>роли в 2 проектах</li><li><span class="ic">🤖</span>1 агент · 1 активный секрет</li></ul>
+      </div>
+      <div class="box"><h4>Что изменится <span class="pin">2</span></h4>
+        <div class="diff"><div class="r">− anna · UnlimitedLORE · editor</div><div class="r">− anna · miniLORE · editor</div><div class="r">− секрет агента anna-claude (отозван)</div></div>
+        <p class="hint">Для подтверждения введите логин: <span class="inp">anna</span></p>
+        <p><button class="btn dng">Снять 3</button></p>
+      </div>
+    </div>
+    <div class="toast" style="margin-top:8px">Снято 3 · <button class="btn">Отменить (10 с)</button> <span class="pin">3</span></div>
+    <p class="hint">Для последней администрирующей учётки кнопка недоступна: «это последний админ — сначала назначьте другого». <span class="pin">4</span></p>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Инвентаризация до действия.</b> Учётка, роли, агенты, секреты — ничего не остаётся «висеть».</div></li>
+    <li><span class="pin">2</span><div><b>Дифф и ввод логина.</b> Красное — уйдёт. Подтверждение именем, а не «ОК».<div class="tags"><span class="chip">POST /lore/user/role/batch</span></div></div></li>
+    <li><span class="pin">3</span><div><b>Отменить пачкой.</b> В журнале — одна запись с раскрытием и откатом всей пачки.<div class="tags"><span class="chip">admin_actions</span></div></div></li>
+    <li><span class="pin">4</span><div><b>Защита «последний админ»</b> — блокирует сервер, а не подтверждение.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-6 ═══════════════ -->
+<section class="scr" data-id="uc6" data-grp="Доступ" data-t="Сменить секрет агента" data-st="□">
+  <h2>Сменить секрет агента без простоя · UC-6</h2>
+  <p class="lead">Новый секрет выпускается рядом со старым; когда агент начал ходить с новым — старый отзывается. Агент не падает посреди работы.</p>
+  <div class="meta"><span class="chip dash">□ прототип</span><span class="chip">UC-ADMIN-SECRET-ROTATE</span><span class="chip w">два секрета сразу — гипотеза, сервер не проверен</span></div>
+  <div class="mock">
+    <div class="steps"><span class="done">Новый выпущен</span><span class="cur">Агент перешёл?</span><span>Старый отозван</span><span class="pin">1</span></div>
+    <ul class="check">
+      <li><span class="ic" style="color:var(--suc)">✓</span>новый ••3f9a — последний вызов 14:12</li>
+      <li><span class="ic" style="color:var(--wrn)">!</span>старый ••81c0 — последний вызов 13:40 <button class="where btn dng">Отозвать старый</button></li>
+    </ul>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Три шага с проверкой между ними.</b> «Отозвать старый» доступен, только когда видно вызов с новым — иначе предупреждение «агент ещё на старом».<div class="tags"><span class="chip">mcp_connections (по профилю, S7B-07)</span></div></div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ МАТРИЦА ═══════════════ -->
+<section class="scr" data-id="mx" data-grp="Доступ" data-t="Матрица проект × люди" data-st="◐">
+  <h2>Матрица проект × люди</h2>
+  <p class="lead">Для массовых правок. Ячейка — чип роли, клик меняет; изменения копятся и применяются одной пачкой с диффом.</p>
+  <div class="meta"><span class="chip i">◐ в работе</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-11</span></div>
+  <div class="mock"><div class="tblw"><table>
+    <thead><tr><th>Проект</th><th>omiloreadmin</th><th>volva</th><th>anna</th><th>demo</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">UnlimitedLORE</td><td><span class="role owner">owner</span></td><td><span class="role editor">editor</span></td><td><span class="role editor">editor</span> <span class="pin">1</span></td><td><span class="role reader">reader</span></td></tr>
+      <tr><td class="mono">miniLORE</td><td><span class="role owner">owner</span></td><td><span class="role none">—</span></td><td><span class="role editor">editor</span></td><td><span class="role none">—</span></td></tr>
+      <tr><td class="mono">volva</td><td><span class="role editor">editor</span></td><td><span class="role owner">owner</span></td><td><span class="role none">—</span></td><td><span class="role none">—</span></td></tr>
+    </tbody></table></div>
+    <p><span class="chip w">изменений: 1</span> <button class="btn pri">Показать дифф и применить</button> <span class="pin">2</span></p>
+  </div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Клик по чипу</b> — меню owner / editor / reader / снять. Изменённая ячейка подсвечивается до применения.<div class="tags"><span class="chip">role_matrix</span></div></div></li>
+    <li><span class="pin">2</span><div><b>Одна пачка.</b> Сколько бы ячеек ни поменяли — один дифф, одно подтверждение, одна запись в журнале.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ UC-5 ═══════════════ -->
+<section class="scr" data-id="uc5" data-grp="Проекты" data-t="Проект как у похожего" data-st="□">
+  <h2>Завести проект и раздать доступ «как у похожего» · UC-5</h2>
+  <p class="lead">Новый проект: зарегистрировать репозиторий, скопировать людей и роли с похожего проекта, проверить дифф.</p>
+  <div class="meta"><span class="chip dash">□ прототип</span><span class="chip">UC-ADMIN-PROJECT-ADD</span></div>
+  <div class="mock"><div class="grid2">
+    <div class="box"><h4>Репозиторий <span class="pin">1</span></h4><div class="inp">AIDA/<b>new-service</b></div><p><span class="chip ok">есть в Forgejo</span></p></div>
+    <div class="box"><h4>Люди как в… <span class="pin">2</span></h4><div class="inp">как в: <b>AIDA/miniLORE</b> ▾</div>
+      <div class="diff" style="margin-top:6px"><div class="a">+ omiloreadmin · owner</div><div class="a">+ anna · editor</div></div></div>
+  </div></div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Проверка в Forgejo.</b> Есть ли такой репозиторий; если нет — подсказка, как завести (или кнопка, если заберём учётки Forgejo себе).<div class="tags"><span class="chip">project_new</span></div></div></li>
+    <li><span class="pin">2</span><div><b>Копия людей и ролей</b> с похожего проекта, галочками, с диффом.<div class="tags"><span class="chip">project_users</span><span class="chip">role/batch</span></div></div></li>
+  </ol>
+</section>
+
+<section class="scr" data-id="lang" data-grp="Язык графа" data-t="Справочники и правила" data-st="◐">
+  <h2>Справочники и правила CLAUDE</h2>
+  <p class="lead">Язык, на котором граф говорит о себе: статусы, типы, harness, теги; и правила CLAUDE.md, которые видят агенты.</p>
+  <div class="meta"><span class="chip i">◐ S7B-06 правила: дифф и синхронизация</span><span class="chip dash">□ справочники — перенос из v1</span></div>
+  <div class="mock"><div class="grid2">
+    <div class="box"><h4>Справочник · task_status <span class="pin">1</span></h4>
+      <ul class="check"><li><span class="ic" style="color:var(--suc)">●</span>done · 412 использований</li><li><span class="ic" style="color:var(--inf)">●</span>in_progress · 38</li><li><span class="ic" style="color:var(--wrn)">●</span>ready_for_deploy · 6</li></ul>
+      <p class="hint">Цвет и иконка — с превью; ключ не правится.</p></div>
+    <div class="box"><h4>Правила CLAUDE <span class="pin">2</span></h4>
+      <div class="diff"><div class="muted">файл ↔ LORE: расходятся в 1 месте</div><div class="r">− старая строка</div><div class="a">+ новая строка из файла</div></div></div>
+  </div></div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>«Сколько используется» до правки.</b> Вывод значения из оборота показывает, сколько записей его несут.</div></li>
+    <li><span class="pin">2</span><div><b>Дифф файла и снимка.</b> Источник истины — файлы; панель показывает, где снимок отстал.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ ВНЕШНИЕ ═══════════════ -->
+<section class="scr" data-id="ext" data-grp="Система" data-t="Внешние системы" data-st="□">
+  <h2>Внешние системы: что здесь, что там</h2>
+  <p class="lead">Ваши слова: «свести к удобной настройке через один интерфейс, где допустимо, и мини-подсказкам, что сделать в другом месте… не бегать между тремя интерфейсами… учётки Forgejo хорошо бы тоже забрать себе». Таблица ниже — по каждой операции: делается в админке или с подсказкой там.</p>
+  <div class="meta"><span class="chip dash">□ прототип</span><span class="chip">FEAT-ADMIN-ONE-INTERFACE</span></div>
+  <div class="mock"><div class="tblw"><table>
+    <thead><tr><th>Операция</th><th>Где делается</th><th>Подсказка, если «там»</th></tr></thead>
+    <tbody>
+      <tr><td>Роли в проектах LORE</td><td><span class="chip ok">здесь</span></td><td class="muted">—</td></tr>
+      <tr><td>Агент, harness, машина</td><td><span class="chip ok">здесь</span></td><td class="muted">—</td></tr>
+      <tr><td>Учётка человека в Keycloak — проверить</td><td><span class="chip ok">здесь</span></td><td class="muted">—</td></tr>
+      <tr><td>Учётка человека в Keycloak — завести <span class="pin">1</span></td><td><span class="chip w">там · пока</span></td><td>Keycloak → realm lore → Users → Add user; пароль выдать лично</td></tr>
+      <tr><td>Секрет агента — выпустить / отозвать</td><td><span class="chip w">здесь · ждёт сервер</span></td><td class="muted">—</td></tr>
+      <tr><td>Секреты сервисов (Infisical) <span class="pin">2</span></td><td><span class="chip">там</span></td><td>Infisical → проект lore → правка → <b>Commit</b> черновика (без него не применится)</td></tr>
+      <tr><td>Учётка и доступ к репо Forgejo <span class="pin">3</span></td><td><span class="chip i">здесь · предлагаю</span></td><td>сейчас: Forgejo → Site Administration → Users; репо → Settings → Collaborators</td></tr>
+      <tr><td>Вход в git с новой машины</td><td><span class="chip">там</span></td><td>tea login add · SSH-порт 2222, не 22</td></tr>
+    </tbody></table></div></div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Keycloak.</b> Сейчас LORE умеет только проверить учётку. Заведение из админки — просьба к серверу; до неё — подсказка ровно с путём по меню.</div></li>
+    <li><span class="pin">2</span><div><b>Infisical остаётся «там»</b> — секреты сервисов не должны проходить через панель. Подсказка напоминает про Commit черновика — частая ловушка.</div></li>
+    <li><span class="pin">3</span><div><b>Forgejo — забрать себе.</b> Учётки и коллабораторы через API Forgejo из админки: одна форма вместо Site Administration. Нужен «да» владелицы и серверный прокси.</div></li>
+  </ol>
+</section>
+
+<!-- ═══════════════ СИСТЕМА / ЯЗЫК ═══════════════ -->
+<section class="scr" data-id="sys" data-grp="Система" data-t="Состояние, MCP, журнал" data-st="◐">
+  <h2>Состояние, подключения MCP, журнал</h2>
+  <p class="lead">Служебные экраны. Свёрнуты, пока не нужны; открываются из главной по карточке или из меню.</p>
+  <div class="meta"><span class="chip i">◐ S7B-07 MCP · S7B-08 флаги и версия</span><span class="chip dash">□ S7B-02 журнал</span></div>
+  <div class="mock"><div class="grid2">
+    <div class="box"><h4>Подключения MCP <span class="pin">1</span></h4>
+      <ul class="check"><li><span class="ic" style="color:var(--suc)">●</span>lore-mcp-ci · 2 мин назад</li><li><span class="ic" style="color:var(--wrn)">●</span>vasilisk · 3 ч назад</li><li><span class="ic muted">○</span>kimi-test · не подключался</li></ul></div>
+    <div class="box"><h4>Журнал <span class="pin">2</span></h4>
+      <ul class="check"><li><span class="ic">▸</span><div>14:20 omiloreadmin · пачка: 3 роли anna<div class="hint">раскрыть · откатить пачку</div></div></li><li><span class="ic">▸</span><div>13:02 omiloreadmin · harness vasilisk → Codex</div></li></ul></div>
+    <div class="box"><h4>Версия и флаги <span class="pin">3</span></h4><dl class="kv"><dt>LORE</dt><dd class="mono">v1.17.6</dd><dt>вход</dt><dd>включён</dd><dt>news v2</dt><dd>вкл</dd></dl></div>
+  </div></div>
+  <ol class="notes">
+    <li><span class="pin">1</span><div><b>Здоровье по профилю агента</b>, а не по сессии: «когда последний раз ходил». Не подключался — серым, а не «ошибка».<div class="tags"><span class="chip">mcp_connections</span></div></div></li>
+    <li><span class="pin">2</span><div><b>Кто, что, когда.</b> При нескольких равных соавторах — единственный способ понять, кто перекрасил статус. Пачка — одной строкой с раскрытием.<div class="tags"><span class="chip">admin_actions</span></div></div></li>
+    <li><span class="pin">3</span><div><b>Версия и флаги</b> — то, что сейчас в «Системе» v1.</div></li>
+  </ol>
+</section>
+
+
+
+</main>
+</div>
+
+<script>
+// Навигация: группы по смыслу и риску; выбранный экран — в адресе (#id).
+const RISK = { 'Доступ': '<span class="chip d" style="padding:0 6px">риск</span>' };
+const ST = { '✓': 'ok', '◐': 'i', '⏳': 'w', '□': 'dash', '—': '' };
+const scrs = [...document.querySelectorAll('section.scr')];
+const nav = document.getElementById('nav');
+const groups = {};
+scrs.forEach(s => (groups[s.dataset.grp] ??= []).push(s));
+for (const [g, list] of Object.entries(groups)) {
+  const div = document.createElement('div');
+  div.className = 'grp';
+  div.innerHTML = `<div class="gh">${g}${RISK[g] ? `<span class="risk">${RISK[g]}</span>` : ''}</div>` +
+    list.map(s => `<button data-go="${s.dataset.id}">${s.dataset.t}<span class="st chip ${ST[s.dataset.st] ?? ''}">${s.dataset.st}</span></button>`).join('');
+  nav.appendChild(div);
+}
+function show(id) {
+  if (!scrs.some(s => s.dataset.id === id)) id = 'map';
+  scrs.forEach(s => s.classList.toggle('on', s.dataset.id === id));
+  nav.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.go === id));
+}
+nav.addEventListener('click', e => { const b = e.target.closest('button[data-go]'); if (b) { location.hash = b.dataset.go; } });
+window.addEventListener('hashchange', () => { show(location.hash.slice(1)); window.scrollTo(0, 0); });
+show(location.hash.slice(1));
+document.getElementById('pins').addEventListener('change', e => document.body.classList.toggle('nopins', !e.target.checked));
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.7/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+const dark = !matchMedia('(prefers-color-scheme: light)').matches;
+mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'neutral', flowchart: { useMaxWidth: false },
+  themeVariables: { fontFamily: 'Manrope, sans-serif', fontSize: '13px' } });
+// Карта рисуется, даже если пользователь открыл другой экран: временно показываем секцию.
+const sec = document.querySelector('section[data-id="map"]');
+const wasOn = sec.classList.contains('on');
+sec.style.display = 'block';
+await mermaid.run({ querySelector: '.mermaid' });
+sec.style.display = '';
+if (!wasOn) sec.classList.remove('on');
+document.body.dataset.mermaid = 'done';
+</script>
+</body>
+</html>
