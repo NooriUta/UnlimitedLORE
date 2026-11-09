@@ -11,7 +11,10 @@ const ru = {
   'settings.loadFailed': 'Настройки не прочитались — умолчания за сохранённое не выдаём.',
   'settings.saveFailed': 'Не сохранилось — вернули прежнее значение.',
   'settings.saving': 'Сохраняем…',
-  'settings.stubNote': 'Хранится по контракту S2: пока сервер не готов — в этом браузере.',
+  // Надпись про ИСТОЧНИК показанных значений, а не про историю экрана
+  // (повторный CJM 09.11.2026: панель читала с сервера и писала «в этом
+  // браузере» — текст остался от времён заглушки).
+  'settings.serverNote': 'Хранится на сервере LORE: эти настройки одинаковы на всех ваших устройствах.',
   'settings.on': 'вкл',
   'settings.off': 'выкл',
   'settings.readNav.label': 'Меню при чтении записи',
@@ -65,7 +68,7 @@ const en: Record<keyof typeof ru, string> = {
   'settings.loadFailed': 'Settings could not be read — defaults are not shown as if they were saved.',
   'settings.saveFailed': 'Not saved — the previous value is back.',
   'settings.saving': 'Saving…',
-  'settings.stubNote': 'Stored per the S2 contract: until the server is ready — in this browser.',
+  'settings.serverNote': 'Stored on the LORE server: these settings are the same on all your devices.',
   'settings.on': 'on',
   'settings.off': 'off',
   'settings.readNav.label': 'Menu while reading a record',

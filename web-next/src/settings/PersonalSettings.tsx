@@ -70,7 +70,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
   return (
     <section className="settings" aria-labelledby="settings-title" aria-busy={busy}>
       <h3 id="settings-title" className="settings-title">{t(lang, 'settings.title')}</h3>
-      <p className="settings-note">{t(lang, busy ? 'settings.saving' : 'settings.stubNote')}</p>
+      <p className="settings-note">{t(lang, busy ? 'settings.saving' : 'settings.serverNote')}</p>
       {(state.warnings?.length ?? 0) > 0 && (
         // Сервер хранит значение, которого в v2 нет (например theme: system):
         // показываем умолчание и говорим об этом. Молча подменить значение
