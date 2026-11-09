@@ -425,4 +425,29 @@ class NewsV2EngineFixtureTest {
         assertEquals(rows, xml.split("<entry>", -1).length - 1);
         assertTrue(xml.contains("×3"), "свёрнутая по дню правка C несёт ×3");
     }
+
+    /**
+     * S7A-12 (UI «Новости», 09.11): фильтр «Кто» по конкретному человеку/агенту и
+     * счёт по оси who — как у остальных осей. Числа остальных метрик не меняются.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void whoAxisCountsAndFiltersByConcreteAuthor() {
+        assertTrue(NewsV2Engine.AXES.contains("who"), "who — ось группировки и фильтра");
+        Map<String, Object> all = engine().compute(NewsV2.Query.none());
+        Map<String, Object> byWho = (Map<String, Object>) ((Map<String, Object>)
+            ((Map<String, Object>) all.get("metrics")).get("counts")).get("by_who");
+        assertNotNull(byWho, "metrics.counts.by_who — счёт по конкретным авторам");
+        Map<String, Object> claude = (Map<String, Object>) byWho.get("agent:claude");
+        assertNotNull(claude, "серия агента на C видна по имени: " + byWho);
+        assertTrue(byWho.containsKey(NewsV2Engine.NOWHO), "автор неизвестен — своя группа, а не пропажа: " + byWho);
+
+        Map<String, Object> only = engine().compute(new NewsV2.Query(null, null, null, null, null, null, null, null,
+            "who", null, null, null, null, Set.of("agent:claude")));
+        List<Map<String, Object>> groups = (List<Map<String, Object>>) ((Map<String, Object>) only.get("groups")).get("list");
+        assertEquals(1, groups.size(), "фильтр who оставляет одного автора: " + groups);
+        assertEquals(claude.get("events"), ((Map<String, Object>) ((Map<String, Object>)
+            ((Map<String, Object>) only.get("metrics")).get("counts")).get("total")).get("events"),
+            "события под фильтром = счёт этого автора в by_who");
+    }
 }
