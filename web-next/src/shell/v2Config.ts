@@ -14,8 +14,19 @@ import { ICON_CANON } from '@seidr/kit';
 import { statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 
-/** Разделы меню v2 — они же id пунктов меню и ключи экранов. */
-export const V2_SECTIONS = ['sprint', 'task', 'adr', 'news', 'settings'] as const;
+/**
+ * Разделы меню v2 — они же id пунктов меню и ключи экранов.
+ *
+ * S4-V2-SECTIONS: было пять, стало тринадцать. Одиннадцать разделов v1 плюс
+ * «Новости» и «Настройки». Порядок внутри набора значения не имеет — он задан
+ * группами меню ниже (группы по смыслу, а не по таблицам БД).
+ */
+export const V2_SECTIONS = [
+  'sprint', 'task', 'milestone', 'release',
+  'adr', 'decision', 'spec', 'question',
+  'component', 'tech', 'feature',
+  'news', 'settings',
+] as const;
 export type V2Section = (typeof V2_SECTIONS)[number];
 
 type Category = KitConfig['statuses']['items'][number]['category'];
@@ -82,8 +93,21 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       groups: [
         // S4-23: «Новости» — первой группой: с них начинается день.
         { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', items: [item('news', ICON_CANON.sectionNews)] },
-        { id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)', items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask)] },
-        { id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)', items: [item('adr', 'scroll-quill')] },
+        // «Работа» — что делаем и когда: спринты, задачи, вехи, релизы.
+        {
+          id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)',
+          items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask), item('milestone', 'crossed-axes'), item('release', 'open-book')],
+        },
+        // «Знание» — почему так: ADR, решения, спеки, вопросы.
+        {
+          id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)',
+          items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('question', 'help')],
+        },
+        // «Устройство» — из чего система сделана: компоненты, технологии, фичи.
+        {
+          id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
+          items: [item('component', 'cog'), item('tech', 'gears'), item('feature', 'gift-of-knowledge')],
+        },
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
     },
@@ -92,6 +116,16 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       task: { title: t('shell.sec.task'), icon: ICON_CANON.sectionTask },
       adr: { title: t('shell.sec.adr'), icon: 'scroll-quill' },
       news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
+      // S4-V2-SECTIONS: виды записей новых разделов. Нужны палитре и
+      // «Недавнему» — без вида запись в них рисуется безымянной.
+      milestone: { title: t('shell.sec.milestone'), icon: 'crossed-axes' },
+      release: { title: t('shell.sec.release'), icon: 'open-book' },
+      decision: { title: t('shell.sec.decision'), icon: 'gavel' },
+      spec: { title: t('shell.sec.spec'), icon: 'scroll-unfurled' },
+      question: { title: t('shell.sec.question'), icon: 'help' },
+      component: { title: t('shell.sec.component'), icon: 'cog' },
+      tech: { title: t('shell.sec.tech'), icon: 'gears' },
+      feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge' },
     },
     statuses: {
       // Словарь из модели главнее: он данные, а рукописный список — умолчание.

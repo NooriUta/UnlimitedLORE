@@ -128,13 +128,28 @@ describe('D-01 · результат поиска открывает запис�
     expect(replaces.length).toBeGreaterThan(0);
   });
 
-  it('тип без раздела: причина названа словами, и никуда не уводит', async () => {
+  // Раньше примером «типа без раздела» была спека: раздела «Спеки» в v2 не
+  // существовало. Теперь он есть (S4-V2-SECTIONS), и пример переписан, а не
+  // удалён: правило «нет раздела — скажи словами» никуда не делось, просто
+  // спека из него вышла. Для проверки взят `doc` — документы в v2 раздела не
+  // имеют, и это видно по SECTION_OF_TYPE.
+  it('спека теперь уводит в свой раздел — он собран вместе с остальными', async () => {
     const { w } = mount(found('spec', 'SPEC-1', 'Спека'));
     openPalette();
     await search('спека');
     await act(async () => { fireEvent.click(screen.getByText('SPEC-1')); });
+    const p = new URLSearchParams(w.location.search);
+    expect(p.get('sec')).toBe('spec');
+    expect(p.get('open')).toBe('SPEC-1');
+  });
+
+  it('тип без раздела: причина названа словами, и никуда не уводит', async () => {
+    const { w } = mount(found('doc', 'DOC-1', 'Документ'));
+    openPalette();
+    await search('документ');
+    await act(async () => { fireEvent.click(screen.getByText('DOC-1')); });
     expect(w.location.search).not.toContain('open=');
     expect(document.body.textContent).toMatch(/раздел/i);
-    expect(document.body.textContent).toContain('spec');
+    expect(document.body.textContent).toContain('doc');
   });
 });

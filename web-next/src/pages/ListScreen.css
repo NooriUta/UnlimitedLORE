@@ -36,3 +36,36 @@
 }
 
 
+
+/*
+ * «Паспорта у этого типа ещё нет» (S4-V2-SECTIONS) — ответ на щелчок по строке
+ * в разделе без паспорта. Намеренно спокойный, не как ошибка: ошибки здесь нет,
+ * возможности нет. Цвета и кегли — токенами, как везде (STYLE-01).
+ */
+.list-screen__nopassport {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap);
+  padding: calc(var(--gap) * 2);
+  color: var(--t2);
+}
+
+.list-screen__nopassport-head {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--t1);
+}
+
+.list-screen__nopassport-id {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--t2);
+}
+
+.list-screen__nopassport-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--t3);
+}
