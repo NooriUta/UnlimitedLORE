@@ -184,7 +184,17 @@ const RECENT_LIMIT = 8;
  * у зоны, которую можно тянуть без предела, «сломано» и «я так потянула»
  * выглядят одинаково.
  */
-const SIDE_W = { def: 232, min: 168, max: 420 };
+const SIDE_W = {
+  def: 232,
+  min: 168,
+  max: 420,
+  /** Ширина рейки иконок — то же число, что у трека рейки в seidr.css. */
+  rail: 56,
+  /** Уже этого подписи не сжимаются, а честно исчезают: становится рейка. */
+  toRail: 140,
+  /** Уже этого и иконки не нужны — меню уходит в ушко. */
+  toHide: 70,
+};
 const TONES = new Set(['acc', 'suc', 'wrn', 'dng', 'inf']);
 
 /**
@@ -307,7 +317,7 @@ export function KitShell({
   const [readCollapsed, setReadCollapsed] = useState(false);
   // S4-30: ширина левого меню — личная, как ширина колонки списка, и так же
   // живёт в хранилище, а не в адресе: ссылка общая, ширина личная.
-  const [sideW, setSideW] = useState(() => zoneSize(storage, 'shell.side', SIDE_W.def));
+  const [sideW, setSideW] = useState(() => zoneSize(storage, 'shell.side', SIDE_W.def, { min: SIDE_W.rail, max: SIDE_W.max }));
   const navRef = useRef(nav);
   navRef.current = nav;
 
@@ -442,9 +452,10 @@ export function KitShell({
       : urlStateHref(urlWin, navParams);
   }, [keepParams, nav.item, nav.module, urlWin]);
 
-  const menu = (onPick?: () => void) => (
+  const menu = (onPick?: () => void, rail = false) => (
     <ShellMenu
       config={config}
+      rail={rail}
       lang={lang}
       nav={nav}
       recent={recent}
@@ -544,20 +555,37 @@ export function KitShell({
                 <GameIcon slug={ICON_CANON.ctlMenu} size={13} />
                 <span className="sk-shell__label">{menuModeLabel(lang, effMenuMode)}</span>
               </button>
-              {menu()}
+              {menu(undefined, effMenuMode === 'rail')}
             </div>
           )}
           {/* Граница меню и содержимого (S4-30, слова владелицы 09.11: «левое,
-              правое меню не имеет драг анд дроп мышкой»). Только у раскрытого
-              меню: у рейки ширина — это ширина иконки, у ушка колонки нет
-              вовсе, и ручка там обещала бы управление, которого нет. */}
-          {!narrow && !menuCollapsed && effMenuMode === 'open' && (
+              правое меню не имеет драг анд дроп мышкой»).
+              Граница есть и у рейки: уточнение владелицы того же дня — «не
+              только при полном развороте, это промежуточное состояние
+              resizable состояния», и до этого рейку она «ни разу не получила»,
+              потому что состояние жило только в кнопке-переключателе. Из рейки
+              без границы не выбраться мышью, поэтому там она тоже нужна.
+              У ушка колонки нет вовсе — туда возвращает само ушко. */}
+          {!narrow && !menuCollapsed && (
             <ResizeBorder
               zone="shell.side"
               className="sk-shell__resize"
-              size={sideW}
-              min={SIDE_W.min}
+              size={effMenuMode === 'rail' ? SIDE_W.rail : sideW}
+              // Минимум — ширина рейки, а не колонки: сжатая колонка с
+              // обрезанными подписями не состояние, а поломка. Ниже порога
+              // подписи честно исчезают, и остаётся рейка.
+              min={SIDE_W.rail}
               max={SIDE_W.max}
+              levels={{
+                rail: SIDE_W.toRail,
+                hide: SIDE_W.toHide,
+                onLevel: level => {
+                  // Возвращаясь из рейки, отдаём колонке читаемую ширину:
+                  // иначе «раскрыть» даст колонку шириной иконки.
+                  if (level === 'open' && sideW < SIDE_W.min) setSideW(SIDE_W.def);
+                  setMenuMode(level);
+                },
+              }}
               store={storage}
               onSize={setSideW}
               label={kitT(lang, 'kit.shell.sideWidth')}
@@ -590,6 +618,8 @@ export function KitShell({
 
 interface ShellMenuProps {
   config: KitConfig;
+  /** Меню в состоянии рейки: подписей нет, личные блоки — кнопкой с меню. */
+  rail?: boolean;
   lang: KitLang;
   nav: KitNav;
   recent: string[];
@@ -651,17 +681,76 @@ function Group({ title, tone, children, expanded, onToggle }: GroupProps) {
 }
 
 function ShellMenu({
-  config, lang, nav, recent, titles, views, collapsed, onToggleGroup, onItem, onView, onRecent, onSaveView, onRemoveView,
+  config, rail, lang, nav, recent, titles, views, collapsed, onToggleGroup, onItem, onView, onRecent, onSaveView, onRemoveView,
   itemHref, recordHref,
 }: ShellMenuProps) {
   // Раскрыты ли все виды (S9-12). Местное: это способ дотянуться до своего
   // вида, а не состояние, которым делятся ссылкой.
   const [allViews, setAllViews] = useState(false);
   const { groups, myViews, recent: showRecent } = config.menu;
+  // S4-MENU-STATES, слова владелицы 09.11 с прода: «новости должны стоять до
+  // моих видов и недавних и при сворачивании левого меню». Какая группа идёт
+  // первой, называет ПРИЛОЖЕНИЕ (`pinTop`): kit не знает, что «новости»
+  // важнее личных блоков, и знать не должен (K-14).
+  const pinned = groups.filter(g => g.pinTop);
+  const rest = groups.filter(g => !g.pinTop);
+  const groupBlock = (g: (typeof groups)[number]) => {
+    const expanded = !collapsed.includes(g.id);
+    // Свёрнутая группа прячет пункты, кроме текущего: «где я» видно всегда.
+    const shown = expanded ? g.items : g.items.filter(i => i.id === nav.item);
+    return (
+      <Group key={g.id} title={g.title} tone={g.tone} expanded={expanded} onToggle={() => onToggleGroup(g.id)}>
+        {listId => (
+          <ul id={listId} className="sk-shell__list">
+            {shown.map(i => (
+              <li key={i.id}>
+                <a
+                  className="sk-shell__item"
+                  href={itemHref(i.id, i.view) ?? '#'}
+                  aria-current={i.id === nav.item ? 'page' : undefined}
+                  // В рейке подписи скрыты правилом CSS, поэтому имя действия
+                  // переносится в aria-label и подсказку: иначе пункт для
+                  // скринридера и для мыши остаётся безымянным значком.
+                  {...(rail ? { 'aria-label': i.title, title: i.title } : {})}
+                  onClick={navClick(() => onItem(i.id, i.view))}
+                >
+                  {i.icon && <GameIcon slug={i.icon} size={14} />}
+                  <span className="sk-shell__label">{i.title}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Group>
+    );
+  };
+  /**
+   * Личный блок в рейке — ОДНА кнопка с меню.
+   *
+   * Слова владелицы 09.11: «недавние должны быть кнопкой с меню, а не кучей
+   * непонятных значков». В рейке подписи скрыты общим правилом, и список
+   * недавних превращался в столбик одинаковых значков: пять записей выглядят
+   * как пять одинаковых кнопок, выбрать нельзя — возможность есть, а
+   * пользоваться нечем. Поэтому в рейке список складывается в кнопку, а
+   * записи показываются с НАЗВАНИЯМИ.
+   */
+  const railBlock = (title: string, icon: string, children: ReactNode) => (
+    <RailMenu title={title} icon={icon}>{children}</RailMenu>
+  );
+  /**
+   * Блок меню: в рейке — кнопка с меню, иначе прежняя группа.
+   *
+   * Одним приёмом на «Мои виды» и «Недавние»: «куча непонятных значков» была у
+   * обоих, и два разных лечения дали бы два разных поведения — то самое, из-за
+   * чего границы зон пришлось сводить в один механизм.
+   */
+  const personal = (title: string, icon: string, body: ReactNode) =>
+    (rail ? railBlock(title, icon, body) : <Group title={title}>{body}</Group>);
   return (
     <nav className="sk-shell__side-nav" aria-label={kitT(lang, 'kit.shell.sections')}>
-      {myViews && (
-        <Group title={kitT(lang, 'kit.shell.myViews')}>
+      {pinned.map(groupBlock)}
+      {myViews && personal(kitT(lang, 'kit.shell.myViews'), ICON_CANON.myViews, (
+        <>
           {views.length === 0 && <p className="sk-shell__note">{kitT(lang, 'kit.shell.myViewsEmpty')}</p>}
           <ul className="sk-shell__list">
             {(allViews ? views : views.slice(0, PINNED_VIEWS)).map(v => (
@@ -707,10 +796,10 @@ function ShellMenu({
               </button>
             </li>
           </ul>
-        </Group>
-      )}
-      {showRecent && (
-        <Group title={kitT(lang, 'kit.shell.recent')}>
+        </>
+      ))}
+      {showRecent && personal(kitT(lang, 'kit.shell.recent'), ICON_CANON.recent, (
+        <>
           {recent.length === 0 && <p className="sk-shell__note">{kitT(lang, 'kit.shell.recentEmpty')}</p>}
           <ul className="sk-shell__list">
             {recent.map(id => {
@@ -748,35 +837,66 @@ function ShellMenu({
               );
             })}
           </ul>
-        </Group>
-      )}
+        </>
+      ))}
       {groups.length === 0 && <p className="sk-shell__note">{kitT(lang, 'kit.shell.menuEmpty')}</p>}
-      {groups.map(g => {
-        const expanded = !collapsed.includes(g.id);
-        // Свёрнутая группа прячет пункты, кроме текущего: «где я» видно всегда.
-        const shown = expanded ? g.items : g.items.filter(i => i.id === nav.item);
-        return (
-        <Group key={g.id} title={g.title} tone={g.tone} expanded={expanded} onToggle={() => onToggleGroup(g.id)}>
-          {listId => (
-          <ul id={listId} className="sk-shell__list">
-            {shown.map(i => (
-              <li key={i.id}>
-                <a
-                  className="sk-shell__item"
-                  href={itemHref(i.id, i.view) ?? '#'}
-                  aria-current={i.id === nav.item ? 'page' : undefined}
-                  onClick={navClick(() => onItem(i.id, i.view))}
-                >
-                  {i.icon && <GameIcon slug={i.icon} size={14} />}
-                  <span className="sk-shell__label">{i.title}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          )}
-        </Group>
-        );
-      })}
+      {rest.map(groupBlock)}
     </nav>
+  );
+}
+
+/**
+ * Личный блок меню в рейке: кнопка, открывающая меню со НАЗВАНИЯМИ.
+ *
+ * Слова владелицы 09.11.2026 с прода: «недавние должны быть кнопкой с меню, а
+ * не кучей непонятных значков».
+ *
+ * Своё маленькое всплывающее меню, а не общий элемент: в kit их уже три
+ * (палитра статусов, «Ещё» у вкладок, и это), и общий поповер стоит завести
+ * отдельно — но ЗАВОДИТЬ его попутно с правкой по жалобе значило бы переписать
+ * три рабочих места ради четвёртого. Записано в задачу меню как долг.
+ */
+function RailMenu({ title, icon, children }: { title: string; icon: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  // Esc закрывает, щелчок мимо — тоже: меню, которое не закрывается, ловит
+  // клавиатуру и мышь на себя (находка P0 аудита навигации 08.11 про Esc).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setOpen(false); } };
+    const onDown = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
+  }, [open]);
+  return (
+    <div className="sk-shell__railmenu" ref={box}>
+      <button
+        type="button"
+        className="sk-shell__item sk-shell__railmenu-btn"
+        aria-label={title}
+        title={title}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen(o => !o)}
+      >
+        <GameIcon slug={icon} size={14} />
+      </button>
+      {open && (
+        // role="group", а не "menu": внутри ССЫЛКИ на записи и виды, а меню по
+        // ARIA обязано содержать menuitem. Объявить меню и положить внутрь
+        // ссылки значит соврать скринридеру о том, что это за элемент — и
+        // отнять у ссылок их поведение (новая вкладка, копировать адрес).
+        <div
+          className="sk-shell__railmenu-pop"
+          role="group"
+          aria-label={title}
+          onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
+        >
+          <p className="sk-shell__railmenu-head">{title}</p>
+          <div className="sk-shell__railmenu-body" onClick={() => setOpen(false)}>{children}</div>
+        </div>
+      )}
+    </div>
   );
 }
