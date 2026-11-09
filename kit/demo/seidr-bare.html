@@ -377,6 +377,63 @@
 </ul>
 <button type="button" class="sk-batch__undo" data-testid="kit-batch-undo">Отменить · 10 с</button>
 </section>
+<div class="sk-matrix">
+<div class="sk-matrix__scroll">
+<table class="sk-matrix__table">
+<caption class="sk-matrix__caption">Строки × Колонки</caption>
+<thead>
+<tr>
+<th scope="col" class="sk-matrix__corner">
+<span class="sk-matrix__axis">Строки</span>
+</th>
+<th scope="col" class="sk-matrix__colhead">
+<span class="sk-matrix__coltitle">Колонка один</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-colset-c1">задать всей колонке</button>
+</th>
+<th scope="col" class="sk-matrix__colhead">
+<span class="sk-matrix__coltitle">Колонка два</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-colset-c2">задать всей колонке</button>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row" class="sk-matrix__rowhead">
+<span class="sk-matrix__rowtitle">Первая строка</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-rowset-r1">задать всей строке</button>
+</th>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r1-c1" data-state="value" title="Значение один" aria-label="Первая строка · Колонка один: Значение один">
+<span class="sk-matrix__chip">Значение один</span>
+</button>
+</td>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r1-c2" data-state="none" title="значения нет" aria-label="Первая строка · Колонка два: значения нет">
+<span class="sk-matrix__mark">—</span>
+</button>
+</td>
+</tr>
+<tr>
+<th scope="row" class="sk-matrix__rowhead">
+<span class="sk-matrix__rowtitle">Вторая строка</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-rowset-r2">задать всей строке</button>
+</th>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r2-c1" data-state="unverified" title="не смогли проверить: источник не ответил" aria-label="Вторая строка · Колонка один: не смогли проверить: источник не ответил" aria-disabled="true">
+<span class="sk-matrix__mark">?</span>
+</button>
+</td>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r2-c2" data-state="forbidden" title="нет прав смотреть: нужна роль администратора" aria-label="Вторая строка · Колонка два: нет прав смотреть: нужна роль администратора" aria-disabled="true">
+<span class="sk-matrix__mark">×</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<span class="sk-matrix__axis sk-matrix__axis--cols">Колонки</span>
+</div>
 </section>
 <section class="bare__sec" data-kit="content">
 <h2 class="bare__h2">MD / HTML</h2>

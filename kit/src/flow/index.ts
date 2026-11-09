@@ -6,3 +6,4 @@ export { Steps, type StepDef, type StepsManualItem, type StepsProps } from './St
 export { SecretOnce, type SecretClipboard, type SecretOnceProps } from './SecretOnce';
 export { DiffPreview, type DiffCheck, type DiffKind, type DiffPreviewProps, type DiffRow } from './DiffPreview';
 export { BatchUndo, type BatchItemFail, type BatchResult, type BatchUndoProps } from './BatchUndo';
+export { Matrix, type MatrixAxis, type MatrixCellState, type MatrixChange, type MatrixOption, type MatrixProps } from './Matrix';

@@ -403,5 +403,16 @@
   "kitPage.flow.diffApplied": "The app received {n} row(s) — it then applies them as one batch with an undo window.",
   "kitPage.flow.batchHead": "The batch: undo window and partial failure",
   "kitPage.flow.batchFail": "One row did not apply",
-  "kitPage.flow.batchFailWhy": "the source refused: 409"
+  "kitPage.flow.batchFailWhy": "the source refused: 409",
+  "kitPage.flow.matrixHead": "The matrix: a value in the cell and the check state",
+  "kitPage.flow.matrixLead": "The matrix applies nothing: proposals go to the diff, and the diff to the batch with an undo window.",
+  "kitPage.flow.matrixRows": "Rows",
+  "kitPage.flow.matrixCols": "Columns",
+  "kitPage.flow.matrixR1": "First row",
+  "kitPage.flow.matrixR2": "Second row",
+  "kitPage.flow.matrixC1": "Column one",
+  "kitPage.flow.matrixC2": "Column two",
+  "kitPage.flow.matrixO1": "Value one",
+  "kitPage.flow.matrixO2": "Value two",
+  "kitPage.flow.matrixProposed": "Changes proposed: {n} — the diff shows them next."
 }

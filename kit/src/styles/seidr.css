@@ -2212,6 +2212,147 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-batch__badtime { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
 .sk-batch__undofail { margin: 0; color: var(--dng); font-size: var(--fs-sm); }
 
+/* ---------- Матрица «ось × ось» (K2-MATRIX) ----------
+   Состояние ячейки несут И знак, И цвет, И подпись: по цвету одному раздавать
+   доступы нельзя, а знак «—/?/×» читается даже в чёрно-белой распечатке.
+   Заголовки залипают: без них на десятой колонке ячейка безымянна. У бокса с
+   прокруткой — min-width: 0, иначе широкая матрица раздвинет страницу (S9-12). */
+.sk-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.sk-matrix__empty { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-matrix__scroll {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+}
+.sk-matrix__table { border-collapse: collapse; font-size: var(--fs-sm); }
+.sk-matrix__caption {
+  padding: 4px 8px;
+  color: var(--t2);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.sk-matrix__corner,
+.sk-matrix__colhead,
+.sk-matrix__rowhead {
+  position: sticky;
+  z-index: 1;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg2);
+  color: var(--t1);
+  font-weight: 400;
+  text-align: left;
+  white-space: nowrap;
+}
+.sk-matrix__corner { top: 0; left: 0; z-index: 2; }
+.sk-matrix__colhead { top: 0; }
+.sk-matrix__rowhead { left: 0; border-right: 1px solid var(--bd); }
+.sk-matrix__coltitle,
+.sk-matrix__rowtitle { display: block; color: var(--t1); }
+.sk-matrix__axis {
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-matrix__axis--cols { align-self: flex-end; }
+.sk-matrix__td { padding: 2px; border-bottom: 1px solid var(--bd); }
+.sk-matrix__cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), 44px);
+  min-height: max(var(--tap), 24px);
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-matrix__cell[aria-disabled='true'] { cursor: default; }
+.sk-matrix__cell:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__cell[data-state='value'] { border-color: color-mix(in srgb, var(--acc) 45%, var(--bd)); background: color-mix(in srgb, var(--acc) 10%, transparent); }
+.sk-matrix__cell[data-state='none'] { color: var(--t3); }
+.sk-matrix__cell[data-state='unverified'] { border-color: color-mix(in srgb, var(--wrn) 55%, transparent); background: color-mix(in srgb, var(--wrn) 12%, transparent); color: var(--wrn); }
+.sk-matrix__cell[data-state='forbidden'] { border-color: color-mix(in srgb, var(--inf) 55%, transparent); background: color-mix(in srgb, var(--inf) 12%, transparent); color: var(--inf); }
+.sk-matrix__chip { font-size: var(--fs-xs); }
+.sk-matrix__mark { font-family: var(--mono); }
+.sk-matrix__all {
+  min-height: max(var(--tap), 20px);
+  padding: 0 6px;
+  border: 1px dashed var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+.sk-matrix__all:hover { color: var(--t1); border-color: var(--acc); }
+.sk-matrix__all:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--acc);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+}
+.sk-matrix__opt {
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-matrix__opt.is-clear { border-style: dashed; color: var(--t2); }
+.sk-matrix__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__skipped { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+/* Узкий вид: список по выбранной строке, а не сжатая сетка. */
+.sk-matrix--narrow { gap: var(--gap); }
+.sk-matrix__pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.sk-matrix__pickbtn {
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg1);
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-matrix__pickbtn.is-on { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, transparent); color: var(--t1); }
+.sk-matrix__pickbtn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__list { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-matrix__listrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-width: 0;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-matrix__listtitle { min-width: 0; color: var(--t1); font-size: var(--fs-sm); }
+
 /* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
 .sk-shead {
   display: flex;
