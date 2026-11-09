@@ -75,14 +75,27 @@ describe('K-01 · валидатор конфига', () => {
     }
   });
 
-  it('цвет — только токен var(--…): сырой hex и неизвестный токен отбиваются', () => {
+  // Переписано 09.11 по SPRINT_UXR_S10_SEIDR_KIT/K-14. Раньше НЕИЗВЕСТНЫЙ
+  // токен был ошибкой наравне с сырым цветом — то есть kit решал, какие имена
+  // приложению позволено иметь, и это уже сработало против самой LORE
+  // (`--st-ready_for_deploy` был в теме, но не в списке валидатора).
+  //
+  // Теперь правило разделено: сырое значение — ошибка (правило владелицы
+  // «только токенами» остаётся), незнакомое имя токена — предупреждение, чтобы
+  // опечатку было видно, но своя тема приложению не запрещалась.
+  it('сырой цвет — ошибка; незнакомый токен — предупреждение, а не отказ', () => {
     const cfg = minimalConfig();
     cfg.statuses.items[0].color = '#ff0000';
     cfg.menu.groups[0].tone = 'var(--nope)';
     cfg.edges = { DEP: { label: 'зависит', color: 'red' } };
     const v = validateKitConfig(cfg);
+    // Сырые значения: hex и ключевое слово css.
     expect(v.errors.filter((e) => e.code === 'color-token').map((e) => e.path).sort()).toEqual([
-      'edges.DEP.color', 'menu.groups[0].tone', 'statuses.items[0].color',
+      'edges.DEP.color', 'statuses.items[0].color',
+    ]);
+    // Токен формой верный, но kit его не знает — это предупреждение.
+    expect(v.warnings.filter((e) => e.code === 'color-token-unknown').map((e) => e.path)).toEqual([
+      'menu.groups[0].tone',
     ]);
     expect(KIT_COLOR_TOKENS).toContain('acc');
   });
