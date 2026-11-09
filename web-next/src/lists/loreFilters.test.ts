@@ -1,5 +1,5 @@
 // SPRINT_UXR_S4_UI_SHELL_LISTS/S4-05 — фильтры списков LORE в v2: поля
-// фасетов (в т.ч. «Релиз» = release_ids слайса спринтов), иконки значений как
+// фасетов (в т.ч. «Релиз»), иконки значений как
 // в прототипе v4 и релиз задачи, унаследованный от её спринта (слайс задач
 // релиза не отдаёт — считаем на клиенте, без новой серверной колонки).
 import { describe, expect, it } from 'vitest';
@@ -13,7 +13,11 @@ const rec = (id: string, kind: string, fields: Record<string, unknown>): KitReco
 
 describe('поля фильтров LORE', () => {
   it('у спринтов и задач есть «Релиз»; ключи — fields.* слайса', () => {
-    expect(LORE_FILTER_FIELDS.release).toBe('fields.release_ids');
+    // 09.11: имена фасетов — по ключам ЗАПИСИ, а не столбцов слайса. Прежние
+    // 'fields.release_ids' / 'git_projects' / 'milestone_ids' в записи не
+    // существовали: sprintRecord пишет release / project / milestone. Экраны
+    // набором не пользовались, поэтому расхождение молчало — теперь набор один.
+    expect(LORE_FILTER_FIELDS.release).toBe('fields.release');
     expect(SPRINT_FILTERS).toContain(LORE_FILTER_FIELDS.release);
     expect(TASK_FILTERS).toContain(LORE_FILTER_FIELDS.release);
     expect(SPRINT_FILTERS[0]).toBe('status');
@@ -42,15 +46,15 @@ describe('иконки значений — по канону S4-25, есть в
 });
 
 describe('релиз задачи — от её спринта, на клиенте', () => {
-  const sprints = [rec('SPRINT_A', 'sprint', { release_ids: ['v1.2.0'] }), rec('SPRINT_B', 'sprint', { release_ids: null })];
+  const sprints = [rec('SPRINT_A', 'sprint', { release: ['v1.2.0'] }), rec('SPRINT_B', 'sprint', { release: null })];
   const tasks = [
-    rec('SPRINT_A/A-1', 'task', { sprint_id: 'SPRINT_A' }),
-    rec('SPRINT_B/B-1', 'task', { sprint_id: 'SPRINT_B' }),
+    rec('SPRINT_A/A-1', 'task', { sprint: 'SPRINT_A' }),
+    rec('SPRINT_B/B-1', 'task', { sprint: 'SPRINT_B' }),
     rec('BACKLOG-1', 'task', {}),
   ];
   it('фильтр «Релиз: пусто» у задач работает по унаследованному полю', () => {
     const ts = tasksWithSprintRelease(tasks, sprints);
-    expect(ts[0].fields.release_ids).toEqual(['v1.2.0']);
+    expect(ts[0].fields.release).toEqual(['v1.2.0']);
     const set = { fields: { [LORE_FILTER_FIELDS.release]: { op: 'empty' as const, values: [] } } };
     expect(applyFilterSet(ts, set).map(t => t.id)).toEqual(['SPRINT_B/B-1', 'BACKLOG-1']);
     expect(facetOf(ts, { fields: {} }, LORE_FILTER_FIELDS.release).values).toEqual([{ value: 'v1.2.0', count: 1 }]);

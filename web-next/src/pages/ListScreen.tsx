@@ -16,6 +16,7 @@ import { LIST_SCREENS, type ListScreenDef, type ListScreenId } from '../lists/sc
 import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
 import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
+import { loreValueIcon } from '../lists/loreFilters';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
@@ -151,6 +152,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         data={shownData ?? data}
         urlState={urlState}
         quickIcons={def.quickIcons}
+        // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
+        // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
+        // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
+        valueIcon={loreValueIcon}
         // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}

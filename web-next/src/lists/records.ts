@@ -15,9 +15,25 @@ export function normStatus(raw: unknown): string {
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : v === null || v === undefined ? '' : String(v));
 
-/** Список (рёбра графа) → одна строка для фильтра и группировки; пустой — ''. */
-const joined = (v: unknown): string =>
-  Array.isArray(v) ? v.filter(x => x !== null && x !== undefined && x !== '').map(String).join(', ') : str(v);
+/**
+ * Список (рёбра графа) → список значений. Пустой — `[]`.
+ *
+ * **Раньше здесь была склейка в одну строку «A, B», и она теряла данные.**
+ * Фасет «Компоненты» показывал одно значение «LORE, FORSETI» вместо двух,
+ * выбрать один компонент было нельзя, а фильтр «релиз = lore-v1.18.0» не
+ * находил спринт с двумя релизами: склеенная строка не равна ни одному из них.
+ * «Без релиза» при этом работало (склейка пустого списка — ''), поэтому беда и
+ * не бросалась в глаза: половина кнопок работала.
+ *
+ * Для показа склейка тоже не нужна: `ListView.valueCell` сам рисует каждое
+ * значение своим чипом через `valuesOf`. То есть склейка только теряла данные
+ * — ради вида, который без неё получается лучше.
+ *
+ * Одно значение (не массив) остаётся строкой: у него нет многозначности, и
+ * заворачивать его в список незачем.
+ */
+const list = (v: unknown): string[] | string =>
+  Array.isArray(v) ? v.filter(x => x !== null && x !== undefined && x !== '').map(String) : str(v);
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
@@ -32,10 +48,10 @@ export function sprintRecord(row: Row): KitRecord {
     // Только словарём (planStatusOf): наивная склейка давала «вне словаря: in_progress» (08.11).
     status: planStatusOf(typeof row.status_raw === 'string' ? row.status_raw : null),
     fields: {
-      project: joined(row.git_projects),
-      components: joined(row.components),
-      release: joined(row.release_ids),
-      milestone: joined(row.milestone_ids),
+      project: list(row.git_projects),
+      components: list(row.components),
+      release: list(row.release_ids),
+      milestone: list(row.milestone_ids),
       priority: num(row.priority),
       planned_start: str(row.planned_start_date),
       planned_end: str(row.planned_end_date),
@@ -56,9 +72,9 @@ export function adrRecord(row: Row): KitRecord {
     status: normStatus(row.status),
     fields: {
       component: str(row.component),
-      components: joined(row.components),
-      project: joined(row.git_projects),
-      tags: joined(row.tags),
+      components: list(row.components),
+      project: list(row.git_projects),
+      tags: list(row.tags),
       decisions: num(row.decision_count),
     },
     ...(created ? { updated_at: created } : {}),
