@@ -20,14 +20,18 @@ describe('normStatus', () => {
 });
 
 describe('строки слайсов → KitRecord', () => {
-  it('спринт: код, имя, статус, проекты/компоненты/релизы строкой, приоритет', () => {
+  // Переписано 09.11 (S4-05): многозначные поля больше НЕ склеиваются в строку.
+  // Склейка теряла данные — фильтр по одному релизу не находил спринт с двумя,
+  // а фасет показывал «LORE, FORSETI» одним значением. Подробный разбор и
+  // проверки фильтра — в `multiValue.test.ts`.
+  it('спринт: код, имя, статус, проекты/компоненты/релизы списками, приоритет', () => {
     const r = sprintRecord({
       sprint_id: 'SPRINT_X', name: 'Икс', status_raw: '🔄 ACTIVE', priority: 2,
       git_projects: ['NooriUta/UnlimitedLORE'], components: ['FORSETI', 'OMILORE'], release_ids: [],
       valid_from: '2026-11-01T10:00:00',
     });
     expect(r).toMatchObject({ id: 'SPRINT_X', kind: 'sprint', title: 'Икс', status: 'active', updated_at: '2026-11-01T10:00:00' });
-    expect(r.fields).toMatchObject({ project: 'NooriUta/UnlimitedLORE', components: 'FORSETI, OMILORE', release: '', priority: 2 });
+    expect(r.fields).toMatchObject({ project: ['NooriUta/UnlimitedLORE'], components: ['FORSETI', 'OMILORE'], release: [], priority: 2 });
   });
 
   it('спринт без имени — заголовок = код (пустая строка списка не нужна)', () => {
@@ -37,7 +41,7 @@ describe('строки слайсов → KitRecord', () => {
   it('ADR: статус в нижнем регистре, число решений — числом', () => {
     const r = adrRecord({ adr_id: 'ADR-1', name: 'Один', status: 'ACCEPTED', component: 'FORSETI', decision_count: 0, tags: ['ui'] });
     expect(r).toMatchObject({ id: 'ADR-1', kind: 'adr', status: 'accepted' });
-    expect(r.fields).toMatchObject({ component: 'FORSETI', decisions: 0, tags: 'ui' });
+    expect(r.fields).toMatchObject({ component: 'FORSETI', decisions: 0, tags: ['ui'] });
   });
 });
 

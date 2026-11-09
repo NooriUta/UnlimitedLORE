@@ -1,70 +1,90 @@
-// Версия записи и версия черновика — РАЗНЫЕ ТИПЫ на двух серверных
-// поверхностях (SPRINT_UXR_S5_RECORD_TASKS/S5-09, находка 09.11).
+// Версия записи у черновика — строка, та же, что `record.version`
+// (SPRINT_UXR_S5_RECORD_TASKS/S5-09, разбор и правка 09.11).
 //
-// Сверено по коду бэкенда:
-//   • GET /lore/record  → record.version — СТРОКА: valid_from открытого
-//     состояния (LoreRecordVersion.sql / normalize → String).
-//   • /lore/me/drafts   → base_version — ЦЕЛОЕ: свойство
-//     KnowUserDraft.base_version INTEGER, DraftRequest.base_version: Integer,
-//     проверка «base_version must be >= 0» (LoreMeDrafts).
+// **Этот файл переписан в тот же день, и причина важнее самих проверок.**
 //
-// А задача S5-09 говорит, что второе берётся из первого. Одновременно это
-// выполнить нельзя: ISO-время не целое ≥ 0.
+// Утром две серверные поверхности расходились типом: `GET /lore/record` отдавал
+// `record.version` строкой (`valid_from` открытого состояния), а
+// `/lore/me/drafts` объявлял `base_version` целым (`INTEGER`, проверка «>= 0»),
+// при том что S5-09 говорит «второе берётся из первого». Одновременно
+// невыполнимо: ISO-время не целое ≥ 0.
 //
-// Что делает клиент: НЕ выдумывает перевод. Из ISO-времени целое можно только
-// придумать (хэш, миллисекунды, порядковый номер) — и тогда пометка «запись
-// изменили после черновика» срабатывала бы по придуманному числу. Ложная
-// пометка хуже отсутствующей: человек бросит правку, которой ничего не
-// угрожало. Поэтому строковая версия не отправляется и не сравнивается, а
-// расхождение передано серверной сессии.
+// Тогда тут стояли проверки на то, что клиент НИЧЕГО не выдумывает: строковая
+// версия не отправляется и не сравнивается, пометка «запись изменили после
+// черновика» не ставится. Это было правильно ровно до тех пор, пока контракт
+// не выбран: из времени целое получается только придумкой, и пометка
+// срабатывала бы по придуманному числу.
+//
+// Серверная сессия выбрала строку (PR #964, в develop): `base_version` — это
+// ровно `record.version`, сравнение на равенство, предел длины 64, старые
+// числовые черновики отдаются строкой цифр. Проверки заменены на проверки
+// выбранного контракта — не удалены «потому что покраснели».
 import { describe, expect, it, vi } from 'vitest';
-import { draftSlot, type DraftsApi } from './drafts';
+import { comparableVersion, draftSlot, type DraftRow, type DraftsApi } from './drafts';
 
-const api = (rows: Awaited<ReturnType<DraftsApi['list']>>) => {
+const V_NOW = '2026-11-08T10:00:00Z';
+const V_OLD = '2026-11-07T09:00:00Z';
+
+const api = (rows: DraftRow[]) => {
   const save = vi.fn(async () => {});
-  const impl: DraftsApi = {
-    list: async () => rows,
-    save: save as unknown as DraftsApi['save'],
-    remove: async () => {},
-  };
+  const impl: DraftsApi = { list: async () => rows, save, remove: async () => {} };
   return { impl, save };
 };
 
-const row = (base: unknown) => ({
+const row = (base: string | null): DraftRow => ({
   ref_type: 'sprint', ref_id: 'SPRINT_A',
   field: 'context_md', body_md: 'черновик', saved_at: '2026-11-09T03:00:00Z',
-  base_version: base as number | null,
+  base_version: base,
 });
 
-describe('S5-09 · версия записи строкой: пометку не выдумываем', () => {
+const slotOf = (rows: DraftRow[], version: string | null) => {
+  const { impl, save } = api(rows);
+  return { slot: draftSlot({ api: impl, type: 'sprint', id: 'SPRINT_A', field: 'context_md', version }), save };
+};
+
+describe('S5-09 · версия черновика — строка record.version', () => {
   it('положительный контроль: черновик доходит до поля', async () => {
-    const { impl } = api([row(null)]);
-    const slot = draftSlot({ api: impl, type: 'sprint', id: 'SPRINT_A', field: 'context_md', version: null });
+    const { slot } = slotOf([row(V_NOW)], V_NOW);
     expect((await slot.load())?.text).toBe('черновик');
   });
 
-  it('версия записи — строка: расхождение НЕ помечается, сравнивать нечем', async () => {
-    const { impl } = api([row(7)]);
-    const slot = draftSlot({ api: impl, type: 'sprint', id: 'SPRINT_A', field: 'context_md', version: '2026-11-08T10:00:00Z' });
+  it('версии совпали — пометки нет: запись с тех пор не меняли', async () => {
+    const { slot } = slotOf([row(V_NOW)], V_NOW);
     expect((await slot.load())?.stale).toBe(false);
   });
 
-  it('строковая версия не уходит в base_version — сервер ждёт целое и ответил бы 400', async () => {
-    const { impl, save } = api([]);
-    const slot = draftSlot({ api: impl, type: 'sprint', id: 'SPRINT_A', field: 'context_md', version: '2026-11-08T10:00:00Z' });
-    await slot.save('новый текст');
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ baseVersion: null }));
-  });
-
-  it('целая версия работает как прежде: расхождение видно', async () => {
-    const { impl } = api([row(7)]);
-    const slot = draftSlot({ api: impl, type: 'sprint', id: 'SPRINT_A', field: 'context_md', version: 9 });
+  it('версии разошлись — пометка есть: запись изменили после черновика', async () => {
+    const { slot } = slotOf([row(V_OLD)], V_NOW);
     expect((await slot.load())?.stale).toBe(true);
   });
 
-  it('целая версия совпала — пометки нет', async () => {
-    const { impl } = api([row(9)]);
-    const slot = draftSlot({ api: impl, type: 'sprint', id: 'SPRINT_A', field: 'context_md', version: 9 });
+  it('версия записи неизвестна — расхождение НЕ выдумывается', async () => {
+    const { slot } = slotOf([row(V_OLD)], null);
     expect((await slot.load())?.stale).toBe(false);
+  });
+
+  it('у черновика версии нет — тоже без пометки: сравнивать не с чем', async () => {
+    const { slot } = slotOf([row(null)], V_NOW);
+    expect((await slot.load())?.stale).toBe(false);
+  });
+
+  it('версия уходит на сервер строкой, как он её и отдал', async () => {
+    const { slot, save } = slotOf([], V_NOW);
+    await slot.save('новый текст');
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ baseVersion: V_NOW }));
+  });
+
+  it('старый числовой черновик («7») помечается изменённым — поверх чего его писали, мы не знаем', async () => {
+    // До #964 в базе лежали числа, сервер отдаёт их строкой цифр. Равенства с
+    // меткой версии такая строка не даст — и утверждать «писали поверх
+    // текущей версии» нельзя, поэтому пометка честная, а не ложная.
+    const { slot } = slotOf([row('7')], V_NOW);
+    expect((await slot.load())?.stale).toBe(true);
+  });
+
+  it('comparableVersion: пустая строка — это «неизвестно», а не версия', () => {
+    expect(comparableVersion('')).toBeNull();
+    expect(comparableVersion(null)).toBeNull();
+    expect(comparableVersion(V_NOW)).toBe(V_NOW);
   });
 });

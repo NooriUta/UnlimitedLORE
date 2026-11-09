@@ -17,6 +17,7 @@ import { type PassportType } from './passportAdapters';
 import { fromLoreRecord } from './loreRecordContract';
 import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
+import { saveRelation } from './relationSave';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
@@ -82,15 +83,30 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
   // паспорт с сервера — показываем записанное, а не то, что набрали.
   const onSave = async ({ field, to }: { field: string; to: unknown }) => {
-    await savePassportField(type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl);
+    // Версия на момент ЧТЕНИЯ записи (S5-08): сервер сверит её и откажет
+    // 409-м, если запись успели изменить. Без неё сохранение затирало чужую
+    // правку молча. У ADR проверки на сервере нет — там версия не уходит, и
+    // это сказано в коде, а не замолчано (ADR_NO_VERSION_CHECK).
+    await savePassportField(type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl, contract?.record.version ?? null);
     pp.reload();
   };
-  const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave } }, data: view.data, role: 'reader', href: x => `#${encodeURIComponent(x)}`, esc, md };
+  // Привязка и отвязка связей (S4-MODEL-PASSPORT-LIST): управление в kit было
+  // написано, но хук ему никто не давал — форма привязки просто не рисовалась.
+  // Какими связями управлять можно, решает сервер (`manageable` из фасада), а
+  // не вид UML: путь привязки есть не у всех. Отказ доходит словами — kit
+  // печатает причину рядом с управлением.
+  const onRelation = async ({ rel, dir, target, action }: { rel: string; dir: 'out' | 'in'; target: string; action: 'add' | 'remove' }) => {
+    await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
+    pp.reload();
+  };
+  const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave, onRelation } }, data: view.data, role: 'reader', href: x => `#${encodeURIComponent(x)}`, esc, md };
   return (
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEdit}
       // Черновик правки — на сервере (S5-09): «Восстановить черновик от
-      // ЧЧ:ММ» и автосохранение. Версия записи в адаптере пока null, поэтому
-      // расхождение версий не помечается: нет данных — нет пометки.
+      // ЧЧ:ММ» и автосохранение. Версия записи теперь приходит фасадом
+      // (строкой), и `base_version` черновика — та же строка (PR #964),
+      // поэтому пометка «запись изменили после черновика» наконец работает:
+      // раньше версии в паспорте не было вовсе, и помечать было нечем.
       mdDrafts={field => draftSlot({ api: drafts, type, id: view.record.id, field, version: contract?.record.version ?? null })}
       history={{
         // «Не прочитали» и «запрещено» — разные состояния, и оба не «пусто».
