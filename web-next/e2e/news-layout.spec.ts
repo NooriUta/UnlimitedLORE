@@ -88,7 +88,7 @@ const PARITY: Array<[id: string, how: How, selector: string]> = [
   ['v2 мини-график сгорания наверху', 'none', '[data-testid="news-spark"]'],
   ['v2 быстрый фильтр: проект', 'none', '[data-testid="news-facet-project"]'],
   ['v2 быстрый фильтр: компонент', 'none', '[data-testid="news-facet-component"]'],
-  ['v2 быстрый фильтр: кто', 'none', '[data-testid="news-facet-author"]'],
+  ['v2 быстрый фильтр: кто', 'none', '[data-testid="news-facet-who"]'],
 ];
 // Не здесь: п.13/16/26 (ошибка, 403, 502 — фикстура не падает; kit NewsFeed.test.tsx),
 // п.24/28/29/30 (ниже и в сторожах i18n), п.25 (сам вход /news — open()).
@@ -126,4 +126,18 @@ test('скрин', async ({ page }, info) => {
   await page.goto('/news');
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${dir}/news-${process.env.SHOT_LABEL ?? 'shot'}-${info.project.name}.png` });
+});
+
+// Владелица 09.11 (планшет): «название выровняй — глаза разъезжаются».
+test('заголовки строк начинаются с одной линии, подпись вида целиком влезает в плашку', async ({ page }) => {
+  await open(page);
+  const r = await page.evaluate(() => {
+    const links = [...document.querySelectorAll<HTMLElement>('a.sk-news__link')].filter(a => a.offsetParent);
+    const xs = links.map(a => Math.round(a.querySelector('.sk-news__rtitle')!.getBoundingClientRect().left - a.getBoundingClientRect().left));
+    const clipped = links.map(a => a.querySelector<HTMLElement>('.sk-news__tag')!).filter(t => t.scrollWidth > t.clientWidth + 1).map(t => t.textContent);
+    return { xs: [...new Set(xs)], clipped, n: links.length };
+  });
+  expect(r.n).toBeGreaterThan(2);
+  expect(r.xs, `отступы заголовков: ${r.xs.join(', ')}`).toHaveLength(1);
+  expect(r.clipped).toEqual([]);
 });

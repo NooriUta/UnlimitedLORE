@@ -208,7 +208,7 @@ describe('S7A-02 · строка «фильтр / группировка / по�
     await mount(src());
     openFilters();
     const values = screen.getAllByTestId(/^news-group-opt-/).map(o => o.dataset.testid!.replace('news-group-opt-', ''));
-    expect(values).toEqual(['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'day']);
+    expect(values).toEqual(['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'who', 'day']);
     expect(screen.getByTestId('news-group-opt-author').textContent).toMatch(/автор.*S2-12/i);
   });
 
@@ -491,7 +491,7 @@ describe('S7A-12 v2 · мини-график, быстрые фильтры, д�
   it('быстрые фильтры наверху: Проект/Компонент/Кто — одно нажатие открывает варианты, выбор уходит на сервер', async () => {
     const s = src();
     await mount(s);
-    for (const a of ['project', 'component', 'author']) expect(screen.getByTestId(`news-facet-${a}`)).toBeTruthy();
+    for (const a of ['project', 'component', 'who']) expect(screen.getByTestId(`news-facet-${a}`)).toBeTruthy();
     const btn = screen.getByTestId('news-facet-project');
     fireEvent.click(btn);
     expect(btn.getAttribute('aria-expanded')).toBe('true');
@@ -502,14 +502,31 @@ describe('S7A-12 v2 · мини-график, быстрые фильтры, д�
     expect(screen.getByTestId('news-facet-project').dataset.on).toBe('true');
   });
 
-  it('«Кто» — люди и агенты; Esc закрывает варианты', async () => {
-    const s = src();
+  it('«Кто» — вид (люди/агенты) и конкретное имя со счётом сервера by_who; выбор имени уходит параметром who', async () => {
+    const data = clone();
+    data.metrics.counts.by_who = { volva: { events: 4, elements: 3 }, '(unknown)': { events: 1, elements: 1 } };
+    const s = src({}, data);
     await mount(s);
-    fireEvent.click(screen.getByTestId('news-facet-author'));
-    const pop = screen.getByTestId('news-facet-pop-author');
-    expect(within(pop).getAllByRole('button').length).toBe(3);
+    fireEvent.click(screen.getByTestId('news-facet-who'));
+    expect(within(screen.getByTestId('news-facet-opts-author')).getAllByRole('button').length).toBe(3);
+    const names = screen.getByTestId('news-facet-opts-who');
+    expect(names.textContent).toContain('автор неизвестен');
+    const volva = within(names).getByRole('button', { name: /volva/ });
+    expect(volva.textContent).toContain('4 · 3');
+    fireEvent.click(volva);
+    await waitFor(() => expect(last(s).get('who')).toBe('volva'));
+    expect(screen.getByTestId('news-facet-who').textContent).toContain('volva');
+  });
+
+  it('«Кто» без by_who (старый сервер) — имена из строк ленты, без чисел; Esc закрывает', async () => {
+    await mount(src());
+    fireEvent.click(screen.getByTestId('news-facet-who'));
+    const names = screen.getByTestId('news-facet-opts-who');
+    // В фикстуре who не заполнен ни у одной строки — честно «автор неизвестен», без выдуманного числа.
+    const unknown = within(names).getByRole('button', { name: /автор неизвестен/ });
+    expect(unknown.querySelector('.sk-news__n')).toBeNull();
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.queryByTestId('news-facet-pop-author')).toBeNull();
+    expect(screen.queryByTestId('news-facet-pop-who')).toBeNull();
   });
 
   it('фиксированный разрез паспорта не даёт снять себя быстрым фильтром', async () => {

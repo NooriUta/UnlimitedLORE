@@ -248,7 +248,7 @@ function Bar({ query: q, update, t, fixed, onSheet }: CtlProps & { onSheet: () =
  */
 function axisOptions(ax: NewsFilterAxis, data: NewsResponse | undefined, q: NewsQuery, lang: KitLang): Array<[string, string, string | null]> {
   const out = new Map<string, [string, string | null]>();
-  const pairs = ax === 'kind' ? data?.metrics.counts.by_kind : undefined;
+  const pairs = ax === 'kind' ? data?.metrics.counts.by_kind : ax === 'who' ? data?.metrics.counts.by_who : undefined;
   if (pairs) for (const [k, p] of Object.entries(pairs)) out.set(k, [newsGroupLabel(ax, k, lang), pairText(p)]);
   else if (ax === 'author') for (const k of ['agent', 'human', 'unknown']) out.set(k, [newsGroupLabel(ax, k, lang), null]);
   else {
@@ -266,7 +266,7 @@ function toggleFilter(q: NewsQuery, update: (p: Partial<NewsQuery>) => void, ax:
 }
 
 /** Быстрые фильтры наверху (владелица 09.11): Проект ▾ · Компонент ▾ · Кто ▾ и типы со счётом. */
-const TOP_AXES: readonly NewsFilterAxis[] = ['project', 'component', 'author'];
+const TOP_AXES: readonly NewsFilterAxis[] = ['project', 'component', 'who'];
 
 function Filters({ query: q, update, data, t, lang, fixed }: CtlProps & { data: NewsResponse }) {
   const [pop, setPop] = useState<NewsFilterAxis | null>(null);
@@ -279,7 +279,9 @@ function Filters({ query: q, update, data, t, lang, fixed }: CtlProps & { data: 
   const axes = TOP_AXES.filter(a => !fixed.has(a));
   const byType = data.metrics.counts.by_type;
   const typeOn = q.filters.type?.length === 1 ? q.filters.type[0] : null;
-  const label = (a: NewsFilterAxis) => (a === 'author' ? t('facet.who') : axisLabel(a, lang));
+  const label = (a: NewsFilterAxis) => (a === 'who' ? t('facet.who') : axisLabel(a, lang));
+  // «Кто» — и вид (люди/агенты, ось author), и конкретное имя (ось who, сервер #974).
+  const axesOf = (a: NewsFilterAxis): NewsFilterAxis[] => (a === 'who' && !fixed.has('author') ? ['author', 'who'] : [a]);
   return (
     <div className="sk-news__filters" data-testid="news-filters">
       {/* Одна строка с прокруткой вбок: грани и типы вместе — высоту ленты не съедают. */}
@@ -287,13 +289,13 @@ function Filters({ query: q, update, data, t, lang, fixed }: CtlProps & { data: 
         {axes.length > 0 && (
           <div className="sk-news__facets" role="group" aria-label={t('facets')}>
             {axes.map(a => {
-              const sel = q.filters[a] ?? [];
+              const sel = axesOf(a).flatMap(x => (q.filters[x] ?? []).map(v => newsGroupLabel(x, v, lang)));
               return (
                 <button key={a} type="button" className="sk-news__fc" data-testid={`news-facet-${a}`}
                   aria-expanded={pop === a} aria-controls={`news-facet-pop-${a}`} data-on={sel.length > 0 || undefined}
                   onClick={() => setPop(p => (p === a ? null : a))}>
                   <span>{label(a)}</span>
-                  {sel.length > 0 && <b>{sel.length === 1 ? newsGroupLabel(a, sel[0], lang) : sel.length}</b>}
+                  {sel.length > 0 && <b>{sel.length === 1 ? sel[0] : sel.length}</b>}
                   <span aria-hidden="true">▾</span>
                 </button>
               );
@@ -316,13 +318,19 @@ function Filters({ query: q, update, data, t, lang, fixed }: CtlProps & { data: 
       </div>
       {pop && (
         <div className="sk-news__pop" id={`news-facet-pop-${pop}`} role="group" aria-label={label(pop)} data-testid={`news-facet-pop-${pop}`}>
-          {axisOptions(pop, data, q, lang).map(([v, l, n]) => (
-            <button key={v} type="button" className="sk-news__chip" title={v}
-              aria-pressed={q.filters[pop]?.length === 1 && q.filters[pop]![0] === v}
-              onClick={() => { toggleFilter(q, update, pop, v); setPop(null); }}>
-              <span>{l}</span>
-              {n && <span className="sk-news__n">{n}</span>}
-            </button>
+          {axesOf(pop).map(ax => (
+            <div key={ax} className="sk-news__popg" role="group" aria-label={axesOf(pop).length > 1 ? t(ax === 'author' ? 'facet.kind' : 'facet.names') : label(pop)}
+              data-testid={`news-facet-opts-${ax}`}>
+              {axesOf(pop).length > 1 && <span className="sk-list__label">{t(ax === 'author' ? 'facet.kind' : 'facet.names')}</span>}
+              {axisOptions(ax, data, q, lang).map(([v, l, n]) => (
+                <button key={v} type="button" className="sk-news__chip" title={v}
+                  aria-pressed={q.filters[ax]?.length === 1 && q.filters[ax]![0] === v}
+                  onClick={() => { toggleFilter(q, update, ax, v); setPop(null); }}>
+                  <span>{l}</span>
+                  {n && <span className="sk-news__n">{n}</span>}
+                </button>
+              ))}
+            </div>
           ))}
         </div>
       )}
@@ -386,7 +394,7 @@ function Active({ query: q, update, t, lang, fixed }: CtlProps) {
 
 // ── панель «Фильтры»: справа на широком экране, нижний лист на телефоне ──
 
-const ALL_AXES_FOR_SHEET: readonly NewsFilterAxis[] = ['project', 'component', 'sprint', 'milestone', 'author', 'kind'];
+const ALL_AXES_FOR_SHEET: readonly NewsFilterAxis[] = ['project', 'component', 'sprint', 'milestone', 'author', 'who', 'kind'];
 
 function Sheet({ query: q, update, data, t, lang, fixed, onClose }: CtlProps & { data: NewsResponse | undefined; onClose: () => void }) {
   useEffect(() => {

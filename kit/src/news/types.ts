@@ -4,11 +4,11 @@
 // клиент их рисует и ни одного не выводит сам.
 
 /** Оси группировки и фильтра — NewsV2Engine.AXES. */
-export const NEWS_AXES = ['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'day'] as const;
+export const NEWS_AXES = ['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'who', 'day'] as const;
 export type NewsAxis = (typeof NEWS_AXES)[number];
 
 /** Оси, по которым фильтрует сервер (day — только разрез, фильтра у него нет). */
-export const NEWS_FILTER_AXES = ['type', 'project', 'component', 'sprint', 'milestone', 'author', 'kind'] as const;
+export const NEWS_FILTER_AXES = ['type', 'project', 'component', 'sprint', 'milestone', 'author', 'who', 'kind'] as const;
 export type NewsFilterAxis = (typeof NEWS_FILTER_AXES)[number];
 
 /** Оси сгорания задач (§7.2, TASK_AXES). */
@@ -167,7 +167,11 @@ export interface NewsKnowledge {
 }
 
 export interface NewsMetrics {
-  counts: { total: NewsPair; by_type: Record<string, NewsPair>; by_kind: Record<string, NewsPair> };
+  counts: {
+    total: NewsPair; by_type: Record<string, NewsPair>; by_kind: Record<string, NewsPair>;
+    /** Счёт по конкретному автору (сервер #974); старый сервер его не шлёт. */
+    by_who?: Record<string, NewsPair>;
+  };
   tasks: NewsTasksAvailable | (NewsUnmeasurable & { available: false });
   knowledge: NewsKnowledge;
   agents: { measurable: true; events: NewsPair; elements: NewsPair } | (NewsUnmeasurable & { measurable: false });
