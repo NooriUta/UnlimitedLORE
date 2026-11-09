@@ -10,6 +10,7 @@ import type { KitConfig, KitLang, KitProgressInput, KitRecord } from '@seidr/kit
 import type { LoreClient } from '../sprints/loreClient';
 import { loadSprintProgress } from '../sprints/sprintProgress';
 import { SprintTasks } from '../sprints/SprintTasks';
+import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import type { AppKey } from '../i18n';
 import { adrRecord, sprintRecord } from './records';
@@ -101,7 +102,9 @@ function sprintsConfig(lang: KitLang): KitConfig {
         { id: 'planned', title: appT(lang, 'lists.status.planned'), filter: { status: 'planned' } },
         { id: 'no-release', title: appT(lang, 'lists.quick.noRelease'), filter: { release: '' } },
       ],
-      filters: ['status', 'project', 'components', 'release'],
+      // Имена фасетов — из общего набора loreFilters (S4-05): пока они жили
+      // строками здесь и ключами там, наборы разошлись молча.
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
       groupings: ['status', 'project', 'priority', 'milestone'],
       // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
       columns: ['id', 'title', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
@@ -140,7 +143,7 @@ function adrsConfig(lang: KitLang): KitConfig {
         { id: 'accepted', title: appT(lang, 'lists.status.accepted'), filter: { status: 'accepted' } },
         { id: 'no-decisions', title: appT(lang, 'lists.quick.noDecisions'), filter: { decisions: '0' } },
       ],
-      filters: ['status', 'component', 'project'],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
       groupings: ['status', 'component', 'project'],
       columns: ['id', 'title', 'status', 'component', 'decisions', 'updated_at'],
     },

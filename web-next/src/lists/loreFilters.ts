@@ -10,13 +10,25 @@ import { ICON_CANON } from '@seidr/kit';
 import { inheritField } from '@seidr/kit';
 import type { KitRecord, ValueIcon } from '@seidr/kit';
 
+/**
+ * Поля фасетов — по ключам ЗАПИСИ, а не по именам столбцов среза.
+ *
+ * Было наоборот: `fields.release_ids`, `fields.git_projects`,
+ * `fields.milestone_ids` — имена из слайсов, а `sprintRecord` пишет `release`,
+ * `project`, `milestone`. Экраны этим набором не пользовались (задавали
+ * фильтры строками у себя), поэтому расхождение ничего не роняло — оно просто
+ * ждало первого, кто возьмёт набор и получит пустые фасеты.
+ *
+ * Теперь набор один и его берут экраны (`screens.ts`), а тест держит это
+ * равенство: два места для имён одного поля расходятся молча, одно — нет.
+ */
 export const LORE_FILTER_FIELDS = {
-  release: 'fields.release_ids',
+  release: 'fields.release',
   component: 'fields.components',
-  project: 'fields.git_projects',
-  milestone: 'fields.milestone_ids',
+  project: 'fields.project',
+  milestone: 'fields.milestone',
   priority: 'fields.priority',
-  sprint: 'fields.sprint_id',
+  sprint: 'fields.sprint',
 } as const;
 
 /** Фасеты списка спринтов (порядок = порядок кнопок). */
@@ -50,13 +62,26 @@ const FIELD_ICONS: Record<string, ValueIcon> = {
  * вид — из словаря конфига), null — без иконки (пустое значение).
  */
 export function loreValueIcon(key: string, value: string): ValueIcon | null | undefined {
+  // Одно и то же поле зовут двумя написаниями: фасет — «fields.release»,
+  // колонка таблицы — «release» (`fieldValue` понимает оба). Иконка не должна
+  // зависеть от написания, иначе в фильтре она есть, а в ячейке её нет.
+  const k = key.startsWith('fields.') ? key : `fields.${key}`;
   if (key === 'status' || key === 'kind') return undefined;
   if (!value) return null;
-  if (key === LORE_FILTER_FIELDS.priority) return PRIORITY_ICONS[value] ?? { icon: ICON_CANON.prioP2, color: 'var(--t2)' };
-  return FIELD_ICONS[key] ?? null;
+  if (k === LORE_FILTER_FIELDS.priority) return PRIORITY_ICONS[value] ?? { icon: ICON_CANON.prioP2, color: 'var(--t2)' };
+  return FIELD_ICONS[k] ?? null;
 }
 
 /** Задачи с полем release_ids их спринта; спринта нет в выдаче — релиз пуст, а не выдуман. */
 export function tasksWithSprintRelease(tasks: readonly KitRecord[], sprints: readonly KitRecord[]): KitRecord[] {
-  return inheritField(tasks, sprints, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.release, 'release_ids');
+  // Имя поля у задачи — то же, что у спринта (`release`): два имени одного
+  // поля разошлись бы, как разошлись имена фасетов.
+  return inheritField(tasks, sprints, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.release, 'release');
 }
+
+/**
+ * Фасет статуса. Имя простое («status» — поле записи, не её `fields`), но
+ * лежит здесь по той же причине, что и остальные: имена фасетов живут в одном
+ * месте, иначе они расходятся.
+ */
+export const STATUS_FACET = 'status';
