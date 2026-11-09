@@ -5,7 +5,7 @@
 // вкладок, вынос в под-компонент, другой файл) ронял тест при работающем экране,
 // а сломанный экран с той же строкой проходил. Теперь проверяется поведение:
 // по адресу рисуется нужный экран.
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
 import i18n from '../../../i18n';
 import { renderUi } from '../../../test/render';
@@ -55,6 +55,15 @@ describe('Админка · группа «MCP» (render)', () => {
 // Старые адреса ?section=mcp / ?section=connections (закладки, ссылки в доках)
 // должны продолжать открывать те же экраны вне админки.
 describe('LorePage · старые адреса экранов MCP (render)', () => {
+  // Первый импорт LorePage (тяжёлая страница, сотни модулей) стоил секунды трансформации и
+  // шёл ВНУТРИ теста — под лимитом 5 с. На загруженном раннере тест падал по таймауту
+  // (прогон 4884, PR #1020; push preprod 09.11), второй тест — нет: модуль уже в кэше.
+  // Импорт — в beforeAll со своим лимитом; тест мерит только маршрутизацию.
+  let LorePage: typeof import('../../../pages/LorePage').default;
+  beforeAll(async () => {
+    ({ default: LorePage } = await import('../../../pages/LorePage'));
+  }, 60_000);
+
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(
       new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }))));
@@ -62,13 +71,11 @@ describe('LorePage · старые адреса экранов MCP (render)', ()
   afterEach(() => { vi.unstubAllGlobals(); });
 
   it('?section=mcp открывает справочник инструментов', async () => {
-    const { default: LorePage } = await import('../../../pages/LorePage');
     renderUi(<LorePage />, { route: '/lore?section=mcp' });
     expect(await screen.findByTestId('screen-mcp-api')).toBeInTheDocument();
   });
 
   it('?section=connections открывает рецепт подключения', async () => {
-    const { default: LorePage } = await import('../../../pages/LorePage');
     renderUi(<LorePage />, { route: '/lore?section=connections' });
     expect(await screen.findByTestId('screen-connections')).toBeInTheDocument();
   });
