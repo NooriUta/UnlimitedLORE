@@ -2157,6 +2157,27 @@ public final class LoreSlices {
                 "work_class", " WHERE work_class = :work_class")),
             " ORDER BY sprint_id, task_uid");
 
+        // Аудит UX 09.11, D-30 (SPRINT_UXR_S9_SCALE_OPT/S9-01): закрытые задачи для
+        // порционной подгрузки в разделе «Задачи» v2 — та же облегчённая проекция и
+        // фильтры, что у open_tasks. Порции — общие limit/offset (SlicePage, page.has_more),
+        // потолка нет. «done ИЛИ cancelled» — через OR, поэтому В СКОБКАХ: фильтры
+        // дописываются через AND и без скобок легли бы только на последнюю ветку.
+        slice("closed_tasks",
+            "SELECT task_uid, task_id, title, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('TAGGED_WITH').component_id AS component_ids, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
+            "FROM KnowTask " +
+            "WHERE (" + LoreStatusVocabulary.anySql(OPEN_TASK_STATUS_EXPR, "done", "cancelled") + ")",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+                "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint",
+                "component", " WHERE out('TAGGED_WITH').component_id CONTAINS :component",
+                "work_class", " WHERE work_class = :work_class")),
+            " ORDER BY sprint_id, task_uid");
+
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
             "SELECT finding_id, type, verified, source_sprint " +
@@ -2634,6 +2655,7 @@ public final class LoreSlices {
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("closed_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.
         Map.entry("release_tasks_by_tag", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // AN-06: срез I — строка на uc-задачу, проект через её спринт.
