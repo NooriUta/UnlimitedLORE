@@ -3,12 +3,13 @@
 // открытой записью или выделением списка (S4-10, ListView.onSelectionChange).
 // Клавиши, ARIA, честные состояния — kit (CommandPalette, useKitPalette);
 // здесь только склейка с API LORE. Своей копии палитры web-next не держит.
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   CommandPalette, PaletteTriggers, createRecentList, useKitLang, useKitPalette,
   type KitCtx, type KitData, type KitRecord, type PaletteAction, type PaletteTarget, type RecentList, type SafeStorage,
 } from '@seidr/kit';
 import { copyActions, loreRemoteSearch, searchKinds, type ClipboardLike } from './paletteSource';
+import { recordHref } from '../nav/loreRoutes';
 
 export interface LorePaletteProps {
   storage: SafeStorage;
@@ -38,18 +39,38 @@ export interface LorePaletteProps {
 
 const EMPTY_DATA: KitData = { records: [], edges: [], journal: [], meta: { generated_at: '' } };
 
+/**
+ * Ссылка на запись из палитры (S4-13, переоткрыто 09.11): известна запись — адрес
+ * раздела её типа из loreRoutes (?mod&sec&open), как у ленты и списка; иначе —
+ * переданная ссылка. «Копировать ссылку» и переход давали ?rec=<id>, а такого
+ * маршрута в v2 нет: ссылка открывала «Новости» (тот же тупик, что аудит D-01).
+ */
+export function paletteHref(id: string, records: readonly KitRecord[], fallback: (id: string) => string): string {
+  const r = records.find(x => x.id === id);
+  const kind = r ? String((r as { kind?: unknown }).kind ?? (r as { type?: unknown }).type ?? '') : '';
+  return (kind && recordHref(kind, id)) || fallback(id);
+}
+
 export function defaultHref(id: string): string {
   return `?rec=${encodeURIComponent(id)}`;
 }
 
 export function LorePalette({
-  storage, ctx, target, actions, href = defaultHref, onOpenRecord, headers, fetchImpl, clipboard, remoteDelayMs, enabled, trigger, recent: recentProp,
+  storage, ctx, target, actions, href: hrefProp = defaultHref, onOpenRecord, headers, fetchImpl, clipboard, remoteDelayMs, enabled, trigger, recent: recentProp,
 }: LorePaletteProps) {
   const lang = useKitLang();
   const palette = useKitPalette({ enabled });
   const ownRecent = useMemo(() => createRecentList(storage), [storage]);
   const recent = recentProp ?? ownRecent;
   const remote = useMemo(() => loreRemoteSearch({ headers, fetchImpl, lang }), [headers, fetchImpl, lang]);
+  // Записи, которые палитра знает (экрана и цель), — для адреса по типу записи.
+  // Через ref: ссылку зовут лениво (копировать, открыть), а ctx собирается ниже.
+  const known = useRef<readonly KitRecord[]>([]);
+  known.current = [
+    ...(ctx?.data?.records ?? []),
+    ...(target?.type === 'record' ? [target.record] : []),
+  ];
+  const href = useMemo(() => (id: string) => paletteHref(id, known.current, hrefProp), [hrefProp]);
 
   const fullCtx = useMemo<KitCtx>(() => {
     const config = ctx?.config ?? { modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [] } };
