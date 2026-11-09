@@ -25,13 +25,14 @@ class LoreKcAgentClientTest {
 
     @Test
     void templateIsCopiedWithoutIdentityAndSecret() {
-        JsonObject template = JsonObject.of(
-            "id", "tpl-uuid", "clientId", "lore-mcp-full", "name", "LORE MCP full", "secret", "TEMPLATE-SECRET",
-            "enabled", true, "publicClient", false, "serviceAccountsEnabled", true,
-            "registeredNodes", JsonObject.of("n", 1),
-            "attributes", JsonObject.of("access.token.lifespan", "300"),
-            "protocolMappers", JsonArray.of(JsonObject.of("id", "m-uuid", "name", "aud", "protocol", "openid-connect")),
-            "defaultClientScopes", JsonArray.of("profile"));
+        // JsonObject.of держит не больше 10 пар — шаблон собирается put-ами.
+        JsonObject template = new JsonObject()
+            .put("id", "tpl-uuid").put("clientId", "lore-mcp-full").put("name", "LORE MCP full")
+            .put("secret", "TEMPLATE-SECRET").put("enabled", true).put("publicClient", false)
+            .put("serviceAccountsEnabled", true).put("registeredNodes", JsonObject.of("n", 1))
+            .put("attributes", JsonObject.of("access.token.lifespan", "300"))
+            .put("protocolMappers", JsonArray.of(JsonObject.of("id", "m-uuid", "name", "aud", "protocol", "openid-connect")))
+            .put("defaultClientScopes", JsonArray.of("profile"));
         JsonObject copy = LoreKcAgentClient.fromTemplate(template, "lore-mcp-full_arharaga");
         assertEquals("lore-mcp-full_arharaga", copy.getString("clientId"));
         assertFalse(copy.containsKey("id"), "id шаблона не переносится — иначе KC перезапишет шаблон");
