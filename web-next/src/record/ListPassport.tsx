@@ -83,7 +83,11 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
   // паспорт с сервера — показываем записанное, а не то, что набрали.
   const onSave = async ({ field, to }: { field: string; to: unknown }) => {
-    await savePassportField(type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl);
+    // Версия на момент ЧТЕНИЯ записи (S5-08): сервер сверит её и откажет
+    // 409-м, если запись успели изменить. Без неё сохранение затирало чужую
+    // правку молча. У ADR проверки на сервере нет — там версия не уходит, и
+    // это сказано в коде, а не замолчано (ADR_NO_VERSION_CHECK).
+    await savePassportField(type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl, contract?.record.version ?? null);
     pp.reload();
   };
   // Привязка и отвязка связей (S4-MODEL-PASSPORT-LIST): управление в kit было

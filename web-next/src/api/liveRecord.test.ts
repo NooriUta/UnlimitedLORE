@@ -102,7 +102,11 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
   it('подпись поля — label, а не label_key: ключ человеку не показывают', () => {
     const c = recordFromServer(sprintBody(), LOADED);
     const labels = c.schema.fields.map(f => f.label);
-    expect(labels).toEqual(['Название', 'Дорожка', 'Контекст']);
+    // «Контекст» — единственное правимое поле тела спринта, и оно становится
+    // телом записи (values.body_md), поэтому в списке полей его больше нет:
+    // иначе текст задвоился бы разделом поверх самого себя. Разбор этого
+    // переноса — в record/bodyEditableAfterFacade.test.ts.
+    expect(labels).toEqual(['Название', 'Дорожка']);
     expect(JSON.stringify(c.schema.fields)).not.toContain('rec.sprint');
     expect(c.schema.fields.find(f => f.key === 'track')?.section).toBe('Планирование');
   });

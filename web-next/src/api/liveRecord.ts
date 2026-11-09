@@ -81,6 +81,15 @@ export class RecordShape extends Error {
   }
 }
 
+/**
+ * Типы, у которых ОДНО поле группы `body` становится телом записи.
+ *
+ * Те же три, что умеет сохранять `passportSave` через `body_md`. ADR сюда не
+ * входит: его тело склеено из трёх разделов, и одним полем его не сохранить,
+ * не затерев соседние.
+ */
+const BODY_AS_RECORD: readonly string[] = ['sprint', 'task', 'spec'];
+
 /** Виды поля паспорта; незнакомый вид показываем текстом, а не прячем поле. */
 const KINDS: readonly FieldKind[] = ['text', 'md', 'enum', 'ref', 'date', 'number'];
 const kindOf = (v: unknown): FieldKind => (KINDS as readonly string[]).includes(str(v)) ? (str(v) as FieldKind) : 'text';
@@ -207,6 +216,32 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       : typeof facts.adrs_error === 'string' ? { tasks: { error: facts.adrs_error } }
         : null;
 
+  // Тело записи (регрессия моего же перехода на фасад, поймана тестом 09.11).
+  //
+  // Эмуляция из срезов укладывала текст в `body_md`: у спринта — `context_md`,
+  // у задачи — `note_md`, у спеки — `content_md`. `fromLoreRecord` правит
+  // только `body_md`, остальные поля группы `body` рисует разделами ТОЛЬКО ДЛЯ
+  // ЧТЕНИЯ. Фасад называет поля своими именами — и правка текста на месте
+  // пропала: кнопки ✎ у спринта, задачи и спеки не стало.
+  //
+  // Поэтому первое ПРАВИМОЕ поле группы `body` становится телом записи, как и
+  // было. Путь записи при этом прежний: `payload()` в `passportSave` переводит
+  // `body_md` в нужное имя по типу. Остальные поля группы (у спринта — «Итог»)
+  // остаются разделами.
+  //
+  // У ADR — намеренно иначе: его тело склеено из трёх разделов, и одним полем
+  // его не сохранить, не затерев соседние (ADR_BODY_READONLY). Там тела записи
+  // не появляется.
+  const values = obj(b.values);
+  let fieldsOut = fields;
+  if (BODY_AS_RECORD.includes(str(rec.type)) && values.body_md === undefined) {
+    const primary = fields.find(f => f.group === 'body' && f.editable);
+    if (primary) {
+      values.body_md = values[primary.key];
+      fieldsOut = fields.filter(f => f.key !== primary.key);
+    }
+  }
+
   return {
     contract: 'lore.record/1',
     record: {
@@ -217,9 +252,9 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     },
     schema: {
       type: str(schema.type), label: str(schema.label) || str(schema.type), icon: str(schema.icon),
-      fields, tabs: tabsOf(relRows), relations,
+      fields: fieldsOut, tabs: tabsOf(relRows), relations,
     },
-    values: obj(b.values),
+    values,
     links,
     facts: factsOut,
     perms: {
