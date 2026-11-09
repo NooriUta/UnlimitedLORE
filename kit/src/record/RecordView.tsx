@@ -16,6 +16,7 @@ import { Segmented } from '../elements/Segmented';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
 import { BlockBoundary } from './BlockBoundary';
+import { DataStateBlock } from './DataStateBlock';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { RecordLinks, recordLinks } from './RecordLinks';
 import { RecordGraph } from './RecordGraph';
@@ -387,6 +388,13 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
           <RecordVerdict record={record} ctx={ctx} lang={lang} />
         </BlockBoundary>
+        {/*
+          S4-30: что проверено, что не смогли, что обрезано — над содержимым.
+          Источник — meta той же выдачи, из которой нарисована запись, поэтому
+          подключать это экранам вручную не нужно (и нельзя: однажды забудут).
+          Сказать нечего — блока нет, компонент возвращает null сам.
+        */}
+        <DataStateBlock meta={ctx.data.meta} />
         {propsRow && kind && (
           <details ref={propsRowRef} className="sk-rec-propsrow" open={propsOpen} onToggle={e => setPropsOpen((e.currentTarget as HTMLDetailsElement).open)}>
             <summary className="sk-rec-propsrow__sum">

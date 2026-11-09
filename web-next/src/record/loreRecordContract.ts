@@ -25,7 +25,13 @@ export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: st
 export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number }
 export interface LoreRecord1 {
   contract: 'lore.record/1';
-  record: { type: string; id: string; title: string; status: string; version: number | null; updated_at: string | null; updated_by: string | null };
+  /**
+   * `version` — СТРОКА, как её отдаёт фасад: `valid_from` открытого состояния
+   * SCD2 (`LoreRecordVersion.normalize`). Раньше тут стояло число — тип
+   * писался до фасада, по догадке. Строка нужна как есть: это метка версии
+   * для `expected_version` (S5-08), а не счётчик, и арифметики над ней нет.
+   */
+  record: { type: string; id: string; title: string; status: string; version: string | null; updated_at: string | null; updated_by: string | null };
   schema: { type: string; label: string; icon: string; fields: LoreField[]; tabs: LoreTab[]; relations: LoreRelation[] };
   values: Record<string, unknown>;
   links: LoreLink[];
@@ -153,6 +159,23 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     [type]: { title: c.schema.label, icon: c.schema.icon, ...(overview ? { overview } : {}), relations: c.schema.relations.map(({ count: _n, ...d }) => d), fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
-  const data: KitData = { records: [record, ...others], edges, journal: [], meta: { generated_at: c.meta.loaded_at, ...(errors.length ? { errors } : {}) } };
+  // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit
+  // (dataStateOf): «нет прав», «обрезано» и сбой — разные ответы, и список
+  // errors их сливал в один. errors остаётся рядом: по нему рисует плашку блок
+  // связей (blockError), и терять её нельзя. Задвоения нет — разбор пропускает
+  // блок, о котором уже сказано через data_state.
+  const dataState = c.meta.sources.map(s => ({
+    source: s.block, state: s.state,
+    ...(s.reason ? { reason: s.reason } : {}),
+    ...(s.total !== undefined ? { total: s.total } : {}),
+  }));
+  const data: KitData = {
+    records: [record, ...others], edges, journal: [],
+    meta: {
+      generated_at: c.meta.loaded_at,
+      ...(dataState.length ? { data_state: dataState } : {}),
+      ...(errors.length ? { errors } : {}),
+    } as KitData['meta'],
+  };
   return { record, data, config, ...(c.facts?.tasks ? { facts: SPRINT_FACTS } : {}) };
 }

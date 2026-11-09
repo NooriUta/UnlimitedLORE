@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import {
   CommandPalette, PaletteTriggers, createRecentList, useKitLang, useKitPalette,
-  type KitCtx, type KitData, type KitRecord, type PaletteAction, type PaletteTarget, type SafeStorage,
+  type KitCtx, type KitData, type KitRecord, type PaletteAction, type PaletteTarget, type RecentList, type SafeStorage,
 } from '@seidr/kit';
 import { copyActions, loreRemoteSearch, searchKinds, type ClipboardLike } from './paletteSource';
 
@@ -28,6 +28,12 @@ export interface LorePaletteProps {
   enabled?: boolean;
   /** Кнопки «Поиск» и «Команды»: на сенсоре клавиш нет — у каждой клавиши есть кнопка. */
   trigger?: boolean;
+  /**
+   * Список недавнего. По умолчанию свой, в хранилище палитры. Внутри
+   * оболочки передаётся список оболочки (shellRecent.ts): два списка
+   * недавнего — это две правды о том, где человек был.
+   */
+  recent?: RecentList;
 }
 
 const EMPTY_DATA: KitData = { records: [], edges: [], journal: [], meta: { generated_at: '' } };
@@ -37,11 +43,12 @@ export function defaultHref(id: string): string {
 }
 
 export function LorePalette({
-  storage, ctx, target, actions, href = defaultHref, onOpenRecord, headers, fetchImpl, clipboard, remoteDelayMs, enabled, trigger,
+  storage, ctx, target, actions, href = defaultHref, onOpenRecord, headers, fetchImpl, clipboard, remoteDelayMs, enabled, trigger, recent: recentProp,
 }: LorePaletteProps) {
   const lang = useKitLang();
   const palette = useKitPalette({ enabled });
-  const recent = useMemo(() => createRecentList(storage), [storage]);
+  const ownRecent = useMemo(() => createRecentList(storage), [storage]);
+  const recent = recentProp ?? ownRecent;
   const remote = useMemo(() => loreRemoteSearch({ headers, fetchImpl, lang }), [headers, fetchImpl, lang]);
 
   const fullCtx = useMemo<KitCtx>(() => {

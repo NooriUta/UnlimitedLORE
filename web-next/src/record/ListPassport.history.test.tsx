@@ -77,3 +77,53 @@ describe('вкладка «История» в паспорте', () => {
     await waitFor(() => expect(document.body.textContent).toMatch(/прав|доступ/i));
   }, 15000);
 });
+
+// S9-09: «показано N из M» без возможности посмотреть дальше — половина
+// правды. Листание: растим предел и перечитываем страницу.
+describe('листание истории', () => {
+  const paged = (total: number, returned: number) => ({
+    ...HISTORY,
+    rows: HISTORY.rows.slice(0, returned),
+    page: { total, offset: 0, limit: returned, returned, has_more: returned < total, order: 'desc' },
+  });
+
+  it('есть «дальше» — кнопка есть, и нажатие просит больше', async () => {
+    const limits: string[] = [];
+    const f = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://lore.test');
+      if (url.pathname === '/lore/history') {
+        limits.push(url.searchParams.get('limit') ?? '');
+        return json(paged(7, 2));
+      }
+      if (url.pathname === '/lore/me/drafts') return json({ drafts: [] });
+      const slice = url.pathname.split('/').pop();
+      if (slice === 'sprints') return json({ rows: [{ sprint_id: 'SP', name: 'Спринт SP', status_raw: '🔄 IN PROGRESS' }] });
+      return json({ rows: [] });
+    }) as unknown as typeof fetch;
+
+    render(<ListPassport type="sprint" id="SP" placement="bottom" fetchImpl={f} backLabel="Спринты" onBack={() => {}} />);
+    const tab = await screen.findByRole('tab', { name: /История/ }, { timeout: 8000 });
+    tab.click();
+    const more = await waitFor(() => screen.getByRole('button', { name: /Показать ещё/ }));
+    more.click();
+    await waitFor(() => expect(limits.length).toBeGreaterThan(1));
+    expect(Number(limits[limits.length - 1])).toBeGreaterThan(Number(limits[0]));
+  }, 15000);
+
+  it('дальше ничего нет — кнопки нет', async () => {
+    const f = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://lore.test');
+      if (url.pathname === '/lore/history') return json(paged(2, 2));
+      if (url.pathname === '/lore/me/drafts') return json({ drafts: [] });
+      const slice = url.pathname.split('/').pop();
+      if (slice === 'sprints') return json({ rows: [{ sprint_id: 'SP', name: 'Спринт SP', status_raw: '🔄 IN PROGRESS' }] });
+      return json({ rows: [] });
+    }) as unknown as typeof fetch;
+
+    render(<ListPassport type="sprint" id="SP" placement="bottom" fetchImpl={f} backLabel="Спринты" onBack={() => {}} />);
+    const tab = await screen.findByRole('tab', { name: /История/ }, { timeout: 8000 });
+    tab.click();
+    await waitFor(() => expect(document.querySelector('.sk-rec-history')).toBeTruthy());
+    expect(screen.queryByRole('button', { name: /Показать ещё/ })).toBeNull();
+  }, 15000);
+});

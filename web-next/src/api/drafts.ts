@@ -100,8 +100,38 @@ export interface DraftSlotOptions {
   type: string;
   id: string;
   field: string;
-  /** Версия записи сейчас (record.version из lore.record/1); null — неизвестна. */
-  version: number | null;
+  /**
+   * Версия записи сейчас (`record.version` из `lore.record/1`); `null` —
+   * неизвестна.
+   *
+   * Строка — это версия фасада (`valid_from` открытого состояния). Сравнить её
+   * с `base_version` черновика нечем: см. причину у `comparableVersion`.
+   */
+  version: string | number | null;
+}
+
+/**
+ * Версия, которую можно сравнивать и отправлять, либо `null`.
+ *
+ * **Две серверные поверхности расходятся типом** (сверено по коду 09.11):
+ * `GET /lore/record` отдаёт `record.version` СТРОКОЙ (`valid_from`), а
+ * `/lore/me/drafts` объявляет `base_version` ЦЕЛЫМ
+ * (`KnowUserDraft.base_version INTEGER`, `DraftRequest.base_version: Integer`,
+ * проверка «base_version must be >= 0»). При этом S5-09 говорит, что второе
+ * берётся из первого — одновременно это выполнить нельзя.
+ *
+ * Перевод мы НЕ придумываем. Из ISO-времени целое можно получить только
+ * выдумкой (миллисекунды, хэш, порядковый номер), и тогда пометка «запись
+ * изменили после черновика» срабатывала бы по придуманному числу. Ложная
+ * пометка хуже отсутствующей: человек бросит правку, которой ничего не
+ * угрожало. Поэтому строковая версия не отправляется и не сравнивается, а
+ * расхождение передано серверной сессии и записано в задачах S5-09 / S5-08.
+ *
+ * Когда сервер приведёт `base_version` к той же строке — здесь останется
+ * вернуть `version` как есть, и пометка заработает сама.
+ */
+export function comparableVersion(version: string | number | null): number | null {
+  return typeof version === 'number' ? version : null;
 }
 
 /**
@@ -114,15 +144,16 @@ export interface DraftSlotOptions {
  * выдумываем расхождение: нет данных, нет пометки.
  */
 export function draftSlot({ api, type, id, field, version }: DraftSlotOptions): MdDraftSlot {
+  const base = comparableVersion(version);
   return {
     async load() {
       const rows = await api.list({ type, id });
       const row = rows.find(r => r.field === field);
       if (!row) return null;
-      const stale = row.base_version != null && version != null && row.base_version !== version;
+      const stale = row.base_version != null && base != null && row.base_version !== base;
       return { text: row.body_md, savedAt: row.saved_at, stale };
     },
-    save: text => api.save({ type, id, field, bodyMd: text, baseVersion: version }),
+    save: text => api.save({ type, id, field, bodyMd: text, baseVersion: base }),
     remove: () => api.remove({ type, id, field }),
   };
 }

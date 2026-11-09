@@ -1315,6 +1315,17 @@ public final class LoreSlices {
             "FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-11: вся матрица «проект × люди» одним запросом —
+        // строка на человека, его проекты и роль на ребре (те же пары, что у
+        // user_project_roles, но без обязательного kc_sub: N запросов на экран не нужны).
+        // Правка ячейки — POST /lore/user/role и /lore/user/role/batch.
+        slice("role_matrix",
+            "SELECT kc_sub, display_name, " +
+            "out('HAS_PROJECT_ROLE').slug AS projects, " +
+            "outE('HAS_PROJECT_ROLE').role AS roles " +
+            "FROM KnowUser",
+            List.of(), Map.of(), " ORDER BY display_name");   // без потолка: SliceCapAndCardParityTest
+
         // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
         // ревью доступа, что у project_users. Один агент — один живой
         // OWNED_BY (out()/outE() без индекса ok — единственная строка).
@@ -2397,6 +2408,25 @@ public final class LoreSlices {
             "GROUP BY object_id, segment",
             List.of(), Map.of(), " ORDER BY calls DESC LIMIT 100");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-07: подключения MCP и их честное «здоровье».
+        // MCP-сервер работает у агента на машине; LORE видит только его вызовы,
+        // поэтому здоровье — наблюдённое: профиль агента (caller), сколько звал,
+        // когда в последний раз (last_seen, epoch millis). Агента, который не звал
+        // ни разу, здесь нет — это «не видели», а не «здоров».
+        // GROUP BY — в хвосте: фильтры дописываются после базы, а не после группировки.
+        slice("mcp_connections",
+            "SELECT object_id AS caller, sum(value) AS calls, max(ts) AS last_seen " +
+            "FROM MetricSnapshot WHERE metric = 'lore.requests' AND segment = 'agent'",
+            List.of(), Map.of("caller", " WHERE object_id = :caller"),
+            " GROUP BY object_id ORDER BY last_seen DESC LIMIT 100");
+
+        // Сбои агентских записей: ответ с кодом ≥ 400 (AO-01 пишет код в value).
+        slice("mcp_failures",
+            "SELECT source AS caller, count(*) AS failures, max(ts) AS last_failure " +
+            "FROM MetricSnapshot WHERE metric = 'lore.action' AND segment = 'agent' AND value >= 400",
+            List.of(), Map.of("caller", " WHERE source = :caller"),
+            " GROUP BY source ORDER BY last_failure DESC LIMIT 100");
+
         // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
         // Отличать от sessions_recent намеренно: здесь наблюдённый факт входа,
         // там — догадка LORE по первому запросу после паузы. source = clientId,
@@ -2754,6 +2784,9 @@ public final class LoreSlices {
         Map.entry("requests_total", "телеметрия — решение"),
         Map.entry("agent_actions", "журнал действий (AO-01) — админский, как телеметрия; решение"),
         Map.entry("admin_actions", "журнал действий админки (S7B-02) — тот же ряд AO-01, админский; решение"),
+        Map.entry("role_matrix", "матрица ролей проект × люди (S7B-11) — админская, как project_users для всех; решение"),
+        Map.entry("mcp_connections", "подключения MCP (S7B-07) — телеметрия агентов, админская; решение"),
+        Map.entry("mcp_failures", "сбои записей агентов (S7B-07) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")

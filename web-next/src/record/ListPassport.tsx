@@ -13,11 +13,12 @@ import {
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
 import { useAppT } from '../i18n';
-import { loadPassport, type PassportType } from './passportAdapters';
-import { fromLoreRecord, toLoreRecord } from './loreRecordContract';
+import { type PassportType } from './passportAdapters';
+import { fromLoreRecord } from './loreRecordContract';
+import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
 import { createDraftsApi, draftSlot } from '../api/drafts';
-import { HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
+import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const md = (s: string) => <MartProse text={s} />;
@@ -55,12 +56,26 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Вкладка «История» (S5-11) была в kit, но в v2 её никто не подключал:
   // RecordView.history нигде не передавался. Тип вне таблицы SCD2 — это
   // «история не ведётся», и сервер мы о нём не спрашиваем.
+  // Листание истории (S9-09): растим предел и перечитываем страницу. Растить,
+  // а не склеивать куски: сервер отдаёт историю одной выборкой с page, и
+  // склейка на клиенте разошлась бы с ней при чужой правке посреди листания.
+  const [histLimit, setHistLimit] = useState(HISTORY_PAGE);
   const hist = useLoadState(
-    () => (HISTORY_TRACKED.has(type) ? fetchHistory(type, id, {}, fetchImpl) : Promise.resolve(NOT_TRACKED)),
-    [type, id, fetchImpl],
+    () => (HISTORY_TRACKED.has(type)
+      ? fetchHistory(type, id, { limit: histLimit }, fetchImpl)
+      : Promise.resolve(NOT_TRACKED)),
+    [type, id, fetchImpl, histLimit],
   );
-  const pp = useLoadState(() => loadPassport(type, id, lang, slice), [type, id, lang, slice]);
-  const contract = useMemo(() => (pp.data ? toLoreRecord(pp.data, new Date().toISOString(), lang) : null), [pp.data, lang]);
+  // Источник паспорта — боевой фасад /lore/record (S4-MODEL-PASSPORT-LIST).
+  // Вместе с ним приходит `record.version` (без неё нет защиты от затирания,
+  // S5-08), настоящие `perms` и состояние блоков. Фасад не ответил — паспорт
+  // собирается из срезов, и причина НАЗВАНА строкой в состоянии данных:
+  // молчаливый откат выглядел бы настоящим паспортом без версии.
+  const pp = useLoadState(
+    () => loadRecordContract(type, id, lang, slice, { fetchImpl }),
+    [type, id, lang, slice, fetchImpl],
+  );
+  const contract = pp.data ?? null;
   const view = useMemo(() => (contract ? fromLoreRecord(contract, lang) : null), [contract, lang]);
   if (pp.state === 'error') return <LoadError error={pp.error} onRetry={pp.reload} />;
   if (!view) return <Skeleton lines={8} label={t('pp.loading')} />;
@@ -88,6 +103,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
         data: hist.data,
         error: hist.error,
         onRetry: hist.reload,
+        // «Показать ещё» есть только пока сервер говорит, что дальше есть.
+        onMore: hist.data?.page?.has_more ? () => setHistLimit(n => n + HISTORY_PAGE) : undefined,
+        loadingMore: hist.state === 'loading' && histLimit > HISTORY_PAGE,
       }}
       placement={placement} loadedAt={contract?.meta.loaded_at} onReload={pp.reload}
       className="list-passport"
