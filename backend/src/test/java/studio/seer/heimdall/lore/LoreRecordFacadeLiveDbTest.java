@@ -183,6 +183,21 @@ class LoreRecordFacadeLiveDbTest {
             .post("/lore/spec").then().statusCode(409);
         admin().body("{\"spec_id\":\"SPEC-REC-VER\",\"content_md\":\"b\",\"expected_version\":\"" + pv + "\"}")
             .post("/lore/spec").then().statusCode(200);
+
+        // S5-08 (kit 09.11): у ADR защиты не было — правка раздела молча ложилась поверх
+        // чужой. Тело ADR — три раздела, каждый своим запросом: одновременная правка
+        // двух разделов — самый вероятный конфликт.
+        admin().body("{\"adr_id\":\"ADR-REC-VER\",\"name\":\"a\",\"status\":\"proposed\",\"context_md\":\"c\"}")
+            .post("/lore/adr").then().statusCode(200);
+        String av = record("adr", "ADR-REC-VER").getString("record.version");
+        var ac = admin().body("{\"adr_id\":\"ADR-REC-VER\",\"decision_md\":\"d\",\"expected_version\":\"stale\"}")
+            .post("/lore/adr").then().statusCode(409).extract().jsonPath();
+        assertEquals("VERSION_CONFLICT", ac.getString("error"));
+        assertEquals(av, ac.getString("current.version"));
+        admin().body("{\"adr_id\":\"ADR-REC-VER\",\"decision_md\":\"d\",\"expected_version\":\"" + av + "\"}")
+            .post("/lore/adr").then().statusCode(200);
+        // без expected_version — как раньше (MCP adr_new, v1)
+        admin().body("{\"adr_id\":\"ADR-REC-VER\",\"consequences_md\":\"e\"}").post("/lore/adr").then().statusCode(200);
     }
 
     @Test
