@@ -1572,7 +1572,11 @@ final class LoreSchemaMigrations {
 
         // S7B-15: заполнение harness по имени — Java-шаг (в SQL после v1 только аддитивное):
         // однозначные назначения LoreActorHarness.plan, с условием «ещё не стоит».
-        new Step(76, 17, "java__actor_harness_backfill", List.of())
+        new Step(76, 17, "java__actor_harness_backfill", List.of()),
+
+        // S2-11 (прод 09.11, v1.17.8): версия истории на нескольких сущностях — каждому владельцу
+        // кроме первого своя копия (те же поля и даты), ребро переводится на копию.
+        new Step(77, 17, "java__shared_state_split", List.of())
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

@@ -493,6 +493,7 @@ public class LoreSchemaMigrationRunner {
         if (version == 68) backfillStatusHistory();
         if (version == 71) backfillTaskHistory();
         if (version == 76) backfillActorHarness();
+        if (version == 77) splitSharedStates();
     }
 
     /**
@@ -532,9 +533,68 @@ public class LoreSchemaMigrationRunner {
         return opened;
     }
 
-    /** Заглушка до правки (S2-11, V77): общие версии пока не разводятся. */
+    /**
+     * V77 (S2-11, прод 09.11 v1.17.8): версия истории, на которую ведут HAS_STATE от НЕСКОЛЬКИХ
+     * сущностей (сторож {@code state_shared_by_entities}: 13 у релизов, 2 у задач —
+     * SPRINT_SITE_SEO_PRERENDER/META-05 делит версию с PRE-03). Срезы истории относят такую
+     * версию первому владельцу ({@code in('HAS_STATE').<id>[0]}), и у остальных история пуста.
+     *
+     * <p>Первый владелец сохраняет версию. Каждый следующий получает СВОЮ копию: те же поля и
+     * даты (ничего не выдумано), новый {@code state_uid}; его ребро переводится на копию —
+     * новое ребро создаётся, старое удаляется по @rid ({@code DELETE EDGE} в ArcadeDB нет).
+     * Идемпотентен: повтор находит ноль общих версий.
+     *
+     * @return сколько рёбер переведено на копии
+     */
     int splitSharedStates() {
-        return 0;
+        StatusHistoryService.Db sdb = statusDb();
+        int moved = 0;
+        for (String hist : new java.util.TreeSet<>(LoreSlices.HIST_PARENT.keySet())) {
+            List<Map<String, Object>> shared = sdb.query(
+                "SELECT @rid AS rid FROM " + hist + " WHERE in('HAS_STATE').size() > 1", Map.of());
+            for (Map<String, Object> s : shared) {
+                String rid = rid(s.get("rid"));
+                if (rid == null) continue;
+                List<Map<String, Object>> edges = sdb.query(
+                    "SELECT @rid AS erid, @out AS owner FROM (SELECT expand(inE('HAS_STATE')) FROM " + rid + ")",
+                    Map.of());
+                List<Map<String, Object>> full = sdb.query("SELECT FROM " + rid, Map.of());
+                if (edges.size() < 2 || full.isEmpty()) continue;
+                for (int i = 1; i < edges.size(); i++) {
+                    String erid = rid(edges.get(i).get("erid"));
+                    String owner = rid(edges.get(i).get("owner"));
+                    if (erid == null || owner == null) continue;
+                    Map<String, Object> params = new java.util.LinkedHashMap<>();
+                    StringBuilder set = new StringBuilder();
+                    int k = 0;
+                    for (Map.Entry<String, Object> e : full.get(0).entrySet()) {
+                        String name = e.getKey();
+                        if (name.startsWith("@") || "state_uid".equals(name) || e.getValue() == null) continue;
+                        if (!name.matches("[A-Za-z_][A-Za-z0-9_]*")) continue;
+                        set.append(set.length() == 0 ? "" : ", ").append(name).append(" = :p").append(k);
+                        params.put("p" + k++, e.getValue());
+                    }
+                    params.put("nsid", java.util.UUID.randomUUID().toString());
+                    set.append(set.length() == 0 ? "" : ", ").append("state_uid = :nsid");
+                    sdb.script("LET $c = INSERT INTO " + hist + " SET " + set + ";"
+                        + "CREATE EDGE HAS_STATE FROM " + owner + " TO $c;"
+                        + "DELETE FROM HAS_STATE WHERE @rid = " + erid + ";", params);
+                    moved++;
+                }
+            }
+            if (!shared.isEmpty())
+                LOG.infof("[LORE MIGRATE] V77 %s: общих версий %d — каждому владельцу кроме первого своя копия",
+                    hist, shared.size());
+        }
+        return moved;
+    }
+
+    /** @rid из ответа движка в виде «#c:p»; всё прочее — null (в SQL вставляется только проверенное). */
+    private static String rid(Object v) {
+        if (v == null) return null;
+        String s = String.valueOf(v);
+        if (v instanceof Map<?, ?> m && m.get("@rid") != null) s = String.valueOf(m.get("@rid"));
+        return s.matches("#\\d+:\\d+") ? s : null;
     }
 
     private StatusHistoryService.Db statusDb() {
