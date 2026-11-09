@@ -38,7 +38,11 @@ public class LoreAdrResource extends LoreResourceBase {
         // LH-02: when true, a body edit CLOSES the current open hist row and opens a
         // fresh one (SCD2 close-open) instead of amending in place — so the previous
         // edition is preserved. Default (null/false) keeps the amend-in-place behaviour.
-        Boolean checkpoint) {}
+        Boolean checkpoint,
+        // ADR-LORE-047 A3 / S5-08: версия записи паспорта (record.version); не совпала —
+        // 409 VERSION_CONFLICT. Тело ADR — три раздела, каждый своим запросом, поэтому
+        // одновременная правка двух разделов — самый вероятный конфликт.
+        String expected_version) {}
 
     // ── Write-path: create / upsert KnowADR ──────────────────────────────────
 
@@ -54,6 +58,8 @@ public class LoreAdrResource extends LoreResourceBase {
             return badParams("adr_id required");
         if (!SAFE_ID.matcher(req.adr_id()).matches())
             return badParams("adr_id contains illegal characters");
+        Response stale = versionConflict("adr", req.adr_id(), req.expected_version());
+        if (stale != null) return stale;
         try {
             String now  = Instant.now().toString();
             String nsid = UUID.randomUUID().toString();
