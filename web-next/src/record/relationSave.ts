@@ -17,6 +17,7 @@
 // печатает причину отказа рядом с собой (`sk-rel__failed`). До этого отказ
 // проглатывался, и неудачная привязка выглядела как успех.
 import { loreFetch } from '../auth/session';
+import { recordPath } from '../api/liveRecord';
 
 export interface RelationChange {
   type: string;
@@ -58,12 +59,14 @@ function refusalText(status: number, body: Record<string, unknown>): string {
  * Привязка или отвязка. Удача — ничего не возвращает; отказ — исключение с
  * текстом, пригодным для показа.
  *
- * Код записи в адрес не кодируется: сервер принимает `{id: .+}`, и у задачи
- * код — «спринт/код».
+ * Код записи кодируется ПО СЕГМЕНТАМ (`recordPath`): слэш остаётся живым,
+ * потому что сервер принимает `{id: .+}` и у задачи код — «спринт/код», а
+ * решётка обязана уйти как `%23` — иначе браузер отрежет её как якорь и запрос
+ * придёт на валидный путь ДРУГОЙ записи (ключ релиза — «проект#тег»).
  */
 export async function saveRelation(c: RelationChange, fetchImpl?: typeof fetch): Promise<void> {
   const http = fetchImpl ?? loreFetch;
-  const res = await http(`/lore/record/${c.type}/${c.id}/relation`, {
+  const res = await http(`/lore/record/${c.type}/${recordPath(c.id)}/relation`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ rel: c.rel, dir: c.dir, target: c.target, action: c.action }),

@@ -38,6 +38,9 @@ const ListPassport = lazy(() => import('../record/ListPassport'));
  */
 const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task', specs: 'spec',
+  // Появились 09.11 вместе с типами фасада (#988, #991). Четыре — только на
+  // чтение; «только чтение» приходит в `perms`, клиент это не предполагает.
+  decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 type OpenRecord = { id: string | null; place: RecordPlacement };
