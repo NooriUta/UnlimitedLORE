@@ -43,6 +43,18 @@ export interface MdInlineEditProps {
   defaultMode?: MdEditMode;
   /** Текст пустого поля; по умолчанию — «Текста нет». */
   emptyText?: string;
+  /**
+   * Показывать строку-подсказку «как править» над текстом. По умолчанию да.
+   *
+   * Слова владелицы 09.11.2026: «верни типтап редактирование, вы ухудшили user
+   * experience». Когда разделы тела стали править каждый по отдельности
+   * (S5-06), подсказка и кнопка «Режим исходника» размножились по числу
+   * разделов: у ADR их стало три, и запись из документа превратилась в форму.
+   * Подсказка — свойство ЗАПИСИ, а не каждого поля, поэтому её показывает
+   * только первый редактор, остальные её гасят. Сама правка на месте
+   * (TipTap) у каждого раздела остаётся.
+   */
+  hint?: boolean;
   /** Загрузчик картинок для превью (TipTapField). */
   onUploadImage?: (file: File) => Promise<{ url: string }>;
   /** Упоминания по «@» в превью. */
@@ -76,7 +88,7 @@ const MODE_KEY: Record<MdEditMode, KitKey> = {
 
 export function MdInlineEdit({
   value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
-  emptyText, onUploadImage, mentionItems, drafts, className,
+  emptyText, hint = true, onUploadImage, mentionItems, drafts, className,
 }: MdInlineEditProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -279,7 +291,7 @@ export function MdInlineEdit({
       <section className={['sk-mdedit', className].filter(Boolean).join(' ')} data-state="read">
         {draftBar}
         {/* S4-CONTENT-V4 (прототип v4): как править — строкой над текстом; «Режим исходника» — сразу в код. */}
-        {onSave && (
+        {onSave && hint && (
           <div className="sk-mdedit__hint">
             <span className="sk-mdedit__hint-text">{t('kit.mdedit.hint')}</span>
             <button type="button" className="sk-mdedit__src-btn" onClick={() => { choose('code'); open(); }}>

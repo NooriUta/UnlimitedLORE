@@ -62,7 +62,10 @@ describe('fetchPassportOrder: три неудачи различимы', () => {
       fetchImpl: net(modelBody({ sprint: { decided: true, sections: SECTIONS } })),
     });
     expect(r.order.decided).toBe(false);
-    expect(r.notes.join(' ')).toMatch(/модель его не задаёт/);
+    // 09.11: строка стала КОНКРЕТНЕЕ — называет тип, которого не хватило.
+    // Прежнее общее «модель его не задаёт» годилось на три разных случая
+    // сразу, и проверка на проде по нему ничего не могла сказать.
+    expect(r.notes.join(' ')).toMatch(/нет порядка для типа «adr»/);
   });
 
   // ПЕРЕПИСАНО 09.11 вместе с ослаблением сторожа по CJM. Раньше лишний ключ
@@ -128,6 +131,54 @@ describe('паспорт: причина видна человеку, а не т
       fetchImpl={passportNet({ sprint: { decided: true, sections: SECTIONS } })}
       backLabel="Спринты" onBack={() => {}} />);
     expect(await screen.findByText('Спринт А', {}, { timeout: 8000 })).toBeTruthy();
-    await waitFor(() => expect(document.querySelector('.pp-model-note')).toBeNull(), { timeout: 8000 });
+    // ПРО ПОРЯДОК слов быть не должно. Сама строка замечаний теперь может
+    // существовать по ДРУГОМУ поводу: с 09.11 туда же идут замечания про цикл
+    // статусов, а в этой модели цикла для спринта нет — и об этом сказано
+    // честно. Поэтому проверяем не отсутствие строки, а отсутствие утверждения
+    // про порядок; прежняя форма требовала молчания и про статусы тоже.
+    await waitFor(() => {
+      const note = document.querySelector('.pp-model-note')?.textContent ?? '';
+      expect(note).not.toMatch(/порядок разделов/);
+    }, { timeout: 8000 });
   }, 15000);
+});
+
+describe('S4-29 · ТРИ разных «порядка нет» различимы словами (CJM прод 09.11.2026)', () => {
+  // Серверная сессия проверила по коду: `/lore/model` ОТДАЁТ
+  // `surfaces.passport.sprint` с `decided: true` и порядком tasks → content →
+  // dependsOn/blocks (slot content) → phases (slot more). А на проде v1.17.7
+  // порядок не применился. Значит клиент получил НЕ ТО — и прежняя одна
+  // строка «для этого типа модель его не задаёт» не позволяла понять, что
+  // именно: не дошёл раздел surfaces, не дошёл тип или сервер не решал.
+  //
+  // Три утверждения — три разных причины и три разных виноватых. Пока они
+  // слиты в одну строку, следующая проверка на проде опять ничего не скажет.
+  const noSurfaces = { format: 'model/0', version: 'v1', partial: true, missing: ['surfaces:*'] };
+
+  it('раздела surfaces в документе НЕТ — сказано про раздел, а не про тип', async () => {
+    const r = await fetchPassportOrder('sprint', { fetchImpl: net(noSurfaces) });
+    expect(r.order.decided).toBe(false);
+    expect(r.notes.join(' ')).toMatch(/раздела surfaces/i);
+  });
+
+  it('surfaces есть, а типа в нём нет — названо, какого типа не хватило', async () => {
+    const r = await fetchPassportOrder('sprint', { fetchImpl: net(modelBody({ task: { decided: true, sections: SECTIONS } })) });
+    expect(r.order.decided).toBe(false);
+    expect(r.notes.join(' ')).toMatch(/sprint/);
+    expect(r.notes.join(' ')).not.toMatch(/раздела surfaces/i);
+  });
+
+  it('тип есть, но сервер порядок НЕ РЕШАЛ — это третье утверждение', async () => {
+    const r = await fetchPassportOrder('sprint', { fetchImpl: net(modelBody({ sprint: { decided: false, sections: [] } })) });
+    expect(r.order.decided).toBe(false);
+    expect(r.notes.join(' ')).toMatch(/не решал|не задаёт/i);
+  });
+
+  it('положительный контроль: с порядком модели лишних слов нет', async () => {
+    const r = await fetchPassportOrder('sprint', {
+      fetchImpl: net(modelBody({ sprint: { decided: true, sections: SECTIONS } })),
+    });
+    expect(r.order.decided).toBe(true);
+    expect(r.notes).toEqual([]);
+  });
 });

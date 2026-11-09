@@ -152,17 +152,26 @@ describe('S5-06 · склеенное тело и разделы не споря
     expect(screen.getByRole('button', { name: /Править «Заметка»/ })).toBeTruthy();
   });
 
-  it('тело НЕ пустое — показано и правится, разделы идут после него', () => {
+  it('тело НЕ показывается отдельным блоком: оно КОПИЯ раздела (прод v1.17.8)', () => {
+    // Находка серверной сессии: у задачи заметка выходила ДВАЖДЫ — разделом
+    // «Текст» и разделом «Заметка», оба с ✎. Сервер отдаёт тело записи копией
+    // одного из разделов для старых клиентов (у задачи это заметка, у спринта
+    // контекст, у спеки содержимое), и kit рисовал её ещё и своим блоком.
+    // Прежний тест требовал как раз этого второго блока — то есть закреплял
+    // удвоение.
     const onSave = vi.fn(async () => {});
     const { container } = render(
       <RecordView
-        record={{ ...record, body_md: 'Общий текст' }}
+        record={{ ...record, body_md: 'Заметка руками' }}
         ctx={ctxWith({ hooks: { onSave } })} tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
       />,
     );
-    expect(screen.getByRole('button', { name: /Править «Текст»/ })).toBeTruthy();
-    const order = [...container.querySelectorAll('.sk-rec-sections > *')].map(n => n.className);
-    expect(order[0]).not.toContain('sk-rec-fields__sec');
+    expect(screen.queryByRole('button', { name: /Править «Текст»/ })).toBeNull();
+    // Текст виден ОДИН раз — как раздел «Заметка», и правится как раздел.
+    expect(screen.getAllByText('Заметка руками')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Править «Заметка»/ })).toBeTruthy();
+    const first = [...container.querySelectorAll('.sk-rec-sections > *')][0];
+    expect(first?.className).toContain('sk-rec-fields__sec');
   });
 });
 
@@ -210,5 +219,72 @@ describe('S5-06 · раздел «только чтение» не получа�
       />,
     );
     expect([...container.querySelectorAll('.sk-rec-fields__sechead')]).toEqual([]);
+  });
+});
+
+describe('S5-06 · подсказка «как править» — ОДНА на запись, а не у каждого раздела', () => {
+  // Слова владелицы 09.11.2026: «верни типтап редактирование, вы ухудшили user
+  // experience». Правка на месте никуда не делась — ухудшилось ЧТЕНИЕ: когда
+  // разделы стали править по отдельности, строка-подсказка и кнопка «Режим
+  // исходника» размножились по числу разделов, и запись из документа
+  // превратилась в форму. Подсказка — свойство записи, не поля.
+  const hints = () => document.querySelectorAll('.sk-mdedit__hint');
+  const pens = () => document.querySelectorAll('.sk-mdedit__pen');
+
+  it('два раздела, тела нет — подсказка одна, а ✎ у каждого раздела', () => {
+    const onSave = vi.fn(async () => {});
+    render(
+      <RecordView
+        record={{ ...record, fields: { note_md: 'Заметка', plan_md: 'План' } }}
+        ctx={ctxWith({ hooks: { onSave } })} tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
+      />,
+    );
+    expect(hints()).toHaveLength(1);
+    expect(pens()).toHaveLength(2);
+  });
+
+  it('есть тело и разделы — подсказку показывает тело', () => {
+    const onSave = vi.fn(async () => {});
+    const { container } = render(
+      <RecordView
+        record={{ ...record, body_md: 'Общий текст', fields: { note_md: 'Заметка', plan_md: 'План' } }}
+        ctx={ctxWith({ hooks: { onSave } })} tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
+      />,
+    );
+    expect(hints()).toHaveLength(1);
+    // Именно у первого блока — то есть у тела, до разделов.
+    const first = container.querySelector('.sk-rec-sections > *');
+    expect(first?.querySelector('.sk-mdedit__hint')).toBeTruthy();
+  });
+
+  it('первый раздел только для чтения — подсказка у первого ПРАВИМОГО', () => {
+    const onSave = vi.fn(async () => {});
+    render(
+      <RecordView
+        record={{ ...record, fields: { note_md: 'Заметка', plan_md: 'План' } }}
+        ctx={ctxWith({ hooks: { onSave }, kinds: {
+          task: {
+            title: 'Задача', icon: 'scroll-unfurled',
+            bodySections: [
+              { key: 'note_md', title: 'Заметка', editable: false },
+              { key: 'plan_md', title: 'План' },
+            ],
+          },
+        } })}
+        tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
+      />,
+    );
+    expect(hints()).toHaveLength(1);
+    expect(pens()).toHaveLength(1);
+  });
+
+  it('без права правки подсказок нет вовсе — читателю править нечем', () => {
+    render(
+      <RecordView
+        record={{ ...record, fields: { note_md: 'Заметка', plan_md: 'План' } }}
+        ctx={ctxWith()} tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
+      />,
+    );
+    expect(hints()).toHaveLength(0);
   });
 });
