@@ -122,4 +122,37 @@ class LoreActorOwnerLiveDbTest {
             .body("owner_linked", equalTo(false))
             .body("hint", notNullValue());
     }
+
+    /**
+     * SPRINT_UXR_S11_TEST_OPT/CT-SLICES-V2 — контракт строки agent_owners для экрана «Агенты».
+     * owner_kc_sub и owner_display_name — МАССИВЫ (OWNED_BY бывает не одно; дефект #1001:
+     * клиент ждал строку). harness — ключ есть всегда; пишется только кодом справочника,
+     * "" сбрасывает (S7B-15, #997).
+     */
+    @Test
+    @Order(7)
+    @SuppressWarnings("unchecked")
+    void agentOwnersRowContract() {
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"actor_id\":\"" + ACTOR + "\",\"client_id\":\"" + CLIENT_ID + "\",\"kc_sub\":\"" + OWNER_SUB + "\",\"harness\":\"codex\"}")
+        .when().post("/lore/actor/owner").then().statusCode(200);
+        java.util.Map<String, Object> row = given().header("X-Seer-Role", "admin")
+            .when().get("/lore/slice/agent_owners").then().statusCode(200)
+            .extract().jsonPath().getMap("rows.find { it.actor_id == '" + ACTOR + "' }");
+        org.junit.jupiter.api.Assertions.assertTrue(row.keySet().containsAll(java.util.Set.of("actor_id", "name", "client_id",
+            "agent_role", "machine_id", "session_id", "harness", "owner_kc_sub", "owner_display_name")), "ключи строки: " + row.keySet());
+        org.junit.jupiter.api.Assertions.assertInstanceOf(java.util.List.class, row.get("owner_kc_sub"), "owner_kc_sub — массив");
+        org.junit.jupiter.api.Assertions.assertInstanceOf(java.util.List.class, row.get("owner_display_name"), "owner_display_name — массив");
+        org.junit.jupiter.api.Assertions.assertEquals("codex", row.get("harness"));
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"actor_id\":\"" + ACTOR + "\",\"client_id\":\"" + CLIENT_ID + "\",\"kc_sub\":\"" + OWNER_SUB + "\",\"harness\":\"no-such-harness\"}")
+        .when().post("/lore/actor/owner").then().statusCode(400);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"actor_id\":\"" + ACTOR + "\",\"client_id\":\"" + CLIENT_ID + "\",\"kc_sub\":\"" + OWNER_SUB + "\",\"harness\":\"\"}")
+        .when().post("/lore/actor/owner").then().statusCode(200);
+        given().header("X-Seer-Role", "admin").when().get("/lore/slice/agent_owners").then().statusCode(200)
+            .body("rows.find { it.actor_id == '" + ACTOR + "' }.harness", org.hamcrest.Matchers.nullValue());
+    }
 }
