@@ -15,6 +15,7 @@ import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { statusMeta } from '../elements/statusMeta';
+import { statusLook, useStatusDict } from '../core/statusLook';
 import { StatusIcon } from '../core/StatusIcon';
 import { useKitLang } from '../i18n';
 import type { KitLang } from '../i18n';
@@ -901,19 +902,42 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
 }
 
 /**
- * Статус значком: сырой статус сервера читается в код тем же читателем, что у
- * задач и спринтов (StatusOfCtx), иконка и цвет — из общей таблицы kit. Подпись —
- * код, сырой текст сервера — в подсказке.
+ * Статус значком.
+ *
+ * Сырой статус сервера читается в код тем же читателем, что у задач и спринтов
+ * (StatusOfCtx). Иконка и цвет — ИЗ СЛОВАРЯ ПРИЛОЖЕНИЯ (`statusLook`), а не из
+ * таблицы kit: слова владелицы 09.11.2026 — «статусную модель и иконки к ним
+ * по контракту несут они, а ты просто обрабатываешь согласно контракту».
+ *
+ * До этой правки лента брала таблицу kit, а списки и чип — словарь модели, и
+ * на проде v1.17.7 иконки статусов в новостях не совпадали с задачами и
+ * спринтами. Это была не разница вкусов, а две правды.
+ *
+ * Запас kit остался — но ПОМЕЧЕННЫМ: причина уходит в подсказку, чтобы дыра в
+ * справочнике (например adr-статусы без иконки) не выглядела замыслом.
  */
 function StatusMark({ code }: { code: string | null }) {
   const statusOf = useContext(StatusOfCtx);
+  const dict = useStatusDict();
   if (!code) return <span className="sk-news__st" data-status="">∅</span>;
   const canon = statusOf(code) || code;
-  const m = statusMeta(canon);
+  const look = statusLook(canon, dict);
+  const category = statusMeta(canon).category;
   return (
-    <span className="sk-news__st" data-status={canon} data-category={m.category} title={code}
-      style={{ '--st-c': m.color } as CSSProperties}>
-      <StatusIcon icon={m.icon} size={12} />
+    <span
+      className="sk-news__st"
+      data-status={canon}
+      data-category={category}
+      // Пометка «оформление из запаса» — атрибутом, а не в подсказке: в
+      // подсказке человек ждёт СЫРОЙ статус сервера, а не рассказ о внутренних
+      // источниках kit. Но и молчать нельзя: по этому атрибуту видно, что
+      // иконка не из словаря приложения — им же пользуются тесты и аудит.
+      data-look={look.source}
+      data-look-why={look.why}
+      title={code}
+      style={{ '--st-c': look.color } as CSSProperties}
+    >
+      <StatusIcon icon={look.icon} size={12} />
       {canon}
     </span>
   );

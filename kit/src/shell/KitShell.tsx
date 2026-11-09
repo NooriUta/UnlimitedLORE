@@ -15,6 +15,7 @@
 import { ICON_CANON } from '../elements/iconCanon';
 import { navClick } from '../core/navClick';
 import { useNarrow } from '../core/narrow';
+import { StatusDictCtx } from '../core/statusLook';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { KitConfig, KitData } from '../core/contract';
@@ -468,6 +469,13 @@ export function KitShell({
 
   return (
     <ShellContext.Provider value={api}>
+      {/* Словарь статусов — всем, кто рисует статус (S4-STATUS-AXIS-CONFIG,
+          слова владелицы 09.11: «статусную модель и иконки к ним по контракту
+          несут они, а ты просто обрабатываешь»). Лента новостей и будущие виды
+          получают данные своим источником, и конфиг до них не доходил — отсюда
+          две правды об иконках статусов на проде v1.17.7. Провайдер здесь,
+          потому что конфиг в руках у оболочки. */}
+      <StatusDictCtx.Provider value={config.statuses.items}>
       <div className={[
         'sk-shell',
         narrow ? 'sk-shell--narrow' : '',
@@ -605,6 +613,7 @@ export function KitShell({
           </Sheet>
         )}
       </div>
+      </StatusDictCtx.Provider>
     </ShellContext.Provider>
   );
 }
