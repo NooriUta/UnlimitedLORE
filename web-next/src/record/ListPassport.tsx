@@ -141,7 +141,15 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // 409-м, если запись успели изменить. Без неё сохранение затирало чужую
     // правку молча. У ADR проверки на сервере нет — там версия не уходит, и
     // С PR #969 проверку принимают все четыре типа, включая ADR.
-    await savePassportField(type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl, contract?.record.version ?? null);
+    // Путь записи РАЗДЕЛА берём из схемы сервера (`write`), а не из своей
+    // таблицы «тип → поле»: у спринта разделов два («Контекст» и «Итог»), у
+    // ADR три, и таблица по одному имени на тип молча не записала бы
+    // остальные (замечание серверной сессии 09.11 по его же реестру).
+    const def = contract?.schema.fields.find(f => f.key === field);
+    await savePassportField(
+      type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl,
+      contract?.record.version ?? null, def?.write ?? null,
+    );
     pp.reload();
   };
   // Привязка и отвязка связей (S4-MODEL-PASSPORT-LIST): управление в kit было

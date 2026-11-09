@@ -16,6 +16,15 @@ export interface LoreField {
   group: 'head' | 'body' | 'props';
   /** Раздел внутри «Свойств» (S4-36): «Планирование», «Модули». */
   section?: string;
+  /**
+   * Куда писать ИМЕННО ЭТОТ раздел (сервер, `LoreRecordRegistry:532`).
+   *
+   * Своей таблицы «тип → поле тела» в клиенте быть не должно: у спринта
+   * разделов ДВА («Контекст» и «Итог»), у ADR три, и таблица по одному имени
+   * на тип молча не записала бы остальные. `null` вместе с `editable: false`
+   * — «только чтение», и тогда ✎ не предлагается вовсе.
+   */
+  write?: { endpoint: string; field: string } | null;
 }
 export interface LoreTab { key: string; label: string; zone: 'record' | 'around'; rel?: string; dir?: 'out' | 'in'; count?: number }
 /** Связь типа по виду UML (D-2026-LORE-RECORD-RELATION-UML) — kit рисует и управляет по виду. */
