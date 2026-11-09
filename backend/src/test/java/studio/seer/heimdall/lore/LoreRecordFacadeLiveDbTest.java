@@ -241,6 +241,29 @@ class LoreRecordFacadeLiveDbTest {
         assertEquals(r.getMap("computed.tasks_total"), list.getMap("rows[0].tasks_total"), "паспорт и список — одно число");
     }
 
+    /**
+     * SPRINT_UXR_S11_TEST_OPT/CT-RECORD — то, на чём kit держит кнопки: perms.can_status (кнопка
+     * статуса) и record.version строкой (защита от перезаписи). В values — только скаляры и
+     * списки: объект там клиент рисует мусором (#1004).
+     */
+    @Test
+    void contractForKit() {
+        final String sid = "SPRINT_REC_CONTRACT";
+        sprint(sid);
+        task(sid, "T-1");
+        for (String[] tr : new String[][]{{"sprint", sid}, {"task", sid + "/T-1"}}) {
+            JsonPath r = record(tr[0], tr[1]);
+            String w = tr[0] + ": ";
+            assertInstanceOf(String.class, r.get("record.version"), w + "версия — строка (valid_from открытой версии)");
+            assertInstanceOf(Boolean.class, r.get("perms.can_status"), w + "perms.can_status — булево");
+            assertInstanceOf(Boolean.class, r.get("perms.can_edit"), w + "perms.can_edit — булево");
+            assertInstanceOf(Map.class, r.get("computed"), w + "computed — объект всегда, пусть и пустой");
+            Map<String, Object> values = r.getMap("values");
+            for (Map.Entry<String, Object> e : values.entrySet())
+                assertFalse(e.getValue() instanceof Map, w + "в values объект — " + e.getKey());
+        }
+    }
+
     /** Kit 09.11: паспорта решения и вопроса (только чтение) — первыми из восьми типов разделов v2. */
     @Test
     void decisionAndQuestionPassportsAreReadOnly() {

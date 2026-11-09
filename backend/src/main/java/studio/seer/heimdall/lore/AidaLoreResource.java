@@ -999,6 +999,11 @@ public class AidaLoreResource extends LoreResourceBase {
                 .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
         }
 
+        // Условие 6 (SPEC-LORE-KIT-CONTRACT-CONDITIONS): sprint_totals проверяет, какие из
+        // запрошенных спринтов существуют, — «нет такого» ≠ «ноль задач». Сбой пробы —
+        // existing = null, и ответ честно говорит existence_checked:false.
+        final java.util.concurrent.atomic.AtomicReference<java.util.Set<String>> sprintsExisting =
+            new java.util.concurrent.atomic.AtomicReference<>();
         return client.query(db, basicAuth(), body)
             .chain(res -> {
                 if (exemptQuery == null) return Uni.createFrom().item(res);
@@ -1012,6 +1017,22 @@ public class AidaLoreResource extends LoreResourceBase {
                     return new studio.seer.heimdall.bench.MartResult(m.rows(), res.returned(),
                         res.limit(), res.truncated());
                 });
+            })
+            .chain(res -> {
+                if (!"sprint_totals".equals(id)) return Uni.createFrom().item(res);
+                List<String> ids = new ArrayList<>();
+                for (String s : given.getOrDefault("sprint_ids", "").split(",")) if (!s.isBlank()) ids.add(s.trim());
+                if (ids.isEmpty()) { sprintsExisting.set(java.util.Set.of()); return Uni.createFrom().item(res); }
+                MartQuery probe = new MartQuery("sql", "SELECT sprint_id FROM KnowSprint WHERE sprint_id IN :ids",
+                    Map.of("ids", ids), -1);
+                return client.query(db, basicAuth(), probe)
+                    .map(p -> {
+                        java.util.Set<String> found = new java.util.HashSet<>();
+                        for (Object r : p.result()) if (r instanceof Map<?, ?> m && m.get("sprint_id") != null) found.add(String.valueOf(m.get("sprint_id")));
+                        sprintsExisting.set(found);
+                        return res;
+                    })
+                    .onFailure().recoverWithItem(ex -> res);
             })
             // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
             // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
@@ -1036,7 +1057,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 out.put("rows", LoreStatusCategory.enrich(id, castRows(out.get("rows"))));
                 // Владелица 09.11: итоги спринта — строки задач сворачиваются в строку на
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
-                if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""));
+                if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (outside != null) out.put("outside_scope", outside);
                 try {

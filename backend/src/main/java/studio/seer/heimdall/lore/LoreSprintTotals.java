@@ -28,6 +28,16 @@ final class LoreSprintTotals {
         + "не готово. Сумма — по заполненным значениям; known — сколько заполнено; при known = 0 value = null.";
 
     static List<Map<String, Object>> aggregate(List<Map<String, Object>> tasks, List<String> sprintIds) {
+        return aggregate(tasks, sprintIds, null);
+    }
+
+    /**
+     * {@code existing} — какие из запрошенных спринтов есть в базе; null — не проверяли.
+     * Нет спринта — state not_found и value null (SPEC-LORE-KIT-CONTRACT-CONDITIONS, условие 6):
+     * «нет такого» и «ноль задач» — разные утверждения.
+     */
+    static List<Map<String, Object>> aggregate(List<Map<String, Object>> tasks, List<String> sprintIds,
+                                               java.util.Set<String> existing) {
         Map<String, Acc> by = new LinkedHashMap<>();
         for (String sid : sprintIds) by.put(sid, new Acc());
         for (Map<String, Object> t : tasks) {
@@ -48,9 +58,10 @@ final class LoreSprintTotals {
             Acc a = e.getValue();
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("sprint_id", e.getKey());
-            row.put("state", "ok");
+            boolean missing = existing != null && a.of == 0 && !existing.contains(e.getKey());
+            row.put("state", missing ? "not_found" : "ok");
             Map<String, Object> total = new LinkedHashMap<>();
-            total.put("value", a.of);
+            total.put("value", missing ? null : a.of);
             total.put("known", a.of);
             total.put("of", a.of);
             total.put("done", a.done);
@@ -69,13 +80,17 @@ final class LoreSprintTotals {
      * должен зависеть от того, где считается свёртка (kit 09.11). Ключ есть всегда.
      */
     @SuppressWarnings("unchecked")
-    static void fold(Map<String, Object> body, String sprintIdsCsv) {
+    static void fold(Map<String, Object> body, String sprintIdsCsv) { fold(body, sprintIdsCsv, null); }
+
+    @SuppressWarnings("unchecked")
+    static void fold(Map<String, Object> body, String sprintIdsCsv, java.util.Set<String> existing) {
         Object t = body.get("truncated");
         body.put("inputs_truncated", t != null && !Boolean.FALSE.equals(t));
         List<Map<String, Object>> rows = body.get("rows") instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
         List<String> ids = new ArrayList<>();
         for (String s : (sprintIdsCsv == null ? "" : sprintIdsCsv).split(",")) if (!s.isBlank()) ids.add(s.trim());
-        body.put("rows", aggregate(rows, ids));
+        body.put("rows", aggregate(rows, ids, existing));
+        if (existing == null) body.put("existence_checked", false);
         body.put("rule", RULE);
     }
 
