@@ -157,6 +157,14 @@ public final class LoreSlices {
     static final String DONE_STATUS_SQL = LoreStatusVocabulary.anySql("status_raw", "done");
 
     /**
+     * S7B-02: семейства записи, относящиеся к админке (журнал действий админки).
+     * Человеческие семейства (AgentScopeFilter.HUMAN_ONLY без контентных news/record)
+     * и управление проектами и их ролями.
+     */
+    static final java.util.Set<String> ADMIN_FAMILIES =
+        java.util.Set.of("dict", "kc", "admin", "user", "project", "project-actor");
+
+    /**
      * S2-11: дата закрытия спринта — момент ПЕРЕХОДА в «выполнен». Правка плана
      * закрытого спринта открывает новую DONE-версию, и {@code [done].valid_from[0]}
      * мог указать на неё — дата плыла. {@code status_known_from} ставится только
@@ -2368,6 +2376,19 @@ public final class LoreSlices {
                 "caller", " WHERE source = :caller"),
             " ORDER BY ts DESC LIMIT 500");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-02: журнал действий АДМИНКИ — тот же ряд AO-01,
+        // только админские семейства (ADMIN_FAMILIES). «Кто» — caller, «человек или
+        // агент» — axis, «что» — family + entity_id, «когда» — ts, исход — status (код
+        // ответа): отказы видны наравне с успехом.
+        slice("admin_actions",
+            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, " +
+            "segment AS axis, value AS status FROM MetricSnapshot WHERE metric = 'lore.action' " +
+            "AND object_type IN [" + String.join(", ", ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()) + "]",
+            List.of(), Map.of(
+                "family", " WHERE object_type = :family",
+                "caller", " WHERE source = :caller"),
+            " ORDER BY ts DESC LIMIT 500");
+
         // Тот же ряд, свёрнутый до вызывающего: «кто вообще сколько зовёт»,
         // без разбивки по эндпоинтам — верхний уровень ответа.
         slice("requests_total",
@@ -2732,6 +2753,7 @@ public final class LoreSlices {
         Map.entry("requests_by_caller", "телеметрия обращений — админская, решение"),
         Map.entry("requests_total", "телеметрия — решение"),
         Map.entry("agent_actions", "журнал действий (AO-01) — админский, как телеметрия; решение"),
+        Map.entry("admin_actions", "журнал действий админки (S7B-02) — тот же ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")
