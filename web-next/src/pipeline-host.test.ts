@@ -521,3 +521,13 @@ describe('PL-04: бэкенд препрода — basic (root), а не ток�
     expect(step).not.toMatch(/vars\.LORE_MART_AUTH/);
   });
 });
+
+// Метка версии в углу (владелица 09.11): тег релиза доезжает до /lore/version только
+// если выкатка прода передаёт его в контейнер, а compose принимает. Снять любую из
+// двух строк — release молча станет null, и метка покажет коммит вместо версии.
+describe('тег релиза доходит до бэкенда прода', () => {
+  it('шаг up передаёт LORE_RELEASE_TAG, compose принимает его в environment lore-backend', () => {
+    expect(read('.github/scripts/lore-host-deploy.sh')).toMatch(/LORE_RELEASE_TAG=\$TAG docker compose up -d lore-backend/);
+    expect(read('docker-compose.yml')).toContain('- LORE_RELEASE_TAG=${LORE_RELEASE_TAG:-}');
+  });
+});

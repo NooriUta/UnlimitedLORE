@@ -141,6 +141,9 @@ services:
       - minio
     environment:
       - MART_ARCADE_URL=http://arcade:2480
+      # Метка версии в углу (владелица 09.11): тег релиза передаёт выкатка прода
+      # (lore-host-deploy.sh, шаг up). Пусто — /lore/version отдаёт release: null.
+      - LORE_RELEASE_TAG=${LORE_RELEASE_TAG:-}
       - ARCADEDB_USER=${ARCADEDB_USER:-root}
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
       # ── Auth: флаги нужны и на СБОРКЕ, и в РАНТАЙМЕ ──────────────────────────
