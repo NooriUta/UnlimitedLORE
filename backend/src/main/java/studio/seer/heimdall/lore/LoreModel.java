@@ -68,6 +68,15 @@ final class LoreModel {
     static final Set<String> NOT_ENUM_DICTS = Set.of("app_setting");
 
     static Map<String, Object> build(List<Map<String, Object>> dictRows) {
+        return build(dictRows, null);
+    }
+
+    /**
+     * S4-MODEL-TYPES: со схемой графа (vertex type → свойства) в документ входит раздел
+     * {@code types} ({@link LoreModelTypes}), и {@code missing} его больше не называет —
+     * missing вычисляется из отсутствующих разделов, а не хранится списком.
+     */
+    static Map<String, Object> build(List<Map<String, Object>> dictRows, Map<String, List<String>> schema) {
         List<Map<String, Object>> rows = dictRows == null ? List.of() : dictRows;
         List<String> warnings = new ArrayList<>();
 
@@ -99,9 +108,14 @@ final class LoreModel {
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("format", FORMAT);
         content.put("partial", true);
-        content.put("missing", List.of("types", "surfaces", "statuses:*"));
+        List<String> missing = new ArrayList<>();
+        if (schema == null) missing.add("types");
+        missing.add("surfaces");
+        missing.add("statuses:*");
+        content.put("missing", missing);
         content.put("statuses_known", List.copyOf(STATUS_DICTS.keySet()));
         content.put("statuses", statuses);
+        if (schema != null) content.put("types", LoreModelTypes.build(schema));
         content.put("dictionaries", dictionaries);
         content.put("warnings", warnings);
 
