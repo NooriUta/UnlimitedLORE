@@ -12,9 +12,8 @@
 //     словами. Это НЕ «всё хорошо»: на устаревшем или отсутствующем словаре
 //     новый статус снова выйдет пустым чипом.
 import { useEffect, useState } from 'react';
-import { loadModel, type KitConfig } from '@seidr/kit';
+import { configFromModel, loadModel, type KitConfig } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
-import { statusesFromModel } from './statusesFromModel';
 
 /** Словарь статусов LORE для задач, спринтов и ADR — один справочник. */
 export const LORE_STATUS_DICT = 'task_status';
@@ -55,8 +54,21 @@ export async function fetchModelStatuses(
   if (res.state === 'stale') {
     notes.push(`модель взята из кеша и может быть устаревшей (${reason(res.error)})`);
   }
-  const parsed = statusesFromModel(res.model, LORE_STATUS_DICT);
-  return { items: parsed.items, notes: [...notes, ...parsed.warnings] };
+  // Генератор ЖИВЁТ В KIT (K-MODEL-LOADER, K-14): словарь статусов — данные
+  // приложения, и знание о том, как документ превращается в конфиг, не должно
+  // лежать в каждом приложении отдельно. Прежний разбор был здесь, в web-next,
+  // и у второго приложения на kit пришлось бы написать такой же.
+  //
+  // Предметное имя словаря по-прежнему даёт ПРИЛОЖЕНИЕ (LORE_STATUS_DICT): в
+  // kit нет ни одного имени из LORE, и это держится тестом-грепом.
+  // Тип res.model допускает undefined у состояния error, а оно уже отсечено
+  // выше возвратом: иначе пришлось бы молча подставлять пустой документ.
+  if (!res.model) return { items: [], notes: [...notes, "модель прочитана, но документа в ответе нет"] };
+  const parsed = configFromModel(res.model, { statusDict: LORE_STATUS_DICT });
+  // Берём замечания ТОЛЬКО про статусы: про виды записей этот потребитель не
+  // спрашивал, и печатать человеку жалобу о том, чем сам не пользуешься, —
+  // шум, а не честность.
+  return { items: parsed.statuses, notes: [...notes, ...parsed.notes.statuses] };
 }
 
 function reason(e: unknown): string {
