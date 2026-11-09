@@ -206,6 +206,49 @@ function Fields({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: Ki
 }
 
 function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: KindConfig | undefined; ctx: KitCtx; lang: KitLang; edit?: EditSlot }) {
+  // Разделы тела ДАННЫМИ (S5-06): рисует kit, поэтому у каждого есть ✎ и
+  // черновик. Проверяется ПЕРВЫМ — данные главнее своей функции рисования:
+  // именно `overview` тихо отнял правку заметки задачи на проде v1.17.7
+  // (приложение задавало его всегда, когда у типа есть поля группы «тело»).
+  const sections = kind?.bodySections ?? [];
+  if (sections.length) {
+    const body = record.body_md?.trim();
+    return (
+      <div className="sk-rec-sections">
+        {/* Тело записи, если оно есть, идёт первым — до разделов.
+            ПУСТОЕ тело при наличии разделов НЕ получает редактора: у таких
+            типов тело склеено из разделов (у ADR — «Контекст / Решение /
+            Следствия»), и предлагать писать «в тело» значило бы предлагать
+            путь, которого на сервере нет. Пишут в разделы. */}
+        {body && (
+          edit
+            ? <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} drafts={edit.drafts?.('body_md')} />
+            : <>{ctx.md(record.body_md ?? '')}</>
+        )}
+        {sections.map(s => {
+          const raw = record.fields[s.key];
+          const text = typeof raw === 'string' ? raw : raw === null || raw === undefined ? '' : valueText(raw);
+          // Раздел может быть только для чтения САМ ПО СЕБЕ: сервер не даёт
+          // пути записи именно для него (`schema.fields[].editable: false`).
+          // Право правки записи этого не отменяет: ✎ у такого раздела обещал
+          // бы сохранение, которого некуда отправить.
+          const may = edit && s.editable !== false ? edit : undefined;
+          // Без права правки пустой раздел не рисуем: подпись без содержимого
+          // ничего не сообщает. С правом — рисуем, иначе в пустой раздел
+          // нечем написать, и это тупик без способа начать.
+          if (!text.trim() && !may) return null;
+          return (
+            <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
+              <h2 className="sk-rec-fields__sechead">{s.title}</h2>
+              {may
+                ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} />
+                : <>{ctx.md(text)}</>}
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
   if (kind?.overview) return <>{renderOut(kind.overview(record, ctx), ctx)}</>;
   // Тело с правом на правку: тот же рендер чтения + ✎; пустое — «Текста нет»
   // и ✎, а не тупик без способа написать.
