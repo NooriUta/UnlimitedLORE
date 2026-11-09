@@ -1036,12 +1036,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 out.put("rows", LoreStatusCategory.enrich(id, castRows(out.get("rows"))));
                 // Владелица 09.11: итоги спринта — строки задач сворачиваются в строку на
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
-                if ("sprint_totals".equals(id)) {
-                    String ids = given.getOrDefault("sprint_ids", "");
-                    out.put("rows", LoreSprintTotals.aggregate(castRows(out.get("rows")),
-                        java.util.Arrays.stream(ids.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList()));
-                    out.put("rule", LoreSprintTotals.RULE);
-                }
+                if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""));
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (outside != null) out.put("outside_scope", outside);
                 try {

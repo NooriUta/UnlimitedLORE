@@ -62,6 +62,23 @@ final class LoreSprintTotals {
         return out;
     }
 
+    /**
+     * Свёртка тела ответа среза sprint_totals: строки задач → строка на спринт.
+     * {@code inputs_truncated} — обрезал ли сервер СЛАГАЕМЫЕ (строки задач): тогда
+     * суммы неполные. Отдельное поле, а не чужой {@code truncated}: его смысл не
+     * должен зависеть от того, где считается свёртка (kit 09.11). Ключ есть всегда.
+     */
+    @SuppressWarnings("unchecked")
+    static void fold(Map<String, Object> body, String sprintIdsCsv) {
+        Object t = body.get("truncated");
+        body.put("inputs_truncated", t != null && !Boolean.FALSE.equals(t));
+        List<Map<String, Object>> rows = body.get("rows") instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        List<String> ids = new ArrayList<>();
+        for (String s : (sprintIdsCsv == null ? "" : sprintIdsCsv).split(",")) if (!s.isBlank()) ids.add(s.trim());
+        body.put("rows", aggregate(rows, ids));
+        body.put("rule", RULE);
+    }
+
     private static Map<String, Object> sum(double value, int known, int of) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("value", known == 0 ? null : value);
