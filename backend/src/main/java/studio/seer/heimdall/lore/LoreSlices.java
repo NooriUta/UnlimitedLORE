@@ -1315,6 +1315,17 @@ public final class LoreSlices {
             "FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-11: вся матрица «проект × люди» одним запросом —
+        // строка на человека, его проекты и роль на ребре (те же пары, что у
+        // user_project_roles, но без обязательного kc_sub: N запросов на экран не нужны).
+        // Правка ячейки — POST /lore/user/role и /lore/user/role/batch.
+        slice("role_matrix",
+            "SELECT kc_sub, display_name, " +
+            "out('HAS_PROJECT_ROLE').slug AS projects, " +
+            "outE('HAS_PROJECT_ROLE').role AS roles " +
+            "FROM KnowUser",
+            List.of(), Map.of(), " ORDER BY display_name LIMIT 500");
+
         // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
         // ревью доступа, что у project_users. Один агент — один живой
         // OWNED_BY (out()/outE() без индекса ok — единственная строка).
@@ -2754,6 +2765,7 @@ public final class LoreSlices {
         Map.entry("requests_total", "телеметрия — решение"),
         Map.entry("agent_actions", "журнал действий (AO-01) — админский, как телеметрия; решение"),
         Map.entry("admin_actions", "журнал действий админки (S7B-02) — тот же ряд AO-01, админский; решение"),
+        Map.entry("role_matrix", "матрица ролей проект × люди (S7B-11) — админская, как project_users для всех; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")
