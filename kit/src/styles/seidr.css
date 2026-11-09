@@ -2012,6 +2012,21 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-size: var(--fs-sm);
 }
 .sk-list__search::placeholder { color: var(--t3); }
+/* Поиск по группам (S9-02): то же поле, но короче — он стоит в полосе
+   «Группировка» рядом с её меню, а не вместо поиска по записям. */
+.sk-list__gfind {
+  min-height: max(var(--tap), 22px);
+  width: 120px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-list__gfind::placeholder { color: var(--t3); }
+.sk-list__gfind-empty { padding: 10px 12px; color: var(--t2); font-size: var(--fs-sm); }
 .sk-facet { position: relative; display: inline-flex; }
 .sk-facet__btn {
   display: inline-flex;

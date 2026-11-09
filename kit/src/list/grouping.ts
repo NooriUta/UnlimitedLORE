@@ -100,17 +100,29 @@ export function groupBy(
     return title !== undefined ? { key: k, records: rs, title } : { key: k, records: rs, missing: true };
   });
   groups.sort((a, b) => b.records.length - a.records.length || a.key.localeCompare(b.key));
-  if (groups.length > budget.maxGroups) {
-    const rest = groups.slice(budget.topGroups);
-    const seen = new Set<string>();
-    const merged = rest.flatMap(g => g.records).filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true)));
-    groups = [
-      ...groups.slice(0, budget.topGroups),
-      { key: '\u0000other', records: merged, other: true, groupCount: rest.length },
-    ];
-  }
+  groups = capGroups(groups, budget);
   if (none.length) groups.push({ key: '', records: none, none: true });
   return groups;
+}
+
+/**
+ * Срез хвоста групп в «Прочие»: больше `maxGroups` — топ-`topGroups` плюс одна
+ * группа с остатком. Запись, попавшая в несколько групп сразу (разрез по
+ * связи), в «Прочих» не задваивается.
+ *
+ * Правило живёт в одном месте, потому что его зовут из двух: обычная
+ * группировка и поиск по группам (S9-02) — у найденных групп тот же бюджет,
+ * иначе поиск по 142 релизам вернул бы стену из найденного.
+ */
+export function capGroups(groups: readonly ListGroup[], budget: Budget = LIST_BUDGET): ListGroup[] {
+  if (groups.length <= budget.maxGroups) return [...groups];
+  const rest = groups.slice(budget.topGroups);
+  const seen = new Set<string>();
+  const merged = rest.flatMap(g => g.records).filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true)));
+  return [
+    ...groups.slice(0, budget.topGroups),
+    { key: '\u0000other', records: merged, other: true, groupCount: rest.length },
+  ];
 }
 
 /** Сколько записей попало больше чем в одну группу (сумма групп > показанного). */
