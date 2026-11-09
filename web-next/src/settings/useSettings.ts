@@ -11,7 +11,15 @@ import { S2ConflictError, type S2Client } from '../api/contracts/s2.stubs';
 export type SettingsState =
   | { status: 'loading' }
   | { status: 'error'; error: unknown }
-  | { status: 'ok'; settings: UserSettings; version: number; saving: boolean; saveError?: unknown };
+  | {
+      status: 'ok'; settings: UserSettings; version: number; saving: boolean; saveError?: unknown;
+      /**
+       * Расхождения перевода с сервера (S5-14): сервер хранит значение,
+       * которого в v2 нет. Показываем умолчание и говорим об этом — молча
+       * подменить значение значит соврать о том, что выбрано.
+       */
+      warnings?: string[];
+    };
 
 export interface UseSettings {
   state: SettingsState;
@@ -30,7 +38,7 @@ export function useSettings(client: S2Client, apply: (s: UserSettings) => void):
     let live = true;
     put({ status: 'loading' });
     client.getSettings().then(
-      r => { if (!live) return; applyRef.current(r.settings); put({ status: 'ok', settings: r.settings, version: r.version, saving: false }); },
+      r => { if (!live) return; applyRef.current(r.settings); put({ status: 'ok', settings: r.settings, version: r.version, saving: false, warnings: r.warnings }); },
       error => { if (live) put({ status: 'error', error }); },
     );
     return () => { live = false; };
@@ -60,7 +68,7 @@ export function useSettings(client: S2Client, apply: (s: UserSettings) => void):
       return;
     }
     applyRef.current(saved.settings);
-    put({ status: 'ok', settings: saved.settings, version: saved.version, saving: false });
+    put({ status: 'ok', settings: saved.settings, version: saved.version, saving: false, warnings: saved.warnings });
   }, [client]);
 
   return { state, set, reload };

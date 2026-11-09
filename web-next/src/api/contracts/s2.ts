@@ -217,6 +217,14 @@ export interface SavedView {
   updated_at: string;
   /** Номер версии для оптимистической блокировки (S2-09). */
   version: number;
+  /**
+   * Мой это вид или нет (S5-14, аддитивно). Боевой сервер kc_sub владельца не
+   * отдаёт — только «мой / не мой» (LoreMeResource.viewOut), поэтому у видов
+   * с сервера owner остаётся null: придумывать чужой идентификатор нельзя.
+   */
+  own?: boolean;
+  /** Личный вид по умолчанию в разделе (есть у боевого сервера). */
+  is_personal_default?: boolean;
 }
 
 export interface SavedViewInput {
@@ -325,6 +333,13 @@ export interface SettingsResponse {
   defaults: UserSettings;
   version: number;
   updated_at: string | null;
+  /**
+   * Расхождения, о которых нельзя молчать (S5-14, аддитивно). Боевой сервер
+   * знает значения, которых в v2 нет (theme: system, text_size: xl): клиент
+   * показывает умолчание v2 и называет расхождение здесь. Пустой массив —
+   * «перевод сошёлся», отсутствие поля — «источник о расхождениях не говорит».
+   */
+  warnings?: string[];
 }
 export interface SettingsPatchRequest { patch: Partial<UserSettings>; expected_version: number }
 

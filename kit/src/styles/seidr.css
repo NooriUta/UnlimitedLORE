@@ -1050,6 +1050,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
 .sk-tabs--underline { gap: 2px; padding: 0; }
+/* Линия вкладок записи не висит в воздухе: свой отступ сверху, как в прототипе
+   v4 (.tabs padding 10px 16px 0). Аудит 08.11: «между шапкой записи,
+   вкладками и текстом нет ни линии, ни фона, только 8 px зазора». */
+.sk-rec__tabs > .sk-tabs--underline { padding: 10px 2px 0; }
 .sk-tabs--underline .sk-tab {
   margin-bottom: -1px;
   padding: 0 14px;
@@ -1152,6 +1156,30 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-shell__brand-text { overflow: hidden; text-overflow: ellipsis; }
 .sk-shell__side-nav { display: flex; flex-direction: column; }
+/* Кнопка сворачивания в самой колонке меню (замечание владелицы по v1.17.4:
+   «левое меню не имеет свойства к сворачиванию» — кнопка была только в шапке,
+   иконкой без подписи). Вид — как у пункта меню, чтобы не спорила с ними. */
+.sk-shell__sidefold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: max(var(--tap), 24px);
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: none;
+  color: var(--t3);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+}
+.sk-shell__sidefold:hover { color: var(--acc); }
+.sk-shell__sidefold:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-shell--menu-rail .sk-shell__sidefold { justify-content: center; padding-inline: 0; }
 .sk-shell__mods {
   display: flex;
   align-self: stretch;
@@ -1293,7 +1321,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-right: 1px solid var(--bd);
   background: var(--bg1);
 }
-.sk-shell__main { min-width: 0; overflow: auto; }
+/* position: relative — система координат для дока «во весь экран» внутри
+   оболочки: замечание владелицы «"развернуть на всю страницу" скрывает даже
+   верхнее меню, чего не было в прототипе». «Весь экран» внутри приложения
+   значит «вся область содержимого». */
+.sk-shell__main { position: relative; min-width: 0; overflow: auto; }
 .sk-shell__main:focus { outline: none; }
 .sk-shell__grp + .sk-shell__grp { margin-top: 10px; }
 .sk-shell__grp-title {
@@ -1765,6 +1797,15 @@ code, pre, kbd, samp { font-family: var(--mono); }
   gap: var(--gap);
 }
 .sk-list__bar { justify-content: space-between; }
+/* Полоса фильтров отделена от таблицы линией и своим отступом — как в
+   прототипе v4 (.fbar: padding 4px 14px 8px + border-bottom). В релизе линия
+   потерялась при переносе, и аудит 08.11 намерил: «у блоков нет своих отступов
+   и рамок, разделяет только зазор 8 px — шапка экрана и фильтры читаются как
+   одна серая масса». */
+.sk-list__controls {
+  padding-bottom: var(--gap);
+  border-bottom: 1px solid var(--bd);
+}
 /* «Показано N из M» — в конце единственной полосы, прижато вправо. */
 .sk-list__controls > .sk-list__shown { margin-left: auto; }
 /* Быстрые фильтры — тем же кеглем, что вся полоса (08.11, «шрифты скачут»). */
@@ -2133,7 +2174,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   top: 0;
   padding: var(--pad-y) var(--pad-x);
   border-bottom: 1px solid var(--bd);
-  background: var(--bg1);
+  /* Шапка таблицы — своя полоса (прототип v4: .list th background bg3), иначе
+     она сливается со строками и таблица начинается «ниоткуда». */
+  background: var(--bg3);
   color: var(--t3);
   font-size: var(--fs-xs);
   font-weight: 700;
@@ -3049,7 +3092,25 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
    полосой-заголовком с числом задач. На узком экране таблица скроллится
    вбок, а не ломает колонки. Цели касания — max(var(--tap), …). */
 .sk-tasks { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.sk-tasks__bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-tasks__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* Выбор колонок таблицы задач (S4-35 «общие колонки»): кнопка в полосе,
+   панель — тот же ColumnsChoice, что у списков. Поповер, а не вкладка: полоса
+   задач и так узкая. */
+.sk-tasks__cols { position: relative; display: inline-flex; }
+.sk-tasks__colspop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 240px;
+  padding: 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+}
+/* Группировка — своей группой, чтобы у неё осталось имя для чтения вслух. */
+.sk-tasks__groupby { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .sk-tasks__wrap { overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-tasks__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); color: var(--t1); }
 .sk-tasks__th {
@@ -3847,6 +3908,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   font-size: var(--fs-2xs);
 }
 .sk-news__days { display: flex; flex-direction: column; gap: 4px; }
+.sk-news__dayw { display: flex; flex-direction: column; }
 .sk-news__day { display: flex; flex-direction: column; }
 .sk-news__dayh { position: sticky; top: 0; z-index: 1; margin: 0; background: var(--bg1); }
 .sk-news__daybtn {
@@ -3945,6 +4007,101 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 }
 span.sk-news__chip { display: inline-flex; align-items: center; cursor: default; }
 .sk-news__chip[aria-pressed='true'] { border-color: var(--acc); color: var(--acc); }
+
+/* ═══ S7A-12 — лента первой: полоса, строка критичного, панель «Фильтры», цифры дня ═══ */
+.sk-news { min-width: 0; }
+.sk-news__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.sk-news__types { display: flex; flex: 1 1 0; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.sk-news__types::-webkit-scrollbar { display: none; }
+.sk-news__types .sk-news__chip { flex: none; display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); white-space: nowrap; }
+.sk-news__n { font-family: var(--mono); color: var(--t3); }
+.sk-news__chip[aria-pressed='true'] .sk-news__n,
+.sk-news__chip[aria-checked='true'] .sk-news__n { color: var(--acc); }
+.sk-news__chip[aria-checked='true'] { border-color: var(--acc); color: var(--acc); }
+.sk-news__fbtn {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  min-height: max(var(--tap), 24px); padding: 0 12px;
+  border: 1px solid var(--bdh); border-radius: 999px; background: var(--bg2);
+  color: var(--t1); font: 700 var(--fs-sm) var(--font); cursor: pointer;
+}
+.sk-news__badge { padding: 0 6px; border-radius: 999px; background: var(--acc); color: var(--bg0); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-news__active { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sk-news__achip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 10px; border-radius: 999px; background: var(--bg2); color: var(--t2); font-size: var(--fs-xs); }
+.sk-news__x { min-width: max(var(--tap), 20px); min-height: max(var(--tap), 20px); border: 0; background: none; color: var(--t3); cursor: pointer; }
+.sk-news__strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
+  padding: 2px 2px 6px; border-bottom: 1px solid var(--bd); color: var(--t3); font-size: var(--fs-xs);
+}
+.sk-news__sm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.sk-news__sm b { font-family: var(--mono); font-size: var(--fs-sm); color: var(--t1); }
+.sk-news__sm[data-tone='suc'], .sk-news__sm[data-tone='suc'] b { color: var(--suc); }
+.sk-news__sm[data-tone='dng'], .sk-news__sm[data-tone='dng'] b { color: var(--dng); }
+.sk-news__sp { flex: 1; }
+.sk-news__linkbtn {
+  min-height: max(var(--tap), 18px); padding: 0 4px; border: 0; background: none; color: var(--t3);
+  font: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer;
+}
+.sk-news__linkbtn:disabled { opacity: .55; cursor: default; }
+.sk-news__vbtn {
+  min-height: max(var(--tap), 20px); padding: 0 8px; border: 1px solid var(--wrn); border-radius: 999px;
+  background: none; color: var(--wrn); font: 600 var(--fs-xs) var(--mono); cursor: pointer;
+}
+.sk-news__vbtn[data-tone='dng'] { border-color: var(--dng); color: var(--dng); }
+.sk-news__more { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-news__more[hidden] { display: none; }
+/* цифры дня: критичное — кубиками, информационное — строкой-сноской */
+.sk-news__figs { display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 4px; }
+.sk-news__cubes { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-news__cube {
+  display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 4px;
+  padding: 2px 8px 1px; border: 1px solid var(--bdh); border-radius: var(--r-sm); background: var(--bg2); --c: var(--t1);
+}
+.sk-news__cube[data-tone='suc'] { --c: var(--suc); }
+.sk-news__cube[data-tone='dng'] { --c: var(--dng); }
+.sk-news__cube[data-tone='wrn'] { --c: var(--wrn); }
+.sk-news__cube[data-tone='acc'] { --c: var(--acc); }
+.sk-news__cube[data-tone='t3'] { --c: var(--t3); }
+.sk-news__cube .sk-icon { color: var(--c); }
+.sk-news__cube b { font-family: var(--mono); font-size: var(--fs-md); color: var(--c); }
+.sk-news__cube > span:last-child { grid-column: 1 / -1; font-size: var(--fs-2xs); color: var(--t3); white-space: nowrap; }
+.sk-news__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-news__foot > span, .sk-news__ftypes > span { display: inline-flex; align-items: center; gap: 3px; }
+.sk-news__ftypes { display: inline-flex; gap: 8px; }
+.sk-news__bn { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); font-weight: 400; }
+.sk-news__readline {
+  display: flex; align-items: center; gap: 8px; margin: 10px 0 4px;
+  color: var(--acc); font: 600 var(--fs-2xs) var(--mono);
+}
+.sk-news__readline::before, .sk-news__readline::after {
+  content: ''; flex: 1; border-top: 1px dashed color-mix(in srgb, var(--acc) 60%, transparent);
+}
+/* панель «Фильтры»: справа; на телефоне — нижний лист */
+.sk-news__scrim { position: fixed; inset: 0; z-index: 40; background: color-mix(in srgb, var(--bg0) 60%, transparent); }
+.sk-news__sheet {
+  position: fixed; z-index: 41; top: 0; right: 0; bottom: 0; width: min(380px, 92vw);
+  display: flex; flex-direction: column; border-left: 1px solid var(--bd); background: var(--bg1);
+}
+.sk-news__grip { display: none; }
+.sk-news__sheeth { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--bd); }
+.sk-news__sheeth .sk-news__pt { flex: 1; margin: 0; }
+.sk-news__sheetb { flex: 1; overflow: auto; padding: 4px 14px 14px; }
+.sk-news__sheetf { display: flex; padding: 8px 14px; border-top: 1px solid var(--bd); }
+.sk-news__sheetf .sk-btn { flex: 1; }
+.sk-news__fs { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--bg3); }
+.sk-news__fs h4 { margin: 0; }
+.sk-news__wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-news__wrap .sk-news__chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); }
+@media (max-width: 720px) {
+  .sk-news__types { order: 3; flex-basis: 100%; }
+  .sk-news__fbtn { margin-left: auto; }
+  .sk-news__sheet {
+    top: auto; left: 0; width: auto; max-height: 88vh;
+    border-left: 0; border-top: 1px solid var(--bdh); border-radius: 14px 14px 0 0;
+  }
+  .sk-news__grip { display: block; width: 40px; height: 4px; margin: 8px auto 0; border-radius: 2px; background: var(--bdh); }
+  .sk-news__rtitle { white-space: normal; overflow-wrap: anywhere; }
+  .sk-news__link { flex-basis: 100%; }
+}
 
 /* ═══ S7A-06 — вкладка «Активность» паспорта (лента /lore/news/v2 по записи) ═══ */
 .sk-act { display: flex; flex-direction: column; gap: var(--gap); }
@@ -4071,6 +4228,19 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-dock[data-placement='full'] .sk-rec[data-width] { --rec-col: 100%; --rec-frame: 100%; }
   .sk-rec-widthbar { display: none; }
 }
+/* Мера чтения в доке снизу — ОТ ДИСПЛЕЯ (поправка владелицы 09.11: «у тебя она
+   уже была мерой от контекста, а должна быть от дисплея»). Раньше меры не было
+   вовсе: строка шла по ширине контейнера, поэтому в доке выходила вдвое
+   длиннее, чем во весь экран (~920 против ~680), и менялась от вкладки к
+   вкладке — ширина контейнера зависит от того, открыта ли колонка свойств.
+   Мера в vw этого не делает: пока окно то же, строка та же. 92vw — не «мера от
+   контекста», а потолок для телефона, где 680 px просто не влезает.
+   Узкая панель справа остаётся как есть (прежнее решение): там своей меры нет,
+   колонка и так узкая. */
+.sk-dock[data-placement='bottom'] .sk-rec-head,
+.sk-dock[data-placement='bottom'] .sk-rec-propsrow,
+.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+
 /* Линия вкладок — во всю рамку (~1200 px), а шапка, свойства и текст — узкой колонкой по центру:
    владелица 08.11 «выглядит классно, чем всё вписанное в одну ширину» (как v4). */
 .sk-dock[data-placement='full'] .sk-rec-head,
@@ -4088,6 +4258,13 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rel__head { margin: 0; color: var(--t2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .sk-rel__list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .sk-rel__item { display: flex; align-items: center; gap: 8px; min-height: max(var(--tap), var(--row-h)); padding: 2px 4px; border-bottom: 1px solid var(--bd); }
+/* Связи таблицей с общими колонками списка (S4-37, замечание владелицы по
+   v1.17.4). Своих правил вида таблица не заводит: всё от .sk-list__table —
+   иначе «общие колонки» выглядели бы похожими, а не теми же. Здесь только
+   место: во вкладке таблица занимает всю ширину. */
+.sk-rel__table { width: 100%; }
+/* Вид записи, которого нет в справочнике видов: показываем код как есть. */
+.sk-rel__raw { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rel__empty { color: var(--t3); font-size: var(--fs-sm); }
 .sk-rel__mark { color: var(--acc); font-family: var(--mono); }
 .sk-rel__unlink { margin-left: auto; min-width: max(var(--tap), 24px); min-height: max(var(--tap), 24px); border: 1px solid var(--bd); border-radius: var(--r-sm); background: none; color: var(--t3); cursor: pointer; }
@@ -4147,7 +4324,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    список короткий: аудит 08.11 намерил «343 px прозрачного backdrop — пустая
    треть экрана». Затемнять список нельзя — он живой (решение владелицы 08.11),
    поэтому убрана пустота, а не видимость списка. */
-.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); }
+.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); --rec-col: min(var(--read-col), 92vw); }
 .sk-dock__backdrop {
   min-height: 0;
   overflow: auto;
@@ -4161,7 +4338,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 .sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
-.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; --rec-frame: 66%; --rec-col: 66%; }
+/* Рамка во весь экран — 66vw, а не 66 %: теперь слой внутри оболочки накрывает
+   область содержимого, и процент считался бы от неё, то есть от контекста.
+   Владелица 09.11: мера должна быть от дисплея. Проценты колонки (56/66/82 %
+   ниже) берутся от этой рамки, то есть тоже от дисплея. */
+.sk-dock[data-placement='full'] { position: fixed; inset: 0; z-index: 60; height: auto; min-height: 0; border: 0; border-radius: 0; --rec-frame: 66vw; --rec-col: 66%; }
+/* Внутри оболочки «во весь экран» накрывает область содержимого, а не окно:
+   шапка и меню остаются на месте, и проценты ниже начинают считаться от
+   контекста, а не от ширины экрана (замечание владелицы по v1.17.4). Сам по
+   себе (витрина /kit/passport) док остаётся слоем поверх окна. */
+.sk-shell__main .sk-dock[data-placement='full'] { position: absolute; inset: 0; }
 .sk-dock[data-placement='full'] .sk-dock__panel { padding: 48px 20px 12px; }
 .sk-dock__close { position: sticky; top: 0; float: right; z-index: 1; min-width: max(var(--tap), 28px); min-height: max(var(--tap), 28px); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 .sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }
@@ -4206,6 +4392,24 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 
 /* S4-CONTENT-V4 (прототип v4): строка-подсказка правки над текстом. */
 .sk-mdedit__hint { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 0 0 8px; font-size: var(--fs-2xs); color: var(--t3); }
+/* Полоса черновика (S5-09): «Восстановить черновик от ЧЧ:ММ» и сбои записи
+   черновика. Предупреждение, а не ошибка: текст записи на месте, просто
+   где-то лежит несохранённая правка. */
+.sk-mdedit__draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  font-size: var(--fs-xs);
+  color: var(--t2);
+}
+.sk-mdedit__draft-text { color: var(--t1); }
+.sk-mdedit__draft-note { color: var(--wrn); }
 .sk-mdedit__src-btn { font: inherit; font-size: var(--fs-xs); color: var(--t2); background: none; border: 1px solid var(--bd); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
 .sk-mdedit__src-btn:hover { color: var(--t1); border-color: var(--acc); }
 

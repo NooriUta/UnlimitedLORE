@@ -554,6 +554,43 @@ public class LoreMeResource extends LoreResourceBase {
         }
     }
 
+    // ── Мои проекты (S7B-14, S9-04) ─────────────────────────────────────────
+
+    /**
+     * Проекты вызывающего — по назначениям ролей (HAS_PROJECT_ROLE, источник истины
+     * о правах — граф, ADR-LORE-036), а не все проекты LORE: «Все мои (N своих)».
+     * Без ролей — честный ноль, без опознанного вызывающего — 401.
+     */
+    @GET
+    @Path("projects")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response myProjects() {
+        if (!enabled) return disabled();
+        String me = ownerSub();
+        if (me == null) return noIdentity();
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :me ORDER BY slug",
+                Map.of("me", me));
+            List<Map<String, Object>> projects = new ArrayList<>();
+            for (Map<String, Object> r : rows) {
+                if (r.get("slug") == null) continue;
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("slug", r.get("slug"));
+                p.put("role", r.get("role"));
+                projects.add(p);
+            }
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("ok", true);
+            body.put("projects", projects);
+            body.put("count", projects.size());
+            body.put("source", "HAS_PROJECT_ROLE");
+            return noStore(Response.ok(body));
+        } catch (Exception e) {
+            return upstream("my projects", e);
+        }
+    }
+
     // ── Личные настройки ────────────────────────────────────────────────────
 
     public record SettingsRequest(Map<String, Object> settings, Integer expected_version) {}

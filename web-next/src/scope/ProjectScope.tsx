@@ -9,6 +9,7 @@ import type { SliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
 import type { AppKey } from '../i18n';
 import { loadProjectScope } from './loadProjectScope';
+import { myProjects } from '../api/me.projects';
 import type { MineReason, ProjectScopeData } from './loadProjectScope';
 
 /** Параметр URL с выбранными проектами — общий для экранов списков S4. */
@@ -25,6 +26,12 @@ export interface ProjectScopeProps {
   fetch?: SliceFetcher;
   /** kc_sub вошедшего пользователя; вход в v2 ещё не подключён — undefined. */
   sub?: string | null;
+  /**
+   * «Мои проекты» с сервера (S7B-14). По умолчанию — GET /lore/me/projects:
+   * сервер сам знает, кто спрашивает. null — вернуться к прежнему пути через
+   * срез по kc_sub (тесты, встройка).
+   */
+  me?: ((signal?: AbortSignal) => Promise<readonly string[]>) | null;
   /** Телефон/широкий принудительно; не задан — по ширине экрана. */
   narrow?: boolean;
   onChange?: (projects: string[]) => void;
@@ -36,12 +43,17 @@ export function useProjectScope(): string[] {
   return useMemo(() => parseScopeParam(raw), [raw]);
 }
 
-export function ProjectScope({ fetch, sub, narrow, onChange }: ProjectScopeProps) {
+export function ProjectScope({ fetch, sub, me, narrow, onChange }: ProjectScopeProps) {
   const t = useAppT();
   const doFetch = useMemo(() => fetch ?? sliceFetcher(), [fetch]);
   const result = useLoadState<ProjectScopeData>(
-    signal => loadProjectScope({ fetch: doFetch, sub, signal }),
-    [doFetch, sub],
+    signal => loadProjectScope({
+      fetch: doFetch,
+      sub,
+      me: me === null ? undefined : (me ?? (sig => myProjects(sig).then(list => list.map(p => p.slug)))),
+      signal,
+    }),
+    [doFetch, sub, me],
   );
   const [raw, setRaw] = useUrlParam(PROJECT_SCOPE_PARAM);
   const value = useMemo(() => parseScopeParam(raw), [raw]);

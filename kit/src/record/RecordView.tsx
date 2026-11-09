@@ -25,6 +25,7 @@ import { RecordFacts } from './RecordFacts';
 import type { RecordFactsSpec } from './facts';
 import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
 import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, relationName, relationTargets } from './RecordRelations';
+import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
 
 export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
@@ -38,6 +39,11 @@ export interface MdEditorSlotProps {
   value: string;
   label: string;
   onSave?: (markdown: string) => Promise<void> | void;
+  /**
+   * Черновик ЭТОГО поля на сервере (S5-09). Слот даёт приложение: адрес и
+   * версия записи — его забота, kit про API не знает.
+   */
+  drafts?: MdDraftSlot;
 }
 
 export interface RecordViewProps {
@@ -58,6 +64,12 @@ export interface RecordViewProps {
    * (roles[role].canEdit; без roles — может). Иначе — чтение как прежде.
    */
   mdEditor?: ComponentType<MdEditorSlotProps>;
+  /**
+   * Черновик по ключу поля (S5-09): вернул слот — у поля появится
+   * «Восстановить черновик от ЧЧ:ММ» и автосохранение. Не передан — поля
+   * работают как раньше, без единого вызова.
+   */
+  mdDrafts?: (field: string) => MdDraftSlot | undefined;
   /** Источник вкладки «История» (S5-11); нет — вкладки нет (истории у вида может не быть). */
   history?: RecordHistorySource;
   /** Когда экран получил данные (S4-29): «получено N мин» в строке статуса. */
@@ -111,12 +123,12 @@ function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
   return (field, from) => to => onSave({ type: record.kind, id: record.id, field, from, to });
 }
 
-interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver> }
+interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver>; drafts?: (field: string) => MdDraftSlot | undefined }
 
 function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string }): ReactNode {
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
-    return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} />;
+    return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} drafts={edit.drafts?.(fieldKey)} />;
   }
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
@@ -159,7 +171,7 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
   // Тело с правом на правку: тот же рендер чтения + ✎; пустое — «Текста нет»
   // и ✎, а не тупик без способа написать.
   if (edit) {
-    return <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} />;
+    return <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} drafts={edit.drafts?.('body_md')} />;
   }
   if (record.body_md?.trim()) return <>{ctx.md(record.body_md)}</>;
   return <EmptyState compact title={kitT(lang, 'kit.record.body.empty')} hint={kitT(lang, 'kit.record.body.emptyHint')} />;
@@ -186,12 +198,12 @@ function propsSummary(record: KitRecord, kind: KindConfig): string {
     .join(' · ');
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
-  const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver } : undefined;
+  const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver, drafts: mdDrafts } : undefined;
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
   const kindTabs = kind?.tabs ?? [];

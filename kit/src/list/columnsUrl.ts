@@ -18,9 +18,17 @@
  * @param search строка запроса (с «?» или без)
  * @param known  колонки, которые существуют у этого типа
  * @param locked колонка, которую нельзя убрать (обычно название записи)
+ * @param param  имя параметра; по умолчанию «cols». Своё имя нужно, когда на
+ *   одной странице два набора колонок — например док показывает список и
+ *   паспорт сразу, и «cols» списка не должен значить колонки задач паспорта.
  */
-export function columnsFromUrl(search: string, known: readonly string[], locked?: string): string[] | undefined {
-  const raw = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('cols');
+export function columnsFromUrl(
+  search: string,
+  known: readonly string[],
+  locked?: string,
+  param = 'cols',
+): string[] | undefined {
+  const raw = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get(param);
   if (!raw) return undefined;
 
   const seen = new Set<string>();

@@ -47,12 +47,16 @@ describe('паспорт по видам связей', () => {
     const names = tabNames();
     expect(names).toEqual(expect.arrayContaining(['composition:Части1', 'aggregation:Решения2', 'association:Зависимости2', 'realization:Реализация1']));
   });
-  it('визуализация вида: значок UML у вкладки и у строк (◆ ◇ ⇢ ▷)', () => {
+  // Значок вида связи остался у вкладки и у заголовка раздела, но ушёл из
+  // строк: связи теперь таблица (замечание владелицы по v1.17.4 — «наши
+  // любимые общие колонки»), а внутри одной таблицы вид связи у всех строк
+  // один и тот же. Повторять его в каждой строке — шум, а не сведения.
+  it('визуализация вида: значок UML у вкладки; строки — таблицей со своими кодами', () => {
     view('decisions');
     const tab = screen.getAllByRole('tab').find(t => t.getAttribute('data-relation') === 'aggregation')!;
     expect(tab.querySelector('[data-relation-mark]')?.textContent).toBe('◇');
     const rows = screen.getByTestId('kit-relation-list');
-    expect(within(rows).getAllByRole('listitem').map(li => li.getAttribute('data-record-id'))).toEqual(['D-1', 'D-2']);
+    expect(within(rows).getAllByRole('row').slice(1).map(tr => tr.getAttribute('data-record-id'))).toEqual(['D-1', 'D-2']);
   });
   it('зависимости — двумя разделами: «Зависит от» и «Блокирует»', () => {
     view('rel:association');

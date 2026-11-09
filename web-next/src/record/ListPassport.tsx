@@ -16,6 +16,8 @@ import { useAppT } from '../i18n';
 import { loadPassport, type PassportType } from './passportAdapters';
 import { fromLoreRecord, toLoreRecord } from './loreRecordContract';
 import { savePassportField } from './passportSave';
+import { createDraftsApi, draftSlot } from '../api/drafts';
+import { HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const md = (s: string) => <MartProse text={s} />;
@@ -49,6 +51,14 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const lang = useKitLang();
   const [tab, setTab] = useState('overview');
   const slice = useMemo(() => <T,>(name: string, params?: Record<string, string>) => fetchSlice<T>(name, params, { fetchImpl }), [fetchImpl]);
+  const drafts = useMemo(() => createDraftsApi(fetchImpl), [fetchImpl]);
+  // Вкладка «История» (S5-11) была в kit, но в v2 её никто не подключал:
+  // RecordView.history нигде не передавался. Тип вне таблицы SCD2 — это
+  // «история не ведётся», и сервер мы о нём не спрашиваем.
+  const hist = useLoadState(
+    () => (HISTORY_TRACKED.has(type) ? fetchHistory(type, id, {}, fetchImpl) : Promise.resolve(NOT_TRACKED)),
+    [type, id, fetchImpl],
+  );
   const pp = useLoadState(() => loadPassport(type, id, lang, slice), [type, id, lang, slice]);
   const contract = useMemo(() => (pp.data ? toLoreRecord(pp.data, new Date().toISOString(), lang) : null), [pp.data, lang]);
   const view = useMemo(() => (contract ? fromLoreRecord(contract, lang) : null), [contract, lang]);
@@ -63,6 +73,22 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave } }, data: view.data, role: 'reader', href: x => `#${encodeURIComponent(x)}`, esc, md };
   return (
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEdit}
+      // Черновик правки — на сервере (S5-09): «Восстановить черновик от
+      // ЧЧ:ММ» и автосохранение. Версия записи в адаптере пока null, поэтому
+      // расхождение версий не помечается: нет данных — нет пометки.
+      mdDrafts={field => draftSlot({ api: drafts, type, id: view.record.id, field, version: contract?.record.version ?? null })}
+      history={{
+        // «Не прочитали» и «запрещено» — разные состояния, и оба не «пусто».
+        // useLoadState различает «пусто» и «частично» — вкладке истории эти
+        // оттенки не нужны: версий ноль она покажет сама, а предупреждения
+        // приходят в warnings ответа. Поэтому и empty, и partial — это 'ok'.
+        state: hist.state === 'error'
+          ? (hist.error instanceof HistoryForbidden ? 'forbidden' : 'error')
+          : hist.state === 'loading' ? 'loading' : 'ok',
+        data: hist.data,
+        error: hist.error,
+        onRetry: hist.reload,
+      }}
       placement={placement} loadedAt={contract?.meta.loaded_at} onReload={pp.reload}
       className="list-passport"
       crumbs={backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view.record.id} /> : undefined}

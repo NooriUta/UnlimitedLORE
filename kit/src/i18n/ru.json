@@ -589,5 +589,11 @@
   "kit.record.relkind.association": "зависимость",
   "kit.record.relkind.attribute": "свойство",
   "kit.record.relkind.realization": "реализация",
-  "kit.record.relkind.generalization": "обобщение"
+  "kit.record.relkind.generalization": "обобщение",
+  "kit.mdedit.draft.restore": "Восстановить черновик от {time}",
+  "kit.mdedit.draft.restoreBtn": "Восстановить",
+  "kit.mdedit.draft.discard": "Отбросить",
+  "kit.mdedit.draft.stale": "запись изменили после черновика, текст может разойтись",
+  "kit.mdedit.draft.loadFailed": "черновик не прочитан: {reason}",
+  "kit.mdedit.draft.saveFailed": "черновик не сохранён: {reason}"
 }

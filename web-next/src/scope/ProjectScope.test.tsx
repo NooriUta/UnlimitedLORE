@@ -56,9 +56,13 @@ describe('S4-03 · выбор проектов в шапке v2', () => {
     expect(trigger().textContent).toMatch(/TYR/);
   });
 
-  it('«все мои» — по ролям пользователя', async () => {
+  // S7B-14: «мои проекты» приходят с сервера (GET /lore/me/projects), а не
+  // срезом по kc_sub: сервер сам знает, кто спрашивает. Поэтому в тестах
+  // подменяется этот источник; прежний путь через срез остался и проверяется
+  // ниже значением me={null}.
+  it('«все мои» — по моим проектам с сервера', async () => {
     const onChange = vi.fn();
-    render(<ProjectScope fetch={fetcher()} sub="u1" narrow={false} onChange={onChange} />);
+    render(<ProjectScope fetch={fetcher()} me={async () => ['unlimitedlore']} narrow={false} onChange={onChange} />);
     await flush();
     fireEvent.click(trigger());
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Все мои/ }));
@@ -66,8 +70,8 @@ describe('S4-03 · выбор проектов в шапке v2', () => {
     expect(trigger().textContent).toMatch(/Все мои \(1\)/);
   });
 
-  it('без входа — «все мои» недоступно с объяснением', async () => {
-    render(<ProjectScope fetch={fetcher()} narrow={false} />);
+  it('не опознан (401) — «все мои» недоступно с объяснением', async () => {
+    render(<ProjectScope fetch={fetcher()} me={async () => { throw new Error('401 NO_IDENTITY'); }} narrow={false} />);
     await flush();
     fireEvent.click(trigger());
     const dlg = screen.getByRole('dialog');
@@ -75,8 +79,8 @@ describe('S4-03 · выбор проектов в шапке v2', () => {
     expect(dlg.textContent).toMatch(/вход в v2 ещё не подключён/);
   });
 
-  it('сбой слайса ролей — список есть, «мои» не проверены', async () => {
-    render(<ProjectScope fetch={fetcher(new LoreHttpError(502, 'LORE_UPSTREAM', ''))} sub="u1" narrow={false} />);
+  it('сбой слайса ролей — список есть, «мои» не проверены (прежний путь, me={null})', async () => {
+    render(<ProjectScope fetch={fetcher(new LoreHttpError(502, 'LORE_UPSTREAM', ''))} sub="u1" me={null} narrow={false} />);
     await flush();
     fireEvent.click(trigger());
     const dlg = screen.getByRole('dialog');

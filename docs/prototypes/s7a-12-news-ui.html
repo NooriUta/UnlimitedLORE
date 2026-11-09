@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Новости — облегчённая лента</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<!--
+  Мини-прототип SPRINT_UXR_S7A_NEWS/S7A-12. Только РАСКЛАДКА: иконки и цвета —
+  из v1 (LoreNewsFeed) и kit (NEWS_KIND_META / NEWS_TYPE_META). Данные выдуманы,
+  числа ниже — подставные, в коде их по-прежнему присылает сервер /lore/news/v2.
+-->
+<style>
+:root{
+  --bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--bdh:#584c38;
+  --t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;
+  --g-news:#d4a84a;
+  --font:'Manrope',sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif;
+  --fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--fs-2xl:24px;
+}
+@media (pointer:coarse),(max-width:600px){:root{--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:16px;--fs-xl:22px}}
+:root[data-theme="light"]{--bg0:#f6f1e4;--bg1:#efe8d6;--bg2:#e6dcc4;--bg3:#dccfb2;--bd:#c9b994;--t1:#2a2316;--t2:#5e523b;--t3:#6d6148}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-base)/1.4 var(--font)}
+button{font:inherit;color:inherit}
+iconify-icon{display:inline-block;vertical-align:-2px}
+.mono{font-family:var(--mono)}
+
+/* ── каркас ── */
+.top{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg1)}
+.top b{font:800 var(--fs-md) var(--head);color:var(--acc)}
+.top .crumb{color:var(--t2);font-size:var(--fs-sm)}
+.top .sp{flex:1}
+.proto{font:600 var(--fs-2xs) var(--mono);color:var(--wrn);border:1px solid var(--wrn);border-radius:999px;padding:1px 8px}
+.page{max-width:980px;margin:0 auto;padding:0 16px 80px}
+h1{font:800 var(--fs-lg) var(--head);margin:14px 0 8px;display:flex;align-items:baseline;gap:10px}
+h1 small{font:600 var(--fs-xs) var(--font);color:var(--t3)}
+
+/* ── полоса над лентой ── */
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden;flex:none}
+.seg button{background:none;border:0;padding:3px 11px;font-size:var(--fs-sm);color:var(--t2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--g-news) 18%,transparent);color:var(--g-news);font-weight:700}
+.chips{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 92%,transparent)}
+.chips::-webkit-scrollbar{display:none}
+.chip{display:inline-flex;align-items:center;gap:5px;flex:none;border:1px solid var(--bd);border-radius:999px;background:none;padding:3px 10px;font-size:var(--fs-sm);color:var(--t2);cursor:pointer;white-space:nowrap}
+.chip .n{font:600 var(--fs-xs) var(--mono);color:var(--t3)}
+.chip[aria-pressed="true"]{border-color:color-mix(in srgb,var(--g-news) 55%,transparent);background:color-mix(in srgb,var(--g-news) 14%,transparent);color:var(--g-news)}
+.chip[aria-pressed="true"] .n{color:var(--g-news)}
+.fbtn{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bdh);border-radius:999px;background:var(--bg2);padding:4px 12px;font-weight:700;font-size:var(--fs-sm);cursor:pointer}
+.fbtn .n{font:600 var(--fs-xs) var(--mono);background:var(--g-news);color:var(--bg0);border-radius:999px;padding:0 6px}
+.active{display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 6px}
+.achip{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border-radius:999px;padding:2px 4px 2px 10px;font-size:var(--fs-xs)}
+.achip i{font-style:normal;color:var(--t3)}
+.achip button{border:0;background:none;color:var(--t3);cursor:pointer;padding:0 4px;font-size:var(--fs-sm)}
+.linkbtn{border:0;background:none;color:var(--t3);text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;font-size:var(--fs-xs);padding:2px 4px}
+
+/* ── свёрнутая полоса метрик ── */
+.mstrip{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;padding:2px 2px 6px;margin:0;cursor:pointer;border-bottom:1px solid var(--bd)}
+.mstrip .m{display:inline-flex;align-items:baseline;gap:5px;font-size:var(--fs-xs);color:var(--t3)}
+.mstrip .m b{font:700 var(--fs-sm) var(--mono);color:var(--t2)}
+.mstrip .d{font:600 var(--fs-2xs) var(--mono)}
+.up{color:var(--suc)}.dn{color:var(--dng)}
+.mstrip .sp{flex:1}
+.warn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--wrn);color:var(--wrn);border-radius:999px;padding:1px 8px;font:600 var(--fs-xs) var(--mono);background:none;cursor:pointer}
+.chev{color:var(--t3);font-size:var(--fs-xs)}
+.mpanel{border:1px solid var(--bd);border-radius:8px;margin:6px 0 8px;padding:10px;background:var(--bg1)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px}
+.kpi{background:var(--bg2);border-radius:6px;padding:6px 8px}
+.kpi b{display:block;font:700 var(--fs-lg) var(--mono)}
+.kpi span{font-size:var(--fs-2xs);color:var(--t3);text-transform:uppercase;letter-spacing:.3px}
+.kpi.w b{color:var(--wrn)}
+.acc{margin-top:8px;border-top:1px solid var(--bd)}
+.acc summary{cursor:pointer;padding:7px 2px;font:700 var(--fs-xs) var(--font);text-transform:uppercase;letter-spacing:.4px;color:var(--t2)}
+.acc summary small{text-transform:none;letter-spacing:0;font-weight:400;color:var(--t3)}
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-xs)}
+.tbl th,.tbl td{padding:3px 6px;border-bottom:1px solid var(--bg3);text-align:left}
+.tbl thead th{font-size:var(--fs-2xs);text-transform:uppercase;color:var(--t3)}
+.tbl td.r,.tbl th.r{text-align:right;font-family:var(--mono)}
+.scroll{overflow-x:auto}
+.valid li{margin:3px 0;font-size:var(--fs-xs)}
+.valid .u{color:var(--wrn)}
+
+/* ── лента ── */
+.day{margin-top:4px}
+.dayh{position:sticky;top:0;z-index:2;background:var(--bg0);display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;border:0;border-bottom:1px solid var(--bd);padding:9px 2px 6px;cursor:pointer;text-align:left}
+.dayh .dn{font:700 var(--fs-sm) var(--mono);color:var(--t2)}
+.dayh .tot{font:700 var(--fs-sm) var(--mono);color:var(--g-news)}
+.cubes{display:flex;gap:6px;padding:6px 0 4px;overflow-x:auto;scrollbar-width:none;align-items:stretch}
+.cubes::-webkit-scrollbar{display:none}
+.cube{flex:none;display:grid;grid-template-columns:auto auto;align-items:center;column-gap:4px;background:var(--bg1);border:1px solid var(--bg3);border-radius:6px;padding:3px 8px 2px;min-width:54px}
+.cube b{font:700 var(--fs-md) var(--mono);line-height:1.1}
+.cube i{grid-column:1/-1;font-style:normal;font-size:var(--fs-2xs);color:var(--t3);white-space:nowrap}
+.cmore{flex:none;border:1px dashed var(--bd);background:none;border-radius:6px;padding:0 10px;color:var(--t3);font-size:var(--fs-xs);cursor:pointer}
+.cube.crit{border-color:var(--bdh)}
+.cube.main{border-color:color-mix(in srgb,var(--g-news) 40%,transparent)}
+.ctypes{display:inline-flex;gap:8px;align-items:center;margin-left:auto;padding-left:6px;flex:none}
+.bd{display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.bi{display:inline-flex;align-items:center;gap:2px;font:600 var(--fs-2xs) var(--mono);color:var(--t3)}
+.bsep{width:1px;height:12px;background:var(--bd)}
+.pill{display:inline-flex;align-items:center;gap:3px;font:800 var(--fs-2xs) var(--mono);border:1px solid currentColor;border-radius:999px;padding:0 6px}
+.grph{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;border:0;background:var(--bg2);padding:4px 4px 4px 14px;cursor:pointer;text-align:left}
+.grph .gl{font:700 var(--fs-xs) var(--font);text-transform:uppercase;letter-spacing:.4px;color:var(--t2)}
+.grph .gc{font:600 var(--fs-xs) var(--mono);color:var(--t3)}
+.rows{list-style:none;margin:0;padding:0}
+.row{display:flex;gap:10px;align-items:flex-start;padding:7px 4px;border-bottom:1px solid var(--bg2)}
+.row.link{cursor:pointer}.row.link:hover{background:var(--bg1)}
+.row .g{width:20px;flex:none;display:flex;justify-content:center;padding-top:1px}
+.row .b{flex:1;min-width:0}
+.row .tt{font-size:var(--fs-md);line-height:1.35;overflow-wrap:anywhere}
+.row .mt{display:flex;gap:4px 8px;flex-wrap:wrap;align-items:baseline;margin-top:1px;font-size:var(--fs-xs);color:var(--t3)}
+.tag{display:inline-flex;align-items:center;gap:3px;font:700 var(--fs-2xs) var(--mono);text-transform:uppercase;letter-spacing:.3px}
+.id{font:600 var(--fs-2xs) var(--mono);background:var(--bg2);border-radius:4px;padding:0 5px;color:var(--t2)}
+.fut{font:600 var(--fs-2xs) var(--mono);color:var(--wrn);border:1px solid var(--wrn);border-radius:4px;padding:0 4px}
+.unread .tt::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--g-news);margin-right:6px;vertical-align:2px}
+.readline{display:flex;align-items:center;gap:8px;margin:12px 0 4px;color:var(--g-news);font:600 var(--fs-2xs) var(--mono)}
+.readline span{flex:1;border-top:1px dashed color-mix(in srgb,var(--g-news) 60%,transparent)}
+.more{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--bd);background:var(--bg2);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:var(--fs-sm)}
+
+/* ── панель «Фильтры»: справа на широком, нижний лист на телефоне ── */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20}
+.sheet{position:fixed;z-index:21;background:var(--bg1);border-left:1px solid var(--bd);top:0;right:0;bottom:0;width:min(380px,92vw);display:flex;flex-direction:column}
+.sheet header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bd)}
+.sheet header h2{font:800 var(--fs-md) var(--head);margin:0;flex:1}
+.sheet .body{overflow:auto;padding:4px 14px 14px;flex:1}
+.sheet footer{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--bd)}
+.sheet footer .btn.pri{background:var(--g-news);color:var(--bg0);border-color:var(--g-news);font-weight:700;flex:1}
+.fs{padding:8px 0;border-bottom:1px solid var(--bg3)}
+.fs h3{margin:0 0 6px;font:700 var(--fs-2xs) var(--font);text-transform:uppercase;letter-spacing:.5px;color:var(--t3)}
+.fs .wrap{display:flex;gap:6px;flex-wrap:wrap}
+.grip{display:none}
+@media (max-width:600px){
+  .page{padding:0 12px 80px}
+  .sheet{top:auto;left:0;right:0;width:auto;max-height:88vh;border-left:0;border-top:1px solid var(--bdh);border-radius:14px 14px 0 0}
+  .grip{display:block;width:40px;height:4px;border-radius:2px;background:var(--bdh);margin:8px auto 0}
+  .bar .chips{order:3;flex-basis:100%}
+  .bar .fbtn{margin-left:auto}
+  .dayh .bd{margin-left:0;flex-basis:100%}
+  .cubes{flex-wrap:wrap;overflow:visible}
+  .cube{min-width:0;padding:2px 6px 1px}
+  .ctypes{margin-left:0}
+  .top .crumb{display:none}
+}
+
+/* ── «где что живёт» (только прототип) ── */
+.notes{margin-top:28px;border:1px dashed var(--bdh);border-radius:8px;padding:10px 12px;background:var(--bg1)}
+.notes h2{font:800 var(--fs-md) var(--head);margin:0 0 6px}
+.notes p,.notes li{font-size:var(--fs-xs);color:var(--t2)}
+.notes .tbl td:first-child{font-family:var(--mono);color:var(--t3);width:24px}
+.ok{color:var(--suc)}.q{color:var(--wrn)}
+</style>
+</head>
+<body>
+<div class="top"><b>LORE</b><span class="crumb">Знания · Новости</span><span class="sp"></span><span class="proto">ПРОТОТИП S7A-12</span></div>
+<main class="page" id="app"></main>
+
+<script>
+// ── подставные данные (форма — как ответ /lore/news/v2) ──
+const TYPE={task:['sprint','Задачи'],sprint:['sprint','Спринты'],adr:['scroll-quill','ADR'],decision:['gavel','Решения'],spec:['spell-book','Спеки'],release:['open-book','Релизы']};
+const KIND={created:['sprout','появилось','var(--suc)'],changed:['pencil','изменено','var(--inf)'],status:['pencil','сменила статус','var(--t2)'],ready:['wave-crest','готова','var(--wrn)'],reactivated:['lucide:undo-2','реактивирована','var(--dng)'],closed:['check-mark','закрыто','var(--suc)'],cancelled:['lucide:circle-x','снята','var(--t3)'],released:['upgrade','релиз','var(--acc)']};
+const NAV=new Set(['release','sprint','decision','adr']);
+const P={U:'NooriUta/UnlimitedLORE',V:'NooriUta/volva',A:'NooriUta/AIDA'};
+const D=['2026-11-08','2026-11-07','2026-11-06','2026-11-05','2026-11-04','2026-11-03','2026-11-02'];
+const titles=['Новости: лента на первом экране','Esc закрывает слои','Колонки списка из настройки','Загрузчик модели LORE','Паспорт ADR по разделам','Черта «прочитано» на сервере','Atom-лента на фильтр','Статусы из конфигурации','Поиск по фасетам','Честная версия задач без истории','Матрица дни × проекты','Сторож i18n-coverage','Скоуп проекта 403','Свёртка серий агента'];
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const pick=a=>a[Math.floor(rnd()*a.length)];
+const EV=[];
+D.forEach((d,di)=>{const n=di===0?9:di<3?7:4;for(let i=0;i<n;i++){
+  const type=pick(['task','task','task','task','sprint','adr','decision','spec','release']);
+  const kind=type==='release'?'released':type==='task'?pick(['created','closed','closed','ready','status','reactivated']):pick(['created','changed']);
+  const proj=type==='sprint'&&rnd()>.5?[P.U,P.V]:[pick([P.U,P.U,P.V,P.A])];
+  const code=type==='task'?'S7A-'+(10+i+di):type==='sprint'?'SPRINT_UXR_S'+(4+di):type==='adr'?'ADR-LORE-0'+(40+i):type==='decision'?'D-2026-UXR-'+i:type==='spec'?'SPEC-LORE-UXR-'+i:'v0.9.'+(9-di);
+  const hh=String(21-i*2).padStart(2,'0');
+  EV.push({key:d+i,type,kind,day:d,time:(type==='spec'&&i%2)?null:hh+':'+String(13*i%60).padStart(2,'0'),title:type==='task'?pick(titles):code,el:code,projects:proj,component:pick(['FORSETI','KIT','HEIMDALL']),author:pick(['agent','human','unknown']),mult:rnd()>.85?3:1,groups_n:proj.length,future:false,unread:(di===0&&i<5),from:kind==='status'?'В работе':null,to:kind==='status'?'Ревью':null});}});
+EV.push({key:'fut',type:'task',kind:'created',day:'2026-11-09',time:null,title:'Дата из будущего (опечатка?)',el:'S7A-99',projects:[P.U],component:'FORSETI',author:'human',mult:1,groups_n:1,future:true,unread:true});
+EV.sort((a,b)=>(b.day+(b.time||'00:00')).localeCompare(a.day+(a.time||'00:00')));
+const READ='2026-11-07 15:00';
+
+// ── состояние (в коде — в URL, как сейчас: n.period, n.f.*, n.group, n.sub, n.order, n.zone) ──
+const S={period:'week',types:new Set(),filters:{},group:'day',sub:'',order:'desc',zone:'local',sheet:false,metrics:false,valid:false,closedDays:new Set(),closedGroups:new Set(),moreDays:new Set()};
+const ax={project:'Проект',component:'Компонент',sprint:'Спринт',milestone:'Веха',author:'Автор',kind:'Событие',type:'Тип',day:'Подряд'};
+const authorL={agent:'⚙ агент',human:'● человек',unknown:'неизвестно'};
+const sh=p=>p.split('/').pop();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ic=(s,c,z=13)=>`<iconify-icon icon="${s.includes(':')?s:'game-icons:'+s}" width="${z}" style="color:${c||'currentColor'}"></iconify-icon>`;
+const vals=(e,a)=>a==='project'?e.projects:a==='component'?[e.component]:a==='author'?[e.author]:a==='kind'?[e.kind]:a==='type'?[e.type]:a==='sprint'?[e.type==='task'?'SPRINT_UXR_S7A_NEWS':'—']:a==='milestone'?['M-UXR-2']:[];
+const label=(a,v)=>a==='project'?sh(v):a==='author'?authorL[v]:a==='kind'?KIND[v][1]:a==='type'?TYPE[v][1]:v;
+
+function filtered(skipTypes){return EV.filter(e=>(skipTypes||!S.types.size||S.types.has(e.type))&&Object.entries(S.filters).every(([a,v])=>vals(e,a).includes(v)));}
+const nFilters=()=>Object.keys(S.filters).length+(S.group!=='day'?1:0)+(S.sub?1:0)+(S.zone!=='local'?1:0)+(S.order!=='desc'?1:0);
+
+// ── рендер ──
+function render(){
+  const all=filtered(true),list=filtered(false);
+  let h=`<h1>Новости <small>● вычисляется из истории LORE</small></h1>`;
+  // 1. полоса
+  h+=`<div class="bar" role="toolbar" aria-label="Лента">
+    <div class="seg" role="radiogroup" aria-label="Период">${[['day','День'],['week','Неделя'],['month','Месяц']].map(([k,n])=>`<button role="radio" aria-pressed="${S.period===k}" data-period="${k}">${n}</button>`).join('')}</div>
+    <div class="chips">${Object.entries(TYPE).map(([k,[s,n]])=>{const c=all.filter(e=>e.type===k).length;return c?`<button class="chip" aria-pressed="${S.types.has(k)}" data-type="${k}">${ic(s)}${n}<span class="n">${c}</span></button>`:''}).join('')}</div>
+    <button class="fbtn" data-sheet>${ic('settings-knobs')} Фильтры${nFilters()?`<span class="n">${nFilters()}</span>`:''}</button>
+  </div>`;
+  const act=Object.entries(S.filters).map(([a,v])=>`<span class="achip"><i>${ax[a]}:</i> ${esc(label(a,v))}<button data-unf="${a}" aria-label="снять">✕</button></span>`);
+  if(S.group!=='day')act.push(`<span class="achip"><i>Группа:</i> ${ax[S.group]}${S.sub?' → '+ax[S.sub]:''}<button data-ungroup aria-label="снять">✕</button></span>`);
+  if(S.order==='asc')act.push(`<span class="achip"><i>Порядок:</i> старые сверху<button data-unorder aria-label="снять">✕</button></span>`);
+  if(S.zone==='utc')act.push(`<span class="achip"><i>Время:</i> UTC<button data-unzone aria-label="снять">✕</button></span>`);
+  if(act.length)h+=`<div class="active">${act.join('')}<button class="linkbtn" data-reset>сбросить всё</button></div>`;
+  // 2. свёрнутая полоса метрик
+  h+=`<div class="mstrip" data-metrics role="button" aria-expanded="${S.metrics}" tabindex="0">
+    <span class="m">${ic('flame','var(--suc)')}<b class="up">+3</b>сгорание <span class="d up">▲ +2</span></span>
+    <span class="m"><b>${list.filter(e=>e.unread).length}</b>с прошлого раза <button class="linkbtn" data-read>прочитано</button></span>
+    <span class="sp"></span>
+    <button class="warn" data-valid title="Сверка чисел: 1 проверка не выполнена">⚠ 1</button>
+    <span class="chev">${S.metrics?'▴ свернуть':'▾ все метрики'}</span>
+  </div>`;
+  if(S.valid)h+=`<div class="mpanel"><b class="q">Сверка чисел (§10)</b> — 11 проверок прошли, 1 не смогли проверить:<ul class="valid"><li class="u">не смогли проверить · §10.1-7 атрибуция агента: автор версии ждёт SPRINT_UXR_S2_GRAPH_MEMORY/S2-12</li></ul><button class="linkbtn" data-valid>скрыть</button></div>`;
+  if(S.metrics)h+=metricsPanel();
+  // 3. лента
+  h+=feed(list);
+  h+=notes();
+  if(S.sheet)h+=sheet(all);
+  document.getElementById('app').innerHTML=h;
+}
+
+function metricsPanel(){
+  const k=[['41 · 28','события · элементы','▲ +6 · +4'],['+3','сгорание','▲ +2'],['+4','сгорание по словарю',''],['−1','поправка выкатки',''],['5 → 4','ждут выкатки','▼ −1',1],['2','выкатка не определена','',1],['3','выкачено',''],['9','закрыто',''],['1,5 д','медиана ожидания',''],['2 · 2 · 8%','реактивация',''],['6 = 4 + 2','добавлено',''],['не измерить','доля агентов','S2-12',1]];
+  return `<div class="mpanel">
+   <div class="kpis">${k.map(([v,l,d,w])=>`<div class="kpi ${w?'w':''}"><b>${v}</b><span>${l}</span>${d?`<div class="mono" style="font-size:var(--fs-2xs);color:var(--t3)">${d}</div>`:''}</div>`).join('')}</div>
+   <details class="acc"><summary>Разрез по оси <small>· проект · Σ 44 ≠ ∪ 41 (×N)</small></summary><div class="scroll"><table class="tbl"><thead><tr><th>Проект</th><th class="r">события · элементы</th><th class="r">×N</th></tr></thead><tbody><tr><td>UnlimitedLORE</td><td class="r">28 · 19</td><td class="r">×3</td></tr><tr><td>volva</td><td class="r">10 · 7</td><td class="r">×3</td></tr><tr><td>AIDA</td><td class="r">6 · 5</td><td class="r"></td></tr></tbody></table></div></details>
+   <details class="acc"><summary>Матрица «дни × проекты» <small>· 3 · 5 · 8 столбцов</small></summary><div class="scroll"><table class="tbl"><thead><tr><th>День</th><th class="r">ULORE</th><th class="r">volva</th><th class="r">AIDA</th><th class="r">Σ</th><th class="r">∪</th></tr></thead><tbody>${D.slice(0,4).map((d,i)=>`<tr><td class="mono">${d}</td><td class="r">${5-i} · ${4-i}</td><td class="r">${2} · 2</td><td class="r">1 · 1</td><td class="r">${8-i}</td><td class="r">${7-i}</td></tr>`).join('')}</tbody></table></div></details>
+   <details class="acc"><summary>Сгорание: своё и общее <small>· по проекту / спринту / компоненту / вехе · по дням</small></summary><p style="font-size:var(--fs-xs);color:var(--t3)">Таблицы как сейчас (NewsPanels → Burn), без изменений.</p></details>
+   <details class="acc"><summary>Знания <small>· очереди ADR и решений, ревизии, версии спек</small></summary><p style="font-size:var(--fs-xs);color:var(--t3)">Как сейчас (NewsPanels → Knowledge), без изменений.</p></details>
+  </div>`;
+}
+
+// Мини-кубики дня (правки владелицы 08–09.11): на виду — критичное
+// (сгорание, заведено задач, закрыто, готово к выкатке, реактивировано,
+// релиз — только ненулевые; набор утвердила владелица 09.11), остальное — информационное, по нажатию «ещё ▾».
+function dayCubes(d,es){
+  const byK={};es.forEach(e=>{byK[e.kind]=(byK[e.kind]||0)+1;});
+  const cl=es.filter(e=>e.type==="task"&&e.kind==="closed").length,cr=es.filter(e=>e.type==="task"&&e.kind==="created").length,net=cl-cr;
+  const nc=net>0?"var(--suc)":net<0?"var(--dng)":"var(--t3)";
+  const cube=(icon,c,v,l,tip,cls="")=>`<span class="cube ${cls}" title="${tip||l}">${icon?ic(icon,c,12):""}<b style="color:${c}">${v}</b><i>${l}</i></span>`;
+  const byT={};es.forEach(e=>{byT[e.type]=(byT[e.type]||0)+1;});
+  const more=S.moreDays.has(d);
+  const info=[cube("","var(--g-news)",es.length+" · "+new Set(es.map(e=>e.el)).size,"события · эл.","итог дня: события · уникальные элементы","main"),
+    ...(byK.created-cr>0?[cube(KIND.created[0],KIND.created[2],byK.created-cr,"появилось прочего")]:[]),...["changed"].filter(k=>byK[k]).map(k=>cube(KIND[k][0],KIND[k][2],byK[k],KIND[k][1])),
+    cube("","var(--g-news)","Δ "+new Set(es.map(e=>e.el)).size,"уникальных"),
+    `<span class="ctypes">${Object.entries(byT).map(([t,n])=>`<span class="bi" title="${TYPE[t][1]}">${ic(TYPE[t][0],"var(--t2)",12)}${n}</span>`).join("")}</span>`];
+  const crit=[cl||cr?cube("flame",nc,(net>0?"+":"")+net,"сгорание","закрыто "+cl+" − заведено "+cr,"crit"):"",...(cr?[cube(KIND.created[0],KIND.created[2],cr,"заведено задач","","crit")]:[]),...["closed","ready","reactivated","released"].filter(k=>byK[k]).map(k=>cube(KIND[k][0],KIND[k][2],byK[k],KIND[k][1],"","crit"))].join("");
+  return `<div class="cubes">${crit}<button class="cmore" data-more="${d}" aria-expanded="${more}">${more?"свернуть ▴":"ещё "+(info.length-1)+" ▾"}</button>${more?info.join(""):""}</div>`;
+}
+function dayHead(d,es){
+  const byT={},byK={};es.forEach(e=>{byT[e.type]=(byT[e.type]||0)+1;byK[e.kind]=(byK[e.kind]||0)+1;});
+  const cl=es.filter(e=>e.type==='task'&&e.kind==='closed').length,cr=es.filter(e=>e.type==='task'&&e.kind==='created').length,net=cl-cr;
+  const nc=net>0?'var(--suc)':net<0?'var(--dng)':'var(--t3)';
+  return `${Object.entries(byT).map(([t,n])=>`<span class="bi" title="${TYPE[t][1]}">${ic(TYPE[t][0],'var(--t2)',12)}${n}</span>`).join('')}<span class="bsep"></span>${['closed','created','changed','ready','reactivated','released'].filter(k=>byK[k]).map(k=>`<span class="bi" style="color:${KIND[k][2]}" title="${KIND[k][1]}">${ic(KIND[k][0],KIND[k][2],12)}${byK[k]}</span>`).join('')}${cl||cr?`<span class="pill" style="color:${nc}" title="сгорание задач: закрыто ${cl} − заведено ${cr}">${ic('flame',nc,11)}${net>0?'+':''}${net}</span>`:''}<span class="pill" style="color:var(--g-news)" title="уникальных элементов">Δ ${new Set(es.map(e=>e.el)).size}</span>`;
+}
+
+function row(e){
+  const [ti]=TYPE[e.type],[ki,kl,kc]=KIND[e.kind],nav=NAV.has(e.type);
+  const tm=e.time?(S.zone==='utc'?shiftUtc(e.time)+' UTC':e.time):'—';
+  return `<li class="row ${nav?'link':''} ${e.unread?'unread':''}" ${nav?'tabindex="0" role="link"':''}><span class="g" title="${TYPE[e.type][1]}">${ic(ti,'var(--t2)',16)}</span><div class="b">
+   <div class="tt">${esc(e.title)}</div>
+   <div class="mt"><span class="tag" style="color:${kc}">${ic(ki,kc,12)}${kl}</span><span class="mono">${tm}</span>${e.title!==e.el?`<span class="id">${esc(e.el)}</span>`:""}${e.projects.map(p=>`<span>${sh(p)}</span>`).join(' ')}${e.from?`<span class="mono">${e.from} → ${e.to}</span>`:''}${e.mult>1?`<span class="mono" title="свёрнуто ${e.mult} события">×${e.mult}</span>`:''}${e.future?`<span class="fut" title="дата позже сегодня — вероятно опечатка">будущее</span>`:''}</div></div></li>`;
+}
+const shiftUtc=t=>{const [h,m]=t.split(':').map(Number);return String((h+21)%24).padStart(2,'0')+':'+String(m).padStart(2,'0');};
+
+function feed(list){
+  if(!list.length)return `<p style="color:var(--t3);padding:20px 0">За период под фильтром изменений нет. <button class="linkbtn" data-reset>сбросить фильтры</button></p>`;
+  const days=new Map();list.forEach(e=>{if(!days.has(e.day))days.set(e.day,[]);days.get(e.day).push(e);});
+  let arr=[...days];if(S.order==='asc')arr=arr.reverse().map(([d,es])=>[d,[...es].reverse()]);
+  let h='',lineDone=false,i=0;
+  for(const [d,es] of arr){
+    const open=S.closedDays.has(d)?false:(S.closedDays.has('!'+d)||i<2);
+    const firstRead=es.findIndex(e=>!e.unread);
+    h+=`<section class="day"><button class="dayh" data-day="${d}" aria-expanded="${open}"><span class="chev">${open?'▾':'▸'}</span><span class="dn">${d===D[0]?'сегодня':new Date(d).toLocaleDateString('ru',{weekday:'short',day:'numeric',month:'short'})} · ${d}</span>${open?"":`<span class="tot" title="события · элементы">${es.length} · ${new Set(es.map(e=>e.el)).size}</span><span class="bd">${dayHead(d,es)}</span>`}</button>${open?dayCubes(d,es):""}`;
+    if(open){
+      const put=(rows)=>{let r='<ul class="rows">';rows.forEach(e=>{if(!lineDone&&S.order==='desc'&&!e.unread){lineDone=true;r+=`</ul><div class="readline" role="separator" aria-label="прочитано до сюда"><span></span>прочитано до сюда · ${READ}<span></span></div><ul class="rows">`;}r+=row(e);});return r+'</ul>';};
+      if(S.group==='day')h+=put(es);
+      else{const b=new Map();es.forEach(e=>vals(e,S.group).forEach(v=>{if(!b.has(v))b.set(v,[]);b.get(v).push(e);}));
+        b.forEach((ge,k)=>{const gk=d+'|'+k,go=!S.closedGroups.has(gk);h+=`<button class="grph" data-grp="${esc(gk)}" aria-expanded="${go}"><span class="chev">${go?'▾':'▸'}</span><span class="gl">${esc(label(S.group,k))}</span><span class="gc">${ge.length} · ${new Set(ge.map(e=>e.el)).size}</span><span class="bd">${dayHead(d,ge)}</span></button>`;if(go)h+=put(ge);});}
+    }
+    h+='</section>';i++;
+  }
+  return h+`<div class="more"><button class="btn">Показать ещё неделю</button><button class="btn" data-read>Отметить прочитанным до сюда</button></div>`;
+}
+
+function sheet(all){
+  const chipset=(a)=>{const c=new Map();all.forEach(e=>vals(e,a).forEach(v=>c.set(v,(c.get(v)||0)+1)));return `<div class="fs"><h3>${ax[a]}</h3><div class="wrap">${[...c].sort((x,y)=>y[1]-x[1]).map(([v,n])=>`<button class="chip" aria-pressed="${S.filters[a]===v}" data-f="${a}" data-v="${esc(v)}">${a==='kind'?ic(KIND[v][0],KIND[v][2],12):''}${esc(label(a,v))}<span class="n">${n}</span></button>`).join('')}</div></div>`;};
+  const seg=(key,items,name)=>`<div class="fs"><h3>${name}</h3><div class="seg" role="radiogroup">${items.map(([k,n])=>`<button role="radio" aria-pressed="${S[key]===k}" data-set="${key}" data-v="${k}">${n}</button>`).join('')}</div></div>`;
+  return `<div class="scrim" data-close></div><aside class="sheet" role="dialog" aria-modal="true" aria-label="Фильтры ленты"><div class="grip"></div>
+   <header><h2>Фильтры</h2><button class="linkbtn" data-reset>сбросить</button><button class="btn" data-close aria-label="закрыть">✕</button></header>
+   <div class="body">
+    <div class="fs"><h3>Группировка внутри дня</h3><div class="wrap">${['day','type','project','component','sprint','milestone','author','kind'].map(a=>`<button class="chip" aria-pressed="${S.group===a}" data-set="group" data-v="${a}">${ax[a]}</button>`).join('')}</div>
+     ${S.group!=='day'?`<h3 style="margin-top:8px">Подгруппы</h3><div class="wrap"><button class="chip" aria-pressed="${!S.sub}" data-set="sub" data-v="">нет</button>${['project','component','sprint','milestone','author','kind','type'].filter(a=>a!==S.group).map(a=>`<button class="chip" aria-pressed="${S.sub===a}" data-set="sub" data-v="${a}">${ax[a]}</button>`).join('')}</div>`:''}</div>
+    ${seg('order',[['desc','Новые сверху'],['asc','Старые сверху']],'Порядок')}
+    ${['project','component','sprint','milestone','author','kind'].map(chipset).join('')}
+    ${seg('zone',[['local','Местное'],['utc','UTC']],'Время')}
+    <div class="fs"><h3>Подписка</h3><button class="linkbtn">Atom-лента на этот фильтр ↗</button></div>
+   </div>
+   <footer><button class="btn pri" data-close>Показать ${filtered(false).length}</button></footer></aside>`;
+}
+
+function notes(){
+  const map=[
+   [1,'Событие с иконкой и цветом','строка ленты — без изменений'],[2,'Шесть типов с иконками разделов','строка + чипы полосы'],
+   [3,'Дни, sticky, первые 2 открыты, свёртка','лента'],[4,'Режимы группы внутри дня, свёртка группы','панель → «Группировка» + заголовок группы'],
+   [5,'Итог дня/группы = события','кубик «события · эл.» у дня, число в заголовке группы'],[6,'Разбивка по типам и событиям','кубики дня по событиям + иконки типов справа; у группы — строкой'],
+   [7,'Чип «сгорание»','заголовок дня/группы + полоса метрик'],[8,'Δ уникальных','заголовок дня/группы'],
+   [9,'«С прошлого раза» + «прочитано»','полоса метрик + черта в ленте + кнопка внизу'],[10,'«ещё N задач»','снята ранее (сервер не шлёт agg), свёртка ×N в строке'],
+   [11,'Мета строки: время, тег, detail, проект, «будущее»','строка'],[12,'Переход к записи','строка (релиз, спринт, решение, ADR)'],
+   [13,'Ошибка с «Повторить», скелетон, пусто','на месте ленты'],[14,'Окно / limit','период «Неделя» + «показать ещё»'],
+   [15,'since / before / days','период в полосе'],[16,'Скоуп, 403','плашка на месте ленты'],[17,'«Будущее» по UTC','строка'],
+   [18,'Сортировка; без времени — «—»','лента + порядок в панели'],[19,'Дедуп «изменено» по дню','сервер, не трогаем'],[20,'«заведена», «спринт создан»','сервер, не трогаем'],
+   [21,'Мультипроект во всех группах','группы + ×N'],[22,'Группа «без проекта»','группа'],[23,'detail по видам','строка (код записи)'],
+   [24,'Задачи и спеки некликабельны','строка без ховера'],[25,'Вход section=news','меню'],[26,'502 / disabled / без items = ошибка','на месте ленты'],
+   [27,'Время: местное / UTC','панель → «Время»'],[28,'Свой скролл, ширина ≤ 860–980','страница'],[29,'Enter и пробел','все кнопки — нативные button'],[30,'i18n ru+en','ключи news.*'],
+  ];
+  return `<section class="notes"><h2>Что куда переехало</h2>
+   <p>Ничего не удалено. Убрано с первого экрана: 4 полосы управления, 7 выпадающих списков, плашка «Сверка чисел», сетка из 8 карточек. Расчёт и ответ <span class="mono">/lore/news/v2</span> не меняются.</p>
+   <ul>
+    <li><b>Над лентой</b> — одна полоса: период · чипы типов со счётчиками · «Фильтры (N)». На телефоне чипы — второй строкой с прокруткой.</li>
+    <li><b>Панель «Фильтры»</b> — проект, компонент, спринт, веха, автор, событие (чипы со счётчиками, одно касание), группировка + подгруппы, порядок (видно текущее), время Местное/UTC, Atom. На телефоне — нижний лист.</li>
+    <li><b>Метрики</b> — в заголовках дня и группы (как v1). Над лентой — свёрнутая полоса из трёх чисел. По нажатию — все 12 карточек, разрез по оси, матрица, сгорание, знания (каждое свёрнуто).</li>
+    <li><b>Сверка чисел</b> — значок ⚠ N в полосе метрик, отчёт по нажатию.</li>
+    <li><b>Прочитано</b> — черта «прочитано до сюда» в ленте, непрочитанные — точкой.</li>
+   </ul>
+   <details class="acc"><summary>30 функций паритета (SPEC-LORE-UXR-NEWS-PARITY) — где каждая</summary><div class="scroll"><table class="tbl"><tbody>${map.map(([n,f,w])=>`<tr><td>${n}</td><td>${f}</td><td class="${n===10?'q':'ok'}">${w}</td></tr>`).join('')}</tbody></table></div></details>
+   <details class="acc"><summary>Открытые вопросы к владелице</summary><ul>
+    <li>Разбивка по типам/событиям в заголовке дня: сервер сейчас шлёт только итог дня (matrix.rows.total). Либо клиент подписывает счёт строк дня, либо сервер добавляет <span class="mono">days[].by_type/by_kind</span> (сессия бэкенда).</li>
+    <li>Сгорание в заголовке дня — из <span class="mono">metrics.tasks.days[].burn</span> (уже есть).</li>
+   </ul></details>
+  </section>`;
+}
+
+// ── события ──
+document.addEventListener('click',ev=>{const t=ev.target.closest('button,[data-metrics],[data-close]');if(!t)return;const d=t.dataset;
+  if(d.period){S.period=d.period;}
+  else if(d.type){S.types.has(d.type)?S.types.delete(d.type):S.types.add(d.type);}
+  else if(d.sheet!=null){S.sheet=true;}
+  else if(d.close!=null){S.sheet=false;}
+  else if(d.f){S.filters[d.f]===d.v?delete S.filters[d.f]:S.filters[d.f]=d.v;}
+  else if(d.unf){delete S.filters[d.unf];}
+  else if(d.ungroup!=null){S.group='day';S.sub='';}
+  else if(d.unorder!=null){S.order='desc';}
+  else if(d.unzone!=null){S.zone='local';}
+  else if(d.set){S[d.set]=d.v;if(d.set==='group'&&(d.v==='day'||S.sub===d.v))S.sub='';}
+  else if(d.reset!=null){S.filters={};S.types.clear();S.group='day';S.sub='';S.order='desc';S.zone='local';}
+  else if(d.valid!=null){ev.stopPropagation();S.valid=!S.valid;}
+  else if(d.read!=null){ev.stopPropagation();EV.forEach(e=>e.unread=false);}
+  else if(d.day){const open=t.getAttribute('aria-expanded')==='true';S.closedDays.delete(d.day);S.closedDays.delete('!'+d.day);S.closedDays.add(open?d.day:'!'+d.day);}
+  else if(d.more){S.moreDays.has(d.more)?S.moreDays.delete(d.more):S.moreDays.add(d.more);}
+  else if(d.grp){S.closedGroups.has(d.grp)?S.closedGroups.delete(d.grp):S.closedGroups.add(d.grp);}
+  else if(d.metrics!=null){S.metrics=!S.metrics;}
+  else return;
+  render();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.sheet){S.sheet=false;render();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-metrics]')){e.preventDefault();S.metrics=!S.metrics;render();}});
+render();
+</script>
+</body>
+</html>

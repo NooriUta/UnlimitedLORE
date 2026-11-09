@@ -347,6 +347,7 @@ class LoreMeLiveDbTest {
     @JwtSecurity(claims = @Claim(key = "sub", value = SUB_B))
     void settingsArePersonal() {
         given().when().get("/lore/me/settings").then().statusCode(200)
-            .body("version", equalTo(0)).body("settings.density", equalTo("compact"));
+            // умолчание плотности — roomy (S5-14, решение владелицы 08.11 по S4-21)
+            .body("version", equalTo(0)).body("settings.density", equalTo("roomy"));
     }
 }
