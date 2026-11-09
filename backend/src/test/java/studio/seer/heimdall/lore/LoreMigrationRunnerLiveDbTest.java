@@ -87,4 +87,39 @@ class LoreMigrationRunnerLiveDbTest {
             .body("rows[0].content_hash", equalTo(
                 LoreContentHash.of("тело для хэша", null, null)));
     }
+
+    @jakarta.inject.Inject
+    LoreSchemaMigrationRunner runner;
+
+    /**
+     * SPRINT_UXR_S11_TEST_OPT/MIG-REPLAY, п. 2–3: Java-шаг V76 (harness по имени и по фактам
+     * владелицы) на базе с агентами, названными как на проде. Ошибка этого шага 09.11 дважды
+     * дошла бы до прода (#1010 — Kimi без harness, #1012 — vasilisk с claude-code). Повторный
+     * вызов ничего не меняет и не трогает уже выставленное.
+     */
+    @Test
+    void harnessBackfillFollowsOwnerFactsAndIsIdempotent() throws Exception {
+        String[][] agents = {
+            {"MIG-T-KIMI", "Kimi (full)", null},
+            {"AGENT-FULL_VASILISK-mw85b6r4", "Claude Code (full) vasilisk", null},
+            {"MIG-T-PM", "Claude Code (pm)", null},
+            {"MIG-T-AMB", "Claude Code vs Codex", null},
+            {"MIG-T-SET", "Claude Code (set by hand)", "dsh"}};
+        for (String[] a : agents)
+            sql("INSERT INTO KnowActor SET actor_id = '" + a[0] + "', name = '" + a[1] + "', kind = 'agent'"
+                + (a[2] == null ? "" : ", harness = '" + a[2] + "'"));
+        runner.backfillActorHarness();
+        java.util.Map<String, Object> got = new java.util.HashMap<>();
+        for (java.util.Map<String, Object> r : sql("SELECT actor_id, harness FROM KnowActor WHERE actor_id IN "
+                + "['MIG-T-KIMI', 'AGENT-FULL_VASILISK-mw85b6r4', 'MIG-T-PM', 'MIG-T-AMB', 'MIG-T-SET']"))
+            got.put(String.valueOf(r.get("actor_id")), r.get("harness"));
+        org.junit.jupiter.api.Assertions.assertEquals("kimi-code", got.get("MIG-T-KIMI"), "Kimi (full) — kimi-code (#1010)");
+        org.junit.jupiter.api.Assertions.assertEquals("codex", got.get("AGENT-FULL_VASILISK-mw85b6r4"), "vasilisk — codex по слову владелицы (#1012)");
+        org.junit.jupiter.api.Assertions.assertEquals("claude-code", got.get("MIG-T-PM"));
+        org.junit.jupiter.api.Assertions.assertNull(got.get("MIG-T-AMB"), "два правила — неоднозначно, не угадываем");
+        org.junit.jupiter.api.Assertions.assertEquals("dsh", got.get("MIG-T-SET"), "выставленное руками не трогается");
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, runner.backfillActorHarness(), "повтор — ничего не заполняет");
+        org.junit.jupiter.api.Assertions.assertEquals("kimi-code", sql("SELECT harness FROM KnowActor WHERE actor_id = 'MIG-T-KIMI'").get(0).get("harness"));
+    }
 }
