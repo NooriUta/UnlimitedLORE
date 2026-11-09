@@ -172,4 +172,35 @@ class LoreHistHygieneLiveDbTest {
             .body("rows.findAll { it.finding == 'state_shared_by_entities' }.state_uid", hasItem("hh-shared-1"))
             .body("rows.findAll { it.finding == 'state_wrong_class' }.ref_id", hasItem(WRONG));
     }
+
+    /**
+     * S2-11, прод 09.11 (v1.17.8): сторож нашёл 15 общих версий — 13 у релизов, 2 у задач
+     * (SPRINT_SITE_SEO_PRERENDER/META-05 делит версию с PRE-03). V77 разводит их: первый владелец
+     * сохраняет версию, остальные получают СВОЮ копию с теми же полями и датами (ничего не
+     * выдумано), ребро переводится на копию. Повтор — ноль: общих больше нет.
+     */
+    @Test
+    @Order(6)
+    void sharedStateIsSplitByV77AndHistoryOfBothOwnersIsVisible() {
+        assertTrue(runner.splitSharedStates() >= 1, "V77 развёл общую версию");
+        assertEquals(0, runner.splitSharedStates(), "повтор — ноль, общих версий больше нет");
+
+        for (String uid : List.of(SHARED_A, SHARED_B)) {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT state_uid, status_raw, valid_from FROM KnowTaskHist "
+                + "WHERE in('HAS_STATE').task_uid CONTAINS :uid", Map.of("uid", uid));
+            assertEquals(1, rows.size(), uid + ": ровно одна своя версия, " + rows);
+            assertEquals("DONE", rows.get(0).get("status_raw"), uid + ": статус скопирован");
+            assertTrue(String.valueOf(rows.get(0).get("valid_from")).startsWith("2026-11-09"),
+                uid + ": дата скопирована, не выдумана: " + rows.get(0));
+        }
+        List<Map<String, Object>> owners = ingest.queryPublic(
+            "SELECT in('HAS_STATE').size() AS n FROM KnowTaskHist WHERE state_uid = 'hh-shared-1'", Map.of());
+        assertEquals(1, ((Number) owners.get(0).get("n")).intValue(), "у исходной версии остался один владелец");
+
+        given().when().get("/lore/slice/history_hygiene")
+        .then().statusCode(200)
+            .body("rows.findAll { it.finding == 'state_shared_by_entities' }.ref_id", not(hasItem(SHARED_A)))
+            .body("rows.findAll { it.finding == 'state_shared_by_entities' }.ref_id", not(hasItem(SHARED_B)));
+    }
 }

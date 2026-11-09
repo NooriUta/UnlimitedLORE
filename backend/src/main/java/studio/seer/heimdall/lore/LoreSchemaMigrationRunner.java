@@ -532,6 +532,11 @@ public class LoreSchemaMigrationRunner {
         return opened;
     }
 
+    /** Заглушка до правки (S2-11, V77): общие версии пока не разводятся. */
+    int splitSharedStates() {
+        return 0;
+    }
+
     private StatusHistoryService.Db statusDb() {
         return new StatusHistoryService.Db() {
             @Override
