@@ -136,6 +136,12 @@ function isElkCompatible(def: string): boolean {
   return /^(flowchart|graph)\b/.test(body);
 }
 
+/** Заглушка до правки: склейка как была. */
+export function withInit(def: string, init: string): string {
+  return `${init}
+${def}`;
+}
+
 function buildInit(p: DiagramPalette, elk: boolean): string {
   const cfg: Record<string, unknown> = { theme: 'base', flowchart: { htmlLabels: false }, themeVariables: resolveVars(p) };
   if (elk) cfg.layout = 'elk';
