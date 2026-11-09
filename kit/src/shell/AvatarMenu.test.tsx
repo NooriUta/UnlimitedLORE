@@ -174,8 +174,12 @@ describe('displayAttrs — размер текста и полоски на ко
     expect(el.hasAttribute('data-text-size')).toBe(false);
     expect(el.hasAttribute('data-stripes')).toBe(false);
   });
-  it('TEXT_SIZES — sm, md, lg; md — умолчание', () => {
-    expect(TEXT_SIZES).toEqual(['sm', 'md', 'lg']);
+  it('TEXT_SIZES — sm, md, lg, xl; md — умолчание', () => {
+    // xl добавлен 09.11.2026 по словам владелицы: «у меня 4к и все мелкое»,
+    // а шкала заканчивалась на lg. Значение не новое для системы — боевой
+    // сервер личных настроек его уже знал (контракт S2), и v2 показывал
+    // умолчание вместо выбранного. Шкала и её порядок — textSizeXl.test.ts.
+    expect(TEXT_SIZES).toEqual(['sm', 'md', 'lg', 'xl']);
   });
 });
 

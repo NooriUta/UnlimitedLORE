@@ -122,10 +122,10 @@ export function applyTheme(el: AttrTarget, p: ThemePrefs): void {
 // Личные настройки пользователя (контракт S2: text_size, stripes). Как и
 // плотность, это атрибуты корня; значения шкалы живут только в seidr.css.
 
-export type TextSize = 'sm' | 'md' | 'lg';
+export type TextSize = 'sm' | 'md' | 'lg' | 'xl';
 
 /** md — умолчание (шкала v1 как есть). */
-export const TEXT_SIZES: readonly TextSize[] = ['sm', 'md', 'lg'];
+export const TEXT_SIZES: readonly TextSize[] = ['sm', 'md', 'lg', 'xl'];
 
 export interface DisplayPrefs {
   textSize: TextSize;

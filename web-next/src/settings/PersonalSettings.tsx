@@ -8,7 +8,7 @@
 // D-2026-UXR-READ-COLLAPSE) — блоком ReadingSettings: его читает ReadingView.
 // Пока у него своё хранилище kit, а не /lore/me/settings — сведение в одно — отдельной задачей.
 import { ICON_CANON } from '@seidr/kit';
-import { GameIcon, KitLangProvider, LoadError, PALETTES, ReadingSettings, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
+import { GameIcon, LoadError, PALETTES, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
 import type { UserSettings } from '../api/contracts/s2';
 import { t, type Lang, type MessageKey } from '../i18n/messages';
 import { switchNavUrl } from '../nav/navVersion';
@@ -91,7 +91,14 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         opts(lang, [['auto', 'settings.rightColumn.auto'], ['open', 'settings.rightColumn.open'], ['closed', 'settings.rightColumn.closed']] as const),
         v => onChange({ right_column: v }))}
       {row('text_size', 'settings.textSize.label', s.text_size,
-        opts(lang, [['sm', 'settings.textSize.sm'], ['md', 'settings.textSize.md'], ['lg', 'settings.textSize.lg']] as const),
+        // xl — по словам владелицы 09.11.2026: «у меня 4к и все мелкое».
+        // Шкала кончалась на lg, а сервер значение xl уже знал (контракт S2,
+        // SettingsResponse.warnings), то есть выбрать было можно, а увидеть —
+        // нет: клиент показывал умолчание.
+        opts(lang, [
+          ['sm', 'settings.textSize.sm'], ['md', 'settings.textSize.md'],
+          ['lg', 'settings.textSize.lg'], ['xl', 'settings.textSize.xl'],
+        ] as const),
         v => onChange({ text_size: v }))}
       {row('mode', 'settings.mode.label', s.mode,
         opts(lang, [['dark', 'settings.mode.dark'], ['light', 'settings.mode.light']] as const),
@@ -113,11 +120,16 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
           <span>{t(lang, 'settings.memory.open')}</span>
         </button>
       )}
-      <div className="setting-row" data-reading-settings>
-        <KitLangProvider lang={lang}>
-          <ReadingSettings />
-        </KitLangProvider>
-      </div>
+      {/* Блок «режим чтения» из kit (ReadingSettings) здесь БОЛЬШЕ НЕ РИСУЕТСЯ.
+          Находка CJM на проде 09.11.2026: владелица видела «две правды» —
+          «Меню при чтении записи: не сворачивать» в строках контракта S2 и
+          тут же ниже включённую галочку «Сворачивать меню при чтении».
+          Инвентаризация (греп по kit и web-next): этот блок настраивает
+          `ReadingView`, который web-next не рисует НИГДЕ, и пишет в своё
+          хранилище kit. То есть это были два разных источника про одно, и оба
+          мёртвые. Строки контракта S2 теперь настоящие (settings/applied.ts
+          читает то, что применено, и экран записи это слушает), а блок kit
+          вернётся вместе с режимом чтения, когда он появится в v2. */}
     </section>
   );
 }

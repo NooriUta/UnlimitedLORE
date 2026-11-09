@@ -272,7 +272,8 @@ export interface FavoritesResponse { items: Favorite[] }
 export interface UserSettings {
   collapse_nav_on_read: boolean;
   right_column: 'auto' | 'open' | 'closed';
-  text_size: 'sm' | 'md' | 'lg';
+  /** Шаг xl добавлен 09.11.2026 (S4-16): «у меня 4к и все мелкое». Сервер его уже знал — см. SettingsResponse.warnings. */
+  text_size: 'sm' | 'md' | 'lg' | 'xl';
   /** Палитра темы — те же коды, что в cookie seer-prefs (palette). */
   palette: string;
   mode: 'dark' | 'light';
@@ -302,7 +303,7 @@ const bool: Check = v => typeof v === 'boolean';
 const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   collapse_nav_on_read: bool,
   right_column: oneOf('auto', 'open', 'closed'),
-  text_size: oneOf('sm', 'md', 'lg'),
+  text_size: oneOf('sm', 'md', 'lg', 'xl'),
   palette: v => typeof v === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(v),
   mode: oneOf('dark', 'light'),
   density: oneOf('roomy', 'compact', 'comfortable'),
@@ -335,7 +336,7 @@ export interface SettingsResponse {
   updated_at: string | null;
   /**
    * Расхождения, о которых нельзя молчать (S5-14, аддитивно). Боевой сервер
-   * знает значения, которых в v2 нет (theme: system, text_size: xl): клиент
+   * знает значения, которых в v2 нет (например theme: system): клиент
    * показывает умолчание v2 и называет расхождение здесь. Пустой массив —
    * «перевод сошёлся», отсутствие поля — «источник о расхождениях не говорит».
    */

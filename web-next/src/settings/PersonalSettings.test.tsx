@@ -49,13 +49,36 @@ describe('S3-07: переключатель «новая навигация»', 
   });
 });
 
-describe('S5-05: настройки режима чтения в личных настройках', () => {
-  it('размер текста и «сворачивать меню при чтении» — блоком kit ReadingSettings', () => {
+describe('S5-14: про одно и то же в панели — ОДНА строка, а не две', () => {
+  // Находка CJM на проде 09.11.2026: владелица видела «Меню при чтении записи:
+  // не сворачивать» и тут же ниже включённую галочку «Сворачивать меню при
+  // чтении» — два блока про одно, и оба мёртвые (блок kit настраивал
+  // ReadingView, которого в v2 нет; строки контракта ложились атрибутами,
+  // которые никто не читал). Прежний тест требовал ВТОРОЙ блок, то есть
+  // закреплял саму поломку; теперь он требует его отсутствия.
+  it('блока режима чтения из kit в панели нет', () => {
     const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
     const html = renderToString(<PersonalSettings lang="ru" state={ok} onChange={() => {}} navTargetUrl={null} />);
-    expect(html).toContain('data-reading-settings');
-    expect(html).toContain('Сворачивать меню при чтении');
-    expect(html).toContain('Размер текста');
+    expect(html).not.toContain('data-reading-settings');
+    expect(html).not.toContain('Сворачивать меню при чтении');
+  });
+
+  it('про меню при чтении и про правую колонку осталось по одной строке', () => {
+    const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
+    const html = renderToString(<PersonalSettings lang="ru" state={ok} onChange={() => {}} navTargetUrl={null} />);
+    // Считаем ВИДИМЫЕ подписи: у переключателя та же строка идёт ещё и в
+    // aria-label, и по простому поиску по тексту их было бы две на одну строку.
+    const visible = (text: string) => html.match(new RegExp(`sk-setting__label[^>]*>${text}`, 'g'))?.length ?? 0;
+    expect(visible('Меню при чтении записи')).toBe(1);
+    expect(visible('Правая колонка записи')).toBe(1);
+  });
+
+  it('размер текста назван как общий для интерфейса — чтобы не путать с Aa чтения', () => {
+    const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
+    const html = renderToString(<PersonalSettings lang="ru" state={ok} onChange={() => {}} navTargetUrl={null} />);
+    expect(html).toContain('Размер текста во всём интерфейсе');
+    // И шаг «очень крупно» есть: «у меня 4к и все мелкое» (S4-16).
+    expect(html).toContain('очень крупно');
   });
 });
 
