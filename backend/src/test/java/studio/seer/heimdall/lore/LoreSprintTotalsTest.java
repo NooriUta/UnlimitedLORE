@@ -74,4 +74,25 @@ class LoreSprintTotalsTest {
         assertTrue(sql.contains("actual_days") && sql.contains("effort_days"), sql);
         assertEquals(LoreSlices.PROJECT_SCOPED.get("tasks_of_sprints_batch"), LoreSlices.PROJECT_SCOPED.get("sprint_totals"));
     }
+
+    /**
+     * Kit 09.11: обрезка СЛАГАЕМЫХ (строк задач) должна быть видна отдельным полем, которое
+     * не зависит от того, где считается свёртка: иначе сумма молча занижена и выглядит точной.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void inputsTruncatedSurvivesTheFold() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("rows", List.of(t("S1", "✅ DONE", 1.0, null)));
+        body.put("truncated", true);
+        LoreSprintTotals.fold(body, "S1");
+        assertEquals(true, body.get("inputs_truncated"), "слагаемые обрезаны — суммы неполные");
+        assertEquals("S1", ((List<Map<String, Object>>) body.get("rows")).get(0).get("sprint_id"));
+        assertEquals(LoreSprintTotals.RULE, body.get("rule"));
+
+        Map<String, Object> full = new HashMap<>();
+        full.put("rows", List.of(t("S1", "✅ DONE", 1.0, null)));
+        LoreSprintTotals.fold(full, "S1");
+        assertEquals(false, full.get("inputs_truncated"), "ключ есть всегда: false = видели все слагаемые");
+    }
 }
