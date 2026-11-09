@@ -206,6 +206,40 @@ final class LoreRecordValues {
         return item(str(r.get("question_id")), str(r.get("title")), (String) vals.get("status"), vals);
     }
 
+    /** Kit 09.11: паспорт решения (срез {@code decision}), только чтение. */
+    static Map<String, Object> decision(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("title")) != null ? str(r.get("title")) : str(r.get("decision_id")));
+        v.put("status", docToken(r.get("status_raw")));
+        v.put("code", str(r.get("decision_id")));
+        v.put("date", str(r.get("date_created")));
+        v.put("adr", str(r.get("parent_adr")));
+        v.put("components", arr(r.get("components")));
+        v.put("projects", arr(r.get("projects")));
+        v.put("tags", arr(r.get("tags")));
+        v.put("body_md", str(r.get("body_md")));
+        v.put("rationale_md", str(r.get("rationale_md")));
+        return v;
+    }
+
+    /** Kit 09.11: паспорт вопроса (срез {@code question_by_id}), только чтение. */
+    static Map<String, Object> question(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("title")) != null ? str(r.get("title")) : str(r.get("question_id")));
+        v.put("status", docToken(r.get("status")));
+        v.put("code", str(r.get("question_id")));
+        v.put("priority", str(r.get("priority")));
+        v.put("due_date", str(r.get("due_date")));
+        v.put("owner", str(r.get("owner")));
+        v.put("raised_by", str(r.get("raised_by")));
+        v.put("opened", str(r.get("opened_date")));
+        v.put("closed", str(r.get("closed_date")));
+        v.put("components", arr(r.get("components")));
+        v.put("projects", arr(r.get("projects")));
+        v.put("body_md", str(r.get("body_md")));
+        return v;
+    }
+
     /** Решение (decisions_of_adr) → item. */
     static Map<String, Object> decisionItem(Map<String, Object> r) {
         Map<String, Object> vals = new LinkedHashMap<>();

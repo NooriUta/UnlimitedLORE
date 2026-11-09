@@ -34,8 +34,11 @@ class LoreRecordRegistryTest {
 
     @Test
     void typesNowAreSprintTaskAdrSpec() {
-        assertEquals(List.of("sprint", "task", "adr", "spec"), LoreRecordRegistry.TYPES);
-        assertNull(LoreRecordRegistry.get("decision"), "решение — позже (A6), сейчас его в реестре нет");
+        assertEquals(List.of("sprint", "task", "adr", "spec", "decision", "question"), LoreRecordRegistry.TYPES);
+        // Kit 09.11: решение и вопрос заведены — пока только чтение (READ_ONLY).
+        assertNotNull(LoreRecordRegistry.get("decision"));
+        assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("decision", "question")));
+        assertNull(LoreRecordRegistry.get("milestone"), "веха — позже, сейчас её в реестре нет");
     }
 
     @Test
@@ -195,5 +198,22 @@ class LoreRecordRegistryTest {
         assertFalse(((List<?>) js.get("fields")).isEmpty());
         assertFalse(((List<?>) js.get("relations")).isEmpty());
         assertNull(LoreRecordRegistry.schemaJson("nope"));
+    }
+
+    /**
+     * Kit 09.11: паспорта решения и вопроса — первыми из восьми типов разделов v2. Пока
+     * только чтение: у типа без путей записи ни одно поле не правится (иначе kit нарисует
+     * кнопку, которой нечем сохранить).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void decisionAndQuestionAreReadOnlyTypes() {
+        for (String t : List.of("decision", "question")) {
+            assertTrue(LoreRecordRegistry.READ_ONLY.contains(t), t + " — только чтение");
+            Map<String, Object> s = LoreRecordRegistry.schemaJson(t);
+            for (Map<String, Object> f : (List<Map<String, Object>>) s.get("fields"))
+                assertEquals(false, f.get("editable"), t + "." + f.get("key") + " не правится");
+        }
+        assertFalse(LoreRecordRegistry.READ_ONLY.contains("adr"), "у ADR пути записи есть");
     }
 }

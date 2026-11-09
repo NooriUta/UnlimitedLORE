@@ -106,7 +106,7 @@ class LoreRecordFacadeLiveDbTest {
         assertTrue(n.getList("meta.data_state").isEmpty(), "новая запись ничего не читала — список пуст");
 
         admin().get("/lore/record/task/NOPE_SPRINT/NOPE").then().statusCode(404);
-        admin().get("/lore/record/decision/D-1").then().statusCode(400);
+        admin().get("/lore/record/milestone/M-1").then().statusCode(400);   // тип без паспорта (решение заведено 09.11)
     }
 
     @Test
@@ -236,5 +236,23 @@ class LoreRecordFacadeLiveDbTest {
         assertNull(r.get("values.effort_days_total.value"), "нет оценок — null, а не 0");
         JsonPath list = given().get("/lore/slice/sprint_totals?sprint_ids=" + sid).then().statusCode(200).extract().jsonPath();
         assertEquals(r.getMap("values.tasks_total"), list.getMap("rows[0].tasks_total"), "паспорт и список — одно число");
+    }
+
+    /** Kit 09.11: паспорта решения и вопроса (только чтение) — первыми из восьми типов разделов v2. */
+    @Test
+    void decisionAndQuestionPassportsAreReadOnly() {
+        admin().body("{\"decision_id\":\"D-2026-REC-PASS\",\"title\":\"решение для паспорта\"}").post("/lore/decision").then().statusCode(200);
+        JsonPath d = record("decision", "D-2026-REC-PASS");
+        assertEquals("decision", d.getString("record.type"));
+        assertEquals("решение для паспорта", d.getString("values.title"));
+        assertFalse(d.getBoolean("perms.can_edit"), "только чтение — правка не обещается");
+        assertEquals(List.of(), d.getList("perms.status_next"));
+
+        admin().body("{\"question_id\":\"Q-REC-PASS\",\"title\":\"вопрос для паспорта\",\"status\":\"open\"}").post("/lore/question").then().statusCode(200);
+        JsonPath q = record("question", "Q-REC-PASS");
+        assertEquals("question", q.getString("record.type"));
+        assertEquals("open", q.getString("values.status"));
+        assertFalse(q.getBoolean("perms.can_edit"));
+        admin().get("/lore/record/question/Q-NO-SUCH").then().statusCode(404);
     }
 }
