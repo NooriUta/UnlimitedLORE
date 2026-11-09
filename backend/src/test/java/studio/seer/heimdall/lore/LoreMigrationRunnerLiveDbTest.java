@@ -122,4 +122,20 @@ class LoreMigrationRunnerLiveDbTest {
         org.junit.jupiter.api.Assertions.assertEquals(0, runner.backfillActorHarness(), "повтор — ничего не заполняет");
         org.junit.jupiter.api.Assertions.assertEquals("kimi-code", sql("SELECT harness FROM KnowActor WHERE actor_id = 'MIG-T-KIMI'").get(0).get("harness"));
     }
+
+    /**
+     * SPRINT_UXR_S11_TEST_OPT/MIG-REPLAY, п. 2: повторный прогон всех шагов на уже
+     * мигрированной базе не меняет ни схему, ни ledger. Снимок — типы со свойствами и индексы.
+     */
+    @Test
+    void secondRunChangesNothing() throws Exception {
+        String typesSql = "SELECT name, properties.name AS props FROM schema:types ORDER BY name";
+        String idxSql = "SELECT name FROM schema:indexes ORDER BY name";
+        String ledgerSql = "SELECT version, checksum FROM LoreSchemaVersion ORDER BY version";
+        String t0 = sql(typesSql).toString(), i0 = sql(idxSql).toString(), l0 = sql(ledgerSql).toString();
+        runner.run();
+        org.junit.jupiter.api.Assertions.assertEquals(t0, sql(typesSql).toString(), "типы и свойства те же");
+        org.junit.jupiter.api.Assertions.assertEquals(i0, sql(idxSql).toString(), "индексы те же");
+        org.junit.jupiter.api.Assertions.assertEquals(l0, sql(ledgerSql).toString(), "ledger тот же");
+    }
 }
