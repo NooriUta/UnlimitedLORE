@@ -47,7 +47,7 @@ export interface KindConfig { title:string; icon:string; relations?:KitRelationD
    * заметки задачи (дефект прода v1.17.7 — «нет ни ✎, ни „Править"»), потому
    * что kit отдавал ей весь обзор и редактор до тела не доходил.
    */
-  bodySections?:{key:string; title:string}[];
+  bodySections?:{key:string; title:string; /** Раздел можно писать. false — только чтение даже при праве правки: путь записи для него сервер не даёт (schema.fields[].editable). */ editable?:boolean}[];
   overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; type:'text'|'md'|'enum'|'ref'|'date'|'number'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string}[] }
 export interface KitRecord { id:string; kind:string; title:string; status:string; fields:Record<string,unknown>; body_md?:string; updated_at?:string }
 export interface KitEdge { from:string; to:string; type:string }

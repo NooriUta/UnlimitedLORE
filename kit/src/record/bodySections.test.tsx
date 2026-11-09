@@ -165,3 +165,50 @@ describe('S5-06 · склеенное тело и разделы не споря
     expect(order[0]).not.toContain('sk-rec-fields__sec');
   });
 });
+
+describe('S5-06 · раздел «только чтение» не получает ✎', () => {
+  // Серверная сессия 09.11 проверила по коду `LoreRecordRegistry.schemaJson`:
+  // у каждого раздела тела есть `editable` и свой путь записи `write`. Право
+  // правки ЗАПИСИ этого не отменяет: ✎ у раздела с `editable: false` обещал
+  // бы сохранение, которого некуда отправить.
+  it('editable: false — текст виден, кнопки правки нет', () => {
+    const onSave = vi.fn(async () => {});
+    render(
+      <RecordView
+        record={{ ...record, fields: { note_md: 'Заметка руками', plan_md: 'План' } }}
+        ctx={ctxWith({ hooks: { onSave }, kinds: {
+          task: {
+            title: 'Задача', icon: 'scroll-unfurled',
+            bodySections: [
+              { key: 'note_md', title: 'Заметка' },
+              { key: 'plan_md', title: 'План', editable: false },
+            ],
+          },
+        } })}
+        tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
+      />,
+    );
+    // «План» встречается дважды — подписью раздела и его текстом; берём
+    // подпись заголовка, иначе утверждение зависит от совпадения строк.
+    expect(screen.getAllByText('План').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /Править «Заметка»/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Править «План»/ })).toBeNull();
+  });
+
+  it('editable: false и раздел ПУСТОЙ — не рисуется вовсе: ни текста, ни способа начать', () => {
+    const onSave = vi.fn(async () => {});
+    const { container } = render(
+      <RecordView
+        record={record}
+        ctx={ctxWith({ hooks: { onSave }, kinds: {
+          task: {
+            title: 'Задача', icon: 'scroll-unfurled',
+            bodySections: [{ key: 'plan_md', title: 'План', editable: false }],
+          },
+        } })}
+        tab="overview" onTab={() => {}} mdEditor={MdInlineEdit}
+      />,
+    );
+    expect([...container.querySelectorAll('.sk-rec-fields__sechead')]).toEqual([]);
+  });
+});

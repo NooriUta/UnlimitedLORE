@@ -156,7 +156,10 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   //
   // Теперь kit получает список «ключ + подпись» и рисует разделы сам — с ✎,
   // черновиком и честным пустым состоянием у каждого.
-  const bodySections = sections.map(s => ({ key: s.key, title: s.label }));
+  // Признак «можно писать» приходит из схемы сервера: у раздела может не быть
+  // пути записи, и тогда ✎ обещал бы сохранение, которого некуда отправить
+  // (проверено серверной сессией по LoreRecordRegistry.schemaJson 09.11).
+  const bodySections = sections.map(s => ({ key: s.key, title: s.label, editable: s.editable !== false }));
   const tabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
     key: t.key, title: t.label,
     render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),

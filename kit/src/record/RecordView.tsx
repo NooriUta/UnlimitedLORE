@@ -228,15 +228,20 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
         {sections.map(s => {
           const raw = record.fields[s.key];
           const text = typeof raw === 'string' ? raw : raw === null || raw === undefined ? '' : valueText(raw);
+          // Раздел может быть только для чтения САМ ПО СЕБЕ: сервер не даёт
+          // пути записи именно для него (`schema.fields[].editable: false`).
+          // Право правки записи этого не отменяет: ✎ у такого раздела обещал
+          // бы сохранение, которого некуда отправить.
+          const may = edit && s.editable !== false ? edit : undefined;
           // Без права правки пустой раздел не рисуем: подпись без содержимого
           // ничего не сообщает. С правом — рисуем, иначе в пустой раздел
           // нечем написать, и это тупик без способа начать.
-          if (!text.trim() && !edit) return null;
+          if (!text.trim() && !may) return null;
           return (
             <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
               <h2 className="sk-rec-fields__sechead">{s.title}</h2>
-              {edit
-                ? <edit.Editor value={text} label={s.title} onSave={edit.save(s.key, raw ?? null)} drafts={edit.drafts?.(s.key)} />
+              {may
+                ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} />
                 : <>{ctx.md(text)}</>}
             </section>
           );

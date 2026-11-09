@@ -80,7 +80,19 @@ function payload(type: PassportType, rec: Ref, field: string, to: unknown): { pa
     if (!name) throw new Error('у ADR не заполнено имя — без него правка раздела не отправляется');
     return { path: '/lore/adr', body: { adr_id: rec.id, name, [field]: typeof to === 'string' ? to : '' } };
   }
-  if (field !== 'body_md') throw new Error(`поле «${field}» пока не правится в паспорте`);
+  // Текст записи приходит либо склеенным телом (`body_md` — эмуляция), либо
+  // СВОИМ полем раздела: фасад `/lore/record` отдаёт разделы тела под их
+  // настоящими именами (`note_md` у задачи, `context_md` у спринта,
+  // `content_md` у спеки). Прежде принималось только `body_md`, и правка
+  // раздела падала с «поле не правится» — а снаружи это выглядело как
+  // отсутствие правки вовсе (дефект прода v1.17.7, S5-06).
+  const BODY_FIELD: Partial<Record<PassportType, string>> = {
+    sprint: 'context_md', task: 'note_md', spec: 'content_md',
+  };
+  const own = BODY_FIELD[type];
+  if (field !== 'body_md' && field !== own) {
+    throw new Error(`поле «${field}» пока не правится в паспорте`);
+  }
   const text = typeof to === 'string' ? to : '';
   if (type === 'sprint') return { path: '/lore/sprint/update', body: { sprint_id: rec.id, context_md: text } };
   if (type === 'task') return { path: '/lore/task/edit', body: { task_uid: rec.id, title: rec.title, note_md: text } };
