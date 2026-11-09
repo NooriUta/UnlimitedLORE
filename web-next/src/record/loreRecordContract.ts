@@ -25,7 +25,13 @@ export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: st
 export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number }
 export interface LoreRecord1 {
   contract: 'lore.record/1';
-  record: { type: string; id: string; title: string; status: string; version: number | null; updated_at: string | null; updated_by: string | null };
+  /**
+   * `version` — СТРОКА, как её отдаёт фасад: `valid_from` открытого состояния
+   * SCD2 (`LoreRecordVersion.normalize`). Раньше тут стояло число — тип
+   * писался до фасада, по догадке. Строка нужна как есть: это метка версии
+   * для `expected_version` (S5-08), а не счётчик, и арифметики над ней нет.
+   */
+  record: { type: string; id: string; title: string; status: string; version: string | null; updated_at: string | null; updated_by: string | null };
   schema: { type: string; label: string; icon: string; fields: LoreField[]; tabs: LoreTab[]; relations: LoreRelation[] };
   values: Record<string, unknown>;
   links: LoreLink[];
