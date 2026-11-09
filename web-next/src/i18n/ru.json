@@ -414,5 +414,15 @@
   "kitPage.flow.matrixC2": "Колонка два",
   "kitPage.flow.matrixO1": "Значение один",
   "kitPage.flow.matrixO2": "Значение два",
-  "kitPage.flow.matrixProposed": "Предложено изменений: {n} — дальше их показывает дифф."
+  "kitPage.flow.matrixProposed": "Предложено изменений: {n} — дальше их показывает дифф.",
+  "kitPage.flow.relHead": "Выпуск содержимого: дифф версий и активация",
+  "kitPage.flow.relLead": "Класс выпуска (хотфикс или релиз) считает сервер — витрина показывает присланный. Активация и откат идут через подтверждение.",
+  "kitPage.flow.relAdded": "Добавленная запись",
+  "kitPage.flow.relChanged": "Изменённая запись",
+  "kitPage.flow.relRemoved": "Снятая запись",
+  "kitPage.flow.relWas": "правило для всех",
+  "kitPage.flow.relNow": "правило для новичков",
+  "kitPage.flow.relWho": "кто-то из команды",
+  "kitPage.flow.relRolledBack": "откат на {v}",
+  "kitPage.flow.relDone": "Приложение получило действие: {v}."
 }

@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, ContentRelease, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 
@@ -172,6 +172,22 @@ function Samples() {
                   : { state: 'forbidden', reason: 'нужна роль администратора' }
           )}
           onPropose={noop}
+        />
+        {/* Выпуск содержимого: пословный дифф поля, класс от сервера и журнал
+            активаций. В снимке видно, как читаются зачёркнутое «было» и
+            подчёркнутое «стало» одним CSS-слоем (K-12). */}
+        <ContentRelease
+          diff={{
+            from: 7,
+            to: 8,
+            class: 'hotfix',
+            added: [{ id: 'A-1', title: 'Новая запись' }],
+            changed: [{ id: 'C-1', title: 'Изменённая запись', fields: { title: { from: 'правило для всех', to: 'правило для новичков' } } }],
+            removed: [{ id: 'R-1', title: 'Снятая запись' }],
+          }}
+          log={[{ version: 7, who: 'кто-то', when: '2026-11-01T10:00:00Z', action: 'activate' }]}
+          onActivate={noop}
+          onRollback={noop}
         />
       </section>
       <section className="bare__sec" data-kit="content">
