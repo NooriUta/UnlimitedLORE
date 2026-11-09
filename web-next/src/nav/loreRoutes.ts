@@ -122,3 +122,19 @@ export function readRoute(params: URLSearchParams): LoreRoute {
   const kind = sec && (V2_SECTIONS as readonly string[]).includes(sec) ? typeOfSection(sec) : null;
   return { sec, q, record: id && kind ? { kind, id } : null };
 }
+
+/**
+ * Ссылка по коду, когда тип записи известен только из загруженных записей: kit
+ * зовёт ctx.href(id) без типа (связи, граф, таблица связей, «Активность»), палитра
+ * — href(id) для «Копировать ссылку». Тип известен и у него есть раздел — адрес
+ * оболочки; иначе — переданная запасная ссылка, раздел не выдумывается.
+ */
+export function knownRecordHref(
+  id: string,
+  records: readonly { id: string; kind?: unknown }[],
+  fallback: (id: string) => string,
+): string {
+  const r = records.find(x => x.id === id);
+  const kind = typeof r?.kind === 'string' ? r.kind : '';
+  return (kind && recordHref(kind, id)) || fallback(id);
+}

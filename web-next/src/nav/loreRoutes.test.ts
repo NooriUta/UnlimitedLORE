@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { readUrlState, type UrlWindow } from '@seidr/kit';
 import { V2_SECTIONS } from '../shell/v2Config';
 import {
-  SEARCH_HIT_TYPES, TYPE_SECTION, readRoute, recordHref, recordIdOf, searchHref, sectionHref, sectionOfType,
+  SEARCH_HIT_TYPES, TYPE_SECTION, knownRecordHref, readRoute, recordHref, recordIdOf, searchHref, sectionHref, sectionOfType,
 } from './loreRoutes';
 
 const params = (href: string) => new URLSearchParams(href.slice(href.indexOf('?') + 1));
@@ -116,6 +116,21 @@ describe('B-07 · переход в другой раздел не тащит q,
   });
 });
 
+// Ссылка по коду, когда тип записи известен только из загруженных записей:
+// kit зовёт ctx.href(id) без типа (связи, граф, таблица связей паспорта). Паспорт
+// отдавал «#код» — ссылка вела никуда (находка 09.11 при приёмке на проде).
+describe('ссылка по коду из известных записей', () => {
+  const recs = [{ id: 'S/T-1', kind: 'task' }, { id: 'ADR-1', kind: 'adr' }, { id: 'DOC-1', kind: 'doc' }];
+  it('тип известен → адрес раздела оболочки', () => {
+    expect(knownRecordHref('S/T-1', recs, () => 'x')).toBe('/?mod=forseti&sec=task&open=S%2FT-1');
+    expect(knownRecordHref('ADR-1', recs, () => 'x')).toBe('/?mod=forseti&sec=adr&open=ADR-1');
+  });
+  it('записи нет или у типа нет раздела в v2 — запасная ссылка, раздел не выдумывается', () => {
+    expect(knownRecordHref('NOPE', recs, id => '#' + id)).toBe('#NOPE');
+    expect(knownRecordHref('DOC-1', recs, id => '#' + id)).toBe('#DOC-1');
+  });
+});
+
 // Сторож вызова, а не модуля: прежний тест проверял модуль сам на себе и был
 // зелёным, пока экраны собирали адреса в обход.
 describe('S4-13 · адреса записей собирает только loreRoutes', () => {
@@ -127,11 +142,17 @@ describe('S4-13 · адреса записей собирает только lor
   // TaskReadPage — отдельная страница «читать целиком» вне оболочки (S5-04): она
   // сама читает и пишет свой адрес ?section=tasks&passport=…. Убрать её — решение
   // владелицы (правило «функции не удалять без approve»), до него — явное исключение.
-  const ALLOW = [join('nav', 'loreRoutes.ts'), join('tasks', 'TaskReadPage.tsx')];
+  // PassportDemo — витрина /kit/passport на демо-данных вне приложения (S4-33).
+  const ALLOW = [join('nav', 'loreRoutes.ts'), join('tasks', 'TaskReadPage.tsx'), join('pages', 'PassportDemo.tsx')];
   const files = walk(SRC).filter(f => !ALLOW.some(a => f.endsWith(a)));
 
   it('карта «тип → раздел» (Record<…, V2Section>) больше нигде не заводится', () => {
     const bad = files.filter(f => /Record<string,\s*V2Section>/.test(readFileSync(f, 'utf8')));
+    expect(bad.map(f => relative(SRC, f))).toEqual([]);
+  });
+
+  it('ссылки «#код» вместо адреса записи (href: x => `#${…}`) в v2 нет', () => {
+    const bad = files.filter(f => /href:\s*\w+\s*=>\s*`#\$\{/.test(readFileSync(f, 'utf8')));
     expect(bad.map(f => relative(SRC, f))).toEqual([]);
   });
 

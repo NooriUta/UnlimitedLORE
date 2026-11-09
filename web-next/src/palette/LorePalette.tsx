@@ -9,7 +9,7 @@ import {
   type KitCtx, type KitData, type KitRecord, type PaletteAction, type PaletteTarget, type RecentList, type SafeStorage,
 } from '@seidr/kit';
 import { copyActions, loreRemoteSearch, searchKinds, type ClipboardLike } from './paletteSource';
-import { recordHref } from '../nav/loreRoutes';
+import { knownRecordHref } from '../nav/loreRoutes';
 
 export interface LorePaletteProps {
   storage: SafeStorage;
@@ -46,9 +46,7 @@ const EMPTY_DATA: KitData = { records: [], edges: [], journal: [], meta: { gener
  * маршрута в v2 нет: ссылка открывала «Новости» (тот же тупик, что аудит D-01).
  */
 export function paletteHref(id: string, records: readonly KitRecord[], fallback: (id: string) => string): string {
-  const r = records.find(x => x.id === id);
-  const kind = r ? String((r as { kind?: unknown }).kind ?? (r as { type?: unknown }).type ?? '') : '';
-  return (kind && recordHref(kind, id)) || fallback(id);
+  return knownRecordHref(id, records, fallback);
 }
 
 export function defaultHref(id: string): string {
