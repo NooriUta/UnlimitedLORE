@@ -16,9 +16,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { pushUrlState, urlStateHref, useKitLang, useKitShell, type KitConfig, type KitRecord, type SafeStorage } from '@seidr/kit';
 import { appT } from '../i18n';
-import { v2Config, type V2Section } from '../shell/v2Config';
+import { v2Config } from '../shell/v2Config';
 import { LorePalette } from './LorePalette';
 import { shellRecentList } from './shellRecent';
+import { sectionOfType } from '../nav/loreRoutes';
 import './SectionPalette.css';
 
 /**
@@ -29,23 +30,7 @@ import './SectionPalette.css';
  * словами, а не уводом в раздел по умолчанию. Список растёт вместе с
  * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-V2-SECTIONS.
  */
-const SECTION_OF_TYPE: Readonly<Record<string, V2Section>> = {
-  sprint: 'sprint',
-  adr: 'adr',
-  task: 'task',
-  // S4-V2-SECTIONS: разделы собраны — значит найденное в них теперь можно
-  // открыть. Пока раздела не было, палитра честно отказывала по имени типа.
-  decision: 'decision',
-  spec: 'spec',
-  question: 'question',
-  milestone: 'milestone',
-  release: 'release',
-  component: 'component',
-  feature: 'feature',
-  // Технологии — те же спеки SPEC-TECH-*, и серверный поиск отдаёт их типом
-  // `spec`. Отдельного типа у них нет, поэтому своей строки здесь тоже нет:
-  // найденная спека технологии открывается в «Спеках», где у неё есть паспорт.
-};
+// Тип записи → раздел — единая карта loreRoutes (S4-13; своя копия здесь удалена).
 
 export interface SectionPaletteProps {
   storage: SafeStorage;
@@ -94,7 +79,7 @@ export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
    *      бы жать дважды, чтобы вернуться к тому, откуда искали.
    */
   const openRecord = useCallback((r: KitRecord) => {
-    const section = SECTION_OF_TYPE[r.kind];
+    const section = sectionOfType(r.kind);
     if (!section) {
       // Разделов в v2 пока пять. Молча никуда не уводим и в «Новости» тем
       // более: запись найдена, и об этом надо сказать правду.

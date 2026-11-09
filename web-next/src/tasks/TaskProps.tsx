@@ -5,6 +5,7 @@
 import type { ReactNode } from 'react';
 import { StatusChip, type KitCtx, type KitRecord } from '@seidr/kit';
 import { useTaskT, type TaskReadKey } from './taskRead.i18n';
+import { recordHref } from '../nav/loreRoutes';
 
 function list(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x !== '') : [];
@@ -20,7 +21,7 @@ export function TaskProps({ record, ctx }: { record: KitRecord; ctx: KitCtx }) {
   ));
   const rows: [TaskReadKey, ReactNode][] = [
     ['task.prop.status', <StatusChip key="s" record={record} config={ctx.config} role={ctx.role} />],
-    ['task.prop.sprint', <a key="sp" className="sk-rec-ref" href={`?section=sprints&passport=${encodeURIComponent(String(f.sprint_id))}`}>{String(f.sprint_id)}</a>],
+    ['task.prop.sprint', <a key="sp" className="sk-rec-ref" href={recordHref('sprint', String(f.sprint_id)) ?? undefined}>{String(f.sprint_id)}</a>],
     ['task.prop.type', text(f.task_type)],
     ['task.prop.workClass', text(f.work_class)],
     ['task.prop.effort', typeof f.effort_days === 'number' ? <span className="task-props__mono">{f.effort_days}</span> : none],
