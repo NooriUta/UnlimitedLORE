@@ -155,3 +155,35 @@
   color: var(--wrn);
 }
 .sprint-tasks { padding-top: 8px; }
+
+/* ---------- Метка версии в правом нижнем углу (S4-30) ---------- */
+/* Просьба владелицы 09.11.2026: «в правое нижний угол запиши версию сервера и
+   версию фронта или одну если они вместе». Угол — fixed: метка относится к
+   установке целиком, а не к открытому разделу, и при прокрутке остаётся на
+   месте. Тихая: моно, самый мелкий кегль, третий цвет текста — она нужна,
+   когда её ищут, и не должна спорить с содержимым. */
+.v2-version {
+  position: fixed;
+  right: 8px;
+  bottom: 6px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.v2-version__btn {
+  pointer-events: auto;
+  border: 0;
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--bg1) 80%, transparent);
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+.v2-version__btn:hover { color: var(--t1); background: var(--bg2); }
+.v2-version__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.v2-version__said { color: var(--suc); font-size: var(--fs-2xs); }

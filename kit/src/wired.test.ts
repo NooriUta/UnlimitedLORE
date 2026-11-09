@@ -63,6 +63,8 @@ const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string 
   { symbol: 'RecordHistory', declaredIn: 'record/RecordHistory.tsx', why: 'вкладка «История» записи (S5-11)' },
   { symbol: 'RelationTable', declaredIn: 'record/RelationTable.tsx', why: 'связи таблицей с общими колонками (S4-37)' },
   { symbol: 'DataStateBlock', declaredIn: 'record/DataStateBlock.tsx', why: 'блок «что проверено / что не смогли» (S4-30)' },
+  { symbol: 'ResizeBorder', declaredIn: 'shell/ResizeBorder.tsx', why: 'границы зон тянутся мышью: левое меню, колонка свойств, док (S4-30)' },
+  { symbol: 'zoneSaved', declaredIn: 'shell/ResizeBorder.tsx', why: '«границу не тянули» отличается от «поставила умолчание» (S4-30)' },
   { symbol: 'navClick', declaredIn: 'core/navClick.ts', why: 'пункты меню и крошки — ссылки, а не кнопки (S4-28, S4-MENU-STATES)' },
   { symbol: 'urlStateHref', declaredIn: 'resilience/urlState.ts', why: 'у ссылки есть адрес до перехода (S4-28)' },
 ];

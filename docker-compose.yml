@@ -328,6 +328,13 @@ services:
         VITE_LORE_AUTH_ENABLED: ${VITE_LORE_AUTH_ENABLED:-}
         VITE_OIDC_ISSUER: ${VITE_OIDC_ISSUER:-}
         VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
+        # S4-30: коммит выкатки доводится до бандла — метка версии в правом
+        # нижнем углу сверяет его с коммитом бэкенда из /lore/version и
+        # показывает ОДНУ версию только когда они совпали. Переменная та же,
+        # что уже есть у бэкенда (LORE_BUILD_COMMIT в lore-cd.yml): новой в
+        # workflow не нужно, иначе у одной выкатки появилось бы две правды о
+        # собственном коммите.
+        VITE_LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
     environment:
       # Runtime-подстановка в общий шаблон nginx — смысл каждой см. у lore-app.
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
