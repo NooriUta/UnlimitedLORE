@@ -10,6 +10,8 @@ import { axeViolations } from '../test/axe';
 import { registerGameIcons } from '../elements/GameIcon';
 import { KitLangProvider } from '../i18n';
 import { NEWS_FIXTURE, NewsActivity, NewsFeed, type NewsResponse, type NewsSource } from './index';
+import { StatusDictCtx } from '../core/statusLook';
+import type { KitConfig } from '../core/contract';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -30,10 +32,19 @@ function src(over: Partial<NewsSource> = {}, data: NewsResponse = clone()): News
   };
 }
 
-async function mount(source: NewsSource, props: Partial<Parameters<typeof NewsFeed>[0]> = {}) {
+async function mount(
+  source: NewsSource,
+  props: Partial<Parameters<typeof NewsFeed>[0]> = {},
+  // Словарь статусов приложения: в приложении его даёт оболочка, здесь —
+  // напрямую (S4-STATUS-AXIS-CONFIG). Не передан — словаря нет, и лента
+  // честно рисует запас kit с пометкой.
+  dict?: KitConfig['statuses']['items'],
+) {
   const r = render(
     <KitLangProvider lang="ru">
-      <NewsFeed source={source} urlPrefix={null} timeZone="Europe/Moscow" {...props} />
+      <StatusDictCtx.Provider value={dict}>
+        <NewsFeed source={source} urlPrefix={null} timeZone="Europe/Moscow" {...props} />
+      </StatusDictCtx.Provider>
     </KitLangProvider>,
   );
   await screen.findByTestId('news-feed-days');
@@ -621,5 +632,34 @@ describe('ширина ленты', () => {
     const rules = [...css.matchAll(/(^|\n)\.sk-news\s*\{([^}]*)\}/g)].map(m => m[2]);
     expect(rules.length).toBeGreaterThan(0);
     expect(rules.filter(r => /max-width/.test(r))).toEqual([]);
+  });
+});
+
+describe('S4-STATUS-AXIS-CONFIG · иконка статуса в ленте — ИЗ СЛОВАРЯ приложения', () => {
+  // Находка прода v1.17.7 (релизная сессия): иконки статусов в новостях не
+  // совпадали с задачами и спринтами. Причина не во вкусах, а в источнике:
+  // лента брала внутреннюю таблицу kit, а списки и чип — словарь модели.
+  // Слова владелицы 09.11: «статусную модель и иконки к ним по контракту несут
+  // они, а ты просто обрабатываешь согласно контракту».
+  const DICT = [
+    { code: 'ready_for_deploy', title: 'К выкатке', category: 'active' as const, icon: 'castle', color: 'var(--inf)' },
+  ];
+  const mark = (root: ParentNode) => root.querySelector('[data-status="ready_for_deploy"]') as HTMLElement;
+
+  it('есть словарь — иконка и цвет оттуда, помечено source=dict', async () => {
+    const { container } = await mount(src(), {}, DICT);
+    const m = mark(container);
+    expect(m, 'статус «ready_for_deploy» в ленте').toBeTruthy();
+    expect(m.getAttribute('data-look')).toBe('dict');
+    expect(m.getAttribute('style')).toContain('var(--inf)');
+  });
+
+  it('словаря нет (витрина вне оболочки) — запас kit, и это ПОМЕЧЕНО', async () => {
+    const { container } = await mount(src());
+    const m = mark(container);
+    expect(m.getAttribute('data-look')).toBe('fallback');
+    expect(m.getAttribute('data-look-why')).toMatch(/словар/i);
+    // Подсказка остаётся сырым статусом сервера, а не рассказом про kit.
+    expect(m.getAttribute('title')).toBe('ready_for_deploy');
   });
 });

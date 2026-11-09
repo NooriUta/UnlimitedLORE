@@ -2244,7 +2244,24 @@ code, pre, kbd, samp { font-family: var(--mono); }
   margin: 0;
   color: var(--t2);
   font-size: var(--fs-xs);
+  /* S9-12, находка прода 09.11.2026: при экране 393 px строка выходила 688 px,
+     и ехала ВСЯ СТРАНИЦА (scrollWidth 728), унося верхнюю панель,
+     «Группировку» и «Порядок». Причина — минимальная ширина flex-элемента
+     равна содержимому, пока не сказано min-width: 0; без этого overflow-x на
+     самой строке не спасал. Прокрутку теперь держит полоса чипов внутри, а
+     «+N» и «Сбросить» остаются на виду. */
+  min-width: 0;
+  overflow-x: visible;
+}
+/* Полоса условий: листаются чипы, а не управление. */
+.sk-list__chipscroll {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--gap);
+  min-width: 0;
   overflow-x: auto;
+  scrollbar-width: thin;
 }
 .sk-list__desc:has(.sk-list__chipmore[aria-expanded='true']) { flex-wrap: wrap; overflow-x: visible; }
 /* «+N условий» — не чип: это управление свёрткой, и выглядеть оно должно иначе,
