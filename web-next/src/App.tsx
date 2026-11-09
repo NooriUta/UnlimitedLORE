@@ -60,8 +60,18 @@ const meClient = createLiveS2Client();
 export type Route = 'kit' | 'passport' | 'news' | 'task' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
-/** Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01). */
-const LIST_SECTION: Record<ListScreenId, V2Section> = { sprints: 'sprint', adrs: 'adr', tasks: 'task' };
+/**
+ * Старый адрес экрана списка (S4-04) → раздел оболочки (S4-01).
+ *
+ * Карта ПОЛНАЯ по экранам намеренно: у каждого экрана списка есть свой раздел
+ * оболочки, и `Record` держит это равенство — добавив экран и забыв раздел,
+ * сборка не пройдёт (S4-V2-SECTIONS).
+ */
+const LIST_SECTION: Record<ListScreenId, V2Section> = {
+  sprints: 'sprint', adrs: 'adr', tasks: 'task',
+  decisions: 'decision', specs: 'spec', questions: 'question', milestones: 'milestone',
+  releases: 'release', components: 'component', tech: 'tech', features: 'feature',
+};
 
 /**
  * Путь без хвостового «/»: /kit и /kit/ — одна страница; /news — новости v2

@@ -33,6 +33,18 @@ const SECTION_OF_TYPE: Readonly<Record<string, V2Section>> = {
   sprint: 'sprint',
   adr: 'adr',
   task: 'task',
+  // S4-V2-SECTIONS: разделы собраны — значит найденное в них теперь можно
+  // открыть. Пока раздела не было, палитра честно отказывала по имени типа.
+  decision: 'decision',
+  spec: 'spec',
+  question: 'question',
+  milestone: 'milestone',
+  release: 'release',
+  component: 'component',
+  feature: 'feature',
+  // Технологии — те же спеки SPEC-TECH-*, и серверный поиск отдаёт их типом
+  // `spec`. Отдельного типа у них нет, поэтому своей строки здесь тоже нет:
+  // найденная спека технологии открывается в «Спеках», где у неё есть паспорт.
 };
 
 export interface SectionPaletteProps {

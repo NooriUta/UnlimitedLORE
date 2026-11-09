@@ -77,17 +77,43 @@ describe('конфиги экранов списков', () => {
   // 09.11: добавлен раздел «Задачи» (S4-V2-SECTIONS) — пункт в меню был с самого
   // начала, а экрана под ним не было. Список экранов перечислен явно намеренно:
   // так видно, когда появляется новый, и его иконки тоже проверяются.
-  it('спринты, ADR и задачи; иконки статусов, вида и «Быстро» есть в наборе game-icons', () => {
-    expect(Object.keys(LIST_SCREENS)).toEqual(['sprints', 'adrs', 'tasks']);
+  // 09.11: все одиннадцать разделов v1 собраны (S4-V2-SECTIONS). Список
+  // перечислен явно намеренно: так видно, когда появляется новый, и его иконки
+  // тоже проверяются.
+  it('все одиннадцать разделов на месте; иконки статусов, вида и «Быстро» есть в наборе game-icons', () => {
+    expect(Object.keys(LIST_SCREENS)).toEqual([
+      'sprints', 'adrs', 'tasks',
+      'decisions', 'specs', 'questions', 'milestones', 'releases', 'components', 'tech', 'features',
+    ]);
     for (const lang of ['ru', 'en'] as const) {
       for (const s of Object.values(LIST_SCREENS)) {
         const c = s.config(lang);
         for (const it of c.statuses.items) expect(hasGameIcon(it.icon), `${s.slice}:${it.code}`).toBe(true);
         for (const k of Object.values(c.kinds)) expect(hasGameIcon(k.icon)).toBe(true);
         for (const ic of Object.values(s.quickIcons)) expect(hasGameIcon(ic), ic).toBe(true);
-        expect(c.list?.quick?.length).toBeGreaterThan(0);
-        expect(c.list?.filters).toContain('status');
+        expect(c.list?.quick?.length, s.slice).toBeGreaterThan(0);
       }
+    }
+  });
+
+  /**
+   * Фасет статуса — РОВНО там, где есть статусная ось.
+   *
+   * Было «фасет status у каждого раздела», и для четырёх типов это стало
+   * неправдой: у вех, релизов, компонентов и технологий статуса нет ни в одном
+   * поле среза (замер 09.11). Пустой фасет — обещание фильтра, которого нет,
+   * поэтому проверяется равенство в ДВЕ стороны: есть ось → есть фасет; нет оси
+   * → нет ни фасета, ни колонки, ни разреза по статусу.
+   */
+  it('фасет и колонка статуса есть ровно там, где есть статусная ось', () => {
+    const noAxis = ['milestones', 'releases', 'components', 'tech'] as const;
+    for (const [id, s] of Object.entries(LIST_SCREENS)) {
+      const c = s.config('ru');
+      const hasAxis = c.statuses.items.length > 0;
+      expect(hasAxis, `${id}: ось статусов ${hasAxis ? 'есть' : 'пуста'}`).toBe(!(noAxis as readonly string[]).includes(id));
+      expect(c.list?.filters?.includes('status') ?? false, `${id}: фасет статуса`).toBe(hasAxis);
+      expect(c.list?.columns?.includes('status') ?? false, `${id}: колонка статуса`).toBe(hasAxis);
+      expect(c.list?.groupings?.includes('status') ?? false, `${id}: разрез по статусу`).toBe(hasAxis);
     }
   });
 });
