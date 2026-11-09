@@ -12,6 +12,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
 import { Tabs, type TabItem } from '../shell/Tabs';
+import { applySections, gluedSections, type PassportOrder } from '../model/surfaces';
 import { Segmented } from '../elements/Segmented';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
@@ -102,6 +103,18 @@ export interface RecordViewProps {
    * 'column' — колонкой слева при bottom/full (раскладка S4-33, отложена, не удалена).
    */
   aroundAs?: 'tabs' | 'column';
+  /**
+   * Порядок и места разделов паспорта — ДАННЫМИ приложения (S4-29).
+   *
+   * Просьба владелицы 09.11: «ты должен определять порядок например Спринт
+   * первое как ни странно задачи потом уже контент… а зависимости и прочее
+   * можно скрыть под море». У LORE это умолчание модели
+   * (`surfaces.passport.<type>.sections`), разобранное `passportSections`.
+   *
+   * Нет или `decided: false` — kit держит свой порядок, группирует связи как
+   * прежде и НИЧЕГО не прячет. «Сервер не решал» не превращается в «решил».
+   */
+  sections?: PassportOrder | null;
 }
 
 /** Часы с шагом в минуту — для «получено N мин»; выключены — не тикают. */
@@ -199,7 +212,7 @@ function propsSummary(record: KitRecord, kind: KindConfig): string {
     .join(' · ');
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
@@ -211,9 +224,21 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // Связи по видам UML: композиция и агрегация — своя вкладка; зависимости (и ассоциация) —
   // одна вкладка; реализация — одна; обобщение — строкой в шапке.
   const rels: KitRelationDef[] = kind?.relations ?? [];
+  // Решил ли порядок разделов сервер. `false` — всё как прежде: группировка
+  // связей, порядок по данным, и это ПОМЕЧЕНО как умолчание, а не выдано за
+  // решение модели (D-2026-LORE-MODEL-COLUMN-LAYERS, честные состояния).
+  const named = sections?.decided === true;
   const relTabs: { id: string; label: string; relation: string; defs: KitRelationDef[] }[] = [];
   for (const d of rels) {
-    if (OWN_TAB.includes(d.relation)) { relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] }); continue; }
+    // Модель назвала разделы по отдельности — НЕ группируем (S4-29).
+    //
+    // kit сводит связи-ассоциации в одну вкладку «Зависимости» (`SHARED_TAB`),
+    // и это было разумным умолчанием, пока порядок разделов решал конструктор.
+    // Но модель называет их поимённо (`dependsOn`, `blocks`), и при группировке
+    // ключи модели ни с чем не совпадут: раздел, которому велели быть в хвосте
+    // тела, остался бы вкладкой — молча. Поэтому при `decided` группировка
+    // отключается: что считать разделом, решает приложение, а не конструктор.
+    if (named || OWN_TAB.includes(d.relation)) { relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] }); continue; }
     const sh = SHARED_TAB[d.relation];
     if (!sh) continue;
     const ex = relTabs.find(x => x.id === sh.id);
@@ -272,7 +297,22 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   ].map(i => (zoned ? { ...i, zone: 'around' as const } : i));
   // По умолчанию всё вкладками; колонка слева — только aroundAs='column' при bottom/full.
   const aside = aroundAs === 'column' && (placement === 'bottom' || placement === 'full');
-  const items: TabItem[] = aside ? recordItems : [...recordItems, ...aroundItems];
+  // Разделы, которые модель велела вклеить в хвост тела, — только те, которые
+  // я УМЕЮ там нарисовать (связи). Если модель вклеивает что-то другое (часть,
+  // своя вкладка вида), раздел остаётся вкладкой: показать его не там, где
+  // просили, — полбеды, а не показать вовсе — потеря данных с экрана.
+  const glueable = new Set(relTabs.map(rt => rt.id));
+  const order: PassportOrder | null | undefined = sections?.decided
+    ? { decided: true, notes: sections.notes, sections: sections.sections.map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
+    : sections;
+  const glued = gluedSections(order)
+    .map(s => relTabs.find(rt => rt.id === s.key))
+    .filter((rt): rt is NonNullable<typeof rt> => !!rt)
+    // Пустой блок не рисуется: иначе у ADR под текстом вылезет семь пустых
+    // заголовков. «Не смогли прочитать» — другое утверждение, и его печатает
+    // блок «Состояние данных» по meta.data_state, а не пустой заголовок.
+    .filter(rt => relCount(rt.defs) > 0);
+  const items: TabItem[] = applySections(aside ? recordItems : [...recordItems, ...aroundItems], order);
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
   // Панелью справа (узко) — переключатель видов над шапкой, как «таблица / доска» (владелица 08.11):
   // Контент (текст и вкладки типа) · Свойства · Аналитика (связи, граф, журнал, история).
@@ -308,6 +348,23 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
             <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
           </BlockBoundary>
         )}
+        {/*
+          Разделы со `slot: "content"` — блоками в хвосте тела, как было в v1 у
+          зависимостей спринта и у списка решений ADR (слова владелицы 09.11,
+          подтверждено её CJM). Заголовок со СЧЁТЧИКОМ обязателен: вкладки у
+          раздела больше нет, и без счётчика число исчезло бы с экрана совсем.
+        */}
+        {glued.map(rt => (
+          <section key={rt.id} className="sk-rec-glue" data-glued={rt.id}>
+            <h3 className="sk-rec-glue__head">
+              <span>{rt.label}</span>
+              <span className="sk-tab__count">{relCount(rt.defs)}</span>
+            </h3>
+            <BlockBoundary block={`rel:${rt.id}`} label={rt.label} lang={lang} resetKey={reset}>
+              <RecordRelations record={record} ctx={ctx} defs={rt.defs} lang={lang} />
+            </BlockBoundary>
+          </section>
+        ))}
       </div>
     );
   } else if (current === RECORD_TABS.props && kind && !propsSide) {

@@ -139,10 +139,12 @@ describe('S7A-02 · клик по строке (П12, П24, П29)', () => {
   it('задача и спека — ссылки на запись; ссылку строит hrefOf', async () => {
     await mount(src());
     const task = firstRow('task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07');
-    const a = within(task).getByRole('link');
+    // Основная ссылка строки — первая; вторая — код записи справа (09.11), ведёт туда же.
+    const [a, code] = within(task).getAllByRole('link');
+    expect(code.getAttribute('href')).toBe(a.getAttribute('href'));
     expect(a.getAttribute('href')).toBe('/lore?section=sprints&passport=SPRINT_UXR_S7A_NEWS');
     const spec = screen.getByTestId('news-row-spec:SPEC-LORE-UXR-NEWS-ALGORITHMS|version|2026-11-07');
-    expect(within(spec).getByRole('link').getAttribute('href')).toMatch(/passport=spec%3A/);
+    expect(within(spec).getAllByRole('link')[0].getAttribute('href')).toMatch(/passport=spec%3A/);
   });
 
   it('onOpen: Enter и пробел на строке открывают запись (дефект v1 исправлен)', async () => {
@@ -150,7 +152,7 @@ describe('S7A-02 · клик по строке (П12, П24, П29)', () => {
     await mount(src(), { onOpen });
     // День 06.11 — третий, свёрнут: открываем.
     fireEvent.click(dayBtn('2026-11-06'));
-    const link = within(screen.getByTestId('news-row-adr:ADR-LORE-045|changed|2026-11-06')).getByRole('link');
+    const link = within(screen.getByTestId('news-row-adr:ADR-LORE-045|changed|2026-11-06')).getAllByRole('link')[0];
     fireEvent.keyDown(link, { key: ' ' });
     fireEvent.keyDown(link, { key: 'Enter' });
     fireEvent.click(link);
@@ -547,5 +549,40 @@ describe('S7A-12 v2 · мини-график, быстрые фильтры, д�
     expect(bar.getAttribute('role')).toBe('img');
     expect(bar.getAttribute('aria-label')).toMatch(/закрыто · \d+ заведено задач/);
     expect(within(d).getByTestId('news-cube-burn').textContent).toContain('+2');
+  });
+});
+
+describe('S7A-12 · строка ленты: код — переход, без повтора, статусы значками (владелица 09.11)', () => {
+  // «в правой стороне новостей нет переходов у кодов; для спек код повторяется,
+  // может излишне, хотя копировать приятно; переход статусов невыделенным
+  // шрифтом написан — может значками сделать?»
+  it('код записи справа — ссылка на запись, рядом «скопировать»', async () => {
+    await mount(src());
+    const row = firstRow('task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07');
+    const code = within(row).getByTestId('news-code');
+    expect(code.tagName).toBe('A');
+    expect(code.getAttribute('href')).toBeTruthy();
+    expect(code.textContent).toBe('SPRINT_UXR_S7A_NEWS/S7A-02');
+    expect(within(row).getByTestId('news-copy').getAttribute('aria-label')).toMatch(/SPRINT_UXR_S7A_NEWS\/S7A-02/);
+  });
+
+  it('если заголовок и есть код — код второй раз не пишется, копирование остаётся', async () => {
+    const data = clone();
+    const ev = data.events.find(e => e.type === 'spec')!;
+    ev.title = ev.el;
+    await mount(src({}, data));
+    const row = firstRow(ev.key);
+    expect(within(row).queryByTestId('news-code')).toBeNull();
+    expect(within(row).getByTestId('news-copy')).toBeTruthy();
+  });
+
+  it('переход статусов — значками со своим цветом, код статуса в подсказке', async () => {
+    await mount(src());
+    const row = firstRow('task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07');
+    const st = within(row).getByTestId('news-status');
+    const marks = st.querySelectorAll('[data-status]');
+    expect([...marks].map(m => m.getAttribute('data-status'))).toEqual(['in_progress', 'ready_for_deploy']);
+    expect(marks[1].getAttribute('title')).toBe('ready_for_deploy');
+    expect((marks[1] as HTMLElement).style.getPropertyValue('--st-c')).toMatch(/var\(--/);
   });
 });
