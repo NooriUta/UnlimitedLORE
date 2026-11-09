@@ -138,18 +138,43 @@ describe('итоги спринта: задач x/y, оценка Σ, факт �
   const cutOf = (m: Map<string, Record<string, unknown>>): boolean =>
     (m.get('S0')?.effort_total as { cut?: boolean } | undefined)?.cut === true;
 
-  it('«обрезано, а сколько — неизвестно» считается обрезкой тоже', async () => {
+  /**
+   * Признак берётся из СВОЕГО поля сервера `inputs_truncated` (#995), а не из
+   * чужого `truncated`. Прежний путь держался на порядке кода: тело ответа
+   * собиралось до свёртки, поэтому `truncated` случайно означал нужное. Своё
+   * поле не зависит от того, где считается свёртка.
+   */
+  it('inputs_truncated: true — суммы помечены', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: true }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(true);
+  });
+
+  it('inputs_truncated: false главнее прежнего признака — он про другое', async () => {
+    // `truncated` после свёртки относится к строкам ИТОГОВ, а не к слагаемым.
+    // Если сервер прямо говорит «слагаемые целы», верим ему, а не догадке.
+    const f = fakeFetch(() => jsonRes({
+      rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: false, truncated: true,
+    }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(false);
+  });
+
+  it('страница с продолжением обрезкой НЕ считается — она режет строки итогов', async () => {
+    // Исправление прежнего поведения: `SlicePage.apply` работает ПОСЛЕ свёртки,
+    // то есть режет строки «по одной на спринт». Суммы в отданных строках полны.
+    const f = fakeFetch(() => jsonRes({
+      rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: false, page: { has_more: true, total: 9 },
+    }));
+    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(false);
+  });
+
+  it('поля нет (сервер старее #995) — читается прежний признак, а не «не обрезано»', async () => {
+    // Считать отсутствие ключа за «целы» было бы молчаливым допущением.
     const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], truncated: 'unknown' }));
     expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(true);
   });
 
-  it('страница с продолжением — тоже обрезка', async () => {
-    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], page: { has_more: true, total: 9 } }));
-    expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(true);
-  });
-
   it('полная выдача признака обрезки НЕ несёт', async () => {
-    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], truncated: false }));
+    const f = fakeFetch(() => jsonRes({ rows: [totals('S0', { done: 0, of: 1 })], inputs_truncated: false }));
     expect(cutOf(await loadSprintTotals(client(f), ['S0']))).toBe(false);
   });
 
