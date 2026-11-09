@@ -17,6 +17,7 @@ import { useKitLang } from '@seidr/kit';
 import { useAppT } from '../i18n';
 import { sliceFetcher } from '../api/loreSlice';
 import { loadTaskDicts, type TaskDicts } from './taskDicts';
+import { recordHref } from '../nav/loreRoutes';
 import { editTask, loadSprintTasks, setTaskStatus, type SprintTasksData } from './sprintTasksApi';
 
 export const GROUP_PARAM = 'group';
@@ -29,9 +30,13 @@ function groupFromUrl(win: UrlWindow | undefined): TaskGroupBy {
   return (TASK_GROUP_BYS as readonly string[]).includes(raw ?? '') ? (raw as TaskGroupBy) : DEFAULT_GROUP;
 }
 
-/** Адрес паспорта задачи: задача всегда пишется парой «спринт/код». */
+/**
+ * Адрес задачи: раздел «Задачи» оболочки с открытой записью (loreRoutes, S4-13).
+ * Задача всегда пишется парой «спринт/код». Прежний адрес ?section=tasks&passport=…
+ * открывал отдельную страницу вне оболочки — меню пропадало (владелица 09.11).
+ */
 export function taskPassportHref(sprintId: string, taskId: string): string {
-  return `?section=tasks&passport=${encodeURIComponent(`${sprintId}/${taskId}`)}`;
+  return recordHref('task', `${sprintId}/${taskId}`)!;
 }
 
 export interface SprintTasksTabProps {

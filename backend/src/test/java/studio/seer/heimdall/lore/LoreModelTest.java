@@ -77,6 +77,23 @@ class LoreModelTest {
         assertTrue(String.valueOf(m.get("warnings")).contains("blocked"));
     }
 
+    /**
+     * kit 09.11 (S4-STATUS-AXIS-CONFIG): иконка и цвет статуса — предметное знание сервера.
+     * Статья цикла без иконки или цвета в справочнике не молчит: модель называет её в warnings,
+     * иначе клиент держит свою таблицу «код → иконка» и у иконок два источника.
+     */
+    @Test
+    void lifecycleStatusWithoutIconOrColorIsNamed() {
+        List<Map<String, Object>> rows = taskDict();
+        rows.get(7).put("icon", null);   // done
+        rows.get(8).put("color", "");  // blocked
+        Map<String, Object> m = LoreModel.build(rows);
+        String w = String.valueOf(m.get("warnings"));
+        assertTrue(w.contains("task_status: статус «done» без иконки"), w);
+        assertTrue(w.contains("task_status: статус «blocked» без цвета"), w);
+        assertFalse(w.contains("«planned» без"), "заполненный статус не назван: " + w);
+    }
+
     @Test
     void adrDictionaryCaseMismatchIsMatchedAndReported() {
         List<Map<String, Object>> rows = new ArrayList<>(taskDict());

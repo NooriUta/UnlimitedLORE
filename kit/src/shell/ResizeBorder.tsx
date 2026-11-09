@@ -37,6 +37,15 @@ const ZONES = 'zones';
 /** Шаг стрелкой. Крупнее пикселя — иначе границу клавиатурой не сдвинуть. */
 const STEP = 10;
 
+/**
+ * Состояние зоны: открыта · только иконки · убрана.
+ *
+ * Три состояния, а не два, потому что «узкая колонка с обрезанными подписями»
+ * — это не состояние, а поломка: либо подписи есть, либо их честно нет и
+ * остаются иконки.
+ */
+export type ZoneLevel = 'open' | 'rail' | 'hidden';
+
 export interface ResizeBorderProps {
   /** Имя зоны в хранилище. Предметное имя даёт приложение. */
   zone: string;
@@ -62,6 +71,29 @@ export interface ResizeBorderProps {
    * справа называют `after` явно.
    */
   side?: 'before' | 'after';
+  /**
+   * Состояния зоны, достигаемые ТОЙ ЖЕ границей (слова владелицы 09.11.2026:
+   * «не только при полном развороте — это промежуточное состояние resizable
+   * состояния»).
+   *
+   * Тянем узко — зона просит `rail` (только иконки), ещё узже — `hidden`.
+   * Тянем обратно — `open`. Границу между состояниями называет зона: сколько
+   * места нужно её иконкам, знает она, а не разделитель.
+   *
+   * Зачем это здесь, а не кнопкой: до этого рейка существовала только в
+   * кнопке-переключателе, и владелица её «ни разу не получила» — состояние
+   * было объявлено и недостижимо рукой. Граница видна и под мышью всегда.
+   *
+   * Не передано — граница меняет только размер (прежнее поведение).
+   */
+  levels?: {
+    /** Уже этого зона показывает только иконки. */
+    rail: number;
+    /** Уже этого зону лучше убрать совсем. Не задано — до `hidden` не доходим. */
+    hide?: number;
+    /** Вызывается ОДИН раз на переход, а не на каждое движение мыши. */
+    onLevel: (level: ZoneLevel) => void;
+  };
   /** Личное хранилище. Нет — тянуть можно, но размер не переживёт перезагрузку. */
   store?: WidthStore;
   /** Что именно меняет эта граница — вслух, для скринридера. */
@@ -77,8 +109,25 @@ export interface ResizeBorderProps {
  * Нужен зонам при открытии: без него личный размер лежит в хранилище, а на
  * экране умолчание — «я же тянула, и ничего не сохранилось».
  */
-export function zoneSize(store: WidthStore | undefined, zone: string, fallback: number): number {
-  return zoneSaved(store, zone) ?? fallback;
+export function zoneSize(
+  store: WidthStore | undefined,
+  zone: string,
+  fallback: number,
+  /**
+   * Пределы зоны. Передавать их НУЖНО: хранилище чужое и содержит что угодно —
+   * другое приложение на том же домене, прошлая версия, правка руками.
+   *
+   * Жалоба с прода 09.11.2026 (владелица): «как минимум левое меню глючит и
+   * разворачивается во всю стену». Чтение было не ограничено: при
+   * перетаскивании пределы соблюдались, а при открытии экрана зона рисовалась
+   * тем числом, которое нашла в хранилище.
+   */
+  bounds?: { min: number; max?: number },
+): number {
+  const saved = zoneSaved(store, zone);
+  if (saved === undefined) return fallback;
+  if (!bounds) return saved;
+  return Math.max(bounds.min, bounds.max === undefined ? saved : Math.min(bounds.max, saved));
 }
 
 /**
@@ -96,7 +145,7 @@ export function zoneSaved(store: WidthStore | undefined, zone: string): number |
 }
 
 export function ResizeBorder({
-  zone, size, min, max, axis = 'x', side = axis === 'y' ? 'after' : 'before', store, label, onSize, className,
+  zone, size, min, max, axis = 'x', side = axis === 'y' ? 'after' : 'before', levels, store, label, onSize, className,
 }: ResizeBorderProps) {
   // Знак: зона «до» границы растёт вслед за курсором, зона «после» — против
   // него. Одно число вместо четырёх ветвей (ось × сторона).
@@ -121,6 +170,28 @@ export function ResizeBorder({
 
   const apply = (value: number): void => { live.current = value; onSize(value); };
 
+  /**
+   * Состояние зоны по ЖЕЛАЕМОМУ размеру — до ограничения минимумом.
+   *
+   * Считать по ограниченному нельзя: размер упирается в минимум, и дальше
+   * «тяну ещё» перестало бы что-либо значить — ровно та дорога, по которой
+   * рейка оказывалась недостижимой.
+   */
+  const levelOf = (wanted: number): ZoneLevel => {
+    if (!levels) return 'open';
+    if (levels.hide !== undefined && wanted < levels.hide) return 'hidden';
+    return wanted < levels.rail ? 'rail' : 'open';
+  };
+  const levelNow = useRef<ZoneLevel>(levelOf(size));
+  const sayLevel = (wanted: number): void => {
+    if (!levels) return;
+    const next = levelOf(wanted);
+    // Один раз на переход: иначе зона перерисовывается на каждый пиксель.
+    if (next === levelNow.current) return;
+    levelNow.current = next;
+    levels.onLevel(next);
+  };
+
   const onPointerDown = (e: PointerEvent<HTMLElement>): void => {
     e.preventDefault();
     const from = axis === 'y' ? e.clientY : e.clientX;
@@ -129,7 +200,9 @@ export function ResizeBorder({
     const move = (ev: Event): void => {
       const at = axis === 'y' ? (ev as globalThis.PointerEvent).clientY : (ev as globalThis.PointerEvent).clientX;
       if (!Number.isFinite(at)) return;
-      last = fit(was + dir * (at - from));
+      const wanted = was + dir * (at - from);
+      sayLevel(wanted);
+      last = fit(wanted);
       apply(last);
     };
     const up = (): void => {
@@ -148,13 +221,17 @@ export function ResizeBorder({
     // какой стороны зона, и это уже посчитано в dir.
     const forward = axis === 'y' ? 'ArrowDown' : 'ArrowRight';
     const back = axis === 'y' ? 'ArrowUp' : 'ArrowLeft';
-    let next: number | null = null;
-    if (e.key === forward) next = fit(live.current + dir * STEP);
-    else if (e.key === back) next = fit(live.current - dir * STEP);
-    else if (e.key === 'Home') next = fit(min);
-    else if (e.key === 'End' && max !== undefined) next = fit(max);
-    if (next === null) return;
+    let wanted: number | null = null;
+    if (e.key === forward) wanted = live.current + dir * STEP;
+    else if (e.key === back) wanted = live.current - dir * STEP;
+    else if (e.key === 'Home') wanted = min;
+    else if (e.key === 'End' && max !== undefined) wanted = max;
+    if (wanted === null) return;
     e.preventDefault();
+    // Состояния зоны доступны и с клавиатуры: управление, которое есть только
+    // под мышью, для части людей просто отсутствует.
+    sayLevel(wanted);
+    const next = fit(wanted);
     apply(next);
     save(next);
   };

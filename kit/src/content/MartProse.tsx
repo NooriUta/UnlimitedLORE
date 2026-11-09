@@ -136,6 +136,18 @@ function isElkCompatible(def: string): boolean {
   return /^(flowchart|graph)\b/.test(body);
 }
 
+/**
+ * Строка %%{init}%% — после фронтматтера, а не перед ним. Mermaid узнаёт фронтматтер
+ * (`---` / `config:` / `layout: elk` / `---`, правило владелицы 08.11.2026 для всех диаграмм)
+ * только в самом начале текста; init перед ним превращал его в «граф» с ошибкой разбора
+ * (прод 09.11, ADR-MINILORE-007: «Parse error on line 1: ---config: layout»).
+ */
+export function withInit(def: string, init: string): string {
+  const fm = /^\s*(---\r?\n[\s\S]*?\r?\n---[ \t]*)(\r?\n|$)/.exec(def);
+  if (!fm) return `${init}\n${def}`;
+  return `${fm[1]}\n${init}\n${def.slice(fm[0].length)}`;
+}
+
 function buildInit(p: DiagramPalette, elk: boolean): string {
   const cfg: Record<string, unknown> = { theme: 'base', flowchart: { htmlLabels: false }, themeVariables: resolveVars(p) };
   if (elk) cfg.layout = 'elk';
@@ -151,7 +163,7 @@ export function MermaidDiagram({ def }: { def: string }) {
   useEffect(() => {
     let active = true;
     setErr(null);
-    mermaid.render(`sk-mermaid-${mermaidSeq++}`, `${buildInit(palette, isElkCompatible(def))}\n${def}`)
+    mermaid.render(`sk-mermaid-${mermaidSeq++}`, withInit(def, buildInit(palette, isElkCompatible(def))))
       .then(({ svg }) => { if (active) setSvg(svg); })
       .catch(e => { if (active) setErr(String((e as Error)?.message ?? e)); });
     return () => { active = false; };

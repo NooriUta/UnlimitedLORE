@@ -10,6 +10,8 @@ import { axeViolations } from '../test/axe';
 import { registerGameIcons } from '../elements/GameIcon';
 import { KitLangProvider } from '../i18n';
 import { NEWS_FIXTURE, NewsActivity, NewsFeed, type NewsResponse, type NewsSource } from './index';
+import { StatusDictCtx } from '../core/statusLook';
+import type { KitConfig } from '../core/contract';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -30,10 +32,19 @@ function src(over: Partial<NewsSource> = {}, data: NewsResponse = clone()): News
   };
 }
 
-async function mount(source: NewsSource, props: Partial<Parameters<typeof NewsFeed>[0]> = {}) {
+async function mount(
+  source: NewsSource,
+  props: Partial<Parameters<typeof NewsFeed>[0]> = {},
+  // Словарь статусов приложения: в приложении его даёт оболочка, здесь —
+  // напрямую (S4-STATUS-AXIS-CONFIG). Не передан — словаря нет, и лента
+  // честно рисует запас kit с пометкой.
+  dict?: KitConfig['statuses']['items'],
+) {
   const r = render(
     <KitLangProvider lang="ru">
-      <NewsFeed source={source} urlPrefix={null} timeZone="Europe/Moscow" {...props} />
+      <StatusDictCtx.Provider value={dict}>
+        <NewsFeed source={source} urlPrefix={null} timeZone="Europe/Moscow" {...props} />
+      </StatusDictCtx.Provider>
     </KitLangProvider>,
   );
   await screen.findByTestId('news-feed-days');
@@ -584,5 +595,71 @@ describe('S7A-12 · строка ленты: код — переход, без �
     expect([...marks].map(m => m.getAttribute('data-status'))).toEqual(['in_progress', 'ready_for_deploy']);
     expect(marks[1].getAttribute('title')).toBe('ready_for_deploy');
     expect((marks[1] as HTMLElement).style.getPropertyValue('--st-c')).toMatch(/var\(--/);
+  });
+
+  // Прод v1.17.7 (владелица 09.11: «статусы задач там имеют не те иконки, которые в
+  // задачах и спринтах»): сервер отдаёт from/to сырым status_raw («✅ DONE»), а
+  // таблица kit ждёт код — статус выходил «неизвестным» (иконка help) с эмодзи рядом.
+  it('сырой статус сервера («✅ DONE», «🚀 READY FOR DEPLOY») читается в код, а не в «неизвестно»', async () => {
+    const data = clone();
+    const ev = data.events.find(e => e.key === 'task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07')!;
+    ev.from = '✅ DONE';
+    ev.to = '🚀 READY FOR DEPLOY';
+    await mount(src({}, data));
+    const marks = within(firstRow(ev.key)).getByTestId('news-status').querySelectorAll('[data-status]');
+    expect([...marks].map(m => m.getAttribute('data-status'))).toEqual(['done', 'ready_for_deploy']);
+    expect([...marks].map(m => m.getAttribute('data-category'))).not.toContain('unknown');
+    // Подпись — код без эмодзи; сырой текст сервера — в подсказке.
+    expect(marks[0].textContent).toBe('done');
+    expect(marks[0].getAttribute('title')).toBe('✅ DONE');
+  });
+
+  it('приложение подставляет свой читатель статуса — тот же, что у задач и спринтов', async () => {
+    const data = clone();
+    const ev = data.events.find(e => e.key === 'task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07')!;
+    ev.to = '✅ MERGED — влито';
+    await mount(src({}, data), { statusOf: raw => (raw?.startsWith('✅') ? 'done' : 'unknown') });
+    const marks = within(firstRow(ev.key)).getByTestId('news-status').querySelectorAll('[data-status]');
+    expect(marks[1].getAttribute('data-status')).toBe('done');
+  });
+});
+
+// Владелица 09.11: «почему новости не на всю ширину… плотно прилегали к левому краю».
+describe('ширина ленты', () => {
+  it('у .sk-news нет своего max-width — лента занимает всю область содержимого', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
+    const rules = [...css.matchAll(/(^|\n)\.sk-news\s*\{([^}]*)\}/g)].map(m => m[2]);
+    expect(rules.length).toBeGreaterThan(0);
+    expect(rules.filter(r => /max-width/.test(r))).toEqual([]);
+  });
+});
+
+describe('S4-STATUS-AXIS-CONFIG · иконка статуса в ленте — ИЗ СЛОВАРЯ приложения', () => {
+  // Находка прода v1.17.7 (релизная сессия): иконки статусов в новостях не
+  // совпадали с задачами и спринтами. Причина не во вкусах, а в источнике:
+  // лента брала внутреннюю таблицу kit, а списки и чип — словарь модели.
+  // Слова владелицы 09.11: «статусную модель и иконки к ним по контракту несут
+  // они, а ты просто обрабатываешь согласно контракту».
+  const DICT = [
+    { code: 'ready_for_deploy', title: 'К выкатке', category: 'active' as const, icon: 'castle', color: 'var(--inf)' },
+  ];
+  const mark = (root: ParentNode) => root.querySelector('[data-status="ready_for_deploy"]') as HTMLElement;
+
+  it('есть словарь — иконка и цвет оттуда, помечено source=dict', async () => {
+    const { container } = await mount(src(), {}, DICT);
+    const m = mark(container);
+    expect(m, 'статус «ready_for_deploy» в ленте').toBeTruthy();
+    expect(m.getAttribute('data-look')).toBe('dict');
+    expect(m.getAttribute('style')).toContain('var(--inf)');
+  });
+
+  it('словаря нет (витрина вне оболочки) — запас kit, и это ПОМЕЧЕНО', async () => {
+    const { container } = await mount(src());
+    const m = mark(container);
+    expect(m.getAttribute('data-look')).toBe('fallback');
+    expect(m.getAttribute('data-look-why')).toMatch(/словар/i);
+    // Подсказка остаётся сырым статусом сервера, а не рассказом про kit.
+    expect(m.getAttribute('title')).toBe('ready_for_deploy');
   });
 });

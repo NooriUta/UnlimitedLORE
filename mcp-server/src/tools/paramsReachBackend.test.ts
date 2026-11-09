@@ -14,11 +14,12 @@ import { collect, isEnum, MARK, NUM, variantsOf } from './writeToolHarness.js';
 // инструменты (rel/action) зовутся по разу на каждое значение перечисления,
 // и параметр считается дошедшим, если дошёл хоть в одной ветке.
 
-const sent: { path: string; body: unknown }[] = [];
+const sent: { path: string; body: unknown; headers?: unknown }[] = [];
 
 vi.mock('../backend.js', () => ({
   ACTIVE_PROJECT: undefined,
-  lorePost: vi.fn(async (path: string, body: unknown) => { sent.push({ path, body }); return { ok: true }; }),
+  // Параметр может дойти заголовком (dict_set.human_approval → X-Lore-Human-Approval) — он тоже «дошёл».
+  lorePost: vi.fn(async (path: string, body: unknown, headers?: unknown) => { sent.push({ path, body, headers }); return { ok: true }; }),
   loreGet: vi.fn(async (path: string, params?: unknown) => { sent.push({ path, body: params }); return { ok: true, rows: [] }; }),
   loreUpload: vi.fn(async (...a: unknown[]) => { sent.push({ path: String(a[0]), body: a.slice(1) }); return { ok: true }; }),
 }));

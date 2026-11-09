@@ -10,11 +10,12 @@
 // Фильтры, группировка, порядок и время — в панели «Фильтры» (на телефоне —
 // нижний лист). Карточки метрик, разрез, матрица, сгорание, знания — по
 // нажатию «все метрики». Ничего не удалено: всё в одном действии.
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { statusMeta } from '../elements/statusMeta';
+import { statusLook, useStatusDict } from '../core/statusLook';
 import { StatusIcon } from '../core/StatusIcon';
 import { useKitLang } from '../i18n';
 import type { KitLang } from '../i18n';
@@ -51,7 +52,25 @@ export interface NewsFeedProps {
   /** Заголовок; null — без заголовка (вкладка паспорта). */
   title?: string | null;
   className?: string;
+  /**
+   * Сырой статус сервера (status_raw: «✅ DONE», «🚀 READY FOR DEPLOY») → код
+   * статуса. Приложение подставляет тот же читатель, что у задач и спринтов, —
+   * иначе одна запись в ленте и в списке выглядела бы по-разному.
+   * По умолчанию — простой разбор (эмодзи и слова → код).
+   */
+  statusOf?: (raw: string | null | undefined) => string;
 }
+
+/**
+ * Разбор по умолчанию: «✅ DONE — merged» → «done», «🚀 READY FOR DEPLOY» →
+ * «ready_for_deploy». Берётся первое слово-фраза до тире; эмодзи отбрасываются.
+ */
+export function defaultNewsStatusOf(raw: string | null | undefined): string {
+  const s = (raw ?? '').split(/\s[—–-]\s/)[0].toLowerCase().replace(/[^a-z_ ]+/g, ' ').trim();
+  return s.replace(/\s+/g, '_');
+}
+
+const StatusOfCtx = createContext<(raw: string | null | undefined) => string>(defaultNewsStatusOf);
 
 export const NEWS_SECTIONS_ALL: readonly NewsSection[] = ['metrics', 'groups', 'matrix', 'burn', 'knowledge', 'feed'];
 
@@ -92,6 +111,7 @@ function sheetChanges(q: NewsQuery, fixed: Set<string>): number {
 
 export function NewsFeed({
   source, scope, urlPrefix = 'n', timeZone, sections = NEWS_SECTIONS_ALL, hrefOf = newsHref, onOpen, title, className,
+  statusOf = defaultNewsStatusOf,
 }: NewsFeedProps) {
   const lang = useKitLang();
   const t: T = (k, vars) => newsT(lang, k, vars);
@@ -168,8 +188,10 @@ export function NewsFeed({
               title={Object.keys(q.filters).length || q.els.length ? t('empty.filtered') : t('empty.title')}
               hint={t('empty.hint')}
             />
-          : <FeedDays data={data} query={q} lang={lang} tz={q.zone === 'utc' ? 'UTC' : tz} hrefOf={hrefOf} onOpen={onOpen}
-              open={openDays} setOpen={setOpenDays} />)}
+          : <StatusOfCtx.Provider value={statusOf}>
+              <FeedDays data={data} query={q} lang={lang} tz={q.zone === 'utc' ? 'UTC' : tz} hrefOf={hrefOf} onOpen={onOpen}
+                open={openDays} setOpen={setOpenDays} />
+            </StatusOfCtx.Provider>)}
       </>
     );
   }
@@ -879,14 +901,44 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
   );
 }
 
-/** Статус значком: иконка и цвет из общей таблицы kit, код — подписью и подсказкой. */
+/**
+ * Статус значком.
+ *
+ * Сырой статус сервера читается в код тем же читателем, что у задач и спринтов
+ * (StatusOfCtx). Иконка и цвет — ИЗ СЛОВАРЯ ПРИЛОЖЕНИЯ (`statusLook`), а не из
+ * таблицы kit: слова владелицы 09.11.2026 — «статусную модель и иконки к ним
+ * по контракту несут они, а ты просто обрабатываешь согласно контракту».
+ *
+ * До этой правки лента брала таблицу kit, а списки и чип — словарь модели, и
+ * на проде v1.17.7 иконки статусов в новостях не совпадали с задачами и
+ * спринтами. Это была не разница вкусов, а две правды.
+ *
+ * Запас kit остался — но ПОМЕЧЕННЫМ: причина уходит в подсказку, чтобы дыра в
+ * справочнике (например adr-статусы без иконки) не выглядела замыслом.
+ */
 function StatusMark({ code }: { code: string | null }) {
+  const statusOf = useContext(StatusOfCtx);
+  const dict = useStatusDict();
   if (!code) return <span className="sk-news__st" data-status="">∅</span>;
-  const m = statusMeta(code);
+  const canon = statusOf(code) || code;
+  const look = statusLook(canon, dict);
+  const category = statusMeta(canon).category;
   return (
-    <span className="sk-news__st" data-status={code} title={code} style={{ '--st-c': m.color } as CSSProperties}>
-      <StatusIcon icon={m.icon} size={12} />
-      {code}
+    <span
+      className="sk-news__st"
+      data-status={canon}
+      data-category={category}
+      // Пометка «оформление из запаса» — атрибутом, а не в подсказке: в
+      // подсказке человек ждёт СЫРОЙ статус сервера, а не рассказ о внутренних
+      // источниках kit. Но и молчать нельзя: по этому атрибуту видно, что
+      // иконка не из словаря приложения — им же пользуются тесты и аудит.
+      data-look={look.source}
+      data-look-why={look.why}
+      title={code}
+      style={{ '--st-c': look.color } as CSSProperties}
+    >
+      <StatusIcon icon={look.icon} size={12} />
+      {canon}
     </span>
   );
 }

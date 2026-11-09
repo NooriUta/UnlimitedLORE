@@ -139,4 +139,37 @@ class LoreHistHygieneLiveDbTest {
         .then().statusCode(200)
             .body("rows.ref_id", not(hasItem(BARE)));
     }
+
+    private static final String SHARED_A = SPRINT + "/HH-SHARED-A";
+    private static final String SHARED_B = SPRINT + "/HH-SHARED-B";
+    private static final String WRONG = SPRINT + "/HH-WRONG";
+
+    /**
+     * S2-11, прод 09.11: у PRE-03 статус виден через out('HAS_STATE'), а история по задаче пуста —
+     * версия, на которую ведёт ребро, не находится как «своя» (in('HAS_STATE').task_uid[0]).
+     * Два способа так сломаться: версия ОБЩАЯ с другой задачей (у PRE-03 и DLG-08 одна заметка)
+     * или версия ЧУЖОГО класса. entity_without_history этого не видит — ребро-то есть.
+     */
+    @Test
+    @Order(5)
+    void sharedOrForeignStateIsCaught() {
+        ingest.queryPublic("INSERT INTO KnowTask SET task_uid = :uid, task_id = 'HH-SHARED-A', title = 'A'", Map.of("uid", SHARED_A));
+        ingest.queryPublic("INSERT INTO KnowTask SET task_uid = :uid, task_id = 'HH-SHARED-B', title = 'B'", Map.of("uid", SHARED_B));
+        ingest.queryPublic("INSERT INTO KnowTask SET task_uid = :uid, task_id = 'HH-WRONG', title = 'W'", Map.of("uid", WRONG));
+        ingest.queryPublic("CREATE VERTEX KnowTaskHist SET state_uid = 'hh-shared-1', status_raw = 'DONE', "
+            + "valid_from = '2026-11-09T10:00:00.000Z'", Map.of());
+        ingest.queryPublic("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :a) "
+            + "TO (SELECT FROM KnowTaskHist WHERE state_uid = 'hh-shared-1')", Map.of("a", SHARED_A));
+        ingest.queryPublic("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :b) "
+            + "TO (SELECT FROM KnowTaskHist WHERE state_uid = 'hh-shared-1')", Map.of("b", SHARED_B));
+        ingest.queryPublic("CREATE VERTEX KnowSprintHist SET state_uid = 'hh-wrong-1', status_raw = 'DONE', "
+            + "valid_from = '2026-11-09T10:00:00.000Z'", Map.of());
+        ingest.queryPublic("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :w) "
+            + "TO (SELECT FROM KnowSprintHist WHERE state_uid = 'hh-wrong-1')", Map.of("w", WRONG));
+
+        given().when().get("/lore/slice/history_hygiene")
+        .then().statusCode(200)
+            .body("rows.findAll { it.finding == 'state_shared_by_entities' }.state_uid", hasItem("hh-shared-1"))
+            .body("rows.findAll { it.finding == 'state_wrong_class' }.ref_id", hasItem(WRONG));
+    }
 }

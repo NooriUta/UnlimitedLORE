@@ -33,17 +33,20 @@ import {
   LIST_RESERVED_KEYS, ariaKeyshortcuts, assertKeymap, findAction, isMacPlatform, kbdKeys,
 } from '../keyboard/keymap';
 import { matchHotkey } from '../resilience/hotkeys';
-import { kitT, useKitLang } from '../i18n';
+import { kitPlural, kitT, useKitLang } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
 import { describeError } from '../resilience/errorText';
 import { isEditableTarget } from '../resilience/editable';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
+// Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
+// тянуть за собой меню ради одного хука).
+import { useNarrow } from '../core/narrow';
 import { ProgressCell } from './progress';
 import { SumCell, colKey } from './sum';
 import {
-  CHIPS_INLINE, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
+  CHIPS_INLINE, CHIPS_INLINE_NARROW, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
@@ -171,6 +174,16 @@ export interface ListViewProps {
     /** Телефон: ширины не применяются вовсе — там карточки. */
     narrow?: boolean;
   };
+  /**
+   * Узкий экран (телефон). Не задан — спрашивается сам, одним порогом kit
+   * (`useNarrow`, ≤720px).
+   *
+   * Нужен не для вида, а для ПОРОГОВ, которые иначе врут: строка условий на
+   * 393 px держала три чипа и уезжала за край вместе с «+N» (S9-12, находка
+   * прода 09.11.2026). Задаётся прямо — для тестов и встройки, где matchMedia
+   * нет или где ширину решает хозяин.
+   */
+  narrow?: boolean;
   className?: string;
 }
 
@@ -293,8 +306,13 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, expand, head, viewIcons, widths, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
 }: ListViewProps) {
+  // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
+  const narrow = useNarrow(narrowProp);
+  // Сколько условий остаётся в строке: на телефоне меньше — три чипа «Поле:
+  // значение» на 393 px не влезают ни при каком шрифте (S9-12).
+  const chipsInline = narrow ? CHIPS_INLINE_NARROW : CHIPS_INLINE;
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
   assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
   const mac = isMacPlatform();
@@ -304,7 +322,11 @@ export function ListView({
   const [colW, setColW] = useState<ColumnWidths>(
     () => (widths?.store ? readWidths(widths.store, widths.screen) : {}),
   );
-  const appliedW = widths ? widthsFor(colW, LIST_COL_MIN, widths.narrow) : {};
+  // Телефон: личные ширины не применяются вовсе — там карточки. Флаг зоны
+  // остаётся как перебивка, но по умолчанию список спрашивает ширину экрана
+  // САМ: web-next его не передавал ни разу, и правило «на телефоне ширины не
+  // применяются» существовало только в комментарии (S4-35, S9-12).
+  const appliedW = widths ? widthsFor(colW, LIST_COL_MIN, widths.narrow ?? narrow) : {};
   /** Потянуть ширину: считаем от текущей ширины заголовка, а не от нуля. */
   const onGrip = (col: string) => (e: ReactPointerEvent<HTMLElement>) => {
     const th = (e.currentTarget as HTMLElement).closest('th');
@@ -1276,26 +1298,32 @@ export function ListView({
           иначе «что сейчас отсеивает записи» перестанет быть видно, а это и
           есть смысл строки-описания.
         */}
-        {(chipsOpen ? chips : chips.slice(0, CHIPS_INLINE)).map(c => (
-          <Pill
-            key={c.id}
-            variant="filter"
-            pressed
-            onToggle={on => { if (!on) c.remove(); }}
-            onRemove={c.remove}
-            removeLabel={t('kit.list.removeChip', { what: c.text })}
-          >
-            {c.text}
-          </Pill>
-        ))}
-        {chips.length > CHIPS_INLINE && (
+        {/* Чипы — в своей прокручиваемой полосе (S9-12, находка прода 09.11):
+            «+N» и «Сбросить» лежали ВНУТРИ прокрутки и уезжали вместе с
+            чипами за край экрана. Теперь листаются только условия, а
+            управление остаётся на виду. */}
+        <div className="sk-list__chipscroll">
+          {(chipsOpen ? chips : chips.slice(0, chipsInline)).map(c => (
+            <Pill
+              key={c.id}
+              variant="filter"
+              pressed
+              onToggle={on => { if (!on) c.remove(); }}
+              onRemove={c.remove}
+              removeLabel={t('kit.list.removeChip', { what: c.text })}
+            >
+              {c.text}
+            </Pill>
+          ))}
+        </div>
+        {chips.length > chipsInline && (
           <button
             type="button"
             className="sk-list__chipmore"
             aria-expanded={chipsOpen}
             onClick={() => setChipsOpen(v => !v)}
           >
-            {chipsOpen ? t('kit.list.chipsLess') : t('kit.list.chipsMore', { n: chips.length - CHIPS_INLINE })}
+            {chipsOpen ? t('kit.list.chipsLess') : kitPlural(lang, 'kit.list.chipsMore', chips.length - chipsInline)}
           </button>
         )}
         <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button>

@@ -17,6 +17,7 @@ import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
 import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
 import { loreValueIcon } from '../lists/loreFilters';
+import { appliedCollapseNavOnRead } from '../settings/applied';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
@@ -140,6 +141,22 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // аудита 08.11 — «"Недавние" пусто даже после открытия записи». Экран живёт
   // и вне оболочки (тесты, демо), поэтому доступ необязательный.
   const shell = useOptionalKitShell();
+  // Личная настройка «Меню при чтении записи» наконец работает (S4-02,
+  // находка CJM на проде 09.11.2026: атрибут `data-read-nav` писали и не
+  // читал НИКТО, а в панели рядом стоял второй, тоже мёртвый блок про то же).
+  // Меню убирается на ВРЕМЯ чтения — это действие экрана, не выбор человека:
+  // kit такое состояние в хранилище не пишет и выбранную рейку не затирает
+  // (S5-05 · D-2026-UXR-READ-COLLAPSE).
+  const collapseOnRead = appliedCollapseNavOnRead();
+  // Пока запись открыта и человек так выбрал — меню убрано. Возвращаем его,
+  // когда запись закрыли или экран ушёл: оставить меню убранным после
+  // закрытия значило бы менять выбор человека без его участия.
+  const setCollapsed = shell?.setMenuCollapsed;
+  useEffect(() => {
+    if (!collapseOnRead || !setCollapsed) return;
+    setCollapsed(!!open.id);
+    return () => setCollapsed(false);
+  }, [collapseOnRead, setCollapsed, open.id]);
   const config = useMemo(() => def.config(lang), [def, lang]);
   const result = useLoadState(
     signal => fetchSlice(def.slice, undefined, { signal, fetchImpl }),

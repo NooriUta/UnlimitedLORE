@@ -154,6 +154,22 @@
   --fs-xl:   22px;
   --fs-2xl:  26px;
 }
+/* xl — «очень крупно» (S4-16). Слова владелицы 09.11.2026: «и я просила
+   улучшить крупнее текст у меня экран не как у мужа у меня 4к и все мелкое».
+   Шкала заканчивалась на lg, и крупнее было некуда.
+   Значение xl не выдумано: боевой сервер личных настроек его уже знает — в
+   контракте S2 это записано как расхождение, о котором v2 обязан был
+   предупреждать. То есть выбрать xl можно было, а показать — нет. */
+[data-text-size='xl'] {
+  --fs-2xs:  12px;
+  --fs-xs:   13px;
+  --fs-sm:   14px;
+  --fs-base: 16px;
+  --fs-md:   17px;
+  --fs-lg:   19px;
+  --fs-xl:   26px;
+  --fs-2xl:  30px;
+}
 
 /* compact — прежняя плотность IDE (до S4-21): строка 24 px, название в одну строку. */
 [data-density='compact'] {
@@ -1372,12 +1388,24 @@ code, pre, kbd, samp { font-family: var(--mono); }
   padding: 6px;
   border-right: 1px solid var(--bd);
   background: var(--bg1);
+  /* Клетка задана явно (дефект прода v1.17.7: «левое меню разворачивается во
+     всю стену»). Ручка границы стоит в row 1 / col 1 явно, а явно размещённые
+     элементы сетка ставит первыми — автоматически размещённое меню уезжало в
+     колонку 2 (1fr), а содержимое в строку 2. */
+  grid-row: 1;
+  grid-column: 1;
 }
 /* position: relative — система координат для дока «во весь экран» внутри
    оболочки: замечание владелицы «"развернуть на всю страницу" скрывает даже
    верхнее меню, чего не было в прототипе». «Весь экран» внутри приложения
    значит «вся область содержимого». */
-.sk-shell__main { position: relative; min-width: 0; overflow: auto; }
+.sk-shell__main {
+  position: relative; min-width: 0; overflow: auto;
+  /* Последняя колонка первой строки при любом числе колонок: две у раскрытого
+     меню, рейки и ушка, одна на узком экране. */
+  grid-row: 1;
+  grid-column: -2 / -1;
+}
 .sk-shell__main:focus { outline: none; }
 .sk-shell__grp + .sk-shell__grp { margin-top: 10px; }
 .sk-shell__grp-title {
@@ -2216,7 +2244,24 @@ code, pre, kbd, samp { font-family: var(--mono); }
   margin: 0;
   color: var(--t2);
   font-size: var(--fs-xs);
+  /* S9-12, находка прода 09.11.2026: при экране 393 px строка выходила 688 px,
+     и ехала ВСЯ СТРАНИЦА (scrollWidth 728), унося верхнюю панель,
+     «Группировку» и «Порядок». Причина — минимальная ширина flex-элемента
+     равна содержимому, пока не сказано min-width: 0; без этого overflow-x на
+     самой строке не спасал. Прокрутку теперь держит полоса чипов внутри, а
+     «+N» и «Сбросить» остаются на виду. */
+  min-width: 0;
+  overflow-x: visible;
+}
+/* Полоса условий: листаются чипы, а не управление. */
+.sk-list__chipscroll {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--gap);
+  min-width: 0;
   overflow-x: auto;
+  scrollbar-width: thin;
 }
 .sk-list__desc:has(.sk-list__chipmore[aria-expanded='true']) { flex-wrap: wrap; overflow-x: visible; }
 /* «+N условий» — не чип: это управление свёрткой, и выглядеть оно должно иначе,
@@ -3674,6 +3719,44 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-shell--menu-rail .sk-shell__note { display: none; }
 .sk-shell--menu-rail .sk-shell__item { justify-content: center; padding-inline: 0; }
 .sk-shell--menu-rail .sk-shell__side { padding: 6px 2px; }
+/* Личный блок в рейке — кнопка с выпадающим меню (слова владелицы 09.11:
+   «недавние должны быть кнопкой с меню, а не кучей непонятных значков»).
+   Меню выезжает ВПРАВО от рейки: внутри рейки шириной в иконку оно было бы
+   обрезано, а подписи записей — то, ради чего оно и открывается. */
+.sk-shell__railmenu { position: relative; display: flex; justify-content: center; }
+.sk-shell__railmenu-btn { justify-content: center; padding-inline: 0; min-height: max(var(--tap), 28px); }
+.sk-shell__railmenu-pop {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 4px);
+  z-index: 30;
+  min-width: 240px;
+  max-width: 340px;
+  max-height: 60dvh;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+}
+/* Тело меню — прежние списки целиком, своей раскладки у него нет. */
+.sk-shell__railmenu-body { display: block; min-width: 0; }
+.sk-shell__railmenu-head {
+  margin: 0 0 4px;
+  padding: 0 4px;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+/* Подписи внутри меню видны ВСЕГДА, даже в рейке: правило рейки скрывает
+   подписи пунктов колонки, а здесь они и есть содержимое. */
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__label,
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__id,
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__tag,
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__note { display: initial; }
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__item { justify-content: flex-start; padding-inline: 6px; }
 .sk-shell__menu-toggle { flex: 0 0 auto; }
 /* Колонка свойств открыта — тексту чуть меньше правого поля. */
 .sk-read--rail .sk-read__main { padding-right: 8px; }
@@ -3935,7 +4018,8 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 /* ── Новости v2: лента, разрезы, метрики (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06) ──
    Числа — моно; «ждёт выкатки» и «не смогли» — --wrn; Σ≠∪ — пилюля --acc.
    Строка управления — классы sk-list__* (тот же вид, что у списков). */
-.sk-news { display: flex; flex-direction: column; gap: var(--gap); max-width: 1200px; color: var(--t1); font-size: var(--fs-base); }
+/* Без своего max-width: лента занимает всю область содержимого и прилегает к левому краю (владелица 09.11: «почему новости не на всю ширину… места как украли»). */
+.sk-news { display: flex; flex-direction: column; gap: var(--gap); color: var(--t1); font-size: var(--fs-base); }
 .sk-news__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
 .sk-news__title {
   margin: 0;
@@ -4423,7 +4507,15 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__panel { min-width: 0; }
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
 .sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) var(--props-w, minmax(240px, 320px)); gap: 24px; align-items: start; }
-.sk-rec__content { min-width: 0; }
+/* Клетки названы ЯВНО у всех трёх детей, и это не украшение, а лечение дефекта
+   с прода 09.11.2026 («левое меню во всю стену», та же ошибка в оболочке):
+   сетка размещает явно размещённые элементы первыми, а остальные расставляет
+   автоматически, ОБХОДЯ занятые клетки. Ручка границы стоит в клетке 1/2, и
+   автоматически размещаемая колонка свойств уезжала в следующую свободную —
+   во второй ряд. Правило на будущее: в сетке, где хоть один ребёнок размещён
+   явно, клетки обязаны быть названы у ВСЕХ. Сторож — gridPlacement.test.ts. */
+.sk-rec__content { min-width: 0; grid-area: 1 / 1; }
+.sk-rec__props { grid-area: 1 / 2; }
 /* Ручка границы между содержимым и свойствами (S4-30). Сидит в клетке колонки
    свойств, прижатая к её левому краю, то есть ровно на линии border-left —
    третий трек раздвинул бы колонки и на телефоне тоже. Во всю высоту ряда:
@@ -4442,9 +4534,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec-propsrow__label { color: var(--t1); font-weight: 600; }
 .sk-rec-propsrow__vals { color: var(--t2); }
 .sk-rec-propsrow > .sk-rec-fields { padding: 4px 10px 8px; }
+/* Рейка зоны — только иконки (S4-30, выбор владелицы 09.11). Подписи
+   вертикальным текстом убраны: мини-версия у колонки и у полного экрана должна
+   быть ОДНА, иначе человек читает их как два разных элемента. Имя действия
+   остаётся у кнопки для скринридера и в подсказке. */
 .sk-rec-rail { position: absolute; top: 50%; right: 0; display: flex; flex-direction: column; gap: 4px; transform: translateY(-50%); }
-.sk-rec-rail__btn { padding: 10px 4px; border: 1px solid var(--bd); border-right: 0; border-radius: var(--r-md) 0 0 var(--r-md); background: none; color: var(--t2); font: inherit; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; writing-mode: vertical-rl; cursor: pointer; }
-.sk-rec-rail__btn:hover { border-color: var(--t3); color: var(--t1); }
+/* Колонка свойств в среднем состоянии границы: узкая полоса иконок. Ширину
+   задаёт сетка (--props-w), здесь только раскладка — иначе два числа о ширине
+   разошлись бы. */
+.sk-rec__props--rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; }
+.sk-rec__props--rail .sk-rec__zone { display: none; }
 /* Во весь экран — воздушнее и по центру (владелица 08.11): колонка ~920 px, поля, свободное межстрочие. */
 .sk-dock[data-placement='full'] .sk-rec { max-width: var(--rec-frame); margin: 0 auto; padding: 8px 32px 48px; }
 /* Пропорции эталона v4 (владелица 08.11: «посмотри на скриншоте хорошие проценты и соблюдай»):

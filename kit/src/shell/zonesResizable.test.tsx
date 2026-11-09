@@ -129,13 +129,33 @@ describe('S4-30 · граница левого меню подключена к 
     expect(win.location.search).not.toContain('side');
   });
 
-  it('у рейки иконок границы нет — тянуть там нечего', () => {
+  it('ПОТЯНУЛИ УЗКО — меню стало рейкой иконок: состояние достигается рукой', () => {
+    // Владелица 09.11.2026: «ни разу не получилось получить мини бар», и
+    // позже: «не только при полном развороте — это промежуточное состояние
+    // resizable состояния». Рейка была объявлена в переключателе и
+    // недостижима рукой; теперь она — среднее положение той же границы.
+    shell();
+    drag(sideBorder() as HTMLElement, -160);
+    expect(document.querySelector('.sk-shell--menu-rail')).toBeTruthy();
+  });
+
+  it('потянули ещё узже — меню ушло в ушко', () => {
+    shell();
+    drag(sideBorder() as HTMLElement, -230);
+    expect(document.querySelector('.sk-shell--menu-collapsed')).toBeTruthy();
+  });
+
+  it('из рейки тянем обратно — меню раскрывается, и подписи возвращаются', () => {
     const { storage } = memStorage();
     storage.setItem('seidr-kit.menuMode', 'rail');
     render(
       <KitShell config={CONFIG} data={DATA} win={fakeWin()} storage={createSafeStorage(() => storage)} narrow={false}><p>a</p></KitShell>,
     );
-    expect(sideBorder()).toBeNull();
+    // В рейке граница ЕСТЬ — иначе из неё не выбраться мышью.
+    const el = screen.getByRole('separator', { name: /Ширина меню/ });
+    drag(el, 200);
+    expect(document.querySelector('.sk-shell--menu-rail')).toBeNull();
+    expect(screen.getByRole('link', { name: /Спринты/ })).toBeTruthy();
   });
 
   it('меню убрано в ушко — границы нет', () => {

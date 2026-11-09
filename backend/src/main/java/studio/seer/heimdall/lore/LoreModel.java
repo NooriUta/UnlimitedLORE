@@ -158,6 +158,7 @@ final class LoreModel {
                     + code + "» без учёта регистра — свести к одному написанию");
             }
             entries.add(statusEntry(type, code, d, true, cycleKnown ? without(cycle, code) : null));
+            if (d != null) warnIfUndressed(dictType, code, d, warnings);
         }
         for (Map<String, Object> d : dictByLower.values()) {
             String code = str(d.get("code"));
@@ -166,6 +167,7 @@ final class LoreModel {
                     + type + " — перейти в него нельзя");
             }
             entries.add(statusEntry(type, code, d, !cycleKnown, cycleKnown ? List.of() : null));
+            if (!cycleKnown && active(d)) warnIfUndressed(dictType, code, d, warnings);
         }
 
         Map<String, Object> block = new LinkedHashMap<>();
@@ -174,6 +176,18 @@ final class LoreModel {
         block.put("lifecycle_known", cycleKnown);
         block.put("entries", entries);
         return block;
+    }
+
+    /**
+     * kit 09.11 (S4-STATUS-AXIS-CONFIG): иконка и цвет живого статуса — предметное знание
+     * сервера, клиент их не выдумывает. Дыра в справочнике называется словами, а не
+     * отдаётся молчаливым null, иначе клиент снова заводит свою таблицу «код → иконка».
+     */
+    private static void warnIfUndressed(String dictType, String code, Map<String, Object> d, List<String> warnings) {
+        if (nullIfEmpty(d.get("icon")) == null)
+            warnings.add(dictType + ": статус «" + code + "» без иконки — задать в справочнике");
+        if (nullIfEmpty(d.get("color")) == null)
+            warnings.add(dictType + ": статус «" + code + "» без цвета — задать в справочнике");
     }
 
     private static Map<String, Object> statusEntry(String type, String code, Map<String, Object> d,

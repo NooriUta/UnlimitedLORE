@@ -4,11 +4,13 @@
 // источника данных; разрез экрана живёт в URL (префикс «n»).
 import { NewsFeed } from '@seidr/kit';
 import { newsSource } from './source';
+import { planStatusOf } from '../sprints/taskStatus';
+import { newsHrefV2 } from './newsLinks';
 
 export default function NewsPage() {
   return (
     <main data-lore-app="v2" className="shell">
-      <NewsFeed source={newsSource} urlPrefix="n" />
+      <NewsFeed source={newsSource} urlPrefix="n" statusOf={planStatusOf} hrefOf={newsHrefV2} />
     </main>
   );
 }
