@@ -15,6 +15,7 @@ import { newsSource } from '../news/source';
 import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 import { useModelStatuses } from './useModelStatuses';
+import { VersionCorner } from './VersionCorner';
 
 
 /** Глобальные параметры URL v2 — не снимаются при смене раздела. */
@@ -110,6 +111,11 @@ export function V2Shell({ storage, win, narrow, brandTag, topStart, topEnd, acco
       narrow={narrow}
     >
       <SectionScreen />
+      {/* Версия сборки в правом нижнем углу (S4-30, просьба владелицы 09.11):
+          одна метка, если сервер и фронт собраны из одного коммита, иначе
+          обе — подписанными. Внутри оболочки, а не в App: метка про установку
+          целиком, и она нужна на любом разделе. */}
+      <VersionCorner />
     </KitShell>
   );
 }
