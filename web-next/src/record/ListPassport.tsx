@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
-  type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
+  type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
@@ -21,6 +21,7 @@ import { savePassportField } from './passportSave';
 import { saveRelation } from './relationSave';
 import { saveRecordStatus, statusEntity } from './statusSave';
 import { fetchPassportOrder } from './passportOrder';
+import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
 import { createDraftsApi, draftSlot } from '../api/drafts';
@@ -81,6 +82,17 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   useEffect(() => {
     let alive = true;
     fetchPassportOrder(type, { fetchImpl }).then(r => { if (alive) setOrder(r); }, () => { /* сказано в notes */ });
+    return () => { alive = false; };
+  }, [type, fetchImpl]);
+  // Цикл статусов ТИПА из модели (S4-STATUS-AXIS-CONFIG). Жалоба владелицы на
+  // проде: в меню статуса задачи «В работе» дважды и чужие статусы — потому
+  // что список собирался из внутренней таблицы kit, то есть из всех осей
+  // разом. Теперь спрашиваем цикл этого типа; модель не ответила — остаётся
+  // умолчание приложения, и это сказано словами в той же строке замечаний.
+  const [statuses, setStatuses] = useState<{ items: KitConfig['statuses']['items']; notes: string[] }>({ items: [], notes: [] });
+  useEffect(() => {
+    let alive = true;
+    fetchTypeStatuses(type, { fetchImpl }).then(r => { if (alive) setStatuses(r); }, () => { /* сказано в notes */ });
     return () => { alive = false; };
   }, [type, fetchImpl]);
   const slice = useMemo(() => <T,>(name: string, params?: Record<string, string>) => fetchSlice<T>(name, params, { fetchImpl }), [fetchImpl]);
@@ -162,7 +174,15 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
     pp.reload();
   };
-  const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave, onRelation } }, data: view.data, role: 'reader',
+  const ctx: KitCtx = { config: {
+    ...view.config,
+    // Цикл статусов из модели ГЛАВНЕЕ умолчания приложения: умолчание —
+    // внутренняя таблица kit со всеми осями сразу, из-за неё в меню задачи и
+    // были чужие статусы и два «В работе». Пусто — модель не ответила, и
+    // причина уже названа в строке замечаний.
+    statuses: statuses.items.length ? { ...view.config.statuses, items: statuses.items } : view.config.statuses,
+    hooks: { ...view.config.hooks, onSave, onRelation },
+  }, data: view.data, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
     href: id => knownRecordHref(id, view.data.records, x => '#' + encodeURIComponent(x)), esc, md };
@@ -173,9 +193,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
         (S4-29). Молчаливый откат хуже отсутствия порядка: человек решит, что
         так и задумано, и перегруженность примет за замысел.
       */}
-      {order.notes.length > 0 && (
+      {[...order.notes, ...statuses.notes].length > 0 && (
         <ul className="pp-model-note" role="status">
-          {order.notes.map(n => <li key={n}>{n}</li>)}
+          {[...order.notes, ...statuses.notes].map(n => <li key={n}>{n}</li>)}
         </ul>
       )}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEdit}
