@@ -3,8 +3,7 @@
 // из существующих слайсов (toLoreRecord), а kit рисует только то, что пришло в объекте
 // (fromLoreRecord). Когда фасад появится на бэкенде, toLoreRecord уходит, fromLoreRecord остаётся.
 // Честность: эмуляция помечена в meta.facade; упавший блок — meta.sources[].state='error', не «пусто».
-import { createElement } from 'react';
-import type { KitConfig, KitCtx, KitData, KitEdge, KitLang, KitRecord, KitRelation } from '@seidr/kit';
+import type { KitConfig, KitData, KitEdge, KitLang, KitRecord, KitRelation } from '@seidr/kit';
 import { appT } from '../i18n';
 import { baseConfig, type PassportLoad } from './passportAdapters';
 import { SPRINT_FACTS } from './loreRecord';
@@ -146,19 +145,24 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   const errors = c.meta.sources.filter(s => s.state !== 'ok').map(s => ({ block: s.block, reason: s.reason ?? s.state }));
   const props = c.schema.fields.filter(f => f.group === 'props');
   const sections = c.schema.fields.filter(f => f.group === 'body' && f.key !== 'body_md');
-  // Разделы текста — блоками с подписью, как в v1 (ADR: Контекст / Решение / Следствия); пустые не рисуем.
-  const overview = sections.length
-    ? (r: KitRecord, ctx: KitCtx) => createElement('div', { className: 'sk-rec-sections' }, ...sections
-      .filter(s => typeof r.fields[s.key] === 'string' && (r.fields[s.key] as string).trim())
-      .map(s => createElement('section', { key: s.key, className: 'sk-rec-fields__sec', 'aria-label': s.label },
-        createElement('h2', { className: 'sk-rec-fields__sechead' }, s.label), ctx.md(r.fields[s.key] as string))))
-    : undefined;
+  // Разделы текста — ДАННЫМИ, а не своей функцией рисования (S5-06).
+  //
+  // Было: функция, которая печатала разделы текстом. И это тихо отнимало
+  // правку: ✎ у тела даёт kit, но ТОЛЬКО если у вида нет своего рисовальщика
+  // обзора. У задачи заметка приходит полем группы «тело», значит функция
+  // задавалась всегда — и редактор до заметки не доходил. Так и выглядел
+  // дефект прода v1.17.7: «нет ни ✎, ни „Править", двойной клик не открывает
+  // редактор», а вместе с ним было нечем проверить черновик (S5-09).
+  //
+  // Теперь kit получает список «ключ + подпись» и рисует разделы сам — с ✎,
+  // черновиком и честным пустым состоянием у каждого.
+  const bodySections = sections.map(s => ({ key: s.key, title: s.label }));
   const tabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
     key: t.key, title: t.label,
     render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),
   }));
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(overview ? { overview } : {}), relations: c.schema.relations.map(({ count: _n, ...d }) => d), fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...(tabs.length ? { tabs } : {}) },
+    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: c.schema.relations.map(({ count: _n, ...d }) => d), fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit
