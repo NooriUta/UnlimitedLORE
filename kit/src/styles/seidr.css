@@ -1907,6 +1907,190 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__quick .sk-pill { font-size: var(--fs-sm); }
 .sk-list__view { display: inline-flex; align-items: center; gap: 4px; }
 
+/* ---------- Шаги мастера (SPRINT_UXR_S10_SEIDR_KIT_2/K2-STEPS) ----------
+   Полоса шагов, содержимое шага, «осталось руками» и навигация. Цели касания
+   не меньше --tap; неактивный шаг скрыт атрибутом hidden (его прячет браузер),
+   поэтому отдельного правила на скрытие здесь нет. */
+.sk-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  color: var(--t1);
+  font-size: var(--fs-base);
+}
+.sk-steps__empty {
+  margin: 0;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+}
+.sk-steps__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  margin: 0;
+  padding: 0 0 var(--gap);
+  min-width: 0;
+  border-bottom: 1px solid var(--bd);
+  list-style: none;
+  counter-reset: none;
+}
+.sk-steps__item { display: flex; min-width: 0; }
+.sk-steps__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg1);
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+/* Непройденный шаг не кликается: вперёд ведёт только кнопка — она проверяет
+   условие перехода, а полоса его обошла бы. */
+.sk-steps__step[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-steps__step.is-done { color: var(--t1); border-color: color-mix(in srgb, var(--suc) 45%, var(--bd)); }
+.sk-steps__step.is-here {
+  color: var(--t1);
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+}
+.sk-steps__step:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-steps__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+}
+.sk-steps__step.is-here .sk-steps__num { background: var(--acc); color: var(--bg0); }
+.sk-steps__title { min-width: 0; }
+.sk-steps__progress {
+  margin: 0;
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+.sk-steps__note {
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-steps__panel { min-width: 0; }
+/* «Осталось руками» — не украшение: это то, чего система сделать не может. */
+.sk-steps__manual {
+  padding: 8px 10px;
+  border: 1px dashed var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-steps__manual-head {
+  margin: 0 0 6px;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-steps__manual-list { margin: 0; padding: 0; list-style: none; }
+.sk-steps__manual-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: var(--fs-sm);
+}
+.sk-steps__manual-link { color: var(--inf); }
+.sk-steps__manual-text { color: var(--t1); }
+.sk-steps__manual-hint { color: var(--t3); font-size: var(--fs-xs); }
+.sk-steps__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  min-width: 0;
+}
+.sk-steps__btn {
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-steps__btn.is-primary { border-color: var(--acc); color: var(--acc); }
+.sk-steps__btn[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-steps__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* Причина, по которой вперёд нельзя: цвет предупреждения, а не красный отказ —
+   это не ошибка человека, а незаполненное условие. */
+.sk-steps__blocked { color: var(--wrn); font-size: var(--fs-sm); }
+
+/* ---------- Секрет, который показывают один раз (K2-SECRET-ONCE) ----------
+   Значение — моно и с переносом по символам: его читают глазами и переписывают,
+   поэтому обрезать его нельзя ни при какой ширине. */
+.sk-secret {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, var(--bd));
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-secret__label {
+  color: var(--t2);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-secret__warn { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-secret__none,
+.sk-secret__spent { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-secret__value {
+  padding: 6px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-sm);
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  word-break: break-all;
+  user-select: all;
+}
+.sk-secret__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); min-width: 0; }
+.sk-secret__btn {
+  min-height: max(var(--tap), 28px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-secret__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-secret__ok { color: var(--suc); font-size: var(--fs-sm); }
+.sk-secret__fail { color: var(--dng); font-size: var(--fs-sm); }
+
 /* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
 .sk-shead {
   display: flex;

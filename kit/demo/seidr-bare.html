@@ -286,6 +286,50 @@
 <button type="button" class="sk-ear sk-ear--left" aria-expanded="true">Ушко слева</button>
 </div>
 </section>
+<section class="bare__sec" data-kit="flow">
+<h2 class="bare__h2">Мастера</h2>
+<div class="sk-steps">
+<ol class="sk-steps__bar" aria-label="Шаги">
+<li class="sk-steps__item">
+<button type="button" class="sk-steps__step is-here" aria-current="step">
+<span class="sk-steps__num">1</span>
+<span class="sk-steps__title">Выбор</span>
+</button>
+</li>
+<li class="sk-steps__item">
+<button type="button" class="sk-steps__step" aria-disabled="true">
+<span class="sk-steps__num">2</span>
+<span class="sk-steps__title">Заполнение</span>
+</button>
+</li>
+<li class="sk-steps__item">
+<button type="button" class="sk-steps__step" aria-disabled="true">
+<span class="sk-steps__num">3</span>
+<span class="sk-steps__title">Проверка</span>
+</button>
+</li>
+</ol>
+<p class="sk-steps__progress" data-testid="kit-steps-progress">Шаг 1 из 3</p>
+<div class="sk-steps__panel" data-testid="kit-steps-panel-pick">
+<p>Содержимое первого шага</p>
+</div>
+<div class="sk-steps__panel" data-testid="kit-steps-panel-fill" hidden="">
+<p>Содержимое второго шага</p>
+</div>
+<div class="sk-steps__panel" data-testid="kit-steps-panel-check" hidden="">
+<p>Содержимое третьего шага</p>
+</div>
+<div class="sk-steps__nav">
+<button type="button" class="sk-steps__btn is-primary" data-testid="kit-steps-next" aria-disabled="true" aria-describedby="kit-steps-blocked-reason">Дальше</button>
+<span class="sk-steps__blocked" id="kit-steps-blocked-reason" role="status" data-testid="kit-steps-blocked">Не выбрано, что делаем</span>
+</div>
+</div>
+<div class="sk-secret" data-phase="warned">
+<span class="sk-secret__label">Секрет</span>
+<p class="sk-secret__warn" data-testid="kit-secret-warn">Значение будет показано один раз — сохраните его сейчас.</p>
+<button type="button" class="sk-secret__btn" data-testid="kit-secret-reveal">Показать</button>
+</div>
+</section>
 <section class="bare__sec" data-kit="content">
 <h2 class="bare__h2">MD / HTML</h2>
 <div class="sk-md">
