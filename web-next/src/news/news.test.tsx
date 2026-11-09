@@ -22,17 +22,16 @@ describe('S7A-02 · маршрут /news', () => {
 
   it('App по /news рисует ленту kit (П25: вход в раздел новостей)', async () => {
     render(<KitLangProvider lang="ru"><App path="/news" /></KitLangProvider>);
-    await screen.findByTestId('news-feed-days', {}, { timeout: 5000 });
-    expect(screen.getByRole('heading', { name: 'Новости' })).toBeTruthy();
+    // Источник живой: в тесте сервера нет — лента честно покажет ошибку, но
+    // экран новостей (заголовок, полоса) на месте.
+    expect(await screen.findByRole('heading', { name: 'Новости' }, { timeout: 5000 })).toBeTruthy();
   });
 });
 
 describe('S7A-02 · источник: фикстура за флагом, живой API — одной строкой', () => {
-  it('флаг выключен, пока эндпоинт не на стенде: источник — фикстура и помечен', async () => {
-    expect(NEWS_LIVE).toBe(false);
-    expect(newsSource.kind).toBe('fixture');
-    render(<KitLangProvider lang="ru"><App path="/news" /></KitLangProvider>);
-    await screen.findByTestId('news-fixture-badge', {}, { timeout: 5000 });
+  it('по умолчанию — живой источник (09.11: «новости к серверной части не подключены»), фикстуры нет', () => {
+    expect(NEWS_LIVE).toBe(true);
+    expect(newsSource.kind).toBe('live');
   });
 
   it('фикстура отдаёт ответ по контракту', async () => {

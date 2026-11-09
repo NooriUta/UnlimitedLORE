@@ -923,7 +923,9 @@ public class LoreProductResource extends LoreResourceBase {
      * Необязателен: старые вызовы (до V21) роль не передавали, и затирать её
      * пустым значением при повторной привязке владельца нельзя.
      */
-    public record ActorOwnerRequest(String actor_id, String client_id, String kc_sub, String agent_role) {}
+    public record ActorOwnerRequest(String actor_id, String client_id, String kc_sub, String agent_role,
+        // S7B-15, ADR-MINILORE-007: harness из справочника harness. null — не трогать, "" — сбросить.
+        String harness) {}
 
     @POST
     @Path("actor/owner")
@@ -940,6 +942,8 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("client_id required");
         if (req.kc_sub() == null || req.kc_sub().isBlank())
             return badParams("kc_sub required");
+        String harnessErr = LoreActorHarness.error(req.harness(), activeDictCodes("harness", LoreActorHarness.REGISTRY));
+        if (harnessErr != null) return badParams(harnessErr);
         try {
             List<Map<String, Object>> actor = ingest.queryPublic(
                 "SELECT kind FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
@@ -953,11 +957,13 @@ public class LoreProductResource extends LoreResourceBase {
             // роль пустым значением.
             String setSql = "UPDATE KnowActor SET client_id=:c"
                 + (req.agent_role() != null && !req.agent_role().isBlank() ? ", agent_role=:r" : "")
+                + (req.harness() == null ? "" : req.harness().isEmpty() ? ", harness=null" : ", harness=:h")
                 + " WHERE actor_id=:id";
             Map<String, Object> setParams = new LinkedHashMap<>();
             setParams.put("c", req.client_id());
             setParams.put("id", req.actor_id());
             if (req.agent_role() != null && !req.agent_role().isBlank()) setParams.put("r", req.agent_role());
+            if (req.harness() != null && !req.harness().isEmpty()) setParams.put("h", req.harness());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 setSql, setParams)).await().indefinitely();
 

@@ -44,6 +44,9 @@ const PassportDemo = lazy(() => import('./pages/PassportDemo'));
 const NewsPage = lazy(() => import('./news/NewsPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
 const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
+// Админка v2 (SPRINT_UXR_S7B_ADMIN): пока отдельной страницей /admin, как /news;
+// модуль ?mod=admin в оболочке подключит kit (v2Config — её зона).
+const AdminPage = lazy(() => import('./admin/AdminPage'));
 
 // Личное пользователя (/lore/me/*, контракт S2) — боевой сервер
 // (SPRINT_UXR_S5_RECORD_TASKS/S5-14). Прежняя заглушка держала настройки в
@@ -57,7 +60,7 @@ const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
 // seer-prefs ещё до запроса, а ответ сервера её потом уточняет.
 const meClient = createLiveS2Client();
 
-export type Route = 'kit' | 'passport' | 'news' | 'task' | 'home' | ListScreenId;
+export type Route = 'kit' | 'passport' | 'news' | 'admin' | 'task' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /**
@@ -83,6 +86,7 @@ export function routeOf(path: string, search = ''): Route {
   if (p === '/kit') return 'kit';
   if (p === '/kit/passport') return 'passport';
   if (p === '/news') return 'news';
+  if (p === '/admin') return 'admin';
   const q = new URLSearchParams(search);
   if (q.get('section') === 'tasks' && q.get('passport')) return 'task';
   return LIST_ROUTES[p] ?? 'home';
@@ -146,6 +150,15 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
     return (
       <ErrorBoundary lang="ru">
         <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
+  if (route === 'admin') {
+    return (
+      <ErrorBoundary lang={lang}>
+        <StorageBanner storage={storage} lang={lang} />
+        <OutsideShell kind="standalone" />
+        <Suspense fallback={<Skeleton lines={8} />}><AdminPage /></Suspense>
       </ErrorBoundary>
     );
   }

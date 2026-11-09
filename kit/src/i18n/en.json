@@ -607,5 +607,14 @@
   "kit.list.cols.width": "Width of column «{title}»",
   "kit.record.history.more": "Show more",
   "kit.record.history.moreBusy": "Loading…",
-  "kit.record.history.moreFailed": "Not loaded: {reason}. The versions shown are still here."
+  "kit.record.history.moreFailed": "Not loaded: {reason}. The versions shown are still here.",
+  "kit.sum.full": "Total {value} — filled in for all {of}",
+  "kit.sum.partial": "Total {value}, but filled in for {known} of {of}",
+  "kit.sum.cover": "{known} of {of}",
+  "kit.sum.empty": "Not filled in for any of {of}",
+  "kit.sum.emptyShort": "not filled in",
+  "kit.sum.error": "Not counted: {reason}",
+  "kit.sum.loading": "Counting…",
+  "kit.sum.none": "Not counted",
+  "kit.sum.cut": "not everything was summed: the result was truncated"
 }

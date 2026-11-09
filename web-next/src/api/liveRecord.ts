@@ -38,6 +38,28 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : und
 const obj = (v: unknown): Json => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Json) : {});
 const arr = (v: unknown): Json[] => (Array.isArray(v) ? v.filter(x => x && typeof x === 'object') as Json[] : []);
 
+/**
+ * Ключ записи в путь запроса: слэш остаётся живым, остальное кодируется.
+ *
+ * Два факта, оба проверены по коду, а не предположены:
+ *
+ *  1. **Слэш кодировать НЕЛЬЗЯ.** Шаблон пути фасада — `{type}/{id: .+}`, то
+ *     есть жадный, и именно поэтому паспорт задачи с ключом
+ *     `SPRINT_X/CO-11` работает со слэшем в открытом виде. Перевод на `%2F`
+ *     сломал бы то, что уже работает.
+ *  2. **Решётку кодировать НАДО.** Ключ релиза — `release_uid` вида
+ *     `NooriUta/UnlimitedLORE#v1.17.4`. Браузер режет «#» как якорь и не
+ *     отправляет хвост, то есть сервер получил бы
+ *     `/lore/record/release/NooriUta/UnlimitedLORE` — ВАЛИДНЫЙ путь к другому
+ *     ключу. Это худший вид поломки: не ошибка, а тихая подмена записи.
+ *
+ * Отсюда кодирование ПО СЕГМЕНТАМ: `encodeURIComponent` каждому куску между
+ * слэшами. Для обычных ключов (`S4-09`, `ADR-LORE-049`) это тождество.
+ */
+export function recordPath(id: string): string {
+  return id.split('/').map(encodeURIComponent).join('/');
+}
+
 /** Записи нет (404). Отдельно от «нет прав»: тут нечего ждать и не у кого просить. */
 export class RecordNotFound extends Error {
   constructor(readonly type: string, readonly id: string, detail: string) {
@@ -290,7 +312,7 @@ export async function fetchLoreRecord(type: string, id: string, opts: FetchRecor
   const http = opts.fetchImpl ?? loreFetch;
   const base = opts.base ?? '';
   const now = opts.now ?? (() => new Date().toISOString());
-  const res = await http(`${base}/lore/record/${type}/${id}`);
+  const res = await http(`${base}/lore/record/${type}/${recordPath(id)}`);
   let body: unknown = null;
   try {
     body = await res.json();

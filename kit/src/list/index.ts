@@ -8,6 +8,8 @@ export * from './FacetFilter';
 export * from './grouping';
 // Составные объекты (S4-09): прогресс «x/y» для колонки progress:<поле>.
 export * from './progress';
+// Сумма с охватом (S4-09): колонка sum:<поле> — «12,5 д · у 9 из 14».
+export * from './sum';
 // Выделение: режим выбора, долгое нажатие (S4-10).
 export * from './listSelection';
 export * from './useLongPress';

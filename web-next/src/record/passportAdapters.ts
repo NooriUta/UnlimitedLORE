@@ -10,7 +10,20 @@ import { loreEdgesConfig } from './loreEdges';
 import { planStatusOf } from '../sprints/taskStatus';
 import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type SprintTaskSliceRow } from './loreRecord';
 
-export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec'] as const;
+/**
+ * Типы с паспортом в v2 — ровно те, что отдаёт фасад
+ * (`LoreRecordRegistry.TYPES`, сверено по коду сервера).
+ *
+ * Четыре последних — только на чтение (`READ_ONLY` на сервере): путей записи у
+ * них в фасаде нет, и `perms` это говорят прямо (`can_edit: false`, причина
+ * словами). Клиент ничего про это не предполагает — он рисует то, что пришло:
+ * кнопка без пути сохранения хуже её отсутствия.
+ *
+ * Поля этих типов здесь НЕ описаны намеренно: их присылает фасад. Описания в
+ * этом файле — наследство эпохи до фасада (S4-33), и новые типы его не
+ * повторяют.
+ */
+export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec', 'decision', 'question', 'milestone', 'release'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
 
 type Slice = <T>(slice: string, params?: Record<string, string>) => Promise<SliceBody<T>>;
@@ -42,6 +55,16 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   if (type === 'sprint') return (await slice<Row>('sprints', { fields: 'sprint_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.sprint_id), title: str(r.name) || str(r.sprint_id) }));
   if (type === 'adr') return (await slice<Row>('adrs', { fields: 'adr_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.adr_id), title: str(r.name) || str(r.adr_id) }));
   if (type === 'spec') return (await slice<Row>('specs', { fields: 'spec_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.spec_id), title: str(r.title) || str(r.spec_id) }));
+  // Типы, у которых паспорт появился 09.11 (только чтение). Перечень нужен не
+  // паспорту, а переходу «предыдущая / следующая» внутри дока: без своей ветки
+  // тип падал в `open_tasks`, и стрелки водили бы по ЧУЖИМ записям — молча.
+  if (type === 'decision') return (await slice<Row>('decisions', { fields: 'decision_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.decision_id), title: str(r.title) || str(r.decision_id) }));
+  if (type === 'question') return (await slice<Row>('questions', { fields: 'question_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.question_id), title: str(r.title) || str(r.question_id) }));
+  // У вехи название живёт в `label`, а не в `title`.
+  if (type === 'milestone') return (await slice<Row>('milestones', { fields: 'milestone_id,label', limit: '1000' })).rows.map(r => ({ id: str(r.milestone_id), title: str(r.label) || str(r.milestone_id) }));
+  // Ключ релиза — `release_uid` («проект#тег»): `release_id` повторяется у
+  // разных проектов, и по нему стрелки открывали бы не тот релиз.
+  if (type === 'release') return (await slice<Row>('releases', { fields: 'release_uid,git_tag', limit: '1000' })).rows.map(r => ({ id: str(r.release_uid), title: str(r.git_tag) || str(r.release_uid) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));
 }
 

@@ -1,0 +1,28 @@
+/* Админка v2 (SPRINT_UXR_S7B_ADMIN): только токены Seiðr, шрифты — var(--fs-*). */
+.adm { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.adm-h { margin: 0; font: 800 var(--fs-lg) var(--head, var(--font)); color: var(--t1); }
+.adm-lead { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.adm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: max(var(--tap, 24px), 24px); padding: 0 10px;
+  border: 1px solid var(--bd); border-radius: 999px; background: var(--bg2); color: var(--t2);
+  font: 600 var(--fs-xs) var(--mono); cursor: pointer;
+}
+.adm-chip b { color: var(--t1); }
+.adm-chip[aria-pressed='true'] { border-color: var(--acc); color: var(--acc); }
+.adm-chip[data-none] { border-style: dashed; color: var(--wrn); }
+.adm-note { margin: 0; padding: 4px 8px; border-radius: 6px; font-size: var(--fs-xs); color: var(--wrn); background: var(--bg2); }
+.adm-tablewrap { overflow-x: auto; }
+.adm-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.adm-table th, .adm-table td { padding: 4px 8px; border-bottom: 1px solid var(--bd); text-align: left; vertical-align: top; }
+.adm-table thead th { color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; }
+.adm-name { display: block; color: var(--t1); font-weight: 600; }
+.adm-id, .adm-mono { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); }
+.adm-role { color: var(--t3); font-size: var(--fs-xs); }
+.adm-missing { color: var(--wrn); font-size: var(--fs-xs); }
+.adm-err { display: block; color: var(--dng); font-size: var(--fs-xs); }
+.adm-select {
+  min-height: max(var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
+  background: var(--bg1); color: var(--t1); font: 600 var(--fs-xs) var(--mono);
+}
+.adm-select[data-none] { color: var(--wrn); border-style: dashed; }

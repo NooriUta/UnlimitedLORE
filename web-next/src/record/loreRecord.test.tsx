@@ -3,7 +3,7 @@
 // «статус · задачи x/y · просрочено · свежесть» из строк существующих слайсов
 // (sprints + задачи спринта), без новых эндпоинтов.
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { KNOWN_STATUSES, KitLangProvider, RecordView, recordFacts, type KitConfig, type KitCtx } from '@seidr/kit';
 import ru from '../i18n/ru.json';
 import en from '../i18n/en.json';
@@ -95,9 +95,14 @@ describe('S5-01 · шапка паспорта спринта', () => {
     expect(line.textContent).toContain('1 дн назад');
   });
 
+  // Уточнено 09.11: раньше в строке фактов была РОВНО ОДНА кнопка, и тест брал
+  // её без имени. Теперь кнопок две — статус тоже стал кнопкой, когда права
+  // позволяют его сменить (дефект «не могу поменять статус адр»). Предмет
+  // проверки не изменился, поэтому кнопка выбирается по своему факту.
   it('«задачи 1/3» ведёт на вкладку «Задачи» (?tab=tasks) — одно касание', () => {
     const onTab = view();
-    fireEvent.click(within(screen.getByTestId('kit-facts')).getByRole('button'));
+    const tasks = screen.getByTestId('kit-facts').querySelector('[data-fact="tasks"] button')!;
+    fireEvent.click(tasks);
     expect(onTab).toHaveBeenCalledWith(SPRINT_FACTS.tasksTab);
   });
 

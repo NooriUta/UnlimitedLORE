@@ -206,6 +206,101 @@ final class LoreRecordValues {
         return item(str(r.get("question_id")), str(r.get("title")), (String) vals.get("status"), vals);
     }
 
+    /** Kit 09.11: паспорт решения (срез {@code decision}), только чтение. */
+    static Map<String, Object> decision(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("title")) != null ? str(r.get("title")) : str(r.get("decision_id")));
+        v.put("status", docToken(r.get("status_raw")));
+        v.put("code", str(r.get("decision_id")));
+        v.put("date", str(r.get("date_created")));
+        v.put("adr", str(r.get("parent_adr")));
+        v.put("components", arr(r.get("components")));
+        v.put("projects", arr(r.get("projects")));
+        v.put("tags", arr(r.get("tags")));
+        v.put("body_md", str(r.get("body_md")));
+        v.put("rationale_md", str(r.get("rationale_md")));
+        return v;
+    }
+
+    /** Kit 09.11: счётчик в форме вычисляемого поля {value, known, of} — у счёта known = of. */
+    static Map<String, Object> countOf(int n) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("value", n);
+        m.put("known", n);
+        m.put("of", n);
+        return m;
+    }
+
+    private static int intOf(Object v) {
+        if (v instanceof Number n) return n.intValue();
+        try { return v == null ? 0 : Integer.parseInt(String.valueOf(v)); } catch (NumberFormatException e) { return 0; }
+    }
+
+    /**
+     * Вычисляемые итоги записи по строке её среза — отдельно от values (S7A-12 09.11: объект
+     * {value, known, of} в values клиент рисует строкой, то есть мусором). Итоги спринта
+     * считаются по задачам в фасаде (LoreSprintTotals), здесь — вехи и релиза.
+     */
+    static Map<String, Object> computed(String type, Map<String, Object> r) {
+        Map<String, Object> c = new LinkedHashMap<>();
+        switch (type == null ? "" : type) {
+            case "milestone" -> c.put("sprints_total", countOf(arr(r.get("direct_sprint_ids")).size()));
+            case "release" -> {
+                c.put("sprints_total", countOf(intOf(r.get("sprint_count"))));
+                c.put("prs_total", countOf(intOf(r.get("pr_count"))));
+            }
+            default -> { }
+        }
+        return c;
+    }
+
+    /** Kit 09.11: паспорт вехи (срез {@code milestone_by_id}), только чтение. */
+    static Map<String, Object> milestone(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("label")) != null ? str(r.get("label")) : str(r.get("milestone_id")));
+        v.put("code", str(r.get("milestone_id")));
+        v.put("week", str(r.get("week")));
+        v.put("date", str(r.get("date_display")));
+        v.put("priority", str(r.get("priority")));
+        v.put("products", arr(r.get("products")));
+        v.put("goal_md", str(r.get("goal_md")));
+        v.put("decisions_md", str(r.get("decisions_md")));
+        return v;
+    }
+
+    /** Kit 09.11: паспорт релиза (срез {@code release_by_id}), только чтение. */
+    static Map<String, Object> release(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        String tag = str(r.get("release_id")) != null ? str(r.get("release_id")) : str(r.get("git_tag"));
+        v.put("title", str(r.get("version")) != null ? str(r.get("version")) : tag);
+        v.put("code", tag);
+        v.put("type", str(r.get("type")));
+        v.put("date", str(r.get("release_date")));
+        v.put("is_current", r.get("is_current") == null ? null : String.valueOf(r.get("is_current")));
+        v.put("week", str(r.get("week")));
+        v.put("projects", arr(r.get("projects")));
+        v.put("description_md", str(r.get("description_md")));
+        return v;
+    }
+
+    /** Kit 09.11: паспорт вопроса (срез {@code question_by_id}), только чтение. */
+    static Map<String, Object> question(Map<String, Object> r) {
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("title")) != null ? str(r.get("title")) : str(r.get("question_id")));
+        v.put("status", docToken(r.get("status")));
+        v.put("code", str(r.get("question_id")));
+        v.put("priority", str(r.get("priority")));
+        v.put("due_date", str(r.get("due_date")));
+        v.put("owner", str(r.get("owner")));
+        v.put("raised_by", str(r.get("raised_by")));
+        v.put("opened", str(r.get("opened_date")));
+        v.put("closed", str(r.get("closed_date")));
+        v.put("components", arr(r.get("components")));
+        v.put("projects", arr(r.get("projects")));
+        v.put("body_md", str(r.get("body_md")));
+        return v;
+    }
+
     /** Решение (decisions_of_adr) → item. */
     static Map<String, Object> decisionItem(Map<String, Object> r) {
         Map<String, Object> vals = new LinkedHashMap<>();

@@ -52,12 +52,19 @@ public class LoreRecordResource extends LoreResourceBase {
     /** Главный срез записи типа и имя его параметра. */
     record Source(String slice, String param, boolean list) {}
 
+    /** release_uid «проект#тег» (AIDA/UnlimitedLORE#v1.17.4): как SAFE_ID, плюс «#». */
+    static final java.util.regex.Pattern RELEASE_UID = java.util.regex.Pattern.compile("[A-Za-z0-9_./\\-]{1,100}#[A-Za-z0-9_.\\-]{1,60}");
+
     static Source sourceOf(String type) {
         return switch (type) {
             case "sprint" -> new Source("sprint_tree", "id", false);
             case "task" -> new Source("tasks_by_uids", "task_uids", true);
             case "adr" -> new Source("adr", "id", false);
             case "spec" -> new Source("spec_by_id", "id", false);
+            case "decision" -> new Source("decision", "id", false);
+            case "question" -> new Source("question_by_id", "id", false);
+            case "milestone" -> new Source("milestone_by_id", "id", false);
+            case "release" -> new Source("release_by_id", "id", false);
             default -> null;
         };
     }
@@ -79,7 +86,9 @@ public class LoreRecordResource extends LoreResourceBase {
         if (!LoreRecordRegistry.TYPES.contains(type))
             return noStore(Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("UNKNOWN_TYPE",
                 "тип паспорта '" + type + "' не заведён; есть: " + LoreRecordRegistry.TYPES)));
-        if (!NEW_ID.equals(id) && !SAFE_ID.matcher(id).matches())
+        // Ключ релиза — release_uid «проект#тег»: «#» допустим только у релиза.
+        boolean idOk = "release".equals(type) ? RELEASE_UID.matcher(id).matches() : SAFE_ID.matcher(id).matches();
+        if (!NEW_ID.equals(id) && !idOk)
             return badParams("id contains illegal characters");
         Set<String> scope;
         try {
@@ -98,6 +107,7 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> out = envelope(rec, values, List.of(), List.of(),
             LoreRecordPerms.of(type, role, identified, null, 0, specStatuses(type)), Map.of(), type, List.of(),
             List.of());
+        out.put("computed", Map.of());
         return noStore(Response.ok(out));
     }
 
@@ -117,10 +127,17 @@ public class LoreRecordResource extends LoreResourceBase {
             case "sprint" -> LoreRecordValues.sprint(row);
             case "task" -> LoreRecordValues.task(row);
             case "adr" -> LoreRecordValues.adr(row);
+            case "decision" -> LoreRecordValues.decision(row);
+            case "question" -> LoreRecordValues.question(row);
+            case "milestone" -> LoreRecordValues.milestone(row);
+            case "release" -> LoreRecordValues.release(row);
             default -> LoreRecordValues.spec(row);
         };
+        // Итоги — отдельным блоком computed, не в values (S7A-12 09.11).
+        Map<String, Object> computed = new LinkedHashMap<>(LoreRecordValues.computed(type, row));
         String status = switch (type) {
             case "sprint", "task" -> LoreRecordValues.planToken(LoreRecordValues.str(row.get("status_raw")));
+            case "decision" -> LoreRecordValues.docToken(row.get("status_raw"));
             default -> LoreRecordValues.docToken(row.get("status"));
         };
         values.put("status", status);
@@ -189,7 +206,7 @@ public class LoreRecordResource extends LoreResourceBase {
                     }
                     Map<String, Object> totals = LoreSprintTotals.aggregate(rowsWithSprint, List.of(id)).get(0);
                     for (String k : List.of("tasks_total", "effort_days_total", "actual_days_total"))
-                        values.put(k, totals.get(k));
+                        computed.put(k, totals.get(k));
                 }
             }
             case "task" -> {
@@ -217,7 +234,9 @@ public class LoreRecordResource extends LoreResourceBase {
 
         String version = null;
         String versionError = null;
-        try {
+        // Kit 09.11: у типов только-для-чтения (решение, вопрос) истории SCD2 нет — версии нет, и это
+        // не ошибка: record.version = null без version_error.
+        if (!LoreRecordRegistry.READ_ONLY.contains(type)) try {
             List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordVersion.sql(type), Map.of("id", id));
             if (!v.isEmpty()) version = LoreRecordVersion.normalize(v.get(0).get("version"));
         } catch (RuntimeException e) {
@@ -229,6 +248,7 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> out = envelope(rec, values, parts, links,
             LoreRecordPerms.of(type, role, identified, status, openTasks, specStatuses(type)), facts, type, blocks,
             dataState);
+        out.put("computed", computed);
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());

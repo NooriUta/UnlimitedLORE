@@ -26,6 +26,7 @@ final class LoreRecordPerms {
     private LoreRecordPerms() {}
 
     static final String NO_RIGHTS = "нет прав: правка и смена статуса требуют роли admin или superadmin";
+    static final String READ_ONLY_REASON = "только чтение: путей записи у этого типа в паспорте пока нет";
     static final String NOT_IDENTIFIED =
         "не опознан: запрос без проверенной учётки и без роли — права вычислить не из чего";
 
@@ -51,6 +52,16 @@ final class LoreRecordPerms {
      */
     static Map<String, Object> of(String type, String role, boolean identified, String currentStatus,
                                   int openTasks, List<String> specStatuses) {
+        if (LoreRecordRegistry.READ_ONLY.contains(type)) {
+            // Kit 09.11: путей записи у типа в фасаде нет — ничего не обещаем, причину называем.
+            Map<String, Object> ro = new LinkedHashMap<>();
+            ro.put("can_edit", false);
+            ro.put("can_status", false);
+            ro.put("can_create", false);
+            ro.put("status_next", List.of());
+            ro.put("reason", READ_ONLY_REASON);
+            return ro;
+        }
         boolean can = "admin".equals(role) || "superadmin".equals(role);
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("can_edit", can);
