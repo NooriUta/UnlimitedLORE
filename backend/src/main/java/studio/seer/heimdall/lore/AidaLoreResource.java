@@ -952,10 +952,14 @@ public class AidaLoreResource extends LoreResourceBase {
         LoreSlices.Composed composed;
         final SlicePage page;
         java.util.Set<String> rowScope;
+        java.util.Set<String> callerScope;
+        SliceProjectNarrowing.Result narrowing;
         try {
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
-            rowScope = allowedProjectsOrNull(role);
+            callerScope = allowedProjectsOrNull(role);
+            narrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            rowScope = narrowing.scope();
             composed = LoreSlices.compose(id, given, rowScope);
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
@@ -979,11 +983,18 @@ public class AidaLoreResource extends LoreResourceBase {
         // AL-91 (условие шлюза miniLORE): пустое множество разрешённых проектов —
         // явный отказ, а не 200 с пустым списком: «нет прав» не должно выглядеть
         // как «ничего нет».
-        if (scopeDenies(id, rowScope)) {
+        if (scopeDenies(id, callerScope)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
                 .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
                     + "проекта (не заведён в граф ролей или роль не выдана) — срез " + id + " не отдаётся пустым"))));
         }
+        if (narrowing.emptyByChoice()) {
+            Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("rows", List.of());
+            empty.put(SliceProjectNarrowing.PARAM, narrowing.meta());
+            return Uni.createFrom().item(noStore(Response.ok(empty)));
+        }
+        final Map<String, Object> narrowMarker = narrowing.meta();
         final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
         java.util.Set<String> allowedForRedact =
             redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
@@ -1058,7 +1069,10 @@ public class AidaLoreResource extends LoreResourceBase {
                 // Владелица 09.11: итоги спринта — строки задач сворачиваются в строку на
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
+                // Kit 2 (K2-MATRIX): у ячейки матрицы состояние «проверено / не смогли / нет прав».
+                if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out);
                 if (scopeMarker != null) out.put("scope", scopeMarker);
+                if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
                 if (outside != null) out.put("outside_scope", outside);
                 try {
                     SlicePage.apply(out, page);
@@ -1102,17 +1116,21 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
-        final Map<String, String> filters = LoreSectionCount.filtersOf(given);
         LoreSlices.Composed composed;
         java.util.Set<String> rowScope;
+        java.util.Set<String> callerScope;
+        final Map<String, String> filters;
         try {
-            rowScope = allowedProjectsOrNull(role);
+            callerScope = allowedProjectsOrNull(role);
+            // Выбор проектов в шапке сужает и счётчик — иначе число в разделе не сойдётся со списком.
+            rowScope = SliceProjectNarrowing.apply(id, given, callerScope).scope();
+            filters = LoreSectionCount.filtersOf(given);
             composed = LoreSlices.compose(id, new LinkedHashMap<>(filters), rowScope);
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
         }
-        if (scopeDenies(id, rowScope)) {
+        if (scopeDenies(id, callerScope)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
                 .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
                     + "проекта — счётчик среза " + id + " не отдаётся нулём"))));

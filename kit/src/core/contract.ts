@@ -8,7 +8,7 @@ import type { LoreStatusCategory } from './statusAxis';
 
 /** S4-27: закрытые (категории done/cancelled) — внизу свёрнуто / все / за 30 дней / скрыть. */
 export type KitShowClosed = 'below' | 'all' | 'days30' | 'hide';
-export interface KitConfig { modules: {id:string; title:string; icon:string; status?:'planned'|'active'}[]; menu: {groups:{id:string; title:string; tone?:string; items:{id:string; title:string; icon?:string; view?:string}[]}[]; myViews?:boolean; recent?:boolean}; kinds: Record<string, KindConfig>; edges?: Record<string,{label:string; color:string; layer?:'structural'}>; graph?: {depth:1|2|3; limit:number; colorBy?:'verdict'|'type'}; statuses: {items:{code:string; title:string; category:KitStatusCategoryInput; icon:string; color:string; hotkey?:string; allow?:string[]}[]; selfApprove?:boolean; undo?:boolean; bulk?:boolean}; roles?: Record<string,{canEdit:boolean; canStatus:boolean}>; verdict?: (r:KitRecord, ctx:KitCtx)=>KitVerdict; list?: {views:('list'|'cards'|'board'|'tree'|'feed'|'timeline')[]; /** Вид «Таймлайн» (S4-22): поля даты начала и конца (ключи fields). */ timeline?:{start:string; end?:string}; quick?:{id:string; title:string; filter:KitFilter}[]; filters?:string[]; groupings?:string[]; /** S9-02: разрезы, у которых группы свёрнуты при первом показе (у LORE — релиз и спринт: групп всегда много). */ collapsedGroupings?:string[]; columns?:string[]; tree?:{parent:string; order:string; rollup?:'verdict'|'status'}; showClosed?:KitShowClosed}; palette?: {commands?:{id:string; title:string; run:(ctx:KitCtx)=>void}[]}; hooks?: KitHooks }
+export interface KitConfig { modules: {id:string; title:string; icon:string; status?:'planned'|'active'}[]; menu: {groups:{id:string; title:string; tone?:string; /** S4-MENU-STATES: группа идёт ВЫШЕ «Моих видов» и «Недавних» — порядок называет приложение (владелица 09.11: «новости должны стоять до моих видов и недавних»). */ pinTop?:boolean; items:{id:string; title:string; icon?:string; view?:string}[]}[]; myViews?:boolean; recent?:boolean}; kinds: Record<string, KindConfig>; edges?: Record<string,{label:string; color:string; layer?:'structural'}>; graph?: {depth:1|2|3; limit:number; colorBy?:'verdict'|'type'}; statuses: {items:{code:string; title:string; category:KitStatusCategoryInput; icon:string; color:string; hotkey?:string; allow?:string[]}[]; selfApprove?:boolean; undo?:boolean; bulk?:boolean}; roles?: Record<string,{canEdit:boolean; canStatus:boolean}>; verdict?: (r:KitRecord, ctx:KitCtx)=>KitVerdict; list?: {views:('list'|'cards'|'board'|'tree'|'feed'|'timeline')[]; /** Вид «Таймлайн» (S4-22): поля даты начала и конца (ключи fields). */ timeline?:{start:string; end?:string}; quick?:{id:string; title:string; filter:KitFilter}[]; filters?:string[]; groupings?:string[]; /** S9-02: разрезы, у которых группы свёрнуты при первом показе (у LORE — релиз и спринт: групп всегда много). */ collapsedGroupings?:string[]; columns?:string[]; tree?:{parent:string; order:string; rollup?:'verdict'|'status'}; showClosed?:KitShowClosed}; palette?: {commands?:{id:string; title:string; run:(ctx:KitCtx)=>void}[]}; hooks?: KitHooks }
 /**
  * Категория статуса в конфигурации (S4-STATUS-AXIS-CONFIG).
  *
@@ -37,7 +37,18 @@ export type KitRelation = 'composition'|'aggregation'|'association'|'attribute'|
  * управление связями.
  */
 export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in'; manageable?:boolean }
-export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[]; overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; type:'text'|'md'|'enum'|'ref'|'date'|'number'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string}[] }
+export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[];
+  /**
+   * Разделы тела записи — ДАННЫМИ (S5-06, S5-09). Список «ключ поля + подпись»;
+   * рисует их kit, поэтому у каждого раздела сразу есть ✎, черновик и честное
+   * пустое состояние.
+   *
+   * Данные ГЛАВНЕЕ `overview`: своя функция рисования тихо отняла правку
+   * заметки задачи (дефект прода v1.17.7 — «нет ни ✎, ни „Править"»), потому
+   * что kit отдавал ей весь обзор и редактор до тела не доходил.
+   */
+  bodySections?:{key:string; title:string; /** Раздел можно писать. false — только чтение даже при праве правки: путь записи для него сервер не даёт (schema.fields[].editable). */ editable?:boolean}[];
+  overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; type:'text'|'md'|'enum'|'ref'|'date'|'number'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string}[] }
 export interface KitRecord { id:string; kind:string; title:string; status:string; fields:Record<string,unknown>; body_md?:string; updated_at?:string }
 export interface KitEdge { from:string; to:string; type:string }
 export interface KitJournalEntry { at:string; who:string; is_agent?:boolean; record_id:string; field:string; from:unknown; to:unknown; approved_by?:string }

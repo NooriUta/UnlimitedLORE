@@ -32,6 +32,7 @@ export * from './list';
 // Ядро: контракт KitConfig/KitData и смена статуса «2 касания» с хуками
 // сохранения (SPRINT_UXR_S10_SEIDR_KIT/K-05).
 export * from './core/statusModel';
+export * from './core/statusLook';
 export * from './core/statusSave';
 export * from './core/useStatusChange';
 export * from './core/StatusIcon';

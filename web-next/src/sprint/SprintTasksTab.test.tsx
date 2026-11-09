@@ -122,11 +122,11 @@ describe('SprintTasksTab · запись', () => {
     expect(within(screen.getByRole('row', { name: /S5-01/ })).getByText('Паспорт v2')).toBeTruthy();
   });
 
-  it('id задачи — ссылка на паспорт задачи (?section=tasks&passport=…)', async () => {
+  it('id задачи — ссылка на задачу в разделе «Задачи» оболочки (S4-13: меню не пропадает)', async () => {
     const { impl } = ok();
     render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={fakeWin()} />);
     const link = await screen.findByRole('link', { name: 'S5-01' });
-    expect(link.getAttribute('href')).toBe('?section=tasks&passport=SPRINT_X%2FS5-01');
+    expect(link.getAttribute('href')).toBe('/?mod=forseti&sec=task&open=SPRINT_X%2FS5-01');
   });
 });
 

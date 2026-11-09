@@ -54,6 +54,15 @@ export const ICON_CANON = {
   ctlTreeToggle: 'lucide:chevron-right',
   ctlEdit: 'lucide:pencil',
   ctlReading: 'lucide:book-open',
+  /**
+   * Мини-версия зоны «только иконками» (S4-30). Выбор владелицы 09.11.2026:
+   * на предложение «Свойства — sliders-horizontal, Граф — share-2,
+   * Аналитика — bar-chart-3» ответила «три». В lucide 1.70 третья называется
+   * chart-column — то же изображение, переименовано вверх по течению.
+   */
+  recProps: 'lucide:sliders-horizontal',
+  recGraph: 'lucide:share-2',
+  recAnalytics: 'lucide:chart-column',
 } as const satisfies Record<string, string | null>;
 
 export type IconCanonKey = keyof typeof ICON_CANON;

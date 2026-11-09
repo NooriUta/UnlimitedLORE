@@ -72,6 +72,26 @@ type Ref = { id: string; title: string };
  */
 export const ADR_SECTIONS = ['context_md', 'decision_md', 'consequences_md'] as const;
 
+/**
+ * Чем запись называется в теле запроса: ключ и, где сервер требует, имя.
+ *
+ * Эндпоинты LORE перезаписывают запись целиком, поэтому имя обязательно у тех,
+ * кто без него сохранит запись безымянной. Лучше не сохранить, чем сохранить
+ * безымянным — поэтому пустое имя тут отказ, а не пустая строка.
+ */
+function idBody(type: PassportType, rec: Ref): Record<string, unknown> {
+  const named = (key: string, nameKey: string) => {
+    const name = rec.title.trim();
+    if (!name) throw new Error(`у записи не заполнено имя — без него правка раздела не отправляется`);
+    return { [key]: rec.id, [nameKey]: name };
+  };
+  if (type === 'sprint') return { sprint_id: rec.id };
+  if (type === 'task') return named('task_uid', 'title');
+  if (type === 'spec') return named('spec_id', 'title');
+  if (type === 'adr') return named('adr_id', 'name');
+  return { id: rec.id };
+}
+
 function payload(type: PassportType, rec: Ref, field: string, to: unknown): { path: string; body: Record<string, unknown> } {
   if (type === 'adr' && (ADR_SECTIONS as readonly string[]).includes(field)) {
     // Имя обязательно: сервер перезаписывает запись, и без него ADR остался
@@ -80,7 +100,19 @@ function payload(type: PassportType, rec: Ref, field: string, to: unknown): { pa
     if (!name) throw new Error('у ADR не заполнено имя — без него правка раздела не отправляется');
     return { path: '/lore/adr', body: { adr_id: rec.id, name, [field]: typeof to === 'string' ? to : '' } };
   }
-  if (field !== 'body_md') throw new Error(`поле «${field}» пока не правится в паспорте`);
+  // Текст записи приходит либо склеенным телом (`body_md` — эмуляция), либо
+  // СВОИМ полем раздела: фасад `/lore/record` отдаёт разделы тела под их
+  // настоящими именами (`note_md` у задачи, `context_md` у спринта,
+  // `content_md` у спеки). Прежде принималось только `body_md`, и правка
+  // раздела падала с «поле не правится» — а снаружи это выглядело как
+  // отсутствие правки вовсе (дефект прода v1.17.7, S5-06).
+  const BODY_FIELD: Partial<Record<PassportType, string>> = {
+    sprint: 'context_md', task: 'note_md', spec: 'content_md',
+  };
+  const own = BODY_FIELD[type];
+  if (field !== 'body_md' && field !== own) {
+    throw new Error(`поле «${field}» пока не правится в паспорте`);
+  }
   const text = typeof to === 'string' ? to : '';
   if (type === 'sprint') return { path: '/lore/sprint/update', body: { sprint_id: rec.id, context_md: text } };
   if (type === 'task') return { path: '/lore/task/edit', body: { task_uid: rec.id, title: rec.title, note_md: text } };
@@ -101,8 +133,19 @@ function payload(type: PassportType, rec: Ref, field: string, to: unknown): { pa
 export async function savePassportField(
   type: PassportType, rec: Ref, field: string, to: unknown,
   fetchImpl: typeof fetch = loreFetch, expectedVersion?: string | null,
+  /**
+   * Путь записи ИМЕННО ЭТОГО раздела из схемы сервера (`write`).
+   *
+   * Передан — пишем по нему, и своя таблица «тип → поле» не нужна. Это не
+   * украшение: у спринта разделов два («Контекст» и «Итог»), у ADR три, и
+   * таблица по одному имени на тип молча не записала бы остальные (замечание
+   * серверной сессии 09.11, проверено по `LoreRecordRegistry:532`).
+   */
+  write?: { endpoint: string; field: string } | null,
 ): Promise<void> {
-  const { path, body } = payload(type, rec, field, to);
+  const { path, body } = write
+    ? { path: write.endpoint, body: { ...idBody(type, rec), [write.field]: typeof to === 'string' ? to : '' } }
+    : payload(type, rec, field, to);
   const checked = (VERSION_CHECKED as readonly string[]).includes(type);
   const version = typeof expectedVersion === 'string' ? expectedVersion.trim() : '';
   const withVersion = checked && version ? { ...body, expected_version: version } : body;

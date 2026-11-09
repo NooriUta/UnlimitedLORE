@@ -146,7 +146,9 @@ public class LoreUserResource extends LoreResourceBase {
     public record UserRoleRequest(String kc_sub, String display_name, String project, String role, String action) {}
 
     public record UserRoleBatchRequest(String kc_sub, String display_name, List<Map<String, Object>> changes,
-                                       Boolean dry_run) {}
+                                       Boolean dry_run,
+                                       // Kit 2 (K2-BATCH-UNDO): этот вызов — отмена пачки batch_id; вне окна — отказ.
+                                       String undo_of) {}
 
     /**
      * SPRINT_UXR_S7B_ADMIN/S7B-05 · S7B-09 · S7B-13 — массовая смена ролей человека.
@@ -169,6 +171,11 @@ public class LoreUserResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.kc_sub()).matches()) return badParams("kc_sub contains illegal characters");
         String err = LoreRoleBatch.error(req.changes());
         if (err != null) return badParams(err);
+        java.time.Instant now = java.time.Instant.now();
+        if (req.undo_of() != null) {
+            String undoErr = LoreRoleBatch.undoError(req.undo_of(), now);
+            if (undoErr != null) return badParams(undoErr);
+        }
         try {
             Map<String, String> current = new java.util.LinkedHashMap<>();
             for (Map<String, Object> r : ingestService.queryPublic(
@@ -189,7 +196,16 @@ public class LoreUserResource extends LoreResourceBase {
             List<Map<String, Object>> items = new java.util.ArrayList<>();
             int applied = 0, failed = 0;
             for (Map<String, Object> p : plan) {
-                if ("unchanged".equals(p.get("kind"))) continue;
+                // Kit 09.11: итог у КАЖДОЙ строки плана — пачка не атомарна, и клиент не должен
+                // считать успех вычитанием. «Уже так» — своя строка с result=unchanged.
+                if ("unchanged".equals(p.get("kind"))) {
+                    Map<String, Object> same = new java.util.LinkedHashMap<>();
+                    same.put("project", p.get("project"));
+                    same.put("kind", "unchanged");
+                    same.put("result", "unchanged");
+                    items.add(same);
+                    continue;
+                }
                 boolean remove = "remove".equals(p.get("kind"));
                 Response r = setUserRole(new UserRoleRequest(req.kc_sub(), req.display_name(),
                     String.valueOf(p.get("project")), remove ? null : String.valueOf(p.get("after")),
@@ -201,6 +217,7 @@ public class LoreUserResource extends LoreResourceBase {
                 Object entity = r.getEntity();
                 if (entity instanceof Map<?, ?> m && m.get("outcome") != null) item.put("outcome", m.get("outcome"));
                 if (entity instanceof LoreError le) item.put("error", le);
+                item.put("result", r.getStatus() == 200 ? "applied" : "failed");
                 if (r.getStatus() == 200) applied++; else failed++;
                 items.add(item);
             }
@@ -208,6 +225,12 @@ public class LoreUserResource extends LoreResourceBase {
             out.put("failed", failed);
             out.put("atomic", false);
             out.put("items", items);
+            // Kit 2 (K2-BATCH-UNDO): идентификатор пачки и окно отмены. Отмена — этот же вызов
+            // с changes = undo и undo_of = batch_id. Журнал AO-01 — одна запись на вызов = на пачку.
+            String batchId = LoreRoleBatch.batchId(now);
+            out.put("batch_id", batchId);
+            out.put("undo_until", String.valueOf(LoreRoleBatch.undoUntil(batchId)));
+            if (req.undo_of() != null) out.put("undo_of", req.undo_of());
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE USER ROLE BATCH] %s: %s", req.kc_sub(), e.getMessage());

@@ -261,7 +261,25 @@ public final class LoreSlices {
                 .append(hist).append("' AS hist_type, in('HAS_STATE').")
                 .append(parent.idField()).append("[0] AS ref_id, state_uid FROM ")
                 .append(hist).append(" WHERE valid_to IS NULL AND valid_from IS NULL)");
+            // S2-11 (прод 09.11, PRE-03): одна версия на ДВЕ сущности — история второй пуста,
+            // а статус через out('HAS_STATE') виден. Ветка на каждую цепочку.
+            String shared = "$g" + (char) ('a' + i);
+            vars.append(", ").append(shared);
+            lets.append(", ").append(shared)
+                .append(" = (SELECT 'state_shared_by_entities' AS finding, '")
+                .append(parent.entityType()).append("' AS entity_type, '")
+                .append(hist).append("' AS hist_type, in('HAS_STATE').")
+                .append(parent.idField()).append("[0] AS ref_id, state_uid FROM ")
+                .append(hist).append(" WHERE in('HAS_STATE').size() > 1)");
         }
+        // S2-11: ребро HAS_STATE ведёт на версию ЧУЖОГО класса — паспорт и история её не видят.
+        vars.append(", $wt, $ws");
+        lets.append(", $wt = (SELECT 'state_wrong_class' AS finding, 'task' AS entity_type, "
+                + "'KnowTaskHist' AS hist_type, task_uid AS ref_id, null AS state_uid FROM KnowTask "
+                + "WHERE out('HAS_STATE')[@type <> 'KnowTaskHist'].size() > 0)")
+            .append(", $ws = (SELECT 'state_wrong_class' AS finding, 'sprint' AS entity_type, "
+                + "'KnowSprintHist' AS hist_type, sprint_id AS ref_id, null AS state_uid FROM KnowSprint "
+                + "WHERE out('HAS_STATE')[@type <> 'KnowSprintHist'].size() > 0)");
         // S2-11: задача или спринт без ЕДИНОЙ версии истории — запись мимо SCD2
         // (найдено 07.11: 14 задач, их O(t) не определить). Пустой срез без этой
         // ветки читался бы как «история в порядке».

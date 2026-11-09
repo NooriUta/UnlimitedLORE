@@ -20,8 +20,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ResizeBorder, zoneSize } from './ResizeBorder';
 
 /** Хранилище в памяти — как SafeStorage kit при недоступном localStorage. */
-function mem() {
-  const map = new Map<string, string>();
+function mem(initial: Record<string, string> = {}) {
+  const map = new Map<string, string>(Object.entries(initial));
   return { map, get: (k: string) => map.get(k) ?? null, set: (k: string, v: string) => { map.set(k, v); } };
 }
 
@@ -168,10 +168,94 @@ describe('ResizeBorder: граница тянется и запоминаетс�
     expect(onSize).toHaveBeenLastCalledWith(360);
   });
 
+  it('СОСТОЯНИЯ ЗОНЫ: потянули узко — зона просит рейку, ещё узче — скрыться', () => {
+    // Слова владелицы 09.11.2026: «не только при полном развороте — это
+    // промежуточное состояние resizable состояния». То есть «только иконками»
+    // — не отдельный режим паспорта, а СРЕДНЕЕ состояние той же границы,
+    // которое получается, если тянуть её дальше. До этого рейка существовала
+    // только в кнопке-переключателе, и владелица её «ни разу не получила».
+    const onLevel = vi.fn();
+    show({ min: 60, levels: { rail: 140, hide: 70, onLevel } });
+    const el = bar();
+    // 280 − 160 = 120 → это уже рейка, но ещё не «скрыть».
+    drag(el, -160);
+    expect(onLevel).toHaveBeenLastCalledWith('rail');
+    drag(el, -230);
+    expect(onLevel).toHaveBeenLastCalledWith('hidden');
+  });
+
+  it('состояние считается по ЖЕЛАЕМОМУ размеру, а не по упёртому в минимум', () => {
+    // Иначе зона с жёстким минимумом никогда не дойдёт до рейки: размер
+    // упирается, и «тяну ещё» перестаёт что-либо значить — ровно та дорога,
+    // по которой рейка у левого меню оказывалась недостижимой. Здесь минимум
+    // (200) ВЫШЕ порога рейки (140) намеренно.
+    const onLevel = vi.fn();
+    const { onSize } = show({ min: 200, levels: { rail: 140, hide: 70, onLevel } });
+    drag(bar(), -200);
+    expect(onLevel).toHaveBeenLastCalledWith('rail');
+    // И размер при этом всё равно не уходит ниже минимума.
+    expect(onSize).toHaveBeenLastCalledWith(200);
+  });
+
+  it('из рейки тянем обратно — зона просит раскрыться', () => {
+    const onLevel = vi.fn();
+    show({ size: 56, min: 44, levels: { rail: 140, hide: 70, onLevel } });
+    drag(bar(), 200);
+    expect(onLevel).toHaveBeenLastCalledWith('open');
+  });
+
+  it('состояние сообщается ОДИН раз на переход, а не на каждое движение', () => {
+    // Иначе зона перерисовывается на каждый пиксель и мигает.
+    const onLevel = vi.fn();
+    show({ min: 60, levels: { rail: 140, hide: 70, onLevel } });
+    const el = bar();
+    act(() => {
+      el.dispatchEvent(new MouseEvent('pointerdown', { clientX: 300, bubbles: true, cancelable: true }));
+      // 280 − 150 = 130, 280 − 160 = 120, 280 − 170 = 110 — все три «рейка».
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 150, bubbles: true }));
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 140, bubbles: true }));
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 130, bubbles: true }));
+      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    });
+    expect(onLevel).toHaveBeenCalledTimes(1);
+    expect(onLevel).toHaveBeenCalledWith('rail');
+  });
+
+  it('без levels зона состояний не меняет — только размер', () => {
+    // Положительный контроль обратной стороны: старые потребители (колонка
+    // свойств до правки) не должны внезапно начать сворачиваться.
+    const { onSize } = show({ min: 60 });
+    drag(bar(), -400);
+    expect(onSize).toHaveBeenLastCalledWith(60);
+  });
+
+  it('клавиатурой до рейки тоже дойти можно: управление не только мышью', () => {
+    const onLevel = vi.fn();
+    show({ size: 145, min: 60, levels: { rail: 140, hide: 70, onLevel } });
+    fireEvent.keyDown(bar(), { key: 'ArrowLeft' });
+    expect(onLevel).toHaveBeenLastCalledWith('rail');
+  });
+
   it('хранилища нет (приватный режим) — тянуть можно, просто не запомнится', () => {
     const { onSize } = show({ store: undefined });
     drag(bar(), 30);
     expect(onSize).toHaveBeenLastCalledWith(310);
+  });
+
+  it('ЧУЖОЕ или битое значение в хранилище не раздвигает зону на весь экран', () => {
+    // Жалоба с прода 09.11.2026 (владелица): «как минимум левое меню глючит и
+    // разворачивается во всю стену». Чтение размера НЕ было ограничено: в
+    // хранилище лежит что угодно (другое приложение на том же домене, старая
+    // версия, ручная правка), и зона рисовалась ровно тем числом, что нашла.
+    // Пределы применяются и на чтении, а не только при перетаскивании.
+    const store = mem({ 'kit.cols.w.zones': JSON.stringify({ aside: 4000, dock: 2 }) });
+    expect(zoneSize(store, 'aside', 280, { min: 168, max: 420 })).toBe(420);
+    expect(zoneSize(store, 'dock', 240, { min: 120, max: 900 })).toBe(120);
+    // Без пределов — прежнее поведение: зона сама решает, что с этим делать.
+    expect(zoneSize(store, 'aside', 280)).toBe(4000);
+    // Значение не число — умолчание, а не NaN в вёрстке.
+    const junk = mem({ 'kit.cols.w.zones': JSON.stringify({ aside: 'широкое' }) });
+    expect(zoneSize(junk, 'aside', 280, { min: 168, max: 420 })).toBe(280);
   });
 
   it('прочитать запомненный размер можно тем же ключом, что писали', () => {

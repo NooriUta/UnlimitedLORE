@@ -14,6 +14,8 @@ import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * SPRINT_UXR_S7B_ADMIN/S7B-05 — массовая смена ролей сквозь REST: dry_run даёт дифф
@@ -91,5 +93,31 @@ class LoreRoleBatchLiveDbTest {
             .valueToTree(undo).toString() + "}";
         admin().body(body).when().post("/lore/user/role/batch").then().statusCode(200);
         assertEquals(Map.of(P1, "reader"), roles(), "откат пачки вернул как было");
+    }
+
+    /**
+     * Kit 09.11 (K2-BATCH-UNDO): пачка не атомарна, поэтому итог — у КАЖДОЙ строки плана,
+     * включая успешные и «уже так»: клиент не считает успех вычитанием. applied/failed — сверка.
+     * Отмена с чужим id — отказ по имени.
+     */
+    @Test
+    @Order(5)
+    void everyPlanRowHasItsResultAndBatchCanBeReferenced() {
+        String body = "{\"kc_sub\":\"" + SUB + "\",\"changes\":["
+            + "{\"project\":\"" + P1 + "\",\"role\":\"reader\"},"
+            + "{\"project\":\"" + P2 + "\",\"role\":\"tester\"}]}";
+        JsonPath r = admin().body(body).when().post("/lore/user/role/batch").then().statusCode(200)
+            .extract().jsonPath();
+        java.util.List<Map<String, Object>> items = r.getList("items");
+        assertEquals(r.getList("plan").size(), items.size(), "строка итога на каждую строку плана");
+        for (Map<String, Object> it : items)
+            assertTrue(java.util.Set.of("applied", "failed", "unchanged").contains(it.get("result")), "result: " + it);
+        assertEquals("unchanged", items.get(0).get("result"), "P1 уже reader — «уже так», но строка есть");
+        assertEquals("applied", items.get(1).get("result"));
+        assertTrue(r.getString("batch_id").startsWith("rb-"), r.getString("batch_id"));
+        assertNotNull(r.getString("undo_until"));
+
+        String bad = "{\"kc_sub\":\"" + SUB + "\",\"undo_of\":\"rb-garbage\",\"changes\":[{\"project\":\"" + P2 + "\",\"action\":\"remove\"}]}";
+        admin().body(bad).when().post("/lore/user/role/batch").then().statusCode(400);
     }
 }

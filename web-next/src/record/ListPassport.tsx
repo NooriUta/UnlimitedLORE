@@ -12,6 +12,7 @@ import {
 } from '@seidr/kit';
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
+import { knownRecordHref } from '../nav/loreRoutes';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
 import { fromLoreRecord } from './loreRecordContract';
@@ -20,6 +21,7 @@ import { savePassportField } from './passportSave';
 import { saveRelation } from './relationSave';
 import { saveRecordStatus, statusEntity } from './statusSave';
 import { fetchPassportOrder } from './passportOrder';
+import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
@@ -67,6 +69,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // до сих пор не вызывался ниоткуда — паспорт держал вкладку местным
   // состоянием, и адрес о ней не знал.
   const [tab, setTab] = useRecordTab('overview', win);
+  // Личная настройка «Правая колонка записи» наконец доходит до записи
+  // (S4-02, находка CJM на проде 09.11.2026). Раньше выбор ложился атрибутом
+  // `data-right-column` на корень документа, и этот атрибут не читал НИКТО:
+  // настройка сохранялась и не меняла ничего, а рядом в панели стоял второй,
+  // тоже мёртвый блок про то же. `auto` — выбора не было, решает сам паспорт.
+  const rightColumn = appliedRightColumn();
   // Порядок разделов из модели (S4-29). Пока грузится — умолчание приложения,
   // и это honest-состояние: экран работает, просто порядок пока клиентский.
   const [order, setOrder] = useState<{ order: PassportOrder; notes: string[] }>({ order: { decided: false, sections: [], notes: [] }, notes: [] });
@@ -134,7 +142,15 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // 409-м, если запись успели изменить. Без неё сохранение затирало чужую
     // правку молча. У ADR проверки на сервере нет — там версия не уходит, и
     // С PR #969 проверку принимают все четыре типа, включая ADR.
-    await savePassportField(type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl, contract?.record.version ?? null);
+    // Путь записи РАЗДЕЛА берём из схемы сервера (`write`), а не из своей
+    // таблицы «тип → поле»: у спринта разделов два («Контекст» и «Итог»), у
+    // ADR три, и таблица по одному имени на тип молча не записала бы
+    // остальные (замечание серверной сессии 09.11 по его же реестру).
+    const def = contract?.schema.fields.find(f => f.key === field);
+    await savePassportField(
+      type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl,
+      contract?.record.version ?? null, def?.write ?? null,
+    );
     pp.reload();
   };
   // Привязка и отвязка связей (S4-MODEL-PASSPORT-LIST): управление в kit было
@@ -146,7 +162,10 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
     pp.reload();
   };
-  const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave, onRelation } }, data: view.data, role: 'reader', href: x => `#${encodeURIComponent(x)}`, esc, md };
+  const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave, onRelation } }, data: view.data, role: 'reader',
+    // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
+    // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
+    href: id => knownRecordHref(id, view.data.records, x => '#' + encodeURIComponent(x)), esc, md };
   return (
     <>
       {/*
@@ -189,7 +208,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       crumbs={backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view.record.id} /> : undefined}
       pager={onGo && ids.length > 0 ? <RecordPager ids={ids} current={view.record.id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined}
       tools={onFull ? <button type="button" className="sk-iconbtn list-passport__full" aria-label={t('pp.place.full')} title={t('pp.place.full')} onClick={onFull}>⤢</button> : undefined}
-      asideOpen={false} onAside={() => {}} />
+      asideOpen={false} onAside={() => {}}
+      {...(rightColumn === 'auto' ? {} : { defaultPropsOpen: rightColumn === 'open' })} />
     </>
   );
 }

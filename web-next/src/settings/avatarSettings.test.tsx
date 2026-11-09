@@ -84,7 +84,10 @@ describe('S4-02 · заглушка /lore/me/settings хранит по конт
 
   it('незнакомый ключ или чужое значение — 400 BAD_PARAMS с перечнем ключей', async () => {
     const c = createLocalS2Client(createSafeStorage(memBacking()));
-    const err = await c.patchSettings({ patch: { text_size: 'xl' } as unknown as Partial<UserSettings>, expected_version: 1 }).catch(e => e);
+    // Пример чужого значения сменился: `xl` стал законным шагом шкалы
+    // 09.11.2026 (S4-16, «у меня 4к и все мелкое»), и проверять им отказ
+    // больше нельзя — тест проверял бы уже поддержанное значение.
+    const err = await c.patchSettings({ patch: { text_size: 'huge' } as unknown as Partial<UserSettings>, expected_version: 1 }).catch(e => e);
     expect(err).toBeInstanceOf(S2HttpError);
     expect((err as S2HttpError).status).toBe(400);
     expect((err as S2HttpError).body.detail).toContain('text_size');

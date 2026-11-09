@@ -17,6 +17,8 @@ import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
 import { applySections, gluedSections, type PassportOrder } from '../model/surfaces';
 import { Segmented } from '../elements/Segmented';
+import { IconButton } from '../elements/IconButton';
+import { ICON_CANON } from '../elements/iconCanon';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
 import { BlockBoundary } from './BlockBoundary';
@@ -130,6 +132,16 @@ export interface RecordViewProps {
   widthStore?: WidthStore;
 }
 
+/**
+ * Колонка свойств: умолчание, пределы и порог рейки (S4-30).
+ *
+ * 280 — середина прежнего `minmax(240, 320)` из seidr.css: пока границу не
+ * тянули, вид не меняется. 240 — оттуда же: уже этого пара «поле — значение»
+ * ломается в две строки, поэтому ниже порога подписи не сжимаются, а честно
+ * исчезают — остаются иконки. 56 — ширина рейки, как у левого меню.
+ */
+const PROPS_W = { def: 280, min: 240, max: 520, rail: 200, railW: 56, hide: 96 };
+
 /** Часы с шагом в минуту — для «получено N мин»; выключены — не тикают. */
 function useMinuteClock(on: boolean): number {
   const [now, setNow] = useState(() => Date.now());
@@ -194,6 +206,49 @@ function Fields({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: Ki
 }
 
 function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: KindConfig | undefined; ctx: KitCtx; lang: KitLang; edit?: EditSlot }) {
+  // Разделы тела ДАННЫМИ (S5-06): рисует kit, поэтому у каждого есть ✎ и
+  // черновик. Проверяется ПЕРВЫМ — данные главнее своей функции рисования:
+  // именно `overview` тихо отнял правку заметки задачи на проде v1.17.7
+  // (приложение задавало его всегда, когда у типа есть поля группы «тело»).
+  const sections = kind?.bodySections ?? [];
+  if (sections.length) {
+    const body = record.body_md?.trim();
+    return (
+      <div className="sk-rec-sections">
+        {/* Тело записи, если оно есть, идёт первым — до разделов.
+            ПУСТОЕ тело при наличии разделов НЕ получает редактора: у таких
+            типов тело склеено из разделов (у ADR — «Контекст / Решение /
+            Следствия»), и предлагать писать «в тело» значило бы предлагать
+            путь, которого на сервере нет. Пишут в разделы. */}
+        {body && (
+          edit
+            ? <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} drafts={edit.drafts?.('body_md')} />
+            : <>{ctx.md(record.body_md ?? '')}</>
+        )}
+        {sections.map(s => {
+          const raw = record.fields[s.key];
+          const text = typeof raw === 'string' ? raw : raw === null || raw === undefined ? '' : valueText(raw);
+          // Раздел может быть только для чтения САМ ПО СЕБЕ: сервер не даёт
+          // пути записи именно для него (`schema.fields[].editable: false`).
+          // Право правки записи этого не отменяет: ✎ у такого раздела обещал
+          // бы сохранение, которого некуда отправить.
+          const may = edit && s.editable !== false ? edit : undefined;
+          // Без права правки пустой раздел не рисуем: подпись без содержимого
+          // ничего не сообщает. С правом — рисуем, иначе в пустой раздел
+          // нечем написать, и это тупик без способа начать.
+          if (!text.trim() && !may) return null;
+          return (
+            <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
+              <h2 className="sk-rec-fields__sechead">{s.title}</h2>
+              {may
+                ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} />
+                : <>{ctx.md(text)}</>}
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
   if (kind?.overview) return <>{renderOut(kind.overview(record, ctx), ctx)}</>;
   // Тело с правом на правку: тот же рендер чтения + ✎; пустое — «Текста нет»
   // и ✎, а не тупик без способа написать.
@@ -281,7 +336,14 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // меняется. Минимум 240 — оттуда же: уже этого пара «поле — значение»
   // ломается в две строки.
   const widths = useMemo(() => widthStore ?? createSafeStorage(), [widthStore]);
-  const [propsW, setPropsW] = useState(() => zoneSize(widths, 'rec.props', 280));
+  const [propsW, setPropsW] = useState(() => zoneSize(widths, 'rec.props', PROPS_W.def, { min: PROPS_W.railW, max: PROPS_W.max }));
+  // S4-30, уточнение владелицы 09.11: «не только при полном развороте — это
+  // промежуточное состояние resizable состояния». Состояние колонки НЕ
+  // хранится отдельно от размера: две правды о том, «что сейчас с колонкой»,
+  // разошлись бы первой же правкой. Узкий размер и ЕСТЬ рейка.
+  const propsRail = propsW < PROPS_W.rail;
+  /** Вернуть колонку из рейки: размер ниже порога и ЕСТЬ рейка, поэтому возвращаем размер. */
+  const openProps = (): void => { setPropsW(w => (w < PROPS_W.min ? PROPS_W.def : w)); setPropsOpen(true); };
   // <details> меняет своё open сам, и React не возвращает его обратно, если
   // проп не менялся. В управляемом режиме это сделало бы управление обманом:
   // человек щёлкнул, приложение не сохранило, а строка осталась раскрытой.
@@ -426,16 +488,34 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   ) : <div className="sk-rec__panel">{panel}</div>;
   // Снизу / на весь экран: шапка на всю ширину, под ней в одном ряду вкладки и «Свойства» —
   // свойства начинаются вровень с контентом, а не с заголовком (владелица 08.11).
+  // Рейка зоны: те же три действия, что у рейки полного экрана, только
+  // иконками. Выбор иконок — владелицы 09.11 (ICON_CANON.recProps/recGraph/
+  // recAnalytics); подпись остаётся именем для скринридера и подсказкой.
+  const zoneRail = (
+    <>
+      <IconButton icon={ICON_CANON.recProps} label={kitT(lang, 'kit.record.tab.props')} onClick={() => openProps()} />
+      <IconButton icon={ICON_CANON.recGraph} label={kitT(lang, 'kit.record.tab.graph')} onClick={() => onTab(RECORD_TABS.graph)} />
+      <IconButton icon={ICON_CANON.recAnalytics} label={kitT(lang, 'kit.record.rail.analytics')} onClick={() => onTab(RECORD_TABS.links)} />
+    </>
+  );
   const propsAside = propsSide && kind ? (
-    <aside className="sk-rec__props" data-zone="props" aria-label={kitT(lang, 'kit.record.tab.props')}>
-      {/* Заголовок зоны — кнопка свёртки: то же действие, что «▸ Свойства» во
-          весь экран (находка P1 аудита 08.11 про два поведения). */}
-      <button type="button" className="sk-rec__zone sk-rec__zone--fold" aria-expanded="true" onClick={() => setPropsOpen(false)}>
-        {kitT(lang, 'kit.record.tab.props')}
-      </button>
-      <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
-        <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
-      </BlockBoundary>
+    <aside
+      className={['sk-rec__props', propsRail ? 'sk-rec__props--rail' : ''].filter(Boolean).join(' ')}
+      data-zone="props"
+      aria-label={kitT(lang, 'kit.record.tab.props')}
+    >
+      {propsRail ? zoneRail : (
+        <>
+          {/* Заголовок зоны — кнопка свёртки: то же действие, что «▸ Свойства» во
+              весь экран (находка P1 аудита 08.11 про два поведения). */}
+          <button type="button" className="sk-rec__zone sk-rec__zone--fold" aria-expanded="true" onClick={() => setPropsOpen(false)}>
+            {kitT(lang, 'kit.record.tab.props')}
+          </button>
+          <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
+            <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+          </BlockBoundary>
+        </>
+      )}
     </aside>
   ) : null;
   const mainBlock = (
@@ -483,17 +563,36 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
           </details>
         )}
         {propsAside ? (
-          <div className="sk-rec__body" style={{ '--props-w': `${propsW}px` } as CSSProperties}>
+          <div
+            className="sk-rec__body"
+            style={{ '--props-w': `${propsRail ? PROPS_W.railW : propsW}px` } as CSSProperties}
+          >
             <div className="sk-rec__content">{tabsBlock}</div>
             {/* Граница содержимого и свойств (S4-30). Зона — СПРАВА от неё,
-                поэтому side="after": тянуть влево значит расширять свойства. */}
+                поэтому side="after": тянуть влево значит расширять свойства.
+                Минимум — ширина рейки, а не колонки: сжатая колонка с
+                обрезанными подписями не состояние, а поломка, поэтому ниже
+                порога подписи честно исчезают и остаются иконки. */}
             <ResizeBorder
               zone="rec.props"
               className="sk-rec__resize"
               side="after"
               size={propsW}
-              min={240}
-              max={520}
+              min={PROPS_W.railW}
+              max={PROPS_W.max}
+              levels={{
+                rail: PROPS_W.rail,
+                hide: PROPS_W.hide,
+                // Рейку рисует сам размер (propsRail), поэтому здесь нужен
+                // только уход колонки. И размер при уходе возвращается к
+                // умолчанию: иначе человек раскроет свойства и получит рейку,
+                // которую не просил.
+                onLevel: level => {
+                  if (level !== 'hidden') return;
+                  setPropsW(PROPS_W.def);
+                  setPropsOpen(false);
+                },
+              }}
               store={widths}
               onSize={setPropsW}
               label={kitT(lang, 'kit.record.propsWidth')}
@@ -501,11 +600,17 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
             {propsAside}
           </div>
         ) : tabsBlock}
+        {/* Рейка во весь экран — та же мини-версия зоны, что и у узкой колонки:
+            только иконками (владелица 09.11, «три»). Подписи вертикальным
+            текстом ушли: в одной оболочке два вида одной рейки человек читает
+            как два разных элемента. */}
         {placement === 'full' && (
           <nav className="sk-rec-rail" aria-label={kitT(lang, 'kit.record.rail')}>
-            {hasProps && <button type="button" className="sk-rec-rail__btn" onClick={() => setPropsOpen(true)}>{kitT(lang, 'kit.record.tab.props')}</button>}
-            <button type="button" className="sk-rec-rail__btn" onClick={() => onTab(RECORD_TABS.graph)}>{kitT(lang, 'kit.record.tab.graph')}</button>
-            <button type="button" className="sk-rec-rail__btn" onClick={() => onTab(RECORD_TABS.links)}>{kitT(lang, 'kit.record.rail.analytics')}</button>
+            {hasProps && (
+              <IconButton icon={ICON_CANON.recProps} label={kitT(lang, 'kit.record.tab.props')} onClick={() => setPropsOpen(true)} />
+            )}
+            <IconButton icon={ICON_CANON.recGraph} label={kitT(lang, 'kit.record.tab.graph')} onClick={() => onTab(RECORD_TABS.graph)} />
+            <IconButton icon={ICON_CANON.recAnalytics} label={kitT(lang, 'kit.record.rail.analytics')} onClick={() => onTab(RECORD_TABS.links)} />
           </nav>
         )}
     </>

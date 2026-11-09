@@ -4,10 +4,10 @@
 // а новые паспорта kit (S4-33, RecordDock + RecordView через lore.record/1) жили только
 // в демо /kit/passport. Теперь щелчок по записи открывает её паспорт поверх списка;
 // место (справа / снизу / весь экран) переключается, «Закрыть» возвращает к списку.
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons } from '@seidr/kit';
+import { KitShell, registerGameIcons, type KitConfig } from '@seidr/kit';
 import { ListScreen } from './ListScreen';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -54,5 +54,85 @@ describe('паспорт записи открывается из живого �
     // под нагрузкой: он монтирует весь ListScreen и ждёт MartProse/mermaid.
     // Проверено двумя сессиями: в одиночку проходит, красный только в полном
     // прогоне. «Flaky» не называем — для этого нужно ≥10 прогонов со счётом.
+  }, 15000);
+});
+
+describe('S4-02 · личные настройки записи доходят до экрана (CJM прод 09.11.2026)', () => {
+  // До этой правки выбор «Правая колонка записи» и «Меню при чтении записи»
+  // ложился атрибутами на корень документа, которых НЕ читал никто: настройка
+  // сохранялась и ничего не делала, а в панели рядом стоял второй, тоже
+  // мёртвый блок про то же. Владелица видела «две правды».
+  const attr = (name: string, value: string | null) => {
+    if (value === null) document.documentElement.removeAttribute(name);
+    else document.documentElement.setAttribute(name, value);
+  };
+  afterEach(() => { attr('data-right-column', null); attr('data-read-nav', null); });
+
+  const openPassport = async () => {
+    const r = render(<ListScreen screen="sprints" fetchImpl={fakeFetch()} urlState={false} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Спринт SP' }));
+    await waitFor(
+      () => expect(r.container.querySelector('[data-testid="kit-rec-dock"] article[data-kind]')).toBeTruthy(),
+      { timeout: 8000 },
+    );
+    return r;
+  };
+
+  /** Снизу свойства — КОЛОНКА: только там выбор «открыта/свёрнута» и виден. */
+  const toBottom = () => {
+    fireEvent.click(screen.getByRole('button', { name: /^Вид/ }));
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Паспорт открывается' })).getByRole('radio', { name: 'снизу' }));
+  };
+
+  it('положительный контроль: «открыта» — колонка свойств раскрыта', async () => {
+    attr('data-right-column', 'open');
+    const { container } = await openPassport();
+    toBottom();
+    await waitFor(() => expect(container.querySelector('aside[data-zone="props"]')).toBeTruthy());
+  }, 15000);
+
+  it('«свёрнута» — колонки нет, свойства строкой-свёрткой', async () => {
+    attr('data-right-column', 'closed');
+    const { container } = await openPassport();
+    toBottom();
+    await waitFor(() => expect(container.querySelector('.sk-rec-propsrow')).toBeTruthy());
+    expect(container.querySelector('aside[data-zone="props"]')).toBeNull();
+  }, 15000);
+
+  it('«не сворачивать» — меню оболочки экран не трогает', async () => {
+    // Положительный контроль обратной стороны: без выбора человека экран не
+    // должен убирать меню сам.
+    attr('data-read-nav', null);
+    const { container } = await openPassport();
+    expect(container.querySelector('.sk-shell--menu-collapsed')).toBeNull();
+  }, 15000);
+});
+
+describe('S4-02 · «сворачивать меню при чтении» — положительный контроль в оболочке', () => {
+  // Отрицательный контроль (экран не трогает меню сам) есть выше. Без этого
+  // теста правка оставалась бы недоказанной: сам по себе ListScreen оболочки
+  // не видит, и «ничего не произошло» выглядело бы как успех.
+  const SHELL_CONFIG: KitConfig = {
+    modules: [{ id: 'lore', title: 'LORE', icon: 'scroll-unfurled', status: 'active' }],
+    menu: { groups: [{ id: 'work', title: 'Работа', items: [{ id: 'sprints', title: 'Спринты', view: 'list' }] }] },
+    kinds: { sprint: { title: 'Спринт', icon: 'sprint' } },
+    statuses: { items: [{ code: 'done', title: 'Готово', category: 'done', icon: 'check-mark', color: 'var(--suc)' }] },
+  };
+  const win = () => ({ location: { pathname: '/', search: '', hash: '' }, history: { pushState: () => {}, replaceState: () => {} } });
+
+  afterEach(() => { document.documentElement.removeAttribute('data-read-nav'); });
+
+  it('меню убрано, пока открыта запись, и возвращается после закрытия', async () => {
+    document.documentElement.setAttribute('data-read-nav', 'collapse');
+    const { container } = render(
+      <KitShell config={SHELL_CONFIG} win={win()} narrow={false}>
+        <ListScreen screen="sprints" fetchImpl={fakeFetch()} urlState={false} />
+      </KitShell>,
+    );
+    expect(container.querySelector('.sk-shell--menu-collapsed')).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'Спринт SP' }));
+    await waitFor(() => expect(container.querySelector('.sk-shell--menu-collapsed')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть паспорт' }));
+    await waitFor(() => expect(container.querySelector('.sk-shell--menu-collapsed')).toBeNull());
   }, 15000);
 });
