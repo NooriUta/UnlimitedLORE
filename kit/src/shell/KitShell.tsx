@@ -14,6 +14,7 @@
 // которой нет в выгрузке, помечена, а не выброшена молча.
 import { ICON_CANON } from '../elements/iconCanon';
 import { navClick } from '../core/navClick';
+import { useNarrow } from '../core/narrow';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { KitConfig, KitData } from '../core/contract';
@@ -171,7 +172,6 @@ export interface KitShellProps {
   children?: ReactNode;
 }
 
-const NARROW_QUERY = '(max-width: 720px)';
 const RECENT_LIMIT = 8;
 
 /**
@@ -258,24 +258,17 @@ function readList<T>(storage: SafeStorage, key: string): T[] {
 }
 
 /**
- * Узкий экран (телефон, ≤720px) — один порог на весь kit: оболочка уводит меню
- * в drawer, выбор проектов (S4-03) — в лист снизу. force задан — без matchMedia.
+ * Узкий экран (телефон, ≤720px) — ОДИН порог на весь kit: оболочка уводит меню
+ * в drawer, выбор проектов (S4-03) — в лист снизу, список — в карточки, а
+ * строка условий сворачивает лишнее в «+N» (S9-12).
+ *
+ * Сам хук живёт в `core/narrow.ts`: список не может импортировать оболочку
+ * ради одного хука, а второй порог в списке означал бы, что «узко» наступает
+ * в разных местах по-разному. Здесь — реэкспорт, чтобы прежние импорты
+ * `useNarrow` из оболочки продолжали работать.
  */
-export function useNarrow(force?: boolean): boolean {
-  const [matches, setMatches] = useState(() => {
-    if (force !== undefined || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-    return window.matchMedia(NARROW_QUERY).matches;
-  });
-  useEffect(() => {
-    if (force !== undefined || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-    const mql = window.matchMedia(NARROW_QUERY);
-    setMatches(mql.matches);
-    const onChange = (e: { matches: boolean }) => setMatches(e.matches);
-    mql.addEventListener?.('change', onChange);
-    return () => mql.removeEventListener?.('change', onChange);
-  }, [force]);
-  return force ?? matches;
-}
+export { NARROW_QUERY } from '../core/narrow';
+export { useNarrow };
 
 function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
   const usable = config.modules.filter(m => m.status !== 'planned');
