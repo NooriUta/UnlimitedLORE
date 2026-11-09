@@ -176,6 +176,17 @@ function buildInit(t: DiagramTheme, elk: boolean): string {
   return `%%{init: ${JSON.stringify(cfg)}}%%`;
 }
 
+/**
+ * Строка %%{init}%% — после фронтматтера, а не перед ним. Mermaid узнаёт фронтматтер
+ * (`---` / `config:` / `layout: elk` / `---`, правило владелицы 08.11.2026 для всех диаграмм)
+ * только в самом начале текста; init перед ним давал «Parse error on line 1: ---config: layout»
+ * (прод 09.11, ADR-MINILORE-007). Та же правка, что в kit/src/content/MartProse.tsx.
+ */
+export function withInit(def: string, init: string): string {
+  const fm = /^\s*(---\r?\n[\s\S]*?\r?\n---[ \t]*)(\r?\n|$)/.exec(def);
+  if (!fm) return `${init}\n${def}`;
+  return `${fm[1]}\n${init}\n${def.slice(fm[0].length)}`;
+}
 /** Экспортирована, чтобы продуктовый `Markdown` (shared.tsx) мог рендерить те
  * же диаграммы внутри своего собственного `.lore-md`-обёртки, а не только
  * внутри MartProse — тела UC/актора/боли и т.п. ходят через другой рендерер
@@ -187,7 +198,7 @@ export function MermaidDiagram({ def }: { def: string }) {
   useEffect(() => {
     let active = true;
     setErr(null);
-    mermaid.render(`mart-mermaid-${mermaidSeq++}`, `${buildInit(DIAGRAM_THEMES[themeIdx], isElkCompatible(def))}\n${def}`)
+    mermaid.render(`mart-mermaid-${mermaidSeq++}`, withInit(def, buildInit(DIAGRAM_THEMES[themeIdx], isElkCompatible(def))))
       .then(({ svg }) => { if (active) setSvg(svg); })
       .catch(e => {
         console.warn('[mart-prose mermaid] render error:', e);
