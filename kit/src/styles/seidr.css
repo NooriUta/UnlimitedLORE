@@ -1372,12 +1372,24 @@ code, pre, kbd, samp { font-family: var(--mono); }
   padding: 6px;
   border-right: 1px solid var(--bd);
   background: var(--bg1);
+  /* Клетка задана явно (дефект прода v1.17.7: «левое меню разворачивается во
+     всю стену»). Ручка границы стоит в row 1 / col 1 явно, а явно размещённые
+     элементы сетка ставит первыми — автоматически размещённое меню уезжало в
+     колонку 2 (1fr), а содержимое в строку 2. */
+  grid-row: 1;
+  grid-column: 1;
 }
 /* position: relative — система координат для дока «во весь экран» внутри
    оболочки: замечание владелицы «"развернуть на всю страницу" скрывает даже
    верхнее меню, чего не было в прототипе». «Весь экран» внутри приложения
    значит «вся область содержимого». */
-.sk-shell__main { position: relative; min-width: 0; overflow: auto; }
+.sk-shell__main {
+  position: relative; min-width: 0; overflow: auto;
+  /* Последняя колонка первой строки при любом числе колонок: две у раскрытого
+     меню, рейки и ушка, одна на узком экране. */
+  grid-row: 1;
+  grid-column: -2 / -1;
+}
 .sk-shell__main:focus { outline: none; }
 .sk-shell__grp + .sk-shell__grp { margin-top: 10px; }
 .sk-shell__grp-title {
