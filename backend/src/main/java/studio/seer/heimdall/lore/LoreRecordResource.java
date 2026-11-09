@@ -107,6 +107,7 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> out = envelope(rec, values, List.of(), List.of(),
             LoreRecordPerms.of(type, role, identified, null, 0, specStatuses(type)), Map.of(), type, List.of(),
             List.of());
+        out.put("computed", Map.of());
         return noStore(Response.ok(out));
     }
 
@@ -132,6 +133,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "release" -> LoreRecordValues.release(row);
             default -> LoreRecordValues.spec(row);
         };
+        // Итоги — отдельным блоком computed, не в values (S7A-12 09.11).
+        Map<String, Object> computed = new LinkedHashMap<>(LoreRecordValues.computed(type, row));
         String status = switch (type) {
             case "sprint", "task" -> LoreRecordValues.planToken(LoreRecordValues.str(row.get("status_raw")));
             case "decision" -> LoreRecordValues.docToken(row.get("status_raw"));
@@ -203,7 +206,7 @@ public class LoreRecordResource extends LoreResourceBase {
                     }
                     Map<String, Object> totals = LoreSprintTotals.aggregate(rowsWithSprint, List.of(id)).get(0);
                     for (String k : List.of("tasks_total", "effort_days_total", "actual_days_total"))
-                        values.put(k, totals.get(k));
+                        computed.put(k, totals.get(k));
                 }
             }
             case "task" -> {
@@ -245,6 +248,7 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> out = envelope(rec, values, parts, links,
             LoreRecordPerms.of(type, role, identified, status, openTasks, specStatuses(type)), facts, type, blocks,
             dataState);
+        out.put("computed", computed);
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());

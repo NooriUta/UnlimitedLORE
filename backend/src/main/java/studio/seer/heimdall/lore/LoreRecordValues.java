@@ -236,6 +236,24 @@ final class LoreRecordValues {
         try { return v == null ? 0 : Integer.parseInt(String.valueOf(v)); } catch (NumberFormatException e) { return 0; }
     }
 
+    /**
+     * Вычисляемые итоги записи по строке её среза — отдельно от values (S7A-12 09.11: объект
+     * {value, known, of} в values клиент рисует строкой, то есть мусором). Итоги спринта
+     * считаются по задачам в фасаде (LoreSprintTotals), здесь — вехи и релиза.
+     */
+    static Map<String, Object> computed(String type, Map<String, Object> r) {
+        Map<String, Object> c = new LinkedHashMap<>();
+        switch (type == null ? "" : type) {
+            case "milestone" -> c.put("sprints_total", countOf(arr(r.get("direct_sprint_ids")).size()));
+            case "release" -> {
+                c.put("sprints_total", countOf(intOf(r.get("sprint_count"))));
+                c.put("prs_total", countOf(intOf(r.get("pr_count"))));
+            }
+            default -> { }
+        }
+        return c;
+    }
+
     /** Kit 09.11: паспорт вехи (срез {@code milestone_by_id}), только чтение. */
     static Map<String, Object> milestone(Map<String, Object> r) {
         Map<String, Object> v = new LinkedHashMap<>();
@@ -247,7 +265,6 @@ final class LoreRecordValues {
         v.put("products", arr(r.get("products")));
         v.put("goal_md", str(r.get("goal_md")));
         v.put("decisions_md", str(r.get("decisions_md")));
-        v.put("sprints_total", countOf(arr(r.get("direct_sprint_ids")).size()));
         return v;
     }
 
@@ -263,8 +280,6 @@ final class LoreRecordValues {
         v.put("week", str(r.get("week")));
         v.put("projects", arr(r.get("projects")));
         v.put("description_md", str(r.get("description_md")));
-        v.put("sprints_total", countOf(intOf(r.get("sprint_count"))));
-        v.put("prs_total", countOf(intOf(r.get("pr_count"))));
         return v;
     }
 
