@@ -59,9 +59,8 @@ final class LoreActorHarness {
         "opencode", new String[]{"OpenCode", "OpenCode"});
 
     /**
-     * V75: свойство, засев справочника, заполнение по имени. Заполнение — из тех же
-     * {@link #NAME_RULES}, что {@link #fromName}: каждое UPDATE исключает совпадения с
-     * другими правилами (неоднозначное остаётся null) и не трогает уже выставленное.
+     * V75: свойство и засев справочника — только аддитивные формы (чек-лист v1). Заполнение
+     * по имени — Java-шаг V76 ({@link #plan}, LoreSchemaMigrationRunner).
      */
     static final List<String> SCHEMA_SQL_V75 = build();
 
@@ -76,24 +75,24 @@ final class LoreActorHarness {
                 + ", is_active=true, is_extensible=true UPSERT WHERE dict_type='harness' AND code='" + code + "'");
             order += 10;
         }
-        for (Map.Entry<String, List<String>> e : NAME_RULES.entrySet()) {
-            StringBuilder s = new StringBuilder("UPDATE KnowActor SET harness='" + e.getKey()
-                + "' WHERE kind='agent' AND harness IS NULL AND (");
-            s.append(likeAny(e.getValue())).append(")");
-            for (Map.Entry<String, List<String>> other : NAME_RULES.entrySet())
-                if (!other.getKey().equals(e.getKey()))
-                    for (String p : other.getValue()) s.append(" AND name.toLowerCase() NOT LIKE '%").append(p).append("%'");
-            sql.add(s.toString());
-        }
         return List.copyOf(sql);
     }
 
-    private static String likeAny(List<String> patterns) {
-        StringBuilder s = new StringBuilder();
-        for (String p : patterns) {
-            if (s.length() > 0) s.append(" OR ");
-            s.append("name.toLowerCase() LIKE '%").append(p).append("%'");
+    /** Назначение harness актору при заполнении V76. */
+    record Assign(String actorId, String harness) {}
+
+    /**
+     * План заполнения V76: вход — агенты с пустым harness (actor_id, name), выход — только
+     * однозначные назначения по {@link #fromName}. Остальные остаются null — это видно в
+     * agent_owners. Пишется с условием «harness ещё не стоит» — уже выставленное не трогается.
+     */
+    static List<Assign> plan(List<Map<String, Object>> agentsWithoutHarness) {
+        List<Assign> out = new ArrayList<>();
+        for (Map<String, Object> a : agentsWithoutHarness) {
+            Object id = a.get("actor_id");
+            String h = fromName(a.get("name") == null ? null : String.valueOf(a.get("name")));
+            if (id != null && h != null) out.add(new Assign(String.valueOf(id), h));
         }
-        return s.toString();
+        return out;
     }
 }

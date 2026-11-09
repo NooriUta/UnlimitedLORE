@@ -1568,7 +1568,11 @@ final class LoreSchemaMigrations {
 
         // SPRINT_UXR_S7B_ADMIN/S7B-15, ADR-MINILORE-007 (поправка 09.11): harness актора-агента —
         // свойство, справочник harness, заполнение по имени только при однозначном совпадении.
-        new Step(75, 17, "actor_harness", LoreActorHarness.SCHEMA_SQL_V75)
+        new Step(75, 17, "actor_harness", LoreActorHarness.SCHEMA_SQL_V75),
+
+        // S7B-15: заполнение harness по имени — Java-шаг (в SQL после v1 только аддитивное):
+        // однозначные назначения LoreActorHarness.plan, с условием «ещё не стоит».
+        new Step(76, 17, "java__actor_harness_backfill", List.of())
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

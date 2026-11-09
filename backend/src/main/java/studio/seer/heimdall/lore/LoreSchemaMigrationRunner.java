@@ -492,6 +492,26 @@ public class LoreSchemaMigrationRunner {
         if (version == 57) dropPlanItemLeftoversIfUnused();
         if (version == 68) backfillStatusHistory();
         if (version == 71) backfillTaskHistory();
+        if (version == 76) backfillActorHarness();
+    }
+
+    /**
+     * V76 (S7B-15, ADR-MINILORE-007): harness агентам по имени — только однозначные
+     * ({@link LoreActorHarness#plan}), с условием «ещё не стоит». Идемпотентен.
+     */
+    @SuppressWarnings("unchecked")
+    int backfillActorHarness() {
+        Object r = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "SELECT actor_id, name FROM KnowActor WHERE kind = 'agent' AND harness IS NULL", null))
+            .await().indefinitely().result();
+        List<Map<String, Object>> rows = r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        List<LoreActorHarness.Assign> plan = LoreActorHarness.plan(rows);
+        for (LoreActorHarness.Assign a : plan)
+            client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowActor SET harness = :h WHERE actor_id = :id AND harness IS NULL",
+                Map.of("h", a.harness(), "id", a.actorId()))).await().indefinitely();
+        LOG.infof("[LORE MIGRATE] V76 harness по имени: заполнено %d, осталось без harness %d", plan.size(), rows.size() - plan.size());
+        return plan.size();
     }
 
     /**

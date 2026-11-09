@@ -38,9 +38,19 @@ class LoreActorHarnessTest {
         for (String code : LoreActorHarness.REGISTRY)
             assertTrue(sql.stream().anyMatch(s -> s.contains("dict_type='harness'") && s.contains("code='" + code + "'")),
                 "в справочнике есть " + code);
-        assertTrue(sql.stream().anyMatch(s -> s.startsWith("UPDATE KnowActor SET harness='claude-code'") && s.contains("harness IS NULL")),
-            "заполнение не затирает уже выставленное");
+        assertFalse(sql.stream().anyMatch(s -> s.startsWith("UPDATE KnowActor")),
+            "в SQL-шаге после v1 только аддитивное — заполнение идёт Java-шагом V76");
         assertTrue(LoreSchemaMigrations.STEPS.stream().anyMatch(s -> s.version() == 75), "шаг V75 зарегистрирован");
+        assertTrue(LoreSchemaMigrations.STEPS.stream().anyMatch(s -> s.version() == 76 && s.name().equals("java__actor_harness_backfill")));
+    }
+
+    @Test
+    void backfillPlanAssignsOnlyUnambiguous() {
+        List<LoreActorHarness.Assign> plan = LoreActorHarness.plan(List.of(
+            Map.of("actor_id", "A1", "name", "Claude Code (full)"),
+            Map.of("actor_id", "A2", "name", "lore-mcp-full"),
+            Map.of("actor_id", "A3", "name", "Claude Code vs Codex")));
+        assertEquals(List.of(new LoreActorHarness.Assign("A1", "claude-code")), plan, "только однозначные");
     }
 
     @Test
