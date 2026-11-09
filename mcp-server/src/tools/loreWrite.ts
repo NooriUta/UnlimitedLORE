@@ -163,6 +163,8 @@ function definePostTool<S extends z.ZodRawShape>(
     missingProject?: (args: ShapeOutput<S>) => boolean;
     /** Отказ ДО записи с объяснением, что делать вместо (MT-MCP-TRUTH A1): строка — текст отказа. */
     refuse?: (args: ShapeOutput<S>) => string | null;
+    /** Заголовки записи из аргументов (dict_set.human_approval → X-Lore-Human-Approval). */
+    headers?: (args: ShapeOutput<S>) => Record<string, string> | undefined;
   },
 ): void {
   // The SDK's server.tool overloads don't unify cleanly with a generic shape, so
@@ -173,7 +175,8 @@ function definePostTool<S extends z.ZodRawShape>(
     if (refusal) return { content: [{ type: 'text' as const, text: refusal }], isError: true };
     if (def.missingProject?.(args)) return projectRequired();
     try {
-      const res = await lorePost(def.path, def.body(args));
+      const h = def.headers?.(args);
+      const res = h && Object.keys(h).length ? await lorePost(def.path, def.body(args), h) : await lorePost(def.path, def.body(args));
       if (!def.after) return json(res);
       return json({ ...(res as Record<string, unknown>), ...(await def.after(args)) });
     } catch (e) {
@@ -2298,7 +2301,10 @@ export function registerLoreWrite(server: McpServer): void {
       sort_order:    z.number().int().optional().describe('display order within the domain'),
       is_active:     z.boolean().optional().describe('soft-delete flag; default true'),
       is_extensible: z.boolean().optional().describe('true = admins may add values via UI; default false'),
+      human_approval: z.string().max(300).optional().describe('WHO approved and WHERE, e.g. "omiloreadmin: minilore channel 09.11". Dictionaries are human-only; the full profile may write only with a named human approval (owner decision 09.11.2026). Logged on the server.'),
     },
+    headers: ({ human_approval }) =>
+      human_approval && human_approval.trim() ? { 'X-Lore-Human-Approval': encodeURIComponent(human_approval.trim()) } : undefined,
     path: '/lore/dict/entry',
     body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }) =>
       ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }),

@@ -739,6 +739,7 @@
       "code": "string",
       "color": "string?",
       "dict_type": "string",
+      "human_approval": "string?",
       "icon": "string?",
       "is_active": "boolean?",
       "is_extensible": "boolean?",
