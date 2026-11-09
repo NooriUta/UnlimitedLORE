@@ -112,7 +112,7 @@ class LoreModelTypesTest {
     /**
      * Владелица 09.11: «ширина колонок — под контент и важность этого контента; где
      * контента много — „ещё“ или многоточие с подсказкой» — это контракт модели, а не
-     * ручной конфиг kit. У каждого поля — display {priority 1..3, width, overflow}.
+     * ручной конфиг kit. У каждого поля — display {priority 1..4 (как пороги прототипа v4), width, overflow}.
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -122,7 +122,7 @@ class LoreModelTypesTest {
             for (Map<String, Object> f : fields(type(types, t))) {
                 Map<String, Object> d = (Map<String, Object>) f.get("display");
                 assertNotNull(d, t + "." + f.get("key") + ": нет display");
-                assertTrue(List.of(1, 2, 3).contains(d.get("priority")), t + "." + f.get("key") + " priority " + d);
+                assertTrue(List.of(1, 2, 3, 4).contains(d.get("priority")), t + "." + f.get("key") + " priority " + d);
                 assertTrue(LoreModelTypes.WIDTHS.contains(d.get("width")), t + "." + f.get("key") + " width " + d);
                 assertTrue(LoreModelTypes.OVERFLOWS.contains(d.get("overflow")), t + "." + f.get("key") + " overflow " + d);
             }
@@ -143,12 +143,13 @@ class LoreModelTypesTest {
         assertNotNull(computed, "у спринта объявлены вычисляемые поля");
         Map<String, Map<String, Object>> byKey = new java.util.LinkedHashMap<>();
         for (Map<String, Object> c : computed) byKey.put(String.valueOf(c.get("key")), c);
-        assertTrue(byKey.keySet().containsAll(List.of("tasks_total", "effort_days_total", "actual_days_total", "effort_known")), byKey.keySet().toString());
-        Map<String, Object> effort = (Map<String, Object>) byKey.get("effort_days_total").get("rule");
-        assertEquals("tasks", effort.get("from"));
-        assertEquals("sum", effort.get("fn"));
-        assertEquals("effort_days", effort.get("field"));
-        assertEquals(List.of("withdrawn"), effort.get("exclude_categories"), "отменённые не считаются — как в прогрессе");
+        assertTrue(byKey.keySet().containsAll(List.of("tasks_total", "effort_days_total", "actual_days_total")), byKey.keySet().toString());
+        // kit 09.11: одно число из двух мест — расхождение; считает ТОЛЬКО сервер, правила в контракте нет.
+        for (Map<String, Object> c : computed) {
+            assertEquals("server", c.get("source"), c.get("key") + ": считает сервер");
+            assertEquals("value_known_of", c.get("shape"), c.get("key") + ": у суммы своё «из скольких»");
+            assertFalse(c.containsKey("rule"), c.get("key") + ": второй реализации у клиента нет");
+        }
         assertEquals(1, ((Map<String, Object>) byKey.get("effort_days_total").get("display")).get("priority"));
         assertTrue(LoreModelTypes.build(schema()).values().stream()
                 .allMatch(t -> ((Map<String, Object>) t).containsKey("computed")),
