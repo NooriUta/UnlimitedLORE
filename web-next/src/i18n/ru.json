@@ -332,7 +332,6 @@
   "admin.harness.filter": "Фильтр по harness",
   "admin.harness.all": "все",
   "admin.harness.none": "не указан",
-  "admin.harness.noRegistry": "Сервер не прислал реестр harness — правка недоступна, показываем как есть.",
   "admin.harness.edit": "Harness агента {agent}",
   "admin.machine.none": "не привязана",
   "admin.owner.none": "владелец не указан",
@@ -340,5 +339,9 @@
   "admin.col.harness": "Harness",
   "admin.col.machine": "Машина",
   "admin.col.owner": "Владелец",
-  "admin.col.profile": "Профиль"
+  "admin.col.profile": "Профиль",
+  "admin.harness.dictEmpty": "Справочник harness пуст — на базе ещё не прошла миграция. Правка недоступна, показываем как есть.",
+  "admin.harness.dictError": "Справочник harness не прочитался ({reason}) — правка недоступна, показываем как есть.",
+  "admin.harness.offDict": "{code} — вне справочника",
+  "admin.harness.offDictNote": "вне справочника"
 }

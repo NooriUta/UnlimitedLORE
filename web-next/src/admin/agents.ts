@@ -7,8 +7,11 @@
 //
 // Здесь только чтение и одна правка:
 //   • срез agent_owners → строки агентов с harness и машиной;
-//   • реестр допустимых harness — с сервера (harness_registry), своей копии
-//     у клиента нет: новый harness появляется без перевыпуска;
+//   • реестр допустимых harness — справочник `harness` (срез dictionary,
+//     dict_type=harness), как у agent_role; своей копии у клиента нет: новый
+//     harness заводится в справочнике и появляется без перевыпуска. В выборе —
+//     только is_active, по sort_order. Справочник пуст (на базе не прошла
+//     миграция) или не прочитался — правки нет, причина сказана словами;
 //   • правка harness — POST /lore/actor/owner (только админ).
 // «Не указан» и «не привязана» — честные состояния, а не пустые клетки.
 import { loreFetch } from '../auth/session';
@@ -32,8 +35,12 @@ export interface AgentRow {
 
 export interface AgentsData {
   rows: AgentRow[];
-  /** Реестр с сервера; null — сервер его не прислал (старый сервер): правка недоступна. */
+  /** Активные коды справочника по sort_order; null — справочник пуст или не прочитан: правки нет. */
   registry: string[] | null;
+  /** Почему правки нет: справочник пуст / не прочитан (текст ошибки). null — всё в порядке. */
+  registryProblem: { kind: 'empty' } | { kind: 'error'; reason: string } | null;
+  /** Подписи кодов из справочника (в том числе неактивных); кода нет — показываем сам код. */
+  labels: Record<string, string>;
   /** Строк больше, чем пришло (метаданные полноты среза). */
   truncated: boolean;
 }
@@ -46,7 +53,20 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
  */
 const list = (v: unknown): string[] => (Array.isArray(v) ? v : [v]).map(str).filter((x): x is string => x !== null);
 
-export function parseAgents(body: SliceBody<Record<string, unknown>> & { harness_registry?: unknown }): AgentsData {
+export interface HarnessDictRow { code: string; label: string; active: boolean; sort: number }
+
+/** Строки справочника harness: код, подпись на языке, активность, порядок. */
+export function parseHarnessDict(rows: Array<Record<string, unknown>>, lang: 'ru' | 'en' = 'ru'): HarnessDictRow[] {
+  return rows.map(r => ({
+    code: String(r.code ?? ''),
+    label: str(lang === 'en' ? r.label_en : r.label_ru) ?? str(r.label_ru) ?? String(r.code ?? ''),
+    // is_active не пришёл — считаем активным: так справочник отдаёт значения по умолчанию.
+    active: r.is_active !== false,
+    sort: typeof r.sort_order === 'number' ? r.sort_order : 0,
+  })).filter(d => d.code !== '');
+}
+
+export function parseAgents(body: SliceBody<Record<string, unknown>>, dict?: HarnessDictRow[] | { error: string }): AgentsData {
   const rows = (Array.isArray(body.rows) ? body.rows : []).map(r => ({
     actor_id: String(r.actor_id ?? ''),
     name: str(r.name),
@@ -59,14 +79,34 @@ export function parseAgents(body: SliceBody<Record<string, unknown>> & { harness
     owner_kc_subs: list(r.owner_kc_sub),
     owner_display_name: list(r.owner_display_name).join(', ') || null,
   })).filter(r => r.actor_id !== '');
-  const reg = body.harness_registry;
-  const registry = Array.isArray(reg) && reg.every(x => typeof x === 'string') ? (reg as string[]) : null;
-  return { rows, registry, truncated: body.truncated === true };
+  let registry: string[] | null = null;
+  let registryProblem: AgentsData['registryProblem'] = null;
+  const labels: Record<string, string> = {};
+  if (dict === undefined) registryProblem = { kind: 'empty' };
+  else if ('error' in dict) registryProblem = { kind: 'error', reason: dict.error };
+  else {
+    for (const d of dict) labels[d.code] = d.label;
+    const active = dict.filter(d => d.active).sort((a, b) => a.sort - b.sort || a.code.localeCompare(b.code));
+    if (active.length) registry = active.map(d => d.code); else registryProblem = { kind: 'empty' };
+  }
+  return { rows, registry, registryProblem, labels, truncated: body.truncated === true };
 }
 
-export async function fetchAgents(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<AgentsData> {
-  const body = await fetchSlice<Record<string, unknown>>('agent_owners', { limit: '1000' }, { signal, fetchImpl });
-  return parseAgents(body as SliceBody<Record<string, unknown>> & { harness_registry?: unknown });
+export async function fetchAgents(signal?: AbortSignal, fetchImpl?: typeof fetch, lang: 'ru' | 'en' = 'ru'): Promise<AgentsData> {
+  // Справочник читается рядом и НЕ роняет экран: без него агенты видны, нет только правки.
+  const [body, dict] = await Promise.all([
+    fetchSlice<Record<string, unknown>>('agent_owners', { limit: '1000' }, { signal, fetchImpl }),
+    fetchSlice<Record<string, unknown>>('dictionary', { dict_type: 'harness' }, { signal, fetchImpl }).then(
+      b => parseHarnessDict(b.rows, lang),
+      (e: unknown) => ({ error: e instanceof Error ? e.message : String(e) }),
+    ),
+  ]);
+  return parseAgents(body, dict);
+}
+
+/** Код стоит у актора, но в активном справочнике его нет — рисуем как есть с пометкой. */
+export function offRegistry(harness: string | null, registry: string[] | null): boolean {
+  return harness !== null && registry !== null && !registry.includes(harness);
 }
 
 /** Ключ «не указан» в разбивке и фильтре — отдельное значение, а не пропуск. */

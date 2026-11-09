@@ -332,7 +332,6 @@
   "admin.harness.filter": "Filter by harness",
   "admin.harness.all": "all",
   "admin.harness.none": "not set",
-  "admin.harness.noRegistry": "The server sent no harness registry — editing is unavailable, shown as is.",
   "admin.harness.edit": "Harness of agent {agent}",
   "admin.machine.none": "not linked",
   "admin.owner.none": "no owner",
@@ -340,5 +339,9 @@
   "admin.col.harness": "Harness",
   "admin.col.machine": "Machine",
   "admin.col.owner": "Owner",
-  "admin.col.profile": "Profile"
+  "admin.col.profile": "Profile",
+  "admin.harness.dictEmpty": "The harness dictionary is empty — the migration has not run yet. Editing is unavailable, shown as is.",
+  "admin.harness.dictError": "Could not read the harness dictionary ({reason}) — editing is unavailable, shown as is.",
+  "admin.harness.offDict": "{code} — not in dictionary",
+  "admin.harness.offDictNote": "not in dictionary"
 }
