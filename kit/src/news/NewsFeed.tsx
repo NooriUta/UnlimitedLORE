@@ -828,10 +828,13 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
   const main = (
     <>
       <GameIcon slug={NEWS_TYPE_META[e.type]?.icon ?? 'scroll-quill'} size={14} label={typeLabel(e.type, lang)} />
-      <span className="sk-news__tag" data-kind-tag={e.kind} data-tone={km.tone}
-        style={{ '--pill-c': `var(--${km.tone})` } as CSSProperties}>
-        <GameIcon slug={km.icon} size={12} />
-        {kindLabel(e.kind, lang)}
+      {/* Слот одной ширины: плашка своей ширины, заголовки — с одной линии (владелица 09.11). */}
+      <span className="sk-news__tagslot">
+        <span className="sk-news__tag" data-kind-tag={e.kind} data-tone={km.tone}
+          style={{ '--pill-c': `var(--${km.tone})` } as CSSProperties}>
+          <GameIcon slug={km.icon} size={12} />
+          {kindLabel(e.kind, lang)}
+        </span>
       </span>
       <span className="sk-news__rtitle">{e.title ?? e.el}</span>
     </>

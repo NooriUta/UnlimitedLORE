@@ -134,7 +134,7 @@ test('заголовки строк начинаются с одной лини�
   const r = await page.evaluate(() => {
     const links = [...document.querySelectorAll<HTMLElement>('a.sk-news__link')].filter(a => a.offsetParent);
     const xs = links.map(a => Math.round(a.querySelector('.sk-news__rtitle')!.getBoundingClientRect().left - a.getBoundingClientRect().left));
-    const clipped = links.map(a => a.querySelector<HTMLElement>('.sk-news__tag')!).filter(t => t.scrollWidth > t.clientWidth + 1).map(t => t.textContent);
+    const clipped = links.map(a => a.querySelector<HTMLElement>('.sk-news__tagslot')!).filter(t => t.querySelector<HTMLElement>('.sk-news__tag')!.offsetWidth > t.clientWidth + 1).map(t => t.textContent);
     return { xs: [...new Set(xs)], clipped, n: links.length };
   });
   expect(r.n).toBeGreaterThan(2);
