@@ -624,5 +624,21 @@
   "kit.sum.loading": "Считаем…",
   "kit.sum.none": "Не посчитано",
   "kit.sum.cut": "складывали не всё: выдачу обрезали",
-  "kit.tabs.more": "Ещё"
+  "kit.tabs.more": "Ещё",
+  "kit.steps.bar": "Шаги",
+  "kit.steps.progress": "Шаг {n} из {total}",
+  "kit.steps.next": "Дальше",
+  "kit.steps.back": "Назад",
+  "kit.steps.done": "Готово",
+  "kit.steps.empty": "Шагов нет — мастеру нечего показать.",
+  "kit.steps.unknown": "Шага «{key}» здесь нет — открыт первый.",
+  "kit.secret.warn": "Значение будет показано один раз — сохраните его сейчас.",
+  "kit.secret.reveal": "Показать",
+  "kit.secret.copy": "Скопировать",
+  "kit.secret.copied": "Скопировано",
+  "kit.secret.copyNoBuffer": "Буфер обмена недоступен (нужен https или разрешение) — скопируйте вручную.",
+  "kit.secret.copyFailed": "Скопировать не удалось — скопируйте вручную.",
+  "kit.secret.hide": "Скрыть",
+  "kit.secret.spent": "Показать снова нельзя — выдайте новое значение.",
+  "kit.secret.none": "Значения нет — его ещё не выдали."
 }

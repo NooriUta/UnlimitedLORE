@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  Skeleton, StatusStar, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 
@@ -103,6 +103,30 @@ function Samples() {
           <Ear label="Ушко" expanded={false} controls="bare-ear" onToggle={noop} />
           <Ear label="Ушко слева" side="left" expanded onToggle={noop} />
         </div>
+      </section>
+      <section className="bare__sec" data-kit="flow">
+        <h2 className="bare__h2">Мастера</h2>
+        {/* Шаги с незаполненным условием: в снимке видно и причину отказа, и
+            «осталось руками» последнего шага (K2-STEPS). Параметра адреса в
+            снимке нет — состояние шага здесь в памяти. */}
+        <Steps
+          urlKey={null}
+          steps={[
+            { key: 'pick', title: 'Выбор', blocked: 'Не выбрано, что делаем', render: () => <p>Содержимое первого шага</p> },
+            { key: 'fill', title: 'Заполнение', render: () => <p>Содержимое второго шага</p> },
+            { key: 'check', title: 'Проверка', render: () => <p>Содержимое третьего шага</p> },
+          ]}
+          manual={{
+            title: 'Осталось руками',
+            items: [
+              { text: 'Передать пароль лично', hint: 'в системе этого сделать нельзя' },
+              { text: 'Forgejo: доступ к репозиторию', href: 'https://example.org' },
+            ],
+          }}
+        />
+        {/* Секрет в снимке — в состоянии «ещё не показан»: значение в снимок
+            попадать не должно даже в демонстрационном виде (K2-SECRET-ONCE). */}
+        <SecretOnce value="не-показано-в-снимке" label="Секрет" />
       </section>
       <section className="bare__sec" data-kit="content">
         <h2 className="bare__h2">MD / HTML</h2>

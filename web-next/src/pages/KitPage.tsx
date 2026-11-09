@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  Skeleton, StatusStar, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -15,13 +15,14 @@ import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 
-const SECTIONS = ['tokens', 'elements', 'states', 'shell', 'palette', 'content'] as const;
+const SECTIONS = ['tokens', 'elements', 'states', 'shell', 'flow', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
   elements: 'kitPage.sec.elements',
   states: 'kitPage.sec.states',
   shell: 'kitPage.sec.shell',
+  flow: 'kitPage.sec.flow',
   palette: 'kitPage.sec.palette',
   content: 'kitPage.sec.content',
 };
@@ -55,6 +56,8 @@ export default function KitPage() {
   const [fav, setFav] = useState(false);
   const [tab, setTab] = useState<TabId>(readTab);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [flowPick, setFlowPick] = useState<'a' | 'b' | null>(null);
+  const [flowDone, setFlowDone] = useState(false);
   const [earOpen, setEarOpen] = useState(false);
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
   // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
@@ -196,6 +199,65 @@ export default function KitPage() {
           <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('kitPage.sh.sheetTitle')}>
             <p>{t('kitPage.sh.sheetBody')}</p>
           </Sheet>
+        </section>
+
+        <section id="kit-flow" className="kitp__sec" aria-labelledby="kit-flow-h">
+          <h2 id="kit-flow-h" className="kitp__h2">{t('kitPage.sec.flow')}</h2>
+          <p>{t('kitPage.flow.lead')}</p>
+          <Steps
+            flow="kit-demo"
+            urlKey="demoStep"
+            onDone={() => setFlowDone(true)}
+            manual={{
+              title: t('kitPage.flow.manualTitle'),
+              items: [
+                { text: t('kitPage.flow.manual1'), hint: t('kitPage.flow.manualHint') },
+                { text: t('kitPage.flow.manual2'), href: 'https://git.seidrstudio.pro' },
+              ],
+            }}
+            steps={[
+              {
+                key: 'pick',
+                title: t('kitPage.flow.s1'),
+                // Причина отказа — словами, а не серой кнопкой молча.
+                blocked: flowPick ? null : t('kitPage.flow.blocked'),
+                render: () => (
+                  <div className="kitp__row" role="radiogroup" aria-label={t('kitPage.flow.pick')}>
+                    {(['a', 'b'] as const).map(id => (
+                      <button
+                        key={id}
+                        type="button"
+                        className="sk-btn"
+                        role="radio"
+                        aria-checked={flowPick === id}
+                        onClick={() => setFlowPick(id)}
+                      >
+                        {t(id === 'a' ? 'kitPage.flow.optA' : 'kitPage.flow.optB')}
+                      </button>
+                    ))}
+                  </div>
+                ),
+              },
+              {
+                key: 'fill',
+                title: t('kitPage.flow.s2'),
+                render: () => (
+                  <label className="kitp__panel">
+                    {t('kitPage.flow.note')}
+                    {/* Без класса kit: общего правила для полей ввода в
+                        seidr.css нет, и выдумывать имя класса здесь нельзя —
+                        вид разошёлся бы с голым HTML молча (S4-00e). */}
+                    <input defaultValue="" />
+                  </label>
+                ),
+              },
+              { key: 'check', title: t('kitPage.flow.s3'), render: () => <p className="kitp__panel">{t('kitPage.flow.s3lead')}</p> },
+            ]}
+          />
+          {flowDone && <p className="kitp__panel" role="status">{t('kitPage.flow.doneSaid')}</p>}
+          <h3 className="kitp__h3">{t('kitPage.flow.secretHead')}</h3>
+          {/* Значение здесь показное: витрина не выдаёт настоящих секретов. */}
+          <SecretOnce value="demo-0000-0000" label={t('kitPage.flow.secretLabel')} />
         </section>
 
         <section id="kit-palette" className="kitp__sec" aria-labelledby="kit-palette-h">
