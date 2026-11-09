@@ -55,9 +55,38 @@ final class LoreRoleBatch {
             m.put("before", before);
             m.put("after", remove ? null : after);
             m.put("kind", kind);
+            // Kit 2 (K2-DIFF): знак строки и состояние проверки ПО СТРОКЕ. Текущие роли
+            // прочитаны из графа одним запросом — значит каждая строка «проверено».
+            m.put("sign", switch (kind) { case "grant" -> "+"; case "remove" -> "−"; case "update" -> "~"; default -> "="; });
+            m.put("check", Map.of("state", "checked", "source", "graph"));
             out.add(m);
         }
         return out;
+    }
+
+    /** Kit 2 (K2-BATCH-UNDO): окно, в которое пачку можно отменить одним вызовом. */
+    static final java.time.Duration UNDO_WINDOW = java.time.Duration.ofMinutes(15);
+
+    private static final java.util.regex.Pattern BATCH_ID = java.util.regex.Pattern.compile("^rb-([0-9]{13})-[0-9a-f]{8}$");
+
+    /** Идентификатор пачки: время применения зашито в id — окно отмены проверяется без хранилища. */
+    static String batchId(java.time.Instant at) {
+        return "rb-" + String.format("%013d", at.toEpochMilli()) + "-"
+            + String.format("%08x", java.util.concurrent.ThreadLocalRandom.current().nextInt());
+    }
+
+    static java.time.Instant undoUntil(String batchId) {
+        java.util.regex.Matcher m = batchId == null ? null : BATCH_ID.matcher(batchId);
+        if (m == null || !m.matches()) return null;
+        return java.time.Instant.ofEpochMilli(Long.parseLong(m.group(1))).plus(UNDO_WINDOW);
+    }
+
+    /** Причина отказа в отмене или null. */
+    static String undoError(String batchId, java.time.Instant now) {
+        java.time.Instant until = undoUntil(batchId);
+        if (until == null) return "undo_of: не идентификатор пачки (" + batchId + ")";
+        if (now.isAfter(until)) return "undo_of: окно отмены пачки " + batchId + " закрыто в " + until;
+        return null;
     }
 
     /** Обратный пакет: вернуть «было» для всего, что пакет меняет. */

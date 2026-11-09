@@ -1058,6 +1058,8 @@ public class AidaLoreResource extends LoreResourceBase {
                 // Владелица 09.11: итоги спринта — строки задач сворачиваются в строку на
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
+                // Kit 2 (K2-MATRIX): у ячейки матрицы состояние «проверено / не смогли / нет прав».
+                if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out);
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (outside != null) out.put("outside_scope", outside);
                 try {
