@@ -1340,8 +1340,23 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-shell__body {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  /* 232px — умолчание; личную ширину (S4-30) оболочка подставляет переменной. */
+  grid-template-columns: var(--side-w, 232px) minmax(0, 1fr);
   min-height: 0;
+}
+/* Ручка границы меню сидит в той же клетке сетки, что и колонка, прижатая к её
+   правому краю — то есть ровно на линии border-right колонки. Так не пришлось
+   добавлять третий трек: он раздвинул бы меню и содержимое у всех трёх
+   состояний меню и на телефоне. Липкая и во всю высоту окна — тянуть можно и
+   в прокрученной странице, не только у верхнего края. */
+.sk-shell__resize {
+  grid-row: 1;
+  grid-column: 1;
+  justify-self: end;
+  position: sticky;
+  top: var(--sk-top-h);
+  height: calc(100dvh - var(--sk-top-h));
+  z-index: 2;
 }
 .sk-shell--narrow .sk-shell__body { grid-template-columns: minmax(0, 1fr); }
 .sk-shell__side {
@@ -2261,6 +2276,41 @@ code, pre, kbd, samp { font-family: var(--mono); }
   user-select: none;
 }
 .sk-list__grip:hover { background: var(--bd); }
+
+/* Граница между блоками оболочки (S4-30): левое меню, правая колонка, нижний
+   док. Одна и та же черта на все зоны — см. shell/ResizeBorder.tsx.
+
+   Полоса намеренно тонкая и без фона: это граница, а не элемент управления, и
+   украшать её значило бы рисовать лишнюю линию рядом с уже существующей. Она
+   проявляется под курсором и обязана быть видна при фокусе с клавиатуры —
+   иначе управление есть, а где оно, не видно. */
+.sk-resize {
+  flex: 0 0 auto;
+  align-self: stretch;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+}
+.sk-resize--x { width: 6px; min-width: 6px; cursor: col-resize; }
+.sk-resize--y { height: 6px; min-height: 6px; cursor: row-resize; }
+.sk-resize:hover { background: var(--bd); }
+.sk-resize:focus-visible {
+  background: var(--acc);
+  outline: none;
+}
+/* Палец: границы НЕТ (ADR-LORE-049 — цель касания считается от
+   pointer: coarse). Шестью пикселями на сенсоре не прицелиться, а растянуть
+   невидимую полосу до 44px значило бы накрыть ею правый край меню и съесть
+   нажатия на сами пункты — то есть сломать то, ради чего меню и открыто.
+   Поэтому на сенсоре зоны переключаются кнопками состояний (меню: открыто /
+   рейка / ушко; паспорт: справа / снизу / во весь экран), а тянутся границы
+   мышью и с клавиатуры. Это исключение из гейта целей касания, и оно
+   проверяется: web-next/src/a11y/shellLists.a11y.test.tsx. */
+@media (pointer: coarse) {
+  .sk-resize { display: none; }
+}
 
 .sk-list__th {
   position: sticky;
@@ -4372,8 +4422,20 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__modes { display: flex; margin: 0 0 6px; }
 .sk-rec__panel { min-width: 0; }
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
-.sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 24px; align-items: start; }
+.sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) var(--props-w, minmax(240px, 320px)); gap: 24px; align-items: start; }
 .sk-rec__content { min-width: 0; }
+/* Ручка границы между содержимым и свойствами (S4-30). Сидит в клетке колонки
+   свойств, прижатая к её левому краю, то есть ровно на линии border-left —
+   третий трек раздвинул бы колонки и на телефоне тоже. Во всю высоту ряда:
+   align-items: start у сетки иначе дал бы ручку в один пиксель. */
+.sk-rec__resize {
+  grid-row: 1;
+  grid-column: 2;
+  justify-self: start;
+  align-self: stretch;
+  margin-left: -15px;
+  z-index: 1;
+}
 /* Во весь экран (v4): свойства свёрткой под шапкой и вертикальная рейка у правого края. */
 .sk-rec-propsrow { margin: 6px 0 4px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-rec-propsrow__sum { padding: 6px 10px; cursor: pointer; color: var(--t2); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -4497,13 +4559,28 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   overflow: hidden;
   background: var(--bg0);
 }
-.sk-dock[data-placement='right'] { grid-template-columns: minmax(0, 1fr) min(560px, 45%); }
+.sk-dock[data-placement='right'] { grid-template-columns: minmax(0, 1fr) var(--dock-panel-w, min(560px, 45%)); }
 /* Доля списка — по его содержимому, но не больше 40 % высоты дока; остальное
    забирает паспорт. Жёсткие 2fr/3fr оставляли над паспортом пустое поле, когда
    список короткий: аудит 08.11 намерил «343 px прозрачного backdrop — пустая
    треть экрана». Затемнять список нельзя — он живой (решение владелицы 08.11),
    поэтому убрана пустота, а не видимость списка. */
 .sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); --rec-col: min(var(--read-col), 92vw); }
+/* Границу тянули (S4-30) — личная высота паспорта главнее правила «список по
+   содержимому»: правило существует, чтобы не было пустоты, а не чтобы спорить
+   с тем, кто уже показал, сколько ему нужно. Пока не тянули, атрибута нет и
+   раскладка прежняя. */
+.sk-dock[data-placement='bottom'][data-sized='h'] { grid-template-rows: minmax(0, 1fr) var(--dock-panel-h, 420px); }
+/* Места в сетке названы явно: ручка — третий ребёнок, и при автоматической
+   раскладке паспорт уехал бы в неявный третий ряд (пустая полоса вместо
+   записи). Ручка сидит в клетке ПАНЕЛИ, прижатая к её внутреннему краю, то
+   есть ровно на линии border-left / border-top панели. */
+.sk-dock[data-placement='right'] .sk-dock__backdrop { grid-area: 1 / 1; }
+.sk-dock[data-placement='right'] .sk-dock__panel { grid-area: 1 / 2; }
+.sk-dock[data-placement='right'] .sk-dock__resize { grid-area: 1 / 2; justify-self: start; align-self: stretch; z-index: 1; }
+.sk-dock[data-placement='bottom'] .sk-dock__backdrop { grid-area: 1 / 1; }
+.sk-dock[data-placement='bottom'] .sk-dock__panel { grid-area: 2 / 1; }
+.sk-dock[data-placement='bottom'] .sk-dock__resize { grid-area: 2 / 1; align-self: start; justify-self: stretch; z-index: 1; }
 .sk-dock__backdrop {
   min-height: 0;
   overflow: auto;
@@ -4535,6 +4612,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 @media (max-width: 720px) {
   .sk-dock[data-placement] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
   .sk-dock[data-placement] .sk-dock__backdrop { display: none; }
+  /* Телефон: списка под паспортом нет, делить нечего — границы тоже нет.
+     Заодно снимаем явные места: в одной клетке паспорт встаёт сам. */
+  .sk-dock[data-placement] .sk-dock__resize { display: none; }
+  .sk-dock[data-placement] .sk-dock__panel { grid-area: auto; }
 }
 
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */

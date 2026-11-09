@@ -46,7 +46,13 @@ describe('снизу / на весь экран — свойства колон�
     expect(side).not.toBeNull();
     expect(within(side).getByTestId('kit-fields').textContent).toContain('1.0');
     expect(side.parentElement?.classList.contains('sk-rec__body')).toBe(true); // 08.11: вровень с контентом, под шапкой
-    expect(container.querySelector('.sk-rec__content')?.nextElementSibling).toBe(side);
+    // Между контентом и свойствами теперь стоит граница, которую можно тянуть
+    // (S4-30): соседство осталось, появился разделитель. Проверяем порядок, а
+    // не «следующий элемент» — иначе утверждение запрещало бы саму границу.
+    const kids = [...(container.querySelector('.sk-rec__body')?.children ?? [])];
+    expect(kids.map(k => k.className.split(' ')[0]))
+      .toEqual(['sk-rec__content', 'sk-resize', 'sk-rec__props']);
+    expect(kids[kids.length - 1]).toBe(side);
   });
   it('на другой вкладке колонка свойств остаётся', () => {
     const { container } = view('bottom', 'links');

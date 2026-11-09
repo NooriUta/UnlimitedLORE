@@ -15,7 +15,7 @@
 import { ICON_CANON } from '../elements/iconCanon';
 import { navClick } from '../core/navClick';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { KitConfig, KitData } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
@@ -28,6 +28,7 @@ import { pushUrlState, readUrlState, sectionScopedPatch, urlStateHref } from '..
 import type { UrlWindow } from '../resilience/urlState';
 import { Sheet } from './Sheet';
 import { Ear } from './Ear';
+import { ResizeBorder, zoneSize } from './ResizeBorder';
 
 /** Где пользователь: модуль, пункт меню, вид пункта. */
 export interface KitNav {
@@ -172,6 +173,18 @@ export interface KitShellProps {
 
 const NARROW_QUERY = '(max-width: 720px)';
 const RECENT_LIMIT = 8;
+
+/**
+ * Левое меню: умолчание и пределы ширины (S4-30).
+ *
+ * 232 — та же ширина, что в seidr.css и в прототипе v4: пока границу не
+ * тянули, вид не меняется. Минимум — чтобы пункт с подписью оставался
+ * читаемым, иначе человек получает колонку, в которой ничего не разобрать и
+ * которая при этом не рейка. Максимум — чтобы меню не съело содержимое:
+ * у зоны, которую можно тянуть без предела, «сломано» и «я так потянула»
+ * выглядят одинаково.
+ */
+const SIDE_W = { def: 232, min: 168, max: 420 };
 const TONES = new Set(['acc', 'suc', 'wrn', 'dng', 'inf']);
 
 /**
@@ -292,6 +305,9 @@ export function KitShell({
   });
   // Меню, убранное на время чтения (S5-05) — состояние сеанса, не выбор.
   const [readCollapsed, setReadCollapsed] = useState(false);
+  // S4-30: ширина левого меню — личная, как ширина колонки списка, и так же
+  // живёт в хранилище, а не в адресе: ссылка общая, ширина личная.
+  const [sideW, setSideW] = useState(() => zoneSize(storage, 'shell.side', SIDE_W.def));
   const navRef = useRef(nav);
   navRef.current = nav;
 
@@ -505,7 +521,13 @@ export function KitShell({
           {topEnd && <div className="sk-shell__top-end">{topEnd}</div>}
           {account && <div className="sk-shell__account">{account}</div>}
         </header>
-        <div className="sk-shell__body">
+        <div
+          className="sk-shell__body"
+          // Ширина — переменной, а не правкой сетки в CSS: трек один, а его
+          // значение личное. Пока не тянули, переменной нет и работает
+          // умолчание из seidr.css.
+          style={{ '--side-w': `${sideW}px` } as CSSProperties}
+        >
           {!narrow && !menuCollapsed && (
             <div className="sk-shell__side">
               {/* Сворачивание — в самой колонке и с видимой подписью: замечание
@@ -524,6 +546,22 @@ export function KitShell({
               </button>
               {menu()}
             </div>
+          )}
+          {/* Граница меню и содержимого (S4-30, слова владелицы 09.11: «левое,
+              правое меню не имеет драг анд дроп мышкой»). Только у раскрытого
+              меню: у рейки ширина — это ширина иконки, у ушка колонки нет
+              вовсе, и ручка там обещала бы управление, которого нет. */}
+          {!narrow && !menuCollapsed && effMenuMode === 'open' && (
+            <ResizeBorder
+              zone="shell.side"
+              className="sk-shell__resize"
+              size={sideW}
+              min={SIDE_W.min}
+              max={SIDE_W.max}
+              store={storage}
+              onSize={setSideW}
+              label={kitT(lang, 'kit.shell.sideWidth')}
+            />
           )}
           {!narrow && menuCollapsed && (
             <Ear
