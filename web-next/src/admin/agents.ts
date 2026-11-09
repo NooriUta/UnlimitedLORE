@@ -23,7 +23,10 @@ export interface AgentRow {
   session_id: string | null;
   /** Код из реестра или null — сервер не знает (не угадываем). */
   harness: string | null;
+  /** Первый владелец — для правки (сервер ждёт один kc_sub). */
   owner_kc_sub: string | null;
+  /** Все владельцы (OWNED_BY может быть несколько). */
+  owner_kc_subs: string[];
   owner_display_name: string | null;
 }
 
@@ -36,6 +39,12 @@ export interface AgentsData {
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null);
+/**
+ * Владелец в agent_owners приходит МАССИВОМ (ребро OWNED_BY может быть не одно):
+ * ["omiloreadmin"]. Строкой его ждать нельзя — иначе у каждого агента выходило
+ * «владелец не указан», хотя он есть. Несколько владельцев — через запятую.
+ */
+const list = (v: unknown): string[] => (Array.isArray(v) ? v : [v]).map(str).filter((x): x is string => x !== null);
 
 export function parseAgents(body: SliceBody<Record<string, unknown>> & { harness_registry?: unknown }): AgentsData {
   const rows = (Array.isArray(body.rows) ? body.rows : []).map(r => ({
@@ -46,8 +55,9 @@ export function parseAgents(body: SliceBody<Record<string, unknown>> & { harness
     machine_id: str(r.machine_id),
     session_id: str(r.session_id),
     harness: str(r.harness),
-    owner_kc_sub: str(r.owner_kc_sub),
-    owner_display_name: str(r.owner_display_name),
+    owner_kc_sub: list(r.owner_kc_sub)[0] ?? null,
+    owner_kc_subs: list(r.owner_kc_sub),
+    owner_display_name: list(r.owner_display_name).join(', ') || null,
   })).filter(r => r.actor_id !== '');
   const reg = body.harness_registry;
   const registry = Array.isArray(reg) && reg.every(x => typeof x === 'string') ? (reg as string[]) : null;
