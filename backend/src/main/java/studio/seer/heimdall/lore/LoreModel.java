@@ -110,12 +110,17 @@ final class LoreModel {
         content.put("partial", true);
         List<String> missing = new ArrayList<>();
         if (schema == null) missing.add("types");
-        missing.add("surfaces");
+        // surfaces отдаётся частично: пока только passport (порядок разделов, LorePassportSurface).
+        missing.add("surfaces:list");
         missing.add("statuses:*");
         content.put("missing", missing);
         content.put("statuses_known", List.copyOf(STATUS_DICTS.keySet()));
         content.put("statuses", statuses);
         if (schema != null) content.put("types", LoreModelTypes.build(schema));
+        Map<String, Object> surfaces = new LinkedHashMap<>();
+        surfaces.put("partial", true);
+        surfaces.put("passport", LorePassportSurface.build());
+        content.put("surfaces", surfaces);
         content.put("dictionaries", dictionaries);
         content.put("warnings", warnings);
 
