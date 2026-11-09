@@ -23,11 +23,18 @@ final class LoreActorHarness {
     static final Map<String, List<String>> NAME_RULES = new LinkedHashMap<>();
     static {
         NAME_RULES.put("claude-code", List.of("claude code", "claude-code"));
-        NAME_RULES.put("kimi-code", List.of("kimi code", "kimi-code"));
+        NAME_RULES.put("kimi-code", List.of("kimi"));
         NAME_RULES.put("dsh", List.of("dsh"));
         NAME_RULES.put("codex", List.of("codex"));
         NAME_RULES.put("opencode", List.of("opencode"));
     }
+
+    /**
+     * Агенты, у которых имя врёт: владелица 09.11 — «все кроме Kimi и basilisk harness Claude»,
+     * а vasilisk зовётся «Claude Code (full) vasilisk». Его harness не угадываем — null, ставит
+     * владелица в админке.
+     */
+    static final java.util.Set<String> NAME_UNRELIABLE = java.util.Set.of("AGENT-FULL_VASILISK-mw85b6r4");
 
     /** harness по имени — только если подходит РОВНО одно правило; иначе null. */
     static String fromName(String name) {
@@ -91,7 +98,7 @@ final class LoreActorHarness {
         for (Map<String, Object> a : agentsWithoutHarness) {
             Object id = a.get("actor_id");
             String h = fromName(a.get("name") == null ? null : String.valueOf(a.get("name")));
-            if (id != null && h != null) out.add(new Assign(String.valueOf(id), h));
+            if (id != null && h != null && !NAME_UNRELIABLE.contains(String.valueOf(id))) out.add(new Assign(String.valueOf(id), h));
         }
         return out;
     }
