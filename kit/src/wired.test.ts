@@ -54,6 +54,8 @@ const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string 
   { symbol: 'ColumnsChoice', declaredIn: 'list/ColumnsChoice.tsx', why: 'выбор колонок в списке и в таблице задач (S4-35)' },
   { symbol: 'SumCell', declaredIn: 'list/sum.tsx', why: 'колонка sum:<поле> — итог с охватом, «не заполнено» вместо нуля (S4-09)' },
   { symbol: 'StatusSlot', declaredIn: 'record/StatusSlot.tsx', why: 'статус в записи становится кнопкой, когда права позволяют его сменить (дефект 09.11)' },
+  { symbol: 'applySections', declaredIn: 'model/surfaces.ts', why: 'порядок разделов паспорта из модели: «задачи первыми, редкое под Ещё» (S4-29)' },
+  { symbol: 'gluedSections', declaredIn: 'model/surfaces.ts', why: 'разделы, вклеенные в хвост тела — как в v1 у зависимостей спринта (S4-29)' },
   { symbol: 'readWidths', declaredIn: 'list/columnWidths.ts', why: 'личная ширина колонок читается при открытии списка (S4-35)' },
   { symbol: 'writeWidths', declaredIn: 'list/columnWidths.ts', why: 'ширина запоминается после перетаскивания (S4-35)' },
   { symbol: 'widthsFor', declaredIn: 'list/columnWidths.ts', why: 'ширины применяются к таблице и не применяются на телефоне (S4-35)' },
@@ -61,6 +63,8 @@ const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string 
   { symbol: 'RecordHistory', declaredIn: 'record/RecordHistory.tsx', why: 'вкладка «История» записи (S5-11)' },
   { symbol: 'RelationTable', declaredIn: 'record/RelationTable.tsx', why: 'связи таблицей с общими колонками (S4-37)' },
   { symbol: 'DataStateBlock', declaredIn: 'record/DataStateBlock.tsx', why: 'блок «что проверено / что не смогли» (S4-30)' },
+  { symbol: 'ResizeBorder', declaredIn: 'shell/ResizeBorder.tsx', why: 'границы зон тянутся мышью: левое меню, колонка свойств, док (S4-30)' },
+  { symbol: 'zoneSaved', declaredIn: 'shell/ResizeBorder.tsx', why: '«границу не тянули» отличается от «поставила умолчание» (S4-30)' },
   { symbol: 'navClick', declaredIn: 'core/navClick.ts', why: 'пункты меню и крошки — ссылки, а не кнопки (S4-28, S4-MENU-STATES)' },
   { symbol: 'urlStateHref', declaredIn: 'resilience/urlState.ts', why: 'у ссылки есть адрес до перехода (S4-28)' },
 ];

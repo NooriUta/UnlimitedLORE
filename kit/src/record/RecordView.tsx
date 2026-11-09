@@ -7,11 +7,15 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
-import { useEffect, useId, useRef, useState } from 'react';
-import type { ComponentType, ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
 import { Tabs, type TabItem } from '../shell/Tabs';
+import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
+import { createSafeStorage } from '../resilience/safeStorage';
+import type { WidthStore } from '../list/columnWidths';
+import { applySections, gluedSections, type PassportOrder } from '../model/surfaces';
 import { Segmented } from '../elements/Segmented';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
@@ -102,6 +106,28 @@ export interface RecordViewProps {
    * 'column' — колонкой слева при bottom/full (раскладка S4-33, отложена, не удалена).
    */
   aroundAs?: 'tabs' | 'column';
+  /**
+   * Порядок и места разделов паспорта — ДАННЫМИ приложения (S4-29).
+   *
+   * Просьба владелицы 09.11: «ты должен определять порядок например Спринт
+   * первое как ни странно задачи потом уже контент… а зависимости и прочее
+   * можно скрыть под море». У LORE это умолчание модели
+   * (`surfaces.passport.<type>.sections`), разобранное `passportSections`.
+   *
+   * Нет или `decided: false` — kit держит свой порядок, группирует связи как
+   * прежде и НИЧЕГО не прячет. «Сервер не решал» не превращается в «решил».
+   */
+  sections?: PassportOrder | null;
+  /**
+   * Хранилище личных размеров зон (S4-30). Не передано — своё, с откатом в
+   * память.
+   *
+   * Да, рядом сказано «kit сам ничего не хранит» — про то, РАСКРЫТЫ ли
+   * свойства: это состояние приложения. Размер зоны — другое: он личный, как
+   * ширина колонки списка («ширина личная, набор командный», решение
+   * владелицы 08.11), в адрес не идёт и приложению про него знать нечего.
+   */
+  widthStore?: WidthStore;
 }
 
 /** Часы с шагом в минуту — для «получено N мин»; выключены — не тикают. */
@@ -199,7 +225,7 @@ function propsSummary(record: KitRecord, kind: KindConfig): string {
     .join(' · ');
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore }: RecordViewProps) {
   const lang = useKitLang();
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
@@ -211,9 +237,21 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // Связи по видам UML: композиция и агрегация — своя вкладка; зависимости (и ассоциация) —
   // одна вкладка; реализация — одна; обобщение — строкой в шапке.
   const rels: KitRelationDef[] = kind?.relations ?? [];
+  // Решил ли порядок разделов сервер. `false` — всё как прежде: группировка
+  // связей, порядок по данным, и это ПОМЕЧЕНО как умолчание, а не выдано за
+  // решение модели (D-2026-LORE-MODEL-COLUMN-LAYERS, честные состояния).
+  const named = sections?.decided === true;
   const relTabs: { id: string; label: string; relation: string; defs: KitRelationDef[] }[] = [];
   for (const d of rels) {
-    if (OWN_TAB.includes(d.relation)) { relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] }); continue; }
+    // Модель назвала разделы по отдельности — НЕ группируем (S4-29).
+    //
+    // kit сводит связи-ассоциации в одну вкладку «Зависимости» (`SHARED_TAB`),
+    // и это было разумным умолчанием, пока порядок разделов решал конструктор.
+    // Но модель называет их поимённо (`dependsOn`, `blocks`), и при группировке
+    // ключи модели ни с чем не совпадут: раздел, которому велели быть в хвосте
+    // тела, остался бы вкладкой — молча. Поэтому при `decided` группировка
+    // отключается: что считать разделом, решает приложение, а не конструктор.
+    if (named || OWN_TAB.includes(d.relation)) { relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] }); continue; }
     const sh = SHARED_TAB[d.relation];
     if (!sh) continue;
     const ex = relTabs.find(x => x.id === sh.id);
@@ -238,6 +276,12 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const propsOpen = propsOpenControlled ?? propsOpenInner;
   const propsSide = hasProps && placement === 'bottom' && propsOpen;
   const propsRow = hasProps && (placement === 'full' || (placement === 'bottom' && !propsOpen));
+  // S4-30: ширина колонки свойств — личная и с пределами. 280 — середина
+  // прежнего minmax(240, 320) из seidr.css: пока границу не тянули, вид не
+  // меняется. Минимум 240 — оттуда же: уже этого пара «поле — значение»
+  // ломается в две строки.
+  const widths = useMemo(() => widthStore ?? createSafeStorage(), [widthStore]);
+  const [propsW, setPropsW] = useState(() => zoneSize(widths, 'rec.props', 280));
   // <details> меняет своё open сам, и React не возвращает его обратно, если
   // проп не менялся. В управляемом режиме это сделало бы управление обманом:
   // человек щёлкнул, приложение не сохранило, а строка осталась раскрытой.
@@ -272,7 +316,22 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   ].map(i => (zoned ? { ...i, zone: 'around' as const } : i));
   // По умолчанию всё вкладками; колонка слева — только aroundAs='column' при bottom/full.
   const aside = aroundAs === 'column' && (placement === 'bottom' || placement === 'full');
-  const items: TabItem[] = aside ? recordItems : [...recordItems, ...aroundItems];
+  // Разделы, которые модель велела вклеить в хвост тела, — только те, которые
+  // я УМЕЮ там нарисовать (связи). Если модель вклеивает что-то другое (часть,
+  // своя вкладка вида), раздел остаётся вкладкой: показать его не там, где
+  // просили, — полбеды, а не показать вовсе — потеря данных с экрана.
+  const glueable = new Set(relTabs.map(rt => rt.id));
+  const order: PassportOrder | null | undefined = sections?.decided
+    ? { decided: true, notes: sections.notes, sections: sections.sections.map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
+    : sections;
+  const glued = gluedSections(order)
+    .map(s => relTabs.find(rt => rt.id === s.key))
+    .filter((rt): rt is NonNullable<typeof rt> => !!rt)
+    // Пустой блок не рисуется: иначе у ADR под текстом вылезет семь пустых
+    // заголовков. «Не смогли прочитать» — другое утверждение, и его печатает
+    // блок «Состояние данных» по meta.data_state, а не пустой заголовок.
+    .filter(rt => relCount(rt.defs) > 0);
+  const items: TabItem[] = applySections(aside ? recordItems : [...recordItems, ...aroundItems], order);
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
   // Панелью справа (узко) — переключатель видов над шапкой, как «таблица / доска» (владелица 08.11):
   // Контент (текст и вкладки типа) · Свойства · Аналитика (связи, граф, журнал, история).
@@ -308,6 +367,23 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
             <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
           </BlockBoundary>
         )}
+        {/*
+          Разделы со `slot: "content"` — блоками в хвосте тела, как было в v1 у
+          зависимостей спринта и у списка решений ADR (слова владелицы 09.11,
+          подтверждено её CJM). Заголовок со СЧЁТЧИКОМ обязателен: вкладки у
+          раздела больше нет, и без счётчика число исчезло бы с экрана совсем.
+        */}
+        {glued.map(rt => (
+          <section key={rt.id} className="sk-rec-glue" data-glued={rt.id}>
+            <h3 className="sk-rec-glue__head">
+              <span>{rt.label}</span>
+              <span className="sk-tab__count">{relCount(rt.defs)}</span>
+            </h3>
+            <BlockBoundary block={`rel:${rt.id}`} label={rt.label} lang={lang} resetKey={reset}>
+              <RecordRelations record={record} ctx={ctx} defs={rt.defs} lang={lang} />
+            </BlockBoundary>
+          </section>
+        ))}
       </div>
     );
   } else if (current === RECORD_TABS.props && kind && !propsSide) {
@@ -406,7 +482,25 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
             </BlockBoundary>
           </details>
         )}
-        {propsAside ? <div className="sk-rec__body"><div className="sk-rec__content">{tabsBlock}</div>{propsAside}</div> : tabsBlock}
+        {propsAside ? (
+          <div className="sk-rec__body" style={{ '--props-w': `${propsW}px` } as CSSProperties}>
+            <div className="sk-rec__content">{tabsBlock}</div>
+            {/* Граница содержимого и свойств (S4-30). Зона — СПРАВА от неё,
+                поэтому side="after": тянуть влево значит расширять свойства. */}
+            <ResizeBorder
+              zone="rec.props"
+              className="sk-rec__resize"
+              side="after"
+              size={propsW}
+              min={240}
+              max={520}
+              store={widths}
+              onSize={setPropsW}
+              label={kitT(lang, 'kit.record.propsWidth')}
+            />
+            {propsAside}
+          </div>
+        ) : tabsBlock}
         {placement === 'full' && (
           <nav className="sk-rec-rail" aria-label={kitT(lang, 'kit.record.rail')}>
             {hasProps && <button type="button" className="sk-rec-rail__btn" onClick={() => setPropsOpen(true)}>{kitT(lang, 'kit.record.tab.props')}</button>}

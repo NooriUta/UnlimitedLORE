@@ -200,6 +200,35 @@ describe('PL-04: оверлей docker-compose.preprod.yml', () => {
   });
 });
 
+// ── S4-30: коммит фронта доезжает в бандл ────────────────────────────────────
+
+describe('S4-30: фронт v2 знает, из какого коммита собран', () => {
+  // Метка версии в правом нижнем углу (просьба владелицы 09.11) показывает ОДНУ
+  // версию только когда сервер и фронт собраны из одного коммита. Сверять не с
+  // чем, если отметки у фронта нет: метка тогда честно говорит «сервер …», и
+  // главный вопрос — доехала ли выкатка целиком — остаётся без ответа.
+  //
+  // Переменная берётся та же, что уже есть у бэкенда (LORE_BUILD_COMMIT в
+  // lore-cd.yml), поэтому workflow не правится: отметка просто доводится до
+  // сборки фронта. Vite впекает import.meta.env в бандл, значит это build-arg,
+  // а не переменная контейнера — иначе значение не попадёт в код вовсе.
+  const compose = () => code(read('docker-compose.yml'));
+  const dockerfile = () => code(read('web-next/Dockerfile'));
+
+  it('build-arg у lore-app-next берёт существующий LORE_BUILD_COMMIT', () => {
+    expect(compose()).toMatch(/VITE_LORE_BUILD_COMMIT:\s*\$\{LORE_BUILD_COMMIT:-\}/);
+  });
+
+  it('Dockerfile принимает его и кладёт в окружение сборки — иначе Vite его не увидит', () => {
+    expect(dockerfile()).toMatch(/ARG VITE_LORE_BUILD_COMMIT/);
+    expect(dockerfile()).toMatch(/ENV[\s\S]{0,200}VITE_LORE_BUILD_COMMIT=\$VITE_LORE_BUILD_COMMIT/);
+  });
+
+  it('CD уже знает этот коммит — новой переменной в workflow не нужно', () => {
+    expect(read('.github/workflows/lore-cd.yml')).toMatch(/LORE_BUILD_COMMIT:\s*\$\{\{\s*github\.sha\s*\}\}/);
+  });
+});
+
 // ── PL-05: прод по тегу ──────────────────────────────────────────────────────
 
 describe('PL-05: lore-release.yml катит прод на lore-host', () => {
@@ -519,5 +548,15 @@ describe('PL-04: бэкенд препрода — basic (root), а не ток�
     const step = w.slice(w.indexOf('- name: Deploy backend'), w.indexOf('docker compose up -d --no-deps lore-backend'));
     expect(step).toMatch(/LORE_MART_AUTH: basic\b/);
     expect(step).not.toMatch(/vars\.LORE_MART_AUTH/);
+  });
+});
+
+// Метка версии в углу (владелица 09.11): тег релиза доезжает до /lore/version только
+// если выкатка прода передаёт его в контейнер, а compose принимает. Снять любую из
+// двух строк — release молча станет null, и метка покажет коммит вместо версии.
+describe('тег релиза доходит до бэкенда прода', () => {
+  it('шаг up передаёт LORE_RELEASE_TAG, compose принимает его в environment lore-backend', () => {
+    expect(read('.github/scripts/lore-host-deploy.sh')).toMatch(/LORE_RELEASE_TAG=\$TAG docker compose up -d lore-backend/);
+    expect(read('docker-compose.yml')).toContain('- LORE_RELEASE_TAG=${LORE_RELEASE_TAG:-}');
   });
 });

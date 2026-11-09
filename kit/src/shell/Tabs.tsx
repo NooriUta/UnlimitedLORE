@@ -2,9 +2,10 @@
 // (в Tab-порядке только выбранная), стрелки по кругу с пропуском выключенных,
 // Home/End, автоматическая активация. Значение — управляемое: состояние
 // вкладки живёт в URL у экрана, а не внутри компонента.
-import { useId, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
+import { kitT, useKitLang } from '../i18n';
 
 export interface TabItem {
   id: string;
@@ -21,6 +22,18 @@ export interface TabItem {
   mark?: string;
   /** Что значит значок связи: подсказка у глифа — иначе он «случайный» (P2 аудита 08.11). */
   markTitle?: string;
+  /**
+   * Редкая вкладка: в ряду не показывается, живёт под свёрткой «Ещё» (S4-29).
+   *
+   * Повод — владелица 09.11: «зависимости и прочее можно скрыть под море…
+   * интерфейс становится перегруженным». КАКИЕ вкладки редкие, решает
+   * приложение (у LORE — умолчание модели плюс личная настройка); kit получает
+   * готовый признак и только выбирает, рисовать в ряд или под свёртку.
+   *
+   * Выбранная вкладка показывается в ряду ВСЕГДА, даже с этим признаком:
+   * спрятать то, что человек сейчас читает, хуже перегруженности.
+   */
+  secondary?: boolean;
 }
 
 export interface TabsProps {
@@ -40,12 +53,21 @@ export interface TabsProps {
 }
 
 export function Tabs({ items, value, onChange, label, children, className, variant = 'pill' }: TabsProps) {
+  const lang = useKitLang();
   const base = useId();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const hasPanel = children !== undefined;
   const panelId = `${base}-panel`;
   const tabId = (id: string) => `${base}-tab-${id}`;
-  const enabled = items.filter(i => !i.disabled);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // Редкие вкладки (S4-29). Выбранная остаётся в ряду даже будучи редкой:
+  // иначе человек читает раздел, которого не видит в навигации.
+  const folded = items.filter(i => i.secondary && i.id !== value);
+  const shown = items.filter(i => !folded.includes(i));
+  // Клавиатура ряда ходит по ВИДИМЫМ вкладкам: стрелка не должна прыгать в
+  // спрятанное — там её не видно, и фокус пропадает «в никуда».
+  const enabled = shown.filter(i => !i.disabled);
   // Значение вне списка — в Tab-порядок попадает первая доступная вкладка,
   // иначе группа становится недостижимой с клавиатуры.
   const focusId = enabled.some(i => i.id === value) ? value : enabled[0]?.id;
@@ -72,7 +94,7 @@ export function Tabs({ items, value, onChange, label, children, className, varia
   return (
     <div className={['sk-tabs-root', className].filter(Boolean).join(' ')}>
       <div role="tablist" aria-label={label} className={variant === 'underline' ? 'sk-tabs sk-tabs--underline' : 'sk-tabs'}>
-        {items.map(item => {
+        {shown.map(item => {
           const selected = item.id === value;
           return (
             <button
@@ -102,6 +124,33 @@ export function Tabs({ items, value, onChange, label, children, className, varia
             </button>
           );
         })}
+        {folded.length > 0 && (
+          // Свёртка — ВСПЛЫВАЮЩАЯ, а не вторая строка вкладок: вторая строка
+          // вернула бы перегруженность, от которой свёртка и спасает.
+          // Число спрятанного названо: «Ещё» без числа не говорит, стоит ли
+          // открывать.
+          <span className="sk-tabs__more">
+            <button type="button" className="sk-tab sk-tabs__more-btn"
+              aria-expanded={moreOpen} aria-haspopup="menu"
+              onClick={() => setMoreOpen(v => !v)}>
+              <span>{kitT(lang, 'kit.tabs.more')}</span>
+              <span className="sk-tab__count">{folded.length}</span>
+            </button>
+            {moreOpen && (
+              <div role="menu" aria-label={kitT(lang, 'kit.tabs.more')} className="sk-tabs__more-pop"
+                onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setMoreOpen(false); } }}>
+                {folded.map(item => (
+                  <button key={item.id} type="button" role="menuitem" className="sk-tabs__more-item"
+                    onClick={() => { setMoreOpen(false); go(item.id); }}>
+                    {item.icon && <GameIcon slug={item.icon} size={13} />}
+                    <span>{item.label}</span>
+                    {item.count !== undefined && <span className="sk-tab__count">{item.count}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </span>
+        )}
       </div>
       {hasPanel && (
         <div role="tabpanel" id={panelId} aria-labelledby={tabId(value)} tabIndex={0} className="sk-tabpanel">

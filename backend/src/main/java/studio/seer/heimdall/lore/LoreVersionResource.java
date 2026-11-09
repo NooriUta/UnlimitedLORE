@@ -47,7 +47,19 @@ public class LoreVersionResource extends LoreResourceBase {
         // Из того же реестра, что ведёт миграции: две правды о номере схемы
         // разошлись бы первой же правкой.
         out.put("schema_version", LoreSchemaMigrations.codeVersion());
+        // Владелица 09.11: версия в правом нижнем углу. Тег релиза сборка не знает — его
+        // передаёт выкатка прода (LORE_RELEASE_TAG). Нет — null, а не выдуманная версия.
+        out.put("release", releaseTag(System.getenv("LORE_RELEASE_TAG")));
         return noStore(Response.ok(out));
+    }
+
+    private static final java.util.regex.Pattern TAG = java.util.regex.Pattern.compile("^v[0-9]+[.][0-9]+[.][0-9]+$");
+
+    /** Тег релиза вида vX.Y.Z или null. */
+    static String releaseTag(String raw) {
+        if (raw == null) return null;
+        String t = raw.trim();
+        return TAG.matcher(t).matches() ? t : null;
     }
 
     static Map<String, String> loadBuildInfo() {

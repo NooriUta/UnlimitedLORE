@@ -123,6 +123,16 @@ describe('S7A-02 · подписи и ссылки', () => {
     expect(newsHref(by('release'))).toBe('/lore?section=releases&rel=NooriUta%2FUnlimitedLORE%23v1.17.0');
   });
 
+  // Сервер (#1025) отдаёт вопросы: type 'question', события created/closed.
+  // Без своей ветки строка вопроса была без ссылки, иконки и подписи типа.
+  it('вопрос: ссылка в «Открытые вопросы» v1, иконка и подпись типа', () => {
+    const q = { ...NEWS_FIXTURE.events[0], type: 'question', el: 'Q-UXR-4', sprint: null };
+    expect(newsHref(q)).toBe('/lore?section=openQuestions&passport=Q-UXR-4');
+    expect(NEWS_TYPE_META.question?.icon).toBe('help');
+    expect(newsGroupLabel('type', 'question', 'ru')).toBe('вопрос');
+    expect(newsGroupLabel('type', 'question', 'en')).toBe('question');
+  });
+
   // S4-25: события «отменено» и «вернули в работу» — lucide (выбор владелицы), проверка — по реестру GameIcon.
   it('иконки типов (паритет 2) и событий (паритет 1) есть в зарегистрированных наборах', () => {
     registerGameIcons(gameIcons);

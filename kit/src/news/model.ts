@@ -185,6 +185,7 @@ export const NEWS_TYPE_META: Record<string, { icon: string }> = {
   adr: { icon: 'scroll-quill' },
   decision: { icon: 'gavel' },
   spec: { icon: 'spell-book' },
+  question: { icon: 'help' },
 };
 
 /** Иконка и тон события (паритет 1). «Готово к выкатке» — жёлтым. */
@@ -290,6 +291,7 @@ export function newsHref(e: NewsEvent): string | null {
     case 'adr': return `/lore?section=adrs&passport=${enc(e.el)}`;
     case 'decision': return `/lore?section=decisions&passport=${enc(e.el)}`;
     case 'spec': return `/lore?section=knowledge&passport=${enc(`spec:${e.el}`)}`;
+    case 'question': return `/lore?section=openQuestions&passport=${enc(e.el)}`;
     // Релиз — парой «проект#id»: один номер версии живёт в нескольких репозиториях.
     case 'release': {
       const p = e.projects?.[0];

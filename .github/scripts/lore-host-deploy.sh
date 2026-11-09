@@ -171,6 +171,9 @@ state() {
       || { err "в $(dir_of "$s")/docker-compose.yml нет image: unlimitedlore-${s}:<тег>"; bad=1; }
   done
   r "test -d $THEME_DIR && test -w $THEME_DIR" || { err "каталог темы $THEME_DIR на lore-host не существует или не на запись"; bad=1; }
+  # Метка версии: не ошибка выкатки, а честное предупреждение — без строки тег не доедет.
+  r "grep -q 'LORE_RELEASE_TAG' $DIR_BE/docker-compose.yml" \
+    || echo "::warning::в $DIR_BE/docker-compose.yml нет LORE_RELEASE_TAG — /lore/version отдаст release: null (метка в углу покажет коммит). Добавить в environment lore-backend: - LORE_RELEASE_TAG=\${LORE_RELEASE_TAG:-}"
   echo "── контейнеры"
   r "docker ps --format '{{.Names}}  {{.Image}}  {{.Status}}' | grep -E 'lore|keycloak' || true"
   local line n
@@ -293,7 +296,10 @@ up() {
   local at st i
   at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   sed -i '/^UP_AT=/d' "$STATE"; put UP_AT "$at"
-  r "cd $DIR_BE && docker compose up -d lore-backend" || { rollback_hint; die "compose up lore-backend не прошёл"; }
+  # Тег релиза — в контейнер (/lore/version → release, метка версии в углу). В compose на
+  # хосте должна быть строка LORE_RELEASE_TAG=${LORE_RELEASE_TAG:-}; нет её — release: null
+  # (state предупреждает), выкатке это не мешает.
+  r "cd $DIR_BE && LORE_RELEASE_TAG=$TAG docker compose up -d lore-backend" || { rollback_hint; die "compose up lore-backend не прошёл"; }
   for i in $(seq 1 60); do
     st="$(r "docker inspect -f '{{.State.Health.Status}}' \$(cd $DIR_BE && docker compose ps -q lore-backend) 2>/dev/null" || echo missing)"
     [ "$st" = healthy ] && { echo "бэкенд прода healthy (${i}×5с)"; break; }

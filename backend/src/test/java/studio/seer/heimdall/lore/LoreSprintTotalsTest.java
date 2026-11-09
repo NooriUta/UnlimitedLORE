@@ -95,4 +95,52 @@ class LoreSprintTotalsTest {
         LoreSprintTotals.fold(full, "S1");
         assertEquals(false, full.get("inputs_truncated"), "ключ есть всегда: false = видели все слагаемые");
     }
+
+    /**
+     * SPEC-LORE-KIT-CONTRACT-CONDITIONS, условие 6: ответ покрывает запрос. Несуществующий
+     * спринт — state not_found и value null, а не «ok» с нулями: «нет такого» ≠ «ноль задач».
+     * Проба на проде 09.11: SPRINT_DOES_NOT_EXIST_PROBE отвечал state:"ok", value 0.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void unknownSprintIsNotFoundNotZero() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("rows", List.of(t("S1", "✅ DONE", 1.0, null)));
+        LoreSprintTotals.fold(body, "S1,S0,NOPE", java.util.Set.of("S1", "S0"));
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) body.get("rows");
+        assertEquals("ok", rows.get(0).get("state"));
+        assertEquals("ok", rows.get(1).get("state"), "спринт есть, задач нет — ok и честный 0");
+        assertEquals(0, ((Map<String, Object>) rows.get(1).get("tasks_total")).get("value"));
+        Map<String, Object> nope = rows.get(2);
+        assertEquals("not_found", nope.get("state"));
+        assertNull(((Map<String, Object>) nope.get("tasks_total")).get("value"), "нет спринта — null, а не 0");
+        assertEquals(java.util.Set.of("sprint_id", "state", "tasks_total", "effort_days_total", "actual_days_total"), nope.keySet(),
+            "форма строки та же — меняется только state");
+    }
+
+    /**
+     * SPRINT_UXR_S11_TEST_OPT/CT-SLICES-V2 — контракт строки sprint_totals для kit: ровно эти
+     * ключи, tasks_total с done, прочие суммы {value, known, of}, inputs_truncated есть всегда.
+     * Смысл inputs_truncated не должен поменяться молча, если свёртка переедет в SQL (kit 09.11).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void contractForKit() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("rows", List.of(t("S1", "✅ DONE", 1.0, null), t("S1", "📋 PLANNED", null, null)));
+        LoreSprintTotals.fold(body, "S1,S2");
+        assertInstanceOf(Boolean.class, body.get("inputs_truncated"));
+        assertInstanceOf(String.class, body.get("rule"));
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) body.get("rows");
+        assertEquals(2, rows.size(), "строка на КАЖДЫЙ запрошенный спринт, и на пустой тоже");
+        for (Map<String, Object> row : rows) {
+            assertEquals(java.util.Set.of("sprint_id", "state", "tasks_total", "effort_days_total", "actual_days_total"), row.keySet());
+            assertEquals(java.util.Set.of("value", "known", "of", "done"), ((Map<String, Object>) row.get("tasks_total")).keySet());
+            for (String k : List.of("effort_days_total", "actual_days_total"))
+                assertEquals(java.util.Set.of("value", "known", "of"), ((Map<String, Object>) row.get(k)).keySet(), k);
+        }
+        Map<String, Object> empty = rows.get(1);
+        assertEquals("S2", empty.get("sprint_id"));
+        assertNull(((Map<String, Object>) empty.get("effort_days_total")).get("value"), "нечего складывать — null, не 0");
+    }
 }

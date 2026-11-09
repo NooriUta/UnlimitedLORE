@@ -35,9 +35,15 @@ COPY web-next/src ./src
 ARG VITE_LORE_AUTH_ENABLED=""
 ARG VITE_OIDC_ISSUER=""
 ARG VITE_OIDC_CLIENT_ID=""
+# S4-30: из какого коммита собран фронт — для метки версии в правом нижнем углу.
+# Тоже build-time, и по той же причине: Vite впекает import.meta.env в бандл, и
+# переменная контейнера до кода не доходит вовсе. Пусто — метка честно скажет
+# «сервер …», а не выдаст серверную версию за общую.
+ARG VITE_LORE_BUILD_COMMIT=""
 ENV VITE_LORE_AUTH_ENABLED=$VITE_LORE_AUTH_ENABLED \
     VITE_OIDC_ISSUER=$VITE_OIDC_ISSUER \
-    VITE_OIDC_CLIENT_ID=$VITE_OIDC_CLIENT_ID
+    VITE_OIDC_CLIENT_ID=$VITE_OIDC_CLIENT_ID \
+    VITE_LORE_BUILD_COMMIT=$VITE_LORE_BUILD_COMMIT
 
 RUN npm run build
 

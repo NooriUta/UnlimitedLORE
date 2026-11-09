@@ -44,6 +44,7 @@ const ru = {
   'type.adr': 'ADR',
   'type.decision': 'решение',
   'type.spec': 'спека',
+  'type.question': 'вопрос',
   'kind.created': 'появилось',
   'kind.changed': 'изменено',
   'kind.status': 'статус',
@@ -177,6 +178,8 @@ const ru = {
   'spark.nodata': '{day}: нет данных о сгорании',
   'types.period': 'за период',
   'bal': '{cl} закрыто · {cr} заведено задач',
+  'code.copy': 'Скопировать код {code}',
+  'code.copied': 'Скопировано',
   'feed': 'Лента',
   'day.collapse': 'Свернуть или развернуть день',
 } as const;
@@ -224,6 +227,7 @@ const en: Record<NewsKey, string> = {
   'type.adr': 'ADR',
   'type.decision': 'decision',
   'type.spec': 'spec',
+  'type.question': 'question',
   'kind.created': 'created',
   'kind.changed': 'changed',
   'kind.status': 'status',
@@ -357,6 +361,8 @@ const en: Record<NewsKey, string> = {
   'spark.nodata': '{day}: no burn data',
   'types.period': 'for the period',
   'bal': '{cl} closed · {cr} tasks added',
+  'code.copy': 'Copy code {code}',
+  'code.copied': 'Copied',
   'feed': 'Feed',
   'day.collapse': 'Collapse or expand the day',
 };
