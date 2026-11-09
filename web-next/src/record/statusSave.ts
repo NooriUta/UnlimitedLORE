@@ -23,6 +23,38 @@ import { LoreHttpError } from '../api/loreSlice';
 /** Типы, у которых сервер принимает смену статуса (LoreStatusResource). */
 export type StatusEntity = 'sprint' | 'task' | 'phase' | 'adr';
 
+/** Те же типы списком — для проверки во время выполнения. */
+export const STATUS_ENTITIES: readonly StatusEntity[] = ['sprint', 'task', 'phase', 'adr'];
+
+/**
+ * Отказ: у типа записи пути смены статуса на сервере нет вовсе.
+ *
+ * Нужен потому, что паспорт в v2 есть у восьми типов, а статус сервер принимает
+ * у четырёх (`ENTITY_TYPES` в `LoreResourceBase`). У остальных `perms.can_status`
+ * приходит `false`, и чип не становится кнопкой, — но полагаться на одно это
+ * нельзя: ошибка в правах или новый тип превратили бы отказ в запрос, который
+ * сервер отвергнет кодом, а человек увидит «не получилось» без причины.
+ */
+export class StatusNotSupported extends Error {
+  readonly type: string;
+  constructor(type: string) {
+    super(`смена статуса у типа «${type}» не поддерживается: на сервере нет пути записи статуса для него`);
+    this.name = 'StatusNotSupported';
+    this.type = type;
+  }
+}
+
+/**
+ * Тип паспорта → тип для `/lore/status`, с отказом по имени для остальных.
+ *
+ * Отдельная функция, а не приведение типа: приведение спрятало бы проблему в
+ * компиляции, а на экране дало бы 400 от сервера без причины.
+ */
+export function statusEntity(type: string): StatusEntity {
+  if ((STATUS_ENTITIES as readonly string[]).includes(type)) return type as StatusEntity;
+  throw new StatusNotSupported(type);
+}
+
 export interface StatusChange {
   type: StatusEntity;
   id: string;
