@@ -60,16 +60,21 @@ describe('оболочка v2 (S4-01)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Новости' })).toBeTruthy();
   });
 
-  it('выбор раздела пишется в URL и меняет экран; несобранный экран — «не собран», а не «пусто»', () => {
+  // Переписано 09.11: «Задачи» были здесь примером НЕСОБРАННОГО экрана, а
+  // теперь раздел собран (S4-V2-SECTIONS). Примера под рукой больше нет — все
+  // пять разделов меню собраны, и это само по себе проверяемое утверждение.
+  // Механизм честного «не собран» остался для будущих разделов (SCREENS
+  // объявлен Partial), поэтому здесь проверяем, что НИ ОДИН раздел меню его не
+  // показывает, и заодно — что «Задачи» открывают именно список задач.
+  it('выбор раздела пишется в URL и меняет экран; ни один раздел меню не «не собран»', () => {
     const win = fakeWin();
     const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
     fireEvent.click(screen.getByRole('link', { name: 'Задачи' }));
     expect(new URLSearchParams(win.location.search).get('sec')).toBe('task');
     expect(screen.getByRole('heading', { level: 1, name: 'Задачи' })).toBeTruthy();
     const main = screen.getByRole('main');
-    expect(main.querySelector('[data-state="unbuilt"]')).toBeTruthy();
-    expect(main.querySelector('[data-state="empty"]')).toBeNull();
-    expect(container.querySelector('[data-section="task"]')).toBeTruthy();
+    expect(main.querySelector('[data-state="unbuilt"]')).toBeNull();
+    expect(container.querySelector('[data-section="task"] [data-screen="tasks"]')).toBeTruthy();
   });
 
   it('списки (S4-04) — экраны разделов: ADR открывает список kit под одним заголовком раздела', () => {

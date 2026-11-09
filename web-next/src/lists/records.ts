@@ -116,3 +116,40 @@ export function sliceWarnings(body: SliceBody<unknown>): string[] {
   add(body.outside_scope?.reason);
   return out;
 }
+
+/**
+ * Оговорка раздела «Задачи» (S4-V2-SECTIONS).
+ *
+ * `open_tasks` отдаёт только открытые задачи: закрытые и отменённые отсечены на
+ * сервере. Значит «Показано N из N» — правда про выдачу, но не про корпус, и
+ * человек, не зная этого, решит, что закрытых задач у него нет.
+ *
+ * Строка живёт здесь, рядом с маппером, чтобы её нельзя было потерять при
+ * смене среза: поменяется источник — поменяется и она.
+ */
+export const OPEN_ONLY_NOTE = 'показаны открытые задачи: закрытые и отменённые этот срез не отдаёт';
+
+/**
+ * Строка слайса `open_tasks` → запись kit (S4-V2-SECTIONS).
+ *
+ * Код записи — `task_uid` («спринт/код»): по нему открывается паспорт и
+ * строится ссылка. Отдельного `task_id` в коде мало — он повторяется в разных
+ * спринтах.
+ */
+export function taskListRecord(row: Row): KitRecord {
+  const id = str(row.task_uid);
+  return {
+    id,
+    kind: 'task',
+    title: str(row.title) || id,
+    // Канон словаря, а не сырой статус: наивная склейка давала «вне словаря».
+    status: planStatusOf(typeof row.status_raw === 'string' ? row.status_raw : null),
+    fields: {
+      code: str(row.task_id),
+      sprint: str(row.sprint_id),
+      components: list(row.component_ids),
+      effort: num(row.effort_days),
+      work_class: str(row.work_class),
+    },
+  };
+}

@@ -24,7 +24,7 @@ import './ListScreen.css';
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
 const ListPassport = lazy(() => import('../record/ListPassport'));
 /** Тип паспорта по экрану списка. */
-const PASSPORT_OF: Record<ListScreenId, PassportType> = { sprints: 'sprint', adrs: 'adr' };
+const PASSPORT_OF: Record<ListScreenId, PassportType> = { sprints: 'sprint', adrs: 'adr', tasks: 'task' };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 type OpenRecord = { id: string | null; place: RecordPlacement };
 
@@ -108,7 +108,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (body ? sliceToKitData(body, def.map, new Date().toISOString()) : null),
     [body, def],
   );
-  const warnings = body ? sliceWarnings(body) : [];
+  // Предупреждения выдачи плюс оговорка самого раздела (S4-V2-SECTIONS): где
+  // срез по природе отдаёт НЕ ВСЁ, «Показано N из N» — правда про выдачу, но не
+  // про корпус, и без слов человек решит, что остального у него нет.
+  const warnings = [...(def.note ? [def.note] : []), ...(body ? sliceWarnings(body) : [])];
 
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
   // упавшая пачка — «?» с причиной (это решает loadProgress), а не 0/0.

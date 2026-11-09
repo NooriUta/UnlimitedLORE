@@ -23,7 +23,7 @@ export const V2_KEEP_PARAMS = ['proj'] as const;
 const SECTION_TITLE_ID = 'v2-screen-title';
 
 /** Разделы, где h1 рисует сам экран (шапка экрана kit, S4-23), а не оболочка. */
-const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>(['sprint', 'adr']);
+const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>(['sprint', 'adr', 'task']);
 
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
 const SCREENS: Partial<Record<V2Section, ComponentType>> = {
@@ -33,6 +33,10 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   sprint: () => <ListScreen screen="sprints" titleId={SECTION_TITLE_ID} />,
   // S4-23: заголовок ADR — шапка экрана kit (ScreenHead): виды в строке заголовка.
   adr: () => <ListScreen screen="adrs" titleId={SECTION_TITLE_ID} />,
+  // S4-V2-SECTIONS: пункт «Задачи» был в меню с самого начала, а экрана под ним
+  // не было — раздел отвечал «экран не собран». Источник — open_tasks (all_tasks
+  // несёт note_md и даёт миллионы символов), и это сказано на экране словами.
+  task: () => <ListScreen screen="tasks" titleId={SECTION_TITLE_ID} />,
   // Лента новостей kit (SPRINT_UXR_S7A_NEWS/S7A-02); свой заголовок — у раздела.
   news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} />,
   // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —

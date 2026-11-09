@@ -13,7 +13,7 @@ import { SprintTasks } from '../sprints/SprintTasks';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import type { AppKey } from '../i18n';
-import { adrRecord, sprintRecord } from './records';
+import { OPEN_ONLY_NOTE, adrRecord, sprintRecord, taskListRecord } from './records';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
 
@@ -48,6 +48,14 @@ export interface ListScreenDef {
   config: (lang: KitLang) => KitConfig;
   /** Свои быстрые иконки «Быстро», которым не подходит иконка статуса. */
   quickIcons: Record<string, string>;
+  /**
+   * Оговорка про выдачу раздела — печатается на экране (S4-V2-SECTIONS).
+   *
+   * Нужна там, где срез по своей природе отдаёт НЕ ВСЁ: «Показано N из N»
+   * тогда правда про выдачу, но не про корпус, и без слов человек решит, что
+   * остального у него нет.
+   */
+  note?: string;
   /**
    * Вложенное (S4-09, перенесено на общий путь в S4-22): колонка прогресса,
    * которая догружается после списка, и раскрытие строки. Раздел подключает
@@ -150,6 +158,54 @@ function adrsConfig(lang: KitLang): KitConfig {
   };
 }
 
+/**
+ * Раздел «Задачи» (S4-V2-SECTIONS). Пункт в меню был с самого начала, экрана
+ * под ним не было.
+ *
+ * Источник — `open_tasks`, а не `all_tasks`: второй несёт `note_md`, и на живом
+ * замере весь корпус дал 4 млн символов на 57 730 строк (SE-01 в `LoreSlices`).
+ * Цена выбора названа словами (`OPEN_ONLY_NOTE`): закрытых задач в этой выдаче
+ * не бывает, поэтому режим «закрытые внизу» разделу не ставится — обещать
+ * сортировку того, чего нет, нельзя.
+ */
+function tasksConfig(lang: KitLang): KitConfig {
+  return {
+    ...BASE,
+    kinds: {
+      task: {
+        title: appT(lang, 'lists.tasks.title'), icon: ICON_CANON.sectionTask,
+        fields: [
+          { key: 'sprint', title: f(lang, 'sprint'), type: 'ref' },
+          { key: 'components', title: f(lang, 'components'), type: 'ref' },
+          { key: 'effort', title: f(lang, 'effort'), type: 'number' },
+        ],
+      },
+    },
+    statuses: {
+      items: statusItems(lang, [
+        ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
+        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'],
+        ['done', 'done'], ['cancelled', 'cancelled'],
+      ]),
+    },
+    list: {
+      views: ['list', 'cards', 'board'],
+      // Закрытых в выдаче не бывает — режим «закрытые внизу» был бы обманом.
+      showClosed: 'hide',
+      quick: [
+        { id: 'active', title: appT(lang, 'lists.status.active'), filter: { status: 'active' } },
+        { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
+        { id: 'no-sprint', title: appT(lang, 'lists.quick.noSprint'), filter: { sprint: '' } },
+      ],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
+      groupings: ['status', LORE_FILTER_FIELDS.sprint],
+      // Спринтов много — разрез по спринту свёрнут с первого показа (S9-02).
+      collapsedGroupings: [LORE_FILTER_FIELDS.sprint],
+      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort'],
+    },
+  };
+}
+
 export const LIST_SCREENS = {
   sprints: {
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
@@ -165,6 +221,12 @@ export const LIST_SCREENS = {
   adrs: {
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
+  },
+  tasks: {
+    slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
+    map: taskListRecord, config: tasksConfig, quickIcons: {},
+    // Срез отдаёт только открытые задачи — это сказано словами на экране.
+    note: OPEN_ONLY_NOTE,
   },
 } as const satisfies Record<string, ListScreenDef>;
 
