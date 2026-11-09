@@ -549,7 +549,8 @@ public class LoreStatusResource extends LoreResourceBase {
         // carry-forward баг, что и статус-флип, — тела спринта терялись при правке плана.
         MartQuery readQ = new MartQuery("sql",
             "SELECT @rid AS rid, status_raw, priority, planned_start_date, planned_end_date, " +
-            "track_id, pr_refs, context_md, outcome_md, content_hash FROM KnowSprintHist " +
+            "track_id, pr_refs, context_md, outcome_md, content_hash" +
+            StatusHistoryService.STATUS_FIELDS_SELECT.replace(", status_raw", "") + " FROM KnowSprintHist " +
             "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sid), -1);
 
@@ -582,6 +583,13 @@ public class LoreStatusResource extends LoreResourceBase {
             insertParams.put("now", now);
             insertParams.put("sid", sid);
             author.bind(insertParams);
+            // S2-11: правка плана — не смена статуса. Статусные поля версии
+            // (категория, «статус известен с», пометка бэкфилла) переносятся как
+            // есть — иначе терялись, и дата закрытия спринта плыла (тот же класс
+            // carry-forward, что 2026-07-17). status_raw уже перенесён выше.
+            Map<String, Object> statusRow = new LinkedHashMap<>(cur);
+            statusRow.remove("status_raw");
+            String carryStatus = StatusHistoryService.carryStatusSet(statusRow, insertParams);
 
             // S2-09: close-open одним sqlscript (раньше — три отдельные команды без
             // атомарности) с условным закрытием: версия должна быть ЕЩЁ открыта,
@@ -590,13 +598,16 @@ public class LoreStatusResource extends LoreResourceBase {
             if (oldRid.startsWith("#")) {
                 script.append(Scd2Guard.guardedClose("KnowSprintHist", false));
                 insertParams.put("oldrid", oldRid);
+            } else {
+                // S2-15: открытой версии не было видно — проверить внутри скрипта.
+                script.append(Scd2Guard.guardedNoOpen("KnowSprintHist", "sprint_id", "sid"));
             }
             script.append("INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
                     "planned_end_date = :planned_end_date, " +
                     "track_id = :track_id, pr_refs = :pr_refs, " +
                     "context_md = :context_md, outcome_md = :outcome_md, content_hash = :content_hash" +
-                    ChangeAuthor.SET_SQL + ";")
+                    carryStatus + ChangeAuthor.SET_SQL + ";")
                 .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) ")
                 .append("TO (SELECT FROM KnowSprintHist WHERE state_uid = :nsid);");
 

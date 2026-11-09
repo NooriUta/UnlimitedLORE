@@ -67,7 +67,13 @@ final class V1SchemaSafetyChecklist {
         // обычные версии без статуса); valid_from/valid_to существующих строк и
         // поля v1 не трогаются.
         "java__status_history_backfill",
-        "только новые свойства V67 на открытых версиях + первая версия у элементов без истории");
+        "только новые свойства V67 на открытых версиях + первая версия у элементов без истории",
+        // S2-11, V71. Доказательство — StatusHistoryServiceTest
+        // (task_backfill_opens_one_honest_version_for_tasks_without_history) и
+        // LoreHistHygieneLiveDbTest: только INSERT первой версии задаче без
+        // HAS_STATE, с условием «версий нет»; существующие строки не трогаются.
+        "java__task_history_backfill",
+        "только первая версия у задач без истории (INSERT, существующее не трогается)");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

@@ -157,6 +157,28 @@ public final class LoreSlices {
     static final String DONE_STATUS_SQL = LoreStatusVocabulary.anySql("status_raw", "done");
 
     /**
+     * S7B-02: семейства записи, относящиеся к админке (журнал действий админки).
+     * Человеческие семейства (AgentScopeFilter.HUMAN_ONLY без контентных news/record)
+     * и управление проектами и их ролями.
+     */
+    static final java.util.Set<String> ADMIN_FAMILIES =
+        java.util.Set.of("dict", "kc", "admin", "user", "project", "project-actor");
+
+    /**
+     * S2-11: дата закрытия спринта — момент ПЕРЕХОДА в «выполнен». Правка плана
+     * закрытого спринта открывает новую DONE-версию, и {@code [done].valid_from[0]}
+     * мог указать на неё — дата плыла. {@code status_known_from} ставится только
+     * сменой статуса и переносится правками (StatusHistoryService, правка плана),
+     * поэтому у открытой DONE-версии он и есть момент закрытия. Старые версии без
+     * этого поля (до S2-13) — прежнее выражение.
+     */
+    // Цепочка фильтров [..][..], а не AND: проекция без « AND » — сторож склейки
+    // фильтров слайса (LoreSliceComposeFiltersTest) различает AND только по тексту.
+    static final String DONE_DATE_SQL =
+        "ifnull(out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL
+            + "].status_known_from[0], out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0])";
+
+    /**
      * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
      * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
      */
@@ -240,6 +262,16 @@ public final class LoreSlices {
                 .append(parent.idField()).append("[0] AS ref_id, state_uid FROM ")
                 .append(hist).append(" WHERE valid_to IS NULL AND valid_from IS NULL)");
         }
+        // S2-11: задача или спринт без ЕДИНОЙ версии истории — запись мимо SCD2
+        // (найдено 07.11: 14 задач, их O(t) не определить). Пустой срез без этой
+        // ветки читался бы как «история в порядке».
+        vars.append(", $nt, $ns");
+        lets.append(", $nt = (SELECT 'entity_without_history' AS finding, 'task' AS entity_type, "
+                + "'KnowTaskHist' AS hist_type, task_uid AS ref_id, null AS state_uid FROM KnowTask "
+                + "WHERE out('HAS_STATE').size() = 0)")
+            .append(", $ns = (SELECT 'entity_without_history' AS finding, 'sprint' AS entity_type, "
+                + "'KnowSprintHist' AS hist_type, sprint_id AS ref_id, null AS state_uid FROM KnowSprint "
+                + "WHERE out('HAS_STATE').size() = 0)");
         return "SELECT finding, entity_type, hist_type, ref_id, state_uid "
             + "FROM (SELECT expand(unionall(" + vars + ")) LET " + lets + ") "
             + "ORDER BY entity_type, ref_id";
@@ -729,7 +761,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
-            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date, " +
+            DONE_DATE_SQL + " AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
@@ -796,7 +828,7 @@ public final class LoreSlices {
         // см. DONE_STATUS_SQL про то, почему якорь, а не подстрока.
         slice("sprint_done_dates",
             "SELECT sprint_id, " +
-            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date " +
+            DONE_DATE_SQL + " AS done_date " +
             "FROM KnowSprint " +
             "WHERE out('HAS_STATE')[" + DONE_STATUS_SQL + "].size() > 0",
             List.of(), Map.of(), "");
@@ -2344,6 +2376,19 @@ public final class LoreSlices {
                 "caller", " WHERE source = :caller"),
             " ORDER BY ts DESC LIMIT 500");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-02: журнал действий АДМИНКИ — тот же ряд AO-01,
+        // только админские семейства (ADMIN_FAMILIES). «Кто» — caller, «человек или
+        // агент» — axis, «что» — family + entity_id, «когда» — ts, исход — status (код
+        // ответа): отказы видны наравне с успехом.
+        slice("admin_actions",
+            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, " +
+            "segment AS axis, value AS status FROM MetricSnapshot WHERE metric = 'lore.action' " +
+            "AND object_type IN [" + String.join(", ", ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()) + "]",
+            List.of(), Map.of(
+                "family", " WHERE object_type = :family",
+                "caller", " WHERE source = :caller"),
+            " ORDER BY ts DESC LIMIT 500");
+
         // Тот же ряд, свёрнутый до вызывающего: «кто вообще сколько зовёт»,
         // без разбивки по эндпоинтам — верхний уровень ответа.
         slice("requests_total",
@@ -2708,6 +2753,7 @@ public final class LoreSlices {
         Map.entry("requests_by_caller", "телеметрия обращений — админская, решение"),
         Map.entry("requests_total", "телеметрия — решение"),
         Map.entry("agent_actions", "журнал действий (AO-01) — админский, как телеметрия; решение"),
+        Map.entry("admin_actions", "журнал действий админки (S7B-02) — тот же ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")

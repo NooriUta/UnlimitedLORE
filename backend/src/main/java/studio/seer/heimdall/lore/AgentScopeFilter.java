@@ -164,6 +164,10 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // под тем же префиксом этой строкой не затрагиваются: READ_METHODS вне
         // проверки.
         Map.entry("product",   Set.of("full", "architect", "pm", "product-analyst")),
+        // canvas (SPRINT_UXR_S7C_WHY_CANVAS/S7C-01) — холст «зачем»: VP-канва, BMC,
+        // карта историй. Это продуктовый слой, поэтому те же профили, что у pain/gain/
+        // job и фич, плюс analyst. Строкой, а не пропуском «неизвестного семейства».
+        Map.entry("canvas",    Set.of("full", "architect", "pm", "product-analyst", "analyst")),
         // ── Прочее из README, чего тоже не было ──────────────────────────────
         Map.entry("component", Set.of("full", "architect")),
         // tech СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий

@@ -554,6 +554,43 @@ public class LoreMeResource extends LoreResourceBase {
         }
     }
 
+    // ── Мои проекты (S7B-14, S9-04) ─────────────────────────────────────────
+
+    /**
+     * Проекты вызывающего — по назначениям ролей (HAS_PROJECT_ROLE, источник истины
+     * о правах — граф, ADR-LORE-036), а не все проекты LORE: «Все мои (N своих)».
+     * Без ролей — честный ноль, без опознанного вызывающего — 401.
+     */
+    @GET
+    @Path("projects")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response myProjects() {
+        if (!enabled) return disabled();
+        String me = ownerSub();
+        if (me == null) return noIdentity();
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :me ORDER BY slug",
+                Map.of("me", me));
+            List<Map<String, Object>> projects = new ArrayList<>();
+            for (Map<String, Object> r : rows) {
+                if (r.get("slug") == null) continue;
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("slug", r.get("slug"));
+                p.put("role", r.get("role"));
+                projects.add(p);
+            }
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("ok", true);
+            body.put("projects", projects);
+            body.put("count", projects.size());
+            body.put("source", "HAS_PROJECT_ROLE");
+            return noStore(Response.ok(body));
+        } catch (Exception e) {
+            return upstream("my projects", e);
+        }
+    }
+
     // ── Личные настройки ────────────────────────────────────────────────────
 
     public record SettingsRequest(Map<String, Object> settings, Integer expected_version) {}
@@ -587,6 +624,98 @@ public class LoreMeResource extends LoreResourceBase {
         out.put("updated_at", row == null ? null : row.get("updated_at"));
         out.put("schema", LoreMePrefs.schema());
         return out;
+    }
+
+    // ── Черновики (S5-09) ───────────────────────────────────────────────────
+
+    public record DraftRequest(String ref_type, String ref_id, String field, String body_md, Integer base_version) {}
+
+    public record DraftDeleteRequest(String ref_type, String ref_id, String field) {}
+
+    /** Черновики записи у вызывающего — по полю, свежие сверху. Пустой список — «черновиков нет». */
+    @GET
+    @Path("drafts")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response listDrafts(@QueryParam("ref_type") String refType, @QueryParam("ref_id") String refId) {
+        if (!enabled) return disabled();
+        String me = ownerSub();
+        if (me == null) return noIdentity();
+        String err = LoreMeDrafts.error(refType, refId, "x", "", null);
+        if (err != null) return badParams(err);
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT ref_type, ref_id, field, body_md, base_version, saved_at FROM KnowUserDraft "
+                + "WHERE owner_sub = :me AND ref_type = :t AND ref_id = :i ORDER BY saved_at DESC",
+                Map.of("me", me, "t", refType, "i", refId));
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("ok", true);
+            body.put("drafts", rows.stream().map(LoreMeDrafts::out).toList());
+            body.put("count", rows.size());
+            return noStore(Response.ok(body));
+        } catch (Exception e) {
+            return upstream("drafts list", e);
+        }
+    }
+
+    /** Сохранить черновик поля: один на (владелец, запись, поле), повтор обновляет. */
+    @POST
+    @Path("drafts")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response saveDraft(DraftRequest req) {
+        if (!enabled) return disabled();
+        String me = ownerSub();
+        if (me == null) return noIdentity();
+        if (req == null) return badParams("body required");
+        String err = LoreMeDrafts.error(req.ref_type(), req.ref_id(), req.field(), req.body_md(), req.base_version());
+        if (err != null) return badParams(err);
+        Map<String, Object> p = new HashMap<>();
+        p.put("me", me);
+        p.put("t", req.ref_type());
+        p.put("i", req.ref_id());
+        p.put("f", req.field());
+        p.put("b", req.body_md());
+        p.put("v", req.base_version());
+        p.put("at", now());
+        try {
+            boolean existed = !ingestService.queryPublic(
+                "SELECT @rid FROM KnowUserDraft WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f",
+                Map.of("me", me, "t", req.ref_type(), "i", req.ref_id(), "f", req.field())).isEmpty();
+            exec("UPDATE KnowUserDraft SET owner_sub=:me, ref_type=:t, ref_id=:i, field=:f, body_md=:b, "
+                + "base_version=:v, saved_at=:at UPSERT WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f", p);
+            return noStore(Response.ok(Map.of("ok", true, "saved_at", p.get("at"),
+                "outcome", existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED)));
+        } catch (Exception e) {
+            return upstream("draft save", e);
+        }
+    }
+
+    /** Удалить черновик поля (после сохранения записи или «отбросить»); без field — все черновики записи. */
+    @POST
+    @Path("drafts/delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteDraft(DraftDeleteRequest req) {
+        if (!enabled) return disabled();
+        String me = ownerSub();
+        if (me == null) return noIdentity();
+        if (req == null) return badParams("body required");
+        String field = req.field() == null ? "x" : req.field();
+        String err = LoreMeDrafts.error(req.ref_type(), req.ref_id(), field, "", null);
+        if (err != null) return badParams(err);
+        Map<String, Object> p = new HashMap<>();
+        p.put("me", me);
+        p.put("t", req.ref_type());
+        p.put("i", req.ref_id());
+        String where = "owner_sub=:me AND ref_type=:t AND ref_id=:i";
+        if (req.field() != null) { where += " AND field=:f"; p.put("f", req.field()); }
+        try {
+            long n = affected(new LoreCommandClient.LoreCommand("sql", "DELETE FROM KnowUserDraft WHERE " + where, p));
+            return noStore(Response.ok(Map.of("ok", true, "deleted", n,
+                "outcome", n > 0 ? LoreOutcome.DELETED : LoreOutcome.NOOP)));
+        } catch (Exception e) {
+            return upstream("draft delete", e);
+        }
     }
 
     @GET
