@@ -27,7 +27,7 @@
 :root[data-theme="dark"]{--bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--t1:#efe6d2;--t2:#b8ab90;--t3:#7f735c;
   --acc:#d9a441;--suc:#8fb85f;--wrn:#d9a441;--dng:#d0644f;--inf:#6fa3c4;}
 *{box-sizing:border-box}
-html,body{overflow-x:hidden}
+html,body{overflow-x:clip}
 body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 Manrope,system-ui,sans-serif}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 h1,h2,h3{font-family:Unbounded,sans-serif;font-weight:800;margin:0}
@@ -122,9 +122,24 @@ body.nopins .notes{display:none}
 .legend{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .map{width:100%}
 .map td:first-child{white-space:nowrap}
+/* два режима: «Интерфейс» — чистые экраны; «Пояснения» — карта и разбор экранов */
+.tabs{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.tabs a{padding:4px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--t2);text-decoration:none}
+.tabs a.on{background:var(--acc);color:var(--bg)}
+body.mode-ui #docs{display:none}
+body.mode-doc .wrap,body.mode-doc .uionly{display:none}
+body.mode-ui section.scr .lead,body.mode-ui section.scr .meta,body.mode-ui section.scr .notes,body.mode-ui section.scr .foot{display:none}
+.doc{max-width:900px;margin:0 auto;padding:16px}
+.doc section.scr{display:block}
+.doc .notes{display:grid!important}
+.doc .pin{display:inline-grid!important}
+.docscr{scroll-margin-top:120px;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);padding:12px;margin:14px 0}
+.docscr header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.docscr header h2{flex:1;margin:0}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 /* телефон / планшет вертикально */
 @media (max-width:860px){
-  .wrap{grid-template-columns:1fr}
+  .wrap{grid-template-columns:1fr;align-content:start}
   nav.side{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--bd);display:flex;gap:10px;overflow-x:auto;padding:8px 16px}
   .grp{flex:none;margin:0}
   .grp button{white-space:nowrap}
@@ -141,7 +156,8 @@ body.nopins .notes{display:none}
   <span class="chip ok">Keycloak жив</span>
   <span class="chip i">админов 2</span>
   <span class="chip">v1.17.6</span>
-  <label class="tog"><input type="checkbox" id="pins" checked> пояснения</label>
+  <nav class="tabs" aria-label="Режим"><a href="#ui/home" data-tab="ui">Интерфейс</a><a href="#doc" data-tab="doc">Пояснения</a></nav>
+  <label class="tog uionly"><input type="checkbox" id="pins"> номера</label>
 </header>
 <div class="wrap">
 <nav class="side" id="nav"></nav>
@@ -151,7 +167,7 @@ body.nopins .notes{display:none}
 <section class="scr" data-id="map" data-grp="Как читать" data-t="Карта админки" data-st="—">
   <h2>Карта: что где и куда ведёт</h2>
   <p class="lead">Админка — <b>один интерфейс</b> вместо трёх (LORE, Keycloak, Forgejo; плюс хранилище секретов).
-  Слева меню сгруппировано <b>по намерению и риску</b>, а не по таблицам базы: сначала «что я хочу сделать» (сценарии), потом «опасное» (доступ), потом справочники и система.
+  Меню сгруппировано <b>по намерению и риску</b>, а не по таблицам базы: сначала «что я хочу сделать» (сценарии), потом «опасное» (доступ), потом справочники и система.
   Каждый сценарий — мастер от намерения до проверки «заработало», с честным списком «что осталось сделать руками в другом месте».</p>
   <div class="legend">
     <span class="chip ok">✓ в develop</span>
@@ -221,7 +237,7 @@ flowchart TB
 </section>
 
 <!-- ═══════════════ ГЛАВНАЯ ═══════════════ -->
-<section class="scr" data-id="home" data-grp="Как читать" data-t="Главная" data-st="□">
+<section class="scr" data-id="home" data-grp="Начало" data-t="Главная" data-st="□">
   <h2>Главная: что требует внимания</h2>
   <p class="lead">Первое, что видно при входе. Не «вся информация», а только то, что сломано или недоделано, — каждая карточка ведёт в сценарий, который это чинит.</p>
   <div class="meta"><span class="chip dash">□ только прототип</span><span class="chip">SPRINT_UXR_S7B_ADMIN/S7B-01</span></div>
@@ -587,13 +603,38 @@ flowchart TB
 
 </main>
 </div>
+<div id="docs" class="doc"></div>
 
 <script>
-// Навигация: группы по смыслу и риску; выбранный экран — в адресе (#id).
+// Два режима по просьбе владелицы 09.11: «Интерфейс» — экраны без пояснений;
+// «Пояснения» — отдельной вкладкой: карта и разбор каждого экрана.
+// Адрес: #ui/<экран>[/n] — экран (n — с номерами), #doc[/<экран>] — пояснения.
 const RISK = { 'Доступ': '<span class="chip d" style="padding:0 6px">риск</span>' };
 const ST = { '✓': 'ok', '◐': 'i', '⏳': 'w', '□': 'dash', '—': '' };
-const scrs = [...document.querySelectorAll('section.scr')];
+const ST_TXT = { '✓': 'в develop', '◐': 'в работе', '⏳': 'ждёт сервер', '□': 'только прототип' };
+const all = [...document.querySelectorAll('section.scr')];
+const mapSec = all.find(s => s.dataset.id === 'map');
+const scrs = all.filter(s => s !== mapSec);
+const ids = new Set(scrs.map(s => s.dataset.id));
 const nav = document.getElementById('nav');
+const doc = document.getElementById("docs");
+document.body.classList.add('nopins');
+// Ссылки «#uc1» в тексте → на экран интерфейса.
+document.querySelectorAll('a[href^="#"]').forEach(a => { const id = a.getAttribute('href').slice(1); if (ids.has(id)) a.setAttribute('href', `#ui/${id}`); });
+// Вкладка «Пояснения»: карта + по блоку на экран (пояснения переносятся из экрана).
+doc.appendChild(mapSec);
+const toc = document.createElement('div');
+toc.className = 'toc';
+toc.innerHTML = '<b style="width:100%">Экраны:</b>' + scrs.map(s => `<a class="chip ${ST[s.dataset.st] ?? ''}" href="#doc/${s.dataset.id}">${s.dataset.t}</a>`).join('');
+mapSec.querySelector('h2').after(toc);
+for (const s of scrs) {
+  const art = document.createElement('article');
+  art.className = 'docscr';
+  art.id = `d-${s.dataset.id}`;
+  art.innerHTML = `<header><h2>${s.querySelector('h2').textContent}</h2><span class="chip ${ST[s.dataset.st] ?? ''}">${s.dataset.st} ${ST_TXT[s.dataset.st] ?? ''}</span><a class="btn pri" href="#ui/${s.dataset.id}/n">Открыть экран с номерами →</a></header>`;
+  for (const sel of ['.lead', '.meta', '.notes', '.foot']) { const el = s.querySelector(sel); if (el) art.appendChild(el); }
+  doc.appendChild(art);
+}
 const groups = {};
 scrs.forEach(s => (groups[s.dataset.grp] ??= []).push(s));
 for (const [g, list] of Object.entries(groups)) {
@@ -603,15 +644,29 @@ for (const [g, list] of Object.entries(groups)) {
     list.map(s => `<button data-go="${s.dataset.id}">${s.dataset.t}<span class="st chip ${ST[s.dataset.st] ?? ''}">${s.dataset.st}</span></button>`).join('');
   nav.appendChild(div);
 }
-function show(id) {
-  if (!scrs.some(s => s.dataset.id === id)) id = 'map';
-  scrs.forEach(s => s.classList.toggle('on', s.dataset.id === id));
-  nav.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.go === id));
+const pins = document.getElementById('pins');
+function route() {
+  const [mode, id, n] = location.hash.slice(1).split('/');
+  const isDoc = mode === 'doc';
+  document.body.classList.toggle('mode-doc', isDoc);
+  document.body.classList.toggle('mode-ui', !isDoc);
+  document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === (isDoc ? 'doc' : 'ui')));
+  if (isDoc) {
+    const t = id && document.getElementById(`d-${id}`);
+    if (t) t.scrollIntoView(); else window.scrollTo(0, 0);
+    return;
+  }
+  const cur = ids.has(id) ? id : 'home';
+  scrs.forEach(s => s.classList.toggle('on', s.dataset.id === cur));
+  nav.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.go === cur));
+  pins.checked = n === 'n';
+  document.body.classList.toggle('nopins', !pins.checked);
+  window.scrollTo(0, 0);
 }
-nav.addEventListener('click', e => { const b = e.target.closest('button[data-go]'); if (b) { location.hash = b.dataset.go; } });
-window.addEventListener('hashchange', () => { show(location.hash.slice(1)); window.scrollTo(0, 0); });
-show(location.hash.slice(1));
-document.getElementById('pins').addEventListener('change', e => document.body.classList.toggle('nopins', !e.target.checked));
+nav.addEventListener('click', e => { const b = e.target.closest('button[data-go]'); if (b) location.hash = `ui/${b.dataset.go}${pins.checked ? '/n' : ''}`; });
+pins.addEventListener('change', () => { const id = location.hash.slice(1).split('/')[1] || 'home'; location.hash = `ui/${id}${pins.checked ? '/n' : ''}`; });
+window.addEventListener('hashchange', route);
+route();
 </script>
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
@@ -620,13 +675,11 @@ mermaid.registerLayoutLoaders(elkLayouts);
 const dark = !matchMedia('(prefers-color-scheme: light)').matches;
 mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'neutral', flowchart: { useMaxWidth: false },
   themeVariables: { fontFamily: 'Manrope, sans-serif', fontSize: '13px' } });
-// Карта рисуется, даже если пользователь открыл другой экран: временно показываем секцию.
-const sec = document.querySelector('section[data-id="map"]');
-const wasOn = sec.classList.contains('on');
-sec.style.display = 'block';
+// Карта живёт на вкладке «Пояснения»; рисуем её, даже если открыт интерфейс.
+const doc = document.getElementById("docs");
+doc.style.display = 'block';
 await mermaid.run({ querySelector: '.mermaid' });
-sec.style.display = '';
-if (!wasOn) sec.classList.remove('on');
+doc.style.display = '';
 document.body.dataset.mermaid = 'done';
 </script>
 </body>
