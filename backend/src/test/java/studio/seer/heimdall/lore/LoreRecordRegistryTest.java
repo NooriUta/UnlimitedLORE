@@ -34,11 +34,11 @@ class LoreRecordRegistryTest {
 
     @Test
     void typesNowAreSprintTaskAdrSpec() {
-        assertEquals(List.of("sprint", "task", "adr", "spec", "decision", "question"), LoreRecordRegistry.TYPES);
+        assertEquals(List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release"), LoreRecordRegistry.TYPES);
         // Kit 09.11: решение и вопрос заведены — пока только чтение (READ_ONLY).
         assertNotNull(LoreRecordRegistry.get("decision"));
         assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("decision", "question")));
-        assertNull(LoreRecordRegistry.get("milestone"), "веха — позже, сейчас её в реестре нет");
+        assertNull(LoreRecordRegistry.get("component"), "компонент — позже, сейчас его в реестре нет");
     }
 
     @Test
