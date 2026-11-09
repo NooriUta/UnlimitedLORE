@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -64,6 +64,7 @@ export default function KitPage() {
   const [batch, setBatch] = useState<{ id: string; applied: number; total: number; undoUntil: number } | null>(null);
   const [batchUndone, setBatchUndone] = useState(false);
   const [proposed, setProposed] = useState<number | null>(null);
+  const [activated, setActivated] = useState<string | null>(null);
   const [earOpen, setEarOpen] = useState(false);
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
   // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
@@ -312,6 +313,27 @@ export default function KitPage() {
             onPropose={changes => setProposed(changes.length)}
           />
           {proposed !== null && <p className="kitp__panel" role="status">{t('kitPage.flow.matrixProposed', { n: proposed })}</p>}
+          <h3 className="kitp__h3">{t('kitPage.flow.relHead')}</h3>
+          <p>{t('kitPage.flow.relLead')}</p>
+          {/* Класс выпуска считает сервер; витрина показывает присланный. */}
+          <ContentRelease
+            diff={{
+              from: 7,
+              to: 8,
+              class: 'hotfix',
+              added: [{ id: 'A-1', title: t('kitPage.flow.relAdded') }],
+              changed: [{
+                id: 'C-1',
+                title: t('kitPage.flow.relChanged'),
+                fields: { title: { from: t('kitPage.flow.relWas'), to: t('kitPage.flow.relNow') } },
+              }],
+              removed: [{ id: 'R-1', title: t('kitPage.flow.relRemoved') }],
+            }}
+            log={[{ version: 7, who: t('kitPage.flow.relWho'), when: '2026-11-01T10:00:00Z', action: 'activate' }]}
+            onActivate={v => setActivated(String(v))}
+            onRollback={v => setActivated(t('kitPage.flow.relRolledBack', { v: String(v) }))}
+          />
+          {activated && <p className="kitp__panel" role="status">{t('kitPage.flow.relDone', { v: activated })}</p>}
           <h3 className="kitp__h3">{t('kitPage.flow.secretHead')}</h3>
           {/* Значение здесь показное: витрина не выдаёт настоящих секретов. */}
           <SecretOnce value="demo-0000-0000" label={t('kitPage.flow.secretLabel')} />

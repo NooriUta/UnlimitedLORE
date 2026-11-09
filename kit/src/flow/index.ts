@@ -7,3 +7,5 @@ export { SecretOnce, type SecretClipboard, type SecretOnceProps } from './Secret
 export { DiffPreview, type DiffCheck, type DiffKind, type DiffPreviewProps, type DiffRow } from './DiffPreview';
 export { BatchUndo, type BatchItemFail, type BatchResult, type BatchUndoProps } from './BatchUndo';
 export { Matrix, type MatrixAxis, type MatrixCellState, type MatrixChange, type MatrixOption, type MatrixProps } from './Matrix';
+export { wordDiff, type WordChunk, type WordChunkKind, type WordDiffOptions, type WordDiffResult } from './wordDiff';
+export { ContentRelease, type ActivationEntry, type ContentChangedItem, type ContentDiff, type ContentFieldChange, type ContentItem, type ContentReleaseProps } from './ContentRelease';

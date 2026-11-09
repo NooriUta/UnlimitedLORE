@@ -2353,6 +2353,124 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-matrix__listtitle { min-width: 0; color: var(--t1); font-size: var(--fs-sm); }
 
+/* ---------- Выпуск содержимого: дифф версий и активация (K-12) ----------
+   Пословный дифф: убранное зачёркнуто и красным, добавленное — зелёным и
+   подчёркнутым. Зачёркивание и подчёркивание рядом с цветом намеренно: по
+   этому диффу решают, выкатывать ли версию на прод, и цвета одного мало. */
+.sk-rel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  color: var(--t1);
+  font-size: var(--fs-base);
+}
+.sk-rel__top { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap); min-width: 0; }
+.sk-rel__versions { margin: 0; font-family: var(--mono); font-size: var(--fs-sm); }
+.sk-rel__class {
+  padding: 1px 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+}
+.sk-rel__class[data-class='hotfix'] { border-color: color-mix(in srgb, var(--wrn) 55%, transparent); color: var(--wrn); }
+.sk-rel__class[data-class='release'] { border-color: color-mix(in srgb, var(--suc) 55%, transparent); color: var(--suc); }
+.sk-rel__class[data-class='unknown'] { border-style: dashed; color: var(--t2); }
+.sk-rel__trunc {
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  font-size: var(--fs-sm);
+}
+.sk-rel__none { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-rel__group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-rel__ghead {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-rel__count { color: var(--t1); font-family: var(--mono); }
+.sk-rel__gempty { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
+.sk-rel__list { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-rel__item,
+.sk-rel__logrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--bd);
+  font-size: var(--fs-sm);
+}
+.sk-rel__id { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-rel__title { min-width: 0; color: var(--t1); }
+.sk-rel__nofields { color: var(--t3); font-size: var(--fs-xs); font-style: italic; }
+.sk-rel__fields { margin: 0; padding: 0 0 0 10px; min-width: 0; list-style: none; }
+.sk-rel__field { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; padding: 2px 0; }
+.sk-rel__fname { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-rel__wdiff { min-width: 0; white-space: pre-wrap; word-break: break-word; }
+.sk-rel__chunk[data-chunk='same'] { color: var(--t2); }
+.sk-rel__chunk[data-chunk='del'] { color: var(--dng); text-decoration: line-through; }
+.sk-rel__chunk[data-chunk='add'] { color: var(--suc); text-decoration: underline; }
+.sk-rel__rough { color: var(--wrn); font-size: var(--fs-xs); }
+.sk-rel__more {
+  align-self: flex-start;
+  min-height: max(var(--tap), 20px);
+  padding: 0 8px;
+  border: 1px dashed var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sk-rel__more:hover { color: var(--t1); border-color: var(--acc); }
+.sk-rel__acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); min-width: 0; }
+.sk-rel__act {
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-rel__act.is-primary { border-color: var(--acc); color: var(--acc); }
+.sk-rel__act[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-rel__act:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-rel__norollback { color: var(--t2); font-size: var(--fs-sm); }
+/* Подтверждение рискованного действия — отдельной рамкой: его не должно быть
+   видно краем глаза как «ещё одну кнопку». */
+.sk-rel__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  padding: 8px 10px;
+  border: 1px solid var(--wrn);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+}
+.sk-rel__q { margin: 0; font-size: var(--fs-sm); }
+.sk-rel__log { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-rel__logact { color: var(--t2); font-size: var(--fs-xs); }
+.sk-rel__logrow[data-action='rollback'] .sk-rel__logact { color: var(--wrn); }
+.sk-rel__who { color: var(--t1); }
+.sk-rel__when { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+
 /* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
 .sk-shead {
   display: flex;

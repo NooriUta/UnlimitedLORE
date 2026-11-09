@@ -414,5 +414,15 @@
   "kitPage.flow.matrixC2": "Column two",
   "kitPage.flow.matrixO1": "Value one",
   "kitPage.flow.matrixO2": "Value two",
-  "kitPage.flow.matrixProposed": "Changes proposed: {n} — the diff shows them next."
+  "kitPage.flow.matrixProposed": "Changes proposed: {n} — the diff shows them next.",
+  "kitPage.flow.relHead": "Content release: version diff and activation",
+  "kitPage.flow.relLead": "The release class (hotfix or release) is computed by the server — the showcase shows what was sent. Activation and rollback go through a confirmation.",
+  "kitPage.flow.relAdded": "An added record",
+  "kitPage.flow.relChanged": "A changed record",
+  "kitPage.flow.relRemoved": "A removed record",
+  "kitPage.flow.relWas": "a rule for everyone",
+  "kitPage.flow.relNow": "a rule for newcomers",
+  "kitPage.flow.relWho": "someone on the team",
+  "kitPage.flow.relRolledBack": "rollback to {v}",
+  "kitPage.flow.relDone": "The app received the action: {v}."
 }
