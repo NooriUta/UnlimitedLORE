@@ -37,4 +37,21 @@ class LoreVersionEndpointTest {
             // о номере схемы разошлись бы первой же правкой.
             .body("schema_version", equalTo(LoreSchemaMigrations.codeVersion()));
     }
+
+    /**
+     * Владелица 09.11: «в правый нижний угол запиши версию сервера и версию фронта». Номер
+     * релиза сборка не знает (образ собирается до тега) — его передаёт выкатка прода
+     * переменной LORE_RELEASE_TAG. Нет или мусор — release: null, а не выдуманная версия.
+     */
+    @Test
+    void releaseTagIsTakenOnlyWhenItLooksLikeATag() {
+        org.junit.jupiter.api.Assertions.assertEquals("v1.17.7", LoreVersionResource.releaseTag("v1.17.7"));
+        org.junit.jupiter.api.Assertions.assertEquals("v1.17.7", LoreVersionResource.releaseTag(" v1.17.7 "));
+        org.junit.jupiter.api.Assertions.assertNull(LoreVersionResource.releaseTag(null));
+        org.junit.jupiter.api.Assertions.assertNull(LoreVersionResource.releaseTag(""));
+        org.junit.jupiter.api.Assertions.assertNull(LoreVersionResource.releaseTag("latest"));
+        org.junit.jupiter.api.Assertions.assertNull(LoreVersionResource.releaseTag("339f15b0"));
+        given().when().get("/lore/version").then().statusCode(200)
+            .body("$", org.hamcrest.Matchers.hasKey("release"));
+    }
 }
