@@ -923,9 +923,14 @@ public class LoreProductResource extends LoreResourceBase {
      * Необязателен: старые вызовы (до V21) роль не передавали, и затирать её
      * пустым значением при повторной привязке владельца нельзя.
      */
+    /** S7B-16: учётка машины miniLORE — client_id с этим префиксом (ADR-MINILORE-007 В4). */
+    static final String MACHINE_CLIENT_PREFIX = "minilore-link-";
+
     public record ActorOwnerRequest(String actor_id, String client_id, String kc_sub, String agent_role,
         // S7B-15, ADR-MINILORE-007: harness из справочника harness. null — не трогать, "" — сбросить.
-        String harness) {}
+        String harness,
+        // S7B-16, ADR-MINILORE-007 В4: машина — поле machine_id. null — не трогать, "" — отвязать.
+        String machine_id) {}
 
     @POST
     @Path("actor/owner")
@@ -944,6 +949,8 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("kc_sub required");
         String harnessErr = LoreActorHarness.error(req.harness(), activeDictCodes("harness", LoreActorHarness.REGISTRY));
         if (harnessErr != null) return badParams(harnessErr);
+        if (req.machine_id() != null && !req.machine_id().isEmpty() && !SAFE_ID.matcher(req.machine_id()).matches())
+            return badParams("machine_id contains illegal characters");
         try {
             List<Map<String, Object>> actor = ingest.queryPublic(
                 "SELECT kind FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
@@ -952,18 +959,31 @@ public class LoreProductResource extends LoreResourceBase {
             if (!"agent".equals(actor.get(0).get("kind")))
                 return badParams("actor '" + req.actor_id() + "' не kind=agent — владелец назначается только агентам");
 
+            // S7B-16: две машины одно имя — отказ. Машина — актор с client_id minilore-link-*;
+            // агенты lore-mcp-* на одной машине делят machine_id законно.
+            if (req.machine_id() != null && !req.machine_id().isEmpty() && req.client_id().startsWith(MACHINE_CLIENT_PREFIX)) {
+                List<Map<String, Object>> taken = ingest.queryPublic(
+                    "SELECT actor_id FROM KnowActor WHERE machine_id = :m AND client_id LIKE :p AND actor_id <> :id",
+                    Map.of("m", req.machine_id(), "p", MACHINE_CLIENT_PREFIX + "%", "id", req.actor_id()));
+                if (taken != null && !taken.isEmpty())
+                    return badParams("machine_id '" + req.machine_id() + "' уже занят машиной '"
+                        + taken.get(0).get("actor_id") + "' — две машины с одним именем не допускаются (S7B-16)");
+            }
+
             // agent_role пишем ТОЛЬКО когда передан: вызов без него (легаси или
             // повторная привязка владельца) не должен затирать уже выставленную
             // роль пустым значением.
             String setSql = "UPDATE KnowActor SET client_id=:c"
                 + (req.agent_role() != null && !req.agent_role().isBlank() ? ", agent_role=:r" : "")
                 + (req.harness() == null ? "" : req.harness().isEmpty() ? ", harness=null" : ", harness=:h")
+                + (req.machine_id() == null ? "" : req.machine_id().isEmpty() ? ", machine_id=null" : ", machine_id=:mid")
                 + " WHERE actor_id=:id";
             Map<String, Object> setParams = new LinkedHashMap<>();
             setParams.put("c", req.client_id());
             setParams.put("id", req.actor_id());
             if (req.agent_role() != null && !req.agent_role().isBlank()) setParams.put("r", req.agent_role());
             if (req.harness() != null && !req.harness().isEmpty()) setParams.put("h", req.harness());
+            if (req.machine_id() != null && !req.machine_id().isEmpty()) setParams.put("mid", req.machine_id());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 setSql, setParams)).await().indefinitely();
 
