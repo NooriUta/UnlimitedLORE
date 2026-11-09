@@ -230,12 +230,15 @@ class LoreRecordFacadeLiveDbTest {
         task(sid, "T-1");
         task(sid, "T-2");
         JsonPath r = record("sprint", sid);
-        assertEquals(2, r.getInt("values.tasks_total.of"), "задач в спринте");
-        assertEquals(0, r.getInt("values.tasks_total.done"));
-        assertEquals(0, r.getInt("values.effort_days_total.known"), "оценок не задавали");
-        assertNull(r.get("values.effort_days_total.value"), "нет оценок — null, а не 0");
+        // Итоги — отдельным блоком computed, не в values: values — поля схемы, клиент рисует
+        // их строкой, и объект {value, known, of} там стал бы мусором (S7A-12, 09.11).
+        assertNull(r.get("values.tasks_total"), "итоги не в values");
+        assertEquals(2, r.getInt("computed.tasks_total.of"), "задач в спринте");
+        assertEquals(0, r.getInt("computed.tasks_total.done"));
+        assertEquals(0, r.getInt("computed.effort_days_total.known"), "оценок не задавали");
+        assertNull(r.get("computed.effort_days_total.value"), "нет оценок — null, а не 0");
         JsonPath list = given().get("/lore/slice/sprint_totals?sprint_ids=" + sid).then().statusCode(200).extract().jsonPath();
-        assertEquals(r.getMap("values.tasks_total"), list.getMap("rows[0].tasks_total"), "паспорт и список — одно число");
+        assertEquals(r.getMap("computed.tasks_total"), list.getMap("rows[0].tasks_total"), "паспорт и список — одно число");
     }
 
     /** Kit 09.11: паспорта решения и вопроса (только чтение) — первыми из восьми типов разделов v2. */
