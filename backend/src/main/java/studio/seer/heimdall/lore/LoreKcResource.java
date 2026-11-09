@@ -178,6 +178,120 @@ public class LoreKcResource extends LoreResourceBase {
         } catch (Exception e) { return upstream(e); }
     }
 
+    // ── S7A-12 A: учётка агента по шаблону профиля (UC-ADMIN-NEW-MACHINE) ────
+
+    public record KcAgentClientRequest(String profile, String machine) {}
+
+    private Response kcRefused(HttpResponse<String> r) {
+        String hint = LoreKcAgentClient.forbiddenHint(r.statusCode());
+        return noStore(Response.status(r.statusCode())
+            .entity(new LoreError(hint != null ? "KC_FORBIDDEN" : "KC_UPSTREAM", hint != null ? hint : r.body())));
+    }
+
+    /** id клиента KC по clientId; null — нет такого. */
+    private String kcClientUuid(String clientId, String t) throws Exception {
+        HttpResponse<String> r = kc("GET", "/clients?clientId=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8), null, t);
+        if (r.statusCode() != 200) throw new KcCallFailed(r);
+        io.vertx.core.json.JsonArray a = new io.vertx.core.json.JsonArray(r.body());
+        return a.isEmpty() ? null : a.getJsonObject(0).getString("id");
+    }
+
+    private static final class KcCallFailed extends RuntimeException {
+        final HttpResponse<String> response;
+        KcCallFailed(HttpResponse<String> r) { super("kc " + r.statusCode()); this.response = r; }
+    }
+
+    @POST
+    @Path("agent-client")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createAgentClient(KcAgentClientRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!configured()) return notConfigured();
+        if (req == null) return badParams("profile и machine обязательны");
+        final String templateId, newId;
+        try {
+            templateId = LoreKcAgentClient.templateId(req.profile());
+            newId = LoreKcAgentClient.clientId(req.profile(), req.machine());
+        } catch (IllegalArgumentException e) { return badParams(e.getMessage()); }
+        try {
+            String t = adminToken();
+            String tplUuid = kcClientUuid(templateId, t);
+            if (tplUuid == null)
+                return badParams("нет шаблона профиля: клиента " + templateId + " в Keycloak нет");
+            if (kcClientUuid(newId, t) != null)
+                return noStore(Response.status(409).entity(new LoreError("EXISTS",
+                    newId + " уже есть — секрет повторно не выдаётся; отключите и заведите заново")));
+            HttpResponse<String> tpl = kc("GET", "/clients/" + tplUuid, null, t);
+            if (tpl.statusCode() != 200) return kcRefused(tpl);
+            io.vertx.core.json.JsonObject body = LoreKcAgentClient.fromTemplate(new io.vertx.core.json.JsonObject(tpl.body()), newId);
+            HttpResponse<String> created = kc("POST", "/clients", body.encode(), t);
+            if (created.statusCode() >= 300) return kcRefused(created);
+            String newUuid = kcClientUuid(newId, t);
+            HttpResponse<String> sec = kc("GET", "/clients/" + newUuid + "/client-secret", null, t);
+            if (sec.statusCode() != 200) return kcRefused(sec);
+            String secret = new io.vertx.core.json.JsonObject(sec.body()).getString("value");
+
+            // realm-роли сервисного аккаунта — тоже из шаблона: без них учётка входит, но прав нет.
+            List<String> copied = new java.util.ArrayList<>();
+            String rolesNote = null;
+            HttpResponse<String> tplSa = kc("GET", "/clients/" + tplUuid + "/service-account-user", null, t);
+            HttpResponse<String> newSa = kc("GET", "/clients/" + newUuid + "/service-account-user", null, t);
+            if (tplSa.statusCode() == 200 && newSa.statusCode() == 200) {
+                String tplUser = new io.vertx.core.json.JsonObject(tplSa.body()).getString("id");
+                String newUser = new io.vertx.core.json.JsonObject(newSa.body()).getString("id");
+                HttpResponse<String> rm = kc("GET", "/users/" + tplUser + "/role-mappings/realm", null, t);
+                if (rm.statusCode() == 200) {
+                    io.vertx.core.json.JsonArray roles = new io.vertx.core.json.JsonArray(rm.body());
+                    io.vertx.core.json.JsonArray grant = new io.vertx.core.json.JsonArray();
+                    for (int i = 0; i < roles.size(); i++) {
+                        io.vertx.core.json.JsonObject r = roles.getJsonObject(i);
+                        if (KcBridge.isKeycloakServiceRole(r.getString("name", ""))) continue;
+                        grant.add(r);
+                        copied.add(r.getString("name"));
+                    }
+                    if (!grant.isEmpty()) {
+                        HttpResponse<String> g = kc("POST", "/users/" + newUser + "/role-mappings/realm", grant.encode(), t);
+                        if (g.statusCode() >= 300) { copied.clear(); rolesNote = "роли не скопированы: KC " + g.statusCode(); }
+                    }
+                } else rolesNote = "роли шаблона не прочитаны: KC " + rm.statusCode();
+            } else rolesNote = "сервисный аккаунт не найден у шаблона или нового клиента";
+            LOG.infof("[LORE KC] создан клиент агента %s по шаблону %s, ролей скопировано %d", newId, templateId, copied.size());
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("clientId", newId);
+            out.put("template", templateId);
+            out.put("secret", secret);
+            out.put("secret_note", "показывается один раз: LORE его не хранит. Положите в Infisical или в конфиг машины сразу.");
+            out.put("roles_copied", copied);
+            if (rolesNote != null) out.put("roles_note", rolesNote);
+            return noStore(Response.ok(out));
+        } catch (KcCallFailed e) { return kcRefused(e.response); }
+        catch (Exception e) { return upstream(e); }
+    }
+
+    @POST
+    @Path("agent-client/{clientId}/disable")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response disableAgentClient(@PathParam("clientId") String clientId, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!configured()) return notConfigured();
+        if (clientId == null || !clientId.startsWith("lore-mcp-"))
+            return badParams("отключаются только учётки агентов lore-mcp-*");
+        try {
+            String t = adminToken();
+            String uuid = kcClientUuid(clientId, t);
+            if (uuid == null) return noStore(Response.status(404).entity(new LoreError("NOT_FOUND", clientId + " в Keycloak нет")));
+            HttpResponse<String> r = kc("PUT", "/clients/" + uuid, io.vertx.core.json.JsonObject.of("enabled", false).encode(), t);
+            if (r.statusCode() >= 300) return kcRefused(r);
+            LOG.infof("[LORE KC] клиент агента %s отключён", clientId);
+            return noStore(Response.ok(Map.of("ok", true, "clientId", clientId, "enabled", false)));
+        } catch (KcCallFailed e) { return kcRefused(e.response); }
+        catch (Exception e) { return upstream(e); }
+    }
+
     public record KcRoleRequest(String role, String action) {}
 
     @POST
