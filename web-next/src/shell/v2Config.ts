@@ -29,6 +29,22 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
   ['in_progress', 'active', ['done', 'blocked', 'todo']],
   ['active', 'active', ['done', 'cancelled']],
   ['blocked', 'active', ['in_progress', 'cancelled']],
+  // Эти четыре кода были ПОТЕРЯНЫ: подписи для них в локалях есть
+  // («Частично», «К выкатке», «Проектирование», «Отложено»), а записи в
+  // словаре не было — и kit было нечем рисовать чип.
+  //
+  // Так и появились «задачи без статусов» из аудита 09.11 (D-03): по замеру
+  // серверной сессии в корпусе 55 задач «🟡 PARTIAL» и 34 «🚀 READY FOR
+  // DEPLOY», и у всех чип выходил пустым. Сервер при этом статус отдавал
+  // всегда (null у нуля задач из 4802), и оба словаря клиента строку узнавали
+  // правильно — ломалось на последнем шаге, в словаре конфига.
+  //
+  // Сторож `tasks/twoVocabularies.probe.test.ts` держит правило: код, который
+  // может получиться из данных, обязан быть здесь.
+  ['partial', 'active', ['done', 'blocked', 'cancelled']],
+  ['ready_for_deploy', 'active', ['done', 'blocked']],
+  ['design', 'todo', ['todo', 'planned', 'cancelled']],
+  ['deferred', 'todo', ['todo', 'cancelled']],
   ['done', 'done', ['in_progress']],
   ['accepted', 'done', ['superseded']],
   ['cancelled', 'cancelled', ['backlog']],

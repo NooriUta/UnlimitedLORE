@@ -29,10 +29,30 @@ export interface KitValidation {
 export const KIT_COLOR_TOKENS = [
   'acc', 'suc', 'wrn', 'dng', 'inf', 't1', 't2', 't3', 'bd', 'bdh',
   'st-active', 'st-backlog', 'st-blocked', 'st-cancelled', 'st-deferred',
-  'st-design', 'st-done', 'st-partial', 'st-planned', 'st-todo',
+  'st-design', 'st-done', 'st-partial', 'st-planned', 'st-ready_for_deploy', 'st-todo',
 ] as const;
 
-const COLOR_RE = new RegExp(`^var\\(--(${KIT_COLOR_TOKENS.join('|')})\\)$`);
+/**
+ * Цвет в конфиге — ТОКЕН, и проверяется его ФОРМА, а не принадлежность к
+ * перечню статусов LORE (SPRINT_UXR_S10_SEIDR_KIT/K-14).
+ *
+ * Было наоборот: разрешался только токен из `KIT_COLOR_TOKENS`, то есть kit
+ * решал, какие статусы приложению позволено иметь. Это уже сработало против
+ * самой LORE (`--st-ready_for_deploy` был в теме, но не в списке), а чужому
+ * приложению со своими статусами оставляло только форк — ровно та угроза, о
+ * которой K-10.
+ *
+ * Правило «цвета только токенами, никаких сырых hex» (владелица) остаётся:
+ * сырое значение — ошибка. Незнакомый токен — предупреждение, чтобы опечатку
+ * было видно, но своё имя приложению не запрещалось.
+ */
+const COLOR_RE = /^var\(--[A-Za-z][\w-]*\)$/;
+
+/** Имя токена из `var(--имя)`; null — форма не та. */
+function tokenName(v: string): string | null {
+  const m = /^var\(--([A-Za-z][\w-]*)\)$/.exec(v);
+  return m ? m[1] : null;
+}
 // Слаг game-icons или «lucide:имя» (второй набор v1, S4-25).
 const ICON_RE = /^(lucide:)?[a-z0-9]+(-[a-z0-9]+)*$/;
 const STATUS_CODE_RE = /^[A-Za-z0-9_-]+$/;
@@ -116,7 +136,15 @@ class Collector {
     const v = o[key];
     if (v === undefined) { if (required) this.err(p, 'required', `нет обязательного поля ${p}`); return; }
     if (!isStr(v) || !COLOR_RE.test(v)) {
-      this.err(p, 'color-token', `${p}: цвет только токеном var(--…) из ${KIT_COLOR_TOKENS.join(', ')}; получено «${String(v)}»`);
+      this.err(p, 'color-token', `${p}: цвет только токеном вида var(--имя); сырые значения запрещены, получено «${String(v)}»`);
+      return;
+    }
+    // Токен не из темы kit — возможно, свой токен приложения (это законно), а
+    // возможно, опечатка. Поэтому предупреждение, а не отказ.
+    const name = tokenName(v);
+    if (name && !(KIT_COLOR_TOKENS as readonly string[]).includes(name)) {
+      this.warn(p, 'color-token-unknown',
+        `${p}: токен «--${name}» не из темы kit — если это токен приложения, объявите его в своей теме; иначе проверьте опечатку`);
     }
   }
   icon(o: Obj, key: string, base: string, required: boolean, exists?: (s: string) => boolean): void {
