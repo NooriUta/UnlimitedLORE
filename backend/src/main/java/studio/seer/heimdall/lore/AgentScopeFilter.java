@@ -370,6 +370,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      *
      * @return {@code null} — запись пропускается; иначе отказ
      */
+    /** Решение с учётом разрешения человека (заглушка до правки: разрешение пока не учитывается). */
+    static Denial decide(String scope, String path, String humanApproval) {
+        return decide(scope, path);
+    }
+
     static Denial decide(String scope, String path) {
         String family = familyOf(path);
         if (family == null) return null;
