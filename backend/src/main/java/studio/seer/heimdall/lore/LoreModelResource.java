@@ -44,7 +44,25 @@ public class LoreModelResource extends LoreResourceBase {
             LOG.warnf("[LORE MODEL] справочник не прочитан: %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
         }
-        Map<String, Object> doc = LoreModel.build(dict);
+        // S4-MODEL-TYPES: свойства типов из схемы графа. Не прочиталась — раздела types
+        // нет и он остаётся в missing (честная неполнота), а не пустой раздел.
+        Map<String, List<String>> schema = null;
+        try {
+            schema = new java.util.HashMap<>();
+            for (Map<String, Object> t : ingestService.queryPublic("SELECT name, properties FROM schema:types", Map.of())) {
+                String name = t.get("name") == null ? null : String.valueOf(t.get("name"));
+                if (name == null || !name.startsWith("Know")) continue;
+                List<String> props = new java.util.ArrayList<>();
+                if (t.get("properties") instanceof List<?> l)
+                    for (Object p : l)
+                        if (p instanceof Map<?, ?> pm && pm.get("name") != null) props.add(String.valueOf(pm.get("name")));
+                schema.put(name, props);
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE MODEL] схема типов не прочитана — раздел types не отдаю: %s", e.getMessage());
+            schema = null;
+        }
+        Map<String, Object> doc = LoreModel.build(dict, schema);
         String version = String.valueOf(doc.get("version"));
         EntityTag tag = new EntityTag(version);
         if (ifNoneMatch != null && ifNoneMatch.replace("\"", "").trim().equals(version)) {

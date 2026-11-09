@@ -543,6 +543,29 @@
       ]
     }
   },
+  "claude_rules_diff": {
+    "input": {
+      "doc_id": "string",
+      "path": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "added": "number",
+            "diff": [],
+            "doc_bytes": "number",
+            "doc_id": "string",
+            "file_bytes": "number",
+            "in_sync": "boolean",
+            "path": "string",
+            "removed": "number"
+          }
+        }
+      ]
+    }
+  },
   "claude_rules_pull": {
     "input": {
       "doc_id": "string",
