@@ -12,6 +12,7 @@ import {
 } from '@seidr/kit';
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
+import { knownRecordHref } from '../nav/loreRoutes';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
 import { fromLoreRecord } from './loreRecordContract';
@@ -153,7 +154,10 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
     pp.reload();
   };
-  const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave, onRelation } }, data: view.data, role: 'reader', href: x => `#${encodeURIComponent(x)}`, esc, md };
+  const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave, onRelation } }, data: view.data, role: 'reader',
+    // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
+    // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
+    href: id => knownRecordHref(id, view.data.records, x => '#' + encodeURIComponent(x)), esc, md };
   return (
     <>
       {/*
