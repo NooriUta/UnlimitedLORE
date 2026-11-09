@@ -14,6 +14,7 @@ import { ListScreen } from '../pages/ListScreen';
 import { newsSource } from '../news/source';
 import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
+import { useModelStatuses } from './useModelStatuses';
 
 
 /** Глобальные параметры URL v2 — не снимаются при смене раздела. */
@@ -71,7 +72,11 @@ export interface V2ShellProps {
 
 export function V2Shell({ storage, win, narrow, brandTag, topStart, topEnd, account }: V2ShellProps) {
   const lang = useKitLang();
-  const config = useMemo(() => v2Config(lang), [lang]);
+  // Словарь статусов — из модели (S4-STATUS-AXIS-CONFIG): он данные приложения,
+  // а не код клиента. Модель недоступна — остаётся рукописное умолчание, и
+  // причина названа словами в `notes`, а не замолчана.
+  const statuses = useModelStatuses();
+  const config = useMemo(() => v2Config(lang, statuses.items), [lang, statuses.items]);
   return (
     <KitShell
       config={config}

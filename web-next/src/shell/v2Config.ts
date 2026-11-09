@@ -52,7 +52,19 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
   ['rejected', 'cancelled', ['proposed']],
 ];
 
-export function v2Config(lang: KitLang): KitConfig {
+/**
+ * Статьи словаря статусов, пришедшие из модели (S4-STATUS-AXIS-CONFIG).
+ *
+ * Передали — словарь берётся оттуда, и рукописный `STATUSES` ниже не
+ * используется вовсе. Не передали (модель недоступна, старый сервер, витрина
+ * без сети) — остаётся рукописный, и это НЕ молчаливый откат: тот, кто грузит
+ * модель, обязан показать причину (`statusesFromModel` отдаёт её словами).
+ *
+ * Зачем так: словарь статусов — дело приложения и его данных, а не кода
+ * клиента. Рукописный список уже стоил находки аудита 09.11 — четыре кода в
+ * него не попали, и у 89 задач корпуса чип выходил пустым.
+ */
+export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items']): KitConfig {
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
     ({ id, title: t(`shell.sec.${id}` as AppKey), icon, ...(view ? { view } : {}) });
@@ -82,10 +94,13 @@ export function v2Config(lang: KitLang): KitConfig {
       news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
     },
     statuses: {
-      items: STATUSES.map(([code, category, allow]) => {
-        const meta = statusMeta(code);
-        return { code, title: t(`status.${code}` as AppKey), category, icon: meta.icon, color: meta.color, allow };
-      }),
+      // Словарь из модели главнее: он данные, а рукописный список — умолчание.
+      items: statusesFromModel?.length
+        ? statusesFromModel
+        : STATUSES.map(([code, category, allow]) => {
+          const meta = statusMeta(code);
+          return { code, title: t(`status.${code}` as AppKey), category, icon: meta.icon, color: meta.color, allow };
+        }),
       // →done в LORE идёт через reviewer-гейт: себе не одобряют.
       selfApprove: false,
       undo: true,
