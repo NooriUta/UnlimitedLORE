@@ -344,10 +344,16 @@ public class AgentScopeFilter implements ContainerRequestFilter {
             return;
         }
         String scope = eff.scope();
-        Denial d = decide(scope, path);
+        String approval = humanApproval(ctx.getHeaderString(HUMAN_APPROVAL_HEADER));
+        Denial d = decide(scope, path, approval);
         if (d != null) {
             deny(ctx, scope, d.what(), d.why());
             return;
+        }
+        if (approval != null && decide(scope, path) != null) {
+            // Пропущено только благодаря разрешению — каждая такая запись видна в журнале.
+            LOG.warnf("[agent-scope] %s с разрешения человека: профиль %s, %s %s, разрешил: «%s»",
+                familyOf(path), scope, ctx.getMethod(), path, approval.strip());
         }
         String family = familyOf(path);
         if (family != null && !HUMAN_ONLY.contains(family) && !FAMILY_AGENTS.containsKey(family)
@@ -370,9 +376,40 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      *
      * @return {@code null} — запись пропускается; иначе отказ
      */
-    /** Решение с учётом разрешения человека (заглушка до правки: разрешение пока не учитывается). */
+    /**
+     * Решение владелицы 09.11.2026 («перепиши правило — с разрешения человека»): семейства,
+     * которые агент full может править, если в запросе назван разрешивший человек
+     * ({@link #HUMAN_APPROVAL_HEADER}). Только справочник: kc/admin/user/news/record остаются
+     * человеческими без исключений.
+     */
+    static final Set<String> HUMAN_APPROVABLE = Set.of("dict");
+    /** Заголовок «кто из людей разрешил и где», URL-кодированный (кириллица в заголовке HTTP недопустима). */
+    static final String HUMAN_APPROVAL_HEADER = "X-Lore-Human-Approval";
+    static final int HUMAN_APPROVAL_MAX = 300;
+
+    /**
+     * Решение с учётом разрешения человека. Без разрешения — ровно {@link #decide(String, String)}.
+     * С разрешением открывается только запрет человеческого семейства из {@link #HUMAN_APPROVABLE}
+     * и только для профиля full; прочие проверки (подпути, матрица) не ослабляются.
+     */
     static Denial decide(String scope, String path, String humanApproval) {
-        return decide(scope, path);
+        Denial d = decide(scope, path);
+        if (d == null || humanApproval == null) return d;
+        String a = humanApproval.strip();
+        if (a.isEmpty() || a.length() > HUMAN_APPROVAL_MAX) return d;
+        String family = familyOf(path);
+        if ("full".equals(scope) && HUMAN_APPROVABLE.contains(family) && family.equals(d.what())) return null;
+        return d;
+    }
+
+    /** Значение заголовка разрешения, раскодированное; битое кодирование = разрешения нет. */
+    static String humanApproval(String header) {
+        if (header == null || header.isBlank()) return null;
+        try {
+            return java.net.URLDecoder.decode(header, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     static Denial decide(String scope, String path) {

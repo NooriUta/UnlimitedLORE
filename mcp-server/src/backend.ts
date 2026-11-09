@@ -367,10 +367,10 @@ export async function loreGet(path: string, params?: Record<string, string>): Pr
 }
 
 /** POST a LORE write endpoint, authenticated per writeAuthHeaders() (see A2 above). */
-export async function lorePost(path: string, body: unknown): Promise<unknown> {
+export async function lorePost(path: string, body: unknown, extraHeaders?: Record<string, string>): Promise<unknown> {
   const res = await loreFetch(`POST ${path}`, `${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()) },
+    headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()), ...(extraHeaders ?? {}) },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
