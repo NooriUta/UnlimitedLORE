@@ -41,10 +41,12 @@ public final class NewsV2Engine {
     public static final String NOSPR  = "(no-sprint)";
     public static final String NOMS   = "(no-milestone)";
     public static final String AUTHOR_AGENT = "agent", AUTHOR_HUMAN = "human", AUTHOR_UNKNOWN = "unknown";
+    /** S7A-12: автор события не установлен — своя группа оси who, а не пропажа события. */
+    public static final String NOWHO = "(unknown)";
 
-    /** Оси группировки и фильтра (S7A-02). */
+    /** Оси группировки и фильтра (S7A-02; who — S7A-12, конкретный автор). */
     public static final List<String> AXES =
-        List.of("project", "component", "type", "kind", "sprint", "milestone", "author", "day");
+        List.of("project", "component", "type", "kind", "sprint", "milestone", "author", "who", "day");
     /** Оси, по которым элемент принадлежит группе (а не событие): для них считается ×N. */
     static final Set<String> ELEMENT_AXES = Set.of("project", "component", "type", "sprint", "milestone");
     /** Оси задач для сгорания по группам (§7.2, §7.2b). */
@@ -238,6 +240,7 @@ public final class NewsV2Engine {
             case "sprint"    -> List.of(e.sprint() == null ? NOSPR : e.sprint());
             case "milestone" -> e.milestones() == null || e.milestones().isEmpty() ? List.of(NOMS) : e.milestones();
             case "author"    -> List.of(authorClass(e));
+            case "who"       -> List.of(e.who() == null || e.who().isBlank() ? NOWHO : e.who());
             case "day"       -> List.of(String.valueOf(dayOf(e)));
             default -> throw new IllegalArgumentException("unknown axis: " + axis);
         };
@@ -799,6 +802,7 @@ public final class NewsV2Engine {
         if (!hit(q.kinds(), axisValues("kind", e))) return false;
         if (q.authors() != null && !q.authors().isEmpty()
                 && !q.authors().contains(authorClass(e)) && (e.who() == null || !q.authors().contains(e.who()))) return false;
+        if (!hit(q.whos(), axisValues("who", e))) return false;
         return q.els() == null || q.els().isEmpty() || q.els().contains(e.elKey());
     }
 
@@ -926,6 +930,7 @@ public final class NewsV2Engine {
         counts.put("total", pair(c.E.size(), (int) c.E.stream().map(Event::elKey).distinct().count()));
         counts.put("by_type", byAxis(c.E, "type"));
         counts.put("by_kind", byAxis(c.E, "kind"));
+        counts.put("by_who", byAxis(c.E, "who"));   // S7A-12: счёт для фильтра «Кто»
         m.put("counts", counts);
         if (c.tasksAvailable) m.put("tasks", tasksOut(c.ship));
         else m.put("tasks", mapOf("available", false, "reason", "история задач недоступна — см. meta.errors"));
