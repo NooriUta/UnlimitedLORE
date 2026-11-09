@@ -33,12 +33,17 @@
 // человек — поверх. Здесь только первый слой.
 
 /** Законные ключи элемента раздела. Пятёрка закрыта намеренно — см. шапку. */
-export const SECTION_KEYS: readonly string[] = ['key', 'source', 'ref', 'order', 'default_visible'];
+export const SECTION_KEYS: readonly string[] = ['key', 'source', 'ref', 'order', 'slot'];
 
 /** Источник раздела: тело записи, часть или связь. */
 export type SectionSource = 'body' | 'part' | 'relation';
 
 const SOURCES: readonly string[] = ['body', 'part', 'relation'];
+
+/** Место раздела в паспорте. Три, потому что мест в v1 было три. */
+export type SectionSlot = 'own' | 'content' | 'more';
+
+const SLOTS: readonly string[] = ['own', 'content', 'more'];
 
 /** Раздел паспорта в том виде, в котором им пользуется приложение. */
 export interface PassportSection {
@@ -47,8 +52,19 @@ export interface PassportSection {
   /** Ключ части или связи; у тела — `null` (тело одно на все разделы). */
   ref: string | null;
   order: number;
-  /** Видно сразу; `false` — под «Ещё» (умолчание модели, человек может сдвинуть). */
-  visible: boolean;
+  /**
+   * Место раздела — умолчание модели, человек может сдвинуть:
+   *  • `own` — свой раздел, виден сразу;
+   *  • `content` — блоком В ХВОСТЕ ТЕЛА, вкладкой НЕ становится вовсе (так было
+   *    в v1 у зависимостей спринта и у списка решений ADR — подтверждено CJM);
+   *  • `more` — под свёрткой «Ещё».
+   *
+   * Третье значение появилось по словам владелицы 09.11: «раньше блокирует и
+   * зависит был как подраздел контента… вариант как пример адр в конце решения
+   * были списком и это cjm работы просел и подтвердил». Булева мало: «под Ещё»
+   * и «в конце контента» — разные места, а не разная видимость.
+   */
+  slot: SectionSlot;
 }
 
 /**
@@ -97,12 +113,16 @@ export function passportSections(model: unknown, type: string): PassportOrder {
     if (typeof raw.order !== 'number' || !Number.isInteger(raw.order)) {
       throw new Error(`surfaces.passport.${type}.sections[${key}]: order должен быть целым`);
     }
+    const slot = typeof raw.slot === 'string' ? raw.slot : '';
+    if (!SLOTS.includes(slot)) {
+      throw new Error(`surfaces.passport.${type}.sections[${key}]: slot «${slot}» не из ${SLOTS.join(' | ')}`);
+    }
     out.push({
       key,
       source: source as SectionSource,
       ref: typeof raw.ref === 'string' && raw.ref ? raw.ref : null,
       order: raw.order,
-      visible: raw.default_visible !== false,
+      slot: slot as SectionSlot,
     });
   }
   // Сортировка по `order`, а не по месту в массиве: порядок объявлен числом, и
@@ -137,24 +157,36 @@ export function applySections<T extends { id: string; secondary?: boolean }>(
   const rest: T[] = [];
   for (const item of items) {
     const i = at.get(item.id);
-    if (i === undefined) rest.push(item);
-    else named.push({ item: { ...item, secondary: !order.sections[i].visible }, i });
+    if (i === undefined) { rest.push(item); continue; }
+    const slot = order.sections[i].slot;
+    // `content` из ряда вкладок уходит ВОВСЕ: такой раздел рисуется блоком в
+    // хвосте тела. Это и есть разница между «под Ещё» (вкладка есть, но
+    // свёрнута) и «в конце контента» (вкладки нет). Если оставить его здесь
+    // хотя бы как `secondary`, раздел покажется дважды.
+    if (slot === 'content') continue;
+    named.push({ item: { ...item, secondary: slot === 'more' }, i });
   }
   named.sort((a, b) => a.i - b.i);
   return [...named.map(n => n.item), ...rest];
 }
 
-// ПОЧЕМУ ЭТИХ ИМЁН НЕТ В СТОРОЖЕ «написанное дошло до экрана» (kit/src/wired.test.ts).
-//
-// `passportSections` и `applySections` сейчас не вызываются ни из одного
-// компонента, и это НЕ забытая половина, а незакрытый договор: форма элемента
-// ещё обсуждается с серверной сессией. Владелица 09.11 назвала третье место
-// («блоком в конце контента», как было в v1 у зависимостей спринта и у списка
-// решений ADR), поэтому двух значений видимости мало — ключ станет
-// трёхзначным. Писать потребителя под форму, которая меняется, значит написать
-// его дважды.
-//
-// Это тот же случай, что `renderMarkdownBare` (K-13): библиотека ждёт
-// потребителя, который появится вместе с договором, а не раньше. Как только
-// форма устоится и вклейка в хвост тела будет сделана — имена идут в сторож, и
-// тогда отсутствие потребителя снова станет ошибкой.
+/**
+ * Разделы, которые рисуются блоками в ХВОСТЕ ТЕЛА, в порядке модели.
+ *
+ * Отдельная функция, а не флаг в списке вкладок: это другое место на экране, и
+ * путать их нельзя. Сервер гарантирует инвариант — `content` допустим только у
+ * типа с телом и только ПОСЛЕ раздела тела, — поэтому угадывать, куда
+ * вклеивать, не нужно.
+ *
+ * Что делает приложение с этим списком (мои обязательства перед серверной
+ * сессией, записаны здесь, чтобы не потерялись):
+ *  • заголовок блока со СЧЁТЧИКОМ («Решения 12»): вкладки у раздела больше нет,
+ *    и без счётчика число исчезнет с экрана совсем;
+ *  • пустой блок не рисуется — иначе у ADR вылезет семь пустых заголовков;
+ *  • «не смогли прочитать» — это ДРУГОЕ утверждение, и его печатает блок
+ *    «Состояние данных» по `meta.data_state`, а не пустой заголовок.
+ */
+export function gluedSections(order?: PassportOrder | null): PassportSection[] {
+  if (!order?.decided) return [];
+  return order.sections.filter(s => s.slot === 'content');
+}

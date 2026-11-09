@@ -22,15 +22,15 @@
 // здесь стоит сторож: у элемента ровно пять ключей, любой лишний — отказ. Так
 // «данные, а не отрисовка» проверяется, а не доказывается в переписке.
 import { describe, expect, it } from 'vitest';
-import { SECTION_KEYS, applySections, passportSections } from './surfaces';
+import { SECTION_KEYS, applySections, gluedSections, passportSections } from './surfaces';
 
 const sprint = {
   decided: true,
   sections: [
-    { key: 'tasks', source: 'part', ref: 'tasks', order: 1, default_visible: true },
-    { key: 'content', source: 'body', ref: null, order: 2, default_visible: true },
-    { key: 'phases', source: 'part', ref: 'phases', order: 3, default_visible: false },
-    { key: 'deps', source: 'relation', ref: 'DEPENDS_ON:out', order: 4, default_visible: false },
+    { key: 'tasks', source: 'part', ref: 'tasks', order: 1, slot: 'own' },
+    { key: 'content', source: 'body', ref: null, order: 2, slot: 'own' },
+    { key: 'phases', source: 'part', ref: 'phases', order: 3, slot: 'more' },
+    { key: 'deps', source: 'relation', ref: 'DEPENDS_ON:out', order: 4, slot: 'more' },
   ],
 };
 
@@ -49,9 +49,9 @@ describe('passportSections: порядок и видимость из модел
     expect(r.sections.map(s => s.key)).toEqual(['tasks', 'content', 'phases', 'deps']);
   });
 
-  it('`default_visible: false` — редкий раздел, под «Ещё»', () => {
+  it('slot «more» — редкий раздел, под «Ещё»', () => {
     const r = passportSections(model({ sprint }), 'sprint');
-    expect(r.sections.filter(s => !s.visible).map(s => s.key)).toEqual(['phases', 'deps']);
+    expect(r.sections.filter(s => s.slot !== 'own').map(s => s.key)).toEqual(['phases', 'deps']);
   });
 
   it('у типа нет записи — порядок НЕ решён, и это сказано, а не угадано', () => {
@@ -75,7 +75,7 @@ describe('passportSections: порядок и видимость из модел
 
 describe('сторож формы: данные, а не отрисовка', () => {
   it('положительный контроль: пять законных ключей названы', () => {
-    expect([...SECTION_KEYS].sort()).toEqual(['default_visible', 'key', 'order', 'ref', 'source'].sort());
+    expect([...SECTION_KEYS].sort()).toEqual(['key', 'order', 'ref', 'slot', 'source'].sort());
   });
 
   it.each(['component', 'render', 'icon', 'label', 'tabs'])('лишний ключ «%s» — отказ целиком, а не тихое игнорирование', extra => {
@@ -143,5 +143,66 @@ describe('applySections: порядок применяется, незнаком
     const copy = items.map(i => ({ ...i }));
     applySections(items, order);
     expect(items).toEqual(copy);
+  });
+});
+
+describe('третье место: «в конце контента» — не вкладка вовсе', () => {
+  // Повод — слова владелицы 09.11: «раньше блокирует и зависит был как
+  // подраздел контента… вариант как пример адр в конце решения были списком и
+  // это cjm работы просел и подтвердил». Булева мало: «под Ещё» и «в конце
+  // контента» — РАЗНЫЕ МЕСТА, а не разная видимость.
+  const withGlue = {
+    decided: true,
+    sections: [
+      { key: 'tasks', source: 'part', ref: 'tasks', order: 1, slot: 'own' },
+      { key: 'content', source: 'body', ref: null, order: 2, slot: 'own' },
+      { key: 'deps', source: 'relation', ref: 'DEPENDS_ON:out', order: 3, slot: 'content' },
+      { key: 'blocks', source: 'relation', ref: 'DEPENDS_ON:in', order: 4, slot: 'content' },
+      { key: 'phases', source: 'part', ref: 'phases', order: 5, slot: 'more' },
+    ],
+  };
+  const order = passportSections(model({ sprint: withGlue }), 'sprint');
+  const items: { id: string; label: string; secondary?: boolean }[] = [
+    { id: 'content', label: 'Текст' },
+    { id: 'tasks', label: 'Задачи' },
+    { id: 'deps', label: 'Зависит от' },
+    { id: 'blocks', label: 'Блокирует' },
+    { id: 'phases', label: 'Фазы' },
+    { id: 'graph', label: 'Граф' },
+  ];
+
+  it('положительный контроль: три места разобраны', () => {
+    expect(order.sections.map(s => s.slot)).toEqual(['own', 'own', 'content', 'content', 'more']);
+  });
+
+  it('вклеенные разделы УХОДЯТ из ряда вкладок вовсе', () => {
+    const r = applySections(items, order);
+    expect(r.map(i => i.id)).not.toContain('deps');
+    expect(r.map(i => i.id)).not.toContain('blocks');
+  });
+
+  it('вклеенный не превращается в «под Ещё» — иначе показался бы дважды', () => {
+    const r = applySections(items, order);
+    // Под «Ещё» только `phases`; `deps`/`blocks` не вкладки ни в каком виде.
+    expect(r.filter(i => i.secondary).map(i => i.id)).toEqual(['phases']);
+  });
+
+  it('порядок ряда: своё по модели, затем незнакомое моделью', () => {
+    const r = applySections(items, order);
+    expect(r.map(i => i.id)).toEqual(['tasks', 'content', 'phases', 'graph']);
+  });
+
+  it('gluedSections отдаёт вклеенные в порядке модели', () => {
+    expect(gluedSections(order).map(s => s.key)).toEqual(['deps', 'blocks']);
+  });
+
+  it('порядок не решён — вклеивать нечего, и ряд не тронут', () => {
+    expect(gluedSections({ decided: false, sections: [] })).toEqual([]);
+    expect(gluedSections()).toEqual([]);
+    expect(applySections(items, { decided: false, sections: [] })).toEqual(items);
+  });
+
+  it('у вклеенного есть `ref` — по нему приложение и знает, что рисовать', () => {
+    expect(gluedSections(order).map(s => s.ref)).toEqual(['DEPENDS_ON:out', 'DEPENDS_ON:in']);
   });
 });

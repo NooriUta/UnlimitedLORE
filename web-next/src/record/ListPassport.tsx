@@ -5,10 +5,10 @@
 // листалка по списку и «⤢». Свой ушко «Свойства» RecordReader НЕ включаем (aside нет):
 // свойства во весь экран — рейка и свёртка самого RecordView (сессия kit, #914).
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
-  type KitCtx, type RecordPlacement, type UrlWindow,
+  type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
@@ -19,6 +19,8 @@ import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
 import { saveRelation } from './relationSave';
 import { saveRecordStatus, statusEntity } from './statusSave';
+import { fetchPassportOrder } from './passportOrder';
+import './ListPassport.css';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
@@ -65,6 +67,14 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // до сих пор не вызывался ниоткуда — паспорт держал вкладку местным
   // состоянием, и адрес о ней не знал.
   const [tab, setTab] = useRecordTab('overview', win);
+  // Порядок разделов из модели (S4-29). Пока грузится — умолчание приложения,
+  // и это honest-состояние: экран работает, просто порядок пока клиентский.
+  const [order, setOrder] = useState<{ order: PassportOrder; notes: string[] }>({ order: { decided: false, sections: [] }, notes: [] });
+  useEffect(() => {
+    let alive = true;
+    fetchPassportOrder(type, { fetchImpl }).then(r => { if (alive) setOrder(r); }, () => { /* сказано в notes */ });
+    return () => { alive = false; };
+  }, [type, fetchImpl]);
   const slice = useMemo(() => <T,>(name: string, params?: Record<string, string>) => fetchSlice<T>(name, params, { fetchImpl }), [fetchImpl]);
   const drafts = useMemo(() => createDraftsApi(fetchImpl), [fetchImpl]);
   // Вкладка «История» (S5-11) была в kit, но в v2 её никто не подключал:
@@ -138,7 +148,21 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   };
   const ctx: KitCtx = { config: { ...view.config, hooks: { ...view.config.hooks, onSave, onRelation } }, data: view.data, role: 'reader', href: x => `#${encodeURIComponent(x)}`, esc, md };
   return (
+    <>
+      {/*
+        Порядок разделов остался клиентским — говорим об этом, а не молчим
+        (S4-29). Молчаливый откат хуже отсутствия порядка: человек решит, что
+        так и задумано, и перегруженность примет за замысел.
+      */}
+      {order.notes.length > 0 && (
+        <ul className="pp-model-note" role="status">
+          {order.notes.map(n => <li key={n}>{n}</li>)}
+        </ul>
+      )}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEdit}
+      // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
+      // потом контент, зависимости в конце контента, редкое под Ещё».
+      sections={order.order}
       // Черновик правки — на сервере (S5-09): «Восстановить черновик от
       // ЧЧ:ММ» и автосохранение. Версия записи теперь приходит фасадом
       // (строкой), и `base_version` черновика — та же строка (PR #964),
@@ -166,5 +190,6 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       pager={onGo && ids.length > 0 ? <RecordPager ids={ids} current={view.record.id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined}
       tools={onFull ? <button type="button" className="sk-iconbtn list-passport__full" aria-label={t('pp.place.full')} title={t('pp.place.full')} onClick={onFull}>⤢</button> : undefined}
       asideOpen={false} onAside={() => {}} />
+    </>
   );
 }

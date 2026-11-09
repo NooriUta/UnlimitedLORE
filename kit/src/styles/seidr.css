@@ -4594,3 +4594,19 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   margin-inline: auto;
   font-size: var(--read-fs, var(--fs-md));
 }
+
+/* Разделы, вклеенные в хвост тела (S4-29): так было в v1 у зависимостей
+   спринта и у списка решений ADR. Заголовок со счётчиком — вкладки у раздела
+   больше нет, и без счётчика число исчезло бы с экрана. */
+.sk-rec-glue { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--bd); }
+.sk-rec-glue__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
