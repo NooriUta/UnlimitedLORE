@@ -115,6 +115,23 @@ export function sliceWarnings(body: SliceBody<unknown>): string[] {
   add(body.page?.warning);
   add(body.scope?.note);
   add(body.outside_scope?.reason);
+  // Сужение по выбранным проектам (S4-03): три разных утверждения, и ни одно
+  // не должно выглядеть как «данных нет».
+  const sp = body.scope_projects;
+  if (sp) {
+    if (!sp.applied) {
+      add(sp.note
+        ? `выбор проектов не применён: ${sp.note}`
+        : 'выбор проектов не применён: этот срез не привязан к проектам');
+    } else {
+      // Отброшенные правами называем: иначе человек видит меньше записей и не
+      // знает, что часть выбранных проектов ему просто недоступна.
+      if (sp.dropped && sp.dropped.length) {
+        add(`недоступны и не вошли в сужение: ${sp.dropped.join(', ')}`);
+      }
+      if (sp.note) add(sp.note);
+    }
+  }
   return out;
 }
 

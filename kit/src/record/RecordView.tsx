@@ -51,6 +51,14 @@ export interface MdEditorSlotProps {
    * версия записи — его забота, kit про API не знает.
    */
   drafts?: MdDraftSlot;
+  /**
+   * Показывать подсказку «как править». Подсказка — свойство ЗАПИСИ, а не
+   * каждого поля: когда разделы тела стали править по отдельности, она
+   * размножилась по числу разделов, и запись стала похожа на форму (слова
+   * владелицы 09.11.2026: «верни типтап редактирование, вы ухудшили user
+   * experience»). Поэтому её показывает только ПЕРВЫЙ редактор записи.
+   */
+  hint?: boolean;
 }
 
 export interface RecordViewProps {
@@ -212,20 +220,27 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
   // (приложение задавало его всегда, когда у типа есть поля группы «тело»).
   const sections = kind?.bodySections ?? [];
   if (sections.length) {
-    const body = record.body_md?.trim();
+    // Подсказка «как править» — ОДНА на запись (слова владелицы 09.11.2026:
+    // «верни типтап редактирование, вы ухудшили user experience»): когда она
+    // шла у каждого раздела, у ADR их становилось три, и документ выглядел
+    // формой. Её показывает первый раздел, которому редактор действительно
+    // достался (раздел «только чтение» его не получает).
+    const hintAt = edit ? sections.findIndex(s => s.editable !== false) : -1;
     return (
       <div className="sk-rec-sections">
-        {/* Тело записи, если оно есть, идёт первым — до разделов.
-            ПУСТОЕ тело при наличии разделов НЕ получает редактора: у таких
-            типов тело склеено из разделов (у ADR — «Контекст / Решение /
-            Следствия»), и предлагать писать «в тело» значило бы предлагать
-            путь, которого на сервере нет. Пишут в разделы. */}
-        {body && (
-          edit
-            ? <edit.Editor value={record.body_md ?? ''} label={kitT(lang, 'kit.record.body')} onSave={edit.save('body_md', record.body_md ?? null)} drafts={edit.drafts?.('body_md')} />
-            : <>{ctx.md(record.body_md ?? '')}</>
-        )}
-        {sections.map(s => {
+        {/* ТЕЛО ОТДЕЛЬНЫМ БЛОКОМ ЗДЕСЬ НЕ РИСУЕТСЯ — и это правило, а не
+            упущение.
+            Находка прода v1.17.8 (серверная сессия): у задачи заметка
+            показывалась ДВАЖДЫ — разделом «Текст» и разделом «Заметка», оба с
+            ✎. Корень на стыке: сервер отдаёт `body_md` КОПИЕЙ одного из
+            разделов для старых клиентов (у задачи это `note_md`, у спринта
+            `context_md`, у спеки `content_md`), а kit рисовал непустое
+            `body_md` ещё и своим блоком.
+            Поэтому: есть разделы тела — `body_md` это копия, и показывать её
+            второй раз нельзя. Типы, у которых тело и ЕСТЬ `body_md`, разделов
+            не присылают (приложение их отфильтровывает) и идут прежним путём
+            ниже. */}
+        {sections.map((s, si) => {
           const raw = record.fields[s.key];
           const text = typeof raw === 'string' ? raw : raw === null || raw === undefined ? '' : valueText(raw);
           // Раздел может быть только для чтения САМ ПО СЕБЕ: сервер не даёт
@@ -241,7 +256,7 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
             <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
               <h2 className="sk-rec-fields__sechead">{s.title}</h2>
               {may
-                ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} />
+                ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} hint={si === hintAt} />
                 : <>{ctx.md(text)}</>}
             </section>
           );

@@ -59,6 +59,10 @@ const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string 
   { symbol: 'loadSprintTotals', declaredIn: 'sprints/sprintTotals.ts', why: 'итоги спринта в списке: задач x/y, оценка Σ дн, факт Σ дн (S4-09)' },
   { symbol: 'saveRecordStatus', declaredIn: 'record/statusSave.ts', why: 'смена статуса из паспорта — путь записи (дефект 09.11: был написан и не подключён)' },
   { symbol: 'fetchPassportOrder', declaredIn: 'record/passportOrder.ts', why: 'порядок разделов паспорта из модели плюс названная причина отката (S4-29)' },
+  { symbol: 'fetchTypeStatuses', declaredIn: 'record/passportStatuses.ts', why: 'меню статуса — цикл ТИПА из модели, а не все оси разом (S4-STATUS-AXIS-CONFIG, жалоба 09.11)' },
+  { symbol: 'useProjectScope', declaredIn: 'scope/ProjectScope.tsx', why: 'выбор проектов в шапке сужает списки (S4-03, жалоба 09.11: «фильтр не влияет на элементы внизу»)' },
+  { symbol: 'appliedRightColumn', declaredIn: 'settings/applied.ts', why: 'личная настройка «Правая колонка записи» доходит до паспорта (S4-02)' },
+  { symbol: 'appliedCollapseNavOnRead', declaredIn: 'settings/applied.ts', why: 'личная настройка «Меню при чтении записи» доходит до экрана (S4-02)' },
 ];
 
 describe('сторож приложения: написанное дошло до экрана', () => {

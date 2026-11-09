@@ -18,6 +18,7 @@ import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
 import { loreValueIcon } from '../lists/loreFilters';
 import { appliedCollapseNavOnRead } from '../settings/applied';
+import { useProjectScope } from '../scope/ProjectScope';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
@@ -158,9 +159,18 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     return () => setCollapsed(false);
   }, [collapseOnRead, setCollapsed, open.id]);
   const config = useMemo(() => def.config(lang), [def, lang]);
+  // Выбор проектов в шапке наконец доходит до среза (S4-03, жалоба владелицы
+  // 09.11.2026: «верхний фильтр по проектам не влияет на элементы внизу»).
+  // Причина была не в фильтре: `useProjectScope()` не вызывал НИ ОДИН экран —
+  // выбор доезжал до адреса `?proj=` и дальше никуда.
+  const scope = useProjectScope();
+  const scopeParam = useMemo(
+    () => (scope.length ? { scope_projects: scope.join(',') } : undefined),
+    [scope],
+  );
   const result = useLoadState(
-    signal => fetchSlice(def.slice, undefined, { signal, fetchImpl }),
-    [def.slice, fetchImpl],
+    signal => fetchSlice(def.slice, scopeParam, { signal, fetchImpl }),
+    [def.slice, fetchImpl, scopeParam],
     { rows: body => body.rows },
   );
   const body = result.data;

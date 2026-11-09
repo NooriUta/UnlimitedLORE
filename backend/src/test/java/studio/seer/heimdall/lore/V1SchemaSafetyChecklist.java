@@ -78,7 +78,12 @@ final class V1SchemaSafetyChecklist {
         // UPDATE ставит только новое свойство V75 harness с условием «ещё не стоит»;
         // поля v1 не трогаются.
         "java__actor_harness_backfill",
-        "только новое свойство V75 harness у агентов, где оно пусто и имя однозначно");
+        "только новое свойство V75 harness у агентов, где оно пусто и имя однозначно",
+        // S2-11, V77. Доказательство — LoreHistHygieneLiveDbTest.sharedStateIsSplitByV77AndHistoryOfBothOwnersIsVisible:
+        // INSERT копии версии (те же поля v1, новый state_uid) и перевод ребра HAS_STATE второго
+        // владельца на копию; исходная версия и её первый владелец не меняются.
+        "java__shared_state_split",
+        "копия общей версии второму владельцу и перевод его ребра; исходная строка не меняется");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

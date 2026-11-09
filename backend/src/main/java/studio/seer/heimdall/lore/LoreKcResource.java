@@ -356,6 +356,45 @@ public class LoreKcResource extends LoreResourceBase {
         return Boolean.TRUE.equals(client.getBoolean("serviceAccountsEnabled", false));
     }
 
+    /**
+     * Ось агента (S4-AGENT-CLIENT-PICK): свои роли клиента ∪ клиентские роли его
+     * сервисной учётки вида {@code agent-*}. Машинные клиенты
+     * {@code lore-mcp-full_<машина>} своих ролей не имеют — {@code agent-full} им
+     * выдана клиентской ролью {@code lore-mcp-full} на сервисную учётку, и раньше
+     * их ось была пустой: админка не пускала их в «Учётку». Служебные роли
+     * Keycloak (realm-management и т. п.) агента из клиента не делают.
+     * Сервисную учётку не прочитали — остаются свои роли, без выдумывания.
+     *
+     * @param ownRolesJson   ответ {@code /clients/{id}/roles} (массив ролей)
+     * @param saMappingsJson ответ {@code /users/{sa}/role-mappings} или null
+     */
+    static java.util.List<String> agentScope(String ownRolesJson, String saMappingsJson) {
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        try {
+            io.vertx.core.json.JsonArray own = new io.vertx.core.json.JsonArray(ownRolesJson == null ? "[]" : ownRolesJson);
+            for (int i = 0; i < own.size(); i++) {
+                String n = own.getJsonObject(i).getString("name");
+                if (n != null) out.add(n);
+            }
+        } catch (RuntimeException e) { /* свои роли не прочитались — ось из сервисной учётки */ }
+        if (saMappingsJson != null) {
+            try {
+                io.vertx.core.json.JsonObject cm = new io.vertx.core.json.JsonObject(saMappingsJson).getJsonObject("clientMappings");
+                if (cm != null) {
+                    for (String client : cm.fieldNames()) {
+                        io.vertx.core.json.JsonArray ms = cm.getJsonObject(client).getJsonArray("mappings");
+                        if (ms == null) continue;
+                        for (int i = 0; i < ms.size(); i++) {
+                            String n = ms.getJsonObject(i).getString("name");
+                            if (n != null && n.startsWith("agent-")) out.add(n);
+                        }
+                    }
+                }
+            } catch (RuntimeException e) { /* нечитаемый ответ — остаются свои роли */ }
+        }
+        return new java.util.ArrayList<>(out);
+    }
+
     @GET
     @Path("agents")
     @Produces(MediaType.APPLICATION_JSON)
@@ -373,11 +412,19 @@ public class LoreKcResource extends LoreResourceBase {
                 String cid = c.getString("clientId", "");
                 if (!hasServiceAccount(c)) continue;
                 HttpResponse<String> roles = kc("GET", "/clients/" + c.getString("id") + "/roles", null, t);
-                io.vertx.core.json.JsonArray scope = new io.vertx.core.json.JsonArray();
-                if (roles.statusCode() == 200) {
-                    io.vertx.core.json.JsonArray ra = new io.vertx.core.json.JsonArray(roles.body());
-                    for (int j = 0; j < ra.size(); j++) scope.add(ra.getJsonObject(j).getString("name"));
+                String own = roles.statusCode() == 200 ? roles.body() : "[]";
+                // S4-AGENT-CLIENT-PICK: ось машинного клиента (lore-mcp-full_<машина>)
+                // выдана ролью на его сервисную учётку, а не своей ролью клиента.
+                String sa = null;
+                HttpResponse<String> su = kc("GET", "/clients/" + c.getString("id") + "/service-account-user", null, t);
+                if (su.statusCode() == 200) {
+                    String uid = new io.vertx.core.json.JsonObject(su.body()).getString("id");
+                    if (uid != null) {
+                        HttpResponse<String> rm = kc("GET", "/users/" + uid + "/role-mappings", null, t);
+                        if (rm.statusCode() == 200) sa = rm.body();
+                    }
                 }
+                io.vertx.core.json.JsonArray scope = new io.vertx.core.json.JsonArray(agentScope(own, sa));
                 out.add(io.vertx.core.json.JsonObject.of("clientId", cid, "id", c.getString("id"),
                     "enabled", c.getBoolean("enabled"), "agent_scope", scope));
             }
