@@ -390,5 +390,18 @@
   "kitPage.flow.manual2": "Forgejo: repository access",
   "kitPage.flow.doneSaid": "Wizard finished — the app would now perform the action.",
   "kitPage.flow.secretHead": "A value shown only once",
-  "kitPage.flow.secretLabel": "Demo value"
+  "kitPage.flow.secretLabel": "Demo value",
+  "kitPage.flow.diffHead": "What will change before applying",
+  "kitPage.flow.diffLabel": "What will change",
+  "kitPage.flow.diffAdd": "A row will be added",
+  "kitPage.flow.diffRemove": "A row will be removed",
+  "kitPage.flow.diffSame": "A row is already there",
+  "kitPage.flow.diffUnver": "This row could not be verified",
+  "kitPage.flow.diffUnverWhy": "the source did not answer",
+  "kitPage.flow.diffForbid": "Looking was not allowed",
+  "kitPage.flow.diffForbidWhy": "an administrator role is required",
+  "kitPage.flow.diffApplied": "The app received {n} row(s) — it then applies them as one batch with an undo window.",
+  "kitPage.flow.batchHead": "The batch: undo window and partial failure",
+  "kitPage.flow.batchFail": "One row did not apply",
+  "kitPage.flow.batchFailWhy": "the source refused: 409"
 }

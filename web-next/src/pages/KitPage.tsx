@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, DiffPreview, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -58,6 +58,11 @@ export default function KitPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [flowPick, setFlowPick] = useState<'a' | 'b' | null>(null);
   const [flowDone, setFlowDone] = useState(false);
+  const [diffApplied, setDiffApplied] = useState<number | null>(null);
+  // Пачка показывается ровно так, как её отдаст сервер: окно отмены считается
+  // от срока, а не от таймера на клиенте (K2-BATCH-UNDO).
+  const [batch, setBatch] = useState<{ id: string; applied: number; total: number; undoUntil: number } | null>(null);
+  const [batchUndone, setBatchUndone] = useState(false);
   const [earOpen, setEarOpen] = useState(false);
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
   // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
@@ -255,6 +260,38 @@ export default function KitPage() {
             ]}
           />
           {flowDone && <p className="kitp__panel" role="status">{t('kitPage.flow.doneSaid')}</p>}
+          <h3 className="kitp__h3">{t('kitPage.flow.diffHead')}</h3>
+          {/* Все три вида строк и все три исхода проверки: именно их
+              различимость и надо видеть глазами (K2-DIFF). */}
+          <DiffPreview
+            label={t('kitPage.flow.diffLabel')}
+            rows={[
+              { id: 'a', kind: 'add', text: t('kitPage.flow.diffAdd'), detail: 'editor', check: { state: 'checked' } },
+              { id: 'b', kind: 'remove', text: t('kitPage.flow.diffRemove'), check: { state: 'checked' } },
+              { id: 'c', kind: 'same', text: t('kitPage.flow.diffSame'), check: { state: 'checked' } },
+              { id: 'd', kind: 'add', text: t('kitPage.flow.diffUnver'), check: { state: 'unverified', reason: t('kitPage.flow.diffUnverWhy') } },
+              { id: 'e', kind: 'add', text: t('kitPage.flow.diffForbid'), check: { state: 'forbidden', reason: t('kitPage.flow.diffForbidWhy') } },
+            ]}
+            onApply={applied => {
+              setDiffApplied(applied.length);
+              setBatchUndone(false);
+              setBatch({ id: 'demo-op', applied: applied.length, total: applied.length + 1, undoUntil: Date.now() + 10_000 });
+            }}
+          />
+          {diffApplied !== null && <p className="kitp__panel" role="status">{t('kitPage.flow.diffApplied', { n: diffApplied })}</p>}
+          {batch && (
+            <>
+              <h3 className="kitp__h3">{t('kitPage.flow.batchHead')}</h3>
+              <BatchUndo
+                batch={{
+                  ...batch,
+                  failed: [{ id: 'f', text: t('kitPage.flow.batchFail'), reason: t('kitPage.flow.batchFailWhy') }],
+                }}
+                undone={batchUndone}
+                onUndo={() => setBatchUndone(true)}
+              />
+            </>
+          )}
           <h3 className="kitp__h3">{t('kitPage.flow.secretHead')}</h3>
           {/* Значение здесь показное: витрина не выдаёт настоящих секретов. */}
           <SecretOnce value="demo-0000-0000" label={t('kitPage.flow.secretLabel')} />

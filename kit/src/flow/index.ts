@@ -4,3 +4,5 @@
 // что за изменения и чьи роли, знает приложение.
 export { Steps, type StepDef, type StepsManualItem, type StepsProps } from './Steps';
 export { SecretOnce, type SecretClipboard, type SecretOnceProps } from './SecretOnce';
+export { DiffPreview, type DiffCheck, type DiffKind, type DiffPreviewProps, type DiffRow } from './DiffPreview';
+export { BatchUndo, type BatchItemFail, type BatchResult, type BatchUndoProps } from './BatchUndo';

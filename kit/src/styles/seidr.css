@@ -2091,6 +2091,127 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-secret__ok { color: var(--suc); font-size: var(--fs-sm); }
 .sk-secret__fail { color: var(--dng); font-size: var(--fs-sm); }
 
+/* ---------- «Что изменится» перед применением (K2-DIFF) ----------
+   Цвет здесь НЕСЁТ СМЫСЛ, а не украшает: добавится — успех, снимется —
+   опасность, уже есть — серо. Отдельно от этого идёт состояние ПРОВЕРКИ
+   строки: «не смогли проверить» и «нет прав» помечаются рамкой слева, чтобы их
+   нельзя было перепутать с обычной строкой. Знак +/−/= дублирует цвет словами
+   («добавится»), потому что по цвету одному раздавать права нельзя. */
+.sk-diff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-diff__head {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-diff__list { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-diff__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-left: 2px solid transparent;
+  font-size: var(--fs-sm);
+}
+.sk-diff__row[data-kind='add'] { border-left-color: var(--suc); }
+.sk-diff__row[data-kind='remove'] { border-left-color: var(--dng); }
+.sk-diff__row[data-kind='same'] { border-left-color: var(--bd); color: var(--t3); }
+.sk-diff__row[data-check='unverified'] { background: color-mix(in srgb, var(--wrn) 10%, transparent); }
+.sk-diff__row[data-check='forbidden'] { background: color-mix(in srgb, var(--inf) 10%, transparent); }
+.sk-diff__sign {
+  min-width: 12px;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+}
+.sk-diff__row[data-kind='add'] .sk-diff__sign { color: var(--suc); }
+.sk-diff__row[data-kind='remove'] .sk-diff__sign { color: var(--dng); }
+.sk-diff__kind { color: var(--t3); font-size: var(--fs-xs); }
+.sk-diff__text { min-width: 0; color: var(--t1); }
+.sk-diff__row[data-kind='same'] .sk-diff__text { color: var(--t3); }
+.sk-diff__detail { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-diff__check { display: inline-flex; flex-wrap: wrap; gap: 4px; color: var(--wrn); font-size: var(--fs-xs); }
+.sk-diff__row[data-check='forbidden'] .sk-diff__check { color: var(--inf); }
+.sk-diff__reason { color: var(--t2); }
+.sk-diff__skip { color: var(--t2); font-size: var(--fs-xs); font-style: italic; }
+.sk-diff__nothing { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-diff__apply {
+  align-self: flex-start;
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--acc);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-diff__apply[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-diff__apply:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* ---------- Пачка как объект: окно отмены (K2-BATCH-UNDO) ----------
+   Исход пачки несёт рамка: применилось всё · применилось частично · не
+   применилось ничего. Частичный исход помечен предупреждением НАМЕРЕННО: это
+   не успех, и выглядеть как успех он не должен. */
+.sk-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-batch[data-outcome='applied'] { border-color: color-mix(in srgb, var(--suc) 45%, var(--bd)); }
+.sk-batch[data-outcome='partial'] { border-color: color-mix(in srgb, var(--wrn) 55%, var(--bd)); }
+.sk-batch[data-outcome='none'] { border-color: color-mix(in srgb, var(--dng) 55%, var(--bd)); }
+.sk-batch__summary { margin: 0; color: var(--t1); font-size: var(--fs-sm); }
+.sk-batch__failed { margin: 0; padding: 0; list-style: none; }
+.sk-batch__fail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: var(--fs-sm);
+}
+.sk-batch__fail-text { color: var(--t1); }
+.sk-batch__fail-reason { color: var(--dng); font-size: var(--fs-xs); }
+.sk-batch__undo {
+  align-self: flex-start;
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--acc);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-batch__undo[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-batch__undo:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-batch__expired,
+.sk-batch__noundo,
+.sk-batch__undone { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-batch__badtime { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-batch__undofail { margin: 0; color: var(--dng); font-size: var(--fs-sm); }
+
 /* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
 .sk-shead {
   display: flex;

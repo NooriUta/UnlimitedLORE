@@ -329,6 +329,54 @@
 <p class="sk-secret__warn" data-testid="kit-secret-warn">Значение будет показано один раз — сохраните его сейчас.</p>
 <button type="button" class="sk-secret__btn" data-testid="kit-secret-reveal">Показать</button>
 </div>
+<section class="sk-diff" aria-label="Что изменится">
+<h3 class="sk-diff__head">Что изменится</h3>
+<ul class="sk-diff__list">
+<li class="sk-diff__row" data-testid="kit-diff-row-a" data-kind="add" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">+</span>
+<span class="sk-diff__kind">добавится</span>
+<span class="sk-diff__text">строка добавится</span>
+<span class="sk-diff__detail">подробность</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-b" data-kind="remove" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">−</span>
+<span class="sk-diff__kind">снимется</span>
+<span class="sk-diff__text">строка снимется</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-c" data-kind="same" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">=</span>
+<span class="sk-diff__kind">уже есть</span>
+<span class="sk-diff__text">строка уже есть</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-d" data-kind="add" data-check="unverified">
+<span class="sk-diff__sign" aria-hidden="true">+</span>
+<span class="sk-diff__kind">добавится</span>
+<span class="sk-diff__text">строка не проверена</span>
+<span class="sk-diff__check" data-testid="kit-diff-check-d">не смогли проверить<span class="sk-diff__reason">источник не ответил</span>
+</span>
+<span class="sk-diff__skip" data-testid="kit-diff-skip-d">не будет применено, пока не проверено</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-e" data-kind="add" data-check="forbidden">
+<span class="sk-diff__sign" aria-hidden="true">+</span>
+<span class="sk-diff__kind">добавится</span>
+<span class="sk-diff__text">смотреть не дали</span>
+<span class="sk-diff__check" data-testid="kit-diff-check-e">нет прав смотреть<span class="sk-diff__reason">нужна роль администратора</span>
+</span>
+<span class="sk-diff__skip" data-testid="kit-diff-skip-e">не будет применено, пока не проверено</span>
+</li>
+</ul>
+<button type="button" class="sk-diff__apply" data-testid="kit-diff-apply">Применить 2 изменения</button>
+</section>
+<section class="sk-batch" data-testid="kit-batch" data-outcome="partial" aria-label="Применённая пачка">
+<p class="sk-batch__summary" data-testid="kit-batch-summary">Применилось 2 из 3 — остальное не применилось.</p>
+<ul class="sk-batch__failed" data-testid="kit-batch-failed">
+<li class="sk-batch__fail">
+<span class="sk-batch__fail-text">третья строка</span>
+<span class="sk-batch__fail-reason">источник отказал: 409</span>
+</li>
+</ul>
+<button type="button" class="sk-batch__undo" data-testid="kit-batch-undo">Отменить · 10 с</button>
+</section>
 </section>
 <section class="bare__sec" data-kit="content">
 <h2 class="bare__h2">MD / HTML</h2>
