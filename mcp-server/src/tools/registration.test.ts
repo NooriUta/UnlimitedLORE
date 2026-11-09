@@ -230,9 +230,10 @@ describe('registerForgejo', () => {
 // пропадут при рефакторинге, правила окажутся в базе без способа их достать,
 // и заметят это не сразу, а когда понадобятся.
 describe('registerClaudeRules', () => {
-  it('registers exactly the load/unload pair', () => {
+  it('registers the diff plus the load/unload pair', () => {
     const { server, names } = fakeServer();
     registerClaudeRules(server);
-    expect(names).toEqual(['claude_rules_push', 'claude_rules_pull']);
+    // claude_rules_diff — SPRINT_UXR_S7B_ADMIN/S7B-06: сравнить файл и док, ничего не меняя.
+    expect(names).toEqual(['claude_rules_diff', 'claude_rules_push', 'claude_rules_pull']);
   });
 });
