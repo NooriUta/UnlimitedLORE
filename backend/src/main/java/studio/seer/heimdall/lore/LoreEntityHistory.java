@@ -189,6 +189,67 @@ final class LoreEntityHistory {
         return out;
     }
 
+    // ── S9-09: история на 100+ версий — страница, фильтры, порядок ───────────
+
+    /** Предел строк на страницу. */
+    static final int PAGE_MAX = 500;
+    static final java.util.Set<String> AUTHOR_KINDS = java.util.Set.of("human", "agent", "unknown", "ingest", "unauth");
+    /** Поле версии → колонка строки истории, по которой видно изменение. */
+    static final Map<String, String> CHANGE_FIELDS = Map.of("status", "status_raw", "content", "content_hash");
+
+    /** Причина отказа параметров страницы или null. */
+    static String pageError(String authorKind, String field, String order, Integer offset, Integer limit) {
+        if (authorKind != null && !AUTHOR_KINDS.contains(authorKind)) return "author_kind must be one of " + AUTHOR_KINDS;
+        if (field != null && !CHANGE_FIELDS.containsKey(field)) return "field must be one of " + CHANGE_FIELDS.keySet();
+        if (order != null && !order.equals("asc") && !order.equals("desc")) return "order must be asc or desc";
+        if (offset != null && offset < 0) return "offset must be >= 0";
+        if (limit != null && (limit < 1 || limit > PAGE_MAX)) return "limit must be 1.." + PAGE_MAX;
+        return null;
+    }
+
+    /**
+     * Страница истории над атрибутированными строками в хронологии (как отдаёт {@link #sql}).
+     * Фильтр по полю оставляет версии, в которых поле изменилось относительно предыдущей
+     * версии ВСЕЙ цепочки (первая версия — изменение). total — после фильтров;
+     * has_more — за страницей есть ещё. Без параметров — вся цепочка, как раньше.
+     */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> page(List<Map<String, Object>> rows, String authorKind, String field,
+                                    String order, Integer offset, Integer limit) {
+        List<Map<String, Object>> kept = new ArrayList<>();
+        String col = field == null ? null : CHANGE_FIELDS.get(field);
+        Object prev = null;
+        boolean first = true;
+        for (Map<String, Object> r : rows) {
+            Object cur = col == null ? null : r.get(col);
+            boolean changed = col == null || first || !java.util.Objects.equals(prev, cur);
+            prev = cur;
+            first = false;
+            if (!changed) continue;
+            if (authorKind != null) {
+                Object a = r.get("author");
+                Object kind = a instanceof Map<?, ?> m ? m.get("kind") : null;
+                if (!authorKind.equals(kind)) continue;
+            }
+            kept.add(r);
+        }
+        if ("desc".equals(order)) java.util.Collections.reverse(kept);
+        int total = kept.size();
+        int from = offset == null ? 0 : Math.min(offset, total);
+        int to = limit == null ? total : Math.min(total, from + limit);
+        Map<String, Object> page = new LinkedHashMap<>();
+        page.put("total", total);
+        page.put("offset", from);
+        page.put("limit", limit);
+        page.put("returned", to - from);
+        page.put("has_more", to < total);
+        page.put("order", order == null ? "asc" : order);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("rows", new ArrayList<>(kept.subList(from, to)));
+        out.put("page", page);
+        return out;
+    }
+
     private static boolean isSuccess(Object status) {
         if (status instanceof Number n) return n.doubleValue() >= 200 && n.doubleValue() < 300;
         if (status == null) return false;

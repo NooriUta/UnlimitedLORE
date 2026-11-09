@@ -43,8 +43,14 @@ public class LoreHistoryResource extends LoreResourceBase {
     @Path("history")
     @Produces(MediaType.APPLICATION_JSON)
     public Response history(@QueryParam("type") String type, @QueryParam("id") String id,
+                            @QueryParam("author_kind") String authorKind, @QueryParam("field") String field,
+                            @QueryParam("order") String order, @QueryParam("offset") Integer offset,
+                            @QueryParam("limit") Integer limit,
                             @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
+        // S9-09: страница, фильтры и порядок — необязательны; без них ответ прежний.
+        String pageErr = LoreEntityHistory.pageError(authorKind, field, order, offset, limit);
+        if (pageErr != null) return badParams(pageErr);
         if (type == null || type.isBlank()) return badParams("type required (known: " + LoreEntityHistory.types() + ")");
         if (!LoreEntityHistory.types().contains(type))
             return badParams("unknown history type: " + type + " (known: " + LoreEntityHistory.types() + ")");
@@ -85,11 +91,14 @@ public class LoreHistoryResource extends LoreResourceBase {
             attribution.put("ok", true);
         }
         List<Map<String, Object>> out = LoreEntityHistory.attribute(rows, journal);
+        Map<String, Object> paged = LoreEntityHistory.page(out, authorKind, field, order, offset, limit);
+        @SuppressWarnings("unchecked") List<Map<String, Object>> pageRows = (List<Map<String, Object>>) paged.get("rows");
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", type);
         body.put("id", id);
-        body.put("rows", LoreTimeFormat.isoUtc(out));
+        body.put("rows", LoreTimeFormat.isoUtc(pageRows));
+        body.put("page", paged.get("page"));
         body.put("attribution", attribution);
         if (allowed != null) {
             Map<String, Object> scope = new LinkedHashMap<>();
