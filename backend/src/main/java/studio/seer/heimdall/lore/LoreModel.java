@@ -121,6 +121,7 @@ final class LoreModel {
         surfaces.put("partial", true);
         surfaces.put("passport", LorePassportSurface.build());
         content.put("surfaces", surfaces);
+        content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), warnings));
         content.put("dictionaries", dictionaries);
         content.put("warnings", warnings);
 
@@ -129,6 +130,40 @@ final class LoreModel {
         doc.put("version", version(content));
         content.forEach((k, v) -> { if (!"format".equals(k)) doc.put(k, v); });
         return doc;
+    }
+
+    /**
+     * kit 10.11 (K-14): палитра — прикладной словарь, её держит сервер, а не kit. Коды и
+     * умолчание — из белого списка настройки {@code palette} ({@link LoreMePrefs#SETTINGS}):
+     * один источник, иначе модель предложила бы палитру, которую сервер не даст сохранить.
+     * Подписи — из справочника {@code palette}; кода без статьи не прячем: подпись = код,
+     * {@code in_dictionary:false} и строка в warnings.
+     */
+    private static Map<String, Object> paletteBlock(List<Map<String, Object>> dictRows, List<String> warnings) {
+        LoreMePrefs.SettingSpec spec = LoreMePrefs.SETTINGS.get("palette");
+        Map<String, Map<String, Object>> byCode = new LinkedHashMap<>();
+        for (Map<String, Object> r : dictRows) byCode.putIfAbsent(str(r.get("code")), r);
+        List<Map<String, Object>> entries = new ArrayList<>();
+        int order = 0;
+        for (String code : spec.values()) {
+            Map<String, Object> d = byCode.get(code);
+            Map<String, Object> e = new LinkedHashMap<>();
+            e.put("code", code);
+            String title = d == null ? "" : str(d.get("label_ru"));
+            e.put("title", title.isEmpty() ? code : title);
+            e.put("title_en", d == null ? null : nullIfEmpty(d.get("label_en")));
+            e.put("order", d != null && d.get("sort_order") != null ? d.get("sort_order") : (order + 1) * 10);
+            e.put("in_dictionary", d != null);
+            entries.add(e);
+            if (d == null)
+                warnings.add("palette: палитра «" + code + "» без статьи в справочнике — подпись = код");
+            order++;
+        }
+        Map<String, Object> block = new LinkedHashMap<>();
+        block.put("source", "settings:palette");
+        block.put("default", spec.def());
+        block.put("entries", entries);
+        return block;
     }
 
     private static Map<String, Object> statusBlock(String type, String dictType,
