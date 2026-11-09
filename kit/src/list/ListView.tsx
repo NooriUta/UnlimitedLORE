@@ -41,6 +41,7 @@ import { pushUrlState, readUrlState } from '../resilience/urlState';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 import { ProgressCell } from './progress';
+import { SumCell, colKey } from './sum';
 import {
   CHIPS_INLINE, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
@@ -384,7 +385,7 @@ export function ListView({
     if (col === 'verdict') return t('kit.list.col.verdict');
     if (col === 'edges_count') return t('kit.list.col.edges');
     if (col === 'actions') return t('kit.list.col.actions');
-    return labels.keyTitle(col.startsWith('progress:') ? col.slice(9) : col);
+    return labels.keyTitle(colKey(col));
   };
   const configColumns = listCfg?.columns ?? ['title+id', 'status'];
   // Набор колонок — командный: живёт в адресе, им делятся ссылкой (S4-35,
@@ -760,6 +761,9 @@ export function ListView({
       case 'actions': return rowActionsCell(r);
       default:
         if (col.startsWith('progress:')) return <ProgressCell value={fieldValue(r, col.slice(9))} />;
+        // Сумма с охватом (S4-09): «12,5 д» или «12,5 д · у 9 из 14», и
+        // «не заполнено» вместо нуля, когда не заполнено ни у кого.
+        if (col.startsWith('sum:')) return <SumCell value={fieldValue(r, col.slice(4))} />;
         return valueCell(col, r);
     }
   };
@@ -775,7 +779,7 @@ export function ListView({
       case 'verdict': return t('kit.list.col.verdict');
       case 'edges_count': return t('kit.list.col.edges');
       case 'actions': return t('kit.list.col.actions');
-      default: return labels.keyTitle(col.startsWith('progress:') ? col.slice(9) : col);
+      default: return labels.keyTitle(colKey(col));
     }
   };
 

@@ -6,9 +6,9 @@ import { ICON_CANON } from '@seidr/kit';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { statusMeta } from '@seidr/kit';
-import type { KitConfig, KitLang, KitProgressInput, KitRecord } from '@seidr/kit';
+import type { KitConfig, KitLang, KitRecord } from '@seidr/kit';
 import type { LoreClient } from '../sprints/loreClient';
-import { loadSprintProgress } from '../sprints/sprintProgress';
+import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
@@ -69,9 +69,18 @@ export interface ListScreenDef {
 }
 
 export interface ListNested {
-  /** Поле записи с прогрессом «x/y» (колонка progress:<поле>). */
-  progressField: string;
-  loadProgress: (client: LoreClient, ids: readonly string[], signal: AbortSignal) => Promise<Map<string, KitProgressInput>>;
+  /**
+   * Поля записи, которые приходят ПОСЛЕ списка (S4-09, обобщено 09.11).
+   *
+   * Было одно поле прогресса, и этого хватало, пока догружалось одно число.
+   * С итогами спринта за один проход приходят три значения — задач x/y, оценка
+   * Σ и факт Σ, — и грузить их тремя запросами ради одной строки было бы
+   * расточительством. Перечень нужен не загрузчику, а экрану: пока значений
+   * нет, в каждом из этих полей стоит «…», то есть «считаем» вместо пустоты.
+   */
+  lateFields: readonly string[];
+  /** Заплатки полей по id записи: имя поля → значение. */
+  load: (client: LoreClient, ids: readonly string[], signal: AbortSignal) => Promise<Map<string, Record<string, unknown>>>;
   /** Содержимое раскрытой строки; грузится лениво — по раскрытию. */
   render: (id: string, client: LoreClient) => ReactNode;
 }
@@ -91,6 +100,12 @@ function sprintsConfig(lang: KitLang): KitConfig {
           { key: 'milestone', title: f(lang, 'milestone'), type: 'ref' },
           { key: 'priority', title: f(lang, 'priority'), type: 'number' },
           { key: 'tasks', title: f(lang, 'tasks'), type: 'number' },
+          // Итоги спринта (S4-09, просьба владелицы 09.11). Единица — в
+          // ЗАГОЛОВКЕ колонки («Оценка, дн»), а не в каждой ячейке: иначе «д»
+          // повторяется в каждой строке и съедает ширину, за которую мы же и
+          // боремся (S4-35).
+          { key: 'effort_total', title: f(lang, 'effortTotal'), type: 'number' },
+          { key: 'actual_total', title: f(lang, 'actualTotal'), type: 'number' },
         ],
       },
     },
@@ -119,7 +134,7 @@ function sprintsConfig(lang: KitLang): KitConfig {
       filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
       groupings: ['status', 'project', 'priority', 'milestone'],
       // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
-      columns: ['id', 'title', 'progress:tasks', 'status', 'project', 'priority', 'release', 'updated_at'],
+      columns: ['id', 'title', 'progress:tasks', 'sum:effort_total', 'sum:actual_total', 'status', 'project', 'priority', 'release', 'updated_at'],
     },
   };
 }
@@ -390,10 +405,12 @@ export const LIST_SCREENS = {
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     map: sprintRecord, config: sprintsConfig, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
-    // Задачи x/y и раскрытие строки с задачами — как было у SprintsPage (S4-09).
+    // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
+    // `sprint_totals` (S4-09). Считает сервер: одно число из двух мест
+    // расходится, и у kit это уже случилось со статусными цветами (K-14).
     nested: {
-      progressField: 'tasks',
-      loadProgress: loadSprintProgress,
+      lateFields: TOTALS_FIELDS,
+      load: loadSprintTotals,
       render: (id, client) => createElement(SprintTasks, { sprintId: id, client }),
     },
   },

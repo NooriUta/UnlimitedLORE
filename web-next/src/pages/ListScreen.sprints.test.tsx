@@ -34,8 +34,19 @@ function fakeFetch() {
         { sprint_id: 'SQ', name: 'Спринт SQ', status_raw: '✅ DONE' },
       ] });
     }
-    if (slice === 'tasks_of_sprints_batch') {
-      return jsonRes({ rows: [task('SP', 'T1', '✅ DONE'), task('SP', 'T2', '📋 PLANNED'), task('SQ', 'T1', '✅ DONE')] });
+    // 09.11: итоги спринта считает сервер и отдаёт срезом `sprint_totals`
+    // (S4-09). Прежний `tasks_of_sprints_batch` для этого не нужен — он нёс
+    // `note_md`, 3,6 МБ на двадцать спринтов ради трёх чисел.
+    if (slice === 'sprint_totals') {
+      const sum = (done: number, of: number) => ({
+        tasks_total: { value: of, known: of, of, done },
+        effort_days_total: { value: of, known: of, of },
+        actual_days_total: { value: null, known: 0, of },
+      });
+      return jsonRes({ rows: [
+        { sprint_id: 'SP', state: 'ok', ...sum(1, 2) },
+        { sprint_id: 'SQ', state: 'ok', ...sum(1, 1) },
+      ] });
     }
     return jsonRes({ rows: [task('SP', 'T1', '✅ DONE'), task('SP', 'T2', '📋 PLANNED')] });
   });
@@ -43,13 +54,18 @@ function fakeFetch() {
 }
 
 describe('«Спринты» на ListScreen: паритет с SprintsPage', () => {
-  it('колонка «Задачи» x/y догружается пачкой; закрытый спринт — в «Закрытые», и там тоже x/y', async () => {
+  // Переписано 09.11 вместе со сменой источника итогов (S4-09): x/y приходит
+  // срезом `sprint_totals`, а не считается на клиенте по пачке задач с телами.
+  // Утверждение теста то же — колонка догружается после списка и честна в
+  // закрытых тоже; изменился только путь, которым число добывается.
+  it('колонка «Задачи» x/y догружается срезом итогов; закрытый спринт — в «Закрытые», и там тоже x/y', async () => {
     const f = fakeFetch();
     const { container } = render(<ListScreen screen="sprints" fetchImpl={f.fn} urlState={false} />);
     await waitFor(() => expect(container.querySelector('[data-record-id="SP"] [data-progress="ok"]')).toBeTruthy());
     expect(screen.getByRole('columnheader', { name: 'Задачи' })).toBeTruthy();
     expect(container.querySelector('[data-record-id="SP"] [data-progress]')!.textContent).toContain('1/2');
-    expect(f.calls.some(u => u.pathname.endsWith('/tasks_of_sprints_batch'))).toBe(true);
+    expect(f.calls.some(u => u.pathname.endsWith('/sprint_totals'))).toBe(true);
+    expect(f.calls.some(u => u.pathname.endsWith('/tasks_of_sprints_batch'))).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: /Закрытые\s*1/ }));
     expect(container.querySelector('[data-record-id="SQ"] [data-progress="complete"]')!.textContent).toContain('1/1');
   });

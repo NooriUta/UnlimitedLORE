@@ -320,5 +320,7 @@
   "lists.quick.noMilestone": "No milestone",
   "lists.noPassport.head": "Records in “{{section}}” have no passport yet",
   "lists.noPassport.note": "The list, filters and search work — only the record card is missing.",
-  "lists.noPassport.back": "Back to the list"
+  "lists.noPassport.back": "Back to the list",
+  "lists.field.effortTotal": "Estimate, d",
+  "lists.field.actualTotal": "Actual, d"
 }

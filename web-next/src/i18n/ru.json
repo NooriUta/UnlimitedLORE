@@ -320,5 +320,7 @@
   "lists.quick.noMilestone": "Без вехи",
   "lists.noPassport.head": "Паспорта записей раздела «{{section}}» ещё нет",
   "lists.noPassport.note": "Список, фильтры и поиск по разделу работают — не сделана только карточка записи.",
-  "lists.noPassport.back": "Вернуться к списку"
+  "lists.noPassport.back": "Вернуться к списку",
+  "lists.field.effortTotal": "Оценка, дн",
+  "lists.field.actualTotal": "Факт, дн"
 }
