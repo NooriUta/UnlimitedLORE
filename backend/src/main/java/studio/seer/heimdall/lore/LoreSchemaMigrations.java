@@ -1554,7 +1554,12 @@ final class LoreSchemaMigrations {
         // SPRINT_UXR_S5_RECORD_TASKS/S5-09: черновик правки MD-поля на сервере —
         // новый тип KnowUserDraft, владелец kc_sub полем (как V63). Аддитивно,
         // major 17, v1 о нём не знает. DDL живёт рядом с логикой (LoreMeDrafts).
-        new Step(72, 17, "user_drafts", LoreMeDrafts.SCHEMA_SQL)
+        new Step(72, 17, "user_drafts", LoreMeDrafts.SCHEMA_SQL),
+
+        // SPRINT_UXR_S7C_WHY_CANVAS/S7C-01: холст «зачем» на сервере — три новых
+        // типа KnowCanvas / KnowCanvasItem / KnowCanvasLink. Аддитивно, major 17,
+        // v1 о них не знает. DDL рядом с логикой (LoreCanvas).
+        new Step(73, 17, "canvas_storage", LoreCanvas.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
