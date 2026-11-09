@@ -9,6 +9,19 @@ import { isClosedCategory, normalizeAxisCategory } from '../core/statusAxis';
 
 export const LIST_BUDGET = { perGroup: 50, maxGroups: 20, topGroups: 10 } as const;
 
+/**
+ * Сколько условий фильтра показывать в строке-описании до свёртки «+N»
+ * (SPRINT_UXR_S9_SCALE_OPT/S9-12).
+ *
+ * Это ПОРОГ, а не расчёт по ширине: мерить ширину нечем там, где правило должно
+ * быть проверяемым, а строка обязана держаться в одну строку и на 412 px.
+ * Три условия вида «Поле: значение» такую строку уже заполняют.
+ *
+ * Число одно на оба размера экрана и живёт здесь: захочется другое — меняется
+ * одна строка, а не разметка.
+ */
+export const CHIPS_INLINE = 3;
+
 const TOP_LEVEL = new Set(['id', 'kind', 'title', 'status', 'updated_at', 'body_md']);
 
 function walk(obj: unknown, path: string[]): unknown {
