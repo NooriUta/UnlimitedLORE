@@ -628,7 +628,7 @@ public class LoreMeResource extends LoreResourceBase {
 
     // ── Черновики (S5-09) ───────────────────────────────────────────────────
 
-    public record DraftRequest(String ref_type, String ref_id, String field, String body_md, Integer base_version) {}
+    public record DraftRequest(String ref_type, String ref_id, String field, String body_md, String base_version) {}
 
     public record DraftDeleteRequest(String ref_type, String ref_id, String field) {}
 
@@ -644,7 +644,7 @@ public class LoreMeResource extends LoreResourceBase {
         if (err != null) return badParams(err);
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT ref_type, ref_id, field, body_md, base_version, saved_at FROM KnowUserDraft "
+                "SELECT ref_type, ref_id, field, body_md, base_version, base_record_version, saved_at FROM KnowUserDraft "
                 + "WHERE owner_sub = :me AND ref_type = :t AND ref_id = :i ORDER BY saved_at DESC",
                 Map.of("me", me, "t", refType, "i", refId));
             Map<String, Object> body = new LinkedHashMap<>();
@@ -682,7 +682,7 @@ public class LoreMeResource extends LoreResourceBase {
                 "SELECT @rid FROM KnowUserDraft WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f",
                 Map.of("me", me, "t", req.ref_type(), "i", req.ref_id(), "f", req.field())).isEmpty();
             exec("UPDATE KnowUserDraft SET owner_sub=:me, ref_type=:t, ref_id=:i, field=:f, body_md=:b, "
-                + "base_version=:v, saved_at=:at UPSERT WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f", p);
+                + "base_version=null, base_record_version=:v, saved_at=:at UPSERT WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f", p);
             return noStore(Response.ok(Map.of("ok", true, "saved_at", p.get("at"),
                 "outcome", existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED)));
         } catch (Exception e) {
