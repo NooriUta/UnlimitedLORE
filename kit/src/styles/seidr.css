@@ -4207,6 +4207,10 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
   }
   .sk-news__grip { display: block; width: 40px; height: 4px; margin: 8px auto 0; border-radius: 2px; background: var(--bdh); }
   .sk-news__rtitle { white-space: normal; overflow-wrap: anywhere; }
+  /* Телефон: слот одной ширины съел бы треть строки — плашка вида встаёт после заголовка,
+     заголовки по-прежнему с одной линии (сразу за иконкой типа). */
+  .sk-news__tagslot { order: 2; min-width: 0; }
+  .sk-news__link > .sk-news__rtitle { order: 1; flex: 0 1 auto; }
   .sk-news__link { flex-basis: 100%; }
 }
 
