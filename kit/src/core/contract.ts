@@ -37,7 +37,18 @@ export type KitRelation = 'composition'|'aggregation'|'association'|'attribute'|
  * управление связями.
  */
 export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in'; manageable?:boolean }
-export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[]; overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; type:'text'|'md'|'enum'|'ref'|'date'|'number'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string}[] }
+export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[];
+  /**
+   * Разделы тела записи — ДАННЫМИ (S5-06, S5-09). Список «ключ поля + подпись»;
+   * рисует их kit, поэтому у каждого раздела сразу есть ✎, черновик и честное
+   * пустое состояние.
+   *
+   * Данные ГЛАВНЕЕ `overview`: своя функция рисования тихо отняла правку
+   * заметки задачи (дефект прода v1.17.7 — «нет ни ✎, ни „Править"»), потому
+   * что kit отдавал ей весь обзор и редактор до тела не доходил.
+   */
+  bodySections?:{key:string; title:string; /** Раздел можно писать. false — только чтение даже при праве правки: путь записи для него сервер не даёт (schema.fields[].editable). */ editable?:boolean}[];
+  overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; type:'text'|'md'|'enum'|'ref'|'date'|'number'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string}[] }
 export interface KitRecord { id:string; kind:string; title:string; status:string; fields:Record<string,unknown>; body_md?:string; updated_at?:string }
 export interface KitEdge { from:string; to:string; type:string }
 export interface KitJournalEntry { at:string; who:string; is_agent?:boolean; record_id:string; field:string; from:unknown; to:unknown; approved_by?:string }

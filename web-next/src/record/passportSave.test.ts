@@ -1,6 +1,6 @@
 // Правка на месте в паспорте (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24, ADR-LORE-047 п. 14.1):
 // пока нет фасада записи — через существующие пути, те же, что у MCP sprint_set / task_set / spec_set.
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EDITABLE_BODY, savePassportField } from './passportSave';
 import { toLoreRecord } from './loreRecordContract';
 import type { PassportLoad } from './passportAdapters';
@@ -101,5 +101,51 @@ describe('контракт: право править — по типу, с че
     const c = toLoreRecord(load('adr'), '2026-11-08T00:00:00Z');
     expect(c.perms.can_edit).toBe(true);
     expect(c.perms.reason).toMatch(/раздел/);
+  });
+});
+
+describe('S5-06 · путь записи РАЗДЕЛА берётся из схемы сервера (write)', () => {
+  // Замечание серверной сессии 09.11, проверенное по её реестру
+  // (LoreRecordRegistry:532): у каждого раздела тела свой `write {endpoint,
+  // field}`. У спринта разделов ДВА — «Контекст» и «Итог», — и таблица «тип →
+  // одно поле» молча не записала бы «Итог». Поэтому путь приходит данными.
+  const calls: { url: string; body: unknown }[] = [];
+  const net = (() => async (url: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : null });
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } });
+  })() as unknown as typeof fetch;
+
+  beforeEach(() => { calls.length = 0; });
+
+  it('положительный контроль: «Итог» спринта уходит своим полем по своему пути', async () => {
+    await savePassportField(
+      'sprint', { id: 'SP', title: 'Спринт' }, 'outcome_md', 'Итог работ', net, null,
+      { endpoint: '/lore/sprint/update', field: 'outcome_md' },
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toContain('/lore/sprint/update');
+    expect(calls[0].body).toMatchObject({ sprint_id: 'SP', outcome_md: 'Итог работ' });
+  });
+
+  it('раздел ADR уходит своим полем, имя записи обязательно', async () => {
+    await savePassportField(
+      'adr', { id: 'ADR-1', title: 'Решение' }, 'decision_md', 'Текст', net, null,
+      { endpoint: '/lore/adr', field: 'decision_md' },
+    );
+    expect(calls[0].body).toMatchObject({ adr_id: 'ADR-1', name: 'Решение', decision_md: 'Текст' });
+  });
+
+  it('без имени записи правка НЕ уходит — лучше не сохранить, чем сохранить безымянным', async () => {
+    await expect(savePassportField(
+      'adr', { id: 'ADR-1', title: '   ' }, 'decision_md', 'Текст', net, null,
+      { endpoint: '/lore/adr', field: 'decision_md' },
+    )).rejects.toThrow(/имя/);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('write не передан — прежний путь по склеенному телу (эмуляция)', async () => {
+    await savePassportField('task', { id: 'SP/T1', title: 'Задача' }, 'body_md', 'Заметка', net, null);
+    expect(calls[0].url).toContain('/lore/task/edit');
+    expect(calls[0].body).toMatchObject({ task_uid: 'SP/T1', note_md: 'Заметка' });
   });
 });

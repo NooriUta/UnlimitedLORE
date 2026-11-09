@@ -103,8 +103,12 @@ describe('ADR — разделы как в v1: «Контекст», «Реше�
   it('kit рисует непустые разделы по порядку, каждый со своей подписью', async () => {
     const c = toLoreRecord(await loadPassport('adr', 'ADR-1', 'ru', fake({ adr: [ADR], decisions_of_adr: [] }), NOW), NOW);
     const k = fromLoreRecord(JSON.parse(JSON.stringify(c)) as LoreRecord1, 'ru');
-    const ov = k.config.kinds.adr.overview;
-    expect(typeof ov).toBe('function');
+    // 09.11.2026: разделы приходят ДАННЫМИ, а не функцией рисования. Прежнее
+    // утверждение («overview — функция») закрепляло ту самую причину, из-за
+    // которой у разделов не было ✎: kit отдавал весь обзор чужой функции и
+    // редактор до текста не доходил (дефект прода v1.17.7).
+    expect(k.config.kinds.adr.overview).toBeUndefined();
+    expect(k.config.kinds.adr.bodySections?.map(s => s.key)).toEqual(['context_md', 'decision_md', 'consequences_md']);
     expect(k.config.kinds.adr.fields?.map(f => f.key)).not.toContain('decision_md');
   });
 });
