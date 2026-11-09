@@ -616,5 +616,6 @@
   "kit.sum.error": "Not counted: {reason}",
   "kit.sum.loading": "Counting…",
   "kit.sum.none": "Not counted",
-  "kit.sum.cut": "not everything was summed: the result was truncated"
+  "kit.sum.cut": "not everything was summed: the result was truncated",
+  "kit.tabs.more": "More"
 }

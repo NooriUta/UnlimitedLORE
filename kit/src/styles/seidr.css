@@ -1047,6 +1047,43 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 .sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+
+/* Редкие вкладки под «Ещё» (S4-29, просьба владелицы 09.11: «зависимости и
+   прочее можно скрыть под море… интерфейс становится перегруженным»).
+   Свёртка всплывающая, а не вторая строка вкладок: вторая строка вернула бы
+   ту же перегруженность. */
+.sk-tabs__more { position: relative; display: inline-flex; }
+.sk-tabs__more-btn { color: var(--t3); }
+.sk-tabs__more-btn[aria-expanded='true'] { color: var(--t1); }
+.sk-tabs__more-pop {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  max-width: min(320px, 92vw);
+  max-height: 62vh;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+}
+.sk-tabs__more-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: max(var(--tap), 28px);
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+.sk-tabs__more-item:hover { background: var(--bg3); color: var(--t1); }
+
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
 .sk-tabs--underline { gap: 2px; padding: 0; }
