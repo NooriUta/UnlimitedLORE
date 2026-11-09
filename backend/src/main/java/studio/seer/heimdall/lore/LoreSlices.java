@@ -1324,7 +1324,7 @@ public final class LoreSlices {
             "out('HAS_PROJECT_ROLE').slug AS projects, " +
             "outE('HAS_PROJECT_ROLE').role AS roles " +
             "FROM KnowUser",
-            List.of(), Map.of(), " ORDER BY display_name LIMIT 500");
+            List.of(), Map.of(), " ORDER BY display_name");   // без потолка: SliceCapAndCardParityTest
 
         // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
         // ревью доступа, что у project_users. Один агент — один живой
