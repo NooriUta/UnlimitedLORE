@@ -3042,7 +3042,25 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
    полосой-заголовком с числом задач. На узком экране таблица скроллится
    вбок, а не ломает колонки. Цели касания — max(var(--tap), …). */
 .sk-tasks { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.sk-tasks__bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-tasks__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* Выбор колонок таблицы задач (S4-35 «общие колонки»): кнопка в полосе,
+   панель — тот же ColumnsChoice, что у списков. Поповер, а не вкладка: полоса
+   задач и так узкая. */
+.sk-tasks__cols { position: relative; display: inline-flex; }
+.sk-tasks__colspop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 240px;
+  padding: 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+}
+/* Группировка — своей группой, чтобы у неё осталось имя для чтения вслух. */
+.sk-tasks__groupby { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .sk-tasks__wrap { overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-tasks__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); color: var(--t1); }
 .sk-tasks__th {

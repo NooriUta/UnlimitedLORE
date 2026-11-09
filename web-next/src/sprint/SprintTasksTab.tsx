@@ -9,7 +9,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { loreFetch } from '../auth/session';
 import {
-  LoadStateView, pushUrlState, readUrlState, TaskCounters, TaskTable, TASK_GROUP_BYS, useLoadState,
+  LoadStateView, pushUrlState, readUrlState, TaskCounters, TaskTable, TASK_COLUMN_KEYS, TASK_GROUP_BYS,
+  columnsFromUrl, columnsToUrlValue, useLoadState,
   type TaskGroupBy, type TaskPatch, type TaskRowData, type TaskStatus, type UrlWindow,
 } from '@seidr/kit';
 import { useKitLang } from '@seidr/kit';
@@ -19,6 +20,8 @@ import { loadTaskDicts, type TaskDicts } from './taskDicts';
 import { editTask, loadSprintTasks, setTaskStatus, type SprintTasksData } from './sprintTasksApi';
 
 export const GROUP_PARAM = 'group';
+/** Набор колонок задач — в адресе, как у списков (S4-35): ссылкой делятся. */
+export const TASK_COLS_PARAM = 'tcols';
 const DEFAULT_GROUP: TaskGroupBy = 'phase';
 
 function groupFromUrl(win: UrlWindow | undefined): TaskGroupBy {
@@ -61,6 +64,17 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
     return () => { live = false; };
   }, [lang]);
 
+  // Набор колонок живёт в адресе: им делятся ссылкой, как видом списка.
+  // Чужой или устаревший ключ отбрасывает сам kit — пустой столбец хуже
+  // отсутствующего.
+  const [cols, setCols] = useState<string[] | undefined>(
+    () => columnsFromUrl(win ? win.location.search : (typeof window === 'undefined' ? '' : window.location.search), TASK_COLUMN_KEYS, 'title', TASK_COLS_PARAM),
+  );
+  const onColumnsChange = useCallback((next: string[]) => {
+    setCols(next);
+    pushUrlState({ [TASK_COLS_PARAM]: columnsToUrlValue(next) }, { replace: true, win });
+  }, [win]);
+
   const onGroupByChange = useCallback((by: TaskGroupBy) => {
     setGroupBy(by);
     pushUrlState({ [GROUP_PARAM]: by }, { replace: true, win });
@@ -99,6 +113,8 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             onStatusChange={onStatusChange}
             onSave={onSave}
             dict={dicts}
+            columns={cols}
+            onColumnsChange={onColumnsChange}
             hrefFor={task => taskPassportHref(sprintId, task.id)}
             label={t('sprintTasks.caption', { id: sprintId })}
             />
