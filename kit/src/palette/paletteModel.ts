@@ -19,7 +19,7 @@ export interface PaletteRecordItem {
   icon: string | undefined;
   status: string;
   /** remote — найдена сервером (S4-14), среди загруженных её нет. */
-  origin?: 'remote';
+  origin?: 'remote' | 'recent-only';
 }
 
 export interface PaletteCommandItem {
@@ -195,6 +195,16 @@ export function searchPalette({ query, data, config, mode, recent, limit = 30, a
       const type = key.slice(0, sep);
       const id = key.slice(sep + 1);
       if (type === 'record' && byId.has(id)) items.push(recordItem(byId.get(id)!, config));
+      // Запись в недавних есть, а в выгрузке экрана её нет — показываем код и
+      // помечаем, что о ней известно только это. Прежде такой пункт молча
+      // пропадал, и палитра выглядела пустой, хотя человек точно открывал
+      // записи (находка P1 аудита 08.11, вторая половина).
+      else if (type === 'record' && id) {
+        items.push({
+          type: 'record', id, title: id, kind: '', kindTitle: '', icon: undefined, status: '',
+          origin: 'recent-only',
+        });
+      }
       else if (type === 'command' && cmdById.has(id)) items.push({ type: 'command', id, title: cmdById.get(id)!.title });
     }
     // Команды, которых ещё нет в недавних: показываем, что палитра умеет.

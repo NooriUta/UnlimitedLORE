@@ -7,6 +7,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KitShowClosed } from '../core/contract';
 import type { RecordPlacement } from '../record/RecordDock';
+import { ColumnsChoice, type ColumnChoice } from './ColumnsChoice';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey } from '../i18n';
 import { useFocusTrap } from '../keyboard/focusTrap';
@@ -18,11 +19,18 @@ export interface ViewMenuProps {
   /** Где открывается паспорт записи — настройка использования, а не элемент паспорта (владелица 08.11). Без onPlace раздела нет. */
   place?: RecordPlacement;
   onPlace?: (p: RecordPlacement) => void;
+  /**
+   * Выбор колонок (S4-35): в прототипе владелицы раздел «Колонки» живёт в этом
+   * же поповере «Вид», а не отдельной кнопкой рядом — настройки вида в одном
+   * месте. Без onColumns раздела нет.
+   */
+  columns?: { all: readonly ColumnChoice[]; chosen: readonly string[] };
+  onColumns?: (cols: string[]) => void;
 }
 
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 
-export function ViewMenu({ closed, modes, onClosed, place, onPlace }: ViewMenuProps) {
+export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onColumns }: ViewMenuProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [open, setOpen] = useState(false);
@@ -77,6 +85,11 @@ export function ViewMenu({ closed, modes, onClosed, place, onPlace }: ViewMenuPr
             ))}
           </div>
           <p className="sk-vmenu__hint">{t('kit.list.closed.hint')}</p>
+          {columns && onColumns && (
+            <div className="sk-vmenu__cols">
+              <ColumnsChoice all={columns.all} chosen={columns.chosen} onChange={onColumns} />
+            </div>
+          )}
           {onPlace && (
             <div role="radiogroup" aria-label={t('kit.list.place.label')} className="sk-vmenu__seg">
               <span className="sk-vmenu__label" aria-hidden="true">{t('kit.list.place.label')}</span>

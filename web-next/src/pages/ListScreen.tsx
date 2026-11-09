@@ -14,6 +14,7 @@ import { fetchSlice } from '../api/loreClient';
 import { useAppT } from '../i18n';
 import { LIST_SCREENS, type ListScreenDef, type ListScreenId } from '../lists/screens';
 import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
+import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
@@ -153,6 +154,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
+        // Личная ширина колонок (S4-35, «ширина личная, набор командный»):
+        // ключ раздела свой у каждого списка, хранилище — общее v2 с откатом
+        // в память (приватный режим ширину просто не запомнит).
+        widths={{ screen: screen, store: appStorage }}
         expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
         onOpen={id => {
           setOpen({ ...open, id });

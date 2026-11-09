@@ -11,6 +11,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KitRecord } from '../core/contract';
 import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
 import { errorDetail } from '../states/loadState';
+import { describeError } from '../resilience/errorText';
 import { kitT, useKitLang, type KitLang } from '../i18n';
 import { valueText } from './fmt';
 import {
@@ -27,6 +28,16 @@ export interface RecordHistorySource {
   restorable?: readonly string[];
   /** Записать поля старой версии как новую версию. Нет — запись только для чтения. */
   onRestore?: (req: KitRestoreRequest) => Promise<void>;
+  /**
+   * Догрузить следующую страницу истории (S9-09). Нет — кнопки «Показать
+   * ещё» не будет: обещать кнопкой то, чего приложение не умеет, нельзя.
+   * Сказать «показано N из M» и не дать посмотреть дальше — половина правды.
+   */
+  onMore?: () => void;
+  /** Идёт догрузка: кнопка занята и второй раз не зовётся. */
+  loadingMore?: boolean;
+  /** Догрузка не удалась: причина словами, показанные версии остаются. */
+  moreError?: unknown;
 }
 
 export interface RecordHistoryProps {
@@ -128,7 +139,24 @@ function HistoryBody({ record, history, source, lang }: { record: KitRecord; his
         <p key={`a:${a}`} className="sk-rec-note sk-rec-history__anomaly" role="note">{kitT(lang, 'kit.record.history.anomaly', { code: a })}</p>
       ))}
       {page?.has_more && (
-        <p className="sk-rec-note" role="note">{kitT(lang, 'kit.record.history.partial', { shown: versions.length, total: page.total })}</p>
+        <p className="sk-rec-note" role="note">
+          {kitT(lang, 'kit.record.history.partial', { shown: versions.length, total: page.total })}
+          {source.onMore && (
+            <button
+              type="button"
+              className="sk-btn sk-rec-history__more"
+              disabled={source.loadingMore}
+              onClick={() => { if (!source.loadingMore) source.onMore?.(); }}
+            >
+              {kitT(lang, source.loadingMore ? 'kit.record.history.moreBusy' : 'kit.record.history.more')}
+            </button>
+          )}
+        </p>
+      )}
+      {source.moreError !== undefined && (
+        <p className="sk-rec-note sk-rec-history__morefail" role="alert">
+          {kitT(lang, 'kit.record.history.moreFailed', { reason: describeError(source.moreError) })}
+        </p>
       )}
 
       <ol className="sk-rec-history__list" aria-label={kitT(lang, 'kit.record.history.list')}>

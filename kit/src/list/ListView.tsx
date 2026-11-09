@@ -23,7 +23,7 @@
 // кнопка с aria-keyshortcuts и подсказкой Kbd; в поле ввода клавиша — текст.
 import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
@@ -62,6 +62,8 @@ import { SortMenu } from './SortMenu';
 import { TimelineLanes } from '../views/timeline';
 import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
+import { MIN_COL_W, clampWidth, readWidths, widthsFor, writeWidths, type ColumnWidths, type WidthStore } from './columnWidths';
+import { columnsFromUrl, columnsToUrlValue } from './columnsUrl';
 
 export interface ListBulkAction {
   id: string;
@@ -153,6 +155,20 @@ export interface ListViewProps {
   head?: ListHead;
   /** Иконки видов (вид → слаг game-icons). Задаёт приложение: иконки — из канона LORE v1 (S4-25). */
   viewIcons?: Partial<Record<ListViewKind, string>>;
+  /**
+   * Личная ширина колонок (S4-35, «ширина личная, набор командный»). Задано —
+   * у заголовков появляются ручки, ширина живёт в личном хранилище и НЕ идёт в
+   * адрес: ссылкой делятся, а ширина своя. Не задано — ручек нет: показывать
+   * то, чем нельзя управлять, незачем.
+   */
+  widths?: {
+    /** Ключ раздела в хранилище: у списка задач и списка ADR ширины свои. */
+    screen: string;
+    /** Хранилище; нет — ширина живёт до перезагрузки (приватный режим). */
+    store?: WidthStore;
+    /** Телефон: ширины не применяются вовсе — там карточки. */
+    narrow?: boolean;
+  };
   className?: string;
 }
 
@@ -163,6 +179,9 @@ export interface ListHead {
   icon?: string;
   actions?: ReactNode;
 }
+
+/** Колонка, которую нельзя снять: список без названия записи нечитаем (S4-35). */
+const COLS_LOCKED = 'title+id';
 
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
 /** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
@@ -263,14 +282,51 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
   return <span className="sk-list__title">{r.title}</span>;
 }
 
+/**
+ * Минимальная ширина отдельных колонок (S4-35): «Запись» уже 220 px читается
+ * хуже, чем вовсе без неё — название переносится в кашу. Остальным хватает
+ * общего MIN_COL_W.
+ */
+const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title: 220 };
+
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, expand, head, viewIcons, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, expand, head, viewIcons, widths, className, state: stateProp, onStateChange,
 }: ListViewProps) {
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
   assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
   const mac = isMacPlatform();
   const rootRef = useRef<HTMLDivElement>(null);
+  // Ширины колонок (S4-35). Читаются один раз: хранилище личное, и чужие
+  // правки в нём по ходу жизни экрана нас не касаются.
+  const [colW, setColW] = useState<ColumnWidths>(
+    () => (widths?.store ? readWidths(widths.store, widths.screen) : {}),
+  );
+  const appliedW = widths ? widthsFor(colW, LIST_COL_MIN, widths.narrow) : {};
+  /** Потянуть ширину: считаем от текущей ширины заголовка, а не от нуля. */
+  const onGrip = (col: string) => (e: ReactPointerEvent<HTMLElement>) => {
+    const th = (e.currentTarget as HTMLElement).closest('th');
+    if (!th) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = appliedW[col] ?? th.getBoundingClientRect().width ?? MIN_COL_W;
+    let last = startW;
+    const move = (ev: PointerEvent) => {
+      const next = clampWidth(col, startW + (ev.clientX - startX), LIST_COL_MIN);
+      if (next === undefined) return;
+      last = next;
+      setColW(w => ({ ...w, [col]: next }));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      // Пишем один раз по отпусканию, а не на каждое движение: хранилище —
+      // не журнал перетаскивания.
+      if (widths?.store) writeWidths(widths.store, widths.screen, { ...colW, [col]: last });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
   const [cursor, setCursor] = useState<string | null>(null);
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -308,7 +364,29 @@ export function ListView({
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
   const hasGroupings = groupOpts.fields.length + groupOpts.relations.length > 0;
-  const baseColumns = listCfg?.columns ?? ['title+id', 'status'];
+  /**
+   * Имя колонки ТЕКСТОМ — для выбора колонок и подписей: у «выбрать все»
+   * заголовок это галочка, и в список выбора такое не положишь.
+   */
+  const columnTitleText = (col: string): string => {
+    if (col === 'title+id') return t('kit.list.col.title');
+    if (col === 'verdict') return t('kit.list.col.verdict');
+    if (col === 'edges_count') return t('kit.list.col.edges');
+    if (col === 'actions') return t('kit.list.col.actions');
+    return labels.keyTitle(col.startsWith('progress:') ? col.slice(9) : col);
+  };
+  const configColumns = listCfg?.columns ?? ['title+id', 'status'];
+  // Набор колонок — командный: живёт в адресе, им делятся ссылкой (S4-35,
+  // решение владелицы 08.11). Незнакомый ключ из адреса отбрасывается, «Запись»
+  // возвращается на место: список без названия записи нечитаем.
+  const colsFromUrl = win ? columnsFromUrl(win.location.search, configColumns, COLS_LOCKED) : undefined;
+  const [colsOwn, setColsOwn] = useState<string[] | undefined>(colsFromUrl);
+  const chosenColumns = colsOwn ?? configColumns;
+  const baseColumns = chosenColumns;
+  const setColumns = (next: string[]) => {
+    setColsOwn(next);
+    if (win) pushUrlState({ cols: columnsToUrlValue(next) }, { replace: true, win: win });
+  };
   // Чекбоксы — колонкой конфига или в режиме выбора (тогда первой колонкой, S4-10);
   // действия строки (S4-11) — последней колонкой.
   const withSelect = mode && !baseColumns.includes('select') ? ['select', ...baseColumns] : baseColumns;
@@ -565,6 +643,15 @@ export function ListView({
       onClosed={c => update({ closed: c })}
       place={recordPlace?.value}
       onPlace={recordPlace?.onChange}
+      columns={{
+        all: configColumns
+          // «Выбрать все» и «Действия» — не колонки данных: они появляются от
+          // режима выбора и прав, и выбором ими не управляют.
+          .filter(c => c !== 'select' && c !== 'actions')
+          .map(c => ({ key: c, title: columnTitleText(c), locked: c === COLS_LOCKED })),
+        chosen: chosenColumns.filter(c => c !== 'select' && c !== 'actions'),
+      }}
+      onColumns={setColumns}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
@@ -640,6 +727,7 @@ export function ListView({
         return valueCell(col, r);
     }
   };
+
   const colTitle = (col: string): ReactNode => {
     switch (col) {
       case 'select': return (
@@ -870,7 +958,39 @@ export function ListView({
       <div className="sk-list__scroll">
         <table className="sk-list__table">
           <thead>
-            <tr>{expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}{columns.map(c => <th key={c} scope="col" className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{colTitle(c)}</th>)}</tr>
+            <tr>
+              {expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}
+              {columns.map(c => {
+                const head = colTitle(c);
+                return (
+                <th
+                  key={c}
+                  scope="col"
+                  className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}
+                  style={appliedW[c] === undefined ? undefined : { width: `${appliedW[c]}px` }}
+                >
+                  {head}
+                  {widths && !widths.narrow && (
+                    // Ручка — только когда ширинами управляют: иначе это
+                    // украшение, которое ничего не делает.
+                    <span
+                      className="sk-list__grip"
+                      data-grip={c}
+                      // aria-hidden: ручка — приспособление для мыши, и
+                      // клавиатурного изменения ширины у неё НЕТ. Объявить её
+                      // скринридеру значило бы обещать управление, которого
+                      // нет; к тому же её подпись подмешивалась в имя колонки,
+                      // и «Задачи» читались как «Задачи Ширина колонки
+                      // Задачи» (поймано тестом списка спринтов).
+                      aria-hidden="true"
+                      title={t('kit.list.cols.width', { title: typeof head === 'string' ? head : c })}
+                      onPointerDown={onGrip(c)}
+                    />
+                  )}
+                </th>
+                );
+              })}
+            </tr>
           </thead>
           {groups.map(g => {
             const headed = grouped || g.key === CLOSED_KEY;
