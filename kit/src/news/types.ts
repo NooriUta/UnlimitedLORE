@@ -15,7 +15,7 @@ export type NewsFilterAxis = (typeof NEWS_FILTER_AXES)[number];
 export const NEWS_TASK_AXES = ['project', 'sprint', 'component', 'milestone'] as const;
 export type NewsTaskAxis = (typeof NEWS_TASK_AXES)[number];
 
-export type NewsType = 'task' | 'sprint' | 'release' | 'adr' | 'decision' | 'spec' | (string & {});
+export type NewsType = 'task' | 'sprint' | 'release' | 'adr' | 'decision' | 'spec' | 'question' | (string & {});
 export type NewsKind =
   | 'created' | 'changed' | 'status' | 'ready' | 'reactivated' | 'closed' | 'cancelled' | 'released' | 'version'
   | (string & {});
