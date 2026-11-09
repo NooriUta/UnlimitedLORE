@@ -143,9 +143,14 @@ describe('S5-01 · строка-вердикт в шапке', () => {
     expect(onTab).toHaveBeenCalledWith('tasks');
   });
 
-  it('вкладки «Задачи» у вида нет — факт текстом, не кнопкой', () => {
+  // Сужено 09.11: утверждение было «в строке фактов НЕТ кнопок вообще», и оно
+  // стало неверным не по своей вине — статус в строке теперь становится кнопкой,
+  // когда права позволяют его сменить (дефект «не могу поменять статус адр»).
+  // Предмет проверки — ФАКТ ЗАДАЧ, поэтому смотрим на него, а не на всю строку.
+  it('вкладки «Задачи» у вида нет — факт задач текстом, не кнопкой', () => {
     view({ ...SPEC, tasksTab: 'nope' });
-    expect(within(screen.getByTestId('kit-facts')).queryByRole('button')).toBeNull();
+    const tasks = screen.getByTestId('kit-facts').querySelector('[data-fact="tasks"]')!;
+    expect(tasks.querySelector('button')).toBeNull();
   });
 
   it('ошибка задач рисуется явно', () => {

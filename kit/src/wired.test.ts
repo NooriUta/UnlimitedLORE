@@ -53,6 +53,7 @@ function callers(symbol: string, declaredIn: string): string[] {
 const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string }[] = [
   { symbol: 'ColumnsChoice', declaredIn: 'list/ColumnsChoice.tsx', why: 'выбор колонок в списке и в таблице задач (S4-35)' },
   { symbol: 'SumCell', declaredIn: 'list/sum.tsx', why: 'колонка sum:<поле> — итог с охватом, «не заполнено» вместо нуля (S4-09)' },
+  { symbol: 'StatusSlot', declaredIn: 'record/StatusSlot.tsx', why: 'статус в записи становится кнопкой, когда права позволяют его сменить (дефект 09.11)' },
   { symbol: 'readWidths', declaredIn: 'list/columnWidths.ts', why: 'личная ширина колонок читается при открытии списка (S4-35)' },
   { symbol: 'writeWidths', declaredIn: 'list/columnWidths.ts', why: 'ширина запоминается после перетаскивания (S4-35)' },
   { symbol: 'widthsFor', declaredIn: 'list/columnWidths.ts', why: 'ширины применяются к таблице и не применяются на телефоне (S4-35)' },

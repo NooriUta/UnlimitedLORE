@@ -18,6 +18,7 @@ import { fromLoreRecord } from './loreRecordContract';
 import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
 import { saveRelation } from './relationSave';
+import { saveRecordStatus, statusEntity } from './statusSave';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
@@ -95,6 +96,30 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
   // паспорт с сервера — показываем записанное, а не то, что набрали.
   const onSave = async ({ field, to }: { field: string; to: unknown }) => {
+    // СТАТУС сохраняется СВОИМ путём — у него на сервере отдельный эндпоинт
+    // (`POST /lore/status`), и он единственный, кто двигает SCD2 состояния.
+    //
+    // Эта ветка — исправление дефекта, замеченного владелицей 09.11 («не могу
+    // поменять статус адр через новый редиз»). Корень был не на сервере: он
+    // смену статуса ADR принимает давно. `saveRecordStatus` я написал в тот же
+    // день, покрыл тестами и НЕ ПОДКЛЮЧИЛ — греп показал вызовы только из его
+    // собственного теста. То есть чип стал нажимаемым (права приходят фасадом,
+    // `perms.can_status`), а сохранять было нечем, и это молчало.
+    //
+    // Следствие было шире жалобы: статус не менялся НИ У ОДНОГО типа, просто
+    // первым это понадобилось на ADR.
+    if (field === 'status') {
+      await saveRecordStatus({
+        type: statusEntity(type),
+        id: view.record.id,
+        // «Было» — ровно то, что показано человеку: сервер сверит и откажет
+        // 409-м, если статус успели изменить, вместо тихой перезаписи.
+        to: String(to),
+        was: contract?.record.status ?? null,
+      }, fetchImpl);
+      pp.reload();
+      return;
+    }
     // Версия на момент ЧТЕНИЯ записи (S5-08): сервер сверит её и откажет
     // 409-м, если запись успели изменить. Без неё сохранение затирало чужую
     // правку молча. У ADR проверки на сервере нет — там версия не уходит, и

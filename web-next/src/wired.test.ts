@@ -57,6 +57,7 @@ const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string 
   { symbol: 'createLiveS2Client', declaredIn: 'api/liveS2.ts', why: 'личные настройки, виды и память — с сервера, а не из браузера (S5-14)' },
   { symbol: 'shellRecentList', declaredIn: 'palette/shellRecent.ts', why: '«Недавнее» палитры — тот же список, что в меню (S4-14)' },
   { symbol: 'loadSprintTotals', declaredIn: 'sprints/sprintTotals.ts', why: 'итоги спринта в списке: задач x/y, оценка Σ дн, факт Σ дн (S4-09)' },
+  { symbol: 'saveRecordStatus', declaredIn: 'record/statusSave.ts', why: 'смена статуса из паспорта — путь записи (дефект 09.11: был написан и не подключён)' },
 ];
 
 describe('сторож приложения: написанное дошло до экрана', () => {
