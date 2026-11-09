@@ -279,11 +279,19 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
   }
 
   // statuses
+  //
+  // Пустой словарь — ЗАКОННЫЙ конфиг и означает «у этого списка нет статусной
+  // оси» (K-14). Раньше здесь стояла ошибка «нужен хотя бы один статус», и это
+  // было предметное допущение внутри kit: есть ли у типа статус — дело
+  // приложения и его данных. У вех, компонентов, технологий и релизов LORE
+  // статуса нет ни в одном поле среза, и фиктивный статус рисовал бы каждой
+  // строке чип, которого у неё нет: «оси нет» ≠ «ось есть, значение неизвестно».
+  let statusAxisEmpty = false;
   const statuses = c.obj(cfg, 'statuses', '', true);
   if (statuses) {
     const items = c.arr(statuses, 'items', 'statuses', true);
     if (items) {
-      if (items.length === 0) c.err('statuses.items', 'empty', 'нужен хотя бы один статус');
+      statusAxisEmpty = items.length === 0;
       const codeSeen = new Set<string>();
       const hotSeen = new Set<string>();
       const allCodes = new Set(items.filter(isObj).map((s) => s.code).filter(isStr));
@@ -352,8 +360,25 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
         }
       }
     });
+    const listArrays: Record<string, unknown[]> = {};
     for (const k of ['filters', 'groupings', 'columns']) {
-      c.arr(list, k, 'list', false)?.forEach((v, i) => { if (!isStr(v)) c.err(`list.${k}[${i}]`, 'type', `list.${k}[${i}] должно быть строкой`); });
+      const a = c.arr(list, k, 'list', false);
+      if (a) listArrays[k] = a;
+      a?.forEach((v, i) => { if (!isStr(v)) c.err(`list.${k}[${i}]`, 'type', `list.${k}[${i}] должно быть строкой`); });
+    }
+    // Колонка и фасет «Статус» при пустой оси обещают то, чего нет. Это не
+    // ошибка — kit их покажет, просто пустыми, — но молчать нельзя: иначе
+    // пустая колонка читается как «статусы потерялись», а не «их не бывает».
+    if (statusAxisEmpty) {
+      if ((listArrays.columns ?? []).includes('status')) {
+        c.warn('list.columns', 'status-column-without-axis', 'колонка «status» заказана, а statuses.items пуст: колонка обещает статусную ось, которой нет');
+      }
+      if ((listArrays.filters ?? []).includes('status')) {
+        c.warn('list.filters', 'status-facet-without-axis', 'фасет «status» заказан, а statuses.items пуст: фильтр обещает статусную ось, которой нет');
+      }
+      if ((listArrays.groupings ?? []).includes('status')) {
+        c.warn('list.groupings', 'status-grouping-without-axis', 'разрез «status» заказан, а statuses.items пуст: группировка обещает статусную ось, которой нет');
+      }
     }
     const tree = c.obj(list, 'tree', 'list', false);
     if (tree) {
@@ -409,6 +434,12 @@ export function validateKitData(input: unknown, config?: KitConfig): KitValidati
   const kindKeys = config && isObj(config.kinds) ? new Set(Object.keys(config.kinds)) : undefined;
   const statusCodes = config && isObj(config.statuses) && Array.isArray(config.statuses.items)
     ? new Set(config.statuses.items.map((s) => s.code)) : undefined;
+  // Пустая ось (K-14): конфиг говорит «статуса у этого типа нет». Тогда жалоба
+  // «нет в config.statuses» не по делу — она прозвучала бы на КАЖДОЙ строке и
+  // утопила бы настоящие замечания. Расхождение всё равно называется, но один
+  // раз и по-другому: данные статусы несут, а ось не объявлена (ниже).
+  const noStatusAxis = statusCodes?.size === 0;
+  const statusesWithoutAxis = new Set<string>();
   // Конфиг без словаря рёбер — любой тип ребра ему неизвестен (а не «всё можно»).
   const edgeTypes = config ? new Set(isObj(config.edges) ? Object.keys(config.edges) : []) : undefined;
 
@@ -426,8 +457,19 @@ export function validateKitData(input: unknown, config?: KitConfig): KitValidati
     if (r.updated_at !== undefined && !isIsoDate(r.updated_at)) c.err(`${p}.updated_at`, 'date', `${p}.updated_at — дата ISO 8601`);
     c.unknownKeys(r, RECORD_KEYS, p, 'положи его в fields');
     if (kind !== undefined && kindKeys && !kindKeys.has(kind)) c.warn(`${p}.kind`, 'unknown-kind', `${p}.kind «${kind}» нет в config.kinds`);
-    if (status !== undefined && statusCodes && !statusCodes.has(status)) c.warn(`${p}.status`, 'unknown-status', `${p}.status «${status}» нет в config.statuses`);
+    if (noStatusAxis) {
+      if (status) statusesWithoutAxis.add(status);
+    } else if (status !== undefined && statusCodes && !statusCodes.has(status)) {
+      c.warn(`${p}.status`, 'unknown-status', `${p}.status «${status}» нет в config.statuses`);
+    }
   });
+
+  // Одно предупреждение на всю выдачу, со списком самих значений: по нему
+  // видно, что чинить — объявить ось или убрать статус из данных.
+  if (statusesWithoutAxis.size > 0) {
+    c.warn('records', 'status-without-axis',
+      `статусной оси в конфиге нет (statuses.items пуст), а записи несут статусы: ${[...statusesWithoutAxis].sort().join(' · ')}`);
+  }
 
   const edges = c.arr(d, 'edges', '', true);
   edges?.forEach((e, i) => {
