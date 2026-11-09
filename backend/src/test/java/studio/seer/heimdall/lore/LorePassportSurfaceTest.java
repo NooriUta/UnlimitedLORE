@@ -10,10 +10,11 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * surfaces.passport — порядок разделов паспорта и что по умолчанию под «Ещё».
- * Владелица 09.11: «Спринт первое как ни странно задачи потом уже контент … а зависимости
- * и прочее можно скрыть под море». Форма согласована с kit (D-2026-LORE-MODEL-TYPES-VS-SURFACES,
- * -COLUMN-LAYERS): данные-умолчание, не отрисовка; ключ не «tabs» — его не пускает assertDataOnly.
+ * surfaces.passport — порядок разделов паспорта и место каждого: own (свой раздел, виден сразу),
+ * content (блоком в конце тела, как в v1 зависимости спринта и решения ADR), more (под «Ещё»).
+ * Владелица 09.11: «Спринт первое как ни странно задачи потом уже контент … зависимости и прочее
+ * под море»; «раньше блокирует и зависит был как подраздел контента». Форма согласована с kit:
+ * ключ slot, а не place (place уже занят в relations[] другими значениями), не tabs (сторож kit).
  */
 class LorePassportSurfaceTest {
 
@@ -30,41 +31,53 @@ class LorePassportSurfaceTest {
         return out;
     }
 
+    private static Object slotOf(List<Map<String, Object>> s, String key) {
+        return s.stream().filter(m -> key.equals(m.get("key"))).findFirst().orElseThrow().get("slot");
+    }
+
     @Test
-    void sprintFollowsOwnerOrder() {
+    void sprintFollowsOwnerWords() {
         Map<?, ?> sprint = (Map<?, ?>) LorePassportSurface.build().get("sprint");
         assertEquals(true, sprint.get("decided"));
         List<Map<String, Object>> s = sections("sprint");
-        assertEquals(List.of("tasks", "content", "phases", "dependsOn", "blocks"), keys(s));
-        for (Map<String, Object> m : s) {
-            boolean shown = Set.of("tasks", "content").contains(m.get("key"));
-            assertEquals(shown, m.get("default_visible"), "видно сразу только задачи и контент: " + m.get("key"));
-        }
-        assertEquals("part", s.get(0).get("source"));
+        assertEquals(List.of("tasks", "content", "dependsOn", "blocks", "phases"), keys(s));
+        assertEquals("own", slotOf(s, "tasks"));
+        assertEquals("own", slotOf(s, "content"));
+        assertEquals("content", slotOf(s, "dependsOn"), "зависимости — подраздел контента, как в v1");
+        assertEquals("content", slotOf(s, "blocks"));
+        assertEquals("more", slotOf(s, "phases"), "фазы у 4 спринтов из 29 — под «Ещё»");
         assertEquals("body", s.get(1).get("source"));
         assertNull(s.get(1).get("ref"), "тело — одна статья, ref null");
-        assertEquals("relation", s.get(3).get("source"));
     }
 
     @Test
-    void otherTypesAreHonestlyUndecided() {
+    void undecidedTypesHideNothing() {
         for (String type : LoreRecordRegistry.TYPES) {
-            if (type.equals("sprint")) continue;
             Map<?, ?> t = (Map<?, ?>) LorePassportSurface.build().get(type);
-            assertEquals(false, t.get("decided"), type + ": без слова владелицы порядок по данным");
+            if (Boolean.TRUE.equals(t.get("decided"))) continue;
             for (Map<String, Object> m : sections(type))
-                assertEquals(true, m.get("default_visible"), type + "/" + m.get("key") + ": без решения ничего не прячем");
+                assertEquals("own", m.get("slot"), type + "/" + m.get("key") + ": без решения ничего не прячем и не вклеиваем");
         }
     }
 
     @Test
-    void sectionsAreDataOnlyAndOrdered() {
+    void sectionsAreDataOnlyOrderedAndSlotted() {
         for (String type : LoreRecordRegistry.TYPES) {
             List<Map<String, Object>> s = sections(type);
+            int bodyOrder = -1;
             for (int i = 0; i < s.size(); i++) {
-                assertEquals(Set.of("key", "source", "ref", "order", "default_visible"), s.get(i).keySet(),
-                    type + ": элемент раздела — только данные, без лишних ключей");
-                assertEquals(i + 1, s.get(i).get("order"));
+                Map<String, Object> m = s.get(i);
+                assertEquals(Set.of("key", "source", "ref", "order", "slot"), m.keySet(),
+                    type + ": элемент раздела — только данные, ровно пять ключей");
+                assertEquals(i + 1, m.get("order"));
+                assertTrue(Set.of("own", "content", "more").contains(m.get("slot")), type + ": slot из закрытого набора");
+                if ("body".equals(m.get("source"))) {
+                    bodyOrder = i + 1;
+                    assertEquals("own", m.get("slot"), type + ": само тело не вклеивается в себя");
+                }
+                if ("content".equals(m.get("slot"))) {
+                    assertTrue(bodyOrder > 0, type + "/" + m.get("key") + ": вклеенное в контент идёт ПОСЛЕ тела, и тело у типа есть");
+                }
             }
         }
     }
