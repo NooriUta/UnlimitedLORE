@@ -77,6 +77,27 @@ describe('оболочка v2 (S4-01)', () => {
     expect(container.querySelector('[data-section="task"] [data-screen="tasks"]')).toBeTruthy();
   });
 
+  /**
+   * Каждый пункт меню открывает собранный экран — все тринадцать (S4-V2-SECTIONS).
+   *
+   * Проверка обходит пункты, а не перечисляет их: раздел добавляют в меню
+   * (`v2Config`) и забывают экран (`V2Shell.SCREENS`) — тогда пункт есть, а под
+   * ним «экран не собран». Снаружи это выглядит как сломанная навигация, и
+   * прежние проверки по одному разделу такого не поймали бы: они смотрели на
+   * «Задачи» и ADR, а промахнуться можно было в любом из одиннадцати.
+   */
+  it('ни один пункт меню не ведёт на «экран не собран» — обходим все', () => {
+    const win = fakeWin();
+    const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);
+    const names = screen.getAllByRole('link').map(a => a.textContent?.trim() ?? '').filter(Boolean);
+    // Положительный контроль: пунктов действительно много, обход не пустой.
+    expect(names.length).toBeGreaterThanOrEqual(13);
+    for (const name of names) {
+      fireEvent.click(screen.getByRole('link', { name }));
+      expect(container.querySelector('[data-state="unbuilt"]'), `раздел «${name}»: экран не собран`).toBeNull();
+    }
+  });
+
   it('списки (S4-04) — экраны разделов: ADR открывает список kit под одним заголовком раздела', () => {
     const win = fakeWin();
     const { container } = render(<App path="/" win={win} storage={mem()} narrow={false} />);

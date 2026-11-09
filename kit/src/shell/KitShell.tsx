@@ -115,6 +115,19 @@ export interface KitShellApi {
   menuMode: KitMenuMode;
   /** Выбрать состояние меню: запоминается в хранилище. */
   setMenuMode: (mode: KitMenuMode) => void;
+  /**
+   * Окно, в котором оболочка держит состояние в адресе; `null` — состояние в
+   * памяти (`win={null}`).
+   *
+   * Нужно приложению, когда он дописывает СВОИ параметры к адресу раздела —
+   * например «открыть эту запись» после перехода из поиска. Без этого
+   * приложение пишет в глобальный `window`, а оболочка живёт в другом, и
+   * параметр просто не доходит (поймано тестом палитры 09.11).
+   *
+   * Это точка расширения, а не утечка: решать, какие параметры у раздела есть,
+   * должно приложение — kit про них не знает (K-10).
+   */
+  win: UrlWindow | null;
 }
 
 export interface KitShellProps {
@@ -383,8 +396,8 @@ export function KitShell({
   }, []);
 
   const api = useMemo<KitShellApi>(
-    () => ({ nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed, menuMode, setMenuMode }),
-    [nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed, menuMode, setMenuMode],
+    () => ({ nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed, menuMode, setMenuMode, win: urlWin ?? null }),
+    [nav, navigate, openRecord, recent, views, saveView, removeView, menuCollapsed, setMenuCollapsed, menuMode, setMenuMode, urlWin],
   );
 
   const activeModule = config.modules.find(m => m.id === nav.module) ?? config.modules[0];

@@ -1481,6 +1481,18 @@ public final class LoreSlices {
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
 
+        // Владелица 09.11: итоги спринта (задач, оценка, факт). Лёгкая проекция БЕЗ
+        // note_md — ради сумм тела не нужны (у tasks_of_sprints_batch это 3,6 МБ на
+        // 20 спринтов). Строки задач AidaLoreResource сворачивает в строку на спринт
+        // функцией LoreSprintTotals — той же, что кормит паспорт.
+        slice("sprint_totals",
+            "SELECT out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "actual_days " +
+            "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids",
+            List.of("sprint_ids"), Map.of(), "");
+
         // SE-01, шаг 1 (пункт 4 mig_gen, 05.11.2026): заметки задач по списку uid.
         // После open_tasks агенту нужно прочитать 10–20 заметок — раньше либо по
         // одной, либо весь спринт целиком (78–90 КБ ради трёх заметок). Поля и
@@ -2654,6 +2666,7 @@ public final class LoreSlices {
         Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("closed_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.

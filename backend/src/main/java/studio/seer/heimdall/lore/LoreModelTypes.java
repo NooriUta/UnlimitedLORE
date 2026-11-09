@@ -79,6 +79,7 @@ final class LoreModelTypes {
                 for (String cand : candidates(key, f, aliases))
                     if (cand != null && props.contains(cand) && !isSystem(cand)) { property = cand; break; }
                 m.put("visibility", "visible");
+                m.put("display", display(key, f));
                 m.put("property", property);
                 m.put("source", property != null ? "CONFIRMS" : "SUPPLIES");
                 if (property != null) matched.add(property);
@@ -100,12 +101,86 @@ final class LoreModelTypes {
             type.put("hist", g.hist());
             type.put("fields", fields);
             type.put("relations", contract.get("relations"));
+            type.put("computed", COMPUTED.getOrDefault(t, List.of()));
             type.put("unclassified", unclassified);
             type.put("internal", internal);
             out.put(t, type);
         }
         return out;
     }
+
+    // ── Вид поля: важность и поведение длинного содержимого (владелица 09.11) ──
+    // Водораздел: kit знает только ФОРМУ (рисует поле по этим подсказкам), приложение —
+    // СМЫСЛ (какое поле важно). Поэтому подсказки — в модели, а не в конфиге kit.
+
+    /** Ширина колонки: от узкой (число) до «тянется» (название). */
+    static final List<String> WIDTHS = List.of("xs", "s", "m", "l", "fill");
+    /** Длинное содержимое: не режется / многоточие с подсказкой / «ещё N» (многозначное, тексты). */
+    static final List<String> OVERFLOWS = List.of("none", "ellipsis", "more");
+
+    /** Уточнения поверх умолчаний по kind: ключ поля → {priority, width, overflow}. */
+    private static final Map<String, Object[]> DISPLAY_OVERRIDES = Map.of(
+        "title", new Object[]{1, "fill", "ellipsis"},
+        "status", new Object[]{1, "s", "none"},
+        "code", new Object[]{1, "s", "none"},
+        "priority", new Object[]{2, "xs", "none"},
+        "effort", new Object[]{2, "xs", "none"},
+        "summary", new Object[]{4, "l", "more"});
+
+    /**
+     * priority — четыре ступени, как пороги прототипа v4 (kit 09.11): 1 — не скрывается
+     * никогда (и на телефоне), 2 — скрывается ≤900, 3 — ≤1100, 4 — ≤1280, первой.
+     * Умолчание — по kind; уточнения — DISPLAY_OVERRIDES.
+     */
+    static Map<String, Object> display(String key, Map<String, Object> f) {
+        Object[] d = DISPLAY_OVERRIDES.get(key);
+        if (d == null) {
+            String kind = String.valueOf(f.get("kind"));
+            boolean multi = Boolean.TRUE.equals(f.get("multi"));
+            d = switch (kind) {
+                case "number" -> new Object[]{3, "xs", "none"};
+                case "date" -> new Object[]{3, "s", "none"};
+                case "enum" -> new Object[]{2, "s", "ellipsis"};
+                case "ref" -> multi ? new Object[]{3, "m", "more"} : new Object[]{2, "m", "ellipsis"};
+                case "md" -> new Object[]{4, "l", "more"};
+                default -> new Object[]{4, "m", "ellipsis"};
+            };
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("priority", d[0]);
+        m.put("width", d[1]);
+        m.put("overflow", d[2]);
+        return m;
+    }
+
+    // ── Вычисляемые поля (владелица 09.11: «оценка и размер спринтов суммарно по дням
+    // и задач — важный элемент, а его нет»). Считает ТОЛЬКО сервер (kit 09.11: одно
+    // число из двух мест — расхождение): срез sprint_totals для списка и /lore/record
+    // для паспорта — одна функция LoreSprintTotals. Правила в контракте нет — вторая
+    // реализация у клиента не нужна. Форма значения — {value, known, of}.
+
+    private static Map<String, Object> computed(String key, String label, String kind, Object[] display) {
+        Map<String, Object> d = new LinkedHashMap<>();
+        d.put("priority", display[0]);
+        d.put("width", display[1]);
+        d.put("overflow", display[2]);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("key", key);
+        m.put("label", label);
+        m.put("kind", kind);
+        m.put("shape", "value_known_of");
+        m.put("source", "server");
+        m.put("rule_text", LoreSprintTotals.RULE);
+        m.put("display", d);
+        return m;
+    }
+
+    /** Тип → вычисляемые поля. Нет записи — пустой список («вычисляемых нет»). */
+    static final Map<String, List<Map<String, Object>>> COMPUTED = Map.of(
+        "sprint", List.of(
+            computed("tasks_total", "Задач", "count", new Object[]{1, "xs", "none"}),
+            computed("effort_days_total", "Оценка, дн", "days", new Object[]{1, "xs", "none"}),
+            computed("actual_days_total", "Факт, дн", "days", new Object[]{2, "xs", "none"})));
 
     @SuppressWarnings("unchecked")
     private static List<String> candidates(String key, Map<String, Object> f, Map<String, String> aliases) {
