@@ -28,7 +28,7 @@ export interface PassportOrderResult {
   notes: string[];
 }
 
-const NOT_DECIDED: PassportOrder = { decided: false, sections: [] };
+const NOT_DECIDED: PassportOrder = { decided: false, sections: [], notes: [] };
 
 export interface PassportOrderOptions {
   fetchImpl?: typeof fetch;
@@ -62,6 +62,10 @@ export async function fetchPassportOrder(
   }
   try {
     const order = passportSections(res.model, type);
+    // Замечания разбора (лишние ключи в документе) — на экран. Сторож ослаблен
+    // по CJM: лишний ключ больше не отказывает целиком, значит о нём обязан
+    // сказать кто-то другой, иначе ослабление превратится в молчание.
+    notes.push(...order.notes);
     // «Тип не решён» — это НЕ ошибка и не повод молчать: человек должен знать,
     // что порядок перед ним выбрал клиент, а не модель.
     if (!order.decided) notes.push('порядок разделов — умолчание приложения: для этого типа модель его не задаёт');

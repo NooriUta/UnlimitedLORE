@@ -303,7 +303,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // просили, — полбеды, а не показать вовсе — потеря данных с экрана.
   const glueable = new Set(relTabs.map(rt => rt.id));
   const order: PassportOrder | null | undefined = sections?.decided
-    ? { decided: true, sections: sections.sections.map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
+    ? { decided: true, notes: sections.notes, sections: sections.sections.map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
     : sections;
   const glued = gluedSections(order)
     .map(s => relTabs.find(rt => rt.id === s.key))

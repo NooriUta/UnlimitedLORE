@@ -136,7 +136,7 @@ describe('вклейка разделов в хвост тела', () => {
   it('`decided: false` — ничего не вклеивается, ряд как был', () => {
     render(
       <RecordView record={record} ctx={ctx()} tab="overview" onTab={() => {}}
-        sections={{ decided: false, sections: [] }} />,
+        sections={{ decided: false, sections: [], notes: [] }} />,
     );
     // Группировка снова включена, вклейки нет — ряд точно как без модели.
     expect(tabIds().join(' · ')).toContain('Зависимости');

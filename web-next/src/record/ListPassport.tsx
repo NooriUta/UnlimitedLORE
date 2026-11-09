@@ -69,7 +69,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const [tab, setTab] = useRecordTab('overview', win);
   // Порядок разделов из модели (S4-29). Пока грузится — умолчание приложения,
   // и это honest-состояние: экран работает, просто порядок пока клиентский.
-  const [order, setOrder] = useState<{ order: PassportOrder; notes: string[] }>({ order: { decided: false, sections: [] }, notes: [] });
+  const [order, setOrder] = useState<{ order: PassportOrder; notes: string[] }>({ order: { decided: false, sections: [], notes: [] }, notes: [] });
   useEffect(() => {
     let alive = true;
     fetchPassportOrder(type, { fetchImpl }).then(r => { if (alive) setOrder(r); }, () => { /* сказано в notes */ });

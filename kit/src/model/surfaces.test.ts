@@ -22,7 +22,7 @@
 // здесь стоит сторож: у элемента ровно пять ключей, любой лишний — отказ. Так
 // «данные, а не отрисовка» проверяется, а не доказывается в переписке.
 import { describe, expect, it } from 'vitest';
-import { SECTION_KEYS, applySections, gluedSections, passportSections } from './surfaces';
+import { SECTION_KEYS, applySections, gluedSections, passportSections, unknownSections } from './surfaces';
 
 const sprint = {
   decided: true,
@@ -61,8 +61,8 @@ describe('passportSections: порядок и видимость из модел
   });
 
   it('`surfaces` нет вовсе (сервер старее) — тоже «не решён», без ошибки', () => {
-    expect(passportSections({}, 'sprint')).toEqual({ decided: false, sections: [] });
-    expect(passportSections(null, 'sprint')).toEqual({ decided: false, sections: [] });
+    expect(passportSections({}, 'sprint')).toEqual({ decided: false, sections: [], notes: [] });
+    expect(passportSections(null, 'sprint')).toEqual({ decided: false, sections: [], notes: [] });
   });
 
   it('`decided: false` у типа — перечень игнорируется, порядок за приложением', () => {
@@ -78,9 +78,42 @@ describe('сторож формы: данные, а не отрисовка', ()
     expect([...SECTION_KEYS].sort()).toEqual(['key', 'order', 'ref', 'slot', 'source'].sort());
   });
 
-  it.each(['component', 'render', 'icon', 'label', 'tabs'])('лишний ключ «%s» — отказ целиком, а не тихое игнорирование', extra => {
+  // ОСЛАБЛЕНО 09.11 по CJM, и это не смягчение требований, а исправление
+  // вреда. Сначала лишний ключ отказывал ЦЕЛИКОМ. Серверная сессия проверила
+  // условие по пути человека: добавь сервер безобидное поле — и клиент
+  // потеряет ВЕСЬ порядок разделов, показав умолчание. Технически честно, а
+  // человеку хуже, чем принять лишнее и сказать о нём строкой.
+  //
+  // Молчаливое игнорирование по-прежнему запрещено: оно спрятало бы попытку
+  // положить в модель отрисовку. Поэтому исход один — принять и НАЗВАТЬ.
+  it.each(['component', 'render', 'icon', 'label', 'tabs'])('лишний ключ «%s» — принят и НАЗВАН, порядок не потерян', extra => {
     const bad = { decided: true, sections: [{ ...sprint.sections[0], [extra]: 'x' }] };
-    expect(() => passportSections(model({ sprint: bad }), 'sprint')).toThrow(/лишн/i);
+    const r = passportSections(model({ sprint: bad }), 'sprint');
+    expect(r.decided).toBe(true);
+    expect(r.sections.map(s => s.key)).toEqual(['tasks']);
+    expect(r.notes.join(' ')).toContain(extra);
+    expect(r.notes.join(' ')).toMatch(/не прочитаны/);
+  });
+
+  it('отказ ОСТАЛСЯ там, где продолжение соврёт о структуре', () => {
+    // Неизвестный slot и source: непонятно даже, куда девать раздел, и любое
+    // решение за сервера показало бы неправду. Это условие 1 в части, которую
+    // серверная сессия просила не ослаблять.
+    const badSlot = { decided: true, sections: [{ ...sprint.sections[0], slot: 'sidebar' }] };
+    const badSource = { decided: true, sections: [{ ...sprint.sections[0], source: 'widget' }] };
+    expect(() => passportSections(model({ sprint: badSlot }), 'sprint')).toThrow(/slot/);
+    expect(() => passportSections(model({ sprint: badSource }), 'sprint')).toThrow(/source/);
+  });
+
+  it('раздел назван моделью, а у записи его нет — тоже сказано словами', () => {
+    // Условие 5. Молчание означало бы: модель говорит «есть раздел», человек
+    // его не видит, и никто не знает почему. Отказ тоже вреден — остальной
+    // порядок верен.
+    const order = passportSections(model({ sprint }), 'sprint');
+    const notes = unknownSections([{ id: 'tasks' }], order);
+    expect(notes.join(' ')).toMatch(/которых у записи нет/);
+    expect(notes.join(' ')).toContain('content');
+    expect(unknownSections([{ id: 'tasks' }, { id: 'content' }, { id: 'phases' }, { id: 'deps' }], order)).toEqual([]);
   });
 
   it('неизвестный `source` — отказ: трёх источников достаточно, четвёртый надо обсуждать', () => {
@@ -114,7 +147,7 @@ describe('applySections: порядок применяется, незнаком
   const order = passportSections(model({ sprint }), 'sprint');
 
   it('положительный контроль: порядок не решён — список не меняется вовсе', () => {
-    expect(applySections(items, { decided: false, sections: [] })).toEqual(items);
+    expect(applySections(items, { decided: false, sections: [], notes: [] })).toEqual(items);
     expect(applySections(items)).toEqual(items);
   });
 
@@ -197,9 +230,9 @@ describe('третье место: «в конце контента» — не �
   });
 
   it('порядок не решён — вклеивать нечего, и ряд не тронут', () => {
-    expect(gluedSections({ decided: false, sections: [] })).toEqual([]);
+    expect(gluedSections({ decided: false, sections: [], notes: [] })).toEqual([]);
     expect(gluedSections()).toEqual([]);
-    expect(applySections(items, { decided: false, sections: [] })).toEqual(items);
+    expect(applySections(items, { decided: false, sections: [], notes: [] })).toEqual(items);
   });
 
   it('у вклеенного есть `ref` — по нему приложение и знает, что рисовать', () => {

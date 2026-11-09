@@ -78,9 +78,23 @@ export interface PassportSection {
 export interface PassportOrder {
   decided: boolean;
   sections: PassportSection[];
+  /**
+   * Что в документе не так, но не настолько, чтобы отказываться (условие 1
+   * договора kit ↔ сервер, ослаблено 09.11 по CJM).
+   *
+   * Сначала лишний ключ отказывал ЦЕЛИКОМ. Серверная сессия проверила это по
+   * пути человека и согласилась, что вред больше пользы: добавь сервер
+   * безобидное поле — и клиент потеряет ВЕСЬ порядок разделов, показав
+   * умолчание. Технически честно, а человеку хуже, чем принять лишнее и
+   * сказать о нём строкой.
+   *
+   * Отказ остался там, где продолжение показало бы НЕПРАВДУ О СТРУКТУРЕ:
+   * неизвестный `slot` или `source`. Там непонятно даже, куда раздел девать.
+   */
+  notes: string[];
 }
 
-const NOT_DECIDED: PassportOrder = { decided: false, sections: [] };
+const NOT_DECIDED: PassportOrder = { decided: false, sections: [], notes: [] };
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v);
@@ -93,14 +107,18 @@ export function passportSections(model: unknown, type: string): PassportOrder {
   if (!forType || forType.decided !== true || !Array.isArray(forType.sections)) return NOT_DECIDED;
 
   const seen = new Set<string>();
+  const notes: string[] = [];
   const out: PassportSection[] = [];
   for (const raw of forType.sections) {
     if (!isObj(raw)) throw new Error(`surfaces.passport.${type}.sections: элемент должен быть объектом`);
     const extra = Object.keys(raw).filter(k => !SECTION_KEYS.includes(k));
     if (extra.length) {
-      // Отказ ЦЕЛИКОМ, а не «пропустим незнакомое»: лишний ключ — это попытка
-      // положить в модель отрисовку, и молчаливое игнорирование спрячет её.
-      throw new Error(`surfaces.passport.${type}.sections: лишние ключи ${extra.join(', ')} — в модели только данные`);
+      // ПРИНЯТЬ И НАЗВАТЬ, а не отказаться (условие 1, ослаблено 09.11 по
+      // CJM). Отказ целиком стоил бы человеку всего порядка разделов из-за
+      // одного безобидного поля; молчаливое игнорирование спрятало бы попытку
+      // положить в модель отрисовку. Названная строка — единственный исход, у
+      // которого нет ни той, ни другой цены.
+      notes.push(`surfaces.passport.${type}.sections[${String(raw.key)}]: лишние ключи ${extra.join(', ')} — в модели только данные, они не прочитаны`);
     }
     const key = typeof raw.key === 'string' ? raw.key : '';
     if (!key) throw new Error(`surfaces.passport.${type}.sections: у раздела пустой key`);
@@ -128,7 +146,7 @@ export function passportSections(model: unknown, type: string): PassportOrder {
   // Сортировка по `order`, а не по месту в массиве: порядок объявлен числом, и
   // полагаться на порядок ключей JSON нельзя.
   out.sort((a, b) => a.order - b.order);
-  return { decided: true, sections: out };
+  return { decided: true, sections: out, notes };
 }
 
 /**
@@ -189,4 +207,27 @@ export function applySections<T extends { id: string; secondary?: boolean }>(
 export function gluedSections(order?: PassportOrder | null): PassportSection[] {
   if (!order?.decided) return [];
   return order.sections.filter(s => s.slot === 'content');
+}
+
+/**
+ * Разделы, которые модель назвала, а у записи их нет (условие 5 договора).
+ *
+ * Молчаливое игнорирование здесь было бы той же бедой, что и везде: модель
+ * говорит «есть раздел X», человек его не видит, и никто не знает, почему.
+ * Отказываться тоже нельзя — остальной порядок верен и полезен. Поэтому имя
+ * называется строкой, а порядок применяется.
+ *
+ * Отдельно от разбора: во время разбора я ещё не знаю, какие разделы есть у
+ * ЭТОЙ записи — это знает только тот, кто её рисует.
+ */
+export function unknownSections(
+  items: readonly { id: string }[],
+  order?: PassportOrder | null,
+): string[] {
+  if (!order?.decided) return [];
+  const have = new Set(items.map(i => i.id));
+  const missing = order.sections.filter(s => !have.has(s.key)).map(s => s.key);
+  return missing.length
+    ? [`модель называет разделы, которых у записи нет: ${missing.join(', ')} — порядок применён к остальным`]
+    : [];
 }

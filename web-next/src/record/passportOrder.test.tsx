@@ -65,23 +65,29 @@ describe('fetchPassportOrder: три неудачи различимы', () => {
     expect(r.notes.join(' ')).toMatch(/модель его не задаёт/);
   });
 
-  it('форма не та — сторож отказал, и это НЕ выглядит как порядок сервера', async () => {
+  // ПЕРЕПИСАНО 09.11 вместе с ослаблением сторожа по CJM. Раньше лишний ключ
+  // отказывал целиком, и человек терял ВЕСЬ порядок разделов из-за одного
+  // безобидного поля. Теперь порядок применяется, а про лишнее сказано — и
+  // сказано на экране, иначе ослабление стало бы молчанием.
+  it('лишний ключ — порядок применён, а про лишнее сказано', async () => {
     const bad = [{ ...SECTIONS[0], component: 'Widget' }];
+    const r = await fetchPassportOrder('sprint', {
+      fetchImpl: net(modelBody({ sprint: { decided: true, sections: bad } })),
+    });
+    expect(r.order.decided).toBe(true);
+    expect(r.order.sections.map(s => s.key)).toEqual(['tasks']);
+    expect(r.notes.join(' ')).toContain('component');
+  });
+
+  it('а вот неизвестный slot отказывает — продолжение соврёт о структуре', async () => {
+    const bad = [{ ...SECTIONS[0], slot: 'sidebar' }];
     const r = await fetchPassportOrder('sprint', {
       fetchImpl: net(modelBody({ sprint: { decided: true, sections: bad } })),
     });
     expect(r.order.decided).toBe(false);
     expect(r.notes.join(' ')).toMatch(/модель не принята/);
-    expect(r.notes.join(' ')).toMatch(/лишн/i);
   });
 
-  it('неизвестный slot — тоже отказ по имени', async () => {
-    const bad = [{ ...SECTIONS[0], slot: 'sidebar' }];
-    const r = await fetchPassportOrder('sprint', {
-      fetchImpl: net(modelBody({ sprint: { decided: true, sections: bad } })),
-    });
-    expect(r.notes.join(' ')).toMatch(/slot/);
-  });
 });
 
 /** Ответ фасада для спринта — минимальный, нужен только порядок вкладок. */
