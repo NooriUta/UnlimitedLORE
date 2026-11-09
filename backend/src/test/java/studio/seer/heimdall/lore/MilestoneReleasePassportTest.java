@@ -61,4 +61,21 @@ class MilestoneReleasePassportTest {
         assertEquals(LoreSlices.PROJECT_SCOPED.get("releases"), LoreSlices.PROJECT_SCOPED.get("release_by_id"));
         assertNotNull(LoreSlices.SCOPE_PENDING.get("milestone_by_id"));
     }
+
+    /**
+     * Kit 09.11: ключ релиза — «проект#тег», в нём И слэши, И решётка. Клиент кодирует по
+     * сегментам: NooriUta/UnlimitedLORE%23v1.17.4. Если решётку не закодировать, браузер
+     * отрежет её как якорь — и до сервера дойдёт «NooriUta/UnlimitedLORE»: это должно быть
+     * ОТКАЗОМ (400), а не тихой подменой записи.
+     */
+    @Test
+    void releaseKeyWithSlashesAndHashIsExactOrRefused() {
+        assertTrue(LoreRecordResource.RELEASE_UID.matcher("NooriUta/UnlimitedLORE#v1.17.4").matches());
+        assertTrue(LoreRecordResource.RELEASE_UID.matcher("ivanovalex32/UDWE#v0.3.42").matches());
+        assertFalse(LoreRecordResource.RELEASE_UID.matcher("NooriUta/UnlimitedLORE").matches(),
+            "решётку отрезали — отказ, а не чужая запись");
+        assertFalse(LoreRecordResource.RELEASE_UID.matcher("v1.17.4").matches(),
+            "release_id повторяется у разных проектов — ключом не годится");
+        assertFalse(LoreRecordResource.RELEASE_UID.matcher("A/B#v1#x").matches(), "одна решётка");
+    }
 }
