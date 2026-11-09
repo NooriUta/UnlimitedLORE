@@ -138,3 +138,25 @@ export function knownRecordHref(
   const kind = typeof r?.kind === 'string' ? r.kind : '';
   return (kind && recordHref(kind, id)) || fallback(id);
 }
+
+/**
+ * Старые адреса отдельных страниц паспорта (S5-02 спринт, S5-04 задача):
+ * ?section=sprints|tasks&passport=<id>. Страницы жили вне оболочки — меню
+ * пропадало. Владелица 09.11: «у вас есть развернуть на весь экран — зачем
+ * читать отдельно?» / «да, переводи задачу и спринт в оболочку». Закладки и
+ * старые ссылки ведут теперь в раздел оболочки с записью во весь экран; у
+ * спринта — сразу на вкладку «Задачи», как открывалась прежняя страница.
+ * Не старый адрес — null.
+ */
+export function legacyPassportHref(search: string): string | null {
+  const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const id = p.get('passport')?.trim();
+  const type = p.get('section') === 'tasks' ? 'task' : p.get('section') === 'sprints' ? 'sprint' : null;
+  if (!type || !id) return null;
+  const base = recordHref(type, id);
+  if (!base) return null;
+  const out = new URLSearchParams(base.slice(2));
+  out.set('place', 'full');
+  if (type === 'sprint') out.set('tab', 'tasks');
+  return `/?${out.toString()}`;
+}
