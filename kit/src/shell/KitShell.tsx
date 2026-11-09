@@ -184,7 +184,17 @@ const RECENT_LIMIT = 8;
  * у зоны, которую можно тянуть без предела, «сломано» и «я так потянула»
  * выглядят одинаково.
  */
-const SIDE_W = { def: 232, min: 168, max: 420 };
+const SIDE_W = {
+  def: 232,
+  min: 168,
+  max: 420,
+  /** Ширина рейки иконок — то же число, что у трека рейки в seidr.css. */
+  rail: 56,
+  /** Уже этого подписи не сжимаются, а честно исчезают: становится рейка. */
+  toRail: 140,
+  /** Уже этого и иконки не нужны — меню уходит в ушко. */
+  toHide: 70,
+};
 const TONES = new Set(['acc', 'suc', 'wrn', 'dng', 'inf']);
 
 /**
@@ -307,7 +317,7 @@ export function KitShell({
   const [readCollapsed, setReadCollapsed] = useState(false);
   // S4-30: ширина левого меню — личная, как ширина колонки списка, и так же
   // живёт в хранилище, а не в адресе: ссылка общая, ширина личная.
-  const [sideW, setSideW] = useState(() => zoneSize(storage, 'shell.side', SIDE_W.def));
+  const [sideW, setSideW] = useState(() => zoneSize(storage, 'shell.side', SIDE_W.def, { min: SIDE_W.rail, max: SIDE_W.max }));
   const navRef = useRef(nav);
   navRef.current = nav;
 
@@ -548,16 +558,33 @@ export function KitShell({
             </div>
           )}
           {/* Граница меню и содержимого (S4-30, слова владелицы 09.11: «левое,
-              правое меню не имеет драг анд дроп мышкой»). Только у раскрытого
-              меню: у рейки ширина — это ширина иконки, у ушка колонки нет
-              вовсе, и ручка там обещала бы управление, которого нет. */}
-          {!narrow && !menuCollapsed && effMenuMode === 'open' && (
+              правое меню не имеет драг анд дроп мышкой»).
+              Граница есть и у рейки: уточнение владелицы того же дня — «не
+              только при полном развороте, это промежуточное состояние
+              resizable состояния», и до этого рейку она «ни разу не получила»,
+              потому что состояние жило только в кнопке-переключателе. Из рейки
+              без границы не выбраться мышью, поэтому там она тоже нужна.
+              У ушка колонки нет вовсе — туда возвращает само ушко. */}
+          {!narrow && !menuCollapsed && (
             <ResizeBorder
               zone="shell.side"
               className="sk-shell__resize"
-              size={sideW}
-              min={SIDE_W.min}
+              size={effMenuMode === 'rail' ? SIDE_W.rail : sideW}
+              // Минимум — ширина рейки, а не колонки: сжатая колонка с
+              // обрезанными подписями не состояние, а поломка. Ниже порога
+              // подписи честно исчезают, и остаётся рейка.
+              min={SIDE_W.rail}
               max={SIDE_W.max}
+              levels={{
+                rail: SIDE_W.toRail,
+                hide: SIDE_W.toHide,
+                onLevel: level => {
+                  // Возвращаясь из рейки, отдаём колонке читаемую ширину:
+                  // иначе «раскрыть» даст колонку шириной иконки.
+                  if (level === 'open' && sideW < SIDE_W.min) setSideW(SIDE_W.def);
+                  setMenuMode(level);
+                },
+              }}
               store={storage}
               onSize={setSideW}
               label={kitT(lang, 'kit.shell.sideWidth')}

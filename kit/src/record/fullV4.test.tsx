@@ -40,7 +40,14 @@ describe('S4-CONTENT-V4 (kit): паспорт во весь экран как v4
     const onTab = vi.fn();
     const { container } = render(<RecordView record={rec} ctx={ctx} tab="overview" onTab={onTab} placement="full" />);
     const rail = screen.getByRole('navigation', { name: 'Разделы паспорта' });
-    expect(within(rail).getAllByRole('button').map(b => b.textContent)).toEqual(['Свойства', 'Граф', 'Аналитика']);
+    // 09.11.2026: рейка стала «только иконками» (владелица: «три» на
+    // предложенные иконки, и «не только при полном развороте — это
+    // промежуточное состояние resizable состояния»). Поэтому имена проверяем
+    // доступными именами, а не видимым текстом: текста у кнопок больше нет, и
+    // прежняя форма утверждения запрещала бы саму мини-версию.
+    expect(within(rail).getAllByRole('button').map(b => b.getAttribute('aria-label')))
+      .toEqual(['Свойства', 'Граф', 'Аналитика']);
+    expect(within(rail).getAllByRole('button').map(b => b.textContent?.trim())).toEqual(['', '', '']);
     fireEvent.click(within(rail).getByRole('button', { name: 'Свойства' }));
     expect((container.querySelector('details.sk-rec-propsrow') as HTMLDetailsElement).open).toBe(true);
     fireEvent.click(within(rail).getByRole('button', { name: 'Граф' }));
@@ -113,7 +120,11 @@ describe('во весь экран — ширина полей настраив�
 
 describe('ушки разделов — без заливки (владелица 08.11: «акцентный фон убирает воздушность»)', () => {
   it('у кнопок рейки фон прозрачный, при наведении — без акцента', () => {
-    expect(ruleOf('.sk-rec-rail__btn')).toMatch(/background:\s*(none|transparent)/);
-    expect(ruleOf('.sk-rec-rail__btn:hover')).not.toMatch(/--acc/);
+    // Рейка перешла на общие кнопки-иконки kit (09.11, «только иконками»),
+    // поэтому утверждение теперь про них: своего правила `.sk-rec-rail__btn`
+    // больше нет, а требование владелицы — то же, «акцентный фон убирает
+    // воздушность».
+    expect(ruleOf('.sk-iconbtn')).toMatch(/background:\s*(none|transparent)/);
+    expect(ruleOf('.sk-iconbtn:hover')).not.toMatch(/--acc/);
   });
 });
