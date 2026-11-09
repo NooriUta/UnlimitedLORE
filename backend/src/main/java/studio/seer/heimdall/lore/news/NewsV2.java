@@ -85,9 +85,19 @@ public final class NewsV2 {
                         Set<String> sprints, Set<String> milestones, Set<String> authors,
                         Set<String> kinds, Set<String> els,
                         String groupBy, String subBy, Integer matrixN, Integer limit,
-                        Instant readMark) {
+                        Instant readMark,
+                        // S7A-12: «Кто» — точные имена who (мультивыбор, как project); null — без фильтра.
+                        Set<String> whos) {
+        /** Прежняя форма без who — для вызовов, которым фильтр «Кто» не нужен. */
+        public Query(Set<String> types, Set<String> projects, Set<String> components,
+                     Set<String> sprints, Set<String> milestones, Set<String> authors,
+                     Set<String> kinds, Set<String> els,
+                     String groupBy, String subBy, Integer matrixN, Integer limit, Instant readMark) {
+            this(types, projects, components, sprints, milestones, authors, kinds, els,
+                groupBy, subBy, matrixN, limit, readMark, null);
+        }
         public static Query none() {
-            return new Query(null, null, null, null, null, null, null, null, "project", null, null, null, null);
+            return new Query(null, null, null, null, null, null, null, null, "project", null, null, null, null, null);
         }
     }
 
