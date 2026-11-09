@@ -12,6 +12,7 @@ import { appT, type AppKey } from '../i18n';
 import { switchNavUrl } from '../nav/navVersion';
 import { ListScreen } from '../pages/ListScreen';
 import { newsSource } from '../news/source';
+import { planStatusOf } from '../sprints/taskStatus';
 import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 import { useModelStatuses } from './useModelStatuses';
@@ -56,7 +57,8 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   tech: () => <ListScreen screen="tech" titleId={SECTION_TITLE_ID} />,
   feature: () => <ListScreen screen="features" titleId={SECTION_TITLE_ID} />,
   // Лента новостей kit (SPRINT_UXR_S7A_NEWS/S7A-02); свой заголовок — у раздела.
-  news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} />,
+  // Статусы в ленте читаются тем же planStatusOf, что у задач и спринтов (иконки совпадают).
+  news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} statusOf={planStatusOf} />,
   // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —
   // раздел «Настройки» (S4-01). Сами личные настройки — под аватаром в шапке
   // (S4-02, AccountMenu в слоте account): здесь на них только указатель.

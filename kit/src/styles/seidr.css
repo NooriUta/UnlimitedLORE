@@ -3935,7 +3935,8 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 /* ── Новости v2: лента, разрезы, метрики (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06) ──
    Числа — моно; «ждёт выкатки» и «не смогли» — --wrn; Σ≠∪ — пилюля --acc.
    Строка управления — классы sk-list__* (тот же вид, что у списков). */
-.sk-news { display: flex; flex-direction: column; gap: var(--gap); max-width: 1200px; color: var(--t1); font-size: var(--fs-base); }
+/* Без своего max-width: лента занимает всю область содержимого и прилегает к левому краю (владелица 09.11: «почему новости не на всю ширину… места как украли»). */
+.sk-news { display: flex; flex-direction: column; gap: var(--gap); color: var(--t1); font-size: var(--fs-base); }
 .sk-news__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
 .sk-news__title {
   margin: 0;
