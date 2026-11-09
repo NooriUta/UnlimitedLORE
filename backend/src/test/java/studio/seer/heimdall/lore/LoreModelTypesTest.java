@@ -77,6 +77,16 @@ class LoreModelTypesTest {
             "часть полей паспорта в подставной схеме не объявлена — SUPPLIES");
     }
 
+    /** Контракт с kit (08.11): пустой список = «проверено, таких нет»; отсутствие ключа = «не смотрели». */
+    @Test
+    void unclassifiedAndInternalAreAlwaysPresentEvenEmpty() {
+        Map<String, Object> types = LoreModelTypes.build(Map.of());
+        for (String t : LoreRecordRegistry.TYPES) {
+            assertEquals(List.of(), type(types, t).get("unclassified"), t + ": unclassified есть и пуст");
+            assertEquals(List.of(), type(types, t).get("internal"), t + ": internal есть и пуст");
+        }
+    }
+
     @Test
     void missingShrinksWhenTypesArePresent() {
         assertTrue(String.valueOf(LoreModel.build(List.of()).get("missing")).contains("types"));
