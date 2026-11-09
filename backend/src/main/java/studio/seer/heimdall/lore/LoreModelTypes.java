@@ -36,7 +36,10 @@ final class LoreModelTypes {
         "sprint", new Graph("KnowSprint", "KnowSprintHist", "sprint_id"),
         "task", new Graph("KnowTask", "KnowTaskHist", "task_uid"),
         "adr", new Graph("KnowADR", "KnowADRHist", "adr_id"),
-        "spec", new Graph("KnowSpec", "KnowSpecHist", "spec_id"));
+        "spec", new Graph("KnowSpec", "KnowSpecHist", "spec_id"),
+        // Kit 09.11: вершины без истории SCD2 — hist = null.
+        "decision", new Graph("KnowDecision", null, "decision_id"),
+        "question", new Graph("KnowQuestion", null, "question_id"));
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
     static final Map<String, Map<String, String>> ALIASES = Map.of(
@@ -44,7 +47,9 @@ final class LoreModelTypes {
             "no_release", "no_release_required", "track", "track_id", "planned_start", "planned_start_date"),
         "task", Map.of("status", "status_raw", "note", "note_md", "effort", "effort_days", "actual", "actual_days"),
         "adr", Map.of("title", "name", "status", "status"),
-        "spec", Map.of("status", "status", "body_md", "content_md"));
+        "spec", Map.of("status", "status", "body_md", "content_md"),
+        "decision", Map.of("status", "status_raw", "code", "decision_id", "date", "date_created"),
+        "question", Map.of("code", "question_id", "opened", "opened_date", "closed", "closed_date"));
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
@@ -67,7 +72,7 @@ final class LoreModelTypes {
             Graph g = GRAPH.get(t);
             Set<String> props = new LinkedHashSet<>();
             props.addAll(schema.getOrDefault(g.vertex(), List.of()));
-            props.addAll(schema.getOrDefault(g.hist(), List.of()));
+            if (g.hist() != null) props.addAll(schema.getOrDefault(g.hist(), List.of()));
             Map<String, Object> contract = LoreRecordRegistry.schemaJson(t);
             Map<String, String> aliases = ALIASES.getOrDefault(t, Map.of());
             Set<String> matched = new LinkedHashSet<>();

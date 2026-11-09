@@ -58,6 +58,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "task" -> new Source("tasks_by_uids", "task_uids", true);
             case "adr" -> new Source("adr", "id", false);
             case "spec" -> new Source("spec_by_id", "id", false);
+            case "decision" -> new Source("decision", "id", false);
+            case "question" -> new Source("question_by_id", "id", false);
             default -> null;
         };
     }
@@ -117,10 +119,13 @@ public class LoreRecordResource extends LoreResourceBase {
             case "sprint" -> LoreRecordValues.sprint(row);
             case "task" -> LoreRecordValues.task(row);
             case "adr" -> LoreRecordValues.adr(row);
+            case "decision" -> LoreRecordValues.decision(row);
+            case "question" -> LoreRecordValues.question(row);
             default -> LoreRecordValues.spec(row);
         };
         String status = switch (type) {
             case "sprint", "task" -> LoreRecordValues.planToken(LoreRecordValues.str(row.get("status_raw")));
+            case "decision" -> LoreRecordValues.docToken(row.get("status_raw"));
             default -> LoreRecordValues.docToken(row.get("status"));
         };
         values.put("status", status);
@@ -217,7 +222,9 @@ public class LoreRecordResource extends LoreResourceBase {
 
         String version = null;
         String versionError = null;
-        try {
+        // Kit 09.11: у типов только-для-чтения (решение, вопрос) истории SCD2 нет — версии нет, и это
+        // не ошибка: record.version = null без version_error.
+        if (!LoreRecordRegistry.READ_ONLY.contains(type)) try {
             List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordVersion.sql(type), Map.of("id", id));
             if (!v.isEmpty()) version = LoreRecordVersion.normalize(v.get(0).get("version"));
         } catch (RuntimeException e) {

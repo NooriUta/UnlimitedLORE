@@ -33,7 +33,13 @@ final class LoreRecordRegistry {
     private LoreRecordRegistry() {}
 
     /** Типы паспорта v2 — в порядке показа. */
-    static final List<String> TYPES = List.of("sprint", "task", "adr", "spec");
+    static final List<String> TYPES = List.of("sprint", "task", "adr", "spec", "decision", "question");
+
+    /**
+     * Kit 09.11: типы с паспортом только на чтение — путей записи в фасаде у них пока нет.
+     * Поля не правятся, perms ничего не обещают: кнопка без пути сохранения хуже её отсутствия.
+     */
+    static final java.util.Set<String> READ_ONLY = java.util.Set.of("decision", "question");
 
     /** Куда пишется поле: эндпоинт существующего пути записи и имя поля в его теле. */
     record Write(String endpoint, String field) {}
@@ -330,6 +336,56 @@ final class LoreRecordRegistry {
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", true),
                 rel("refsOut", "Ссылается", "REFERENCES", "out", "any", "association", "link_tab", false),
                 rel("refsIn", "На неё ссылаются", "REFERENCES", "in", "any", "association", "link_tab", false)))));
+
+        // ── Решение (только чтение, kit 09.11) ───────────────────────────────
+        // Ключи status/code/title/date — те же, что у колонок parts «Решения» в ADR.
+        TYPE_DEFS.put("decision", new TypeDef("decision", "Решение", "pp.kind.decision", "scales",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("status", "Статус", null, "enum", "decision_status", null),
+                head("code", "Код", null, "text", null, null),
+                prop("date", "Дата", "pp.field.date", "date", null, null),
+                ref("adr", "ADR", null, "adr", "DECIDED_IN", "out", "aggregation", false, false),
+                ref("components", "Компоненты", "pp.field.components", "component", "BELONGS_TO", "out", "attribute", true, false),
+                ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false),
+                ref("tags", "Теги", "pp.field.tags", "tag", "TAGGED_WITH", "out", "attribute", true, false)),
+            List.of(
+                new Body("body_md", "Решение", "pp.field.body", false, null),
+                new Body("rationale_md", "Обоснование", null, false, null)),
+            List.of(new PropSection(null, List.of("date", "adr", "components", "projects", "tags"))),
+            List.of(), List.of(), List.of(),
+            List.of(
+                rel("adr", "ADR", "DECIDED_IN", "out", "adr", "aggregation", "head", false),
+                rel("supersedes", "Заменяет", "SUPERSEDES", "out", "decision", "association", "links", false),
+                rel("answers", "Отвечает на вопросы", "ANSWERS", "out", "question", "association", "links", false),
+                rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
+                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
+                rel("tags", "Теги", "TAGGED_WITH", "out", "tag", "attribute", "prop", false))));
+
+        // ── Вопрос (только чтение, kit 09.11) ────────────────────────────────
+        // Ключи status/code/title/priority/due_date — те же, что у колонок parts «Вопросы».
+        TYPE_DEFS.put("question", new TypeDef("question", "Вопрос", "pp.kind.question", "help",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("status", "Статус", null, "enum", null, null),
+                head("code", "Код", null, "text", null, null),
+                prop("priority", "Приоритет", "pp.field.priority", "enum", "priority", null),
+                prop("due_date", "Срок", null, "date", null, null),
+                prop("owner", "Ответственный", null, "text", null, null),
+                prop("raised_by", "Поднял", null, "text", null, null),
+                prop("opened", "Открыт", null, "date", null, null),
+                prop("closed", "Закрыт", null, "date", null, null),
+                ref("components", "Компоненты", "pp.field.components", "component", "BELONGS_TO", "out", "attribute", true, false),
+                ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false)),
+            List.of(new Body("body_md", "Суть", "pp.field.body", false, null)),
+            List.of(new PropSection(null, List.of("priority", "due_date", "owner", "raised_by", "opened", "closed", "components", "projects"))),
+            List.of(), List.of(), List.of(),
+            List.of(
+                rel("raisedIn", "Поднят в", "RAISED_IN", "out", "any", "aggregation", "head", false),
+                rel("gates", "Блокирует задачи", "GATES", "out", "task", "association", "links", false),
+                rel("answeredBy", "Ответ — решения", "ANSWERS", "in", "decision", "association", "links", false),
+                rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
+                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
 
         // ── Дети без своего паспорта: фаза, вопрос, решение — поля для колонок parts ──
         CHILD_ONLY.put("phase", childOnly("phase", "Фаза", List.of(
