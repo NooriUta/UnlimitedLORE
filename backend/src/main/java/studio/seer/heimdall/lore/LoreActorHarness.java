@@ -30,11 +30,10 @@ final class LoreActorHarness {
     }
 
     /**
-     * Агенты, у которых имя врёт: владелица 09.11 — «все кроме Kimi и basilisk harness Claude»,
-     * а vasilisk зовётся «Claude Code (full) vasilisk». Его harness не угадываем — null, ставит
-     * владелица в админке.
+     * Факты владелицы сильнее имени. 09.11: «все кроме Kimi и basilisk harness Claude»,
+     * «harness vasilisk Codex» — а зовётся он «Claude Code (full) vasilisk».
      */
-    static final java.util.Set<String> NAME_UNRELIABLE = java.util.Set.of("AGENT-FULL_VASILISK-mw85b6r4");
+    static final Map<String, String> OWNER_FACTS = Map.of("AGENT-FULL_VASILISK-mw85b6r4", "codex");
 
     /** harness по имени — только если подходит РОВНО одно правило; иначе null. */
     static String fromName(String name) {
@@ -97,8 +96,9 @@ final class LoreActorHarness {
         List<Assign> out = new ArrayList<>();
         for (Map<String, Object> a : agentsWithoutHarness) {
             Object id = a.get("actor_id");
-            String h = fromName(a.get("name") == null ? null : String.valueOf(a.get("name")));
-            if (id != null && h != null && !NAME_UNRELIABLE.contains(String.valueOf(id))) out.add(new Assign(String.valueOf(id), h));
+            String h = id == null ? null : OWNER_FACTS.get(String.valueOf(id));
+            if (h == null) h = fromName(a.get("name") == null ? null : String.valueOf(a.get("name")));
+            if (id != null && h != null) out.add(new Assign(String.valueOf(id), h));
         }
         return out;
     }
