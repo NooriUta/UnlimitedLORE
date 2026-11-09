@@ -4,14 +4,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * {@code surfaces.passport} в /lore/model: порядок разделов паспорта и что по умолчанию
  * под «Ещё». Это умолчание модели (D-2026-LORE-MODEL-COLUMN-LAYERS: модель → командный вид →
  * личная настройка), а не отрисовка: kit сам решает, вкладки это на десктопе или свёртка
  * на телефоне. Поэтому ключ — {@code sections}, элемент — только
- * {key, source, ref, order, default_visible}.
+ * {key, source, ref, order, slot}.
  *
  * <p>{@code decided}: true — порядок задан словом владелицы; false — порядок по данным
  * (тело → части → вкладки связей в порядке реестра), сервер ничего не решал и ничего не прячет.
@@ -26,14 +25,15 @@ final class LorePassportSurface {
     /** Явный порядок по слову владелицы; ключи — разделы этого типа. */
     private static final Map<String, List<String>> DECIDED_ORDER = Map.of(
         // 09.11: «Спринт первое как ни странно задачи потом уже контент … зависимости и прочее под море».
-        "sprint", List.of("tasks", CONTENT, "phases", "dependsOn", "blocks"));
+        "sprint", List.of("tasks", CONTENT, "dependsOn", "blocks", "phases"));
 
     /**
-     * Видны сразу. Остальное в decided-типе — под «Ещё». Фазы у спринта скрыты по замеру
-     * 09.11: phase_uid есть у задач 4 спринтов из 29 последних.
+     * Место раздела в decided-типе: own — свой раздел, content — блоком в конце тела (v1:
+     * «блокирует и зависит был как подраздел контента»), more — под «Ещё». Не названное —
+     * more. Фазы у спринта под «Ещё» по замеру 09.11: phase_uid у задач 4 спринтов из 29.
      */
-    private static final Map<String, Set<String>> DECIDED_VISIBLE = Map.of(
-        "sprint", Set.of("tasks", CONTENT));
+    private static final Map<String, Map<String, String>> DECIDED_SLOT = Map.of(
+        "sprint", Map.of("tasks", "own", CONTENT, "own", "dependsOn", "content", "blocks", "content"));
 
     record Section(String key, String source, String ref) {}
 
@@ -58,12 +58,12 @@ final class LorePassportSurface {
             if (decided) {
                 for (String k : order)
                     data.stream().filter(s -> s.key().equals(k)).findFirst().ifPresent(ordered::add);
-                // Раздел, появившийся в реестре после решения, не теряется — в конец и под «Ещё».
+                // Раздел, появившийся в реестре после решения, не теряется — в конец, slot more.
                 for (Section s : data) if (!order.contains(s.key())) ordered.add(s);
             } else {
                 ordered.addAll(data);
             }
-            Set<String> visible = DECIDED_VISIBLE.getOrDefault(type, Set.of());
+            Map<String, String> slots = DECIDED_SLOT.getOrDefault(type, Map.of());
             List<Map<String, Object>> sections = new ArrayList<>();
             int i = 1;
             for (Section s : ordered) {
@@ -72,7 +72,7 @@ final class LorePassportSurface {
                 m.put("source", s.source());
                 m.put("ref", s.ref());
                 m.put("order", i++);
-                m.put("default_visible", !decided || visible.contains(s.key()));
+                m.put("slot", decided ? slots.getOrDefault(s.key(), "more") : "own");
                 sections.add(m);
             }
             Map<String, Object> t = new LinkedHashMap<>();
