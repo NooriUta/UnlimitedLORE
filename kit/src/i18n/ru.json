@@ -589,5 +589,8 @@
   "kit.mdedit.draft.stale": "запись изменили после черновика, текст может разойтись",
   "kit.mdedit.draft.loadFailed": "черновик не прочитан: {reason}",
   "kit.mdedit.draft.saveFailed": "черновик не сохранён: {reason}",
-  "kit.list.cols.width": "Ширина колонки «{title}»"
+  "kit.list.cols.width": "Ширина колонки «{title}»",
+  "kit.record.history.more": "Показать ещё",
+  "kit.record.history.moreBusy": "Загружаю…",
+  "kit.record.history.moreFailed": "Не догрузилось: {reason}. Показанные версии на месте."
 }

@@ -170,3 +170,9 @@ export const HISTORY_TRACKED: ReadonlySet<string> = new Set(HISTORY_TYPES);
 export const NOT_TRACKED: KitHistory = {
   tracking: 'not_tracked', versions: [], anomalies: [], page: null, warnings: [],
 };
+
+/**
+ * Сколько версий просить за раз. Не «все»: у долгой записи история длинная, и
+ * страница паспорта не должна её тянуть целиком ради трёх верхних строк.
+ */
+export const HISTORY_PAGE = 20;
