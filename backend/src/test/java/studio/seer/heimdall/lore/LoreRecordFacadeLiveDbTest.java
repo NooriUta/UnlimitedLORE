@@ -218,4 +218,23 @@ class LoreRecordFacadeLiveDbTest {
             .extract().jsonPath().getString("rows[0].outcome_md");
         assertEquals("итог", outcome);
     }
+
+    /**
+     * Владелица 09.11: итоги спринта в паспорте — те же ключи и та же функция
+     * (LoreSprintTotals), что у среза sprint_totals: одно число — один источник.
+     */
+    @Test
+    void sprintPassportCarriesServerTotalsLikeTheList() {
+        final String sid = "SPRINT_REC_TOTALS";
+        sprint(sid);
+        task(sid, "T-1");
+        task(sid, "T-2");
+        JsonPath r = record("sprint", sid);
+        assertEquals(2, r.getInt("values.tasks_total.of"), "задач в спринте");
+        assertEquals(0, r.getInt("values.tasks_total.done"));
+        assertEquals(0, r.getInt("values.effort_days_total.known"), "оценок не задавали");
+        assertNull(r.get("values.effort_days_total.value"), "нет оценок — null, а не 0");
+        JsonPath list = given().get("/lore/slice/sprint_totals?sprint_ids=" + sid).then().statusCode(200).extract().jsonPath();
+        assertEquals(r.getMap("values.tasks_total"), list.getMap("rows[0].tasks_total"), "паспорт и список — одно число");
+    }
 }

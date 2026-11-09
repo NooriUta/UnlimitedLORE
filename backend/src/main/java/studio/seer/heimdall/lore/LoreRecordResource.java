@@ -179,6 +179,17 @@ public class LoreRecordResource extends LoreResourceBase {
                     tf.put("total", taskItems.size());
                     tf.put("open", openTasks);
                     facts.put("tasks", tf);
+                    // Владелица 09.11: итоги спринта — та же функция, что у среза sprint_totals
+                    // (одно число — один источник). Строкам части задач проставляется sprint_id.
+                    List<Map<String, Object>> rowsWithSprint = new ArrayList<>();
+                    for (Map<String, Object> t : tasksRead.rows()) {
+                        Map<String, Object> c = new LinkedHashMap<>(t);
+                        c.put("sprint_id", id);
+                        rowsWithSprint.add(c);
+                    }
+                    Map<String, Object> totals = LoreSprintTotals.aggregate(rowsWithSprint, List.of(id)).get(0);
+                    for (String k : List.of("tasks_total", "effort_days_total", "actual_days_total"))
+                        values.put(k, totals.get(k));
                 }
             }
             case "task" -> {
