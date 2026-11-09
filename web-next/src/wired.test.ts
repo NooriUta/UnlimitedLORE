@@ -58,6 +58,7 @@ const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string 
   { symbol: 'shellRecentList', declaredIn: 'palette/shellRecent.ts', why: '«Недавнее» палитры — тот же список, что в меню (S4-14)' },
   { symbol: 'loadSprintTotals', declaredIn: 'sprints/sprintTotals.ts', why: 'итоги спринта в списке: задач x/y, оценка Σ дн, факт Σ дн (S4-09)' },
   { symbol: 'saveRecordStatus', declaredIn: 'record/statusSave.ts', why: 'смена статуса из паспорта — путь записи (дефект 09.11: был написан и не подключён)' },
+  { symbol: 'fetchPassportOrder', declaredIn: 'record/passportOrder.ts', why: 'порядок разделов паспорта из модели плюс названная причина отката (S4-29)' },
 ];
 
 describe('сторож приложения: написанное дошло до экрана', () => {

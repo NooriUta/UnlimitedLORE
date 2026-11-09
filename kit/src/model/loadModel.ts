@@ -30,6 +30,16 @@ export interface LoreModelDoc {
   statusesKnown: string[];
   statuses: Record<string, unknown>;
   dictionaries: Record<string, unknown>;
+  /**
+   * Свойства типов (#958): поля с видимостью и `display`, рёбра с концами.
+   * Разбирается потребителем — загрузчик про предметные имена не знает.
+   */
+  types: Record<string, unknown>;
+  /**
+   * Умолчания поверхностей (#1011): порядок и места разделов паспорта.
+   * Разбирается `passportSections` — здесь только довозится без потерь.
+   */
+  surfaces: Record<string, unknown>;
   /** Текст для человека. Машиночитаемы флаги у статей, а не эти строки. */
   warnings: string[];
 }
@@ -80,6 +90,14 @@ export function parseModel(raw: unknown): LoreModelDoc {
     statusesKnown: list(doc.statuses_known),
     statuses: obj(doc.statuses),
     dictionaries: obj(doc.dictionaries),
+    // `types` и `surfaces` появились позже загрузчика (#958 и #1011), и их
+    // здесь НЕ БЫЛО — документ собирался поимённо, поэтому два раздела молча
+    // пропадали. Загрузчик при этом не падал: он возвращал «успешно
+    // разобранную» модель без них, потребитель видел пустоту и честно говорил
+    // «сервер не задаёт» — честное состояние про неправду. Дефект найден
+    // 09.11.2026 при подключении порядка разделов паспорта (S4-29).
+    types: obj(doc.types),
+    surfaces: obj(doc.surfaces),
     warnings: list(doc.warnings),
   };
 }
@@ -94,8 +112,10 @@ export function modelSections(m: LoreModelDoc): Record<string, SectionState> {
     return Object.keys(value).length > 0 ? 'present' : 'empty';
   };
   return {
-    types: of('types', {}),
-    surfaces: of('surfaces', {}),
+    // Считаем по САМИМ разделам: от пустого литерала «present» не получался
+    // никогда, и присланный сервером раздел выглядел пустым.
+    types: of('types', m.types),
+    surfaces: of('surfaces', m.surfaces),
     statuses: of('statuses', m.statuses),
     dictionaries: of('dictionaries', m.dictionaries),
   };
@@ -120,6 +140,11 @@ export function readCachedModel(store: ModelStore): LoreModelDoc | undefined {
       statusesKnown: list(parsed.statusesKnown),
       statuses: obj(parsed.statuses),
       dictionaries: obj(parsed.dictionaries),
+      // Кеш собирается тем же поимённым списком, и те же два раздела пропадали
+      // здесь тоже: модель из кеша теряла `types` и `surfaces` даже после
+      // починки разбора — а кеш работает именно тогда, когда сеть отказала.
+      types: obj(parsed.types),
+      surfaces: obj(parsed.surfaces),
       warnings: list(parsed.warnings),
     };
   } catch {

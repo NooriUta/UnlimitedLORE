@@ -1,0 +1,241 @@
+// Порядок разделов паспорта приходит данными, а не кодом
+// (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-29, просьба владелицы 09.11.2026).
+//
+// Её слова: «ты должен определять порядок например Спринт первое как ни
+// странно задачи потом уже контент потом еще что-то а зависимости и прочее
+// можно скрыть под море и сделать настройкой».
+//
+// ПОЧЕМУ ЭТО `surfaces`, А НЕ `types`. Я сначала попросил у сервера
+// `types[t].tabs` — и серверная сессия отказала, справедливо, двумя доводами,
+// которые я проверил по коду:
+//   1. у меня же в `model/dataOnly.ts` в `BEHAVIOUR_STAYS_IN_APP` стоит
+//      `tabs`, и проверка идёт на ЛЮБОЙ глубине: `types.sprint.tabs` уронил бы
+//      `assertDataOnly` на всю модель;
+//   2. D-2026-LORE-MODEL-TYPES-VS-SURFACES: в `types` — свойства типа, а
+//      интерфейсный выбор — в `surfaces`. Порядок разделов и «что под Ещё» —
+//      ровно умолчание поверхности.
+// То есть я попросил то, что сам запретил. Форма ниже — её, не моя.
+//
+// И почему `sections`, а не `tabs` под другим именем: «вкладка» называет
+// КОНТРОЛ, а на телефоне это свёртка или нижний лист. Список РАЗДЕЛОВ говорит
+// что и в каком порядке, но не как. Чтобы это не осталось словесной разницей,
+// здесь стоит сторож: у элемента ровно пять ключей, любой лишний — отказ. Так
+// «данные, а не отрисовка» проверяется, а не доказывается в переписке.
+import { describe, expect, it } from 'vitest';
+import { SECTION_KEYS, applySections, gluedSections, passportSections, unknownSections } from './surfaces';
+
+const sprint = {
+  decided: true,
+  sections: [
+    { key: 'tasks', source: 'part', ref: 'tasks', order: 1, slot: 'own' },
+    { key: 'content', source: 'body', ref: null, order: 2, slot: 'own' },
+    { key: 'phases', source: 'part', ref: 'phases', order: 3, slot: 'more' },
+    { key: 'deps', source: 'relation', ref: 'DEPENDS_ON:out', order: 4, slot: 'more' },
+  ],
+};
+
+const model = (passport: unknown) => ({ surfaces: { partial: true, passport } });
+
+describe('passportSections: порядок и видимость из модели', () => {
+  it('положительный контроль: разделы приходят в порядке `order`', () => {
+    const r = passportSections(model({ sprint }), 'sprint');
+    expect(r.decided).toBe(true);
+    expect(r.sections.map(s => s.key)).toEqual(['tasks', 'content', 'phases', 'deps']);
+  });
+
+  it('порядок берётся из `order`, а не из порядка в массиве', () => {
+    const shuffled = { decided: true, sections: [...sprint.sections].reverse() };
+    const r = passportSections(model({ sprint: shuffled }), 'sprint');
+    expect(r.sections.map(s => s.key)).toEqual(['tasks', 'content', 'phases', 'deps']);
+  });
+
+  it('slot «more» — редкий раздел, под «Ещё»', () => {
+    const r = passportSections(model({ sprint }), 'sprint');
+    expect(r.sections.filter(s => s.slot !== 'own').map(s => s.key)).toEqual(['phases', 'deps']);
+  });
+
+  it('у типа нет записи — порядок НЕ решён, и это сказано, а не угадано', () => {
+    const r = passportSections(model({ sprint }), 'adr');
+    expect(r.decided).toBe(false);
+    expect(r.sections).toEqual([]);
+  });
+
+  it('`surfaces` нет вовсе (сервер старее) — тоже «не решён», без ошибки', () => {
+    expect(passportSections({}, 'sprint')).toEqual({ decided: false, sections: [], notes: [] });
+    expect(passportSections(null, 'sprint')).toEqual({ decided: false, sections: [], notes: [] });
+  });
+
+  it('`decided: false` у типа — перечень игнорируется, порядок за приложением', () => {
+    // Сервер прямо говорит «я не решал». Притворяться, что решал, нельзя.
+    const r = passportSections(model({ sprint: { decided: false, sections: sprint.sections } }), 'sprint');
+    expect(r.decided).toBe(false);
+    expect(r.sections).toEqual([]);
+  });
+});
+
+describe('сторож формы: данные, а не отрисовка', () => {
+  it('положительный контроль: пять законных ключей названы', () => {
+    expect([...SECTION_KEYS].sort()).toEqual(['key', 'order', 'ref', 'slot', 'source'].sort());
+  });
+
+  // ОСЛАБЛЕНО 09.11 по CJM, и это не смягчение требований, а исправление
+  // вреда. Сначала лишний ключ отказывал ЦЕЛИКОМ. Серверная сессия проверила
+  // условие по пути человека: добавь сервер безобидное поле — и клиент
+  // потеряет ВЕСЬ порядок разделов, показав умолчание. Технически честно, а
+  // человеку хуже, чем принять лишнее и сказать о нём строкой.
+  //
+  // Молчаливое игнорирование по-прежнему запрещено: оно спрятало бы попытку
+  // положить в модель отрисовку. Поэтому исход один — принять и НАЗВАТЬ.
+  it.each(['component', 'render', 'icon', 'label', 'tabs'])('лишний ключ «%s» — принят и НАЗВАН, порядок не потерян', extra => {
+    const bad = { decided: true, sections: [{ ...sprint.sections[0], [extra]: 'x' }] };
+    const r = passportSections(model({ sprint: bad }), 'sprint');
+    expect(r.decided).toBe(true);
+    expect(r.sections.map(s => s.key)).toEqual(['tasks']);
+    expect(r.notes.join(' ')).toContain(extra);
+    expect(r.notes.join(' ')).toMatch(/не прочитаны/);
+  });
+
+  it('отказ ОСТАЛСЯ там, где продолжение соврёт о структуре', () => {
+    // Неизвестный slot и source: непонятно даже, куда девать раздел, и любое
+    // решение за сервера показало бы неправду. Это условие 1 в части, которую
+    // серверная сессия просила не ослаблять.
+    const badSlot = { decided: true, sections: [{ ...sprint.sections[0], slot: 'sidebar' }] };
+    const badSource = { decided: true, sections: [{ ...sprint.sections[0], source: 'widget' }] };
+    expect(() => passportSections(model({ sprint: badSlot }), 'sprint')).toThrow(/slot/);
+    expect(() => passportSections(model({ sprint: badSource }), 'sprint')).toThrow(/source/);
+  });
+
+  it('раздел назван моделью, а у записи его нет — тоже сказано словами', () => {
+    // Условие 5. Молчание означало бы: модель говорит «есть раздел», человек
+    // его не видит, и никто не знает почему. Отказ тоже вреден — остальной
+    // порядок верен.
+    const order = passportSections(model({ sprint }), 'sprint');
+    const notes = unknownSections([{ id: 'tasks' }], order);
+    expect(notes.join(' ')).toMatch(/которых у записи нет/);
+    expect(notes.join(' ')).toContain('content');
+    expect(unknownSections([{ id: 'tasks' }, { id: 'content' }, { id: 'phases' }, { id: 'deps' }], order)).toEqual([]);
+  });
+
+  it('неизвестный `source` — отказ: трёх источников достаточно, четвёртый надо обсуждать', () => {
+    const bad = { decided: true, sections: [{ ...sprint.sections[0], source: 'widget' }] };
+    expect(() => passportSections(model({ sprint: bad }), 'sprint')).toThrow(/source/i);
+  });
+
+  it('`order` не целое — отказ: по дробному порядку сортировка молча разъедется', () => {
+    const bad = { decided: true, sections: [{ ...sprint.sections[0], order: 1.5 }] };
+    expect(() => passportSections(model({ sprint: bad }), 'sprint')).toThrow(/order/i);
+  });
+
+  it('повторяющийся `key` — отказ: два раздела с одним ключом дали бы одну вкладку', () => {
+    const bad = { decided: true, sections: [sprint.sections[0], { ...sprint.sections[1], key: 'tasks' }] };
+    expect(() => passportSections(model({ sprint: bad }), 'sprint')).toThrow(/tasks/);
+  });
+
+  it('`ref` у `body` может быть null — тело паспорта одно на все разделы', () => {
+    const r = passportSections(model({ sprint }), 'sprint');
+    expect(r.sections.find(s => s.source === 'body')?.ref).toBeNull();
+  });
+});
+
+describe('applySections: порядок применяется, незнакомое не прячется', () => {
+  const items: { id: string; label: string; secondary?: boolean }[] = [
+    { id: 'overview', label: 'Текст' },
+    { id: 'tasks', label: 'Задачи' },
+    { id: 'deps', label: 'Зависит от' },
+    { id: 'graph', label: 'Граф' },
+  ];
+  const order = passportSections(model({ sprint }), 'sprint');
+
+  it('положительный контроль: порядок не решён — список не меняется вовсе', () => {
+    expect(applySections(items, { decided: false, sections: [], notes: [] })).toEqual(items);
+    expect(applySections(items)).toEqual(items);
+  });
+
+  it('названные моделью идут первыми, в её порядке', () => {
+    const r = applySections(items, order);
+    // tasks (1) → content/нет в списке → phases/нет → deps (4); затем остальное.
+    expect(r.map(i => i.id)).toEqual(['tasks', 'deps', 'overview', 'graph']);
+  });
+
+  it('невидимое по модели помечается `secondary`, видимое — нет', () => {
+    const r = applySections(items, order);
+    expect(r.find(i => i.id === 'tasks')?.secondary).toBe(false);
+    expect(r.find(i => i.id === 'deps')?.secondary).toBe(true);
+  });
+
+  it('ЧЕГО МОДЕЛЬ НЕ НАЗЫВАЛА — не прячется и остаётся как было', () => {
+    // Граф, журнал, история — вкладки конструктора; модель о них не говорит.
+    const r = applySections(items, order);
+    expect(r.find(i => i.id === 'graph')?.secondary).toBeUndefined();
+    expect(r.find(i => i.id === 'overview')?.secondary).toBeUndefined();
+    // И их взаимный порядок прежний.
+    expect(r.slice(2).map(i => i.id)).toEqual(['overview', 'graph']);
+  });
+
+  it('исходный массив не портится — функция чистая', () => {
+    const copy = items.map(i => ({ ...i }));
+    applySections(items, order);
+    expect(items).toEqual(copy);
+  });
+});
+
+describe('третье место: «в конце контента» — не вкладка вовсе', () => {
+  // Повод — слова владелицы 09.11: «раньше блокирует и зависит был как
+  // подраздел контента… вариант как пример адр в конце решения были списком и
+  // это cjm работы просел и подтвердил». Булева мало: «под Ещё» и «в конце
+  // контента» — РАЗНЫЕ МЕСТА, а не разная видимость.
+  const withGlue = {
+    decided: true,
+    sections: [
+      { key: 'tasks', source: 'part', ref: 'tasks', order: 1, slot: 'own' },
+      { key: 'content', source: 'body', ref: null, order: 2, slot: 'own' },
+      { key: 'deps', source: 'relation', ref: 'DEPENDS_ON:out', order: 3, slot: 'content' },
+      { key: 'blocks', source: 'relation', ref: 'DEPENDS_ON:in', order: 4, slot: 'content' },
+      { key: 'phases', source: 'part', ref: 'phases', order: 5, slot: 'more' },
+    ],
+  };
+  const order = passportSections(model({ sprint: withGlue }), 'sprint');
+  const items: { id: string; label: string; secondary?: boolean }[] = [
+    { id: 'content', label: 'Текст' },
+    { id: 'tasks', label: 'Задачи' },
+    { id: 'deps', label: 'Зависит от' },
+    { id: 'blocks', label: 'Блокирует' },
+    { id: 'phases', label: 'Фазы' },
+    { id: 'graph', label: 'Граф' },
+  ];
+
+  it('положительный контроль: три места разобраны', () => {
+    expect(order.sections.map(s => s.slot)).toEqual(['own', 'own', 'content', 'content', 'more']);
+  });
+
+  it('вклеенные разделы УХОДЯТ из ряда вкладок вовсе', () => {
+    const r = applySections(items, order);
+    expect(r.map(i => i.id)).not.toContain('deps');
+    expect(r.map(i => i.id)).not.toContain('blocks');
+  });
+
+  it('вклеенный не превращается в «под Ещё» — иначе показался бы дважды', () => {
+    const r = applySections(items, order);
+    // Под «Ещё» только `phases`; `deps`/`blocks` не вкладки ни в каком виде.
+    expect(r.filter(i => i.secondary).map(i => i.id)).toEqual(['phases']);
+  });
+
+  it('порядок ряда: своё по модели, затем незнакомое моделью', () => {
+    const r = applySections(items, order);
+    expect(r.map(i => i.id)).toEqual(['tasks', 'content', 'phases', 'graph']);
+  });
+
+  it('gluedSections отдаёт вклеенные в порядке модели', () => {
+    expect(gluedSections(order).map(s => s.key)).toEqual(['deps', 'blocks']);
+  });
+
+  it('порядок не решён — вклеивать нечего, и ряд не тронут', () => {
+    expect(gluedSections({ decided: false, sections: [], notes: [] })).toEqual([]);
+    expect(gluedSections()).toEqual([]);
+    expect(applySections(items, { decided: false, sections: [], notes: [] })).toEqual(items);
+  });
+
+  it('у вклеенного есть `ref` — по нему приложение и знает, что рисовать', () => {
+    expect(gluedSections(order).map(s => s.ref)).toEqual(['DEPENDS_ON:out', 'DEPENDS_ON:in']);
+  });
+});

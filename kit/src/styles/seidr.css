@@ -1047,6 +1047,43 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 .sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+
+/* Редкие вкладки под «Ещё» (S4-29, просьба владелицы 09.11: «зависимости и
+   прочее можно скрыть под море… интерфейс становится перегруженным»).
+   Свёртка всплывающая, а не вторая строка вкладок: вторая строка вернула бы
+   ту же перегруженность. */
+.sk-tabs__more { position: relative; display: inline-flex; }
+.sk-tabs__more-btn { color: var(--t3); }
+.sk-tabs__more-btn[aria-expanded='true'] { color: var(--t1); }
+.sk-tabs__more-pop {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  max-width: min(320px, 92vw);
+  max-height: 62vh;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+}
+.sk-tabs__more-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: max(var(--tap), 28px);
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+.sk-tabs__more-item:hover { background: var(--bg3); color: var(--t1); }
+
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
 .sk-tabs--underline { gap: 2px; padding: 0; }
@@ -4556,4 +4593,20 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   max-width: var(--read-col);
   margin-inline: auto;
   font-size: var(--read-fs, var(--fs-md));
+}
+
+/* Разделы, вклеенные в хвост тела (S4-29): так было в v1 у зависимостей
+   спринта и у списка решений ADR. Заголовок со счётчиком — вкладки у раздела
+   больше нет, и без счётчика число исчезло бы с экрана. */
+.sk-rec-glue { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--bd); }
+.sk-rec-glue__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
