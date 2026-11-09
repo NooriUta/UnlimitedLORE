@@ -461,3 +461,74 @@ describe('лента внутри раздела (title=null)', () => {
     expect(container.querySelector('div.sk-news')).not.toBeNull();
   });
 });
+
+describe('S7A-12 v2 · мини-график, быстрые фильтры, день — полоса баланса (выбор владелицы 09.11)', () => {
+  it('мини-график: столбик на каждый день периода из tasks.days; день без данных — «нет данных», а не ноль', async () => {
+    await mount(src());
+    const spark = screen.getByTestId('news-spark');
+    expect(within(spark).getAllByRole('button').length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByTestId('news-spark-2026-11-07').dataset.tone).toBe('suc');
+    expect(screen.getByTestId('news-spark-2026-11-05').dataset.state).toBe('zero');
+    const none = screen.getByTestId('news-spark-2026-11-08');
+    expect(none.dataset.state).toBe('none');
+    expect(none.getAttribute('aria-label')).toMatch(/нет данных/);
+  });
+
+  it('мини-график: нажатие на столбик раскрывает свёрнутый день', async () => {
+    await mount(src());
+    expect(dayBtn('2026-11-05').getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(screen.getByTestId('news-spark-2026-11-05'));
+    await waitFor(() => expect(dayBtn('2026-11-05').getAttribute('aria-expanded')).toBe('true'));
+  });
+
+  it('мини-графика нет, если сгорание не посчитано (не рисуем пустые нули)', async () => {
+    const data = clone();
+    (data.metrics as { tasks: unknown }).tasks = { available: false, reason: 'нет источника' };
+    await mount(src({}, data));
+    expect(screen.queryByTestId('news-spark')).toBeNull();
+  });
+
+  it('быстрые фильтры наверху: Проект/Компонент/Кто — одно нажатие открывает варианты, выбор уходит на сервер', async () => {
+    const s = src();
+    await mount(s);
+    for (const a of ['project', 'component', 'author']) expect(screen.getByTestId(`news-facet-${a}`)).toBeTruthy();
+    const btn = screen.getByTestId('news-facet-project');
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+    const pop = screen.getByTestId('news-facet-pop-project');
+    fireEvent.click(within(pop).getAllByRole('button')[0]);
+    await waitFor(() => expect(last(s).has('project')).toBe(true));
+    expect(screen.queryByTestId('news-facet-pop-project')).toBeNull();
+    expect(screen.getByTestId('news-facet-project').dataset.on).toBe('true');
+  });
+
+  it('«Кто» — люди и агенты; Esc закрывает варианты', async () => {
+    const s = src();
+    await mount(s);
+    fireEvent.click(screen.getByTestId('news-facet-author'));
+    const pop = screen.getByTestId('news-facet-pop-author');
+    expect(within(pop).getAllByRole('button').length).toBe(3);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('news-facet-pop-author')).toBeNull();
+  });
+
+  it('фиксированный разрез паспорта не даёт снять себя быстрым фильтром', async () => {
+    await mount(src(), { scope: { project: 'UnlimitedLORE' } });
+    expect(screen.queryByTestId('news-facet-project')).toBeNull();
+    expect(screen.getByTestId('news-facet-component')).toBeTruthy();
+  });
+
+  it('счёт на чипе типа подписан «за период» — это не размер корпуса', async () => {
+    await mount(src());
+    expect(screen.getByTestId('news-type-chip-task').getAttribute('title')).toMatch(/за период/);
+  });
+
+  it('день — полоса «закрыто против заведено» с подписью для читалки', async () => {
+    await mount(src());
+    const d = day('2026-11-07');
+    const bar = d.querySelector('.sk-news__balbar')!;
+    expect(bar.getAttribute('role')).toBe('img');
+    expect(bar.getAttribute('aria-label')).toMatch(/закрыто · \d+ заведено задач/);
+    expect(within(d).getByTestId('news-cube-burn').textContent).toContain('+2');
+  });
+});

@@ -107,6 +107,17 @@ export function NewsFeed({
   const [sheet, setSheet] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
   const [validOpen, setValidOpen] = useState(false);
+  const [openDays, setOpenDays] = useState<Record<string, boolean>>({});
+
+  /** Нажатие на столбик мини-графика: раскрыть день и прокрутить к нему. */
+  const jumpToDay = (day: string) => {
+    setOpenDays(o => ({ ...o, [day]: true }));
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-day="${day}"]`);
+      el?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+      el?.querySelector<HTMLButtonElement>('button[aria-expanded]')?.focus({ preventScroll: true });
+    });
+  };
 
   const data = res.error ? undefined : res.data;
   const fixedAxes = new Set<string>(Object.keys(scope ?? {}).filter(k => k !== 'release'));
@@ -140,7 +151,8 @@ export function NewsFeed({
         <Banners data={data} lang={lang} />
         <Strip data={data} t={t} lang={lang} busy={busy} markMsg={markMsg} onMark={markRead}
           hasPanels={panels.length > 0} metricsOpen={metricsOpen} onMetrics={() => setMetricsOpen(o => !o)}
-          validOpen={validOpen} onValid={() => setValidOpen(o => !o)} />
+          validOpen={validOpen} onValid={() => setValidOpen(o => !o)} onJump={jumpToDay} />
+        <Filters query={q} update={update} data={data} t={t} lang={lang} fixed={fixedAxes} />
         {validOpen && <Validation data={data} t={t} />}
         {panels.length > 0 && (
           // Свёрнутые метрики остаются в документе (hidden): числа не пропадают,
@@ -154,7 +166,8 @@ export function NewsFeed({
               title={Object.keys(q.filters).length || q.els.length ? t('empty.filtered') : t('empty.title')}
               hint={t('empty.hint')}
             />
-          : <FeedDays data={data} query={q} lang={lang} tz={q.zone === 'utc' ? 'UTC' : tz} hrefOf={hrefOf} onOpen={onOpen} />)}
+          : <FeedDays data={data} query={q} lang={lang} tz={q.zone === 'utc' ? 'UTC' : tz} hrefOf={hrefOf} onOpen={onOpen}
+              open={openDays} setOpen={setOpenDays} />)}
       </>
     );
   }
@@ -180,7 +193,7 @@ export function NewsFeed({
           )}
         </header>
       )}
-      <Bar query={q} update={update} data={data} t={t} lang={lang} fixed={fixedAxes} onSheet={() => setSheet(true)} />
+      <Bar query={q} update={update} t={t} lang={lang} fixed={fixedAxes} onSheet={() => setSheet(true)} />
       <Active query={q} update={update} t={t} lang={lang} fixed={fixedAxes} />
       {body}
       {sheet && <Sheet query={q} update={update} data={data} t={t} lang={lang} fixed={fixedAxes} onClose={() => setSheet(false)} />}
@@ -211,37 +224,108 @@ function Radios<V extends string>({ label, value, items, on, testId }: {
   );
 }
 
-function Bar({ query: q, update, data, t, lang, fixed, onSheet }: CtlProps & { data: NewsResponse | undefined; onSheet: () => void }) {
-  const byType = data?.metrics.counts.by_type ?? {};
-  const typeOn = q.filters.type?.length === 1 ? q.filters.type[0] : null;
-  const toggleType = (k: string) => {
-    const next = { ...q.filters };
-    if (typeOn === k) delete next.type; else next.type = [k];
-    update({ filters: next });
-  };
+function Bar({ query: q, update, t, fixed, onSheet }: CtlProps & { onSheet: () => void }) {
   const n = sheetChanges(q, fixed);
   return (
     <div className="sk-news__bar" role="toolbar" aria-label={t('feed')} data-testid="news-bar">
       <Radios<NewsPeriod> label={t('period')} value={q.period} testId="news-period"
         items={[['day', t('period.day')], ['week', t('period.week')], ['month', t('period.month')]]}
         on={v => update({ period: v })} />
-      {!fixed.has('type') && (
-        <div className="sk-news__types" role="group" aria-label={axisLabel('type', lang)}>
-          {Object.entries(byType).map(([k, p]) => (
-            <button key={k} type="button" className="sk-news__chip" aria-pressed={typeOn === k}
-              data-testid={`news-type-chip-${k}`} title={`${typeLabel(k, lang)}: ${pairText(p)}`} onClick={() => toggleType(k)}>
-              <GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={13} />
-              <span>{typeLabel(k, lang)}</span>
-              <span className="sk-news__n">{p.events}</span>
+      <button type="button" className="sk-news__fbtn" data-testid="news-filters-btn" aria-haspopup="dialog"
+        aria-label={`${t('more.btn')} · ${t('filters')}`} onClick={onSheet}>
+        <GameIcon slug="settings-knobs" size={13} />
+        <span>{t('more.btn')}</span>
+        {n > 0 && <span className="sk-news__badge">{n}</span>}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Варианты фильтра по оси: числа — только присланные сервером (свёртка kind,
+ * разрез по этой оси); иначе значения из строк ленты без числа. Общие для
+ * быстрых фильтров наверху и панели «Ещё».
+ */
+function axisOptions(ax: NewsFilterAxis, data: NewsResponse | undefined, q: NewsQuery, lang: KitLang): Array<[string, string, string | null]> {
+  const out = new Map<string, [string, string | null]>();
+  const pairs = ax === 'kind' ? data?.metrics.counts.by_kind : undefined;
+  if (pairs) for (const [k, p] of Object.entries(pairs)) out.set(k, [newsGroupLabel(ax, k, lang), pairText(p)]);
+  else if (ax === 'author') for (const k of ['agent', 'human', 'unknown']) out.set(k, [newsGroupLabel(ax, k, lang), null]);
+  else {
+    if (data?.groups.axis === ax) for (const g of data.groups.list) out.set(g.key, [newsGroupLabel(ax, g.key, lang), `${g.events} · ${g.elements}`]);
+    for (const e of data?.events ?? []) for (const v of eventAxisValues(e, ax)) if (!out.has(v)) out.set(v, [newsGroupLabel(ax, v, lang), null]);
+  }
+  for (const v of q.filters[ax] ?? []) if (!out.has(v)) out.set(v, [newsGroupLabel(ax, v, lang), null]);
+  return [...out].map(([k, [l, n]]) => [k, l, n]);
+}
+
+function toggleFilter(q: NewsQuery, update: (p: Partial<NewsQuery>) => void, ax: NewsFilterAxis, v: string) {
+  const next = { ...q.filters };
+  if (next[ax]?.length === 1 && next[ax]![0] === v) delete next[ax]; else next[ax] = [v];
+  update({ filters: next });
+}
+
+/** Быстрые фильтры наверху (владелица 09.11): Проект ▾ · Компонент ▾ · Кто ▾ и типы со счётом. */
+const TOP_AXES: readonly NewsFilterAxis[] = ['project', 'component', 'author'];
+
+function Filters({ query: q, update, data, t, lang, fixed }: CtlProps & { data: NewsResponse }) {
+  const [pop, setPop] = useState<NewsFilterAxis | null>(null);
+  useEffect(() => {
+    if (!pop) return undefined;
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setPop(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pop]);
+  const axes = TOP_AXES.filter(a => !fixed.has(a));
+  const byType = data.metrics.counts.by_type;
+  const typeOn = q.filters.type?.length === 1 ? q.filters.type[0] : null;
+  const label = (a: NewsFilterAxis) => (a === 'author' ? t('facet.who') : axisLabel(a, lang));
+  return (
+    <div className="sk-news__filters" data-testid="news-filters">
+      {/* Одна строка с прокруткой вбок: грани и типы вместе — высоту ленты не съедают. */}
+      <div className="sk-news__frow">
+        {axes.length > 0 && (
+          <div className="sk-news__facets" role="group" aria-label={t('facets')}>
+            {axes.map(a => {
+              const sel = q.filters[a] ?? [];
+              return (
+                <button key={a} type="button" className="sk-news__fc" data-testid={`news-facet-${a}`}
+                  aria-expanded={pop === a} aria-controls={`news-facet-pop-${a}`} data-on={sel.length > 0 || undefined}
+                  onClick={() => setPop(p => (p === a ? null : a))}>
+                  <span>{label(a)}</span>
+                  {sel.length > 0 && <b>{sel.length === 1 ? newsGroupLabel(a, sel[0], lang) : sel.length}</b>}
+                  <span aria-hidden="true">▾</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {!fixed.has('type') && Object.keys(byType).length > 0 && (
+          <div className="sk-news__types" role="group" aria-label={`${axisLabel('type', lang)} · ${t('types.period')}`}>
+            {Object.entries(byType).map(([k, p]) => (
+              <button key={k} type="button" className="sk-news__chip" aria-pressed={typeOn === k}
+                data-testid={`news-type-chip-${k}`} title={`${typeLabel(k, lang)} ${t('types.period')}: ${pairText(p)}`}
+                onClick={() => toggleFilter(q, update, 'type', k)}>
+                <GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={13} />
+                <span className="sk-news__tlabel">{typeLabel(k, lang)}</span>
+                <span className="sk-news__n">{p.events}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {pop && (
+        <div className="sk-news__pop" id={`news-facet-pop-${pop}`} role="group" aria-label={label(pop)} data-testid={`news-facet-pop-${pop}`}>
+          {axisOptions(pop, data, q, lang).map(([v, l, n]) => (
+            <button key={v} type="button" className="sk-news__chip" title={v}
+              aria-pressed={q.filters[pop]?.length === 1 && q.filters[pop]![0] === v}
+              onClick={() => { toggleFilter(q, update, pop, v); setPop(null); }}>
+              <span>{l}</span>
+              {n && <span className="sk-news__n">{n}</span>}
             </button>
           ))}
         </div>
       )}
-      <button type="button" className="sk-news__fbtn" data-testid="news-filters-btn" aria-haspopup="dialog" onClick={onSheet}>
-        <GameIcon slug="settings-knobs" size={13} />
-        <span>{t('filters')}</span>
-        {n > 0 && <span className="sk-news__badge">{n}</span>}
-      </button>
     </div>
   );
 }
@@ -313,24 +397,8 @@ function Sheet({ query: q, update, data, t, lang, fixed, onClose }: CtlProps & {
   const authorPending = data?.metrics.agents.measurable === false;
   const axisOpt = (a: NewsAxis) => (a === 'author' && authorPending ? `${axisLabel(a, lang)} (${t('axis.author.pending')})` : axisLabel(a, lang));
 
-  const options = (ax: NewsFilterAxis): Array<[string, string, string | null]> => {
-    const out = new Map<string, [string, string | null]>();
-    const pairs = ax === 'kind' ? data?.metrics.counts.by_kind : undefined;
-    if (pairs) for (const [k, p] of Object.entries(pairs)) out.set(k, [newsGroupLabel(ax, k, lang), pairText(p)]);
-    else if (ax === 'author') for (const k of ['agent', 'human', 'unknown']) out.set(k, [newsGroupLabel(ax, k, lang), null]);
-    else {
-      // Числа у опции — только если сервер прислал разрез по этой оси.
-      if (data?.groups.axis === ax) for (const g of data.groups.list) out.set(g.key, [newsGroupLabel(ax, g.key, lang), `${g.events} · ${g.elements}`]);
-      for (const e of data?.events ?? []) for (const v of eventAxisValues(e, ax)) if (!out.has(v)) out.set(v, [newsGroupLabel(ax, v, lang), null]);
-    }
-    for (const v of q.filters[ax] ?? []) if (!out.has(v)) out.set(v, [newsGroupLabel(ax, v, lang), null]);
-    return [...out].map(([k, [l, n]]) => [k, l, n]);
-  };
-  const toggle = (ax: NewsFilterAxis, v: string) => {
-    const next = { ...q.filters };
-    if (next[ax]?.length === 1 && next[ax]![0] === v) delete next[ax]; else next[ax] = [v];
-    update({ filters: next });
-  };
+  const options = (ax: NewsFilterAxis) => axisOptions(ax, data, q, lang);
+  const toggle = (ax: NewsFilterAxis, v: string) => toggleFilter(q, update, ax, v);
 
   return (
     <>
@@ -398,9 +466,39 @@ function Sheet({ query: q, update, data, t, lang, fixed, onClose }: CtlProps & {
 
 // ── строка критичного над лентой (владелица 09.11: на виду — критичное) ──
 
-function Strip({ data, t, lang, busy, markMsg, onMark, hasPanels, metricsOpen, onMetrics, validOpen, onValid }: {
+/**
+ * Мини-график сгорания по дням периода (владелица 09.11: «мини-графики на
+ * самом верху»). Высота столбика — burn дня из tasks.days, ничего не считаем.
+ * День периода без строки в tasks.days — «нет данных» штриховкой, а не нулём:
+ * «не смогли посчитать» ≠ «ничего не закрыли».
+ */
+function Spark({ data, t, onJump }: { data: NewsResponse; t: T; onJump: (day: string) => void }) {
+  const tasks = data.metrics.tasks;
+  if (!tasks.available) return null;
+  const byDay = new Map(tasks.days.map(d => [d.day_local, d.burn]));
+  const days = [...new Set([...tasks.days.map(d => d.day_local), ...(data.matrix?.rows.map(r => r.day) ?? [])])].sort();
+  if (days.length < 2) return null;
+  const max = Math.max(1, ...tasks.days.map(d => Math.abs(d.burn)));
+  return (
+    <div className="sk-news__spark" role="group" aria-label={t('spark')} data-testid="news-spark">
+      {days.map(day => {
+        const v = byDay.get(day);
+        const label = v === undefined ? t('spark.nodata', { day }) : t('spark.day', { day, v: signed(v) });
+        return (
+          <button key={day} type="button" className="sk-news__sbar" data-testid={`news-spark-${day}`}
+            data-state={v === undefined ? 'none' : v === 0 ? 'zero' : undefined} data-tone={v === undefined ? undefined : signTone(v)}
+            style={v ? { '--h': `${Math.max(12, Math.round((Math.abs(v) / max) * 100))}%` } as CSSProperties : undefined}
+            title={label} aria-label={label} onClick={() => onJump(day)} />
+        );
+      })}
+    </div>
+  );
+}
+
+function Strip({ data, t, lang, busy, markMsg, onMark, hasPanels, metricsOpen, onMetrics, validOpen, onValid, onJump }: {
   data: NewsResponse; t: T; lang: KitLang; busy: boolean; markMsg: string | null; onMark: () => void;
   hasPanels: boolean; metricsOpen: boolean; onMetrics: () => void; validOpen: boolean; onValid: () => void;
+  onJump: (day: string) => void;
 }) {
   const m = data.metrics;
   const tasks = m.tasks;
@@ -410,6 +508,7 @@ function Strip({ data, t, lang, busy, markMsg, onMark, hasPanels, metricsOpen, o
   const checks = data.meta.validation.checks.filter(c => c.ok !== true).length;
   return (
     <div className="sk-news__strip" data-testid="news-strip" aria-label={t('strip')} role="group">
+      <Spark data={data} t={t} onJump={onJump} />
       {tasks.available && (
         <span className="sk-news__sm" data-testid="news-strip-burn" data-tone={signTone(tasks.all.burn)}>
           <GameIcon slug="flame" size={13} />
@@ -505,14 +604,15 @@ interface FeedProps {
   onOpen?: (e: NewsEvent) => void;
 }
 
-/** Критичные цифры дня (набор утвердила владелица 09.11.2026), в этом порядке. */
-const CRIT_KINDS = ['closed', 'ready', 'reactivated', 'released'] as const;
+/** Критичные цифры дня (набор утвердила владелица 09.11.2026) — цветными чипами. */
+const CRIT_KINDS = ['ready', 'reactivated', 'released'] as const;
 
 /**
- * Цифры дня. Сгорание и итог — поля ответа (tasks.days, matrix.rows);
- * разбивка по видам и типам — счёт строк этого дня, то есть подпись того,
- * что нарисовано ниже, а не метрика методики (допущение принято с approve
- * прототипа 09.11).
+ * Цифры дня, вариант C (выбор владелицы 09.11.2026): полоса баланса
+ * «закрыто против заведено» + чипы — критичные цветом, информационные серым.
+ * Сгорание и итог — поля ответа (tasks.days, matrix.rows); счёты по видам и
+ * типам — счёт строк этого дня, то есть подпись того, что нарисовано ниже,
+ * а не метрика методики (допущение принято с approve прототипа 09.11).
  */
 function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsEvent[]; data: NewsResponse; t: T; lang: KitLang }) {
   const byKind = new Map<string, number>();
@@ -523,33 +623,63 @@ function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsE
     byType.set(e.type, (byType.get(e.type) ?? 0) + 1);
     if (e.type === 'task' && e.kind === 'created') tasksCreated++;
   }
+  const closed = byKind.get('closed') ?? 0;
   const burn = data.metrics.tasks.available ? data.metrics.tasks.days.find(d => d.day_local === day) : undefined;
   const total = data.matrix?.rows.find(r => r.day === day)?.total;
   const otherCreated = (byKind.get('created') ?? 0) - tasksCreated;
-  const cube = (id: string, value: ReactNode, label: string, opts: { icon?: string; tone?: string; title?: string } = {}) => (
-    <span key={id} className="sk-news__cube" data-testid={id} data-tone={opts.tone} title={opts.title ?? label}>
-      {opts.icon && <GameIcon slug={opts.icon} size={12} />}
-      <b>{value}</b>
+  const showBal = closed + tasksCreated > 0 || (burn && burn.burn !== 0);
+  const share = closed + tasksCreated > 0 ? Math.round((closed / (closed + tasksCreated)) * 100) : 0;
+  const balText = t('bal', { cl: closed, cr: tasksCreated });
+  const chip = (id: string, n: number, label: string, icon: string, tone: string) => (
+    <span key={id} className="sk-news__dchip" data-testid={id} data-tone={tone} title={label}>
+      <GameIcon slug={icon} size={11} />
+      <b>{n}</b>
       <span>{label}</span>
     </span>
   );
-  const crit: ReactNode[] = [];
-  if (burn && (burn.burn !== 0 || tasksCreated > 0 || (byKind.get('closed') ?? 0) > 0)) {
-    crit.push(cube('news-cube-burn', signed(burn.burn), t('cube.burn'), { icon: 'flame', tone: signTone(burn.burn) }));
-  }
-  if (tasksCreated > 0) crit.push(cube('news-cube-kind-created', tasksCreated, t('cube.created'), { icon: NEWS_KIND_META.created.icon, tone: 'suc' }));
-  for (const k of CRIT_KINDS) {
+  const crit = CRIT_KINDS.flatMap(k => {
     const n = byKind.get(k);
-    if (n) crit.push(cube(`news-cube-kind-${k}`, n, t(`cube.${k}` as NewsKey), { icon: NEWS_KIND_META[k].icon, tone: NEWS_KIND_META[k].tone }));
-  }
+    return n ? [chip(`news-cube-kind-${k}`, n, t(`cube.${k}` as NewsKey), NEWS_KIND_META[k].icon, NEWS_KIND_META[k].tone)] : [];
+  });
   return (
     <div className="sk-news__figs">
-      {crit.length > 0 && <div className="sk-news__cubes">{crit}</div>}
-      <div className="sk-news__foot">
-        {total && <span data-testid="news-cube-total" title={t('pair')}><span data-testid="news-day-total">{pairText(total)}</span> {t('cube.total')}</span>}
-        {otherCreated > 0 && <span><GameIcon slug={NEWS_KIND_META.created.icon} size={11} />{`${otherCreated} ${t('cube.other')}`}</span>}
-        {(byKind.get('changed') ?? 0) > 0 && <span><GameIcon slug={NEWS_KIND_META.changed.icon} size={11} />{`${byKind.get('changed')} ${t('cube.changed')}`}</span>}
-        {total && <span data-testid="news-cube-delta" title={t('cube.delta')}>{`Δ ${total.elements}`}</span>}
+      {showBal && (
+        <div className="sk-news__bal">
+          {burn && (
+            <span className="sk-news__bburn" data-testid="news-cube-burn" data-tone={signTone(burn.burn)} title={t('cube.burn')}>
+              <GameIcon slug="flame" size={12} />
+              <b>{signed(burn.burn)}</b>
+            </span>
+          )}
+          <span className="sk-news__balbar" role="img" aria-label={balText}>
+            <span data-part="closed" style={{ width: `${share}%` }} />
+            <span data-part="created" style={{ width: `${100 - share}%` }} />
+          </span>
+          <span className="sk-news__ball">
+            <span data-testid="news-cube-kind-closed">{`${closed} ${t('cube.closed')}`}</span>
+            {' · '}
+            <span data-testid="news-cube-kind-created">{`${tasksCreated} ${t('cube.created')}`}</span>
+          </span>
+        </div>
+      )}
+      <div className="sk-news__dchips">
+        {crit}
+        {total && (
+          <span className="sk-news__dchip" data-testid="news-cube-total" title={t('pair')}>
+            <span data-testid="news-day-total">{pairText(total)}</span>
+          </span>
+        )}
+        {otherCreated > 0 && (
+          <span className="sk-news__dchip" title={t('cube.other')}>
+            <GameIcon slug={NEWS_KIND_META.created.icon} size={11} />{otherCreated}
+          </span>
+        )}
+        {(byKind.get('changed') ?? 0) > 0 && (
+          <span className="sk-news__dchip" title={t('cube.changed')}>
+            <GameIcon slug={NEWS_KIND_META.changed.icon} size={11} />{byKind.get('changed')}
+          </span>
+        )}
+        {total && <span className="sk-news__dchip" data-testid="news-cube-delta" title={t('cube.delta')}>{`Δ ${total.elements}`}</span>}
         <span className="sk-news__ftypes" data-testid="news-day-types" title={t('day.types')}>
           {[...byType].map(([k, n]) => (
             <span key={k} title={typeLabel(k, lang)}><GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={11} />{n}</span>
@@ -560,9 +690,10 @@ function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsE
   );
 }
 
-function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen }: FeedProps) {
+function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: FeedProps & {
+  open: Record<string, boolean>; setOpen: (f: (o: Record<string, boolean>) => Record<string, boolean>) => void;
+}) {
   const t: T = (k, vars) => newsT(lang, k, vars);
-  const [open, setOpen] = useState<Record<string, boolean>>({});
   const days = useMemo(() => {
     const m = new Map<string, NewsEvent[]>();
     for (const e of data.events) {
@@ -591,7 +722,7 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen }: FeedProps) {
             <section className="sk-news__day" data-testid={`news-day-${day}`} data-day={day}>
               <h3 className="sk-news__dayh">
                 <button type="button" className="sk-news__daybtn" aria-expanded={isOpen}
-                  onClick={() => setOpen({ ...open, [day]: !isOpen })}>
+                  onClick={() => setOpen(o => ({ ...o, [day]: !isOpen }))}>
                   <span className="sk-news__chev" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
                   <span className="sk-news__dayname">{shortDay(day)}</span>
                   <span className="sk-news__dayiso">{day}</span>

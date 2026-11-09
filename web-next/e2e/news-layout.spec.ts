@@ -85,6 +85,10 @@ const PARITY: Array<[id: string, how: How, selector: string]> = [
   ['S7A-03 сгорание своё/общее', 'metrics', '[data-testid="news-burn"]'],
   ['S7A-03 знания', 'metrics', '[data-testid="news-knowledge"]'],
   ['S7A-07 сверка чисел', 'valid', '[data-testid="news-validation"]'],
+  ['v2 мини-график сгорания наверху', 'none', '[data-testid="news-spark"]'],
+  ['v2 быстрый фильтр: проект', 'none', '[data-testid="news-facet-project"]'],
+  ['v2 быстрый фильтр: компонент', 'none', '[data-testid="news-facet-component"]'],
+  ['v2 быстрый фильтр: кто', 'none', '[data-testid="news-facet-author"]'],
 ];
 // Не здесь: п.13/16/26 (ошибка, 403, 502 — фикстура не падает; kit NewsFeed.test.tsx),
 // п.24/28/29/30 (ниже и в сторожах i18n), п.25 (сам вход /news — open()).

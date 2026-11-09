@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Новости — экран v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<!-- SPRINT_UXR_S7A_NEWS/S7A-12: выбор владелицы 09.11.2026 — C (полоса баланса + чипы) в заголовке дня,
+     неделя сгорания мини-графиком наверху, фильтры тип/проект/компонент/люди·агенты наверху.
+     Условие: до ленты не крутить. Только раскладка, числа подставные. -->
+<style>
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--bdh:#584c38;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;--g-news:#d4a84a;
+--font:'Manrope',sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif;--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px}
+@media (pointer:coarse),(max-width:600px){:root{--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:16px}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-base)/1.4 var(--font)}
+main{max-width:900px;margin:0 auto;padding:8px 16px 40px}
+iconify-icon{display:inline-block;vertical-align:-2px}
+.mono{font-family:var(--mono)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+/* 1. верхняя строка */
+.bar{display:flex;gap:8px;align-items:center;padding:4px 0}
+.ttl{font:800 var(--fs-md) var(--head);color:var(--g-news);margin-right:auto}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.seg button{padding:3px 10px;font:700 var(--fs-xs) var(--mono);color:var(--t2)}
+.seg button[aria-checked=true]{background:var(--bg3);color:var(--t1)}
+.fbtn{border:1px solid var(--bd);border-radius:999px;padding:3px 10px;font:700 var(--fs-xs) var(--mono);color:var(--t2);display:inline-flex;gap:4px;align-items:center}
+.badge{background:var(--acc);color:var(--bg0);border-radius:999px;padding:0 5px}
+/* 2. неделя мини-графиком + строка «с прошлого раза» */
+.pulse{display:flex;align-items:flex-end;gap:10px;padding:4px 0 6px;border-bottom:1px solid var(--bd)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:30px}
+.spark button{width:16px;border-radius:2px 2px 0 0;position:relative}
+.spark button.z{height:1px!important;background:var(--bd)}
+.spark button:hover,.spark button:focus-visible{outline:1px solid var(--t1)}
+.pinfo{display:flex;flex-direction:column;gap:1px;font:600 var(--fs-2xs) var(--mono);color:var(--t3);min-width:0}
+.pinfo b{font-size:var(--fs-sm);color:var(--suc)}
+.pside{margin-left:auto;display:flex;gap:8px;align-items:center;font:600 var(--fs-2xs) var(--mono);color:var(--t2);flex-wrap:wrap;justify-content:flex-end}
+.lnk{color:var(--acc);text-decoration:underline dotted}
+.warn{border:1px solid var(--wrn);color:var(--wrn);border-radius:999px;padding:0 6px}
+/* 3. фильтры наверху: одна строка граней, прокрутка вбок */
+.facets{display:flex;gap:6px;overflow-x:auto;padding:6px 0 2px;scrollbar-width:none}
+.facets::-webkit-scrollbar{display:none}
+.fc{flex:none;display:inline-flex;gap:4px;align-items:center;border:1px solid var(--bd);border-radius:999px;padding:2px 10px;font:700 var(--fs-xs) var(--mono);color:var(--t2);white-space:nowrap}
+.fc[aria-expanded=true]{border-color:var(--g-news);color:var(--t1)}
+.fc.on{border-color:var(--acc);color:var(--acc)}
+.fc em{font-style:normal;color:var(--t1)}
+.pop{display:none;flex-wrap:wrap;gap:6px;padding:6px 8px;margin:4px 0;border:1px solid var(--bdh);border-radius:8px;background:var(--bg1)}
+.pop.open{display:flex}
+.pop h4{width:100%;margin:0;font:700 var(--fs-2xs) var(--mono);color:var(--t3);text-transform:uppercase}
+.opt{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--bd);border-radius:999px;padding:1px 8px;font:600 var(--fs-xs) var(--mono);color:var(--t2)}
+.opt[aria-pressed=true]{background:var(--bg3);border-color:var(--acc);color:var(--t1)}
+.opt i{font-style:normal;color:var(--t3)}
+/* типы — иконки со счётом, тоже одна строка */
+.types{display:flex;gap:6px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
+.types::-webkit-scrollbar{display:none}
+.tc{flex:none;display:inline-flex;gap:3px;align-items:center;border:1px solid var(--bd);border-radius:999px;padding:1px 8px;font:700 var(--fs-xs) var(--mono);color:var(--t2)}
+.tc[aria-pressed=true]{border-color:var(--acc);color:var(--t1);background:var(--bg3)}
+/* 4. день: вариант C */
+.day{margin-top:6px}
+.date{font:700 var(--fs-sm) var(--mono);color:var(--t2);padding:6px 0 2px;display:flex;gap:8px;align-items:center}
+.date button{display:inline-flex;gap:4px;align-items:center}
+.bal{display:flex;align-items:center;gap:8px;padding:4px 0}
+.bal .bar2{flex:1;display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--bg3);max-width:320px}
+.bal .bar2 span{display:block;height:100%}
+.bal .lbl{font:700 var(--fs-xs) var(--mono);white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 6px;border-bottom:1px solid var(--bd)}
+.chip{display:inline-flex;gap:4px;align-items:center;border:1px solid currentColor;border-radius:999px;padding:0 8px;font:700 var(--fs-xs) var(--mono)}
+.chip.q{border-color:var(--bd);color:var(--t3)}
+.row{display:flex;gap:10px;padding:6px 2px;border-bottom:1px solid var(--bg2);font-size:var(--fs-md)}
+.row small{display:block;font:700 var(--fs-2xs) var(--mono);text-transform:uppercase}
+.readline{display:flex;align-items:center;gap:8px;color:var(--acc);font:700 var(--fs-2xs) var(--mono);text-transform:uppercase;margin:4px 0}
+.readline:before,.readline:after{content:"";flex:1;height:1px;background:var(--acc)}
+/* пояснение — под лентой, чтобы не толкать её вниз */
+.note{margin-top:24px;border:1px dashed var(--bd);border-radius:10px;padding:10px 12px;color:var(--t2);font-size:var(--fs-sm)}
+.note b{color:var(--t1)}
+.note li{margin:3px 0}
+.ruler{position:fixed;right:8px;bottom:8px;background:var(--bg2);border:1px solid var(--bdh);border-radius:999px;padding:2px 10px;font:700 var(--fs-2xs) var(--mono);color:var(--t2)}
+</style>
+</head>
+<body><main id="m"></main><div class="ruler" id="ruler"></div>
+<script>
+const ic=(s,c,z=13)=>`<iconify-icon icon="${s.includes(':')?s:'game-icons:'+s}" width="${z}" style="color:${c}"></iconify-icon>`;
+const week=[['пн',1],['вт',-1],['ср',2],['чт',0],['пт',3],['сб',1],['вс',2]];
+const facets={
+  project:{t:'Проект',h:'проекты в периоде',o:[['UnlimitedLORE',31],['miniLORE',9],['Forseti',4]]},
+  component:{t:'Компонент',h:'компоненты',o:[['kit',14],['web-next',11],['backend',8],['mcp',5]]},
+  who:{t:'Кто',h:'люди и агенты',o:[['user:владелица',6],['robot-golem:агент S7A-12',12],['robot-golem:агент kit',9],['robot-golem:агент backend',7]]},
+};
+const types=[['sprint','задачи',22],['scroll-quill','ADR',3],['gavel','решения',4],['spell-book','спеки',3],['open-book','доки',5],['upgrade','релизы',1]];
+const days=[
+  {d:'сегодня · 09.11',burn:'+2',cl:5,cr:3,rd:2,re:1,rel:1,tot:'18 · 14',ch:4,dl:14,rows:[
+    ['sprint','Колонки списка из настройки','check-mark','var(--suc)','закрыто · 17:26 · SPRINT_UXR_S7A_NEWS/S7A-12'],
+    ['upgrade','Релиз v0.9.9','upgrade','var(--acc)','релиз · 16:02'],
+    ['sprint','Фильтр «Вехи» в ленте','lucide:undo-2','var(--dng)','вернулась · 15:40 · SPRINT_UXR_S7A_NEWS/S7A-02']]},
+  {d:'вчера · 08.11',burn:'+1',cl:3,cr:2,rd:1,re:0,rel:0,tot:'11 · 9',ch:3,dl:9,read:true,rows:[
+    ['scroll-quill','ADR-LORE-041 · Матрица в ленте','sprout','var(--suc)','появилось · 19:10'],
+    ['sprint','Сверка чисел как ⚠','check-mark','var(--suc)','закрыто · 14:22 · SPRINT_UXR_S7A_NEWS/S7A-07']]},
+];
+const S={period:'Неделя',open:null,sel:{project:new Set(),component:new Set(),who:new Set()},type:new Set()};
+const lbl=s=>s.includes(':')?s.split(':')[1]:s, icn=s=>s.includes(':')?s.split(':')[0]:null;
+function dayHtml(x){
+  const tot=x.cl+x.cr, w=Math.round(x.cl/tot*100);
+  const crit=[x.rd&&`<span class="chip" style="color:var(--wrn)">${ic('wave-crest','var(--wrn)',11)}${x.rd} готово</span>`,
+    x.re&&`<span class="chip" style="color:var(--dng)">${ic('lucide:undo-2','var(--dng)',11)}${x.re} вернулось</span>`,
+    x.rel&&`<span class="chip" style="color:var(--acc)">${ic('upgrade','var(--acc)',11)}${x.rel} релиз</span>`].filter(Boolean).join('');
+  return `<section class="day"><div class="date"><button aria-expanded="true">▾ ${x.d}</button></div>
+  <div class="bal"><span class="lbl" style="color:var(--suc)">${ic('flame','var(--suc)',12)} ${x.burn}</span><div class="bar2"><span style="width:${w}%;background:var(--suc)"></span><span style="width:${100-w}%;background:var(--t3)"></span></div><span class="lbl" style="color:var(--t3)">${x.cl} закрыто · ${x.cr} заведено</span></div>
+  <div class="chips">${crit}<span class="chip q">${x.tot}</span><span class="chip q">${ic('pencil','var(--t3)',11)}${x.ch}</span><span class="chip q">Δ ${x.dl}</span></div>
+  ${x.read?'<div class="readline">прочитано до сюда</div>':''}
+  ${x.rows.map(([t,n,ki,kc,m])=>`<div class="row" data-row>${ic(t,'var(--t2)',16)}<div>${n}<small style="color:${kc}">${ic(ki,kc,11)} ${m}</small></div></div>`).join('')}</section>`;
+}
+function render(){
+  const nSel=Object.values(S.sel).reduce((a,s)=>a+s.size,0)+S.type.size;
+  let h=`<div class="bar"><span class="ttl">Новости</span><span class="seg" role="radiogroup">${['День','Неделя','Месяц'].map(p=>`<button role="radio" aria-checked="${S.period===p}" data-p="${p}">${p}</button>`).join('')}</span><button class="fbtn">${ic('settings-knobs','var(--t2)',12)} Ещё${nSel?` <span class="badge">${nSel}</span>`:''}</button></div>`;
+  h+=`<div class="pulse"><div class="spark" title="сгорание по дням недели — нажми, чтобы прыгнуть к дню">${week.map(([d,v])=>v===0?`<button class="z" title="${d}: 0"></button>`:`<button style="height:${Math.abs(v)*9}px;background:${v>0?'var(--suc)':'var(--dng)'}" title="${d}: ${v>0?'+':''}${v}"></button>`).join('')}</div>
+  <div class="pinfo">сгорание за неделю<b>${ic('flame','var(--suc)',12)} +8</b></div>
+  <div class="pside"><span>с прошлого раза <b style="color:var(--t1)">6</b></span><button class="lnk">прочитано</button><button class="warn">⚠ 1</button></div></div>`;
+  h+=`<div class="facets">${Object.entries(facets).map(([k,f])=>{const s=S.sel[k];return `<button class="fc ${s.size?'on':''}" aria-expanded="${S.open===k}" data-f="${k}">${f.t}${s.size?`: <em>${s.size===1?lbl([...s][0]):s.size}</em>`:''} ▾</button>`}).join('')}</div>`;
+  if(S.open){const f=facets[S.open];h+=`<div class="pop open"><h4>${f.h}</h4>${f.o.map(([v,n])=>`<button class="opt" aria-pressed="${S.sel[S.open].has(v)}" data-o="${v}">${icn(v)?ic(icn(v),'var(--t2)',11):''}${lbl(v)} <i>${n}</i></button>`).join('')}</div>`;}
+  h+=`<div class="types">${types.map(([i,l,n])=>`<button class="tc" aria-pressed="${S.type.has(l)}" data-t="${l}" title="${l}">${ic(i,'var(--t2)',12)}${n}</button>`).join('')}</div>`;
+  h+=days.map(dayHtml).join('');
+  h+=`<div class="note"><b>Что здесь</b> (SPRINT_UXR_S7A_NEWS/S7A-12, твой выбор 09.11):<ul>
+  <li><b>Наверху мини-график</b>: сгорание по дням недели, зелёное — выгребаем, красное — копится. Нажатие на столбик — прыжок к дню. Рядом «с прошлого раза», «прочитано», ⚠ сверки.</li>
+  <li><b>Фильтры наверху одной строкой</b>: Проект ▾, Компонент ▾, Кто ▾ (люди и агенты) и типы иконками со счётом. Строка прокручивается вбок, высоту не ест. Выбранное значение видно на самой кнопке.</li>
+  <li><b>День — вариант C</b>: полоса «закрыто против заведено», критичные чипы цветом (готово, вернулось, релиз), информационные серым (итог, изменено, Δ).</li>
+  <li>В «Ещё» остаются только редкие: группировка, порядок, спринт, веха, событие, время Местное/UTC и все метрики периода.</li>
+  <li><b>До ленты не крутить</b>: счётчик справа внизу показывает, на какой высоте начинается первая карточка. Цель на телефоне 412×915: меньше трети экрана.</li></ul></div>`;
+  document.getElementById('m').innerHTML=h;
+  const r=document.querySelector('[data-row]').getBoundingClientRect();
+  document.getElementById('ruler').textContent=`лента с ${Math.round(r.top+scrollY)} px из ${innerHeight}`;
+}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.p)S.period=b.dataset.p;
+  else if(b.dataset.f)S.open=S.open===b.dataset.f?null:b.dataset.f;
+  else if(b.dataset.o){const s=S.sel[S.open];s.has(b.dataset.o)?s.delete(b.dataset.o):s.add(b.dataset.o);}
+  else if(b.dataset.t){S.type.has(b.dataset.t)?S.type.delete(b.dataset.t):S.type.add(b.dataset.t);}
+  else return; render();});
+addEventListener('resize',render);
+render();
+</script></body></html>
