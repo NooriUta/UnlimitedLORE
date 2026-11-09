@@ -80,7 +80,7 @@ function SigmaUnion({ sum, total, t }: { sum: NewsPair; total: NewsPair; t: T })
  * Дельта к прошлому такому же периоду P⁻ (§7.5): знак, процент (только когда
  * сервер его прислал — при f(P⁻) ≥ 5) и в подсказке — границы P⁻ и «было».
  */
-function Delta({ d, t, lang, prev }: { d?: NewsDelta; t: T; lang: KitLang; prev?: { from: string; to: string } }) {
+export function Delta({ d, t, lang, prev }: { d?: NewsDelta; t: T; lang: KitLang; prev?: { from: string; to: string } }) {
   if (!d) return null;
   const title = prev
     ? t('delta.prevRange', { from: prev.from.slice(0, 10), to: prev.to.slice(0, 10), prev: d.previous })

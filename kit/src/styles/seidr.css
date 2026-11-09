@@ -3820,6 +3820,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   font-size: var(--fs-2xs);
 }
 .sk-news__days { display: flex; flex-direction: column; gap: 4px; }
+.sk-news__dayw { display: flex; flex-direction: column; }
 .sk-news__day { display: flex; flex-direction: column; }
 .sk-news__dayh { position: sticky; top: 0; z-index: 1; margin: 0; background: var(--bg1); }
 .sk-news__daybtn {
@@ -3918,6 +3919,101 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 }
 span.sk-news__chip { display: inline-flex; align-items: center; cursor: default; }
 .sk-news__chip[aria-pressed='true'] { border-color: var(--acc); color: var(--acc); }
+
+/* ═══ S7A-12 — лента первой: полоса, строка критичного, панель «Фильтры», цифры дня ═══ */
+.sk-news { min-width: 0; }
+.sk-news__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.sk-news__types { display: flex; flex: 1 1 0; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.sk-news__types::-webkit-scrollbar { display: none; }
+.sk-news__types .sk-news__chip { flex: none; display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); white-space: nowrap; }
+.sk-news__n { font-family: var(--mono); color: var(--t3); }
+.sk-news__chip[aria-pressed='true'] .sk-news__n,
+.sk-news__chip[aria-checked='true'] .sk-news__n { color: var(--acc); }
+.sk-news__chip[aria-checked='true'] { border-color: var(--acc); color: var(--acc); }
+.sk-news__fbtn {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  min-height: max(var(--tap), 24px); padding: 0 12px;
+  border: 1px solid var(--bdh); border-radius: 999px; background: var(--bg2);
+  color: var(--t1); font: 700 var(--fs-sm) var(--font); cursor: pointer;
+}
+.sk-news__badge { padding: 0 6px; border-radius: 999px; background: var(--acc); color: var(--bg0); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-news__active { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sk-news__achip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 10px; border-radius: 999px; background: var(--bg2); color: var(--t2); font-size: var(--fs-xs); }
+.sk-news__x { min-width: max(var(--tap), 20px); min-height: max(var(--tap), 20px); border: 0; background: none; color: var(--t3); cursor: pointer; }
+.sk-news__strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
+  padding: 2px 2px 6px; border-bottom: 1px solid var(--bd); color: var(--t3); font-size: var(--fs-xs);
+}
+.sk-news__sm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.sk-news__sm b { font-family: var(--mono); font-size: var(--fs-sm); color: var(--t1); }
+.sk-news__sm[data-tone='suc'], .sk-news__sm[data-tone='suc'] b { color: var(--suc); }
+.sk-news__sm[data-tone='dng'], .sk-news__sm[data-tone='dng'] b { color: var(--dng); }
+.sk-news__sp { flex: 1; }
+.sk-news__linkbtn {
+  min-height: max(var(--tap), 18px); padding: 0 4px; border: 0; background: none; color: var(--t3);
+  font: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer;
+}
+.sk-news__linkbtn:disabled { opacity: .55; cursor: default; }
+.sk-news__vbtn {
+  min-height: max(var(--tap), 20px); padding: 0 8px; border: 1px solid var(--wrn); border-radius: 999px;
+  background: none; color: var(--wrn); font: 600 var(--fs-xs) var(--mono); cursor: pointer;
+}
+.sk-news__vbtn[data-tone='dng'] { border-color: var(--dng); color: var(--dng); }
+.sk-news__more { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-news__more[hidden] { display: none; }
+/* цифры дня: критичное — кубиками, информационное — строкой-сноской */
+.sk-news__figs { display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 4px; }
+.sk-news__cubes { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-news__cube {
+  display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 4px;
+  padding: 2px 8px 1px; border: 1px solid var(--bdh); border-radius: var(--r-sm); background: var(--bg2); --c: var(--t1);
+}
+.sk-news__cube[data-tone='suc'] { --c: var(--suc); }
+.sk-news__cube[data-tone='dng'] { --c: var(--dng); }
+.sk-news__cube[data-tone='wrn'] { --c: var(--wrn); }
+.sk-news__cube[data-tone='acc'] { --c: var(--acc); }
+.sk-news__cube[data-tone='t3'] { --c: var(--t3); }
+.sk-news__cube .sk-icon { color: var(--c); }
+.sk-news__cube b { font-family: var(--mono); font-size: var(--fs-md); color: var(--c); }
+.sk-news__cube > span:last-child { grid-column: 1 / -1; font-size: var(--fs-2xs); color: var(--t3); white-space: nowrap; }
+.sk-news__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-news__foot > span, .sk-news__ftypes > span { display: inline-flex; align-items: center; gap: 3px; }
+.sk-news__ftypes { display: inline-flex; gap: 8px; }
+.sk-news__bn { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); font-weight: 400; }
+.sk-news__readline {
+  display: flex; align-items: center; gap: 8px; margin: 10px 0 4px;
+  color: var(--acc); font: 600 var(--fs-2xs) var(--mono);
+}
+.sk-news__readline::before, .sk-news__readline::after {
+  content: ''; flex: 1; border-top: 1px dashed color-mix(in srgb, var(--acc) 60%, transparent);
+}
+/* панель «Фильтры»: справа; на телефоне — нижний лист */
+.sk-news__scrim { position: fixed; inset: 0; z-index: 40; background: color-mix(in srgb, var(--bg0) 60%, transparent); }
+.sk-news__sheet {
+  position: fixed; z-index: 41; top: 0; right: 0; bottom: 0; width: min(380px, 92vw);
+  display: flex; flex-direction: column; border-left: 1px solid var(--bd); background: var(--bg1);
+}
+.sk-news__grip { display: none; }
+.sk-news__sheeth { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--bd); }
+.sk-news__sheeth .sk-news__pt { flex: 1; margin: 0; }
+.sk-news__sheetb { flex: 1; overflow: auto; padding: 4px 14px 14px; }
+.sk-news__sheetf { display: flex; padding: 8px 14px; border-top: 1px solid var(--bd); }
+.sk-news__sheetf .sk-btn { flex: 1; }
+.sk-news__fs { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--bg3); }
+.sk-news__fs h4 { margin: 0; }
+.sk-news__wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-news__wrap .sk-news__chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); }
+@media (max-width: 720px) {
+  .sk-news__types { order: 3; flex-basis: 100%; }
+  .sk-news__fbtn { margin-left: auto; }
+  .sk-news__sheet {
+    top: auto; left: 0; width: auto; max-height: 88vh;
+    border-left: 0; border-top: 1px solid var(--bdh); border-radius: 14px 14px 0 0;
+  }
+  .sk-news__grip { display: block; width: 40px; height: 4px; margin: 8px auto 0; border-radius: 2px; background: var(--bdh); }
+  .sk-news__rtitle { white-space: normal; overflow-wrap: anywhere; }
+  .sk-news__link { flex-basis: 100%; }
+}
 
 /* ═══ S7A-06 — вкладка «Активность» паспорта (лента /lore/news/v2 по записи) ═══ */
 .sk-act { display: flex; flex-direction: column; gap: var(--gap); }

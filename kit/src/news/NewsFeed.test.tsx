@@ -40,6 +40,10 @@ async function mount(source: NewsSource, props: Partial<Parameters<typeof NewsFe
   return r;
 }
 
+// S7A-12: фильтры — в панели «Фильтры», метрики — по «все метрики», сверка — по ⚠.
+// Каждая функция — ровно одно действие от ленты.
+const openFilters = () => fireEvent.click(screen.getByTestId('news-filters-btn'));
+const openMetrics = () => fireEvent.click(screen.getByTestId('news-strip-toggle'));
 const day = (d: string) => screen.getByTestId(`news-day-${d}`);
 const dayBtn = (d: string) => within(day(d)).getByRole('button', { name: new RegExp(d.split('-').reverse().slice(0, 2).join('\\.')) });
 
@@ -65,7 +69,8 @@ describe('S7A-02 · лента: дни, строки, время', () => {
 
   it('порядок «старые сверху» переворачивает дни (без пересчёта)', async () => {
     await mount(src());
-    fireEvent.click(screen.getByRole('button', { name: /старые сверху/i }));
+    openFilters();
+    fireEvent.click(screen.getByRole('radio', { name: /старые сверху/i }));
     const order = screen.getAllByTestId(/^news-day-\d/).map(n => n.dataset.day);
     expect(order).toEqual(['2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08']);
   });
@@ -158,32 +163,53 @@ describe('S7A-02 · строка «фильтр / группировка / по�
   it('смена группировки — новый запрос с group_by; заголовки групп дня — по новой оси', async () => {
     const s = src();
     await mount(s);
-    fireEvent.change(screen.getByLabelText('Группировка'), { target: { value: 'type' } });
+    openFilters();
+    fireEvent.click(screen.getByTestId('news-group-opt-type'));
     await waitFor(() => expect(last(s).get('group_by')).toBe('type'));
   });
 
   it('фильтр по проекту — параметр запроса; снимается «Сбросить»', async () => {
     const s = src();
     await mount(s);
-    fireEvent.change(screen.getByLabelText('Проект'), { target: { value: 'NooriUta/volva' } });
+    openFilters();
+    fireEvent.click(within(screen.getByTestId('news-filter-project')).getByRole('button', { name: /volva/ }));
     await waitFor(() => expect(last(s).get('project')).toBe('NooriUta/volva'));
     expect(screen.getByTestId('news-desc').textContent).toMatch(/Проект: volva/);
-    fireEvent.click(screen.getByRole('button', { name: 'Сбросить' }));
+    fireEvent.click(within(screen.getByTestId('news-desc')).getByRole('button', { name: 'Сбросить' }));
     await waitFor(() => expect(last(s).has('project')).toBe(false));
   });
 
-  it('опции фильтра типа несут числа сервера (by_type), а не подсчёт клиента', async () => {
+  it('чипы типов в полосе несут числа сервера (by_type), а не подсчёт клиента', async () => {
     await mount(src());
-    const opt = within(screen.getByLabelText('Тип записи')).getByRole('option', { name: /задача · 6 · 5/ });
-    expect(opt).toBeTruthy();
+    const chip = screen.getByTestId('news-type-chip-task');
+    expect(chip.textContent).toMatch(/задачаs*6/);
+    expect(chip.getAttribute('title')).toMatch(/6 · 5/);
+  });
+
+  it('чип типа — фильтр type; повторное нажатие снимает', async () => {
+    const s = src();
+    await mount(s);
+    fireEvent.click(screen.getByTestId('news-type-chip-task'));
+    await waitFor(() => expect(last(s).get('type')).toBe('task'));
+    fireEvent.click(screen.getByTestId('news-type-chip-task'));
+    await waitFor(() => expect(last(s).has('type')).toBe(false));
+  });
+
+  it('панель «Фильтры» закрывается Esc; число на кнопке — сколько настроек изменено', async () => {
+    await mount(src());
+    openFilters();
+    fireEvent.click(screen.getByTestId('news-group-opt-type'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('news-sheet')).toBeNull();
+    expect(screen.getByTestId('news-filters-btn').textContent).toMatch(/1/);
   });
 
   it('все оси S7A-02 в группировке; автор помечен «ждёт S2-12», пока автор не хранится', async () => {
     await mount(src());
-    const sel = screen.getByLabelText('Группировка');
-    const values = within(sel).getAllByRole('option').map(o => (o as HTMLOptionElement).value);
+    openFilters();
+    const values = screen.getAllByTestId(/^news-group-opt-/).map(o => o.dataset.testid!.replace('news-group-opt-', ''));
     expect(values).toEqual(['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'day']);
-    expect(within(sel).getByRole('option', { name: /автор.*S2-12/i })).toBeTruthy();
+    expect(screen.getByTestId('news-group-opt-author').textContent).toMatch(/автор.*S2-12/i);
   });
 
   it('период и пояс — переключатели; запрос несёт days и tz', async () => {
@@ -191,6 +217,7 @@ describe('S7A-02 · строка «фильтр / группировка / по�
     await mount(s);
     fireEvent.click(screen.getByRole('radio', { name: 'Месяц' }));
     await waitFor(() => expect(last(s).get('days')).toBe('30'));
+    openFilters();
     fireEvent.click(screen.getByRole('radio', { name: /UTC/ }));
     await waitFor(() => expect(last(s).get('tz')).toBe('UTC'));
   });
@@ -198,6 +225,7 @@ describe('S7A-02 · строка «фильтр / группировка / по�
   it('клик по группе в разрезе — фильтр этой группы (filter-дескриптор сервера)', async () => {
     const s = src();
     await mount(s);
+    openMetrics();
     fireEvent.click(within(screen.getByTestId('news-groups')).getByRole('button', { name: /^AIDA/ }));
     await waitFor(() => expect(last(s).get('project')).toBe('NooriUta/AIDA'));
   });
@@ -260,6 +288,7 @@ describe('S7A-02 · разрезы и метрики: только числа с
 
   it('сгорание по дням — таблица сервера', async () => {
     await mount(src());
+    openMetrics();
     const b = screen.getByTestId('news-burn-days');
     expect(within(b).getAllByRole('row')).toHaveLength(4);
   });
@@ -273,6 +302,7 @@ describe('S7A-02 · разрезы и метрики: только числа с
 
   it('матрица «дни × проекты»: клетки «события · элементы», Σ≠∪ в строке дня, итог столбца', async () => {
     await mount(src());
+    openMetrics();
     const mx = screen.getByTestId('news-matrix');
     expect(within(mx).getByRole('columnheader', { name: 'UnlimitedLORE' })).toBeTruthy();
     const row = within(mx).getByTestId('news-matrix-row-2026-11-07');
@@ -285,6 +315,7 @@ describe('S7A-02 · разрезы и метрики: только числа с
   it('число столбцов матрицы — параметр запроса matrix', async () => {
     const s = src();
     await mount(s);
+    openMetrics();
     fireEvent.click(within(screen.getByTestId('news-matrix')).getByRole('radio', { name: '10' }));
     await waitFor(() => expect(last(s).get('matrix')).toBe('10'));
   });
@@ -366,6 +397,10 @@ describe('S7A-02 · честные состояния (П13, П16, S7A-07)', () 
     d.meta.validation.ok = false;
     d.meta.validation.checks[0].ok = false;
     await mount(src({}, d));
+    expect(screen.queryByTestId('news-validation')).toBeNull();
+    const btn = screen.getByTestId('news-valid-btn');
+    expect(btn.dataset.tone).toBe('dng');
+    fireEvent.click(btn);
     const v = screen.getByTestId('news-validation');
     expect(v.querySelector('[data-check-state="fail"]')?.textContent).toMatch(/N_ev/);
     expect(v.querySelector('[data-check-state="unknown"]')?.textContent).toMatch(/выкатка/);
@@ -411,7 +446,8 @@ describe('S7A-02 · доступность', () => {
   it('en: подписи на английском', async () => {
     render(<KitLangProvider lang="en"><NewsFeed source={src()} urlPrefix={null} timeZone="UTC" /></KitLangProvider>);
     await screen.findByTestId('news-feed-days');
-    expect(screen.getByLabelText('Group by')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('news-filters-btn'));
+    expect(screen.getByRole('radiogroup', { name: 'Group by' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Mark as read' })).toBeTruthy();
   });
 });
