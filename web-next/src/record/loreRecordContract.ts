@@ -27,10 +27,45 @@ export interface LoreField {
   write?: { endpoint: string; field: string } | null;
 }
 export interface LoreTab { key: string; label: string; zone: 'record' | 'around'; rel?: string; dir?: 'out' | 'in'; count?: number }
+
+/**
+ * Где связь ЖИВЁТ на экране (сервер, `schema.relations[].place`).
+ *
+ * Разница не косметическая: `prop` — это СВОЙСТВО, его значения лежат в
+ * `values` (проекты, компоненты спринта), и рисовать его блоком связей значит
+ * печатать «Проекты 0» рядом с живым значением. `part` — часть записи, её
+ * элементы приходят в `parts[]`. `link_tab` — настоящая вкладка связей, и
+ * только у неё элементы лежат в `links`.
+ */
+export type LorePlace = 'own' | 'prop' | 'part' | 'link_tab';
+
+/** Элемент части — общая обёртка `item()` сервера. id деловой: у задачи «SPRINT_X/CODE». */
+export interface LorePartItem { id: string; title: string; status: string; values?: Record<string, unknown> }
+
+/**
+ * Часть записи: задачи и фазы спринта, вопросы и решения ADR (place: 'part').
+ *
+ * `count` — число элементов при `state: 'ok'`, иначе null: «не посчитали» не
+ * ноль. `state` ровно три значения (сверено по коду сервера серверной сессией
+ * 09.11.2026): ok · denied (проектный скоуп: нет разрешённых проектов) ·
+ * error (сбой среза). Состояния «обрезано» у части нет — обрезку показывает
+ * `meta.data_state`.
+ */
+export interface LorePart {
+  key: string; label: string; type?: string; rel: string; dir: 'out' | 'in';
+  owned?: boolean; relation?: KitRelation;
+  state: 'ok' | 'denied' | 'error'; error?: string;
+  count: number | null; items: LorePartItem[];
+  columns?: string[]; optional_columns?: string[]; order_by?: string; create?: unknown;
+}
 /** Связь типа по виду UML (D-2026-LORE-RECORD-RELATION-UML) — kit рисует и управляет по виду. */
 export interface LoreRelation { key: string; label: string; relation: KitRelation; rel: string; dir: 'out' | 'in'; count: number; 
   /** Есть ли у сервера путь привязки именно для этой связи (LoreRecordRelationRoutes). */
-  manageable?: boolean }
+  manageable?: boolean;
+  /** Где связь живёт на экране; не прислали — считаем вкладкой связей, как было до фасада. */
+  place?: LorePlace;
+  /** Тип на другом конце (сервер: target_type) — для подписи и иконки. */
+  target_type?: string }
 export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string }
 export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number }
 export interface LoreRecord1 {
@@ -45,7 +80,16 @@ export interface LoreRecord1 {
   schema: { type: string; label: string; icon: string; fields: LoreField[]; tabs: LoreTab[]; relations: LoreRelation[] };
   values: Record<string, unknown>;
   links: LoreLink[];
-  facts: { tasks?: { done: number; total: number } | { error: string }; due?: string | null } | null;
+  /** Части записи; у старой клиентской эмуляции их нет. */
+  parts?: LorePart[];
+  /**
+   * Итоги, посчитанные СЕРВЕРОМ по корпусу (не по присланной выборке).
+   *
+   * `facts.tasks` считается только при успешном чтении задач: при сбое ключа
+   * НЕТ ВОВСЕ, а причина — в `parts[tasks].state/error` и `meta.data_state`.
+   * Отсутствие ≠ ноль, поэтому клиент не подставляет 0/0.
+   */
+  facts: { tasks?: { done: number; total: number; open?: number } | { error: string }; due?: string | null } | null;
   perms: { can_edit: boolean; can_status: boolean; can_create: boolean; status_next: string[]; reason: string | null };
   meta: { loaded_at: string; facade: 'server' | 'client-emulated'; sources: LoreSource[] };
 }
@@ -148,11 +192,48 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     id, kind: type, title: typeof title === 'string' && title ? title : id, status: c.record.status,
     body_md: typeof body_md === 'string' && body_md ? body_md : undefined, updated_at: c.record.updated_at ?? undefined, fields,
   };
-  const edges: KitEdge[] = c.links.map(l => (l.dir === 'out' ? { from: id, to: l.id, type: l.rel } : { from: l.id, to: id, type: l.rel }));
-  const others: KitRecord[] = c.links.filter((l, i, a) => a.findIndex(x => x.id === l.id) === i)
+  // Части записи (parts) — ЗАДАЧИ И ФАЗЫ спринта, вопросы и решения ADR.
+  //
+  // Дефект прода v1.17.8: «Задач нет» при 48 задачах. Сервер отдавал их в
+  // `parts[]`, а здесь читались только `links` — и вкладки, и вердикт считались
+  // по рёбрам, которых в ответе нет. Теперь элементы частей становятся
+  // записями и рёбрами: дальше с ними работает всё обычное — вкладки, граф,
+  // вердикт, таблица задач.
+  const parts = c.parts ?? [];
+  const partEdges: KitEdge[] = parts.flatMap(p => p.items.map(i =>
+    p.dir === 'in' ? { from: i.id, to: id, type: p.rel } : { from: id, to: i.id, type: p.rel }));
+  const partRecords: KitRecord[] = parts.flatMap(p => p.items.map(i => ({
+    id: i.id, kind: p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
+  })));
+  const edges: KitEdge[] = [
+    ...c.links.map(l => (l.dir === 'out' ? { from: id, to: l.id, type: l.rel } : { from: l.id, to: id, type: l.rel })),
+    ...partEdges,
+  ];
+  const linkRecords: KitRecord[] = c.links.filter((l, i, a) => a.findIndex(x => x.id === l.id) === i)
     .map(l => ({ id: l.id, kind: l.type, title: l.title, status: l.status, fields: {} }));
-  const errors = c.meta.sources.filter(s => s.state !== 'ok').map(s => ({ block: s.block, reason: s.reason ?? s.state }));
+  const others: KitRecord[] = [...linkRecords, ...partRecords]
+    .filter((r, i, a) => r.id !== id && a.findIndex(x => x.id === r.id) === i);
+  // Часть не прочиталась — это РАЗНЫЕ утверждения: «нет прав» (denied) и «сбой»
+  // (error). Ни одно из них не «пусто»: без этой строки вердикт показал бы
+  // проверенный ноль там, где проверки не было.
+  const partErrors = parts.filter(p => p.state !== 'ok').map(p => ({
+    block: p.key,
+    state: p.state === 'denied' ? ('forbidden' as const) : ('error' as const),
+    reason: p.error ?? p.state,
+  }));
+  const errors = [
+    ...c.meta.sources.filter(s => s.state !== 'ok').map(s => ({ block: s.block, reason: s.reason ?? s.state })),
+    ...partErrors.map(e => ({ block: e.block, reason: e.reason })),
+  ];
   const props = c.schema.fields.filter(f => f.group === 'props');
+  // Связь place=prop — свойство: значения уже лежат в `values`. Если в
+  // `schema.fields` её не перечислили, поле добавляем сами — иначе значение
+  // («Проекты: NooriUta/AIDA») не показалось бы вообще, а в блоке связей
+  // стояло бы «Проекты 0».
+  const propRels = c.schema.relations.filter(r => r.place === 'prop' && !props.some(f => f.key === r.key));
+  const propFields = propRels.map(r => ({
+    key: r.key, title: r.label, type: 'ref' as const,
+  }));
   const sections = c.schema.fields.filter(f => f.group === 'body' && f.key !== 'body_md');
   // Разделы текста — ДАННЫМИ, а не своей функцией рисования (S5-06).
   //
@@ -169,12 +250,22 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // пути записи, и тогда ✎ обещал бы сохранение, которого некуда отправить
   // (проверено серверной сессией по LoreRecordRegistry.schemaJson 09.11).
   const bodySections = sections.map(s => ({ key: s.key, title: s.label, editable: s.editable !== false }));
-  const tabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
+  const linkTabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
     key: t.key, title: t.label,
     render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),
   }));
+  // Вкладка части: её элементы уже пришли. Не прочиталась — так и сказано,
+  // а не «нет элементов» (ListPassport подменяет вкладку задач настоящей
+  // таблицей — withSprintTasksTab; эта остаётся для прочих частей).
+  const partTabs = parts.map(p => ({
+    key: p.key, title: p.label,
+    render: () => (p.state !== 'ok'
+      ? (p.error ?? p.state)
+      : p.items.map(i => i.title || i.id).join(' · ') || appT(lang, 'pp.contract.noLinks')),
+  }));
+  const tabs = [...partTabs, ...linkTabs.filter(t => !partTabs.some(x => x.key === t.key))];
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: c.schema.relations.map(({ count: _n, ...d }) => d), fields: props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...(tabs.length ? { tabs } : {}) },
+    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: c.schema.relations.filter(r => (r.place ?? 'link_tab') === 'link_tab').map(({ count: _n, place: _p, target_type: _t, ...d }) => d), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...propFields], ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit
@@ -182,11 +273,16 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // errors их сливал в один. errors остаётся рядом: по нему рисует плашку блок
   // связей (blockError), и терять её нельзя. Задвоения нет — разбор пропускает
   // блок, о котором уже сказано через data_state.
-  const dataState = c.meta.sources.map(s => ({
-    source: s.block, state: s.state,
-    ...(s.reason ? { reason: s.reason } : {}),
-    ...(s.total !== undefined ? { total: s.total } : {}),
-  }));
+  const dataState = [
+    ...c.meta.sources.map(s => ({
+      source: s.block, state: s.state,
+      ...(s.reason ? { reason: s.reason } : {}),
+      ...(s.total !== undefined ? { total: s.total } : {}),
+    })),
+    ...partErrors
+      .filter(e => !c.meta.sources.some(s => s.block === e.block))
+      .map(e => ({ source: e.block, state: e.state, reason: e.reason })),
+  ];
   const data: KitData = {
     records: [record, ...others], edges, journal: [],
     meta: {
@@ -195,7 +291,18 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
       ...(errors.length ? { errors } : {}),
     } as KitData['meta'],
   };
-  return { record, data, config, ...(c.facts?.tasks ? { facts: sprintFactsFor(c.links) } : {}) };
+  const tasksPart = parts.find(p => p.key === 'tasks');
+  const served = c.facts?.tasks;
+  const counts = served && 'total' in served
+    ? { done: served.done, total: served.total, ...(typeof served.open === 'number' ? { open: served.open } : {}) }
+    : undefined;
+  // Вердикт нужен всегда, когда сервер прислал блок фактов, а не только когда
+  // пришли ЧИСЛА задач:
+  //  • задачи не прочитались — `facts.tasks` нет вовсе (контракт), и вердикт
+  //    должен сказать «не смогли проверить», а не промолчать;
+  //  • в этом же блоке живёт срок (`dueField`), и прежнее условие «есть
+  //    facts.tasks» молча отнимало вместе с задачами и строку срока.
+  return { record, data, config, ...(c.facts || tasksPart ? { facts: sprintFactsFor(c.links, tasksPart, counts) } : {}) };
 }
 
 /**
@@ -207,7 +314,17 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
  * задачах (владелица 09.11.2026). Берём ту форму, что пришла; PART_OF к не
  * задаче (спринт в вехе) задачей не считается.
  */
-function sprintFactsFor(links: LoreLink[]): typeof SPRINT_FACTS {
-  const facade = links.some(l => l.rel === 'PART_OF' && l.dir === 'in' && l.type === 'task');
-  return facade ? { ...SPRINT_FACTS, childEdge: 'PART_OF', childDir: 'in' } : SPRINT_FACTS;
+function sprintFactsFor(
+  links: LoreLink[],
+  tasksPart: LorePart | undefined,
+  counts: { done: number; total: number; open?: number } | undefined,
+): typeof SPRINT_FACTS {
+  // Форму берём у части, если она есть: имя ребра и направление приходят в
+  // ответе, и догадываться о них незачем.
+  const base = tasksPart
+    ? { ...SPRINT_FACTS, childEdge: tasksPart.rel, childDir: tasksPart.dir }
+    : links.some(l => l.rel === 'PART_OF' && l.dir === 'in' && l.type === 'task')
+      ? { ...SPRINT_FACTS, childEdge: 'PART_OF', childDir: 'in' as const }
+      : SPRINT_FACTS;
+  return counts ? { ...base, counts } : base;
 }
