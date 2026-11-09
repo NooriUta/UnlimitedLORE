@@ -14,6 +14,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
+import { statusMeta } from '../elements/statusMeta';
+import { StatusIcon } from '../core/StatusIcon';
 import { useKitLang } from '../i18n';
 import type { KitLang } from '../i18n';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
@@ -846,14 +848,26 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
         : <span className="sk-news__link is-static">{main}</span>}
       <span className="sk-news__meta">
         {e.unread && <span className="sk-news__unread">{t('unread')}</span>}
-        <Pill variant="id">{e.el}</Pill>
+        {/* Код — ссылка на запись (владелица 09.11: «нет переходов у кодов»). Если
+            заголовок строки и есть код (у спек), второй раз его не пишем — остаётся
+            только «скопировать»: «код повторяется, хотя копировать приятно». */}
+        {(e.title ?? e.el) !== e.el && (href !== null
+          ? <a className="sk-news__code" href={href} data-testid="news-code" onClick={open} onKeyDown={onKey}>{e.el}</a>
+          : <Pill variant="id">{e.el}</Pill>)}
+        <CopyCode code={e.el} label={t('code.copy', { code: e.el })} done={t('code.copied')} />
         {e.time_local
           ? <span className="sk-news__time" title={t('time.local.hint', { tz })} data-testid="news-time-local">{e.time_local}</span>
           : <span className="sk-news__time is-none" title={t('time.none.hint')} data-testid="news-time-none">{t('time.none')}</span>}
         {utc && <span className="sk-news__utc" title={t('time.utc.hint')} data-testid="news-time-utc">{`${utc} UTC`}</span>}
         {(e.projects ?? []).map(p => <span key={p} className="sk-news__proj" title={p}>{shortProject(p)}</span>)}
         {(e.from || e.to) && e.type === 'task' && (
-          <span className="sk-news__status">{`${e.from ?? '∅'} → ${e.to ?? '∅'}`}</span>
+          // Переход статусов — значками со своим цветом (владелица 09.11: «невыделенным
+          // шрифтом написан, может значками сделать?»). Иконка и цвет — общая таблица kit.
+          <span className="sk-news__status" data-testid="news-status">
+            <StatusMark code={e.from} />
+            <span className="sk-news__arrow" aria-hidden="true">{' → '}</span>
+            <StatusMark code={e.to} />
+          </span>
         )}
         {e.mult > 1 && <span className="sk-news__mult" title={t('mult.hint', { n: e.mult })} data-testid="news-mult">{`×${e.mult}`}</span>}
         {e.groups_n > 1 && (
@@ -862,6 +876,39 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
         {e.future && <span data-testid="news-future"><Pill tone="wrn" title={t('future.hint')}>{t('future')}</Pill></span>}
       </span>
     </li>
+  );
+}
+
+/** Статус значком: иконка и цвет из общей таблицы kit, код — подписью и подсказкой. */
+function StatusMark({ code }: { code: string | null }) {
+  if (!code) return <span className="sk-news__st" data-status="">∅</span>;
+  const m = statusMeta(code);
+  return (
+    <span className="sk-news__st" data-status={code} title={code} style={{ '--st-c': m.color } as CSSProperties}>
+      <StatusIcon icon={m.icon} size={12} />
+      {code}
+    </span>
+  );
+}
+
+/** «Скопировать код» — кнопка рядом с кодом; буфер недоступен — молча не врём, что скопировали. */
+function CopyCode({ code, label, done }: { code: string; label: string; done: string }) {
+  const [ok, setOk] = useState(false);
+  const copy = async (ev: MouseEvent) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(code);
+      setOk(true);
+      setTimeout(() => setOk(false), 1500);
+    } catch {
+      setOk(false);
+    }
+  };
+  return (
+    <button type="button" className="sk-news__copy" data-testid="news-copy" aria-label={label} title={ok ? done : label} onClick={copy}>
+      <GameIcon slug={ok ? 'check-mark' : 'papers'} size={12} />
+    </button>
   );
 }
 

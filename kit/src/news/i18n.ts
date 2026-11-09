@@ -177,6 +177,8 @@ const ru = {
   'spark.nodata': '{day}: нет данных о сгорании',
   'types.period': 'за период',
   'bal': '{cl} закрыто · {cr} заведено задач',
+  'code.copy': 'Скопировать код {code}',
+  'code.copied': 'Скопировано',
   'feed': 'Лента',
   'day.collapse': 'Свернуть или развернуть день',
 } as const;
@@ -357,6 +359,8 @@ const en: Record<NewsKey, string> = {
   'spark.nodata': '{day}: no burn data',
   'types.period': 'for the period',
   'bal': '{cl} closed · {cr} tasks added',
+  'code.copy': 'Copy code {code}',
+  'code.copied': 'Copied',
   'feed': 'Feed',
   'day.collapse': 'Collapse or expand the day',
 };
