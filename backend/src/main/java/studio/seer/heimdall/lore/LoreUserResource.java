@@ -145,6 +145,76 @@ public class LoreUserResource extends LoreResourceBase {
 
     public record UserRoleRequest(String kc_sub, String display_name, String project, String role, String action) {}
 
+    public record UserRoleBatchRequest(String kc_sub, String display_name, List<Map<String, Object>> changes,
+                                       Boolean dry_run) {}
+
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-05 · S7B-09 · S7B-13 — массовая смена ролей человека.
+     * dry_run → только план «было → станет» для одного подтверждения на N. Иначе
+     * каждое изменение идёт через {@link #setUserRole} (те же проверки, блокировки
+     * снятия AL-100 и события AL-102), а ответ несёт итог по каждому проекту и
+     * {@code undo} — обратный пакет для отката всей пачки этим же вызовом.
+     * Журнал AO-01 пишет одну точку на HTTP-вызов — пачка видна одной записью.
+     * Пакет НЕ атомарен: отказ по одному проекту не откатывает уже сделанные —
+     * это сказано в ответе (atomic=false) и видно по item.outcome.
+     */
+    @POST
+    @Path("user/role/batch")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setUserRoleBatch(UserRoleBatchRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.kc_sub() == null || req.kc_sub().isBlank()) return badParams("kc_sub required");
+        if (!SAFE_ID.matcher(req.kc_sub()).matches()) return badParams("kc_sub contains illegal characters");
+        String err = LoreRoleBatch.error(req.changes());
+        if (err != null) return badParams(err);
+        try {
+            Map<String, String> current = new java.util.LinkedHashMap<>();
+            for (Map<String, Object> r : ingestService.queryPublic(
+                    "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+                    Map.of("sub", req.kc_sub())))
+                if (r.get("slug") != null) current.put(String.valueOf(r.get("slug")), String.valueOf(r.get("role")));
+            List<Map<String, Object>> plan = LoreRoleBatch.plan(current, req.changes());
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("kc_sub", req.kc_sub());
+            out.put("plan", plan);
+            out.put("undo", LoreRoleBatch.undo(plan));
+            if (Boolean.TRUE.equals(req.dry_run())) {
+                out.put("dry_run", true);
+                out.put("applied", 0);
+                return noStore(Response.ok(out));
+            }
+            List<Map<String, Object>> items = new java.util.ArrayList<>();
+            int applied = 0, failed = 0;
+            for (Map<String, Object> p : plan) {
+                if ("unchanged".equals(p.get("kind"))) continue;
+                boolean remove = "remove".equals(p.get("kind"));
+                Response r = setUserRole(new UserRoleRequest(req.kc_sub(), req.display_name(),
+                    String.valueOf(p.get("project")), remove ? null : String.valueOf(p.get("after")),
+                    remove ? "remove" : null), role);
+                Map<String, Object> item = new java.util.LinkedHashMap<>();
+                item.put("project", p.get("project"));
+                item.put("kind", p.get("kind"));
+                item.put("status", r.getStatus());
+                Object entity = r.getEntity();
+                if (entity instanceof Map<?, ?> m && m.get("outcome") != null) item.put("outcome", m.get("outcome"));
+                if (entity instanceof LoreError le) item.put("error", le);
+                if (r.getStatus() == 200) applied++; else failed++;
+                items.add(item);
+            }
+            out.put("applied", applied);
+            out.put("failed", failed);
+            out.put("atomic", false);
+            out.put("items", items);
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE USER ROLE BATCH] %s: %s", req.kc_sub(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
     @POST
     @Path("user/role")
     @Consumes(MediaType.APPLICATION_JSON)
