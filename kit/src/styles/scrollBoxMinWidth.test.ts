@@ -52,6 +52,7 @@ const SCROLL_BOXES: readonly [selector: string, why: string][] = [
   ['.sk-mdedit__live', 'живой просмотр MD рядом с исходником'],
   ['.sk-shell__main', 'область содержимого оболочки'],
   ['.sk-shell__mods', 'полоса модулей в шапке'],
+  ['.sk-matrix__scroll', 'матрица «ось × ось»: колонок столько, сколько у приложения (K2-MATRIX)'],
 ];
 
 describe('S9-12 · страница не шире окна: правила, которые это держат', () => {

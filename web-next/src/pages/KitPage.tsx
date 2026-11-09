@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, DiffPreview, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -63,6 +63,7 @@ export default function KitPage() {
   // от срока, а не от таймера на клиенте (K2-BATCH-UNDO).
   const [batch, setBatch] = useState<{ id: string; applied: number; total: number; undoUntil: number } | null>(null);
   const [batchUndone, setBatchUndone] = useState(false);
+  const [proposed, setProposed] = useState<number | null>(null);
   const [earOpen, setEarOpen] = useState(false);
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
   // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
@@ -292,6 +293,25 @@ export default function KitPage() {
               />
             </>
           )}
+          <h3 className="kitp__h3">{t('kitPage.flow.matrixHead')}</h3>
+          <p>{t('kitPage.flow.matrixLead')}</p>
+          {/* Четыре исхода ячейки: значение · значения нет · не смогли
+              проверить · нет прав. Матрица ничего не применяет — предложения
+              уходят в дифф выше (K2-MATRIX). */}
+          <Matrix
+            labels={{ rows: t('kitPage.flow.matrixRows'), cols: t('kitPage.flow.matrixCols') }}
+            rows={[{ key: 'r1', title: t('kitPage.flow.matrixR1') }, { key: 'r2', title: t('kitPage.flow.matrixR2') }]}
+            cols={[{ key: 'c1', title: t('kitPage.flow.matrixC1') }, { key: 'c2', title: t('kitPage.flow.matrixC2') }]}
+            options={[{ value: 'o1', title: t('kitPage.flow.matrixO1') }, { value: 'o2', title: t('kitPage.flow.matrixO2') }]}
+            cell={(r, c) => (
+              r === 'r1' && c === 'c1' ? { state: 'value', value: 'o1' }
+                : r === 'r1' ? { state: 'none' }
+                  : c === 'c1' ? { state: 'unverified', reason: t('kitPage.flow.diffUnverWhy') }
+                    : { state: 'forbidden', reason: t('kitPage.flow.diffForbidWhy') }
+            )}
+            onPropose={changes => setProposed(changes.length)}
+          />
+          {proposed !== null && <p className="kitp__panel" role="status">{t('kitPage.flow.matrixProposed', { n: proposed })}</p>}
           <h3 className="kitp__h3">{t('kitPage.flow.secretHead')}</h3>
           {/* Значение здесь показное: витрина не выдаёт настоящих секретов. */}
           <SecretOnce value="demo-0000-0000" label={t('kitPage.flow.secretLabel')} />

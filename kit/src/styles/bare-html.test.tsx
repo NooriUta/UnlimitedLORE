@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, DiffPreview, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 
@@ -154,6 +154,24 @@ function Samples() {
           }}
           now={() => 0}
           onUndo={noop}
+        />
+        {/* Матрица в снимке — со всеми четырьмя исходами ячейки: значение,
+            значения нет, не смогли проверить, нет прав. Именно их различимость
+            одним CSS-слоем и надо видеть глазами (K2-MATRIX). Вид широкий:
+            узкий зависит от ширины окна, а снимок — файл. */}
+        <Matrix
+          narrow={false}
+          labels={{ rows: 'Строки', cols: 'Колонки' }}
+          rows={[{ key: 'r1', title: 'Первая строка' }, { key: 'r2', title: 'Вторая строка' }]}
+          cols={[{ key: 'c1', title: 'Колонка один' }, { key: 'c2', title: 'Колонка два' }]}
+          options={[{ value: 'o1', title: 'Значение один' }, { value: 'o2', title: 'Значение два' }]}
+          cell={(r, c) => (
+            r === 'r1' && c === 'c1' ? { state: 'value', value: 'o1' }
+              : r === 'r1' ? { state: 'none' }
+                : c === 'c1' ? { state: 'unverified', reason: 'источник не ответил' }
+                  : { state: 'forbidden', reason: 'нужна роль администратора' }
+          )}
+          onPropose={noop}
         />
       </section>
       <section className="bare__sec" data-kit="content">

@@ -403,5 +403,16 @@
   "kitPage.flow.diffApplied": "Приложение получило {n} строк(и) — дальше их применяет пачкой с окном отмены.",
   "kitPage.flow.batchHead": "Пачка: окно отмены и частичный отказ",
   "kitPage.flow.batchFail": "Одна строка не применилась",
-  "kitPage.flow.batchFailWhy": "источник отказал: 409"
+  "kitPage.flow.batchFailWhy": "источник отказал: 409",
+  "kitPage.flow.matrixHead": "Матрица: значение в ячейке и состояние проверки",
+  "kitPage.flow.matrixLead": "Матрица ничего не применяет: предложения уходят в дифф, а он — в пачку с окном отмены.",
+  "kitPage.flow.matrixRows": "Строки",
+  "kitPage.flow.matrixCols": "Колонки",
+  "kitPage.flow.matrixR1": "Первая строка",
+  "kitPage.flow.matrixR2": "Вторая строка",
+  "kitPage.flow.matrixC1": "Колонка один",
+  "kitPage.flow.matrixC2": "Колонка два",
+  "kitPage.flow.matrixO1": "Значение один",
+  "kitPage.flow.matrixO2": "Значение два",
+  "kitPage.flow.matrixProposed": "Предложено изменений: {n} — дальше их показывает дифф."
 }

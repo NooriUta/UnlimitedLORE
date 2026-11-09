@@ -662,5 +662,14 @@
   "kit.batch.expired": "Окно отмены закрылось — отменить уже нельзя.",
   "kit.batch.noUndo": "Отмена для этой пачки не предусмотрена.",
   "kit.batch.badTime": "Срок окна отмены не понят — отмену не предлагаем, чтобы не обещать лишнего.",
-  "kit.batch.undone": "Пачка отменена."
+  "kit.batch.undone": "Пачка отменена.",
+  "kit.matrix.empty": "Осей нет — показывать нечего.",
+  "kit.matrix.menu": "Выбор значения",
+  "kit.matrix.clear": "Снять значение",
+  "kit.matrix.setRow": "задать всей строке",
+  "kit.matrix.setCol": "задать всей колонке",
+  "kit.matrix.skipped": "Пропущено ячеек: {n} — их не удалось проверить или смотреть не дали.",
+  "kit.matrix.cell.none": "значения нет",
+  "kit.matrix.cell.unverified": "не смогли проверить",
+  "kit.matrix.cell.forbidden": "нет прав смотреть"
 }
