@@ -24,6 +24,30 @@ class RoleMatrixSliceTest {
         assertTrue(sql.contains("ORDER BY display_name"), sql);
     }
 
+    /**
+     * Kit 2 (K2-MATRIX, владелица 09.11 через S7A-12): ячейка несёт СОСТОЯНИЕ, а не роль|null —
+     * «проверено / не смогли / нет прав». Для графа LORE ячейка честно «проверено»: роли прочитаны.
+     * Источники Keycloak/Forgejo добавятся своими ячейками со своим состоянием.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void matrixRowGetsCellsWithState() {
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("rows", java.util.List.of(
+            new java.util.HashMap<>(Map.of("kc_sub", "u1", "projects", java.util.List.of("a/one", "a/two"),
+                "roles", java.util.List.of("reader", "developer"))),
+            new java.util.HashMap<>(Map.of("kc_sub", "u2", "projects", java.util.List.of(), "roles", java.util.List.of()))));
+        LoreRoleMatrix.fold(body);
+        java.util.List<Map<String, Object>> rows = (java.util.List<Map<String, Object>>) body.get("rows");
+        java.util.List<Map<String, Object>> cells = (java.util.List<Map<String, Object>>) rows.get(0).get("cells");
+        assertEquals(2, cells.size());
+        assertEquals(Map.of("project", "a/one", "role", "reader", "state", "checked", "source", "graph"), cells.get(0));
+        assertEquals(java.util.List.of(), rows.get(1).get("cells"), "ролей нет — пусто, но строка проверена");
+        assertEquals("checked", rows.get(1).get("state"), "у строки своё состояние: граф прочитан");
+        assertTrue(rows.get(0).containsKey("projects"), "старые поля не убраны — обратная совместимость");
+        assertEquals(java.util.List.of("checked", "unavailable", "forbidden"), LoreRoleMatrix.STATES);
+    }
+
     @Test
     void matrixIsClassifiedForScope() {
         assertTrue(LoreSlices.SCOPE_PENDING.containsKey("role_matrix")
