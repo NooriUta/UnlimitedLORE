@@ -7,8 +7,8 @@
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
 import { useMemo, useState } from 'react';
 import {
-  LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState,
-  type KitCtx, type RecordPlacement,
+  LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
+  type KitCtx, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
@@ -46,12 +46,24 @@ export interface ListPassportProps {
   onGo?: (id: string) => void;
   /** «⤢» — развернуть на весь экран; нет — кнопки нет (уже во весь экран). */
   onFull?: () => void;
+  /**
+   * Окно, в котором список держит состояние в адресе (D-21).
+   *
+   * Нужно, чтобы вкладка записи жила в ТОМ ЖЕ адресе, что `open` и `place`:
+   * паспорт не выбирает себе окно сам, иначе в тестах и в песочнице он писал
+   * бы в другое, и вкладка не доходила бы (так и поймали это у палитры).
+   */
+  win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, win }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
-  const [tab, setTab] = useState('overview');
+  // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
+  // поделиться, «назад» возвращает прежнюю вкладку. Хук kit уже это умел и
+  // до сих пор не вызывался ниоткуда — паспорт держал вкладку местным
+  // состоянием, и адрес о ней не знал.
+  const [tab, setTab] = useRecordTab('overview', win);
   const slice = useMemo(() => <T,>(name: string, params?: Record<string, string>) => fetchSlice<T>(name, params, { fetchImpl }), [fetchImpl]);
   const drafts = useMemo(() => createDraftsApi(fetchImpl), [fetchImpl]);
   // Вкладка «История» (S5-11) была в kit, но в v2 её никто не подключал:
