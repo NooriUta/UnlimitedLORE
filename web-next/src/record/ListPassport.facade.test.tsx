@@ -12,7 +12,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons } from '@seidr/kit';
+import { registerGameIcons, type UrlWindow } from '@seidr/kit';
 import ListPassport from './ListPassport';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
