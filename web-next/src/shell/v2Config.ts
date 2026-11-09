@@ -94,7 +94,13 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       recent: true,
       groups: [
         // S4-23: «Новости» — первой группой: с них начинается день.
-        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', items: [item('news', ICON_CANON.sectionNews)] },
+        // S4-MENU-STATES, слова владелицы 09.11 с прода: «новости должны
+        // стоять до моих видов и недавних и при сворачивании левого меню».
+        // Группа первая в наборе, но личные блоки («Мои виды», «Недавние») в
+        // kit рисуются выше групп, и до новостей приходилось проскроллить
+        // личное. `pinTop` поднимает ИМЕННО эту группу — что важнее, решает
+        // приложение, kit предметных имён не знает.
+        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', pinTop: true, items: [item('news', ICON_CANON.sectionNews)] },
         // «Работа» — что делаем и когда: спринты, задачи, вехи, релизы.
         {
           id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)',

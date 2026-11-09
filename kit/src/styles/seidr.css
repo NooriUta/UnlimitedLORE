@@ -3674,6 +3674,44 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-shell--menu-rail .sk-shell__note { display: none; }
 .sk-shell--menu-rail .sk-shell__item { justify-content: center; padding-inline: 0; }
 .sk-shell--menu-rail .sk-shell__side { padding: 6px 2px; }
+/* Личный блок в рейке — кнопка с выпадающим меню (слова владелицы 09.11:
+   «недавние должны быть кнопкой с меню, а не кучей непонятных значков»).
+   Меню выезжает ВПРАВО от рейки: внутри рейки шириной в иконку оно было бы
+   обрезано, а подписи записей — то, ради чего оно и открывается. */
+.sk-shell__railmenu { position: relative; display: flex; justify-content: center; }
+.sk-shell__railmenu-btn { justify-content: center; padding-inline: 0; min-height: max(var(--tap), 28px); }
+.sk-shell__railmenu-pop {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 4px);
+  z-index: 30;
+  min-width: 240px;
+  max-width: 340px;
+  max-height: 60dvh;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+}
+/* Тело меню — прежние списки целиком, своей раскладки у него нет. */
+.sk-shell__railmenu-body { display: block; min-width: 0; }
+.sk-shell__railmenu-head {
+  margin: 0 0 4px;
+  padding: 0 4px;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+/* Подписи внутри меню видны ВСЕГДА, даже в рейке: правило рейки скрывает
+   подписи пунктов колонки, а здесь они и есть содержимое. */
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__label,
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__id,
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__tag,
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__note { display: initial; }
+.sk-shell--menu-rail .sk-shell__railmenu-pop .sk-shell__item { justify-content: flex-start; padding-inline: 6px; }
 .sk-shell__menu-toggle { flex: 0 0 auto; }
 /* Колонка свойств открыта — тексту чуть меньше правого поля. */
 .sk-read--rail .sk-read__main { padding-right: 8px; }
