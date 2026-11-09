@@ -221,3 +221,47 @@ describe('паспорт v2 — одновременная правка', () => 
     expect((box as HTMLTextAreaElement).value).toBe('мой текст');
   }, 20000);
 });
+
+// Вкладка паспорта живёт в адресе (аудит D-21).
+//
+// Было: `ListPassport` держал вкладку местным состоянием, и адрес о ней не
+// знал. Следствие по словам аудита: «вкладки не живут в URL» — ссылку на
+// «Связи» или «Историю» переслать нельзя, перезагрузка всегда возвращает
+// «Обзор». Хук kit `useRecordTab` это умел и не вызывался ниоткуда.
+describe('паспорт v2 — вкладка в адресе', () => {
+  /** Окно с историей, как у списка: паспорт обязан писать именно в него. */
+  const urlWin = (search = '') => {
+    const w: UrlWindow = {
+      location: { pathname: '/', search, hash: '' },
+      history: {
+        pushState: (_s, _t, url) => { w.location.search = String(url).replace(/^[^?]*/, '').replace(/#.*$/, ''); },
+        replaceState: (_s, _t, url) => { w.location.search = String(url).replace(/^[^?]*/, '').replace(/#.*$/, ''); },
+      },
+    };
+    return w;
+  };
+
+  const showWithWin = (f: typeof fetch, w: UrlWindow) => render(
+    <ListPassport type="sprint" id="SP" placement="bottom" fetchImpl={f} backLabel="Спринты" onBack={() => {}} win={w} />,
+  );
+
+  it('положительный контроль: паспорт открылся', async () => {
+    showWithWin(net(() => json(FACADE)), urlWin());
+    expect(await screen.findByText('Название от фасада', {}, { timeout: 8000 })).toBeTruthy();
+  }, 15000);
+
+  it('выбор вкладки пишется в адрес — ссылкой можно поделиться', async () => {
+    const w = urlWin();
+    showWithWin(net(() => json(FACADE)), w);
+    const tab = await screen.findByRole('tab', { name: /Связи/ }, { timeout: 8000 });
+    fireEvent.click(tab);
+    await waitFor(() => expect(w.location.search).toContain('tab=links'));
+  }, 15000);
+
+  it('адрес с вкладкой открывает её сразу, а не «Обзор»', async () => {
+    showWithWin(net(() => json(FACADE)), urlWin('?tab=links'));
+    await screen.findByText('Название от фасада', {}, { timeout: 8000 });
+    const tab = await screen.findByRole('tab', { name: /Связи/ }, { timeout: 8000 });
+    expect(tab.getAttribute('aria-selected')).toBe('true');
+  }, 15000);
+});
