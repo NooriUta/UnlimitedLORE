@@ -10,7 +10,7 @@
 // Чтобы отличить одно от другого, названия в ответе фасада и в срезах РАЗНЫЕ:
 // если на экране название среза, значит экран всё ещё на эмуляции.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import ListPassport from './ListPassport';
@@ -92,5 +92,65 @@ describe('паспорт v2 — на боевом фасаде', () => {
       const ds = document.querySelector('.sk-ds') as HTMLElement;
       expect(ds?.textContent).toContain('собран на клиенте');
     });
+  }, 15000);
+});
+
+// Управление связями доходит до человека (S4-MODEL-PASSPORT-LIST).
+//
+// В kit форма привязки была написана давно, но хук `onRelation` ей никто не
+// давал — формы просто не было. А кому можно управлять, теперь говорит сервер
+// (`manageable` у связи), а не вид UML: путь привязки есть не у каждой связи.
+describe('паспорт v2 — управление связями', () => {
+  const withRelation = (manageable: boolean) => ({
+    ...FACADE,
+    perms: { ...FACADE.perms, can_edit: true },
+    schema: {
+      ...FACADE.schema,
+      relations: [{
+        // IMPLEMENTED_IN ADR↔спринт: вид realization, и путь привязки у неё на
+        // сервере ЕСТЬ (маршрут ADR_SPRINT) — ровно тот случай, где правило по
+        // виду UML скрывало управление, хотя сервер его позволяет.
+        key: 'adrs', label: 'Реализует ADR', relation: 'realization',
+        rel: 'IMPLEMENTED_IN', dir: 'in', target_type: 'adr', place: 'links', manageable,
+      }],
+    },
+  });
+
+  const openDeps = async () => {
+    // Реализация живёт в своей вкладке «Реализация», а не в общей «Связи»:
+    // общая — это RecordLinks, там управления нет и быть не должно.
+    const tab = await screen.findByRole('tab', { name: /Реализация/ }, { timeout: 8000 });
+    tab.click();
+  };
+
+  it('связь с путём привязки — форма есть, хотя вид UML это запрещал', async () => {
+    show(net(() => json(withRelation(true))));
+    await openDeps();
+    await waitFor(() => expect(screen.getByRole('textbox')).toBeTruthy());
+  }, 15000);
+
+  it('связь без пути — формы нет: иначе человек введёт код и получит UNKNOWN_RELATION', async () => {
+    show(net(() => json(withRelation(false))));
+    await openDeps();
+    await waitFor(() => expect(document.querySelector('.sk-rel__add')).toBeNull());
+  }, 15000);
+
+  it('сервер отказал по роли — причина напечатана, а не проглочена', async () => {
+    const http = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://lore.test');
+      if (url.pathname.endsWith('/relation')) return json({ error: 'FORBIDDEN', detail: 'admin role required' }, 403);
+      if (url.pathname.startsWith('/lore/record/')) return json(withRelation(true));
+      if (url.pathname === '/lore/history') return json({ type: 'sprint', id: 'SP', rows: [], attribution: { ok: true } });
+      if (url.pathname === '/lore/me/drafts') return json({ drafts: [] });
+      return json({ rows: [] });
+    }) as unknown as typeof fetch;
+    show(http);
+    await openDeps();
+    const box = await screen.findByRole('textbox', {}, { timeout: 8000 });
+    fireEvent.change(box, { target: { value: 'SPRINT_B' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Привязать' }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/роль администратора/));
+    // Код не потерян: его не придётся набирать заново.
+    expect((box as HTMLInputElement).value).toBe('SPRINT_B');
   }, 15000);
 });

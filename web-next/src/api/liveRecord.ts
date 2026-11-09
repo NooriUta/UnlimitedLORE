@@ -95,7 +95,7 @@ const groupOf = (v: unknown): LoreField['group'] => {
  * Вид связи по UML (D-2026-LORE-RECORD-RELATION-UML). Незнакомое слово —
  * 'association': рисуем самым слабым утверждением, а не выдумываем сильное.
  */
-const RELATIONS: readonly string[] = ['aggregation', 'composition', 'dependency', 'association', 'generalization'];
+const RELATIONS: readonly string[] = ['composition', 'aggregation', 'association', 'attribute', 'realization', 'generalization'];
 const relationOf = (v: unknown): KitRelation =>
   (RELATIONS.includes(str(v)) ? str(v) : 'association') as KitRelation;
 
@@ -192,6 +192,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       relation: relationOf(r.relation), rel, dir,
       // Счётчик сервер не присылает — считаем по тем связям, что пришли.
       count: links.filter(l => l.rel === rel && l.dir === dir).length,
+      // Есть ли путь привязки — знает только сервер (LoreRecordRelationRoutes).
+      // Нет признака — это «нет пути», а не «решайте сами»: иначе человек
+      // введёт код и получит UNKNOWN_RELATION.
+      manageable: r.manageable === true,
     };
   });
 

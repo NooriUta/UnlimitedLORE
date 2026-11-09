@@ -29,7 +29,14 @@ export interface KitDictItem { code:string; title:string; icon?:string; color?:s
 /** Вид связи по UML (D-2026-LORE-RECORD-RELATION-UML). */
 export type KitRelation = 'composition'|'aggregation'|'association'|'attribute'|'realization'|'generalization';
 /** Связь типа: ребро, направление и вид — kit рисует и управляет по виду, типов записей не зная. */
-export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in' }
+/**
+ * Связь типа. `manageable` — есть ли у приложения путь привязки ИМЕННО для
+ * этой связи; задан — он главнее вида UML, потому что про свои пути знает
+ * только сервер (у LORE это `LoreRecordRelationRoutes`). Не задан — остаётся
+ * прежнее правило по виду UML, чтобы конфиги без этого признака не потеряли
+ * управление связями.
+ */
+export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in'; manageable?:boolean }
 export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[]; overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; type:'text'|'md'|'enum'|'ref'|'date'|'number'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string}[] }
 export interface KitRecord { id:string; kind:string; title:string; status:string; fields:Record<string,unknown>; body_md?:string; updated_at?:string }
 export interface KitEdge { from:string; to:string; type:string }

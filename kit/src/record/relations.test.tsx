@@ -9,7 +9,7 @@
 //  realization ▷ — «Реализация»: что реализует / обосновывает;
 //  generalization — строкой в шапке («заменяет X»).
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { KitConfig, KitCtx, KitRecord } from '../core/contract';
 import { RecordView } from './RecordView';
 
@@ -70,13 +70,20 @@ describe('паспорт по видам связей', () => {
     expect(tabNames().some(n => n?.startsWith('attribute'))).toBe(false); // поля-ссылки — в «Свойствах»
   });
 
-  it('управление: агрегацию и зависимость можно отвязать и привязать — через hooks.onRelation', () => {
+  // Проверка та же, но с ожиданием ответа. Причина: вызов хука стал
+  // асинхронным намеренно — отказ привязки раньше проглатывался (`void
+  // call(...)`), и неудача выглядела как успех. Теперь группа ждёт ответ,
+  // чтобы напечатать причину и не терять введённый код, поэтому второй вызов
+  // случается на следующий тик, а не в том же.
+  it('управление: агрегацию и зависимость можно отвязать и привязать — через hooks.onRelation', async () => {
     const onRelation = vi.fn(async () => {});
     view('decisions', config(onRelation));
-    fireEvent.click(screen.getByRole('button', { name: 'Отвязать: Решение 1' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Отвязать: Решение 1' })); });
     expect(onRelation).toHaveBeenCalledWith({ type: 'adr', id: 'ADR-1', rel: 'DECIDED_IN', dir: 'in', target: 'D-1', action: 'remove' });
-    fireEvent.change(screen.getByRole('textbox', { name: 'Привязать: Решения' }), { target: { value: 'D-9' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Привязать' }));
+    await act(async () => {
+      fireEvent.change(screen.getByRole('textbox', { name: 'Привязать: Решения' }), { target: { value: 'D-9' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Привязать' }));
+    });
     expect(onRelation).toHaveBeenLastCalledWith({ type: 'adr', id: 'ADR-1', rel: 'DECIDED_IN', dir: 'in', target: 'D-9', action: 'add' });
   });
   it('композицию отвязать нельзя — дочь без родителя не живёт', () => {
