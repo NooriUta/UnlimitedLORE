@@ -1559,7 +1559,12 @@ final class LoreSchemaMigrations {
         // SPRINT_UXR_S7C_WHY_CANVAS/S7C-01: холст «зачем» на сервере — три новых
         // типа KnowCanvas / KnowCanvasItem / KnowCanvasLink. Аддитивно, major 17,
         // v1 о них не знает. DDL рядом с логикой (LoreCanvas).
-        new Step(73, 17, "canvas_storage", LoreCanvas.SCHEMA_SQL)
+        new Step(73, 17, "canvas_storage", LoreCanvas.SCHEMA_SQL),
+
+        // SPRINT_UXR_S5_RECORD_TASKS/S5-09 (kit 09.11): версия записи в черновике —
+        // строкой, как record.version в /lore/record. Прежнее base_version объявлено
+        // INTEGER и строку не примет — новое свойство, аддитивно, major 17.
+        new Step(74, 17, "user_drafts_record_version", LoreMeDrafts.SCHEMA_SQL_V74)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
