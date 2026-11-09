@@ -220,7 +220,7 @@ export function shortProject(slug: string): string {
 
 const NONE: Record<string, NewsKey> = {
   '(no-project)': 'none.project', '(no-component)': 'none.component',
-  '(no-sprint)': 'none.sprint', '(no-milestone)': 'none.milestone',
+  '(no-sprint)': 'none.sprint', '(unknown)': 'none.who', '(no-milestone)': 'none.milestone',
 };
 
 /** Подпись значения оси: заглушки сервера — словами, проекты — коротко. */
@@ -268,6 +268,7 @@ export function eventAxisValues(e: NewsEvent, axis: NewsAxis): string[] {
     case 'sprint': return [e.sprint ?? '(no-sprint)'];
     case 'milestone': return e.milestones?.length ? e.milestones : ['(no-milestone)'];
     case 'author': return [e.author];
+    case 'who': return [e.who ?? '(unknown)'];
     case 'day': return [e.day_local];
   }
 }
