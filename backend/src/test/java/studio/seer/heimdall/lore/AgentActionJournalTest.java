@@ -28,6 +28,27 @@ class AgentActionJournalTest {
         assertTrue(sql.contains("source = :caller"), sql);
     }
 
+    // SPRINT_UXR_S7B_ADMIN/S7B-02: журнал действий админки — тот же ряд lore.action,
+    // но только админские семейства; фильтр по семейству и по вызывающему.
+    @Test
+    void adminJournalReadsOnlyAdminFamilies() {
+        String sql = LoreSlices.compose("admin_actions", Map.of()).sql();
+        assertTrue(sql.contains("metric = 'lore.action'"), sql);
+        for (String f : LoreSlices.ADMIN_FAMILIES)
+            assertTrue(sql.contains("'" + f + "'"), "семейство " + f + " в журнале админки: " + sql);
+        assertFalse(sql.contains("'task'") || sql.contains("'sprint'"), "рабочие семейства не админка: " + sql);
+        assertTrue(sql.contains("ORDER BY ts DESC"), sql);
+        assertTrue(LoreSlices.ADMIN_FAMILIES.containsAll(java.util.List.of("dict", "kc", "admin", "user", "project")));
+    }
+
+    @Test
+    void adminJournalFiltersByFamilyAndCaller() {
+        String sql = LoreSlices.compose("admin_actions", Map.of("family", "dict", "caller", "omiloreadmin")).sql();
+        assertTrue(sql.contains("object_type = :family"), sql);
+        assertTrue(sql.contains("source = :caller"), sql);
+        assertEquals(1, sql.toUpperCase().split(" WHERE ", -1).length - 1, "один WHERE: " + sql);
+    }
+
     @Test
     void readsAreNotJournalled() {
         assertFalse(LoreRequestStats.isJournalled("GET"));
