@@ -36,9 +36,12 @@ class LoreMeDraftsLiveDbTest {
     private static final String SUB_B = "s509-user-b";
     private static final String REC = "ref_type=task&ref_id=SPRINT_S509/T-1";
 
-    private static String draft(String body, int base) {
+    /** Версия записи — та же строка, что record.version в /lore/record (valid_from открытого состояния). */
+    private static final String VER = "2026-11-09T02:45:27.453349250Z";
+
+    private static String draft(String body, String base) {
         return "{\"ref_type\":\"task\",\"ref_id\":\"SPRINT_S509/T-1\",\"field\":\"note_md\","
-            + "\"body_md\":\"" + body + "\",\"base_version\":" + base + "}";
+            + "\"body_md\":\"" + body + "\",\"base_version\":\"" + base + "\"}";
     }
 
     private static List<Map<String, Object>> drafts() {
@@ -50,12 +53,12 @@ class LoreMeDraftsLiveDbTest {
     @TestSecurity(user = "a", roles = {"viewer"})
     @JwtSecurity(claims = {@Claim(key = "sub", value = SUB_A)})
     void saveThenRestore() {
-        given().contentType("application/json").body(draft("первый набросок", 3))
+        given().contentType("application/json").body(draft("первый набросок", VER))
             .when().post("/lore/me/drafts").then().statusCode(200);
         List<Map<String, Object>> d = drafts();
         assertEquals(1, d.size(), d.toString());
         assertEquals("первый набросок", d.get(0).get("body_md"));
-        assertEquals(3, d.get(0).get("base_version"));
+        assertEquals(VER, d.get(0).get("base_version"), "версия записи возвращается той же строкой, что record.version");
         assertNotNull(d.get(0).get("saved_at"), "время сохранения — для «Восстановить черновик от HH:MM»");
         assertFalse(d.get(0).containsKey("owner_sub"), "kc_sub наружу не отдаётся");
     }
@@ -65,7 +68,7 @@ class LoreMeDraftsLiveDbTest {
     @TestSecurity(user = "a", roles = {"viewer"})
     @JwtSecurity(claims = {@Claim(key = "sub", value = SUB_A)})
     void secondSaveUpdatesTheSameDraft() {
-        given().contentType("application/json").body(draft("второй набросок", 3))
+        given().contentType("application/json").body(draft("второй набросок", VER))
             .when().post("/lore/me/drafts").then().statusCode(200);
         List<Map<String, Object>> d = drafts();
         assertEquals(1, d.size(), "черновик поля один, повтор его обновляет: " + d);
