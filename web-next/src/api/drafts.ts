@@ -24,13 +24,14 @@ export interface DraftRow {
   ref_id: string;
   field: string;
   body_md: string;
-  base_version: number | null;
+  /** Версия записи, поверх которой писали черновик (`record.version`); строка. */
+  base_version: string | null;
   saved_at: string;
 }
 
 export interface DraftsApi {
   list: (ref: { type: string; id: string }) => Promise<DraftRow[]>;
-  save: (row: { type: string; id: string; field: string; bodyMd: string; baseVersion?: number | null }) => Promise<void>;
+  save: (row: { type: string; id: string; field: string; bodyMd: string; baseVersion?: string | null }) => Promise<void>;
   remove: (ref: { type: string; id: string; field?: string }) => Promise<void>;
 }
 
@@ -74,7 +75,9 @@ export function createDraftsApi(fetchImpl: typeof fetch = loreFetch): DraftsApi 
           ref_id: String(row.ref_id ?? ''),
           field: String(row.field ?? ''),
           body_md: typeof row.body_md === 'string' ? row.body_md : '',
-          base_version: typeof row.base_version === 'number' ? row.base_version : null,
+          // Сервер отдаёт строку (PR #964). Старые числовые черновики приходят
+          // строкой цифр — это НЕ версия записи, и равенства с ней не даст.
+          base_version: typeof row.base_version === 'string' && row.base_version ? row.base_version : null,
           saved_at: String(row.saved_at ?? ''),
         };
       });
@@ -101,37 +104,35 @@ export interface DraftSlotOptions {
   id: string;
   field: string;
   /**
-   * Версия записи сейчас (`record.version` из `lore.record/1`); `null` —
-   * неизвестна.
-   *
-   * Строка — это версия фасада (`valid_from` открытого состояния). Сравнить её
-   * с `base_version` черновика нечем: см. причину у `comparableVersion`.
+   * Версия записи сейчас — `record.version` из `lore.record/1`, строка
+   * (`valid_from` открытого состояния); `null` — неизвестна.
    */
-  version: string | number | null;
+  version: string | null;
 }
 
 /**
- * Версия, которую можно сравнивать и отправлять, либо `null`.
+ * Версия, пригодная для сравнения и отправки, либо `null`.
  *
- * **Две серверные поверхности расходятся типом** (сверено по коду 09.11):
- * `GET /lore/record` отдаёт `record.version` СТРОКОЙ (`valid_from`), а
- * `/lore/me/drafts` объявляет `base_version` ЦЕЛЫМ
- * (`KnowUserDraft.base_version INTEGER`, `DraftRequest.base_version: Integer`,
- * проверка «base_version must be >= 0»). При этом S5-09 говорит, что второе
- * берётся из первого — одновременно это выполнить нельзя.
+ * **История этой функции — про то, чего мы НЕ стали выдумывать.** Утром 09.11
+ * две серверные поверхности расходились типом: `/lore/record` отдавал
+ * `record.version` строкой, а `/lore/me/drafts` объявлял `base_version` целым
+ * (`INTEGER`, проверка «>= 0»), при том что S5-09 говорит «второе берётся из
+ * первого». Привести одно к другому на клиенте было нельзя: из ISO-времени
+ * целое получается только придумкой, и пометка «запись изменили после
+ * черновика» срабатывала бы по придуманному числу. Поэтому версия тогда не
+ * отправлялась и не сравнивалась вовсе, а расхождение ушло серверной сессии.
  *
- * Перевод мы НЕ придумываем. Из ISO-времени целое можно получить только
- * выдумкой (миллисекунды, хэш, порядковый номер), и тогда пометка «запись
- * изменили после черновика» срабатывала бы по придуманному числу. Ложная
- * пометка хуже отсутствующей: человек бросит правку, которой ничего не
- * угрожало. Поэтому строковая версия не отправляется и не сравнивается, а
- * расхождение передано серверной сессии и записано в задачах S5-09 / S5-08.
+ * Она выбрала строку (PR #964, в develop): `base_version` — это ровно
+ * `record.version`, сравнение только на равенство, предел длины 64. Поэтому
+ * здесь больше нет заглушки.
  *
- * Когда сервер приведёт `base_version` к той же строке — здесь останется
- * вернуть `version` как есть, и пометка заработает сама.
+ * Отдельно про старые черновики: до #964 в базе лежали числа, и сервер отдаёт
+ * их строкой цифр. Такая строка никогда не равна метке версии, поэтому у
+ * старого черновика пометка «запись изменили» появится. Так и нужно: мы не
+ * знаем, поверх чего его писали, и утверждать «поверх текущей версии» нельзя.
  */
-export function comparableVersion(version: string | number | null): number | null {
-  return typeof version === 'number' ? version : null;
+export function comparableVersion(version: string | null): string | null {
+  return typeof version === 'string' && version ? version : null;
 }
 
 /**

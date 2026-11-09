@@ -48,16 +48,57 @@ export function relationTargets(record: KitRecord, ctx: KitCtx, def: KitRelation
     .map(e => (def.dir === 'out' ? e.to : e.from));
 }
 
-const canManage = (def: KitRelationDef) => def.relation === 'aggregation' || def.relation === 'association';
+/**
+ * Можно ли менять эту связь.
+ *
+ * Признак `manageable` от приложения главнее вида UML: путь привязки есть не у
+ * каждой связи, и знает об этом только та сторона, что его предоставляет. Пока
+ * правило было по виду, расходилось в обе стороны: у спринта `HAS_TASK` —
+ * агрегация, и форма рисовалась без пути на сервере (человек получал
+ * UNKNOWN_RELATION), а `DEPENDS_ON` — «зависимость», и управление скрывалось,
+ * хотя путь есть.
+ *
+ * Признака нет — прежнее правило по виду: иначе конфиги, которые о нём не
+ * знают, молча потеряли бы управление связями.
+ */
+const canManage = (def: KitRelationDef) =>
+  def.manageable ?? (def.relation === 'aggregation' || def.relation === 'association');
 
 function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
   record: KitRecord; ctx: KitCtx; def: KitRelationDef; lang: KitLang; single: boolean;
   onRelation?: NonNullable<NonNullable<KitCtx['config']['hooks']>['onRelation']>;
 }) {
   const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const ids = relationTargets(record, ctx, def);
   const manage = onRelation && canManage(def);
-  const call = (target: string, action: 'add' | 'remove') => onRelation?.({ type: record.kind, id: record.id, rel: def.rel, dir: def.dir, target, action });
+  /**
+   * Привязать или отвязать. Возвращает, получилось ли.
+   *
+   * Раньше вызов шёл через `void call(...)`, то есть отказ промиса
+   * ВЫБРАСЫВАЛСЯ, а поле ввода очищалось сразу, до ответа. Снаружи это
+   * выглядело как успех: поле опустело, строки нет — и человек заключал, что
+   * ввёл не тот код, хотя сервер отказывал по одной и той же причине (путь
+   * привязки может требовать прав или вовсе не существовать у этой связи).
+   *
+   * Молчаливый отказ хуже ошибки: ошибку читают и идут просить доступ, а
+   * молчание заставляет перебирать варианты.
+   */
+  const call = async (target: string, action: 'add' | 'remove'): Promise<boolean> => {
+    if (!onRelation) return false;
+    setBusy(true);
+    setFailed(null);
+    try {
+      await onRelation({ type: record.kind, id: record.id, rel: def.rel, dir: def.dir, target, action });
+      return true;
+    } catch (e) {
+      setFailed(e instanceof Error && e.message ? e.message : String(e));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
   // Связи — таблицей с общими колонками списка (замечание владелицы по
   // v1.17.4: «связи пока там, где я хотела бы видеть таблицы… наши любимые
   // общие колонки»). Пустую таблицу не рисуем: о пустоте говорим словами,
@@ -74,17 +115,30 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
       />
     );
   const form = manage && (
-    <form className="sk-rel__add" onSubmit={e => { e.preventDefault(); const v = draft.trim(); if (v) { void call(v, 'add'); setDraft(''); } }}>
+    <form
+      className="sk-rel__add"
+      onSubmit={e => {
+        e.preventDefault();
+        const v = draft.trim();
+        // Поле очищается ТОЛЬКО после удачи: иначе код, который не прошёл,
+        // пришлось бы набирать заново — а он, скорее всего, верный.
+        if (v) void call(v, 'add').then(ok => { if (ok) setDraft(''); });
+      }}
+    >
       <input type="text" value={draft} onChange={e => setDraft(e.target.value)} placeholder={kitT(lang, 'kit.record.rel.idPlaceholder')}
         aria-label={kitT(lang, 'kit.record.rel.link', { label: def.label })} />
-      <button type="submit" className="sk-btn">{kitT(lang, 'kit.record.rel.linkBtn')}</button>
+      <button type="submit" className="sk-btn" disabled={busy}>{kitT(lang, 'kit.record.rel.linkBtn')}</button>
     </form>
   );
-  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{form}</div>;
+  // Причина отказа — словами и рядом с управлением, а не в консоли.
+  const complaint = failed && (
+    <p className="sk-rel__failed" role="alert">{kitT(lang, 'kit.record.rel.failed', { reason: failed })}</p>
+  );
+  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{form}{complaint}</div>;
   return (
     <section role="group" aria-label={def.label} className="sk-rel__group" data-relation={def.relation}>
       <h3 className="sk-rel__head"><span className="sk-rel__mark" aria-hidden="true">{RELATION_MARK[def.relation]}</span>{def.label}</h3>
-      {list}{form}
+      {list}{form}{complaint}
     </section>
   );
 }

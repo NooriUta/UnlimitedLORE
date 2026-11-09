@@ -4288,6 +4288,15 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Вид записи, которого нет в справочнике видов: показываем код как есть. */
 .sk-rel__raw { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rel__empty { color: var(--t3); font-size: var(--fs-sm); }
+/* Отказ привязки: цвет опасности, потому что по этой связи нельзя делать
+   выводы — она осталась прежней, хотя человек её менял. */
+.sk-rel__failed {
+  margin: 6px 0 0;
+  color: var(--dng);
+  font-size: var(--fs-sm);
+  border-left: 2px solid var(--dng);
+  padding-left: 8px;
+}
 .sk-rel__mark { color: var(--acc); font-family: var(--mono); }
 .sk-rel__unlink { margin-left: auto; min-width: max(var(--tap), 24px); min-height: max(var(--tap), 24px); border: 1px solid var(--bd); border-radius: var(--r-sm); background: none; color: var(--t3); cursor: pointer; }
 .sk-rel__unlink:hover { border-color: var(--dng); color: var(--dng); }

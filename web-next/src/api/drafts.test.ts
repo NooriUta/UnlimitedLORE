@@ -21,7 +21,7 @@ const json = (body: unknown, status = 200) =>
 
 const row = (over: Record<string, unknown> = {}) => ({
   ref_type: 'adr', ref_id: 'ADR-1', field: 'decision_md',
-  body_md: 'Недописанное', base_version: 3, saved_at: '2026-11-09T07:05:00Z', ...over,
+  body_md: 'Недописанное', base_version: '2026-11-08T10:00:00Z', saved_at: '2026-11-09T07:05:00Z', ...over,
 });
 
 const call = (f: ReturnType<typeof vi.fn>, i = 0) => ({
@@ -47,11 +47,11 @@ describe('клиент черновиков', () => {
   it('сохранение — POST с полем и базовой версией', async () => {
     const f = vi.fn(async () => json({ ok: true, saved_at: '2026-11-09T07:06:00Z' }));
     await createDraftsApi(f as unknown as typeof fetch)
-      .save({ type: 'adr', id: 'ADR-1', field: 'decision_md', bodyMd: 'Текст', baseVersion: 3 });
+      .save({ type: 'adr', id: 'ADR-1', field: 'decision_md', bodyMd: 'Текст', baseVersion: '2026-11-08T10:00:00Z' });
     const { url, init, body } = call(f);
     expect(url).toBe('/lore/me/drafts');
     expect(init.method).toBe('POST');
-    expect(body).toEqual({ ref_type: 'adr', ref_id: 'ADR-1', field: 'decision_md', body_md: 'Текст', base_version: 3 });
+    expect(body).toEqual({ ref_type: 'adr', ref_id: 'ADR-1', field: 'decision_md', body_md: 'Текст', base_version: '2026-11-08T10:00:00Z' });
   });
 
   it('версии нет — ключ base_version не посылается, а не уходит нулём', async () => {
@@ -79,39 +79,39 @@ describe('клиент черновиков', () => {
 });
 
 describe('переходник к MD-полю', () => {
-  const slot = (rows: unknown[], version: number | null) => {
+  const slot = (rows: unknown[], version: string | null) => {
     const f = vi.fn(async () => json({ drafts: rows }));
     const api = createDraftsApi(f as unknown as typeof fetch);
     return { f, slot: draftSlot({ api, type: 'adr', id: 'ADR-1', field: 'decision_md', version }) };
   };
 
   it('черновик своего поля находится; чужие поля не подставляются', async () => {
-    const { slot: s } = slot([row({ field: 'context_md', body_md: 'Чужое' }), row()], 3);
+    const { slot: s } = slot([row({ field: 'context_md', body_md: 'Чужое' }), row()], '2026-11-08T10:00:00Z');
     expect((await s.load())?.text).toBe('Недописанное');
   });
 
   it('черновика поля нет — null, а не пустая строка', async () => {
-    const { slot: s } = slot([row({ field: 'context_md' })], 3);
+    const { slot: s } = slot([row({ field: 'context_md' })], '2026-11-08T10:00:00Z');
     expect(await s.load()).toBeNull();
   });
 
   it('базовая версия совпала — пометки расхождения нет', async () => {
-    const { slot: s } = slot([row({ base_version: 3 })], 3);
+    const { slot: s } = slot([row({ base_version: '2026-11-08T10:00:00Z' })], '2026-11-08T10:00:00Z');
     expect((await s.load())?.stale).toBe(false);
   });
 
   it('базовая версия разошлась — stale: запись правили после черновика', async () => {
-    const { slot: s } = slot([row({ base_version: 2 })], 5);
+    const { slot: s } = slot([row({ base_version: '2026-11-07T10:00:00Z' })], '2026-11-09T10:00:00Z');
     expect((await s.load())?.stale).toBe(true);
   });
 
   it('версия записи неизвестна — расхождение не выдумывается', async () => {
-    const { slot: s } = slot([row({ base_version: 2 })], null);
+    const { slot: s } = slot([row({ base_version: '2026-11-07T10:00:00Z' })], null);
     expect((await s.load())?.stale).toBe(false);
   });
 
   it('время сохранения доходит как есть — подпись «от ЧЧ:ММ» делает kit', async () => {
-    const { slot: s } = slot([row()], 3);
+    const { slot: s } = slot([row()], '2026-11-08T10:00:00Z');
     expect((await s.load())?.savedAt).toBe('2026-11-09T07:05:00Z');
   });
 });
