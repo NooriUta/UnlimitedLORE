@@ -17,6 +17,16 @@ export interface SliceBody<T = Record<string, unknown>> {
   limit?: number;
   hint?: string;
   scope?: { applied: boolean; projects?: number; note?: string };
+  /**
+   * Сужение по выбранным в шапке проектам (S4-03, серверный PR #1053).
+   *
+   * `requested` — что просили, `applied` — применилось ли вообще (срез может
+   * быть не привязан к проектам), `dropped` — какие проекты отброшены правами.
+   * Если ни один выбранный проект недоступен, сервер отвечает 200 и пустыми
+   * строками, а не 403 — поэтому «пусто» здесь обязано сопровождаться словами,
+   * иначе его не отличить от «данных нет в системе».
+   */
+  scope_projects?: { requested: string[]; applied: boolean; dropped?: string[]; note?: string };
   outside_scope?: { id: string; verdict: string; reason: string } | null;
   page?: {
     limit: number | null; offset: number; total: number; has_more: boolean;

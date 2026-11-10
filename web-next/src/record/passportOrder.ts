@@ -40,6 +40,37 @@ function reason(e: unknown): string {
   return e === undefined ? 'причина не названа' : String(e);
 }
 
+const obj = (v: unknown): Record<string, unknown> | null =>
+  (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
+
+/**
+ * ПОЧЕМУ порядка нет — тремя разными утверждениями.
+ *
+ * Разные виноватые: раздела `surfaces` в документе нет вовсе (сервер его не
+ * отдал или до клиента дошла старая модель) · раздел есть, а этого ТИПА в нём
+ * нет · тип есть, и сервер честно говорит `decided: false` — порядок он ещё не
+ * решал. Одна общая строка на все три случая не позволяла понять по экрану,
+ * куда смотреть (находка CJM на проде 09.11.2026).
+ */
+function whyNotDecided(model: unknown, type: string): string {
+  const doc = obj(model);
+  const surfaces = doc && obj(doc.surfaces);
+  // Загрузчик модели приводит отсутствующий раздел к пустому объекту, поэтому
+  // «нет раздела» — это ПУСТО, а не undefined. Отдельно смотрим `missing`:
+  // сервер сам называет разделы, которых в документе нет.
+  const missing = Array.isArray(doc?.missing) ? doc.missing.map(String) : [];
+  const noSurfaces = !surfaces || Object.keys(surfaces).length === 0
+    || missing.some(m => m === 'surfaces:*' || m.startsWith('surfaces:passport'));
+  if (noSurfaces) return 'в модели нет раздела surfaces.passport — порядок выбрал клиент';
+  const passport = obj(surfaces.passport);
+  if (!passport || Object.keys(passport).length === 0) {
+    return 'в модели есть surfaces, но нет passport — порядок выбрал клиент';
+  }
+  const forType = obj(passport[type]);
+  if (!forType) return `в модели нет порядка для типа «${type}» — порядок выбрал клиент`;
+  return `для типа «${type}» сервер порядок ещё не решал (decided: false)`;
+}
+
 /** Разбор без React — чтобы это можно было проверить тестом без экрана. */
 export async function fetchPassportOrder(
   type: string,
@@ -66,9 +97,13 @@ export async function fetchPassportOrder(
     // по CJM: лишний ключ больше не отказывает целиком, значит о нём обязан
     // сказать кто-то другой, иначе ослабление превратится в молчание.
     notes.push(...order.notes);
-    // «Тип не решён» — это НЕ ошибка и не повод молчать: человек должен знать,
-    // что порядок перед ним выбрал клиент, а не модель.
-    if (!order.decided) notes.push('порядок разделов — умолчание приложения: для этого типа модель его не задаёт');
+    // «Порядка нет» — это ТРИ разных утверждения, и у них разные виноватые.
+    // Пока они были слиты в одну строку, проверка на проде v1.17.7 не могла
+    // сказать, что случилось: серверная сессия проверила по коду, что
+    // `/lore/model` отдаёт `surfaces.passport.sprint` с `decided: true`, а
+    // порядок на экране не применился — и понять, не дошёл ли раздел, не дошёл
+    // ли тип или сервер действительно не решал, было нечем.
+    if (!order.decided) notes.push(`порядок разделов — умолчание приложения: ${whyNotDecided(res.model, type)}`);
     return { order, notes };
   } catch (e) {
     // Сторож формы отказал (лишний ключ, неизвестный slot, дробный order).

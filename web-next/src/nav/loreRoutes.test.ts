@@ -139,11 +139,8 @@ describe('S4-13 · адреса записей собирает только lor
     const p = join(d, n);
     return statSync(p).isDirectory() ? walk(p) : /\.tsx?$/.test(n) && !/\.test\./.test(n) ? [p] : [];
   });
-  // TaskReadPage — отдельная страница «читать целиком» вне оболочки (S5-04): она
-  // сама читает и пишет свой адрес ?section=tasks&passport=…. Убрать её — решение
-  // владелицы (правило «функции не удалять без approve»), до него — явное исключение.
   // PassportDemo — витрина /kit/passport на демо-данных вне приложения (S4-33).
-  const ALLOW = [join('nav', 'loreRoutes.ts'), join('tasks', 'TaskReadPage.tsx'), join('pages', 'PassportDemo.tsx')];
+  const ALLOW = [join('nav', 'loreRoutes.ts'), join('pages', 'PassportDemo.tsx')];
   const files = walk(SRC).filter(f => !ALLOW.some(a => f.endsWith(a)));
 
   it('карта «тип → раздел» (Record<…, V2Section>) больше нигде не заводится', () => {

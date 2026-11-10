@@ -239,3 +239,61 @@ describe('третье место: «в конце контента» — не �
     expect(gluedSections(order).map(s => s.ref)).toEqual(['DEPENDS_ON:out', 'DEPENDS_ON:in']);
   });
 });
+
+describe('порядок спринта с ПРОДА — ровно то, что просила владелица (CJM 09.11.2026)', () => {
+  // Фрагмент, который серверная сессия выписала из своего кода
+  // (`LorePassportSurface.build()`), слово в слово: у спринта пять разделов, у
+  // двух из них slot content, у фаз — more.
+  //
+  // Проверка нужна потому, что на проде v1.17.7 порядок НЕ применился, и надо
+  // было отделить «клиент не умеет» от «клиент не получил». Этот тест говорит:
+  // получив такой документ, клиент раскладывает ровно так, как она просила —
+  // «Спринт: первое, как ни странно, задачи, потом уже контент, а зависимости
+  // и прочее можно скрыть под море».
+  const PROD_SPRINT = {
+    decided: true,
+    sections: [
+      { key: 'tasks', source: 'relation', ref: 'PART_OF:in', order: 1, slot: 'own' },
+      { key: 'content', source: 'body', ref: null, order: 2, slot: 'own' },
+      { key: 'dependsOn', source: 'relation', ref: 'DEPENDS_ON:out', order: 3, slot: 'content' },
+      { key: 'blocks', source: 'relation', ref: 'DEPENDS_ON:in', order: 4, slot: 'content' },
+      { key: 'phases', source: 'relation', ref: 'IN_PHASE:in', order: 5, slot: 'more' },
+    ],
+  };
+  const model = { surfaces: { partial: true, passport: { sprint: PROD_SPRINT } } };
+  const order = passportSections(model, 'sprint');
+
+  /** Вкладки, как их строит паспорт: контент, задачи, связи, плюс чужая. */
+  const items = [
+    { id: 'content' }, { id: 'tasks' }, { id: 'dependsOn' }, { id: 'blocks' },
+    { id: 'phases' }, { id: 'journal' },
+  ];
+
+  it('положительный контроль: документ принят, порядок решён', () => {
+    expect(order.decided).toBe(true);
+    expect(order.notes).toEqual([]);
+  });
+
+  it('ЗАДАЧИ ПЕРВЫМИ, потом контент — ровно просьба владелицы', () => {
+    const out = applySections(items, order);
+    expect(out.map(i => i.id).slice(0, 2)).toEqual(['tasks', 'content']);
+  });
+
+  it('зависимости уходят из ряда вкладок ВОВСЕ — иначе показались бы дважды', () => {
+    const out = applySections(items, order);
+    expect(out.map(i => i.id)).not.toContain('dependsOn');
+    expect(out.map(i => i.id)).not.toContain('blocks');
+    // И они же — в списке вклеиваемых в хвост тела, в порядке модели.
+    expect(gluedSections(order).map(s => s.key)).toEqual(['dependsOn', 'blocks']);
+  });
+
+  it('фазы — под «Ещё», а не выброшены', () => {
+    const out = applySections(items, order);
+    expect(out.find(i => i.id === 'phases')).toMatchObject({ secondary: true });
+  });
+
+  it('раздел, которого в модели нет, остаётся на месте и не прячется', () => {
+    const out = applySections(items, order);
+    expect(out.map(i => i.id)).toContain('journal');
+  });
+});

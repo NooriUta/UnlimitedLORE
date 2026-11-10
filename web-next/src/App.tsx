@@ -23,7 +23,7 @@ import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary, Pill, Skeleton, StorageBanner, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
-import { SprintPassport, SPRINT_TABS, type SprintTab } from './sprint/SprintPassport';
+import { legacyPassportHref } from './nav/loreRoutes';
 import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
@@ -43,7 +43,6 @@ const PassportDemo = lazy(() => import('./pages/PassportDemo'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
 const NewsPage = lazy(() => import('./news/NewsPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
-const TaskReadPage = lazy(() => import('./tasks/TaskReadPage'));
 // Админка v2 (SPRINT_UXR_S7B_ADMIN): пока отдельной страницей /admin, как /news;
 // модуль ?mod=admin в оболочке подключит kit (v2Config — её зона).
 const AdminPage = lazy(() => import('./admin/AdminPage'));
@@ -60,7 +59,7 @@ const AdminPage = lazy(() => import('./admin/AdminPage'));
 // seer-prefs ещё до запроса, а ответ сервера её потом уточняет.
 const meClient = createLiveS2Client();
 
-export type Route = 'kit' | 'passport' | 'news' | 'admin' | 'task' | 'home' | ListScreenId;
+export type Route = 'kit' | 'passport' | 'news' | 'admin' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /**
@@ -87,23 +86,12 @@ export function routeOf(path: string, search = ''): Route {
   if (p === '/kit/passport') return 'passport';
   if (p === '/news') return 'news';
   if (p === '/admin') return 'admin';
-  const q = new URLSearchParams(search);
-  if (q.get('section') === 'tasks' && q.get('passport')) return 'task';
+  // Старые адреса паспорта (?section=tasks|sprints&passport=…) — не отдельные
+  // страницы, а оболочка: App переписывает их в раздел с записью (legacyPassportHref).
+  void search;
   return LIST_ROUTES[p] ?? 'home';
 }
 
-/**
- * Паспорт спринта по URL (S5-02): ?section=sprints&passport=ID[&tab=…].
- * Паспорта открываются из списков S4 тем же адресом. Неизвестная вкладка —
- * «Задачи» (первая и по умолчанию: задачи спринта видны за 2 клика).
- */
-export function sprintPassportOf(search: string): { sprintId: string; tab: SprintTab } | null {
-  const p = new URLSearchParams(search);
-  const id = p.get('passport')?.trim();
-  if (p.get('section') !== 'sprints' || !id) return null;
-  const tab = (SPRINT_TABS as readonly string[]).includes(p.get('tab') ?? '') ? (p.get('tab') as SprintTab) : 'tasks';
-  return { sprintId: id, tab };
-}
 
 /** /sprints → /?sec=sprint (замена записи истории, без перезагрузки): экран
  *  списка живёт в разделе оболочки, отдельной страницы у него нет. */
@@ -131,6 +119,12 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   const current = path ?? (typeof window === 'undefined' ? '/' : window.location.pathname);
   const query = search ?? win?.location.search ?? (typeof window === 'undefined' ? '' : window.location.search);
   const route = routeOf(current, query);
+  // Старый адрес отдельной страницы паспорта → раздел оболочки, запись во весь экран
+  // (владелица 09.11: «да, переводи задачу и спринт в оболочку»). Замена записи
+  // истории без перезагрузки: оболочка ниже читает уже новый адрес.
+  const legacy = legacyPassportHref(query);
+  const w = win ?? (typeof window === 'undefined' ? undefined : window);
+  if (legacy && w) w.history.replaceState(null, '', legacy);
   // Страницы вне оболочки подписаны (S4-17, находка P0 аудита 08.11): без
   // шапки и меню LORE выглядит сломанным, и отличить витрину от поломки
   // человек не может, пока ему не сказали. Витрины — «демо вне приложения»,
@@ -159,28 +153,6 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
         <StorageBanner storage={storage} lang={lang} />
         <OutsideShell kind="standalone" />
         <Suspense fallback={<Skeleton lines={8} />}><AdminPage /></Suspense>
-      </ErrorBoundary>
-    );
-  }
-  // Паспорта S5 (задача, спринт) — пока отдельные страницы по URL, вне оболочки.
-  if (route === 'task') {
-    return (
-      <ErrorBoundary lang="ru">
-        <StorageBanner storage={storage} lang="ru" />
-        <OutsideShell kind="standalone" />
-        <Suspense fallback={<Skeleton />}><TaskReadPage /></Suspense>
-      </ErrorBoundary>
-    );
-  }
-  const passport = sprintPassportOf(query);
-  if (passport) {
-    return (
-      <ErrorBoundary lang="ru">
-        <StorageBanner storage={storage} lang="ru" />
-        <OutsideShell kind="standalone" back="/?sec=sprint" />
-        <main data-lore-app="v2">
-          <SprintPassport sprintId={passport.sprintId} tab={passport.tab} />
-        </main>
       </ErrorBoundary>
     );
   }
