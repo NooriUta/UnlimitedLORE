@@ -67,7 +67,9 @@ describe('S4-03 · выбор проектов в шапке v2', () => {
     fireEvent.click(trigger());
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Все мои/ }));
     expect(onChange).toHaveBeenLastCalledWith(['unlimitedlore']);
-    expect(trigger().textContent).toMatch(/Все мои \(1\)/);
+    // 10.11.2026: число в подписи называет, что оно про СВОИ, и берётся из
+    // ответа про мои проекты, а не счётом по списку git-проектов.
+    expect(trigger().textContent).toMatch(/Все мои \(1 своих\)/);
   });
 
   it('не опознан (401) — «все мои» недоступно с объяснением', async () => {

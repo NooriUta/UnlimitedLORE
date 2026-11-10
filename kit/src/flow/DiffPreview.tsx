@@ -38,6 +38,7 @@
 // только форма (сторож — греп по исходнику в `DiffPreview.test.tsx`).
 import { useId, useState } from 'react';
 import { kitPlural, kitT, type KitLang } from '../i18n';
+import { unknownWord } from './unknownOutcome';
 
 /** Что строка сделает: добавится · снимется · сменится · уже есть. */
 export type DiffKind = 'add' | 'remove' | 'same' | 'change';
@@ -218,7 +219,10 @@ export function DiffPreview({ rows, onApply, busy, label, confirm, lang = 'ru' }
                 {r.detail && <span className="sk-diff__detail">{r.detail}</span>}
                 {r.check.state !== 'checked' && (
                   <span className="sk-diff__check" data-testid={`kit-diff-check-${r.id}`}>
-                    {kitT(lang, r.check.state === 'forbidden' ? 'kit.diff.check.forbidden' : 'kit.diff.check.unverified')}
+                    {/* Слова «неизвестно» — из общего словаря kit
+                        (unknownOutcome.ts): те же, что у ячейки матрицы и у
+                        цепочки причин. Второго словаря у kit нет. */}
+                    {unknownWord(lang, r.check.state)}
                     {reason && <span className="sk-diff__reason">{reason}</span>}
                   </span>
                 )}

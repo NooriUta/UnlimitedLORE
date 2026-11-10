@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, ContentRelease, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, ChainExplain, ContentRelease, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -175,6 +175,23 @@ function Samples() {
                   : { state: 'forbidden', reason: 'нужна роль администратора' }
           )}
           onPropose={noop}
+        />
+        {/* Цепочка причин в снимке — со ВСЕМИ пятью исходами шага, помеченным
+            решающим шагом и оборванным хвостом: именно их различимость одним
+            CSS-слоем и надо видеть глазами (K2-CHAIN-EXPLAIN). */}
+        <ChainExplain
+          label="Почему такой вывод"
+          verdict="Доступ есть"
+          tone="suc"
+          decidedBy="s2"
+          stopped={{ notRun: 2, reason: 'дальше не считали — уже решилось' }}
+          steps={[
+            { id: 's1', title: 'Первый шаг', outcome: { state: 'confirmed', detail: 'подробность' } },
+            { id: 's2', title: 'Второй шаг', outcome: { state: 'denied', detail: 'подробность' } },
+            { id: 's3', title: 'Третий шаг', outcome: { state: 'unverified', reason: 'источник не ответил' } },
+            { id: 's4', title: 'Четвёртый шаг', outcome: { state: 'forbidden', reason: 'смотреть не дали' } },
+            { id: 's5', title: 'Пятый шаг', outcome: { state: 'unasked', reason: 'источник выключен' } },
+          ]}
         />
         {/* Выпуск содержимого: пословный дифф поля, класс от сервера и журнал
             активаций. В снимке видно, как читаются зачёркнутое «было» и

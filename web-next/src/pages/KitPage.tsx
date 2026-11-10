@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -325,6 +325,25 @@ export default function KitPage() {
             onPropose={changes => setProposed(changes.length)}
           />
           {proposed !== null && <p className="kitp__panel" role="status">{t('kitPage.flow.matrixProposed', { n: proposed })}</p>}
+          <h3 className="kitp__h3">{t('kitPage.flow.chainHead')}</h3>
+          <p>{t('kitPage.flow.chainLead')}</p>
+          {/* Пять исходов шага, помеченный решающий шаг и оборванный хвост:
+              вердикт, шаги и исходы приходят ДАННЫМИ — что из чего следует,
+              знает приложение, а не kit (K2-CHAIN-EXPLAIN). */}
+          <ChainExplain
+            label={t('kitPage.flow.chainLabel')}
+            verdict={t('kitPage.flow.chainVerdict')}
+            tone="suc"
+            decidedBy="s2"
+            stopped={{ notRun: 2, reason: t('kitPage.flow.chainStopWhy') }}
+            steps={[
+              { id: 's1', title: t('kitPage.flow.chainS1'), outcome: { state: 'confirmed', detail: t('kitPage.flow.chainDetail') } },
+              { id: 's2', title: t('kitPage.flow.chainS2'), outcome: { state: 'denied', detail: t('kitPage.flow.chainDetail') } },
+              { id: 's3', title: t('kitPage.flow.chainS3'), outcome: { state: 'unverified', reason: t('kitPage.flow.diffUnverWhy') } },
+              { id: 's4', title: t('kitPage.flow.chainS4'), outcome: { state: 'forbidden', reason: t('kitPage.flow.diffForbidWhy') } },
+              { id: 's5', title: t('kitPage.flow.chainS5'), outcome: { state: 'unasked', reason: t('kitPage.flow.chainUnaskedWhy') } },
+            ]}
+          />
           <h3 className="kitp__h3">{t('kitPage.flow.relHead')}</h3>
           <p>{t('kitPage.flow.relLead')}</p>
           {/* Класс выпуска считает сервер; витрина показывает присланный. */}

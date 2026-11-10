@@ -460,6 +460,45 @@
 </div>
 <span class="sk-matrix__axis sk-matrix__axis--cols">Колонки</span>
 </div>
+<section class="sk-chain" aria-label="Почему такой вывод" data-tone="suc">
+<h3 class="sk-chain__head">Почему такой вывод</h3>
+<p class="sk-chain__verdict" data-testid="kit-chain-verdict" data-tone="suc">Доступ есть</p>
+<ol class="sk-chain__steps" data-testid="kit-chain-steps">
+<li class="sk-chain__step" data-testid="kit-chain-step-s1" data-state="confirmed">
+<span class="sk-chain__num" data-testid="kit-chain-num-s1">1</span>
+<span class="sk-chain__title">Первый шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s1">подтвердил</span>
+<span class="sk-chain__aside">подробность</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s2" data-state="denied" data-decider="true">
+<span class="sk-chain__num" data-testid="kit-chain-num-s2">2</span>
+<span class="sk-chain__title">Второй шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s2">опроверг</span>
+<span class="sk-chain__aside">подробность</span>
+<span class="sk-chain__decider" data-testid="kit-chain-decider-s2">решающий шаг</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s3" data-state="unverified">
+<span class="sk-chain__num" data-testid="kit-chain-num-s3">3</span>
+<span class="sk-chain__title">Третий шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s3">не смогли проверить</span>
+<span class="sk-chain__aside">источник не ответил</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s4" data-state="forbidden">
+<span class="sk-chain__num" data-testid="kit-chain-num-s4">4</span>
+<span class="sk-chain__title">Четвёртый шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s4">нет прав смотреть</span>
+<span class="sk-chain__aside">смотреть не дали</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s5" data-state="unasked">
+<span class="sk-chain__num" data-testid="kit-chain-num-s5">5</span>
+<span class="sk-chain__title">Пятый шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s5">источник не спрашивали</span>
+<span class="sk-chain__aside">источник выключен</span>
+</li>
+</ol>
+<p class="sk-chain__note sk-chain__note--wrn" data-testid="kit-chain-stopped">Цепочку прервали — дальше не считали ещё 2 шага.<span class="sk-chain__aside">дальше не считали — уже решилось</span>
+</p>
+</section>
 <section class="sk-rel" aria-label="Выпуск содержимого">
 <header class="sk-rel__top">
 <p class="sk-rel__versions" data-testid="kit-rel-versions">Версия 7 → 8</p>

@@ -2514,6 +2514,90 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-bottom: 1px solid var(--bd);
 }
 .sk-matrix__listtitle { min-width: 0; color: var(--t1); font-size: var(--fs-sm); }
+/* «Не спрашивали» — свой вид, а не оттенок сбоя: это наш выбор, а не отказ
+   источника, и по этим двум случаям человек делает разное. */
+.sk-matrix__cell[data-state='unasked'] { border-style: dashed; border-color: var(--bd); color: var(--t3); }
+
+/* ---------- Почему такой вывод: вердикт и цепочка причин (K2-CHAIN-EXPLAIN) ----------
+   Цепочка читается сверху вниз, в том порядке, в котором шаги решали. Цвет
+   здесь НЕСЁТ СМЫСЛ, но не остаётся единственным носителем: исход каждого
+   шага назван словом рядом, потому что по цвету одному доступы не разбирают.
+   Решающий шаг выделен рамкой слева и подписью: без неё цепочка читается как
+   список фактов, а не как объяснение. Оборванная цепочка и неназванный
+   решающий шаг идут предупреждением — это неполнота, а не норма. */
+.sk-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-chain__head {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-chain__verdict {
+  margin: 0;
+  min-width: 0;
+  color: var(--t1);
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-lg);
+}
+.sk-chain__verdict[data-tone='suc'] { color: var(--suc); }
+.sk-chain__verdict[data-tone='wrn'] { color: var(--wrn); }
+.sk-chain__verdict[data-tone='dng'] { color: var(--dng); }
+.sk-chain__verdict[data-tone='inf'] { color: var(--inf); }
+.sk-chain__steps { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-chain__step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-left: 2px solid var(--bd);
+  font-size: var(--fs-sm);
+}
+.sk-chain__step[data-state='confirmed'] { border-left-color: var(--suc); }
+.sk-chain__step[data-state='denied'] { border-left-color: var(--dng); }
+.sk-chain__step[data-state='unverified'] { border-left-color: var(--wrn); background: color-mix(in srgb, var(--wrn) 10%, transparent); }
+.sk-chain__step[data-state='forbidden'] { border-left-color: var(--inf); background: color-mix(in srgb, var(--inf) 10%, transparent); }
+.sk-chain__step[data-state='unasked'] { border-left-style: dashed; color: var(--t3); }
+.sk-chain__step[data-decider='true'] { background: color-mix(in srgb, var(--acc) 10%, transparent); }
+.sk-chain__num {
+  min-width: 14px;
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+.sk-chain__title { min-width: 0; color: var(--t1); }
+.sk-chain__step[data-state='unasked'] .sk-chain__title { color: var(--t2); }
+.sk-chain__outcome { color: var(--t2); font-size: var(--fs-xs); }
+.sk-chain__step[data-state='confirmed'] .sk-chain__outcome { color: var(--suc); }
+.sk-chain__step[data-state='denied'] .sk-chain__outcome { color: var(--dng); }
+.sk-chain__step[data-state='unverified'] .sk-chain__outcome { color: var(--wrn); }
+.sk-chain__step[data-state='forbidden'] .sk-chain__outcome { color: var(--inf); }
+.sk-chain__aside { color: var(--t2); font-size: var(--fs-xs); }
+.sk-chain__decider {
+  padding: 1px 8px;
+  border: 1px solid var(--acc);
+  border-radius: 999px;
+  color: var(--acc);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-chain__none { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-chain__note { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-chain__note--wrn { color: var(--wrn); }
 
 /* ---------- Выпуск содержимого: дифф версий и активация (K-12) ----------
    Пословный дифф: убранное зачёркнуто и красным, добавленное — зелёным и
