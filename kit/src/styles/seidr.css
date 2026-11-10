@@ -3758,6 +3758,25 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields__row { display: contents; }
 .sk-rec-fields dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
+/* Ряд значений-чипов в «Свойствах» (S4-29): первые три и «ещё N».
+   У унаследованного чипа пунктирная рамка И подпись источника словами — по
+   одному оттенку «от спринта» не прочитать. */
+.sk-rec-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+.sk-rec-chips__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  min-width: 0;
+}
+.sk-rec-chips__item[data-inherited] { border-style: dashed; }
+.sk-rec-chips__link { color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sk-rec-chips__from { color: var(--t3); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-rec-chips__more { font-size: var(--fs-2xs); padding: 1px 8px; }
 .sk-rec-fields__none { color: var(--t3); }
 .sk-rec-fields__mono { font-family: var(--mono); }
 /* Набор ссылок и сама ссылка сжимаются до своей колонки: inline-flex без

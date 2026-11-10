@@ -17,6 +17,8 @@ import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
 import { applySections, gluedSections, sectionGroups, type PassportOrder } from '../model/surfaces';
+import { isChipList } from '../core/chipValue';
+import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
 import { Segmented } from '../elements/Segmented';
 import { IconButton } from '../elements/IconButton';
@@ -175,6 +177,7 @@ function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
 
 interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver>; drafts?: (field: string) => MdDraftSlot | undefined }
 
+
 function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string }): ReactNode {
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
@@ -183,6 +186,10 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
   if (type === 'ref') {
+    // Значения пришли чипами (S4-29) — ряд чипов со свёрткой; строки — прежний
+    // путь. Проверяем форму ДАННЫХ, а не тип поля: сервер сменил форму у
+    // существующих полей, и тип поля об этом не знает.
+    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} />;
     const ids = (Array.isArray(value) ? value : [value]).map(v => valueText(v));
     return <span className="sk-rec-fields__refs">{ids.map(id => <RecordRef key={id} id={id} ctx={ctx} />)}</span>;
   }

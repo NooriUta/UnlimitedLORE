@@ -35,6 +35,7 @@ import {
   BatchUndo, ContentRelease, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
+import { ValueChips } from '../record/ValueChips';
 
 const SNAPSHOT = '../../demo/seidr-bare.html';
 // В jsdom-окружении import.meta.url не file:// — пути от корня пакета kit
@@ -190,6 +191,24 @@ function Samples() {
           log={[{ version: 7, who: 'кто-то', when: '2026-11-01T10:00:00Z', action: 'activate' }]}
           onActivate={noop}
           onRollback={noop}
+        />
+      </section>
+      <section className="bare__sec" data-kit="chips">
+        <h2 className="bare__h2">Значения-чипы</h2>
+        {/* Три случая сразу: свой чип, унаследованный (пунктир плюс подпись
+            источника) и чип БЕЗ подписи — он показывает код, а не пустоту.
+            Шестой уходит под «ещё N»: снимок статический, и ряд в нём стоит
+            свёрнутым — ровно так его видит человек при открытии. */}
+        <ValueChips
+          href={id => `#rec=${encodeURIComponent(id)}`}
+          value={[
+            { id: 'NooriUta/UnlimitedLORE', label: 'UnlimitedLORE', inherited_from: null },
+            { id: 'NooriUta/BRAGI', label: 'BRAGI', inherited_from: null },
+            { id: 'NooriUta/FORSETI', label: null, inherited_from: null },
+            { id: 'NooriUta/MIDGARD', label: 'MIDGARD', inherited_from: { type: 'sprint', id: 'SPRINT_UXR_S4_UI_SHELL_LISTS' } },
+            { id: 'NooriUta/VOLVA', label: 'VÖLVA', inherited_from: { type: 'sprint', id: 'SPRINT_UXR_S4_UI_SHELL_LISTS' } },
+            { id: 'NooriUta/BRAGI_WEB', label: 'BRAGI web', inherited_from: { type: 'feature', id: 'FEAT-PUBLISH' } },
+          ]}
         />
       </section>
       <section className="bare__sec" data-kit="content">

@@ -12,6 +12,7 @@ import {
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
+import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 
@@ -384,6 +385,30 @@ export default function KitPage() {
               <MartProse text={md} />
             </div>
           </div>
+          {/*
+            Ряд значений-чипов (S4-29). Показан ЗДЕСЬ, а не в «Элементах»:
+            это значение поля, и смысл виден только рядом с текстом и подписью.
+
+            В примере намеренно три случая сразу: свой чип, унаследованный (с
+            подписью «от спринта» и кодом источника в подсказке) и чип без
+            подписи — он показывает КОД, а не пустоту. И седьмой чип за «ещё N»,
+            чтобы свёртку было видно живой.
+          */}
+          <h3 className="kitp__h3">{t('kitPage.chips.title')}</h3>
+          <p>{t('kitPage.chips.lead')}</p>
+          <dl className="kitp__chips">
+            <dt>{t('kitPage.chips.projects')}</dt>
+            <dd>
+              <ValueChips href={paletteCtx.href} value={[
+                { id: 'NooriUta/UnlimitedLORE', label: 'UnlimitedLORE', inherited_from: null },
+                { id: 'NooriUta/BRAGI', label: 'BRAGI', inherited_from: null },
+                { id: 'NooriUta/FORSETI', label: null, inherited_from: null },
+                { id: 'NooriUta/MIDGARD', label: 'MIDGARD', inherited_from: { type: 'sprint', id: 'SPRINT_UXR_S4_UI_SHELL_LISTS' } },
+                { id: 'NooriUta/VOLVA', label: 'VÖLVA', inherited_from: { type: 'sprint', id: 'SPRINT_UXR_S4_UI_SHELL_LISTS' } },
+                { id: 'NooriUta/BRAGI_WEB', label: 'BRAGI web', inherited_from: { type: 'feature', id: 'FEAT-PUBLISH' } },
+              ]} />
+            </dd>
+          </dl>
           <h3 className="kitp__h3">{t('kitPage.md.html')}</h3>
           <SandboxedHtmlFrame html={t('kitPage.md.htmlSample')} title={t('kitPage.md.htmlTitle')} />
         </section>

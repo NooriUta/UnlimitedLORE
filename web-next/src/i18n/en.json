@@ -669,5 +669,8 @@
   "admin.roles.danger.logged": "The batch is recorded in the action journal.",
   "admin.roles.danger.journal": "Open in the journal",
   "admin.roles.danger.done": "Done",
-  "admin.roles.danger.cancel": "Cancel"
+  "admin.roles.danger.cancel": "Cancel",
+  "kitPage.chips.title": "Chip values",
+  "kitPage.chips.lead": "A field value may arrive as an object: an id for the link, a label for the human, and a mark of inheritance. The row shows the first three, the rest sit under “N more”. An inherited chip says where it came from — “the task’s project” and “its sprint’s project” are different claims. No label means the id is shown, not emptiness.",
+  "kitPage.chips.projects": "Projects"
 }

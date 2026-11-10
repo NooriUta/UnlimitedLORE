@@ -4,6 +4,7 @@
 //
 // Бюджет — правила SPRINT_UXR_S9_SCALE_OPT: S9-01 «не больше 50 строк на
 // группу · ещё N», S9-02 «при >20 группах — топ-10 + Прочие, свёрнуто».
+import { asChip, chipId } from '../core/chipValue';
 import type { KitConfig, KitFilter, KitMeta, KitRecord, KitShowClosed } from '../core/contract';
 import { isClosedCategory, normalizeAxisCategory } from '../core/statusAxis';
 
@@ -60,6 +61,12 @@ export function valueKey(v: unknown): string {
   if (v === undefined || v === null) return '';
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  // Значение-чип ключуется КОДОМ (S4-29). Без этого каждый чип становился в
+  // фасете отдельным значением со своим JSON — то есть фильтр по проекту
+  // ломался молча, а в группировке один проект давал столько групп, сколько
+  // у него встретилось подписей.
+  const c = asChip(v);
+  if (c) return chipId(c);
   return JSON.stringify(v);
 }
 
