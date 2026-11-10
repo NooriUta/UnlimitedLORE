@@ -250,6 +250,21 @@ final class LoreEntityHistory {
         return out;
     }
 
+    /** Режимы свёртки. */
+    static final java.util.Set<String> COLLAPSE_MODES = java.util.Set.of("agent");
+
+    /** ЗАГЛУШКА S9-09: author и collapse пока не проверяются. */
+    static String pageError(String authorKind, String author, String field, String collapse,
+                            String order, Integer offset, Integer limit) {
+        return pageError(authorKind, field, order, offset, limit);
+    }
+
+    /** ЗАГЛУШКА S9-09: author и collapse пока игнорируются. */
+    static Map<String, Object> page(List<Map<String, Object>> rows, String authorKind, String author, String field,
+                                    String collapse, String order, Integer offset, Integer limit) {
+        return page(rows, authorKind, field, order, offset, limit);
+    }
+
     private static boolean isSuccess(Object status) {
         if (status instanceof Number n) return n.doubleValue() >= 200 && n.doubleValue() < 300;
         if (status == null) return false;
