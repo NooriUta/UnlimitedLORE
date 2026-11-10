@@ -1,12 +1,23 @@
 // @vitest-environment jsdom
-// ОДИН ОБЩИЙ ПОПОВЕР ВМЕСТО ТРЁХ РАЗНЫХ МЕНЮ
+// ОДИН ОБЩИЙ ПОПОВЕР ВМЕСТО ПЯТИ РАЗНЫХ МЕНЮ
 // (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-MENU-STATES, строка «долг» в плане владелицы).
 //
 // ОТКУДА ДОЛГ. Его назвал сам код — KitShell, RailMenu: «Своё маленькое
 // всплывающее меню, а не общий элемент: в kit их уже три (палитра статусов,
 // „Ещё“ у вкладок, и это), и общий поповер стоит завести отдельно».
 //
-// ИНВЕНТАРИЗАЦИЯ ТРЁХ МЕНЮ (до сведения). Разное у них ровно двух родов.
+// ПЕРЕВЕДЁННЫЕ МЕСТА (список держать здесь, иначе сторож отстаёт от кода):
+//   1. меню статуса у чипа — core/StatusPopover (первая правка S4-MENU-STATES);
+//   2. «Ещё» у вкладок — shell/Tabs;
+//   3. личный блок рейки — shell/KitShell, RailMenu;
+//   4. палитра звезды статуса — elements/StatusPalette (эта правка);
+//   5. ячейка статуса в таблице задач — tasks/TaskTable (эта правка).
+// Шестого «своего» всплывающего меню в kit быть не должно: оболочка одна.
+// Отдельно стоят поповеры-ДИАЛОГИ полосы списка (list/ViewMenu, list/GroupMenu,
+// list/SortMenu, picker/ScopePicker): у них role=dialog, которую общий слой пока
+// не носит, — они в этот сторож не входят и остались при своей ловушке фокуса.
+//
+// ИНВЕНТАРИЗАЦИЯ ПЕРВЫХ ТРЁХ МЕНЮ (до сведения). Разное у них ровно двух родов.
 //
 // 1) СОДЕРЖИМОЕ — различается ПО СУЩЕСТВУ, и сводить его нельзя:
 //    • меню статуса — пункты (role=menuitem) плюс «Отмена» и третий шаг
@@ -29,8 +40,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { KitShell, StatusPopover, Tabs, createSafeStorage, registerGameIcons } from '../index';
-import type { KitConfig, KitData, TabItem } from '../index';
+import { KitShell, StatusPopover, StatusStar, TaskTable, Tabs, createSafeStorage, registerGameIcons } from '../index';
+import type { KitConfig, KitData, TabItem, TaskRowData } from '../index';
 import type { UrlWindow } from '../resilience/urlState';
 import { Popover } from './Popover';
 import { axeViolations } from '../test/axe';
@@ -136,6 +147,60 @@ const STATUSES: KitConfig['statuses'] = {
     { code: 'active', title: 'В работе', category: 'active', icon: 'progression', color: 'acc' },
     { code: 'done', title: 'Готово', category: 'done', icon: 'divided-spiral', color: 'var(--suc)' },
   ],
+};
+
+// ---------- стенд: палитра звезды статуса ----------
+
+const STAR_TITLES: Record<string, string> = { todo: 'К работе', active: 'В работе', done: 'Готово', blocked: 'Заблокировано' };
+const STAR_OPTIONS = ['todo', 'active', 'done', 'blocked'];
+
+/** Звезда открыта на палитре; возвращает звезду, меню и сам слой поповера. */
+function openStar() {
+  const onPick = vi.fn(async () => {});
+  render(
+    <StatusStar status="todo" options={STAR_OPTIONS} titleOf={c => STAR_TITLES[c] ?? c} onPick={onPick} showLabel />,
+  );
+  const btn = screen.getByRole('button', { name: /^Статус:/ });
+  btn.focus();
+  fireEvent.click(btn);
+  const menu = screen.getByRole('menu', { name: 'Сменить статус' });
+  // Слой — корень всплывашки (.sk-spop), меню лежит ВНУТРИ него: «Отмена» не
+  // menuitem и обязана быть вне role=menu, поэтому роль не у корня.
+  return { btn, menu, pop: menu.closest('.sk-spop') as HTMLElement, onPick };
+}
+
+// ---------- стенд: ячейка статуса в таблице задач ----------
+
+const TT_TASKS: TaskRowData[] = [
+  { uid: 'u2', id: 'S5-02', title: 'Вкладка задач', status: 'todo', phase: null, effortDays: null, executor: null, reviewer: null, taskType: null, workClass: null, order: 1 },
+];
+
+/** Ячейка статуса открыта; возвращает звезду ячейки и её меню. */
+function openTaskStatus() {
+  const onStatusChange = vi.fn(async () => {});
+  render(<TaskTable tasks={TT_TASKS} phases={[]} groupBy="none" onStatusChange={onStatusChange} label="Задачи" />);
+  const star = screen.getByRole('button', { name: /Статус/ });
+  star.focus();
+  fireEvent.click(star);
+  return { star, pop: screen.getByRole('menu', { name: /S5-02/ }), onStatusChange };
+}
+
+/**
+ * Замер без раскладки: jsdom не считает геометрию, поэтому прямоугольник слоя
+ * подменяется. Общий для всех мест — край экрана у них один и тот же.
+ */
+const withRect = (box: { left: number; width: number; top?: number; height?: number }, run: () => void) => {
+  const orig = HTMLElement.prototype.getBoundingClientRect;
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    if (!this.classList.contains('sk-pop')) return orig.call(this);
+    const top = box.top ?? 10;
+    const height = box.height ?? 100;
+    return {
+      x: box.left, y: top, left: box.left, top, width: box.width, height,
+      right: box.left + box.width, bottom: top + height, toJSON: () => ({}),
+    } as DOMRect;
+  };
+  try { run(); } finally { HTMLElement.prototype.getBoundingClientRect = orig; }
 };
 
 // =====================================================================
@@ -355,21 +420,6 @@ describe('S4-MENU-STATES · рейка: та же клавиатура, хотя
 // =====================================================================
 
 describe('S4-MENU-STATES · поповер не уезжает за границу экрана', () => {
-  /** Замер без раскладки: jsdom не считает геометрию, поэтому прямоугольник подменяется. */
-  const withRect = (box: { left: number; width: number; top?: number; height?: number }, run: () => void) => {
-    const orig = HTMLElement.prototype.getBoundingClientRect;
-    HTMLElement.prototype.getBoundingClientRect = function () {
-      if (!this.classList.contains('sk-pop')) return orig.call(this);
-      const top = box.top ?? 10;
-      const height = box.height ?? 100;
-      return {
-        x: box.left, y: top, left: box.left, top, width: box.width, height,
-        right: box.left + box.width, bottom: top + height, toJSON: () => ({}),
-      } as DOMRect;
-    };
-    try { run(); } finally { HTMLElement.prototype.getBoundingClientRect = orig; }
-  };
-
   it('выход за правый край — поповер сдвигается влево на столько же', () => {
     withRect({ left: 900, width: 300 }, () => {
       render(<Popover onClose={() => {}} label="Меню" role="menu"><button type="button" role="menuitem">раз</button></Popover>);
@@ -397,6 +447,172 @@ describe('S4-MENU-STATES · поповер не уезжает за границ
 });
 
 // =====================================================================
+// 6б. Палитра звезды статуса (место 4): та же оболочка
+//
+// До этой правки у палитры был свой огрызок: свой разбор Esc, свои стрелки,
+// свой первый фокус, а щелчок мимо ловила ОБЁРТКА звезды (свой mousedown на
+// document). Чего не было вовсе: ловушки Tab и прижатия к краю экрана — на
+// узком экране палитра уезжала за правый край.
+// =====================================================================
+
+describe('S4-MENU-STATES · палитра звезды: тот же слой, что у остальных', () => {
+  it('палитра носит общий класс sk-pop', () => {
+    const { pop } = openStar();
+    expect(pop.classList.contains('sk-pop')).toBe(true);
+  });
+
+  it('край экрана: палитра сдвигается влево, а не уезжает за правый край', () => {
+    withRect({ left: 900, width: 300 }, () => {
+      const { pop } = openStar();
+      // window.innerWidth в jsdom — 1024; правый край 1200 → сдвиг на -180 (с зазором 4).
+      expect(pop.style.getPropertyValue('--pop-dx')).toBe('-180px');
+    });
+  });
+
+  it('ловушка Tab: с «Отмена» — на первый пункт, Shift+Tab с первого — на «Отмена»', () => {
+    const { menu, pop } = openStar();
+    const items = within(menu).getAllByRole('menuitem');
+    const cancel = within(pop).getByRole('button', { name: 'Отмена' });
+    fireEvent.keyDown(items[0], { key: 'Tab', code: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(cancel);
+    fireEvent.keyDown(cancel, { key: 'Tab', code: 'Tab' });
+    expect(document.activeElement).toBe(items[0]);
+  });
+
+  it('инвариант: «Отмена» лежит ВНЕ role=menu (она не пункт меню)', () => {
+    const { menu, pop } = openStar();
+    expect(menu.contains(within(pop).getByRole('button', { name: 'Отмена' }))).toBe(false);
+  });
+
+  it('фокус при открытии — на первом пункте, стрелки ходят по кругу (умела и раньше)', () => {
+    const { menu } = openStar();
+    const items = within(menu).getAllByRole('menuitem');
+    expect(document.activeElement).toBe(items[0]);
+    fireEvent.keyDown(items[0], { key: 'ArrowDown', code: 'ArrowDown' });
+    expect(document.activeElement).toBe(items[1]);
+    fireEvent.keyDown(items[1], { key: 'ArrowUp', code: 'ArrowUp' });
+    expect(document.activeElement).toBe(items[0]);
+    fireEvent.keyDown(items[0], { key: 'ArrowUp', code: 'ArrowUp' });
+    expect(document.activeElement).toBe(items[items.length - 1]);
+  });
+
+  it('Esc закрывает и возвращает фокус на звезду (умела и раньше)', () => {
+    const { btn, menu } = openStar();
+    fireEvent.keyDown(menu, { key: 'Escape', code: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(btn);
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('щелчок мимо закрывает (умела и раньше — но уже оболочкой, а не обёрткой)', () => {
+    openStar();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('щелчок по самой звезде закрывает, а не открывает заново', () => {
+    const { btn } = openStar();
+    fireEvent.mouseDown(btn);
+    fireEvent.click(btn);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('выбор пункта по-прежнему пишет статус (ничего не потеряно)', () => {
+    const { menu, onPick } = openStar();
+    fireEvent.click(within(menu).getByRole('menuitem', { name: /В работе/ }));
+    expect(onPick).toHaveBeenCalledWith('active', 'todo');
+  });
+});
+
+// =====================================================================
+// 6в. Ячейка статуса в таблице задач (место 5): та же оболочка
+//
+// До правки у ячейки был свой разбор клавиш (Esc, стрелки, Home/End) и
+// закрытие ПО УХОДУ ФОКУСА (onBlur) вместо щелчка вне: мышью мимо таблицы
+// меню не закрывалось, пока фокус оставался внутри. Ловушки Tab и прижатия к
+// краю экрана не было, а связь звезды с меню (aria-controls) не называлась.
+// =====================================================================
+
+describe('S4-MENU-STATES · ячейка статуса в таблице задач: тот же слой', () => {
+  it('меню ячейки носит общий класс sk-pop', () => {
+    const { pop } = openTaskStatus();
+    expect(pop.classList.contains('sk-pop')).toBe(true);
+  });
+
+  it('звезда ячейки названа связью с меню (aria-controls → id меню)', () => {
+    const { star, pop } = openTaskStatus();
+    expect(pop.id).toBeTruthy();
+    expect(star.getAttribute('aria-controls')).toBe(pop.id);
+    expect(star.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('щелчок мимо закрывает меню — мышью, а не только уходом фокуса', () => {
+    openTaskStatus();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('щелчок по звезде при открытом меню закрывает его, а не открывает заново', () => {
+    const { star } = openTaskStatus();
+    fireEvent.mouseDown(star);
+    fireEvent.click(star);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('ловушка Tab: с последнего пункта — на первый, Shift+Tab с первого — на последний', () => {
+    const { pop } = openTaskStatus();
+    const items = within(pop).getAllByRole('menuitemradio');
+    const last = items[items.length - 1];
+    fireEvent.keyDown(items[0], { key: 'Tab', code: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    fireEvent.keyDown(last, { key: 'Tab', code: 'Tab' });
+    expect(document.activeElement).toBe(items[0]);
+  });
+
+  it('край экрана: меню ячейки сдвигается влево', () => {
+    withRect({ left: 900, width: 300 }, () => {
+      const { pop } = openTaskStatus();
+      expect(pop.style.getPropertyValue('--pop-dx')).toBe('-180px');
+    });
+  });
+
+  it('инвариант: пункты — menuitemradio с aria-checked, а не простые menuitem', () => {
+    const { pop } = openTaskStatus();
+    expect(within(pop).queryAllByRole('menuitem')).toHaveLength(0);
+    const items = within(pop).getAllByRole('menuitemradio');
+    expect(items.length).toBeGreaterThan(1);
+    expect(items.filter(i => i.getAttribute('aria-checked') === 'true')).toHaveLength(1);
+  });
+
+  it('фокус при открытии — на текущем статусе; стрелки, Home и End ходят по пунктам', () => {
+    const { pop } = openTaskStatus();
+    const items = within(pop).getAllByRole('menuitemradio');
+    const checked = items.find(i => i.getAttribute('aria-checked') === 'true')!;
+    expect(document.activeElement).toBe(checked);
+    fireEvent.keyDown(checked, { key: 'ArrowDown', code: 'ArrowDown' });
+    expect(document.activeElement).toBe(items[items.indexOf(checked) + 1]);
+    fireEvent.keyDown(document.activeElement!, { key: 'End', code: 'End' });
+    expect(document.activeElement).toBe(items[items.length - 1]);
+    fireEvent.keyDown(document.activeElement!, { key: 'Home', code: 'Home' });
+    expect(document.activeElement).toBe(items[0]);
+  });
+
+  it('Esc закрывает и возвращает фокус на звезду ячейки (умела и раньше)', () => {
+    const { star, pop } = openTaskStatus();
+    fireEvent.keyDown(pop, { key: 'Escape', code: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(star);
+  });
+
+  it('выбор пункта по-прежнему пишет статус (ничего не потеряно)', async () => {
+    const { pop, onStatusChange } = openTaskStatus();
+    await act(async () => { fireEvent.click(within(pop).getByRole('menuitemradio', { name: 'Готово' })); });
+    expect(onStatusChange).toHaveBeenCalledWith(TT_TASKS[0], 'done');
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+});
+
+// =====================================================================
 // 7. Доступность открытых поповеров
 // =====================================================================
 
@@ -415,5 +631,17 @@ describe('S4-MENU-STATES · axe: открытые поповеры', () => {
   it('меню статуса — без нарушений', async () => {
     const { container } = render(<StatusPopover statuses={STATUSES} current="todo" onPick={() => {}} onCancel={() => {}} />);
     expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('открытая палитра звезды — без нарушений', async () => {
+    openStar();
+    expect(await axeViolations(document.querySelector('.sk-star-wrap') as Element)).toEqual([]);
+  });
+
+  it('открытое меню ячейки статуса внутри таблицы — без нарушений', async () => {
+    // Роли внутри таблицы проверяются целиком: role=menu внутри чужой роли
+    // (как было с tablist) axe валит именно на уровне контейнера.
+    openTaskStatus();
+    expect(await axeViolations(document.querySelector('.sk-tasks') as Element)).toEqual([]);
   });
 });

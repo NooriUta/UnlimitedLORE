@@ -107,6 +107,11 @@ describe('TaskTable · статус в 2 касания', () => {
   it('фокус уходит в палитру; Escape закрывает её и возвращает фокус на звезду', () => {
     render(<TaskTable tasks={tasks} phases={phases} groupBy="none" onStatusChange={async () => {}} label="Задачи" />);
     const star = within(screen.getByRole('row', { name: /S5-02/ })).getByRole('button', { name: /Статус/ });
+    // Утверждение то же, стенд честнее: настоящий щелчок мыши СНАЧАЛА ставит
+    // фокус на кнопку, а fireEvent.click в jsdom — нет. Общая оболочка
+    // поповера (S4-MENU-STATES) запоминает открывателя по фокусу на момент
+    // открытия, как и стенды popoverCommon.test (openMore, openRail).
+    star.focus();
     fireEvent.click(star);
     const menu = screen.getByRole('menu');
     expect(menu.contains(document.activeElement)).toBe(true);

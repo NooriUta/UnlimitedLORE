@@ -4,11 +4,23 @@
 // порядке жизненного цикла; текущий статус не предлагается. Завершающий статус
 // (done/closed) — третий шаг: StatusConfirm, Esc там возвращает к меню.
 // Esc и «Отмена» в меню закрывают без выбора.
+//
+// S4-MENU-STATES: оболочка всплывашки — общий Popover (положение, прижатие к
+// краю экрана, Esc, щелчок вне, ловушка и возврат фокуса, стрелки по пунктам).
+// Свой огрызок был: разбор Esc, стрелки и первый фокус — здесь, а щелчок вне —
+// у обёртки звезды (свой mousedown на document, снят). Ловушки Tab и прижатия
+// к краю экрана не было вовсе: на узком экране палитра уезжала за правый край.
+//
+// Здесь остаётся то, что у палитры своё ПО СУЩЕСТВУ: клавиши 1…9 статусов,
+// третий шаг (подтверждение) и «Отмена» — она лежит ВНЕ role=menu, потому что
+// не menuitem, и поэтому корню поповера роль не передаётся: role=menu у
+// внутреннего блока (то же решение, что у StatusPopover у чипа).
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey } from '../i18n';
 import { matchHotkey } from '../resilience/hotkeys';
+import { Popover } from '../shell/Popover';
 import { GameIcon } from './GameIcon';
 import { Kbd } from './Kbd';
 import { StatusConfirm } from './StatusConfirm';
@@ -27,10 +39,6 @@ export interface StatusPaletteProps {
   className?: string;
 }
 
-function isEscape(e: ReactKeyboardEvent): boolean {
-  return e.code === 'Escape' || e.key === 'Escape';
-}
-
 export function StatusPalette({ current, options, titleOf = (c) => c, onPick, onCancel, id, className }: StatusPaletteProps) {
   const lang = useKitLang();
   const cur = statusMeta(current).code;
@@ -45,6 +53,8 @@ export function StatusPalette({ current, options, titleOf = (c) => c, onPick, on
   const [focusCode, setFocusCode] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Фокус внутрь ставит оболочка (initialFocus), но ПЕРЕХОД между шагами —
+  // наш: после «Назад» фокус обязан вернуться на тот пункт, с которого ушли.
   useEffect(() => {
     if (confirming) return;
     const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
@@ -61,24 +71,11 @@ export function StatusPalette({ current, options, titleOf = (c) => c, onPick, on
     setConfirming(null);
   };
 
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (isEscape(e)) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (confirming) back();
-      else onCancel();
-      return;
-    }
+  // Своё по существу: клавиши статусов 1…9. Tab и Esc не трогаем — они у
+  // оболочки (ловушка фокуса и закрытие); в подтверждении клавиш статусов нет.
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
     if (confirming) return;
-    if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
-      const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
-      if (!items.length) return;
-      e.preventDefault();
-      const at = items.indexOf(document.activeElement as HTMLElement);
-      const next = e.code === 'ArrowDown' ? (at + 1) % items.length : (at - 1 + items.length) % items.length;
-      items[next].focus();
-      return;
-    }
+    if (e.key === 'Tab' || e.key === 'Escape' || e.code === 'Escape') return;
     const hit = flat.find((c) => {
       const k = keyOf(c);
       return k !== '' && matchHotkey(e, k);
@@ -92,24 +89,38 @@ export function StatusPalette({ current, options, titleOf = (c) => c, onPick, on
 
   const cls = ['sk-spop', 'sk-spal', className].filter(Boolean).join(' ');
 
+  // Один Popover на оба шага: он не пересоздаётся при переходе к подтверждению,
+  // поэтому открыватель (звезда) помнится и на третьем шаге.
+  const shell = (body: ReactNode) => (
+    <Popover
+      id={id}
+      className={cls}
+      align="start"
+      arrows={!confirming}
+      initialFocus={(root) => root.querySelector<HTMLElement>('[role="menuitem"]')}
+      onKeyDown={onKeyDown}
+      onClose={() => { if (confirming) back(); else onCancel(); }}
+    >
+      {body}
+    </Popover>
+  );
+
   if (confirming) {
     const m = statusMeta(confirming);
-    return (
-      <div className={cls} id={id} onKeyDown={onKeyDown}>
-        <StatusConfirm
-          title={titleOf(confirming)}
-          code={m.code}
-          icon={m.icon}
-          color={m.color}
-          onConfirm={() => onPick(confirming)}
-          onBack={back}
-        />
-      </div>
+    return shell(
+      <StatusConfirm
+        title={titleOf(confirming)}
+        code={m.code}
+        icon={m.icon}
+        color={m.color}
+        onConfirm={() => onPick(confirming)}
+        onBack={back}
+      />,
     );
   }
 
-  return (
-    <div className={cls} id={id} onKeyDown={onKeyDown}>
+  return shell(
+    <>
       {flat.length ? (
         <div ref={menuRef} role="menu" aria-label={kitT(lang, 'kit.status.menu')} className="sk-spop__menu">
           {groups.map((g) => {
@@ -152,6 +163,6 @@ export function StatusPalette({ current, options, titleOf = (c) => c, onPick, on
       <button type="button" className="sk-spop__cancel" onClick={onCancel} aria-keyshortcuts="Escape">
         {kitT(lang, 'kit.status.cancel')}
       </button>
-    </div>
+    </>,
   );
 }
