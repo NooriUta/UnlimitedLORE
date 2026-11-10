@@ -514,6 +514,8 @@
   "kit.tasks.groupBy.phase": "By phase",
   "kit.tasks.groupBy.status": "By status",
   "kit.tasks.groupBy.none": "Flat list",
+  "kit.tasks.groupBy.phase_status": "Phase → status",
+  "kit.tasks.shownOf": "Showing {shown} of {total}",
   "kit.tasks.group.nophase": "No phase",
   "kit.tasks.group.orphan": "Phase not found (data fault)",
   "kit.tasks.group.all": "All tasks",

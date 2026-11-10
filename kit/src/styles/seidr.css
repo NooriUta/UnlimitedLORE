@@ -4469,6 +4469,10 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
   border-top: 1px solid var(--bd);
 }
 .sk-tasks__gth--fault { color: var(--wrn); }
+/* S9-07: подшапка статуса внутри фазы и строка потолка «Показаны N из M · ещё K». */
+.sk-tasks__gth--sub { color: var(--t2); background: var(--bg1); padding-left: 20px; border-top-style: dashed; }
+.sk-tasks__morerow td { padding: 4px 8px; border-top: 1px dashed var(--bd); }
+.sk-tasks__shown { margin-right: 8px; font-size: var(--fs-xs); color: var(--t3); }
 
 /* S4-35: выбор колонок — раздел «Колонки» меню «Вид», по прототипу
    владелицы s4-35-columns.html. */
