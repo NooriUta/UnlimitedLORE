@@ -43,13 +43,14 @@ public class LoreHistoryResource extends LoreResourceBase {
     @Path("history")
     @Produces(MediaType.APPLICATION_JSON)
     public Response history(@QueryParam("type") String type, @QueryParam("id") String id,
-                            @QueryParam("author_kind") String authorKind, @QueryParam("field") String field,
+                            @QueryParam("author_kind") String authorKind, @QueryParam("author") String author,
+                            @QueryParam("field") String field, @QueryParam("collapse") String collapse,
                             @QueryParam("order") String order, @QueryParam("offset") Integer offset,
                             @QueryParam("limit") Integer limit,
                             @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         // S9-09: страница, фильтры и порядок — необязательны; без них ответ прежний.
-        String pageErr = LoreEntityHistory.pageError(authorKind, field, order, offset, limit);
+        String pageErr = LoreEntityHistory.pageError(authorKind, author, field, collapse, order, offset, limit);
         if (pageErr != null) return badParams(pageErr);
         if (type == null || type.isBlank()) return badParams("type required (known: " + LoreEntityHistory.types() + ")");
         if (!LoreEntityHistory.types().contains(type))
@@ -91,7 +92,7 @@ public class LoreHistoryResource extends LoreResourceBase {
             attribution.put("ok", true);
         }
         List<Map<String, Object>> out = LoreEntityHistory.attribute(rows, journal);
-        Map<String, Object> paged = LoreEntityHistory.page(out, authorKind, field, order, offset, limit);
+        Map<String, Object> paged = LoreEntityHistory.page(out, authorKind, author, field, collapse, order, offset, limit);
         @SuppressWarnings("unchecked") List<Map<String, Object>> pageRows = (List<Map<String, Object>>) paged.get("rows");
 
         Map<String, Object> body = new LinkedHashMap<>();
