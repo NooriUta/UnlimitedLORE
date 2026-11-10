@@ -84,6 +84,29 @@ td code{font-family:var(--mono);color:var(--t1)}
 .no{color:var(--t3);font-family:var(--mono)}
 .demo{font-size:var(--fs-xs);color:var(--t3);margin-top:12px;border-top:1px dashed var(--bd);padding-top:8px}
 noscript div{border:1px solid var(--dng);color:var(--dng);padding:10px;border-radius:6px;margin:10px 0}
+/* Ссылки в тексте: зелёная — запись есть, красная — нет; «отложено» — завести отказались, остаётся красной. */
+.bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.menuw{position:relative}
+.menu{position:absolute;z-index:5;top:calc(100% + 4px);left:0;min-width:320px;background:var(--bg2);border:1px solid var(--bdh);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:4px 0}
+.menu[hidden]{display:none}
+.menu .mi{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 10px;font-size:var(--fs-sm)}
+.menu .mi .id{font-family:var(--mono);color:var(--dng)}
+.menu .empty{padding:8px 10px;color:var(--t3);font-size:var(--fs-sm)}
+.refs{display:flex;flex-direction:column;gap:4px}
+.rf{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:var(--fs-sm);padding:5px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg1)}
+.rf .id{font-family:var(--mono)}
+.rf.ok{border-color:color-mix(in srgb,var(--suc) 55%,var(--bd))}.rf.ok .id{color:var(--suc)}
+.rf.miss{border-color:var(--dng)}.rf.miss .id{color:var(--dng)}
+.rf .st{font-size:var(--fs-xs);color:var(--t3)}
+.rf .act{margin-left:auto;display:flex;gap:4px}
+.rf.flash{animation:fl 1.2s ease-out}
+@keyframes fl{from{box-shadow:0 0 0 3px var(--acc)}to{box-shadow:0 0 0 0 transparent}}
+.savewarn{border:1px solid var(--wrn);border-left-width:3px;background:var(--bg1);padding:8px 10px;border-radius:6px;font-size:var(--fs-sm);color:var(--t2);margin-bottom:8px}
+.savewarn b{color:var(--wrn)}.savewarn[hidden]{display:none}
+.saveok{border-color:var(--suc)}.saveok b{color:var(--suc)}
+.toast{font-size:var(--fs-sm);color:var(--t2);background:var(--bg2);border:1px solid var(--bdh);border-radius:6px;padding:6px 10px;margin-bottom:8px}
+.toast[hidden]{display:none}
+.sk-wref.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 55%,var(--bdh))}
 /* Компьютер: две колонки (правка | исходник), плотные IDE-размеры; 16px у полей — только для телефона (порог зума iOS). */
 @media (min-width:900px){
   .wrap{max-width:1120px}
@@ -133,6 +156,17 @@ noscript div{border:1px solid var(--dng);color:var(--dng);padding:10px;border-ra
     </div>
     </div>
     <div class="col">
+
+    <div class="bar">
+      <button class="btn pri" id="save">Сохранить</button>
+      <span class="menuw"><button class="btn" id="fixBtn" aria-haspopup="true" aria-expanded="false">Дозавести <span id="fixN">0</span></button>
+        <div class="menu" id="fixMenu" hidden></div></span>
+      <span class="hint" style="margin:0">Вставьте текст с ID — ссылки проверятся сразу.</span>
+    </div>
+    <div class="savewarn" id="saveWarn" hidden></div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="lbl">Ссылки в тексте</div>
+    <div class="refs" id="refs"></div>
 
     <div class="demo">Состояние списка (для показа):
       <span class="seg" style="display:inline-flex;margin:4px 0 0" id="stateSeg">
@@ -283,7 +317,79 @@ function insert(d){
   close(); sync();
 }
 function close(){cur=null;card='old';tried=false;renderPop()}
-function sync(){ $('raw').textContent=ed.value; renderProse(); }
+function sync(){ $('raw').textContent=ed.value; renderProse(); renderRefs(); }
+
+/* ---------- ссылки в тексте: проверка, вставка копипастом, «дозавести» ---------- */
+const deferred=new Set();           // завести отказались — ссылка остаётся красной
+const typeOfId=id=>/^ADR-/i.test(id)?'adr':/^SPEC-/i.test(id)?'spec':/^D-\d{4}-/i.test(id)?'decision':/^SPRINT_[A-Z0-9_]+\/[A-Z0-9-]+$/i.test(id)?'task':null;
+// голые ID по форме (как splitLoreRefs): ADR-…, SPEC-…, D-2026-…, SPRINT_X/CODE
+const BARE=/(^|[\s(«"])((?:ADR|SPEC)-[A-Z0-9-]*[A-Z0-9]|D-\d{4}-[A-Z0-9-]*[A-Z0-9]|SPRINT_[A-Z0-9_]+\/[A-Z0-9-]+)(?=$|[\s.,;:)»"!?])/g;
+function refsIn(text){
+  const out=[], seen=new Set();
+  text.replace(/\[\[(?:([a-z]+):)?([^\[\]\n]+)\]\]/gi,(m,t,id)=>{id=id.trim(); if(!seen.has(id)){seen.add(id); out.push({id,t:(t||typeOfId(id)||'').toLowerCase()})} return m});
+  return out;
+}
+const plural=n=>{const a=n%10,b=n%100;return a===1&&b!==11?'ссылка':a>=2&&a<=4&&(b<12||b>14)?'ссылки':'ссылок'};
+const found=id=>DB.some(x=>x.id===id);
+function missing(){return refsIn(ed.value).filter(r=>!found(r.id))}
+function renderRefs(flashIds){
+  const rs=refsIn(ed.value), miss=rs.filter(r=>!found(r.id));
+  $('refs').innerHTML=rs.length?rs.map(r=>{
+    const ok=found(r.id), d=ok&&DB.find(x=>x.id===r.id);
+    return `<div class="rf ${ok?'ok':'miss'}${flashIds&&flashIds.has(r.id)?' flash':''}"><span class="ty">${TYPES[r.t]||'?'}</span><span class="id">${esc(r.id)}</span>
+      <span class="st">${ok?esc(d.title):deferred.has(r.id)?'нет такой записи · заводить отказались':'нет такой записи'}</span>
+      ${ok?'':`<span class="act"><button class="btn pri" data-fix="${esc(r.id)}">Завести</button>${deferred.has(r.id)?'':`<button class="btn" data-later="${esc(r.id)}">Не сейчас</button>`}</span>`}</div>`}).join('')
+    :'<div class="hint">Ссылок в тексте нет.</div>';
+  $('fixN').textContent=miss.length;
+  $('fixBtn').disabled=!miss.length;
+  if(!$('fixMenu').hidden) renderFixMenu();
+  if(!$('saveWarn').hidden&&!$('saveWarn').classList.contains('saveok')) showSaveWarn(false);
+}
+function renderFixMenu(){
+  const m=missing();
+  $('fixMenu').innerHTML=m.length?m.map(r=>`<div class="mi"><span><span class="ty">${TYPES[r.t]||'?'}</span> <span class="id">${esc(r.id)}</span></span><button class="btn pri" data-fix="${esc(r.id)}">Завести</button></div>`).join('')
+    :'<div class="empty">Всё, на что ссылается текст, в LORE есть.</div>';
+}
+function showSaveWarn(fromSave){
+  const m=missing(), W=$('saveWarn');
+  if(!m.length){ W.classList.add('saveok'); W.innerHTML=fromSave?'<b>Сохранено.</b> Все ссылки ведут на существующие записи.':'<b>Все ссылки найдены.</b>'; W.hidden=false; return }
+  W.classList.remove('saveok');
+  W.innerHTML=`<b>В тексте ${m.length} ${plural(m.length)} на несуществующие записи:</b> ${m.map(r=>esc(r.id)).join(', ')}.
+    Сохранить можно — ссылки останутся красными.
+    <div class="row"><button class="btn" id="saveAnyway">Сохранить всё равно</button><button class="btn pri" id="openFix">Дозавести</button></div>`;
+  W.hidden=false;
+}
+function startFix(id){
+  const r=refsIn(ed.value).find(x=>x.id===id); const ty=r&&r.t&&TYPES[r.t]?r.t:'task';
+  $('fixMenu').hidden=true; $('fixBtn').setAttribute('aria-expanded','false');
+  cur={trig:'дозавести',type:ty,q:'',start:null,fixId:id};
+  card='new'; tried=false; warned=false;
+  const B=$('newBody'); B.dataset.ty=ty; B.dataset.more='0';
+  const vals={}; if(ty==='task'){vals['Спринт']=id.split('/')[0]}
+  B.dataset.v=JSON.stringify(vals);
+  renderPop(); $('pQ').textContent=TYPES[ty]+' · '+id+' — завести под этим ID';
+  pop.scrollIntoView({block:'nearest'});
+}
+document.querySelector('#v-edit').addEventListener('click',e=>{
+  const f=e.target.closest('[data-fix]'); if(f){startFix(f.dataset.fix);return}
+  const l=e.target.closest('[data-later]'); if(l){deferred.add(l.dataset.later);renderRefs();return}
+  if(e.target.id==='saveAnyway'){ $('saveWarn').innerHTML='<b>Сохранено с красными ссылками.</b> Их видно здесь и в «Дозавести».'; return }
+  if(e.target.id==='openFix'){ $('fixMenu').hidden=false; $('fixBtn').setAttribute('aria-expanded','true'); renderFixMenu(); return }
+});
+$('save').onclick=()=>showSaveWarn(true);
+$('fixBtn').onclick=()=>{const M=$('fixMenu'); M.hidden=!M.hidden; $('fixBtn').setAttribute('aria-expanded',String(!M.hidden)); if(!M.hidden) renderFixMenu()};
+ed.addEventListener('paste',e=>{
+  const txt=(e.clipboardData||window.clipboardData).getData('text'); if(!txt) return;
+  e.preventDefault();
+  const wrapped=txt.replace(BARE,(m,pre,id)=>`${pre}[[${typeOfId(id)}:${id}]]`);
+  const s=ed.selectionStart, en=ed.selectionEnd;
+  ed.value=ed.value.slice(0,s)+wrapped+ed.value.slice(en);
+  ed.setSelectionRange(s+wrapped.length,s+wrapped.length);
+  const rs=refsIn(wrapped), ok=rs.filter(r=>found(r.id)).length;
+  sync(); renderRefs(new Set(rs.map(r=>r.id)));
+  const T=$('toast'); T.hidden=!rs.length;
+  T.innerHTML=`Во вставке ${rs.length} ${plural(rs.length)}: <b style="color:var(--suc)">${ok} найдено</b>, <b style="color:var(--dng)">${rs.length-ok} нет в LORE</b>${rs.length-ok?' — их можно завести здесь или потом через «Дозавести».':'.'}`;
+});
 function onEdit(){
   const r=detect(ed.value.slice(0,ed.selectionStart));
   if(!r){ if(card!=='new') close(); return }
@@ -324,6 +430,8 @@ $('newBody').addEventListener('click',e=>{
     const n=DB.filter(d=>d.t===ty).length+1;
     const id=ty==='task'?(vals['Спринт']+'/NEW-'+n):ty==='adr'?'ADR-LORE-0'+(50+n):ty==='spec'?'SPEC-NEW-'+n:'D-2026-NEW-'+n;
     const f={}; LAYOUT[ty].forEach(x=>{if(x.k!=='Название'&&vals[x.k]) f[x.k]=vals[x.k]}); f['Статус']=f['Статус']||'новый';
+    if(cur.fixId){ // дозавести: ID уже стоит в тексте, заводим запись под ним
+      const fid=cur.fixId; DB.push({t:ty,id:fid,title:vals['Название'],f}); deferred.delete(fid); close(); sync(); renderRefs(new Set([fid])); return }
     const d={t:ty,id,title:vals['Название'],f}; DB.push(d); insert(d);
   }
 });
@@ -336,7 +444,7 @@ function renderProse(){
     if(/^#\s/.test(p)) return `<p style="font-family:var(--disp);font-weight:800">${p.replace(/^#\s/,'')}</p>`;
     return '<p>'+p.replace(/\[\[(?:([a-z]+):)?([^\[\]\n]+)\]\]/gi,(m,t,id)=>{
       const d=DB.find(x=>x.id===id.trim());
-      return `<span class="sk-wref${d?'':' miss'}" data-ref="${esc(id.trim())}" title="${d?esc(d.title):'не найдено в LORE'}">${esc(id.trim())}</span>`;
+      return `<span class="sk-wref${d?' ok':' miss'}" data-ref="${esc(id.trim())}" title="${d?esc(d.title):'не найдено в LORE'}">${esc(id.trim())}</span>`;
     })+'</p>';
   }).join('');
   $('prose').innerHTML=html; $('peek').hidden=true;
