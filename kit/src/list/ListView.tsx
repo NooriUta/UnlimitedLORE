@@ -38,6 +38,7 @@ import type { KitKey, KitLang } from '../i18n';
 import { describeError } from '../resilience/errorText';
 import { isEditableTarget } from '../resilience/editable';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
+import { chipLabel, isChipList, toChips } from '../core/chipValue';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -944,9 +945,29 @@ export function ListView({
     return config.kinds[kind]?.fields?.find(f => f.key === name)?.type;
   };
 
+  /**
+   * Подписи чипов ЭТОЙ записи: код → подпись (S4-29).
+   *
+   * Значения ключуются кодом (иначе один проект с двумя подписями дал бы два
+   * значения в фасете), а на экран идёт подпись — она пришла от источника
+   * вместе с кодом, и показывать вместо неё код значит прятать то, что уже
+   * есть в данных.
+   *
+   * Карта строится по записи, а не на весь список: подпись принадлежит
+   * значению В ЭТОЙ записи, и общая карта тихо подменяла бы её чужой.
+   */
+  const chipLabelsOf = (r: KitRecord, key: string): Map<string, string> => {
+    const raw = fieldValue(r, key);
+    const m = new Map<string, string>();
+    if (!isChipList(raw)) return m;
+    for (const c of toChips(raw)) if (!m.has(c.id)) m.set(c.id, chipLabel(c));
+    return m;
+  };
+
   const valueCell = (key: string, r: KitRecord): ReactNode => {
     const vs = valuesOf(r, key);
     if (!vs.length) return '—';
+    const labelOf = chipLabelsOf(r, key);
     if (fieldType(r.kind, key) === 'date') {
       return (
         <span className="sk-list__vals">
@@ -957,7 +978,7 @@ export function ListView({
     return (
       <span className="sk-list__vals">
         {vs.map(v => (
-          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} />{labels.valueTitle(key, v)}</span>
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} />{labelOf.get(v) ?? labels.valueTitle(key, v)}</span>
         ))}
       </span>
     );
