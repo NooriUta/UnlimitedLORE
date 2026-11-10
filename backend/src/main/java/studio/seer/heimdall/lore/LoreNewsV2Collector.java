@@ -41,6 +41,24 @@ final class LoreNewsV2Collector {
     static final String SQL_TASK_HIST =
         "SELECT in('HAS_STATE').task_uid[0] AS task_uid, valid_from, status_raw " +
         "FROM KnowTaskHist WHERE valid_from IS NOT NULL";
+    /**
+     * S7A-09: текущий снимок задач — лёгкая проекция. Срез all_tasks везёт note_md
+     * (сотни раз тяжелее остального) и роли; ленте нужны только эти пять полей.
+     * Выражения — те же, что у all_tasks (статус — с открытой строки истории, MT-12).
+     */
+    static final String SQL_TASKS =
+        "SELECT task_uid, title, out('BELONGS_TO').component_id[0] AS component_id, " +
+        "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+        "out('PART_OF').sprint_id[0] AS sprint_id FROM KnowTask";
+    /** S7A-09: спринты — без context_md, приоритета, PR и плана; выражения — те же, что у среза sprints. */
+    static final String SQL_SPRINTS =
+        "SELECT sprint_id, name, created_date, " +
+        "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
+        "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
+        LoreSlices.DONE_DATE_SQL + " AS done_date, " +
+        "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+        "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
+        "out('TARGETS_MILESTONE').milestone_id AS milestone_ids FROM KnowSprint";
     static final String SQL_RELEASES =
         "SELECT release_id, release_uid, release_date, git_project, out('BELONGS_TO_PROJECT').slug AS projects " +
         "FROM KnowRelease WHERE release_date IS NOT NULL";
@@ -102,21 +120,26 @@ final class LoreNewsV2Collector {
         }
     }
 
-    /** S7A-09: начало окна чтения — начало предыдущего периода (§7.5). ЗАГЛУШКА до кода. */
+    /**
+     * S7A-09: начало окна чтения — начало ПРЕДЫДУЩЕГО периода (§7.5): период длиной
+     * больше суток сдвигается на свою длину, сутки и короче — на неделю. Одно место
+     * для сборщика, истории статуса и индекса авторов — тот же сдвиг, что у
+     * {@code NewsV2Engine.previousInput()}.
+     */
     static Instant windowStart(Instant t0, Instant t1) {
-        return t0;
+        java.time.Duration len = java.time.Duration.between(t0, t1);
+        java.time.Duration shift = len.compareTo(java.time.Duration.ofDays(1)) <= 0 ? java.time.Duration.ofDays(7) : len;
+        return t0.minus(shift);
     }
 
     NewsV2.Input collect(Instant t0, Instant t1, Instant now, ZoneId zone, Set<String> scope) {
-        java.time.Duration len = java.time.Duration.between(t0, t1);
-        java.time.Duration shift = len.compareTo(java.time.Duration.ofDays(1)) <= 0 ? java.time.Duration.ofDays(7) : len;
-        Instant from = t0.minus(shift);
+        Instant from = windowStart(t0, t1);
         LocalDate fromDay = from.atZone(zone).toLocalDate();
         LocalDate toDay = t1.minusMillis(1).atZone(zone).toLocalDate();
 
         // ── справочники ──
         Map<String, Sprint> sprints = new TreeMap<>();
-        for (Map<String, Object> s : slice("sprints", true)) {
+        for (Map<String, Object> s : read("sprints", SQL_SPRINTS, true)) {
             String sid = str(s.get("sprint_id"));
             if (sid == null || sprints.containsKey(sid)) continue;
             List<String> ids = strList(s.get("release_ids"));
@@ -133,7 +156,7 @@ final class LoreNewsV2Collector {
 
         // ── задачи: текущий снимок + вся история ──
         Map<String, Map<String, Object>> cur = new HashMap<>();
-        for (Map<String, Object> t : slice("all_tasks", true)) {
+        for (Map<String, Object> t : read("all_tasks", SQL_TASKS, true)) {
             String uid = str(t.get("task_uid"));
             if (uid != null) cur.putIfAbsent(uid, t);
         }

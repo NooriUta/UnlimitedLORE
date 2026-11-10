@@ -163,8 +163,10 @@ public class LoreNewsV2Resource extends LoreResourceBase {
             // S7A-01: автор и история статуса — из истории SCD2 (S2-12/S2-13), а не заглушки.
             java.util.function.BiFunction<String, Map<String, Object>, List<Map<String, Object>>> rows =
                 (sql, params) -> LoreTimeFormat.isoUtcRows(ingestService.queryPublic(sql, params));
-            StatusHistoryTimeline timeline = StatusHistoryTimeline.load(rows);
-            HistAuthorIndex authorIndex = HistAuthorIndex.load(rows);
+            // S7A-09: только типы ленты и только окно [начало предыдущего периода, t1) — не вся история корпуса.
+            Instant windowFrom = LoreNewsV2Collector.windowStart(period[0], period[1]);
+            StatusHistoryTimeline timeline = StatusHistoryTimeline.load(rows, FEED_TYPES, windowFrom, period[1]);
+            HistAuthorIndex authorIndex = HistAuthorIndex.load(rows, FEED_TYPES, windowFrom, period[1]);
             Map<String, Object> out = new NewsV2Engine(input,
                     LoreNewsV2Collector.authors(timeline, authorIndex), timeline)
                 .compute(q);
