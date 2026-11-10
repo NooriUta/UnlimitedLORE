@@ -89,3 +89,22 @@
 .adm-verdict[data-sees='false'] { color: var(--dng); }
 .adm-chain { margin: 0; padding-left: 20px; color: var(--t2); font-size: var(--fs-xs); }
 .adm-plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
+/* Роли человека (S7B-03/05/09): карточка, группы, панель, опасное действие. Только токены. */
+.adm-card {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1);
+}
+.adm-card__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.adm-card__head .adm-name { display: inline; }
+.adm-roles__search { width: min(32ch, 100%); }
+.adm-roles__row { display: flex; align-items: center; gap: 6px; min-height: max(var(--tap, 24px), 24px); cursor: pointer; }
+.adm-roles__panel { position: sticky; bottom: 0; align-items: center; }
+.adm-btn:disabled { opacity: .5; cursor: not-allowed; }
+.adm-btn--dng { border-color: var(--dng); color: var(--dng); }
+.adm-danger {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  padding: 6px 8px; border: 1px solid var(--dng); border-radius: 6px; background: var(--bg1);
+}
+.adm-danger__h { margin: 0; color: var(--t1); font: 700 var(--fs-sm) var(--font); }
+.adm-danger__confirm .adm-input { width: min(32ch, 100%); }
+.adm-danger__btns { display: flex; gap: 6px; }

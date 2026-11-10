@@ -154,7 +154,7 @@ describe('модель · карточка на объёме (S7B-09)', () => {
 
   it('поиск по проекту — без учёта регистра, по подстроке', () => {
     const p = parseRoleMatrix(MATRIX).people[0];
-    expect(filterProjects(p.cells, 'P2').map(c => c.project)).toEqual(['AIDA/p02', 'AIDA/p20', 'AIDA/p21', 'AIDA/p22', 'AIDA/p23']);
+    expect(filterProjects(p.cells, 'P2').map(c => c.project)).toEqual(['AIDA/p20', 'AIDA/p21', 'AIDA/p22', 'AIDA/p23']);
     expect(filterProjects(p.cells, '  ')).toHaveLength(23);
   });
 
@@ -263,7 +263,7 @@ describe('экран · карточка на 23 ролях (S7B-09)', () => {
     mount(fake().f);
     const input = await screen.findByTestId('adm-roles-search');
     fireEvent.change(input, { target: { value: 'p2' } });
-    expect(screen.getAllByTestId(/^adm-roles-row-/)).toHaveLength(5);
+    expect(screen.getAllByTestId(/^adm-roles-row-/)).toHaveLength(4);
     expect(new URLSearchParams(window.location.search).get('adm-q')).toBe('p2');
   });
 
