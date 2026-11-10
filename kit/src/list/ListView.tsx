@@ -65,7 +65,7 @@ import { axisSource, countsNotes, facetFromAxis, quickSource } from './listCount
 import type { ListCounts } from './listCounts';
 import { FacetFilter, ValueIconMark } from './FacetFilter';
 import type { ValueIcon } from './FacetFilter';
-import { selectAllShown, toggleId, visibleSelection } from './listSelection';
+import { onScreenItems, selectAllShown, toggleId, visibleSelection, type ShownGroup } from './listSelection';
 import { useLongPress } from './useLongPress';
 import { ScreenHead } from './ScreenHead';
 import { ViewMenu } from './ViewMenu';
@@ -793,22 +793,18 @@ export function ListView({
    * отрисовка, а отмеченное за пределами показанного называется числом
    * (kit.list.selHidden), а не теряется тихо.
    */
-  const onScreenOf = (g: ListGroup): KitRecord[] => {
+  // Правило «что на экране» — одно на список и вложенные таблицы (S9-06):
+  // onScreenItems в listSelection.ts. Здесь только перевод групп списка в
+  // ту форму, в которой они стоят на экране.
+  const shownGroupOf = (g: ListGroup): ShownGroup<KitRecord> => {
     // Заголовок (а значит, и сворачивание) есть в списке при группировке и у «Закрытых».
     const headed = view === 'list' && (groupKey !== null || g.key === CLOSED_KEY);
-    if (headed && !isOpen(g.key)) return [];
-    if (view === 'list' && subKey && g.key !== CLOSED_KEY) {
-      // Вторая ступень (S4-26) сворачивается своим ключом — иначе строки
-      // свёрнутой подгруппы считались бы показанными.
-      const out: KitRecord[] = [];
-      for (const sg of groupBy(g.records, subKey, config, data, budget)) {
-        const k = g.key + '' + sg.key;
-        if (!isOpen(k)) continue;
-        out.push(...sg.records.slice(0, limitOf(k)));
-      }
-      return out;
-    }
-    return g.records.slice(0, limitOf(g.key));
+    // Вторая ступень (S4-26) сворачивается своим ключом — иначе строки
+    // свёрнутой подгруппы считались бы показанными.
+    const sub = view === 'list' && subKey && g.key !== CLOSED_KEY
+      ? groupBy(g.records, subKey, config, data, budget).map(sg => ({ key: g.key + '' + sg.key, items: sg.records, headed: true }))
+      : undefined;
+    return { key: g.key, items: g.records, headed, sub };
   };
   const pickable: KitRecord[] = [];
   {
@@ -828,7 +824,7 @@ export function ListView({
         for (const c of cols) put(c.records.slice(0, limitOf(laned ? lane.key + '' + c.key : c.key)));
       }
     } else if (view === 'list') {
-      for (const g of groups) put(onScreenOf(g));
+      put(onScreenItems(groups.map(shownGroupOf), isOpen, limitOf));
     } else {
       // Карточки, дерево и таймлайн рисуют весь отфильтрованный набор.
       put(filtered);
