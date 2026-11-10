@@ -280,7 +280,8 @@ describe('экран · карточка на 23 ролях (S7B-09)', () => {
     mount(fake().f);
     const input = await screen.findByTestId('adm-roles-search');
     fireEvent.change(input, { target: { value: 'p2' } });
-    expect(screen.getAllByTestId(/^adm-roles-row-/)).toHaveLength(4);
+    // Поиск живёт в адресе (useUrlParam): строки сужаются после обновления состояния, не синхронно.
+    await waitFor(() => expect(screen.getAllByTestId(/^adm-roles-row-/)).toHaveLength(4));
     expect(new URLSearchParams(window.location.search).get('adm-q')).toBe('p2');
   });
 
