@@ -17,14 +17,15 @@ export const PALETTES: { id: Palette; label: string; swatch: string }[] = [
 
 const PREFS_COOKIE = 'seer-prefs';
 
-export function readPrefs(): { theme?: string; palette?: string } {
+export function readPrefs(): { theme?: string; palette?: string; nav?: string } {
   const m = document.cookie.match(/(?:^|; )seer-prefs=([^;]*)/);
   if (!m) return {};
-  try { return JSON.parse(decodeURIComponent(m[1])) as { theme?: string; palette?: string }; }
+  try { return JSON.parse(decodeURIComponent(m[1])) as { theme?: string; palette?: string; nav?: string }; }
   catch { return {}; }
 }
 
-export function writePrefs(patch: { theme?: string; palette?: string }) {
+// nav — флаг «новая навигация» (S3-07): 'v1'|'v2', общий с web-next.
+export function writePrefs(patch: { theme?: string; palette?: string; nav?: string }) {
   const next = { ...readPrefs(), ...patch };
   const h = location.hostname;
   // Домен не ставим для localhost и голых IP — браузер отвергнет такую cookie

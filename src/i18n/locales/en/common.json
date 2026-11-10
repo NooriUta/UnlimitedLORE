@@ -2998,5 +2998,12 @@
   },
   "app": {
     "admin": "Admin"
+  },
+  "settings": {
+    "nav": {
+      "label": "New navigation",
+      "hint": "Turn on to switch to the new LORE. The choice is remembered for both versions.",
+      "unavailable": "Switch unavailable: this address (localhost or IP) has no second LORE version."
+    }
   }
 }
