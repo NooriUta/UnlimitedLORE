@@ -1,5 +1,6 @@
 package studio.seer.heimdall.lore;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +82,85 @@ final class LoreRecordFrom {
 
     /** Одна функция на все типы: значения по описаниям «откуда» из строки среза, в их порядке. */
     static Map<String, Object> assemble(List<Val> vals, Map<String, Object> row) {
-        return new LinkedHashMap<>();   // заглушка: сборщик появится следующим шагом (красный тест LoreRecordFromTest)
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (Val v : vals) {
+            From f = v.from();
+            if (f.when() != null && !Boolean.TRUE.equals(row.get(f.when()))) continue;
+            out.put(v.key(), apply(f, row));
+        }
+        return out;
+    }
+
+    /** Одно преобразование колонки (закрытый набор {@link Transform}). */
+    static Object apply(From f, Map<String, Object> row) {
+        Object first = row.get(f.columns().get(0));
+        return switch (f.transform()) {
+            case STR -> LoreRecordValues.str(first);
+            case RAW -> first;
+            case LIST -> LoreRecordValues.arr(first);
+            case TRIM -> trim(LoreRecordValues.str(first));
+            case DATE10 -> date10(LoreRecordValues.str(first));
+            case BOOL_YES -> Boolean.TRUE.equals(first) ? "Да" : null;
+            case TEXT -> first == null ? null : String.valueOf(first);
+            case PLAN_TOKEN -> LoreRecordValues.planToken(LoreRecordValues.str(first));
+            case DOC_TOKEN -> LoreRecordValues.docToken(first);
+            case PRESENT -> LoreRecordValues.str(first) != null;
+            case FIRST_OF -> firstOf(f.columns(), row);
+            case HEAD_OR -> headOr(f.columns(), row);
+        };
+    }
+
+    private static String trim(String s) { return s == null ? null : s.trim(); }
+
+    private static String date10(String s) { return s == null ? null : s.substring(0, Math.min(10, s.length())); }
+
+    private static String firstOf(List<String> columns, Map<String, Object> row) {
+        for (String c : columns) {
+            String s = LoreRecordValues.str(row.get(c));
+            if (s != null) return s;
+        }
+        return null;
+    }
+
+    private static String headOr(List<String> columns, Map<String, Object> row) {
+        List<String> head = LoreRecordValues.arr(row.get(columns.get(0)));
+        if (!head.isEmpty()) return head.get(0);
+        return columns.size() > 1 ? LoreRecordValues.str(row.get(columns.get(1))) : null;
+    }
+
+    /** Строка ребёнка → item части: значения тем же сборщиком; подпись — колонка подписи, иначе id. */
+    static Map<String, Object> item(ItemDef d, Map<String, Object> row) {
+        Map<String, Object> vals = assemble(d.values(), row);
+        String id = LoreRecordValues.str(row.get(d.idColumn()));
+        String title = LoreRecordValues.str(row.get(d.titleColumn()));
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("title", title != null ? title : id);
+        m.put("status", vals.get("status"));
+        m.put("values", vals);
+        return m;
+    }
+
+    /** Связи из строки главного среза по описаниям типа. */
+    static List<Map<String, Object>> rowLinks(String type, Map<String, Object> row) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (LinkFrom l : ROW_LINKS.getOrDefault(type, List.of()))
+            for (String id : LoreRecordValues.arr(row.get(l.column()))) {
+                String t = l.techByPrefix() && id.startsWith(LoreRecordValues.TECH_SPEC_PREFIX) ? "tech" : l.type();
+                out.add(LoreRecordValues.link(l.rel(), l.dir(), id, t, id, null));
+            }
+        return out;
+    }
+
+    /** Строка отдельного среза вкладки → связь. */
+    static Map<String, Object> sliceLink(SliceLink sl, Map<String, Object> row) {
+        return LoreRecordValues.link(sl.rel(), sl.dir(), (String) apply(sl.id(), row), sl.type(),
+            (String) apply(sl.title(), row), sl.status() == null ? null : (String) apply(sl.status(), row));
+    }
+
+    static SliceLink sliceLinkDef(String type, String key) {
+        for (SliceLink sl : SLICE_LINKS.getOrDefault(type, List.of())) if (sl.key().equals(key)) return sl;
+        return null;
     }
 
     // ── Описания ─────────────────────────────────────────────────────────────
