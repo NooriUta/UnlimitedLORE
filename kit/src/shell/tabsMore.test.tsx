@@ -13,6 +13,12 @@
 // ОДНО ПРАВИЛО ВАЖНЕЕ ОСТАЛЬНЫХ: выбранная вкладка видна ВСЕГДА, даже если она
 // из редких. Спрятать то, что человек сейчас читает, — хуже перегруженности:
 // он перестаёт понимать, где находится.
+//
+// Правка 10.11.2026 (ревью, B13): сама свёртка спрашивается по роли ВКЛАДКИ, а
+// не кнопки. Она живёт внутри `role="tablist"`, и обычная кнопка делала ряд
+// недопустимым по ARIA (axe: aria-required-children) — нашлось, когда
+// сворачивание наконец начало срабатывать на живом паспорте. Теперь это
+// вкладка с всплывающим меню (`aria-haspopup="menu"`), что ARIA разрешает.
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Tabs, type TabItem } from './Tabs';
@@ -38,7 +44,7 @@ describe('вкладки: редкие под «Ещё»', () => {
   it('положительный контроль: без признака `secondary` все вкладки в ряду', () => {
     render(<Tabs items={items.map(i => ({ ...i, secondary: false }))} value="tasks" onChange={() => {}} label="Разделы" />);
     expect(inRow()).toHaveLength(5);
-    expect(screen.queryByRole('button', { name: /Ещё/ })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /Ещё/ })).toBeNull();
   });
 
   it('редкие в ряду не показываются, а их число названо', () => {
@@ -48,12 +54,12 @@ describe('вкладки: редкие под «Ещё»', () => {
     expect(row).toContain('Контент');
     expect(row).not.toContain('Фазы');
     // Сколько спрятано — числом: «Ещё» без числа не говорит, стоит ли открывать.
-    expect(screen.getByRole('button', { name: /Ещё.*3/ })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Ещё.*3/ })).toBeTruthy();
   });
 
   it('«Ещё» открывает список редких, и выбор переключает вкладку', () => {
     const { onChange } = show();
-    fireEvent.click(screen.getByRole('button', { name: /Ещё/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
     const pop = screen.getByRole('menu', { name: /Ещё/ });
     expect(within(pop).getAllByRole('menuitem')).toHaveLength(3);
     fireEvent.click(within(pop).getByRole('menuitem', { name: /Зависит от/ }));
@@ -66,17 +72,17 @@ describe('вкладки: редкие под «Ещё»', () => {
     expect(row).toContain('Зависит от');
     // Остальные редкие по-прежнему спрятаны, и их теперь двое.
     expect(row).not.toContain('Фазы');
-    expect(screen.getByRole('button', { name: /Ещё.*2/ })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Ещё.*2/ })).toBeTruthy();
   });
 
   it('все редкие спрятаны и выбрана частая — «Ещё» всё равно есть', () => {
     show('content');
-    expect(screen.getByRole('button', { name: /Ещё.*3/ })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Ещё.*3/ })).toBeTruthy();
   });
 
   it('свёртка закрывается по Esc — она всплывающая, а не вторая строка вкладок', () => {
     show();
-    fireEvent.click(screen.getByRole('button', { name: /Ещё/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
     expect(screen.getByRole('menu', { name: /Ещё/ })).toBeTruthy();
     fireEvent.keyDown(screen.getByRole('menu', { name: /Ещё/ }), { key: 'Escape' });
     expect(screen.queryByRole('menu', { name: /Ещё/ })).toBeNull();

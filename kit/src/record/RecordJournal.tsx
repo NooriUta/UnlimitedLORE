@@ -6,6 +6,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { kitT, type KitLang } from '../i18n';
 import { blockError } from './RecordLinks';
 import { valueText } from './fmt';
+import { kitMinute } from '../core/fmtValue';
 
 export function recordJournal(id: string, journal: readonly KitJournalEntry[]): KitJournalEntry[] {
   return journal.filter(j => j.record_id === id).sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
@@ -23,7 +24,7 @@ export function RecordJournal({ record, ctx, lang }: { record: KitRecord; ctx: K
       {rows.map((j, i) => (
         <li key={`${j.at}:${j.field}:${i}`} className="sk-rec-journal__row" data-testid="kit-journal-row"
           data-agent={j.is_agent ? 'true' : undefined}>
-          <time className="sk-rec-journal__at" dateTime={j.at}>{j.at.replace('T', ' ').slice(0, 16)}</time>
+          <time className="sk-rec-journal__at" dateTime={j.at} title={kitMinute(j.at)?.title}>{kitMinute(j.at)?.text ?? j.at}</time>
           <span className="sk-rec-journal__who">
             {j.who}
             {j.is_agent && <span className="sk-pill sk-pill--value sk-rec-journal__agent">{kitT(lang, 'kit.record.journal.agent')}</span>}

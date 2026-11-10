@@ -28,12 +28,17 @@ export interface RecordCrumbsProps {
 
 export function RecordCrumbs({ back, context, current, className }: RecordCrumbsProps) {
   const lang = useKitLang();
+  // Подпись — один инлайновый узел внутри flex-бокса ссылки: подчёркивание
+  // рисует он (на самом flex-контейнере линия ложится по базовой линии бокса
+  // и проходит по глифам — крошка выглядела зачёркнутой, B7 ревью 10.11.2026),
+  // и пробелы между «←», разделом и контекстом остаются на месте — у flex-
+  // элементов они схлопывались («←Задачи· Категория»).
   const inner = (
-    <>
+    <span className="sk-crumbs__label">
       <span aria-hidden="true">← </span>
       <span>{back.label}</span>
       {context && <span className="sk-crumbs__ctx"> · {context}</span>}
-    </>
+    </span>
   );
   return (
     <nav className={['sk-crumbs', className].filter(Boolean).join(' ')} aria-label={kitT(lang, 'kit.record.crumbs.label')}>

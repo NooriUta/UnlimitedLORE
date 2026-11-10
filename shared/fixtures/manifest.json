@@ -1,0 +1,19 @@
+{
+  "_about": "SPRINT_UXR_S11_TEST_OPT/CT-KIT-FIXTURES: что снимает shared/fixtures/snapshot.mjs. Порядок важен: подстановка {x} берёт значение из первой строки среза, снятого РАНЬШЕ (picks). Значение можно задать руками: --set adr_id=ADR-LORE-048.",
+  "targets": [
+    { "name": "model", "path": "/lore/model" },
+    { "name": "slice-sprints", "path": "/lore/slice/sprints?limit=5" },
+    { "name": "slice-adrs", "path": "/lore/slice/adrs?limit=5" },
+    { "name": "slice-tasks_of_sprint", "path": "/lore/slice/tasks_of_sprint?sprint_id={sprint_id}&limit=10" },
+    { "name": "slice-phases_of_sprint", "path": "/lore/slice/phases_of_sprint?sprint_id={sprint_id}" },
+    { "name": "slice-search", "path": "/lore/slice/search?pattern=LORE&limit=5" },
+    { "name": "record-sprint", "path": "/lore/record/sprint/{sprint_id}" },
+    { "name": "record-task", "path": "/lore/record/task/{task_uid}" },
+    { "name": "record-adr", "path": "/lore/record/adr/{adr_id}" }
+  ],
+  "picks": {
+    "sprint_id": { "from": "slice-sprints", "field": "sprint_id" },
+    "task_uid": { "from": "slice-tasks_of_sprint", "field": "task_uid" },
+    "adr_id": { "from": "slice-adrs", "field": "adr_id" }
+  }
+}

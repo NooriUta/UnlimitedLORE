@@ -11,6 +11,7 @@ import { statusMeta } from '../elements/statusMeta';
 import { kitT, useKitLang } from '../i18n';
 import { taskStatusName } from './TaskTable';
 import { TASK_STATUSES, type TaskRowData } from './taskGroups';
+import { kitNumber } from '../core/fmtValue';
 
 export interface TaskCountersProps {
   tasks: readonly TaskRowData[];
@@ -39,7 +40,7 @@ export function TaskCounters({ tasks, className }: TaskCountersProps) {
     if (meta.category === 'done') done += 1;
     if (typeof t.effortDays === 'number') { effort += t.effortDays; hasEffort = true; }
   }
-  const fmt = new Intl.NumberFormat(lang === 'en' ? 'en' : 'ru', { maximumFractionDigits: 2 });
+  const fmt = { format: (v: number) => kitNumber(lang, v) };
 
   return (
     <div className={['sk-tc', className].filter(Boolean).join(' ')}>

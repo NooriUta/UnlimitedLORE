@@ -48,7 +48,6 @@ public class LoreLinkResource extends LoreResourceBase {
 
     static final String ORIGIN_MENTION = "mention";
 
-    private static final Pattern RID = Pattern.compile("#\\d+:\\d+");
     private static final Pattern EDGE_NAME = Pattern.compile("[A-Z_]{2,40}");
 
     @GET
@@ -202,39 +201,16 @@ public class LoreLinkResource extends LoreResourceBase {
         }
     }
 
-    /**
-     * @return rid записи; {@code null} — записи нет; пустая строка — id неоднозначен.
-     *         Сбой запроса летит наверх: «не смогли проверить» ≠ «нет».
-     */
+    /** @see LoreGraphLinks#resolveRid */
     private String resolveRid(LoreLinkTypes.Entity e, String id) {
-        List<Map<String, Object>> rows = ingestService.queryPublic(
-            "SELECT @rid AS rid FROM " + e.vertexClass() + " WHERE " + e.idField() + " = :v LIMIT 2",
-            Map.of("v", id));
-        if (rows.isEmpty()) return null;
-        if (rows.size() > 1) return "";
-        String rid = String.valueOf(rows.get(0).get("rid"));
-        if (!RID.matcher(rid).matches()) throw new IllegalStateException("неожиданный @rid: " + rid);
-        return rid;
+        return LoreGraphLinks.resolveRid(ingestService, e, id);
     }
 
     private boolean edgeBetween(String edge, String fromRid, String toRid) {
-        List<Map<String, Object>> rows = ingestService.queryPublic(
-            "SELECT count(*) AS n FROM " + edge + " WHERE @out = " + fromRid + " AND @in = " + toRid, Map.of());
-        return !rows.isEmpty() && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
-    }
-
-    /** Кто поставил: факт токена (ось:идентичность), а не поле тела запроса. */
-    private String callerLabel() {
-        String scope = identity == null ? null : AgentScopeFilter.agentScopeOf(identity);
-        if (scope != null) {
-            String client = callerClientId();
-            return "agent:" + scope + (client == null ? "" : "/" + client);
-        }
-        String sub = callerKcSub();
-        return sub == null ? "human" : "human:" + sub;
+        return LoreGraphLinks.edgeBetween(ingestService, edge, fromRid, toRid);
     }
 
     private static String sqlSafe(String s) {
-        return s == null ? "" : s.replaceAll("[^A-Za-z0-9_:/.@\\-]", "_");
+        return LoreGraphLinks.sqlSafe(s);
     }
 }

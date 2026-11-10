@@ -106,7 +106,7 @@ class LoreRecordFacadeLiveDbTest {
         assertTrue(n.getList("meta.data_state").isEmpty(), "новая запись ничего не читала — список пуст");
 
         admin().get("/lore/record/task/NOPE_SPRINT/NOPE").then().statusCode(404);
-        admin().get("/lore/record/component/C-1").then().statusCode(400);   // тип без паспорта (решение, вопрос, веха, релиз заведены 09.11)
+        admin().get("/lore/record/pain/P-1").then().statusCode(400);   // тип без паспорта (компонент, технология, фича заведены S4-V2-SECTIONS)
     }
 
     @Test
@@ -280,5 +280,83 @@ class LoreRecordFacadeLiveDbTest {
         assertEquals("open", q.getString("values.status"));
         assertFalse(q.getBoolean("perms.can_edit"));
         admin().get("/lore/record/question/Q-NO-SUCH").then().statusCode(404);
+    }
+
+    /** Общий минимум контракта lore.record/1 для паспорта только-для-чтения. */
+    private JsonPath readOnlyContract(String type, String id) {
+        JsonPath r = record(type, id);
+        String w = type + ": ";
+        assertEquals("lore.record/1", r.getString("contract"), w + "контракт");
+        assertEquals(type, r.getString("record.type"), w + "тип");
+        assertEquals(id, r.getString("record.id"), w + "деловой ключ, не @rid");
+        assertNull(r.get("record.version"), w + "истории SCD2 нет — версии нет");
+        assertFalse(r.getBoolean("perms.can_edit"), w + "только чтение — правка не обещается");
+        assertFalse(r.getBoolean("perms.can_status"), w + "смена статуса не обещается");
+        assertEquals(List.of(), r.getList("perms.status_next"), w);
+        assertEquals(type, r.getString("schema.type"), w + "раскладка из реестра");
+        assertInstanceOf(Map.class, r.get("computed"), w + "computed — объект всегда");
+        Map<String, Object> values = r.getMap("values");
+        for (Map.Entry<String, Object> e : values.entrySet())
+            assertFalse(e.getValue() instanceof Map, w + "в values объект — " + e.getKey());
+        return r;
+    }
+
+    /** S4-V2-SECTIONS: паспорт вехи — контракт lore.record/1 на живой БД. */
+    @Test
+    void milestonePassportContract() {
+        admin().body(Map.of("milestone_id", "M-REC-PASS", "label", "веха для паспорта", "goal_md", "цель"))
+            .post("/lore/milestone").then().statusCode(200);
+        JsonPath m = readOnlyContract("milestone", "M-REC-PASS");
+        assertEquals("веха для паспорта", m.getString("values.title"));
+        assertEquals("цель", m.getString("values.goal_md"));
+        assertEquals(0, m.getInt("computed.sprints_total.value"));
+        admin().get("/lore/record/milestone/M-NO-SUCH").then().statusCode(404);
+    }
+
+    /** S4-V2-SECTIONS: паспорта компонента, технологии и фичи (только чтение). */
+    @Test
+    void componentTechFeaturePassportsAreReadOnly() {
+        admin().body(Map.of("component_id", "C-REC-PASS", "full_name", "компонент для паспорта", "area", "core",
+            "owner", "arharaga")).post("/lore/component/create").then().statusCode(200);
+        JsonPath c = readOnlyContract("component", "C-REC-PASS");
+        assertEquals("компонент для паспорта", c.getString("values.title"));
+        assertEquals("core", c.getString("values.area"));
+        admin().get("/lore/record/component/C-NO-SUCH").then().statusCode(404);
+
+        admin().body(Map.of("spec_id", "SPEC-TECH-C-REC-PASS-QUARKUS", "title", "Quarkus", "version", "3.15.1",
+            "content_md", "- license: Apache-2.0")).post("/lore/spec").then().statusCode(200);
+        JsonPath t = readOnlyContract("tech", "SPEC-TECH-C-REC-PASS-QUARKUS");
+        assertEquals("Quarkus", t.getString("values.title"));
+        assertEquals("3.15.1", t.getString("values.version"));
+        admin().body(Map.of("spec_id", "SPEC-REC-NOT-TECH", "title", "обычная спека"))
+            .post("/lore/spec").then().statusCode(200);
+        admin().get("/lore/record/tech/SPEC-REC-NOT-TECH").then().statusCode(404);   // спека — не технология
+
+        admin().body(Map.of("feature_id", "FEAT-REC-PASS", "title", "фича для паспорта"))
+            .post("/lore/feature").then().statusCode(200);
+        admin().body(Map.of("uc_id", "UC-REC-PASS-1", "title", "сценарий фичи", "parent_uc_id", "FEAT-REC-PASS",
+            "goal_level", "sea-level")).post("/lore/uc").then().statusCode(200);
+        JsonPath f = readOnlyContract("feature", "FEAT-REC-PASS");
+        assertEquals("фича для паспорта", f.getString("values.title"));
+        // Паспорт фичи открывает и сценарий любого уровня — US разделом тоже щёлкаются.
+        JsonPath u = readOnlyContract("feature", "UC-REC-PASS-1");
+        assertEquals("sea-level", u.getString("values.goal_level"));
+        assertEquals("FEAT-REC-PASS", u.getString("values.parent"));
+    }
+
+    /** S4-V2-SECTIONS, «US разделом»: срез всех уровней без обязательного параметра. */
+    @Test
+    void useCasesSliceReturnsEveryLevel() {
+        admin().body(Map.of("feature_id", "FEAT-REC-ALL", "title", "корень"))
+            .post("/lore/feature").then().statusCode(200);
+        admin().body(Map.of("uc_id", "UC-REC-ALL-1", "title", "лист", "parent_uc_id", "FEAT-REC-ALL",
+            "goal_level", "subfunction")).post("/lore/uc").then().statusCode(200);
+        List<String> ids = admin().get("/lore/slice/use_cases").then().statusCode(200).extract().jsonPath()
+            .getList("rows.uc_id", String.class);
+        assertTrue(ids.contains("FEAT-REC-ALL"), "корень в выдаче: " + ids);
+        assertTrue(ids.contains("UC-REC-ALL-1"), "сценарий уровня subfunction в выдаче: " + ids);
+        List<String> leaves = admin().get("/lore/slice/use_cases?goal_level=subfunction").then().statusCode(200)
+            .extract().jsonPath().getList("rows.uc_id", String.class);
+        assertTrue(leaves.contains("UC-REC-ALL-1") && !leaves.contains("FEAT-REC-ALL"), leaves.toString());
     }
 }

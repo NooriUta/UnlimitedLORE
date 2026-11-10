@@ -81,6 +81,31 @@ final class HistAuthorIndex {
         return of(rows, errors);
     }
 
+    /**
+     * S7A-09: только цепочки типов {@code types} и только версии с {@code valid_from} в
+     * [from − допуск, to + допуск]. Автор ищется у версии, начавшейся в момент события
+     * (± {@link #TOLERANCE_MS}), поэтому версии вне окна ни одному событию окна не
+     * подходят — их чтение было работой впустую. Цепочка вне {@code types} не читается.
+     */
+    static HistAuthorIndex load(BiFunction<String, Map<String, Object>, List<Map<String, Object>>> query,
+                                java.util.Set<String> types, Instant from, Instant to) {
+        Map<String, List<Map<String, Object>>> rows = new TreeMap<>();
+        List<String> errors = new ArrayList<>();
+        Map<String, Object> window = Map.of(
+            "from", from.minusMillis(TOLERANCE_MS).toString(), "to", to.plusMillis(TOLERANCE_MS).toString());
+        for (Map.Entry<String, LoreSlices.HistParent> e : new TreeMap<>(LoreSlices.HIST_PARENT).entrySet()) {
+            if (types != null && !types.contains(e.getValue().entityType())) continue;
+            try {
+                List<Map<String, Object>> r = query.apply(
+                    sql(e.getKey()) + " AND valid_from >= date(:from) AND valid_from <= date(:to)", window);
+                rows.put(e.getValue().entityType(), r == null ? List.of() : r);
+            } catch (RuntimeException ex) {
+                errors.add(e.getKey() + ": " + ex.getMessage());
+            }
+        }
+        return of(rows, errors);
+    }
+
     /** Индекс из готовых строк (тип сущности → строки {@link #sql}) — для тестов без БД. */
     static HistAuthorIndex of(Map<String, List<Map<String, Object>>> rowsByType, List<String> errors) {
         Map<String, Map<String, List<Version>>> idx = new HashMap<>();

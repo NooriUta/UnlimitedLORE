@@ -26,6 +26,19 @@ export interface RecordFactsSpec {
   now?: string | number | Date;
   /** Вкладка вида, куда ведёт «задачи x/y» (одно касание до таблицы задач). */
   tasksTab?: string;
+  /**
+   * Готовые числа задач — когда их посчитала ТА сторона, что знает корпус.
+   *
+   * Дефект прода v1.17.8: в паспорте спринта «Задач нет» при 48 задачах.
+   * Сервер присылал `facts.tasks {done, total, open}`, а клиент считал по
+   * рёбрам своей выборки — и выборка бывает обрезанной (meta.data_state,
+   * truncated). Пересчёт тогда занижает МОЛЧА, а это хуже, чем сказать «не
+   * смогли проверить». Поэтому заданные числа сильнее пересчёта.
+   *
+   * Сильнее их только ошибка блока: «не прочитали» остаётся «не прочитали»,
+   * сколько бы чисел ни пришло. `open` необязателен — без него это total − done.
+   */
+  counts?: { done: number; total: number; open?: number; cancelled?: number };
 }
 
 export type FactTone = 'suc' | 'wrn' | 'dng' | 'inf' | 't2' | 't3';
@@ -78,6 +91,15 @@ function tasksFact(record: KitRecord, ctx: KitCtx, spec: RecordFactsSpec): Tasks
   if (!spec.childEdge) return null;
   const err = ctx.data.meta.errors?.find(e => e.block === (spec.errorBlock ?? 'tasks'));
   if (err) return { state: 'error', reason: err.reason };
+  // Числа, посчитанные знающей стороной (spec.counts), побеждают пересчёт по
+  // рёбрам: см. пояснение у RecordFactsSpec.counts. Ноль остаётся проверенным
+  // нулём — «Задач нет», а не «0 из 0».
+  if (spec.counts) {
+    const { done, total } = spec.counts;
+    if (total <= 0 && done <= 0) return { state: 'none' };
+    const open = spec.counts.open ?? Math.max(0, total - done);
+    return { state: 'ok', done, total, open, cancelled: spec.counts.cancelled ?? 0 };
+  }
   const out = (spec.childDir ?? 'out') === 'out';
   const ids = new Set<string>();
   for (const e of ctx.data.edges) {

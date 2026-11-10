@@ -12,6 +12,7 @@
 // Правка тела здесь не делается — по решению владелицы это отдельный вопрос.
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { splitDiagramFences } from './diagramFence';
 
 export interface MarkdownBareResult {
   /** Разбор и очистка прошли. */
@@ -30,8 +31,6 @@ export interface MarkdownBareOptions {
   /** Подмена очистки. Очистка обязательна: без неё html не показывается. */
   sanitize?: (html: string) => string;
 }
-
-const MERMAID_BLOCK = /```mermaid\r?\n([\s\S]*?)```/g;
 
 function escapeHtml(s: string): string {
   return s
@@ -62,12 +61,17 @@ export function renderMarkdownBare(src: string, opts: MarkdownBareOptions = {}):
   if (!src.trim()) return { ok: true, html: '', diagrams: 0 };
 
   let diagrams = 0;
-  const withDiagrams = src.replace(MERMAID_BLOCK, (_m, code: string) => {
-    diagrams += 1;
-    // Исходник схемы остаётся в разметке: это и данные для mermaid, и то,
-    // что увидит человек, если отрисовка не случится.
-    return `<div class="sk-prose__diagram"><pre class="sk-prose__mermaid">${escapeHtml(code.trim())}</pre></div>`;
-  });
+  // Что считается схемой — решает splitDiagramFences, то же правило, что в
+  // MartProse: упоминание ```mermaid внутри строки прозы схему не открывает.
+  const withDiagrams = splitDiagramFences(src, ['mermaid'])
+    .map(part => {
+      if (part.kind === 'text') return part.text;
+      diagrams += 1;
+      // Исходник схемы остаётся в разметке: это и данные для mermaid, и то,
+      // что увидит человек, если отрисовка не случится.
+      return `\n<div class="sk-prose__diagram"><pre class="sk-prose__mermaid">${escapeHtml(part.def)}</pre></div>\n`;
+    })
+    .join('');
 
   let raw: string;
   try {

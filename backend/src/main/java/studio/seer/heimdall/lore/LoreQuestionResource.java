@@ -27,7 +27,7 @@ public class LoreQuestionResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreQuestionResource.class);
 
-    private static final java.util.Set<String> STATUSES = java.util.Set.of("open", "deferred", "closed", "dropped");
+    static final java.util.Set<String> STATUSES = java.util.Set.of("open", "deferred", "closed", "dropped");
 
     /**
      * MT-MCP-TRUTH A1–A2 (06.11.2026): отказ на closed руками обязан объяснять

@@ -4,6 +4,7 @@
 // статусу / списком. Компонент не знает API: запись — колбэки экрана
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
+import { kitNumber } from '../core/fmtValue';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react';
 import { GameIcon } from '../elements/GameIcon';
@@ -191,7 +192,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
   const showPhase = groupBy !== 'phase';
   const showGroupHeads = groupBy !== 'none';
   const phaseById = new Map(phases.map(p => [p.uid, p]));
-  const fmt = new Intl.NumberFormat(lang === 'en' ? 'en' : 'ru', { maximumFractionDigits: 2 });
+  const fmt = { format: (v: number) => kitNumber(lang, v) };
 
   // Доступные колонки: «Фаза» недоступна при группировке по фазе — она уже в
   // заголовке группы, второй раз это шум.

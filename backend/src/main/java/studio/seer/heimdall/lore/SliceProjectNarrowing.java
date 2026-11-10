@@ -40,7 +40,8 @@ final class SliceProjectNarrowing {
         meta.put("requested", requested);
         if (!LoreSlices.PROJECT_SCOPED.containsKey(sliceId)) {
             meta.put("applied", false);
-            meta.put("reason", "срез " + sliceId + " не привязан к проектам — сузить по выбранным проектам "
+            // Ревью 10.11, B11: текст отметки — в `note` (его читает клиент), не в `reason`.
+            meta.put("note", "срез " + sliceId + " не привязан к проектам — сузить по выбранным проектам "
                 + "нечем, показано всё доступное");
             return new Result(rowScope, meta, false);
         }
@@ -51,9 +52,8 @@ final class SliceProjectNarrowing {
             else dropped.add(p);
         }
         meta.put("applied", true);
+        // Отброшенные называются один раз — списком dropped; та же фраза в note была дублем (ревью 10.11).
         meta.put("dropped", dropped);
-        if (!dropped.isEmpty())
-            meta.put("note", "проекты вне ваших прав отброшены: " + String.join(", ", dropped));
         return new Result(effective, meta, effective.isEmpty());
     }
 }

@@ -24,7 +24,7 @@
 #   theme    тема Keycloak из дерева тега → /home/nooriuta/keycloak/themes/lore,
 #            сверка размера css внутри контейнера keycloak.
 #   probe    хэш бандла v1/v2 (на lore-host по Host и по публичному имени),
-#            /lore/version = коммит сборки, в логе «БД vN = код vN».
+#            /lore/version = коммит сборки через nginx v1 И v2, в логе «БД vN = код vN».
 #   swap-file <файл> <сервис> <тег>   — замена тега образа в одном compose-файле
 #            (её же выполняет compose на lore-host: скрипт уходит туда по stdin).
 #   remote-backup <каталог> <база>    — BACKUP DATABASE кредом работающего
@@ -343,7 +343,11 @@ probe() {
   done
   bash "$here/bundle-probe.sh" "v1 прод" "$BUNDLE_V1" "https://$HOST_V1/" || rc=1
   bash "$here/bundle-probe.sh" "v2 прод" "$BUNDLE_V2" "https://$HOST_V2/" || rc=1
+  # /lore/version — через nginx ОБОИХ фронтов (SPRINT_UXR_S8_SWITCH/S8-01): шаблон
+  # nginx общий, но после переключения основной адрес — v2, и телефон с MCP идут
+  # через его прокси /lore/. Проба только по имени v1 этого пути не видела.
   EXPECT_COMMIT="$EXPECT_COMMIT" bash "$here/version-probe.sh" "https://$HOST_V1" || rc=1
+  EXPECT_COMMIT="$EXPECT_COMMIT" bash "$here/version-probe.sh" "https://$HOST_V2" || rc=1
   line="$(r "cd $DIR_BE && docker compose logs --no-color --since $UP_AT lore-backend 2>&1 | grep -oE 'схема сверена: БД v[0-9]+ = код v[0-9]+' | tail -1" || true)"
   case "$line" in
     *"БД v$CODE_SCHEMA = код v$CODE_SCHEMA") echo "ok: $line" ;;
@@ -351,7 +355,7 @@ probe() {
     *) err "в логе нового бэкенда нет «схема сверена: БД v$CODE_SCHEMA = код v$CODE_SCHEMA» (есть: ${line:-ничего})"; rc=1 ;;
   esac
   if [ "$rc" -ne 0 ]; then rollback_hint; return 1; fi
-  summary "- пробы: бандлы v1/v2, /lore/version = ${EXPECT_COMMIT:0:8}, БД v$CODE_SCHEMA = код v$CODE_SCHEMA"
+  summary "- пробы: бандлы v1/v2, /lore/version (v1 и v2) = ${EXPECT_COMMIT:0:8}, БД v$CODE_SCHEMA = код v$CODE_SCHEMA"
 }
 
 case "${1:-}" in

@@ -5,6 +5,7 @@ import { GameIcon } from '../elements/GameIcon';
 import { kitT, type KitLang } from '../i18n';
 import { verdictTone } from './graph';
 import { StatusSlot } from './StatusSlot';
+import { kitMinute } from '../core/fmtValue';
 
 /**
  * Шапка записи (K-04; раскладка S4-29 по прототипу v4): надзаголовок «тип · ID»
@@ -35,7 +36,7 @@ export function RecordHead({ record, ctx, lang, titleId, withStatus = true, tail
           <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
           {record.updated_at && (
             <time className="sk-rec-head__time" dateTime={record.updated_at}>
-              {kitT(lang, 'kit.record.updated', { at: record.updated_at.replace('T', ' ').slice(0, 16) })}
+              {kitT(lang, 'kit.record.updated', { at: kitMinute(record.updated_at)?.text ?? record.updated_at })}
             </time>
           )}
           {tail}

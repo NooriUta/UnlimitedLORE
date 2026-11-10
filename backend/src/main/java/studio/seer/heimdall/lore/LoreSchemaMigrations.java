@@ -1576,7 +1576,15 @@ final class LoreSchemaMigrations {
 
         // S2-11 (прод 09.11, v1.17.8): версия истории на нескольких сущностях — каждому владельцу
         // кроме первого своя копия (те же поля и даты), ребро переводится на копию.
-        new Step(77, 17, "java__shared_state_split", List.of())
+        new Step(77, 17, "java__shared_state_split", List.of()),
+
+        // SPRINT_UXR_S7B_ADMIN/S7B-13: событие AL-102 знает свою пачку массовых правок и роль до
+        // правки — пачку раскрывают из журнала по batch_id и откатывают без ответа исходного
+        // вызова (GET /lore/admin/actions/batch/{id}). Аддитивно, major 17. Индекса нет: событий
+        // сотни, а у старых batch_id пуст — индекс по пустому полю ради скана сотни строк не нужен.
+        new Step(78, 17, "project_role_event_batch", List.of(
+            "CREATE PROPERTY KnowProjectRoleEvent.batch_id    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.role_before IF NOT EXISTS STRING"))
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

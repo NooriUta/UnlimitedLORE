@@ -1001,7 +1001,9 @@ public class AidaLoreResource extends LoreResourceBase {
 
         // S1-09: записи, намеренно лишённые проекта (claude-rules, infra), скоуп не режет —
         // подтягиваются вторым запросом без скоупа и вливаются в выдачу (ScopeExemptRows).
-        final Map<String, String> exemptGiven = ScopeExemptRows.exemptParams(id, given, rowScope);
+        // Ревью 10.11, B12: выбор проектов в шапке — явный фильтр по проекту, строки без проекта ему не отвечают.
+        boolean headerProjectsChosen = narrowMarker != null && Boolean.TRUE.equals(narrowMarker.get("applied"));
+        final Map<String, String> exemptGiven = ScopeExemptRows.exemptParams(id, given, rowScope, headerProjectsChosen);
         final LoreSlices.Composed exemptQuery;
         try {
             exemptQuery = exemptGiven == null ? null : LoreSlices.compose(id, exemptGiven);
@@ -1120,10 +1122,12 @@ public class AidaLoreResource extends LoreResourceBase {
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
         final Map<String, String> filters;
+        SliceProjectNarrowing.Result countNarrowing;
         try {
             callerScope = allowedProjectsOrNull(role);
             // Выбор проектов в шапке сужает и счётчик — иначе число в разделе не сойдётся со списком.
-            rowScope = SliceProjectNarrowing.apply(id, given, callerScope).scope();
+            countNarrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            rowScope = countNarrowing.scope();
             filters = LoreSectionCount.filtersOf(given);
             composed = LoreSlices.compose(id, new LinkedHashMap<>(filters), rowScope);
         } catch (IllegalArgumentException e) {
@@ -1136,16 +1140,129 @@ public class AidaLoreResource extends LoreResourceBase {
                     + "проекта — счётчик среза " + id + " не отдаётся нулём"))));
         }
         final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
+        // Ревью 10.11: отметка сужения едет и в счётчик — иначе «ноль по выбору проектов»
+        // неотличим от «записей нет».
+        final Map<String, Object> countNarrowMarker = countNarrowing.meta();
         MartQuery body = new MartQuery("sql", composed.sql(),
             composed.params().isEmpty() ? null : composed.params(), -1);
         return client.query(db, basicAuth(), body)
             .map(res -> {
                 Map<String, Object> out = sliceBody(res);
                 if (scopeMarker != null) out.put("scope", scopeMarker);
-                return noStore(Response.ok(LoreSectionCount.count(id, out, filters)));
+                Map<String, Object> counted = LoreSectionCount.count(id, out, filters);
+                if (countNarrowMarker != null) counted.put(SliceProjectNarrowing.PARAM, countNarrowMarker);
+                return noStore(Response.ok(counted));
             })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice-count=%s: %s", id, ex.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(LoreUpstream.error(ex)));
+            });
+    }
+
+    /**
+     * SPRINT_UXR_S9_SCALE_OPT/S9-01: значения фасетов и итоги списка по ВСЕЙ отфильтрованной
+     * выдаче ({@link LoreListFacets}). {@code axes=a,b} — поля строки (или {@code status_category}),
+     * {@code group_by} — поле итогов (по умолчанию категория статуса). Ось считается без фильтра
+     * своей оси, но с прочими; оси с одинаковым набором фильтров делят один запрос. Тот же
+     * compose, скоуп, {@code scope_projects} и отказ SCOPE_EMPTY, что у {@link #slice};
+     * страница (limit/offset/fields) не учитывается. Сбой запроса оси — ось в {@code unavailable},
+     * а не ноль; сбой основного запроса — 502.
+     */
+    @GET
+    @Path("slice/{id}/facets")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Uni<Response> sliceFacets(@PathParam("id") String id, @Context UriInfo uriInfo,
+                                     @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return Uni.createFrom().item(disabled());
+        if (LoreSlices.get(id) == null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
+                .entity(new LoreError("UNKNOWN_SLICE", id))));
+        }
+        Map<String, String> given = new LinkedHashMap<>();
+        uriInfo.getQueryParameters().forEach((k, v) -> {
+            if (v != null && !v.isEmpty()) given.put(k, v.get(0));
+        });
+        final List<String> axes;
+        final String groupBy;
+        final Map<String, String> filters;
+        final java.util.Set<String> rowScope;
+        final java.util.Set<String> callerScope;
+        final SliceProjectNarrowing.Result narrowing;
+        // Наборы фильтров: [0] — все фильтры (итоги), далее — уникальные наборы осей.
+        final List<Map<String, String>> sets = new ArrayList<>();
+        final Map<String, Integer> axisSet = new LinkedHashMap<>();
+        final List<LoreSlices.Composed> queries = new ArrayList<>();
+        try {
+            axes = LoreListFacets.axes(id, given.get(LoreListFacets.AXES_PARAM));
+            groupBy = LoreListFacets.groupBy(id, given.get(LoreListFacets.GROUP_PARAM));
+            callerScope = allowedProjectsOrNull(role);
+            narrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            rowScope = narrowing.scope();
+            filters = LoreListFacets.filtersOf(given);
+            sets.add(filters);
+            for (String axis : axes) {
+                Map<String, String> f = LoreListFacets.withoutAxis(id, filters, axis);
+                int at = sets.indexOf(f);
+                if (at < 0) { sets.add(f); at = sets.size() - 1; }
+                axisSet.put(axis, at);
+            }
+            for (Map<String, String> f : sets) queries.add(LoreSlices.compose(id, new LinkedHashMap<>(f), rowScope));
+        } catch (IllegalArgumentException e) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
+        }
+        if (scopeDenies(id, callerScope)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — фасеты среза " + id + " не отдаются нулями"))));
+        }
+        // Срезы, подмешивающие записи без проекта вторым запросом (ScopeExemptRows), здесь
+        // этого не делают — число разошлось бы со списком. Честный отказ вместо тихой недостачи.
+        boolean headerChosen = narrowing.meta() != null && Boolean.TRUE.equals(narrowing.meta().get("applied"));
+        if (ScopeExemptRows.exemptParams(id, filters, rowScope, headerChosen) != null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("NOT_FACETABLE", "срез " + id + " под скоупом подмешивает записи без проекта "
+                    + "— серверные фасеты по нему не считаются, иначе число не сойдётся со списком"))));
+        }
+        final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
+        final Map<String, Object> narrowMarker = narrowing.meta();
+        List<Uni<Object>> unis = new ArrayList<>();
+        for (int i = 0; i < queries.size(); i++) {
+            LoreSlices.Composed c = queries.get(i);
+            MartQuery q = new MartQuery("sql", c.sql(), c.params().isEmpty() ? null : c.params(), -1);
+            Uni<Object> u = client.query(db, basicAuth(), q).map(res -> (Object) sliceBody(res));
+            // Основной запрос (итоги) падает целиком — 502; запрос оси — ось в unavailable.
+            if (i > 0) u = u.onFailure().recoverWithItem(ex -> {
+                LoreError err = LoreUpstream.error(ex);
+                return err.error() + (err.detail() == null ? "" : ": " + err.detail());
+            });
+            unis.add(u);
+        }
+        return Uni.combine().all().unis(unis).with(results -> {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> base = (Map<String, Object>) results.get(0);
+                if (scopeMarker != null) base.put("scope", scopeMarker);
+                Map<String, Map<String, Object>> perAxis = new LinkedHashMap<>();
+                Map<String, String> errors = new LinkedHashMap<>();
+                for (String axis : axes) {
+                    Object r = results.get(axisSet.get(axis));
+                    if (r instanceof Map<?, ?>) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> m = (Map<String, Object>) r;
+                        perAxis.put(axis, m);
+                    } else {
+                        perAxis.put(axis, null);
+                        errors.put(axis, String.valueOf(r));
+                    }
+                }
+                Map<String, Object> out = LoreListFacets.assemble(id, axes, base, perAxis, errors, groupBy, filters);
+                if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
+                return noStore(Response.ok(out));
+            })
+            .onFailure().recoverWithItem(ex -> {
+                LOG.warnf("[LORE FAILED] slice-facets=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex)));
             });

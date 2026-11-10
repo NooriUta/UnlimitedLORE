@@ -16,6 +16,8 @@ import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 
@@ -202,5 +204,56 @@ class LoreHistHygieneLiveDbTest {
         .then().statusCode(200)
             .body("rows.findAll { it.finding == 'state_shared_by_entities' }.ref_id", not(hasItem(SHARED_A)))
             .body("rows.findAll { it.finding == 'state_shared_by_entities' }.ref_id", not(hasItem(SHARED_B)));
+    }
+
+    // ── B9: общая версия НЕ приписывается «первому владельцу» ([0]-конвенция) ──
+
+    private static final String B9_A = SPRINT + "/HH-B9-A";
+    private static final String B9_B = SPRINT + "/HH-B9-B";
+    private static final String B9_VF = "2026-11-09T12:00:00.000Z";
+
+    /**
+     * B9: версия с двумя владельцами видна В ОБЕИХ историях. До правки срезы искали
+     * {@code in('HAS_STATE').task_uid[0] = :id} — у второго владельца история пуста
+     * молча, а /lore/history отдавал строки с чужим ref_id. V77 (заказ 6) развёл
+     * только СУЩЕСТВОВАВШИЕ общие версии; конвенция [0] сломала бы новую снова —
+     * кейс строит свою общую версию уже после V77 и проверяет чтение, не миграцию.
+     */
+    @Test
+    @Order(7)
+    void sharedVersionIsVisibleInHistoryOfBothOwners() {
+        ingest.queryPublic("INSERT INTO KnowTask SET task_uid = :uid, task_id = 'HH-B9-A', title = 'B9 A'", Map.of("uid", B9_A));
+        ingest.queryPublic("INSERT INTO KnowTask SET task_uid = :uid, task_id = 'HH-B9-B', title = 'B9 B'", Map.of("uid", B9_B));
+        ingest.queryPublic("CREATE VERTEX KnowTaskHist SET state_uid = 'hh-b9-1', status_raw = 'DONE', valid_from = :vf",
+            Map.of("vf", B9_VF));
+        for (String uid : List.of(B9_A, B9_B)) {
+            ingest.queryPublic("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :u) "
+                + "TO (SELECT FROM KnowTaskHist WHERE state_uid = 'hh-b9-1')", Map.of("u", uid));
+        }
+
+        // срез истории задачи: версия видна каждому владельцу, не только [0]
+        for (String uid : List.of(B9_A, B9_B)) {
+            given().when().get("/lore/slice/history_task?id=" + uid)
+            .then().statusCode(200)
+                .body("rows.size()", equalTo(1))
+                .body("rows[0].status_raw", equalTo("DONE"));
+        }
+
+        // общий /lore/history: ref_id — запрошенная запись, а не первый владелец версии
+        for (String uid : List.of(B9_A, B9_B)) {
+            given().when().get("/lore/history?type=task&id=" + uid)
+            .then().statusCode(200)
+                .body("rows.size()", equalTo(1))
+                .body("rows[0].ref_id", equalTo(uid));
+        }
+
+        // пакетный срез не выдаёт общую версию за одного владельца: state_owners честный (≥ 2).
+        // Какой из владельцев попадёт в task_uid — порядок хранилища, поэтому только
+        // «строка есть ровно под одним из них и у неё state_owners ≥ 2».
+        String b9rows = "rows.findAll { it.task_uid == '" + B9_A + "' || it.task_uid == '" + B9_B + "' }";
+        given().when().get("/lore/slice/task_starts")
+        .then().statusCode(200)
+            .body(b9rows + ".size()", greaterThanOrEqualTo(1))
+            .body(b9rows + ".state_owners", everyItem(greaterThanOrEqualTo(2)));
     }
 }

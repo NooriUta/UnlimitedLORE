@@ -11,7 +11,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
 import type { KindConfig, KitCtx, KitRecord } from '../core/contract';
-import { Tabs, type TabItem } from '../shell/Tabs';
+import { Tabs, TabCount, type TabItem } from '../shell/Tabs';
+import { mergeTabs } from '../shell/tabRow';
 import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
@@ -25,6 +26,7 @@ import { BlockBoundary } from './BlockBoundary';
 import { DataStateBlock } from './DataStateBlock';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { RecordLinks, recordLinks } from './RecordLinks';
+import { dataStateOf } from './dataState';
 import { RecordGraph } from './RecordGraph';
 import { RecordJournal, recordJournal } from './RecordJournal';
 import { RecordRef, renderOut, valueText } from './fmt';
@@ -321,13 +323,35 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     // ключи модели ни с чем не совпадут: раздел, которому велели быть в хвосте
     // тела, остался бы вкладкой — молча. Поэтому при `decided` группировка
     // отключается: что считать разделом, решает приложение, а не конструктор.
-    if (named || OWN_TAB.includes(d.relation)) { relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] }); continue; }
+    if (named || OWN_TAB.includes(d.relation)) {
+      // Ключ связи — ключ вкладки, и две связи с одним ключом дали бы два
+      // одинаковых раздела (B13: «дублирующиеся вкладки»). Совпал — связи
+      // идут в одну вкладку, а не во вторую такую же.
+      const same = relTabs.find(x => x.id === d.key);
+      if (same) same.defs.push(d); else relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] });
+      continue;
+    }
     const sh = SHARED_TAB[d.relation];
     if (!sh) continue;
     const ex = relTabs.find(x => x.id === sh.id);
     if (ex) ex.defs.push(d); else relTabs.push({ id: sh.id, label: kitT(lang, sh.label), relation: d.relation, defs: [d] });
   }
   const relCount = (defs: KitRelationDef[]) => defs.reduce((n, d) => n + relationTargets(record, ctx, d).length, 0);
+  // Счётчик раздела — ОДНИМ правилом (B13: «счётчики то есть, то нет»).
+  //
+  // Число считается по рёбрам выборки, а блок рёбер этого раздела мог не
+  // прочитаться — тогда ноль был бы ЛОЖНЫМ. Поэтому у раздела, про который
+  // meta.data_state (или meta.errors) говорит «сбой» или «нет прав», счётчик
+  // неизвестен: `null`, то есть «?» с подсказкой, а не 0 и не пустота.
+  const failed = useMemo(() => {
+    const s = dataStateOf(ctx.data.meta);
+    // Имя блока сервер пишет как «источник» или «источник · часть» — поэтому
+    // сверяем и целиком, и по части: иначе честное состояние пришло бы, а до
+    // счётчика не дошло.
+    const names = [...s.failed, ...s.forbidden].map(f => f.block);
+    return new Set(names.flatMap(n => [n, ...n.split(' · ')]));
+  }, [ctx.data.meta]);
+  const tabCount = (id: string, defs: KitRelationDef[]): number | null => (failed.has(id) ? null : relCount(defs));
   const zoned = placement !== undefined;
   const hasProps = zoned && (kind?.fields?.length ?? 0) > 0;
   // Снизу и на весь экран свойства — колонкой справа рядом с контентом (владелица 08.11):
@@ -379,16 +403,25 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // Ширина текста во весь экран — настройка наверху (владелица 08.11), запоминается в браузере.
   const [width, setWidthState] = useState<RecWidth>(() => readWidth());
   const setWidth = (w: RecWidth) => { setWidthState(w); try { localStorage.setItem(WIDTH_KEY, w); } catch { /* приватный режим — живём в памяти */ } };
-  const recordItems: TabItem[] = [
+  // Ряд вкладок записи. Вкладки вида идут РАНЬШЕ вкладок связей: при совпадении
+  // ключа mergeTabs оставляет первую (её объявило приложение — там настоящая
+  // таблица), добирая у связи счётчик и значок вида UML. До этой сверки один
+  // раздел занимал в ряду два места (B13).
+  const recordItems: TabItem[] = mergeTabs([
     { id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' : undefined },
     ...(hasProps && !propsSide && !propsRow ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
-    ...kindTabs.map(t => ({ id: t.key, label: t.title, zone: zoned ? 'record' as const : undefined })),
-    ...relTabs.map(rt => ({ id: rt.id, label: rt.label, count: relCount(rt.defs), relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], markTitle: relationName(lang, rt.relation), zone: zoned ? 'record' as const : undefined })),
-  ];
+    // Счётчик у вкладки приложения — по тому же правилу, что у вкладок связей
+    // (B13): вкладка без числа рядом с вкладками с числом читается как «тут
+    // считать нечего», а у частей считать есть что.
+    ...kindTabs.map(t => ({ id: t.key, label: t.title, count: t.count, zone: zoned ? 'record' as const : undefined })),
+    ...relTabs.map(rt => ({ id: rt.id, label: rt.label, count: tabCount(rt.id, rt.defs), relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], markTitle: relationName(lang, rt.relation), zone: zoned ? 'record' as const : undefined })),
+  ]);
+  // Счётчики служебного — тем же правилом: блок не прочитался, значит число
+  // неизвестно («?»), а не ноль. Имена блоков рёбер и журнала у kit свои.
   const aroundItems: TabItem[] = [
-    { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: recordLinks(record.id, ctx.data.edges).length },
+    { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: failed.has('edges') ? null : recordLinks(record.id, ctx.data.edges).length },
     { id: RECORD_TABS.graph, label: kitT(lang, 'kit.record.tab.graph') },
-    { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: recordJournal(record.id, ctx.data.journal).length },
+    { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: failed.has('journal') ? null : recordJournal(record.id, ctx.data.journal).length },
     ...(history ? [{ id: RECORD_TABS.history, label: kitT(lang, 'kit.record.tab.history'), count: historyCount(history) }] : []),
   ].map(i => (zoned ? { ...i, zone: 'around' as const } : i));
   // По умолчанию всё вкладками; колонка слева — только aroundAs='column' при bottom/full.
@@ -405,10 +438,23 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     .map(s => relTabs.find(rt => rt.id === s.key))
     .filter((rt): rt is NonNullable<typeof rt> => !!rt)
     // Пустой блок не рисуется: иначе у ADR под текстом вылезет семь пустых
-    // заголовков. «Не смогли прочитать» — другое утверждение, и его печатает
-    // блок «Состояние данных» по meta.data_state, а не пустой заголовок.
-    .filter(rt => relCount(rt.defs) > 0);
-  const items: TabItem[] = applySections(aside ? recordItems : [...recordItems, ...aroundItems], order);
+    // заголовков. «Не смогли прочитать» — другое утверждение: такой раздел
+    // ОСТАЁТСЯ (со счётчиком «?»), а его причину печатает блок «Состояние
+    // данных» по meta.data_state. Ложный ноль прятал бы и то, и другое.
+    .filter(rt => tabCount(rt.id, rt.defs) !== 0);
+  // Ряд: ключи уникальны (ключ связи мог совпасть и со служебным), порядок —
+  // от модели, а приоритет «что под Ещё» — умолчание формы, которое модель
+  // перебивает: решила она (`decided`), значит второстепенность её, и kit
+  // своего ничего не прячет.
+  // Ряд: ключи уникальны (ключ связи мог совпасть и со служебным), а порядок и
+  // «что под Ещё» — ТОЛЬКО от модели через applySections (`slot: more`).
+  // Своего приоритета kit не придумывает: у типа, которому сервер порядок
+  // задал, выдуманное правило разошлось бы с моделью молча, а у типа с
+  // `decided: false` выдало бы догадку за решение сервера. Порядок не решён —
+  // ряд остаётся как есть, и приложение ГОВОРИТ об этом строкой (у LORE —
+  // notes из passportOrder), а не подменяет его тихо.
+  const row = mergeTabs(aside ? recordItems : [...recordItems, ...aroundItems]);
+  const items: TabItem[] = applySections(row, order);
   const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
   // Панелью справа (узко) — переключатель видов над шапкой, как «таблица / доска» (владелица 08.11):
   // Контент (текст и вкладки типа) · Свойства · Аналитика (связи, граф, журнал, история).
@@ -454,7 +500,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
           <section key={rt.id} className="sk-rec-glue" data-glued={rt.id}>
             <h3 className="sk-rec-glue__head">
               <span>{rt.label}</span>
-              <span className="sk-tab__count">{relCount(rt.defs)}</span>
+              <TabCount count={tabCount(rt.id, rt.defs)} lang={lang} />
             </h3>
             <BlockBoundary block={`rel:${rt.id}`} label={rt.label} lang={lang} resetKey={reset}>
               <RecordRelations record={record} ctx={ctx} defs={rt.defs} lang={lang} />
@@ -475,16 +521,22 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         <RecordHistory record={record} source={history} lang={lang} />
       </BlockBoundary>
     );
+  } else if (custom) {
+    // Вкладка вида — РАНЬШЕ связи с тем же ключом (B13). Раньше связь шла
+    // первой, и это тихо отнимало функцию: у спринта вместо настоящей таблицы
+    // задач (группировка по фазам, смена статуса в строке, строка сгорания)
+    // рисовался общий список связей. Приложение объявило вкладку намеренно —
+    // его рисовальщик и главнее; число и значок вида связи при слиянии
+    // остались у чипа.
+    panel = (
+      <BlockBoundary block={`tab:${custom.key}`} label={custom.title} lang={lang} resetKey={reset}>
+        <KindTab render={custom.render} record={record} ctx={ctx} />
+      </BlockBoundary>
+    );
   } else if (relTab) {
     panel = (
       <BlockBoundary block={`rel:${relTab.id}`} label={relTab.label} lang={lang} resetKey={reset}>
         <RecordRelations record={record} ctx={ctx} defs={relTab.defs} lang={lang} />
-      </BlockBoundary>
-    );
-  } else if (custom) {
-    panel = (
-      <BlockBoundary block={`tab:${custom.key}`} label={custom.title} lang={lang} resetKey={reset}>
-        <KindTab render={custom.render} record={record} ctx={ctx} />
       </BlockBoundary>
     );
   } else {
@@ -637,7 +689,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         const Body = i.id === RECORD_TABS.links ? RecordLinks : i.id === RECORD_TABS.graph ? RecordGraph : i.id === RECORD_TABS.journal ? RecordJournal : null;
         return (
           <section key={i.id} className="sk-rec__around-block" data-block={i.id}>
-            <h2 className="sk-rec__around-head">{i.label}{i.count !== undefined && <span className="sk-tab__count">{i.count}</span>}</h2>
+            <h2 className="sk-rec__around-head">{i.label}<TabCount count={i.count} lang={lang} /></h2>
             <BlockBoundary block={i.id} label={i.label} lang={lang} resetKey={record.id}>
               {Body ? <Body record={record} ctx={ctx} lang={lang} /> : history ? <RecordHistory record={record} source={history} lang={lang} /> : null}
             </BlockBoundary>

@@ -159,7 +159,7 @@ public class LoreDictResource extends LoreResourceBase {
             "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
             "is_active=:is_active, is_extensible=:is_extensible" + ChangeAuthor.SET_SQL + ";" +
             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
-            "TO (SELECT FROM KnowDictEntryHist WHERE state_uid=:nsid);",
+            "TO (SELECT FROM KnowDictEntryHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);",
             hp)).await().indefinitely();
     }
 

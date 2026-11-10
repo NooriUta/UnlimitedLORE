@@ -34,6 +34,20 @@
     "fixed",
     "done"
   ],
+  "_questionFeatureStatusesComment": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-V2-SECTIONS. questionStatuses mirror LoreQuestionResource.STATUSES (the write-time set; the questions slice ranks them open 0 · deferred 1 · closed 2 · dropped 3). featureStatuses mirror UcReadinessCalculator: INTENT_STATUSES (proposed, dropped — the only ones a human/agent may write) + COMPUTED_STATUSES (active, shipped, in_rework — set only by the calculator). One KnowUseCase type covers features and use cases of every level (PL-28). Guarded by LoreStatusesConsistencyTest; the web-next copy (lists/axisStatus.ts) by axisStatus.test.ts.",
+  "questionStatuses": [
+    "open",
+    "deferred",
+    "closed",
+    "dropped"
+  ],
+  "featureStatuses": [
+    "proposed",
+    "dropped",
+    "active",
+    "shipped",
+    "in_rework"
+  ],
   "entityTypes": [
     "plan_item",
     "sprint",

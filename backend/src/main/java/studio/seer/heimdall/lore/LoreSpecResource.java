@@ -159,7 +159,7 @@ public class LoreSpecResource extends LoreResourceBase {
                         "content_md=:content, version=:version, summary=:summary, status=:status" +
                         carryStatus + ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
-                        "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely().result();
+                        "TO (SELECT FROM KnowSpecHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", hp)).await().indefinitely().result();
                     if (Scd2Guard.isConflict(cpRes))
                         throw new Scd2Guard.ConflictException("spec '" + req.spec_id()
                             + "': the body version read was closed by a concurrent write — re-read and retry", Map.of());
@@ -192,7 +192,7 @@ public class LoreSpecResource extends LoreResourceBase {
                         "content_md=:content, version=:version, summary=:summary, status=:status" +
                         ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
-                        "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
+                        "TO (SELECT FROM KnowSpecHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", hp)).await().indefinitely();
                 }
                 histWritten = true;
             }

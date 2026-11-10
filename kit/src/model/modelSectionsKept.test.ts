@@ -18,7 +18,7 @@
 // считалось от литерала `{}`, поэтому «present» у них не получался НИКОГДА —
 // раздел, присланный сервером, выглядел пустым.
 import { describe, expect, it } from 'vitest';
-import { modelSections, parseModel } from './loadModel';
+import { modelSections, parseModel, readCachedModel, writeCachedModel } from './loadModel';
 
 const doc = {
   format: 'model/0',
@@ -30,6 +30,10 @@ const doc = {
   dictionaries: {},
   types: { sprint: { fields: [], relations: [] } },
   surfaces: { partial: true, passport: { sprint: { decided: true, sections: [] } } },
+  // Палитры (#1069, K-14 п. 5) — ещё один раздел, появившийся ПОЗЖЕ
+  // загрузчика. Внесён в сторож сразу, чтобы не повторить историю types и
+  // surfaces, которые молча пропадали.
+  palettes: { source: 'settings:palette', default: 'amber-forest', entries: [{ code: 'amber-forest', in_dictionary: false }] },
 };
 
 describe('parseModel: разделы модели не теряются', () => {
@@ -45,6 +49,25 @@ describe('parseModel: разделы модели не теряются', () => 
 
   it('раздел `surfaces` доходит до потребителя', () => {
     expect(parseModel(doc).surfaces).toEqual(doc.surfaces);
+  });
+
+  it('кеш модели тоже не теряет новый раздел: он нужен ровно при отказе сети', () => {
+    const store = (() => {
+      let v: string | null = null;
+      return { get: () => v, set: (_k: string, x: string) => { v = x; } };
+    })();
+    writeCachedModel(store, parseModel(doc));
+    expect(readCachedModel(store)?.palettes).toEqual(doc.palettes);
+  });
+
+  it('раздел `palettes` доходит до потребителя', () => {
+    expect(parseModel(doc).palettes).toEqual(doc.palettes);
+  });
+
+  it('и его состояние считается от самого раздела: present, а не вечно empty', () => {
+    expect(modelSections(parseModel(doc)).palettes).toBe('present');
+    expect(modelSections(parseModel({ ...doc, palettes: {} })).palettes).toBe('empty');
+    expect(modelSections(parseModel({ ...doc, missing: ['palettes'] })).palettes).toBe('missing');
   });
 
   it('разделов нет в документе — пустые объекты, а не undefined', () => {
