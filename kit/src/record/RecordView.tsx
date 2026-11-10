@@ -17,7 +17,8 @@ import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
 import { applySections, gluedSections, sectionGroups, type PassportOrder } from '../model/surfaces';
-import { VALUE_CHIPS_INLINE, chipLabel, isChipList, toChips } from '../core/chipValue';
+import { isChipList } from '../core/chipValue';
+import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
 import { Segmented } from '../elements/Segmented';
 import { IconButton } from '../elements/IconButton';
@@ -176,67 +177,6 @@ function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
 
 interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver>; drafts?: (field: string) => MdDraftSlot | undefined }
 
-/**
- * Ряд значений-чипов: первые три и «ещё N» (S4-29).
- *
- * Почему свёртка нужна: у задачи проектов и компонентов бывает десяток —
- * свои плюс унаследованные от спринта, — и строка «Свойств» переносится на
- * четыре строки, выдавливая остальные поля вниз.
- *
- * Почему «ещё N» несёт ЧИСЛО: без числа свёрнутое читается как мелочь, а там
- * бывает большая часть. Раскрытие — на месте: уводить в другое окно значило бы
- * потерять связь с полем, у которого эти значения.
- *
- * Свёртка у каждого поля СВОЯ: «Проекты» и «Компоненты» стоят рядом, и общее
- * состояние раскрывало бы оба сразу — то есть ровно то, от чего свёртка.
- */
-function ValueChips({ value, ctx }: { value: unknown; ctx: KitCtx }) {
-  const lang = useKitLang();
-  const [open, setOpen] = useState(false);
-  const all = toChips(value);
-  if (all.length === 0) return <span className="sk-rec-fields__none">—</span>;
-  const shown = open ? all : all.slice(0, VALUE_CHIPS_INLINE);
-  const rest = all.length - shown.length;
-  return (
-    <span className="sk-rec-chips" data-chips-row="">
-      {shown.map(c => {
-        const from = c.inherited_from ?? null;
-        // Подпись источника: «от спринта» без имени спринта бесполезно —
-        // человек не поймёт, какой именно спринт принёс это значение. Тип
-        // источника незнаком — говорим о нём как есть, а не молчим.
-        const kindWord = from
-          ? (from.type === 'sprint' ? kitT(lang, 'kit.chips.fromSprint')
-            : from.type === 'feature' ? kitT(lang, 'kit.chips.fromFeature')
-            : kitT(lang, 'kit.chips.fromOther', { type: from.type || '—' }))
-          : null;
-        const title = from ? `${kindWord} ${from.id || '—'}`.trim() : undefined;
-        return (
-          <span
-            key={c.id}
-            className="sk-rec-chips__item"
-            data-chip={c.id}
-            data-inherited={from ? (from.type || 'unknown') : undefined}
-            title={title}
-          >
-            <a className="sk-rec-chips__link" href={ctx.href(c.id)}>{chipLabel(c)}</a>
-            {from && <span className="sk-rec-chips__from">{kindWord}</span>}
-          </span>
-        );
-      })}
-      {(rest > 0 || open) && (
-        <button
-          type="button"
-          className="sk-btn sk-rec-chips__more"
-          data-chips-more=""
-          aria-expanded={open}
-          onClick={() => setOpen(v => !v)}
-        >
-          {open ? kitT(lang, 'kit.chips.less') : kitT(lang, 'kit.list.more', { n: rest })}
-        </button>
-      )}
-    </span>
-  );
-}
 
 function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string }): ReactNode {
   if (type === 'md' && edit && fieldKey) {
@@ -249,7 +189,7 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
     // Значения пришли чипами (S4-29) — ряд чипов со свёрткой; строки — прежний
     // путь. Проверяем форму ДАННЫХ, а не тип поля: сервер сменил форму у
     // существующих полей, и тип поля об этом не знает.
-    if (isChipList(value)) return <ValueChips value={value} ctx={ctx} />;
+    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} />;
     const ids = (Array.isArray(value) ? value : [value]).map(v => valueText(v));
     return <span className="sk-rec-fields__refs">{ids.map(id => <RecordRef key={id} id={id} ctx={ctx} />)}</span>;
   }
