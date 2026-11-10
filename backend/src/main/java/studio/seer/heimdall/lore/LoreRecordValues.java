@@ -399,7 +399,8 @@ final class LoreRecordValues {
      */
     static final Map<String, Map<String, String>> READ_BY_SLICE = Map.of(
         "task", Map.of("adrs", "adrs_of_task", "gates", "gating_questions_of_task"),
-        "release", Map.of("sprints", "release_sprints", "prs", "release_prs"));
+        "release", Map.of("sprints", "release_sprints", "prs", "release_prs"),
+        "component", Map.of("tasks", "component_tasks", "sprints", "component_sprints"));
 
     /**
      * Вкладки связей, которые фасад пока НЕ читает — среза нет. Без этого списка такая вкладка
