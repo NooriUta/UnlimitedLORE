@@ -612,11 +612,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-pop[data-side='up'] { top: auto; bottom: calc(100% + 4px); }
 .sk-pop[data-side='up'][data-align='side'] { top: auto; bottom: 0; }
 
+/* Положение — у общего слоя .sk-pop (S4-MENU-STATES): и меню чипа, и палитра
+   звезды рисуются внутри Popover, своего положения у .sk-spop больше нет. */
 .sk-spop {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 65;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -4309,11 +4307,10 @@ a.sk-tasks__id { text-decoration: none; display: inline-flex; align-items: cente
 a.sk-tasks__id:hover { text-decoration: underline; }
 a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
 .sk-tasks__none { color: var(--t3); }
+/* Положение — у общего слоя .sk-pop[data-align='start'] (S4-MENU-STATES);
+   здесь остаётся только своё: отступ от края ячейки, ширина, рамка. */
 .sk-tasks__menu {
-  position: absolute;
-  z-index: 20;
-  top: 100%;
-  left: 4px;
+  margin-left: 4px;
   display: flex;
   flex-direction: column;
   min-width: 200px;
