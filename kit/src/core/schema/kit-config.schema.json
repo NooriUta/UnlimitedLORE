@@ -207,6 +207,17 @@
           },
           "additionalProperties": false
         },
+        "feed": {
+          "description": "Вид «Лента»: поля, которые НАЗЫВАЕТ приложение. Без timeField ленту не предлагаем — kit не угадывает, где у записи время.",
+          "type": "object",
+          "required": ["timeField"],
+          "properties": {
+            "timeField": { "type": "string", "minLength": 1 },
+            "lead": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "because": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          },
+          "additionalProperties": false
+        },
         "showClosed": { "enum": ["below", "all", "days30", "hide"] }
       },
       "additionalProperties": false

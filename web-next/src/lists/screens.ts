@@ -6,7 +6,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { statusMeta } from '@seidr/kit';
-import type { KitConfig, KitLang, KitRecord } from '@seidr/kit';
+import type { KitConfig, KitLang, KitRecord, ListSort } from '@seidr/kit';
 import type { LoreClient } from '../sprints/loreClient';
 import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
@@ -20,6 +20,9 @@ import {
 } from './records';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
+
+/** Свежие сверху — умолчание раздела, где у записи есть время (см. ListScreenDef.defaultSort). */
+const FRESH_FIRST: ListSort = { key: 'updated_at', dir: 'desc' };
 
 /** Иконки и цвета статусов, которых нет в общей таблице kit (statusMeta). */
 const OWN_META: Record<string, { icon: string; color: string }> = {
@@ -79,6 +82,15 @@ export interface ListScreenDef {
    * это описанием, а не своей страницей.
    */
   nested?: ListNested;
+  /**
+   * Порядок по умолчанию — по свежести записи (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS,
+   * владелица 10.11: «не по мере заведения, а по свежести»).
+   *
+   * Ставится разделу, чей маппер даёт записи время (`updated_at`); это умолчание,
+   * а не выбор: порядок в адресе (`ls`) или из вида главнее. Раздел без времени
+   * в срезе умолчания не получает — поле не выдумывается.
+   */
+  defaultSort?: ListSort;
 }
 
 export interface ListNested {
@@ -233,7 +245,7 @@ function tasksConfig(lang: KitLang): KitConfig {
       groupings: ['status', LORE_FILTER_FIELDS.sprint],
       // Спринтов много — разрез по спринту свёрнут с первого показа (S9-02).
       collapsedGroupings: [LORE_FILTER_FIELDS.sprint],
-      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort'],
+      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort', 'updated_at'],
     },
   };
 }
@@ -318,7 +330,7 @@ const specsSpec: SectionSpec = {
   quick: [['no-status', 'lists.quick.noStatus', { status: '' }], ['no-version', 'lists.quick.noVersion', { version: '' }]],
   filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
   groupings: [LORE_FILTER_FIELDS.component, 'status'],
-  columns: ['id', 'title', 'status', 'component', 'version'],
+  columns: ['id', 'title', 'status', 'component', 'version', 'updated_at'],
 };
 
 /** Вопросы: группировка по статусу — прямая просьба владелицы (06.11). */
@@ -430,6 +442,7 @@ export const LIST_SCREENS = {
   sprints: {
     modelType: 'sprint',
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
+    defaultSort: FRESH_FIRST,
     map: sprintRecord, config: sprintsConfig, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
     // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
@@ -444,11 +457,13 @@ export const LIST_SCREENS = {
   adrs: {
     modelType: 'adr',
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
+    defaultSort: FRESH_FIRST,
     map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
   tasks: {
     modelType: 'task',
     slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
+    defaultSort: FRESH_FIRST,
     map: taskListRecord, config: tasksConfig, quickIcons: {},
     // Срез отдаёт только открытые задачи — это сказано словами на экране.
     note: OPEN_ONLY_NOTE,
@@ -456,11 +471,13 @@ export const LIST_SCREENS = {
   decisions: {
     modelType: 'decision',
     slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
+    defaultSort: FRESH_FIRST,
     map: decisionRecord, config: lang => sectionConfig(lang, decisionsSpec), quickIcons: {},
   },
   specs: {
     modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
+    defaultSort: FRESH_FIRST,
     map: specRecord, config: lang => sectionConfig(lang, specsSpec), quickIcons: {},
   },
   questions: {
@@ -468,6 +485,7 @@ export const LIST_SCREENS = {
     // отдаёт все вопросы, несмотря на имя (182 закрытых из 262).
     modelType: 'question',
     slice: 'questions', titleKey: 'lists.questions.title', icon: 'help',
+    defaultSort: FRESH_FIRST,
     map: questionRecord, config: lang => sectionConfig(lang, questionsSpec), quickIcons: {},
   },
   milestones: {
@@ -476,6 +494,7 @@ export const LIST_SCREENS = {
   },
   releases: {
     slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',
+    defaultSort: FRESH_FIRST,
     map: releaseRecord, config: lang => sectionConfig(lang, releasesSpec), quickIcons: {},
   },
   components: {
@@ -484,6 +503,7 @@ export const LIST_SCREENS = {
   },
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',
+    defaultSort: FRESH_FIRST,
     map: techRecord, config: lang => sectionConfig(lang, techSpec), quickIcons: {},
   },
   features: {
@@ -498,6 +518,7 @@ export const LIST_SCREENS = {
     // `shell.sec.feature`): теперь он неточен — внутри и фичи, и US, — но
     // слова в меню выбирает владелица, а не этот файл.
     slice: 'use_cases', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
+    defaultSort: FRESH_FIRST,
     map: featureRecord, config: lang => sectionConfig(lang, featuresSpec), quickIcons: {},
     // Оговорка осталась, но про ДРУГУЮ, настоящую причину: компонент и проект
     // срез отдаёт только свои, а у вложенных сценариев они наследованные.

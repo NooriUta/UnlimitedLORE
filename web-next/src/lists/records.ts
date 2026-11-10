@@ -38,10 +38,22 @@ const list = (v: unknown): string[] | string =>
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
+/**
+ * Свежесть записи (updated_at kit) — время ПОСЛЕДНЕГО ИЗМЕНЕНИЯ, а не заведения
+ * (вопрос №49 владелицы 10.11: «по последней дате изменения — это свежесть»).
+ *
+ * Сервер отдаёт его колонкой `changed_at` (valid_from открытой версии SCD2,
+ * иначе дата заведения). `fallback` — прежний источник на случай среза без
+ * колонки; у задач и спек его нет — времени тогда нет, и оно не выдумывается.
+ */
+function freshness(row: Row, fallback = ''): { updated_at?: string } {
+  const at = str(row.changed_at) || fallback;
+  return at ? { updated_at: at } : {};
+}
+
 /** Строка слайса sprints → запись kit. */
 export function sprintRecord(row: Row): KitRecord {
   const id = str(row.sprint_id);
-  const updated = str(row.valid_from) || str(row.created_date);
   return {
     id,
     kind: 'sprint',
@@ -58,14 +70,13 @@ export function sprintRecord(row: Row): KitRecord {
       planned_end: str(row.planned_end_date),
       done_date: str(row.done_date),
     },
-    ...(updated ? { updated_at: updated } : {}),
+    ...freshness(row, str(row.valid_from) || str(row.created_date)),
   };
 }
 
 /** Строка слайса adrs → запись kit. */
 export function adrRecord(row: Row): KitRecord {
   const id = str(row.adr_id);
-  const created = str(row.date_created);
   return {
     id,
     kind: 'adr',
@@ -78,7 +89,7 @@ export function adrRecord(row: Row): KitRecord {
       tags: list(row.tags),
       decisions: num(row.decision_count),
     },
-    ...(created ? { updated_at: created } : {}),
+    ...freshness(row, str(row.date_created)),
   };
 }
 
@@ -175,6 +186,8 @@ export function taskListRecord(row: Row): KitRecord {
       effort: num(row.effort_days),
       work_class: str(row.work_class),
     },
+    // Своего времени у задачи в срезе не было — только changed_at (вопрос №49).
+    ...freshness(row),
   };
 }
 
@@ -208,7 +221,6 @@ export function taskListRecord(row: Row): KitRecord {
  */
 export function decisionRecord(row: Row): KitRecord {
   const id = str(row.decision_id);
-  const created = str(row.date_created);
   return {
     id,
     kind: 'decision',
@@ -221,7 +233,7 @@ export function decisionRecord(row: Row): KitRecord {
       tags: list(row.tags),
       adr: str(row.parent_adr),
     },
-    ...(created ? { updated_at: created } : {}),
+    ...freshness(row, str(row.date_created)),
   };
 }
 
@@ -249,6 +261,8 @@ export function specRecord(row: Row): KitRecord {
       path: str(row.file_path),
       project: list(row.projects),
     },
+    // Своего времени у спеки в срезе не было — только changed_at (вопрос №49).
+    ...freshness(row),
   };
 }
 
@@ -265,7 +279,6 @@ export function specRecord(row: Row): KitRecord {
  */
 export function questionRecord(row: Row): KitRecord {
   const id = str(row.question_id);
-  const opened = str(row.opened_date);
   return {
     id,
     kind: 'question',
@@ -281,7 +294,7 @@ export function questionRecord(row: Row): KitRecord {
       gates: list(row.gating_tasks),
       adr: list(row.raised_adr),
     },
-    ...(opened ? { updated_at: opened } : {}),
+    ...freshness(row, str(row.opened_date)),
   };
 }
 
@@ -322,7 +335,6 @@ export function milestoneRecord(row: Row): KitRecord {
  */
 export function releaseRecord(row: Row): KitRecord {
   const id = str(row.release_uid) || str(row.release_id);
-  const date = str(row.release_date);
   return {
     id,
     kind: 'release',
@@ -337,7 +349,7 @@ export function releaseRecord(row: Row): KitRecord {
       sprints: num(row.sprint_count),
       prs: num(row.pr_count),
     },
-    ...(date ? { updated_at: date } : {}),
+    ...freshness(row, str(row.release_date)),
   };
 }
 
@@ -431,7 +443,6 @@ export const UC_OWN_LINKS_NOTE = 'компонент и проект показ�
  */
 export function featureRecord(row: Row): KitRecord {
   const id = str(row.uc_id);
-  const created = str(row.date_created);
   const ucs = num(row.uc_total);
   const tasks = num(row.task_count);
   // Родитель — РЕБРОМ `DECOMPOSES_INTO` (так же читает его паспорт типа
@@ -461,6 +472,6 @@ export function featureRecord(row: Row): KitRecord {
       // тогда, когда столбец пришёл — хоть бы и пустым.
       ...('milestone_id' in row ? { milestone: str(row.milestone_id) } : {}),
     },
-    ...(created ? { updated_at: created } : {}),
+    ...freshness(row, str(row.date_created)),
   };
 }

@@ -6,6 +6,7 @@ import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
 import { kitT, useKitLang, type KitLang } from '../i18n';
+import { Popover } from './Popover';
 
 export interface TabItem {
   id: string;
@@ -84,6 +85,7 @@ export function Tabs({ items, value, onChange, label, children, className, varia
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const hasPanel = children !== undefined;
   const panelId = `${base}-panel`;
+  const popId = `${base}-more`;
   const tabId = (id: string) => `${base}-tab-${id}`;
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -157,39 +159,65 @@ export function Tabs({ items, value, onChange, label, children, className, varia
           // открывать.
           <span className="sk-tabs__more" role="presentation">
             {/*
-              Свёртка живёт ВНУТРИ ряда вкладок, поэтому у неё роль вкладки с
-              всплывающим меню (`role="tab"` + `aria-haspopup="menu"`; ARIA
-              допускает вкладку, открывающую меню). Пока это была обычная
+              КНОПКА свёртки живёт ВНУТРИ ряда вкладок, поэтому у неё роль
+              вкладки с всплывающим меню (`role="tab"` + `aria-haspopup="menu"`;
+              ARIA допускает вкладку, открывающую меню). Пока это была обычная
               кнопка, role="tablist" содержал чужого ребёнка, и axe справедливо
               валил правило aria-required-children — найдено этой же правкой,
               когда сворачивание наконец начало срабатывать: до него свёртка в
               ряду просто не появлялась.
               Выбранной такая «вкладка» не бывает: выбранный раздел ряд
               показывает всегда, даже будучи редким.
+              САМО МЕНЮ в ряду не лежит — оно ниже, сиблингом (см. там же).
             */}
             <button type="button" className="sk-tab sk-tabs__more-btn"
               role="tab" aria-selected={false}
               aria-expanded={moreOpen} aria-haspopup="menu"
+              // Связь с всплывашкой названа: по ней же общий поповер узнаёт
+              // СВОЙ открыватель и не считает щелчок по нему «щелчком вне».
+              aria-controls={moreOpen ? popId : undefined}
               onClick={() => setMoreOpen(v => !v)}>
               <span>{kitT(lang, 'kit.tabs.more')}</span>
               <span className="sk-tab__count">{folded.length}</span>
             </button>
-            {moreOpen && (
-              <div role="menu" aria-label={kitT(lang, 'kit.tabs.more')} className="sk-tabs__more-pop"
-                onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setMoreOpen(false); } }}>
-                {folded.map(item => (
-                  <button key={item.id} type="button" role="menuitem" className="sk-tabs__more-item"
-                    onClick={() => { setMoreOpen(false); go(item.id); }}>
-                    {item.icon && <GameIcon slug={item.icon} size={13} />}
-                    <span>{item.label}</span>
-                    <TabCount count={item.count} lang={lang} />
-                  </button>
-                ))}
-              </div>
-            )}
           </span>
         )}
       </div>
+      {/*
+        САМО МЕНЮ — РЯДОМ С РЯДОМ, А НЕ ВНУТРИ НЕГО (S4-MENU-STATES).
+
+        Находка этой правки: прежняя всплывашка лежала внутри role="tablist", и
+        axe валил `aria-required-children` — ряд вкладок обязан содержать
+        только вкладки, а role="menu" там чужой. Это вторая половина той же
+        ошибки, что B13 нашёл у КНОПКИ свёртки: тогда из ряда убрали чужую
+        роль у открывателя, а чужую роль у всплывашки не заметили, потому что
+        axe её не проверяли открытой. Теперь проверяют (popoverCommon.test).
+
+        Почему сиблингом ряда, а не в обёртке вокруг ряда: `role="tablist"`
+        обязан остаться прямым ребёнком корня Tabs — на это стоят и запись
+        (`.sk-rec__tabs > .sk-tabs`, липкий ряд записи), и её тест. Поповер
+        абсолютный и БЕЗ `top`: его статическое место в потоке — сразу под
+        рядом, то есть ровно там, где он и рисовался.
+      */}
+      {moreOpen && folded.length > 0 && (
+        <Popover
+          id={popId}
+          role="menu"
+          label={kitT(lang, 'kit.tabs.more')}
+          align="under"
+          className="sk-tabs__more-pop"
+          onClose={() => setMoreOpen(false)}
+        >
+          {folded.map(item => (
+            <button key={item.id} type="button" role="menuitem" className="sk-tabs__more-item"
+              onClick={() => { setMoreOpen(false); go(item.id); }}>
+              {item.icon && <GameIcon slug={item.icon} size={13} />}
+              <span>{item.label}</span>
+              <TabCount count={item.count} lang={lang} />
+            </button>
+          ))}
+        </Popover>
+      )}
       {hasPanel && (
         <div role="tabpanel" id={panelId} aria-labelledby={tabId(value)} tabIndex={0} className="sk-tabpanel">
           {children}

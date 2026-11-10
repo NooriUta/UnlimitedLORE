@@ -150,4 +150,20 @@ class ComponentTechFeaturePassportTest {
         assertEquals(LoreSlices.UC_INHERITED_SCOPE, LoreSlices.PROJECT_SCOPED.get("use_cases"),
             "проект сценария наследуется от корня — как у use_cases_of_feature");
     }
+
+    /** Просьба kit: прогресс x/y, веха и наследуемые компонент/проект — те же выражения, что у use_cases_of_feature. */
+    @Test
+    void useCasesSliceCarriesProgressMilestoneAndInheritedColumns() {
+        String sql = LoreSlices.compose("use_cases", Map.of()).sql();
+        assertTrue(sql.contains("out('DECOMPOSES_INTO').size()") && sql.contains("AS uc_total"), sql);
+        assertTrue(sql.contains("out('DECOMPOSES_INTO')[status='shipped'].size()") && sql.contains("AS uc_shipped"), sql);
+        assertTrue(sql.contains("out('TARGETS_MILESTONE').milestone_id[0]") && sql.contains("AS milestone_id"), sql);
+        String feat = LoreSlices.compose("use_cases_of_feature", Map.of("id", "X")).sql();
+        for (String expr : new String[]{
+                "in('DECOMPOSES_INTO').out('BELONGS_TO').component_id AS inherited_component_ids",
+                "in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug AS inherited_projects"}) {
+            assertTrue(feat.contains(expr), "эталон в use_cases_of_feature: " + expr);
+            assertTrue(sql.contains(expr), "use_cases отдаёт: " + expr + "\n" + sql);
+        }
+    }
 }

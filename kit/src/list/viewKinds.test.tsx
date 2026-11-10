@@ -21,6 +21,9 @@ const base: KitConfig = {
     columns: ['title+id', 'status', 'fields.owner'],
     groupings: ['status'],
     timeline: { start: 'start' },
+    // Лента — вид там, где приложение НАЗВАЛО поле времени (K2-FEED-VIEW):
+    // какое поле записи главное, kit не угадывает (K-14).
+    feed: { timeField: 'updated_at' },
     tree: { parent: 'parent', order: 'title' },
     showClosed: 'all',
   },
@@ -55,12 +58,17 @@ describe('S4-22: виды над одним набором данных', () => 
     expect(a.querySelector('[data-status="todo"]')).not.toBeNull();
   });
 
-  it('лента: по дням, новые сверху', () => {
+  // K2-FEED-VIEW §3: группы ленты — не календарные дни, а ведра «сегодня ·
+  // вчера · на этой неделе · раньше» относительно «сейчас» ИСТОЧНИКА
+  // (meta.generated_at = 2026-11-08). Раньше здесь стояли сами дни; дни
+  // остались в каждой строке, а заголовки стали ведрами, как в принятом
+  // прототипе.
+  it('лента: ведра времени, новые сверху', () => {
     const { container } = render(<ListView config={base} data={data} urlState={false} />);
     pick('Лента');
     const days = [...container.querySelectorAll('.sk-feed__day')].map(d => d.getAttribute('data-day'));
-    expect(days).toEqual(['2026-11-08', '2026-11-07']);
-    const first = [...container.querySelectorAll('.sk-feed__day[data-day="2026-11-08"] [data-record-id]')].map(e => e.getAttribute('data-record-id'));
+    expect(days).toEqual(['today', 'yesterday']);
+    const first = [...container.querySelectorAll('.sk-feed__day[data-day="today"] [data-record-id]')].map(e => e.getAttribute('data-record-id'));
     expect(first).toEqual(['a', 'c']);
   });
 

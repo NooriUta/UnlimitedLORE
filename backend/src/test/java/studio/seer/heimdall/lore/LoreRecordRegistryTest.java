@@ -85,8 +85,9 @@ class LoreRecordRegistryTest {
         LoreRecordRegistry.TypeDef s = def("sprint");
         Map<String, LoreRecordRegistry.Part> parts = s.parts().stream()
             .collect(Collectors.toMap(LoreRecordRegistry.Part::key, p -> p));
-        assertEquals(Set.of("phases", "tasks"), parts.keySet());
-        for (LoreRecordRegistry.Part p : parts.values()) {
+        // S4-29 v3 (43а): третья часть — вопросы спринта (aggregation, проверяется ниже отдельно).
+        assertEquals(Set.of("phases", "tasks", "questions"), parts.keySet());
+        for (LoreRecordRegistry.Part p : List.of(parts.get("phases"), parts.get("tasks"))) {
             assertEquals("composition", p.relation(), p.key());
             assertEquals("strict", p.owned(), p.key());
             assertEquals("PART_OF", p.rel(), p.key());
@@ -101,7 +102,8 @@ class LoreRecordRegistryTest {
     void sprintDependsOnIsAssociationTabBothDirectionsWithKindAndReason() {
         LoreRecordRegistry.LinkTab deps = def("sprint").linkTabs().stream()
             .filter(t -> t.key().equals("deps")).findFirst().orElseThrow();
-        assertEquals("Зависимости", deps.label());
+        // S4-29 v3: linkTab — это группа вкладок паспорта, подпись — слово владелицы (48а).
+        assertEquals("Связи", deps.label());
         assertEquals(2, deps.rels().size());
         Map<String, LoreRecordRegistry.TabRel> byDir = deps.rels().stream()
             .collect(Collectors.toMap(LoreRecordRegistry.TabRel::dir, r -> r));
@@ -218,5 +220,26 @@ class LoreRecordRegistryTest {
                 assertEquals(false, f.get("editable"), t + "." + f.get("key") + " не правится");
         }
         assertFalse(LoreRecordRegistry.READ_ONLY.contains("adr"), "у ADR пути записи есть");
+    }
+
+    /**
+     * S4-29 v3 (43а): у спринта вкладка «Вопросы» — частью по срезу questions_of_sprint.
+     * Срез ждёт {@code id}, а не {@code sprint_id}: имя параметра берётся из среза, а не
+     * угадывается по суффиксу «_of_sprint» (угадывание отдало бы пустую часть как «проверено»).
+     */
+    @Test
+    void sprintQuestionsArePartAndEveryPartSliceGetsItsOwnParam() {
+        LoreRecordRegistry.Part q = def("sprint").parts().stream().filter(p -> p.key().equals("questions"))
+            .findFirst().orElseThrow(() -> new AssertionError("у спринта нет части questions"));
+        assertEquals("questions_of_sprint", q.slice());
+        assertEquals("RAISED_IN", q.rel());
+        assertEquals("in", q.dir());
+        for (String t : LoreRecordRegistry.TYPES)
+            for (LoreRecordRegistry.Part p : def(t).parts()) {
+                LoreSlices.SliceDef s = LoreSlices.get(p.slice());
+                assertNotNull(s, t + "/" + p.key() + ": срез " + p.slice() + " есть");
+                assertEquals(s.required(), List.of(LoreRecordResource.paramOf(p.slice())),
+                    t + "/" + p.key() + ": срез части получает ровно свой обязательный параметр");
+            }
     }
 }

@@ -169,8 +169,12 @@ final class LoreRecordRegistry {
                 new Part("phases", "Фазы", "phase", "PART_OF", "in", "strict", "composition",
                     PHASE_NODE_COLUMNS, List.of(), "order_index", "phases_of_sprint"),
                 new Part("tasks", "Задачи", "task", "PART_OF", "in", "strict", "composition",
-                    TASK_NODE_COLUMNS, TASK_NODE_OPTIONAL, "order_index", "tasks_of_sprint")),
-            List.of(new LinkTab("deps", "Зависимости", List.of(
+                    TASK_NODE_COLUMNS, TASK_NODE_OPTIONAL, "order_index", "tasks_of_sprint"),
+                // S4-29 v3 (43а): вопросы спринта — частью, как у ADR и задачи; срез ждёт id.
+                new Part("questions", "Вопросы", "question", "RAISED_IN", "in", "shared", "aggregation",
+                    List.of("status", "code", "title", "priority"), List.of("due_date"), "question_id", "questions_of_sprint")),
+            // S4-29 v3: linkTab — группа вкладок паспорта (surfaces.passport.*.group), подпись — слово владелицы (48а).
+            List.of(new LinkTab("deps", "Связи", List.of(
                 new TabRel("DEPENDS_ON", "out", "зависит от", "association", List.of("kind", "reason")),
                 new TabRel("DEPENDS_ON", "in", "блокирует", "association", List.of("kind", "reason"))))),
             List.of(
@@ -187,9 +191,10 @@ final class LoreRecordRegistry {
                 rel("releases", "Релизы", "IMPLEMENTED_IN_RELEASE", "out", "release", "attribute", "prop", false),
                 rel("milestones", "Вехи", "TARGETS_MILESTONE", "out", "milestone", "attribute", "prop", true),
                 // Вне таблицы документа (он покрывает задачу, ADR, спеку): обратная
-                // сторона ADR → спринт и вопросы спринта — в «Связи / Граф».
-                rel("adrs", "Реализует ADR", "IMPLEMENTED_IN", "in", "adr", "realization", "links", true),
-                rel("questions", "Вопросы", "RAISED_IN", "in", "question", "aggregation", "links", true)))));
+                // сторона ADR → спринт и вопросы спринта. S4-29 v3 (43а): вкладками —
+                // ADR звено цепочки «решение ↔ работа», вопросы — частью questions_of_sprint.
+                rel("adrs", "Реализует ADR", "IMPLEMENTED_IN", "in", "adr", "realization", "link_tab", true),
+                rel("questions", "Вопросы", "RAISED_IN", "in", "question", "aggregation", "part", true)))));
 
         // ── Задача ──────────────────────────────────────────────────────────
         final String roles = "Роли";
@@ -225,19 +230,19 @@ final class LoreRecordRegistry {
                 new PropSection(classes, List.of("task_type", "work_class", "realizes_uc"))),
             List.of(new Part("questions", "Вопросы", "question", "RAISED_IN", "in", "shared", "aggregation",
                 List.of("status", "code", "title", "priority"), List.of("due_date"), "question_id", "questions_of_task")),
+            // S4-29 v3: группы вкладок по итоговой таблице анализа. Блокирующие вопросы — в конце
+            // заметки (42 ребра на 4896 задач), публикации — своей вкладкой, а не в группе.
             List.of(
-                new LinkTab("realization", "Реализация", List.of(
-                    new TabRel("CLOSED_BY", "out", "закрыта PR", "realization", List.of()),
-                    new TabRel("REALIZES", "out", "реализует сценарий", "realization", List.of()))),
-                new LinkTab("justification", "Обоснование", List.of(
+                new LinkTab("justification", "ADR", List.of(
                     new TabRel("JUSTIFIED_BY", "out", "обоснована ADR", "realization", List.of()),
                     new TabRel("PROMOTED_TO", "in", "из рекомендации QG", "realization", List.of()),
                     new TabRel("LED_TO", "in", "из инсайта BRAGI", "realization", List.of()))),
-                new LinkTab("deps", "Зависимости", List.of(
-                    new TabRel("GATES", "in", "блокирующие вопросы", "association", List.of("solved_at")),
+                new LinkTab("realization", "Реализация", List.of(
+                    new TabRel("CLOSED_BY", "out", "закрыта PR", "realization", List.of()),
+                    new TabRel("REALIZES", "out", "реализует сценарий", "realization", List.of()))),
+                new LinkTab("refs", "Ссылки", List.of(
                     new TabRel("REFERENCES", "out", "ссылается", "association", List.of()),
-                    new TabRel("REFERENCES", "in", "на неё ссылаются", "association", List.of()),
-                    new TabRel("PRODUCED_BY", "in", "публикации", "association", List.of())))),
+                    new TabRel("REFERENCES", "in", "на неё ссылаются", "association", List.of())))),
             List.of(),
             common(List.of(
                 rel("sprint", "Спринт", "PART_OF", "out", "sprint", "composition", "head", false),
@@ -277,22 +282,19 @@ final class LoreRecordRegistry {
                     List.of("status", "code", "title"), List.of("date"), "decision_id", "decisions_of_adr"),
                 new Part("questions", "Вопросы", "question", "RAISED_IN", "in", "shared", "aggregation",
                     List.of("status", "code", "title", "priority"), List.of("due_date"), "question_id", "questions_of_adr")),
+            // S4-29 v3 (48а): «Зависимости» разделены на две группы владелицы — связи ADR↔ADR
+            // и ссылки (с ранбуками). Спринты, релизы, задачи, сценарии, инсайты — каждая своей
+            // вкладкой: цепочка «решение → работа» стоит на позициях 2–3, а не в одной куче.
             List.of(
-                new LinkTab("deps", "Зависимости", List.of(
+                new LinkTab("adrLinks", "Связи ADR", List.of(
                     new TabRel("DEPENDS_ON", "out", "зависит от", "association", List.of()),
                     new TabRel("DEPENDS_ON", "in", "блокирует", "association", List.of()),
                     new TabRel("SUPERSEDES", "out", "заменяет", "association", List.of()),
-                    new TabRel("SUPERSEDES", "in", "заменён", "association", List.of()),
-                    new TabRel("REFERENCES_ADR", "in", "ранбуки", "association", List.of()),
+                    new TabRel("SUPERSEDES", "in", "заменён", "association", List.of()))),
+                new LinkTab("refs", "Ссылки", List.of(
                     new TabRel("REFERENCES", "out", "ссылается", "association", List.of()),
-                    new TabRel("REFERENCES", "in", "на него ссылаются", "association", List.of()))),
-                new LinkTab("realization", "Реализация", List.of(
-                    new TabRel("IMPLEMENTED_IN", "out", "спринты", "realization", List.of()),
-                    new TabRel("IMPLEMENTED_IN_RELEASE", "out", "релизы", "realization", List.of()),
-                    new TabRel("JUSTIFIED_BY", "in", "задачи по этому ADR", "realization", List.of()),
-                    new TabRel("TRACED_TO", "in", "сценарии", "realization", List.of()))),
-                new LinkTab("justification", "Обоснование", List.of(
-                    new TabRel("LED_TO", "in", "из инсайта BRAGI", "realization", List.of())))),
+                    new TabRel("REFERENCES", "in", "на него ссылаются", "association", List.of()),
+                    new TabRel("REFERENCES_ADR", "in", "ранбуки", "association", List.of())))),
             List.of(),
             common(List.of(
                 rel("decisions", "Решения", "DECIDED_IN", "in", "decision", "aggregation", "part", false),
@@ -329,7 +331,7 @@ final class LoreRecordRegistry {
             List.of(new Body("content_md", "Текст", "pp.field.body", true, w(spec, "content_md"))),
             List.of(new PropSection(null, List.of("version", "summary", "component", "projects", "file_path"))),
             List.of(),
-            List.of(new LinkTab("deps", "Зависимости", List.of(
+            List.of(new LinkTab("refs", "Ссылки", List.of(
                 new TabRel("REFERENCES", "out", "ссылается", "association", List.of()),
                 new TabRel("REFERENCES", "in", "на неё ссылаются", "association", List.of())))),
             List.of(),
@@ -359,8 +361,9 @@ final class LoreRecordRegistry {
             List.of(), List.of(), List.of(),
             List.of(
                 rel("adr", "ADR", "DECIDED_IN", "out", "adr", "aggregation", "head", false),
-                rel("supersedes", "Заменяет", "SUPERSEDES", "out", "decision", "association", "links", false),
-                rel("answers", "Отвечает на вопросы", "ANSWERS", "out", "question", "association", "links", false),
+                // S4-29 v3 (44а): связи решения — вкладками. Данные — из строки среза decision.
+                rel("supersedes", "Заменяет", "SUPERSEDES", "out", "decision", "association", "link_tab", false),
+                rel("answers", "Отвечает на вопросы", "ANSWERS", "out", "question", "association", "link_tab", false),
                 rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
                 rel("tags", "Теги", "TAGGED_WITH", "out", "tag", "attribute", "prop", false))));
@@ -385,8 +388,9 @@ final class LoreRecordRegistry {
             List.of(), List.of(), List.of(),
             List.of(
                 rel("raisedIn", "Поднят в", "RAISED_IN", "out", "any", "aggregation", "head", false),
-                rel("gates", "Блокирует задачи", "GATES", "out", "task", "association", "links", false),
-                rel("answeredBy", "Ответ — решения", "ANSWERS", "in", "decision", "association", "links", false),
+                // S4-29 v3 (44а): Ответ · Блокирует задачи — вкладками; данные — из question_by_id.
+                rel("gates", "Блокирует задачи", "GATES", "out", "task", "association", "link_tab", false),
+                rel("answeredBy", "Ответ — решения", "ANSWERS", "in", "decision", "association", "link_tab", false),
                 rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
 
@@ -404,7 +408,8 @@ final class LoreRecordRegistry {
                 new Body("decisions_md", "Решения", null, false, null)),
             List.of(new PropSection(null, List.of("week", "date", "priority", "products"))),
             List.of(), List.of(), List.of(),
-            List.of(rel("sprints", "Спринты", "TARGETS_MILESTONE", "in", "sprint", "aggregation", "links", false))));
+            // S4-29 v3 (45а): веха — контейнер, спринты первой вкладкой.
+            List.of(rel("sprints", "Спринты", "TARGETS_MILESTONE", "in", "sprint", "aggregation", "link_tab", false))));
 
         // ── Релиз (только чтение, kit 09.11) ─────────────────────────────────
         TYPE_DEFS.put("release", new TypeDef("release", "Релиз", "pp.kind.release", "rocket",
@@ -420,8 +425,9 @@ final class LoreRecordRegistry {
             List.of(new PropSection(null, List.of("type", "date", "is_current", "week", "projects"))),
             List.of(), List.of(), List.of(),
             List.of(
-                rel("sprints", "Спринты", "IMPLEMENTED_IN_RELEASE", "in", "sprint", "realization", "links", false),
-                rel("prs", "PR", "SHIPPED_IN", "in", "pr", "realization", "links", false),
+                // S4-29 v3 (44а): Спринты · PR — вкладками; данные — срезы release_sprints / release_prs.
+                rel("sprints", "Спринты", "IMPLEMENTED_IN_RELEASE", "in", "sprint", "realization", "link_tab", false),
+                rel("prs", "PR", "SHIPPED_IN", "in", "pr", "realization", "link_tab", false),
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
 
         // ── Компонент (только чтение, S4-V2-SECTIONS) ────────────────────────
@@ -449,10 +455,12 @@ final class LoreRecordRegistry {
             List.of(), List.of(), List.of(),
             List.of(
                 rel("parent", "Родитель", "PARENT_OF", "out", "component", "composition", "prop", false),
-                rel("children", "Подкомпоненты", "PARENT_OF", "in", "component", "composition", "prop", false),
-                rel("tech", "Технологии", "USES", "out", "tech", "attribute", "prop", false),
-                rel("adrs", "ADR", "BELONGS_TO", "in", "adr", "attribute", "prop", false),
-                rel("specs", "Спеки", "DOCUMENTED_IN", "out", "spec", "attribute", "prop", false))));
+                // S4-29 v3 (46а/52а): Спеки · ADR · Технологии · Подкомпоненты — вкладками (поля в
+                // «Свойствах» остаются). Задачи и Спринты компонента ждут среза с пагинацией.
+                rel("children", "Подкомпоненты", "PARENT_OF", "in", "component", "composition", "link_tab", false),
+                rel("tech", "Технологии", "USES", "out", "tech", "attribute", "link_tab", false),
+                rel("adrs", "ADR", "BELONGS_TO", "in", "adr", "attribute", "link_tab", false),
+                rel("specs", "Спеки", "DOCUMENTED_IN", "out", "spec", "attribute", "link_tab", false))));
 
         // ── Технология (только чтение, S4-V2-SECTIONS) ───────────────────────
         // Технология — спека SPEC-TECH-<КОМПОНЕНТ>-<ТЕХ> (SPRINT_TECH_REGISTRY), срез tech_by_id.
@@ -497,17 +505,25 @@ final class LoreRecordRegistry {
                 new PropSection(null, List.of("goal_level", "rigor", "priority", "date", "shipped_at", "parent",
                     "components", "projects")),
                 new PropSection(modules, List.of("children", "tasks"))),
-            List.of(), List.of(), List.of(),
+            List.of(),
+            // S4-29 v3: «Ценность» — одна вкладка с подзаголовками (акторы · боли · выгоды · работы).
+            List.of(new LinkTab("value", "Ценность", List.of(
+                new TabRel("HAS_ACTOR", "out", "акторы", "association", List.of()),
+                new TabRel("ADDRESSES", "out", "боли", "association", List.of()),
+                new TabRel("PROMISES", "out", "выгоды", "association", List.of()),
+                new TabRel("HELPS_WITH", "out", "работы", "association", List.of())))),
+            List.of(),
             List.of(
                 rel("parent", "Родитель", "DECOMPOSES_INTO", "in", "feature", "composition", "head", false),
-                rel("children", "Сценарии", "DECOMPOSES_INTO", "out", "feature", "composition", "prop", false),
+                // S4-29 v3: Сценарии · Задачи · Ценность — вкладками; данные — из строки uc_by_id.
+                rel("children", "Сценарии", "DECOMPOSES_INTO", "out", "feature", "composition", "link_tab", false),
                 rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
-                rel("tasks", "Задачи", "REALIZES", "in", "task", "realization", "prop", false),
-                rel("actors", "Акторы", "HAS_ACTOR", "out", "actor", "association", "links", false),
-                rel("pains", "Боли", "ADDRESSES", "out", "pain", "association", "links", false),
-                rel("gains", "Выгоды", "PROMISES", "out", "gain", "association", "links", false),
-                rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "links", false))));
+                rel("tasks", "Задачи", "REALIZES", "in", "task", "realization", "link_tab", false),
+                rel("actors", "Акторы", "HAS_ACTOR", "out", "actor", "association", "link_tab", false),
+                rel("pains", "Боли", "ADDRESSES", "out", "pain", "association", "link_tab", false),
+                rel("gains", "Выгоды", "PROMISES", "out", "gain", "association", "link_tab", false),
+                rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "link_tab", false))));
 
         // ── Дети без своего паспорта: фаза, вопрос, решение — поля для колонок parts ──
         CHILD_ONLY.put("phase", childOnly("phase", "Фаза", List.of(
