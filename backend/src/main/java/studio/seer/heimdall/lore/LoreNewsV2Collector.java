@@ -38,18 +38,22 @@ import java.util.regex.Pattern;
 final class LoreNewsV2Collector {
 
     /** Все версии задач со статусом: состояние на t0/t1 и события (§1, §7.2). */
+    // B9: task_uids — ВСЕ владельцы версии. task_uid ([0]) — лишь первый, а порядок
+    // рёбер — порядок хранилища, не приоритет: общая версия (S2-11) иначе приписалась
+    // бы одному владельцу, второй потерял бы переход в таймлайне.
     static final String SQL_TASK_HIST =
-        "SELECT in('HAS_STATE').task_uid[0] AS task_uid, valid_from, status_raw " +
+        "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_uid AS task_uids, " +
+        "valid_from, status_raw " +
         "FROM KnowTaskHist WHERE valid_from IS NOT NULL";
     static final String SQL_RELEASES =
         "SELECT release_id, release_uid, release_date, git_project, out('BELONGS_TO_PROJECT').slug AS projects " +
         "FROM KnowRelease WHERE release_date IS NOT NULL";
     static final String SQL_ADR_HIST =
-        "SELECT in('HAS_STATE').adr_id[0] AS adr_id, valid_from, " +
+        "SELECT in('HAS_STATE').adr_id[0] AS adr_id, in('HAS_STATE').adr_id AS adr_uids, valid_from, " +
         "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
         "FROM KnowADRHist WHERE valid_from IS NOT NULL";
     static final String SQL_SPEC_HIST =
-        "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, " +
+        "SELECT in('HAS_STATE').spec_id[0] AS spec_id, in('HAS_STATE').spec_id AS spec_uids, valid_from, " +
         "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
         "FROM KnowSpecHist WHERE valid_from IS NOT NULL";
     /** S7A-01: вопросы для ленты — лёгкая проекция без body_md (условие 9 SPEC-LORE-KIT-CONTRACT-CONDITIONS). */
@@ -134,10 +138,12 @@ final class LoreNewsV2Collector {
         }
         Map<String, List<Version>> hist = new TreeMap<>();
         for (Map<String, Object> h : read("task_history", SQL_TASK_HIST, true)) {
-            String uid = str(h.get("task_uid"));
             Instant vf = instant(h.get("valid_from"));
-            if (uid == null || vf == null) continue;
-            hist.computeIfAbsent(uid, k -> new ArrayList<>()).add(new Version(vf, str(h.get("status_raw"))));
+            if (vf == null) continue;
+            // B9: переход — каждому владельцу версии, не только первому ([0]).
+            for (String uid : owners(h, "task_uids", "task_uid")) {
+                hist.computeIfAbsent(uid, k -> new ArrayList<>()).add(new Version(vf, str(h.get("status_raw"))));
+            }
         }
         List<TaskRecord> tasks = new ArrayList<>();
         Set<String> uids = new TreeSet<>(hist.keySet());
@@ -185,15 +191,20 @@ final class LoreNewsV2Collector {
                     sortedSet(a.get("components")), null, List.of(), null, str(a.get("status")), str(a.get("name")), "adrs.date_created"));
         }
         List<Map<String, Object>> adrHist = read("adr_history", SQL_ADR_HIST, false);
-        Map<String, Instant> adrFirst = firstBy(adrHist, "adr_id");
+        Map<String, Instant> adrFirst = firstByOwners(adrHist, "adr_uids", "adr_id");
         for (Map<String, Object> h : adrHist) {
-            String id = str(h.get("adr_id"));
             Instant vf = instant(h.get("valid_from"));
-            if (id == null || vf == null || vf.equals(adrFirst.get(id)) || vf.isBefore(from) || !vf.isBefore(t1)) continue;
-            Map<String, Object> a = adrById.getOrDefault(id, Map.of());
-            List<String> p = sortedSet(h.get("projects"));
-            if (p.isEmpty()) p = sortedSet(a.get("git_projects"));
-            events.add(ev("adr", id, "changed", vf, null, p, sortedSet(a.get("components")), null, List.of(), null, null, str(a.get("name")), "adr_history"));
+            if (vf == null || vf.isBefore(from) || !vf.isBefore(t1)) continue;
+            List<String> rowProjects = sortedSet(h.get("projects"));
+            // B9: событие «изменено» — каждому владельцу версии. «Первая версия» своя
+            // у каждого: для владельца, у которого общая версия единственная, это
+            // начальное состояние, не правка — события нет.
+            for (String id : owners(h, "adr_uids", "adr_id")) {
+                if (vf.equals(adrFirst.get(id))) continue;
+                Map<String, Object> a = adrById.getOrDefault(id, Map.of());
+                List<String> p = rowProjects.isEmpty() ? sortedSet(a.get("git_projects")) : rowProjects;
+                events.add(ev("adr", id, "changed", vf, null, p, sortedSet(a.get("components")), null, List.of(), null, null, str(a.get("name")), "adr_history"));
+            }
         }
 
         // ── решения ──
@@ -227,7 +238,7 @@ final class LoreNewsV2Collector {
             if (id != null) tspec.put(id, s);
         }
         List<Map<String, Object>> specHist = read("spec_history", SQL_SPEC_HIST, false);
-        Map<String, Instant> specFirst = firstBy(specHist, "spec_id");
+        Map<String, Instant> specFirst = firstByOwners(specHist, "spec_uids", "spec_id");
         Map<String, Map<String, Object>> specById = new HashMap<>();
         Map<String, Instant> specCreated = new HashMap<>();
         for (Map<String, Object> s : slice("specs", false)) {
@@ -245,14 +256,18 @@ final class LoreNewsV2Collector {
                 events.add(ev("spec", id, "created", created, null, p, c, null, List.of(), null, str(s.get("status")), str(s.get("title")), "timeline_specs"));
         }
         for (Map<String, Object> h : specHist) {
-            String id = str(h.get("spec_id"));
             Instant vf = instant(h.get("valid_from"));
-            if (id == null || vf == null || vf.equals(specCreated.getOrDefault(id, specFirst.get(id))) || vf.isBefore(from) || !vf.isBefore(t1)) continue;
-            Map<String, Object> s = specById.getOrDefault(id, Map.of());
-            List<String> p = sortedSet(h.get("projects"));
-            if (p.isEmpty()) p = sortedSet(s.get("projects"));
-            List<String> c = s.get("component_id") == null ? List.of() : List.of(str(s.get("component_id")));
-            events.add(ev("spec", id, "version", vf, null, p, c, null, List.of(), null, null, str(s.get("title")), "spec_history"));
+            if (vf == null || vf.isBefore(from) || !vf.isBefore(t1)) continue;
+            List<String> rowProjects = sortedSet(h.get("projects"));
+            // B9: событие «версия» — каждому владельцу, «первая версия» своя у каждого
+            // (см. adr-цикл выше).
+            for (String id : owners(h, "spec_uids", "spec_id")) {
+                if (vf.equals(specCreated.getOrDefault(id, specFirst.get(id)))) continue;
+                Map<String, Object> s = specById.getOrDefault(id, Map.of());
+                List<String> p = rowProjects.isEmpty() ? sortedSet(s.get("projects")) : rowProjects;
+                List<String> c = s.get("component_id") == null ? List.of() : List.of(str(s.get("component_id")));
+                events.add(ev("spec", id, "version", vf, null, p, c, null, List.of(), null, null, str(s.get("title")), "spec_history"));
+            }
         }
         // ── вопросы (S7A-01, новые типы §1): «открыт» и «закрыт»; дата без времени — днём ──
         for (Map<String, Object> q : read("questions", SQL_QUESTIONS, false)) {
@@ -281,13 +296,24 @@ final class LoreNewsV2Collector {
         return new Event(type, el, kind, at, at == null ? day : null, null, null, p, c, sprint, ms, parent, null, to, title, src);
     }
 
-    static Map<String, Instant> firstBy(List<Map<String, Object>> rows, String idField) {
+    /**
+     * B9: владельцы строки истории — списком: версия, общая у нескольких записей
+     * (S2-11), относится к каждой. Подставные строки без колонки-списка несут
+     * скалярный id — он и читается (обратная совместимость тестовых фикстур).
+     */
+    static List<String> owners(Map<String, Object> row, String ownersField, String idField) {
+        return strList(row.containsKey(ownersField) ? row.get(ownersField) : row.get(idField));
+    }
+
+    /** Минимальный valid_from на каждого владельца — «первая версия» своя у каждого. */
+    static Map<String, Instant> firstByOwners(List<Map<String, Object>> rows, String ownersField, String idField) {
         Map<String, Instant> first = new HashMap<>();
         for (Map<String, Object> h : rows) {
-            String id = str(h.get(idField));
             Instant vf = instant(h.get("valid_from"));
-            if (id == null || vf == null) continue;
-            first.merge(id, vf, (a, b) -> a.isBefore(b) ? a : b);
+            if (vf == null) continue;
+            for (String id : owners(h, ownersField, idField)) {
+                first.merge(id, vf, (a, b) -> a.isBefore(b) ? a : b);
+            }
         }
         return first;
     }

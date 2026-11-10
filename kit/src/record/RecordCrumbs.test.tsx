@@ -77,3 +77,15 @@ describe('CSS: на телефоне крошки сокращаются до «
     expect(css).toMatch(/@media \(max-width: 720px\)[^{]*\{[^@]*\.sk-crumbs__ctx[^}]*display:\s*none/);
   });
 });
+
+describe('CSS: крошка не выглядит зачёркнутой (B7 аудита 10.11)', () => {
+  it('постоянной декорации нет; подчёркивание — только на hover', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/seidr.css'), 'utf8');
+    const rules = [...css.matchAll(/\.sk-crumbs__back[^{]*\{[^}]*\}/g)].map(m => m[0]);
+    expect(rules.length, 'правила .sk-crumbs__back есть').toBeGreaterThan(0);
+    for (const r of rules) expect(r).not.toMatch(/line-through/);
+    // Постоянного подчёркивания нет — по канону ссылок kit: none + hover.
+    expect(rules.find(r => /:hover/.test(r)) ?? '').toMatch(/text-decoration:\s*underline/);
+    expect(css).toMatch(/\.sk-crumbs__back[^{]*\{[^}]*color:\s*var\(--acc\)[^}]*\}/);
+  });
+});

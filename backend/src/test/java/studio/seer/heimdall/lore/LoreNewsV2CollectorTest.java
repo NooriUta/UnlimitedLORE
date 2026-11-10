@@ -57,6 +57,47 @@ class LoreNewsV2CollectorTest {
     }
 
     /**
+     * B9: версия, общая у двух задач (S2-11), попадает в таймлайн КАЖДОЙ, а события
+     * «изменено» у ADR и «версия» у спек ставятся каждому владельцу — не только
+     * первому ([0] — порядок хранилища, не приоритет). «Первая версия» у каждого
+     * владельца своя: общая версия, единственная у владельца, — начальное состояние,
+     * не правка.
+     */
+    @Test
+    void sharedVersionReachesTimelineAndChangedEventsOfEveryOwner() {
+        LoreNewsV2Collector c = new LoreNewsV2Collector((sql, p) -> {
+            if (sql.equals(LoreNewsV2Collector.SQL_TASK_HIST)) return List.of(
+                row("task_uid", "S9/A-1", "task_uids", List.of("S9/A-1", "S9/B-1"),
+                    "valid_from", "2026-10-20T10:00:00.000Z", "status_raw", "📋 PLANNED"));
+            if (sql.equals(LoreNewsV2Collector.SQL_ADR_HIST)) return List.of(
+                row("adr_id", "ADR-A", "adr_uids", List.of("ADR-A"),
+                    "valid_from", "2026-10-25T10:00:00.000Z", "projects", List.of("P1")),
+                row("adr_id", "ADR-B", "adr_uids", List.of("ADR-B"),
+                    "valid_from", "2026-10-26T10:00:00.000Z", "projects", List.of("P1")),
+                row("adr_id", "ADR-A", "adr_uids", List.of("ADR-A", "ADR-B"),
+                    "valid_from", "2026-11-03T10:00:00.000Z", "projects", List.of("P1")));
+            if (sql.equals(LoreNewsV2Collector.SQL_SPEC_HIST)) return List.of(
+                row("spec_id", "SPEC-A", "spec_uids", List.of("SPEC-A"),
+                    "valid_from", "2026-10-25T10:00:00.000Z", "projects", List.of("P1")),
+                row("spec_id", "SPEC-B", "spec_uids", List.of("SPEC-B"),
+                    "valid_from", "2026-10-26T10:00:00.000Z", "projects", List.of("P1")),
+                row("spec_id", "SPEC-A", "spec_uids", List.of("SPEC-A", "SPEC-B"),
+                    "valid_from", "2026-11-03T10:00:00.000Z", "projects", List.of("P1")));
+            return List.of();
+        });
+        NewsV2.Input in = c.collect(T0, T1, T1, ZoneId.of("Europe/Moscow"), null);
+        NewsV2.TaskRecord ta = in.tasks().stream().filter(t -> t.uid().equals("S9/A-1")).findFirst().orElseThrow();
+        NewsV2.TaskRecord tb = in.tasks().stream().filter(t -> t.uid().equals("S9/B-1")).findFirst().orElseThrow();
+        assertEquals(1, ta.versions().size(), "переход — владельцу A, не дублируется");
+        assertEquals(1, tb.versions().size(), "переход — и владельцу B, а не только первому ([0])");
+        assertTrue(in.otherEvents().stream().anyMatch(e -> e.type().equals("adr") && e.el().equals("ADR-A") && e.kind().equals("changed")));
+        assertTrue(in.otherEvents().stream().anyMatch(e -> e.type().equals("adr") && e.el().equals("ADR-B") && e.kind().equals("changed")),
+            "событие «изменено» — каждому владельцу общей версии");
+        assertTrue(in.otherEvents().stream().anyMatch(e -> e.type().equals("spec") && e.el().equals("SPEC-A") && e.kind().equals("version")));
+        assertTrue(in.otherEvents().stream().anyMatch(e -> e.type().equals("spec") && e.el().equals("SPEC-B") && e.kind().equals("version")));
+    }
+
+    /**
      * S7A-01, новые типы §1: вопросы в ленте — «открыт» по opened_date, «закрыт» по closed_date,
      * только в окне. Читается лёгкая проекция без body_md (SPEC-LORE-KIT-CONTRACT-CONDITIONS,
      * условие 9: срез questions везёт 576 КБ тел, ленте они не нужны).

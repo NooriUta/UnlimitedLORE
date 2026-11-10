@@ -32,7 +32,10 @@ export function StatusSlot({ record, ctx, unknownTitle, compact }: {
   // Пустая статусная ось (K-14) — у типа статуса нет вовсе, и менять нечего.
   // Проверяется ДО прав: право сменить то, чего не существует, бессмысленно.
   const hasAxis = (ctx.config.statuses?.items?.length ?? 0) > 0;
-  if (!hasAxis || !canChangeStatus(ctx.config, ctx.role)) {
+  // Пустой код — чип не рисуем ни плашкой, ни кнопкой (B5): показывать нечего,
+  // а «—» у типа без статуса читалось как реальный статус записи.
+  if (!hasAxis || !record.status) return null;
+  if (!canChangeStatus(ctx.config, ctx.role)) {
     return <StatusPill code={record.status} ctx={ctx} unknownTitle={unknownTitle} />;
   }
   // Обёртка с тем же классом, что у плашки (`sk-rec-status`), — НАМЕРЕННО:

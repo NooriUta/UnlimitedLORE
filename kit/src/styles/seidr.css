@@ -3608,13 +3608,15 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   background: none;
   color: var(--acc);
   font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Постоянного подчёркивания у крошки нет — по канону ссылок kit (B7 аудита
+   10.11): на проде «← Раздел» с неубираемой декорацией читалось как
+   зачёркнутая, удалённая запись. Подчёркивание — только на hover. */
+.sk-crumbs__back:hover { text-decoration: underline; text-underline-offset: 2px; }
 .sk-crumbs__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-crumbs__ctx { color: var(--t2); }
 .sk-crumbs__sep { color: var(--t3); }
@@ -3835,7 +3837,11 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-facts { min-width: 0; }
 .sk-rec-facts__list { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--gap); margin: 0; padding: 0; list-style: none; }
 .sk-rec-facts__item { --fact-c: var(--t2); display: inline-flex; align-items: center; gap: 4px; color: var(--fact-c); font-size: var(--fs-sm); }
-.sk-rec-facts__item + .sk-rec-facts__item::before { content: '·'; color: var(--t3); margin-right: 2px; }
+/* Пустой пункт строки фактов не занимает место и не даёт разделителя: у типа
+   без статусной оси (релиз, компонент, технология) StatusSlot не рисует чип
+   вовсе (B5), и «Статус» оставлял бы пустой <li> с висячей точкой «·». */
+.sk-rec-facts__item:empty { display: none; }
+.sk-rec-facts__item:not(:empty) ~ .sk-rec-facts__item:not(:empty)::before { content: '·'; color: var(--t3); margin-right: 2px; }
 .sk-rec-facts__item[data-fact='tasks'], .sk-rec-facts__item[data-fact='due'] { font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rec-facts__text { color: inherit; }
 .sk-rec-facts__btn {

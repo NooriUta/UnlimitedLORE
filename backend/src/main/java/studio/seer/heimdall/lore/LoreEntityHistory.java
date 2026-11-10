@@ -92,17 +92,23 @@ final class LoreEntityHistory {
         String hist = type == null ? null : HIST_OF_TYPE.get(type);
         if (hist == null) throw new IllegalArgumentException("unknown history type: " + type + " (known: " + types() + ")");
         LoreSlices.HistParent parent = LoreSlices.HIST_PARENT.get(hist);
+        boolean dict = "dict_entry".equals(type);
         // У строки справочника ключ денормализован на саму Hist (составной, без одиночного id у вершины).
-        String idExpr = "dict_entry".equals(type) ? "code" : "in('HAS_STATE')." + parent.idField() + "[0]";
+        // B9: история читается в контексте записи. WHERE — CONTAINS, а не «первый владелец [0] =»:
+        // версия, общая у нескольких записей (S2-11), иначе у второго владельца молча пуста —
+        // WHERE по чужому [0] не сматчится. ref_id — сам запрошенный :id, а не in('HAS_STATE').<id>[0]:
+        // иначе строки в истории второго владельца несли бы чужой ключ.
+        String idExpr = dict ? "code" : ":id";
+        String where = dict ? "code = :id" : "in('HAS_STATE')." + parent.idField() + " CONTAINS :id";
         StringBuilder sb = new StringBuilder("SELECT '").append(type).append("' AS entity_type, '")
             .append(hist).append("' AS hist_type, ").append(idExpr).append(" AS ref_id, state_uid, ")
             .append("valid_from, valid_to, content_hash, source_commit, status_raw, changed_by, changed_by_kind");
-        if ("dict_entry".equals(type)) sb.append(", dict_type");
+        if (dict) sb.append(", dict_type");
         String p = projectsExpr(type);
         if (p != null) sb.append(", ").append(p).append(" AS projects");
         String via = projectsViaExpr(type);
         if (via != null) sb.append(", ").append(via).append(" AS projects_via");
-        sb.append(" FROM ").append(hist).append(" WHERE ").append(idExpr).append(" = :id ORDER BY valid_from");
+        sb.append(" FROM ").append(hist).append(" WHERE ").append(where).append(" ORDER BY valid_from");
         return sb.toString();
     }
 

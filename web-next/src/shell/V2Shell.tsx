@@ -6,8 +6,8 @@
 // Экраны разделов подключаются в SCREENS своими задачами S4 (списки спринтов,
 // ADR…). Раздел без экрана честно говорит «экран не собран» (NotBuilt kit), а
 // не рисует «пусто»: данных он не запрашивал.
-import { useMemo, type ComponentType, type ReactNode } from 'react';
-import { KitShell, NewsFeed, NotBuilt, useKitLang, useKitShell, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
+import { KitShell, NewsFeed, NotBuilt, createSafeStorage, useKitLang, useKitShell, type KitShellApi, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { switchNavUrl } from '../nav/navVersion';
 import { ListScreen } from '../pages/ListScreen';
@@ -16,6 +16,7 @@ import { planStatusOf } from '../sprints/taskStatus';
 import { newsHrefV2 } from '../news/newsLinks';
 import { NavSwitch } from '../settings/NavSwitch';
 import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
+import { SHELL_STORAGE_KEY, openRecent } from './recentNav';
 import { useModelStatuses } from './useModelStatuses';
 import { VersionCorner } from './VersionCorner';
 
@@ -90,13 +91,30 @@ export interface V2ShellProps {
   account?: ReactNode;
 }
 
-export function V2Shell({ storage, win, narrow, brandTag, topStart, topEnd, account }: V2ShellProps) {
+export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart, topEnd, account }: V2ShellProps) {
   const lang = useKitLang();
+  // Хранилище одно на оболочку и на навигацию из «Недавнего»: у createSafeStorage
+  // память своя у КАЖДОГО вызова (отказ localStorage), и второй экземпляр
+  // прочитал бы мету недавних пусто.
+  const storage = useMemo(() => storageProp ?? createSafeStorage(), [storageProp]);
   // Словарь статусов — из модели (S4-STATUS-AXIS-CONFIG): он данные приложения,
   // а не код клиента. Модель недоступна — остаётся рукописное умолчание, и
   // причина названа словами в `notes`, а не замолчана.
   const statuses = useModelStatuses();
   const config = useMemo(() => v2Config(lang, statuses.items), [lang, statuses.items]);
+  // api оболочки ловим изнутри (мост ниже): onOpenRecord — проп KitShell, а
+  // navigate живёт в api внутри оболочки. Клик по «Недавнему» KitShell
+  // обрабатывает сам и зовёт onOpenRecord — без него клик лишь перестраивал
+  // порядок пунктов (жалоба с прода v1.17.9), поэтому здесь он всегда есть.
+  const apiRef = useRef<KitShellApi | null>(null);
+  // Счётчик открытий из «Недавнего»: клик в ТОТ ЖЕ раздел не пересобирает
+  // ListScreen (открытую запись он читает из URL только на монтировании),
+  // поэтому после навигации экран поднимаем заново — он прочитает ?open=.
+  const [openSeq, setOpenSeq] = useState(0);
+  const onOpenRecord = useCallback((id: string) => {
+    const api = apiRef.current;
+    if (api && openRecent(api, storage, id)) setOpenSeq(n => n + 1);
+  }, [storage]);
   return (
     <KitShell
       config={config}
@@ -105,15 +123,17 @@ export function V2Shell({ storage, win, narrow, brandTag, topStart, topEnd, acco
       brandTag={brandTag}
       topStart={topStart}
       topEnd={topEnd}
+      onOpenRecord={onOpenRecord}
       // Выбор проектов (S4-03, ?proj=) — глобальный: переживает смену раздела (S4-13, B-07).
       keepParams={V2_KEEP_PARAMS}
       account={account}
       storage={storage}
-      storageKey="lore-v2.shell"
+      storageKey={SHELL_STORAGE_KEY}
       win={win}
       narrow={narrow}
     >
-      <SectionScreen />
+      <ShellApiBridge sink={apiRef} />
+      <SectionScreen key={openSeq} />
       {/* Версия сборки в правом нижнем углу (S4-30, просьба владелицы 09.11):
           одна метка, если сервер и фронт собраны из одного коммита, иначе
           обе — подписанными. Внутри оболочки, а не в App: метка про установку
@@ -121,6 +141,18 @@ export function V2Shell({ storage, win, narrow, brandTag, topStart, topEnd, acco
       <VersionCorner />
     </KitShell>
   );
+}
+
+/**
+ * Мост к api оболочки: onOpenRecord объявлен пропом KitShell, но navigate ему
+ * нужен из api, который оболочка создаёт внутри себя. Ловим api из контекста
+ * и отдаём наружу через ref — клик случится после монтирования, к тому
+ * моменту ref уже заполнен.
+ */
+function ShellApiBridge({ sink }: { sink: RefObject<KitShellApi | null> }) {
+  const api = useKitShell();
+  useEffect(() => { sink.current = api; }, [api, sink]);
+  return null;
 }
 
 function isSection(id: string | null): id is V2Section {
