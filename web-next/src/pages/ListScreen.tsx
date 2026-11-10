@@ -292,6 +292,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         counts={serverCounts}
         urlState={urlState}
         quickIcons={def.quickIcons}
+        // Свежие сверху по умолчанию (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS): это
+        // умолчание — `ls` в адресе (явный выбор или применённый вид) kit ставит поверх.
+        initial={def.defaultSort ? { sort: def.defaultSort } : undefined}
         // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
         // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
         // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
