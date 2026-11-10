@@ -787,5 +787,12 @@
   "kit.md.sourceHtml": "HTML source",
   "kit.md.together": "show side by side: source and preview",
   "kit.md.live": "Live preview",
-  "kit.matrix.cell.unasked": "source was not asked"
+  "kit.matrix.cell.unasked": "source was not asked",
+  "kit.list.feed.body.less": "collapse",
+  "kit.list.feed.body.busy": "loading…",
+  "kit.list.feed.body.retry": "try again",
+  "kit.list.feed.body.moreUnknown": "more",
+  "kit.list.feed.body.moreUnknownWhy": "how much is left — the source did not say",
+  "kit.list.feed.body.failed": "Could not finish reading: {reason}",
+  "kit.list.feed.body.related": "Related"
 }

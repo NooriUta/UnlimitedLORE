@@ -787,5 +787,12 @@
   "kit.md.sourceHtml": "исходник HTML",
   "kit.md.together": "показывать вместе: исходник и просмотр",
   "kit.md.live": "Живой просмотр",
-  "kit.matrix.cell.unasked": "источник не спрашивали"
+  "kit.matrix.cell.unasked": "источник не спрашивали",
+  "kit.list.feed.body.less": "свернуть",
+  "kit.list.feed.body.busy": "догружаю…",
+  "kit.list.feed.body.retry": "попробовать снова",
+  "kit.list.feed.body.moreUnknown": "ещё",
+  "kit.list.feed.body.moreUnknownWhy": "сколько осталось — источник не сказал",
+  "kit.list.feed.body.failed": "Не смогли дочитать: {reason}",
+  "kit.list.feed.body.related": "Относится"
 }
