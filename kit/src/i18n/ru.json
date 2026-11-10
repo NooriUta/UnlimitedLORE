@@ -705,5 +705,9 @@
   "kit.rel.logEmpty": "активаций ещё не было",
   "kit.rel.logUnknown": "журнал не прислали — это не значит, что активаций не было",
   "kit.rel.act.activate": "активация",
-  "kit.rel.act.rollback": "откат"
+  "kit.rel.act.rollback": "откат",
+  "kit.scale.label": "Размер текста",
+  "kit.scale.smaller": "Мельче",
+  "kit.scale.bigger": "Крупнее",
+  "kit.scale.now": "{percent}%"
 }

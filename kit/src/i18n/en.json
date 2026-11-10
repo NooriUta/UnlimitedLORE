@@ -705,5 +705,9 @@
   "kit.rel.logEmpty": "there have been no activations yet",
   "kit.rel.logUnknown": "the log was not sent — that does not mean there were no activations",
   "kit.rel.act.activate": "activation",
-  "kit.rel.act.rollback": "rollback"
+  "kit.rel.act.rollback": "rollback",
+  "kit.scale.label": "Text size",
+  "kit.scale.smaller": "Smaller",
+  "kit.scale.bigger": "Bigger",
+  "kit.scale.now": "{percent}%"
 }
