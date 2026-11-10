@@ -44,6 +44,14 @@ class LoreKcAgentClientTest {
         assertNull(LoreKcAgentClient.idOf(null));
     }
 
+    /** Находка kit к #1077: тело role-mappings с 200, но битое (HTML от прокси) — null, а не 500 на создание учётки. */
+    @Test
+    void brokenRoleMappingsBodyIsNullNotCrash() {
+        assertNotNull(LoreKcAgentClient.jsonOrNull("{\"clientMappings\":{}}"));
+        assertNull(LoreKcAgentClient.jsonOrNull("<html>502</html>"));
+        assertNull(LoreKcAgentClient.jsonOrNull(""));
+    }
+
     @Test
     void clientIdFromProfileAndMachine() {
         assertEquals("lore-mcp-full_arharaga", LoreKcAgentClient.clientId("full", "arharaga"));
