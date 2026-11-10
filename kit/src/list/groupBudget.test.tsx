@@ -22,6 +22,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '../elements/GameIcon';
+import { KitLangProvider } from '../i18n';
 import { ListView } from './ListView';
 import { LIST_BUDGET } from './listModel';
 import type { KitConfig, KitData, KitRecord } from '../core/contract';
@@ -164,5 +165,119 @@ describe('S9-02 · поиск по группам', () => {
     // v1.1.0, v1.10…v1.19, v1.100…v1.141 — заметно больше двадцати.
     expect(groupHeads().length).toBe(LIST_BUDGET.topGroups + 1);
     expect(document.body.textContent).toMatch(/Прочие/);
+  });
+});
+
+// Честные состояния потолка (S9-02, вторая половина задачи).
+//
+// Проба 10.11 показала, чего не хватало после первого захода: потолок есть, но
+// он молчит о себе.
+//   • «Прочие» называли только число групп; сколько там СТРОК, читалось из
+//     общего счётчика группы рядом — то есть число было, но не было сказано,
+//     что оно про спрятанное. «Прочие» без строк читается как «мелочь», а в
+//     них при 142 релизах лежит 396 строк из 426 — почти вся выдача.
+//   • Про то, что топ-10 посчитан по ЗАГРУЖЕННОЙ странице, не говорилось
+//     вовсе. При обрезанной выдаче «десять самых больших» — неправда: это
+//     десять самых больших среди загруженного, а в полной выдаче порядок
+//     групп может быть другим.
+//   • Сколько всего групп (из чего выбран топ) на экране не было: 10 и
+//     «Прочие» не говорят «из 142».
+
+/** Та же выдача, но сервер сказал, что обрезал её. */
+const showTruncated = (releases: number, total = 5000) => {
+  const d = dataWith(releases);
+  return render(
+    <ListView
+      config={config}
+      data={{ ...d, meta: { generated_at: 'x', total, truncated: true } }}
+      state={state} onStateChange={() => {}}
+    />,
+  );
+};
+
+const otherHead = () => groupHeads().find(h => h.getAttribute('data-group-key')?.includes('other'));
+const capNote = () => document.querySelector('.sk-list__gcap');
+
+describe('S9-02 · «Прочие» называют, сколько спрятано', () => {
+  it('142 релиза: «Прочие» называют и число групп, и число строк в них', () => {
+    show(142);
+    const txt = otherHead()?.textContent ?? '';
+    // 142 группы по 3 записи: показаны 10 (30 строк), спрятаны 132 (396 строк).
+    expect(txt).toMatch(/132 групп/);
+    expect(txt).toMatch(/396 строк/);
+  });
+
+  it('число склоняется: 21 группа и 63 строки, а не «21 групп»', () => {
+    show(31);
+    const txt = otherHead()?.textContent ?? '';
+    expect(txt).toMatch(/21 группа(?!х)/);
+    expect(txt).toMatch(/63 строки/);
+  });
+
+  it('«Прочие» раскрываются: спрятанное достижимо, а не отрезано', () => {
+    show(142);
+    expect(document.querySelectorAll('[data-record-id]').length).toBe(0);
+    fireEvent.click(otherHead()!.querySelector('.sk-list__gbtn')!);
+    // Раскрылось: строки «Прочих» показаны (первые 50 — потолок на группу, S9-01).
+    expect(document.querySelectorAll('[data-record-id]').length).toBe(LIST_BUDGET.perGroup);
+  });
+
+  it('en: «Other» тоже называет группы и строки', () => {
+    render(
+      <KitLangProvider lang="en">
+        <ListView config={config} data={dataWith(142)} state={state} onStateChange={() => {}} />
+      </KitLangProvider>,
+    );
+    const txt = otherHead()?.textContent ?? '';
+    expect(txt).toMatch(/132 groups/);
+    expect(txt).toMatch(/396 rows/);
+  });
+});
+
+describe('S9-02 · из чего выбран топ и по чему посчитан', () => {
+  it('потолок сработал — сказано, сколько групп всего', () => {
+    show(142);
+    const note = capNote();
+    expect(note?.getAttribute('role')).toBe('status');
+    expect(note?.textContent).toMatch(/10/);
+    expect(note?.textContent).toMatch(/142/);
+  });
+
+  it('выдача полная — про обрезку не говорим', () => {
+    show(142);
+    expect(capNote()?.textContent).not.toMatch(/обрезан/);
+  });
+
+  it('выдача обрезана сервером — «топ-10 среди загруженного», а не «десять самых больших»', () => {
+    showTruncated(142);
+    const note = capNote();
+    expect(note?.getAttribute('role')).toBe('status');
+    expect(note?.textContent).toMatch(/обрезан/);
+    expect(note?.textContent).toMatch(/загруж/);
+  });
+
+  it('групп мало, но выдача обрезана — группы всё равно посчитаны по загруженному', () => {
+    showTruncated(5);
+    expect(capNote()?.textContent).toMatch(/загруж/);
+  });
+
+  it('групп мало и выдача полная — оговорки нет: говорить нечего', () => {
+    show(5);
+    expect(capNote()).toBeNull();
+  });
+
+  it('без группировки оговорки нет', () => {
+    render(
+      <ListView config={config} data={dataWith(142)} state={{ ...state, group: null }} onStateChange={() => {}} />,
+    );
+    expect(capNote()).toBeNull();
+  });
+
+  it('при поиске топ выбран из НАЙДЕННЫХ групп, и число названо их', () => {
+    show(142);
+    const box = screen.getByRole('searchbox', { name: /групп/i });
+    fireEvent.change(box, { target: { value: 'v1.1' } });
+    // v1.1.0, v1.10…v1.19 (10), v1.100…v1.141 (42) — 53 группы.
+    expect(capNote()?.textContent).toMatch(/53/);
   });
 });

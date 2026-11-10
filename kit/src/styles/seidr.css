@@ -591,6 +591,33 @@ code, pre, kbd, samp { font-family: var(--mono); }
   cursor: pointer;
 }
 .sk-schip__undo:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* ---------- Общий всплывающий слой (S4-MENU-STATES) ----------
+   Один элемент Popover на три меню kit: меню статуса, «Ещё» у вкладок и
+   личный блок рейки. Здесь — только ПОЛОЖЕНИЕ слоя и его поведение у края
+   экрана; рамка, ширина и отступы остаются у каждого свои (.sk-spop,
+   .sk-tabs__more-pop, .sk-shell__railmenu-pop) — они и различаются по делу.
+   Положение задано через [data-align], чтобы специфичность была выше класса:
+   порядок правил в файле тогда ничего не решает.
+   --pop-dx — сдвиг от края экрана, его считает компонент замером. */
+.sk-pop {
+  position: absolute;
+  z-index: 65;
+  transform: translateX(var(--pop-dx, 0px));
+}
+.sk-pop[data-align='start'] { top: calc(100% + 4px); right: auto; left: 0; }
+.sk-pop[data-align='end'] { top: calc(100% + 4px); right: 0; left: auto; }
+/* «Вправо от рейки»: внутри колонки шириной в иконку меню было бы обрезано. */
+.sk-pop[data-align='side'] { top: 0; right: auto; left: calc(100% + 4px); }
+/* «На своём месте в потоке, прижат вправо»: `top` не задан нарочно — у
+   абсолютного элемента без top сохраняется статическое положение, то есть
+   ровно под тем, за чем он стоит в разметке. Так всплывашка свёртки вкладок
+   лежит сиблингом ряда (внутри ряда role="menu" недопустим), а рисуется под
+   ним, как раньше. */
+.sk-pop[data-align='under'] { right: 0; left: auto; margin-top: 4px; }
+/* Не хватило места внизу — раскрываемся вверх. */
+.sk-pop[data-side='up'] { top: auto; bottom: calc(100% + 4px); }
+.sk-pop[data-side='up'][data-align='side'] { top: auto; bottom: 0; }
+
 .sk-spop {
   position: absolute;
   top: calc(100% + 4px);
@@ -1048,7 +1075,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 
 /* ---------- Tabs ---------- */
-.sk-tabs-root { display: flex; flex-direction: column; min-width: 0; }
+/* position: relative — чтобы всплывашка свёртки «Ещё» (она сиблинг ряда, а не
+   его ребёнок: role="menu" внутри role="tablist" недопустим) считала своё
+   положение от корня вкладок, а не от случайного предка. */
+.sk-tabs-root { position: relative; display: flex; flex-direction: column; min-width: 0; }
 /* Ряд вкладок: РОВНЫЙ ШАГ по обеим осям (ревью 10.11.2026, B13 — «строка
    связей плывёт на 3–4 строки с рваными промежутками»). Шаг задан отдельно по
    осям намеренно: одной записью `gap` строки и столбцы расходились при правке,
@@ -1103,11 +1133,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-tabs__more { position: relative; display: inline-flex; }
 .sk-tabs__more-btn { color: var(--t3); }
 .sk-tabs__more-btn[aria-expanded='true'] { color: var(--t1); }
+/* Положение — у общего слоя .sk-pop[data-align='end'] (S4-MENU-STATES);
+   здесь остаётся только то, что у свёртки своё: ширина, прокрутка, рамка. */
 .sk-tabs__more-pop {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 40;
   min-width: 180px;
   max-width: min(320px, 92vw);
   max-height: 62vh;
@@ -1649,6 +1677,22 @@ code, pre, kbd, samp { font-family: var(--mono); }
   line-height: 1.55;
 }
 .sk-md__source:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+/* «Показывать вместе» (владелица 10.11.2026) — исходник и живой просмотр рядом,
+   кнопкой в ряду самого редактора. Доли равные; на телефоне делить нечего, и
+   просмотр уходит под исходник. Ширину полю даёт data-wide="side" у
+   MdInlineEdit (ниже): иначе «вместе» делило бы колонку чтения пополам. */
+.sk-md__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
+.sk-md__live {
+  min-width: 0;
+  padding: 7px 9px;
+  overflow: auto;
+  border-left: 1px solid var(--bd);
+  background: var(--bg1);
+}
+@media (max-width: 720px) {
+  .sk-md__split { grid-template-columns: minmax(0, 1fr); }
+  .sk-md__live { border-left: none; border-top: 1px solid var(--bd); }
+}
 .sk-md .ProseMirror img { display: block; max-width: 100%; height: auto; margin: 8px 0; border-radius: var(--r-md); }
 .sk-md .ProseMirror table { width: 100%; margin: 8px 0; border-collapse: collapse; table-layout: fixed; }
 .sk-md .ProseMirror th,
@@ -1830,42 +1874,16 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 
 /* ---------- MdInlineEdit: правка MD на месте (S5-06) ----------
-   Чтение — sk-prose; правка — только кнопкой ✎ (≥ --tap), внутри
-   переключатель «код / превью / рядом» и кнопки ≥ --tap. */
+   Чтение — sk-prose; правка — ОДНОЙ кнопкой ✎ (≥ --tap), а вид правки
+   (исходник, «вместе») — кнопками самого редактора (sk-md__btn выше). */
 .sk-mdedit { position: relative; min-width: 0; }
 .sk-mdedit[data-state="read"] { padding-right: calc(max(var(--tap), 24px) + 4px); }
 .sk-mdedit__pen { position: absolute; top: 0; right: 0; }
 .sk-mdedit__empty { margin: 0; color: var(--t3); font-size: var(--fs-sm); font-style: italic; }
 .sk-mdedit.is-editing { display: flex; flex-direction: column; gap: 6px; }
-.sk-mdedit__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
-.sk-mdedit__modes {
-  display: inline-flex;
-  padding: 2px;
-  gap: 2px;
-  border: 1px solid var(--bd);
-  border-radius: var(--r-pill);
-  background: var(--bg2);
-}
-.sk-mdedit__mode {
-  min-height: max(var(--tap), 24px);
-  padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--t2);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-.sk-mdedit__mode:hover { color: var(--t1); }
-.sk-mdedit__mode.is-on {
-  color: var(--acc);
-  background: color-mix(in srgb, var(--acc) 18%, transparent);
-  border-color: color-mix(in srgb, var(--acc) 35%, transparent);
-}
-.sk-mdedit__mode[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
-.sk-mdedit__mode:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* Ряд действий прижат вправо: переключателя видов правки слева больше нет —
+   вид выбирается в самом редакторе (владелица 10.11.2026). */
+.sk-mdedit__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
 .sk-mdedit__actions { display: inline-flex; gap: 6px; }
 .sk-btn--primary { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 22%, var(--bg2)); color: var(--t1); }
 .sk-btn:disabled { opacity: .55; cursor: default; }
@@ -1876,24 +1894,6 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-radius: var(--r-sm);
   color: var(--dng);
   font-size: var(--fs-xs);
-}
-.sk-mdedit__source {
-  min-height: 160px;
-  border: 1px solid var(--bd);
-  border-radius: var(--r-sm);
-}
-.sk-mdedit__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
-.sk-mdedit__live {
-  min-height: 160px;
-  min-width: 0;
-  padding: 7px 9px;
-  overflow: auto;
-  border: 1px dashed var(--bd);
-  border-radius: var(--r-sm);
-  background: var(--bg1);
-}
-@media (max-width: 720px) {
-  .sk-mdedit__split { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---------- SandboxedHtmlFrame: HTML только в песочнице ---------- */
@@ -2765,6 +2765,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-list__gfind::placeholder { color: var(--t3); }
 .sk-list__gfind-empty { padding: 10px 12px; color: var(--t2); font-size: var(--fs-sm); }
+/* Оговорка о потолке групп (S9-02): «из скольких выбран топ» и «по чему
+   посчитано» — текстом в той же полосе «Группировка», что и её меню. */
+.sk-list__gcap { color: var(--t3); font-size: var(--fs-2xs); max-width: 420px; }
 .sk-facet { position: relative; display: inline-flex; }
 .sk-facet__btn {
   display: inline-flex;
@@ -2845,6 +2848,25 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-size: var(--fs-sm);
 }
 .sk-facet__opts { display: flex; flex-direction: column; }
+/* Блоки фасета на объёме (S9-03): выбранные / закреплённые / частые / найденные.
+   Подпись блока — та же плотность, что у подписей сегментов списка. */
+.sk-facet__sec { display: flex; flex-direction: column; }
+.sk-facet__sec + .sk-facet__sec { border-top: 1px solid var(--bd); margin-top: 2px; padding-top: 2px; }
+.sk-facet__cap {
+  margin: 0;
+  padding: 2px 6px;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+/* «Ещё N» — числом: сколько значений осталось за первым экраном. */
+.sk-facet__more {
+  margin: 0;
+  padding: 2px 6px;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+}
 .sk-facet__opt {
   display: flex;
   align-items: center;
@@ -3244,11 +3266,66 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-cards__fields { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; margin: 0; font-size: var(--fs-sm); }
 .sk-cards__fields dt { color: var(--t3); }
 .sk-cards__fields dd { margin: 0; min-width: 0; }
+/* Лента как ВИД того же источника (K2-FEED-VIEW, прототип kit2-story-feed,
+   раздел 1). Форма строки ОДНА на все типы записей: время слева колонкой,
+   справа — шапка (вид, код), название, суть и повод. Своей вёрстки под тип
+   записи нет намеренно (§7), поэтому и правил под тип здесь нет. */
 .sk-feed { display: flex; flex-direction: column; gap: 12px; }
 .sk-feed__day { min-width: 0; }
-.sk-feed__date { margin: 0 0 4px; color: var(--t3); font: 700 var(--fs-xs)/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.sk-feed__date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  color: var(--t3);
+  font: 700 var(--fs-xs)/1.2 var(--mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-feed__gtitle { color: var(--t2); min-width: 0; }
+.sk-feed__count { font-family: var(--mono); color: var(--t3); letter-spacing: 0; }
 .sk-feed__items { margin: 0; padding: 0; list-style: none; }
-.sk-feed__item { display: flex; align-items: center; gap: 8px; min-height: max(var(--tap), var(--row-h)); padding: 2px 4px; border-bottom: 1px solid var(--bd); }
+.sk-feed__item {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  min-height: max(var(--tap), var(--row-h));
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-feed__item:last-child { border-bottom: 0; }
+.sk-feed__item.is-selected { background: var(--bg2); }
+.sk-feed__when { padding-top: 2px; text-align: right; font-size: var(--fs-2xs); color: var(--t3); }
+.sk-feed__nowhen { color: var(--bdh); }
+.sk-feed__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sk-feed__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.sk-feed__kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--bg3);
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.sk-feed__title { font-size: var(--fs-md); font-weight: 700; color: var(--t1); min-width: 0; }
+.sk-feed__lead { font-size: var(--fs-sm); color: var(--t2); min-width: 0; }
+.sk-feed__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.sk-feed__because { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.sk-feed__ref { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--inf); border-bottom: 1px dashed var(--bdh); }
+/* Провал источника строкой: виден как особая строка, но ОСТАЁТСЯ строкой
+   ленты — её место в порядке времени и есть смысл правила (§6). */
+.sk-feed__item--gap { border-left: 2px solid var(--dng); background: var(--bg2); }
+.sk-feed__item--gap .sk-feed__title { color: var(--dng); font-size: var(--fs-sm); }
+.sk-feed__item--gap[data-feed-gap='forbidden'] { border-left-color: var(--wrn); }
+.sk-feed__item--gap[data-feed-gap='forbidden'] .sk-feed__title { color: var(--wrn); }
+/* «Обрезано» и «неполно» — словами, а не только видом потока. */
+.sk-feed__cut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--t3); }
+.sk-feed__page,
+.sk-feed__none { margin: 0; font-size: var(--fs-xs); color: var(--wrn); }
 .sk-board {
   display: grid;
   grid-auto-flow: column;
@@ -3924,6 +4001,41 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
   font-size: var(--fs-xs);
 }
 
+/* Иерархия таблицей (S4-TREE-NESTED): столбцы ОДНИ на все уровни, поэтому
+   таблица берёт правила списка (.sk-list__table/__th/__td/__row), а своих
+   добавляет ровно два: отступ уровня в первой ячейке и оговорка о состоянии
+   уровня. Вложенный блок вида (.sk-kindblock) своих украшений не заводит
+   вовсе — он рисуется разметкой строки, карточки или тела паспорта. */
+.sk-kindblock { min-width: 0; }
+.sk-ttab { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.sk-ttab__table { width: 100%; }
+.sk-ttab__note {
+  margin: 0;
+  padding: 4px 8px;
+  border-left: 2px solid var(--wrn);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+}
+.sk-ttab__note[data-state='denied'] { border-left-color: var(--inf); }
+.sk-ttab__note[data-state='error'] { border-left-color: var(--dng); }
+.sk-ttab__nest {
+  --tree-depth: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding-left: calc(var(--tree-depth) * 18px);
+}
+.sk-ttab__toggle .sk-icon { transition: transform .12s ease; }
+.sk-ttab__toggle.is-open .sk-icon { transform: rotate(90deg); }
+.sk-ttab__spacer {
+  display: inline-block;
+  flex-shrink: 0;
+  width: max(var(--tap), 24px);
+}
+.sk-ttab__group > th { text-align: left; }
+.sk-ttab__row[aria-expanded='false'] .sk-ttab__nest { opacity: .9; }
+
 /* ═══ K-10 — хуки рендера по виду записи (overview / tabs) ═══ */
 /* Строка-HTML хука (после санитайзера) читается как тело записи. */
 .sk-hook { color: var(--t1); font-size: var(--fs-base); line-height: 1.5; min-width: 0; }
@@ -4445,11 +4557,8 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
    обрезано, а подписи записей — то, ради чего оно и открывается. */
 .sk-shell__railmenu { position: relative; display: flex; justify-content: center; }
 .sk-shell__railmenu-btn { justify-content: center; padding-inline: 0; min-height: max(var(--tap), 28px); }
+/* Положение (вправо от рейки) — у общего слоя .sk-pop[data-align='side']. */
 .sk-shell__railmenu-pop {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 4px);
-  z-index: 30;
   min-width: 240px;
   max-width: 340px;
   max-height: 60dvh;
@@ -5511,9 +5620,6 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 .sk-mdedit__draft-text { color: var(--t1); }
 .sk-mdedit__draft-note { color: var(--wrn); }
-.sk-mdedit__src-btn { font: inherit; font-size: var(--fs-xs); color: var(--t2); background: none; border: 1px solid var(--bd); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
-.sk-mdedit__src-btn:hover { color: var(--t1); border-color: var(--acc); }
-
 .sk-mdedit__hint-text { flex: 1 1 auto; min-width: 0; text-align: right; }
 
 /* S4-CONTENT-V4 п.5 (прототип v4): текст записи внизу и во весь экран — колонкой чтения,
@@ -5524,6 +5630,17 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   margin-inline: auto;
   font-size: var(--read-fs, var(--fs-md));
 }
+/* Правка «вместе» (владелица 10.11.2026: «при просмотре рядом сжимается на
+   половину ширина — так быть не должно, раздвигай, у нас есть большой запас»).
+   Мера чтения 680 px верна для ЧТЕНИЯ одной колонкой; когда в том же месте
+   стоят исходник и просмотр, она даёт по 340 px на поле — ровно та половина.
+   Пока поле правят «вместе», мера снимается и с него, и с колонки-предка
+   (её задают .sk-tabpanel > * в доке): поле занимает свободное место, а
+   остальная запись остаётся колонкой чтения. */
+.sk-rec-reader [data-placement='bottom'] .sk-mdedit[data-wide='side'],
+.sk-rec-reader [data-placement='full'] .sk-mdedit[data-wide='side'] { max-width: none; }
+.sk-dock[data-placement='bottom'] .sk-tabpanel > *:has(.sk-mdedit[data-wide='side']),
+.sk-dock[data-placement='full'] .sk-tabpanel > *:has(.sk-mdedit[data-wide='side']) { max-width: none; }
 
 /* Разделы, вклеенные в хвост тела (S4-29): так было в v1 у зависимостей
    спринта и у списка решений ADR. Заголовок со счётчиком — вкладки у раздела

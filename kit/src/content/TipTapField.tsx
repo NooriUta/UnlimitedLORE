@@ -7,6 +7,11 @@
 //    файлов не перехватываются (поле не «съедает» файл, который некуда деть);
 //  - подписи — локали kit (kit.md.*), а не react-i18next v1;
 //  - стиль — классы sk-md* в seidr.css (токены v2), а не инлайн и не CSS из JS.
+// Одна кнопка правки (слова владелицы 10.11.2026: «не надо две кнопки
+// редактирования — исходный текст есть по кнопке md в tiptap, и выбор
+// „показывать вместе“ можно встроить туда же»): вид правки выбирается ВНУТРИ
+// поля, в том же ряду кнопок — исходник markdown (`</> md`) и «вместе»
+// (исходник и просмотр рядом, рендер чтения даёт вызывающий).
 // Поведение — как в v1: таблицы, чек-листы, режимы источника md/html,
 // упоминания по «@», изменение размера картинки, внешнее значение применяется,
 // когда разошлось с содержимым и поле не в фокусе.
@@ -167,9 +172,18 @@ export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
   return out;
 }
 
+/** Вид правки внутри поля: набор, исходник markdown, исходник HTML. */
+export type TipTapMode = 'wysiwyg' | 'md' | 'html';
+
 export interface TipTapFieldProps {
   value: string;
-  onChange: (markdown: string) => void;
+  /**
+   * Новое значение (markdown). `meta.source` — текст набран в ИСХОДНИКЕ
+   * (кнопка md), то есть пришёл дословно, а не через круг «TipTap → markdown».
+   * Вызывающему это нужно, чтобы не канонизировать то, что человек написал
+   * руками (MdInlineEdit гасит дрейф только для второго случая).
+   */
+  onChange: (markdown: string, meta?: { source?: boolean }) => void;
   placeholder?: string;
   minHeight?: number;
   /** Только просмотр: без панели, без набора, без загрузки. */
@@ -182,11 +196,36 @@ export interface TipTapFieldProps {
   ariaLabel?: string;
   /** Источник упоминаний по «@». Не задан — «@» обычный символ. */
   mentionItems?: MentionItem[];
+  /** Вид правки, управляемый (пара с onModeChange); не задан — свой. */
+  mode?: TipTapMode;
+  /** Вид правки при открытии поля. */
+  defaultMode?: TipTapMode;
+  onModeChange?: (mode: TipTapMode) => void;
+  /**
+   * Просмотр рядом с исходником («показывать вместе»): рендер чтения даёт
+   * вызывающий — kit не навязывает полю ни MartProse, ни mermaid/bpmn за ним.
+   * Не задан — кнопки «вместе» нет.
+   */
+  renderPreview?: (markdown: string) => ReactNode;
+  /** «Вместе» включено, управляемо (внешнему это нужно, чтобы раздвинуть поле). */
+  sideBySide?: boolean;
+  onSideBySide?: (on: boolean) => void;
+  /**
+   * Визуальная правка разрешена. false — круг «MD → TipTap → MD» на этом
+   * тексте не сходится (сырой HTML и т.п.): поле живёт только исходником,
+   * кнопка md закрыта с причиной (lossyReason), кнопок форматирования нет.
+   * Молча испортить текст хуже, чем честно сказать «здесь только код».
+   */
+  allowWysiwyg?: boolean;
+  /** Причина, по которой визуальная правка закрыта — подсказкой у кнопки md. */
+  lossyReason?: string;
 }
 
 export function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
   onUploadImage, enableHtmlMode = false, ariaLabel, mentionItems,
+  mode: modeProp, defaultMode = 'wysiwyg', onModeChange,
+  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason,
 }: TipTapFieldProps) {
   const lang = useKitLang();
   const t = (k: KitKey) => kitT(lang, k);
@@ -204,8 +243,20 @@ export function TipTapField({
   mentionStateRef.current = mentionState;
   const mentionItemsRef = useRef<MentionItem[]>([]);
   mentionItemsRef.current = mentionItems ?? [];
-  const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');
+  const [ownMode, setOwnMode] = useState<TipTapMode>(defaultMode);
+  const [ownSide, setOwnSide] = useState(false);
+  const wanted = modeProp ?? ownMode;
+  // Визуальная правка закрыта — набор недоступен, остаётся исходник.
+  const mode: TipTapMode = allowWysiwyg || wanted === 'html' ? wanted : 'md';
+  const side = sideBySide ?? ownSide;
+  const splitOn = side && mode === 'md' && Boolean(renderPreview);
   const [draft, setDraft] = useState(value);
+  // Что мы сами отдали наружу: внешнее значение, которое мы НЕ отдавали,
+  // — это правка со стороны (восстановленный черновик), её надо подхватить;
+  // своё эхо подхватывать нельзя, иначе оно переписывало бы набор.
+  const lastEmit = useRef<string | null>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
   // Подпись берётся в момент вызова: расширения фиксируются при создании редактора.
   const langRef = useRef(lang);
   langRef.current = lang;
@@ -266,12 +317,21 @@ export function TipTapField({
 
   // Внешнее значение применяется, когда разошлось с содержимым; в фокусе не
   // вмешиваемся (дралось бы с кареткой). emitUpdate:false — не эхо родителю.
+  // В исходнике текст ведёт textarea: синхронизировать редактор на каждую
+  // букву незачем, и setContent посреди набора стоил бы дорого.
   useEffect(() => {
-    if (!editor || editor.isDestroyed) return;
+    if (!editor || editor.isDestroyed || mode !== 'wysiwyg') return;
     const current = getMarkdown(editor);
     if (value === current) return;
     if (value === '' || !editor.isFocused) editor.commands.setContent(value, { emitUpdate: false });
-  }, [value, editor]);
+  }, [value, editor, mode]);
+
+  // Правка со стороны, пока открыт исходник (восстановленный черновик S5-09):
+  // своё эхо (lastEmit) не трогаем, чужое — показываем.
+  useEffect(() => {
+    if (mode !== 'md' || value === lastEmit.current) return;
+    setDraft(prev => (prev === value ? prev : value));
+  }, [value, mode]);
 
   const toggleLink = () => {
     if (!editor) return;
@@ -308,25 +368,61 @@ export function TipTapField({
 
   // md — setContent (tiptap-markdown разбирает как markdown); html — мимо
   // команд TipTap, через DOMParser ProseMirror (единственный путь «как HTML»).
-  const applyDraftBack = () => {
-    if (!editor) return;
-    if (mode === 'md') {
+  const applyDraftBack = (from: TipTapMode) => {
+    if (!editor || editor.isDestroyed) return;
+    if (from === 'md') {
       editor.commands.setContent(draft);
-    } else if (mode === 'html') {
+    } else if (from === 'html') {
       const dom = document.createElement('div');
       dom.innerHTML = sanitizeMd(draft);
       const doc = PMDOMParser.fromSchema(editor.schema).parse(dom);
       editor.view.dispatch(editor.state.tr.replaceWith(0, editor.state.doc.content.size, doc.content));
+    } else {
+      return;
     }
-    onChangeRef.current(getMarkdown(editor));
+    const md = getMarkdown(editor);
+    lastEmit.current = md;
+    onChangeRef.current(md);
+  };
+
+  // Перенос текста между видами правки — в эффекте, а не в обработчике кнопки:
+  // вид может приехать и снаружи (управляемый mode), и тогда клика нет.
+  // В исходник берём ВНЕШНЕЕ значение, а не getMarkdown(editor): вызывающий
+  // гасит дрейф канонизации, и исходник должен показывать текст автора.
+  const prevMode = useRef<TipTapMode>(mode);
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const was = prevMode.current;
+    if (was === mode) return;
+    prevMode.current = mode;
+    if (was !== 'wysiwyg') applyDraftBack(was);
+    if (mode !== 'wysiwyg') setDraft(mode === 'md' ? valueRef.current : editor.getHTML());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, editor]);
+
+  const goMode = (m: TipTapMode) => {
+    if (modeProp === undefined) setOwnMode(m);
+    onModeChange?.(m);
   };
 
   const toggleMode = (target: 'md' | 'html') => {
     if (!editor) return;
-    if (mode === target) { applyDraftBack(); setMode('wysiwyg'); return; }
-    if (mode !== 'wysiwyg') applyDraftBack();
-    setDraft(target === 'md' ? getMarkdown(editor) : editor.getHTML());
-    setMode(target);
+    if (mode !== target) { goMode(target); return; }
+    // Назад в набор — только если он открыт; «вместе» без исходника не бывает.
+    if (!allowWysiwyg) return;
+    goMode('wysiwyg');
+    if (sideBySide === undefined) setOwnSide(false);
+  };
+
+  const toggleTogether = () => {
+    if (side) {
+      if (sideBySide === undefined) setOwnSide(false);
+      onSideBySide?.(false);
+      return;
+    }
+    if (mode !== 'md') goMode('md');
+    if (sideBySide === undefined) setOwnSide(true);
+    onSideBySide?.(true);
   };
 
   const run = (fn: (e: Editor) => void) => () => { if (editor) fn(editor); };
@@ -338,9 +434,55 @@ export function TipTapField({
     if (tex && tex.trim()) editor.chain().focus().insertContent({ type: 'mathInline', attrs: { tex: tex.trim() } }).run();
   };
 
+  // Исходник. Набранное в md уходит вызывающему СРАЗУ и дословно: иначе
+  // «написал в исходнике и сохранил, не возвращаясь в набор» теряло бы текст.
+  const source = (
+    <textarea
+      className="sk-md__source"
+      style={{ minHeight }}
+      value={draft}
+      aria-label={[ariaLabel, mode === 'md' ? t('kit.md.sourceMd') : t('kit.md.sourceHtml')].filter(Boolean).join(' · ')}
+      spellCheck
+      onChange={e => {
+        const next = e.target.value;
+        setDraft(next);
+        if (mode !== 'md') return;
+        lastEmit.current = next;
+        onChangeRef.current(next, { source: true });
+      }}
+      placeholder={placeholder}
+    />
+  );
+
+  // Кнопки видов правки — конец ряда и единственное, что остаётся, когда
+  // визуальная правка закрыта: форматирование гнало бы текст через TipTap,
+  // которому этот текст нельзя доверить.
+  const modeBtns = (
+    <>
+      <ToolBtn
+        label={t('kit.md.modeMd')}
+        active={mode === 'md'}
+        off={!allowWysiwyg}
+        hint={allowWysiwyg ? undefined : lossyReason}
+        onClick={() => toggleMode('md')}
+      >{'</> md'}</ToolBtn>
+      {enableHtmlMode && <ToolBtn label={t('kit.md.modeHtml')} active={mode === 'html'} onClick={() => toggleMode('html')}>{'</> html'}</ToolBtn>}
+      {/* «Показывать вместе» (владелица 10.11.2026) — здесь же, в ряду правки:
+          отдельного переключателя над полем больше нет. */}
+      {renderPreview && (
+        <ToolBtn label={t('kit.md.together')} active={splitOn} onClick={toggleTogether}>◫</ToolBtn>
+      )}
+    </>
+  );
+
   return (
     <div className="sk-md">
-      {editable && editor && (
+      {editable && editor && !allowWysiwyg && (
+        <div className="sk-md__toolbar" role="toolbar" aria-label={t('kit.md.toolbar')}>
+          {modeBtns}
+        </div>
+      )}
+      {editable && editor && allowWysiwyg && (
         <div className="sk-md__toolbar" role="toolbar" aria-label={t('kit.md.toolbar')}>
           <ToolBtn label={t('kit.md.undo')} onClick={run(e => e.chain().focus().undo().run())}>↺</ToolBtn>
           <ToolBtn label={t('kit.md.redo')} onClick={run(e => e.chain().focus().redo().run())}>↻</ToolBtn>
@@ -375,8 +517,7 @@ export function TipTapField({
             <ToolBtn label={t('kit.md.insertImage')} active={uploading} onClick={() => fileInputRef.current?.click()}>{uploading ? '…' : '🖼'}</ToolBtn>
           )}
           <Sep />
-          <ToolBtn label={t('kit.md.modeMd')} active={mode === 'md'} onClick={() => toggleMode('md')}>{'</> md'}</ToolBtn>
-          {enableHtmlMode && <ToolBtn label={t('kit.md.modeHtml')} active={mode === 'html'} onClick={() => toggleMode('html')}>{'</> html'}</ToolBtn>}
+          {modeBtns}
           {enableImages && (
             <input ref={fileInputRef} type="file" accept="image/*" hidden tabIndex={-1} aria-hidden onChange={onImageSelected} />
           )}
@@ -384,14 +525,12 @@ export function TipTapField({
       )}
       {uploadFailed && <div className="sk-md__err" role="alert">{t('kit.md.uploadFailed')}</div>}
       {mode !== 'wysiwyg' ? (
-        <textarea
-          className="sk-md__source"
-          style={{ minHeight }}
-          value={draft}
-          aria-label={`${ariaLabel ?? ''} ${mode === 'md' ? t('kit.md.modeMd') : t('kit.md.modeHtml')}`.trim()}
-          onChange={e => setDraft(e.target.value)}
-          placeholder={placeholder}
-        />
+        splitOn ? (
+          <div className="sk-md__split">
+            {source}
+            <div className="sk-md__live" role="region" aria-label={t('kit.md.live')}>{renderPreview?.(draft)}</div>
+          </div>
+        ) : source
       ) : (
         <div className="sk-md__box">
           <EditorContent editor={editor} />
@@ -427,15 +566,24 @@ export function TipTapField({
   );
 }
 
-function ToolBtn({ label, active, onClick, children }: { label: string; active?: boolean; onClick: () => void; children: ReactNode }) {
+function ToolBtn({ label, active, off, hint, onClick, children }: {
+  label: string; active?: boolean;
+  /** Кнопка закрыта: видна и названа, но не действует (причина — в hint). */
+  off?: boolean;
+  hint?: string;
+  onClick: () => void; children: ReactNode;
+}) {
   // aria-label = title: у кнопки с глифом («B», «🔗») иначе прочтётся глиф.
+  // aria-disabled, а не disabled: закрытая кнопка остаётся в обходе с клавиш
+  // и читает причину, иначе «почему нельзя» нигде не услышать.
   return (
     <button
       type="button"
       className={`sk-md__btn${active ? ' is-on' : ''}`}
-      onClick={onClick}
-      title={label}
+      onClick={off ? undefined : onClick}
+      title={hint ?? label}
       aria-label={label}
+      aria-disabled={off || undefined}
       aria-pressed={active === undefined ? undefined : active}
     >{children}</button>
   );

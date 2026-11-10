@@ -28,3 +28,6 @@ export * from './RecordDock';
 export * from './RecordRelations';
 export * from './dataState';
 export * from './DataStateBlock';
+// Вложенный блок вида: строка раздела / карточка / тело паспорта одним
+// компонентом, без третьего рендера (S4-TREE-NESTED).
+export { KindBlock, KindCell, kindColumns, kindColumnTitle, type KindBlockAs, type KindBlockProps } from './KindBlock';

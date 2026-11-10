@@ -2,7 +2,7 @@
 // для групп списка, дорожек доски и дорожек таймлайна — иначе «без связи» в
 // списке и на таймлайне разъедутся по формулировке.
 import type { KitConfig } from '../core/contract';
-import { kitT } from '../i18n';
+import { kitPlural, kitT } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
 import { parseGroupKey } from './grouping';
 import type { ListGroup } from './listModel';
@@ -45,7 +45,16 @@ export function fieldValueTitle(config: KitConfig, lang: KitLang, key: string, v
 
 /** Подпись группы/дорожки по общему ключу. */
 export function groupTitle(config: KitConfig, lang: KitLang, key: string | null, g: ListGroup): string {
-  if (g.other) return kitT(lang, 'kit.list.others', { groups: g.groupCount ?? 0 });
+  // «Прочие» называют ОБА числа: сколько групп спрятано и сколько в них строк
+  // (S9-02). Одно число групп читается как «мелочь», а при 142 релизах в
+  // «Прочих» лежит 396 строк из 426 — почти вся выдача. Число строк берётся из
+  // самой группы, поэтому для разреза по связи оно уже без дублей.
+  if (g.other) {
+    return kitT(lang, 'kit.list.others', {
+      groups: kitPlural(lang, 'kit.list.groupsN', g.groupCount ?? 0),
+      rows: kitPlural(lang, 'kit.list.rowsN', g.records.length),
+    });
+  }
   const spec = parseGroupKey(key);
   if (spec.type === 'none') return '';
   if (spec.type === 'rel') {

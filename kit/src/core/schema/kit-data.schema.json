@@ -71,7 +71,9 @@
             "required": ["block", "reason"],
             "properties": {
               "block": { "type": "string", "minLength": 1 },
-              "reason": { "type": "string", "minLength": 1 }
+              "reason": { "type": "string", "minLength": 1 },
+              "forbidden": { "description": "Отказ по правам, а не сбой: «нет прав» ≠ «не смогли проверить».", "type": "boolean" },
+              "at": { "description": "Когда пропуск случился — чтобы в ленте он стоял на своём месте по времени.", "type": "string", "minLength": 1 }
             },
             "additionalProperties": false
           }

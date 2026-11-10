@@ -72,7 +72,14 @@ import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
 import { MIN_COL_W, clampWidth, readWidths, widthsFor, writeWidths, type ColumnWidths, type WidthStore } from './columnWidths';
 import { columnsFromUrl, columnsToUrlValue } from './columnsUrl';
-import { kitDay } from '../core/fmtValue';
+import { kitDay, kitMinute } from '../core/fmtValue';
+// Лента — ВИД того же источника (K2-FEED-VIEW): ведра времени, порядок и
+// провалы источника строками. Фильтрация и группировка по полю здесь не
+// повторяются — лента берёт то же `filtered` и ту же `groupBy`.
+import {
+  FEED_GAPS, FEED_UNDATED, FEED_UNREAD, feedByGroups, feedByTime, feedGaps, feedOrder,
+} from './feedModel';
+import type { FeedGroup, FeedRow } from './feedModel';
 
 export interface ListBulkAction {
   id: string;
@@ -165,6 +172,16 @@ export interface ListViewProps {
    * (статус и вид — из конфига), null — без иконки. Подпись остаётся всегда.
    */
   valueIcon?: (key: string, value: string) => ValueIcon | null | undefined;
+  /**
+   * Значения оси, которые приложение держит под рукой (S9-03): они встают в
+   * фасете отдельным блоком «Закреплённые» сразу под выбранными.
+   *
+   * Функция, а не список: у каждой оси набор свой, и ЧЕМ он определяется —
+   * знание приложения, а не kit (K-14). Не задана — блока нет, поведение
+   * прежнее: показывать пустой блок «Закреплённые» было бы обещанием без
+   * содержания.
+   */
+  facetPinned?: (key: string) => readonly string[];
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
   /**
@@ -336,7 +353,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -423,7 +440,21 @@ export function ListView({
   const [bulkError, setBulkError] = useState<{ title: string; reason: string } | null>(null);
 
   const listCfg = config.list;
-  const views = (listCfg?.views ?? ['list']).filter(v => VIEWS_RENDERED.includes(v));
+  /**
+   * Поля ленты, НАЗВАННЫЕ приложением (K2-FEED-VIEW §2): по какому полю время,
+   * какие поля несут суть, какие связи объясняют повод.
+   */
+  const feedCfg = listCfg?.feed;
+  const views = (listCfg?.views ?? ['list'])
+    .filter(v => VIEWS_RENDERED.includes(v))
+    /*
+      Допущение, принятое владелицей: лента — вид ВЕЗДЕ, где приложение назвало
+      поле времени, и только там. Раздел без такого поля ленту не предлагает —
+      иначе kit начал бы угадывать, какое поле записи главное (водораздел
+      K-14), а в ленте такая догадка особенно дорога: порядок строк и есть её
+      смысл.
+    */
+    .filter(v => v !== 'feed' || !!feedCfg?.timeField);
   const view: ListViewKind = views.includes(state.view) ? state.view : (views[0] ?? 'list');
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
@@ -575,13 +606,24 @@ export function ListView({
   const rawGroups: ListGroup[] = view === 'board'
     ? lanes.map(l => l.lane)
     : groupBy(split.open, groupKey, config, data, find ? { ...budget, maxGroups: Number.MAX_SAFE_INTEGER } : budget);
-  const foundGroups = find
-    ? capGroups(rawGroups.filter(g => groupTitleOf(config, lang, groupKey, g).toLocaleLowerCase().includes(find)), budget)
+  const matched = find
+    ? rawGroups.filter(g => groupTitleOf(config, lang, groupKey, g).toLocaleLowerCase().includes(find))
     : rawGroups;
+  const foundGroups = find ? capGroups(matched, budget) : rawGroups;
   const groups: ListGroup[] = view === 'board'
     ? foundGroups
     : [...foundGroups, ...(closedGroup ? [closedGroup] : [])];
   const multi = (view === 'list' || laned) && groupKey ? multiGroupCount(groups) : 0;
+  /**
+   * Из чего выбран топ (S9-02). «10 групп и „Прочие“» не говорят, сколько групп
+   * было всего, а это и есть мера того, насколько список урезан. Число берётся
+   * у самой выдачи, а не из данных: показанные группы плюс спрятанные в
+   * «Прочих». При поиске это ровно число НАЙДЕННЫХ групп — топ там выбран из
+   * них, и называть полное число было бы не про то, что на экране.
+   */
+  const otherGroup = foundGroups.find(g => g.other) ?? null;
+  const shownGroups = foundGroups.length - (otherGroup ? 1 : 0);
+  const groupTotal = shownGroups + (otherGroup?.groupCount ?? 0);
   /**
    * Свёрнуты ли группы при первом показе.
    *
@@ -602,6 +644,34 @@ export function ListView({
   const limitOf = (k: string) => cur.more[k] ?? budget.perGroup;
   const toggleGroup = (k: string) => setUi({ ...cur, open: { ...cur.open, [k]: !isOpen(k) } });
   const showMore = (k: string) => setUi({ ...cur, more: { ...cur.more, [k]: limitOf(k) + budget.perGroup } });
+
+  /**
+   * Провалы источника, которые лента показывает строками (§6). Считаются
+   * всегда, когда вид — лента: от них зависит, можно ли вообще говорить
+   * «пусто». Лента читается как поток событий, и пропуск в ней читается как
+   * «ничего не было» — поэтому упавший блок обязан быть виден СТРОКОЙ, а не
+   * только плашкой над лентой.
+   */
+  const gaps = view === 'feed' && feedCfg ? feedGaps(data.meta) : [];
+  /**
+   * Группы ленты.
+   *
+   * Источник тот же `filtered`, что у таблицы, — отсюда и берётся «без второй
+   * реализации»: один и тот же фильтр обязан давать один и тот же НАБОР
+   * записей в обоих видах. Группировка полем — та же общая `groupBy`; своей у
+   * ленты нет. Умолчание — ведра времени, и только оно принадлежит ленте.
+   *
+   * Порядок: выбранный в строке управления главнее. Не выбран — свежие сверху
+   * по названному полю времени, записи без отметки в конце.
+   */
+  const feedGroupsList: FeedGroup[] | null = view === 'feed' && feedCfg
+    ? (groupKey !== null
+      ? feedByGroups(groupBy(filtered, groupKey, config, data, budget), gaps, feedCfg.timeField)
+      : feedByTime(
+        state.sort ? filtered : feedOrder(filtered, feedCfg.timeField),
+        gaps, feedCfg.timeField, data.meta.generated_at,
+      ))
+    : null;
 
   // Выбранное — только среди показанного: фильтр спрятал запись — действие её не тронет.
   // Свёрнутая группа «Закрытые N» (S4-27) тоже не показана: её строки не выбираются «всем списком».
@@ -631,9 +701,17 @@ export function ListView({
   // S4-11: курсор — по видимым строкам в порядке экрана (свёрнутые группы и
   // хвост за «ещё N» не в счёт). Один таб-стоп: курсорная строка 0, прочие −1.
   const visibleIds: string[] = [];
-  for (const g of groups) {
-    if (view === 'list' && groupKey !== null && !isOpen(g.key)) continue;
-    for (const r of g.records.slice(0, limitOf(g.key))) visibleIds.push(r.id);
+  if (feedGroupsList) {
+    // В ленте порядок экрана — её собственный, и курсор обязан идти по нему, а
+    // не по группам таблицы: иначе ↑/↓ прыгали бы мимо строк.
+    for (const g of feedGroupsList) {
+      for (const row of g.rows.slice(0, limitOf(g.key))) if (row.kind === 'record') visibleIds.push(row.record.id);
+    }
+  } else {
+    for (const g of groups) {
+      if (view === 'list' && groupKey !== null && !isOpen(g.key)) continue;
+      for (const r of g.records.slice(0, limitOf(g.key))) visibleIds.push(r.id);
+    }
   }
   const cursorId = cursor !== null && visibleIds.includes(cursor) ? cursor : (visibleIds[0] ?? null);
   const focusRow = (id: string) => {
@@ -736,13 +814,39 @@ export function ListView({
 
   const groupTitle = (g: ListGroup): string => (g.key === CLOSED_KEY ? t('kit.list.closed.group') : groupTitleOf(config, lang, groupKey, g));
 
-  const errors = (data.meta.errors ?? []).filter(e => e.block === 'records' || e.block === 'list');
+  /**
+   * Плашки ошибок над списком. В ленте их НЕТ: там те же провалы стоят
+   * строками в порядке времени (§6), и второй раз плашкой сверху они бы
+   * спорили сами с собой — «не смогли проверить» дважды читается как два
+   * разных провала.
+   */
+  const errors = feedGroupsList ? [] : (data.meta.errors ?? []).filter(e => e.block === 'records' || e.block === 'list');
   const shown = shownOf(data.meta, records.length, filtered.length);
   const shownText = shown.kind === 'complete'
     ? t('kit.list.shown', { shown: shown.shown, total: shown.total })
     : shown.kind === 'truncated'
       ? t('kit.list.shownTruncated', { shown: shown.shown, total: shown.total, loaded: shown.loaded })
       : t('kit.list.shownUnknown', { shown: shown.shown, loaded: shown.loaded });
+
+  /**
+   * Оговорка о потолке групп (S9-02): словами, а не только видом списка.
+   *
+   * Две разные вещи, и путать их нельзя:
+   *   • потолок сработал — надо сказать, из скольких групп выбран топ, иначе
+   *     «10 и „Прочие“» не говорят, что групп 142;
+   *   • выдача обрезана сервером — тогда топ посчитан по ЗАГРУЖЕННЫМ строкам,
+   *     и «десять самых больших» неправда: в полной выдаче порядок групп может
+   *     быть другим. Это верно и когда групп мало: числа в группах всё равно по
+   *     загруженному.
+   * Группировки нет или сказать нечего — молчим: пустая оговорка хуже, чем её
+   * отсутствие, потому что приучает её не читать.
+   */
+  const groupCapNote: string | null = groupKey === null ? null
+    : otherGroup
+      ? (shown.kind === 'complete'
+        ? t('kit.list.groupCap', { top: shownGroups, total: groupTotal })
+        : t('kit.list.groupCapPage', { top: shownGroups, total: groupTotal }))
+      : (shown.kind === 'complete' ? null : t('kit.list.groupsPage'));
 
   const hasFilter = Object.keys(filterSet.fields).length > 0 || !!filterSet.text || activeQuick !== null;
   const opTitles = Object.fromEntries((['any', 'not', 'empty', 'nonempty'] as FilterOp[])
@@ -932,17 +1036,189 @@ export function ListView({
       : null;
   };
 
+  /** Пустое состояние с оговоркой фильтра — общее для всех видов. */
+  const emptyFilteredState = (
+    <EmptyState
+      title={t('kit.list.emptyFiltered')}
+      hint={t('kit.list.emptyFilteredHint')}
+      action={hasFilter ? <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button> : undefined}
+    />
+  );
+
+  /**
+   * Подпись группы ленты. Ведро времени — свои слова; группировка полем —
+   * подпись ОБЩЕЙ группировки (`groupLabel`), а не вторая формулировка: иначе
+   * «без связи» в таблице и в ленте разъехались бы.
+   */
+  const feedGroupTitle = (g: FeedGroup): string => {
+    if (g.group) return groupTitle(g.group);
+    switch (g.key) {
+      case FEED_UNDATED: return t('kit.list.feed.undated');
+      case FEED_UNREAD: return t('kit.list.feed.unread');
+      case FEED_GAPS: return t('kit.list.feed.gaps');
+      default: return t(`kit.list.feed.day.${g.key}` as KitKey);
+    }
+  };
+
+  /** Время строки ленты: минуты по названному полю, отметки нет — «—». */
+  const feedWhen = (at: string | null): ReactNode => {
+    const m = at === null ? null : kitMinute(at);
+    if (!m) return <span className="sk-feed__nowhen">—</span>;
+    return (
+      <time className="sk-list__mono" dateTime={m.ok ? m.title : undefined} data-date={m.ok ? 'minute' : 'raw'} title={m.title}>
+        {m.text}
+      </time>
+    );
+  };
+
+  /**
+   * Повод строки (§2): НАЗВАННЫЕ приложением связи записи. Связанная запись не
+   * загружена — показываем её код, а не придумываем заголовок (то же правило,
+   * что у разреза по связи). Связей нет — блока нет.
+   */
+  const feedBecause = (r: KitRecord): ReactNode => {
+    const types = feedCfg?.because ?? [];
+    if (types.length === 0) return null;
+    const seen = new Set<string>();
+    const refs: { id: string; type: string }[] = [];
+    for (const e of data.edges) {
+      if (!types.includes(e.type)) continue;
+      const other = e.from === r.id ? e.to : e.to === r.id ? e.from : null;
+      if (other === null || other === r.id || seen.has(other)) continue;
+      seen.add(other);
+      refs.push({ id: other, type: e.type });
+    }
+    if (refs.length === 0) return null;
+    return (
+      <span className="sk-feed__because">
+        {refs.map(x => {
+          const target = data.records.find(rr => rr.id === x.id);
+          const label = config.edges?.[x.type]?.label ?? x.type;
+          return href
+            ? <a key={x.id} className="sk-feed__ref" href={href(x.id)} title={label}>{target?.title ?? x.id}</a>
+            : <span key={x.id} className="sk-feed__ref" title={label}>{target?.title ?? x.id}</span>;
+        })}
+      </span>
+    );
+  };
+
+  /**
+   * Строка ленты — ОДНА форма на все типы записей (§2, §7). Различия приходят
+   * названными полями, а не своей вёрсткой под каждый тип: иначе при появлении
+   * нового типа лента молча перестала бы его показывать как следует.
+   */
+  const feedItem = (r: KitRecord, at: string | null): ReactNode => {
+    const leads = (feedCfg?.lead ?? []).filter(k => valuesOf(r, k).length > 0);
+    // Статуса у записи нет (или оси нет вовсе, K-14) — чипа нет: пустого места
+    // не рисуем, а «∅» обещало бы значение, которого не существует.
+    const withStatus = r.status !== '' && config.statuses.items.length > 0;
+    return (
+      <li
+        key={r.id}
+        className={`sk-feed__item${selected.has(r.id) ? ' is-selected' : ''}`}
+        data-record-id={r.id}
+        {...rowProps(r)}
+        onClick={e => onRecordClick(e, r.id)}
+      >
+        <span className="sk-feed__when">{feedWhen(at)}</span>
+        <span className="sk-feed__main">
+          <span className="sk-feed__head">
+            <span className="sk-feed__kind">{labels.valueTitle('kind', r.kind)}</span>
+            <Pill variant="id">{r.id}</Pill>
+          </span>
+          <span className="sk-feed__title"><Title r={r} href={href} onOpen={onOpen} /></span>
+          {leads.map(k => <span key={k} className="sk-feed__lead">{valueCell(k, r)}</span>)}
+          {(withStatus || feedBecause(r)) && (
+            <span className="sk-feed__meta">
+              {withStatus && <StatusCell code={r.status} labels={labels} />}
+              {feedBecause(r)}
+            </span>
+          )}
+        </span>
+      </li>
+    );
+  };
+
+  /**
+   * Провал источника строкой ленты (§6). Стоит на своём месте по времени, с
+   * причиной, и «нет прав» названо ИНАЧЕ, чем сбой: это два разных исхода, и
+   * лечатся они по-разному.
+   */
+  const feedGapRow = (gap: FeedRow & { kind: 'gap' }, i: number): ReactNode => (
+    <li
+      key={`gap:${gap.gap.block}:${i}`}
+      className="sk-feed__item sk-feed__item--gap"
+      data-feed-gap={gap.gap.kind}
+      data-block={gap.gap.block}
+    >
+      <span className="sk-feed__when">
+        {gap.at === null ? <span className="sk-feed__nowhen" title={t('kit.list.feed.gap.noTime')}>—</span> : feedWhen(gap.at)}
+      </span>
+      <span className="sk-feed__main">
+        <span className="sk-feed__head"><span className="sk-feed__kind">{gap.gap.block}</span></span>
+        <span className="sk-feed__title">
+          {t(gap.gap.kind === 'forbidden' ? 'kit.list.feed.gap.forbidden' : 'kit.list.feed.gap.failed')}
+        </span>
+        <span className="sk-feed__lead">{gap.gap.reason}</span>
+      </span>
+    </li>
+  );
+
   let body: ReactNode;
-  if (records.length === 0 && shown.kind === 'complete') {
+  if (feedGroupsList) {
+    /*
+      Лента (K2-FEED-VIEW). Честные состояния здесь — не украшение, а часть
+      вида: лента выглядит потоком событий, и пропуск в ней читается как
+      «ничего не было». Поэтому она сама отвечает за все четыре исхода:
+        • «не смогли проверить» и «нет прав» — строками в порядке времени;
+        • «обрезано» — числом в каждой группе и оговоркой про обрезанную выдачу;
+        • «пусто» — только когда источник ОТВЕТИЛ, провалов нет и записей
+          действительно нет.
+    */
+    const empty = feedGroupsList.length === 0;
+    body = (
+      <div className="sk-feed">
+        {feedGroupsList.map(g => {
+          const limit = limitOf(g.key);
+          const cutN = g.rows.length - limit;
+          const title = feedGroupTitle(g);
+          return (
+            <section key={g.key} className="sk-feed__day" data-day={g.key} aria-label={t('kit.list.column', { title, n: g.rows.length })}>
+              <h3 className="sk-feed__date">
+                <span className="sk-feed__gtitle">{title}</span>
+                <span className="sk-feed__count">{g.rows.length}</span>
+              </h3>
+              <ul className="sk-feed__items">
+                {g.rows.slice(0, limit).map((row, i) => (row.kind === 'record' ? feedItem(row.record, row.at) : feedGapRow(row, i)))}
+              </ul>
+              {cutN > 0 && (
+                <p className="sk-feed__cut" role="status">
+                  <span>{t(g.group ? 'kit.list.feed.cutGroup' : 'kit.list.feed.cutDay', { shown: limit, total: g.rows.length })}</span>
+                  {' '}
+                  <button type="button" className="sk-btn" onClick={() => showMore(g.key)}>{t('kit.list.more', { n: cutN })}</button>
+                </p>
+              )}
+            </section>
+          );
+        })}
+        {/* Проверенный ноль: источник ответил целиком, провалов нет, записей нет. */}
+        {empty && shown.kind === 'complete' && records.length === 0 && <EmptyState />}
+        {/* Фильтр отсеял всё — это не «ничего не было», и чинится другим фильтром. */}
+        {empty && records.length > 0 && emptyFilteredState}
+        {/* Выдача неполная, а строк нет: «пусто» утверждать нельзя. */}
+        {empty && shown.kind !== 'complete' && records.length === 0 && (
+          <p className="sk-feed__none" role="status">{t('kit.list.feed.none')}</p>
+        )}
+        {/* Период показан не весь: числа групп — по загруженным строкам. */}
+        {!empty && shown.kind !== 'complete' && (
+          <p className="sk-feed__page" role="status">{t('kit.list.feed.cutPage')}</p>
+        )}
+      </div>
+    );
+  } else if (records.length === 0 && shown.kind === 'complete') {
     body = <EmptyState />;
   } else if (filtered.length === 0 && records.length > 0) {
-    body = (
-      <EmptyState
-        title={t('kit.list.emptyFiltered')}
-        hint={t('kit.list.emptyFilteredHint')}
-        action={hasFilter ? <button type="button" className="sk-btn" onClick={resetFilters}>{t('kit.list.reset')}</button> : undefined}
-      />
-    );
+    body = emptyFilteredState;
   } else if (view === 'cards') {
     // Карточки (S4-22): сетка auto-fit; на карточке — название, ID, статус и поля колонок.
     const extra = columns.filter(c0 => c0.startsWith('fields.'));
@@ -960,29 +1236,6 @@ export function ListView({
           </li>
         ))}
       </ul>
-    );
-  } else if (view === 'feed') {
-    // Лента (S4-22): по дням изменения, новые сверху; без даты — в конце.
-    const byDay = new Map<string, KitRecord[]>();
-    for (const r of [...filtered].sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))) {
-      const d = kitDay(r.updated_at)?.text ?? '';
-      byDay.set(d, [...(byDay.get(d) ?? []), r]);
-    }
-    body = (
-      <div className="sk-feed">
-        {[...byDay.entries()].map(([d, items]) => (
-          <section key={d || 'none'} className="sk-feed__day" data-day={d || 'none'} aria-label={d || t('kit.list.feed.undated')}>
-            <h3 className="sk-feed__date">{d || t('kit.list.feed.undated')}</h3>
-            <ul className="sk-feed__items">
-              {items.map(r => (
-                <li key={r.id} className="sk-feed__item" data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
-                  {cell('status', r)}<Title r={r} href={href} onOpen={onOpen} /><Pill variant="id">{r.id}</Pill>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
     );
   } else if (view === 'timeline') {
     // Таймлайн (S4-22): дорожки той же группировки, что у списка и доски.
@@ -1056,7 +1309,8 @@ export function ListView({
                   <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(lane.key)}>
                     <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
                     <span className={lane.missing || lane.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{title}</span>
-                    <span className="sk-list__gcount">{lane.records.length}</span>
+                    {/* У «Прочих» число строк уже в подписи (S9-02) — второй раз рядом оно только спорит с собой. */}
+                    {!lane.other && <span className="sk-list__gcount">{lane.records.length}</span>}
                   </button>
                 </h3>
                 {open && columnsOf(cols, lane, 'h4')}
@@ -1176,7 +1430,7 @@ export function ListView({
                       <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
                         <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
                         <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
-                        <span className="sk-list__gcount">{g.records.length}</span>
+                        {!g.other && <span className="sk-list__gcount">{g.records.length}</span>}
                       </button>
                     </th>
                   </tr>
@@ -1303,11 +1557,18 @@ export function ListView({
                 countsFrom={src.from === 'all' || wholeLoaded ? 'all' : 'page'}
                 countsUnknown={src.from === 'unknown' ? (src.reason ?? '') : undefined}
                 multi={src.from === 'all' ? src.axis.multi : undefined}
+                // Закреплённые значения оси (S9-03): их называет приложение,
+                // потому что «почему именно эти» — предметное знание (K-14).
+                pinned={facetPinned?.(k)}
               />
             );
           })}
         </fieldset>
-        {(view === 'list' || view === 'board') && hasGroupings && (
+        {/* Лента получает ТУ ЖЕ строку управления (K2-FEED-VIEW §1): просьба
+            была именно про «фильтровать и группировать наверху, как в
+            табличном виде». Без сегмента группировки лента была бы просто
+            длинным списком. */}
+        {(view === 'list' || view === 'board' || view === 'feed') && hasGroupings && (
           <fieldset className="sk-list__seg" data-seg="group">
           <legend className="sk-list__seglabel">{t('kit.list.group')}</legend>
           <GameIcon slug={ICON_CANON.segGroup} size={14} className="sk-list__segicon" />
@@ -1339,6 +1600,7 @@ export function ListView({
               onChange={e => setGroupFind(e.target.value)}
             />
           )}
+          {groupCapNote && <span className="sk-list__gcap" role="status">{groupCapNote}</span>}
           </fieldset>
         )}
         <fieldset className="sk-list__seg" data-seg="sort">
