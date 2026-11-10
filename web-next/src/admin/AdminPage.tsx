@@ -9,13 +9,14 @@
 import { useUrlParam } from '@seidr/kit';
 import { v2Auth } from '../auth/session';
 import { useAppT } from '../i18n';
+import { ActionsScreen } from './ActionsScreen';
 import { AgentsScreen } from './AgentsScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
 
 export default function AdminPage() {
   const t = useAppT();
   const [tab, setTab] = useUrlParam('adm');
-  const current = tab === 'who' ? 'who' : 'agents';
+  const current = tab === 'who' ? 'who' : tab === 'log' ? 'log' : 'agents';
   return (
     <main data-lore-app="v2" className="shell" aria-label={t('admin.title')}>
       <nav className="adm-tabs" aria-label={t('admin.title')}>
@@ -23,8 +24,12 @@ export default function AdminPage() {
           data-testid="adm-tab-agents" onClick={() => setTab(null)}>{t('admin.agents.title')}</button>
         <button type="button" className="adm-tab" aria-current={current === 'who' ? 'page' : undefined}
           data-testid="adm-tab-who" onClick={() => setTab('who')}>{t('admin.who.title')}</button>
+        <button type="button" className="adm-tab" aria-current={current === 'log' ? 'page' : undefined}
+          data-testid="adm-tab-log" onClick={() => setTab('log')}>{t('admin.log.title')}</button>
       </nav>
-      {current === 'agents' ? <AgentsScreen /> : <WhoWhereScreen meSub={v2Auth.getState().user?.sub ?? null} />}
+      {current === 'agents' && <AgentsScreen />}
+      {current === 'who' && <WhoWhereScreen meSub={v2Auth.getState().user?.sub ?? null} />}
+      {current === 'log' && <ActionsScreen />}
     </main>
   );
 }

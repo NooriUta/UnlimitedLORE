@@ -95,7 +95,8 @@ describe('перевод истории с сервера', () => {
 
   it('page есть (S9-09) — читается как есть', () => {
     const h = historyFromServer(body({ page: { total: 120, offset: 20, limit: 20, returned: 20, has_more: true, order: 'desc' } }));
-    expect(h.page).toEqual({ limit: 20, offset: 20, total: 120, has_more: true });
+    // author/collapse — эхо сервера (S9-09, PR #1083); их не прислали — null.
+    expect(h.page).toEqual({ limit: 20, offset: 20, total: 120, has_more: true, author: null, collapse: null });
   });
 });
 
@@ -124,5 +125,75 @@ describe('чтение истории с сервера', () => {
   it('не-JSON в ответе — тоже ошибка', async () => {
     const f = vi.fn(async () => new Response('<html>502</html>', { status: 502 }));
     await expect(fetchHistory('adr', 'ADR-1', {}, f as unknown as typeof fetch)).rejects.toThrow(/502/);
+  });
+});
+
+// ─── S9-09, вторая половина (PR #1083): конкретный автор и свёртка ──────────
+describe('фильтр по автору и свёртка правок агента', () => {
+  const seen = async (opts: Parameters<typeof fetchHistory>[2]) => {
+    let url = '';
+    const f = vi.fn(async (input: RequestInfo | URL) => { url = String(input); return json(body()); });
+    await fetchHistory('adr', 'ADR-1', opts, f as unknown as typeof fetch);
+    return url;
+  };
+
+  it('положительный контроль: без фильтров адрес прежний, кроме порядка', async () => {
+    const url = await seen({});
+    expect(url).toContain('type=adr');
+    expect(url).not.toContain('author=');
+    expect(url).not.toContain('collapse=');
+  });
+
+  it('конкретный автор и свёртка уходят в адрес вместе с видом автора (условие «И»)', async () => {
+    const url = await seen({ author: 'claude-code', author_kind: 'agent', collapse: 'agent' });
+    for (const part of ['author=claude-code', 'author_kind=agent', 'collapse=agent']) expect(url).toContain(part);
+  });
+
+  it('порядок по умолчанию — desc: страница обязана быть НОВЕЙШИМИ версиями', async () => {
+    // Сервер без order отдаёт хронологию и режет страницу С НАЧАЛА, то есть
+    // самые СТАРЫЕ версии. Наш вид фиксирован «новейшая первой», и первая
+    // страница без order показывала бы начало цепочки, выдавая его за свежее.
+    expect(await seen({ limit: 20 })).toContain('order=desc');
+    expect(await seen({ limit: 20, order: 'asc' })).toContain('order=asc');
+  });
+
+  it('свёрнутая серия читается: число правок и начало серии', () => {
+    const h = historyFromServer(body({
+      rows: [row({
+        state_uid: 'st-9', valid_from: '2026-11-08T10:00:00Z', valid_to: null,
+        author: { kind: 'agent', caller: 'claude-code', source: 'hist' },
+        collapsed: { count: 5, first_state_uid: 'st-5', first_valid_from: '2026-11-08T09:00:00Z' },
+      })],
+    }));
+    expect(h.versions[0].collapsed).toEqual({ count: 5, first_state_uid: 'st-5', first_valid_from: '2026-11-08T09:00:00Z' });
+  });
+
+  it('пометка серии в снимок полей не попадает: иначе сравнение показало бы поле «collapsed»', () => {
+    const h = historyFromServer(body({
+      rows: [row({ collapsed: { count: 3, first_state_uid: 'st-0', first_valid_from: '2026-11-01T09:00:00Z' } })],
+    }));
+    expect(Object.keys(h.versions[0].fields)).not.toContain('collapsed');
+  });
+
+  it('несвёрнутая строка серией не помечается: одиночная правка агента — не серия', () => {
+    expect(historyFromServer(body()).versions[0].collapsed).toBeNull();
+  });
+
+  it('эхо author и collapse доходит до вкладки: показываем то, что сервер применил', () => {
+    const h = historyFromServer(body({
+      page: { total: 12, offset: 0, limit: 20, returned: 12, has_more: false, order: 'desc', author: 'claude-code', collapse: 'agent' },
+    }));
+    expect(h.page).toMatchObject({ total: 12, author: 'claude-code', collapse: 'agent' });
+  });
+
+  it('эха нет — это «сервер не сказал», а не «не применил»', () => {
+    const h = historyFromServer(body({ page: { total: 12, offset: 0, limit: 20, returned: 12, has_more: false, order: 'desc' } }));
+    expect(h.page?.author).toBeNull();
+    expect(h.page?.collapse).toBeNull();
+  });
+
+  it('пустой автор и слишком длинный — отказ сервера, а не пустая история', async () => {
+    const f = vi.fn(async () => json({ error: 'BAD_PARAMS', detail: 'author must not be blank' }, 400));
+    await expect(fetchHistory('adr', 'ADR-1', { author: '' }, f as unknown as typeof fetch)).rejects.toThrow(/BAD_PARAMS/);
   });
 });
