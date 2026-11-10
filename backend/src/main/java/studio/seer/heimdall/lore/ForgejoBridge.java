@@ -238,19 +238,46 @@ public class ForgejoBridge {
             return ageSeconds > graceSeconds ? STALLED : NO_RUN;
         }
         Set<String> gate = required.isEmpty() ? statusByContext.keySet() : required;
-        boolean anyRed = false, anyPendingOrMissing = false;
+        boolean anyRed = false, anyPendingOrMissing = false, anyCancelledAlone = false;
         for (String ctx : gate) {
             String st = statusByContext.get(ctx);
             if (st == null) { anyPendingOrMissing = true; continue; } // required-ран ещё не зарегистрирован
             switch (st) {
                 case "success" -> { }
                 case "failure", "error" -> anyRed = true;
+                // S3-11: отмена — не красный. Зелёный двойник того же джоба на этом sha
+                // (push ↔ pull_request) закрывает проверку; без него прогона не будет — STALLED.
+                case CANCELLED -> { if (!hasGreenTwin(ctx, statusByContext)) anyCancelledAlone = true; }
                 default -> anyPendingOrMissing = true;               // pending / warning / прочее
             }
         }
         if (anyRed) return RED;                                      // красный сильнее pending: чинить уже есть что
         if (anyPendingOrMissing) return PENDING;
+        if (anyCancelledAlone) return STALLED;
         return GREEN;
+    }
+
+    /** S3-11: состояние отменённого прогона в карте проверок (у Forgejo такого state нет). */
+    static final String CANCELLED = "cancelled";
+
+    /** Forgejo помечает отменённый прогон failure + «Has been cancelled» — других признаков в commit-status нет. */
+    static boolean isCancelled(String state, String description) {
+        return "failure".equals(state) && description != null
+            && description.trim().toLowerCase(java.util.Locale.ROOT).startsWith("has been cancelled");
+    }
+
+    /** «Backend CI / build (push)» → «Backend CI / build»: джоб без события-триггера. */
+    static String jobKey(String ctx) {
+        return ctx.replaceFirst("\\s*\\([^()]*\\)\\s*$", "");
+    }
+
+    /** Есть ли на том же sha зелёный прогон того же джоба от другого события. */
+    static boolean hasGreenTwin(String ctx, Map<String, String> statusByContext) {
+        String job = jobKey(ctx);
+        for (Map.Entry<String, String> e : statusByContext.entrySet())
+            if (!e.getKey().equals(ctx) && "success".equals(e.getValue()) && jobKey(e.getKey()).equals(job))
+                return true;
+        return false;
     }
 
     /**
@@ -269,6 +296,7 @@ public class ForgejoBridge {
             if (s == null) continue;
             String ctx = s.getString("context");
             String st = s.getString("status");
+            if (isCancelled(st, s.getString("description"))) st = CANCELLED; // S3-11
             byCtx.putIfAbsent(ctx == null ? "" : ctx, st == null ? "" : st);
         }
         return byCtx;
