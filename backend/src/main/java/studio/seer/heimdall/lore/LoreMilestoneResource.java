@@ -342,7 +342,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
                         "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g"
                         + ChangeAuthor.SET_SQL + ";"
                         + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowMilestone WHERE milestone_id=:mid) "
-                        + "TO (SELECT FROM KnowMilestoneHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
+                        + "TO (SELECT FROM KnowMilestoneHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", hp)).await().indefinitely();
                 }
                 List<Map<String, Object>> after = openGoalHist(req.milestone_id());
                 goalWritten = after.size() == 1 && req.goal_md().equals(after.get(0).get("goal_md"));

@@ -340,7 +340,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
                     .append("valid_from = :now, note_md = :note, effort_days = :eff").append(ChangeAuthor.SET_SQL).append(";")
                     .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
-                    .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
+                    .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);");
                 Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
                     "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType, "wc", workClass,
                     "eff", req.effort_days(), "act", req.actual_days(),
@@ -610,7 +610,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .append("INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw=:st, valid_from=:now, note_md=:note")
                 .append(effort != null ? ", effort_days=:eff" : "")
                 .append(ChangeAuthor.SET_SQL).append(";")
-                .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid);");
+                .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);");
             Map<String, Object> p = mapOfNullable("uid", newUid, "tid", tid, "title", title,
                 "note", note, "oi", order, "sid", targetSid, "nsid", nsid, "now", now,
                 "tt", taskType, "author", author, "executor", executor, "reviewer", reviewer,
@@ -726,7 +726,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
                             "valid_from = :now" + ChangeAuthor.SET_SQL + ";" +
                             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
-                            "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid);";
+                            "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);";
                         Map<String, Object> p = mapOfNullable("uid", uid, "pid", display, "name", name,
                             "summary", summary, "oi", order, "sid", sid, "nsid", nsid, "now", now);
                         by.bind(p);
