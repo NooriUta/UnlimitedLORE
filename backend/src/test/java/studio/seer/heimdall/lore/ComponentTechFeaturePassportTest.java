@@ -62,7 +62,7 @@ class ComponentTechFeaturePassportTest {
         row.put("tech", List.of("quarkus"));
         row.put("adrs", List.of("ADR-LORE-048"));
         row.put("specs", List.of("SPEC-X"));
-        Map<String, Object> v = LoreRecordValues.component(row);
+        Map<String, Object> v = LoreRecordValues.values("component", row);
         assertEquals("Хранилище знаний", v.get("title"));
         assertEquals("LORE", v.get("code"));
         assertEquals("core", v.get("area"));
@@ -73,7 +73,7 @@ class ComponentTechFeaturePassportTest {
         assertEquals(List.of("LORE-UI", "LORE-MCP"), v.get("children"));
         assertEquals(List.of("quarkus"), v.get("tech"));
         row.remove("full_name");
-        assertEquals("LORE", LoreRecordValues.component(row).get("title"), "без имени — код");
+        assertEquals("LORE", LoreRecordValues.values("component", row).get("title"), "без имени — код");
     }
 
     @Test
@@ -85,7 +85,7 @@ class ComponentTechFeaturePassportTest {
         row.put("checked_at", "2026-11-01");
         row.put("component_id", "LORE");
         row.put("content_md", "- license: Apache-2.0");
-        Map<String, Object> v = LoreRecordValues.tech(row);
+        Map<String, Object> v = LoreRecordValues.values("tech", row);
         assertEquals("Quarkus", v.get("title"));
         assertEquals("SPEC-TECH-LORE-QUARKUS", v.get("code"));
         assertEquals("3.15.1", v.get("version"));
@@ -110,7 +110,7 @@ class ComponentTechFeaturePassportTest {
         row.put("acceptance_md", "критерий");
         row.put("child_uc_ids", List.of("UC-8"));
         row.put("task_uids", List.of("S/T-1"));
-        Map<String, Object> v = LoreRecordValues.feature(row);
+        Map<String, Object> v = LoreRecordValues.values("feature", row);
         assertEquals("Открыть паспорт", v.get("title"));
         assertEquals("UC-7", v.get("code"));
         assertEquals("sea-level", v.get("goal_level"));

@@ -7,11 +7,12 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, type Density, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
+import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 
@@ -271,9 +272,20 @@ export default function KitPage() {
               { id: 'a', kind: 'add', text: t('kitPage.flow.diffAdd'), detail: 'editor', check: { state: 'checked' } },
               { id: 'b', kind: 'remove', text: t('kitPage.flow.diffRemove'), check: { state: 'checked' } },
               { id: 'c', kind: 'same', text: t('kitPage.flow.diffSame'), check: { state: 'checked' } },
+              // Смена — ОДНА строка «было → стало», а не пара «снимется» +
+              // «добавится»: пара читается как два действия и как провал
+              // между ними (K2-DIFF, запрос сессии администрирования).
+              {
+                id: 'ch', kind: 'change', text: t('kitPage.flow.diffChange'),
+                from: t('kitPage.flow.diffChangeFrom'), to: t('kitPage.flow.diffChangeTo'),
+                check: { state: 'checked' },
+              },
               { id: 'd', kind: 'add', text: t('kitPage.flow.diffUnver'), check: { state: 'unverified', reason: t('kitPage.flow.diffUnverWhy') } },
               { id: 'e', kind: 'add', text: t('kitPage.flow.diffForbid'), check: { state: 'forbidden', reason: t('kitPage.flow.diffForbidWhy') } },
             ]}
+            // Опасную пачку подтверждают словом. Какое слово и что считать
+            // опасным — знает приложение: kit его не выдумывает.
+            confirm={{ word: t('kitPage.flow.diffConfirmWord'), label: t('kitPage.flow.diffConfirmLabel') }}
             onApply={applied => {
               setDiffApplied(applied.length);
               setBatchUndone(false);
@@ -313,6 +325,25 @@ export default function KitPage() {
             onPropose={changes => setProposed(changes.length)}
           />
           {proposed !== null && <p className="kitp__panel" role="status">{t('kitPage.flow.matrixProposed', { n: proposed })}</p>}
+          <h3 className="kitp__h3">{t('kitPage.flow.chainHead')}</h3>
+          <p>{t('kitPage.flow.chainLead')}</p>
+          {/* Пять исходов шага, помеченный решающий шаг и оборванный хвост:
+              вердикт, шаги и исходы приходят ДАННЫМИ — что из чего следует,
+              знает приложение, а не kit (K2-CHAIN-EXPLAIN). */}
+          <ChainExplain
+            label={t('kitPage.flow.chainLabel')}
+            verdict={t('kitPage.flow.chainVerdict')}
+            tone="suc"
+            decidedBy="s2"
+            stopped={{ notRun: 2, reason: t('kitPage.flow.chainStopWhy') }}
+            steps={[
+              { id: 's1', title: t('kitPage.flow.chainS1'), outcome: { state: 'confirmed', detail: t('kitPage.flow.chainDetail') } },
+              { id: 's2', title: t('kitPage.flow.chainS2'), outcome: { state: 'denied', detail: t('kitPage.flow.chainDetail') } },
+              { id: 's3', title: t('kitPage.flow.chainS3'), outcome: { state: 'unverified', reason: t('kitPage.flow.diffUnverWhy') } },
+              { id: 's4', title: t('kitPage.flow.chainS4'), outcome: { state: 'forbidden', reason: t('kitPage.flow.diffForbidWhy') } },
+              { id: 's5', title: t('kitPage.flow.chainS5'), outcome: { state: 'unasked', reason: t('kitPage.flow.chainUnaskedWhy') } },
+            ]}
+          />
           <h3 className="kitp__h3">{t('kitPage.flow.relHead')}</h3>
           <p>{t('kitPage.flow.relLead')}</p>
           {/* Класс выпуска считает сервер; витрина показывает присланный. */}
@@ -373,6 +404,30 @@ export default function KitPage() {
               <MartProse text={md} />
             </div>
           </div>
+          {/*
+            Ряд значений-чипов (S4-29). Показан ЗДЕСЬ, а не в «Элементах»:
+            это значение поля, и смысл виден только рядом с текстом и подписью.
+
+            В примере намеренно три случая сразу: свой чип, унаследованный (с
+            подписью «от спринта» и кодом источника в подсказке) и чип без
+            подписи — он показывает КОД, а не пустоту. И седьмой чип за «ещё N»,
+            чтобы свёртку было видно живой.
+          */}
+          <h3 className="kitp__h3">{t('kitPage.chips.title')}</h3>
+          <p>{t('kitPage.chips.lead')}</p>
+          <dl className="kitp__chips">
+            <dt>{t('kitPage.chips.projects')}</dt>
+            <dd>
+              <ValueChips href={paletteCtx.href} value={[
+                { id: 'NooriUta/UnlimitedLORE', label: 'UnlimitedLORE', inherited_from: null },
+                { id: 'NooriUta/BRAGI', label: 'BRAGI', inherited_from: null },
+                { id: 'NooriUta/FORSETI', label: null, inherited_from: null },
+                { id: 'NooriUta/MIDGARD', label: 'MIDGARD', inherited_from: { type: 'sprint', id: 'SPRINT_UXR_S4_UI_SHELL_LISTS' } },
+                { id: 'NooriUta/VOLVA', label: 'VÖLVA', inherited_from: { type: 'sprint', id: 'SPRINT_UXR_S4_UI_SHELL_LISTS' } },
+                { id: 'NooriUta/BRAGI_WEB', label: 'BRAGI web', inherited_from: { type: 'feature', id: 'FEAT-PUBLISH' } },
+              ]} />
+            </dd>
+          </dl>
           <h3 className="kitp__h3">{t('kitPage.md.html')}</h3>
           <SandboxedHtmlFrame html={t('kitPage.md.htmlSample')} title={t('kitPage.md.htmlTitle')} />
         </section>

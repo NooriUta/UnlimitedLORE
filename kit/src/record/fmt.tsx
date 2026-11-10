@@ -1,5 +1,6 @@
 // Общие мелочи каркаса записи (K-04): статус из конфига, вывод значения,
 // ссылка на запись, «строка или узел» из render конфига.
+import { asChip, chipLabel } from '../core/chipValue';
 import type { CSSProperties, ReactNode } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
@@ -10,11 +11,19 @@ export function renderOut(out: ReactNode | string, ctx: KitCtx): ReactNode {
   return typeof out === 'string' ? ctx.md(out) : out;
 }
 
-/** Значение поля/журнала словами: пустое — «—», объект — JSON. */
+/**
+ * Значение поля/журнала словами: пустое — «—», чип — его подпись, прочий
+ * объект — JSON.
+ *
+ * Чип разбирается ЗДЕСЬ, а не только в ряду чипов: это же значение печатается
+ * в журнале правок и в подсказках, и там JSON выглядел данными (S4-29).
+ */
 export function valueText(v: unknown): string {
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  const c = asChip(v);
+  if (c) return chipLabel(c);
   try {
     return JSON.stringify(v);
   } catch {
