@@ -69,6 +69,7 @@ import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
 import { MIN_COL_W, clampWidth, readWidths, widthsFor, writeWidths, type ColumnWidths, type WidthStore } from './columnWidths';
 import { columnsFromUrl, columnsToUrlValue } from './columnsUrl';
+import { kitDay } from '../core/fmtValue';
 
 export interface ListBulkAction {
   id: string;
@@ -258,6 +259,22 @@ function StatusCell({ code, labels }: { code: string; labels: Labels }) {
       <GameIcon slug={s?.icon ?? 'help'} size={14} />
       <span>{labels.valueTitle('status', code)}</span>
     </span>
+  );
+}
+
+/**
+ * День в клетке списка. Пусто — «—»; отметку не разобрали — показываем КАК
+ * ПРИСЛАЛИ и говорим об этом подсказкой. «Не разобрали» ≠ «пусто», и прятать
+ * непонятное значение нельзя: именно по нему и находят кривые данные.
+ */
+function DayCell({ iso, badTitle }: { iso?: string | null; badTitle?: string }) {
+  const d = kitDay(iso);
+  if (!d) return <>—</>;
+  return (
+    <time className="sk-list__mono" dateTime={d.ok ? d.title : undefined} data-date={d.ok ? 'day' : 'raw'}
+      title={d.ok || !badTitle ? d.title : `${d.title} — ${badTitle}`}>
+      {d.text}
+    </time>
   );
 }
 
@@ -757,9 +774,28 @@ export function ListView({
     if (f.op !== 'any') ops[k] = f.op; else delete ops[k];
     update({ filters, ops });
   };
+  // Тип поля «date» (и «datetime» модели, он приходит сюда тем же «date»)
+  // печатался СЫРЫМ: в «Технологиях» в клетке стоял ISO с миллисекундами.
+  // Движок знает тип поля из модели — значит и показывать день должен он, а не
+  // каждый экран по-своему (ревью 10.11, UX-долг).
+  const fieldType = (kind: string, key: string): string | undefined => {
+    // Колонка приходит с приставкой («fields.start»), а в модели поле зовётся
+    // без неё — как и в fieldValue (listModel.ts:54). Без снятия приставки тип
+    // не находился, и поле-дата печаталось сырым.
+    const name = key.startsWith('fields.') ? key.slice(7) : key;
+    return config.kinds[kind]?.fields?.find(f => f.key === name)?.type;
+  };
+
   const valueCell = (key: string, r: KitRecord): ReactNode => {
     const vs = valuesOf(r, key);
     if (!vs.length) return '—';
+    if (fieldType(r.kind, key) === 'date') {
+      return (
+        <span className="sk-list__vals">
+          {vs.map(v => <DayCell key={v} iso={String(v)} badTitle={t('kit.fmt.badDate')} />)}
+        </span>
+      );
+    }
     return (
       <span className="sk-list__vals">
         {vs.map(v => (
@@ -784,7 +820,7 @@ export function ListView({
       case 'status': return <StatusCell code={r.status} labels={labels} />;
       case 'kind': return labels.valueTitle('kind', r.kind);
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
-      case 'updated_at': return r.updated_at ? <span className="sk-list__mono">{r.updated_at.slice(0, 10)}</span> : '—';
+      case 'updated_at': return <DayCell iso={r.updated_at} badTitle={t('kit.fmt.badDate')} />;
       case 'edges_count': return <span className="sk-list__mono">{edgeCount.get(r.id) ?? 0}</span>;
       case 'actions': return rowActionsCell(r);
       default:
@@ -875,7 +911,7 @@ export function ListView({
     // Лента (S4-22): по дням изменения, новые сверху; без даты — в конце.
     const byDay = new Map<string, KitRecord[]>();
     for (const r of [...filtered].sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))) {
-      const d = r.updated_at ? r.updated_at.slice(0, 10) : '';
+      const d = kitDay(r.updated_at)?.text ?? '';
       byDay.set(d, [...(byDay.get(d) ?? []), r]);
     }
     body = (

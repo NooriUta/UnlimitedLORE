@@ -27,6 +27,7 @@ import { fetchPassportOrder } from './passportOrder';
 import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
+import { ModelNotes } from './ModelNotes';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
@@ -202,15 +203,15 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   return (
     <>
       {/*
-        Порядок разделов остался клиентским — говорим об этом, а не молчим
-        (S4-29). Молчаливый откат хуже отсутствия порядка: человек решит, что
-        так и задумано, и перегруженность примет за замысел.
+        Оговорки разбора модели — шевроном «⚠ N» (B14 ревью 10.11.2026).
+        Говорить о них по-прежнему обязаны (S4-29: молчаливый откат хуже
+        отсутствия порядка), но развёрнутая полоса занимала верх паспорта —
+        ровно там, где человек ищет шапку, — и попадала под плавающую «×»
+        дока. Свёрнутый вид НЕ молчит: число оговорок стоит в самой строке.
+        Почему свёрнуто всем, а не только правящим модель, — в ModelNotes.tsx:
+        признака роли у клиента сейчас нет вовсе, и выдумывать его нельзя.
       */}
-      {[...order.notes, ...statuses.notes].length > 0 && (
-        <ul className="pp-model-note" role="status">
-          {[...order.notes, ...statuses.notes].map(n => <li key={n}>{n}</li>)}
-        </ul>
-      )}
+      <ModelNotes notes={[...order.notes, ...statuses.notes]} />
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEdit}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».

@@ -17,6 +17,7 @@ import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import { marked } from './markdown';
+import { splitDiagramFences } from './diagramFence';
 import { sanitizeMd, sanitizeSvg } from './sanitizeHtml';
 import { kitT } from '../i18n';
 import { useKitLang } from '../i18n/lang';
@@ -44,10 +45,6 @@ export type ProseSegment =
   | { kind: 'mermaid'; def: string }
   | { kind: 'bpmn'; def: string };
 
-// Одна регулярка на оба языка: два независимых прохода дали бы bpmn после
-// последнего mermaid утонуть в его «хвостовом» HTML-сегменте (v1).
-const DIAGRAM_FENCE = /```(mermaid|bpmn)[^\n]*\r?\n([\s\S]*?)```/g;
-
 /** Имена флажков чек-листа (локализует вызывающий). */
 export interface TaskLabels { done: string; todo: string }
 const DEFAULT_TASK_LABELS: TaskLabels = { done: 'done', todo: 'not done' };
@@ -71,20 +68,23 @@ function mdToHtml(md: string, labels: TaskLabels): string {
   return labelTaskBoxes(sanitizeMd(marked.parse(md) as string), labels);
 }
 
-/** Разбор markdown на HTML-сегменты и диаграммы (React владеет узлом диаграммы). */
+/**
+ * Разбор markdown на HTML-сегменты и диаграммы (React владеет узлом диаграммы).
+ *
+ * Решение «это диаграмма» принимает splitDiagramFences — по правилам фенса
+ * CommonMark. Текст, который диаграммой не объявлен, рендереру диаграмм не
+ * достаётся никогда: иначе проза уезжает в mermaid и возвращается его
+ * англоязычной ошибкой поверх содержимого (дефект владелицы 10.11.2026).
+ */
 export function toSegments(text: string, labels: TaskLabels = DEFAULT_TASK_LABELS): ProseSegment[] {
   const segs: ProseSegment[] = [];
-  let last = 0;
-  let m: RegExpExecArray | null;
-  DIAGRAM_FENCE.lastIndex = 0;
-  while ((m = DIAGRAM_FENCE.exec(text)) !== null) {
-    const before = text.slice(last, m.index);
-    if (before.trim()) segs.push({ kind: 'html', html: mdToHtml(before, labels) });
-    segs.push({ kind: m[1] as 'mermaid' | 'bpmn', def: m[2].trim() });
-    last = DIAGRAM_FENCE.lastIndex;
+  for (const part of splitDiagramFences(text)) {
+    if (part.kind === 'diagram') {
+      segs.push({ kind: part.lang as 'mermaid' | 'bpmn', def: part.def });
+    } else if (part.text.trim()) {
+      segs.push({ kind: 'html', html: mdToHtml(part.text, labels) });
+    }
   }
-  const tail = text.slice(last);
-  if (tail.trim()) segs.push({ kind: 'html', html: mdToHtml(tail, labels) });
   return segs;
 }
 
@@ -154,6 +154,27 @@ function buildInit(p: DiagramPalette, elk: boolean): string {
   return `%%{init: ${JSON.stringify(cfg)}}%%`;
 }
 
+/**
+ * Объявленную диаграмму не удалось нарисовать — честная оговорка ВМЕСТЕ с
+ * исходником блока. Доктрина: «не смогли нарисовать» ≠ «пусто», содержимое не
+ * теряется. Сырое сообщение библиотеки (англоязычное, про внутренности) больше
+ * не встаёт поверх содержимого — оно уходит в «техническую причину».
+ */
+function DiagramFailure({ kind, def, err }: { kind: 'mermaid' | 'bpmn'; def: string; err: string }) {
+  const lang = useKitLang();
+  return (
+    <div className="sk-prose__diagram-err" role="alert">
+      <p className="sk-prose__diagram-err-why">⚠ {kitT(lang, 'kit.prose.diagramFailed')}</p>
+      <p className="sk-prose__diagram-err-cap">{kitT(lang, 'kit.prose.diagramSource')}</p>
+      <pre className="sk-prose__diagram-err-src">{def}</pre>
+      <details className="sk-prose__diagram-err-tech">
+        <summary>{kitT(lang, 'kit.prose.diagramReason')}</summary>
+        <pre>{`${kind}: ${err}`}</pre>
+      </details>
+    </div>
+  );
+}
+
 export function MermaidDiagram({ def }: { def: string }) {
   const lang = useKitLang();
   const [svg, setSvg] = useState<string | null>(null);
@@ -169,18 +190,7 @@ export function MermaidDiagram({ def }: { def: string }) {
     return () => { active = false; };
   }, [def, palette]);
 
-  if (err) {
-    // Сообщение говорит, ЧТО не так; исходник под <details> показывает, где.
-    return (
-      <div className="sk-prose__diagram-err" role="alert">
-        ⚠ mermaid: {err}
-        <details>
-          <summary>{kitT(lang, 'kit.prose.diagramSource')}</summary>
-          <pre>{def}</pre>
-        </details>
-      </div>
-    );
-  }
+  if (err) return <DiagramFailure kind="mermaid" def={def} err={err} />;
   if (svg) {
     const label = kitT(lang, palette.id === 'paper' ? 'kit.prose.palettePaper' : 'kit.prose.paletteTheme');
     return (
@@ -225,7 +235,9 @@ export function BpmnDiagram({ def }: { def: string }) {
     };
   }, [def]);
 
-  if (err) return <div className="sk-prose__diagram-err" role="alert">⚠ bpmn: {err}</div>;
+  // То же правило, что у mermaid: оговорка и исходник блока, а не одна ошибка
+  // вместо содержимого (раньше текст схемы здесь пропадал совсем).
+  if (err) return <DiagramFailure kind="bpmn" def={def} err={err} />;
   // Явная высота до importXML: у родителя с height:auto canvas схлопывается в 0.
   return <div ref={hostRef} className="sk-prose__bpmn" />;
 }

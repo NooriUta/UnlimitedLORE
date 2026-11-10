@@ -5,15 +5,23 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
-import { kitT, useKitLang } from '../i18n';
+import { kitT, useKitLang, type KitLang } from '../i18n';
 
 export interface TabItem {
   id: string;
   label: string;
   /** Слаг game-icons. */
   icon?: string;
-  /** Счётчик (моно) — сколько записей во вкладке. */
-  count?: number;
+  /**
+   * Счётчик (моно) — сколько записей во вкладке.
+   *
+   * Три состояния, и они разные (ревью 10.11.2026, B13: «счётчики то есть, то
+   * нет»): число — посчитано; `null` — «не смогли посчитать» (блок данных не
+   * прочитался), и это показывается знаком вопроса, а не прячется и не
+   * выдаётся за ноль; нет вовсе — раздел не коллекция (текст, свойства, граф),
+   * и считать там нечего.
+   */
+  count?: number | null;
   disabled?: boolean;
   /** Зона (S4-33): «around» — вычисляемое вокруг записи, рисуется другим тоном. */
   zone?: 'record' | 'around';
@@ -50,6 +58,24 @@ export interface TabsProps {
    * словарь форм прототипа v4 (вкладки записи). API и клавиатура одинаковы.
    */
   variant?: 'pill' | 'underline';
+}
+
+/**
+ * Счётчик вкладки — ОДНИМ правилом на весь ряд (B13).
+ *
+ * Отдельным компонентом, чтобы одно и то же число рисовалось одинаково и в
+ * ряду, и в свёртке «Ещё», и у заголовков блоков записи: пока это была
+ * выражение-вставка в трёх местах, `null` в одном из них рисовался пустотой —
+ * то есть «не смогли посчитать» выглядело как «счётчика нет».
+ */
+export function TabCount({ count, lang }: { count: number | null | undefined; lang: KitLang }) {
+  if (count === undefined) return null;
+  const unknown = count === null;
+  return (
+    <span className="sk-tab__count" data-unknown={unknown ? '' : undefined} title={unknown ? kitT(lang, 'kit.tabs.count.unknown') : undefined}>
+      {unknown ? '?' : count}
+    </span>
+  );
 }
 
 export function Tabs({ items, value, onChange, label, children, className, variant = 'pill' }: TabsProps) {
@@ -120,7 +146,7 @@ export function Tabs({ items, value, onChange, label, children, className, varia
                 <span className="sk-tab__mark" data-relation-mark aria-hidden="true" title={item.markTitle}>{item.mark}</span>
               )}
               <span>{item.label}</span>
-              {item.count !== undefined && <span className="sk-tab__count">{item.count}</span>}
+              <TabCount count={item.count} lang={lang} />
             </button>
           );
         })}
@@ -129,8 +155,20 @@ export function Tabs({ items, value, onChange, label, children, className, varia
           // вернула бы перегруженность, от которой свёртка и спасает.
           // Число спрятанного названо: «Ещё» без числа не говорит, стоит ли
           // открывать.
-          <span className="sk-tabs__more">
+          <span className="sk-tabs__more" role="presentation">
+            {/*
+              Свёртка живёт ВНУТРИ ряда вкладок, поэтому у неё роль вкладки с
+              всплывающим меню (`role="tab"` + `aria-haspopup="menu"`; ARIA
+              допускает вкладку, открывающую меню). Пока это была обычная
+              кнопка, role="tablist" содержал чужого ребёнка, и axe справедливо
+              валил правило aria-required-children — найдено этой же правкой,
+              когда сворачивание наконец начало срабатывать: до него свёртка в
+              ряду просто не появлялась.
+              Выбранной такая «вкладка» не бывает: выбранный раздел ряд
+              показывает всегда, даже будучи редким.
+            */}
             <button type="button" className="sk-tab sk-tabs__more-btn"
+              role="tab" aria-selected={false}
               aria-expanded={moreOpen} aria-haspopup="menu"
               onClick={() => setMoreOpen(v => !v)}>
               <span>{kitT(lang, 'kit.tabs.more')}</span>
@@ -144,7 +182,7 @@ export function Tabs({ items, value, onChange, label, children, className, varia
                     onClick={() => { setMoreOpen(false); go(item.id); }}>
                     {item.icon && <GameIcon slug={item.icon} size={13} />}
                     <span>{item.label}</span>
-                    {item.count !== undefined && <span className="sk-tab__count">{item.count}</span>}
+                    <TabCount count={item.count} lang={lang} />
                   </button>
                 ))}
               </div>
