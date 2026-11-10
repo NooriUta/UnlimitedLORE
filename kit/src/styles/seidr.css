@@ -2456,6 +2456,39 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-matrix__opt.is-clear { border-style: dashed; color: var(--t2); }
 .sk-matrix__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-matrix__skipped { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+
+/* Выбор нескольких ячеек (K2-MATRIX): полоса режима и счётчик «выбрано N».
+   Отмеченная ячейка обведена, а не перекрашена: цвет у неё уже занят
+   состоянием проверки, и перекраска стёрла бы «не смогли проверить». */
+.sk-matrix__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sk-matrix__mode {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 22px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-matrix__mode[aria-pressed='true'] {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+}
+.sk-matrix__mode:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__count { color: var(--t1); font-size: var(--fs-xs); font-weight: 700; }
+.sk-matrix__cell.is-marked {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
 /* Узкий вид: список по выбранной строке, а не сжатая сетка. */
 .sk-matrix--narrow { gap: var(--gap); }
 .sk-matrix__pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
@@ -3239,6 +3272,27 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__chev { color: var(--t3); }
 .sk-list__gtitle.is-unknown { color: var(--wrn); font-style: italic; }
 .sk-list__gcount { margin-left: auto; font-family: var(--mono); color: var(--t3); }
+/* Выбор группы (S4-10): чекбокс стоит РЯДОМ с кнопкой сворачивания, поэтому
+   у заголовка появилась строка-ряд. Счётчик «отмечено N из M» — справа,
+   моноширинным: число читается как число, а не как слово. */
+.sk-list__ghrow { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.sk-list__ghrow .sk-list__gbtn { flex: 1 1 auto; min-width: 0; }
+.sk-list__gcheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), var(--row-h));
+  min-height: max(var(--tap), var(--row-h));
+}
+.sk-list__gsel {
+  flex: 0 0 auto;
+  padding-right: var(--pad-x);
+  color: var(--acc);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
 .sk-list__morerow td { padding: 4px var(--pad-x); }
 
 /* Составные объекты (S4-09): раскрытие строки и прогресс «x/y».
@@ -3555,6 +3609,9 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__selmode { color: var(--t1); }
 .sk-list__selcount { font-weight: 700; color: var(--t1); }
 .sk-list__selbusy { color: var(--t2); font-size: var(--fs-xs); }
+/* «Отмечено вне показанного» — цветом предупреждения: это не пояснение, а
+   расхождение между тем, что человек отметил, и тем, над чем пойдёт действие. */
+.sk-list__selhidden { color: var(--wrn); font-size: var(--fs-xs); }
 .sk-list__seldone { margin-left: auto; }
 .sk-list__selbar .sk-btn {
   min-height: max(var(--tap), 22px);
