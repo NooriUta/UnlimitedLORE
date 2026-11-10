@@ -560,3 +560,68 @@ describe('тег релиза доходит до бэкенда прода', ()
     expect(read('docker-compose.yml')).toContain('- LORE_RELEASE_TAG=${LORE_RELEASE_TAG:-}');
   });
 });
+
+// SPRINT_UXR_S8_SWITCH/S8-01: чек-лист готовности к переключению на v2 —
+// «/lore/version отвечает» обязано проверяться на проде по ОБОИМ публичным
+// именам. Оба образа собираются с одного шаблона nginx, но прокси /lore/ у v2
+// на проде релиз не сверял: проба шла только через имя v1. После переключения
+// основной адрес — v2, и телефон с MCP пойдут через его nginx; потерянный там
+// location /lore/ отдал бы SPA-заглушку при зелёном релизе.
+describe.skipIf(!bashBin)('S8-01: проба прода /lore/version — через nginx v1 И v2', { timeout: SPAWN_TIMEOUT }, () => {
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+
+  /** Копия lore-host-deploy.sh рядом с заглушками version-probe/bundle-probe. */
+  function probeRun(failHost = '') {
+    const d = mkdtempSync(join(tmpdir(), 'lore-pl-probe-'));
+    writeFileSync(join(d, 'lore-host-deploy.sh'), read('.github/scripts/lore-host-deploy.sh'));
+    writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version-probe.sh'), [
+      '#!/usr/bin/env bash',
+      'echo "$1 EXPECT=${EXPECT_COMMIT:-}" >> "$PROBE_LOG"',
+      'if [ -n "${STUB_FAIL_HOST:-}" ] && [ "$1" = "$STUB_FAIL_HOST" ]; then echo "::error::stub: $1 красный"; exit 1; fi',
+      'exit 0', '',
+    ].join('\n'));
+    // R — «ssh на lore-host»: бандл по порту, строка сверки схемы в логе бэкенда.
+    writeFileSync(join(d, 'r.sh'), [
+      '#!/usr/bin/env bash',
+      'case "$*" in',
+      '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
+      '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
+      '  *"compose logs"*) echo "схема сверена: БД v71 = код v71" ;;',
+      'esac', '',
+    ].join('\n'));
+    chmodSync(join(d, 'r.sh'), 0o755);
+    const st = join(d, 'state.env');
+    writeFileSync(st, [
+      'BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+      'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=71', 'UP_AT=2026-11-10T00:00:00Z', '',
+    ].join('\n'));
+    const log = join(d, 'probe.log');
+    writeFileSync(log, '');
+    const r = run(fwd(join(d, 'lore-host-deploy.sh')), ['probe'], {
+      DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), PROBE_LOG: fwd(log),
+      STUB_FAIL_HOST: failHost, TAG: 'v9.9.9',
+    });
+    const calls = readFileSync(log, 'utf8').split('\n').filter(Boolean);
+    rmSync(d, { recursive: true, force: true });
+    return { ...r, calls };
+  }
+
+  it('зовёт version-probe и по имени v1, и по имени v2 — оба с коммитом сборки', () => {
+    const r = probeRun();
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.calls).toContain('https://lore.odal.seidrstudio.pro EXPECT=0123456789abcdef');
+    expect(r.calls).toContain('https://new.lore.odal.seidrstudio.pro EXPECT=0123456789abcdef');
+  });
+
+  it('/lore/version через nginx v2 красный — красная и вся проба, с подсказкой отката', () => {
+    const r = probeRun('https://new.lore.odal.seidrstudio.pro');
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/ОТКАТ на lore-host/);
+  });
+
+  it('/lore/version через nginx v1 красный — по-прежнему красная проба', () => {
+    expect(probeRun('https://lore.odal.seidrstudio.pro').code).toBe(1);
+  });
+});
