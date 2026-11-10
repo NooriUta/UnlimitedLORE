@@ -79,7 +79,21 @@ class LoreRecordSnapshotLiveDbTest {
         String body = admin().get("/lore/record/" + type + "/" + id).then().statusCode(200).extract().asString();
         JsonNode r = mapper.readTree(body);
         Map<String, Object> row = mainRow(type, id);
-        same(LoreRecordSnapshotTest.Legacy.values(type, row), r.get("values"), type + " values");
+        // Чипы проектов и компонентов (#1128) достраиваются ПОСЛЕ сборки из модели (LoreRecordChips) и
+        // намеренно новые: у прежнего сборщика их не было или они были строками. Снимок сверяет сборку
+        // из модели, поэтому чипы из обеих сторон снимаются, а их форма проверяется отдельно.
+        Map<String, Object> expectedValues = new java.util.LinkedHashMap<>(LoreRecordSnapshotTest.Legacy.values(type, row));
+        com.fasterxml.jackson.databind.node.ObjectNode actualValues = ((com.fasterxml.jackson.databind.node.ObjectNode) r.get("values")).deepCopy();
+        for (String chip : List.of("projects", "components")) {
+            expectedValues.remove(chip);
+            JsonNode chips = actualValues.remove(chip);
+            if (chips != null) {
+                assertTrue(chips.isArray(), type + " " + chip + ": список чипов");
+                for (JsonNode ch : chips)
+                    assertTrue(ch.has("id") && ch.has("label") && ch.has("inherited_from"), type + " " + chip + ": форма чипа " + ch);
+            }
+        }
+        same(expectedValues, actualValues, type + " values");
 
         List<Map<String, Object>> links = new ArrayList<>(LoreRecordSnapshotTest.Legacy.rowLinks(type, row));
         if ("task".equals(type)) {
