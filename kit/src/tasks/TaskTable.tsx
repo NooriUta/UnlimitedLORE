@@ -5,12 +5,13 @@
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
 import { kitNumber } from '../core/fmtValue';
-import { useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react';
 import { Popover } from '../shell/Popover';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { ColumnsChoice } from '../list/ColumnsChoice';
+import { LIST_BUDGET } from '../list/listModel';
 import type { KitConfig, KitDictItem } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
@@ -190,7 +191,15 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [colsOpen, setColsOpen] = useState(false);
   const groups = groupTasks(tasks, groupBy, phases);
-  const showPhase = groupBy !== 'phase';
+  const showPhase = groupBy !== 'phase' && groupBy !== 'phase_status';
+  // Потолок строк на группу (S9-07, решение 1а): тот же шаг, что у списков,
+  // одним местом — LIST_BUDGET. Не виртуализация: строк вне DOM не находит
+  // Ctrl+F, и человек решил бы «такой задачи нет». Здесь всё показанное — в
+  // DOM, а спрятанное названо числом в своей группе. Состояние местное: это
+  // способ дотянуться, а не вид, которым делятся ссылкой.
+  const [limits, setLimits] = useState<Record<string, number>>({});
+  const limitOf = (k: string) => limits[k] ?? LIST_BUDGET.perGroup;
+  const showMore = (k: string) => setLimits(m => ({ ...m, [k]: limitOf(k) + LIST_BUDGET.perGroup }));
   const showGroupHeads = groupBy !== 'none';
   const phaseById = new Map(phases.map(p => [p.uid, p]));
   const fmt = { format: (v: number) => kitNumber(lang, v) };
@@ -274,7 +283,17 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   </th>
                 </tr>
               )}
-              {g.tasks.map(task => (
+              {(g.subgroups ?? [g]).map(leaf => (
+                <Fragment key={leaf.key}>
+                  {leaf !== g && (
+                    <tr>
+                      <th scope="rowgroup" colSpan={cols.length} className="sk-tasks__gth sk-tasks__gth--sub">
+                        <span>{groupLabel(lang, leaf)}</span>
+                        <span className="sk-tasks__gcount">{leaf.tasks.length}</span>
+                      </th>
+                    </tr>
+                  )}
+                  {leaf.tasks.slice(0, limitOf(leaf.key)).map(task => (
                 <TaskRow
                   key={task.uid}
                   task={task}
@@ -290,6 +309,18 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   onSave={onSave}
                   href={hrefFor?.(task)}
                 />
+                  ))}
+                  {leaf.tasks.length > limitOf(leaf.key) && (
+                    <tr className="sk-tasks__morerow">
+                      <td colSpan={cols.length}>
+                        <span className="sk-tasks__shown">{t('kit.tasks.shownOf', { shown: limitOf(leaf.key), total: leaf.tasks.length })}</span>
+                        <button type="button" className="sk-btn" onClick={() => showMore(leaf.key)}>
+                          {t('kit.list.more', { n: leaf.tasks.length - limitOf(leaf.key) })}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           ))}

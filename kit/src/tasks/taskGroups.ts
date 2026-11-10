@@ -30,8 +30,13 @@ export interface TaskPhase {
   order: number;
 }
 
-export type TaskGroupBy = 'phase' | 'status' | 'none';
-export const TASK_GROUP_BYS: readonly TaskGroupBy[] = ['phase', 'status', 'none'];
+/**
+ * Разрезы таблицы задач. `phase_status` (S9-07) — фаза, а внутри неё статусы:
+ * на спринте в 200+ задач «что в фазе застряло» иначе ищется глазами.
+ * Порядок массива — порядок кнопок; умолчание экрана — «Фаза», первым.
+ */
+export type TaskGroupBy = 'phase' | 'phase_status' | 'status' | 'none';
+export const TASK_GROUP_BYS: readonly TaskGroupBy[] = ['phase', 'phase_status', 'status', 'none'];
 
 export type TaskGroupKind = 'phase' | 'nophase' | 'orphan' | 'status' | 'all';
 
@@ -43,6 +48,11 @@ export interface TaskGroup {
   /** Категория статуса — только у kind=status. */
   category?: StatusCategory;
   tasks: TaskRowData[];
+  /**
+   * Подгруппы по статусу — только у разреза `phase_status`. `tasks` при этом
+   * остаётся ПОЛНЫМ составом группы: шапка фазы называет все её задачи.
+   */
+  subgroups?: TaskGroup[];
 }
 
 /**
@@ -77,16 +87,7 @@ export function groupTasks(tasks: readonly TaskRowData[], by: TaskGroupBy, phase
   const sorted = [...tasks].sort(byOrder);
   if (by === 'none') return [{ key: 'all', kind: 'all', label: '', tasks: sorted }];
 
-  if (by === 'status') {
-    const buckets = new Map<StatusCategory, TaskRowData[]>();
-    for (const t of sorted) {
-      const c = statusMeta(t.status).category;
-      buckets.set(c, [...(buckets.get(c) ?? []), t]);
-    }
-    return STATUS_CATEGORIES.filter(c => buckets.has(c)).map(c => ({
-      key: c, kind: 'status' as const, label: '', category: c, tasks: buckets.get(c)!,
-    }));
-  }
+  if (by === 'status') return byStatus(sorted, '');
 
   const known = new Map(phases.map(p => [p.uid, p]));
   const groups: TaskGroup[] = [...phases]
@@ -97,7 +98,20 @@ export function groupTasks(tasks: readonly TaskRowData[], by: TaskGroupBy, phase
   const orphan = sorted.filter(t => t.phase != null && t.phase !== '' && !known.has(t.phase));
   if (nophase.length) groups.push({ key: 'nophase', kind: 'nophase', label: '', tasks: nophase });
   if (orphan.length) groups.push({ key: 'orphan', kind: 'orphan', label: '', tasks: orphan });
+  if (by === 'phase_status') for (const g of groups) g.subgroups = byStatus(g.tasks, g.key + '/');
   return groups;
+}
+
+/** Статусные группы в порядке категорий; ключ с префиксом — уникален внутри фазы. */
+function byStatus(sorted: readonly TaskRowData[], prefix: string): TaskGroup[] {
+  const buckets = new Map<StatusCategory, TaskRowData[]>();
+  for (const t of sorted) {
+    const c = statusMeta(t.status).category;
+    buckets.set(c, [...(buckets.get(c) ?? []), t]);
+  }
+  return STATUS_CATEGORIES.filter(c => buckets.has(c)).map(c => ({
+    key: prefix + c, kind: 'status' as const, label: '', category: c, tasks: buckets.get(c)!,
+  }));
 }
 
 /** Черновик правки в строке — как введено в поля. */
