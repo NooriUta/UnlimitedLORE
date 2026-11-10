@@ -322,6 +322,10 @@ public class LoreReleaseResource extends LoreResourceBase {
             if (set.equals("UPDATE KnowRelease SET")) {
                 return badParams("at least one field (git_tag, release_date, description_md, is_current) required");
             }
+            // S4-04 (свежесть): правка релиза версию SCD2 не открывает — момент правки на
+            // вершине; changed_at среза releases — максимум с открытой версией.
+            set = set + ", updated_at=:upd";
+            p.put("upd", Instant.now().toString());
             // REL-UID-01: релиз адресуется ТОЛЬКО парой «проект#версия». Проект
             // известен всегда (ugp — явный или проект релизов по умолчанию, иначе
             // отказ выше); прежняя ветка «WHERE release_id=…» без проекта правила

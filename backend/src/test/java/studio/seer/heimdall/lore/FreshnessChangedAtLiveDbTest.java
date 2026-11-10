@@ -181,6 +181,79 @@ class FreshnessChangedAtLiveDbTest {
             uid, "valid_from")), r0, "новый релиз: changed_at = момент заведения");
     }
 
+    // ── Правки «на месте» (версию SCD2 не открывают) — S4-04, продолжение ──────
+    // Было: changed_at = valid_from открытой версии, и правка заметки/названия задачи,
+    // тела спеки без checkpoint, полей релиза время не двигала — запись «старела»,
+    // хотя её только что правили. Стало: такие пути ставят updated_at на вершине,
+    // changed_at — максимум из открытой версии и updated_at.
+
+    @Test
+    void taskNoteAndTitle_inPlaceEdit_movesChangedAt() {
+        String sid = "SPRINT_FRESH_INPLACE";
+        String uid = sid + "/T1";
+        post("/lore/sprint/create", "{\"sprint_id\":\"" + sid + "\",\"name\":\"проба правки на месте\"}");
+        post("/lore/task", "{\"sprint_id\":\"" + sid + "\",\"task_id\":\"T1\",\"title\":\"проба правки на месте\"}");
+        Map<String, String> bySprint = Map.of("sprint", sid);
+        Instant t0 = changedAt("open_tasks", "task_uid", uid, bySprint);
+        Instant open0 = openFrom("KnowTaskHist", "task_uid", uid);
+        assertEquals(open0, t0, "положительный контроль: новая задача — changed_at = момент заведения");
+
+        tick();
+        post("/lore/task/edit", "{\"task_uid\":\"" + uid + "\",\"title\":\"проба правки на месте\",\"note_md\":\"заметка\"}");
+        assertEquals(open0, openFrom("KnowTaskHist", "task_uid", uid), "правка заметки версию не открывает");
+        Instant t1 = changedAt("open_tasks", "task_uid", uid, bySprint);
+        assertGrew(t0, t1, "задача (заметка)");
+
+        tick();
+        post("/lore/task/edit", "{\"task_uid\":\"" + uid + "\",\"title\":\"новое название\"}");
+        assertGrew(t1, changedAt("open_tasks", "task_uid", uid, bySprint), "задача (название)");
+    }
+
+    @Test
+    void specBody_withoutCheckpoint_movesChangedAt() {
+        String spec = "SPEC-FRESH-INPLACE";
+        post("/lore/spec", "{\"spec_id\":\"" + spec + "\",\"title\":\"проба правки на месте\",\"content_md\":\"тело\"}");
+        Instant p0 = changedAt("specs", "spec_id", spec, Map.of());
+        Instant open0 = openFrom("KnowSpecHist", "spec_id", spec);
+        assertEquals(open0, p0, "положительный контроль: новая спека — changed_at = момент заведения");
+
+        tick();
+        post("/lore/spec", "{\"spec_id\":\"" + spec + "\",\"content_md\":\"новое тело\"}");
+        assertEquals(open0, openFrom("KnowSpecHist", "spec_id", spec), "тело без checkpoint версию не открывает");
+        assertGrew(p0, changedAt("specs", "spec_id", spec, Map.of()), "спека (тело на месте)");
+    }
+
+    @Test
+    void releaseFields_edit_movesChangedAt() {
+        String gp = "test/fresh-inplace";
+        post("/lore/project", "{\"slug\":\"" + gp + "\"}");
+        post("/lore/release", "{\"release_id\":\"v0.0.2-fresh\",\"git_project\":\"" + gp + "\",\"git_tag\":\"v0.0.2-fresh\"}");
+        String uid = gp + "#v0.0.2-fresh";
+        Instant r0 = changedAt("releases", "release_uid", uid, Map.of());
+
+        tick();
+        post("/lore/release/update", "{\"release_id\":\"v0.0.2-fresh\",\"git_project\":\"" + gp
+            + "\",\"description_md\":\"описание после правки\"}");
+        assertGrew(r0, changedAt("releases", "release_uid", uid, Map.of()), "релиз (правка полей)");
+    }
+
+    @Test
+    void decision_statusAfterFieldEdit_isTheChange() {
+        String id = "D-2026-FRESH-INPLACE";
+        post("/lore/decision", "{\"decision_id\":\"" + id + "\",\"title\":\"проба правки на месте\"}");
+        tick();
+        post("/lore/decision", "{\"decision_id\":\"" + id + "\",\"title\":\"правка полей\"}");
+        Instant d1 = changedAt("decisions", "decision_id", id, Map.of());
+
+        tick();
+        post("/lore/decision", "{\"decision_id\":\"" + id + "\",\"title\":\"правка полей\",\"status\":\"accepted\"}");
+        Instant d2 = changedAt("decisions", "decision_id", id, Map.of());
+        assertGrew(d1, d2, "решение (смена статуса)");
+        // Последнее изменение — версия статуса: она открыта ПОСЛЕ отметки правки полей.
+        assertEquals(openFrom("KnowDecisionHist", "decision_id", id), d2,
+            "решение: changed_at = максимум (открытая версия статуса позже updated_at)");
+    }
+
     @Test
     void questionAndUseCase_withoutHistory_fallBackToTheirDates() {
         // У вопроса и сценария SCD2 нет: последнее известное изменение — их собственные даты.

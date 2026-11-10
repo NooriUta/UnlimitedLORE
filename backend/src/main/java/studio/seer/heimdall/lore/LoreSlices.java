@@ -184,13 +184,16 @@ public final class LoreSlices {
      *
      * <p>{@code changed_at} — {@code valid_from} ОТКРЫТОЙ версии SCD2 (каждая смена
      * статуса и версионируемая правка открывает новую), иначе — дата заведения из
-     * {@code fallbacks}. Правки «на месте» (тело спеки без checkpoint, заметка
-     * задачи) версию не открывают и время не сдвигают — это свойство записи
-     * истории, а не среза.
+     * {@code fallbacks}. Правки «на месте» (тело спеки без checkpoint, заметка и
+     * название задачи, поля релиза и решения) версию не открывают — они ставят
+     * {@code updated_at} на вершине, и {@code changed_at} — МАКСИМУМ из открытой
+     * версии и {@code updated_at}. Максимум считает {@link LoreChangedAt#fold}
+     * (типы разные: DATETIME и строка ISO), срез отдаёт для него служебную колонку
+     * {@link LoreChangedAt#TOUCHED}.
      */
     static String changedAtSql(String... fallbacks) {
         return "COALESCE(out('HAS_STATE')[valid_to IS NULL].valid_from[0], "
-            + String.join(", ", fallbacks) + ") AS changed_at";
+            + String.join(", ", fallbacks) + ") AS changed_at, updated_at AS " + LoreChangedAt.TOUCHED;
     }
 
     /** Дата заведения у типов без своего поля: первая версия истории (порядок рёбер — порядок вставки). */
@@ -544,8 +547,9 @@ public final class LoreSlices {
         slice("decisions",
             "SELECT decision_id, title, date_created, status_raw, out('BELONGS_TO').component_id[0] AS component_id, " +
             // Свежесть (вопрос №49): правка полей ставит updated_at на вершине (версию
-            // не открывает), смена статуса — версию KnowDecisionHist; иначе заведение.
-            "COALESCE(updated_at, out('HAS_STATE')[valid_to IS NULL].valid_from[0], created_at, date_created) AS changed_at, " +
+            // не открывает), смена статуса — версию KnowDecisionHist; changed_at — более
+            // поздняя из двух (раньше updated_at брался первым и прятал смену статуса).
+            changedAtSql("created_at", "date_created") + ", " +
             "out('BELONGS_TO').component_id     AS components, " +
             "out('BELONGS_TO_PROJECT').slug     AS projects, " +
             "out('TAGGED_WITH').tag_id  AS tags, " +
