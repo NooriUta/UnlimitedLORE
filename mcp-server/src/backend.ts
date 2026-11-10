@@ -281,7 +281,7 @@ export async function loreSlice(
 export async function loreSliceWithMeta(
   slice: string,
   params?: Record<string, string>,
-): Promise<{ rows: unknown[]; meta?: SliceMeta; page?: SlicePage }> {
+): Promise<{ rows: unknown[]; meta?: SliceMeta; page?: SlicePage; extra?: SliceExtra }> {
   const qs =
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
@@ -291,10 +291,22 @@ export async function loreSliceWithMeta(
   });
   if (!res.ok) throw new Error(`GET /lore/slice/${slice} → ${res.status} ${await detail(res)}`);
   const body = (await res.json()) as SliceBody;
-  return { rows: Array.isArray(body.rows) ? body.rows : [], meta: sliceMetaOf(body), page: slicePageOf(body) };
+  return { rows: Array.isArray(body.rows) ? body.rows : [], meta: sliceMetaOf(body), page: slicePageOf(body), extra: sliceExtraOf(body) };
 }
 
-type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string; page?: unknown };
+/**
+ * S6-08: отметки скоупа, которые бэкенд кладёт рядом со строками — RBAC-скоуп (scope),
+ * выбор проектов (scope_projects) и «запись есть, но вне скоупа» (outside_scope).
+ * Без них суженный ответ неотличим от полного.
+ */
+export type SliceExtra = { scope?: unknown; scope_projects?: unknown; outside_scope?: unknown };
+export function sliceExtraOf(body: SliceBody): SliceExtra | undefined {
+  const out: SliceExtra = {};
+  for (const k of ['scope', 'scope_projects', 'outside_scope'] as const) if (body[k] != null) out[k] = body[k];
+  return Object.keys(out).length ? out : undefined;
+}
+
+type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string; page?: unknown; scope?: unknown; scope_projects?: unknown; outside_scope?: unknown };
 export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean; fields?: string[]; fields_checked?: boolean; warning?: string };
 
 /**

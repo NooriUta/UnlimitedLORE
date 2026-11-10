@@ -1681,6 +1681,43 @@
       ]
     }
   },
+  "run_block": {
+    "input": {
+      "block": "string",
+      "vars": "record<string>?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "block": {
+              "params": {},
+              "slice": "string"
+            },
+            "meta": {
+              "complete": "boolean",
+              "has_more": "boolean",
+              "returned": "number",
+              "scope": {
+                "backend_scope": "null",
+                "narrowed": "boolean",
+                "outside_scope": "null",
+                "project": "null",
+                "project_source": "null",
+                "scope_projects": "null"
+              },
+              "total": "number",
+              "truncated": "boolean",
+              "warnings": []
+            },
+            "rows": [],
+            "status": "string"
+          }
+        }
+      ]
+    }
+  },
   "runbook_link": {
     "input": {
       "action": "enum(add|remove)?",
