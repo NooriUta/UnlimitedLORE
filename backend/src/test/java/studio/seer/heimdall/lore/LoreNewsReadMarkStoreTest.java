@@ -27,7 +27,9 @@ class LoreNewsReadMarkStoreTest {
     void noRowMeansUnsetNotUnavailable() {
         LoreNewsReadMarkStore s = new LoreNewsReadMarkStore((sql, p) -> List.of(), (sql, p) -> { });
         LoreNewsReadMarkStore.State st = s.get();
-        assertEquals("unset", st.state());
+        // Ревью 10.11, B3: имя состояния — из контракта клиента (kit/src/news/types.ts: ok | none | unavailable).
+        // Сервер слал "unset", kit ждёт "none" — кнопка «Прочитано» была заблокирована с подписью «недоступна: unset».
+        assertEquals("none", st.state());
         assertNull(st.at());
         assertNull(st.error());
     }
