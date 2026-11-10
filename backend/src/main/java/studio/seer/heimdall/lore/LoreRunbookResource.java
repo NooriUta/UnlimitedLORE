@@ -192,7 +192,7 @@ public class LoreRunbookResource extends LoreResourceBase {
                     "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt" +
                     ChangeAuthor.SET_SQL + ";" +
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRunbook WHERE runbook_id=:id) " +
-                    "TO (SELECT FROM KnowRunbookHist WHERE state_uid=:nsid);", hp))
+                    "TO (SELECT FROM KnowRunbookHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", hp))
                     .await().indefinitely();
                 histCreated = true;
             }

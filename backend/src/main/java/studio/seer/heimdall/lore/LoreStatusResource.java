@@ -609,7 +609,7 @@ public class LoreStatusResource extends LoreResourceBase {
                     "context_md = :context_md, outcome_md = :outcome_md, content_hash = :content_hash" +
                     carryStatus + ChangeAuthor.SET_SQL + ";")
                 .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) ")
-                .append("TO (SELECT FROM KnowSprintHist WHERE state_uid = :nsid);");
+                .append("TO (SELECT FROM KnowSprintHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);");
 
             return writeClient.command(db, basicAuth(),
                     new LoreCommandClient.LoreCommand("sqlscript", script.toString(), insertParams))

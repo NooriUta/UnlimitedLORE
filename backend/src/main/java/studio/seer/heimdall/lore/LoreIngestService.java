@@ -114,7 +114,7 @@ public class LoreIngestService {
                 "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now" + priSet
                     + ChangeAuthor.SET_SQL + ";" +
                 "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
-                "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su);" +
+                "TO (SELECT FROM KnowSprintHist WHERE state_uid = :su AND in('HAS_STATE').size() = 0);" +
                 "UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp;",
                 hp);
         }
