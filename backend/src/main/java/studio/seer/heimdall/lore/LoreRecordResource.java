@@ -241,13 +241,9 @@ public class LoreRecordResource extends LoreResourceBase {
             }
             case "release" -> {
                 // S4-29 v3 (44а): Спринты · PR релиза. Ключ записи — release_uid, его и ждут срезы.
-                Read sprints = read("release_sprints", Map.of("ruid", id), scope);
-                blocks.add("sprints");
-                dataState.add(LoreRecordDataState.entry("release_sprints", "sprints", sprints));
-                if (sprints.ok()) for (Map<String, Object> s : sprints.rows())
-                    links.add(LoreRecordValues.link("IMPLEMENTED_IN_RELEASE", "in", LoreRecordValues.str(s.get("sprint_id")), "sprint",
+                tabBySlice("release_sprints", "sprints", Map.of("ruid", id), scope, blocks, dataState, links, facts,
+                    s -> LoreRecordValues.link("IMPLEMENTED_IN_RELEASE", "in", LoreRecordValues.str(s.get("sprint_id")), "sprint",
                         LoreRecordValues.str(s.get("name")), LoreRecordValues.planToken(LoreRecordValues.str(s.get("status_raw")))));
-                else facts.put("sprints_error", sprints.error());
                 Read prs = read("release_prs", Map.of("ruid", id), scope);
                 blocks.add("prs");
                 dataState.add(LoreRecordDataState.entry("release_prs", "prs", prs));
@@ -257,6 +253,15 @@ public class LoreRecordResource extends LoreResourceBase {
                         "pr", LoreRecordValues.str(p.get("title")), null));
                 }
                 else facts.put("prs_error", prs.error());
+            }
+            case "component" -> {
+                // S4-29: Задачи · Спринты компонента — по рёбрам, срезами с пагинацией.
+                tabBySlice("component_tasks", "tasks", Map.of("cid", id), scope, blocks, dataState, links, facts,
+                    t -> LoreRecordValues.link("TAGGED_WITH", "in", LoreRecordValues.str(t.get("task_uid")), "task",
+                        LoreRecordValues.str(t.get("title")), LoreRecordValues.planToken(LoreRecordValues.str(t.get("status_raw")))));
+                tabBySlice("component_sprints", "sprints", Map.of("cid", id), scope, blocks, dataState, links, facts,
+                    s -> LoreRecordValues.link("BELONGS_TO", "in", LoreRecordValues.str(s.get("sprint_id")), "sprint",
+                        LoreRecordValues.str(s.get("name")), LoreRecordValues.planToken(LoreRecordValues.str(s.get("status_raw")))));
             }
             default -> { }
         }
@@ -406,6 +411,33 @@ public class LoreRecordResource extends LoreResourceBase {
             state.add(LoreRecordDataState.entry(source, null, new Read(List.of(), "error", e.getMessage(), e)));
         }
         return out;
+    }
+
+    /**
+     * S4-29: первая порция вкладки-связи, читаемой срезом. Больше {@link #TAB_FIRST_PAGE} строк —
+     * отдаётся порция и {@code data_state: truncated} с {@code total}: остальное клиент берёт
+     * тем же срезом через {@code /lore/slice} (limit/offset, SE-01). Порция не выдаётся за всё.
+     */
+    static final int TAB_FIRST_PAGE = 100;
+
+    private void tabBySlice(String slice, String part, Map<String, String> given, Set<String> scope,
+                            List<String> blocks, List<Map<String, Object>> dataState,
+                            List<Map<String, Object>> links, Map<String, Object> facts,
+                            java.util.function.Function<Map<String, Object>, Map<String, Object>> toLink) {
+        Read r = read(slice, given, scope);
+        blocks.add(part);
+        if (!r.ok()) {
+            dataState.add(LoreRecordDataState.entry(slice, part, r));
+            facts.put(part + "_error", r.error());
+            return;
+        }
+        List<Map<String, Object>> rows = r.rows();
+        int total = rows.size();
+        List<Map<String, Object>> page = total > TAB_FIRST_PAGE ? rows.subList(0, TAB_FIRST_PAGE) : rows;
+        for (Map<String, Object> row : page) links.add(toLink.apply(row));
+        dataState.add(total > TAB_FIRST_PAGE
+            ? LoreRecordDataState.truncated(slice, part, page.size(), (long) total)
+            : LoreRecordDataState.entry(slice, part, r));
     }
 
     private List<String> specStatuses(String type) {

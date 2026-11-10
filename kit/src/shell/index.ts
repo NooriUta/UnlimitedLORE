@@ -5,4 +5,5 @@ export * from './Ear';
 export * from './KitShell';
 export * from './AvatarMenu';
 export * from './ResizeBorder';
+export * from './TextScaleSlider';
 export * from './Popover';

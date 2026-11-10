@@ -396,6 +396,50 @@ class LoreRecordFacadeLiveDbTest {
         chips(c, "components");
     }
 
+    /**
+     * S4-29: вкладки «Задачи» и «Спринты» паспорта компонента — по рёбрам, постранично.
+     * Спринт, чьё имя содержит ключ компонента, но ребра нет, — НЕ спринт компонента
+     * (раньше подбор по имени его подтягивал).
+     */
+    @Test
+    void componentTasksAndSprints_byEdge_paged() {
+        final String cid = "CPAGE";
+        admin().body(Map.of("component_id", cid, "full_name", "компонент страниц", "area", "core"))
+            .post("/lore/component/create").then().statusCode(200);
+        final String linked = "SPRINT_CPAGE_LINKED";
+        final String byName = "SPRINT_CPAGE_NAME_ONLY";
+        sprint(linked);
+        sprint(byName);
+        admin().body(Map.of("sprint_id", linked, "component_id", cid)).post("/lore/sprint/component").then().statusCode(200);
+        task(linked, "T-1");
+        task(linked, "T-2");
+        task(byName, "T-3");
+        for (String t : List.of("T-1", "T-2"))
+            admin().body(Map.of("task_uid", linked + "/" + t, "component_id", cid)).post("/lore/task/component")
+                .then().statusCode(200);
+
+        JsonPath tp = admin().queryParam("cid", cid).queryParam("limit", 1).get("/lore/slice/component_tasks")
+            .then().statusCode(200).extract().jsonPath();
+        assertEquals(1, tp.getList("rows").size(), "страница из одной строки");
+        assertEquals(2, tp.getInt("page.total"), "total — все задачи компонента, а не страница");
+        assertTrue(tp.getBoolean("page.has_more"));
+
+        List<String> sprints = admin().queryParam("cid", cid).get("/lore/slice/component_sprints")
+            .then().statusCode(200).extract().jsonPath().getList("rows.sprint_id");
+        assertEquals(List.of(linked), sprints, "спринт компонента — по ребру, не по имени");
+
+        JsonPath c = record("component", cid);
+        List<Map<String, Object>> links = c.getList("links");
+        assertEquals(2, links.stream().filter(l -> "TAGGED_WITH".equals(l.get("rel")) && "task".equals(l.get("type"))).count(),
+            "вкладка «Задачи»: " + links);
+        assertEquals(List.of(linked), links.stream().filter(l -> "sprint".equals(l.get("type"))).map(l -> l.get("id")).toList(),
+            "вкладка «Спринты»: " + links);
+        List<Map<String, Object>> ds = c.getList("meta.data_state");
+        for (String part : List.of("tasks", "sprints"))
+            assertTrue(ds.stream().anyMatch(e -> part.equals(e.get("part")) && "ok".equals(e.get("state"))),
+                part + " прочитана и названа в data_state: " + ds);
+    }
+
     /** S4-V2-SECTIONS: паспорта компонента, технологии и фичи (только чтение). */
     @Test
     void componentTechFeaturePassportsAreReadOnly() {

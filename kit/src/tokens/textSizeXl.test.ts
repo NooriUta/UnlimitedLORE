@@ -14,31 +14,42 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { DEFAULT_DISPLAY, TEXT_SIZES, displayAttrs } from './prefs';
 
-const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const cssRaw = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
+const css = cssRaw.replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** Значения шкалы --fs-* внутри блока `[data-text-size='<id>']`. */
-function scaleOf(id: string): Record<string, number> {
+/**
+ * Множитель ступени (S4-16, 10.11.2026: ось размера одна).
+ *
+ * До этого у каждой ступени был свой блок пикселей, и сторож сравнивал числа
+ * ступень к ступени. Теперь ступень задаёт один множитель `--fs-k`, а кегли
+ * считаются от него в :root — значит «крупнее на каждой ступени» выражается
+ * одним числом, и сравнивать надо его.
+ */
+function kOf(id: string): number | null {
   const re = new RegExp(`\\[data-text-size='${id}'\\]\\s*\\{([^}]*)\\}`);
   const body = re.exec(css)?.[1] ?? '';
-  const out: Record<string, number> = {};
-  for (const m of body.matchAll(/--(fs-[\w-]+)\s*:\s*(\d+(?:\.\d+)?)px/g)) out[m[1]] = Number(m[2]);
-  return out;
+  const m = /--fs-k\s*:\s*(\d+(?:\.\d+)?)/.exec(body);
+  return m ? Number(m[1]) : null;
 }
 
 /** Умолчание (md) живёт в :root — отдельного блока у него нет. */
-function rootScale(): Record<string, number> {
+function rootK(): number {
   const body = /:root\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-  const out: Record<string, number> = {};
-  for (const m of body.matchAll(/--(fs-[\w-]+)\s*:\s*(\d+(?:\.\d+)?)px/g)) out[m[1]] = Number(m[2]);
-  return out;
+  const m = /--fs-k\s*:\s*(\d+(?:\.\d+)?)/.exec(body);
+  return m ? Number(m[1]) : Number.NaN;
 }
 
-const STEPS = ['fs-2xs', 'fs-xs', 'fs-sm', 'fs-base', 'fs-md', 'fs-lg', 'fs-xl', 'fs-2xl'] as const;
+/** Ступени шкалы, считаемые от множителя в :root. */
+function rootSteps(): string[] {
+  const body = /:root\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  return [...body.matchAll(/(--fs-[\w-]+)\s*:/g)].map(m => m[1]).filter(n => n !== '--fs-k' && n !== '--fs-touch-input');
+}
 
 describe('S4-16 · шкала текста: есть шаг крупнее «крупного»', () => {
-  it('положительный контроль: разбор CSS видит прежние шкалы', () => {
-    expect(rootScale()['fs-base']).toBe(12);
-    expect(scaleOf('lg')['fs-base']).toBe(14);
+  it('положительный контроль: разбор CSS видит ось и ступени', () => {
+    expect(rootK(), 'множителя в :root нет — ось размера пропала').toBe(1);
+    expect(kOf('lg'), 'ступень lg не задаёт множитель').toBeGreaterThan(1);
+    expect(rootSteps().length, 'кегли шкалы не найдены').toBeGreaterThan(5);
   });
 
   it('xl объявлен в наборе и в контракте настроек', () => {
@@ -47,27 +58,40 @@ describe('S4-16 · шкала текста: есть шаг крупнее «к�
     expect(displayAttrs({ textSize: 'xl', stripes: true })['data-text-size']).toBe('xl');
   });
 
-  it('у xl есть своя шкала в seidr.css, и она КРУПНЕЕ lg на каждой ступени', () => {
-    const lg = scaleOf('lg');
-    const xl = scaleOf('xl');
-    expect(Object.keys(xl).length).toBeGreaterThan(0);
-    for (const step of STEPS) {
-      expect(xl[`${step}`], `${step}: xl должен быть крупнее lg`).toBeGreaterThan(lg[`${step}`]);
+  it('xl крупнее lg — и, значит, крупнее на КАЖДОЙ ступени шкалы', () => {
+    const lg = kOf('lg');
+    const xl = kOf('xl');
+    expect(lg, 'ступень lg пропала').not.toBeNull();
+    expect(xl, 'ступень xl пропала').not.toBeNull();
+    // Кегли считаются от множителя, поэтому одно это сравнение покрывает всю
+    // шкалу разом: отдельной «своей шкалы» у ступени больше нет.
+    expect(xl!, 'xl должен быть крупнее lg').toBeGreaterThan(lg!);
+    for (const name of rootSteps()) {
+      expect(cssRaw, `${name} считается мимо множителя — ступень его не изменит`).toMatch(
+        new RegExp(`${name}\\s*:\\s*calc\\([^;]*var\\(--fs-k\\)`),
+      );
     }
   });
 
-  it('порядок шкал не перепутан: sm < md < lg < xl по основному тексту', () => {
-    const base = (s: Record<string, number>) => s['fs-base'];
-    expect(base(scaleOf('sm'))).toBeLessThan(base(rootScale()));
-    expect(base(rootScale())).toBeLessThan(base(scaleOf('lg')));
-    expect(base(scaleOf('lg'))).toBeLessThan(base(scaleOf('xl')));
+  it('порядок ступеней не перепутан: sm < md < lg < xl', () => {
+    const sm = kOf('sm')!;
+    const md = rootK();
+    const lg = kOf('lg')!;
+    const xl = kOf('xl')!;
+    expect(sm).toBeLessThan(md);
+    expect(md).toBeLessThan(lg);
+    expect(lg).toBeLessThan(xl);
   });
 
   it('порог поля ввода на сенсоре шкала НЕ трогает — это не вкус, а правило iOS', () => {
     // iOS приближает страницу при фокусе на поле со шрифтом меньше 16px.
     // Личный масштаб не должен уводить это число вниз, и вверх тоже незачем.
+    // Ступень задаёт ТОЛЬКО множитель, поэтому порога в ней быть не может…
     for (const id of ['sm', 'lg', 'xl']) {
-      expect(scaleOf(id)['fs-touch-input'], id).toBeUndefined();
+      const body = new RegExp(`\\[data-text-size='${id}'\\]\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+      expect(body, id).not.toContain('fs-touch-input');
     }
+    // …и сам порог не считается от множителя: число постоянное.
+    expect(css).toMatch(/--fs-touch-input\s*:\s*16px/);
   });
 });

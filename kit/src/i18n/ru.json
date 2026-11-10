@@ -783,6 +783,8 @@
   "kit.record.history.runPartial": "Дошло правок: {got} из {count} — остальные сервер не прислал.",
   "kit.record.history.runFailed": "Серия не развернулась: {reason}",
   "kit.record.history.runNoExpand": "Правки серии по одной показать нечем — выключите свёртку.",
+  "kit.scale.label": "Размер текста",
+  "kit.scale.now": "{percent}%",
   "kit.md.sourceMd": "исходник markdown",
   "kit.md.sourceHtml": "исходник HTML",
   "kit.md.together": "показывать вместе: исходник и просмотр",
