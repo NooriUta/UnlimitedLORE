@@ -5,4 +5,4 @@ export * from './Ear';
 export * from './KitShell';
 export * from './AvatarMenu';
 export * from './ResizeBorder';
-export * from './TextSizeQuick';
+export * from './TextScaleSlider';
