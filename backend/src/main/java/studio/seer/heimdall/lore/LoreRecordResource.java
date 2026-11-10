@@ -197,37 +197,16 @@ public class LoreRecordResource extends LoreResourceBase {
                         computed.put(k, totals.get(k));
                 }
             }
-            case "task" -> {
-                Read adrs = read("adrs_of_task", Map.of("id", id), scope);
-                blocks.add("adrs");
-                dataState.add(LoreRecordDataState.entry("adrs_of_task", "adrs", adrs));
-                if (adrs.ok()) for (Map<String, Object> a : adrs.rows())
-                    links.add(LoreRecordValues.sliceLink("task", "adrs", a));
-                else facts.put("adrs_error", adrs.error());
-                // S4-29 v3: блокирующие вопросы — блоком в конце заметки; раньше их не читал никто.
-                Read gates = read("gating_questions_of_task", Map.of("id", id), scope);
-                blocks.add("gates");
-                dataState.add(LoreRecordDataState.entry("gating_questions_of_task", "gates", gates));
-                if (gates.ok()) for (Map<String, Object> q : gates.rows())
-                    links.add(LoreRecordValues.sliceLink("task", "gates", q));
-                else facts.put("gates_error", gates.error());
-            }
-            case "release" -> {
-                // S4-29 v3 (44а): Спринты · PR релиза. Ключ записи — release_uid, его и ждут срезы.
-                Read sprints = read("release_sprints", Map.of("ruid", id), scope);
-                blocks.add("sprints");
-                dataState.add(LoreRecordDataState.entry("release_sprints", "sprints", sprints));
-                if (sprints.ok()) for (Map<String, Object> s : sprints.rows())
-                    links.add(LoreRecordValues.sliceLink("release", "sprints", s));
-                else facts.put("sprints_error", sprints.error());
-                Read prs = read("release_prs", Map.of("ruid", id), scope);
-                blocks.add("prs");
-                dataState.add(LoreRecordDataState.entry("release_prs", "prs", prs));
-                if (prs.ok()) for (Map<String, Object> p : prs.rows())
-                    links.add(LoreRecordValues.sliceLink("release", "prs", p));
-                else facts.put("prs_error", prs.error());
-            }
             default -> { }
+        }
+        // Вкладки связей отдельным срезом (задача: ADR, блокирующие вопросы; релиз: спринты, PR) —
+        // по описаниям LoreRecordFrom.SLICE_LINKS, одним циклом на все типы (S4-MODEL-RECORD).
+        for (LoreRecordFrom.SliceLink sl : LoreRecordFrom.SLICE_LINKS.getOrDefault(type, List.of())) {
+            Read r = read(sl.slice(), Map.of(sl.param(), id), scope);
+            blocks.add(sl.key());
+            dataState.add(LoreRecordDataState.entry(sl.slice(), sl.key(), r));
+            if (r.ok()) for (Map<String, Object> row2 : r.rows()) links.add(LoreRecordFrom.sliceLink(sl, row2));
+            else facts.put(sl.key() + "_error", r.error());
         }
 
         String version = null;

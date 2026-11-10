@@ -62,26 +62,15 @@ final class LoreRecordValues {
 
     /** Строка ребёнка → item части (кроме фазы: её «x/y» считается по задачам, {@link #phaseItem}). */
     static Map<String, Object> partItem(String childType, Map<String, Object> r) {
-        return switch (childType) {
-            case "question" -> questionItem(r);
-            case "decision" -> decisionItem(r);
-            default -> taskItem(r);
-        };
+        LoreRecordFrom.ItemDef d = LoreRecordFrom.ITEMS.get(childType);
+        return LoreRecordFrom.item(d != null ? d : LoreRecordFrom.ITEMS.get("task"), r);   // прочие — как задача (как раньше)
     }
 
     /** Строка отдельного среза вкладки ({@link #READ_BY_SLICE}) → связь {@code links[]}. */
     static Map<String, Object> sliceLink(String type, String key, Map<String, Object> r) {
-        return switch (type + "." + key) {
-            case "task.adrs" -> link("JUSTIFIED_BY", "out", str(r.get("adr_id")), "adr", str(r.get("name")), docToken(r.get("status")));
-            case "task.gates" -> link("GATES", "in", str(r.get("question_id")), "question", str(r.get("title")), docToken(r.get("status")));
-            case "release.sprints" -> link("IMPLEMENTED_IN_RELEASE", "in", str(r.get("sprint_id")), "sprint", str(r.get("name")),
-                planToken(str(r.get("status_raw"))));
-            case "release.prs" -> {
-                String uid = str(r.get("pr_uid"));
-                yield link("SHIPPED_IN", "in", uid != null ? uid : str(r.get("pr_number")), "pr", str(r.get("title")), null);
-            }
-            default -> throw new IllegalArgumentException("связь " + type + "." + key + " не читается отдельным срезом");
-        };
+        LoreRecordFrom.SliceLink d = LoreRecordFrom.sliceLinkDef(type, key);
+        if (d == null) throw new IllegalArgumentException("связь " + type + "." + key + " не читается отдельным срезом");
+        return LoreRecordFrom.sliceLink(d, r);
     }
 
     // ── values по типам ────────────────────────────────────────────────────
@@ -430,9 +419,18 @@ final class LoreRecordValues {
      * Вкладки связей, которые фасад наполняет ОТДЕЛЬНЫМ срезом (не из строки основного):
      * ключ связи → срез. Состояние каждого чтения уходит в {@code meta.data_state}.
      */
-    static final Map<String, Map<String, String>> READ_BY_SLICE = Map.of(
-        "task", Map.of("adrs", "adrs_of_task", "gates", "gating_questions_of_task"),
-        "release", Map.of("sprints", "release_sprints", "prs", "release_prs"));
+    static final Map<String, Map<String, String>> READ_BY_SLICE = readBySlice();
+
+    /** S4-MODEL-RECORD: выводится из описаний {@link LoreRecordFrom#SLICE_LINKS} — один источник. */
+    private static Map<String, Map<String, String>> readBySlice() {
+        Map<String, Map<String, String>> out = new LinkedHashMap<>();
+        LoreRecordFrom.SLICE_LINKS.forEach((type, defs) -> {
+            Map<String, String> m = new LinkedHashMap<>();
+            for (LoreRecordFrom.SliceLink d : defs) m.put(d.key(), d.slice());
+            out.put(type, java.util.Collections.unmodifiableMap(m));
+        });
+        return java.util.Collections.unmodifiableMap(out);
+    }
 
     /**
      * Вкладки связей, которые фасад пока НЕ читает — среза нет. Без этого списка такая вкладка
@@ -468,56 +466,6 @@ final class LoreRecordValues {
      * S4-29 v3: вкладки связей решения, вопроса, вехи, компонента, фичи и «блокирует» у ADR.
      */
     static List<Map<String, Object>> rowLinks(String type, Map<String, Object> row) {
-        List<Map<String, Object>> l = new ArrayList<>();
-        switch (type) {
-            case "sprint" -> {
-                l.addAll(links("DEPENDS_ON", "out", "sprint", arr(row.get("depends_on"))));
-                l.addAll(links("DEPENDS_ON", "in", "sprint", arr(row.get("blocks"))));
-                l.addAll(links("IMPLEMENTED_IN", "in", "adr", arr(row.get("adr_ids"))));
-            }
-            case "task" -> {
-                l.addAll(links("CLOSED_BY", "out", "pr", arr(row.get("closed_by_prs"))));
-                l.addAll(links("REALIZES", "out", "use_case", arr(row.get("realizes_uc"))));
-            }
-            case "adr" -> {
-                l.addAll(links("DEPENDS_ON", "out", "adr", arr(row.get("depends_on_ids"))));
-                l.addAll(links("DEPENDS_ON", "in", "adr", arr(row.get("blocks_ids"))));
-                l.addAll(links("SUPERSEDES", "out", "adr", arr(row.get("supersedes_ids"))));
-                l.addAll(links("SUPERSEDES", "in", "adr", arr(row.get("superseded_by_ids"))));
-                l.addAll(links("IMPLEMENTED_IN", "out", "sprint", arr(row.get("implemented_in_ids"))));
-                l.addAll(links("IMPLEMENTED_IN_RELEASE", "out", "release", arr(row.get("release_ids"))));
-                l.addAll(links("JUSTIFIED_BY", "in", "task", arr(row.get("justified_task_uids"))));
-                l.addAll(links("TRACED_TO", "in", "use_case", arr(row.get("traced_by_ucs"))));
-            }
-            case "decision" -> {
-                l.addAll(links("SUPERSEDES", "out", "decision", arr(row.get("supersedes_ids"))));
-                l.addAll(links("ANSWERS", "out", "question", arr(row.get("answers_ids"))));
-            }
-            case "question" -> {
-                l.addAll(links("ANSWERS", "in", "decision", arr(row.get("answered_by"))));
-                l.addAll(links("GATES", "out", "task", arr(row.get("gating_tasks"))));
-            }
-            case "milestone" -> l.addAll(links("TARGETS_MILESTONE", "in", "sprint", arr(row.get("direct_sprint_ids"))));
-            case "component" -> {
-                // Технология — это спека SPEC-TECH-…: тип tech, чтобы щелчок открыл паспорт технологии.
-                for (String s : arr(row.get("specs")))
-                    l.add(link("DOCUMENTED_IN", "out", s, s.startsWith(TECH_SPEC_PREFIX) ? "tech" : "spec", s, null));
-                l.addAll(links("BELONGS_TO", "in", "adr", arr(row.get("adrs"))));
-                // out('USES').tech_id — НЕ ключ паспорта (тот — spec_id SPEC-TECH-…): тип tech_ref,
-                // чтобы клиент не открыл по нему чужую запись.
-                l.addAll(links("USES", "out", "tech_ref", arr(row.get("tech"))));
-                l.addAll(links("PARENT_OF", "in", "component", arr(row.get("sub_components"))));
-            }
-            case "feature" -> {
-                l.addAll(links("DECOMPOSES_INTO", "out", "feature", arr(row.get("child_uc_ids"))));
-                l.addAll(links("REALIZES", "in", "task", arr(row.get("task_uids"))));
-                l.addAll(links("HAS_ACTOR", "out", "actor", arr(row.get("actor_ids"))));
-                l.addAll(links("ADDRESSES", "out", "pain", arr(row.get("pain_ids"))));
-                l.addAll(links("PROMISES", "out", "gain", arr(row.get("gain_ids"))));
-                l.addAll(links("HELPS_WITH", "out", "job", arr(row.get("job_ids"))));
-            }
-            default -> { }
-        }
-        return l;
+        return LoreRecordFrom.rowLinks(type, row);   // S4-MODEL-RECORD: по описаниям LoreRecordFrom.ROW_LINKS
     }
 }
