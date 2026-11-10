@@ -424,5 +424,6 @@
   "kitPage.flow.relNow": "правило для новичков",
   "kitPage.flow.relWho": "кто-то из команды",
   "kitPage.flow.relRolledBack": "откат на {v}",
-  "kitPage.flow.relDone": "Приложение получило действие: {v}."
+  "kitPage.flow.relDone": "Приложение получило действие: {v}.",
+  "version.note.kit": "конструктор Seiðr-kit {v}"
 }

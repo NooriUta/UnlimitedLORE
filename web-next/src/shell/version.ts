@@ -18,7 +18,7 @@
 // «Не проверено» — не то же, что «версий нет» и не то же, что «старая версия».
 // Поэтому последнее известное значение не кешуется и не показывается: метка
 // говорит о том, что видно СЕЙЧАС.
-import type { KitLang } from '@seidr/kit';
+import { KIT_VERSION, type KitLang } from '@seidr/kit';
 import { appT } from '../i18n';
 import { loreFetch } from '../auth/session';
 
@@ -106,6 +106,11 @@ export function versionLabel(lang: KitLang, state: VersionState, front: string):
   const t = (k: Parameters<typeof appT>[1], v?: Record<string, string | number>) => appT(lang, k, v);
   const f = shortCommit(front);
   const notes: string[] = [];
+  // Версия конструктора известна всегда — она собрана вместе с фронтом, и её
+  // не надо ни у кого спрашивать. Это то, с чего начинается разбор жалобы
+  // «у нас выглядит иначе» (K-08 п. 1: приложение умеет сказать, на какой
+  // версии kit работает).
+  notes.push(t('version.note.kit', { v: KIT_VERSION }));
   if (!f) notes.push(t('version.note.frontUnstamped'));
 
   if (state.kind === 'loading') return { text: '', note: '' };

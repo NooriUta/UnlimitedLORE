@@ -11,6 +11,7 @@
 //     серверной, а не выдаём за общую;
 //   • /lore/version не ответил — «сервер: не проверено», а не пустота и не
 //     последнее известное значение.
+import { KIT_VERSION } from '@seidr/kit';
 import { describe, expect, it } from 'vitest';
 import { fetchServerVersion, shortCommit, versionLabel } from './version';
 
@@ -24,7 +25,21 @@ describe('versionLabel · одна метка только когда верси
   it('положительный контроль: коммиты совпали — одна метка с тегом выпуска', () => {
     const r = versionLabel('ru', ok, '339f15b0c1d2e3f4');
     expect(r.text).toBe('v1.17.7 · 339f15b0');
-    expect(r.note).toBe('');
+    // В подсказке с K-08 п. 1 всегда стоит версия конструктора: с неё
+    // начинается разбор жалобы «у нас выглядит иначе». Когда всё сошлось,
+    // кроме неё в подсказке ничего нет — оговорок-то и нет.
+    expect(r.note).toBe(`конструктор Seiðr-kit ${KIT_VERSION}`);
+  });
+
+  it('версия конструктора в подсказке есть при ЛЮБОМ состоянии: её не у кого спрашивать', () => {
+    const states = [
+      ok,
+      { kind: 'ok' as const, server: { ...SERVER, release: null } },
+      { kind: 'failed' as const, reason: '502' },
+    ];
+    for (const st of states) {
+      expect(versionLabel('ru', st, '339f15b0c1d2e3f4').note).toContain(KIT_VERSION);
+    }
   });
 
   it('коммиты совпали, а тега выпуска нет (препрод) — один коммит, без выдумки', () => {

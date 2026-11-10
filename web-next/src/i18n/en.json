@@ -424,5 +424,6 @@
   "kitPage.flow.relNow": "a rule for newcomers",
   "kitPage.flow.relWho": "someone on the team",
   "kitPage.flow.relRolledBack": "rollback to {v}",
-  "kitPage.flow.relDone": "The app received the action: {v}."
+  "kitPage.flow.relDone": "The app received the action: {v}.",
+  "version.note.kit": "Seiðr-kit {v}"
 }
