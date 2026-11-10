@@ -11,6 +11,8 @@ import {
 } from '@seidr/kit';
 import type { RecordPlacement, UrlWindow } from '@seidr/kit';
 import { fetchSlice } from '../api/loreClient';
+import { axesForKeys } from '../api/loreFacets';
+import { useListFacets } from '../api/useListFacets';
 import { useAppT } from '../i18n';
 import { LIST_SCREENS, type ListScreenDef, type ListScreenId } from '../lists/screens';
 import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
@@ -204,6 +206,30 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     [def.slice, fetchImpl, scopeParam],
     { rows: body => body.rows },
   );
+  // Счётчики фасетов считает СЕРВЕР по всей выдаче (S9-01). Сам список умеет
+  // считать только по загруженным строкам, а рядом стоит «Показано 1000 из
+  // 4000» — и число у фасета читается как счёт по всей выдаче, хотя посчитано
+  // по тысяче.
+  //
+  // Спрашиваем ровно те оси, по которым этот раздел и правда фильтрует:
+  // неизвестная ось — это 400 BAD_PARAMS на ВЕСЬ запрос, то есть одна лишняя
+  // ось лишила бы счётчиков все остальные. Чего в карте нет (например статус),
+  // остаётся со счётом по строкам, и список говорит это словами сам.
+  //
+  // Выбор проектов уходит и сюда: иначе счётчики считали бы не ту выдачу,
+  // которую человек видит, — ровно та жалоба, с которой начинался S4-03.
+  const facetKeys = config.list?.filters ?? [];
+  const facetKey = facetKeys.join(',');
+  const facetAxes = useMemo(() => axesForKeys(facetKeys), [facetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const serverCounts = useListFacets(def.slice, {
+    axes: facetAxes,
+    scopeProjects: scope,
+    fetchImpl,
+    // Раздел, у которого нет ни одной известной оси, в сеть не ходит вовсе:
+    // пустой запрос вернул бы отказ и подписал бы счётчики «не посчитали»
+    // там, где спрашивать было нечего.
+    enabled: Object.keys(facetAxes).length > 0,
+  });
   const body = result.data;
   const data = useMemo(
     () => (body ? sliceToKitData(body, def.map, new Date().toISOString()) : null),
@@ -263,6 +289,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       <ListView
         config={config}
         data={shownData ?? data}
+        counts={serverCounts}
         urlState={urlState}
         quickIcons={def.quickIcons}
         // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
