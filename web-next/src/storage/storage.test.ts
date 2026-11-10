@@ -143,19 +143,43 @@ describe('S3-08: гард — к хранилищу браузера v2 обра
     });
   }
 
+  /**
+   * Код без комментариев: сторож ловит ОБРАЩЕНИЯ, а не упоминания.
+   *
+   * Повод (10.11.2026, слияние с ветки аудита UX): в `shell/V2Shell.tsx`
+   * появился комментарий «…память своя у КАЖДОГО вызова (отказ localStorage)…»
+   * — и сторож объявил файл нарушителем, хотя обращения в нём нет. Это хуже
+   * ложной тревоги: правило начинает запрещать ОБЪЯСНЯТЬ причину, а у нас на
+   * объяснениях в комментариях держится половина разбора.
+   *
+   * Строковые литералы здесь не вырезаются намеренно: «localStorage» внутри
+   * строки — это либо ключ, либо сообщение, и увидеть такое в списке полезнее,
+   * чем пропустить настоящее обращение ради красоты разбора.
+   */
+  const code = (src: string): string =>
+    src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
   it('ни один исходник web-next/src вне storage/ не трогает localStorage/sessionStorage/document.cookie', () => {
     const root = join(__dirname, '..');
     const files = walk(root).filter(f => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f));
     expect(files.length).toBeGreaterThan(1); // положительный контроль: обход что-то нашёл
     const offenders = files
       .filter(f => !relative(root, f).replace(/\\/g, '/').startsWith('storage/'))
-      .filter(f => /\b(localStorage|sessionStorage)\b|document\.cookie/.test(readFileSync(f, 'utf8')))
+      .filter(f => /\b(localStorage|sessionStorage)\b|document\.cookie/.test(code(readFileSync(f, 'utf8'))))
       .map(f => relative(root, f));
     expect(offenders).toEqual([]);
   });
 
   it('положительный контроль гарда: тот же шаблон находит обращение в самом storage.ts', () => {
-    const src = readFileSync(join(__dirname, 'storage.ts'), 'utf8');
+    const src = code(readFileSync(join(__dirname, 'storage.ts'), 'utf8'));
     expect(src).toMatch(/\b(localStorage|sessionStorage)\b|document\.cookie/);
+  });
+
+  it('упоминание в комментарии нарушением НЕ считается, а обращение в коде — считается', () => {
+    expect(code('// причина: отказ localStorage\nconst a = 1;')).not.toMatch(/\blocalStorage\b/);
+    expect(code('/* про sessionStorage */\nconst b = 2;')).not.toMatch(/\bsessionStorage\b/);
+    expect(code('const v = localStorage.getItem("x"); // комментарий')).toMatch(/\blocalStorage\b/);
+    // Двойной слэш в адресе не должен съедать остаток строки с обращением.
+    expect(code('const u = "https://x"; const v = document.cookie;')).toMatch(/document\.cookie/);
   });
 });
