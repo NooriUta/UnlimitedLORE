@@ -46,6 +46,12 @@ final class ScopeExemptRows {
      * скоуп выключен ({@code allowed == null}), пуст (там честный 403), у среза нет
      * исключения, вызывающий просил другой вид или явно фильтрует по проекту.
      */
+    /** Заглушка до правки (ревью B12): выбор проектов пока не учитывается. */
+    static Map<String, String> exemptParams(String sliceId, Map<String, String> given, Set<String> allowed,
+                                            boolean headerProjectsChosen) {
+        return exemptParams(sliceId, given, allowed);
+    }
+
     static Map<String, String> exemptParams(String sliceId, Map<String, String> given, Set<String> allowed) {
         if (allowed == null || allowed.isEmpty()) return null;
         Exemption ex = BY_SLICE.get(sliceId);

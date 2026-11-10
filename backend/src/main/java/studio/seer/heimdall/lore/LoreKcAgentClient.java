@@ -63,4 +63,14 @@ final class LoreKcAgentClient {
             + " у его сервисного аккаунта — выдаётся в консоли KC (Clients → lore-admin → Service account roles)."
             + " LORE эту роль сам себе не выдаёт.";
     }
+
+    /** Заглушка до правки (ревью B8). */
+    static java.util.Map<String, io.vertx.core.json.JsonArray> clientRoleGrants(JsonObject roleMappings) {
+        return java.util.Map.of();
+    }
+
+    /** Заглушка до правки (ревью B10). */
+    static String idOf(String body) {
+        return null;
+    }
 }
