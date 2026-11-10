@@ -27,22 +27,38 @@ final class LoreMePrefs {
 
     private LoreMePrefs() {}
 
-    enum Kind { BOOL, ENUM }
+    enum Kind { BOOL, ENUM, NUMBER }
 
-    record SettingSpec(Kind kind, Object def, List<String> values) {
+    /** min/max/step — только у NUMBER; у прочих null. */
+    record SettingSpec(Kind kind, Object def, List<String> values, Double min, Double max, Double step) {
+        SettingSpec(Kind kind, Object def, List<String> values) { this(kind, def, values, null, null, null); }
+
         Map<String, Object> describe() {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("type", kind == Kind.BOOL ? "boolean" : "enum");
+            m.put("type", switch (kind) { case BOOL -> "boolean"; case ENUM -> "enum"; case NUMBER -> "number"; });
             m.put("default", def);
             if (kind == Kind.ENUM) m.put("values", values);
+            if (kind == Kind.NUMBER) { m.put("min", min); m.put("max", max); m.put("step", step); }
             return m;
         }
+
+        /** Число, прижатое к границам. */
+        double clamp(double v) { return Math.max(min, Math.min(max, v)); }
     }
 
     private static SettingSpec bool(boolean def) { return new SettingSpec(Kind.BOOL, def, List.of()); }
     private static SettingSpec oneOf(String def, String... values) {
         return new SettingSpec(Kind.ENUM, def, List.of(values));
     }
+    private static SettingSpec number(double def, double min, double max, double step) {
+        return new SettingSpec(Kind.NUMBER, def, List.of(), min, max, step);
+    }
+
+    /**
+     * Границы множителя масштаба текста (S4-16) — ПРЕДВАРИТЕЛЬНЫЕ: владелица назовёт свои после
+     * выкатки («я скажу сколько мин/макс оставить»). Меняются здесь, одной правкой.
+     */
+    static final double TEXT_SCALE_MIN = 0.8, TEXT_SCALE_MAX = 1.6, TEXT_SCALE_STEP = 0.05;
 
     /**
      * Личные настройки — список из задачи S2-04, п.4. Умолчания выбраны так,
@@ -54,7 +70,9 @@ final class LoreMePrefs {
         Map<String, SettingSpec> m = new LinkedHashMap<>();
         m.put("nav_collapse_on_read", bool(false));                          // сворачивать меню при чтении
         m.put("right_column", oneOf("auto", "auto", "shown", "hidden"));     // правая колонка
-        m.put("text_size", oneOf("m", "s", "m", "l", "xl"));                 // размер текста
+        m.put("text_size", oneOf("m", "s", "m", "l", "xl"));                 // размер текста (предустановка поверх text_scale)
+        // множитель масштаба текста — единственная ось размера (S4-16); вне границ — прижатие, не отказ
+        m.put("text_scale", number(1.0, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_SCALE_STEP));
         m.put("theme", oneOf("dark", "dark", "light", "system"));            // тема
         // плотность: roomy — умолчание v2 (решение владелицы 08.11, SPRINT_UXR_S4_UI_SHELL_LISTS/S4-21)
         m.put("density", oneOf("roomy", "roomy", "compact", "comfortable"));
@@ -92,18 +110,40 @@ final class LoreMePrefs {
                 errs.add(k + ": ожидается true/false, пришло " + v);
             if (s.kind() == Kind.ENUM && !(v instanceof String str && s.values().contains(str)))
                 errs.add(k + ": допустимо " + s.values() + ", пришло " + v);
+            if (s.kind() == Kind.NUMBER && !(v instanceof Number n && Double.isFinite(n.doubleValue())))
+                errs.add(k + ": ожидается число, пришло " + v);
         });
         return errs;
     }
 
-    /** Заглушка (тест до правки): оговорки о прижатых значениях. */
-    static List<String> clampNotes(Map<String, Object> patch) { return List.of(); }
+    /** Значение для хранения/выдачи: число прижимается к границам, прочее — как есть. */
+    private static Object normalized(String k, Object v) {
+        SettingSpec s = SETTINGS.get(k);
+        if (s != null && s.kind() == Kind.NUMBER && v instanceof Number n) return s.clamp(n.doubleValue());
+        return v;
+    }
+
+    /**
+     * Оговорки о прижатых значениях: вне границ — не отказ, а край, и об этом сказано словами
+     * (иначе человек увидит не то, что выбрал, и не поймёт почему).
+     */
+    static List<String> clampNotes(Map<String, Object> patch) {
+        List<String> notes = new ArrayList<>();
+        if (patch == null) return notes;
+        patch.forEach((k, v) -> {
+            SettingSpec s = SETTINGS.get(k);
+            if (s == null || s.kind() != Kind.NUMBER || !(v instanceof Number n)) return;
+            double d = n.doubleValue(), c = s.clamp(d);
+            if (c != d) notes.add(k + ": " + d + " вне границ " + s.min() + "…" + s.max() + " — сохранено " + c);
+        });
+        return notes;
+    }
 
     /** Сохранённые личные значения + патч. Патч уже проверен. null снимает ключ. */
     static Map<String, Object> merge(Map<String, Object> stored, Map<String, Object> patch) {
         Map<String, Object> out = new LinkedHashMap<>();
         if (stored != null) stored.forEach((k, v) -> { if (SETTINGS.containsKey(k) && v != null) out.put(k, v); });
-        if (patch != null) patch.forEach((k, v) -> { if (v == null) out.remove(k); else out.put(k, v); });
+        if (patch != null) patch.forEach((k, v) -> { if (v == null) out.remove(k); else out.put(k, normalized(k, v)); });
         return out;
     }
 
@@ -111,7 +151,7 @@ final class LoreMePrefs {
     static Map<String, Object> effective(Map<String, Object> stored) {
         Map<String, Object> eff = defaults();
         if (stored != null) stored.forEach((k, v) -> {
-            if (SETTINGS.containsKey(k) && v != null && validateSettingsPatch(Map.of(k, v)).isEmpty()) eff.put(k, v);
+            if (SETTINGS.containsKey(k) && v != null && validateSettingsPatch(Map.of(k, v)).isEmpty()) eff.put(k, normalized(k, v));
         });
         return eff;
     }
