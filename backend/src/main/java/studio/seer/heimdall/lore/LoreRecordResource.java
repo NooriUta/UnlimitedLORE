@@ -199,15 +199,10 @@ public class LoreRecordResource extends LoreResourceBase {
             }
             default -> { }
         }
-        // Вкладки связей отдельным срезом (задача: ADR, блокирующие вопросы; релиз: спринты, PR) —
-        // по описаниям LoreRecordFrom.SLICE_LINKS, одним циклом на все типы (S4-MODEL-RECORD).
-        for (LoreRecordFrom.SliceLink sl : LoreRecordFrom.SLICE_LINKS.getOrDefault(type, List.of())) {
-            Read r = read(sl.slice(), Map.of(sl.param(), id), scope);
-            blocks.add(sl.key());
-            dataState.add(LoreRecordDataState.entry(sl.slice(), sl.key(), r));
-            if (r.ok()) for (Map<String, Object> row2 : r.rows()) links.add(LoreRecordFrom.sliceLink(sl, row2));
-            else facts.put(sl.key() + "_error", r.error());
-        }
+        // Вкладки связей отдельным срезом (задача: ADR, блокирующие вопросы; релиз: спринты, PR;
+        // компонент: задачи, спринты) — по описаниям LoreRecordFrom.SLICE_LINKS, одним циклом (S4-MODEL-RECORD).
+        for (LoreRecordFrom.SliceLink sl : LoreRecordFrom.SLICE_LINKS.getOrDefault(type, List.of()))
+            tabBySlice(sl, id, scope, blocks, dataState, links, facts);
 
         String version = null;
         String versionError = null;
@@ -241,6 +236,38 @@ public class LoreRecordResource extends LoreResourceBase {
         LoreSlices.SliceDef def = LoreSlices.get(slice);
         if (def != null && def.required().size() == 1) return def.required().get(0);
         return slice.endsWith("_of_sprint") ? "sprint_id" : "id";
+    }
+
+    /**
+     * S4-29: первая порция вкладки-связи, читаемой срезом. Больше {@link #TAB_FIRST_PAGE} строк —
+     * отдаётся порция и {@code data_state: truncated} с {@code total}: остальное клиент берёт
+     * тем же срезом через {@code /lore/slice} (limit/offset, SE-01). Порция не выдаётся за всё.
+     */
+    static final int TAB_FIRST_PAGE = 100;
+
+    /**
+     * Вкладка-связь отдельным срезом по описанию {@link LoreRecordFrom.SliceLink} (S4-MODEL-RECORD):
+     * строки — связями общим сборщиком; у {@code paged} — только первая порция (S4-29).
+     */
+    private void tabBySlice(LoreRecordFrom.SliceLink sl, String id, Set<String> scope,
+                            List<String> blocks, List<Map<String, Object>> dataState,
+                            List<Map<String, Object>> links, Map<String, Object> facts) {
+        String slice = sl.slice(), part = sl.key();
+        Read r = read(slice, Map.of(sl.param(), id), scope);
+        blocks.add(part);
+        if (!r.ok()) {
+            dataState.add(LoreRecordDataState.entry(slice, part, r));
+            facts.put(part + "_error", r.error());
+            return;
+        }
+        List<Map<String, Object>> rows = r.rows();
+        int total = rows.size();
+        boolean cut = sl.paged() && total > TAB_FIRST_PAGE;
+        List<Map<String, Object>> page = cut ? rows.subList(0, TAB_FIRST_PAGE) : rows;
+        for (Map<String, Object> row : page) links.add(LoreRecordFrom.sliceLink(sl, row));
+        dataState.add(cut
+            ? LoreRecordDataState.truncated(slice, part, page.size(), (long) total)
+            : LoreRecordDataState.entry(slice, part, r));
     }
 
     private List<String> specStatuses(String type) {

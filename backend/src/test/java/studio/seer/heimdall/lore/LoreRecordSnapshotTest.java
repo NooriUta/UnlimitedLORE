@@ -96,6 +96,8 @@ class LoreRecordSnapshotTest {
         SLICE_ROWS.put("task.gates", m("question_id", "Q-1", "title", "Вопрос", "status", "OPEN"));
         SLICE_ROWS.put("release.sprints", m("sprint_id", "SPRINT_A", "name", "Спринт", "status_raw", "✅ DONE"));
         SLICE_ROWS.put("release.prs", m("pr_uid", "AIDA/UnlimitedLORE#7", "pr_number", 7, "title", "PR"));
+        SLICE_ROWS.put("component.tasks", m("task_uid", "SPRINT_A/T-1", "title", "Задача", "status_raw", "📋 PLANNED"));
+        SLICE_ROWS.put("component.sprints", m("sprint_id", "SPRINT_A", "name", "Спринт", "status_raw", "✅ DONE"));
     }
 
     /** Полная строка и её варианты: без каждой колонки, с « » вместо каждой, одиночное значение вместо списка, пустая. */
@@ -199,7 +201,7 @@ class LoreRecordSnapshotTest {
 
     // ── Замороженная копия сборки до S4-MODEL-RECORD ─────────────────────────
 
-    /** Копия LoreRecordValues (develop 4d67cb55) — НЕ править: это и есть снимок. */
+    /** Копия LoreRecordValues и связей фасада (develop 4d67cb55 + вкладки компонента b8a2d5ba) — НЕ править: это и есть снимок. */
     static final class Legacy {
         private static String str(Object v) { return LoreRecordValues.str(v); }
         private static List<String> arr(Object v) { return LoreRecordValues.arr(v); }
@@ -248,6 +250,11 @@ class LoreRecordSnapshotTest {
                     String uid = str(r.get("pr_uid"));
                     yield link("SHIPPED_IN", "in", uid != null ? uid : str(r.get("pr_number")), "pr", str(r.get("title")), null);
                 }
+                // develop b8a2d5ba (#1126, S4-29): вкладки «Задачи» · «Спринты» компонента.
+                case "component.tasks" -> link("TAGGED_WITH", "in", str(r.get("task_uid")), "task", str(r.get("title")),
+                    planToken(str(r.get("status_raw"))));
+                case "component.sprints" -> link("BELONGS_TO", "in", str(r.get("sprint_id")), "sprint", str(r.get("name")),
+                    planToken(str(r.get("status_raw"))));
                 default -> throw new IllegalArgumentException(type + "." + key);
             };
         }

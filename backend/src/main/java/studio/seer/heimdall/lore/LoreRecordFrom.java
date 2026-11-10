@@ -74,9 +74,12 @@ final class LoreRecordFrom {
      */
     record LinkFrom(String rel, String dir, String type, String column, boolean techByPrefix) {}
 
-    /** Вкладка связей, которую фасад читает отдельным срезом: что читать и как строка становится связью. */
+    /**
+     * Вкладка связей, которую фасад читает отдельным срезом: что читать и как строка становится связью.
+     * {@code paged} — в ответ идёт только первая порция, остальное клиент берёт тем же срезом (S4-29).
+     */
     record SliceLink(String key, String slice, String param, String rel, String dir, String type,
-                     From id, From title, From status) {}
+                     From id, From title, From status, boolean paged) {}
 
     // ── Общий сборщик ────────────────────────────────────────────────────────
 
@@ -405,14 +408,20 @@ final class LoreRecordFrom {
     static final Map<String, List<SliceLink>> SLICE_LINKS = Map.of(
         "task", List.of(
             new SliceLink("adrs", "adrs_of_task", "id", "JUSTIFIED_BY", "out", "adr",
-                from(Transform.STR, "adr_id"), from(Transform.STR, "name"), from(Transform.DOC_TOKEN, "status")),
+                from(Transform.STR, "adr_id"), from(Transform.STR, "name"), from(Transform.DOC_TOKEN, "status"), false),
             // S4-29 v3: блокирующие вопросы — блоком в конце заметки.
             new SliceLink("gates", "gating_questions_of_task", "id", "GATES", "in", "question",
-                from(Transform.STR, "question_id"), from(Transform.STR, "title"), from(Transform.DOC_TOKEN, "status"))),
+                from(Transform.STR, "question_id"), from(Transform.STR, "title"), from(Transform.DOC_TOKEN, "status"), false)),
         // S4-29 v3 (44а): Спринты · PR релиза. Ключ записи — release_uid, его и ждут срезы.
         "release", List.of(
             new SliceLink("sprints", "release_sprints", "ruid", "IMPLEMENTED_IN_RELEASE", "in", "sprint",
-                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw")),
+                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true),
             new SliceLink("prs", "release_prs", "ruid", "SHIPPED_IN", "in", "pr",
-                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.STR, "title"), null)));
+                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.STR, "title"), null, false)),
+        // S4-29: Задачи · Спринты компонента — по рёбрам, срезами с пагинацией.
+        "component", List.of(
+            new SliceLink("tasks", "component_tasks", "cid", "TAGGED_WITH", "in", "task",
+                from(Transform.STR, "task_uid"), from(Transform.STR, "title"), from(Transform.PLAN_TOKEN, "status_raw"), true),
+            new SliceLink("sprints", "component_sprints", "cid", "BELONGS_TO", "in", "sprint",
+                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true)));
 }
