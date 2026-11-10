@@ -3,6 +3,8 @@ export * from './ListView';
 export * from './listModel';
 // Фильтры: есть / нет / пусто / не пусто, текст, счётчики (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-05).
 export * from './filterModel';
+// Счётчики по всей выдаче, посчитанные источником (SPRINT_UXR_S9_SCALE_OPT/S9-01).
+export * from './listCounts';
 export * from './FacetFilter';
 // Общая группировка: группы списка, дорожки доски и таймлайна, разрезы связей (S4-06).
 export * from './grouping';

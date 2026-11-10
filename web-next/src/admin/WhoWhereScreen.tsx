@@ -5,11 +5,12 @@
 //     плюс «это вы» для смотрящего.
 // Строки свёрнуты (details): в шапке — числа, раскрытие — подробности. Так
 // пять человек и двадцать пять проектов помещаются на экран, а не в ленту.
-import { useMemo } from 'react';
+import { useMemo, type SyntheticEvent } from 'react';
 import { EmptyState, Forbidden, LoadError, Pill, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
 import { useAppT } from '../i18n';
 import { fetchParticipation, type Participation } from './participation';
 import type { AgentRow } from './agents';
+import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import './Admin.css';
 
 export interface WhoWhereScreenProps {
@@ -22,23 +23,32 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
   const t = useAppT();
   const [by, setBy] = useUrlParam('adm-by');
   const view = by === 'projects' ? 'projects' : 'people';
+  // Раскрытая строка — в адресе (?adm-open=kc_sub | slug): ссылка открывает тот же вопрос «почему».
+  const [open, setOpen] = useUrlParam('adm-open');
   const res = useLoadState<Participation>(signal => fetchParticipation(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
   const data = res.data;
   const agentNames = (list: AgentRow[]) => list.map(a => (
     <Pill key={a.actor_id} variant="id" title={a.harness ?? t('admin.harness.none')}>{a.name ?? a.actor_id}</Pill>
   ));
 
+  const allSlugs = useMemo(() => (data ? data.projects.map(p => p.slug) : []), [data]);
   const body = useMemo(() => {
     if (!data) return null;
+    const toggle = (key: string) => (e: SyntheticEvent<HTMLDetailsElement>) => {
+      const isOpen = e.currentTarget.open;
+      if (isOpen && open !== key) setOpen(key);
+      else if (!isOpen && open === key) setOpen(null);
+    };
     if (view === 'people') {
       return (
         <ul className="adm-list" data-testid="adm-people">
           {data.people.map(p => (
             <li key={p.kc_sub}>
-              <details data-testid={`adm-person-${p.kc_sub}`}>
+              <details data-testid={`adm-person-${p.kc_sub}`} open={open === p.kc_sub} onToggle={toggle(p.kc_sub)}>
                 <summary>
                   <span className="adm-name">{p.name}</span>
                   {p.kc_sub === meSub && <span className="adm-me">{t('admin.who.you')}</span>}
+                  {p.kc_sub === meSub && <MyProjectsChip fetchImpl={fetchImpl} />}
                   <span className="adm-count" data-testid="adm-person-projects">{t('admin.who.inProjects', { n: p.projects.length })}</span>
                   <span className="adm-count">{t('admin.who.agents', { n: p.agents.length })}</span>
                 </summary>
@@ -56,6 +66,12 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
                   {t('admin.who.hisAgents')}{' '}
                   {p.agents.length ? agentNames(p.agents) : <span className="adm-missing">{t('admin.who.noAgents')}</span>}
                 </p>
+                {open === p.kc_sub && (
+                  <>
+                    <PersonAgentsLine kcSub={p.kc_sub} isMe={p.kc_sub === meSub} fetchImpl={fetchImpl} />
+                    <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
+                  </>
+                )}
               </details>
             </li>
           ))}
@@ -66,7 +82,7 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
       <ul className="adm-list" data-testid="adm-projects">
         {data.projects.map(pr => (
           <li key={pr.slug}>
-            <details data-testid={`adm-project-${pr.slug}`}>
+            <details data-testid={`adm-project-${pr.slug}`} open={open === pr.slug} onToggle={toggle(pr.slug)}>
               <summary>
                 <span className="adm-name adm-mono">{pr.slug}</span>
                 <span className="adm-count">{t('admin.who.people', { n: pr.members.length })}</span>
@@ -93,12 +109,13 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
                   ))}
                 </tbody>
               </table>
+              {open === pr.slug && <WhoSeesBlock project={pr.slug} fetchImpl={fetchImpl} />}
             </details>
           </li>
         ))}
       </ul>
     );
-  }, [data, view, meSub, t]);
+  }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs]);
 
   let content;
   if (res.state === 'loading' && !data) content = <Skeleton lines={6} label={t('admin.who.loading')} />;

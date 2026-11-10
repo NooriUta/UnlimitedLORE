@@ -57,7 +57,10 @@ describe('ListScreen — спринты', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Порядок:/ })); // 08.11: меню kit вместо системного списка
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Порядок' })).getByRole('radio', { name: 'Приоритет' }));
-    fireEvent.click(screen.getByRole('button', { name: 'по убыванию' }));
+    // Умолчание раздела — свежие сверху (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS):
+    // новый ключ наследует направление «по убыванию», поэтому кнопку не жмём —
+    // она уже нажата.
+    expect(screen.getByRole('button', { name: 'по убыванию' }).getAttribute('aria-pressed')).toBe('true');
     // Порядок — внутри открытых; закрытые — своей группой в конце (S4-27).
     fireEvent.click(screen.getByRole('button', { name: /Закрытые\s*1/ }));
     expect(rowIds(container)).toEqual(['S_B', 'S_A', 'S_C']);

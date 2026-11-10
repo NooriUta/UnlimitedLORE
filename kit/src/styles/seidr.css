@@ -375,6 +375,24 @@
 
 html, body, #root { height: 100%; }
 
+/* Движок телефона не увеличивает наш текст сам (снимок владелицы 10.11.2026:
+   «все еще не адаптивно под телефон», new.lore в браузере Android — кегли и
+   обвязка примерно вдвое больше наших токенов).
+
+   Браузеры Android применяют автоувеличение текста (text autosizing) к блокам,
+   которые считают «немобильными», и делают это ПОСЛЕ наших стилей: токены
+   остаются прежними, а на экране всё крупнее. Поэтому ни `--tap`, ни шкала
+   кеглей таким раздутым видом управлять не могут — их там уже умножили.
+
+   Ровно 100%, а НЕ `none`: `none` запрещает увеличение совсем, включая то,
+   которое человек задал себе сам в настройках браузера. Масштаб страницы
+   (щипок, настройка) при 100% продолжает работать — выключается только
+   самовольное увеличение шрифта движком. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font);
   background-color: var(--bg0);
@@ -2662,6 +2680,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
   color: var(--t2);
   opacity: .75;
 }
+/* «Не посчитали» в чипе «Быстро» — тот же «?» с подсказкой (S9-01). */
+.sk-list__qcount[data-unknown] { color: var(--wrn); opacity: 1; cursor: help; }
+/* Число по всей выдаче — не приглушается: оно и есть ответ на вопрос «сколько». */
+.sk-list__qcount[data-src='all'] { opacity: 1; }
 .sk-list__field {
   display: inline-flex;
   align-items: center;
@@ -2847,6 +2869,20 @@ code, pre, kbd, samp { font-family: var(--mono); }
   color: var(--t2);
   font-size: var(--fs-2xs);
 }
+/* «Не посчитали» — тот же приём, что у счётчика вкладки (.sk-tab__count): «?»
+   цветом предупреждения и подсказка. Второго способа сказать «неизвестно» в
+   kit нет (S9-01). */
+.sk-facet__n[data-unknown] { color: var(--wrn); cursor: help; }
+/* Откуда число (S9-01): по всей выдаче — обычное, по загруженной странице —
+   приглушённое, чтобы «240» и «1» не выглядели одинаково достоверными. */
+.sk-facet__n[data-src='page'] { opacity: .7; }
+/* Откуда числа — словами в самой панели фасета. */
+.sk-facet__note {
+  margin: 0;
+  padding: 2px 6px;
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+}
 .sk-facet__empty {
   margin: 0;
   padding: 4px 6px;
@@ -2913,6 +2949,17 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-list__shown {
   margin: 0;
   color: var(--t2);
+  font-size: var(--fs-sm);
+}
+/* Оговорки о полноте счёта (S9-01): рядом с «Показано N из M», тем же
+   предупреждающим видом — неполный счёт это не косметика. */
+.sk-list__counts {
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  color: var(--t1);
   font-size: var(--fs-sm);
 }
 .sk-list__shown[data-kind='truncated'],
@@ -3728,6 +3775,18 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-history__ok { margin: 0; color: var(--suc); font-size: var(--fs-sm); }
 .sk-rec-history__fail { margin: 0; color: var(--dng); font-size: var(--fs-sm); }
 .sk-rec-history__restore .sk-btn:disabled, .sk-rec-history__confirm .sk-btn:disabled { opacity: .5; cursor: not-allowed; }
+/* S9-09: фильтры выдачи, свёртка серий агента, развёрнутая серия. */
+.sk-rec-history__filters { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--gap); padding-bottom: var(--gap); border-bottom: 1px solid var(--bd); }
+.sk-rec-history__toggle { display: inline-flex; align-items: center; gap: 6px; min-height: max(var(--tap), 24px); color: var(--t2); font-size: var(--fs-xs); cursor: pointer; }
+.sk-rec-history__reset { margin-left: auto; }
+.sk-rec-history__run { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--gap); padding: 0 var(--pad-x) 6px; }
+.sk-rec-history__runpill { --pill-c: var(--inf); }
+.sk-rec-history__runat { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-rec-history__runmore { min-height: max(var(--tap), 24px); }
+.sk-rec-history__runnote { color: var(--wrn); font-size: var(--fs-xs); }
+.sk-rec-history__runfail { color: var(--dng); font-size: var(--fs-xs); }
+.sk-rec-history__runlist { list-style: none; margin: 0 0 6px; padding: 0 0 0 var(--pad-x); display: flex; flex-direction: column; border-left: 2px solid var(--inf); }
+.sk-rec-history__runrow { border-top: 1px solid var(--bd); }
 @media (pointer: coarse) { .sk-rec-history__select { font-size: var(--fs-touch-input); } }
 
 /* ═══ K-06 — честность блоков (errBlock ≠ «пусто (проверено)») ═══ */
