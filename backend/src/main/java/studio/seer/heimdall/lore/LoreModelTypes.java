@@ -78,6 +78,16 @@ final class LoreModelTypes {
             "row_version").contains(prop);
     }
 
+    /** Чья схема нужна модели (поведение LoreModelResource как есть: только Know*). */
+    static boolean wantsSchemaOf(String name) {
+        return name != null && name.startsWith("Know");
+    }
+
+    /** Схема с объявленными типами свойств (пока не используются — поведение как есть). */
+    static Map<String, Object> build(Map<String, List<String>> schema, Map<String, Map<String, String>> declared) {
+        return build(schema);
+    }
+
     @SuppressWarnings("unchecked")
     static Map<String, Object> build(Map<String, List<String>> schema) {
         Map<String, Object> out = new LinkedHashMap<>();
