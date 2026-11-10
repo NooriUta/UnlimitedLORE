@@ -39,6 +39,8 @@ import { describeError } from '../resilience/errorText';
 import { isEditableTarget } from '../resilience/editable';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
 import { chipLabel, isChipList, toChips } from '../core/chipValue';
+import { foldBody, type FeedBody } from './feedBody';
+import { GluedBlock } from '../record/GluedBlock';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -183,6 +185,22 @@ export interface ListViewProps {
    * содержания.
    */
   facetPinned?: (key: string) => readonly string[];
+  /**
+   * Тело записи для ленты (K2-FEED-BODY-MORE): начало, остаток и его состояние —
+   * НАЗЫВАЕТ приложение. Решение владелицы 10.11.2026: «грузить первые 3 абзаца
+   * остально при расеррытии», то есть остаток не спрятан, а запрашивается.
+   *
+   * Не задано — лента остаётся строкой: тело выдумывать не из чего. Вернуло
+   * null у записи — у этой записи тела нет, и блока тела нет тоже (пустая
+   * рамка обещала бы текст).
+   */
+  feedBody?: (r: KitRecord) => FeedBody | null;
+  /**
+   * Запросить остаток тела. Нет обработчика — «Ещё» при НЕзагруженном остатке
+   * не предлагается вовсе: кнопка, обещающая действие, которого нет, хуже её
+   * отсутствия (то же правило, что у применения в DiffPreview).
+   */
+  onFeedBody?: (id: string) => void;
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
   /**
@@ -354,7 +372,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -1071,6 +1089,15 @@ export function ListView({
    * подпись ОБЩЕЙ группировки (`groupLabel`), а не вторая формулировка: иначе
    * «без связи» в таблице и в ленте разъехались бы.
    */
+  // Какие тела раскрыты. В памяти, а не в адресе: ссылкой делятся видом,
+  // фильтром и порядком, а раскрытый абзац — личное состояние чтения.
+  const [bodyOpen, setBodyOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleBody = (id: string) => setBodyOpen(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
   const feedGroupTitle = (g: FeedGroup): string => {
     if (g.group) return groupTitle(g.group);
     switch (g.key) {
@@ -1097,9 +1124,9 @@ export function ListView({
    * загружена — показываем её код, а не придумываем заголовок (то же правило,
    * что у разреза по связи). Связей нет — блока нет.
    */
-  const feedBecause = (r: KitRecord): ReactNode => {
+  const feedRefs = (r: KitRecord): { id: string; type: string }[] => {
     const types = feedCfg?.because ?? [];
-    if (types.length === 0) return null;
+    if (types.length === 0) return [];
     const seen = new Set<string>();
     const refs: { id: string; type: string }[] = [];
     for (const e of data.edges) {
@@ -1109,17 +1136,106 @@ export function ListView({
       seen.add(other);
       refs.push({ id: other, type: e.type });
     }
+    return refs;
+  };
+
+  /** Ссылка на связанную запись. Не загружена — КОД, а не выдуманный заголовок. */
+  const feedRef = (x: { id: string; type: string }): ReactNode => {
+    const target = data.records.find(rr => rr.id === x.id);
+    const label = config.edges?.[x.type]?.label ?? x.type;
+    return href
+      ? <a key={x.id} className="sk-feed__ref" href={href(x.id)} title={label}>{target?.title ?? x.id}</a>
+      : <span key={x.id} className="sk-feed__ref" title={label}>{target?.title ?? x.id}</span>;
+  };
+
+  const feedBecause = (r: KitRecord): ReactNode => {
+    const refs = feedRefs(r);
     if (refs.length === 0) return null;
+    return <span className="sk-feed__because">{refs.map(feedRef)}</span>;
+  };
+
+  /**
+   * Тело записи в ленте (K2-FEED-BODY-MORE): первые абзацы и свёртка остатка.
+   *
+   * Четыре состояния остатка (не загружен · здесь · едет · не дошёл) дают
+   * ЧЕТЫРЕ разных предложения под телом — правило живёт чистой функцией
+   * foldBody, потому что оно про утверждения, а не про разметку.
+   *
+   * «Ещё» без числа, когда числа не назвали: за «Ещё 4» человек ждёт четыре
+   * абзаца, а не сорок, и выдуманное число здесь хуже отсутствующего.
+   */
+  const feedBodyBlock = (r: KitRecord): ReactNode => {
+    const body = feedBody?.(r) ?? null;
+    if (!body) return null;
+    const open = bodyOpen.has(r.id);
+    const { shown, action } = foldBody(body, open);
+    if (shown.length === 0 && action.kind === 'none') return null;
+    // Запрос остатка предлагаем только тому, кто умеет его выполнить.
+    const askable = action.kind === 'load' || action.kind === 'retry' ? !!onFeedBody : true;
+    const unknownN = action.kind === 'load' && action.n === null;
+    const label =
+      action.kind === 'open' ? t('kit.list.more', { n: action.n })
+      : action.kind === 'close' ? t('kit.list.feed.body.less')
+      : action.kind === 'busy' ? t('kit.list.feed.body.busy')
+      : action.kind === 'retry' ? t('kit.list.feed.body.retry')
+      : unknownN ? t('kit.list.feed.body.moreUnknown')
+      : t('kit.list.more', { n: (action as { n: number }).n });
+    const click = () => {
+      if (action.kind === 'busy') return;
+      if (action.kind === 'load' || action.kind === 'retry') {
+        onFeedBody?.(r.id);
+        if (action.kind === 'load' && !open) toggleBody(r.id);
+        return;
+      }
+      toggleBody(r.id);
+    };
     return (
-      <span className="sk-feed__because">
-        {refs.map(x => {
-          const target = data.records.find(rr => rr.id === x.id);
-          const label = config.edges?.[x.type]?.label ?? x.type;
-          return href
-            ? <a key={x.id} className="sk-feed__ref" href={href(x.id)} title={label}>{target?.title ?? x.id}</a>
-            : <span key={x.id} className="sk-feed__ref" title={label}>{target?.title ?? x.id}</span>;
-        })}
+      <span className="sk-feed__body" data-body={action.kind} data-open={open ? '' : undefined}>
+        {shown.map((para, i) => <span key={i} className="sk-feed__para">{para}</span>)}
+        {action.kind === 'retry' && (
+          <span className="sk-feed__bodyfail" role="alert">
+            {t('kit.list.feed.body.failed', { reason: action.reason })}
+          </span>
+        )}
+        {action.kind !== 'none' && askable && (
+          <button
+            type="button"
+            className="sk-btn sk-feed__bodymore"
+            aria-disabled={action.kind === 'busy' ? 'true' : undefined}
+            aria-expanded={action.kind === 'open' || action.kind === 'close' ? open : undefined}
+            title={unknownN ? t('kit.list.feed.body.moreUnknownWhy') : undefined}
+            onClick={e => { e.stopPropagation(); click(); }}
+          >
+            {label}
+          </button>
+        )}
       </span>
+    );
+  };
+
+  /**
+   * Относящееся к записи с телом — ВКЛЕЕННЫМ блоком с числом в заголовке
+   * (§5, п.2; согласие владелицы 10.11.2026: «пусть встраивает»).
+   *
+   * Блок — ТОТ ЖЕ, что в хвосте тела паспорта (GluedBlock), а не похожий:
+   * утверждение одно, и у него одни правила — счётчик обязателен, «не
+   * проверено» это не ноль, пустой блок не рисуется. Второй такой же блок
+   * разъехался бы с первым первой же правкой.
+   *
+   * Только у записи С ТЕЛОМ: у строки места под блок нет, и там те же связи
+   * идут чипами в строке мета.
+   */
+  const feedGlued = (r: KitRecord): ReactNode => {
+    const refs = feedRefs(r);
+    if (refs.length === 0) return null;
+    const types = feedCfg?.because ?? [];
+    const label = types.length === 1
+      ? (config.edges?.[types[0]]?.label ?? types[0])
+      : t('kit.list.feed.body.related');
+    return (
+      <GluedBlock id="feed-because" label={label} count={refs.length} lang={lang}>
+        <span className="sk-feed__because">{refs.map(feedRef)}</span>
+      </GluedBlock>
     );
   };
 
@@ -1130,6 +1246,7 @@ export function ListView({
    */
   const feedItem = (r: KitRecord, at: string | null): ReactNode => {
     const leads = (feedCfg?.lead ?? []).filter(k => valuesOf(r, k).length > 0);
+    const bodyNode = feedBodyBlock(r);
     // Статуса у записи нет (или оси нет вовсе, K-14) — чипа нет: пустого места
     // не рисуем, а «∅» обещало бы значение, которого не существует.
     const withStatus = r.status !== '' && config.statuses.items.length > 0;
@@ -1149,12 +1266,18 @@ export function ListView({
           </span>
           <span className="sk-feed__title"><Title r={r} href={href} onOpen={onOpen} /></span>
           {leads.map(k => <span key={k} className="sk-feed__lead">{valueCell(k, r)}</span>)}
-          {(withStatus || feedBecause(r)) && (
+          {/* Статус у записи с телом остаётся в шапке: он часть утверждения о
+              записи, а не часть текста. Связи же у записи с телом уезжают во
+              вклеенный блок — там у них есть ЧИСЛО, которого в строке чипов
+              нет. У записи без тела всё как было. */}
+          {(withStatus || (!bodyNode && feedBecause(r))) && (
             <span className="sk-feed__meta">
               {withStatus && <StatusCell code={r.status} labels={labels} />}
-              {feedBecause(r)}
+              {!bodyNode && feedBecause(r)}
             </span>
           )}
+          {bodyNode}
+          {bodyNode && feedGlued(r)}
         </span>
       </li>
     );

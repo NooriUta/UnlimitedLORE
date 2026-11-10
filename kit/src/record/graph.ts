@@ -21,13 +21,59 @@ export interface EgoNode {
   y: number;
 }
 
-export interface EgoSector { type: string; start: number; end: number; count: number }
+/**
+ * Потолок однотипных соседей (S9-08). Больше — сектор сворачивается в кластер.
+ *
+ * Названо ОДНИМ местом: число живёт в модели, а не в вёрстке, иначе холст и
+ * подпись однажды разойдутся. Двенадцать — из задачи владельца.
+ */
+export const GRAPH_CLUSTER_MAX = 12;
+
+export interface EgoSector {
+  type: string;
+  start: number;
+  end: number;
+  /** Настоящее число соседей сектора — остаётся правдой и у свёрнутого. */
+  count: number;
+  /** Сектор свёрнут в кластер: на холсте у него одно место, а не count. */
+  clustered?: true;
+}
+
+/**
+ * Свёрнутый сектор: вместо N кружков — одно место с числом (S9-08).
+ *
+ * Зачем вообще: у хаба однотипных соседей бывает полторы сотни, и беда не
+ * только в числе кружков — сектор такого типа съедает почти всю окружность, а
+ * остальные связи, за которыми человек и пришёл, ужимаются в щель. Поэтому
+ * свёртка решается ДО раскладки секторов.
+ */
+export interface EgoCluster {
+  /** Ключ раскрытия — тип ребра сектора. */
+  key: string;
+  sector: string;
+  dir: 'out' | 'in';
+  /** Сколько узлов спрятано. */
+  count: number;
+  /** Их коды — по ним строится список связей. */
+  ids: string[];
+  /**
+   * Число неточное: выдача обрезана лимитом, и под кластером может быть
+   * больше. Кластер «149», под которым четыреста, хуже каши — каша видна, а
+   * неверное число выглядит знанием.
+   */
+  atLeast: boolean;
+  angle: number;
+  x: number;
+  y: number;
+}
 
 export interface EgoGraph {
   center: { id: string; record?: KitRecord };
   nodes: EgoNode[];
   links: KitEdge[];
   sectors: EgoSector[];
+  /** Свёрнутые секторы-хабы (S9-08); пусто — свёртки нет. */
+  clusters: EgoCluster[];
   /** Сколько узлов достижимо в пределах глубины (до лимита). */
   total: number;
   truncated: boolean;
@@ -46,6 +92,13 @@ export interface EgoOptions {
    * Нет — все типы.
    */
   types?: ReadonlySet<string>;
+  /**
+   * S9-08: потолок однотипных соседей; больше — сектор сворачивается.
+   * Умолчание — GRAPH_CLUSTER_MAX. Бесконечность отключает свёртку вовсе.
+   */
+  clusterMax?: number;
+  /** Типы рёбер, чьи секторы человек раскрыл: они рисуются узлами как прежде. */
+  expanded?: ReadonlySet<string>;
 }
 
 export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): EgoGraph {
@@ -91,20 +144,65 @@ export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): Ego
 
   const limit = Math.max(0, opts.limit);
   const shown = all.slice(0, limit);
+  const truncated = all.length > shown.length;
   const types = [...new Set(shown.map(n => n.sector))].sort(cmp);
+
+  // S9-08. Свёртка решается ЗДЕСЬ — до раскладки, — и это главное решение
+  // задачи: кластер, посчитанный после, оставил бы хабу его сектор, и три
+  // нужные связи остались бы в щели. Свёрнутый сектор весит в раскладке ОДНО
+  // место, а его настоящий счёт остаётся в sectors[].count.
+  //
+  // Сворачивается сектор ЦЕЛИКОМ, со всеми своими кольцами, а не только
+  // первое кольцо. Цена названа: раскрытие показывает всю ветку сектора. Зато
+  // нет оборванных узлов — спрятать соседа, оставив его соседа висеть в
+  // пустоте, читалось бы как связь, которой нет.
+  const clusterMax = opts.clusterMax ?? GRAPH_CLUSTER_MAX;
+  const expanded = opts.expanded;
+  const countOf = (type: string) => shown.filter(n => n.sector === type).length;
+  const collapsed = new Set(
+    types.filter(t => !expanded?.has(t) && countOf(t) > clusterMax),
+  );
+
   const gap = types.length > 1 ? 0.08 : 0;
   const usable = Math.PI * 2 - gap * types.length;
+  // Вес сектора в раскладке: свёрнутый занимает одно место.
+  const weightOf = (type: string) => (collapsed.has(type) ? 1 : countOf(type));
+  const weightAll = types.reduce((n, t) => n + weightOf(t), 0);
   const sectors: EgoSector[] = [];
   let at = -Math.PI / 2;
   for (const type of types) {
-    const count = shown.filter(n => n.sector === type).length;
-    const span = (usable * count) / (shown.length || 1);
-    sectors.push({ type, start: round(at), end: round(at + span), count });
+    const count = countOf(type);
+    const span = (usable * weightOf(type)) / (weightAll || 1);
+    sectors.push(collapsed.has(type)
+      ? { type, start: round(at), end: round(at + span), count, clustered: true }
+      : { type, start: round(at), end: round(at + span), count });
     at += span + gap;
+  }
+
+  const clusters: EgoCluster[] = [];
+  for (const s of sectors) {
+    if (!s.clustered) continue;
+    const inSector = shown.filter(n => n.sector === s.type);
+    const angle = round((s.start + s.end) / 2);
+    clusters.push({
+      key: s.type,
+      sector: s.type,
+      // Направление берём у первого соседа сектора: сектор — это тип ребра
+      // первого шага, и направление у него одно на весь сектор.
+      dir: inSector[0]?.dir ?? 'out',
+      count: inSector.length,
+      ids: inSector.map(n => n.id),
+      atLeast: truncated,
+      angle,
+      x: round(Math.cos(angle)),
+      y: round(Math.sin(angle)),
+    });
   }
 
   const nodes: EgoNode[] = [];
   for (const s of sectors) {
+    // Свёрнутый сектор рисуется кластером — его узлов на холсте нет.
+    if (s.clustered) continue;
     const inSector = shown.filter(n => n.sector === s.type);
     for (let d = 1; d <= opts.depth; d++) {
       const ring = inSector.filter(n => n.depth === d);
@@ -116,15 +214,16 @@ export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): Ego
     }
   }
 
-  const ids = new Set([centerId, ...shown.map(n => n.id)]);
+  const ids = new Set([centerId, ...nodes.map(n => n.id)]);
   const links = edges.filter(e => ids.has(e.from) && ids.has(e.to));
   return {
     center: { id: centerId, record: byId.get(centerId) },
     nodes,
     links,
     sectors,
+    clusters,
     total: all.length,
-    truncated: all.length > shown.length,
+    truncated,
   };
 }
 
@@ -135,7 +234,12 @@ export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): Ego
  * узлами. Порядок — по типу.
  */
 export function typesAround(centerId: string, data: KitData, depth: number): { type: string; count: number }[] {
-  const g = egoGraph(centerId, data, { depth, limit: Number.MAX_SAFE_INTEGER });
+  // clusterMax: Infinity — свёртка хабов здесь ОБЯЗАНА быть выключена.
+  // Иначе тип-хаб исчезает из перечня: его узлы свёрнуты, значит их рёбра не
+  // попадают в links, и кнопка фильтра для этого типа не рисуется вовсе —
+  // человек теряет возможность включить/выключить ровно тот тип, из-за
+  // которого свёртка и случилась. Поймано тестом S9-08 при первом прогоне.
+  const g = egoGraph(centerId, data, { depth, limit: Number.MAX_SAFE_INTEGER, clusterMax: Infinity });
   const counts = new Map<string, number>();
   for (const l of g.links) counts.set(l.type, (counts.get(l.type) ?? 0) + 1);
   return [...counts.entries()].sort((a, b) => cmp(a[0], b[0])).map(([type, count]) => ({ type, count }));

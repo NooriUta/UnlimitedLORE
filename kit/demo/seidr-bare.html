@@ -348,6 +348,22 @@
 <span class="sk-diff__kind">уже есть</span>
 <span class="sk-diff__text">строка уже есть</span>
 </li>
+<li class="sk-diff__row" data-testid="kit-diff-row-ch" data-kind="change" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">→</span>
+<span class="sk-diff__kind">изменится</span>
+<span class="sk-diff__text">значение сменится</span>
+<span class="sk-diff__change" data-testid="kit-diff-change-ch">
+<span class="sk-diff__was">
+<span class="sk-diff__cap">было</span>
+<span class="sk-diff__val">прежнее</span>
+</span>
+<span class="sk-diff__arrow" aria-hidden="true">→</span>
+<span class="sk-diff__now">
+<span class="sk-diff__cap">стало</span>
+<span class="sk-diff__val">новое</span>
+</span>
+</span>
+</li>
 <li class="sk-diff__row" data-testid="kit-diff-row-d" data-kind="add" data-check="unverified">
 <span class="sk-diff__sign" aria-hidden="true">+</span>
 <span class="sk-diff__kind">добавится</span>
@@ -365,7 +381,14 @@
 <span class="sk-diff__skip" data-testid="kit-diff-skip-e">не будет применено, пока не проверено</span>
 </li>
 </ul>
-<button type="button" class="sk-diff__apply" data-testid="kit-diff-apply">Применить 2 изменения</button>
+<div class="sk-diff__go">
+<span class="sk-diff__ask">
+<label class="sk-diff__ask-label">введите ПРИМЕНИТЬ</label>
+<input class="sk-diff__word" data-testid="kit-diff-confirm" autocomplete="off" spellcheck="false" type="text" value="">
+</span>
+<button type="button" class="sk-diff__apply" data-testid="kit-diff-apply" aria-disabled="true">Применить 3 изменения</button>
+<p class="sk-diff__blocked" role="status" data-testid="kit-diff-blocked">Чтобы применить, введите слово подтверждения в поле выше.</p>
+</div>
 </section>
 <section class="sk-batch" data-testid="kit-batch" data-outcome="partial" aria-label="Применённая пачка">
 <p class="sk-batch__summary" data-testid="kit-batch-summary">Применилось 2 из 3 — остальное не применилось.</p>

@@ -18,6 +18,7 @@ import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
 import { applySections, gluedSections, sectionGroups, type PassportOrder } from '../model/surfaces';
 import { VALUE_CHIPS_INLINE, chipLabel, isChipList, toChips } from '../core/chipValue';
+import { GluedBlock } from './GluedBlock';
 import { Segmented } from '../elements/Segmented';
 import { IconButton } from '../elements/IconButton';
 import { ICON_CANON } from '../elements/iconCanon';
@@ -606,15 +607,11 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
           раздела больше нет, и без счётчика число исчезло бы с экрана совсем.
         */}
         {glued.map(rt => (
-          <section key={rt.id} className="sk-rec-glue" data-glued={rt.id}>
-            <h3 className="sk-rec-glue__head">
-              <span>{rt.label}</span>
-              <TabCount count={tabCount(rt.id, rt.defs)} lang={lang} />
-            </h3>
+          <GluedBlock key={rt.id} id={rt.id} label={rt.label} count={tabCount(rt.id, rt.defs)} lang={lang}>
             <BlockBoundary block={`rel:${rt.id}`} label={rt.label} lang={lang} resetKey={reset}>
               <RecordRelations record={record} ctx={ctx} defs={rt.defs} lang={lang} />
             </BlockBoundary>
-          </section>
+          </GluedBlock>
         ))}
       </div>
     );
