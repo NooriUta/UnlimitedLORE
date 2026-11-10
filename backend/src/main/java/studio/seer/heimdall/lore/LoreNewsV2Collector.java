@@ -101,12 +101,35 @@ final class LoreNewsV2Collector {
         };
     }
 
+    /** Момент чтения текущего сбора ({@code now} из {@link #collect}) — к нему относится провал источника. */
+    private Instant readAt;
+
+    private void fail(String source, Exception e, boolean critical) {
+        errors.add(new SourceError(source, String.valueOf(e.getMessage()), critical, forbidden(e), readAt));
+    }
+
+    /**
+     * K2-FEED-VIEW §6: отказ ПО ПРАВАМ — по всей цепочке причин: наш
+     * {@link LoreExceptions.Forbidden}, {@link SecurityException} или ответ 403.
+     * 401 сюда не идёт: «кред не принят» — это «не смогли», а не «не дали».
+     */
+    static boolean forbidden(Throwable e) {
+        Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Throwable t = e; t != null && seen.add(t); t = t.getCause()) {
+            if (t instanceof LoreExceptions.Forbidden || t instanceof SecurityException) return true;
+            if (t instanceof LoreExceptions.LoreException le && le.status == 403) return true;
+            if (t instanceof jakarta.ws.rs.WebApplicationException w && w.getResponse() != null
+                && w.getResponse().getStatus() == 403) return true;
+        }
+        return false;
+    }
+
     private List<Map<String, Object>> read(String source, String sql, boolean critical) {
         try {
             List<Map<String, Object>> rows = query.apply(sql, Map.of());
             return rows == null ? List.of() : rows;
         } catch (Exception e) {
-            errors.add(new SourceError(source, String.valueOf(e.getMessage()), critical));
+            fail(source, e, critical);
             return List.of();
         }
     }
@@ -114,12 +137,12 @@ final class LoreNewsV2Collector {
     private List<Map<String, Object>> slice(String sliceId, boolean critical) {
         LoreSlices.Composed c;
         try { c = LoreSlices.compose(sliceId, Map.of()); }
-        catch (Exception e) { errors.add(new SourceError(sliceId, String.valueOf(e.getMessage()), critical)); return List.of(); }
+        catch (Exception e) { fail(sliceId, e, critical); return List.of(); }
         try {
             List<Map<String, Object>> rows = query.apply(c.sql(), c.params());
             return rows == null ? List.of() : rows;
         } catch (Exception e) {
-            errors.add(new SourceError(sliceId, String.valueOf(e.getMessage()), critical));
+            fail(sliceId, e, critical);
             return List.of();
         }
     }
@@ -137,6 +160,7 @@ final class LoreNewsV2Collector {
     }
 
     NewsV2.Input collect(Instant t0, Instant t1, Instant now, ZoneId zone, Set<String> scope) {
+        readAt = now;
         Instant from = windowStart(t0, t1);
         LocalDate fromDay = from.atZone(zone).toLocalDate();
         LocalDate toDay = t1.minusMillis(1).atZone(zone).toLocalDate();
