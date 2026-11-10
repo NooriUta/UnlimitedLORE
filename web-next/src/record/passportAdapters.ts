@@ -23,7 +23,10 @@ import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type Sp
  * этом файле — наследство эпохи до фасада (S4-33), и новые типы его не
  * повторяют.
  */
-export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec', 'decision', 'question', 'milestone', 'release'] as const;
+export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec', 'decision', 'question', 'milestone', 'release',
+  // Появились 10.11 вместе с серверным PR #1090, все три — только на чтение
+  // (perms.can_edit=false, status_next=[], version=null приходят с фасада).
+  'component', 'tech', 'feature'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
 
 type Slice = <T>(slice: string, params?: Record<string, string>) => Promise<SliceBody<T>>;
@@ -65,6 +68,13 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   // Ключ релиза — `release_uid` («проект#тег»): `release_id` повторяется у
   // разных проектов, и по нему стрелки открывали бы не тот релиз.
   if (type === 'release') return (await slice<Row>('releases', { fields: 'release_uid,git_tag', limit: '1000' })).rows.map(r => ({ id: str(r.release_uid), title: str(r.git_tag) || str(r.release_uid) }));
+  // Компонент: ключ — component_id, название живёт в full_name.
+  if (type === 'component') return (await slice<Row>('components', { fields: 'component_id,full_name', limit: '1000' })).rows.map(r => ({ id: str(r.component_id), title: str(r.full_name) || str(r.component_id) }));
+  // Технология — это спека SPEC-TECH-*, поэтому ключ spec_id, а имя tech_name.
+  if (type === 'tech') return (await slice<Row>('tech_registry', { fields: 'spec_id,tech_name', limit: '1000' })).rows.map(r => ({ id: str(r.spec_id), title: str(r.tech_name) || str(r.spec_id) }));
+  // Фича/US: срез use_cases отдаёт ВСЕ уровни шкалы целей, поэтому стрелки
+  // ходят по тем же записям, что видны в разделе, а не по одним верхним.
+  if (type === 'feature') return (await slice<Row>('use_cases', { fields: 'uc_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.uc_id), title: str(r.title) || str(r.uc_id) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));
 }
 

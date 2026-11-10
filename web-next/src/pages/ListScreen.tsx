@@ -39,11 +39,15 @@ const ListPassport = lazy(() => import('../record/ListPassport'));
  * типа ещё нет», и оно говорится словами (ниже, `NoPassport`). Карта растёт
  * вместе с фасадом: появился тип на сервере — появилась строка здесь.
  */
-const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
+export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task', specs: 'spec',
   // Появились 09.11 вместе с типами фасада (#988, #991). Четыре — только на
   // чтение; «только чтение» приходит в `perms`, клиент это не предполагает.
   decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release',
+  // Появились 10.11 (серверный PR #1090), тоже только на чтение. Технология
+  // открывается по spec_id: путь /lore/record/tech/<SPEC-TECH-…>, обычная
+  // спека по этому пути даёт 404 — то есть тип выбирает раздел, а не ключ.
+  components: 'component', tech: 'tech', features: 'feature',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 type OpenRecord = { id: string | null; place: RecordPlacement };
