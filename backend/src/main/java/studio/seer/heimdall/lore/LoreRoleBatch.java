@@ -89,6 +89,28 @@ final class LoreRoleBatch {
         return null;
     }
 
+    /** S7B-13: строка — идентификатор пачки (форма {@code rb-<13 цифр>-<8 hex>}). */
+    static boolean isBatchId(String s) {
+        return s != null && BATCH_ID.matcher(s).matches();
+    }
+
+    /**
+     * S7B-13: обратный пакет по событиям AL-102 пачки — ответ исходного вызова для
+     * отката уже не нужен. role_before == null → роли до пачки не было → снять;
+     * иначе вернуть role_before. Порядок — порядок событий.
+     */
+    static List<Map<String, Object>> undoFromEvents(List<Map<String, Object>> events) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> e : events) {
+            Object project = e.get("project");
+            Object before = e.get("role_before");
+            out.add(before == null
+                ? Map.of("project", project, "action", "remove")
+                : Map.of("project", project, "role", before));
+        }
+        return out;
+    }
+
     /** Обратный пакет: вернуть «было» для всего, что пакет меняет. */
     static List<Map<String, Object>> undo(List<Map<String, Object>> plan) {
         List<Map<String, Object>> out = new ArrayList<>();

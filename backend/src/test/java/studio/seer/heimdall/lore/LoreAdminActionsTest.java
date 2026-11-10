@@ -103,6 +103,33 @@ class LoreAdminActionsTest {
         assertEquals(2L, full.get("total"));
     }
 
+    /**
+     * S7B-13: запись журнала о пачке массовых правок несёт batch_id — по нему пачку
+     * раскрывают (GET /lore/admin/actions/batch/{id}) и откатывают. У прочих записей
+     * поле есть и равно null: «не пачка», а не «забыли отдать».
+     */
+    @Test
+    void journalRowOfBatchCarriesItsBatchIdOthersSayNull() {
+        String id = "rb-0000000001000-0000abcd";
+        List<Map<String, Object>> out = LoreAdminActions.withBatch(List.of(
+            Map.of("entity_id", id, "family", "user"),
+            Map.of("entity_id", "SPRINT_X/CO-1", "family", "task")));
+        assertEquals(id, out.get(0).get("batch_id"), out.toString());
+        assertTrue(out.get(1).containsKey("batch_id") && out.get(1).get("batch_id") == null, out.toString());
+        assertEquals("user", out.get(0).get("family"), "остальные поля строки на месте");
+    }
+
+    @Test
+    void filtersByBatchIdAndRefusesWhatIsNotOne() {
+        String id = "rb-0000000001000-0000abcd";
+        LoreAdminActions.Query q = LoreAdminActions.build(null, null, null, id, null, null, 10);
+        for (String s : new String[] {q.sql(), q.countSql()})
+            assertTrue(s.contains("object_id = :batch"), s);
+        assertEquals(Map.of("batch", id), q.params());
+        assertThrows(IllegalArgumentException.class,
+            () -> LoreAdminActions.build(null, null, null, "rb-garbage", null, null, 10));
+    }
+
     @Test
     void totalThatCouldNotBeCountedIsSaidSoNotZero() {
         Map<String, Object> b = LoreAdminActions.body(rows(2), null, 3);

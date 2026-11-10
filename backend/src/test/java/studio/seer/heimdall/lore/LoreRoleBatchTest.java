@@ -20,6 +20,33 @@ class LoreRoleBatchTest {
         return role == null ? Map.of("project", project, "action", "remove") : Map.of("project", project, "role", role);
     }
 
+    /** S7B-13: id пачки распознаётся по форме, чужое — нет. */
+    @Test
+    void batchIdIsRecognisedByShape() {
+        assertTrue(LoreRoleBatch.isBatchId(LoreRoleBatch.batchId(java.time.Instant.now())));
+        assertTrue(!LoreRoleBatch.isBatchId("rb-garbage"));
+        assertTrue(!LoreRoleBatch.isBatchId("SPRINT_X/CO-1"));
+        assertTrue(!LoreRoleBatch.isBatchId(null));
+    }
+
+    /**
+     * S7B-13: пачку откатывают и после того, как ответ на неё потерян (журнал открыт
+     * завтра): обратный пакет собирается из событий AL-102 пачки по role_before.
+     */
+    @Test
+    void undoOfBatchIsRebuiltFromItsEvents() {
+        java.util.HashMap<String, Object> grant = new java.util.HashMap<>();
+        grant.put("project", "a/two"); grant.put("action", "grant"); grant.put("role", "tester"); grant.put("role_before", null);
+        List<Map<String, Object>> undo = LoreRoleBatch.undoFromEvents(List.of(
+            Map.of("project", "a/one", "action", "update", "role", "developer", "role_before", "reader"),
+            grant,
+            Map.of("project", "a/three", "action", "remove", "role_before", "owner")));
+        assertEquals(List.of(
+            Map.of("project", "a/one", "role", "reader"),
+            Map.of("project", "a/two", "action", "remove"),
+            Map.of("project", "a/three", "role", "owner")), undo);
+    }
+
     @Test
     void planShowsBeforeAndAfterForEveryKind() {
         Map<String, String> cur = Map.of("a/one", "reader", "a/two", "owner");

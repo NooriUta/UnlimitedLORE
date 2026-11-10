@@ -49,6 +49,11 @@ public class LoreAdminActions extends LoreResourceBase {
     record Query(String sql, String countSql, Map<String, Object> params) {}
 
     static Query build(String caller, String axis, String family, Long from, Long to, int limit) {
+        return build(caller, axis, family, null, from, to, limit);
+    }
+
+    /** S7B-13: {@code batchId} — только записи этой пачки массовых правок. */
+    static Query build(String caller, String axis, String family, String batchId, Long from, Long to, int limit) {
         if (family != null && !LoreSlices.ADMIN_FAMILIES.contains(family))
             throw new IllegalArgumentException("unknown family '" + family + "' — admin journal families: "
                 + new java.util.TreeSet<>(LoreSlices.ADMIN_FAMILIES));
@@ -57,6 +62,8 @@ public class LoreAdminActions extends LoreResourceBase {
                 + new java.util.TreeSet<>(AXES));
         if (from != null && to != null && from > to)
             throw new IllegalArgumentException("from is later than to");
+        if (batchId != null && !LoreRoleBatch.isBatchId(batchId))
+            throw new IllegalArgumentException("batch_id '" + batchId + "' is not a batch id (rb-<millis>-<hex8> expected)");
         StringBuilder where = new StringBuilder(" FROM MetricSnapshot WHERE metric = 'lore.action' AND object_type IN [")
             .append(String.join(", ", LoreSlices.ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()))
             .append("]");
@@ -64,11 +71,29 @@ public class LoreAdminActions extends LoreResourceBase {
         if (caller != null) { where.append(" AND source = :caller"); p.put("caller", caller); }
         if (axis != null)   { where.append(" AND segment = :axis");  p.put("axis", axis); }
         if (family != null) { where.append(" AND object_type = :family"); p.put("family", family); }
+        if (batchId != null) { where.append(" AND object_id = :batch"); p.put("batch", batchId); }
         if (from != null)   { where.append(" AND ts >= :from"); p.put("from", from); }
         if (to != null)     { where.append(" AND ts <= :to");   p.put("to", to); }
         String sql = "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, "
             + "segment AS axis, value AS status" + where + " ORDER BY ts DESC LIMIT " + (limit + 1);
         return new Query(sql, "SELECT count(*) AS n" + where, p);
+    }
+
+    /**
+     * S7B-13: каждая строка журнала получает {@code batch_id} — id пачки или null.
+     * Запись о пачке {@code POST /lore/user/role/batch} несёт id пачки сущностью:
+     * фильтр журнала берёт первое *_id поле ответа, а batch_id в ответе пачки стоит
+     * первым из них. Строки копируются — ряды из базы и из тестов бывают неизменяемыми.
+     */
+    static List<Map<String, Object>> withBatch(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> m = new LinkedHashMap<>(r);
+            Object e = r.get("entity_id");
+            m.put("batch_id", e instanceof String s && LoreRoleBatch.isBatchId(s) ? s : null);
+            out.add(m);
+        }
+        return out;
     }
 
     /** epoch millis | ISO-момент | дата (UTC); {@code to}=дата — конец дня включительно. Пусто → null. */
@@ -119,6 +144,7 @@ public class LoreAdminActions extends LoreResourceBase {
     public Response actions(@QueryParam("caller") String caller,
                             @QueryParam("axis") String axis,
                             @QueryParam("family") String family,
+                            @QueryParam("batch_id") String batchId,
                             @QueryParam("from") String from,
                             @QueryParam("to") String to,
                             @QueryParam("limit") Integer limit,
@@ -129,7 +155,7 @@ public class LoreAdminActions extends LoreResourceBase {
         int lim;
         try {
             lim = limitOf(limit);
-            q = build(blankToNull(caller), blankToNull(axis), blankToNull(family),
+            q = build(blankToNull(caller), blankToNull(axis), blankToNull(family), blankToNull(batchId),
                 parseTime("from", from, false), parseTime("to", to, true), lim);
         } catch (IllegalArgumentException e) {
             return badParams(e.getMessage());
@@ -149,10 +175,68 @@ public class LoreAdminActions extends LoreResourceBase {
             // Строки есть, счёта нет — отдаём строки и total_state=unknown, а не 502.
             LOG.warnf("[ADMIN ACTIONS] count: %s", e.getMessage());
         }
-        Map<String, Object> b = body(rows, total, lim);
+        Map<String, Object> b = body(withBatch(rows), total, lim);
         Map<String, Object> filters = new LinkedHashMap<>(q.params());
         b.put("filters", filters);
         return noStore(Response.ok(b));
+    }
+
+    /**
+     * S7B-13: раскрыть пачку массовых правок до её назначений и собрать откат.
+     * Элементы — события AL-102 ({@code KnowProjectRoleEvent}) с этим batch_id;
+     * откат — {@code rollback.body} как есть в {@code POST /lore/user/role/batch}
+     * (окно {@link LoreRoleBatch#UNDO_WINDOW}; после него сервер откажет по имени,
+     * {@code undo_open=false} говорит об этом заранее).
+     */
+    @GET
+    @Path("batch/{batch_id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response batch(@jakarta.ws.rs.PathParam("batch_id") String batchId,
+                          @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!LoreRoleBatch.isBatchId(batchId))
+            return badParams("batch_id '" + batchId + "' is not a batch id (rb-<millis>-<hex8> expected)");
+        List<Map<String, Object>> events;
+        try {
+            events = ingestService.queryPublic(
+                "SELECT kc_sub, project, action, role, role_before, at, by_role FROM KnowProjectRoleEvent "
+                + "WHERE batch_id = :b ORDER BY at", Map.of("b", batchId));
+        } catch (Exception e) {
+            LOG.warnf("[ADMIN ACTIONS] batch %s: %s", batchId, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+        if (events.isEmpty())
+            return targetNotFound("пачка " + batchId + ": событий назначений с этим batch_id нет "
+                + "(пачка без изменений, dry_run или событие не записалось)");
+        Map<String, Object> b = batchBody(batchId, events, Instant.now());
+        return noStore(Response.ok(b));
+    }
+
+    /** S7B-13: тело ответа раскрытой пачки — чистая часть. */
+    static Map<String, Object> batchBody(String batchId, List<Map<String, Object>> events, Instant now) {
+        Object kcSub = events.get(0).get("kc_sub");
+        List<Map<String, Object>> undo = LoreRoleBatch.undoFromEvents(events);
+        Instant until = LoreRoleBatch.undoUntil(batchId);
+        Map<String, Object> rbBody = new LinkedHashMap<>();
+        rbBody.put("kc_sub", kcSub);
+        rbBody.put("changes", undo);
+        rbBody.put("undo_of", batchId);
+        Map<String, Object> rollback = new LinkedHashMap<>();
+        rollback.put("method", "POST");
+        rollback.put("path", "/lore/user/role/batch");
+        rollback.put("body", rbBody);
+        Map<String, Object> b = new LinkedHashMap<>();
+        b.put("batch_id", batchId);
+        b.put("kc_sub", kcSub);
+        b.put("count", events.size());
+        b.put("items", events);
+        b.put("undo", undo);
+        b.put("undo_until", String.valueOf(until));
+        b.put("undo_open", until != null && !now.isAfter(until));
+        b.put("rollback", rollback);
+        return b;
     }
 
     private static String blankToNull(String s) {

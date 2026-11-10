@@ -193,6 +193,16 @@ public class LoreUserResource extends LoreResourceBase {
                 out.put("applied", 0);
                 return noStore(Response.ok(out));
             }
+            // Kit 2 (K2-BATCH-UNDO) + S7B-13: id пачки — до применения: каждое событие AL-102 пачки
+            // несёт его, и пачку раскрывают из журнала (GET /lore/admin/actions/batch/{id}).
+            // В ответе batch_id — ПЕРВОЕ *_id поле: фильтр журнала AO-01 пишет его сущностью записи.
+            String batchId = LoreRoleBatch.batchId(now);
+            Map<String, Object> head = new java.util.LinkedHashMap<>();
+            head.put("ok", true);
+            head.put("batch_id", batchId);
+            out.remove("ok");
+            head.putAll(out);
+            out = head;
             List<Map<String, Object>> items = new java.util.ArrayList<>();
             int applied = 0, failed = 0;
             for (Map<String, Object> p : plan) {
@@ -209,7 +219,7 @@ public class LoreUserResource extends LoreResourceBase {
                 boolean remove = "remove".equals(p.get("kind"));
                 Response r = setUserRole(new UserRoleRequest(req.kc_sub(), req.display_name(),
                     String.valueOf(p.get("project")), remove ? null : String.valueOf(p.get("after")),
-                    remove ? "remove" : null), role);
+                    remove ? "remove" : null), role, batchId);
                 Map<String, Object> item = new java.util.LinkedHashMap<>();
                 item.put("project", p.get("project"));
                 item.put("kind", p.get("kind"));
@@ -227,8 +237,6 @@ public class LoreUserResource extends LoreResourceBase {
             out.put("items", items);
             // Kit 2 (K2-BATCH-UNDO): идентификатор пачки и окно отмены. Отмена — этот же вызов
             // с changes = undo и undo_of = batch_id. Журнал AO-01 — одна запись на вызов = на пачку.
-            String batchId = LoreRoleBatch.batchId(now);
-            out.put("batch_id", batchId);
             out.put("undo_until", String.valueOf(LoreRoleBatch.undoUntil(batchId)));
             if (req.undo_of() != null) out.put("undo_of", req.undo_of());
             return noStore(Response.ok(out));
@@ -243,6 +251,11 @@ public class LoreUserResource extends LoreResourceBase {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response setUserRole(UserRoleRequest req, @HeaderParam("X-Seer-Role") String role) {
+        return setUserRole(req, role, null);
+    }
+
+    /** S7B-13: {@code batchId} — правка идёт в составе пачки; событие AL-102 несёт её id. */
+    Response setUserRole(UserRoleRequest req, String role, String batchId) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.kc_sub() == null || req.kc_sub().isBlank())
@@ -285,7 +298,8 @@ public class LoreUserResource extends LoreResourceBase {
                     "DELETE FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj", pair))
                     .await().indefinitely();
                 boolean gone = !edgeExists("HAS_PROJECT_ROLE", "kc_sub", req.kc_sub(), "slug", req.project());
-                if (gone) logRoleEvent(req.kc_sub(), req.project(), null, "remove", role); // AL-102
+                if (gone) logRoleEvent(req.kc_sub(), req.project(), null, "remove", role, // AL-102
+                    batchId, roleOf(existing));
                 Map<String, Object> out = new java.util.LinkedHashMap<>();
                 out.put("ok", true);
                 out.put("removed", gone);
@@ -316,7 +330,8 @@ public class LoreUserResource extends LoreResourceBase {
                     "UPDATE HAS_PROJECT_ROLE SET role=:r WHERE @out.kc_sub=:sub AND @in.slug=:proj",
                     Map.of("r", req.role(), "sub", req.kc_sub(), "proj", req.project())))
                     .await().indefinitely();
-                logRoleEvent(req.kc_sub(), req.project(), req.role(), "update", role); // AL-102
+                logRoleEvent(req.kc_sub(), req.project(), req.role(), "update", role, // AL-102
+                    batchId, roleOf(existing));
                 out.put("outcome", LoreOutcome.UPDATED);
                 out.put("previous_role", existing.get(0).get("role"));
             } else {
@@ -330,7 +345,7 @@ public class LoreUserResource extends LoreResourceBase {
                     out.put("reason", "ребро HAS_PROJECT_ROLE не создано: пользователь или проект не найден");
                     return noStore(Response.ok(out));
                 }
-                logRoleEvent(req.kc_sub(), req.project(), req.role(), "grant", role); // AL-102
+                logRoleEvent(req.kc_sub(), req.project(), req.role(), "grant", role, batchId, null); // AL-102
                 out.put("outcome", LoreOutcome.CREATED);
             }
             return noStore(Response.ok(out));
@@ -350,7 +365,14 @@ public class LoreUserResource extends LoreResourceBase {
      * недоступна (аутентификация на ролевом заголовке), появится с sub в токене
      * (AL-105).
      */
-    private void logRoleEvent(String kcSub, String project, String roleGranted, String action, String byRole) {
+    private static String roleOf(List<Map<String, Object>> existing) {
+        Object r = existing.isEmpty() ? null : existing.get(0).get("role");
+        return r == null ? null : String.valueOf(r);
+    }
+
+    /** S7B-13: batchId — пачка, в составе которой правка; roleBefore — роль до правки (для отката из журнала). */
+    private void logRoleEvent(String kcSub, String project, String roleGranted, String action, String byRole,
+                              String batchId, String roleBefore) {
         try {
             Map<String, Object> p = new HashMap<>();
             p.put("eid", UUID.randomUUID().toString());
@@ -363,6 +385,8 @@ public class LoreUserResource extends LoreResourceBase {
                 + "action=:act, at=:at");
             if (roleGranted != null) { sql.append(", role=:r");     p.put("r", roleGranted); }
             if (byRole != null)      { sql.append(", by_role=:br"); p.put("br", byRole); }
+            if (batchId != null)     { sql.append(", batch_id=:bid"); p.put("bid", batchId); }
+            if (roleBefore != null)  { sql.append(", role_before=:rb"); p.put("rb", roleBefore); }
             writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sql", sql.toString(), p)).await().indefinitely();
         } catch (Exception e) {
