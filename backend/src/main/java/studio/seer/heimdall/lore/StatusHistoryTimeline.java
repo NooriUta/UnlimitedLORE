@@ -62,6 +62,12 @@ final class StatusHistoryTimeline implements KnowledgeStatusHistory, AuthorResol
         return t;
     }
 
+    /** S7A-09: история только типов {@code types} и только версий окна [from, to). ЗАГЛУШКА до кода. */
+    static StatusHistoryTimeline load(BiFunction<String, Map<String, Object>, List<Map<String, Object>>> query,
+                                      Set<String> types, Instant from, Instant to) {
+        return load(query);
+    }
+
     /** Добавить строки типа (видимость пакетная — для юнит-теста без БД). */
     void add(String type, List<Map<String, Object>> rows) {
         Map<String, List<Version>> m = byType.computeIfAbsent(type, x -> new HashMap<>());

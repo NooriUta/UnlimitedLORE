@@ -53,6 +53,13 @@ public class LoreNewsV2Resource extends LoreResourceBase {
     private static final Logger LOG = Logger.getLogger(LoreNewsV2Resource.class);
     static final ZoneId DEFAULT_ZONE = ZoneId.of("Europe/Moscow");
 
+    /**
+     * S7A-09: типы, у которых в ленте бывают события (сборщик + движок). Историю статуса
+     * и авторов читаем только для них: у документов, находок, вех, фаз, ранбуков и
+     * словаря событий ленты нет — их цепочки читались зря.
+     */
+    static final Set<String> FEED_TYPES = Set.of("task", "sprint", "release", "adr", "decision", "spec", "question");
+
     /** Проектный скоуп — тем же кодом, что у v1 (allowedProjectsOrNull), без копии правил. */
     @Inject
     AidaLoreResource lore;

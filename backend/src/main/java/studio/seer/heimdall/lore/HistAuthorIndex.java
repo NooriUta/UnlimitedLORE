@@ -81,6 +81,12 @@ final class HistAuthorIndex {
         return of(rows, errors);
     }
 
+    /** S7A-09: только цепочки типов {@code types} и только версии окна [from, to] ± допуск. ЗАГЛУШКА до кода. */
+    static HistAuthorIndex load(BiFunction<String, Map<String, Object>, List<Map<String, Object>>> query,
+                                java.util.Set<String> types, Instant from, Instant to) {
+        return load(query);
+    }
+
     /** Индекс из готовых строк (тип сущности → строки {@link #sql}) — для тестов без БД. */
     static HistAuthorIndex of(Map<String, List<Map<String, Object>>> rowsByType, List<String> errors) {
         Map<String, Map<String, List<Version>>> idx = new HashMap<>();

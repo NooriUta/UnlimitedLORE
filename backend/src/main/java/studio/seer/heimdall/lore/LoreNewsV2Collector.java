@@ -102,6 +102,11 @@ final class LoreNewsV2Collector {
         }
     }
 
+    /** S7A-09: начало окна чтения — начало предыдущего периода (§7.5). ЗАГЛУШКА до кода. */
+    static Instant windowStart(Instant t0, Instant t1) {
+        return t0;
+    }
+
     NewsV2.Input collect(Instant t0, Instant t1, Instant now, ZoneId zone, Set<String> scope) {
         java.time.Duration len = java.time.Duration.between(t0, t1);
         java.time.Duration shift = len.compareTo(java.time.Duration.ofDays(1)) <= 0 ? java.time.Duration.ofDays(7) : len;
