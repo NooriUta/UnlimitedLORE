@@ -794,5 +794,13 @@
   "kit.list.feed.body.moreUnknown": "ещё",
   "kit.list.feed.body.moreUnknownWhy": "сколько осталось — источник не сказал",
   "kit.list.feed.body.failed": "Не смогли дочитать: {reason}",
-  "kit.list.feed.body.related": "Относится"
+  "kit.list.feed.body.related": "Относится",
+  "kit.record.graph.view": "Вид графа",
+  "kit.record.graph.viewGraph": "Холст",
+  "kit.record.graph.viewGraphHint": "связи рисунком; на узком экране читается хуже",
+  "kit.record.graph.viewLinks": "Список",
+  "kit.record.graph.viewLinksHint": "связи списком по типу — читается на телефоне",
+  "kit.record.graph.cluster": "{label}: {n}",
+  "kit.record.graph.clusterAtLeast": "{label}: не меньше {n}",
+  "kit.record.graph.clusterOpen": "раскрыть"
 }

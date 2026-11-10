@@ -19,7 +19,7 @@ const q = (s: string) => new URLSearchParams(s);
 
 describe('S5-10 · parseGraphState', () => {
   it('без параметров — глубина из конфига, ничего не выключено, структурный слой скрыт', () => {
-    expect(parseGraphState(q(''), cfg)).toEqual({ depth: 2, off: [], structural: false });
+    expect(parseGraphState(q(''), cfg)).toEqual({ depth: 2, off: [], structural: false, open: [], view: null });
   });
 
   it('конфига graph нет — глубина 1', () => {
@@ -43,13 +43,13 @@ describe('S5-10 · parseGraphState', () => {
   });
 
   it('туда-обратно через URL без потерь; значения по умолчанию снимают параметр', () => {
-    const s = { depth: 3 as const, off: ['REFERENCES'], structural: true };
+    const s = { depth: 3 as const, off: ['REFERENCES'], structural: true, open: [] as string[], view: null };
     const p = graphStateParams(s, cfg);
-    expect(p).toEqual({ [GRAPH_PARAMS.depth]: '3', [GRAPH_PARAMS.off]: 'REFERENCES', [GRAPH_PARAMS.layer]: 'struct' });
+    expect(p).toEqual({ [GRAPH_PARAMS.depth]: '3', [GRAPH_PARAMS.off]: 'REFERENCES', [GRAPH_PARAMS.layer]: 'struct', [GRAPH_PARAMS.open]: null, [GRAPH_PARAMS.view]: null });
     const back = new URLSearchParams(Object.entries(p).filter(([, v]) => v != null) as [string, string][]);
     expect(parseGraphState(back, cfg)).toEqual(s);
-    expect(graphStateParams({ depth: 2, off: [], structural: false }, cfg))
-      .toEqual({ [GRAPH_PARAMS.depth]: null, [GRAPH_PARAMS.off]: null, [GRAPH_PARAMS.layer]: null });
+    expect(graphStateParams({ depth: 2, off: [], structural: false, open: [], view: null }, cfg))
+      .toEqual({ [GRAPH_PARAMS.depth]: null, [GRAPH_PARAMS.off]: null, [GRAPH_PARAMS.layer]: null, [GRAPH_PARAMS.open]: null, [GRAPH_PARAMS.view]: null });
   });
 });
 
@@ -62,8 +62,8 @@ describe('S5-10 · слой и фильтр типов', () => {
 
   it('разрешённые типы: без выключенных и без структурных, пока слой скрыт', () => {
     const all = ['DECIDED_IN', 'PART_OF', 'REFERENCES'];
-    expect([...allowedEdgeTypes(all, cfg, { depth: 1, off: [], structural: false })].sort()).toEqual(['DECIDED_IN', 'REFERENCES']);
-    expect([...allowedEdgeTypes(all, cfg, { depth: 1, off: ['REFERENCES'], structural: true })].sort()).toEqual(['DECIDED_IN', 'PART_OF']);
+    expect([...allowedEdgeTypes(all, cfg, { depth: 1, off: [], structural: false, open: [], view: null })].sort()).toEqual(['DECIDED_IN', 'REFERENCES']);
+    expect([...allowedEdgeTypes(all, cfg, { depth: 1, off: ['REFERENCES'], structural: true, open: [], view: null })].sort()).toEqual(['DECIDED_IN', 'PART_OF']);
   });
 
   it('подпись ребра — из конфига; неизвестный тип — его код, а не пусто', () => {

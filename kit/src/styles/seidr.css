@@ -3706,6 +3706,39 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-graph__node:focus-visible .sk-rec-graph__hit { stroke: var(--acc); stroke-width: 2; }
 .sk-rec-graph__label { fill: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); pointer-events: none; }
 .sk-rec-graph__legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+/* Хабы в графе (SPRINT_UXR_S9_SCALE_OPT/S9-08): сотня однотипных соседей —
+   одно место с числом, и сектор хаба больше не съедает окружность. */
+.sk-rec-graph__view { display: flex; gap: 4px; align-items: center; }
+.sk-rec-graph__cluster { }
+.sk-rec-graph__cbtn {
+  width: 100%;
+  font-size: var(--fs-2xs);
+  padding: 2px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-color: var(--node-c, var(--bd));
+}
+/* «Не меньше N» — число неточное, и это видно пунктиром рамки, а не только
+   текстом: точная и приблизительная подпись не должны выглядеть одинаково. */
+.sk-rec-graph__cluster[data-at-least='true'] .sk-rec-graph__cbtn { border-style: dashed; }
+/* Список связей — вид для телефона: читается без раскладки. */
+.sk-rec-graph__links { display: flex; flex-direction: column; gap: 12px; }
+.sk-rec-graph__lgroup[data-at-least='true'] .sk-rec-graph__lhead { border-left: 2px dashed var(--bd); padding-left: 6px; }
+.sk-rec-graph__lhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--t2);
+}
+.sk-rec-graph__litems { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sk-rec-graph__lref { font-size: var(--fs-sm); color: var(--t1); min-height: var(--tap); display: flex; align-items: center; }
+.sk-rec-graph__lref[data-missing='true'] { color: var(--t3); font-family: var(--mono); }
 .sk-rec-graph__legend li { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-sm); }
 /* S5-10: настройки графа — глубина, слой структурных связей, фильтр типов.
    Кнопки — pill-фильтры kit (≥ --tap на касании); подпись ребра — текстом
