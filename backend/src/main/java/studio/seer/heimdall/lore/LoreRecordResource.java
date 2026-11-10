@@ -127,27 +127,10 @@ public class LoreRecordResource extends LoreResourceBase {
                 type + " '" + id + "' не найден" + (scope != null ? " (или вне проектного скоупа)" : ""))));
         Map<String, Object> row = main.rows().get(0);
 
-        Map<String, Object> values = switch (type) {
-            case "sprint" -> LoreRecordValues.sprint(row);
-            case "task" -> LoreRecordValues.task(row);
-            case "adr" -> LoreRecordValues.adr(row);
-            case "decision" -> LoreRecordValues.decision(row);
-            case "question" -> LoreRecordValues.question(row);
-            case "milestone" -> LoreRecordValues.milestone(row);
-            case "release" -> LoreRecordValues.release(row);
-            case "component" -> LoreRecordValues.component(row);
-            case "tech" -> LoreRecordValues.tech(row);
-            case "feature" -> LoreRecordValues.feature(row);
-            default -> LoreRecordValues.spec(row);
-        };
+        Map<String, Object> values = LoreRecordValues.values(type, row);
         // Итоги — отдельным блоком computed, не в values (S7A-12 09.11).
         Map<String, Object> computed = new LinkedHashMap<>(LoreRecordValues.computed(type, row));
-        String status = switch (type) {
-            case "sprint", "task" -> LoreRecordValues.planToken(LoreRecordValues.str(row.get("status_raw")));
-            case "decision" -> LoreRecordValues.docToken(row.get("status_raw"));
-            default -> LoreRecordValues.docToken(row.get("status"));
-        };
-        values.put("status", status);
+        String status = (String) values.get("status");
 
         // S4-29 (50а/51а/55а): проекты и компоненты — чипами у всех типов, с наследованием.
         List<Map<String, Object>> chipState = new ArrayList<>();
@@ -171,7 +154,7 @@ public class LoreRecordResource extends LoreResourceBase {
         List<Map<String, Object>> taskItems = new ArrayList<>();
         Read tasksRead = partReads.get("tasks");
         if (tasksRead != null && tasksRead.ok())
-            for (Map<String, Object> r : tasksRead.rows()) taskItems.add(LoreRecordValues.taskItem(r));
+            for (Map<String, Object> r : tasksRead.rows()) taskItems.add(LoreRecordValues.partItem("task", r));
         for (LoreRecordRegistry.Part p : def.parts()) {
             Read r = partReads.get(p.key());
             Map<String, Object> part = LoreRecordRegistry.partJson(p);
@@ -181,12 +164,9 @@ public class LoreRecordResource extends LoreResourceBase {
             List<Map<String, Object>> items = new ArrayList<>();
             if (r.ok()) {
                 if ("tasks".equals(p.key())) items = taskItems;
-                else for (Map<String, Object> row2 : r.rows()) items.add(switch (p.type()) {
-                    case "phase" -> LoreRecordValues.phaseItem(row2, taskItems);
-                    case "question" -> LoreRecordValues.questionItem(row2);
-                    case "decision" -> LoreRecordValues.decisionItem(row2);
-                    default -> LoreRecordValues.taskItem(row2);
-                });
+                else for (Map<String, Object> row2 : r.rows()) items.add("phase".equals(p.type())
+                    ? LoreRecordValues.phaseItem(row2, taskItems)
+                    : LoreRecordValues.partItem(p.type(), row2));
             }
             part.put("count", r.ok() ? items.size() : null);
             part.put("items", items);
@@ -222,49 +202,12 @@ public class LoreRecordResource extends LoreResourceBase {
                         computed.put(k, totals.get(k));
                 }
             }
-            case "task" -> {
-                Read adrs = read("adrs_of_task", Map.of("id", id), scope);
-                blocks.add("adrs");
-                dataState.add(LoreRecordDataState.entry("adrs_of_task", "adrs", adrs));
-                if (adrs.ok()) for (Map<String, Object> a : adrs.rows())
-                    links.add(LoreRecordValues.link("JUSTIFIED_BY", "out", LoreRecordValues.str(a.get("adr_id")), "adr",
-                        LoreRecordValues.str(a.get("name")), LoreRecordValues.docToken(a.get("status"))));
-                else facts.put("adrs_error", adrs.error());
-                // S4-29 v3: блокирующие вопросы — блоком в конце заметки; раньше их не читал никто.
-                Read gates = read("gating_questions_of_task", Map.of("id", id), scope);
-                blocks.add("gates");
-                dataState.add(LoreRecordDataState.entry("gating_questions_of_task", "gates", gates));
-                if (gates.ok()) for (Map<String, Object> q : gates.rows())
-                    links.add(LoreRecordValues.link("GATES", "in", LoreRecordValues.str(q.get("question_id")), "question",
-                        LoreRecordValues.str(q.get("title")), LoreRecordValues.docToken(q.get("status"))));
-                else facts.put("gates_error", gates.error());
-            }
-            case "release" -> {
-                // S4-29 v3 (44а): Спринты · PR релиза. Ключ записи — release_uid, его и ждут срезы.
-                tabBySlice("release_sprints", "sprints", Map.of("ruid", id), scope, blocks, dataState, links, facts,
-                    s -> LoreRecordValues.link("IMPLEMENTED_IN_RELEASE", "in", LoreRecordValues.str(s.get("sprint_id")), "sprint",
-                        LoreRecordValues.str(s.get("name")), LoreRecordValues.planToken(LoreRecordValues.str(s.get("status_raw")))));
-                Read prs = read("release_prs", Map.of("ruid", id), scope);
-                blocks.add("prs");
-                dataState.add(LoreRecordDataState.entry("release_prs", "prs", prs));
-                if (prs.ok()) for (Map<String, Object> p : prs.rows()) {
-                    String uid = LoreRecordValues.str(p.get("pr_uid"));
-                    links.add(LoreRecordValues.link("SHIPPED_IN", "in", uid != null ? uid : LoreRecordValues.str(p.get("pr_number")),
-                        "pr", LoreRecordValues.str(p.get("title")), null));
-                }
-                else facts.put("prs_error", prs.error());
-            }
-            case "component" -> {
-                // S4-29: Задачи · Спринты компонента — по рёбрам, срезами с пагинацией.
-                tabBySlice("component_tasks", "tasks", Map.of("cid", id), scope, blocks, dataState, links, facts,
-                    t -> LoreRecordValues.link("TAGGED_WITH", "in", LoreRecordValues.str(t.get("task_uid")), "task",
-                        LoreRecordValues.str(t.get("title")), LoreRecordValues.planToken(LoreRecordValues.str(t.get("status_raw")))));
-                tabBySlice("component_sprints", "sprints", Map.of("cid", id), scope, blocks, dataState, links, facts,
-                    s -> LoreRecordValues.link("BELONGS_TO", "in", LoreRecordValues.str(s.get("sprint_id")), "sprint",
-                        LoreRecordValues.str(s.get("name")), LoreRecordValues.planToken(LoreRecordValues.str(s.get("status_raw")))));
-            }
             default -> { }
         }
+        // Вкладки связей отдельным срезом (задача: ADR, блокирующие вопросы; релиз: спринты, PR;
+        // компонент: задачи, спринты) — по описаниям LoreRecordFrom.SLICE_LINKS, одним циклом (S4-MODEL-RECORD).
+        for (LoreRecordFrom.SliceLink sl : LoreRecordFrom.SLICE_LINKS.getOrDefault(type, List.of()))
+            tabBySlice(sl, id, scope, blocks, dataState, links, facts);
 
         String version = null;
         String versionError = null;
@@ -420,11 +363,15 @@ public class LoreRecordResource extends LoreResourceBase {
      */
     static final int TAB_FIRST_PAGE = 100;
 
-    private void tabBySlice(String slice, String part, Map<String, String> given, Set<String> scope,
+    /**
+     * Вкладка-связь отдельным срезом по описанию {@link LoreRecordFrom.SliceLink} (S4-MODEL-RECORD):
+     * строки — связями общим сборщиком; у {@code paged} — только первая порция (S4-29).
+     */
+    private void tabBySlice(LoreRecordFrom.SliceLink sl, String id, Set<String> scope,
                             List<String> blocks, List<Map<String, Object>> dataState,
-                            List<Map<String, Object>> links, Map<String, Object> facts,
-                            java.util.function.Function<Map<String, Object>, Map<String, Object>> toLink) {
-        Read r = read(slice, given, scope);
+                            List<Map<String, Object>> links, Map<String, Object> facts) {
+        String slice = sl.slice(), part = sl.key();
+        Read r = read(slice, Map.of(sl.param(), id), scope);
         blocks.add(part);
         if (!r.ok()) {
             dataState.add(LoreRecordDataState.entry(slice, part, r));
@@ -433,9 +380,10 @@ public class LoreRecordResource extends LoreResourceBase {
         }
         List<Map<String, Object>> rows = r.rows();
         int total = rows.size();
-        List<Map<String, Object>> page = total > TAB_FIRST_PAGE ? rows.subList(0, TAB_FIRST_PAGE) : rows;
-        for (Map<String, Object> row : page) links.add(toLink.apply(row));
-        dataState.add(total > TAB_FIRST_PAGE
+        boolean cut = sl.paged() && total > TAB_FIRST_PAGE;
+        List<Map<String, Object>> page = cut ? rows.subList(0, TAB_FIRST_PAGE) : rows;
+        for (Map<String, Object> row : page) links.add(LoreRecordFrom.sliceLink(sl, row));
+        dataState.add(cut
             ? LoreRecordDataState.truncated(slice, part, page.size(), (long) total)
             : LoreRecordDataState.entry(slice, part, r));
     }
