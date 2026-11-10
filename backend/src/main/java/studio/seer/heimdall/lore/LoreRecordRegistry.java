@@ -33,13 +33,16 @@ final class LoreRecordRegistry {
     private LoreRecordRegistry() {}
 
     /** Типы паспорта v2 — в порядке показа. */
-    static final List<String> TYPES = List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release");
+    static final List<String> TYPES = List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release",
+        // S4-V2-SECTIONS (kit 09.11): последние три раздела v2 — компонент, технология, фича.
+        "component", "tech", "feature");
 
     /**
      * Kit 09.11: типы с паспортом только на чтение — путей записи в фасаде у них пока нет.
      * Поля не правятся, perms ничего не обещают: кнопка без пути сохранения хуже её отсутствия.
      */
-    static final java.util.Set<String> READ_ONLY = java.util.Set.of("decision", "question", "milestone", "release");
+    static final java.util.Set<String> READ_ONLY = java.util.Set.of("decision", "question", "milestone", "release",
+        "component", "tech", "feature");
 
     /** Куда пишется поле: эндпоинт существующего пути записи и имя поля в его теле. */
     record Write(String endpoint, String field) {}
@@ -420,6 +423,91 @@ final class LoreRecordRegistry {
                 rel("sprints", "Спринты", "IMPLEMENTED_IN_RELEASE", "in", "sprint", "realization", "links", false),
                 rel("prs", "PR", "SHIPPED_IN", "in", "pr", "realization", "links", false),
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
+
+        // ── Компонент (только чтение, S4-V2-SECTIONS) ────────────────────────
+        // Срез `component`. Тела у компонента нет. Технологии — out('USES').tech_id: это
+        // НЕ ключ паспорта технологии (тот — spec_id SPEC-TECH-…), поэтому поле текстовое,
+        // а не ссылка: щелчок по нему открыл бы чужую запись.
+        TYPE_DEFS.put("component", new TypeDef("component", "Компонент", "pp.kind.component", "cog",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("code", "Код", null, "text", null, null),
+                prop("area", "Область", null, "text", null, null),
+                ref("parent", "Родитель", null, "component", "PARENT_OF", "out", "composition", false, false),
+                prop("owner", "Владелец", null, "text", null, null),
+                prop("team", "Команда", null, "text", null, null),
+                prop("icon", "Иконка", null, "text", null, null),
+                ref("children", "Подкомпоненты", null, "component", "PARENT_OF", "in", "composition", true, false),
+                new Field("tech", "Технологии", null, "text", "props", null, false, null, true, false,
+                    null, null, null, null),
+                ref("adrs", "ADR", null, "adr", "BELONGS_TO", "in", "attribute", true, false),
+                ref("specs", "Спеки", null, "spec", "DOCUMENTED_IN", "out", "attribute", true, false)),
+            List.of(),
+            List.of(
+                new PropSection(null, List.of("area", "parent", "owner", "team", "icon")),
+                new PropSection(modules, List.of("children", "tech", "adrs", "specs"))),
+            List.of(), List.of(), List.of(),
+            List.of(
+                rel("parent", "Родитель", "PARENT_OF", "out", "component", "composition", "prop", false),
+                rel("children", "Подкомпоненты", "PARENT_OF", "in", "component", "composition", "prop", false),
+                rel("tech", "Технологии", "USES", "out", "tech", "attribute", "prop", false),
+                rel("adrs", "ADR", "BELONGS_TO", "in", "adr", "attribute", "prop", false),
+                rel("specs", "Спеки", "DOCUMENTED_IN", "out", "spec", "attribute", "prop", false))));
+
+        // ── Технология (только чтение, S4-V2-SECTIONS) ───────────────────────
+        // Технология — спека SPEC-TECH-<КОМПОНЕНТ>-<ТЕХ> (SPRINT_TECH_REGISTRY), срез tech_by_id.
+        TYPE_DEFS.put("tech", new TypeDef("tech", "Технология", "pp.kind.tech", "gears",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("code", "Код", null, "text", null, null),
+                prop("version", "Версия", "pp.field.version", "text", null, null),
+                prop("checked_at", "Проверено", null, "date", null, null),
+                ref("component", "Компонент", "pp.field.component", "component", "BELONGS_TO", "out", "attribute", false, false)),
+            List.of(new Body("content_md", "Сведения", "pp.field.body", false, null)),
+            List.of(new PropSection(null, List.of("version", "checked_at", "component"))),
+            List.of(), List.of(), List.of(),
+            List.of(
+                rel("documentedFor", "Компонент", "DOCUMENTED_IN", "in", "component", "attribute", "prop", false),
+                rel("component", "Компонент", "BELONGS_TO", "out", "component", "attribute", "prop", false))));
+
+        // ── Фича / сценарий (только чтение, S4-V2-SECTIONS) ──────────────────
+        // Один тип KnowUseCase на все уровни шкалы Коберна (PL-28): паспорт открывает и
+        // корень (cloud|kite), и сценарий внутри — раздел US щёлкается в тот же паспорт.
+        TYPE_DEFS.put("feature", new TypeDef("feature", "Фича", "pp.kind.feature", "gift-of-knowledge",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("status", "Статус", null, "enum", null, null),
+                head("code", "Код", null, "text", null, null),
+                prop("goal_level", "Уровень цели", null, "enum", "uc_goal_level", null),
+                prop("rigor", "Оформление", null, "enum", null, null),
+                prop("priority", "Приоритет", "pp.field.priority", "enum", null, null),
+                prop("date", "Создан", "pp.field.date", "date", null, null),
+                prop("shipped_at", "Выпущен", null, "date", null, null),
+                ref("parent", "Родитель", null, "feature", "DECOMPOSES_INTO", "in", "composition", false, false),
+                ref("children", "Сценарии", null, "feature", "DECOMPOSES_INTO", "out", "composition", true, false),
+                ref("components", "Компоненты", "pp.field.components", "component", "BELONGS_TO", "out", "attribute", true, false),
+                ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false),
+                ref("tasks", "Задачи", null, "task", "REALIZES", "in", "realization", true, false)),
+            List.of(
+                new Body("body_md", "Описание", "pp.field.body", false, null),
+                new Body("context_md", "Контекст", "pp.adr.context", false, null),
+                new Body("scenario_md", "Сценарий", null, false, null),
+                new Body("acceptance_md", "Критерии приёмки", null, false, null)),
+            List.of(
+                new PropSection(null, List.of("goal_level", "rigor", "priority", "date", "shipped_at", "parent",
+                    "components", "projects")),
+                new PropSection(modules, List.of("children", "tasks"))),
+            List.of(), List.of(), List.of(),
+            List.of(
+                rel("parent", "Родитель", "DECOMPOSES_INTO", "in", "feature", "composition", "head", false),
+                rel("children", "Сценарии", "DECOMPOSES_INTO", "out", "feature", "composition", "prop", false),
+                rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
+                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
+                rel("tasks", "Задачи", "REALIZES", "in", "task", "realization", "prop", false),
+                rel("actors", "Акторы", "HAS_ACTOR", "out", "actor", "association", "links", false),
+                rel("pains", "Боли", "ADDRESSES", "out", "pain", "association", "links", false),
+                rel("gains", "Выгоды", "PROMISES", "out", "gain", "association", "links", false),
+                rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "links", false))));
 
         // ── Дети без своего паспорта: фаза, вопрос, решение — поля для колонок parts ──
         CHILD_ONLY.put("phase", childOnly("phase", "Фаза", List.of(

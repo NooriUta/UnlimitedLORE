@@ -29,19 +29,20 @@ export const DECISION_STATUSES = ['proposed', 'accepted', 'deferred', 'supersede
 export const SPEC_STATUSES = ['proposed', 'accepted', 'deprecated', 'superseded'] as const;
 
 /**
- * Статусы вопросов. В shared их НЕТ — ось объявлена на сервере, выражением
- * `status_rank` среза вопросов (open 0 · deferred 1 · closed 2 · dropped 3,
- * неизвестный — 4). Пробел в shared записан в задаче: словарь должен быть там,
- * где и остальные, иначе клиент и сервер разойдутся молча.
+ * `questionStatuses` из shared/lore-statuses.json (зеркало записи
+ * LoreQuestionResource; срез вопросов ранжирует open 0 · deferred 1 · closed 2 ·
+ * dropped 3, неизвестный — 4).
  */
 export const QUESTION_STATUSES = ['open', 'deferred', 'closed', 'dropped'] as const;
 
 /**
- * Статусы фич. В shared их тоже нет; перечень снят замером корпуса (`features`:
- * shipped · active · in_rework и пусто). Это НЕ ось задач: у фичи не бывает ни
- * «заблокирована», ни «к выкатке».
+ * `featureStatuses` из shared/lore-statuses.json. proposed и dropped — намерения
+ * автора (их пишет человек или агент), active · shipped · in_rework ставит только
+ * вычислитель готовности. Замер корпуса 09.11 нашёл лишь три последних, но
+ * словарь записи шире — копия сверяется с shared, а не с замером. Это НЕ ось
+ * задач: у фичи не бывает ни «заблокирована», ни «к выкатке».
  */
-export const FEATURE_STATUSES = ['active', 'in_rework', 'shipped'] as const;
+export const FEATURE_STATUSES = ['proposed', 'dropped', 'active', 'in_rework', 'shipped'] as const;
 
 /**
  * Значение оси → её код, иначе `unknown`.

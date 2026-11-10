@@ -97,6 +97,24 @@ class LoreStatusesConsistencyTest {
                      "DECISION_STATUSES_FALLBACK drift vs shared/lore-statuses.json");
     }
 
+    /**
+     * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-V2-SECTIONS: у вопросов и фич словарь жил только в
+     * коде записи (LoreQuestionResource.STATUSES, UcReadinessCalculator), а клиент держал
+     * копию, снятую замером корпуса. Теперь он в shared, как у остальных осей.
+     */
+    @Test
+    void questionAndFeatureStatusesMatchCanonical() throws Exception {
+        JsonNode c = loadCanonical();
+        assertNotNull(c.get("questionStatuses"), "questionStatuses missing from canonical JSON");
+        assertNotNull(c.get("featureStatuses"), "featureStatuses missing from canonical JSON");
+        assertEquals(new TreeSet<>(LoreQuestionResource.STATUSES), new TreeSet<>(array(c, "questionStatuses")),
+            "LoreQuestionResource.STATUSES drift vs shared/lore-statuses.json");
+        Set<String> uc = new TreeSet<>(UcReadinessCalculator.INTENT_STATUSES);
+        uc.addAll(UcReadinessCalculator.COMPUTED_STATUSES);
+        assertEquals(uc, new TreeSet<>(array(c, "featureStatuses")),
+            "UcReadinessCalculator INTENT+COMPUTED drift vs shared/lore-statuses.json");
+    }
+
     private static java.util.Map<String, String> map(JsonNode node) {
         java.util.Map<String, String> out = new java.util.TreeMap<>();
         node.fields().forEachRemaining(e -> out.put(e.getKey(), e.getValue().asText()));
