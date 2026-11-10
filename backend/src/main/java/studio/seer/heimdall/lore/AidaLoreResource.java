@@ -1084,7 +1084,9 @@ public class AidaLoreResource extends LoreResourceBase {
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
                 // S1-06: аддитивное поле категории статуса — ДО SlicePage.apply,
                 // чтобы fields=…,status_category проецировалось как обычная колонка.
-                out.put("rows", LoreStatusCategory.enrich(id, castRows(out.get("rows"))));
+                // S4-04: changed_at — максимум из открытой версии и updated_at (служебная колонка
+                // свёртывается здесь же, до страницы, чтобы fields/total её не видели).
+                out.put("rows", LoreStatusCategory.enrich(id, LoreChangedAt.fold(castRows(out.get("rows")))));
                 // Владелица 09.11: итоги спринта — строки задач сворачиваются в строку на
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());

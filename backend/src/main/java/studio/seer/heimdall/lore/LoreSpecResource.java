@@ -91,6 +91,9 @@ public class LoreSpecResource extends LoreResourceBase {
             if (req.component_id() != null) { sql.append(", component_id=:cid");        p.put("cid", req.component_id()); }
             if (req.content_md() != null)   { sql.append(", content_md=:content");      p.put("content", req.content_md()); }
             if (req.file_path() != null)    { sql.append(", file_path=:fp");            p.put("fp", req.file_path()); }
+            // S4-04 (свежесть): тело без checkpoint и поля вершины версию не открывают —
+            // момент правки на вершине; changed_at — максимум с открытой версией.
+            sql.append(", updated_at=:upd");                                     p.put("upd", Instant.now().toString());
             sql.append(" UPSERT WHERE spec_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
