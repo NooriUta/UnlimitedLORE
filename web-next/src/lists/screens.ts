@@ -245,7 +245,7 @@ function tasksConfig(lang: KitLang): KitConfig {
       groupings: ['status', LORE_FILTER_FIELDS.sprint],
       // Спринтов много — разрез по спринту свёрнут с первого показа (S9-02).
       collapsedGroupings: [LORE_FILTER_FIELDS.sprint],
-      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort'],
+      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort', 'updated_at'],
     },
   };
 }
@@ -330,7 +330,7 @@ const specsSpec: SectionSpec = {
   quick: [['no-status', 'lists.quick.noStatus', { status: '' }], ['no-version', 'lists.quick.noVersion', { version: '' }]],
   filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
   groupings: [LORE_FILTER_FIELDS.component, 'status'],
-  columns: ['id', 'title', 'status', 'component', 'version'],
+  columns: ['id', 'title', 'status', 'component', 'version', 'updated_at'],
 };
 
 /** Вопросы: группировка по статусу — прямая просьба владелицы (06.11). */
@@ -463,6 +463,7 @@ export const LIST_SCREENS = {
   tasks: {
     modelType: 'task',
     slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
+    defaultSort: FRESH_FIRST,
     map: taskListRecord, config: tasksConfig, quickIcons: {},
     // Срез отдаёт только открытые задачи — это сказано словами на экране.
     note: OPEN_ONLY_NOTE,
@@ -476,6 +477,7 @@ export const LIST_SCREENS = {
   specs: {
     modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
+    defaultSort: FRESH_FIRST,
     map: specRecord, config: lang => sectionConfig(lang, specsSpec), quickIcons: {},
   },
   questions: {

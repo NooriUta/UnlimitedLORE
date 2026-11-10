@@ -179,6 +179,24 @@ public final class LoreSlices {
             + "].status_known_from[0], out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0])";
 
     /**
+     * Свежесть записи в списках разделов v2 (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS,
+     * вопрос №49 владелицы 10.11: «по последней дате изменения — это свежесть»).
+     *
+     * <p>{@code changed_at} — {@code valid_from} ОТКРЫТОЙ версии SCD2 (каждая смена
+     * статуса и версионируемая правка открывает новую), иначе — дата заведения из
+     * {@code fallbacks}. Правки «на месте» (тело спеки без checkpoint, заметка
+     * задачи) версию не открывают и время не сдвигают — это свойство записи
+     * истории, а не среза.
+     */
+    static String changedAtSql(String... fallbacks) {
+        return "COALESCE(out('HAS_STATE')[valid_to IS NULL].valid_from[0], "
+            + String.join(", ", fallbacks) + ") AS changed_at";
+    }
+
+    /** Дата заведения у типов без своего поля: первая версия истории (порядок рёбер — порядок вставки). */
+    private static final String FIRST_STATE_FROM_SQL = "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0]";
+
+    /**
      * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
      * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
      */
@@ -425,6 +443,7 @@ public final class LoreSlices {
         // ── §2 ADRs ──────────────────────────────────────────────────────────
         slice("adrs",
             "SELECT adr_id, name, status, date_created, " +
+            changedAtSql("created_at", "date_created") + ", " +
             "out('BELONGS_TO').component_id[0] AS component, " +
             "out('BELONGS_TO').component_id    AS components, " +
             "out('TAGGED_WITH').tag_id         AS tags, " +
@@ -524,6 +543,9 @@ public final class LoreSlices {
         // in the suffix so a future optional WHERE lands before them.
         slice("decisions",
             "SELECT decision_id, title, date_created, status_raw, out('BELONGS_TO').component_id[0] AS component_id, " +
+            // Свежесть (вопрос №49): правка полей ставит updated_at на вершине (версию
+            // не открывает), смена статуса — версию KnowDecisionHist; иначе заведение.
+            "COALESCE(updated_at, out('HAS_STATE')[valid_to IS NULL].valid_from[0], created_at, date_created) AS changed_at, " +
             "out('BELONGS_TO').component_id     AS components, " +
             "out('BELONGS_TO_PROJECT').slug     AS projects, " +
             "out('TAGGED_WITH').tag_id  AS tags, " +
@@ -645,6 +667,9 @@ public final class LoreSlices {
             // забытого, и реестр гниёт в свалку отложенного.
             "SELECT question_id, title, body_md, status, `trigger`, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, owner, " +
             "raised_by, opened_date, closed_date, " +
+            // Свежесть (вопрос №49): SCD2 у вопроса нет — последнее известное изменение
+            // это закрытие, иначе заведение.
+            "COALESCE(closed_date, opened_date) AS changed_at, " +
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('GATES').task_uid      AS gating_tasks, " +
@@ -787,6 +812,7 @@ public final class LoreSlices {
         // [field IS NOT NULL] filter: skip sparse hist entries where field absent
         slice("sprints",
             "SELECT sprint_id, name, created_date, no_release_required, unplanned_intentional, " +
+            changedAtSql("created_date") + ", " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0] AS valid_from, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
@@ -988,6 +1014,9 @@ public final class LoreSlices {
         // несёт заголовки, тело — в паспорте (/lore/record/feature/<uc_id>).
         slice("use_cases",
             "SELECT uc_id, title, status, goal_level, rigor, priority, parent_uc_id, date_created, shipped_at, " +
+            // Свежесть (вопрос №49): SCD2 у сценария нет — последнее известное изменение
+            // это поставка (shipped_at ставит система), иначе заведение.
+            "COALESCE(shipped_at, date_created) AS changed_at, " +
             "out('BELONGS_TO').component_id AS component_ids, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             // Просьба kit: у детей своих рёбер нет — без наследуемого поля «компонент» и
@@ -1848,6 +1877,7 @@ public final class LoreSlices {
         // lore-backfill-spec-titles.mjs; until then the frontend falls back to spec_id.
         slice("specs",
             "SELECT spec_id, title, file_path, " +
+            changedAtSql(FIRST_STATE_FROM_SQL) + ", " +
             "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id, " +
             // DS-2: версия/аннотация/статус — с открытой ревизии, как в spec_by_id.
             // Без них сверка реестра шла N вызовами spec_by_id.
@@ -2249,6 +2279,7 @@ public final class LoreSlices {
         // тот же класс дефекта, что уже ловили на этой же задаче раньше.
         slice("open_tasks",
             "SELECT task_uid, task_id, title, work_class, " +
+            changedAtSql(FIRST_STATE_FROM_SQL) + ", " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
@@ -2275,6 +2306,7 @@ public final class LoreSlices {
         // дописываются через AND и без скобок легли бы только на последнюю ветку.
         slice("closed_tasks",
             "SELECT task_uid, task_id, title, work_class, " +
+            changedAtSql(FIRST_STATE_FROM_SQL) + ", " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
@@ -2306,6 +2338,7 @@ public final class LoreSlices {
         // ── Releases ─────────────────────────────────────────────────────────
         slice("releases",
             "SELECT release_id, release_uid, git_tag, version, week, type, " +
+            changedAtSql("released_at", "release_date") + ", " +
             "release_date, is_current, description_md, git_project, " +
             // AL-96: плоское git_project и ребро BELONGS_TO_PROJECT — две правды
             // об одном (аудит проектной оси). Поле оставлено: на нём живут табы

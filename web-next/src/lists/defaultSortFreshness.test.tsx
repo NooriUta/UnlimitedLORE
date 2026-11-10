@@ -24,6 +24,8 @@ const SINK: Record<string, unknown> = {
   milestone_id: 'X', release_uid: 'X', release_id: 'X', component_id: 'X', tech_id: 'X', uc_id: 'X',
   valid_from: '2026-11-01', created_date: '2026-11-01', date_created: '2026-11-01', opened_date: '2026-11-01',
   release_date: '2026-11-01', checked_at: '2026-11-01', updated_at: '2026-11-01', shipped_at: '2026-11-01',
+  // Время последнего изменения записи (вопрос №49: «по последней дате изменения — это свежесть»).
+  changed_at: '2026-11-01T10:00:00.000Z',
 };
 
 const ids = Object.keys(LIST_SCREENS) as ListScreenId[];
