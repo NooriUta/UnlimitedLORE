@@ -271,9 +271,20 @@ export default function KitPage() {
               { id: 'a', kind: 'add', text: t('kitPage.flow.diffAdd'), detail: 'editor', check: { state: 'checked' } },
               { id: 'b', kind: 'remove', text: t('kitPage.flow.diffRemove'), check: { state: 'checked' } },
               { id: 'c', kind: 'same', text: t('kitPage.flow.diffSame'), check: { state: 'checked' } },
+              // Смена — ОДНА строка «было → стало», а не пара «снимется» +
+              // «добавится»: пара читается как два действия и как провал
+              // между ними (K2-DIFF, запрос сессии администрирования).
+              {
+                id: 'ch', kind: 'change', text: t('kitPage.flow.diffChange'),
+                from: t('kitPage.flow.diffChangeFrom'), to: t('kitPage.flow.diffChangeTo'),
+                check: { state: 'checked' },
+              },
               { id: 'd', kind: 'add', text: t('kitPage.flow.diffUnver'), check: { state: 'unverified', reason: t('kitPage.flow.diffUnverWhy') } },
               { id: 'e', kind: 'add', text: t('kitPage.flow.diffForbid'), check: { state: 'forbidden', reason: t('kitPage.flow.diffForbidWhy') } },
             ]}
+            // Опасную пачку подтверждают словом. Какое слово и что считать
+            // опасным — знает приложение: kit его не выдумывает.
+            confirm={{ word: t('kitPage.flow.diffConfirmWord'), label: t('kitPage.flow.diffConfirmLabel') }}
             onApply={applied => {
               setDiffApplied(applied.length);
               setBatchUndone(false);

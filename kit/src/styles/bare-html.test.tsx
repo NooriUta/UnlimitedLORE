@@ -136,10 +136,12 @@ function Samples() {
             { id: 'a', kind: 'add', text: 'строка добавится', detail: 'подробность', check: { state: 'checked' } },
             { id: 'b', kind: 'remove', text: 'строка снимется', check: { state: 'checked' } },
             { id: 'c', kind: 'same', text: 'строка уже есть', check: { state: 'checked' } },
+            { id: 'ch', kind: 'change', text: 'значение сменится', from: 'прежнее', to: 'новое', check: { state: 'checked' } },
             { id: 'd', kind: 'add', text: 'строка не проверена', check: { state: 'unverified', reason: 'источник не ответил' } },
             { id: 'e', kind: 'add', text: 'смотреть не дали', check: { state: 'forbidden', reason: 'нужна роль администратора' } },
           ]}
           onApply={noop}
+          confirm={{ word: 'ПРИМЕНИТЬ', label: 'введите ПРИМЕНИТЬ' }}
         />
         {/* Пачка в снимке — с частичным исходом: именно он не должен выглядеть
             успехом (K2-BATCH-UNDO). Часы в снимке подставлены, чтобы остаток

@@ -99,7 +99,7 @@ param_value() { # param_value <slice> <param>
     finding_by_id\|id)     sample "SELECT finding_id AS v FROM KnowFinding LIMIT 1" ;;
     *\|sprint_id)          sample "SELECT sprint_id AS v FROM KnowSprint LIMIT 1" ;;
     *\|phase_uid)          sample "SELECT phase_uid AS v FROM KnowPhase LIMIT 1" ;;
-    use_cases_of_component\|component|component_sprints\|cid)
+    use_cases_of_component\|component|component_sprints\|cid|component_tasks\|cid)
       sample "SELECT component_id AS v FROM LoreComponent LIMIT 1" ;;
     *\|kc_sub)             sample "SELECT kc_sub AS v FROM KnowUser LIMIT 1" ;;
     *\|project)            sample "SELECT slug AS v FROM KnowGitProject LIMIT 1" ;;
@@ -115,7 +115,6 @@ param_value() { # param_value <slice> <param>
       sample "SELECT code AS v FROM KnowDictEntry WHERE dict_type = '$(sample "SELECT dict_type AS v FROM KnowDictEntry LIMIT 1")' LIMIT 1" ;;
     components_in_area\|code) sample "SELECT area AS v FROM LoreComponent WHERE area IS NOT NULL LIMIT 1" ;;
     search\|pattern)       printf 'LORE' ;;
-    component_sprints\|pattern) printf 'SPRINT' ;;
     *) printf '' ;;
   esac
 }

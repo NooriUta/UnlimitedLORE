@@ -38,6 +38,8 @@ import type { KitKey, KitLang } from '../i18n';
 import { describeError } from '../resilience/errorText';
 import { isEditableTarget } from '../resilience/editable';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
+import { foldBody, type FeedBody } from './feedBody';
+import { GluedBlock } from '../record/GluedBlock';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -151,7 +153,15 @@ export interface ListViewProps {
   state?: ListState;
   /** Каждая правка фильтра, группировки, порядка или вида — и в управляемом режиме, и в обычном. */
   onStateChange?: (state: ListState) => void;
-  budget?: Partial<typeof LIST_BUDGET>;
+  /**
+   * Бюджет показа (строк в группе, групп в списке, групп в топе) — числами.
+   *
+   * Было `Partial<typeof LIST_BUDGET>`, а LIST_BUDGET объявлен `as const`: тип
+   * допускал ровно 50/20/10, то есть настройка принимала только своё же
+   * умолчание и ничего не настраивала. Поймано тестом выбора в группах, где
+   * понадобился маленький бюджет, чтобы хвост «ещё N» вообще появился.
+   */
+  budget?: Partial<Record<keyof typeof LIST_BUDGET, number>>;
   /**
    * Свои иконки «Быстро» (id → слаг game-icons). Без них «Быстро» по одному
    * статусу берёт иконку статуса из словаря (S4-04), прочие — без иконки.
@@ -182,6 +192,22 @@ export interface ListViewProps {
    * содержания.
    */
   facetPinned?: (key: string) => readonly string[];
+  /**
+   * Тело записи для ленты (K2-FEED-BODY-MORE): начало, остаток и его состояние —
+   * НАЗЫВАЕТ приложение. Решение владелицы 10.11.2026: «грузить первые 3 абзаца
+   * остально при расеррытии», то есть остаток не спрятан, а запрашивается.
+   *
+   * Не задано — лента остаётся строкой: тело выдумывать не из чего. Вернуло
+   * null у записи — у этой записи тела нет, и блока тела нет тоже (пустая
+   * рамка обещала бы текст).
+   */
+  feedBody?: (r: KitRecord) => FeedBody | null;
+  /**
+   * Запросить остаток тела. Нет обработчика — «Ещё» при НЕзагруженном остатке
+   * не предлагается вовсе: кнопка, обещающая действие, которого нет, хуже её
+   * отсутствия (то же правило, что у применения в DiffPreview).
+   */
+  onFeedBody?: (id: string) => void;
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
   /**
@@ -353,7 +379,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -673,13 +699,85 @@ export function ListView({
       ))
     : null;
 
-  // Выбранное — только среди показанного: фильтр спрятал запись — действие её не тронет.
-  // Свёрнутая группа «Закрытые N» (S4-27) тоже не показана: её строки не выбираются «всем списком».
-  const pickable = closedGroup && !isOpen(CLOSED_KEY) ? split.open : filtered;
+  /**
+   * Что РЕАЛЬНО стоит на экране — то и есть набор, над которым действуют.
+   *
+   * Было: показанным считалось всё, что прошло фильтр (кроме свёрнутых
+   * «Закрытых»). В группированном списке это неправда — свёрнутая группа и
+   * хвост за «ещё N» на экране не стоят, а массовое действие их молча
+   * забирало: отметил группу, свернул её, нажал действие — и оно тронуло то,
+   * чего не видно. Теперь набор строится теми же правилами, которыми идёт
+   * отрисовка, а отмеченное за пределами показанного называется числом
+   * (kit.list.selHidden), а не теряется тихо.
+   */
+  const onScreenOf = (g: ListGroup): KitRecord[] => {
+    // Заголовок (а значит, и сворачивание) есть в списке при группировке и у «Закрытых».
+    const headed = view === 'list' && (groupKey !== null || g.key === CLOSED_KEY);
+    if (headed && !isOpen(g.key)) return [];
+    if (view === 'list' && subKey && g.key !== CLOSED_KEY) {
+      // Вторая ступень (S4-26) сворачивается своим ключом — иначе строки
+      // свёрнутой подгруппы считались бы показанными.
+      const out: KitRecord[] = [];
+      for (const sg of groupBy(g.records, subKey, config, data, budget)) {
+        const k = g.key + '' + sg.key;
+        if (!isOpen(k)) continue;
+        out.push(...sg.records.slice(0, limitOf(k)));
+      }
+      return out;
+    }
+    return g.records.slice(0, limitOf(g.key));
+  };
+  const pickable: KitRecord[] = [];
+  {
+    // Запись, попавшая в несколько групп (разрезы по связям), на экране одна —
+    // и в действие обязана уйти один раз, иначе «Выбрано: 2» про одну строку.
+    const seen = new Set<string>();
+    const put = (rs: readonly KitRecord[]) => {
+      for (const r of rs) if (!seen.has(r.id)) { seen.add(r.id); pickable.push(r); }
+    };
+    if (feedGroupsList) {
+      for (const g of feedGroupsList) {
+        for (const row of g.rows.slice(0, limitOf(g.key))) if (row.kind === 'record') put([row.record]);
+      }
+    } else if (view === 'board') {
+      for (const { lane, columns: cols } of lanes) {
+        if (laned && !isOpen(lane.key)) continue;
+        for (const c of cols) put(c.records.slice(0, limitOf(laned ? lane.key + '' + c.key : c.key)));
+      }
+    } else if (view === 'list') {
+      for (const g of groups) put(onScreenOf(g));
+    } else {
+      // Карточки, дерево и таймлайн рисуют весь отфильтрованный набор.
+      put(filtered);
+    }
+  }
   const selIds = visibleSelection(selected, pickable);
   const selKey = selIds.join('\u0000');
   useEffect(() => { onSelectionChange?.(selKey ? selKey.split('\u0000') : []); }, [selKey, onSelectionChange]);
+  /**
+   * Отмеченное за пределами показанного. Считаем по самим отметкам, а не по
+   * причинам: спрятал фильтр, свёрнутая группа или хвост «ещё N» — человеку
+   * важно одно, что часть его выбора в действие НЕ уйдёт.
+   */
+  const shownSel = new Set(selIds);
+  const selHidden = [...selected].filter(id => !shownSel.has(id)).length;
   const toggleSel = (id: string) => { setBulkError(null); setSelected(prev => toggleId(prev, id)); };
+  /**
+   * Сколько отмечено в группе — по ВСЕМ её записям, включая скрытые. Если
+   * считать только показанные, свёрнутая группа выглядела бы как «ничего не
+   * выбрано», хотя выбор в ней есть и он помешает действию.
+   */
+  const groupSelCount = (g: ListGroup) => g.records.reduce((n, r) => (selected.has(r.id) ? n + 1 : n), 0);
+  /** Отметить/снять всю группу одним движением. */
+  const toggleGroupSel = (g: ListGroup) => {
+    setBulkError(null);
+    setSelected(prev => {
+      const n = new Set(prev);
+      const all = g.records.length > 0 && g.records.every(r => n.has(r.id));
+      for (const r of g.records) { if (all) n.delete(r.id); else n.add(r.id); }
+      return n;
+    });
+  };
   const allShownSelected = pickable.length > 0 && selIds.length === pickable.length;
   const toggleAll = () => { setBulkError(null); setSelected(prev => selectAllShown(prev, pickable)); };
   const selectable = columns.includes('select');
@@ -969,6 +1067,38 @@ export function ListView({
     </label>
   );
 
+  /**
+   * Выбор группы у её заголовка: чекбокс с именем группы и «отмечено N из M».
+   * Чекбокс — рядом с кнопкой сворачивания, а не внутри неё: вложенная в
+   * кнопку кнопка — недопустимая разметка, и нажатие било бы сразу по двум.
+   */
+  const groupPick = (g: ListGroup, title: string) => {
+    const n = groupSelCount(g);
+    const all = g.records.length > 0 && n === g.records.length;
+    return (
+      <label className="sk-list__check sk-list__gcheck">
+        <input
+          type="checkbox"
+          checked={all}
+          // «Часть группы» — это mixed, а не «снято»: снятый квадратик обещал
+          // бы, что в группе ничего не выбрано.
+          ref={el => { if (el) el.indeterminate = n > 0 && !all; }}
+          onChange={() => toggleGroupSel(g)}
+          aria-label={t('kit.list.selectGroup', { title })}
+        />
+      </label>
+    );
+  };
+  const groupSelNote = (g: ListGroup) => {
+    const n = groupSelCount(g);
+    if (n === 0) return null;
+    return (
+      <span className="sk-list__gsel" data-testid={`kit-list-gsel-${g.key}`}>
+        {t('kit.list.groupSelected', { n, total: g.records.length })}
+      </span>
+    );
+  };
+
   const cell = (col: string, r: KitRecord): ReactNode => {
     switch (col) {
       case 'select': return checkbox(r);
@@ -1050,6 +1180,15 @@ export function ListView({
    * подпись ОБЩЕЙ группировки (`groupLabel`), а не вторая формулировка: иначе
    * «без связи» в таблице и в ленте разъехались бы.
    */
+  // Какие тела раскрыты. В памяти, а не в адресе: ссылкой делятся видом,
+  // фильтром и порядком, а раскрытый абзац — личное состояние чтения.
+  const [bodyOpen, setBodyOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleBody = (id: string) => setBodyOpen(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
   const feedGroupTitle = (g: FeedGroup): string => {
     if (g.group) return groupTitle(g.group);
     switch (g.key) {
@@ -1076,9 +1215,9 @@ export function ListView({
    * загружена — показываем её код, а не придумываем заголовок (то же правило,
    * что у разреза по связи). Связей нет — блока нет.
    */
-  const feedBecause = (r: KitRecord): ReactNode => {
+  const feedRefs = (r: KitRecord): { id: string; type: string }[] => {
     const types = feedCfg?.because ?? [];
-    if (types.length === 0) return null;
+    if (types.length === 0) return [];
     const seen = new Set<string>();
     const refs: { id: string; type: string }[] = [];
     for (const e of data.edges) {
@@ -1088,17 +1227,106 @@ export function ListView({
       seen.add(other);
       refs.push({ id: other, type: e.type });
     }
+    return refs;
+  };
+
+  /** Ссылка на связанную запись. Не загружена — КОД, а не выдуманный заголовок. */
+  const feedRef = (x: { id: string; type: string }): ReactNode => {
+    const target = data.records.find(rr => rr.id === x.id);
+    const label = config.edges?.[x.type]?.label ?? x.type;
+    return href
+      ? <a key={x.id} className="sk-feed__ref" href={href(x.id)} title={label}>{target?.title ?? x.id}</a>
+      : <span key={x.id} className="sk-feed__ref" title={label}>{target?.title ?? x.id}</span>;
+  };
+
+  const feedBecause = (r: KitRecord): ReactNode => {
+    const refs = feedRefs(r);
     if (refs.length === 0) return null;
+    return <span className="sk-feed__because">{refs.map(feedRef)}</span>;
+  };
+
+  /**
+   * Тело записи в ленте (K2-FEED-BODY-MORE): первые абзацы и свёртка остатка.
+   *
+   * Четыре состояния остатка (не загружен · здесь · едет · не дошёл) дают
+   * ЧЕТЫРЕ разных предложения под телом — правило живёт чистой функцией
+   * foldBody, потому что оно про утверждения, а не про разметку.
+   *
+   * «Ещё» без числа, когда числа не назвали: за «Ещё 4» человек ждёт четыре
+   * абзаца, а не сорок, и выдуманное число здесь хуже отсутствующего.
+   */
+  const feedBodyBlock = (r: KitRecord): ReactNode => {
+    const body = feedBody?.(r) ?? null;
+    if (!body) return null;
+    const open = bodyOpen.has(r.id);
+    const { shown, action } = foldBody(body, open);
+    if (shown.length === 0 && action.kind === 'none') return null;
+    // Запрос остатка предлагаем только тому, кто умеет его выполнить.
+    const askable = action.kind === 'load' || action.kind === 'retry' ? !!onFeedBody : true;
+    const unknownN = action.kind === 'load' && action.n === null;
+    const label =
+      action.kind === 'open' ? t('kit.list.more', { n: action.n })
+      : action.kind === 'close' ? t('kit.list.feed.body.less')
+      : action.kind === 'busy' ? t('kit.list.feed.body.busy')
+      : action.kind === 'retry' ? t('kit.list.feed.body.retry')
+      : unknownN ? t('kit.list.feed.body.moreUnknown')
+      : t('kit.list.more', { n: (action as { n: number }).n });
+    const click = () => {
+      if (action.kind === 'busy') return;
+      if (action.kind === 'load' || action.kind === 'retry') {
+        onFeedBody?.(r.id);
+        if (action.kind === 'load' && !open) toggleBody(r.id);
+        return;
+      }
+      toggleBody(r.id);
+    };
     return (
-      <span className="sk-feed__because">
-        {refs.map(x => {
-          const target = data.records.find(rr => rr.id === x.id);
-          const label = config.edges?.[x.type]?.label ?? x.type;
-          return href
-            ? <a key={x.id} className="sk-feed__ref" href={href(x.id)} title={label}>{target?.title ?? x.id}</a>
-            : <span key={x.id} className="sk-feed__ref" title={label}>{target?.title ?? x.id}</span>;
-        })}
+      <span className="sk-feed__body" data-body={action.kind} data-open={open ? '' : undefined}>
+        {shown.map((para, i) => <span key={i} className="sk-feed__para">{para}</span>)}
+        {action.kind === 'retry' && (
+          <span className="sk-feed__bodyfail" role="alert">
+            {t('kit.list.feed.body.failed', { reason: action.reason })}
+          </span>
+        )}
+        {action.kind !== 'none' && askable && (
+          <button
+            type="button"
+            className="sk-btn sk-feed__bodymore"
+            aria-disabled={action.kind === 'busy' ? 'true' : undefined}
+            aria-expanded={action.kind === 'open' || action.kind === 'close' ? open : undefined}
+            title={unknownN ? t('kit.list.feed.body.moreUnknownWhy') : undefined}
+            onClick={e => { e.stopPropagation(); click(); }}
+          >
+            {label}
+          </button>
+        )}
       </span>
+    );
+  };
+
+  /**
+   * Относящееся к записи с телом — ВКЛЕЕННЫМ блоком с числом в заголовке
+   * (§5, п.2; согласие владелицы 10.11.2026: «пусть встраивает»).
+   *
+   * Блок — ТОТ ЖЕ, что в хвосте тела паспорта (GluedBlock), а не похожий:
+   * утверждение одно, и у него одни правила — счётчик обязателен, «не
+   * проверено» это не ноль, пустой блок не рисуется. Второй такой же блок
+   * разъехался бы с первым первой же правкой.
+   *
+   * Только у записи С ТЕЛОМ: у строки места под блок нет, и там те же связи
+   * идут чипами в строке мета.
+   */
+  const feedGlued = (r: KitRecord): ReactNode => {
+    const refs = feedRefs(r);
+    if (refs.length === 0) return null;
+    const types = feedCfg?.because ?? [];
+    const label = types.length === 1
+      ? (config.edges?.[types[0]]?.label ?? types[0])
+      : t('kit.list.feed.body.related');
+    return (
+      <GluedBlock id="feed-because" label={label} count={refs.length} lang={lang}>
+        <span className="sk-feed__because">{refs.map(feedRef)}</span>
+      </GluedBlock>
     );
   };
 
@@ -1109,6 +1337,7 @@ export function ListView({
    */
   const feedItem = (r: KitRecord, at: string | null): ReactNode => {
     const leads = (feedCfg?.lead ?? []).filter(k => valuesOf(r, k).length > 0);
+    const bodyNode = feedBodyBlock(r);
     // Статуса у записи нет (или оси нет вовсе, K-14) — чипа нет: пустого места
     // не рисуем, а «∅» обещало бы значение, которого не существует.
     const withStatus = r.status !== '' && config.statuses.items.length > 0;
@@ -1128,12 +1357,18 @@ export function ListView({
           </span>
           <span className="sk-feed__title"><Title r={r} href={href} onOpen={onOpen} /></span>
           {leads.map(k => <span key={k} className="sk-feed__lead">{valueCell(k, r)}</span>)}
-          {(withStatus || feedBecause(r)) && (
+          {/* Статус у записи с телом остаётся в шапке: он часть утверждения о
+              записи, а не часть текста. Связи же у записи с телом уезжают во
+              вклеенный блок — там у них есть ЧИСЛО, которого в строке чипов
+              нет. У записи без тела всё как было. */}
+          {(withStatus || (!bodyNode && feedBecause(r))) && (
             <span className="sk-feed__meta">
               {withStatus && <StatusCell code={r.status} labels={labels} />}
-              {feedBecause(r)}
+              {!bodyNode && feedBecause(r)}
             </span>
           )}
+          {bodyNode}
+          {bodyNode && feedGlued(r)}
         </span>
       </li>
     );
@@ -1427,11 +1662,15 @@ export function ListView({
                 {headed && (
                   <tr className="sk-list__ghead" data-group-key={g.key} data-other={g.other ? 'true' : undefined}>
                     <th colSpan={span} scope="rowgroup">
-                      <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
-                        <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
-                        <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
-                        {!g.other && <span className="sk-list__gcount">{g.records.length}</span>}
-                      </button>
+                      <div className="sk-list__ghrow">
+                        {selecting && groupPick(g, groupTitle(g))}
+                        <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
+                          <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                          <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
+                          {!g.other && <span className="sk-list__gcount">{g.records.length}</span>}
+                        </button>
+                        {selecting && groupSelNote(g)}
+                      </div>
                     </th>
                   </tr>
                 )}
@@ -1488,6 +1727,11 @@ export function ListView({
       {selecting && (
         <div className="sk-list__selbar" data-testid="kit-list-selbar" role="group" aria-label={t('kit.list.bulk')} aria-busy={busy !== null}>
           <span className="sk-list__selcount">{t('kit.list.selected', { n: selIds.length })}</span>
+          {selHidden > 0 && (
+            <span className="sk-list__selhidden" role="status" data-testid="kit-list-selhidden">
+              {t('kit.list.selHidden', { n: selHidden })}
+            </span>
+          )}
           <button type="button" className="sk-btn" onClick={toggleAll} disabled={pickable.length === 0}>
             {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: pickable.length })}
           </button>

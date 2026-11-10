@@ -6,7 +6,7 @@
 // спрашивали) — один на весь kit: `unknownOutcome.ts`.
 export { Steps, type StepDef, type StepsManualItem, type StepsProps } from './Steps';
 export { SecretOnce, type SecretClipboard, type SecretOnceProps } from './SecretOnce';
-export { DiffPreview, type DiffCheck, type DiffKind, type DiffPreviewProps, type DiffRow } from './DiffPreview';
+export { DiffPreview, type DiffCheck, type DiffConfirm, type DiffKind, type DiffPreviewProps, type DiffRow } from './DiffPreview';
 export { BatchUndo, type BatchItemFail, type BatchResult, type BatchUndoProps } from './BatchUndo';
 export { Matrix, type MatrixAxis, type MatrixCellState, type MatrixChange, type MatrixOption, type MatrixProps } from './Matrix';
 export { ChainExplain, type ChainExplainProps, type ChainOutcome, type ChainStep, type ChainStop } from './ChainExplain';
