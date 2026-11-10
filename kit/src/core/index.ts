@@ -32,3 +32,7 @@ export * from './StatusChip';
 // умолчание ctx.md — MartProse, а он тянет mermaid/bpmn-js.
 export * from './kindHooks';
 export * from './statusAxis';
+// Одно правило на числа и даты (ревью владелицы 10.11.2026): форматирование
+// жило только внутри kit, и приложению приходилось резать дату на месте —
+// ровно то, против чего правило и заведено. Отдаём его наружу.
+export * from './fmtValue';

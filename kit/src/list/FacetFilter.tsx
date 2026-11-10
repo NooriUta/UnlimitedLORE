@@ -35,13 +35,46 @@ export interface FacetFilterProps {
   compare?: (a: string, b: string) => number;
   onChange: (f: FieldFilter) => void;
   lang: KitLang;
+  /**
+   * Откуда числа (S9-01): `all` — посчитаны источником по всей выдаче, `page` —
+   * по загруженным строкам. Это говорится словами: рядом с «Показано 2 из 400»
+   * число по странице читается как число по выдаче, а это другое утверждение.
+   */
+  countsFrom?: 'all' | 'page';
+  /**
+   * Счётчики не посчитаны (причина словами, пустая строка — причины не дали).
+   * Тогда вместо чисел — «?», тот же приём, что у счётчика вкладки: «не
+   * посчитали» обязано быть отличимо от нуля.
+   */
+  countsUnknown?: string;
+  /** У записи бывает несколько значений: Σcount > total — норма, а не сбой счёта. */
+  multi?: boolean;
+}
+
+/**
+ * Счётчик значения: число, а при «не посчитали» — «?» с подсказкой (приём
+ * счётчика вкладки, `TabCount`: одно «неизвестно» на весь kit, а не второе).
+ */
+function FacetCount({ n, from, unknown, lang }: { n: number; from: 'all' | 'page'; unknown?: string; lang: KitLang }) {
+  if (unknown !== undefined) {
+    const why = unknown ? kitT(lang, 'kit.list.count.unknownWhy', { reason: unknown }) : kitT(lang, 'kit.list.count.unknown');
+    return <span className="sk-facet__n" data-unknown="" title={why}>?</span>;
+  }
+  return (
+    <span className="sk-facet__n" data-src={from} title={kitT(lang, from === 'all' ? 'kit.list.count.all' : 'kit.list.count.page')}>
+      {n}
+    </span>
+  );
 }
 
 /** Порог «их стало много»: с этого числа значений появляется поиск. Тот же
  *  порог у поиска по группам списка (S9-02) — одно число на один смысл. */
 export const FIND_FROM = 10;
 
-export function FacetFilter({ title, filter, facet, valueTitle, valueIcon, compare, onChange, lang }: FacetFilterProps) {
+export function FacetFilter({
+  title, filter, facet, valueTitle, valueIcon, compare, onChange, lang,
+  countsFrom = 'page', countsUnknown, multi,
+}: FacetFilterProps) {
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const [open, setOpen] = useState(false);
   const [find, setFind] = useState('');
@@ -120,7 +153,7 @@ export function FacetFilter({ title, filter, facet, valueTitle, valueIcon, compa
                     className={`sk-facet__op${filter.op === op ? ' is-on' : ''}`}
                     onClick={() => onChange({ op, values: filter.values })}
                   >
-                    {opTitle(op)}{n !== null && <> <span className="sk-facet__n">{n}</span></>}
+                    {opTitle(op)}{n !== null && <> <FacetCount n={n} from={countsFrom} unknown={countsUnknown} lang={lang} /></>}
                   </button>
                 );
               })}
@@ -144,7 +177,7 @@ export function FacetFilter({ title, filter, facet, valueTitle, valueIcon, compa
                         <input type="checkbox" checked={filter.values.includes(v.value)} onChange={() => toggleValue(v.value)} />
                         <ValueIconMark icon={valueIcon(v.value)} />
                         <span className="sk-facet__vt">{valueTitle(v.value)}</span>
-                        <span className="sk-facet__n">{v.count}</span>
+                        <FacetCount n={v.count} from={countsFrom} unknown={countsUnknown} lang={lang} />
                       </label>
                     ))}
                   </div>
@@ -153,6 +186,19 @@ export function FacetFilter({ title, filter, facet, valueTitle, valueIcon, compa
                 )}
               </>
             )}
+            {/*
+              Откуда числа — словами, в самой панели (S9-01). Иначе «240» и «1»
+              выглядят одинаково достоверными, хотя первое посчитано по выдаче,
+              а второе — по загруженной странице. Сумма больше итога тоже
+              называется нормой: у записи бывает несколько значений, и без этих
+              слов подпись выглядит как ошибка счёта.
+            */}
+            <p className="sk-facet__note">
+              {countsUnknown !== undefined
+                ? (countsUnknown ? t('kit.list.facet.noCountsWhy', { reason: countsUnknown }) : t('kit.list.facet.noCounts'))
+                : t(countsFrom === 'all' ? 'kit.list.facet.fromAll' : 'kit.list.facet.fromPage')}
+              {countsUnknown === undefined && multi ? ` ${t('kit.list.facet.multi')}` : ''}
+            </p>
             <div className="sk-facet__foot">
               <button type="button" className="sk-btn" onClick={close}>{t('kit.list.facetDone')}</button>
             </div>

@@ -50,12 +50,15 @@ import {
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
-import type { FilterOp, ListGroup, ListState, ListViewKind } from './listModel';
+import type { FilterOp, ListGroup, ListState, ListViewKind, QuickItem } from './listModel';
 import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
 import { FIND_FROM as GROUP_FIND_FROM } from './FacetFilter';
 import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf } from './groupLabel';
 import { applyFilterSet, describeFieldFilter, facetOf, toFilterSet } from './filterModel';
 import type { FieldFilter } from './filterModel';
+// Счётчики по всей выдаче (S9-01): правила, когда верить числам источника.
+import { axisSource, countsNotes, facetFromAxis, quickSource } from './listCounts';
+import type { ListCounts } from './listCounts';
 import { FacetFilter, ValueIconMark } from './FacetFilter';
 import type { ValueIcon } from './FacetFilter';
 import { selectAllShown, toggleId, visibleSelection } from './listSelection';
@@ -147,6 +150,16 @@ export interface ListViewProps {
    * статусу берёт иконку статуса из словаря (S4-04), прочие — без иконки.
    */
   quickIcons?: Record<string, string>;
+  /**
+   * Счётчики, посчитанные ИСТОЧНИКОМ по всей выдаче (S9-01) — данными, как и
+   * записи: в сеть список не ходит (K-14), числа ему передаёт приложение.
+   *
+   * Без них счётчики считаются по `data.records`, то есть по загруженной
+   * странице, и рядом с «Показано 1000 из 4000» это читается как число по всей
+   * выдаче. С ними каждое число подписано, откуда оно, а «не посчитали»
+   * остаётся «не посчитали» — не нулём.
+   */
+  counts?: ListCounts;
   /**
    * Иконка значения поля в фасетах и ячейках (S4-05). undefined — по умолчанию
    * (статус и вид — из конфига), null — без иконки. Подпись остаётся всегда.
@@ -324,6 +337,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  counts: serverCounts,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
   const narrow = useNarrow(narrowProp);
@@ -466,13 +480,53 @@ export function ListView({
   const activeQuick = quick.find(q => q.id === state.quick) ?? null;
   const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
   const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
-  const counts = useMemo(() => quickCounts(pool, quick, []), [pool, quick]);
+  const pageCounts = useMemo(() => quickCounts(pool, quick, []), [pool, quick]);
+  /**
+   * Чем выдача сужена СЕЙЧАС (S9-01). Источник считает ось по выдаче без
+   * фильтра своей оси, но прочих условий мы ему не отправляли — значит его
+   * числа годятся только пока выдачу не сузило что-то другое.
+   */
+  const narrowing = useMemo(
+    () => ({ keys: Object.keys(filterSet.fields), text: (filterSet.text ?? '') !== '' }),
+    [filterSet],
+  );
+  /**
+   * Выдача не обрезана — «по загруженным строкам» и «по всей выдаче» это одно и
+   * то же множество, и оговорка была бы ложной тревогой. Считается по meta, а
+   * не по фильтру: фильтр сужает показанное, а не выдачу.
+   */
+  const wholeLoaded = shownOf(data.meta, records.length, records.length).kind === 'complete';
+  /** Число «Быстро»: у источника — по всей выдаче, иначе по загруженной странице. */
+  const quickCount = (q: QuickItem): { n: number | null; from: 'all' | 'page'; why?: string } => {
+    const s = quickSource(serverCounts, q.filter, narrowing);
+    if (s.from === 'all') return { n: s.count, from: 'all' };
+    if (s.from === 'unknown') return { n: null, from: 'all', ...(s.reason === undefined ? {} : { why: s.reason }) };
+    return { n: pageCounts[q.id] ?? 0, from: wholeLoaded ? 'all' : 'page' };
+  };
   // «Быстро» с нулём не рисуем (аудит 10.11): «Без версии 0» — шум. Виден
   // ненулевой счётчик или включённый фильтр (его надо видеть, чтобы снять).
+  // Непосчитанное (null) прячется НЕ: «не знаем» — не ноль, и чип без числа
+  // человек всё равно должен видеть, чтобы им воспользоваться (S9-01).
   const visibleQuick = useMemo(
-    () => quick.filter(q => (counts[q.id] ?? 0) > 0 || state.quick === q.id),
-    [quick, counts, state.quick],
+    () => quick.filter(q => {
+      const c = quickCount(q);
+      return c.n === null || c.n > 0 || state.quick === q.id;
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [quick, pageCounts, serverCounts, narrowing, state.quick],
   );
+  /** Оговорки о полноте счёта — словами (S9-01). */
+  const countsWords = useMemo(() => countsNotes(serverCounts).map(n => {
+    switch (n.kind) {
+      case 'unsupported': return t('kit.list.counts.unsupported');
+      case 'forbidden': return t('kit.list.counts.forbidden');
+      case 'failed': return n.reason ? t('kit.list.counts.failed', { reason: n.reason }) : t('kit.list.counts.failedNoReason');
+      case 'cap': return t('kit.list.counts.cap', { limit: n.limit, parts: n.parts.join(', ') });
+      case 'partial': return t('kit.list.counts.partial');
+      case 'unknown': return t('kit.list.counts.unknown');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [serverCounts, lang]);
   const sortedAll = useMemo(() => sortRecords(applyFilters(pool, quickFilters), state.sort, config),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pool, config, JSON.stringify(quickFilters), state.sort]);
@@ -1228,19 +1282,30 @@ export function ListView({
             value={state.text}
             onChange={e => update({ text: e.target.value })}
           />
-          {filterKeys.map(k => (
-            <FacetFilter
-              key={k}
-              title={labels.keyTitle(k)}
-              filter={fieldFilterOf(k)}
-              facet={facetOf(records, filterSet, k)}
-              valueTitle={v => labels.valueTitle(k, v)}
-              valueIcon={v => iconOf(k, v)}
-              compare={k === 'status' ? statusCompare : undefined}
-              onChange={fl => setFieldFilter(k, fl)}
-              lang={lang}
-            />
-          ))}
+          {filterKeys.map(k => {
+            // Числа оси: у источника — по всей выдаче, иначе по загруженной
+            // странице; «не посчитали» — «?» вместо чисел (S9-01). Значения
+            // при «?» остаются страничными: выбрать значение всё равно надо,
+            // а вот счёт по ним мы не обещаем.
+            const src = axisSource(serverCounts, k, narrowing);
+            const page = facetOf(records, filterSet, k);
+            return (
+              <FacetFilter
+                key={k}
+                title={labels.keyTitle(k)}
+                filter={fieldFilterOf(k)}
+                facet={src.from === 'all' ? facetFromAxis(src.axis) : page}
+                valueTitle={v => labels.valueTitle(k, v)}
+                valueIcon={v => iconOf(k, v)}
+                compare={k === 'status' ? statusCompare : undefined}
+                onChange={fl => setFieldFilter(k, fl)}
+                lang={lang}
+                countsFrom={src.from === 'all' || wholeLoaded ? 'all' : 'page'}
+                countsUnknown={src.from === 'unknown' ? (src.reason ?? '') : undefined}
+                multi={src.from === 'all' ? src.axis.multi : undefined}
+              />
+            );
+          })}
         </fieldset>
         {(view === 'list' || view === 'board') && hasGroupings && (
           <fieldset className="sk-list__seg" data-seg="group">
@@ -1305,6 +1370,12 @@ export function ListView({
             {visibleQuick.map(q => {
               const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
               const qColor = quickColorOf(q, config);
+              // Число чипа — у источника или по странице; «не посчитали» — «?»
+              // с подсказкой, тем же приёмом, что у счётчика вкладки (S9-01).
+              const qc = quickCount(q);
+              const qTitle = qc.n === null
+                ? (qc.why ? t('kit.list.count.unknownWhy', { reason: qc.why }) : t('kit.list.count.unknown'))
+                : t(qc.from === 'all' ? 'kit.list.count.all' : 'kit.list.count.page');
               return (
                 <Pill
                   key={q.id}
@@ -1313,7 +1384,15 @@ export function ListView({
                   onToggle={on => update({ quick: on ? q.id : null })}
                 >
                   {icon && <span className="sk-list__qicon" data-quick-icon={icon} style={qColor ? { color: qColor } : undefined}><GameIcon slug={icon} size={12} /></span>}
-                  <span>{q.title}</span><span className="sk-list__qcount">{counts[q.id] ?? 0}</span>
+                  <span>{q.title}</span>
+                  <span
+                    className="sk-list__qcount"
+                    data-src={qc.n === null ? undefined : qc.from}
+                    data-unknown={qc.n === null ? '' : undefined}
+                    title={qTitle}
+                  >
+                    {qc.n === null ? '?' : qc.n}
+                  </span>
                 </Pill>
               );
             })}
@@ -1325,6 +1404,12 @@ export function ListView({
           </button>
         )}
         <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
+        {/* Полнота счёта — словами рядом с «Показано N из M» (S9-01): «посчитано
+            не целиком», «счётчиков не бывает», «нет разрешённых проектов»,
+            «сбой» — каждое своё, и ни одно из них не ноль. */}
+        {countsWords.length > 0 && (
+          <p className="sk-list__counts" data-testid="kit-list-counts" role="status">{countsWords.join(' ')}</p>
+        )}
         {/* Скрытое — числом (S4-27): сколько закрытых убрал режим «скрыть» или «за 30 дней». */}
         {split.hidden > 0 && (
           <span className="sk-list__closedhidden" data-testid="kit-list-closed-hidden">{t('kit.list.closed.hidden', { n: split.hidden })}</span>
