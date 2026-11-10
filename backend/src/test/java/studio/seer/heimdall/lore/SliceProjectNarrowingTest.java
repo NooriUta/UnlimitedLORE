@@ -62,6 +62,9 @@ class SliceProjectNarrowingTest {
         SliceProjectNarrowing.Result r = SliceProjectNarrowing.apply(SCOPED, given("a,z"), Set.of("a", "b"));
         assertEquals(Set.of("a"), r.scope());
         assertEquals(List.of("z"), r.meta().get("dropped"));
+        // Ревью 10.11 (дубли предупреждений): отброшенные уже названы в dropped — та же
+        // фраза в note печаталась клиентом вторым разом.
+        assertFalse(r.meta().containsKey("note"), "отброшенные названы в dropped, второй раз в note — дубль");
     }
 
     /** Ни один выбранный не доступен — пусто ПО ВЫБОРУ, а не «нет прав вообще». */
@@ -80,7 +83,9 @@ class SliceProjectNarrowingTest {
         SliceProjectNarrowing.Result r = SliceProjectNarrowing.apply(UNSCOPED, g, null);
         assertNull(r.scope());
         assertEquals(false, r.meta().get("applied"));
-        assertTrue(String.valueOf(r.meta().get("reason")).contains("не привязан к проектам"));
+        // Ревью 10.11, B11: клиент читает `note`; сервер писал причину в `reason`, и она терялась.
+        assertTrue(String.valueOf(r.meta().get("note")).contains("не привязан к проектам"), String.valueOf(r.meta()));
+        assertFalse(r.meta().containsKey("reason"), "одно имя для текста отметки — note");
     }
 
     @Test

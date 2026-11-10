@@ -63,4 +63,43 @@ final class LoreKcAgentClient {
             + " у его сервисного аккаунта — выдаётся в консоли KC (Clients → lore-admin → Service account roles)."
             + " LORE эту роль сам себе не выдаёт.";
     }
+
+    /**
+     * Ревью 10.11, B8: клиентские роли сервисной учётки шаблона ({@code clientMappings} ответа
+     * {@code /users/{id}/role-mappings}) — по uuid клиента-владельца роли. Роль agent-&lt;profile&gt;
+     * выдаётся именно так (kc-provision-agents.js), и без неё машинная учётка получала пустой
+     * agent_scope. Служебные роли самого KC (realm-management, account, broker) не копируются —
+     * то же правило, что у realm-ролей.
+     */
+    static java.util.Map<String, io.vertx.core.json.JsonArray> clientRoleGrants(JsonObject roleMappings) {
+        java.util.Map<String, io.vertx.core.json.JsonArray> out = new java.util.LinkedHashMap<>();
+        JsonObject cm = roleMappings == null ? null : roleMappings.getJsonObject("clientMappings");
+        if (cm == null) return out;
+        for (String name : cm.fieldNames()) {
+            if (KC_SERVICE_CLIENTS.contains(name)) continue;
+            JsonObject c = cm.getJsonObject(name);
+            String uuid = c == null ? null : c.getString("id");
+            io.vertx.core.json.JsonArray roles = c == null ? null : c.getJsonArray("mappings");
+            if (uuid == null || roles == null || roles.isEmpty()) continue;
+            out.put(uuid, roles);
+        }
+        return out;
+    }
+
+    /** Встроенные клиенты Keycloak — их роли служебные, агенту не копируются. */
+    static final java.util.Set<String> KC_SERVICE_CLIENTS = java.util.Set.of(
+        "realm-management", "account", "account-console", "broker", "admin-cli", "security-admin-console");
+
+    /**
+     * Ревью 10.11, B10: {@code id} из тела ответа KC; битое тело (пустое, HTML от прокси) — {@code null},
+     * а не исключение, которое роняло весь список агентов одним ответом.
+     */
+    static String idOf(String body) {
+        if (body == null || body.isBlank()) return null;
+        try {
+            return new JsonObject(body).getString("id");
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
 }

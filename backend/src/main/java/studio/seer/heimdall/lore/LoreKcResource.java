@@ -256,6 +256,22 @@ public class LoreKcResource extends LoreResourceBase {
                         if (g.statusCode() >= 300) { copied.clear(); rolesNote = "роли не скопированы: KC " + g.statusCode(); }
                     }
                 } else rolesNote = "роли шаблона не прочитаны: KC " + rm.statusCode();
+                // Ревью 10.11, B8: клиентские роли (agent-<profile> выдаётся именно так) — тоже из шаблона,
+                // иначе свежая машинная учётка с пустым agent_scope невидима в «Учётке».
+                HttpResponse<String> all = kc("GET", "/users/" + tplUser + "/role-mappings", null, t);
+                if (all.statusCode() == 200) {
+                    java.util.Map<String, io.vertx.core.json.JsonArray> grants =
+                        LoreKcAgentClient.clientRoleGrants(new io.vertx.core.json.JsonObject(all.body()));
+                    for (java.util.Map.Entry<String, io.vertx.core.json.JsonArray> g : grants.entrySet()) {
+                        HttpResponse<String> cg = kc("POST", "/users/" + newUser + "/role-mappings/clients/" + g.getKey(),
+                            g.getValue().encode(), t);
+                        if (cg.statusCode() >= 300) {
+                            rolesNote = (rolesNote == null ? "" : rolesNote + "; ") + "клиентские роли не скопированы: KC " + cg.statusCode();
+                        } else {
+                            for (int i = 0; i < g.getValue().size(); i++) copied.add(g.getValue().getJsonObject(i).getString("name"));
+                        }
+                    }
+                } else rolesNote = (rolesNote == null ? "" : rolesNote + "; ") + "клиентские роли шаблона не прочитаны: KC " + all.statusCode();
             } else rolesNote = "сервисный аккаунт не найден у шаблона или нового клиента";
             LOG.infof("[LORE KC] создан клиент агента %s по шаблону %s, ролей скопировано %d", newId, templateId, copied.size());
             Map<String, Object> out = new java.util.LinkedHashMap<>();
@@ -418,7 +434,8 @@ public class LoreKcResource extends LoreResourceBase {
                 String sa = null;
                 HttpResponse<String> su = kc("GET", "/clients/" + c.getString("id") + "/service-account-user", null, t);
                 if (su.statusCode() == 200) {
-                    String uid = new io.vertx.core.json.JsonObject(su.body()).getString("id");
+                    // Ревью 10.11, B10: битое тело одного ответа — у этого клиента нет оси, а не 5xx на весь список.
+                    String uid = LoreKcAgentClient.idOf(su.body());
                     if (uid != null) {
                         HttpResponse<String> rm = kc("GET", "/users/" + uid + "/role-mappings", null, t);
                         if (rm.statusCode() == 200) sa = rm.body();
