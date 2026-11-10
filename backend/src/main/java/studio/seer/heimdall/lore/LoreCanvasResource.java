@@ -32,6 +32,16 @@ import java.util.UUID;
  * POST /lore/canvas/{uid}/links           UPSERT стрелок {links:[…]} (концы — элементы этого холста)
  * POST /lore/canvas/{uid}/links/delete    удалить стрелки {link_uids:[…]}
  * </pre>
+ *
+ * <p><b>S7C-05 — стрелка как ребро графа.</b> Если оба стикера привязаны к сущностям
+ * ({@code ref_type}/{@code ref_id}), стрелка пишется типизированным ребром {@code edge}
+ * между ними; пары и типы — каталог «Связать» ({@link LoreLinkTypes}, S2-06),
+ * {@code REFERENCES} — запасной. Все отказы ДО записи пакета. Ребро несёт
+ * {@code origin='canvas'} и {@code canvas_ref='<canvas>/<link>'}; удаление стрелки или
+ * её стикера снимает только своё ребро. У стрелки {@code graph}: {@code created} —
+ * ребро поставлено ею, {@code existing} — уже было, чужое, {@code drawing} — только рисунок.
+ * Не сделано: перепривязка стикера к другой сущности не переносит рёбра его стрелок —
+ * клиент переставляет стрелку (повторный UPSERT того же {@code link_uid}).
  */
 @Path("/lore/canvas")
 public class LoreCanvasResource extends LoreResourceBase {
@@ -92,7 +102,8 @@ public class LoreCanvasResource extends LoreResourceBase {
                 "SELECT item_uid, kind, text, x, y, w, h, color, slot, ref_type, ref_id, updated_at FROM KnowCanvasItem "
                 + "WHERE canvas_uid = :u ORDER BY item_uid", Map.of("u", uid));
             List<Map<String, Object>> links = ingestService.queryPublic(
-                "SELECT link_uid, from_uid, to_uid, edge FROM KnowCanvasLink WHERE canvas_uid = :u ORDER BY link_uid",
+                "SELECT link_uid, from_uid, to_uid, edge, ifnull(graph_state, 'drawing') AS graph FROM KnowCanvasLink "
+                + "WHERE canvas_uid = :u ORDER BY link_uid",
                 Map.of("u", uid));
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("ok", true);
@@ -187,7 +198,9 @@ public class LoreCanvasResource extends LoreResourceBase {
         try {
             if (!exists(uid)) return notFound(uid);
             Map<String, Object> p = Map.of("u", uid, "ids", new ArrayList<>(req.item_uids()));
-            // Стрелки удалённых элементов не должны висеть — сносятся вместе с ними.
+            // Стрелки удалённых элементов не должны висеть — сносятся вместе с ними,
+            // а их рёбра графа (S7C-05) — до самих стрелок, пока метка ещё читается.
+            dropOwnedEdges(uid, null, req.item_uids());
             exec("DELETE FROM KnowCanvasLink WHERE canvas_uid = :u AND (from_uid IN :ids OR to_uid IN :ids)", p);
             exec("DELETE FROM KnowCanvasItem WHERE canvas_uid = :u AND item_uid IN :ids", p);
             return noStore(Response.ok(Map.of("ok", true, "outcome", LoreOutcome.DELETED)));
@@ -208,23 +221,118 @@ public class LoreCanvasResource extends LoreResourceBase {
             String err = LoreCanvas.linkError(req.links().get(i));
             if (err != null) return badParams("links[" + i + "]: " + err);
         }
+        if (LoreCanvas.uidError("canvas_uid", uid) != null) return badParams(LoreCanvas.uidError("canvas_uid", uid));
         try {
             if (!exists(uid)) return notFound(uid);
-            for (Map<String, Object> l : req.links()) {
+            // Фаза 1 — все проверки пакета ДО записи: отказ не оставляет полупакета.
+            List<PlannedLink> plans = new ArrayList<>();
+            for (int i = 0; i < req.links().size(); i++) {
+                Map<String, Object> l = req.links().get(i);
+                Map<String, Map<String, Object>> ends = new HashMap<>();
                 // Концы — элементы ЭТОГО холста; стрелка в никуда не сохраняется.
-                for (String end : List.of("from_uid", "to_uid"))
-                    if (ingestService.queryPublic("SELECT item_uid FROM KnowCanvasItem WHERE canvas_uid = :u AND item_uid = :i",
-                            Map.of("u", uid, "i", l.get(end))).isEmpty())
-                        return badParams(end + " '" + l.get(end) + "' is not an item of this canvas");
-                Map<String, Object> p = new HashMap<>();
-                p.put("u", uid); p.put("l", l.get("link_uid")); p.put("f", l.get("from_uid"));
-                p.put("t", l.get("to_uid")); p.put("e", l.get("edge"));
-                exec("UPDATE KnowCanvasLink SET canvas_uid = :u, link_uid = :l, from_uid = :f, to_uid = :t, edge = :e "
-                    + "UPSERT WHERE canvas_uid = :u AND link_uid = :l", p);
+                for (String end : List.of("from_uid", "to_uid")) {
+                    List<Map<String, Object>> rows = ingestService.queryPublic(
+                        "SELECT item_uid, ref_type, ref_id FROM KnowCanvasItem WHERE canvas_uid = :u AND item_uid = :i",
+                        Map.of("u", uid, "i", l.get(end)));
+                    if (rows.isEmpty()) return badParams(end + " '" + l.get(end) + "' is not an item of this canvas");
+                    ends.put(end, rows.get(0));
+                }
+                Map<String, Object> f = ends.get("from_uid"), t = ends.get("to_uid");
+                LoreCanvas.GraphPlan gp = LoreCanvas.graphPlan(f.get("ref_type"), t.get("ref_type"), (String) l.get("edge"));
+                if (gp.error() != null)
+                    return noStore(Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new LoreError("EDGE_NOT_ALLOWED", "links[" + i + "]: " + gp.error())));
+                String fromRid = null, toRid = null;
+                if (!gp.drawing()) {
+                    // S7C-05: обе привязки есть — стрелка станет ребром графа. Права агента —
+                    // по семейству исходной сущности, той же матрицей, что у «Связать».
+                    String scope = identity == null ? null : AgentScopeFilter.agentScopeOf(identity);
+                    if (scope != null) {
+                        AgentScopeFilter.Denial d = AgentScopeFilter.decide(scope, "/lore/" + gp.from().family() + "/link");
+                        if (d != null)
+                            return agentScopeForbidden("agent-" + scope + " не ставит связи от '" + gp.from().type()
+                                + "' (семейство " + d.what() + ": " + d.why() + ")");
+                    }
+                    String fromId = String.valueOf(f.get("ref_id")), toId = String.valueOf(t.get("ref_id"));
+                    fromRid = LoreGraphLinks.resolveRid(ingestService, gp.from(), fromId);
+                    toRid = LoreGraphLinks.resolveRid(ingestService, gp.to(), toId);
+                    if (fromRid == null) return targetNotFound("links[" + i + "]: " + gp.from().type() + " " + fromId);
+                    if (toRid == null) return targetNotFound("links[" + i + "]: " + gp.to().type() + " " + toId);
+                    if (fromRid.isEmpty() || toRid.isEmpty())
+                        return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("AMBIGUOUS_TARGET",
+                            "links[" + i + "]: id " + (fromRid.isEmpty() ? fromId : toId)
+                            + " принадлежит нескольким записям — уточните (например, релиз — в каком проекте)")));
+                }
+                plans.add(new PlannedLink(l, gp, fromRid, toRid));
             }
-            return noStore(Response.ok(Map.of("ok", true, "saved", req.links().size(), "outcome", LoreOutcome.UPDATED)));
+            // Фаза 2 — запись.
+            String now = Instant.now().toString();
+            String by = LoreGraphLinks.sqlSafe(callerLabel());
+            List<Map<String, Object>> graph = new ArrayList<>();
+            for (PlannedLink pl : plans) {
+                String linkUid = (String) pl.link().get("link_uid");
+                String edge = (String) pl.link().get("edge");
+                // Переставленная стрелка (тот же link_uid) сначала снимает своё прежнее ребро.
+                dropOwnedEdges(uid, List.of(linkUid), null);
+                String state = LoreCanvas.GRAPH_DRAWING;
+                if (!pl.plan().drawing()) {
+                    if (LoreGraphLinks.edgeBetween(ingestService, edge, pl.fromRid(), pl.toRid())) {
+                        // Ребро уже стоит (поставлено другим путём) — стрелка его показывает, но не владеет им.
+                        state = LoreCanvas.GRAPH_EXISTING;
+                    } else {
+                        // SET — String.format: CREATE EDGE не принимает именованные параметры в SET.
+                        exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS SET origin='%s', "
+                                + "canvas_ref='%s', created_at='%s', created_by='%s'",
+                            edge, pl.fromRid(), pl.toRid(), LoreCanvas.ORIGIN_CANVAS,
+                            LoreGraphLinks.sqlSafe(LoreCanvas.canvasRef(uid, linkUid)), now, by), Map.of());
+                        if (!LoreGraphLinks.edgeBetween(ingestService, edge, pl.fromRid(), pl.toRid()))
+                            throw new IllegalStateException("ребро " + edge + " не встало после CREATE EDGE");
+                        state = LoreCanvas.GRAPH_CREATED;
+                    }
+                }
+                Map<String, Object> p = new HashMap<>();
+                p.put("u", uid); p.put("l", linkUid); p.put("f", pl.link().get("from_uid"));
+                p.put("t", pl.link().get("to_uid")); p.put("e", edge); p.put("g", state);
+                exec("UPDATE KnowCanvasLink SET canvas_uid = :u, link_uid = :l, from_uid = :f, to_uid = :t, edge = :e, "
+                    + "graph_state = :g UPSERT WHERE canvas_uid = :u AND link_uid = :l", p);
+                Map<String, Object> g = new LinkedHashMap<>();
+                g.put("link_uid", linkUid);
+                g.put("edge_type", edge);
+                g.put("state", state);
+                graph.add(g);
+                LOG.infof("[LORE CANVAS] link %s/%s %s — %s", uid, linkUid, edge, state);
+            }
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("ok", true);
+            body.put("saved", req.links().size());
+            body.put("outcome", LoreOutcome.UPDATED);
+            body.put("graph", graph);
+            return noStore(Response.ok(body));
         } catch (Exception e) {
             return upstream("links", e);
+        }
+    }
+
+    private record PlannedLink(Map<String, Object> link, LoreCanvas.GraphPlan plan, String fromRid, String toRid) {}
+
+    /**
+     * S7C-05: снять рёбра графа, которые поставили ЭТИ стрелки ({@code graph_state='created'},
+     * метка {@code canvas_ref}). Чужие рёбра ({@code existing}) не трогаются.
+     * {@code itemUids} задан — стрелки, касающиеся этих элементов.
+     */
+    private void dropOwnedEdges(String uid, List<String> linkUids, List<String> itemUids) {
+        List<Map<String, Object>> owned = itemUids == null
+            ? ingestService.queryPublic("SELECT link_uid, edge FROM KnowCanvasLink WHERE canvas_uid = :u "
+                + "AND link_uid IN :ids AND graph_state = :g",
+                Map.of("u", uid, "ids", new ArrayList<>(linkUids), "g", LoreCanvas.GRAPH_CREATED))
+            : ingestService.queryPublic("SELECT link_uid, edge FROM KnowCanvasLink WHERE canvas_uid = :u "
+                + "AND (from_uid IN :ids OR to_uid IN :ids) AND graph_state = :g",
+                Map.of("u", uid, "ids", new ArrayList<>(itemUids), "g", LoreCanvas.GRAPH_CREATED));
+        for (Map<String, Object> o : owned) {
+            String edge = String.valueOf(o.get("edge"));
+            if (!LoreCanvas.EDGE.matcher(edge).matches()) continue;
+            exec("DELETE FROM " + edge + " WHERE canvas_ref = :r",
+                Map.of("r", LoreCanvas.canvasRef(uid, String.valueOf(o.get("link_uid")))));
         }
     }
 
@@ -239,6 +347,7 @@ public class LoreCanvasResource extends LoreResourceBase {
             if (LoreCanvas.uidError("link_uid", l) != null) return badParams(LoreCanvas.uidError("link_uid", l));
         try {
             if (!exists(uid)) return notFound(uid);
+            dropOwnedEdges(uid, req.link_uids(), null);
             exec("DELETE FROM KnowCanvasLink WHERE canvas_uid = :u AND link_uid IN :ids",
                 Map.of("u", uid, "ids", new ArrayList<>(req.link_uids())));
             return noStore(Response.ok(Map.of("ok", true, "outcome", LoreOutcome.DELETED)));

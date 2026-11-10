@@ -291,6 +291,20 @@ public abstract class LoreResourceBase {
     }
 
     /**
+     * Кто поставил запись (провенанс ребра): факт токена (ось:идентичность), а не
+     * поле тела запроса. S2-06 «Связать» и S7C-05 стрелки холста.
+     */
+    String callerLabel() {
+        String scope = identity == null ? null : AgentScopeFilter.agentScopeOf(identity);
+        if (scope != null) {
+            String client = callerClientId();
+            return "agent:" + scope + (client == null ? "" : "/" + client);
+        }
+        String sub = callerKcSub();
+        return sub == null ? "human" : "human:" + sub;
+    }
+
+    /**
      * Активные коды словаря {@code dictType}; пустой словарь (свежая БД до
      * сидов) или сбой чтения — {@code fallback}. Канон — словарь, константа
      * только страхует старт (тот же приём, что AL-79 у decision_status).

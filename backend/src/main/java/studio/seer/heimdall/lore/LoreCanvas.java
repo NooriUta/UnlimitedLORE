@@ -130,11 +130,31 @@ final class LoreCanvas {
     /** Провенанс на ребре: удаление стрелки снимает ровно своё ребро, а не чужое. */
     static final String ORIGIN_CANVAS = "canvas";
 
+    /**
+     * Каталог пар и типов — тот же, что у «Связать» (S2-06, {@link LoreLinkTypes}):
+     * граф остаётся типизированным, {@code REFERENCES} — запасной. Направление не
+     * разворачивается молча: развёрнутые варианты UI берёт из GET /lore/link/types.
+     */
     static GraphPlan graphPlan(Object fromRefType, Object toRefType, String edge) {
-        return new GraphPlan(null, null, edge, null); // STUB S7C-05
+        if (fromRefType == null || toRefType == null) return new GraphPlan(null, null, edge, null);
+        LoreLinkTypes.Entity from = LoreLinkTypes.entity(String.valueOf(fromRefType));
+        LoreLinkTypes.Entity to = LoreLinkTypes.entity(String.valueOf(toRefType));
+        for (Object t : new Object[] {fromRefType, toRefType})
+            if (LoreLinkTypes.entity(String.valueOf(t)) == null)
+                return new GraphPlan(null, null, edge, "ref_type '" + t + "' не связывается рёбрами графа; допустимы: "
+                    + String.join(", ", LoreLinkTypes.ENTITIES.keySet()));
+        if (!LoreLinkTypes.isAllowed(from.type(), to.type(), edge)) {
+            List<String> allowed = LoreLinkTypes.optionsFor(from.type(), to.type()).stream()
+                .filter(o -> !o.reversed()).map(LoreLinkTypes.Option::edgeType).toList();
+            return new GraphPlan(null, null, edge, edge + " не ставится " + from.type() + " → " + to.type()
+                + "; допустимо в этом направлении: " + String.join(", ", allowed)
+                + " (варианты обоих направлений — GET /lore/link/types)");
+        }
+        return new GraphPlan(from, to, edge, null);
     }
 
+    /** Метка стрелки на её ребре графа: по ней удаление стрелки находит своё ребро. */
     static String canvasRef(String canvasUid, String linkUid) {
-        return null; // STUB S7C-05
+        return canvasUid + "/" + linkUid;
     }
 }
