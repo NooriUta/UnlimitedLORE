@@ -13,6 +13,7 @@ import { useIsAdmin } from '../../auth/useRole';
 import { fetchLoreEnv } from '../../api/lore';
 import { ProjectScopeProvider, useProjectScope } from '../../context/ProjectScopeContext';
 import { type Palette, type Mode, PALETTES, writePrefs, resolvePalette, resolveMode } from '../../theme/prefs';
+import { v2Url, switchToV2 } from '../../theme/navSwitch';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
@@ -67,6 +68,8 @@ function AppShellBody() {
   }, [palette, mode]);
 
   const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
+  // S3-07: адрес v2 для текущего хоста; null — пары нет (localhost/IP).
+  const toV2 = v2Url(window.location);
 
   // ── Seiðr-шапка: бренд/тенант/«ещё» как dropdown'ы + палитра поиска ──────────
   const [openDD, setOpenDD] = useState<null | 'brand' | 'project' | 'chapters' | 'more' | 'user'>(null);
@@ -452,6 +455,19 @@ function AppShellBody() {
                     англоязычному «Переключить на русский» по-английски. */}
                 {lang === 'ru' ? 'Switch to English' : 'Переключить на русский'}
               </button>
+              {/* S3-07: флаг «новая навигация» — переход в v2 (обратный — в v2).
+                  В v1 он всегда выключен; включение = nav=v2 в seer-prefs и уход
+                  на new.-хост. На localhost/IP пары нет — пункт выключен. */}
+              <button type="button" role="menuitemcheckbox" aria-checked={false} data-nav-switch="v1"
+                disabled={!toV2}
+                style={{ ...ddItem(false), cursor: toV2 ? 'pointer' : 'not-allowed', opacity: toV2 ? 1 : 0.6 }}
+                onClick={() => { const url = switchToV2(window.location); if (url) window.location.assign(url); }}>
+                <span style={{ width: 15, textAlign: 'center' }}>☐</span>
+                {t('settings.nav.label')}
+              </button>
+              <div style={{ ...ddNote, color: toV2 ? 'var(--t3)' : 'var(--wrn)' }}>
+                {toV2 ? t('settings.nav.hint') : t('settings.nav.unavailable')}
+              </div>
               <div style={ddSep} />
               <button type="button" role="menuitem" style={ddItem(false)} onClick={() => { setOpenDD(null); setPalOpen(true); }}>
                 <span style={{ width: 15, textAlign: 'center' }}>⌕</span>Поиск<span style={{ ...ddBadge, borderColor: 'var(--bd)' }}>/</span>
