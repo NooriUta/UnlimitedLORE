@@ -49,6 +49,11 @@ public class LoreAdminActions extends LoreResourceBase {
     record Query(String sql, String countSql, Map<String, Object> params) {}
 
     static Query build(String caller, String axis, String family, Long from, Long to, int limit) {
+        return build(caller, axis, family, null, from, to, limit);
+    }
+
+    /** S7B-13: {@code batchId} — только записи этой пачки массовых правок. */
+    static Query build(String caller, String axis, String family, String batchId, Long from, Long to, int limit) {
         if (family != null && !LoreSlices.ADMIN_FAMILIES.contains(family))
             throw new IllegalArgumentException("unknown family '" + family + "' — admin journal families: "
                 + new java.util.TreeSet<>(LoreSlices.ADMIN_FAMILIES));
@@ -69,6 +74,11 @@ public class LoreAdminActions extends LoreResourceBase {
         String sql = "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, "
             + "segment AS axis, value AS status" + where + " ORDER BY ts DESC LIMIT " + (limit + 1);
         return new Query(sql, "SELECT count(*) AS n" + where, p);
+    }
+
+    /** S7B-13: каждая строка журнала получает {@code batch_id} — id пачки или null. ЗАГЛУШКА. */
+    static List<Map<String, Object>> withBatch(List<Map<String, Object>> rows) {
+        return rows;
     }
 
     /** epoch millis | ISO-момент | дата (UTC); {@code to}=дата — конец дня включительно. Пусто → null. */
@@ -153,6 +163,18 @@ public class LoreAdminActions extends LoreResourceBase {
         Map<String, Object> filters = new LinkedHashMap<>(q.params());
         b.put("filters", filters);
         return noStore(Response.ok(b));
+    }
+
+    /** S7B-13: раскрыть пачку массовых правок до её элементов и обратного пакета. ЗАГЛУШКА. */
+    @GET
+    @Path("batch/{batch_id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response batch(@jakarta.ws.rs.PathParam("batch_id") String batchId,
+                          @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        return targetNotFound("пачка " + batchId);
     }
 
     private static String blankToNull(String s) {

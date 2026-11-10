@@ -89,6 +89,16 @@ final class LoreRoleBatch {
         return null;
     }
 
+    /** S7B-13: строка — идентификатор пачки. ЗАГЛУШКА. */
+    static boolean isBatchId(String s) {
+        return false;
+    }
+
+    /** S7B-13: обратный пакет по событиям AL-102 пачки (role_before каждого). ЗАГЛУШКА. */
+    static List<Map<String, Object>> undoFromEvents(List<Map<String, Object>> events) {
+        return List.of();
+    }
+
     /** Обратный пакет: вернуть «было» для всего, что пакет меняет. */
     static List<Map<String, Object>> undo(List<Map<String, Object>> plan) {
         List<Map<String, Object>> out = new ArrayList<>();
