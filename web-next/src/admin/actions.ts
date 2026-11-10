@@ -152,7 +152,7 @@ export interface FetchOptions {
   fetchImpl?: typeof fetch;
 }
 
-async function getJson(url: string, opts: FetchOptions): Promise<unknown> {
+export async function getJson(url: string, opts: FetchOptions): Promise<unknown> {
   const doFetch = opts.fetchImpl ?? loreFetch;
   const res = await doFetch(url, { signal: opts.signal, headers: { Accept: 'application/json' } });
   if (!(res.headers.get('Content-Type') ?? '').includes('json')) {

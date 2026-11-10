@@ -77,3 +77,15 @@
   padding: 6px 8px; border: 1px dashed var(--bd); border-radius: 6px; background: var(--bg2);
 }
 .adm-batchbox__head { display: flex; align-items: center; gap: 8px; }
+/* Доступ (S7B-10/12/14): «почему видит», «кто видит», проекты агента. Только токены. */
+.adm-access {
+  display: flex; flex-direction: column; gap: 4px; margin: 4px 0;
+  padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2);
+}
+.adm-access__h { margin: 0; color: var(--t2); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; }
+.adm-verdict { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 700; font-size: var(--fs-sm); }
+.adm-verdict[data-sees='true'] { color: var(--suc); }
+.adm-verdict[data-sees='true'][data-write='false'] { color: var(--inf); }
+.adm-verdict[data-sees='false'] { color: var(--dng); }
+.adm-chain { margin: 0; padding-left: 20px; color: var(--t2); font-size: var(--fs-xs); }
+.adm-plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
