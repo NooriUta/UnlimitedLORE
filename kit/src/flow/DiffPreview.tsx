@@ -120,7 +120,10 @@ export function DiffPreview({ rows, onApply, busy, label, lang = 'ru' }: DiffPre
         </ul>
       )}
 
-      {nothing
+      {/* Режим чтения: обработчика применения нет — значит нет ни кнопки, ни
+          фраз о применении. Они про действие, которого здесь не бывает, а
+          кнопка-обманка читается как «изменения ещё не применены». */}
+      {!onApply ? null : nothing
         ? <p className="sk-diff__nothing" data-testid="kit-diff-nothing">{nothing}</p>
         : (
           <button

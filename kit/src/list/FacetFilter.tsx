@@ -9,6 +9,9 @@ import { GameIcon } from '../elements/GameIcon';
 import { kitT } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
 import type { Facet, FieldFilter } from './filterModel';
+// Блоки фасета на объёме (S9-03): выбранные → закреплённые → частые → поиск.
+import { FACET_SCALE, facetSections } from './facetSections';
+import type { FacetBlockKind } from './facetSections';
 import { FILTER_OPS } from './listModel';
 import type { FilterOp } from './listModel';
 
@@ -49,6 +52,12 @@ export interface FacetFilterProps {
   countsUnknown?: string;
   /** У записи бывает несколько значений: Σcount > total — норма, а не сбой счёта. */
   multi?: boolean;
+  /**
+   * Значения, которые приложение держит под рукой (S9-03): они идут отдельным
+   * блоком сразу под выбранными, в порядке приложения. Почему именно эти —
+   * знание приложения, а не kit (K-14): сюда приходит только список значений.
+   */
+  pinned?: readonly string[];
 }
 
 /**
@@ -68,12 +77,13 @@ function FacetCount({ n, from, unknown, lang }: { n: number; from: 'all' | 'page
 }
 
 /** Порог «их стало много»: с этого числа значений появляется поиск. Тот же
- *  порог у поиска по группам списка (S9-02) — одно число на один смысл. */
-export const FIND_FROM = 10;
+ *  порог у поиска по группам списка (S9-02) — одно число на один смысл.
+ *  Задан одним местом — `FACET_SCALE` (S9-03), здесь только имя для списка. */
+export const FIND_FROM = FACET_SCALE.findFrom;
 
 export function FacetFilter({
   title, filter, facet, valueTitle, valueIcon, compare, onChange, lang,
-  countsFrom = 'page', countsUnknown, multi,
+  countsFrom = 'page', countsUnknown, multi, pinned,
 }: FacetFilterProps) {
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const [open, setOpen] = useState(false);
@@ -85,11 +95,21 @@ export function FacetFilter({
   const counts = new Map(facet.values.map(v => [v.value, v.count]));
   // отмеченное значение видно и с нулём — его надо уметь снять
   for (const v of filter.values) if (v !== '' && !counts.has(v)) counts.set(v, 0);
-  let values = [...counts].map(([value, count]) => ({ value, count }));
+  const values = [...counts].map(([value, count]) => ({ value, count }));
   if (compare) values.sort((a, b) => compare(a.value, b.value));
   else values.sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, 'ru', { numeric: true }));
-  const needle = find.trim().toLocaleLowerCase();
-  if (needle) values = values.filter(v => `${v.value} ${valueTitle(v.value)}`.toLocaleLowerCase().includes(needle));
+  // Блоки считаются по УЖЕ отсортированному списку: «частые» — это начало того
+  // же порядка, в котором значения показаны, с теми же числами (S9-03).
+  // «Частыми» блок зовётся только когда числа есть и порядок по ним: со своим
+  // порядком (словарь статусов) или без чисел это «первые по порядку».
+  const sec = facetSections({
+    values,
+    picked: filter.values,
+    pinned,
+    query: find,
+    haystack: valueTitle,
+    ranked: countsUnknown === undefined && !compare,
+  });
 
   const active = filter.op === 'empty' || filter.op === 'nonempty' || filter.values.length > 0;
   let summary: string;
@@ -116,6 +136,22 @@ export function FacetFilter({
     onChange({ op: filter.op, values: has ? filter.values.filter(x => x !== v) : [...filter.values, v] });
   };
   const opCount = (op: FilterOp): number | null => (op === 'empty' ? facet.empty : op === 'nonempty' ? facet.nonempty : null);
+  /**
+   * Подпись блока. У «частых» подпись зависит от того, ОТКУДА числа: счёт по
+   * загруженным строкам даёт «частые среди загруженного» — иначе блок обещает
+   * частоту по всей выдаче, которой не считали (S9-01). Плоский список ниже
+   * порога подписи не получает: делить там нечего.
+   */
+  const blockTitle = (kind: FacetBlockKind): string | null => {
+    switch (kind) {
+      case 'picked': return t('kit.list.facet.sec.picked');
+      case 'pinned': return t('kit.list.facet.sec.pinned');
+      case 'frequent': return t(countsFrom === 'all' ? 'kit.list.facet.sec.frequent' : 'kit.list.facet.sec.frequentPage');
+      case 'first': return t('kit.list.facet.sec.first');
+      case 'found': return t('kit.list.facet.sec.found');
+      default: return null;
+    }
+  };
   const pickValues = filter.op === 'any' || filter.op === 'not';
 
   return (
@@ -160,7 +196,7 @@ export function FacetFilter({
             </div>
             {pickValues && (
               <>
-                {counts.size > FIND_FROM && (
+                {sec.search && (
                   <input
                     type="search"
                     className="sk-facet__find"
@@ -170,20 +206,30 @@ export function FacetFilter({
                     onChange={e => setFind(e.target.value)}
                   />
                 )}
-                {values.length > 0 ? (
+                {sec.blocks.length > 0 && (
                   <div className="sk-facet__opts">
-                    {values.map(v => (
-                      <label key={v.value} className="sk-facet__opt">
-                        <input type="checkbox" checked={filter.values.includes(v.value)} onChange={() => toggleValue(v.value)} />
-                        <ValueIconMark icon={valueIcon(v.value)} />
-                        <span className="sk-facet__vt">{valueTitle(v.value)}</span>
-                        <FacetCount n={v.count} from={countsFrom} unknown={countsUnknown} lang={lang} />
-                      </label>
+                    {sec.blocks.map(b => (
+                      <div key={b.kind} className="sk-facet__sec" data-sec={b.kind}>
+                        {blockTitle(b.kind) !== null && <p className="sk-facet__cap">{blockTitle(b.kind)}</p>}
+                        {b.values.map(v => (
+                          <label key={v.value} className="sk-facet__opt">
+                            <input type="checkbox" checked={filter.values.includes(v.value)} onChange={() => toggleValue(v.value)} />
+                            <ValueIconMark icon={valueIcon(v.value)} />
+                            <span className="sk-facet__vt">{valueTitle(v.value)}</span>
+                            <FacetCount n={v.count} from={countsFrom} unknown={countsUnknown} lang={lang} />
+                          </label>
+                        ))}
+                        {/* Непоказанное — числом, а не многоточием: «ещё 420» и
+                            «ещё 3» требуют разных действий от человека. */}
+                        {b.hidden > 0 && <p className="sk-facet__more">{t('kit.list.facet.more', { n: b.hidden })}</p>}
+                      </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="sk-facet__empty">{counts.size ? t('kit.list.facetNoMatch') : t('kit.list.facetNoValues')}</p>
                 )}
+                {/* «По запросу ничего» ≠ «значений нет»: первое лечится другим
+                    запросом, второе — другими фильтрами. */}
+                {sec.noMatch && <p className="sk-facet__empty">{t('kit.list.facetNoMatch')}</p>}
+                {sec.total === 0 && <p className="sk-facet__empty">{t('kit.list.facetNoValues')}</p>}
               </>
             )}
             {/*
