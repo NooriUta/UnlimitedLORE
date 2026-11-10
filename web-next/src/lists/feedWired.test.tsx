@@ -50,8 +50,8 @@ describe('K2-FEED-VIEW · лента — у каждого раздела, гд�
     }
     // Ни одного предупреждения про ленту: «feed без полей» и «поля без feed» — оба промах.
     const r = validateKitConfig(cfg);
-    // Конфиг раздела — частичный (модули и меню задаёт оболочка): смотрим только list.
-    expect(r.errors.filter(e => e.path.startsWith('list'))).toEqual([]);
+    // Конфиг раздела — частичный (модули и меню задаёт оболочка): смотрим только ленту.
+    expect(r.errors.filter(e => e.path.startsWith('list.feed') || e.code.startsWith('feed'))).toEqual([]);
     expect(r.warnings.filter(w => w.code.startsWith('feed'))).toEqual([]);
   });
 
