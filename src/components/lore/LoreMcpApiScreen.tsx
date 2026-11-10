@@ -40,6 +40,8 @@ const TOOLS: ToolDoc[] = [
     desc: 'Каталог всех именованных слайсов (read-запросов) с их обязательными/опциональными параметрами. Вызывать первым — задаёт, что вообще можно прочитать через query_slice.' },
   { name: 'query_slice', kind: 'read', entity: 'Meta', backend: 'GET /lore/slice/{slice}', params: 'slice, params?',
     desc: 'Выполнить один слайс из каталога list_slices и получить rows[]. params — map строк-значений: {"id":"ADR-FE-001"}, {"sprint_id":"SPRINT_X"} и т.п. Сам SQL и whitelisting полей — на бэкенде, клиент их не видит. ADR-LORE-017 (T16): project-scoped слайсы (сегодня — "sprints") принимают опциональный params.project (git_project slug) — не передан, подставляется сессионный LORE_ACTIVE_PROJECT, если задан; явный project, отличный от него, разрешён, но ответ несёт поле _warning — расхождение никогда не тихое.' },
+  { name: 'run_block', kind: 'read', entity: 'Meta', backend: 'GET /lore/slice/{slice}', params: 'block, vars?',
+    desc: 'Выполнить блок lore-query из текста записи (S6-08, SPEC-LORE-UXR-EMBED-BLOCKS) и получить строки с метаданными полноты. Исполняется подмножество «<срез> | where поле = значение and … | limit | offset | fields | chart»; group by, in (…), question: N и незаданная $переменная отказываются явно с кодом. Ответ status:"ok" — rows + meta {returned, total (null, если бэкенд обрезал), truncated, has_more, complete, scope {narrowed, project, project_source, backend_scope, scope_projects, outside_scope}, warnings}; status:"error" — isError и error {stage, code, message} без rows: «не смогли выполнить» ≠ «пусто».' },
 
   { name: 'search', kind: 'read', entity: 'Search', backend: 'GET /lore/search',
     params: 'q, types?, components?, projects?, limit?, offset?, mode?',
