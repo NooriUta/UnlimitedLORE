@@ -46,9 +46,14 @@ final class ScopeExemptRows {
      * скоуп выключен ({@code allowed == null}), пуст (там честный 403), у среза нет
      * исключения, вызывающий просил другой вид или явно фильтрует по проекту.
      */
-    /** Заглушка до правки (ревью B12): выбор проектов пока не учитывается. */
+    /**
+     * Ревью 10.11, B12: выбор проектов в шапке ({@code scope_projects}, вынимается из параметров до
+     * этого вызова) — такой же явный фильтр по проекту, как {@code project}: записи без проекта ему
+     * не отвечают.
+     */
     static Map<String, String> exemptParams(String sliceId, Map<String, String> given, Set<String> allowed,
                                             boolean headerProjectsChosen) {
+        if (headerProjectsChosen) return null;
         return exemptParams(sliceId, given, allowed);
     }
 
