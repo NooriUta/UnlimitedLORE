@@ -118,3 +118,51 @@ describe('S5-14: расхождение перевода настроек вид
     expect(html).not.toContain('settings-warn');
   });
 });
+
+
+describe('S5-14: надпись о хранении — от источника, а не от заглушки', () => {
+  // Повторный CJM на проде v1.17.8 (сессия d8097ab4): «в шапке панели осталась
+  // надпись „Хранится по контракту S2: пока сервер не готов — в этом браузере",
+  // хотя приложение читает с сервера (GET /lore/me/settings → 200)».
+  //
+  // ПРИЧИНА: строка писалась в те дни, когда /lore/me/settings был заглушкой в
+  // localStorage, и осталась неизменной после перехода на живой клиент
+  // (App.tsx: createLiveS2Client). То есть панель сообщала о СВОЁМ прошлом, а
+  // не о том, где лежат показанные значения. Для честных состояний это тот же
+  // класс, что «не смогли проверить» ≠ «пусто»: надпись обязана говорить про
+  // источник ЭТИХ значений.
+  //
+  // Живой клиент при сбое чтения бросает, и панель уходит в состояние error
+  // (LoadError, settings.loadFailed). Значит status === 'ok' означает ровно
+  // одно: значения пришли с сервера — так и написано.
+  const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
+
+  it('значения с сервера — надписи про «в этом браузере» нет', () => {
+    const html = renderToString(<PersonalSettings lang="ru" state={ok} onChange={() => {}} navTargetUrl={null} />);
+    expect(html).not.toContain('в этом браузере');
+    expect(html).not.toContain('пока сервер не готов');
+    expect(html).toContain(MESSAGES.ru['settings.serverNote']);
+  });
+
+  it('en-надпись тоже про сервер, а не про заглушку', () => {
+    const html = renderToString(<PersonalSettings lang="en" state={ok} onChange={() => {}} navTargetUrl={null} />);
+    expect(html).not.toContain('in this browser');
+    expect(html).toContain(MESSAGES.en['settings.serverNote']);
+  });
+
+  it('пока сохраняем — сказано «Сохраняем…», а не про источник', () => {
+    const html = renderToString(
+      <PersonalSettings lang="ru" state={{ ...ok, saving: true }} onChange={() => {}} navTargetUrl={null} />,
+    );
+    expect(html).toContain(MESSAGES.ru['settings.saving']);
+    expect(html).not.toContain(MESSAGES.ru['settings.serverNote']);
+  });
+
+  it('сбой чтения — не «на сервере», а честная плашка «не прочитались»', () => {
+    const html = renderToString(
+      <PersonalSettings lang="ru" state={{ status: 'error', error: new Error('502') }} onChange={() => {}} navTargetUrl={null} />,
+    );
+    expect(html).toContain(MESSAGES.ru['settings.loadFailed']);
+    expect(html).not.toContain(MESSAGES.ru['settings.serverNote']);
+  });
+});

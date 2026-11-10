@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-AGENT-CLIENT-PICK. Владелица 08.11: «админка не
@@ -56,5 +57,16 @@ class LoreKcAgentScopeTest {
         assertEquals(List.of("agent-reader"), LoreKcResource.agentScope(own, null));
         assertEquals(List.of("agent-reader"), LoreKcResource.agentScope(own, "not json"));
         assertEquals(List.of("agent-reader"), LoreKcResource.agentScope(own, "{}"));
+    }
+
+    // B10: битое тело service-account-user (пустое/HTML) одного клиента давало DecodeException
+    // в общий catch — 5xx на весь GET /lore/kc/agents. Теперь разбор локален: плохой ответ —
+    // null, клиент остаётся со своими ролями, список живёт.
+    @Test
+    void brokenServiceAccountBodyDoesNotKillAgentsList() {
+        assertNull(LoreKcAgentClient.idOf("not json"));
+        assertNull(LoreKcAgentClient.idOf(""));
+        assertNull(LoreKcAgentClient.idOf("{\"name\":\"no-id-here\"}"));
+        assertEquals("sa-1", LoreKcAgentClient.idOf("{\"id\":\"sa-1\"}"));
     }
 }

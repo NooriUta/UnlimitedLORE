@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  Skeleton, StatusStar, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, ContentRelease, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 
@@ -103,6 +103,92 @@ function Samples() {
           <Ear label="Ушко" expanded={false} controls="bare-ear" onToggle={noop} />
           <Ear label="Ушко слева" side="left" expanded onToggle={noop} />
         </div>
+      </section>
+      <section className="bare__sec" data-kit="flow">
+        <h2 className="bare__h2">Мастера</h2>
+        {/* Шаги с незаполненным условием: в снимке видно и причину отказа, и
+            «осталось руками» последнего шага (K2-STEPS). Параметра адреса в
+            снимке нет — состояние шага здесь в памяти. */}
+        <Steps
+          urlKey={null}
+          steps={[
+            { key: 'pick', title: 'Выбор', blocked: 'Не выбрано, что делаем', render: () => <p>Содержимое первого шага</p> },
+            { key: 'fill', title: 'Заполнение', render: () => <p>Содержимое второго шага</p> },
+            { key: 'check', title: 'Проверка', render: () => <p>Содержимое третьего шага</p> },
+          ]}
+          manual={{
+            title: 'Осталось руками',
+            items: [
+              { text: 'Передать пароль лично', hint: 'в системе этого сделать нельзя' },
+              { text: 'Forgejo: доступ к репозиторию', href: 'https://example.org' },
+            ],
+          }}
+        />
+        {/* Секрет в снимке — в состоянии «ещё не показан»: значение в снимок
+            попадать не должно даже в демонстрационном виде (K2-SECRET-ONCE). */}
+        <SecretOnce value="не-показано-в-снимке" label="Секрет" />
+        {/* Дифф в снимке — со всеми тремя видами строк И со всеми тремя
+            исходами проверки: именно их различимость одним CSS-слоем и надо
+            видеть глазами (K2-DIFF). */}
+        <DiffPreview
+          label="Что изменится"
+          rows={[
+            { id: 'a', kind: 'add', text: 'строка добавится', detail: 'подробность', check: { state: 'checked' } },
+            { id: 'b', kind: 'remove', text: 'строка снимется', check: { state: 'checked' } },
+            { id: 'c', kind: 'same', text: 'строка уже есть', check: { state: 'checked' } },
+            { id: 'd', kind: 'add', text: 'строка не проверена', check: { state: 'unverified', reason: 'источник не ответил' } },
+            { id: 'e', kind: 'add', text: 'смотреть не дали', check: { state: 'forbidden', reason: 'нужна роль администратора' } },
+          ]}
+          onApply={noop}
+        />
+        {/* Пачка в снимке — с частичным исходом: именно он не должен выглядеть
+            успехом (K2-BATCH-UNDO). Часы в снимке подставлены, чтобы остаток
+            не менялся от прогона к прогону. */}
+        <BatchUndo
+          batch={{
+            id: 'op-1',
+            applied: 2,
+            total: 3,
+            failed: [{ id: 'x', text: 'третья строка', reason: 'источник отказал: 409' }],
+            undoUntil: 10_000,
+          }}
+          now={() => 0}
+          onUndo={noop}
+        />
+        {/* Матрица в снимке — со всеми четырьмя исходами ячейки: значение,
+            значения нет, не смогли проверить, нет прав. Именно их различимость
+            одним CSS-слоем и надо видеть глазами (K2-MATRIX). Вид широкий:
+            узкий зависит от ширины окна, а снимок — файл. */}
+        <Matrix
+          narrow={false}
+          labels={{ rows: 'Строки', cols: 'Колонки' }}
+          rows={[{ key: 'r1', title: 'Первая строка' }, { key: 'r2', title: 'Вторая строка' }]}
+          cols={[{ key: 'c1', title: 'Колонка один' }, { key: 'c2', title: 'Колонка два' }]}
+          options={[{ value: 'o1', title: 'Значение один' }, { value: 'o2', title: 'Значение два' }]}
+          cell={(r, c) => (
+            r === 'r1' && c === 'c1' ? { state: 'value', value: 'o1' }
+              : r === 'r1' ? { state: 'none' }
+                : c === 'c1' ? { state: 'unverified', reason: 'источник не ответил' }
+                  : { state: 'forbidden', reason: 'нужна роль администратора' }
+          )}
+          onPropose={noop}
+        />
+        {/* Выпуск содержимого: пословный дифф поля, класс от сервера и журнал
+            активаций. В снимке видно, как читаются зачёркнутое «было» и
+            подчёркнутое «стало» одним CSS-слоем (K-12). */}
+        <ContentRelease
+          diff={{
+            from: 7,
+            to: 8,
+            class: 'hotfix',
+            added: [{ id: 'A-1', title: 'Новая запись' }],
+            changed: [{ id: 'C-1', title: 'Изменённая запись', fields: { title: { from: 'правило для всех', to: 'правило для новичков' } } }],
+            removed: [{ id: 'R-1', title: 'Снятая запись' }],
+          }}
+          log={[{ version: 7, who: 'кто-то', when: '2026-11-01T10:00:00Z', action: 'activate' }]}
+          onActivate={noop}
+          onRollback={noop}
+        />
       </section>
       <section className="bare__sec" data-kit="content">
         <h2 className="bare__h2">MD / HTML</h2>

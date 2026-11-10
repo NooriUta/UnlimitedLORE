@@ -120,4 +120,49 @@ class LoreRoleBatchLiveDbTest {
         String bad = "{\"kc_sub\":\"" + SUB + "\",\"undo_of\":\"rb-garbage\",\"changes\":[{\"project\":\"" + P2 + "\",\"action\":\"remove\"}]}";
         admin().body(bad).when().post("/lore/user/role/batch").then().statusCode(400);
     }
+
+    /**
+     * S7B-13: пачка из журнала раскрывается по batch_id до своих назначений и
+     * откатывается целиком — без ответа исходного вызова (журнал открывают позже).
+     * Запись журнала AO-01 о пачке несёт именно batch_id: фильтр журнала берёт
+     * первое *_id поле ответа.
+     */
+    @Test
+    @Order(6)
+    void batchOpensFromJournalByIdAndRollsBackWhole() throws Exception {
+        assertEquals(Map.of(P1, "reader", P2, "tester"), roles(), "исходное после Order(5)");
+        String body = "{\"kc_sub\":\"" + SUB + "\",\"changes\":["
+            + "{\"project\":\"" + P1 + "\",\"role\":\"developer\"},"
+            + "{\"project\":\"" + P2 + "\",\"action\":\"remove\"}]}";
+        String raw = admin().body(body).when().post("/lore/user/role/batch").then().statusCode(200)
+            .extract().asString();
+        JsonPath r = new JsonPath(raw);
+        String id = r.getString("batch_id");
+        // Jackson в LinkedHashMap — порядок полей как в ответе (фильтр журнала берёт первое *_id).
+        Map<String, Object> resp = new com.fasterxml.jackson.databind.ObjectMapper().readValue(raw,
+            new com.fasterxml.jackson.core.type.TypeReference<java.util.LinkedHashMap<String, Object>>() {});
+        assertEquals(id, LoreAuditLogFilter.entityIdOf(resp), "журнал AO-01 пишет пачку её batch_id");
+
+        JsonPath b = given().header("X-Seer-Role", "admin").when().get("/lore/admin/actions/batch/" + id)
+            .then().statusCode(200).extract().jsonPath();
+        assertEquals(id, b.getString("batch_id"));
+        assertEquals(SUB, b.getString("kc_sub"));
+        assertEquals(2, b.getInt("count"));
+        Map<String, String> before = new java.util.TreeMap<>();
+        for (Map<String, Object> it : b.<Map<String, Object>>getList("items"))
+            before.put(String.valueOf(it.get("project")), String.valueOf(it.get("role_before")));
+        assertEquals(Map.of(P1, "reader", P2, "tester"), before, "у каждого назначения — роль до пачки");
+        assertEquals(id, b.getString("rollback.body.undo_of"));
+        assertEquals("/lore/user/role/batch", b.getString("rollback.path"));
+
+        String rollback = new com.fasterxml.jackson.databind.ObjectMapper()
+            .valueToTree(b.getMap("rollback.body")).toString();
+        admin().body(rollback).when().post("/lore/user/role/batch").then().statusCode(200);
+        assertEquals(Map.of(P1, "reader", P2, "tester"), roles(), "откат пачки из журнала вернул как было");
+
+        given().header("X-Seer-Role", "admin").when().get("/lore/admin/actions/batch/rb-0000000000001-00000000")
+            .then().statusCode(404);
+        given().header("X-Seer-Role", "admin").when().get("/lore/admin/actions/batch/rb-garbage")
+            .then().statusCode(400);
+    }
 }

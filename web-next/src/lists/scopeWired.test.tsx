@@ -84,6 +84,33 @@ describe('S4-03 · честность сужения: три разных утв
     expect(notes.join(' ')).toMatch(/не привязан к проектам|сужение не применено/i);
   });
 
+  it('объяснение в reason, note пуст (B11) — причина дочитана, а не заглушка', () => {
+    const notes = sliceWarnings({
+      rows: [],
+      scope_projects: { requested: ['A'], applied: false, reason: 'срез releases не привязан к проектам — показано всё доступное' },
+    } as never);
+    expect(notes.join(' ')).toContain('показано всё доступное');
+    expect(notes.join(' ')).not.toContain('этот срез не привязан к проектам');
+  });
+
+  it('note и reason вместе (B11) — сообщение одно, информативнее note', () => {
+    const notes = sliceWarnings({
+      rows: [],
+      scope_projects: { requested: ['A'], applied: false, note: 'причина из note', reason: 'причина из reason' },
+    } as never);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain('причина из note');
+  });
+
+  it('dropped с серверным note (B11) — отброшенные названы один раз, без дубля', () => {
+    const notes = sliceWarnings({
+      rows: [ROW],
+      scope_projects: { requested: ['A', 'B'], applied: true, dropped: ['B'], note: 'проекты вне ваших прав отброшены: B' },
+    } as never);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain('B');
+  });
+
   it('часть проектов недоступна (dropped) — названы, а не отброшены молча', () => {
     const notes = sliceWarnings({
       rows: [ROW],

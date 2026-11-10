@@ -65,6 +65,10 @@ public class LoreRecordResource extends LoreResourceBase {
             case "question" -> new Source("question_by_id", "id", false);
             case "milestone" -> new Source("milestone_by_id", "id", false);
             case "release" -> new Source("release_by_id", "id", false);
+            // S4-V2-SECTIONS: компонент, технология (спека SPEC-TECH-…), фича — сценарий любого уровня.
+            case "component" -> new Source("component", "id", false);
+            case "tech" -> new Source("tech_by_id", "id", false);
+            case "feature" -> new Source("uc_by_id", "id", false);
             default -> null;
         };
     }
@@ -131,6 +135,9 @@ public class LoreRecordResource extends LoreResourceBase {
             case "question" -> LoreRecordValues.question(row);
             case "milestone" -> LoreRecordValues.milestone(row);
             case "release" -> LoreRecordValues.release(row);
+            case "component" -> LoreRecordValues.component(row);
+            case "tech" -> LoreRecordValues.tech(row);
+            case "feature" -> LoreRecordValues.feature(row);
             default -> LoreRecordValues.spec(row);
         };
         // Итоги — отдельным блоком computed, не в values (S7A-12 09.11).

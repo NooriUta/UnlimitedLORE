@@ -26,6 +26,7 @@
 // модели, а показывает своё.
 import type { KindConfig, KitConfig, KitRelation, KitRelationDef } from '../core/contract';
 import type { LoreModelDoc } from './loadModel';
+import { normalizeAxisCategory, type LoreStatusCategory } from '../core/statusAxis';
 
 type StatusItem = KitConfig['statuses']['items'][number];
 type Category = StatusItem['category'];
@@ -87,16 +88,35 @@ const UNKNOWN_ICON = 'help';
 /**
  * Ось документа → четыре категории контракта.
  *
- * Документ может говорить шестью значениями (ось владелицы), а контракт kit
- * знает четыре. Перевод объявлен здесь, а не угадывается: незнакомое значение
- * становится «в работе» и НАЗЫВАЕТСЯ — спрятать его в «готово» значило бы
- * закрыть запись, которая не закрыта.
+ * Документ говорит ШЕСТЬЮ значениями оси владелицы (`core/statusAxis.ts`,
+ * зеркало серверного `LoreStatusCategory`), а контракт kit знает четыре.
+ *
+ * **Дефект, из-за которого таблица переписана (B2 ревью 10.11.2026, прод
+ * v1.17.9):** здесь был свой список, в котором НЕ БЫЛО `not_started`,
+ * `in_force` и `unknown`. Сервер шлёт именно их, и «не начато» на каждом
+ * экране рисовалось «в работе» — с предупреждением, но рисовалось. Это тот же
+ * класс, что K-14 со статусными цветами в трёх местах: один факт, записанный
+ * дважды, расходится молча. Поэтому синонимы прежних конфигов больше здесь не
+ * перечисляются — их знает ось (`normalizeAxisCategory`), а тут остаётся
+ * только перевод оси в контракт.
+ *
+ * **Почему «действует» идёт в «в работе», а не в «готово».** Отдельной
+ * категории «действует» в контракте kit нет. Из двух зол выбрано открытое:
+ * принятый ADR живой, по нему работают, и показать его завершённым значит
+ * выписать его из обязательных (та же причина, по которой `isClosedCategory`
+ * не считает `in_force` закрытым). Потеря здесь есть, и она названа: пока
+ * контракт не знает «действует», «принято и действует» неотличимо от
+ * «в работе» — это отдельное решение, а не умолчание.
  */
-const CATEGORY: Record<string, Category> = {
-  todo: 'todo', backlog: 'todo', planned: 'todo', design: 'todo', deferred: 'todo',
-  active: 'active', in_progress: 'active', partial: 'active', blocked: 'active', review: 'active',
-  done: 'done', finished: 'done',
-  cancelled: 'cancelled', withdrawn: 'cancelled', closed: 'cancelled',
+const AXIS_TO_CONTRACT: Record<LoreStatusCategory, Category> = {
+  not_started: 'todo',
+  in_progress: 'active',
+  in_force: 'active',
+  finished: 'done',
+  withdrawn: 'cancelled',
+  // «Неизвестно» остаётся открытым и НАЗЫВАЕТСЯ ниже: спрятать непонятное в
+  // «готово» значило бы закрыть запись, которая не закрыта.
+  unknown: 'active',
 };
 
 /** Вид поля документа → тип поля конфига. Незнакомый — текст, и это сказано. */
@@ -144,8 +164,16 @@ function statusesOf(model: LoreModelDoc, opts: ConfigFromModelOptions, notes: st
     const icon = str(raw.icon);
     if (!icon) notes.push(`у статуса «${code}» не задан значок — показан общим`);
     const cat = str(raw.category);
-    const category = opts.categoryOf?.(cat) ?? CATEGORY[cat];
-    if (!category) notes.push(`у статуса «${code}» категория «${cat}» неизвестна — показан как «в работе»`);
+    // Правило приложения сильнее оси: у чужого приложения ось может быть своя
+    // (точка расширения K-14), и kit не должен требовать от него наших слов.
+    const own = opts.categoryOf?.(cat);
+    const axis = own ? undefined : normalizeAxisCategory(cat);
+    const category = own ?? (axis && axis !== 'unknown' ? AXIS_TO_CONTRACT[axis] : undefined);
+    if (!category) {
+      notes.push(cat
+        ? `у статуса «${code}» категория «${cat}» неизвестна — показан как «в работе»`
+        : `у статуса «${code}» не задана категория — показан как «в работе»`);
+    }
     const item: StatusItem = {
       code,
       title: str(raw.title) || code,

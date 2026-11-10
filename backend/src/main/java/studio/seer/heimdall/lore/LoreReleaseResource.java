@@ -249,7 +249,7 @@ public class LoreReleaseResource extends LoreResourceBase {
                 // REL-UID-01: по release_uid, а не по номеру — иначе строка
                 // истории цеплялась ко ВСЕМ релизам с тем же номером в других проектах.
                 + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_uid=:ruid) "
-                + "TO (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid);";
+                + "TO (SELECT FROM KnowReleaseHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);";
             writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sqlscript", script, p)).await().indefinitely();
             // PS-20: ребро BELONGS_TO_PROJECT раньше не создавалось НИ при создании,

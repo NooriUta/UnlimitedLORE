@@ -4,3 +4,5 @@ export * from './loadModel';
 export * from './surfaces';
 // Генератор декларативной части конфига из документа модели (K-MODEL-LOADER).
 export * from './configFromModel';
+// Палитры данными из модели, а не списком внутри kit (K-14, п. 5).
+export * from './palettes';

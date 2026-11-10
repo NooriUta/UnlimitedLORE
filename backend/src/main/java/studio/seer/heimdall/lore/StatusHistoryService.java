@@ -172,7 +172,7 @@ final class StatusHistoryService {
               .append(ChangeAuthor.SET_SQL).append(";")
               .append("CREATE EDGE HAS_STATE FROM (SELECT FROM ").append(k.vertex())
               .append(" WHERE ").append(k.key()).append(" = :id) TO (SELECT FROM ").append(k.hist())
-              .append(" WHERE state_uid = :nsid);")
+              .append(" WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);")
               .append("UPDATE ").append(k.vertex()).append(" SET ").append(k.vertexField())
               .append(" = :ns WHERE ").append(k.key()).append(" = :id;");
         return new Plan(script.toString(), p);
@@ -365,7 +365,7 @@ final class StatusHistoryService {
                     + "status_backfilled = true" + mirrorSet + ChangeAuthor.SET_SQL + ";"
                     + "CREATE EDGE HAS_STATE FROM (SELECT FROM " + k.vertex() + " WHERE " + k.key()
                     + " = :id AND out('HAS_STATE').size() = 0) TO (SELECT FROM " + k.hist()
-                    + " WHERE state_uid = :nsid);", p);
+                    + " WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", p);
                 opened++;
             }
             out.add(new BackfillCount(type, stamped, opened));

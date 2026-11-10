@@ -77,3 +77,75 @@ describe('CSS: на телефоне крошки сокращаются до «
     expect(css).toMatch(/@media \(max-width: 720px\)[^{]*\{[^@]*\.sk-crumbs__ctx[^}]*display:\s*none/);
   });
 });
+
+// B7 ревью владелицы 10.11.2026: «Крошка „← Раздел“ в паспорте зачёркнута —
+// выглядит как удалённая запись». Зачёркивания в правилах крошек нет: линию
+// даёт `text-decoration: underline`, заданный САМОМУ flex-контейнеру
+// .sk-crumbs__back (inline-flex + min-height: max(var(--tap), 22px) +
+// align-items: center). У flex-контейнера позиция линии считается от базовой
+// линии бокса, а текст центрированием сдвинут вниз, и линия проходит по
+// глифам. Blink линию пробрасывает во flex-элементы и рисует верно, WebKit
+// рисует её самим боксом — отсюда «зачёркнуто» на телефоне.
+// Правило, а не случай: НИ ОДИН flex-бокс крошек не носит text-decoration;
+// линия живёт на инлайновом потомке, где её положение задаёт сам текст.
+describe('CSS: крошка-возврат нигде не выглядит зачёркнутой (B7)', () => {
+  const css = readFileSync(resolve(process.cwd(), 'src/styles/seidr.css'), 'utf8');
+  // Плоский разбор: @media-обёртки снимаем, их `}` остаются сиротами и в
+  // селекторы не попадают (`[^{}]`).
+  const rules = [...css.replace(/@media[^{]*\{/g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .map(m => ({ sel: m[1].trim(), body: m[2] }));
+  const crumbs = rules.filter(r => r.sel.includes('.sk-crumbs'));
+  const drawsLine = (body: string) => /text-decoration(-line)?:\s*(?![^;]*none)[^;]*(underline|line-through|overline)/.test(body);
+
+  it('положительный контроль: правила крошек найдены, а зачёркивание в файле вообще ловится', () => {
+    expect(crumbs.length).toBeGreaterThan(3);
+    // Намеренное зачёркивание (удалённый кусок диффа, прежнее значение в журнале) — есть и остаётся.
+    expect(rules.filter(r => /line-through/.test(r.body)).length).toBeGreaterThan(0);
+  });
+
+  it('ни одно правило крошек не зачёркивает текст', () => {
+    expect(crumbs.filter(r => /line-through/.test(r.body)).map(r => r.sel)).toEqual([]);
+  });
+
+  it('линию рисует не flex-контейнер крошек, а инлайновый потомок', () => {
+    expect(crumbs.filter(r => /display:\s*(inline-)?flex/.test(r.body) && drawsLine(r.body)).map(r => r.sel)).toEqual([]);
+  });
+
+  // Вторая половина правила пришла из параллельной правки соседней сессии и
+  // здесь сведена с первой: ПОСТОЯННОЙ декорации у крошки нет вовсе (канон
+  // ссылок kit — none, подчёркивание на наведении). Одна проверка без другой
+  // неполна: без первой линия вернулась бы на hover тем же боксом и снова
+  // пошла бы по глифам; без второй крошка носила бы неубираемую линию.
+  it('постоянного подчёркивания нет — оно появляется только на наведении', () => {
+    const always = crumbs.filter(r => !/:hover|:focus/.test(r.sel) && drawsLine(r.body)).map(r => r.sel);
+    expect(always, 'крошка носит декорацию постоянно').toEqual([]);
+    const hover = crumbs.filter(r => /:hover/.test(r.sel) && drawsLine(r.body)).map(r => r.sel);
+    expect(hover, 'подчёркивания на наведении нет вовсе').not.toEqual([]);
+  });
+
+  it('и на наведении линию рисует подпись, а не flex-бокс', () => {
+    const hover = crumbs.filter(r => /:hover/.test(r.sel) && drawsLine(r.body));
+    expect(hover.map(r => r.sel).every(sel => sel.includes('__label')),
+      `линия на наведении задана боксом: ${hover.map(r => r.sel).join(', ')}`).toBe(true);
+  });
+
+  it('цвет ссылки-возврата — токен темы, а не сырой цвет', () => {
+    // Селектор ищем ВХОЖДЕНИЕМ: плоский разбор тащит в него предшествующий
+    // комментарий, и сравнение на равенство правило не находило — проверка
+    // шла по пустой строке, то есть ни по чему.
+    const back = crumbs.find(r => r.sel.includes('.sk-crumbs__back') && /color:/.test(r.body));
+    expect(back, 'правило .sk-crumbs__back с цветом не найдено').toBeTruthy();
+    expect(back!.body).toMatch(/color:\s*var\(--acc\)/);
+  });
+});
+
+describe('RecordCrumbs: подпись возврата — один инлайновый узел', () => {
+  it('стрелка, раздел и контекст лежат в .sk-crumbs__label одной строкой (пробелы не съедены)', () => {
+    render(<RecordCrumbs back={{ label: 'Спеки', href: '#list' }} context="Категория: wip" current="SPEC-1" />);
+    const label = screen.getByRole('link').querySelector('.sk-crumbs__label');
+    expect(label).not.toBeNull();
+    expect(label!.textContent).toBe('← Спеки · Категория: wip');
+    // Контекст по-прежнему отдельным узлом: на телефоне его прячет медиа-правило.
+    expect(label!.querySelector('.sk-crumbs__ctx')).not.toBeNull();
+  });
+});

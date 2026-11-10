@@ -84,6 +84,7 @@ final class LoreStatusCategory {
         Map.entry("tasks_by_uids", new StatusSource("task", "status_raw")),
         Map.entry("tasks_of_uc", new StatusSource("task", "status_raw")),
         Map.entry("open_tasks", new StatusSource("task", "status_raw")),
+        Map.entry("closed_tasks", new StatusSource("task", "status_raw")),
         Map.entry("backlog_tasks", new StatusSource("task", "status_raw")),
         Map.entry("all_tasks", new StatusSource("task", "status_raw")),
         Map.entry("release_tasks_by_tag", new StatusSource("task", "status_raw")));

@@ -1031,10 +1031,16 @@ code, pre, kbd, samp { font-family: var(--mono); }
 
 /* ---------- Tabs ---------- */
 .sk-tabs-root { display: flex; flex-direction: column; min-width: 0; }
+/* Ряд вкладок: РОВНЫЙ ШАГ по обеим осям (ревью 10.11.2026, B13 — «строка
+   связей плывёт на 3–4 строки с рваными промежутками»). Шаг задан отдельно по
+   осям намеренно: одной записью `gap` строки и столбцы расходились при правке,
+   а на глаз рваным выглядит именно разный шаг. */
 .sk-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  row-gap: 4px;
+  column-gap: 4px;
   padding: 2px 2px 6px;
   border-bottom: 1px solid var(--bd);
 }
@@ -1042,6 +1048,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  /* Чип не тянется и не сжимается, а подпись не переносится: иначе значок вида
+     связи отрывался от подписи, а чипы разной «резиновости» давали рваные
+     промежутки (B13). */
+  flex: 0 0 auto;
+  white-space: nowrap;
   min-height: max(var(--tap), 24px);
   padding: 0 10px;
   border: 1px solid var(--bd);
@@ -1063,6 +1074,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 .sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* «Не смогли посчитать» — знаком вопроса и предупреждающим тоном: ложный ноль
+   и молчание тут одинаково врут (B13, доктрина честных состояний). */
+.sk-tab__count[data-unknown] { color: var(--wrn); cursor: help; }
 
 /* Редкие вкладки под «Ещё» (S4-29, просьба владелицы 09.11: «зависимости и
    прочее можно скрыть под море… интерфейс становится перегруженным»).
@@ -1102,7 +1116,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
-.sk-tabs--underline { gap: 2px; padding: 0; }
+.sk-tabs--underline { row-gap: 2px; column-gap: 2px; padding: 0; }
 /* Линия вкладок записи не висит в воздухе: свой отступ сверху, как в прототипе
    v4 (.tabs padding 10px 16px 0). Аудит 08.11: «между шапкой записи,
    вкладками и текстом нет ни линии, ни фона, только 8 px зазора». */
@@ -1153,12 +1167,47 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 
+/* ---------- Полосы прокрутки в теме (просьба владелицы 10.11.2026:
+   «ползунки скролов сделай, чтобы в тему попадали, а не выглядели инородно»).
+   Системная полоса рисуется цветами ОС: в тёмной теме Seiðr она светло-серая и
+   режет глаз, в светлой — наоборот. Поэтому цвет берём токенами темы, и он сам
+   меняется вместе с палитрой и светлым/тёмным режимом.
+   Два механизма намеренно: «scrollbar-color» понимают Firefox и новые
+   Chromium, «::-webkit-scrollbar» — Safari и старые Chromium. Один без
+   другого оставил бы половину браузеров с системной полосой.
+   Боксы, которые НАРОЧНО прячут полосу («scrollbar-width: none»), это правило
+   не трогает: там прокрутка скрыта по своей причине. ---------- */
+:root {
+  /* ползунок · дорожка */
+  scrollbar-color: var(--bd) transparent;
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  /* Фон рисуем через background-clip, иначе рамка-отступ закрасится тоже и
+     ползунок прилипнет к краю. */
+  background: var(--bd);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--bdh); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
 /* ---------- KitShell (K-02): модули сверху, меню групп, drawer на телефоне ----------
    Вынос из прототипа v4 (.top/.apps/.side/.sgrp/.sitem). Узкий экран — меню
    в Sheet слева (рисует компонент), подписи модулей прячутся, имя — aria-label. */
 .sk-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  /* ОДНА колонка, которая не растягивается содержимым (S9-12, замер 09.11 в
+     настоящем браузере: при окне 412 px колонка оболочки была 692 px, и вся
+     страница прокручивалась боком — с ней уезжали «Группировка», «Порядок» и
+     шапка). Колонок здесь не объявляли, а неявная колонка сетки — auto, то
+     есть по max-content: широкая таблица списка раздвигала не свою полосу
+     прокрутки, а оболочку. minmax(0, 1fr) запрещает это по построению. */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
   background: var(--bg0);
   color: var(--t1);
@@ -1359,6 +1408,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   /* 232px — умолчание; личную ширину (S4-30) оболочка подставляет переменной. */
   grid-template-columns: var(--side-w, 232px) minmax(0, 1fr);
   min-height: 0;
+  /* Без min-width: 0 минимальная ширина элемента сетки равна его
+     СОДЕРЖИМОМУ, и строка оболочки снова распирается таблицей. */
+  min-width: 0;
 }
 /* Ручка границы меню сидит в той же клетке сетки, что и колонка, прижатая к её
    правому краю — то есть ровно на линии border-right колонки. Так не пришлось
@@ -1725,15 +1777,30 @@ code, pre, kbd, samp { font-family: var(--mono); }
    ставим цвет текста темы (селектор по элементу: классы срезает санитайзер). */
 .sk-prose__mermaid--theme svg text { fill: var(--t1) !important; }
 .sk-prose__diagram-wait { min-height: 24px; margin: 0 0 .8em; }
+/* «Диаграмму не удалось нарисовать» — оговорка ВМЕСТЕ с исходником блока
+   (дефект владелицы 10.11.2026): не смогли нарисовать ≠ пусто, и сырое
+   сообщение библиотеки не закрывает содержимое. Вид — как у фолбэка K-13:
+   пунктир --wrn, потому что это оговорка, а не отказ показать запись. */
 .sk-prose__diagram-err {
   margin: 0 0 .8em;
-  padding: 4px 8px;
-  border: 1px solid var(--dng);
-  border-radius: var(--r-sm);
-  color: var(--dng);
+  padding: 6px 10px;
+  border: 1px dashed var(--wrn);
+  border-radius: var(--r-md);
+  background: var(--bg1);
   font-family: var(--mono);
   font-size: var(--fs-base);
 }
+.sk-prose__diagram-err-why { margin: 0 0 6px; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-prose__diagram-err-cap { margin: 0 0 2px; color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; }
+.sk-prose__diagram-err-src {
+  margin: 0;
+  overflow-x: auto;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+.sk-prose__diagram-err-tech { margin: 6px 0 0; font-size: var(--fs-sm); }
 .sk-prose__diagram-err summary { color: var(--t3); cursor: pointer; }
 .sk-prose__diagram-err pre { margin: 4px 0 0; color: var(--t2); white-space: pre-wrap; }
 .sk-prose__bpmn {
@@ -1800,6 +1867,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-mdedit__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
 .sk-mdedit__live {
   min-height: 160px;
+  min-width: 0;
   padding: 7px 9px;
   overflow: auto;
   border: 1px dashed var(--bd);
@@ -1895,6 +1963,570 @@ code, pre, kbd, samp { font-family: var(--mono); }
 /* Быстрые фильтры — тем же кеглем, что вся полоса (08.11, «шрифты скачут»). */
 .sk-list__quick .sk-pill { font-size: var(--fs-sm); }
 .sk-list__view { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- Шаги мастера (SPRINT_UXR_S10_SEIDR_KIT_2/K2-STEPS) ----------
+   Полоса шагов, содержимое шага, «осталось руками» и навигация. Цели касания
+   не меньше --tap; неактивный шаг скрыт атрибутом hidden (его прячет браузер),
+   поэтому отдельного правила на скрытие здесь нет. */
+.sk-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  color: var(--t1);
+  font-size: var(--fs-base);
+}
+.sk-steps__empty {
+  margin: 0;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+}
+.sk-steps__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  margin: 0;
+  padding: 0 0 var(--gap);
+  min-width: 0;
+  border-bottom: 1px solid var(--bd);
+  list-style: none;
+  counter-reset: none;
+}
+.sk-steps__item { display: flex; min-width: 0; }
+.sk-steps__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg1);
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+/* Непройденный шаг не кликается: вперёд ведёт только кнопка — она проверяет
+   условие перехода, а полоса его обошла бы. */
+.sk-steps__step[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-steps__step.is-done { color: var(--t1); border-color: color-mix(in srgb, var(--suc) 45%, var(--bd)); }
+.sk-steps__step.is-here {
+  color: var(--t1);
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+}
+.sk-steps__step:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-steps__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+}
+.sk-steps__step.is-here .sk-steps__num { background: var(--acc); color: var(--bg0); }
+.sk-steps__title { min-width: 0; }
+.sk-steps__progress {
+  margin: 0;
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+.sk-steps__note {
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  color: var(--t1);
+  font-size: var(--fs-sm);
+}
+.sk-steps__panel { min-width: 0; }
+/* «Осталось руками» — не украшение: это то, чего система сделать не может. */
+.sk-steps__manual {
+  padding: 8px 10px;
+  border: 1px dashed var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-steps__manual-head {
+  margin: 0 0 6px;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-steps__manual-list { margin: 0; padding: 0; list-style: none; }
+.sk-steps__manual-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: var(--fs-sm);
+}
+.sk-steps__manual-link { color: var(--inf); }
+.sk-steps__manual-text { color: var(--t1); }
+.sk-steps__manual-hint { color: var(--t3); font-size: var(--fs-xs); }
+.sk-steps__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  min-width: 0;
+}
+.sk-steps__btn {
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-steps__btn.is-primary { border-color: var(--acc); color: var(--acc); }
+.sk-steps__btn[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-steps__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* Причина, по которой вперёд нельзя: цвет предупреждения, а не красный отказ —
+   это не ошибка человека, а незаполненное условие. */
+.sk-steps__blocked { color: var(--wrn); font-size: var(--fs-sm); }
+
+/* ---------- Секрет, который показывают один раз (K2-SECRET-ONCE) ----------
+   Значение — моно и с переносом по символам: его читают глазами и переписывают,
+   поэтому обрезать его нельзя ни при какой ширине. */
+.sk-secret {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, var(--bd));
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-secret__label {
+  color: var(--t2);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-secret__warn { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-secret__none,
+.sk-secret__spent { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-secret__value {
+  padding: 6px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-sm);
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  word-break: break-all;
+  user-select: all;
+}
+.sk-secret__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); min-width: 0; }
+.sk-secret__btn {
+  min-height: max(var(--tap), 28px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-secret__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-secret__ok { color: var(--suc); font-size: var(--fs-sm); }
+.sk-secret__fail { color: var(--dng); font-size: var(--fs-sm); }
+
+/* ---------- «Что изменится» перед применением (K2-DIFF) ----------
+   Цвет здесь НЕСЁТ СМЫСЛ, а не украшает: добавится — успех, снимется —
+   опасность, уже есть — серо. Отдельно от этого идёт состояние ПРОВЕРКИ
+   строки: «не смогли проверить» и «нет прав» помечаются рамкой слева, чтобы их
+   нельзя было перепутать с обычной строкой. Знак +/−/= дублирует цвет словами
+   («добавится»), потому что по цвету одному раздавать права нельзя. */
+.sk-diff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-diff__head {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-diff__list { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-diff__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-left: 2px solid transparent;
+  font-size: var(--fs-sm);
+}
+.sk-diff__row[data-kind='add'] { border-left-color: var(--suc); }
+.sk-diff__row[data-kind='remove'] { border-left-color: var(--dng); }
+.sk-diff__row[data-kind='same'] { border-left-color: var(--bd); color: var(--t3); }
+.sk-diff__row[data-check='unverified'] { background: color-mix(in srgb, var(--wrn) 10%, transparent); }
+.sk-diff__row[data-check='forbidden'] { background: color-mix(in srgb, var(--inf) 10%, transparent); }
+.sk-diff__sign {
+  min-width: 12px;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+}
+.sk-diff__row[data-kind='add'] .sk-diff__sign { color: var(--suc); }
+.sk-diff__row[data-kind='remove'] .sk-diff__sign { color: var(--dng); }
+.sk-diff__kind { color: var(--t3); font-size: var(--fs-xs); }
+.sk-diff__text { min-width: 0; color: var(--t1); }
+.sk-diff__row[data-kind='same'] .sk-diff__text { color: var(--t3); }
+.sk-diff__detail { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-diff__check { display: inline-flex; flex-wrap: wrap; gap: 4px; color: var(--wrn); font-size: var(--fs-xs); }
+.sk-diff__row[data-check='forbidden'] .sk-diff__check { color: var(--inf); }
+.sk-diff__reason { color: var(--t2); }
+.sk-diff__skip { color: var(--t2); font-size: var(--fs-xs); font-style: italic; }
+.sk-diff__nothing { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-diff__apply {
+  align-self: flex-start;
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--acc);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-diff__apply[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-diff__apply:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* ---------- Пачка как объект: окно отмены (K2-BATCH-UNDO) ----------
+   Исход пачки несёт рамка: применилось всё · применилось частично · не
+   применилось ничего. Частичный исход помечен предупреждением НАМЕРЕННО: это
+   не успех, и выглядеть как успех он не должен. */
+.sk-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-batch[data-outcome='applied'] { border-color: color-mix(in srgb, var(--suc) 45%, var(--bd)); }
+.sk-batch[data-outcome='partial'] { border-color: color-mix(in srgb, var(--wrn) 55%, var(--bd)); }
+.sk-batch[data-outcome='none'] { border-color: color-mix(in srgb, var(--dng) 55%, var(--bd)); }
+.sk-batch__summary { margin: 0; color: var(--t1); font-size: var(--fs-sm); }
+.sk-batch__failed { margin: 0; padding: 0; list-style: none; }
+.sk-batch__fail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: var(--fs-sm);
+}
+.sk-batch__fail-text { color: var(--t1); }
+.sk-batch__fail-reason { color: var(--dng); font-size: var(--fs-xs); }
+.sk-batch__undo {
+  align-self: flex-start;
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--acc);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-batch__undo[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-batch__undo:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-batch__expired,
+.sk-batch__noundo,
+.sk-batch__undone { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-batch__badtime { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-batch__undofail { margin: 0; color: var(--dng); font-size: var(--fs-sm); }
+
+/* ---------- Матрица «ось × ось» (K2-MATRIX) ----------
+   Состояние ячейки несут И знак, И цвет, И подпись: по цвету одному раздавать
+   доступы нельзя, а знак «—/?/×» читается даже в чёрно-белой распечатке.
+   Заголовки залипают: без них на десятой колонке ячейка безымянна. У бокса с
+   прокруткой — min-width: 0, иначе широкая матрица раздвинет страницу (S9-12). */
+.sk-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.sk-matrix__empty { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-matrix__scroll {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+}
+.sk-matrix__table { border-collapse: collapse; font-size: var(--fs-sm); }
+.sk-matrix__caption {
+  padding: 4px 8px;
+  color: var(--t2);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.sk-matrix__corner,
+.sk-matrix__colhead,
+.sk-matrix__rowhead {
+  position: sticky;
+  z-index: 1;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--bg2);
+  color: var(--t1);
+  font-weight: 400;
+  text-align: left;
+  white-space: nowrap;
+}
+.sk-matrix__corner { top: 0; left: 0; z-index: 2; }
+.sk-matrix__colhead { top: 0; }
+.sk-matrix__rowhead { left: 0; border-right: 1px solid var(--bd); }
+.sk-matrix__coltitle,
+.sk-matrix__rowtitle { display: block; color: var(--t1); }
+.sk-matrix__axis {
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-matrix__axis--cols { align-self: flex-end; }
+.sk-matrix__td { padding: 2px; border-bottom: 1px solid var(--bd); }
+.sk-matrix__cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), 44px);
+  min-height: max(var(--tap), 24px);
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-matrix__cell[aria-disabled='true'] { cursor: default; }
+.sk-matrix__cell:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__cell[data-state='value'] { border-color: color-mix(in srgb, var(--acc) 45%, var(--bd)); background: color-mix(in srgb, var(--acc) 10%, transparent); }
+.sk-matrix__cell[data-state='none'] { color: var(--t3); }
+.sk-matrix__cell[data-state='unverified'] { border-color: color-mix(in srgb, var(--wrn) 55%, transparent); background: color-mix(in srgb, var(--wrn) 12%, transparent); color: var(--wrn); }
+.sk-matrix__cell[data-state='forbidden'] { border-color: color-mix(in srgb, var(--inf) 55%, transparent); background: color-mix(in srgb, var(--inf) 12%, transparent); color: var(--inf); }
+.sk-matrix__chip { font-size: var(--fs-xs); }
+.sk-matrix__mark { font-family: var(--mono); }
+.sk-matrix__all {
+  min-height: max(var(--tap), 20px);
+  padding: 0 6px;
+  border: 1px dashed var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+.sk-matrix__all:hover { color: var(--t1); border-color: var(--acc); }
+.sk-matrix__all:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--acc);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+}
+.sk-matrix__opt {
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-matrix__opt.is-clear { border-style: dashed; color: var(--t2); }
+.sk-matrix__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__skipped { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+/* Узкий вид: список по выбранной строке, а не сжатая сетка. */
+.sk-matrix--narrow { gap: var(--gap); }
+.sk-matrix__pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.sk-matrix__pickbtn {
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg1);
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-matrix__pickbtn.is-on { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, transparent); color: var(--t1); }
+.sk-matrix__pickbtn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__list { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-matrix__listrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-width: 0;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.sk-matrix__listtitle { min-width: 0; color: var(--t1); font-size: var(--fs-sm); }
+
+/* ---------- Выпуск содержимого: дифф версий и активация (K-12) ----------
+   Пословный дифф: убранное зачёркнуто и красным, добавленное — зелёным и
+   подчёркнутым. Зачёркивание и подчёркивание рядом с цветом намеренно: по
+   этому диффу решают, выкатывать ли версию на прод, и цвета одного мало. */
+.sk-rel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  color: var(--t1);
+  font-size: var(--fs-base);
+}
+.sk-rel__top { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap); min-width: 0; }
+.sk-rel__versions { margin: 0; font-family: var(--mono); font-size: var(--fs-sm); }
+.sk-rel__class {
+  padding: 1px 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+}
+.sk-rel__class[data-class='hotfix'] { border-color: color-mix(in srgb, var(--wrn) 55%, transparent); color: var(--wrn); }
+.sk-rel__class[data-class='release'] { border-color: color-mix(in srgb, var(--suc) 55%, transparent); color: var(--suc); }
+.sk-rel__class[data-class='unknown'] { border-style: dashed; color: var(--t2); }
+.sk-rel__trunc {
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  font-size: var(--fs-sm);
+}
+.sk-rel__none { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-rel__group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-rel__ghead {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-rel__count { color: var(--t1); font-family: var(--mono); }
+.sk-rel__gempty { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
+.sk-rel__list { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-rel__item,
+.sk-rel__logrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--bd);
+  font-size: var(--fs-sm);
+}
+.sk-rel__id { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-rel__title { min-width: 0; color: var(--t1); }
+.sk-rel__nofields { color: var(--t3); font-size: var(--fs-xs); font-style: italic; }
+.sk-rel__fields { margin: 0; padding: 0 0 0 10px; min-width: 0; list-style: none; }
+.sk-rel__field { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; padding: 2px 0; }
+.sk-rel__fname { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-rel__wdiff { min-width: 0; white-space: pre-wrap; word-break: break-word; }
+.sk-rel__chunk[data-chunk='same'] { color: var(--t2); }
+.sk-rel__chunk[data-chunk='del'] { color: var(--dng); text-decoration: line-through; }
+.sk-rel__chunk[data-chunk='add'] { color: var(--suc); text-decoration: underline; }
+.sk-rel__rough { color: var(--wrn); font-size: var(--fs-xs); }
+.sk-rel__more {
+  align-self: flex-start;
+  min-height: max(var(--tap), 20px);
+  padding: 0 8px;
+  border: 1px dashed var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sk-rel__more:hover { color: var(--t1); border-color: var(--acc); }
+.sk-rel__acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); min-width: 0; }
+.sk-rel__act {
+  min-height: max(var(--tap), 28px);
+  padding: 0 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-rel__act.is-primary { border-color: var(--acc); color: var(--acc); }
+.sk-rel__act[aria-disabled='true'] { cursor: default; opacity: .55; }
+.sk-rel__act:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-rel__norollback { color: var(--t2); font-size: var(--fs-sm); }
+/* Подтверждение рискованного действия — отдельной рамкой: его не должно быть
+   видно краем глаза как «ещё одну кнопку». */
+.sk-rel__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  padding: 8px 10px;
+  border: 1px solid var(--wrn);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+}
+.sk-rel__q { margin: 0; font-size: var(--fs-sm); }
+.sk-rel__log { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-rel__logact { color: var(--t2); font-size: var(--fs-xs); }
+.sk-rel__logrow[data-action='rollback'] .sk-rel__logact { color: var(--wrn); }
+.sk-rel__who { color: var(--t1); }
+.sk-rel__when { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
 
 /* ---------- Шапка экрана (S4-22, S4-23): заголовок · виды · действие ---------- */
 .sk-shead {
@@ -2300,6 +2932,14 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-list__scroll {
   overflow-x: auto;
+  /* S9-12, вторая половина (замер серверной сессии на проде v1.17.8: при
+     экране 393 px страница имела scrollWidth 730 — обрезались верхняя панель,
+     «Группировка», «Порядок»). `overflow-x: auto` сам по себе не спасает: у
+     элемента внутри flex/grid минимальная ширина равна СОДЕРЖИМОМУ, пока не
+     сказано min-width: 0. Таблица с десятком колонок шире телефона всегда,
+     поэтому без этих двух строк она раздвигала не себя, а всю страницу. */
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--bd);
   border-radius: var(--r-md);
 }
@@ -2567,6 +3207,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   grid-auto-flow: column;
   grid-auto-columns: minmax(220px, 1fr);
   gap: var(--gap);
+  min-width: 0;
   overflow-x: auto;
   padding-bottom: 4px;
 }
@@ -2987,22 +3628,36 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   min-width: 0;
   font-size: var(--fs-sm);
 }
+/* Линию рисует подпись (.sk-crumbs__label), а не сам этот бокс: у flex-
+   контейнера подчёркивание ложится по базовой линии бокса, а текст сдвинут
+   вниз центрированием в высоте тапа — линия проходит по глифам и читается
+   как зачёркивание («удалённая запись», B7 ревью 10.11.2026). На инлайновом
+   потомке положение линии задаёт сам текст, и это верно в любом движке. */
 .sk-crumbs__back {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
   min-height: max(var(--tap), 22px);
   padding: 0;
   border: 0;
   background: none;
   color: var(--acc);
   font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
   cursor: pointer;
+}
+.sk-crumbs__label {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Постоянного подчёркивания у крошки нет — по канону ссылок kit (B7 аудита
+   10.11): на проде «← Раздел» с неубираемой декорацией читалось как
+   зачёркнутая, удалённая запись. Подчёркивание — только на hover, и рисует
+   его ПОДПИСЬ, а не сам flex-бокс: на боксе линия вернулась бы по глифам —
+   то есть зачёркнутой, только при наведении. */
+.sk-crumbs__back:hover .sk-crumbs__label { text-decoration: underline; text-underline-offset: 2px; }
 .sk-crumbs__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-crumbs__ctx { color: var(--t2); }
 .sk-crumbs__sep { color: var(--t3); }
@@ -3223,7 +3878,11 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-facts { min-width: 0; }
 .sk-rec-facts__list { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--gap); margin: 0; padding: 0; list-style: none; }
 .sk-rec-facts__item { --fact-c: var(--t2); display: inline-flex; align-items: center; gap: 4px; color: var(--fact-c); font-size: var(--fs-sm); }
-.sk-rec-facts__item + .sk-rec-facts__item::before { content: '·'; color: var(--t3); margin-right: 2px; }
+/* Пустой пункт строки фактов не занимает место и не даёт разделителя: у типа
+   без статусной оси (релиз, компонент, технология) StatusSlot не рисует чип
+   вовсе (B5), и «Статус» оставлял бы пустой <li> с висячей точкой «·». */
+.sk-rec-facts__item:empty { display: none; }
+.sk-rec-facts__item:not(:empty) ~ .sk-rec-facts__item:not(:empty)::before { content: '·'; color: var(--t3); margin-right: 2px; }
 .sk-rec-facts__item[data-fact='tasks'], .sk-rec-facts__item[data-fact='due'] { font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rec-facts__text { color: inherit; }
 .sk-rec-facts__btn {
@@ -3317,7 +3976,8 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 }
 /* Группировка — своей группой, чтобы у неё осталось имя для чтения вслух. */
 .sk-tasks__groupby { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-.sk-tasks__wrap { overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+/* min-width: 0 — иначе бокс с прокруткой раздвигает полосу, а не себя (S9-12). */
+.sk-tasks__wrap { min-width: 0; overflow-x: auto; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-tasks__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); color: var(--t1); }
 .sk-tasks__th {
   position: sticky;
@@ -3688,6 +4348,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 }
 .sk-read__rail {
   width: 280px;
+  min-width: 0;
   max-height: 100vh;
   overflow: auto;
   padding: 8px 10px;
@@ -3702,7 +4363,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   max-height: none;
   border-radius: 0;
 }
-.sk-read__full-body { overflow: auto; }
+.sk-read__full-body { min-width: 0; overflow: auto; }
 .sk-read__full-body table { display: table; }
 
 /* Меню оболочки, свёрнутое на время чтения (D-2026-UXR-READ-COLLAPSE). */
@@ -4095,7 +4756,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-news__delta { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); }
 .sk-news__delta[data-tone='suc'] { color: var(--suc); }
 .sk-news__delta[data-tone='dng'] { color: var(--dng); }
-.sk-news__scroll { overflow-x: auto; }
+.sk-news__scroll { min-width: 0; overflow-x: auto; }
 .sk-news__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .sk-news__table th,
 .sk-news__table td { padding: var(--pad-y) var(--pad-x); border-bottom: 1px solid var(--bd); text-align: left; white-space: nowrap; }
@@ -4393,6 +5054,24 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
 .sk-news__wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 .sk-news__wrap .sk-news__chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); }
 @media (max-width: 720px) {
+  /* Телефон: ряды чипов ПЕРЕНОСЯТСЯ, а не прокручиваются вслепую.
+     Жалоба владелицы 10.11.2026 со скриншотом с планшета: «до этих пунктов у
+     тебя все езе не адаптивный мобильный вид». Замер на 412: ряд быстрых
+     фильтров — содержимое 519 px в коробке 412, чипы дня стоят до 518 px.
+     Страница при этом НЕ шире экрана, поэтому прежняя проверка «нет
+     горизонтальной прокрутки» была зелёной — она смотрела не туда.
+     Почему перенос, а не своя полоса прокрутки (как у условий списка в S9-12):
+     там прокручиваются УСЛОВИЯ, а управление остаётся на виду; здесь сами
+     фильтры и счётчики дня — то, ради чего на экран и смотрят. Фильтр,
+     которого не видно, — это фильтр, которого нет, а половина счёта дня за
+     краем бессмысленна. Полоса прокрутки без видимого ползунка
+     (scrollbar-width: none) к тому же ничем не показывает, что справа ещё
+     что-то есть. */
+  .sk-news__frow { flex-wrap: wrap; overflow-x: visible; }
+  .sk-news__frow > .sk-news__types { flex-wrap: wrap; padding-left: 0; border-left: 0; }
+  .sk-news__facets,
+  .sk-news__types,
+  .sk-news__strip { flex-wrap: wrap; }
   .sk-news__tlabel { display: none; }
   .sk-news__sheet {
     top: auto; left: 0; width: auto; max-height: 88vh;

@@ -286,6 +286,216 @@
 <button type="button" class="sk-ear sk-ear--left" aria-expanded="true">Ушко слева</button>
 </div>
 </section>
+<section class="bare__sec" data-kit="flow">
+<h2 class="bare__h2">Мастера</h2>
+<div class="sk-steps">
+<ol class="sk-steps__bar" aria-label="Шаги">
+<li class="sk-steps__item">
+<button type="button" class="sk-steps__step is-here" aria-current="step">
+<span class="sk-steps__num">1</span>
+<span class="sk-steps__title">Выбор</span>
+</button>
+</li>
+<li class="sk-steps__item">
+<button type="button" class="sk-steps__step" aria-disabled="true">
+<span class="sk-steps__num">2</span>
+<span class="sk-steps__title">Заполнение</span>
+</button>
+</li>
+<li class="sk-steps__item">
+<button type="button" class="sk-steps__step" aria-disabled="true">
+<span class="sk-steps__num">3</span>
+<span class="sk-steps__title">Проверка</span>
+</button>
+</li>
+</ol>
+<p class="sk-steps__progress" data-testid="kit-steps-progress">Шаг 1 из 3</p>
+<div class="sk-steps__panel" data-testid="kit-steps-panel-pick">
+<p>Содержимое первого шага</p>
+</div>
+<div class="sk-steps__panel" data-testid="kit-steps-panel-fill" hidden="">
+<p>Содержимое второго шага</p>
+</div>
+<div class="sk-steps__panel" data-testid="kit-steps-panel-check" hidden="">
+<p>Содержимое третьего шага</p>
+</div>
+<div class="sk-steps__nav">
+<button type="button" class="sk-steps__btn is-primary" data-testid="kit-steps-next" aria-disabled="true" aria-describedby="kit-steps-blocked-reason">Дальше</button>
+<span class="sk-steps__blocked" id="kit-steps-blocked-reason" role="status" data-testid="kit-steps-blocked">Не выбрано, что делаем</span>
+</div>
+</div>
+<div class="sk-secret" data-phase="warned">
+<span class="sk-secret__label">Секрет</span>
+<p class="sk-secret__warn" data-testid="kit-secret-warn">Значение будет показано один раз — сохраните его сейчас.</p>
+<button type="button" class="sk-secret__btn" data-testid="kit-secret-reveal">Показать</button>
+</div>
+<section class="sk-diff" aria-label="Что изменится">
+<h3 class="sk-diff__head">Что изменится</h3>
+<ul class="sk-diff__list">
+<li class="sk-diff__row" data-testid="kit-diff-row-a" data-kind="add" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">+</span>
+<span class="sk-diff__kind">добавится</span>
+<span class="sk-diff__text">строка добавится</span>
+<span class="sk-diff__detail">подробность</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-b" data-kind="remove" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">−</span>
+<span class="sk-diff__kind">снимется</span>
+<span class="sk-diff__text">строка снимется</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-c" data-kind="same" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">=</span>
+<span class="sk-diff__kind">уже есть</span>
+<span class="sk-diff__text">строка уже есть</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-d" data-kind="add" data-check="unverified">
+<span class="sk-diff__sign" aria-hidden="true">+</span>
+<span class="sk-diff__kind">добавится</span>
+<span class="sk-diff__text">строка не проверена</span>
+<span class="sk-diff__check" data-testid="kit-diff-check-d">не смогли проверить<span class="sk-diff__reason">источник не ответил</span>
+</span>
+<span class="sk-diff__skip" data-testid="kit-diff-skip-d">не будет применено, пока не проверено</span>
+</li>
+<li class="sk-diff__row" data-testid="kit-diff-row-e" data-kind="add" data-check="forbidden">
+<span class="sk-diff__sign" aria-hidden="true">+</span>
+<span class="sk-diff__kind">добавится</span>
+<span class="sk-diff__text">смотреть не дали</span>
+<span class="sk-diff__check" data-testid="kit-diff-check-e">нет прав смотреть<span class="sk-diff__reason">нужна роль администратора</span>
+</span>
+<span class="sk-diff__skip" data-testid="kit-diff-skip-e">не будет применено, пока не проверено</span>
+</li>
+</ul>
+<button type="button" class="sk-diff__apply" data-testid="kit-diff-apply">Применить 2 изменения</button>
+</section>
+<section class="sk-batch" data-testid="kit-batch" data-outcome="partial" aria-label="Применённая пачка">
+<p class="sk-batch__summary" data-testid="kit-batch-summary">Применилось 2 из 3 — остальное не применилось.</p>
+<ul class="sk-batch__failed" data-testid="kit-batch-failed">
+<li class="sk-batch__fail">
+<span class="sk-batch__fail-text">третья строка</span>
+<span class="sk-batch__fail-reason">источник отказал: 409</span>
+</li>
+</ul>
+<button type="button" class="sk-batch__undo" data-testid="kit-batch-undo">Отменить · 10 с</button>
+</section>
+<div class="sk-matrix">
+<div class="sk-matrix__scroll">
+<table class="sk-matrix__table">
+<caption class="sk-matrix__caption">Строки × Колонки</caption>
+<thead>
+<tr>
+<th scope="col" class="sk-matrix__corner">
+<span class="sk-matrix__axis">Строки</span>
+</th>
+<th scope="col" class="sk-matrix__colhead">
+<span class="sk-matrix__coltitle">Колонка один</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-colset-c1">задать всей колонке</button>
+</th>
+<th scope="col" class="sk-matrix__colhead">
+<span class="sk-matrix__coltitle">Колонка два</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-colset-c2">задать всей колонке</button>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row" class="sk-matrix__rowhead">
+<span class="sk-matrix__rowtitle">Первая строка</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-rowset-r1">задать всей строке</button>
+</th>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r1-c1" data-state="value" title="Значение один" aria-label="Первая строка · Колонка один: Значение один">
+<span class="sk-matrix__chip">Значение один</span>
+</button>
+</td>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r1-c2" data-state="none" title="значения нет" aria-label="Первая строка · Колонка два: значения нет">
+<span class="sk-matrix__mark">—</span>
+</button>
+</td>
+</tr>
+<tr>
+<th scope="row" class="sk-matrix__rowhead">
+<span class="sk-matrix__rowtitle">Вторая строка</span>
+<button type="button" class="sk-matrix__all" data-testid="kit-matrix-rowset-r2">задать всей строке</button>
+</th>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r2-c1" data-state="unverified" title="не смогли проверить: источник не ответил" aria-label="Вторая строка · Колонка один: не смогли проверить: источник не ответил" aria-disabled="true">
+<span class="sk-matrix__mark">?</span>
+</button>
+</td>
+<td class="sk-matrix__td">
+<button type="button" class="sk-matrix__cell" data-testid="kit-matrix-cell-r2-c2" data-state="forbidden" title="нет прав смотреть: нужна роль администратора" aria-label="Вторая строка · Колонка два: нет прав смотреть: нужна роль администратора" aria-disabled="true">
+<span class="sk-matrix__mark">×</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<span class="sk-matrix__axis sk-matrix__axis--cols">Колонки</span>
+</div>
+<section class="sk-rel" aria-label="Выпуск содержимого">
+<header class="sk-rel__top">
+<p class="sk-rel__versions" data-testid="kit-rel-versions">Версия 7 → 8</p>
+<span class="sk-rel__class" data-class="hotfix" data-testid="kit-rel-class">хотфикс: правки существующих записей</span>
+</header>
+<div class="sk-rel__group" data-group="added">
+<h3 class="sk-rel__ghead" data-testid="kit-rel-added">Добавлено <span class="sk-rel__count">1</span>
+</h3>
+<ul class="sk-rel__list">
+<li class="sk-rel__item" data-testid="kit-rel-item-A-1">
+<span class="sk-rel__id">A-1</span>
+<span class="sk-rel__title">Новая запись</span>
+</li>
+</ul>
+</div>
+<div class="sk-rel__group" data-group="changed">
+<h3 class="sk-rel__ghead" data-testid="kit-rel-changed">Изменено <span class="sk-rel__count">1</span>
+</h3>
+<ul class="sk-rel__list">
+<li class="sk-rel__item" data-testid="kit-rel-item-C-1">
+<span class="sk-rel__id">C-1</span>
+<span class="sk-rel__title">Изменённая запись</span>
+<ul class="sk-rel__fields">
+<li class="sk-rel__field" data-testid="kit-rel-field-C-1-title">
+<span class="sk-rel__fname">title</span>
+<span class="sk-rel__wdiff">
+<span class="sk-rel__chunk" data-chunk="same">правило для </span>
+<span class="sk-rel__chunk" data-chunk="del">всех</span>
+<span class="sk-rel__chunk" data-chunk="add">новичков</span>
+</span>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="sk-rel__group" data-group="removed">
+<h3 class="sk-rel__ghead" data-testid="kit-rel-removed">Снято <span class="sk-rel__count">1</span>
+</h3>
+<ul class="sk-rel__list">
+<li class="sk-rel__item" data-testid="kit-rel-item-R-1">
+<span class="sk-rel__id">R-1</span>
+<span class="sk-rel__title">Снятая запись</span>
+</li>
+</ul>
+</div>
+<div class="sk-rel__acts">
+<button type="button" class="sk-rel__act is-primary" data-testid="kit-rel-activate">Активировать 8</button>
+<button type="button" class="sk-rel__act" data-testid="kit-rel-rollback">Откатить на 7</button>
+</div>
+<div class="sk-rel__log">
+<h3 class="sk-rel__ghead">Журнал активаций</h3>
+<ul class="sk-rel__list">
+<li class="sk-rel__logrow" data-action="activate" data-testid="kit-rel-log-0">
+<span class="sk-rel__logact">активация</span>
+<span class="sk-rel__id">7</span>
+<span class="sk-rel__who">кто-то</span>
+<span class="sk-rel__when">2026-11-01T10:00:00Z</span>
+</li>
+</ul>
+</div>
+</section>
+</section>
 <section class="bare__sec" data-kit="content">
 <h2 class="bare__h2">MD / HTML</h2>
 <div class="sk-md">

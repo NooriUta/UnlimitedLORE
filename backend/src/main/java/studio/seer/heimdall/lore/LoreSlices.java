@@ -472,10 +472,12 @@ public final class LoreSlices {
         // обязан отдавать тела, а не только хэш; иначе история из 200 ревизий тел
         // показывала прочерки. content_hash (SV-10) = дешёвый «менялось ли», тела =
         // «что именно» для пополевого диффа в UI.
+        // B9: WHERE — CONTAINS, не [0] =: у общей версии (S2-11) владелец №2 иначе
+        // получает пустую историю молча — фильтр сравнивался с чужим первым владельцем.
         slice("adr_history",
             "SELECT valid_from, valid_to, content_hash, source_commit, " +
             "context_md, decision_md, consequences_md " +
-            "FROM KnowADRHist WHERE in('HAS_STATE').adr_id[0] = :id ORDER BY valid_from",
+            "FROM KnowADRHist WHERE in('HAS_STATE').adr_id CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
         // AL-113 (запрошено miniLORE 2026-08-16): `adr_history` отдаёт правки
@@ -484,25 +486,33 @@ public final class LoreSlices {
         // сразу по всем, для новостной ленты правок. valid_from — реальная
         // колонка KnowADRHist (ORDER BY по ней надёжен). Тела не тянем — лента
         // показывает факт правки, не диф.
+        // B9: state_owners — число владельцев версии (> 1 — общая версия, S2-11):
+        // id — первый владелец ([0] порядком хранилища не гарантирован), колонка
+        // говорит потребителю, что строка относится не только к нему. Счётчик, не
+        // сравнение: бинарное выражение (size() > 1) в проекции ArcadeDB не парсит.
         slice("adr_history_all",
             "SELECT in('HAS_STATE').adr_id[0] AS adr_id, valid_from, valid_to, " +
             "content_hash, source_commit, " +
             // Проект вершины — событию «изменено» в ленте (см. NewsChangedCarriesProjectTest).
-            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
         // Зеркала adr_history_all для события «изменено» в ленте (ML-NEWS): правки
         // спек и решений — такая же новость, как правка ADR. Свёртку «одна строка
         // на (id, день)» делает потребитель (/news), здесь только сырые ревизии.
+        // B9: state_owners — см. adr_history_all: > 1 — общая версия.
         slice("spec_history_all",
             "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash, " +
-            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowSpecHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
         slice("decision_history_all",
-            "SELECT in('HAS_STATE').decision_id[0] AS decision_id, valid_from, valid_to, content_hash " +
+            "SELECT in('HAS_STATE').decision_id[0] AS decision_id, valid_from, valid_to, content_hash, " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowDecisionHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
@@ -967,6 +977,24 @@ public final class LoreSlices {
             "FROM KnowUseCase WHERE out('BELONGS_TO').component_id CONTAINS :component " +
             "ORDER BY goal_level, uc_id",
             List.of("component"), Map.of(), "");
+
+        // S4-V2-SECTIONS, «US разделом»: ВСЕ уровни шкалы, без обязательного параметра.
+        // `features` режет выдачу до корней (cloud|kite), `use_cases_of_component` требует
+        // компонент — раздела «все сценарии» собрать было не из чего. Тел нет: список
+        // несёт заголовки, тело — в паспорте (/lore/record/feature/<uc_id>).
+        slice("use_cases",
+            "SELECT uc_id, title, status, goal_level, rigor, priority, parent_uc_id, date_created, shipped_at, " +
+            "out('BELONGS_TO').component_id AS component_ids, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('DECOMPOSES_INTO').uc_id    AS parent_uc_ids, " +
+            "out('DECOMPOSES_INTO').size()  AS uc_total, " +
+            "in('REALIZES').size()          AS task_count " +
+            "FROM KnowUseCase",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component",
+                "goal_level", " WHERE goal_level = :goal_level")),
+            " ORDER BY uc_id");
 
         // Дочерние сценарии корня. Источник истины — ребро DECOMPOSES_INTO;
         // parent_uc_id рядом с ним денормализация для индекса, а не вторая правда.
@@ -1859,6 +1887,18 @@ public final class LoreSlices {
                 "component", " AND (out('BELONGS_TO').component_id CONTAINS :component OR component_id = :component)")),
             " ORDER BY spec_id");
 
+        // S4-V2-SECTIONS: паспорт технологии — та же строка, что у tech_registry, по ключу.
+        // Фильтр SPEC-TECH- остаётся: обычная спека — не технология, и паспорт «технологии»
+        // по её id отвечает 404, а не показывает спеку под чужим видом.
+        slice("tech_by_id",
+            "SELECT spec_id, title AS tech_name, " +
+            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS checked_at, " +
+            "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id " +
+            "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%' AND spec_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
         // AL-30: + все версионируемые поля ревизии (тела, план, pr_refs) — история
         // перестаёт показывать «только статус» при полных данных под ней.
@@ -1866,17 +1906,18 @@ public final class LoreSlices {
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
             "priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
             "context_md, outcome_md " +
-            "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
+            "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
         // AL-30: тот же паттерн для задач — раньше был только status_raw через
         // task_done_dates/task_starts (агрегатные min/max, не полная цепочка).
         // effort_days и note_md версионируются (task_set пишет их в открытую
         // HAS_STATE), но ни один слайс не отдавал цепочку ревизий целиком.
+        // B9: CONTAINS, не [0] = — см. adr_history.
         slice("history_task",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
             "effort_days, note_md " +
-            "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid[0] = :id ORDER BY valid_from",
+            "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
         // Bulk: every sprint state row (scalar valid_from). Frontend takes the min
@@ -1935,7 +1976,9 @@ public final class LoreSlices {
             "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days, " +
-            "in('HAS_STATE').bookkeeping[0] AS bookkeeping " +
+            "in('HAS_STATE').bookkeeping[0] AS bookkeeping, " +
+            // B9: state_owners — см. adr_history_all (> 1 — общая версия). Сравнение «.size() > 1» в проекции ArcadeDB не разбирает.
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowTaskHist WHERE valid_to IS NULL " +
             "AND (" + DONE_STATUS_SQL + ") AND valid_from IS NOT NULL",
             List.of(), Map.of(), "");
@@ -1945,7 +1988,9 @@ public final class LoreSlices {
         slice("task_starts",
             // SE-08: task_uid — пара «спринт/код»; голый task_id неоднозначен (220 кодов в
             // нескольких спринтах). task_id оставлен для прежних читателей.
-            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from " +
+            // B9: state_owners — см. adr_history_all.
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
@@ -1964,7 +2009,9 @@ public final class LoreSlices {
         // стороне. Зеркало task_starts, но с task_uid (уникален) и sprint_id.
         slice("task_created_dates",
             "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
-            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from, " +
+            // B9: state_owners — см. adr_history_all.
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
@@ -2765,6 +2812,7 @@ public final class LoreSlices {
         Map.entry("features", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("uc_by_id", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_component", UC_INHERITED_SCOPE),
+        Map.entry("use_cases", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_feature", UC_INHERITED_SCOPE),
         Map.entry("shipped_dynamics", UC_INHERITED_SCOPE),
         Map.entry("feature_vp_analytics", "out('BELONGS_TO_PROJECT').slug")
@@ -2799,6 +2847,7 @@ public final class LoreSlices {
         Map.entry("history_hygiene", "сторож истории — служебный"),
         Map.entry("asset_orphans", "сторож ассетов — служебный"),
         Map.entry("tech_registry", "реестр технологий — общий"),
+        Map.entry("tech_by_id", "паспорт технологии — тот же общий реестр"),
         Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
         Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем")
     );

@@ -167,7 +167,7 @@ public class LoreAdrResource extends LoreResourceBase {
                         "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
                         "context_md=:ctx, decision_md=:dec, consequences_md=:con" + carryStatus + ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
-                        "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely().result();
+                        "TO (SELECT FROM KnowADRHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", cp)).await().indefinitely().result();
                     if (Scd2Guard.isConflict(cpRes))
                         throw new Scd2Guard.ConflictException("adr '" + req.adr_id()
                             + "': the body version read was closed by a concurrent write — re-read and retry", Map.of());
@@ -219,7 +219,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
                     "context_md=:ctx, decision_md=:dec, consequences_md=:con" + firstStatus + ChangeAuthor.SET_SQL + ";" +
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
-                    "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);",
+                    "TO (SELECT FROM KnowADRHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);",
                     histP)).await().indefinitely();
                 histCreated = true;
             }

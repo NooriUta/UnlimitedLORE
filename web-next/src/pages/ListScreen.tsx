@@ -19,6 +19,7 @@ import { sliceToKitData, sliceWarnings } from '../lists/records';
 import { loreValueIcon } from '../lists/loreFilters';
 import { appliedCollapseNavOnRead } from '../settings/applied';
 import { useProjectScope } from '../scope/ProjectScope';
+import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
@@ -38,11 +39,15 @@ const ListPassport = lazy(() => import('../record/ListPassport'));
  * типа ещё нет», и оно говорится словами (ниже, `NoPassport`). Карта растёт
  * вместе с фасадом: появился тип на сервере — появилась строка здесь.
  */
-const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
+export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task', specs: 'spec',
   // Появились 09.11 вместе с типами фасада (#988, #991). Четыре — только на
   // чтение; «только чтение» приходит в `perms`, клиент это не предполагает.
   decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release',
+  // Появились 10.11 (серверный PR #1090), тоже только на чтение. Технология
+  // открывается по spec_id: путь /lore/record/tech/<SPEC-TECH-…>, обычная
+  // спека по этому пути даёт 404 — то есть тип выбирает раздел, а не ключ.
+  components: 'component', tech: 'tech', features: 'feature',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 type OpenRecord = { id: string | null; place: RecordPlacement };
@@ -158,7 +163,33 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     setCollapsed(!!open.id);
     return () => setCollapsed(false);
   }, [collapseOnRead, setCollapsed, open.id]);
-  const config = useMemo(() => def.config(lang), [def, lang]);
+  const baseConfig = useMemo(() => def.config(lang), [def, lang]);
+  // Статусная ось раздела — ИЗ МОДЕЛИ (K-14 п. 4, S4-STATUS-AXIS-CONFIG).
+  //
+  // Перечень статусов в `lists/screens.ts` остаётся умолчанием: пока модель не
+  // прочитана (или в ней нет цикла для типа), экран показывает его И ГОВОРИТ
+  // об этом. Молчаливое умолчание — это ровно тот дефект, из-за которого в
+  // меню статуса задачи были чужие статусы и два «В работе»: клиент показывал
+  // свой список, уверенно и неправильно.
+  const [modelStatuses, setModelStatuses] = useState<TypeStatuses | null>(null);
+  const modelType = def.modelType;
+  useEffect(() => {
+    if (!modelType) { setModelStatuses(null); return; }
+    let live = true;
+    setModelStatuses(null);
+    fetchTypeStatuses(modelType, fetchImpl ? { fetchImpl } : {}).then(
+      r => { if (live) setModelStatuses(r); },
+      // Ожидаемые отказы `fetchTypeStatuses` возвращает оговорками; сюда
+      // попадаем, только если упал сам загрузчик — и это тоже надо сказать.
+      e => { if (live) setModelStatuses({ items: [], notes: [`статусы — умолчание приложения: ${e instanceof Error ? e.message : String(e)}`] }); },
+    );
+    return () => { live = false; };
+  }, [modelType, fetchImpl]);
+  const config = useMemo(() => {
+    const items = modelStatuses?.items ?? [];
+    if (!items.length) return baseConfig;
+    return { ...baseConfig, statuses: { ...baseConfig.statuses, items } };
+  }, [baseConfig, modelStatuses]);
   // Выбор проектов в шапке наконец доходит до среза (S4-03, жалоба владелицы
   // 09.11.2026: «верхний фильтр по проектам не влияет на элементы внизу»).
   // Причина была не в фильтре: `useProjectScope()` не вызывал НИ ОДИН экран —
@@ -181,7 +212,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Предупреждения выдачи плюс оговорка самого раздела (S4-V2-SECTIONS): где
   // срез по природе отдаёт НЕ ВСЁ, «Показано N из N» — правда про выдачу, но не
   // про корпус, и без слов человек решит, что остального у него нет.
-  const warnings = [...(def.note ? [def.note] : []), ...(body ? sliceWarnings(body) : [])];
+  const warnings = [
+    ...(def.note ? [def.note] : []),
+    ...(body ? sliceWarnings(body) : []),
+    // Оговорки про ось статусов — там же, где прочие: человек должен видеть,
+    // что список статусов взят не из модели, а из умолчания приложения.
+    ...(modelStatuses?.notes ?? []),
+  ];
 
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
   // упавшая пачка — «?» с причиной (это решает loadProgress), а не 0/0.

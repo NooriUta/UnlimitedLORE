@@ -19,6 +19,7 @@
 //   • не заполнено ни у кого → «не заполнено», НЕ 0;
 //   • не посчитали / считаем → причина и «…», как у прогресса.
 import { kitT, useKitLang } from '../i18n';
+import { kitNumber } from '../core/fmtValue';
 
 /**
  * Имя поля из ключа колонки: `progress:tasks` и `sum:effort` → `tasks`,
@@ -74,7 +75,7 @@ export function sumOf(v: unknown): SumValue {
 
 /** Число без лишних нулей: 12 → «12», 12,5 → «12,5» (разделитель — по языку). */
 export function formatSum(value: number, lang: string): string {
-  return new Intl.NumberFormat(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2 }).format(value);
+  return kitNumber(lang, value);
 }
 
 export function SumCell({ value }: { value: unknown }) {

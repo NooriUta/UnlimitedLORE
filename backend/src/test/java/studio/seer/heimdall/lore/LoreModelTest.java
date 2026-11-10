@@ -94,6 +94,39 @@ class LoreModelTest {
         assertFalse(w.contains("«planned» без"), "заполненный статус не назван: " + w);
     }
 
+    /**
+     * kit 10.11 (K-14): палитра — прикладной словарь, kit не должен держать её у себя. Раздел
+     * {@code palettes} несёт коды из того же белого списка, что принимает настройка
+     * {@code palette} (один источник), умолчание и подписи из справочника {@code palette}.
+     * Код без статьи в справочнике не прячется: {@code in_dictionary:false}, подпись = код,
+     * и он назван в warnings — «не описано» отличается от «не прислали».
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void palettesComeFromSettingsWhitelistWithDictionaryLabels() {
+        List<Map<String, Object>> rows = new ArrayList<>(taskDict());
+        rows.add(dict("palette", "lichen", "Лишайник", null, null, 20));
+        Map<String, Object> m = LoreModel.build(rows);
+
+        Map<String, Object> p = (Map<String, Object>) m.get("palettes");
+        assertEquals("amber-forest", p.get("default"));
+        List<Map<String, Object>> entries = (List<Map<String, Object>>) p.get("entries");
+        assertEquals(List.of("amber-forest", "lichen", "slate", "juniper", "warm-dark"),
+            entries.stream().map(e -> e.get("code")).toList(), "ровно коды настройки palette, в её порядке");
+
+        Map<String, Object> lichen = entries.get(1);
+        assertEquals("Лишайник", lichen.get("title"));
+        assertEquals(true, lichen.get("in_dictionary"));
+        Map<String, Object> slate = entries.get(2);
+        assertEquals("slate", slate.get("title"), "нет статьи — подпись = код, не выдумана");
+        assertEquals(false, slate.get("in_dictionary"));
+
+        String w = String.valueOf(m.get("warnings"));
+        assertTrue(w.contains("palette: палитра «slate» без статьи в справочнике"), w);
+        assertFalse(w.contains("«lichen» без статьи"), w);
+        assertFalse(String.valueOf(m.get("missing")).contains("palettes"), "раздел прислан — в missing его нет");
+    }
+
     @Test
     void adrDictionaryCaseMismatchIsMatchedAndReported() {
         List<Map<String, Object>> rows = new ArrayList<>(taskDict());

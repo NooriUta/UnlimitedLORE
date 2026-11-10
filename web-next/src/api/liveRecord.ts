@@ -27,7 +27,7 @@
 // Честные состояния: «не найдено», «нет прав» и «сервер сломался» — разные
 // ответы человеку, и каждый отказывает своим типом, а не пустым паспортом.
 import { loreFetch } from '../auth/session';
-import type { FieldKind, LoreField, LoreLink, LoreRecord1, LoreRelation, LoreSource, LoreTab } from '../record/loreRecordContract';
+import type { FieldKind, LoreField, LoreLink, LorePart, LorePlace, LoreRecord1, LoreRelation, LoreSource, LoreTab } from '../record/loreRecordContract';
 import type { KitRelation } from '@seidr/kit';
 
 type Json = Record<string, unknown>;
@@ -171,6 +171,56 @@ export function sourcesFromServer(dataState: unknown): LoreSource[] {
  * а не данные (`assertDataOnly` их в модель не пустит). Сервер говорит
  * «у этой связи место — вкладка», решение «нарисовать вкладку» — наше.
  */
+/**
+ * Место связи, как его называет сервер: own · prop · part · link_tab.
+ *
+ * Неизвестное слово — НЕ повод угадывать: считаем вкладкой связей, потому что
+ * так вело себя приложение до появления `place`, и это поведение видно
+ * человеку (вкладка с элементами), а не прячет данные.
+ */
+function placeOf(v: unknown): LorePlace | undefined {
+  const s = str(v);
+  return s === 'own' || s === 'prop' || s === 'part' || s === 'link_tab' ? s : undefined;
+}
+
+/**
+ * Части записи: `parts[]` фасада (LoreRecordRegistry.partJson).
+ *
+ * Дефект прода v1.17.8: паспорт спринта писал «Задач нет» при 48 задачах —
+ * задачи и фазы приходят ИМЕННО ЗДЕСЬ, а слой перевода их молча терял.
+ *
+ * `state` у части — ровно три значения (сверено по коду сервера): ok · denied
+ * (нет разрешённых проектов) · error (сбой среза). Чужое слово в `state`
+ * становится 'error' с названной причиной: «состояние неизвестно» — это не
+ * «всё хорошо». `count` при не-ok — null: «не посчитали» ≠ ноль.
+ */
+function partsOf(v: unknown): LorePart[] {
+  return arr(v).map(row => {
+    const raw = str(row.state) || 'ok';
+    const state: LorePart['state'] = raw === 'ok' || raw === 'denied' || raw === 'error' ? raw : 'error';
+    const error = strOrNull(row.error);
+    const items = arr(row.items).map(i => ({
+      id: str(i.id), title: str(i.title) || str(i.id), status: str(i.status),
+      ...(i.values && typeof i.values === 'object' && !Array.isArray(i.values) ? { values: i.values as Record<string, unknown> } : {}),
+    })).filter(i => i.id);
+    const type = str(row.type);
+    const count = num(row.count);
+    return {
+      key: str(row.key), label: str(row.label) || str(row.key),
+      ...(type ? { type } : {}),
+      rel: str(row.rel), dir: str(row.dir) === 'in' ? ('in' as const) : ('out' as const),
+      ...(row.owned === true ? { owned: true } : {}),
+      ...(row.relation ? { relation: relationOf(row.relation) } : {}),
+      state,
+      ...(state === 'ok'
+        ? {}
+        : { error: error ?? (raw === state ? state : `состояние «${raw}» неизвестно`) }),
+      count: state === 'ok' ? (count ?? items.length) : null,
+      items,
+    };
+  }).filter(p => p.key);
+}
+
 function tabsOf(relations: Json[]): LoreTab[] {
   return relations
     .filter(r => str(r.place) === 'link_tab')
@@ -214,6 +264,7 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     };
   });
 
+  const parts = partsOf(b.parts);
   const relRows = arr(schema.relations);
   const relations: LoreRelation[] = relRows.map(r => {
     const rel = str(r.rel);
@@ -221,20 +272,31 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     return {
       key: str(r.key), label: str(r.label) || str(r.key),
       relation: relationOf(r.relation), rel, dir,
-      // Счётчик сервер не присылает — считаем по тем связям, что пришли.
-      count: links.filter(l => l.rel === rel && l.dir === dir).length,
+      // Счётчик сервер не присылает. У части число знает сама часть (её
+      // элементы в links не приходят, и пересчёт давал бы 0); у остальных —
+      // считаем по пришедшим связям.
+      count: parts.find(x => x.key === str(r.key))?.count
+        ?? links.filter(l => l.rel === rel && l.dir === dir).length,
       // Есть ли путь привязки — знает только сервер (LoreRecordRelationRoutes).
       // Нет признака — это «нет пути», а не «решайте сами»: иначе человек
       // введёт код и получит UNKNOWN_RELATION.
       manageable: r.manageable === true,
+      // Место связи нужно донести: по нему решают, что это — свойство
+      // (значения в values), часть (элементы в parts) или вкладка связей.
+      // Потеря этого слова и давала «Проекты 0» рядом с живым значением.
+      ...(placeOf(r.place) ? { place: placeOf(r.place)! } : {}),
+      ...(str(r.target_type) ? { target_type: str(r.target_type) } : {}),
     };
   });
 
   const tasks = obj(facts.tasks);
   const done = num(tasks.done);
   const total = num(tasks.total);
+  const open = num(tasks.open);
   const factsOut: LoreRecord1['facts'] =
-    done !== undefined && total !== undefined ? { tasks: { done, total } }
+    // «open» сервер считает сам (и это не всегда total − done: отменённые
+    // задачи в total не входят). Пришло — несём как есть.
+    done !== undefined && total !== undefined ? { tasks: { done, total, ...(open !== undefined ? { open } : {}) } }
       : typeof facts.adrs_error === 'string' ? { tasks: { error: facts.adrs_error } }
         : null;
 
@@ -278,6 +340,7 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     },
     values,
     links,
+    ...(parts.length ? { parts } : {}),
     facts: factsOut,
     perms: {
       can_edit: perms.can_edit === true, can_status: perms.can_status === true, can_create: perms.can_create === true,

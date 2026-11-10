@@ -21,6 +21,10 @@ const sprints = [
 ];
 const rowIds = (c: HTMLElement) => [...c.querySelectorAll('[data-record-id]')].map(r => r.getAttribute('data-record-id'));
 
+/** Адреса, которые экран запросил: срез и модель идут независимо. */
+const urls = (f: { mock: { calls: unknown[][] } }) => f.mock.calls.map(c => String(c[0]));
+const asked = (f: { mock: { calls: unknown[][] } }, part: string) => urls(f).some(u => u.includes(part));
+
 describe('маршруты v2', () => {
   it('/sprints и /adrs — экраны списков; хвостовой «/» не мешает', () => {
     expect(routeOf('/sprints')).toBe('sprints');
@@ -36,7 +40,7 @@ describe('ListScreen — спринты', () => {
     const { container } = render(<ListScreen screen="sprints" fetchImpl={fetchImpl} urlState={false} />);
     // S4-27: спринты — «закрытые внизу, свёрнуты»: S_C (готово) в группе «Закрытые 1».
     await waitFor(() => expect(rowIds(container)).toHaveLength(2));
-    expect(String((fetchImpl.mock.calls[0] as unknown[])[0])).toContain('/lore/slice/sprints');
+    expect(asked(fetchImpl, '/lore/slice/sprints'), 'срез спринтов запрошен').toBe(true);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Спринты');
     expect(screen.getByRole('group', { name: 'Фильтр' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Группировка' })).toBeTruthy();
@@ -90,7 +94,7 @@ describe('ListScreen — ADR и честные состояния', () => {
     ] }));
     const { container } = render(<ListScreen screen="adrs" fetchImpl={fetchImpl} urlState={false} />);
     await waitFor(() => expect(rowIds(container)).toHaveLength(2));
-    expect(String((fetchImpl.mock.calls[0] as unknown[])[0])).toContain('/lore/slice/adrs');
+    expect(asked(fetchImpl, '/lore/slice/adrs'), 'срез ADR запрошен').toBe(true);
     expect(container.querySelector('[data-record-id="ADR-1"] [data-status="accepted"]')?.textContent).toContain('Действует');
   });
 
@@ -101,9 +105,17 @@ describe('ListScreen — ADR и честные состояния', () => {
   });
 
   it('500 — ошибка с причиной и «Повторить»; повтор перезапрашивает', async () => {
-    const fetchImpl = vi.fn()
-      .mockResolvedValueOnce(json(500, { error: 'LORE_UPSTREAM_X', detail: 'boom' }))
-      .mockResolvedValueOnce(json(200, { rows: sprints }));
+    // Отвечаем ПО АДРЕСУ: модель и срез грузятся независимо, и «первый ответ»
+    // больше не означает «ответ срезу».
+    let sliceTries = 0;
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes('/lore/model')) return json(200, { format: 'model/0', version: 'v1' });
+      sliceTries += 1;
+      return sliceTries === 1
+        ? json(500, { error: 'LORE_UPSTREAM_X', detail: 'boom' })
+        : json(200, { rows: sprints });
+    });
     const { container } = render(<ListScreen screen="sprints" fetchImpl={fetchImpl} urlState={false} />);
     await waitFor(() => expect(container.querySelector('[data-state="error"]')).toBeTruthy());
     expect(container.querySelector('[data-state="error"]')?.textContent).toContain('boom');

@@ -294,6 +294,12 @@ jobs:
           npm run typecheck
           npm test
 
+      # SPRINT_UXR_S11_TEST_OPT/CT-KIT-FIXTURES: скрипт снятия живых ответов
+      # сервера в shared/fixtures (из них читают тесты kit и web-next). Здесь —
+      # только его чистые части: без сети, без зависимостей, секунды.
+      - name: Живые фикстуры (shared/fixtures) — тесты скрипта снятия
+        run: node --test shared/fixtures/*.test.mjs
+
       - name: LORE v2 (web-next) — install + typecheck + test + build
         if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next

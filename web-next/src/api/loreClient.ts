@@ -25,8 +25,11 @@ export interface SliceBody<T = Record<string, unknown>> {
    * Если ни один выбранный проект недоступен, сервер отвечает 200 и пустыми
    * строками, а не 403 — поэтому «пусто» здесь обязано сопровождаться словами,
    * иначе его не отличить от «данных нет в системе».
+   *
+   * Объяснение приходит то в `note` (проекты вне прав отброшены), то в
+   * `reason` (срез не привязан к проектам) — смысл тот же, читаем оба (B11).
    */
-  scope_projects?: { requested: string[]; applied: boolean; dropped?: string[]; note?: string };
+  scope_projects?: { requested: string[]; applied: boolean; dropped?: string[]; note?: string; reason?: string };
   outside_scope?: { id: string; verdict: string; reason: string } | null;
   page?: {
     limit: number | null; offset: number; total: number; has_more: boolean;

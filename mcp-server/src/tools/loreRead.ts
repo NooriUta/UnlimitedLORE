@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, loreGet, loreSliceWithMeta, loreSlices } from '../backend.js';
+import { completeness, parseLoreQueryBlock } from './runBlock.js';
 
 // ADR-LORE-017 (T16): slices that take a `project` param inherit LORE_ACTIVE_PROJECT
 // when the caller omits it. Tier 2 (Task/Component/ADR/tech-registry) deliberately
@@ -42,6 +43,34 @@ async function sliceTakesProject(slice: string): Promise<boolean | undefined> {
     }
   }
   return projectAwareSlices ? projectAwareSlices.has(slice) : undefined;
+}
+
+/**
+ * ADR-LORE-017: подстановка LORE_ACTIVE_PROJECT в срез с параметром project —
+ * общая для query_slice и run_block, чтобы оба сужали одинаково и одинаково
+ * говорили об этом.
+ */
+async function withProjectDefault(
+  slice: string,
+  params: Record<string, string> | undefined,
+): Promise<{ effectiveParams: Record<string, string>; warning?: string; defaulted: boolean }> {
+  const effectiveParams = { ...(params ?? {}) };
+  let warning: string | undefined;
+  let defaulted = false;
+  if (ACTIVE_PROJECT) {
+    const takesProject = await sliceTakesProject(slice);
+    if (takesProject === undefined) {
+      warning = `LORE_ACTIVE_PROJECT="${ACTIVE_PROJECT}" was NOT applied: the slice registry ` +
+        `could not be read (${projectAwareFailure}). These rows are NOT limited to that project.`;
+    } else if (takesProject && effectiveParams.project === undefined) {
+      effectiveParams.project = ACTIVE_PROJECT;
+      defaulted = true;
+    } else if (takesProject && effectiveParams.project !== ACTIVE_PROJECT) {
+      warning = `project="${effectiveParams.project}" differs from the session's active project ` +
+        `("${ACTIVE_PROJECT}", from LORE_ACTIVE_PROJECT) — proceeding with the explicit value.`;
+    }
+  }
+  return { effectiveParams, warning, defaulted };
 }
 
 const json = (data: unknown) => ({
@@ -95,20 +124,7 @@ export function registerLoreRead(server: McpServer): void {
     },
     async ({ slice, params }) => {
       try {
-        const effectiveParams = { ...(params ?? {}) };
-        let warning: string | undefined;
-        if (ACTIVE_PROJECT) {
-          const takesProject = await sliceTakesProject(slice);
-          if (takesProject === undefined) {
-            warning = `LORE_ACTIVE_PROJECT="${ACTIVE_PROJECT}" was NOT applied: the slice registry ` +
-              `could not be read (${projectAwareFailure}). These rows are NOT limited to that project.`;
-          } else if (takesProject && effectiveParams.project === undefined) {
-            effectiveParams.project = ACTIVE_PROJECT;
-          } else if (takesProject && effectiveParams.project !== ACTIVE_PROJECT) {
-            warning = `project="${effectiveParams.project}" differs from the session's active project ` +
-              `("${ACTIVE_PROJECT}", from LORE_ACTIVE_PROJECT) — proceeding with the explicit value.`;
-          }
-        }
+        const { effectiveParams, warning } = await withProjectDefault(slice, params);
         const { rows, meta, page } = await loreSliceWithMeta(
           slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
         // Усечённая выдача обязана выглядеть усечённой: голый массив читался
@@ -122,6 +138,60 @@ export function registerLoreRead(server: McpServer): void {
         });
       } catch (e) {
         return err(e);
+      }
+    },
+  );
+
+  // S6-08: агент выполняет блок lore-query из текста записи так же, как его
+  // увидит пользователь, и узнаёт, полный ли ответ. Обёртка над /lore/slice —
+  // своего эндпоинта нет: скоуп, усечение и страница уже приходят оттуда.
+  server.tool(
+    'run_block',
+    'Execute a lore-query block (the source as it sits in a record\'s Markdown, SPEC-LORE-UXR-EMBED-BLOCKS) and return ' +
+      'its rows WITH completeness metadata. READ status FIRST: "ok" | "error" — an error has NO rows (it is not an empty ' +
+      'result) and carries error {stage: parse|execute, code, message}. Executable subset (the block language itself is an ' +
+      'open question of the spec): `<slice> | where field = value [and field = value] | limit N | offset N | fields a,b | chart …` ' +
+      '— where-pairs become slice params (see list_slices), chart is view-only (warning). group by, in (…), or/</>, and ' +
+      '`question: N` (a saved Völva question) are refused explicitly rather than run distorted. $vars (e.g. $this.project) ' +
+      'come from `vars`; an unset one is an error, never an empty param. meta: returned, total (null = unknown because the ' +
+      'backend truncated), truncated, has_more, complete, limit/offset, scope {narrowed, project, project_source ' +
+      '(block|session_default), backend_scope, scope_projects, outside_scope}, warnings[].',
+    {
+      block: z.string().describe('lore-query block: fenced ```lore-query … ``` or just its body, e.g. "sprints | where status = active | limit 20"'),
+      vars: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe('values for $variables in the block, e.g. {"this.project":"NooriUta/UnlimitedLORE"}'),
+    },
+    async ({ block, vars }) => {
+      const parsed = parseLoreQueryBlock(block, vars ?? {});
+      if (!parsed.ok) {
+        return { ...json({ status: 'error', error: { stage: 'parse', code: parsed.code, message: parsed.message } }), isError: true };
+      }
+      const blockProject = parsed.params.project ?? null;
+      try {
+        const { effectiveParams, warning, defaulted } = await withProjectDefault(parsed.slice, parsed.params);
+        const { rows, meta, page, extra } = await loreSliceWithMeta(
+          parsed.slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
+        const warnings = [...parsed.warnings, ...(warning ? [warning] : [])];
+        return json({
+          status: 'ok',
+          block: { slice: parsed.slice, params: effectiveParams },
+          rows,
+          meta: completeness(rows, meta, page, extra, {
+            param: effectiveParams.project ?? null,
+            source: defaulted ? 'session_default' : blockProject !== null ? 'block' : null,
+          }, warnings),
+        });
+      } catch (e) {
+        return {
+          ...json({
+            status: 'error',
+            block: { slice: parsed.slice, params: parsed.params },
+            error: { stage: 'execute', code: 'EXECUTE_FAILED', message: (e as Error).message ?? String(e) },
+          }),
+          isError: true,
+        };
       }
     },
   );

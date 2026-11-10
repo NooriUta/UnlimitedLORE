@@ -4,6 +4,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -13,6 +14,44 @@ import static org.junit.jupiter.api.Assertions.*;
  * Здесь — чистые части: имя и очистка шаблона (KC в CI нет).
  */
 class LoreKcAgentClientTest {
+
+    /**
+     * Ревью 10.11, B8: роль agent-&lt;profile&gt; выдана сервисной учётке шаблона КЛИЕНТСКОЙ ролью
+     * (kc-provision-agents.js), а копировались только realm-роли — свежая машинная учётка
+     * получала пустой agent_scope. Клиентские роли из clientMappings переносятся все, кроме
+     * служебных ролей самого KC.
+     */
+    @Test
+    void clientRolesOfTemplateServiceAccountAreCopied() {
+        JsonObject mappings = new JsonObject()
+            .put("realmMappings", new JsonArray().add(new JsonObject().put("name", "lore-admin")))
+            .put("clientMappings", new JsonObject()
+                .put("lore-mcp-full", new JsonObject().put("id", "uuid-tpl").put("client", "lore-mcp-full")
+                    .put("mappings", new JsonArray().add(new JsonObject().put("id", "r1").put("name", "agent-full"))))
+                .put("realm-management", new JsonObject().put("id", "uuid-rm").put("client", "realm-management")
+                    .put("mappings", new JsonArray().add(new JsonObject().put("id", "r2").put("name", "manage-clients")))));
+        java.util.Map<String, JsonArray> g = LoreKcAgentClient.clientRoleGrants(mappings);
+        assertEquals(java.util.Set.of("uuid-tpl"), g.keySet(), "служебные роли KC (realm-management) не копируются");
+        assertEquals("agent-full", g.get("uuid-tpl").getJsonObject(0).getString("name"));
+        assertTrue(LoreKcAgentClient.clientRoleGrants(new JsonObject()).isEmpty(), "нет clientMappings — нечего копировать");
+    }
+
+    /** Ревью 10.11, B10: битое тело ответа KC (пустое, HTML) — нет id, а не 5xx на весь список агентов. */
+    @Test
+    void brokenServiceAccountBodyGivesNoIdInsteadOfCrash() {
+        assertEquals("u1", LoreKcAgentClient.idOf("{\"id\":\"u1\"}"));
+        assertNull(LoreKcAgentClient.idOf("<html>bad gateway</html>"));
+        assertNull(LoreKcAgentClient.idOf(""));
+        assertNull(LoreKcAgentClient.idOf(null));
+    }
+
+    /** Находка kit к #1077: тело role-mappings с 200, но битое (HTML от прокси) — null, а не 500 на создание учётки. */
+    @Test
+    void brokenRoleMappingsBodyIsNullNotCrash() {
+        assertNotNull(LoreKcAgentClient.jsonOrNull("{\"clientMappings\":{}}"));
+        assertNull(LoreKcAgentClient.jsonOrNull("<html>502</html>"));
+        assertNull(LoreKcAgentClient.jsonOrNull(""));
+    }
 
     @Test
     void clientIdFromProfileAndMachine() {

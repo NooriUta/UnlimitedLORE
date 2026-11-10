@@ -14,7 +14,7 @@ import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import type { AppKey } from '../i18n';
 import {
-  FEATURE_ROOTS_NOTE, OPEN_ONLY_NOTE,
+  OPEN_ONLY_NOTE, UC_OWN_LINKS_NOTE,
   adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord,
   questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
 } from './records';
@@ -46,6 +46,19 @@ const f = (lang: KitLang, key: string) => appT(lang, `lists.field.${key}` as App
 export interface ListScreenDef {
   /** Слайс GET /lore/slice/{slice}. */
   slice: string;
+  /**
+   * Имя ТИПА в модели (`/lore/model` → `statuses.<type>`) — K-14 п. 4.
+   *
+   * Статусная ось раздела берётся из модели, а не из перечня в этом файле:
+   * иначе словарь LORE живёт в клиенте, и при добавлении статуса (как это уже
+   * было с `ready_for_deploy`) экран показывает не то, что знает сервер.
+   * Перечень ниже остаётся УМОЛЧАНИЕМ на случай, когда модель недоступна, и
+   * тогда экран говорит об этом словами.
+   *
+   * Нет имени — у раздела нет статусной оси в модели (вехи, релизы,
+   * компоненты, реестр технологий): это законно, ось просто не из модели.
+   */
+  modelType?: string;
   titleKey: AppKey;
   icon: string;
   map: (row: Record<string, unknown>) => KitRecord;
@@ -379,29 +392,43 @@ const techSpec: SectionSpec = {
 };
 
 /**
- * Фичи: статусы свои (shipped / active / in_rework и пусто) — не ось задач.
- * Колонка «сценариев x/y» берёт готовые числа среза, без догрузки.
+ * Фичи и US: статусы свои (shipped / active / in_rework и пусто) — не ось задач.
+ * Числа «сценариев» и «задач» берутся готовыми из среза, без догрузки.
+ *
+ * Раздел читает `use_cases` — ВСЕ уровни шкалы целей, поэтому в нём вперемешку
+ * корни (фичи) и вложенные сценарии (US). Отсюда и состав: «Уровень цели» —
+ * фасет, разрез и колонка (раньше он различал только cloud и kite, теперь —
+ * все четыре уровня шкалы), а быстрый фильтр «Верхний уровень» отбирает одни
+ * фичи (записи без родителя) — тем же признаком, которым их отличает человек.
+ *
+ * Чего здесь НЕ стало и почему:
+ * • «Веха» (поле, быстрый фильтр, колонка) — столбца `milestone_id` в срезе
+ *   нет. Колонка была бы прочерками, а «Без вехи» совпадал бы со всей выдачей.
+ * • «Сценариев x/y» (progress:ucs) — нет второго числа (`uc_shipped`). Вместо
+ *   прогресса обычный счёт сценариев плюс счёт задач (`task_count`).
+ * Вернуть и то и то можно одним серверным столбцом каждому — см. отчёт.
  */
 const featuresSpec: SectionSpec = {
   kind: 'feature', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
   fields: [
     ['components', 'ref'], ['project', 'ref'], ['level', 'text'],
-    ['milestone', 'ref'], ['parent', 'ref'], ['shipped', 'date'], ['ucs', 'number'],
+    ['parent', 'ref'], ['shipped', 'date'], ['ucs', 'number'], ['tasks', 'number'],
   ],
   statuses: [['active', 'active'], ['in_rework', 'active'], ['shipped', 'done']],
   views: ['list', 'cards', 'board'],
   showClosed: 'below',
   quick: [
     ['active', 'lists.status.active', { status: 'active' }],
-    ['no-milestone', 'lists.quick.noMilestone', { milestone: '' }],
+    ['top-level', 'lists.quick.topLevel', { parent: '' }],
   ],
   filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, 'fields.level'],
   groupings: ['status', 'fields.level', LORE_FILTER_FIELDS.component],
-  columns: ['id', 'title', 'status', 'progress:ucs', 'level', 'components', 'milestone'],
+  columns: ['id', 'title', 'status', 'level', 'ucs', 'tasks', 'components'],
 };
 
 export const LIST_SCREENS = {
   sprints: {
+    modelType: 'sprint',
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     map: sprintRecord, config: sprintsConfig, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
@@ -415,26 +442,31 @@ export const LIST_SCREENS = {
     },
   },
   adrs: {
+    modelType: 'adr',
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
   tasks: {
+    modelType: 'task',
     slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
     map: taskListRecord, config: tasksConfig, quickIcons: {},
     // Срез отдаёт только открытые задачи — это сказано словами на экране.
     note: OPEN_ONLY_NOTE,
   },
   decisions: {
+    modelType: 'decision',
     slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
     map: decisionRecord, config: lang => sectionConfig(lang, decisionsSpec), quickIcons: {},
   },
   specs: {
+    modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
     map: specRecord, config: lang => sectionConfig(lang, specsSpec), quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
     // отдаёт все вопросы, несмотря на имя (182 закрытых из 262).
+    modelType: 'question',
     slice: 'questions', titleKey: 'lists.questions.title', icon: 'help',
     map: questionRecord, config: lang => sectionConfig(lang, questionsSpec), quickIcons: {},
   },
@@ -455,11 +487,21 @@ export const LIST_SCREENS = {
     map: techRecord, config: lang => sectionConfig(lang, techSpec), quickIcons: {},
   },
   features: {
-    slice: 'features', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
+    modelType: 'feature',
+    // `use_cases`, а НЕ `features`: второй по построению отбирает только корни
+    // шкалы целей (`goal_level IN ['cloud','kite']`) — 8 строк при 31 вложенном
+    // сценарии у них же (замер 10.11), то есть US в разделе не было вовсе.
+    // Обязательного параметра у `use_cases` нет, предела выдачи тоже — обрезки
+    // больше нет ни по уровню, ни по числу строк.
+    //
+    // Заголовок раздела при этом остался «Фичи» (`lists.features.title`,
+    // `shell.sec.feature`): теперь он неточен — внутри и фичи, и US, — но
+    // слова в меню выбирает владелица, а не этот файл.
+    slice: 'use_cases', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
     map: featureRecord, config: lang => sectionConfig(lang, featuresSpec), quickIcons: {},
-    // Срез режет выдачу до верхних уровней шкалы целей, и это надо сказать:
-    // иначе «Показано 8 из 8» прочтётся как «сценариев у нас восемь».
-    note: FEATURE_ROOTS_NOTE,
+    // Оговорка осталась, но про ДРУГУЮ, настоящую причину: компонент и проект
+    // срез отдаёт только свои, а у вложенных сценариев они наследованные.
+    note: UC_OWN_LINKS_NOTE,
   },
 } as const satisfies Record<string, ListScreenDef>;
 

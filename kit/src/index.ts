@@ -1,6 +1,8 @@
 // Seiðr-kit (@seidr/kit) — общие токены, тема и элементы UI на React
 // (SPRINT_UXR_S10_SEIDR_KIT, D-2026-UXR-KIT-REACT). CSS-слой подключается
 // отдельно: `import '@seidr/kit/styles/seidr.css'` (или <link> в голом HTML).
+// Версия kit: приложение должно уметь сказать, на чём оно работает (K-08 п. 1).
+export * from './version';
 export * from './tokens/prefs';
 export * from './elements';
 export * from './i18n';
@@ -68,5 +70,8 @@ export * from './charts';
 // Режим чтения: колонка ~680 px, широкие блоки с ⤢, Aa, ушко правой колонки,
 // меню по настройке (SPRINT_UXR_S5_RECORD_TASKS/S5-05).
 export * from './reading';
+// Мастера и операции (SPRINT_UXR_S10_SEIDR_KIT_2, фаза ADMIN): шаги с
+// условием перехода и «осталось руками» (K2-STEPS).
+export * from './flow';
 // Новости v2: лента, разрезы, метрики сервера (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06).
 export * from './news';
