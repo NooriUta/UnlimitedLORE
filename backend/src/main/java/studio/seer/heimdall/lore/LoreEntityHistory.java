@@ -253,16 +253,70 @@ final class LoreEntityHistory {
     /** Режимы свёртки. */
     static final java.util.Set<String> COLLAPSE_MODES = java.util.Set.of("agent");
 
-    /** ЗАГЛУШКА S9-09: author и collapse пока не проверяются. */
+    /** Предел длины {@code author} — идентификатор вызывающего, не текст. */
+    static final int AUTHOR_MAX = 200;
+
+    /** Причина отказа параметров страницы (с автором и свёрткой) или null. */
     static String pageError(String authorKind, String author, String field, String collapse,
                             String order, Integer offset, Integer limit) {
+        if (author != null && author.isBlank()) return "author must not be blank";
+        if (author != null && author.length() > AUTHOR_MAX) return "author must be at most " + AUTHOR_MAX + " characters";
+        if (collapse != null && !COLLAPSE_MODES.contains(collapse)) return "collapse must be one of " + COLLAPSE_MODES;
         return pageError(authorKind, field, order, offset, limit);
     }
 
-    /** ЗАГЛУШКА S9-09: author и collapse пока игнорируются. */
+    /**
+     * Страница истории с фильтром по конкретному автору ({@code author} — {@code author.caller},
+     * вместе с {@code authorKind} по И) и свёрткой {@code collapse=agent}: подряд идущие
+     * (после фильтров, в хронологии) правки ОДНОГО агента — одна строка, последняя версия
+     * серии, с {@code collapsed {count, first_state_uid, first_valid_from}}; серия из одной
+     * правки не помечается. Свёртка — до страницы, поэтому total/has_more честны.
+     */
     static Map<String, Object> page(List<Map<String, Object>> rows, String authorKind, String author, String field,
                                     String collapse, String order, Integer offset, Integer limit) {
-        return page(rows, authorKind, field, order, offset, limit);
+        // Порядок применения: поле (по всей цепочке) → вид/автор → свёртка → порядок → страница.
+        Map<String, Object> all = page(rows, authorKind, field, null, null, null);
+        @SuppressWarnings("unchecked") List<Map<String, Object>> kept = (List<Map<String, Object>>) all.get("rows");
+        if (author != null) {
+            List<Map<String, Object>> byAuthor = new ArrayList<>();
+            for (Map<String, Object> r : kept) if (author.equals(authorField(r, "caller"))) byAuthor.add(r);
+            kept = byAuthor;
+        }
+        if ("agent".equals(collapse)) kept = collapseAgentRuns(kept);
+        Map<String, Object> out = page(kept, null, null, order, offset, limit);
+        @SuppressWarnings("unchecked") Map<String, Object> pg = (Map<String, Object>) out.get("page");
+        if (author != null) pg.put("author", author);
+        if (collapse != null) pg.put("collapse", collapse);
+        return out;
+    }
+
+    private static Object authorField(Map<String, Object> r, String key) {
+        Object a = r.get("author");
+        return a instanceof Map<?, ?> m ? m.get(key) : null;
+    }
+
+    private static List<Map<String, Object>> collapseAgentRuns(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        int i = 0;
+        while (i < rows.size()) {
+            Map<String, Object> first = rows.get(i);
+            Object caller = authorField(first, "caller");
+            int j = i + 1;
+            if (ChangeAuthor.KIND_AGENT.equals(authorField(first, "kind")) && caller != null) {
+                while (j < rows.size() && ChangeAuthor.KIND_AGENT.equals(authorField(rows.get(j), "kind"))
+                       && caller.equals(authorField(rows.get(j), "caller"))) j++;
+            }
+            if (j - i == 1) { out.add(first); i = j; continue; }
+            Map<String, Object> last = new LinkedHashMap<>(rows.get(j - 1));
+            Map<String, Object> run = new LinkedHashMap<>();
+            run.put("count", j - i);
+            run.put("first_state_uid", first.get("state_uid"));
+            run.put("first_valid_from", first.get("valid_from"));
+            last.put("collapsed", run);
+            out.add(last);
+            i = j;
+        }
+        return out;
     }
 
     private static boolean isSuccess(Object status) {
