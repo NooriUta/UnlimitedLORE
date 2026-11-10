@@ -67,7 +67,7 @@ class LoreListFacetsTest {
     @Test
     void многозначноеПоле_каждыйЭлементОтдельно_суммаБольшеTotal() {
         Map<String, Object> f = LoreListFacets.facet(List.of(
-            row("component_ids", List.of("ui", "api")),
+            row("component_ids", List.of("ui", "api", "db")),
             row("component_ids", List.of("ui")),
             row("component_ids", List.of()),
             row("component_ids", Arrays.asList("api", null))), "component_ids");
