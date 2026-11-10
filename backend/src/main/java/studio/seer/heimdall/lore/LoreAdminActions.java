@@ -1,29 +1,161 @@
 package studio.seer.heimdall.lore;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import org.jboss.logging.Logger;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-/** SPRINT_UXR_S7B_ADMIN/S7B-02 — заглушка до правки (тест до кода). */
-public class LoreAdminActions {
+/**
+ * SPRINT_UXR_S7B_ADMIN/S7B-02 — журнал действий админки для экрана:
+ * {@code GET /lore/admin/actions}. Кто (caller + ось human/agent), что (family +
+ * entity_id), когда (ts), исход (status — код ответа, отказы видны).
+ *
+ * <p>Второго журнала нет: это тот же ряд AO-01 ({@code MetricSnapshot},
+ * {@code metric='lore.action'}), что и срез {@code admin_actions}, только
+ * админские семейства ({@link LoreSlices#ADMIN_FAMILIES}). Отдельный эндпоинт
+ * нужен ради двух вещей, которых срез дать не может:
+ * <ul>
+ *   <li><b>период</b> — {@code ts} хранится LONG (epoch millis), а параметры
+ *       среза приходят строками: сравнение строки с LONG молча не отберёт ничего;</li>
+ *   <li><b>честная полнота</b> — {@code total} (сколько всего под фильтром),
+ *       {@code truncated} (выбрано на строку больше лимита — видно и без счёта) и
+ *       {@code total_state}: счёт, которому верить нельзя, отдаётся как unknown,
+ *       а не цифрой.</li>
+ * </ul>
+ */
+@Path("/lore/admin/actions")
+public class LoreAdminActions extends LoreResourceBase {
+
+    private static final Logger LOG = Logger.getLogger(LoreAdminActions.class);
 
     static final int DEFAULT_LIMIT = 200;
     static final int MAX_LIMIT = 1000;
+    static final Set<String> AXES = Set.of("human", "agent", "unauth");
 
     record Query(String sql, String countSql, Map<String, Object> params) {}
 
     static Query build(String caller, String axis, String family, Long from, Long to, int limit) {
-        return new Query("", "", Map.of());
+        if (family != null && !LoreSlices.ADMIN_FAMILIES.contains(family))
+            throw new IllegalArgumentException("unknown family '" + family + "' — admin journal families: "
+                + new java.util.TreeSet<>(LoreSlices.ADMIN_FAMILIES));
+        if (axis != null && !AXES.contains(axis))
+            throw new IllegalArgumentException("unknown axis '" + axis + "' — expected one of "
+                + new java.util.TreeSet<>(AXES));
+        if (from != null && to != null && from > to)
+            throw new IllegalArgumentException("from is later than to");
+        StringBuilder where = new StringBuilder(" FROM MetricSnapshot WHERE metric = 'lore.action' AND object_type IN [")
+            .append(String.join(", ", LoreSlices.ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()))
+            .append("]");
+        Map<String, Object> p = new LinkedHashMap<>();
+        if (caller != null) { where.append(" AND source = :caller"); p.put("caller", caller); }
+        if (axis != null)   { where.append(" AND segment = :axis");  p.put("axis", axis); }
+        if (family != null) { where.append(" AND object_type = :family"); p.put("family", family); }
+        if (from != null)   { where.append(" AND ts >= :from"); p.put("from", from); }
+        if (to != null)     { where.append(" AND ts <= :to");   p.put("to", to); }
+        String sql = "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, "
+            + "segment AS axis, value AS status" + where + " ORDER BY ts DESC LIMIT " + (limit + 1);
+        return new Query(sql, "SELECT count(*) AS n" + where, p);
     }
 
+    /** epoch millis | ISO-момент | дата (UTC); {@code to}=дата — конец дня включительно. Пусто → null. */
     static Long parseTime(String name, String v, boolean endOfDay) {
-        return -1L;
+        if (v == null || v.isBlank()) return null;
+        String s = v.trim();
+        if (s.chars().allMatch(Character::isDigit)) {
+            try { return Long.parseLong(s); } catch (NumberFormatException e) { /* ниже — общий отказ */ }
+        }
+        try { return Instant.parse(s).toEpochMilli(); } catch (DateTimeParseException ignored) { }
+        try {
+            LocalDate d = LocalDate.parse(s);
+            return endOfDay
+                ? d.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() - 1
+                : d.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+        } catch (DateTimeParseException ignored) { }
+        throw new IllegalArgumentException("bad value for param: " + name
+            + " (epoch millis, ISO instant like 2026-11-10T12:00:00Z or date 2026-11-10 expected)");
     }
 
     static int limitOf(Integer limit) {
-        return -1;
+        if (limit == null) return DEFAULT_LIMIT;
+        if (limit < 1 || limit > MAX_LIMIT)
+            throw new IllegalArgumentException("limit must be 1.." + MAX_LIMIT + " (got " + limit + ")");
+        return limit;
     }
 
+    /** {@code rows} выбраны с LIMIT limit+1; {@code total} — счёт или null, если посчитать не удалось. */
     static Map<String, Object> body(List<Map<String, Object>> rows, Long total, int limit) {
-        return Map.of();
+        boolean truncated = rows.size() > limit;
+        List<Map<String, Object>> shown = truncated ? new ArrayList<>(rows.subList(0, limit)) : rows;
+        // Счёт меньше того, что уже выбрано, — счёт врёт (count под нехваткой heap
+        // недосчитывает); цифру не отдаём, говорим «неизвестно».
+        boolean exact = total != null && total >= rows.size();
+        Map<String, Object> b = new LinkedHashMap<>();
+        b.put("rows", shown);
+        b.put("shown", shown.size());
+        b.put("total", exact ? total : null);
+        b.put("total_state", exact ? "exact" : "unknown");
+        b.put("truncated", truncated);
+        b.put("limit", limit);
+        return b;
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response actions(@QueryParam("caller") String caller,
+                            @QueryParam("axis") String axis,
+                            @QueryParam("family") String family,
+                            @QueryParam("from") String from,
+                            @QueryParam("to") String to,
+                            @QueryParam("limit") Integer limit,
+                            @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        Query q;
+        int lim;
+        try {
+            lim = limitOf(limit);
+            q = build(blankToNull(caller), blankToNull(axis), blankToNull(family),
+                parseTime("from", from, false), parseTime("to", to, true), lim);
+        } catch (IllegalArgumentException e) {
+            return badParams(e.getMessage());
+        }
+        List<Map<String, Object>> rows;
+        try {
+            rows = ingestService.queryPublic(q.sql(), q.params());
+        } catch (Exception e) {
+            LOG.warnf("[ADMIN ACTIONS] %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+        Long total = null;
+        try {
+            List<Map<String, Object>> c = ingestService.queryPublic(q.countSql(), q.params());
+            if (!c.isEmpty() && c.get(0).get("n") instanceof Number n) total = n.longValue();
+        } catch (Exception e) {
+            // Строки есть, счёта нет — отдаём строки и total_state=unknown, а не 502.
+            LOG.warnf("[ADMIN ACTIONS] count: %s", e.getMessage());
+        }
+        Map<String, Object> b = body(rows, total, lim);
+        Map<String, Object> filters = new LinkedHashMap<>(q.params());
+        b.put("filters", filters);
+        return noStore(Response.ok(b));
+    }
+
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
     }
 }
