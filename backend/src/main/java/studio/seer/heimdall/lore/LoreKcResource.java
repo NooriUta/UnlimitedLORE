@@ -256,25 +256,22 @@ public class LoreKcResource extends LoreResourceBase {
                         if (g.statusCode() >= 300) { copied.clear(); rolesNote = "роли не скопированы: KC " + g.statusCode(); }
                     }
                 } else rolesNote = "роли шаблона не прочитаны: KC " + rm.statusCode();
-                // B8: agent-<profile> шаблону выдана КЛИЕНТСКОЙ ролью (kc-provision-agents.js) —
-                // realm-копия выше её не видит, и свежая учётка живёт с пустым agent_scope
-                // (невидима в «Учётке», JWT-клейм пуст). Копируем клиентские роли самого
-                // шаблона с тем же фильтром служебных ролей; унаследованный с шаблона
-                // маппер agent_scope читает роли именно этого клиента.
-                if (rolesNote == null) {
-                    HttpResponse<String> crm = kc("GET", "/users/" + tplUser + "/role-mappings/clients/" + tplUuid, null, t);
-                    if (crm.statusCode() == 200) {
-                        int mark = copied.size();
-                        io.vertx.core.json.JsonArray grant = roleGrant(crm.body(), copied);
-                        if (!grant.isEmpty()) {
-                            HttpResponse<String> g = kc("POST", "/users/" + newUser + "/role-mappings/clients/" + tplUuid, grant.encode(), t);
-                            if (g.statusCode() >= 300) {
-                                while (copied.size() > mark) copied.remove(copied.size() - 1);
-                                rolesNote = "клиентские роли не скопированы: KC " + g.statusCode();
-                            }
+                // Ревью 10.11, B8: клиентские роли (agent-<profile> выдаётся именно так) — тоже из шаблона,
+                // иначе свежая машинная учётка с пустым agent_scope невидима в «Учётке».
+                HttpResponse<String> all = kc("GET", "/users/" + tplUser + "/role-mappings", null, t);
+                if (all.statusCode() == 200) {
+                    java.util.Map<String, io.vertx.core.json.JsonArray> grants =
+                        LoreKcAgentClient.clientRoleGrants(new io.vertx.core.json.JsonObject(all.body()));
+                    for (java.util.Map.Entry<String, io.vertx.core.json.JsonArray> g : grants.entrySet()) {
+                        HttpResponse<String> cg = kc("POST", "/users/" + newUser + "/role-mappings/clients/" + g.getKey(),
+                            g.getValue().encode(), t);
+                        if (cg.statusCode() >= 300) {
+                            rolesNote = (rolesNote == null ? "" : rolesNote + "; ") + "клиентские роли не скопированы: KC " + cg.statusCode();
+                        } else {
+                            for (int i = 0; i < g.getValue().size(); i++) copied.add(g.getValue().getJsonObject(i).getString("name"));
                         }
-                    } else rolesNote = "клиентские роли шаблона не прочитаны: KC " + crm.statusCode();
-                }
+                    }
+                } else rolesNote = (rolesNote == null ? "" : rolesNote + "; ") + "клиентские роли шаблона не прочитаны: KC " + all.statusCode();
             } else rolesNote = "сервисный аккаунт не найден у шаблона или нового клиента";
             LOG.infof("[LORE KC] создан клиент агента %s по шаблону %s, ролей скопировано %d", newId, templateId, copied.size());
             Map<String, Object> out = new java.util.LinkedHashMap<>();
@@ -414,34 +411,6 @@ public class LoreKcResource extends LoreResourceBase {
         return new java.util.ArrayList<>(out);
     }
 
-    /**
-     * Грант из списка ролей маппингов: всё, что не служебная роль самого Keycloak
-     * (тот же фильтр, что у realm-копии). Имена добавляются в {@code copied}; при
-     * неуспешном POST гранта вызывающий откатывает список до метки. Битый JSON —
-     * пустой грант, не исключение.
-     */
-    static io.vertx.core.json.JsonArray roleGrant(String rolesJson, List<String> copied) {
-        io.vertx.core.json.JsonArray grant = new io.vertx.core.json.JsonArray();
-        try {
-            io.vertx.core.json.JsonArray roles = new io.vertx.core.json.JsonArray(rolesJson == null ? "[]" : rolesJson);
-            for (int i = 0; i < roles.size(); i++) {
-                io.vertx.core.json.JsonObject r = roles.getJsonObject(i);
-                if (KcBridge.isKeycloakServiceRole(r.getString("name", ""))) continue;
-                grant.add(r);
-                copied.add(r.getString("name"));
-            }
-        } catch (RuntimeException e) { /* нечитаемый список ролей — грант остаётся пустым */ }
-        return grant;
-    }
-
-    /** id сервисной учётки из тела ответа KC; битое тело — null, а не исключение:
-     * один клиент с испорченным service-account-user не роняет весь список агентов (B10). */
-    static String serviceAccountUserId(String body) {
-        try {
-            return new io.vertx.core.json.JsonObject(body).getString("id");
-        } catch (RuntimeException e) { return null; }
-    }
-
     @GET
     @Path("agents")
     @Produces(MediaType.APPLICATION_JSON)
@@ -465,7 +434,8 @@ public class LoreKcResource extends LoreResourceBase {
                 String sa = null;
                 HttpResponse<String> su = kc("GET", "/clients/" + c.getString("id") + "/service-account-user", null, t);
                 if (su.statusCode() == 200) {
-                    String uid = serviceAccountUserId(su.body());
+                    // Ревью 10.11, B10: битое тело одного ответа — у этого клиента нет оси, а не 5xx на весь список.
+                    String uid = LoreKcAgentClient.idOf(su.body());
                     if (uid != null) {
                         HttpResponse<String> rm = kc("GET", "/users/" + uid + "/role-mappings", null, t);
                         if (rm.statusCode() == 200) sa = rm.body();

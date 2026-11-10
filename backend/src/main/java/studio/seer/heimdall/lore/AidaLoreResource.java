@@ -1001,7 +1001,9 @@ public class AidaLoreResource extends LoreResourceBase {
 
         // S1-09: записи, намеренно лишённые проекта (claude-rules, infra), скоуп не режет —
         // подтягиваются вторым запросом без скоупа и вливаются в выдачу (ScopeExemptRows).
-        final Map<String, String> exemptGiven = ScopeExemptRows.exemptParams(id, given, rowScope);
+        // Ревью 10.11, B12: выбор проектов в шапке — явный фильтр по проекту, строки без проекта ему не отвечают.
+        boolean headerProjectsChosen = narrowMarker != null && Boolean.TRUE.equals(narrowMarker.get("applied"));
+        final Map<String, String> exemptGiven = ScopeExemptRows.exemptParams(id, given, rowScope, headerProjectsChosen);
         final LoreSlices.Composed exemptQuery;
         try {
             exemptQuery = exemptGiven == null ? null : LoreSlices.compose(id, exemptGiven);
@@ -1120,10 +1122,12 @@ public class AidaLoreResource extends LoreResourceBase {
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
         final Map<String, String> filters;
+        SliceProjectNarrowing.Result countNarrowing;
         try {
             callerScope = allowedProjectsOrNull(role);
             // Выбор проектов в шапке сужает и счётчик — иначе число в разделе не сойдётся со списком.
-            rowScope = SliceProjectNarrowing.apply(id, given, callerScope).scope();
+            countNarrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            rowScope = countNarrowing.scope();
             filters = LoreSectionCount.filtersOf(given);
             composed = LoreSlices.compose(id, new LinkedHashMap<>(filters), rowScope);
         } catch (IllegalArgumentException e) {
@@ -1136,13 +1140,18 @@ public class AidaLoreResource extends LoreResourceBase {
                     + "проекта — счётчик среза " + id + " не отдаётся нулём"))));
         }
         final Map<String, Object> scopeMarker = scopeMeta(id, rowScope);
+        // Ревью 10.11: отметка сужения едет и в счётчик — иначе «ноль по выбору проектов»
+        // неотличим от «записей нет».
+        final Map<String, Object> countNarrowMarker = countNarrowing.meta();
         MartQuery body = new MartQuery("sql", composed.sql(),
             composed.params().isEmpty() ? null : composed.params(), -1);
         return client.query(db, basicAuth(), body)
             .map(res -> {
                 Map<String, Object> out = sliceBody(res);
                 if (scopeMarker != null) out.put("scope", scopeMarker);
-                return noStore(Response.ok(LoreSectionCount.count(id, out, filters)));
+                Map<String, Object> counted = LoreSectionCount.count(id, out, filters);
+                if (countNarrowMarker != null) counted.put(SliceProjectNarrowing.PARAM, countNarrowMarker);
+                return noStore(Response.ok(counted));
             })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice-count=%s: %s", id, ex.getMessage());

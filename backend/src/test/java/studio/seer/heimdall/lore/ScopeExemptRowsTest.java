@@ -61,6 +61,19 @@ class ScopeExemptRowsTest {
             "пустой скоуп — честный 403 SCOPE_EMPTY, а не подмешивание");
     }
 
+    /**
+     * Ревью 10.11, B12: выбор проектов в шапке (scope_projects) — тот же явный фильтр по проекту,
+     * что и устаревший `project`. Записи без проекта ему не отвечают: иначе «фильтр не влияет
+     * на элементы внизу» оставался бы правдой для доков и ранбуков.
+     */
+    @Test
+    void headerProjectChoiceAlsoTurnsExemptionOff() {
+        assertNull(ScopeExemptRows.exemptParams("docs", Map.of(), Set.of("p"), true),
+            "выбраны проекты в шапке — доки без проекта не подмешиваются");
+        assertEquals(Map.of("kind", "claude-rules"), ScopeExemptRows.exemptParams("docs", Map.of(), Set.of("p"), false),
+            "без выбора — прежнее поведение (положительный контроль)");
+    }
+
     @Test
     void projectlessExemptRowsAreMergedInSortedAndDeduped() {
         List<Map<String, Object>> scoped = new ArrayList<>(List.of(

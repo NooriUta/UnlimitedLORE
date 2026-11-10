@@ -64,9 +64,9 @@ class LoreKcAgentScopeTest {
     // null, клиент остаётся со своими ролями, список живёт.
     @Test
     void brokenServiceAccountBodyDoesNotKillAgentsList() {
-        assertNull(LoreKcResource.serviceAccountUserId("not json"));
-        assertNull(LoreKcResource.serviceAccountUserId(""));
-        assertNull(LoreKcResource.serviceAccountUserId("{\"name\":\"no-id-here\"}"));
-        assertEquals("sa-1", LoreKcResource.serviceAccountUserId("{\"id\":\"sa-1\"}"));
+        assertNull(LoreKcAgentClient.idOf("not json"));
+        assertNull(LoreKcAgentClient.idOf(""));
+        assertNull(LoreKcAgentClient.idOf("{\"name\":\"no-id-here\"}"));
+        assertEquals("sa-1", LoreKcAgentClient.idOf("{\"id\":\"sa-1\"}"));
     }
 }

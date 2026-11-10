@@ -4,8 +4,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,6 +14,36 @@ import static org.junit.jupiter.api.Assertions.*;
  * Здесь — чистые части: имя и очистка шаблона (KC в CI нет).
  */
 class LoreKcAgentClientTest {
+
+    /**
+     * Ревью 10.11, B8: роль agent-&lt;profile&gt; выдана сервисной учётке шаблона КЛИЕНТСКОЙ ролью
+     * (kc-provision-agents.js), а копировались только realm-роли — свежая машинная учётка
+     * получала пустой agent_scope. Клиентские роли из clientMappings переносятся все, кроме
+     * служебных ролей самого KC.
+     */
+    @Test
+    void clientRolesOfTemplateServiceAccountAreCopied() {
+        JsonObject mappings = new JsonObject()
+            .put("realmMappings", new JsonArray().add(new JsonObject().put("name", "lore-admin")))
+            .put("clientMappings", new JsonObject()
+                .put("lore-mcp-full", new JsonObject().put("id", "uuid-tpl").put("client", "lore-mcp-full")
+                    .put("mappings", new JsonArray().add(new JsonObject().put("id", "r1").put("name", "agent-full"))))
+                .put("realm-management", new JsonObject().put("id", "uuid-rm").put("client", "realm-management")
+                    .put("mappings", new JsonArray().add(new JsonObject().put("id", "r2").put("name", "manage-clients")))));
+        java.util.Map<String, JsonArray> g = LoreKcAgentClient.clientRoleGrants(mappings);
+        assertEquals(java.util.Set.of("uuid-tpl"), g.keySet(), "служебные роли KC (realm-management) не копируются");
+        assertEquals("agent-full", g.get("uuid-tpl").getJsonObject(0).getString("name"));
+        assertTrue(LoreKcAgentClient.clientRoleGrants(new JsonObject()).isEmpty(), "нет clientMappings — нечего копировать");
+    }
+
+    /** Ревью 10.11, B10: битое тело ответа KC (пустое, HTML) — нет id, а не 5xx на весь список агентов. */
+    @Test
+    void brokenServiceAccountBodyGivesNoIdInsteadOfCrash() {
+        assertEquals("u1", LoreKcAgentClient.idOf("{\"id\":\"u1\"}"));
+        assertNull(LoreKcAgentClient.idOf("<html>bad gateway</html>"));
+        assertNull(LoreKcAgentClient.idOf(""));
+        assertNull(LoreKcAgentClient.idOf(null));
+    }
 
     @Test
     void clientIdFromProfileAndMachine() {
@@ -55,36 +83,5 @@ class LoreKcAgentClientTest {
         assertNotNull(hint);
         assertTrue(hint.contains("manage-clients"), "403 — назвать недостающую роль lore-admin: " + hint);
         assertNull(LoreKcAgentClient.forbiddenHint(201));
-    }
-
-    // B8: agent-<profile> шаблону выдана клиентской ролью (kc-provision-agents.js), realm-копия
-    // её не видела — свежая учётка жила с пустым agent_scope. Грант клиентских ролей шаблона
-    // собирается с тем же фильтром служебных ролей KC, что и у realm-ролей.
-    @Test
-    void templateClientRolesBecomeGrantForNewAccount() {
-        List<String> copied = new ArrayList<>();
-        JsonArray grant = LoreKcResource.roleGrant(
-            "[{\"id\":\"r1\",\"name\":\"agent-full\"},{\"id\":\"r2\",\"name\":\"custom-client-role\"}]", copied);
-        assertEquals(2, grant.size());
-        assertEquals(List.of("agent-full", "custom-client-role"), copied,
-            "клиентские роли шаблона копируются на сервисную учётку нового клиента");
-    }
-
-    @Test
-    void keycloakServiceClientRolesAreSkippedInGrant() {
-        List<String> copied = new ArrayList<>();
-        JsonArray grant = LoreKcResource.roleGrant(
-            "[{\"id\":\"r1\",\"name\":\"agent-full\"},{\"id\":\"r2\",\"name\":\"default-roles-omilore\"}]", copied);
-        assertEquals(1, grant.size());
-        assertEquals("agent-full", grant.getJsonObject(0).getString("name"));
-        assertEquals(List.of("agent-full"), copied);
-    }
-
-    @Test
-    void brokenClientRoleMappingsGiveEmptyGrant() {
-        List<String> copied = new ArrayList<>();
-        assertTrue(LoreKcResource.roleGrant("not json", copied).isEmpty());
-        assertTrue(LoreKcResource.roleGrant(null, copied).isEmpty());
-        assertTrue(copied.isEmpty(), "битый ответ не должен оставлять имён в списке скопированных");
     }
 }
