@@ -359,4 +359,54 @@ class LoreRecordFacadeLiveDbTest {
             .extract().jsonPath().getList("rows.uc_id", String.class);
         assertTrue(leaves.contains("UC-REC-ALL-1") && !leaves.contains("FEAT-REC-ALL"), leaves.toString());
     }
+
+    /**
+     * S4-V2-SECTIONS, просьба kit: прогресс «сценариев x/y» (uc_shipped рядом с uc_total),
+     * веха корня (milestone_id) и НАСЛЕДУЕМЫЕ от корня компонент/проект у детей.
+     * Замер kit по проду: у 5 из 5 детей FEAT-LORE-HONEST component_ids и projects пусты.
+     * Живая БД нужна ещё и ради разбора: фильтр-проекция [status='shipped'].size()
+     * в списке полей должна пройти парсер ArcadeDB.
+     */
+    @Test
+    void useCasesSliceCarriesProgressMilestoneAndInherited() {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body(Map.of("slug", "acme/uc-cols", "name", "Продукт колонок")).post("/lore/project")
+            .then().statusCode(200);
+        admin().body(Map.of("component_id", "C-UC-COLS", "full_name", "компонент колонок", "area", "core"))
+            .post("/lore/component/create").then().statusCode(200);
+        admin().body(Map.of("milestone_id", "M-UC-COLS", "label", "веха колонок"))
+            .post("/lore/milestone").then().statusCode(200);
+        admin().body(Map.of("feature_id", "FEAT-UC-COLS", "title", "корень колонок"))
+            .post("/lore/feature").then().statusCode(200);
+        admin().body(Map.of("feature_id", "FEAT-UC-COLS", "rel", "milestone", "target_id", "M-UC-COLS"))
+            .post("/lore/feature/link").then().statusCode(200);
+        admin().body(Map.of("feature_id", "FEAT-UC-COLS", "rel", "component", "target_id", "C-UC-COLS"))
+            .post("/lore/feature/link").then().statusCode(200);
+        admin().body(Map.of("uc_id", "FEAT-UC-COLS", "rel", "project", "target_id", "acme/uc-cols"))
+            .post("/lore/uc/link").then().statusCode(200);
+        for (String uc : new String[]{"UC-UC-COLS-1", "UC-UC-COLS-2"})
+            admin().body(Map.of("uc_id", uc, "title", "сценарий " + uc, "parent_uc_id", "FEAT-UC-COLS",
+                "goal_level", "sea-level")).post("/lore/uc").then().statusCode(200);
+        // Один из двух выпущен — тем же путём, что в жизни: задача done → вычислитель D17 → shipped.
+        final String sid = "SPRINT_UC_COLS";
+        sprint(sid);
+        admin().body(Map.of("sprint_id", sid, "task_id", "UCC-1", "title", "доставка", "work_class", "uc",
+            "uc_id", "UC-UC-COLS-1", "executor_agent", "claude-full", "reviewer_agent", "architect"))
+            .post("/lore/task").then().statusCode(200);
+        for (String st : new String[]{"active", "done"})
+            admin().body(Map.of("entity_type", "task", "id", sid + "/UCC-1", "status", st))
+                .post("/lore/status").then().statusCode(200);
+
+        JsonPath j = admin().get("/lore/slice/use_cases").then().statusCode(200).extract().jsonPath();
+        Map<String, Object> root = j.getMap("rows.find { it.uc_id == 'FEAT-UC-COLS' }");
+        assertNotNull(root, "корень в выдаче");
+        assertEquals(2, ((Number) root.get("uc_total")).intValue(), root.toString());
+        assertEquals(1, ((Number) root.get("uc_shipped")).intValue(), "выпущен один из двух: " + root);
+        assertEquals("M-UC-COLS", root.get("milestone_id"), root.toString());
+        Map<String, Object> child = j.getMap("rows.find { it.uc_id == 'UC-UC-COLS-2' }");
+        assertNotNull(child, "сценарий в выдаче");
+        assertEquals(List.of("C-UC-COLS"), child.get("inherited_component_ids"), child.toString());
+        assertEquals(List.of("acme/uc-cols"), child.get("inherited_projects"), child.toString());
+        assertEquals(0, ((Number) child.get("uc_shipped")).intValue(), "у листа детей нет: " + child);
+    }
 }
