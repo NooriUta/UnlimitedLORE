@@ -119,6 +119,18 @@ class LoreListFacetsTest {
     }
 
     @Test
+    void закрытыеЗадачи_постраничныйСписок_несутКатегориюСтатуса() {
+        // closed_tasks — первый постраничный потребитель серверных фасетов: без категории
+        // статуса у него нет ни оси «статус», ни итогов по группе, ни /count.
+        assertEquals(List.of("status_category"), LoreListFacets.axes("closed_tasks", "status_category"));
+        assertEquals("status_category", LoreListFacets.defaultGroupBy("closed_tasks"));
+        List<Map<String, Object>> rows = LoreStatusCategory.enrich("closed_tasks",
+            List.of(row("status_raw", "✅ DONE"), row("status_raw", "🚫 CANCELLED")));
+        assertEquals("finished", rows.get(0).get("status_category"));
+        assertEquals("withdrawn", rows.get(1).get("status_category"));
+    }
+
+    @Test
     void собственныеПараметры_иСтраница_неФильтры() {
         Map<String, String> given = new LinkedHashMap<>();
         given.put("axes", "sprint_id");
