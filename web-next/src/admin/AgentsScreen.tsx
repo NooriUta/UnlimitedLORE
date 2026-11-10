@@ -7,8 +7,9 @@
 //   • «не указан» / «не привязана» — словами и цветом предупреждения, потому
 //     что пустая клетка читается как «так и надо».
 // Правка harness — выбором из реестра сервера, только если сервер его прислал.
-import { useMemo, useState } from 'react';
-import { Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState } from '@seidr/kit';
+import { Fragment, useMemo, useState } from 'react';
+import { Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useUrlParam } from '@seidr/kit';
+import { AgentProjectsPanel } from './AccessBlocks';
 import { useAppT } from '../i18n';
 import {
   fetchAgents, filterAgents, harnessCounts, HARNESS_NONE, offRegistry, setAgentHarness, type AgentRow, type AgentsData,
@@ -25,6 +26,8 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
   const lang = useKitLang();
   const res = useLoadState<AgentsData>(signal => fetchAgents(signal, fetchImpl, lang), [fetchImpl, lang], { rows: d => d.rows });
   const [harness, setHarness] = useState<string | null>(null);
+  // Раскрытый агент (вкладка «Проекты») — в адресе: ?adm-agent=actor_id (S7B-12).
+  const [openAgent, setOpenAgent] = useUrlParam('adm-agent');
   const data = res.data;
   const counts = useMemo(() => (data ? harnessCounts(data.rows, data.registry) : []), [data]);
   const rows = useMemo(() => (data ? filterAgents(data.rows, harness) : []), [data, harness]);
@@ -67,11 +70,24 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                 <th scope="col">{t('admin.col.machine')}</th>
                 <th scope="col">{t('admin.col.owner')}</th>
                 <th scope="col">{t('admin.col.profile')}</th>
+                <th scope="col">{t('admin.col.projects')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
-                <AgentLine key={r.actor_id} row={r} registry={data.registry} labels={data.labels} fetchImpl={fetchImpl} onSaved={res.reload} />
+                <Fragment key={r.actor_id}>
+                  <AgentLine row={r} registry={data.registry} labels={data.labels} fetchImpl={fetchImpl} onSaved={res.reload}
+                    expanded={openAgent === r.actor_id}
+                    onToggle={() => setOpenAgent(openAgent === r.actor_id ? null : r.actor_id)} />
+                  {openAgent === r.actor_id && (
+                    <tr data-testid={`adm-agent-row-${r.actor_id}`}>
+                      <td colSpan={6}>
+                        <AgentProjectsPanel clientId={r.client_id} agentScope={r.agent_role}
+                          ownerName={r.owner_display_name} fetchImpl={fetchImpl} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -88,8 +104,9 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
   );
 }
 
-function AgentLine({ row, registry, labels, fetchImpl, onSaved }: {
+function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onToggle }: {
   row: AgentRow; registry: string[] | null; labels: Record<string, string>; fetchImpl?: typeof fetch; onSaved: () => void;
+  expanded: boolean; onToggle: () => void;
 }) {
   const off = offRegistry(row.harness, registry);
   const t = useAppT();
@@ -130,6 +147,10 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved }: {
       <td>{row.machine_id ? <span className="adm-mono">{row.machine_id}</span> : <span className="adm-missing">{t('admin.machine.none')}</span>}</td>
       <td>{row.owner_display_name ?? row.owner_kc_sub ?? <span className="adm-missing">{t('admin.owner.none')}</span>}</td>
       <td><span className="adm-mono">{row.client_id ?? '—'}</span>{row.agent_role && <span className="adm-role"> · {row.agent_role}</span>}</td>
+      <td>
+        <button type="button" className="adm-btn" aria-expanded={expanded} data-testid={`adm-agent-proj-btn-${row.actor_id}`}
+          onClick={onToggle}>{t('admin.access.agentTab')}</button>
+      </td>
     </tr>
   );
 }
