@@ -1947,8 +1947,8 @@ public final class LoreSlices {
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days, " +
             "in('HAS_STATE').bookkeeping[0] AS bookkeeping, " +
-            // B9: shared — см. adr_history_all: общая версия не выдаётся за одного владельца.
-            "in('HAS_STATE').size() > 1 AS shared " +
+            // B9: state_owners — см. adr_history_all (> 1 — общая версия). Сравнение «.size() > 1» в проекции ArcadeDB не разбирает.
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowTaskHist WHERE valid_to IS NULL " +
             "AND (" + DONE_STATUS_SQL + ") AND valid_from IS NOT NULL",
             List.of(), Map.of(), "");
@@ -1958,9 +1958,9 @@ public final class LoreSlices {
         slice("task_starts",
             // SE-08: task_uid — пара «спринт/код»; голый task_id неоднозначен (220 кодов в
             // нескольких спринтах). task_id оставлен для прежних читателей.
-            // B9: shared — см. adr_history_all.
+            // B9: state_owners — см. adr_history_all.
             "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
-            "in('HAS_STATE').size() > 1 AS shared " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
@@ -1980,8 +1980,8 @@ public final class LoreSlices {
         slice("task_created_dates",
             "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
             "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from, " +
-            // B9: shared — см. adr_history_all.
-            "in('HAS_STATE').size() > 1 AS shared " +
+            // B9: state_owners — см. adr_history_all.
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 

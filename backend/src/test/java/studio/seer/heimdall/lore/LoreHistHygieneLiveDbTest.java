@@ -247,13 +247,13 @@ class LoreHistHygieneLiveDbTest {
                 .body("rows[0].ref_id", equalTo(uid));
         }
 
-        // пакетный срез не выдаёт общую версию за одного владельца: маркер shared честный.
+        // пакетный срез не выдаёт общую версию за одного владельца: state_owners честный (≥ 2).
         // Какой из владельцев попадёт в task_uid — порядок хранилища, поэтому только
-        // «строка есть ровно под одним из них и помечена shared».
+        // «строка есть ровно под одним из них и у неё state_owners ≥ 2».
         String b9rows = "rows.findAll { it.task_uid == '" + B9_A + "' || it.task_uid == '" + B9_B + "' }";
         given().when().get("/lore/slice/task_starts")
         .then().statusCode(200)
             .body(b9rows + ".size()", greaterThanOrEqualTo(1))
-            .body(b9rows + ".shared", everyItem(equalTo(true)));
+            .body(b9rows + ".state_owners", everyItem(greaterThanOrEqualTo(2)));
     }
 }
