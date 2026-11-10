@@ -26,7 +26,9 @@ const json = (body: unknown, status = 200) =>
 const SECTIONS = [
   { key: 'tasks', source: 'part', ref: 'tasks', order: 1, slot: 'own' },
   { key: 'overview', source: 'body', ref: null, order: 2, slot: 'own' },
-  { key: 'deps', source: 'relation', ref: 'DEPENDS_ON:out', order: 3, slot: 'more' },
+  // v3: вместо снятого slot «more» — обычная вкладка; что уйдёт под «Ещё»,
+  // решает ряд вкладок по ширине, а не модель.
+  { key: 'deps', source: 'relation', ref: 'DEPENDS_ON:out', order: 3, slot: 'own' },
 ];
 
 const modelBody = (passport: unknown) => ({

@@ -7,9 +7,13 @@
 // Три утверждения, каждое отдельно:
 //  1) раскладка — чип не разрывается (значок остаётся при подписи) и не
 //     растягивается, шаг ряда один и тот же по обеим осям;
-//  2) «под Ещё» — ТОЛЬКО по решению модели (`surfaces.passport.<type>.sections`,
-//     `slot: more`), и там раздел ДОСТУПЕН: это перенос, а не удаление. Своего
-//     приоритета kit не придумывает: порядок не решён — ряд как есть;
+//  2) «под Ещё» — по месту в ряду, и там раздел ДОСТУПЕН: это перенос, а не
+//     удаление. Своего приоритета kit не придумывает: ПОРЯДОК приходит из
+//     модели (`surfaces.passport.<type>.sections`), а под свёртку уходит хвост
+//     этого порядка — то, что не влезло по ширине или за потолок в семь вкладок
+//     (паспорта v3, 10.11.2026: прежнее `slot: more` было решением о чужом
+//     экране вслепую — сервер не знает ни ширины окна, ни того, сколько вкладок
+//     у записи набралось вместе со служебными);
 //  3) счётчик — по одному правилу: у раздела-коллекции он есть всегда, а
 //     «не смогли посчитать» показывается знаком вопроса с подсказкой, а не
 //     прячется и не выдаётся за ноль.
@@ -56,22 +60,45 @@ const ctxOf = (meta: Record<string, unknown> = {}): KitCtx => ({
 });
 
 /**
- * Порядок разделов, как его отдаёт модель (`surfaces.passport.<type>.sections`,
- * разбор — model/surfaces): «Вложения» названы `slot: more`, то есть «под Ещё».
- * Остальное модель не называла — и остаётся как было.
+ * Ряд длиннее потолка: модель называет «Вложения» ПОСЛЕДНИМИ, и в семь вкладок
+ * они не попадают.
+ *
+ * Модель при этом ничего не прячет — у всех разделов `slot: own`. Прятать
+ * нечего и некому: «не влезло» считает ряд, а модель только расставляет
+ * порядок. Четыре безымянных раздела между ними — не декорация: без них
+ * «Вложения» оказались бы четвёртыми и влезли, и тест проверял бы не то, что
+ * написано в его названии.
  */
-const MORE_FILES: PassportOrder = {
+const PAST_CEILING: PassportOrder = {
   decided: true, notes: [],
   sections: [
-    { key: 'overview', source: 'body', ref: null, order: 1, slot: 'own' },
-    { key: 'kids', source: 'relation', ref: 'HAS_PART', order: 2, slot: 'own' },
-    { key: 'notes', source: 'relation', ref: 'HAS_NOTE', order: 3, slot: 'own' },
-    { key: 'files', source: 'relation', ref: 'HAS_FILE', order: 4, slot: 'more' },
+    { key: 'overview', source: 'body', ref: null, order: 1, slot: 'own', group: null },
+    { key: 'kids', source: 'relation', ref: 'HAS_PART', order: 2, slot: 'own', group: null },
+    { key: 'notes', source: 'relation', ref: 'HAS_NOTE', order: 3, slot: 'own', group: null },
+    ...[0, 1, 2, 3].map(i => ({ key: `x${i}`, source: 'relation' as const, ref: `X${i}`, order: 4 + i, slot: 'own' as const, group: null })),
+    { key: 'files', source: 'relation', ref: 'HAS_FILE', order: 9, slot: 'own', group: null },
   ],
 };
 
-const view = (tab = 'overview', meta: Record<string, unknown> = {}, sections?: PassportOrder) =>
-  render(<RecordView record={host} ctx={ctxOf(meta)} tab={tab} onTab={() => {}} placement="bottom" sections={sections} />);
+/** Тот же тип, но со связями `x0…x3` — чтобы ряду было чем перевалить потолок. */
+const padded: KitConfig = {
+  ...config,
+  kinds: {
+    host: {
+      ...config.kinds.host,
+      relations: [
+        ...(config.kinds.host.relations ?? []).slice(0, 2),
+        ...[0, 1, 2, 3].map(i => ({ key: `x${i}`, label: `Прочее ${i}`, relation: 'aggregation' as const, rel: `X${i}`, dir: 'out' as const })),
+        ...(config.kinds.host.relations ?? []).slice(2),
+      ],
+    },
+  },
+};
+
+const view = (tab = 'overview', meta: Record<string, unknown> = {}, sections?: PassportOrder, cfg: KitConfig = config) =>
+  render(<RecordView record={host} ctx={{ ...ctxOf(meta), config: cfg }} tab={tab} onTab={() => {}} placement="bottom" sections={sections} />);
+/** Ряд, в котором «Вложения» заведомо за потолком. */
+const viewPast = (tab = 'overview', meta: Record<string, unknown> = {}) => view(tab, meta, PAST_CEILING, padded);
 const rowNames = () => screen.getAllByRole('tab').map(t => (t.textContent ?? '').replace(/[◆◇⇢▷△]/g, ''));
 const countOf = (label: string) => {
   const tab = screen.getAllByRole('tab').find(t => (t.textContent ?? '').includes(label));
@@ -102,40 +129,41 @@ describe('B13 · 1) раскладка ряда вкладок', () => {
   });
 });
 
-describe('B13 · 2) «под Ещё» решает модель, а не конструктор', () => {
-  it('положительный контроль: порядок не решён — ряд как есть, kit ничего не прячет', () => {
+describe('B13 · 2) «под Ещё» решает ряд, а порядок — модель', () => {
+  it('положительный контроль: вкладок меньше потолка — не прячется НИЧЕГО', () => {
     view();
     expect(rowNames().some(n => n.startsWith('Заметки'))).toBe(true);
     expect(rowNames().some(n => n.startsWith('Вложения'))).toBe(true);
     expect(screen.queryByRole('tab', { name: /Ещё/ })).toBeNull();
   });
 
-  it('`decided: false` — тоже не повод прятать: «сервер не решал» ≠ «сервер решил скрыть»', () => {
+  it('`decided: false` — порядок за приложением, и прятать это тоже не повод', () => {
     view('overview', {}, { decided: false, sections: [], notes: [] });
     expect(screen.queryByRole('tab', { name: /Ещё/ })).toBeNull();
   });
 
-  it('модель назвала раздел `slot: more` — он уходит под «Ещё», и число названо', () => {
-    view('overview', {}, MORE_FILES);
+  it('раздел за потолком ряда уходит под «Ещё», и число спрятанного названо', () => {
+    viewPast();
     expect(rowNames().some(n => n.startsWith('Вложения'))).toBe(false);
-    expect(screen.getByRole('tab', { name: /Ещё.*1/ })).toBeTruthy();
+    // «Ещё» без числа не говорит, стоит ли открывать.
+    expect(screen.getByRole('tab', { name: /Ещё.*\d/ })).toBeTruthy();
   });
 
   it('спрятанное ДОСТУПНО и со своим счётчиком: «под ещё» — перенос, а не удаление', () => {
-    view('overview', {}, MORE_FILES);
+    viewPast();
     fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
     const menu = screen.getByRole('menu', { name: 'Ещё' });
     const item = within(menu).getByRole('menuitem', { name: /Вложения/ });
     expect(item.querySelector('.sk-tab__count')?.textContent).toBe('0');
   });
 
-  it('открытая вкладка остаётся в ряду, даже будучи редкой: прятать читаемое нельзя', () => {
-    view('files', {}, MORE_FILES);
+  it('открытая вкладка остаётся в ряду, даже будучи за потолком: прятать читаемое нельзя', () => {
+    viewPast('files');
     expect(rowNames().some(n => n.startsWith('Вложения'))).toBe(true);
   });
 
   it('ряд со свёрткой допустим по ARIA: role="tablist" не содержит чужих детей', async () => {
-    const { container } = view('overview', {}, MORE_FILES);
+    const { container } = viewPast();
     expect(await axeViolations(container)).toEqual([]);
   });
 });
@@ -163,7 +191,7 @@ describe('B13 · 3) счётчик — по одному правилу', () => 
   });
 
   it('то же правило под «Ещё»: спрятанный раздел с нечитаемым блоком — «?», а не ноль', () => {
-    view('overview', { data_state: [{ source: 'files', state: 'forbidden', reason: 'нет прав' }] }, MORE_FILES);
+    viewPast('overview', { data_state: [{ source: 'files', state: 'forbidden', reason: 'нет прав' }] });
     fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
     const item = within(screen.getByRole('menu', { name: 'Ещё' })).getByRole('menuitem', { name: /Вложения/ });
     expect(item.querySelector('.sk-tab__count')?.textContent).toBe('?');
@@ -173,8 +201,8 @@ describe('B13 · 3) счётчик — по одному правилу', () => 
     view('overview', { data_state: [{ source: 'files', state: 'error', reason: 'срез отдал 502' }] }, {
       decided: true, notes: [],
       sections: [
-        { key: 'overview', source: 'body', ref: null, order: 1, slot: 'own' },
-        { key: 'files', source: 'relation', ref: 'HAS_FILE', order: 2, slot: 'content' },
+        { key: 'overview', source: 'body', ref: null, order: 1, slot: 'own', group: null },
+        { key: 'files', source: 'relation', ref: 'HAS_FILE', order: 2, slot: 'content', group: null },
       ],
     });
     const glue = document.querySelector('[data-glued="files"]');
