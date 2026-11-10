@@ -91,9 +91,17 @@ public class LoreAdrResource extends LoreResourceBase {
                     upsertSql.append(", created_at=:created_at");
                     upsertP.put("created_at", cm.moment());
                 }
-            } else if (req.date_created() != null) {
-                upsertSql.append(", date_created=:date_created");
-                upsertP.put("date_created", req.date_created());
+            } else {
+                if (req.date_created() != null) {
+                    upsertSql.append(", date_created=:date_created");
+                    upsertP.put("date_created", req.date_created());
+                }
+                // Аудит времени 10.11 (класс S4-04): правка существующего ADR без checkpoint
+                // пишет тело в открытую версию на месте — момент правки на вершине; changed_at
+                // среза adrs — максимум с открытой версией. У нового ADR первая версия и есть
+                // момент заведения — отметка не нужна.
+                upsertSql.append(", updated_at=:upd");
+                upsertP.put("upd", Instant.now().toString());
             }
             if (req.component_id() != null) {
                 upsertSql.append(", component_id=:component_id");

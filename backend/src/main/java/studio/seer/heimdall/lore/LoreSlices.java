@@ -199,6 +199,12 @@ public final class LoreSlices {
     /** Дата заведения у типов без своего поля: первая версия истории (порядок рёбер — порядок вставки). */
     private static final String FIRST_STATE_FROM_SQL = "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0]";
 
+    /** Технология (спека SPEC-TECH-*): номер, тело и «проверено» — из открытой версии. */
+    private static final String TECH_OPEN_COLUMNS =
+        "COALESCE(out('HAS_STATE')[valid_to IS NULL].version[0], version) AS version, " +
+        "COALESCE(out('HAS_STATE')[valid_to IS NULL].content_md[0], content_md) AS content_md, " +
+        "out('HAS_STATE')[valid_to IS NULL].valid_from[0] AS checked_at, ";
+
     /**
      * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
      * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
@@ -1621,8 +1627,13 @@ public final class LoreSlices {
         // ── §3 Milestones ────────────────────────────────────────────────────
         slice("milestones",
             "SELECT milestone_id, label, week, date_display, priority, " +
-            "out('HAS_STATE').goal_md[0]      AS goal_md, " +
-            "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
+            // Аудит времени 10.11: цель вехи пишется ВЕРСИЕЙ KnowMilestoneHist — читается
+            // открытая строка (после первой смены цели строк больше одной).
+            "out('HAS_STATE')[valid_to IS NULL].goal_md[0]      AS goal_md, " +
+            "out('HAS_STATE')[valid_to IS NULL].decisions_md[0] AS decisions_md, " +
+            // Свежесть: версия цели, иначе отметка правки полей вершины. Даты заведения
+            // у вехи нет — без того и другого changed_at пуст, а не выдуман.
+            changedAtSql("updated_at") + ", " +
             // SPRINT_PLANITEM_RETIRE (T-21) had briefly split this into a "planned"
             // bucket (KnowSprintHist.planned_milestone_id, a plain property) vs.
             // this "actual" bucket (TARGETS_MILESTONE edge). The property drifted
@@ -1640,8 +1651,8 @@ public final class LoreSlices {
         // Kit 09.11: паспорт вехи (только чтение) — та же проекция, что у milestones, по id.
         slice("milestone_by_id",
             "SELECT milestone_id, label, week, date_display, priority, " +
-            "out('HAS_STATE').goal_md[0]      AS goal_md, " +
-            "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
+            "out('HAS_STATE')[valid_to IS NULL].goal_md[0]      AS goal_md, " +
+            "out('HAS_STATE')[valid_to IS NULL].decisions_md[0] AS decisions_md, " +
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids, " +
             "out('TARGETS_PRODUCT').code       AS products " +
             "FROM KnowMilestone WHERE milestone_id = :id",
@@ -1664,7 +1675,7 @@ public final class LoreSlices {
         // меняется дорога». Проект остаётся границей ПРАВ и вехи не несёт.
         slice("roadmap",
             "SELECT milestone_id, label, week, date_display, priority, " +
-            "out('HAS_STATE').goal_md[0]       AS goal_md, " +
+            "out('HAS_STATE')[valid_to IS NULL].goal_md[0]       AS goal_md, " +
             "in('TARGETS_MILESTONE').sprint_id AS sprint_ids, " +
             "in('TARGETS_MILESTONE').size()    AS sprint_count, " +
             "out('TARGETS_PRODUCT').code       AS products " +
@@ -1931,9 +1942,11 @@ public final class LoreSlices {
         // backend write endpoint needed) — this slice is the read side.
         slice("tech_registry",
             "SELECT spec_id, title AS tech_name, " +
-            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
-            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
-            "out('HAS_STATE').valid_from[0] AS checked_at, " +
+            // Аудит времени 10.11: версия, тело и «проверено» — из ОТКРЫТОЙ версии, а не из
+            // первого ребра: смена номера открывает версию (LoreSpecResource), и [0] без
+            // фильтра отдавал бы строку, выбранную порядком рёбер.
+            TECH_OPEN_COLUMNS +
+            changedAtSql(FIRST_STATE_FROM_SQL) + ", " +
             "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id " +
             "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%'",
             List.of(),
@@ -1947,9 +1960,7 @@ public final class LoreSlices {
         // по её id отвечает 404, а не показывает спеку под чужим видом.
         slice("tech_by_id",
             "SELECT spec_id, title AS tech_name, " +
-            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
-            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
-            "out('HAS_STATE').valid_from[0] AS checked_at, " +
+            TECH_OPEN_COLUMNS +
             "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id " +
             "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%' AND spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
