@@ -593,7 +593,7 @@ describe('S7A-12 · строка ленты: код — переход, без �
     const st = within(row).getByTestId('news-status');
     const marks = st.querySelectorAll('[data-status]');
     expect([...marks].map(m => m.getAttribute('data-status'))).toEqual(['in_progress', 'ready_for_deploy']);
-    expect(marks[1].getAttribute('title')).toBe('ready_for_deploy');
+    expect(marks[1].getAttribute('title')).toContain('ready_for_deploy');
     expect((marks[1] as HTMLElement).style.getPropertyValue('--st-c')).toMatch(/var\(--/);
   });
 
@@ -611,7 +611,7 @@ describe('S7A-12 · строка ленты: код — переход, без �
     expect([...marks].map(m => m.getAttribute('data-category'))).not.toContain('unknown');
     // Подпись — код без эмодзи; сырой текст сервера — в подсказке.
     expect(marks[0].textContent).toBe('done');
-    expect(marks[0].getAttribute('title')).toBe('✅ DONE');
+    expect(marks[0].getAttribute('title')).toContain('✅ DONE');
   });
 
   it('приложение подставляет свой читатель статуса — тот же, что у задач и спринтов', async () => {
@@ -660,6 +660,6 @@ describe('S4-STATUS-AXIS-CONFIG · иконка статуса в ленте —
     expect(m.getAttribute('data-look')).toBe('fallback');
     expect(m.getAttribute('data-look-why')).toMatch(/словар/i);
     // Подсказка остаётся сырым статусом сервера, а не рассказом про kit.
-    expect(m.getAttribute('title')).toBe('ready_for_deploy');
+    expect(m.getAttribute('title')).toContain('ready_for_deploy');
   });
 });

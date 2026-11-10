@@ -886,9 +886,9 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
           // Переход статусов — значками со своим цветом (владелица 09.11: «невыделенным
           // шрифтом написан, может значками сделать?»). Иконка и цвет — общая таблица kit.
           <span className="sk-news__status" data-testid="news-status">
-            <StatusMark code={e.from} />
+            <NewsStatusMark code={e.from} />
             <span className="sk-news__arrow" aria-hidden="true">{' → '}</span>
-            <StatusMark code={e.to} />
+            <NewsStatusMark code={e.to} />
           </span>
         )}
         {e.mult > 1 && <span className="sk-news__mult" title={t('mult.hint', { n: e.mult })} data-testid="news-mult">{`×${e.mult}`}</span>}
@@ -916,13 +916,33 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
  * Запас kit остался — но ПОМЕЧЕННЫМ: причина уходит в подсказку, чтобы дыра в
  * справочнике (например adr-статусы без иконки) не выглядела замыслом.
  */
-function StatusMark({ code }: { code: string | null }) {
+export function NewsStatusMark({ code }: { code: string | null }) {
   const statusOf = useContext(StatusOfCtx);
   const dict = useStatusDict();
   if (!code) return <span className="sk-news__st" data-status="">∅</span>;
   const canon = statusOf(code) || code;
   const look = statusLook(canon, dict);
   const category = statusMeta(canon).category;
+  // Подпись — ИЗ СЛОВАРЯ ПРИЛОЖЕНИЯ, как иконка и цвет (просьба владелицы
+  // 10.11.2026 со снимком ленты: «статусы пописаны но не локализацей и прямо в
+  // теле строки — учитывать локализацию, надписи в подсказки»).
+  //
+  // Код — это ключ, а не слово языка: в ленте человек читает события, а не
+  // словарь. Поэтому в строке стоит подпись, а код уходит в подсказку — его
+  // спрашивают, когда надо свериться с API или с фильтром, и он же остаётся в
+  // data-status для тестов и аудита.
+  //
+  // Подписи нет (словаря нет или кода в нём нет) — показываем КОД и говорим
+  // об этом в подсказке. Выдумать подпись значило бы соврать про словарь.
+  const item = dict?.find(s => s.code === canon);
+  const label = item?.title?.trim() || canon;
+  // Сырой статус сервера («✅ DONE») остаётся в подсказке, когда он отличается
+  // от кода: по нему сверяются с ответом API, и прежняя проверка ленты держала
+  // именно его.
+  const raw = code !== canon ? ` · ${code}` : '';
+  const tip = item
+    ? `${label} · ${canon}${raw}`
+    : `${canon} — подписи нет в словаре статусов приложения${raw}`;
   return (
     <span
       className="sk-news__st"
@@ -934,11 +954,11 @@ function StatusMark({ code }: { code: string | null }) {
       // иконка не из словаря приложения — им же пользуются тесты и аудит.
       data-look={look.source}
       data-look-why={look.why}
-      title={code}
+      title={tip}
       style={{ '--st-c': look.color } as CSSProperties}
     >
       <StatusIcon icon={look.icon} size={12} />
-      {canon}
+      {label}
     </span>
   );
 }
