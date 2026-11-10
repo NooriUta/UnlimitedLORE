@@ -51,6 +51,56 @@ final class LoreRecordValues {
         return s == null ? null : s.trim().toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}_ ]", "").trim().replace(' ', '_');
     }
 
+    // ── Точки входа фасада (S4-MODEL-RECORD: сверка снимков держится за них) ──
+
+    /** {@code values} записи по строке главного среза — вместе со статусом записи. */
+    static Map<String, Object> values(String type, Map<String, Object> r) {
+        Map<String, Object> values = switch (type) {
+            case "sprint" -> sprint(r);
+            case "task" -> task(r);
+            case "adr" -> adr(r);
+            case "decision" -> decision(r);
+            case "question" -> question(r);
+            case "milestone" -> milestone(r);
+            case "release" -> release(r);
+            case "component" -> component(r);
+            case "tech" -> tech(r);
+            case "feature" -> feature(r);
+            default -> spec(r);
+        };
+        String status = switch (type) {
+            case "sprint", "task" -> planToken(str(r.get("status_raw")));
+            case "decision" -> docToken(r.get("status_raw"));
+            default -> docToken(r.get("status"));
+        };
+        values.put("status", status);
+        return values;
+    }
+
+    /** Строка ребёнка → item части (кроме фазы: её «x/y» считается по задачам, {@link #phaseItem}). */
+    static Map<String, Object> partItem(String childType, Map<String, Object> r) {
+        return switch (childType) {
+            case "question" -> questionItem(r);
+            case "decision" -> decisionItem(r);
+            default -> taskItem(r);
+        };
+    }
+
+    /** Строка отдельного среза вкладки ({@link #READ_BY_SLICE}) → связь {@code links[]}. */
+    static Map<String, Object> sliceLink(String type, String key, Map<String, Object> r) {
+        return switch (type + "." + key) {
+            case "task.adrs" -> link("JUSTIFIED_BY", "out", str(r.get("adr_id")), "adr", str(r.get("name")), docToken(r.get("status")));
+            case "task.gates" -> link("GATES", "in", str(r.get("question_id")), "question", str(r.get("title")), docToken(r.get("status")));
+            case "release.sprints" -> link("IMPLEMENTED_IN_RELEASE", "in", str(r.get("sprint_id")), "sprint", str(r.get("name")),
+                planToken(str(r.get("status_raw"))));
+            case "release.prs" -> {
+                String uid = str(r.get("pr_uid"));
+                yield link("SHIPPED_IN", "in", uid != null ? uid : str(r.get("pr_number")), "pr", str(r.get("title")), null);
+            }
+            default -> throw new IllegalArgumentException("связь " + type + "." + key + " не читается отдельным срезом");
+        };
+    }
+
     // ── values по типам ────────────────────────────────────────────────────
 
     /** Спринт из строки {@code sprint_tree}. */
