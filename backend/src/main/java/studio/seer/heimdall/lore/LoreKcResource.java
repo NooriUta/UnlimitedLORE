@@ -259,9 +259,12 @@ public class LoreKcResource extends LoreResourceBase {
                 // Ревью 10.11, B8: клиентские роли (agent-<profile> выдаётся именно так) — тоже из шаблона,
                 // иначе свежая машинная учётка с пустым agent_scope невидима в «Учётке».
                 HttpResponse<String> all = kc("GET", "/users/" + tplUser + "/role-mappings", null, t);
-                if (all.statusCode() == 200) {
+                io.vertx.core.json.JsonObject allJson = all.statusCode() == 200 ? LoreKcAgentClient.jsonOrNull(all.body()) : null;
+                if (all.statusCode() == 200 && allJson == null) {
+                    rolesNote = (rolesNote == null ? "" : rolesNote + "; ") + "клиентские роли шаблона не разобраны: KC вернул не JSON";
+                } else if (all.statusCode() == 200) {
                     java.util.Map<String, io.vertx.core.json.JsonArray> grants =
-                        LoreKcAgentClient.clientRoleGrants(new io.vertx.core.json.JsonObject(all.body()));
+                        LoreKcAgentClient.clientRoleGrants(allJson);
                     for (java.util.Map.Entry<String, io.vertx.core.json.JsonArray> g : grants.entrySet()) {
                         HttpResponse<String> cg = kc("POST", "/users/" + newUser + "/role-mappings/clients/" + g.getKey(),
                             g.getValue().encode(), t);

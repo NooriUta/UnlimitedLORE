@@ -94,6 +94,19 @@ final class LoreKcAgentClient {
      * Ревью 10.11, B10: {@code id} из тела ответа KC; битое тело (пустое, HTML от прокси) — {@code null},
      * а не исключение, которое роняло весь список агентов одним ответом.
      */
+    /**
+     * Находка kit к #1077: JSON-объект из тела ответа KC; битое тело (пустое, HTML от прокси) — null,
+     * чтобы вызывающий записал оговорку, а не упал 500 на всей операции. Тот же приём, что {@link #idOf}.
+     */
+    static JsonObject jsonOrNull(String body) {
+        if (body == null || body.isBlank()) return null;
+        try {
+            return new JsonObject(body);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
     static String idOf(String body) {
         if (body == null || body.isBlank()) return null;
         try {
