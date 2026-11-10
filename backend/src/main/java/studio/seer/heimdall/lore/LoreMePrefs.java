@@ -63,6 +63,8 @@ final class LoreMePrefs {
         m.put("single_key_shortcuts", bool(false));                          // однобуквенные клавиши
         m.put("stripes", bool(false));                                       // полоски в таблицах
         m.put("new_navigation", bool(false));                                // флаг «новая навигация»
+        // место показа паспорта (S4-17): auto = выбора не было, экран решает сам; не подменять умолчанием
+        m.put("passport_place", oneOf("auto", "auto", "right", "bottom", "full"));
         SETTINGS = Collections.unmodifiableMap(m);
     }
 
