@@ -6,8 +6,10 @@ server's tools. `full` is the `primary` mode profile (Claude / backfill sessions
 the tool-name-prefix categories that role owns (permission keys are glob patterns matched against
 the MCP tool name — see [MIGRATION.md](./MIGRATION.md) for the current tool name list).
 
-Read tools (`list_slices`, `query_slice`) are allowed on every profile — reading the graph never
-needs restricting, only writes do.
+Read tools (`list_slices`, `query_slice`, `run_block`, `search`, `search_similar`) are allowed on
+every profile — reading the graph never needs restricting, only writes do. All five are GET
+(`/lore/slice`, `/lore/search`); `AgentProfilesMatchMatrixTest.everyProfileReadsTheGraph` keeps
+every subagent profile carrying them (S6-08).
 
 | Profile | Owns |
 |---|---|
