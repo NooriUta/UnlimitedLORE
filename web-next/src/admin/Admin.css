@@ -40,3 +40,40 @@
 .adm-me { color: var(--acc); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; margin-left: 6px; }
 .adm-sub { margin: 4px 0; color: var(--t2); font-size: var(--fs-xs); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .adm-table tr[data-me] th, .adm-table tr[data-me] td { background: var(--bg2); }
+/* Журнал действий (S7B-02): фильтры, исход строки, пачка. Только токены. */
+.adm-note[data-tone='inf'] { color: var(--inf); }
+.adm-note[data-tone='dng'] { color: var(--dng); }
+.adm-note__line { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.adm-filters {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 10px;
+  padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1);
+}
+.adm-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.adm-field__l { color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; }
+.adm-field--btns { flex-direction: row; gap: 6px; align-items: center; }
+.adm-input {
+  min-height: max(var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
+  background: var(--bg2); color: var(--t1); font: 600 var(--fs-xs) var(--font); min-width: 0; width: 14ch;
+}
+.adm-btn {
+  min-height: max(var(--tap, 24px), 24px); padding: 0 12px; border: 1px solid var(--bd); border-radius: 999px;
+  background: var(--bg2); color: var(--t1); font: 600 var(--fs-xs) var(--font); cursor: pointer;
+}
+.adm-btn[type='submit'] { border-color: var(--acc); color: var(--acc); }
+.adm-hint { margin: 0; flex-basis: 100%; color: var(--t3); font-size: var(--fs-2xs); }
+.adm-dim { color: var(--t3); font-size: var(--fs-xs); }
+.adm-link {
+  border: 0; background: none; padding: 0 0 0 6px; color: var(--acc);
+  font: 600 var(--fs-xs) var(--font); cursor: pointer; text-decoration: underline;
+}
+.adm-outcome { font: 600 var(--fs-xs) var(--mono); }
+.adm-outcome[data-outcome='ok'] { color: var(--suc); }
+.adm-outcome[data-outcome='refused'] { color: var(--dng); }
+.adm-outcome[data-outcome='unknown'] { color: var(--wrn); }
+.adm-batch[data-batch='batch'] { color: var(--inf); }
+.adm-batch[data-batch='unexpandable'] { color: var(--wrn); }
+.adm-batchbox {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 6px 8px; border: 1px dashed var(--bd); border-radius: 6px; background: var(--bg2);
+}
+.adm-batchbox__head { display: flex; align-items: center; gap: 8px; }
