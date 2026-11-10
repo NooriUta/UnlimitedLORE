@@ -95,6 +95,10 @@ public class AidaLoreResource extends LoreResourceBase {
     @Inject
     ProjectRbacService projectRbac;
 
+    /** S7B-11: ячейка Keycloak в role_matrix — realm-роли человека тем же мостом, что у админки. */
+    @Inject
+    KcBridge kcBridge;
+
     // ── SPRINT_VIZ_EMBED/VE-2: подпись ссылки встройки Völva ─────────────────
     // Ключ — через SecretProvider (env | Infisical), как KC_ADMIN_CLIENT_SECRET;
     // в код и в переменные сборки не попадает. Адрес и белый список графиков —
@@ -1017,6 +1021,8 @@ public class AidaLoreResource extends LoreResourceBase {
         // existing = null, и ответ честно говорит existence_checked:false.
         final java.util.concurrent.atomic.AtomicReference<java.util.Set<String>> sprintsExisting =
             new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicReference<LoreRoleMatrix.KcResult> kcAnswer =
+            new java.util.concurrent.atomic.AtomicReference<>();
         return client.query(db, basicAuth(), body)
             .chain(res -> {
                 if (exemptQuery == null) return Uni.createFrom().item(res);
@@ -1047,6 +1053,17 @@ public class AidaLoreResource extends LoreResourceBase {
                     })
                     .onFailure().recoverWithItem(ex -> res);
             })
+            // S7B-11 (D-2026-UXR-OWNER-DELEGATED-ANSWERS-10-11, 31а): realm-роли людей матрицы
+            // из Keycloak. Вызов блокирующий — на рабочем пуле; сбой — причина в ячейке.
+            .chain(res -> {
+                if (!"role_matrix".equals(id)) return Uni.createFrom().item(res);
+                Map<String, Object> probe = new java.util.HashMap<>();
+                probe.put("rows", res.result());
+                List<String> subs = LoreRoleMatrix.kcSubs(probe);
+                return Uni.createFrom().item(() -> LoreRoleMatrix.askKc(kcBridge, subs))
+                    .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+                    .map(kc -> { kcAnswer.set(kc); return res; });
+            })
             // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
             // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
             .chain(res -> {
@@ -1072,7 +1089,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
                 // Kit 2 (K2-MATRIX): у ячейки матрицы состояние «проверено / не смогли / нет прав».
-                if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out);
+                if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out, kcAnswer.get());
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
                 if (outside != null) out.put("outside_scope", outside);
