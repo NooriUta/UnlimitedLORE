@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * раз, и kit узнавал об этом из переписки. Здесь — то, что потребители читают:
  * удаление или переименование ключа, смена типа значения или новое значение закрытого
  * перечня роняют CI. Новые ключи допустимы (добавление не ломает читателя) — кроме мест,
- * где набор закрыт договором (элемент surfaces.passport.*.sections — ровно пять ключей).
+ * где набор закрыт договором (элемент surfaces.passport.*.sections — ровно шесть ключей, S4-29 v3).
  * Поменял форму осознанно — поправь этот тест и предупреди kit в том же PR.
  */
 class LoreModelContractTest {
@@ -86,12 +86,12 @@ class LoreModelContractTest {
         Map<String, Object> d2 = doc();
         Map<String, Object> sec = (Map<String, Object>) ((List<Object>) map(map(map(d2.get("surfaces"), "s").get("passport"), "p").get("sprint"), "sp").get("sections")).get(0);
         sec.put("render", "tabs");
-        assertThrows(AssertionError.class, () -> checkSurfaces(d2), "шестой ключ в разделе ловится");
+        assertThrows(AssertionError.class, () -> checkSurfaces(d2), "седьмой ключ в разделе ловится");
 
         Map<String, Object> d3 = doc();
         Map<String, Object> sec3 = (Map<String, Object>) ((List<Object>) map(map(map(d3.get("surfaces"), "s").get("passport"), "p").get("sprint"), "sp").get("sections")).get(0);
-        sec3.put("slot", "tab");
-        assertThrows(AssertionError.class, () -> checkSurfaces(d3), "значение вне перечня slot ловится");
+        sec3.put("slot", "more");
+        assertThrows(AssertionError.class, () -> checkSurfaces(d3), "«Ещё» больше не место модели (S4-29 v3) — slot more ловится");
     }
 
     private static void checkTypes(Map<String, Object> d) {
@@ -141,10 +141,12 @@ class LoreModelContractTest {
             assertInstanceOf(Boolean.class, p.get("decided"), "passport." + t + ".decided");
             for (Object so : list(p.get("sections"), t + ".sections")) {
                 Map<String, Object> sec = map(so, t + ".sections[]");
-                assertEquals(Set.of("key", "source", "ref", "order", "slot"), sec.keySet(),
-                    t + ": элемент раздела — ровно пять ключей (сторож kit на ту же пятёрку)");
+                assertEquals(Set.of("key", "source", "ref", "order", "slot", "group"), sec.keySet(),
+                    t + ": элемент раздела — ровно шесть ключей (пятёрка kit + group, S4-29 v3)");
                 oneOf(sec.get("source"), Set.of("body", "part", "relation"), t + ".source");
-                oneOf(sec.get("slot"), Set.of("own", "content", "more"), t + ".slot");
+                oneOf(sec.get("slot"), Set.of("own", "content"), t + ".slot");
+                if (sec.get("group") != null)
+                    assertEquals(Set.of("key", "label"), map(sec.get("group"), t + ".group").keySet(), t + ".group — {key, label}");
                 assertInstanceOf(Integer.class, sec.get("order"));
             }
         }
