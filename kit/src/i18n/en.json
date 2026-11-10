@@ -783,6 +783,8 @@
   "kit.record.history.runPartial": "Edits received: {got} of {count} — the server did not send the rest.",
   "kit.record.history.runFailed": "The run did not expand: {reason}",
   "kit.record.history.runNoExpand": "Nothing can show the run edit by edit — turn the collapse off.",
+  "kit.scale.label": "Text size",
+  "kit.scale.now": "{percent}%",
   "kit.md.sourceMd": "markdown source",
   "kit.md.sourceHtml": "HTML source",
   "kit.md.together": "show side by side: source and preview",
