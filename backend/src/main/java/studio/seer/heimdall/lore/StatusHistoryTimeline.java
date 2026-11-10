@@ -62,6 +62,39 @@ final class StatusHistoryTimeline implements KnowledgeStatusHistory, AuthorResol
         return t;
     }
 
+    /**
+     * S7A-09: SQL версий одного типа, пересекающих окно [from, to): начались до {@code to}
+     * и не закрылись до {@code from}. Этого хватает и для {@link #statusAt} в любой момент
+     * окна, и для {@link #authorOf} у событий окна: версия, закрытая раньше {@code from},
+     * ни на какой момент окна открытой не бывает. Время — date(строка ISO-Z), тот же
+     * разбор, что у V56 (UTC wall clock, как хранит DATETIME).
+     */
+    static String sql(StatusHistoryService.Kind k, boolean windowed) {
+        if (!windowed) return sql(k);
+        return sql(k) + " AND valid_from < date(:to) AND (valid_to IS NULL OR valid_to > date(:from))";
+    }
+
+    /**
+     * S7A-09: история только типов {@code types} и только версий окна [from, to) — для
+     * ленты новостей, которой не нужна вся история корпуса. Тип вне {@code types}
+     * остаётся недоступным ({@link #available} = false), а не «пустым».
+     */
+    static StatusHistoryTimeline load(BiFunction<String, Map<String, Object>, List<Map<String, Object>>> query,
+                                      Set<String> types, Instant from, Instant to) {
+        StatusHistoryTimeline t = new StatusHistoryTimeline();
+        Map<String, Object> window = Map.of("from", from.toString(), "to", to.toString());
+        for (StatusHistoryService.Kind k : StatusHistoryService.KINDS.values()) {
+            if (types != null && !types.contains(k.type())) continue;
+            try {
+                List<Map<String, Object>> rows = query.apply(sql(k, true), window);
+                t.add(k.type(), rows == null ? List.of() : rows);
+            } catch (RuntimeException e) {
+                // тип остаётся недоступным: «не смогли прочитать» ≠ «истории нет»
+            }
+        }
+        return t;
+    }
+
     /** Добавить строки типа (видимость пакетная — для юнит-теста без БД). */
     void add(String type, List<Map<String, Object>> rows) {
         Map<String, List<Version>> m = byType.computeIfAbsent(type, x -> new HashMap<>());
