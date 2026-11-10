@@ -190,3 +190,42 @@ describe('S4-29 · ТРИ разных «порядка нет» различи�
     expect(r.notes).toEqual([]);
   });
 });
+
+describe('S4-29 v3 · группы вкладок и «Ещё» по ширине (D-2026-UXR-OWNER-DELEGATED-ANSWERS-10-11)', () => {
+  // Сервер v3: у раздела шестой ключ `group {key, label}` (или null), slot только
+  // own | content. «Ещё» решает kit по ширине, модель его больше не называет.
+  // `group` — ЗНАКОМЫЙ ключ: приложение его читает и отдаёт группы отдельно,
+  // поэтому на экране нет строки «лишние ключи group». Пока сторож kit знает
+  // только пятёрку v2, приложение снимает group до разбора — иначе человек
+  // увидел бы оговорку про то, что сервер сделал правильно.
+  const V3 = [
+    { key: 'content', source: 'body', ref: null, order: 1, slot: 'own', group: null },
+    { key: 'decisions', source: 'part', ref: 'decisions', order: 2, slot: 'content', group: null },
+    { key: 'dependsOn', source: 'relation', ref: 'dependsOn', order: 3, slot: 'own', group: { key: 'adrLinks', label: 'Связи ADR' } },
+    { key: 'blocks', source: 'relation', ref: 'blocks', order: 4, slot: 'own', group: { key: 'adrLinks', label: 'Связи ADR' } },
+  ];
+
+  it('group — знакомый ключ: порядок принят, оговорок нет, группы выданы', async () => {
+    const r = await fetchPassportOrder('adr', { fetchImpl: net(modelBody({ adr: { decided: true, sections: V3 } })) });
+    expect(r.order.decided).toBe(true);
+    expect(r.order.sections.map(s => s.key)).toEqual(['content', 'decisions', 'dependsOn', 'blocks']);
+    expect(r.notes).toEqual([]);
+    expect(r.groups).toEqual({
+      dependsOn: { key: 'adrLinks', label: 'Связи ADR' },
+      blocks: { key: 'adrLinks', label: 'Связи ADR' },
+    });
+  });
+
+  it('кривой group (не {key, label}) — не выдаётся за группу, и об этом сказано', async () => {
+    const bad = [{ ...V3[2], group: 'adrLinks' }];
+    const r = await fetchPassportOrder('adr', { fetchImpl: net(modelBody({ adr: { decided: true, sections: bad } })) });
+    expect(r.order.decided).toBe(true);
+    expect(r.groups).toEqual({});
+    expect(r.notes.join(' ')).toMatch(/group/);
+  });
+
+  it('без групп (сервер v2) — groups пусто, а не undefined', async () => {
+    const r = await fetchPassportOrder('sprint', { fetchImpl: net(modelBody({ sprint: { decided: true, sections: SECTIONS } })) });
+    expect(r.groups).toEqual({});
+  });
+});

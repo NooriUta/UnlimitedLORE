@@ -104,6 +104,9 @@ final class LoreEntityHistory {
             .append(hist).append("' AS hist_type, ").append(idExpr).append(" AS ref_id, state_uid, ")
             .append("valid_from, valid_to, content_hash, source_commit, status_raw, changed_by, changed_by_kind");
         if (dict) sb.append(", dict_type");
+        // S7B-06: у дока тело версии — сама суть истории (построчный дифф версий
+        // в «Правилах CLAUDE»); без него экран видел только смену хеша.
+        if ("doc".equals(type)) sb.append(", content_md");
         String p = projectsExpr(type);
         if (p != null) sb.append(", ").append(p).append(" AS projects");
         String via = projectsViaExpr(type);

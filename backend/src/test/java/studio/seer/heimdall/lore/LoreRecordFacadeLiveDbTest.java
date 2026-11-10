@@ -84,7 +84,12 @@ class LoreRecordFacadeLiveDbTest {
         List<String> dsParts = t.getList("meta.data_state.part");
         assertTrue(dsParts.containsAll(List.of("questions", "adrs")), "data_state: " + t.getList("meta.data_state"));
         assertTrue(t.getList("meta.data_state.source").contains("version"), "сбой версии тоже должен быть виден");
-        assertTrue(t.getList("meta.data_state.state").stream().allMatch("ok"::equals), "data_state: " + t.getList("meta.data_state"));
+        // S4-29 v3: строки «relation:<ключ>» — вкладки без среза; они «не проверены» на любой базе.
+        List<Map<String, Object>> ds = t.getList("meta.data_state");
+        assertTrue(ds.stream().filter(e -> !String.valueOf(e.get("source")).startsWith("relation:"))
+            .allMatch(e -> "ok".equals(e.get("state"))), "data_state: " + ds);
+        assertTrue(ds.stream().anyMatch(e -> "relation:refsOut".equals(e.get("source")) && "error".equals(e.get("state"))),
+            "вкладка без среза названа непроверенной: " + ds);
 
         admin().body("{\"adr_id\":\"ADR-REC-1\",\"name\":\"проба\",\"status\":\"proposed\",\"context_md\":\"к\",\"decision_md\":\"р\"}")
             .post("/lore/adr").then().statusCode(200);
