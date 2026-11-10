@@ -64,6 +64,46 @@ class LoreCanvasTest {
             "тип ребра — идентификатор в верхнем регистре");
     }
 
+    /** S7C-05: стрелка между привязанными стикерами — ребро графа из каталога S2-06. */
+    @Test
+    void arrowBetweenBoundStickersIsATypedGraphEdge() {
+        LoreCanvas.GraphPlan ok = LoreCanvas.graphPlan("task", "adr", "JUSTIFIED_BY");
+        assertNull(ok.error(), ok.error());
+        assertFalse(ok.drawing());
+        assertEquals("KnowTask", ok.from().vertexClass());
+        assertEquals("KnowADR", ok.to().vertexClass());
+        assertEquals("JUSTIFIED_BY", ok.edge());
+
+        LoreCanvas.GraphPlan vp = LoreCanvas.graphPlan("use_case", "pain", "RELIEVES");
+        assertNull(vp.error(), "VP-канва: сценарий снимает боль — " + vp.error());
+
+        LoreCanvas.GraphPlan fallback = LoreCanvas.graphPlan("adr", "task", "REFERENCES");
+        assertNull(fallback.error(), "REFERENCES — запасной для любой пары каталога");
+    }
+
+    @Test
+    void arrowWithAnUnboundEndStaysADrawing() {
+        assertTrue(LoreCanvas.graphPlan(null, "adr", "RELIEVES").drawing());
+        assertTrue(LoreCanvas.graphPlan("task", null, "ANYTHING").drawing());
+        assertTrue(LoreCanvas.graphPlan(null, null, "X").drawing());
+    }
+
+    @Test
+    void boundArrowWithAWrongTypeOrDirectionIsRefused() {
+        String wrongType = LoreCanvas.graphPlan("task", "adr", "RELIEVES").error();
+        assertTrue(wrongType != null && wrongType.contains("JUSTIFIED_BY"),
+            "отказ называет, что допустимо: " + wrongType);
+        assertNotNull(LoreCanvas.graphPlan("adr", "task", "JUSTIFIED_BY").error(),
+            "направление ребра не разворачивается молча");
+        String unknown = LoreCanvas.graphPlan("feature", "adr", "REFERENCES").error();
+        assertTrue(unknown != null && unknown.contains("feature"), "неизвестный тип привязки: " + unknown);
+    }
+
+    @Test
+    void canvasRefNamesTheArrow() {
+        assertEquals("cv-1/l1", LoreCanvas.canvasRef("cv-1", "l1"));
+    }
+
     @Test
     void batchHasACeiling() {
         assertTrue(LoreCanvas.BATCH_MAX >= 100, "типичный холст (≤100 стикеров) сохраняется одним вызовом");
