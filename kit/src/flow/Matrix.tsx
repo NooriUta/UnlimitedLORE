@@ -35,7 +35,17 @@ export type MatrixCellState =
   | { state: 'value'; value: string }
   | { state: 'none' }
   | { state: 'unverified'; reason?: string }
-  | { state: 'forbidden'; reason?: string };
+  | { state: 'forbidden'; reason?: string }
+  /**
+   * Источник НЕ СПРАШИВАЛИ — это наш выбор, а не отказ источника.
+   *
+   * Отдельно от «не смогли проверить» потому, что человек делает по ним разное:
+   * увидев сбой, идут чинить связь с источником; увидев «не спрашивали» —
+   * понимают, что чинить нечего, а надо включить источник. Приложение знает,
+   * кого спрашивали, и говорит это ЗНАЧЕНИЕМ; гадать по перечню источников kit
+   * не станет — перечень предметный (K-14).
+   */
+  | { state: 'unasked'; reason?: string };
 
 /** Значение из палитры: код и подпись (подписи знает приложение). */
 export interface MatrixOption { value: string; title: string }
@@ -106,7 +116,9 @@ export function Matrix({ rows, cols, cell, options, labels, onPropose, narrow: n
   function say(c: MatrixCellState): string {
     if (c.state === 'value') return title(options, c.value);
     if (c.state === 'none') return kitT(lang, 'kit.matrix.cell.none');
-    const base = kitT(lang, c.state === 'forbidden' ? 'kit.matrix.cell.forbidden' : 'kit.matrix.cell.unverified');
+    const base = kitT(lang, c.state === 'forbidden'
+      ? 'kit.matrix.cell.forbidden'
+      : c.state === 'unasked' ? 'kit.matrix.cell.unasked' : 'kit.matrix.cell.unverified');
     return c.reason ? `${base}: ${c.reason}` : base;
   }
 
@@ -181,7 +193,11 @@ export function Matrix({ rows, cols, cell, options, labels, onPropose, narrow: n
       >
         {c.state === 'value'
           ? <span className="sk-matrix__chip">{title(options, c.value)}</span>
-          : <span className="sk-matrix__mark">{c.state === 'none' ? '—' : c.state === 'unverified' ? '?' : '×'}</span>}
+          : (
+            <span className="sk-matrix__mark">
+              {c.state === 'none' ? '—' : c.state === 'unverified' ? '?' : c.state === 'unasked' ? '○' : '×'}
+            </span>
+          )}
       </button>
     );
   }

@@ -2,10 +2,12 @@
 // (в Tab-порядке только выбранная), стрелки по кругу с пропуском выключенных,
 // Home/End, автоматическая активация. Значение — управляемое: состояние
 // вкладки живёт в URL у экрана, а не внутри компонента.
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
 import { kitT, useKitLang, type KitLang } from '../i18n';
+import { Popover } from './Popover';
+import { TAB_ROW_MAX, foldRow } from './tabRow';
 
 export interface TabItem {
   id: string;
@@ -34,15 +36,32 @@ export interface TabItem {
    * Редкая вкладка: в ряду не показывается, живёт под свёрткой «Ещё» (S4-29).
    *
    * Повод — владелица 09.11: «зависимости и прочее можно скрыть под море…
-   * интерфейс становится перегруженным». КАКИЕ вкладки редкие, решает
-   * приложение (у LORE — умолчание модели плюс личная настройка); kit получает
-   * готовый признак и только выбирает, рисовать в ряд или под свёртку.
+   * интерфейс становится перегруженным». Это ЛИЧНЫЙ выбор человека («мне это в
+   * ряду не нужно»), который приносит приложение, и он действует даже когда
+   * места вдоволь.
+   *
+   * Не путать с потолком ряда: «что не влезло» kit считает сам (`TAB_ROW_MAX`,
+   * ширина) и признака для этого не требует. Раньше его присылала модель
+   * (`slot: more`) — это было решение о чужом экране вслепую, и в паспортах v3
+   * (10.11.2026) оно отсюда ушло.
    *
    * Выбранная вкладка показывается в ряду ВСЕГДА, даже с этим признаком:
    * спрятать то, что человек сейчас читает, хуже перегруженности.
    */
   secondary?: boolean;
 }
+
+/**
+ * На сколько ширина должна измениться, чтобы ряд пересчитал «что влезло».
+ *
+ * Гаситель дрожи, а не вкусовщина. Убрав вкладку, ряд становится ниже на
+ * строку; страница иногда теряет от этого вертикальную полосу прокрутки,
+ * ширина подрастает на её толщину (~15–17 px), и без порога ряд начал бы
+ * мигать: убрал вкладку → стало шире → вернул → снова узко. Порог заведомо
+ * больше толщины полосы, но меньше любого чипа, поэтому настоящее изменение
+ * раскладки по-прежнему пересчитывается.
+ */
+const REPROBE_PX = 24;
 
 export interface TabsProps {
   items: readonly TabItem[];
@@ -84,19 +103,65 @@ export function Tabs({ items, value, onChange, label, children, className, varia
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const hasPanel = children !== undefined;
   const panelId = `${base}-panel`;
+  const popId = `${base}-more`;
   const tabId = (id: string) => `${base}-tab-${id}`;
   const [moreOpen, setMoreOpen] = useState(false);
 
-  // Редкие вкладки (S4-29). Выбранная остаётся в ряду даже будучи редкой:
-  // иначе человек читает раздел, которого не видит в навигации.
-  const folded = items.filter(i => i.secondary && i.id !== value);
-  const shown = items.filter(i => !folded.includes(i));
+  // Сколько вкладок влезло ПО ШИРИНЕ. Начинаем с потолка и укорачиваем ряд,
+  // пока он не перестанет переноситься на вторую строку (см. эффекты ниже).
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [fits, setFits] = useState(TAB_ROW_MAX);
+  // Состав ряда поменялся — мерить заново с потолка: у новой записи и вкладки
+  // другие, и подписи другой длины.
+  const ids = items.map(i => i.id).join('\u0000');
+
+  // Что в ряду, а что под «Ещё» (shell/tabRow.ts: потолок, уход с конца,
+  // выбранная не прячется). Правило живёт отдельной чистой функцией, потому что
+  // в jsdom его иначе не проверить: раскладку он не считает, и «влезло» там
+  // всегда равно потолку.
+  const { shown, folded } = foldRow(items, value, fits);
   // Клавиатура ряда ходит по ВИДИМЫМ вкладкам: стрелка не должна прыгать в
   // спрятанное — там её не видно, и фокус пропадает «в никуда».
   const enabled = shown.filter(i => !i.disabled);
   // Значение вне списка — в Tab-порядок попадает первая доступная вкладка,
   // иначе группа становится недостижимой с клавиатуры.
   const focusId = enabled.some(i => i.id === value) ? value : enabled[0]?.id;
+
+  useEffect(() => { setFits(TAB_ROW_MAX); }, [ids]);
+
+  // Ширина окна/зоны изменилась — мерить заново. Следим ТОЛЬКО за шириной:
+  // высота ряда меняется от наших же правок, и реакция на неё дала бы петлю.
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let last = el.clientWidth;
+    const ro = new ResizeObserver(entries => {
+      const w = Math.round(entries[0].contentRect.width);
+      if (Math.abs(w - last) < REPROBE_PX) return;
+      last = w;
+      setFits(TAB_ROW_MAX);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Усадка: ряд перенёсся на вторую строку — значит последняя вкладка не влезла.
+  //
+  // Перенос, а не горизонтальное переполнение: ряд объявлен `flex-wrap: wrap`,
+  // поэтому лишний чип уезжает ВНИЗ, и `scrollWidth` о нём молчит. Отличаем по
+  // `offsetTop`: у всех детей он одинаков, пока строка одна.
+  //
+  // Шаг — ровно одна ВИДИМАЯ вкладка (`shown.length - 1`), а не «fits - 1»:
+  // иначе при четырёх вкладках и потолке семь первые три прохода не меняли бы
+  // ничего. Усадка только вниз и только до одной вкладки, поэтому петли нет.
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el || shown.length <= 1) return;
+    const kids = Array.from(el.children) as HTMLElement[];
+    if (kids.length < 2) return;
+    const top = kids[0].offsetTop;
+    if (kids.some(k => k.offsetTop > top)) setFits(Math.max(1, shown.length - 1));
+  });
 
   function go(id: string | undefined) {
     if (!id) return;
@@ -119,7 +184,7 @@ export function Tabs({ items, value, onChange, label, children, className, varia
 
   return (
     <div className={['sk-tabs-root', className].filter(Boolean).join(' ')}>
-      <div role="tablist" aria-label={label} className={variant === 'underline' ? 'sk-tabs sk-tabs--underline' : 'sk-tabs'}>
+      <div ref={rowRef} role="tablist" aria-label={label} className={variant === 'underline' ? 'sk-tabs sk-tabs--underline' : 'sk-tabs'}>
         {shown.map(item => {
           const selected = item.id === value;
           return (
@@ -157,39 +222,65 @@ export function Tabs({ items, value, onChange, label, children, className, varia
           // открывать.
           <span className="sk-tabs__more" role="presentation">
             {/*
-              Свёртка живёт ВНУТРИ ряда вкладок, поэтому у неё роль вкладки с
-              всплывающим меню (`role="tab"` + `aria-haspopup="menu"`; ARIA
-              допускает вкладку, открывающую меню). Пока это была обычная
+              КНОПКА свёртки живёт ВНУТРИ ряда вкладок, поэтому у неё роль
+              вкладки с всплывающим меню (`role="tab"` + `aria-haspopup="menu"`;
+              ARIA допускает вкладку, открывающую меню). Пока это была обычная
               кнопка, role="tablist" содержал чужого ребёнка, и axe справедливо
               валил правило aria-required-children — найдено этой же правкой,
               когда сворачивание наконец начало срабатывать: до него свёртка в
               ряду просто не появлялась.
               Выбранной такая «вкладка» не бывает: выбранный раздел ряд
               показывает всегда, даже будучи редким.
+              САМО МЕНЮ в ряду не лежит — оно ниже, сиблингом (см. там же).
             */}
             <button type="button" className="sk-tab sk-tabs__more-btn"
               role="tab" aria-selected={false}
               aria-expanded={moreOpen} aria-haspopup="menu"
+              // Связь с всплывашкой названа: по ней же общий поповер узнаёт
+              // СВОЙ открыватель и не считает щелчок по нему «щелчком вне».
+              aria-controls={moreOpen ? popId : undefined}
               onClick={() => setMoreOpen(v => !v)}>
               <span>{kitT(lang, 'kit.tabs.more')}</span>
               <span className="sk-tab__count">{folded.length}</span>
             </button>
-            {moreOpen && (
-              <div role="menu" aria-label={kitT(lang, 'kit.tabs.more')} className="sk-tabs__more-pop"
-                onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setMoreOpen(false); } }}>
-                {folded.map(item => (
-                  <button key={item.id} type="button" role="menuitem" className="sk-tabs__more-item"
-                    onClick={() => { setMoreOpen(false); go(item.id); }}>
-                    {item.icon && <GameIcon slug={item.icon} size={13} />}
-                    <span>{item.label}</span>
-                    <TabCount count={item.count} lang={lang} />
-                  </button>
-                ))}
-              </div>
-            )}
           </span>
         )}
       </div>
+      {/*
+        САМО МЕНЮ — РЯДОМ С РЯДОМ, А НЕ ВНУТРИ НЕГО (S4-MENU-STATES).
+
+        Находка этой правки: прежняя всплывашка лежала внутри role="tablist", и
+        axe валил `aria-required-children` — ряд вкладок обязан содержать
+        только вкладки, а role="menu" там чужой. Это вторая половина той же
+        ошибки, что B13 нашёл у КНОПКИ свёртки: тогда из ряда убрали чужую
+        роль у открывателя, а чужую роль у всплывашки не заметили, потому что
+        axe её не проверяли открытой. Теперь проверяют (popoverCommon.test).
+
+        Почему сиблингом ряда, а не в обёртке вокруг ряда: `role="tablist"`
+        обязан остаться прямым ребёнком корня Tabs — на это стоят и запись
+        (`.sk-rec__tabs > .sk-tabs`, липкий ряд записи), и её тест. Поповер
+        абсолютный и БЕЗ `top`: его статическое место в потоке — сразу под
+        рядом, то есть ровно там, где он и рисовался.
+      */}
+      {moreOpen && folded.length > 0 && (
+        <Popover
+          id={popId}
+          role="menu"
+          label={kitT(lang, 'kit.tabs.more')}
+          align="under"
+          className="sk-tabs__more-pop"
+          onClose={() => setMoreOpen(false)}
+        >
+          {folded.map(item => (
+            <button key={item.id} type="button" role="menuitem" className="sk-tabs__more-item"
+              onClick={() => { setMoreOpen(false); go(item.id); }}>
+              {item.icon && <GameIcon slug={item.icon} size={13} />}
+              <span>{item.label}</span>
+              <TabCount count={item.count} lang={lang} />
+            </button>
+          ))}
+        </Popover>
+      )}
       {hasPanel && (
         <div role="tabpanel" id={panelId} aria-labelledby={tabId(value)} tabIndex={0} className="sk-tabpanel">
           {children}

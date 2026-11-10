@@ -43,7 +43,7 @@ export function loreTeamViews(lang: KitLang): KitSavedListView[] {
   return [
     team('team-sprints-by-status', 'sprints', 'views.team.sprintsByStatus', q({ group: 'status', sort: { key: 'updated_at', dir: 'desc' } }), true),
     team('team-sprints-active', 'sprints', 'views.team.sprintsActive', q({ quick: 'active', sort: { key: 'updated_at', dir: 'desc' } })),
-    team('team-adrs-by-status', 'adrs', 'views.team.adrsByStatus', q({ group: 'status' }), true),
+    team('team-adrs-by-status', 'adrs', 'views.team.adrsByStatus', q({ group: 'status', sort: { key: 'updated_at', dir: 'desc' } }), true),
     team('team-adrs-proposed', 'adrs', 'views.team.adrsProposed', q({ quick: 'proposed', sort: { key: 'updated_at', dir: 'desc' } })),
   ];
 }

@@ -754,6 +754,8 @@ public class LoreMeResource extends LoreResourceBase {
             if (row != null && merged.equals(stored)) {
                 Map<String, Object> out = settingsOut(row);
                 out.put("outcome", LoreOutcome.UNCHANGED);
+                List<String> clamped = LoreMePrefs.clampNotes(req.settings());
+                if (!clamped.isEmpty()) out.put("notes", clamped);
                 return noStore(Response.ok(out));
             }
             Map<String, Object> p = new HashMap<>();
@@ -785,6 +787,9 @@ public class LoreMeResource extends LoreResourceBase {
             if (n == 0) return conflict("настройки изменены в другом месте одновременно с этой правкой", settingsOut(after));
             Map<String, Object> out = settingsOut(after);
             out.put("outcome", row == null ? LoreOutcome.CREATED : LoreOutcome.UPDATED);
+            // S4-16: значение вне границ прижато к краю — сказать об этом, а не сохранить молча другое
+            List<String> clamped = LoreMePrefs.clampNotes(req.settings());
+            if (!clamped.isEmpty()) out.put("notes", clamped);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             return upstream("settings save", e);

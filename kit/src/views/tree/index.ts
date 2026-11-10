@@ -5,3 +5,9 @@ export {
   type TreeFilterResult, type TreeModel, type TreeNode, type TreeRow, type TreeSpec, type VerdictRollup,
 } from './treeModel';
 export { TREE_FIXTURE, TREE_FIXTURE_CONFIG, fixtureVerdict } from './fixture';
+// Иерархия таблицей: одинаковые столбцы на всех уровнях, пропущенный уровень
+// не меняет разметку (S4-TREE-NESTED).
+export {
+  TreeTable, treeTableLines,
+  type TreeFlatRow, type TreeLevel, type TreeLevelState, type TreeTableLine, type TreeTableProps,
+} from './TreeTable';

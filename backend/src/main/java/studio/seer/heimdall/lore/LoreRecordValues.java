@@ -392,4 +392,99 @@ final class LoreRecordValues {
         for (String id : ids) out.add(link(rel, dir, id, type, id, null));
         return out;
     }
+
+    /**
+     * Вкладки связей, которые фасад наполняет ОТДЕЛЬНЫМ срезом (не из строки основного):
+     * ключ связи → срез. Состояние каждого чтения уходит в {@code meta.data_state}.
+     */
+    static final Map<String, Map<String, String>> READ_BY_SLICE = Map.of(
+        "task", Map.of("adrs", "adrs_of_task", "gates", "gating_questions_of_task"),
+        "release", Map.of("sprints", "release_sprints", "prs", "release_prs"));
+
+    /**
+     * Вкладки связей, которые фасад пока НЕ читает — среза нет. Без этого списка такая вкладка
+     * показала бы «0 — пусто (проверено)», не проверив ничего. По каждой фасад пишет в
+     * {@code meta.data_state} строку {@code state: error} с причиной: «не смогли проверить» ≠ «пусто».
+     */
+    static final Map<String, java.util.Set<String>> UNREAD_LINK_TABS = Map.of(
+        "task", java.util.Set.of("qgRecs", "insights", "refsOut", "refsIn", "publications"),
+        "adr", java.util.Set.of("runbooks", "refsOut", "refsIn", "insights"),
+        "spec", java.util.Set.of("refsOut", "refsIn"));
+
+    /** Строки {@code meta.data_state} для вкладок без среза — форма та же, что у прочитанных источников. */
+    static List<Map<String, Object>> unreadState(String type) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        java.util.Set<String> keys = UNREAD_LINK_TABS.getOrDefault(type, java.util.Set.of());
+        for (String k : new java.util.TreeSet<>(keys)) {
+            Map<String, Object> e = new LinkedHashMap<>();
+            e.put("source", "relation:" + k);
+            e.put("part", k);
+            e.put("state", "error");
+            e.put("reason", "связь не читается фасадом: среза нет — «0» здесь не проверен");
+            out.add(e);
+        }
+        return out;
+    }
+
+    /** Префикс ключа паспорта технологии: технология — спека SPEC-TECH-&lt;КОМПОНЕНТ&gt;-&lt;ТЕХ&gt;. */
+    static final String TECH_SPEC_PREFIX = "SPEC-TECH-";
+
+    /**
+     * Связи {@code links[]}, которые читаются из строки основного среза записи (без отдельных
+     * запросов). Пустой список здесь — «проверено, связей нет»: основной срез прочитан.
+     * S4-29 v3: вкладки связей решения, вопроса, вехи, компонента, фичи и «блокирует» у ADR.
+     */
+    static List<Map<String, Object>> rowLinks(String type, Map<String, Object> row) {
+        List<Map<String, Object>> l = new ArrayList<>();
+        switch (type) {
+            case "sprint" -> {
+                l.addAll(links("DEPENDS_ON", "out", "sprint", arr(row.get("depends_on"))));
+                l.addAll(links("DEPENDS_ON", "in", "sprint", arr(row.get("blocks"))));
+                l.addAll(links("IMPLEMENTED_IN", "in", "adr", arr(row.get("adr_ids"))));
+            }
+            case "task" -> {
+                l.addAll(links("CLOSED_BY", "out", "pr", arr(row.get("closed_by_prs"))));
+                l.addAll(links("REALIZES", "out", "use_case", arr(row.get("realizes_uc"))));
+            }
+            case "adr" -> {
+                l.addAll(links("DEPENDS_ON", "out", "adr", arr(row.get("depends_on_ids"))));
+                l.addAll(links("DEPENDS_ON", "in", "adr", arr(row.get("blocks_ids"))));
+                l.addAll(links("SUPERSEDES", "out", "adr", arr(row.get("supersedes_ids"))));
+                l.addAll(links("SUPERSEDES", "in", "adr", arr(row.get("superseded_by_ids"))));
+                l.addAll(links("IMPLEMENTED_IN", "out", "sprint", arr(row.get("implemented_in_ids"))));
+                l.addAll(links("IMPLEMENTED_IN_RELEASE", "out", "release", arr(row.get("release_ids"))));
+                l.addAll(links("JUSTIFIED_BY", "in", "task", arr(row.get("justified_task_uids"))));
+                l.addAll(links("TRACED_TO", "in", "use_case", arr(row.get("traced_by_ucs"))));
+            }
+            case "decision" -> {
+                l.addAll(links("SUPERSEDES", "out", "decision", arr(row.get("supersedes_ids"))));
+                l.addAll(links("ANSWERS", "out", "question", arr(row.get("answers_ids"))));
+            }
+            case "question" -> {
+                l.addAll(links("ANSWERS", "in", "decision", arr(row.get("answered_by"))));
+                l.addAll(links("GATES", "out", "task", arr(row.get("gating_tasks"))));
+            }
+            case "milestone" -> l.addAll(links("TARGETS_MILESTONE", "in", "sprint", arr(row.get("direct_sprint_ids"))));
+            case "component" -> {
+                // Технология — это спека SPEC-TECH-…: тип tech, чтобы щелчок открыл паспорт технологии.
+                for (String s : arr(row.get("specs")))
+                    l.add(link("DOCUMENTED_IN", "out", s, s.startsWith(TECH_SPEC_PREFIX) ? "tech" : "spec", s, null));
+                l.addAll(links("BELONGS_TO", "in", "adr", arr(row.get("adrs"))));
+                // out('USES').tech_id — НЕ ключ паспорта (тот — spec_id SPEC-TECH-…): тип tech_ref,
+                // чтобы клиент не открыл по нему чужую запись.
+                l.addAll(links("USES", "out", "tech_ref", arr(row.get("tech"))));
+                l.addAll(links("PARENT_OF", "in", "component", arr(row.get("sub_components"))));
+            }
+            case "feature" -> {
+                l.addAll(links("DECOMPOSES_INTO", "out", "feature", arr(row.get("child_uc_ids"))));
+                l.addAll(links("REALIZES", "in", "task", arr(row.get("task_uids"))));
+                l.addAll(links("HAS_ACTOR", "out", "actor", arr(row.get("actor_ids"))));
+                l.addAll(links("ADDRESSES", "out", "pain", arr(row.get("pain_ids"))));
+                l.addAll(links("PROMISES", "out", "gain", arr(row.get("gain_ids"))));
+                l.addAll(links("HELPS_WITH", "out", "job", arr(row.get("job_ids"))));
+            }
+            default -> { }
+        }
+        return l;
+    }
 }

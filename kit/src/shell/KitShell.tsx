@@ -30,6 +30,7 @@ import { pushUrlState, readUrlState, sectionScopedPatch, urlStateHref } from '..
 import type { UrlWindow } from '../resilience/urlState';
 import { Sheet } from './Sheet';
 import { Ear } from './Ear';
+import { Popover } from './Popover';
 import { ResizeBorder, zoneSize } from './ResizeBorder';
 
 /** Где пользователь: модуль, пункт меню, вид пункта. */
@@ -853,26 +854,16 @@ function ShellMenu({
  * Слова владелицы 09.11.2026 с прода: «недавние должны быть кнопкой с меню, а
  * не кучей непонятных значков».
  *
- * Своё маленькое всплывающее меню, а не общий элемент: в kit их уже три
- * (палитра статусов, «Ещё» у вкладок, и это), и общий поповер стоит завести
- * отдельно — но ЗАВОДИТЬ его попутно с правкой по жалобе значило бы переписать
- * три рабочих места ради четвёртого. Записано в задачу меню как долг.
+ * Оболочка всплывашки — общий Popover (S4-MENU-STATES, долг закрыт): Esc,
+ * щелчок вне, ловушка фокуса, возврат фокуса на кнопку рейки, стрелки и край
+ * экрана живут там, одним правилом на все три меню kit. Своей копии Esc и
+ * щелчка-мимо здесь больше нет; ловушки фокуса и стрелок тут не было вовсе.
  */
 function RailMenu({ title, icon, children }: { title: string; icon: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-  // Esc закрывает, щелчок мимо — тоже: меню, которое не закрывается, ловит
-  // клавиатуру и мышь на себя (находка P0 аудита навигации 08.11 про Esc).
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setOpen(false); } };
-    const onDown = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('mousedown', onDown);
-    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
-  }, [open]);
+  const popId = `${useId()}-railmenu`;
   return (
-    <div className="sk-shell__railmenu" ref={box}>
+    <div className="sk-shell__railmenu">
       <button
         type="button"
         className="sk-shell__item sk-shell__railmenu-btn"
@@ -880,6 +871,10 @@ function RailMenu({ title, icon, children }: { title: string; icon: string; chil
         title={title}
         aria-expanded={open}
         aria-haspopup="menu"
+        // Связь названа: по ней общий поповер узнаёт СВОЙ открыватель и не
+        // считает щелчок по нему «щелчком вне» (иначе кнопка-переключатель
+        // закрывала бы меню по mousedown и тут же открывала по click).
+        aria-controls={open ? popId : undefined}
         onClick={() => setOpen(o => !o)}
       >
         <GameIcon slug={icon} size={14} />
@@ -889,15 +884,19 @@ function RailMenu({ title, icon, children }: { title: string; icon: string; chil
         // ARIA обязано содержать menuitem. Объявить меню и положить внутрь
         // ссылки значит соврать скринридеру о том, что это за элемент — и
         // отнять у ссылок их поведение (новая вкладка, копировать адрес).
-        <div
-          className="sk-shell__railmenu-pop"
+        // Поэтому и стрелки тут ходят по фокусируемому, а не по menuitem.
+        <Popover
+          id={popId}
           role="group"
-          aria-label={title}
-          onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
+          label={title}
+          align="side"
+          walk="focusable"
+          className="sk-shell__railmenu-pop"
+          onClose={() => setOpen(false)}
         >
           <p className="sk-shell__railmenu-head">{title}</p>
           <div className="sk-shell__railmenu-body" onClick={() => setOpen(false)}>{children}</div>
-        </div>
+        </Popover>
       )}
     </div>
   );

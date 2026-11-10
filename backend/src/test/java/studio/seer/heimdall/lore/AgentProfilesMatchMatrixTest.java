@@ -43,7 +43,36 @@ class AgentProfilesMatchMatrixTest {
 
     /** Читающие инструменты — сервер GET не скоупит, в реестре записей их нет. */
     private static final Set<String> READ_TOOLS = Set.of(
-        "list_slices", "query_slice", "search", "search_similar", "metric_get", "bragi_search");
+        "list_slices", "query_slice", "run_block", "search", "search_similar", "metric_get", "bragi_search");
+
+    /**
+     * Чтение графа — у КАЖДОГО профиля (README профилей: «reading the graph never needs
+     * restricting»). S6-08: run_block (PR #1086) и поиск search/search_similar в профили
+     * не попали — агент OpenCode видел срез, но не мог выполнить блок записи или найти её.
+     * Все пять — GET (/lore/slice, /lore/search), агентный фильтр их не скоупит.
+     */
+    static final List<String> GRAPH_READ_TOOLS = List.of(
+        "list_slices", "query_slice", "run_block", "search", "search_similar");
+
+    @Test
+    void everyProfileReadsTheGraph() throws IOException {
+        JsonObject contract = new JsonObject(Files.readString(
+            profilesDir().resolveSibling("src").resolve("tools").resolve("contract.snapshot.json"), StandardCharsets.UTF_8));
+        List<String> v = new ArrayList<>();
+        for (String tool : GRAPH_READ_TOOLS)
+            if (!contract.containsKey(tool)) v.add("инструмента '" + tool + "' нет в контракте MCP");
+        try (Stream<Path> s = Files.list(profilesDir())) {
+            for (Path f : s.filter(p -> p.toString().endsWith(".json")).sorted().toList()) {
+                String name = f.getFileName().toString().replace(".json", "");
+                if (name.equals("tool-paths")) continue;
+                JsonObject perm = new JsonObject(Files.readString(f, StandardCharsets.UTF_8)).getJsonObject("permission");
+                if ("allow".equals(perm.getString("*"))) continue;   // full
+                for (String tool : GRAPH_READ_TOOLS)
+                    if (!"allow".equals(perm.getString(tool))) v.add(name + ": нет '" + tool + "'");
+            }
+        }
+        assertEquals(List.of(), v, "читающие инструменты графа обязаны быть в каждом профиле");
+    }
 
     private static Path profilesDir() {
         for (String c : new String[]{"../mcp-server/agent-profiles", "mcp-server/agent-profiles"}) {

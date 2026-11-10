@@ -19,13 +19,17 @@
 // правилом, что в контракте (changedFields). Выдумывать значения полей, чтобы
 // «был дифф», нельзя: сравнение показывало бы несуществующие правки.
 import { HISTORY_TYPES, changedFields } from '../api/contracts/s2';
-import type { KitHistory, KitHistoryAuthor, KitHistoryVersion } from '@seidr/kit';
+import type { KitHistory, KitHistoryAuthor, KitHistoryRun, KitHistoryVersion } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 
 /** Служебные поля строки: в снимок полей версии не идут. */
 const SERVICE = new Set([
   'entity_type', 'hist_type', 'ref_id', 'state_uid', 'valid_from', 'valid_to',
   'changed_by', 'changed_by_kind', 'author', 'projects', 'projects_via',
+  // Пометка свёрнутой серии (S9-09) — метаданные выдачи, а не поле версии:
+  // попади она в снимок, сравнение версий показывало бы правку поля
+  // «collapsed», которой не было.
+  'collapsed',
 ]);
 
 export interface HistoryQueryOpts {
@@ -37,6 +41,17 @@ export interface HistoryQueryOpts {
   author_kind?: 'human' | 'agent';
   /** Только смены статуса или только правки содержимого. */
   field?: 'status' | 'content';
+  /**
+   * Только правки этого автора — его идентификатор вызывающего (S9-09, PR
+   * #1083). Можно вместе с `author_kind`: на сервере это условие «И».
+   */
+  author?: string;
+  /**
+   * Свернуть подряд идущие правки одного агента в одну строку (последняя
+   * версия серии, с `collapsed`). Свёртка идёт ДО страницы, поэтому
+   * `page.total` и `has_more` честны по свёрнутым строкам.
+   */
+  collapse?: 'agent';
 }
 
 export class HistoryForbidden extends Error {}
@@ -53,6 +68,18 @@ function authorOf(raw: unknown): KitHistoryAuthor {
   return { kind: 'unknown' };
 }
 
+/** Пометка свёрнутой серии, как её отдаёт сервер. Нет — строка не свёрнута. */
+function runOf(raw: unknown): KitHistoryRun | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.count !== 'number') return null;
+  return {
+    count: r.count,
+    first_state_uid: typeof r.first_state_uid === 'string' ? r.first_state_uid : null,
+    first_valid_from: typeof r.first_valid_from === 'string' ? r.first_valid_from : null,
+  };
+}
+
 function versionOf(raw: Record<string, unknown>): KitHistoryVersion {
   const fields: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(raw)) if (!SERVICE.has(k)) fields[k] = v;
@@ -66,6 +93,7 @@ function versionOf(raw: Record<string, unknown>): KitHistoryVersion {
     fields,
     changed: [],
     author: authorOf(raw.author),
+    collapsed: runOf(raw.collapsed),
   };
 }
 
@@ -122,6 +150,10 @@ export function historyFromServer(body: Record<string, unknown>): KitHistory {
         offset: typeof page.offset === 'number' ? page.offset : 0,
         total: typeof page.total === 'number' ? page.total : withChanged.length,
         has_more: page.has_more === true,
+        // Эхо сервера: что он ДЕЙСТВИТЕЛЬНО применил. Эха нет (сервер старее
+        // PR #1083) — null, то есть «не сказал», а не «не применил».
+        author: typeof page.author === 'string' ? page.author : null,
+        collapse: page.collapse === 'agent' ? 'agent' : null,
       }
       : null,
     warnings,
@@ -136,6 +168,11 @@ export async function fetchHistory(
   fetchImpl: typeof fetch = loreFetch,
 ): Promise<KitHistory> {
   const p = new URLSearchParams({ type, id });
+  // Порядок по умолчанию — desc. Сервер без order отдаёт хронологию и режет
+  // страницу С НАЧАЛА, то есть самыми СТАРЫМИ версиями; наш вид фиксирован
+  // «новейшая первой», и такая первая страница показывала бы начало цепочки,
+  // выдавая его за свежее (а текущей версии в ней могло не быть вовсе).
+  if (opts.order === undefined) p.set('order', 'desc');
   for (const [k, v] of Object.entries(opts)) if (v !== undefined) p.set(k, String(v));
   const res = await fetchImpl(`/lore/history?${p.toString()}`);
   let body: Record<string, unknown> = {};

@@ -95,6 +95,8 @@ public class LoreDocResource extends LoreResourceBase {
                         Map.of("id", req.doc_id(), "pid", req.parent_doc_id()))).await().indefinitely();
                 }
             }
+            if (req.content_md_ru() != null || req.content_md_en() != null || req.content_html() != null)
+                versionBody(req.doc_id());
             hashStamper.stampOpenHist("KnowDocHist", "KnowDoc", "doc_id", req.doc_id());
             // NM-03 (ADR-LORE-041): поле component_id писалось, ребро — нет.
             // 112 доков на проде связаны с компонентом ТОЛЬКО полем; ответ при
@@ -105,11 +107,73 @@ public class LoreDocResource extends LoreResourceBase {
             out.put("doc_id", req.doc_id());
             linkComponentEdge("KnowDoc", "doc_id", req.doc_id(), req.component_id(), out);
             return noStore(Response.ok(out));
+        } catch (Scd2Guard.ConflictException c) {
+            return c.response();
         } catch (Exception e) {
             LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }
+    }
+
+    /**
+     * Тело версии дока — то, что показывает читатель: ru, иначе en, иначе легаси
+     * content_md. HTML-тело в MD-версию не кладём: версия у HTML-дока не заводится.
+     */
+    static String versionBodyOf(Object ru, Object en, Object legacy) {
+        for (Object v : new Object[]{ru, en, legacy})
+            if (v != null && !String.valueOf(v).isBlank()) return String.valueOf(v);
+        return null;
+    }
+
+    /**
+     * S7B-06: версия SCD2 дока по его ТЕКУЩЕМУ телу (после UPDATE вершины).
+     * Тело совпало с открытой версией — ничего не пишется (повтор doc_new или
+     * правка метаданных версию не множат). Тело другое — открытая версия
+     * закрывается и открывается новая, тем же сторожем, что у спеки (Scd2Guard);
+     * версии нет — открывается первая. До правки запись дока версий не заводила
+     * вовсе, и история доков была пуста.
+     */
+    @SuppressWarnings("unchecked")
+    private void versionBody(String id) {
+        List<Map<String, Object>> cur = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+            new LoreCommandClient.LoreCommand("sql",
+                "SELECT content_md_ru, content_md_en, content_md FROM KnowDoc WHERE doc_id = :id",
+                Map.of("id", id))).await().indefinitely().result();
+        if (cur == null || cur.isEmpty()) return;
+        String body = versionBodyOf(cur.get(0).get("content_md_ru"), cur.get(0).get("content_md_en"),
+            cur.get(0).get("content_md"));
+        if (body == null) return;
+        List<Map<String, Object>> open = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+            new LoreCommandClient.LoreCommand("sql",
+                "SELECT @rid AS rid, content_md FROM KnowDocHist "
+                + "WHERE in('HAS_STATE').doc_id CONTAINS :id AND valid_to IS NULL LIMIT 1",
+                Map.of("id", id))).await().indefinitely().result();
+        boolean hasOpen = open != null && !open.isEmpty();
+        if (hasOpen && body.equals(open.get(0).get("content_md"))) return;
+        Map<String, Object> hp = new java.util.HashMap<>();
+        hp.put("id", id);
+        hp.put("nsid", UUID.randomUUID().toString());
+        hp.put("now", Instant.now().toString());
+        hp.put("content", body);
+        changeAuthor().bind(hp);
+        String guard;
+        if (hasOpen) {
+            hp.put("oldrid", open.get(0).get("rid"));
+            guard = Scd2Guard.guardedClose("KnowDocHist", false);
+        } else {
+            guard = Scd2Guard.guardedNoOpen("KnowDocHist", "doc_id", "id");
+        }
+        Object res = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+            guard
+            + "INSERT INTO KnowDocHist SET doc_id=:id, state_uid=:nsid, valid_from=:now, content_md=:content"
+            + ChangeAuthor.SET_SQL + ";"
+            + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDoc WHERE doc_id=:id) "
+            + "TO (SELECT FROM KnowDocHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);",
+            hp)).await().indefinitely().result();
+        if (Scd2Guard.isConflict(res))
+            throw new Scd2Guard.ConflictException("doc '" + id
+                + "': the open version read was changed by a concurrent write — re-read and retry", Map.of());
     }
 
     public record DocDeleteRequest(String doc_id) {}

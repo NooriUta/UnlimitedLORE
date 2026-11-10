@@ -1,0 +1,159 @@
+// Опасное действие над ролями человека (SPRINT_UXR_S7B_ADMIN/S7B-03).
+//
+// Путь один для любой правки ролей — одной ячейки, отмеченных проектов или
+// «всей строки» матрицы (правило A прототипа s7b-admin-v6):
+//   1. дифф «было → станет» — сервер считает его сам (dry_run), ничего не пишет;
+//   2. ввод логина человека — не «ОК»: кнопка применения занята, пока логин
+//      не введён точно;
+//   3. применение одной пачкой (batch_id) — итог по каждому проекту, пачка не
+//      атомарна, и частичный отказ назван числами и причинами;
+//   4. «Отменить» — вся пачка одним вызовом (undo_of), пока открыто окно;
+//   5. запись в журнале — ссылка на ту же пачку в «Журнале действий».
+//
+// Элементы — kit2: DiffPreview (дифф с проверкой у каждой строки) и BatchUndo
+// (окно отмены с остатком). Здесь — только что за изменения и куда их слать.
+import { useEffect, useMemo, useState } from 'react';
+import { BatchUndo, DiffPreview, Forbidden, LoadError, Skeleton, setUrlParams, useKitLang, type DiffRow } from '@seidr/kit';
+import { useAppT } from '../i18n';
+import { LoreHttpError } from '../api/loreSlice';
+import {
+  isConfirmed, parseApply, parsePlan, planToDiff, postRoleBatch, type ApplyAnswer, type RoleChange,
+} from './roles';
+
+export interface DangerBatchProps {
+  person: { kc_sub: string; name: string };
+  changes: readonly RoleChange[];
+  fetchImpl?: typeof fetch;
+  onClose: () => void;
+  /** Пачка применена или отменена — матрицу пора перечитать. */
+  onChanged?: () => void;
+}
+
+type PlanState =
+  | { kind: 'loading' }
+  | { kind: 'ok'; rows: DiffRow[] }
+  | { kind: 'forbidden'; reason: string }
+  | { kind: 'bad'; reason: string }
+  | { kind: 'error'; error: unknown };
+
+const reasonOf = (e: unknown): string =>
+  e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e);
+
+export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged }: DangerBatchProps) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const [plan, setPlan] = useState<PlanState>({ kind: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+  const [typed, setTyped] = useState('');
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<ApplyAnswer | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const [undone, setUndone] = useState(false);
+  const [undoError, setUndoError] = useState<string | null>(null);
+  const key = useMemo(() => JSON.stringify(changes), [changes]);
+
+  useEffect(() => {
+    let alive = true;
+    setPlan({ kind: 'loading' });
+    setAnswer(null);
+    setApplyError(null);
+    setUndone(false);
+    setUndoError(null);
+    setTyped('');
+    postRoleBatch({ kc_sub: person.kc_sub, display_name: person.name, changes, dry_run: true }, fetchImpl).then(
+      body => {
+        if (alive) setPlan({ kind: 'ok', rows: planToDiff(parsePlan(body), { before: t('admin.roles.diff.before'), none: t('admin.roles.diff.none') }) });
+      },
+      (e: unknown) => {
+        if (!alive) return;
+        if (e instanceof LoreHttpError && (e.status === 401 || e.status === 403)) setPlan({ kind: 'forbidden', reason: reasonOf(e) });
+        else if (e instanceof LoreHttpError && e.status === 400) setPlan({ kind: 'bad', reason: reasonOf(e) });
+        else setPlan({ kind: 'error', error: e });
+      },
+    );
+    return () => { alive = false; };
+  }, [key, person.kc_sub, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const confirmed = isConfirmed(typed, person.name);
+
+  const apply = (rows: readonly DiffRow[]) => {
+    if (!confirmed || applying) return;
+    // В пачку уходят ТОЛЬКО применимые строки (проверенные и меняющие) — их и отдал дифф.
+    const ids = new Set(rows.map(r => r.id));
+    const send = changes.filter(c => ids.has(c.project));
+    setApplying(true);
+    setApplyError(null);
+    postRoleBatch({ kc_sub: person.kc_sub, display_name: person.name, changes: send }, fetchImpl).then(
+      body => { setAnswer(parseApply(body)); setApplying(false); onChanged?.(); },
+      (e: unknown) => { setApplyError(reasonOf(e)); setApplying(false); },
+    );
+  };
+
+  const undo = (id: string) => {
+    if (!answer || undoing) return;
+    setUndoing(true);
+    setUndoError(null);
+    postRoleBatch({ kc_sub: person.kc_sub, display_name: person.name, changes: answer.undo, undo_of: id }, fetchImpl).then(
+      () => { setUndone(true); setUndoing(false); onChanged?.(); },
+      (e: unknown) => { setUndoError(t('admin.roles.undoFailed', { reason: reasonOf(e) })); setUndoing(false); },
+    );
+  };
+
+  const toJournal = (id: string) => setUrlParams({ adm: 'log', 'adm-batch': id });
+
+  return (
+    <section className="adm-danger" aria-labelledby="adm-danger-h" data-testid="adm-danger">
+      <h3 id="adm-danger-h" className="adm-danger__h">{t('admin.roles.danger.title', { name: person.name })}</h3>
+      {plan.kind === 'loading' && <Skeleton lines={3} label={t('admin.roles.danger.loading')} />}
+      {plan.kind === 'forbidden' && (
+        <div data-testid="adm-danger-forbidden">
+          <Forbidden title={t('admin.roles.danger.forbidden')} hint={t('admin.roles.forbiddenHint')} reason={plan.reason} />
+        </div>
+      )}
+      {plan.kind === 'bad' && (
+        <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-danger-bad">
+          {t('admin.roles.danger.bad', { reason: plan.reason })}
+        </p>
+      )}
+      {plan.kind === 'error' && <LoadError error={plan.error} onRetry={() => setAttempt(a => a + 1)} />}
+      {plan.kind === 'ok' && !answer && (
+        <>
+          <label className="adm-field adm-danger__confirm">
+            <span className="adm-field__l">{t('admin.roles.danger.confirm', { name: person.name })}</span>
+            <input className="adm-input adm-mono" type="text" value={typed} autoComplete="off" spellCheck={false}
+              data-testid="adm-danger-confirm" aria-invalid={typed !== '' && !confirmed ? true : undefined}
+              onChange={e => setTyped(e.target.value)} />
+          </label>
+          {!confirmed && <p className="adm-hint" data-testid="adm-danger-need">{t('admin.roles.danger.need')}</p>}
+          <DiffPreview rows={plan.rows} onApply={apply} busy={!confirmed || applying}
+            label={t('admin.roles.danger.diff')} lang={lang} />
+          {applyError && (
+            <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-danger-applyerror">
+              {t('admin.roles.danger.applyError', { reason: applyError })}
+            </p>
+          )}
+        </>
+      )}
+      {answer && (
+        <>
+          <BatchUndo batch={answer.batch} onUndo={undo} undoing={undoing} undone={undone} undoError={undoError} lang={lang} />
+          {answer.batch.id && (
+            <p className="adm-sub">
+              {t('admin.roles.danger.logged')}{' '}
+              <button type="button" className="adm-link" data-testid="adm-danger-journal" onClick={() => toJournal(answer.batch.id)}>
+                {t('admin.roles.danger.journal')}
+              </button>
+              <span className="adm-mono"> {answer.batch.id}</span>
+            </p>
+          )}
+        </>
+      )}
+      <div className="adm-field--btns adm-danger__btns">
+        <button type="button" className="adm-btn" data-testid="adm-danger-cancel" onClick={onClose}>
+          {answer ? t('admin.roles.danger.done') : t('admin.roles.danger.cancel')}
+        </button>
+      </div>
+    </section>
+  );
+}

@@ -31,3 +31,10 @@ it('блок sk-rec-history* без сырых hex и px-шрифтов; аге�
   expect(rule(".sk-rec-history__author[data-kind='agent']")).toMatch(/var\(--inf\)/);
   expect(rule('.sk-rec-history__cmp')).toMatch(/text-transform:\s*uppercase/);
 });
+
+it('S9-09: фильтры, переключатель свёртки и разворот серии — цели не меньше --tap, серия тоном --inf', () => {
+  expect(rule('.sk-rec-history__toggle')).toMatch(/min-height:\s*max\(var\(--tap\)/);
+  expect(rule('.sk-rec-history__runmore')).toMatch(/min-height:\s*max\(var\(--tap\)/);
+  expect(rule('.sk-rec-history__runpill')).toMatch(/var\(--inf\)/);
+  expect(rule('.sk-rec-history__filters')).toMatch(/flex-wrap:\s*wrap/);
+});
