@@ -464,7 +464,9 @@ public final class LoreSlices {
             // ADR TO старого, поэтому у ЗАМЕНЁННОГО оно входящее и в паспорте не
             // показывалось вовсе. Статус «Заменено» стоял, а чем перекрыт —
             // нигде: цепочка решений обрывалась ровно там, где нужна.
-            "in('SUPERSEDES').adr_id              AS superseded_by_ids " +
+            "in('SUPERSEDES').adr_id              AS superseded_by_ids, " +
+            // S4-29 v3: «блокирует» во вкладке «Связи ADR» — входящий DEPENDS_ON не читался вовсе.
+            "in('DEPENDS_ON').adr_id              AS blocks_ids " +
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -578,7 +580,9 @@ public final class LoreSlices {
             "out('BELONGS_TO').component_id[0] AS component_id, " +
             "out('DECIDED_IN').adr_id[0] AS parent_adr, " +
             "out('TAGGED_WITH').tag_id AS tags, " +
-            "out('SUPERSEDES').decision_id AS supersedes_ids " +
+            "out('SUPERSEDES').decision_id AS supersedes_ids, " +
+            // S4-29 v3 (44а): вкладка «Вопросы» паспорта решения — на какие вопросы оно отвечает.
+            "out('ANSWERS').question_id AS answers_ids " +
             "FROM KnowDecision WHERE decision_id = :id",
             List.of("id"), Map.of(), "");
 
