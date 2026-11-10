@@ -27,7 +27,11 @@ const cfg: KitConfig = {
   ] },
   list: {
     views: ['list', 'board'],
-    quick: [{ id: 'done', title: 'готово', filter: { status: 'done' } }],
+    // «несуществующий» не совпадает ни с одной записью — счётчик 0 (аудит 10.11).
+    quick: [
+      { id: 'done', title: 'готово', filter: { status: 'done' } },
+      { id: 'none', title: 'несуществующий', filter: { status: 'nonexistent' } },
+    ],
     filters: ['status'],
     groupings: ['status'],
     columns: ['title+id', 'status'],
@@ -94,5 +98,24 @@ describe('одна полоса управления над таблицей (п
     const count = btn.querySelector('.sk-list__qcount');
     expect(count?.textContent).toBe('2');
     expect(count?.previousElementSibling?.textContent).toBe('готово');
+  });
+
+  it('чип «Быстро» с нулевым счётчиком не рисуется — «Без версии 0» — шум (аудит 10.11)', () => {
+    const { container } = render(<ListView config={cfg} data={data} urlState={false} />);
+    const quickGroup = screen.getByRole('group', { name: 'Быстро' });
+    expect(within(quickGroup).queryByRole('button', { name: /несуществующий/ })).toBeNull();
+    // Ненулевой при этом на месте — скрываем только нулевые.
+    expect(within(quickGroup).getByRole('button', { name: /готово/ })).toBeTruthy();
+    expect(container.querySelector('.sk-list__quick')).not.toBeNull();
+  });
+
+  it('включённый «Быстро» с нулём виден — иначе фильтр нечем снять (аудит 10.11)', () => {
+    render(<ListView config={cfg} data={data} urlState={false} initial={{ quick: 'none' }} />);
+    const quickGroup = screen.getByRole('group', { name: 'Быстро' });
+    const btn = within(quickGroup).getByRole('button', { name: /несуществующий/ });
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    // Снять его можно: повторный щелчок убирает фильтр, чип исчезает.
+    fireEvent.click(btn);
+    expect(within(quickGroup).queryByRole('button', { name: /несуществующий/ })).toBeNull();
   });
 });

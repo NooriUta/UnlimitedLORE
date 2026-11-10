@@ -28,6 +28,11 @@ export function findRecord(ctx: KitCtx, id: string): KitRecord | undefined {
 
 /** Пилюля статуса по config.statuses; кода нет в конфиге — код виден как есть. */
 export function StatusPill({ code, ctx, unknownTitle }: { code: string; ctx: KitCtx; unknownTitle: string }) {
+  // Пустой код или пустая ось — плашки нет вовсе (B5, аудит 10.11): «—» у типа
+  // без статуса (релиз, компонент, технология) читалось как реальный статус
+  // записи. Те же правила у StatusSlot, пиков и таблицы связей — они зовут эту
+  // плашку напрямую, так что гард здесь закрывает всех.
+  if (!code || !ctx.config.statuses?.items?.length) return null;
   const item = ctx.config.statuses.items.find(s => s.code === code);
   const style = { '--pill-c': item ? toCssColor(item.color) : 'var(--t3)' } as CSSProperties;
   return (

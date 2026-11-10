@@ -472,10 +472,12 @@ public final class LoreSlices {
         // обязан отдавать тела, а не только хэш; иначе история из 200 ревизий тел
         // показывала прочерки. content_hash (SV-10) = дешёвый «менялось ли», тела =
         // «что именно» для пополевого диффа в UI.
+        // B9: WHERE — CONTAINS, не [0] =: у общей версии (S2-11) владелец №2 иначе
+        // получает пустую историю молча — фильтр сравнивался с чужим первым владельцем.
         slice("adr_history",
             "SELECT valid_from, valid_to, content_hash, source_commit, " +
             "context_md, decision_md, consequences_md " +
-            "FROM KnowADRHist WHERE in('HAS_STATE').adr_id[0] = :id ORDER BY valid_from",
+            "FROM KnowADRHist WHERE in('HAS_STATE').adr_id CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
         // AL-113 (запрошено miniLORE 2026-08-16): `adr_history` отдаёт правки
@@ -484,25 +486,33 @@ public final class LoreSlices {
         // сразу по всем, для новостной ленты правок. valid_from — реальная
         // колонка KnowADRHist (ORDER BY по ней надёжен). Тела не тянем — лента
         // показывает факт правки, не диф.
+        // B9: state_owners — число владельцев версии (> 1 — общая версия, S2-11):
+        // id — первый владелец ([0] порядком хранилища не гарантирован), колонка
+        // говорит потребителю, что строка относится не только к нему. Счётчик, не
+        // сравнение: бинарное выражение (size() > 1) в проекции ArcadeDB не парсит.
         slice("adr_history_all",
             "SELECT in('HAS_STATE').adr_id[0] AS adr_id, valid_from, valid_to, " +
             "content_hash, source_commit, " +
             // Проект вершины — событию «изменено» в ленте (см. NewsChangedCarriesProjectTest).
-            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
         // Зеркала adr_history_all для события «изменено» в ленте (ML-NEWS): правки
         // спек и решений — такая же новость, как правка ADR. Свёртку «одна строка
         // на (id, день)» делает потребитель (/news), здесь только сырые ревизии.
+        // B9: state_owners — см. adr_history_all: > 1 — общая версия.
         slice("spec_history_all",
             "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash, " +
-            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
+            "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowSpecHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
         slice("decision_history_all",
-            "SELECT in('HAS_STATE').decision_id[0] AS decision_id, valid_from, valid_to, content_hash " +
+            "SELECT in('HAS_STATE').decision_id[0] AS decision_id, valid_from, valid_to, content_hash, " +
+            "in('HAS_STATE').size() AS state_owners " +
             "FROM KnowDecisionHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
@@ -1866,17 +1876,18 @@ public final class LoreSlices {
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
             "priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
             "context_md, outcome_md " +
-            "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
+            "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
         // AL-30: тот же паттерн для задач — раньше был только status_raw через
         // task_done_dates/task_starts (агрегатные min/max, не полная цепочка).
         // effort_days и note_md версионируются (task_set пишет их в открытую
         // HAS_STATE), но ни один слайс не отдавал цепочку ревизий целиком.
+        // B9: CONTAINS, не [0] = — см. adr_history.
         slice("history_task",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
             "effort_days, note_md " +
-            "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid[0] = :id ORDER BY valid_from",
+            "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
         // Bulk: every sprint state row (scalar valid_from). Frontend takes the min
@@ -1935,7 +1946,9 @@ public final class LoreSlices {
             "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days, " +
-            "in('HAS_STATE').bookkeeping[0] AS bookkeeping " +
+            "in('HAS_STATE').bookkeeping[0] AS bookkeeping, " +
+            // B9: shared — см. adr_history_all: общая версия не выдаётся за одного владельца.
+            "in('HAS_STATE').size() > 1 AS shared " +
             "FROM KnowTaskHist WHERE valid_to IS NULL " +
             "AND (" + DONE_STATUS_SQL + ") AND valid_from IS NOT NULL",
             List.of(), Map.of(), "");
@@ -1945,7 +1958,9 @@ public final class LoreSlices {
         slice("task_starts",
             // SE-08: task_uid — пара «спринт/код»; голый task_id неоднозначен (220 кодов в
             // нескольких спринтах). task_id оставлен для прежних читателей.
-            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from " +
+            // B9: shared — см. adr_history_all.
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
+            "in('HAS_STATE').size() > 1 AS shared " +
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
@@ -1964,7 +1979,9 @@ public final class LoreSlices {
         // стороне. Зеркало task_starts, но с task_uid (уникален) и sprint_id.
         slice("task_created_dates",
             "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
-            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from, " +
+            // B9: shared — см. adr_history_all.
+            "in('HAS_STATE').size() > 1 AS shared " +
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
