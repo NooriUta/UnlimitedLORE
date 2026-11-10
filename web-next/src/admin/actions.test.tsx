@@ -327,12 +327,12 @@ describe('экран журнала · честные состояния', () =>
     fireEvent.change(screen.getByLabelText('Семейство'), { target: { value: 'dict' } });
     fireEvent.change(screen.getByLabelText('Предел'), { target: { value: '50' } });
     fireEvent.click(screen.getByTestId('adm-log-apply'));
-    await waitFor(() => expect(urls.at(-1)).toContain('caller=omiloreadmin'));
-    expect(urls.at(-1)).toContain('axis=agent');
-    expect(urls.at(-1)).toContain('family=dict');
-    expect(urls.at(-1)).toContain('limit=50');
+    await waitFor(() => expect(urls[urls.length - 1]).toContain('caller=omiloreadmin'));
+    expect(urls[urls.length - 1]).toContain('axis=agent');
+    expect(urls[urls.length - 1]).toContain('family=dict');
+    expect(urls[urls.length - 1]).toContain('limit=50');
     fireEvent.click(screen.getByTestId('adm-log-reset'));
-    await waitFor(() => expect(urls.at(-1)).toBe('/lore/admin/actions'));
+    await waitFor(() => expect(urls[urls.length - 1]).toBe('/lore/admin/actions'));
   });
 });
 
@@ -398,7 +398,7 @@ describe('экран журнала · пачка (S7B-13)', () => {
     await screen.findAllByTestId(/^adm-log-row-/);
     fireEvent.change(screen.getByLabelText(/Пачка/), { target: { value: BATCH } });
     fireEvent.click(screen.getByTestId('adm-log-apply'));
-    await waitFor(() => expect(urls.at(-1)).toContain('batch_id=' + BATCH));
+    await waitFor(() => expect(urls[urls.length - 1]).toContain('batch_id=' + BATCH));
   });
 });
 

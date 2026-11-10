@@ -88,11 +88,27 @@ describe('S9-09 · фильтры истории на экране', () => {
   it('человек выбирает автора — запрос уходит, выдача сужается', async () => {
     const srv = stand();
     show(srv.fetchImpl);
-    await waitFor(() => expect(screen.getAllByTestId('kit-history-row')).toHaveLength(4));
-    fireEvent.change(screen.getByLabelText('Автор'), { target: { value: 'claude-code' } });
-    await waitFor(() => expect(screen.getAllByTestId('kit-history-row')).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByTestId('kit-history-row')).toHaveLength(4), { timeout: 8000 });
+    // Список авторов наполняется ИЗ ОТВЕТА, отдельным эффектом после того,
+    // как строки уже нарисованы. Поэтому ждать появления строк мало: пока
+    // варианта нет, <select> молча проглотит присвоенное значение, запрос
+    // не уйдёт, и проверка упрётся в «не сузилось» вместо настоящей причины.
+    const pick = () => screen.getByLabelText('Автор') as HTMLSelectElement;
+    await waitFor(() => {
+      const has = Array.from(pick().options).some(o => o.value === 'claude-code');
+      expect(has, 'в списке авторов нет claude-code — выбирать нечего').toBe(true);
+    }, { timeout: 8000 });
+    await act(async () => {
+      fireEvent.change(pick(), { target: { value: 'claude-code' } });
+    });
+    // Сначала ФАКТ запроса, потом выдача. Так проверка говорит, что именно
+    // сломалось: параметр не ушёл или ответ не доехал до строк.
+    await waitFor(() => {
+      expect(srv.urls.join(' '), 'параметр author не ушёл на сервер').toContain('author=claude-code');
+    }, { timeout: 8000 });
+    await waitFor(() => expect(screen.getAllByTestId('kit-history-row')).toHaveLength(3), { timeout: 8000 });
     expect(srv.urls[srv.urls.length - 1]).toContain('author=claude-code');
-  });
+  }, 15000);
 
   it('человек включает свёртку — серия приходит одной строкой с числом правок', async () => {
     const srv = stand();
