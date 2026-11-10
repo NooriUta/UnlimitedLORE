@@ -318,6 +318,82 @@ class LoreRecordFacadeLiveDbTest {
         admin().get("/lore/record/milestone/M-NO-SUCH").then().statusCode(404);
     }
 
+    /** Чип шапки: {id, label, inherited_from: null | {type, id}}. */
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> chips(JsonPath r, String key) {
+        Object v = r.get("values." + key);
+        assertInstanceOf(List.class, v, "values." + key + " — список чипов у каждого типа: " + v);
+        List<Map<String, Object>> l = (List<Map<String, Object>>) v;
+        for (Map<String, Object> c : l) {
+            assertTrue(c.containsKey("id") && c.containsKey("label") && c.containsKey("inherited_from"),
+                "форма чипа {id, label, inherited_from}: " + c);
+        }
+        return l;
+    }
+
+    private static Map<String, Object> chip(List<Map<String, Object>> l, String id) {
+        return l.stream().filter(c -> id.equals(c.get("id"))).findFirst()
+            .orElseThrow(() -> new AssertionError("чипа " + id + " нет: " + l));
+    }
+
+    /**
+     * Решения владелицы 50а, 51а, 55а (D-2026-UXR-OWNER-DELEGATED-ANSWERS-10-11): компоненты и
+     * проекты — чипами в шапке паспорта; унаследованные — с пометкой источника (задача — от
+     * спринта, сценарий — от фичи); свои — первыми. Было: у задачи нет проектов, у вехи и
+     * компонента нет ни того ни другого, наследования нет нигде.
+     */
+    @Test
+    void headChips_ownFirst_thenInheritedWithSource() {
+        final String gp = "test/rec-chips";
+        final String sid = "SPRINT_REC_CHIPS";
+        admin().body(Map.of("slug", gp, "name", "Проект чипов")).post("/lore/project").then().statusCode(200);
+        admin().body(Map.of("component_id", "C-CHIP-SPRINT", "full_name", "Компонент спринта", "area", "core"))
+            .post("/lore/component/create").then().statusCode(200);
+        admin().body(Map.of("component_id", "C-CHIP-OWN", "full_name", "Свой компонент", "area", "core"))
+            .post("/lore/component/create").then().statusCode(200);
+        sprint(sid);
+        admin().body(Map.of("sprint_id", sid, "git_project", gp)).post("/lore/sprint/project").then().statusCode(200);
+        admin().body(Map.of("sprint_id", sid, "component_id", "C-CHIP-SPRINT")).post("/lore/sprint/component").then().statusCode(200);
+        task(sid, "T-1");
+        admin().body(Map.of("task_uid", sid + "/T-1", "component_id", "C-CHIP-OWN")).post("/lore/task/component")
+            .then().statusCode(200);
+
+        JsonPath t = record("task", sid + "/T-1");
+        List<Map<String, Object>> tp = chips(t, "projects");
+        Map<String, Object> p = chip(tp, gp);
+        assertEquals("Проект чипов", p.get("label"));
+        assertEquals(Map.of("type", "sprint", "id", sid), p.get("inherited_from"), "проект задачи — от спринта");
+        List<Map<String, Object>> tc = chips(t, "components");
+        assertEquals(List.of("C-CHIP-OWN", "C-CHIP-SPRINT"), tc.stream().map(c -> c.get("id")).toList(), "свои — первыми");
+        assertNull(tc.get(0).get("inherited_from"), "свой компонент — без источника");
+        assertEquals("Свой компонент", tc.get(0).get("label"));
+        assertEquals(Map.of("type", "sprint", "id", sid), tc.get(1).get("inherited_from"));
+
+        JsonPath s = record("sprint", sid);
+        assertNull(chip(chips(s, "projects"), gp).get("inherited_from"), "у спринта проект свой");
+
+        // Сценарий — от фичи.
+        admin().body(Map.of("feature_id", "UC-CHIP-ROOT", "title", "корень чипов", "goal_level", "kite"))
+            .post("/lore/feature").then().statusCode(200);
+        admin().body(Map.of("uc_id", "UC-CHIP-ROOT", "rel", "project", "target_id", gp)).post("/lore/uc/link")
+            .then().statusCode(200);
+        admin().body(Map.of("uc_id", "UC-CHIP-CHILD", "title", "сценарий чипов", "parent_uc_id", "UC-CHIP-ROOT",
+            "goal_level", "sea-level")).post("/lore/uc").then().statusCode(200);
+        JsonPath f = record("feature", "UC-CHIP-CHILD");
+        assertEquals(Map.of("type", "feature", "id", "UC-CHIP-ROOT"), chip(chips(f, "projects"), gp).get("inherited_from"),
+            "проект сценария — от фичи");
+
+        // Веха и компонент: ключи есть всегда (пустой список — «проверено, нет»).
+        admin().body(Map.of("milestone_id", "M-REC-CHIPS", "label", "веха чипов")).post("/lore/milestone").then().statusCode(200);
+        JsonPath m = record("milestone", "M-REC-CHIPS");
+        chips(m, "projects");
+        chips(m, "components");
+        JsonPath c = record("component", "C-CHIP-SPRINT");
+        assertEquals(Map.of("type", "sprint", "id", sid), chip(chips(c, "projects"), gp).get("inherited_from"),
+            "проект компонента — от его спринтов");
+        chips(c, "components");
+    }
+
     /** S4-V2-SECTIONS: паспорта компонента, технологии и фичи (только чтение). */
     @Test
     void componentTechFeaturePassportsAreReadOnly() {
