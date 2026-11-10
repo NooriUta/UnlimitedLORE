@@ -111,8 +111,31 @@ describe('CSS: крошка-возврат нигде не выглядит за
     expect(crumbs.filter(r => /display:\s*(inline-)?flex/.test(r.body) && drawsLine(r.body)).map(r => r.sel)).toEqual([]);
   });
 
-  it('подчёркивание у ссылки-возврата осталось — на подписи', () => {
-    expect(crumbs.filter(r => r.sel.includes('__label') && drawsLine(r.body)).map(r => r.sel)).not.toEqual([]);
+  // Вторая половина правила пришла из параллельной правки соседней сессии и
+  // здесь сведена с первой: ПОСТОЯННОЙ декорации у крошки нет вовсе (канон
+  // ссылок kit — none, подчёркивание на наведении). Одна проверка без другой
+  // неполна: без первой линия вернулась бы на hover тем же боксом и снова
+  // пошла бы по глифам; без второй крошка носила бы неубираемую линию.
+  it('постоянного подчёркивания нет — оно появляется только на наведении', () => {
+    const always = crumbs.filter(r => !/:hover|:focus/.test(r.sel) && drawsLine(r.body)).map(r => r.sel);
+    expect(always, 'крошка носит декорацию постоянно').toEqual([]);
+    const hover = crumbs.filter(r => /:hover/.test(r.sel) && drawsLine(r.body)).map(r => r.sel);
+    expect(hover, 'подчёркивания на наведении нет вовсе').not.toEqual([]);
+  });
+
+  it('и на наведении линию рисует подпись, а не flex-бокс', () => {
+    const hover = crumbs.filter(r => /:hover/.test(r.sel) && drawsLine(r.body));
+    expect(hover.map(r => r.sel).every(sel => sel.includes('__label')),
+      `линия на наведении задана боксом: ${hover.map(r => r.sel).join(', ')}`).toBe(true);
+  });
+
+  it('цвет ссылки-возврата — токен темы, а не сырой цвет', () => {
+    // Селектор ищем ВХОЖДЕНИЕМ: плоский разбор тащит в него предшествующий
+    // комментарий, и сравнение на равенство правило не находило — проверка
+    // шла по пустой строке, то есть ни по чему.
+    const back = crumbs.find(r => r.sel.includes('.sk-crumbs__back') && /color:/.test(r.body));
+    expect(back, 'правило .sk-crumbs__back с цветом не найдено').toBeTruthy();
+    expect(back!.body).toMatch(/color:\s*var\(--acc\)/);
   });
 });
 

@@ -1167,6 +1167,34 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 
+/* ---------- Полосы прокрутки в теме (просьба владелицы 10.11.2026:
+   «ползунки скролов сделай, чтобы в тему попадали, а не выглядели инородно»).
+   Системная полоса рисуется цветами ОС: в тёмной теме Seiðr она светло-серая и
+   режет глаз, в светлой — наоборот. Поэтому цвет берём токенами темы, и он сам
+   меняется вместе с палитрой и светлым/тёмным режимом.
+   Два механизма намеренно: «scrollbar-color» понимают Firefox и новые
+   Chromium, «::-webkit-scrollbar» — Safari и старые Chromium. Один без
+   другого оставил бы половину браузеров с системной полосой.
+   Боксы, которые НАРОЧНО прячут полосу («scrollbar-width: none»), это правило
+   не трогает: там прокрутка скрыта по своей причине. ---------- */
+:root {
+  /* ползунок · дорожка */
+  scrollbar-color: var(--bd) transparent;
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  /* Фон рисуем через background-clip, иначе рамка-отступ закрасится тоже и
+     ползунок прилипнет к краю. */
+  background: var(--bd);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--bdh); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
 /* ---------- KitShell (K-02): модули сверху, меню групп, drawer на телефоне ----------
    Вынос из прототипа v4 (.top/.apps/.side/.sgrp/.sitem). Узкий экран — меню
    в Sheet слева (рисует компонент), подписи модулей прячутся, имя — aria-label. */
@@ -3620,12 +3648,16 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 }
 .sk-crumbs__label {
   min-width: 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Постоянного подчёркивания у крошки нет — по канону ссылок kit (B7 аудита
+   10.11): на проде «← Раздел» с неубираемой декорацией читалось как
+   зачёркнутая, удалённая запись. Подчёркивание — только на hover, и рисует
+   его ПОДПИСЬ, а не сам flex-бокс: на боксе линия вернулась бы по глифам —
+   то есть зачёркнутой, только при наведении. */
+.sk-crumbs__back:hover .sk-crumbs__label { text-decoration: underline; text-underline-offset: 2px; }
 .sk-crumbs__back:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-crumbs__ctx { color: var(--t2); }
 .sk-crumbs__sep { color: var(--t3); }
@@ -3846,7 +3878,11 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-facts { min-width: 0; }
 .sk-rec-facts__list { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--gap); margin: 0; padding: 0; list-style: none; }
 .sk-rec-facts__item { --fact-c: var(--t2); display: inline-flex; align-items: center; gap: 4px; color: var(--fact-c); font-size: var(--fs-sm); }
-.sk-rec-facts__item + .sk-rec-facts__item::before { content: '·'; color: var(--t3); margin-right: 2px; }
+/* Пустой пункт строки фактов не занимает место и не даёт разделителя: у типа
+   без статусной оси (релиз, компонент, технология) StatusSlot не рисует чип
+   вовсе (B5), и «Статус» оставлял бы пустой <li> с висячей точкой «·». */
+.sk-rec-facts__item:empty { display: none; }
+.sk-rec-facts__item:not(:empty) ~ .sk-rec-facts__item:not(:empty)::before { content: '·'; color: var(--t3); margin-right: 2px; }
 .sk-rec-facts__item[data-fact='tasks'], .sk-rec-facts__item[data-fact='due'] { font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rec-facts__text { color: inherit; }
 .sk-rec-facts__btn {

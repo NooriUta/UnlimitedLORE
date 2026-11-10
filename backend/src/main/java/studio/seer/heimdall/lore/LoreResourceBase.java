@@ -325,7 +325,7 @@ public abstract class LoreResourceBase {
             String vertexType, String histType, String keyField, String id, String nsid) {
         return new LoreCommandClient.LoreCommand("sql",
             "CREATE EDGE HAS_STATE FROM (SELECT FROM " + vertexType + " WHERE " + keyField + " = :id) " +
-            "TO (SELECT FROM " + histType + " WHERE state_uid = :nsid)",
+            "TO (SELECT FROM " + histType + " WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0)",
             Map.of("id", id, "nsid", nsid));
     }
 

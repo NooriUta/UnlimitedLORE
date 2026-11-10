@@ -92,17 +92,23 @@ final class LoreEntityHistory {
         String hist = type == null ? null : HIST_OF_TYPE.get(type);
         if (hist == null) throw new IllegalArgumentException("unknown history type: " + type + " (known: " + types() + ")");
         LoreSlices.HistParent parent = LoreSlices.HIST_PARENT.get(hist);
+        boolean dict = "dict_entry".equals(type);
         // У строки справочника ключ денормализован на саму Hist (составной, без одиночного id у вершины).
-        String idExpr = "dict_entry".equals(type) ? "code" : "in('HAS_STATE')." + parent.idField() + "[0]";
+        // B9: история читается в контексте записи. WHERE — CONTAINS, а не «первый владелец [0] =»:
+        // версия, общая у нескольких записей (S2-11), иначе у второго владельца молча пуста —
+        // WHERE по чужому [0] не сматчится. ref_id — сам запрошенный :id, а не in('HAS_STATE').<id>[0]:
+        // иначе строки в истории второго владельца несли бы чужой ключ.
+        String idExpr = dict ? "code" : ":id";
+        String where = dict ? "code = :id" : "in('HAS_STATE')." + parent.idField() + " CONTAINS :id";
         StringBuilder sb = new StringBuilder("SELECT '").append(type).append("' AS entity_type, '")
             .append(hist).append("' AS hist_type, ").append(idExpr).append(" AS ref_id, state_uid, ")
             .append("valid_from, valid_to, content_hash, source_commit, status_raw, changed_by, changed_by_kind");
-        if ("dict_entry".equals(type)) sb.append(", dict_type");
+        if (dict) sb.append(", dict_type");
         String p = projectsExpr(type);
         if (p != null) sb.append(", ").append(p).append(" AS projects");
         String via = projectsViaExpr(type);
         if (via != null) sb.append(", ").append(via).append(" AS projects_via");
-        sb.append(" FROM ").append(hist).append(" WHERE ").append(idExpr).append(" = :id ORDER BY valid_from");
+        sb.append(" FROM ").append(hist).append(" WHERE ").append(where).append(" ORDER BY valid_from");
         return sb.toString();
     }
 
@@ -247,6 +253,75 @@ final class LoreEntityHistory {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("rows", new ArrayList<>(kept.subList(from, to)));
         out.put("page", page);
+        return out;
+    }
+
+    /** Режимы свёртки. */
+    static final java.util.Set<String> COLLAPSE_MODES = java.util.Set.of("agent");
+
+    /** Предел длины {@code author} — идентификатор вызывающего, не текст. */
+    static final int AUTHOR_MAX = 200;
+
+    /** Причина отказа параметров страницы (с автором и свёрткой) или null. */
+    static String pageError(String authorKind, String author, String field, String collapse,
+                            String order, Integer offset, Integer limit) {
+        if (author != null && author.isBlank()) return "author must not be blank";
+        if (author != null && author.length() > AUTHOR_MAX) return "author must be at most " + AUTHOR_MAX + " characters";
+        if (collapse != null && !COLLAPSE_MODES.contains(collapse)) return "collapse must be one of " + COLLAPSE_MODES;
+        return pageError(authorKind, field, order, offset, limit);
+    }
+
+    /**
+     * Страница истории с фильтром по конкретному автору ({@code author} — {@code author.caller},
+     * вместе с {@code authorKind} по И) и свёрткой {@code collapse=agent}: подряд идущие
+     * (после фильтров, в хронологии) правки ОДНОГО агента — одна строка, последняя версия
+     * серии, с {@code collapsed {count, first_state_uid, first_valid_from}}; серия из одной
+     * правки не помечается. Свёртка — до страницы, поэтому total/has_more честны.
+     */
+    static Map<String, Object> page(List<Map<String, Object>> rows, String authorKind, String author, String field,
+                                    String collapse, String order, Integer offset, Integer limit) {
+        // Порядок применения: поле (по всей цепочке) → вид/автор → свёртка → порядок → страница.
+        Map<String, Object> all = page(rows, authorKind, field, null, null, null);
+        @SuppressWarnings("unchecked") List<Map<String, Object>> kept = (List<Map<String, Object>>) all.get("rows");
+        if (author != null) {
+            List<Map<String, Object>> byAuthor = new ArrayList<>();
+            for (Map<String, Object> r : kept) if (author.equals(authorField(r, "caller"))) byAuthor.add(r);
+            kept = byAuthor;
+        }
+        if ("agent".equals(collapse)) kept = collapseAgentRuns(kept);
+        Map<String, Object> out = page(kept, null, null, order, offset, limit);
+        @SuppressWarnings("unchecked") Map<String, Object> pg = (Map<String, Object>) out.get("page");
+        if (author != null) pg.put("author", author);
+        if (collapse != null) pg.put("collapse", collapse);
+        return out;
+    }
+
+    private static Object authorField(Map<String, Object> r, String key) {
+        Object a = r.get("author");
+        return a instanceof Map<?, ?> m ? m.get(key) : null;
+    }
+
+    private static List<Map<String, Object>> collapseAgentRuns(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        int i = 0;
+        while (i < rows.size()) {
+            Map<String, Object> first = rows.get(i);
+            Object caller = authorField(first, "caller");
+            int j = i + 1;
+            if (ChangeAuthor.KIND_AGENT.equals(authorField(first, "kind")) && caller != null) {
+                while (j < rows.size() && ChangeAuthor.KIND_AGENT.equals(authorField(rows.get(j), "kind"))
+                       && caller.equals(authorField(rows.get(j), "caller"))) j++;
+            }
+            if (j - i == 1) { out.add(first); i = j; continue; }
+            Map<String, Object> last = new LinkedHashMap<>(rows.get(j - 1));
+            Map<String, Object> run = new LinkedHashMap<>();
+            run.put("count", j - i);
+            run.put("first_state_uid", first.get("state_uid"));
+            run.put("first_valid_from", first.get("valid_from"));
+            last.put("collapsed", run);
+            out.add(last);
+            i = j;
+        }
         return out;
     }
 

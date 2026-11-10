@@ -467,6 +467,12 @@ export function ListView({
   const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
   const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
   const counts = useMemo(() => quickCounts(pool, quick, []), [pool, quick]);
+  // «Быстро» с нулём не рисуем (аудит 10.11): «Без версии 0» — шум. Виден
+  // ненулевой счётчик или включённый фильтр (его надо видеть, чтобы снять).
+  const visibleQuick = useMemo(
+    () => quick.filter(q => (counts[q.id] ?? 0) > 0 || state.quick === q.id),
+    [quick, counts, state.quick],
+  );
   const sortedAll = useMemo(() => sortRecords(applyFilters(pool, quickFilters), state.sort, config),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pool, config, JSON.stringify(quickFilters), state.sort]);
@@ -1290,10 +1296,13 @@ export function ListView({
             {t('kit.list.sortDesc')}
           </button>
         </fieldset>
-        {quick.length > 0 && (
+        {/* Чип с нулевым счётчиком не рисуем (аудит 10.11): «Без версии 0» —
+            чистый шум. Исключение — включённый фильтр: его надо видеть, чтобы
+            было что снять, иначе фильтр остаётся навсегда. */}
+        {visibleQuick.length > 0 && (
           <div role="group" aria-label={t('kit.list.quick')} className="sk-list__quick">
             <span className="sk-list__label" aria-hidden="true">{t('kit.list.quick')}</span>
-            {quick.map(q => {
+            {visibleQuick.map(q => {
               const icon = quickIcons?.[q.id] ?? quickIconOf(q, config);
               const qColor = quickColorOf(q, config);
               return (

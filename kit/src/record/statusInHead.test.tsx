@@ -82,6 +82,20 @@ describe('статус в шапке записи: плашка или кноп�
     expect(screen.queryByRole('button', { name: /^Статус/ })).toBeNull();
   });
 
+  it('оси нет — чипа нет вовсе, даже плашки «—» (B5: пустой чип читался как статус)', () => {
+    const cfg = config({ reader: { canEdit: false, canStatus: false } });
+    const { container } = head(ctxOf({ ...cfg, statuses: { items: [] } }, 'reader'));
+    expect(container.querySelector('.sk-rec-status')).toBeNull();
+  });
+
+  it('код статуса пуст (тип без статуса) — чип не рисуется, даже с правами (B5)', () => {
+    const cfg = config({ reader: { canEdit: true, canStatus: true } });
+    const empty: KitRecord = { ...record, status: '' };
+    const { container } = render(<RecordHead record={empty} ctx={ctxOf(cfg, 'reader')} lang="ru" titleId="t" />);
+    expect(container.querySelector('.sk-rec-status')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Статус/ })).toBeNull();
+  });
+
   it('нажатие уходит в hooks.onSave приложения — kit сам ничего не пишет', async () => {
     const onSave = vi.fn(async (_c: unknown) => {});
     const cfg = config({ reader: { canEdit: true, canStatus: true } });

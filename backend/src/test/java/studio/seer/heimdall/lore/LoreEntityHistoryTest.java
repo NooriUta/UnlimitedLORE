@@ -33,6 +33,24 @@ class LoreEntityHistoryTest {
         assertEquals(LoreSlices.HIST_PARENT.size(), LoreEntityHistory.types().size());
     }
 
+    /**
+     * B9: фильтр цепочки — по ЛЮБОМУ владельцу версии (CONTAINS), не по «первому» ([0]).
+     * У общей версии (S2-11) второй владелец с [0] получал пустую историю молча,
+     * а ref_id в строках нёс чужой ключ — теперь ref_id — сам запрошенный :id.
+     */
+    @Test
+    void historyQueryMatchesAnyOwnerAndRefIdIsTheRequestedRecord() {
+        for (Map.Entry<String, LoreSlices.HistParent> e : LoreSlices.HIST_PARENT.entrySet()) {
+            String type = e.getValue().entityType();
+            String sql = LoreEntityHistory.sql(type);
+            if ("dict_entry".equals(type)) continue;   // ключ денормализован на саму строку, обхода рёбер нет
+            assertTrue(sql.contains("in('HAS_STATE')." + e.getValue().idField() + " CONTAINS :id"),
+                e.getKey() + ": " + sql);
+            assertFalse(sql.contains("[0]"), e.getKey() + ": [0] — «первый владелец», общая версия у второго молча пуста: " + sql);
+            assertTrue(sql.contains(":id AS ref_id"), e.getKey() + ": ref_id — запрошенная запись: " + sql);
+        }
+    }
+
     @Test
     void unknownTypeIsRejectedNotAnsweredEmpty() {
         assertThrows(IllegalArgumentException.class, () -> LoreEntityHistory.sql("nope"));

@@ -4,6 +4,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -42,6 +43,14 @@ class LoreKcAgentClientTest {
         assertNull(LoreKcAgentClient.idOf("<html>bad gateway</html>"));
         assertNull(LoreKcAgentClient.idOf(""));
         assertNull(LoreKcAgentClient.idOf(null));
+    }
+
+    /** Находка kit к #1077: тело role-mappings с 200, но битое (HTML от прокси) — null, а не 500 на создание учётки. */
+    @Test
+    void brokenRoleMappingsBodyIsNullNotCrash() {
+        assertNotNull(LoreKcAgentClient.jsonOrNull("{\"clientMappings\":{}}"));
+        assertNull(LoreKcAgentClient.jsonOrNull("<html>502</html>"));
+        assertNull(LoreKcAgentClient.jsonOrNull(""));
     }
 
     @Test
