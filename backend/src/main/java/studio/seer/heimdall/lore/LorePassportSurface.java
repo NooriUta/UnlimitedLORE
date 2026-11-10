@@ -22,18 +22,43 @@ final class LorePassportSurface {
     /** Раздел тела — одна статья на все поля тела (у ADR три поля читаются подряд). */
     static final String CONTENT = "content";
 
-    /** Явный порядок по слову владелицы; ключи — разделы этого типа. */
-    private static final Map<String, List<String>> DECIDED_ORDER = Map.of(
-        // 09.11: «Спринт первое как ни странно задачи потом уже контент … зависимости и прочее под море».
-        "sprint", List.of("tasks", CONTENT, "dependsOn", "blocks", "phases"));
+    private static final String OWN = "own", GLUE = "content", MORE = "more";
+
+    /** Раздел решённого паспорта: ключ и место. */
+    private record Slot(String key, String slot) {}
+
+    private static Slot s(String key, String slot) { return new Slot(key, slot); }
 
     /**
-     * Место раздела в decided-типе: own — свой раздел, content — блоком в конце тела (v1:
-     * «блокирует и зависит был как подраздел контента»), more — под «Ещё». Не названное —
-     * more. Фазы у спринта под «Ещё» по замеру 09.11: phase_uid у задач 4 спринтов из 29.
+     * Явный порядок и место разделов. own — свой раздел (первый ряд, ≤ 5), content — блоком в
+     * конце тела (v1: «блокирует и зависит был как подраздел контента»), more — под «Ещё».
+     * Раздел, не названный здесь (появился в реестре позже), — в конец под «Ещё».
+     * Map.ofEntries, а не Map.of: типов больше десяти.
      */
-    private static final Map<String, Map<String, String>> DECIDED_SLOT = Map.of(
-        "sprint", Map.of("tasks", "own", CONTENT, "own", "dependsOn", "content", "blocks", "content"));
+    private static final Map<String, List<Slot>> DECIDED = Map.ofEntries(
+        // 09.11: «Спринт первое как ни странно задачи потом уже контент … зависимости и прочее под море».
+        // Фазы под «Ещё» по замеру 09.11: phase_uid у задач 4 спринтов из 29.
+        Map.entry("sprint", List.of(s("tasks", OWN), s(CONTENT, OWN), s("dependsOn", GLUE), s("blocks", GLUE),
+            s("phases", MORE))),
+        // S4-29 (10.11): у задачи главное — заметка; PR/ADR/сценарий/блокирующий вопрос — 0–1 штука,
+        // PR к тому же есть в «Свойствах», поэтому они блоком в конце заметки, а не вкладками.
+        Map.entry("task", List.of(s(CONTENT, OWN), s("questions", OWN),
+            s("gates", GLUE), s("prs", GLUE), s("adrs", GLUE), s("useCases", GLUE),
+            s("qgRecs", MORE), s("insights", MORE), s("refsOut", MORE), s("refsIn", MORE), s("publications", MORE))),
+        // ADR: решения — своей вкладкой (их бывает десятки), связи ADR↔ADR — в конце текста.
+        Map.entry("adr", List.of(s(CONTENT, OWN), s("decisions", OWN), s("questions", OWN), s("sprints", OWN),
+            s("dependsOn", GLUE), s("blocks", GLUE), s("supersedes", GLUE), s("supersededBy", GLUE),
+            s("justifies", MORE), s("releases", MORE), s("useCases", MORE), s("runbooks", MORE),
+            s("insights", MORE), s("refsOut", MORE), s("refsIn", MORE))),
+        Map.entry("spec", List.of(s(CONTENT, OWN), s("refsIn", GLUE), s("refsOut", GLUE))),
+        // Типы только на чтение: из разделов паспорта у них лишь тело; связи — в «Свойствах»/шапке.
+        Map.entry("decision", List.of(s(CONTENT, OWN))),
+        Map.entry("question", List.of(s(CONTENT, OWN))),
+        Map.entry("milestone", List.of(s(CONTENT, OWN))),
+        Map.entry("release", List.of(s(CONTENT, OWN))),
+        Map.entry("component", List.of()),
+        Map.entry("tech", List.of(s(CONTENT, OWN))),
+        Map.entry("feature", List.of(s(CONTENT, OWN))));
 
     record Section(String key, String source, String ref) {}
 
@@ -52,8 +77,11 @@ final class LorePassportSurface {
         for (String type : LoreRecordRegistry.TYPES) {
             LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
             List<Section> data = byData(d);
-            List<String> order = DECIDED_ORDER.get(type);
-            boolean decided = order != null;
+            List<Slot> decidedSlots = DECIDED.get(type);
+            boolean decided = decidedSlots != null;
+            List<String> order = new ArrayList<>();
+            Map<String, String> slots = new LinkedHashMap<>();
+            if (decided) for (Slot sl : decidedSlots) { order.add(sl.key()); slots.put(sl.key(), sl.slot()); }
             List<Section> ordered = new ArrayList<>();
             if (decided) {
                 for (String k : order)
@@ -63,7 +91,6 @@ final class LorePassportSurface {
             } else {
                 ordered.addAll(data);
             }
-            Map<String, String> slots = DECIDED_SLOT.getOrDefault(type, Map.of());
             List<Map<String, Object>> sections = new ArrayList<>();
             int i = 1;
             for (Section s : ordered) {

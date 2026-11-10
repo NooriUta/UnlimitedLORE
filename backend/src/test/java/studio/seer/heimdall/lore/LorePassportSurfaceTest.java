@@ -95,4 +95,66 @@ class LorePassportSurfaceTest {
             assertEquals(got.size(), Set.copyOf(got).size(), type + ": без повторов");
         }
     }
+
+    // ── S4-29: паспорта решены у ВСЕХ типов (владелица 10.11: «проанализировать и создать
+    // паспорта у всех»; жалоба «перегружено» — все вкладки в первом ряду). ──
+
+    private static List<String> keysIn(List<Map<String, Object>> s, String slot) {
+        List<String> out = new ArrayList<>();
+        for (Map<String, Object> m : s) if (slot.equals(m.get("slot"))) out.add((String) m.get("key"));
+        return out;
+    }
+
+    @Test
+    void everyTypeIsDecided() {
+        for (String type : LoreRecordRegistry.TYPES) {
+            Map<?, ?> t = (Map<?, ?>) LorePassportSurface.build().get(type);
+            assertEquals(true, t.get("decided"), type + ": порядок паспорта решён, а не «по данным»");
+        }
+    }
+
+    @Test
+    void firstRowHasAtMostFiveSections() {
+        for (String type : LoreRecordRegistry.TYPES) {
+            List<String> own = keysIn(sections(type), "own");
+            assertTrue(own.size() <= 5, type + ": в первом ряду не больше 5 вкладок, сейчас " + own);
+        }
+    }
+
+    @Test
+    void everyRefExistsInModelRelations() {
+        for (String type : LoreRecordRegistry.TYPES) {
+            LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
+            Set<String> parts = new java.util.HashSet<>();
+            for (LoreRecordRegistry.Part p : d.parts()) parts.add(p.key());
+            Set<String> rels = new java.util.HashSet<>();
+            for (LoreRecordRegistry.Relation r : d.relations()) rels.add(r.key());
+            for (Map<String, Object> m : sections(type)) {
+                Object ref = m.get("ref");
+                switch ((String) m.get("source")) {
+                    case "body" -> assertNull(ref, type + ": у тела ref null");
+                    case "part" -> assertTrue(parts.contains(ref), type + "/" + ref + ": часть есть в parts");
+                    case "relation" -> assertTrue(rels.contains(ref), type + "/" + ref + ": связь есть в relations модели");
+                    default -> fail(type + ": неизвестный source " + m.get("source"));
+                }
+            }
+        }
+    }
+
+    @Test
+    void taskAndAdrFollowAnalysis() {
+        List<Map<String, Object>> task = sections("task");
+        assertEquals(List.of("content", "questions"), keysIn(task, "own"));
+        assertEquals(List.of("gates", "prs", "adrs", "useCases"), keysIn(task, "content"),
+            "PR, обоснование и блокирующие вопросы — 0–1 штука, блоком в конце заметки");
+        List<Map<String, Object>> adr = sections("adr");
+        assertEquals(List.of("content", "decisions", "questions", "sprints"), keysIn(adr, "own"),
+            "решения — своей вкладкой: у 74% ADR они есть, до 35 штук");
+        assertEquals(List.of("dependsOn", "blocks", "supersedes", "supersededBy"), keysIn(adr, "content"),
+            "связи ADR↔ADR — в конце текста, как зависимости спринта");
+        List<Map<String, Object>> spec = sections("spec");
+        assertEquals(List.of("content"), keysIn(spec, "own"));
+        assertEquals(List.of("refsIn", "refsOut"), keysIn(spec, "content"),
+            "у спеки ссылки — вторичное, блоком в конце текста, а не вкладками");
+    }
 }
