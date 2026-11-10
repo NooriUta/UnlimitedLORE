@@ -65,7 +65,7 @@ describe('S5-06 · RecordView — правка на месте в режиме �
     expect(container.querySelector('.sk-prose h2')?.textContent).toBe('Тело');
     expect(screen.getByRole('button', { name: /Править «Заметка»/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Править «Текст»/ }));
-    fireEvent.click(screen.getByRole('radio', { name: /Код/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'режим markdown-источника' }));
     fireEvent.change(screen.getByRole('textbox', { name: /markdown/i }), { target: { value: '## Новое тело' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Сохранить' })); });
     expect(onSave).toHaveBeenCalledWith({ type: 'Task', id: 'S5-06', field: 'body_md', from: '## Тело', to: '## Новое тело' });
@@ -75,7 +75,7 @@ describe('S5-06 · RecordView — правка на месте в режиме �
     const onSave = vi.fn(async () => {});
     render(<RecordView record={record} ctx={ctxWith({ hooks: { onSave } })} tab="overview" onTab={() => {}} mdEditor={MdInlineEdit} />);
     fireEvent.click(screen.getByRole('button', { name: /Править «Заметка»/ }));
-    fireEvent.click(screen.getByRole('radio', { name: /Код/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'режим markdown-источника' }));
     fireEvent.change(screen.getByRole('textbox', { name: /markdown/i }), { target: { value: 'иначе' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Сохранить' })); });
     expect(onSave).toHaveBeenCalledWith({ type: 'Task', id: 'S5-06', field: 'note_md', from: '**заметка**', to: 'иначе' });

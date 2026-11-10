@@ -32,7 +32,7 @@ describe('правка на месте в паспорте', () => {
     const f = fake();
     render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={f as unknown as typeof fetch} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Править «Текст»' }, { timeout: 8000 }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Код' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'режим markdown-источника' }));
     fireEvent.change(screen.getByLabelText('Текст · исходник markdown'), { target: { value: 'новый текст' } });
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
     await waitFor(() => expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(true));

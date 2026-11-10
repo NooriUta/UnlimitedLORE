@@ -4,19 +4,28 @@
 //  - Чтение — MartProse (тот же рендер, что у всей записи). Правка
 //    открывается ТОЛЬКО кнопкой ✎: касание по тексту на телефоне — прокрутка,
 //    выделение, переход по ссылке, а не случайный вход в правку.
-//  - Внутри — переключатель «код / превью / рядом»: код — исходник markdown,
-//    превью — визуальная правка TipTap (TipTapField), рядом — исходник и
-//    живой рендер чтения бок о бок.
+//  - Кнопка правки ОДНА (слова владелицы 10.11.2026: «не надо две кнопки
+//    редактирования — исходный текст есть по кнопке md в tiptap, и выбор
+//    „показывать вместе“ можно встроить туда же»). Вид правки выбирается
+//    внутри редактора, в его же ряду кнопок: `</> md` — исходник markdown,
+//    «◫» — исходник и живой рендер чтения рядом. Прежний переключатель
+//    «код / превью / рядом» над полем и вторая кнопка «Режим исходника» в
+//    строке-подсказке убраны: способ правки выбирают, уже видя редактор.
+//  - «Вместе» РАЗДВИГАЕТ поле (та же правка владелицы: «при просмотре рядом
+//    сжимается на половину ширина — так быть не должно, раздвигай, у нас есть
+//    большой запас»): на секции появляется data-wide="side", и seidr.css
+//    снимает с неё и с колонки-предка меру чтения --read-col. Без этого
+//    исходник и просмотр делили 680 px пополам — по 340 px на поле.
 //  - Страховка — круг S5-07 (tiptapMd.ts): если текст не переживает
-//    «Markdown → TipTap → Markdown» без потерь (сырой HTML и т.п.), превью
-//    закрыто с видимой причиной, правка идёт в коде. Молча испортить тело
-//    записи хуже, чем честно сказать «здесь только код».
+//    «Markdown → TipTap → Markdown» без потерь (сырой HTML и т.п.), визуальная
+//    правка закрыта с видимой причиной, правка идёт в исходнике. Молча
+//    испортить тело записи хуже, чем честно сказать «здесь только код».
 //  - Черновик — строка markdown, единственный источник: переключение режимов
 //    без правки текст не трогает (TipTap пишет в черновик только на правку).
 //  - Сохранение — onSave вызывающего (kit не знает API). Сбой — видимая
 //    ошибка, правка и черновик остаются. Esc выходит только без правок.
 import { ICON_CANON } from '../elements/iconCanon';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { MartProse } from './MartProse';
 import { TipTapField, type MentionItem } from './TipTapField';
@@ -26,6 +35,11 @@ import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 import { describeError } from '../resilience/errorText';
 
+/**
+ * Вид правки: исходник, визуальная правка, исходник и просмотр рядом.
+ * Кнопок-переключателей у поля больше нет — вид живёт в редакторе и может
+ * приехать снаружи (например, из URL экрана).
+ */
 export type MdEditMode = 'code' | 'preview' | 'split';
 export const MD_EDIT_MODES: readonly MdEditMode[] = ['code', 'preview', 'split'];
 
@@ -48,11 +62,10 @@ export interface MdInlineEditProps {
    *
    * Слова владелицы 09.11.2026: «верни типтап редактирование, вы ухудшили user
    * experience». Когда разделы тела стали править каждый по отдельности
-   * (S5-06), подсказка и кнопка «Режим исходника» размножились по числу
-   * разделов: у ADR их стало три, и запись из документа превратилась в форму.
-   * Подсказка — свойство ЗАПИСИ, а не каждого поля, поэтому её показывает
-   * только первый редактор, остальные её гасят. Сама правка на месте
-   * (TipTap) у каждого раздела остаётся.
+   * (S5-06), подсказка размножилась по числу разделов: у ADR их стало три, и
+   * запись из документа превратилась в форму. Подсказка — свойство ЗАПИСИ, а
+   * не каждого поля, поэтому её показывает только первый редактор, остальные
+   * её гасят. Сама правка на месте (TipTap) у каждого раздела остаётся.
    */
   hint?: boolean;
   /** Загрузчик картинок для превью (TipTapField). */
@@ -80,19 +93,12 @@ export interface MdDraftSlot {
   delayMs?: number;
 }
 
-const MODE_KEY: Record<MdEditMode, KitKey> = {
-  code: 'kit.mdedit.mode.code',
-  preview: 'kit.mdedit.mode.preview',
-  split: 'kit.mdedit.mode.split',
-};
-
 export function MdInlineEdit({
   value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
   emptyText, hint = true, onUploadImage, mentionItems, drafts, className,
 }: MdInlineEditProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
-  const srcId = useId();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [ownMode, setOwnMode] = useState<MdEditMode>(defaultMode);
@@ -109,7 +115,7 @@ export function MdInlineEdit({
   draftsRef.current = drafts;
 
   const penRef = useRef<HTMLButtonElement>(null);
-  const groupRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLElement>(null);
   const wasEditing = useRef(false);
 
   const shown = saved && saved.base === value ? saved.md : value;
@@ -142,8 +148,12 @@ export function MdInlineEdit({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // Открыли правку — фокус внутрь поля: в исходник, а при визуальной правке —
+  // на первую кнопку редактора (саму область набора не трогаем: ProseMirror
+  // ставит каретку сам, а внешний focus() дёргает его прокрутку). Закрыли —
+  // фокус возвращается на ✎, иначе он улетает в начало страницы.
   useEffect(() => {
-    if (editing) groupRef.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
+    if (editing) boxRef.current?.querySelector<HTMLElement>('.sk-md__source, .sk-md__btn')?.focus();
     else if (wasEditing.current) penRef.current?.focus();
     wasEditing.current = editing;
   }, [editing]);
@@ -214,8 +224,11 @@ export function MdInlineEdit({
   // TipTap сообщает своё каноническое написание (мягкие переносы склеены и
   // т.п.) и при служебных транзакциях, не только на правку. Черновик меняем
   // лишь когда изменился СМЫСЛ (рендер чтения): иначе простое переключение
-  // «код → превью → код» переписывало бы текст автора (поймано тестом).
-  const fromTipTap = (md: string) => {
+  // «исходник → набор → исходник» переписывало бы текст автора (поймано
+  // тестом). Набранное в ИСХОДНИКЕ берём дословно: там каждая буква —
+  // решение автора, канонизировать её нельзя.
+  const fromTipTap = (md: string, meta?: { source?: boolean }) => {
+    if (meta?.source) { setDraft(md); return; }
     setDraft(prev => (sameMd(prev, md) ? prev : md));
   };
 
@@ -225,28 +238,10 @@ export function MdInlineEdit({
     if (e.key === 'Escape' && !dirty && !saving) { e.preventDefault(); close(); }
   };
 
-  const onGroupKey = (e: KeyboardEvent) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const avail = MD_EDIT_MODES.filter(m => m !== 'preview' || lossless);
-    const i = avail.indexOf(mode);
-    const next = avail[(i + (e.key === 'ArrowRight' ? 1 : avail.length - 1)) % avail.length];
-    choose(next);
-    groupRef.current?.querySelector<HTMLElement>(`[data-mode="${next}"]`)?.focus();
-  };
-
-  const srcLabel = `${label} · ${t('kit.mdedit.source')}`;
-  const source = (
-    <textarea
-      id={srcId}
-      className="sk-md__source sk-mdedit__source"
-      value={draft}
-      aria-label={srcLabel}
-      spellCheck
-      onChange={e => setDraft(e.target.value)}
-    />
-  );
-  const preview = useMemo(() => <MartProse text={draft} />, [draft]);
+  // Живой просмотр для режима «вместе»: тот же рендер, что у чтения. Поле
+  // просит его у нас, а не тянет MartProse само — рендер чтения со схемами и
+  // BPMN не должен приезжать в каждое поле правки.
+  const renderPreview = (md: string) => <MartProse text={md} />;
 
   const restore = () => {
     if (!pending) return;
@@ -290,13 +285,12 @@ export function MdInlineEdit({
     return (
       <section className={['sk-mdedit', className].filter(Boolean).join(' ')} data-state="read">
         {draftBar}
-        {/* S4-CONTENT-V4 (прототип v4): как править — строкой над текстом; «Режим исходника» — сразу в код. */}
+        {/* S4-CONTENT-V4 (прототип v4): как править — строкой над текстом.
+            Кнопки в ней больше нет (владелица 10.11.2026: «не надо две кнопки
+            редактирования») — только слова о том, где искать исходник. */}
         {onSave && hint && (
           <div className="sk-mdedit__hint">
             <span className="sk-mdedit__hint-text">{t('kit.mdedit.hint')}</span>
-            <button type="button" className="sk-mdedit__src-btn" onClick={() => { choose('code'); open(); }}>
-              {t('kit.mdedit.sourceMode')}
-            </button>
           </div>
         )}
         {onSave && (
@@ -317,39 +311,18 @@ export function MdInlineEdit({
 
   return (
     <section
+      ref={boxRef}
       className={['sk-mdedit', 'is-editing', className].filter(Boolean).join(' ')}
       data-state="edit"
+      // «Вместе» — поле раздвигается: мера чтения (--read-col) снимается в
+      // seidr.css по этому признаку, иначе исходник и просмотр делят её
+      // пополам.
+      data-wide={mode === 'split' ? 'side' : undefined}
       aria-label={t('kit.mdedit.editing', { field: label })}
       onKeyDown={onKeyDown}
     >
       {draftBar}
       <div className="sk-mdedit__bar">
-        <div
-          ref={groupRef}
-          className="sk-mdedit__modes"
-          role="radiogroup"
-          aria-label={t('kit.mdedit.modes')}
-          onKeyDown={onGroupKey}
-        >
-          {MD_EDIT_MODES.map(m => {
-            const off = m === 'preview' && !lossless;
-            const on = m === mode;
-            return (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                data-mode={m}
-                className={`sk-mdedit__mode${on ? ' is-on' : ''}`}
-                aria-checked={on}
-                aria-disabled={off || undefined}
-                tabIndex={on ? 0 : -1}
-                title={off ? t('kit.mdedit.lossy') : undefined}
-                onClick={() => choose(m)}
-              >{t(MODE_KEY[m])}</button>
-            );
-          })}
-        </div>
         <span className="sk-mdedit__actions">
           <button type="button" className="sk-btn" onClick={close} disabled={saving}>{t('kit.mdedit.cancel')}</button>
           <button
@@ -364,23 +337,24 @@ export function MdInlineEdit({
       </div>
       {!lossless && <p className="sk-mdedit__note">{t('kit.mdedit.lossy')}</p>}
       {error && <div className="sk-mdedit__err" role="alert">{t('kit.mdedit.saveFailed', { reason: error })}</div>}
-      {mode === 'code' && source}
-      {mode === 'preview' && (
-        <TipTapField
-          value={draft}
-          onChange={fromTipTap}
-          ariaLabel={label}
-          onUploadImage={onUploadImage}
-          mentionItems={mentionItems}
-          minHeight={160}
-        />
-      )}
-      {mode === 'split' && (
-        <div className="sk-mdedit__split">
-          {source}
-          <div className="sk-mdedit__live" aria-label={t('kit.mdedit.live')} role="region">{preview}</div>
-        </div>
-      )}
+      {/* Один редактор на все виды правки: исходник и «вместе» — его же
+          кнопки. Вид держим у себя (он может приехать из URL), редактор
+          сообщает о переключении назад. */}
+      <TipTapField
+        value={draft}
+        onChange={fromTipTap}
+        ariaLabel={label}
+        onUploadImage={onUploadImage}
+        mentionItems={mentionItems}
+        minHeight={160}
+        mode={mode === 'preview' ? 'wysiwyg' : 'md'}
+        onModeChange={m => choose(m === 'wysiwyg' ? 'preview' : 'code')}
+        sideBySide={mode === 'split'}
+        onSideBySide={on => choose(on ? 'split' : 'code')}
+        renderPreview={renderPreview}
+        allowWysiwyg={lossless}
+        lossyReason={t('kit.mdedit.lossy')}
+      />
     </section>
   );
 }

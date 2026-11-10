@@ -1677,6 +1677,22 @@ code, pre, kbd, samp { font-family: var(--mono); }
   line-height: 1.55;
 }
 .sk-md__source:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+/* «Показывать вместе» (владелица 10.11.2026) — исходник и живой просмотр рядом,
+   кнопкой в ряду самого редактора. Доли равные; на телефоне делить нечего, и
+   просмотр уходит под исходник. Ширину полю даёт data-wide="side" у
+   MdInlineEdit (ниже): иначе «вместе» делило бы колонку чтения пополам. */
+.sk-md__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
+.sk-md__live {
+  min-width: 0;
+  padding: 7px 9px;
+  overflow: auto;
+  border-left: 1px solid var(--bd);
+  background: var(--bg1);
+}
+@media (max-width: 720px) {
+  .sk-md__split { grid-template-columns: minmax(0, 1fr); }
+  .sk-md__live { border-left: none; border-top: 1px solid var(--bd); }
+}
 .sk-md .ProseMirror img { display: block; max-width: 100%; height: auto; margin: 8px 0; border-radius: var(--r-md); }
 .sk-md .ProseMirror table { width: 100%; margin: 8px 0; border-collapse: collapse; table-layout: fixed; }
 .sk-md .ProseMirror th,
@@ -1858,42 +1874,16 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 
 /* ---------- MdInlineEdit: правка MD на месте (S5-06) ----------
-   Чтение — sk-prose; правка — только кнопкой ✎ (≥ --tap), внутри
-   переключатель «код / превью / рядом» и кнопки ≥ --tap. */
+   Чтение — sk-prose; правка — ОДНОЙ кнопкой ✎ (≥ --tap), а вид правки
+   (исходник, «вместе») — кнопками самого редактора (sk-md__btn выше). */
 .sk-mdedit { position: relative; min-width: 0; }
 .sk-mdedit[data-state="read"] { padding-right: calc(max(var(--tap), 24px) + 4px); }
 .sk-mdedit__pen { position: absolute; top: 0; right: 0; }
 .sk-mdedit__empty { margin: 0; color: var(--t3); font-size: var(--fs-sm); font-style: italic; }
 .sk-mdedit.is-editing { display: flex; flex-direction: column; gap: 6px; }
-.sk-mdedit__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
-.sk-mdedit__modes {
-  display: inline-flex;
-  padding: 2px;
-  gap: 2px;
-  border: 1px solid var(--bd);
-  border-radius: var(--r-pill);
-  background: var(--bg2);
-}
-.sk-mdedit__mode {
-  min-height: max(var(--tap), 24px);
-  padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--t2);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-.sk-mdedit__mode:hover { color: var(--t1); }
-.sk-mdedit__mode.is-on {
-  color: var(--acc);
-  background: color-mix(in srgb, var(--acc) 18%, transparent);
-  border-color: color-mix(in srgb, var(--acc) 35%, transparent);
-}
-.sk-mdedit__mode[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
-.sk-mdedit__mode:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* Ряд действий прижат вправо: переключателя видов правки слева больше нет —
+   вид выбирается в самом редакторе (владелица 10.11.2026). */
+.sk-mdedit__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
 .sk-mdedit__actions { display: inline-flex; gap: 6px; }
 .sk-btn--primary { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 22%, var(--bg2)); color: var(--t1); }
 .sk-btn:disabled { opacity: .55; cursor: default; }
@@ -1904,24 +1894,6 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-radius: var(--r-sm);
   color: var(--dng);
   font-size: var(--fs-xs);
-}
-.sk-mdedit__source {
-  min-height: 160px;
-  border: 1px solid var(--bd);
-  border-radius: var(--r-sm);
-}
-.sk-mdedit__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
-.sk-mdedit__live {
-  min-height: 160px;
-  min-width: 0;
-  padding: 7px 9px;
-  overflow: auto;
-  border: 1px dashed var(--bd);
-  border-radius: var(--r-sm);
-  background: var(--bg1);
-}
-@media (max-width: 720px) {
-  .sk-mdedit__split { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---------- SandboxedHtmlFrame: HTML только в песочнице ---------- */
@@ -5648,9 +5620,6 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 .sk-mdedit__draft-text { color: var(--t1); }
 .sk-mdedit__draft-note { color: var(--wrn); }
-.sk-mdedit__src-btn { font: inherit; font-size: var(--fs-xs); color: var(--t2); background: none; border: 1px solid var(--bd); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
-.sk-mdedit__src-btn:hover { color: var(--t1); border-color: var(--acc); }
-
 .sk-mdedit__hint-text { flex: 1 1 auto; min-width: 0; text-align: right; }
 
 /* S4-CONTENT-V4 п.5 (прототип v4): текст записи внизу и во весь экран — колонкой чтения,
@@ -5661,6 +5630,17 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   margin-inline: auto;
   font-size: var(--read-fs, var(--fs-md));
 }
+/* Правка «вместе» (владелица 10.11.2026: «при просмотре рядом сжимается на
+   половину ширина — так быть не должно, раздвигай, у нас есть большой запас»).
+   Мера чтения 680 px верна для ЧТЕНИЯ одной колонкой; когда в том же месте
+   стоят исходник и просмотр, она даёт по 340 px на поле — ровно та половина.
+   Пока поле правят «вместе», мера снимается и с него, и с колонки-предка
+   (её задают .sk-tabpanel > * в доке): поле занимает свободное место, а
+   остальная запись остаётся колонкой чтения. */
+.sk-rec-reader [data-placement='bottom'] .sk-mdedit[data-wide='side'],
+.sk-rec-reader [data-placement='full'] .sk-mdedit[data-wide='side'] { max-width: none; }
+.sk-dock[data-placement='bottom'] .sk-tabpanel > *:has(.sk-mdedit[data-wide='side']),
+.sk-dock[data-placement='full'] .sk-tabpanel > *:has(.sk-mdedit[data-wide='side']) { max-width: none; }
 
 /* Разделы, вклеенные в хвост тела (S4-29): так было в v1 у зависимостей
    спринта и у списка решений ADR. Заголовок со счётчиком — вкладки у раздела
