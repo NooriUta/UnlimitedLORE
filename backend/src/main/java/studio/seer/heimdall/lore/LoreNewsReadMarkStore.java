@@ -57,7 +57,7 @@ final class LoreNewsReadMarkStore {
         try {
             List<Map<String, Object>> rows = query.apply(
                 "SELECT mark_at FROM " + TYPE + " WHERE mark_id = :id", Map.of("id", SHARED));
-            if (rows == null || rows.isEmpty() || rows.get(0).get("mark_at") == null) return new State("unset", null, null);
+            if (rows == null || rows.isEmpty() || rows.get(0).get("mark_at") == null) return new State("none", null, null); // ревью 10.11, B3: имя из контракта kit (ok | none | unavailable)
             Instant at = LoreNewsV2Collector.instant(rows.get(0).get("mark_at"));
             return at == null ? new State("unavailable", null, "mark_at не разобран: " + rows.get(0).get("mark_at"))
                 : new State("ok", at, null);
