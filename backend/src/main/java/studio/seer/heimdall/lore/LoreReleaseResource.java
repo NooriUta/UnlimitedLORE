@@ -338,15 +338,15 @@ public class LoreReleaseResource extends LoreResourceBase {
             // закрывает открытую версию и открывает новую (с описанием после правки) в ОДНОМ
             // sqlscript с правкой вершины; закрыть можно только ещё открытую строку
             // (Scd2Guard), иначе 409 и ничего не записано.
-            List<Map<String, Object>> cur = ingestService.queryPublic(
+            List<Map<String, Object>> curRow = ingestService.queryPublic(
                 "SELECT description_md FROM KnowRelease WHERE release_uid = :k", Map.of("k", rkey));
-            if (cur.isEmpty()) return badParams("release not found: " + rkey);
+            if (curRow.isEmpty()) return badParams("release not found: " + rkey);
             List<Map<String, Object>> openRows = ingestService.queryPublic(
                 "SELECT @rid AS rid FROM KnowReleaseHist WHERE in('HAS_STATE').release_uid CONTAINS :k "
                 + "AND valid_to IS NULL", Map.of("k", rkey));
             Object openRid = openRows.isEmpty() ? null : openRows.get(0).get("rid");
             String newUid = p.containsKey("ruid") ? String.valueOf(p.get("ruid")) : rkey;
-            Object desc = req.description_md() != null ? req.description_md() : cur.get(0).get("description_md");
+            Object desc = req.description_md() != null ? req.description_md() : curRow.get(0).get("description_md");
             p.put("now", nowIso);
             p.put("nsid", UUID.randomUUID().toString());
             p.put("nuid", newUid);
