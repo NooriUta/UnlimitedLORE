@@ -346,7 +346,9 @@ class LoreRecordFacadeLiveDbTest {
     void headChips_ownFirst_thenInheritedWithSource() {
         final String gp = "test/rec-chips";
         final String sid = "SPRINT_REC_CHIPS";
-        admin().body(Map.of("slug", gp, "name", "Проект чипов")).post("/lore/project").then().statusCode(200);
+        // Проект заводит только superadmin (admin → 403).
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body(Map.of("slug", gp, "name", "Проект чипов")).post("/lore/project").then().statusCode(200);
         admin().body(Map.of("component_id", "C-CHIP-SPRINT", "full_name", "Компонент спринта", "area", "core"))
             .post("/lore/component/create").then().statusCode(200);
         admin().body(Map.of("component_id", "C-CHIP-OWN", "full_name", "Свой компонент", "area", "core"))
