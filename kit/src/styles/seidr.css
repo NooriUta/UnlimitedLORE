@@ -1153,6 +1153,34 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 
+/* ---------- Полосы прокрутки в теме (просьба владелицы 10.11.2026:
+   «ползунки скролов сделай, чтобы в тему попадали, а не выглядели инородно»).
+   Системная полоса рисуется цветами ОС: в тёмной теме Seiðr она светло-серая и
+   режет глаз, в светлой — наоборот. Поэтому цвет берём токенами темы, и он сам
+   меняется вместе с палитрой и светлым/тёмным режимом.
+   Два механизма намеренно: «scrollbar-color» понимают Firefox и новые
+   Chromium, «::-webkit-scrollbar» — Safari и старые Chromium. Один без
+   другого оставил бы половину браузеров с системной полосой.
+   Боксы, которые НАРОЧНО прячут полосу («scrollbar-width: none»), это правило
+   не трогает: там прокрутка скрыта по своей причине. ---------- */
+:root {
+  /* ползунок · дорожка */
+  scrollbar-color: var(--bd) transparent;
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  /* Фон рисуем через background-clip, иначе рамка-отступ закрасится тоже и
+     ползунок прилипнет к краю. */
+  background: var(--bd);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--bdh); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
 /* ---------- KitShell (K-02): модули сверху, меню групп, drawer на телефоне ----------
    Вынос из прототипа v4 (.top/.apps/.side/.sgrp/.sitem). Узкий экран — меню
    в Sheet слева (рисует компонент), подписи модулей прячутся, имя — aria-label. */
