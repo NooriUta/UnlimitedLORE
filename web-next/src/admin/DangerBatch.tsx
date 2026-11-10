@@ -27,6 +27,12 @@ export interface DangerBatchProps {
   onClose: () => void;
   /** Пачка применена или отменена — матрицу пора перечитать. */
   onChanged?: () => void;
+  /**
+   * Откат прошлой пачки из журнала (S7B-13): тот же путь, но с undo_of —
+   * сервер проверяет окно и в диффе, и при применении. display_name при
+   * этом не уходит: имени человека журнал не знает, и затирать его kc_sub-ом нельзя.
+   */
+  undoOf?: string;
 }
 
 type PlanState =
@@ -39,7 +45,7 @@ type PlanState =
 const reasonOf = (e: unknown): string =>
   e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e);
 
-export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged }: DangerBatchProps) {
+export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, undoOf }: DangerBatchProps) {
   const t = useAppT();
   const lang = useKitLang();
   const [plan, setPlan] = useState<PlanState>({ kind: 'loading' });
@@ -52,6 +58,10 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged }: 
   const [undone, setUndone] = useState(false);
   const [undoError, setUndoError] = useState<string | null>(null);
   const key = useMemo(() => JSON.stringify(changes), [changes]);
+  /** Кто и чем: правка из «Ролей» несёт имя, откат из журнала — undo_of без имени. */
+  const who = undoOf
+    ? { kc_sub: person.kc_sub, undo_of: undoOf }
+    : { kc_sub: person.kc_sub, display_name: person.name };
 
   useEffect(() => {
     let alive = true;
@@ -61,7 +71,7 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged }: 
     setUndone(false);
     setUndoError(null);
     setTyped('');
-    postRoleBatch({ kc_sub: person.kc_sub, display_name: person.name, changes, dry_run: true }, fetchImpl).then(
+    postRoleBatch({ ...who, changes, dry_run: true }, fetchImpl).then(
       body => {
         if (alive) setPlan({ kind: 'ok', rows: planToDiff(parsePlan(body), { before: t('admin.roles.diff.before'), none: t('admin.roles.diff.none') }) });
       },
@@ -84,7 +94,7 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged }: 
     const send = changes.filter(c => ids.has(c.project));
     setApplying(true);
     setApplyError(null);
-    postRoleBatch({ kc_sub: person.kc_sub, display_name: person.name, changes: send }, fetchImpl).then(
+    postRoleBatch({ ...who, changes: send }, fetchImpl).then(
       body => { setAnswer(parseApply(body)); setApplying(false); onChanged?.(); },
       (e: unknown) => { setApplyError(reasonOf(e)); setApplying(false); },
     );
@@ -94,7 +104,7 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged }: 
     if (!answer || undoing) return;
     setUndoing(true);
     setUndoError(null);
-    postRoleBatch({ kc_sub: person.kc_sub, display_name: person.name, changes: answer.undo, undo_of: id }, fetchImpl).then(
+    postRoleBatch({ ...who, changes: answer.undo, undo_of: id }, fetchImpl).then(
       () => { setUndone(true); setUndoing(false); onChanged?.(); },
       (e: unknown) => { setUndoError(t('admin.roles.undoFailed', { reason: reasonOf(e) })); setUndoing(false); },
     );

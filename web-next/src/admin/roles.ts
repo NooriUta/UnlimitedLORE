@@ -10,7 +10,7 @@
 //     пачки (changes=undo, undo_of=batch_id).
 //
 // Здесь — модель без React: что рисовать и что отправлять.
-import type { BatchItemFail, BatchResult, DiffCheck, DiffRow } from '@seidr/kit';
+import type { BatchItemFail, BatchResult, DiffCheck, DiffRow, MatrixCellState } from '@seidr/kit';
 import { fetchSlice, LoreHttpError } from '../api/loreSlice';
 import { loreFetch } from '../auth/session';
 
@@ -107,6 +107,30 @@ export function parseRoleMatrix(body: unknown): RolesData {
     sourcesAsked: Array.isArray(b.sources_asked) ? b.sources_asked.map(String) : [],
     truncated: b.truncated === true,
   };
+}
+
+/** Источники ячеек на человека — колонки блока «вне графа» (S7B-11). */
+export const PERSON_SOURCES = ['kc', 'forgejo'] as const;
+
+/**
+ * Ячейка на человека → состояние kit Matrix (S7B-11).
+ *   • checked + роль — значение; checked без роли — «значения нет»
+ *     (сервер спросил и услышал «нет», например человека нет в KC);
+ *   • unavailable и источник НЕ в sources_asked — `unasked`: его не спрашивали,
+ *     чинить нечего (Forgejo: «нет связи с пользователем Forgejo»);
+ *   • unavailable и источник спрашивали — «не смогли проверить» с причиной;
+ *   • forbidden — «нет прав»;
+ *   • ячейки нет — не спрашивали (если источник не опрошен) или не смогли.
+ */
+export function personSourceCell(pc: PersonCell | undefined, sourcesAsked: readonly string[], source?: string): MatrixCellState {
+  const src = pc?.source ?? source ?? null;
+  const asked = src !== null && sourcesAsked.includes(src);
+  if (!pc) return asked ? { state: 'unverified' } : { state: 'unasked' };
+  if (pc.state === 'forbidden') return { state: 'forbidden', reason: pc.reason ?? undefined };
+  if (pc.state === 'unavailable') {
+    return asked ? { state: 'unverified', reason: pc.reason ?? undefined } : { state: 'unasked', reason: pc.reason ?? undefined };
+  }
+  return pc.role ? { state: 'value', value: pc.role } : { state: 'none' };
 }
 
 export async function fetchRoleMatrix(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<RolesData> {

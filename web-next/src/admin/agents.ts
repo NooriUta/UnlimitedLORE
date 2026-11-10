@@ -137,10 +137,28 @@ export async function setAgentHarness(
   harness: string | null,
   fetchImpl: typeof fetch = loreFetch,
 ): Promise<void> {
+  await postActorOwner({ actor_id: row.actor_id, client_id: row.client_id, kc_sub: row.owner_kc_sub, harness: harness ?? '' }, fetchImpl);
+}
+
+/**
+ * Привязка машины (S7B-16, сервер #1031): machine_id в POST /lore/actor/owner.
+ * null — отвязать (уходит ""); harness в теле нет — сервер его не трогает.
+ * Две машины с одним именем — 400 со словами сервера: отдаём как ошибку.
+ */
+export async function setAgentMachine(
+  row: Pick<AgentRow, 'actor_id' | 'client_id' | 'owner_kc_sub'>,
+  machineId: string | null,
+  fetchImpl: typeof fetch = loreFetch,
+): Promise<void> {
+  const id = (machineId ?? '').trim();
+  await postActorOwner({ actor_id: row.actor_id, client_id: row.client_id, kc_sub: row.owner_kc_sub, machine_id: id }, fetchImpl);
+}
+
+async function postActorOwner(body: Record<string, unknown>, fetchImpl: typeof fetch = loreFetch): Promise<void> {
   const res = await fetchImpl('/lore/actor/owner', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ actor_id: row.actor_id, client_id: row.client_id, kc_sub: row.owner_kc_sub, harness: harness ?? '' }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     let code = '';
