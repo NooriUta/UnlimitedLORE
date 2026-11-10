@@ -88,4 +88,11 @@
 .adm-verdict[data-sees='true'][data-write='false'] { color: var(--inf); }
 .adm-verdict[data-sees='false'] { color: var(--dng); }
 .adm-chain { margin: 0; padding-left: 20px; color: var(--t2); font-size: var(--fs-xs); }
+/* Правила CLAUDE (S7B-06) и флаги (S7B-08). Только токены. */
+.adm-rule { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.adm-prose { padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); min-width: 0; overflow-x: auto; }
+.adm-flag { font: 700 var(--fs-xs) var(--mono); }
+.adm-flag[data-on='true'] { color: var(--suc); }
+.adm-flag[data-on='false'] { color: var(--t3); }
+.adm-table tr[data-overridden] th, .adm-table tr[data-overridden] td { background: var(--bg2); }
 .adm-plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
