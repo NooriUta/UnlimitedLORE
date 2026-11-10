@@ -55,26 +55,9 @@ final class LoreRecordValues {
 
     /** {@code values} записи по строке главного среза — вместе со статусом записи. */
     static Map<String, Object> values(String type, Map<String, Object> r) {
-        // S4-MODEL-RECORD: четыре прежних типа — общим сборщиком по описаниям from.
-        if (java.util.Set.of("sprint", "task", "adr", "spec").contains(type))
-            return LoreRecordFrom.assemble(LoreRecordFrom.VALUES.get(type), r);
-        Map<String, Object> values = switch (type) {
-            case "decision" -> decision(r);
-            case "question" -> question(r);
-            case "milestone" -> milestone(r);
-            case "release" -> release(r);
-            case "component" -> component(r);
-            case "tech" -> tech(r);
-            case "feature" -> feature(r);
-            default -> spec(r);
-        };
-        String status = switch (type) {
-            case "sprint", "task" -> planToken(str(r.get("status_raw")));
-            case "decision" -> docToken(r.get("status_raw"));
-            default -> docToken(r.get("status"));
-        };
-        values.put("status", status);
-        return values;
+        // S4-MODEL-RECORD: все типы — общим сборщиком по описаниям from; неизвестный тип — как спека (как раньше).
+        List<LoreRecordFrom.Val> d = LoreRecordFrom.VALUES.get(type);
+        return LoreRecordFrom.assemble(d != null ? d : LoreRecordFrom.VALUES.get("spec"), r);
     }
 
     /** Строка ребёнка → item части (кроме фазы: её «x/y» считается по задачам, {@link #phaseItem}). */
