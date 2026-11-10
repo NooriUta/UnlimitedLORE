@@ -96,6 +96,9 @@ final class LoreMePrefs {
         return errs;
     }
 
+    /** Заглушка (тест до правки): оговорки о прижатых значениях. */
+    static List<String> clampNotes(Map<String, Object> patch) { return List.of(); }
+
     /** Сохранённые личные значения + патч. Патч уже проверен. null снимает ключ. */
     static Map<String, Object> merge(Map<String, Object> stored, Map<String, Object> patch) {
         Map<String, Object> out = new LinkedHashMap<>();

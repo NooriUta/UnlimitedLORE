@@ -32,6 +32,31 @@ class LoreMePrefsTest {
             "неизвестное место — отказ, а не молчаливое умолчание");
     }
 
+    /**
+     * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-16: масштаб текста — ползунок-множитель (владелица 10.11:
+     * «ползунок с сохранением множителя… сколько мин/макс оставить — скажу после выкатки»).
+     * Границы предварительные — значение вне них прижимается к краю, а не отвергается:
+     * после сужения границ человек придёт со старым значением, отказ прочтётся как поломка.
+     */
+    @Test
+    void textScaleIsANumberClampedToBounds() {
+        assertEquals(1.0, ((Number) LoreMePrefs.defaults().get("text_scale")).doubleValue(), 1e-9);
+        Map<String, Object> sch = (Map<String, Object>) LoreMePrefs.schema().get("text_scale");
+        assertEquals("number", sch.get("type"));
+        assertEquals(0.8, ((Number) sch.get("min")).doubleValue(), 1e-9);
+        assertEquals(1.6, ((Number) sch.get("max")).doubleValue(), 1e-9);
+        assertEquals(0.05, ((Number) sch.get("step")).doubleValue(), 1e-9);
+        assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("text_scale", 1.25)));
+        assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("text_scale", 3)),
+            "вне границ — не отказ, а прижатие");
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("text_scale", "big")).size(), "не число — отказ");
+        Map<String, Object> eff = LoreMePrefs.effective(Map.of("text_scale", 3));
+        assertEquals(1.6, ((Number) eff.get("text_scale")).doubleValue(), 1e-9, "прижато к верхней границе");
+        assertEquals(0.8, ((Number) LoreMePrefs.effective(Map.of("text_scale", 0.1)).get("text_scale")).doubleValue(), 1e-9);
+        assertFalse(LoreMePrefs.clampNotes(Map.of("text_scale", 3)).isEmpty(), "о прижатии сказано словами");
+        assertTrue(LoreMePrefs.clampNotes(Map.of("text_scale", 1.2)).isEmpty());
+    }
+
     // ── Схема: один аддитивный шаг, только новые типы ───────────────────────
 
     @Test
