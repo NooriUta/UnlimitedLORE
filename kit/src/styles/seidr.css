@@ -4979,6 +4979,24 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
 .sk-news__wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 .sk-news__wrap .sk-news__chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); }
 @media (max-width: 720px) {
+  /* Телефон: ряды чипов ПЕРЕНОСЯТСЯ, а не прокручиваются вслепую.
+     Жалоба владелицы 10.11.2026 со скриншотом с планшета: «до этих пунктов у
+     тебя все езе не адаптивный мобильный вид». Замер на 412: ряд быстрых
+     фильтров — содержимое 519 px в коробке 412, чипы дня стоят до 518 px.
+     Страница при этом НЕ шире экрана, поэтому прежняя проверка «нет
+     горизонтальной прокрутки» была зелёной — она смотрела не туда.
+     Почему перенос, а не своя полоса прокрутки (как у условий списка в S9-12):
+     там прокручиваются УСЛОВИЯ, а управление остаётся на виду; здесь сами
+     фильтры и счётчики дня — то, ради чего на экран и смотрят. Фильтр,
+     которого не видно, — это фильтр, которого нет, а половина счёта дня за
+     краем бессмысленна. Полоса прокрутки без видимого ползунка
+     (scrollbar-width: none) к тому же ничем не показывает, что справа ещё
+     что-то есть. */
+  .sk-news__frow { flex-wrap: wrap; overflow-x: visible; }
+  .sk-news__frow > .sk-news__types { flex-wrap: wrap; padding-left: 0; border-left: 0; }
+  .sk-news__facets,
+  .sk-news__types,
+  .sk-news__strip { flex-wrap: wrap; }
   .sk-news__tlabel { display: none; }
   .sk-news__sheet {
     top: auto; left: 0; width: auto; max-height: 88vh;
