@@ -1031,10 +1031,16 @@ code, pre, kbd, samp { font-family: var(--mono); }
 
 /* ---------- Tabs ---------- */
 .sk-tabs-root { display: flex; flex-direction: column; min-width: 0; }
+/* Ряд вкладок: РОВНЫЙ ШАГ по обеим осям (ревью 10.11.2026, B13 — «строка
+   связей плывёт на 3–4 строки с рваными промежутками»). Шаг задан отдельно по
+   осям намеренно: одной записью `gap` строки и столбцы расходились при правке,
+   а на глаз рваным выглядит именно разный шаг. */
 .sk-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  row-gap: 4px;
+  column-gap: 4px;
   padding: 2px 2px 6px;
   border-bottom: 1px solid var(--bd);
 }
@@ -1042,6 +1048,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  /* Чип не тянется и не сжимается, а подпись не переносится: иначе значок вида
+     связи отрывался от подписи, а чипы разной «резиновости» давали рваные
+     промежутки (B13). */
+  flex: 0 0 auto;
+  white-space: nowrap;
   min-height: max(var(--tap), 24px);
   padding: 0 10px;
   border: 1px solid var(--bd);
@@ -1063,6 +1074,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: 1px;
 }
 .sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* «Не смогли посчитать» — знаком вопроса и предупреждающим тоном: ложный ноль
+   и молчание тут одинаково врут (B13, доктрина честных состояний). */
+.sk-tab__count[data-unknown] { color: var(--wrn); cursor: help; }
 
 /* Редкие вкладки под «Ещё» (S4-29, просьба владелицы 09.11: «зависимости и
    прочее можно скрыть под море… интерфейс становится перегруженным»).
@@ -1102,7 +1116,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
-.sk-tabs--underline { gap: 2px; padding: 0; }
+.sk-tabs--underline { row-gap: 2px; column-gap: 2px; padding: 0; }
 /* Линия вкладок записи не висит в воздухе: свой отступ сверху, как в прототипе
    v4 (.tabs padding 10px 16px 0). Аудит 08.11: «между шапкой записи,
    вкладками и текстом нет ни линии, ни фона, только 8 px зазора». */
@@ -1735,15 +1749,30 @@ code, pre, kbd, samp { font-family: var(--mono); }
    ставим цвет текста темы (селектор по элементу: классы срезает санитайзер). */
 .sk-prose__mermaid--theme svg text { fill: var(--t1) !important; }
 .sk-prose__diagram-wait { min-height: 24px; margin: 0 0 .8em; }
+/* «Диаграмму не удалось нарисовать» — оговорка ВМЕСТЕ с исходником блока
+   (дефект владелицы 10.11.2026): не смогли нарисовать ≠ пусто, и сырое
+   сообщение библиотеки не закрывает содержимое. Вид — как у фолбэка K-13:
+   пунктир --wrn, потому что это оговорка, а не отказ показать запись. */
 .sk-prose__diagram-err {
   margin: 0 0 .8em;
-  padding: 4px 8px;
-  border: 1px solid var(--dng);
-  border-radius: var(--r-sm);
-  color: var(--dng);
+  padding: 6px 10px;
+  border: 1px dashed var(--wrn);
+  border-radius: var(--r-md);
+  background: var(--bg1);
   font-family: var(--mono);
   font-size: var(--fs-base);
 }
+.sk-prose__diagram-err-why { margin: 0 0 6px; color: var(--wrn); font-size: var(--fs-sm); }
+.sk-prose__diagram-err-cap { margin: 0 0 2px; color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; }
+.sk-prose__diagram-err-src {
+  margin: 0;
+  overflow-x: auto;
+  color: var(--t2);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+.sk-prose__diagram-err-tech { margin: 6px 0 0; font-size: var(--fs-sm); }
 .sk-prose__diagram-err summary { color: var(--t3); cursor: pointer; }
 .sk-prose__diagram-err pre { margin: 4px 0 0; color: var(--t2); white-space: pre-wrap; }
 .sk-prose__bpmn {
@@ -3571,18 +3600,28 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   min-width: 0;
   font-size: var(--fs-sm);
 }
+/* Линию рисует подпись (.sk-crumbs__label), а не сам этот бокс: у flex-
+   контейнера подчёркивание ложится по базовой линии бокса, а текст сдвинут
+   вниз центрированием в высоте тапа — линия проходит по глифам и читается
+   как зачёркивание («удалённая запись», B7 ревью 10.11.2026). На инлайновом
+   потомке положение линии задаёт сам текст, и это верно в любом движке. */
 .sk-crumbs__back {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
   min-height: max(var(--tap), 22px);
   padding: 0;
   border: 0;
   background: none;
   color: var(--acc);
   font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sk-crumbs__label {
+  min-width: 0;
   text-decoration: underline;
   text-underline-offset: 2px;
-  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

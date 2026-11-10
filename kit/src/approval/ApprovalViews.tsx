@@ -16,6 +16,7 @@ import type { KitKey, KitLang } from '../i18n';
 import { EmptyState } from '../states/StateViews';
 import { checkTransition, journalRows, rolePerms } from './approval';
 import type { ApprovalCtx, DenyReason } from './approval';
+import { kitMinute } from '../core/fmtValue';
 
 const DENY_KEY: Record<DenyReason, KitKey> = {
   readonly: 'kit.appr.deny.readonly',
@@ -157,7 +158,7 @@ export function ApprovalJournal({ ctx, recordId }: ApprovalJournalProps) {
       <tbody>
         {rows.map((r, i) => (
           <tr key={`${r.at}-${r.field}-${i}`} data-state={r.state}>
-            <td className="sk-appr-log__mono">{r.at.slice(0, 16).replace('T', ' ')}</td>
+            <td className="sk-appr-log__mono" title={kitMinute(r.at)?.title}>{kitMinute(r.at)?.text ?? '—'}</td>
             <td className="sk-appr-log__mono">{r.field}</td>
             <td className="sk-appr-log__change">{show(r.from)} → {show(r.to)}</td>
             <td>

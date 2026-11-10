@@ -250,6 +250,11 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // пути записи, и тогда ✎ обещал бы сохранение, которого некуда отправить
   // (проверено серверной сессией по LoreRecordRegistry.schemaJson 09.11).
   const bodySections = sections.map(s => ({ key: s.key, title: s.label, editable: s.editable !== false }));
+  // Связи, которые рисует САМ kit (по видам UML — со счётчиком, значком и
+  // управлением). Их ключи нужны ниже: своей вкладки на тот же ключ приложение
+  // не отдаёт.
+  const kitRels = c.schema.relations.filter(r => (r.place ?? 'link_tab') === 'link_tab');
+  const kitRelKeys = new Set(kitRels.map(r => r.key));
   const linkTabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
     key: t.key, title: t.label,
     render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),
@@ -259,13 +264,30 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // таблицей — withSprintTasksTab; эта остаётся для прочих частей).
   const partTabs = parts.map(p => ({
     key: p.key, title: p.label,
+    // Число элементов части — в ряд вкладок (B13). Часть уже отдаёт его
+    // честной формы: при state !== 'ok' приходит null, то есть «не смогли
+    // посчитать», и ряд покажет «?» с подсказкой, а не ложный ноль.
+    count: p.count,
     render: () => (p.state !== 'ok'
       ? (p.error ?? p.state)
       : p.items.map(i => i.title || i.id).join(' · ') || appT(lang, 'pp.contract.noLinks')),
   }));
-  const tabs = [...partTabs, ...linkTabs.filter(t => !partTabs.some(x => x.key === t.key))];
+  // ОДИН РАЗДЕЛ — ОДНО МЕСТО (ревью 10.11.2026, B13; просьба владелицы того же
+  // дня: «проверить, почему… в паспорте у спринтов дублирующиеся вкладки»).
+  //
+  // Связь с `place: "link_tab"` проходила ДВУМЯ путями: `recordFromServer`
+  // (api/liveRecord.ts, `tabsOf`) делал из неё `schema.tabs` — так было до
+  // того, как kit научился рисовать вкладки связей сам, — а здесь та же связь
+  // уходит в `relations`, и kit строит вкладку второй раз. В ряду выходили две
+  // вкладки «Зависит от»: одна со счётчиком и значком ⇢, другая без ничего
+  // (отсюда же «счётчики то есть, то нет» из ревью).
+  //
+  // Поэтому вкладку связи отдаёт kit, а приложение оставляет свои вкладки
+  // только там, где kit связь НЕ рисует: части (`place: "part"` — у них в
+  // `parts[]` лежат настоящие элементы) и свойства.
+  const tabs = [...partTabs, ...linkTabs.filter(t => !partTabs.some(x => x.key === t.key) && !kitRelKeys.has(t.key))];
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: c.schema.relations.filter(r => (r.place ?? 'link_tab') === 'link_tab').map(({ count: _n, place: _p, target_type: _t, ...d }) => d), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...propFields], ...(tabs.length ? { tabs } : {}) },
+    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: kitRels.map(({ count: _n, place: _p, target_type: _t, ...d }) => d), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...propFields], ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit

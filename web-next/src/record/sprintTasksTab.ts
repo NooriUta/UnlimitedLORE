@@ -23,7 +23,13 @@ export function withSprintTasksTab(
 ): KitConfig {
   const k = config.kinds[kind];
   if (!k) return config;
-  const tab: Tab = { key: SPRINT_TASKS_TAB, title, render: r => render(r) };
+  // Подменяется СОДЕРЖИМОЕ вкладки, а не то, что о ней известно (B13 ревью
+  // 10.11.2026). Счётчик приходит от части записи, и собранная заново вкладка
+  // его теряла: в списке «48/55», а в ряду паспорта «Задачи» без числа —
+  // ровно та жалоба, с которой начался разбор паспорта спринта. Переносим как
+  // есть, включая null: «не смогли посчитать» не должно стать «считать нечего».
+  const was = (k.tabs ?? []).find(x => x.key === SPRINT_TASKS_TAB);
+  const tab: Tab = { key: SPRINT_TASKS_TAB, title, render: r => render(r), ...(was && 'count' in was ? { count: was.count } : {}) };
   const rest = (k.tabs ?? []).filter(x => x.key !== SPRINT_TASKS_TAB);
   return { ...config, kinds: { ...config.kinds, [kind]: { ...k, tabs: [tab, ...rest] } } };
 }

@@ -10,6 +10,7 @@
 // Фильтры, группировка, порядок и время — в панели «Фильтры» (на телефоне —
 // нижний лист). Карточки метрик, разрез, матрица, сгорание, знания — по
 // нажатию «все метрики». Ничего не удалено: всё в одном действии.
+import { kitMinute } from '../core/fmtValue';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { GameIcon } from '../elements/GameIcon';
@@ -769,7 +770,7 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: F
             {showLine && i === lastUnread && (
               <div className="sk-news__readline" role="separator" data-testid="news-read-line"
                 aria-label={`${t('readLine')} · ${data.meta.read_mark?.at ?? ''}`}>
-                <span>{`${t('readLine')} · ${(data.meta.read_mark?.at ?? '').slice(0, 16).replace('T', ' ')}`}</span>
+                <span>{`${t('readLine')} · ${kitMinute(data.meta.read_mark?.at)?.text ?? ''}`}</span>
               </div>
             )}
           </div>
