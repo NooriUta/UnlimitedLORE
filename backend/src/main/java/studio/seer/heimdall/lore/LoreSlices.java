@@ -986,8 +986,17 @@ public final class LoreSlices {
             "SELECT uc_id, title, status, goal_level, rigor, priority, parent_uc_id, date_created, shipped_at, " +
             "out('BELONGS_TO').component_id AS component_ids, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            // Просьба kit: у детей своих рёбер нет — без наследуемого поля «компонент» и
+            // «проект» у 5 из 5 детей FEAT-LORE-HONEST приходили пустыми. Те же выражения,
+            // что у use_cases_of_feature: свой и унаследованный — РАЗНЫЕ поля.
+            "in('DECOMPOSES_INTO').out('BELONGS_TO').component_id AS inherited_component_ids, " +
+            "in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug AS inherited_projects, " +
             "in('DECOMPOSES_INTO').uc_id    AS parent_uc_ids, " +
+            // Прогресс «сценариев x/y». Фильтр-проекция [..].size() парсер принимает;
+            // сравнение над .size() в списке полей — нет (CommandSQLParsingException).
             "out('DECOMPOSES_INTO').size()  AS uc_total, " +
+            "out('DECOMPOSES_INTO')[status='shipped'].size() AS uc_shipped, " +
+            "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id, " +
             "in('REALIZES').size()          AS task_count " +
             "FROM KnowUseCase",
             List.of(),
