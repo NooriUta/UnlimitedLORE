@@ -53,8 +53,12 @@ function callers(symbol: string, declaredIn: string): string[] {
 const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string }[] = [
   { symbol: 'ColumnsChoice', declaredIn: 'list/ColumnsChoice.tsx', why: 'выбор колонок в списке и в таблице задач (S4-35)' },
   { symbol: 'SumCell', declaredIn: 'list/sum.tsx', why: 'колонка sum:<поле> — итог с охватом, «не заполнено» вместо нуля (S4-09)' },
+  { symbol: 'feedByTime', declaredIn: 'list/feedModel.ts', why: 'вид «Лента»: ведра времени и провалы источника строками (K2-FEED-VIEW)' },
+  { symbol: 'feedGaps', declaredIn: 'list/feedModel.ts', why: 'в ленте «нет прав» и «не смогли проверить» видны строками в порядке времени (K2-FEED-VIEW §6)' },
   { symbol: 'StatusSlot', declaredIn: 'record/StatusSlot.tsx', why: 'статус в записи становится кнопкой, когда права позволяют его сменить (дефект 09.11)' },
-  { symbol: 'applySections', declaredIn: 'model/surfaces.ts', why: 'порядок разделов паспорта из модели: «задачи первыми, редкое под Ещё» (S4-29)' },
+  { symbol: 'applySections', declaredIn: 'model/surfaces.ts', why: 'порядок разделов паспорта из модели: «задачи первыми» (S4-29)' },
+  { symbol: 'sectionGroups', declaredIn: 'model/surfaces.ts', why: 'группа разделов рисуется ОДНОЙ вкладкой с подписью группы (паспорта v3, 10.11.2026)' },
+  { symbol: 'foldRow', declaredIn: 'shell/tabRow.ts', why: '«Ещё» в ряду вкладок: потолок семь и уход хвоста по ширине (паспорта v3, 10.11.2026)' },
   { symbol: 'gluedSections', declaredIn: 'model/surfaces.ts', why: 'разделы, вклеенные в хвост тела — как в v1 у зависимостей спринта (S4-29)' },
   { symbol: 'readWidths', declaredIn: 'list/columnWidths.ts', why: 'личная ширина колонок читается при открытии списка (S4-35)' },
   { symbol: 'writeWidths', declaredIn: 'list/columnWidths.ts', why: 'ширина запоминается после перетаскивания (S4-35)' },

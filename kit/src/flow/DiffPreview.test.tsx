@@ -26,21 +26,27 @@ const rows = (): DiffRow[] => [
 
 const apply = () => screen.getByTestId('kit-diff-apply');
 
+// 10.11.2026. Прежние проверки рисовали дифф ВОВСЕ БЕЗ обработчика применения
+// и при этом ждали кнопку «Применить N» и фразы «применять нечего». Это и был
+// дефект, найденный сессией приложения: кнопка обещала действие, которого нет.
+// Поэтому проверки, говорящие о применении, теперь передают обработчик — то
+// есть ставят тот случай, который и описывают. Отдельная группа ниже держит
+// обратное правило: без обработчика ни кнопки, ни фраз о применении нет.
 describe('K2-DIFF · три состояния строки', () => {
   it('положительный контроль: все три строки нарисованы', () => {
-    render(<DiffPreview rows={rows()} />);
+    render(<DiffPreview rows={rows()} onApply={() => {}} />);
     expect(screen.getAllByTestId(/^kit-diff-row-/)).toHaveLength(3);
   });
 
   it('добавится / снимется / уже есть различимы, а не красятся одинаково', () => {
-    render(<DiffPreview rows={rows()} />);
+    render(<DiffPreview rows={rows()} onApply={() => {}} />);
     expect(screen.getByTestId('kit-diff-row-r1').getAttribute('data-kind')).toBe('add');
     expect(screen.getByTestId('kit-diff-row-r2').getAttribute('data-kind')).toBe('remove');
     expect(screen.getByTestId('kit-diff-row-r3').getAttribute('data-kind')).toBe('same');
   });
 
   it('«уже есть» НЕ прячется: он объясняет, почему изменений меньше, чем галочек', () => {
-    render(<DiffPreview rows={rows()} />);
+    render(<DiffPreview rows={rows()} onApply={() => {}} />);
     expect(screen.getByText('строка уже есть')).toBeTruthy();
   });
 });
@@ -53,19 +59,19 @@ describe('K2-DIFF · состояние проверки у каждой стр�
   ];
 
   it('три исхода проверки различимы по состоянию строки', () => {
-    render(<DiffPreview rows={mixed()} />);
+    render(<DiffPreview rows={mixed()} onApply={() => {}} />);
     expect(screen.getByTestId('kit-diff-row-a').getAttribute('data-check')).toBe('checked');
     expect(screen.getByTestId('kit-diff-row-b').getAttribute('data-check')).toBe('unverified');
     expect(screen.getByTestId('kit-diff-row-c').getAttribute('data-check')).toBe('forbidden');
   });
 
   it('«не смогли проверить» несёт причину на экране, а не только в данных', () => {
-    render(<DiffPreview rows={mixed()} />);
+    render(<DiffPreview rows={mixed()} onApply={() => {}} />);
     expect(screen.getByText(/источник не ответил/)).toBeTruthy();
   });
 
   it('«нет прав» несёт свою причину и не выглядит как «не смогли»', () => {
-    render(<DiffPreview rows={mixed()} />);
+    render(<DiffPreview rows={mixed()} onApply={() => {}} />);
     expect(screen.getByText(/нужна роль администратора/)).toBeTruthy();
   });
 
@@ -78,7 +84,7 @@ describe('K2-DIFF · состояние проверки у каждой стр�
   });
 
   it('у непроверенной строки прямо сказано, что её не применят', () => {
-    render(<DiffPreview rows={mixed()} />);
+    render(<DiffPreview rows={mixed()} onApply={() => {}} />);
     expect(screen.getByTestId('kit-diff-skip-b')).toBeTruthy();
     expect(screen.getByTestId('kit-diff-skip-c')).toBeTruthy();
     expect(screen.queryByTestId('kit-diff-skip-a')).toBeNull();
@@ -87,13 +93,13 @@ describe('K2-DIFF · состояние проверки у каждой стр�
 
 describe('K2-DIFF · одна кнопка на всю пачку', () => {
   it('счётчик равен числу применимых строк: «уже есть» в него не входит', () => {
-    render(<DiffPreview rows={rows()} />);
+    render(<DiffPreview rows={rows()} onApply={() => {}} />);
     expect(apply().textContent).toMatch(/2/);
   });
 
   it('число склоняется по-русски', () => {
     const one: DiffRow[] = [{ id: 'x', kind: 'add', text: 'одна', check: ok }];
-    render(<DiffPreview rows={one} />);
+    render(<DiffPreview rows={one} onApply={() => {}} />);
     expect(apply().textContent).toMatch(/1 изменение/);
   });
 
@@ -115,14 +121,14 @@ describe('K2-DIFF · одна кнопка на всю пачку', () => {
 
 describe('K2-DIFF · нечего применять — кнопки нет, и сказано ПОЧЕМУ', () => {
   it('сравнивать нечего: строк не прислали', () => {
-    render(<DiffPreview rows={[]} />);
+    render(<DiffPreview rows={[]} onApply={() => {}} />);
     expect(screen.queryByTestId('kit-diff-apply')).toBeNull();
     expect(screen.getByTestId('kit-diff-nothing').textContent?.trim()).not.toBe('');
   });
 
   it('всё уже есть — это НЕ «нечего сравнивать», и текст другой', () => {
     const same: DiffRow[] = [{ id: 's', kind: 'same', text: 'уже есть', check: ok }];
-    render(<DiffPreview rows={same} />);
+    render(<DiffPreview rows={same} onApply={() => {}} />);
     expect(screen.queryByTestId('kit-diff-apply')).toBeNull();
     const said = screen.getByTestId('kit-diff-nothing').textContent ?? '';
     expect(said).toMatch(/уже|нет изменений/i);
@@ -132,7 +138,7 @@ describe('K2-DIFF · нечего применять — кнопки нет, и
     const unver: DiffRow[] = [
       { id: 'u', kind: 'add', text: 'не проверено', check: { state: 'unverified', reason: 'источник не ответил' } },
     ];
-    render(<DiffPreview rows={unver} />);
+    render(<DiffPreview rows={unver} onApply={() => {}} />);
     expect(screen.queryByTestId('kit-diff-apply')).toBeNull();
     const said = screen.getByTestId('kit-diff-nothing').textContent ?? '';
     expect(said).toMatch(/не провер/i);
@@ -145,7 +151,7 @@ describe('K2-DIFF · нечего применять — кнопки нет, и
       [{ id: 's', kind: 'same', text: 'уже есть', check: ok }] as DiffRow[],
       [{ id: 'u', kind: 'add', text: 'нет', check: { state: 'unverified' as const, reason: 'источник не ответил' } }] as DiffRow[],
     ]) {
-      const { unmount } = render(<DiffPreview rows={set} />);
+      const { unmount } = render(<DiffPreview rows={set} onApply={() => {}} />);
       texts.add(screen.getByTestId('kit-diff-nothing').textContent ?? '');
       unmount();
     }
@@ -167,5 +173,55 @@ describe('K2-DIFF · граница K-14', () => {
   it('подпись блока приходит от приложения', () => {
     render(<DiffPreview rows={rows()} label="Что изменится" />);
     expect(screen.getByText('Что изменится')).toBeTruthy();
+  });
+});
+
+// ── Режим чтения: применять нечем, значит и кнопки нет ──────────────────
+//
+// Находка сессии приложения 10.11.2026 (экран «Правила CLAUDE», S7B-06): дифф
+// версий документа показывают ДЛЯ ЧТЕНИЯ — применять там нечего. Но кнопка
+// «Применить N» рисовалась всё равно и по нажатию не делала ничего, потому что
+// обработчик не передан.
+//
+// Это тот же класс, что мы ловим везде: интерфейс обещает действие, которого
+// нет. Кнопка-обманка хуже отсутствия кнопки — по ней судят, что изменения
+// ещё не применены, и жмут снова.
+//
+// Правило: нет обработчика применения — нет ни кнопки, ни фраз о том, почему
+// применять нечего (они про применение, а здесь его не бывает вовсе). Строки
+// диффа при этом показываются как есть: читать их и есть смысл этого режима.
+describe('DiffPreview · режим чтения (обработчика применения нет)', () => {
+  const rows: DiffRow[] = [
+    { id: 'a', kind: 'add', text: 'добавится строка', check: { state: 'checked' } },
+    { id: 'b', kind: 'remove', text: 'снимется строка', check: { state: 'checked' } },
+    { id: 'c', kind: 'same', text: 'уже есть', check: { state: 'checked' } },
+  ];
+
+  it('положительный контроль: с обработчиком кнопка есть', () => {
+    render(<DiffPreview rows={rows} onApply={() => {}} />);
+    expect(screen.getByTestId('kit-diff-apply')).toBeTruthy();
+  });
+
+  it('без обработчика кнопки применения нет вовсе', () => {
+    render(<DiffPreview rows={rows} />);
+    expect(screen.queryByTestId('kit-diff-apply'), 'кнопка обещает действие, которого нет').toBeNull();
+  });
+
+  it('и фраз «применять нечего» тоже нет — они про применение', () => {
+    render(<DiffPreview rows={[{ id: 'c', kind: 'same', text: 'уже есть', check: { state: 'checked' } }]} />);
+    expect(screen.queryByTestId('kit-diff-nothing'), 'сказано про применение там, где его не бывает').toBeNull();
+  });
+
+  it('строки при этом показаны целиком — ради них режим и нужен', () => {
+    render(<DiffPreview rows={rows} />);
+    expect(screen.getByTestId('kit-diff-row-a')).toBeTruthy();
+    expect(screen.getByTestId('kit-diff-row-b')).toBeTruthy();
+    expect(screen.getByTestId('kit-diff-row-c')).toBeTruthy();
+  });
+
+  it('пустой дифф в режиме чтения говорит, что сравнивать нечего', () => {
+    render(<DiffPreview rows={[]} onApply={() => {}} />);
+    // «Строк нет» — это про данные, а не про применение: такое сказать надо.
+    expect(document.body.textContent ?? '').toMatch(/нечего|нет/i);
   });
 });

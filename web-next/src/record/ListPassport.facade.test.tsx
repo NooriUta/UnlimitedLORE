@@ -187,7 +187,7 @@ describe('паспорт v2 — одновременная правка', () => 
     await screen.findByText('Название от фасада', {}, { timeout: 8000 });
     const edit = await screen.findByRole('button', { name: /Править/ }, { timeout: 8000 });
     fireEvent.click(edit);
-    fireEvent.click(screen.getByRole('radio', { name: 'Код' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'режим markdown-источника' }));
     fireEvent.change(screen.getByLabelText(/исходник markdown/i), { target: { value: 'новый текст' } });
     fireEvent.click(screen.getByRole('button', { name: /Сохранить/ }));
     await waitFor(() => expect(sent.length).toBe(1));
@@ -212,7 +212,7 @@ describe('паспорт v2 — одновременная правка', () => 
     show(http);
     await screen.findByText('Название от фасада', {}, { timeout: 8000 });
     fireEvent.click(await screen.findByRole('button', { name: /Править/ }, { timeout: 8000 }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Код' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'режим markdown-источника' }));
     const box = screen.getByLabelText(/исходник markdown/i);
     fireEvent.change(box, { target: { value: 'мой текст' } });
     fireEvent.click(screen.getByRole('button', { name: /Сохранить/ }));

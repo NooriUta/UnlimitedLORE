@@ -390,6 +390,18 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
     const timeline = c.obj(list, 'timeline', 'list', false);
     if (timeline) c.str(timeline, 'start', 'list.timeline');
     if (views?.includes('timeline') && !timeline) c.err('list.timeline', 'timeline-config', 'вид timeline требует list.timeline {start}');
+    /*
+      Вид «Лента» (K2-FEED-VIEW, допущение, принятое владелицей): лента — вид
+      там, где приложение НАЗВАЛО поле времени. Поэтому это не ошибка, а
+      предупреждение: конфиг рабочий, просто ленту в переключателе не покажут —
+      угадывать, какое поле записи главное, kit не станет (K-14).
+    */
+    const feed = c.obj(list, 'feed', 'list', false);
+    if (feed) c.str(feed, 'timeField', 'list.feed');
+    if (views?.includes('feed') && !feed) {
+      c.warn('list.feed', 'feed-config', 'вид feed без list.feed {timeField} не предлагается: kit не угадывает, по какому полю у записи время');
+    }
+    if (!views?.includes('feed') && feed) c.warn('list.feed', 'feed-unused', 'list.feed задан, но вида feed в list.views нет');
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
     if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');
@@ -522,6 +534,11 @@ export function validateKitData(input: unknown, config?: KitConfig): KitValidati
       if (!isObj(e)) { c.err(p, 'type', `${p} должно быть объектом`); return; }
       c.str(e, 'block', p);
       c.str(e, 'reason', p);
+      // K2-FEED-VIEW §6: «нет прав» ≠ «не смогли проверить», и когда пропуск
+      // случился — тоже сведение, а не украшение: в ленте по нему строка
+      // встаёт на своё место по времени.
+      c.optBool(e, 'forbidden', p);
+      c.optStr(e, 'at', p);
     });
     c.unknownKeys(meta, ['generated_at', 'scope', 'total', 'returned', 'truncated', 'errors'], 'meta', 'kit его не прочтёт');
   }

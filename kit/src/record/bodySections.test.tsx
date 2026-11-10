@@ -86,7 +86,7 @@ describe('S5-06 · разделы тела приходят данными и р
     const onSave = vi.fn(async () => {});
     show({ hooks: { onSave } }, { mdEditor: MdInlineEdit });
     fireEvent.click(screen.getByRole('button', { name: /Править «Заметка»/ }));
-    fireEvent.click(screen.getByRole('radio', { name: /Код/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'режим markdown-источника' }));
     fireEvent.change(screen.getByRole('textbox', { name: /markdown/i }), { target: { value: 'Новая заметка' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Сохранить' })); });
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
