@@ -27,10 +27,22 @@ export interface RoleCell {
   source: string | null;
 }
 
+/**
+ * Ячейка на человека целиком (project «*», S7B-11): Keycloak — realm-роли,
+ * Forgejo — «не смогли» с причиной. Это не роль проекта и не правится как она.
+ */
+export interface PersonCell {
+  source: string | null;
+  role: string | null;
+  state: CellState;
+  reason: string | null;
+}
+
 export interface PersonRoles {
   kc_sub: string;
   name: string;
   cells: RoleCell[];
+  personCells: PersonCell[];
   /** Состояние строки целиком: unknown — сервер его не назвал (старая сборка). */
   state: CellState | 'unknown';
 }
@@ -58,8 +70,19 @@ export function parseRoleMatrix(body: unknown): RolesData {
     const kc = str(r.kc_sub);
     if (!kc) continue;
     let cells: RoleCell[];
+    const personCells: PersonCell[] = [];
     if (Array.isArray(r.cells)) {
-      cells = r.cells.map(c => {
+      cells = r.cells.filter(c => {
+        const o = (c ?? {}) as Record<string, unknown>;
+        if (o.project !== '*') return true;
+        personCells.push({
+          source: str(o.source),
+          role: str(o.role),
+          state: stateOf(o.state) ?? 'unavailable',
+          reason: str(o.reason),
+        });
+        return false;
+      }).map(c => {
         const o = (c ?? {}) as Record<string, unknown>;
         return {
           project: String(o.project ?? ''),
@@ -76,7 +99,7 @@ export function parseRoleMatrix(body: unknown): RolesData {
     }
     cells.sort((a, c) => a.project.localeCompare(c.project));
     cells.forEach(c => projects.add(c.project));
-    people.push({ kc_sub: kc, name: str(r.display_name) ?? kc, cells, state: stateOf(r.state) ?? 'unknown' });
+    people.push({ kc_sub: kc, name: str(r.display_name) ?? kc, cells, personCells, state: stateOf(r.state) ?? 'unknown' });
   }
   return {
     people,

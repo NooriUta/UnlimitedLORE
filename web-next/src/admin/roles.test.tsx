@@ -140,6 +140,23 @@ describe('модель · матрица ролей (role_matrix)', () => {
     expect(d.sourcesAsked).toEqual([]);
   });
 
+  it('ячейки на человека (project «*», Keycloak/Forgejo — S7B-11) — не проект и не правятся как роль проекта', () => {
+    const d = parseRoleMatrix({
+      sources_asked: ['graph', 'kc'],
+      rows: [{ kc_sub: 'u', display_name: 'u', state: 'checked', cells: [
+        { project: 'a', role: 'owner', state: 'checked', source: 'graph' },
+        { project: '*', role: 'admin, viewer', roles: ['admin', 'viewer'], state: 'checked', source: 'kc' },
+        { project: '*', role: null, state: 'unavailable', source: 'forgejo', reason: 'нет связи с пользователем Forgejo' },
+      ] }],
+    });
+    expect(d.projects).toEqual(['a']);
+    expect(d.people[0].cells).toEqual([{ project: 'a', role: 'owner', state: 'checked', source: 'graph' }]);
+    expect(d.people[0].personCells).toEqual([
+      { source: 'kc', role: 'admin, viewer', state: 'checked', reason: null },
+      { source: 'forgejo', role: null, state: 'unavailable', reason: 'нет связи с пользователем Forgejo' },
+    ]);
+  });
+
   it('роли — закрытый список проекта (v1 adminHelpers.PROJECT_ROLES)', () => {
     expect(PROJECT_ROLES).toContain('owner');
     expect(PROJECT_ROLES).toContain('reader');
