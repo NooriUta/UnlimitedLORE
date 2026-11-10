@@ -33,7 +33,7 @@ final class LoreNewsReadMarkStore {
         "CREATE PROPERTY " + TYPE + ".updated_by IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON " + TYPE + " (mark_id) UNIQUE");
 
-    /** ok — черта есть; unset — черты ещё не ставили; unavailable — хранилище недоступно. */
+    /** ok — черта есть; none — черты ещё не ставили; unavailable — хранилище недоступно. */
     record State(String state, Instant at, String error) {
         Map<String, Object> toMap() {
             Map<String, Object> m = new java.util.LinkedHashMap<>();
