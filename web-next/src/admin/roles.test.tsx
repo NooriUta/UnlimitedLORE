@@ -24,8 +24,8 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { RolesScreen } from './RolesScreen';
 import {
-  buildChanges, filterProjects, groupByRole, isConfirmed, parseApply, parsePlan, parseRoleMatrix, planToDiff,
-  PROJECT_ROLES,
+  buildChanges, filterProjects, groupByRole, isConfirmed, parseApply, parsePlan, parseRoleMatrix, personSourceCell,
+  planToDiff, PROJECT_ROLES,
 } from './roles';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -421,5 +421,59 @@ describe('экран · матрица ролей человека (S7B-05)', ()
     const old = { rows: MATRIX.rows.map(r => ({ kc_sub: r.kc_sub, display_name: r.display_name, projects: r.projects, roles: r.roles })) };
     mount(fake({ matrix: old }).f);
     expect((await screen.findByTestId('kit-matrix-cell-u-fro-AIDA/p01')).getAttribute('data-state')).toBe('unverified');
+  });
+});
+
+// ── S7B-11: ячейки Keycloak и Forgejo у человека ────────────────────────────
+// Сервер (#1116): cells с project «*» — source kc (realm-роли; checked/unavailable)
+// и forgejo (всегда unavailable «нет связи с пользователем Forgejo»);
+// sources_asked ["graph","kc"] — Forgejo не опрашивается. Не спрашивали
+// источник — это kit-состояние `unasked`, а не «не смогли проверить».
+describe('экран · Keycloak и Forgejo у человека (S7B-11)', () => {
+  const KC_CELL = { project: '*', role: 'admin, viewer', roles: ['admin', 'viewer'], state: 'checked', source: 'kc' };
+  const FJ_CELL = { project: '*', role: null, state: 'unavailable', source: 'forgejo', reason: 'нет связи с пользователем Forgejo' };
+  const withSources = (kc: Record<string, unknown> | null, asked: string[]) => ({
+    sources_asked: asked,
+    rows: MATRIX.rows.map(r => ({ ...r, cells: [...r.cells, ...(kc ? [kc] : []), FJ_CELL] })),
+  });
+
+  it('модель: источник не опрошен и ячейка unavailable — unasked; опрошен — unverified; checked — значение', () => {
+    const asked = ['graph', 'kc'];
+    expect(personSourceCell({ source: 'forgejo', role: null, state: 'unavailable', reason: 'нет связи' }, asked))
+      .toEqual({ state: 'unasked', reason: 'нет связи' });
+    expect(personSourceCell({ source: 'kc', role: null, state: 'unavailable', reason: 'KC 502' }, asked))
+      .toEqual({ state: 'unverified', reason: 'KC 502' });
+    expect(personSourceCell({ source: 'kc', role: 'admin', state: 'checked', reason: null }, asked))
+      .toEqual({ state: 'value', value: 'admin' });
+    expect(personSourceCell({ source: 'kc', role: null, state: 'checked', reason: 'нет в KC' }, asked))
+      .toEqual({ state: 'none' });
+    expect(personSourceCell(undefined, asked, 'forgejo')).toMatchObject({ state: 'unasked' });
+  });
+
+  it('у человека видны KC — realm-роли и Forgejo — «не спрашивали» с причиной', async () => {
+    at('adm-person=u-owner');
+    mount(fake({ matrix: withSources(KC_CELL, ['graph', 'kc']) }).f);
+    const box = await screen.findByTestId('adm-roles-sources');
+    const kc = within(box).getByTestId('kit-matrix-cell-u-owner-kc');
+    expect(kc.getAttribute('data-state')).toBe('value');
+    expect(kc.textContent).toContain('admin, viewer');
+    const fj = within(box).getByTestId('kit-matrix-cell-u-owner-forgejo');
+    expect(fj.getAttribute('data-state')).toBe('unasked');
+    expect(fj.getAttribute('aria-label') ?? fj.getAttribute('title') ?? '').toContain('нет связи с пользователем Forgejo');
+  });
+
+  it('KC спрашивали, но он не ответил — «не смогли проверить», а не «ролей нет»', async () => {
+    at('adm-person=u-owner');
+    const kcDown = { project: '*', role: null, state: 'unavailable', source: 'kc', reason: 'Keycloak: 502' };
+    mount(fake({ matrix: withSources(kcDown, ['graph', 'kc']) }).f);
+    const box = await screen.findByTestId('adm-roles-sources');
+    expect(within(box).getByTestId('kit-matrix-cell-u-owner-kc').getAttribute('data-state')).toBe('unverified');
+  });
+
+  it('ячейки на человека видны и в виде «матрица», и они только на чтение', async () => {
+    at('adm-person=u-owner&adm-view=matrix');
+    mount(fake({ matrix: withSources(KC_CELL, ['graph', 'kc']) }).f);
+    const box = await screen.findByTestId('adm-roles-sources');
+    expect(within(box).queryByTestId('kit-matrix-rowset-u-owner')).toBeNull();
   });
 });

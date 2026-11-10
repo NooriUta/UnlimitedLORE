@@ -411,3 +411,87 @@ describe('экран журнала · доступность', () => {
     expect(await axeViolations(container)).toEqual([]);
   });
 });
+
+// ── S7B-13: «Откатить пачку» из журнала ─────────────────────────────────────
+// Сервер (LoreAdminActions.batchBody): rollback {method, path, body{kc_sub,
+// changes, undo_of}} — готовое тело для POST /lore/user/role/batch. Откат идёт
+// тем же DangerBatch, что в «Ролях»: дифф (dry_run с undo_of) → ввод слова →
+// одна пачка. Вне окна — честная надпись, кнопки нет.
+describe('экран журнала · откат пачки (S7B-13)', () => {
+  const OPEN = {
+    ...BATCH_BODY,
+    undo_open: true,
+    rollback: {
+      method: 'POST', path: '/lore/user/role/batch',
+      body: { kc_sub: 'u-fro', changes: BATCH_BODY.undo, undo_of: BATCH },
+    },
+  };
+
+  function fakeRb(batch: unknown = OPEN) {
+    const posts: Array<Record<string, unknown>> = [];
+    const f = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/lore/user/role/batch') {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        posts.push(body);
+        const plan = [
+          { project: 'AIDA/miniLORE', before: 'reader', after: null, kind: 'remove', sign: '−', check: { state: 'checked', source: 'graph' } },
+          { project: 'AIDA/UnlimitedLORE', before: 'writer', after: 'reader', kind: 'update', sign: '~', check: { state: 'checked', source: 'graph' } },
+        ];
+        if (body.dry_run) return json({ ok: true, kc_sub: 'u-fro', plan, undo: [], dry_run: true, applied: 0 });
+        return json({
+          ok: true, batch_id: 'rb-1762767999000-00000001', kc_sub: 'u-fro', plan, undo: [], applied: 2, failed: 0,
+          atomic: false, undo_of: body.undo_of, undo_until: new Date(Date.now() + 15 * 60_000).toISOString(),
+          items: plan.map(p => ({ project: p.project, kind: p.kind, status: 200, result: 'applied' })),
+        });
+      }
+      if (url.includes('/actions/batch/')) return json(batch);
+      return json(BODY);
+    }) as unknown as typeof fetch;
+    return { f, posts, writes: () => posts.filter(p => !p.dry_run) };
+  }
+
+  async function openPanel(f: typeof fetch) {
+    mount(f);
+    const rows = await screen.findAllByTestId(/^adm-log-row-/);
+    fireEvent.click(within(rows[0]).getByTestId('adm-log-expand'));
+    return screen.findByTestId('adm-log-batch-panel');
+  }
+
+  it('модель: rollback.body разобран — kc_sub, changes, undo_of', () => {
+    const d = parseBatch(OPEN);
+    expect(d.rollback?.body).toEqual({ kc_sub: 'u-fro', changes: BATCH_BODY.undo, undo_of: BATCH });
+  });
+
+  it('окно открыто — кнопка «Откатить пачку»; нажатие ничего не пишет, а показывает дифф с подтверждением', async () => {
+    const fk = fakeRb();
+    const panel = await openPanel(fk.f);
+    fireEvent.click(await within(panel).findByTestId('adm-log-rollback-btn'));
+    await screen.findByTestId('kit-diff-apply');
+    expect(screen.getByTestId('adm-danger-confirm')).toBeTruthy();
+    expect(fk.writes()).toHaveLength(0);
+    expect(fk.posts[0]).toMatchObject({ kc_sub: 'u-fro', dry_run: true, undo_of: BATCH, changes: BATCH_BODY.undo });
+    // display_name не уходит: откат не должен переименовывать человека в его kc_sub.
+    expect('display_name' in fk.posts[0]).toBe(false);
+  });
+
+  it('подтверждение словом → одна пачка с undo_of и changes из rollback.body', async () => {
+    const fk = fakeRb();
+    const panel = await openPanel(fk.f);
+    fireEvent.click(await within(panel).findByTestId('adm-log-rollback-btn'));
+    const apply = await screen.findByTestId('kit-diff-apply');
+    fireEvent.click(apply);
+    expect(fk.writes()).toHaveLength(0);
+    fireEvent.change(screen.getByTestId('adm-danger-confirm'), { target: { value: 'u-fro' } });
+    fireEvent.click(screen.getByTestId('kit-diff-apply'));
+    expect(await screen.findByTestId('kit-batch-summary')).toBeTruthy();
+    expect(fk.writes()).toHaveLength(1);
+    expect(fk.writes()[0]).toMatchObject({ kc_sub: 'u-fro', undo_of: BATCH, changes: BATCH_BODY.undo });
+  });
+
+  it('окно закрыто — честная надпись «откатить нельзя», кнопки нет', async () => {
+    const panel = await openPanel(fakeRb(BATCH_BODY).f);
+    const closed = await within(panel).findByTestId('adm-log-rollback-closed');
+    expect(closed.textContent).toMatch(/нельзя/i);
+    expect(within(panel).queryByTestId('adm-log-rollback-btn')).toBeNull();
+  });
+});
