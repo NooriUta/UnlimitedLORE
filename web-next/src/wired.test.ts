@@ -61,6 +61,7 @@ const MUST_BE_WIRED: readonly { symbol: string; declaredIn: string; why: string 
   { symbol: 'fetchPassportOrder', declaredIn: 'record/passportOrder.ts', why: 'порядок разделов паспорта из модели плюс названная причина отката (S4-29)' },
   { symbol: 'fetchTypeStatuses', declaredIn: 'record/passportStatuses.ts', why: 'меню статуса — цикл ТИПА из модели, а не все оси разом (S4-STATUS-AXIS-CONFIG, жалоба 09.11)' },
   { symbol: 'useProjectScope', declaredIn: 'scope/ProjectScope.tsx', why: 'выбор проектов в шапке сужает списки (S4-03, жалоба 09.11: «фильтр не влияет на элементы внизу»)' },
+  { symbol: 'fetchPalettes', declaredIn: 'settings/palettesSource.ts', why: 'список палитр приходит из модели, а не живёт списком внутри kit (K-14 п. 5)' },
   { symbol: 'appliedRightColumn', declaredIn: 'settings/applied.ts', why: 'личная настройка «Правая колонка записи» доходит до паспорта (S4-02)' },
   { symbol: 'appliedCollapseNavOnRead', declaredIn: 'settings/applied.ts', why: 'личная настройка «Меню при чтении записи» доходит до экрана (S4-02)' },
 ];

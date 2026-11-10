@@ -40,6 +40,12 @@ export interface LoreModelDoc {
    * Разбирается `passportSections` — здесь только довозится без потерь.
    */
   surfaces: Record<string, unknown>;
+  /**
+   * Палитры приложения (#1069, K-14 п. 5): коды, подписи, умолчание.
+   * Разбирается `palettesFromModel`; значения цветов остаются в теме kit —
+   * это оформление, а не словарь.
+   */
+  palettes: Record<string, unknown>;
   /** Текст для человека. Машиночитаемы флаги у статей, а не эти строки. */
   warnings: string[];
 }
@@ -98,6 +104,9 @@ export function parseModel(raw: unknown): LoreModelDoc {
     // 09.11.2026 при подключении порядка разделов паспорта (S4-29).
     types: obj(doc.types),
     surfaces: obj(doc.surfaces),
+    // Тот же урок, что с types и surfaces: новый раздел модели надо внести
+    // ЗДЕСЬ, иначе он молча не доедет (сторож — modelSectionsKept.test.ts).
+    palettes: obj(doc.palettes),
     warnings: list(doc.warnings),
   };
 }
@@ -118,6 +127,7 @@ export function modelSections(m: LoreModelDoc): Record<string, SectionState> {
     surfaces: of('surfaces', m.surfaces),
     statuses: of('statuses', m.statuses),
     dictionaries: of('dictionaries', m.dictionaries),
+    palettes: of('palettes', m.palettes),
   };
 }
 
@@ -145,6 +155,10 @@ export function readCachedModel(store: ModelStore): LoreModelDoc | undefined {
       // починки разбора — а кеш работает именно тогда, когда сеть отказала.
       types: obj(parsed.types),
       surfaces: obj(parsed.surfaces),
+      // И здесь тоже: кеш работает ровно тогда, когда сеть отказала, и
+      // потерять в нём новый раздел — значит показать «сервер не задаёт» в
+      // самый неподходящий момент.
+      palettes: obj(parsed.palettes),
       warnings: list(parsed.warnings),
     };
   } catch {

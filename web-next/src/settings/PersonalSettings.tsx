@@ -8,7 +8,8 @@
 // D-2026-UXR-READ-COLLAPSE) — блоком ReadingSettings: его читает ReadingView.
 // Пока у него своё хранилище kit, а не /lore/me/settings — сведение в одно — отдельной задачей.
 import { ICON_CANON } from '@seidr/kit';
-import { GameIcon, LoadError, PALETTES, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
+import { GameIcon, LoadError, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
+import { paletteFallback, type PalettesView } from './palettesSource';
 import type { UserSettings } from '../api/contracts/s2';
 import { t, type Lang, type MessageKey } from '../i18n/messages';
 import { switchNavUrl } from '../nav/navVersion';
@@ -23,6 +24,11 @@ export interface PersonalSettingsProps {
   onOpenMemory?: () => void;
   /** Адрес v1 для переключателя навигации; по умолчанию — от текущего хоста. */
   navTargetUrl?: string | null;
+  /**
+   * Палитры из модели (K-14 п. 5). Не передали — список темы kit, как было
+   * до модели; оговорок в этом случае нет, потому что говорить нечего.
+   */
+  palettes?: PalettesView;
 }
 
 type Opt<V extends string> = { value: V; label: string };
@@ -32,7 +38,7 @@ const opts = <V extends string>(lang: Lang, pairs: readonly (readonly [V, Messag
 type OnOff = 'on' | 'off';
 const onOff = (v: boolean): OnOff => (v ? 'on' : 'off');
 
-export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory, navTargetUrl }: PersonalSettingsProps) {
+export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory, navTargetUrl, palettes }: PersonalSettingsProps) {
   const targetUrl = navTargetUrl !== undefined
     ? navTargetUrl
     : (typeof location === 'undefined' ? null : switchNavUrl(location, 'v1'));
@@ -71,6 +77,14 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
     <section className="settings" aria-labelledby="settings-title" aria-busy={busy}>
       <h3 id="settings-title" className="settings-title">{t(lang, 'settings.title')}</h3>
       <p className="settings-note">{t(lang, busy ? 'settings.saving' : 'settings.serverNote')}</p>
+      {(palettes?.notes.length ?? 0) > 0 && (
+        // Откуда взялся список палитр — это про ЧЕСТНОСТЬ выбора: «модель не
+        // прислала раздел» и «палитра без статьи в справочнике» человек должен
+        // видеть словами, иначе список темы kit выглядит выбором модели.
+        <ul className="settings-warn" role="status" data-testid="settings-palette-notes">
+          {palettes!.notes.map(n => <li key={n}>{n}</li>)}
+        </ul>
+      )}
       {(state.warnings?.length ?? 0) > 0 && (
         // Сервер хранит значение, которого в v2 нет (например theme: system):
         // показываем умолчание и говорим об этом. Молча подменить значение
@@ -104,7 +118,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         opts(lang, [['dark', 'settings.mode.dark'], ['light', 'settings.mode.light']] as const),
         v => onChange({ mode: v }))}
       {row('palette', 'settings.palette.label', s.palette === 'amber' ? 'amber-forest' : s.palette,
-        PALETTES.map(p => ({ value: p.id as string, label: p.label })),
+        (palettes?.options ?? paletteFallback()).map(p => ({ value: p.value, label: p.label })),
         v => onChange({ palette: v }))}
       {row('density', 'settings.density.label', s.density,
         opts(lang, [['roomy', 'settings.density.roomy'], ['compact', 'settings.density.compact'], ['comfortable', 'settings.density.comfortable']] as const),

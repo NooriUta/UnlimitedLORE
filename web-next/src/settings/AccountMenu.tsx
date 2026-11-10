@@ -3,7 +3,7 @@
 // читаются при монтировании оболочки (а не при открытии меню) и сразу
 // применяются к корню документа — тема, текст, плотность и прочее действуют
 // с первого экрана. Хранение — S2Client (до S2-04 — заглушка api/me.ts).
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AvatarMenu, kitT, type AttrTarget } from '@seidr/kit';
 import type { UserSettings } from '../api/contracts/s2';
 import type { S2Client } from '../api/contracts/s2.stubs';
@@ -11,6 +11,7 @@ import { t, type Lang } from '../i18n/messages';
 import type { CookieJar } from '../storage/storage';
 import { applySettings } from './applySettings';
 import { MemoryPanel } from './MemoryPanel';
+import { fetchPalettes, type PalettesView } from './palettesSource';
 import { PersonalSettings } from './PersonalSettings';
 import { useSettings } from './useSettings';
 
@@ -27,10 +28,27 @@ export interface AccountMenuProps {
   navTargetUrl?: string | null;
   /** Выход (S3-18); нет — вход выключен, кнопки «Выйти» нет. */
   onLogout?: () => void;
+  /** Подмена загрузки палитр (тесты); по умолчанию — модель с сервера. */
+  loadPalettes?: () => Promise<PalettesView>;
 }
 
-export function AccountMenu({ client, lang, root, jar, name, subtitle, navTargetUrl, onLogout }: AccountMenuProps) {
+export function AccountMenu({ client, lang, root, jar, name, subtitle, navTargetUrl, onLogout, loadPalettes }: AccountMenuProps) {
   const [view, setView] = useState<'settings' | 'memory'>('settings');
+  // Список палитр — прикладной словарь, он приходит из модели (K-14 п. 5).
+  // Пока не пришёл — панель показывает список темы kit и говорит об этом
+  // сама: подставлять молча значило бы выдать умолчание за выбор модели.
+  const [palettes, setPalettes] = useState<PalettesView | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    const load = loadPalettes ?? (() => fetchPalettes({ lang }));
+    load().then(
+      p => { if (live) setPalettes(p); },
+      // Сюда попадаем, только если упал сам загрузчик: все ожидаемые отказы
+      // fetchPalettes возвращает оговорками, а не исключением.
+      e => { if (live) setPalettes({ options: [], default: null, fromModel: false, notes: [String(e)] }); },
+    );
+    return () => { live = false; };
+  }, [loadPalettes, lang]);
   const apply = useCallback((s: UserSettings) => {
     const target = root ?? (typeof document === 'undefined' ? null : document.documentElement);
     if (target) applySettings(target, s, jar);
@@ -53,6 +71,7 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
             onRetry={reload}
             onOpenMemory={() => setView('memory')}
             navTargetUrl={navTargetUrl}
+            palettes={palettes}
           />
         )
         : <MemoryPanel client={client} lang={lang} onBack={() => setView('settings')} />}
