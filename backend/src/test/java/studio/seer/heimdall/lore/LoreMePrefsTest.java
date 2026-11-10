@@ -18,6 +18,20 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class LoreMePrefsTest {
 
+    /**
+     * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-17: место показа паспорта — личная настройка, а не только
+     * адрес текущего сеанса. Владелица 10.11: «в настройках нет указания, где паспорт показывать —
+     * справа или внизу». «auto» — выбора не было, экран решает сам; подменять его умолчанием нельзя.
+     */
+    @Test
+    void passportPlaceIsAPersonalSetting() {
+        assertEquals("auto", LoreMePrefs.defaults().get("passport_place"), "умолчание — «выбора не было»");
+        for (String p : List.of("auto", "right", "bottom", "full"))
+            assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("passport_place", p)), p);
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("passport_place", "left")).size(),
+            "неизвестное место — отказ, а не молчаливое умолчание");
+    }
+
     // ── Схема: один аддитивный шаг, только новые типы ───────────────────────
 
     @Test
