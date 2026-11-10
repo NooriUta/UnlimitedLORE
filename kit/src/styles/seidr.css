@@ -2223,6 +2223,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-diff__row[data-kind='add'] { border-left-color: var(--suc); }
 .sk-diff__row[data-kind='remove'] { border-left-color: var(--dng); }
 .sk-diff__row[data-kind='same'] { border-left-color: var(--bd); color: var(--t3); }
+.sk-diff__row[data-kind='change'] { border-left-color: var(--acc); }
 .sk-diff__row[data-check='unverified'] { background: color-mix(in srgb, var(--wrn) 10%, transparent); }
 .sk-diff__row[data-check='forbidden'] { background: color-mix(in srgb, var(--inf) 10%, transparent); }
 .sk-diff__sign {
@@ -2233,6 +2234,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-diff__row[data-kind='add'] .sk-diff__sign { color: var(--suc); }
 .sk-diff__row[data-kind='remove'] .sk-diff__sign { color: var(--dng); }
+.sk-diff__row[data-kind='change'] .sk-diff__sign { color: var(--acc); }
 .sk-diff__kind { color: var(--t3); font-size: var(--fs-xs); }
 .sk-diff__text { min-width: 0; color: var(--t1); }
 .sk-diff__row[data-kind='same'] .sk-diff__text { color: var(--t3); }
@@ -2256,6 +2258,41 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-diff__apply[aria-disabled='true'] { cursor: default; opacity: .55; }
 .sk-diff__apply:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* «Было → стало» одной строкой: прежнее и новое РАЗНЫМИ блоками и с
+   подписями словами («было» / «стало»). По цвету и порядку одному смену
+   читать нельзя — в чёрно-белой распечатке и для не различающего цвет
+   остаётся только слово. */
+.sk-diff__change { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 6px; min-width: 0; }
+.sk-diff__was, .sk-diff__now { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; }
+.sk-diff__was .sk-diff__val { color: var(--t3); text-decoration: line-through; }
+.sk-diff__now .sk-diff__val { color: var(--t1); }
+.sk-diff__cap { color: var(--t3); font-size: var(--fs-2xs); letter-spacing: .04em; text-transform: uppercase; }
+.sk-diff__val { min-width: 0; color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-diff__arrow { color: var(--acc); font-family: var(--mono); font-size: var(--fs-sm); }
+/* Оговорка о поправленном виде строки: не ошибка и не украшение — замечание. */
+.sk-diff__note { color: var(--wrn); font-size: var(--fs-xs); font-style: italic; }
+
+/* Подтверждение словом: поле, кнопка и причина отказа — одним блоком, чтобы
+   причина стояла У кнопки, а не терялась выше по странице. */
+.sk-diff__go { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); min-width: 0; }
+.sk-diff__ask { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.sk-diff__ask-label { color: var(--t2); font-size: var(--fs-xs); }
+.sk-diff__word {
+  min-width: 0;
+  max-width: 220px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+}
+.sk-diff__word[aria-invalid='true'] { border-color: var(--dng); }
+.sk-diff__word:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-diff__blocked { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
 
 /* ---------- Пачка как объект: окно отмены (K2-BATCH-UNDO) ----------
    Исход пачки несёт рамка: применилось всё · применилось частично · не
