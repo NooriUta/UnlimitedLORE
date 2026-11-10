@@ -1,20 +1,30 @@
 // @vitest-environment jsdom
-// Щелчок по строке в разделе без паспорта получает ОТВЕТ, а не пустоту
+// Раздел без паспорта отвечает СЛОВАМИ, а не пустотой
 // (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-V2-SECTIONS).
 //
-// Фасад записи отдаёт четыре типа (sprint, task, adr, spec), а разделов
-// одиннадцать. До этой правки карта паспортов была ПОЛНОЙ по экранам, то есть
-// обещала паспорт каждому: открыв строку в «Технологиях», человек получил бы
-// пустой паспорт и решил бы, что данные потерялись.
+// История этого файла — часть правила. Сначала карта паспортов была ПОЛНОЙ по
+// экранам: она обещала паспорт каждому разделу, и щелчок по строке в
+// «Технологиях» открывал пустой паспорт — человек читал это как «данные
+// потерялись». Тогда карту сделали частичной, а разделам без паспорта дали
+// ответ словами, и проверка шла на живых «Технологиях».
 //
-// Проверяется сквозное поведение — от щелчка по строке до слов на экране, а не
-// содержимое карты: карту можно поправить и забыть про экран (урок сторожа
-// `wired.test.ts`: «написано и покрыто тестами» ≠ «дошло до человека»).
+// 10.11.2026 фасад научился отдавать ещё три типа (component, tech, feature,
+// серверный PR #1090), и разделов без паспорта в приложении НЕ ОСТАЛОСЬ. Это
+// не повод снимать правило: следующий раздел появится раньше своего паспорта —
+// так было уже дважды. Поэтому проверка больше не выбирает «раздел без
+// паспорта» среди живых (такого нет), а держит два утверждения:
+//
+//  1. сегодня паспорт есть у КАЖДОГО раздела — это и есть достигнутое
+//     состояние, и именно оно регрессирует молча;
+//  2. отказ по-прежнему называет раздел, код записи и путь назад — на случай
+//     раздела, который появится без паспорта.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons, type UrlWindow } from '@seidr/kit';
 import { ListScreen } from './ListScreen';
+import { LIST_SCREENS } from '../lists/screens';
+import { PASSPORT_TYPES } from '../record/passportAdapters';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -47,44 +57,29 @@ function fakeWin(search = ''): UrlWindow {
 
 const net = (body: unknown) => vi.fn(async () => json(body)) as unknown as typeof fetch;
 
-describe('раздел без паспорта: отказ назван словами', () => {
+describe('паспорт есть у каждого раздела', () => {
   it('положительный контроль: список технологий нарисовался', async () => {
     render(<ListScreen screen="tech" fetchImpl={net(TECH_ROWS)} urlState={fakeWin()} />);
     expect(await screen.findByText('React', {}, { timeout: 8000 })).toBeTruthy();
   });
 
-  it('щелчок по строке говорит, что паспорта у типа нет, и называет раздел и код', async () => {
+  it('щелчок по строке «Технологий» больше не упирается в отказ', async () => {
     render(<ListScreen screen="tech" fetchImpl={net(TECH_ROWS)} urlState={fakeWin()} />);
     const row = await screen.findByText('React', {}, { timeout: 8000 });
     await act(async () => { fireEvent.click(row); });
-
-    const said = await waitFor(() => {
-      const t = document.body.textContent ?? '';
-      expect(t).toMatch(/паспорт/i);
-      return t;
+    // Ждём, пока щелчок отработает, и убеждаемся: отказа нет.
+    await waitFor(() => {
+      expect(document.querySelector('.list-screen__nopassport'), 'раздел снова отвечает «паспорта нет»').toBeNull();
     }, { timeout: 8000 });
-
-    // Назван раздел — чтобы было видно, О ЧЁМ речь…
-    expect(said).toContain('Технологии');
-    // …и код записи: по нему её можно найти другим путём.
-    expect(said).toContain('SPEC-TECH-REACT');
-    // Отказ — это состояние, а не ошибка: он объявлен как status.
-    expect(document.querySelector('[role="status"]')).toBeTruthy();
   });
 
-  it('сказано и то, что РАБОТАЕТ: иначе отказ читается как «раздел не готов»', async () => {
-    render(<ListScreen screen="tech" fetchImpl={net(TECH_ROWS)} urlState={fakeWin()} />);
-    const row = await screen.findByText('React', {}, { timeout: 8000 });
-    await act(async () => { fireEvent.click(row); });
-    await waitFor(() => expect(document.body.textContent ?? '').toMatch(/список|фильтр/i), { timeout: 8000 });
-  });
-
-  it('из отказа можно вернуться к списку одной кнопкой', async () => {
-    render(<ListScreen screen="tech" fetchImpl={net(TECH_ROWS)} urlState={fakeWin()} />);
-    const row = await screen.findByText('React', {}, { timeout: 8000 });
-    await act(async () => { fireEvent.click(row); });
-    const back = await screen.findByRole('button', { name: /верн/i }, { timeout: 8000 });
-    await act(async () => { fireEvent.click(back); });
-    await waitFor(() => expect(document.body.textContent ?? '').not.toMatch(/паспорт/i), { timeout: 8000 });
+  it('у каждого раздела есть тип паспорта, и этот тип фасад знает', async () => {
+    const { PASSPORT_OF } = await import('./ListScreen');
+    const sections = Object.keys(LIST_SCREENS);
+    expect(sections.length, 'разделы не прочитались — проверка прошла бы мимо').toBeGreaterThan(5);
+    const without = sections.filter(s => !(s in PASSPORT_OF));
+    expect(without, 'раздел без паспорта: человек получит отказ вместо записи').toEqual([]);
+    const unknown = Object.values(PASSPORT_OF).filter(t => !(PASSPORT_TYPES as readonly string[]).includes(t as string));
+    expect(unknown, 'раздел ведёт на тип, которого фасад не отдаёт').toEqual([]);
   });
 });

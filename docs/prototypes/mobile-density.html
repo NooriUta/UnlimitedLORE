@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Плотность на телефоне — предложение</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#0d1017; --bg1:#12151d; --bg2:#171b25; --bg3:#1d222e;
+  --bd:#262c3a; --bdh:#39414f;
+  --t1:#e6e8ee; --t2:#a7aebd; --t3:#6d7585;
+  --acc:#e0a030; --suc:#5fa86a; --wrn:#d8a13a; --dng:#cf5f52; --inf:#5a8fc7;
+  --st-ready:#7fb5a8; --st-active:#5a8fc7; --st-planned:#8a8fa0;
+  --fs-2xs:10px; --fs-xs:11px; --fs-sm:12px; --fs-base:12px; --fs-md:13.5px; --fs-lg:16px; --fs-xl:20px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --r-sm:4px; --r-md:6px; --r-lg:10px;
+  --gap:8px; --pad-x:10px; --row-h:26px;
+  /* цель касания: сейчас она задаёт ВЫСОТУ элемента */
+  --tap:44px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);
+  font:var(--fs-base)/1.5 Manrope,system-ui,sans-serif}
+.wrap{max-width:412px;margin:0 auto;padding:12px 16px 32px}
+h1{font-family:Unbounded,sans-serif;font-weight:800;font-size:var(--fs-xl);margin:0 0 2px}
+h2{font-family:Unbounded,sans-serif;font-weight:800;font-size:var(--fs-sm);
+  text-transform:uppercase;letter-spacing:.06em;margin:18px 0 6px;color:var(--t2)}
+p{margin:0 0 8px;color:var(--t2);font-size:var(--fs-sm)}
+.lead{color:var(--t3);font-size:var(--fs-xs);margin-bottom:10px}
+.card{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);padding:10px;margin-bottom:10px}
+.card--now{border-color:color-mix(in srgb,var(--dng) 40%,var(--bd))}
+.card--new{border-color:color-mix(in srgb,var(--suc) 40%,var(--bd))}
+.tag{display:inline-block;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;
+  padding:1px 6px;border-radius:999px;border:1px solid var(--bd);color:var(--t3);margin-bottom:8px}
+.tag--now{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 45%,transparent)}
+.tag--new{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 45%,transparent)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--gap)}
+.note{font-size:var(--fs-2xs);color:var(--t3);margin-top:6px;font-family:var(--mono)}
+
+/* ── плашка статуса: ЭТАЛОН владелицы, высота по содержимому ───────── */
+/* nowrap — как в kit (.sk-schip): без него «В работе» рвётся на две строки
+   внутри плашки и строка списка растёт. В первой версии прототипа этого
+   запрета не было, и на телефоне владелицы плашка разорвалась — изъян был в
+   прототипе, не в продукте. */
+.st{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+  padding:1px 7px;border-radius:999px;font-size:var(--fs-2xs);font-weight:600;
+  border:1px solid color-mix(in srgb,var(--st-c) 45%,transparent);
+  background:color-mix(in srgb,var(--st-c) 14%,transparent);color:var(--st-c)}
+.st--ready{--st-c:var(--st-ready)} .st--active{--st-c:var(--st-active)} .st--planned{--st-c:var(--st-planned)}
+
+/* ── НЫНЕШНЕЕ: высота элемента = цели касания ──────────────────────── */
+.now .chip,.now .seg button,.now .tab,.now .btn{min-height:var(--tap)}
+
+/* ── ПРЕДЛОЖЕНИЕ: высота по содержимому, цель касания — невидимой областью ── */
+.new .chip,.new .seg button,.new .tab{min-height:26px;position:relative}
+.new .chip::after,.new .seg button::after,.new .tab::after{
+  /* область пальца шире самого чипа на 9 px сверху и снизу: это 44 px по
+     вертикали, но раскладку она не трогает — чипы остаются плотными.
+     По горизонтали не расширяем: там соседи стоят вплотную. */
+  content:'';position:absolute;left:0;right:0;top:-9px;bottom:-9px}
+.new .btn{min-height:36px}
+
+/* ── А: воздух между рядами ───────────────────────────────────────────
+   Ряды разведены на 18 px, поэтому области касания соседних рядов НЕ
+   накладываются: 26 + 9 + 9 = 44, и между ними остаётся зазор. На ряд уходит
+   столько же, сколько сейчас, — выигрыш в виде, а не в длине. */
+/* Промежуток нужен и МЕЖДУ рядами, а не только внутри переноса: иначе области
+   касания соседних рядов всё равно налезают друг на друга (замерено: −10 px). */
+.air .row,.air .tabs{row-gap:20px;margin-bottom:20px !important}
+.air .list{margin-top:20px}
+/* ── Б: плотно ────────────────────────────────────────────────────────
+   Ряды по 4 px. Область касания равна самому чипу — 26 px, то есть МЕНЬШЕ
+   нормы 44. Показано честно: это цена плотности, а не бесплатный выигрыш. */
+.tight .chip::after,.tight .seg button::after,.tight .tab::after{top:0;bottom:0}
+.tight .row,.tight .tabs{row-gap:4px}
+/* ── В: середина ──────────────────────────────────────────────────────
+   Чип 32 px (всё ещё вдвое ниже нынешних 44 и близко к плашке), область
+   касания 44 за счёт ±6 px, ряды разведены на 14 px — области не налезают.
+   На ряд уходит 32 + 14 = 46 px против нынешних 44 + 8 = 52. */
+.mid .chip,.mid .seg button,.mid .tab{min-height:32px}
+.mid .chip::after,.mid .seg button::after,.mid .tab::after{top:-6px;bottom:-6px}
+.mid .row,.mid .tabs{row-gap:14px;margin-bottom:14px !important}
+.mid .list{margin-top:14px}
+.warnline{display:flex;gap:6px;align-items:flex-start;margin-top:8px;
+  padding:5px 8px;border-radius:var(--r-md);
+  border:1px solid color-mix(in srgb,var(--wrn) 45%,transparent);
+  background:color-mix(in srgb,var(--wrn) 10%,transparent);
+  color:var(--t1);font-size:var(--fs-2xs)}
+
+.chip{display:inline-flex;align-items:center;gap:5px;padding:0 10px;
+  border:1px solid var(--bd);border-radius:999px;background:var(--bg2);
+  color:var(--t2);font:600 var(--fs-xs)/1 Manrope,sans-serif;cursor:pointer}
+.chip[aria-pressed=true]{background:color-mix(in srgb,var(--acc) 16%,var(--bg2));
+  border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));color:var(--t1)}
+.chip .n{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.seg button{background:var(--bg2);color:var(--t2);border:0;padding:0 11px;
+  font:600 var(--fs-xs)/1 Manrope,sans-serif;cursor:pointer}
+.seg button+button{border-left:1px solid var(--bd)}
+.seg button[aria-pressed=true]{background:var(--acc);color:#1a1205}
+
+.tabs{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.tab{display:inline-flex;align-items:center;gap:5px;padding:0 10px;white-space:nowrap;
+  flex:0 0 auto;border:1px solid var(--bd);border-radius:999px;background:var(--bg2);
+  color:var(--t2);font:600 var(--fs-xs)/1 Manrope,sans-serif;cursor:pointer}
+.tab[aria-selected=true]{background:color-mix(in srgb,var(--acc) 16%,var(--bg2));
+  border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));color:var(--t1)}
+.tab .n{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;border-radius:var(--r-md);
+  border:1px solid color-mix(in srgb,var(--acc) 55%,var(--bd));
+  background:color-mix(in srgb,var(--acc) 18%,var(--bg2));color:var(--t1);
+  font:700 var(--fs-xs)/1 Manrope,sans-serif;cursor:pointer}
+
+/* ── список: строка остаётся целью касания целиком ─────────────────── */
+.list{border:1px solid var(--bd);border-radius:var(--r-md);overflow:hidden}
+.li{display:flex;align-items:center;gap:var(--gap);padding:0 var(--pad-x);
+  border-bottom:1px solid var(--bd);background:var(--bg1)}
+.li:last-child{border-bottom:0}
+.now .li{min-height:var(--tap)}
+.new .li{min-height:34px}   /* строка — настоящая цель касания, но не 44 */
+.li .t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:var(--fs-sm);color:var(--t1)}
+.li .id{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+
+.ruler{display:flex;align-items:flex-end;gap:6px;margin-top:4px}
+.bar{width:14px;background:color-mix(in srgb,var(--acc) 30%,var(--bg3));
+  border:1px solid var(--bd);border-radius:var(--r-sm) var(--r-sm) 0 0}
+.bar b{display:block;font:600 var(--fs-2xs)/1 var(--mono);color:var(--t3);
+  transform:translateY(-14px)}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-xs);margin-top:4px}
+th,td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--bd)}
+th{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.05em;color:var(--t3);font-weight:600}
+td.n{font-family:var(--mono);color:var(--t2)}
+td.good{color:var(--suc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Плотность на телефоне</h1>
+  <p class="lead">412 px, тёмная тема Seiðr. Слева — как сейчас, ниже — предложение. Ваш эталон: плашка статуса.</p>
+
+  <h2>Эталон — плашка статуса</h2>
+  <div class="card">
+    <div class="row">
+      <span class="st st--ready">🚀 Готово к выкатке</span>
+      <span class="st st--active">В работе</span>
+      <span class="st st--planned">Запланировано</span>
+    </div>
+    <div class="note">высота ≈ 18 px · подпись 10 px · это и есть «правильный размер»</div>
+  </div>
+
+  <h2>Как сейчас</h2>
+  <div class="card card--now now">
+    <span class="tag tag--now">сейчас: высота = цель касания 44 px</span>
+    <div class="row" style="margin-bottom:8px">
+      <div class="seg"><button type="button" aria-pressed="true">Все</button><button type="button">Открытые</button><button type="button">Мои</button></div>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="chip" type="button" aria-pressed="true">Спринт <span class="n">12</span></button>
+      <button class="chip" type="button">Проект <span class="n">5</span></button>
+      <button class="chip" type="button">Кто <span class="n">9</span></button>
+    </div>
+    <div class="tabs" style="margin-bottom:8px">
+      <button class="tab" type="button" aria-selected="true">Задачи <span class="n">48</span></button>
+      <button class="tab" type="button">Контент <span class="n">7</span></button>
+      <button class="tab" type="button">Фазы <span class="n">3</span></button>
+    </div>
+    <div class="list">
+      <div class="li"><span class="st st--ready">Готово</span><span class="t">Паспорт спринта: задачи из parts[]</span><span class="id">S4-36</span></div>
+      <div class="li"><span class="st st--active">В работе</span><span class="t">Вкладки паспорта: дубли и «Ещё»</span><span class="id">B13</span></div>
+    </div>
+    <div class="note">плашка 18 px — чип 44 px: разница 2,4×, а в ряду фильтров и вкладок она видна сильнее всего</div>
+  </div>
+
+  <h2>Предложение А — воздух между рядами <span style="color:var(--suc)">(рекомендую)</span></h2>
+  <div class="card card--new new air">
+    <span class="tag tag--new">чип 26 px · палец 44 px · ряды разведены, области не накладываются</span>
+    <div class="row" style="margin-bottom:8px">
+      <div class="seg"><button type="button" aria-pressed="true">Все</button><button type="button">Открытые</button><button type="button">Мои</button></div>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="chip" type="button" aria-pressed="true">Спринт <span class="n">12</span></button>
+      <button class="chip" type="button">Проект <span class="n">5</span></button>
+      <button class="chip" type="button">Кто <span class="n">9</span></button>
+    </div>
+    <div class="tabs" style="margin-bottom:8px">
+      <button class="tab" type="button" aria-selected="true">Задачи <span class="n">48</span></button>
+      <button class="tab" type="button">Контент <span class="n">7</span></button>
+      <button class="tab" type="button">Фазы <span class="n">3</span></button>
+    </div>
+    <div class="list">
+      <div class="li"><span class="st st--ready">Готово</span><span class="t">Паспорт спринта: задачи из parts[]</span><span class="id">S4-36</span></div>
+      <div class="li"><span class="st st--active">В работе</span><span class="t">Вкладки паспорта: дубли и «Ещё»</span><span class="id">B13</span></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" type="button">Применить</button>
+      <span class="note" style="margin:0">настоящая кнопка остаётся крупной — её ищут глазами</span>
+    </div>
+    <div class="note">на ряд уходит 26 + 18 = 44 px, как и сейчас: выигрыш здесь в ВИДЕ, а длину страницы сокращают строки списка и кнопки</div>
+  </div>
+
+  <h2>Предложение Б — плотно</h2>
+  <div class="card card--new new tight">
+    <span class="tag tag--new">чип 26 px · ряды по 4 px · палец = сам чип</span>
+    <div class="row" style="margin-bottom:8px">
+      <div class="seg"><button type="button" aria-pressed="true">Все</button><button type="button">Открытые</button><button type="button">Мои</button></div>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="chip" type="button" aria-pressed="true">Спринт <span class="n">12</span></button>
+      <button class="chip" type="button">Проект <span class="n">5</span></button>
+      <button class="chip" type="button">Кто <span class="n">9</span></button>
+    </div>
+    <div class="tabs" style="margin-bottom:8px">
+      <button class="tab" type="button" aria-selected="true">Задачи <span class="n">48</span></button>
+      <button class="tab" type="button">Контент <span class="n">7</span></button>
+      <button class="tab" type="button">Фазы <span class="n">3</span></button>
+    </div>
+    <div class="list">
+      <div class="li"><span class="st st--ready">Готово</span><span class="t">Паспорт спринта: задачи из parts[]</span><span class="id">S4-36</span></div>
+      <div class="li"><span class="st st--active">В работе</span><span class="t">Вкладки паспорта: дубли и «Ещё»</span><span class="id">B13</span></div>
+    </div>
+    <div class="warnline"><span>⚠</span><span>Цена названа прямо: цель касания у чипов и вкладок здесь 26 px вместо 44. Это ниже нормы — пальцем в край ряда попасть труднее, а рядом стоящий чип перехватит нажатие.</span></div>
+  </div>
+
+  <h2>Предложение В — середина <span style="color:var(--suc)">(по числам лучшее)</span></h2>
+  <div class="card card--new new mid">
+    <span class="tag tag--new">чип 32 px · палец 44 px · ряды по 14 px, области не налезают</span>
+    <div class="row" style="margin-bottom:8px">
+      <div class="seg"><button type="button" aria-pressed="true">Все</button><button type="button">Открытые</button><button type="button">Мои</button></div>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="chip" type="button" aria-pressed="true">Спринт <span class="n">12</span></button>
+      <button class="chip" type="button">Проект <span class="n">5</span></button>
+      <button class="chip" type="button">Кто <span class="n">9</span></button>
+    </div>
+    <div class="tabs" style="margin-bottom:8px">
+      <button class="tab" type="button" aria-selected="true">Задачи <span class="n">48</span></button>
+      <button class="tab" type="button">Контент <span class="n">7</span></button>
+      <button class="tab" type="button">Фазы <span class="n">3</span></button>
+    </div>
+    <div class="list">
+      <div class="li"><span class="st st--ready">Готово</span><span class="t">Паспорт спринта: задачи из parts[]</span><span class="id">S4-36</span></div>
+      <div class="li"><span class="st st--active">В работе</span><span class="t">Вкладки паспорта: дубли и «Ещё»</span><span class="id">B13</span></div>
+    </div>
+    <div class="note">норма касания соблюдена и страница короче нынешней: на ряд 46 px против 52</div>
+  </div>
+
+  <h2>Что именно меняется</h2>
+  <div class="card">
+    <p>Замерено в браузере на 360 px — ширине телефона, а не на глаз.</p>
+    <table>
+      <tr><th>вариант</th><th>видно</th><th>палец</th><th>зазор</th><th>блок</th></tr>
+      <tr><td>сейчас</td><td class="n">44</td><td class="n">44</td><td class="n">8</td><td class="n">333</td></tr>
+      <tr><td>А воздух</td><td class="n good">26</td><td class="n">44</td><td class="n">2</td><td class="n" style="color:var(--dng)">420</td></tr>
+      <tr><td>Б плотно</td><td class="n good">26</td><td class="n" style="color:var(--dng)">26</td><td class="n">8</td><td class="n good">303</td></tr>
+      <tr><td>В середина</td><td class="n good">32</td><td class="n">44</td><td class="n">2</td><td class="n good">310</td></tr>
+    </table>
+    <div class="note">видно — высота чипа глазами · палец — область касания · зазор — просвет между областями соседних рядов (ноль и меньше значит «нажатие перехватит сосед») · блок — высота всей обвязки</div>
+    <table style="margin-top:10px">
+      <tr><th>элемент</th><th>сейчас</th><th>в варианте В</th><th>палец</th></tr>
+      <tr><td>чип фильтра</td><td class="n">44</td><td class="n good">32</td><td class="n">44</td></tr>
+      <tr><td>переключатель</td><td class="n">44</td><td class="n good">32</td><td class="n">44</td></tr>
+      <tr><td>вкладка</td><td class="n">44</td><td class="n good">32</td><td class="n">44</td></tr>
+      <tr><td>строка списка</td><td class="n">44</td><td class="n good">34</td><td class="n">34</td></tr>
+      <tr><td>кнопка действия</td><td class="n">44</td><td class="n good">36</td><td class="n">36</td></tr>
+      <tr><td>плашка статуса</td><td class="n">19</td><td class="n">19</td><td>—</td></tr>
+    </table>
+  </div>
+
+  <h2>Почему так, а не просто «уменьшить»</h2>
+  <div class="card">
+    <p>Сейчас высота элемента <b>равна</b> цели касания: 44 px растягивают чип, у которого подписи 11 px. Текст не растёт — растёт только обвязка, поэтому телефон и выглядит иначе, а не просто крупнее.</p>
+    <p>В предложении эти две вещи разведены: высоту задаёт содержимое, а палец получает своё — невидимой областью вокруг. По вертикали её расширять можно: между рядами есть просвет. По горизонтали — нет: там чипы стоят вплотную, и области наложились бы друг на друга.</p>
+    <p style="margin:0">Строка списка и кнопка остаются крупнее остального: по строке попадают вслепую при прокрутке, а кнопку ищут глазами.</p>
+  </div>
+</div>
+</body>
+</html>
