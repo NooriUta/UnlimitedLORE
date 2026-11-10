@@ -112,4 +112,29 @@ final class LoreCanvas {
             return "edge must match " + EDGE.pattern();
         return null;
     }
+
+    /**
+     * SPRINT_UXR_S7C_WHY_CANVAS/S7C-05 — план ребра графа для стрелки холста.
+     * Оба стикера привязаны — ребро графа {@code from → to} типа {@code edge};
+     * иначе стрелка остаётся рисунком на холсте ({@link #drawing()}). {@code error} —
+     * отказ ДО записи: неизвестный тип привязки или недопустимая пара/направление.
+     */
+    record GraphPlan(LoreLinkTypes.Entity from, LoreLinkTypes.Entity to, String edge, String error) {
+        boolean drawing() { return from == null && error == null; }
+    }
+
+    /** Ребро графа у стрелки: поставлено этой стрелкой / уже было, не наше / стрелка — только рисунок. */
+    static final String GRAPH_CREATED = "created";
+    static final String GRAPH_EXISTING = "existing";
+    static final String GRAPH_DRAWING = "drawing";
+    /** Провенанс на ребре: удаление стрелки снимает ровно своё ребро, а не чужое. */
+    static final String ORIGIN_CANVAS = "canvas";
+
+    static GraphPlan graphPlan(Object fromRefType, Object toRefType, String edge) {
+        return new GraphPlan(null, null, edge, null); // STUB S7C-05
+    }
+
+    static String canvasRef(String canvasUid, String linkUid) {
+        return null; // STUB S7C-05
+    }
 }
