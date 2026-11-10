@@ -43,11 +43,16 @@ describe('статусные оси неплановых типов', () => {
     expect([...SPEC_STATUSES].sort()).toEqual([...shared.specStatuses].sort());
   });
 
-  it('у вопросов и фич словаря в shared НЕТ — это пробел, а не ошибка теста', () => {
-    // Если он там появится, тест обязан покраснеть: тогда копию надо сверять с
-    // ним, а не держать перечень, снятый замером корпуса.
-    expect(shared.questionStatuses, 'словарь вопросов появился в shared — сверьте копию с ним').toBeUndefined();
-    expect(shared.featureStatuses, 'словарь фич появился в shared — сверьте копию с ним').toBeUndefined();
+  // S4-V2-SECTIONS, серверная часть: словари вопросов и фич появились в shared
+  // (раньше жили только в коде записи) — копия сверяется с ними, как у решений и спек.
+  it('копия словаря вопросов совпадает с shared', () => {
+    expect(Array.isArray(shared.questionStatuses)).toBe(true);
+    expect([...QUESTION_STATUSES].sort()).toEqual([...shared.questionStatuses].sort());
+  });
+
+  it('копия словаря фич совпадает с shared', () => {
+    expect(Array.isArray(shared.featureStatuses)).toBe(true);
+    expect([...FEATURE_STATUSES].sort()).toEqual([...shared.featureStatuses].sort());
   });
 
   it.each([

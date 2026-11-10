@@ -301,6 +301,21 @@ final class LoreRecordValues {
         return v;
     }
 
+    /** S4-V2-SECTIONS: паспорт компонента (срез {@code component}). ЗАГЛУШКА до кода. */
+    static Map<String, Object> component(Map<String, Object> r) {
+        return new LinkedHashMap<>();
+    }
+
+    /** S4-V2-SECTIONS: паспорт технологии (срез {@code tech_by_id}). ЗАГЛУШКА до кода. */
+    static Map<String, Object> tech(Map<String, Object> r) {
+        return new LinkedHashMap<>();
+    }
+
+    /** S4-V2-SECTIONS: паспорт фичи / сценария любого уровня (срез {@code uc_by_id}). ЗАГЛУШКА до кода. */
+    static Map<String, Object> feature(Map<String, Object> r) {
+        return new LinkedHashMap<>();
+    }
+
     /** Решение (decisions_of_adr) → item. */
     static Map<String, Object> decisionItem(Map<String, Object> r) {
         Map<String, Object> vals = new LinkedHashMap<>();

@@ -34,11 +34,14 @@ class LoreRecordRegistryTest {
 
     @Test
     void typesNowAreSprintTaskAdrSpec() {
-        assertEquals(List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release"), LoreRecordRegistry.TYPES);
+        assertEquals(List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release",
+            "component", "tech", "feature"), LoreRecordRegistry.TYPES);
         // Kit 09.11: решение и вопрос заведены — пока только чтение (READ_ONLY).
         assertNotNull(LoreRecordRegistry.get("decision"));
         assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("decision", "question")));
-        assertNull(LoreRecordRegistry.get("component"), "компонент — позже, сейчас его в реестре нет");
+        // S4-V2-SECTIONS: компонент, технология и фича — последними, тоже только чтение.
+        assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("component", "tech", "feature")));
+        assertNull(LoreRecordRegistry.get("pain"), "боль — не тип паспорта");
     }
 
     @Test
