@@ -55,10 +55,10 @@ final class LoreRecordValues {
 
     /** {@code values} записи по строке главного среза — вместе со статусом записи. */
     static Map<String, Object> values(String type, Map<String, Object> r) {
+        // S4-MODEL-RECORD: четыре прежних типа — общим сборщиком по описаниям from.
+        if (java.util.Set.of("sprint", "task", "adr", "spec").contains(type))
+            return LoreRecordFrom.assemble(LoreRecordFrom.VALUES.get(type), r);
         Map<String, Object> values = switch (type) {
-            case "sprint" -> sprint(r);
-            case "task" -> task(r);
-            case "adr" -> adr(r);
             case "decision" -> decision(r);
             case "question" -> question(r);
             case "milestone" -> milestone(r);
