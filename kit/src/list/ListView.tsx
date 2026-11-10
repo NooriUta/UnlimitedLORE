@@ -40,6 +40,7 @@ import { isEditableTarget } from '../resilience/editable';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
 import { chipLabel, isChipList, toChips } from '../core/chipValue';
 import { foldBody, type FeedBody } from './feedBody';
+import { foldUnder, type FeedUnder, type FeedUnderFold } from './feedUnder';
 import { GluedBlock } from '../record/GluedBlock';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
@@ -80,7 +81,7 @@ import { kitDay, kitMinute } from '../core/fmtValue';
 // провалы источника строками. Фильтрация и группировка по полю здесь не
 // повторяются — лента берёт то же `filtered` и ту же `groupBy`.
 import {
-  FEED_GAPS, FEED_UNDATED, FEED_UNREAD, feedByGroups, feedByTime, feedGaps, feedOrder,
+  FEED_GAPS, FEED_UNDATED, FEED_UNREAD, feedByGroups, feedByTime, feedGaps, feedOrder, feedTime,
 } from './feedModel';
 import type { FeedGroup, FeedRow } from './feedModel';
 
@@ -209,6 +210,24 @@ export interface ListViewProps {
    * отсутствия (то же правило, что у применения в DiffPreview).
    */
   onFeedBody?: (id: string) => void;
+  /**
+   * Нижний уровень двухуровневой ленты (K2-FEED-TWO-LEVEL): состояние —
+   * НАЗЫВАЕТ приложение (`feedUnder.ts`, пять исходов).
+   *
+   * Вернуло null — запись не верхнего уровня, полосы с числами и раскрытия у
+   * неё нет. Не задано — двух уровней нет вовсе: раскрывать нечего, а кнопка,
+   * обещающая действие, которого нет, хуже её отсутствия.
+   *
+   * ЧТО такое верхний и нижний уровень, kit не знает (K-14): верхний — тот, у
+   * кого приложение вернуло состояние, подпись нижнего — `list.feed.under.title`.
+   */
+  feedUnder?: (r: KitRecord) => FeedUnder | null;
+  /**
+   * Запросить нижний уровень. Решение владелицы 10.11.2026 — грузить ПРИ
+   * РАСКРЫТИИ: сразу это по запросу на каждую полосу экрана. Нет обработчика —
+   * «Ещё» при незагруженном нижнем уровне не предлагается.
+   */
+  onFeedUnder?: (id: string) => void;
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
   /**
@@ -255,6 +274,13 @@ export interface ListHead {
 
 /** Колонка, которую нельзя снять: список без названия записи нечитаем (S4-35). */
 const COLS_LOCKED = 'title+id';
+
+/**
+ * Уровень строки ленты (K2-FEED-TWO-LEVEL). `flat` — обычная запись, `top` —
+ * верхний уровень (у него полоса чисел и раскрытие), `under` — то, что в нём
+ * двигалось. Признак, а не своя вёрстка: форма строки на обоих уровнях ОДНА.
+ */
+type FeedLevel = 'flat' | 'top' | 'under';
 
 const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
 /** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
@@ -380,7 +406,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -699,6 +725,62 @@ export function ListView({
         gaps, feedCfg.timeField, data.meta.generated_at,
       ))
     : null;
+
+  /*
+    Двухуровневая лента (K2-FEED-TWO-LEVEL, просьба владелицы 09.11.2026:
+    «раздели еще одну идею … дерево будет двух уровневая лента»).
+
+    Включена, когда СОШЛИСЬ две вещи от приложения: подпись нижнего уровня в
+    конфиге и его состояние пропсом. Одного мало по разным причинам: без
+    подписи kit нарисовал бы «Ещё 7» неизвестно чего (водораздел K-14), без
+    состояния кнопка обещала бы раскрытие, которому нечего показать.
+  */
+  const underCfg = feedCfg?.under;
+  const twoLevel = !!feedGroupsList && !!underCfg && !!feedUnder;
+  /**
+   * Числа полосы верхнего уровня — ТЕ ЖЕ колонки `progress:`/`sum:`, что у
+   * таблицы, и рисует их тот же `cell`. Не «так же», а ТЕМ ЖЕ путём: второй
+   * счёт дал бы две правды о числах, и разошлись бы они первой же правкой.
+   *
+   * Колонок таких нет — полосы чисел нет: пустая полоса обещала бы числа,
+   * которых приложение не назвало.
+   */
+  const stripCols = twoLevel ? columns.filter(c => c.startsWith('progress:') || c.startsWith('sum:')) : [];
+  /**
+   * Состояние нижнего уровня у записи. Вне двухуровневой ленты — нет вовсе, и
+   * у строки нижнего уровня своего нижнего не бывает: уровней ровно два.
+   */
+  const underOf = (r: KitRecord, level: FeedLevel): FeedUnder | null =>
+    (twoLevel && level !== 'under' ? feedUnder!(r) ?? null : null);
+  /*
+    Пришли по ссылке в РАСКРЫТУЮ запись, а нижний уровень ещё в источнике —
+    просим его сами, один раз на запись.
+
+    Без этого «раскрытие переживает перезагрузку» было бы неправдой: адрес
+    говорит «раскрыто», а под полосой снова кнопка «Ещё». Отметку о запросе
+    держим своей, а не выводим из состояния, нарочно: источник может ответить
+    тем же «не загружено» (ещё едет, уже отказал), и по состоянию мы просили бы
+    вечно.
+  */
+  const askedUnder = useRef<Set<string>>(new Set());
+  const askUnder = useRef(onFeedUnder);
+  askUnder.current = onFeedUnder;
+  const underState = useRef(feedUnder);
+  underState.current = feedUnder;
+  useEffect(() => {
+    if (!twoLevel || !askUnder.current) return;
+    for (const id of expanded) {
+      if (askedUnder.current.has(id)) continue;
+      const r = records.find(x => x.id === id);
+      if (!r) continue;
+      const u = underState.current?.(r) ?? null;
+      // Просим только то, чего ещё не присылали. Пришедшее, едущее, отказанное
+      // и проверенный ноль запроса не требуют.
+      if (!u || u.kind !== 'rest' || foldUnder(u, true).action.kind !== 'load') continue;
+      askedUnder.current.add(id);
+      askUnder.current(id);
+    }
+  }, [twoLevel, expanded, records]);
 
   /**
    * Что РЕАЛЬНО стоит на экране — то и есть набор, над которым действуют.
@@ -1352,13 +1434,127 @@ export function ListView({
   };
 
   /**
+   * Полоса верхнего уровня: числа ТЕМ ЖЕ путём, что в таблице (состав п.4).
+   *
+   * Рисует их тот же `cell`, что и ячейку таблицы, по тем же колонкам
+   * `progress:`/`sum:`. Счёт здесь не повторяется НИ В ОДНОЙ строке кода —
+   * иначе у чисел появилось бы две правды, и разошлись бы они первой правкой.
+   *
+   * У каждого числа подпись: «3/7» без подписи неизвестно о чём, а наведения
+   * на телефоне нет, и спрятанная в подсказку подпись там не существует.
+   */
+  const feedStrip = (r: KitRecord): ReactNode => {
+    if (stripCols.length === 0) return null;
+    return (
+      <span className="sk-feed__strip">
+        {stripCols.map(c => (
+          <span key={c} className="sk-feed__stripcell" data-col={c}>
+            <span className="sk-feed__striplabel">{colTitle(c)}</span>
+            {cell(c, r)}
+          </span>
+        ))}
+      </span>
+    );
+  };
+
+  /**
+   * Нижний уровень под полосой (состав п.2, п.3).
+   *
+   * Пять состояний (не загружен · здесь · едет · не дошёл · нет прав) дают
+   * пять разных предложений — правило живёт чистой функцией `foldUnder`,
+   * потому что это утверждения о состоянии, а не вид. Разметка их только
+   * рисует.
+   *
+   * Загруженное раскрывается НА МЕСТЕ и в сеть не ходит; незагруженное
+   * запрашивается — слово владелицы 10.11.2026 «грузить при раскрытии». У
+   * «нет прав» кнопки нет вовсе: повторять нечего, и чинится это не повтором.
+   */
+  const feedUnderBlock = (r: KitRecord, fold: FeedUnderFold): ReactNode => {
+    const { rows, action, nothing, cut } = fold;
+    const open = expanded.has(r.id);
+    // Запрос предлагаем только тому, кто умеет его выполнить.
+    const askable = action.kind === 'load' || action.kind === 'retry' ? !!onFeedUnder : true;
+    const unknownN = action.kind === 'load' && action.n === null;
+    const label =
+      action.kind === 'open' ? t('kit.list.more', { n: action.n })
+      : action.kind === 'close' ? t('kit.list.feed.under.less')
+      : action.kind === 'busy' ? t('kit.list.feed.under.busy')
+      : action.kind === 'retry' ? t('kit.list.feed.under.retry')
+      : unknownN ? t('kit.list.feed.under.moreUnknown')
+      : t('kit.list.more', { n: (action as { n: number }).n });
+    const click = () => {
+      if (action.kind === 'busy' || action.kind === 'none' || action.kind === 'denied') return;
+      if (action.kind === 'load' || action.kind === 'retry') {
+        // Нажали — значит уже спросили: отмечаем, чтобы догрузка по ссылке не
+        // послала второй запрос за тем же самым.
+        askedUnder.current.add(r.id);
+        onFeedUnder?.(r.id);
+        // Раскрываем сразу: иначе ответ приедет в свёрнутое, и человек не
+        // увидит того, что сам попросил.
+        if (action.kind === 'load' && !open) toggleExpand(r.id);
+        return;
+      }
+      toggleExpand(r.id);
+    };
+    const showButton = action.kind !== 'none' && action.kind !== 'denied' && askable;
+    return (
+      <span className="sk-feed__undergroup" data-under={action.kind} data-open={open ? '' : undefined}>
+        {/* «Ничего нет» — утверждение источника, а не пустое место под полосой. */}
+        {nothing && (
+          <span className="sk-feed__undernote" data-note="nothing" role="status">{t('kit.list.feed.under.nothing')}</span>
+        )}
+        {action.kind === 'denied' && (
+          <span className="sk-feed__undernote" data-note="denied" role="status">
+            {t('kit.list.feed.under.denied', { reason: action.reason })}
+          </span>
+        )}
+        {action.kind === 'retry' && (
+          <span className="sk-feed__undernote" data-note="failed" role="alert">
+            {t('kit.list.feed.under.failed', { reason: action.reason })}
+          </span>
+        )}
+        {rows.length > 0 && (
+          /* Тот же вклеенный блок, что у паспорта и у тела записи: счётчик
+             обязателен, и «показано не всё» названо числом рядом. */
+          <GluedBlock id="feed-under" label={underCfg?.title ?? ''} count={cut ? cut.total : rows.length} lang={lang}>
+            <ul className="sk-feed__under">
+              {rows.map(rr => feedItem(rr, feedCfg ? feedTime(rr, feedCfg.timeField) : null, 'under'))}
+            </ul>
+            {cut && (
+              <span className="sk-feed__undernote" data-note="cut" role="status">
+                {t('kit.list.feed.under.cut', { shown: cut.shown, total: cut.total })}
+              </span>
+            )}
+          </GluedBlock>
+        )}
+        {showButton && (
+          <button
+            type="button"
+            className="sk-btn sk-feed__undermore"
+            aria-disabled={action.kind === 'busy' ? 'true' : undefined}
+            aria-expanded={action.kind === 'open' || action.kind === 'close' ? open : undefined}
+            title={unknownN ? t('kit.list.feed.under.moreUnknownWhy') : undefined}
+            onClick={e => { e.stopPropagation(); click(); }}
+          >
+            {label}
+          </button>
+        )}
+      </span>
+    );
+  };
+
+  /**
    * Строка ленты — ОДНА форма на все типы записей (§2, §7). Различия приходят
    * названными полями, а не своей вёрсткой под каждый тип: иначе при появлении
    * нового типа лента молча перестала бы его показывать как следует.
    */
-  const feedItem = (r: KitRecord, at: string | null): ReactNode => {
+  const feedItem = (r: KitRecord, at: string | null, level: FeedLevel = 'flat'): ReactNode => {
     const leads = (feedCfg?.lead ?? []).filter(k => valuesOf(r, k).length > 0);
     const bodyNode = feedBodyBlock(r);
+    // Верхний уровень — тот, у кого приложение вернуло состояние нижнего
+    // (K-14): kit не знает, что считать верхним.
+    const under = underOf(r, level);
+    const fold = under ? foldUnder(under, expanded.has(r.id)) : null;
     // Статуса у записи нет (или оси нет вовсе, K-14) — чипа нет: пустого места
     // не рисуем, а «∅» обещало бы значение, которого не существует.
     const withStatus = r.status !== '' && config.statuses.items.length > 0;
@@ -1366,6 +1562,9 @@ export function ListView({
       <li
         key={r.id}
         className={`sk-feed__item${selected.has(r.id) ? ' is-selected' : ''}`}
+        /* Уровень — ПРИЗНАКОМ, а не классом и не своей вёрсткой: форма строки
+           на обоих уровнях одна, иначе нижний уровень поехал бы своим видом. */
+        data-feed-level={twoLevel ? (level === 'under' ? 'under' : under ? 'top' : 'flat') : undefined}
         data-record-id={r.id}
         {...rowProps(r)}
         onClick={e => onRecordClick(e, r.id)}
@@ -1388,8 +1587,10 @@ export function ListView({
               {!bodyNode && feedBecause(r)}
             </span>
           )}
+          {under && feedStrip(r)}
           {bodyNode}
           {bodyNode && feedGlued(r)}
+          {fold && feedUnderBlock(r, fold)}
         </span>
       </li>
     );

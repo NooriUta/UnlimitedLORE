@@ -402,6 +402,14 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       c.warn('list.feed', 'feed-config', 'вид feed без list.feed {timeField} не предлагается: kit не угадывает, по какому полю у записи время');
     }
     if (!views?.includes('feed') && feed) c.warn('list.feed', 'feed-unused', 'list.feed задан, но вида feed в list.views нет');
+    /*
+      Двухуровневая лента (K2-FEED-TWO-LEVEL): подпись нижнего уровня — слово
+      приложения, и без неё двух уровней нет. Пустая подпись — ошибка, а не
+      тихий отказ: конфиг явно просил два уровня, и промолчать значило бы
+      спрятать причину, по которой их на экране не видно.
+    */
+    const under = feed ? c.obj(feed, 'under', 'list.feed', false) : null;
+    if (under) c.str(under, 'title', 'list.feed.under');
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
     if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');

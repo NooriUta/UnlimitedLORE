@@ -3452,6 +3452,32 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-feed__cut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--t3); }
 .sk-feed__page,
 .sk-feed__none { margin: 0; font-size: var(--fs-xs); color: var(--wrn); }
+/* Двухуровневая лента (SPRINT_UXR_S10_SEIDR_KIT_2/K2-FEED-TWO-LEVEL):
+   верхний уровень полосой, под ним то, что в нём двигалось.
+
+   Полоса чисел — ряд с переносом: на телефоне два-три числа в строку не
+   влезают, а горизонтальной прокрутки у строки ленты нет. Подпись над числом
+   мелкая и тусклая: «3/7» без подписи неизвестно о чём, но читается первым
+   всё равно число. */
+.sk-feed__strip { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-top: 4px; min-width: 0; }
+.sk-feed__stripcell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sk-feed__striplabel { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: .04em; }
+/* Нижний уровень — колонкой: тут и строки, и оговорки про них. */
+.sk-feed__undergroup { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; min-width: 0; }
+/* Строки нижнего уровня — тот же .sk-feed__item, со сдвигом и черешком слева:
+   вложенность видно, а форма строки остаётся ОДНА на оба уровня. */
+.sk-feed__under { margin: 0; padding: 0 0 0 10px; list-style: none; border-left: 1px solid var(--bd); }
+.sk-feed__under .sk-feed__title { font-size: var(--fs-sm); }
+/* Оговорки нижнего уровня: «ничего нет», «нет прав», «не дошло», «показано не
+   всё». Тон задаёт признак — «нет прав» и сбой НЕ одного цвета, потому что это
+   разные исходы и чинятся по-разному. */
+.sk-feed__undernote { font-size: var(--fs-xs); color: var(--t3); min-width: 0; }
+.sk-feed__undernote[data-note='failed'] { color: var(--dng); border-left: 2px solid var(--dng); padding-left: 8px; }
+.sk-feed__undernote[data-note='denied'] { color: var(--wrn); border-left: 2px solid var(--wrn); padding-left: 8px; }
+/* Кнопка раскрытия — своей строкой слева, как у тела записи: в ряд с числами
+   она читалась бы как ещё одно число. */
+.sk-feed__undermore { align-self: flex-start; font-size: var(--fs-xs); padding: 2px 8px; }
+.sk-feed__undermore[aria-disabled='true'] { color: var(--t3); cursor: default; }
 .sk-board {
   display: grid;
   grid-auto-flow: column;
