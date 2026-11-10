@@ -98,7 +98,8 @@ test('индекс: что снято и с каким кодом, без адр
 test('скрипт не читает файлов, кроме манифеста, и не знает имён секретов', () => {
   for (const f of ['snapshot.mjs', 'snapshot-core.mjs']) {
     const src = readFileSync(join(here, f), 'utf8');
-    assert.doesNotMatch(src, /\.env\b|infisical|credential|\.netrc|\.npmrc/i, f);
+    // имя файла .env в строковом литерале (process.env — окружение, его задаёт человек)
+    assert.doesNotMatch(src, /['"`][^'"`\n]*\.env(\.[a-z]+)?['"`]|infisical|credential|\.netrc|\.npmrc/i, f);
     const reads = [...src.matchAll(/readFileSync\(([^)]*)\)/g)].map(m => m[1]);
     for (const r of reads) assert.match(r, /manifest/, `${f}: чтение не манифеста — ${r}`);
   }
