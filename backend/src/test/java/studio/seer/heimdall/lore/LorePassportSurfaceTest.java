@@ -152,5 +152,9 @@ class LorePassportSurfaceTest {
             "решения — своей вкладкой: у 74% ADR они есть, до 35 штук");
         assertEquals(List.of("dependsOn", "blocks", "supersedes", "supersededBy"), keysIn(adr, "content"),
             "связи ADR↔ADR — в конце текста, как зависимости спринта");
+        List<Map<String, Object>> spec = sections("spec");
+        assertEquals(List.of("content"), keysIn(spec, "own"));
+        assertEquals(List.of("refsIn", "refsOut"), keysIn(spec, "content"),
+            "у спеки ссылки — вторичное, блоком в конце текста, а не вкладками");
     }
 }
