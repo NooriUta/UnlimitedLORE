@@ -19,6 +19,7 @@ import {
   fetchActions, fetchBatch, hasActionFilters, outcomeOf, type ActionsData, type ActionsQuery, type BatchData,
   type BatchState,
 } from './actions';
+import { DangerBatch } from './DangerBatch';
 import './Admin.css';
 
 export interface ActionsScreenProps {
@@ -312,14 +313,15 @@ type PanelState =
  * (dry_run) и те, что ничего не изменили. Это «мы не можем её собрать», а не
  * «пачка пустая», и после такого ответа раскрытие по строке не предлагается.
  *
- * Кнопки отката здесь НЕТ намеренно: откат — запись, и сервер отдаёт лишь
- * готовое тело запроса. Отдельное разрешение владелицы — отдельной задачей.
+ * Откат — запись: кнопка ведёт в тот же DangerBatch, что в «Ролях» (см. Rollback).
  */
-function BatchPanel({ batchId, fetchImpl, onNothing, onClose }: {
+function BatchPanel({ batchId, fetchImpl, onNothing, onClose, onChanged }: {
   batchId: string;
   fetchImpl?: typeof fetch;
   onNothing: (id: string) => void;
   onClose: () => void;
+  /** Пачку откатили — журнал пора перечитать (в нём появится запись отката). */
+  onChanged?: () => void;
 }) {
   const t = useAppT();
   const [st, setSt] = useState<PanelState>({ kind: 'loading' });
@@ -398,13 +400,42 @@ function BatchPanel({ batchId, fetchImpl, onNothing, onClose }: {
               ))}
             </tbody>
           </table>
-          {st.data.rollback && (
-            <p className="adm-hint" data-testid="adm-log-rollback">
-              {t('admin.log.batch.rollbackNote', { method: st.data.rollback.method, path: st.data.rollback.path })}
-            </p>
-          )}
+          <Rollback data={st.data} fetchImpl={fetchImpl} onChanged={onChanged} />
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * «Откатить пачку» (S7B-13). Тело — готовое от сервера (rollback.body), путь —
+ * тот же DangerBatch, что в «Ролях»: дифф (dry_run с undo_of) → ввод слова →
+ * одна пачка. Слово подтверждения — kc_sub человека: имени журнал не знает.
+ * Окно закрыто, срок не назван или тела нет — честная надпись, а не кнопка.
+ */
+function Rollback({ data, fetchImpl, onChanged }: { data: BatchData; fetchImpl?: typeof fetch; onChanged?: () => void }) {
+  const t = useAppT();
+  const [open, setOpen] = useState(false);
+  const body = data.rollback?.body ?? null;
+  if (!data.undoOpen || !body) {
+    return (
+      <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-log-rollback-closed">
+        {!body ? t('admin.log.batch.rollbackNoBody') : t('admin.log.batch.rollbackClosed')}
+      </p>
+    );
+  }
+  if (!open) {
+    return (
+      <div className="adm-field--btns">
+        <button type="button" className="adm-btn adm-btn--dng" data-testid="adm-log-rollback-btn" onClick={() => setOpen(true)}>
+          {t('admin.log.batch.rollback')}
+        </button>
+        <span className="adm-hint">{t('admin.log.batch.rollbackHint')}</span>
+      </div>
+    );
+  }
+  return (
+    <DangerBatch person={{ kc_sub: body.kc_sub, name: body.kc_sub }} changes={body.changes} undoOf={body.undo_of}
+      fetchImpl={fetchImpl} onClose={() => setOpen(false)} onChanged={onChanged} />
   );
 }

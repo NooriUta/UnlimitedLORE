@@ -19,7 +19,7 @@ import {
 import { useAppT } from '../i18n';
 import { DangerBatch } from './DangerBatch';
 import {
-  buildChanges, fetchRoleMatrix, filterProjects, groupByRole, PROJECT_ROLES,
+  buildChanges, fetchRoleMatrix, filterProjects, groupByRole, PERSON_SOURCES, personSourceCell, PROJECT_ROLES,
   type PersonRoles, type RoleChange, type RolesData,
 } from './roles';
 import './Admin.css';
@@ -112,10 +112,42 @@ function PersonCard({ person, data, onPropose }: {
         <button type="button" role="radio" className="adm-chip" aria-checked={isMatrix} aria-pressed={isMatrix}
           data-testid="adm-roles-view-matrix" onClick={() => setView('matrix')}>{t('admin.roles.view.matrix')}</button>
       </div>
+      <PersonSources person={person} sourcesAsked={data.sourcesAsked} />
       {isMatrix
         ? <PersonMatrix person={person} data={data} onPropose={onPropose} />
         : <PersonGroups person={person} onPropose={onPropose} />}
     </article>
+  );
+}
+
+/** Имена источников — собственные имена систем, не переводятся. */
+const SOURCE_TITLE: Record<string, string> = { kc: 'Keycloak', forgejo: 'Forgejo' };
+
+/**
+ * S7B-11: ячейки на человека — Keycloak (realm-роли) и Forgejo. Только на
+ * чтение (kit Matrix без onPropose): это не роль проекта, и правится она не здесь.
+ */
+function PersonSources({ person, sourcesAsked }: { person: PersonRoles; sourcesAsked: readonly string[] }) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const sources = useMemo(() => {
+    const s: string[] = [...PERSON_SOURCES];
+    for (const c of person.personCells) if (c.source && !s.includes(c.source)) s.push(c.source);
+    return s;
+  }, [person]);
+  const bySource = useMemo(() => new Map(person.personCells.map(c => [c.source ?? '', c])), [person]);
+  return (
+    <div data-testid="adm-roles-sources" aria-label={t('admin.roles.sources')} role="group">
+      <Matrix
+        rows={[{ key: person.kc_sub, title: person.name }]}
+        cols={sources.map(s => ({ key: s, title: SOURCE_TITLE[s] ?? s }))}
+        cell={(_r, col) => personSourceCell(bySource.get(col), sourcesAsked, col)}
+        options={[]}
+        labels={{ rows: t('admin.col.person'), cols: t('admin.roles.sources.col') }}
+        lang={lang}
+      />
+      <p className="adm-hint">{t('admin.roles.sources.hint')}</p>
+    </div>
   );
 }
 

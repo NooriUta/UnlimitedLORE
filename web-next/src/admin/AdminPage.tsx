@@ -12,6 +12,7 @@ import { useAppT } from '../i18n';
 import { ActionsScreen } from './ActionsScreen';
 import { AgentsScreen } from './AgentsScreen';
 import { FlagsScreen } from './FlagsScreen';
+import { McpScreen } from './McpScreen';
 import { RulesScreen } from './RulesScreen';
 import { RolesScreen } from './RolesScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
@@ -20,7 +21,7 @@ export default function AdminPage() {
   const t = useAppT();
   const [tab, setTab] = useUrlParam('adm');
   const current = tab === 'who' ? 'who' : tab === 'log' ? 'log' : tab === 'roles' ? 'roles'
-    : tab === 'rules' ? 'rules' : tab === 'flags' ? 'flags' : 'agents';
+    : tab === 'rules' ? 'rules' : tab === 'flags' ? 'flags' : tab === 'mcp' ? 'mcp' : 'agents';
   return (
     <main data-lore-app="v2" className="shell" aria-label={t('admin.title')}>
       <nav className="adm-tabs" aria-label={t('admin.title')}>
@@ -36,6 +37,8 @@ export default function AdminPage() {
           data-testid="adm-tab-rules" onClick={() => setTab('rules')}>{t('admin.rules.title')}</button>
         <button type="button" className="adm-tab" aria-current={current === 'flags' ? 'page' : undefined}
           data-testid="adm-tab-flags" onClick={() => setTab('flags')}>{t('admin.flags.title')}</button>
+        <button type="button" className="adm-tab" aria-current={current === 'mcp' ? 'page' : undefined}
+          data-testid="adm-tab-mcp" onClick={() => setTab('mcp')}>{t('admin.mcp.title')}</button>
       </nav>
       {current === 'agents' && <AgentsScreen />}
       {current === 'who' && <WhoWhereScreen meSub={v2Auth.getState().user?.sub ?? null} />}
@@ -43,6 +46,7 @@ export default function AdminPage() {
       {current === 'roles' && <RolesScreen />}
       {current === 'rules' && <RulesScreen />}
       {current === 'flags' && <FlagsScreen />}
+      {current === 'mcp' && <McpScreen />}
     </main>
   );
 }

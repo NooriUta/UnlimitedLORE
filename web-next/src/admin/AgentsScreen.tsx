@@ -11,8 +11,10 @@ import { Fragment, useMemo, useState } from 'react';
 import { Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useUrlParam } from '@seidr/kit';
 import { AgentProjectsPanel } from './AccessBlocks';
 import { useAppT } from '../i18n';
+import { LoreHttpError } from '../api/loreSlice';
 import {
-  fetchAgents, filterAgents, harnessCounts, HARNESS_NONE, offRegistry, setAgentHarness, type AgentRow, type AgentsData,
+  fetchAgents, filterAgents, harnessCounts, HARNESS_NONE, offRegistry, setAgentHarness, setAgentMachine,
+  type AgentRow, type AgentsData,
 } from './agents';
 import './Admin.css';
 
@@ -82,6 +84,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                   {openAgent === r.actor_id && (
                     <tr data-testid={`adm-agent-row-${r.actor_id}`}>
                       <td colSpan={6}>
+                        <MachineEditor row={r} fetchImpl={fetchImpl} onSaved={res.reload} />
                         <AgentProjectsPanel clientId={r.client_id} agentScope={r.agent_role}
                           ownerName={r.owner_display_name} fetchImpl={fetchImpl} />
                       </td>
@@ -101,6 +104,63 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
       <p className="adm-lead">{t('admin.agents.lead')}</p>
       {body}
     </section>
+  );
+}
+
+/**
+ * Машина агента в его карточке (S7B-16): «не привязана» словами, привязка по
+ * имени, «Отвязать». Сервер принимает правку только вместе с владельцем и
+ * учёткой — нет их, правки нет, и причина сказана (а не кнопка, которая упадёт).
+ */
+function MachineEditor({ row, fetchImpl, onSaved }: { row: AgentRow; fetchImpl?: typeof fetch; onSaved: () => void }) {
+  const t = useAppT();
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const bound = row.machine_id !== null;
+  const save = async (machine: string | null) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await setAgentMachine(row, machine, fetchImpl);
+      setValue('');
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const blocker = !row.owner_kc_sub ? 'noowner' : !row.client_id ? 'noclient' : null;
+  return (
+    <div className="adm-filters" role="group" aria-label={t('admin.machine.title')}
+      data-testid={`adm-machine-${row.actor_id}`} data-bound={String(bound)}>
+      <span className="adm-field__l">{t('admin.machine.title')}</span>
+      {bound
+        ? <span className="adm-mono">{t('admin.machine.bound', { id: row.machine_id! })}</span>
+        : <span className="adm-missing">{t('admin.machine.none')}</span>}
+      {blocker ? (
+        <p className="adm-note" data-tone="wrn" role="status" data-testid={`adm-machine-${blocker}`}>
+          {blocker === 'noowner' ? t('admin.machine.noOwner') : t('admin.machine.noClient')}
+        </p>
+      ) : (
+        <>
+          <label className="adm-field">
+            <span className="adm-field__l">{t('admin.machine.input')}</span>
+            <input className="adm-input adm-mono" type="text" value={value} disabled={busy} spellCheck={false}
+              data-testid="adm-machine-input" onChange={e => setValue(e.target.value)} />
+          </label>
+          <button type="button" className="adm-btn" data-testid="adm-machine-save"
+            disabled={busy || value.trim() === ''} onClick={() => { void save(value); }}>{t('admin.machine.save')}</button>
+          {bound && (
+            <button type="button" className="adm-btn adm-btn--dng" data-testid="adm-machine-unbind" disabled={busy}
+              onClick={() => { void save(null); }}>{t('admin.machine.unbind')}</button>
+          )}
+          <p className="adm-hint">{t('admin.machine.hint')}</p>
+        </>
+      )}
+      {err && <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-machine-error">{t('admin.machine.error', { reason: err })}</p>}
+    </div>
   );
 }
 
