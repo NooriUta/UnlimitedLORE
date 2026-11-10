@@ -154,7 +154,15 @@ export interface ListViewProps {
   state?: ListState;
   /** Каждая правка фильтра, группировки, порядка или вида — и в управляемом режиме, и в обычном. */
   onStateChange?: (state: ListState) => void;
-  budget?: Partial<typeof LIST_BUDGET>;
+  /**
+   * Бюджет показа (строк в группе, групп в списке, групп в топе) — числами.
+   *
+   * Было `Partial<typeof LIST_BUDGET>`, а LIST_BUDGET объявлен `as const`: тип
+   * допускал ровно 50/20/10, то есть настройка принимала только своё же
+   * умолчание и ничего не настраивала. Поймано тестом выбора в группах, где
+   * понадобился маленький бюджет, чтобы хвост «ещё N» вообще появился.
+   */
+  budget?: Partial<Record<keyof typeof LIST_BUDGET, number>>;
   /**
    * Свои иконки «Быстро» (id → слаг game-icons). Без них «Быстро» по одному
    * статусу берёт иконку статуса из словаря (S4-04), прочие — без иконки.
@@ -773,13 +781,85 @@ export function ListView({
     }
   }, [twoLevel, expanded, records]);
 
-  // Выбранное — только среди показанного: фильтр спрятал запись — действие её не тронет.
-  // Свёрнутая группа «Закрытые N» (S4-27) тоже не показана: её строки не выбираются «всем списком».
-  const pickable = closedGroup && !isOpen(CLOSED_KEY) ? split.open : filtered;
+  /**
+   * Что РЕАЛЬНО стоит на экране — то и есть набор, над которым действуют.
+   *
+   * Было: показанным считалось всё, что прошло фильтр (кроме свёрнутых
+   * «Закрытых»). В группированном списке это неправда — свёрнутая группа и
+   * хвост за «ещё N» на экране не стоят, а массовое действие их молча
+   * забирало: отметил группу, свернул её, нажал действие — и оно тронуло то,
+   * чего не видно. Теперь набор строится теми же правилами, которыми идёт
+   * отрисовка, а отмеченное за пределами показанного называется числом
+   * (kit.list.selHidden), а не теряется тихо.
+   */
+  const onScreenOf = (g: ListGroup): KitRecord[] => {
+    // Заголовок (а значит, и сворачивание) есть в списке при группировке и у «Закрытых».
+    const headed = view === 'list' && (groupKey !== null || g.key === CLOSED_KEY);
+    if (headed && !isOpen(g.key)) return [];
+    if (view === 'list' && subKey && g.key !== CLOSED_KEY) {
+      // Вторая ступень (S4-26) сворачивается своим ключом — иначе строки
+      // свёрнутой подгруппы считались бы показанными.
+      const out: KitRecord[] = [];
+      for (const sg of groupBy(g.records, subKey, config, data, budget)) {
+        const k = g.key + '' + sg.key;
+        if (!isOpen(k)) continue;
+        out.push(...sg.records.slice(0, limitOf(k)));
+      }
+      return out;
+    }
+    return g.records.slice(0, limitOf(g.key));
+  };
+  const pickable: KitRecord[] = [];
+  {
+    // Запись, попавшая в несколько групп (разрезы по связям), на экране одна —
+    // и в действие обязана уйти один раз, иначе «Выбрано: 2» про одну строку.
+    const seen = new Set<string>();
+    const put = (rs: readonly KitRecord[]) => {
+      for (const r of rs) if (!seen.has(r.id)) { seen.add(r.id); pickable.push(r); }
+    };
+    if (feedGroupsList) {
+      for (const g of feedGroupsList) {
+        for (const row of g.rows.slice(0, limitOf(g.key))) if (row.kind === 'record') put([row.record]);
+      }
+    } else if (view === 'board') {
+      for (const { lane, columns: cols } of lanes) {
+        if (laned && !isOpen(lane.key)) continue;
+        for (const c of cols) put(c.records.slice(0, limitOf(laned ? lane.key + '' + c.key : c.key)));
+      }
+    } else if (view === 'list') {
+      for (const g of groups) put(onScreenOf(g));
+    } else {
+      // Карточки, дерево и таймлайн рисуют весь отфильтрованный набор.
+      put(filtered);
+    }
+  }
   const selIds = visibleSelection(selected, pickable);
   const selKey = selIds.join('\u0000');
   useEffect(() => { onSelectionChange?.(selKey ? selKey.split('\u0000') : []); }, [selKey, onSelectionChange]);
+  /**
+   * Отмеченное за пределами показанного. Считаем по самим отметкам, а не по
+   * причинам: спрятал фильтр, свёрнутая группа или хвост «ещё N» — человеку
+   * важно одно, что часть его выбора в действие НЕ уйдёт.
+   */
+  const shownSel = new Set(selIds);
+  const selHidden = [...selected].filter(id => !shownSel.has(id)).length;
   const toggleSel = (id: string) => { setBulkError(null); setSelected(prev => toggleId(prev, id)); };
+  /**
+   * Сколько отмечено в группе — по ВСЕМ её записям, включая скрытые. Если
+   * считать только показанные, свёрнутая группа выглядела бы как «ничего не
+   * выбрано», хотя выбор в ней есть и он помешает действию.
+   */
+  const groupSelCount = (g: ListGroup) => g.records.reduce((n, r) => (selected.has(r.id) ? n + 1 : n), 0);
+  /** Отметить/снять всю группу одним движением. */
+  const toggleGroupSel = (g: ListGroup) => {
+    setBulkError(null);
+    setSelected(prev => {
+      const n = new Set(prev);
+      const all = g.records.length > 0 && g.records.every(r => n.has(r.id));
+      for (const r of g.records) { if (all) n.delete(r.id); else n.add(r.id); }
+      return n;
+    });
+  };
   const allShownSelected = pickable.length > 0 && selIds.length === pickable.length;
   const toggleAll = () => { setBulkError(null); setSelected(prev => selectAllShown(prev, pickable)); };
   const selectable = columns.includes('select');
@@ -1068,6 +1148,38 @@ export function ListView({
       <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} aria-label={t('kit.list.select', { title: r.title })} aria-keyshortcuts="X" />
     </label>
   );
+
+  /**
+   * Выбор группы у её заголовка: чекбокс с именем группы и «отмечено N из M».
+   * Чекбокс — рядом с кнопкой сворачивания, а не внутри неё: вложенная в
+   * кнопку кнопка — недопустимая разметка, и нажатие било бы сразу по двум.
+   */
+  const groupPick = (g: ListGroup, title: string) => {
+    const n = groupSelCount(g);
+    const all = g.records.length > 0 && n === g.records.length;
+    return (
+      <label className="sk-list__check sk-list__gcheck">
+        <input
+          type="checkbox"
+          checked={all}
+          // «Часть группы» — это mixed, а не «снято»: снятый квадратик обещал
+          // бы, что в группе ничего не выбрано.
+          ref={el => { if (el) el.indeterminate = n > 0 && !all; }}
+          onChange={() => toggleGroupSel(g)}
+          aria-label={t('kit.list.selectGroup', { title })}
+        />
+      </label>
+    );
+  };
+  const groupSelNote = (g: ListGroup) => {
+    const n = groupSelCount(g);
+    if (n === 0) return null;
+    return (
+      <span className="sk-list__gsel" data-testid={`kit-list-gsel-${g.key}`}>
+        {t('kit.list.groupSelected', { n, total: g.records.length })}
+      </span>
+    );
+  };
 
   const cell = (col: string, r: KitRecord): ReactNode => {
     switch (col) {
@@ -1751,11 +1863,15 @@ export function ListView({
                 {headed && (
                   <tr className="sk-list__ghead" data-group-key={g.key} data-other={g.other ? 'true' : undefined}>
                     <th colSpan={span} scope="rowgroup">
-                      <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
-                        <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
-                        <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
-                        {!g.other && <span className="sk-list__gcount">{g.records.length}</span>}
-                      </button>
+                      <div className="sk-list__ghrow">
+                        {selecting && groupPick(g, groupTitle(g))}
+                        <button type="button" className="sk-list__gbtn" aria-expanded={open} onClick={() => toggleGroup(g.key)}>
+                          <span className="sk-list__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                          <span className={g.unknown || g.missing || g.none ? 'sk-list__gtitle is-unknown' : 'sk-list__gtitle'}>{groupTitle(g)}</span>
+                          {!g.other && <span className="sk-list__gcount">{g.records.length}</span>}
+                        </button>
+                        {selecting && groupSelNote(g)}
+                      </div>
                     </th>
                   </tr>
                 )}
@@ -1812,6 +1928,11 @@ export function ListView({
       {selecting && (
         <div className="sk-list__selbar" data-testid="kit-list-selbar" role="group" aria-label={t('kit.list.bulk')} aria-busy={busy !== null}>
           <span className="sk-list__selcount">{t('kit.list.selected', { n: selIds.length })}</span>
+          {selHidden > 0 && (
+            <span className="sk-list__selhidden" role="status" data-testid="kit-list-selhidden">
+              {t('kit.list.selHidden', { n: selHidden })}
+            </span>
+          )}
           <button type="button" className="sk-btn" onClick={toggleAll} disabled={pickable.length === 0}>
             {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: pickable.length })}
           </button>

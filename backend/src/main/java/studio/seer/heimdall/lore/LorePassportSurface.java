@@ -67,8 +67,10 @@ final class LorePassportSurface {
         // 45а: контейнер — дети первыми. Решения вехи — поле тела decisions_md, читаются после цели.
         Map.entry("milestone", List.of(own("sprints"), own(CONTENT))),
         Map.entry("release", List.of(own(CONTENT), own("sprints"), own("prs"))),
-        // 46а/52а: тела у компонента нет — первая вкладка документация.
-        Map.entry("component", List.of(own("specs"), own("adrs"), own("tech"), own("children"))),
+        // 46а/52а: тела у компонента нет — первая вкладка документация. S4-29: Задачи · Спринты
+        // (срезы с пагинацией) — после своих связей.
+        Map.entry("component", List.of(own("specs"), own("adrs"), own("tech"), own("children"),
+            own("tasks"), own("sprints"))),
         Map.entry("tech", List.of(own(CONTENT))),
         Map.entry("feature", List.of(own(CONTENT), own("children"), own("tasks"),
             own("actors"), own("pains"), own("gains"), own("jobs"))));

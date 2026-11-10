@@ -326,10 +326,8 @@ export default function LoreComponentPassport({
         setEditFullName(c?.full_name ?? '');
         setEditParentId(c?.parent_id ?? '');
         setLoading(false);
-        const key = componentId.length < 4
-          ? (c?.full_name?.split(/\s+/)[0]?.toUpperCase() ?? componentId)
-          : componentId;
-        return fetchLoreSlice<ComponentSprintRow>('component_sprints', { pattern: `%${key}%`, cid: componentId }, ctrl.signal);
+        // S4-29: спринты компонента — по ребру BELONGS_TO; подбор по имени снят на сервере.
+        return fetchLoreSlice<ComponentSprintRow>('component_sprints', { cid: componentId }, ctrl.signal);
       })
       .then(rows => setSprints(rows ?? []))
       .catch(e => {

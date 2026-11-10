@@ -280,7 +280,8 @@ describe('экран · карточка на 23 ролях (S7B-09)', () => {
     mount(fake().f);
     const input = await screen.findByTestId('adm-roles-search');
     fireEvent.change(input, { target: { value: 'p2' } });
-    expect(screen.getAllByTestId(/^adm-roles-row-/)).toHaveLength(4);
+    // Поиск живёт в адресе (useUrlParam): строки сужаются после обновления состояния, не синхронно.
+    await waitFor(() => expect(screen.getAllByTestId(/^adm-roles-row-/)).toHaveLength(4));
     expect(new URLSearchParams(window.location.search).get('adm-q')).toBe('p2');
   });
 
@@ -289,8 +290,9 @@ describe('экран · карточка на 23 ролях (S7B-09)', () => {
     const fk = fake();
     mount(fk.f);
     fireEvent.click(await screen.findByTestId('adm-roles-selectall'));
+    // Выбор живёт в адресе (useUrlParam) и применяется после обновления состояния, не синхронно (та же гонка, что #1127).
+    await waitFor(() => expect(screen.getByTestId('adm-roles-selected').textContent).toContain('23'));
     expect(new URLSearchParams(window.location.search).get('adm-sel')?.split(',')).toHaveLength(23);
-    expect(screen.getByTestId('adm-roles-selected').textContent).toContain('23');
     fireEvent.change(screen.getByTestId('adm-roles-setrole'), { target: { value: 'reader' } });
     fireEvent.click(screen.getByTestId('adm-roles-apply-set'));
     await screen.findByTestId('kit-diff-row-AIDA/p01');

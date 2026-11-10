@@ -970,6 +970,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         // work_class (ADR-LORE-022): вторая ось, vertex-only; трогаем только когда передана.
         if (workClass != null)     { sql.append(", work_class = :wc");           p.put("wc", workClass); }
         if (taskType      != null) { sql.append(", task_type = :tt");            p.put("tt", taskType); }
+        // S4-04 (свежесть, вопрос №49): правка на месте (заметка, название, поля вершины)
+        // версию SCD2 не открывает — её момент живёт отметкой на вершине; changed_at
+        // срезов берёт максимум из открытой версии и updated_at (LoreChangedAt).
+        sql.append(", updated_at = :upd");
+        p.put("upd", java.time.Instant.now().toString());
         sql.append(" WHERE task_uid = :uid");
         return new LoreCommandClient.LoreCommand("sql", sql.toString(), p);
     }

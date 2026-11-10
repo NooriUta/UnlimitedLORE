@@ -112,8 +112,19 @@ describe('S4-00a · палитры v2 = палитры v1', () => {
 
 describe('S4-00a · шкала и шрифты = v1', () => {
   it('шкала --fs-* совпадает ступень-в-ступень', () => {
-    const pick = (m: Record<string, string>) => Object.fromEntries(SCALE.map(k => [k, m[k]]));
+    // С S4-16 шкала v2 записана через множитель: `calc(12px * var(--fs-k))`
+    // вместо `12px`. Сверять дословно больше нельзя — но и ослаблять сверку
+    // нельзя: она держит обещание «кегли v2 = кегли v1». Поэтому сравниваются
+    // САМИ СТУПЕНИ (число внутри calc), а множитель проверяется отдельно: он
+    // по умолчанию 1, то есть у не выбиравшего человека размеры те же.
+    const step = (v: string | undefined) => {
+      const m = /calc\(\s*([\d.]+px)\s*\*\s*var\(--fs-k\)\s*\)/.exec(v ?? '');
+      return m ? m[1] : v;
+    };
+    const pick = (m: Record<string, string>) => Object.fromEntries(SCALE.map(k => [k, step(m[k])]));
     expect(pick(v2.get(':root')!)).toEqual(pick(v1.get(':root')!));
+    // Множитель — именно 1: иначе «те же ступени» ничего не значат.
+    expect(v2.get(':root')!['--fs-k'], 'масштаб по умолчанию не 1').toBe('1');
   });
 
   it('гарнитуры: Manrope / IBM Plex Mono / Unbounded — как в v1', () => {

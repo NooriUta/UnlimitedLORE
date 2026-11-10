@@ -86,17 +86,34 @@
   --display: 'Unbounded', sans-serif;
   --display-weight: 800;
 
+  /* ── множитель размера текста (S4-16) ──
+     Решение владелицы 10.11.2026, дословно: «вообще ползунок с сохранением
+     множителя поставьте в настройках я скажу сколько мин макс оставить
+     после выкатки».
+
+     Множитель НЕ заменяет ступени text_size, а умножает выбранную: ступень
+     задаёт основу (её числа подобраны поступенчато вручную и остаются как
+     есть), ползунок — точную подгонку поверх. Поэтому он один на все блоки
+     размеров: при 1 не меняется ничего.
+
+     Чего множитель не трогает, названо там же, где оно объявлено: цель
+     касания (палец не растёт вместе с кеглем) и порог поля ввода на сенсоре
+     (ниже 16px iOS приближает страницу при фокусе). ── */
+  --fs-k: 1;
   /* ── шкала шрифта (T24 v1): base 12, плотный IDE-подобный UI ── */
-  --fs-2xs:  9px;   /* микро-мета: даты, счётчики */
-  --fs-xs:   10px;  /* чипы, заголовки таблиц, подписи полей */
-  --fs-sm:   11px;  /* строки списков, кнопки, бейджи */
-  --fs-base: 12px;  /* основной текст, поля ввода */
-  --fs-md:   13px;  /* подзаголовки */
-  --fs-lg:   14px;  /* заголовки секций и карточек */
-  --fs-xl:   20px;  /* вторичные KPI */
-  --fs-2xl:  24px;  /* главные KPI */
+  --fs-2xs:  calc(9px * var(--fs-k));   /* микро-мета: даты, счётчики */
+  --fs-xs:   calc(10px * var(--fs-k));  /* чипы, заголовки таблиц, подписи полей */
+  --fs-sm:   calc(11px * var(--fs-k));  /* строки списков, кнопки, бейджи */
+  --fs-base: calc(12px * var(--fs-k));  /* основной текст, поля ввода */
+  --fs-md:   calc(13px * var(--fs-k));  /* подзаголовки */
+  --fs-lg:   calc(14px * var(--fs-k));  /* заголовки секций и карточек */
+  --fs-xl:   calc(20px * var(--fs-k));  /* вторичные KPI */
+  --fs-2xl:  calc(24px * var(--fs-k));  /* главные KPI */
   /* Вне шкалы: поле ввода на сенсоре — iOS приближает страницу при фокусе на
      поле со шрифтом меньше 16px (AH-05, SH-13 в v1). */
+  /* Масштаб текста этого порога НЕ трогает — ни вниз, ни вверх: это правило
+     iOS (при кегле меньше 16px страница приближается на фокусе), а не вкус
+     человека. Решение принято раньше и подтверждено сторожем ступеней. */
   --fs-touch-input: 16px;
 
   /* ── радиусы: pill/chip — 999 ── */
@@ -134,42 +151,19 @@
 /* ---------- размер текста (личная настройка S4-02, text_size) ----------
    Шкала сдвигается целиком, ступени сохраняют порядок; md — :root выше.
    --fs-touch-input не трогаем: это порог iOS, а не вкус пользователя. */
-[data-text-size='sm'] {
-  --fs-2xs:  8px;
-  --fs-xs:   9px;
-  --fs-sm:   10px;
-  --fs-base: 11px;
-  --fs-md:   12px;
-  --fs-lg:   13px;
-  --fs-xl:   18px;
-  --fs-2xl:  22px;
-}
-[data-text-size='lg'] {
-  --fs-2xs:  10px;
-  --fs-xs:   11px;
-  --fs-sm:   12px;
-  --fs-base: 14px;
-  --fs-md:   15px;
-  --fs-lg:   16px;
-  --fs-xl:   22px;
-  --fs-2xl:  26px;
-}
-/* xl — «очень крупно» (S4-16). Слова владелицы 09.11.2026: «и я просила
-   улучшить крупнее текст у меня экран не как у мужа у меня 4к и все мелкое».
-   Шкала заканчивалась на lg, и крупнее было некуда.
-   Значение xl не выдумано: боевой сервер личных настроек его уже знает — в
-   контракте S2 это записано как расхождение, о котором v2 обязан был
-   предупреждать. То есть выбрать xl можно было, а показать — нет. */
-[data-text-size='xl'] {
-  --fs-2xs:  12px;
-  --fs-xs:   13px;
-  --fs-sm:   14px;
-  --fs-base: 16px;
-  --fs-md:   17px;
-  --fs-lg:   19px;
-  --fs-xl:   26px;
-  --fs-2xl:  30px;
-}
+[data-text-size='sm'] { --fs-k: 0.9; }
+[data-text-size='lg'] { --fs-k: 1.15; }
+/* Ступени размера — предустановки одного множителя (S4-16, согласовано
+   10.11.2026). Ось одна: `--fs-k`. Ползунок в настройках пишет множитель
+   прямо в корень и перекрывает предустановку — это и значит «одна ось».
+
+   xl добавлена 09.11 по словам владелицы: «и я просила улучшить крупнее
+   текст у меня экран не как у мужа у меня 4к и все мелкое».
+
+   Названная цена перехода: прежние блоки подбирались поступенчато вручную
+   (отношение к md гуляло от 0.889 до 0.929), поэтому на части ступеней
+   кегль сдвинется на 1 px. */
+[data-text-size='xl'] { --fs-k: 1.33; }
 
 /* compact — прежняя плотность IDE (до S4-21): строка 24 px, название в одну строку. */
 [data-density='compact'] {
@@ -618,11 +612,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-pop[data-side='up'] { top: auto; bottom: calc(100% + 4px); }
 .sk-pop[data-side='up'][data-align='side'] { top: auto; bottom: 0; }
 
+/* Положение — у общего слоя .sk-pop (S4-MENU-STATES): и меню чипа, и палитра
+   звезды рисуются внутри Popover, своего положения у .sk-spop больше нет. */
 .sk-spop {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 65;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1241,6 +1233,31 @@ code, pre, kbd, samp { font-family: var(--mono); }
 ::-webkit-scrollbar-thumb:hover { background: var(--bdh); background-clip: content-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
+/* ---------- Быстрые A− / A+ над осью размера текста (S4-16) ----------
+   Сам орган управления НЕ растёт вместе с выбранной ступенью: иначе при
+   мелком выборе по нему труднее попасть ровно тогда, когда человек хочет
+   вернуть крупнее. Кегль у него свой, высота — от цели касания. --------- */
+.sk-tscale { display: inline-flex; align-items: center; gap: 4px; }
+.sk-tscale__btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: max(var(--tap), 24px); min-height: max(var(--tap), 24px);
+  padding: 0 6px; border: 1px solid var(--bd); border-radius: var(--r-pill);
+  background: var(--bg2); color: var(--t1);
+  font-family: var(--font); font-size: var(--fs-sm); font-weight: 700; cursor: pointer;
+}
+.sk-tscale__btn:hover:not(:disabled) { border-color: var(--bdh); }
+.sk-tscale__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* Край оси виден ДО нажатия: выключенная кнопка названа видом. */
+.sk-tscale__btn:disabled { opacity: 0.5; cursor: default; }
+.sk-tscale__range {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--acc);
+  min-height: max(var(--tap), 20px);
+  cursor: pointer;
+}
+.sk-tscale__range:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-tscale__now { min-width: 3ch; text-align: center; font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); }
 /* ---------- KitShell (K-02): модули сверху, меню групп, drawer на телефоне ----------
    Вынос из прототипа v4 (.top/.apps/.side/.sgrp/.sitem). Узкий экран — меню
    в Sheet слева (рисует компонент), подписи модулей прячутся, имя — aria-label. */
@@ -2204,6 +2221,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-diff__row[data-kind='add'] { border-left-color: var(--suc); }
 .sk-diff__row[data-kind='remove'] { border-left-color: var(--dng); }
 .sk-diff__row[data-kind='same'] { border-left-color: var(--bd); color: var(--t3); }
+.sk-diff__row[data-kind='change'] { border-left-color: var(--acc); }
 .sk-diff__row[data-check='unverified'] { background: color-mix(in srgb, var(--wrn) 10%, transparent); }
 .sk-diff__row[data-check='forbidden'] { background: color-mix(in srgb, var(--inf) 10%, transparent); }
 .sk-diff__sign {
@@ -2214,6 +2232,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-diff__row[data-kind='add'] .sk-diff__sign { color: var(--suc); }
 .sk-diff__row[data-kind='remove'] .sk-diff__sign { color: var(--dng); }
+.sk-diff__row[data-kind='change'] .sk-diff__sign { color: var(--acc); }
 .sk-diff__kind { color: var(--t3); font-size: var(--fs-xs); }
 .sk-diff__text { min-width: 0; color: var(--t1); }
 .sk-diff__row[data-kind='same'] .sk-diff__text { color: var(--t3); }
@@ -2237,6 +2256,41 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-diff__apply[aria-disabled='true'] { cursor: default; opacity: .55; }
 .sk-diff__apply:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* «Было → стало» одной строкой: прежнее и новое РАЗНЫМИ блоками и с
+   подписями словами («было» / «стало»). По цвету и порядку одному смену
+   читать нельзя — в чёрно-белой распечатке и для не различающего цвет
+   остаётся только слово. */
+.sk-diff__change { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 6px; min-width: 0; }
+.sk-diff__was, .sk-diff__now { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; }
+.sk-diff__was .sk-diff__val { color: var(--t3); text-decoration: line-through; }
+.sk-diff__now .sk-diff__val { color: var(--t1); }
+.sk-diff__cap { color: var(--t3); font-size: var(--fs-2xs); letter-spacing: .04em; text-transform: uppercase; }
+.sk-diff__val { min-width: 0; color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-diff__arrow { color: var(--acc); font-family: var(--mono); font-size: var(--fs-sm); }
+/* Оговорка о поправленном виде строки: не ошибка и не украшение — замечание. */
+.sk-diff__note { color: var(--wrn); font-size: var(--fs-xs); font-style: italic; }
+
+/* Подтверждение словом: поле, кнопка и причина отказа — одним блоком, чтобы
+   причина стояла У кнопки, а не терялась выше по странице. */
+.sk-diff__go { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); min-width: 0; }
+.sk-diff__ask { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.sk-diff__ask-label { color: var(--t2); font-size: var(--fs-xs); }
+.sk-diff__word {
+  min-width: 0;
+  max-width: 220px;
+  min-height: max(var(--tap), 28px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+}
+.sk-diff__word[aria-invalid='true'] { border-color: var(--dng); }
+.sk-diff__word:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-diff__blocked { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
 
 /* ---------- Пачка как объект: окно отмены (K2-BATCH-UNDO) ----------
    Исход пачки несёт рамка: применилось всё · применилось частично · не
@@ -2400,6 +2454,39 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-matrix__opt.is-clear { border-style: dashed; color: var(--t2); }
 .sk-matrix__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-matrix__skipped { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+
+/* Выбор нескольких ячеек (K2-MATRIX): полоса режима и счётчик «выбрано N».
+   Отмеченная ячейка обведена, а не перекрашена: цвет у неё уже занят
+   состоянием проверки, и перекраска стёрла бы «не смогли проверить». */
+.sk-matrix__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sk-matrix__mode {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 22px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-matrix__mode[aria-pressed='true'] {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+}
+.sk-matrix__mode:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__count { color: var(--t1); font-size: var(--fs-xs); font-weight: 700; }
+.sk-matrix__cell.is-marked {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
 /* Узкий вид: список по выбранной строке, а не сжатая сетка. */
 .sk-matrix--narrow { gap: var(--gap); }
 .sk-matrix__pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
@@ -3183,6 +3270,27 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__chev { color: var(--t3); }
 .sk-list__gtitle.is-unknown { color: var(--wrn); font-style: italic; }
 .sk-list__gcount { margin-left: auto; font-family: var(--mono); color: var(--t3); }
+/* Выбор группы (S4-10): чекбокс стоит РЯДОМ с кнопкой сворачивания, поэтому
+   у заголовка появилась строка-ряд. Счётчик «отмечено N из M» — справа,
+   моноширинным: число читается как число, а не как слово. */
+.sk-list__ghrow { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.sk-list__ghrow .sk-list__gbtn { flex: 1 1 auto; min-width: 0; }
+.sk-list__gcheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), var(--row-h));
+  min-height: max(var(--tap), var(--row-h));
+}
+.sk-list__gsel {
+  flex: 0 0 auto;
+  padding-right: var(--pad-x);
+  color: var(--acc);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
 .sk-list__morerow td { padding: 4px var(--pad-x); }
 
 /* Составные объекты (S4-09): раскрытие строки и прогресс «x/y».
@@ -3525,6 +3633,9 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__selmode { color: var(--t1); }
 .sk-list__selcount { font-weight: 700; color: var(--t1); }
 .sk-list__selbusy { color: var(--t2); font-size: var(--fs-xs); }
+/* «Отмечено вне показанного» — цветом предупреждения: это не пояснение, а
+   расхождение между тем, что человек отметил, и тем, над чем пойдёт действие. */
+.sk-list__selhidden { color: var(--wrn); font-size: var(--fs-xs); }
 .sk-list__seldone { margin-left: auto; }
 .sk-list__selbar .sk-btn {
   min-height: max(var(--tap), 22px);
@@ -3732,6 +3843,39 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-graph__node:focus-visible .sk-rec-graph__hit { stroke: var(--acc); stroke-width: 2; }
 .sk-rec-graph__label { fill: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); pointer-events: none; }
 .sk-rec-graph__legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+/* Хабы в графе (SPRINT_UXR_S9_SCALE_OPT/S9-08): сотня однотипных соседей —
+   одно место с числом, и сектор хаба больше не съедает окружность. */
+.sk-rec-graph__view { display: flex; gap: 4px; align-items: center; }
+.sk-rec-graph__cluster { }
+.sk-rec-graph__cbtn {
+  width: 100%;
+  font-size: var(--fs-2xs);
+  padding: 2px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-color: var(--node-c, var(--bd));
+}
+/* «Не меньше N» — число неточное, и это видно пунктиром рамки, а не только
+   текстом: точная и приблизительная подпись не должны выглядеть одинаково. */
+.sk-rec-graph__cluster[data-at-least='true'] .sk-rec-graph__cbtn { border-style: dashed; }
+/* Список связей — вид для телефона: читается без раскладки. */
+.sk-rec-graph__links { display: flex; flex-direction: column; gap: 12px; }
+.sk-rec-graph__lgroup[data-at-least='true'] .sk-rec-graph__lhead { border-left: 2px dashed var(--bd); padding-left: 6px; }
+.sk-rec-graph__lhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--t2);
+}
+.sk-rec-graph__litems { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sk-rec-graph__lref { font-size: var(--fs-sm); color: var(--t1); min-height: var(--tap); display: flex; align-items: center; }
+.sk-rec-graph__lref[data-missing='true'] { color: var(--t3); font-family: var(--mono); }
 .sk-rec-graph__legend li { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-sm); }
 /* S5-10: настройки графа — глубина, слой структурных связей, фильтр типов.
    Кнопки — pill-фильтры kit (≥ --tap на касании); подпись ребра — текстом
@@ -4334,11 +4478,10 @@ a.sk-tasks__id { text-decoration: none; display: inline-flex; align-items: cente
 a.sk-tasks__id:hover { text-decoration: underline; }
 a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
 .sk-tasks__none { color: var(--t3); }
+/* Положение — у общего слоя .sk-pop[data-align='start'] (S4-MENU-STATES);
+   здесь остаётся только своё: отступ от края ячейки, ширина, рамка. */
 .sk-tasks__menu {
-  position: absolute;
-  z-index: 20;
-  top: 100%;
-  left: 4px;
+  margin-left: 4px;
   display: flex;
   flex-direction: column;
   min-width: 200px;
