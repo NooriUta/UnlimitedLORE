@@ -27,6 +27,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { kitT, type KitLang } from '../i18n';
 import { useNarrow } from '../core/narrow';
+import { sayUnknown } from './unknownOutcome';
 
 export interface MatrixAxis { key: string; title: string }
 
@@ -112,14 +113,17 @@ export function Matrix({ rows, cols, cell, options, labels, onPropose, narrow: n
 
   const title = (opts: readonly MatrixOption[], value: string) => opts.find(o => o.value === value)?.title ?? value;
 
-  /** Подпись ячейки словами — она же уходит в aria-label и в подсказку. */
+  /**
+   * Подпись ячейки словами — она же уходит в aria-label и в подсказку.
+   *
+   * Три «неизвестно» печатает ОБЩИЙ словарь kit (`unknownOutcome.ts`): те же
+   * слова читают и цепочка причин, и дифф, а два разных «неизвестно» на одном
+   * экране заставили бы искать разницу там, где её нет.
+   */
   function say(c: MatrixCellState): string {
     if (c.state === 'value') return title(options, c.value);
     if (c.state === 'none') return kitT(lang, 'kit.matrix.cell.none');
-    const base = kitT(lang, c.state === 'forbidden'
-      ? 'kit.matrix.cell.forbidden'
-      : c.state === 'unasked' ? 'kit.matrix.cell.unasked' : 'kit.matrix.cell.unverified');
-    return c.reason ? `${base}: ${c.reason}` : base;
+    return sayUnknown(lang, c.state, c.reason);
   }
 
   function propose(value: string | null) {

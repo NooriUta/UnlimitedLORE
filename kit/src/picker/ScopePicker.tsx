@@ -1,7 +1,10 @@
 // ScopePicker — выбор нескольких проектов в шапке (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-03).
 //
-//   • кнопка в шапке подписана выбором: «Все проекты» · «Все мои (N)» · название
-//     одного · «N проектов»;
+//   • кнопка в шапке подписана выбором: «Все проекты» · «Все мои (N своих)» ·
+//     название одного · «N проектов». Число своих даёт ПРИЛОЖЕНИЕ (`mineCount`):
+//     счёт по загруженному списку назвал бы не «сколько своих», а «сколько
+//     своих мы успели увидеть». Числа не дали — подпись без числа, и это
+//     сказано; ноль и «не посчитали» — разные утверждения;
 //   • в панели — поиск, «Все мои», «Все проекты», галочки и «только этот» у
 //     каждой строки;
 //   • широкий экран — поповер у кнопки (не модальный: Esc и клик мимо
@@ -50,6 +53,15 @@ export interface ScopePickerProps {
   mine?: 'known' | 'unknown';
   /** Почему роли не проверены (нет входа, ошибка слайса…). */
   mineHint?: string;
+  /**
+   * Сколько записей СВОИХ — числом от приложения (10.11.2026).
+   *
+   * Почему не считаем сами по `options`: список бывает обрезан, и тогда счёт
+   * по нему называл бы не «сколько своих», а «сколько своих мы успели
+   * увидеть». Числа не дали — подпись идёт без него, и об этом сказано: ноль
+   * и «не посчитали» — разные утверждения, и путать их нельзя.
+   */
+  mineCount?: number;
   /** Телефон — лист снизу; иначе поповер. Не задан — по ширине экрана (useNarrow). */
   narrow?: boolean;
   /** Язык поверх KitLangProvider. */
@@ -57,11 +69,24 @@ export interface ScopePickerProps {
   className?: string;
 }
 
+/** Число своих — только от приложения; нет числа — нет и цифры в подписи. */
+function knownCount(n: number | undefined): number | null {
+  return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? Math.trunc(n) : null;
+}
+
 /** Скрытое — числом (S4-23): «Все проекты · 23», если число проектов известно. */
-function summaryText(lang: KitLang, s: ScopeSummary, total = 0): string {
+function summaryText(lang: KitLang, s: ScopeSummary, total = 0, mineCount?: number): string {
   switch (s.kind) {
     case 'all': return total > 0 ? kitT(lang, 'kit.scope.allN', { n: total }) : kitT(lang, 'kit.scope.all');
-    case 'mine': return kitT(lang, 'kit.scope.summary.mine', { n: s.count });
+    // «Все мои» без числа читается как «всё, что есть». Число своих знает
+    // приложение; не сказало — говорим, что не посчитали, а не печатаем счёт
+    // по загруженному списку (он бывает обрезан) и не ставим ноль.
+    case 'mine': {
+      const own = knownCount(mineCount);
+      return own === null
+        ? kitT(lang, 'kit.scope.summary.mineUncounted')
+        : kitT(lang, 'kit.scope.summary.mine', { n: own });
+    }
     case 'one': return s.title;
     case 'many': return kitT(lang, 'kit.scope.summary.many', { n: s.count });
   }
@@ -79,7 +104,7 @@ export function ScopePicker(props: ScopePickerProps) {
 
 function ScopePickerInner({
   label, icon = ICON_CANON.scopeAll, options, value, onChange, state = 'ok', error, onRetry, completeness,
-  forbiddenReason, mine = 'known', mineHint, narrow: narrowProp, lang = 'ru', className,
+  forbiddenReason, mine = 'known', mineHint, mineCount, narrow: narrowProp, lang = 'ru', className,
 }: ScopePickerProps) {
   const narrow = useNarrow(narrowProp);
   const name = label ?? kitT(lang, 'kit.scope.label');
@@ -87,7 +112,7 @@ function ScopePickerInner({
   const trigger = useRef<HTMLButtonElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const summary = summarizeScope(value, options, mine === 'known');
-  const sumText = summaryText(lang, summary, options.length);
+  const sumText = summaryText(lang, summary, options.length, mineCount);
 
   const close = (refocus = true) => {
     setOpen(false);
@@ -117,6 +142,7 @@ function ScopePickerInner({
       forbiddenReason={forbiddenReason}
       mine={mine}
       mineHint={mineHint}
+      mineCount={mineCount}
     />
   );
 
@@ -177,10 +203,11 @@ interface BodyProps {
   forbiddenReason?: string;
   mine: 'known' | 'unknown';
   mineHint?: string;
+  mineCount?: number;
 }
 
 function ScopeBody({
-  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint,
+  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount,
 }: BodyProps) {
   const [query, setQuery] = useState('');
   const searchId = useId();
@@ -192,11 +219,22 @@ function ScopeBody({
   const hasData = state === 'ok' || state === 'partial';
 
   const mineDisabled = !hasData || !mineKnown || mineIds.length === 0;
+  const own = knownCount(mineCount);
+
+  // Четыре РАЗНЫХ утверждения, и каждое своё:
+  //   роли не проверены · своих ноль (проверено) · своих в списке нет, а
+  //   сколько всего — не посчитали · своих N, но в загруженный список они не
+  //   попали. Прежний код печатал второе там, где верно третье: ноль считался
+  //   по загруженному списку, а он бывает обрезан.
   let mineNote: string | null = null;
   if (hasData && !mineKnown) {
     mineNote = [kitT(lang, 'kit.scope.mineUnknown'), mineHint].filter(Boolean).join(' · ');
-  } else if (hasData && mineIds.length === 0) {
+  } else if (hasData && own === 0) {
     mineNote = kitT(lang, 'kit.scope.mineNone');
+  } else if (hasData && mineIds.length === 0) {
+    mineNote = own === null
+      ? kitT(lang, 'kit.scope.mineUncounted')
+      : kitT(lang, 'kit.scope.mineOffList', { n: own });
   }
 
   let content: ReactNode;
@@ -280,7 +318,7 @@ function ScopeBody({
           {kitT(lang, 'kit.scope.all')}
         </button>
       </div>
-      {mineNote && <p className="sk-scope__note sk-scope__note--wrn">{mineNote}</p>}
+      {mineNote && <p className="sk-scope__note sk-scope__note--wrn" data-testid="kit-scope-minenote">{mineNote}</p>}
       {content}
       {hasData && (
         <p className="sk-scope__count" aria-live="polite">
