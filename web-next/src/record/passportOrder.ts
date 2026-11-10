@@ -22,10 +22,46 @@
 import { loadModel, passportSections, type PassportOrder } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 
+/** Группа вкладок (S4-29 v3): разделы одной группы — одна вкладка с подзаголовками. */
+export interface PassportGroup { key: string; label: string }
+
 export interface PassportOrderResult {
   order: PassportOrder;
   /** Что случилось — словами, для показа человеку. Пусто — говорить нечего. */
   notes: string[];
+  /** Ключ раздела → его группа. Раздел без группы сюда не попадает; групп нет — пустой объект. */
+  groups: Record<string, PassportGroup>;
+}
+
+/**
+ * S4-29 v3: шестой ключ раздела `group` — знакомый приложению. Сторож kit пока знает пятёрку v2
+ * и назвал бы его «лишним» строкой на экране, хотя сервер прав. Поэтому группы читаются здесь, а
+ * в разбор kit уходит копия модели без `group`. Кривой `group` (не {key, label}) группой не
+ * считается, и об этом сказано строкой — молча выкинуть его значило бы спрятать расхождение.
+ */
+function takeGroups(model: unknown, type: string): { model: unknown; groups: Record<string, PassportGroup>; notes: string[] } {
+  const groups: Record<string, PassportGroup> = {};
+  const notes: string[] = [];
+  const doc = obj(model);
+  const surfaces = doc && obj(doc.surfaces);
+  const passport = surfaces && obj(surfaces.passport);
+  const forType = passport && obj(passport[type]);
+  if (!doc || !surfaces || !passport || !forType || !Array.isArray(forType.sections)) return { model, groups, notes };
+  const sections = forType.sections.map(raw => {
+    const s = obj(raw);
+    if (!s || !('group' in s)) return raw;
+    const { group, ...rest } = s;
+    const g = obj(group);
+    const key = typeof rest.key === 'string' ? rest.key : '';
+    if (g && typeof g.key === 'string' && g.key && typeof g.label === 'string') {
+      if (key) groups[key] = { key: g.key, label: g.label };
+    } else if (group !== null && group !== undefined) {
+      notes.push(`surfaces.passport.${type}.sections[${key}]: group не в форме {key, label} — раздел показан без группы`);
+    }
+    return rest;
+  });
+  const copy = { ...doc, surfaces: { ...surfaces, passport: { ...passport, [type]: { ...forType, sections } } } };
+  return { model: copy, groups, notes };
 }
 
 const NOT_DECIDED: PassportOrder = { decided: false, sections: [], notes: [] };
@@ -85,14 +121,17 @@ export async function fetchPassportOrder(
   });
 
   if (res.state === 'error') {
-    return { order: NOT_DECIDED, notes: [`порядок разделов — умолчание приложения: модель недоступна (${reason(res.error)})`] };
+    return { order: NOT_DECIDED, notes: [`порядок разделов — умолчание приложения: модель недоступна (${reason(res.error)})`], groups: {} };
   }
   const notes: string[] = [];
   if (res.state === 'stale') {
     notes.push(`порядок разделов взят из кеша модели и может быть устаревшим (${reason(res.error)})`);
   }
+  const taken = takeGroups(res.model, type);
+  notes.push(...taken.notes);
+  const groups = taken.groups;
   try {
-    const order = passportSections(res.model, type);
+    const order = passportSections(taken.model, type);
     // Замечания разбора (лишние ключи в документе) — на экран. Сторож ослаблен
     // по CJM: лишний ключ больше не отказывает целиком, значит о нём обязан
     // сказать кто-то другой, иначе ослабление превратится в молчание.
@@ -104,11 +143,11 @@ export async function fetchPassportOrder(
     // порядок на экране не применился — и понять, не дошёл ли раздел, не дошёл
     // ли тип или сервер действительно не решал, было нечем.
     if (!order.decided) notes.push(`порядок разделов — умолчание приложения: ${whyNotDecided(res.model, type)}`);
-    return { order, notes };
+    return { order, notes, groups: order.decided ? groups : {} };
   } catch (e) {
     // Сторож формы отказал (лишний ключ, неизвестный slot, дробный order).
     // Это расхождение с сервером, и прятать его нельзя: порядок окажется
     // клиентским, а выглядеть будет как серверный.
-    return { order: NOT_DECIDED, notes: [...notes, `порядок разделов — умолчание приложения: модель не принята (${reason(e)})`] };
+    return { order: NOT_DECIDED, notes: [...notes, `порядок разделов — умолчание приложения: модель не принята (${reason(e)})`], groups: {} };
   }
 }

@@ -189,11 +189,12 @@ public class LoreRecordResource extends LoreResourceBase {
             blocks.add(p.key());
         }
 
+        // Связи из строки основного среза — одна функция на все типы (S4-29 v3).
+        links.addAll(LoreRecordValues.rowLinks(type, row));
+        // Вкладки без среза — «не смогли проверить», а не «пусто» (S4-29 v3).
+        dataState.addAll(LoreRecordValues.unreadState(type));
         switch (type) {
             case "sprint" -> {
-                links.addAll(LoreRecordValues.links("DEPENDS_ON", "out", "sprint", LoreRecordValues.arr(row.get("depends_on"))));
-                links.addAll(LoreRecordValues.links("DEPENDS_ON", "in", "sprint", LoreRecordValues.arr(row.get("blocks"))));
-                links.addAll(LoreRecordValues.links("IMPLEMENTED_IN", "in", "adr", LoreRecordValues.arr(row.get("adr_ids"))));
                 if (tasksRead != null && tasksRead.ok()) {
                     openTasks = SprintCloseGuard.openTasks(tasksRead.rows()).size();
                     int done = 0;
@@ -217,8 +218,6 @@ public class LoreRecordResource extends LoreResourceBase {
                 }
             }
             case "task" -> {
-                links.addAll(LoreRecordValues.links("CLOSED_BY", "out", "pr", LoreRecordValues.arr(row.get("closed_by_prs"))));
-                links.addAll(LoreRecordValues.links("REALIZES", "out", "use_case", LoreRecordValues.arr(row.get("realizes_uc"))));
                 Read adrs = read("adrs_of_task", Map.of("id", id), scope);
                 blocks.add("adrs");
                 dataState.add(LoreRecordDataState.entry("adrs_of_task", "adrs", adrs));
@@ -226,15 +225,33 @@ public class LoreRecordResource extends LoreResourceBase {
                     links.add(LoreRecordValues.link("JUSTIFIED_BY", "out", LoreRecordValues.str(a.get("adr_id")), "adr",
                         LoreRecordValues.str(a.get("name")), LoreRecordValues.docToken(a.get("status"))));
                 else facts.put("adrs_error", adrs.error());
+                // S4-29 v3: блокирующие вопросы — блоком в конце заметки; раньше их не читал никто.
+                Read gates = read("gating_questions_of_task", Map.of("id", id), scope);
+                blocks.add("gates");
+                dataState.add(LoreRecordDataState.entry("gating_questions_of_task", "gates", gates));
+                if (gates.ok()) for (Map<String, Object> q : gates.rows())
+                    links.add(LoreRecordValues.link("GATES", "in", LoreRecordValues.str(q.get("question_id")), "question",
+                        LoreRecordValues.str(q.get("title")), LoreRecordValues.docToken(q.get("status"))));
+                else facts.put("gates_error", gates.error());
             }
-            case "adr" -> {
-                links.addAll(LoreRecordValues.links("DEPENDS_ON", "out", "adr", LoreRecordValues.arr(row.get("depends_on_ids"))));
-                links.addAll(LoreRecordValues.links("SUPERSEDES", "out", "adr", LoreRecordValues.arr(row.get("supersedes_ids"))));
-                links.addAll(LoreRecordValues.links("SUPERSEDES", "in", "adr", LoreRecordValues.arr(row.get("superseded_by_ids"))));
-                links.addAll(LoreRecordValues.links("IMPLEMENTED_IN", "out", "sprint", LoreRecordValues.arr(row.get("implemented_in_ids"))));
-                links.addAll(LoreRecordValues.links("IMPLEMENTED_IN_RELEASE", "out", "release", LoreRecordValues.arr(row.get("release_ids"))));
-                links.addAll(LoreRecordValues.links("JUSTIFIED_BY", "in", "task", LoreRecordValues.arr(row.get("justified_task_uids"))));
-                links.addAll(LoreRecordValues.links("TRACED_TO", "in", "use_case", LoreRecordValues.arr(row.get("traced_by_ucs"))));
+            case "release" -> {
+                // S4-29 v3 (44а): Спринты · PR релиза. Ключ записи — release_uid, его и ждут срезы.
+                Read sprints = read("release_sprints", Map.of("ruid", id), scope);
+                blocks.add("sprints");
+                dataState.add(LoreRecordDataState.entry("release_sprints", "sprints", sprints));
+                if (sprints.ok()) for (Map<String, Object> s : sprints.rows())
+                    links.add(LoreRecordValues.link("IMPLEMENTED_IN_RELEASE", "in", LoreRecordValues.str(s.get("sprint_id")), "sprint",
+                        LoreRecordValues.str(s.get("name")), LoreRecordValues.planToken(LoreRecordValues.str(s.get("status_raw")))));
+                else facts.put("sprints_error", sprints.error());
+                Read prs = read("release_prs", Map.of("ruid", id), scope);
+                blocks.add("prs");
+                dataState.add(LoreRecordDataState.entry("release_prs", "prs", prs));
+                if (prs.ok()) for (Map<String, Object> p : prs.rows()) {
+                    String uid = LoreRecordValues.str(p.get("pr_uid"));
+                    links.add(LoreRecordValues.link("SHIPPED_IN", "in", uid != null ? uid : LoreRecordValues.str(p.get("pr_number")),
+                        "pr", LoreRecordValues.str(p.get("title")), null));
+                }
+                else facts.put("prs_error", prs.error());
             }
             default -> { }
         }
@@ -262,8 +279,14 @@ public class LoreRecordResource extends LoreResourceBase {
         return noStore(Response.ok(out));
     }
 
-    /** Параметр среза части: срезы спринта ждут {@code sprint_id}, прочие — {@code id}. */
+    /**
+     * Параметр среза части — ровно обязательный параметр самого среза. S4-29 v3: раньше имя
+     * угадывалось по суффиксу «_of_sprint» → sprint_id, а questions_of_sprint ждёт id — угадывание
+     * отдало бы часть ошибкой. Запасной путь (срез без одного обязательного) — прежнее правило.
+     */
     static String paramOf(String slice) {
+        LoreSlices.SliceDef def = LoreSlices.get(slice);
+        if (def != null && def.required().size() == 1) return def.required().get(0);
         return slice.endsWith("_of_sprint") ? "sprint_id" : "id";
     }
 
