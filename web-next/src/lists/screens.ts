@@ -46,6 +46,19 @@ const f = (lang: KitLang, key: string) => appT(lang, `lists.field.${key}` as App
 export interface ListScreenDef {
   /** Слайс GET /lore/slice/{slice}. */
   slice: string;
+  /**
+   * Имя ТИПА в модели (`/lore/model` → `statuses.<type>`) — K-14 п. 4.
+   *
+   * Статусная ось раздела берётся из модели, а не из перечня в этом файле:
+   * иначе словарь LORE живёт в клиенте, и при добавлении статуса (как это уже
+   * было с `ready_for_deploy`) экран показывает не то, что знает сервер.
+   * Перечень ниже остаётся УМОЛЧАНИЕМ на случай, когда модель недоступна, и
+   * тогда экран говорит об этом словами.
+   *
+   * Нет имени — у раздела нет статусной оси в модели (вехи, релизы,
+   * компоненты, реестр технологий): это законно, ось просто не из модели.
+   */
+  modelType?: string;
   titleKey: AppKey;
   icon: string;
   map: (row: Record<string, unknown>) => KitRecord;
@@ -402,6 +415,7 @@ const featuresSpec: SectionSpec = {
 
 export const LIST_SCREENS = {
   sprints: {
+    modelType: 'sprint',
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     map: sprintRecord, config: sprintsConfig, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
@@ -415,26 +429,31 @@ export const LIST_SCREENS = {
     },
   },
   adrs: {
+    modelType: 'adr',
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
   tasks: {
+    modelType: 'task',
     slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
     map: taskListRecord, config: tasksConfig, quickIcons: {},
     // Срез отдаёт только открытые задачи — это сказано словами на экране.
     note: OPEN_ONLY_NOTE,
   },
   decisions: {
+    modelType: 'decision',
     slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
     map: decisionRecord, config: lang => sectionConfig(lang, decisionsSpec), quickIcons: {},
   },
   specs: {
+    modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
     map: specRecord, config: lang => sectionConfig(lang, specsSpec), quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
     // отдаёт все вопросы, несмотря на имя (182 закрытых из 262).
+    modelType: 'question',
     slice: 'questions', titleKey: 'lists.questions.title', icon: 'help',
     map: questionRecord, config: lang => sectionConfig(lang, questionsSpec), quickIcons: {},
   },
@@ -455,6 +474,7 @@ export const LIST_SCREENS = {
     map: techRecord, config: lang => sectionConfig(lang, techSpec), quickIcons: {},
   },
   features: {
+    modelType: 'feature',
     slice: 'features', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
     map: featureRecord, config: lang => sectionConfig(lang, featuresSpec), quickIcons: {},
     // Срез режет выдачу до верхних уровней шкалы целей, и это надо сказать:
