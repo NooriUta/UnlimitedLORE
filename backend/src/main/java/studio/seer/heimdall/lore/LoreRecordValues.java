@@ -301,19 +301,58 @@ final class LoreRecordValues {
         return v;
     }
 
-    /** S4-V2-SECTIONS: паспорт компонента (срез {@code component}). ЗАГЛУШКА до кода. */
+    /** S4-V2-SECTIONS: паспорт компонента (срез {@code component}), только чтение. */
     static Map<String, Object> component(Map<String, Object> r) {
-        return new LinkedHashMap<>();
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("full_name")) != null ? str(r.get("full_name")) : str(r.get("component_id")));
+        v.put("code", str(r.get("component_id")));
+        v.put("area", str(r.get("area")));
+        v.put("parent", str(r.get("parent_id")));
+        v.put("owner", str(r.get("owner")));
+        v.put("team", str(r.get("team")));
+        v.put("icon", str(r.get("game_icon")));
+        v.put("children", arr(r.get("sub_components")));
+        v.put("tech", arr(r.get("tech")));
+        v.put("adrs", arr(r.get("adrs")));
+        v.put("specs", arr(r.get("specs")));
+        return v;
     }
 
-    /** S4-V2-SECTIONS: паспорт технологии (срез {@code tech_by_id}). ЗАГЛУШКА до кода. */
+    /** S4-V2-SECTIONS: паспорт технологии (срез {@code tech_by_id}), только чтение. */
     static Map<String, Object> tech(Map<String, Object> r) {
-        return new LinkedHashMap<>();
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("tech_name")) != null ? str(r.get("tech_name")) : str(r.get("spec_id")));
+        v.put("code", str(r.get("spec_id")));
+        v.put("version", str(r.get("version")));
+        v.put("checked_at", str(r.get("checked_at")));
+        v.put("component", str(r.get("component_id")));
+        v.put("body_md", str(r.get("content_md")));
+        v.put("content_md", str(r.get("content_md")));
+        return v;
     }
 
-    /** S4-V2-SECTIONS: паспорт фичи / сценария любого уровня (срез {@code uc_by_id}). ЗАГЛУШКА до кода. */
+    /** S4-V2-SECTIONS: паспорт фичи / сценария любого уровня (срез {@code uc_by_id}), только чтение. */
     static Map<String, Object> feature(Map<String, Object> r) {
-        return new LinkedHashMap<>();
+        Map<String, Object> v = new LinkedHashMap<>();
+        v.put("title", str(r.get("title")) != null ? str(r.get("title")) : str(r.get("uc_id")));
+        v.put("code", str(r.get("uc_id")));
+        v.put("goal_level", str(r.get("goal_level")));
+        v.put("rigor", str(r.get("rigor")));
+        v.put("priority", str(r.get("priority")));
+        v.put("date", str(r.get("date_created")));
+        v.put("shipped_at", str(r.get("shipped_at")));
+        // Источник истины — ребро DECOMPOSES_INTO; parent_uc_id — денормализация (на случай без ребра).
+        List<String> parents = arr(r.get("parent_uc_ids"));
+        v.put("parent", !parents.isEmpty() ? parents.get(0) : str(r.get("parent_uc_id")));
+        v.put("children", arr(r.get("child_uc_ids")));
+        v.put("components", arr(r.get("component_ids")));
+        v.put("projects", arr(r.get("projects")));
+        v.put("tasks", arr(r.get("task_uids")));
+        v.put("body_md", str(r.get("body_md")));
+        v.put("context_md", str(r.get("context_md")));
+        v.put("scenario_md", str(r.get("scenario_md")));
+        v.put("acceptance_md", str(r.get("acceptance_md")));
+        return v;
     }
 
     /** Решение (decisions_of_adr) → item. */

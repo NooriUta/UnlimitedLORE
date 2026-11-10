@@ -32,28 +32,37 @@ final class LoreModelTypes {
     /** Тип записи → (вершина, Hist, деловой ключ). */
     record Graph(String vertex, String hist, String key) {}
 
-    static final Map<String, Graph> GRAPH = Map.of(
-        "sprint", new Graph("KnowSprint", "KnowSprintHist", "sprint_id"),
-        "task", new Graph("KnowTask", "KnowTaskHist", "task_uid"),
-        "adr", new Graph("KnowADR", "KnowADRHist", "adr_id"),
-        "spec", new Graph("KnowSpec", "KnowSpecHist", "spec_id"),
+    // Map.ofEntries, а не Map.of: у Map.of предел — десять пар, типов уже одиннадцать.
+    static final Map<String, Graph> GRAPH = Map.ofEntries(
+        Map.entry("sprint", new Graph("KnowSprint", "KnowSprintHist", "sprint_id")),
+        Map.entry("task", new Graph("KnowTask", "KnowTaskHist", "task_uid")),
+        Map.entry("adr", new Graph("KnowADR", "KnowADRHist", "adr_id")),
+        Map.entry("spec", new Graph("KnowSpec", "KnowSpecHist", "spec_id")),
         // Kit 09.11: вершины без истории SCD2 — hist = null.
-        "decision", new Graph("KnowDecision", null, "decision_id"),
-        "question", new Graph("KnowQuestion", null, "question_id"),
-        "milestone", new Graph("KnowMilestone", null, "milestone_id"),
-        "release", new Graph("KnowRelease", null, "release_uid"));
+        Map.entry("decision", new Graph("KnowDecision", null, "decision_id")),
+        Map.entry("question", new Graph("KnowQuestion", null, "question_id")),
+        Map.entry("milestone", new Graph("KnowMilestone", null, "milestone_id")),
+        Map.entry("release", new Graph("KnowRelease", null, "release_uid")),
+        // S4-V2-SECTIONS: паспорт только чтения — история фасаду не нужна, hist = null
+        // (у технологии-спеки Hist есть, но версию записи фасад у READ_ONLY не спрашивает).
+        Map.entry("component", new Graph("LoreComponent", null, "component_id")),
+        Map.entry("tech", new Graph("KnowSpec", null, "spec_id")),
+        Map.entry("feature", new Graph("KnowUseCase", null, "uc_id")));
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
-    static final Map<String, Map<String, String>> ALIASES = Map.of(
-        "sprint", Map.of("title", "name", "status", "status_raw", "created", "created_date",
-            "no_release", "no_release_required", "track", "track_id", "planned_start", "planned_start_date"),
-        "task", Map.of("status", "status_raw", "note", "note_md", "effort", "effort_days", "actual", "actual_days"),
-        "adr", Map.of("title", "name", "status", "status"),
-        "spec", Map.of("status", "status", "body_md", "content_md"),
-        "decision", Map.of("status", "status_raw", "code", "decision_id", "date", "date_created"),
-        "question", Map.of("code", "question_id", "opened", "opened_date", "closed", "closed_date"),
-        "milestone", Map.of("title", "label", "code", "milestone_id", "date", "date_display"),
-        "release", Map.of("code", "release_id", "date", "release_date", "description_md", "description_md"));
+    static final Map<String, Map<String, String>> ALIASES = Map.ofEntries(
+        Map.entry("sprint", Map.of("title", "name", "status", "status_raw", "created", "created_date",
+            "no_release", "no_release_required", "track", "track_id", "planned_start", "planned_start_date")),
+        Map.entry("task", Map.of("status", "status_raw", "note", "note_md", "effort", "effort_days", "actual", "actual_days")),
+        Map.entry("adr", Map.of("title", "name", "status", "status")),
+        Map.entry("spec", Map.of("status", "status", "body_md", "content_md")),
+        Map.entry("decision", Map.of("status", "status_raw", "code", "decision_id", "date", "date_created")),
+        Map.entry("question", Map.of("code", "question_id", "opened", "opened_date", "closed", "closed_date")),
+        Map.entry("milestone", Map.of("title", "label", "code", "milestone_id", "date", "date_display")),
+        Map.entry("release", Map.of("code", "release_id", "date", "release_date", "description_md", "description_md")),
+        Map.entry("component", Map.of("title", "full_name", "code", "component_id", "parent", "parent_id", "icon", "game_icon")),
+        Map.entry("tech", Map.of("code", "spec_id")),
+        Map.entry("feature", Map.of("code", "uc_id", "date", "date_created", "parent", "parent_uc_id")));
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {

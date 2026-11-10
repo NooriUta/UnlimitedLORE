@@ -968,6 +968,24 @@ public final class LoreSlices {
             "ORDER BY goal_level, uc_id",
             List.of("component"), Map.of(), "");
 
+        // S4-V2-SECTIONS, «US разделом»: ВСЕ уровни шкалы, без обязательного параметра.
+        // `features` режет выдачу до корней (cloud|kite), `use_cases_of_component` требует
+        // компонент — раздела «все сценарии» собрать было не из чего. Тел нет: список
+        // несёт заголовки, тело — в паспорте (/lore/record/feature/<uc_id>).
+        slice("use_cases",
+            "SELECT uc_id, title, status, goal_level, rigor, priority, parent_uc_id, date_created, shipped_at, " +
+            "out('BELONGS_TO').component_id AS component_ids, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('DECOMPOSES_INTO').uc_id    AS parent_uc_ids, " +
+            "out('DECOMPOSES_INTO').size()  AS uc_total, " +
+            "in('REALIZES').size()          AS task_count " +
+            "FROM KnowUseCase",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component",
+                "goal_level", " WHERE goal_level = :goal_level")),
+            " ORDER BY uc_id");
+
         // Дочерние сценарии корня. Источник истины — ребро DECOMPOSES_INTO;
         // parent_uc_id рядом с ним денормализация для индекса, а не вторая правда.
         slice("use_cases_of_feature",
@@ -1858,6 +1876,18 @@ public final class LoreSlices {
                 // CONTAINS, не [0] — см. комментарий в слайсе adrs.
                 "component", " AND (out('BELONGS_TO').component_id CONTAINS :component OR component_id = :component)")),
             " ORDER BY spec_id");
+
+        // S4-V2-SECTIONS: паспорт технологии — та же строка, что у tech_registry, по ключу.
+        // Фильтр SPEC-TECH- остаётся: обычная спека — не технология, и паспорт «технологии»
+        // по её id отвечает 404, а не показывает спеку под чужим видом.
+        slice("tech_by_id",
+            "SELECT spec_id, title AS tech_name, " +
+            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS checked_at, " +
+            "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id " +
+            "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%' AND spec_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
 
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
         // AL-30: + все версионируемые поля ревизии (тела, план, pr_refs) — история
@@ -2765,6 +2795,7 @@ public final class LoreSlices {
         Map.entry("features", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("uc_by_id", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_component", UC_INHERITED_SCOPE),
+        Map.entry("use_cases", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_feature", UC_INHERITED_SCOPE),
         Map.entry("shipped_dynamics", UC_INHERITED_SCOPE),
         Map.entry("feature_vp_analytics", "out('BELONGS_TO_PROJECT').slug")
@@ -2799,6 +2830,7 @@ public final class LoreSlices {
         Map.entry("history_hygiene", "сторож истории — служебный"),
         Map.entry("asset_orphans", "сторож ассетов — служебный"),
         Map.entry("tech_registry", "реестр технологий — общий"),
+        Map.entry("tech_by_id", "паспорт технологии — тот же общий реестр"),
         Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
         Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем")
     );
