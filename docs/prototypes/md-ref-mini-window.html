@@ -84,6 +84,19 @@ td code{font-family:var(--mono);color:var(--t1)}
 .no{color:var(--t3);font-family:var(--mono)}
 .demo{font-size:var(--fs-xs);color:var(--t3);margin-top:12px;border-top:1px dashed var(--bd);padding-top:8px}
 noscript div{border:1px solid var(--dng);color:var(--dng);padding:10px;border-radius:6px;margin:10px 0}
+/* Компьютер: две колонки (правка | исходник), плотные IDE-размеры; 16px у полей — только для телефона (порог зума iOS). */
+@media (min-width:900px){
+  .wrap{max-width:1120px}
+  #v-edit:not([hidden]){display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:0 20px;align-items:start}
+  #v-edit>.col{min-width:0}
+  textarea,.fld input,.fld select{font-size:var(--fs-md)}
+  textarea{min-height:190px}
+  .prose{font-size:var(--fs-md);max-width:760px}
+  #v-read .peek{max-width:520px}
+  .sheet{left:auto;top:0;bottom:0;width:380px;max-height:none;border-radius:0;border-top:0;border-left:1px solid var(--bdh)}
+  .sheet .grab{display:none}
+  .list{max-height:300px}
+}
 </style>
 </head>
 <body>
@@ -100,6 +113,7 @@ noscript div{border:1px solid var(--dng);color:var(--dng);padding:10px;border-ra
   </div>
 
   <section id="v-edit">
+    <div class="col">
     <textarea id="ed" spellcheck="false"># Разбор сбоя выкладки
 
 Причина — в правиле, которое описано в [[adr:ADR-LORE-038]]. Чинить будем по задаче </textarea>
@@ -117,6 +131,8 @@ noscript div{border:1px solid var(--dng);color:var(--dng);padding:10px;border-ra
       <div id="oldBody"><div class="list" id="list"></div></div>
       <div id="newBody" hidden></div>
     </div>
+    </div>
+    <div class="col">
 
     <div class="demo">Состояние списка (для показа):
       <span class="seg" style="display:inline-flex;margin:4px 0 0" id="stateSeg">
@@ -128,6 +144,7 @@ noscript div{border:1px solid var(--dng);color:var(--dng);padding:10px;border-ra
 
     <div class="lbl">Исходник MD — так хранится</div>
     <div class="raw" id="raw"></div>
+    </div>
   </section>
 
   <section id="v-read" hidden>
