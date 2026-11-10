@@ -4,6 +4,9 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -52,5 +55,36 @@ class LoreKcAgentClientTest {
         assertNotNull(hint);
         assertTrue(hint.contains("manage-clients"), "403 — назвать недостающую роль lore-admin: " + hint);
         assertNull(LoreKcAgentClient.forbiddenHint(201));
+    }
+
+    // B8: agent-<profile> шаблону выдана клиентской ролью (kc-provision-agents.js), realm-копия
+    // её не видела — свежая учётка жила с пустым agent_scope. Грант клиентских ролей шаблона
+    // собирается с тем же фильтром служебных ролей KC, что и у realm-ролей.
+    @Test
+    void templateClientRolesBecomeGrantForNewAccount() {
+        List<String> copied = new ArrayList<>();
+        JsonArray grant = LoreKcResource.roleGrant(
+            "[{\"id\":\"r1\",\"name\":\"agent-full\"},{\"id\":\"r2\",\"name\":\"custom-client-role\"}]", copied);
+        assertEquals(2, grant.size());
+        assertEquals(List.of("agent-full", "custom-client-role"), copied,
+            "клиентские роли шаблона копируются на сервисную учётку нового клиента");
+    }
+
+    @Test
+    void keycloakServiceClientRolesAreSkippedInGrant() {
+        List<String> copied = new ArrayList<>();
+        JsonArray grant = LoreKcResource.roleGrant(
+            "[{\"id\":\"r1\",\"name\":\"agent-full\"},{\"id\":\"r2\",\"name\":\"default-roles-omilore\"}]", copied);
+        assertEquals(1, grant.size());
+        assertEquals("agent-full", grant.getJsonObject(0).getString("name"));
+        assertEquals(List.of("agent-full"), copied);
+    }
+
+    @Test
+    void brokenClientRoleMappingsGiveEmptyGrant() {
+        List<String> copied = new ArrayList<>();
+        assertTrue(LoreKcResource.roleGrant("not json", copied).isEmpty());
+        assertTrue(LoreKcResource.roleGrant(null, copied).isEmpty());
+        assertTrue(copied.isEmpty(), "битый ответ не должен оставлять имён в списке скопированных");
     }
 }

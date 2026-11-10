@@ -118,6 +118,47 @@ describe('оболочка v2 (S4-01)', () => {
     expect(p.get('lf')).toBeNull();
   });
 
+  /**
+   * «Недавние» ведут в раздел записи (жалоба с прода v1.17.9: клик по пункту
+   * не менял URL и не открывал паспорт, а порядок пунктов перестраивался —
+   * оболочка касание засчитывала, а куда идти, приложение ей не говорило).
+   */
+  it('«Недавние»: клик по пункту открывает запись в её разделе и поднимает её в списке', () => {
+    const st = mem();
+    st.set('lore-v2.shell.recent', JSON.stringify(['ADR-1', 'SPRINT_A']));
+    st.set('lore-v2.shell.recentMeta', JSON.stringify({
+      'ADR-1': { title: 'Адреса записей', href: '/?mod=forseti&sec=adr&open=ADR-1' },
+      'SPRINT_A': { title: 'Переезд AIDA', href: '/?mod=forseti&sec=sprint&open=SPRINT_A' },
+    }));
+    const win = fakeWin('?mod=forseti&sec=task&open=SPRINT_X%2FT-1');
+    render(<App path="/" win={win} storage={st} narrow={false} />);
+    const side = screen.getByRole('navigation', { name: 'Разделы' });
+    fireEvent.click(within(side).getByRole('link', { name: /Переезд AIDA/ }));
+    const p = new URLSearchParams(win.location.search);
+    expect(p.get('sec')).toBe('sprint');
+    expect(p.get('open')).toBe('SPRINT_A');
+    // Касание по-прежнему засчитывается: запись поднялась на первое место.
+    expect(JSON.parse(st.get('lore-v2.shell.recent') ?? '[]')).toEqual(['SPRINT_A', 'ADR-1']);
+    // Экран раздела пересобран — показывает список спринтов, а не задач.
+    expect(screen.getByRole('main').querySelector('[data-screen="sprints"]')).toBeTruthy();
+  });
+
+  it('«Недавние»: клик по записи текущего раздела меняет ?open= в адресе', () => {
+    const st = mem();
+    st.set('lore-v2.shell.recent', JSON.stringify(['SPRINT_X/T-2', 'SPRINT_X/T-1']));
+    st.set('lore-v2.shell.recentMeta', JSON.stringify({
+      'SPRINT_X/T-1': { title: 'Первая', href: '/?mod=forseti&sec=task&open=SPRINT_X%2FT-1' },
+      'SPRINT_X/T-2': { title: 'Вторая', href: '/?mod=forseti&sec=task&open=SPRINT_X%2FT-2' },
+    }));
+    const win = fakeWin('?mod=forseti&sec=task&open=SPRINT_X%2FT-1');
+    render(<App path="/" win={win} storage={st} narrow={false} />);
+    const side = screen.getByRole('navigation', { name: 'Разделы' });
+    fireEvent.click(within(side).getByRole('link', { name: /Вторая/ }));
+    const p = new URLSearchParams(win.location.search);
+    expect(p.get('sec')).toBe('task');
+    expect(p.get('open')).toBe('SPRINT_X/T-2');
+  });
+
   it('старый адрес /sprints ведёт в раздел оболочки ?sec=sprint', () => {
     const win = fakeWin();
     const { container } = render(<App path="/sprints" win={win} storage={mem()} narrow={false} />);
