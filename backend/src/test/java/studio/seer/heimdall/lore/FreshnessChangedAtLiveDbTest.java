@@ -149,7 +149,8 @@ class FreshnessChangedAtLiveDbTest {
 
         tick();
         status("adr", adr, "accepted");
-        status("spec", spec, "accepted");
+        // /lore/status спеки не принимает — статус спеки пишет её путь записи (версией KnowSpecHist).
+        post("/lore/spec", "{\"spec_id\":\"" + spec + "\",\"status\":\"accepted\"}");
         assertGrew(a0, changedAt("adrs", "adr_id", adr, Map.of()), "ADR");
         assertGrew(p0, changedAt("specs", "spec_id", spec, Map.of()), "спека");
     }
@@ -163,8 +164,10 @@ class FreshnessChangedAtLiveDbTest {
             "новое решение без истории: changed_at = момент заведения");
 
         tick();
-        status("decision", id, "accepted");
-        assertGrew(d0, changedAt("decisions", "decision_id", id, Map.of()), "решение (смена статуса)");
+        // /lore/status решения не принимает — правка идёт путём записи решения
+        // (статус версией KnowDecisionHist, отметка правки updated_at на вершине).
+        post("/lore/decision", "{\"decision_id\":\"" + id + "\",\"title\":\"проба свежести\",\"status\":\"accepted\"}");
+        assertGrew(d0, changedAt("decisions", "decision_id", id, Map.of()), "решение (правка)");
     }
 
     @Test
