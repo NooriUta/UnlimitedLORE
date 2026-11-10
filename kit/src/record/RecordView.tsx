@@ -16,7 +16,7 @@ import { mergeTabs } from '../shell/tabRow';
 import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
-import { applySections, gluedSections, type PassportOrder } from '../model/surfaces';
+import { applySections, gluedSections, sectionGroups, type PassportOrder } from '../model/surfaces';
 import { Segmented } from '../elements/Segmented';
 import { IconButton } from '../elements/IconButton';
 import { ICON_CANON } from '../elements/iconCanon';
@@ -442,26 +442,67 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
     // ОСТАЁТСЯ (со счётчиком «?»), а его причину печатает блок «Состояние
     // данных» по meta.data_state. Ложный ноль прятал бы и то, и другое.
     .filter(rt => tabCount(rt.id, rt.defs) !== 0);
-  // Ряд: ключи уникальны (ключ связи мог совпасть и со служебным), порядок —
-  // от модели, а приоритет «что под Ещё» — умолчание формы, которое модель
-  // перебивает: решила она (`decided`), значит второстепенность её, и kit
-  // своего ничего не прячет.
-  // Ряд: ключи уникальны (ключ связи мог совпасть и со служебным), а порядок и
-  // «что под Ещё» — ТОЛЬКО от модели через applySections (`slot: more`).
-  // Своего приоритета kit не придумывает: у типа, которому сервер порядок
-  // задал, выдуманное правило разошлось бы с моделью молча, а у типа с
-  // `decided: false` выдало бы догадку за решение сервера. Порядок не решён —
-  // ряд остаётся как есть, и приложение ГОВОРИТ об этом строкой (у LORE —
-  // notes из passportOrder), а не подменяет его тихо.
+  // Ряд: ключи уникальны (ключ связи мог совпасть и со служебным), а ПОРЯДОК —
+  // от модели через applySections. Своего приоритета kit не придумывает: у
+  // типа, которому сервер порядок задал, выдуманное правило разошлось бы с
+  // моделью молча, а у типа с `decided: false` выдало бы догадку за решение
+  // сервера. Порядок не решён — ряд остаётся как есть, и приложение ГОВОРИТ об
+  // этом строкой (у LORE — notes из passportOrder), а не подменяет его тихо.
+  //
+  // А «ЧТО ПОД ЕЩЁ» РЕШАЕТ РЯД, а не модель (паспорта v3, 10.11.2026): это
+  // вопрос ширины экрана и потолка в семь вкладок, и знает их только тот, кто
+  // рисует (shell/tabRow.ts). Прежнее `slot: more` было решением о чужом
+  // экране вслепую — сервер не знал ни ширины, ни того, сколько вкладок у
+  // записи набралось вместе со служебными.
   const row = mergeTabs(aside ? recordItems : [...recordItems, ...aroundItems]);
-  const items: TabItem[] = applySections(row, order);
-  const current = items.some(i => i.id === tab) ? tab : RECORD_TABS.overview;
+  const ordered: TabItem[] = applySections(row, order);
+  // ГРУППЫ: несколько родственных разделов — ОДНА вкладка с подписью группы
+  // (шестой ключ модели). Склеиваются только разделы-связи: их рисует kit, и
+  // внутри вкладки они становятся подзаголовками. Раздел, который kit внутри
+  // нарисовать не умеет (вкладка вида от приложения), в группу не идёт и
+  // остаётся своей вкладкой — показать его не там, где просили, полбеды, а не
+  // показать вовсе — потеря данных с экрана (то же правило, что у `glueable`).
+  const groupTabs = sectionGroups(order)
+    .map(run => ({
+      key: run.group.key,
+      label: run.group.label,
+      members: run.keys.map(k => relTabs.find(rt => rt.id === k)).filter((rt): rt is NonNullable<typeof rt> => !!rt),
+    }))
+    .filter(g => g.members.length > 0);
+  const groupOf = new Map(groupTabs.flatMap(g => g.members.map(m => [m.id, g] as const)));
+  // Счётчик группы — СУММА счётчиков разделов, и один непроверенный раздел
+  // делает неизвестной ВСЮ сумму. Частичная сумма выглядит точной: вкладка
+  // сказала бы «2» там, где на самом деле «2 и неизвестно сколько ещё».
+  const groupCount = (g: (typeof groupTabs)[number]): number | null => {
+    const counts = g.members.map(m => tabCount(m.id, m.defs));
+    if (counts.some(c => c === null)) return null;
+    return counts.reduce<number>((n, c) => n + (c ?? 0), 0);
+  };
+  const foldGroups = (list: readonly TabItem[]): TabItem[] => {
+    if (groupTabs.length === 0) return [...list];
+    const out: TabItem[] = [];
+    const placed = new Set<string>();
+    for (const it of list) {
+      const g = groupOf.get(it.id);
+      if (!g) { out.push(it); continue; }
+      if (placed.has(g.key)) continue;
+      placed.add(g.key);
+      out.push({ id: g.key, label: g.label, count: groupCount(g), zone: zoned ? 'record' : undefined });
+    }
+    return out;
+  };
+  const items: TabItem[] = foldGroups(ordered);
+  // Адрес мог быть сохранён до того, как разделы сгруппировали. Увести человека
+  // по старой ссылке на обзор — то же, что сломать ссылку, поэтому ключ раздела
+  // приводится к ключу его группы.
+  const asked = groupOf.get(tab)?.key ?? tab;
+  const current = items.some(i => i.id === asked) ? asked : RECORD_TABS.overview;
   // Панелью справа (узко) — переключатель видов над шапкой, как «таблица / доска» (владелица 08.11):
   // Контент (текст и вкладки типа) · Свойства · Аналитика (связи, граф, журнал, история).
   const modes = placement === 'right';
   type Mode = 'content' | 'props' | 'analytics';
   const mode: Mode = current === RECORD_TABS.props ? 'props' : aroundItems.some(i => i.id === current) ? 'analytics' : 'content';
-  const contentItems = recordItems.filter(i => i.id !== RECORD_TABS.props);
+  const contentItems = foldGroups(recordItems.filter(i => i.id !== RECORD_TABS.props));
   const shown: TabItem[] = !modes ? items : mode === 'analytics' ? aroundItems : mode === 'content' ? contentItems : [];
   const firstOf: Record<Mode, string> = { content: RECORD_TABS.overview, props: RECORD_TABS.props, analytics: aroundItems[0].id };
   const switcher = modes ? (
@@ -476,6 +517,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   ) : null;
   const reset = `${record.id}:${current}`;
   const custom = kindTabs.find(t => t.key === current);
+  const groupTab = groupTabs.find(g => g.key === current);
   const relTab = relTabs.find(rt => rt.id === current);
 
   let panel: ReactNode;
@@ -532,6 +574,32 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
       <BlockBoundary block={`tab:${custom.key}`} label={custom.title} lang={lang} resetKey={reset}>
         <KindTab render={custom.render} record={record} ctx={ctx} />
       </BlockBoundary>
+    );
+  } else if (groupTab) {
+    // Вкладка группы: разделы ПОДЗАГОЛОВКАМИ внутри одной вкладки, в порядке
+    // модели. Счётчик у каждого свой — сумма на вкладке не должна прятать, из
+    // чего она собрана, а «не проверено» у одного раздела обязано быть видно
+    // именно у него, а не размазываться по всей группе.
+    panel = (
+      <div className="sk-rec-group">
+        {groupTab.members.map(rt => (
+          <section key={rt.id} className="sk-rec-group__sec" aria-label={rt.label}>
+            {/* h2, а не h3: в панели вкладки это ПЕРВЫЙ заголовок после
+                заголовка записи, и h3 оставлял бы дыру в уровнях — axe ловит
+                это правилом heading-order, а скринридер по списку заголовков
+                читает как «пропущен раздел». У вклеенного в хвост текста блока
+                (.sk-rec-glue__head) уровень третий по делу: над ним уже стоят
+                h2 разделов тела. */}
+            <h2 className="sk-rec-group__head">
+              <span>{rt.label}</span>
+              <TabCount count={tabCount(rt.id, rt.defs)} lang={lang} />
+            </h2>
+            <BlockBoundary block={`rel:${rt.id}`} label={rt.label} lang={lang} resetKey={reset}>
+              <RecordRelations record={record} ctx={ctx} defs={rt.defs} lang={lang} />
+            </BlockBoundary>
+          </section>
+        ))}
+      </div>
     );
   } else if (relTab) {
     panel = (

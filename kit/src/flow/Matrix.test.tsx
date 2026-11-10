@@ -228,3 +228,85 @@ describe('K2-MATRIX · пусто и граница K-14', () => {
     expect(screen.getByText('Колонки')).toBeTruthy();
   });
 });
+
+// ── Пятый исход ячейки: «не спрашивали» ────────────────────────────────
+//
+// Повод — разбор матрицы ролей 10.11.2026 вместе с серверной стороной. У
+// источника Forgejo связь с пользователем не заведена, и его НЕ СПРАШИВАЮТ
+// вовсе; в ответе это видно по тому, что источника нет в перечне спрошенных.
+// На экране же такая ячейка выглядела как «не смогли проверить» — то есть как
+// сбой источника, которого не было.
+//
+// Это то же правило, по которому «не смогли проверить» ≠ «пусто»: не спросили
+// — это НАШ выбор, а не отказ источника. Человек, который видит «не смогли
+// проверить», идёт чинить связь с источником; человек, который видит «не
+// спрашивали», понимает, что чинить нечего, а надо включить источник.
+//
+// Решение принято серверной стороной в рамках поручения владелицы
+// (D-2026-UXR-OWNER-DELEGATED-ANSWERS-10-11); kit получает его ЗНАЧЕНИЕМ
+// состояния, а не догадкой по перечню источников: перечень — предметное
+// знание приложения (K-14).
+describe('Matrix · «не спрашивали» — пятый исход, не оттенок сбоя', () => {
+  const axes = { rows: 'Строки', cols: 'Колонки' };
+  const rows = [{ key: 'r1', title: 'Строка 1' }];
+  const cols = [{ key: 'c1', title: 'Колонка 1' }, { key: 'c2', title: 'Колонка 2' }];
+  const opts = [{ value: 'a', title: 'Альфа' }];
+
+  const show = (state: MatrixCellState, onPropose?: (c: readonly MatrixChange[]) => void) =>
+    render(
+      <Matrix
+        rows={rows}
+        cols={cols}
+        cell={(_r, c) => (c === 'c1' ? state : { state: 'value', value: 'a' })}
+        options={opts}
+        labels={axes}
+        {...(onPropose ? { onPropose } : {})}
+      />,
+    );
+
+  it('положительный контроль: сбой источника по-прежнему говорит «не смогли проверить»', () => {
+    show({ state: 'unverified', reason: 'источник не ответил' });
+    const label = screen.getAllByTestId(/kit-matrix-cell/)[0].getAttribute('aria-label') ?? '';
+    expect(label).toMatch(/не смогли проверить/i);
+  });
+
+  it('«не спрашивали» названо своими словами, а не как сбой', () => {
+    show({ state: 'unasked', reason: 'связь с источником не заведена' });
+    const label = screen.getAllByTestId(/kit-matrix-cell/)[0].getAttribute('aria-label') ?? '';
+    expect(label, 'сказано как про сбой источника').not.toMatch(/не смогли проверить/i);
+    expect(label).toMatch(/не спрашивали/i);
+  });
+
+  it('причина у «не спрашивали» показана: без неё непонятно, что включить', () => {
+    show({ state: 'unasked', reason: 'связь с источником не заведена' });
+    const label = screen.getAllByTestId(/kit-matrix-cell/)[0].getAttribute('aria-label') ?? '';
+    expect(label).toContain('связь с источником не заведена');
+  });
+
+  it('знак отличается от знака сбоя — по значку видно в чёрно-белой распечатке', () => {
+    // Оба исхода в ОДНОМ рендере, по двум колонкам: так сравниваются знаки,
+    // а не два разных дерева (и не нужен cleanup, которого в файле нет).
+    render(
+      <Matrix
+        rows={rows}
+        cols={cols}
+        cell={(_r, c) => (c === 'c1' ? { state: 'unasked' } : { state: 'unverified' })}
+        options={opts}
+        labels={axes}
+      />,
+    );
+    const marks = screen.getAllByTestId(/kit-matrix-cell/).map(e => e.textContent ?? '');
+    expect(marks[0], 'знак «не спрашивали» тот же, что у сбоя').not.toBe(marks[1]);
+  });
+
+  it('в предложение «задать всей строке» такая ячейка НЕ идёт и считается пропущенной', () => {
+    const got: MatrixChange[][] = [];
+    show({ state: 'unasked' }, c => got.push([...c]));
+    fireEvent.click(screen.getAllByTestId(/kit-matrix-cell/)[0]);
+    fireEvent.click(screen.getByTestId('kit-matrix-rowset-r1'));
+    fireEvent.click(screen.getByTestId('kit-matrix-opt-a'));
+    const last = got[got.length - 1] ?? [];
+    expect(last.some(ch => ch.col === 'c1'), 'предложили изменение там, где состояние неизвестно').toBe(false);
+    expect(screen.getByTestId('kit-matrix-skipped').textContent ?? '').toMatch(/1/);
+  });
+});

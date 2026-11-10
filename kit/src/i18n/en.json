@@ -786,5 +786,6 @@
   "kit.md.sourceMd": "markdown source",
   "kit.md.sourceHtml": "HTML source",
   "kit.md.together": "show side by side: source and preview",
-  "kit.md.live": "Live preview"
+  "kit.md.live": "Live preview",
+  "kit.matrix.cell.unasked": "source was not asked"
 }

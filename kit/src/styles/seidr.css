@@ -5657,3 +5657,23 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Вкладка ГРУППЫ разделов (паспорта v3, 10.11.2026): несколько родственных
+   разделов живут одной вкладкой, внутри — подзаголовками. Подзаголовок той же
+   формы, что у вклеенного в хвост текста блока (.sk-rec-glue__head): одна и та
+   же вещь — «имя раздела со счётчиком» — не должна выглядеть двумя разными.
+   Отдельные классы, а не общий: места разные (панель вкладки и хвост текста), и
+   первый же отступ разошёлся бы. */
+.sk-rec-group { display: flex; flex-direction: column; gap: 20px; }
+.sk-rec-group__sec { min-width: 0; }
+.sk-rec-group__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

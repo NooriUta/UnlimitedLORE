@@ -786,5 +786,6 @@
   "kit.md.sourceMd": "исходник markdown",
   "kit.md.sourceHtml": "исходник HTML",
   "kit.md.together": "показывать вместе: исходник и просмотр",
-  "kit.md.live": "Живой просмотр"
+  "kit.md.live": "Живой просмотр",
+  "kit.matrix.cell.unasked": "источник не спрашивали"
 }
