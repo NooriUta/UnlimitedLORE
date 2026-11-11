@@ -1416,6 +1416,51 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: -2px;
 }
 .sk-shell__account { display: flex; align-items: center; margin-left: auto; padding-left: 4px; flex-shrink: 0; }
+/* ---------- Модули нижней панелью на телефоне (S4-MOBILE-COMPARE) ----------
+   Образец — v1 (SPRINT_LORE_MOBILE_UX/MOB-12, решение D-2026-UXR-MOBILE-FOLLOWS-V1):
+   в шапке при 360 px модули выходили за правый край и обрезали «Проекты» и
+   поиск. Внизу — зона большого пальца: иконка и подпись под ней, ячейки
+   поровну, без прокрутки вбок. z-index как у шапки — ниже накладок (60). */
+.sk-shell__dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  min-height: var(--sk-dock-h);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.sk-shell__dock-item {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: var(--sk-dock-h);
+  padding: 4px 2px;
+  border: 0;
+  border-top: 2px solid transparent;
+  background: none;
+  color: var(--t2);
+  font-family: var(--font);
+  cursor: pointer;
+}
+.sk-shell__dock-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+}
+.sk-shell__dock-item[aria-current="page"] { color: var(--acc); border-top-color: var(--acc); }
+.sk-shell__dock-item[aria-disabled="true"] { opacity: .45; cursor: default; }
+.sk-shell__dock-item:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 /* ---------- AvatarMenu (S4-02): аватар в шапке и лист личного ---------- */
 .sk-avatar {
@@ -1526,7 +1571,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
   height: calc(100dvh - var(--sk-top-h));
   z-index: 2;
 }
-.sk-shell--narrow .sk-shell__body { grid-template-columns: minmax(0, 1fr); }
+.sk-shell--narrow { --sk-dock-h: 48px; }
+/* Содержимое не уходит под нижнюю панель модулей (и под полосу жестов). */
+.sk-shell--narrow .sk-shell__body {
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: calc(var(--sk-dock-h) + env(safe-area-inset-bottom, 0px));
+}
 .sk-shell__side {
   /* Меню не уезжает со страницей (находка P1 аудита 08.11: «position: static,
      высота 2467 px при окне 1000 — до "Настройки" не добраться, не прокрутив
@@ -1655,6 +1705,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
   .sk-shell__brand-text { display: none; }
   .sk-shell__mod { padding: 0 10px; }
   .sk-shell__mod .sk-shell__label { display: none; }
+  /* Шапка телефона в одну строку (S4-MOBILE-COMPARE): «Проекты» — иконкой и
+     значением без слова-заголовка, имя остаётся в aria-label кнопки. */
+  .sk-shell__top { overflow-x: clip; }
+  .sk-shell__top .sk-scope__trigger { padding: 0 8px; }
+  .sk-shell__top .sk-scope__name,
+  .sk-shell__top .sk-scope__chev { display: none; }
 }
 
 /* ═══════════ MD/HTML-элементы (S4-00d) ═══════════
