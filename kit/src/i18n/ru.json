@@ -1087,5 +1087,13 @@
   "kit.fresh.tone.warn": "дольше {n} мин — предупреждение",
   "kit.fresh.tone.stale": "дольше {n} мин — устарело",
   "kit.fresh.staleShort": "устарело",
-  "kit.ref.self": "Себя"
+  "kit.ref.self": "Себя",
+  "kit.record.create.draft": "Черновик",
+  "kit.record.create.title": "Новая: {kind}",
+  "kit.record.create.save": "Сохранить",
+  "kit.record.create.saving": "Сохраняем…",
+  "kit.record.create.cancel": "Отмена",
+  "kit.record.create.why": "Не заполнено: {fields}",
+  "kit.record.create.noPath": "Запись некуда сохранить: приложение не дало пути создания",
+  "kit.record.create.failed": "Не сохранено: {reason}"
 }
