@@ -783,5 +783,13 @@
   "admin.orphans.kcForbidden": "Детектор не показан: нет прав (нужна роль admin).",
   "admin.orphans.kcUnconfigured": "Детектор не запускался: связь LORE с Keycloak не настроена на сервере.",
   "admin.orphans.kcError": "Не смогли спросить Keycloak: {reason}",
-  "admin.orphans.disabled": "выключен"
+  "admin.orphans.disabled": "выключен",
+  "mdref.type.adr": "ADR",
+  "mdref.type.task": "задача",
+  "mdref.type.spec": "спека",
+  "mdref.type.decision": "решение",
+  "mdref.type.doc": "док",
+  "mdref.type.sprint": "спринт",
+  "mdref.type.runbook": "ранбук",
+  "mdref.type.use_case": "сценарий"
 }

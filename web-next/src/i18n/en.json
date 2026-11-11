@@ -783,5 +783,13 @@
   "admin.orphans.kcForbidden": "Detector not shown: no rights (admin role required).",
   "admin.orphans.kcUnconfigured": "Detector did not run: the LORE–Keycloak link is not configured on the server.",
   "admin.orphans.kcError": "Could not ask Keycloak: {reason}",
-  "admin.orphans.disabled": "disabled"
+  "admin.orphans.disabled": "disabled",
+  "mdref.type.adr": "ADR",
+  "mdref.type.task": "task",
+  "mdref.type.spec": "spec",
+  "mdref.type.decision": "decision",
+  "mdref.type.doc": "doc",
+  "mdref.type.sprint": "sprint",
+  "mdref.type.runbook": "runbook",
+  "mdref.type.use_case": "use case"
 }

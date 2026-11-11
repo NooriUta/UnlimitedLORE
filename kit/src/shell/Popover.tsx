@@ -67,6 +67,12 @@ export interface PopoverProps {
   restoreFocus?: boolean;
   /** Куда ставить фокус при открытии; нет — первый пункт, иначе первый фокусируемый. */
   initialFocus?: (root: HTMLElement) => HTMLElement | null | undefined;
+  /**
+   * Забирать фокус при открытии (по умолчанию да — меню). false — подсказка ПОСРЕДИ набора
+   * (мини-окно ссылки в MD, MD-WINDOW): фокус остаётся у поля, иначе следующая буква ушла бы
+   * в поповер. Esc внутри, щелчок вне и край экрана работают как обычно.
+   */
+  takeFocus?: boolean;
   /** Свой разбор клавиш ПЕРЕД общим: preventDefault останавливает общий. */
   onKeyDown?: (e: ReactKeyboardEvent<HTMLElement>) => void;
   className?: string;
@@ -75,7 +81,7 @@ export interface PopoverProps {
 
 export function Popover({
   onClose, role, label, id, align = 'start', walk = 'menuitem', arrows = true,
-  closeOnOutside = true, restoreFocus = true, initialFocus, onKeyDown, className, children,
+  closeOnOutside = true, restoreFocus = true, initialFocus, takeFocus = true, onKeyDown, className, children,
 }: PopoverProps) {
   const root = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -108,6 +114,8 @@ export function Popover({
   }, []);
 
   const trap = useFocusTrap(root, {
+    // active=false снимает только перевод фокуса при открытии; Esc и Tab внутри — как обычно.
+    active: takeFocus,
     onEscape: () => latest.current.onClose(),
     // Возврат фокуса — свой, умный (см. выше), а не безусловный хуковый.
     restoreFocus: false,
