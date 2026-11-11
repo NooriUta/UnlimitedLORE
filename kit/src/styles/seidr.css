@@ -5945,6 +5945,25 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
   .sk-news__link { flex-basis: 100%; }
 }
 
+/* S7A-12 — лента под пальцем (телефон и планшет; решает вид указателя, а не ширина).
+   Невидимая зона касания 44 px (::after kit, PR 1179) хороша для одиночной мелкой
+   кнопки, но у соседей вплотную она ложится поверх соседа. Замер Playwright
+   (центр кнопки → elementFromPoint) на 412, 768 и 1024 до правки:
+   - столбик мини-графика 12 px через 3 px — нажатие на день открывало СЛЕДУЮЩИЙ день;
+   - заголовок группы и ссылки «спринт / ADR» в строке — их перекрывала зона
+     строки ленты снизу или заголовка группы следующей.
+   Правило: у широких строк (строка ленты, заголовок дня и группы) целью касания
+   служит сама строка — она и так во всю ширину; у столбиков зона не шире шага
+   столбика (12 + 3 px), но в полную высоту 44. */
+@media (pointer: coarse) {
+  .sk-news__sbar::after { width: min(calc(100% + 3px), max(100%, var(--hit))); }
+  .sk-news__link::after,
+  .sk-news__daybtn::after,
+  .sk-news__bbtn::after { width: 100%; height: 100%; }
+  /* Наведения нет — подсказки с полным заголовком тоже: заголовок переносится, а не режется «…». */
+  .sk-news__rtitle { white-space: normal; overflow-wrap: anywhere; }
+}
+
 /* ═══ S7A-06 — вкладка «Активность» паспорта (лента /lore/news/v2 по записи) ═══ */
 .sk-act { display: flex; flex-direction: column; gap: var(--gap); }
 .sk-act__summary { display: flex; flex-wrap: wrap; gap: 4px var(--gap); margin: 0; }
