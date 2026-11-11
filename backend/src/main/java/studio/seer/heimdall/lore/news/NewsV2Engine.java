@@ -46,7 +46,8 @@ public final class NewsV2Engine {
 
     /** Оси группировки и фильтра (S7A-02; who — S7A-12, конкретный автор). */
     public static final List<String> AXES =
-        List.of("project", "component", "type", "kind", "sprint", "milestone", "author", "who", "day");
+        // S9-11: «record» — свёртка по записи; ключ группы — элемент события («тип:код»).
+        List.of("project", "component", "type", "kind", "sprint", "milestone", "author", "who", "day", "record");
     /** Оси, по которым элемент принадлежит группе (а не событие): для них считается ×N. */
     static final Set<String> ELEMENT_AXES = Set.of("project", "component", "type", "sprint", "milestone");
     /** Оси задач для сгорания по группам (§7.2, §7.2b). */
@@ -242,6 +243,7 @@ public final class NewsV2Engine {
             case "author"    -> List.of(authorClass(e));
             case "who"       -> List.of(e.who() == null || e.who().isBlank() ? NOWHO : e.who());
             case "day"       -> List.of(String.valueOf(dayOf(e)));
+            case "record"    -> List.of(e.elKey());
             default -> throw new IllegalArgumentException("unknown axis: " + axis);
         };
     }
@@ -1079,7 +1081,13 @@ public final class NewsV2Engine {
         int rows = (int) c.prepared.rows().stream().filter(r -> r.events().stream().anyMatch(e -> matches(e, q))).count();
         meta.put("truncated", q.limit() != null && rows > q.limit());
         List<Map<String, Object>> errs = new ArrayList<>();
-        for (NewsV2.SourceError e : in.errors()) errs.add(mapOf("source", e.source(), "error", e.error(), "critical", e.critical()));
+        for (NewsV2.SourceError e : in.errors()) {
+            Map<String, Object> m = mapOf("source", e.source(), "error", e.error(), "critical", e.critical());
+            // K2-FEED-VIEW §6: необязательные поля — только когда известны; старая форма валидна.
+            if (e.forbidden()) m.put("forbidden", true);
+            if (e.at() != null) m.put("at", e.at().toString());
+            errs.add(m);
+        }
         meta.put("errors", errs);
         // S7A-07: «источник недоступен» ≠ «ничего не было».
         String state = in.errors().stream().anyMatch(NewsV2.SourceError::critical) ? "partial"

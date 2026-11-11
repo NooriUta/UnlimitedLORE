@@ -5,11 +5,16 @@
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
 import { kitNumber } from '../core/fmtValue';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react';
+import { Popover } from '../shell/Popover';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { ColumnsChoice } from '../list/ColumnsChoice';
+import { LIST_BUDGET } from '../list/listModel';
+import { useStepLimits } from '../core/stepLimit';
+import { onScreenItems, selectAllShown, toggleId, visibleSelection } from '../list/listSelection';
+import { useLongPress } from '../list/useLongPress';
 import type { KitConfig, KitDictItem } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
@@ -58,6 +63,13 @@ export interface TaskTableProps {
   columns?: readonly string[];
   /** Передан — в полосе появляется выбор колонок, как у списков. */
   onColumnsChange?: (cols: string[]) => void;
+  /**
+   * Смена статуса пачкой (S9-06). Передан — у строк появляется выбор
+   * (чекбокс, долгое нажатие) и панель действий. Получает ТОЛЬКО выбранные и
+   * показанные задачи: правило то же, что у списков (`onScreenItems`).
+   * Отказ — throw: причина печатается в панели, выбор сохраняется.
+   */
+  onBulkStatusChange?: (tasks: TaskRowData[], status: TaskStatus) => Promise<void>;
   className?: string;
 }
 
@@ -184,13 +196,51 @@ export const TASK_COLUMNS = [
 
 export const TASK_COLUMN_KEYS: readonly string[] = TASK_COLUMNS.map(c => c.key);
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, className }: TaskTableProps) {
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, className }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [colsOpen, setColsOpen] = useState(false);
   const groups = groupTasks(tasks, groupBy, phases);
-  const showPhase = groupBy !== 'phase';
+  const showPhase = groupBy !== 'phase' && groupBy !== 'phase_status';
+  // Потолок строк на группу (S9-07, решение 1а): тот же шаг, что у списков,
+  // одним местом — LIST_BUDGET. Не виртуализация: строк вне DOM не находит
+  // Ctrl+F, и человек решил бы «такой задачи нет». Здесь всё показанное — в
+  // DOM, а спрятанное названо числом в своей группе. Состояние местное: это
+  // способ дотянуться, а не вид, которым делятся ссылкой.
+  const { limitOf, showMore } = useStepLimits(LIST_BUDGET.perGroup);
   const showGroupHeads = groupBy !== 'none';
+
+  // Выбор (S9-06). Показанным считается то, что стоит на экране: строки до
+  // потолка каждой группы. Группы таблицы не сворачиваются, поэтому шапка
+  // здесь строк не прячет (headed: false). Правило — общее с ListView.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const bulkHintId = useId();
+  const pickable = onScreenItems(
+    groups.map(g => ({
+      key: g.key, items: g.tasks.map(tk => ({ id: tk.uid, tk })), headed: false,
+      sub: g.subgroups?.map(sg => ({ key: sg.key, items: sg.tasks.map(tk => ({ id: tk.uid, tk })), headed: false })),
+    })),
+    () => true, limitOf,
+  );
+  const selIds = visibleSelection(selected, pickable);
+  const selHidden = selected.size - selIds.length;
+  const allShownSelected = pickable.length > 0 && pickable.every(x => selected.has(x.id));
+  const toggleSel = (uid: string) => { setBulkError(null); setSelected(prev => toggleId(prev, uid)); };
+  const longPress = useLongPress(uid => toggleSel(uid));
+  const runBulk = () => {
+    if (!onBulkStatusChange || bulkBusy || selIds.length === 0 || !bulkStatus) return;
+    const chosen = new Set(selIds);
+    const list = pickable.filter(x => chosen.has(x.id)).map(x => x.tk);
+    setBulkError(null);
+    setBulkBusy(true);
+    onBulkStatusChange(list, bulkStatus).then(
+      () => setBulkBusy(false),
+      (err: unknown) => { setBulkBusy(false); setBulkError(errorDetail(err)); },
+    );
+  };
   const phaseById = new Map(phases.map(p => [p.uid, p]));
   const fmt = { format: (v: number) => kitNumber(lang, v) };
 
@@ -215,6 +265,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
     return col ? t(col.labelKey) : key;
   };
   const cols: { key: string; label: string }[] = [
+    ...(onBulkStatusChange ? [{ key: 'sel', label: t('kit.list.selectMode') }] : []),
     ...shownKeys.map(key => ({ key, label: labelOf(key) })),
     ...(onSave ? [{ key: 'actions', label: t('kit.tasks.col.actions') }] : []),
   ];
@@ -251,14 +302,37 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
           )}
         </div>
       )}
-      <div className="sk-tasks__wrap">
+      {onBulkStatusChange && selected.size > 0 && (
+        <div className="sk-tasks__selbar" role="group" aria-label={t('kit.list.bulk')} aria-busy={bulkBusy}>
+          <span className="sk-tasks__selcount">{t('kit.list.selected', { n: selIds.length })}</span>
+          {selHidden > 0 && <span className="sk-tasks__selhidden" role="status">{t('kit.list.selHidden', { n: selHidden })}</span>}
+          <button type="button" className="sk-btn" onClick={() => setSelected(prev => selectAllShown(prev, pickable))}>
+            {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: pickable.length })}
+          </button>
+          <select className="sk-tasks__selstatus" aria-label={t('kit.tasks.bulkStatus')} value={bulkStatus}
+            aria-describedby={bulkStatus ? undefined : bulkHintId}
+            onChange={e => { setBulkStatus(e.target.value); setBulkError(null); }}>
+            <option value="">—</option>
+            {menuStatuses(statuses, '', lang).map(st => <option key={st.code} value={st.code}>{st.label}</option>)}
+          </select>
+          <button type="button" className="sk-btn" disabled={bulkBusy || selIds.length === 0} onClick={runBulk}
+            aria-describedby={bulkStatus ? undefined : bulkHintId}>
+            {t('kit.tasks.bulkApply', { n: selIds.length })}
+          </button>
+          {!bulkStatus && <span id={bulkHintId} className="sk-tasks__selhint">{t('kit.tasks.bulkNeedStatus')}</span>}
+          {bulkBusy && <span className="sk-tasks__selbusy">{t('kit.list.bulkRunning')}</span>}
+          <button type="button" className="sk-btn" onClick={() => { setSelected(new Set()); setBulkError(null); }}>{t('kit.list.done')}</button>
+          {bulkError && <p className="sk-tasks__selerr" role="alert">{t('kit.tasks.statusFailed', { detail: bulkError })}</p>}
+        </div>
+      )}
+      <div className="sk-tasks__wrap" {...(onBulkStatusChange ? longPress : {})}>
         <table className="sk-tasks__table">
           <caption className="sk-sr">{label}</caption>
           <thead>
             <tr>
               {cols.map(c => (
                 <th key={c.key} scope="col" className="sk-tasks__th">
-                  {c.key === 'actions' ? <span className="sk-sr">{c.label}</span> : c.label}
+                  {c.key === 'actions' || c.key === 'sel' ? <span className="sk-sr">{c.label}</span> : c.label}
                 </th>
               ))}
             </tr>
@@ -273,7 +347,17 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   </th>
                 </tr>
               )}
-              {g.tasks.map(task => (
+              {(g.subgroups ?? [g]).map(leaf => (
+                <Fragment key={leaf.key}>
+                  {leaf !== g && (
+                    <tr>
+                      <th scope="rowgroup" colSpan={cols.length} className="sk-tasks__gth sk-tasks__gth--sub">
+                        <span>{groupLabel(lang, leaf)}</span>
+                        <span className="sk-tasks__gcount">{leaf.tasks.length}</span>
+                      </th>
+                    </tr>
+                  )}
+                  {leaf.tasks.slice(0, limitOf(leaf.key)).map(task => (
                 <TaskRow
                   key={task.uid}
                   task={task}
@@ -288,7 +372,20 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   onStatusChange={onStatusChange}
                   onSave={onSave}
                   href={hrefFor?.(task)}
+                  sel={onBulkStatusChange ? { checked: selected.has(task.uid), onToggle: () => toggleSel(task.uid) } : undefined}
                 />
+                  ))}
+                  {leaf.tasks.length > limitOf(leaf.key) && (
+                    <tr className="sk-tasks__morerow">
+                      <td colSpan={cols.length}>
+                        <span className="sk-tasks__shown">{t('kit.fold.shownOf', { shown: limitOf(leaf.key), total: leaf.tasks.length })}</span>
+                        <button type="button" className="sk-btn" onClick={() => showMore(leaf.key)}>
+                          {t('kit.list.more', { n: leaf.tasks.length - limitOf(leaf.key) })}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           ))}
@@ -312,28 +409,22 @@ interface RowProps {
   onStatusChange?: TaskTableProps['onStatusChange'];
   onSave?: TaskTableProps['onSave'];
   href?: string;
+  /** Выбор строки (S9-06); нет — колонки выбора нет. */
+  sel?: { checked: boolean; onToggle: () => void };
 }
 
-function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, href }: RowProps) {
+function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, href, sel }: RowProps) {
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskDraft | null>(null);
   const [invalid, setInvalid] = useState<keyof TaskDraft | null>(null);
-  const statusCell = useRef<HTMLTableCellElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const firstInput = useRef<HTMLInputElement>(null);
+  const menuId = `${useId()}-status`;
 
   const statusName = taskStatusName(lang, task.status);
   const current = statusMeta(task.status).code;
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]');
-    const checked = menuRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
-    (checked ?? items?.[0])?.focus();
-  }, [menuOpen]);
 
   useEffect(() => {
     if (draft) firstInput.current?.focus();
@@ -342,8 +433,9 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   }, [draft === null]);
 
   function closeMenu() {
+    // Фокус на звезду возвращает оболочка (умный возврат Popover): он был
+    // внутри закрываемого меню, значит забирать его не у кого.
     setMenuOpen(false);
-    statusCell.current?.querySelector<HTMLButtonElement>('.sk-star--btn')?.focus();
   }
 
   async function pick(status: TaskStatus) {
@@ -360,18 +452,19 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     }
   }
 
-  function onMenuKey(e: KeyboardEvent<HTMLDivElement>) {
-    const items = [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [])];
-    const at = items.indexOf(document.activeElement as HTMLButtonElement);
-    if (e.key === 'Escape') { e.preventDefault(); closeMenu(); return; }
-    let next = -1;
-    if (e.key === 'ArrowDown') next = (at + 1) % items.length;
-    else if (e.key === 'ArrowUp') next = (at - 1 + items.length) % items.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = items.length - 1;
-    else return;
+  /**
+   * Своё по существу (S4-MENU-STATES): Home и End — прыжок к первому и
+   * последнему пункту. Esc, стрелки и ловушка Tab — у общей оболочки, здесь их
+   * больше нет: preventDefault на Home/End останавливает общий разбор, всё
+   * остальное уходит в него как есть.
+   */
+  function onMenuKey(e: KeyboardEvent<HTMLElement>) {
+    if (e.key !== 'Home' && e.key !== 'End') return;
+    const panel = e.currentTarget;
+    const items = [...panel.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')];
+    if (!items.length) return;
     e.preventDefault();
-    items[next]?.focus();
+    (e.key === 'Home' ? items[0] : items[items.length - 1]).focus();
   }
 
   function startEdit() {
@@ -435,27 +528,41 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   // только знает, как рисуется каждая. Раньше ячейки шли жёсткой
   // последовательностью JSX, и набор колонок изменить было нельзя.
   const cells: Record<string, ReactNode> = {
+    sel: sel ? (
+      <td key="sel" className="sk-tasks__td sk-tasks__td--sel">
+        <input type="checkbox" checked={sel.checked} onChange={sel.onToggle} aria-label={t('kit.list.select', { title: task.id })} />
+      </td>
+    ) : null,
     status: (
-      <td key="status" ref={statusCell} className="sk-tasks__td sk-tasks__td--status">
+      <td key="status" className="sk-tasks__td sk-tasks__td--status">
           <StatusStar
             status={task.status}
             label={t('kit.tasks.statusLabel', { name: statusName.toLowerCase() })}
             onOpen={onStatusChange && !busy ? () => setMenuOpen(o => !o) : undefined}
             expanded={onStatusChange ? menuOpen : undefined}
+            controls={menuId}
           />
           {menuOpen && (
-            <div
-              ref={menuRef}
-              className="sk-tasks__menu"
+            // Оболочка всплывашки — общий Popover (S4-MENU-STATES): положение,
+            // прижатие к краю экрана, Esc, щелчок вне, ловушка и возврат
+            // фокуса, стрелки по пунктам. Свой огрызок был другим и беднее:
+            // закрытие ПО УХОДУ ФОКУСА (onBlur) вместо щелчка вне — мышью мимо
+            // таблицы меню не закрывалось, пока фокус оставался внутри; ни
+            // ловушки Tab, ни прижатия к краю экрана не было вовсе.
+            //
+            // Пункты остаются menuitemradio: это выбор ОДНОГО из взаимно
+            // исключающих значений, и текущий помечен aria-checked. Обычный
+            // menuitem соврал бы, что выбранного нет.
+            <Popover
+              id={menuId}
               role="menu"
-              aria-label={t('kit.tasks.statusMenu', { id: task.id })}
+              label={t('kit.tasks.statusMenu', { id: task.id })}
+              align="start"
+              className="sk-tasks__menu"
+              initialFocus={root => root.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]')
+                ?? root.querySelector<HTMLElement>('[role="menuitemradio"]')}
               onKeyDown={onMenuKey}
-              onBlur={e => {
-                // Фокус ушёл за пределы палитры (клик мимо, Tab) — палитра закрывается.
-                const next = e.relatedTarget as Node | null;
-                // Звезда в той же ячейке закрывает палитру сама (переключатель).
-                if (!next || !statusCell.current?.contains(next)) setMenuOpen(false);
-              }}
+              onClose={closeMenu}
             >
               {menuStatuses(statuses, current, lang).map(s => (
                 <button
@@ -472,7 +579,7 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
                   <span>{s.label}</span>
                 </button>
               ))}
-            </div>
+            </Popover>
           )}
       </td>
     ),
@@ -516,7 +623,7 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
 
   return (
     <>
-      <tr className={`sk-tasks__row${draft ? ' is-editing' : ''}${busy ? ' is-busy' : ''}`} data-task={task.id} aria-busy={busy || undefined}>
+      <tr className={`sk-tasks__row${draft ? ' is-editing' : ''}${busy ? ' is-busy' : ''}`} data-task={task.id} data-record-id={sel ? task.uid : undefined} aria-busy={busy || undefined}>
         {colKeys.map(k => cells[k]).filter(Boolean)}
         {onSave && (
           <td className="sk-tasks__td sk-tasks__td--actions">

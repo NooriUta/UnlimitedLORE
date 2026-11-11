@@ -160,3 +160,21 @@ export function legacyPassportHref(search: string): string | null {
   if (type === 'sprint') out.set('tab', 'tasks');
   return `/?${out.toString()}`;
 }
+
+/**
+ * Ссылка v1 на задачу якорем — `#SPRINT_X/S4-11` (D-22, аудит 09.11). В v2
+ * такой адрес молча открывал главную: якорь никто не разбирал. Теперь он
+ * ведёт в раздел «Задачи» с этой задачей.
+ *
+ * Только когда в запросе нет `open`: рядом с открытой записью якорь — это
+ * место прокрутки v2, а не ссылка, и переписывать его нельзя. Разбираем
+ * ровно форму «спринт/код» — одиночный id или параметры в якоре не трогаем.
+ */
+export function legacyHashHref(search: string, hash: string): string | null {
+  const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  if (p.get('open')) return null;
+  let raw = hash.startsWith('#') ? hash.slice(1) : hash;
+  try { raw = decodeURIComponent(raw); } catch { return null; }
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(raw)) return null;
+  return recordHref('task', raw);
+}

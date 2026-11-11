@@ -14,7 +14,8 @@
     "./demo/datawanderers": "./demo/datawanderers.ts",
     "./styles/seidr.css": "./src/styles/seidr.css",
     "./style-guard": "./src/tokens/styleGuard.ts",
-    "./demo/*": "./demo/*.ts"
+    "./demo/*": "./demo/*.ts",
+    "./record": "./src/record/index.ts"
   },
   "sideEffects": [
     "*.css",

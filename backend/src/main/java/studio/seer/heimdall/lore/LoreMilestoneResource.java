@@ -286,7 +286,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
     /** Open (valid_to IS NULL) hist rows of a milestone, with their goal text. */
     private List<Map<String, Object>> openGoalHist(String milestoneId) {
         return ingestService.queryPublic(
-            "SELECT @rid, goal_md FROM (SELECT expand(out('HAS_STATE')) FROM KnowMilestone " +
+            "SELECT @rid, goal_md, decisions_md FROM (SELECT expand(out('HAS_STATE')) FROM KnowMilestone " +
             "WHERE milestone_id=:mid) WHERE valid_to IS NULL", Map.of("mid", milestoneId));
     }
 
@@ -315,6 +315,10 @@ public class LoreMilestoneResource extends LoreResourceBase {
             if (req.week() != null)         { msql.append(", week=:wk");         p.put("wk",   req.week()); }
             if (req.date_display() != null) { msql.append(", date_display=:dd"); p.put("dd",   req.date_display()); }
             if (req.priority() != null)     { msql.append(", priority=:prio");   p.put("prio", req.priority()); }
+            // Аудит времени 10.11: поля вершины вехи версию не открывают — момент правки на
+            // вершине; changed_at среза milestones — максимум с открытой версией цели.
+            msql.append(", updated_at=:upd");
+            p.put("upd", java.time.Instant.now().toString());
             msql.append(" UPSERT WHERE milestone_id=:mid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 msql.toString(), p)).await().indefinitely();
@@ -328,9 +332,33 @@ public class LoreMilestoneResource extends LoreResourceBase {
             if (req.goal_md() != null) {
                 List<Map<String, Object>> hist = openGoalHist(req.milestone_id());
                 if (!hist.isEmpty()) {
-                    String rid = hist.get(0).get("@rid").toString();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "UPDATE " + rid + " SET goal_md=:g", Map.of("g", req.goal_md()))).await().indefinitely();
+                    // Аудит времени 10.11: у вехи есть SCD2 (KnowMilestoneHist), а новая цель
+                    // переписывала открытую строку на месте — прежняя цель терялась, времени
+                    // правки не было. Теперь другая цель закрывает версию и открывает новую
+                    // (decisions_md переносится); та же цель — ничего не пишет.
+                    Object curGoal = hist.get(0).get("goal_md");
+                    if (!req.goal_md().equals(curGoal == null ? null : String.valueOf(curGoal))) {
+                        Map<String, Object> hp = new java.util.HashMap<>();
+                        hp.put("mid", req.milestone_id());
+                        hp.put("g", req.goal_md());
+                        hp.put("dmd", hist.get(0).get("decisions_md"));
+                        hp.put("nsid", java.util.UUID.randomUUID().toString());
+                        hp.put("now", java.time.Instant.now().toString());
+                        hp.put("oldrid", hist.get(0).get("@rid").toString());
+                        changeAuthor().bind(hp); // S2-12
+                        String carryDecisions = hp.get("dmd") == null ? "" : ", decisions_md=:dmd";
+                        if (hp.get("dmd") == null) hp.remove("dmd");
+                        Object res = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                            Scd2Guard.guardedClose("KnowMilestoneHist", false)
+                            + "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g"
+                            + carryDecisions + ChangeAuthor.SET_SQL + ";"
+                            + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowMilestone WHERE milestone_id=:mid) "
+                            + "TO (SELECT FROM KnowMilestoneHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);",
+                            hp)).await().indefinitely().result();
+                        if (Scd2Guard.isConflict(res))
+                            return Scd2Guard.conflict("milestone '" + req.milestone_id()
+                                + "': открытую версию цели закрыла соседняя запись — перечитайте и повторите", Map.of());
+                    }
                 } else {
                     Map<String, Object> hp = new java.util.HashMap<>();
                     hp.put("mid", req.milestone_id());

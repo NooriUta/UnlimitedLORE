@@ -23,7 +23,7 @@ import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary, Pill, Skeleton, StorageBanner, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
-import { legacyPassportHref } from './nav/loreRoutes';
+import { legacyHashHref, legacyPassportHref } from './nav/loreRoutes';
 import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
@@ -122,8 +122,9 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   // Старый адрес отдельной страницы паспорта → раздел оболочки, запись во весь экран
   // (владелица 09.11: «да, переводи задачу и спринт в оболочку»). Замена записи
   // истории без перезагрузки: оболочка ниже читает уже новый адрес.
-  const legacy = legacyPassportHref(query);
   const w = win ?? (typeof window === 'undefined' ? undefined : window);
+  // D-22: ссылка v1 якорем «#СПРИНТ/КОД» — в раздел «Задачи» с этой задачей.
+  const legacy = legacyPassportHref(query) ?? legacyHashHref(query, w?.location.hash ?? '');
   if (legacy && w) w.history.replaceState(null, '', legacy);
   // Страницы вне оболочки подписаны (S4-17, находка P0 аудита 08.11): без
   // шапки и меню LORE выглядит сломанным, и отличить витрину от поломки

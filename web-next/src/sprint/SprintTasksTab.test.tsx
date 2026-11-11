@@ -78,6 +78,18 @@ describe('SprintTasksTab · таблица сверху', () => {
     expect(within(group).getByRole('button', { name: 'Списком' }).getAttribute('aria-pressed')).toBe('true');
   });
 
+  // S9-07: «Фаза → статус» живёт в адресе тем же механизмом, что прочие разрезы.
+  it('?group=phase_status читается из адреса и пишется в него', async () => {
+    const { impl } = ok();
+    const win = fakeWin('?group=phase_status');
+    render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={win} />);
+    const group = await screen.findByRole('group', { name: 'Группировка' });
+    expect(within(group).getByRole('button', { name: 'Фаза → статус' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(within(group).getByRole('button', { name: 'По фазе' }));
+    fireEvent.click(within(group).getByRole('button', { name: 'Фаза → статус' }));
+    expect(win.pushes[win.pushes.length - 1]).toMatch(/group=phase_status/);
+  });
+
   it('мусор в ?group= — умолчание «по фазе», а не пустая таблица', async () => {
     const { impl } = ok();
     render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={fakeWin('?group=zzz')} />);
@@ -95,6 +107,42 @@ describe('SprintTasksTab · запись', () => {
     await act(async () => { fireEvent.click(screen.getByRole('menuitemradio', { name: 'Готово' })); });
     expect(calls.find(c => c.url === '/lore/status')?.body).toEqual({ entity_type: 'task', id: 'u2', status: 'done' });
     await waitFor(() => expect(within(screen.getByRole('row', { name: /S5-02/ })).getByRole('button', { name: /Статус: готово/ })).toBeTruthy());
+  });
+
+  // S9-06: смена статуса пачкой — тот же POST /lore/status по каждой задаче,
+  // что и в строке (status/batch требует админа, а вкладку видит не только он).
+  it('пачка: выбранные задачи получают статус, по одному запросу на задачу', async () => {
+    const { impl, calls } = ok();
+    render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={fakeWin()} />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Выбрать: S5-01' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Выбрать: S5-02' }));
+    const bar = screen.getByRole('group', { name: 'Действия с выбранными' });
+    fireEvent.change(within(bar).getByRole('combobox', { name: 'Новый статус' }), { target: { value: 'done' } });
+    await act(async () => { fireEvent.click(within(bar).getByRole('button', { name: 'Сменить статус (2)' })); });
+    expect(calls.filter(c => c.url === '/lore/status').map(c => c.body)).toEqual([
+      { entity_type: 'task', id: 'u1', status: 'done' },
+      { entity_type: 'task', id: 'u2', status: 'done' },
+    ]);
+    await waitFor(() => expect(within(screen.getByRole('row', { name: /S5-01/ })).getByRole('button', { name: /Статус: готово/ })).toBeTruthy());
+  });
+
+  it('пачка, частичный отказ: прошедшие сменились, непрошедшие названы с причиной', async () => {
+    const { impl } = fakeFetch({
+      '/lore/slice/tasks_of_sprint': { body: { rows: tasks } },
+      '/lore/slice/phases_of_sprint': { body: { rows: phases } },
+      '/lore/status': (() => { let n = 0; return () => (n++ === 0 ? { body: { ok: true } } : { status: 409, body: { error: 'CONFLICT', detail: 'reviewer must differ' } }); })(),
+    });
+    render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={fakeWin()} />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Выбрать: S5-01' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Выбрать: S5-02' }));
+    const bar = screen.getByRole('group', { name: 'Действия с выбранными' });
+    fireEvent.change(within(bar).getByRole('combobox', { name: 'Новый статус' }), { target: { value: 'done' } });
+    await act(async () => { fireEvent.click(within(bar).getByRole('button', { name: 'Сменить статус (2)' })); });
+    const alert = await within(bar).findByRole('alert');
+    expect(alert.textContent).toMatch(/1 из 2/);
+    expect(alert.textContent).toMatch(/S5-02.*reviewer must differ/);
+    expect(within(screen.getByRole('row', { name: /S5-01/ })).getByRole('button', { name: /Статус: готово/ })).toBeTruthy();
+    expect(within(screen.getByRole('row', { name: /S5-02/ })).getByRole('button', { name: /Статус: к работе/ })).toBeTruthy();
   });
 
   it('отказ сервера на статусе — ошибка в строке, статус прежний', async () => {
@@ -184,7 +232,8 @@ describe('S4-36 · набор колонок задач', () => {
     const table = await screen.findByRole('table', { name: /Задачи спринта/ });
     // «Действия» — не колонка набора: она появляется от права правки, и её
     // выбором не управляют (иначе правку можно было бы спрятать от себя).
-    expect(within(table).getAllByRole('columnheader').map(th => th.textContent?.trim())).toEqual(['ID', 'Задача', 'Действия']);
+    // «Выбрать» (S9-06) — тоже не колонка набора: она появляется от пачки действий.
+    expect(within(table).getAllByRole('columnheader').map(th => th.textContent?.trim())).toEqual(['Выбрать', 'ID', 'Задача', 'Действия']);
   });
 
   it('набора в адресе нет — прежние колонки v1, паритет не пропадает молча', async () => {

@@ -81,3 +81,10 @@
 .kitp__panel { padding: 8px 0; color: var(--t2); }
 .kitp__earcol { padding: 8px; border: 1px solid var(--bd); border-radius: var(--r-md); }
 .kitp__split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+
+/* Пара «подпись — значение» для ряда чипов: так же, как в «Свойствах» записи,
+   чтобы витрина показывала элемент в его настоящем окружении. */
+.kitp__chips { display: grid; grid-template-columns: minmax(0, 160px) minmax(0, 1fr); gap: 4px 12px; margin: 8px 0 0; }
+.kitp__chips dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; }
+.kitp__chips dd { margin: 0; min-width: 0; }
+@media (max-width: 720px) { .kitp__chips { grid-template-columns: minmax(0, 1fr); } }

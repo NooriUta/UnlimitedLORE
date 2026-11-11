@@ -34,7 +34,7 @@ class MilestoneReleasePassportTest {
         row.put("milestone_id", "M2");
         row.put("label", "Ядро");
         row.put("direct_sprint_ids", List.of("S1", "S2", "S3"));
-        Map<String, Object> v = LoreRecordValues.milestone(row);
+        Map<String, Object> v = LoreRecordValues.values("milestone", row);
         assertEquals("Ядро", v.get("title"));
         assertEquals("M2", v.get("code"));
         assertFalse(v.containsKey("sprints_total"), "итоги не в values");
@@ -49,7 +49,7 @@ class MilestoneReleasePassportTest {
         row.put("version", "1.17.4");
         row.put("sprint_count", 4);
         row.put("pr_count", 12);
-        Map<String, Object> v = LoreRecordValues.release(row);
+        Map<String, Object> v = LoreRecordValues.values("release", row);
         assertEquals("v1.17.4", v.get("code"));
         assertFalse(v.containsKey("prs_total"), "итоги не в values");
         Map<String, Object> c = LoreRecordValues.computed("release", row);

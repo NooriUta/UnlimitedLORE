@@ -74,6 +74,9 @@ export function ProjectScope({ fetch, sub, me, narrow, onChange }: ProjectScopeP
       forbiddenReason={data?.outside_scope?.reason}
       mine={data?.mine ?? 'unknown'}
       mineHint={data?.mineReason ? t(MINE_HINT[data.mineReason]) : undefined}
+      // Число своих — из ответа про мои проекты, а не счётом по списку:
+      // список бывает обрезан, и своё могло в него не попасть.
+      mineCount={data?.mineCount}
       narrow={narrow}
     />
   );

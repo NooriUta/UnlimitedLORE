@@ -12,6 +12,7 @@ import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
+import { feedConfig, type FeedSpec } from './feed';
 import type { AppKey } from '../i18n';
 import {
   OPEN_ONLY_NOTE, UC_OWN_LINKS_NOTE,
@@ -91,6 +92,12 @@ export interface ListScreenDef {
    * в срезе умолчания не получает — поле не выдумывается.
    */
   defaultSort?: ListSort;
+  /**
+   * Лента раздела (K2-FEED-VIEW): то же описание, из которого собран
+   * `list.feed` конфига, — экрану оно нужно, чтобы отдать kit тело записи и
+   * нижний уровень. Нет — у записи раздела нет времени, ленты нет.
+   */
+  feed?: FeedSpec;
 }
 
 export interface ListNested {
@@ -111,6 +118,57 @@ export interface ListNested {
 }
 
 const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'modules' | 'menu'>;
+
+/**
+ * Лента разделов (K2-FEED-VIEW): поле сути, повод и нижний уровень — по
+ * разделу. Ключ — раздел, у которого у записи ЕСТЬ время (`updated_at` из
+ * `changed_at`); вехам и компонентам времени срез не даёт — ленты у них нет, и
+ * поле не выдумывается.
+ *
+ * Имена md-полей — те же, что в строке среза и в `values` паспорта
+ * (`LoreRecordRegistry`): у спринта context_md, у задачи note_md, у ADR
+ * контекст и решение, у спеки текст, у решения суть и обоснование.
+ */
+export const FEEDS = {
+  sprints: {
+    lead: ['context_md'], inRow: true,
+    because: ['DEPENDS_ON', 'IMPLEMENTED_IN'],
+    // Два уровня: под полосой спринта — его задачи, по раскрытию.
+    under: {
+      titleKey: 'lists.feed.under.tasks',
+      load: async (client, id, signal) => {
+        const body = await client.slice<Record<string, unknown>>('tasks_of_sprint', { sprint_id: id }, signal);
+        const records = body.rows.map(taskListRecord);
+        return { records, ...(body.page?.has_more && typeof body.page.total === 'number' ? { total: body.page.total } : {}) };
+      },
+    },
+  },
+  adrs: { lead: ['context_md', 'decision_md'], because: ['DEPENDS_ON', 'SUPERSEDES'] },
+  tasks: { lead: ['note_md'], because: ['JUSTIFIED_BY', 'GATES'] },
+  decisions: {
+    lead: ['body_md', 'rationale_md'], because: ['DECIDED_IN', 'ANSWERS'],
+    becauseFields: { DECIDED_IN: 'adr' },
+  },
+  specs: { lead: ['content_md'] },
+  questions: {
+    lead: ['body_md'], inRow: true, because: ['RAISED_IN', 'GATES'],
+    becauseFields: { GATES: 'gates', RAISED_IN: 'adr' },
+  },
+  releases: { lead: ['description_md'], inRow: true },
+  tech: { lead: ['content_md'], inRow: true },
+  features: { lead: ['body_md', 'context_md'] },
+} as const satisfies Partial<Record<string, FeedSpec>>;
+
+/** Конфиг раздела + лента: вид `feed`, `list.feed` и подписи рёбер-поводов. */
+function withFeed(lang: KitLang, cfg: KitConfig, spec: FeedSpec): KitConfig {
+  const { feed, edges } = feedConfig(spec, k => appT(lang, k));
+  const list = cfg.list!;
+  return {
+    ...cfg,
+    ...(edges ? { edges: { ...(cfg.edges ?? {}), ...edges } } : {}),
+    list: { ...list, views: list.views.includes('feed') ? list.views : [...list.views, 'feed'], feed },
+  };
+}
 
 function sprintsConfig(lang: KitLang): KitConfig {
   return {
@@ -157,7 +215,10 @@ function sprintsConfig(lang: KitLang): KitConfig {
       // Имена фасетов — из общего набора loreFilters (S4-05): пока они жили
       // строками здесь и ключами там, наборы разошлись молча.
       filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
-      groupings: ['status', 'project', 'priority', 'milestone'],
+      groupings: ['status', 'project', 'priority', 'milestone', 'release'],
+      // S9-02: релизов у LORE больше сотни — разрез свёрнут при первом показе,
+      // иначе раскрытые группы снова дают стену строк, из которой задача и выросла.
+      collapsedGroupings: ['release'],
       // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
       columns: ['id', 'title', 'progress:tasks', 'sum:effort_total', 'sum:actual_total', 'status', 'project', 'priority', 'release', 'updated_at'],
     },
@@ -443,7 +504,7 @@ export const LIST_SCREENS = {
     modelType: 'sprint',
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     defaultSort: FRESH_FIRST,
-    map: sprintRecord, config: sprintsConfig, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
+    map: sprintRecord, config: lang => withFeed(lang, sprintsConfig(lang), FEEDS.sprints), feed: FEEDS.sprints, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
     // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
     // `sprint_totals` (S4-09). Считает сервер: одно число из двух мест
@@ -458,13 +519,13 @@ export const LIST_SCREENS = {
     modelType: 'adr',
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     defaultSort: FRESH_FIRST,
-    map: adrRecord, config: adrsConfig, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
+    map: adrRecord, config: lang => withFeed(lang, adrsConfig(lang), FEEDS.adrs), feed: FEEDS.adrs, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
   tasks: {
     modelType: 'task',
     slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
     defaultSort: FRESH_FIRST,
-    map: taskListRecord, config: tasksConfig, quickIcons: {},
+    map: taskListRecord, config: lang => withFeed(lang, tasksConfig(lang), FEEDS.tasks), feed: FEEDS.tasks, quickIcons: {},
     // Срез отдаёт только открытые задачи — это сказано словами на экране.
     note: OPEN_ONLY_NOTE,
   },
@@ -472,13 +533,13 @@ export const LIST_SCREENS = {
     modelType: 'decision',
     slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
     defaultSort: FRESH_FIRST,
-    map: decisionRecord, config: lang => sectionConfig(lang, decisionsSpec), quickIcons: {},
+    map: decisionRecord, config: lang => withFeed(lang, sectionConfig(lang, decisionsSpec), FEEDS.decisions), feed: FEEDS.decisions, quickIcons: {},
   },
   specs: {
     modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
     defaultSort: FRESH_FIRST,
-    map: specRecord, config: lang => sectionConfig(lang, specsSpec), quickIcons: {},
+    map: specRecord, config: lang => withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs), feed: FEEDS.specs, quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
@@ -486,7 +547,7 @@ export const LIST_SCREENS = {
     modelType: 'question',
     slice: 'questions', titleKey: 'lists.questions.title', icon: 'help',
     defaultSort: FRESH_FIRST,
-    map: questionRecord, config: lang => sectionConfig(lang, questionsSpec), quickIcons: {},
+    map: questionRecord, config: lang => withFeed(lang, sectionConfig(lang, questionsSpec), FEEDS.questions), feed: FEEDS.questions, quickIcons: {},
   },
   milestones: {
     slice: 'milestones', titleKey: 'lists.milestones.title', icon: 'crossed-axes',
@@ -495,7 +556,7 @@ export const LIST_SCREENS = {
   releases: {
     slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',
     defaultSort: FRESH_FIRST,
-    map: releaseRecord, config: lang => sectionConfig(lang, releasesSpec), quickIcons: {},
+    map: releaseRecord, config: lang => withFeed(lang, sectionConfig(lang, releasesSpec), FEEDS.releases), feed: FEEDS.releases, quickIcons: {},
   },
   components: {
     slice: 'components', titleKey: 'lists.components.title', icon: 'cog',
@@ -504,7 +565,7 @@ export const LIST_SCREENS = {
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',
     defaultSort: FRESH_FIRST,
-    map: techRecord, config: lang => sectionConfig(lang, techSpec), quickIcons: {},
+    map: techRecord, config: lang => withFeed(lang, sectionConfig(lang, techSpec), FEEDS.tech), feed: FEEDS.tech, quickIcons: {},
   },
   features: {
     modelType: 'feature',
@@ -519,7 +580,7 @@ export const LIST_SCREENS = {
     // слова в меню выбирает владелица, а не этот файл.
     slice: 'use_cases', titleKey: 'lists.features.title', icon: 'gift-of-knowledge',
     defaultSort: FRESH_FIRST,
-    map: featureRecord, config: lang => sectionConfig(lang, featuresSpec), quickIcons: {},
+    map: featureRecord, config: lang => withFeed(lang, sectionConfig(lang, featuresSpec), FEEDS.features), feed: FEEDS.features, quickIcons: {},
     // Оговорка осталась, но про ДРУГУЮ, настоящую причину: компонент и проект
     // срез отдаёт только свои, а у вложенных сценариев они наследованные.
     note: UC_OWN_LINKS_NOTE,

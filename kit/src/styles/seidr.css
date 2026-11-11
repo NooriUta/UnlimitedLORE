@@ -612,11 +612,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-pop[data-side='up'] { top: auto; bottom: calc(100% + 4px); }
 .sk-pop[data-side='up'][data-align='side'] { top: auto; bottom: 0; }
 
+/* Положение — у общего слоя .sk-pop (S4-MENU-STATES): и меню чипа, и палитра
+   звезды рисуются внутри Popover, своего положения у .sk-spop больше нет. */
 .sk-spop {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 65;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2456,6 +2454,39 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-matrix__opt.is-clear { border-style: dashed; color: var(--t2); }
 .sk-matrix__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-matrix__skipped { margin: 0; color: var(--wrn); font-size: var(--fs-sm); }
+
+/* Выбор нескольких ячеек (K2-MATRIX): полоса режима и счётчик «выбрано N».
+   Отмеченная ячейка обведена, а не перекрашена: цвет у неё уже занят
+   состоянием проверки, и перекраска стёрла бы «не смогли проверить». */
+.sk-matrix__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sk-matrix__mode {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(var(--tap), 22px);
+  padding: 0 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-matrix__mode[aria-pressed='true'] {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+  color: var(--t1);
+}
+.sk-matrix__mode:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-matrix__count { color: var(--t1); font-size: var(--fs-xs); font-weight: 700; }
+.sk-matrix__cell.is-marked {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
 /* Узкий вид: список по выбранной строке, а не сжатая сетка. */
 .sk-matrix--narrow { gap: var(--gap); }
 .sk-matrix__pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
@@ -2483,6 +2514,90 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-bottom: 1px solid var(--bd);
 }
 .sk-matrix__listtitle { min-width: 0; color: var(--t1); font-size: var(--fs-sm); }
+/* «Не спрашивали» — свой вид, а не оттенок сбоя: это наш выбор, а не отказ
+   источника, и по этим двум случаям человек делает разное. */
+.sk-matrix__cell[data-state='unasked'] { border-style: dashed; border-color: var(--bd); color: var(--t3); }
+
+/* ---------- Почему такой вывод: вердикт и цепочка причин (K2-CHAIN-EXPLAIN) ----------
+   Цепочка читается сверху вниз, в том порядке, в котором шаги решали. Цвет
+   здесь НЕСЁТ СМЫСЛ, но не остаётся единственным носителем: исход каждого
+   шага назван словом рядом, потому что по цвету одному доступы не разбирают.
+   Решающий шаг выделен рамкой слева и подписью: без неё цепочка читается как
+   список фактов, а не как объяснение. Оборванная цепочка и неназванный
+   решающий шаг идут предупреждением — это неполнота, а не норма. */
+.sk-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+}
+.sk-chain__head {
+  margin: 0;
+  color: var(--t2);
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-chain__verdict {
+  margin: 0;
+  min-width: 0;
+  color: var(--t1);
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: var(--fs-lg);
+}
+.sk-chain__verdict[data-tone='suc'] { color: var(--suc); }
+.sk-chain__verdict[data-tone='wrn'] { color: var(--wrn); }
+.sk-chain__verdict[data-tone='dng'] { color: var(--dng); }
+.sk-chain__verdict[data-tone='inf'] { color: var(--inf); }
+.sk-chain__steps { margin: 0; padding: 0; min-width: 0; list-style: none; }
+.sk-chain__step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-left: 2px solid var(--bd);
+  font-size: var(--fs-sm);
+}
+.sk-chain__step[data-state='confirmed'] { border-left-color: var(--suc); }
+.sk-chain__step[data-state='denied'] { border-left-color: var(--dng); }
+.sk-chain__step[data-state='unverified'] { border-left-color: var(--wrn); background: color-mix(in srgb, var(--wrn) 10%, transparent); }
+.sk-chain__step[data-state='forbidden'] { border-left-color: var(--inf); background: color-mix(in srgb, var(--inf) 10%, transparent); }
+.sk-chain__step[data-state='unasked'] { border-left-style: dashed; color: var(--t3); }
+.sk-chain__step[data-decider='true'] { background: color-mix(in srgb, var(--acc) 10%, transparent); }
+.sk-chain__num {
+  min-width: 14px;
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+.sk-chain__title { min-width: 0; color: var(--t1); }
+.sk-chain__step[data-state='unasked'] .sk-chain__title { color: var(--t2); }
+.sk-chain__outcome { color: var(--t2); font-size: var(--fs-xs); }
+.sk-chain__step[data-state='confirmed'] .sk-chain__outcome { color: var(--suc); }
+.sk-chain__step[data-state='denied'] .sk-chain__outcome { color: var(--dng); }
+.sk-chain__step[data-state='unverified'] .sk-chain__outcome { color: var(--wrn); }
+.sk-chain__step[data-state='forbidden'] .sk-chain__outcome { color: var(--inf); }
+.sk-chain__aside { color: var(--t2); font-size: var(--fs-xs); }
+.sk-chain__decider {
+  padding: 1px 8px;
+  border: 1px solid var(--acc);
+  border-radius: 999px;
+  color: var(--acc);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.sk-chain__none { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-chain__note { margin: 0; color: var(--t2); font-size: var(--fs-sm); }
+.sk-chain__note--wrn { color: var(--wrn); }
 
 /* ---------- Выпуск содержимого: дифф версий и активация (K-12) ----------
    Пословный дифф: убранное зачёркнуто и красным, добавленное — зелёным и
@@ -3239,7 +3354,30 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__chev { color: var(--t3); }
 .sk-list__gtitle.is-unknown { color: var(--wrn); font-style: italic; }
 .sk-list__gcount { margin-left: auto; font-family: var(--mono); color: var(--t3); }
+/* Выбор группы (S4-10): чекбокс стоит РЯДОМ с кнопкой сворачивания, поэтому
+   у заголовка появилась строка-ряд. Счётчик «отмечено N из M» — справа,
+   моноширинным: число читается как число, а не как слово. */
+.sk-list__ghrow { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.sk-list__ghrow .sk-list__gbtn { flex: 1 1 auto; min-width: 0; }
+.sk-list__gcheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(var(--tap), var(--row-h));
+  min-height: max(var(--tap), var(--row-h));
+}
+.sk-list__gsel {
+  flex: 0 0 auto;
+  padding-right: var(--pad-x);
+  color: var(--acc);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
 .sk-list__morerow td { padding: 4px var(--pad-x); }
+/* S4-35: ячейка колонки, которой у типа записи нет — не «—» (пусто), а другое утверждение. */
+.sk-list__na { font-size: var(--fs-2xs); color: var(--t3); font-style: italic; border-bottom: 1px dotted var(--bd); cursor: help; }
 
 /* Составные объекты (S4-09): раскрытие строки и прогресс «x/y».
    Кнопка раскрытия — цель касания не меньше --tap (44px на сенсоре). */
@@ -3400,6 +3538,32 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-feed__cut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--t3); }
 .sk-feed__page,
 .sk-feed__none { margin: 0; font-size: var(--fs-xs); color: var(--wrn); }
+/* Двухуровневая лента (SPRINT_UXR_S10_SEIDR_KIT_2/K2-FEED-TWO-LEVEL):
+   верхний уровень полосой, под ним то, что в нём двигалось.
+
+   Полоса чисел — ряд с переносом: на телефоне два-три числа в строку не
+   влезают, а горизонтальной прокрутки у строки ленты нет. Подпись над числом
+   мелкая и тусклая: «3/7» без подписи неизвестно о чём, но читается первым
+   всё равно число. */
+.sk-feed__strip { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-top: 4px; min-width: 0; }
+.sk-feed__stripcell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sk-feed__striplabel { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: .04em; }
+/* Нижний уровень — колонкой: тут и строки, и оговорки про них. */
+.sk-feed__undergroup { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; min-width: 0; }
+/* Строки нижнего уровня — тот же .sk-feed__item, со сдвигом и черешком слева:
+   вложенность видно, а форма строки остаётся ОДНА на оба уровня. */
+.sk-feed__under { margin: 0; padding: 0 0 0 10px; list-style: none; border-left: 1px solid var(--bd); }
+.sk-feed__under .sk-feed__title { font-size: var(--fs-sm); }
+/* Оговорки нижнего уровня: «ничего нет», «нет прав», «не дошло», «показано не
+   всё». Тон задаёт признак — «нет прав» и сбой НЕ одного цвета, потому что это
+   разные исходы и чинятся по-разному. */
+.sk-feed__undernote { font-size: var(--fs-xs); color: var(--t3); min-width: 0; }
+.sk-feed__undernote[data-note='failed'] { color: var(--dng); border-left: 2px solid var(--dng); padding-left: 8px; }
+.sk-feed__undernote[data-note='denied'] { color: var(--wrn); border-left: 2px solid var(--wrn); padding-left: 8px; }
+/* Кнопка раскрытия — своей строкой слева, как у тела записи: в ряд с числами
+   она читалась бы как ещё одно число. */
+.sk-feed__undermore { align-self: flex-start; font-size: var(--fs-xs); padding: 2px 8px; }
+.sk-feed__undermore[aria-disabled='true'] { color: var(--t3); cursor: default; }
 .sk-board {
   display: grid;
   grid-auto-flow: column;
@@ -3555,6 +3719,9 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-list__selmode { color: var(--t1); }
 .sk-list__selcount { font-weight: 700; color: var(--t1); }
 .sk-list__selbusy { color: var(--t2); font-size: var(--fs-xs); }
+/* «Отмечено вне показанного» — цветом предупреждения: это не пояснение, а
+   расхождение между тем, что человек отметил, и тем, над чем пойдёт действие. */
+.sk-list__selhidden { color: var(--wrn); font-size: var(--fs-xs); }
 .sk-list__seldone { margin-left: auto; }
 .sk-list__selbar .sk-btn {
   min-height: max(var(--tap), 22px);
@@ -3703,6 +3870,25 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields__row { display: contents; }
 .sk-rec-fields dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
+/* Ряд значений-чипов в «Свойствах» (S4-29): первые три и «ещё N».
+   У унаследованного чипа пунктирная рамка И подпись источника словами — по
+   одному оттенку «от спринта» не прочитать. */
+.sk-rec-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+.sk-rec-chips__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 8px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  min-width: 0;
+}
+.sk-rec-chips__item[data-inherited] { border-style: dashed; }
+.sk-rec-chips__link { color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sk-rec-chips__from { color: var(--t3); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-rec-chips__more { font-size: var(--fs-2xs); padding: 1px 8px; }
 .sk-rec-fields__none { color: var(--t3); }
 .sk-rec-fields__mono { font-family: var(--mono); }
 /* Набор ссылок и сама ссылка сжимаются до своей колонки: inline-flex без
@@ -4285,6 +4471,20 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
   border-top: 1px solid var(--bd);
 }
 .sk-tasks__gth--fault { color: var(--wrn); }
+/* S9-07: подшапка статуса внутри фазы и строка потолка «Показаны N из M · ещё K». */
+.sk-tasks__gth--sub { color: var(--t2); background: var(--bg1); padding-left: 20px; border-top-style: dashed; }
+.sk-tasks__morerow td { padding: 4px 8px; border-top: 1px dashed var(--bd); }
+.sk-tasks__shown { margin-right: 8px; font-size: var(--fs-xs); color: var(--t3); }
+/* S9-11: потолок строк в группе дня ленты новостей — та же строка «Показаны N из M · ещё K». */
+.sk-news__morerow { list-style: none; padding: 4px 8px; border-top: 1px dashed var(--bd); }
+.sk-news__shown { margin-right: 8px; font-size: var(--fs-xs); color: var(--t3); }
+/* S9-06: выбор во вложенной таблице задач — панель как у списков. */
+.sk-tasks__selbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 6px; margin-bottom: 6px; }
+.sk-tasks__selcount { font-weight: 600; color: var(--t1); }
+.sk-tasks__selhidden, .sk-tasks__selhint, .sk-tasks__selbusy { font-size: var(--fs-xs); color: var(--t3); }
+.sk-tasks__selstatus { font: inherit; background: var(--bg1); color: var(--t1); border: 1px solid var(--bd); border-radius: 4px; padding: 2px 4px; }
+.sk-tasks__selerr { flex-basis: 100%; margin: 0; color: var(--dng); font-size: var(--fs-xs); }
+.sk-tasks__td--sel { width: 1%; }
 
 /* S4-35: выбор колонок — раздел «Колонки» меню «Вид», по прототипу
    владелицы s4-35-columns.html. */
@@ -4397,11 +4597,10 @@ a.sk-tasks__id { text-decoration: none; display: inline-flex; align-items: cente
 a.sk-tasks__id:hover { text-decoration: underline; }
 a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
 .sk-tasks__none { color: var(--t3); }
+/* Положение — у общего слоя .sk-pop[data-align='start'] (S4-MENU-STATES);
+   здесь остаётся только своё: отступ от края ячейки, ширина, рамка. */
 .sk-tasks__menu {
-  position: absolute;
-  z-index: 20;
-  top: 100%;
-  left: 4px;
+  margin-left: 4px;
   display: flex;
   flex-direction: column;
   min-width: 200px;
@@ -4646,7 +4845,9 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 
 /* Меню оболочки, свёрнутое на время чтения (D-2026-UXR-READ-COLLAPSE). */
 .sk-shell--menu-collapsed .sk-shell__body { grid-template-columns: auto minmax(0, 1fr); }
-.sk-shell__ear { align-self: start; margin-top: 8px; }
+/* Ушко — посередине высоты окна и липнет при прокрутке (S4-MENU-STATES, владелица 09.11:
+   «ухо хоть в середину поставьте»): у верхнего края оно уезжало со страницей. */
+.sk-shell__ear { align-self: start; position: sticky; top: 50%; transform: translateY(-50%); }
 
 /* S4-MENU-STATES: третье состояние меню — рейка иконок. Колонка узкая, подписи
    скрыты, иконка по центру; цель касания остаётся во всю ширину рейки. */
@@ -5499,7 +5700,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__props--rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; }
 .sk-rec__props--rail .sk-rec__zone { display: none; }
 /* Во весь экран — воздушнее и по центру (владелица 08.11): колонка ~920 px, поля, свободное межстрочие. */
-.sk-dock[data-placement='full'] .sk-rec { max-width: var(--rec-frame); margin: 0 auto; padding: 8px 32px 48px; }
+/* S5-05: width: 100% — статья не сжимается по содержимому вкладки. Без неё ширина
+   статьи (а с ней и мера строки, % от неё) менялась при переключении вкладок:
+   замер Playwright 1280px — 744 / 735 / 684 / 679 px на разных вкладках. */
+.sk-dock[data-placement='full'] .sk-rec { width: 100%; max-width: var(--rec-frame); margin: 0 auto; padding: 8px 32px 48px; }
 /* Пропорции эталона v4 (владелица 08.11: «посмотри на скриншоте хорошие проценты и соблюдай»):
    линия вкладок ~66% области, шапка и текст ~66% линии. Ширина текста — настройка наверху. */
 .sk-dock[data-placement='full'] .sk-rec[data-width='s'] { --rec-col: 56%; }

@@ -47,22 +47,30 @@ public class LoreModelResource extends LoreResourceBase {
         // S4-MODEL-TYPES: свойства типов из схемы графа. Не прочиталась — раздела types
         // нет и он остаётся в missing (честная неполнота), а не пустой раздел.
         Map<String, List<String>> schema = null;
+        // Аудит времени 10.11: объявленный тип свойства (DATETIME / DATE / STRING) — в поле
+        // property_type; схема — у всех вершин модели (LoreComponent тоже), не только Know*.
+        Map<String, Map<String, String>> declared = new java.util.HashMap<>();
         try {
             schema = new java.util.HashMap<>();
             for (Map<String, Object> t : ingestService.queryPublic("SELECT name, properties FROM schema:types", Map.of())) {
                 String name = t.get("name") == null ? null : String.valueOf(t.get("name"));
-                if (name == null || !name.startsWith("Know")) continue;
+                if (!LoreModelTypes.wantsSchemaOf(name)) continue;
                 List<String> props = new java.util.ArrayList<>();
+                Map<String, String> types = new java.util.HashMap<>();
                 if (t.get("properties") instanceof List<?> l)
                     for (Object p : l)
-                        if (p instanceof Map<?, ?> pm && pm.get("name") != null) props.add(String.valueOf(pm.get("name")));
+                        if (p instanceof Map<?, ?> pm && pm.get("name") != null) {
+                            props.add(String.valueOf(pm.get("name")));
+                            if (pm.get("type") != null) types.put(String.valueOf(pm.get("name")), String.valueOf(pm.get("type")));
+                        }
                 schema.put(name, props);
+                declared.put(name, types);
             }
         } catch (Exception e) {
             LOG.warnf("[LORE MODEL] схема типов не прочитана — раздел types не отдаю: %s", e.getMessage());
             schema = null;
         }
-        Map<String, Object> doc = LoreModel.build(dict, schema);
+        Map<String, Object> doc = LoreModel.build(dict, schema, declared);
         String version = String.valueOf(doc.get("version"));
         EntityTag tag = new EntityTag(version);
         if (ifNoneMatch != null && ifNoneMatch.replace("\"", "").trim().equals(version)) {

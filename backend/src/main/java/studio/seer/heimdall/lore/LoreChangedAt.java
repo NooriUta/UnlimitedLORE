@@ -50,7 +50,11 @@ final class LoreChangedAt {
                 // проиграла бы своей же отметке — сравнение и выдача на точности миллисекунд.
                 t = t.truncatedTo(ChronoUnit.MILLIS);
                 Instant cur = instant(c.get("changed_at"));
-                if (cur == null || t.isAfter(cur)) c.put("changed_at", ISO_MS.format(t));
+                // Тот же источник: срез без истории и даты (компонент, веха) берёт запасным
+                // сам updated_at — тогда changed_at пришёл сырым (до наносекунд) и выдаётся
+                // в той же форме, что и при победе отметки, а не двумя разными строками.
+                boolean sameSource = String.valueOf(touched).equals(String.valueOf(c.get("changed_at")));
+                if (cur == null || sameSource || t.isAfter(cur)) c.put("changed_at", ISO_MS.format(t));
             }
             out.add(c);
         }

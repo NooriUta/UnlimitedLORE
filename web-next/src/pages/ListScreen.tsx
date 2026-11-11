@@ -9,7 +9,8 @@ import {
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { KitRecord, RecordPlacement, UrlWindow } from '@seidr/kit';
+import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
 import { axesForKeys } from '../api/loreFacets';
 import { useListFacets } from '../api/useListFacets';
@@ -22,6 +23,7 @@ import { loreValueIcon } from '../lists/loreFilters';
 import { appliedCollapseNavOnRead } from '../settings/applied';
 import { useProjectScope } from '../scope/ProjectScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
+import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
@@ -52,6 +54,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   components: 'component', tech: 'tech', features: 'feature',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
+const NO_RECORDS: readonly KitRecord[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };
 
 /**
@@ -91,14 +94,26 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
   const win: UrlWindow | undefined = urlState === false ? undefined
     : typeof urlState === 'object' ? urlState
       : typeof window === 'undefined' ? undefined : window;
-  const [open, setOpen] = useState<OpenRecord>(() => {
-    if (!win) return { id: null, place: 'right' };
-    const p = readUrlState(win);
+  const fromUrl = (w: UrlWindow): OpenRecord => {
+    const p = readUrlState(w);
     const id = p.get('open');
     const raw = p.get('place') ?? '';
     const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : 'right';
     return { id: id || null, place };
-  });
+  };
+  const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: 'right' }));
+  // D-24: «назад»/«вперёд» меняют адрес не нашими руками — паспорт обязан
+  // идти за ним, иначе адрес и экран расходятся молча. Следим только у
+  // настоящего окна: у подменного окна тестов событий нет.
+  useEffect(() => {
+    const w = win as (UrlWindow & Partial<Pick<Window, 'addEventListener' | 'removeEventListener'>>) | undefined;
+    if (!w?.addEventListener || !w.removeEventListener) return;
+    const sync = () => setOpen(fromUrl(w));
+    w.addEventListener('popstate', sync);
+    w.addEventListener('hashchange', sync);
+    return () => { w.removeEventListener!('popstate', sync); w.removeEventListener!('hashchange', sync); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [win]);
   const set = (next: OpenRecord) => {
     setOpen(next);
     if (!win) return;
@@ -112,7 +127,11 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     // (D-21): иначе `tab=history` останется в адресе списка и следующая
     // открытая запись покажется не с начала, а с чужой вкладки.
     const patch = { open: next.id, place: closed || next.place === 'right' ? null : next.place, ...(closed ? { tab: null } : {}) };
-    pushUrlState(patch, { replace: true, win, ...(closed ? { anchor: null } : {}) });
+    // Открыть и закрыть паспорт — шаг истории (D-24): «назад» его и отменяет.
+    // Переход между записями (пейджер) и смена места — заменой, иначе листание
+    // десяти записей потребовало бы десяти «назад», чтобы выйти из паспорта.
+    const step = (open.id == null) !== closed;
+    pushUrlState(patch, { replace: !step, win, ...(closed ? { anchor: null } : {}) });
   };
   /** Адрес списка без открытой записи — им крошка «←» становится ссылкой. */
   const backHref = win ? urlStateHref(win, { open: null, place: null, tab: null }, { anchor: null }) : undefined;
@@ -249,6 +268,23 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
   // упавшая пачка — «?» с причиной (это решает loadProgress), а не 0/0.
   const ids = useMemo(() => data?.records.map(r => r.id) ?? [], [data]);
+
+  // Цель палитры команд (S4-14): открытая запись, иначе выделение списка.
+  // Записи может не быть в загруженных строках (открыли по ссылке) — тогда
+  // цель несёт её код: действовать над записью можно и без названия.
+  const [selection, setSelection] = useState<string[]>([]);
+  useEffect(() => {
+    if (open.id) {
+      const rec = data?.records.find(r => r.id === open.id)
+        ?? { id: open.id, kind: PASSPORT_OF[screen] ?? screen, title: open.id, status: '', fields: {} };
+      setPaletteTarget({ type: 'record', record: rec });
+    } else {
+      setPaletteTarget(selection.length > 0 ? { type: 'selection', ids: selection } : null);
+    }
+  }, [open.id, data, selection, screen]);
+  // Экран ушёл — цель снимается: палитра не должна действовать над тем, чего
+  // на экране уже нет.
+  useEffect(() => () => setPaletteTarget(null), []);
   const [late, setLate] = useState<Map<string, Record<string, unknown>> | null>(null);
   useEffect(() => {
     if (!nested || !ids.length) return;
@@ -272,6 +308,19 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     };
   }, [data, nested, late]);
 
+  // Лента (K2-FEED-VIEW): тело записи, нижний уровень и рёбра-поводы. Ничего
+  // не грузится на всю ленту — паспорт и задачи спринта идут по раскрытию
+  // одной записи (слово владелицы 10.11: «первые 3 абзаца, остальное при раскрытии»).
+  const feed = useFeed({
+    spec: def.feed, passportType: PASSPORT_OF[screen], rows: body?.rows,
+    records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl,
+  });
+  const viewData = useMemo(() => {
+    const base = shownData ?? data;
+    if (!base || feed.edges.length === 0) return base;
+    return { ...base, edges: [...base.edges, ...feed.edges] };
+  }, [shownData, data, feed.edges]);
+
   const headId = titleId ?? `list-screen-${screen}`;
   // Иконка заголовка — из канона LORE v1 (S4-25): def.icon = иконка раздела v1.
   const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon } : undefined;
@@ -288,8 +337,12 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     content = (
       <ListView
         config={config}
-        data={shownData ?? data}
+        data={viewData ?? data}
         counts={serverCounts}
+        feedBody={feed.feedBody}
+        onFeedBody={feed.onFeedBody}
+        feedUnder={feed.feedUnder}
+        onFeedUnder={feed.onFeedUnder}
         urlState={urlState}
         quickIcons={def.quickIcons}
         // Свежие сверху по умолчанию (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS): это
@@ -317,6 +370,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           });
         }}
         recordPlace={{ value: open.place, onChange: place => setOpen({ ...open, place }) }}
+        onSelectionChange={setSelection}
       />
     );
   }

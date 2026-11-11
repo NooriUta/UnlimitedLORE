@@ -136,8 +136,11 @@ public class UcReadinessCalculator {
             if ("shipped".equals(computed) && str(r.get("shipped_at")) == null) {
                 sql.append(", shipped_at = :d");
             }
+            // S4-MODEL-TYPES (свежесть): вычисленная смена статуса — изменение сценария.
+            sql.append(", updated_at = :upd");
             sql.append(" WHERE uc_id = :id");
             Map<String, Object> p = new java.util.LinkedHashMap<>();
+            p.put("upd", java.time.Instant.now().toString());
             p.put("s", computed);
             p.put("id", ucId);
             if (sql.indexOf(":d") >= 0) p.put("d", LocalDate.now().toString());

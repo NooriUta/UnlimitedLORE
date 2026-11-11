@@ -173,3 +173,51 @@ describe('S4-36 · проекты и компоненты — свойства, 
     expect(tabs.map(t => t.key)).toEqual(expect.arrayContaining(['tasks', 'phases']));
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-09: итоги спринта в паспорте. Сервер кладёт
+// их в `computed` (та же функция, что у среза sprint_totals), а клиент этот
+// блок не читал вовсе — в паспорте не было «оценка Σ / факт Σ».
+describe('S4-09 · итоги спринта из computed — полями паспорта', () => {
+  const fieldsOf = (c: LoreRecord1) => load(c).config.kinds.sprint!.fields ?? [];
+
+  it('оценка и факт — поля-суммы с охватом, как ячейки списка', () => {
+    const c = sprint({ computed: { effort_days_total: { value: 12.5, known: 9, of: 14 }, actual_days_total: { value: null, known: 0, of: 14 } } });
+    const l = load(c);
+    expect(fieldsOf(c).filter(f => f.type === 'sum').map(f => f.key)).toEqual(['effort_total', 'actual_total']);
+    expect(l.record.fields.effort_total).toEqual({ value: 12.5, known: 9, of: 14 });
+    expect(l.record.fields.actual_total).toEqual({ value: null, known: 0, of: 14 });
+  });
+
+  it('ответ сервера без итогов у спринта — «не посчитали» с причиной, а не ноль', () => {
+    const l = load(sprint({ computed: {} }));
+    expect(l.record.fields.effort_total).toEqual({ error: expect.stringMatching(/не прислал/) });
+  });
+
+  it('положительный контроль: клиентская эмуляция без computed — полей итогов нет вовсе', () => {
+    expect(fieldsOf(sprint()).some(f => f.type === 'sum')).toBe(false);
+  });
+});
+
+// SPRINT_UXR_S9_SCALE_OPT/S9-05: у компонента вкладки детей (tasks, sprints)
+// приходят первыми 100, а `count` — полное число. Шапка вкладки называла 230,
+// тело молча перечисляло 100 — обрезка не была сказана нигде в самой вкладке.
+describe('S9-05 · вкладка части: пришла не вся — сказано числом', () => {
+  const tabOf = (c: LoreRecord1, key: string) =>
+    (load(c).config.kinds.sprint!.tabs ?? []).find(t => t.key === key)!;
+  const many = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `SPRINT_X/T-${i}`, title: `Задача ${i}`, status: 'done' }));
+
+  it('пришло 100 из 230 — в теле вкладки «показаны 100 из 230»', () => {
+    const t = tabOf(sprint({ parts: [part({ count: 230, items: many(100) })] }), 'tasks');
+    expect(String(t.render?.({} as never, {} as never))).toContain('показаны 100 из 230');
+  });
+
+  it('положительный контроль: пришли все — оговорки нет', () => {
+    const t = tabOf(sprint({ parts: [part({ count: 3, items: many(3) })] }), 'tasks');
+    expect(String(t.render?.({} as never, {} as never))).not.toMatch(/показаны \d+ из/);
+  });
+
+  it('число неизвестно (count null) — оговорку не выдумываем', () => {
+    const t = tabOf(sprint({ parts: [part({ count: null, items: many(3) })] }), 'tasks');
+    expect(String(t.render?.({} as never, {} as never))).not.toMatch(/показаны \d+ из/);
+  });
+});
