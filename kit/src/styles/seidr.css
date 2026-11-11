@@ -6698,3 +6698,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-fresh[data-tone='bad'] { color: var(--t3); border-bottom: 1px dashed var(--t3); }
 .sk-fresh__dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none; }
 .sk-fresh__word { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; }
+
+/* S4-24: варианты поля не загрузились — причина словами и «Повторить» рядом со значением. */
+.sk-rec-fields__opterr { margin-left: 6px; font-size: var(--fs-xs); color: var(--wrn); }
+.sk-rec-fields__retry { margin-left: 6px; }

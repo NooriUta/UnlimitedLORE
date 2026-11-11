@@ -271,6 +271,8 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // write правка поля обещала бы сохранение, которого некуда отправить.
       ...(writeOf(f.write) ? { write: writeOf(f.write) } : { write: null }),
       ...(str(f.dict) ? { dict: str(f.dict) } : {}),
+      // S4-24 (#1241): варианты из среза сервера — {slice, param, value, label, group?}.
+      ...(optionsSpecOf(f.options) ? { options: optionsSpecOf(f.options)! } : {}),
       ...(section ? { section } : {}),
     };
   });
@@ -406,4 +408,14 @@ export async function fetchLoreRecord(type: string, id: string, opts: FetchRecor
     throw new RecordFetchError(res.status, code, detail);
   }
   return recordFromServer(body, now());
+}
+
+/** Разбор options поля схемы; неполная спека — нет вариантов из среза (а не догадка). */
+export function optionsSpecOf(v: unknown): { slice: string; param?: string; value: string; label: string; group?: string } | null {
+  const o = v && typeof v === 'object' ? (v as Record<string, unknown>) : null;
+  if (!o) return null;
+  const s = (k: string) => (typeof o[k] === 'string' && (o[k] as string) !== '' ? (o[k] as string) : '');
+  if (!s('slice') || !s('value') || !s('label')) return null;
+  // param необязателен: у среза без параметров (трек спринта) его нет.
+  return { slice: s('slice'), ...(s('param') ? { param: s('param') } : {}), value: s('value'), label: s('label'), ...(s('group') ? { group: s('group') } : {}) };
 }

@@ -139,6 +139,7 @@
   "kit.list.shownUnknown": "Showing {shown} · {loaded} loaded, total unknown — the server truncated the result",
   "kit.list.more": "{n} more",
   "kit.field.none": "— not set —",
+  "kit.field.optionsFailed": "options failed to load — cannot edit ({reason})",
   "kit.field.notInList": "«{value}» is not in the list",
   "kit.field.yes": "Yes",
   "kit.field.no": "No",

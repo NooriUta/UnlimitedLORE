@@ -75,6 +75,13 @@ final class LoreRecordRegistry {
     static final Options TASK_IDENTITY_OPTIONS =
         new Options(LoreTaskIdentities.SLICE, "id", "code", "title", "kind");
 
+    /**
+     * Трек спринта — из треков плана (вершины PlanTrack). Список общий, не «по записи»:
+     * {@code param} нет, срез вызывается без параметров.
+     */
+    static final Options SPRINT_TRACK_OPTIONS =
+        new Options(LoreSprintTracks.SLICE, null, "code", "title", null);
+
     /** Раздел текста записи; каждый пишется своим полем (у ADR — три поля adr_set). */
     record Body(String key, String label, String labelKey, boolean editable, Write write) {}
 
@@ -182,7 +189,9 @@ final class LoreRecordRegistry {
                 prop("planned_start", "Начало по плану", "pp.field.plannedStart", "date", null, w("/lore/sprint/plan", "planned_start_date")),
                 prop("planned_end_date", "Конец по плану", "pp.field.plannedEnd", "date", null, w("/lore/sprint/plan", "planned_end_date")),
                 prop("no_release", "Не требует релиза", "pp.field.noRelease", "text", null, null),
-                prop("track", "Трек", null, "text", null, w("/lore/sprint/plan", "track_id")),
+                // S4-24: track_id — ссылка на PlanTrack; выбор из треков плана, запись проверяется
+                // сервером (только существующий трек, LoreSprintTracks.refusal).
+                picked(prop("track", "Трек", null, "enum", null, w("/lore/sprint/plan", "track_id")), SPRINT_TRACK_OPTIONS),
                 ref("components", "Компоненты", "pp.field.components", "component", "BELONGS_TO", "out", "attribute", true, true)),
             List.of(
                 new Body("context_md", "Контекст", "pp.adr.context", true, w("/lore/sprint/update", "context_md")),
@@ -700,7 +709,8 @@ final class LoreRecordRegistry {
         if (f.options() != null) {
             Map<String, Object> o = new LinkedHashMap<>();
             o.put("slice", f.options().slice());
-            o.put("param", f.options().param());
+            // param — только у среза «по записи»; общий список зовётся без параметров.
+            if (f.options().param() != null) o.put("param", f.options().param());
             o.put("value", f.options().value());
             o.put("label", f.options().label());
             if (f.options().group() != null) o.put("group", f.options().group());

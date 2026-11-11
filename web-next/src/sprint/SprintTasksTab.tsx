@@ -144,6 +144,9 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             onColumnsChange={onColumnsChange}
             hrefFor={task => taskPassportHref(sprintId, task.id)}
             label={t('sprintTasks.caption', { id: sprintId })}
+            // S4-SPRINT-TASKS-CONTROLS: стандартная полоса списка — поиск,
+            // фасеты статус / исполнитель / фаза, группировка, порядок.
+            controls
             />
           </>
         )}

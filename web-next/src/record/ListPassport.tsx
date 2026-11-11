@@ -21,7 +21,7 @@ import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
-import { fromLoreRecord, withFieldOptions } from './loreRecordContract';
+import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } from './loreRecordContract';
 import { toDictItems, type DictApiRow } from '../sprint/taskDicts';
 import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
@@ -181,6 +181,25 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     }
     return () => { alive = false; };
   }, [dictKeys, slice, lang]);
+  // S4-24 (#1241): варианты enum из среза сервера (автор/исполнитель/принимающий — task_identities).
+  // Не прочитались — поле говорит причину и даёт «Повторить», свободного ввода нет.
+  const optFields = (contract?.schema.fields ?? []).filter(f => f.kind === 'enum' && f.editable && f.write && !f.dict && f.options);
+  const optKey = optFields.map(f => `${f.key}:${f.options!.slice}`).join(',');
+  const [optSeq, setOptSeq] = useState(0);
+  const [sliceOpts, setSliceOpts] = useState<Record<string, OptionState>>({});
+  useEffect(() => {
+    if (!optKey) return;
+    let alive = true;
+    for (const f of optFields) {
+      const spec = f.options!;
+      slice<Record<string, unknown>>(spec.slice, spec.param ? { [spec.param]: id } : undefined).then(
+        body => { if (alive) setSliceOpts(prev => ({ ...prev, [f.key]: { items: optionsFromSlice(body?.rows ?? [], spec, g => t(g === 'agent' ? 'pp.opt.agents' : g === 'person' ? 'pp.opt.people' : 'pp.opt.other')) } })); },
+        e => { if (alive) setSliceOpts(prev => ({ ...prev, [f.key]: { error: e instanceof Error ? e.message : String(e), retry: () => setOptSeq(n => n + 1) } })); },
+      );
+    }
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optKey, id, slice, optSeq]);
   if (pp.state === 'error') return <LoadError error={pp.error} onRetry={pp.reload} />;
   if (!view) return <Skeleton lines={8} label={t('pp.loading')} />;
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
@@ -269,7 +288,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     ))
     : view.config;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
-  const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf);
+  const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const graphPeek = loreListPeek(lang, id => view.data.records.find(r => r.id === id)?.kind ?? null);
   const ctx: KitCtx = { config: {
     ...withOptions,
