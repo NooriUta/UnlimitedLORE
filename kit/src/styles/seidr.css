@@ -211,8 +211,19 @@
     height: max(100%, var(--hit));
     transform: translate(-50%, -50%);
   }
-  /* У поля ввода ::after нет — оно само высотой цели. */
-  :where(input:not([type='checkbox']):not([type='radio']), select) {
+  /* У поля ввода ::after нет — оно само высотой цели. НЕ под :where:
+     компоненты задают своим полям `min-height: max(var(--tap), 26px)` через
+     «.класс input», и при нулевой специфичности общее правило проигрывало
+     (замер v1.17.13: поле «Привязать…» в паспорте — 26 px). */
+  input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+  select {
+    min-height: var(--hit);
+  }
+  /* У чекбокса и радио тоже нет ::after, а сами они 13 px — цель касания здесь
+     вся строка-подпись (замер v1.17.13: листы «Вид» и «Настройки», строка 18 px).
+     :has(> input[…]) по специфичности сильнее класса подписи — правило одно на
+     все виды подписей kit и приложения. */
+  :where(label):has(> input[type='checkbox'], > input[type='radio']) {
     min-height: var(--hit);
   }
 }
@@ -3684,6 +3695,12 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 }
 .sk-feed__item:last-child { border-bottom: 0; }
 .sk-feed__item.is-selected { background: var(--bg2); }
+/* Телефон (S4-MOBILE-EDGE): колонка времени 112 px оставляла тексту 180 из
+   360 px (замер v1.17.13, «Задачи» → «Лента»). Время — над текстом, слева. */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-feed__item { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .sk-feed__when { padding-top: 0; text-align: left; }
+}
 .sk-feed__when { padding-top: 2px; text-align: right; font-size: var(--fs-2xs); color: var(--t3); }
 .sk-feed__nowhen { color: var(--bdh); }
 .sk-feed__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -4541,6 +4558,15 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
    вовсе — он рисуется разметкой строки, карточки или тела паспорта. */
 .sk-kindblock { min-width: 0; }
 .sk-ttab { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+/* Телефон (S4-MOBILE-EDGE): иерархия карточками — те же .sk-cards__card, что у
+   списка; уровень — отступом слева, группа — строкой-заголовком. */
+.sk-ttab__cards { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sk-ttab__card { margin-left: calc(var(--tree-depth, 0) * 12px); }
+.sk-ttab__cgroup {
+  display: flex; align-items: center; gap: 6px;
+  margin-left: calc(var(--tree-depth, 0) * 12px);
+  padding: 4px 0 0;
+}
 .sk-ttab__table { width: 100%; }
 .sk-ttab__note {
   margin: 0;
