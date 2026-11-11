@@ -35,14 +35,16 @@ final class LoreRecordRegistry {
     /** Типы паспорта v2 — в порядке показа. */
     static final List<String> TYPES = List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release",
         // S4-V2-SECTIONS (kit 09.11): последние три раздела v2 — компонент, технология, фича.
-        "component", "tech", "feature");
+        "component", "tech", "feature",
+        // S4-29 (53а, D-2026-UXR-OWNER-DELEGATED-ANSWERS-10-11): паспорт проекта.
+        "project");
 
     /**
      * Kit 09.11: типы с паспортом только на чтение — путей записи в фасаде у них пока нет.
      * Поля не правятся, perms ничего не обещают: кнопка без пути сохранения хуже её отсутствия.
      */
     static final java.util.Set<String> READ_ONLY = java.util.Set.of("decision", "question", "milestone", "release",
-        "component", "tech", "feature");
+        "component", "tech", "feature", "project");
 
     /** Куда пишется поле: эндпоинт существующего пути записи и имя поля в его теле. */
     record Write(String endpoint, String field) {}
@@ -528,6 +530,35 @@ final class LoreRecordRegistry {
                 rel("pains", "Боли", "ADDRESSES", "out", "pain", "association", "link_tab", false),
                 rel("gains", "Выгоды", "PROMISES", "out", "gain", "association", "link_tab", false),
                 rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "link_tab", false))));
+
+        // ── Проект (только чтение, S4-29, решение 53а) ──────────────────────
+        // KnowGitProject: справочная вершина, ключ slug («владелец/репозиторий»), статуса и
+        // истории нет. Тела нет — первая вкладка сразу «Спринты». Вкладки по смыслу (53а):
+        // Спринты · Компоненты · ADR · Релизы · Люди и агенты; каждая читается своим срезом
+        // project_* постранично (LoreRecordFrom.SLICE_LINKS), порядок — surfaces.passport.
+        TYPE_DEFS.put("project", new TypeDef("project", "Проект", "pp.kind.project", "open-folder",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("code", "Код", null, "text", null, null),
+                prop("default_branch", "Основная ветка", null, "text", null, null),
+                prop("is_private", "Приватный", null, "text", null, null)),
+            List.of(),
+            List.of(new PropSection(null, List.of("default_branch", "is_private"))),
+            List.of(),
+            // Люди и их агенты — одна вкладка с подзаголовками (группа surfaces.passport).
+            List.of(new LinkTab("people", "Люди и агенты", List.of(
+                new TabRel("HAS_PROJECT_ROLE", "in", "люди и агенты", "association", List.of("role"))))),
+            List.of(),
+            List.of(
+                rel("sprints", "Спринты", "BELONGS_TO_PROJECT", "in", "sprint", "attribute", "link_tab", false),
+                // Компонент достигает проекта через свои спринты (своего ребра нет) — тот же путь,
+                // что колонка git_projects у среза components.
+                rel("components", "Компоненты", "BELONGS_TO_PROJECT", "in", "component", "attribute", "link_tab", false),
+                rel("adrs", "ADR", "BELONGS_TO_PROJECT", "in", "adr", "attribute", "link_tab", false),
+                rel("releases", "Релизы", "BELONGS_TO_PROJECT", "in", "release", "attribute", "link_tab", false),
+                rel("people", "Люди", "HAS_PROJECT_ROLE", "in", "user", "association", "link_tab", false),
+                // Агент роли в проекте не получает — он действует от имени владельца с ролью.
+                rel("agents", "Агенты", "HAS_PROJECT_ROLE", "in", "agent", "association", "link_tab", false))));
 
         // ── Дети без своего паспорта: фаза, вопрос, решение — поля для колонок parts ──
         CHILD_ONLY.put("phase", childOnly("phase", "Фаза", List.of(

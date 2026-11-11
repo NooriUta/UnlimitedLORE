@@ -26,7 +26,9 @@ import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type Sp
 export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec', 'decision', 'question', 'milestone', 'release',
   // Появились 10.11 вместе с серверным PR #1090, все три — только на чтение
   // (perms.can_edit=false, status_next=[], version=null приходят с фасада).
-  'component', 'tech', 'feature'] as const;
+  'component', 'tech', 'feature',
+  // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий».
+  'project'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
 
 type Slice = <T>(slice: string, params?: Record<string, string>) => Promise<SliceBody<T>>;
@@ -75,6 +77,8 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   // Фича/US: срез use_cases отдаёт ВСЕ уровни шкалы целей, поэтому стрелки
   // ходят по тем же записям, что видны в разделе, а не по одним верхним.
   if (type === 'feature') return (await slice<Row>('use_cases', { fields: 'uc_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.uc_id), title: str(r.title) || str(r.uc_id) }));
+  // Проект: перечень — тот же срез, что выбор проекта (git_projects); ключ — slug.
+  if (type === 'project') return (await slice<Row>('git_projects', { fields: 'slug,name', limit: '1000' })).rows.map(r => ({ id: str(r.slug), title: str(r.name) || str(r.slug) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));
 }
 
