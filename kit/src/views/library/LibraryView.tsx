@@ -30,6 +30,12 @@ export interface LibraryViewProps {
   /** Выбранный документ (управляемый, если задан onSelect). */
   selected?: string;
   onSelect?: (id: string) => void;
+  /** Поиск (управляемый, если задан onQuery) — чтобы приложение держало его в адресе. */
+  query?: string;
+  onQuery?: (query: string) => void;
+  /** Фильтр «все / актуальные / устарели» (управляемый, если задан onFilter). */
+  filter?: LibraryFilter;
+  onFilter?: (filter: LibraryFilter) => void;
   /** Ссылка «Открыть паспорт». */
   href?: (id: string) => string;
   /** Своё тело читалки; нет — MartProse по `doc.body`. */
@@ -40,12 +46,16 @@ export interface LibraryViewProps {
   className?: string;
 }
 
-export function LibraryView({ groups, status, selected: selectedProp, onSelect, href, renderBody, perGroup = 5, narrow: narrowProp, className }: LibraryViewProps) {
+export function LibraryView({ groups, status, selected: selectedProp, onSelect, query: queryProp, onQuery, filter: filterProp, onFilter, href, renderBody, perGroup = 5, narrow: narrowProp, className }: LibraryViewProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const narrow = useNarrow(narrowProp);
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<LibraryFilter>('all');
+  const [ownQuery, setOwnQuery] = useState('');
+  const [ownFilter, setOwnFilter] = useState<LibraryFilter>('all');
+  const query = queryProp ?? ownQuery;
+  const filter = filterProp ?? ownFilter;
+  const setQuery = (q: string) => { if (queryProp === undefined) setOwnQuery(q); onQuery?.(q); };
+  const setFilter = (f: LibraryFilter) => { if (filterProp === undefined) setOwnFilter(f); onFilter?.(f); };
   const [own, setOwn] = useState<string | undefined>(undefined);
   const [sheetOpen, setSheetOpen] = useState(false);
   const limits = useStepLimits(perGroup);

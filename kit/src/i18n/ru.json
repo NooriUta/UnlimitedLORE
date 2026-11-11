@@ -1088,5 +1088,7 @@
   "kit.fresh.tone.stale": "дольше {n} мин — устарело",
   "kit.fresh.staleShort": "устарело",
   "kit.ref.self": "Себя",
-  "kit.calendar.field": "Поле даты"
+  "kit.calendar.field": "Поле даты",
+  "kit.list.view.library": "Библиотека",
+  "kit.list.library.noConfig": "Для библиотеки у раздела не заданы группы документов"
 }
