@@ -68,7 +68,9 @@ export interface LoreRelation { key: string; label: string; relation: KitRelatio
   /** Тип на другом конце (сервер: target_type) — для подписи и иконки. */
   target_type?: string }
 export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string }
-export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number }
+export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number;
+  /** Кому строка (S4-TECH-NOTES), если её назвал сервер. Нет — решает приложение (fromLoreRecord). */
+  audience?: 'user' | 'tech' }
 export interface LoreRecord1 {
   contract: 'lore.record/1';
   /**
@@ -332,15 +334,20 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // errors их сливал в один. errors остаётся рядом: по нему рисует плашку блок
   // связей (blockError), и терять её нельзя. Задвоения нет — разбор пропускает
   // блок, о котором уже сказано через data_state.
+  //
+  // S4-TECH-NOTES: строки состояния — имена источников («relation:<ключ>»,
+  // «срез · часть»), с ними человек ничего сделать не может. Приложение
+  // помечает их tech: kit спрячет коды и оставит строку «часть сведений не
+  // загрузилась». Тег, присланный сервером, главнее — решает тот, кто родил строку.
   const dataState = [
     ...c.meta.sources.map(s => ({
-      source: s.block, state: s.state,
+      source: s.block, state: s.state, audience: s.audience ?? ('tech' as const),
       ...(s.reason ? { reason: s.reason } : {}),
       ...(s.total !== undefined ? { total: s.total } : {}),
     })),
     ...partErrors
       .filter(e => !c.meta.sources.some(s => s.block === e.block))
-      .map(e => ({ source: e.block, state: e.state, reason: e.reason })),
+      .map(e => ({ source: e.block, state: e.state, reason: e.reason, audience: 'tech' as const })),
   ];
   const data: KitData = {
     records: [record, ...others], edges, journal: [],

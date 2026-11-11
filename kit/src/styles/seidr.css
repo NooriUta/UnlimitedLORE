@@ -6133,3 +6133,20 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-list__p2 { display: none; }
 }
 
+
+/* S4-TECH-NOTES: техническое скрыто до включения — кнопка «тех.» на месте блока. */
+.sk-tech { display: flex; flex-direction: column; gap: 4px; }
+.sk-tech__bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sk-tech__note { color: var(--wrn); }
+.sk-tech__btn {
+  padding: 0 6px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  cursor: pointer;
+}
+.sk-tech__btn:hover, .sk-tech__btn[aria-expanded="true"] { color: var(--t1); border-color: var(--acc); }

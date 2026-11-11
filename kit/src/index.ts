@@ -45,6 +45,9 @@ export {
   blockOutcome, ErrBlock, ErrBlockBoundary, KitBlock, KitSlot, UnverifiedBlock,
   type BlockOutcome, type ErrBlockProps, type KitBlockProps, type KitSlotProps,
 } from './resilience/errBlock';
+// S4-TECH-NOTES: адресат сообщения (user | tech) и скрытие технического до включения.
+export { audienceOf, isTech, type Audience } from './resilience/audience';
+export { TechGate, TechVisibilityProvider, useShowTech, type TechGateProps } from './resilience/techGate';
 export { installErrorScreen, showErrorScreen, type ErrorScreenOptions } from './resilience/errorScreen';
 export { describeError, isBenignError } from './resilience/errorText';
 export { useHotkeys, type HotkeyHandler } from './resilience/useHotkeys';

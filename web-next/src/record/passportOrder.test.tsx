@@ -14,7 +14,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons } from '@seidr/kit';
+import { registerGameIcons, TechVisibilityProvider } from '@seidr/kit';
 import { fetchPassportOrder } from './passportOrder';
 import ListPassport from './ListPassport';
 
@@ -117,9 +117,9 @@ function passportNet(passport: unknown) {
 }
 
 describe('паспорт: причина видна человеку, а не только в коде', () => {
-  it('порядок не задан — на экране сказано, что он клиентский', async () => {
-    render(<ListPassport type="sprint" id="SPRINT_A" placement="bottom"
-      fetchImpl={passportNet({})} backLabel="Спринты" onBack={() => {}} />);
+  it('порядок не задан — на экране сказано, что он клиентский (настройка «технические сведения» включена, S4-TECH-NOTES)', async () => {
+    render(<TechVisibilityProvider show><ListPassport type="sprint" id="SPRINT_A" placement="bottom"
+      fetchImpl={passportNet({})} backLabel="Спринты" onBack={() => {}} /></TechVisibilityProvider>);
     expect(await screen.findByText('Спринт А', {}, { timeout: 8000 })).toBeTruthy();
     await waitFor(() => {
       expect(document.body.textContent ?? '').toMatch(/умолчание приложения/);
