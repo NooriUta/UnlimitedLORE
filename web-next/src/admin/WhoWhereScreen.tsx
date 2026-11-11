@@ -23,6 +23,7 @@ import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import { PersonMachines } from './MachinesScreen';
 import { PersonOffboard } from './PersonOffboard';
+import { WhyNotSee } from './WhyNotSee';
 import './Admin.css';
 
 /** Сброс адреса мастера UC-5: его поля и общий ключ шага мастеров (WizardsScreen STEP_KEY). */
@@ -174,6 +175,8 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
           <ProjectLikeWizard fetchImpl={fetchImpl ?? loreFetch} onDone={closeProjectWiz} />
         </Drawer>
       )}
+      {/* S7B-21: «почему не видит / 403» для агента и инструмента; Главная (детектор 403) и «Агенты» ведут сюда. */}
+      {view === 'people' && <WhyNotSee projects={data ? data.projects.map(p => p.slug) : []} fetchImpl={fetchImpl} />}
     </section>
   );
 }
