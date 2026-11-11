@@ -29,6 +29,25 @@ final class LoreModelTypes {
 
     private LoreModelTypes() {}
 
+    /**
+     * Цвет типа — ИМЯ токена канона v1 ({@code --section-*}), не hex: значение решает
+     * тема, светлая и тёмная совпадают (поручение владелицы 11.11: упоминание чужого
+     * объекта — с иконкой и цветом его канонического объекта). Каждый токен обязан
+     * быть объявлен в src/styles (сторож — LoreModelTypeColorTest).
+     */
+    static final Map<String, String> TYPE_COLOR = Map.of(
+        "sprint", "section-sprints",
+        "adr", "section-adrs",
+        "decision", "section-decisions",
+        "milestone", "section-milestones",
+        "release", "section-releases",
+        "component", "section-components",
+        "tech", "section-tech",
+        "feature", "section-features");
+
+    /** Типы без канона цвета в v1: color = null честно, цвет не выдумываем. */
+    static final Set<String> NO_TYPE_COLOR = Set.of("task", "spec", "question", "project");
+
     /** Тип записи → (вершина, Hist, деловой ключ). */
     record Graph(String vertex, String hist, String key) {}
 
@@ -145,6 +164,7 @@ final class LoreModelTypes {
             type.put("label", contract.get("label"));
             type.put("label_key", contract.get("label_key"));
             type.put("icon", contract.get("icon"));
+            type.put("color", TYPE_COLOR.get(t));
             type.put("key", g.key());
             type.put("vertex", g.vertex());
             type.put("hist", g.hist());

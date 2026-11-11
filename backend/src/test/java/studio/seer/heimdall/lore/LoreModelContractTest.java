@@ -99,8 +99,12 @@ class LoreModelContractTest {
         assertEquals(LoreRecordRegistry.TYPES, List.copyOf(types.keySet()), "все 8 типов паспорта, в порядке показа");
         for (String t : LoreRecordRegistry.TYPES) {
             Map<String, Object> type = map(types.get(t), "types." + t);
-            has(type, Set.of("type", "label", "icon", "key", "vertex", "hist", "fields", "relations", "computed",
+            has(type, Set.of("type", "label", "icon", "color", "key", "vertex", "hist", "fields", "relations", "computed",
                 "unclassified", "internal"), "types." + t);
+            // Поручение владелицы 11.11: цвет типа — имя токена канона (section-*) или null, не hex.
+            Object color = type.get("color");
+            assertTrue(color == null || String.valueOf(color).matches("section-[a-z-]+"),
+                "types." + t + ".color — имя токена section-* или null, а не «" + color + "»");
             for (Object fo : list(type.get("fields"), t + ".fields")) {
                 Map<String, Object> f = map(fo, t + ".fields[]");
                 String w = t + "." + f.get("key");

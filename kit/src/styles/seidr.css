@@ -1644,7 +1644,14 @@ code, pre, kbd, samp { font-family: var(--mono); }
    верхнее меню, чего не было в прототипе». «Весь экран» внутри приложения
    значит «вся область содержимого». */
 .sk-shell__main {
-  position: relative; min-width: 0; overflow: auto;
+  /* НЕ контейнер прокрутки (S7B-29, замер 11.11 в Chrome, 1280×800 и
+     844×390): прокручивается документ, а не эта область — у неё нет своей
+     высоты. Прежний overflow: auto делал её контейнером, который сам никогда
+     не прокручивается, и любое position: sticky внутри было мёртвым: полоса
+     шагов мастера уезжала на −717 px. overflow-x: clip держит ширину (лишнее
+     обрезается, страница боком не распирается — S9-12), но контейнера
+     прокрутки не создаёт; overflow-y остаётся visible. */
+  position: relative; min-width: 0; overflow-x: clip;
   /* Последняя колонка первой строки при любом числе колонок: две у раскрытого
      меню, рейки и ушка, одна на узком экране. */
   grid-row: 1;
@@ -2181,7 +2188,17 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   color: var(--t2);
   font-size: var(--fs-sm);
 }
+/* Полоса шагов липнет сверху, кнопки — снизу (S7B-29): при прокрутке длинного
+   шага видно, где ты и куда дальше. Фон непрозрачный — содержимое под ними не
+   просвечивает и не перекрывает кнопки. В оболочке полоса встаёт под её липкую
+   шапку, кнопки — над нижней панелью модулей телефона. */
+.sk-shell .sk-steps { scroll-margin-top: var(--sk-top-h); }
 .sk-steps__bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg0);
+  padding-top: 4px;
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap);
@@ -2192,6 +2209,7 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   list-style: none;
   counter-reset: none;
 }
+.sk-shell .sk-steps__bar { top: var(--sk-top-h); }
 .sk-steps__item { display: flex; min-width: 0; }
 .sk-steps__step {
   display: inline-flex;
@@ -2275,11 +2293,24 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-steps__manual-text { color: var(--t1); }
 .sk-steps__manual-hint { color: var(--t3); font-size: var(--fs-xs); }
 .sk-steps__nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--bg0);
+  padding: 6px 0;
+  border-top: 1px solid var(--bd);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gap);
   min-width: 0;
+}
+.sk-shell--narrow .sk-steps__nav { bottom: calc(var(--sk-dock-h) + env(safe-area-inset-bottom, 0px)); }
+/* Низкий экран (телефон в ландшафте, ≤500 px): две липкие полосы и шапка
+   съели бы почти всю высоту. Липкими остаются только кнопки — без них шаг не
+   пройти; полоса шагов уезжает со страницей, а «Шаг N из M» над шагом. */
+@media (max-height: 500px) {
+  .sk-steps__bar { position: static; }
 }
 .sk-steps__btn {
   min-height: max(var(--tap), 28px);
@@ -6487,3 +6518,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-live__trunc { color: var(--wrn); }
 .sk-live__scope { margin-left: auto; }
 .sk-live__view { min-width: 0; }
+
+/* S4-14: фильтр по типам в поиске — свёрнут по умолчанию (слово владелицы 11.11.2026). */
+.sk-palette__kinds { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 12px; border-bottom: 1px solid var(--bd); }
+.sk-palette__kindsbtn { border: 0; background: none; padding: 2px 4px; font: inherit; font-size: var(--fs-xs); color: var(--t2); cursor: pointer; }
+.sk-palette__kindsbtn::after { content: " ▸"; color: var(--t3); }
+.sk-palette__kindsbtn[aria-expanded="true"]::after { content: " ▾"; }
+.sk-palette__kindn { font-family: var(--mono); color: var(--t3); }

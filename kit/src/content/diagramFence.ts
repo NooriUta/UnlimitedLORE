@@ -41,7 +41,7 @@ export interface FenceOpening { indent: number; marker: string; lang: string }
 
 /**
  * Открывает ли строка фенс по CommonMark. ОДНО правило на весь kit: им пользуются
- * чтение (diagramFence, markdownBare) и правка (normalizeMarkdown) — K-13.
+ * чтение (MartProse) и правка (normalizeMarkdown) — K-13.
  */
 export function fenceOpening(line: string): FenceOpening | null {
   const m = FENCE.exec(line);
@@ -72,8 +72,8 @@ function dedent(line: string, indent: number): string {
  * Разбор текста на текстовые куски и объявленные блоки диаграмм.
  *
  * Склейка всех `text`-кусков обратно даёт исходный текст без потерь — поэтому
- * тем же разбором пользуются и React-рендер (MartProse), и путь без сборки
- * (markdownBare): правило «что считается диаграммой» одно на оба пути.
+ * тем же разбором пользуются чтение (MartProse) и правка (normalizeMarkdown):
+ * правило «что считается диаграммой» одно (K-13: в kit везде TipTap + MartProse).
  */
 export function splitDiagramFences(
   text: string,

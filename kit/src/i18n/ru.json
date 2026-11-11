@@ -299,6 +299,8 @@
   "kit.palette.more": "Показано {shown} из {total} — уточните запрос",
   "kit.palette.commandFailed": "Команда «{title}» не выполнилась: {reason}",
   "kit.palette.hint": "↑↓ — выбор · Enter — открыть · Esc — закрыть",
+  "kit.palette.kinds": "Типы",
+  "kit.palette.kindsOn": "Типы · {n}",
   "kit.palette.action": "действие",
   "kit.palette.targetRecord": "Над записью {id}",
   "kit.palette.targetSelection": "Выбрано: {n}",
@@ -1015,5 +1017,6 @@
   "kit.peek.copyFailed": "Не удалось скопировать: браузер не дал доступа к буферу обмена.",
   "kit.peek.close": "Закрыть просмотр",
   "kit.peek.width": "Ширина просмотра",
-  "kit.peek.keys": "Пробел — закрыть · J/K — соседняя строка · Esc"
+  "kit.peek.keys": "Пробел — закрыть · J/K — соседняя строка · Esc",
+  "kit.steps.held": "Шаг «{title}» из ссылки пока закрыт — открыт этот: {reason}"
 }

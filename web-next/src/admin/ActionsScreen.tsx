@@ -20,6 +20,7 @@ import {
   type BatchState,
 } from './actions';
 import { DangerBatch } from './DangerBatch';
+import { KcDenials } from './KcDenials';
 import './Admin.css';
 
 export interface ActionsScreenProps {
@@ -269,6 +270,8 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
         <p className="adm-hint">{t('admin.log.f.timeHint')}</p>
       </form>
       {body}
+      {/* S7B-31 п.4а: отказы доступа KC (буфер до рестарта) — из старой вкладки «Настройки». */}
+      <KcDenials fetchImpl={fetchImpl} />
     </section>
   );
 }
