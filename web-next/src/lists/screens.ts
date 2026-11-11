@@ -256,7 +256,7 @@ function adrsConfig(lang: KitLang): KitConfig {
         { id: 'accepted', title: appT(lang, 'lists.status.accepted'), filter: { status: 'accepted' } },
         { id: 'no-decisions', title: appT(lang, 'lists.quick.noDecisions'), filter: { decisions: '0' } },
       ],
-      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.tags],
       groupings: ['status', 'component', 'project'],
       columns: ['id', 'title', 'status', 'component', 'decisions', 'updated_at'],
     },
@@ -375,7 +375,7 @@ const decisionsSpec: SectionSpec = {
   views: ['list', 'cards', 'board', 'feed'],
   showClosed: 'below',
   quick: [['proposed', 'lists.status.proposed', { status: 'proposed' }], ['no-adr', 'lists.quick.noAdr', { adr: '' }]],
-  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.tags],
   groupings: ['status', LORE_FILTER_FIELDS.component, 'fields.adr'],
   columns: ['id', 'title', 'status', 'component', 'adr', 'updated_at'],
 };
