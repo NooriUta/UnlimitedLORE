@@ -86,6 +86,11 @@ final class LoreSectionCount {
         return out;
     }
 
+    /** MT-MCP-CHANGED-RANGE: заготовка под тест (красный до кода). */
+    static Map<String, Object> count(String sliceId, Map<String, Object> body, Map<String, String> filters, SlicePage page) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
     static List<String> countableSlices() {
         return LoreStatusCategory.SLICE_STATUS.keySet().stream().sorted().toList();
     }
