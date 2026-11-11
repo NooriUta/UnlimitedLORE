@@ -1935,9 +1935,12 @@ export function ListView({
       : <EmptyState title={t('kit.list.timeline.noConfig')} />;
   } else if (view === 'calendar') {
     // Календарь (K2-VIEW-CALENDAR, прототип утверждён 11.11.2026): те же отфильтрованные записи.
+    // Месяц и поле даты — в состоянии списка, а значит в адресе (lm, lcd): ссылкой делятся тем же видом.
     const cal = listCfg?.calendar;
+    const pick = cal?.dates?.find(d => d.date === state.calDate) ?? cal?.dates?.find(d => d.date === cal.date) ?? cal?.dates?.[0];
     body = cal
-      ? <CalendarMonth config={config} records={filtered} date={cal.date} href={href} onOpen={onOpen} narrow={narrow} />
+      ? <CalendarMonth config={config} records={filtered} date={pick?.date ?? cal.date} end={pick ? pick.end : cal.end} dates={cal.dates}
+          onDate={d => update({ calDate: d })} month={state.month ?? undefined} onMonth={m => update({ month: m })} href={href} onOpen={onOpen} narrow={narrow} />
       : <EmptyState title={t('kit.list.calendar.noConfig')} />;
   } else if (view === 'tree') {
     // Дерево (S4-22): иерархия по list.tree над теми же отфильтрованными записями.

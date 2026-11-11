@@ -250,6 +250,10 @@ export interface ListState {
   group2?: string | null;
   /** Режим закрытых (S4-27); null — из конфига (list.showClosed), иначе «все». */
   closed?: KitShowClosed | null;
+  /** Месяц календаря YYYY-MM (K2-VIEW-CALENDAR); нет — текущий. */
+  month?: string | null;
+  /** Поле даты календаря из list.calendar.dates; нет — list.calendar.date. */
+  calDate?: string | null;
 }
 
 export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
@@ -257,9 +261,9 @@ export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group:
 /**
  * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
  * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
- * lg2 (подгруппа, S4-26).
+ * lg2 (подгруппа, S4-26), lm (месяц календаря), lcd (поле даты календаря).
  */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2'] as const;
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
@@ -275,6 +279,8 @@ export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[numb
     lt: text.trim() ? text : null,
     lc: s.closed ?? null,
     lg2: s.group && s.group2 && s.group2 !== s.group ? s.group2 : null,
+    lm: s.month ?? null,
+    lcd: s.calDate ?? null,
   };
 }
 
@@ -309,7 +315,7 @@ export function readListState(p: URLSearchParams): ListState {
     } catch { /* битый URL — условия по умолчанию */ }
   }
   return {
-    view: lv === 'board' || lv === 'tree' || lv === 'cards' || lv === 'feed' || lv === 'timeline' ? lv : 'list',
+    view: lv === 'board' || lv === 'tree' || lv === 'cards' || lv === 'feed' || lv === 'timeline' || lv === 'calendar' ? lv : 'list',
     quick: p.get('lq'),
     group: p.get('lg'),
     sort: ls ? { key: ls.replace(/^-/, ''), dir: ls.startsWith('-') ? 'desc' : 'asc' } : null,
@@ -318,6 +324,8 @@ export function readListState(p: URLSearchParams): ListState {
     text: p.get('lt') ?? '',
     closed: isShowClosed(p.get('lc')) ? (p.get('lc') as KitShowClosed) : undefined,
     group2: p.get('lg2') ?? undefined,
+    month: /^\d{4}-(0[1-9]|1[0-2])$/.test(p.get('lm') ?? '') ? p.get('lm')! : undefined,
+    calDate: p.get('lcd') ?? undefined,
   };
 }
 

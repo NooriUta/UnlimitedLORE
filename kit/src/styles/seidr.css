@@ -6528,6 +6528,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-cal__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sk-cal__month { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-md); text-transform: capitalize; }
 .sk-cal__undated { font-size: var(--fs-xs); color: var(--wrn); }
+.sk-cal__field { font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 2px 6px; }
 .sk-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--bd); border-radius: var(--r-md); overflow: hidden; }
 .sk-cal__dow { padding: 4px 6px; background: var(--bg2); border-bottom: 1px solid var(--bd); font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
 .sk-cal__day { min-height: 84px; padding: 3px 4px; display: grid; gap: 2px; align-content: start; min-width: 0; border-right: 1px solid var(--bd); border-bottom: 1px solid var(--bd); }
