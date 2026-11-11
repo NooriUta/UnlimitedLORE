@@ -869,6 +869,13 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
+    /** Решение владелицы 11.11: срезы, у которых число скрытых скоупом строк говорится словами. ЗАГЛУШКА до правки. */
+    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of();
+
+    /** ЗАГЛУШКА до правки: «скрыто N» в метке скоупа. */
+    static void putHidden(Map<String, Object> marker, int total, int shown) {
+    }
+
     /** AL-91: скоупный срез при пустом множестве разрешённых проектов — отказ, а не пустой список. */
     static boolean scopeDenies(String id, java.util.Set<String> allowed) {
         return allowed != null && allowed.isEmpty() && LoreSlices.PROJECT_SCOPED.containsKey(id);
