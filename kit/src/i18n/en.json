@@ -1003,5 +1003,6 @@
   "kit.peek.copyFailed": "Could not copy: the browser denied clipboard access.",
   "kit.peek.close": "Close preview",
   "kit.peek.width": "Preview width",
-  "kit.peek.keys": "Space — close · J/K — next row · Esc"
+  "kit.peek.keys": "Space — close · J/K — next row · Esc",
+  "kit.steps.held": "Step «{title}» from the link is not open yet — this one is: {reason}"
 }

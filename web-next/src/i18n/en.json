@@ -922,6 +922,7 @@
   "peek.kind.unknown": "record",
   "peek.err.noType": "record type is not set and cannot be recognised from the ID — cannot open",
   "peek.sheetTitle": "Record {id}",
+  "admin.wiz.finished": "Wizard «{title}» is finished. Pick a wizard to start again.",
   "admin.projects.title": "Projects",
   "admin.projects.lead": "Who is in each project, with which role, and whose agents work there. An agent sees all of its owner’s projects, so a project runs the agents of all its members. Expand a project to see who sees it and why.",
   "admin.mcp.onlyFailures": "Only with refusals",
