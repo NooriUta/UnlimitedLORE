@@ -10,7 +10,7 @@
 //     задачами S4; до тех пор раздел честно говорит «экран не собран».
 //   • Статусы — коды LORE; иконка и цвет из общей таблицы kit (statusMeta), чтобы
 //     v2 и kit не разошлись; подпись — из локалей web-next.
-import { ICON_CANON } from '@seidr/kit';
+import { ICON_CANON, SECTION_ICONS } from '@seidr/kit';
 import { statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { ADMIN_MODULE, adminMenu } from '../admin/adminModule';
@@ -26,6 +26,8 @@ export const V2_SECTIONS = [
   'sprint', 'task', 'milestone', 'release',
   'adr', 'decision', 'spec', 'question',
   'component', 'tech', 'feature', 'project',
+  // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
+  'product', 'actor', 'pain', 'gain', 'job',
   'news', 'settings',
 ] as const;
 export type V2Section = (typeof V2_SECTIONS)[number];
@@ -117,10 +119,22 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
           id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)',
           items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('question', 'help')],
         },
-        // «Устройство» — из чего система сделана: компоненты, технологии, фичи.
+        // «Продукт» — зачем всё это (глава «Зачем» v1): продукты, фичи и сценарии,
+        // роли, боли, выгоды, работы (S4-PRODUCTS-NODE). «Фичи» переехали сюда из
+        // «Устройства» (S4-PRODUCT-HILITE) — перенос, раздел и его экран те же.
+        // Иконки — канон: bullseye — SECTION_ICONS.value kit; остальные — слаги v1
+        // (LorePage SECTIONS, product/icons.ts VP_ICON).
+        {
+          id: 'product', title: t('shell.grp.product'), tone: 'var(--wrn)',
+          items: [
+            item('product', SECTION_ICONS.value), item('feature', 'gift-of-knowledge'), item('actor', 'hooded-figure'),
+            item('pain', 'thorn-helix'), item('gain', 'gift-of-knowledge'), item('job', 'archery-target'),
+          ],
+        },
+        // «Устройство» — из чего система сделана: проекты, компоненты, технологии.
         {
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
-          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears'), item('feature', 'gift-of-knowledge')],
+          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears')],
         },
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
@@ -141,6 +155,11 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       tech: { title: t('shell.sec.tech'), icon: 'gears' },
       feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge' },
       project: { title: t('shell.sec.project'), icon: 'open-folder' },
+      product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },
+      actor: { title: t('shell.sec.actor'), icon: 'hooded-figure' },
+      pain: { title: t('shell.sec.pain'), icon: 'thorn-helix' },
+      gain: { title: t('shell.sec.gain'), icon: 'gift-of-knowledge' },
+      job: { title: t('shell.sec.job'), icon: 'archery-target' },
     },
     statuses: {
       // Словарь из модели главнее: он данные, а рукописный список — умолчание.

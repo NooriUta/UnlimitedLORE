@@ -70,6 +70,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "tech" -> new Source("tech_by_id", "id", false);
             case "feature" -> new Source("uc_by_id", "id", false);
             // S4-29 (53а): паспорт проекта; ключ — slug «владелец/репозиторий».
+            // S4-PRODUCTS-NODE: паспорт продукта; ключ — код статьи словаря product.
+            case "product" -> new Source("product_by_id", "code", false);
             case "project" -> new Source("project_by_id", "project", false);
             default -> null;
         };

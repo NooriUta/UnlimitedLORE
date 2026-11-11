@@ -75,6 +75,7 @@ const LIST_SECTION: Record<ListScreenId, V2Section> = {
   decisions: 'decision', specs: 'spec', questions: 'question', milestones: 'milestone',
   releases: 'release', components: 'component', tech: 'tech', features: 'feature',
   projects: 'project',
+  products: 'product', actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job',
 };
 
 /**

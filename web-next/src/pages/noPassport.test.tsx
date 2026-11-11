@@ -78,8 +78,26 @@ describe('паспорт есть у каждого раздела', () => {
     const sections = Object.keys(LIST_SCREENS);
     expect(sections.length, 'разделы не прочитались — проверка прошла бы мимо').toBeGreaterThan(5);
     const without = sections.filter(s => !(s in PASSPORT_OF));
-    expect(without, 'раздел без паспорта: человек получит отказ вместо записи').toEqual([]);
+    // S4-PRODUCTS-NODE (11.11): боли, выгоды, работы и роли пришли в v2 РАНЬШЕ своего
+    // паспорта — третий раз по правилу этого файла. Список явный: новый раздел без
+    // паспорта сюда молча не попадёт.
+    expect(without, 'раздел без паспорта: человек получит отказ вместо записи').toEqual(['actors', 'pains', 'gains', 'jobs']);
     const unknown = Object.values(PASSPORT_OF).filter(t => !(PASSPORT_TYPES as readonly string[]).includes(t as string));
     expect(unknown, 'раздел ведёт на тип, которого фасад не отдаёт').toEqual([]);
+  });
+});
+
+describe('раздел без паспорта отвечает словами (боли, S4-PRODUCTS-NODE)', () => {
+  const PAINS = { rows: [{ pain_id: 'PAIN-1', title: 'Долго искать', severity: 'high', actor_ids: [], addressed_by: 1, relieved_by: 0 }], truncated: false };
+  it('щелчок по боли — «паспорта нет», код записи и путь назад', async () => {
+    render(<ListScreen screen="pains" fetchImpl={net(PAINS)} urlState={fakeWin()} />);
+    const row = await screen.findByText('Долго искать', {}, { timeout: 8000 });
+    await act(async () => { fireEvent.click(row); });
+    await waitFor(() => {
+      const box = document.querySelector('.list-screen__nopassport');
+      expect(box, 'отказ словами').toBeTruthy();
+      expect(box!.textContent).toContain('PAIN-1');
+      expect(box!.querySelector('button'), 'путь назад').toBeTruthy();
+    }, { timeout: 8000 });
   });
 });

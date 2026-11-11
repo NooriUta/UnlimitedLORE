@@ -46,7 +46,10 @@ final class LoreModelTypes {
         "feature", "section-features");
 
     /** Типы без канона цвета в v1: color = null честно, цвет не выдумываем. */
-    static final Set<String> NO_TYPE_COLOR = Set.of("task", "spec", "question", "project");
+    static final Set<String> NO_TYPE_COLOR = Set.of("task", "spec", "question", "project",
+        // S4-PRODUCTS-NODE: канона --section-products в v1 нет (src/styles/tokens.css) — цвет ТИПА не выдумываем.
+        // Цвет КОНКРЕТНОГО продукта — данные (KnowDictEntry.color), а не цвет типа.
+        "product");
 
     /** Тип записи → (вершина, Hist, деловой ключ). */
     record Graph(String vertex, String hist, String key) {}
@@ -71,7 +74,9 @@ final class LoreModelTypes {
         Map.entry("tech", new Graph("KnowSpec", "KnowSpecHist", "spec_id")),
         Map.entry("feature", new Graph("KnowUseCase", null, "uc_id")),
         // S4-29 (53а): проект — справочная вершина без истории.
-        Map.entry("project", new Graph("KnowGitProject", null, "slug")));
+        Map.entry("project", new Graph("KnowGitProject", null, "slug")),
+        // S4-PRODUCTS-NODE: продукт — статья словаря; история статьи — KnowDictEntryHist (history_dict).
+        Map.entry("product", new Graph("KnowDictEntry", "KnowDictEntryHist", "code")));
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
     static final Map<String, Map<String, String>> ALIASES = Map.ofEntries(
@@ -87,7 +92,8 @@ final class LoreModelTypes {
         Map.entry("component", Map.of("title", "full_name", "code", "component_id", "parent", "parent_id", "icon", "game_icon")),
         Map.entry("tech", Map.of("code", "spec_id")),
         Map.entry("feature", Map.of("code", "uc_id", "date", "date_created", "parent", "parent_uc_id")),
-        Map.entry("project", Map.of("title", "name", "code", "slug")));
+        Map.entry("project", Map.of("title", "name", "code", "slug")),
+        Map.entry("product", Map.of("title", "label_ru")));
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
@@ -297,7 +303,9 @@ final class LoreModelTypes {
             List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("shipped_at", "date", null), src("date_created", "date", null)))),
         // S4-29 (53а): у проекта ни истории, ни дат заведения и правки — честные пустые списки
         // («источника нет»), а не отсутствие раздела.
-        Map.entry("project", time("none", List.of(), List.of())));
+        Map.entry("project", time("none", List.of(), List.of())),
+        // S4-PRODUCTS-NODE: статья словаря — версия SCD2 в KnowDictEntryHist, даты заведения нет.
+        Map.entry("product", time("scd2", List.of(), List.of(src(VER, "datetime", "версию открывает правка статьи словаря")))));
 
     // ── Вид поля: важность и поведение длинного содержимого (владелица 09.11) ──
     // Водораздел: kit знает только ФОРМУ (рисует поле по этим подсказкам), приложение —

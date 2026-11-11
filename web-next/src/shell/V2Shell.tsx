@@ -43,6 +43,8 @@ const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>([
   'sprint', 'adr', 'task',
   // S4-V2-SECTIONS: у всех разделов-списков заголовок рисует шапка экрана kit.
   'milestone', 'release', 'decision', 'spec', 'question', 'component', 'tech', 'feature', 'project',
+  // S4-PRODUCTS-NODE: нода «Продукт».
+  'product', 'actor', 'pain', 'gain', 'job',
 ]);
 
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
@@ -71,6 +73,13 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   feature: () => <ListScreen screen="features" titleId={SECTION_TITLE_ID} />,
   // S4-29 (53а): раздел «Проекты» — тем же путём; щелчок открывает паспорт проекта.
   project: () => <ListScreen screen="projects" titleId={SECTION_TITLE_ID} />,
+  // S4-PRODUCTS-NODE: нода «Продукт» — тем же путём (общий ListScreen + описание экрана).
+  // Паспорт — только у продукта; боли, выгоды, работы, роли отвечают «паспорта нет».
+  product: () => <ListScreen screen="products" titleId={SECTION_TITLE_ID} />,
+  actor: () => <ListScreen screen="actors" titleId={SECTION_TITLE_ID} />,
+  pain: () => <ListScreen screen="pains" titleId={SECTION_TITLE_ID} />,
+  gain: () => <ListScreen screen="gains" titleId={SECTION_TITLE_ID} />,
+  job: () => <ListScreen screen="jobs" titleId={SECTION_TITLE_ID} />,
   // Лента новостей kit (SPRINT_UXR_S7A_NEWS/S7A-02); свой заголовок — у раздела.
   // Статусы в ленте читаются тем же planStatusOf, что у задач и спринтов (иконки совпадают).
   news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} statusOf={planStatusOf} hrefOf={newsHrefV2} refHrefOf={newsRefHrefV2} />,

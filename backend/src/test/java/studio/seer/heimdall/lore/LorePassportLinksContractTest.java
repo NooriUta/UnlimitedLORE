@@ -47,7 +47,10 @@ class LorePassportLinksContractTest {
         new Fact("tech", "BELONGS_TO", "component", "LoreResourceBase.syncSpecComponent (SPEC-TECH-…)"),
         new Fact("component", "DOCUMENTED_IN", "tech", "LoreResourceBase.relinkSpecComponentEdge (SPEC-TECH-…)"),
         new Fact("component", "PARENT_OF", "component", "LoreResourceBase (ребёнок → родитель, parent_id)"),
-        new Fact("component", "USES", "tech_ref", "LoreTechnology по tech_id (стек компонента)"));
+        new Fact("component", "USES", "tech_ref", "LoreTechnology по tech_id (стек компонента)"),
+        // S4-PRODUCTS-NODE: компонент входит в продукт — показывают оба конца (поле «Продукты»
+        // компонента и вкладка «Компоненты» паспорта продукта).
+        new Fact("component", "IN_PRODUCT", "product", "LoreProductAxisResource product_link (component → IN_PRODUCT)"));
 
     /**
      * Тип паспорта → тип сущности в каталоге рёбер ({@link LoreLinkTypes#ENTITIES}, {@link #GRAPH}).

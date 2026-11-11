@@ -35,7 +35,22 @@ class LoreRecordSnapshotTest {
     static final Map<String, Map<String, Object>> ROWS = new LinkedHashMap<>();
 
     /** Типы, рождённые после перевода на общий сборщик: снимка «до» у них нет. */
-    static final List<String> POST_REFACTOR = List.of("project");
+    static final List<String> POST_REFACTOR = List.of("project", "product");
+
+    /**
+     * Значения, которые общий сборщик отдаёт СВЕРХ снимка — поля, заведённые после рефакторинга
+     * (S4-PRODUCTS-NODE: «Продукты» компонента, IN_PRODUCT). Снимок «до» их не знал; сверка идёт
+     * без них, а само значение проверяет ProductPassportTest. Список явный: молча расширить
+     * значения типа нельзя.
+     */
+    static final Map<String, List<String>> ADDED_AFTER = Map.of("component", List.of("products"));
+
+    /** Значения сборщика без полей, заведённых после снимка ({@link #ADDED_AFTER}). */
+    static Map<String, Object> sansAdded(String type, Map<String, Object> v) {
+        Map<String, Object> out = new LinkedHashMap<>(v);
+        for (String k : ADDED_AFTER.getOrDefault(type, List.of())) out.remove(k);
+        return out;
+    }
 
     static {
         ROWS.put("sprint", m("sprint_id", "SPRINT_SNAP", "name", "Спринт снимка", "status_raw", "✅ DONE — закрыт",
@@ -153,7 +168,7 @@ class LoreRecordSnapshotTest {
     void valuesMatchSnapshotForAllElevenTypes() {
         for (String type : ROWS.keySet())
             for (Map<String, Object> row : variants(ROWS.get(type)))
-                assertSnapshot(Legacy.values(type, row), LoreRecordValues.values(type, row), type + " values " + row);
+                assertSnapshot(Legacy.values(type, row), sansAdded(type, LoreRecordValues.values(type, row)), type + " values " + row);
     }
 
     @Test

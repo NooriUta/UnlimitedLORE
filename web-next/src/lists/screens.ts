@@ -16,8 +16,9 @@ import { feedConfig, type FeedSpec } from './feed';
 import type { AppKey } from '../i18n';
 import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
-  adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord, projectRecord,
-  questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
+  actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
+  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord,
+  techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
 
@@ -528,6 +529,67 @@ const featuresSpec: SectionSpec = {
   columns: ['id', 'title', 'status', 'level', 'ucs', 'tasks', 'components'],
 };
 
+// ── Нода «Продукт» (S4-PRODUCTS-NODE, владелица 11.11) ───────────────────────
+// Продукты и минимальный профиль клиента: боли, выгоды, работы, роли. Статусов у
+// этих записей нет (справочники) — ни колонки, ни фасета статуса (K-14). VP-канва —
+// отдельный спринт; здесь только списки. Иконки — канон v1 (product/icons.ts,
+// LorePage SECTIONS) и SECTION_ICONS kit.
+
+/** Продукты: статья словаря product; родитель и подпродукты — рёбра PARENT_PRODUCT. */
+const productsSpec: SectionSpec = {
+  kind: 'product', titleKey: 'lists.products.title', icon: 'bullseye',
+  fields: [['parent', 'ref'], ['children', 'ref'], ['components', 'ref'], ['project', 'ref']],
+  views: ['list', 'cards'],
+  quick: [['top-level', 'lists.quick.topLevel', { parent: '' }]],
+  filters: [LORE_FILTER_FIELDS.project, 'fields.parent'],
+  groupings: ['fields.parent'],
+  columns: ['id', 'title', 'parent', 'children', 'components', 'project'],
+};
+
+/** Боли: «заявлено» (ADDRESSES) и «снимает» (RELIEVES) — два разных утверждения (ADR-LORE-032 D5). */
+const painsSpec: SectionSpec = {
+  kind: 'pain', titleKey: 'lists.pains.title', icon: 'thorn-helix',
+  fields: [['severity', 'text'], ['actors', 'ref'], ['claimed', 'number'], ['relieved', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.severity', 'fields.actors'],
+  groupings: ['fields.severity', 'fields.actors'],
+  // «Никто не снимает» — тот же вопрос, что находка pain_without_relief гигиены продукта.
+  quick: [['not-relieved', 'lists.quick.notRelieved', { relieved: '0' }]],
+  columns: ['id', 'title', 'severity', 'actors', 'claimed', 'relieved'],
+};
+
+const gainsSpec: SectionSpec = {
+  kind: 'gain', titleKey: 'lists.gains.title', icon: 'gift-of-knowledge',
+  fields: [['rank', 'text'], ['actors', 'ref'], ['claimed', 'number'], ['delivered', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.rank', 'fields.actors'],
+  groupings: ['fields.rank', 'fields.actors'],
+  quick: [['not-delivered', 'lists.quick.notDelivered', { delivered: '0' }]],
+  columns: ['id', 'title', 'rank', 'actors', 'claimed', 'delivered'],
+};
+
+const jobsSpec: SectionSpec = {
+  kind: 'job', titleKey: 'lists.jobs.title', icon: 'archery-target',
+  fields: [['job_kind', 'text'], ['importance', 'text'], ['actors', 'ref'], ['claimed', 'number'], ['performed', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.job_kind', 'fields.importance', 'fields.actors'],
+  groupings: ['fields.job_kind', 'fields.importance'],
+  quick: [['not-performed', 'lists.quick.notPerformed', { performed: '0' }]],
+  columns: ['id', 'title', 'job_kind', 'importance', 'actors', 'claimed', 'performed'],
+};
+
+/** Пользовательские роли (клиентские сегменты): вид актора — фасет и разрез по умолчанию. */
+const actorsSpec: SectionSpec = {
+  kind: 'actor', titleKey: 'lists.actors.title', icon: 'hooded-figure',
+  fields: [['actor_kind', 'text'], ['project', 'ref'], ['ucs', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.actor_kind', LORE_FILTER_FIELDS.project],
+  groupings: ['fields.actor_kind', LORE_FILTER_FIELDS.project],
+  // «Мёртвая роль» v1 (аналитика продукта): роль без сценариев.
+  quick: [['no-ucs', 'lists.quick.noUcs', { ucs: '0' }]],
+  columns: ['id', 'title', 'actor_kind', 'project', 'ucs'],
+};
+
 export const LIST_SCREENS = {
   sprints: {
     modelType: 'sprint',
@@ -619,6 +681,27 @@ export const LIST_SCREENS = {
     // Оговорка осталась, но про ДРУГУЮ, настоящую причину: компонент и проект
     // срез отдаёт только свои, а у вложенных сценариев они наследованные.
     note: UC_OWN_LINKS_NOTE,
+  },
+  // S4-PRODUCTS-NODE: продукты (паспорт v2 — тип product) и профиль клиента.
+  products: {
+    slice: 'products', titleKey: 'lists.products.title', icon: 'bullseye',
+    map: productRecord, config: lang => sectionConfig(lang, productsSpec), quickIcons: {},
+  },
+  actors: {
+    slice: 'actors', titleKey: 'lists.actors.title', icon: 'hooded-figure',
+    map: actorRecord, config: lang => sectionConfig(lang, actorsSpec), quickIcons: {},
+  },
+  pains: {
+    slice: 'pains', titleKey: 'lists.pains.title', icon: 'thorn-helix',
+    map: painRecord, config: lang => sectionConfig(lang, painsSpec), quickIcons: {},
+  },
+  gains: {
+    slice: 'gains', titleKey: 'lists.gains.title', icon: 'gift-of-knowledge',
+    map: gainRecord, config: lang => sectionConfig(lang, gainsSpec), quickIcons: {},
+  },
+  jobs: {
+    slice: 'jobs', titleKey: 'lists.jobs.title', icon: 'archery-target',
+    map: jobRecord, config: lang => sectionConfig(lang, jobsSpec), quickIcons: {},
   },
 } as const satisfies Record<string, ListScreenDef>;
 
