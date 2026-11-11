@@ -91,6 +91,22 @@ describe('паспорт по видам связей', () => {
     expect(screen.queryByRole('button', { name: /^Отвязать/ })).toBeNull();
     expect(screen.getByTestId('kit-relation-list').textContent).toContain('Задача');
   });
+  // Слово владелицы 11.11 («связь с компонентами пропала»): у компонента BELONGS_TO:in — и ADR,
+  // и спринты. Без вида цели вкладка «ADR» показывала бы спринты, а «Спринты» — ADR.
+  it('одно ребро в двух связях — каждая вкладка только свой вид цели (targetKind)', () => {
+    const comp = r('C-1', 'component', 'Компонент');
+    const recs = [comp, r('ADR-9', 'adr', 'ADR компонента'), r('S-9', 'sprint', 'Спринт компонента')];
+    const cfg: KitConfig = { ...config(), kinds: { component: { title: 'Компонент', icon: 'cog', fields: [], relations: [
+      { key: 'adrs', label: 'ADR', relation: 'aggregation', rel: 'BELONGS_TO', dir: 'in', targetKind: 'adr' },
+      { key: 'sprints', label: 'Спринты', relation: 'aggregation', rel: 'BELONGS_TO', dir: 'in', targetKind: 'sprint' },
+    ] } } };
+    const ctx: KitCtx = { ...ctxOf(cfg), data: { records: recs, edges: [
+      { from: 'ADR-9', to: 'C-1', type: 'BELONGS_TO' }, { from: 'S-9', to: 'C-1', type: 'BELONGS_TO' },
+    ], journal: [], meta: { generated_at: '2026-11-11T00:00:00Z' } } };
+    render(<RecordView record={comp} ctx={ctx} tab="adrs" onTab={() => {}} placement="bottom" />);
+    const rows = within(screen.getByTestId('kit-relation-list')).getAllByRole('row').slice(1);
+    expect(rows.map(tr => tr.getAttribute('data-record-id'))).toEqual(['ADR-9']);
+  });
   it('без hooks.onRelation — только чтение, кнопок управления нет', () => {
     view('decisions');
     expect(screen.queryByRole('button', { name: /^Отвязать/ })).toBeNull();

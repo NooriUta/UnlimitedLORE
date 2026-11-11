@@ -259,8 +259,10 @@ class LorePassportSurfaceTest {
 
     @Test
     void component() {
-        assertEquals(List.of("specs", "adrs", "tech", "children", "tasks", "sprints"), tabs("component"),
-            "компонент: Спеки · ADR · Технологии · Подкомпоненты (46а/52а) · Задачи · Спринты (срезы с пагинацией, S4-29)");
+        assertEquals(List.of("specs", "adrs", "techs", "children", "decisions", "questions", "features", "docs", "qgs",
+                "tasks", "sprints"), tabs("component"),
+            "компонент: Спеки · ADR · Технологии · Подкомпоненты (46а/52а) · решения, вопросы, сценарии, знания, гейты "
+                + "(11.11, как v1) · Задачи · Спринты (срезы с пагинацией, S4-29)");
     }
 
     @Test

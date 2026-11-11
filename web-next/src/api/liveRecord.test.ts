@@ -124,6 +124,24 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect(c.schema.relations.find(r => r.key === 'depends_on')?.count).toBe(1);
   });
 
+  // Слово владелицы 11.11 («связь с компонентами пропала»): у компонента BELONGS_TO:in — ADR,
+  // спринты, решения… Одно ребро, разные связи; счёт — по типу цели, а не по ребру.
+  it('одно ребро в двух связях — счётчик по типу цели', () => {
+    const b = sprintBody();
+    b.links = [
+      { rel: 'BELONGS_TO', dir: 'in', id: 'ADR-1', type: 'adr', title: 'ADR', status: '' },
+      { rel: 'BELONGS_TO', dir: 'in', id: 'S-1', type: 'sprint', title: 'S', status: '' },
+      { rel: 'BELONGS_TO', dir: 'in', id: 'S-2', type: 'sprint', title: 'S2', status: '' },
+    ];
+    b.schema.relations = [
+      { key: 'adrs', label: 'ADR', relation: 'attribute', rel: 'BELONGS_TO', dir: 'in', target_type: 'adr', place: 'link_tab', manageable: false },
+      { key: 'sprints', label: 'Спринты', relation: 'attribute', rel: 'BELONGS_TO', dir: 'in', target_type: 'sprint', place: 'link_tab', manageable: false },
+    ];
+    const c = recordFromServer(b, LOADED);
+    expect(c.schema.relations.find(r => r.key === 'adrs')?.count).toBe(1);
+    expect(c.schema.relations.find(r => r.key === 'sprints')?.count).toBe(2);
+  });
+
   it('подпись поля — label, а не label_key: ключ человеку не показывают', () => {
     const c = recordFromServer(sprintBody(), LOADED);
     const labels = c.schema.fields.map(f => f.label);

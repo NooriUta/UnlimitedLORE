@@ -155,6 +155,21 @@ final class LoreLinkTypes {
             && isAllowed(fromType, toType, edgeType);
     }
 
+    /**
+     * Ребро «запись → компонент» по классу вершины записи — одно правило для всех путей записи.
+     * Берётся из {@link #PAIRS} (у задачи — TAGGED_WITH), иначе BELONGS_TO. Слово владелицы 11.11
+     * («связь с компонентами пропала»): задача из находки QG получала BELONGS_TO, а паспорт задачи,
+     * срез component_tasks и граф читают TAGGED_WITH — компонент такой задачи не виден нигде.
+     */
+    static String componentEdgeOf(String vertexClass) {
+        for (Entity e : ENTITIES.values()) {
+            if (!e.vertexClass().equals(vertexClass)) continue;
+            for (Pair p : PAIRS)
+                if (p.fromType().equals(e.type()) && "component".equals(p.toType())) return p.edgeType();
+        }
+        return "BELONGS_TO";
+    }
+
     static Entity entity(String type) {
         return type == null ? null : ENTITIES.get(type);
     }

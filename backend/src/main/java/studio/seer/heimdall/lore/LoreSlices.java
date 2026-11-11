@@ -1941,7 +1941,19 @@ public final class LoreSlices {
             "in('PARENT_OF').component_id   AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
             "in('BELONGS_TO')[adr_id IS NOT NULL].adr_id  AS adrs, " +
-            "out('DOCUMENTED_IN').spec_id   AS specs " +
+            "out('DOCUMENTED_IN').spec_id   AS specs, " +
+            // Слово владелицы 11.11 («связь с компонентами пропала»): всё, что пути записи
+            // привязывают к компоненту ребром BELONGS_TO, — для вкладок паспорта v2 (как в v1:
+            // QG · Знания · Сценарии). belonging_specs — спеки, у которых есть только ребро
+            // спека → компонент (без DOCUMENTED_IN); паспорт сводит их со specs. Отбор — по
+            // классу вершины, а не по наличию поля: qg_id носит не только QualityGate (счётчик
+            // qg_count у HND — 10, а гейтов компонента — 4).
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSpec'].spec_id         AS belonging_specs, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowDecision'].decision_id AS decisions, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowQuestion'].question_id AS questions, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowUseCase'].uc_id        AS features, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowDoc'].doc_id           AS docs, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'QualityGate'].qg_id        AS qgs " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 

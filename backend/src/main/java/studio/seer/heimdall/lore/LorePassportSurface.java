@@ -69,7 +69,11 @@ final class LorePassportSurface {
         Map.entry("release", List.of(own(CONTENT), own("sprints"), own("prs"))),
         // 46а/52а: тела у компонента нет — первая вкладка документация. S4-29: Задачи · Спринты
         // (срезы с пагинацией) — после своих связей.
-        Map.entry("component", List.of(own("specs"), own("adrs"), own("tech"), own("children"),
+        // 11.11 (слово владелицы — «связь с компонентами пропала»): вкладка «Технологии» — паспорта
+        // технологий (techs, DOCUMENTED_IN), а не метки стека USES; + решения, вопросы, сценарии,
+        // знания и гейты — после своих связей, перед задачами и спринтами.
+        Map.entry("component", List.of(own("specs"), own("adrs"), own("techs"), own("children"),
+            own("decisions"), own("questions"), own("features"), own("docs"), own("qgs"),
             own("tasks"), own("sprints"))),
         Map.entry("tech", List.of(own(CONTENT))),
         Map.entry("feature", List.of(own(CONTENT), own("children"), own("tasks"),
