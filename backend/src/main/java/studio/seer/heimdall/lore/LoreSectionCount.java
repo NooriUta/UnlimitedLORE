@@ -30,7 +30,7 @@ final class LoreSectionCount {
     private LoreSectionCount() {}
 
     /** Параметры страницы — не фильтры: в счётчик и в {@code filters} не попадают. */
-    static final Set<String> PAGE_PARAMS = Set.of("limit", "offset", "fields");
+    static final Set<String> PAGE_PARAMS = Set.of("limit", "offset", "fields", "changed_from", "changed_to", "sort");
 
     /** Срез считается, только если известно, каким полем он несёт статус какого типа. */
     static boolean isCountable(String sliceId) {
@@ -86,9 +86,36 @@ final class LoreSectionCount {
         return out;
     }
 
-    /** MT-MCP-CHANGED-RANGE: заготовка под тест (красный до кода). */
+    /**
+     * MT-MCP-CHANGED-RANGE: счётчик с тем же периодом {@code changed_from}/{@code changed_to}, что у
+     * среза ({@link SlicePage}) — иначе «закрыто за сегодня» в счётчике не сошлось бы со списком.
+     * Строки сворачиваются {@link LoreChangedAt#fold} (как в выдаче среза) и режутся периодом;
+     * учтённый период называется в {@code filters}. Страница (limit/offset/fields) по-прежнему
+     * не учитывается. Срез без {@code changed_at} в строках — отказ (как у среза).
+     */
     static Map<String, Object> count(String sliceId, Map<String, Object> body, Map<String, String> filters, SlicePage page) {
-        throw new UnsupportedOperationException("not implemented");
+        SlicePage.Range range = page == null ? null : page.range();
+        if (range == null || !range.filters()) return count(sliceId, body, filters);
+        Object raw = body == null ? null : body.get("rows");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = raw instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        rows = LoreChangedAt.fold(rows);
+        boolean hasColumn = false;
+        for (Map<String, Object> r : rows) if (r != null && r.containsKey(SlicePage.CHANGED_AT)) { hasColumn = true; break; }
+        if (!rows.isEmpty() && !hasColumn)
+            throw new IllegalArgumentException("slice " + sliceId + " has no " + SlicePage.CHANGED_AT
+                + " in its rows — changed_from/changed_to cannot apply to its count");
+        List<Map<String, Object>> kept = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows)
+            if (r != null && range.contains(LoreChangedAt.instant(r.get(SlicePage.CHANGED_AT)))) kept.add(r);
+        Map<String, Object> cut = body == null ? new LinkedHashMap<>() : new LinkedHashMap<>(body);
+        cut.put("rows", kept);
+        Map<String, String> echo = new LinkedHashMap<>(filtersOf(filters));
+        if (range.fromRaw() != null) echo.put("changed_from", range.fromRaw());
+        if (range.toRaw() != null) echo.put("changed_to", range.toRaw());
+        Map<String, Object> counted = count(sliceId, cut, filters);
+        counted.put("filters", echo);
+        return counted;
     }
 
     static List<String> countableSlices() {
