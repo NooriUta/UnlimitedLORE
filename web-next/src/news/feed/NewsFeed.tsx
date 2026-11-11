@@ -10,30 +10,31 @@
 // Фильтры, группировка, порядок и время — в панели «Фильтры» (на телефоне —
 // нижний лист). Карточки метрик, разрез, матрица, сгорание, знания — по
 // нажатию «все метрики». Ничего не удалено: всё в одном действии.
-import { kitMinute } from '../core/fmtValue';
+import { kitMinute } from '@seidr/kit/core';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
-import { GameIcon } from '../elements/GameIcon';
-import { Pill } from '../elements/Pill';
-import { statusMeta } from '../elements/statusMeta';
-import { statusLook, useStatusDict } from '../core/statusLook';
-import { StatusIcon } from '../core/StatusIcon';
-import { kitT, useKitLang } from '../i18n';
-import { LIST_BUDGET } from '../list/listModel';
-import { useStepLimits, type StepLimits } from '../core/stepLimit';
-import type { KitLang } from '../i18n';
-import { pushUrlState, readUrlState } from '../resilience/urlState';
-import { classifyError, errorDetail } from '../states/loadState';
-import { useLoadState } from '../states/useLoadState';
-import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
+import { GameIcon } from '@seidr/kit';
+import { Pill } from '@seidr/kit';
+import { statusMeta } from '@seidr/kit';
+import { statusLook, useStatusDict } from '@seidr/kit';
+import { StatusIcon } from '@seidr/kit';
+import { kitT, useKitLang } from '@seidr/kit';
+import { LIST_BUDGET } from '@seidr/kit';
+import { useStepLimits, type StepLimits } from '@seidr/kit/core';
+import type { KitLang } from '@seidr/kit';
+import { pushUrlState, readUrlState } from '@seidr/kit';
+import { classifyError, errorDetail } from '@seidr/kit';
+import { useLoadState } from '@seidr/kit';
+import { EmptyState, Forbidden, LoadError, Skeleton } from '@seidr/kit';
 import { newsT, type NewsKey } from './i18n';
 import {
   DEFAULT_NEWS_QUERY, NEWS_KIND_META, NEWS_TYPE_META, axisLabel, buildNewsParams, drillLabel, eventAxisValues, kindLabel,
-  newsGroupLabel, newsHref, pairText, parseNewsResponse, readNewsQuery, shortDay, shortProject, signTone, signed, typeLabel,
+  newsGroupLabel, pairText, parseNewsResponse, readNewsQuery, shortDay, shortProject, signTone, signed, typeLabel,
   utcClock, writeNewsQuery, type NewsPeriod, type NewsQuery, type NewsScope, type NewsZone,
 } from './model';
 import { Delta, NewsPanels, type NewsSection } from './NewsPanels';
 import type { NewsSource } from './source';
+import { newsHrefV2 } from '../newsLinks';
 import {
   NEWS_AXES, NEWS_FILTER_AXES, type NewsAxis, type NewsEvent, type NewsFilterAxis, type NewsReadMark, type NewsResponse,
 } from './types';
@@ -48,7 +49,7 @@ export interface NewsFeedProps {
   timeZone?: string;
   /** Какие блоки показать; по умолчанию все. */
   sections?: readonly NewsSection[];
-  /** Ссылка строки; по умолчанию — паспорта LORE (newsHref). null — строка не ведёт никуда. */
+  /** Ссылка строки; по умолчанию — маршрутизатор приложения (newsHrefV2). null — строка не ведёт никуда. */
   hrefOf?: (e: NewsEvent) => string | null;
   /** Открыть запись без перехода по ссылке (клик, Enter, пробел). */
   onOpen?: (e: NewsEvent) => void;
@@ -124,7 +125,7 @@ function sheetChanges(q: NewsQuery, fixed: Set<string>): number {
 }
 
 export function NewsFeed({
-  source, scope, urlPrefix = 'n', timeZone, sections = NEWS_SECTIONS_ALL, hrefOf = newsHref, onOpen, title, className,
+  source, scope, urlPrefix = 'n', timeZone, sections = NEWS_SECTIONS_ALL, hrefOf = newsHrefV2, onOpen, title, className,
   statusOf = defaultNewsStatusOf, refHrefOf = noRefHref,
 }: NewsFeedProps) {
   const lang = useKitLang();

@@ -103,7 +103,9 @@ export function sprintKitData(
       journal: [],
       meta: {
         generated_at: generatedAt,
-        ...(failed ? { errors: [{ block: TASKS_BLOCK, reason: (tasks as { error: string }).error }] } : {}),
+        // S4-TECH-NOTES: «tasks — HTTP 403» — диагностика (tech): человек видит
+        // строку «часть сведений не загрузилась» и «не смогли проверить» в фактах.
+        ...(failed ? { errors: [{ block: TASKS_BLOCK, reason: (tasks as { error: string }).error, audience: 'tech' as const }] } : {}),
       },
     },
   };

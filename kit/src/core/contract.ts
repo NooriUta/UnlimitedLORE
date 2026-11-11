@@ -48,7 +48,7 @@ export interface KindConfig { title:string; icon:string; relations?:KitRelationD
    * что kit отдавал ей весь обзор и редактор до тела не доходил.
    */
   bodySections?:{key:string; title:string; /** Раздел можно писать. false — только чтение даже при праве правки: путь записи для него сервер не даёт (schema.fields[].editable). */ editable?:boolean}[];
-  overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; /** Сколько элементов (B13): число — счёт, `null` — «не смогли посчитать», поля нет — считать нечего. Рисуется тем же TabCount, что у вкладок связей. */ count?:number|null; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; /** `sum` (S4-09) — сумма с охватом (KitSumInput), та же ячейка, что `sum:` в списке. */ type:'text'|'md'|'enum'|'ref'|'date'|'number'|'sum'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string}[] }
+  overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; /** Сколько элементов (B13): число — счёт, `null` — «не смогли посчитать», поля нет — считать нечего. Рисуется тем же TabCount, что у вкладок связей. */ count?:number|null; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; /** `sum` (S4-09) — сумма с охватом (KitSumInput), та же ячейка, что `sum:` в списке. */ type:'text'|'md'|'enum'|'ref'|'date'|'number'|'sum'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string; /** S4-24: поле правится на месте (✎ → FieldEditor). Право и путь записи называет приложение; без него — только чтение. */ editable?:boolean; /** Варианты для enum (значение или пара «значение + подпись»). Нет вариантов — enum не правится: выбирать не из чего. */ options?:(string|{value:string; label:string})[]; /** Обязательность (D-2026-LORE-RECORD-FIELD-REQUIRED). */ required?:'block'|'warn'}[] }
 export interface KitRecord { id:string; kind:string; title:string; status:string; fields:Record<string,unknown>; body_md?:string; updated_at?:string }
 export interface KitEdge { from:string; to:string; type:string }
 export interface KitJournalEntry { at:string; who:string; is_agent?:boolean; record_id:string; field:string; from:unknown; to:unknown; approved_by?:string }
@@ -56,7 +56,9 @@ export interface KitMeta { generated_at:string; scope?:string; total?:number; re
   /** Отказ по ПРАВАМ, а не сбой (K2-FEED-VIEW §6): «нет прав» ≠ «не смогли проверить», и по тексту причины это не угадывается — признак называет приложение. */
   forbidden?:boolean;
   /** Когда пропуск случился — чтобы в ленте он стоял на своём месте по времени, а не притворялся свежим. Не названо — строка идёт в «без времени». */
-  at?:string}[] }
+  at?:string;
+  /** Кому строка (S4-TECH-NOTES): 'tech' — диагностика, скрыта, пока её не включили; без тега — 'user'. Ставит тот, кто строку рождает. */
+  audience?:'user'|'tech'}[] }
 export interface KitData { records:KitRecord[]; edges:KitEdge[]; journal:KitJournalEntry[]; meta:KitMeta }
 export interface KitVerdict { score:number; max:number; failed:string[]; hints:string[] }
 export type KitFilter = Record<string, string|string[]>;

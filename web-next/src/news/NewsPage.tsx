@@ -2,7 +2,7 @@
 // Вся лента — компонент kit (NewsFeed): тот же, что паспорта S5 вставляют
 // вкладкой «Активность» (NewsActivity, S7A-06). Здесь — только выбор
 // источника данных; разрез экрана живёт в URL (префикс «n»).
-import { NewsFeed } from '@seidr/kit';
+import { NewsFeed } from './feed';
 import { newsSource } from './source';
 import { planStatusOf } from '../sprints/taskStatus';
 import { newsHrefV2, newsRefHrefV2 } from './newsLinks';

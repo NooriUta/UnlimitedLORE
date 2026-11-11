@@ -87,4 +87,36 @@ describe('UC-8 · экран', () => {
     expect(await screen.findByTestId('adm-agents-error')).toBeTruthy();
     expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
   });
+
+  it('поиск: по имени человека, его проекту или агенту; запрос в адресе (adm-q), S7B-25', async () => {
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
+    const q = await screen.findByTestId('adm-who-q');
+    fireEvent.change(q, { target: { value: 'FRO' } });
+    expect(new URLSearchParams(window.location.search).get('adm-q')).toBe('FRO');
+    expect(screen.getByTestId('adm-person-u-fro')).toBeTruthy();
+    expect(screen.queryByTestId('adm-person-u-owner')).toBeNull();
+    fireEvent.change(q, { target: { value: 'kimi' } });
+    expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
+    expect(screen.queryByTestId('adm-person-u-fro')).toBeNull();
+    fireEvent.change(q, { target: { value: 'unlimited' } });
+    expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
+    expect(screen.queryByTestId('adm-person-u-fro')).toBeNull();
+  });
+
+  it('поиск в «Проектах»: по slug или участнику', async () => {
+    window.history.replaceState(null, '', '/?adm-by=projects&adm-q=frolova');
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
+    expect(await screen.findByTestId('adm-project-AIDA/miniLORE')).toBeTruthy();
+    expect(screen.queryByTestId('adm-project-NooriUta/UnlimitedLORE')).toBeNull();
+  });
+
+  it('по запросу никого — «ничего не найдено» с кнопкой сброса, а не «людей нет»', async () => {
+    window.history.replaceState(null, '', '/?adm-q=нетакого');
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
+    const empty = await screen.findByTestId('adm-who-nothing');
+    expect(empty.textContent).toMatch(/нетакого/);
+    fireEvent.click(within(empty).getByRole('button'));
+    expect(new URLSearchParams(window.location.search).get('adm-q')).toBeNull();
+    expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
+  });
 });

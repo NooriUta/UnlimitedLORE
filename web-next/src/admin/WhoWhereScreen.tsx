@@ -8,7 +8,7 @@
 import { useMemo, type SyntheticEvent } from 'react';
 import { EmptyState, Forbidden, LoadError, Pill, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
 import { useAppT } from '../i18n';
-import { fetchParticipation, type Participation } from './participation';
+import { fetchParticipation, filterPeople, filterProjectViews, type Participation } from './participation';
 import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import './Admin.css';
@@ -25,6 +25,8 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
   const view = by === 'projects' ? 'projects' : 'people';
   // Раскрытая строка — в адресе (?adm-open=kc_sub | slug): ссылка открывает тот же вопрос «почему».
   const [open, setOpen] = useUrlParam('adm-open');
+  // S7B-25: поиск — в адресе (?adm-q=…), ссылка открывает ту же выборку.
+  const [query, setQuery] = useUrlParam('adm-q');
   const res = useLoadState<Participation>(signal => fetchParticipation(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
   const data = res.data;
   const agentNames = (list: AgentRow[]) => list.map(a => (
@@ -42,7 +44,7 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
     if (view === 'people') {
       return (
         <ul className="adm-list" data-testid="adm-people">
-          {data.people.map(p => (
+          {filterPeople(data.people, query).map(p => (
             <li key={p.kc_sub}>
               <details data-testid={`adm-person-${p.kc_sub}`} open={open === p.kc_sub} onToggle={toggle(p.kc_sub)}>
                 <summary>
@@ -80,7 +82,7 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
     }
     return (
       <ul className="adm-list" data-testid="adm-projects">
-        {data.projects.map(pr => (
+        {filterProjectViews(data.projects, query).map(pr => (
           <li key={pr.slug}>
             <details data-testid={`adm-project-${pr.slug}`} open={open === pr.slug} onToggle={toggle(pr.slug)}>
               <summary>
@@ -115,7 +117,9 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
         ))}
       </ul>
     );
-  }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs]);
+  }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs, query]);
+  const nothing = !!data && !!(query ?? '').trim()
+    && (view === 'people' ? filterPeople(data.people, query) : filterProjectViews(data.projects, query)).length === 0;
 
   let content;
   if (res.state === 'loading' && !data) content = <Skeleton lines={6} label={t('admin.who.loading')} />;
@@ -132,7 +136,12 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
             {t('admin.who.orphans', { n: data.orphanAgents.length })} {agentNames(data.orphanAgents)}
           </p>
         )}
-        {body}
+        {nothing ? (
+          <div data-testid="adm-who-nothing">
+            <EmptyState title={t('admin.who.nothing', { q: (query ?? '').trim() })} hint={t('admin.who.nothingHint')}
+              action={<button type="button" className="sk-btn" onClick={() => setQuery(null, { replace: true })}>{t('admin.who.qReset')}</button>} />
+          </div>
+        ) : body}
       </>
     );
   }
@@ -147,6 +156,12 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
         <button type="button" role="radio" className="adm-chip" aria-checked={view === 'projects'} aria-pressed={view === 'projects'}
           data-testid="adm-by-projects" onClick={() => setBy('projects')}>{t('admin.who.byProjects')}</button>
       </div>
+      <label className="adm-field adm-who__q">
+        <span className="adm-field__l">{t('admin.who.q')}</span>
+        <input className="adm-input" type="search" value={query ?? ''} data-testid="adm-who-q"
+          placeholder={t('admin.who.qHint')} spellCheck={false}
+          onChange={e => setQuery(e.target.value === '' ? null : e.target.value, { replace: true })} />
+      </label>
       {content}
     </section>
   );

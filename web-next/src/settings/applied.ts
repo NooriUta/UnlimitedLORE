@@ -43,3 +43,8 @@ export function appliedCollapseNavOnRead(given?: Host): boolean {
 export function appliedPeekHover(given?: Host): boolean {
   return host(given)?.getAttribute('data-peek-hover') !== 'off';
 }
+
+/** Показывать ли технические сведения (S4-TECH-NOTES). Атрибута нет — нет. */
+export function appliedShowTech(given?: Host): boolean {
+  return host(given)?.getAttribute('data-show-tech') === 'on';
+}

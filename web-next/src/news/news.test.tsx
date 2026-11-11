@@ -6,7 +6,8 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { KitLangProvider, NEWS_FIXTURE, registerGameIcons } from '@seidr/kit';
+import { KitLangProvider, registerGameIcons } from '@seidr/kit';
+import { NEWS_FIXTURE } from './feed';
 import App, { routeOf } from '../App';
 import { NEWS_LIVE, newsSource, pickNewsSource } from './source';
 

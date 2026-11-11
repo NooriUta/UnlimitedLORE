@@ -7,8 +7,8 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons } from '../elements/GameIcon';
-import { KitLangProvider } from '../i18n';
+import { registerGameIcons } from '@seidr/kit';
+import { KitLangProvider } from '@seidr/kit';
 import {
   DEFAULT_NEWS_QUERY, NEWS_FIXTURE, NewsFeed, buildNewsParams, metricDrill, readNewsQuery, writeNewsQuery,
   type NewsResponse, type NewsSource,

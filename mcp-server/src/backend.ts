@@ -3,6 +3,8 @@
 // named-slice composition + whitelisting. Writes carry either a bearer token
 // (A2, once LORE_MCP_CLIENT_ID/SECRET are set) or the legacy X-Seer-Role header.
 
+import { hostname as osHostname } from 'node:os';
+
 const BASE = (process.env.LORE_BACKEND_URL ?? 'http://localhost:9100').replace(/\/$/, '');
 const ROLE = process.env.LORE_SEER_ROLE ?? 'admin';
 
@@ -229,13 +231,43 @@ export function actAsHeader(env: Record<string, string | undefined>): Record<str
   return v ? { 'X-Lore-Act-As': v } : {};
 }
 
+/**
+ * SPRINT_LORE_AGENT_OBSERVABILITY/AO-MACHINE-OBJ: машина, с которой пишет эта сессия, —
+ * заголовком X-Lore-Machine на каждом вызове. Бэкенд заводит вершину KnowMachine при
+ * отсутствии и привязывает к ней агента ребром (машин у агента может быть несколько).
+ *
+ * Источник: LORE_MACHINE_ID (явно) → COMPUTERNAME (тот же, что у хука SessionStart,
+ * session-start-register.ps1) → HOSTNAME → имя хоста ОС. Символы вне [A-Za-z0-9_.-]
+ * заменяются на «-», длина — до 64: бэкенд недопустимое значение не примет и скажет об этом.
+ */
+export function machineHeader(
+  env: Record<string, string | undefined>,
+  hostname: () => string = osHostname,
+): Record<string, string> {
+  const raw = [env.LORE_MACHINE_ID, env.COMPUTERNAME, env.HOSTNAME, safeHostname(hostname)]
+    .map((v) => (v ?? '').trim())
+    .find((v) => v.length > 0);
+  if (!raw) return {};
+  return { 'X-Lore-Machine': raw.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 64) };
+}
+
+function safeHostname(hostname: () => string): string {
+  try {
+    return hostname();
+  } catch {
+    return '';
+  }
+}
+
 async function writeAuthHeaders(): Promise<Record<string, string>> {
   const actAs = actAsHeader(process.env);
-  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs };
+  const machine = machineHeader(process.env);
+  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs, ...machine };
   return {
     Authorization: `Bearer ${await serviceAccountToken()}`,
     'X-Seer-Role': ROLE,
     ...actAs,
+    ...machine,
   };
 }
 
@@ -307,7 +339,7 @@ export function sliceExtraOf(body: SliceBody): SliceExtra | undefined {
 }
 
 type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string; page?: unknown; scope?: unknown; scope_projects?: unknown; outside_scope?: unknown };
-export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean; fields?: string[]; fields_checked?: boolean; warning?: string };
+export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean; fields?: string[]; fields_checked?: boolean; warning?: string; changed_from?: string | null; changed_to?: string | null; sort?: string | null; time_zone?: string };
 
 /**
  * SE-01: страница выдачи (limit/offset у любого слайса). Бэкенд кладёт её в `page`;
@@ -324,6 +356,11 @@ export function slicePageOf(body: SliceBody): SlicePage | undefined {
     ...(Array.isArray(o.fields) ? { fields: o.fields as string[] } : {}),
     ...(typeof o.fields_checked === 'boolean' ? { fields_checked: o.fields_checked } : {}),
     ...(typeof o.warning === 'string' ? { warning: o.warning } : {}),
+    // MT-MCP-CHANGED-RANGE: применённый период и порядок — иначе отфильтрованная выдача читалась бы как весь срез.
+    ...('changed_from' in o ? { changed_from: (o.changed_from as string | null) ?? null } : {}),
+    ...('changed_to' in o ? { changed_to: (o.changed_to as string | null) ?? null } : {}),
+    ...('sort' in o ? { sort: (o.sort as string | null) ?? null } : {}),
+    ...(typeof o.time_zone === 'string' ? { time_zone: o.time_zone } : {}),
   };
 }
 export type SliceMeta = { truncated: boolean | string; limit?: number; hint?: string };

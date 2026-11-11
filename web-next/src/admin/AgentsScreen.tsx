@@ -8,13 +8,13 @@
 //     что пустая клетка читается как «так и надо».
 // Правка harness — выбором из реестра сервера, только если сервер его прислал.
 import { Fragment, useMemo, useState } from 'react';
-import { Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useUrlParam } from '@seidr/kit';
+import { DiffPreview, Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useUrlParam, type DiffRow } from '@seidr/kit';
 import { AgentProjectsPanel } from './AccessBlocks';
 import { RotatePanel } from './KcDanger';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  agentWhy, fetchAgentOrphans, fetchAgents, filterAgents, graphOrphans, harnessCounts, HARNESS_NONE, offRegistry,
+  agentWhy, agentsWithoutMachine, AGENTS_NO_MACHINE, fetchAgentOrphans, fetchAgents, filterAgents, graphOrphans, harnessCounts, HARNESS_NONE, offRegistry,
   setAgentHarness, setAgentMachine,
   type AgentRow, type AgentsData, type KcOrphan,
 } from './agents';
@@ -32,9 +32,16 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
   const [harness, setHarness] = useState<string | null>(null);
   // Раскрытый агент (вкладка «Проекты») — в адресе: ?adm-agent=actor_id (S7B-12).
   const [openAgent, setOpenAgent] = useUrlParam('adm-agent');
+  // S7B-25: фильтр «без машины» — в адресе: на него ведёт карточка Главной (S7B-26).
+  const [agentsF, setAgentsF] = useUrlParam('adm-agents-f');
+  const noMachine = agentsF === AGENTS_NO_MACHINE;
   const data = res.data;
   const counts = useMemo(() => (data ? harnessCounts(data.rows, data.registry) : []), [data]);
-  const rows = useMemo(() => (data ? filterAgents(data.rows, harness) : []), [data, harness]);
+  const rows = useMemo(() => {
+    if (!data) return [];
+    const byHarness = filterAgents(data.rows, harness);
+    return noMachine ? agentsWithoutMachine(byHarness) : byHarness;
+  }, [data, harness, noMachine]);
   const label = (k: string) => (k === HARNESS_NONE ? t('admin.harness.none') : data?.labels[k] ?? k);
 
   let body;
@@ -56,6 +63,11 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
               {label(c.key)} <b>{c.n}</b>
             </button>
           ))}
+          <button type="button" className="adm-chip" aria-pressed={noMachine} data-testid="adm-agents-nomachine"
+            data-none={agentsWithoutMachine(data.rows).length > 0 || undefined}
+            onClick={() => setAgentsF(noMachine ? null : AGENTS_NO_MACHINE, { replace: true })}>
+            {t('admin.machine.noneChip')} <b>{agentsWithoutMachine(data.rows).length}</b>
+          </button>
         </div>
         {data.truncated && <p className="adm-note" data-tone="wrn" role="status">{t('admin.agents.truncated')}</p>}
         {data.registryProblem && (
@@ -87,7 +99,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                     <tr data-testid={`adm-agent-row-${r.actor_id}`}>
                       <td colSpan={6}>
                         <AgentWhyLine row={r} />
-                        <MachineEditor row={r} fetchImpl={fetchImpl} onSaved={res.reload} />
+                        <MachineEditor row={r} all={data.rows} fetchImpl={fetchImpl} onSaved={res.reload} />
                         {/* S7B-03: ротация секрета — дифф → ввод clientId → секрет один раз; отменить нельзя. */}
                         <RotatePanel clientId={r.client_id} fetchImpl={fetchImpl} />
                         <AgentProjectsPanel clientId={r.client_id} agentScope={r.agent_role}
@@ -197,18 +209,26 @@ function OrphansBlock({ rows, fetchImpl }: { rows: AgentRow[]; fetchImpl?: typeo
  * имени, «Отвязать». Сервер принимает правку только вместе с владельцем и
  * учёткой — нет их, правки нет, и причина сказана (а не кнопка, которая упадёт).
  */
-function MachineEditor({ row, fetchImpl, onSaved }: { row: AgentRow; fetchImpl?: typeof fetch; onSaved: () => void }) {
+function MachineEditor({ row, all, fetchImpl, onSaved }: { row: AgentRow; all: readonly AgentRow[]; fetchImpl?: typeof fetch; onSaved: () => void }) {
   const t = useAppT();
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const bound = row.machine_id !== null;
+  // S7B-25: отвязка — не в один клик: сперва вопрос с именем машины.
+  const [asking, setAsking] = useState(false);
+  // S7B-25: подсказка занятых имён — машины, уже известные по другим агентам.
+  const known = useMemo(() => [...new Set(all.filter(a => a.actor_id !== row.actor_id && a.machine_id).map(a => a.machine_id!))].sort(), [all, row.actor_id]);
+  const typedName = value.trim();
+  const sharing = typedName === '' ? [] : all.filter(a => a.actor_id !== row.actor_id && a.machine_id === typedName);
+  const listId = `adm-machines-${row.actor_id}`;
   const save = async (machine: string | null) => {
     setBusy(true);
     setErr(null);
     try {
       await setAgentMachine(row, machine, fetchImpl);
       setValue('');
+      setAsking(false);
       onSaved();
     } catch (e) {
       setErr(e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e));
@@ -233,13 +253,28 @@ function MachineEditor({ row, fetchImpl, onSaved }: { row: AgentRow; fetchImpl?:
           <label className="adm-field">
             <span className="adm-field__l">{t('admin.machine.input')}</span>
             <input className="adm-input adm-mono" type="text" value={value} disabled={busy} spellCheck={false}
-              data-testid="adm-machine-input" onChange={e => setValue(e.target.value)} />
+              list={listId} data-testid="adm-machine-input" onChange={e => setValue(e.target.value)} />
           </label>
+          <datalist id={listId}>{known.map(m => <option key={m} value={m} />)}</datalist>
+          {sharing.length > 0 && (
+            <p className="adm-note" data-tone="inf" role="status" data-testid="adm-machine-taken">
+              {t('admin.machine.taken', { id: typedName, agents: sharing.map(a => a.name ?? a.actor_id).join(', ') })}
+            </p>
+          )}
           <button type="button" className="adm-btn" data-testid="adm-machine-save"
             disabled={busy || value.trim() === ''} onClick={() => { void save(value); }}>{t('admin.machine.save')}</button>
-          {bound && (
+          {bound && !asking && (
             <button type="button" className="adm-btn adm-btn--dng" data-testid="adm-machine-unbind" disabled={busy}
-              onClick={() => { void save(null); }}>{t('admin.machine.unbind')}</button>
+              onClick={() => setAsking(true)}>{t('admin.machine.unbind')}</button>
+          )}
+          {bound && asking && (
+            <p className="adm-note" data-tone="wrn" role="group" data-testid="adm-machine-unbind-ask">
+              {t('admin.machine.unbindAsk', { id: row.machine_id! })}{' '}
+              <button type="button" className="adm-btn adm-btn--dng" data-testid="adm-machine-unbind-yes" disabled={busy}
+                onClick={() => { void save(null); }}>{t('admin.machine.unbindYes')}</button>{' '}
+              <button type="button" className="adm-btn" data-testid="adm-machine-unbind-no" disabled={busy}
+                onClick={() => setAsking(false)}>{t('admin.machine.unbindNo')}</button>
+            </p>
           )}
           <p className="adm-hint">{t('admin.machine.hint')}</p>
         </>
@@ -255,13 +290,20 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
 }) {
   const off = offRegistry(row.harness, registry);
   const t = useAppT();
+  const lang = useKitLang();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const save = async (v: string) => {
+  // S7B-25: выбор не пишет сразу — сперва дифф «было → станет» и «Применить»/«Отмена»;
+  // применённое можно вернуть одним нажатием (прежнее значение помним здесь).
+  const [pending, setPending] = useState<string | null>(null);
+  const [revertTo, setRevertTo] = useState<{ value: string | null } | null>(null);
+  const name = (h: string | null) => (h ? labels[h] ?? h : t('admin.harness.none'));
+  const save = async (v: string, after?: () => void) => {
     setBusy(true);
     setErr(null);
     try {
       await setAgentHarness(row, v === '' ? null : v, fetchImpl);
+      after?.();
       onSaved();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -269,6 +311,17 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
       setBusy(false);
     }
   };
+  const was = row.harness;
+  const apply = () => {
+    if (pending === null) return;
+    const to = pending;
+    void save(to, () => { setPending(null); setRevertTo({ value: was }); });
+  };
+  const revert = () => {
+    if (!revertTo) return;
+    void save(revertTo.value ?? '', () => setRevertTo(null));
+  };
+  const diff: DiffRow[] = pending === null ? [] : [harnessDiff(t('admin.col.harness'), was, pending === '' ? null : pending, name)];
   return (
     <tr data-testid={`adm-agent-${row.actor_id}`}>
       <th scope="row">
@@ -278,7 +331,8 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
       <td>
         {registry ? (
           <select className="adm-select" aria-label={t('admin.harness.edit', { agent: row.name ?? row.actor_id })}
-            value={row.harness ?? ''} disabled={busy} onChange={e => { void save(e.target.value); }}
+            value={pending ?? row.harness ?? ''} disabled={busy}
+            onChange={e => { const v = e.target.value; setRevertTo(null); setPending(v === (row.harness ?? '') ? null : v); }}
             data-none={row.harness === null || undefined}>
             <option value="">{t('admin.harness.none')}</option>
             {/* Код у актора есть, а в активном справочнике нет — показываем как есть, с пометкой. */}
@@ -288,6 +342,17 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
         ) : row.harness ? <Pill variant="id">{labels[row.harness] ?? row.harness}</Pill> : <span className="adm-missing">{t('admin.harness.none')}</span>}
         {off && <span className="adm-missing" data-testid="adm-off-dict">{t('admin.harness.offDictNote')}</span>}
         {err && <span className="adm-err" role="alert">{err}</span>}
+        {pending !== null && (
+          <div className="adm-harness-pending" data-testid={`adm-harness-pending-${row.actor_id}`}>
+            <DiffPreview rows={diff} onApply={apply} busy={busy} lang={lang} />
+            <button type="button" className="adm-btn" data-testid="adm-harness-cancel" disabled={busy}
+              onClick={() => setPending(null)}>{t('admin.harness.cancel')}</button>
+          </div>
+        )}
+        {revertTo && pending === null && (
+          <button type="button" className="adm-btn" data-testid={`adm-harness-revert-${row.actor_id}`} disabled={busy}
+            onClick={revert}>{t('admin.harness.revert', { was: name(revertTo.value) })}</button>
+        )}
       </td>
       <td>{row.machine_id ? <span className="adm-mono">{row.machine_id}</span> : <span className="adm-missing">{t('admin.machine.none')}</span>}</td>
       <td>{row.owner_display_name ?? row.owner_kc_sub ?? <span className="adm-missing">{t('admin.owner.none')}</span>}</td>
@@ -298,4 +363,16 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
       </td>
     </tr>
   );
+}
+
+/**
+ * Строка диффа правки harness (S7B-25). Вид — по правде: было и стало —
+ * смена; не было — добавление; станет пусто — снятие. Проверка — «checked»:
+ * варианты пришли из справочника сервера, а не придуманы здесь.
+ */
+function harnessDiff(text: string, from: string | null, to: string | null, name: (h: string | null) => string): DiffRow {
+  const check = { state: 'checked' as const };
+  if (from && to) return { id: 'harness', kind: 'change', text, from: name(from), to: name(to), check };
+  if (to) return { id: 'harness', kind: 'add', text: `${text}: ${name(to)}`, check };
+  return { id: 'harness', kind: 'remove', text: `${text}: ${name(from)}`, check };
 }

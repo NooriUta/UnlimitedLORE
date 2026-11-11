@@ -218,3 +218,11 @@ async function postActorOwner(body: Record<string, unknown>, fetchImpl: typeof f
     throw new LoreHttpError(res.status, code, detail);
   }
 }
+
+/** S7B-25/26: агенты без машины — не понять, с какого ноутбука они ходят. */
+export function agentsWithoutMachine(rows: readonly AgentRow[]): AgentRow[] {
+  return rows.filter(r => !r.machine_id);
+}
+
+/** Значение фильтра «без машины» в адресе (?adm-agents-f=nomachine). */
+export const AGENTS_NO_MACHINE = 'nomachine';

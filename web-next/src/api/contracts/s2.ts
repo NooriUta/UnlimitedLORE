@@ -285,6 +285,8 @@ export interface UserSettings {
   peek_hover: boolean;
   /** Флаг «новая навигация»; cookie seer-prefs.nav остаётся кэшем для перехода между хостами. */
   nav_version: 'v1' | 'v2';
+  /** S4-TECH-NOTES: показывать технические сведения (коды источников, оговорки модели, сырые метрики). */
+  show_tech: boolean;
 }
 
 export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
@@ -298,6 +300,7 @@ export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   stripes: true,
   peek_hover: true,
   nav_version: 'v2',
+  show_tech: false,
 };
 
 type Check = (v: unknown) => boolean;
@@ -314,6 +317,7 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   stripes: bool,
   peek_hover: bool,
   nav_version: oneOf('v1', 'v2'),
+  show_tech: bool,
 };
 
 /** Ключи патча, которые сервер отвергнет 400 BAD_PARAMS (незнакомые и с чужим значением). */

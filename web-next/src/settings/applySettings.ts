@@ -5,7 +5,8 @@
 //   text_size, stripes          — атрибуты kit (applyDisplay);
 //   collapse_nav_on_read        — data-read-nav="collapse" (экран записи сворачивает меню);
 //   right_column                — data-right-column="open|closed" (ушко записи; auto — снят);
-//   single_key_shortcuts        — data-single-keys="off" (слой клавиш, singleKeysEnabled).
+//   single_key_shortcuts        — data-single-keys="off" (слой клавиш, singleKeysEnabled);
+//   show_tech                   — data-show-tech="on" (общий выключатель tech, ShowTech.tsx).
 // Тема дублируется в общую cookie seer-prefs — её читают v1 и тема входа.
 import { applyDisplay, applyTheme, normalizePalette, DEFAULT_PREFS, type AttrTarget } from '@seidr/kit';
 import type { UserSettings } from '../api/contracts/s2';
@@ -28,6 +29,7 @@ export function applySettings(root: AttrTarget, s: UserSettings, jar?: CookieJar
   setAttr(root, 'data-single-keys', s.single_key_shortcuts ? null : 'off');
   // Peek по наведению (S9-10): выключено — атрибут; молчание — включено.
   setAttr(root, 'data-peek-hover', s.peek_hover ? null : 'off');
+  setAttr(root, 'data-show-tech', s.show_tech ? 'on' : null);
 
   const shared = readSharedPrefs(jar);
   if (shared.theme !== s.mode || shared.palette !== s.palette) {

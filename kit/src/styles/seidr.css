@@ -3248,7 +3248,30 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   color: var(--t2);
   font-size: var(--fs-xs);
 }
-.sk-facet__foot { display: flex; justify-content: flex-end; }
+.sk-facet__foot { display: flex; justify-content: flex-end; gap: 4px; }
+/* Фильтр по дате (K2-DATE-RANGE): быстрые периоды переносятся, «с … по …» —
+   нативный ввод даты (на телефоне — системный выбор дня). */
+.sk-daterange { vertical-align: top; }
+.sk-daterange__presets { flex-wrap: wrap; }
+.sk-daterange__bounds { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px; }
+.sk-daterange__bound {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+}
+.sk-daterange__input {
+  min-height: max(var(--tap), 22px);
+  padding: 0 6px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t1);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+}
+.sk-daterange__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-facet__btn:focus-visible,
 .sk-facet__op:focus-visible,
 .sk-facet__find:focus-visible,
@@ -4068,6 +4091,11 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields__row { display: contents; }
 .sk-rec-fields dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
+/* S4-24: правка характеристики на месте — ✎ рядом со значением, редактор под подписью. */
+.sk-rec-fields__edit { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.sk-rec-fields__pen { padding: 0 6px; font-size: var(--fs-xs); color: var(--t3); }
+.sk-rec-fields__pen:hover { color: var(--t1); }
+.sk-rec-fields__editor { display: grid; gap: 4px; }
 /* Телефон (S4-MOBILE-EDGE): MD-поле в колонке значений получало ~225 из 360 px —
    подпись колонкой слева съедала треть. Узко подпись MD-поля встаёт над ним,
    а текст и редактор берут всю ширину; короткие поля остаются парой «подпись — значение». */
@@ -6290,6 +6318,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 
 
+/* S4-TECH-NOTES: техническое скрыто до включения — кнопка «тех.» на месте блока. */
+.sk-tech { display: flex; flex-direction: column; gap: 4px; }
+.sk-tech__bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sk-tech__note { color: var(--wrn); }
+.sk-tech__btn {
+  padding: 0 6px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  cursor: pointer;
+}
+.sk-tech__btn:hover, .sk-tech__btn[aria-expanded="true"] { color: var(--t1); border-color: var(--acc); }
 /* Телефон: фильтр, группировка и порядок свёрнуты под одной кнопкой — как
    «фильтры 0 · развернуть» в v1 (S4-MOBILE-COMPARE, владелица 11.11: «фильтры
    и порядок прятаться под more»). «Быстро» и «Показано N из M» остаются. */
