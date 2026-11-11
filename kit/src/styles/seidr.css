@@ -6338,9 +6338,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 
 /* S4-CONTENT-V4 п.5 (прототип v4): текст записи внизу и во весь экран — колонкой чтения,
    как режим чтения S5-05 (--read-col ~680 px, кегль --read-fs); в узкой панели справа — как есть. */
-.sk-rec-reader [data-placement='bottom'] .sk-mdedit,
-.sk-rec-reader [data-placement='full'] .sk-mdedit {
+.sk-rec-reader [data-placement='bottom'] .sk-mdedit {
   max-width: var(--read-col);
+  margin-inline: auto;
+  font-size: var(--read-fs, var(--fs-md));
+}
+/* Во весь экран ширину текста задаёт ВЫБРАННАЯ ширина записи (S/M/L/«во всю
+   ширину», --rec-col у .sk-tabpanel > *), как у шапки и вкладок, — а не своя
+   мера 680 px поверх (жалоба владелицы 11.11.2026: «шапка и строка меню с
+   ушками растягиваются, а MartProse и сам контекст — нет»). */
+.sk-rec-reader [data-placement='full'] .sk-mdedit {
   margin-inline: auto;
   font-size: var(--read-fs, var(--fs-md));
 }
