@@ -90,7 +90,7 @@ function PeekTasks({ record, ctx, lang, taskEdges, limit }: {
           {shown.map(t => (
             <li key={t.id} className="sk-peek__task" data-testid="kit-peek-task" data-missing={t.record ? undefined : 'true'}>
               {t.record
-                ? <StatusPill code={t.record.status} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
+                ? <StatusPill code={t.record.status} kind={t.record.kind} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
                 : <span className="sk-peek__missing">{kitT(lang, 'kit.record.links.missing')}</span>}
               <a className="sk-rec-ref sk-peek__ref" href={ctx.href(t.id)}>
                 <span>{t.record ? t.record.title : t.id}</span>
@@ -124,7 +124,7 @@ export function RecordPeek({ record, ctx, onClose, onReadFull, readHref, taskEdg
     <Drawer open title={record.title} onClose={onClose} actions={readAction} className="sk-peek">
       <div className="sk-peek__meta">
         <span className="sk-pill sk-pill--id">{record.id}</span>
-        <StatusPill code={record.status} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
+        <StatusPill code={record.status} kind={record.kind} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
       </div>
       {taskEdges && taskEdges.length > 0 && (
         <PeekTasks record={record} ctx={ctx} lang={lang} taskEdges={taskEdges} limit={taskLimit} />
