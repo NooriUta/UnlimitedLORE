@@ -208,8 +208,14 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   }, [modelType, fetchImpl]);
   const config = useMemo(() => {
     const items = modelStatuses?.items ?? [];
-    if (!items.length) return baseConfig;
-    return { ...baseConfig, statuses: { ...baseConfig.statuses, items } };
+    // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
+    // из той же модели, что статусы. Нет в модели — колонки как раньше.
+    const display = modelStatuses?.display;
+    const withDisplay = display && baseConfig.list
+      ? { ...baseConfig, list: { ...baseConfig.list, columnDisplay: display as NonNullable<NonNullable<typeof baseConfig.list>['columnDisplay']> } }
+      : baseConfig;
+    if (!items.length) return withDisplay;
+    return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
   }, [baseConfig, modelStatuses]);
   // Выбор проектов в шапке наконец доходит до среза (S4-03, жалоба владелицы
   // 09.11.2026: «верхний фильтр по проектам не влияет на элементы внизу»).
