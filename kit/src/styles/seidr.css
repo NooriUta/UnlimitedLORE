@@ -3376,6 +3376,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   white-space: nowrap;
 }
 .sk-list__morerow td { padding: 4px var(--pad-x); }
+/* S4-35: ячейка колонки, которой у типа записи нет — не «—» (пусто), а другое утверждение. */
+.sk-list__na { font-size: var(--fs-2xs); color: var(--t3); font-style: italic; border-bottom: 1px dotted var(--bd); cursor: help; }
 
 /* Составные объекты (S4-09): раскрытие строки и прогресс «x/y».
    Кнопка раскрытия — цель касания не меньше --tap (44px на сенсоре). */
