@@ -42,15 +42,24 @@ describe('S4-MOBILE-EDGE п.Б — таймлайн узко: список по 
     expect(container.querySelector('.sk-tl__day')).toBeNull();
   });
 
-  it('узко — нет полос шкалы; группы по дате начала, по возрастанию', () => {
-    const { container } = render(<TimelineLanes config={config} data={data} group="status" start="start" end="end" narrow />);
+  // Владелица 11.11 (выбор по прототипу, «2б»): группы — по МЕСЯЦУ начала, дата
+  // начала и конца — в строке. По дню почти у каждой записи был свой заголовок,
+  // и список выходил вдвое длиннее.
+  it('узко — нет полос шкалы; группы по месяцу начала, по возрастанию', () => {
+    const recs = [...rs, rec('e', 'todo', { start: '2026-04-20', end: '2026-05-02' })];
+    const d2: KitData = { ...data, records: recs };
+    const { container } = render(<TimelineLanes config={config} data={d2} group="status" start="start" end="end" narrow />);
     expect(container.querySelector('.sk-tl__bar')).toBeNull();
     expect(container.querySelector('.sk-tl__lane')).toBeNull();
-    const days = [...container.querySelectorAll('.sk-tl__day')];
-    expect(days.map(d => d.querySelector('.sk-tl__title')?.textContent)).toEqual(['2026-04-01', '2027-01-15']);
-    // Внутри даты — порядок Ганта (дорожка «к работе», потом «готово»).
-    expect(ids(days[0])).toEqual(['a', 'b']);
-    expect(ids(days[1])).toEqual(['c']);
+    const months = [...container.querySelectorAll('.sk-tl__day')];
+    expect(months.map(d => d.getAttribute('data-month'))).toEqual(['2026-04', '2027-01']);
+    // Заголовок — месяц и год словами, не код даты.
+    expect(months[0].querySelector('.sk-tl__title')?.textContent).toMatch(/2026/);
+    expect(months[0].querySelector('.sk-tl__title')?.textContent).not.toMatch(/2026-04/);
+    // Внутри месяца — по дате начала; при равной дате — порядок Ганта
+    // (дорожка «к работе», потом «готово»).
+    expect(ids(months[0])).toEqual(['a', 'b', 'e']);
+    expect(ids(months[1])).toEqual(['c']);
   });
 
   it('узко — те же записи, что на Ганте; без даты — тот же честный счётчик', () => {
