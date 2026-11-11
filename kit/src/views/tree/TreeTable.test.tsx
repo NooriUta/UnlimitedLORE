@@ -267,3 +267,47 @@ describe('S4-TREE-NESTED · treeTableLines — правило без React', () 
     expect(lines.filter(l => l.type === 'record').map(l => l.type === 'record' && l.record.id)).toEqual(['C-1']);
   });
 });
+
+// Телефон (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-MOBILE-EDGE, SPEC-SEIDRKIT-ADAPTIVE-TEST
+// §3 п.5): замер v1.17.13, паспорт спринта 360×800 — вкладка «Задачи» была
+// таблицей 699 px внутри 302, «Запись» сжата до 69 px, читать можно только
+// листая вбок. В v1 здесь список карточек (D-2026-UXR-MOBILE-FOLLOWS-V1).
+// Правило то же, что у списка: узко — карточки, столбцы — парами «подпись —
+// значение», уровень — отступом, свёртка ветки работает.
+describe('TreeTable на телефоне — карточками, без таблицы', () => {
+  const phone = (rows = FULL) => render(
+    <KitLangProvider lang="ru">
+      <TreeTable levels={LEVELS} columns={COLUMNS} rows={rows} ctx={ctxOf()} narrow />
+    </KitLangProvider>,
+  );
+
+  it('положительный контроль: широко — таблица', () => {
+    const { container } = render(
+      <KitLangProvider lang="ru"><TreeTable levels={LEVELS} columns={COLUMNS} rows={FULL} ctx={ctxOf()} narrow={false} /></KitLangProvider>,
+    );
+    expect(container.querySelector('table.sk-ttab__table')).toBeTruthy();
+    expect(container.querySelector('.sk-ttab__cards')).toBeNull();
+  });
+
+  it('узко — нет таблицы, на каждую запись карточка, группа — заголовком', () => {
+    const { container } = phone();
+    expect(container.querySelector('table')).toBeNull();
+    const cards = [...container.querySelectorAll('.sk-ttab__cards [data-line="record"]')];
+    expect(cards.map(c => c.getAttribute('data-id'))).toEqual(['C-1', 'U-1', 'L-1', 'U-2', 'L-2', 'L-9']);
+    expect(container.querySelector('.sk-ttab__cards [data-line="group"]')).toBeTruthy();
+  });
+
+  it('узко — уровень виден отступом, а столбцы — подписями', () => {
+    const { container } = phone();
+    const l1 = container.querySelector<HTMLElement>('[data-id="L-1"]')!;
+    expect(l1.getAttribute('aria-level')).toBe('3');
+    expect(l1.style.getPropertyValue('--tree-depth')).toBe('2');
+    expect([...l1.querySelectorAll('dt')].map(d => d.textContent)).toContain('Минут');
+  });
+
+  it('узко — свёртка ветки работает', () => {
+    const { container } = phone();
+    fireEvent.click(screen.getByRole('button', { name: /Руны/ }));
+    expect([...container.querySelectorAll('[data-line="record"]')].map(c => c.getAttribute('data-id'))).toEqual(['C-1']);
+  });
+});

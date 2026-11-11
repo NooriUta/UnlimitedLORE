@@ -8,6 +8,13 @@
   padding: var(--pad-y) var(--pad-x);
 }
 
+/* Телефон: открытый паспорт — во весь экран (S4-MOBILE-COMPARE). Поля сняты у
+   .list-screen--passport (ListScreen.css), но родитель .v2-screen держал свои
+   12 px, и паспорт стоял с полями 24 px (замер v1.17.13, 360×800). */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .v2-screen:has(> .list-screen--passport) { padding-inline: 0; }
+}
+
 .v2-screen__title {
   margin: 0;
   font-family: var(--display);

@@ -600,15 +600,22 @@ export function TipTapField({
       <ToolBtn label={t('kit.md.h3')} active={editor.isActive('heading', { level: 3 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 3 }).run())}>H3</ToolBtn>
     </>
   );
-  const btnLists = editor && (
+  // Списки и цитата — отдельно от разделителя и формулы: на телефоне первые
+  // три стоят в первой строке, а «—» и «∑» уходят под «ещё» (владелица 11.11).
+  const btnListsMain = editor && (
     <>
       <ToolBtn label={t('kit.md.orderedList')} active={editor.isActive('orderedList')} onClick={run(e => e.chain().focus().toggleOrderedList().run())}>1.</ToolBtn>
       <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
       <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
+    </>
+  );
+  const btnListsRest = editor && (
+    <>
       <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
       <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
     </>
   );
+  const btnLists = editor && <>{btnListsMain}{btnListsRest}</>;
   const btnTable = editor && (
     <>
       {editor.isActive('table') ? (
@@ -637,9 +644,10 @@ export function TipTapField({
         <div className={narrow ? 'sk-md__toolbar sk-md__toolbar--narrow' : 'sk-md__toolbar'} role="toolbar" aria-label={t('kit.md.toolbar')}>
           {narrow ? (
             <>
-              {/* S4-MOBILE-EDGE: на телефоне одна строка главного + «ещё ▾»;
-                  остальное — тем же набором кнопок под «ещё», ничего не пропадает. */}
-              {btnUndo}{btnBold}{btnItalic}{btnLink}{btnBullet}
+              {/* S4-MOBILE-EDGE: на телефоне одна строка частых кнопок + «ещё ▾»;
+                  остальное — тем же набором кнопок под «ещё», ничего не пропадает.
+                  Владелица 11.11: «повтор» — в «ещё» (1а), кнопок в строке больше и мельче. */}
+              {btnUndo}{btnBold}{btnItalic}{btnStrike}{btnLink}{btnBullet}{btnListsMain}
               <button
                 type="button"
                 className={`sk-md__btn sk-md__morebtn${moreOpen ? ' is-on' : ''}`}
@@ -650,11 +658,11 @@ export function TipTapField({
               >{'⋯ ▾'}</button>
               {moreOpen && (
                 <div className="sk-md__more">
-                  {btnRedo}{btnStrike}{btnCode}
+                  {btnRedo}{btnCode}
                   <Sep />
                   {btnHeadings}
                   <Sep />
-                  {btnLists}
+                  {btnListsRest}
                   <Sep />
                   {btnTable}
                   <Sep />

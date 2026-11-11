@@ -13,11 +13,13 @@ import { McpScreen } from './McpScreen';
 import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
+import { WizardsScreen } from './WizardsScreen';
 import { AdminNavProvider, type AdminNav } from './adminNav';
 import type { AdminSection } from './adminModule';
 
 const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-home': () => <AdminHome />,
+  'adm-wiz': () => <WizardsScreen meSub={v2Auth.getState().user?.sub ?? null} />,
   'adm-agents': () => <AgentsScreen />,
   'adm-who': () => <WhoWhereScreen meSub={v2Auth.getState().user?.sub ?? null} />,
   'adm-roles': () => <RolesScreen />,

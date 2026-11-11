@@ -10,7 +10,7 @@ import type { KitConfig, KitLang } from '@seidr/kit';
 export const ADMIN_MODULE = 'admin';
 
 /** Разделы админки — они же id пунктов меню и значения sec. */
-export const ADMIN_SECTIONS = ['adm-home', 'adm-agents', 'adm-who', 'adm-roles', 'adm-rules', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
+export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-who', 'adm-roles', 'adm-rules', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
 
 export function isAdminSection(id: string | null): id is AdminSection {
@@ -20,6 +20,7 @@ export function isAdminSection(id: string | null): id is AdminSection {
 /** Подпись раздела — те же ключи, что у заголовков экранов. */
 const TITLE: Record<AdminSection, AppKey> = {
   'adm-home': 'admin.home.title',
+  'adm-wiz': 'admin.wiz.title',
   'adm-agents': 'admin.agents.title',
   'adm-who': 'admin.who.title',
   'adm-roles': 'admin.roles.title',
@@ -31,6 +32,7 @@ const TITLE: Record<AdminSection, AppKey> = {
 
 const ICON: Record<AdminSection, string> = {
   'adm-home': 'house',
+  'adm-wiz': 'compass',
   'adm-agents': 'robot-golem',
   'adm-who': 'person',
   'adm-roles': 'key',
@@ -46,7 +48,8 @@ export function adminSectionTitle(lang: KitLang, id: AdminSection): string {
 
 /**
  * Меню админки — группы по смыслу и риску, а не по таблицам:
- *   • «Начало» — Главная «что требует внимания» (S7B-26): вход в модуль;
+ *   • «Начало» — Главная «что требует внимания» (S7B-26): вход в модуль; рядом
+ *     «Мастера» UC-1/UC-2/UC-7 (S7B-17) — вход «хочу сделать»;
  *   • «Люди и агенты» — кто есть и чем работает (чтение, правка своего);
  *   • «Доступ» — роли и права: правка здесь меняет, кто что видит, — тон риска;
  *   • «Язык графа» — правила CLAUDE;
@@ -58,7 +61,7 @@ export function adminMenu(lang: KitLang): KitConfig['menu'] {
     myViews: false,
     recent: false,
     groups: [
-      { id: 'adm-start', title: appT(lang, 'shell.grp.admStart'), tone: 'var(--acc)', items: [item('adm-home')] },
+      { id: 'adm-start', title: appT(lang, 'shell.grp.admStart'), tone: 'var(--acc)', items: [item('adm-home'), item('adm-wiz')] },
       { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-who')] },
       { id: 'adm-access', title: appT(lang, 'shell.grp.admAccess'), tone: 'var(--wrn)', items: [item('adm-roles')] },
       { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--suc)', items: [item('adm-rules')] },
