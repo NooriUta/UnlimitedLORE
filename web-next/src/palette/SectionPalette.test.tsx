@@ -130,3 +130,34 @@ describe('«Недавнее» палитры — список оболочки'
     expect(within(dlg).getAllByText('SPRINT_A').length).toBeGreaterThan(0);
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-14: Ctrl+K — команды над ЗАПИСЬЮ или
+// ВЫДЕЛЕНИЕМ. Палитра kit цель понимает (`target`), а v2 её не передавал:
+// палитра живёт в шапке оболочки, цель — в экране списка, и мостика между
+// ними не было. Поэтому команды над целью не предлагались никогда.
+describe('S4-14 · палитра видит цель экрана', () => {
+  it('открытая запись — цель палитры: «Над записью …» и команды над ней', async () => {
+    const { setPaletteTarget } = await import('./paletteTarget');
+    mount();
+    act(() => { setPaletteTarget({ type: 'record', record: { id: 'SPRINT_X', kind: 'sprint', title: 'Спринт X', status: '', fields: {} } }); });
+    openPalette();
+    const dlg = screen.getByRole('dialog');
+    expect(within(dlg).getByText('Над записью SPRINT_X')).toBeTruthy();
+    act(() => { setPaletteTarget(null); });
+  });
+
+  it('выделение — цель палитры: «Выбрано: 2»', async () => {
+    const { setPaletteTarget } = await import('./paletteTarget');
+    mount();
+    act(() => { setPaletteTarget({ type: 'selection', ids: ['A', 'B'] }); });
+    openPalette();
+    expect(within(screen.getByRole('dialog')).getByText('Выбрано: 2')).toBeTruthy();
+    act(() => { setPaletteTarget(null); });
+  });
+
+  it('положительный контроль: цели нет — подписи цели нет', () => {
+    mount();
+    openPalette();
+    expect(within(screen.getByRole('dialog')).queryByText(/^Над записью|^Выбрано:/)).toBeNull();
+  });
+});

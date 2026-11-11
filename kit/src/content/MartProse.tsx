@@ -9,7 +9,7 @@
 //  - подписи — из локалей kit.
 // Доверие то же, что в v1: тело пишет владелец записи; HTML-сегменты и SVG всё
 // равно проходят санитайзер.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import mermaid from 'mermaid';
 import elkLayouts from '@mermaid-js/layout-elk';
@@ -242,15 +242,40 @@ export function BpmnDiagram({ def }: { def: string }) {
   return <div ref={hostRef} className="sk-prose__bpmn" />;
 }
 
-export function MartProse({ text, style, className }: { text?: string | null; style?: CSSProperties; className?: string }) {
+/**
+ * [[ссылка]] в чтении → ссылка на паспорт записи (SPRINT_UXR_S10_SEIDR_KIT_2/MD-READ-PEEK,
+ * D-2026-LORE-MD-REF-EDIT-IN-PASSPORT). Адрес даёт приложение; null — рамка остаётся без ссылки.
+ */
+export type MartRefHref = (ref: { id: string; type: string | null }) => string | null;
+
+/** Рамки .sk-wref, для которых приложение знает адрес, становятся <a href> с теми же атрибутами. */
+function linkRefs(root: HTMLElement, refHref: MartRefHref) {
+  root.querySelectorAll<HTMLSpanElement>('span.sk-wref').forEach(span => {
+    const id = span.getAttribute('data-ref') ?? '';
+    const href = id ? refHref({ id, type: span.getAttribute('data-ref-type') }) : null;
+    if (!href) return;
+    const a = document.createElement('a');
+    for (const at of Array.from(span.attributes)) a.setAttribute(at.name, at.value);
+    a.setAttribute('href', href);
+    a.textContent = span.textContent;
+    span.replaceWith(a);
+  });
+}
+
+export function MartProse({ text, style, className, refHref }: { text?: string | null; style?: CSSProperties; className?: string; refHref?: MartRefHref }) {
   const lang = useKitLang();
   const segments = useMemo(
     () => (text ? toSegments(text, { done: kitT(lang, 'kit.prose.taskDone'), todo: kitT(lang, 'kit.prose.taskTodo') }) : []),
     [text, lang],
   );
+  const rootRef = useRef<HTMLDivElement>(null);
+  // После каждой отрисовки html (React перезаписывает innerHTML сегмента при смене текста).
+  useLayoutEffect(() => {
+    if (refHref && rootRef.current) linkRefs(rootRef.current, refHref);
+  }, [segments, refHref]);
   if (!text) return null;
   return (
-    <div className={['sk-prose', className].filter(Boolean).join(' ')} style={style}>
+    <div ref={rootRef} className={['sk-prose', className].filter(Boolean).join(' ')} style={style}>
       {segments.map((seg, i) => {
         if (seg.kind === 'mermaid') return <MermaidDiagram key={i} def={seg.def} />;
         if (seg.kind === 'bpmn') return <BpmnDiagram key={i} def={seg.def} />;

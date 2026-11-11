@@ -9,6 +9,7 @@
 // по каждому блоку), он станет главным; пока его нет, состояние выводится из
 // `errors` и `truncated`, и мы не притворяемся, что знаем больше.
 import type { KitMeta } from '../core/contract';
+import { audienceOf, type Audience } from '../resilience/audience';
 
 export interface FailedBlock { block: string; reason: string }
 
@@ -48,6 +49,8 @@ interface SourceRow {
   reason?: unknown;
   total?: unknown;
   has_more?: unknown;
+  /** Кому строка (S4-TECH-NOTES): tech — диагностика; без тега — user. */
+  audience?: unknown;
 }
 
 /** Имя блока для показа: «источник · часть», если часть названа. */
@@ -76,45 +79,52 @@ function rows(meta: KitMeta): SourceRow[] {
  * смогли проверить» вместе с самим значением. Пропустить его значило бы
  * показать блок исправным, ничего о нём не зная.
  */
-export function dataStateOf(meta: KitMeta): DataState {
+export function dataStateOf(meta: KitMeta, audience?: Audience): DataState {
+  // S4-TECH-NOTES: с адресатом — только его строки. Сводка «показано N из M»
+  // по всей выдаче — смысловая (user), у неё тега нет.
+  const mine = (x: { audience?: unknown }) => audience === undefined || audienceOf(x) === audience;
   const checked: string[] = [];
   const failed: FailedBlock[] = [];
   const forbidden: FailedBlock[] = [];
   const truncatedBlocks: string[] = [];
   const seen = new Set<string>();
 
+  // «Уже сказано» считается по ВСЕМ строкам, а не по строкам адресата: иначе
+  // ошибка из errors без тега, уже названная tech-строкой, всплыла бы у
+  // человека с кодом источника.
   for (const r of rows(meta)) {
     const block = nameOf(r);
     if (!block) continue;
+    const take = mine(r);
     const state = typeof r.state === 'string' ? r.state : '';
     const reason = typeof r.reason === 'string' ? r.reason : '';
-    if (state === 'ok') { checked.push(block); continue; }
-    if (state === 'truncated') { truncatedBlocks.push(block); continue; }
+    if (state === 'ok') { if (take) checked.push(block); continue; }
+    if (state === 'truncated') { if (take) truncatedBlocks.push(block); continue; }
     // «Нет прав» — не ошибка чтения: ждать нечего, надо просить доступ.
     if (state === 'forbidden') {
-      forbidden.push({ block, reason: reason || 'нет прав' });
+      if (take) forbidden.push({ block, reason: reason || 'нет прав' });
       seen.add(block);
       continue;
     }
     // Сервер называет сбой «error», прежнее имя было «failed» — принимаем оба.
     if (state === 'error' || state === 'failed') {
-      failed.push({ block, reason: reason || 'причина не названа' });
+      if (take) failed.push({ block, reason: reason || 'причина не названа' });
       seen.add(block);
       continue;
     }
-    failed.push({ block, reason: reason || `состояние «${state}» неизвестно` });
+    if (take) failed.push({ block, reason: reason || `состояние «${state}» неизвестно` });
     seen.add(block);
   }
 
   for (const e of meta.errors ?? []) {
     if (seen.has(e.block)) continue; // Уже сказано через sources — не задваиваем.
-    failed.push({ block: e.block, reason: e.reason });
+    if (mine(e)) failed.push({ block: e.block, reason: e.reason });
     seen.add(e.block);
   }
 
   // Флагу сервера верим: если он сказал «обрезано», арифметика его не отменяет.
   let truncated: DataState['truncated'];
-  if (meta.truncated) {
+  if (meta.truncated && audience !== 'tech') {
     truncated = {};
     if (typeof meta.returned === 'number') truncated.returned = meta.returned;
     if (typeof meta.total === 'number') truncated.total = meta.total;

@@ -115,3 +115,21 @@
 .adm-danger__h { margin: 0; color: var(--t1); font: 700 var(--fs-sm) var(--font); }
 .adm-danger__confirm .adm-input { width: min(32ch, 100%); }
 .adm-danger__btns { display: flex; gap: 6px; }
+
+/* S7B-26: Главная «что требует внимания» — карточки с числом и кнопкой в экран-лекарство. */
+.adm-attn { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.adm-attn__card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 8px 10px; border: 1px solid var(--bd); border-left-width: 3px; border-radius: 6px; background: var(--bg1);
+}
+.adm-attn__card[data-tone='wrn'] { border-left-color: var(--wrn); }
+.adm-attn__card[data-tone='dng'] { border-left-color: var(--dng); }
+.adm-attn__card[data-tone='suc'] { border-left-color: var(--suc); }
+.adm-attn__n { font-family: var(--mono); font-size: var(--fs-xl); font-weight: 700; color: var(--t1); line-height: 1; }
+.adm-attn__card[data-tone='wrn'] .adm-attn__n { color: var(--wrn); }
+.adm-attn__card[data-tone='dng'] .adm-attn__n { color: var(--dng); }
+.adm-attn__t { font-size: var(--fs-sm); color: var(--t1); }
+
+/* S7B-25: поиск «Кто где»; дифф правки harness в клетке таблицы. */
+.adm-who__q { max-width: 320px; }
+.adm-harness-pending { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 4px; }

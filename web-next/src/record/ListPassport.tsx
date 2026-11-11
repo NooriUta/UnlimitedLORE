@@ -10,11 +10,11 @@ import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
   type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
-import { MartProse, MdInlineEdit } from '@seidr/kit/content';
+import { MartProse } from '@seidr/kit/content';
+import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
 import { fetchSlice } from '../api/loreClient';
-import { knownRecordHref } from '../nav/loreRoutes';
-import { SprintBurnLine } from '../sprint/SprintBurnLine';
-import { SprintTasksTab } from '../sprint/SprintTasksTab';
+import { passportHref } from './passportHref';
+import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
@@ -32,7 +32,7 @@ import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-const md = (s: string) => <MartProse text={s} />;
+const md = (s: string) => <MartProse text={s} refHref={loreRefHref} />;
 
 export interface ListPassportProps {
   type: PassportType;
@@ -73,7 +73,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // поделиться, «назад» возвращает прежнюю вкладку. Хук kit уже это умел и
   // до сих пор не вызывался ниоткуда — паспорт держал вкладку местным
   // состоянием, и адрес о ней не знал.
-  const [tab, setTab] = useRecordTab('overview', win);
+  //
+  // Умолчание — ПУСТО, то есть «не выбрана» (S4-MOBILE-COMPARE): что открыть,
+  // решает kit — на десктопе обзор, как прежде, на телефоне первую вкладку по
+  // модели (у спринта задачи, как в v1). Подставленный здесь 'overview' kit
+  // принял бы за выбор человека.
+  const [tab, setTab] = useRecordTab('', win);
   // Личная настройка «Правая колонка записи» наконец доходит до записи
   // (S4-02, находка CJM на проде 09.11.2026). Раньше выбор ложился атрибутом
   // `data-right-column` на корень документа, и этот атрибут не читал НИКТО:
@@ -178,14 +183,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
     pp.reload();
   };
-  // Спринт: вкладка «Задачи» с таблицей задач (группировка, статус в строке, правка)
-  // и строкой сгорания — то, что раньше было только на отдельной странице вне оболочки.
-  const baseConfig = type === 'sprint'
-    ? withSprintTasksTab(view.config, view.record.kind, t('sprintTasks.title'), r => (
-      <>
-        <SprintBurnLine sprintId={r.id} />
-        <SprintTasksTab sprintId={r.id} fetchImpl={fetchImpl} win={win} />
-      </>
+  // Спринт: вкладка «Задачи» — дерево спринт → [фаза] → задача (S4-TREE-NESTED,
+  // решение владелицы 10.11) из того же ответа /lore/record, и вторым видом —
+  // прежняя таблица задач (группировка, правка, массовый статус) со строкой сгорания.
+  const baseConfig = type === 'sprint' && contract
+    ? withSprintTasksTab(view.config, view.record.kind, t('sprintTasks.title'), () => (
+      <SprintTasksPanel contract={contract} onStatusSaved={pp.reload} fetchImpl={fetchImpl} win={win} />
     ))
     : view.config;
   const ctx: KitCtx = { config: {
@@ -199,7 +202,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   }, data: view.data, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
-    href: id => knownRecordHref(id, view.data.records, x => '#' + encodeURIComponent(x)), esc, md };
+    // Чипы проектов и компонентов шапки — паспорт своего типа (S4-29, 53а): тип берётся из
+    // поля, в котором чип пришёл; раньше чип вёл на «#код».
+    href: passportHref(view.data.records, contract?.values ?? {}, x => '#' + encodeURIComponent(x)), esc, md };
   return (
     <>
       {/*
@@ -212,7 +217,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
         признака роли у клиента сейчас нет вовсе, и выдумывать его нельзя.
       */}
       <ModelNotes notes={[...order.notes, ...statuses.notes]} />
-    <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEdit}
+    <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEditWithRefs}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
       sections={order.order}

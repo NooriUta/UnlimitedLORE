@@ -22,7 +22,7 @@
 // а не на window: два списка на экране не делят клавиши. У каждой клавиши —
 // кнопка с aria-keyshortcuts и подсказкой Kbd; в поле ввода клавиша — текст.
 import { ICON_CANON } from '../elements/iconCanon';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
@@ -42,6 +42,8 @@ import { chipLabel, isChipList, toChips } from '../core/chipValue';
 import { foldBody, type FeedBody } from './feedBody';
 import { foldUnder, type FeedUnder, type FeedUnderFold } from './feedUnder';
 import { GluedBlock } from '../record/GluedBlock';
+import { MartProse } from '../content/MartProse';
+import { RecordSection } from '../record/RecordSection';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -65,7 +67,10 @@ import { axisSource, countsNotes, facetFromAxis, quickSource } from './listCount
 import type { ListCounts } from './listCounts';
 import { FacetFilter, ValueIconMark } from './FacetFilter';
 import type { ValueIcon } from './FacetFilter';
-import { selectAllShown, toggleId, visibleSelection } from './listSelection';
+// Фильтр по дате — диапазон (K2-DATE-RANGE): одна модель на таблицу, ленту и фасеты.
+import { DateRangeFilter, type DateFilterScope } from './DateRangeFilter';
+import { NO_DATE_RANGE, describeDateRange, filterByDateRange, isDateRangeActive, type DateRangeValue } from './dateRange';
+import { onScreenItems, selectAllShown, toggleId, visibleSelection, type ShownGroup } from './listSelection';
 import { useLongPress } from './useLongPress';
 import { ScreenHead } from './ScreenHead';
 import { ViewMenu } from './ViewMenu';
@@ -262,6 +267,40 @@ export interface ListViewProps {
    */
   narrow?: boolean;
   className?: string;
+  /**
+   * Фильтр по дате — диапазон «с … по …» (K2-DATE-RANGE). Поле времени,
+   * подпись и ГДЕ отобрано называет приложение (K-14); значение держит тоже
+   * оно — ему же уходить в адрес и, если источник умеет, в запрос. Не задан —
+   * фильтра по дате нет.
+   */
+  dateFilter?: ListDateFilter;
+}
+
+/** Фильтр по дате списка: значение и смысл — от приложения, отбор и вид — kit. */
+export interface ListDateFilter {
+  /** Поле отметки времени записи (`updated_at` или `fields.<ключ>`). */
+  field: string;
+  /** Подпись поля словами («Изменены»). */
+  title: string;
+  value: DateRangeValue;
+  onChange: (v: DateRangeValue) => void;
+  /**
+   * `source` — источник уже отобрал выдачу по диапазону, kit второй раз не
+   * режет; `loaded` (по умолчанию) — kit отбирает загруженные строки и
+   * говорит об этом «по загруженному».
+   */
+  scope?: DateFilterScope;
+  /** Пояс «местного» дня (IANA); по умолчанию — пояс браузера. */
+  timeZone?: string;
+  /** Фильтр недоступен (у типа нет времени) — причина словами; строки не режутся. */
+  unavailable?: string;
+}
+
+/** Метка сужения диапазоном дат для правил счётчиков (S9-01): не совпадает ни с одной осью. */
+const DATE_NARROW_KEY = '\u0000date';
+
+function browserZone(): string {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
 }
 
 /** Шапка экрана списка: заголовок, его id и иконка, первичное действие. */
@@ -407,7 +446,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
-  counts: serverCounts,
+  counts: serverCounts, dateFilter,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
   const narrow = useNarrow(narrowProp);
@@ -459,6 +498,14 @@ export function ListView({
   const budget = { ...LIST_BUDGET, ...budgetPart };
   const win = resolveWin(urlState);
   const [ownState, setState] = useState<ListState>(() => initialState(win, initial));
+  /**
+   * Вид выбран ЯВНО: адресом (lv=), приложением (initial — в том числе
+   * сохранённый вид) или кнопкой. Тогда телефонное умолчание «Карточки»
+   * (S4-MOBILE-COMPARE, D-2026-UXR-MOBILE-FOLLOWS-V1) его не переспоривает.
+   */
+  const [viewPicked, setViewPicked] = useState<boolean>(
+    () => initial?.view !== undefined || (!!win && readUrlState(win).has('lv')),
+  );
   const state = stateProp ?? ownState;
   // Управляемый режим: состояние пришло снаружи (выбор вида) — URL догоняет.
   const controlledKey = stateProp ? JSON.stringify(writeListState(stateProp)) : null;
@@ -478,6 +525,9 @@ export function ListView({
    * так же. Так же сделан поиск по значениям внутри фасета.
    */
   const [groupFind, setGroupFind] = useState('');
+  /** Телефон: раскрыта ли полоса фильтра, группировки и порядка (S4-MOBILE-COMPARE). Местное, как «+N». */
+  const [ctlOpen, setCtlOpen] = useState(false);
+  const ctlId = useId();
   /** Раскрыта ли свёртка «+N» в строке условий (S9-12). Местное, не в адресе. */
   const [chipsOpen, setChipsOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => initialExpanded(win));
@@ -508,7 +558,11 @@ export function ListView({
       смысл.
     */
     .filter(v => v !== 'feed' || !!feedCfg?.timeField);
-  const view: ListViewKind = views.includes(state.view) ? state.view : (views[0] ?? 'list');
+  // Телефон: по умолчанию карточки — таблица в 6–11 колонок на 360 px шире
+  // экрана, а карточек помещается 9 против 2 строк (замер 11.11, как в v1).
+  // Явный выбор и управляемое состояние — закон.
+  const phoneCards = narrow && !viewPicked && !stateProp && views.includes('cards');
+  const view: ListViewKind = phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
@@ -542,6 +596,7 @@ export function ListView({
   const columns = rowActions?.length && !withSelect.includes('actions') ? [...withSelect, 'actions'] : withSelect;
 
   const update = (patch: Partial<ListState>) => {
+    if (patch.view !== undefined) setViewPicked(true);
     if (stateProp) {
       onStateChange?.({ ...stateProp, ...patch });
       return;
@@ -556,7 +611,20 @@ export function ListView({
     data, config, href: href ?? (id => `#${encodeURIComponent(id)}`), esc, md: (s: string) => s, ...ctxPart,
   }), [data, config, href, ctxPart]);
 
-  const records = data.records;
+  // Диапазон дат (K2-DATE-RANGE) режет выдачу ДО всего остального: таблица,
+  // лента, доска и счётчики фасетов дальше берут один и тот же набор — второй
+  // реализации фильтра нет. «Сейчас» — время источника (meta.generated_at).
+  const dateTz = dateFilter?.timeZone ?? browserZone();
+  const dateOn = !!dateFilter && dateFilter.unavailable === undefined && isDateRangeActive(dateFilter.value);
+  const dateLoaded = dateOn && (dateFilter!.scope ?? 'loaded') === 'loaded';
+  const dated = useMemo(
+    () => (dateLoaded
+      ? filterByDateRange(data.records, dateFilter!.field, dateFilter!.value, data.meta.generated_at, dateTz)
+      : { records: data.records, undated: 0 }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data.records, dateLoaded, dateFilter?.field, JSON.stringify(dateFilter?.value), data.meta.generated_at, dateTz],
+  );
+  const records = dated.records;
   // S4-05: поля (есть / нет / пусто / не пусто) и текст — одним набором
   const filterSet = useMemo(() => toFilterSet(state),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -571,8 +639,10 @@ export function ListView({
    * числа годятся только пока выдачу не сузило что-то другое.
    */
   const narrowing = useMemo(
-    () => ({ keys: Object.keys(filterSet.fields), text: (filterSet.text ?? '') !== '' }),
-    [filterSet],
+    // Диапазон дат источнику не отправлялся вместе со счётчиками — его числа
+    // при диапазоне не годятся (ключ-метка не совпадает ни с одной осью).
+    () => ({ keys: [...Object.keys(filterSet.fields), ...(dateOn ? [DATE_NARROW_KEY] : [])], text: (filterSet.text ?? '') !== '' }),
+    [filterSet, dateOn],
   );
   /**
    * Выдача не обрезана — «по загруженным строкам» и «по всей выдаче» это одно и
@@ -793,22 +863,18 @@ export function ListView({
    * отрисовка, а отмеченное за пределами показанного называется числом
    * (kit.list.selHidden), а не теряется тихо.
    */
-  const onScreenOf = (g: ListGroup): KitRecord[] => {
+  // Правило «что на экране» — одно на список и вложенные таблицы (S9-06):
+  // onScreenItems в listSelection.ts. Здесь только перевод групп списка в
+  // ту форму, в которой они стоят на экране.
+  const shownGroupOf = (g: ListGroup): ShownGroup<KitRecord> => {
     // Заголовок (а значит, и сворачивание) есть в списке при группировке и у «Закрытых».
     const headed = view === 'list' && (groupKey !== null || g.key === CLOSED_KEY);
-    if (headed && !isOpen(g.key)) return [];
-    if (view === 'list' && subKey && g.key !== CLOSED_KEY) {
-      // Вторая ступень (S4-26) сворачивается своим ключом — иначе строки
-      // свёрнутой подгруппы считались бы показанными.
-      const out: KitRecord[] = [];
-      for (const sg of groupBy(g.records, subKey, config, data, budget)) {
-        const k = g.key + '' + sg.key;
-        if (!isOpen(k)) continue;
-        out.push(...sg.records.slice(0, limitOf(k)));
-      }
-      return out;
-    }
-    return g.records.slice(0, limitOf(g.key));
+    // Вторая ступень (S4-26) сворачивается своим ключом — иначе строки
+    // свёрнутой подгруппы считались бы показанными.
+    const sub = view === 'list' && subKey && g.key !== CLOSED_KEY
+      ? groupBy(g.records, subKey, config, data, budget).map(sg => ({ key: g.key + '' + sg.key, items: sg.records, headed: true }))
+      : undefined;
+    return { key: g.key, items: g.records, headed, sub };
   };
   const pickable: KitRecord[] = [];
   {
@@ -828,7 +894,7 @@ export function ListView({
         for (const c of cols) put(c.records.slice(0, limitOf(laned ? lane.key + '' + c.key : c.key)));
       }
     } else if (view === 'list') {
-      for (const g of groups) put(onScreenOf(g));
+      put(onScreenItems(groups.map(shownGroupOf), isOpen, limitOf));
     } else {
       // Карточки, дерево и таймлайн рисуют весь отфильтрованный набор.
       put(filtered);
@@ -1029,7 +1095,7 @@ export function ListView({
         : t('kit.list.groupCapPage', { top: shownGroups, total: groupTotal }))
       : (shown.kind === 'complete' ? null : t('kit.list.groupsPage'));
 
-  const hasFilter = Object.keys(filterSet.fields).length > 0 || !!filterSet.text || activeQuick !== null;
+  const hasFilter = Object.keys(filterSet.fields).length > 0 || !!filterSet.text || activeQuick !== null || dateOn;
   const opTitles = Object.fromEntries((['any', 'not', 'empty', 'nonempty'] as FilterOp[])
     .map(op => [op, t(`kit.list.op.${op}` as KitKey)])) as Record<FilterOp, string>;
   // Строка-описание (S4-04): каждое условие — свой снимаемый чип, а не сплошной
@@ -1055,8 +1121,23 @@ export function ListView({
   if (activeQuick) {
     chips.push({ id: 'q', text: `${t('kit.list.quick')}: ${activeQuick.title}`, remove: () => update({ quick: null }) });
   }
-  const resetFilters = () => update({ filters: {}, ops: {}, text: '', quick: null });
+  // Диапазон снимается с сохранением зоны: зона — выбор человека, а не часть условия.
+  const clearDate = () => dateFilter?.onChange({ ...NO_DATE_RANGE, zone: dateFilter.value.zone });
+  if (dateOn) {
+    const words = describeDateRange(dateFilter!.value, lang, { showZone: true });
+    chips.push({
+      id: 'd',
+      text: `${dateFilter!.title}: ${words}${dateLoaded ? ` · ${t('kit.date.scope.loadedChip')}` : ''}`,
+      remove: clearDate,
+    });
+  }
+  const resetFilters = () => {
+    update({ filters: {}, ops: {}, text: '', quick: null });
+    if (dateOn) clearDate();
+  };
   // «Вид ⌄» (S4-27): режим закрытых — часть состояния списка и сохранённого вида.
+  // Телефон: виды — внутри «Вид ▾», а не строкой над списком (владелица 11.11).
+  const viewsInMenu = narrow && views.length > 1;
   const viewMenu = (
     <ViewMenu
       closed={closedMode}
@@ -1073,10 +1154,16 @@ export function ListView({
         chosen: chosenColumns.filter(c => c !== 'select' && c !== 'actions'),
       }}
       onColumns={setColumns}
+      kinds={viewsInMenu ? {
+        all: views.map(v => ({ key: v, title: t(`kit.list.view.${v}` as KitKey) })),
+        current: view,
+        onPick: k => update({ view: k as ListViewKind }),
+      } : undefined}
+      narrow={narrow}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
-  const viewsSwitch = views.length > 1 ? (
+  const viewsSwitch = views.length > 1 && !viewsInMenu ? (
     <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
       {views.map(v => {
         const icon = viewIcons?.[v];
@@ -1096,7 +1183,7 @@ export function ListView({
       })}
     </div>
   ) : null;
-  const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0);
+  const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0) + (dateOn ? 1 : 0);
   const segCount = (n: number) => (n > 0
     ? <span className="sk-list__segcount" data-testid="kit-list-segcount" title={t('kit.list.segActive', { n })}>{n}</span>
     : null);
@@ -1117,6 +1204,22 @@ export function ListView({
   // печатался СЫРЫМ: в «Технологиях» в клетке стоял ISO с миллисекундами.
   // Движок знает тип поля из модели — значит и показывать день должен он, а не
   // каждый экран по-своему (ревью 10.11, UX-долг).
+  /** Тип объявил поля, и этого среди них нет — колонка к записи не относится. */
+  const notApplicable = (kind: string, key: string): boolean => {
+    const declared = config.kinds[kind]?.fields;
+    if (!declared) return false;
+    const name = key.startsWith('fields.') ? key.slice(7) : key;
+    return !declared.some(f => f.key === name);
+  };
+  /** Подпись поля по любому типу, который его объявил; не нашлась — ключ как есть. */
+  const fieldTitleOf = (key: string): string => {
+    const name = key.startsWith('fields.') ? key.slice(7) : key;
+    for (const k of Object.values(config.kinds)) {
+      const f = k.fields?.find(x => x.key === name);
+      if (f?.title) return f.title;
+    }
+    return key;
+  };
   const fieldType = (kind: string, key: string): string | undefined => {
     // Колонка приходит с приставкой («fields.start»), а в модели поле зовётся
     // без неё — как и в fieldValue (listModel.ts:54). Без снятия приставки тип
@@ -1202,6 +1305,35 @@ export function ListView({
     );
   };
 
+  // S4-35 / ADR-LORE-049: показ колонки из модели — приоритет, шаг ширины,
+  // переполнение. Модель зовёт поле по имени, колонка — «fields.имя»: ищем по
+  // обоим написаниям, как fieldType.
+  const displayOf = (col: string) => {
+    const d = config.list?.columnDisplay;
+    if (!d) return undefined;
+    return d[col] ?? (col.startsWith('fields.') ? d[col.slice(7)] : d[`fields.${col}`]);
+  };
+  const colAttrs = (col: string): { className: string; 'data-w'?: string } => {
+    const d = displayOf(col);
+    const p = d?.priority;
+    // Приоритет 1 не прячется никогда — класса у него нет вовсе.
+    // Полные имена классов, а не шаблон: сторож единого слоя CSS сверяет
+    // каждое имя с правилом в seidr.css (S4-00e).
+    const prio = p === 2 ? ' sk-list__p2' : p === 3 ? ' sk-list__p3' : p === 4 ? ' sk-list__p4' : '';
+    return { className: `sk-list__c-${col.replace(/[^a-z0-9]+/g, '-')}${prio}`, ...(d?.width ? { 'data-w': d.width } : {}) };
+  };
+  // Многоточие: полный текст в подсказке И раскрытие по касанию — на телефоне
+  // наведения нет, и подсказка по title там не откроется никогда.
+  const ellip = (col: string, r: KitRecord, node: ReactNode): ReactNode => {
+    if (displayOf(col)?.overflow !== 'ellipsis') return node;
+    const full = valuesOf(r, col).map(v => String(v)).join(', ');
+    return (
+      <span className="sk-list__ellip" title={full || undefined}
+        onClick={e => { const el = e.currentTarget; if (el.getAttribute('data-open')) el.removeAttribute('data-open'); else el.setAttribute('data-open', 'true'); }}>
+        {node}
+      </span>
+    );
+  };
   const cell = (col: string, r: KitRecord): ReactNode => {
     switch (col) {
       case 'select': return checkbox(r);
@@ -1219,6 +1351,13 @@ export function ListView({
         // Сумма с охватом (S4-09): «12,5 д» или «12,5 д · у 9 из 14», и
         // «не заполнено» вместо нуля, когда не заполнено ни у кого.
         if (col.startsWith('sum:')) return <SumCell value={fieldValue(r, col.slice(4))} />;
+        // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
+        // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это
+        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем.
+        if (notApplicable(r.kind, col)) {
+          const fieldTitle = fieldTitleOf(col);
+          return <span className="sk-list__na" title={t('kit.list.cell.na', { kind: config.kinds[r.kind]?.title ?? r.kind, field: fieldTitle })}>{t('kit.list.cell.naShort')}</span>;
+        }
         return valueCell(col, r);
     }
   };
@@ -1384,8 +1523,13 @@ export function ListView({
       toggleBody(r.id);
     };
     return (
-      <span className="sk-feed__body" data-body={action.kind} data-open={open ? '' : undefined}>
-        {shown.map((para, i) => <span key={i} className="sk-feed__para">{para}</span>)}
+      <div className="sk-feed__body" data-body={action.kind} data-open={open ? '' : undefined}>
+        {/* Тело — тот же MD, что в паспорте, и тот же рендер (владелица 11.11.2026). */}
+        {/* Лента — лента паспортов (владелица 11.11.2026): названный раздел тела
+            рисуется ТЕМ ЖЕ блоком раздела, что в паспорте. */}
+        {body.section
+          ? <RecordSection title={body.section}>{shown.map((para, i) => <MartProse key={i} className="sk-feed__para" text={para} />)}</RecordSection>
+          : shown.map((para, i) => <MartProse key={i} className="sk-feed__para" text={para} />)}
         {action.kind === 'retry' && (
           <span className="sk-feed__bodyfail" role="alert">
             {t('kit.list.feed.body.failed', { reason: action.reason })}
@@ -1403,7 +1547,7 @@ export function ListView({
             {label}
           </button>
         )}
-      </span>
+      </div>
     );
   };
 
@@ -1698,7 +1842,7 @@ export function ListView({
     // Таймлайн (S4-22): дорожки той же группировки, что у списка и доски.
     const tl = listCfg?.timeline;
     body = tl
-      ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} />
+      ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} narrow={narrow} />
       : <EmptyState title={t('kit.list.timeline.noConfig')} />;
   } else if (view === 'tree') {
     // Дерево (S4-22): иерархия по list.tree над теми же отфильтрованными записями.
@@ -1818,7 +1962,7 @@ export function ListView({
                       onClick={e => onRecordClick(e, r.id)}
                     >
                       {expandCell(r)}
-                      {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
+                      {columns.map(c => { const a = colAttrs(c); return <td key={c} className={`sk-list__td ${a.className}`} data-w={a['data-w']}>{ellip(c, r, cell(c, r))}</td>; })}
                     </tr>
                     {expandRow(r)}
                   </Fragment>
@@ -1835,7 +1979,8 @@ export function ListView({
                 <th
                   key={c}
                   scope="col"
-                  className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}
+                  className={`sk-list__th ${colAttrs(c).className}`}
+                  data-w={colAttrs(c)['data-w']}
                   style={appliedW[c] === undefined ? undefined : { width: `${appliedW[c]}px` }}
                 >
                   {head}
@@ -1987,7 +2132,25 @@ export function ListView({
           [Фильтр][Группировка][Порядок] · «Быстро» · «Показано N из M». Сегменты —
           fieldset+legend: имя сегмента не спорит с подписью внутри. В сегменте
           фильтра — поиск по тексту и фасеты полей (S4-05). */}
-      <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls" data-testid="kit-list-controls">
+      {/* Телефон: фильтр, группировка и порядок — под одной кнопкой, как
+          «фильтры 0 · развернуть» в v1 (владелица 11.11: «фильтры и порядок
+          прятаться под more»). Число на кнопке — сколько условий задано, чтобы
+          свёрнутый фильтр не прятал, что список уже сужен. */}
+      {narrow && (
+        <button
+          type="button"
+          className={`sk-list__fold${filterCount + (groupKey ? 1 : 0) > 0 ? ' is-active' : ''}`}
+          aria-expanded={ctlOpen}
+          aria-controls={ctlId}
+          onClick={() => setCtlOpen(o => !o)}
+        >
+          <GameIcon slug={ICON_CANON.segFilter} size={14} />
+          <span>{t('kit.list.filters')}</span>
+          {segCount(filterCount + (groupKey ? 1 : 0))}
+          <span aria-hidden="true">{ctlOpen ? '▴' : '▾'}</span>
+        </button>
+      )}
+      <div id={ctlId} role="group" aria-label={t('kit.list.filters')} className={`sk-list__controls${narrow && !ctlOpen ? ' is-folded' : ''}`} data-testid="kit-list-controls">
         {!head && viewsSwitch}
         {!head && viewMenu}
         <fieldset className="sk-list__seg" data-seg="filter">
@@ -2026,9 +2189,23 @@ export function ListView({
                 // Закреплённые значения оси (S9-03): их называет приложение,
                 // потому что «почему именно эти» — предметное знание (K-14).
                 pinned={facetPinned?.(k)}
+                narrow={narrow}
               />
             );
           })}
+          {dateFilter && (
+            <DateRangeFilter
+              title={dateFilter.title}
+              value={dateFilter.value}
+              onChange={dateFilter.onChange}
+              now={data.meta.generated_at}
+              timeZone={dateTz}
+              lang={lang}
+              scope={dateFilter.scope ?? 'loaded'}
+              undated={dated.undated}
+              unavailable={dateFilter.unavailable}
+            />
+          )}
         </fieldset>
         {/* Лента получает ТУ ЖЕ строку управления (K2-FEED-VIEW §1): просьба
             была именно про «фильтровать и группировать наверху, как в
@@ -2048,6 +2225,7 @@ export function ListView({
             onGroup={g => update({ group: g, ...(g === null || g === state.group2 ? { group2: null } : {}) })}
             onSub={g => update({ group2: g })}
             bare
+            narrow={narrow}
           />
           {/*
             Поиск по группам появляется, когда их столько, что глазами искать
@@ -2078,6 +2256,7 @@ export function ListView({
             keys={sortKeys}
             keyTitle={labels.keyTitle}
             onChange={k => update({ sort: k ? { key: k, dir: state.sort?.dir ?? 'asc' } : null })}
+            narrow={narrow}
           />
           <button
             type="button"

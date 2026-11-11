@@ -27,8 +27,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
+import { detectRefTrigger, type RefTrigger } from './refTrigger';
+import { RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicker';
+import type { RefItem, RefSearch } from './RefSearchList';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
+import { useNarrow } from '../core/narrow';
 
 /** Элемент списка упоминаний: id сущности (им создаётся ребро) и подпись. */
 export interface MentionItem {
@@ -172,6 +176,25 @@ export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
   return out;
 }
 
+/**
+ * Источник ссылок для мини-окна (SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW, ADR-LORE-050): «[[», «#тип»,
+ * «@» (кроме случая, когда «@» уже занят упоминаниями людей — mentionItems). Kit не знает
+ * предметных имён: словарь типов, подписи, поиск и создание даёт приложение.
+ */
+export interface TipTapRefSource {
+  /** слово после «#» / префикс «[[тип:» (нижний регистр) → тип записи */
+  types: Record<string, string>;
+  typeLabels: Record<string, string>;
+  /** поиск; отказ (throw) — окно скажет «не смогли загрузить» с причиной */
+  search: (query: string, type: string | null) => Promise<RefItem[]>;
+  createSpec?: RefPickerProps['createSpec'];
+  onCreate?: RefPickerProps['onCreate'];
+  /** с какой длины запроса искать (по умолчанию 1); короче — «введите слова поиска», поиск не зовётся */
+  minQuery?: number;
+}
+
+interface RefOpen { trigger: RefTrigger; from: number; to: number; rect: { left: number; top: number } }
+
 /** Вид правки внутри поля: набор, исходник markdown, исходник HTML. */
 export type TipTapMode = 'wysiwyg' | 'md' | 'html';
 
@@ -219,15 +242,24 @@ export interface TipTapFieldProps {
   allowWysiwyg?: boolean;
   /** Причина, по которой визуальная правка закрыта — подсказкой у кнопки md. */
   lossyReason?: string;
+  /** Ссылки на записи прямо в тексте (мини-окно). Не задан — «[[» и «#» обычные символы. */
+  refs?: TipTapRefSource;
+  /**
+   * Узкий экран (телефон): панель — одна строка главных кнопок и «ещё ▾»
+   * (S4-MOBILE-EDGE). Не задан — по единому порогу kit (useNarrow, ≤720px).
+   */
+  narrow?: boolean;
 }
 
 export function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
   onUploadImage, enableHtmlMode = false, ariaLabel, mentionItems,
   mode: modeProp, defaultMode = 'wysiwyg', onModeChange,
-  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason,
+  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason, refs, narrow: narrowProp,
 }: TipTapFieldProps) {
   const lang = useKitLang();
+  const narrow = useNarrow(narrowProp);
+  const [moreOpen, setMoreOpen] = useState(false);
   const t = (k: KitKey) => kitT(lang, k);
   const enableImages = Boolean(onUploadImage);
   const onChangeRef = useRef(onChange);
@@ -243,6 +275,40 @@ export function TipTapField({
   mentionStateRef.current = mentionState;
   const mentionItemsRef = useRef<MentionItem[]>([]);
   mentionItemsRef.current = mentionItems ?? [];
+  // Мини-окно ссылки: расширения фиксируются при создании редактора, поэтому всё живое — в ref.
+  const refsRef = useRef(refs);
+  refsRef.current = refs;
+  const [refOpen, setRefOpen] = useState<RefOpen | null>(null);
+  const refOpenRef = useRef<RefOpen | null>(null);
+  refOpenRef.current = refOpen;
+  const pickerRef = useRef<RefPickerHandle>(null);
+  // Закрытое Esc/щелчком вне не открывается снова, пока вызов на том же месте.
+  const refDismissed = useRef<number | null>(null);
+  const [refSearch, setRefSearch] = useState<RefSearch>({ state: 'loading' });
+  const [refRetry, setRefRetry] = useState(0);
+  const scanRefs = (ed: Editor) => {
+    const src = refsRef.current;
+    const sel = ed.state.selection;
+    const closeRef = () => { refDismissed.current = null; if (refOpenRef.current) setRefOpen(null); };
+    if (!src || !sel.empty || !ed.isEditable) return closeRef();
+    const $from = sel.$from;
+    // Внутри кода окна нет никогда: и в блоке кода, и под строчной меткой кода.
+    if ($from.parent.type.spec.code || ed.isActive('code')) return closeRef();
+    const blockStart = $from.start();
+    const before = ed.state.doc.textBetween(blockStart, sel.from, '\n', '￼');
+    const tr = detectRefTrigger(before, { types: src.types });
+    // «@» занят упоминаниями людей — его не перехватываем (развилка «@» ждёт решения владелицы).
+    // Упоминание подключено, когда проп mentionItems задан (даже пустым списком).
+    if (!tr || (tr.trigger === 'at' && mentionItems !== undefined)) return closeRef();
+    const from = blockStart + tr.start;
+    if (refDismissed.current === from) return;
+    refDismissed.current = null;
+    let rect = { left: 0, top: 0 };
+    try { const c = ed.view.coordsAtPos(sel.from); rect = { left: c.left, top: c.bottom }; } catch { /* нет раскладки (jsdom) */ }
+    setRefOpen({ trigger: tr, from, to: sel.from, rect });
+  };
+  const scanRefsRef = useRef(scanRefs);
+  scanRefsRef.current = scanRefs;
   const [ownMode, setOwnMode] = useState<TipTapMode>(defaultMode);
   const [ownSide, setOwnSide] = useState(false);
   const wanted = modeProp ?? ownMode;
@@ -293,6 +359,13 @@ export function TipTapField({
         void uploadAndInsertRef.current(files);
         return true;
       },
+      // Окно ссылки открыто — стрелки, Enter, Tab и Esc идут ему (фокус остаётся в тексте).
+      handleKeyDown: (_view, event) => {
+        if (!refOpenRef.current || !pickerRef.current) return false;
+        if (!pickerRef.current.handleKey(event.key)) return false;
+        event.preventDefault();
+        return true;
+      },
       handlePaste: (_view, event) => {
         if (!enableImages) return false;
         const files = imageFilesFrom((event as ClipboardEvent).clipboardData);
@@ -304,8 +377,42 @@ export function TipTapField({
     },
     onUpdate: ({ editor }) => {
       onChangeRef.current(getMarkdown(editor));
+      scanRefsRef.current(editor);
     },
+    onSelectionUpdate: ({ editor }) => { scanRefsRef.current(editor); },
   });
+
+  // Поиск для окна ссылки: по запросу и типу; ответ устаревшего запроса не перетирает свежий.
+  const refQuery = refOpen && !refOpen.trigger.unknownType ? `${refOpen.trigger.type ?? ''}\u0000${refOpen.trigger.query}` : null;
+  useEffect(() => {
+    const src = refsRef.current;
+    const open = refOpenRef.current;
+    if (refQuery === null || !src || !open) return;
+    if (open.trigger.query.trim().length < (src.minQuery ?? 1)) { setRefSearch({ state: 'idle' }); return; }
+    let live = true;
+    setRefSearch({ state: 'loading' });
+    src.search(open.trigger.query, open.trigger.type).then(
+      found => { if (live) setRefSearch({ state: 'ok', items: found }); },
+      (e: unknown) => { if (live) setRefSearch({ state: 'error', reason: e instanceof Error ? e.message : String(e) }); },
+    );
+    return () => { live = false; };
+  }, [refQuery, refRetry]);
+
+  const pickRef = (item: RefItem) => {
+    const open = refOpenRef.current;
+    if (!editor || editor.isDestroyed || !open) return;
+    // Атомом mdRaw/wikilink — как круг «MD → TipTap → MD»: текстом сериализатор экранировал бы «[[».
+    editor.chain().focus().deleteRange({ from: open.from, to: open.to }).insertContent([
+      { type: 'mdRaw', attrs: { raw: `[[${item.type}:${item.id}]]`, kind: 'wikilink' } },
+      { type: 'text', text: ' ' },
+    ]).run();
+    refDismissed.current = null;
+    setRefOpen(null);
+  };
+  const closeRefPicker = () => {
+    refDismissed.current = refOpenRef.current?.from ?? null;
+    setRefOpen(null);
+  };
 
   // isDestroyed: при повторном подключении эффектов (Suspense, StrictMode)
   // React зовёт их со ссылкой на редактор, который useEditor уже уничтожил, —
@@ -475,6 +582,50 @@ export function TipTapField({
     </>
   );
 
+  // Кнопки панели — одним набором на оба вида: широкий ряд и узкий
+  // «главное + ещё» (S4-MOBILE-EDGE) собираются из тех же элементов, и функция
+  // не может потеряться в одном виде, оставшись в другом.
+  const btnUndo = editor && <ToolBtn label={t('kit.md.undo')} onClick={run(e => e.chain().focus().undo().run())}>↺</ToolBtn>;
+  const btnRedo = editor && <ToolBtn label={t('kit.md.redo')} onClick={run(e => e.chain().focus().redo().run())}>↻</ToolBtn>;
+  const btnBold = editor && <ToolBtn label={t('kit.md.bold')} active={editor.isActive('bold')} onClick={run(e => e.chain().focus().toggleBold().run())}><b>B</b></ToolBtn>;
+  const btnItalic = editor && <ToolBtn label={t('kit.md.italic')} active={editor.isActive('italic')} onClick={run(e => e.chain().focus().toggleItalic().run())}><i>i</i></ToolBtn>;
+  const btnStrike = editor && <ToolBtn label={t('kit.md.strike')} active={editor.isActive('strike')} onClick={run(e => e.chain().focus().toggleStrike().run())}><s>S</s></ToolBtn>;
+  const btnCode = editor && <ToolBtn label={t('kit.md.code')} active={editor.isActive('code')} onClick={run(e => e.chain().focus().toggleCode().run())}>{'</>'}</ToolBtn>;
+  const btnLink = editor && <ToolBtn label={t('kit.md.link')} active={editor.isActive('link')} onClick={toggleLink}>🔗</ToolBtn>;
+  const btnBullet = editor && <ToolBtn label={t('kit.md.bulletList')} active={editor.isActive('bulletList')} onClick={run(e => e.chain().focus().toggleBulletList().run())}>•</ToolBtn>;
+  const btnHeadings = editor && (
+    <>
+      <ToolBtn label={t('kit.md.h1')} active={editor.isActive('heading', { level: 1 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 1 }).run())}>H1</ToolBtn>
+      <ToolBtn label={t('kit.md.h2')} active={editor.isActive('heading', { level: 2 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 2 }).run())}>H2</ToolBtn>
+      <ToolBtn label={t('kit.md.h3')} active={editor.isActive('heading', { level: 3 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 3 }).run())}>H3</ToolBtn>
+    </>
+  );
+  const btnLists = editor && (
+    <>
+      <ToolBtn label={t('kit.md.orderedList')} active={editor.isActive('orderedList')} onClick={run(e => e.chain().focus().toggleOrderedList().run())}>1.</ToolBtn>
+      <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
+      <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
+      <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
+      <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
+    </>
+  );
+  const btnTable = editor && (
+    <>
+      {editor.isActive('table') ? (
+        <>
+          <ToolBtn label={t('kit.md.addColumn')} onClick={run(e => e.chain().focus().addColumnAfter().run())}>+▏</ToolBtn>
+          <ToolBtn label={t('kit.md.addRow')} onClick={run(e => e.chain().focus().addRowAfter().run())}>+▁</ToolBtn>
+          <ToolBtn label={t('kit.md.deleteTable')} onClick={run(e => e.chain().focus().deleteTable().run())}>⊞×</ToolBtn>
+        </>
+      ) : (
+        <ToolBtn label={t('kit.md.insertTable')} onClick={run(e => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run())}>⊞</ToolBtn>
+      )}
+      {enableImages && (
+        <ToolBtn label={t('kit.md.insertImage')} active={uploading} onClick={() => fileInputRef.current?.click()}>{uploading ? '…' : '🖼'}</ToolBtn>
+      )}
+    </>
+  );
+
   return (
     <div className="sk-md">
       {editable && editor && !allowWysiwyg && (
@@ -483,41 +634,49 @@ export function TipTapField({
         </div>
       )}
       {editable && editor && allowWysiwyg && (
-        <div className="sk-md__toolbar" role="toolbar" aria-label={t('kit.md.toolbar')}>
-          <ToolBtn label={t('kit.md.undo')} onClick={run(e => e.chain().focus().undo().run())}>↺</ToolBtn>
-          <ToolBtn label={t('kit.md.redo')} onClick={run(e => e.chain().focus().redo().run())}>↻</ToolBtn>
-          <Sep />
-          <ToolBtn label={t('kit.md.bold')} active={editor.isActive('bold')} onClick={run(e => e.chain().focus().toggleBold().run())}><b>B</b></ToolBtn>
-          <ToolBtn label={t('kit.md.italic')} active={editor.isActive('italic')} onClick={run(e => e.chain().focus().toggleItalic().run())}><i>i</i></ToolBtn>
-          <ToolBtn label={t('kit.md.strike')} active={editor.isActive('strike')} onClick={run(e => e.chain().focus().toggleStrike().run())}><s>S</s></ToolBtn>
-          <ToolBtn label={t('kit.md.code')} active={editor.isActive('code')} onClick={run(e => e.chain().focus().toggleCode().run())}>{'</>'}</ToolBtn>
-          <ToolBtn label={t('kit.md.link')} active={editor.isActive('link')} onClick={toggleLink}>🔗</ToolBtn>
-          <Sep />
-          <ToolBtn label={t('kit.md.h1')} active={editor.isActive('heading', { level: 1 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 1 }).run())}>H1</ToolBtn>
-          <ToolBtn label={t('kit.md.h2')} active={editor.isActive('heading', { level: 2 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 2 }).run())}>H2</ToolBtn>
-          <ToolBtn label={t('kit.md.h3')} active={editor.isActive('heading', { level: 3 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 3 }).run())}>H3</ToolBtn>
-          <Sep />
-          <ToolBtn label={t('kit.md.bulletList')} active={editor.isActive('bulletList')} onClick={run(e => e.chain().focus().toggleBulletList().run())}>•</ToolBtn>
-          <ToolBtn label={t('kit.md.orderedList')} active={editor.isActive('orderedList')} onClick={run(e => e.chain().focus().toggleOrderedList().run())}>1.</ToolBtn>
-          <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
-          <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
-          <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
-          <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
-          <Sep />
-          {editor.isActive('table') ? (
+        <div className={narrow ? 'sk-md__toolbar sk-md__toolbar--narrow' : 'sk-md__toolbar'} role="toolbar" aria-label={t('kit.md.toolbar')}>
+          {narrow ? (
             <>
-              <ToolBtn label={t('kit.md.addColumn')} onClick={run(e => e.chain().focus().addColumnAfter().run())}>+▏</ToolBtn>
-              <ToolBtn label={t('kit.md.addRow')} onClick={run(e => e.chain().focus().addRowAfter().run())}>+▁</ToolBtn>
-              <ToolBtn label={t('kit.md.deleteTable')} onClick={run(e => e.chain().focus().deleteTable().run())}>⊞×</ToolBtn>
+              {/* S4-MOBILE-EDGE: на телефоне одна строка главного + «ещё ▾»;
+                  остальное — тем же набором кнопок под «ещё», ничего не пропадает. */}
+              {btnUndo}{btnBold}{btnItalic}{btnLink}{btnBullet}
+              <button
+                type="button"
+                className={`sk-md__btn sk-md__morebtn${moreOpen ? ' is-on' : ''}`}
+                onClick={() => setMoreOpen(o => !o)}
+                title={t('kit.md.more')}
+                aria-label={t('kit.md.more')}
+                aria-expanded={moreOpen}
+              >{'⋯ ▾'}</button>
+              {moreOpen && (
+                <div className="sk-md__more">
+                  {btnRedo}{btnStrike}{btnCode}
+                  <Sep />
+                  {btnHeadings}
+                  <Sep />
+                  {btnLists}
+                  <Sep />
+                  {btnTable}
+                  <Sep />
+                  {modeBtns}
+                </div>
+              )}
             </>
           ) : (
-            <ToolBtn label={t('kit.md.insertTable')} onClick={run(e => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run())}>⊞</ToolBtn>
+            <>
+              {btnUndo}{btnRedo}
+              <Sep />
+              {btnBold}{btnItalic}{btnStrike}{btnCode}{btnLink}
+              <Sep />
+              {btnHeadings}
+              <Sep />
+              {btnBullet}{btnLists}
+              <Sep />
+              {btnTable}
+              <Sep />
+              {modeBtns}
+            </>
           )}
-          {enableImages && (
-            <ToolBtn label={t('kit.md.insertImage')} active={uploading} onClick={() => fileInputRef.current?.click()}>{uploading ? '…' : '🖼'}</ToolBtn>
-          )}
-          <Sep />
-          {modeBtns}
           {enableImages && (
             <input ref={fileInputRef} type="file" accept="image/*" hidden tabIndex={-1} aria-hidden onChange={onImageSelected} />
           )}
@@ -535,6 +694,22 @@ export function TipTapField({
         <div className="sk-md__box">
           <EditorContent editor={editor} />
           {editor?.isEmpty && placeholder && <div className="sk-md__placeholder" aria-hidden>{placeholder}</div>}
+          {refOpen && refs && (
+            // Якорь у каретки (координаты окна); поповер встаёт под ним и прижимается к краю экрана.
+            <div className="sk-md__refanchor" style={{ left: refOpen.rect.left, top: refOpen.rect.top }}>
+              <RefPicker
+                ref={pickerRef}
+                trigger={refOpen.trigger}
+                typeLabels={refs.typeLabels}
+                search={refSearch}
+                onPick={pickRef}
+                onClose={closeRefPicker}
+                onRetry={() => setRefRetry(n => n + 1)}
+                createSpec={refs.createSpec}
+                onCreate={refs.onCreate}
+              />
+            </div>
+          )}
           {/* position: fixed — координаты каретки приходят в координатах окна. */}
           {mentionState && mentionState.rect && (
             <div

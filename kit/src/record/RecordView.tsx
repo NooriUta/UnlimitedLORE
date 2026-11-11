@@ -7,6 +7,8 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
+import { RecordSection } from './RecordSection';
+import { SumCell } from '../list/sum';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
@@ -25,6 +27,7 @@ import { IconButton } from '../elements/IconButton';
 import { ICON_CANON } from '../elements/iconCanon';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
+import { useNarrow } from '../core/narrow';
 import { BlockBoundary } from './BlockBoundary';
 import { DataStateBlock } from './DataStateBlock';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
@@ -69,7 +72,11 @@ export interface MdEditorSlotProps {
 export interface RecordViewProps {
   record: KitRecord;
   ctx: KitCtx;
-  /** Выбранная вкладка (из URL); неизвестная — обзор. */
+  /**
+   * Выбранная вкладка (из URL); неизвестная (или пустая — «не выбрана») — обзор,
+   * а на узком экране — ПЕРВАЯ вкладка ряда в порядке модели (S4-MOBILE-COMPARE,
+   * D-2026-UXR-MOBILE-FOLLOWS-V1: у спринта на телефоне первыми — задачи, как в v1).
+   */
   tab: string;
   onTab: (tab: string) => void;
   className?: string;
@@ -143,6 +150,13 @@ export interface RecordViewProps {
    * владелицы 08.11), в адрес не идёт и приложению про него знать нечего.
    */
   widthStore?: WidthStore;
+  /**
+   * Узкий экран (S4-MOBILE-COMPARE). Не задан — по общему порогу kit
+   * (`useNarrow`, NARROW_QUERY); задан — без matchMedia (тесты, встройка).
+   * На узком: один ряд вкладок без сегмента видов, вкладка по умолчанию — первая
+   * по модели. Десктоп от этого не меняется.
+   */
+  narrow?: boolean;
 }
 
 /**
@@ -183,6 +197,9 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
     const text = value === null || value === undefined ? '' : valueText(value);
     return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} drafts={edit.drafts?.(fieldKey)} />;
   }
+  // Сумма с охватом (S4-09): та же ячейка, что `sum:` в списке — число,
+  // «у 9 из 14», «не заполнено» вместо нуля, «?» с причиной. Одно число — один вид.
+  if (type === 'sum') return <SumCell value={value} />;
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
   if (type === 'ref') {
@@ -263,12 +280,11 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
           // нечем написать, и это тупик без способа начать.
           if (!text.trim() && !may) return null;
           return (
-            <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
-              <h2 className="sk-rec-fields__sechead">{s.title}</h2>
+            <RecordSection key={s.key} title={s.title}>
               {may
                 ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} hint={si === hintAt} />
                 : <>{ctx.md(text)}</>}
-            </section>
+            </RecordSection>
           );
         })}
       </div>
@@ -289,11 +305,11 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-type RecWidth = 's' | 'm' | 'l';
-const WIDTHS: readonly RecWidth[] = ['s', 'm', 'l'];
+type RecWidth = 's' | 'm' | 'l' | 'f';
+const WIDTHS: readonly RecWidth[] = ['s', 'm', 'l', 'f'];
 const WIDTH_KEY = 'seidr-kit:rec-width';
 function readWidth(): RecWidth {
-  try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' ? v : 'm'; } catch { return 'm'; }
+  try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' || v === 'f' ? v : 'm'; } catch { return 'm'; }
 }
 
 /** Свёртка «Свойства · …» (v4): непустые значения полей одной строкой. */
@@ -305,8 +321,9 @@ function propsSummary(record: KitRecord, kind: KindConfig): string {
     .join(' · ');
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore }: RecordViewProps) {
+export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore, narrow: narrowProp }: RecordViewProps) {
   const lang = useKitLang();
+  const narrow = useNarrow(narrowProp);
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
@@ -504,10 +521,21 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   // по старой ссылке на обзор — то же, что сломать ссылку, поэтому ключ раздела
   // приводится к ключу его группы.
   const asked = groupOf.get(tab)?.key ?? tab;
-  const current = items.some(i => i.id === asked) ? asked : RECORD_TABS.overview;
+  // Вкладка не выбрана (или устарела): на десктопе — обзор, как прежде; на
+  // телефоне — первая вкладка ряда, то есть первая по модели (v1: у спринта
+  // первыми задачи, D-2026-UXR-MOBILE-FOLLOWS-V1). Выбор человека главнее:
+  // явный «Контент» остаётся контентом.
+  const fallbackTab = narrow && items.length > 0 ? items[0].id : RECORD_TABS.overview;
+  const current = items.some(i => i.id === asked) ? asked : fallbackTab;
   // Панелью справа (узко) — переключатель видов над шапкой, как «таблица / доска» (владелица 08.11):
   // Контент (текст и вкладки типа) · Свойства · Аналитика (связи, граф, журнал, история).
-  const modes = placement === 'right';
+  //
+  // НА ТЕЛЕФОНЕ СЕГМЕНТА НЕТ (S4-MOBILE-COMPARE): сегмент и вкладки вида давали
+  // ДВА ряда управления («Контент · Свойства · Аналитика» и под ним «Контент ·
+  // Ещё 8»), а задачи спринта уезжали под «Ещё». Один ряд, как в v1: всё, что
+  // было под сегментом, — вкладками того же ряда (лишнее — под «Ещё»), ничего
+  // не пропадает.
+  const modes = placement === 'right' && !narrow;
   type Mode = 'content' | 'props' | 'analytics';
   const mode: Mode = current === RECORD_TABS.props ? 'props' : aroundItems.some(i => i.id === current) ? 'analytics' : 'content';
   const contentItems = foldGroups(recordItems.filter(i => i.id !== RECORD_TABS.props));

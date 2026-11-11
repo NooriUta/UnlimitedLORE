@@ -118,6 +118,7 @@ class LoreNewsV2QueryBudgetTest {
         new LoreNewsV2Collector(recorder(calls)).collect(T0, T1, T1, ZONE, null);
         StatusHistoryTimeline.load(recorder(calls), LoreNewsV2Resource.FEED_TYPES, from, T1);
         HistAuthorIndex.load(recorder(calls), LoreNewsV2Resource.FEED_TYPES, from, T1);
-        assertTrue(calls.size() <= 23, "запросов на ленту: " + calls.size() + " (было 30)");
+        // S7A-01: вехи и компоненты — по одной лёгкой проекции без тел (+2): 23 → 25.
+        assertTrue(calls.size() <= 25, "запросов на ленту: " + calls.size() + " (было 30, до вех и компонентов 23)");
     }
 }

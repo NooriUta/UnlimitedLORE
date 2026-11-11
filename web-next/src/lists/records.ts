@@ -183,6 +183,9 @@ export function taskListRecord(row: Row): KitRecord {
       code: str(row.task_id),
       sprint: str(row.sprint_id),
       components: list(row.component_ids),
+      // S9-02: релизы спринта задачи (PART_OF → IMPLEMENTED_IN_RELEASE) —
+      // то же имя поля, что у спринта, иначе фасеты разошлись бы.
+      release: list(row.release_ids),
       effort: num(row.effort_days),
       work_class: str(row.work_class),
     },
@@ -379,6 +382,24 @@ export function componentRecord(row: Row): KitRecord {
       project: list(row.git_projects),
       adrs: num(row.adr_count),
       specs: num(row.spec_count),
+    },
+  };
+}
+
+/**
+ * Строка слайса git_projects → запись kit (S4-29, решение 53а). **Статуса нет** —
+ * проект справочная вершина; ключ — slug «владелец/репозиторий», им же
+ * открывается паспорт (/lore/record/project/<slug>).
+ */
+export function projectRecord(row: Row): KitRecord {
+  const id = str(row.slug);
+  return {
+    id,
+    kind: 'project',
+    title: str(row.name) || id,
+    status: '',
+    fields: {
+      default_branch: str(row.default_branch),
     },
   };
 }

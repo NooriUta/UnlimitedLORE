@@ -10,7 +10,7 @@
 //   «фильтр сервер не принял» (его слова + его список допустимых значений);
 //   «одиночное действие» / «пачка» / «пачку раскрыть нечем».
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Forbidden, LoadError, Pill, Skeleton, useLoadState, useUrlParam, setUrlParams } from '@seidr/kit';
+import { EmptyState, Forbidden, LoadError, Pill, Skeleton, useLoadState, useUrlParam, setUrlParams } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
@@ -247,13 +247,13 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
         </label>
         <label className="adm-field">
           <span className="adm-field__l">{t('admin.log.f.from')}</span>
-          <input className="adm-input" type="text" value={draft.from} onChange={e => set('from')(e.target.value)}
-            placeholder="2026-11-10" />
+          <input className="adm-input" type={dayOrEmpty(draft.from) ? 'date' : 'text'} value={draft.from}
+            onChange={e => set('from')(e.target.value)} placeholder="2026-11-10" />
         </label>
         <label className="adm-field">
           <span className="adm-field__l">{t('admin.log.f.to')}</span>
-          <input className="adm-input" type="text" value={draft.to} onChange={e => set('to')(e.target.value)}
-            placeholder="2026-11-10" />
+          <input className="adm-input" type={dayOrEmpty(draft.to) ? 'date' : 'text'} value={draft.to}
+            onChange={e => set('to')(e.target.value)} placeholder="2026-11-10" />
         </label>
         <label className="adm-field">
           <span className="adm-field__l">{t('admin.log.f.limit')}</span>
@@ -275,6 +275,14 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
 
 type T = ReturnType<typeof useAppT>;
 
+/**
+ * S7B-25: период — полем даты, а не текстом. Но сервер принимает и момент ISO,
+ * и epoch millis (ссылка из чата может их нести): такое значение поле даты
+ * показало бы пустым и молча потеряло бы. Поэтому дата или пусто — поле даты,
+ * иное — текст как прислали.
+ */
+const dayOrEmpty = (v: string): boolean => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v);
+
 /** Код + подпись: кода нет в закрытом списке — показываем КАК ПРИСЛАЛИ. */
 function label(t: T, map: Record<string, AppKey>, code: string | null) {
   if (code === null) return <span className="adm-missing">—</span>;
@@ -286,15 +294,13 @@ function label(t: T, map: Record<string, AppKey>, code: string | null) {
 function EmptyJournal({ filtered, onReset }: { filtered: boolean; onReset: () => void }) {
   const t = useAppT();
   return (
-    <div className="sk-state sk-state--empty" data-state="empty" data-testid="adm-log-empty"
-      data-empty={filtered ? 'filter' : 'journal'}>
-      <p className="sk-state__title">{filtered ? t('admin.log.emptyFilter') : t('admin.log.empty')}</p>
-      <p className="sk-state__hint">{filtered ? t('admin.log.emptyFilterHint') : t('admin.log.emptyHint')}</p>
-      {filtered && (
-        <div className="sk-state__action">
-          <button type="button" className="sk-btn" onClick={onReset}>{t('admin.log.reset')}</button>
-        </div>
-      )}
+    // S7B-25: пустое состояние — kit EmptyState; обёртка несёт только метку для проверок.
+    <div data-testid="adm-log-empty" data-empty={filtered ? 'filter' : 'journal'}>
+      <EmptyState
+        title={filtered ? t('admin.log.emptyFilter') : t('admin.log.empty')}
+        hint={filtered ? t('admin.log.emptyFilterHint') : t('admin.log.emptyHint')}
+        action={filtered ? <button type="button" className="sk-btn" onClick={onReset}>{t('admin.log.reset')}</button> : undefined}
+      />
     </div>
   );
 }

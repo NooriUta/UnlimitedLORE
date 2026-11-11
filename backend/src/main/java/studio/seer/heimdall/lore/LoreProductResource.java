@@ -166,6 +166,9 @@ public class LoreProductResource extends LoreResourceBase {
             p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now().toString());
+            // S4-MODEL-TYPES (свежесть): истории у фичи нет — момент заведения/правки на вершине.
+            sql.append(", updated_at=:upd");
+            p.put("upd", java.time.Instant.now().toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
@@ -251,6 +254,9 @@ public class LoreProductResource extends LoreResourceBase {
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now().toString());
+            // S4-MODEL-TYPES (свежесть): истории у сценария нет — момент заведения/правки на вершине.
+            sql.append(", updated_at=:upd");
+            p.put("upd", java.time.Instant.now().toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
@@ -1379,6 +1385,7 @@ public class LoreProductResource extends LoreResourceBase {
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
                     "OR @in.milestone_id=:tid OR @in.component_id=:tid OR @in.uc_id=:tid", p))
                     .await().indefinitely();
+                if (had) touchUpdatedAt("KnowUseCase", "uc_id", req.feature_id());
                 return unlinkOutcome(Map.of("ok", true, "feature_id", req.feature_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
@@ -1389,6 +1396,7 @@ public class LoreProductResource extends LoreResourceBase {
                     "TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
+            if (linked && !had) touchUpdatedAt("KnowUseCase", "uc_id", req.feature_id());
             return linkOutcome(had, Map.of("ok", true, "feature_id", req.feature_id(),
                 "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked),
                 linked, edge, "uc_id", req.feature_id(), inField, req.target_id(), "фича " + req.feature_id() + " или " + req.target_id());
@@ -1533,6 +1541,7 @@ public class LoreProductResource extends LoreResourceBase {
                             req.uc_id(), LoreUpstream.detail(e));
                     }
                 }
+                if (had) touchUpdatedAt("KnowUseCase", "uc_id", req.uc_id());
                 return unlinkOutcome(Map.of("ok", true, "uc_id", req.uc_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
@@ -1560,6 +1569,8 @@ public class LoreProductResource extends LoreResourceBase {
             String roleBefore = null;
             boolean roleChanged = false;
             boolean fresh = linked && !had;
+            // S4-MODEL-TYPES (свежесть): новая связь — правка сценария; смена роли ниже ставит отметку сама.
+            if (fresh) touchUpdatedAt("KnowUseCase", "uc_id", req.uc_id());
             if ("actor".equals(req.rel()) && (fresh || req.actor_role() != null)) {
                 String desired = req.actor_role() != null ? req.actor_role()
                     : (countPrimaryActors(req.uc_id()) == 0 ? "primary" : "supporting");
@@ -1598,6 +1609,7 @@ public class LoreProductResource extends LoreResourceBase {
                 "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют"));
             if ("actor".equals(req.rel()) && (fresh || roleChanged)) out.put("quality", qualityOf(req.uc_id()));
             if (roleChanged) {
+                touchUpdatedAt("KnowUseCase", "uc_id", req.uc_id());
                 out.put("outcome", LoreOutcome.UPDATED);
                 out.put("role_before", roleBefore);
                 out.put("role_after", req.actor_role());

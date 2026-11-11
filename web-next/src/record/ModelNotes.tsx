@@ -27,6 +27,7 @@
 // свёрнутом виде. Свёрнутая она НЕ МОЛЧИТ: число оговорок и слово о том, что
 // это оговорки модели, стоят в самом шевроне — «свёрнуто» не должно читаться
 // как «предупреждений нет».
+import { TechGate } from '@seidr/kit';
 import { useAppT } from '../i18n';
 
 export interface ModelNotesProps {
@@ -40,18 +41,25 @@ export function ModelNotes({ notes }: ModelNotesProps) {
   // приходят СТРОКАМИ (passportOrder.ts, passportStatuses.ts), то есть тоже
   // оговорками: пустой список значит именно «модель ответила, спорить не о чем».
   if (notes.length === 0) return null;
+  // S4-TECH-NOTES (владелица 11.11.2026): оговорки разбора модели — сведения
+  // для разработчика, человек с ними ничего сделать не может. Скрыты, пока не
+  // включена личная настройка или кнопка «тех.» на месте. Неполноты данных они
+  // не означают (паспорт показан целиком, меняется только порядок/словарь
+  // умолчания), поэтому заменяющей строки нет.
   return (
-    <div className="pp-model-note" role="status">
-      <details className="pp-model-note__box">
-        <summary className="pp-model-note__sum">
-          <span aria-hidden="true">⚠</span>{' '}
-          {t('pp.modelNotes', { n: notes.length })}
-        </summary>
-        <ul className="pp-model-note__list">
-          {notes.map(n => <li key={n}>{n}</li>)}
-        </ul>
-      </details>
-    </div>
+    <TechGate className="pp-model-note__tech">
+      <div className="pp-model-note" role="status">
+        <details className="pp-model-note__box">
+          <summary className="pp-model-note__sum">
+            <span aria-hidden="true">⚠</span>{' '}
+            {t('pp.modelNotes', { n: notes.length })}
+          </summary>
+          <ul className="pp-model-note__list">
+            {notes.map(n => <li key={n}>{n}</li>)}
+          </ul>
+        </details>
+      </div>
+    </TechGate>
   );
 }
 

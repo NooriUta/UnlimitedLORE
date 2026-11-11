@@ -14,6 +14,7 @@ import { FACET_SCALE, facetSections } from './facetSections';
 import type { FacetBlockKind } from './facetSections';
 import { FILTER_OPS } from './listModel';
 import type { FilterOp } from './listModel';
+import { Sheet } from '../shell/Sheet';
 
 /** Иконка значения поля: слаг game-icons и цвет токеном. */
 export interface ValueIcon { icon: string; color?: string }
@@ -58,6 +59,11 @@ export interface FacetFilterProps {
    * знание приложения, а не kit (K-14): сюда приходит только список значений.
    */
   pinned?: readonly string[];
+  /**
+   * Узкий экран (≤720, от ListView): панель — нижним листом (S4-MOBILE-EDGE).
+   * Замер на 360×800: панель у кнопки уходила на 377 px под нижний край.
+   */
+  narrow?: boolean;
 }
 
 /**
@@ -83,7 +89,7 @@ export const FIND_FROM = FACET_SCALE.findFrom;
 
 export function FacetFilter({
   title, filter, facet, valueTitle, valueIcon, compare, onChange, lang,
-  countsFrom = 'page', countsUnknown, multi, pinned,
+  countsFrom = 'page', countsUnknown, multi, pinned, narrow = false,
 }: FacetFilterProps) {
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const [open, setOpen] = useState(false);
@@ -154,28 +160,7 @@ export function FacetFilter({
   };
   const pickValues = filter.op === 'any' || filter.op === 'not';
 
-  return (
-    <div className={`sk-facet${open ? ' is-open' : ''}`} onKeyDown={onKey}>
-      <button
-        ref={trigger}
-        type="button"
-        className={`sk-facet__btn${active ? ' is-active' : ''}`}
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen(o => !o)}
-      >
-        <span className="sk-list__label">{title}</span>
-        <span className="sk-facet__sum">{summary}</span>
-        <span className="sk-facet__chev" aria-hidden="true">{open ? '▴' : '▾'}</span>
-      </button>
-      <div
-        id={panelId}
-        className="sk-facet__panel"
-        role="group"
-        aria-label={t('kit.list.facetPanel', { field: title })}
-        hidden={!open}
-      >
-        {open && (
+  const body = (
           <>
             <div role="radiogroup" aria-label={t('kit.list.op')} className="sk-facet__ops">
               {FILTER_OPS.map(op => {
@@ -249,8 +234,45 @@ export function FacetFilter({
               <button type="button" className="sk-btn" onClick={close}>{t('kit.list.facetDone')}</button>
             </div>
           </>
-        )}
-      </div>
+  );
+
+  return (
+    <div className={`sk-facet${open ? ' is-open' : ''}`} onKeyDown={onKey}>
+      <button
+        ref={trigger}
+        type="button"
+        className={`sk-facet__btn${active ? ' is-active' : ''}`}
+        aria-expanded={open}
+        aria-haspopup={narrow ? 'dialog' : undefined}
+        aria-controls={narrow ? undefined : panelId}
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className="sk-list__label">{title}</span>
+        <span className="sk-facet__sum">{summary}</span>
+        <span className="sk-facet__chev" aria-hidden="true">{open ? '▴' : '▾'}</span>
+      </button>
+      {narrow ? (
+        open && (
+          // Лист сам ведёт ловушку фокуса, Esc и касание мимо; при закрытии
+          // фокус возвращается на кнопку поля.
+          <Sheet open onClose={close} title={title} side="bottom" className="sk-lsheet"
+            initialFocus={root => root.querySelector<HTMLElement>('.sk-facet__op[aria-checked="true"]')}>
+            <div role="group" aria-label={t('kit.list.facetPanel', { field: title })} className="sk-facet__sheet">
+              {body}
+            </div>
+          </Sheet>
+        )
+      ) : (
+        <div
+          id={panelId}
+          className="sk-facet__panel"
+          role="group"
+          aria-label={t('kit.list.facetPanel', { field: title })}
+          hidden={!open}
+        >
+          {open && body}
+        </div>
+      )}
     </div>
   );
 }

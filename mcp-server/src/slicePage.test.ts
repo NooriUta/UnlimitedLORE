@@ -21,6 +21,11 @@ describe('slicePageOf: страница слайса не теряется по 
       .toMatchObject({ fields_checked: false, warning: expect.stringContaining('NOT be checked') });
   });
 
+  it('MT-MCP-CHANGED-RANGE: применённый период и сортировка доходят до агента', () => {
+    expect(slicePageOf({ rows: [], page: { limit: null, offset: 0, total: 3, has_more: false, changed_from: '2026-11-10', changed_to: '2026-11-11', sort: 'changed_at:desc', time_zone: 'UTC' } }))
+      .toMatchObject({ total: 3, changed_from: '2026-11-10', changed_to: '2026-11-11', sort: 'changed_at:desc', time_zone: 'UTC' });
+  });
+
   it('мусор вместо page не выдаётся за страницу', () => {
     expect(slicePageOf({ rows: [], page: 'x' as unknown as object })).toBeUndefined();
   });

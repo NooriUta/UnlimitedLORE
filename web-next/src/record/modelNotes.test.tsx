@@ -25,7 +25,12 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ModelNotes } from './ModelNotes';
+import { TechVisibilityProvider } from '@seidr/kit';
+import { ModelNotes as Bare } from './ModelNotes';
+
+// S4-TECH-NOTES: оговорки модели — tech. Здесь проверяется вид шеврона при
+// включённой настройке; скрытие по умолчанию — settings/showTech.test.tsx.
+const ModelNotes = (p: { notes: string[] }) => <TechVisibilityProvider show><Bare {...p} /></TechVisibilityProvider>;
 
 const NOTES = [
   'статусы — умолчание приложения: документа в ответе нет',

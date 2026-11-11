@@ -120,6 +120,21 @@ describe('экран «Агенты»', () => {
     expect(within(chips).getByTestId(`adm-harness-${HARNESS_NONE}`).textContent).toMatch(/не указан.*1/);
   });
 
+  it('чип «без машины» — число и фильтр; выбор в адресе (adm-agents-f=nomachine), S7B-25', async () => {
+    window.history.replaceState(null, '', '/');
+    mount(fake({ rows: ROWS }).f);
+    const chip = await screen.findByTestId('adm-agents-nomachine');
+    expect(chip.textContent).toMatch(/без машины.*2/);
+    fireEvent.click(chip);
+    expect(new URLSearchParams(window.location.search).get('adm-agents-f')).toBe('nomachine');
+    expect(screen.queryByTestId('adm-agent-A1')).toBeNull();
+    expect(screen.getByTestId('adm-agent-A2')).toBeTruthy();
+    expect(screen.getByTestId('adm-agent-A3')).toBeTruthy();
+    fireEvent.click(chip);
+    expect(new URLSearchParams(window.location.search).get('adm-agents-f')).toBeNull();
+    expect(screen.getByTestId('adm-agent-A1')).toBeTruthy();
+  });
+
   it('у агента без машины — «не привязана» словами, а не пустая клетка', async () => {
     mount(fake({ rows: ROWS }).f);
     const row = await screen.findByTestId('adm-agent-A2');
@@ -136,11 +151,40 @@ describe('экран «Агенты»', () => {
     expect(screen.getByTestId('adm-agent-A1')).toBeTruthy();
   });
 
-  it('выбор harness из реестра сохраняется на сервер и список перечитывается', async () => {
+  it('выбор harness НЕ пишет сразу: дифф «было → станет», «Отмена» ничего не пишет (S7B-25)', async () => {
+    const { f, calls } = fake({ rows: ROWS });
+    mount(f);
+    const sel = within(await screen.findByTestId('adm-agent-A2')).getByRole('combobox');
+    fireEvent.change(sel, { target: { value: 'dsh' } });
+    const pend = await screen.findByTestId('adm-harness-pending-A2');
+    expect(pend.textContent).toContain('Kimi Code');
+    expect(pend.textContent).toContain('DSH');
+    expect(calls.some(c => c.url === '/lore/actor/owner')).toBe(false);
+    fireEvent.click(within(pend).getByTestId('adm-harness-cancel'));
+    expect(screen.queryByTestId('adm-harness-pending-A2')).toBeNull();
+    expect(calls.some(c => c.url === '/lore/actor/owner')).toBe(false);
+  });
+
+  it('применённый harness можно вернуть одним нажатием — прежнее значение уходит на сервер (S7B-25)', async () => {
+    const { f, calls } = fake({ rows: ROWS });
+    mount(f);
+    const sel = within(await screen.findByTestId('adm-agent-A2')).getByRole('combobox');
+    fireEvent.change(sel, { target: { value: 'dsh' } });
+    fireEvent.click(within(await screen.findByTestId('adm-harness-pending-A2')).getByTestId('kit-diff-apply'));
+    const back = await screen.findByTestId('adm-harness-revert-A2');
+    expect(back.textContent).toContain('Kimi Code');
+    fireEvent.click(back);
+    await waitFor(() => expect(calls.filter(c => c.url === '/lore/actor/owner')).toHaveLength(2));
+    const posts = calls.filter(c => c.url === '/lore/actor/owner').map(c => JSON.parse(String(c.init?.body)).harness);
+    expect(posts).toEqual(['dsh', 'kimi-code']);
+  });
+
+  it('выбор harness из реестра после «Применить» сохраняется на сервер и список перечитывается', async () => {
     const { f, calls } = fake({ rows: ROWS });
     mount(f);
     const sel = within(await screen.findByTestId('adm-agent-A3')).getByRole('combobox');
     fireEvent.change(sel, { target: { value: 'dsh' } });
+    fireEvent.click(within(await screen.findByTestId('adm-harness-pending-A3')).getByTestId('kit-diff-apply'));
     await waitFor(() => expect(calls.some(c => c.url === '/lore/actor/owner')).toBe(true));
     const post = calls.find(c => c.url === '/lore/actor/owner')!;
     expect(JSON.parse(String(post.init?.body)).harness).toBe('dsh');
@@ -228,6 +272,15 @@ describe('карточка агента · машина (S7B-16)', () => {
     expect(box.getAttribute('data-bound')).toBe('true');
     expect(box.textContent).toContain('lorcetus');
     fireEvent.click(within(box).getByTestId('adm-machine-unbind'));
+    // S7B-25: отвязка — не в один клик: сперва вопрос с именем машины, записи ещё нет.
+    const ask = within(box).getByTestId('adm-machine-unbind-ask');
+    expect(ask.textContent).toContain('lorcetus');
+    expect(fk.posts()).toHaveLength(0);
+    fireEvent.click(within(ask).getByTestId('adm-machine-unbind-no'));
+    expect(within(box).queryByTestId('adm-machine-unbind-ask')).toBeNull();
+    expect(fk.posts()).toHaveLength(0);
+    fireEvent.click(within(box).getByTestId('adm-machine-unbind'));
+    fireEvent.click(within(box).getByTestId('adm-machine-unbind-yes'));
     await waitFor(() => expect(fk.posts()).toHaveLength(1));
     expect(fk.posts()[0].machine_id).toBe('');
   });
@@ -241,6 +294,21 @@ describe('карточка агента · машина (S7B-16)', () => {
     fireEvent.click(within(box).getByTestId('adm-machine-save'));
     const err = await within(box).findByTestId('adm-machine-error');
     expect(err.textContent).toContain('уже занят');
+  });
+
+  it('подсказка занятых имён: известные машины в подсказке ввода; имя уже есть — сказано, у кого (S7B-25)', async () => {
+    open('A2');
+    const fk = fakeM();
+    mount(fk.f);
+    const box = await screen.findByTestId('adm-machine-A2');
+    const input = within(box).getByTestId('adm-machine-input') as HTMLInputElement;
+    const list = document.getElementById(input.getAttribute('list') ?? '');
+    expect(list).toBeTruthy();
+    expect([...list!.querySelectorAll('option')].map(o => o.getAttribute('value'))).toEqual(['lorcetus']);
+    fireEvent.change(input, { target: { value: 'lorcetus' } });
+    expect(within(box).getByTestId('adm-machine-taken').textContent).toContain('Claude Code (full)');
+    fireEvent.change(input, { target: { value: 'новая' } });
+    expect(within(box).queryByTestId('adm-machine-taken')).toBeNull();
   });
 
   it('у агента нет владельца — правки нет, причина сказана (сервер требует kc_sub)', async () => {

@@ -34,6 +34,7 @@ export { KindBlock, KindCell, kindColumns, kindColumnTitle, type KindBlockAs, ty
 // Вклеенный блок с числом в заголовке: хвост тела паспорта (S4-29) и запись с
 // телом в ленте (K2-FEED-BODY-MORE) — один код, а не похожая вёрстка.
 export * from './GluedBlock';
+export * from './RecordSection';
 // Ряд значений-чипов: первые три и «ещё N», подпись источника у унаследованных
 // (S4-29). Нужен не только паспорту — отсюда отдельный файл и экспорт.
 export * from './ValueChips';

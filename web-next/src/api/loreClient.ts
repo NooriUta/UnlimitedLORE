@@ -36,6 +36,12 @@ export interface SliceBody<T = Record<string, unknown>> {
     fields?: string[]; fields_checked?: boolean; warning?: string;
   };
   warnings?: string[];
+  /**
+   * «Сейчас» источника — заголовок Date ответа, ISO (K2-DATE-RANGE). От него, а
+   * не от часов браузера считаются «сегодня» ленты и быстрые периоды фильтра
+   * по дате. Нет заголовка — поля нет, и экран берёт часы браузера.
+   */
+  served_at?: string;
 }
 
 export class LoreApiError extends Error {
@@ -93,5 +99,11 @@ export async function fetchSlice<T = Record<string, unknown>>(
   if (!res.ok) throw await toError(res);
   if (!isJson(res)) throw new LoreApiError(res.status, 'NON_JSON', 'ответ не JSON');
   const body = (await res.json()) as Partial<SliceBody<T>> | null;
-  return { ...(body ?? {}), rows: Array.isArray(body?.rows) ? body!.rows : [] };
+  const date = res.headers.get('date');
+  const ms = date ? Date.parse(date) : NaN;
+  return {
+    ...(body ?? {}),
+    rows: Array.isArray(body?.rows) ? body!.rows : [],
+    ...(Number.isNaN(ms) ? {} : { served_at: new Date(ms).toISOString() }),
+  };
 }

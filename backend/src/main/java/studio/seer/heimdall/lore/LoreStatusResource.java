@@ -96,7 +96,8 @@ public class LoreStatusResource extends LoreResourceBase {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> updateStatus(StatusUpdateRequest req,
-                                      @HeaderParam("X-Seer-Role") String role) {
+                                      @HeaderParam("X-Seer-Role") String role,
+                                      @HeaderParam(AgentMachine.HEADER) String machineHeader) {
         if (!enabled) return Uni.createFrom().item(disabled());
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
@@ -127,6 +128,11 @@ public class LoreStatusResource extends LoreResourceBase {
         String nsid = UUID.randomUUID().toString();
         // S2-12: автор версии — из проверенного токена, снят до асинхронной цепочки.
         final ChangeAuthor author = changeAuthor();
+        // AO-MACHINE-OBJ: машина агента — в ответ (привязку в графе делает AgentMachineFilter
+        // на любой мутации; здесь — чтобы агент видел «машина не указана» в самом ответе).
+        // AO-REVIEWER-AUTHOR: ревьюер задачи — после смены статуса, ниже. Значения могут
+        // быть null (machine_id без машины), поэтому синхронизированный LinkedHashMap.
+        final Map<String, Object> extras = java.util.Collections.synchronizedMap(new LinkedHashMap<>());
         Uni<Response> flip = switch (req.entity_type()) {
             // Read the currently-open row's plan fields (priority/planned_*/track_id)
             // BEFORE the SCD2 flip, then restore them onto the freshly-opened row —
@@ -199,11 +205,13 @@ public class LoreStatusResource extends LoreResourceBase {
         // статуса), то есть без переезда на worker-пул он молча не работал бы
         // вовсе. Ровно так первая редакция и вела себя: тесты показали статус
         // «proposed» там, где ждали «shipped», без единой ошибки в ответе.
+        final Map<String, Object> machine = AgentMachine.answerFields(AgentMachine.judge(author, machineHeader, false));
         return flip.chain(r -> {
             if (r == null || r.getStatus() >= 300 || !"task".equals(req.entity_type()))
                 return Uni.createFrom().item(r);
             return Uni.createFrom().item(() -> {
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.id());
+                    extras.put("reviewer", fillReviewer(req.id(), author));
                     readiness.recomputeForTask(req.id());
                     // QG-17: связь «вопрос держит задачу» не снимается, а помечается решённой.
                     try {
@@ -226,7 +234,68 @@ public class LoreStatusResource extends LoreResourceBase {
                         req.id(), ex.getMessage()))
                     .onFailure().recoverWithItem((Void) null)
                     .replaceWith(rr));
+        }).map(r -> {
+            synchronized (extras) { extras.putAll(machine); }
+            return withExtras(r, extras);
         });
+    }
+
+    /**
+     * Добавить к успешному ответу status_set поля сверх основных (reviewer, machine_id,
+     * machine_warning). Пусто — ответ не трогаем: форма прежняя (StatusUpdateResponse).
+     */
+    static Response withExtras(Response r, Map<String, Object> extras) {
+        if (r == null || r.getStatus() >= 300 || extras == null || extras.isEmpty()) return r;
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (r.getEntity() instanceof StatusUpdateResponse s) {
+            out.put("ok", s.ok()); out.put("entity_type", s.entity_type()); out.put("id", s.id());
+            out.put("old_status", s.old_status()); out.put("new_status", s.new_status()); out.put("revision", s.revision());
+        } else if (r.getEntity() instanceof Map<?, ?> m) {
+            m.forEach((k, v) -> out.put(String.valueOf(k), v));
+        } else {
+            return r;
+        }
+        synchronized (extras) { out.putAll(extras); }
+        return noStore(Response.ok(out));
+    }
+
+    @jakarta.inject.Inject
+    TaskRoleService roleService; // AO-REVIEWER-AUTHOR: единственная точка записи роли
+
+    /**
+     * AO-REVIEWER-AUTHOR: ревьюера на задаче нет — поставить человека-инициатора
+     * (агент → его владелец, человек → он сам; {@link ReviewerFill}). Блокирующий —
+     * звать с worker-потока. Вторичен по отношению к смене статуса: сбой — в ответ
+     * и в лог, но статус уже сменён и не откатывается.
+     */
+    Map<String, Object> fillReviewer(String taskUid, ChangeAuthor author) {
+        try {
+            List<String> current = roleService.currentHolders(taskUid, TaskRole.REVIEWER);
+            List<String> humans = new java.util.ArrayList<>();
+            ReviewerFill.Query q = current.isEmpty() ? ReviewerFill.resolveQuery(author) : null;
+            if (q != null) {
+                for (Map<String, Object> row : ingestService.queryPublic(q.sql(), q.params())) {
+                    Object n = row.get("names");
+                    if (n instanceof java.util.Collection<?> c) c.forEach(x -> { if (x != null) humans.add(String.valueOf(x)); });
+                    else if (n != null) humans.add(String.valueOf(n));
+                }
+            }
+            ReviewerFill.Decision d = ReviewerFill.decide(author, current, humans);
+            Map<String, Object> applied = null;
+            if (d.action() == ReviewerFill.Action.FILL) {
+                TaskRoleService.Result res = roleService.apply(new TaskRoleService.RoleRequest(
+                    taskUid, TaskRole.REVIEWER, d.identity(), null, null, null, null));
+                applied = new LinkedHashMap<>(res.body());
+                if (!res.applied()) applied.put("outcome", "noop");
+            }
+            return ReviewerFill.answer(d, applied);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE STATUS] task=%s ревьюер не подставлен (статус сменён): %s", taskUid, e.getMessage());
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("outcome", "error");
+            out.put("reason", "ревьюер не подставлен: " + LoreUpstream.detail(e));
+            return out;
+        }
     }
 
     /**
@@ -710,7 +779,8 @@ public class LoreStatusResource extends LoreResourceBase {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response batchSetStatus(BatchStatusRequest req,
-                                   @HeaderParam("X-Seer-Role") String role) {
+                                   @HeaderParam("X-Seer-Role") String role,
+                                   @HeaderParam(AgentMachine.HEADER) String machineHeader) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.ids() == null || req.ids().isEmpty())
@@ -723,7 +793,7 @@ public class LoreStatusResource extends LoreResourceBase {
         for (String id : req.ids()) {
             try {
                 var body = new StatusUpdateRequest(req.entity_type(), id, req.status());
-                Response r = updateStatus(body, "admin").await().indefinitely();
+                Response r = updateStatus(body, "admin", machineHeader).await().indefinitely();
                 if (r.getStatus() == 200) {
                     // «Уже был такой статус» и «статус сменили» — разные исходы, и до
                     // сих пор они складывались в одно число. «Обновлено 3» не

@@ -89,7 +89,7 @@ describe('мера чтения — от дисплея', () => {
     expect(ruleOf(".sk-dock[data-placement='full']")).toMatch(/--rec-frame:\s*66vw/);
   });
 
-  it('пропорции во весь экран (выбор владелицы 08.11) не тронуты', () => {
-    expect(ruleOf(".sk-dock[data-placement='full'] .sk-rec[data-width='m']")).toMatch(/--rec-col:\s*66%/);
+  it('пропорции во весь экран — по слову владелицы 11.11 (поля вдвое уже прежних)', () => {
+    expect(ruleOf(".sk-dock[data-placement='full'] .sk-rec[data-width='m']")).toMatch(/--rec-col:\s*83%/);
   });
 });

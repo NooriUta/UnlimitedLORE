@@ -21,9 +21,10 @@ import '@fontsource/ibm-plex-mono/700.css';
 import '@fontsource/unbounded/800.css';
 import '@seidr/kit/styles/seidr.css';
 import { lazy, Suspense } from 'react';
-import { ErrorBoundary, Pill, Skeleton, StorageBanner, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { ErrorBoundary, Pill, Skeleton, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
-import { legacyPassportHref } from './nav/loreRoutes';
+import { legacyHashHref, legacyPassportHref } from './nav/loreRoutes';
+import { legacyAdminHref } from './admin/adminModule';
 import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
@@ -43,9 +44,9 @@ const PassportDemo = lazy(() => import('./pages/PassportDemo'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
 const NewsPage = lazy(() => import('./news/NewsPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
-// Админка v2 (SPRINT_UXR_S7B_ADMIN): пока отдельной страницей /admin, как /news;
-// модуль ?mod=admin в оболочке подключит kit (v2Config — её зона).
-const AdminPage = lazy(() => import('./admin/AdminPage'));
+// Админка v2 (SPRINT_UXR_S7B_ADMIN/S7B-01) — модуль оболочки ?mod=admin
+// (V2Shell, admin/adminModule.ts). Прежняя страница /admin?adm=… переписывается
+// в модуль, чтобы старые ссылки (журнал, чат) открывали то же самое.
 
 // Личное пользователя (/lore/me/*, контракт S2) — боевой сервер
 // (SPRINT_UXR_S5_RECORD_TASKS/S5-14). Прежняя заглушка держала настройки в
@@ -73,6 +74,7 @@ const LIST_SECTION: Record<ListScreenId, V2Section> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task',
   decisions: 'decision', specs: 'spec', questions: 'question', milestones: 'milestone',
   releases: 'release', components: 'component', tech: 'tech', features: 'feature',
+  projects: 'project',
 };
 
 /**
@@ -122,9 +124,13 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   // Старый адрес отдельной страницы паспорта → раздел оболочки, запись во весь экран
   // (владелица 09.11: «да, переводи задачу и спринт в оболочку»). Замена записи
   // истории без перезагрузки: оболочка ниже читает уже новый адрес.
-  const legacy = legacyPassportHref(query);
   const w = win ?? (typeof window === 'undefined' ? undefined : window);
+  // D-22: ссылка v1 якорем «#СПРИНТ/КОД» — в раздел «Задачи» с этой задачей.
+  const legacy = legacyPassportHref(query) ?? legacyHashHref(query, w?.location.hash ?? '');
   if (legacy && w) w.history.replaceState(null, '', legacy);
+  // S7B-01: /admin?adm=X → /?mod=admin&sec=adm-X. Уже переписанный адрес (mod
+  // есть) второй раз не трогаем: иначе повторный рендер сбросил бы раздел.
+  if (route === 'admin' && w && !new URLSearchParams(query).has('mod')) w.history.replaceState(null, '', legacyAdminHref(query));
   // Страницы вне оболочки подписаны (S4-17, находка P0 аудита 08.11): без
   // шапки и меню LORE выглядит сломанным, и отличить витрину от поломки
   // человек не может, пока ему не сказали. Витрины — «демо вне приложения»,
@@ -144,15 +150,6 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
     return (
       <ErrorBoundary lang="ru">
         <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
-      </ErrorBoundary>
-    );
-  }
-  if (route === 'admin') {
-    return (
-      <ErrorBoundary lang={lang}>
-        <StorageBanner storage={storage} lang={lang} />
-        <OutsideShell kind="standalone" />
-        <Suspense fallback={<Skeleton lines={8} />}><AdminPage /></Suspense>
       </ErrorBoundary>
     );
   }

@@ -1,0 +1,24 @@
+{
+  "_about": "Эталон сторожа K-14 (k14Boundary.test.ts): известный долг предметности LORE в kit на 11.11.2026 после выноса news/activity (SPRINT_UXR_S7B_ADMIN/S7B-27). Не разрешение, а перечень к разбору в SPRINT_UXR_S7B_ADMIN/S7B-23. Новая строка сюда — только с причиной и задачей; вынесли — строку убрать (сторож краснеет на устаревшую).",
+  "files": {
+    "src/auth/oidc.ts": { "markers": ["client_id"], "why": "OIDC-параметр протокола (client_id) — стандарт, не предметность; оставить, перепроверить в S7B-23" },
+    "src/auth/session.ts": { "markers": ["seer", "x-seer-role"], "why": "dev-заголовок X-Seer-Role: admin дефолтом — предметность LORE (S7B-23, п.5 §15.4)" },
+    "src/charts/burn.ts": { "markers": ["sprint"], "why": "формат UID «спринт/задача» в расчёте burn (S7B-23, п.4 §15.4)" },
+    "src/charts/index.ts": { "markers": ["sprint"], "why": "реэкспорт useSprintBurn (S7B-23)" },
+    "src/charts/useSprintBurn.ts": { "markers": ["sprint"], "why": "хук burn спринта LORE (S7B-23)" },
+    "src/content/markdownLossless.ts": { "markers": ["lore"], "why": "схема ссылок lore: в общем редакторе (S7B-23, п.8 §15.4)" },
+    "src/content/SandboxedHtmlFrame.tsx": { "markers": ["seer"], "why": "имя сообщения _seerResize — бренд приложения в протоколе песочницы (S7B-23)" },
+    "src/content/TipTapField.tsx": { "markers": ["lore"], "why": "схема ссылок lore: и упоминания (S7B-23, п.8 §15.4)" },
+    "src/core/statusAxis.ts": { "markers": ["lore"], "why": "LORE_STATUS_AXIS — ось категорий статусов по умолчанию (S7B-23)" },
+    "src/core/validate.ts": { "markers": ["lore", "ready_for_deploy"], "why": "белый список статусных токенов темы и ось LORE как умолчание (K-14 п.3: предупреждение, не отказ; S7B-23)" },
+    "src/elements/iconCanon.ts": { "markers": ["milestone"], "why": "канон иконок под структуру LORE (S7B-23, п.7 §15.4)" },
+    "src/elements/lucideIcons.ts": { "markers": ["milestone"], "why": "имя иконки lucide «milestone» в наборе — не предметность, уйдёт вместе с каноном (S7B-23)" },
+    "src/elements/statusMeta.ts": { "markers": ["ready_for_deploy"], "why": "словарь иконок статусов LORE по умолчанию (S7B-23)" },
+    "src/i18n/en.json": { "markers": ["keycloak", "lore", "ready_for_deploy", "sprint"], "why": "предметные строки kit.auth/kit.tasks/kit.burn/kit.palette (S7B-23, п.9 §15.4)" },
+    "src/i18n/ru.json": { "markers": ["keycloak", "lore", "ready_for_deploy", "sprint", "агент"], "why": "предметные строки kit.auth/kit.tasks/kit.burn/kit.record.journal (S7B-23, п.9 §15.4)" },
+    "src/record/history.ts": { "markers": ["client_id", "kc_sub"], "why": "модель авторства kc_sub/client_id в ядре (S7B-23, п.6 §15.4)" },
+    "src/record/ValueChips.tsx": { "markers": ["sprint"], "why": "подпись «от спринта» по типу источника (S7B-23)" },
+    "src/tasks/taskGroups.ts": { "markers": ["ready_for_deploy"], "why": "дефолтный перечень статусов задач LORE (S7B-23, п.3 §15.4)" },
+    "src/tokens/prefs.ts": { "markers": ["lore", "seer"], "why": "ключи хранения lore-*/seer-prefs общие с v1 (S7B-23)" }
+  }
+}

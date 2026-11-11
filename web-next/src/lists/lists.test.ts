@@ -83,7 +83,7 @@ describe('конфиги экранов списков', () => {
   it('все одиннадцать разделов на месте; иконки статусов, вида и «Быстро» есть в наборе game-icons', () => {
     expect(Object.keys(LIST_SCREENS)).toEqual([
       'sprints', 'adrs', 'tasks',
-      'decisions', 'specs', 'questions', 'milestones', 'releases', 'components', 'tech', 'features',
+      'decisions', 'specs', 'questions', 'milestones', 'releases', 'components', 'projects', 'tech', 'features',
     ]);
     for (const lang of ['ru', 'en'] as const) {
       for (const s of Object.values(LIST_SCREENS)) {
@@ -106,7 +106,8 @@ describe('конфиги экранов списков', () => {
    * → нет ни фасета, ни колонки, ни разреза по статусу.
    */
   it('фасет и колонка статуса есть ровно там, где есть статусная ось', () => {
-    const noAxis = ['milestones', 'releases', 'components', 'tech'] as const;
+    // S4-29 (53а): у проекта статуса нет — справочник git-проектов.
+    const noAxis = ['milestones', 'releases', 'components', 'projects', 'tech'] as const;
     for (const [id, s] of Object.entries(LIST_SCREENS)) {
       const c = s.config('ru');
       const hasAxis = c.statuses.items.length > 0;

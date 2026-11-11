@@ -12,7 +12,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons, type UrlWindow } from '@seidr/kit';
+import { registerGameIcons, TechVisibilityProvider, type UrlWindow } from '@seidr/kit';
 import ListPassport from './ListPassport';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -57,8 +57,11 @@ function net(recordReply: () => Response) {
   }) as unknown as typeof fetch;
 }
 
-const show = (f: typeof fetch) => render(
-  <ListPassport type="sprint" id="SP" placement="bottom" fetchImpl={f} backLabel="Спринты" onBack={() => {}} />,
+// S4-TECH-NOTES: строки состояния — tech; tech=true — включённая личная настройка.
+const show = (f: typeof fetch, tech = false) => render(
+  <TechVisibilityProvider show={tech}>
+    <ListPassport type="sprint" id="SP" placement="bottom" fetchImpl={f} backLabel="Спринты" onBack={() => {}} />
+  </TechVisibilityProvider>,
 );
 
 describe('паспорт v2 — на боевом фасаде', () => {
@@ -73,8 +76,19 @@ describe('паспорт v2 — на боевом фасаде', () => {
     expect(document.body.textContent).not.toContain('Название из среза');
   }, 15000);
 
-  it('состояние блоков фасада дошло до блока «Состояние данных»: «нет прав» названо', async () => {
+  it('S4-TECH-NOTES: без настройки — код источника скрыт, «закрыта правами» сказано словами', async () => {
     show(net(() => json(FACADE)));
+    await screen.findByText('Название от фасада', {}, { timeout: 8000 });
+    await waitFor(() => {
+      const ds = document.querySelector('.sk-ds') as HTMLElement;
+      expect(ds).toBeTruthy();
+      expect(ds.textContent).toContain('закрыта правами');
+      expect(ds.textContent).not.toContain('tasks_of_sprint');
+    });
+  }, 15000);
+
+  it('состояние блоков фасада дошло до блока «Состояние данных»: «нет прав» названо', async () => {
+    show(net(() => json(FACADE)), true);
     await screen.findByText('Название от фасада', {}, { timeout: 8000 });
     await waitFor(() => {
       const ds = document.querySelector('.sk-ds') as HTMLElement;
@@ -84,7 +98,7 @@ describe('паспорт v2 — на боевом фасаде', () => {
   }, 15000);
 
   it('фасад выключен — паспорт из срезов, и причина отката НАЗВАНА на экране', async () => {
-    show(net(() => json({ error: 'DISABLED', detail: 'фасад выключен' }, 501)));
+    show(net(() => json({ error: 'DISABLED', detail: 'фасад выключен' }, 501)), true);
     // Виден паспорт из срезов…
     await screen.findByText('Название из среза', {}, { timeout: 8000 });
     // …и рядом сказано, почему он собран на клиенте.

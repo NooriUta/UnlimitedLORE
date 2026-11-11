@@ -77,6 +77,12 @@ final class LoreModel {
      * missing вычисляется из отсутствующих разделов, а не хранится списком.
      */
     static Map<String, Object> build(List<Map<String, Object>> dictRows, Map<String, List<String>> schema) {
+        return build(dictRows, schema, Map.of());
+    }
+
+    /** declared — объявленные типы свойств схемы (vertex type → свойство → тип), см. LoreModelTypes. */
+    static Map<String, Object> build(List<Map<String, Object>> dictRows, Map<String, List<String>> schema,
+                                     Map<String, Map<String, String>> declared) {
         List<Map<String, Object>> rows = dictRows == null ? List.of() : dictRows;
         List<String> warnings = new ArrayList<>();
 
@@ -116,7 +122,7 @@ final class LoreModel {
         content.put("missing", missing);
         content.put("statuses_known", List.copyOf(STATUS_DICTS.keySet()));
         content.put("statuses", statuses);
-        if (schema != null) content.put("types", LoreModelTypes.build(schema));
+        if (schema != null) content.put("types", LoreModelTypes.build(schema, declared));
         Map<String, Object> surfaces = new LinkedHashMap<>();
         surfaces.put("partial", true);
         surfaces.put("passport", LorePassportSurface.build());

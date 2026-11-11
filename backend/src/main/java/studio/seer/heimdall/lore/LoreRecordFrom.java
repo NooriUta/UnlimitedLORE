@@ -332,7 +332,13 @@ final class LoreRecordFrom {
             s("context_md", "context_md"),
             s("scenario_md", "scenario_md"),
             s("acceptance_md", "acceptance_md"),
-            v("status", Transform.DOC_TOKEN, "status"))));
+            v("status", Transform.DOC_TOKEN, "status"))),
+        // S4-29 (53а): проект — справочная вершина KnowGitProject; статуса у проекта нет.
+        Map.entry("project", List.of(
+            v("title", Transform.FIRST_OF, "name", "slug"),
+            s("code", "slug"),
+            s("default_branch", "default_branch"),
+            v("is_private", Transform.BOOL_YES, "is_private"))));
 
     /** Строки детей частей по типу ребёнка (фаза — не здесь: её «x/y» считается по задачам). */
     static final Map<String, ItemDef> ITEMS = Map.of(
@@ -423,5 +429,21 @@ final class LoreRecordFrom {
             new SliceLink("tasks", "component_tasks", "cid", "TAGGED_WITH", "in", "task",
                 from(Transform.STR, "task_uid"), from(Transform.STR, "title"), from(Transform.PLAN_TOKEN, "status_raw"), true),
             new SliceLink("sprints", "component_sprints", "cid", "BELONGS_TO", "in", "sprint",
-                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true)));
+                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
+        // S4-29 (53а): вкладки паспорта проекта — каждая своим срезом project_*, постранично.
+        // Компоненты — через спринты проекта; агенты — через роль владельца (своего ребра к
+        // проекту у них нет), поэтому rel у них тот же, что у людей, а различает тип цели.
+        "project", List.of(
+            new SliceLink("sprints", "project_sprints", "project", "BELONGS_TO_PROJECT", "in", "sprint",
+                from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true),
+            new SliceLink("components", "project_components", "project", "BELONGS_TO_PROJECT", "in", "component",
+                from(Transform.STR, "component_id"), from(Transform.FIRST_OF, "full_name", "component_id"), null, true),
+            new SliceLink("adrs", "project_adrs", "project", "BELONGS_TO_PROJECT", "in", "adr",
+                from(Transform.STR, "adr_id"), from(Transform.FIRST_OF, "name", "adr_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("releases", "project_releases", "project", "BELONGS_TO_PROJECT", "in", "release",
+                from(Transform.STR, "release_uid"), from(Transform.FIRST_OF, "version", "release_id", "git_tag", "release_uid"), null, true),
+            new SliceLink("people", "project_people", "project", "HAS_PROJECT_ROLE", "in", "user",
+                from(Transform.STR, "kc_sub"), from(Transform.FIRST_OF, "display_name", "kc_sub"), null, true),
+            new SliceLink("agents", "project_agents", "project", "HAS_PROJECT_ROLE", "in", "agent",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true)));
 }

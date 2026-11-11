@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { loreFetch } from '../auth/session';
 import {
-  LoadStateView, pushUrlState, readUrlState, TaskCounters, TaskTable, TASK_COLUMN_KEYS, TASK_GROUP_BYS,
+  errorDetail, LoadStateView, pushUrlState, readUrlState, TaskCounters, TaskTable, TASK_COLUMN_KEYS, TASK_GROUP_BYS,
   columnsFromUrl, columnsToUrlValue, useLoadState,
   type TaskGroupBy, type TaskPatch, type TaskRowData, type TaskStatus, type UrlWindow,
 } from '@seidr/kit';
@@ -92,6 +92,27 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
     patch(task.uid, { status });
   }
 
+  /**
+   * Статус пачкой (S9-06): тот же POST /lore/status по каждой задаче, что и в
+   * строке — status/batch требует админа, а вкладку видят все. По одной, а не
+   * разом: прошедшие сразу видны в строке, а непрошедшие названы поимённо с
+   * причиной. Молчаливое «успешно» на половине пачки — худший исход.
+   */
+  async function onBulkStatusChange(list: TaskRowData[], status: TaskStatus) {
+    const failed: string[] = [];
+    for (const task of list) {
+      try {
+        await setTaskStatus(task.uid, status, f);
+        patch(task.uid, { status });
+      } catch (err) {
+        failed.push(t('sprintTasks.bulkFailedOne', { id: task.id, reason: errorDetail(err) }));
+      }
+    }
+    if (failed.length > 0) {
+      throw new Error(t('sprintTasks.bulkPartial', { ok: list.length - failed.length, total: list.length, failed: failed.join('; ') }));
+    }
+  }
+
   async function onSave(task: TaskRowData, p: TaskPatch) {
     await editTask(task, p, f);
     const next: Partial<TaskRowData> = {};
@@ -116,6 +137,7 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             groupBy={groupBy}
             onGroupByChange={onGroupByChange}
             onStatusChange={onStatusChange}
+            onBulkStatusChange={onBulkStatusChange}
             onSave={onSave}
             dict={dicts}
             columns={cols}
