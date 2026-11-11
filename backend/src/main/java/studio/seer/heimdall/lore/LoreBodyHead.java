@@ -54,7 +54,7 @@ final class LoreBodyHead {
         "closed_tasks", List.of("out('HAS_STATE')[note_md IS NOT NULL].note_md[0]"),
         "decisions", List.of("body_md", "rationale_md"),
         "specs", List.of("COALESCE(out('HAS_STATE').content_md[0], content_md)"),
-        "use_cases", List.of("body_md", "context_md"));
+        "use_cases", List.of("context_md", "body_md"));
 
     private static final Pattern PARA = Pattern.compile("\\r?\\n\\s*\\r?\\n");
 
@@ -94,7 +94,12 @@ final class LoreBodyHead {
             List<Object> texts = new ArrayList<>();
             for (int i = 1; c.containsKey(SRC + i); i++) texts.add(c.remove(SRC + i));
             if (Boolean.TRUE.equals(c.get("body_redacted"))) { out.add(c); continue; }
-            List<String> all = paragraphs(texts);
+            // Владелица 11.11.2026: лента — лента паспортов, «с показом раздела „Контекст“»;
+            // у типа без него — первый раздел тела. Голова — ОДИН раздел: первый непустой
+            // по порядку источников (контекст стоит первым), а не склейка всех разделов.
+            int sec = -1;
+            for (int i = 0; i < texts.size() && sec < 0; i++) if (!paragraphs(List.of(String.valueOf(texts.get(i) == null ? "" : texts.get(i)))).isEmpty()) sec = i;
+            List<String> all = sec < 0 ? List.of() : paragraphs(List.of(texts.get(sec)));
             List<String> head = new ArrayList<>();
             int budget = HEAD_CHARS;
             int whole = 0;
@@ -113,6 +118,7 @@ final class LoreBodyHead {
             c.put("body_head", head);
             c.put("body_rest", rest);
             c.put("body_more", rest > 0);
+            if (sec >= 0) c.put("body_sec", sec);
             out.add(c);
         }
         return out;

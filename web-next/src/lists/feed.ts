@@ -27,6 +27,12 @@ export interface FeedSpec {
    * в строке среза и в `values` паспорта: одно имя на оба источника.
    */
   lead: readonly string[];
+  /**
+   * Подписи разделов из lead — те же, что у разделов паспорта (по порядку lead).
+   * Лента — лента паспортов (владелица 11.11.2026): тело в ленте — раздел
+   * с подписью. Нет подписи — раздел без заголовка.
+   */
+  titles?: readonly AppKey[];
   /** Срез уже везёт эти поля в строке: тело целиком здесь, сеть не нужна. */
   inRow?: boolean;
   /**
@@ -84,6 +90,20 @@ export function feedConfig(
  * Абзацы md-текста: куски между пустыми строками. Что считать абзацем — забота
  * источника (kit получает абзацы готовыми), и правило здесь одно на все поля.
  */
+/**
+ * Раздел тела для ленты: первый НЕПУСТОЙ по порядку lead — «Контекст» стоит
+ * первым у тех, у кого он есть; у типа без него — первый раздел тела
+ * (владелица 11.11.2026, вариант «а»). Тот же выбор делает сервер
+ * (LoreBodyHead, body_sec), поэтому раскрытие догружает остаток ТОГО ЖЕ раздела.
+ */
+export function pickSection(lead: readonly string[], values: Record<string, unknown>): { index: number; paragraphs: string[] } {
+  for (let i = 0; i < lead.length; i++) {
+    const p = paragraphsOf(values[lead[i]]);
+    if (p.length) return { index: i, paragraphs: p };
+  }
+  return { index: -1, paragraphs: [] };
+}
+
 export function paragraphsOf(...texts: unknown[]): string[] {
   const out: string[] = [];
   for (const t of texts) {

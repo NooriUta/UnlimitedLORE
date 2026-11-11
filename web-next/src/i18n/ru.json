@@ -791,5 +791,10 @@
   "mdref.type.doc": "док",
   "mdref.type.sprint": "спринт",
   "mdref.type.runbook": "ранбук",
-  "mdref.type.use_case": "сценарий"
+  "mdref.type.use_case": "сценарий",
+  "lists.feed.sec.note": "Заметка",
+  "lists.feed.sec.rationale": "Обоснование",
+  "lists.feed.sec.essence": "Суть",
+  "lists.feed.sec.info": "Сведения",
+  "lists.feed.sec.description": "Описание"
 }

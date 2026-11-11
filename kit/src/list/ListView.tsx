@@ -43,6 +43,7 @@ import { foldBody, type FeedBody } from './feedBody';
 import { foldUnder, type FeedUnder, type FeedUnderFold } from './feedUnder';
 import { GluedBlock } from '../record/GluedBlock';
 import { MartProse } from '../content/MartProse';
+import { RecordSection } from '../record/RecordSection';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -1435,7 +1436,11 @@ export function ListView({
     return (
       <div className="sk-feed__body" data-body={action.kind} data-open={open ? '' : undefined}>
         {/* Тело — тот же MD, что в паспорте, и тот же рендер (владелица 11.11.2026). */}
-        {shown.map((para, i) => <MartProse key={i} className="sk-feed__para" text={para} />)}
+        {/* Лента — лента паспортов (владелица 11.11.2026): названный раздел тела
+            рисуется ТЕМ ЖЕ блоком раздела, что в паспорте. */}
+        {body.section
+          ? <RecordSection title={body.section}>{shown.map((para, i) => <MartProse key={i} className="sk-feed__para" text={para} />)}</RecordSection>
+          : shown.map((para, i) => <MartProse key={i} className="sk-feed__para" text={para} />)}
         {action.kind === 'retry' && (
           <span className="sk-feed__bodyfail" role="alert">
             {t('kit.list.feed.body.failed', { reason: action.reason })}

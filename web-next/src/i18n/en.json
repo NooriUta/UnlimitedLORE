@@ -791,5 +791,10 @@
   "mdref.type.doc": "doc",
   "mdref.type.sprint": "sprint",
   "mdref.type.runbook": "runbook",
-  "mdref.type.use_case": "use case"
+  "mdref.type.use_case": "use case",
+  "lists.feed.sec.note": "Note",
+  "lists.feed.sec.rationale": "Rationale",
+  "lists.feed.sec.essence": "Essence",
+  "lists.feed.sec.info": "Details",
+  "lists.feed.sec.description": "Description"
 }

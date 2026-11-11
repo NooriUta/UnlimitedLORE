@@ -7,6 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
+import { RecordSection } from './RecordSection';
 import { SumCell } from '../list/sum';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
@@ -267,12 +268,11 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
           // нечем написать, и это тупик без способа начать.
           if (!text.trim() && !may) return null;
           return (
-            <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
-              <h2 className="sk-rec-fields__sechead">{s.title}</h2>
+            <RecordSection key={s.key} title={s.title}>
               {may
                 ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} hint={si === hintAt} />
                 : <>{ctx.md(text)}</>}
-            </section>
+            </RecordSection>
           );
         })}
       </div>

@@ -131,7 +131,7 @@ const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'mo
  */
 export const FEEDS = {
   sprints: {
-    lead: ['context_md'], inRow: true,
+    lead: ['context_md'], titles: ['pp.adr.context'], inRow: true,
     because: ['DEPENDS_ON', 'IMPLEMENTED_IN'],
     // Два уровня: под полосой спринта — его задачи, по раскрытию.
     under: {
@@ -144,20 +144,21 @@ export const FEEDS = {
     },
   },
   // Голова тела — с сервера (body_head, K2-FEED-BODY-MORE), остаток — паспортом.
-  adrs: { lead: ['context_md', 'decision_md'], headInRow: true, because: ['DEPENDS_ON', 'SUPERSEDES'] },
-  tasks: { lead: ['note_md'], headInRow: true, because: ['JUSTIFIED_BY', 'GATES'] },
+  adrs: { lead: ['context_md', 'decision_md'], titles: ['pp.adr.context', 'pp.adr.decision'], headInRow: true, because: ['DEPENDS_ON', 'SUPERSEDES'] },
+  tasks: { lead: ['note_md'], titles: ['lists.feed.sec.note'], headInRow: true, because: ['JUSTIFIED_BY', 'GATES'] },
   decisions: {
-    lead: ['body_md', 'rationale_md'], headInRow: true, because: ['DECIDED_IN', 'ANSWERS'],
+    lead: ['body_md', 'rationale_md'], titles: ['pp.adr.decision', 'lists.feed.sec.rationale'], headInRow: true, because: ['DECIDED_IN', 'ANSWERS'],
     becauseFields: { DECIDED_IN: 'adr' },
   },
-  specs: { lead: ['content_md'], headInRow: true },
+  specs: { lead: ['content_md'], titles: ['pp.field.body'], headInRow: true },
   questions: {
-    lead: ['body_md'], inRow: true, because: ['RAISED_IN', 'GATES'],
+    lead: ['body_md'], titles: ['lists.feed.sec.essence'], inRow: true, because: ['RAISED_IN', 'GATES'],
     becauseFields: { GATES: 'gates', RAISED_IN: 'adr' },
   },
   releases: { lead: ['description_md'], inRow: true },
-  tech: { lead: ['content_md'], inRow: true },
-  features: { lead: ['body_md', 'context_md'], headInRow: true },
+  tech: { lead: ['content_md'], titles: ['lists.feed.sec.info'], inRow: true },
+  // «Контекст» первым — как у сервера (LoreBodyHead.SOURCES), владелица 11.11.2026.
+  features: { lead: ['context_md', 'body_md'], titles: ['pp.adr.context', 'lists.feed.sec.description'], headInRow: true },
 } as const satisfies Partial<Record<string, FeedSpec>>;
 
 /** Конфиг раздела + лента: вид `feed`, `list.feed` и подписи рёбер-поводов. */

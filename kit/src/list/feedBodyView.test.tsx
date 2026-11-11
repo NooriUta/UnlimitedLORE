@@ -215,3 +215,23 @@ describe('тело в ленте рендерится MartProse, как в па�
     expect(body.textContent).not.toContain('**');
   });
 });
+
+// Владелица 11.11.2026: «лента — это лента паспортов», «принудительно с показом
+// раздела „Контекст“»; у типов без контекста — первый раздел тела (вариант «а»).
+// Тело в ленте — РАЗДЕЛ паспорта: тот же блок, та же подпись, что в паспорте.
+describe('тело в ленте — раздел паспорта с подписью', () => {
+  it('приложение назвало раздел — он рисуется блоком раздела паспорта с подписью', () => {
+    const { container } = feed({ kind: 'full', paragraphs: ['абзац контекста'], section: 'Контекст' });
+    const sec = item(container, 'a').querySelector('.sk-feed__body .sk-rec-fields__sec') as HTMLElement;
+    expect(sec).toBeTruthy();
+    expect(sec.getAttribute('aria-label')).toBe('Контекст');
+    expect(sec.querySelector('.sk-rec-fields__sechead')?.textContent).toBe('Контекст');
+    expect(sec.textContent).toContain('абзац контекста');
+  });
+
+  it('раздел не назван — подписи нет, абзацы те же (выдумывать подпись kit не станет)', () => {
+    const { container } = feed({ kind: 'full', paragraphs: ['абзац'] });
+    expect(item(container, 'a').querySelector('.sk-rec-fields__sechead')).toBeNull();
+    expect(paras(container, 'a')).toEqual(['абзац']);
+  });
+});

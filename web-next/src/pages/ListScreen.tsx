@@ -322,7 +322,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // одной записи (слово владелицы 10.11: «первые 3 абзаца, остальное при раскрытии»).
   const feed = useFeed({
     spec: def.feed, passportType: PASSPORT_OF[screen], rows: body?.rows,
-    records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl,
+    records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl, t,
   });
   const viewData = useMemo(() => {
     const base = shownData ?? data;
