@@ -142,3 +142,45 @@ describe('FieldEditor · обязательность (D-2026-LORE-RECORD-FIELD-
     expect(screen.queryByText('Обязательное поле')).toBeNull();
   });
 });
+
+// Вторая порция: несколько значений (multi), порядок (ordered), MD через слот.
+describe('FieldEditor · несколько значений и порядок', () => {
+  it('multi: флажки по вариантам; отметка добавляет, снятие убирает; «ничего» — [], а не null', () => {
+    const on = mount({ key: 'tags', label: 'Теги', kind: 'enum', options: ['a', 'b', 'c'], multi: true }, ['a']);
+    const group = screen.getByRole('group', { name: 'Теги' });
+    expect((screen.getByRole('checkbox', { name: 'a' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'b' }));
+    expect(on).toHaveBeenLastCalledWith(['a', 'b']);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'a' }));
+    expect(on).toHaveBeenLastCalledWith([]);
+    expect(group).toBeTruthy();
+  });
+
+  it('multi: значения вне списка не пропадают — видны и отмечены', () => {
+    mount({ key: 'tags', label: 'Теги', kind: 'enum', options: ['a'], multi: true }, ['a', 'zz']);
+    expect((screen.getByRole('checkbox', { name: '«zz» нет в списке' }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('ordered: выбранные идут списком с кнопками «выше / ниже», порядок уходит наружу', () => {
+    const on = mount({ key: 'deps', label: 'Порядок', kind: 'enum', options: ['a', 'b', 'c'], multi: true, ordered: true }, ['a', 'c']);
+    fireEvent.click(screen.getByRole('button', { name: 'Ниже: a' }));
+    expect(on).toHaveBeenLastCalledWith(['c', 'a']);
+    expect((screen.getByRole('button', { name: 'Выше: a' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('FieldEditor · MD через слот', () => {
+  it('md без переданного редактора — только чтение с причиной (тяжёлый редактор в основной пакет не тянем)', () => {
+    mount({ key: 'body', label: 'Текст', kind: 'md' }, '**жирный**');
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getByText(/редактор MD не подключён/)).toBeTruthy();
+  });
+
+  it('md со слотом — рисуется переданный редактор, изменение уходит наружу', () => {
+    const on = vi.fn();
+    render(<FieldEditor def={{ key: 'body', label: 'Текст', kind: 'md' }} value="было" onChange={on}
+      mdEditor={({ value, onChange, label }) => <textarea aria-label={label} value={value} onChange={e => onChange(e.target.value)} />} />);
+    fireEvent.change(screen.getByLabelText('Текст'), { target: { value: 'стало' } });
+    expect(on).toHaveBeenCalledWith('стало');
+  });
+});

@@ -562,6 +562,8 @@
   "kitPage.fields.datetime": "Date and time",
   "kitPage.fields.enum": "Choice from list",
   "kitPage.fields.unknown": "Unknown kind",
+  "kitPage.fields.multi": "Several, ordered",
+  "kitPage.fields.md": "MD text",
   "kitPage.fields.check": "Check required",
   "kitPage.flow.lead": "Wizard steps: order, a named reason when you cannot go on, going back without losing input, the step in the URL, and a final “left to do by hand” list.",
   "kitPage.flow.s1": "Choice",

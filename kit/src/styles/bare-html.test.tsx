@@ -236,6 +236,7 @@ function Samples() {
         <FieldEditor def={{ key: 'when', label: 'Когда', kind: 'datetime', required: 'warn' }} value={null} onChange={noop} showRequired tzOffsetMinutes={180} />
         <FieldEditor def={{ key: 'prio', label: 'Приоритет', kind: 'enum', options: ['P1', 'P2'] }} value="P9" onChange={noop} />
         <FieldEditor def={{ key: 'geo', label: 'Гео', kind: 'geo' }} value="55.75,37.62" onChange={noop} />
+        <FieldEditor def={{ key: 'tags', label: 'Теги по порядку', kind: 'enum', options: ['ui', 'api'], multi: true, ordered: true }} value={['api', 'ui']} onChange={noop} />
       </section>
       <section className="bare__sec" data-kit="content">
         <h2 className="bare__h2">MD / HTML</h2>

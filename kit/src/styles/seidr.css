@@ -6006,6 +6006,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-field__seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); width: max-content; }
 .sk-field__opt { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: var(--fs-sm); color: var(--t2); min-height: max(var(--tap), 22px); cursor: pointer; }
 .sk-field__opt input { margin: 0; }
+.sk-field__checks { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.sk-field__order { margin: 4px 0 0; padding-left: 18px; font-size: var(--fs-sm); }
+.sk-field__orderitem { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.sk-field__orderitem span { flex: 1; }
 .sk-field__err { margin: 0; font-size: var(--fs-xs); color: var(--dng); }
 .sk-field__warn { margin: 0; font-size: var(--fs-xs); color: var(--wrn); }
 .sk-field__note { margin: 0; font-size: var(--fs-xs); color: var(--t3); }
