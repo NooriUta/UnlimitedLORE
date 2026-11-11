@@ -1087,5 +1087,13 @@
   "kit.fresh.tone.warn": "over {n} min — warning",
   "kit.fresh.tone.stale": "over {n} min — stale",
   "kit.fresh.staleShort": "stale",
-  "kit.ref.self": "Me"
+  "kit.ref.self": "Me",
+  "kit.record.create.draft": "Draft",
+  "kit.record.create.title": "New: {kind}",
+  "kit.record.create.save": "Save",
+  "kit.record.create.saving": "Saving…",
+  "kit.record.create.cancel": "Cancel",
+  "kit.record.create.why": "Not filled: {fields}",
+  "kit.record.create.noPath": "Nowhere to save: the app gave no create path",
+  "kit.record.create.failed": "Not saved: {reason}"
 }
