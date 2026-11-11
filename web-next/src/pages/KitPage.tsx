@@ -454,9 +454,11 @@ function FieldsDemo() {
     { key: 'at', label: t('kitPage.fields.time'), kind: 'time' },
     { key: 'when', label: t('kitPage.fields.datetime'), kind: 'datetime' },
     { key: 'prio', label: t('kitPage.fields.enum'), kind: 'enum', options: ['P1', 'P2', 'P3'] },
+    { key: 'tags', label: t('kitPage.fields.multi'), kind: 'enum', options: ['ui', 'api', 'data'], multi: true, ordered: true },
+    { key: 'body', label: t('kitPage.fields.md'), kind: 'md' },
     { key: 'geo', label: t('kitPage.fields.unknown'), kind: 'geo' },
   ];
-  const [vals, setVals] = useState<Record<string, unknown>>({ title: '', effort: null, flag: null, due: null, at: '09:30', when: null, prio: 'P9', geo: '55.75,37.62' });
+  const [vals, setVals] = useState<Record<string, unknown>>({ title: '', effort: null, flag: null, due: null, at: '09:30', when: null, prio: 'P9', geo: '55.75,37.62', tags: ['api', 'ui'], body: '**MD** через TipTapField' });
   const [check, setCheck] = useState(false);
   return (
     <section id="kit-fields" className="kitp__sec" aria-labelledby="kit-fields-h">
@@ -465,7 +467,8 @@ function FieldsDemo() {
       <div className="kitp__fields">
         {defs.map(d => (
           <FieldEditor key={d.key} def={d} value={vals[d.key]} showRequired={check}
-            onChange={v => setVals(m => ({ ...m, [d.key]: v }))} />
+            onChange={v => setVals(m => ({ ...m, [d.key]: v }))}
+            mdEditor={({ value, onChange, label }) => <TipTapField value={value} onChange={onChange} ariaLabel={label} minHeight={80} />} />
         ))}
       </div>
       <button type="button" className="sk-btn" onClick={() => setCheck(true)}>{t('kitPage.fields.check')}</button>

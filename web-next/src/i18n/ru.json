@@ -556,6 +556,8 @@
   "kitPage.fields.datetime": "Дата и время",
   "kitPage.fields.enum": "Выбор из списка",
   "kitPage.fields.unknown": "Неизвестный вид",
+  "kitPage.fields.multi": "Несколько, по порядку",
+  "kitPage.fields.md": "Текст MD",
   "kitPage.fields.check": "Проверить обязательные",
   "kitPage.flow.lead": "Шаги мастера: порядок, условие перехода с названной причиной, возврат без потери введённого, шаг в адресе и последний шаг «осталось руками».",
   "kitPage.flow.s1": "Выбор",

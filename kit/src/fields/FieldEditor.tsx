@@ -4,7 +4,7 @@
 // них виды, варианты и права — данные приложения (K-14). Неизвестный вид и
 // поле без права правки рисуются ТОЛЬКО ЧТЕНИЕМ с названной причиной: пустое
 // поле ввода на месте значения молча съело бы его при сохранении.
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { kitT, useKitLang, type KitKey } from '../i18n';
 import {
   fieldKindOf, fromZonedIso, isEmptyValue, isKnownKind, optionLabel, optionValue, parseNumberInput,
@@ -20,11 +20,18 @@ export interface FieldEditorProps {
   showRequired?: boolean;
   /** Смещение зоны для даты-времени, минуты к востоку от UTC. По умолчанию — зона браузера. */
   tzOffsetMinutes?: number;
+  /**
+   * Редактор MD — слотом от приложения (TipTapField из '@seidr/kit/content').
+   * Не передан — MD только для чтения: тянуть тяжёлый редактор в основной
+   * пакет kit ради поля нельзя, а поле ввода вместо MD-редактора нарушило бы
+   * правило «MD-поля — только через TipTapField».
+   */
+  mdEditor?: (p: { value: string; onChange: (next: string) => void; label: string; id: string }) => ReactNode;
 }
 
 const text = (v: unknown) => (v === null || v === undefined ? '' : String(v));
 
-export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinutes }: FieldEditorProps) {
+export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinutes, mdEditor }: FieldEditorProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const id = useId();
@@ -54,12 +61,13 @@ export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinute
   } as const;
 
   // Только чтение: право не дано или вида kit не знает. Значение видно как есть.
-  if (def.editable === false || !isKnownKind(kind)) {
+  if (def.editable === false || !isKnownKind(kind) || (kind === 'md' && !mdEditor)) {
     return (
       <div className="sk-field sk-field--ro" data-kind={kind}>
         <span className="sk-field__label">{def.label}</span>
         <span className="sk-field__value">{empty ? '—' : text(value)}</span>
         {!isKnownKind(kind) && <p className="sk-field__note">{t('kit.field.unsupported', { kind })}</p>}
+        {kind === 'md' && !mdEditor && def.editable !== false && <p className="sk-field__note">{t('kit.field.mdNoEditor')}</p>}
       </div>
     );
   }
@@ -97,8 +105,46 @@ export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinute
       );
       break;
     }
+    case 'md':
+      control = mdEditor!({ value: text(value), onChange: v => onChange(v), label: def.label, id });
+      break;
     case 'enum': {
       const opts = def.options ?? [];
+      if (def.multi) {
+        const cur = Array.isArray(value) ? value.map(String) : [];
+        const all = [...opts.map(optionValue), ...cur.filter(v => !opts.some(o => optionValue(o) === v))];
+        const toggle = (v: string) => onChange(cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v]);
+        const move = (i: number, d: -1 | 1) => { const n = [...cur]; [n[i], n[i + d]] = [n[i + d], n[i]]; onChange(n); };
+        const labelOfV = (v: string) => {
+          const o = opts.find(x => optionValue(x) === v);
+          return o ? optionLabel(o) : t('kit.field.notInList', { value: v });
+        };
+        return (
+          <div className="sk-field" data-kind={kind}>
+            <span className="sk-field__label" id={`${id}-l`}>{def.label}</span>
+            <span className="sk-field__checks" role="group" aria-labelledby={`${id}-l`}>
+              {all.map(v => (
+                <label key={v} className="sk-field__opt">
+                  <input type="checkbox" checked={cur.includes(v)} onChange={() => toggle(v)} />
+                  <span>{labelOfV(v)}</span>
+                </label>
+              ))}
+            </span>
+            {def.ordered && cur.length > 0 && (
+              <ol className="sk-field__order">
+                {cur.map((v, i) => (
+                  <li key={v} className="sk-field__orderitem">
+                    <span>{labelOfV(v)}</span>
+                    <button type="button" className="sk-btn" aria-label={t('kit.field.up', { item: labelOfV(v) })} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+                    <button type="button" className="sk-btn" aria-label={t('kit.field.down', { item: labelOfV(v) })} disabled={i === cur.length - 1} onClick={() => move(i, 1)}>↓</button>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {hint}
+          </div>
+        );
+      }
       const cur = text(value);
       const known = opts.some(o => optionValue(o) === cur);
       control = (
