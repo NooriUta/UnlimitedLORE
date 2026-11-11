@@ -3681,6 +3681,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-feed__nowhen { color: var(--bdh); }
 .sk-feed__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .sk-feed__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+/* Статус в строке шапки — только у карточки Peek (RecordCardHead.status), прижат вправо. */
+.sk-card__status { margin-left: auto; display: inline-flex; align-items: center; }
 .sk-feed__kind {
   display: inline-flex;
   align-items: center;
@@ -5133,6 +5135,39 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
    Справа: шапка с «Читать целиком», затем задачи, затем текст. Текст — превью:
    высота ограничена, полное чтение — по кнопке. */
 .sk-peek { display: flex; flex-direction: column; }
+/* Карточка Peek (S9-10, D-2026-LORE-PEEK-ONE-CARD): шапка и раздел — общие с лентой (sk-feed__*, sk-rec-fields__*),
+   здесь только своё — свойства, счётчики, действия и честные состояния. */
+.sk-peek-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: var(--fs-sm); }
+/* Карточка по наведению на ссылку в тексте: якорь у ссылки (координаты окна), поповер под ним. */
+.sk-peek-hover { position: fixed; width: 0; height: 0; z-index: 65; }
+.sk-peek-hover__pop { width: min(380px, calc(100vw - 16px)); background: var(--bg2); border: 1px solid var(--bdh); border-radius: var(--r-md); box-shadow: 0 10px 30px rgb(0 0 0 / .45); padding: 10px 11px; }
+/* Лист на телефоне — общий Sheet + .sk-lsheet (отступ под системную полосу); здесь только своё. */
+.sk-peek-sheet .sk-peek-card { padding-top: 2px; }
+/* Панель Peek у списка: справа поверх, ширина — из хранилища (тянется ручкой). */
+.sk-peek-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; max-width: calc(100vw - 48px); display: flex; flex-direction: column; background: var(--bg2); border-left: 1px solid var(--bdh); box-shadow: -10px 0 30px rgb(0 0 0 / .35); }
+.sk-peek-panel__grip { position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; }
+.sk-peek-panel__grip:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-peek-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--bd); }
+.sk-peek-panel__hint { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-peek-panel__close { flex: none; }
+.sk-peek-panel__body { padding: 10px 12px; overflow: auto; flex: 1 1 auto; }
+.sk-peek-card__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); word-break: break-all; }
+.sk-peek-card__props { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
+.sk-peek-card__prop { display: contents; }
+.sk-peek-card__prop dt { font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; color: var(--t3); padding-top: 2px; white-space: nowrap; }
+.sk-peek-card__prop dd { margin: 0; color: var(--t2); min-width: 0; overflow-wrap: anywhere; }
+.sk-peek-card__unset, .sk-peek-card__none { color: var(--t3); font-style: italic; }
+.sk-peek-card__none { margin: 0; }
+.sk-peek-card__cnt { margin: 0; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-peek-card__cnt b { color: var(--t2); font-weight: 600; }
+.sk-peek-card__acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.sk-peek-card__state { margin: 0; color: var(--t2); }
+.sk-peek-card__state--err { color: var(--dng); }
+.sk-peek-card__state--lock { color: var(--wrn); }
+.sk-peek-card__note { margin: 0; font-size: var(--fs-xs); color: var(--t3); }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-peek-card__open { flex: 1 1 100%; justify-content: center; text-align: center; }
+}
 .sk-peek .sk-sheet__body { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .sk-peek__read { flex: none; text-decoration: none; color: var(--bg0); background: var(--acc); border-color: var(--acc); }
 .sk-peek__read:hover { color: var(--bg0); background: color-mix(in srgb, var(--acc) 85%, var(--t1)); }

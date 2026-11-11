@@ -12,6 +12,8 @@ import {
 } from '@seidr/kit';
 import { MartProse } from '@seidr/kit/content';
 import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
+import { loreRefPeek } from './lorePeek';
+import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
@@ -33,7 +35,14 @@ import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-const md = (s: string) => <MartProse text={s} refHref={loreRefHref} />;
+/** Чтение тела: ссылка ведёт в паспорт (MD-READ-PEEK), наведение/тап — карточка Peek (S9-10). */
+function ProseWithPeek({ text }: { text: string }) {
+  const lang = useKitLang();
+  // Выключатель «Карточки по наведению» (настройки) читается из применённого атрибута.
+  const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
+  return <MartProse text={text} refHref={loreRefHref} refPeek={peek} />;
+}
+const md = (s: string) => <ProseWithPeek text={s} />;
 
 export interface ListPassportProps {
   type: PassportType;
