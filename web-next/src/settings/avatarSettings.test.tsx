@@ -318,3 +318,16 @@ describe('S3-18 · выход из меню аватара', () => {
     expect(within(dlg).queryByRole('button', { name: 'Выйти' })).toBeNull();
   });
 });
+
+// S4-11: пункт «Горячие клавиши» в меню аккаунта — ВСЕГДА, и на телефоне
+// (владелица 11.11: «а вдруг клавиатуру подсоединить, например к планшету»).
+describe('S4-11 · пункт «Горячие клавиши» в меню аккаунта', () => {
+  it('пункт есть и открывает панель клавиш', async () => {
+    const { KeymapHost, closeKeymapPanel } = await import('@seidr/kit');
+    render(<><AccountMenu client={client()} root={document.createElement('div')} lang="ru" jar={jar()} /><KeymapHost /></>);
+    const dlg = await openMenu();
+    fireEvent.click(within(dlg).getByRole('button', { name: /Горячие клавиши/ }));
+    expect(await screen.findByRole('dialog', { name: 'Горячие клавиши' })).toBeTruthy();
+    act(() => { closeKeymapPanel(); });
+  });
+});

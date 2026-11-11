@@ -2,3 +2,5 @@
 // действий и ловушка фокуса для всплывающих окон.
 export * from './keymap';
 export * from './focusTrap';
+export * from './keymapOverrides';
+export * from './KeymapPanel';

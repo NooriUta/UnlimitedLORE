@@ -43,6 +43,16 @@ import { foldBody, type FeedBody } from './feedBody';
 import { foldUnder, type FeedUnder, type FeedUnderFold } from './feedUnder';
 import { GluedBlock } from '../record/GluedBlock';
 import { MartProse } from '../content/MartProse';
+import { applyKeymapOverrides, openKeymapPanel, registerKeymap, useKeymapOverrides } from '../keyboard/keymapOverrides';
+import type { KeymapGroup } from '../keyboard/KeymapPanel';
+
+/** Клавиши слоя списка — для панели «Горячие клавиши» (показываются, не переназначаются). */
+const LIST_BUILTIN_KEYS: readonly { hotkey: string; title: KitKey }[] = [
+  { hotkey: 'ArrowDown', title: 'kit.keymap.list.down' }, { hotkey: 'ArrowUp', title: 'kit.keymap.list.up' },
+  { hotkey: 'Enter', title: 'kit.keymap.list.open' }, { hotkey: 'X', title: 'kit.keymap.list.select' },
+  { hotkey: 'Escape', title: 'kit.keymap.list.unselect' }, { hotkey: '/', title: 'kit.keymap.list.search' },
+  { hotkey: 'Mod+K', title: 'kit.keymap.list.palette' }, { hotkey: '?', title: 'kit.keymap.list.help' },
+];
 import { RecordSection } from '../record/RecordSection';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
@@ -444,7 +454,7 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
 const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title: 220 };
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
+  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter,
 }: ListViewProps) {
@@ -454,9 +464,26 @@ export function ListView({
   // значение» на 393 px не влезают ни при каком шрифте (S9-12).
   const chipsInline = narrow ? CHIPS_INLINE_NARROW : CHIPS_INLINE;
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
-  assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
+  assertKeymap([...(rowActionsProp ?? []), ...(bulkActionsProp ?? [])], LIST_RESERVED_KEYS);
+  // Личная раскладка (S4-11, решение владелицы 11.11): умолчание — клавиши от
+  // приложения, поверх — переназначения человека. Реагируем и подписываем
+  // кнопки уже по ним: иначе панель писала бы раскладку, которой список не знает.
+  const keymap = useKeymapOverrides();
+  const rowActions = useMemo(() => (rowActionsProp ? applyKeymapOverrides(rowActionsProp, keymap) : undefined), [rowActionsProp, keymap]);
+  const bulkActions = useMemo(() => (bulkActionsProp ? applyKeymapOverrides(bulkActionsProp, keymap) : undefined), [bulkActionsProp, keymap]);
+  // Панель «Горячие клавиши» показывает клавиши ЭТОГО списка — из тех же действий.
+  const lang0 = useKitLang();
+  useEffect(() => {
+    const t0 = (k: KitKey) => kitT(lang0, k);
+    const groups: KeymapGroup[] = [];
+    if (rowActionsProp?.length) groups.push({ id: 'row', title: t0('kit.keymap.group.row'), actions: rowActionsProp });
+    if (bulkActionsProp?.length) groups.push({ id: 'bulk', title: t0('kit.keymap.group.bulk'), actions: bulkActionsProp });
+    groups.push({ id: 'list', title: t0('kit.keymap.group.list'), builtin: true, actions: LIST_BUILTIN_KEYS.map(k => ({ id: 'list:' + k.hotkey, title: t0(k.title), hotkey: k.hotkey })) });
+    return registerKeymap({ owner: keymapOwner.current, groups });
+  }, [rowActionsProp, bulkActionsProp, lang0]);
   const mac = isMacPlatform();
   const rootRef = useRef<HTMLDivElement>(null);
+  const keymapOwner = useRef(Symbol('list-keymap'));
   // Ширины колонок (S4-35). Читаются один раз: хранилище личное, и чужие
   // правки в нём по ходу жизни экрана нас не касаются.
   const [colW, setColW] = useState<ColumnWidths>(
@@ -984,6 +1011,12 @@ export function ListView({
       e.preventDefault();
       e.stopPropagation();
       exitSelection();
+      return;
+    }
+    // «?» — панель «Горячие клавиши» (прототип S4-11, принят 11.11).
+    if (matchHotkey(e, '?')) {
+      e.preventDefault();
+      openKeymapPanel();
       return;
     }
     const bulk = selIds.length > 0 ? findAction(bulkActions ?? [], e) : undefined;

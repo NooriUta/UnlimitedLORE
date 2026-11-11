@@ -6322,3 +6322,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Телефон: виды списка — первым разделом меню «Вид ▾», текущий — в самой кнопке. */
 .sk-vmenu__kinds { flex-wrap: wrap; }
 .sk-vmenu__cur { font-weight: 700; color: var(--t1); }
+
+/* S4-11: панель «Горячие клавиши» — правый лист, плотные строки «действие · клавиша · Изменить». */
+.sk-keymap .sk-sheet__body { display: grid; align-content: start; gap: 0; }
+.sk-keymap__search { width: 100%; font: inherit; font-size: var(--fs-base); color: var(--t1); background: var(--bg1); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 4px 8px; margin: 0 0 8px; }
+.sk-keymap__group { margin: 0 0 10px; }
+.sk-keymap__grouphead { margin: 0 0 4px; color: var(--t3); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.sk-keymap__row { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--bd); min-width: 0; }
+.sk-keymap__row[data-own] .sk-kbd { outline: 1px solid var(--acc); border-radius: var(--r-sm); }
+.sk-keymap__what { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--t1); }
+.sk-keymap__keys, .sk-keymap__edit { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sk-keymap__none, .sk-keymap__note { color: var(--t3); font-size: var(--fs-xs); margin: 0; }
+.sk-keymap__capture { min-width: 120px; }
+.sk-keymap__foot { display: grid; gap: 4px; margin-top: 8px; }
