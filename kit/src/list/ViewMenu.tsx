@@ -26,11 +26,18 @@ export interface ViewMenuProps {
    */
   columns?: { all: readonly ColumnChoice[]; chosen: readonly string[] };
   onColumns?: (cols: string[]) => void;
+  /**
+   * Виды списка ВНУТРИ меню — на телефоне (S4-MOBILE-COMPARE, слова владелицы
+   * 11.11: «в мобильном состоянии … в составе дропдаун меню вместе с его кнопкой
+   * вид»). Тогда кнопка называет текущий вид, а раздел видов идёт первым.
+   * Без kinds меню прежнее: виды — строкой в шапке.
+   */
+  kinds?: { all: readonly { key: string; title: string }[]; current: string; onPick: (key: string) => void };
 }
 
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 
-export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onColumns }: ViewMenuProps) {
+export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onColumns, kinds }: ViewMenuProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [open, setOpen] = useState(false);
@@ -64,10 +71,23 @@ export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onC
         aria-controls={open ? id : undefined}
         onClick={() => setOpen(o => !o)}
       >
-        {t('kit.list.viewMenu')} <span aria-hidden="true">▾</span>
+        {t('kit.list.viewMenu')}
+        {kinds && <>: <b className="sk-vmenu__cur">{kinds.all.find(k => k.key === kinds.current)?.title}</b></>}
+        {' '}<span aria-hidden="true">▾</span>
       </button>
       {open && (
         <div ref={panelRef} id={id} role="dialog" aria-label={t('kit.list.viewMenu')} className="sk-vmenu__panel" onKeyDown={onKeyDown}>
+          {kinds && (
+            <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-vmenu__seg sk-vmenu__kinds">
+              <span className="sk-vmenu__label" aria-hidden="true">{t('kit.list.views')}</span>
+              {kinds.all.map(k => (
+                <button key={k.key} type="button" role="radio" aria-checked={k.key === kinds.current}
+                  className={`sk-list__view${k.key === kinds.current ? ' is-on' : ''}`} onClick={() => kinds.onPick(k.key)}>
+                  {k.title}
+                </button>
+              ))}
+            </div>
+          )}
           <p className="sk-vmenu__title">{t('kit.list.viewMenuTitle')}</p>
           <div role="radiogroup" aria-label={t('kit.list.closed.label')} className="sk-vmenu__seg">
             <span className="sk-vmenu__label" aria-hidden="true">{t('kit.list.closed.label')}</span>

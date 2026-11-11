@@ -22,7 +22,7 @@
 // а не на window: два списка на экране не делят клавиши. У каждой клавиши —
 // кнопка с aria-keyshortcuts и подсказкой Kbd; в поле ввода клавиша — текст.
 import { ICON_CANON } from '../elements/iconCanon';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
@@ -461,6 +461,14 @@ export function ListView({
   const budget = { ...LIST_BUDGET, ...budgetPart };
   const win = resolveWin(urlState);
   const [ownState, setState] = useState<ListState>(() => initialState(win, initial));
+  /**
+   * Вид выбран ЯВНО: адресом (lv=), приложением (initial — в том числе
+   * сохранённый вид) или кнопкой. Тогда телефонное умолчание «Карточки»
+   * (S4-MOBILE-COMPARE, D-2026-UXR-MOBILE-FOLLOWS-V1) его не переспоривает.
+   */
+  const [viewPicked, setViewPicked] = useState<boolean>(
+    () => initial?.view !== undefined || (!!win && readUrlState(win).has('lv')),
+  );
   const state = stateProp ?? ownState;
   // Управляемый режим: состояние пришло снаружи (выбор вида) — URL догоняет.
   const controlledKey = stateProp ? JSON.stringify(writeListState(stateProp)) : null;
@@ -480,6 +488,9 @@ export function ListView({
    * так же. Так же сделан поиск по значениям внутри фасета.
    */
   const [groupFind, setGroupFind] = useState('');
+  /** Телефон: раскрыта ли полоса фильтра, группировки и порядка (S4-MOBILE-COMPARE). Местное, как «+N». */
+  const [ctlOpen, setCtlOpen] = useState(false);
+  const ctlId = useId();
   /** Раскрыта ли свёртка «+N» в строке условий (S9-12). Местное, не в адресе. */
   const [chipsOpen, setChipsOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => initialExpanded(win));
@@ -510,7 +521,11 @@ export function ListView({
       смысл.
     */
     .filter(v => v !== 'feed' || !!feedCfg?.timeField);
-  const view: ListViewKind = views.includes(state.view) ? state.view : (views[0] ?? 'list');
+  // Телефон: по умолчанию карточки — таблица в 6–11 колонок на 360 px шире
+  // экрана, а карточек помещается 9 против 2 строк (замер 11.11, как в v1).
+  // Явный выбор и управляемое состояние — закон.
+  const phoneCards = narrow && !viewPicked && !stateProp && views.includes('cards');
+  const view: ListViewKind = phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
@@ -544,6 +559,7 @@ export function ListView({
   const columns = rowActions?.length && !withSelect.includes('actions') ? [...withSelect, 'actions'] : withSelect;
 
   const update = (patch: Partial<ListState>) => {
+    if (patch.view !== undefined) setViewPicked(true);
     if (stateProp) {
       onStateChange?.({ ...stateProp, ...patch });
       return;
@@ -1055,6 +1071,8 @@ export function ListView({
   }
   const resetFilters = () => update({ filters: {}, ops: {}, text: '', quick: null });
   // «Вид ⌄» (S4-27): режим закрытых — часть состояния списка и сохранённого вида.
+  // Телефон: виды — внутри «Вид ▾», а не строкой над списком (владелица 11.11).
+  const viewsInMenu = narrow && views.length > 1;
   const viewMenu = (
     <ViewMenu
       closed={closedMode}
@@ -1071,10 +1089,15 @@ export function ListView({
         chosen: chosenColumns.filter(c => c !== 'select' && c !== 'actions'),
       }}
       onColumns={setColumns}
+      kinds={viewsInMenu ? {
+        all: views.map(v => ({ key: v, title: t(`kit.list.view.${v}` as KitKey) })),
+        current: view,
+        onPick: k => update({ view: k as ListViewKind }),
+      } : undefined}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
-  const viewsSwitch = views.length > 1 ? (
+  const viewsSwitch = views.length > 1 && !viewsInMenu ? (
     <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
       {views.map(v => {
         const icon = viewIcons?.[v];
@@ -2043,7 +2066,25 @@ export function ListView({
           [Фильтр][Группировка][Порядок] · «Быстро» · «Показано N из M». Сегменты —
           fieldset+legend: имя сегмента не спорит с подписью внутри. В сегменте
           фильтра — поиск по тексту и фасеты полей (S4-05). */}
-      <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls" data-testid="kit-list-controls">
+      {/* Телефон: фильтр, группировка и порядок — под одной кнопкой, как
+          «фильтры 0 · развернуть» в v1 (владелица 11.11: «фильтры и порядок
+          прятаться под more»). Число на кнопке — сколько условий задано, чтобы
+          свёрнутый фильтр не прятал, что список уже сужен. */}
+      {narrow && (
+        <button
+          type="button"
+          className={`sk-list__fold${filterCount + (groupKey ? 1 : 0) > 0 ? ' is-active' : ''}`}
+          aria-expanded={ctlOpen}
+          aria-controls={ctlId}
+          onClick={() => setCtlOpen(o => !o)}
+        >
+          <GameIcon slug={ICON_CANON.segFilter} size={14} />
+          <span>{t('kit.list.filters')}</span>
+          {segCount(filterCount + (groupKey ? 1 : 0))}
+          <span aria-hidden="true">{ctlOpen ? '▴' : '▾'}</span>
+        </button>
+      )}
+      <div id={ctlId} role="group" aria-label={t('kit.list.filters')} className={`sk-list__controls${narrow && !ctlOpen ? ' is-folded' : ''}`} data-testid="kit-list-controls">
         {!head && viewsSwitch}
         {!head && viewMenu}
         <fieldset className="sk-list__seg" data-seg="filter">
