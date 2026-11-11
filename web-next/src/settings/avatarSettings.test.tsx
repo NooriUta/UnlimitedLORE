@@ -217,7 +217,7 @@ describe('S4-02 · меню аватара — личные настройки �
     const dlg = await openMenu();
     const g = await within(dlg).findByRole('group', { name: ru['settings.palette.label'] });
     const btns = within(g).getAllByRole('button');
-    expect(btns.length).toBe(5);
+    expect(btns.length).toBe(6); // пять из v1 и mono (S4-19)
     await act(async () => { fireEvent.click(within(g).getByRole('button', { name: 'juniper' })); });
     expect(root.getAttribute('data-theme')).toBe('juniper');
   });
