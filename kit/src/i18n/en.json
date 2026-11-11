@@ -134,6 +134,7 @@
   "kit.field.unsupported": "field kind «{kind}» is not supported — read only",
   "kit.field.required": "Required field",
   "kit.field.warn": "Worth filling in",
+  "kit.field.saveFailed": "Not saved: {reason}. Your input is kept.",
   "kit.field.mdNoEditor": "MD editor is not connected — read only",
   "kit.field.refNoEditor": "record picker is not connected — read only",
   "kit.field.up": "Up: {item}",

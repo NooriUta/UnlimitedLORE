@@ -4089,6 +4089,11 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields__row { display: contents; }
 .sk-rec-fields dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
+/* S4-24: правка характеристики на месте — ✎ рядом со значением, редактор под подписью. */
+.sk-rec-fields__edit { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.sk-rec-fields__pen { padding: 0 6px; font-size: var(--fs-xs); color: var(--t3); }
+.sk-rec-fields__pen:hover { color: var(--t1); }
+.sk-rec-fields__editor { display: grid; gap: 4px; }
 /* Телефон (S4-MOBILE-EDGE): MD-поле в колонке значений получало ~225 из 360 px —
    подпись колонкой слева съедала треть. Узко подпись MD-поля встаёт над ним,
    а текст и редактор берут всю ширину; короткие поля остаются парой «подпись — значение». */

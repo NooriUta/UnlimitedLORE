@@ -134,6 +134,7 @@
   "kit.field.unsupported": "вид поля «{kind}» не поддерживается — только чтение",
   "kit.field.required": "Обязательное поле",
   "kit.field.warn": "Желательно заполнить",
+  "kit.field.saveFailed": "Не сохранилось: {reason}. Набранное на месте.",
   "kit.field.mdNoEditor": "редактор MD не подключён — только чтение",
   "kit.field.refNoEditor": "выбор записи не подключён — только чтение",
   "kit.field.up": "Выше: {item}",
