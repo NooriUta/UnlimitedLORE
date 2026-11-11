@@ -64,6 +64,52 @@ final class LoreRoleBatch {
         return out;
     }
 
+    /** AL-100 — те же слова, что у LoreUserResource.removalBlockedBecause при применении. */
+    static String ownLastRoleReason() {
+        return "Это ваша единственная проектная роль. Сняв её, вы потеряете доступ "
+             + "ко всему LORE, как только включится lore.scope.enforce, — и вернуть "
+             + "роль этой же админкой уже не сможете.";
+    }
+
+    static String lastOwnerReason(String project) {
+        return "Это последний владелец проекта " + project + ". Без владельца проектом "
+             + "некому управлять — назначьте другого owner'а до снятия этого.";
+    }
+
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-20 — отказ AL-100 строкой плана в dry_run. Раньше
+     * пробный прогон отвечал «проверено» на снятие, которое применение затем
+     * отклоняло 409: дифф обещал то, чего не будет.
+     *
+     * <p>Пачка применяется ПОСЛЕДОВАТЕЛЬНО, и проверки при применении видят уже
+     * изменённый граф — поэтому здесь та же последовательность: своих ролей
+     * становится меньше с каждым разрешённым снятием. Запрещённая строка ничего
+     * не снимает и счёт не уменьшает.
+     *
+     * @param owners   число owner'ов по проекту (для строк, где снимается owner)
+     * @param ownRoles сколько проектных ролей у человека, если снимает САМ СЕБЕ
+     *                 (человек, sub == kc_sub); иначе null — правило «своя последняя» не действует
+     * @return сколько строк запрещено
+     */
+    static int markRemovalBlocks(List<Map<String, Object>> plan, Map<String, Long> owners, Long ownRoles) {
+        long mine = ownRoles == null ? -1 : ownRoles;
+        int blocked = 0;
+        for (Map<String, Object> p : plan) {
+            if (!"remove".equals(p.get("kind"))) continue;
+            String project = String.valueOf(p.get("project"));
+            String reason = null;
+            if (ownRoles != null && mine <= 1) reason = ownLastRoleReason();
+            else if ("owner".equals(p.get("before")) && owners.getOrDefault(project, 0L) <= 1) reason = lastOwnerReason(project);
+            if (reason != null) {
+                p.put("check", Map.of("state", "forbidden", "source", reason));
+                blocked++;
+            } else if (ownRoles != null) {
+                mine--;
+            }
+        }
+        return blocked;
+    }
+
     /** Kit 2 (K2-BATCH-UNDO): окно, в которое пачку можно отменить одним вызовом. */
     static final java.time.Duration UNDO_WINDOW = java.time.Duration.ofMinutes(15);
 

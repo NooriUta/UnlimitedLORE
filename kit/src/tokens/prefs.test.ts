@@ -46,7 +46,7 @@ describe('themeAttrs / applyTheme', () => {
     expect(Object.fromEntries(attrs)).toEqual({ 'data-theme': 'lichen', 'data-density': 'comfortable' });
   });
 
-  it('список палитр — те же пять, что у v1', () => {
-    expect(PALETTES.map(p => p.id)).toEqual(['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark']);
+  it('список палитр — пять из v1 и приглушённая mono (S4-19, только v2)', () => {
+    expect(PALETTES.map(p => p.id)).toEqual(['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark', 'mono']);
   });
 });

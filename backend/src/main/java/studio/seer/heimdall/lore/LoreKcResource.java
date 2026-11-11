@@ -67,22 +67,97 @@ public class LoreKcResource extends LoreResourceBase {
         if (!configured()) return notConfigured();
         try {
             String t = adminToken();
-            HttpResponse<String> users = kc("GET", "/users?max=100", null, t);
-            io.vertx.core.json.JsonArray arr = new io.vertx.core.json.JsonArray(users.body());
+            // S7B-20: все учётки постранично — прежний ?max=100 молча терял 101-го человека.
+            io.vertx.core.json.JsonArray arr = KcOps.listAllUsers(call(t), KcOps.PAGE);
             io.vertx.core.json.JsonArray out = new io.vertx.core.json.JsonArray();
             for (int i = 0; i < arr.size(); i++) {
                 io.vertx.core.json.JsonObject u = arr.getJsonObject(i);
                 HttpResponse<String> rm = kc("GET", "/users/" + u.getString("id") + "/role-mappings/realm", null, t);
-                io.vertx.core.json.JsonArray roles = rm.statusCode() == 200 ? new io.vertx.core.json.JsonArray(rm.body()) : new io.vertx.core.json.JsonArray();
-                io.vertx.core.json.JsonArray names = new io.vertx.core.json.JsonArray();
-                for (int j = 0; j < roles.size(); j++) names.add(roles.getJsonObject(j).getString("name"));
-                out.add(io.vertx.core.json.JsonObject.of(
-                    "id", u.getString("id"), "username", u.getString("username"),
-                    "email", u.getString("email"), "enabled", u.getBoolean("enabled"),
-                    "roles", names));
+                // Роли не прочитались — roles_checked:false, а не молча пустой список.
+                out.add(KcOps.userRow(u, new KcOps.Resp(rm.statusCode(), rm.body())));
             }
             return noStore(Response.ok(out.encode()));
-        } catch (Exception e) { return upstream(e); }
+        } catch (KcOps.KcFailed e) { return kcPageFailed(e); }
+        catch (Exception e) { return upstream(e); }
+    }
+
+    /** Admin API KC для чистых классов (KcOps): тот же вызов, что {@link #kc}. */
+    private KcOps.KcCall call(String token) {
+        return (method, path, json) -> {
+            HttpResponse<String> r = kc(method, path, json, token);
+            return new KcOps.Resp(r.statusCode(), r.body());
+        };
+    }
+
+    private Response kcPageFailed(KcOps.KcFailed e) {
+        String hint = LoreKcAgentClient.forbiddenHint(e.status);
+        return noStore(Response.status(e.status >= 400 ? e.status : 502)
+            .entity(new LoreError(hint != null ? "KC_FORBIDDEN" : "KC_UPSTREAM", hint != null ? hint : e.getMessage())));
+    }
+
+    /**
+     * S7B-20 (UC-4): выключить / включить учётку человека в Keycloak. Учётку не
+     * удаляют — выключают: включение возвращает всё как было (роли, атрибуты).
+     * {@code dry_run} — только дифф; {@code undo_of} — этот вызов отменяет операцию
+     * {@code kr-…} в окне. Выключение запрещено для последнего включённого админа
+     * (AL-35) и для себя — отказом сервера, не подтверждением. После выключения
+     * сессии человека закрываются ({@code POST /users/{id}/logout}): выключенная
+     * учётка новых токенов не получит, а открытые сессии иначе дожили бы до истечения.
+     * Журнал AO-01 — фильтром, сущность записи — {@code user_id}.
+     */
+    public record KcUserEnabledRequest(Boolean enabled, Boolean dry_run, String undo_of) {}
+
+    @POST
+    @Path("user/{id}/enabled")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setUserEnabled(@PathParam("id") String userId, KcUserEnabledRequest req,
+                                   @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!configured()) return notConfigured();
+        if (req == null || req.enabled() == null) return badParams("enabled (true|false) required");
+        // Без '/' и '.': id уходит в путь Admin API, и "../clients/…" не должен сменить адресата PUT.
+        if (userId == null || !userId.matches("[A-Za-z0-9-]{1,64}")) return badParams("user id: только id учётки Keycloak (латиница, цифры, -)");
+        java.time.Instant now = java.time.Instant.now();
+        if (req.undo_of() != null) {
+            String undoErr = KcDanger.undoError(req.undo_of(), now);
+            if (undoErr != null) return badParams(undoErr);
+        }
+        try {
+            String t = adminToken();
+            HttpResponse<String> cur = kc("GET", "/users/" + userId, null, t);
+            if (cur.statusCode() == 404)
+                return noStore(Response.status(404).entity(new LoreError("NOT_FOUND", "учётки " + userId + " в Keycloak нет")));
+            if (cur.statusCode() != 200) return kcRefused(cur);
+            Map<String, Object> plan = KcOps.userEnabledPlan(userId, cur.body(), req.enabled(),
+                req.enabled() ? java.util.Set.of() : bridge.enabledAdminHolders(t), callerKcSub());
+            if (Boolean.TRUE.equals(req.dry_run())) {
+                Map<String, Object> out = new java.util.LinkedHashMap<>();
+                out.put("user_id", userId);
+                out.put("ok", true);
+                out.put("dry_run", true);
+                out.put("plan", List.of(plan));
+                return noStore(Response.ok(out));
+            }
+            String refusal = KcOps.refusal(plan);
+            if (refusal != null)
+                return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("KC_USER_ENABLED_BLOCKED", refusal)));
+            boolean loggedOut = false;
+            if (!"unchanged".equals(plan.get("kind"))) {
+                HttpResponse<String> r = kc("PUT", "/users/" + userId, KcOps.withEnabled(cur.body(), req.enabled()).encode(), t);
+                if (r.statusCode() >= 300) return kcRefused(r);
+                if (!req.enabled()) {
+                    HttpResponse<String> lo = kc("POST", "/users/" + userId + "/logout", null, t);
+                    loggedOut = lo.statusCode() < 300;
+                }
+                LOG.infof("[LORE KC] учётка %s %s", userId, req.enabled() ? "включена" : "выключена");
+            }
+            Map<String, Object> out = KcOps.userEnabledAnswer(userId, KcDanger.opId(now), plan, loggedOut);
+            if (req.undo_of() != null) out.put("undo_of", req.undo_of());
+            return noStore(Response.ok(out));
+        } catch (KcCallFailed e) { return kcRefused(e.response); }
+        catch (Exception e) { return upstream(e); }
     }
 
     /**
@@ -133,8 +208,8 @@ public class LoreKcResource extends LoreResourceBase {
         if (!configured()) return notConfigured();
         try {
             String t = adminToken();
-            HttpResponse<String> users = kc("GET", "/users?max=200", null, t);
-            io.vertx.core.json.JsonArray arr = new io.vertx.core.json.JsonArray(users.body());
+            // S7B-20: все учётки постранично — сирота 201-я тоже сирота.
+            io.vertx.core.json.JsonArray arr = KcOps.listAllUsers(call(t), KcOps.PAGE);
             java.util.List<Map<String, Object>> graphUsers = ingestService.queryPublic(
                 "SELECT kc_sub FROM KnowUser", Map.of());
             java.util.Set<String> known = new java.util.HashSet<>();
@@ -150,7 +225,8 @@ public class LoreKcResource extends LoreResourceBase {
                 }
             }
             return noStore(Response.ok(Map.of("orphans", out.getList())));
-        } catch (Exception e) { return upstream(e); }
+        } catch (KcOps.KcFailed e) { return kcPageFailed(e); }
+        catch (Exception e) { return upstream(e); }
     }
 
     public record KcUserCreate(String username, String email) {}
@@ -290,23 +366,57 @@ public class LoreKcResource extends LoreResourceBase {
         catch (Exception e) { return upstream(e); }
     }
 
+    /** S7B-20: {@code dry_run} — только дифф «включена → выключена» (или обратно). */
+    public record KcClientEnabledRequest(Boolean dry_run) {}
+
     @POST
     @Path("agent-client/{clientId}/disable")
+    @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response disableAgentClient(@PathParam("clientId") String clientId, @HeaderParam("X-Seer-Role") String role) {
+    public Response disableAgentClient(@PathParam("clientId") String clientId, KcClientEnabledRequest req,
+                                       @HeaderParam("X-Seer-Role") String role) {
+        return setAgentClientEnabled(clientId, false, req, role);
+    }
+
+    /**
+     * S7B-20 (UC-4): обратное к disable — учётку агента включают обратно. Секрет
+     * при этом не меняется: агент с прежним секретом снова получает токены.
+     */
+    @POST
+    @Path("agent-client/{clientId}/enable")
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response enableAgentClient(@PathParam("clientId") String clientId, KcClientEnabledRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        return setAgentClientEnabled(clientId, true, req, role);
+    }
+
+    private Response setAgentClientEnabled(String clientId, boolean on, KcClientEnabledRequest req, String role) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (!configured()) return notConfigured();
         if (clientId == null || !clientId.startsWith("lore-mcp-"))
-            return badParams("отключаются только учётки агентов lore-mcp-*");
+            return badParams((on ? "включаются" : "отключаются") + " только учётки агентов lore-mcp-*");
         try {
             String t = adminToken();
             String uuid = kcClientUuid(clientId, t);
             if (uuid == null) return noStore(Response.status(404).entity(new LoreError("NOT_FOUND", clientId + " в Keycloak нет")));
-            HttpResponse<String> r = kc("PUT", "/clients/" + uuid, io.vertx.core.json.JsonObject.of("enabled", false).encode(), t);
-            if (r.statusCode() >= 300) return kcRefused(r);
-            LOG.infof("[LORE KC] клиент агента %s отключён", clientId);
-            return noStore(Response.ok(Map.of("ok", true, "clientId", clientId, "enabled", false)));
+            HttpResponse<String> cur = kc("GET", "/clients/" + uuid, null, t);
+            Map<String, Object> plan = KcOps.clientEnabledPlan(clientId, cur.statusCode() == 200 ? cur.body() : null, on);
+            if (req != null && Boolean.TRUE.equals(req.dry_run())) {
+                Map<String, Object> out = new java.util.LinkedHashMap<>();
+                out.put("client_id", clientId);
+                out.put("ok", true);
+                out.put("dry_run", true);
+                out.put("plan", List.of(plan));
+                return noStore(Response.ok(out));
+            }
+            if (!"unchanged".equals(plan.get("kind"))) {
+                HttpResponse<String> r = kc("PUT", "/clients/" + uuid, io.vertx.core.json.JsonObject.of("enabled", on).encode(), t);
+                if (r.statusCode() >= 300) return kcRefused(r);
+                LOG.infof("[LORE KC] клиент агента %s %s", clientId, on ? "включён" : "отключён");
+            }
+            return noStore(Response.ok(KcOps.clientEnabledAnswer(clientId, plan)));
         } catch (KcCallFailed e) { return kcRefused(e.response); }
         catch (Exception e) { return upstream(e); }
     }

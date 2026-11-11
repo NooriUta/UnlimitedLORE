@@ -189,6 +189,21 @@ public class LoreUserResource extends LoreResourceBase {
             out.put("plan", plan);
             out.put("undo", LoreRoleBatch.undo(plan));
             if (Boolean.TRUE.equals(req.dry_run())) {
+                // S7B-20: отказ AL-100 — строкой плана «нельзя» с причиной, как его скажет
+                // применение (removalBlockedBecause), а не «проверено» с 409 потом.
+                Map<String, Long> owners = new java.util.HashMap<>();
+                for (Map<String, Object> p : plan) {
+                    if ("remove".equals(p.get("kind")) && "owner".equals(p.get("before"))) {
+                        String proj = String.valueOf(p.get("project"));
+                        owners.put(proj, countRows(
+                            "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE @in.slug = :proj AND role = 'owner'",
+                            Map.of("proj", proj)));
+                    }
+                }
+                String caller = callerKcSub();
+                boolean selfRemoval = callerClientId() == null && caller != null && caller.equals(req.kc_sub());
+                int blocked = LoreRoleBatch.markRemovalBlocks(plan, owners, selfRemoval ? (long) current.size() : null);
+                out.put("blocked", blocked);
                 out.put("dry_run", true);
                 out.put("applied", 0);
                 return noStore(Response.ok(out));
