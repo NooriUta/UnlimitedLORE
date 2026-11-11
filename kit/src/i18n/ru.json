@@ -399,6 +399,7 @@
   "kit.list.op.empty": "пусто",
   "kit.list.op.nonempty": "не пусто",
   "kit.list.facetAll": "все",
+  "kit.list.facetUntitled": "«{key}» — подпись не задана приложением: это ключ поля, а не его название",
   "kit.list.facetMany": "{first} +{n}",
   "kit.list.facetFind": "Найти значение",
   "kit.list.facetNoValues": "Под прочими фильтрами значений нет",

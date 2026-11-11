@@ -6549,3 +6549,6 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-palette__kindsbtn::after { content: " ▸"; color: var(--t3); }
 .sk-palette__kindsbtn[aria-expanded="true"]::after { content: " ▾"; }
 .sk-palette__kindn { font-family: var(--mono); color: var(--t3); }
+/* K4-FACET-LABELS: подписи поля приложение не дало — ключ строчными, моно, без
+   капса подписи: пропуск виден и не выдаётся за название поля. */
+.sk-list__label.is-untitled { font-family: var(--mono); font-weight: 400; letter-spacing: 0; text-transform: none; text-decoration: underline dotted; cursor: help; }

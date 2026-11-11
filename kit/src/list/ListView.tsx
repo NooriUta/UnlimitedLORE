@@ -73,7 +73,7 @@ import {
 import type { FilterOp, ListGroup, ListState, ListViewKind, QuickItem } from './listModel';
 import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
 import { FIND_FROM as GROUP_FIND_FROM } from './FacetFilter';
-import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf } from './groupLabel';
+import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf, keyTitleMissing } from './groupLabel';
 import { applyFilterSet, describeFieldFilter, facetOf, toFilterSet } from './filterModel';
 import type { FieldFilter } from './filterModel';
 // Счётчики по всей выдаче (S9-01): правила, когда верить числам источника.
@@ -2238,6 +2238,7 @@ export function ListView({
               <FacetFilter
                 key={k}
                 title={labels.keyTitle(k)}
+                untitled={keyTitleMissing(config, k)}
                 filter={fieldFilterOf(k)}
                 facet={src.from === 'all' ? facetFromAxis(src.axis) : page}
                 valueTitle={v => labels.valueTitle(k, v)}

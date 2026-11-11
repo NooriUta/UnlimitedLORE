@@ -62,6 +62,18 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d
 
 const CONFIG_KEYS = ['modules', 'menu', 'kinds', 'edges', 'graph', 'statuses', 'roles', 'verdict', 'list', 'palette', 'hooks'];
 const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at'];
+/**
+ * Ключи `list` — ОДИН список на валидатор и JSON-схему (сторож
+ * facetLabels.test.tsx, по образцу colorTokensMatchCss). До K4-FACET-LABELS
+ * схема отстала от контракта на три ключа (collapsedGroupings, columnDisplay,
+ * feed.under) и при `additionalProperties: false` отвергала рабочий конфиг.
+ */
+export const LIST_KEYS = [
+  'views', 'timeline', 'calendar', 'quick', 'filters', 'groupings', 'fieldLabels', 'collapsedGroupings',
+  'feed', 'columns', 'columnDisplay', 'tree', 'showClosed',
+] as const;
+/** Ключи, подпись которых kit знает сам (groupLabel.ts BUILTIN_KEY_TITLES). */
+export const KIT_BUILTIN_KEYS = ['title', 'id', 'status', 'kind', 'updated_at'] as const;
 const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar'];
 /**
  * Категории статуса: ось владелицы (D-2026-UXR-STATUS-AXIS, шесть значений)
@@ -380,6 +392,43 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
         c.warn('list.groupings', 'status-grouping-without-axis', 'разрез «status» заказан, а statuses.items пуст: группировка обещает статусную ось, которой нет');
       }
     }
+    /*
+      Подписи фасетов и разрезов (K4-FACET-LABELS). Фасет и разрез называют
+      поле ИМЕНЕМ, а подпись kit знает только у встроенных ключей и полей вида.
+      Поле, которое считает сервер или приложение («quality», «review» у
+      Дата-странников), подписи не имело вовсе — и kit молча печатал ключ
+      капсом. Теперь подпись такому полю даёт `list.fieldLabels`, а пропуск
+      называется здесь — громко, а не тихим ключом на экране.
+
+      Предупреждение, не ошибка: kit покажет ключ (строчными, с подсказкой) —
+      конфиг рабочий, но то, что видит человек, не подписано. Разрез по связи
+      (`rel:…`) подписан ребром и сюда не относится.
+    */
+    const fieldLabels = c.obj(list, 'fieldLabels', 'list', false);
+    if (fieldLabels) {
+      for (const [fk, fv] of Object.entries(fieldLabels)) {
+        if (!isStr(fv) || fv.trim() === '') c.err(`list.fieldLabels.${fk}`, 'type', `list.fieldLabels.${fk}: подпись — непустая строка`);
+      }
+    }
+    const labelled = new Set<string>(KIT_BUILTIN_KEYS);
+    for (const k of Object.values(isObj(cfg.kinds) ? cfg.kinds : {})) {
+      if (!isObj(k) || !Array.isArray(k.fields)) continue;
+      for (const fl of k.fields) if (isObj(fl) && isStr(fl.key) && isStr(fl.title) && fl.title.trim()) labelled.add(fl.key);
+    }
+    for (const [fk, fv] of Object.entries(fieldLabels ?? {})) {
+      if (isStr(fv) && fv.trim()) labelled.add(fk.startsWith('fields.') ? fk.slice(7) : fk);
+    }
+    for (const [arrKey, what] of [['filters', 'фасет'], ['groupings', 'разрез']] as const) {
+      (listArrays[arrKey] ?? []).forEach((v, i) => {
+        if (!isStr(v) || v.startsWith('rel:')) return;
+        const bare = v.startsWith('fields.') ? v.slice(7) : v;
+        if (labelled.has(v) || labelled.has(bare)) return;
+        c.warn(`list.${arrKey}[${i}]`, 'facet-without-label',
+          `list.${arrKey}[${i}]: ${what} по полю «${v}» без подписи — его нет ни в kinds.*.fields, ни в list.fieldLabels; `
+          + 'на экране будет сырой ключ. Подпишите поле в list.fieldLabels');
+      });
+    }
+    c.unknownKeys(list, LIST_KEYS, 'list', 'kit его не прочтёт');
     const tree = c.obj(list, 'tree', 'list', false);
     if (tree) {
       c.str(tree, 'parent', 'list.tree');

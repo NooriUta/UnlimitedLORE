@@ -399,6 +399,7 @@
   "kit.list.op.empty": "empty",
   "kit.list.op.nonempty": "not empty",
   "kit.list.facetAll": "all",
+  "kit.list.facetUntitled": "«{key}» — the application gave no label: this is the field key, not its name",
   "kit.list.facetMany": "{first} +{n}",
   "kit.list.facetFind": "Find value",
   "kit.list.facetNoValues": "No values under the other filters",
