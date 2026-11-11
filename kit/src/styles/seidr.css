@@ -55,6 +55,7 @@
   --swatch-slate:        #6aa6ff;
   --swatch-juniper:      #50c090;
   --swatch-warm-dark:    #d4a830;
+  --swatch-mono:         #b8b7b1;
 
   /* Статусы — 11 постоянных оттенков, различимых без подписи (как в v1):
      семантические --suc/--inf/--wrn схлопывали бы их в 5 семейств. */
@@ -398,6 +399,67 @@
   --wrn: #a04808;
   --inf: #3a6858;
   --dng: #c03030;
+}
+
+/* ---------- MONO (S4-19) ----------
+   Приглушённая, почти монохромная. Фидбек пользователя 07.11: «оранжевое
+   ядовито, тянет к чёрно-(почти)белому»; владелица 11.11: «не такую яркую,
+   как у терминальной сессии» — фон не чисто чёрный, текст не чисто белый.
+   Статусы различимы, но без насыщенности. Только v2 (в v1 этой палитры нет). */
+[data-theme='mono'] {
+  --bg0: #141516;
+  --bg1: #18191b;
+  --bg2: #1d1e21;
+  --bg3: #24262a;
+  --bd:  #34363b;
+  --bdh: #46484e;
+  --t1:  #dddcd7;
+  --t2:  #aeada8;
+  --t3:  #92918d;
+  --acc: #c4c2bb;
+  --suc: #8db596;
+  --wrn: #c9ab78;
+  --inf: #98adbf;
+  --dng: #d48e83;
+  --st-done:             #8db596;
+  --st-ready_for_deploy: #8fb3b6;
+  --st-active:           #98adbf;
+  --st-partial:          #c9a07e;
+  --st-planned:          #c2b07e;
+  --st-design:           #b39cb3;
+  --st-todo:             #9a9c9f;
+  --st-backlog:          #8e9093;
+  --st-deferred:         #95979b;
+  --st-blocked:          #d48e83;
+  --st-cancelled:        #8f8f8f;
+}
+[data-theme='mono'][data-mode='light'] {
+  color-scheme: light;
+  --bg0: #ebeae6;
+  --bg1: #f2f1ed;
+  --bg2: #f8f7f4;
+  --bg3: #e0dfda;
+  --bd:  #c5c4be;
+  --bdh: #a7a6a0;
+  --t1:  #1f2022;
+  --t2:  #44464a;
+  --t3:  #5a5c60;
+  --acc: #3d3f43;
+  --suc: #3b6646;
+  --wrn: #775719;
+  --inf: #3a5870;
+  --dng: #9e4237;
+  --st-done:             #3b6646;
+  --st-ready_for_deploy: #2f6468;
+  --st-active:           #3a5870;
+  --st-partial:          #82502a;
+  --st-planned:          #6e5c1f;
+  --st-design:           #6a4a6a;
+  --st-todo:             #55585c;
+  --st-backlog:          #5a5c60;
+  --st-deferred:         #56585d;
+  --st-blocked:          #9e4237;
+  --st-cancelled:        #5b5b5b;
 }
 
 /* ═══════════ база документа ═══════════ */
