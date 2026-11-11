@@ -17,6 +17,7 @@ import { PersonWizard } from './WizardsScreen';
 import { loreFetch } from '../auth/session';
 import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
+import { PersonMachines } from './MachinesScreen';
 import './Admin.css';
 
 /** Ось экрана: раздел «Люди и их проекты» или раздел «Проекты». */
@@ -207,6 +208,8 @@ function PersonPassport({ person: p, isMe, fetchImpl, allSlugs }: { person: Pers
       </p>
       <PersonAgentsLine kcSub={p.kc_sub} isMe={isMe} fetchImpl={fetchImpl} />
       <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
+      {/* S7B-ACL-3: машины, которыми человек владеет и к которым допущен. */}
+      <PersonMachines kcSub={p.kc_sub} fetchImpl={fetchImpl} />
     </div>
   );
 }
