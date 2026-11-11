@@ -6461,3 +6461,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-lib__body { max-width: 62ch; min-width: 0; }
 .sk-lib__open { justify-self: start; text-decoration: none; }
 .sk-lib__sheet .sk-lib__open { margin-top: 8px; }
+
+/* S4-14: фильтр по типам в поиске — свёрнут по умолчанию (слово владелицы 11.11.2026). */
+.sk-palette__kinds { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 12px; border-bottom: 1px solid var(--bd); }
+.sk-palette__kindsbtn { border: 0; background: none; padding: 2px 4px; font: inherit; font-size: var(--fs-xs); color: var(--t2); cursor: pointer; }
+.sk-palette__kindsbtn::after { content: " ▸"; color: var(--t3); }
+.sk-palette__kindsbtn[aria-expanded="true"]::after { content: " ▾"; }
+.sk-palette__kindn { font-family: var(--mono); color: var(--t3); }

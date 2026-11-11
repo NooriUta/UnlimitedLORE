@@ -287,6 +287,8 @@
   "kit.palette.more": "Showing {shown} of {total} — refine the query",
   "kit.palette.commandFailed": "Command “{title}” failed: {reason}",
   "kit.palette.hint": "↑↓ select · Enter open · Esc close",
+  "kit.palette.kinds": "Types",
+  "kit.palette.kindsOn": "Types · {n}",
   "kit.palette.action": "action",
   "kit.palette.targetRecord": "On record {id}",
   "kit.palette.targetSelection": "{n} selected",
