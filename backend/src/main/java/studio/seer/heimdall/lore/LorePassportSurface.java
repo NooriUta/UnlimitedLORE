@@ -73,7 +73,11 @@ final class LorePassportSurface {
             own("tasks"), own("sprints"))),
         Map.entry("tech", List.of(own(CONTENT))),
         Map.entry("feature", List.of(own(CONTENT), own("children"), own("tasks"),
-            own("actors"), own("pains"), own("gains"), own("jobs"))));
+            own("actors"), own("pains"), own("gains"), own("jobs"))),
+        // 53а: проект — контейнер, тела нет: Спринты · Компоненты · ADR · Релизы · Люди и агенты
+        // (люди и их агенты — одной вкладкой-группой linkTab «people»).
+        Map.entry("project", List.of(own("sprints"), own("components"), own("adrs"), own("releases"),
+            own("people"), own("agents"))));
 
     record Section(String key, String source, String ref) {}
 

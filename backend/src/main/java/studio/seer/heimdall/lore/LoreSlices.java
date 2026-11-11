@@ -1905,6 +1905,46 @@ public final class LoreSlices {
             "FROM KnowTask WHERE out('TAGGED_WITH').component_id CONTAINS :cid",
             List.of("cid"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
 
+        // ── Паспорт проекта (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-29, решение 53а) ──────
+        // Главный срез и вкладки Спринты · Компоненты · ADR · Релизы · Люди и агенты. У вкладок
+        // потолка нет: страница — общими limit/offset (SE-01, page.total/has_more), фасад отдаёт
+        // первую порцию и сверх неё data_state truncated с total. ORDER BY — в хвосте: скоуп
+        // вставляется перед ним. Параметр у всех один — project (slug), как у прочих срезов.
+        slice("project_by_id",
+            "SELECT slug, name, default_branch, is_private FROM KnowGitProject WHERE slug = :project",
+            List.of("project"), Map.of(), "");
+        slice("project_sprints",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+            "FROM KnowSprint WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY sprint_id DESC");
+        // Компонент достигает проекта только через свои спринты — тем же путём, что колонка
+        // git_projects у среза components (Component ← BELONGS_TO ← KnowSprint → BELONGS_TO_PROJECT).
+        slice("project_components",
+            "SELECT component_id, full_name FROM LoreComponent " +
+            "WHERE in('BELONGS_TO')[sprint_id IS NOT NULL].out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY component_id");
+        slice("project_adrs",
+            "SELECT adr_id, name, status FROM KnowADR WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY adr_id");
+        // Ключ паспорта релиза — release_uid «проект#тег»; свежие сверху, как у releases.
+        slice("project_releases",
+            "SELECT release_uid, release_id, version, git_tag, release_date " +
+            "FROM KnowRelease WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY release_date DESC, release_uid DESC");
+        // Люди — по назначению роли (HAS_PROJECT_ROLE, AL-82: источник истины о правах — граф),
+        // строка на ребро: роль лежит на нём.
+        slice("project_people",
+            "SELECT @out.kc_sub AS kc_sub, @out.display_name AS display_name, role " +
+            "FROM HAS_PROJECT_ROLE WHERE @in.slug = :project",
+            List.of("project"), Map.of(), " ORDER BY kc_sub");
+        // Агенты — акторы kind='agent', чей владелец имеет роль в проекте (агент сам роли в
+        // проекте не получает: он действует от имени владельца, AL-104).
+        slice("project_agents",
+            "SELECT actor_id, name, client_id, agent_role FROM KnowActor " +
+            "WHERE kind = 'agent' AND out('OWNED_BY').out('HAS_PROJECT_ROLE').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY actor_id");
+
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.
         // The vertex `title` is backfilled from the content_md heading by
@@ -2834,6 +2874,11 @@ public final class LoreSlices {
         Map.entry("question_hygiene", QUESTION_SCOPE),
         // AL-SCOPE-HOLES (06.11.2026): выпадающий список проектов — по самому slug («=» — скалярное поле).
         Map.entry("git_projects", "=slug"),
+        // S4-29 (53а): паспорт проекта — тем же правилом, что выпадающий список проектов.
+        Map.entry("project_by_id", "=slug"),
+        Map.entry("project_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_adrs", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_releases", "out('BELONGS_TO_PROJECT').slug"),
         // Задачи — проект через спринт.
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -2915,6 +2960,9 @@ public final class LoreSlices {
     static final Map<String, String> SHARED_SLICES = Map.ofEntries(
         Map.entry("user_project_roles", "по нему miniLORE делит выдачу по людям (D-2026-LORE-MINILORE-READER-READS-ALL)"),
         Map.entry("project_users", "то же: участники проекта для разделения по людям"),
+        Map.entry("project_people", "паспорт проекта (S4-29): участники — та же выборка, что project_users"),
+        Map.entry("project_agents", "паспорт проекта (S4-29): агенты видны всем (AL-106), как actors"),
+        Map.entry("project_components", "паспорт проекта (S4-29): компоненты — общий справочник, как components"),
         Map.entry("components", "справочник компонентов — общий"),
         Map.entry("component", "паспорт компонента — общий справочник"),
         Map.entry("components_in_area", "справочник компонентов — общий"),

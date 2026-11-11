@@ -29,7 +29,7 @@ describe('типы с паспортом', () => {
   it('перечень совпадает с типами фасада', () => {
     expect([...PASSPORT_TYPES]).toEqual([
       'sprint', 'task', 'adr', 'spec', 'decision', 'question', 'milestone', 'release',
-      'component', 'tech', 'feature',
+      'component', 'tech', 'feature', 'project',
     ]);
   });
 
@@ -68,6 +68,8 @@ describe('типы с паспортом', () => {
     expect(await sliceOf('question')).toBe('questions');
     expect(await sliceOf('milestone')).toBe('milestones');
     expect(await sliceOf('release')).toBe('releases');
+    // S4-29 (53а): паспорт проекта — перечень проектов из того же среза, что выбор проекта.
+    expect(await sliceOf('project')).toBe('git_projects');
   });
 
   it('вехи: название берётся из label, а не из title', async () => {

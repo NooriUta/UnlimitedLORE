@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ссылка в MD — мокап</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Мокап ADR-LORE-050: одно мини-окно, три вызова ([[ · @ · #тип), две карточки, чтение — только показ. */
+:root{
+  color-scheme:dark;
+  --bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--bdh:#584c38;
+  --t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#d4a830;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--fs-touch-input:16px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--disp:'Unbounded',system-ui,sans-serif;--body:'Manrope',system-ui,sans-serif;
+  --tap:40px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--body);font-size:var(--fs-md);line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-left)) 80px}
+h1{font-family:var(--disp);font-weight:800;font-size:var(--fs-xl);margin:6px 0 2px}
+.sub{color:var(--t2);font-size:var(--fs-sm)}
+.ref{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--acc);letter-spacing:.08em;text-transform:uppercase}
+.tabs{display:flex;gap:4px;margin:12px 0 10px;border-bottom:1px solid var(--bd)}
+.tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;color:var(--t3);font-family:var(--mono);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;padding:10px 8px;min-height:var(--tap);cursor:pointer}
+.tab[aria-selected=true]{color:var(--acc);border-bottom-color:var(--acc)}
+.lbl{font-family:var(--mono);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin:14px 0 6px}
+textarea{width:100%;min-height:150px;resize:vertical;background:var(--bg1);color:var(--t1);border:1px solid var(--bd);border-radius:6px;padding:10px 12px;font-family:var(--body);font-size:var(--fs-touch-input);line-height:1.55}
+textarea:focus{outline:none;border-color:var(--acc)}
+.hint{color:var(--t3);font-size:var(--fs-xs);margin-top:6px}
+.hint b{color:var(--t2);font-family:var(--mono)}
+.pop{margin-top:8px;background:var(--bg2);border:1px solid var(--bdh);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.45);overflow:hidden}
+.pop[hidden]{display:none}
+.ph{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.trig{font-family:var(--mono);font-size:var(--fs-2xs);border:1px solid var(--acc);color:var(--acc);border-radius:999px;padding:2px 8px}
+.q{font-family:var(--mono);font-size:var(--fs-sm);color:var(--t1)}
+.seg{display:flex;gap:2px;margin-left:auto}
+.seg button,.btn{appearance:none;background:var(--bg3);border:1px solid var(--bd);color:var(--t2);font-family:var(--mono);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;border-radius:999px;padding:4px 10px;min-height:30px;cursor:pointer}
+.seg button[aria-pressed=true],.btn.pri{border-color:var(--acc);color:var(--bg0);background:var(--acc)}
+.btn:disabled{opacity:.5}
+.list{max-height:260px;overflow:auto}
+.it{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid var(--bd);cursor:pointer;min-height:var(--tap)}
+.it:last-child{border-bottom:0}
+.it.on,.it:hover{background:var(--bg3)}
+.ty{font-family:var(--mono);font-size:var(--fs-2xs);text-transform:uppercase;color:var(--inf);border:1px solid var(--bd);border-radius:999px;padding:1px 7px;white-space:nowrap;margin-top:2px}
+.it .id{font-family:var(--mono);font-size:var(--fs-xs);color:var(--acc)}
+.it .tt{font-size:var(--fs-sm);color:var(--t1)}
+.state{padding:14px 12px;font-size:var(--fs-sm);color:var(--t2)}
+.state b{color:var(--t1)}
+.state.err{border-left:3px solid var(--dng)}
+.state.lock{border-left:3px solid var(--wrn)}
+.new{padding:10px 12px;border-top:1px solid var(--bd)}
+.fld{margin-top:8px}
+.fld label{display:flex;gap:6px;align-items:center;font-size:var(--fs-xs);color:var(--t2)}
+.mk{font-family:var(--mono);font-size:var(--fs-2xs);border-radius:999px;padding:0 6px;border:1px solid}
+.mk.block{color:var(--dng);border-color:var(--dng)}
+.mk.warn{color:var(--wrn);border-color:var(--wrn)}
+.fld input,.fld select{width:100%;margin-top:3px;background:var(--bg1);color:var(--t1);border:1px solid var(--bd);border-radius:5px;padding:7px 9px;font-family:var(--body);font-size:var(--fs-touch-input)}
+.fld.bad input,.fld.bad select{border-color:var(--dng)}
+.fld.soft input,.fld.soft select{border-color:var(--wrn)}
+.refuse{margin-top:10px;font-size:var(--fs-sm);color:var(--dng)}
+.warnmsg{margin-top:6px;font-size:var(--fs-sm);color:var(--wrn)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.raw{font-family:var(--mono);font-size:var(--fs-xs);color:var(--t2);background:var(--bg1);border:1px dashed var(--bd);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word}
+.prose{font-size:var(--fs-lg);line-height:1.7;background:var(--bg1);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
+.prose p{margin:0 0 10px}
+.sk-wref{display:inline-block;font-family:var(--mono);font-size:var(--fs-sm);color:var(--acc);border:1px solid var(--bdh);border-radius:4px;padding:0 5px;background:var(--bg2);cursor:pointer;line-height:1.5}
+.sk-wref.miss{color:var(--dng);border-style:dashed}
+.peek{margin-top:10px;background:var(--bg2);border:1px solid var(--bdh);border-radius:8px;padding:12px}
+.peek[hidden]{display:none}
+.peek h3{font-family:var(--disp);font-weight:800;font-size:var(--fs-lg);margin:4px 0 8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:var(--fs-sm)}
+.kv dt{color:var(--t3);font-family:var(--mono);font-size:var(--fs-2xs);text-transform:uppercase;padding-top:2px}
+.kv dd{margin:0}
+.ro{font-size:var(--fs-xs);color:var(--t3);margin-top:8px}
+.sheet{position:fixed;inset:auto 0 0 0;background:var(--bg1);border-top:1px solid var(--bdh);border-radius:12px 12px 0 0;padding:14px max(16px,env(safe-area-inset-left)) calc(16px + env(safe-area-inset-bottom));max-height:80vh;overflow:auto;box-shadow:0 -10px 30px rgba(0,0,0,.5);z-index:10}
+.sheet[hidden]{display:none}
+.sheet .grab{width:40px;height:4px;border-radius:999px;background:var(--bdh);margin:0 auto 10px}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+th{font-family:var(--mono);font-size:var(--fs-2xs);text-transform:uppercase;color:var(--t3);text-align:left;padding:5px 6px;border-bottom:1px solid var(--bd)}
+td{padding:6px;border-bottom:1px solid var(--bd);vertical-align:top}
+td code{font-family:var(--mono);color:var(--t1)}
+.yes{color:var(--suc);font-family:var(--mono)}
+.no{color:var(--t3);font-family:var(--mono)}
+.demo{font-size:var(--fs-xs);color:var(--t3);margin-top:12px;border-top:1px dashed var(--bd);padding-top:8px}
+noscript div{border:1px solid var(--dng);color:var(--dng);padding:10px;border-radius:6px;margin:10px 0}
+/* Ссылки в тексте: зелёная — запись есть, красная — нет; «отложено» — завести отказались, остаётся красной. */
+.bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.menuw{position:relative}
+.menu{position:absolute;z-index:5;top:calc(100% + 4px);left:0;min-width:320px;background:var(--bg2);border:1px solid var(--bdh);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:4px 0}
+.menu[hidden]{display:none}
+.menu .mi{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 10px;font-size:var(--fs-sm)}
+.menu .mi .id{font-family:var(--mono);color:var(--dng)}
+.menu .empty{padding:8px 10px;color:var(--t3);font-size:var(--fs-sm)}
+.refs{display:flex;flex-direction:column;gap:4px}
+.rf{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:var(--fs-sm);padding:5px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg1)}
+.rf .id{font-family:var(--mono)}
+.rf.ok{border-color:color-mix(in srgb,var(--suc) 55%,var(--bd))}.rf.ok .id{color:var(--suc)}
+.rf.miss{border-color:var(--dng)}.rf.miss .id{color:var(--dng)}
+.rf .st{font-size:var(--fs-xs);color:var(--t3)}
+.rf .act{margin-left:auto;display:flex;gap:4px}
+.rf.flash{animation:fl 1.2s ease-out}
+@keyframes fl{from{box-shadow:0 0 0 3px var(--acc)}to{box-shadow:0 0 0 0 transparent}}
+.savewarn{border:1px solid var(--wrn);border-left-width:3px;background:var(--bg1);padding:8px 10px;border-radius:6px;font-size:var(--fs-sm);color:var(--t2);margin-bottom:8px}
+.savewarn b{color:var(--wrn)}.savewarn[hidden]{display:none}
+.saveok{border-color:var(--suc)}.saveok b{color:var(--suc)}
+.toast{font-size:var(--fs-sm);color:var(--t2);background:var(--bg2);border:1px solid var(--bdh);border-radius:6px;padding:6px 10px;margin-bottom:8px}
+.toast[hidden]{display:none}
+.sk-wref.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 55%,var(--bdh))}
+/* Компьютер: две колонки (правка | исходник), плотные IDE-размеры; 16px у полей — только для телефона (порог зума iOS). */
+@media (min-width:900px){
+  .wrap{max-width:1120px}
+  #v-edit:not([hidden]){display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:0 20px;align-items:start}
+  #v-edit>.col{min-width:0}
+  textarea,.fld input,.fld select{font-size:var(--fs-md)}
+  textarea{min-height:190px}
+  .prose{font-size:var(--fs-md);max-width:760px}
+  #v-read .peek{max-width:520px}
+  .sheet{left:auto;top:0;bottom:0;width:380px;max-height:none;border-radius:0;border-top:0;border-left:1px solid var(--bdh)}
+  .sheet .grab{display:none}
+  .list{max-height:300px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ref">ADR-LORE-050 · мокап, данные выдуманы</div>
+  <h1>Ссылка на объект в MD</h1>
+  <p class="sub">Наберите в тексте <b>[[</b>, <b>@</b> или <b>#adr</b> — откроется одно окно. Выбранное ложится в текст как <span class="raw" style="display:inline;padding:0 4px">[[тип:ID]]</span>.</p>
+  <noscript><div>Скрипты выключены (так бывает во встроенном просмотрщике Telegram) — мокап интерактивный, откройте его в браузере.</div></noscript>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-v="edit">Правка</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="read">Чтение</button>
+    <button class="tab" role="tab" aria-selected="false" data-v="rules">Правила вызова</button>
+  </div>
+
+  <section id="v-edit">
+    <div class="col">
+    <textarea id="ed" spellcheck="false"># Разбор сбоя выкладки
+
+Причина — в правиле, которое описано в [[adr:ADR-LORE-038]]. Чинить будем по задаче </textarea>
+    <div class="hint">Вызов: <b>[[</b> · <b>@</b> после пробела · <b>#тип</b> внутри текста. <b>Esc</b> — закрыть, набранное останется текстом.</div>
+
+    <div class="pop" id="pop" hidden>
+      <div class="ph">
+        <span class="trig" id="pTrig"></span>
+        <span class="q" id="pQ"></span>
+        <div class="seg" role="group" aria-label="Карточка">
+          <button id="cardOld" aria-pressed="true">Существующий</button>
+          <button id="cardNew" aria-pressed="false">Новый</button>
+        </div>
+      </div>
+      <div id="oldBody"><div class="list" id="list"></div></div>
+      <div id="newBody" hidden></div>
+    </div>
+    </div>
+    <div class="col">
+
+    <div class="bar">
+      <button class="btn pri" id="save">Сохранить</button>
+      <span class="menuw"><button class="btn" id="fixBtn" aria-haspopup="true" aria-expanded="false">Дозавести <span id="fixN">0</span></button>
+        <div class="menu" id="fixMenu" hidden></div></span>
+      <span class="hint" style="margin:0">Вставьте текст с ID — ссылки проверятся сразу.</span>
+    </div>
+    <div class="savewarn" id="saveWarn" hidden></div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="lbl">Ссылки в тексте</div>
+    <div class="refs" id="refs"></div>
+
+    <div class="demo">Состояние списка (для показа):
+      <span class="seg" style="display:inline-flex;margin:4px 0 0" id="stateSeg">
+        <button data-s="ok" aria-pressed="true">есть данные</button>
+        <button data-s="err" aria-pressed="false">не загрузилось</button>
+        <button data-s="deny" aria-pressed="false">нет прав</button>
+      </span>
+    </div>
+
+    <div class="lbl">Исходник MD — так хранится</div>
+    <div class="raw" id="raw"></div>
+    </div>
+  </section>
+
+  <section id="v-read" hidden>
+    <div class="prose" id="prose"></div>
+    <div class="peek" id="peek" hidden></div>
+    <p class="hint">В чтении окно только показывает карточку. Править поля — в паспорте.</p>
+  </section>
+
+  <section id="v-rules" hidden>
+    <p class="sub">Чтобы окно не выскакивало на обычном тексте. Таблицу считает та же функция, что и редактор.</p>
+    <div class="lbl">Проверка строк</div>
+    <table><thead><tr><th>Текст до курсора</th><th>Окно</th><th>Почему</th></tr></thead><tbody id="rulesT"></tbody></table>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden></div>
+
+<script>
+/* ---------- данные мокапа ---------- */
+const TYPES={adr:'ADR',task:'задача',spec:'спека',decision:'решение'};
+const ALIAS={adr:'adr','адр':'adr',task:'task','задача':'task',spec:'spec','спека':'spec',decision:'decision','решение':'decision'};
+const DB=[
+  {t:'adr',id:'ADR-LORE-038',title:'Проект ≠ репозиторий: релизы группировать по проекту',f:{'Статус':'ACCEPTED','Компоненты':'OMILORE','Дата':'2026-10-02'}},
+  {t:'adr',id:'ADR-LORE-050',title:'Ссылка на объект LORE прямо в MD',f:{'Статус':'ACCEPTED','Компоненты':'OMILORE, FORSETI','Дата':'2026-11-10'}},
+  {t:'adr',id:'ADR-LORE-033',title:'Служба поиска: ранжирование и русская морфология',f:{'Статус':'ACCEPTED','Компоненты':'OMILORE','Дата':'2026-09-14'}},
+  {t:'task',id:'SPRINT_UXR_S3_V2_INFRA/S3-11',title:'Промо фиксирует SHA',f:{'Статус':'done','Спринт':'SPRINT_UXR_S3_V2_INFRA','Оценка':'3'}},
+  {t:'task',id:'SPRINT_MINILORE_CUTOVER/CO-11',title:'Переключение телефона на новый шлюз',f:{'Статус':'active','Спринт':'SPRINT_MINILORE_CUTOVER','Оценка':'5'}},
+  {t:'spec',id:'SPEC-LORE-VAULT-EXPORT',title:'Выгрузка знания LORE в папку с .md',f:{'Статус':'proposed','Версия':'1.0.0'}},
+  {t:'decision',id:'D-2026-LORE-RECORD-FIELD-REQUIRED',title:'required: block | warn в раскладке lore.record',f:{'Статус':'accepted','ADR':'ADR-LORE-050'}},
+];
+/* раскладка типа: поле, вид, required (block = сервер без него не создаст, warn = только предупредить) */
+const LAYOUT={
+  task:[{k:'Название',r:'block'},{k:'Спринт',r:'block',opt:['SPRINT_MINILORE_CUTOVER','SPRINT_UXR_S3_V2_INFRA']},{k:'Оценка',r:'warn'},{k:'Класс работы',more:1,opt:['feature','fix','chore']}],
+  adr:[{k:'Название',r:'block'},{k:'Компонент',r:'warn',opt:['OMILORE','FORSETI']},{k:'Теги',more:1}],
+  spec:[{k:'Название',r:'block'},{k:'Версия',r:'warn'},{k:'Компонент',more:1,opt:['OMILORE','FORSETI']}],
+  decision:[{k:'Название',r:'block'},{k:'ADR',r:'warn'},{k:'Статус',more:1,opt:['proposed','accepted']}],
+};
+let listState='ok';
+
+/* ---------- правила вызова ---------- */
+// Возвращает {trig, type, q, start} или null — по тексту ДО курсора.
+function detect(before){
+  // внутри кода: незакрытый ``` или нечётное число ` в строке
+  const fences=(before.match(/^```/gm)||[]).length;
+  if(fences%2) return null;
+  const line=before.slice(before.lastIndexOf('\n')+1);
+  if(((line.match(/`/g)||[]).length)%2) return null;
+  let m;
+  if((m=/\[\[([^\[\]\n]{0,80})$/.exec(before))){
+    const inner=m[1]; const tm=/^([a-zа-яё]+):(.*)$/i.exec(inner);
+    const ty=tm&&ALIAS[tm[1].toLowerCase()];
+    return {trig:'[[',type:ty||null,q:ty?tm[2]:inner,start:before.length-m[0].length};
+  }
+  if((m=/(^|\s)@#([a-zа-яё]+)(?:\s([^\n@#]{0,60}))?$/i.exec(before))){
+    const ty=ALIAS[m[2].toLowerCase()]; if(!ty) return {trig:'@#',unknown:m[2],q:'',start:before.length-m[0].length+m[1].length};
+    return {trig:'@#'+m[2],type:ty,q:m[3]||'',start:before.length-m[0].length+m[1].length};
+  }
+  if((m=/(^|\s)@([^\s@#\n][^\n@#]{0,60})?$/.exec(before))){
+    return {trig:'@',type:null,q:m[2]||'',start:before.length-m[0].length+m[1].length};
+  }
+  if((m=/(^|[^\n#])#([a-zа-яё]+)(?:\s([^\n@#]{0,60}))?$/i.exec(before))){
+    // «# » в начале строки — заголовок; «#» сразу перед буквой внутри строки — вызов
+    const pos=before.length-m[0].length+m[1].length;
+    const lineStart=before.lastIndexOf('\n',pos-1)+1;
+    if(pos===lineStart) return null;
+    const ty=ALIAS[m[2].toLowerCase()];
+    if(!ty) return {trig:'#',unknown:m[2],q:'',start:pos};
+    return {trig:'#'+m[2],type:ty,q:m[3]||'',start:pos};
+  }
+  return null;
+}
+function why(s,r){
+  if(r) return r.unknown?'тип «'+r.unknown+'» не знаем — окно скажет это словами':'откроется'+(r.type?' с типом «'+TYPES[r.type]+'»':' по всем типам');
+  if((s.match(/`/g)||[]).length%2) return 'внутри кода';
+  if(/^#\s/.test(s)||/\n#\s?$/.test(s)) return 'заголовок Markdown';
+  if(/\S@/.test(s.slice(-12))) return '@ не после пробела (почта)';
+  return 'обычный текст';
+}
+
+/* ---------- редактор ---------- */
+const ed=document.getElementById('ed'), pop=document.getElementById('pop');
+let cur=null, sel=0, card='old', tried=false, warned=false;
+const $=id=>document.getElementById(id);
+function matches(){
+  const q=(cur.q||'').toLowerCase().trim();
+  return DB.filter(d=>(!cur.type||d.t===cur.type)&&(!q||d.id.toLowerCase().includes(q)||d.title.toLowerCase().includes(q)));
+}
+function renderPop(){
+  if(!cur){pop.hidden=true;return}
+  pop.hidden=false;
+  $('pTrig').textContent=cur.trig;
+  $('pQ').textContent=cur.unknown?'':(cur.type?TYPES[cur.type]+' · ':'')+(cur.q?'«'+cur.q+'»':'введите слова поиска');
+  $('cardOld').setAttribute('aria-pressed',String(card==='old'));
+  $('cardNew').setAttribute('aria-pressed',String(card==='new'));
+  $('oldBody').hidden=card!=='old'; $('newBody').hidden=card!=='new';
+  const L=$('list');
+  if(cur.unknown){L.innerHTML=`<div class="state err"><b>Тип «${esc(cur.unknown)}» не знаем.</b> Есть: ${Object.keys(TYPES).map(k=>'#'+k).join(', ')}. Esc — оставить как текст.</div>`;return}
+  if(listState==='err'){L.innerHTML=`<div class="state err"><b>Не смогли загрузить список.</b> Служба поиска ответила 503 — это не «ничего нет». <button class="btn" onclick="listState='ok';syncState();renderPop()">Повторить</button></div>`;}
+  else {
+    const ms=matches(); sel=Math.min(sel,Math.max(ms.length-1,0));
+    L.innerHTML=ms.length?ms.map((d,i)=>`<div class="it${i===sel?' on':''}" data-i="${DB.indexOf(d)}"><span class="ty">${TYPES[d.t]}</span><div><div class="id">${d.id}</div><div class="tt">${esc(d.title)}</div></div></div>`).join('')
+      :`<div class="state"><b>Не нашлось</b> по «${esc(cur.q)}»${cur.type?' среди: '+TYPES[cur.type]:''}. Поиск отработал — это не ошибка. <button class="btn" onclick="toNew()">Завести новый</button></div>`;
+  }
+  if(card==='new') renderNew();
+}
+function renderNew(){
+  const B=$('newBody');
+  const ty=cur.type||B.dataset.ty||'task'; B.dataset.ty=ty;
+  if(listState==='deny'){B.innerHTML=`<div class="state lock"><b>Нет прав завести «${TYPES[ty]}».</b> Создание этого типа у вашей роли закрыто — ссылку на существующий вставить можно.</div>`;return}
+  const showMore=B.dataset.more==='1';
+  const fields=LAYOUT[ty].filter(f=>!f.more||showMore);
+  const vals=JSON.parse(B.dataset.v||'{}');
+  const miss=LAYOUT[ty].filter(f=>f.r==='block'&&!vals[f.k]).map(f=>f.k);
+  const soft=LAYOUT[ty].filter(f=>f.r==='warn'&&!vals[f.k]).map(f=>f.k);
+  B.innerHTML=`<div class="new">
+    ${cur.type?'':`<div class="fld"><label>Тип</label><select id="nTy">${Object.keys(TYPES).map(k=>`<option value="${k}"${k===ty?' selected':''}>${TYPES[k]}</option>`).join('')}</select></div>`}
+    ${fields.map(f=>`<div class="fld${tried&&f.r==='block'&&!vals[f.k]?' bad':''}${tried&&f.r==='warn'&&!vals[f.k]?' soft':''}">
+      <label>${f.k}${f.r==='block'?' <span class="mk block">обязательно</span>':f.r==='warn'?' <span class="mk warn">желательно</span>':''}</label>
+      ${f.opt?`<select data-k="${f.k}"><option value="">—</option>${f.opt.map(o=>`<option${vals[f.k]===o?' selected':''}>${o}</option>`).join('')}</select>`
+             :`<input data-k="${f.k}" value="${esc(vals[f.k]||(f.k==='Название'&&cur.q?cur.q:''))}">`}
+    </div>`).join('')}
+    ${LAYOUT[ty].some(f=>f.more)&&!showMore?'<div class="row"><button class="btn" id="more">ещё поля</button></div>':''}
+    ${tried&&miss.length?`<div class="refuse">Не создаю: не заполнено — ${miss.join(', ')}. Без этого сервер запись не примет.</div>`:''}
+    ${warned&&!miss.length&&soft.length?`<div class="warnmsg">Можно создать, но пусто желательное: ${soft.join(', ')}.</div>`:''}
+    <div class="row"><button class="btn pri" id="create">${warned&&!miss.length&&soft.length?'Создать всё равно':'Создать и вставить'}</button><button class="btn" id="cancelNew">Отмена</button></div>
+  </div>`;
+  // Название по умолчанию из запроса — сразу в значения
+  if(!vals['Название']&&cur.q){vals['Название']=cur.q;B.dataset.v=JSON.stringify(vals)}
+}
+function toNew(){card='new';tried=false;warned=false;$('newBody').dataset.v='{}';$('newBody').dataset.more='0';renderPop()}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function insert(d){
+  const pos=ed.selectionStart, v=ed.value, tok=`[[${d.t}:${d.id}]] `;
+  ed.value=v.slice(0,cur.start)+tok+v.slice(pos);
+  const np=cur.start+tok.length; ed.focus(); ed.setSelectionRange(np,np);
+  close(); sync();
+}
+function close(){cur=null;card='old';tried=false;renderPop()}
+function sync(){ $('raw').textContent=ed.value; renderProse(); renderRefs(); }
+
+/* ---------- ссылки в тексте: проверка, вставка копипастом, «дозавести» ---------- */
+const deferred=new Set();           // завести отказались — ссылка остаётся красной
+const typeOfId=id=>/^ADR-/i.test(id)?'adr':/^SPEC-/i.test(id)?'spec':/^D-\d{4}-/i.test(id)?'decision':/^SPRINT_[A-Z0-9_]+\/[A-Z0-9-]+$/i.test(id)?'task':null;
+// голые ID по форме (как splitLoreRefs): ADR-…, SPEC-…, D-2026-…, SPRINT_X/CODE
+const BARE=/(^|[\s(«"])((?:ADR|SPEC)-[A-Z0-9-]*[A-Z0-9]|D-\d{4}-[A-Z0-9-]*[A-Z0-9]|SPRINT_[A-Z0-9_]+\/[A-Z0-9-]+)(?=$|[\s.,;:)»"!?])/g;
+function refsIn(text){
+  const out=[], seen=new Set();
+  text.replace(/\[\[(?:([a-z]+):)?([^\[\]\n]+)\]\]/gi,(m,t,id)=>{id=id.trim(); if(!seen.has(id)){seen.add(id); out.push({id,t:(t||typeOfId(id)||'').toLowerCase()})} return m});
+  return out;
+}
+const plural=n=>{const a=n%10,b=n%100;return a===1&&b!==11?'ссылка':a>=2&&a<=4&&(b<12||b>14)?'ссылки':'ссылок'};
+const found=id=>DB.some(x=>x.id===id);
+function missing(){return refsIn(ed.value).filter(r=>!found(r.id))}
+function renderRefs(flashIds){
+  const rs=refsIn(ed.value), miss=rs.filter(r=>!found(r.id));
+  $('refs').innerHTML=rs.length?rs.map(r=>{
+    const ok=found(r.id), d=ok&&DB.find(x=>x.id===r.id);
+    return `<div class="rf ${ok?'ok':'miss'}${flashIds&&flashIds.has(r.id)?' flash':''}"><span class="ty">${TYPES[r.t]||'?'}</span><span class="id">${esc(r.id)}</span>
+      <span class="st">${ok?esc(d.title):deferred.has(r.id)?'нет такой записи · заводить отказались':'нет такой записи'}</span>
+      ${ok?'':`<span class="act"><button class="btn pri" data-fix="${esc(r.id)}">Завести</button>${deferred.has(r.id)?'':`<button class="btn" data-later="${esc(r.id)}">Не сейчас</button>`}</span>`}</div>`}).join('')
+    :'<div class="hint">Ссылок в тексте нет.</div>';
+  $('fixN').textContent=miss.length;
+  $('fixBtn').disabled=!miss.length;
+  if(!$('fixMenu').hidden) renderFixMenu();
+  if(!$('saveWarn').hidden&&!$('saveWarn').classList.contains('saveok')) showSaveWarn(false);
+}
+function renderFixMenu(){
+  const m=missing();
+  $('fixMenu').innerHTML=m.length?m.map(r=>`<div class="mi"><span><span class="ty">${TYPES[r.t]||'?'}</span> <span class="id">${esc(r.id)}</span></span><button class="btn pri" data-fix="${esc(r.id)}">Завести</button></div>`).join('')
+    :'<div class="empty">Всё, на что ссылается текст, в LORE есть.</div>';
+}
+function showSaveWarn(fromSave){
+  const m=missing(), W=$('saveWarn');
+  if(!m.length){ W.classList.add('saveok'); W.innerHTML=fromSave?'<b>Сохранено.</b> Все ссылки ведут на существующие записи.':'<b>Все ссылки найдены.</b>'; W.hidden=false; return }
+  W.classList.remove('saveok');
+  W.innerHTML=`<b>В тексте ${m.length} ${plural(m.length)} на несуществующие записи:</b> ${m.map(r=>esc(r.id)).join(', ')}.
+    Сохранить можно — ссылки останутся красными.
+    <div class="row"><button class="btn" id="saveAnyway">Сохранить всё равно</button><button class="btn pri" id="openFix">Дозавести</button></div>`;
+  W.hidden=false;
+}
+function startFix(id){
+  const r=refsIn(ed.value).find(x=>x.id===id); const ty=r&&r.t&&TYPES[r.t]?r.t:'task';
+  $('fixMenu').hidden=true; $('fixBtn').setAttribute('aria-expanded','false');
+  cur={trig:'дозавести',type:ty,q:'',start:null,fixId:id};
+  card='new'; tried=false; warned=false;
+  const B=$('newBody'); B.dataset.ty=ty; B.dataset.more='0';
+  const vals={}; if(ty==='task'){vals['Спринт']=id.split('/')[0]}
+  B.dataset.v=JSON.stringify(vals);
+  renderPop(); $('pQ').textContent=TYPES[ty]+' · '+id+' — завести под этим ID';
+  pop.scrollIntoView({block:'nearest'});
+}
+document.querySelector('#v-edit').addEventListener('click',e=>{
+  const f=e.target.closest('[data-fix]'); if(f){startFix(f.dataset.fix);return}
+  const l=e.target.closest('[data-later]'); if(l){deferred.add(l.dataset.later);renderRefs();return}
+  if(e.target.id==='saveAnyway'){ $('saveWarn').innerHTML='<b>Сохранено с красными ссылками.</b> Их видно здесь и в «Дозавести».'; return }
+  if(e.target.id==='openFix'){ $('fixMenu').hidden=false; $('fixBtn').setAttribute('aria-expanded','true'); renderFixMenu(); return }
+});
+$('save').onclick=()=>showSaveWarn(true);
+$('fixBtn').onclick=()=>{const M=$('fixMenu'); M.hidden=!M.hidden; $('fixBtn').setAttribute('aria-expanded',String(!M.hidden)); if(!M.hidden) renderFixMenu()};
+ed.addEventListener('paste',e=>{
+  const txt=(e.clipboardData||window.clipboardData).getData('text'); if(!txt) return;
+  e.preventDefault();
+  const wrapped=txt.replace(BARE,(m,pre,id)=>`${pre}[[${typeOfId(id)}:${id}]]`);
+  const s=ed.selectionStart, en=ed.selectionEnd;
+  ed.value=ed.value.slice(0,s)+wrapped+ed.value.slice(en);
+  ed.setSelectionRange(s+wrapped.length,s+wrapped.length);
+  const rs=refsIn(wrapped), ok=rs.filter(r=>found(r.id)).length;
+  sync(); renderRefs(new Set(rs.map(r=>r.id)));
+  const T=$('toast'); T.hidden=!rs.length;
+  T.innerHTML=`Во вставке ${rs.length} ${plural(rs.length)}: <b style="color:var(--suc)">${ok} найдено</b>, <b style="color:var(--dng)">${rs.length-ok} нет в LORE</b>${rs.length-ok?' — их можно завести здесь или потом через «Дозавести».':'.'}`;
+});
+function onEdit(){
+  const r=detect(ed.value.slice(0,ed.selectionStart));
+  if(!r){ if(card!=='new') close(); return }
+  const typeChanged=!cur||cur.type!==r.type; cur=r; if(typeChanged) sel=0;
+  if(card==='new'&&typeChanged) card='old';
+  renderPop();
+}
+ed.addEventListener('input',()=>{onEdit();sync()});
+ed.addEventListener('click',onEdit);
+ed.addEventListener('keydown',e=>{
+  if(!cur) return;
+  if(e.key==='Escape'){e.preventDefault();close();return}
+  if(card!=='old'||listState!=='ok') return;
+  const ms=matches();
+  if(e.key==='ArrowDown'){e.preventDefault();sel=Math.min(sel+1,ms.length-1);renderPop()}
+  else if(e.key==='ArrowUp'){e.preventDefault();sel=Math.max(sel-1,0);renderPop()}
+  else if(e.key==='Enter'&&ms[sel]){e.preventDefault();insert(ms[sel])}
+});
+$('list').addEventListener('mousedown',e=>{const it=e.target.closest('.it'); if(it){e.preventDefault();insert(DB[+it.dataset.i])}});
+$('cardOld').onclick=()=>{card='old';renderPop()};
+$('cardNew').onclick=toNew;
+$('newBody').addEventListener('input',e=>{
+  const B=$('newBody'); const vals=JSON.parse(B.dataset.v||'{}');
+  if(e.target.id==='nTy'){B.dataset.ty=e.target.value;B.dataset.v='{}';tried=false;renderNew();return}
+  if(e.target.dataset.k){vals[e.target.dataset.k]=e.target.value.trim();B.dataset.v=JSON.stringify(vals)}
+});
+$('newBody').addEventListener('change',e=>{if(e.target.tagName==='SELECT'&&tried) renderNew()});
+$('newBody').addEventListener('click',e=>{
+  const B=$('newBody');
+  if(e.target.id==='more'){B.dataset.more='1';renderNew();return}
+  if(e.target.id==='cancelNew'){card='old';renderPop();return}
+  if(e.target.id==='create'){
+    const ty=B.dataset.ty, vals=JSON.parse(B.dataset.v||'{}');
+    const miss=LAYOUT[ty].filter(f=>f.r==='block'&&!vals[f.k]);
+    const soft=LAYOUT[ty].filter(f=>f.r==='warn'&&!vals[f.k]);
+    if(miss.length){tried=true;renderNew();return}
+    if(soft.length&&!warned){tried=true;warned=true;renderNew();return}
+    const n=DB.filter(d=>d.t===ty).length+1;
+    const id=ty==='task'?(vals['Спринт']+'/NEW-'+n):ty==='adr'?'ADR-LORE-0'+(50+n):ty==='spec'?'SPEC-NEW-'+n:'D-2026-NEW-'+n;
+    const f={}; LAYOUT[ty].forEach(x=>{if(x.k!=='Название'&&vals[x.k]) f[x.k]=vals[x.k]}); f['Статус']=f['Статус']||'новый';
+    if(cur.fixId){ // дозавести: ID уже стоит в тексте, заводим запись под ним
+      const fid=cur.fixId; DB.push({t:ty,id:fid,title:vals['Название'],f}); deferred.delete(fid); close(); sync(); renderRefs(new Set([fid])); return }
+    const d={t:ty,id,title:vals['Название'],f}; DB.push(d); insert(d);
+  }
+});
+document.getElementById('stateSeg').addEventListener('click',e=>{const b=e.target.closest('[data-s]'); if(!b) return; listState=b.dataset.s; syncState(); renderPop()});
+function syncState(){document.querySelectorAll('#stateSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===listState)))}
+
+/* ---------- чтение ---------- */
+function renderProse(){
+  const html=esc(ed.value).split(/\n{2,}/).map(p=>{
+    if(/^#\s/.test(p)) return `<p style="font-family:var(--disp);font-weight:800">${p.replace(/^#\s/,'')}</p>`;
+    return '<p>'+p.replace(/\[\[(?:([a-z]+):)?([^\[\]\n]+)\]\]/gi,(m,t,id)=>{
+      const d=DB.find(x=>x.id===id.trim());
+      return `<span class="sk-wref${d?' ok':' miss'}" data-ref="${esc(id.trim())}" title="${d?esc(d.title):'не найдено в LORE'}">${esc(id.trim())}</span>`;
+    })+'</p>';
+  }).join('');
+  $('prose').innerHTML=html; $('peek').hidden=true;
+}
+$('prose').addEventListener('click',e=>{
+  const w=e.target.closest('.sk-wref'); if(!w) return;
+  const d=DB.find(x=>x.id===w.dataset.ref), P=$('peek'); P.hidden=false;
+  if(!d){P.innerHTML=`<div class="state err"><b>${esc(w.dataset.ref)}</b> — такой записи в LORE нет. Ссылка битая: объект удалён или переименован.</div>`;return}
+  P.innerHTML=`<span class="ty">${TYPES[d.t]}</span> <span class="ref">${d.id}</span><h3>${esc(d.title)}</h3>
+   <dl class="kv">${Object.entries(d.f).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+   <div class="ro">Только чтение. Поля правятся в паспорте.</div>
+   <div class="row"><button class="btn pri" id="openPass">Открыть паспорт</button><button class="btn" id="closePeek">Закрыть</button></div>`;
+  P.dataset.i=DB.indexOf(d);
+});
+$('peek').addEventListener('click',e=>{
+  if(e.target.id==='closePeek') $('peek').hidden=true;
+  if(e.target.id==='openPass'){
+    const d=DB[+$('peek').dataset.i], S=$('sheet'); S.hidden=false;
+    S.innerHTML=`<div class="grab"></div><span class="ty">${TYPES[d.t]}</span> <span class="ref">${d.id}</span><h3 style="font-family:var(--disp);font-size:var(--fs-lg)">${esc(d.title)}</h3>
+     <div class="lbl">Свойства — паспорт (RecordPeek)</div>
+     ${Object.entries(d.f).map(([k,v])=>`<div class="fld"><label>${k}</label><input value="${esc(v)}" data-k="${k}"></div>`).join('')}
+     <div class="row"><button class="btn pri" id="savePass">Сохранить</button><button class="btn" id="closeSheet">Закрыть</button></div>
+     <div class="ro">Правка идёт в оригинал — изменится во всех текстах, где есть ссылка.</div>`;
+  }
+});
+$('sheet').addEventListener('click',e=>{
+  const S=$('sheet');
+  if(e.target.id==='closeSheet') S.hidden=true;
+  if(e.target.id==='savePass'){const d=DB[+$('peek').dataset.i]; S.querySelectorAll('input[data-k]').forEach(i=>d.f[i.dataset.k]=i.value); S.hidden=true; $('prose').querySelector(`[data-ref="${CSS.escape(d.id)}"]`)?.click()}
+});
+
+/* ---------- таблица правил ---------- */
+const SAMPLES=['См. [[','См. [[adr:LORE','Связано с @','Связано с @мини','почта a@b','@#task Пере','# Заголовок','текст #adr','текст #spec вы','текст #foo','в коде `@x','# '];
+$('rulesT').innerHTML=SAMPLES.map(s=>{const r=detect(s);return `<tr><td><code>${esc(s)}</code></td><td class="${r?'yes':'no'}">${r?'да':'нет'}</td><td>${why(s,r)}</td></tr>`}).join('');
+
+/* ---------- вкладки ---------- */
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
+  ['edit','read','rules'].forEach(v=>$('v-'+v).hidden=v!==b.dataset.v);
+  close();
+});
+sync();
+</script>
+</body>
+</html>
