@@ -215,7 +215,10 @@ function sprintsConfig(lang: KitLang): KitConfig {
       // Имена фасетов — из общего набора loreFilters (S4-05): пока они жили
       // строками здесь и ключами там, наборы разошлись молча.
       filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
-      groupings: ['status', 'project', 'priority', 'milestone'],
+      groupings: ['status', 'project', 'priority', 'milestone', 'release'],
+      // S9-02: релизов у LORE больше сотни — разрез свёрнут при первом показе,
+      // иначе раскрытые группы снова дают стену строк, из которой задача и выросла.
+      collapsedGroupings: ['release'],
       // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
       columns: ['id', 'title', 'progress:tasks', 'sum:effort_total', 'sum:actual_total', 'status', 'project', 'priority', 'release', 'updated_at'],
     },
