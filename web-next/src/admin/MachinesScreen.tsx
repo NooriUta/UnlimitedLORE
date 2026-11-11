@@ -32,6 +32,7 @@ import {
   splitPair, enrichMachines,
   type AccessPlan, type AccessRequest, type Machine, type MachinesData, type PlanView, type WriteRight,
 } from './machines';
+import { HarnessMark, harnessValueIcon } from './HarnessMark';
 import './Admin.css';
 
 type T = ReturnType<typeof useAppT>;
@@ -191,6 +192,7 @@ function MachinesList({ data, meSub, fetchImpl, onChanged }: { data: MachinesDat
     <>
       {byProject && <p className="adm-note" role="status">{t('admin.macl.byProjectNote')}</p>}
       <ListView config={config} data={kitData(records, data.truncated)} initial={{ group: 'owner' }}
+        valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
         onStateChange={s => setGroup(s.group)} onOpen={id => setOpen(splitPair(id)[0])} />
       {open && (
         <Drawer open onClose={() => setOpen(null)} title={open}>
@@ -266,7 +268,7 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
         <span className="adm-dim">{t('admin.macl.col.owner')}</span>{' '}
         {m.owner_name ? <Pill tone="acc">{m.owner_name}</Pill> : <span className="adm-missing">{t('admin.macl.noOwner')}</span>}{' '}
         <span className="adm-dim">{t('admin.macl.col.harness')}</span>{' '}
-        {m.harness.length ? m.harness.map(h => <Pill key={h}>{data.harnessLabels[h] ?? h}</Pill>) : <span className="adm-missing">{t('admin.macl.harnessUnknown')}</span>}
+        {m.harness.length ? m.harness.map(h => <Pill key={h}><HarnessMark logo={data.harnessLogos[h]} label={data.harnessLabels[h] ?? h} />{data.harnessLabels[h] ?? h}</Pill>) : <span className="adm-missing">{t('admin.macl.harnessUnknown')}</span>}
       </p>
       <p className="adm-sub">
         <span className="adm-dim">{t('admin.macl.col.projects')}</span>{' '}
@@ -279,6 +281,7 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
         {m.grants.length === 0
           ? <EmptyState title={t('admin.macl.grants.empty')} hint={t('admin.macl.grants.emptyHint')} />
           : <ListView config={config} data={kitData(records)} urlState={false} initial={{ group: 'project' }}
+              valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
               budget={{ perGroup: 8 }} rowActions={rowActions} bulkActions={bulkActions} />}
       </div>
 

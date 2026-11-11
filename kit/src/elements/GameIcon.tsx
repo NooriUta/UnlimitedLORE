@@ -18,12 +18,17 @@ const known = new Set<string>();
 addCollection(LUCIDE_ICONS);
 for (const name of [...Object.keys(LUCIDE_ICONS.icons), ...Object.keys(LUCIDE_ICONS.aliases ?? {})]) known.add(`lucide:${name}`);
 
-/** Зарегистрировать набор game-icons (`@iconify-json/game-icons/icons.json`). */
+/**
+ * Зарегистрировать набор Iconify офлайн. game-icons (`@iconify-json/game-icons/icons.json`)
+ * — слаг без префикса; любой другой набор (S7B-22: официальные логотипы у
+ * приложения) — слаг «префикс:имя», как вшитый lucide.
+ */
 export function registerGameIcons(data: unknown): void {
   const set = data as IconifyJSON;
   addCollection(set);
-  for (const name of Object.keys(set.icons ?? {})) known.add(name);
-  for (const name of Object.keys(set.aliases ?? {})) known.add(name);
+  const pre = set.prefix && set.prefix !== 'game-icons' ? `${set.prefix}:` : '';
+  for (const name of Object.keys(set.icons ?? {})) known.add(pre + name);
+  for (const name of Object.keys(set.aliases ?? {})) known.add(pre + name);
 }
 
 /** Есть ли слаг в зарегистрированном наборе (game-icons без префикса или «lucide:имя»). */

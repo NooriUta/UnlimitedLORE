@@ -18,6 +18,7 @@ import { loreFetch } from '../auth/session';
 import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import { PersonMachines } from './MachinesScreen';
+import { AgentChip } from './HarnessMark';
 import './Admin.css';
 
 /** Ось экрана: раздел «Люди и их проекты» или раздел «Проекты». */
@@ -40,7 +41,7 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
   const res = useLoadState<Participation>(signal => fetchParticipation(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
   const data = res.data;
   const agentNames = (list: AgentRow[]) => list.map(a => (
-    <Pill key={a.actor_id} variant="id" title={a.harness ?? t('admin.harness.none')}>{a.name ?? a.actor_id}</Pill>
+    <AgentChip key={a.actor_id} row={a} noneLabel={t('admin.harness.none')} />
   ));
 
   const allSlugs = useMemo(() => (data ? data.projects.map(p => p.slug) : []), [data]);
@@ -203,7 +204,7 @@ function PersonPassport({ person: p, isMe, fetchImpl, allSlugs }: { person: Pers
       <p className="adm-sub">
         {t('admin.who.hisAgents')}{' '}
         {p.agents.length
-          ? p.agents.map(a => <Pill key={a.actor_id} variant="id" title={a.harness ?? t('admin.harness.none')}>{a.name ?? a.actor_id}</Pill>)
+          ? p.agents.map(a => <AgentChip key={a.actor_id} row={a} noneLabel={t('admin.harness.none')} />)
           : <span className="adm-missing">{t('admin.who.noAgents')}</span>}
       </p>
       <PersonAgentsLine kcSub={p.kc_sub} isMe={isMe} fetchImpl={fetchImpl} />
