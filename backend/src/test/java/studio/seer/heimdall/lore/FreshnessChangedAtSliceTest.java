@@ -17,7 +17,7 @@ class FreshnessChangedAtSliceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "open_tasks", "closed_tasks", "specs", "adrs", "decisions", "use_cases", "sprints", "questions", "releases"})
+        "open_tasks", "closed_tasks", "specs", "adrs", "decisions", "use_cases", "sprints", "questions", "releases", "components"})
     void sectionSliceCarriesChangedAt(String id) {
         LoreSlices.SliceDef def = LoreSlices.get(id);
         assertNotNull(def, id);

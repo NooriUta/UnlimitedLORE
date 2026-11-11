@@ -208,6 +208,9 @@ final class LoreModelTypes {
     private static final String TOUCHED = "updated_at";
     private static final String TOUCHED_NOTE =
         "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет";
+    /** S4-MODEL-TYPES: у вопроса, фичи/сценария и компонента истории нет — отметку ставит КАЖДЫЙ путь записи. */
+    private static final String TOUCHED_EVERY =
+        "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник";
 
     /**
      * Тип → время записи. {@code history}: scd2 — есть цепочка версий (valid_from у
@@ -237,7 +240,7 @@ final class LoreModelTypes {
                 src("created_at", "datetime", null), src("date_created", "date", null)))),
         Map.entry("question", time("none",
             List.of(src("opened_date", "date", null)),
-            List.of(src("closed_date", "date", null), src("opened_date", "date", null)))),
+            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("closed_date", "date", null), src("opened_date", "date", null)))),
         Map.entry("milestone", time("scd2",
             List.of(),
             List.of(src(VER, "datetime", "версию открывает цель вехи"), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
@@ -245,13 +248,13 @@ final class LoreModelTypes {
             List.of(src("released_at", "datetime", "момент — если известен при заведении"), src("release_date", "date", null)),
             List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE),
                 src("released_at", "datetime", null), src("release_date", "date", null)))),
-        Map.entry("component", time("none", List.of(), List.of())),
+        Map.entry("component", time("none", List.of(), List.of(src(TOUCHED, "datetime", TOUCHED_EVERY)))),
         Map.entry("tech", time("scd2",
             List.of(src(VER_FIRST, "datetime", null)),
             List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
         Map.entry("feature", time("none",
             List.of(src("date_created", "date", null)),
-            List.of(src("shipped_at", "date", null), src("date_created", "date", null)))));
+            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("shipped_at", "date", null), src("date_created", "date", null)))));
 
     // ── Вид поля: важность и поведение длинного содержимого (владелица 09.11) ──
     // Водораздел: kit знает только ФОРМУ (рисует поле по этим подсказкам), приложение —

@@ -679,7 +679,8 @@ public final class LoreSlices {
             "raised_by, opened_date, closed_date, " +
             // Свежесть (вопрос №49): SCD2 у вопроса нет — последнее известное изменение
             // это закрытие, иначе заведение.
-            "COALESCE(closed_date, opened_date) AS changed_at, " +
+            // S4-MODEL-TYPES: пути записи ставят updated_at (момент) — максимум с днём в LoreChangedAt.
+            changedAtSql("closed_date", "opened_date") + ", " +
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('GATES').task_uid      AS gating_tasks, " +
@@ -971,6 +972,8 @@ public final class LoreSlices {
         slice("features",
             "SELECT uc_id, title, body_md, context_md, status, out('BELONGS_TO').component_id[0] AS component_id, date_created, " +
             "goal_level, shipped_at, parent_uc_id, " +
+            // Свежесть (S4-MODEL-TYPES): тот же источник, что у use_cases.
+            changedAtSql("shipped_at", "date_created") + ", " +
             // PL-10: компоненты и проекты — рёбрами, а не плоским component_id.
             // Плоское поле не давало ни множественности, ни проектной оси.
             "out('BELONGS_TO').component_id      AS component_ids, " +
@@ -1026,7 +1029,8 @@ public final class LoreSlices {
             "SELECT uc_id, title, status, goal_level, rigor, priority, parent_uc_id, date_created, shipped_at, " +
             // Свежесть (вопрос №49): SCD2 у сценария нет — последнее известное изменение
             // это поставка (shipped_at ставит система), иначе заведение.
-            "COALESCE(shipped_at, date_created) AS changed_at, " +
+            // S4-MODEL-TYPES: пути записи ставят updated_at (момент) — максимум с днём в LoreChangedAt.
+            changedAtSql("shipped_at", "date_created") + ", " +
             "out('BELONGS_TO').component_id AS component_ids, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             // Просьба kit: у детей своих рёбер нет — без наследуемого поля «компонент» и
@@ -1846,6 +1850,9 @@ public final class LoreSlices {
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
+            // Свежесть (S4-MODEL-TYPES): у компонента ни истории, ни даты — только отметка
+            // updated_at путей записи; у компонентов, не правленных после неё, changed_at пуст.
+            changedAtSql("updated_at") + ", " +
             "in('PARENT_OF').component_id AS children, " +
             "out('USES').tech_id AS tech, " +
             "in('BELONGS_TO')[adr_id IS NOT NULL].size()    AS adr_count, " +

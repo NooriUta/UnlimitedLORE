@@ -55,6 +55,15 @@ class LoreChangedAtTest {
     }
 
     @Test
+    void touchedAsFallback_isNormalisedToMillis() {
+        // S4-MODEL-TYPES, замер CI 11.11: у компонента запасной источник changed_at — сам
+        // updated_at; без нормализации выдача шла сырой (…12.951831164Z), а при победе
+        // отметки — в мс (…12.951Z): одна величина, две формы.
+        assertEquals("2026-11-11T00:44:12.951Z",
+            one(row("2026-11-11T00:44:12.951831164Z", "2026-11-11T00:44:12.951831164Z")).get("changed_at"));
+    }
+
+    @Test
     void versionOpenedInTheSameMillisecond_afterTheEdit_wins() {
         // Замер CI 10.11: отметка правки 19:42:26.200587215Z, версия статуса — 19:42:26.200 (DATETIME, мс).
         assertEquals("2026-11-10 19:42:26.200",
@@ -74,7 +83,8 @@ class LoreChangedAtTest {
 
     @Test
     void sliceSql_carriesTouchedColumn() {
-        for (String id : List.of("open_tasks", "closed_tasks", "specs", "adrs", "decisions", "sprints", "releases"))
+        for (String id : List.of("open_tasks", "closed_tasks", "specs", "adrs", "decisions", "sprints", "releases",
+                "questions", "open_questions", "use_cases", "components"))
             assertTrue(LoreSlices.get(id).baseSql().contains("updated_at AS " + LoreChangedAt.TOUCHED),
                 id + ": changed_at без отметки правки на месте");
     }

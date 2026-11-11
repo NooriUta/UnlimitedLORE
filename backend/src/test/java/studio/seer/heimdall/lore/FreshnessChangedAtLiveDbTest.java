@@ -254,24 +254,84 @@ class FreshnessChangedAtLiveDbTest {
             "решение: changed_at = максимум (открытая версия статуса позже updated_at)");
     }
 
+    // ── Вопрос, фича/сценарий, компонент — момент правки (S4-MODEL-TYPES, после #1146) ──
+    // Было (#1124/#1146): SCD2 у них нет, и changed_at = их собственная дата — день
+    // (opened_date/closed_date, date_created/shipped_at), у компонента — ничего. Тест
+    // требовал «changed_at = дата заведения», и это фиксировало дыру: правка заголовка
+    // вопроса или сценария в тот же день свежесть не двигала, компонент в разделе
+    // «свежее сверху» не сортировался вовсе. Поручение владелицы «свежесть = последняя
+    // дата изменения»: каждый путь записи ставит на вершине updated_at (ISO-момент, как
+    // у задачи в #1124), срез отдаёт его в changed_at через LoreChangedAt.fold.
+    // Бэкфилла нет: у старых записей updated_at пуст — источник падает на прежнюю дату
+    // (это проверяет LoreChangedAtTest на свёртке без отметки).
+
+    /** Отметка правки на вершине — ISO-момент; в выдаче среза — с точностью до миллисекунд. */
+    private Instant touched(String type, String key, String id) {
+        Object u = field("SELECT updated_at FROM " + type + " WHERE " + key + "=:id", id, "updated_at");
+        assertNotNull(u, type + " " + id + ": путь записи не поставил updated_at");
+        return at(u).truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+    }
+
     @Test
-    void questionAndUseCase_withoutHistory_fallBackToTheirDates() {
-        // У вопроса и сценария SCD2 нет: последнее известное изменение — их собственные даты.
+    void question_everyWritePath_movesChangedAtToTheMoment() {
         String q = "Q-FRESH-CHANGED-AT";
         post("/lore/question", "{\"question_id\":\"" + q + "\",\"title\":\"проба свежести\",\"status\":\"open\"}");
+        Instant q0 = changedAt("questions", "question_id", q, Map.of());
+        assertEquals(touched("KnowQuestion", "question_id", q), q0, "новый вопрос: changed_at = момент заведения, а не день");
         Object opened = field("SELECT opened_date FROM KnowQuestion WHERE question_id=:id", q, "opened_date");
-        assertEquals(at(opened), changedAt("questions", "question_id", q, Map.of()), "новый вопрос: changed_at = дата заведения");
+        assertTrue(!q0.isBefore(at(opened)), "момент не раньше дня заведения");
 
+        tick();
+        post("/lore/question", "{\"question_id\":\"" + q + "\",\"title\":\"проба свежести — правка\"}");
+        Instant q1 = changedAt("questions", "question_id", q, Map.of());
+        assertGrew(q0, q1, "вопрос (правка заголовка в тот же день)");
+
+        tick();
         String d = "D-2026-FRESH-ANSWERS-Q";
         post("/lore/decision", "{\"decision_id\":\"" + d + "\",\"title\":\"ответ на пробу\"}");
         post("/lore/question/answers", "{\"decision_id\":\"" + d + "\",\"question_id\":\"" + q + "\"}");
-        Object closed = field("SELECT closed_date FROM KnowQuestion WHERE question_id=:id", q, "closed_date");
-        assertNotNull(closed, "положительный контроль: ответ закрыл вопрос");
-        assertEquals(at(closed), changedAt("questions", "question_id", q, Map.of()), "закрытый вопрос: changed_at = дата закрытия");
+        assertNotNull(field("SELECT closed_date FROM KnowQuestion WHERE question_id=:id", q, "closed_date"),
+            "положительный контроль: ответ закрыл вопрос");
+        Instant q2 = changedAt("questions", "question_id", q, Map.of());
+        assertGrew(q1, q2, "вопрос (закрыт ответом)");
+        assertEquals(touched("KnowQuestion", "question_id", q), q2, "закрытый вопрос: changed_at = момент закрытия");
+    }
 
+    @Test
+    void featureAndUseCase_everyWritePath_movesChangedAtToTheMoment() {
         String uc = "UC-FRESH-CHANGED-AT";
         post("/lore/uc", "{\"uc_id\":\"" + uc + "\",\"title\":\"проба свежести\"}");
-        Object created = field("SELECT date_created FROM KnowUseCase WHERE uc_id=:id", uc, "date_created");
-        assertEquals(at(created), changedAt("use_cases", "uc_id", uc, Map.of()), "новый сценарий: changed_at = дата заведения");
+        Instant u0 = changedAt("use_cases", "uc_id", uc, Map.of());
+        assertEquals(touched("KnowUseCase", "uc_id", uc), u0, "новый сценарий: changed_at = момент заведения, а не день");
+
+        tick();
+        post("/lore/uc", "{\"uc_id\":\"" + uc + "\",\"title\":\"проба свежести — правка\"}");
+        assertGrew(u0, changedAt("use_cases", "uc_id", uc, Map.of()), "сценарий (правка заголовка в тот же день)");
+
+        String f = "FEAT-FRESH-CHANGED-AT";
+        post("/lore/feature", "{\"feature_id\":\"" + f + "\",\"title\":\"проба свежести\"}");
+        Instant f0 = changedAt("use_cases", "uc_id", f, Map.of());
+        assertEquals(touched("KnowUseCase", "uc_id", f), f0, "новая фича: changed_at = момент заведения");
+
+        tick();
+        post("/lore/feature", "{\"feature_id\":\"" + f + "\",\"title\":\"проба свежести — правка\"}");
+        Instant f1 = changedAt("use_cases", "uc_id", f, Map.of());
+        assertGrew(f0, f1, "фича (правка)");
+
+        tick();
+        post("/lore/feature/link", "{\"feature_id\":\"" + f + "\",\"rel\":\"builds_on\",\"target_id\":\"" + uc + "\"}");
+        assertGrew(f1, changedAt("use_cases", "uc_id", f, Map.of()), "фича (новая связь)");
+    }
+
+    @Test
+    void component_everyWritePath_hasChangedAt() {
+        String c = "TEST-FRESH-CHANGED-AT";
+        post("/lore/component/create", "{\"component_id\":\"" + c + "\",\"full_name\":\"проба свежести\"}");
+        Instant c0 = changedAt("components", "component_id", c, Map.of());
+        assertEquals(touched("LoreComponent", "component_id", c), c0, "новый компонент: changed_at = момент заведения");
+
+        tick();
+        post("/lore/component/update", "{\"component_id\":\"" + c + "\",\"full_name\":\"проба свежести — правка\"}");
+        assertGrew(c0, changedAt("components", "component_id", c, Map.of()), "компонент (правка)");
     }
 }
