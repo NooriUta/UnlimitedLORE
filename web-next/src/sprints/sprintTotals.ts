@@ -38,7 +38,7 @@ export const TOTALS_CHUNK = 20;
 const PARALLEL = 4;
 
 /** Форма суммы с сервера: value, known, of — и done у счёта задач. */
-interface ServerSum {
+export interface ServerSum {
   value?: number | null;
   known?: number | null;
   of?: number | null;
@@ -82,7 +82,7 @@ function progressOfRow(t: ServerSum | null | undefined, cut: boolean): KitProgre
 }
 
 /** Сумма → форма ячейки суммы kit. Пропущенный охват — «не посчитано». */
-function sumOfRow(s: ServerSum | null | undefined, cut: boolean): KitSumInput {
+export function sumOfRow(s: ServerSum | null | undefined, cut: boolean): KitSumInput {
   const known = int(s?.known);
   const of = int(s?.of);
   if (known === null || of === null) return { error: ABSENT_NUMBERS };
