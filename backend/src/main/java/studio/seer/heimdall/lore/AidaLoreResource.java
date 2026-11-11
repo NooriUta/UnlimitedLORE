@@ -869,11 +869,19 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
-    /** Решение владелицы 11.11: срезы, у которых число скрытых скоупом строк говорится словами. ЗАГЛУШКА до правки. */
-    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of();
+    /**
+     * Решение владелицы 11.11.2026: срезы, у которых число скрытых скоупом строк
+     * говорится числом ({@code scope.hidden}). sprint_deps — ребро между двумя
+     * спринтами: без числа «зависимостей нет» неотличимо от «они ведут в чужие проекты».
+     */
+    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps");
 
-    /** ЗАГЛУШКА до правки: «скрыто N» в метке скоупа. */
+    /** «Скрыто N» в метке скоупа: total — без скоупа, shown — под скоупом. */
     static void putHidden(Map<String, Object> marker, int total, int shown) {
+        int hidden = Math.max(0, total - shown);
+        marker.put("hidden", hidden);
+        if (hidden > 0) marker.put("hidden_note",
+            "скрыто " + hidden + ": ведут в проекты, где у вас нет роли (видна строка, только если видны оба конца)");
     }
 
     /** AL-91: скоупный срез при пустом множестве разрешённых проектов — отказ, а не пустой список. */
@@ -1085,10 +1093,27 @@ public class AidaLoreResource extends LoreResourceBase {
                     .map(p -> new Object[] {res, outsideScopeMarker(explicitId, !isEmptyResult(p.result()))})
                     .onFailure().recoverWithItem(ex -> new Object[] {res, null});
             })
+            // Решение владелицы 11.11.2026 (sprint_deps под скоуп): сколько строк скрыто
+            // скоупом — числом, а не молча. Тот же приём, что «вне скоупа» выше: второй
+            // запрос без скоупа с теми же фильтрами. Не прочитался — числа нет, а не 0.
+            .chain(pair -> {
+                studio.seer.heimdall.bench.MartResult res = (studio.seer.heimdall.bench.MartResult) pair[0];
+                if (rowScope == null || scopeMarker == null || !HIDDEN_COUNTED.contains(id))
+                    return Uni.createFrom().item(new Object[] {pair[0], pair[1], null});
+                LoreSlices.Composed unscoped = LoreSlices.compose(id, given);
+                MartQuery all = new MartQuery("sql", unscoped.sql(),
+                    unscoped.params().isEmpty() ? null : unscoped.params(), -1);
+                int shown = res.result() == null ? 0 : res.result().size();
+                return client.query(db, basicAuth(), all)
+                    .map(p -> new Object[] {pair[0], pair[1],
+                        new int[] {p.result() == null ? 0 : p.result().size(), shown}})
+                    .onFailure().recoverWithItem(ex -> new Object[] {pair[0], pair[1], null});
+            })
             .map(pair -> {
                 studio.seer.heimdall.bench.MartResult res = (studio.seer.heimdall.bench.MartResult) pair[0];
                 @SuppressWarnings("unchecked")
                 Map<String, Object> outside = (Map<String, Object>) pair[1];
+                if (pair[2] instanceof int[] counts && scopeMarker != null) putHidden(scopeMarker, counts[0], counts[1]);
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
                 // S1-06: аддитивное поле категории статуса — ДО SlicePage.apply,
                 // чтобы fields=…,status_category проецировалось как обычная колонка.

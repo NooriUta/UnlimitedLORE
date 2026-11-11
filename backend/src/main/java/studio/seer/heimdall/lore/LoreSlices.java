@@ -2899,6 +2899,9 @@ public final class LoreSlices {
 
     static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
         Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
+        // Решение владелицы 11.11.2026: зависимость видна, только если видны ОБА спринта
+        // («&» — обязательные концы ребра DEPENDS_ON). Скрытые рёбра — числом (scope.hidden).
+        Map.entry("sprint_deps", "@out.out('BELONGS_TO_PROJECT').slug&@in.out('BELONGS_TO_PROJECT').slug"),
         Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("releases",  "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_by_id", "out('BELONGS_TO_PROJECT').slug"),
@@ -3052,7 +3055,6 @@ public final class LoreSlices {
         Map.entry("roadmap", "то же: веха без проекта"),
         Map.entry("uc_actors", "ребро HAS_ACTOR — путь через сценарий"),
         Map.entry("actor_pairs", "ребро FILLS_ROLE — служебное, решение"),
-        Map.entry("sprint_deps", "ребро DEPENDS_ON — путь через @out"),
         Map.entry("files_of_task", "KnowFile — путь через задачу"),
         Map.entry("task_roles", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
@@ -3164,29 +3166,38 @@ public final class LoreSlices {
         Map<String, Object> params = new LinkedHashMap<>(base.params());
         // Выражений может быть несколько (прямая связь | через родителя) — сущность
         // видна, если ХОТЯ БЫ ОДИН путь ведёт в разрешённый проект.
-        String[] traversals = traversal.split("\\|");
-        String condition;
+        //
+        // Решение владелицы 11.11.2026 (sprint_deps под скоуп): у ребра ДВА конца,
+        // и показывать его можно, только если видны ОБА — иначе оно ведёт в
+        // невидимое. Группы через «&» — обязательные концы: каждая обязана привести
+        // в разрешённый проект (внутри группы «|», как и прежде, — «хотя бы один»).
+        List<String> keys = new java.util.ArrayList<>();
         if (allowed.isEmpty()) {
             params.put("__scope0", SCOPE_NONE);
-            StringBuilder or = new StringBuilder();
-            for (String tr : traversals) {
-                if (or.length() > 0) or.append(" OR ");
-                or.append(scopeClause(tr, "__scope0"));
-            }
-            condition = "(" + or + ")";
+            keys.add("__scope0");
         } else {
-            StringBuilder or = new StringBuilder();
             int i = 0;
             for (String slug : allowed) {
                 String key = "__scope" + i++;
                 params.put(key, slug);
+                keys.add(key);
+            }
+        }
+        String[] groups = traversal.split("&");
+        StringBuilder all = new StringBuilder();
+        for (String group : groups) {
+            String[] traversals = group.split("\\|");
+            StringBuilder or = new StringBuilder();
+            for (String key : keys) {
                 for (String tr : traversals) {
                     if (or.length() > 0) or.append(" OR ");
                     or.append(scopeClause(tr, key));
                 }
             }
-            condition = "(" + or + ")";
+            if (all.length() > 0) all.append(" AND ");
+            all.append("(").append(or).append(")");
         }
+        String condition = groups.length == 1 ? all.toString() : "(" + all + ")";
         // Скоуп дописывается ПОСЛЕ suffix'а базового SQL нельзя — ORDER BY/LIMIT
         // уже там. Поэтому пересобираем: условие идёт перед хвостом слайса.
         String sql = base.sql();
