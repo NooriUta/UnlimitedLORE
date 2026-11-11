@@ -5819,3 +5819,5 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-ref__btn { appearance: none; background: var(--bg3); border: 1px solid var(--bd); color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; border-radius: var(--r-pill); padding: 3px 10px; cursor: pointer; }
 .sk-ref__btn--pri { background: var(--acc); border-color: var(--acc); color: var(--bg0); }
 .sk-ref__btn:disabled { opacity: .55; cursor: default; }
+/* Якорь мини-окна ссылки у каретки (TipTapField refs): координаты окна, как у .sk-md__mentions. */
+.sk-md__refanchor { position: fixed; width: 0; height: 0; z-index: 65; }

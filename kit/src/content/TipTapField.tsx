@@ -27,6 +27,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
+import { detectRefTrigger, type RefTrigger } from './refTrigger';
+import { RefPicker, type RefItem, type RefPickerHandle, type RefPickerProps, type RefSearch } from './RefPicker';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 
@@ -172,6 +174,23 @@ export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
   return out;
 }
 
+/**
+ * Источник ссылок для мини-окна (SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW, ADR-LORE-050): «[[», «#тип»,
+ * «@» (кроме случая, когда «@» уже занят упоминаниями людей — mentionItems). Kit не знает
+ * предметных имён: словарь типов, подписи, поиск и создание даёт приложение.
+ */
+export interface TipTapRefSource {
+  /** слово после «#» / префикс «[[тип:» (нижний регистр) → тип записи */
+  types: Record<string, string>;
+  typeLabels: Record<string, string>;
+  /** поиск; отказ (throw) — окно скажет «не смогли загрузить» с причиной */
+  search: (query: string, type: string | null) => Promise<RefItem[]>;
+  createSpec?: RefPickerProps['createSpec'];
+  onCreate?: RefPickerProps['onCreate'];
+}
+
+interface RefOpen { trigger: RefTrigger; from: number; to: number; rect: { left: number; top: number } }
+
 /** Вид правки внутри поля: набор, исходник markdown, исходник HTML. */
 export type TipTapMode = 'wysiwyg' | 'md' | 'html';
 
@@ -219,13 +238,15 @@ export interface TipTapFieldProps {
   allowWysiwyg?: boolean;
   /** Причина, по которой визуальная правка закрыта — подсказкой у кнопки md. */
   lossyReason?: string;
+  /** Ссылки на записи прямо в тексте (мини-окно). Не задан — «[[» и «#» обычные символы. */
+  refs?: TipTapRefSource;
 }
 
 export function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
   onUploadImage, enableHtmlMode = false, ariaLabel, mentionItems,
   mode: modeProp, defaultMode = 'wysiwyg', onModeChange,
-  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason,
+  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason, refs,
 }: TipTapFieldProps) {
   const lang = useKitLang();
   const t = (k: KitKey) => kitT(lang, k);
@@ -243,6 +264,40 @@ export function TipTapField({
   mentionStateRef.current = mentionState;
   const mentionItemsRef = useRef<MentionItem[]>([]);
   mentionItemsRef.current = mentionItems ?? [];
+  // Мини-окно ссылки: расширения фиксируются при создании редактора, поэтому всё живое — в ref.
+  const refsRef = useRef(refs);
+  refsRef.current = refs;
+  const [refOpen, setRefOpen] = useState<RefOpen | null>(null);
+  const refOpenRef = useRef<RefOpen | null>(null);
+  refOpenRef.current = refOpen;
+  const pickerRef = useRef<RefPickerHandle>(null);
+  // Закрытое Esc/щелчком вне не открывается снова, пока вызов на том же месте.
+  const refDismissed = useRef<number | null>(null);
+  const [refSearch, setRefSearch] = useState<RefSearch>({ state: 'loading' });
+  const [refRetry, setRefRetry] = useState(0);
+  const scanRefs = (ed: Editor) => {
+    const src = refsRef.current;
+    const sel = ed.state.selection;
+    const closeRef = () => { refDismissed.current = null; if (refOpenRef.current) setRefOpen(null); };
+    if (!src || !sel.empty || !ed.isEditable) return closeRef();
+    const $from = sel.$from;
+    // Внутри кода окна нет никогда: и в блоке кода, и под строчной меткой кода.
+    if ($from.parent.type.spec.code || ed.isActive('code')) return closeRef();
+    const blockStart = $from.start();
+    const before = ed.state.doc.textBetween(blockStart, sel.from, '\n', '￼');
+    const tr = detectRefTrigger(before, { types: src.types });
+    // «@» занят упоминаниями людей — его не перехватываем (развилка «@» ждёт решения владелицы).
+    // Упоминание подключено, когда проп mentionItems задан (даже пустым списком).
+    if (!tr || (tr.trigger === 'at' && mentionItems !== undefined)) return closeRef();
+    const from = blockStart + tr.start;
+    if (refDismissed.current === from) return;
+    refDismissed.current = null;
+    let rect = { left: 0, top: 0 };
+    try { const c = ed.view.coordsAtPos(sel.from); rect = { left: c.left, top: c.bottom }; } catch { /* нет раскладки (jsdom) */ }
+    setRefOpen({ trigger: tr, from, to: sel.from, rect });
+  };
+  const scanRefsRef = useRef(scanRefs);
+  scanRefsRef.current = scanRefs;
   const [ownMode, setOwnMode] = useState<TipTapMode>(defaultMode);
   const [ownSide, setOwnSide] = useState(false);
   const wanted = modeProp ?? ownMode;
@@ -293,6 +348,13 @@ export function TipTapField({
         void uploadAndInsertRef.current(files);
         return true;
       },
+      // Окно ссылки открыто — стрелки, Enter, Tab и Esc идут ему (фокус остаётся в тексте).
+      handleKeyDown: (_view, event) => {
+        if (!refOpenRef.current || !pickerRef.current) return false;
+        if (!pickerRef.current.handleKey(event.key)) return false;
+        event.preventDefault();
+        return true;
+      },
       handlePaste: (_view, event) => {
         if (!enableImages) return false;
         const files = imageFilesFrom((event as ClipboardEvent).clipboardData);
@@ -304,8 +366,41 @@ export function TipTapField({
     },
     onUpdate: ({ editor }) => {
       onChangeRef.current(getMarkdown(editor));
+      scanRefsRef.current(editor);
     },
+    onSelectionUpdate: ({ editor }) => { scanRefsRef.current(editor); },
   });
+
+  // Поиск для окна ссылки: по запросу и типу; ответ устаревшего запроса не перетирает свежий.
+  const refQuery = refOpen && !refOpen.trigger.unknownType ? `${refOpen.trigger.type ?? ''}\u0000${refOpen.trigger.query}` : null;
+  useEffect(() => {
+    const src = refsRef.current;
+    const open = refOpenRef.current;
+    if (refQuery === null || !src || !open) return;
+    let live = true;
+    setRefSearch({ state: 'loading' });
+    src.search(open.trigger.query, open.trigger.type).then(
+      found => { if (live) setRefSearch({ state: 'ok', items: found }); },
+      (e: unknown) => { if (live) setRefSearch({ state: 'error', reason: e instanceof Error ? e.message : String(e) }); },
+    );
+    return () => { live = false; };
+  }, [refQuery, refRetry]);
+
+  const pickRef = (item: RefItem) => {
+    const open = refOpenRef.current;
+    if (!editor || editor.isDestroyed || !open) return;
+    // Атомом mdRaw/wikilink — как круг «MD → TipTap → MD»: текстом сериализатор экранировал бы «[[».
+    editor.chain().focus().deleteRange({ from: open.from, to: open.to }).insertContent([
+      { type: 'mdRaw', attrs: { raw: `[[${item.type}:${item.id}]]`, kind: 'wikilink' } },
+      { type: 'text', text: ' ' },
+    ]).run();
+    refDismissed.current = null;
+    setRefOpen(null);
+  };
+  const closeRefPicker = () => {
+    refDismissed.current = refOpenRef.current?.from ?? null;
+    setRefOpen(null);
+  };
 
   // isDestroyed: при повторном подключении эффектов (Suspense, StrictMode)
   // React зовёт их со ссылкой на редактор, который useEditor уже уничтожил, —
@@ -535,6 +630,22 @@ export function TipTapField({
         <div className="sk-md__box">
           <EditorContent editor={editor} />
           {editor?.isEmpty && placeholder && <div className="sk-md__placeholder" aria-hidden>{placeholder}</div>}
+          {refOpen && refs && (
+            // Якорь у каретки (координаты окна); поповер встаёт под ним и прижимается к краю экрана.
+            <div className="sk-md__refanchor" style={{ left: refOpen.rect.left, top: refOpen.rect.top }}>
+              <RefPicker
+                ref={pickerRef}
+                trigger={refOpen.trigger}
+                typeLabels={refs.typeLabels}
+                search={refSearch}
+                onPick={pickRef}
+                onClose={closeRefPicker}
+                onRetry={() => setRefRetry(n => n + 1)}
+                createSpec={refs.createSpec}
+                onCreate={refs.onCreate}
+              />
+            </div>
+          )}
           {/* position: fixed — координаты каретки приходят в координатах окна. */}
           {mentionState && mentionState.rect && (
             <div
