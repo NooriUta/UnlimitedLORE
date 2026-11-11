@@ -1081,5 +1081,17 @@
   "admin.set.volva.notConfigured": "Not configured: the backend has no LORE_VOLVA_EMBED_SECRET secret or lore.volva.embed.site-url address. ({d})",
   "admin.set.volva.unknownChart": "The velocity chart is not in the lore.volva.embed.charts whitelist. ({d})",
   "admin.set.volva.forbidden": "No access to embed signing. ({d})",
-  "admin.set.volva.error": "Check failed: {d}"
+  "admin.set.volva.error": "Check failed: {d}",
+  "admin.quick.title": "Quick commands",
+  "admin.quick.note": "A personal cheat sheet — everyday commands so the order need not be recalled. The command is shown in full; \"Copy\" puts it on the clipboard.",
+  "admin.quick.grpProject": "Go to a project",
+  "admin.quick.unlimitedLore": "UnlimitedLORE",
+  "admin.quick.aidaRoot": "aida-root",
+  "admin.quick.mobilepoc": "Mobilepoc",
+  "admin.quick.grpChannel": "miniLORE channel",
+  "admin.quick.attach": "Attach the console to a dialogue by sessionId (shown in the app) via the minilore-link channel — NOT -c, it picks the wrong dialogue. PowerShell.",
+  "admin.quick.copy": "Copy",
+  "admin.quick.copied": "copied",
+  "admin.quick.unavailable": "Not copied: the clipboard is unavailable (the page is not on https/localhost). Select the command manually.",
+  "admin.quick.failed": "Not copied: the browser denied clipboard access. Select the command manually."
 }

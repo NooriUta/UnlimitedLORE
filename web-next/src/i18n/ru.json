@@ -1081,5 +1081,17 @@
   "admin.set.volva.notConfigured": "Не настроено: на бэкенде нет секрета LORE_VOLVA_EMBED_SECRET или адреса lore.volva.embed.site-url. ({d})",
   "admin.set.volva.unknownChart": "Графика velocity нет в белом списке lore.volva.embed.charts. ({d})",
   "admin.set.volva.forbidden": "Нет доступа к подписи встройки. ({d})",
-  "admin.set.volva.error": "Ошибка проверки: {d}"
+  "admin.set.volva.error": "Ошибка проверки: {d}",
+  "admin.quick.title": "Быстрые команды",
+  "admin.quick.note": "Личная шпаргалка — команды на каждый день, чтобы не вспоминать порядок заново. Команда видна целиком; «Скопировать» кладёт её в буфер.",
+  "admin.quick.grpProject": "Перейти в проект",
+  "admin.quick.unlimitedLore": "UnlimitedLORE",
+  "admin.quick.aidaRoot": "aida-root",
+  "admin.quick.mobilepoc": "Mobilepoc",
+  "admin.quick.grpChannel": "Канал miniLORE",
+  "admin.quick.attach": "Подключить консоль к диалогу по sessionId (виден в приложении) через канал minilore-link — НЕ -c, он берёт не тот диалог. PowerShell.",
+  "admin.quick.copy": "Скопировать",
+  "admin.quick.copied": "скопировано",
+  "admin.quick.unavailable": "Не скопировано: буфер обмена недоступен (страница открыта не по https/localhost). Выделите команду вручную.",
+  "admin.quick.failed": "Не скопировано: браузер отказал в доступе к буферу. Выделите команду вручную."
 }

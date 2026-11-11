@@ -10,6 +10,7 @@
 import { EmptyState, Forbidden, LoadError, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
+import { QuickCommands } from './QuickCommands';
 import { fetchMcp, isSilent, type McpData, type McpHealth } from './mcp';
 import './Admin.css';
 
@@ -108,6 +109,8 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       <p className="adm-lead">{t('admin.mcp.lead')}</p>
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-profiles-note">{t('admin.mcp.profilesNote')}</p>
       {body}
+      {/* S7B-31 п.5а: быстрые команды подключения — из старой вкладки v1. */}
+      <QuickCommands />
     </section>
   );
 }
