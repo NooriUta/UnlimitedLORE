@@ -25,6 +25,7 @@
   "kit.prose.taskDone": "выполнено",
   "kit.prose.taskTodo": "не выполнено",
   "kit.md.toolbar": "Форматирование",
+  "kit.md.more": "ещё кнопки форматирования",
   "kit.md.undo": "отменить (Ctrl+Z)",
   "kit.md.redo": "повторить (Ctrl+Y)",
   "kit.md.bold": "жирный (Ctrl+B)",

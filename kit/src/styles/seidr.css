@@ -1441,6 +1441,53 @@ code, pre, kbd, samp { font-family: var(--mono); }
   outline-offset: -2px;
 }
 .sk-shell__account { display: flex; align-items: center; margin-left: auto; padding-left: 4px; flex-shrink: 0; }
+/* ---------- Модули нижней панелью на телефоне (S4-MOBILE-COMPARE) ----------
+   Образец — v1 (SPRINT_LORE_MOBILE_UX/MOB-12, решение D-2026-UXR-MOBILE-FOLLOWS-V1):
+   в шапке при 360 px модули выходили за правый край и обрезали «Проекты» и
+   поиск. Внизу — зона большого пальца: иконка и подпись под ней, ячейки
+   поровну, без прокрутки вбок. z-index как у шапки — ниже накладок (60). */
+.sk-shell__dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  min-height: var(--sk-dock-h);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.sk-shell__dock-item {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  /* Видимый минимум — через --tap, как у каждой цели kit (сторож a11y S4-12):
+     высота панели 48 px и так больше зоны касания 44. */
+  min-height: max(var(--tap), var(--sk-dock-h));
+  padding: 4px 2px;
+  border: 0;
+  border-top: 2px solid transparent;
+  background: none;
+  color: var(--t2);
+  font-family: var(--font);
+  cursor: pointer;
+}
+.sk-shell__dock-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+}
+.sk-shell__dock-item[aria-current="page"] { color: var(--acc); border-top-color: var(--acc); }
+.sk-shell__dock-item[aria-disabled="true"] { opacity: .45; cursor: default; }
+.sk-shell__dock-item:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 /* ---------- AvatarMenu (S4-02): аватар в шапке и лист личного ---------- */
 .sk-avatar {
@@ -1551,7 +1598,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
   height: calc(100dvh - var(--sk-top-h));
   z-index: 2;
 }
-.sk-shell--narrow .sk-shell__body { grid-template-columns: minmax(0, 1fr); }
+.sk-shell--narrow { --sk-dock-h: 48px; }
+/* Содержимое не уходит под нижнюю панель модулей (и под полосу жестов). */
+.sk-shell--narrow .sk-shell__body {
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: calc(var(--sk-dock-h) + env(safe-area-inset-bottom, 0px));
+}
 .sk-shell__side {
   /* Меню не уезжает со страницей (находка P1 аудита 08.11: «position: static,
      высота 2467 px при окне 1000 — до "Настройки" не добраться, не прокрутив
@@ -1680,6 +1732,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
   .sk-shell__brand-text { display: none; }
   .sk-shell__mod { padding: 0 10px; }
   .sk-shell__mod .sk-shell__label { display: none; }
+  /* Шапка телефона в одну строку (S4-MOBILE-COMPARE): «Проекты» — иконкой и
+     значением без слова-заголовка, имя остаётся в aria-label кнопки. */
+  .sk-shell__top { overflow-x: clip; }
+  .sk-shell__top .sk-scope__trigger { padding: 0 8px; }
+  .sk-shell__top .sk-scope__name,
+  .sk-shell__top .sk-scope__chev { display: none; }
 }
 
 /* ═══════════ MD/HTML-элементы (S4-00d) ═══════════
@@ -1721,6 +1779,20 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-md__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-md__sep { width: 1px; align-self: stretch; margin: 2px 1px; background: var(--bd); }
+/* Телефон (S4-MOBILE-EDGE, замер 360 px: 19 кнопок в 5 рядов, 241 px высоты):
+   первая строка — пять главных кнопок и «ещё ▾» (6 × 44 px влезают в 300 px),
+   остальное — под «ещё» своим блоком во всю ширину, с переносом. */
+.sk-md__toolbar--narrow { flex-wrap: wrap; }
+.sk-md__morebtn { margin-left: auto; white-space: nowrap; }
+.sk-md__more {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding-top: 4px;
+  border-top: 1px solid var(--bd);
+}
 .sk-md__err {
   padding: 4px 9px;
   color: var(--dng);
@@ -1891,6 +1963,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
 a.sk-wref { text-decoration: none; cursor: pointer; }
 a.sk-wref:hover { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 16%, transparent); }
 a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* Ссылка внутри текста на сенсоре — без невидимой зоны 44 px: строка текста сама цель касания,
+   а зона ловила бы нажатия соседних строк (#1179 даёт её всем ссылкам с kit-классом, a.sk-wref в их числе). */
+@media (pointer: coarse) {
+  .sk-prose a[href]::after { content: none; }
+}
 .sk-prose blockquote { margin: 0 0 .7em; padding: 2px 10px; border-left: 3px solid var(--acc); background: var(--bg1); }
 .sk-prose code { padding: 0 4px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 3px; font-family: var(--mono); font-size: var(--fs-sm); }
 .sk-prose pre { margin: 0 0 .8em; padding: 10px 12px; overflow-x: auto; background: var(--bg0); border: 1px solid var(--bd); border-radius: var(--r-md); }
@@ -2826,6 +2903,20 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   background: var(--bg1);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
 }
+/* На телефоне (≤720) «Вид», «Группировка», «Порядок» и фасет открываются не
+   поповером у кнопки, а нижним листом Sheet (S4-MOBILE-EDGE, ADR-LORE-049 п.1):
+   на 360 px поповер уезжал за правый и нижний край. Лист — во всю ширину, не
+   выше 85vh, прокрутка внутри; тело — та же колонка, что у поповера, и без
+   прокрутки вбок: длинное переносится, а не раздвигает лист. */
+.sk-lsheet .sk-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
 .sk-vmenu__title {
   margin: 0;
   color: var(--t3);
@@ -3056,6 +3147,8 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   box-shadow: 0 6px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
 }
 .sk-facet__panel[hidden] { display: none; }
+/* Содержимое фасета на нижнем листе (S4-MOBILE-EDGE): та же колонка, что у панели. */
+.sk-facet__sheet { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 .sk-facet__ops {
   display: flex;
   flex-wrap: wrap;
@@ -3787,6 +3880,32 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   text-overflow: ellipsis;
 }
 .sk-tl__undated { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+/* Телефон (S4-MOBILE-EDGE, как v1 MOB-03): вместо шкалы — список по датам начала.
+   Строка — статус цветом слева, название, срок и дорожка; переносится, а не режется. */
+.sk-tl__day {
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  padding: 4px 6px;
+}
+.sk-tl--dates .sk-tl__head .sk-tl__title { font-family: var(--mono); }
+.sk-tl__items { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.sk-tl__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  min-height: max(var(--tap), var(--row-h));
+  padding: 2px 0;
+  border-left: 2px solid var(--st-c);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--st-c) 10%, var(--bg2));
+}
+.sk-tl__item .sk-tl__label { flex: 1 1 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.sk-tl__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; padding: 0 6px; }
+.sk-tl__when { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-tl__lanechip { padding: 0 8px; border: 1px solid var(--bd); border-radius: 999px; color: var(--t2); font-size: var(--fs-2xs); }
 
 @media (max-width: 720px) {
   .sk-board { grid-auto-flow: row; grid-auto-columns: auto; }
@@ -3936,6 +4055,11 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-head__kind { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
 .sk-rec-head__time { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
 .sk-rec-head__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1.2; color: var(--t1); word-break: break-word; }
+/* Телефон (S4-MOBILE-COMPARE, замер 360 px): --fs-xl давал заголовок задачи в семь
+   строк и сдвигал текст заметки на второй экран. Как в v1 — не крупнее --fs-lg. */
+@media (max-width: 720px) {
+  .sk-rec-head__title { font-size: var(--fs-lg); }
+}
 .sk-rec-status { gap: 4px; }
 
 .sk-rec-verdict {
@@ -3965,6 +4089,13 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields__row { display: contents; }
 .sk-rec-fields dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
+/* Телефон (S4-MOBILE-EDGE): MD-поле в колонке значений получало ~225 из 360 px —
+   подпись колонкой слева съедала треть. Узко подпись MD-поля встаёт над ним,
+   а текст и редактор берут всю ширину; короткие поля остаются парой «подпись — значение». */
+@media (max-width: 720px) {
+  .sk-rec-fields__row[data-type="md"] > dt,
+  .sk-rec-fields__row[data-type="md"] > dd { grid-column: 1 / -1; }
+}
 /* Ряд значений-чипов в «Свойствах» (S4-29): первые три и «ещё N».
    У унаследованного чипа пунктирная рамка И подпись источника словами — по
    одному оттенку «от спринта» не прочитать. */
@@ -5978,6 +6109,19 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
      Заодно снимаем явные места: в одной клетке паспорт встаёт сам. */
   .sk-dock[data-placement] .sk-dock__resize { display: none; }
   .sk-dock[data-placement] .sk-dock__panel { grid-area: auto; }
+  /* Паспорт во весь экран, без полей (S4-MOBILE-COMPARE, D-2026-UXR-MOBILE-FOLLOWS-V1:
+     образец — v1). Замер 360 px: колонка записи 227 px — треть ширины съедали
+     рамка и поля дока и плавающая «×». Остаётся только внутренний отступ 12 px. */
+  .sk-dock[data-placement] { border: 0; border-radius: 0; }
+  .sk-dock[data-placement] .sk-dock__panel { padding: 8px 12px; border: 0; }
+  .sk-dock[data-placement='full'] .sk-dock__panel { padding: 44px 12px 12px; }
+  .sk-dock[data-placement='full'] .sk-rec { padding: 0 0 24px; }
+  /* «×» плавает справа, а плавающий элемент сужает ВЕСЬ соседний блок-сетку
+     (паспорт — блок со своим контекстом), а не одну строку: запись теряла
+     ширину кнопки по всей высоте. Отрицательное нижнее поле снимает обтекание,
+     кнопка остаётся на месте (липкой), а место ей держит строка крошек. */
+  .sk-dock[data-placement] .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px) - 8px); }
+  .sk-dock[data-placement] .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 4px); }
 }
 
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */
@@ -6150,3 +6294,26 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   cursor: pointer;
 }
 .sk-tech__btn:hover, .sk-tech__btn[aria-expanded="true"] { color: var(--t1); border-color: var(--acc); }
+/* Телефон: фильтр, группировка и порядок свёрнуты под одной кнопкой — как
+   «фильтры 0 · развернуть» в v1 (S4-MOBILE-COMPARE, владелица 11.11: «фильтры
+   и порядок прятаться под more»). «Быстро» и «Показано N из M» остаются. */
+.sk-list__fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.sk-list__fold.is-active { border-color: var(--acc); color: var(--t1); }
+.sk-list__fold:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-list__controls.is-folded > .sk-list__seg { display: none; }
+/* Телефон: виды списка — первым разделом меню «Вид ▾», текущий — в самой кнопке. */
+.sk-vmenu__kinds { flex-wrap: wrap; }
+.sk-vmenu__cur { font-weight: 700; color: var(--t1); }
