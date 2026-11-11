@@ -322,6 +322,12 @@ public class LoreAdrResource extends LoreResourceBase {
             // body sections was actually persisted this call.
             out.put("body_written", req.context_md() != null
                 || req.decision_md() != null || req.consequences_md() != null);
+            // MD-AUTOLINK (spec:SPEC-LORE-MD-INLINE-REF §7): упоминания в записанных разделах →
+            // рёбра однозначных авто-пар (ADR → компонент). ПОСЛЕ шага 6: syncEdges снимает
+            // BELONGS_TO вне component_ids, и авто-ребро, поставленное раньше, ушло бы.
+            if (req.context_md() != null || req.decision_md() != null || req.consequences_md() != null)
+                out.put("mentions", autoLinkMentions("adr", req.adr_id(), false,
+                    req.context_md(), req.decision_md(), req.consequences_md()));
             // ADR-LORE-020: реестр ОВ — отдельная сущность (KnowQuestion), а не
             // markdown-раздел. Тело с «Открытыми вопросами» = вопросы, которые
             // никто не найдёт фильтром, не увидит просроченными и не закроет

@@ -27,10 +27,25 @@
 //  3. **Незнакомый шаг в адресе — открыт первый, и это сказано.** Молча
 //     подменить шаг значит соврать про ссылку, по которой пришли.
 //
+//  4. **Адрес не перескакивает условие** (S7B-29). Ссылка на третий шаг при
+//     невыполненном условии первого открывает первый закрытый шаг и говорит
+//     об этом; адрес при этом не переписан — выполнят условие, и шаг из ссылки
+//     откроется сам. Иначе перезагрузка страницы или чужая ссылка проводили бы
+//     мимо проверки, которую кнопка «вперёд» держит.
+//
+//  5. **Переход начинает шаг сначала** (S7B-29). Если начало шагов уехало за
+//     верхний край (длинный шаг прокручен вниз), переход прокручивает к нему —
+//     иначе новый шаг открывался бы с середины. Полоса шагов липнет сверху,
+//     кнопки — снизу (seidr.css), так что при прокрутке обе на виду.
+//
+//  6. **«Готово» есть, только когда оно что-то делает** (S7B-29): без
+//     `onDone` кнопки нет — нажатая и ничего не сделавшая кнопка хуже
+//     отсутствующей.
+//
 // Границу K-14 элемент держит: он не знает ни про людей, ни про проекты, ни
 // про роли. Шаги, их подписи и условия задаёт приложение (сторож —
 // `Steps.test.tsx`, греп по исходнику).
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { kitT, type KitLang } from '../i18n';
 import { useUrlParam } from '../resilience/useUrlParam';
 
@@ -71,7 +86,7 @@ export interface StepsProps {
   /** Последний шаг: чего система сделать НЕ может. Пустой список — блока нет. */
   manual?: { title: string; items: readonly StepsManualItem[] };
   lang?: KitLang;
-  /** Нажато «Готово» на последнем шаге. */
+  /** Нажато «Готово» на последнем шаге. Не передан — кнопки «Готово» нет. */
   onDone?: () => void;
   /** Отметка для стилей приложения и для тестов. */
   flow?: string;
@@ -82,19 +97,32 @@ export function Steps({ steps, urlKey = 'step', manual, lang = 'ru', onDone, flo
   const [memory, setMemory] = useState<string | null>(null);
   const wanted = urlKey === null ? memory : urlValue;
 
-  const index = useMemo(() => {
+  const root = useRef<HTMLDivElement>(null);
+  const blockedId = `kit-steps-blocked-${useId()}`;
+
+  const asked = useMemo(() => {
     if (!steps.length) return -1;
     const i = steps.findIndex(s => s.key === wanted);
     return i >= 0 ? i : 0;
   }, [steps, wanted]);
+  // Дальше первого закрытого шага не пускает и адрес — см. п. 4 в шапке.
+  const firstClosed = steps.findIndex((s, i) => i < asked && !!s.blocked?.trim());
+  const index = firstClosed >= 0 ? firstClosed : asked;
+  const held = index < asked ? steps[asked].title : null;
 
   // «Шага нет» и «шаг не называли» — разные случаи: про первый говорим, про
   // второй молчим (так открывается мастер с чистого адреса).
-  const unknown = wanted && index === 0 && steps.length > 0 && steps[0].key !== wanted ? wanted : null;
+  const unknown = wanted && asked === 0 && steps.length > 0 && steps[0].key !== wanted ? wanted : null;
 
   const go = useCallback((key: string) => {
     if (urlKey === null) setMemory(key);
     else setUrlValue(key);
+    // Начало шагов за верхним краем — новый шаг открылся бы с середины.
+    // Отступ сверху (липкая шапка приложения) — scroll-margin-top элемента.
+    const el = root.current;
+    if (!el) return;
+    const margin = Number.parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+    if (el.getBoundingClientRect().top < margin) el.scrollIntoView?.({ block: 'start' });
   }, [urlKey, setUrlValue]);
 
   if (!steps.length) {
@@ -108,11 +136,11 @@ export function Steps({ steps, urlKey = 'step', manual, lang = 'ru', onDone, flo
   const current = steps[index];
   const last = index === steps.length - 1;
   const blocked = current.blocked?.trim() ? current.blocked.trim() : null;
-  const blockedId = blocked ? 'kit-steps-blocked-reason' : undefined;
+  const describedBy = blocked ? blockedId : undefined;
   const manualItems = last ? (manual?.items ?? []) : [];
 
   return (
-    <div className="sk-steps" data-flow={flow}>
+    <div className="sk-steps" data-flow={flow} ref={root}>
       <ol className="sk-steps__bar" aria-label={kitT(lang, 'kit.steps.bar')}>
         {steps.map((s, i) => {
           const done = i < index;
@@ -144,6 +172,12 @@ export function Steps({ steps, urlKey = 'step', manual, lang = 'ru', onDone, flo
       {unknown && (
         <p className="sk-steps__note" role="status" data-testid="kit-steps-unknown">
           {kitT(lang, 'kit.steps.unknown', { key: unknown })}
+        </p>
+      )}
+
+      {held && (
+        <p className="sk-steps__note" role="status" data-testid="kit-steps-held">
+          {kitT(lang, 'kit.steps.held', { title: held, reason: blocked ?? '' })}
         </p>
       )}
 
@@ -186,14 +220,14 @@ export function Steps({ steps, urlKey = 'step', manual, lang = 'ru', onDone, flo
           </button>
         )}
         {last
-          ? (
+          ? onDone && (
             <button
               type="button"
               className="sk-steps__btn is-primary"
               data-testid="kit-steps-done"
               aria-disabled={blocked ? true : undefined}
-              aria-describedby={blockedId}
-              onClick={() => { if (!blocked) onDone?.(); }}
+              aria-describedby={describedBy}
+              onClick={() => { if (!blocked) onDone(); }}
             >
               {kitT(lang, 'kit.steps.done')}
             </button>
@@ -204,7 +238,7 @@ export function Steps({ steps, urlKey = 'step', manual, lang = 'ru', onDone, flo
               className="sk-steps__btn is-primary"
               data-testid="kit-steps-next"
               aria-disabled={blocked ? true : undefined}
-              aria-describedby={blockedId}
+              aria-describedby={describedBy}
               onClick={() => { if (!blocked) go(steps[index + 1].key); }}
             >
               {kitT(lang, 'kit.steps.next')}
