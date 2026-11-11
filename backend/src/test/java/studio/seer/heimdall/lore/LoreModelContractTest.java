@@ -150,23 +150,53 @@ class LoreModelContractTest {
 
     /**
      * S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): поле, значение которого задаётся ребром,
-     * выбирается из среза — {@code options = {slice, param, value, label, group?}}. У поля без
+     * выбирается из среза — {@code options = {slice, param?, value, label, group?}}. У поля без
      * выбора ключа нет. Пустых строк и лишних ключей нет: kit строит запрос по ним как есть.
+     * {@code param} есть только у среза «по записи» (task_identities: ?id=задача); у общего
+     * списка (треки плана) его нет — и тогда у среза не должно быть обязательных параметров,
+     * иначе kit не сможет его вызвать.
      */
     private static void checkOptions(Map<String, Object> f, String w) {
         Object o = f.get("options");
         if (o == null) return;
         Map<String, Object> opt = map(o, w + ".options");
         assertTrue(Set.of("slice", "param", "value", "label", "group").containsAll(opt.keySet()),
-            w + ".options — только {slice, param, value, label, group?}, а не " + opt.keySet());
-        for (String k : List.of("slice", "param", "value", "label")) {
+            w + ".options — только {slice, param?, value, label, group?}, а не " + opt.keySet());
+        List<String> mustHave = opt.containsKey("param")
+            ? List.of("slice", "param", "value", "label") : List.of("slice", "value", "label");
+        for (String k : mustHave) {
             assertInstanceOf(String.class, opt.get(k), w + ".options." + k + " — строка");
             assertFalse(((String) opt.get(k)).isBlank(), w + ".options." + k + " — не пустая");
         }
         if (opt.containsKey("group")) assertInstanceOf(String.class, opt.get("group"), w + ".options.group — строка");
-        assertNotNull(LoreSlices.get((String) opt.get("slice")), w + ".options.slice — существующий срез");
-        assertTrue(LoreSlices.get((String) opt.get("slice")).required().contains(opt.get("param")),
-            w + ".options.param — обязательный параметр этого среза");
+        LoreSlices.SliceDef def = LoreSlices.get((String) opt.get("slice"));
+        assertNotNull(def, w + ".options.slice — существующий срез");
+        if (opt.containsKey("param"))
+            assertTrue(def.required().contains(opt.get("param")),
+                w + ".options.param — обязательный параметр этого среза");
+        else
+            assertTrue(def.required().isEmpty(),
+                w + ".options без param — срез вызывается без параметров, а у него обязательные " + def.required());
+    }
+
+    /**
+     * S4-24: трек спринта — ссылка на вершину PlanTrack; выбирается из среза треков плана,
+     * а не набирается текстом (опечатка в коде трека раньше молча писалась в track_id).
+     */
+    @Test
+    void sprintTrackIsPickedFromPlanTracks() {
+        Map<String, Object> model = map(map(doc().get("types"), "types").get("sprint"), "types.sprint");
+        for (Map<String, Object> holder : List.of(model, LoreRecordRegistry.schemaJson("sprint"))) {
+            Map<String, Object> f = null;
+            for (Object fo : list(holder.get("fields"), "sprint.fields"))
+                if ("track".equals(map(fo, "f").get("key"))) f = map(fo, "f");
+            assertNotNull(f, "sprint.track");
+            assertEquals("enum", f.get("kind"), "sprint.track.kind — выбор, а не свободный текст");
+            assertNull(f.get("dict"), "sprint.track.dict — значения не из справочника, а из среза треков");
+            assertEquals(Map.of("slice", LoreSprintTracks.SLICE, "value", "code", "label", "title"),
+                f.get("options"), "sprint.track.options");
+            checkOptions(f, "sprint.track");
+        }
     }
 
     @Test
@@ -213,6 +243,9 @@ class LoreModelContractTest {
         assertThrows(AssertionError.class, () -> checkOptions(f, "x"), "несуществующий срез ловится");
         f.put("options", new java.util.LinkedHashMap<>(Map.of("slice", "task_identities", "param", "id", "value", "code")));
         assertThrows(AssertionError.class, () -> checkOptions(f, "x"), "без label ловится");
+        f.put("options", new java.util.LinkedHashMap<>(Map.of("slice", "task_identities", "value", "code", "label", "title")));
+        assertThrows(AssertionError.class, () -> checkOptions(f, "x"),
+            "без param у среза с обязательным параметром ловится — kit не смог бы его вызвать");
     }
 
     private static void checkTypes(Map<String, Object> d) {
