@@ -10,6 +10,7 @@ import { AgentsScreen } from './AgentsScreen';
 import { DictsScreen } from './DictsScreen';
 import { FlagsScreen } from './FlagsScreen';
 import { AdminHome } from './HomeScreen';
+import { MachinesScreen } from './MachinesScreen';
 import { McpScreen } from './McpScreen';
 import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
@@ -22,6 +23,8 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-home': () => <AdminHome />,
   'adm-wiz': () => <WizardsScreen meSub={v2Auth.getState().user?.sub ?? null} />,
   'adm-agents': () => <AgentsScreen />,
+  // S7B-ACL-3: доступ людей к машинам miniLORE — сосед «Агентов».
+  'adm-machines': () => <MachinesScreen meSub={v2Auth.getState().user?.sub ?? null} />,
   'adm-who': () => <WhoWhereScreen view="people" meSub={v2Auth.getState().user?.sub ?? null} />,
   // S7B-28: «Проекты» — отдельный раздел; та же сборка участия, ось — проекты.
   'adm-projects': () => <WhoWhereScreen view="projects" meSub={v2Auth.getState().user?.sub ?? null} />,
