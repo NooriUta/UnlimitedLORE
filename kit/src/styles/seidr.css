@@ -1623,6 +1623,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
   position: sticky;
   top: var(--sk-top-h);
   align-self: start;
+  /* Высота, а не только потолок (владелица 11.11, S4-21: «при большом разрешении
+     левое меню повисает в воздухе внизу»): с одной max-height фон и граница
+     колонки кончались вместе с пунктами, и на высоком окне меню обрывалось. */
+  height: calc(100dvh - var(--sk-top-h));
   max-height: calc(100dvh - var(--sk-top-h));
   overflow: auto;
   padding: 6px;
