@@ -8,6 +8,7 @@
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
 import { RecordSection } from './RecordSection';
+import { EditableField } from './EditableField';
 import { SumCell } from '../list/sum';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
@@ -181,7 +182,7 @@ function useMinuteClock(on: boolean): number {
 }
 
 /** Сохранение поля записи через hooks.onSave; undefined — правки нет. */
-type FieldSaver = ((field: string, from: unknown) => (to: string) => Promise<void>) | undefined;
+type FieldSaver = ((field: string, from: unknown) => (to: unknown) => Promise<void>) | undefined;
 
 function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
   const onSave = ctx.config.hooks?.onSave;
@@ -215,13 +216,24 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
   return <span>{valueText(value)}</span>;
 }
 
-function Fields({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang; edit?: EditSlot }) {
+/** Виды, которые правятся на месте FieldEditor'ом. ref и md идут своими путями (связи, MD-редактор). */
+const INLINE_KINDS = new Set(['text', 'number', 'date', 'enum']);
+
+function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang; edit?: EditSlot; fieldSave?: FieldSaver }) {
   const fields = kind.fields ?? [];
   if (fields.length === 0) return null;
   const row = (f: (typeof fields)[number]) => (
     <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
       <dt>{f.title}</dt>
-      <dd><FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} /></dd>
+      <dd>{(() => {
+        const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} />;
+        // S4-24: ✎ — только у поля, которое приложение назвало правимым, при праве и пути записи;
+        // enum без вариантов не правится — выбирать не из чего.
+        const can = fieldSave && f.editable && INLINE_KINDS.has(f.type) && (f.type !== 'enum' || (f.options?.length ?? 0) > 0);
+        if (!can) return view;
+        const from = record.fields[f.key];
+        return <EditableField def={{ key: f.key, label: f.title, kind: f.type, options: f.options, required: f.required }} value={from ?? null} view={view} onSave={to => fieldSave(f.key, from ?? null)(to)} />;
+      })()}</dd>
     </div>
   );
   // Поля без раздела — первыми; разделы (section) — подзаголовками в порядке появления (S4-36).
@@ -327,6 +339,8 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
   const loaded = loadedAt ? <RecordLoaded loadedAt={loadedAt} now={nowProp ?? clock} onReload={onReload} lang={lang} /> : null;
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
+  // Правка характеристик (S4-24) не зависит от MD-редактора: право и путь записи — те же.
+  const fieldSave = fieldSaver(record, ctx);
   const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver, drafts: mdDrafts } : undefined;
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
@@ -565,7 +579,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
         </BlockBoundary>
         {kind && !zoned && (
           <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
-            <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+            <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} fieldSave={fieldSave} />
           </BlockBoundary>
         )}
         {/*
@@ -586,7 +600,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
   } else if (current === RECORD_TABS.props && kind && !propsSide) {
     panel = (
       <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
-        <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+        <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} fieldSave={fieldSave} />
       </BlockBoundary>
     );
   } else if (current === RECORD_TABS.history && history) {
@@ -679,7 +693,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
             {kitT(lang, 'kit.record.tab.props')}
           </button>
           <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
-            <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+            <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} fieldSave={fieldSave} />
           </BlockBoundary>
         </>
       )}
@@ -725,7 +739,7 @@ export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor
               {propsSummary(record, kind) && <span className="sk-rec-propsrow__vals"> · {propsSummary(record, kind)}</span>}
             </summary>
             <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
-              <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} />
+              <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} fieldSave={fieldSave} />
             </BlockBoundary>
           </details>
         )}

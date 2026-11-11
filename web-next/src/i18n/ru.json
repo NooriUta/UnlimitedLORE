@@ -917,5 +917,9 @@
   "admin.wiz.manual.minilore": "minilore-link — канал до телефона",
   "admin.wiz.manual.miniloreHint": "распаковать дистрибутив, имя машины — {machine}",
   "admin.wiz.manual.infisical": "Секреты (Infisical)",
-  "admin.wiz.manual.infisicalHint": "не смогли проверить — у LORE нет доступа к Infisical"
+  "admin.wiz.manual.infisicalHint": "не смогли проверить — у LORE нет доступа к Infisical",
+  "admin.roles.danger.need": "Пока логин не введён точно, применить нельзя.",
+  "peek.kind.unknown": "запись",
+  "peek.err.noType": "тип записи не задан и по виду ID не узнан — открыть не можем",
+  "peek.sheetTitle": "Запись {id}"
 }

@@ -12,7 +12,7 @@
    (S4-MOBILE-COMPARE, D-2026-UXR-MOBILE-FOLLOWS-V1, образец — v1). Замер
    360 px: колонка записи 227 px из 360. Внутренний отступ 12 px паспорт
    держит сам (.sk-dock__panel в seidr.css). */
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .list-screen--passport { padding-inline: 0; }
 }
 

@@ -37,7 +37,7 @@ function mediaBodies(cond: string): string[] {
   return out;
 }
 const coarse = () => mediaBodies('(pointer: coarse) {').join('\n');
-const narrow = () => mediaBodies('(max-width: 720px) {').join('\n');
+const narrow = () => mediaBodies('(max-width: 720px), (pointer: coarse) and (max-height: 500px) {').join('\n');
 
 describe('seidr.css · стиль базовых элементов', () => {
   it('pill — скругление токеном 999', () => {

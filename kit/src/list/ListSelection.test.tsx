@@ -145,7 +145,9 @@ describe('панель действий вместо шапки', () => {
     // В jsdom import.meta.url не file:, путь — от корня пакета kit (там стартует vitest).
     const css = readFileSync(resolve(process.cwd(), 'src/styles/seidr.css'), 'utf8');
     expect(css).toMatch(/--fs-base/); // положительный контроль
-    const media = /@media \(max-width: 720px\), \(pointer: coarse\) \{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('S4-10')));
+    // Блок S4-10 — для узкого экрана И любого сенсора; ландшафт телефона
+    // (S4-MOBILE-EDGE) дописан к каждому узкому @media третьим условием.
+    const media = /@media \(max-width: 720px\), \(pointer: coarse\),[^{]*\{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('S4-10')));
     expect(media, 'media-блок S4-10').toBeTruthy();
     expect(media![1]).toMatch(/\.sk-list\[data-selecting='true'\] \.sk-shead[\s\S]*display:\s*none/);
     expect(media![1]).toMatch(/\.sk-list\[data-selecting='true'\] \.sk-list__controls/);

@@ -252,6 +252,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     type: str(l.type), title: str(l.title) || str(l.id), status: str(l.status),
   }));
 
+  const writeOf = (w: unknown): { endpoint: string; field: string } | null => {
+    const o = w && typeof w === 'object' ? (w as Record<string, unknown>) : null;
+    return o && str(o.endpoint) && str(o.field) ? { endpoint: str(o.endpoint), field: str(o.field) } : null;
+  };
   const fields: LoreField[] = arr(schema.fields).map(f => {
     const section = str(f.section);
     return {
@@ -263,6 +267,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       editable: f.editable === true,
       ...(f.multi === true ? { multi: true } : {}),
       group: groupOf(f.group),
+      // S4-24: путь записи поля и справочник вариантов — из схемы сервера. Без
+      // write правка поля обещала бы сохранение, которого некуда отправить.
+      ...(writeOf(f.write) ? { write: writeOf(f.write) } : { write: null }),
+      ...(str(f.dict) ? { dict: str(f.dict) } : {}),
       ...(section ? { section } : {}),
     };
   });

@@ -29,6 +29,7 @@ import { useProjectScope } from '../scope/ProjectScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
 import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
+import { loreListPeek } from '../record/lorePeek';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -387,6 +388,11 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const headId = titleId ?? `list-screen-${screen}`;
   // Иконка заголовка — из канона LORE v1 (S4-25): def.icon = иконка раздела v1.
   const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon } : undefined;
+  // Peek из списка (S9-10): пробел на строке — карточка записи; тип LORE = вид строки.
+  const listPeek = useMemo(
+    () => loreListPeek(lang, id => (viewData ?? data)?.records.find(r => r.id === id)?.kind ?? null, fetchImpl),
+    [lang, viewData, data, fetchImpl],
+  );
   const ready = !(result.state === 'loading' || result.state === 'error' || result.state === 'forbidden' || !data);
 
   let content;
@@ -437,6 +443,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // в память (приватный режим ширину просто не запомнит).
         widths={{ screen: screen, store: appStorage }}
         expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
+        peek={listPeek}
         onOpen={id => {
           setOpen({ ...open, id });
           // Название — из загруженных строк, адрес — тот же, что в адресной

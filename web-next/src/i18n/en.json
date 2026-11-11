@@ -917,5 +917,9 @@
   "admin.wiz.manual.minilore": "minilore-link — the channel to the phone",
   "admin.wiz.manual.miniloreHint": "unpack the distribution, machine name — {machine}",
   "admin.wiz.manual.infisical": "Secrets (Infisical)",
-  "admin.wiz.manual.infisicalHint": "could not check — LORE has no access to Infisical"
+  "admin.wiz.manual.infisicalHint": "could not check — LORE has no access to Infisical",
+  "admin.roles.danger.need": "Until the login is typed exactly, nothing can be applied.",
+  "peek.kind.unknown": "record",
+  "peek.err.noType": "record type is not set and cannot be recognised from the ID — cannot open",
+  "peek.sheetTitle": "Record {id}"
 }

@@ -10,8 +10,13 @@
 // прежние импорты продолжали работать.
 import { useEffect, useState } from 'react';
 
-/** Телефон и узкое окно: ≤720px. Один порог на оболочку, списки и записи. */
-export const NARROW_QUERY = '(max-width: 720px)';
+/**
+ * Телефон и узкое окно: ширина ≤720px ИЛИ пальцевый ввод при высоте ≤500px —
+ * телефон в ландшафте (S4-MOBILE-EDGE, ADR-LORE-049 п.7: вертикаль решает
+ * высота). Один порог на оболочку, списки и записи; те же условия — в каждом
+ * узком @media seidr.css (сторож narrowLandscape.test.ts).
+ */
+export const NARROW_QUERY = '(max-width: 720px), (pointer: coarse) and (max-height: 500px)';
 
 /**
  * Узкий экран. `force` задан — без matchMedia (тесты, встройка, демо).

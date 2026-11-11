@@ -27,6 +27,8 @@ export function applySettings(root: AttrTarget, s: UserSettings, jar?: CookieJar
   setAttr(root, 'data-read-nav', s.collapse_nav_on_read ? 'collapse' : null);
   setAttr(root, 'data-right-column', s.right_column === 'auto' ? null : s.right_column);
   setAttr(root, 'data-single-keys', s.single_key_shortcuts ? null : 'off');
+  // Peek по наведению (S9-10): выключено — атрибут; молчание — включено.
+  setAttr(root, 'data-peek-hover', s.peek_hover ? null : 'off');
   setAttr(root, 'data-show-tech', s.show_tech ? 'on' : null);
 
   const shared = readSharedPrefs(jar);
