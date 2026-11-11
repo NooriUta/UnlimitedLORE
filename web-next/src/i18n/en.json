@@ -245,6 +245,7 @@
   "pp.field.body": "Text",
   "pp.contract.readonly": "Demo: read-only. Permissions and status transitions will be computed by the server (ADR-LORE-047, item 5).",
   "pp.contract.noLinks": "No links",
+  "pp.contract.partShown": "showing {shown} of {total}",
   "pp.contract.title": "lore.record/1 contract object",
   "pp.contract.hint": "Exactly what kit receives. The facade is emulated on the client (meta.facade); required fields come first in Properties.",
   "pp.contract.show": "Show object",
