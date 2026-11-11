@@ -93,14 +93,26 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
   const win: UrlWindow | undefined = urlState === false ? undefined
     : typeof urlState === 'object' ? urlState
       : typeof window === 'undefined' ? undefined : window;
-  const [open, setOpen] = useState<OpenRecord>(() => {
-    if (!win) return { id: null, place: 'right' };
-    const p = readUrlState(win);
+  const fromUrl = (w: UrlWindow): OpenRecord => {
+    const p = readUrlState(w);
     const id = p.get('open');
     const raw = p.get('place') ?? '';
     const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : 'right';
     return { id: id || null, place };
-  });
+  };
+  const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: 'right' }));
+  // D-24: «назад»/«вперёд» меняют адрес не нашими руками — паспорт обязан
+  // идти за ним, иначе адрес и экран расходятся молча. Следим только у
+  // настоящего окна: у подменного окна тестов событий нет.
+  useEffect(() => {
+    const w = win as (UrlWindow & Partial<Pick<Window, 'addEventListener' | 'removeEventListener'>>) | undefined;
+    if (!w?.addEventListener || !w.removeEventListener) return;
+    const sync = () => setOpen(fromUrl(w));
+    w.addEventListener('popstate', sync);
+    w.addEventListener('hashchange', sync);
+    return () => { w.removeEventListener!('popstate', sync); w.removeEventListener!('hashchange', sync); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [win]);
   const set = (next: OpenRecord) => {
     setOpen(next);
     if (!win) return;
@@ -114,7 +126,11 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     // (D-21): иначе `tab=history` останется в адресе списка и следующая
     // открытая запись покажется не с начала, а с чужой вкладки.
     const patch = { open: next.id, place: closed || next.place === 'right' ? null : next.place, ...(closed ? { tab: null } : {}) };
-    pushUrlState(patch, { replace: true, win, ...(closed ? { anchor: null } : {}) });
+    // Открыть и закрыть паспорт — шаг истории (D-24): «назад» его и отменяет.
+    // Переход между записями (пейджер) и смена места — заменой, иначе листание
+    // десяти записей потребовало бы десяти «назад», чтобы выйти из паспорта.
+    const step = (open.id == null) !== closed;
+    pushUrlState(patch, { replace: !step, win, ...(closed ? { anchor: null } : {}) });
   };
   /** Адрес списка без открытой записи — им крошка «←» становится ссылкой. */
   const backHref = win ? urlStateHref(win, { open: null, place: null, tab: null }, { anchor: null }) : undefined;

@@ -110,3 +110,27 @@ describe('крошка — ссылка на список', () => {
     expect(await screen.findByRole('button', { name: /Спринты/ })).toBeTruthy();
   }, 15000);
 });
+
+// D-24 (аудит 09.11, SPRINT_UXR_S4_UI_SHELL_LISTS/S4-28): «назад»/«вперёд»
+// должны закрывать и открывать сам паспорт. Было: открытие писалось в адрес
+// ЗАМЕНОЙ — шага в истории не возникало, и «назад» уводил со страницы целиком,
+// а список за popstate не следил вовсе.
+describe('D-24 · «назад» и «вперёд» управляют паспортом', () => {
+  const popped = () => new Promise<void>(res => window.addEventListener('popstate', () => res(), { once: true }));
+
+  it('открыли запись → «назад» закрывает паспорт, «вперёд» открывает снова', async () => {
+    window.history.replaceState(null, '', '/');
+    const { container } = render(<ListScreen screen="sprints" fetchImpl={fakeFetch()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Спринт SP' }));
+    await waitFor(() => expect(dock(container)).toBeTruthy());
+    expect(window.location.search).toMatch(/open=SP/);
+
+    let p = popped(); window.history.back(); await p;
+    await waitFor(() => expect(dock(container)).toBeNull());
+    expect(window.location.search).not.toMatch(/open=/);
+
+    p = popped(); window.history.forward(); await p;
+    await waitFor(() => expect(dock(container)).toBeTruthy());
+    window.history.replaceState(null, '', '/');
+  });
+});
