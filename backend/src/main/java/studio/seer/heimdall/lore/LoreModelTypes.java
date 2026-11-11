@@ -125,8 +125,18 @@ final class LoreModelTypes {
      *                 schemaless) — у поля {@code property_type: null}: тип неизвестен,
      *                 а не «строка».
      */
-    @SuppressWarnings("unchecked")
     static Map<String, Object> build(Map<String, List<String>> schema, Map<String, Map<String, String>> declared) {
+        return build(schema, declared, null);
+    }
+
+    /**
+     * @param mandatory MD-REQUIRED: обязательные свойства схемы (mandatory / notNull) по типам
+     *                  вершин, {@link LoreFieldRequirement#mandatoryOf}; {@code null} — не читались
+     *                  (у типа {@code requirements_block: unknown}).
+     */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> build(Map<String, List<String>> schema, Map<String, Map<String, String>> declared,
+                                     Map<String, Set<String>> mandatory) {
         Map<String, Map<String, String>> decl = declared == null ? Map.of() : declared;
         Map<String, Object> out = new LinkedHashMap<>();
         for (String t : LoreRecordRegistry.TYPES) {
@@ -134,7 +144,12 @@ final class LoreModelTypes {
             Set<String> props = new LinkedHashSet<>();
             props.addAll(schema.getOrDefault(g.vertex(), List.of()));
             if (g.hist() != null) props.addAll(schema.getOrDefault(g.hist(), List.of()));
-            Map<String, Object> contract = LoreRecordRegistry.schemaJson(t);
+            Set<String> req = null;
+            if (mandatory != null) {
+                req = new LinkedHashSet<>(mandatory.getOrDefault(g.vertex(), Set.of()));
+                if (g.hist() != null) req.addAll(mandatory.getOrDefault(g.hist(), Set.of()));
+            }
+            Map<String, Object> contract = LoreRecordRegistry.schemaJson(t, props, req);
             Map<String, String> aliases = ALIASES.getOrDefault(t, Map.of());
             Set<String> matched = new LinkedHashSet<>();
             List<Map<String, Object>> fields = new ArrayList<>();
@@ -171,6 +186,8 @@ final class LoreModelTypes {
             type.put("time", TIME.get(t));
             type.put("fields", fields);
             type.put("relations", contract.get("relations"));
+            type.put("requirements", contract.get("requirements"));
+            type.put("requirements_block", contract.get("requirements_block"));
             type.put("computed", COMPUTED.getOrDefault(t, List.of()));
             type.put("unclassified", unclassified);
             type.put("internal", internal);
@@ -365,6 +382,14 @@ final class LoreModelTypes {
         "release", List.of(
             computed("sprints_total", "Спринтов", "count", new Object[]{1, "xs", "none"}),
             computed("prs_total", "PR", "count", new Object[]{2, "xs", "none"})));
+
+    /** Свойство графа, которым подтверждено поле (то же сопоставление, что у build): первый кандидат из props, не system. */
+    static String propertyOf(String type, Map<String, Object> f, Set<String> props) {
+        if (props == null) return null;
+        for (String cand : candidates(String.valueOf(f.get("key")), f, ALIASES.getOrDefault(type, Map.of())))
+            if (cand != null && props.contains(cand) && !isSystem(cand)) return cand;
+        return null;
+    }
 
     @SuppressWarnings("unchecked")
     private static List<String> candidates(String key, Map<String, Object> f, Map<String, String> aliases) {

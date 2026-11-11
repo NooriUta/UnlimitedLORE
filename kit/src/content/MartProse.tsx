@@ -17,7 +17,9 @@ import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import { marked } from './markdown';
-import { splitDiagramFences } from './diagramFence';
+import { DIAGRAM_LANGS, splitDiagramFences } from './diagramFence';
+import { LiveBlock, type LiveBlocks } from './LiveBlock';
+import { useNarrow } from '../core/narrow';
 import { sanitizeMd, sanitizeSvg } from './sanitizeHtml';
 import { kitT } from '../i18n';
 import { useKitLang } from '../i18n/lang';
@@ -46,7 +48,9 @@ let mermaidSeq = 0;
 export type ProseSegment =
   | { kind: 'html'; html: string }
   | { kind: 'mermaid'; def: string }
-  | { kind: 'bpmn'; def: string };
+  | { kind: 'bpmn'; def: string }
+  /** Живой блок (S6-04): язык назван приложением в пропе blocks. */
+  | { kind: 'live'; lang: string; def: string };
 
 /** Имена флажков чек-листа (локализует вызывающий). */
 export interface TaskLabels { done: string; todo: string }
@@ -79,10 +83,14 @@ function mdToHtml(md: string, labels: TaskLabels): string {
  * достаётся никогда: иначе проза уезжает в mermaid и возвращается его
  * англоязычной ошибкой поверх содержимого (дефект владелицы 10.11.2026).
  */
-export function toSegments(text: string, labels: TaskLabels = DEFAULT_TASK_LABELS): ProseSegment[] {
+export function toSegments(text: string, labels: TaskLabels = DEFAULT_TASK_LABELS, liveLangs: readonly string[] = []): ProseSegment[] {
   const segs: ProseSegment[] = [];
-  for (const part of splitDiagramFences(text)) {
-    if (part.kind === 'diagram') {
+  // Живые языки (S6-04) идут тем же правилом фенса, что диаграммы, — второй регулярки нет.
+  const live = liveLangs.filter(l => !(DIAGRAM_LANGS as readonly string[]).includes(l));
+  for (const part of splitDiagramFences(text, [...DIAGRAM_LANGS, ...live])) {
+    if (part.kind === 'diagram' && live.includes(part.lang)) {
+      segs.push({ kind: 'live', lang: part.lang, def: part.def });
+    } else if (part.kind === 'diagram') {
       segs.push({ kind: part.lang as 'mermaid' | 'bpmn', def: part.def });
     } else if (part.text.trim()) {
       segs.push({ kind: 'html', html: mdToHtml(part.text, labels) });
@@ -266,11 +274,18 @@ function linkRefs(root: HTMLElement, refHref: MartRefHref) {
 }
 
 /** refPeek — карточка Peek со ссылки (S9-10): мышь — наведение, палец — нижний лист. */
-export function MartProse({ text, style, className, refHref, refPeek }: { text?: string | null; style?: CSSProperties; className?: string; refHref?: MartRefHref; refPeek?: MartRefPeek }) {
+export function MartProse({ text, style, className, refHref, refPeek, blocks, narrow: narrowProp }: {
+  text?: string | null; style?: CSSProperties; className?: string; refHref?: MartRefHref; refPeek?: MartRefPeek;
+  /** S6-04: живые блоки — язык фенса → исполнитель (даёт приложение). */
+  blocks?: LiveBlocks;
+  narrow?: boolean;
+}) {
   const lang = useKitLang();
+  const narrow = useNarrow(narrowProp);
+  const liveKey = blocks ? Object.keys(blocks).sort().join(',') : '';
   const segments = useMemo(
-    () => (text ? toSegments(text, { done: kitT(lang, 'kit.prose.taskDone'), todo: kitT(lang, 'kit.prose.taskTodo') }) : []),
-    [text, lang],
+    () => (text ? toSegments(text, { done: kitT(lang, 'kit.prose.taskDone'), todo: kitT(lang, 'kit.prose.taskTodo') }, liveKey ? liveKey.split(',') : []) : []),
+    [text, lang, liveKey],
   );
   const rootRef = useRef<HTMLDivElement>(null);
   // После каждой отрисовки html (React перезаписывает innerHTML сегмента при смене текста).
@@ -286,6 +301,11 @@ export function MartProse({ text, style, className, refHref, refPeek }: { text?:
       {segments.map((seg, i) => {
         if (seg.kind === 'mermaid') return <MermaidDiagram key={i} def={seg.def} />;
         if (seg.kind === 'bpmn') return <BpmnDiagram key={i} def={seg.def} />;
+        if (seg.kind === 'live') {
+          const run = blocks?.[seg.lang];
+          if (run) return <LiveBlock key={i} lang={seg.lang} source={seg.def} run={run} narrow={narrow} />;
+          return null;
+        }
         return <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />;
       })}
     </div>

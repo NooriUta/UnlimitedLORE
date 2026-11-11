@@ -106,7 +106,7 @@ class LoreMePrefsTest {
     void settingsCoverTheListFromTheTask() {
         Set<String> keys = LoreMePrefs.SETTINGS.keySet();
         for (String k : List.of("nav_collapse_on_read", "right_column", "text_size", "theme",
-                "density", "single_key_shortcuts", "stripes", "new_navigation", "peek_hover"))
+                "density", "single_key_shortcuts", "stripes", "new_navigation", "peek_hover", "graph_view"))
             assertTrue(keys.contains(k), "нет настройки " + k);
     }
 
@@ -116,6 +116,16 @@ class LoreMePrefsTest {
         assertEquals(true, LoreMePrefs.defaults().get("peek_hover"), "по умолчанию карточки по наведению включены");
         assertTrue(LoreMePrefs.validateSettingsPatch(Map.of("peek_hover", false)).isEmpty(), "false — допустимое значение");
         assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("peek_hover", "off")).size(), "строка вместо булева — отказ");
+    }
+
+    // GC-03 (владелица 11.11.2026: «настройкой в настройках человека»): вид вкладки «Граф»
+    // по умолчанию. auto — человек не выбирал: на компьютере секторы, на телефоне список.
+    @Test
+    void graphViewIsAutoByDefaultAndKnowsFourViews() {
+        assertEquals("auto", LoreMePrefs.defaults().get("graph_view"), "по умолчанию вид не выбран — решает экран");
+        for (String v : List.of("auto", "sectors", "list", "force", "obsidian"))
+            assertTrue(LoreMePrefs.validateSettingsPatch(Map.of("graph_view", v)).isEmpty(), v + " — допустимое значение");
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("graph_view", "canvas")).size(), "незнакомый вид — отказ");
     }
 
     @Test

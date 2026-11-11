@@ -134,6 +134,12 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         v => onChange({ stripes: v === 'on' }), 'settings.stripes.hint')}
       {row('peek_hover', 'settings.peekHover.label', onOff(s.peek_hover), onOffOpts,
         v => onChange({ peek_hover: v === 'on' }), 'settings.peekHover.hint')}
+      {row('graph_view', 'settings.graphView.label', s.graph_view,
+        opts(lang, [
+          ['auto', 'settings.graphView.auto'], ['sectors', 'settings.graphView.sectors'], ['list', 'settings.graphView.list'],
+          ['force', 'settings.graphView.force'], ['obsidian', 'settings.graphView.obsidian'],
+        ] as const),
+        v => onChange({ graph_view: v }), 'settings.graphView.hint')}
       {row('show_tech', 'settings.showTech.label', onOff(s.show_tech), onOffOpts,
         v => onChange({ show_tech: v === 'on' }), 'settings.showTech.hint')}
       <NavSwitch lang={lang} targetUrl={targetUrl} />

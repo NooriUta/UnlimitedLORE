@@ -88,12 +88,39 @@ class LoreLinkTypesTest {
     @Test
     void edgesWithSideEffectsOrStructuralAreNotOffered() {
         Set<String> offered = new HashSet<>();
-        LoreLinkTypes.PAIRS.forEach(p -> offered.add(p.edgeType()));
+        // Исключение — привязка к компоненту (SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK): BELONGS_TO
+        // к LoreComponent — это «запись про компонент», её ставят и adr/decision/doc/sprint-пути.
+        // Остальные BELONGS_TO (спринт → проект и т. п.) — по-прежнему структура, вне таблицы.
+        LoreLinkTypes.PAIRS.stream()
+            .filter(p -> !(p.edgeType().equals("BELONGS_TO") && p.toType().equals("component")))
+            .forEach(p -> offered.add(p.edgeType()));
         for (String banned : List.of("ANSWERS", "SUPERSEDES", "HAS_STATE", "PART_OF", "BELONGS_TO",
                 "BELONGS_TO_PROJECT", "IN_PHASE", "TAGGED_WITH", "DOC_CHILD_OF", "GATES")) {
             assertFalse(offered.contains(banned), banned + " не должен предлагаться в «Связать»");
         }
         assertFalse(LoreLinkTypes.isAllowed("sprint", "sprint", "DEPENDS_ON"));
+    }
+
+    /**
+     * SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK: компонент в каталоге, рёбра — те, которыми
+     * пути записи уже связывают записи с компонентом (adr/decision/doc/sprint → BELONGS_TO,
+     * компонент → DOCUMENTED_IN → спека), а не придуманные.
+     */
+    @Test
+    void componentIsInCatalogWithSchemaEdges() {
+        LoreLinkTypes.Entity c = LoreLinkTypes.entity("component");
+        assertNotNull(c, "компонент обязан быть в каталоге");
+        assertEquals("LoreComponent", c.vertexClass());
+        assertEquals("component_id", c.idField());
+        assertEquals("component", c.family());
+        for (String t : List.of("adr", "decision", "doc", "sprint"))
+            assertTrue(LoreLinkTypes.isAllowed(t, "component", "BELONGS_TO"), t + " → component BELONGS_TO");
+        assertFalse(LoreLinkTypes.isAllowed("spec", "component", "BELONGS_TO"),
+            "у спеки компонент один (syncSpecComponent) — второй по упоминанию не ставится");
+        assertFalse(LoreLinkTypes.isAllowed("component", "adr", "BELONGS_TO"), "направление — к компоненту");
+        assertTrue(LoreLinkTypes.isAuto("adr", "BELONGS_TO", "component"));
+        assertFalse(LoreLinkTypes.isAuto("decision", "DECIDED_IN", "adr"),
+            "авто — только пары, помеченные явно");
     }
 
     @Test
