@@ -39,7 +39,11 @@ export interface ModelPalettes {
   notes: string[];
 }
 
+import { kitT, type KitLang } from '../i18n';
+
 export interface PalettesFromModelOptions {
+  /** Язык оговорок (проверка 11.11.2026: были русским текстом в коде). По умолчанию ru. */
+  lang?: KitLang;
   /** Коды палитр, цвета которых есть в теме. Не задано — проверку не делаем. */
   known?: readonly string[];
 }
@@ -52,6 +56,7 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 export function palettesFromModel(model: unknown, opts: PalettesFromModelOptions = {}): ModelPalettes {
   const root = obj(model);
   const notes: string[] = [];
+  const t = (k: Parameters<typeof kitT>[1], v?: Record<string, string | number>) => kitT(opts.lang ?? 'ru', k, v);
   const missing = Array.isArray(root?.missing) ? (root!.missing as unknown[]).map(str) : [];
   const section = obj(root?.palettes);
 
@@ -62,13 +67,13 @@ export function palettesFromModel(model: unknown, opts: PalettesFromModelOptions
   // о разделе, которого он не присылал.
   const absent = !root || !section || Object.keys(section).length === 0 || missing.includes('palettes');
   if (absent) {
-    notes.push('Раздел палитр модель не прислала — список взят из темы kit как умолчание.');
+    notes.push(t('kit.pal.absent'));
     return { sent: false, entries: [], default: null, source: null, notes };
   }
 
   const rows = Array.isArray(section.entries) ? section.entries : null;
   if (!rows) {
-    notes.push('Раздел палитр пришёл не списком — читать его нечем, список взят из темы kit как умолчание.');
+    notes.push(t('kit.pal.notList'));
     return { sent: false, entries: [], default: null, source: str(section.source) || null, notes };
   }
 
@@ -101,11 +106,11 @@ export function palettesFromModel(model: unknown, opts: PalettesFromModelOptions
   entries.sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER) || a.code.localeCompare(b.code));
 
   const def = str(section.default) || null;
-  if (!entries.length) notes.push('Раздел палитр пришёл пустым — выбирать нечего.');
-  if (noTitle.length) notes.push(`Палитры без статьи в справочнике — показан код: ${noTitle.join(', ')}.`);
-  if (noTheme.length) notes.push(`Палитры есть в модели, а цветов в теме kit нет — образец не нарисован: ${noTheme.join(', ')}.`);
+  if (!entries.length) notes.push(t('kit.pal.empty'));
+  if (noTitle.length) notes.push(t('kit.pal.noTitle', { codes: noTitle.join(', ') }));
+  if (noTheme.length) notes.push(t('kit.pal.noTheme', { codes: noTheme.join(', ') }));
   if (def && entries.length && !entries.some(e => e.code === def)) {
-    notes.push(`Умолчание модели «${def}» в списке палитр отсутствует.`);
+    notes.push(t('kit.pal.defaultMissing', { def }));
   }
 
   return { sent: true, entries, default: def, source: str(section.source) || null, notes };

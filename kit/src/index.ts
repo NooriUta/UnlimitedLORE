@@ -65,6 +65,8 @@ export * from './views/tree';
 export * from './picker';
 // Таймлайн с дорожками той же общей группировки (S4-06).
 export * from './views/timeline';
+export * from './views/calendar';
+export * from './views/library';
 // Сохранённые виды списка: сохранить / сохранить как / сбросить, командные виды
 // по умолчанию; хранилище — контракт S2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-08).
 export * from './views/saved';

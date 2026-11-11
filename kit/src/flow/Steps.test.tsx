@@ -233,3 +233,160 @@ describe('K2-STEPS · клавиатура', () => {
     expect(screen.getByTestId('kit-steps-progress').textContent).toMatch(/1.*3/);
   });
 });
+
+// ── S7B-29: переходы и прокрутка (SPRINT_UXR_S7B_ADMIN/S7B-29) ──────────────
+// Слова владелицы 11.11: «Wizard не доделан: переход между шагами; вкладка не
+// ладит со скроллом». Каждая проверка ниже падала до правки.
+describe('S7B-29 · шаг из адреса согласован с условиями', () => {
+  it('адрес не перескакивает условие: открыт первый закрытый шаг, и это СКАЗАНО', () => {
+    window.history.replaceState(null, '', '/?step=check');
+    render(<Steps steps={steps({ who: 'не выбрано, кого' })} />);
+    expect(screen.getByTestId('kit-steps-progress').textContent).toMatch(/1.*3/);
+    expect(screen.getByText('шаг один').closest('[hidden]')).toBeNull();
+    const note = screen.getByTestId('kit-steps-held');
+    expect(note.textContent).toContain('Проверка');
+    expect(note.textContent).toContain('не выбрано, кого');
+    // Адрес не переписан: условие выполнят — шаг из ссылки откроется сам.
+    expect(new URLSearchParams(window.location.search).get('step')).toBe('check');
+  });
+
+  it('условие выполнено — открывается шаг из адреса, заметки нет', () => {
+    window.history.replaceState(null, '', '/?step=check');
+    render(<Steps steps={steps()} />);
+    expect(screen.getByTestId('kit-steps-progress').textContent).toMatch(/3.*3/);
+    expect(screen.queryByTestId('kit-steps-held')).toBeNull();
+  });
+});
+
+describe('S7B-29 · «Готово» честное', () => {
+  it('без onDone кнопки «Готово» нет: кнопка, которая ничего не делает, — обман', () => {
+    window.history.replaceState(null, '', '/?step=check');
+    render(<Steps steps={steps()} />);
+    expect(screen.queryByTestId('kit-steps-done')).toBeNull();
+    expect(screen.queryByTestId('kit-steps-next')).toBeNull();
+    expect(back()).toBeTruthy();
+  });
+});
+
+describe('S7B-29 · два мастера на экране', () => {
+  it('у причины «вперёд нельзя» свой id у каждого мастера', () => {
+    render(
+      <>
+        <Steps steps={steps({ who: 'причина А' })} urlKey="a" />
+        <Steps steps={steps({ who: 'причина Б' })} urlKey="b" />
+      </>,
+    );
+    const ids = screen.getAllByTestId('kit-steps-blocked').map(n => n.id);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).not.toBe(ids[1]);
+    const btns = screen.getAllByTestId('kit-steps-next');
+    expect(btns[0].getAttribute('aria-describedby')).toBe(ids[0]);
+    expect(btns[1].getAttribute('aria-describedby')).toBe(ids[1]);
+  });
+});
+
+describe('S7B-29 · прокрутка при переходе', () => {
+  /** Начало шагов уехало за верхний край: длинный шаг прокручен вниз. */
+  const scrolledPast = (top: number) => {
+    const orig = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () { return { top, bottom: top + 2000, left: 0, right: 0, width: 0, height: 2000, x: 0, y: top, toJSON: () => ({}) } as DOMRect; };
+    return () => { Element.prototype.getBoundingClientRect = orig; };
+  };
+
+  it('начало шагов на виду — переход окно не дёргает', () => {
+    const spy = vi.fn();
+    const orig = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = spy;
+    const undo = scrolledPast(120);
+    try {
+      render(<Steps steps={steps()} />);
+      fireEvent.click(next());
+      expect(screen.getByTestId('kit-steps-progress').textContent).toMatch(/2.*3/);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      Element.prototype.scrollIntoView = orig;
+      undo();
+    }
+  });
+
+  it('«вперёд», «назад» и шаг полосы прокручивают к началу шагов; открытие — нет', () => {
+    const spy = vi.fn();
+    const orig = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = spy;
+    const undo = scrolledPast(-900);
+    try {
+      const { container } = render(<Steps steps={steps()} />);
+      expect(spy).not.toHaveBeenCalled();
+      fireEvent.click(next());
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.contexts[0]).toBe(container.querySelector('.sk-steps'));
+      expect(spy.mock.calls[0][0]).toMatchObject({ block: 'start' });
+      fireEvent.click(back());
+      expect(spy).toHaveBeenCalledTimes(2);
+      fireEvent.click(next());
+      fireEvent.click(stepBtn(/Кого подключаем/));
+      expect(spy).toHaveBeenCalledTimes(4);
+    } finally {
+      Element.prototype.scrollIntoView = orig;
+      undo();
+    }
+  });
+
+  it('заблокированный «вперёд» не прокручивает: шаг не сменился', () => {
+    const spy = vi.fn();
+    const orig = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = spy;
+    const undo = scrolledPast(-900);
+    try {
+      render(<Steps steps={steps({ who: 'нельзя' })} />);
+      fireEvent.click(next());
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      Element.prototype.scrollIntoView = orig;
+      undo();
+    }
+  });
+});
+
+describe('S7B-29 · при прокрутке длинного шага полоса и кнопки на виду (CSS)', () => {
+  // Живой замер (Playwright, Chrome, 1280×800 и 844×390, 11.11.2026): документ
+  // прокручен на 900 px — полоса шагов на −717 px, то есть за краем. Причина —
+  // НЕ в шагах: `.sk-shell__main { overflow: auto }` делал область содержимого
+  // контейнером прокрутки, который сам не прокручивается (прокручивается
+  // документ), и любое `position: sticky` внутри неё было мёртвым.
+  const read = async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    return readFileSync(join(process.cwd(), 'src/styles/seidr.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  };
+  const rule = (css: string, sel: string) => {
+    const i = css.indexOf(sel + ' {');
+    expect(i, `правила ${sel} нет`).toBeGreaterThan(-1);
+    return css.slice(css.indexOf('{', i) + 1, css.indexOf('}', i));
+  };
+
+  it('полоса шагов липнет сверху, кнопки — снизу, у обеих непрозрачный фон', async () => {
+    const css = await read();
+    const bar = rule(css, '.sk-steps__bar');
+    const nav = rule(css, '.sk-steps__nav');
+    expect(bar).toMatch(/position:\s*sticky/);
+    expect(bar).toMatch(/top:/);
+    expect(bar).toMatch(/background:/);
+    expect(nav).toMatch(/position:\s*sticky/);
+    expect(nav).toMatch(/bottom:/);
+    expect(nav).toMatch(/background:/);
+  });
+
+  it('в оболочке полоса встаёт под шапку, а кнопки — над нижней панелью модулей', async () => {
+    const css = await read();
+    expect(rule(css, '.sk-shell .sk-steps__bar')).toMatch(/top:\s*var\(--sk-top-h\)/);
+    expect(rule(css, '.sk-shell--narrow .sk-steps__nav')).toMatch(/bottom:\s*calc\(var\(--sk-dock-h\)/);
+  });
+
+  it('область содержимого оболочки — не контейнер прокрутки (иначе липкое внутри мертво)', async () => {
+    const main = rule(await read(), '.sk-shell__main');
+    expect(main).not.toMatch(/overflow(-y)?:\s*(auto|scroll|hidden)/);
+    // Боком при этом страница не распирается: лишнее обрезается, не раздвигает.
+    expect(main).toMatch(/overflow-x:\s*clip/);
+  });
+});

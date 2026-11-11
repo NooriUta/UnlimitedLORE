@@ -55,33 +55,38 @@ const show = (code: string | null, dict: typeof DICT = DICT) => {
 
 const mark = () => box.querySelector('.sk-news__st') as HTMLElement;
 
+// Владелица 11.11.2026 (не первый раз): «в новостях для всех статусов подпись рядом
+// с иконкой убрать, оставить только в подсказке всплывающей». В строке — только
+// значок; подпись — в title и aria-label (значок без имени не прочтёт экранный чтец).
 describe('лента: подпись статуса из словаря, код — в подсказке', () => {
   it('положительный контроль: значок статуса нарисован', () => {
     show('planned');
     expect(mark()).toBeTruthy();
   });
 
-  it('в строке — слово языка, а не ключ', () => {
+  it('в строке только значок: подписи рядом нет, она — в подсказке и в имени для чтеца', () => {
     show('planned');
-    expect(mark().textContent).toContain('Запланировано');
-    expect(mark().textContent).not.toContain('planned');
+    expect(mark().textContent?.trim()).toBe('');
+    expect(mark().getAttribute('title')).toContain('Запланировано');
+    expect(mark().getAttribute('aria-label')).toBe('Запланировано');
+    expect(mark().getAttribute('role')).toBe('img');
   });
 
   it('код статуса доступен в подсказке — по нему сверяются с API и фильтром', () => {
     show('ready_for_deploy');
-    expect(mark().textContent).toContain('К выкатке');
+    expect(mark().getAttribute('title')).toContain('К выкатке');
     expect(mark().getAttribute('title')).toContain('ready_for_deploy');
   });
 
   it('кода нет в словаре — показан код, и подсказка это ОБЪЯСНЯЕТ', () => {
     show('shipped');
-    expect(mark().textContent).toContain('shipped');
+    expect(mark().getAttribute('aria-label')).toBe('shipped');
     expect(mark().getAttribute('title')).toMatch(/словар/i);
   });
 
   it('словаря нет вовсе — то же правило: код плюс объяснение, без выдумок', () => {
     showNoDict('planned');
-    expect(mark().textContent).toContain('planned');
+    expect(mark().getAttribute('aria-label')).toBe('planned');
     expect(mark().getAttribute('title')).toMatch(/словар/i);
   });
 

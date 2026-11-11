@@ -47,7 +47,8 @@ public final class LoreSlices {
      * {@code http_code} — код ответа 100..599 (Long).
      */
     static final Map<String, Map<String, String>> TYPED_PARAMS = Map.of(
-        "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"));
+        "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"),
+        "mcp_failure_rows", Map.of("since", "epoch_ms", "code", "http_code"));
 
     static Object typedValue(String name, String kind, String value) {
         String v = value.trim();
@@ -2709,6 +2710,19 @@ public final class LoreSlices {
                 "code", " WHERE value = :code")),
             " GROUP BY source ORDER BY last_failure DESC LIMIT 100");
 
+        // S7B-30: те же отказы ПОСТРОЧНО — детализация карточки Главной «N отказов ≥ 400».
+        // Условие и фильтры — ровно как у mcp_failures (счётчик и список обязаны сходиться 1:1);
+        // admin_actions не годится (режет агентские записи по админским семействам), agent_actions —
+        // тоже (500 последних действий всех исходов, отказы среди них — малая часть).
+        slice("mcp_failure_rows",
+            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, value AS status " +
+            "FROM MetricSnapshot WHERE metric = 'lore.action' AND segment = 'agent' AND value >= 400",
+            List.of(), new LinkedHashMap<>(Map.of(
+                "caller", " WHERE source = :caller",
+                "since", " WHERE ts >= :since",
+                "code", " WHERE value = :code")),
+            " ORDER BY ts DESC LIMIT 500");
+
         // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
         // Отличать от sessions_recent намеренно: здесь наблюдённый факт входа,
         // там — догадка LORE по первому запросу после паузы. source = clientId,
@@ -2885,6 +2899,9 @@ public final class LoreSlices {
 
     static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
         Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
+        // Решение владелицы 11.11.2026: зависимость видна, только если видны ОБА спринта
+        // («&» — обязательные концы ребра DEPENDS_ON). Скрытые рёбра — числом (scope.hidden).
+        Map.entry("sprint_deps", "@out.out('BELONGS_TO_PROJECT').slug&@in.out('BELONGS_TO_PROJECT').slug"),
         Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("releases",  "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_by_id", "out('BELONGS_TO_PROJECT').slug"),
@@ -3038,7 +3055,6 @@ public final class LoreSlices {
         Map.entry("roadmap", "то же: веха без проекта"),
         Map.entry("uc_actors", "ребро HAS_ACTOR — путь через сценарий"),
         Map.entry("actor_pairs", "ребро FILLS_ROLE — служебное, решение"),
-        Map.entry("sprint_deps", "ребро DEPENDS_ON — путь через @out"),
         Map.entry("files_of_task", "KnowFile — путь через задачу"),
         Map.entry("task_roles", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
@@ -3084,6 +3100,7 @@ public final class LoreSlices {
         Map.entry("role_matrix", "матрица ролей проект × люди (S7B-11) — админская, как project_users для всех; решение"),
         Map.entry("mcp_connections", "подключения MCP (S7B-07) — телеметрия агентов, админская; решение"),
         Map.entry("mcp_failures", "сбои записей агентов (S7B-07) — ряд AO-01, админский; решение"),
+        Map.entry("mcp_failure_rows", "отказы записей агентов построчно (S7B-30) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")
@@ -3149,29 +3166,38 @@ public final class LoreSlices {
         Map<String, Object> params = new LinkedHashMap<>(base.params());
         // Выражений может быть несколько (прямая связь | через родителя) — сущность
         // видна, если ХОТЯ БЫ ОДИН путь ведёт в разрешённый проект.
-        String[] traversals = traversal.split("\\|");
-        String condition;
+        //
+        // Решение владелицы 11.11.2026 (sprint_deps под скоуп): у ребра ДВА конца,
+        // и показывать его можно, только если видны ОБА — иначе оно ведёт в
+        // невидимое. Группы через «&» — обязательные концы: каждая обязана привести
+        // в разрешённый проект (внутри группы «|», как и прежде, — «хотя бы один»).
+        List<String> keys = new java.util.ArrayList<>();
         if (allowed.isEmpty()) {
             params.put("__scope0", SCOPE_NONE);
-            StringBuilder or = new StringBuilder();
-            for (String tr : traversals) {
-                if (or.length() > 0) or.append(" OR ");
-                or.append(scopeClause(tr, "__scope0"));
-            }
-            condition = "(" + or + ")";
+            keys.add("__scope0");
         } else {
-            StringBuilder or = new StringBuilder();
             int i = 0;
             for (String slug : allowed) {
                 String key = "__scope" + i++;
                 params.put(key, slug);
+                keys.add(key);
+            }
+        }
+        String[] groups = traversal.split("&");
+        StringBuilder all = new StringBuilder();
+        for (String group : groups) {
+            String[] traversals = group.split("\\|");
+            StringBuilder or = new StringBuilder();
+            for (String key : keys) {
                 for (String tr : traversals) {
                     if (or.length() > 0) or.append(" OR ");
                     or.append(scopeClause(tr, key));
                 }
             }
-            condition = "(" + or + ")";
+            if (all.length() > 0) all.append(" AND ");
+            all.append("(").append(or).append(")");
         }
+        String condition = groups.length == 1 ? all.toString() : "(" + all + ")";
         // Скоуп дописывается ПОСЛЕ suffix'а базового SQL нельзя — ORDER BY/LIMIT
         // уже там. Поэтому пересобираем: условие идёт перед хвостом слайса.
         String sql = base.sql();

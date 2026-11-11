@@ -10,7 +10,7 @@ import type { KitConfig, KitLang } from '@seidr/kit';
 export const ADMIN_MODULE = 'admin';
 
 /** Разделы админки — они же id пунктов меню и значения sec. */
-export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-who', 'adm-roles', 'adm-dicts', 'adm-rules', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
+export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-who', 'adm-projects', 'adm-roles', 'adm-dicts', 'adm-rules', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
 
 export function isAdminSection(id: string | null): id is AdminSection {
@@ -23,6 +23,7 @@ const TITLE: Record<AdminSection, AppKey> = {
   'adm-wiz': 'admin.wiz.title',
   'adm-agents': 'admin.agents.title',
   'adm-who': 'admin.who.title',
+  'adm-projects': 'admin.projects.title',
   'adm-roles': 'admin.roles.title',
   'adm-dicts': 'admin.dicts.title',
   'adm-rules': 'admin.rules.title',
@@ -36,6 +37,7 @@ const ICON: Record<AdminSection, string> = {
   'adm-wiz': 'compass',
   'adm-agents': 'robot-golem',
   'adm-who': 'person',
+  'adm-projects': 'tree-branch',
   'adm-roles': 'key',
   'adm-dicts': 'spell-book',
   'adm-rules': 'scroll-quill',
@@ -52,7 +54,9 @@ export function adminSectionTitle(lang: KitLang, id: AdminSection): string {
  * Меню админки — группы по смыслу и риску, а не по таблицам:
  *   • «Начало» — Главная «что требует внимания» (S7B-26): вход в модуль; рядом
  *     «Мастера» UC-1/UC-2/UC-7 (S7B-17) — вход «хочу сделать»;
- *   • «Люди и агенты» — кто есть и чем работает (чтение, правка своего);
+ *   • «Люди и агенты» — кто есть и чем работает (чтение, правка своего):
+ *     агенты, «Люди и их проекты» и «Проекты» — два разворота участия
+ *     отдельными разделами (S7B-28; раньше — «Кто где» с переключателем);
  *   • «Доступ» — роли и права: правка здесь меняет, кто что видит, — тон риска;
  *   • «Язык графа» — словари (S7B-31) и правила CLAUDE. Тон риска, как у «Доступа»:
  *     правка справочника меняет подписи, цвета и иконки на каждом экране, канон-словари
@@ -66,7 +70,7 @@ export function adminMenu(lang: KitLang): KitConfig['menu'] {
     recent: false,
     groups: [
       { id: 'adm-start', title: appT(lang, 'shell.grp.admStart'), tone: 'var(--acc)', items: [item('adm-home'), item('adm-wiz')] },
-      { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-who')] },
+      { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-who'), item('adm-projects')] },
       { id: 'adm-access', title: appT(lang, 'shell.grp.admAccess'), tone: 'var(--wrn)', items: [item('adm-roles')] },
       { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--wrn)', items: [item('adm-dicts'), item('adm-rules')] },
       { id: 'adm-system', title: appT(lang, 'shell.grp.admSystem'), tone: 'var(--inf)', items: [item('adm-flags'), item('adm-mcp'), item('adm-log')] },
@@ -114,5 +118,25 @@ export function legacyAdminHref(search: string): string {
     // v1 держал выбранный словарь в ?dict=, v2 — в ?adm-dict=.
     next.append(k === 'dict' ? 'adm-dict' : k, v);
   });
-  return `/?${next.toString()}`;
+  const href = `/?${next.toString()}`;
+  return adminAxisHref(href.slice(1)) ?? href;
+}
+
+/**
+ * S7B-28: «Кто где» с переключателем осей (?adm-by=people|projects) стал двумя
+ * разделами — adm-who «Люди и их проекты» и adm-projects «Проекты». Адрес
+ * модуля с осью → раздел этой оси, сам параметр оси снимается; прочие
+ * параметры (adm-open, adm-q) сохраняются: ссылка из журнала или чата
+ * открывает ту же строку. Нечего переписывать — null.
+ */
+export function adminAxisHref(search: string): string | null {
+  const q = new URLSearchParams(search);
+  if (q.get('mod') !== ADMIN_MODULE || !q.has('adm-by')) return null;
+  const sec = q.get('sec');
+  if (sec !== 'adm-who' && sec !== 'adm-projects') return null;
+  // Ось решает раздел; незнакомое значение оси — раздел остаётся прежним.
+  const by = q.get('adm-by');
+  q.set('sec', by === 'projects' ? 'adm-projects' : by === 'people' ? 'adm-who' : sec);
+  q.delete('adm-by');
+  return `/?${q.toString()}`;
 }

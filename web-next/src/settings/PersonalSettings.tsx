@@ -8,7 +8,7 @@
 // D-2026-UXR-READ-COLLAPSE) — блоком ReadingSettings: его читает ReadingView.
 // Пока у него своё хранилище kit, а не /lore/me/settings — сведение в одно — отдельной задачей.
 import { ICON_CANON } from '@seidr/kit';
-import { GameIcon, LoadError, Skeleton, SettingRow, Segmented, errorDetail } from '@seidr/kit';
+import { GameIcon, LoadError, Skeleton, SettingRow, Segmented, TextScaleSlider, errorDetail } from '@seidr/kit';
 import { paletteFallback, type PalettesView } from './palettesSource';
 import type { UserSettings } from '../api/contracts/s2';
 import { t, type Lang, type MessageKey } from '../i18n/messages';
@@ -114,6 +114,11 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
           ['lg', 'settings.textSize.lg'], ['xl', 'settings.textSize.xl'],
         ] as const),
         v => onChange({ text_size: v }))}
+      {/* Ползунок шрифта поверх ступени (S4-16; S4-21 — владелица 11.11: «я жду
+          ползунка для шрифтов»). Границы — в kit, одним местом. */}
+      <SettingRow setting="text_scale" label={t(lang, 'settings.textScale.label')}>
+        <TextScaleSlider value={s.text_scale} onChange={v => onChange({ text_scale: v })} />
+      </SettingRow>
       {row('mode', 'settings.mode.label', s.mode,
         opts(lang, [['dark', 'settings.mode.dark'], ['light', 'settings.mode.light']] as const),
         v => onChange({ mode: v }))}

@@ -13,9 +13,9 @@ import { LoreHttpError } from '../api/loreSlice';
 import { useAdminNav, type AdminTab } from './adminNav';
 import { AuthPreflight } from './AuthPreflight';
 import { AGENTS_NO_MACHINE, fetchAgents, type AgentsData } from './agents';
-import { fetchMcp, type McpData } from './mcp';
+import { fetchMcp, MCP_ONLY_FAILURES, type McpData } from './mcp';
 import { fetchRoleMatrix, type RolesData } from './roles';
-import { agentsWithoutMachine, mcpFailureTotal, peopleWithoutProjects } from './home';
+import { agentsWithoutMachine, mcpFailureTotal, peopleWithoutProjects, ROLES_NO_PROJECTS } from './home';
 import './Admin.css';
 
 export interface AdminHomeProps {
@@ -73,9 +73,9 @@ export function AdminHome({ fetchImpl }: AdminHomeProps) {
         <AttnCard id="nomachine" st={noMachine} title={t('admin.home.noMachine')} hint={t('admin.home.noMachineHint')}
           fix={t('admin.home.noMachineFix')} onFix={go('agents', { 'adm-agents-f': AGENTS_NO_MACHINE })} onRetry={agents.reload} />
         <AttnCard id="mcpfail" st={mcpFail} title={t('admin.home.mcpFail')} hint={t('admin.home.mcpFailHint')}
-          fix={t('admin.home.mcpFailFix')} onFix={go('mcp')} onRetry={mcp.reload} tone="dng" />
+          fix={t('admin.home.mcpFailFix')} onFix={go('mcp', { 'adm-mcp-f': MCP_ONLY_FAILURES })} onRetry={mcp.reload} tone="dng" />
         <AttnCard id="noprojects" st={noProjects} title={t('admin.home.noProjects')} hint={t('admin.home.noProjectsHint')}
-          fix={t('admin.home.noProjectsFix')} onFix={go('roles')} onRetry={roles.reload} />
+          fix={t('admin.home.noProjectsFix')} onFix={go('roles', { 'adm-roles-f': ROLES_NO_PROJECTS })} onRetry={roles.reload} />
       </div>
       {/* S7B-31 п.4а: чеклист включения auth из старой вкладки «Настройки». */}
       <AuthPreflight fetchImpl={fetchImpl} />
