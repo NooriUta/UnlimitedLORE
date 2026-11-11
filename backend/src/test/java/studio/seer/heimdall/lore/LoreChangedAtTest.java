@@ -74,7 +74,8 @@ class LoreChangedAtTest {
 
     @Test
     void sliceSql_carriesTouchedColumn() {
-        for (String id : List.of("open_tasks", "closed_tasks", "specs", "adrs", "decisions", "sprints", "releases"))
+        for (String id : List.of("open_tasks", "closed_tasks", "specs", "adrs", "decisions", "sprints", "releases",
+                "questions", "open_questions", "use_cases", "components"))
             assertTrue(LoreSlices.get(id).baseSql().contains("updated_at AS " + LoreChangedAt.TOUCHED),
                 id + ": changed_at без отметки правки на месте");
     }

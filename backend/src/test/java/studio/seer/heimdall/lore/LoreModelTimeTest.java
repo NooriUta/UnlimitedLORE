@@ -76,11 +76,16 @@ class LoreModelTimeTest {
                 assertEquals("datetime", changed.get(0).get("precision"), t + ": valid_from — DATETIME");
             }
         }
-        // Честные пустоты: у компонента времени нет совсем; у вопроса и фичи — только день.
-        assertEquals(List.of(), ((Map<String, Object>) type("component").get("time")).get("changed"));
-        for (String t : List.of("question", "feature"))
-            for (Map<String, Object> s : (List<Map<String, Object>>) ((Map<String, Object>) type(t).get("time")).get("changed"))
-                assertEquals("date", s.get("precision"), t + ": у источника " + s.get("source") + " точность — день");
+        // Было (#1146): «честные пустоты» — у компонента времени нет совсем, у вопроса и
+        // фичи только день. Поручение владелицы «свежесть = последняя дата изменения»:
+        // пути записи этих типов ставят updated_at (ISO-момент) — он первый источник
+        // правки, точность datetime; прежние дни остаются запасными (бэкфилла нет).
+        for (String t : List.of("question", "feature", "component")) {
+            List<Map<String, Object>> changed = (List<Map<String, Object>>) ((Map<String, Object>) type(t).get("time")).get("changed");
+            assertFalse(changed.isEmpty(), t + ": у правки есть источник");
+            assertEquals("updated_at", changed.get(0).get("source"), t + ": первый источник правки — отметка updated_at");
+            assertEquals("datetime", changed.get(0).get("precision"), t + ": updated_at — момент");
+        }
     }
 
     /** У поля вида date — точность: день, момент или текст; «не знаем» в модели не остаётся. */
@@ -137,7 +142,8 @@ class LoreModelTimeTest {
             Map.entry("sprint", "sprints"), Map.entry("task", "open_tasks"), Map.entry("adr", "adrs"),
             Map.entry("spec", "specs"), Map.entry("decision", "decisions"), Map.entry("question", "questions"),
             Map.entry("milestone", "milestones"), Map.entry("release", "releases"),
-            Map.entry("tech", "tech_registry"), Map.entry("feature", "use_cases"));
+            Map.entry("tech", "tech_registry"), Map.entry("feature", "use_cases"),
+            Map.entry("component", "components"));
         for (Map.Entry<String, String> e : listSlice.entrySet()) {
             String sql = LoreSlices.get(e.getValue()).baseSql();
             assertTrue(sql.contains(" AS changed_at"), e.getValue() + ": среза без changed_at");
