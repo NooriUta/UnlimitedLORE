@@ -3658,6 +3658,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-feed__nowhen { color: var(--bdh); }
 .sk-feed__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .sk-feed__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+/* Статус в строке шапки — только у карточки Peek (RecordCardHead.status), прижат вправо. */
+.sk-card__status { margin-left: auto; display: inline-flex; align-items: center; }
 .sk-feed__kind {
   display: inline-flex;
   align-items: center;

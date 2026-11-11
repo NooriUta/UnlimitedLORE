@@ -44,6 +44,7 @@ import { foldUnder, type FeedUnder, type FeedUnderFold } from './feedUnder';
 import { GluedBlock } from '../record/GluedBlock';
 import { MartProse } from '../content/MartProse';
 import { RecordSection } from '../record/RecordSection';
+import { RecordCardHead } from '../record/RecordCardHead';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -1650,11 +1651,8 @@ export function ListView({
       >
         <span className="sk-feed__when">{feedWhen(at)}</span>
         <span className="sk-feed__main">
-          <span className="sk-feed__head">
-            <span className="sk-feed__kind">{labels.valueTitle('kind', r.kind)}</span>
-            <Pill variant="id">{r.id}</Pill>
-          </span>
-          <span className="sk-feed__title"><Title r={r} href={href} onOpen={onOpen} /></span>
+          {/* Шапка — общая с Peek (S9-10): вид, ID, название; статус лента держит в метаданных. */}
+          <RecordCardHead kind={labels.valueTitle('kind', r.kind)} id={r.id} title={<Title r={r} href={href} onOpen={onOpen} />} />
           {leads.map(k => <span key={k} className="sk-feed__lead">{valueCell(k, r)}</span>)}
           {/* Статус у записи с телом остаётся в шапке: он часть утверждения о
               записи, а не часть текста. Связи же у записи с телом уезжают во

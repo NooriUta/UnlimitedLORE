@@ -38,3 +38,4 @@ export * from './RecordSection';
 // Ряд значений-чипов: первые три и «ещё N», подпись источника у унаследованных
 // (S4-29). Нужен не только паспорту — отсюда отдельный файл и экспорт.
 export * from './ValueChips';
+export * from './RecordCardHead';
