@@ -383,10 +383,10 @@ function summary(t: T, v: PlanView | null, labels: Record<string, string>): stri
   return `${roleWord(t, v.role)} · ${v.projects.join(', ') || '—'} · ${harn}`;
 }
 
-function toDiff(t: T, items: readonly Planned[], nameOf: (kc: string) => string, labels: Record<string, string>): DiffRow[] {
+function toDiff(t: T, items: readonly Planned[], labelOf: (req: AccessRequest) => string, labels: Record<string, string>): DiffRow[] {
   return items.map((it, i) => {
     const id = String(i);
-    const text = nameOf(it.req.kc_sub);
+    const text = labelOf(it.req);
     if (it.error) {
       return { id, kind: 'same', text, check: it.error.forbidden ? { state: 'forbidden', reason: it.error.reason } : { state: 'unverified', reason: it.error.reason } };
     }
@@ -400,8 +400,15 @@ function toDiff(t: T, items: readonly Planned[], nameOf: (kc: string) => string,
   });
 }
 
-function AccessChange({ requests, nameOf, harnessLabels, fetchImpl, onChanged, onClose }: {
+/**
+ * План → дифф → пачка → отмена для запросов допуска. Экспортирован для UC-4
+ * (S7B-20, PersonOffboard): там все строки — один человек, и строку называет
+ * машина (`labelOf`), а не имя человека.
+ */
+export function AccessChange({ requests, nameOf, labelOf, harnessLabels, fetchImpl, onChanged, onClose }: {
   requests: readonly AccessRequest[]; nameOf: (kc: string) => string; harnessLabels: Record<string, string>;
+  /** Подпись строки диффа; по умолчанию — имя человека (nameOf). */
+  labelOf?: (req: AccessRequest) => string;
   fetchImpl?: typeof fetch; onChanged: () => void; onClose: () => void;
 }) {
   const t = useAppT();
@@ -422,7 +429,10 @@ function AccessChange({ requests, nameOf, harnessLabels, fetchImpl, onChanged, o
     return () => { alive = false; };
   }, [requests, fetchImpl]);
 
-  const rows = useMemo(() => (items ? toDiff(t, items, nameOf, harnessLabels) : []), [items, t, nameOf, harnessLabels]);
+  const rows = useMemo(
+    () => (items ? toDiff(t, items, labelOf ?? (req => nameOf(req.kc_sub)), harnessLabels) : []),
+    [items, t, nameOf, labelOf, harnessLabels],
+  );
 
   const apply = async (picked: readonly DiffRow[]) => {
     if (!items || busy) return;

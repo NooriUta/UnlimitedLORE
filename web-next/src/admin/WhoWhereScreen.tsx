@@ -18,6 +18,7 @@ import { loreFetch } from '../auth/session';
 import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import { PersonMachines } from './MachinesScreen';
+import { PersonOffboard } from './PersonOffboard';
 import './Admin.css';
 
 /** Ось экрана: раздел «Люди и их проекты» или раздел «Проекты». */
@@ -167,7 +168,7 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
       <ListView config={config} data={kitData} onOpen={id => setOpen(id)} initial={q ? { text: q } : undefined} />
       {person && (
         <Drawer open onClose={() => setOpen(null)} title={person.name}>
-          <PersonPassport person={person} isMe={person.kc_sub === meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
+          <PersonPassport person={person} meSub={meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
         </Drawer>
       )}
       {adding && (
@@ -180,8 +181,11 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
 }
 
 /** Паспорт человека — содержимое прежней раскрытой строки, без потерь. */
-function PersonPassport({ person: p, isMe, fetchImpl, allSlugs }: { person: Person; isMe: boolean; fetchImpl?: typeof fetch; allSlugs: string[] }) {
+function PersonPassport({ person: p, meSub, fetchImpl, allSlugs }: { person: Person; meSub: string | null; fetchImpl?: typeof fetch; allSlugs: string[] }) {
   const t = useAppT();
+  const isMe = p.kc_sub === meSub;
+  // S7B-20 (UC-4): «Отключить…» — действие паспорта; кого отключаем — в адресе (?adm-off=kc_sub).
+  const [off, setOff] = useUrlParam('adm-off');
   return (
     <div className="adm-passport" data-testid={`adm-person-${p.kc_sub}`}>
       <p className="adm-sub">
@@ -210,6 +214,15 @@ function PersonPassport({ person: p, isMe, fetchImpl, allSlugs }: { person: Pers
       <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
       {/* S7B-ACL-3: машины, которыми человек владеет и к которым допущен. */}
       <PersonMachines kcSub={p.kc_sub} fetchImpl={fetchImpl} />
+      {/* S7B-20: инвентаризация «за человеком числится» и снятие по блокам — в самом паспорте. */}
+      {off === p.kc_sub
+        ? <PersonOffboard person={{ kc_sub: p.kc_sub, name: p.name }} meSub={meSub} fetchImpl={fetchImpl} onClose={() => setOff(null)} />
+        : (
+          <div className="adm-filters">
+            <button type="button" className="adm-btn adm-btn--dng" data-testid={`adm-off-open-${p.kc_sub}`}
+              onClick={() => setOff(p.kc_sub)}>{t('admin.off.open')}</button>
+          </div>
+        )}
     </div>
   );
 }
