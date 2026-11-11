@@ -30,6 +30,7 @@ import { pushUrlState, readUrlState, sectionScopedPatch, urlStateHref } from '..
 import type { UrlWindow } from '../resilience/urlState';
 import { Sheet } from './Sheet';
 import { Ear } from './Ear';
+import { KeymapHost } from '../keyboard/KeymapPanel';
 import { Popover } from './Popover';
 import { ResizeBorder, zoneSize } from './ResizeBorder';
 
@@ -630,6 +631,9 @@ export function KitShell({
             {menu(() => setDrawer(false))}
           </Sheet>
         )}
+        {/* Панель «Горячие клавиши» (S4-11) — одна на приложение: её открывают «?» и
+            пункт меню, а показывает она клавиши текущего экрана. */}
+        <KeymapHost />
       </div>
       </StatusDictCtx.Provider>
     </ShellContext.Provider>
