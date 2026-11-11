@@ -1,3 +1,4 @@
+import type { NewsBucketMetrics } from './bucketFigures';
 // Контракт GET /lore/news/v2 (SPRINT_UXR_S7A_NEWS/S7A-02, сервер — S7A-09,
 // ветка feature/s7a-news-server-prep, f525c294: NewsV2Engine.compute).
 // Только типы: все числа считает сервер (SPEC-LORE-UXR-NEWS-ALGORITHMS 1.3.0),
@@ -58,12 +59,12 @@ export interface NewsEvent {
 
 export interface NewsSubGroups {
   axis: NewsAxis;
-  groups: Array<{ key: string; events: number; elements: number; multi: number }>;
+  groups: Array<{ key: string; events: number; elements: number; multi: number } & NewsBucketMetrics>;
   total: NewsPair;
   multi_group_elements: number;
 }
 
-export interface NewsGroup {
+export interface NewsGroup extends NewsBucketMetrics {
   key: string;
   events: number;
   elements: number;
@@ -250,7 +251,8 @@ export interface NewsDay {
   by_type: Record<string, NewsTriple & { by_kind: Record<string, NewsTriple> }>;
   /** Ось групп дня — та же, что `groups.axis` ответа. */
   axis: NewsAxis;
-  groups: Array<NewsTriple & { key: string }>;
+  /** S7A · у группы дня тот же набор чисел, что у дня (контракт 11.11): поля необязательны — старый сервер. */
+  groups: Array<NewsTriple & { key: string } & NewsBucketMetrics>;
 }
 
 export interface NewsResponse {

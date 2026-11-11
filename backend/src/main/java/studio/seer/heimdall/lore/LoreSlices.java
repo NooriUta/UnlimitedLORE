@@ -1896,6 +1896,10 @@ public final class LoreSlices {
             "FROM PlanTrack ORDER BY track_id",
             List.of(), Map.of(), "");
 
+        // S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): выпадающий список «Трек» паспорта спринта —
+        // те же вершины PlanTrack в форме {code, title}, как у прочих полей с выбором.
+        slice(LoreSprintTracks.SLICE, LoreSprintTracks.SLICE_SQL, List.of(), Map.of(), "");
+
         slice("plan_sections",
             "SELECT section_id, label, start_week, end_week, color FROM PlanSection ORDER BY start_week");
 
@@ -3114,6 +3118,7 @@ public final class LoreSlices {
         Map.entry("routine_output_by_type", "рутины QG — QG-04"),
         Map.entry("plan_config", "план студии — общий или проектный, решение"),
         Map.entry("plan_tracks", "план — решение"),
+        Map.entry(LoreSprintTracks.SLICE, "план — решение (те же треки, что plan_tracks)"),
         Map.entry("plan_sections", "план — решение"),
         Map.entry("plan_checkpoints", "план — решение"),
         Map.entry("plan_versions", "план — решение"),

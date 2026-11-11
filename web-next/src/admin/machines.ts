@@ -11,7 +11,9 @@
 //   • POST /lore/user/machine-access — grant | revoke, dry_run даёт план
 //     «было → станет» (он и есть DiffPreview).
 //
-// Чего срез НЕ даёт и что собрано на клиенте (сказано в отчёте задачи):
+// Проекты, harness и право записи машины срез отдаёт сам (серверные долги
+// ACL-3): поля projects, harnesses, can_write. Клиентская сборка ниже —
+// запасной путь, когда полей нет (старый сервер или источник не прочитался):
 //   • проекты машины — у машины своего списка нет. Агент видит проекты
 //     владельца (SPEC-RBAC-OMILORE-AGENTS §10.6), поэтому «проекты машины» =
 //     проекты, где у владельца есть роль, плюс проекты уже выданных допусков
@@ -25,8 +27,6 @@ import { fetchAgents, type AgentRow } from './agents';
 import { buildParticipation, type Participation } from './participation';
 
 export const MACHINE_CLIENT_PREFIX = 'minilore-link-';
-/** Разделитель составного id строки «запись × проект» — в данных его не бывает. */
-export const PAIR_SEP = '\u0001';
 
 export type MachineRole = 'viewer' | 'actor';
 
@@ -51,6 +51,12 @@ export interface Machine {
   harness: string[];
   projects: string[];
   grants: MachineGrant[];
+  /** Проекты машины от сервера (срез); null — поля нет, собирает клиент. */
+  server_projects: string[] | null;
+  /** Harness машины от сервера (срез); null — поля нет, собирает клиент. */
+  server_harness: string[] | null;
+  /** Может ли смотрящий выдавать допуски: от сервера; null — сервер не смог вычислить; undefined — поля нет. */
+  can_write: boolean | null | undefined;
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null);
@@ -94,19 +100,23 @@ export function parseMachineAcl(rows: ReadonlyArray<Record<string, unknown>>): M
       harness: [],
       projects: uniq(grants.flatMap(g => g.projects)).sort(),
       grants,
+      server_projects: Array.isArray(r.projects) ? strs(r.projects) : null,
+      server_harness: Array.isArray(r.harnesses) ? strs(r.harnesses) : null,
+      can_write: !('can_write' in r) ? undefined : typeof r.can_write === 'boolean' ? r.can_write : null,
     };
   }).filter(m => m.client_id !== '');
 }
 
 /**
- * Проекты и harness машины — из участия (см. шапку файла). Участие не
- * прочиталось — остаются проекты из допусков, а не «проектов нет».
+ * Проекты и harness машины: от сервера, если срез их отдал; иначе — из
+ * участия (см. шапку файла). Участие не прочиталось — остаются проекты из
+ * допусков, а не «проектов нет».
  */
 export function enrichMachines(machines: readonly Machine[], participation: Participation | null, agents: readonly AgentRow[]): Machine[] {
   return machines.map(m => {
     const owner = participation?.people.find(p => p.kc_sub === m.owner_kc_sub);
-    const projects = uniq([...(owner?.projects.map(p => p.slug) ?? []), ...m.projects]).sort();
-    const harness = uniq(agents
+    const projects = m.server_projects ?? uniq([...(owner?.projects.map(p => p.slug) ?? []), ...m.projects]).sort();
+    const harness = m.server_harness ?? uniq(agents
       .filter(a => a.actor_id === m.actor_id || a.client_id === m.client_id || (a.machine_id !== null && a.machine_id === m.machine_id))
       .map(a => a.harness)
       .filter((h): h is string => h !== null)).sort();
@@ -117,43 +127,32 @@ export function enrichMachines(machines: readonly Machine[], participation: Part
 // ── записи для kit ListView ────────────────────────────────────────────────
 
 /**
- * Машины → записи списка. explodeByProject — строка на пару «машина × проект»
- * (поле project): так группировка по проекту кладёт машину с несколькими
- * проектами в каждую свою группу. Группировка kit по полю-массиву дала бы
- * группу на сочетание проектов, а не на проект.
+ * Машины → записи списка, запись на машину. Группа «по проекту» режется kit
+ * прямо по массиву projects: машина с несколькими проектами стоит в каждой
+ * своей группе, «Прочие» — без дублей (kit #1249).
  */
-export function machineRecords(ms: readonly Machine[], explodeByProject = false): KitRecord[] {
-  const one = (m: Machine, project?: string): KitRecord => {
+export function machineRecords(ms: readonly Machine[]): KitRecord[] {
+  return ms.map(m => {
     const fields: Record<string, unknown> = { owner: m.owner_name ?? '', granted: m.grants.length };
     if (m.harness.length) fields.harness = m.harness;
     if (m.projects.length) fields.projects = m.projects;
-    if (project !== undefined) fields.project = project;
     return {
-      id: project === undefined ? m.machine_id : `${m.machine_id}${PAIR_SEP}${project}`,
-      kind: 'machine', title: m.machine_id, status: '', fields,
+      id: m.machine_id, kind: 'machine', title: m.machine_id, status: '', fields,
       search: [m.machine_id, m.client_id, m.owner_name ?? '', m.owner_kc_sub ?? '', ...m.projects, ...m.harness].join(' '),
     };
-  };
-  if (!explodeByProject) return ms.map(m => one(m));
-  return ms.flatMap(m => (m.projects.length ? m.projects.map(p => one(m, p)) : [one(m, '')]));
+  });
 }
 
-/** Допуски машины → строки «человек × проект допуска» (группа по проекту). */
+/** Допуски машины → запись на человека; группа «по проекту» — по массиву projects. */
 export function grantRecords(m: Machine): KitRecord[] {
-  return m.grants.flatMap(g => (g.projects.length ? g.projects : ['']).map(p => {
-    const fields: Record<string, unknown> = { project: p, role: g.role };
+  return m.grants.map(g => {
+    const fields: Record<string, unknown> = { role: g.role };
     if (g.projects.length) fields.projects = g.projects;
     if (g.harnesses.length) fields.harness = g.harnesses;
     if (g.by) fields.by = g.by;
     if (g.at) fields.at = g.at;
-    return { id: `${g.kc_sub}${PAIR_SEP}${p}`, kind: 'grant', title: g.name, status: '', fields, search: `${g.name} ${g.kc_sub}` };
-  }));
-}
-
-/** Составной id → [запись, проект]. */
-export function splitPair(id: string): [string, string] {
-  const i = id.indexOf(PAIR_SEP);
-  return i < 0 ? [id, ''] : [id.slice(0, i), id.slice(i + 1)];
+    return { id: g.kc_sub, kind: 'grant', title: g.name, status: '', fields, search: `${g.name} ${g.kc_sub}` };
+  });
 }
 
 // ── человек: машины, которыми владеет и к которым допущен ─────────────────
@@ -279,10 +278,16 @@ export function roleRequests(m: Machine, kcSubs: readonly string[], role: string
   });
 }
 
+/** Снять допуски выбранных людей целиком. */
+export function revokeRequests(m: Machine, kcSubs: readonly string[]): AccessRequest[] {
+  return uniq(kcSubs).filter(kc => m.grants.some(g => g.kc_sub === kc))
+    .map(kc => ({ machine_id: m.machine_id, kc_sub: kc, action: 'revoke' as const }));
+}
+
 /**
  * Обратная операция по плану: «было» пусто — снять, иначе вернуть «было».
- * Пачки с окном отмены у сервера для допусков нет (в отличие от ролей,
- * batch_id/undo_of), поэтому отмена — те же запросы с прежним состоянием.
+ * Отмена пачки идёт сервером (undo_of, postMachineAccessBatch); эта функция —
+ * для расчёта ожидаемого «было» в тестах и на старом сервере.
  */
 export function inverseRequest(req: AccessRequest, plan: AccessPlan): AccessRequest {
   if (!plan.before) return { machine_id: req.machine_id, kc_sub: req.kc_sub, action: 'revoke' };
@@ -292,12 +297,96 @@ export function inverseRequest(req: AccessRequest, plan: AccessPlan): AccessRequ
   };
 }
 
+// ── пачка допусков (сервер: items + batch_id + undo_of) ───────────────────
+
+export type AccessItem = Omit<AccessRequest, 'machine_id'>;
+
+export interface BatchItemResult { kc_sub: string; result: string; status: number | null; reason: string | null }
+
+export interface MachineBatch {
+  batch_id: string | null;
+  machine_id: string;
+  items: BatchItemResult[];
+  /** Обратная пачка от сервера — её шлют с undo_of. */
+  undo: AccessItem[];
+  /** Конец окна отмены, мс; null — сервер не назвал. */
+  undo_until: number | null;
+  applied: number;
+  failed: number;
+}
+
+const itemOf = (v: unknown): AccessItem | null => {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const kc = str(o.kc_sub);
+  if (!kc) return null;
+  const action = o.action === 'revoke' ? 'revoke' : 'grant';
+  const out: AccessItem = { kc_sub: kc, action };
+  if (str(o.display_name)) out.display_name = str(o.display_name)!;
+  if (action === 'grant') {
+    out.role = str(o.role) ?? '';
+    out.projects = strs(o.projects);
+    out.harnesses = strs(o.harnesses);
+  }
+  return out;
+};
+
+export function parseBatch(body: unknown, machineId: string): MachineBatch {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const items = arr(b.items).map(v => {
+    const o = (v ?? {}) as Record<string, unknown>;
+    const err = o.error as Record<string, unknown> | undefined;
+    return {
+      kc_sub: String(o.kc_sub ?? ''), result: str(o.result) ?? 'unknown',
+      status: typeof o.status === 'number' ? o.status : null,
+      reason: err ? String(err.detail ?? err.message ?? err.error ?? '') : null,
+    };
+  });
+  const until = str(b.undo_until) ? Date.parse(String(b.undo_until)) : NaN;
+  return {
+    batch_id: str(b.batch_id), machine_id: str(b.machine_id) ?? machineId, items,
+    undo: arr(b.undo).map(itemOf).filter((x): x is AccessItem => x !== null),
+    undo_until: Number.isFinite(until) ? until : null,
+    applied: typeof b.applied === 'number' ? b.applied : items.filter(i => i.result === 'applied').length,
+    failed: typeof b.failed === 'number' ? b.failed : items.filter(i => i.result === 'failed').length,
+  };
+}
+
+/** Пачка запросов → по пачке на машину (сервер принимает пачку к одной машине). */
+export function batchesByMachine(reqs: readonly AccessRequest[]): Array<{ machine_id: string; items: AccessItem[] }> {
+  const by = new Map<string, AccessItem[]>();
+  for (const { machine_id, ...item } of reqs) {
+    const list = by.get(machine_id) ?? [];
+    list.push(item);
+    by.set(machine_id, list);
+  }
+  return [...by].map(([machine_id, items]) => ({ machine_id, items }));
+}
+
+/** Пачка допусков к одной машине; undo_of — отмена пачки batch_id (тело — её undo). */
+export async function postMachineAccessBatch(
+  req: { machine_id: string; items: readonly AccessItem[]; dry_run?: boolean; undo_of?: string },
+  fetchImpl: typeof fetch = loreFetch,
+): Promise<MachineBatch> {
+  const body = await postMachineAccess(req as unknown as AccessRequest, fetchImpl);
+  return parseBatch(body, req.machine_id);
+}
+
 /**
- * Может ли смотрящий писать допуски этой машины. Владелец — да; иначе
- * спрашиваем сервер: dry_run «снять» ничего не пишет, а право проверяет тот же
- * writeRefusal. 403 — только чтение; сбой — «не смогли проверить», не «нельзя».
+ * Может ли смотрящий писать допуски этой машины. Сервер отдаёт это полем
+ * can_write среза (то же правило, что проверка записи). Поля нет (старый
+ * сервер) — владелец да, иначе спрашиваем сервер: dry_run «снять» ничего не
+ * пишет. 403 — только чтение; сбой — «не смогли проверить», не «нельзя».
  */
 export type WriteRight = { state: 'yes' } | { state: 'no'; reason: string } | { state: 'unknown'; reason: string };
+
+/** Право из среза; null — поля can_write нет, нужна проба (probeWrite). */
+export function sliceWriteRight(m: Machine, noReason: string, unknownReason = noReason): WriteRight | null {
+  if (m.can_write === undefined) return null;
+  if (m.can_write === true) return { state: 'yes' };
+  if (m.can_write === false) return { state: 'no', reason: noReason };
+  return { state: 'unknown', reason: unknownReason };
+}
 
 export async function probeWrite(m: Machine, meSub: string | null, fetchImpl?: typeof fetch): Promise<WriteRight> {
   if (meSub && m.owner_kc_sub === meSub) return { state: 'yes' };

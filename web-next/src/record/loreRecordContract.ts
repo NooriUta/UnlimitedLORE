@@ -34,7 +34,7 @@ export interface LoreField {
   options?: OptionsSpec;
 }
 /** Откуда брать варианты: срез, его параметр (id записи) и имена полей строки. */
-export interface OptionsSpec { slice: string; param: string; value: string; label: string; group?: string }
+export interface OptionsSpec { slice: string; param?: string; value: string; label: string; group?: string }
 /** Вариант из среза: код, подпись, подпись группы (уже словами приложения). */
 export interface SliceOption { code: string; title: string; group?: string }
 /** Состояние вариантов поля из среза: пришли / не пришли (причина + повтор). */
