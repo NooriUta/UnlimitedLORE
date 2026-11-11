@@ -5834,6 +5834,8 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
 .sk-news__more[hidden] { display: none; }
 /* цифры дня: критичное — кубиками, информационное — строкой-сноской */
 .sk-news__figs { display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 4px; }
+.sk-news__figs[data-compact] { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 0 0 2px; }
+.sk-news__figs[data-compact] .sk-news__balbar { max-width: 120px; }
 .sk-news__cubes { display: flex; flex-wrap: wrap; gap: 6px; }
 .sk-news__cube {
   display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 4px;
@@ -6711,3 +6713,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* S4-24: варианты поля не загрузились — причина словами и «Повторить» рядом со значением. */
 .sk-rec-fields__opterr { margin-left: 6px; font-size: var(--fs-xs); color: var(--wrn); }
 .sk-rec-fields__retry { margin-left: 6px; }
+
+/* Режим «создание» паспорта (S4-24): черновик, поля, причина неактивной «Сохранить». */
+.sk-rec-create { min-width: 0; }
+.sk-rec-create__form { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; padding: var(--pad-y) var(--pad-x); }
+.sk-rec-create__head { display: flex; align-items: baseline; gap: var(--gap); flex-wrap: wrap; }
+.sk-rec-create__draft { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; color: var(--wrn); border: 1px solid var(--wrn); border-radius: 999px; padding: 0 var(--pad-x); }
+.sk-rec-create__title { margin: 0; font-size: var(--fs-lg); color: var(--t1); overflow-wrap: anywhere; }
+.sk-rec-create__note { font-size: var(--fs-xs); color: var(--wrn); overflow-wrap: anywhere; }
+.sk-rec-create__fields { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-rec-create__field { min-width: 0; }
+.sk-rec-create__err { margin: 0; color: var(--dng); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.sk-rec-create__foot { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
+.sk-rec-create__why { font-size: var(--fs-xs); color: var(--t3); }

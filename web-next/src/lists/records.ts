@@ -371,6 +371,8 @@ export function releaseRecord(row: Row): KitRecord {
       project: list(row.projects),
       sprints: num(row.sprint_count),
       prs: num(row.pr_count),
+      // Дата выпуска — поле календаря (K2-VIEW-CALENDAR); updated_at — время правки, не дата события.
+      released: str(row.release_date),
     },
     ...freshness(row, str(row.release_date)),
   };

@@ -196,7 +196,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     let alive = true;
     for (const f of optFields) {
       const spec = f.options!;
-      slice<Record<string, unknown>>(spec.slice, { [spec.param]: id }).then(
+      slice<Record<string, unknown>>(spec.slice, spec.param ? { [spec.param]: id } : undefined).then(
         body => { if (alive) setSliceOpts(prev => ({ ...prev, [f.key]: { items: optionsFromSlice(body?.rows ?? [], spec, g => t(g === 'agent' ? 'pp.opt.agents' : g === 'person' ? 'pp.opt.people' : 'pp.opt.other')) } })); },
         e => { if (alive) setSliceOpts(prev => ({ ...prev, [f.key]: { error: e instanceof Error ? e.message : String(e), retry: () => setOptSeq(n => n + 1) } })); },
       );
