@@ -1291,5 +1291,14 @@
   "admin.macl.matrix.noTeams": "Команды проектов не прочитались: {reason}",
   "admin.macl.person.title": "Машины · владеет {owned} · допущен к {granted}",
   "admin.macl.person.none": "Ни одной машины: не владеет и не допущен (проверено)",
-  "mdref.modelLoading": "Модель LORE ещё загружается — повторите через секунду"
+  "mdref.modelLoading": "Модель LORE ещё загружается — повторите через секунду",
+  "lists.field.released": "Выпущен",
+  "lists.calendar.dateGroup": "Дата календаря",
+  "lists.calendar.plannedStart": "План: начало",
+  "lists.calendar.doneDate": "Факт: закрыт",
+  "lists.calendar.released": "Дата выпуска",
+  "lists.library.view": "Библиотека",
+  "lists.library.back": "Список",
+  "lists.library.noArea": "Без области",
+  "lists.library.noComponent": "Без компонента"
 }
