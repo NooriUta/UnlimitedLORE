@@ -55,6 +55,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];
+const NO_PINNED: readonly string[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };
 
 /**
@@ -239,7 +240,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // которую человек видит, — ровно та жалоба, с которой начинался S4-03.
   const facetKeys = config.list?.filters ?? [];
   const facetKey = facetKeys.join(',');
-  const facetAxes = useMemo(() => axesForKeys(facetKeys), [facetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const facetAxes = useMemo(() => axesForKeys(facetKeys, def.slice), [facetKey, def.slice]); // eslint-disable-line react-hooks/exhaustive-deps
   const serverCounts = useListFacets(def.slice, {
     axes: facetAxes,
     scopeProjects: scope,
@@ -352,6 +353,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
         // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
         valueIcon={loreValueIcon}
+        // Закреплённые значения фасета (S9-03): текущие релизы приходят с сервера
+        // тем же ответом /facets, что и счётчики, — отдельного запроса нет.
+        facetPinned={key => serverCounts?.pinned?.[key] ?? NO_PINNED}
         // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
