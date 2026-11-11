@@ -937,5 +937,15 @@
   "admin.roles.filter": "Отбор людей",
   "admin.roles.onlyNoProjects": "Только без проектов",
   "admin.roles.noProjectsEmpty": "Людей без проектов нет",
-  "admin.roles.noProjectsEmptyHint": "у каждой проверенной учётки есть хотя бы одна роль"
+  "admin.roles.noProjectsEmptyHint": "у каждой проверенной учётки есть хотя бы одна роль",
+  "kitPage.cal.head": "Календарь",
+  "kitPage.cal.lead": "Месяц сеткой: в клетке до трёх записей, дальше «ещё N»; записи без даты названы числом. Какое поле — дата, решает приложение.",
+  "kitPage.cal.todo": "к работе",
+  "kitPage.cal.done": "готово",
+  "kitPage.cal.e1": "Срез версии",
+  "kitPage.cal.e2": "Промо",
+  "kitPage.cal.e3": "Тег",
+  "kitPage.cal.e4": "Выкатка",
+  "kitPage.cal.e5": "Релиз",
+  "kitPage.cal.e6": "Без даты"
 }

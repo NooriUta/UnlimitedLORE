@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, CalendarMonth, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -208,6 +208,21 @@ function Samples() {
           log={[{ version: 7, who: 'кто-то', when: '2026-11-01T10:00:00Z', action: 'activate' }]}
           onActivate={noop}
           onRollback={noop}
+        />
+      </section>
+      <section className="bare__sec" data-kit="calendar">
+        <h2 className="bare__h2">Календарь</h2>
+        {/* K2-VIEW-CALENDAR: месяц сеткой, «ещё N», записи без даты числом. Дата «сегодня» задана — снимок не меняется по дням. */}
+        <CalendarMonth
+          config={{ modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [{ code: 'todo', title: 'к работе', category: 'todo', icon: 'calendar', color: 'var(--t3)' }, { code: 'done', title: 'готово', category: 'done', icon: 'check-mark', color: 'var(--suc)' }] } }}
+          records={[
+            { id: 'a', kind: 'k', title: 'Срез версии', status: 'done', fields: { d: '2026-11-11' } },
+            { id: 'b', kind: 'k', title: 'Промо', status: 'todo', fields: { d: '2026-11-11' } },
+            { id: 'c', kind: 'k', title: 'Тег', status: 'todo', fields: { d: '2026-11-11' } },
+            { id: 'e', kind: 'k', title: 'Выкатка', status: 'todo', fields: { d: '2026-11-11' } },
+            { id: 'f', kind: 'k', title: 'Без даты', status: 'todo', fields: {} },
+          ]}
+          date="d" month="2026-11" today="2026-11-11" narrow={false}
         />
       </section>
       <section className="bare__sec" data-kit="chips">

@@ -6377,3 +6377,28 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-keymap__none, .sk-keymap__note { color: var(--t3); font-size: var(--fs-xs); margin: 0; }
 .sk-keymap__capture { min-width: 120px; }
 .sk-keymap__foot { display: grid; gap: 4px; margin-top: 8px; }
+
+/* K2-VIEW-CALENDAR: месяц сеткой; телефон — список по дням (прототип утверждён 11.11.2026). */
+.sk-cal { display: grid; gap: 8px; min-width: 0; }
+.sk-cal__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sk-cal__month { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-md); text-transform: capitalize; }
+.sk-cal__undated { font-size: var(--fs-xs); color: var(--wrn); }
+.sk-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--bd); border-radius: var(--r-md); overflow: hidden; }
+.sk-cal__dow { padding: 4px 6px; background: var(--bg2); border-bottom: 1px solid var(--bd); font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
+.sk-cal__day { min-height: 84px; padding: 3px 4px; display: grid; gap: 2px; align-content: start; min-width: 0; border-right: 1px solid var(--bd); border-bottom: 1px solid var(--bd); }
+.sk-cal__day:nth-child(7n) { border-right: 0; }
+.sk-cal__day[data-out] .sk-cal__n { opacity: .45; }
+.sk-cal__day[data-today] { background: color-mix(in srgb, var(--acc) 7%, transparent); }
+.sk-cal__day[data-today] .sk-cal__n { color: var(--acc); font-weight: 700; }
+.sk-cal__n { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-cal__evs { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; min-width: 0; }
+.sk-cal__ev { --st-c: var(--t3); min-width: 0; border-left: 3px solid var(--st-c); border-radius: var(--r-sm); background: var(--bg2); }
+.sk-cal__ev a, .sk-cal__evbtn { display: block; color: var(--t1); text-decoration: none; background: none; border: 0; padding: 1px 4px; font: inherit; text-align: left; width: 100%; cursor: pointer; }
+.sk-cal__evt { display: block; font-size: var(--fs-2xs); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 4px; }
+.sk-cal__ev a .sk-cal__evt, .sk-cal__evbtn .sk-cal__evt { padding: 0; }
+.sk-cal__more { font-size: var(--fs-2xs); color: var(--t3); padding-left: 4px; }
+.sk-cal__pday { display: grid; gap: 3px; }
+.sk-cal__pdh { margin: 0; font-size: var(--fs-xs); font-weight: 700; color: var(--t2); }
+.sk-cal__pday[data-today] .sk-cal__pdh { color: var(--acc); }
+.sk-cal__none { color: var(--t3); font-size: var(--fs-sm); margin: 0; }
+.sk-cal--days { gap: 10px; }
