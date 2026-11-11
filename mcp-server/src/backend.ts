@@ -307,7 +307,7 @@ export function sliceExtraOf(body: SliceBody): SliceExtra | undefined {
 }
 
 type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string; page?: unknown; scope?: unknown; scope_projects?: unknown; outside_scope?: unknown };
-export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean; fields?: string[]; fields_checked?: boolean; warning?: string };
+export type SlicePage = { limit: number | null; offset: number; total: number; has_more: boolean; fields?: string[]; fields_checked?: boolean; warning?: string; changed_from?: string | null; changed_to?: string | null; sort?: string | null; time_zone?: string };
 
 /**
  * SE-01: страница выдачи (limit/offset у любого слайса). Бэкенд кладёт её в `page`;
@@ -324,6 +324,11 @@ export function slicePageOf(body: SliceBody): SlicePage | undefined {
     ...(Array.isArray(o.fields) ? { fields: o.fields as string[] } : {}),
     ...(typeof o.fields_checked === 'boolean' ? { fields_checked: o.fields_checked } : {}),
     ...(typeof o.warning === 'string' ? { warning: o.warning } : {}),
+    // MT-MCP-CHANGED-RANGE: применённый период и порядок — иначе отфильтрованная выдача читалась бы как весь срез.
+    ...('changed_from' in o ? { changed_from: (o.changed_from as string | null) ?? null } : {}),
+    ...('changed_to' in o ? { changed_to: (o.changed_to as string | null) ?? null } : {}),
+    ...('sort' in o ? { sort: (o.sort as string | null) ?? null } : {}),
+    ...(typeof o.time_zone === 'string' ? { time_zone: o.time_zone } : {}),
   };
 }
 export type SliceMeta = { truncated: boolean | string; limit?: number; hint?: string };

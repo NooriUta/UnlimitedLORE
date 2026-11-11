@@ -114,7 +114,12 @@ export function registerLoreRead(server: McpServer): void {
       'SE-01: every slice accepts params limit (1..1000), offset (>=0) and fields (comma list of columns to keep) — ' +
       'e.g. {"limit":"1","fields":"release_id,is_current"} reads just the newest release instead of every description_md; ' +
       'a paged/projected answer carries _page ' +
-      '{limit, offset, total, has_more}, so a page never looks like the full list.',
+      '{limit, offset, total, has_more}, so a page never looks like the full list. ' +
+      'MT-MCP-CHANGED-RANGE: every slice whose rows carry changed_at also accepts changed_from / changed_to ' +
+      '(ISO date YYYY-MM-DD or date-time, both bounds inclusive, UTC; a date as changed_to means the whole day) ' +
+      'and sort=changed_at:desc|asc — e.g. slice "closed_tasks" with {"changed_from":"2026-11-11","sort":"changed_at:desc"} = closed today. ' +
+      'Filter and sort run before limit/offset; _page.total counts the filtered rows and echoes changed_from/changed_to/sort. ' +
+      'A slice without changed_at answers 400 BAD_PARAMS instead of ignoring the range.',
     {
       slice: z.string().describe('slice id from list_slices, e.g. "sprints"'),
       params: z
