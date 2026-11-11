@@ -72,6 +72,7 @@
   "kit.shell.sections": "Sections",
   "kit.shell.menu": "Menu",
   "kit.shell.skip": "Skip to content",
+  "kit.shell.status": "Status bar",
   "kit.shell.planned": "soon",
   "kit.shell.plannedHint": "Module is planned — not available yet",
   "kit.shell.menuEmpty": "The config has no menu groups",

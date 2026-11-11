@@ -6571,3 +6571,41 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-palette__kindsbtn::after { content: " ▸"; color: var(--t3); }
 .sk-palette__kindsbtn[aria-expanded="true"]::after { content: " ▾"; }
 .sk-palette__kindn { font-family: var(--mono); color: var(--t3); }
+
+/* S4-21: строка состояния во всю ширину внизу окна (ответ владелицы 7а). Липнет к
+   низу; меню и ручка границы при ней короче на её высоту — иначе низ меню уходит
+   под строку. Содержимое строки — слот приложения. */
+.sk-shell--status { --sk-status-h: 24px; grid-template-rows: auto minmax(0, 1fr) auto; }
+.sk-shell__status {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  height: var(--sk-status-h);
+  padding: 0 12px;
+  border-top: 1px solid var(--bd);
+  background: var(--bg1);
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sk-shell--status .sk-shell__side {
+  height: calc(100dvh - var(--sk-top-h) - var(--sk-status-h));
+  max-height: calc(100dvh - var(--sk-top-h) - var(--sk-status-h));
+}
+.sk-shell--status .sk-shell__resize { height: calc(100dvh - var(--sk-top-h) - var(--sk-status-h)); }
+/* Угловая метка приложения (версия сборки и т.п., класс sk-shell__corner): есть
+   строка состояния — метка живёт в ней, а угловая копия прячется; на телефоне
+   строки нет, и метка остаётся в углу. */
+.sk-shell--status .sk-shell__main .sk-shell__corner { display: none; }
+.sk-shell__status .sk-shell__corner { position: static; }
+
+/* S7B-ACL-3: подписанные группы в ScopePicker — свои / остальные (подписи от приложения). */
+.sk-scope__grp { display: grid; gap: 2px; }
+.sk-scope__grp + .sk-scope__grp { margin-top: 6px; }
+.sk-scope__grph { margin: 4px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }

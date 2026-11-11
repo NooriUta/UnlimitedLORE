@@ -72,6 +72,7 @@
   "kit.shell.sections": "Разделы",
   "kit.shell.menu": "Меню",
   "kit.shell.skip": "Перейти к содержимому",
+  "kit.shell.status": "Строка состояния",
   "kit.shell.planned": "скоро",
   "kit.shell.plannedHint": "Модуль запланирован — пока недоступен",
   "kit.shell.menuEmpty": "В конфиге нет групп меню",

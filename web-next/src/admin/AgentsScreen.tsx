@@ -11,6 +11,8 @@ import { Fragment, useMemo, useState } from 'react';
 import { DiffPreview, Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useUrlParam, type DiffRow } from '@seidr/kit';
 import { AgentProjectsPanel } from './AccessBlocks';
 import { RotatePanel } from './KcDanger';
+import { bindKcClient, fetchKcClients, orphanBindOptions } from './wizards';
+import { fetchRoleMatrix } from './roles';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
@@ -112,7 +114,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
             </tbody>
           </table>
         </div>
-        <OrphansBlock rows={data.rows} fetchImpl={fetchImpl} />
+        <OrphansBlock rows={data.rows} fetchImpl={fetchImpl} onBound={res.reload} />
       </>
     );
   }
@@ -151,7 +153,7 @@ function AgentWhyLine({ row }: { row: AgentRow }) {
  *     агента в графе. «Сирот нет» — только если KC ответил; 403, «KC не
  *     настроен» (503 KC_NOT_CONFIGURED) и сбой — каждое своими словами.
  */
-function OrphansBlock({ rows, fetchImpl }: { rows: AgentRow[]; fetchImpl?: typeof fetch }) {
+function OrphansBlock({ rows, fetchImpl, onBound }: { rows: AgentRow[]; fetchImpl?: typeof fetch; onBound?: () => void }) {
   const t = useAppT();
   const lonely = graphOrphans(rows);
   const res = useLoadState<KcOrphan[]>(signal => fetchAgentOrphans(signal, fetchImpl), [fetchImpl]);
@@ -180,6 +182,7 @@ function OrphansBlock({ rows, fetchImpl }: { rows: AgentRow[]; fetchImpl?: typeo
           ))}
         </ul>
         <p className="adm-hint">{t('admin.orphans.kcHint')}</p>
+        <BindClientForm orphans={res.data} fetchImpl={fetchImpl} onBound={() => { res.reload(); onBound?.(); }} />
       </>
     );
   }
@@ -201,6 +204,97 @@ function OrphansBlock({ rows, fetchImpl }: { rows: AgentRow[]; fetchImpl?: typeo
         {kc}
       </div>
     </section>
+  );
+}
+
+/**
+ * S4-AGENT-CLIENT-PICK: готовую учётку KC (сироту) привязать к человеку — та
+ * же форма «Учётка», что в v1 (там она заморожена). Ось клиента — из
+ * GET /lore/kc/agents: у машинных lore-mcp-full_<машина> она приходит из ролей
+ * сервисной учётки. Ось пуста — пункт виден, но выключен: «привязка запрещена»
+ * словами, а не молча пропавшая учётка.
+ */
+function BindClientForm({ orphans, fetchImpl, onBound }: { orphans: readonly KcOrphan[]; fetchImpl?: typeof fetch; onBound: () => void }) {
+  const t = useAppT();
+  const kc = useLoadState<unknown[]>(() => fetchKcClients(fetchImpl), [fetchImpl]);
+  const people = useLoadState(signal => fetchRoleMatrix(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
+  const [client, setClient] = useState('');
+  const [owner, setOwner] = useState('');
+  const [profilePick, setProfilePick] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  if (kc.state === 'error' || (kc.error && !kc.data)) return <LoadError error={kc.error} onRetry={kc.reload} />;
+  if (!kc.data) return <Skeleton lines={1} label={t('admin.bind.loading')} />;
+  const options = orphanBindOptions(orphans, kc.data);
+  const picked = options.find(o => o.clientId === client) ?? null;
+  const profile = picked && picked.profiles.includes(profilePick) ? profilePick : picked?.profiles[0] ?? '';
+  const ready = !!picked && !!profile && !!owner && !busy;
+
+  const go = async () => {
+    if (!picked || !profile || !owner) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await bindKcClient({ clientId: picked.clientId, ownerSub: owner, profile, machine: picked.machine }, fetchImpl);
+      setDone(picked.clientId);
+      setClient('');
+      setOwner('');
+      onBound();
+    } catch (e) {
+      setError(e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="adm-field" role="group" aria-label={t('admin.bind.title')} data-testid="adm-bind-client">
+      <h4 className="adm-field__l">{t('admin.bind.title')}</h4>
+      <label className="adm-field">
+        <span>{t('admin.bind.client')}</span>
+        <select className="adm-select" data-testid="adm-bind-client-pick" value={client} onChange={e => { setClient(e.target.value); setDone(null); }}>
+          <option value="">{t('admin.wiz.pickOne')}</option>
+          {options.map(o => (
+            <option key={o.clientId} value={o.clientId} disabled={o.profiles.length === 0}>
+              {o.profiles.length === 0 ? `${o.clientId} — ${t('admin.bind.noScope')}` : o.clientId}
+            </option>
+          ))}
+        </select>
+      </label>
+      {picked && picked.profiles.length > 1 && (
+        <label className="adm-field">
+          <span>{t('admin.col.profile')}</span>
+          <select className="adm-select" data-testid="adm-bind-profile" value={profile} onChange={e => setProfilePick(e.target.value)}>
+            {picked.profiles.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </label>
+      )}
+      <label className="adm-field">
+        <span>{t('admin.col.owner')}</span>
+        {people.state === 'error' || (people.error && !people.data)
+          ? <LoadError error={people.error} onRetry={people.reload} />
+          : (
+            <select className="adm-select" data-testid="adm-bind-owner" value={owner} disabled={!people.data} onChange={e => setOwner(e.target.value)}>
+              <option value="">{t('admin.wiz.pickOne')}</option>
+              {(people.data?.people ?? []).map(p => <option key={p.kc_sub} value={p.kc_sub}>{p.name}</option>)}
+            </select>
+          )}
+      </label>
+      {picked && (
+        <p className="adm-hint" data-testid="adm-bind-summary">
+          {t('admin.bind.summary', { profile: profile || '—', machine: picked.machine ?? t('admin.bind.noMachine') })}
+        </p>
+      )}
+      <div className="adm-field--btns">
+        <button type="button" className="adm-btn" data-testid="adm-bind-go" disabled={!ready} onClick={() => { void go(); }}>
+          {t('admin.bind.go')}
+        </button>
+      </div>
+      {error && <p className="adm-err" role="alert" data-testid="adm-bind-error">{t('admin.bind.error', { reason: error })}</p>}
+      {done && <p className="adm-sub" role="status" data-testid="adm-bind-done">{t('admin.bind.done', { client: done })}</p>}
+    </div>
   );
 }
 
