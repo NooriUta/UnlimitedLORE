@@ -6174,7 +6174,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */
 .sk-shell__top-start { display: flex; align-items: center; min-width: 0; }
 .sk-scope__chev { color: var(--t3); font-size: var(--fs-xs); }
-.sk-ptrig { display: inline-flex; align-items: center; gap: var(--gap); }
+/* Шапка не шире экрана между телефоном и десктопом (S4-MOBILE-EDGE,
+   SPEC-SEIDRKIT-ADAPTIVE-TEST §3 п.1): замер v1.17.13 — на 768 и 915 px
+   жёсткие 220 px поиска распирали шапку до 849/948 px, и уезжала вся
+   страница. Поиск сжимается до иконки, подпись — многоточием. */
+.sk-ptrig { display: inline-flex; align-items: center; gap: var(--gap); min-width: 0; }
 .sk-ptrig__search,
 .sk-ptrig__cmd {
   display: inline-flex;
@@ -6190,9 +6194,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   font-size: var(--fs-sm);
   cursor: pointer;
 }
-.sk-ptrig__search { min-width: 220px; justify-content: flex-start; }
+.sk-ptrig__search { flex: 0 1 220px; min-width: 0; justify-content: flex-start; }
 .sk-ptrig__search .sk-kbd { margin-left: auto; }
-.sk-ptrig__text { white-space: nowrap; }
+.sk-ptrig__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-ptrig__search:hover,
 .sk-ptrig__cmd:hover { border-color: var(--bdh); color: var(--t1); }
 .sk-ptrig__search:focus-visible,
