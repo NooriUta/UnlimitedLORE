@@ -6549,3 +6549,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-palette__kindsbtn::after { content: " ▸"; color: var(--t3); }
 .sk-palette__kindsbtn[aria-expanded="true"]::after { content: " ▾"; }
 .sk-palette__kindn { font-family: var(--mono); color: var(--t3); }
+
+/* S7B-ACL-3: подписанные группы в ScopePicker — свои / остальные (подписи от приложения). */
+.sk-scope__grp { display: grid; gap: 2px; }
+.sk-scope__grp + .sk-scope__grp { margin-top: 6px; }
+.sk-scope__grph { margin: 4px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
