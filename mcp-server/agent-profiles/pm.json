@@ -6,6 +6,7 @@
     "*": "deny",
     "list_slices": "allow",
     "query_slice": "allow",
+    "changed": "allow",
     "run_block": "allow",
     "search": "allow",
     "search_similar": "allow",

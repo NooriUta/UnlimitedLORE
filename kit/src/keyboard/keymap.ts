@@ -18,7 +18,7 @@ export interface KitKeyAction {
 
 /** Клавиши, которые слой списка уже занял (курсор, открыть, выделить, палитра, поиск). */
 export const LIST_RESERVED_KEYS: readonly string[] = [
-  'ArrowDown', 'ArrowUp', 'J', 'K', 'Home', 'End', 'Enter', 'X', 'Escape', 'Space', 'Tab', 'Mod+K', '/',
+  'ArrowDown', 'ArrowUp', 'J', 'K', 'Home', 'End', 'Enter', 'X', 'Escape', 'Space', 'Tab', 'Mod+K', '/', '?',
 ];
 
 function split(spec: string): { mods: Set<string>; key: string } {

@@ -543,6 +543,30 @@
       ]
     }
   },
+  "changed": {
+    "input": {
+      "actor": "string?",
+      "from": "string?",
+      "limit": "number?",
+      "offset": "number?",
+      "project": "string?",
+      "status_category": "string?",
+      "to": "string?",
+      "types": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
   "claude_rules_diff": {
     "input": {
       "doc_id": "string",

@@ -6,11 +6,11 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   Forbidden, ICON_CANON, ListView, LoadError, NO_DATE_RANGE, RecordDock, ScreenHead, Skeleton, dateRangeUrlPatch,
-  isDateRangeActive, pushUrlState, readDateRangeUrl, readUrlState, urlStateHref,
+  isDateRangeActive, isShowClosed, pushUrlState, readDateRangeUrl, readUrlState, showClosedOf, urlStateHref,
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { DateFilterScope, DateRangeValue, KitRecord, RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { DateFilterScope, DateRangeValue, KitRecord, KitShowClosed, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
 import {
@@ -29,6 +29,7 @@ import { useProjectScope } from '../scope/ProjectScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
 import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
+import { loreListPeek } from '../record/lorePeek';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -145,6 +146,22 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
   // Окно отдаём наружу: паспорт пишет в адрес свою вкладку, и писать он обязан
   // в ТО ЖЕ окно, где живут `open` и `place` (D-21).
   return [open, set, backHref, win] as const;
+}
+
+type SliceAnswer = Awaited<ReturnType<typeof fetchSlice<Record<string, unknown>>>>;
+
+/**
+ * Открытые и закрытые одной выдачей: строки подряд, метаданные — основного
+ * среза; неполнота любого из двух — неполнота всей выдачи (не молчим).
+ */
+export function mergeBodies(open: SliceAnswer, closed: SliceAnswer): SliceAnswer {
+  const truncated = open.truncated || closed.truncated;
+  return {
+    ...open,
+    rows: [...open.rows, ...closed.rows],
+    ...(truncated ? { truncated, hint: open.hint ?? closed.hint } : {}),
+    warnings: [...(open.warnings ?? []), ...(closed.warnings ?? [])],
+  };
 }
 
 function browserZone(): string {
@@ -266,23 +283,40 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     [rangeOn, JSON.stringify(range), def.slice, tz],
   );
   const rangeKey = rangeParam ? JSON.stringify(rangeParam) : '';
+  // Закрытые — фильтр по умолчанию, а не срез (слово владелицы 11.11.2026).
+  // У раздела со вторым срезом закрытых (closedSlice) режим «Показывать
+  // закрытые» решает, грузить ли их: «скрыть» — только основной срез, иначе
+  // догружается срез закрытых и сливается с открытыми.
+  const [closedMode, setClosedMode] = useState<KitShowClosed>(() => {
+    const lc = urlWin ? readUrlState(urlWin).get('lc') : null;
+    return isShowClosed(lc) ? lc : showClosedOf({}, baseConfig);
+  });
+  // Список держит режим сам; снять фильтр снаружи (переход на запись вне его)
+  // значит пересобрать список с новым режимом — ключ меняется ровно тогда.
+  const [listKey, setListKey] = useState(0);
+  const loadClosed = !!def.closedSlice && closedMode !== 'hide';
   const result = useLoadState(
     async signal => {
-      if (!rangeParam) return fetchSlice(def.slice, scopeParam, { signal, fetchImpl });
-      try {
-        const b = await fetchSlice(def.slice, { ...scopeParam, ...rangeParam }, { signal, fetchImpl });
-        setRangeScope('source');
-        return b;
-      } catch (e) {
-        if (!isRangeRejected(e)) throw e;
-        // Сервер диапазона не знает — честный откат: те же строки без него, отбор
-        // по загруженному, и это сказано словами (kit: «по загруженному»).
-        markRangeUnsupported(def.slice);
-        setRangeScope('loaded');
-        return fetchSlice(def.slice, scopeParam, { signal, fetchImpl });
-      }
+      const one = async (slice: string): Promise<SliceAnswer> => {
+        if (!rangeParam) return fetchSlice(slice, scopeParam, { signal, fetchImpl });
+        try {
+          const b = await fetchSlice(slice, { ...scopeParam, ...rangeParam }, { signal, fetchImpl });
+          setRangeScope('source');
+          return b;
+        } catch (e) {
+          if (!isRangeRejected(e)) throw e;
+          // Сервер диапазона не знает — честный откат: те же строки без него, отбор
+          // по загруженному, и это сказано словами (kit: «по загруженному»).
+          markRangeUnsupported(slice);
+          setRangeScope('loaded');
+          return fetchSlice(slice, scopeParam, { signal, fetchImpl });
+        }
+      };
+      if (!loadClosed || !def.closedSlice) return one(def.slice);
+      const [openBody, closedBody] = await Promise.all([one(def.slice), one(def.closedSlice)]);
+      return mergeBodies(openBody, closedBody);
     },
-    [def.slice, fetchImpl, scopeParam, rangeKey],
+    [def.slice, def.closedSlice, loadClosed, fetchImpl, scopeParam, rangeKey],
     { rows: body => body.rows },
   );
   const servedAt = result.data?.served_at;
@@ -317,11 +351,23 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString()) : null),
     [body, def],
   );
+  // Переход на запись вне фильтра (слово владелицы 11.11.2026): открыта запись,
+  // которой в загруженном нет, а закрытые скрыты, — фильтр снимается сам
+  // (режим «внизу»), догружаются закрытые, и запись находится. Видна — не трогаем.
+  const openId = open.id;
+  useEffect(() => {
+    if (!def.closedSlice || loadClosed || !openId || !data) return;
+    if (data.records.some(r => r.id === openId)) return;
+    if (urlWin) pushUrlState({ lc: 'below' }, { replace: true, win: urlWin });
+    setClosedMode('below');
+    setListKey(k => k + 1);
+  }, [def.closedSlice, loadClosed, openId, data, urlWin]);
   // Предупреждения выдачи плюс оговорка самого раздела (S4-V2-SECTIONS): где
   // срез по природе отдаёт НЕ ВСЁ, «Показано N из N» — правда про выдачу, но не
   // про корпус, и без слов человек решит, что остального у него нет.
   const warnings = [
     ...(def.note ? [def.note] : []),
+    ...(def.closedNote && def.closedSlice && !loadClosed ? [def.closedNote] : []),
     ...(body ? sliceWarnings(body) : []),
     // Оговорки про ось статусов — там же, где прочие: человек должен видеть,
     // что список статусов взят не из модели, а из умолчания приложения.
@@ -387,6 +433,11 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const headId = titleId ?? `list-screen-${screen}`;
   // Иконка заголовка — из канона LORE v1 (S4-25): def.icon = иконка раздела v1.
   const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon } : undefined;
+  // Peek из списка (S9-10): пробел на строке — карточка записи; тип LORE = вид строки.
+  const listPeek = useMemo(
+    () => loreListPeek(lang, id => (viewData ?? data)?.records.find(r => r.id === id)?.kind ?? null, fetchImpl),
+    [lang, viewData, data, fetchImpl],
+  );
   const ready = !(result.state === 'loading' || result.state === 'error' || result.state === 'forbidden' || !data);
 
   let content;
@@ -403,7 +454,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         data={viewData ?? data}
         // Счётчики источника считаны БЕЗ диапазона дат — при диапазоне им не
         // место: kit считает по загруженному и говорит это (S9-01).
-        counts={rangeOn ? undefined : serverCounts}
+        // Слиты открытые и закрытые — счётчики источника (по основному срезу) уже
+        // не про эту выдачу: kit считает по загруженному и говорит это.
+        counts={rangeOn || loadClosed ? undefined : serverCounts}
         dateFilter={{
           field: DATE_FIELD,
           title: t('lists.date.changed'),
@@ -421,7 +474,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         quickIcons={def.quickIcons}
         // Свежие сверху по умолчанию (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS): это
         // умолчание — `ls` в адресе (явный выбор или применённый вид) kit ставит поверх.
-        initial={def.defaultSort ? { sort: def.defaultSort } : undefined}
+        initial={def.defaultSort || listKey ? { ...(def.defaultSort ? { sort: def.defaultSort } : {}), ...(listKey ? { closed: closedMode } : {}) } : undefined}
+        key={listKey}
+        onStateChange={s => { if (def.closedSlice) setClosedMode(showClosedOf(s, config)); }}
         // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
         // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
         // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
@@ -437,6 +492,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // в память (приватный режим ширину просто не запомнит).
         widths={{ screen: screen, store: appStorage }}
         expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
+        peek={listPeek}
         onOpen={id => {
           setOpen({ ...open, id });
           // Название — из загруженных строк, адрес — тот же, что в адресной

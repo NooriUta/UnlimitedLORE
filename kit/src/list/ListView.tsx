@@ -43,7 +43,21 @@ import { foldBody, type FeedBody } from './feedBody';
 import { foldUnder, type FeedUnder, type FeedUnderFold } from './feedUnder';
 import { GluedBlock } from '../record/GluedBlock';
 import { MartProse } from '../content/MartProse';
+import { applyKeymapOverrides, openKeymapPanel, registerKeymap, useKeymapOverrides } from '../keyboard/keymapOverrides';
+import type { KeymapGroup } from '../keyboard/KeymapPanel';
+
+/** Клавиши слоя списка — для панели «Горячие клавиши» (показываются, не переназначаются). */
+const LIST_BUILTIN_KEYS: readonly { hotkey: string; title: KitKey }[] = [
+  { hotkey: 'ArrowDown', title: 'kit.keymap.list.down' }, { hotkey: 'ArrowUp', title: 'kit.keymap.list.up' },
+  { hotkey: 'Enter', title: 'kit.keymap.list.open' }, { hotkey: 'X', title: 'kit.keymap.list.select' },
+  { hotkey: 'Escape', title: 'kit.keymap.list.unselect' }, { hotkey: '/', title: 'kit.keymap.list.search' },
+  { hotkey: 'Mod+K', title: 'kit.keymap.list.palette' }, { hotkey: '?', title: 'kit.keymap.list.help' },
+];
 import { RecordSection } from '../record/RecordSection';
+import { RecordCardHead } from '../record/RecordCardHead';
+import { PeekPanel, type ListPeek } from './PeekPanel';
+
+export type { ListPeek } from './PeekPanel';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -233,6 +247,11 @@ export interface ListViewProps {
    * «Ещё» при незагруженном нижнем уровне не предлагается.
    */
   onFeedUnder?: (id: string) => void;
+  /**
+   * Peek (S9-10, D-2026-LORE-PEEK-ONE-CARD): пробел на строке — панель справа с карточкой, J/K листают,
+   * Esc закрывает; на узком экране — нижний лист. Нет — пробел ничего не делает.
+   */
+  peek?: ListPeek;
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
   /**
@@ -444,8 +463,8 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
 const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title: 220 };
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -454,9 +473,27 @@ export function ListView({
   // значение» на 393 px не влезают ни при каком шрифте (S9-12).
   const chipsInline = narrow ? CHIPS_INLINE_NARROW : CHIPS_INLINE;
   // Клавиша, которую не нажать однозначно, — ошибка конфигурации, а не тишина.
-  assertKeymap([...(rowActions ?? []), ...(bulkActions ?? [])], LIST_RESERVED_KEYS);
+  assertKeymap([...(rowActionsProp ?? []), ...(bulkActionsProp ?? [])], LIST_RESERVED_KEYS);
+  // Личная раскладка (S4-11, решение владелицы 11.11): умолчание — клавиши от
+  // приложения, поверх — переназначения человека. Реагируем и подписываем
+  // кнопки уже по ним: иначе панель писала бы раскладку, которой список не знает.
+  const keymap = useKeymapOverrides();
+  const rowActions = useMemo(() => (rowActionsProp ? applyKeymapOverrides(rowActionsProp, keymap) : undefined), [rowActionsProp, keymap]);
+  const bulkActions = useMemo(() => (bulkActionsProp ? applyKeymapOverrides(bulkActionsProp, keymap) : undefined), [bulkActionsProp, keymap]);
+  // Панель «Горячие клавиши» показывает клавиши ЭТОГО списка — из тех же действий.
+  const lang0 = useKitLang();
+  useEffect(() => {
+    const t0 = (k: KitKey) => kitT(lang0, k);
+    const groups: KeymapGroup[] = [];
+    if (rowActionsProp?.length) groups.push({ id: 'row', title: t0('kit.keymap.group.row'), actions: rowActionsProp });
+    if (bulkActionsProp?.length) groups.push({ id: 'bulk', title: t0('kit.keymap.group.bulk'), actions: bulkActionsProp });
+    const builtin = [...LIST_BUILTIN_KEYS, ...(peek ? [{ hotkey: 'Space', title: 'kit.keymap.list.peek' as KitKey }] : [])];
+    groups.push({ id: 'list', title: t0('kit.keymap.group.list'), builtin: true, actions: builtin.map(k => ({ id: 'list:' + k.hotkey, title: t0(k.title), hotkey: k.hotkey })) });
+    return registerKeymap({ owner: keymapOwner.current, groups });
+  }, [rowActionsProp, bulkActionsProp, lang0, peek]);
   const mac = isMacPlatform();
   const rootRef = useRef<HTMLDivElement>(null);
+  const keymapOwner = useRef(Symbol('list-keymap'));
   // Ширины колонок (S4-35). Читаются один раз: хранилище личное, и чужие
   // правки в нём по ходу жизни экрана нас не касаются.
   const [colW, setColW] = useState<ColumnWidths>(
@@ -492,6 +529,8 @@ export function ListView({
     window.addEventListener('pointerup', up);
   };
   const [cursor, setCursor] = useState<string | null>(null);
+  // Peek следует за курсором строки: J/K и стрелки «листают» панель сами (как Linear).
+  const [peekOpen, setPeekOpen] = useState(false);
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const labels = useLabels(config, lang);
@@ -978,12 +1017,25 @@ export function ListView({
     if (e.defaultPrevented) return;
     const target = e.target as HTMLElement;
     if (isTypingTarget(target)) return;
+    // Esc сначала закрывает Peek, если он открыт (S9-10), и только потом — выбор.
+    if (peekOpen && (matchHotkey(e, 'Escape') || e.key === 'Escape')) {
+      e.preventDefault();
+      e.stopPropagation();
+      setPeekOpen(false);
+      return;
+    }
     // Esc — выход из режима выбора (S4-10) и снятие выделения (S4-11).
     if (matchHotkey(e, 'Escape') || e.key === 'Escape') {
       if (!selecting) return;
       e.preventDefault();
       e.stopPropagation();
       exitSelection();
+      return;
+    }
+    // «?» — панель «Горячие клавиши» (прототип S4-11, принят 11.11).
+    if (matchHotkey(e, '?')) {
+      e.preventDefault();
+      openKeymapPanel();
       return;
     }
     const bulk = selIds.length > 0 ? findAction(bulkActions ?? [], e) : undefined;
@@ -1001,6 +1053,12 @@ export function ListView({
       const next = visibleIds[Math.max(0, Math.min(visibleIds.length - 1, to))];
       if (next !== undefined) focusRow(next);
     };
+    // Пробел — открыть/закрыть Peek строки (S9-10); на кнопках внутри строки — их собственное действие.
+    if (peek && e.code === 'Space' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && target === rowEl) {
+      e.preventDefault();
+      setPeekOpen(o => !o);
+      return;
+    }
     if (matchHotkey(e, 'ArrowDown') || matchHotkey(e, 'J')) return move(at + 1);
     if (matchHotkey(e, 'ArrowUp') || matchHotkey(e, 'K')) return move(at - 1);
     if (matchHotkey(e, 'Home')) return move(0);
@@ -1715,11 +1773,8 @@ export function ListView({
       >
         <span className="sk-feed__when">{feedWhen(at)}</span>
         <span className="sk-feed__main">
-          <span className="sk-feed__head">
-            <span className="sk-feed__kind">{labels.valueTitle('kind', r.kind)}</span>
-            <Pill variant="id">{r.id}</Pill>
-          </span>
-          <span className="sk-feed__title"><Title r={r} href={href} onOpen={onOpen} /></span>
+          {/* Шапка — общая с Peek (S9-10): вид, ID, название; статус лента держит в метаданных. */}
+          <RecordCardHead kind={labels.valueTitle('kind', r.kind)} id={r.id} title={<Title r={r} href={href} onOpen={onOpen} />} />
           {leads.map(k => <span key={k} className="sk-feed__lead">{valueCell(k, r)}</span>)}
           {/* Статус у записи с телом остаётся в шапке: он часть утверждения о
               записи, а не часть текста. Связи же у записи с телом уезжают во
@@ -2369,6 +2424,8 @@ export function ListView({
       {multi > 0 && <p className="sk-list__multi" data-testid="kit-list-multi">{t('kit.list.multi', { n: multi })}</p>}
 
       {body}
+      {/* Peek (S9-10): панель поверх списка, показывает строку под курсором. */}
+      {peek && peekOpen && cursorId && <PeekPanel id={cursorId} peek={peek} onClose={() => setPeekOpen(false)} />}
     </div>
   );
 }

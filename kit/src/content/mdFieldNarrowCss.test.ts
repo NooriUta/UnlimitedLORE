@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const css = readFileSync(new URL('../styles/seidr.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-const narrowBlocks = [...css.matchAll(/@media \(max-width: 720px\) \{([\s\S]*?)\n\}/g)].map(m => m[1]).join('\n');
+const narrowBlocks = [...css.matchAll(/@media \(max-width: 720px\)[^{]*\{([\s\S]*?)\n\}/g)].map(m => m[1]).join('\n');
 
 describe('S4-MOBILE-EDGE п.А — MD-поле записи узко во всю ширину', () => {
   it('положительный контроль: сетка полей «подпись | значение» на месте', () => {

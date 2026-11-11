@@ -69,19 +69,28 @@ export function TimelineLanes({
 
   if (narrow) {
     // Телефон (S4-MOBILE-EDGE): полгода в 300 px не читаются, полосы режутся
-    // справа. Те же записи, что на шкале, — группами по дате начала, по
-    // возрастанию (как ось слева направо); внутри даты — порядок шкалы
-    // (дорожка за дорожкой). Срок и дорожка — в строке: со шкалы не теряется ничего.
-    const days = new Map<string, { item: (typeof model.lanes)[number]['items'][number]; lane: string | null }[]>();
+    // справа. Те же записи, что на шкале, — группами по МЕСЯЦУ начала, по
+    // возрастанию (как ось слева направо): выбор владелицы 11.11 по прототипу
+    // («2б») — по дню почти у каждой записи был свой заголовок. Внутри месяца —
+    // по дате начала, при равной дате — порядок шкалы (дорожка за дорожкой).
+    // Срок и дорожка — в строке: со шкалы не теряется ничего.
+    const months = new Map<string, { item: (typeof model.lanes)[number]['items'][number]; lane: string | null; order: number }[]>();
+    let order = 0;
     for (const { lane, items } of model.lanes) {
       const laneTitle = group ? groupTitle(config, lang, group, lane) : null;
       for (const it of items) {
-        const row = days.get(it.start) ?? [];
-        row.push({ item: it, lane: laneTitle });
-        days.set(it.start, row);
+        const key = it.start.slice(0, 7);
+        const row = months.get(key) ?? [];
+        row.push({ item: it, lane: laneTitle, order: order++ });
+        months.set(key, row);
       }
     }
-    const ordered = [...days.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    for (const rows of months.values()) {
+      rows.sort((a, b) => (a.item.start < b.item.start ? -1 : a.item.start > b.item.start ? 1 : a.order - b.order));
+    }
+    const ordered = [...months.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    const monthFmt = new Intl.DateTimeFormat(lang, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const monthTitle = (ym: string) => monthFmt.format(new Date(`${ym}-01T00:00:00Z`));
     return (
       <div
         className={['sk-tl', 'sk-tl--dates', className].filter(Boolean).join(' ')}
@@ -89,10 +98,10 @@ export function TimelineLanes({
         aria-label={kitT(lang, 'kit.timeline.label')}
       >
         <p className="sk-tl__range">{kitT(lang, 'kit.timeline.range', model.range)}</p>
-        {ordered.map(([day, rows]) => (
-          <section key={day} className="sk-tl__day" aria-label={kitT(lang, 'kit.list.lane', { title: day, n: rows.length })}>
+        {ordered.map(([ym, rows]) => (
+          <section key={ym} className="sk-tl__day" data-month={ym} aria-label={kitT(lang, 'kit.list.lane', { title: monthTitle(ym), n: rows.length })}>
             <h3 className="sk-tl__head">
-              <span className="sk-tl__title">{day}</span>
+              <span className="sk-tl__title">{monthTitle(ym)}</span>
               <span className="sk-tl__count">{rows.length}</span>
             </h3>
             <ul className="sk-tl__items">

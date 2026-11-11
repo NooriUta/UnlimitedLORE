@@ -32,7 +32,7 @@ describe('S4-MOBILE-COMPARE · паспорт на телефоне в прил�
   it('на узком экране поля экрана вокруг открытого паспорта сняты', () => {
     // Своим классом экрана, а не селектором по .sk-dock: CSS приложения правил
     // для классов kit не пишет (сторож kitBareParity).
-    const m = css.match(/@media \(max-width: 720px\) \{([^@]*?\.list-screen--passport \{[^}]*\})/);
+    const m = css.match(/@media \(max-width: 720px\)[^{]*\{([^@]*?\.list-screen--passport \{[^}]*\})/);
     expect(m, 'правила .list-screen--passport в @media (max-width: 720px) нет').not.toBeNull();
     expect(m![1]).toMatch(/padding-inline:\s*0/);
   });

@@ -147,6 +147,54 @@ export function registerLoreRead(server: McpServer): void {
     },
   );
 
+  // MT-MCP-CHANGED-RANGE (остаток, v1.17.14): «что изменилось с … по …» по многим типам одним
+  // вызовом. Тонкая обёртка над GET /lore/changed: параметры уходят как есть, проект НЕ
+  // подставляется из LORE_ACTIVE_PROJECT (у вех проектной оси нет — неявный фильтр выбил бы тип
+  // в errors[] в каждом вызове); ответ — целиком, вместе с errors[]/complete.
+  server.tool(
+    'changed',
+    'What changed in a period, across many object types in ONE call (GET /lore/changed, MT-MCP-CHANGED-RANGE). ' +
+      'READ complete FIRST: complete:false means some types were NOT read (see errors[] {type, stage: list|history|project, reason}) — ' +
+      'then an empty or short answer is NOT proof that nothing changed; nothing_changed:true is set only for a complete answer with 0 rows. ' +
+      'Rows (newest first): type, ref_id, title, status_was → status_now (status_was = the SCD2 version open just before `from`; ' +
+      'null with created_in_period:true when the record appeared inside the period), status_changed, status_category, ' +
+      'changed_at (ISO UTC), changed_by/changed_by_kind (author of the last version inside the period; null for in-place edits ' +
+      'that open no version), history: versions|none|unavailable|not_tracked, projects. page {limit, offset, total, has_more}. ' +
+      'from/to: ISO date YYYY-MM-DD or date-time, both bounds inclusive, UTC; a date as `to` means the whole day; at least one is required. ' +
+      'types: CSV of task, adr, decision, spec, question, release, sprint, milestone, component, feature (default: all). ' +
+      'status_category: open | closed | a category (not_started, in_progress, in_force, finished, withdrawn, unknown). ' +
+      'Examples: tasks closed today → {types:"task", from:"2026-11-11", status_category:"closed"}; ' +
+      'everything changed 10–11 Nov → {from:"2026-11-10", to:"2026-11-11"}. ' +
+      'project is NOT defaulted from LORE_ACTIVE_PROJECT; a type without a project axis (milestone) goes to errors[] when project is given. ' +
+      'The caller\'s project scope applies as in every slice.',
+    {
+      from: z.string().optional().describe('period start, inclusive: YYYY-MM-DD (00:00 UTC) or date-time'),
+      to: z.string().optional().describe('period end, inclusive: YYYY-MM-DD (whole day, UTC) or date-time'),
+      types: z.string().optional().describe('CSV, e.g. "task,adr,decision"; default all ten types'),
+      project: z.string().optional().describe('git_project slug, e.g. "NooriUta/UnlimitedLORE" — explicit only'),
+      status_category: z.string().optional().describe('open | closed | not_started | in_progress | in_force | finished | withdrawn | unknown'),
+      actor: z.string().optional().describe('author of the last version in the period (changed_by), case-insensitive'),
+      limit: z.number().int().min(1).max(1000).optional().describe('page size (default 200)'),
+      offset: z.number().int().min(0).optional(),
+    },
+    async ({ from, to, types, project, status_category, actor, limit, offset }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (from !== undefined) params.from = from;
+        if (to !== undefined) params.to = to;
+        if (types !== undefined) params.types = types;
+        if (project !== undefined) params.project = project;
+        if (status_category !== undefined) params.status_category = status_category;
+        if (actor !== undefined) params.actor = actor;
+        if (limit !== undefined) params.limit = String(limit);
+        if (offset !== undefined) params.offset = String(offset);
+        return json(await loreGet('/lore/changed', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
   // S6-08: агент выполняет блок lore-query из текста записи так же, как его
   // увидит пользователь, и узнаёт, полный ли ответ. Обёртка над /lore/slice —
   // своего эндпоинта нет: скоуп, усечение и страница уже приходят оттуда.
