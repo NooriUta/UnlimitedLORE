@@ -34,6 +34,9 @@ class LoreRecordSnapshotTest {
 
     static final Map<String, Map<String, Object>> ROWS = new LinkedHashMap<>();
 
+    /** Типы, рождённые после перевода на общий сборщик: снимка «до» у них нет. */
+    static final List<String> POST_REFACTOR = List.of("project");
+
     static {
         ROWS.put("sprint", m("sprint_id", "SPRINT_SNAP", "name", "Спринт снимка", "status_raw", "✅ DONE — закрыт",
             "context_md", "ctx", "outcome_md", "итог", "priority", "P1", "git_projects", List.of("AIDA/UnlimitedLORE", "x/y"),
@@ -139,7 +142,11 @@ class LoreRecordSnapshotTest {
 
     @Test
     void elevenTypesAreCovered() {
-        assertEquals(LoreRecordRegistry.TYPES, new ArrayList<>(ROWS.keySet()), "снимок покрывает все типы паспорта");
+        // Проект (S4-29, 53а) заведён ПОСЛЕ перевода на общий сборщик: ручной функции у него не
+        // было никогда, сверять не с чем — его значения проверяет ProjectPassportTest.
+        List<String> legacy = new ArrayList<>(LoreRecordRegistry.TYPES);
+        legacy.removeAll(POST_REFACTOR);
+        assertEquals(legacy, new ArrayList<>(ROWS.keySet()), "снимок покрывает все типы паспорта, бывшие до рефакторинга");
     }
 
     @Test

@@ -264,6 +264,12 @@ class LorePassportSurfaceTest {
     }
 
     @Test
+    void project() {
+        assertEquals(List.of("sprints", "components", "adrs", "releases", "Люди и агенты[people+agents]"), tabs("project"),
+            "проект (53а): Спринты · Компоненты · ADR · Релизы · Люди и агенты");
+    }
+
+    @Test
     void tech() {
         assertEquals(List.of("content"), tabs("tech"));
     }

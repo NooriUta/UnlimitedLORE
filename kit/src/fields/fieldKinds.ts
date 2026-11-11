@@ -7,7 +7,7 @@
 // что они значат, знает приложение (K-14).
 
 /** Виды, у которых в kit есть редактор. Остальные рисуются только чтением. */
-export const FIELD_KINDS = ['text', 'number', 'boolean', 'date', 'time', 'datetime', 'enum'] as const;
+export const FIELD_KINDS = ['text', 'number', 'boolean', 'date', 'time', 'datetime', 'enum', 'md'] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
 /** Вариант выбора: строкой или парой «значение + подпись». */
@@ -28,6 +28,10 @@ export interface FieldEditorDef {
   options?: readonly FieldOption[];
   /** false — только чтение, даже у знакомого вида. Право решает приложение. */
   editable?: boolean;
+  /** Несколько значений (у enum): значение — массив; «ничего не выбрано» — [], «не задано» — null. */
+  multi?: boolean;
+  /** Порядок значений важен (вместе с multi): выбранные идут списком с «выше / ниже». */
+  ordered?: boolean;
 }
 
 export function fieldKindOf(def: FieldEditorDef): string {
