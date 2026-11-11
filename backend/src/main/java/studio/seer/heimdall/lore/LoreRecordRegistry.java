@@ -141,6 +141,17 @@ final class LoreRecordRegistry {
             refType, rel, dir, relation);
     }
 
+    /**
+     * Чипы без своего ребра: проекты/компоненты, которые запись наследует (у задачи — от спринта,
+     * у вехи и релиза — от спринтов, у компонента — проекты его спринтов; S4-29, 50а/51а/55а).
+     * Фасад кладёт их в values у всех типов, а kit показывает только объявленные поля — без поля
+     * значение невидимо (слово владелицы 11.11: «связь с компонентами пропала»).
+     */
+    private static Field inheritedRef(String key, String label, String labelKey, String refType) {
+        return new Field(key, label, labelKey, "ref", "props", null, false, null, true, false,
+            refType, null, null, "attribute");
+    }
+
     private static Relation rel(String key, String label, String rel, String dir, String target,
                                 String relation, String place, boolean manageable) {
         return new Relation(key, label, rel, dir, target, relation, place, manageable);
@@ -237,6 +248,8 @@ final class LoreRecordRegistry {
                     "sprint", "PART_OF", "out", "composition"),
                 ref("phase", "Фаза", null, "phase", "IN_PHASE", "out", "attribute", false, true),
                 ref("components", "Компоненты", "pp.field.components", "component", "TAGGED_WITH", "out", "attribute", true, true),
+                // Своего ребра к проекту у задачи нет — проекты наследуются от спринта (чипы S4-29).
+                inheritedRef("projects", "Проекты", "pp.field.projects", "project"),
                 // S4-24: роли — рёбра ROLE_HELD_BY; значение выбирается из среза task_identities
                 // (тот же список, что проверяет запись), а не набирается текстом.
                 picked(prop("author", "Автор", "pp.field.author", "enum", null, w(edit, "author_agent")), TASK_IDENTITY_OPTIONS),
@@ -252,7 +265,7 @@ final class LoreRecordRegistry {
                 ref("files", "Файлы", null, "file", "EDITED_IN", "in", "attribute", true, false)),
             List.of(new Body("note_md", "Заметка", "pp.field.body", true, w(edit, "note_md"))),
             List.of(
-                new PropSection(null, List.of("sprint", "phase", "components", "prs", "files")),
+                new PropSection(null, List.of("sprint", "phase", "components", "projects", "prs", "files")),
                 new PropSection(roles, List.of("author", "executor", "reviewer")),
                 new PropSection(estimate, List.of("effort", "actual")),
                 new PropSection(classes, List.of("task_type", "work_class", "realizes_uc"))),
@@ -430,11 +443,14 @@ final class LoreRecordRegistry {
                 prop("week", "Неделя", null, "text", null, null),
                 prop("date", "Срок", "pp.field.date", "text", null, null),
                 prop("priority", "Приоритет", "pp.field.priority", "enum", "priority", null),
-                prop("products", "Продукты", null, "text", null, null)),
+                prop("products", "Продукты", null, "text", null, null),
+                // Своих рёбер нет — проекты и компоненты вехи наследуются от её спринтов (чипы S4-29).
+                inheritedRef("projects", "Проекты", "pp.field.projects", "project"),
+                inheritedRef("components", "Компоненты", "pp.field.components", "component")),
             List.of(
                 new Body("goal_md", "Цель", null, false, null),
                 new Body("decisions_md", "Решения", null, false, null)),
-            List.of(new PropSection(null, List.of("week", "date", "priority", "products"))),
+            List.of(new PropSection(null, List.of("week", "date", "priority", "products", "projects", "components"))),
             List.of(), List.of(), List.of(),
             // S4-29 v3 (45а): веха — контейнер, спринты первой вкладкой.
             List.of(rel("sprints", "Спринты", "TARGETS_MILESTONE", "in", "sprint", "aggregation", "link_tab", false))));
@@ -448,9 +464,11 @@ final class LoreRecordRegistry {
                 prop("date", "Дата", "pp.field.date", "date", null, null),
                 prop("is_current", "Текущий", null, "text", null, null),
                 prop("week", "Неделя", null, "text", null, null),
-                ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false)),
+                ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false),
+                // Своего ребра к компоненту у релиза нет — компоненты его спринтов (чипы S4-29).
+                inheritedRef("components", "Компоненты", "pp.field.components", "component")),
             List.of(new Body("description_md", "Описание", "pp.field.body", false, null)),
-            List.of(new PropSection(null, List.of("type", "date", "is_current", "week", "projects"))),
+            List.of(new PropSection(null, List.of("type", "date", "is_current", "week", "projects", "components"))),
             List.of(), List.of(), List.of(),
             List.of(
                 // S4-29 v3 (44а): Спринты · PR — вкладками; данные — срезы release_sprints / release_prs.
@@ -475,10 +493,12 @@ final class LoreRecordRegistry {
                 new Field("tech", "Технологии", null, "text", "props", null, false, null, true, false,
                     null, null, null, null),
                 ref("adrs", "ADR", null, "adr", "BELONGS_TO", "in", "attribute", true, false),
-                ref("specs", "Спеки", null, "spec", "DOCUMENTED_IN", "out", "attribute", true, false)),
+                ref("specs", "Спеки", null, "spec", "DOCUMENTED_IN", "out", "attribute", true, false),
+                // Компонент достигает проекта через свои спринты (чипы S4-29) — своего ребра нет.
+                inheritedRef("projects", "Проекты", "pp.field.projects", "project")),
             List.of(),
             List.of(
-                new PropSection(null, List.of("area", "parent", "owner", "team", "icon")),
+                new PropSection(null, List.of("area", "parent", "owner", "team", "icon", "projects")),
                 new PropSection(modules, List.of("children", "tech", "adrs", "specs"))),
             List.of(), List.of(), List.of(),
             List.of(
@@ -486,9 +506,25 @@ final class LoreRecordRegistry {
                 // S4-29 v3 (46а/52а): Спеки · ADR · Технологии · Подкомпоненты — вкладками (поля в
                 // «Свойствах» остаются).
                 rel("children", "Подкомпоненты", "PARENT_OF", "in", "component", "composition", "link_tab", false),
-                rel("tech", "Технологии", "USES", "out", "tech", "attribute", "link_tab", false),
+                // Стек (USES → LoreTechnology, tech_id «java») — метка, не паспорт: виден текстовым
+                // полем tech в «Свойствах», цель tech_ref (так её и отдаёт чтение). Место links —
+                // ни вкладки, ни второго поля: ключ tech занят вкладкой ниже.
+                rel("stack", "Стек", "USES", "out", "tech_ref", "attribute", "links", false),
+                // Слово владелицы 11.11: вкладка «Технологии» (ключ tech — прежний, контракт и личный
+                // порядок вкладок не ломаются) — паспорта технологий SPEC-TECH-… (DOCUMENTED_IN ∪
+                // BELONGS_TO). Раньше шла по USES: у HARPA (17 технологий) была пустой, а технологии
+                // смешивались со спеками во вкладке «Спеки».
+                rel("tech", "Технологии", "DOCUMENTED_IN", "out", "tech", "attribute", "link_tab", false),
                 rel("adrs", "ADR", "BELONGS_TO", "in", "adr", "attribute", "link_tab", false),
+                // Спеки — DOCUMENTED_IN ∪ BELONGS_TO спеки (путь записи ставит оба, старые — одно).
                 rel("specs", "Спеки", "DOCUMENTED_IN", "out", "spec", "attribute", "link_tab", false),
+                // Как в v1 (LoreComponentPassport: QG · Знания · Сценарии) и по путям записи
+                // decision_new, question_new/component, feature_new, doc_new, qg_new.
+                rel("decisions", "Решения", "BELONGS_TO", "in", "decision", "attribute", "link_tab", false),
+                rel("questions", "Вопросы", "BELONGS_TO", "in", "question", "attribute", "link_tab", false),
+                rel("features", "Сценарии", "BELONGS_TO", "in", "feature", "attribute", "link_tab", false),
+                rel("docs", "Знания", "BELONGS_TO", "in", "doc", "attribute", "link_tab", false),
+                rel("qgs", "Гейты качества", "BELONGS_TO", "in", "qg", "attribute", "link_tab", false),
                 // S4-29: Задачи · Спринты — срезами component_tasks / component_sprints (по рёбрам,
                 // постранично через /lore/slice limit/offset); фасад отдаёт первую порцию.
                 rel("tasks", "Задачи", "TAGGED_WITH", "in", "task", "attribute", "link_tab", false),

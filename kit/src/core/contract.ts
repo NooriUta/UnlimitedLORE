@@ -36,7 +36,9 @@ export type KitRelation = 'composition'|'aggregation'|'association'|'attribute'|
  * прежнее правило по виду UML, чтобы конфиги без этого признака не потеряли
  * управление связями.
  */
-export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in'; manageable?:boolean }
+export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in'; manageable?:boolean;
+  /** Вид записи на другом конце (kind; не путать с `target` у onRelation — там id). Одно ребро бывает в нескольких связях вида (у компонента BELONGS_TO:in — ADR, спринты, решения…): без цели вкладка «ADR» показала бы и спринты. Не задан — любые записи. */
+  targetKind?:string }
 export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[];
   /**
    * Разделы тела записи — ДАННЫМИ (S5-06, S5-09). Список «ключ поля + подпись»;

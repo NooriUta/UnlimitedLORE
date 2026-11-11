@@ -41,11 +41,18 @@ export const SHARED_TAB: Partial<Record<KitRelation, { id: string; label: 'kit.r
   realization: { id: 'rel:realization', label: 'kit.record.rel.realization' },
 };
 
-/** Записи по другую сторону ребра. */
+/**
+ * Записи по другую сторону ребра. Задан вид цели (`def.targetKind`) — только записи этого вида:
+ * одно ребро делят несколько связей (у компонента BELONGS_TO:in — ADR, спринты, решения),
+ * и без отбора по виду каждая вкладка показывала бы все чужие записи сразу.
+ */
 export function relationTargets(record: KitRecord, ctx: KitCtx, def: KitRelationDef): string[] {
-  return ctx.data.edges
+  const ids = ctx.data.edges
     .filter(e => e.type === def.rel && (def.dir === 'out' ? e.from === record.id : e.to === record.id))
     .map(e => (def.dir === 'out' ? e.to : e.from));
+  if (!def.targetKind) return ids;
+  const kind = new Map(ctx.data.records.map(r => [r.id, r.kind] as const));
+  return ids.filter(id => kind.get(id) === def.targetKind);
 }
 
 /**

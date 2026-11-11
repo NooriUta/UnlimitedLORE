@@ -282,6 +282,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
   const relations: LoreRelation[] = relRows.map(r => {
     const rel = str(r.rel);
     const dir = str(r.dir) === 'in' ? ('in' as const) : ('out' as const);
+    // Одно ребро делят несколько связей типа (у компонента BELONGS_TO:in — ADR, спринты,
+    // решения…): считаем только связи своего типа цели, иначе «ADR 40» насчитал бы и спринты.
+    const target = str(r.target_type);
+    const ofTarget = (l: LoreLink) => !target || target === 'any' || l.type === target;
     return {
       key: str(r.key), label: str(r.label) || str(r.key),
       relation: relationOf(r.relation), rel, dir,
@@ -289,7 +293,7 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // элементы в links не приходят, и пересчёт давал бы 0); у остальных —
       // считаем по пришедшим связям.
       count: parts.find(x => x.key === str(r.key))?.count
-        ?? links.filter(l => l.rel === rel && l.dir === dir).length,
+        ?? links.filter(l => l.rel === rel && l.dir === dir && ofTarget(l)).length,
       // Есть ли путь привязки — знает только сервер (LoreRecordRelationRoutes).
       // Нет признака — это «нет пути», а не «решайте сами»: иначе человек
       // введёт код и получит UNKNOWN_RELATION.
