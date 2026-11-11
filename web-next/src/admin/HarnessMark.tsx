@@ -27,13 +27,13 @@ export function AgentChip({ row, noneLabel }: { row: AgentRow; noneLabel?: strin
 }
 
 /**
- * Журнал: caller — client_id учётки или actor_id. Знак — только если все
- * агенты под этим именем одного harness с логотипом; учётка общая у агентов
- * разных harness — знак был бы угадкой, его нет.
+ * Журнал: у агента caller — его ПРОФИЛЬ (agent_scope, LoreRequestStatsFilter);
+ * понимаем и client_id / actor_id. Знак — только если все агенты под этим
+ * именем одного harness с логотипом; иначе знак был бы угадкой, его нет.
  */
 export function callerHarness(caller: string | null | undefined, rows: readonly AgentRow[]): { logo: string; label: string } | null {
   if (!caller) return null;
-  const mine = rows.filter(r => r.client_id === caller || r.actor_id === caller);
+  const mine = rows.filter(r => r.client_id === caller || r.actor_id === caller || r.agent_role === caller);
   if (mine.length === 0) return null;
   const codes = new Set(mine.map(r => r.harness));
   if (codes.size !== 1) return null;

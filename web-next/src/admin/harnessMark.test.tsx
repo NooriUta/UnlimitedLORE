@@ -108,6 +108,12 @@ describe('журнал и «Доступ к машинам»', () => {
     expect(callerHarness('nobody', d.rows)).toBeNull();
     expect(callerHarness(null, d.rows)).toBeNull();
   });
+  it('в журнале агент записан ПРОФИЛЕМ (caller = agent_scope) — знак по агентам этого профиля, если harness у них один', () => {
+    const kimiOnly = d.rows.filter(r => r.actor_id === 'A2');
+    expect(callerHarness('full', kimiOnly)).toEqual({ logo: 'simple-icons:kimi', label: 'Kimi Code' });
+    // full у трёх агентов разных harness — знак был бы угадкой.
+    expect(callerHarness('full', d.rows)).toBeNull();
+  });
   it('значение harness в списке машин (подписью) → логотип; без логотипа — null; чужое поле — kit решает', () => {
     const vi_ = harnessValueIcon(d.labels, d.logos);
     expect(vi_('harness', 'Claude Code')).toEqual({ icon: 'simple-icons:claudecode' });
