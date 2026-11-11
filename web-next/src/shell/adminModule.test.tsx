@@ -59,6 +59,8 @@ describe('S7B-01 · конфиг модуля admin', () => {
     expect([...items].sort()).toEqual([...ADMIN_SECTIONS].sort());
     // «Доступ» — группа риска: тон предупреждения, а не нейтральный.
     expect(groups.find(g => g.id === 'adm-access')!.tone).toBe('var(--wrn)');
+    // S7B-17: мастера UC-1/UC-2/UC-7 — во «Начале», рядом с Главной: это вход «хочу сделать».
+    expect(groups.find(g => g.id === 'adm-start')!.items.map(i => i.id)).toEqual(['adm-home', 'adm-wiz']);
     // Личные «Мои виды» и «Недавние» — про записи Forseti, в админке их нет.
     expect(cfg.menu.myViews).toBeFalsy();
     expect(cfg.menu.recent).toBeFalsy();
