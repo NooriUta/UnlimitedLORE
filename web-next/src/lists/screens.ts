@@ -19,6 +19,7 @@ import {
   adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord, projectRecord,
   questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
 } from './records';
+import type { RowMapCtx } from './records';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
 
@@ -65,7 +66,8 @@ export interface ListScreenDef {
   modelType?: string;
   titleKey: AppKey;
   icon: string;
-  map: (row: Record<string, unknown>) => KitRecord;
+  /** Строка среза → запись; `ctx.statusCodes` — ось типа из модели (S4-STATUS-AXIS-CONFIG). */
+  map: (row: Record<string, unknown>, ctx?: RowMapCtx) => KitRecord;
   config: (lang: KitLang) => KitConfig;
   /** Свои быстрые иконки «Быстро», которым не подходит иконка статуса. */
   quickIcons: Record<string, string>;

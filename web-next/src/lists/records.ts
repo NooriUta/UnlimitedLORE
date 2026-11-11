@@ -4,9 +4,25 @@
 import type { KitData, KitRecord } from '@seidr/kit';
 import type { SliceBody } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
-import { decisionStatusOf, featureStatusOf, questionStatusOf, specStatusOf } from './axisStatus';
+import { DECISION_STATUSES, FEATURE_STATUSES, QUESTION_STATUSES, SPEC_STATUSES, axisStatusOf } from './axisStatus';
 
 type Row = Record<string, unknown>;
+
+/**
+ * Что маппер знает, кроме строки (S4-STATUS-AXIS-CONFIG, 11.11).
+ *
+ * `statusCodes` — коды цикла ТИПА из `/lore/model` (`statuses.<type>.entries`).
+ * Пришли — статус строки сверяется с НИМИ: иначе статус, объявленный сервером,
+ * но не известный перечню в коде, читался «вне словаря». Пусто или нет —
+ * перечень в коде остаётся умолчанием (экран говорит об этом словами).
+ */
+export interface RowMapCtx {
+  statusCodes?: readonly string[];
+}
+
+/** Ось для сверки: модель главнее, перечень в коде — умолчание. */
+const axisFor = (ctx: RowMapCtx | undefined, fallback: readonly string[]): readonly string[] =>
+  ctx?.statusCodes?.length ? ctx.statusCodes : fallback;
 
 /** «📋 PLANNED» → «planned», «READY FOR DEPLOY» → «ready_for_deploy». */
 export function normStatus(raw: unknown): string {
@@ -101,8 +117,13 @@ export function adrRecord(row: Row): KitRecord {
  *  - truncated:"unknown" — проверить нечем: обрезано без итога;
  *  - иначе — полная выдача, итог = число строк.
  */
-export function sliceToKitData<R>(body: SliceBody<R>, map: (row: R) => KitRecord, generatedAt: string): KitData {
-  const records = body.rows.map(map);
+export function sliceToKitData<R>(
+  body: SliceBody<R>,
+  map: (row: R, ctx?: RowMapCtx) => KitRecord,
+  generatedAt: string,
+  ctx?: RowMapCtx,
+): KitData {
+  const records = body.rows.map(row => map(row, ctx));
   const meta: KitData['meta'] = { generated_at: generatedAt, returned: records.length };
   if (body.truncated === true || body.truncated === 'unknown') {
     meta.truncated = true;
@@ -221,13 +242,13 @@ export function taskListRecord(row: Row): KitRecord {
  * попавший в поле статуса решения. Канон опознает её как cancelled, но это
  * грязь в данных, а не вид статуса решения (передано серверной сессии).
  */
-export function decisionRecord(row: Row): KitRecord {
+export function decisionRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.decision_id);
   return {
     id,
     kind: 'decision',
     title: str(row.title) || id,
-    status: decisionStatusOf(row.status_raw),
+    status: axisStatusOf(row.status_raw, axisFor(ctx, DECISION_STATUSES)),
     fields: {
       component: str(row.component_id),
       components: list(row.components),
@@ -250,13 +271,13 @@ export function decisionRecord(row: Row): KitRecord {
  * Аннотация ревизии (summary) в запись не переносится — это тело, а не поле
  * строки. Путь к файлу переносится, но колонкой не ставится: он длинный.
  */
-export function specRecord(row: Row): KitRecord {
+export function specRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.spec_id);
   return {
     id,
     kind: 'spec',
     title: str(row.title) || id,
-    status: specStatusOf(row.status),
+    status: axisStatusOf(row.status, axisFor(ctx, SPEC_STATUSES)),
     fields: {
       component: str(row.component_id),
       version: str(row.version),
@@ -279,13 +300,13 @@ export function specRecord(row: Row): KitRecord {
  *
  * Тело вопроса (body_md) не переносится: 576 КБ на 262 строки.
  */
-export function questionRecord(row: Row): KitRecord {
+export function questionRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.question_id);
   return {
     id,
     kind: 'question',
     title: str(row.title) || id,
-    status: questionStatusOf(row.status),
+    status: axisStatusOf(row.status, axisFor(ctx, QUESTION_STATUSES)),
     fields: {
       component: str(row.component_id),
       components: list(row.components),
@@ -461,7 +482,7 @@ export const UC_OWN_LINKS_NOTE = 'компонент и проект показ�
  *
  * Тел (body_md, context_md, scenario_md) срез не отдаёт вовсе — они в паспорте.
  */
-export function featureRecord(row: Row): KitRecord {
+export function featureRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.uc_id);
   const ucs = num(row.uc_total);
   const tasks = num(row.task_count);
@@ -474,7 +495,7 @@ export function featureRecord(row: Row): KitRecord {
     id,
     kind: 'feature',
     title: str(row.title) || id,
-    status: featureStatusOf(row.status),
+    status: axisStatusOf(row.status, axisFor(ctx, FEATURE_STATUSES)),
     fields: {
       components: list(row.component_ids),
       project: list(row.projects),
