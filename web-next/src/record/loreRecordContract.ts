@@ -30,6 +30,24 @@ export interface LoreField {
   write?: { endpoint: string; field: string } | null;
   /** Справочник вариантов enum (срез `dictionary`, dict_type). S4-24. */
   dict?: string;
+  /** Варианты enum из среза сервера (S4-24, #1241): автор / исполнитель / принимающий — task_identities. */
+  options?: OptionsSpec;
+}
+/** Откуда брать варианты: срез, его параметр (id записи) и имена полей строки. */
+export interface OptionsSpec { slice: string; param: string; value: string; label: string; group?: string }
+/** Вариант из среза: код, подпись, подпись группы (уже словами приложения). */
+export interface SliceOption { code: string; title: string; group?: string }
+/** Состояние вариантов поля из среза: пришли / не пришли (причина + повтор). */
+export interface OptionState { items?: SliceOption[]; error?: string; retry?: () => void }
+
+/** Строки среза → варианты; группа (например kind) → подпись через groupTitle. */
+export function optionsFromSlice(rows: readonly Record<string, unknown>[], spec: OptionsSpec, groupTitle: (g: string) => string): SliceOption[] {
+  return rows.map(r => {
+    const code = String(r[spec.value] ?? '');
+    const title = String(r[spec.label] ?? code);
+    const g = spec.group ? r[spec.group] : undefined;
+    return typeof g === 'string' && g ? { code, title, group: groupTitle(g) } : { code, title };
+  }).filter(o => o.code !== '');
 }
 export interface LoreTab { key: string; label: string; zone: 'record' | 'around'; rel?: string; dir?: 'out' | 'in'; count?: number }
 
@@ -438,13 +456,18 @@ function sprintFactsFor(
  * схемы; справочника нет — вариантов нет, и kit такое поле не даст править
  * (выбирать не из чего), а не покажет пустой список.
  */
-export function withFieldOptions(cfg: KitConfig, type: string, dicts: Readonly<Record<string, readonly { code: string; title: string }[]>>, dictOf: (key: string) => string | undefined = k => k): KitConfig {
+export function withFieldOptions(cfg: KitConfig, type: string, dicts: Readonly<Record<string, readonly { code: string; title: string }[]>>, dictOf: (key: string) => string | undefined = k => k, sliceOptions: Readonly<Record<string, OptionState>> = {}): KitConfig {
   const kind = cfg.kinds[type];
   if (!kind?.fields) return cfg;
   const fields = kind.fields.map(f => {
     if (f.type !== 'enum') return f;
     const items = dicts[dictOf(f.key) ?? ''];
-    return items?.length ? { ...f, options: items.map(i => ({ value: i.code, label: i.title })) } : f;
+    if (items?.length) return { ...f, options: items.map(i => ({ value: i.code, label: i.title })) };
+    // S4-24: варианты из среза сервера; не пришли — причина и «Повторить», а не свободный ввод.
+    const st = sliceOptions[f.key];
+    if (st?.items?.length) return { ...f, options: st.items.map(i => (i.group ? { value: i.code, label: i.title, group: i.group } : { value: i.code, label: i.title })) };
+    if (st?.error) return { ...f, optionsError: st.error, ...(st.retry ? { onOptionsRetry: st.retry } : {}) };
+    return f;
   });
   return { ...cfg, kinds: { ...cfg.kinds, [type]: { ...kind, fields } } };
 }

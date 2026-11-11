@@ -38,14 +38,20 @@ export interface NestedListProps {
   className?: string;
   /** Оговорка под списком (например, «показаны 100 из 230»). */
   note?: ReactNode;
+  /**
+   * Свои оси фильтра и группировки (S4-SPRINT-TASKS-CONTROLS): встают ПОСЛЕ
+   * умолчания (статус, вид), без дублей. Какие — решает вызывающий (K-14).
+   */
+  axes?: readonly string[];
 }
 
 export const NESTED_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
 
-export function NestedList({ ctx, records, missing, columns, rowActions, testId, className, note }: NestedListProps) {
+export function NestedList({ ctx, records, missing, columns, rowActions, testId, className, note, axes: ownAxes }: NestedListProps) {
   const multiKind = useMemo(() => new Set(records.map(r => r.kind)).size > 1, [records]);
   const config: KitConfig = useMemo(() => {
-    const axes = multiKind ? ['status', 'kind'] : ['status'];
+    const base = multiKind ? ['status', 'kind'] : ['status'];
+    const axes = [...base, ...(ownAxes ?? []).filter(a => !base.includes(a))];
     return {
       ...ctx.config,
       list: {
@@ -56,7 +62,7 @@ export function NestedList({ ctx, records, missing, columns, rowActions, testId,
         showClosed: 'all',
       },
     };
-  }, [ctx.config, columns, multiKind]);
+  }, [ctx.config, columns, multiKind, ownAxes]);
   const data = useMemo(() => ({ ...ctx.data, records: [...records] }), [ctx.data, records]);
   return (
     <div className={['sk-nested', className].filter(Boolean).join(' ')} data-testid={testId}>

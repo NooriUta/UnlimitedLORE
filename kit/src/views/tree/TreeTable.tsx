@@ -36,9 +36,13 @@
 // Записи, чей родитель НАЗВАН, но в выдачу не попал (обычный спутник `denied` и
 // `error`), не всплывают молча в корень: они уходят в отдельную группу с явной
 // подписью. Иначе запись третьего уровня притворилась бы записью первого.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { KitCtx, KitRecord } from '../../core/contract';
+import type { KitConfig, KitCtx, KitRecord } from '../../core/contract';
+import { ControlBar, EMPTY_CONTROLS, controlsActive, type ControlState } from '../../list/ControlBar';
+import { groupRecords } from '../../list/listModel';
+import { fieldValueTitle } from '../../list/groupLabel';
+import { filterTreeRows, leafKindOf, treeRowRecord } from './treeControls';
 import { ICON_CANON } from '../../elements/iconCanon';
 import { IconButton } from '../../elements/IconButton';
 import { EmptyState } from '../../states/StateViews';
@@ -75,7 +79,36 @@ export interface TreeFlatRow {
 /** Строка отрисовки: запись или шапка группы. */
 export type TreeTableLine =
   | { type: 'record'; record: KitRecord; level: number; kids: number; collapsed: boolean }
-  | { type: 'group'; group: 'outside' | 'orphan'; level: number; kind: string | null; count: number; id: string };
+  | {
+    type: 'group'; group: 'outside' | 'orphan' | 'value'; level: number; kind: string | null; count: number; id: string;
+    /** Только у `value` (группировка листьев): ключ группировки и значение группы. */
+    by?: string; value?: string;
+  };
+
+/** Группировка листьев внутри родителя (S4-SPRINT-TASKS-CONTROLS). */
+export interface TreeLinesOptions {
+  /** Ключ группировки в языке списка; null — без групп. */
+  groupBy?: string | null;
+  /** Нужен для порядка групп статуса (порядок словаря). */
+  config?: KitConfig;
+}
+
+/**
+ * Полоса управления дерева. Оси — в языке колонок списка. Состояние — в памяти
+ * дерева; `state` + `onStateChange` делают его управляемым.
+ */
+export interface TreeControls {
+  filters: readonly string[];
+  groupings?: readonly string[];
+  sorts?: readonly string[];
+  state?: ControlState;
+  onStateChange?: (s: ControlState) => void;
+  /** Подпись значения оси; undefined — подпись списка. */
+  valueTitle?: (key: string, v: string) => string | undefined;
+}
+
+/** Группы дерева — все значения: «Прочие» внутри родителя спрятали бы листья. */
+const ALL_GROUPS = { maxGroups: Infinity, topGroups: Infinity };
 
 const PARENT_KEY = '__parent';
 /** Порядок детей — тот, в котором ряды пришли: своего порядка таблица не выдумывает. */
@@ -120,8 +153,11 @@ export function treeTableLines(
   rows: readonly TreeFlatRow[],
   levels: readonly TreeLevel[],
   collapsed: ReadonlySet<string> | null,
+  opts: TreeLinesOptions = {},
 ): TreeTableLine[] {
   if (levels.length === 0) return [];
+  const leafKind = leafKindOf(levels);
+  const groupBy = opts.groupBy && opts.config ? opts.groupBy : null;
   const records = rows.map(toRecord);
   records.forEach((r, i) => { r.fields[ORDER_KEY] = i; });
   const model = buildTree(records, { parent: PARENT_KEY, order: ORDER_KEY });
@@ -150,11 +186,29 @@ export function treeTableLines(
       if (kids && !shut) walk(n.children, lvl + 1, own < 0 ? -2 : own);
     };
 
+    /**
+     * Соседи одного родителя. Группировка (S4-SPRINT-TASKS-CONTROLS) делит
+     * только листья и только внутри родителя: шапка группы стоит на месте
+     * листьев, листья — уровнем ниже. Верхние уровни не перестраиваются.
+     */
+    const emitAll = (nodes: readonly TreeNode[], lvl: number) => {
+      if (!groupBy) { for (const n of nodes) emit(n, lvl); return; }
+      const leaves = nodes.filter(n => n.record.kind === leafKind);
+      for (const n of nodes) if (n.record.kind !== leafKind) emit(n, lvl);
+      if (!leaves.length) return;
+      const byId = new Map(leaves.map(n => [n.id, n]));
+      const pid = leaves[0].parentId ?? 'root';
+      for (const g of groupRecords(leaves.map(n => n.record), groupBy, opts.config!, ALL_GROUPS)) {
+        out.push({ type: 'group', group: 'value', level: lvl, kind: null, count: g.records.length, id: `value:${pid}:${lvl}:${g.key}`, by: groupBy, value: g.key });
+        for (const r of g.records) emit(byId.get(r.id)!, lvl + 1);
+      }
+    };
+
     if (!split) {
-      for (const n of list) emit(n, level);
+      emitAll(list, level);
       return;
     }
-    for (const n of atLevel) emit(n, level);
+    emitAll(atLevel, level);
     const parentId = deeper[0].parentId ?? 'root';
     // Группа ЗАНИМАЕТ место пропущенного уровня, поэтому записи под ней лежат
     // уровнем ниже — там же, где их соседи, у которых этот уровень есть.
@@ -168,7 +222,7 @@ export function treeTableLines(
       count: deeper.length,
       id: `outside:${parentId}`,
     });
-    for (const n of deeper) emit(n, level + 1);
+    emitAll(deeper, level + 1);
   };
 
   // Корни и «сироты» — РАЗНОЕ. Сирота назвала родителя, которого в выдаче нет;
@@ -199,6 +253,11 @@ export interface TreeTableProps {
   className?: string;
   /** Узкий экран (useNarrow); задан — без matchMedia (тесты, встройка). */
   narrow?: boolean;
+  /**
+   * Стандартная полоса управления (S4-SPRINT-TASKS-CONTROLS): поиск, фасеты,
+   * группировка листьев, порядок. Не задана — полосы нет, дерево прежнее.
+   */
+  controls?: TreeControls;
 }
 
 /** Столбцы шапки карточки на телефоне — статус и код; название — своей строкой. */
@@ -226,14 +285,36 @@ function levelNote(lang: KitLang, state: TreeLevelState, level: string, present:
   }
 }
 
-export function TreeTable({ levels, columns, rows, levelState, ctx, className, narrow: narrowProp }: TreeTableProps) {
+export function TreeTable({ levels, columns, rows: allRows, levelState, ctx, className, narrow: narrowProp, controls }: TreeTableProps) {
   const lang = useKitLang();
   const narrow = useNarrow(narrowProp);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
-  const lines = useMemo(() => treeTableLines(rows, levels, collapsed), [rows, levels, collapsed]);
+  const [ownState, setOwnState] = useState<ControlState>(EMPTY_CONTROLS);
+  const cstate = controls?.state ?? ownState;
+  const setCstate = (s: ControlState) => { setOwnState(s); controls?.onStateChange?.(s); };
+  const filtered = useMemo(
+    () => (controls ? filterTreeRows(allRows, levels, cstate, ctx.config) : null),
+    [controls, allRows, levels, cstate, ctx.config],
+  );
+  const rows = filtered?.rows ?? allRows;
+  const filtering = !!controls && controlsActive(cstate);
+  // Новое условие раскрывает дерево: находка под свёрнутой веткой была бы
+  // спрятана, и «Показано 1» без видимой строки читалось бы как сбой.
+  const filterSig = filtering ? JSON.stringify([cstate.text, cstate.filters, cstate.ops]) : '';
+  useEffect(() => { if (filterSig) setCollapsed(new Set()); }, [filterSig]);
+  const groupBy = controls ? cstate.group : null;
+  const lines = useMemo(() => treeTableLines(rows, levels, collapsed, { groupBy, config: ctx.config }), [rows, levels, collapsed, groupBy, ctx.config]);
   const kindTitle = (kind: string | null) => (kind ? ctx.config.kinds[kind]?.title ?? kind : '');
+  const groupLineTitle = (line: Extract<TreeTableLine, { type: 'group' }>) => {
+    if (line.group === 'orphan') return kitT(lang, 'kit.ttab.orphan');
+    if (line.group === 'value') return fieldValueTitle(ctx.config, lang, line.by ?? '', line.value ?? '');
+    return kitT(lang, 'kit.ttab.outside', { level: kindTitle(line.kind) });
+  };
+  const leafKind = leafKindOf(levels);
+  // Счётчики фасетов — по листьям: условие судит только их.
+  const leafRecords = useMemo(() => allRows.filter(r => r.kind === leafKind).map(treeRowRecord), [allRows, leafKind]);
 
-  const present = useMemo(() => new Set(rows.map(r => r.kind)), [rows]);
+  const present = useMemo(() => new Set(allRows.map(r => r.kind)), [allRows]);
   const notes = levels
     .map(l => {
       const state = levelState?.[l.kind] ?? 'ok';
@@ -276,7 +357,24 @@ export function TreeTable({ levels, columns, rows, levelState, ctx, className, n
       {notes.map(n => (
         <p key={n.kind} className="sk-ttab__note" data-state={n.state} data-level-kind={n.kind} role="status">{n.note}</p>
       ))}
-      {rows.length === 0 ? (
+      {controls && (
+        <ControlBar
+          config={ctx.config}
+          records={leafRecords}
+          state={cstate}
+          onChange={setCstate}
+          filterKeys={controls.filters}
+          groupKeys={controls.groupings}
+          sortKeys={controls.sorts}
+          valueTitle={controls.valueTitle}
+          shown={filtered ? { shown: filtered.shown, total: filtered.total } : undefined}
+          narrow={narrow}
+        />
+      )}
+      {rows.length === 0 && filtering && allRows.length > 0 ? (
+        // Записи есть — их отсеяло условие. «Записей нет» здесь было бы неправдой.
+        <EmptyState compact title={kitT(lang, 'kit.list.emptyFiltered')} hint={kitT(lang, 'kit.list.emptyFilteredHint')} />
+      ) : rows.length === 0 ? (
         <EmptyState compact title={kitT(lang, 'kit.ttab.empty')} hint={kitT(lang, 'kit.ttab.emptyHint')} />
       ) : narrow ? (
         // Телефон (S4-MOBILE-EDGE, SPEC-SEIDRKIT-ADAPTIVE-TEST §3 п.5): таблица
@@ -286,9 +384,7 @@ export function TreeTable({ levels, columns, rows, levelState, ctx, className, n
         <ul className="sk-ttab__cards" aria-label={kitT(lang, 'kit.ttab.label')}>
           {lines.map(line => {
             if (line.type === 'group') {
-              const title = line.group === 'orphan'
-                ? kitT(lang, 'kit.ttab.orphan')
-                : kitT(lang, 'kit.ttab.outside', { level: kindTitle(line.kind) });
+              const title = groupLineTitle(line);
               return (
                 <li key={line.id} className="sk-ttab__cgroup" data-line="group" data-group={line.group} aria-level={line.level}
                   style={{ '--tree-depth': line.level - 1 } as CSSProperties}>
@@ -341,9 +437,7 @@ export function TreeTable({ levels, columns, rows, levelState, ctx, className, n
           <tbody>
             {lines.map(line => {
               if (line.type === 'group') {
-                const title = line.group === 'orphan'
-                  ? kitT(lang, 'kit.ttab.orphan')
-                  : kitT(lang, 'kit.ttab.outside', { level: kindTitle(line.kind) });
+                const title = groupLineTitle(line);
                 return (
                   <tr
                     key={line.id}
