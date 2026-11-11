@@ -11,6 +11,7 @@
 import { EmptyState, Forbidden, LoadError, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
+import { QuickCommands } from './QuickCommands';
 import {
   fetchMcp, fetchMcpFailureRows, isSilent, MCP_ONLY_FAILURES, type McpData, type McpFailureRowsData, type McpHealth,
 } from './mcp';
@@ -120,6 +121,8 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-profiles-note">{t('admin.mcp.profilesNote')}</p>
       {body}
       {data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
+      {/* S7B-31 п.5а: быстрые команды подключения — из старой вкладки v1. */}
+      <QuickCommands />
     </section>
   );
 }

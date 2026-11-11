@@ -1,7 +1,7 @@
 // Раскладка экранов v2 в настоящем браузере (SPRINT_UXR_S7A_NEWS/S7A-12).
 // jsdom раскладки не считает, поэтому переполнение на 412 px и «лента не на
-// первом экране» unit-тесты не ловили. Эти проверки — Playwright на двух
-// ширинах: телефон 412×915 и планшет/ноутбук 1280×800.
+// первом экране» unit-тесты не ловили. Эти проверки — Playwright: телефон
+// 412×915, ноутбук 1280×800 и (экраны новостей) планшет 768×1024 и 1024×768.
 //
 // В CI не запускается (решение владелицы 09.11.2026: «тесты локально»):
 //   cd web-next && npx playwright test
@@ -26,5 +26,10 @@ export default defineConfig({
   projects: [
     { name: 'phone-412', use: { viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true } },
     { name: 'desktop-1280', use: { viewport: { width: 1280, height: 800 } } },
+    // Планшет (жалобы владелицы 08.11 и 10.11 — скрины с планшета): палец, а не
+    // мышь, поэтому невидимые зоны касания 44 px включены. Только экраны
+    // новостей: остальные e2e под планшет не размечены.
+    { name: 'tablet-768', testMatch: /news-.*\.spec\.ts/, use: { viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true } },
+    { name: 'tablet-1024', testMatch: /news-.*\.spec\.ts/, use: { viewport: { width: 1024, height: 768 }, isMobile: true, hasTouch: true } },
   ],
 });

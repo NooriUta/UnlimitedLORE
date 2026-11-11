@@ -5,6 +5,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { AuthGate } from '@seidr/kit/auth';
 import App from './App';
 import { v2Auth } from './auth/session';
+import { installServerPulse } from './shell/serverPulse';
 import { themeSource } from './storage/themeSource';
 import { ShowTechFromSettings } from './settings/ShowTech';
 import { staleChunk } from './shell/staleChunk';
@@ -32,6 +33,8 @@ void v2Auth.init();
 // просит чанк, которого на сервере уже нет. Одна перезагрузка, повтор — плашка.
 // Слушатель — до рендера: первый же ленивый раздел может упасть.
 staleChunk.install(window);
+// Свежесть для строки состояния (S4-21): когда сервер LORE ответил в последний раз.
+installServerPulse();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

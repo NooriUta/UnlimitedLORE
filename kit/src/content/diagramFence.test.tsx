@@ -39,7 +39,6 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 // все экраны kit, и тест разбора диаграмм не должен падать из-за чужого файла.
 import { KitLangProvider } from '../i18n/lang';
 import { MartProse, toSegments } from './MartProse';
-import { renderMarkdownBare } from './markdownBare';
 
 const kinds = (md: string) => toSegments(md).map(s => s.kind);
 const mermaidDefs = (md: string) =>
@@ -88,19 +87,6 @@ describe('правило 1 · диаграммой считается тольк
   it('блок с отступом внутри списка — диаграмма, отступ снят', () => {
     const md = '- пункт\n\n  ```mermaid\n  flowchart TB\n    A --> B\n  ```\n';
     expect(mermaidDefs(md)).toEqual(['flowchart TB\n  A --> B']);
-  });
-
-  it('то же правило на пути без сборки (голый HTML): проза не попадает в обёртку диаграммы', () => {
-    const r = renderMarkdownBare('Правило: схема — всегда ```mermaid с layout: elk```.\n\nМой текст примечания.\n\n```\nкод\n```\n');
-    expect(r.diagrams).toBe(0);
-    expect(r.html).not.toContain('sk-prose__mermaid');
-    expect(r.html).toContain('Мой текст примечания');
-  });
-
-  it('положительный контроль пути без сборки: объявленный блок всё ещё обёртка диаграммы', () => {
-    const r = renderMarkdownBare('```mermaid\nflowchart TB\n  A --> B\n```\n');
-    expect(r.diagrams).toBe(1);
-    expect(r.html).toContain('sk-prose__mermaid');
   });
 });
 

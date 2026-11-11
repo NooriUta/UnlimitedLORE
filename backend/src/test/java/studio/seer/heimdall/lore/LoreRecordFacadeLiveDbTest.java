@@ -172,6 +172,12 @@ class LoreRecordFacadeLiveDbTest {
         assertEquals(sv, c.getString("current.version"));
         admin().body("{\"sprint_id\":\"" + sid + "\",\"context_md\":\"x\",\"expected_version\":\"" + sv + "\"}")
             .post("/lore/sprint/update").then().statusCode(200);
+        // S5-08: правка на месте двигает версию — вторая правка с той же (прочитанной ДО
+        // первой) версией не ложится поверх молча. До S5-08 версия была одним valid_from
+        // открытой строки, правка текста её не двигала, и здесь было 200.
+        var c2 = admin().body("{\"sprint_id\":\"" + sid + "\",\"context_md\":\"поверх\",\"expected_version\":\"" + sv + "\"}")
+            .post("/lore/sprint/update").then().statusCode(409).extract().jsonPath();
+        assertEquals(record("sprint", sid).getString("record.version"), c2.getString("current.version"));
         // без expected_version — как раньше (MCP, v1, miniLORE)
         admin().body("{\"sprint_id\":\"" + sid + "\",\"context_md\":\"y\"}").post("/lore/sprint/update").then().statusCode(200);
 
@@ -180,6 +186,8 @@ class LoreRecordFacadeLiveDbTest {
             .post("/lore/task/edit").then().statusCode(409);
         admin().body("{\"task_uid\":\"" + sid + "/T-1\",\"title\":\"t2\",\"expected_version\":\"" + tv + "\"}")
             .post("/lore/task/edit").then().statusCode(200);
+        admin().body("{\"task_uid\":\"" + sid + "/T-1\",\"title\":\"t3\",\"note_md\":\"поверх\",\"expected_version\":\"" + tv + "\"}")
+            .post("/lore/task/edit").then().statusCode(409);
 
         admin().body("{\"spec_id\":\"SPEC-REC-VER\",\"title\":\"s\",\"content_md\":\"a\",\"version\":\"0.1.0\"}")
             .post("/lore/spec").then().statusCode(200);

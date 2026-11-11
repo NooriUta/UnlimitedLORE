@@ -5,7 +5,7 @@
 // Лечение: одна автоматическая перезагрузка; повтор в течение минуты или
 // сбой хранилища — не перезагружать вслепую, а показать плашку с кнопкой.
 import { describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { act, render, screen } from '@testing-library/react';
@@ -186,6 +186,22 @@ describe('S4-STALE-CHUNK · подключение', () => {
       expect(src, f).not.toMatch(/\blazy\(\s*\(\)\s*=>\s*import\(/);
       expect(src, f).toMatch(/lazyChunk\(\(\) => import\(/);
     }
+  });
+
+  // Правило, а не список файлов: после слияния с develop появился новый ленивый
+  // раздел (RecordCreateForm), и перечень из трёх файлов его бы не заметил.
+  it('ни один ленивый импорт в src не обходит lazyChunk (обход всего дерева)', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = resolve(dir, name);
+        if (statSync(p).isDirectory()) { walk(p); continue; }
+        if (!/\.tsx?$/.test(name) || /\.test\.tsx?$/.test(name) || name === 'staleChunk.tsx') continue;
+        if (/\blazy\(\s*\(\)\s*=>\s*import\(/.test(readFileSync(p, 'utf8'))) offenders.push(p);
+      }
+    };
+    walk(resolve(here, '..'));
+    expect(offenders).toEqual([]);
   });
 
   it('метка перезагрузки — в sessionStorage через безопасную обёртку storage/safe', () => {

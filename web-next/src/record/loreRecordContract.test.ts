@@ -125,3 +125,40 @@ describe('ADR — связи по видам UML (слова владелицы 
     expect(c.schema.relations.some(r => r.relation === 'generalization')).toBe(false);
   });
 });
+
+// Прод v1.17.13, 11.11.2026, владелица: «паспорт сломался». У решения вкладка
+// «Контент» пустая, хотя тело в LORE есть. Корень на стыке: сервер отдаёт у
+// решения ДВА поля группы body — `body_md` (само решение, заполнено) и
+// `rationale_md` (обоснование, пусто). Приложение выкидывало `body_md` из
+// разделов, считая его копией (так у задачи: `body_md` — копия `note_md`), а
+// kit, видя разделы, тело отдельным блоком не рисует. Оставался один пустой
+// раздел только для чтения — и он скрыт. Правило: `body_md` — копия, только
+// если совпадает с другим разделом тела; иначе это настоящее тело и первый раздел.
+describe('тело записи: body_md — раздел, если он не копия другого раздела', () => {
+  async function asType(type: string, fields: { key: string; label: string; editable?: boolean }[], values: Record<string, unknown>): Promise<LoreRecord1> {
+    const c = await contractOf('task', TASK.task_uid, { tasks_by_uids: [TASK] });
+    const head = c.schema.fields.filter(f => f.group !== 'body');
+    return {
+      ...c,
+      record: { ...c.record, type },
+      schema: {
+        ...c.schema, type,
+        fields: [...head, ...fields.map(f => ({ key: f.key, label: f.label, kind: 'md' as const, required: false, editable: f.editable ?? false, group: 'body' as const }))],
+      },
+      values: { ...c.values, ...values },
+    };
+  }
+
+  it('решение: body_md заполнено, rationale_md пусто — «Решение» первым разделом с текстом', async () => {
+    const c = await asType('decision', [{ key: 'body_md', label: 'Решение' }, { key: 'rationale_md', label: 'Обоснование' }], { body_md: 'текст решения', rationale_md: null });
+    const k = fromLoreRecord(JSON.parse(JSON.stringify(c)) as LoreRecord1, 'ru');
+    expect(k.config.kinds.decision.bodySections?.map(s => s.key)).toEqual(['body_md', 'rationale_md']);
+    expect(k.record.fields.body_md).toBe('текст решения');
+  });
+
+  it('задача: body_md — копия заметки — вторым разделом не дублируется', async () => {
+    const c = await asType('task', [{ key: 'note_md', label: 'Заметка', editable: true }, { key: 'body_md', label: 'Текст' }], { body_md: 'тело', note_md: 'тело' });
+    const k = fromLoreRecord(JSON.parse(JSON.stringify(c)) as LoreRecord1, 'ru');
+    expect(k.config.kinds.task.bodySections?.map(s => s.key)).toEqual(['note_md']);
+  });
+});

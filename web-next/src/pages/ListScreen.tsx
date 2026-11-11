@@ -25,7 +25,8 @@ import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
 import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
 import { loreValueIcon } from '../lists/loreFilters';
-import { appliedCollapseNavOnRead } from '../settings/applied';
+import { appliedCollapseNavOnRead, appliedPassportPlace } from '../settings/applied';
+import { NEW_RECORD_ID, fetchCanCreate, isCreateType } from '../record/recordCreate';
 import { useProjectScope } from '../scope/ProjectScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
 import { setPaletteTarget } from '../palette/paletteTarget';
@@ -36,6 +37,8 @@ import './ListScreen.css';
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
 const ListPassport = lazyChunk(() => import('../record/ListPassport'));
+// Черновик новой записи (S4-24) — тоже свой чанк: в нём TipTap.
+const RecordCreate = lazyChunk(() => import('../record/RecordCreateForm'));
 /**
  * Тип паспорта по экрану списка — карта ЧАСТИЧНАЯ (S4-V2-SECTIONS).
  *
@@ -65,6 +68,8 @@ const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };
+/** Место записи по умолчанию — личная настройка (S4-24, одна с S4-17); не выбирал — справа. */
+const defaultPlace = (): RecordPlacement => appliedPassportPlace() ?? 'right';
 
 /**
  * «Паспорта у этого типа ещё нет» — ответ на щелчок по строке в разделе без
@@ -107,10 +112,11 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     const p = readUrlState(w);
     const id = p.get('open');
     const raw = p.get('place') ?? '';
-    const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : 'right';
+    // Места в адресе нет — личная настройка «Где открывать запись» (S4-24), иначе справа.
+    const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : defaultPlace();
     return { id: id || null, place };
   };
-  const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: 'right' }));
+  const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: defaultPlace() }));
   // D-24: «назад»/«вперёд» меняют адрес не нашими руками — паспорт обязан
   // идти за ним, иначе адрес и экран расходятся молча. Следим только у
   // настоящего окна: у подменного окна тестов событий нет.
@@ -248,6 +254,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     );
     return () => { live = false; };
   }, [modelType, fetchImpl]);
+  const modelCodes = useMemo(() => (modelStatuses?.items ?? []).map(s => s.code), [modelStatuses]);
   const config = useMemo(() => {
     const items = modelStatuses?.items ?? [];
     // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
@@ -349,15 +356,17 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const body = result.data;
   const data = useMemo(
     // «Сейчас» — время источника (заголовок Date), иначе часы браузера (K2-DATE-RANGE).
-    () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString()) : null),
-    [body, def],
+    // Статус строки сверяется с осью ТИПА из модели, а не с перечнем в коде
+    // (S4-STATUS-AXIS-CONFIG, 11.11): ось доходила до конфига, но не до чтения строки.
+    () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes }) : null),
+    [body, def, modelCodes],
   );
   // Переход на запись вне фильтра (слово владелицы 11.11.2026): открыта запись,
   // которой в загруженном нет, а закрытые скрыты, — фильтр снимается сам
   // (режим «внизу»), догружаются закрытые, и запись находится. Видна — не трогаем.
   const openId = open.id;
   useEffect(() => {
-    if (!def.closedSlice || loadClosed || !openId || !data) return;
+    if (!def.closedSlice || loadClosed || !openId || openId === NEW_RECORD_ID || !data) return;
     if (data.records.some(r => r.id === openId)) return;
     if (urlWin) pushUrlState({ lc: 'below' }, { replace: true, win: urlWin });
     setClosedMode('below');
@@ -384,7 +393,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // цель несёт её код: действовать над записью можно и без названия.
   const [selection, setSelection] = useState<string[]>([]);
   useEffect(() => {
-    if (open.id) {
+    if (open.id && open.id !== NEW_RECORD_ID) {
       const rec = data?.records.find(r => r.id === open.id)
         ?? { id: open.id, kind: PASSPORT_OF[screen] ?? screen, title: open.id, status: '', fields: {} };
       setPaletteTarget({ type: 'record', record: rec });
@@ -433,7 +442,25 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
 
   const headId = titleId ?? `list-screen-${screen}`;
   // Иконка заголовка — из канона LORE v1 (S4-25): def.icon = иконка раздела v1.
-  const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon } : undefined;
+  // «+ Новая» (S4-24): только у типов с путём создания и только при праве
+  // (perms.can_create паспорта `_new`). Не смогли спросить — кнопки нет:
+  // кнопка, которая откажет после заполнения формы, хуже её отсутствия.
+  const passportOf = PASSPORT_OF[screen];
+  const createType = isCreateType(passportOf) ? passportOf : null;
+  const [canCreate, setCanCreate] = useState(false);
+  useEffect(() => {
+    if (!createType) { setCanCreate(false); return; }
+    let live = true;
+    fetchCanCreate(createType, fetchImpl).then(r => { if (live) setCanCreate(r.can); });
+    return () => { live = false; };
+  }, [createType, fetchImpl]);
+  const newAction = createType && canCreate ? (
+    <button type="button" className="sk-btn sk-btn--primary" data-testid="list-new" title={t('create.newHint')}
+      onClick={() => setOpen({ ...open, id: NEW_RECORD_ID })}>
+      {t('create.new')}
+    </button>
+  ) : undefined;
+  const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon, ...(newAction ? { actions: newAction } : {}) } : undefined;
   // Peek из списка (S9-10): пробел на строке — карточка записи; тип LORE = вид строки.
   const listPeek = useMemo(
     () => loreListPeek(lang, id => (viewData ?? data)?.records.find(r => r.id === id)?.kind ?? null, fetchImpl),
@@ -519,7 +546,15 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
       <RecordDock placement={place} modal={shell == null}
         onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
-        {passportType ? (
+        {open.id === NEW_RECORD_ID && createType ? (
+          // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
+          // доке открывается сама запись (то, что открывает «Читать целиком»).
+          <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+            <RecordCreate type={createType} fetchImpl={fetchImpl}
+              onCreated={id => { setOpen({ ...open, id }); result.reload(); }}
+              onCancel={() => setOpen({ ...open, id: null })} />
+          </Suspense>
+        ) : passportType ? (
           <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
             <ListPassport key={open.id} type={passportType} id={open.id} placement={place} fetchImpl={fetchImpl}
               backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}

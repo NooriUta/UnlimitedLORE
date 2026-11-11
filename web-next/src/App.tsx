@@ -24,7 +24,7 @@ import { Suspense } from 'react';
 import { ErrorBoundary, Pill, Skeleton, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
 import { legacyHashHref, legacyPassportHref } from './nav/loreRoutes';
-import { legacyAdminHref } from './admin/adminModule';
+import { adminAxisHref, legacyAdminHref } from './admin/adminModule';
 import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
 import { ProjectScope } from './scope/ProjectScope';
@@ -132,6 +132,10 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   // S7B-01: /admin?adm=X → /?mod=admin&sec=adm-X. Уже переписанный адрес (mod
   // есть) второй раз не трогаем: иначе повторный рендер сбросил бы раздел.
   if (route === 'admin' && w && !new URLSearchParams(query).has('mod')) w.history.replaceState(null, '', legacyAdminHref(query));
+  // S7B-28: «Кто где» с осью (?sec=adm-who&adm-by=projects) → раздел этой оси
+  // («Проекты» или «Люди и их проекты»). Без оси в адресе — null, второй рендер не трогает.
+  const axisFix = w ? adminAxisHref(w.location.search) : null;
+  if (axisFix && w) w.history.replaceState(null, '', axisFix);
   // Страницы вне оболочки подписаны (S4-17, находка P0 аудита 08.11): без
   // шапки и меню LORE выглядит сломанным, и отличить витрину от поломки
   // человек не может, пока ему не сказали. Витрины — «демо вне приложения»,

@@ -99,6 +99,10 @@ public class AidaLoreResource extends LoreResourceBase {
     @Inject
     KcBridge kcBridge;
 
+    /** S4-24: строки task_identities — те же кандидаты, что проверяет запись роли (TR-05). */
+    @Inject
+    TaskRoleService roleService;
+
     // ── SPRINT_VIZ_EMBED/VE-2: подпись ссылки встройки Völva ─────────────────
     // Ключ — через SecretProvider (env | Infisical), как KC_ADMIN_CLIENT_SECRET;
     // в код и в переменные сборки не попадает. Адрес и белый список графиков —
@@ -869,6 +873,21 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
+    /**
+     * Решение владелицы 11.11.2026: срезы, у которых число скрытых скоупом строк
+     * говорится числом ({@code scope.hidden}). sprint_deps — ребро между двумя
+     * спринтами: без числа «зависимостей нет» неотличимо от «они ведут в чужие проекты».
+     */
+    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps");
+
+    /** «Скрыто N» в метке скоупа: total — без скоупа, shown — под скоупом. */
+    static void putHidden(Map<String, Object> marker, int total, int shown) {
+        int hidden = Math.max(0, total - shown);
+        marker.put("hidden", hidden);
+        if (hidden > 0) marker.put("hidden_note",
+            "скрыто " + hidden + ": ведут в проекты, где у вас нет роли (видна строка, только если видны оба конца)");
+    }
+
     /** AL-91: скоупный срез при пустом множестве разрешённых проектов — отказ, а не пустой список. */
     static boolean scopeDenies(String id, java.util.Set<String> allowed) {
         return allowed != null && allowed.isEmpty() && LoreSlices.PROJECT_SCOPED.containsKey(id);
@@ -1024,6 +1043,8 @@ public class AidaLoreResource extends LoreResourceBase {
             new java.util.concurrent.atomic.AtomicReference<>();
         final java.util.concurrent.atomic.AtomicReference<LoreRoleMatrix.KcResult> kcAnswer =
             new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicReference<List<Map<String, Object>>> identities =
+            new java.util.concurrent.atomic.AtomicReference<>();
         return client.query(db, basicAuth(), body)
             .chain(res -> {
                 if (exemptQuery == null) return Uni.createFrom().item(res);
@@ -1065,6 +1086,17 @@ public class AidaLoreResource extends LoreResourceBase {
                     .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
                     .map(kc -> { kcAnswer.set(kc); return res; });
             })
+            // S4-24: заявленные личности проекта задачи. SQL-часть дала задачу под скоупом и её
+            // проекты; строится список только у найденной задачи с проектом. Вызовы графа
+            // блокирующие — на рабочем пуле; сбой — 502, а не пустой список.
+            .chain(res -> {
+                if (!LoreTaskIdentities.SLICE.equals(id) || LoreTaskIdentities.problem(res.result()) != null)
+                    return Uni.createFrom().item(res);
+                String uid = given.get("id");
+                return Uni.createFrom().item(() -> roleService.identitiesOfTask(uid))
+                    .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+                    .map(rows -> { identities.set(rows); return res; });
+            })
             // MT-MCP-TRUTH A12: пустой ответ на ЯВНЫЙ id под скоупом — проверить,
             // есть ли запись вообще. Есть — сказать «вне скоупа», а не «не найдено».
             .chain(res -> {
@@ -1078,10 +1110,39 @@ public class AidaLoreResource extends LoreResourceBase {
                     .map(p -> new Object[] {res, outsideScopeMarker(explicitId, !isEmptyResult(p.result()))})
                     .onFailure().recoverWithItem(ex -> new Object[] {res, null});
             })
+            // Решение владелицы 11.11.2026 (sprint_deps под скоуп): сколько строк скрыто
+            // скоупом — числом, а не молча. Тот же приём, что «вне скоупа» выше: второй
+            // запрос без скоупа с теми же фильтрами. Не прочитался — числа нет, а не 0.
+            .chain(pair -> {
+                studio.seer.heimdall.bench.MartResult res = (studio.seer.heimdall.bench.MartResult) pair[0];
+                if (rowScope == null || scopeMarker == null || !HIDDEN_COUNTED.contains(id))
+                    return Uni.createFrom().item(new Object[] {pair[0], pair[1], null});
+                LoreSlices.Composed unscoped = LoreSlices.compose(id, given);
+                MartQuery all = new MartQuery("sql", unscoped.sql(),
+                    unscoped.params().isEmpty() ? null : unscoped.params(), -1);
+                int shown = res.result() == null ? 0 : res.result().size();
+                return client.query(db, basicAuth(), all)
+                    .map(p -> new Object[] {pair[0], pair[1],
+                        new int[] {p.result() == null ? 0 : p.result().size(), shown}})
+                    .onFailure().recoverWithItem(ex -> new Object[] {pair[0], pair[1], null});
+            })
             .map(pair -> {
                 studio.seer.heimdall.bench.MartResult res = (studio.seer.heimdall.bench.MartResult) pair[0];
                 @SuppressWarnings("unchecked")
                 Map<String, Object> outside = (Map<String, Object>) pair[1];
+                if (pair[2] instanceof int[] counts && scopeMarker != null) putHidden(scopeMarker, counts[0], counts[1]);
+                // S4-24: «некого выбрать» нельзя путать с «не смогли узнать, кого» — нет задачи,
+                // она вне скоупа или у неё нет проекта — ошибка с причиной, а не пустой список.
+                if (LoreTaskIdentities.SLICE.equals(id)) {
+                    String problem = LoreTaskIdentities.problem(res.result());
+                    if (problem != null) {
+                        if (outside != null) return noStore(Response.status(Response.Status.FORBIDDEN)
+                            .entity(new LoreError("OUTSIDE_SCOPE", String.valueOf(outside.get("reason")))));
+                        return noStore(Response.status("TASK_NOT_FOUND".equals(problem)
+                                ? Response.Status.NOT_FOUND.getStatusCode() : 422)
+                            .entity(new LoreError(problem, LoreTaskIdentities.problemDetail(problem, given.get("id")))));
+                    }
+                }
                 Map<String, Object> out = sliceBody(redactIfNoRole(id, res, allowedForRedact));
                 // S1-06: аддитивное поле категории статуса — ДО SlicePage.apply,
                 // чтобы fields=…,status_category проецировалось как обычная колонка.
@@ -1096,6 +1157,10 @@ public class AidaLoreResource extends LoreResourceBase {
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
                 // Kit 2 (K2-MATRIX): у ячейки матрицы состояние «проверено / не смогли / нет прав».
                 if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out, kcAnswer.get());
+                if (LoreTaskIdentities.SLICE.equals(id)) {
+                    out.put("rows", identities.get());
+                    out.put("task_uid", given.get("id"));
+                }
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
                 if (outside != null) out.put("outside_scope", outside);

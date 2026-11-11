@@ -30,6 +30,7 @@ import { kitNumber } from '../core/fmtValue';
 export function colKey(col: string): string {
   if (col.startsWith('progress:')) return col.slice('progress:'.length);
   if (col.startsWith('sum:')) return col.slice('sum:'.length);
+  if (col.startsWith('fresh:')) return col.slice('fresh:'.length);
   return col;
 }
 

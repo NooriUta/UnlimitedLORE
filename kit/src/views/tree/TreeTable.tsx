@@ -45,6 +45,7 @@ import { EmptyState } from '../../states/StateViews';
 import { KindCell, kindColumnTitle } from '../../record/KindBlock';
 import { kitT, useKitLang, type KitLang } from '../../i18n';
 import { buildTree, type TreeNode } from './treeModel';
+import { useNarrow } from '../../core/narrow';
 
 /** Уровень иерархии: вид его записей и можно ли уровню отсутствовать. */
 export interface TreeLevel {
@@ -196,7 +197,13 @@ export interface TreeTableProps {
   levelState?: Record<string, TreeLevelState>;
   ctx: KitCtx;
   className?: string;
+  /** Узкий экран (useNarrow); задан — без matchMedia (тесты, встройка). */
+  narrow?: boolean;
 }
+
+/** Столбцы шапки карточки на телефоне — статус и код; название — своей строкой. */
+const CARD_HEAD = new Set(['status', 'id']);
+const CARD_TITLE = new Set(['title', 'title+id']);
 
 /**
  * Слова для состояния уровня. `ok` и `none` молчат — сказать нечего (и это
@@ -219,8 +226,9 @@ function levelNote(lang: KitLang, state: TreeLevelState, level: string, present:
   }
 }
 
-export function TreeTable({ levels, columns, rows, levelState, ctx, className }: TreeTableProps) {
+export function TreeTable({ levels, columns, rows, levelState, ctx, className, narrow: narrowProp }: TreeTableProps) {
   const lang = useKitLang();
+  const narrow = useNarrow(narrowProp);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const lines = useMemo(() => treeTableLines(rows, levels, collapsed), [rows, levels, collapsed]);
   const kindTitle = (kind: string | null) => (kind ? ctx.config.kinds[kind]?.title ?? kind : '');
@@ -270,6 +278,57 @@ export function TreeTable({ levels, columns, rows, levelState, ctx, className }:
       ))}
       {rows.length === 0 ? (
         <EmptyState compact title={kitT(lang, 'kit.ttab.empty')} hint={kitT(lang, 'kit.ttab.emptyHint')} />
+      ) : narrow ? (
+        // Телефон (S4-MOBILE-EDGE, SPEC-SEIDRKIT-ADAPTIVE-TEST §3 п.5): таблица
+        // в 6 столбцов на 360 px читалась только прокруткой вбок. Те же строки —
+        // карточками, как у списка: шапка — статус и код, затем название,
+        // остальные столбцы — парами «подпись — значение». Уровень — отступом.
+        <ul className="sk-ttab__cards" aria-label={kitT(lang, 'kit.ttab.label')}>
+          {lines.map(line => {
+            if (line.type === 'group') {
+              const title = line.group === 'orphan'
+                ? kitT(lang, 'kit.ttab.orphan')
+                : kitT(lang, 'kit.ttab.outside', { level: kindTitle(line.kind) });
+              return (
+                <li key={line.id} className="sk-ttab__cgroup" data-line="group" data-group={line.group} aria-level={line.level}
+                  style={{ '--tree-depth': line.level - 1 } as CSSProperties}>
+                  <span className="sk-list__gtitle">{title}</span>
+                  <span className="sk-list__gcount">{line.count}</span>
+                </li>
+              );
+            }
+            const r = line.record;
+            const head = columns.filter(c => CARD_HEAD.has(c));
+            const titleCol = columns.find(c => CARD_TITLE.has(c));
+            const rest = columns.filter(c => !CARD_HEAD.has(c) && !CARD_TITLE.has(c));
+            return (
+              <li key={r.id} className="sk-cards__card sk-ttab__card" data-line="record" data-id={r.id} data-kind={r.kind}
+                aria-level={line.level} aria-expanded={line.kids > 0 ? !line.collapsed : undefined}
+                style={{ '--tree-depth': line.level - 1 } as CSSProperties}>
+                <div className="sk-cards__head">
+                  {line.kids > 0 && (
+                    <IconButton
+                      icon={ICON_CANON.ctlTreeToggle}
+                      iconSize={12}
+                      className={['sk-ttab__toggle', line.collapsed ? '' : 'is-open'].filter(Boolean).join(' ')}
+                      label={kitT(lang, line.collapsed ? 'kit.tree.expand' : 'kit.tree.collapse', { title: r.title })}
+                      onClick={() => toggle(r.id)}
+                    />
+                  )}
+                  {head.map(c => <KindCell key={c} col={c} record={r} ctx={ctx} lang={lang} />)}
+                </div>
+                {titleCol && <div className="sk-cards__title"><KindCell col={titleCol} record={r} ctx={ctx} lang={lang} /></div>}
+                {rest.length > 0 && (
+                  <dl className="sk-cards__fields">
+                    {rest.map(c => (
+                      <div key={c}><dt>{kindColumnTitle(ctx, lang, c)}</dt><dd><KindCell col={c} record={r} ctx={ctx} lang={lang} /></dd></div>
+                    ))}
+                  </dl>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <table className="sk-list__table sk-ttab__table" aria-label={kitT(lang, 'kit.ttab.label')}>
           <thead>

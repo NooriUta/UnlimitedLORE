@@ -11,6 +11,7 @@ import { Skeleton, useKitLang, useLoadState } from '@seidr/kit';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import { useAdminNav, type AdminTab } from './adminNav';
+import { AuthPreflight } from './AuthPreflight';
 import { AGENTS_NO_MACHINE, fetchAgents, type AgentsData } from './agents';
 import { fetchMcp, MCP_ONLY_FAILURES, type McpData } from './mcp';
 import { fetchRoleMatrix, type RolesData } from './roles';
@@ -76,6 +77,8 @@ export function AdminHome({ fetchImpl }: AdminHomeProps) {
         <AttnCard id="noprojects" st={noProjects} title={t('admin.home.noProjects')} hint={t('admin.home.noProjectsHint')}
           fix={t('admin.home.noProjectsFix')} onFix={go('roles', { 'adm-roles-f': ROLES_NO_PROJECTS })} onRetry={roles.reload} />
       </div>
+      {/* S7B-31 п.4а: чеклист включения auth из старой вкладки «Настройки». */}
+      <AuthPreflight fetchImpl={fetchImpl} />
       <h3 className="adm-access__h">{t('admin.home.start')}</h3>
       <div className="adm-chips" data-testid="adm-home-start">
         <StartBtn id="person" onClick={go('roles')}>{t('admin.home.goPerson')}</StartBtn>

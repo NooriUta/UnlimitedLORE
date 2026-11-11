@@ -61,8 +61,20 @@ const STATUS_CODE_RE = /^[A-Za-z0-9_-]+$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 
 const CONFIG_KEYS = ['modules', 'menu', 'kinds', 'edges', 'graph', 'statuses', 'roles', 'verdict', 'list', 'palette', 'hooks'];
-const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at'];
-const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
+const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at', 'search'];
+/**
+ * Ключи `list` — ОДИН список на валидатор и JSON-схему (сторож
+ * facetLabels.test.tsx, по образцу colorTokensMatchCss). До K4-FACET-LABELS
+ * схема отстала от контракта на три ключа (collapsedGroupings, columnDisplay,
+ * feed.under) и при `additionalProperties: false` отвергала рабочий конфиг.
+ */
+export const LIST_KEYS = [
+  'views', 'timeline', 'calendar', 'quick', 'filters', 'groupings', 'fieldLabels', 'collapsedGroupings',
+  'feed', 'columns', 'columnDisplay', 'tree', 'showClosed', 'fresh',
+] as const;
+/** Ключи, подпись которых kit знает сам (groupLabel.ts BUILTIN_KEY_TITLES). */
+export const KIT_BUILTIN_KEYS = ['title', 'id', 'status', 'kind', 'updated_at'] as const;
+const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar'];
 /**
  * Категории статуса: ось владелицы (D-2026-UXR-STATUS-AXIS, шесть значений)
  * плюс прежние четыре — старые конфиги должны проходить проверку.
@@ -380,6 +392,43 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
         c.warn('list.groupings', 'status-grouping-without-axis', 'разрез «status» заказан, а statuses.items пуст: группировка обещает статусную ось, которой нет');
       }
     }
+    /*
+      Подписи фасетов и разрезов (K4-FACET-LABELS). Фасет и разрез называют
+      поле ИМЕНЕМ, а подпись kit знает только у встроенных ключей и полей вида.
+      Поле, которое считает сервер или приложение («quality», «review» у
+      Дата-странников), подписи не имело вовсе — и kit молча печатал ключ
+      капсом. Теперь подпись такому полю даёт `list.fieldLabels`, а пропуск
+      называется здесь — громко, а не тихим ключом на экране.
+
+      Предупреждение, не ошибка: kit покажет ключ (строчными, с подсказкой) —
+      конфиг рабочий, но то, что видит человек, не подписано. Разрез по связи
+      (`rel:…`) подписан ребром и сюда не относится.
+    */
+    const fieldLabels = c.obj(list, 'fieldLabels', 'list', false);
+    if (fieldLabels) {
+      for (const [fk, fv] of Object.entries(fieldLabels)) {
+        if (!isStr(fv) || fv.trim() === '') c.err(`list.fieldLabels.${fk}`, 'type', `list.fieldLabels.${fk}: подпись — непустая строка`);
+      }
+    }
+    const labelled = new Set<string>(KIT_BUILTIN_KEYS);
+    for (const k of Object.values(isObj(cfg.kinds) ? cfg.kinds : {})) {
+      if (!isObj(k) || !Array.isArray(k.fields)) continue;
+      for (const fl of k.fields) if (isObj(fl) && isStr(fl.key) && isStr(fl.title) && fl.title.trim()) labelled.add(fl.key);
+    }
+    for (const [fk, fv] of Object.entries(fieldLabels ?? {})) {
+      if (isStr(fv) && fv.trim()) labelled.add(fk.startsWith('fields.') ? fk.slice(7) : fk);
+    }
+    for (const [arrKey, what] of [['filters', 'фасет'], ['groupings', 'разрез']] as const) {
+      (listArrays[arrKey] ?? []).forEach((v, i) => {
+        if (!isStr(v) || v.startsWith('rel:')) return;
+        const bare = v.startsWith('fields.') ? v.slice(7) : v;
+        if (labelled.has(v) || labelled.has(bare)) return;
+        c.warn(`list.${arrKey}[${i}]`, 'facet-without-label',
+          `list.${arrKey}[${i}]: ${what} по полю «${v}» без подписи — его нет ни в kinds.*.fields, ни в list.fieldLabels; `
+          + 'на экране будет сырой ключ. Подпишите поле в list.fieldLabels');
+      });
+    }
+    c.unknownKeys(list, LIST_KEYS, 'list', 'kit его не прочтёт');
     const tree = c.obj(list, 'tree', 'list', false);
     if (tree) {
       c.str(tree, 'parent', 'list.tree');
@@ -390,6 +439,9 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
     const timeline = c.obj(list, 'timeline', 'list', false);
     if (timeline) c.str(timeline, 'start', 'list.timeline');
     if (views?.includes('timeline') && !timeline) c.err('list.timeline', 'timeline-config', 'вид timeline требует list.timeline {start}');
+    const calendar = c.obj(list, 'calendar', 'list', false);
+    if (calendar) c.str(calendar, 'date', 'list.calendar');
+    if (views?.includes('calendar') && !calendar) c.err('list.calendar', 'calendar-config', 'вид calendar требует list.calendar {date}');
     /*
       Вид «Лента» (K2-FEED-VIEW, допущение, принятое владелицей): лента — вид
       там, где приложение НАЗВАЛО поле времени. Поэтому это не ошибка, а
@@ -443,6 +495,42 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
     */
     const under = feed ? c.obj(feed, 'under', 'list.feed', false) : null;
     if (under) c.str(under, 'title', 'list.feed.under');
+    /*
+      Пороги свежести (K4-FRESHNESS): минуты, неотрицательные; предупреждение
+      не позже «устарело» — иначе тон «предупреждение» не наступит никогда, и
+      это ошибка конфига, а не вкус. Колонка fresh: без порогов законна, но
+      рисуется без тона — говорим об этом, чтобы «без тона» не читалось как
+      «всё свежо».
+    */
+    const fresh = c.obj(list, 'fresh', 'list', false);
+    if (fresh) {
+      for (const [field, th] of Object.entries(fresh)) {
+        const p = `list.fresh.${field}`;
+        if (!isObj(th)) { c.err(p, 'type', `${p} должно быть объектом {warnAfter, staleAfter}`); continue; }
+        c.unknownKeys(th, ['warnAfter', 'staleAfter'], p, 'kit его не прочтёт');
+        const num = (k: string): number | undefined => {
+          const v = th[k];
+          if (v === undefined) return undefined;
+          if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
+            c.err(`${p}.${k}`, 'type', `${p}.${k}: нужно неотрицательное число минут, получено «${String(v)}»`);
+            return undefined;
+          }
+          return v;
+        };
+        const w = num('warnAfter');
+        const st = num('staleAfter');
+        if (w !== undefined && st !== undefined && w > st) {
+          c.err(p, 'fresh-order', `${p}: warnAfter (${w}) больше staleAfter (${st}) — тон «предупреждение» не наступит никогда`);
+        }
+      }
+    }
+    for (const col of listArrays.columns ?? []) {
+      if (!isStr(col) || !col.startsWith('fresh:')) continue;
+      const field = col.slice('fresh:'.length);
+      if (!fresh || !isObj(fresh[field])) {
+        c.warn('list.columns', 'fresh-without-thresholds', `колонка «${col}» без list.fresh.${field}: время покажем, тона «устарело» не будет — что считать давним, решает приложение`);
+      }
+    }
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
     if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');
@@ -507,6 +595,7 @@ export function validateKitData(input: unknown, config?: KitConfig): KitValidati
     const status = c.str(r, 'status', p, { allowEmpty: true });
     c.obj(r, 'fields', p, true);
     c.optStr(r, 'body_md', p);
+    c.optStr(r, 'search', p);
     if (r.updated_at !== undefined && !isIsoDate(r.updated_at)) c.err(`${p}.updated_at`, 'date', `${p}.updated_at — дата ISO 8601`);
     c.unknownKeys(r, RECORD_KEYS, p, 'положи его в fields');
     if (kind !== undefined && kindKeys && !kindKeys.has(kind)) c.warn(`${p}.kind`, 'unknown-kind', `${p}.kind «${kind}» нет в config.kinds`);

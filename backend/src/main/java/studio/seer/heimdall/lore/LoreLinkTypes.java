@@ -19,7 +19,10 @@ import java.util.Map;
  * <ul>
  *   <li>Структурные рёбра (HAS_STATE, PART_OF, IN_PHASE, BELONGS_TO,
  *       BELONGS_TO_PROJECT, TAGGED_WITH, DOC_CHILD_OF): это принадлежность и
- *       иерархия, а не «связь по смыслу», и у них есть свои пути записи.</li>
+ *       иерархия, а не «связь по смыслу», и у них есть свои пути записи.
+ *       Исключение — привязка к компоненту: BELONGS_TO (adr/decision/doc/sprint)
+ *       и TAGGED_WITH задача → компонент; «запись про компонент» ставится
+ *       и из упоминания (SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK).</li>
  *   <li>Рёбра с побочным действием: ANSWERS (закрывает вопрос), SUPERSEDES
  *       (требует статуса SUPERSEDED у старого ADR), GATES (меняет готовность
  *       задачи), DEPENDS_ON спринтов (kind/reason и проверка цикла). Поставить их
@@ -74,6 +77,7 @@ final class LoreLinkTypes {
         put(m, "job",      "KnowJob",          "job_id",      "job");
         put(m, "actor",    "KnowProjectActor", "actor_id",    "project-actor");
         put(m, "release",  "KnowRelease",      "release_id",  "release");
+        put(m, "component", "LoreComponent",   "component_id", "component");
         ENTITIES = Collections.unmodifiableMap(m);
     }
 
@@ -119,8 +123,37 @@ final class LoreLinkTypes {
         new Pair("gain",     "DESIRED_BY",             "actor"),
         new Pair("job",      "PERFORMED_BY",           "actor"),
         new Pair("pain",     "BLOCKS",                 "job"),
-        new Pair("gain",     "SUCCESS_OF",             "job")
+        new Pair("gain",     "SUCCESS_OF",             "job"),
+        // привязка к компоненту (SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK): рёбра те же, что ставят
+        // adr_new/adr_link, decision_new, doc_new/doc_link, sprint_link. Спеки здесь НЕТ: у неё
+        // компонент один (syncSpecComponent снимает все и ставит один, чтение берёт [0]).
+        new Pair("adr",      "BELONGS_TO",             "component"),
+        new Pair("decision", "BELONGS_TO",             "component"),
+        new Pair("doc",      "BELONGS_TO",             "component"),
+        new Pair("sprint",   "BELONGS_TO",             "component"),
+        // У задачи СВОЁ ребро к компоненту — TAGGED_WITH (task/component, task_mv, срез
+        // component_tasks, LoreRecordFrom SLICE_LINKS, LoreGraphBuilder). Слова владелицы 11.11:
+        // «компоненты привязываются и к задаче».
+        new Pair("task",     "TAGGED_WITH",            "component")
     );
+
+    /**
+     * Пары, которые сервер ставит САМ по упоминанию в теле (spec:SPEC-LORE-MD-INLINE-REF §7,
+     * {@link LoreMentionAutoLink}). Явный список, а не «любая пара с одним ребром»:
+     * одно ребро в каталоге ещё не значит, что упоминание его подразумевает — решение,
+     * упомянувшее чужой ADR, не «решено в» нём (DECIDED_IN). Новая пара сюда — по слову владелицы.
+     */
+    static final java.util.Set<String> AUTO_PAIRS = java.util.Set.of(
+        "adr|BELONGS_TO|component",
+        "decision|BELONGS_TO|component",
+        "doc|BELONGS_TO|component",
+        "sprint|BELONGS_TO|component",
+        "task|TAGGED_WITH|component");
+
+    static boolean isAuto(String fromType, String edgeType, String toType) {
+        return AUTO_PAIRS.contains(fromType + "|" + edgeType + "|" + toType)
+            && isAllowed(fromType, toType, edgeType);
+    }
 
     static Entity entity(String type) {
         return type == null ? null : ENTITIES.get(type);

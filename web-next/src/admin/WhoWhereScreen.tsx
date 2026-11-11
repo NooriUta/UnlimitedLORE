@@ -1,28 +1,38 @@
-// Экран «Кто где» админки v2 (UC-8, SPEC-ADMIN-LORE-UC 1.2.0).
-// Два разворота одних и тех же данных:
-//   • «Люди» — в скольких проектах человек, его роль в каждом и его агенты;
-//   • «Проекты» — кто в проекте, с какой ролью и чьи агенты там работают,
-//     плюс «это вы» для смотрящего.
+// Экраны «Люди и их проекты» и «Проекты» админки v2 (UC-8, SPEC-ADMIN-LORE-UC 1.2.0).
+// Два разворота одних и тех же данных — два раздела меню (S7B-28, владелица
+// 11.11: «люди и проекты будут двумя разделами»; раньше — один раздел «Кто где»
+// с переключателем осей ?adm-by=…):
+//   • adm-who «Люди и их проекты» — в скольких проектах человек, его роль в
+//     каждом и его агенты;
+//   • adm-projects «Проекты» — кто в проекте, с какой ролью и чьи агенты там
+//     работают, плюс «вы: роль» для смотрящего. Точка роста раздела проектов.
 // Строки свёрнуты (details): в шапке — числа, раскрытие — подробности. Так
 // пять человек и двадцать пять проектов помещаются на экран, а не в ленту.
-import { useMemo, type SyntheticEvent } from 'react';
-import { EmptyState, Forbidden, LoadError, Pill, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
+import { useMemo, useState, type SyntheticEvent } from 'react';
+import { Drawer, EmptyState, Forbidden, ListView, LoadError, Pill, Skeleton, useKitLang, useLoadState, useUrlParam } from '@seidr/kit';
 import { useAppT } from '../i18n';
-import { fetchParticipation, filterPeople, filterProjectViews, type Participation } from './participation';
+import { fetchParticipation, filterProjectViews, type Participation, type Person } from './participation';
+import { peopleListConfig, peopleRecords } from './peopleList';
+import { PersonWizard } from './WizardsScreen';
+import { loreFetch } from '../auth/session';
 import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
+import { PersonMachines } from './MachinesScreen';
 import './Admin.css';
 
+/** Ось экрана: раздел «Люди и их проекты» или раздел «Проекты». */
+export type WhoWhereView = 'people' | 'projects';
+
 export interface WhoWhereScreenProps {
+  /** Какой раздел рисуем; по умолчанию — «Люди и их проекты». */
+  view?: WhoWhereView;
   fetchImpl?: typeof fetch;
   /** kc_sub смотрящего — для пометки «это вы». */
   meSub?: string | null;
 }
 
-export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps) {
+export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: WhoWhereScreenProps) {
   const t = useAppT();
-  const [by, setBy] = useUrlParam('adm-by');
-  const view = by === 'projects' ? 'projects' : 'people';
   // Раскрытая строка — в адресе (?adm-open=kc_sub | slug): ссылка открывает тот же вопрос «почему».
   const [open, setOpen] = useUrlParam('adm-open');
   // S7B-25: поиск — в адресе (?adm-q=…), ссылка открывает ту же выборку.
@@ -41,45 +51,8 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
       if (isOpen && open !== key) setOpen(key);
       else if (!isOpen && open === key) setOpen(null);
     };
-    if (view === 'people') {
-      return (
-        <ul className="adm-list" data-testid="adm-people">
-          {filterPeople(data.people, query).map(p => (
-            <li key={p.kc_sub}>
-              <details data-testid={`adm-person-${p.kc_sub}`} open={open === p.kc_sub} onToggle={toggle(p.kc_sub)}>
-                <summary>
-                  <span className="adm-name">{p.name}</span>
-                  {p.kc_sub === meSub && <span className="adm-me">{t('admin.who.you')}</span>}
-                  {p.kc_sub === meSub && <MyProjectsChip fetchImpl={fetchImpl} />}
-                  <span className="adm-count" data-testid="adm-person-projects">{t('admin.who.inProjects', { n: p.projects.length })}</span>
-                  <span className="adm-count">{t('admin.who.agents', { n: p.agents.length })}</span>
-                </summary>
-                <table className="adm-table">
-                  <tbody>
-                    {p.projects.map(pr => (
-                      <tr key={pr.slug}>
-                        <th scope="row"><span className="adm-mono">{pr.slug}</span></th>
-                        <td><Pill>{pr.role || '—'}</Pill></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <p className="adm-sub">
-                  {t('admin.who.hisAgents')}{' '}
-                  {p.agents.length ? agentNames(p.agents) : <span className="adm-missing">{t('admin.who.noAgents')}</span>}
-                </p>
-                {open === p.kc_sub && (
-                  <>
-                    <PersonAgentsLine kcSub={p.kc_sub} isMe={p.kc_sub === meSub} fetchImpl={fetchImpl} />
-                    <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
-                  </>
-                )}
-              </details>
-            </li>
-          ))}
-        </ul>
-      );
-    }
+    // S7B-28: люди — стандартный список kit (PeoplePanel), не details.
+    if (view === 'people') return null;
     return (
       <ul className="adm-list" data-testid="adm-projects">
         {filterProjectViews(data.projects, query).map(pr => (
@@ -118,8 +91,9 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
       </ul>
     );
   }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs, query]);
-  const nothing = !!data && !!(query ?? '').trim()
-    && (view === 'people' ? filterPeople(data.people, query) : filterProjectViews(data.projects, query)).length === 0;
+  // У «Людей» поиск — в самом списке kit; «ничего не нашли» — его честное состояние.
+  const nothing = view === 'projects' && !!data && !!(query ?? '').trim()
+    && filterProjectViews(data.projects, query).length === 0;
 
   let content;
   if (res.state === 'loading' && !data) content = <Skeleton lines={6} label={t('admin.who.loading')} />;
@@ -141,28 +115,101 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
             <EmptyState title={t('admin.who.nothing', { q: (query ?? '').trim() })} hint={t('admin.who.nothingHint')}
               action={<button type="button" className="sk-btn" onClick={() => setQuery(null, { replace: true })}>{t('admin.who.qReset')}</button>} />
           </div>
+        ) : view === 'people' ? (
+          <PeoplePanel data={data} meSub={meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
         ) : body}
       </>
     );
   }
 
   return (
-    <section className="adm" aria-labelledby="adm-who-h">
-      <h2 id="adm-who-h" className="adm-h">{t('admin.who.title')}</h2>
-      <p className="adm-lead">{t('admin.who.lead')}</p>
-      <div className="adm-chips" role="radiogroup" aria-label={t('admin.who.by')}>
-        <button type="button" role="radio" className="adm-chip" aria-checked={view === 'people'} aria-pressed={view === 'people'}
-          data-testid="adm-by-people" onClick={() => setBy(null)}>{t('admin.who.byPeople')}</button>
-        <button type="button" role="radio" className="adm-chip" aria-checked={view === 'projects'} aria-pressed={view === 'projects'}
-          data-testid="adm-by-projects" onClick={() => setBy('projects')}>{t('admin.who.byProjects')}</button>
-      </div>
-      <label className="adm-field adm-who__q">
+    <section className="adm" aria-labelledby="adm-who-h" data-view={view}>
+      <h2 id="adm-who-h" className="adm-h">{t(view === 'projects' ? 'admin.projects.title' : 'admin.who.title')}</h2>
+      <p className="adm-lead">{t(view === 'projects' ? 'admin.projects.lead' : 'admin.who.lead')}</p>
+      {view === 'projects' && <label className="adm-field adm-who__q">
         <span className="adm-field__l">{t('admin.who.q')}</span>
         <input className="adm-input" type="search" value={query ?? ''} data-testid="adm-who-q"
           placeholder={t('admin.who.qHint')} spellCheck={false}
           onChange={e => setQuery(e.target.value === '' ? null : e.target.value, { replace: true })} />
-      </label>
+      </label>}
       {content}
     </section>
+  );
+}
+
+// ── S7B-28: «Люди и их проекты» — стандартный список, строка открывает паспорт ──
+//
+// Владелица 11.11.2026: «Люди должны быть табличным стандартным значением, а тот
+// экран, который собран сейчас, должен стать паспортом». Паспорт — всё, что
+// было в раскрытой строке: проекты и роли, агенты, «Все мои», агенты машины,
+// эффективный доступ. Открытый человек — в адресе (?adm-open=kc_sub).
+function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
+  data: Participation; meSub: string | null; fetchImpl?: typeof fetch; allSlugs: string[];
+}) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const [open, setOpen] = useUrlParam('adm-open');
+  const [q] = useUrlParam('adm-q');
+  const [adding, setAdding] = useState(false);
+  const config = useMemo(() => peopleListConfig(lang), [lang]);
+  const records = useMemo(() => peopleRecords(data, meSub, t('admin.who.you')), [data, meSub, t]);
+  const kitData = useMemo(() => ({
+    records, edges: [], journal: [],
+    meta: { generated_at: new Date().toISOString(), returned: records.length, ...(data.truncated ? { truncated: true } : {}) },
+  }), [records, data.truncated]);
+  const person = open ? data.people.find(p => p.kc_sub === open) ?? null : null;
+  return (
+    <>
+      <div className="adm-people__bar">
+        <button type="button" className="sk-btn" onClick={() => setAdding(true)}>{t('admin.people.add')}</button>
+      </div>
+      {/* Старые ссылки ?adm-q=… (S7B-25) открывают ту же выборку — текстом поиска списка. */}
+      <ListView config={config} data={kitData} onOpen={id => setOpen(id)} initial={q ? { text: q } : undefined} />
+      {person && (
+        <Drawer open onClose={() => setOpen(null)} title={person.name}>
+          <PersonPassport person={person} isMe={person.kc_sub === meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
+        </Drawer>
+      )}
+      {adding && (
+        <Drawer open onClose={() => setAdding(false)} title={t('admin.wiz.person.title')}>
+          <PersonWizard fetchImpl={fetchImpl ?? loreFetch} onDone={() => setAdding(false)} />
+        </Drawer>
+      )}
+    </>
+  );
+}
+
+/** Паспорт человека — содержимое прежней раскрытой строки, без потерь. */
+function PersonPassport({ person: p, isMe, fetchImpl, allSlugs }: { person: Person; isMe: boolean; fetchImpl?: typeof fetch; allSlugs: string[] }) {
+  const t = useAppT();
+  return (
+    <div className="adm-passport" data-testid={`adm-person-${p.kc_sub}`}>
+      <p className="adm-sub">
+        {isMe && <span className="adm-me">{t('admin.who.you')}</span>}
+        {isMe && <MyProjectsChip fetchImpl={fetchImpl} />}
+        <span className="adm-count" data-testid="adm-person-projects">{t('admin.who.inProjects', { n: p.projects.length })}</span>
+        <span className="adm-count">{t('admin.who.agents', { n: p.agents.length })}</span>
+      </p>
+      <table className="adm-table">
+        <tbody>
+          {p.projects.map(pr => (
+            <tr key={pr.slug}>
+              <th scope="row"><span className="adm-mono">{pr.slug}</span></th>
+              <td><Pill>{pr.role || '—'}</Pill></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="adm-sub">
+        {t('admin.who.hisAgents')}{' '}
+        {p.agents.length
+          ? p.agents.map(a => <Pill key={a.actor_id} variant="id" title={a.harness ?? t('admin.harness.none')}>{a.name ?? a.actor_id}</Pill>)
+          : <span className="adm-missing">{t('admin.who.noAgents')}</span>}
+      </p>
+      <PersonAgentsLine kcSub={p.kc_sub} isMe={isMe} fetchImpl={fetchImpl} />
+      <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
+      {/* S7B-ACL-3: машины, которыми человек владеет и к которым допущен. */}
+      <PersonMachines kcSub={p.kc_sub} fetchImpl={fetchImpl} />
+    </div>
   );
 }

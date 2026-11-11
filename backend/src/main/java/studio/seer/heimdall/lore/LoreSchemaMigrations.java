@@ -1590,7 +1590,13 @@ final class LoreSchemaMigrations {
         // ADR-LORE-041 — связь ребром): машина — вершина KnowMachine, агент привязан к ней
         // рёбрами USES_MACHINE, машин у агента может быть несколько. Аддитивно, major 17.
         // DDL рядом с логикой (AgentMachine).
-        new Step(79, 17, "agent_machine", AgentMachine.SCHEMA_SQL)
+        new Step(79, 17, "agent_machine", AgentMachine.SCHEMA_SQL),
+
+        // SPRINT_UXR_S7B_ADMIN/S7B-ACL-1 · S7B-ACL-2 (заказ владелицы 11.11, круг 2 прав машин):
+        // допуск «человек → машина» — ребро MACHINE_ACCESS KnowUser → актор-машина (client_id
+        // minilore-link-*), на ребре роль из словаря machine_access_role и scope по проектам и
+        // harness. Аддитивно, major 17. DDL и засев словаря рядом с логикой (MachineAccess).
+        new Step(80, 17, "machine_access", MachineAccess.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

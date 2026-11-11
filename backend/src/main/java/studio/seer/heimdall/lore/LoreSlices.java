@@ -801,6 +801,15 @@ public final class LoreSlices {
             "FROM KnowQuestion WHERE out('RAISED_IN').task_uid CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY question_id");
 
+        // S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): выпадающий список автора/исполнителя/
+        // принимающего. SQL отдаёт только задачу под скоупом и её проекты; строки {code, title,
+        // kind} собирает TaskRoleService.identitiesOfTask теми же методами, что проверяет запись
+        // роли (TR-05), — в AidaLoreResource. Нет задачи / нет проекта — ошибка, не пустой список.
+        slice(LoreTaskIdentities.SLICE,
+            "SELECT task_uid, out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowTask WHERE task_uid = :id",
+            List.of("id"), Map.of(), " LIMIT 1");
+
         slice("tasks_of_adr",
             "SELECT task_uid, task_id, title, out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, task_type, work_class " +
@@ -1504,6 +1513,30 @@ public final class LoreSlices {
             "out('USES_MACHINE').machine_id AS machines " +
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
+
+        // SPRINT_UXR_S7B_ADMIN/S7B-ACL-1 · S7B-ACL-2: допуски «человек → машина». Строка на
+        // машину (актор с client_id minilore-link-*): владелец и допущенные люди параллельными
+        // массивами grant_* (тот же приём, что user_project_roles; разбор — MachineAccess.grantsOf).
+        // По машине (client_id) — строка есть всегда, если машина заведена: человека нет ни во
+        // владельце, ни в grant_kc_subs — «закрыто», не «пусто». По человеку (kc_sub) — машины,
+        // где он владелец или допущен. Этим срезом сервер miniLORE решает видимость (MachineOwners, круг 2).
+        slice("machine_acl",
+            "SELECT actor_id, client_id, machine_id, name, " +
+            "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
+            "out('OWNED_BY').display_name AS owner_display_name, " +
+            "in('MACHINE_ACCESS').kc_sub AS grant_kc_subs, " +
+            "in('MACHINE_ACCESS').display_name AS grant_display_names, " +
+            "inE('MACHINE_ACCESS').role AS grant_roles, " +
+            "inE('MACHINE_ACCESS').projects AS grant_projects, " +
+            "inE('MACHINE_ACCESS').harnesses AS grant_harnesses, " +
+            "inE('MACHINE_ACCESS').granted_by AS grant_granted_by, " +
+            "inE('MACHINE_ACCESS').granted_at AS grant_granted_at " +
+            "FROM KnowActor WHERE kind = 'agent' AND client_id LIKE 'minilore-link-%'",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "client_id", " AND client_id = :client_id",
+                "kc_sub", " AND (in('MACHINE_ACCESS').kc_sub CONTAINS :kc_sub OR out('OWNED_BY').kc_sub CONTAINS :kc_sub)")),
+            " ORDER BY client_id");
 
         // ADR-LORE-037 V1: журнал сессий агентов — обратная сторона LOGGED_BY
         // (agent_owners показывает АКТОРА, этот срез показывает КОНКРЕТНЫЕ
@@ -2899,6 +2932,9 @@ public final class LoreSlices {
 
     static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
         Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
+        // Решение владелицы 11.11.2026: зависимость видна, только если видны ОБА спринта
+        // («&» — обязательные концы ребра DEPENDS_ON). Скрытые рёбра — числом (scope.hidden).
+        Map.entry("sprint_deps", "@out.out('BELONGS_TO_PROJECT').slug&@in.out('BELONGS_TO_PROJECT').slug"),
         Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("releases",  "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_by_id", "out('BELONGS_TO_PROJECT').slug"),
@@ -2932,6 +2968,7 @@ public final class LoreSlices {
         // Задачи — проект через спринт.
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry(LoreTaskIdentities.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3024,6 +3061,7 @@ public final class LoreSlices {
         Map.entry("pains", "боли сегмента — общий продуктовый профиль"),
         Map.entry("gains", "выгоды сегмента — общий продуктовый профиль"),
         Map.entry("agent_owners", "реестр агентов и владельцев — служебный"),
+        Map.entry("machine_acl", "допуски к машинам (S7B-ACL-1) — служебный: по нему miniLORE решает видимость диалогов машины"),
         Map.entry("agent_sessions", "журнал сессий агентов — служебный"),
         Map.entry("actor_identity_orphans", "сторож учёток — служебный"),
         Map.entry("projects_without_role", "сторож ролей — служебный"),
@@ -3052,7 +3090,6 @@ public final class LoreSlices {
         Map.entry("roadmap", "то же: веха без проекта"),
         Map.entry("uc_actors", "ребро HAS_ACTOR — путь через сценарий"),
         Map.entry("actor_pairs", "ребро FILLS_ROLE — служебное, решение"),
-        Map.entry("sprint_deps", "ребро DEPENDS_ON — путь через @out"),
         Map.entry("files_of_task", "KnowFile — путь через задачу"),
         Map.entry("task_roles", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
@@ -3164,29 +3201,38 @@ public final class LoreSlices {
         Map<String, Object> params = new LinkedHashMap<>(base.params());
         // Выражений может быть несколько (прямая связь | через родителя) — сущность
         // видна, если ХОТЯ БЫ ОДИН путь ведёт в разрешённый проект.
-        String[] traversals = traversal.split("\\|");
-        String condition;
+        //
+        // Решение владелицы 11.11.2026 (sprint_deps под скоуп): у ребра ДВА конца,
+        // и показывать его можно, только если видны ОБА — иначе оно ведёт в
+        // невидимое. Группы через «&» — обязательные концы: каждая обязана привести
+        // в разрешённый проект (внутри группы «|», как и прежде, — «хотя бы один»).
+        List<String> keys = new java.util.ArrayList<>();
         if (allowed.isEmpty()) {
             params.put("__scope0", SCOPE_NONE);
-            StringBuilder or = new StringBuilder();
-            for (String tr : traversals) {
-                if (or.length() > 0) or.append(" OR ");
-                or.append(scopeClause(tr, "__scope0"));
-            }
-            condition = "(" + or + ")";
+            keys.add("__scope0");
         } else {
-            StringBuilder or = new StringBuilder();
             int i = 0;
             for (String slug : allowed) {
                 String key = "__scope" + i++;
                 params.put(key, slug);
+                keys.add(key);
+            }
+        }
+        String[] groups = traversal.split("&");
+        StringBuilder all = new StringBuilder();
+        for (String group : groups) {
+            String[] traversals = group.split("\\|");
+            StringBuilder or = new StringBuilder();
+            for (String key : keys) {
                 for (String tr : traversals) {
                     if (or.length() > 0) or.append(" OR ");
                     or.append(scopeClause(tr, key));
                 }
             }
-            condition = "(" + or + ")";
+            if (all.length() > 0) all.append(" AND ");
+            all.append("(").append(or).append(")");
         }
+        String condition = groups.length == 1 ? all.toString() : "(" + all + ")";
         // Скоуп дописывается ПОСЛЕ suffix'а базового SQL нельзя — ORDER BY/LIMIT
         // уже там. Поэтому пересобираем: условие идёт перед хвостом слайса.
         String sql = base.sql();
