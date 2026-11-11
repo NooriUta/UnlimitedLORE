@@ -832,5 +832,7 @@
   "admin.home.forbidden": "No rights to check: {reason}",
   "admin.home.error": "Could not check: {reason}",
   "admin.home.retry": "Retry",
-  "admin.home.partial": "not all rows arrived"
+  "admin.home.partial": "not all rows arrived",
+  "lists.date.changed": "Changed",
+  "lists.date.noTime": "this section's slice does not return record change times"
 }

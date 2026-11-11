@@ -832,5 +832,7 @@
   "admin.home.forbidden": "Нет прав проверить: {reason}",
   "admin.home.error": "Не смогли проверить: {reason}",
   "admin.home.retry": "Повторить",
-  "admin.home.partial": "пришли не все строки"
+  "admin.home.partial": "пришли не все строки",
+  "lists.date.changed": "Изменены",
+  "lists.date.noTime": "срез этого раздела не отдаёт время изменения записей"
 }

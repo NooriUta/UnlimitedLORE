@@ -6,6 +6,9 @@ export * from './filterModel';
 // Счётчики по всей выдаче, посчитанные источником (SPRINT_UXR_S9_SCALE_OPT/S9-01).
 export * from './listCounts';
 export * from './FacetFilter';
+// Фильтр по дате — диапазон «с … по …», быстрые периоды, зона, адрес (K2-DATE-RANGE).
+export * from './dateRange';
+export * from './DateRangeFilter';
 // Общая группировка: группы списка, дорожки доски и таймлайна, разрезы связей (S4-06).
 export * from './grouping';
 // Лента как ВИД того же источника (K2-FEED-VIEW): ведра времени, порядок,
