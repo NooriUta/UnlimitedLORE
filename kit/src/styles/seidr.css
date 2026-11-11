@@ -995,7 +995,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   white-space: nowrap;
 }
 .sk-sheet__body { padding: 8px 12px; }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-sheet--right, .sk-sheet--left { width: 100vw; }
 }
 
@@ -1124,7 +1124,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 @media (pointer: coarse) {
   .sk-palette__hint { display: none; }
 }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-palette { top: 0; width: 100vw; max-height: 85vh; border-radius: 0 0 var(--r-lg) var(--r-lg); }
 }
 
@@ -1571,7 +1571,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-seg__btn.is-on { background: color-mix(in srgb, var(--acc) 22%, transparent); color: var(--t1); box-shadow: inset 0 -2px 0 var(--acc); }
 .sk-seg__btn:disabled { opacity: .55; cursor: progress; }
 .sk-seg__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-setting { flex-wrap: wrap; }
   .sk-setting__ctl { width: 100%; }
 }
@@ -1727,7 +1727,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-weight: 600;
 }
 .sk-shell__note { margin: 0; padding: 2px 8px 4px; color: var(--t2); font-size: var(--fs-2xs); }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-shell__top { gap: 2px; padding: 0 4px; }
   .sk-shell__brand-text { display: none; }
   .sk-shell__mod { padding: 0 10px; }
@@ -1840,7 +1840,7 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-left: 1px solid var(--bd);
   background: var(--bg1);
 }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-md__split { grid-template-columns: minmax(0, 1fr); }
   .sk-md__live { border-left: none; border-top: 1px solid var(--bd); }
 }
@@ -2967,7 +2967,7 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
    скруглением 999 при переносе становился овалом высотой 104 px. Перенос
    оставляем (владелица 11.11: горизонтальных прокруток по возможности не
    должно быть), а скругление контейнера — малое, как у блоков v1. */
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-list__views { border-radius: var(--r-md); }
 }
 .sk-list__view,
@@ -3884,7 +3884,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-tl__when { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-tl__lanechip { padding: 0 8px; border: 1px solid var(--bd); border-radius: 999px; color: var(--t2); font-size: var(--fs-2xs); }
 
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-board { grid-auto-flow: row; grid-auto-columns: auto; }
   .sk-list__select { max-width: 100%; }
   .sk-list__search { width: 100%; }
@@ -3926,7 +3926,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   background: color-mix(in srgb, var(--dng) 10%, transparent);
   font-size: var(--fs-xs);
 }
-@media (max-width: 720px), (pointer: coarse) {
+@media (max-width: 720px), (pointer: coarse), (pointer: coarse) and (max-height: 500px) {
   .sk-list[data-selecting='true'] .sk-shead,
   .sk-list[data-selecting='true'] .sk-list__controls,
   .sk-list[data-selecting='true'] .sk-list__desc { display: none; }
@@ -4034,7 +4034,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-head__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1.2; color: var(--t1); word-break: break-word; }
 /* Телефон (S4-MOBILE-COMPARE, замер 360 px): --fs-xl давал заголовок задачи в семь
    строк и сдвигал текст заметки на второй экран. Как в v1 — не крупнее --fs-lg. */
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-rec-head__title { font-size: var(--fs-lg); }
 }
 .sk-rec-status { gap: 4px; }
@@ -4069,7 +4069,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 /* Телефон (S4-MOBILE-EDGE): MD-поле в колонке значений получало ~225 из 360 px —
    подпись колонкой слева съедала треть. Узко подпись MD-поля встаёт над ним,
    а текст и редактор берут всю ширину; короткие поля остаются парой «подпись — значение». */
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-rec-fields__row[data-type="md"] > dt,
   .sk-rec-fields__row[data-type="md"] > dd { grid-column: 1 / -1; }
 }
@@ -4282,13 +4282,13 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-crumbs__ctx { color: var(--t2); }
 .sk-crumbs__sep { color: var(--t3); }
 .sk-crumbs__cur { font-family: var(--mono); color: var(--t1); white-space: nowrap; }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-crumbs__ctx { display: none; }
 }
 .sk-rec-reader__ear { position: sticky; top: var(--gap); }
 .sk-rec-reader__aside { min-width: 0; padding: 8px 10px; border-left: 1px solid var(--bd); background: var(--bg1); font-size: var(--fs-base); color: var(--t1); }
 .sk-rec-reader__aside[hidden] { display: none; }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-rec-reader, .sk-rec-reader[data-aside="open"] { grid-template-columns: minmax(0, 1fr) auto; }
   .sk-rec-reader__aside { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--bd); }
 }
@@ -5735,7 +5735,7 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
 .sk-news__fs h4 { margin: 0; }
 .sk-news__wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 .sk-news__wrap .sk-news__chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   /* Телефон: ряды чипов ПЕРЕНОСЯТСЯ, а не прокручиваются вслепую.
      Жалоба владелицы 10.11.2026 со скриншотом с планшета: «до этих пунктов у
      тебя все езе не адаптивный мобильный вид». Замер на 412: ряд быстрых
@@ -6010,7 +6010,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__around-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .sk-rec__around-head { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--t3); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .sk-tab[data-zone='around'] { color: var(--inf); }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-rec--zones { grid-template-columns: 1fr; }
   .sk-rec__body { grid-template-columns: 1fr; }
   .sk-rec__props { position: static; padding-left: 0; border-left: 0; border-top: 1px solid var(--bd); }
@@ -6079,7 +6079,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }
 .sk-dock__exit { position: absolute; top: 8px; right: 16px; z-index: 1; min-height: max(var(--tap), 28px); padding: 0 12px; border: 1px solid var(--bd); border-radius: var(--r-pill); background: var(--bg2); color: var(--t1); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 .sk-dock__exit:hover { border-color: var(--acc); }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-dock[data-placement] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
   .sk-dock[data-placement] .sk-dock__backdrop { display: none; }
   /* Телефон: списка под паспортом нет, делить нечего — границы тоже нет.
@@ -6127,7 +6127,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-ptrig__cmd:hover { border-color: var(--bdh); color: var(--t1); }
 .sk-ptrig__search:focus-visible,
 .sk-ptrig__cmd:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-ptrig__search { min-width: 0; }
   .sk-ptrig__text,
   .sk-ptrig .sk-kbd { display: none; }

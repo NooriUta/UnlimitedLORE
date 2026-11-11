@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { TipTapField } from './index';
+import { NARROW_QUERY } from '../core/narrow';
 
 const ALL = [
   'отменить', 'повторить', 'жирный', 'курсив', 'зачёркнутый', 'код', 'ссылка',
@@ -63,7 +64,7 @@ describe('S4-MOBILE-EDGE п.А — панель TipTap узко', () => {
   it('без явного narrow — по matchMedia(max-width: 720px)', async () => {
     const w = window as unknown as { matchMedia?: unknown };
     const orig = w.matchMedia;
-    w.matchMedia = (q: string) => ({ matches: q === '(max-width: 720px)', addEventListener() {}, removeEventListener() {} });
+    w.matchMedia = (q: string) => ({ matches: q === NARROW_QUERY, addEventListener() {}, removeEventListener() {} });
     try {
       await mount(undefined);
       expect(screen.getByRole('button', { name: /ещё/i })).toBeTruthy();
