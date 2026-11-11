@@ -184,3 +184,36 @@ describe('FieldEditor · MD через слот', () => {
     expect(on).toHaveBeenCalledWith('стало');
   });
 });
+
+// Третья порция: ссылка на запись. Выбор записи — RefSearchList сессии «MD и
+// супертеги»; поиск по типам знает только приложение (K-14), поэтому редактор
+// приходит слотом, как MD. Значение — { id, type, title } (RefItem).
+describe('FieldEditor · ссылка на запись (ref) через слот', () => {
+  const ref = { id: 'ADR-LORE-049', type: 'adr', title: 'Колонки по модели' };
+
+  it('ref без слота — только чтение: видно, на что ссылка, и названа причина', () => {
+    mount({ key: 'adr', label: 'ADR', kind: 'ref' }, ref);
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getByText('Колонки по модели · ADR-LORE-049')).toBeTruthy();
+    expect(screen.getByText(/выбор записи не подключён/)).toBeTruthy();
+  });
+
+  it('ref со слотом — рисуется переданный выбор; выбранное уходит наружу, «убрать» — null', () => {
+    const on = vi.fn();
+    render(<FieldEditor def={{ key: 'adr', label: 'ADR', kind: 'ref', refTypes: ['adr'] }} value={ref} onChange={on}
+      refEditor={({ value, onChange, label, refTypes }) => (
+        <button type="button" aria-label={label} data-types={refTypes?.join(',')} onClick={() => onChange(value ? null : ref)}>pick</button>
+      )} />);
+    const btn = screen.getByRole('button', { name: 'ADR' });
+    expect(btn.getAttribute('data-types')).toBe('adr');
+    fireEvent.click(btn);
+    expect(on).toHaveBeenCalledWith(null);
+  });
+
+  it('ref: пустая ссылка при показе обязательных — «Обязательное поле»', () => {
+    mount({ key: 'adr', label: 'ADR', kind: 'ref', required: 'block' }, null, {
+      showRequired: true, refEditor: () => <span>pick</span>,
+    });
+    expect(screen.getByText('Обязательное поле')).toBeTruthy();
+  });
+});

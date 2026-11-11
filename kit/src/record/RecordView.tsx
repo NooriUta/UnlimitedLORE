@@ -7,6 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
+import { RecordSection } from './RecordSection';
 import { SumCell } from '../list/sum';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
@@ -267,12 +268,11 @@ function Overview({ record, kind, ctx, lang, edit }: { record: KitRecord; kind: 
           // нечем написать, и это тупик без способа начать.
           if (!text.trim() && !may) return null;
           return (
-            <section key={s.key} className="sk-rec-fields__sec" aria-label={s.title}>
-              <h2 className="sk-rec-fields__sechead">{s.title}</h2>
+            <RecordSection key={s.key} title={s.title}>
               {may
                 ? <may.Editor value={text} label={s.title} onSave={may.save(s.key, raw ?? null)} drafts={may.drafts?.(s.key)} hint={si === hintAt} />
                 : <>{ctx.md(text)}</>}
-            </section>
+            </RecordSection>
           );
         })}
       </div>
@@ -293,11 +293,11 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-type RecWidth = 's' | 'm' | 'l';
-const WIDTHS: readonly RecWidth[] = ['s', 'm', 'l'];
+type RecWidth = 's' | 'm' | 'l' | 'f';
+const WIDTHS: readonly RecWidth[] = ['s', 'm', 'l', 'f'];
 const WIDTH_KEY = 'seidr-kit:rec-width';
 function readWidth(): RecWidth {
-  try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' ? v : 'm'; } catch { return 'm'; }
+  try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' || v === 'f' ? v : 'm'; } catch { return 'm'; }
 }
 
 /** Свёртка «Свойства · …» (v4): непустые значения полей одной строкой. */

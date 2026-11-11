@@ -20,7 +20,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons, type UrlWindow } from '@seidr/kit';
 import { validateKitConfig } from '@seidr/kit/core';
 import { FEEDS, LIST_SCREENS, type ListScreenId } from './screens';
-import type { FeedSpec } from './feed';
+import { pickSection, type FeedSpec } from './feed';
 import { ListScreen } from '../pages/ListScreen';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -111,7 +111,7 @@ function net(rows: Record<string, unknown>) {
 }
 
 const item = (c: HTMLElement, id: string) => c.querySelector(`.sk-feed [data-record-id="${id}"]`) as HTMLElement;
-const shown = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent);
+const shown = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent?.trim());
 
 describe('K2-FEED-VIEW · лента открывается в разделе', () => {
   it('у раздела со временем лента стоит в переключателе видов', async () => {
@@ -221,5 +221,28 @@ describe('K2-FEED-TWO-LEVEL · у спринта нижний уровень —
     fireEvent.click(more);
     await waitFor(() => expect(container.querySelector('.sk-feed__under [data-record-id="SPRINT_A/T-9"]')).not.toBeNull());
     expect(paths.filter(p => p.endsWith('/tasks_of_sprint'))).toHaveLength(1);
+  });
+});
+
+// Владелица 11.11.2026: лента — лента паспортов; показывается раздел «Контекст»,
+// у типа без него — первый раздел тела. Сервер называет раздел номером в lead
+// (body_sec), подпись — та же, что у раздела в паспорте.
+describe('лента паспортов: голова — один раздел с подписью паспорта', () => {
+  it('у задачи (контекста нет) раздел подписан «Заметка»', async () => {
+    const rows = { rows: [{ ...TASKS.rows[0], body_head: ['заметка: абзац 1'], body_rest: 0, body_more: false, body_sec: 0 }], truncated: false };
+    const { fn } = net(rows);
+    const { container } = render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('?lv=feed')} />);
+    await waitFor(() => expect(item(container, 'S1/T-1')?.querySelector('.sk-rec-fields__sechead')?.textContent).toBe('Заметка'));
+  });
+
+  it('порядок разделов: у ADR и фичи «Контекст» первым — как у сервера', () => {
+    expect(FEEDS.adrs.lead[0]).toBe('context_md');
+    expect(FEEDS.features.lead[0]).toBe('context_md');
+  });
+
+  it('раскрытие догружает остаток ТОГО ЖЕ раздела, а не склейку всех', () => {
+    expect(pickSection(['context_md', 'decision_md'], { context_md: 'к1\n\nк2', decision_md: 'р1' })).toEqual({ index: 0, paragraphs: ['к1', 'к2'] });
+    expect(pickSection(['context_md', 'decision_md'], { context_md: '  ', decision_md: 'р1' })).toEqual({ index: 1, paragraphs: ['р1'] });
+    expect(pickSection(['context_md'], {})).toEqual({ index: -1, paragraphs: [] });
   });
 });

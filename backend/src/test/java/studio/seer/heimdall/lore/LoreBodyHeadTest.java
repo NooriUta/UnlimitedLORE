@@ -44,14 +44,33 @@ class LoreBodyHeadTest {
         assertEquals(true, out.get("body_more"));
     }
 
+    // Владелица 11.11.2026: лента — это лента паспортов, «принудительно с показом
+    // раздела „Контекст“»; у типов без контекста — первый раздел тела (вариант «а»).
+    // Значит, голова — ОДИН раздел, а не склейка всех: у ADR это контекст, без
+    // решения. body_sec — номер раздела в порядке источников (= lead web-next),
+    // чтобы клиент подписал его так же, как паспорт.
     @Test
-    void severalFieldsAreOneBodyInLeadOrder() {
-        // ADR: контекст, затем решение — тот же порядок, что lead в web-next и тела паспорта.
+    void headIsOneSectionContextFirstNotAGlueOfAll() {
         Map<String, Object> out = one(row("adr_id", "ADR-1",
             LoreBodyHead.SRC + "1", "Контекст.", LoreBodyHead.SRC + "2", "Решение А.\n\nРешение Б."));
-        assertEquals(List.of("Контекст.", "Решение А.", "Решение Б."), out.get("body_head"));
-        assertEquals(0, out.get("body_rest"));
+        assertEquals(List.of("Контекст."), out.get("body_head"));
+        assertEquals(0, out.get("body_rest"), "остаток — только этого раздела");
         assertEquals(false, out.get("body_more"));
+        assertEquals(0, out.get("body_sec"));
+    }
+
+    @Test
+    void emptyFirstSectionFallsBackToTheNextOne() {
+        Map<String, Object> out = one(row("adr_id", "ADR-1",
+            LoreBodyHead.SRC + "1", "  ", LoreBodyHead.SRC + "2", "Решение А.\n\nРешение Б."));
+        assertEquals(List.of("Решение А.", "Решение Б."), out.get("body_head"));
+        assertEquals(1, out.get("body_sec"));
+    }
+
+    @Test
+    void featuresAndUseCasesPutContextFirst() {
+        assertTrue(LoreBodyHead.SOURCES.get("use_cases").get(0).contains("context_md"), "у сценария первым — контекст");
+        assertTrue(LoreBodyHead.SOURCES.get("adrs").get(0).contains("context_md"), "у ADR первым — контекст");
     }
 
     @Test

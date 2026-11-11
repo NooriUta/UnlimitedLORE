@@ -5781,9 +5781,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-dock[data-placement='full'] .sk-rec { width: 100%; max-width: var(--rec-frame); margin: 0 auto; padding: 8px 32px 48px; }
 /* Пропорции эталона v4 (владелица 08.11: «посмотри на скриншоте хорошие проценты и соблюдай»):
    линия вкладок ~66% области, шапка и текст ~66% линии. Ширина текста — настройка наверху. */
-.sk-dock[data-placement='full'] .sk-rec[data-width='s'] { --rec-col: 56%; }
-.sk-dock[data-placement='full'] .sk-rec[data-width='m'] { --rec-col: 66%; }
-.sk-dock[data-placement='full'] .sk-rec[data-width='l'] { --rec-col: 82%; }
+/* Владелица 11.11: пустые поля по бокам вдвое меньше прежних (44→22, 34→17, 18→9 %),
+   и четвёртый вариант «во всю ширину» — рамка и мера 100%, по краям только стандартный отступ. */
+.sk-dock[data-placement='full'] .sk-rec[data-width='s'] { --rec-col: 78%; }
+.sk-dock[data-placement='full'] .sk-rec[data-width='m'] { --rec-col: 83%; }
+.sk-dock[data-placement='full'] .sk-rec[data-width='l'] { --rec-col: 91%; }
+.sk-dock[data-placement='full'] .sk-rec[data-width='f'] { --rec-col: 100%; max-width: 100%; padding-left: var(--pad-x); padding-right: var(--pad-x); }
 .sk-rec-widthbar { display: flex; justify-content: flex-end; margin: 0 0 4px; }
 .sk-rec-widthbar__seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); }
 .sk-rec-widthbar__opt { min-height: max(var(--tap), 22px); padding: 0 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--t2); font: inherit; font-size: var(--fs-xs); cursor: pointer; }

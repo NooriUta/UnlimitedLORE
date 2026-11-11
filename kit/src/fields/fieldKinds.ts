@@ -7,7 +7,7 @@
 // что они значат, знает приложение (K-14).
 
 /** Виды, у которых в kit есть редактор. Остальные рисуются только чтением. */
-export const FIELD_KINDS = ['text', 'number', 'boolean', 'date', 'time', 'datetime', 'enum', 'md'] as const;
+export const FIELD_KINDS = ['text', 'number', 'boolean', 'date', 'time', 'datetime', 'enum', 'md', 'ref'] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
 /** Вариант выбора: строкой или парой «значение + подпись». */
@@ -32,6 +32,20 @@ export interface FieldEditorDef {
   multi?: boolean;
   /** Порядок значений важен (вместе с multi): выбранные идут списком с «выше / ниже». */
   ordered?: boolean;
+  /** Для ref: типы записей, на которые можно сослаться. Поиск по ним — дело приложения. */
+  refTypes?: string[];
+}
+
+/** Значение ссылки — как RefItem у RefSearchList: id, тип и подпись. */
+export interface RefValue { id: string; type: string; title?: string }
+
+export function isRefValue(v: unknown): v is RefValue {
+  return !!v && typeof v === 'object' && typeof (v as RefValue).id === 'string' && typeof (v as RefValue).type === 'string';
+}
+
+/** Подпись ссылки для чтения: «название · ID», без названия — ID. */
+export function refText(v: RefValue): string {
+  return v.title ? `${v.title} · ${v.id}` : v.id;
 }
 
 export function fieldKindOf(def: FieldEditorDef): string {
