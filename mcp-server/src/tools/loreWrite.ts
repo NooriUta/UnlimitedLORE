@@ -2282,6 +2282,94 @@ export function registerLoreWrite(server: McpServer): void {
     }),
   });
 
+  // SPRINT_UXR_S7B_ADMIN/S7B-ACL-2 · S7B-ACL-3 (приоритет 0 владелицы 11.11.2026): допуск
+  // человека к машине miniLORE — из MCP, а не только из карточки машины в админке.
+  // Решает сервер: владелец машины или admin; агент — НИКОГДА (ADR-MINILORE-007;
+  // семейство "user" в AgentScopeFilter.HUMAN_ONLY). Инструмент отказ не обходит и не
+  // глушит — err() отдаёт ответ сервера целиком, с кодом и причиной. Нужен сессиям,
+  // которые идут от имени человека или admin (режим заголовка роли).
+  definePostTool(server, {
+    name: 'machine_access_set',
+    description: 'Grant, change or revoke a person\'s access to a miniLORE machine (MACHINE_ACCESS edge person → ' +
+      'machine actor client_id minilore-link-<machine_id>, one per pair; S7B-ACL-1/2). Allowed ONLY for the machine ' +
+      'owner or an admin — an agent cannot make this write (ADR-MINILORE-007): the server refuses (403) and the refusal ' +
+      'is returned as is, with its code and reason. Use it from a session acting for a human or admin. ' +
+      'dry_run:true writes nothing and returns plan {kind: grant|update|revoke|unchanged, before → after}. ' +
+      'Every call is journaled (AO-01). Read current state with machine_acl; harness codes — harness_list.',
+    schema: {
+      machine_id:   z.string().describe('machine id, e.g. "lorcetus" (the account is minilore-link-<machine_id>)'),
+      kc_sub:       z.string().describe('Keycloak subject of the person being granted/revoked'),
+      action:       z.enum(['grant', 'revoke']).describe('grant = create or change the grant; revoke = remove it'),
+      role:         z.enum(['viewer', 'actor']).optional().describe('required for grant: viewer = sees dialogues, actor = may act'),
+      projects:     z.array(z.string()).optional().describe('git project slugs the grant is limited to (registered via project_new); omit/[] = no project limit'),
+      harnesses:    z.array(z.string()).optional().describe('harness codes the grant is limited to (harness_list); omit/[] = no harness limit'),
+      display_name: z.string().optional().describe('creates/updates the person\'s KnowUser display name on grant'),
+      dry_run:      z.boolean().optional().describe('true = plan only, nothing written; omit = write'),
+    },
+    path: '/lore/user/machine-access',
+    body: ({ machine_id, kc_sub, action, role, projects, harnesses, display_name, dry_run }) => {
+      const b: Record<string, unknown> = { machine_id, kc_sub, action };
+      if (action === 'grant') {
+        if (role !== undefined) b.role = role;
+        if (projects !== undefined) b.projects = projects;
+        if (harnesses !== undefined) b.harnesses = harnesses;
+        if (display_name !== undefined) b.display_name = display_name;
+      }
+      if (dry_run !== undefined) b.dry_run = dry_run;
+      return b;
+    },
+  });
+
+  // S7B-16 · ADR-MINILORE-007 В4: машинная учётка → человек (владелец, профиль, машина, harness).
+  // Тот же путь, что мастер админки bindKcClient (web-next/src/admin/wizards.ts), но в
+  // обратном порядке: сначала привязка владельца, актор — только если сервер сказал, что
+  // его нет. Так отказ агенту (actor/owner закрыт всем агентным профилям, AL-83) приходит
+  // ДО любой записи и не оставляет в графе актора без владельца.
+  server.tool(
+    'machine_owner_set',
+    'Bind a machine/agent account (Keycloak client_id, e.g. "minilore-link-lorcetus" or "lore-mcp-…") to its human ' +
+      'owner: OWNED_BY owner, agent profile (agent_role), machine_id and harness — the same write as the admin wizard. ' +
+      'If the actor does not exist yet it is created (kind agent, actor_id = name = client_id, as the admin wizard does) and the binding retried. ' +
+      'Allowed for humans/admin only — an agent cannot make this write (AL-83: no agent profile writes actor/owner, ' +
+      'it would let an agent re-own itself): the server refuses and the refusal is returned as is; nothing is created. ' +
+      'Two machines may not share one machine_id (400). Read the result in machine_acl / query_slice "agent_owners".',
+    {
+      client_id:  z.string().describe('Keycloak client_id of the account, e.g. "minilore-link-lorcetus"'),
+      kc_sub:     z.string().describe('Keycloak subject of the owning person'),
+      profile:    z.string().optional().describe('agent profile code (dict agent_role), e.g. "full" | "developer"; omit = keep'),
+      machine_id: z.string().optional().describe('machine id, e.g. "lorcetus"; "" = unbind; omit = keep'),
+      harness:    z.string().optional().describe('harness code (harness_list), e.g. "claude-code"; "" = reset; omit = keep'),
+      actor_id:   z.string().optional().describe('actor id; default = client_id (as the admin wizard does)'),
+    },
+    async ({ client_id, kc_sub, profile, machine_id, harness, actor_id }: {
+      client_id: string; kc_sub: string; profile?: string; machine_id?: string; harness?: string; actor_id?: string;
+    }) => {
+      const id = actor_id && actor_id.trim() ? actor_id : client_id;
+      const owner: Record<string, unknown> = { actor_id: id, client_id, kc_sub };
+      if (profile !== undefined) owner.agent_role = profile;
+      if (machine_id !== undefined) owner.machine_id = machine_id;
+      if (harness !== undefined) owner.harness = harness;
+      try {
+        return json(await lorePost('/lore/actor/owner', owner));
+      } catch (e) {
+        const msg = (e as Error).message ?? String(e);
+        // Актор создаётся ТОЛЬКО когда сервер назвал причину «не найден» (400) и среди
+        // агентов его действительно нет. Иначе — 403 агенту, «не kind=agent», чужой
+        // machine_id — отказ как есть: переписать kind существующего актора нельзя.
+        if (!/→ 400 /.test(msg) || !/не найден|not found/i.test(msg)) return err(e);
+        try {
+          const agents = await loreGet('/lore/slice/agent_owners') as { rows?: { actor_id?: string }[] };
+          if ((agents.rows ?? []).some(r => r.actor_id === id)) return err(e);
+          await lorePost('/lore/actor', { actor_id: id, name: client_id, kind: 'agent' });
+          const res = await lorePost('/lore/actor/owner', owner);
+          return json({ ...(res as Record<string, unknown>), actor_created: true });
+        } catch (e2) {
+          return err(e2);
+        }
+      }
+    },
+  );
+
   // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────
   definePostTool(server, {
     name: 'dict_set',

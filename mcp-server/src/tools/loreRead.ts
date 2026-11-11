@@ -340,4 +340,66 @@ export function registerLoreRead(server: McpServer): void {
     },
   );
 
+  // SPRINT_UXR_S7B_ADMIN/S7B-ACL-2 · S7B-ACL-3 (приоритет 0 владелицы 11.11.2026): машины и
+  // допуски — из MCP, а не только из админки. Тонкая обёртка над срезом machine_acl:
+  // у среза фильтр по client_id, а человек знает машину по machine_id — учётка машины
+  // всегда minilore-link-<machine_id> (ADR-MINILORE-007 В4, MACHINE_CLIENT_PREFIX сервера).
+  server.tool(
+    'machine_acl',
+    'Who may see a miniLORE machine, and which machines a person may see (slice machine_acl, S7B-ACL-1/2). ' +
+      'One row per machine (actor with client_id minilore-link-<machine_id>): owner_kc_sub/owner_display_name and ' +
+      'parallel arrays grant_kc_subs / grant_display_names / grant_roles / grant_projects / grant_harnesses / ' +
+      'grant_granted_by / grant_granted_at (index i = one MACHINE_ACCESS grant). ' +
+      'Filter by machine_id (or its client_id) → that machine; a person absent from owner and grants is CLOSED, not "empty". ' +
+      'Filter by kc_sub → machines where the person is owner or granted. No filter → all machines. ' +
+      'Change access with machine_access_set; bind a machine account to its owner with machine_owner_set.',
+    {
+      machine_id: z.string().optional().describe('machine id, e.g. "lorcetus" — queried as client_id "minilore-link-<machine_id>"'),
+      client_id:  z.string().optional().describe('machine account client_id, e.g. "minilore-link-lorcetus" (alternative to machine_id; if both differ, machine_id wins and _warning says so)'),
+      kc_sub:     z.string().optional().describe('Keycloak subject of a person — machines they own or are granted'),
+    },
+    async ({ machine_id, client_id, kc_sub }) => {
+      try {
+        const params: Record<string, string> = {};
+        const fromMachine = machine_id ? `minilore-link-${machine_id}` : undefined;
+        if (fromMachine) params.client_id = fromMachine;
+        else if (client_id) params.client_id = client_id;
+        if (kc_sub) params.kc_sub = kc_sub;
+        // Оба фильтра машины и они расходятся — не отказ и не молчание: machine_id главнее,
+        // расхождение названо в ответе.
+        const warning = fromMachine && client_id && client_id !== fromMachine
+          ? `client_id="${client_id}" ignored: machine_id="${machine_id}" wins (queried client_id "${fromMachine}")`
+          : undefined;
+        const { rows, meta, page } = await loreSliceWithMeta('machine_acl', Object.keys(params).length ? params : undefined);
+        if (!meta && !page && !warning) return json(rows);
+        return json({
+          rows,
+          ...(page ? { _page: page } : {}),
+          ...(meta ? { _truncated: meta.truncated, _limit: meta.limit, _hint: meta.hint } : {}),
+          ...(warning ? { _warning: warning } : {}),
+        });
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  // S7B-15, ADR-MINILORE-007: справочник harness (чем запускается агент: claude-code, codex…).
+  // Читается срезом dictionary; пишется существующим dict_set(dict_type:"harness").
+  server.tool(
+    'harness_list',
+    'Harness dictionary (dict_type "harness", ADR-MINILORE-007): the agent runtimes a machine grant or an agent ' +
+      'binding may name (machine_access_set.harnesses, machine_owner_set.harness). Rows: code, label_ru, label_en, ' +
+      'icon, sort_order, is_active. Add or amend values with dict_set(dict_type:"harness") — dictionaries are human-only.',
+    {},
+    async () => {
+      try {
+        const { rows } = await loreSliceWithMeta('dictionary', { dict_type: 'harness' });
+        return json(rows);
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
 }
