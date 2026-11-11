@@ -6646,3 +6646,13 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* K4-MINILIST: вид списка — todo (длинный пункт переносится) и квиз (вариант — цель касания целиком). */
 .sk-minilist--check .sk-minilist__text { overflow-wrap: anywhere; }
 .sk-minilist--choice .sk-minilist__row { cursor: pointer; }
+
+/* K4-FRESHNESS: свежесть ячейкой — «3 мин назад», тон по порогам приложения; «времени нет» — нейтрально, не «давно». */
+.sk-fresh { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--t2); }
+.sk-fresh[data-tone='ok'] { color: var(--t1); }
+.sk-fresh[data-tone='warn'] { color: var(--wrn); }
+.sk-fresh[data-tone='stale'] { color: var(--dng); }
+.sk-fresh[data-tone='none'] { color: var(--t3); font-size: var(--fs-2xs); font-style: italic; }
+.sk-fresh[data-tone='bad'] { color: var(--t3); border-bottom: 1px dashed var(--t3); }
+.sk-fresh__dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none; }
+.sk-fresh__word { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; }

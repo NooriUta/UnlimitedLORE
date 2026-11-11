@@ -33,6 +33,8 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
   BatchUndo, CalendarMonth, LibraryView, MiniList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+
+  BatchUndo, CalendarMonth, FreshCell, LibraryView, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -45,6 +47,7 @@ const SNAPSHOT_ABS = resolve(KIT, 'demo/seidr-bare.html');
 const css = readFileSync(resolve(KIT, 'src/styles/seidr.css'), 'utf8');
 
 const noop = () => {};
+const FRESH_NOW = Date.parse('2026-11-11T12:00:00Z');
 const STATUSES = ['done', 'active', 'partial', 'planned', 'backlog', 'blocked', 'cancelled'] as const;
 const MD = '## Заголовок\n\nТекст с **жирным**, `кодом` и [ссылкой](https://example.org).\n\n- пункт один\n- [x] пункт два\n\n| поле | значение |\n|---|---|\n| статус | в работе |\n\n```mermaid\ngraph LR; A[Задача] --> B[PR] --> C[Релиз]\n```\n';
 
@@ -245,6 +248,17 @@ function Samples() {
             { key: 'b', title: 'Документы', total: 9, docs: [{ id: 'N-1', title: 'Как читать вердикт', state: 'устарел', stale: true }] },
           ]}
         />
+      </section>
+      <section className="bare__sec" data-kit="fresh">
+        <h2 className="bare__h2">Свежесть</h2>
+        {/* K4-FRESHNESS: три тона по порогам приложения и пустое значение —
+            «времени нет», а не «давно». Часы подставлены: снимок не меняется от прогона к прогону. */}
+        <div className="bare__row">
+          {[3, 30, 125].map(m => (
+            <FreshCell key={m} value={new Date(FRESH_NOW - m * 60_000).toISOString()} now={FRESH_NOW} thresholds={{ warnAfter: 10, staleAfter: 60 }} />
+          ))}
+          <FreshCell value={null} now={FRESH_NOW} thresholds={{ warnAfter: 10, staleAfter: 60 }} />
+        </div>
       </section>
       <section className="bare__sec" data-kit="chips">
         <h2 className="bare__h2">Значения-чипы</h2>

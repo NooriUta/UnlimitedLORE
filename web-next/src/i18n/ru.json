@@ -35,6 +35,7 @@
   "kitPage.el.statuses": "Статусы",
   "kitPage.el.status": "Статус: {status}",
   "kitPage.el.keys": "Клавиши и подсказки",
+  "kitPage.el.fresh": "Свежесть ячейкой — колонка fresh:<поле>, пороги задаёт приложение",
   "kitPage.el.tooltip": "Подсказка над кнопкой",
   "kitPage.el.toolbar": "Панель действий",
   "kitPage.st.retry": "Повторено",

@@ -1066,5 +1066,14 @@
   "kit.record.graph.viewObsidian": "Обсидиан",
   "kit.record.graph.viewObsidianHint": "физика в фоне, WebGL — для больших графов",
   "kit.steps.held": "Шаг «{title}» из ссылки пока закрыт — открыт этот: {reason}",
-  "kit.graph.peekClose": "Закрыть карточку"
+  "kit.graph.peekClose": "Закрыть карточку",
+  "kit.fresh.now": "только что",
+  "kit.fresh.min": "{n} мин назад",
+  "kit.fresh.hours": "{n} ч назад",
+  "kit.fresh.yesterday": "вчера",
+  "kit.fresh.none": "времени нет",
+  "kit.fresh.noneHint": "Отметки времени нет: значение не заполнено — это не «давно»",
+  "kit.fresh.tone.warn": "дольше {n} мин — предупреждение",
+  "kit.fresh.tone.stale": "дольше {n} мин — устарело",
+  "kit.fresh.staleShort": "устарело"
 }

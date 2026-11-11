@@ -248,6 +248,18 @@
           },
           "additionalProperties": false
         },
+        "fresh": {
+          "description": "K4-FRESHNESS: пороги свежести колонки fresh:<поле>, в минутах; ключ — имя поля. Порогов нет — тона нет.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "warnAfter": { "type": "number", "minimum": 0 },
+              "staleAfter": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": false
+          }
+        },
         "showClosed": { "enum": ["below", "all", "days30", "hide"] }
       },
       "additionalProperties": false
