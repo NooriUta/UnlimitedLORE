@@ -192,6 +192,9 @@ public class LoreDecisionResource extends LoreResourceBase {
             // ни один слайс их связи не показывает. Инструмент при этом всегда
             // отвечал ok:true — отказ выглядел успехом.
             linkComponentEdge("KnowDecision", "decision_id", req.decision_id(), req.component_id(), out);
+            // MD-AUTOLINK (spec:SPEC-LORE-MD-INLINE-REF §7): упоминания в теле → рёбра авто-пар.
+            if (req.body_md() != null)
+                out.put("mentions", autoLinkMentions("decision", req.decision_id(), false, req.body_md()));
             // Факт, а не намерение: CREATE EDGE к НЕЗАРЕГИСТРИРОВАННОМУ проекту —
             // тихий no-op, и ответ ok:true выглядел бы подтверждением связи,
             // которой нет. Спрашиваем ребро после записи и говорим прямо.
