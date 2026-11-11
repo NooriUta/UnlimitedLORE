@@ -1236,5 +1236,6 @@
   "admin.macl.matrix.noProjects": "Ни у одной машины нет проектов",
   "admin.macl.matrix.noTeams": "Команды проектов не прочитались: {reason}",
   "admin.macl.person.title": "Машины · владеет {owned} · допущен к {granted}",
-  "admin.macl.person.none": "Ни одной машины: не владеет и не допущен (проверено)"
+  "admin.macl.person.none": "Ни одной машины: не владеет и не допущен (проверено)",
+  "mdref.modelLoading": "Модель LORE ещё загружается — повторите через секунду"
 }

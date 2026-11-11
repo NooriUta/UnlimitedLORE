@@ -4,9 +4,9 @@
 //
 // Поиск — существующий слайс search (тот же, что у палитры): отказ сервера бросается
 // с причиной, и окно говорит «не смогли загрузить», а не «не нашлось».
-// Карточки «Новый» пока нет: создание из окна ждёт SPRINT_UXR_S10_SEIDR_KIT_2/MD-REQUIRED
-// (обязательные поля из модели) — без него форма требовала бы поля наугад.
-import { useMemo } from 'react';
+// Карточка «Новый» (11.11.2026, после MD-REQUIRED): поля — из модели LORE, правила
+// владелицы — в loreRefCreate.ts (родитель обязателен, автор — кто пишет, исполнитель — «Себя»).
+import { useMemo, type ComponentType } from 'react';
 import { useKitLang, type KitLang, type MdEditorSlotProps } from '@seidr/kit';
 import { MdInlineEdit, type TipTapRefSource, type RefItem } from '@seidr/kit/content';
 import { fetchSearchSlice, type SearchSliceOptions } from '../api/searchSlice';
@@ -15,6 +15,8 @@ import { recordHref } from '../nav/loreRoutes';
 import { loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { typeByForm } from './loreRefForms';
+import { cachedModelType, createLoreRecord, createSpecFor, warmCreateModel } from './loreRefCreate';
+import { v2Auth } from '../auth/session';
 
 export { typeByForm };
 
@@ -44,9 +46,24 @@ const LABEL_KEY: Record<string, AppKey> = {
 /** Сколько пунктов показывать в окне: длиннее — уточняют запрос. */
 const MAX_ITEMS = 20;
 
-export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchImpl' | 'headers'> = {}): TipTapRefSource {
+/** Контекст карточки «Новый»: родители записи, в которой пишут, и кто пишет. */
+export interface LoreRefCreateCtx { parents: Record<string, string>; me?: () => string | null }
+
+export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchImpl' | 'headers'> & { create?: LoreRefCreateCtx } = {}): TipTapRefSource {
   const typeLabels = Object.fromEntries(Object.entries(LABEL_KEY).map(([t, k]) => [t, appT(lang, k)]));
+  const create = opts.create;
+  const me = () => (create?.me ? create.me() : v2Auth.getState().user?.name ?? null);
+  if (create) warmCreateModel(opts.fetchImpl);
   return {
+    ...(create ? {
+      createSpec: (type: string) => {
+        const { model, loading } = cachedModelType(type);
+        if (!model && loading) return { denied: appT(lang, 'mdref.modelLoading') };
+        return createSpecFor(type, model, { me: me(), parents: create.parents }, lang);
+      },
+      onCreate: (type: string, values: Record<string, string>) =>
+        createLoreRecord(type, values, { me: me(), parents: create.parents }, opts.fetchImpl),
+    } : {}),
     types: WORDS,
     typeLabels,
     minQuery: 2,
@@ -67,6 +84,20 @@ export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchI
 export function loreRefHref(ref: { id: string; type: string | null }): string | null {
   const type = ref.type ?? typeByForm(ref.id);
   return type ? recordHref(type, ref.id) : null;
+}
+
+/**
+ * Редактор MD-полей записи с окном ссылок и карточкой «Новый», знающий контекст записи
+ * (её родителей): новая задача из текста спринта сразу кладётся в этот спринт.
+ */
+export function mdEditorWithRefs(parents: Record<string, string>): ComponentType<MdEditorSlotProps> {
+  return function MdInlineEditWithRefsIn(props: MdEditorSlotProps) {
+    const lang = useKitLang();
+    const key = JSON.stringify(parents);
+    const refs = useMemo(() => loreMdRefs(lang, { create: { parents } }), [lang, key]); // eslint-disable-line react-hooks/exhaustive-deps
+    const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
+    return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refPeek={peek} />;
+  };
 }
 
 /** Правка MD-поля записи с окном ссылок — то же MdInlineEdit, плюс источник ссылок LORE. */
