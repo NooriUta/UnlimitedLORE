@@ -262,6 +262,17 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // Вкладка части: её элементы уже пришли. Не прочиталась — так и сказано,
   // а не «нет элементов» (ListPassport подменяет вкладку задач настоящей
   // таблицей — withSprintTasksTab; эта остаётся для прочих частей).
+  // Сервер отдаёт первые элементы части, а `count` — полное число (у
+  // компонента вкладки tasks/sprints — первые 100, S9-05). Шапка вкладки
+  // называет полное число, значит тело обязано сказать, что пришла лишь часть:
+  // иначе 100 имён под заголовком «230» читаются как «всё». Число неизвестно
+  // (null) — оговорку не выдумываем.
+  const partText = (p: (typeof parts)[number]): string => {
+    const list = p.items.map(i => i.title || i.id).join(' · ') || appT(lang, 'pp.contract.noLinks');
+    return typeof p.count === 'number' && p.count > p.items.length
+      ? `${list} — ${appT(lang, 'pp.contract.partShown', { shown: p.items.length, total: p.count })}`
+      : list;
+  };
   const partTabs = parts.map(p => ({
     key: p.key, title: p.label,
     // Число элементов части — в ряд вкладок (B13). Часть уже отдаёт его
@@ -270,7 +281,7 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     count: p.count,
     render: () => (p.state !== 'ok'
       ? (p.error ?? p.state)
-      : p.items.map(i => i.title || i.id).join(' · ') || appT(lang, 'pp.contract.noLinks')),
+      : partText(p)),
   }));
   // ОДИН РАЗДЕЛ — ОДНО МЕСТО (ревью 10.11.2026, B13; просьба владелицы того же
   // дня: «проверить, почему… в паспорте у спринтов дублирующиеся вкладки»).

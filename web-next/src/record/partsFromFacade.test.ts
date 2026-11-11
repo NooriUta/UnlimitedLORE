@@ -173,3 +173,27 @@ describe('S4-36 · проекты и компоненты — свойства, 
     expect(tabs.map(t => t.key)).toEqual(expect.arrayContaining(['tasks', 'phases']));
   });
 });
+
+// SPRINT_UXR_S9_SCALE_OPT/S9-05: у компонента вкладки детей (tasks, sprints)
+// приходят первыми 100, а `count` — полное число. Шапка вкладки называла 230,
+// тело молча перечисляло 100 — обрезка не была сказана нигде в самой вкладке.
+describe('S9-05 · вкладка части: пришла не вся — сказано числом', () => {
+  const tabOf = (c: LoreRecord1, key: string) =>
+    (load(c).config.kinds.sprint!.tabs ?? []).find(t => t.key === key)!;
+  const many = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `SPRINT_X/T-${i}`, title: `Задача ${i}`, status: 'done' }));
+
+  it('пришло 100 из 230 — в теле вкладки «показаны 100 из 230»', () => {
+    const t = tabOf(sprint({ parts: [part({ count: 230, items: many(100) })] }), 'tasks');
+    expect(String(t.render?.({} as never, {} as never))).toContain('показаны 100 из 230');
+  });
+
+  it('положительный контроль: пришли все — оговорки нет', () => {
+    const t = tabOf(sprint({ parts: [part({ count: 3, items: many(3) })] }), 'tasks');
+    expect(String(t.render?.({} as never, {} as never))).not.toMatch(/показаны \d+ из/);
+  });
+
+  it('число неизвестно (count null) — оговорку не выдумываем', () => {
+    const t = tabOf(sprint({ parts: [part({ count: null, items: many(3) })] }), 'tasks');
+    expect(String(t.render?.({} as never, {} as never))).not.toMatch(/показаны \d+ из/);
+  });
+});
