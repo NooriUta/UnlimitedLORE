@@ -20,6 +20,8 @@ import {
   setAgentHarness, setAgentMachine,
   type AgentRow, type AgentsData, type KcOrphan,
 } from './agents';
+import { useAdminNav } from './adminNav';
+import { WHY_AGENT } from './WhyNotSee';
 import './Admin.css';
 
 export interface AgentsScreenProps {
@@ -134,6 +136,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
  */
 function AgentWhyLine({ row }: { row: AgentRow }) {
   const t = useAppT();
+  const nav = useAdminNav();
   const why = agentWhy(row);
   const text = why.kind === 'inherits'
     ? t('admin.agentWhy.inherits', { owner: why.owner, scope: why.scope ?? t('admin.agentWhy.noScope') })
@@ -141,7 +144,10 @@ function AgentWhyLine({ row }: { row: AgentRow }) {
   return (
     <p className={why.kind === 'inherits' ? 'adm-sub' : 'adm-note'} data-tone={why.kind === 'inherits' ? undefined : 'wrn'}
       data-testid="adm-agent-why" data-why={why.kind}>
-      <b>{t('admin.agentWhy.title')}:</b> {text}
+      <b>{t('admin.agentWhy.title')}:</b> {text}{' '}
+      {/* S7B-21: «почему не видит / 403» с этим агентом в вопросе — экран «Люди», блок WhyNotSee. */}
+      <button type="button" className="adm-link" data-testid={`adm-agent-why-${row.actor_id}`}
+        onClick={() => nav.go('who', { [WHY_AGENT]: row.actor_id })}>{t('admin.agents.whyNotSee')}</button>
     </p>
   );
 }

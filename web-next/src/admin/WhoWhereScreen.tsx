@@ -18,6 +18,7 @@ import { loreFetch } from '../auth/session';
 import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import { PersonMachines } from './MachinesScreen';
+import { WhyNotSee } from './WhyNotSee';
 import './Admin.css';
 
 /** Ось экрана: раздел «Люди и их проекты» или раздел «Проекты». */
@@ -133,6 +134,8 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
           onChange={e => setQuery(e.target.value === '' ? null : e.target.value, { replace: true })} />
       </label>}
       {content}
+      {/* S7B-21: «почему не видит / 403» для агента и инструмента; Главная (детектор 403) и «Агенты» ведут сюда. */}
+      {view === 'people' && <WhyNotSee projects={data ? data.projects.map(p => p.slug) : []} fetchImpl={fetchImpl} />}
     </section>
   );
 }
