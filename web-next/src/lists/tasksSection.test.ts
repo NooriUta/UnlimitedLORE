@@ -20,7 +20,7 @@
 import { describe, expect, it } from 'vitest';
 import { valuesOf } from '@seidr/kit';
 import { LIST_SCREENS } from './screens';
-import { OPEN_ONLY_NOTE, taskListRecord } from './records';
+import { CLOSED_HIDDEN_NOTE, taskListRecord } from './records';
 
 const row = {
   task_uid: 'SPRINT_A/A-1', task_id: 'A-1', title: 'Сделать дело',
@@ -73,14 +73,14 @@ describe('S4-V2-SECTIONS · раздел «Задачи»', () => {
     expect(cfg.list?.collapsedGroupings).toContain('fields.sprint');
   });
 
-  it('«закрытые внизу» разделу НЕ ставится: закрытых в этой выдаче не бывает', () => {
+  it('умолчание режима закрытых — «скрыть»: фильтр, а не отсечка (11.11)', () => {
     const cfg = LIST_SCREENS.tasks.config('ru');
     expect(cfg.list?.showClosed).toBe('hide');
   });
 
-  it('оговорка про открытые задачи названа словами и живёт в одном месте', () => {
-    expect(OPEN_ONLY_NOTE).toMatch(/открыт/i);
-    expect(OPEN_ONLY_NOTE).toMatch(/закрыт/i);
+  it('оговорка про скрытые закрытые названа словами и живёт в одном месте', () => {
+    expect(CLOSED_HIDDEN_NOTE).toMatch(/скрыт/i);
+    expect(CLOSED_HIDDEN_NOTE).toMatch(/закрыт/i);
   });
 });
 
