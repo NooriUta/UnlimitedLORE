@@ -127,7 +127,7 @@ export function WizardsScreen({ fetchImpl = loreFetch, meSub, env }: WizardsScre
 
 // ── UC-1: подключить человека ─────────────────────────────────────────────
 
-function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; onDone: () => void }) {
+export function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; onDone: () => void }) {
   const t = useAppT();
   const lang = useKitLang();
   const nav = useAdminNav();

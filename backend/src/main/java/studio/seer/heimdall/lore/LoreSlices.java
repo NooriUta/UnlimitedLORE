@@ -1505,6 +1505,30 @@ public final class LoreSlices {
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
 
+        // SPRINT_UXR_S7B_ADMIN/S7B-ACL-1 · S7B-ACL-2: допуски «человек → машина». Строка на
+        // машину (актор с client_id minilore-link-*): владелец и допущенные люди параллельными
+        // массивами grant_* (тот же приём, что user_project_roles; разбор — MachineAccess.grantsOf).
+        // По машине (client_id) — строка есть всегда, если машина заведена: человека нет ни во
+        // владельце, ни в grant_kc_subs — «закрыто», не «пусто». По человеку (kc_sub) — машины,
+        // где он владелец или допущен. Этим срезом сервер miniLORE решает видимость (MachineOwners, круг 2).
+        slice("machine_acl",
+            "SELECT actor_id, client_id, machine_id, name, " +
+            "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
+            "out('OWNED_BY').display_name AS owner_display_name, " +
+            "in('MACHINE_ACCESS').kc_sub AS grant_kc_subs, " +
+            "in('MACHINE_ACCESS').display_name AS grant_display_names, " +
+            "inE('MACHINE_ACCESS').role AS grant_roles, " +
+            "inE('MACHINE_ACCESS').projects AS grant_projects, " +
+            "inE('MACHINE_ACCESS').harnesses AS grant_harnesses, " +
+            "inE('MACHINE_ACCESS').granted_by AS grant_granted_by, " +
+            "inE('MACHINE_ACCESS').granted_at AS grant_granted_at " +
+            "FROM KnowActor WHERE kind = 'agent' AND client_id LIKE 'minilore-link-%'",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "client_id", " AND client_id = :client_id",
+                "kc_sub", " AND (in('MACHINE_ACCESS').kc_sub CONTAINS :kc_sub OR out('OWNED_BY').kc_sub CONTAINS :kc_sub)")),
+            " ORDER BY client_id");
+
         // ADR-LORE-037 V1: журнал сессий агентов — обратная сторона LOGGED_BY
         // (agent_owners показывает АКТОРА, этот срез показывает КОНКРЕТНЫЕ
         // сессии под ним, зачем и заводился — «какая сессия сделала запись»,
@@ -3027,6 +3051,7 @@ public final class LoreSlices {
         Map.entry("pains", "боли сегмента — общий продуктовый профиль"),
         Map.entry("gains", "выгоды сегмента — общий продуктовый профиль"),
         Map.entry("agent_owners", "реестр агентов и владельцев — служебный"),
+        Map.entry("machine_acl", "допуски к машинам (S7B-ACL-1) — служебный: по нему miniLORE решает видимость диалогов машины"),
         Map.entry("agent_sessions", "журнал сессий агентов — служебный"),
         Map.entry("actor_identity_orphans", "сторож учёток — служебный"),
         Map.entry("projects_without_role", "сторож ролей — служебный"),

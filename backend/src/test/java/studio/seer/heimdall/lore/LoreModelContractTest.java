@@ -74,6 +74,60 @@ class LoreModelContractTest {
     @Test
     void surfacesPassport() { checkSurfaces(doc()); }
 
+    /** MD-REQUIRED: обязательность поля — в контракте /lore/model и /lore/record (kit 9cba12a3). */
+    @Test
+    void fieldRequirements() {
+        Map<String, Object> types = map(doc().get("types"), "types");
+        for (String t : LoreRecordRegistry.TYPES) {
+            Map<String, Object> type = map(types.get(t), "types." + t);
+            checkRequirements(type, "types." + t);
+            checkRequirements(LoreRecordRegistry.schemaJson(t), "record.schema." + t);
+        }
+    }
+
+    private static void checkRequirements(Map<String, Object> holder, String w) {
+        has(holder, Set.of("requirements", "requirements_block"), w);
+        oneOf(holder.get("requirements_block"), Set.of("schema", "unknown"), w + ".requirements_block");
+        for (Object ro : list(holder.get("requirements"), w + ".requirements")) {
+            Map<String, Object> r = map(ro, w + ".requirements[]");
+            checkRule(r, w + ".requirements." + r.get("code"));
+            for (Object to : list(r.get("targets"), w + ".targets")) {
+                Map<String, Object> tg = map(to, w + ".targets[]");
+                assertEquals(Set.of("kind", "key"), tg.keySet(), w + ".targets[] — {kind, key}");
+                oneOf(tg.get("kind"), Set.of("field", "relation"), w + ".targets[].kind");
+            }
+        }
+        for (Object fo : list(holder.get("fields"), w + ".fields")) {
+            Map<String, Object> f = map(fo, w + ".fields[]");
+            String fw = w + "." + f.get("key");
+            has(f, Set.of("required", "required_level", "required_rules"), fw);
+            assertInstanceOf(Boolean.class, f.get("required"), fw + ".required — boolean для старых клиентов");
+            oneOf(f.get("required_level"), new java.util.HashSet<>(java.util.Arrays.asList("block", "warn", null)), fw + ".required_level");
+            for (Object ro : list(f.get("required_rules"), fw + ".required_rules")) checkRule(map(ro, fw + ".required_rules[]"), fw);
+        }
+    }
+
+    private static void checkRule(Map<String, Object> r, String w) {
+        has(r, Set.of("level", "source", "code", "message", "when"), w);
+        oneOf(r.get("level"), Set.of("block", "warn"), w + ".level");
+        oneOf(r.get("source"), Set.of("schema", "quality"), w + ".source");
+        if (r.get("when") != null)
+            assertEquals(Set.of("field", "eq", "text"), map(r.get("when"), w + ".when").keySet(), w + ".when — {field, eq, text}");
+    }
+
+    /** Обратная проверка: снятый required_level ловится. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void requirementsContractCatchesBreakage() {
+        Map<String, Object> d = doc();
+        Map<String, Object> task = map(map(d.get("types"), "t").get("task"), "task");
+        ((Map<String, Object>) ((List<Object>) task.get("fields")).get(0)).remove("required_level");
+        assertThrows(AssertionError.class, () -> checkRequirements(task, "task"));
+        Map<String, Object> task2 = map(map(doc().get("types"), "t").get("task"), "task");
+        ((Map<String, Object>) ((List<Object>) task2.get("requirements")).get(0)).put("level", "error");
+        assertThrows(AssertionError.class, () -> checkRequirements(task2, "task"));
+    }
+
     /** Проверка в обратную сторону: испорченный документ обязан ронять контракт. */
     @Test
     @SuppressWarnings("unchecked")

@@ -56,7 +56,7 @@ export function VersionCorner({ fetchImpl, state: given, front = FRONT_COMMIT, c
   };
 
   return (
-    <div className="v2-version">
+    <div className="v2-version sk-shell__corner">
       <button
         type="button"
         className="v2-version__btn"

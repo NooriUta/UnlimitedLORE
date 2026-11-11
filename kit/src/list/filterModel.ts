@@ -46,7 +46,7 @@ function words(q: string | undefined): string[] {
 export function matchText(r: KitRecord, q: string | undefined): boolean {
   const ws = words(q);
   if (!ws.length) return true;
-  const hay = `${r.id} ${r.title ?? ''}`.toLocaleLowerCase();
+  const hay = `${r.id} ${r.title ?? ''} ${r.search ?? ''}`.toLocaleLowerCase();
   return ws.every(w => hay.includes(w));
 }
 
