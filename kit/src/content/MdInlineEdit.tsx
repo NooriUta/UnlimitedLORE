@@ -34,6 +34,7 @@ import { IconButton } from '../elements/IconButton';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 import { describeError } from '../resilience/errorText';
+import { isMdMergeConflict, lineDiff, resolveMerge, type MergeChunk } from './blockMerge';
 
 /**
  * Вид правки: исходник, визуальная правка, исходник и просмотр рядом.
@@ -110,6 +111,9 @@ export function MdInlineEdit({
   const [ownMode, setOwnMode] = useState<MdEditMode>(defaultMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Спор при сохранении (S5-08): запись изменили, пока её правили, и слить
+  // сами не смогли. Показываем дифф ТОЛЬКО спорных блоков; выбор по каждому.
+  const [merge, setMerge] = useState<{ chunks: MergeChunk[]; by: string | null; picks: Record<number, 'mine' | 'theirs'> } | null>(null);
   // Сохранённое показываем сразу, пока вызывающий не принёс новое value.
   const [saved, setSaved] = useState<{ base: string; md: string } | null>(null);
   // ── черновик на сервере (S5-09) ───────────────────────────────────────
@@ -192,9 +196,10 @@ export function MdInlineEdit({
     setDraft(shown);
     setLossless(isLosslessMd(shown));
     setError(null);
+    setMerge(null);
     setEditing(true);
   };
-  const close = () => { setEditing(false); setError(null); };
+  const close = () => { setEditing(false); setError(null); setMerge(null); };
 
   const choose = (m: MdEditMode) => {
     if (m === 'preview' && !lossless) return;
@@ -207,6 +212,7 @@ export function MdInlineEdit({
     if (!dirty) { close(); return; }
     setSaving(true);
     setError(null);
+    setMerge(null);
     try {
       await onSave(draft);
       setSaved({ base: value, md: draft });
@@ -221,11 +227,67 @@ export function MdInlineEdit({
         // скажет следующее чтение черновика, выдумывать тут нечего.
       }
     } catch (e) {
-      setError(describeError(e));
+      // Спор — не «сбой»: черновик цел, решать по блокам. Без спорных блоков
+      // (вызывающий не смог разобрать) — обычная видимая ошибка.
+      if (isMdMergeConflict(e) && e.chunks.some(c => c.kind === 'conflict')) {
+        setMerge({ chunks: e.chunks, by: e.updatedBy ?? null, picks: {} });
+      } else {
+        setError(describeError(e));
+      }
     } finally {
       setSaving(false);
     }
   };
+
+  // Выбор по спорам собран — текст встаёт в черновик; сохраняет человек сам,
+  // обычной кнопкой: перед записью он видит, что получилось.
+  const applyMerge = () => {
+    if (!merge) return;
+    const text = resolveMerge(merge.chunks, merge.picks);
+    if (text === null) return;
+    setDraft(text);
+    setLossless(isLosslessMd(text));
+    setMerge(null);
+  };
+  const disputes = merge ? merge.chunks.filter((c): c is Extract<MergeChunk, { kind: 'conflict' }> => c.kind === 'conflict') : [];
+  const mergePanel = merge && (
+    <div className="sk-mdmerge" role="group" aria-label={t('kit.mdedit.merge.title', { n: disputes.length })}>
+      <p className="sk-mdmerge__lead">
+        {merge.by ? t('kit.mdedit.merge.leadBy', { who: merge.by }) : t('kit.mdedit.merge.lead')}
+      </p>
+      {disputes.map((c, k) => {
+        const pick = merge.picks[k];
+        const choose = (p: 'mine' | 'theirs') => setMerge(m => (m ? { ...m, picks: { ...m.picks, [k]: p } } : m));
+        return (
+          <section key={k} className="sk-mdmerge__block" aria-label={t('kit.mdedit.merge.block', { n: k + 1 })}>
+            {/* Построчно: «их» → «моё». Общие строки — для опоры глаза. */}
+            <ol className="sk-mdmerge__diff">
+              {lineDiff(c.theirs, c.mine).map((d, i) => (
+                <li key={i} className={`sk-mdmerge__line sk-mdmerge__line--${d.op}`}>
+                  <span className="sk-mdmerge__who">
+                    {d.op === 'del' ? t('kit.mdedit.merge.theirs') : d.op === 'add' ? t('kit.mdedit.merge.mine') : ''}
+                  </span>
+                  <span className="sk-mdmerge__text">{d.line}</span>
+                </li>
+              ))}
+              {!c.mine && <li className="sk-mdmerge__line sk-mdmerge__line--note">{t('kit.mdedit.merge.mine')}: {t('kit.mdedit.merge.removed')}</li>}
+              {!c.theirs && <li className="sk-mdmerge__line sk-mdmerge__line--note">{t('kit.mdedit.merge.theirs')}: {t('kit.mdedit.merge.removed')}</li>}
+            </ol>
+            <span className="sk-mdmerge__picks">
+              <button type="button" className="sk-btn" aria-pressed={pick === 'mine'} onClick={() => choose('mine')}>{t('kit.mdedit.merge.keepMine')}</button>
+              <button type="button" className="sk-btn" aria-pressed={pick === 'theirs'} onClick={() => choose('theirs')}>{t('kit.mdedit.merge.takeTheirs')}</button>
+            </span>
+          </section>
+        );
+      })}
+      <button
+        type="button"
+        className="sk-btn sk-btn--primary"
+        disabled={resolveMerge(merge.chunks, merge.picks) === null}
+        onClick={applyMerge}
+      >{t('kit.mdedit.merge.apply')}</button>
+    </div>
+  );
 
   // TipTap сообщает своё каноническое написание (мягкие переносы склеены и
   // т.п.) и при служебных транзакциях, не только на правку. Черновик меняем
@@ -343,6 +405,7 @@ export function MdInlineEdit({
       </div>
       {!lossless && <p className="sk-mdedit__note">{t('kit.mdedit.lossy')}</p>}
       {error && <div className="sk-mdedit__err" role="alert">{t('kit.mdedit.saveFailed', { reason: error })}</div>}
+      {mergePanel}
       {/* Один редактор на все виды правки: исходник и «вместе» — его же
           кнопки. Вид держим у себя (он может приехать из URL), редактор
           сообщает о переключении назад. */}

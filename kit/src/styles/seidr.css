@@ -6604,3 +6604,17 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    строки нет, и метка остаётся в углу. */
 .sk-shell--status .sk-shell__main .sk-shell__corner { display: none; }
 .sk-shell__status .sk-shell__corner { position: static; }
+
+/* ---------- S5-08: спор при сохранении — дифф только спорных блоков ---------- */
+.sk-mdmerge { display: flex; flex-direction: column; gap: 8px; margin: 0 0 8px; padding: 6px 9px; border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent); border-radius: var(--r-md); background: var(--bg1); }
+.sk-mdmerge__lead { margin: 0; font-size: var(--fs-xs); color: var(--t1); }
+.sk-mdmerge__block { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--bd); padding-top: 6px; }
+.sk-mdmerge__diff { margin: 0; padding: 0; list-style: none; font-family: var(--mono); font-size: var(--fs-xs); overflow-x: auto; }
+.sk-mdmerge__line { display: flex; gap: 8px; padding: 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sk-mdmerge__line--del { background: color-mix(in srgb, var(--dng) 14%, transparent); }
+.sk-mdmerge__line--add { background: color-mix(in srgb, var(--suc) 14%, transparent); }
+.sk-mdmerge__line--note { color: var(--t2); font-style: italic; }
+.sk-mdmerge__text { flex: 1 1 auto; min-width: 0; }
+.sk-mdmerge__who { flex: 0 0 3.5em; color: var(--t2); text-transform: uppercase; }
+.sk-mdmerge__picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-mdmerge__picks .sk-btn[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
