@@ -101,6 +101,10 @@ function net(rows: Record<string, unknown>) {
   const paths: string[] = [];
   const fn = vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input), 'http://lore.test');
+    // `/lore/record/<тип>/_new` — вопрос «можно ли создавать» для «+ Новая»
+    // (S4-24), один на раздел, а не загрузка паспорта записи: в счёт паспортов
+    // ленты его не берём, иначе проверки ниже меряли бы не то, о чём они.
+    if (url.pathname.endsWith('/_new')) return json({ perms: { can_create: false } });
     paths.push(url.pathname);
     if (url.pathname.startsWith('/lore/record/')) return json(TASK_RECORD);
     if (url.pathname.endsWith('/tasks_of_sprint')) return json(SPRINT_TASKS);

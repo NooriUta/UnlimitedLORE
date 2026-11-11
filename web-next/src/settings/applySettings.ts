@@ -37,6 +37,8 @@ export function applySettings(root: AttrTarget, s: UserSettings, jar?: CookieJar
   setAttr(root, 'data-show-tech', s.show_tech ? 'on' : null);
   // Вид вкладки «Граф» (GC-03): auto — атрибута нет, экран решает сам.
   setAttr(root, 'data-graph-view', s.graph_view === 'auto' ? null : s.graph_view);
+  // Где открывать запись (S4-24): auto — атрибута нет, экран решает сам.
+  setAttr(root, 'data-passport-place', s.passport_place === 'auto' ? null : s.passport_place);
 
   const shared = readSharedPrefs(jar);
   if (shared.theme !== s.mode || shared.palette !== s.palette) {
