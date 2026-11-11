@@ -17,6 +17,7 @@
 import { loreFetch } from '../auth/session';
 import { fetchSlice, LoreHttpError, type SliceBody } from '../api/loreSlice';
 import { getJson } from './actions';
+import { ACTIVITY_DEFAULT_H, activityWindowH, MACHINE_CLIENT_PREFIX, parseActivity, type MachineActivity } from './activity';
 
 export interface AgentRow {
   actor_id: string;
@@ -32,6 +33,38 @@ export interface AgentRow {
   /** Все владельцы (OWNED_BY может быть несколько). */
   owner_kc_subs: string[];
   owner_display_name: string | null;
+  /** S7B-ACT-1: окно активности — заполнено у актора-машины (minilore-link-*), у прочих пусто. */
+  activity: MachineActivity;
+  /** Общий дефолт окна от сервера (activity_default_h); нет — ACTIVITY_DEFAULT_H. */
+  activity_default_h: number;
+  /** Когда агент был на связи — последняя активность его сессий; null — отметок нет. */
+  last_seen_at: string | null;
+}
+
+/** Самая поздняя ISO-отметка из списка (срез отдаёт активность всех сессий агента). */
+function latest(v: unknown): string | null {
+  let best: string | null = null;
+  let bestMs = -Infinity;
+  for (const x of Array.isArray(v) ? v : v == null ? [] : [v]) {
+    if (typeof x !== 'string') continue;
+    const ms = Date.parse(x);
+    if (Number.isFinite(ms) && ms > bestMs) { bestMs = ms; best = x; }
+  }
+  return best;
+}
+
+/**
+ * S7B-ACT-1: окно активности агента — окно его машины (актор с client_id
+ * minilore-link-<machine_id>, или сам агент, если он и есть машина) с перекрытием
+ * по его harness; машины нет — общий дефолт. Правило — MachineActivity.effective.
+ */
+export function agentWindow(row: AgentRow, rows: readonly AgentRow[]): { hours: number; basis: 'harness' | 'machine' | 'default'; machine: string | null } {
+  const self = row.client_id?.startsWith(MACHINE_CLIENT_PREFIX) ? row : null;
+  const machineRow = self ?? (row.machine_id ? rows.find(r => r.client_id === `${MACHINE_CLIENT_PREFIX}${row.machine_id}`) ?? null : null);
+  const machine = self ? row.client_id!.slice(MACHINE_CLIENT_PREFIX.length) : row.machine_id;
+  // Машина не заведена (нет актора minilore-link-*) — окна взять не у кого: общий дефолт.
+  if (!machineRow) return { ...activityWindowH({ windowH: null, harness: {} }, null, row.activity_default_h), machine: machine ?? null };
+  return { ...activityWindowH(machineRow.activity, row.harness, machineRow.activity_default_h), machine };
 }
 
 export interface AgentsData {
@@ -79,6 +112,9 @@ export function parseAgents(body: SliceBody<Record<string, unknown>>, dict?: Har
     owner_kc_sub: list(r.owner_kc_sub)[0] ?? null,
     owner_kc_subs: list(r.owner_kc_sub),
     owner_display_name: list(r.owner_display_name).join(', ') || null,
+    activity: parseActivity(r.activity_window_h, r.activity_window_harness),
+    activity_default_h: typeof r.activity_default_h === 'number' ? r.activity_default_h : ACTIVITY_DEFAULT_H,
+    last_seen_at: latest(r.session_activity),
   })).filter(r => r.actor_id !== '');
   let registry: string[] | null = null;
   let registryProblem: AgentsData['registryProblem'] = null;

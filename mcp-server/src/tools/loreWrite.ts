@@ -2370,6 +2370,42 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  // SPRINT_UXR_S7B_ADMIN/S7B-MACH-1 (пробел OWN-1): завести машину miniLORE ОДНИМ вызовом —
+  // актор minilore-link-<machine_id> (kind agent, client_id, machine_id, harness), владелец,
+  // KnowMachine и USES_MACHINE. Заметка задачи: «Права: полная роль (или admin)». Сервер решает
+  // сам: агент full — только СВОЕМУ владельцу (владельца агент не выбирает, AL-83), человек —
+  // себе, admin — любому; чужая машина / имя занято агентом другого владельца — 409 с именем
+  // владельца. Перепривязка владельца существующей машины — machine_owner_set (только человек).
+  definePostTool(server, {
+    name: 'machine_new',
+    description: 'Enroll a miniLORE machine in one call (S7B-MACH-1): actor minilore-link-<machine_id> (kind agent, ' +
+      'client_id, machine_id, harness), OWNED_BY its owner, KnowMachine vertex and USES_MACHINE from the machine and from ' +
+      'the owner\'s agents already on it. Who may: an agent with profile full — ONLY for its own owner (the owner of ' +
+      'the calling agent; kc_sub may be omitted); a human — for themself; admin — for anyone. A machine already owned by ' +
+      'someone else, or a name taken by another owner\'s agent, is refused (409 MACHINE_TAKEN, naming the owner) — ' +
+      'never overwritten; re-owning is machine_owner_set (humans only). Repeating the same call is "unchanged". ' +
+      'dry_run:true writes nothing and returns plan {kind: create|update|unchanged, before → after}. Journaled (AO-01). ' +
+      'Read the result in machine_acl / query_slice "agent_owners".',
+    schema: {
+      machine_id: z.string().describe('machine name WITHOUT the account prefix, e.g. "lorcetus" (account becomes minilore-link-lorcetus)'),
+      kc_sub:     z.string().optional().describe('owner\'s Keycloak subject; omit = the caller (agent: its own owner; human: themself)'),
+      harness:    z.string().optional().describe('harness code (harness_list), e.g. "claude-code"; "" = reset; omit = keep'),
+      name:       z.string().optional().describe('display name; default = the account id'),
+      profile:    z.string().optional().describe('agent profile code (dict agent_role) for the machine account; omit = keep'),
+      dry_run:    z.boolean().optional().describe('true = plan only, nothing written; omit = write'),
+    },
+    path: '/lore/actor/machine',
+    body: ({ machine_id, kc_sub, harness, name, profile, dry_run }) => {
+      const b: Record<string, unknown> = { machine_id };
+      if (kc_sub !== undefined) b.kc_sub = kc_sub;
+      if (harness !== undefined) b.harness = harness;
+      if (name !== undefined) b.name = name;
+      if (profile !== undefined) b.profile = profile;
+      if (dry_run !== undefined) b.dry_run = dry_run;
+      return b;
+    },
+  });
+
   // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────
   definePostTool(server, {
     name: 'dict_set',

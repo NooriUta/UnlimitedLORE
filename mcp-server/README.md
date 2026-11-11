@@ -21,6 +21,7 @@ new/set/del/mv/get/log/search, plus `<cat>_link(rel, ...)` for edges). A represe
 | `machine_acl` | read | `GET /lore/slice/machine_acl` — `machine_id` (→ `client_id` `minilore-link-<id>`) \| `client_id` \| `kc_sub` |
 | `harness_list` | read | `GET /lore/slice/dictionary?dict_type=harness` (write via `dict_set`) |
 | `machine_access_set` | write | `POST /lore/user/machine-access` — `machine_id, kc_sub, action grant\|revoke, role viewer\|actor, projects[], harnesses[], dry_run`; owner/admin only, an agent gets the server's 403 as is |
+| `machine_new` | write | `POST /lore/actor/machine` — `machine_id, kc_sub?, harness?, name?, profile?, dry_run`; one call enrolls a miniLORE machine (actor `minilore-link-<machine_id>`, owner, KnowMachine, USES_MACHINE). Agent `full` — only for its own owner; human — themself; admin — anyone; someone else's machine/name → 409 with the owner's name |
 | `machine_owner_set` | write | `POST /lore/actor/owner` (+ `POST /lore/actor` if the actor is missing) — `client_id, kc_sub, profile, machine_id, harness`; humans/admin only, an agent gets the server's 403 as is |
 
 Full old→new mapping and the complete link-collapse table: [MIGRATION.md](./MIGRATION.md). Live,

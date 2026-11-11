@@ -1596,7 +1596,12 @@ final class LoreSchemaMigrations {
         // допуск «человек → машина» — ребро MACHINE_ACCESS KnowUser → актор-машина (client_id
         // minilore-link-*), на ребре роль из словаря machine_access_role и scope по проектам и
         // harness. Аддитивно, major 17. DDL и засев словаря рядом с логикой (MachineAccess).
-        new Step(80, 17, "machine_access", MachineAccess.SCHEMA_SQL)
+        new Step(80, 17, "machine_access", MachineAccess.SCHEMA_SQL),
+
+        // SPRINT_UXR_S7B_ADMIN/S7B-ACT-1 (слово владелицы 11.11: «считать активной в течении — от часа
+        // после последнего вызова до суток»): окно активности машины и окна по harness — свойства
+        // актора-машины (client_id minilore-link-*). Аддитивно, major 17. DDL рядом с логикой (MachineActivity).
+        new Step(81, 17, "machine_activity_window", MachineActivity.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

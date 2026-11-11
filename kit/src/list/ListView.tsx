@@ -65,7 +65,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { useNarrow } from '../core/narrow';
 import { ProgressCell } from './progress';
 import { SumCell, colKey } from './sum';
-import { FreshCell, useMinuteNow } from './fresh';
+import { FreshCell, freshThresholdsFor, useMinuteNow } from './fresh';
 import {
   CHIPS_INLINE, CHIPS_INLINE_NARROW, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
@@ -1440,7 +1440,7 @@ export function ListView({
         // list.fresh[<поле>]; «времени нет» словами, а не «давно».
         if (col.startsWith('fresh:')) {
           const f = col.slice(6);
-          return <FreshCell value={fieldValue(r, f)} now={freshNow} thresholds={config.list?.fresh?.[f]} />;
+          return <FreshCell value={fieldValue(r, f)} now={freshNow} thresholds={freshThresholdsFor(config.list?.fresh?.[f], r)} />;
         }
         // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
         // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это

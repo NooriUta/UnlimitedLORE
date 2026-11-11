@@ -1072,6 +1072,8 @@ public class AidaLoreResource extends LoreResourceBase {
             new java.util.concurrent.atomic.AtomicReference<>();
         final java.util.concurrent.atomic.AtomicReference<List<Map<String, Object>>> aclAgents =
             new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicReference<List<Map<String, Object>>> aclSeen =
+            new java.util.concurrent.atomic.AtomicReference<>();
         return client.query(db, basicAuth(), body)
             .chain(res -> {
                 if (exemptQuery == null) return Uni.createFrom().item(res);
@@ -1131,6 +1133,13 @@ public class AidaLoreResource extends LoreResourceBase {
                         .map(p -> { aclAgents.set(p.result() == null ? List.of() : p.result()); return (Object) null; })
                         .onFailure().recoverWithItem(ex -> {
                             LOG.warnf("[LORE] machine_acl: агенты не прочитаны: %s", ex.getMessage());
+                            return null;
+                        }))
+                    // S7B-ACT-1: когда машина была на связи — KnowMachine.last_seen_at. Сбой — поля нет.
+                    .chain(x -> client.query(db, basicAuth(), new MartQuery("sql", MachineActivity.LAST_SEEN_SQL, null, -1))
+                        .map(p -> { aclSeen.set(p.result() == null ? List.of() : p.result()); return (Object) null; })
+                        .onFailure().recoverWithItem(ex -> {
+                            LOG.warnf("[LORE] machine_acl: отметки машин не прочитаны: %s", ex.getMessage());
                             return null;
                         }))
                     .map(x -> res);
@@ -1206,7 +1215,10 @@ public class AidaLoreResource extends LoreResourceBase {
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
                 // Kit 2 (K2-MATRIX): у ячейки матрицы состояние «проверено / не смогли / нет прав».
                 if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out, kcAnswer.get());
-                if (machineAcl) MachineAccess.enrichAcl(castRows(out.get("rows")), aclOwnerProjects.get(), aclAgents.get(), aclCaller);
+                if (machineAcl) {
+                    MachineAccess.enrichAcl(castRows(out.get("rows")), aclOwnerProjects.get(), aclAgents.get(), aclCaller);
+                    MachineActivity.enrichAcl(castRows(out.get("rows")), aclSeen.get());
+                }
                 if (LoreTaskIdentities.SLICE.equals(id)) {
                     out.put("rows", identities.get());
                     out.put("task_uid", given.get("id"));

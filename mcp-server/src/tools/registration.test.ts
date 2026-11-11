@@ -78,7 +78,8 @@ describe('registerLoreWrite', () => {
     //   только профилю full, D-2026-LORE-FULL-WRITES-PROJECT-ROLES)
     // + machine_access_set, machine_owner_set (S7B-ACL-2/3 — допуск к машине и владелец
     //   машинной учётки из MCP; агенту сервер отказывает, отказ отдаётся как есть)
-    expect(names).toHaveLength(87);
+    // + machine_new (S7B-MACH-1 — завести машину одним вызовом; агент full — только своему владельцу)
+    expect(names).toHaveLength(88);
   });
 
   it('registers project_role_set (DS-1 — роль в проекте выдаётся без захода в админку)', () => {
