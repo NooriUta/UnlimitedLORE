@@ -13,7 +13,8 @@
 // Элементы — kit2: DiffPreview (дифф с проверкой у каждой строки) и BatchUndo
 // (окно отмены с остатком). Здесь — только что за изменения и куда их слать.
 import { useEffect, useMemo, useState } from 'react';
-import { BatchUndo, DiffPreview, Forbidden, LoadError, Skeleton, setUrlParams, useKitLang, type DiffRow } from '@seidr/kit';
+import { BatchUndo, DiffPreview, Forbidden, LoadError, Skeleton, useKitLang, type DiffRow } from '@seidr/kit';
+import { useAdminNav } from './adminNav';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
@@ -47,6 +48,7 @@ const reasonOf = (e: unknown): string =>
 
 export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, undoOf }: DangerBatchProps) {
   const t = useAppT();
+  const nav = useAdminNav();
   const lang = useKitLang();
   const [plan, setPlan] = useState<PlanState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
@@ -110,7 +112,8 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
     );
   };
 
-  const toJournal = (id: string) => setUrlParams({ adm: 'log', 'adm-batch': id });
+  // S7B-01: в модуле оболочки переход в журнал — навигацией оболочки (useAdminNav).
+  const toJournal = (id: string) => nav.go('log', { 'adm-batch': id });
 
   return (
     <section className="adm-danger" aria-labelledby="adm-danger-h" data-testid="adm-danger">
