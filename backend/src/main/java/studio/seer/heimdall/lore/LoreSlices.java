@@ -801,6 +801,15 @@ public final class LoreSlices {
             "FROM KnowQuestion WHERE out('RAISED_IN').task_uid CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY question_id");
 
+        // S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): выпадающий список автора/исполнителя/
+        // принимающего. SQL отдаёт только задачу под скоупом и её проекты; строки {code, title,
+        // kind} собирает TaskRoleService.identitiesOfTask теми же методами, что проверяет запись
+        // роли (TR-05), — в AidaLoreResource. Нет задачи / нет проекта — ошибка, не пустой список.
+        slice(LoreTaskIdentities.SLICE,
+            "SELECT task_uid, out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowTask WHERE task_uid = :id",
+            List.of("id"), Map.of(), " LIMIT 1");
+
         slice("tasks_of_adr",
             "SELECT task_uid, task_id, title, out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, task_type, work_class " +
@@ -2935,6 +2944,7 @@ public final class LoreSlices {
         // Задачи — проект через спринт.
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry(LoreTaskIdentities.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
