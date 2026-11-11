@@ -26,6 +26,8 @@ export interface LoreField {
    * — «только чтение», и тогда ✎ не предлагается вовсе.
    */
   write?: { endpoint: string; field: string } | null;
+  /** Справочник вариантов enum (срез `dictionary`, dict_type). S4-24. */
+  dict?: string;
 }
 export interface LoreTab { key: string; label: string; zone: 'record' | 'around'; rel?: string; dir?: 'out' | 'in'; count?: number }
 
@@ -324,7 +326,10 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // `parts[]` лежат настоящие элементы) и свойства.
   const tabs = [...partTabs, ...linkTabs.filter(t => !partTabs.some(x => x.key === t.key) && !kitRelKeys.has(t.key))];
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: kitRels.map(({ count: _n, place: _p, target_type: _t, ...d }) => d), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
+    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: kitRels.map(({ count: _n, place: _p, target_type: _t, ...d }) => d), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}),
+      // S4-24: правимо только при ОБОИХ — сервер назвал поле правимым И дал путь записи.
+      ...(f.editable && f.write ? { editable: true } : {}),
+      ...(f.required ? { required: 'block' as const } : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit
@@ -386,4 +391,20 @@ function sprintFactsFor(
       ? { ...SPRINT_FACTS, childEdge: 'PART_OF', childDir: 'in' as const }
       : SPRINT_FACTS;
   return counts ? { ...base, counts } : base;
+}
+
+/**
+ * Варианты enum-полей вида — из справочников (S4-24). Ключ — dict_type поля
+ * схемы; справочника нет — вариантов нет, и kit такое поле не даст править
+ * (выбирать не из чего), а не покажет пустой список.
+ */
+export function withFieldOptions(cfg: KitConfig, type: string, dicts: Readonly<Record<string, readonly { code: string; title: string }[]>>, dictOf: (key: string) => string | undefined = k => k): KitConfig {
+  const kind = cfg.kinds[type];
+  if (!kind?.fields) return cfg;
+  const fields = kind.fields.map(f => {
+    if (f.type !== 'enum') return f;
+    const items = dicts[dictOf(f.key) ?? ''];
+    return items?.length ? { ...f, options: items.map(i => ({ value: i.code, label: i.title })) } : f;
+  });
+  return { ...cfg, kinds: { ...cfg.kinds, [type]: { ...kind, fields } } };
 }
