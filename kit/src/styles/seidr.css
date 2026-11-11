@@ -6377,3 +6377,25 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-keymap__none, .sk-keymap__note { color: var(--t3); font-size: var(--fs-xs); margin: 0; }
 .sk-keymap__capture { min-width: 120px; }
 .sk-keymap__foot { display: grid; gap: 4px; margin-top: 8px; }
+
+/* K4-MINILIST: мини-список — квиз (choice), todo (check), простой (plain). Плотно, строка на пункт. */
+.sk-minilist { display: grid; gap: 4px; margin: 0; padding: 0; font-size: var(--fs-sm); color: var(--t1); }
+.sk-minilist__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sk-minilist--plain { list-style: disc; padding-left: 18px; }
+.sk-minilist__item { min-width: 0; }
+.sk-minilist__row { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-radius: var(--r-md); cursor: pointer; min-width: 0; }
+.sk-minilist__row:hover { background: var(--bg2); }
+.sk-minilist__row input { margin: 0; flex: none; }
+.sk-minilist__text { flex: 1; min-width: 0; word-break: break-word; }
+.sk-minilist__item[data-state="done"] .sk-minilist__text { color: var(--t3); text-decoration: line-through; }
+.sk-minilist__count { margin: 0; font-size: var(--fs-xs); color: var(--t3); font-variant-numeric: tabular-nums; }
+.sk-minilist__letter { flex: none; width: 1.6em; text-align: center; font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); border: 1px solid var(--bd); border-radius: var(--r-sm); }
+.sk-minilist__opt[data-state="picked"] { background: var(--bg2); }
+.sk-minilist__opt[data-state="correct"] { background: color-mix(in srgb, var(--suc) 14%, transparent); }
+.sk-minilist__opt[data-state="correct"] .sk-minilist__letter { border-color: var(--suc); color: var(--suc); }
+.sk-minilist__opt[data-state="wrong"] { background: color-mix(in srgb, var(--dng) 14%, transparent); }
+.sk-minilist__opt[data-state="wrong"] .sk-minilist__letter { border-color: var(--dng); color: var(--dng); }
+.sk-minilist__mark { flex: none; font-size: var(--fs-xs); font-weight: 700; color: var(--suc); }
+.sk-minilist__hint { flex-basis: 100%; padding-left: calc(1.6em + 24px); font-size: var(--fs-xs); color: var(--dng); }
+.sk-minilist__opt { flex-wrap: wrap; }
+.sk-minilist__empty { color: var(--t3); font-size: var(--fs-sm); }
