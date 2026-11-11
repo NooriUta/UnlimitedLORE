@@ -75,5 +75,3 @@ export * from './reading';
 export * from './flow';
 // S4-FIELD-EDITORS: редакторы по видам полей модели.
 export * from './fields';
-// Новости v2: лента, разрезы, метрики сервера (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06).
-export * from './news';

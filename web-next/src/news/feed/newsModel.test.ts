@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import {
   DEFAULT_NEWS_QUERY, NEWS_FIXTURE, NEWS_KIND_META, NEWS_TYPE_META, NewsContractError, buildNewsParams,
-  newsDict, newsHref, newsGroupLabel, parseNewsResponse, readNewsQuery, utcClock, writeNewsQuery,
+  newsDict, newsGroupLabel, parseNewsResponse, readNewsQuery, utcClock, writeNewsQuery,
 } from './index';
-import { hasGameIcon, registerGameIcons } from '../elements/GameIcon';
+import { hasGameIcon, registerGameIcons } from '@seidr/kit';
+import { newsHrefV2 } from '../newsLinks';
 
 describe('S7A-02 · запрос GET /lore/news/v2', () => {
   it('по умолчанию: неделя, пояс, разрез по проектам, матрица 6, без limit (окно целиком, паритет 14)', () => {
@@ -112,22 +113,22 @@ describe('S7A-02 · подписи и ссылки', () => {
     expect(utcClock(null, '2026-11-06')).toBeNull();
   });
 
-  it('задачи и спеки кликабельны (D-2026-UXR-NEWS-V2-RULES п. 2), у каждого типа своя ссылка (паритет 12)', () => {
+  it('задачи и спеки кликабельны (D-2026-UXR-NEWS-V2-RULES п. 2), у каждого типа своя ссылка v2 (паритет 12, K-14)', () => {
     const by = (type: string) => NEWS_FIXTURE.events.find(e => e.type === type)!;
-    expect(newsHref(by('task'))).toBe('/lore?section=sprints&passport=SPRINT_UXR_S7A_NEWS');
-    expect(newsHref(by('spec'))).toBe('/lore?section=knowledge&passport=spec%3ASPEC-LORE-UXR-NEWS-ALGORITHMS');
-    expect(newsHref(by('adr'))).toBe('/lore?section=adrs&passport=ADR-LORE-045');
-    expect(newsHref(by('sprint'))).toBe('/lore?section=sprints&passport=SPRINT_AIDA_X');
-    expect(newsHref(by('decision'))).toBe('/lore?section=decisions&passport=D-2026-UXR-NEWS-V2-RULES');
-    // Релиз — парой «проект#id»: одна версия живёт в нескольких репозиториях.
-    expect(newsHref(by('release'))).toBe('/lore?section=releases&rel=NooriUta%2FUnlimitedLORE%23v1.17.0');
+    for (const t of ['task', 'spec', 'adr', 'sprint', 'decision', 'release']) {
+      const h = newsHrefV2(by(t));
+      expect(h, t).toBeTruthy();
+      // Адресов v1 больше нет: ссылку строит маршрутизатор приложения.
+      expect(h, t).not.toMatch(/section=|passport=/);
+    }
   });
 
   // Сервер (#1025) отдаёт вопросы: type 'question', события created/closed.
   // Без своей ветки строка вопроса была без ссылки, иконки и подписи типа.
-  it('вопрос: ссылка в «Открытые вопросы» v1, иконка и подпись типа', () => {
+  it('вопрос: ссылка v2 на запись, иконка и подпись типа', () => {
     const q = { ...NEWS_FIXTURE.events[0], type: 'question', el: 'Q-UXR-4', sprint: null };
-    expect(newsHref(q)).toBe('/lore?section=openQuestions&passport=Q-UXR-4');
+    expect(newsHrefV2(q)).toBeTruthy();
+    expect(newsHrefV2(q)).not.toMatch(/section=|passport=/);
     expect(NEWS_TYPE_META.question?.icon).toBe('help');
     expect(newsGroupLabel('type', 'question', 'ru')).toBe('вопрос');
     expect(newsGroupLabel('type', 'question', 'en')).toBe('question');

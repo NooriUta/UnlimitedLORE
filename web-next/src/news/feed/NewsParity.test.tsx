@@ -15,8 +15,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons } from '../elements/GameIcon';
-import { KitLangProvider } from '../i18n';
+import { registerGameIcons } from '@seidr/kit';
+import { KitLangProvider } from '@seidr/kit';
 import { NEWS_FIXTURE, NewsFeed, newsDict, type NewsEvent, type NewsResponse, type NewsSource } from './index';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -177,7 +177,7 @@ describe('S7A-08 · П24: ссылкой — всё, у чего есть пас
  * тестах ленты; серверные и раскладка — по имени теста в своём файле.
  */
 describe('S7A-08 · сторож: ни один из 30 пунктов без теста', () => {
-  const ROOT = join(__dirname, '..', '..', '..');
+  const ROOT = join(__dirname, '..', '..', '..', '..');
   const ELSEWHERE: Record<number, [file: string, test: string]> = {
     14: ['backend/src/test/java/studio/seer/heimdall/lore/news/NewsV2EngineFixtureTest.java', 'limitCutsTheFeedAndTruncatedTellsTheTruth'],
     15: ['backend/src/test/java/studio/seer/heimdall/lore/LoreNewsV2CollectorTest.java', 'periodDefaultsToSevenLocalDaysEndingNow'],
