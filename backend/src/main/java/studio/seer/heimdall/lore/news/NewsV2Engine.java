@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
@@ -473,7 +474,7 @@ public final class NewsV2Engine {
 
     /** Состояние одной задачи на всех границах дня. */
     static final class TaskState {
-        String uid; boolean unknown;
+        String uid; boolean unknown; TaskRecord t;
         Eval e0, e1; Eval[] st; boolean[] sb;
         boolean C, A, oC, oA, S, W, doneEver;
         int reactEv, reactFromReady, reactFromClosed, reactAfterRelease;
@@ -552,7 +553,7 @@ public final class NewsV2Engine {
             Rec rec = new Rec(t);
             M.nRecs++;
             TaskState s = new TaskState();
-            s.uid = t.uid();
+            s.uid = t.uid(); s.t = t;
             s.st = new Eval[K];
             for (int k = 0; k < K; k++) s.st[k] = evalAt(rec, B.get(k));
             s.e0 = s.st[0]; s.e1 = s.st[K - 1];
@@ -815,12 +816,60 @@ public final class NewsV2Engine {
         public GroupCount total;           // по оси запроса
         public ShipModel ship;
         public boolean tasksAvailable;
+        /** Счётные наборы: последний статус объекта в ведре «день» / «период» (после фильтров). */
+        public List<Event> Eday, Eperiod;
+    }
+
+    // ═════════════════════════ последний статус в ведре ═════════════════════════
+
+    /** Виды событий задачи, которые означают смену статуса. */
+    static final Set<String> STATUS_KINDS = Set.of("ready", "closed", "cancelled", "reactivated", "status");
+    /** Виды, которые у метрик группы есть всегда — нулём, если в ведре их не было. */
+    static final List<String> FIXED_KINDS = List.of("closed", "created", "ready", "reactivated", "released", "changed");
+    public static final String RULE_DAY = "last_status_of_day", RULE_PERIOD = "last_status_of_period";
+
+    /**
+     * Слова владелицы 11.11.2026: «считается последний актуальный статус по объекту, а не
+     * промежуточный за день»; «аналитика за месяц — последний статус за месяц, если он не
+     * разбит по дням». Переходы статуса одной задачи внутри одного ведра сводятся к одному —
+     * от статуса до первого перехода к статусу после последнего (вид — {@link #kindOf});
+     * вернулась туда же — в счёт не идёт ничего. Остальные события не трогаются.
+     * Лента ({@code events}) это правило не применяет: она показывает все переходы (§1).
+     */
+    List<Event> lastStatus(List<Event> E, Function<Event, Object> bucket) {
+        Map<String, List<Event>> by = new LinkedHashMap<>();
+        for (Event e : E)
+            if ("task".equals(e.type()) && STATUS_KINDS.contains(e.kind()))
+                by.computeIfAbsent(e.elKey() + "\u0001" + bucket.apply(e), k -> new ArrayList<>()).add(e);
+        Map<Event, Event> replace = new IdentityHashMap<>();
+        Set<Event> drop = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (List<Event> l : by.values()) {
+            if (l.size() < 2) continue;
+            l.sort(Comparator.comparing(this::sortKey));
+            Event first = l.get(0), last = l.get(l.size() - 1);
+            String k = kindOf(new Version(first.at(), first.fromStatus()), new Version(last.at(), last.toStatus()));
+            drop.addAll(l);
+            if (!"changed".equals(k))
+                replace.put(last, new Event(last.type(), last.el(), k, last.at(), last.day(), last.who(), last.agent(),
+                    last.projects(), last.components(), last.sprint(), last.milestones(), last.parent(),
+                    first.fromStatus(), last.toStatus(), last.title(), last.src()));
+        }
+        if (drop.isEmpty()) return E;
+        List<Event> out = new ArrayList<>();
+        for (Event e : E) {
+            Event r = replace.get(e);
+            if (r != null) out.add(r);
+            else if (!drop.contains(e)) out.add(e);
+        }
+        return out;
     }
 
     Core core(Query q) {
         Core c = new Core();
         c.prepared = prepare(periodEvents());
         c.E = c.prepared.E().stream().filter(e -> matches(e, q)).toList();
+        c.Eday = lastStatus(c.prepared.E(), this::dayOf).stream().filter(e -> matches(e, q)).toList();
+        c.Eperiod = lastStatus(c.prepared.E(), e -> "P").stream().filter(e -> matches(e, q)).toList();
         c.total = groupCount(c.E, q.groupBy() == null ? "project" : q.groupBy());
         c.tasksAvailable = in.errors().stream().noneMatch(er -> er.critical() && er.source().startsWith("task"));
         c.ship = shipModel(q);
@@ -845,11 +894,11 @@ public final class NewsV2Engine {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("events", feedRows(c, q, axis));
-        out.put("groups", groupsOut(c.E, axis, q.subBy()));
+        out.put("groups", groupsOut(c, axis, q.subBy()));
         out.put("days", daysOut(c, q, axis));   // S7A-09: свёртки дня — аддитивно
         Map<String, Object> metrics = metrics(c, p, q);
         out.put("metrics", metrics);
-        if (q.matrixN() != null && q.matrixN() > 0) out.put("matrix", matrixOut(matrix(c.E, q.matrixN())));
+        if (q.matrixN() != null && q.matrixN() > 0) out.put("matrix", matrixOut(matrix(c.Eday, q.matrixN())));   // сетка дней — ведро «день»
         List<Map<String, Object>> checks = validate(c, q);
         out.put("meta", meta(c, q, checks));
         return out;
@@ -911,46 +960,164 @@ public final class NewsV2Engine {
      * то число, что клиент рисовал. Дни — в порядке ленты, новые сверху.
      */
     List<Map<String, Object>> daysOut(Core c, Query q, String axis) {
-        Map<LocalDate, List<Event>> evByDay = new TreeMap<>(Comparator.reverseOrder());
-        for (Event e : c.E) evByDay.computeIfAbsent(dayOf(e), d -> new ArrayList<>()).add(e);
-        // строка = её первое событие из прошедших фильтр (так же, как в feedRows)
-        Map<LocalDate, List<Event>> rowsByDay = new HashMap<>();
-        for (Row r : c.prepared.rows()) {
-            Event first = r.events().stream().filter(e -> matches(e, q)).findFirst().orElse(null);
-            if (first != null) rowsByDay.computeIfAbsent(dayOf(first), d -> new ArrayList<>()).add(first);
-        }
+        // День есть в days[], если в нём есть строка ленты — даже когда всё в нём промежуточное.
+        Map<LocalDate, List<Event>> rawByDay = new TreeMap<>(Comparator.reverseOrder());
+        for (Event e : c.E) rawByDay.computeIfAbsent(dayOf(e), d -> new ArrayList<>()).add(e);
+        Map<LocalDate, List<Event>> evByDay = new HashMap<>();
+        for (Event e : c.Eday) evByDay.computeIfAbsent(dayOf(e), d -> new ArrayList<>()).add(e);
+        Map<LocalDate, Integer> dayIdx = dayIndex(c.ship);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Map.Entry<LocalDate, List<Event>> en : evByDay.entrySet()) {
-            List<Event> evs = en.getValue();
-            List<Event> rows = rowsByDay.getOrDefault(en.getKey(), List.of());
+        for (Map.Entry<LocalDate, List<Event>> en : rawByDay.entrySet()) {
+            List<Event> evs = evByDay.getOrDefault(en.getKey(), List.of());
+            Bucket b = new Bucket(c, dayIdx.get(en.getKey()));
+            Map<String, Object> fig = figures(evs, b, s -> true);
             Map<String, Object> d = new LinkedHashMap<>();
             d.put("day", en.getKey().toString());
-            d.put("total", pair(evs.size(), (int) evs.stream().map(Event::elKey).distinct().count()));
-            d.put("rows", rows.size());
-            Map<String, Object> byType = new TreeMap<>();
-            for (Map.Entry<String, Map<String, Object>> t : tripleBy(evs, rows, e -> List.of(e.type())).entrySet()) {
-                String type = t.getKey();
-                Map<String, Object> v = new LinkedHashMap<>(t.getValue());
-                v.put("by_kind", tripleBy(evs.stream().filter(e -> type.equals(e.type())).toList(),
-                    rows.stream().filter(e -> type.equals(e.type())).toList(), e -> List.of(e.kind())));
-                byType.put(type, v);
-            }
-            d.put("by_kind", tripleBy(evs, rows, e -> List.of(e.kind())));
-            d.put("by_type", byType);
+            d.put("total", fig.get("total"));
+            d.put("rows", fig.get("rows"));
+            d.put("by_kind", fig.get("by_kind"));
+            d.put("by_type", fig.get("by_type"));
             d.put("axis", axis);
-            List<Map<String, Object>> groups = new ArrayList<>();
-            tripleBy(evs, rows, e -> axisValues(axis, e)).forEach((k, v) -> {
-                Map<String, Object> g = new LinkedHashMap<>();
-                g.put("key", k);
-                g.putAll(v);
-                groups.add(g);
-            });
-            groups.sort(Comparator.comparingInt((Map<String, Object> g) -> (Integer) g.get("events")).reversed()
-                .thenComparing(g -> (String) g.get("key")));
-            d.put("groups", groups);
+            d.put("groups", groupList(evs, axis, q.subBy(), b, s -> true, false));
+            // S7A-09 (11.11.2026): правило счёта и то, что в счёт не пошло, — явно.
+            d.put("rule", RULE_DAY);
+            List<Event> raw = en.getValue();
+            d.put("intermediate", mapOf("events", raw.size() - evs.size(), "rows", rowsOf(raw).size() - rowsOf(evs).size()));
+            d.put("agent_events", fig.get("agent_events"));
+            d.put("agent_elements", fig.get("agent_elements"));
+            d.put("burn", fig.get("burn"));
+            d.put("ship", fig.get("ship"));
+            d.put("balance", fig.get("balance"));
             out.add(d);
         }
         return out;
+    }
+
+    /** Ведро времени: день {@code k} (границы {@code bounds[k]..bounds[k+1]}) или весь период ({@code k == null}). */
+    record Bucket(Core c, Integer k) {}
+
+    Map<LocalDate, Integer> dayIndex(ShipModel M) {
+        Map<LocalDate, Integer> m = new HashMap<>();
+        for (int k = 0; k < M.bounds.size() - 1; k++) m.put(localDay(M.bounds.get(k)), k);
+        return m;
+    }
+
+    /** Строки ленты набора: дедуп «элемент : вид : день» (§5), представитель — первое событие. */
+    List<Event> rowsOf(List<Event> evs) {
+        Map<String, Event> r = new LinkedHashMap<>();
+        for (Event e : evs) r.putIfAbsent(e.elKey() + "|" + e.kind() + "|" + dayOf(e), e);
+        return new ArrayList<>(r.values());
+    }
+
+    /** Какие задачи считаются в сгорании группы: §7.2 T_g для осей задач, иначе — задачи из событий группы. */
+    Predicate<TaskState> taskPred(String axis, String key, List<Event> groupEvents) {
+        if (TASK_AXES.contains(axis)) return s -> taskAxisValues(axis, s.t).contains(key);
+        Set<String> uids = new HashSet<>();
+        for (Event e : groupEvents) if ("task".equals(e.type())) uids.add(e.el());
+        return s -> uids.contains(s.uid);
+    }
+
+    /**
+     * Метрики ведра (день или период × группа × подгруппа) — одна форма для дня, группы и
+     * подгруппы, пустое — нулями: total/events/elements, rows, agent_*, by_kind (виды
+     * {@link #FIXED_KINDS} всегда), by_type (task всегда, с by_kind), burn (§7.2a: открытые
+     * на начало и конец ведра), ship («к выкатке»: ждут на конец ведра, выкатка не
+     * определена, доехали в ведре), balance («закрыто против заведено задач»).
+     */
+    @SuppressWarnings("unchecked")
+    Map<String, Object> figures(List<Event> evs, Bucket b, Predicate<TaskState> tasks) {
+        List<Event> rows = rowsOf(evs);
+        int els = (int) evs.stream().map(Event::elKey).distinct().count();
+        List<Event> ag = evs.stream().filter(e -> Boolean.TRUE.equals(e.agent())).toList();
+        Map<String, Object> f = new LinkedHashMap<>();
+        f.put("events", evs.size());
+        f.put("elements", els);
+        f.put("total", pair(evs.size(), els));
+        f.put("rows", rows.size());
+        f.put("agent_events", ag.size());
+        f.put("agent_elements", (int) ag.stream().map(Event::elKey).distinct().count());
+        Map<String, Map<String, Object>> byKind = kindsFixed(tripleBy(evs, rows, e -> List.of(e.kind())));
+        f.put("by_kind", byKind);
+        Map<String, Object> byType = new TreeMap<>();
+        Map<String, Map<String, Object>> types = tripleBy(evs, rows, e -> List.of(e.type()));
+        types.putIfAbsent("task", triple(0, 0, 0));
+        for (Map.Entry<String, Map<String, Object>> t : types.entrySet()) {
+            String type = t.getKey();
+            Map<String, Object> v = new LinkedHashMap<>(t.getValue());
+            v.put("by_kind", kindsFixed(tripleBy(evs.stream().filter(e -> type.equals(e.type())).toList(),
+                rows.stream().filter(e -> type.equals(e.type())).toList(), e -> List.of(e.kind()))));
+            byType.put(type, v);
+        }
+        f.put("by_type", byType);
+        int o0 = 0, o1 = 0, wait = 0, unk = 0, shipped = 0;
+        ShipModel M = b.c().ship;
+        int K = M.bounds.size();
+        if (b.c().tasksAvailable) for (TaskState s : M.states) {
+            if (s.unknown || !tasks.test(s)) continue;
+            int a = b.k() == null ? 0 : b.k(), z = b.k() == null ? K - 1 : b.k() + 1;
+            o0 += s.st[a].newOpen(); o1 += s.st[z].newOpen();
+            wait += s.st[z].y(); unk += s.st[z].yUnk();
+            if (!s.sb[a] && s.sb[z]) shipped++;
+        }
+        f.put("burn", mapOf("open_start", o0, "open_end", o1, "burn", o0 - o1));
+        f.put("ship", mapOf("waiting", wait, "ship_unknown", unk, "shipped", shipped));
+        Map<String, Object> taskKinds = (Map<String, Object>) byType.get("task");
+        @SuppressWarnings("unchecked")
+        int created = (Integer) ((Map<String, Object>) ((Map<String, Object>) taskKinds.get("by_kind")).get("created")).get("rows");
+        f.put("balance", mapOf("closed", byKind.get("closed").get("rows"), "created", created));
+        return f;
+    }
+
+    static Map<String, Object> triple(int ev, int el, int rows) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("events", ev); m.put("elements", el); m.put("rows", rows);
+        return m;
+    }
+
+    static Map<String, Map<String, Object>> kindsFixed(Map<String, Map<String, Object>> by) {
+        Map<String, Map<String, Object>> out = new TreeMap<>(by);
+        for (String k : FIXED_KINDS) out.putIfAbsent(k, triple(0, 0, 0));
+        return out;
+    }
+
+    /**
+     * Группы ведра по оси (и подгруппы по {@code sub}) с метриками {@link #figures}.
+     * {@code periodShape} — форма groups.list (multi, filter, sub.total …), иначе — групп дня.
+     */
+    List<Map<String, Object>> groupList(List<Event> evs, String axis, String sub, Bucket b, Predicate<TaskState> parent,
+                                        boolean periodShape) {
+        GroupCount R = groupCount(evs, axis);
+        Map<LocalDate, Integer> dayIdx = "day".equals(axis) && b.k() == null ? dayIndex(b.c().ship) : null;
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Group g : R.list()) {
+            // Группа «день» в ответе без разбивки по дням — ведро её дня.
+            Bucket gb = dayIdx != null ? new Bucket(b.c(), dayIdx.get(LocalDate.parse(g.g()))) : b;
+            Predicate<TaskState> tp = parent.and(taskPred(axis, g.g(), g.events()));
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("key", g.g()); m.put("events", g.ev()); m.put("elements", g.el());
+            if (periodShape) {
+                m.put("multi", g.multi());
+                m.put("agent_events", g.agEv()); m.put("agent_elements", g.agEl());
+                m.put("filter", mapOf(axis, g.g()));
+            }
+            Map<String, Object> fig = figures(g.events(), gb, tp);
+            for (Map.Entry<String, Object> x : fig.entrySet()) m.putIfAbsent(x.getKey(), x.getValue());
+            if (!periodShape) m.put("multi", g.multi());
+            if (sub != null && !sub.equals(axis)) {
+                GroupCount S = groupCount(g.events(), sub);
+                List<Map<String, Object>> subs = new ArrayList<>();
+                for (Group x : S.list()) {
+                    Map<String, Object> sm = new LinkedHashMap<>();
+                    sm.put("key", x.g()); sm.put("events", x.ev()); sm.put("elements", x.el()); sm.put("multi", x.multi());
+                    Map<String, Object> sf = figures(x.events(), gb, tp.and(taskPred(sub, x.g(), x.events())));
+                    for (Map.Entry<String, Object> y : sf.entrySet()) sm.putIfAbsent(y.getKey(), y.getValue());
+                    subs.add(sm);
+                }
+                m.put("sub", mapOf("axis", sub, "groups", subs, "total", pair(S.totEv(), S.totEl()), "multi_group_elements", S.M()));
+            }
+            list.add(m);
+        }
+        return list;
     }
 
     /** {ключ → {events, elements, rows}}: элемент нескольких групп считается в каждой (как groupCount). */
@@ -973,25 +1140,19 @@ public final class NewsV2Engine {
         return out;
     }
 
-    Map<String, Object> groupsOut(List<Event> E, String axis, String sub) {
+    /**
+     * Группы периода. Ведро — весь период (последний статус объекта на t1), у оси «день» —
+     * день группы (последний статус дня): правило — в {@code rule}.
+     */
+    Map<String, Object> groupsOut(Core c, String axis, String sub) {
+        boolean byDay = "day".equals(axis);
+        List<Event> E = byDay ? c.Eday : c.Eperiod;
         GroupCount R = groupCount(E, axis);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("axis", axis);
         out.put("element_level", ELEMENT_AXES.contains(axis));
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Group g : R.list()) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("key", g.g()); m.put("events", g.ev()); m.put("elements", g.el()); m.put("multi", g.multi());
-            m.put("agent_events", g.agEv()); m.put("agent_elements", g.agEl());
-            m.put("filter", mapOf(axis, g.g()));
-            if (sub != null && !sub.equals(axis)) {
-                GroupCount S = groupCount(g.events(), sub);
-                List<Map<String, Object>> subs = new ArrayList<>();
-                for (Group x : S.list()) subs.add(mapOf("key", x.g(), "events", x.ev(), "elements", x.el(), "multi", x.multi()));
-                m.put("sub", mapOf("axis", sub, "groups", subs, "total", pair(S.totEv(), S.totEl()), "multi_group_elements", S.M()));
-            }
-            list.add(m);
-        }
+        out.put("rule", byDay ? RULE_DAY : RULE_PERIOD);
+        List<Map<String, Object>> list = groupList(E, axis, sub, new Bucket(c, null), s -> true, true);
         out.put("list", list);
         out.put("total", pair(R.totEv(), R.totEl()));
         out.put("sum", pair(R.list().stream().mapToInt(Group::ev).sum(), R.list().stream().mapToInt(Group::el).sum()));
@@ -1003,16 +1164,20 @@ public final class NewsV2Engine {
     Map<String, Object> metrics(Core c, Core p, Query q) {
         Map<String, Object> m = new LinkedHashMap<>();
         Map<String, Object> counts = new LinkedHashMap<>();
-        counts.put("total", pair(c.E.size(), (int) c.E.stream().map(Event::elKey).distinct().count()));
-        counts.put("by_type", byAxis(c.E, "type"));
-        counts.put("by_kind", byAxis(c.E, "kind"));
-        counts.put("by_who", byAxis(c.E, "who"));   // S7A-12: счёт для фильтра «Кто»
+        // Итоги периода без разбивки — последний статус объекта в периоде (слова владелицы 11.11.2026).
+        List<Event> P = c.Eperiod;
+        counts.put("total", pair(P.size(), (int) P.stream().map(Event::elKey).distinct().count()));
+        counts.put("by_type", byAxis(P, "type"));
+        counts.put("by_kind", byAxis(P, "kind"));
+        counts.put("by_who", byAxis(P, "who"));   // S7A-12: счёт для фильтра «Кто»
+        counts.put("rule", RULE_PERIOD);
+        counts.put("intermediate", mapOf("events", c.E.size() - P.size()));
         m.put("counts", counts);
         if (c.tasksAvailable) m.put("tasks", tasksOut(c.ship));
         else m.put("tasks", mapOf("available", false, "reason", "история задач недоступна — см. meta.errors"));
         m.put("knowledge", knowledge(c.E));
-        GroupCount au = groupCount(c.E, "author");
-        boolean measurable = c.E.stream().anyMatch(e -> e.agent() != null);
+        GroupCount au = groupCount(P, "author");
+        boolean measurable = P.stream().anyMatch(e -> e.agent() != null);
         m.put("agents", measurable
             ? mapOf("measurable", true, "events", pair(au.agEvT(), au.totEv()), "elements", pair(au.agElT(), au.totEl()))
             : mapOf("measurable", false, "reason", "автор версии не хранится — task:SPRINT_UXR_S2_GRAPH_MEMORY/S2-12"));
@@ -1100,12 +1265,12 @@ public final class NewsV2Engine {
     /** §7.5: Δf = f(P) − f(P⁻); проценты — только при f(P⁻) ≥ 5. */
     Map<String, Object> delta(Core c, Core p) {
         Map<String, Object> d = new LinkedHashMap<>();
-        d.put("events", dv(c.E.size(), p.E.size()));
-        d.put("elements", dv((int) c.E.stream().map(Event::elKey).distinct().count(), (int) p.E.stream().map(Event::elKey).distinct().count()));
+        d.put("events", dv(c.Eperiod.size(), p.Eperiod.size()));   // последний статус в периоде
+        d.put("elements", dv((int) c.Eperiod.stream().map(Event::elKey).distinct().count(), (int) p.Eperiod.stream().map(Event::elKey).distinct().count()));
         Map<String, Object> types = new TreeMap<>();
         Map<String, Integer> ct = new HashMap<>(), pt = new HashMap<>();
-        for (Event e : c.E) ct.merge(e.type(), 1, Integer::sum);
-        for (Event e : p.E) pt.merge(e.type(), 1, Integer::sum);
+        for (Event e : c.Eperiod) ct.merge(e.type(), 1, Integer::sum);
+        for (Event e : p.Eperiod) pt.merge(e.type(), 1, Integer::sum);
         Set<String> keys = new TreeSet<>(ct.keySet()); keys.addAll(pt.keySet());
         for (String k : keys) types.put(k, dv(ct.getOrDefault(k, 0), pt.getOrDefault(k, 0)));
         d.put("by_type", types);

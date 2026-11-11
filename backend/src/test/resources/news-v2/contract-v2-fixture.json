@@ -483,37 +483,524 @@
   "groups" : {
     "axis" : "project",
     "element_level" : true,
+    "rule" : "last_status_of_period",
     "list" : [ {
       "key" : "P1",
-      "events" : 17,
-      "elements" : 13,
-      "multi" : 4,
+      "events" : 15,
+      "elements" : 12,
+      "multi" : 3,
       "agent_events" : 3,
       "agent_elements" : 1,
       "filter" : {
         "project" : "P1"
+      },
+      "total" : {
+        "events" : 15,
+        "elements" : 12
+      },
+      "rows" : 13,
+      "by_kind" : {
+        "changed" : {
+          "events" : 4,
+          "elements" : 2,
+          "rows" : 2
+        },
+        "closed" : {
+          "events" : 3,
+          "elements" : 3,
+          "rows" : 3
+        },
+        "created" : {
+          "events" : 4,
+          "elements" : 4,
+          "rows" : 4
+        },
+        "reactivated" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "ready" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2
+        },
+        "released" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        }
+      },
+      "by_type" : {
+        "adr" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2,
+          "by_kind" : {
+            "changed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "decision" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "release" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            }
+          }
+        },
+        "sprint" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 10,
+          "elements" : 7,
+          "rows" : 8,
+          "by_kind" : {
+            "changed" : {
+              "events" : 3,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "closed" : {
+              "events" : 3,
+              "elements" : 3,
+              "rows" : 3
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "ready" : {
+              "events" : 2,
+              "elements" : 2,
+              "rows" : 2
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 5,
+        "open_end" : 4,
+        "burn" : 1
+      },
+      "ship" : {
+        "waiting" : 1,
+        "ship_unknown" : 0,
+        "shipped" : 1
+      },
+      "balance" : {
+        "closed" : 3,
+        "created" : 1
       }
     }, {
       "key" : "P2",
-      "events" : 10,
-      "elements" : 8,
-      "multi" : 4,
+      "events" : 8,
+      "elements" : 7,
+      "multi" : 3,
       "agent_events" : 0,
       "agent_elements" : 0,
       "filter" : {
         "project" : "P2"
+      },
+      "total" : {
+        "events" : 8,
+        "elements" : 7
+      },
+      "rows" : 8,
+      "by_kind" : {
+        "changed" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2
+        },
+        "closed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "created" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "released" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "version" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        }
+      },
+      "by_type" : {
+        "adr" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2,
+          "by_kind" : {
+            "changed" : {
+              "events" : 2,
+              "elements" : 2,
+              "rows" : 2
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "release" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            }
+          }
+        },
+        "spec" : {
+          "events" : 2,
+          "elements" : 1,
+          "rows" : 2,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "version" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            }
+          }
+        },
+        "sprint" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 2,
+        "open_end" : 1,
+        "burn" : 1
+      },
+      "ship" : {
+        "waiting" : 1,
+        "ship_unknown" : 1,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 1,
+        "created" : 0
       }
     } ],
     "total" : {
-      "events" : 22,
-      "elements" : 17
+      "events" : 20,
+      "elements" : 16
     },
     "sum" : {
-      "events" : 27,
-      "elements" : 21
+      "events" : 23,
+      "elements" : 19
     },
-    "multi_group_elements" : 4,
-    "extra" : 4
+    "multi_group_elements" : 3,
+    "extra" : 3
   },
   "days" : [ {
     "day" : "2026-11-06",
@@ -523,10 +1010,35 @@
     },
     "rows" : 2,
     "by_kind" : {
+      "changed" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "closed" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "created" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "reactivated" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
       "ready" : {
         "events" : 1,
         "elements" : 1,
         "rows" : 1
+      },
+      "released" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
       },
       "version" : {
         "events" : 1,
@@ -540,6 +1052,36 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "version" : {
             "events" : 1,
             "elements" : 1,
@@ -552,10 +1094,35 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "ready" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       }
@@ -565,8 +1132,168 @@
       "key" : "P2",
       "events" : 2,
       "elements" : 2,
-      "rows" : 2
-    } ]
+      "total" : {
+        "events" : 2,
+        "elements" : 2
+      },
+      "rows" : 2,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "closed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "created" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "version" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        }
+      },
+      "by_type" : {
+        "spec" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "version" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            }
+          }
+        },
+        "task" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 1,
+        "open_end" : 1,
+        "burn" : 0
+      },
+      "ship" : {
+        "waiting" : 1,
+        "ship_unknown" : 1,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 0,
+        "created" : 0
+      },
+      "multi" : 0
+    } ],
+    "rule" : "last_status_of_day",
+    "intermediate" : {
+      "events" : 0,
+      "rows" : 0
+    },
+    "agent_events" : 0,
+    "agent_elements" : 0,
+    "burn" : {
+      "open_start" : 5,
+      "open_end" : 5,
+      "burn" : 0
+    },
+    "ship" : {
+      "waiting" : 2,
+      "ship_unknown" : 1,
+      "shipped" : 0
+    },
+    "balance" : {
+      "closed" : 0,
+      "created" : 0
+    }
   }, {
     "day" : "2026-11-05",
     "total" : {
@@ -585,10 +1312,25 @@
         "elements" : 1,
         "rows" : 1
       },
+      "created" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "reactivated" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
       "ready" : {
         "events" : 1,
         "elements" : 1,
         "rows" : 1
+      },
+      "released" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
       }
     },
     "by_type" : {
@@ -601,6 +1343,31 @@
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       },
@@ -609,15 +1376,35 @@
         "elements" : 2,
         "rows" : 2,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "closed" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
           },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "ready" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       }
@@ -627,13 +1414,255 @@
       "key" : "P1",
       "events" : 2,
       "elements" : 2,
-      "rows" : 2
+      "total" : {
+        "events" : 2,
+        "elements" : 2
+      },
+      "rows" : 2,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "closed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "created" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        }
+      },
+      "by_type" : {
+        "task" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 5,
+        "open_end" : 4,
+        "burn" : 1
+      },
+      "ship" : {
+        "waiting" : 1,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 1,
+        "created" : 0
+      },
+      "multi" : 1
     }, {
       "key" : "P2",
       "events" : 2,
       "elements" : 2,
-      "rows" : 2
-    } ]
+      "total" : {
+        "events" : 2,
+        "elements" : 2
+      },
+      "rows" : 2,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "closed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "created" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        }
+      },
+      "by_type" : {
+        "adr" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 2,
+        "open_end" : 1,
+        "burn" : 1
+      },
+      "ship" : {
+        "waiting" : 0,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 1,
+        "created" : 0
+      },
+      "multi" : 1
+    } ],
+    "rule" : "last_status_of_day",
+    "intermediate" : {
+      "events" : 0,
+      "rows" : 0
+    },
+    "agent_events" : 0,
+    "agent_elements" : 0,
+    "burn" : {
+      "open_start" : 6,
+      "open_end" : 5,
+      "burn" : 1
+    },
+    "ship" : {
+      "waiting" : 1,
+      "ship_unknown" : 0,
+      "shipped" : 0
+    },
+    "balance" : {
+      "closed" : 1,
+      "created" : 0
+    }
   }, {
     "day" : "2026-11-04",
     "total" : {
@@ -647,10 +1676,25 @@
         "elements" : 1,
         "rows" : 1
       },
+      "closed" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "created" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
       "reactivated" : {
         "events" : 1,
         "elements" : 1,
         "rows" : 1
+      },
+      "ready" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
       },
       "released" : {
         "events" : 1,
@@ -664,6 +1708,31 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "released" : {
             "events" : 1,
             "elements" : 1,
@@ -681,10 +1750,30 @@
             "elements" : 1,
             "rows" : 1
           },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "reactivated" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       }
@@ -694,8 +1783,158 @@
       "key" : "P1",
       "events" : 5,
       "elements" : 3,
-      "rows" : 3
-    } ]
+      "total" : {
+        "events" : 5,
+        "elements" : 3
+      },
+      "rows" : 3,
+      "agent_events" : 3,
+      "agent_elements" : 1,
+      "by_kind" : {
+        "changed" : {
+          "events" : 3,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "closed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "created" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "reactivated" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "ready" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "released" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        }
+      },
+      "by_type" : {
+        "release" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            }
+          }
+        },
+        "task" : {
+          "events" : 4,
+          "elements" : 2,
+          "rows" : 2,
+          "by_kind" : {
+            "changed" : {
+              "events" : 3,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 5,
+        "open_end" : 5,
+        "burn" : 0
+      },
+      "ship" : {
+        "waiting" : 0,
+        "ship_unknown" : 0,
+        "shipped" : 1
+      },
+      "balance" : {
+        "closed" : 0,
+        "created" : 0
+      },
+      "multi" : 0
+    } ],
+    "rule" : "last_status_of_day",
+    "intermediate" : {
+      "events" : 0,
+      "rows" : 0
+    },
+    "agent_events" : 3,
+    "agent_elements" : 1,
+    "burn" : {
+      "open_start" : 6,
+      "open_end" : 6,
+      "burn" : 0
+    },
+    "ship" : {
+      "waiting" : 0,
+      "ship_unknown" : 0,
+      "shipped" : 1
+    },
+    "balance" : {
+      "closed" : 0,
+      "created" : 0
+    }
   }, {
     "day" : "2026-11-03",
     "total" : {
@@ -719,6 +1958,11 @@
         "elements" : 1,
         "rows" : 1
       },
+      "reactivated" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
       "ready" : {
         "events" : 1,
         "elements" : 1,
@@ -740,6 +1984,31 @@
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       },
@@ -748,6 +2017,31 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "released" : {
             "events" : 1,
             "elements" : 1,
@@ -760,10 +2054,35 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "created" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       },
@@ -772,15 +2091,35 @@
         "elements" : 2,
         "rows" : 2,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "closed" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
           },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "ready" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       }
@@ -790,13 +2129,366 @@
       "key" : "P2",
       "events" : 4,
       "elements" : 4,
-      "rows" : 4
+      "total" : {
+        "events" : 4,
+        "elements" : 4
+      },
+      "rows" : 4,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "closed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "created" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "released" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        }
+      },
+      "by_type" : {
+        "adr" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "release" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            }
+          }
+        },
+        "spec" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 3,
+        "open_end" : 2,
+        "burn" : 1
+      },
+      "ship" : {
+        "waiting" : 0,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 1,
+        "created" : 0
+      },
+      "multi" : 2
     }, {
       "key" : "P1",
       "events" : 3,
       "elements" : 3,
-      "rows" : 3
-    } ]
+      "total" : {
+        "events" : 3,
+        "elements" : 3
+      },
+      "rows" : 3,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "closed" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "created" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        }
+      },
+      "by_type" : {
+        "adr" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 6,
+        "open_end" : 5,
+        "burn" : 1
+      },
+      "ship" : {
+        "waiting" : 1,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 1,
+        "created" : 0
+      },
+      "multi" : 2
+    } ],
+    "rule" : "last_status_of_day",
+    "intermediate" : {
+      "events" : 0,
+      "rows" : 0
+    },
+    "agent_events" : 0,
+    "agent_elements" : 0,
+    "burn" : {
+      "open_start" : 7,
+      "open_end" : 6,
+      "burn" : 1
+    },
+    "ship" : {
+      "waiting" : 1,
+      "ship_unknown" : 0,
+      "shipped" : 0
+    },
+    "balance" : {
+      "closed" : 1,
+      "created" : 0
+    }
   }, {
     "day" : "2026-11-02",
     "total" : {
@@ -805,6 +2497,11 @@
     },
     "rows" : 6,
     "by_kind" : {
+      "changed" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
       "closed" : {
         "events" : 2,
         "elements" : 2,
@@ -819,6 +2516,16 @@
         "events" : 1,
         "elements" : 1,
         "rows" : 1
+      },
+      "ready" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "released" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
       }
     },
     "by_type" : {
@@ -827,10 +2534,35 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "created" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       },
@@ -839,10 +2571,35 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "created" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       },
@@ -851,6 +2608,11 @@
         "elements" : 4,
         "rows" : 4,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "closed" : {
             "events" : 2,
             "elements" : 2,
@@ -865,6 +2627,16 @@
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       }
@@ -874,13 +2646,292 @@
       "key" : "P1",
       "events" : 6,
       "elements" : 6,
-      "rows" : 6
+      "total" : {
+        "events" : 6,
+        "elements" : 6
+      },
+      "rows" : 6,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "closed" : {
+          "events" : 2,
+          "elements" : 2,
+          "rows" : 2
+        },
+        "created" : {
+          "events" : 3,
+          "elements" : 3,
+          "rows" : 3
+        },
+        "reactivated" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "ready" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        }
+      },
+      "by_type" : {
+        "adr" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "decision" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 4,
+          "elements" : 4,
+          "rows" : 4,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 2,
+              "elements" : 2,
+              "rows" : 2
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 5,
+        "open_end" : 6,
+        "burn" : -1
+      },
+      "ship" : {
+        "waiting" : 0,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 2,
+        "created" : 1
+      },
+      "multi" : 1
     }, {
       "key" : "P2",
       "events" : 1,
       "elements" : 1,
-      "rows" : 1
-    } ]
+      "total" : {
+        "events" : 1,
+        "elements" : 1
+      },
+      "rows" : 1,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "closed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "created" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "reactivated" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "ready" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        }
+      },
+      "by_type" : {
+        "task" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 2,
+        "open_end" : 3,
+        "burn" : -1
+      },
+      "ship" : {
+        "waiting" : 0,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 0,
+        "created" : 0
+      },
+      "multi" : 1
+    } ],
+    "rule" : "last_status_of_day",
+    "intermediate" : {
+      "events" : 0,
+      "rows" : 0
+    },
+    "agent_events" : 0,
+    "agent_elements" : 0,
+    "burn" : {
+      "open_start" : 6,
+      "open_end" : 7,
+      "burn" : -1
+    },
+    "ship" : {
+      "waiting" : 0,
+      "ship_unknown" : 0,
+      "shipped" : 0
+    },
+    "balance" : {
+      "closed" : 2,
+      "created" : 1
+    }
   }, {
     "day" : "2026-11-01",
     "total" : {
@@ -889,10 +2940,35 @@
     },
     "rows" : 1,
     "by_kind" : {
+      "changed" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "closed" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
       "created" : {
         "events" : 1,
         "elements" : 1,
         "rows" : 1
+      },
+      "reactivated" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "ready" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
+      },
+      "released" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0
       }
     },
     "by_type" : {
@@ -901,10 +2977,72 @@
         "elements" : 1,
         "rows" : 1,
         "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
           "created" : {
             "events" : 1,
             "elements" : 1,
             "rows" : 1
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          }
+        }
+      },
+      "task" : {
+        "events" : 0,
+        "elements" : 0,
+        "rows" : 0,
+        "by_kind" : {
+          "changed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "closed" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "created" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "reactivated" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "ready" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
+          },
+          "released" : {
+            "events" : 0,
+            "elements" : 0,
+            "rows" : 0
           }
         }
       }
@@ -914,19 +3052,298 @@
       "key" : "P1",
       "events" : 1,
       "elements" : 1,
-      "rows" : 1
+      "total" : {
+        "events" : 1,
+        "elements" : 1
+      },
+      "rows" : 1,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "closed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "created" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        }
+      },
+      "by_type" : {
+        "sprint" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 5,
+        "open_end" : 5,
+        "burn" : 0
+      },
+      "ship" : {
+        "waiting" : 0,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 0,
+        "created" : 0
+      },
+      "multi" : 1
     }, {
       "key" : "P2",
       "events" : 1,
       "elements" : 1,
-      "rows" : 1
-    } ]
+      "total" : {
+        "events" : 1,
+        "elements" : 1
+      },
+      "rows" : 1,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "by_kind" : {
+        "changed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "closed" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "created" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1
+        },
+        "reactivated" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "ready" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        },
+        "released" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0
+        }
+      },
+      "by_type" : {
+        "sprint" : {
+          "events" : 1,
+          "elements" : 1,
+          "rows" : 1,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 1,
+              "elements" : 1,
+              "rows" : 1
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        },
+        "task" : {
+          "events" : 0,
+          "elements" : 0,
+          "rows" : 0,
+          "by_kind" : {
+            "changed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "closed" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "created" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "reactivated" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "ready" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            },
+            "released" : {
+              "events" : 0,
+              "elements" : 0,
+              "rows" : 0
+            }
+          }
+        }
+      },
+      "burn" : {
+        "open_start" : 2,
+        "open_end" : 2,
+        "burn" : 0
+      },
+      "ship" : {
+        "waiting" : 0,
+        "ship_unknown" : 0,
+        "shipped" : 0
+      },
+      "balance" : {
+        "closed" : 0,
+        "created" : 0
+      },
+      "multi" : 1
+    } ],
+    "rule" : "last_status_of_day",
+    "intermediate" : {
+      "events" : 0,
+      "rows" : 0
+    },
+    "agent_events" : 0,
+    "agent_elements" : 0,
+    "burn" : {
+      "open_start" : 6,
+      "open_end" : 6,
+      "burn" : 0
+    },
+    "ship" : {
+      "waiting" : 0,
+      "ship_unknown" : 0,
+      "shipped" : 0
+    },
+    "balance" : {
+      "closed" : 0,
+      "created" : 0
+    }
   } ],
   "metrics" : {
     "counts" : {
       "total" : {
-        "events" : 22,
-        "elements" : 17
+        "events" : 20,
+        "elements" : 16
       },
       "by_type" : {
         "adr" : {
@@ -950,8 +3367,8 @@
           "elements" : 1
         },
         "task" : {
-          "events" : 13,
-          "elements" : 9
+          "events" : 11,
+          "elements" : 8
         }
       },
       "by_kind" : {
@@ -960,16 +3377,16 @@
           "elements" : 3
         },
         "closed" : {
-          "events" : 4,
-          "elements" : 4
+          "events" : 3,
+          "elements" : 3
         },
         "created" : {
           "events" : 5,
           "elements" : 5
         },
         "reactivated" : {
-          "events" : 2,
-          "elements" : 2
+          "events" : 1,
+          "elements" : 1
         },
         "ready" : {
           "events" : 3,
@@ -986,13 +3403,17 @@
       },
       "by_who" : {
         "(unknown)" : {
-          "events" : 19,
-          "elements" : 17
+          "events" : 17,
+          "elements" : 16
         },
         "agent:claude" : {
           "events" : 3,
           "elements" : 1
         }
+      },
+      "rule" : "last_status_of_period",
+      "intermediate" : {
+        "events" : 2
       }
     },
     "tasks" : {
@@ -2358,24 +4779,24 @@
       "measurable" : true,
       "events" : {
         "events" : 3,
-        "elements" : 22
+        "elements" : 20
       },
       "elements" : {
         "events" : 1,
-        "elements" : 17
+        "elements" : 16
       }
     },
     "delta" : {
       "events" : {
-        "value" : 22,
+        "value" : 20,
         "previous" : 1,
-        "delta" : 21,
+        "delta" : 19,
         "pct" : null
       },
       "elements" : {
-        "value" : 17,
+        "value" : 16,
         "previous" : 1,
-        "delta" : 16,
+        "delta" : 15,
         "pct" : null
       },
       "by_type" : {
@@ -2410,9 +4831,9 @@
           "pct" : null
         },
         "task" : {
-          "value" : 13,
+          "value" : 11,
           "previous" : 1,
-          "delta" : 12,
+          "delta" : 10,
           "pct" : null
         }
       },

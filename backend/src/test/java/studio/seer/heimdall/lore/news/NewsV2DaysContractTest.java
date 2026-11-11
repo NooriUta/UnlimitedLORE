@@ -75,11 +75,17 @@ class NewsV2DaysContractTest {
     void daysAddUpToThePeriodAndAgreeWithMatrix() {
         Map<String, Object> out = NewsV2EngineFixtureTest.engine().compute(query("project", 6, null));
         List<Map<String, Object>> days = days(out);
+        // Ведра разные: день — последний статус дня, период — последний статус периода. Сходятся
+        // они через ленту: счёт + отброшенное как промежуточное = все события ленты (meta.total).
         Map<String, Object> total = m(m(out, "metrics"), "counts");
-        assertEquals(n(total.get("total"), "events"), days.stream().mapToInt(d -> n(d.get("total"), "events")).sum(),
-            "события всех дней = события периода");
-        // строки дня — те же, что строки ленты (без limit лента целиком)
-        assertEquals(((List<?>) out.get("events")).size(), days.stream().mapToInt(d -> n(d, "rows")).sum());
+        int feedEvents = n(m(out, "meta").get("total"), "events");
+        assertEquals(feedEvents, days.stream().mapToInt(d -> n(d.get("total"), "events") + n(d.get("intermediate"), "events")).sum(),
+            "события дней + промежуточные = события ленты");
+        assertEquals(feedEvents, n(total.get("total"), "events") + n(total.get("intermediate"), "events"),
+            "события периода + промежуточные = события ленты");
+        // строки дня + промежуточные строки — те же, что строки ленты (без limit лента целиком)
+        assertEquals(((List<?>) out.get("events")).size(),
+            days.stream().mapToInt(d -> n(d, "rows") + n(d.get("intermediate"), "rows")).sum());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> mrows = (List<Map<String, Object>>) m(out, "matrix").get("rows");
         for (Map<String, Object> r : mrows) {
