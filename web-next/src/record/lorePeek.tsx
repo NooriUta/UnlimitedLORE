@@ -7,7 +7,7 @@
 // ASSUMED до переноса в модель сервера (рядом с required): список живёт в приложении, сервер не трогали
 // — любой ./gradlew test мигрирует прод-схему.
 import { useCallback, useEffect, useState } from 'react';
-import { Pill, PeekCard, type KitLang, type PeekCardData, type PeekState } from '@seidr/kit';
+import { Pill, PeekCard, type KitLang, type ListPeek, type PeekCardData, type PeekState } from '@seidr/kit';
 import type { MartPeekRef, MartRefPeek } from '@seidr/kit/content';
 import { RecordForbidden, RecordNotFound, fetchLoreRecord } from '../api/liveRecord';
 import { recordHref } from '../nav/loreRoutes';
@@ -99,5 +99,13 @@ export function loreRefPeek(lang: KitLang, opts: { enabled?: boolean; fetchImpl?
     render: r => <LorePeek peekRef={r} lang={lang} fetchImpl={opts.fetchImpl} />,
     title: r => appT(lang, 'peek.sheetTitle', { id: r.id }),
     enabled: opts.enabled,
+  };
+}
+
+/** Источник Peek для списка: строка → карточка LORE; тип записи — вид строки (kind = тип LORE). */
+export function loreListPeek(lang: KitLang, kindOf: (id: string) => string | null, fetchImpl?: typeof fetch): ListPeek {
+  return {
+    render: id => <LorePeek peekRef={{ id, type: kindOf(id) }} lang={lang} fetchImpl={fetchImpl} />,
+    title: id => appT(lang, 'peek.sheetTitle', { id }),
   };
 }
