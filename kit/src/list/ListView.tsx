@@ -1069,6 +1069,7 @@ export function ListView({
         chosen: chosenColumns.filter(c => c !== 'select' && c !== 'actions'),
       }}
       onColumns={setColumns}
+      narrow={narrow}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
@@ -2075,6 +2076,7 @@ export function ListView({
                 // Закреплённые значения оси (S9-03): их называет приложение,
                 // потому что «почему именно эти» — предметное знание (K-14).
                 pinned={facetPinned?.(k)}
+                narrow={narrow}
               />
             );
           })}
@@ -2097,6 +2099,7 @@ export function ListView({
             onGroup={g => update({ group: g, ...(g === null || g === state.group2 ? { group2: null } : {}) })}
             onSub={g => update({ group2: g })}
             bare
+            narrow={narrow}
           />
           {/*
             Поиск по группам появляется, когда их столько, что глазами искать
@@ -2127,6 +2130,7 @@ export function ListView({
             keys={sortKeys}
             keyTitle={labels.keyTitle}
             onChange={k => update({ sort: k ? { key: k, dir: state.sort?.dir ?? 'asc' } : null })}
+            narrow={narrow}
           />
           <button
             type="button"

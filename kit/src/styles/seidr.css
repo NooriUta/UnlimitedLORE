@@ -2801,6 +2801,20 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   background: var(--bg1);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
 }
+/* На телефоне (≤720) «Вид», «Группировка», «Порядок» и фасет открываются не
+   поповером у кнопки, а нижним листом Sheet (S4-MOBILE-EDGE, ADR-LORE-049 п.1):
+   на 360 px поповер уезжал за правый и нижний край. Лист — во всю ширину, не
+   выше 85vh, прокрутка внутри; тело — та же колонка, что у поповера, и без
+   прокрутки вбок: длинное переносится, а не раздвигает лист. */
+.sk-lsheet .sk-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
 .sk-vmenu__title {
   margin: 0;
   color: var(--t3);
@@ -3024,6 +3038,8 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   box-shadow: 0 6px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
 }
 .sk-facet__panel[hidden] { display: none; }
+/* Содержимое фасета на нижнем листе (S4-MOBILE-EDGE): та же колонка, что у панели. */
+.sk-facet__sheet { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 .sk-facet__ops {
   display: flex;
   flex-wrap: wrap;
