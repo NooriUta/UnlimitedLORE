@@ -5110,6 +5110,11 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 /* Карточка Peek (S9-10, D-2026-LORE-PEEK-ONE-CARD): шапка и раздел — общие с лентой (sk-feed__*, sk-rec-fields__*),
    здесь только своё — свойства, счётчики, действия и честные состояния. */
 .sk-peek-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: var(--fs-sm); }
+/* Карточка по наведению на ссылку в тексте: якорь у ссылки (координаты окна), поповер под ним. */
+.sk-peek-hover { position: fixed; width: 0; height: 0; z-index: 65; }
+.sk-peek-hover__pop { width: min(380px, calc(100vw - 16px)); background: var(--bg2); border: 1px solid var(--bdh); border-radius: var(--r-md); box-shadow: 0 10px 30px rgb(0 0 0 / .45); padding: 10px 11px; }
+/* Лист на телефоне — общий Sheet + .sk-lsheet (отступ под системную полосу); здесь только своё. */
+.sk-peek-sheet .sk-peek-card { padding-top: 2px; }
 .sk-peek-card__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); word-break: break-all; }
 .sk-peek-card__props { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
 .sk-peek-card__prop { display: contents; }

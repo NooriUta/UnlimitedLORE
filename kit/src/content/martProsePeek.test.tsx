@@ -1,0 +1,104 @@
+// @vitest-environment jsdom
+// Peek со ссылки в тексте (SPRINT_UXR_S10_SEIDR_KIT_2/S9-10, D-2026-LORE-PEEK-ONE-CARD, P1а/P2а):
+// мышь — карточка после задержки ~0,4 с, щелчок по-прежнему ведёт в паспорт; палец — тап открывает
+// нижний лист с карточкой, перехода нет. Наведение после тапа (браузер шлёт mouseover вслед за
+// касанием) карточку НЕ открывает. Выключатель — карточек по наведению нет, ссылка как ссылка.
+// Содержимое карточки — от приложения (render), kit отвечает за время, место и лист.
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MartProse } from './MartProse';
+import type { MartRefPeek } from './MartProse';
+
+const peek = (over: Partial<MartRefPeek> = {}): MartRefPeek => ({
+  render: r => <div data-peek-content>карточка {r.id}</div>,
+  title: r => `Запись ${r.id}`,
+  ...over,
+});
+const text = 'см. [[adr:ADR-1]] дальше';
+const href = () => '/p/ADR-1';
+const link = (c: HTMLElement) => c.querySelector('a.sk-wref') as HTMLAnchorElement;
+
+beforeEach(() => { vi.useFakeTimers(); });
+afterEach(() => { vi.useRealTimers(); });
+
+describe('MartProse refPeek — мышь', () => {
+  it('карточка после задержки, не сразу', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    fireEvent.mouseOver(link(container));
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(screen.queryByText('карточка ADR-1')).toBeNull();
+    act(() => { vi.advanceTimersByTime(250); });
+    expect(screen.getByText('карточка ADR-1')).toBeTruthy();
+  });
+  it('мышь ушла раньше задержки — карточки нет', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    fireEvent.mouseOver(link(container));
+    act(() => { vi.advanceTimersByTime(200); });
+    fireEvent.mouseOut(link(container));
+    act(() => { vi.advanceTimersByTime(600); });
+    expect(screen.queryByText('карточка ADR-1')).toBeNull();
+  });
+  it('щелчок мышью — обычный переход по ссылке, не перехвачен', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link(container).dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+  });
+  it('выключатель: enabled=false — наведение карточку не открывает', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek({ enabled: false })} />);
+    fireEvent.mouseOver(link(container));
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(screen.queryByText('карточка ADR-1')).toBeNull();
+  });
+});
+
+describe('MartProse refPeek — палец', () => {
+  it('тап — нижний лист с карточкой, переход не происходит', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    fireEvent.touchStart(link(container));
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    act(() => { link(container).dispatchEvent(ev); });
+    expect(ev.defaultPrevented).toBe(true);
+    const sheet = screen.getByRole('dialog', { name: 'Запись ADR-1' });
+    expect(sheet.textContent).toContain('карточка ADR-1');
+  });
+  it('mouseover вслед за касанием не открывает карточку наведения', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    fireEvent.touchStart(link(container));
+    fireEvent.mouseOver(link(container));
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(document.querySelector('.sk-peek-hover')).toBeNull();
+  });
+  it('рамка без адреса тоже открывает лист по тапу', () => {
+    const { container } = render(<MartProse text="см. [[X-9]]" refHref={() => null} refPeek={peek()} />);
+    const span = container.querySelector('span.sk-wref') as HTMLElement;
+    fireEvent.touchStart(span);
+    act(() => { fireEvent.click(span); });
+    expect(screen.getByRole('dialog', { name: 'Запись X-9' })).toBeTruthy();
+  });
+});
+
+describe('MartProse без refPeek', () => {
+  it('ни наведение, ни тап ничего не открывают', () => {
+    const { container } = render(<MartProse text={text} refHref={href} />);
+    fireEvent.mouseOver(link(container));
+    act(() => { vi.advanceTimersByTime(1000); });
+    fireEvent.touchStart(link(container));
+    fireEvent.click(link(container));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.querySelector('.sk-peek-hover')).toBeNull();
+  });
+});
+
+describe('MartProse refPeek — ссылки внутри карточки', () => {
+  it('наведение на ссылку внутри открытой карточки не подменяет карточку', () => {
+    const inner = peek({ render: r => <div>карточка {r.id} <span className="sk-wref" data-ref="ADR-2">ADR-2</span></div> });
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={inner} />);
+    fireEvent.mouseOver(link(container));
+    act(() => { vi.advanceTimersByTime(450); });
+    const innerRef = document.querySelector('.sk-peek-hover [data-ref="ADR-2"]') as HTMLElement;
+    fireEvent.mouseOver(innerRef);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(screen.getByText(/карточка ADR-1/)).toBeTruthy();
+  });
+});

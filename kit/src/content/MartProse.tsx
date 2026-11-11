@@ -21,6 +21,9 @@ import { splitDiagramFences } from './diagramFence';
 import { sanitizeMd, sanitizeSvg } from './sanitizeHtml';
 import { kitT } from '../i18n';
 import { useKitLang } from '../i18n/lang';
+import { useRefPeek, type MartRefPeek } from './RefPeekLayer';
+
+export type { MartRefPeek, MartPeekRef } from './RefPeekLayer';
 
 // ELK-раскладка — только по явной просьбе диаграммы (см. buildInit): глобальный
 // layout:elk вешал mermaid.render() на типах, которые его не поддерживают (v1).
@@ -262,7 +265,8 @@ function linkRefs(root: HTMLElement, refHref: MartRefHref) {
   });
 }
 
-export function MartProse({ text, style, className, refHref }: { text?: string | null; style?: CSSProperties; className?: string; refHref?: MartRefHref }) {
+/** refPeek — карточка Peek со ссылки (S9-10): мышь — наведение, палец — нижний лист. */
+export function MartProse({ text, style, className, refHref, refPeek }: { text?: string | null; style?: CSSProperties; className?: string; refHref?: MartRefHref; refPeek?: MartRefPeek }) {
   const lang = useKitLang();
   const segments = useMemo(
     () => (text ? toSegments(text, { done: kitT(lang, 'kit.prose.taskDone'), todo: kitT(lang, 'kit.prose.taskTodo') }) : []),
@@ -273,9 +277,12 @@ export function MartProse({ text, style, className, refHref }: { text?: string |
   useLayoutEffect(() => {
     if (refHref && rootRef.current) linkRefs(rootRef.current, refHref);
   }, [segments, refHref]);
+  // Хук — до раннего выхода: порядок хуков не должен зависеть от того, есть ли текст.
+  const peek = useRefPeek(refPeek);
   if (!text) return null;
   return (
-    <div ref={rootRef} className={['sk-prose', className].filter(Boolean).join(' ')} style={style}>
+    <div ref={rootRef} className={['sk-prose', className].filter(Boolean).join(' ')} style={style} {...peek.handlers}>
+      {peek.layer}
       {segments.map((seg, i) => {
         if (seg.kind === 'mermaid') return <MermaidDiagram key={i} def={seg.def} />;
         if (seg.kind === 'bpmn') return <BpmnDiagram key={i} def={seg.def} />;
