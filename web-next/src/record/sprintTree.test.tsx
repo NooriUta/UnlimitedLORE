@@ -136,7 +136,7 @@ describe('SprintTasksPanel · вкладка «Задачи» паспорта �
 
   it('по умолчанию — дерево спринт → фаза → задача (TreeTable kit), строки с aria-level', async () => {
     render(<SprintTasksPanel contract={withPhases()} win={fakeWin()} fetchImpl={deadFetch} onStatusSaved={() => {}} />);
-    const table = await screen.findByRole('table', { name: /дерево|tree/i });
+    const table = await screen.findByRole('table', { name: /иерархия|hierarchy/i });
     const sprintRow = within(table).getByText('Спринт X').closest('tr')!;
     expect(sprintRow.getAttribute('aria-level')).toBe('1');
     expect(within(table).getByText('Разведка').closest('tr')!.getAttribute('aria-level')).toBe('2');
