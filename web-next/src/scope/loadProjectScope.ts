@@ -27,6 +27,14 @@ export type ProjectScopeData = SliceCompletenessMeta & {
   rows: ScopeOption[];
   mine: 'known' | 'unknown';
   mineReason?: MineReason;
+  /**
+   * Сколько проектов СВОИХ — по ответу про мои проекты, а не по `rows`
+   * (S7B-14 + 10.11.2026). Считать по `rows` нельзя: список git-проектов
+   * бывает обрезан, и свой проект может в него не попасть — счёт по нему
+   * назвал бы не «сколько своих», а «сколько своих мы успели увидеть».
+   * Роли не проверены — числа нет вовсе, и подпись охвата это говорит.
+   */
+  mineCount?: number;
 };
 
 type Fetch = <T>(slice: string, params: Record<string, string>, signal?: AbortSignal) => Promise<SliceBody<T>>;
@@ -79,6 +87,6 @@ export async function loadProjectScope({ fetch, sub, me, signal }: LoadProjectSc
       return o;
     });
   return known
-    ? { ...meta, rows: options, mine: 'known' }
+    ? { ...meta, rows: options, mine: 'known', mineCount: roles.ids.size }
     : { ...meta, rows: options, mine: 'unknown', mineReason: roles };
 }

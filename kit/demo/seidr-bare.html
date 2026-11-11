@@ -348,6 +348,22 @@
 <span class="sk-diff__kind">уже есть</span>
 <span class="sk-diff__text">строка уже есть</span>
 </li>
+<li class="sk-diff__row" data-testid="kit-diff-row-ch" data-kind="change" data-check="checked">
+<span class="sk-diff__sign" aria-hidden="true">→</span>
+<span class="sk-diff__kind">изменится</span>
+<span class="sk-diff__text">значение сменится</span>
+<span class="sk-diff__change" data-testid="kit-diff-change-ch">
+<span class="sk-diff__was">
+<span class="sk-diff__cap">было</span>
+<span class="sk-diff__val">прежнее</span>
+</span>
+<span class="sk-diff__arrow" aria-hidden="true">→</span>
+<span class="sk-diff__now">
+<span class="sk-diff__cap">стало</span>
+<span class="sk-diff__val">новое</span>
+</span>
+</span>
+</li>
 <li class="sk-diff__row" data-testid="kit-diff-row-d" data-kind="add" data-check="unverified">
 <span class="sk-diff__sign" aria-hidden="true">+</span>
 <span class="sk-diff__kind">добавится</span>
@@ -365,7 +381,14 @@
 <span class="sk-diff__skip" data-testid="kit-diff-skip-e">не будет применено, пока не проверено</span>
 </li>
 </ul>
-<button type="button" class="sk-diff__apply" data-testid="kit-diff-apply">Применить 2 изменения</button>
+<div class="sk-diff__go">
+<span class="sk-diff__ask">
+<label class="sk-diff__ask-label">введите ПРИМЕНИТЬ</label>
+<input class="sk-diff__word" data-testid="kit-diff-confirm" autocomplete="off" spellcheck="false" type="text" value="">
+</span>
+<button type="button" class="sk-diff__apply" data-testid="kit-diff-apply" aria-disabled="true">Применить 3 изменения</button>
+<p class="sk-diff__blocked" role="status" data-testid="kit-diff-blocked">Чтобы применить, введите слово подтверждения в поле выше.</p>
+</div>
 </section>
 <section class="sk-batch" data-testid="kit-batch" data-outcome="partial" aria-label="Применённая пачка">
 <p class="sk-batch__summary" data-testid="kit-batch-summary">Применилось 2 из 3 — остальное не применилось.</p>
@@ -378,6 +401,9 @@
 <button type="button" class="sk-batch__undo" data-testid="kit-batch-undo">Отменить · 10 с</button>
 </section>
 <div class="sk-matrix">
+<div class="sk-matrix__bar" data-testid="kit-matrix-bar">
+<button type="button" class="sk-matrix__mode" data-testid="kit-matrix-markmode" aria-pressed="false">выбрать ячейки</button>
+</div>
 <div class="sk-matrix__scroll">
 <table class="sk-matrix__table">
 <caption class="sk-matrix__caption">Строки × Колонки</caption>
@@ -434,6 +460,45 @@
 </div>
 <span class="sk-matrix__axis sk-matrix__axis--cols">Колонки</span>
 </div>
+<section class="sk-chain" aria-label="Почему такой вывод" data-tone="suc">
+<h3 class="sk-chain__head">Почему такой вывод</h3>
+<p class="sk-chain__verdict" data-testid="kit-chain-verdict" data-tone="suc">Доступ есть</p>
+<ol class="sk-chain__steps" data-testid="kit-chain-steps">
+<li class="sk-chain__step" data-testid="kit-chain-step-s1" data-state="confirmed">
+<span class="sk-chain__num" data-testid="kit-chain-num-s1">1</span>
+<span class="sk-chain__title">Первый шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s1">подтвердил</span>
+<span class="sk-chain__aside">подробность</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s2" data-state="denied" data-decider="true">
+<span class="sk-chain__num" data-testid="kit-chain-num-s2">2</span>
+<span class="sk-chain__title">Второй шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s2">опроверг</span>
+<span class="sk-chain__aside">подробность</span>
+<span class="sk-chain__decider" data-testid="kit-chain-decider-s2">решающий шаг</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s3" data-state="unverified">
+<span class="sk-chain__num" data-testid="kit-chain-num-s3">3</span>
+<span class="sk-chain__title">Третий шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s3">не смогли проверить</span>
+<span class="sk-chain__aside">источник не ответил</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s4" data-state="forbidden">
+<span class="sk-chain__num" data-testid="kit-chain-num-s4">4</span>
+<span class="sk-chain__title">Четвёртый шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s4">нет прав смотреть</span>
+<span class="sk-chain__aside">смотреть не дали</span>
+</li>
+<li class="sk-chain__step" data-testid="kit-chain-step-s5" data-state="unasked">
+<span class="sk-chain__num" data-testid="kit-chain-num-s5">5</span>
+<span class="sk-chain__title">Пятый шаг</span>
+<span class="sk-chain__outcome" data-testid="kit-chain-outcome-s5">источник не спрашивали</span>
+<span class="sk-chain__aside">источник выключен</span>
+</li>
+</ol>
+<p class="sk-chain__note sk-chain__note--wrn" data-testid="kit-chain-stopped">Цепочку прервали — дальше не считали ещё 2 шага.<span class="sk-chain__aside">дальше не считали — уже решилось</span>
+</p>
+</section>
 <section class="sk-rel" aria-label="Выпуск содержимого">
 <header class="sk-rel__top">
 <p class="sk-rel__versions" data-testid="kit-rel-versions">Версия 7 → 8</p>
@@ -495,6 +560,21 @@
 </ul>
 </div>
 </section>
+</section>
+<section class="bare__sec" data-kit="chips">
+<h2 class="bare__h2">Значения-чипы</h2>
+<span class="sk-rec-chips" data-chips-row="">
+<span class="sk-rec-chips__item" data-chip="NooriUta/UnlimitedLORE">
+<a class="sk-rec-chips__link" href="#rec=NooriUta%2FUnlimitedLORE">UnlimitedLORE</a>
+</span>
+<span class="sk-rec-chips__item" data-chip="NooriUta/BRAGI">
+<a class="sk-rec-chips__link" href="#rec=NooriUta%2FBRAGI">BRAGI</a>
+</span>
+<span class="sk-rec-chips__item" data-chip="NooriUta/FORSETI">
+<a class="sk-rec-chips__link" href="#rec=NooriUta%2FFORSETI">NooriUta/FORSETI</a>
+</span>
+<button type="button" class="sk-btn sk-rec-chips__more" data-chips-more="" aria-expanded="false">ещё 3</button>
+</span>
 </section>
 <section class="bare__sec" data-kit="content">
 <h2 class="bare__h2">MD / HTML</h2>

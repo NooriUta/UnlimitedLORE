@@ -402,6 +402,47 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       c.warn('list.feed', 'feed-config', 'вид feed без list.feed {timeField} не предлагается: kit не угадывает, по какому полю у записи время');
     }
     if (!views?.includes('feed') && feed) c.warn('list.feed', 'feed-unused', 'list.feed задан, но вида feed в list.views нет');
+    /*
+      Лента не предложена ВОВСЕ — третий случай, которого тут не было, и
+      случился ровно он (просьба сессии приложения 10.11.2026).
+
+      Два предупреждения выше ловят противоречия внутри конфига. А «ни feed в
+      views, ни list.feed» противоречием не выглядит — и поэтому было тишиной:
+      лента, тело записи и двухуровневый вид сделаны, а в LORE их не видно ни
+      на одном экране, потому что никто не назвал поле времени. Молчащая
+      пропажа неотличима от решения «лента тут не нужна».
+
+      Признак берётся ИЗ КОНФИГА: приложение само объявило у типа поле времени
+      (type: 'date'). Угадывать по данным kit не станет, а `updated_at` для
+      этого негоден — он есть у каждой записи по контракту, и предупреждение
+      вылезало бы в каждом разделе, то есть не значило бы ничего.
+
+      Это предупреждение, не ошибка: раздел имеет полное право жить без ленты.
+    */
+    if (views && !views.includes('feed') && !feed) {
+      const dated: string[] = [];
+      for (const [kind, k] of Object.entries(cfg.kinds ?? {})) {
+        for (const fl of (k as { fields?: { key: string; type: string }[] }).fields ?? []) {
+          if (fl.type === 'date') dated.push(`${kind}.${fl.key}`);
+        }
+      }
+      if (dated.length > 0) {
+        c.warn(
+          'list.views',
+          'feed-not-offered',
+          `вида feed в list.views нет, хотя у типов объявлено время (${dated.join(', ')}): `
+          + 'ленты в этом разделе не будет нигде. Нужна — добавьте feed в views и назовите list.feed {timeField}; не нужна — так и оставьте',
+        );
+      }
+    }
+    /*
+      Двухуровневая лента (K2-FEED-TWO-LEVEL): подпись нижнего уровня — слово
+      приложения, и без неё двух уровней нет. Пустая подпись — ошибка, а не
+      тихий отказ: конфиг явно просил два уровня, и промолчать значило бы
+      спрятать причину, по которой их на экране не видно.
+    */
+    const under = feed ? c.obj(feed, 'under', 'list.feed', false) : null;
+    if (under) c.str(under, 'title', 'list.feed.under');
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
     if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');

@@ -31,3 +31,9 @@ export * from './DataStateBlock';
 // Вложенный блок вида: строка раздела / карточка / тело паспорта одним
 // компонентом, без третьего рендера (S4-TREE-NESTED).
 export { KindBlock, KindCell, kindColumns, kindColumnTitle, type KindBlockAs, type KindBlockProps } from './KindBlock';
+// Вклеенный блок с числом в заголовке: хвост тела паспорта (S4-29) и запись с
+// телом в ленте (K2-FEED-BODY-MORE) — один код, а не похожая вёрстка.
+export * from './GluedBlock';
+// Ряд значений-чипов: первые три и «ещё N», подпись источника у унаследованных
+// (S4-29). Нужен не только паспорту — отсюда отдельный файл и экспорт.
+export * from './ValueChips';

@@ -143,8 +143,13 @@ describe('S4-03 · честные состояния', () => {
     expect(dlg.textContent).toMatch(/нет входа/);
   });
 
+  // 10.11.2026: проверенный ноль теперь требует ЧИСЛА от приложения
+  // (`mineCount={0}`). Прежде он выводился из того, что ни одна загруженная
+  // запись не помечена своей, — а это не то же самое: выдача бывает обрезана,
+  // и своё могло в неё не попасть. Случай «пометок своих нет, числа не дали»
+  // проверяет группа «Все мои (N своих)» ниже: там фраза другая.
   it('ролей нет ни в одном проекте — «все мои» недоступно с другой причиной', () => {
-    render(<Harness options={OPTS.map(o => ({ ...o, mine: false }))} />);
+    render(<Harness options={OPTS.map(o => ({ ...o, mine: false }))} mineCount={0} />);
     const dlg = open();
     expect(within(dlg).getByRole('button', { name: /Все мои/ }).getAttribute('aria-disabled')).toBe('true');
     expect(dlg.textContent).toMatch(/нет роли ни в одном проекте/);
@@ -235,5 +240,64 @@ describe('S4-03 · a11y и язык', () => {
     const dlg = screen.getByRole('dialog', { name: 'Projects' });
     expect(within(dlg).getByRole('button', { name: /All mine/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Projects/ }).textContent).toMatch(/All projects/);
+  });
+});
+
+// ── Подпись охвата несёт число СВОИХ (запрос сессии администрирования, 10.11.2026) ──
+//
+// Было: «Все мои (2)». Число там бралось из ЗАГРУЖЕННОГО списка, а список
+// бывает обрезан — то есть подпись называла не «сколько своих», а «сколько
+// своих мы успели увидеть». Плюс сама скобка не говорила, что число про своих,
+// и «Все мои» читалось как «всё, что есть».
+//
+// Стало: число своих приходит от приложения (оно про это спрашивает сервер);
+// не дали числа — подпись честно без него, и сказано, что не посчитали.
+// Проверенный ноль своих и «не посчитали» — разные утверждения, и путать их
+// нельзя: по первому ясно, что выбирать нечего, по второму — что мы не знаем.
+describe('S4-03 · «Все мои (N своих)» — число своих от приложения', () => {
+  const MINE = ['unlimitedlore', 'mobilepoc'];
+  const trigger = () => screen.getByRole('button', { name: /Проекты/ });
+  const note = () => screen.getByTestId('kit-scope-minenote');
+
+  it('положительный контроль: охват «все мои» подписан числом своих', () => {
+    render(<Harness initial={MINE} mineCount={7} />);
+    expect(trigger().textContent).toMatch(/Все мои \(7 своих\)/);
+  });
+
+  it('число приходит от приложения, а не считается по загруженному списку', () => {
+    // В списке своих две записи, а всего своих семь: выдача бывает обрезана.
+    render(<Harness initial={MINE} mineCount={7} />);
+    expect(trigger().textContent).toMatch(/7/);
+    expect(trigger().textContent, 'счёт по обрезанному списку дал бы 2').not.toMatch(/\(2\b/);
+  });
+
+  it('числа не дали — подпись честно БЕЗ числа, и это сказано', () => {
+    render(<Harness initial={MINE} />);
+    const said = trigger().textContent ?? '';
+    expect(said).toMatch(/Все мои/);
+    expect(said, '«не посчитали» нельзя печатать нулём').not.toMatch(/\b0\b/);
+    expect(said, 'число из списка выдало бы «(2)»').not.toMatch(/\(2\b/);
+    expect(said.replace(/Проекты|Все мои/g, '').trim(), 'молчание читается как «число есть»').not.toBe('');
+  });
+
+  it('ноль своих и «не посчитали» — разные утверждения', () => {
+    const plain: ScopeOption[] = [{ id: 'a', title: 'A' }, { id: 'b', title: 'B' }];
+    const first = render(<Harness options={plain} mineCount={0} />);
+    open();
+    const zero = note().textContent ?? '';
+    first.unmount();
+    render(<Harness options={plain} />);
+    open();
+    const uncounted = note().textContent ?? '';
+    expect(zero.trim()).not.toBe('');
+    expect(uncounted.trim()).not.toBe('');
+    expect(uncounted, 'проверенный ноль и «не посчитали» звучат по-разному').not.toBe(zero);
+  });
+
+  it('своих больше нуля, но в загруженном списке их нет — сказано именно это', () => {
+    const plain: ScopeOption[] = [{ id: 'a', title: 'A' }];
+    render(<Harness options={plain} mineCount={4} />);
+    open();
+    expect(note().textContent).toMatch(/4/);
   });
 });

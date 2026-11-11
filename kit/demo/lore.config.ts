@@ -116,7 +116,19 @@ export const loreConfig: KitConfig = {
   },
   verdict: (r) => loreVerdict(r),
   list: {
-    views: ['list', 'board', 'tree'],
+    views: ['list', 'board', 'tree', 'feed'],
+    /*
+      Лента как вид (K2-FEED-VIEW). Поле времени и «суть» называет ПРИЛОЖЕНИЕ:
+      kit не угадывает, где у записи время и какое поле главное (K-14).
+      `under` — подпись нижнего уровня двухуровневой ленты (K2-FEED-TWO-LEVEL):
+      у спринта внизу его задачи.
+    */
+    feed: {
+      timeField: 'updated_at',
+      lead: ['fields.summary'],
+      because: ['DECIDED_IN', 'BLOCKS'],
+      under: { title: 'Задачи' },
+    },
     quick: [
       { id: 'mine-active', title: 'В работе', filter: { status: 'in_progress' } },
       { id: 'blocked', title: 'Заблокировано', filter: { status: 'blocked' } },

@@ -5,11 +5,13 @@
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
 import { kitNumber } from '../core/fmtValue';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react';
+import { Popover } from '../shell/Popover';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { ColumnsChoice } from '../list/ColumnsChoice';
+import { LIST_BUDGET } from '../list/listModel';
 import type { KitConfig, KitDictItem } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
@@ -189,7 +191,15 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [colsOpen, setColsOpen] = useState(false);
   const groups = groupTasks(tasks, groupBy, phases);
-  const showPhase = groupBy !== 'phase';
+  const showPhase = groupBy !== 'phase' && groupBy !== 'phase_status';
+  // Потолок строк на группу (S9-07, решение 1а): тот же шаг, что у списков,
+  // одним местом — LIST_BUDGET. Не виртуализация: строк вне DOM не находит
+  // Ctrl+F, и человек решил бы «такой задачи нет». Здесь всё показанное — в
+  // DOM, а спрятанное названо числом в своей группе. Состояние местное: это
+  // способ дотянуться, а не вид, которым делятся ссылкой.
+  const [limits, setLimits] = useState<Record<string, number>>({});
+  const limitOf = (k: string) => limits[k] ?? LIST_BUDGET.perGroup;
+  const showMore = (k: string) => setLimits(m => ({ ...m, [k]: limitOf(k) + LIST_BUDGET.perGroup }));
   const showGroupHeads = groupBy !== 'none';
   const phaseById = new Map(phases.map(p => [p.uid, p]));
   const fmt = { format: (v: number) => kitNumber(lang, v) };
@@ -273,7 +283,17 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   </th>
                 </tr>
               )}
-              {g.tasks.map(task => (
+              {(g.subgroups ?? [g]).map(leaf => (
+                <Fragment key={leaf.key}>
+                  {leaf !== g && (
+                    <tr>
+                      <th scope="rowgroup" colSpan={cols.length} className="sk-tasks__gth sk-tasks__gth--sub">
+                        <span>{groupLabel(lang, leaf)}</span>
+                        <span className="sk-tasks__gcount">{leaf.tasks.length}</span>
+                      </th>
+                    </tr>
+                  )}
+                  {leaf.tasks.slice(0, limitOf(leaf.key)).map(task => (
                 <TaskRow
                   key={task.uid}
                   task={task}
@@ -289,6 +309,18 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   onSave={onSave}
                   href={hrefFor?.(task)}
                 />
+                  ))}
+                  {leaf.tasks.length > limitOf(leaf.key) && (
+                    <tr className="sk-tasks__morerow">
+                      <td colSpan={cols.length}>
+                        <span className="sk-tasks__shown">{t('kit.tasks.shownOf', { shown: limitOf(leaf.key), total: leaf.tasks.length })}</span>
+                        <button type="button" className="sk-btn" onClick={() => showMore(leaf.key)}>
+                          {t('kit.list.more', { n: leaf.tasks.length - limitOf(leaf.key) })}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           ))}
@@ -321,19 +353,11 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskDraft | null>(null);
   const [invalid, setInvalid] = useState<keyof TaskDraft | null>(null);
-  const statusCell = useRef<HTMLTableCellElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const firstInput = useRef<HTMLInputElement>(null);
+  const menuId = `${useId()}-status`;
 
   const statusName = taskStatusName(lang, task.status);
   const current = statusMeta(task.status).code;
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]');
-    const checked = menuRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
-    (checked ?? items?.[0])?.focus();
-  }, [menuOpen]);
 
   useEffect(() => {
     if (draft) firstInput.current?.focus();
@@ -342,8 +366,9 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   }, [draft === null]);
 
   function closeMenu() {
+    // Фокус на звезду возвращает оболочка (умный возврат Popover): он был
+    // внутри закрываемого меню, значит забирать его не у кого.
     setMenuOpen(false);
-    statusCell.current?.querySelector<HTMLButtonElement>('.sk-star--btn')?.focus();
   }
 
   async function pick(status: TaskStatus) {
@@ -360,18 +385,19 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     }
   }
 
-  function onMenuKey(e: KeyboardEvent<HTMLDivElement>) {
-    const items = [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [])];
-    const at = items.indexOf(document.activeElement as HTMLButtonElement);
-    if (e.key === 'Escape') { e.preventDefault(); closeMenu(); return; }
-    let next = -1;
-    if (e.key === 'ArrowDown') next = (at + 1) % items.length;
-    else if (e.key === 'ArrowUp') next = (at - 1 + items.length) % items.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = items.length - 1;
-    else return;
+  /**
+   * Своё по существу (S4-MENU-STATES): Home и End — прыжок к первому и
+   * последнему пункту. Esc, стрелки и ловушка Tab — у общей оболочки, здесь их
+   * больше нет: preventDefault на Home/End останавливает общий разбор, всё
+   * остальное уходит в него как есть.
+   */
+  function onMenuKey(e: KeyboardEvent<HTMLElement>) {
+    if (e.key !== 'Home' && e.key !== 'End') return;
+    const panel = e.currentTarget;
+    const items = [...panel.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')];
+    if (!items.length) return;
     e.preventDefault();
-    items[next]?.focus();
+    (e.key === 'Home' ? items[0] : items[items.length - 1]).focus();
   }
 
   function startEdit() {
@@ -436,26 +462,35 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   // последовательностью JSX, и набор колонок изменить было нельзя.
   const cells: Record<string, ReactNode> = {
     status: (
-      <td key="status" ref={statusCell} className="sk-tasks__td sk-tasks__td--status">
+      <td key="status" className="sk-tasks__td sk-tasks__td--status">
           <StatusStar
             status={task.status}
             label={t('kit.tasks.statusLabel', { name: statusName.toLowerCase() })}
             onOpen={onStatusChange && !busy ? () => setMenuOpen(o => !o) : undefined}
             expanded={onStatusChange ? menuOpen : undefined}
+            controls={menuId}
           />
           {menuOpen && (
-            <div
-              ref={menuRef}
-              className="sk-tasks__menu"
+            // Оболочка всплывашки — общий Popover (S4-MENU-STATES): положение,
+            // прижатие к краю экрана, Esc, щелчок вне, ловушка и возврат
+            // фокуса, стрелки по пунктам. Свой огрызок был другим и беднее:
+            // закрытие ПО УХОДУ ФОКУСА (onBlur) вместо щелчка вне — мышью мимо
+            // таблицы меню не закрывалось, пока фокус оставался внутри; ни
+            // ловушки Tab, ни прижатия к краю экрана не было вовсе.
+            //
+            // Пункты остаются menuitemradio: это выбор ОДНОГО из взаимно
+            // исключающих значений, и текущий помечен aria-checked. Обычный
+            // menuitem соврал бы, что выбранного нет.
+            <Popover
+              id={menuId}
               role="menu"
-              aria-label={t('kit.tasks.statusMenu', { id: task.id })}
+              label={t('kit.tasks.statusMenu', { id: task.id })}
+              align="start"
+              className="sk-tasks__menu"
+              initialFocus={root => root.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]')
+                ?? root.querySelector<HTMLElement>('[role="menuitemradio"]')}
               onKeyDown={onMenuKey}
-              onBlur={e => {
-                // Фокус ушёл за пределы палитры (клик мимо, Tab) — палитра закрывается.
-                const next = e.relatedTarget as Node | null;
-                // Звезда в той же ячейке закрывает палитру сама (переключатель).
-                if (!next || !statusCell.current?.contains(next)) setMenuOpen(false);
-              }}
+              onClose={closeMenu}
             >
               {menuStatuses(statuses, current, lang).map(s => (
                 <button
@@ -472,7 +507,7 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
                   <span>{s.label}</span>
                 </button>
               ))}
-            </div>
+            </Popover>
           )}
       </td>
     ),

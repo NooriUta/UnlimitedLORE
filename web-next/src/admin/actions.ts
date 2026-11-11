@@ -211,7 +211,32 @@ export interface BatchData {
   /** До какого момента открыто окно отката; null — сервер срок не назвал. */
   undoUntil: string | null;
   undoOpen: boolean;
-  rollback: { method: string; path: string } | null;
+  /**
+   * Откат — готовое тело сервера для POST /lore/user/role/batch (S7B-13).
+   * body null — сервер тела не прислал (старая сборка): откатывать нечем.
+   */
+  rollback: { method: string; path: string; body: RollbackBody | null } | null;
+}
+
+export interface RollbackBody {
+  kc_sub: string;
+  changes: Array<{ project: string; role?: string; action?: 'remove' }>;
+  undo_of: string;
+}
+
+function parseRollbackBody(v: unknown): RollbackBody | null {
+  const o = (v ?? null) as Record<string, unknown> | null;
+  if (!o) return null;
+  const kc = str(o.kc_sub);
+  const undoOf = str(o.undo_of);
+  if (!kc || !undoOf || !Array.isArray(o.changes)) return null;
+  const changes = o.changes.map(c => {
+    const x = (c ?? {}) as Record<string, unknown>;
+    return x.action === 'remove'
+      ? { project: String(x.project ?? ''), action: 'remove' as const }
+      : { project: String(x.project ?? ''), role: String(x.role ?? '') };
+  }).filter(c => c.project !== '');
+  return { kc_sub: kc, changes, undo_of: undoOf };
 }
 
 export function parseBatch(body: unknown): BatchData {
@@ -228,7 +253,7 @@ export function parseBatch(body: unknown): BatchData {
   // которого сервер может не дать, нельзя.
   const until = str(b.undo_until);
   const undoUntil = until === null || until === 'null' ? null : until;
-  const rb = (b.rollback ?? null) as { method?: unknown; path?: unknown } | null;
+  const rb = (b.rollback ?? null) as { method?: unknown; path?: unknown; body?: unknown } | null;
   return {
     batch_id: str(b.batch_id) ?? '',
     kc_sub: str(b.kc_sub),
@@ -237,7 +262,9 @@ export function parseBatch(body: unknown): BatchData {
     undo: (Array.isArray(b.undo) ? b.undo : []) as Array<Record<string, unknown>>,
     undoUntil,
     undoOpen: b.undo_open === true && undoUntil !== null,
-    rollback: rb && str(rb.path) ? { method: str(rb.method) ?? 'POST', path: str(rb.path)! } : null,
+    rollback: rb && str(rb.path)
+      ? { method: str(rb.method) ?? 'POST', path: str(rb.path)!, body: parseRollbackBody(rb.body) }
+      : null,
   };
 }
 

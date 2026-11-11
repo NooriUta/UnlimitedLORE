@@ -456,11 +456,15 @@ final class LoreRecordRegistry {
             List.of(
                 rel("parent", "Родитель", "PARENT_OF", "out", "component", "composition", "prop", false),
                 // S4-29 v3 (46а/52а): Спеки · ADR · Технологии · Подкомпоненты — вкладками (поля в
-                // «Свойствах» остаются). Задачи и Спринты компонента ждут среза с пагинацией.
+                // «Свойствах» остаются).
                 rel("children", "Подкомпоненты", "PARENT_OF", "in", "component", "composition", "link_tab", false),
                 rel("tech", "Технологии", "USES", "out", "tech", "attribute", "link_tab", false),
                 rel("adrs", "ADR", "BELONGS_TO", "in", "adr", "attribute", "link_tab", false),
-                rel("specs", "Спеки", "DOCUMENTED_IN", "out", "spec", "attribute", "link_tab", false))));
+                rel("specs", "Спеки", "DOCUMENTED_IN", "out", "spec", "attribute", "link_tab", false),
+                // S4-29: Задачи · Спринты — срезами component_tasks / component_sprints (по рёбрам,
+                // постранично через /lore/slice limit/offset); фасад отдаёт первую порцию.
+                rel("tasks", "Задачи", "TAGGED_WITH", "in", "task", "attribute", "link_tab", false),
+                rel("sprints", "Спринты", "BELONGS_TO", "in", "sprint", "attribute", "link_tab", false))));
 
         // ── Технология (только чтение, S4-V2-SECTIONS) ───────────────────────
         // Технология — спека SPEC-TECH-<КОМПОНЕНТ>-<ТЕХ> (SPRINT_TECH_REGISTRY), срез tech_by_id.

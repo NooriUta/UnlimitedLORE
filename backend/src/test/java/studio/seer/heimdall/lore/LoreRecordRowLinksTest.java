@@ -93,12 +93,23 @@ class LoreRecordRowLinksTest {
         for (Map.Entry<String, Map<String, Object>> e : full.entrySet()) {
             String type = e.getKey();
             Set<String> have = new HashSet<>();
-            for (Map<String, Object> l : LoreRecordValues.rowLinks(type, e.getValue())) have.add(l.get("rel") + ":" + l.get("dir"));
+            Set<String> haveTyped = new HashSet<>();
+            for (Map<String, Object> l : LoreRecordValues.rowLinks(type, e.getValue())) {
+                have.add(l.get("rel") + ":" + l.get("dir"));
+                haveTyped.add(l.get("rel") + ":" + l.get("dir") + ":" + l.get("type"));
+            }
             Set<String> bySlice = LoreRecordValues.READ_BY_SLICE.getOrDefault(type, Map.of()).keySet();
             Set<String> unread = LoreRecordValues.UNREAD_LINK_TABS.getOrDefault(type, Set.of());
+            // Одно ребро в двух вкладках (у компонента BELONGS_TO:in — ADR и спринты, S4-29) —
+            // вкладки различаются типом цели, и сверка идёт с ним.
+            Map<String, Long> relDirCount = new java.util.HashMap<>();
+            for (LoreRecordRegistry.Relation r : LoreRecordRegistry.get(type).relations())
+                if ("link_tab".equals(r.place())) relDirCount.merge(r.rel() + ":" + r.dir(), 1L, Long::sum);
             for (LoreRecordRegistry.Relation r : LoreRecordRegistry.get(type).relations()) {
                 if (!"link_tab".equals(r.place())) continue;
-                int ways = (have.contains(r.rel() + ":" + r.dir()) ? 1 : 0) + (bySlice.contains(r.key()) ? 1 : 0)
+                String rd = r.rel() + ":" + r.dir();
+                boolean fromRow = relDirCount.get(rd) > 1 ? haveTyped.contains(rd + ":" + r.targetType()) : have.contains(rd);
+                int ways = (fromRow ? 1 : 0) + (bySlice.contains(r.key()) ? 1 : 0)
                     + (unread.contains(r.key()) ? 1 : 0);
                 assertEquals(1, ways, type + "/" + r.key()
                     + ": вкладка ровно одним способом — из строки, отдельным срезом или названа непрочитанной");

@@ -1858,22 +1858,30 @@ public final class LoreSlices {
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 
-        // LCX-02: sprints related to a component. Two sources, explicit wins:
-        //   1. Explicit BELONGS_TO edge (sprint→component) — authoritative re-link.
-        //   2. Naming convention (sprint_id LIKE '%<key>%') — fuzzy fallback, but ONLY
-        //      for sprints that carry NO explicit component link (so a re-linked sprint
-        //      stops showing under the component its name happens to match).
-        // :pattern is the naming key (frontend-derived); :cid is the component_id.
+        // Спринты компонента — по ребру BELONGS_TO (спринт → компонент), и только по нему.
+        // S4-29: был LIMIT 30 и подбор по имени (sprint_id LIKE '%ключ%' у спринтов без
+        // ребра) — 30 читалось как «все», а чужой спринт с похожим именем — как свой.
+        // Потолка нет: страница — общими limit/offset (SE-01, page.total/has_more).
+        // ORDER BY — в хвосте: скоуп вставляется перед ним.
         slice("component_sprints",
             "SELECT sprint_id, name, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('BELONGS_TO').component_id AS components, " +
             "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids " +
-            "FROM KnowSprint WHERE " +
-            "(out('BELONGS_TO').component_id CONTAINS :cid) " +
-            "OR (sprint_id LIKE :pattern AND out('BELONGS_TO').size() = 0) " +
-            "ORDER BY sprint_id DESC",
-            List.of("pattern", "cid"), Map.of(), " LIMIT 30");
+            "FROM KnowSprint WHERE out('BELONGS_TO').component_id CONTAINS :cid",
+            // pattern — принимается и НИЧЕГО не фильтрует: v1 (src/, выкатывается вручную) ещё
+            // шлёт его, и отказ «unknown param» уронил бы вкладку спринтов в v1.
+            List.of("cid"), Map.of("pattern", ""), " ORDER BY sprint_id DESC");
+
+        // S4-29: задачи компонента (ребро TAGGED_WITH задача → компонент) — вкладка «Задачи»
+        // паспорта компонента. Та же облегчённая проекция, что open_tasks; потолка нет.
+        slice("component_tasks",
+            "SELECT task_uid, task_id, title, task_type, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
+            "FROM KnowTask WHERE out('TAGGED_WITH').component_id CONTAINS :cid",
+            List.of("cid"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
 
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.
@@ -2391,18 +2399,20 @@ public final class LoreSlices {
         // Sprints linked to a given release via IMPLEMENTED_IN_RELEASE edge.
         // Prefer ruid (release_uid, e.g. "NooriUta/AIDA#v1.0.0") for multi-project safety.
         // Falls back to tag (release_id) when ruid is absent (legacy callers).
+        // S4-29: был LIMIT 50 без ORDER BY — произвольные 50 без признака обрезки.
+        // Потолка нет, порядок детерминирован; страница — общими limit/offset (SE-01).
         slice("release_sprints",
             "SELECT sprint_id, name, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_uid CONTAINS :ruid",
-            List.of("ruid"), Map.of(), " LIMIT 50");
+            List.of("ruid"), Map.of(), " ORDER BY sprint_id");
 
         slice("release_sprints_by_tag",
             "SELECT sprint_id, name, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_id CONTAINS :tag",
             // REL-UID-01: номер версии общий у разных проектов — project сужает до своего.
-            List.of("tag"), Map.of("project", " WHERE out('IMPLEMENTED_IN_RELEASE').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " LIMIT 50");
+            List.of("tag"), Map.of("project", " WHERE out('IMPLEMENTED_IN_RELEASE').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY sprint_id");
 
         // PRs shipped in a given release via the SHIPPED_IN edge (KnowPR → KnowRelease).
         // Prefer ruid for multi-project safety.
@@ -2806,6 +2816,7 @@ public final class LoreSlices {
         Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("closed_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("component_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.
         Map.entry("release_tasks_by_tag", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // AN-06: срез I — строка на uc-задачу, проект через её спринт.

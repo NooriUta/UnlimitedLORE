@@ -8,7 +8,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { AgentsScreen } from './AgentsScreen';
-import { filterAgents, harnessCounts, HARNESS_NONE, offRegistry, parseAgents, parseHarnessDict, setAgentHarness } from './agents';
+import { filterAgents, harnessCounts, HARNESS_NONE, offRegistry, parseAgents, parseHarnessDict, setAgentHarness, setAgentMachine } from './agents';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -174,5 +174,80 @@ describe('экран «Агенты»', () => {
     mount(fake({ error: 'FORBIDDEN', detail: 'admin only' }, 403).f);
     await waitFor(() => expect(document.body.textContent).toMatch(/прав/i));
     expect(document.body.textContent).not.toContain('Агентов нет');
+  });
+});
+
+// ── S7B-16: привязка машины в карточке агента ───────────────────────────────
+// Сервер (#1031, LoreProductResource.setActorOwner): POST /lore/actor/owner
+// {actor_id, client_id, kc_sub, machine_id}; machine_id null — не трогать,
+// "" — отвязать; две машины с одним именем — 400 с названием занявшего.
+describe('карточка агента · машина (S7B-16)', () => {
+  const open = (id: string) => window.history.replaceState(null, '', `/?adm-agent=${id}`);
+
+  function fakeM(ownerStatus = 200, ownerBody: unknown = { ok: true }) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const f = vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, init });
+      if (url.startsWith('/lore/actor/owner')) return json(ownerBody, ownerStatus);
+      if (url.startsWith('/lore/slice/dictionary')) return json({ rows: DICT });
+      if (url.startsWith('/lore/slice/agent_owners')) return json({ rows: ROWS });
+      return json({ rows: [] });
+    }) as unknown as typeof fetch;
+    const posts = () => calls.filter(c => c.url === '/lore/actor/owner').map(c => JSON.parse(String(c.init?.body)) as Record<string, unknown>);
+    return { f, calls, posts };
+  }
+
+  it('модель: тело — только machine_id, harness не трогаем; отвязка — ""', async () => {
+    const { f, posts } = fakeM();
+    await setAgentMachine({ actor_id: 'A2', client_id: 'lore-full', owner_kc_sub: 'u1' }, 'lorcetus', f);
+    await setAgentMachine({ actor_id: 'A2', client_id: 'lore-full', owner_kc_sub: 'u1' }, null, f);
+    expect(posts()[0]).toEqual({ actor_id: 'A2', client_id: 'lore-full', kc_sub: 'u1', machine_id: 'lorcetus' });
+    expect(posts()[1].machine_id).toBe('');
+    expect('harness' in posts()[0]).toBe(false);
+  });
+
+  it('не привязана — сказано словами; ввод имени и «Привязать» пишет machine_id и перечитывает список', async () => {
+    open('A2');
+    const fk = fakeM();
+    mount(fk.f);
+    const box = await screen.findByTestId('adm-machine-A2');
+    expect(box.getAttribute('data-bound')).toBe('false');
+    expect(box.textContent).toContain('не привязана');
+    fireEvent.change(within(box).getByTestId('adm-machine-input'), { target: { value: 'lorcetus' } });
+    fireEvent.click(within(box).getByTestId('adm-machine-save'));
+    await waitFor(() => expect(fk.posts()).toHaveLength(1));
+    expect(fk.posts()[0]).toMatchObject({ actor_id: 'A2', machine_id: 'lorcetus', kc_sub: 'u1' });
+    await waitFor(() => expect(fk.calls.filter(c => c.url.startsWith('/lore/slice/agent_owners')).length).toBe(2));
+  });
+
+  it('привязана — видно имя машины и есть «Отвязать» (machine_id "")', async () => {
+    open('A1');
+    const fk = fakeM();
+    mount(fk.f);
+    const box = await screen.findByTestId('adm-machine-A1');
+    expect(box.getAttribute('data-bound')).toBe('true');
+    expect(box.textContent).toContain('lorcetus');
+    fireEvent.click(within(box).getByTestId('adm-machine-unbind'));
+    await waitFor(() => expect(fk.posts()).toHaveLength(1));
+    expect(fk.posts()[0].machine_id).toBe('');
+  });
+
+  it('две машины с одним именем — слова сервера (400), а не молчаливый успех', async () => {
+    open('A2');
+    const fk = fakeM(400, { error: 'BAD_PARAMS', detail: "machine_id 'lorcetus' уже занят машиной 'M9'" });
+    mount(fk.f);
+    const box = await screen.findByTestId('adm-machine-A2');
+    fireEvent.change(within(box).getByTestId('adm-machine-input'), { target: { value: 'lorcetus' } });
+    fireEvent.click(within(box).getByTestId('adm-machine-save'));
+    const err = await within(box).findByTestId('adm-machine-error');
+    expect(err.textContent).toContain('уже занят');
+  });
+
+  it('у агента нет владельца — правки нет, причина сказана (сервер требует kc_sub)', async () => {
+    open('A3');
+    mount(fakeM().f);
+    const box = await screen.findByTestId('adm-machine-A3');
+    expect(within(box).getByTestId('adm-machine-noowner')).toBeTruthy();
+    expect(within(box).queryByTestId('adm-machine-save')).toBeNull();
   });
 });
