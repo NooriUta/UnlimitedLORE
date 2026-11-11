@@ -30,6 +30,8 @@ function fake(o: { flags?: unknown; flagsStatus?: number; version?: unknown; ver
   return vi.fn(async (url: string) => {
     if (url.startsWith('/lore/admin/flags')) return json(o.flags ?? FLAGS, o.flagsStatus ?? 200);
     if (url.startsWith('/lore/version')) return json(o.version ?? { commit: 'abc1234', release: 'v1.17.9' }, o.versionStatus ?? 200);
+    // S7B-31: блок «Параметры приложения» читает свой справочник — здесь он пуст и не мешает.
+    if (url.startsWith('/lore/slice/dictionary')) return json({ rows: [] });
     return json({ error: 'NOPE' }, 404);
   }) as unknown as typeof fetch;
 }

@@ -8,6 +8,13 @@
   padding: var(--pad-y) var(--pad-x);
 }
 
+/* Телефон: открытый паспорт — во весь экран (S4-MOBILE-COMPARE). Поля сняты у
+   .list-screen--passport (ListScreen.css), но родитель .v2-screen держал свои
+   12 px, и паспорт стоял с полями 24 px (замер v1.17.13, 360×800). */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .v2-screen:has(> .list-screen--passport) { padding-inline: 0; }
+}
+
 .v2-screen__title {
   margin: 0;
   font-family: var(--display);
@@ -192,3 +199,8 @@
 .v2-version__btn:hover { color: var(--t1); background: var(--bg2); }
 .v2-version__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .v2-version__said { color: var(--suc); font-size: var(--fs-2xs); }
+
+/* ---------- Строка состояния (S4-21, ответ владелицы 7а) ---------- */
+.v2-status__item[data-tone="wrn"] { color: var(--wrn); }
+.v2-status__item[data-tone="dng"] { color: var(--dng); }
+.v2-status__end { margin-left: auto; }

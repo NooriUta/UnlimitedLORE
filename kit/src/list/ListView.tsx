@@ -91,6 +91,7 @@ import { ViewMenu } from './ViewMenu';
 import { GroupMenu } from './GroupMenu';
 import { SortMenu } from './SortMenu';
 import { TimelineLanes } from '../views/timeline';
+import { CalendarMonth } from '../views/calendar';
 import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
 import { MIN_COL_W, clampWidth, readWidths, widthsFor, writeWidths, type ColumnWidths, type WidthStore } from './columnWidths';
@@ -340,7 +341,7 @@ const COLS_LOCKED = 'title+id';
  */
 type FeedLevel = 'flat' | 'top' | 'under';
 
-const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
+const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar'];
 /** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
 const CLOSED_KEY = '__closed__';
 
@@ -1899,6 +1900,12 @@ export function ListView({
     body = tl
       ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} narrow={narrow} />
       : <EmptyState title={t('kit.list.timeline.noConfig')} />;
+  } else if (view === 'calendar') {
+    // Календарь (K2-VIEW-CALENDAR, прототип утверждён 11.11.2026): те же отфильтрованные записи.
+    const cal = listCfg?.calendar;
+    body = cal
+      ? <CalendarMonth config={config} records={filtered} date={cal.date} href={href} onOpen={onOpen} narrow={narrow} />
+      : <EmptyState title={t('kit.list.calendar.noConfig')} />;
   } else if (view === 'tree') {
     // Дерево (S4-22): иерархия по list.tree над теми же отфильтрованными записями.
     body = <TreeView config={config} data={{ ...data, records: filtered }} href={href} onOpen={onOpen} />;

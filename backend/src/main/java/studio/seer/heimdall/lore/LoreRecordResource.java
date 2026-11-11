@@ -113,6 +113,7 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> out = envelope(rec, values, List.of(), List.of(),
             LoreRecordPerms.of(type, role, identified, null, 0, specStatuses(type)), Map.of(), type, List.of(),
             List.of());
+        out.put("schema", recordSchema(type));
         out.put("computed", Map.of());
         return noStore(Response.ok(out));
     }
@@ -227,6 +228,7 @@ public class LoreRecordResource extends LoreResourceBase {
         Map<String, Object> out = envelope(rec, values, parts, links,
             LoreRecordPerms.of(type, role, identified, status, openTasks, specStatuses(type)), facts, type, blocks,
             dataState);
+        out.put("schema", recordSchema(type));
         out.put("computed", computed);
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
@@ -405,6 +407,25 @@ public class LoreRecordResource extends LoreResourceBase {
             LOG.warnf("[LORE RECORD] slice=%s %s: %s", slice, given, e.getMessage());
             return new Read(List.of(), "error", slice + ": " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * MD-REQUIRED: schema с обязательностью полей — block из схемы БД (schema:types, кэш
+     * {@link LoreFieldRequirement#schemaFacts}), warn из проверок качества MCP. Схема не
+     * прочиталась — {@code requirements_block: unknown}, warn остаётся.
+     */
+    private Map<String, Object> recordSchema(String type) {
+        LoreFieldRequirement.SchemaFacts facts = LoreFieldRequirement.schemaFacts(
+            () -> ingestService.queryPublic("SELECT name, properties FROM schema:types", Map.of()));
+        LoreModelTypes.Graph g = LoreModelTypes.GRAPH.get(type);
+        if (facts == null || g == null) return LoreRecordRegistry.schemaJson(type);
+        java.util.Set<String> props = new java.util.LinkedHashSet<>(facts.props().getOrDefault(g.vertex(), List.of()));
+        java.util.Set<String> req = new java.util.LinkedHashSet<>(facts.mandatory().getOrDefault(g.vertex(), java.util.Set.of()));
+        if (g.hist() != null) {
+            props.addAll(facts.props().getOrDefault(g.hist(), List.of()));
+            req.addAll(facts.mandatory().getOrDefault(g.hist(), java.util.Set.of()));
+        }
+        return LoreRecordRegistry.schemaJson(type, props, req);
     }
 
     private static Map<String, Object> recordHead(String type, String id, String title, String status, String version) {

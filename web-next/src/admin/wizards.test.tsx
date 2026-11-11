@@ -320,3 +320,141 @@ describe('экран · UC-7 новый ноутбук', () => {
     expect(await screen.findByTestId('adm-wiz-seen')).toBeTruthy();
   });
 });
+
+// ── S7B-29: переходы между шагами (SPRINT_UXR_S7B_ADMIN/S7B-29) ─────────────
+// Слова владелицы 11.11: «Wizard не доделан: переход между шагами». Каждая
+// проверка ниже падала до правки.
+const step = () => new URLSearchParams(window.location.search).get('adm-step');
+const progress = () => screen.getByTestId('kit-steps-progress').textContent ?? '';
+
+/** Мок пачки ролей: dry_run — план, применение — итог с окном отмены. */
+function batchFetch() {
+  const base = mockFetch();
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith('/lore/user/role/batch')) {
+      const b = JSON.parse(String(init?.body)) as { dry_run?: boolean; undo_of?: string };
+      if (b.dry_run) {
+        return json({ kc_sub: 'u-anna', dry_run: true, plan: [
+          { project: 'NooriUta/UnlimitedLORE', before: null, after: 'developer', kind: 'grant', sign: '+', check: { state: 'checked' } },
+        ] });
+      }
+      if (b.undo_of) return json({ ok: true });
+      return json({
+        batch_id: 'b-1', undo_until: new Date(Date.now() + 600_000).toISOString(),
+        items: [{ project: 'NooriUta/UnlimitedLORE', result: 'applied' }],
+        undo: [{ project: 'NooriUta/UnlimitedLORE', action: 'remove' }],
+      });
+    }
+    return base(input, init);
+  });
+}
+
+async function personToDiff(f: ReturnType<typeof batchFetch>) {
+  renderScreen(f as unknown as typeof fetch, 'person');
+  fireEvent.change(await screen.findByTestId('adm-wiz-login'), { target: { value: 'anna' } });
+  await screen.findByTestId('adm-wiz-found');
+  next();
+  fireEvent.change(await screen.findByTestId('adm-wiz-like'), { target: { value: 'u-volva' } });
+  await screen.findByTestId('adm-wiz-projects');
+  next();
+  await waitFor(() => expect(step()).toBe('diff'));
+}
+
+async function applyDiff() {
+  fireEvent.change(await screen.findByTestId('kit-diff-confirm'), { target: { value: 'anna' } });
+  fireEvent.click(screen.getByTestId('kit-diff-apply'));
+  await screen.findByTestId('kit-batch');
+}
+
+describe('S7B-29 · смена мастера', () => {
+  it('выбор другого мастера открывает ЕГО первый шаг, а не шаг прежнего', async () => {
+    const f = mockFetch();
+    renderScreen(f as unknown as typeof fetch, 'agent');
+    fireEvent.change(await screen.findByTestId('adm-wiz-owner'), { target: { value: 'u-volva' } });
+    next();
+    await waitFor(() => expect(step()).toBe('profile'));
+    fireEvent.click(screen.getByTestId('adm-wiz-pick-machine'));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('adm-wiz')).toBe('machine'));
+    expect(step()).toBeNull();
+    // Введённое прежним мастером (чей агент) в новый не переезжает.
+    expect(new URLSearchParams(window.location.search).get('adm-owner')).toBeNull();
+    expect(screen.queryByTestId('kit-steps-unknown')).toBeNull();
+    expect(progress()).toMatch(/1.*3/);
+  });
+});
+
+describe('S7B-29 · «Готово» на последнем шаге', () => {
+  it('завершает мастер: выбор снят, шаги и введённое ушли из адреса, сказано «готово»', async () => {
+    const f = mockFetch({
+      agentClient: { status: 200, body: { ok: true, clientId: 'lore-mcp-full_nb', secret: SECRET, roles_copied: [] } },
+    });
+    renderScreen(f as unknown as typeof fetch, 'machine');
+    fireEvent.change(await screen.findByTestId('adm-wiz-machine'), { target: { value: 'nb' } });
+    next();
+    fireEvent.click(await screen.findByTestId('adm-wiz-issue'));
+    await screen.findByTestId('adm-wiz-command');
+    next();
+    fireEvent.click(await screen.findByTestId('kit-steps-done'));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('adm-wiz')).toBeNull());
+    expect(step()).toBeNull();
+    expect(new URLSearchParams(window.location.search).get('adm-machine')).toBeNull();
+    expect(screen.queryByTestId('kit-steps-progress')).toBeNull();
+    expect(screen.getByTestId('adm-wiz-finished')).toBeTruthy();
+  });
+});
+
+describe('S7B-29 · шаг диффа в мастере «подключить человека»', () => {
+  it('«Готово» под применённой пачкой ведёт дальше, а не запирает мастер', async () => {
+    const f = batchFetch();
+    await personToDiff(f);
+    await applyDiff();
+    expect(screen.getByTestId('kit-steps-next').getAttribute('aria-disabled')).toBeNull();
+    fireEvent.click(screen.getByTestId('adm-danger-cancel'));
+    await waitFor(() => expect(step()).toBe('check'));
+    expect(progress()).toMatch(/4.*4/);
+  });
+
+  it('«Отмена» до применения возвращает к проектам', async () => {
+    const f = batchFetch();
+    await personToDiff(f);
+    await screen.findByTestId('kit-diff-confirm');
+    fireEvent.click(screen.getByTestId('adm-danger-cancel'));
+    await waitFor(() => expect(step()).toBe('projects'));
+  });
+
+  it('вперёд к проверке и назад к диффу — итог пачки и окно отмены на месте, повторного dry_run нет', async () => {
+    const f = batchFetch();
+    await personToDiff(f);
+    await applyDiff();
+    const before = f.mock.calls.filter(([u]) => String(u).startsWith('/lore/user/role/batch')).length;
+    next();
+    await waitFor(() => expect(step()).toBe('check'));
+    fireEvent.click(screen.getByTestId('kit-steps-back'));
+    await waitFor(() => expect(step()).toBe('diff'));
+    expect(screen.getByTestId('kit-batch')).toBeTruthy();
+    expect(screen.getByTestId('kit-batch-undo')).toBeTruthy();
+    expect(f.mock.calls.filter(([u]) => String(u).startsWith('/lore/user/role/batch')).length).toBe(before);
+  });
+
+  it('пачку отменили — вперёд снова нельзя: ролей у человека уже нет', async () => {
+    const f = batchFetch();
+    await personToDiff(f);
+    await applyDiff();
+    fireEvent.click(screen.getByTestId('kit-batch-undo'));
+    await screen.findByTestId('kit-batch-undone');
+    expect(screen.getByTestId('kit-steps-next').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('после применения сменили проекты — новая пачка не применена, вперёд нельзя', async () => {
+    const f = batchFetch();
+    await personToDiff(f);
+    await applyDiff();
+    fireEvent.click(screen.getByTestId('kit-steps-back'));
+    await waitFor(() => expect(step()).toBe('projects'));
+    fireEvent.click(screen.getByTestId('adm-wiz-proj-NooriUta/volva'));
+    next();
+    await waitFor(() => expect(step()).toBe('diff'));
+    expect(screen.getByTestId('kit-steps-next').getAttribute('aria-disabled')).toBe('true');
+  });
+});

@@ -132,7 +132,7 @@ describe('S9-08 · телефон: первым список связей', () =
   it('на телефоне можно переключиться на холст', () => {
     const { container } = draw(149, true);
     const sw = within(container).getByTestId('kit-graph-view');
-    fireEvent.click(within(sw).getByRole('button', { name: /граф|холст/i }));
+    fireEvent.click(within(sw).getByRole('button', { name: /граф|холст|секторы/i }));
     expect(container.querySelector('.sk-rec-graph__svg')).toBeTruthy();
   });
 
