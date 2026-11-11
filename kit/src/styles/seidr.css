@@ -4290,6 +4290,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 /* ---------- граф знаний GraphExplorer (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-03) ----------
    Два вида — Force и «как Обсидиан» — и левая панель как у Обсидиана: Фильтры,
    Группы, Отображение, Силы. Холст занимает всё, что осталось. */
+.sk-rec-graph__notes { margin: 2px 0 6px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--t3); font-size: var(--fs-xs); }
 .sk-rec-graph__gx { height: min(70vh, 640px); min-height: 420px; }
 .sk-gx { display: flex; flex-direction: column; min-height: 420px; height: 100%; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); overflow: hidden; }
 .sk-gx--panel { --gx-panel: 248px; }

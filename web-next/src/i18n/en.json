@@ -1291,5 +1291,6 @@
   "admin.macl.matrix.noTeams": "Project teams failed to load: {reason}",
   "admin.macl.person.title": "Machines · owns {owned} · granted {granted}",
   "admin.macl.person.none": "No machines: owns none and has no grants (checked)",
-  "mdref.modelLoading": "The LORE model is still loading — try again in a second"
+  "mdref.modelLoading": "The LORE model is still loading — try again in a second",
+  "pp.graphFailed": "The deeper graph did not load — only direct links are shown"
 }

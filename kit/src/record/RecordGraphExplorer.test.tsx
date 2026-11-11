@@ -90,6 +90,21 @@ describe('GC-03 · вкладка «Граф»: Секторы / Список / 
     expect(sel.querySelector('a')!.getAttribute('href')).toBe('#rec=T-1');
   });
 
+  it('GC-04: типы узлов от приложения (graph.types) — подпись и цвет у соседей любого типа, а не только у своего', async () => {
+    const config = cfg('force');
+    config.graph = { ...config.graph!, types: { adr: { label: 'ADR', color: '--suc' }, decision: { label: 'Решение', color: '--acc' }, task: { label: 'Задача', color: '--t2' } } };
+    render(<RecordView record={CENTER} ctx={ctxOf(config)} tab="graph" onTab={() => {}} />);
+    await screen.findByTestId('eng-force');
+    expect(screen.getByRole('checkbox', { name: /Решение/ })).toBeTruthy();
+  });
+
+  it('GC-04: что граф не показывает (meta.graphNotes) — строкой под легендой, в любом виде', () => {
+    const ctx = ctxOf(cfg());
+    ctx.data = { ...ctx.data, meta: { ...ctx.data.meta, graphNotes: ['Скрыто правами: 3'] } };
+    render(<RecordView record={CENTER} ctx={ctx} tab="graph" onTab={() => {}} />);
+    expect(screen.getByTestId('kit-graph-notes').textContent).toContain('Скрыто правами: 3');
+  });
+
   it('свой переключатель GraphExplorer во вкладке спрятан — переключатель один', async () => {
     show(cfg('force'));
     await screen.findByTestId('eng-force');

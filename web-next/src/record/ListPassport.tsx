@@ -8,11 +8,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
-  type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
-} from '@seidr/kit';
+  type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
+import { appT } from '../i18n';
 import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
 import { parentsOf } from './loreRefCreate';
+import { fetchLoreGraph, graphNotes, mergeGraph, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
@@ -161,6 +162,20 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
   const parentsKey = JSON.stringify(parentsOf(view?.record));
   const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>), [parentsKey]);
+  // Граф (GC-04): вкладка «Граф» берёт окрестность записи с сервера на глубину из адреса —
+  // фасад давал один шаг. Ошибка — строкой блока графа, а не пустым графом.
+  const [gdepthRaw] = useUrlParam('gdepth');
+  const gdepth = gdepthRaw === '2' || gdepthRaw === '3' ? Number(gdepthRaw) : 1;
+  const [graph, setGraph] = useState<{ key: string; body?: LoreGraphBody; error?: string } | null>(null);
+  const graphKey = view && tab === 'graph' ? `${type}|${view.record.id}|${gdepth}` : null;
+  useEffect(() => {
+    if (!graphKey || !view) return;
+    let alive = true;
+    fetchLoreGraph({ type, id: view.record.id, depth: gdepth }, fetchImpl)
+      .then(body => { if (alive) setGraph({ key: graphKey, body }); },
+        e => { if (alive) setGraph({ key: graphKey, error: e instanceof Error ? e.message : String(e) }); });
+    return () => { alive = false; };
+  }, [graphKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
   // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
   // правится (выбирать не из чего), а не показывает пустой список.
@@ -270,6 +285,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     : view.config;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf);
+  const g = graph && graph.key === graphKey ? graph : null;
+  const graphData = g?.body
+    ? (() => { const d = mergeGraph(view.data, g.body); return { ...d, meta: { ...d.meta, graphNotes: graphNotes(g.body.meta, lang) } }; })()
+    : g?.error
+      ? { ...view.data, meta: { ...view.data.meta, graphNotes: [`${appT(lang, 'pp.graphFailed')}: ${g.error}`] } }
+      : view.data;
   const graphPeek = loreListPeek(lang, id => view.data.records.find(r => r.id === id)?.kind ?? null);
   const ctx: KitCtx = { config: {
     ...withOptions,
@@ -280,8 +301,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
     hooks: { ...baseConfig.hooks, onSave, onRelation },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
-    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render } : baseConfig.graph,
-  }, data: view.data, role: 'reader',
+    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
+  }, data: graphData, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
     // Чипы проектов и компонентов шапки — паспорт своего типа (S4-29, 53а): тип берётся из

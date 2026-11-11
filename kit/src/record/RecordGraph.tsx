@@ -105,7 +105,9 @@ export function RecordGraph(
     </div>
   );
 
+  const notes = ctx.data.meta.graphNotes ?? [];
   const legend = (
+    <>
     <div className="sk-rec-graph__legend" role="group" data-testid="kit-graph-legend" aria-label={kitT(lang, 'kit.record.graph.legend')}>
       {chips.map(t => (
         <Pill key={t.type} variant="filter" pressed={!off.has(t.type)} onToggle={() => toggleType(t.type)} title={t.type}>
@@ -115,6 +117,12 @@ export function RecordGraph(
         </Pill>
       ))}
     </div>
+    {notes.length > 0 && (
+      <ul className="sk-rec-graph__notes" data-testid="kit-graph-notes">
+        {notes.map(n => <li key={n}>{n}</li>)}
+      </ul>
+    )}
+    </>
   );
 
   if (g.nodes.length === 0) {
@@ -321,6 +329,8 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
   const kindKeys = Object.keys(ctx.config.kinds);
   const types: Record<string, GxStyle> = {};
   kindKeys.forEach((k, i) => { types[k] = { label: ctx.config.kinds[k].title, color: KIND_TONES[i % KIND_TONES.length] }; });
+  // GC-04: типы от приложения главнее — иначе у соседей чужого типа ни подписи, ни цвета.
+  for (const [k, v] of Object.entries(ctx.config.graph?.types ?? {})) types[k] = { label: v.label, color: v.color };
   const rels: Record<string, GxStyle> = {};
   for (const [k, e] of Object.entries(ctx.config.edges ?? {})) rels[k] = { label: e.label, color: e.color };
   const gxNodes: GxNode[] = [
