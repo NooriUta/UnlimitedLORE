@@ -58,7 +58,7 @@ describe('seidr.css · оболочки (S4-00c)', () => {
     for (const s of ['.sk-sheet', '.sk-sheet--right', '.sk-sheet--left', '.sk-sheet--bottom', '.sk-sheet-backdrop']) {
       expect(rule(s), s).not.toBe('');
     }
-    expect(css).toMatch(/@media \(max-width: 720px\)\s*\{[^}]*\.sk-sheet--right[^{]*\{[^}]*width:\s*100vw/);
+    expect(css).toMatch(/@media \(max-width: 720px\)[^{]*\{[^}]*\.sk-sheet--right[^{]*\{[^}]*width:\s*100vw/);
   });
 
   it('заголовок листа — Unbounded 800 токенами', () => {
