@@ -102,6 +102,16 @@ describe('GC-03 · GraphExplorer', () => {
     expect(sel.querySelector('a')!.getAttribute('href')).toBe('?passport=T-1');
   });
 
+  it('Peek: выбранный узел — карточка приложения вместо строки; крестик закрывает', async () => {
+    render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t10"
+      renderSelected={id => <article data-testid="peek-card">{`Карточка ${id}`}</article>} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'узел ADR-1' }));
+    expect(screen.getByTestId('peek-card').textContent).toBe('Карточка ADR-1');
+    expect(screen.queryByTestId('gx-selected')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть карточку' }));
+    expect(screen.queryByTestId('peek-card')).toBeNull();
+  });
+
   it('панель прячется и возвращается кнопкой', async () => {
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t9" />);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Скрыть настройки' })); });

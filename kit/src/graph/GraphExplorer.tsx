@@ -11,7 +11,7 @@
 //
 // kit не знает предметных слов (K-14): типы узлов и связей, подписи и цвета —
 // от приложения. Движки грузятся лениво: граф не утяжеляет основной бандл.
-import { Suspense, lazy, useCallback, useMemo, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useCallback, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { kitT, type KitLang } from '../i18n';
 import { EmptyState, LoadError } from '../states/StateViews';
 import { Pill } from '../elements/Pill';
@@ -46,6 +46,8 @@ export interface GraphExplorerProps {
   onOpen?: (id: string) => void;
   /** Адрес записи: у выбранного узла появляется обычная ссылка «Открыть». */
   hrefOf?: (id: string) => string;
+  /** Карточка выбранного узла (у LORE — Peek паспорта); нет — строка с названием. */
+  renderSelected?: (id: string) => ReactNode;
   /** Ключ настроек панели в браузере человека; разные места — разные настройки. */
   storageKey?: string;
   /** Панель открыта при первом показе; не задано — открыта, кроме узкого экрана. */
@@ -128,7 +130,14 @@ export function GraphExplorer(props: GraphExplorerProps) {
                 selected={selected} onSelect={setSelected} onOpen={props.onOpen} onError={setFailure} />
             </Suspense>
           )}
-          {sel && (
+          {sel && props.renderSelected && (
+            <div className="sk-gx__peek" role="region" aria-label={sel.title ?? sel.id} data-testid="gx-peek">
+              <button type="button" className="sk-btn sk-gx__ghost sk-gx__peek-close" aria-label={kitT(lang, 'kit.graph.peekClose')}
+                onClick={() => setSelected(null)}>×</button>
+              {props.renderSelected(sel.id)}
+            </div>
+          )}
+          {sel && !props.renderSelected && (
             <div className="sk-gx__sel" role="status" data-testid="gx-selected">
               <span className="sk-gx-dot" aria-hidden="true" style={{ '--gx-c': nodeColor(sel) } as CSSProperties} />
               <span className="sk-gx__sel-title">{sel.title ?? sel.id}</span>

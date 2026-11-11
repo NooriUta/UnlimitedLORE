@@ -4296,6 +4296,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-gx__canvas { position: absolute; inset: 0; }
 .sk-gx__loading { padding: 16px; color: var(--t3); font-size: var(--fs-sm); }
 .sk-gx__sel { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2); font-size: var(--fs-sm); }
+.sk-gx__peek { position: absolute; top: 8px; right: 8px; width: min(380px, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2); box-shadow: 0 6px 20px color-mix(in srgb, var(--bg0) 60%, transparent); }
+.sk-gx__peek-close { position: absolute; top: 4px; right: 4px; z-index: 1; }
 .sk-gx__sel-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t1); }
 .sk-gx__sel-id { margin-left: auto; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-gx-dot { display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: var(--gx-c, var(--t3)); flex: none; }

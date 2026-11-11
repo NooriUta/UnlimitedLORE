@@ -12,8 +12,12 @@ import type { GxEngineProps } from '../graph/engineTypes';
 import { RecordView } from './index';
 
 const stub = (name: string) => function Stub(p: GxEngineProps) {
-  return <div data-testid={`eng-${name}`} data-ids={p.nodes.map(n => `${n.id}:${n.type}`).sort().join(',')}
-    data-rels={[...new Set(p.edges.map(e => e.rel))].sort().join(',')} />;
+  return (
+    <div data-testid={`eng-${name}`} data-ids={p.nodes.map(n => `${n.id}:${n.type}`).sort().join(',')}
+      data-rels={[...new Set(p.edges.map(e => e.rel))].sort().join(',')}>
+      {p.nodes.map(n => <button key={n.id} type="button" onClick={() => p.onSelect(n.id)}>{`узел ${n.id}`}</button>)}
+    </div>
+  );
 };
 vi.mock('../graph/ForceEngine', () => ({ default: stub('force') }));
 vi.mock('../graph/ObsidianEngine', () => ({ default: stub('obsidian') }));
@@ -67,6 +71,23 @@ describe('GC-03 · вкладка «Граф»: Секторы / Список / 
     show(cfg('obsidian'));
     expect(await screen.findByTestId('eng-force')).toBeTruthy();
     expect(screen.queryByTestId('eng-obsidian')).toBeNull();
+  });
+
+  it('Peek из приложения (config.graph.peek) — карточка выбранного узла во вкладке', async () => {
+    const config = cfg('force');
+    config.graph = { ...config.graph!, peek: id => <article data-testid="peek-card">{`Peek ${id}`}</article> };
+    render(<RecordView record={CENTER} ctx={ctxOf(config)} tab="graph" onTab={() => {}} />);
+    await screen.findByTestId('eng-force');
+    expect(screen.queryByTestId('peek-card')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'узел D-1' }));
+    expect(screen.getByTestId('peek-card').textContent).toBe('Peek D-1');
+  });
+
+  it('без Peek у приложения — строка с названием и ссылкой «Открыть» в паспорт узла', async () => {
+    show(cfg('force'));
+    fireEvent.click(await screen.findByRole('button', { name: 'узел T-1' }));
+    const sel = screen.getByTestId('gx-selected');
+    expect(sel.querySelector('a')!.getAttribute('href')).toBe('#rec=T-1');
   });
 
   it('свой переключатель GraphExplorer во вкладке спрятан — переключатель один', async () => {

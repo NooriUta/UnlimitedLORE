@@ -1046,5 +1046,6 @@
   "kit.record.graph.viewForceHint": "live physics: drag a node and its neighbours follow",
   "kit.record.graph.viewObsidian": "Obsidian",
   "kit.record.graph.viewObsidianHint": "background physics, WebGL — for large graphs",
-  "kit.steps.held": "Step «{title}» from the link is not open yet — this one is: {reason}"
+  "kit.steps.held": "Step «{title}» from the link is not open yet — this one is: {reason}",
+  "kit.graph.peekClose": "Close the card"
 }

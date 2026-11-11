@@ -340,7 +340,7 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
     <div ref={host} className="sk-rec-graph__gx">
       <GraphExplorer nodes={gxNodes} edges={gxEdges} types={types} rels={rels} lang={lang}
         engine={engine} onEngineChange={onEngine} engineSwitch={false}
-        hrefOf={ctx.href} onOpen={open} storageKey="record" />
+        hrefOf={ctx.href} onOpen={open} storageKey="record" renderSelected={ctx.config.graph?.peek} />
     </div>
   );
 }
