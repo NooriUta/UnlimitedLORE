@@ -25,6 +25,7 @@
   "kit.prose.taskDone": "done",
   "kit.prose.taskTodo": "not done",
   "kit.md.toolbar": "Formatting",
+  "kit.md.more": "more formatting",
   "kit.md.undo": "undo (Ctrl+Z)",
   "kit.md.redo": "redo (Ctrl+Y)",
   "kit.md.bold": "bold (Ctrl+B)",

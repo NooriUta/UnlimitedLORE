@@ -1779,6 +1779,20 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-md__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-md__sep { width: 1px; align-self: stretch; margin: 2px 1px; background: var(--bd); }
+/* Телефон (S4-MOBILE-EDGE, замер 360 px: 19 кнопок в 5 рядов, 241 px высоты):
+   первая строка — пять главных кнопок и «ещё ▾» (6 × 44 px влезают в 300 px),
+   остальное — под «ещё» своим блоком во всю ширину, с переносом. */
+.sk-md__toolbar--narrow { flex-wrap: wrap; }
+.sk-md__morebtn { margin-left: auto; white-space: nowrap; }
+.sk-md__more {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding-top: 4px;
+  border-top: 1px solid var(--bd);
+}
 .sk-md__err {
   padding: 4px 9px;
   color: var(--dng);
@@ -2889,6 +2903,20 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   background: var(--bg1);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
 }
+/* На телефоне (≤720) «Вид», «Группировка», «Порядок» и фасет открываются не
+   поповером у кнопки, а нижним листом Sheet (S4-MOBILE-EDGE, ADR-LORE-049 п.1):
+   на 360 px поповер уезжал за правый и нижний край. Лист — во всю ширину, не
+   выше 85vh, прокрутка внутри; тело — та же колонка, что у поповера, и без
+   прокрутки вбок: длинное переносится, а не раздвигает лист. */
+.sk-lsheet .sk-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
 .sk-vmenu__title {
   margin: 0;
   color: var(--t3);
@@ -3119,6 +3147,8 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   box-shadow: 0 6px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
 }
 .sk-facet__panel[hidden] { display: none; }
+/* Содержимое фасета на нижнем листе (S4-MOBILE-EDGE): та же колонка, что у панели. */
+.sk-facet__sheet { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 .sk-facet__ops {
   display: flex;
   flex-wrap: wrap;
@@ -3827,6 +3857,32 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   text-overflow: ellipsis;
 }
 .sk-tl__undated { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+/* Телефон (S4-MOBILE-EDGE, как v1 MOB-03): вместо шкалы — список по датам начала.
+   Строка — статус цветом слева, название, срок и дорожка; переносится, а не режется. */
+.sk-tl__day {
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg1);
+  padding: 4px 6px;
+}
+.sk-tl--dates .sk-tl__head .sk-tl__title { font-family: var(--mono); }
+.sk-tl__items { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.sk-tl__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  min-height: max(var(--tap), var(--row-h));
+  padding: 2px 0;
+  border-left: 2px solid var(--st-c);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--st-c) 10%, var(--bg2));
+}
+.sk-tl__item .sk-tl__label { flex: 1 1 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.sk-tl__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; padding: 0 6px; }
+.sk-tl__when { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-tl__lanechip { padding: 0 8px; border: 1px solid var(--bd); border-radius: 999px; color: var(--t2); font-size: var(--fs-2xs); }
 
 @media (max-width: 720px) {
   .sk-board { grid-auto-flow: row; grid-auto-columns: auto; }
@@ -4010,6 +4066,13 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-fields__row { display: contents; }
 .sk-rec-fields dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px; }
 .sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
+/* Телефон (S4-MOBILE-EDGE): MD-поле в колонке значений получало ~225 из 360 px —
+   подпись колонкой слева съедала треть. Узко подпись MD-поля встаёт над ним,
+   а текст и редактор берут всю ширину; короткие поля остаются парой «подпись — значение». */
+@media (max-width: 720px) {
+  .sk-rec-fields__row[data-type="md"] > dt,
+  .sk-rec-fields__row[data-type="md"] > dd { grid-column: 1 / -1; }
+}
 /* Ряд значений-чипов в «Свойствах» (S4-29): первые три и «ещё N».
    У унаследованного чипа пунктирная рамка И подпись источника словами — по
    одному оттенку «от спринта» не прочитать. */

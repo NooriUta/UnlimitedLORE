@@ -1094,6 +1094,7 @@ export function ListView({
         current: view,
         onPick: k => update({ view: k as ListViewKind }),
       } : undefined}
+      narrow={narrow}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
@@ -1776,7 +1777,7 @@ export function ListView({
     // Таймлайн (S4-22): дорожки той же группировки, что у списка и доски.
     const tl = listCfg?.timeline;
     body = tl
-      ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} />
+      ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} narrow={narrow} />
       : <EmptyState title={t('kit.list.timeline.noConfig')} />;
   } else if (view === 'tree') {
     // Дерево (S4-22): иерархия по list.tree над теми же отфильтрованными записями.
@@ -2123,6 +2124,7 @@ export function ListView({
                 // Закреплённые значения оси (S9-03): их называет приложение,
                 // потому что «почему именно эти» — предметное знание (K-14).
                 pinned={facetPinned?.(k)}
+                narrow={narrow}
               />
             );
           })}
@@ -2145,6 +2147,7 @@ export function ListView({
             onGroup={g => update({ group: g, ...(g === null || g === state.group2 ? { group2: null } : {}) })}
             onSub={g => update({ group2: g })}
             bare
+            narrow={narrow}
           />
           {/*
             Поиск по группам появляется, когда их столько, что глазами искать
@@ -2175,6 +2178,7 @@ export function ListView({
             keys={sortKeys}
             keyTitle={labels.keyTitle}
             onChange={k => update({ sort: k ? { key: k, dir: state.sort?.dir ?? 'asc' } : null })}
+            narrow={narrow}
           />
           <button
             type="button"
