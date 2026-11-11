@@ -163,11 +163,17 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
           label={kitT(lang, vertical ? 'kit.record.dock.heightBottom' : 'kit.record.dock.widthRight')}
         />
       )}
-      {full && onExitFull && (
-        <button type="button" className="sk-dock__exit" onClick={onExitFull} title="Esc">{kitT(lang, 'kit.record.dock.exitFull')}</button>
+      {/* Полный экран (S4-17, владелица 11.11: «крестик спорят с линией»): «Выйти» и «×» —
+          одной группой в углу, вне панели. Плавающий «×» в панели при прокрутке вставал
+          поверх «Выйти» и сужал всю запись со строкой вкладок. */}
+      {full && (onExitFull || onClose) && (
+        <div className="sk-dock__ctl">
+          {onExitFull && <button type="button" className="sk-dock__exit" onClick={onExitFull} title="Esc">{kitT(lang, 'kit.record.dock.exitFull')}</button>}
+          {onClose && <button type="button" className="sk-dock__close" onClick={onClose} aria-label={kitT(lang, 'kit.record.dock.close')} title={kitT(lang, 'kit.record.dock.close')}>×</button>}
+        </div>
       )}
       <section className="sk-dock__panel">
-        {onClose && (
+        {onClose && !full && (
           <button type="button" className="sk-dock__close" onClick={onClose} aria-label={kitT(lang, 'kit.record.dock.close')} title={kitT(lang, 'kit.record.dock.close')}>×</button>
         )}
         {children}
