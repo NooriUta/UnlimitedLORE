@@ -440,6 +440,49 @@ class LoreRecordFacadeLiveDbTest {
                 part + " прочитана и названа в data_state: " + ds);
     }
 
+    /**
+     * S4-29, решение 53а: паспорт проекта — контракт lore.record/1 на живой БД. Вкладки Спринты ·
+     * Компоненты (через спринты) · ADR · Релизы · Люди и агенты читаются срезами project_*; каждая
+     * названа в data_state, срез вкладки — постранично с честным total.
+     */
+    @Test
+    void projectPassportContract() {
+        final String gp = "test/rec-project";
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body(Map.of("slug", gp, "name", "Проект паспорта")).post("/lore/project").then().statusCode(200);
+        admin().body(Map.of("component_id", "C-REC-PROJECT", "full_name", "Компонент проекта", "area", "core"))
+            .post("/lore/component/create").then().statusCode(200);
+        for (String sid : List.of("SPRINT_REC_PROJECT_A", "SPRINT_REC_PROJECT_B")) {
+            sprint(sid);
+            admin().body(Map.of("sprint_id", sid, "git_project", gp)).post("/lore/sprint/project").then().statusCode(200);
+        }
+        admin().body(Map.of("sprint_id", "SPRINT_REC_PROJECT_A", "component_id", "C-REC-PROJECT"))
+            .post("/lore/sprint/component").then().statusCode(200);
+
+        JsonPath p = readOnlyContract("project", gp);
+        assertEquals("Проект паспорта", p.getString("values.title"));
+        assertEquals(gp, p.getString("values.code"));
+        List<Map<String, Object>> links = p.getList("links");
+        assertEquals(List.of("SPRINT_REC_PROJECT_B", "SPRINT_REC_PROJECT_A"),
+            links.stream().filter(l -> "sprint".equals(l.get("type"))).map(l -> l.get("id")).toList(),
+            "вкладка «Спринты» — по ребру BELONGS_TO_PROJECT, свежие сверху: " + links);
+        assertEquals(List.of("C-REC-PROJECT"),
+            links.stream().filter(l -> "component".equals(l.get("type"))).map(l -> l.get("id")).toList(),
+            "вкладка «Компоненты» — через спринты проекта: " + links);
+        List<Map<String, Object>> ds = p.getList("meta.data_state");
+        for (String part : List.of("sprints", "components", "adrs", "releases", "people", "agents"))
+            assertTrue(ds.stream().anyMatch(e -> part.equals(e.get("part")) && "ok".equals(e.get("state"))),
+                part + " прочитана и названа в data_state: " + ds);
+
+        JsonPath page = admin().queryParam("project", gp).queryParam("limit", 1).get("/lore/slice/project_sprints")
+            .then().statusCode(200).extract().jsonPath();
+        assertEquals(1, page.getList("rows").size(), "страница из одной строки");
+        assertEquals(2, page.getInt("page.total"), "total — все спринты проекта, а не страница");
+        assertTrue(page.getBoolean("page.has_more"));
+
+        admin().get("/lore/record/project/test/no-such-project").then().statusCode(404);
+    }
+
     /** S4-V2-SECTIONS: паспорта компонента, технологии и фичи (только чтение). */
     @Test
     void componentTechFeaturePassportsAreReadOnly() {
