@@ -36,7 +36,7 @@ import { Delta, NewsPanels, type NewsSection } from './NewsPanels';
 import type { NewsSource } from './source';
 import { newsHrefV2 } from '../newsLinks';
 import {
-  NEWS_AXES, NEWS_FILTER_AXES, type NewsAxis, type NewsEvent, type NewsFilterAxis, type NewsReadMark, type NewsResponse,
+  NEWS_AXES, NEWS_FILTER_AXES, type NewsAxis, type NewsDay, type NewsEvent, type NewsFilterAxis, type NewsReadMark, type NewsResponse,
 } from './types';
 
 export interface NewsFeedProps {
@@ -656,29 +656,30 @@ interface FeedProps {
 /** Критичные цифры дня (набор утвердила владелица 09.11.2026) — цветными чипами. */
 const CRIT_KINDS = ['ready', 'reactivated', 'released'] as const;
 
+/** Свёртка дня из ответа (S7A-09); нет — старый сервер, счёт дня не рисуется. */
+const serverDay = (data: NewsResponse, day: string): NewsDay | undefined => data.days?.find(d => d.day === day);
+/** Итог дня: свёртка дня, у старого сервера — строка матрицы. Оба — поля ответа. */
+const dayTotal = (data: NewsResponse, day: string) =>
+  serverDay(data, day)?.total ?? data.matrix?.rows.find(r => r.day === day)?.total;
+
 /**
  * Цифры дня, вариант C (выбор владелицы 09.11.2026): полоса баланса
  * «закрыто против заведено» + чипы — критичные цветом, информационные серым.
- * Сгорание и итог — поля ответа (tasks.days, matrix.rows); счёты по видам и
- * типам — счёт строк этого дня, то есть подпись того, что нарисовано ниже,
- * а не метрика методики (допущение принято с approve прототипа 09.11).
+ * Все числа — поля ответа: сгорание — tasks.days, итог и счёт по видам и
+ * типам — days[] (S7A-09: сервер считает по всему периоду, клиент не
+ * пересчитывает пришедшие строки — у веба и miniLORE одни числа).
  */
-function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsEvent[]; data: NewsResponse; t: T; lang: KitLang }) {
+function DayFigures({ day, data, t, lang }: { day: string; data: NewsResponse; t: T; lang: KitLang }) {
   // П6 паритета: в разрезе «по типам» типы и так стоят заголовками групп дня —
   // вторая разбивка по типам в заголовке дня была бы повтором.
   const typesShown = data.groups.axis !== 'type';
-  const byKind = new Map<string, number>();
-  const byType = new Map<string, number>();
-  let tasksCreated = 0;
-  for (const e of events) {
-    byKind.set(e.kind, (byKind.get(e.kind) ?? 0) + 1);
-    byType.set(e.type, (byType.get(e.type) ?? 0) + 1);
-    if (e.type === 'task' && e.kind === 'created') tasksCreated++;
-  }
-  const closed = byKind.get('closed') ?? 0;
+  const sd = serverDay(data, day);
+  const kindRows = (k: string) => sd?.by_kind[k]?.rows ?? 0;
+  const tasksCreated = sd?.by_type.task?.by_kind.created?.rows ?? 0;
+  const closed = kindRows('closed');
   const burn = data.metrics.tasks.available ? data.metrics.tasks.days.find(d => d.day_local === day) : undefined;
-  const total = data.matrix?.rows.find(r => r.day === day)?.total;
-  const otherCreated = (byKind.get('created') ?? 0) - tasksCreated;
+  const total = dayTotal(data, day);
+  const otherCreated = kindRows('created') - tasksCreated;
   const showBal = closed + tasksCreated > 0 || (burn && burn.burn !== 0);
   const share = closed + tasksCreated > 0 ? Math.round((closed / (closed + tasksCreated)) * 100) : 0;
   const balText = t('bal', { cl: closed, cr: tasksCreated });
@@ -690,7 +691,7 @@ function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsE
     </span>
   );
   const crit = CRIT_KINDS.flatMap(k => {
-    const n = byKind.get(k);
+    const n = kindRows(k);
     return n ? [chip(`news-cube-kind-${k}`, n, t(`cube.${k}` as NewsKey), NEWS_KIND_META[k].icon, NEWS_KIND_META[k].tone)] : [];
   });
   return (
@@ -726,16 +727,16 @@ function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsE
             <GameIcon slug={NEWS_KIND_META.created.icon} size={11} />{otherCreated}
           </span>
         )}
-        {(byKind.get('changed') ?? 0) > 0 && (
+        {kindRows('changed') > 0 && (
           <span className="sk-news__dchip" title={t('cube.changed')}>
-            <GameIcon slug={NEWS_KIND_META.changed.icon} size={11} />{byKind.get('changed')}
+            <GameIcon slug={NEWS_KIND_META.changed.icon} size={11} />{kindRows('changed')}
           </span>
         )}
         {total && <span className="sk-news__dchip" data-testid="news-cube-delta" title={t('cube.delta')}>{`Δ ${total.elements}`}</span>}
-        {typesShown && (
+        {typesShown && sd && (
           <span className="sk-news__ftypes" data-testid="news-day-types" title={t('day.types')}>
-            {[...byType].map(([k, n]) => (
-              <span key={k} title={typeLabel(k, lang)}><GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={11} />{n}</span>
+            {Object.entries(sd.by_type).map(([k, n]) => (
+              <span key={k} title={typeLabel(k, lang)}><GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={11} />{n.rows}</span>
             ))}
           </span>
         )}
@@ -771,7 +772,7 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: F
     <div className="sk-news__days" data-testid="news-feed-days">
       {days.map(([day, events], i) => {
         const isOpen = open[day] ?? i < 2;
-        const total = data.matrix?.rows.find(r => r.day === day)?.total;
+        const total = dayTotal(data, day);
         return (
           <div key={day} className="sk-news__dayw">
             <section className="sk-news__day" data-testid={`news-day-${day}`} data-day={day}>
@@ -784,11 +785,11 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: F
                   {!isOpen && total && <span className="sk-news__daytotal" title={t('pair')}>{pairText(total)}</span>}
                 </button>
               </h3>
-              {isOpen && <DayFigures day={day} events={events} data={data} t={t} lang={lang} />}
+              {isOpen && <DayFigures day={day} data={data} t={t} lang={lang} />}
               {isOpen && (axis === 'day'
                 ? <CappedRows list={events} fold={dayFold} foldKey={day} lang={lang}
                     render={e => <Row key={e.key} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />} />
-                : <Buckets day={day} events={events} axis={axis} rank={rank} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />)}
+                : <Buckets day={day} events={events} axis={axis} rank={rank} counts={serverDay(data, day)?.groups} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />)}
             </section>
             {showLine && i === lastUnread && (
               <div className="sk-news__readline" role="separator" data-testid="news-read-line"
@@ -808,6 +809,8 @@ interface BucketsProps extends Omit<FeedProps, 'data' | 'query'> {
   events: NewsEvent[];
   axis: NewsAxis;
   rank: Map<string, number>;
+  /** Счёт групп дня с сервера (S7A-09, days[].groups); нет — счёт не рисуется. */
+  counts?: NewsDay['groups'];
 }
 
 /**
@@ -838,7 +841,7 @@ function CappedRows({ list, fold, foldKey, render, lang }: {
   );
 }
 
-function Buckets({ day, events, axis, rank, lang, tz, hrefOf, onOpen }: BucketsProps) {
+function Buckets({ day, events, axis, rank, counts, lang, tz, hrefOf, onOpen }: BucketsProps) {
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const fold = useStepLimits(LIST_BUDGET.perGroup);
   const buckets = new Map<string, NewsEvent[]>();
@@ -854,6 +857,7 @@ function Buckets({ day, events, axis, rank, lang, tz, hrefOf, onOpen }: BucketsP
       {keys.map(k => {
         const isOpen = !closed[k];
         const list = buckets.get(k)!;
+        const n = counts?.find(g => g.key === k)?.rows;
         return (
           <div key={k} className="sk-news__bucket" data-testid={`news-bucket-${k}`}>
             <h4 className="sk-news__bh">
@@ -861,7 +865,7 @@ function Buckets({ day, events, axis, rank, lang, tz, hrefOf, onOpen }: BucketsP
                 onClick={() => setClosed({ ...closed, [k]: isOpen })}>
                 <span className="sk-news__chev" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
                 <span>{newsGroupLabel(axis, k, lang)}</span>
-                <span className="sk-news__bn">{list.length}</span>
+                {n != null && <span className="sk-news__bn">{n}</span>}
               </button>
             </h4>
             {isOpen && (
