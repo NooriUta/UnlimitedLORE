@@ -25,6 +25,10 @@ export interface RefFieldDef {
   options?: string[];
   /** не показывать сразу, только по «ещё поля» */
   more?: boolean;
+  /** значение по умолчанию (родитель из контекста, «я» в исполнителе) — приложение знает, kit нет */
+  value?: string;
+  /** кнопка «Себя» рядом с полем ставит это значение (владелица: «исполнителя выбирает или кнопка себя») */
+  self?: string;
 }
 
 export type RefCreateSpec = { fields: RefFieldDef[] } | { denied: string };
@@ -115,7 +119,13 @@ function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, 
   const [type, setType] = useState(trigger.type ?? Object.keys(typeLabels)[0] ?? '');
   const spec = createSpec(type);
   const fields = 'fields' in spec ? spec.fields : [];
-  const [values, setValues] = useState<Record<string, string>>(() => (fields[0] && trigger.query ? { [fields[0].key]: trigger.query } : {}));
+  const initial = (fs: RefFieldDef[], query: string) => {
+    const v: Record<string, string> = {};
+    for (const x of fs) if (x.value) v[x.key] = x.value;
+    if (fs[0] && query) v[fs[0].key] = query;
+    return v;
+  };
+  const [values, setValues] = useState<Record<string, string>>(() => initial(fields, trigger.query));
   const [more, setMore] = useState(false);
   const [tried, setTried] = useState(false);
   const [warned, setWarned] = useState(false);
@@ -124,7 +134,10 @@ function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, 
 
   const typePick = !trigger.type && (
     <label className="sk-ref__fld">{t('kit.ref.type')}
-      <select value={type} onChange={e => { setType(e.target.value); setValues({}); setTried(false); setWarned(false); }}>
+      <select value={type} onChange={e => {
+        const next = createSpec(e.target.value);
+        setType(e.target.value); setValues(initial('fields' in next ? next.fields : [], '')); setTried(false); setWarned(false);
+      }}>
         {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
       </select>
     </label>
@@ -166,6 +179,11 @@ function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, 
                 <option value="">—</option>
                 {f.options.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
+            ) : f.self !== undefined ? (
+              <span className="sk-ref__self">
+                <input value={values[f.key] ?? ''} onChange={e => set(e.target.value)} />
+                <button type="button" className="sk-ref__btn" onClick={() => set(f.self!)}>{t('kit.ref.self')}</button>
+              </span>
             ) : (
               <input value={values[f.key] ?? ''} onChange={e => set(e.target.value)} />
             )}

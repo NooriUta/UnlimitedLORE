@@ -1062,5 +1062,6 @@
   "kit.record.graph.viewObsidian": "Обсидиан",
   "kit.record.graph.viewObsidianHint": "физика в фоне, WebGL — для больших графов",
   "kit.steps.held": "Шаг «{title}» из ссылки пока закрыт — открыт этот: {reason}",
-  "kit.graph.peekClose": "Закрыть карточку"
+  "kit.graph.peekClose": "Закрыть карточку",
+  "kit.ref.self": "Себя"
 }
