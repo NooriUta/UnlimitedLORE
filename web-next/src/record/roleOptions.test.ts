@@ -50,6 +50,10 @@ describe('разбор options из схемы сервера', () => {
     expect(optionsSpecOf(SPEC)).toEqual(SPEC);
     expect(optionsSpecOf({ ...SPEC, group: undefined })).toEqual({ slice: 'task_identities', param: 'id', value: 'code', label: 'title' });
   });
+  // Трек спринта (сервер, 11.11): срез без параметров — param не обязателен.
+  it('без param — срез без параметров', () => {
+    expect(optionsSpecOf({ slice: 'track_options', value: 'code', label: 'title' })).toEqual({ slice: 'track_options', value: 'code', label: 'title' });
+  });
   it('неполная или чужая — нет вариантов из среза (а не догадка)', () => {
     expect(optionsSpecOf({ slice: 'task_identities' })).toBeNull();
     expect(optionsSpecOf(null)).toBeNull();
