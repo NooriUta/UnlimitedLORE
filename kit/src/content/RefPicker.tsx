@@ -10,20 +10,12 @@
 //     отправки; 'warn' — предупреждение, второй щелчок создаёт (D-2026-LORE-RECORD-FIELD-REQUIRED).
 // Честные состояния различаются словами: не нашлось ≠ не загрузилось ≠ нет прав ≠ тип не знаем.
 // Предметных имён kit не знает (K-14): типы, подписи, поля, поиск и создание — от приложения.
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { Popover } from '../shell/Popover';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 import type { RefTrigger } from './refTrigger';
-
-export interface RefItem { id: string; type: string; title: string }
-
-export type RefSearch =
-  /** запрос ещё не набран — не спрашивали (это не «не нашлось») */
-  | { state: 'idle' }
-  | { state: 'loading' }
-  | { state: 'ok'; items: RefItem[] }
-  | { state: 'error'; reason: string };
+import { RefSearchList, type RefItem, type RefSearch, type RefSearchListHandle } from './RefSearchList';
 
 export interface RefFieldDef {
   key: string;
@@ -71,21 +63,16 @@ export const RefPicker = forwardRef<RefPickerHandle, RefPickerProps>(function Re
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [card, setCard] = useState<'old' | 'new'>('old');
-  const [index, setIndex] = useState(0);
-  const items = search.state === 'ok' ? search.items : [];
-  const at = Math.min(index, Math.max(items.length - 1, 0));
-  const listUsable = card === 'old' && !trigger.unknownType && search.state === 'ok' && items.length > 0;
+  const list = useRef<RefSearchListHandle>(null);
 
   useImperativeHandle(ref, () => ({
     handleKey(key) {
       if (key === 'Escape') { onClose(); return true; }
-      if (!listUsable) return false;
-      if (key === 'ArrowDown') { setIndex((at + 1) % items.length); return true; }
-      if (key === 'ArrowUp') { setIndex((at - 1 + items.length) % items.length); return true; }
-      if (key === 'Enter' || key === 'Tab') { onPick(items[at]); return true; }
-      return false;
+      // Список — общий RefSearchList; в карточке «Новый» и при «тип не знаем» его нет.
+      if (card !== 'old' || trigger.unknownType || !list.current) return false;
+      return list.current.handleKey(key);
     },
-  }), [at, items, listUsable, onClose, onPick]);
+  }), [card, onClose, trigger.unknownType]);
 
   const known = Object.values(typeLabels).join(', ');
   const scope = trigger.type ? (typeLabels[trigger.type] ?? trigger.type) : t('kit.ref.all');
@@ -105,32 +92,9 @@ export const RefPicker = forwardRef<RefPickerHandle, RefPickerProps>(function Re
       {card === 'old' ? (
         trigger.unknownType ? (
           <p className="sk-ref__state sk-ref__state--err">{t('kit.ref.unknownType', { word: trigger.unknownType, known })}</p>
-        ) : search.state === 'idle' ? (
-          <p className="sk-ref__state">{t('kit.ref.idle')}</p>
-        ) : search.state === 'loading' ? (
-          <p className="sk-ref__state">{t('kit.ref.loading')}</p>
-        ) : search.state === 'error' ? (
-          <p className="sk-ref__state sk-ref__state--err">
-            {t('kit.ref.error', { reason: search.reason })}{' '}
-            {onRetry && <button type="button" className="sk-ref__btn" onClick={onRetry}>{t('kit.ref.retry')}</button>}
-          </p>
-        ) : items.length === 0 ? (
-          <p className="sk-ref__state">
-            {t('kit.ref.notFound', { q: trigger.query })}{' '}
-            {createSpec && <button type="button" className="sk-ref__btn" onClick={() => setCard('new')}>{t('kit.ref.toNew')}</button>}
-          </p>
         ) : (
-          <ul className="sk-ref__list">
-            {items.map((it, i) => (
-              <li key={`${it.type}:${it.id}`}>
-                <button type="button" className={`sk-ref__item${i === at ? ' is-on' : ''}`} onMouseDown={e => e.preventDefault()} onClick={() => onPick(it)}>
-                  <span className="sk-ref__ty">{typeLabels[it.type] ?? it.type}</span>
-                  <span className="sk-ref__id">{it.id}</span>
-                  <span className="sk-ref__title">{it.title}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <RefSearchList ref={list} search={search} query={trigger.query} typeLabels={typeLabels} onPick={onPick} onRetry={onRetry}
+            onCreateNew={createSpec ? () => setCard('new') : undefined} />
         )
       ) : (
         createSpec && <NewCard trigger={trigger} typeLabels={typeLabels} createSpec={createSpec} onCreate={onCreate} onPick={onPick} onCancel={() => setCard('old')} t={t} />

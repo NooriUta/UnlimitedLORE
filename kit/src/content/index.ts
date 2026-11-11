@@ -19,3 +19,5 @@ export * from './markdownBare';
 export * from './refTrigger';
 // MD-WINDOW · мини-окно ссылки: две карточки, честные состояния, обязательные поля.
 export * from './RefPicker';
+// Общий список выбора записи: окно ссылки и ref-редактор поля (S4-FIELD-EDITORS).
+export * from './RefSearchList';

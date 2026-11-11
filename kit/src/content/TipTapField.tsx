@@ -28,7 +28,8 @@ import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject }
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
 import { detectRefTrigger, type RefTrigger } from './refTrigger';
-import { RefPicker, type RefItem, type RefPickerHandle, type RefPickerProps, type RefSearch } from './RefPicker';
+import { RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicker';
+import type { RefItem, RefSearch } from './RefSearchList';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 
