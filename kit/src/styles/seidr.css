@@ -4390,6 +4390,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-gx-panel__swatches { display: flex; gap: 2px; }
 .sk-gx-swatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--bd); border-radius: 999px; background: var(--gx-c, var(--t3)); cursor: pointer; }
 .sk-gx-swatch[aria-checked="true"] { outline: 2px solid var(--t1); outline-offset: 1px; }
+.sk-gx-panel__radios { display: flex; gap: 12px; padding: 2px 0; }
 .sk-gx-panel__reset { align-self: flex-start; margin-top: 6px; }
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-gx--panel .sk-gx__body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(360px, 1fr); }

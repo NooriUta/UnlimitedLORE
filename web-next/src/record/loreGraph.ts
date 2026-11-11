@@ -15,14 +15,22 @@ export interface LoreGraphMeta {
   mode?: string; depth?: number; complete: boolean; truncated: boolean; capped_at?: number | null; hidden_by_scope?: number;
   dangling?: { id: string; rel: string; dir: string; reason: string; count: number }[];
   frontier_edges?: string;
+  /** Типы связей окрестности со счётом — без учёта фильтра rels (сервер с feat/graph-depth4). */
+  rels_available?: { rel: string; count: number }[];
+  /** Сколько узлов на каждом шаге от записи (без самой записи). */
+  by_depth?: Record<string, number>;
+  /** Эхо фильтра rels; потолок узлов; окрестность для rels_available обрезана потолком. */
+  rels?: string[] | null; limit?: number; rels_available_truncated?: boolean;
 }
 export interface LoreGraphBody { nodes: LoreGraphNode[]; edges: LoreGraphEdge[]; meta: LoreGraphMeta }
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
-export async function fetchLoreGraph(q: { type: string; id: string; depth: number; structural?: boolean }, fetchFn: FetchFn = loreFetch): Promise<LoreGraphBody> {
+export async function fetchLoreGraph(q: { type: string; id: string; depth: number; structural?: boolean; rels?: string[] }, fetchFn: FetchFn = loreFetch): Promise<LoreGraphBody> {
   const p = new URLSearchParams({ type: q.type, id: q.id, depth: String(q.depth) });
   if (q.structural) p.set('structural', 'true');
+  // Владелица 11.11: «показать связи определённого типа» — обход идёт строго по выбранным типам.
+  if (q.rels?.length) p.set('rels', q.rels.join(','));
   const res = await fetchFn(`/lore/graph?${p.toString()}`, { headers: { Accept: 'application/json' } });
   if (!res.ok) {
     let code = '';
@@ -50,8 +58,21 @@ export function mergeGraph(data: KitData, g: LoreGraphBody): KitData {
     seen.add(k);
     edges.push({ from: e.from, to: e.to, type: e.rel });
   }
-  const meta: KitMeta = { ...data.meta, truncated: !!data.meta.truncated || !g.meta.complete || g.meta.truncated };
+  const meta: KitMeta = { ...data.meta, truncated: !!data.meta.truncated || !g.meta.complete || g.meta.truncated, graphRels: relsOf(g), graphDepth: depthsOf(g) };
   return { ...data, records: [...records.values()], edges, meta };
+}
+
+/** Типы связей окрестности: rels_available сервера; старый сервер — счёт по рёбрам ответа. */
+export function relsOf(g: LoreGraphBody): { rel: string; count: number }[] {
+  if (g.meta.rels_available?.length) return g.meta.rels_available;
+  const m = new Map<string, number>();
+  for (const e of g.edges) m.set(e.rel, (m.get(e.rel) ?? 0) + 1);
+  return [...m].map(([rel, count]) => ({ rel, count })).sort((a, b) => b.count - a.count || a.rel.localeCompare(b.rel));
+}
+
+/** Шаг каждого узла от записи — для подсветки уровней. */
+export function depthsOf(g: LoreGraphBody): Record<string, number> {
+  return Object.fromEntries(g.nodes.map(n => [n.id, n.depth]));
 }
 
 const NOTES = {
@@ -60,12 +81,18 @@ const NOTES = {
     hidden: (n: number) => `Скрыто правами: ${n}`,
     dangling: (n: number) => `Связи вне выдачи: ${n}`,
     capped: (n: number) => `Граф обрезан: показано не больше ${n} узлов`,
+    levels: 'Уровни',
+    pickRels: 'На глубине 4 граф упирается в потолок — снимите лишние типы связей в легенде',
+    relsCut: 'Счёт типов связей — по обрезанной окрестности',
   },
   en: {
     frontier: (d: number) => `Links between edge nodes (depth ${d}) are not shown — this keeps the query cheap`,
     hidden: (n: number) => `Hidden by access: ${n}`,
     dangling: (n: number) => `Links outside the result: ${n}`,
     capped: (n: number) => `Graph cut: at most ${n} nodes shown`,
+    levels: 'Levels',
+    pickRels: 'At depth 4 the graph hits the cap — turn off extra link types in the legend',
+    relsCut: 'Link type counts are from a cut neighbourhood',
   },
 } as const;
 
@@ -78,6 +105,12 @@ export function graphNotes(m: LoreGraphMeta, lang: KitLang): string[] {
   const dangling = (m.dangling ?? []).reduce((n, d) => n + (d.count || 0), 0);
   if (dangling > 0) out.push(t.dangling(dangling));
   if (m.truncated && m.capped_at) out.push(t.capped(m.capped_at));
+  // Сервер (feat/graph-depth4): на 4 без фильтра ответ почти всегда упирается в потолок —
+  // подсказка выбрать типы, а не молча обрезанный граф.
+  if (m.truncated && (m.depth ?? 1) >= 4 && !m.rels?.length) out.push(t.pickRels);
+  if (m.rels_available_truncated) out.push(t.relsCut);
+  const levels = Object.entries(m.by_depth ?? {}).sort(([a], [b]) => Number(a) - Number(b));
+  if (levels.length) out.push(`${t.levels}: ${levels.map(([d, n]) => `${d} — ${n}`).join(' · ')}`);
   return out;
 }
 
