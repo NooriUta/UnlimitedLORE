@@ -183,6 +183,9 @@ export function taskListRecord(row: Row): KitRecord {
       code: str(row.task_id),
       sprint: str(row.sprint_id),
       components: list(row.component_ids),
+      // S9-02: релизы спринта задачи (PART_OF → IMPLEMENTED_IN_RELEASE) —
+      // то же имя поля, что у спринта, иначе фасеты разошлись бы.
+      release: list(row.release_ids),
       effort: num(row.effort_days),
       work_class: str(row.work_class),
     },

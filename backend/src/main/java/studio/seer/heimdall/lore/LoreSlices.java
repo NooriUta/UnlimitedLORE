@@ -212,6 +212,10 @@ public final class LoreSlices {
     private static final String OPEN_TASK_STATUS_EXPR =
         "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
 
+    /** S9-02: релизы спринта задачи — одна проекция у open_tasks и closed_tasks. */
+    private static final String TASK_RELEASES_SQL =
+        "out('PART_OF').out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids";
+
     /**
      * RM-P17: как зовётся родитель строки истории — одна пара на цепочку SCD2.
      *
@@ -2313,6 +2317,10 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
+            // S9-02: релиз задачи — релиз её спринта (как у tasks_of_sprint); спринт
+            // бывает в нескольких релизах — поле многозначное. Без него у раздела
+            // «Задачи» не было оси «Релиз» вовсе.
+            TASK_RELEASES_SQL + ", " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
             // «Открытая» = не закрытая и не отменённая. Оба словаря берутся из
@@ -2340,6 +2348,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
+            TASK_RELEASES_SQL + ", " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
             "WHERE (" + LoreStatusVocabulary.anySql(OPEN_TASK_STATUS_EXPR, "done", "cancelled") + ")",
@@ -3026,7 +3035,10 @@ public final class LoreSlices {
     static final Map<String, List<String>> BODY_SCOPED = Map.of(
         "doc_by_id",     List.of("content_html", "content_md_en", "content_md_ru"),
         "spec_by_id",    List.of("content_md", "summary"),
-        "runbook_by_id", List.of("content_md")
+        "runbook_by_id", List.of("content_md"),
+        // K2-FEED-BODY-MORE: голова тела спеки в строке списка — то же тело, что
+        // content_md паспорта; обнуляется до свёртки, и головы у записи нет вовсе.
+        "specs",         List.of(LoreBodyHead.SRC + "1")
     );
 
     /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */

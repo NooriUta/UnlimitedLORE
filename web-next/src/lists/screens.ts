@@ -143,20 +143,21 @@ export const FEEDS = {
       },
     },
   },
-  adrs: { lead: ['context_md', 'decision_md'], because: ['DEPENDS_ON', 'SUPERSEDES'] },
-  tasks: { lead: ['note_md'], because: ['JUSTIFIED_BY', 'GATES'] },
+  // Голова тела — с сервера (body_head, K2-FEED-BODY-MORE), остаток — паспортом.
+  adrs: { lead: ['context_md', 'decision_md'], headInRow: true, because: ['DEPENDS_ON', 'SUPERSEDES'] },
+  tasks: { lead: ['note_md'], headInRow: true, because: ['JUSTIFIED_BY', 'GATES'] },
   decisions: {
-    lead: ['body_md', 'rationale_md'], because: ['DECIDED_IN', 'ANSWERS'],
+    lead: ['body_md', 'rationale_md'], headInRow: true, because: ['DECIDED_IN', 'ANSWERS'],
     becauseFields: { DECIDED_IN: 'adr' },
   },
-  specs: { lead: ['content_md'] },
+  specs: { lead: ['content_md'], headInRow: true },
   questions: {
     lead: ['body_md'], inRow: true, because: ['RAISED_IN', 'GATES'],
     becauseFields: { GATES: 'gates', RAISED_IN: 'adr' },
   },
   releases: { lead: ['description_md'], inRow: true },
   tech: { lead: ['content_md'], inRow: true },
-  features: { lead: ['body_md', 'context_md'] },
+  features: { lead: ['body_md', 'context_md'], headInRow: true },
 } as const satisfies Partial<Record<string, FeedSpec>>;
 
 /** Конфиг раздела + лента: вид `feed`, `list.feed` и подписи рёбер-поводов. */
@@ -256,7 +257,7 @@ function adrsConfig(lang: KitLang): KitConfig {
         { id: 'accepted', title: appT(lang, 'lists.status.accepted'), filter: { status: 'accepted' } },
         { id: 'no-decisions', title: appT(lang, 'lists.quick.noDecisions'), filter: { decisions: '0' } },
       ],
-      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.tags],
       groupings: ['status', 'component', 'project'],
       columns: ['id', 'title', 'status', 'component', 'decisions', 'updated_at'],
     },
@@ -282,6 +283,7 @@ function tasksConfig(lang: KitLang): KitConfig {
         fields: [
           { key: 'sprint', title: f(lang, 'sprint'), type: 'ref' },
           { key: 'components', title: f(lang, 'components'), type: 'ref' },
+          { key: 'release', title: f(lang, 'release'), type: 'ref' },
           { key: 'effort', title: f(lang, 'effort'), type: 'number' },
         ],
       },
@@ -302,11 +304,11 @@ function tasksConfig(lang: KitLang): KitConfig {
         { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
         { id: 'no-sprint', title: appT(lang, 'lists.quick.noSprint'), filter: { sprint: '' } },
       ],
-      filters: [STATUS_FACET, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
-      groupings: ['status', LORE_FILTER_FIELDS.sprint],
-      // Спринтов много — разрез по спринту свёрнут с первого показа (S9-02).
-      collapsedGroupings: [LORE_FILTER_FIELDS.sprint],
-      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort', 'updated_at'],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
+      groupings: ['status', LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
+      // Спринтов и релизов много — эти разрезы свёрнуты с первого показа (S9-02).
+      collapsedGroupings: [LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
+      columns: ['id', 'title', 'status', 'release', 'sprint', 'components', 'effort', 'updated_at'],
     },
   };
 }
@@ -374,7 +376,7 @@ const decisionsSpec: SectionSpec = {
   views: ['list', 'cards', 'board', 'feed'],
   showClosed: 'below',
   quick: [['proposed', 'lists.status.proposed', { status: 'proposed' }], ['no-adr', 'lists.quick.noAdr', { adr: '' }]],
-  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.tags],
   groupings: ['status', LORE_FILTER_FIELDS.component, 'fields.adr'],
   columns: ['id', 'title', 'status', 'component', 'adr', 'updated_at'],
 };

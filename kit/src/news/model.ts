@@ -186,6 +186,9 @@ export const NEWS_TYPE_META: Record<string, { icon: string }> = {
   decision: { icon: 'gavel' },
   spec: { icon: 'spell-book' },
   question: { icon: 'help' },
+  // S7A-01: новые типы ленты — иконки разделов v2 (вехи, компоненты).
+  milestone: { icon: 'crossed-axes' },
+  component: { icon: 'cog' },
 };
 
 /** Иконка и тон события (паритет 1). «Готово к выкатке» — жёлтым. */

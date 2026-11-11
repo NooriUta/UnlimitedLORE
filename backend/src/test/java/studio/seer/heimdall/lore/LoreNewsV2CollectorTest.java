@@ -126,6 +126,74 @@ class LoreNewsV2CollectorTest {
         assertFalse(LoreNewsV2Collector.SQL_QUESTIONS.contains("body_md"), "тела вопросов ленте не нужны");
     }
 
+    /**
+     * S7A-01, новые типы §1: вехи и компоненты в ленте. Источник времени появился —
+     * у вехи история цели KnowMilestoneHist (первая версия = заведение, следующие =
+     * правка) и updated_at вершины (#1146), у компонента — только updated_at (#1153).
+     * Без источника времени события нет: ни даты, ни истории — веха и компонент
+     * в ленте не появляются, время не выдумывается.
+     */
+    @Test
+    void milestonesAndComponentsBecomeEventsOnlyFromRealTimeSources() {
+        List<String> seen = new ArrayList<>();
+        LoreNewsV2Collector c = new LoreNewsV2Collector((sql, p) -> {
+            seen.add(sql);
+            if (sql.equals(LoreNewsV2Collector.SQL_MILESTONES)) return List.of(
+                // заведена в окне (первая версия), цель сменена позже — правка
+                row("milestone_id", "M-NEW", "label", "Новая веха",
+                    "hist_from", List.of("2026-11-02T10:00:00.000Z", "2026-11-04T12:00:00.000Z")),
+                // заведена до окна, правка полей вершины в окне — updated_at
+                row("milestone_id", "M-OLD", "label", "Старая веха",
+                    "hist_from", List.of("2026-09-01T10:00:00.000Z"), "updated_at", "2026-11-05T08:00:00.000Z"),
+                // ни истории, ни отметки правки — события нет
+                row("milestone_id", "M-NONE", "label", "Без времени"));
+            if (sql.equals(LoreNewsV2Collector.SQL_COMPONENTS)) return List.of(
+                row("component_id", "FORSETI", "full_name", "Forseti", "updated_at", "2026-11-03T09:00:00.000Z",
+                    "git_projects", List.of("P1")),
+                row("component_id", "OLD", "full_name", "Вне окна", "updated_at", "2026-09-03T09:00:00.000Z"),
+                row("component_id", "NONE", "full_name", "Без отметки"));
+            return List.of();
+        });
+        NewsV2.Input in = c.collect(T0, T1, T1, ZoneId.of("Europe/Moscow"), null);
+        assertEquals(List.of(), in.errors());
+        List<NewsV2.Event> m = in.otherEvents().stream().filter(e -> e.type().equals("milestone")).toList();
+        assertTrue(m.stream().anyMatch(e -> e.el().equals("M-NEW") && e.kind().equals("created")
+            && e.at().equals(Instant.parse("2026-11-02T10:00:00Z"))), "заведение — первая версия истории: " + m);
+        assertTrue(m.stream().anyMatch(e -> e.el().equals("M-NEW") && e.kind().equals("changed")
+            && e.at().equals(Instant.parse("2026-11-04T12:00:00Z"))), "следующая версия — правка: " + m);
+        assertTrue(m.stream().anyMatch(e -> e.el().equals("M-OLD") && e.kind().equals("changed")
+            && e.at().equals(Instant.parse("2026-11-05T08:00:00Z"))), "правка полей — updated_at: " + m);
+        assertFalse(m.stream().anyMatch(e -> e.el().equals("M-OLD") && e.kind().equals("created")), "заведена до окна");
+        assertFalse(m.stream().anyMatch(e -> e.el().equals("M-NONE")), "без источника времени события нет");
+        assertTrue(m.stream().allMatch(e -> e.milestones().contains(e.el())), "веха — в своей оси «веха»");
+
+        List<NewsV2.Event> comp = in.otherEvents().stream().filter(e -> e.type().equals("component")).toList();
+        assertEquals(1, comp.size(), String.valueOf(comp));
+        NewsV2.Event f = comp.get(0);
+        assertEquals("FORSETI", f.el());
+        assertEquals("changed", f.kind(), "у компонента только отметка правки — «изменено», не «появилось»");
+        assertEquals(List.of("FORSETI"), f.components());
+        assertEquals(List.of("P1"), f.projects());
+        assertEquals("Forseti", f.title());
+
+        for (String sql : List.of(LoreNewsV2Collector.SQL_MILESTONES, LoreNewsV2Collector.SQL_COMPONENTS)) {
+            assertFalse(sql.contains("goal_md") || sql.contains("decisions_md"), "тела вех ленте не нужны: " + sql);
+            assertTrue(seen.contains(sql), "источник прочитан: " + sql);
+        }
+    }
+
+    @Test
+    void milestoneAndComponentSourceFailuresAreReportedNotSilent() {
+        LoreNewsV2Collector c = new LoreNewsV2Collector((sql, p) -> {
+            if (sql.equals(LoreNewsV2Collector.SQL_MILESTONES) || sql.equals(LoreNewsV2Collector.SQL_COMPONENTS))
+                throw new IllegalStateException("upstream 502");
+            return List.of();
+        });
+        NewsV2.Input in = c.collect(T0, T1, T1, ZoneId.of("Europe/Moscow"), null);
+        assertTrue(in.errors().stream().anyMatch(e -> e.source().equals("milestones") && !e.critical()), String.valueOf(in.errors()));
+        assertTrue(in.errors().stream().anyMatch(e -> e.source().equals("components") && !e.critical()), String.valueOf(in.errors()));
+    }
+
     @Test
     void instantParsesIsoZAndRenderedFormButNotDateOnly() {
         assertEquals(Instant.parse("2026-11-03T10:00:00Z"), LoreNewsV2Collector.instant("2026-11-03T10:00:00.000Z"));

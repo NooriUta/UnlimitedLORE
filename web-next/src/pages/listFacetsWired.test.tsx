@@ -14,8 +14,8 @@
 // Честность состояний проверяется здесь же: пока счёт не пришёл, список НЕ
 // должен выдавать чужие числа за серверные, а отказ («не посчитали», «нет
 // прав», «для раздела не бывает») обязан быть сказан словами.
-import { beforeAll, describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons, type UrlWindow } from '@seidr/kit';
 import { ListScreen } from './ListScreen';
@@ -124,5 +124,66 @@ describe('S9-01 · счётчики фасетов доходят до экра�
     await waitFor(() => {
       expect(screen.getByText('Спринт Б')).toBeTruthy();
     }, { timeout: 8000 });
+  });
+});
+
+// SPRINT_UXR_S9_SCALE_OPT/S9-03 — закреплённые значения фасета (текущие релизы)
+// приходят с сервера в том же ответе /facets и доходят до панели фасета.
+// Блоки фасета появляются только когда значений больше порога (FACET_SCALE.
+// findFrom = 10), поэтому релизов здесь двенадцать.
+describe('S9-03 · текущий релиз закреплён в фасете «Релиз»', () => {
+  beforeEach(() => { window.history.replaceState({}, '', '/'); });
+
+  const releases = Array.from({ length: 12 }, (_, i) => `v1.0.${i}`);
+  const rows = {
+    rows: releases.map((r, i) => ({
+      sprint_id: `SPRINT_${i}`, name: `Спринт ${i}`, status_raw: '📋 PLANNED', git_projects: ['lore'], release_ids: [r],
+    })),
+    truncated: false,
+  };
+  const relAxis = { values: releases.map(value => ({ value, count: 1 })), empty: 0, nonempty: 12, total: 12 };
+
+  function standPinned(pinned: unknown) {
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/facets')) {
+        return json({
+          section: 'sprints', axes: ['release_ids'], facets: { release_ids: relAxis },
+          totals: { all: 12 }, completeness: 'complete', cap: null, ...(pinned ? { pinned } : {}),
+        });
+      }
+      return json(rows);
+    }) as unknown as typeof fetch;
+    return fetchImpl;
+  }
+
+  const openRelease = (c: HTMLElement) => {
+    const btn = [...c.querySelectorAll<HTMLButtonElement>('.sk-facet__btn')]
+      .find(b => b.querySelector('.sk-list__label')?.textContent === 'Релиз');
+    expect(btn, 'кнопки фасета «Релиз» нет').toBeTruthy();
+    fireEvent.click(btn!);
+  };
+
+  it('сервер назвал текущий релиз — он встаёт блоком «Закреплённые»', async () => {
+    const { container } = render(
+      <ListScreen screen="sprints" fetchImpl={standPinned({ release_ids: ['v1.0.11'] })} urlState={fakeWin()} />,
+    );
+    await screen.findByText('Спринт 0', {}, { timeout: 8000 });
+    openRelease(container);
+    // Счётчики (и с ними закреплённые) приходят вторым запросом — панель
+    // открыта и перерисовывается, когда они пришли.
+    await waitFor(() => {
+      const sec = container.querySelector('.sk-facet__sec[data-sec="pinned"]');
+      expect(sec, 'блока закреплённых нет').toBeTruthy();
+      expect([...sec!.querySelectorAll('.sk-facet__vt')].map(e => e.textContent)).toEqual(['v1.0.11']);
+    }, { timeout: 8000 });
+  });
+
+  it('положительный контроль: сервер ничего не закрепил — блока нет', async () => {
+    const { container } = render(<ListScreen screen="sprints" fetchImpl={standPinned(null)} urlState={fakeWin()} />);
+    await screen.findByText('Спринт 0', {}, { timeout: 8000 });
+    openRelease(container);
+    expect(container.querySelector('.sk-facet__sec[data-sec="pinned"]')).toBeNull();
+    expect(container.querySelector('.sk-facet__sec')).toBeTruthy();
   });
 });

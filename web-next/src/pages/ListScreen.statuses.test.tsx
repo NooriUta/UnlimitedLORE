@@ -106,3 +106,18 @@ describe('K-14 п. 4 · статусы списка из модели', () => {
     expect(urls.some(u => u.includes('/lore/model')), 'у вех нет статусной оси в модели — спрашивать нечего').toBe(false);
   });
 });
+
+// S4-35 / ADR-LORE-049: показ колонок из той же модели доходит до таблицы
+// списка — приоритет колонки, шаг ширины. Иначе на 1100 px колонки по-прежнему
+// рубит браузер, а не правило «первой уходит наименее важная».
+describe('S4-35 · показ колонок списка из модели', () => {
+  it('приоритет и ширина поля из модели — у колонки списка', async () => {
+    const withTypes = { ...MODEL, types: { sprint: { label: 'Спринт', fields: [
+      { key: 'priority', label: 'Приоритет', kind: 'number', visibility: 'visible', display: { priority: 4, width: 'xs', overflow: 'none' } },
+    ] } } };
+    const { impl } = net(withTypes);
+    const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
+    await waitFor(() => expect(container.querySelector('th.sk-list__c-priority')?.classList.contains('sk-list__p4')).toBe(true));
+    expect(container.querySelector('th.sk-list__c-priority')?.getAttribute('data-w')).toBe('xs');
+  });
+});

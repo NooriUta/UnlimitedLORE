@@ -83,3 +83,34 @@ describe('S4-V2-SECTIONS · раздел «Задачи»', () => {
     expect(OPEN_ONLY_NOTE).toMatch(/закрыт/i);
   });
 });
+
+// SPRINT_UXR_S9_SCALE_OPT/S9-02 — ось «Релиз» в сквозном списке задач.
+//
+// Правило «по релизу/спринту — свёрнуто» было сделано в kit и включено у
+// спринтов, а в разделе «Задачи» оси релиза не было вовсе: срез `open_tasks`
+// не отдавал релиз, и группировать задачи по релизу было нечем. Релиз задачи —
+// релиз её спринта (ребро PART_OF → IMPLEMENTED_IN_RELEASE); спринт может
+// войти в несколько релизов — поле многозначное.
+describe('S9-02 · ось «Релиз» в разделе «Задачи»', () => {
+  it('релизы спринта задачи — поле записи, списком', () => {
+    const r = taskListRecord({ ...row, release_ids: ['v1.17.12', 'v1.18.0'] });
+    expect(valuesOf(r, 'fields.release')).toEqual(['v1.17.12', 'v1.18.0']);
+  });
+
+  it('релиза нет — пусто, а не выдуманное значение', () => {
+    expect(valuesOf(taskListRecord(row), 'fields.release')).toEqual([]);
+  });
+
+  it('релиз — фасет, ось группировки и колонка; поле объявлено типом', () => {
+    const cfg = LIST_SCREENS.tasks.config('ru');
+    expect(cfg.list?.filters).toContain('fields.release');
+    expect(cfg.list?.groupings).toContain('fields.release');
+    expect(cfg.list?.columns).toContain('release');
+    expect(cfg.kinds.task.fields?.some(f => f.key === 'release')).toBe(true);
+  });
+
+  it('разрезы по релизу и по спринту свёрнуты с первого показа', () => {
+    const cfg = LIST_SCREENS.tasks.config('ru');
+    expect(cfg.list?.collapsedGroupings).toEqual(expect.arrayContaining(['fields.sprint', 'fields.release']));
+  });
+});
