@@ -1,0 +1,2935 @@
+{
+  "events" : [ {
+    "key" : "spec:SPEC-1|version|2026-11-06",
+    "type" : "spec",
+    "el" : "SPEC-1",
+    "el_key" : "spec:SPEC-1",
+    "kind" : "version",
+    "title" : "SPEC-1",
+    "day_local" : "2026-11-06",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-06T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P2" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s15",
+    "future" : false
+  }, {
+    "key" : "task:S3/E|ready|2026-11-06",
+    "type" : "task",
+    "el" : "S3/E",
+    "el_key" : "task:S3/E",
+    "kind" : "ready",
+    "title" : "E",
+    "day_local" : "2026-11-06",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-06T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P2" ],
+    "components" : [ "C3" ],
+    "sprint" : "S3",
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "📋 PLANNED",
+    "to" : "🚀 READY FOR DEPLOY",
+    "parent" : "S3",
+    "series" : "s14",
+    "future" : false
+  }, {
+    "key" : "task:S2/G|closed|2026-11-05",
+    "type" : "task",
+    "el" : "S2/G",
+    "el_key" : "task:S2/G",
+    "kind" : "closed",
+    "title" : "G",
+    "day_local" : "2026-11-05",
+    "time_local" : "15:00",
+    "at_utc" : "2026-11-05T12:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1", "P2" ],
+    "components" : [ "C2" ],
+    "sprint" : "S2",
+    "milestones" : [ "M1" ],
+    "groups_n" : 2,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "📋 PLANNED",
+    "to" : "✅ DONE",
+    "parent" : "S2",
+    "series" : "s13",
+    "future" : false
+  }, {
+    "key" : "adr:ADR-3|changed|2026-11-05",
+    "type" : "adr",
+    "el" : "ADR-3",
+    "el_key" : "adr:ADR-3",
+    "kind" : "changed",
+    "title" : "ADR-3",
+    "day_local" : "2026-11-05",
+    "time_local" : "14:00",
+    "at_utc" : "2026-11-05T11:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P2" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s12",
+    "future" : false
+  }, {
+    "key" : "task:S1/D|ready|2026-11-05",
+    "type" : "task",
+    "el" : "S1/D",
+    "el_key" : "task:S1/D",
+    "kind" : "ready",
+    "title" : "D",
+    "day_local" : "2026-11-05",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-05T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ "C1" ],
+    "sprint" : "S1",
+    "milestones" : [ "M1" ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "📋 PLANNED",
+    "to" : "🚀 READY FOR DEPLOY",
+    "parent" : "S1",
+    "series" : "s11",
+    "future" : false
+  }, {
+    "key" : "release:P1#v2|released|2026-11-04",
+    "type" : "release",
+    "el" : "P1#v2",
+    "el_key" : "release:P1#v2",
+    "kind" : "released",
+    "title" : "P1#v2",
+    "day_local" : "2026-11-04",
+    "time_local" : null,
+    "at_utc" : null,
+    "time_known" : false,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s19",
+    "future" : false
+  }, {
+    "key" : "task:S1/K|reactivated|2026-11-04",
+    "type" : "task",
+    "el" : "S1/K",
+    "el_key" : "task:S1/K",
+    "kind" : "reactivated",
+    "title" : "K",
+    "day_local" : "2026-11-04",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-04T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ "C1" ],
+    "sprint" : "S1",
+    "milestones" : [ "M1" ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "🚀 READY FOR DEPLOY",
+    "to" : "🔄 IN PROGRESS",
+    "parent" : "S1",
+    "series" : "s10",
+    "future" : false
+  }, {
+    "key" : "task:S1/C|changed|2026-11-04",
+    "type" : "task",
+    "el" : "S1/C",
+    "el_key" : "task:S1/C",
+    "kind" : "changed",
+    "title" : "C",
+    "day_local" : "2026-11-04",
+    "time_local" : "12:20",
+    "at_utc" : "2026-11-04T09:20:00Z",
+    "time_known" : true,
+    "mult" : 3,
+    "projects" : [ "P1" ],
+    "components" : [ "C1" ],
+    "sprint" : "S1",
+    "milestones" : [ "M1" ],
+    "groups_n" : 1,
+    "author" : "agent",
+    "who" : "agent:claude",
+    "from" : "📋 PLANNED",
+    "to" : "📋 PLANNED",
+    "parent" : "S1",
+    "series" : "s9",
+    "future" : false
+  }, {
+    "key" : "release:P2#v3|released|2026-11-03",
+    "type" : "release",
+    "el" : "P2#v3",
+    "el_key" : "release:P2#v3",
+    "kind" : "released",
+    "title" : "P2#v3",
+    "day_local" : "2026-11-03",
+    "time_local" : null,
+    "at_utc" : null,
+    "time_known" : false,
+    "mult" : 1,
+    "projects" : [ "P2" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s18",
+    "future" : false
+  }, {
+    "key" : "spec:SPEC-1|created|2026-11-03",
+    "type" : "spec",
+    "el" : "SPEC-1",
+    "el_key" : "spec:SPEC-1",
+    "kind" : "created",
+    "title" : "SPEC-1",
+    "day_local" : "2026-11-03",
+    "time_local" : "15:00",
+    "at_utc" : "2026-11-03T12:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P2" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s8",
+    "future" : false
+  }, {
+    "key" : "adr:ADR-2|changed|2026-11-03",
+    "type" : "adr",
+    "el" : "ADR-2",
+    "el_key" : "adr:ADR-2",
+    "kind" : "changed",
+    "title" : "ADR-2",
+    "day_local" : "2026-11-03",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-03T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1", "P2" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 2,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s5",
+    "future" : false
+  }, {
+    "key" : "task:S1/F|ready|2026-11-03",
+    "type" : "task",
+    "el" : "S1/F",
+    "el_key" : "task:S1/F",
+    "kind" : "ready",
+    "title" : "F",
+    "day_local" : "2026-11-03",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-03T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ "C1" ],
+    "sprint" : "S1",
+    "milestones" : [ "M1" ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "📋 PLANNED",
+    "to" : "🚀 READY FOR DEPLOY",
+    "parent" : "S1",
+    "series" : "s6",
+    "future" : false
+  }, {
+    "key" : "task:S2/A|closed|2026-11-03",
+    "type" : "task",
+    "el" : "S2/A",
+    "el_key" : "task:S2/A",
+    "kind" : "closed",
+    "title" : "A",
+    "day_local" : "2026-11-03",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-03T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1", "P2" ],
+    "components" : [ "C2" ],
+    "sprint" : "S2",
+    "milestones" : [ "M1" ],
+    "groups_n" : 2,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "🔄 IN PROGRESS",
+    "to" : "✅ DONE",
+    "parent" : "S2",
+    "series" : "s7",
+    "future" : false
+  }, {
+    "key" : "adr:ADR-1|created|2026-11-02",
+    "type" : "adr",
+    "el" : "ADR-1",
+    "el_key" : "adr:ADR-1",
+    "kind" : "created",
+    "title" : "ADR-1",
+    "day_local" : "2026-11-02",
+    "time_local" : null,
+    "at_utc" : null,
+    "time_known" : false,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s16",
+    "future" : false
+  }, {
+    "key" : "decision:DEC-1|created|2026-11-02",
+    "type" : "decision",
+    "el" : "DEC-1",
+    "el_key" : "decision:DEC-1",
+    "kind" : "created",
+    "title" : "DEC-1",
+    "day_local" : "2026-11-02",
+    "time_local" : null,
+    "at_utc" : null,
+    "time_known" : false,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ ],
+    "sprint" : null,
+    "milestones" : [ ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : "ADR-1",
+    "series" : "s17",
+    "future" : false
+  }, {
+    "key" : "task:S1/B|closed|2026-11-02",
+    "type" : "task",
+    "el" : "S1/B",
+    "el_key" : "task:S1/B",
+    "kind" : "closed",
+    "title" : "B",
+    "day_local" : "2026-11-02",
+    "time_local" : "15:00",
+    "at_utc" : "2026-11-02T12:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ "C1" ],
+    "sprint" : "S1",
+    "milestones" : [ "M1" ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "📋 PLANNED",
+    "to" : "✅ DONE",
+    "parent" : "S1",
+    "series" : "s4",
+    "future" : false
+  }, {
+    "key" : "task:S2/A|reactivated|2026-11-02",
+    "type" : "task",
+    "el" : "S2/A",
+    "el_key" : "task:S2/A",
+    "kind" : "reactivated",
+    "title" : "A",
+    "day_local" : "2026-11-02",
+    "time_local" : "13:00",
+    "at_utc" : "2026-11-02T10:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1", "P2" ],
+    "components" : [ "C2" ],
+    "sprint" : "S2",
+    "milestones" : [ "M1" ],
+    "groups_n" : 2,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "✅ DONE",
+    "to" : "🔄 IN PROGRESS",
+    "parent" : "S2",
+    "series" : "s3",
+    "future" : false
+  }, {
+    "key" : "task:S1/H|closed|2026-11-02",
+    "type" : "task",
+    "el" : "S1/H",
+    "el_key" : "task:S1/H",
+    "kind" : "closed",
+    "title" : "H",
+    "day_local" : "2026-11-02",
+    "time_local" : "12:00",
+    "at_utc" : "2026-11-02T09:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ "C1" ],
+    "sprint" : "S1",
+    "milestones" : [ "M1" ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : "🚀 READY FOR DEPLOY",
+    "to" : "✅ DONE",
+    "parent" : "S1",
+    "series" : "s2",
+    "future" : false
+  }, {
+    "key" : "task:S1/C|created|2026-11-02",
+    "type" : "task",
+    "el" : "S1/C",
+    "el_key" : "task:S1/C",
+    "kind" : "created",
+    "title" : "C",
+    "day_local" : "2026-11-02",
+    "time_local" : "11:00",
+    "at_utc" : "2026-11-02T08:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1" ],
+    "components" : [ "C1" ],
+    "sprint" : "S1",
+    "milestones" : [ "M1" ],
+    "groups_n" : 1,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : "📋 PLANNED",
+    "parent" : "S1",
+    "series" : "s1",
+    "future" : false
+  }, {
+    "key" : "sprint:S2|created|2026-11-01",
+    "type" : "sprint",
+    "el" : "S2",
+    "el_key" : "sprint:S2",
+    "kind" : "created",
+    "title" : "S2",
+    "day_local" : "2026-11-01",
+    "time_local" : "12:00",
+    "at_utc" : "2026-11-01T09:00:00Z",
+    "time_known" : true,
+    "mult" : 1,
+    "projects" : [ "P1", "P2" ],
+    "components" : [ ],
+    "sprint" : "S2",
+    "milestones" : [ ],
+    "groups_n" : 2,
+    "author" : "unknown",
+    "who" : null,
+    "from" : null,
+    "to" : null,
+    "parent" : null,
+    "series" : "s0",
+    "future" : false
+  } ],
+  "groups" : {
+    "axis" : "project",
+    "element_level" : true,
+    "list" : [ {
+      "key" : "P1",
+      "events" : 17,
+      "elements" : 13,
+      "multi" : 4,
+      "agent_events" : 3,
+      "agent_elements" : 1,
+      "filter" : {
+        "project" : "P1"
+      }
+    }, {
+      "key" : "P2",
+      "events" : 10,
+      "elements" : 8,
+      "multi" : 4,
+      "agent_events" : 0,
+      "agent_elements" : 0,
+      "filter" : {
+        "project" : "P2"
+      }
+    } ],
+    "total" : {
+      "events" : 22,
+      "elements" : 17
+    },
+    "sum" : {
+      "events" : 27,
+      "elements" : 21
+    },
+    "multi_group_elements" : 4,
+    "extra" : 4
+  },
+  "days" : [ {
+    "day" : "2026-11-06",
+    "total" : {
+      "events" : 2,
+      "elements" : 2
+    },
+    "rows" : 2,
+    "by_kind" : {
+      "ready" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "version" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      }
+    },
+    "by_type" : {
+      "spec" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "version" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "task" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "ready" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      }
+    },
+    "axis" : "project",
+    "groups" : [ {
+      "key" : "P2",
+      "events" : 2,
+      "elements" : 2,
+      "rows" : 2
+    } ]
+  }, {
+    "day" : "2026-11-05",
+    "total" : {
+      "events" : 3,
+      "elements" : 3
+    },
+    "rows" : 3,
+    "by_kind" : {
+      "changed" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "closed" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "ready" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      }
+    },
+    "by_type" : {
+      "adr" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "changed" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "task" : {
+        "events" : 2,
+        "elements" : 2,
+        "rows" : 2,
+        "by_kind" : {
+          "closed" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          },
+          "ready" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      }
+    },
+    "axis" : "project",
+    "groups" : [ {
+      "key" : "P1",
+      "events" : 2,
+      "elements" : 2,
+      "rows" : 2
+    }, {
+      "key" : "P2",
+      "events" : 2,
+      "elements" : 2,
+      "rows" : 2
+    } ]
+  }, {
+    "day" : "2026-11-04",
+    "total" : {
+      "events" : 5,
+      "elements" : 3
+    },
+    "rows" : 3,
+    "by_kind" : {
+      "changed" : {
+        "events" : 3,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "reactivated" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "released" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      }
+    },
+    "by_type" : {
+      "release" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "released" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "task" : {
+        "events" : 4,
+        "elements" : 2,
+        "rows" : 2,
+        "by_kind" : {
+          "changed" : {
+            "events" : 3,
+            "elements" : 1,
+            "rows" : 1
+          },
+          "reactivated" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      }
+    },
+    "axis" : "project",
+    "groups" : [ {
+      "key" : "P1",
+      "events" : 5,
+      "elements" : 3,
+      "rows" : 3
+    } ]
+  }, {
+    "day" : "2026-11-03",
+    "total" : {
+      "events" : 5,
+      "elements" : 5
+    },
+    "rows" : 5,
+    "by_kind" : {
+      "changed" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "closed" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "created" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "ready" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      },
+      "released" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      }
+    },
+    "by_type" : {
+      "adr" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "changed" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "release" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "released" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "spec" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "created" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "task" : {
+        "events" : 2,
+        "elements" : 2,
+        "rows" : 2,
+        "by_kind" : {
+          "closed" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          },
+          "ready" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      }
+    },
+    "axis" : "project",
+    "groups" : [ {
+      "key" : "P2",
+      "events" : 4,
+      "elements" : 4,
+      "rows" : 4
+    }, {
+      "key" : "P1",
+      "events" : 3,
+      "elements" : 3,
+      "rows" : 3
+    } ]
+  }, {
+    "day" : "2026-11-02",
+    "total" : {
+      "events" : 6,
+      "elements" : 6
+    },
+    "rows" : 6,
+    "by_kind" : {
+      "closed" : {
+        "events" : 2,
+        "elements" : 2,
+        "rows" : 2
+      },
+      "created" : {
+        "events" : 3,
+        "elements" : 3,
+        "rows" : 3
+      },
+      "reactivated" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      }
+    },
+    "by_type" : {
+      "adr" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "created" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "decision" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "created" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      },
+      "task" : {
+        "events" : 4,
+        "elements" : 4,
+        "rows" : 4,
+        "by_kind" : {
+          "closed" : {
+            "events" : 2,
+            "elements" : 2,
+            "rows" : 2
+          },
+          "created" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          },
+          "reactivated" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      }
+    },
+    "axis" : "project",
+    "groups" : [ {
+      "key" : "P1",
+      "events" : 6,
+      "elements" : 6,
+      "rows" : 6
+    }, {
+      "key" : "P2",
+      "events" : 1,
+      "elements" : 1,
+      "rows" : 1
+    } ]
+  }, {
+    "day" : "2026-11-01",
+    "total" : {
+      "events" : 1,
+      "elements" : 1
+    },
+    "rows" : 1,
+    "by_kind" : {
+      "created" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1
+      }
+    },
+    "by_type" : {
+      "sprint" : {
+        "events" : 1,
+        "elements" : 1,
+        "rows" : 1,
+        "by_kind" : {
+          "created" : {
+            "events" : 1,
+            "elements" : 1,
+            "rows" : 1
+          }
+        }
+      }
+    },
+    "axis" : "project",
+    "groups" : [ {
+      "key" : "P1",
+      "events" : 1,
+      "elements" : 1,
+      "rows" : 1
+    }, {
+      "key" : "P2",
+      "events" : 1,
+      "elements" : 1,
+      "rows" : 1
+    } ]
+  } ],
+  "metrics" : {
+    "counts" : {
+      "total" : {
+        "events" : 22,
+        "elements" : 17
+      },
+      "by_type" : {
+        "adr" : {
+          "events" : 3,
+          "elements" : 3
+        },
+        "decision" : {
+          "events" : 1,
+          "elements" : 1
+        },
+        "release" : {
+          "events" : 2,
+          "elements" : 2
+        },
+        "spec" : {
+          "events" : 2,
+          "elements" : 1
+        },
+        "sprint" : {
+          "events" : 1,
+          "elements" : 1
+        },
+        "task" : {
+          "events" : 13,
+          "elements" : 9
+        }
+      },
+      "by_kind" : {
+        "changed" : {
+          "events" : 5,
+          "elements" : 3
+        },
+        "closed" : {
+          "events" : 4,
+          "elements" : 4
+        },
+        "created" : {
+          "events" : 5,
+          "elements" : 5
+        },
+        "reactivated" : {
+          "events" : 2,
+          "elements" : 2
+        },
+        "ready" : {
+          "events" : 3,
+          "elements" : 3
+        },
+        "released" : {
+          "events" : 2,
+          "elements" : 2
+        },
+        "version" : {
+          "events" : 1,
+          "elements" : 1
+        }
+      },
+      "by_who" : {
+        "(unknown)" : {
+          "events" : 19,
+          "elements" : 17
+        },
+        "agent:claude" : {
+          "events" : 3,
+          "elements" : 1
+        }
+      }
+    },
+    "tasks" : {
+      "available" : true,
+      "all" : {
+        "burn" : 1,
+        "burn_dict" : 2,
+        "ship_correction" : -1,
+        "open_t0" : 6,
+        "open_t1" : 5,
+        "open_dict_t0" : 8,
+        "open_dict_t1" : 6,
+        "closed" : 3,
+        "added" : 2,
+        "added_new" : 1,
+        "added_react" : 1,
+        "waiting_t0" : 0,
+        "waiting_t1" : 2,
+        "ship_unknown" : 1,
+        "shipped" : 1,
+        "done_in_period" : 4,
+        "react" : {
+          "events" : 2,
+          "elements" : 2,
+          "rate" : 0.25,
+          "done_ever" : 8,
+          "from_ready" : 0,
+          "from_closed" : 1,
+          "after_release" : 1,
+          "examples" : [ "S1/K", "S2/A" ]
+        },
+        "unknown" : 0,
+        "tasks" : 10,
+        "examples" : {
+          "shipped" : [ "S1/F" ],
+          "waiting" : [ "S1/D", "S3/E" ],
+          "added" : [ "S1/C", "S1/K" ],
+          "closed" : [ "S1/B", "S1/F", "S2/G" ]
+        }
+      },
+      "by_axis" : {
+        "project" : {
+          "groups" : [ {
+            "key" : "P1",
+            "total" : {
+              "burn" : 1,
+              "burn_dict" : 2,
+              "ship_correction" : -1,
+              "open_t0" : 5,
+              "open_t1" : 4,
+              "open_dict_t0" : 7,
+              "open_dict_t1" : 5,
+              "closed" : 3,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 4,
+              "react" : {
+                "events" : 2,
+                "elements" : 2,
+                "rate" : 0.2857142857142857,
+                "done_ever" : 7,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 1,
+                "examples" : [ "S1/K", "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 9,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F", "S2/G" ]
+              }
+            },
+            "own" : {
+              "burn" : 0,
+              "burn_dict" : 1,
+              "ship_correction" : -1,
+              "open_t0" : 4,
+              "open_t1" : 4,
+              "open_dict_t0" : 6,
+              "open_dict_t1" : 5,
+              "closed" : 2,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.2,
+                "done_ever" : 5,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 1,
+                "examples" : [ "S1/K" ]
+              },
+              "unknown" : 0,
+              "tasks" : 7,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F" ]
+              }
+            },
+            "shared" : {
+              "burn" : 1,
+              "burn_dict" : 1,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 0,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 0,
+              "closed" : 1,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.5,
+                "done_ever" : 2,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 0,
+                "examples" : [ "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 2,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ "S2/G" ]
+              }
+            },
+            "filter" : {
+              "project" : "P1"
+            }
+          }, {
+            "key" : "P2",
+            "total" : {
+              "burn" : 1,
+              "burn_dict" : 1,
+              "ship_correction" : 0,
+              "open_t0" : 2,
+              "open_t1" : 1,
+              "open_dict_t0" : 2,
+              "open_dict_t1" : 1,
+              "closed" : 1,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.3333333333333333,
+                "done_ever" : 3,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 0,
+                "examples" : [ "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 3,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ "S2/G" ]
+              }
+            },
+            "own" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 1,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 1,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : 0.0,
+                "done_ever" : 1,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 1,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "shared" : {
+              "burn" : 1,
+              "burn_dict" : 1,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 0,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 0,
+              "closed" : 1,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.5,
+                "done_ever" : 2,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 0,
+                "examples" : [ "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 2,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ "S2/G" ]
+              }
+            },
+            "filter" : {
+              "project" : "P2"
+            }
+          } ],
+          "burn_own_sum" : 0,
+          "burn_shared_union" : 1,
+          "burn_sigma" : 1
+        },
+        "sprint" : {
+          "groups" : [ {
+            "key" : "S1",
+            "total" : {
+              "burn" : 0,
+              "burn_dict" : 1,
+              "ship_correction" : -1,
+              "open_t0" : 4,
+              "open_t1" : 4,
+              "open_dict_t0" : 6,
+              "open_dict_t1" : 5,
+              "closed" : 2,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.2,
+                "done_ever" : 5,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 1,
+                "examples" : [ "S1/K" ]
+              },
+              "unknown" : 0,
+              "tasks" : 7,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F" ]
+              }
+            },
+            "own" : {
+              "burn" : 0,
+              "burn_dict" : 1,
+              "ship_correction" : -1,
+              "open_t0" : 4,
+              "open_t1" : 4,
+              "open_dict_t0" : 6,
+              "open_dict_t1" : 5,
+              "closed" : 2,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.2,
+                "done_ever" : 5,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 1,
+                "examples" : [ "S1/K" ]
+              },
+              "unknown" : 0,
+              "tasks" : 7,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F" ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "sprint" : "S1"
+            }
+          }, {
+            "key" : "S2",
+            "total" : {
+              "burn" : 1,
+              "burn_dict" : 1,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 0,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 0,
+              "closed" : 1,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.5,
+                "done_ever" : 2,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 0,
+                "examples" : [ "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 2,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ "S2/G" ]
+              }
+            },
+            "own" : {
+              "burn" : 1,
+              "burn_dict" : 1,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 0,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 0,
+              "closed" : 1,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.5,
+                "done_ever" : 2,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 0,
+                "examples" : [ "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 2,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ "S2/G" ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "sprint" : "S2"
+            }
+          }, {
+            "key" : "S3",
+            "total" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 1,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 1,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : 0.0,
+                "done_ever" : 1,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 1,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "own" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 1,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 1,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : 0.0,
+                "done_ever" : 1,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 1,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "sprint" : "S3"
+            }
+          } ],
+          "burn_own_sum" : 1,
+          "burn_shared_union" : 0,
+          "burn_sigma" : 1
+        },
+        "component" : {
+          "groups" : [ {
+            "key" : "C1",
+            "total" : {
+              "burn" : 0,
+              "burn_dict" : 1,
+              "ship_correction" : -1,
+              "open_t0" : 4,
+              "open_t1" : 4,
+              "open_dict_t0" : 6,
+              "open_dict_t1" : 5,
+              "closed" : 2,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.2,
+                "done_ever" : 5,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 1,
+                "examples" : [ "S1/K" ]
+              },
+              "unknown" : 0,
+              "tasks" : 7,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F" ]
+              }
+            },
+            "own" : {
+              "burn" : 0,
+              "burn_dict" : 1,
+              "ship_correction" : -1,
+              "open_t0" : 4,
+              "open_t1" : 4,
+              "open_dict_t0" : 6,
+              "open_dict_t1" : 5,
+              "closed" : 2,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.2,
+                "done_ever" : 5,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 1,
+                "examples" : [ "S1/K" ]
+              },
+              "unknown" : 0,
+              "tasks" : 7,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F" ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "component" : "C1"
+            }
+          }, {
+            "key" : "C2",
+            "total" : {
+              "burn" : 1,
+              "burn_dict" : 1,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 0,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 0,
+              "closed" : 1,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.5,
+                "done_ever" : 2,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 0,
+                "examples" : [ "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 2,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ "S2/G" ]
+              }
+            },
+            "own" : {
+              "burn" : 1,
+              "burn_dict" : 1,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 0,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 0,
+              "closed" : 1,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 2,
+              "react" : {
+                "events" : 1,
+                "elements" : 1,
+                "rate" : 0.5,
+                "done_ever" : 2,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 0,
+                "examples" : [ "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 2,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ "S2/G" ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "component" : "C2"
+            }
+          }, {
+            "key" : "C3",
+            "total" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 1,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 1,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : 0.0,
+                "done_ever" : 1,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 1,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "own" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 1,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 1,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : 0.0,
+                "done_ever" : 1,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 1,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "component" : "C3"
+            }
+          } ],
+          "burn_own_sum" : 1,
+          "burn_shared_union" : 0,
+          "burn_sigma" : 1
+        },
+        "milestone" : {
+          "groups" : [ {
+            "key" : "(no-milestone)",
+            "total" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 1,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 1,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : 0.0,
+                "done_ever" : 1,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 1,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "own" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 1,
+              "open_t1" : 1,
+              "open_dict_t0" : 1,
+              "open_dict_t1" : 1,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 1,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : 0.0,
+                "done_ever" : 1,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 1,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ "S3/E" ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "milestone" : "(no-milestone)"
+            }
+          }, {
+            "key" : "M1",
+            "total" : {
+              "burn" : 1,
+              "burn_dict" : 2,
+              "ship_correction" : -1,
+              "open_t0" : 5,
+              "open_t1" : 4,
+              "open_dict_t0" : 7,
+              "open_dict_t1" : 5,
+              "closed" : 3,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 4,
+              "react" : {
+                "events" : 2,
+                "elements" : 2,
+                "rate" : 0.2857142857142857,
+                "done_ever" : 7,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 1,
+                "examples" : [ "S1/K", "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 9,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F", "S2/G" ]
+              }
+            },
+            "own" : {
+              "burn" : 1,
+              "burn_dict" : 2,
+              "ship_correction" : -1,
+              "open_t0" : 5,
+              "open_t1" : 4,
+              "open_dict_t0" : 7,
+              "open_dict_t1" : 5,
+              "closed" : 3,
+              "added" : 2,
+              "added_new" : 1,
+              "added_react" : 1,
+              "waiting_t0" : 0,
+              "waiting_t1" : 1,
+              "ship_unknown" : 0,
+              "shipped" : 1,
+              "done_in_period" : 4,
+              "react" : {
+                "events" : 2,
+                "elements" : 2,
+                "rate" : 0.2857142857142857,
+                "done_ever" : 7,
+                "from_ready" : 0,
+                "from_closed" : 1,
+                "after_release" : 1,
+                "examples" : [ "S1/K", "S2/A" ]
+              },
+              "unknown" : 0,
+              "tasks" : 9,
+              "examples" : {
+                "shipped" : [ "S1/F" ],
+                "waiting" : [ "S1/D" ],
+                "added" : [ "S1/C", "S1/K" ],
+                "closed" : [ "S1/B", "S1/F", "S2/G" ]
+              }
+            },
+            "shared" : {
+              "burn" : 0,
+              "burn_dict" : 0,
+              "ship_correction" : 0,
+              "open_t0" : 0,
+              "open_t1" : 0,
+              "open_dict_t0" : 0,
+              "open_dict_t1" : 0,
+              "closed" : 0,
+              "added" : 0,
+              "added_new" : 0,
+              "added_react" : 0,
+              "waiting_t0" : 0,
+              "waiting_t1" : 0,
+              "ship_unknown" : 0,
+              "shipped" : 0,
+              "done_in_period" : 0,
+              "react" : {
+                "events" : 0,
+                "elements" : 0,
+                "rate" : null,
+                "done_ever" : 0,
+                "from_ready" : 0,
+                "from_closed" : 0,
+                "after_release" : 0,
+                "examples" : [ ]
+              },
+              "unknown" : 0,
+              "tasks" : 0,
+              "examples" : {
+                "shipped" : [ ],
+                "waiting" : [ ],
+                "added" : [ ],
+                "closed" : [ ]
+              }
+            },
+            "filter" : {
+              "milestone" : "M1"
+            }
+          } ],
+          "burn_own_sum" : 1,
+          "burn_shared_union" : 0,
+          "burn_sigma" : 1
+        }
+      },
+      "days" : [ {
+        "from" : "2026-10-31T21:00:00Z",
+        "to" : "2026-11-01T21:00:00Z",
+        "day_local" : "2026-11-01",
+        "open_start" : 6,
+        "open_end" : 6,
+        "burn" : 0,
+        "burn_dict" : 0,
+        "waiting_end" : 0,
+        "ship_unknown_end" : 0,
+        "shipped" : 0
+      }, {
+        "from" : "2026-11-01T21:00:00Z",
+        "to" : "2026-11-02T21:00:00Z",
+        "day_local" : "2026-11-02",
+        "open_start" : 6,
+        "open_end" : 7,
+        "burn" : -1,
+        "burn_dict" : 0,
+        "waiting_end" : 0,
+        "ship_unknown_end" : 0,
+        "shipped" : 0
+      }, {
+        "from" : "2026-11-02T21:00:00Z",
+        "to" : "2026-11-03T21:00:00Z",
+        "day_local" : "2026-11-03",
+        "open_start" : 7,
+        "open_end" : 6,
+        "burn" : 1,
+        "burn_dict" : 1,
+        "waiting_end" : 1,
+        "ship_unknown_end" : 0,
+        "shipped" : 0
+      }, {
+        "from" : "2026-11-03T21:00:00Z",
+        "to" : "2026-11-04T21:00:00Z",
+        "day_local" : "2026-11-04",
+        "open_start" : 6,
+        "open_end" : 6,
+        "burn" : 0,
+        "burn_dict" : 0,
+        "waiting_end" : 0,
+        "ship_unknown_end" : 0,
+        "shipped" : 1
+      }, {
+        "from" : "2026-11-04T21:00:00Z",
+        "to" : "2026-11-05T21:00:00Z",
+        "day_local" : "2026-11-05",
+        "open_start" : 6,
+        "open_end" : 5,
+        "burn" : 1,
+        "burn_dict" : 1,
+        "waiting_end" : 1,
+        "ship_unknown_end" : 0,
+        "shipped" : 0
+      }, {
+        "from" : "2026-11-05T21:00:00Z",
+        "to" : "2026-11-06T21:00:00Z",
+        "day_local" : "2026-11-06",
+        "open_start" : 5,
+        "open_end" : 5,
+        "burn" : 0,
+        "burn_dict" : 0,
+        "waiting_end" : 2,
+        "ship_unknown_end" : 1,
+        "shipped" : 0
+      }, {
+        "from" : "2026-11-06T21:00:00Z",
+        "to" : "2026-11-07T21:00:00Z",
+        "day_local" : "2026-11-07",
+        "open_start" : 5,
+        "open_end" : 5,
+        "burn" : 0,
+        "burn_dict" : 0,
+        "waiting_end" : 2,
+        "ship_unknown_end" : 1,
+        "shipped" : 0
+      } ],
+      "shipped_list" : [ {
+        "uid" : "S1/F",
+        "sprint" : "S1",
+        "ready" : "2026-11-03",
+        "release" : "P1#v2",
+        "release_date" : "2026-11-04",
+        "days" : 1,
+        "now" : "READY"
+      } ],
+      "wait_median_days" : 1.0,
+      "waiting_oldest" : [ {
+        "uid" : "S1/D",
+        "sprint" : "S1",
+        "since" : "2026-11-05T10:00:00Z",
+        "age_days" : 2.4583333333333335,
+        "ship" : "wait",
+        "link" : "ok"
+      }, {
+        "uid" : "S3/E",
+        "sprint" : "S3",
+        "since" : "2026-11-06T10:00:00Z",
+        "age_days" : 1.4583333333333333,
+        "ship" : "unknown",
+        "link" : "nolink"
+      } ],
+      "entered_ready" : 3,
+      "ready_to_closed_no_release" : 0
+    },
+    "knowledge" : {
+      "adr" : {
+        "exact" : false,
+        "q_t1" : 2,
+        "q_t0_range" : [ 1, 2 ],
+        "flow_range" : [ -1, 0 ],
+        "reason" : "нет истории статуса — точное значение после task:SPRINT_UXR_S2_GRAPH_MEMORY/S2-10 и S2-13",
+        "new" : 1,
+        "new_proposed" : 1,
+        "new_decided" : 0,
+        "superseded_now" : 0,
+        "superseded_new" : 0,
+        "accepted_now" : 1,
+        "no_date" : 0,
+        "ttd" : {
+          "measurable" : false,
+          "reason" : "момент принятия неизвестен до S2-13"
+        }
+      },
+      "decision" : {
+        "exact" : false,
+        "q_t1" : 0,
+        "q_t0_range" : [ 0, 0 ],
+        "flow_range" : [ 0, 0 ],
+        "reason" : "нет истории статуса — точное значение после task:SPRINT_UXR_S2_GRAPH_MEMORY/S2-10 и S2-13",
+        "new" : 1,
+        "new_proposed" : 0,
+        "new_decided" : 1,
+        "superseded_now" : 0,
+        "superseded_new" : 0,
+        "accepted_now" : 1,
+        "no_date" : 0,
+        "ttd" : {
+          "measurable" : false,
+          "reason" : "момент принятия неизвестен до S2-13"
+        }
+      },
+      "adr_revisions" : {
+        "events" : 1,
+        "elements" : 1
+      },
+      "adr_changes" : {
+        "events" : 2,
+        "elements" : 2
+      },
+      "spec_versions" : {
+        "events" : 1,
+        "elements" : 1
+      },
+      "spec_new" : 1,
+      "decisions_per_new_adr" : [ {
+        "id" : "ADR-1",
+        "children" : 1
+      } ],
+      "adr_reactivation" : {
+        "measurable" : false,
+        "reason" : "у ADR нет истории статуса — task:SPRINT_UXR_S2_GRAPH_MEMORY/S2-13"
+      }
+    },
+    "agents" : {
+      "measurable" : true,
+      "events" : {
+        "events" : 3,
+        "elements" : 22
+      },
+      "elements" : {
+        "events" : 1,
+        "elements" : 17
+      }
+    },
+    "delta" : {
+      "events" : {
+        "value" : 22,
+        "previous" : 1,
+        "delta" : 21,
+        "pct" : null
+      },
+      "elements" : {
+        "value" : 17,
+        "previous" : 1,
+        "delta" : 16,
+        "pct" : null
+      },
+      "by_type" : {
+        "adr" : {
+          "value" : 3,
+          "previous" : 0,
+          "delta" : 3,
+          "pct" : null
+        },
+        "decision" : {
+          "value" : 1,
+          "previous" : 0,
+          "delta" : 1,
+          "pct" : null
+        },
+        "release" : {
+          "value" : 2,
+          "previous" : 0,
+          "delta" : 2,
+          "pct" : null
+        },
+        "spec" : {
+          "value" : 2,
+          "previous" : 0,
+          "delta" : 2,
+          "pct" : null
+        },
+        "sprint" : {
+          "value" : 1,
+          "previous" : 0,
+          "delta" : 1,
+          "pct" : null
+        },
+        "task" : {
+          "value" : 13,
+          "previous" : 1,
+          "delta" : 12,
+          "pct" : null
+        }
+      },
+      "burn" : {
+        "value" : 1,
+        "previous" : -1,
+        "delta" : 2,
+        "pct" : null
+      },
+      "waiting_t1" : {
+        "value" : 2,
+        "previous" : 0,
+        "delta" : 2,
+        "pct" : null
+      },
+      "shipped" : {
+        "value" : 1,
+        "previous" : 0,
+        "delta" : 1,
+        "pct" : null
+      },
+      "react_events" : {
+        "value" : 2,
+        "previous" : 0,
+        "delta" : 2,
+        "pct" : null
+      },
+      "react_elements" : {
+        "value" : 2,
+        "previous" : 0,
+        "delta" : 2,
+        "pct" : null
+      },
+      "previous" : {
+        "from" : "2026-10-24T21:00:00Z",
+        "to" : "2026-10-31T21:00:00Z"
+      }
+    }
+  },
+  "matrix" : {
+    "n" : 6,
+    "cols" : [ "P1", "P2" ],
+    "rows" : [ {
+      "day" : "2026-11-01",
+      "cells" : [ [ 1, 1 ], [ 1, 1 ] ],
+      "total" : {
+        "events" : 1,
+        "elements" : 1
+      },
+      "sum" : {
+        "events" : 2,
+        "elements" : 2
+      },
+      "multi" : 1,
+      "extra" : 1
+    }, {
+      "day" : "2026-11-02",
+      "cells" : [ [ 6, 6 ], [ 1, 1 ] ],
+      "total" : {
+        "events" : 6,
+        "elements" : 6
+      },
+      "sum" : {
+        "events" : 7,
+        "elements" : 7
+      },
+      "multi" : 1,
+      "extra" : 1
+    }, {
+      "day" : "2026-11-03",
+      "cells" : [ [ 3, 3 ], [ 4, 4 ] ],
+      "total" : {
+        "events" : 5,
+        "elements" : 5
+      },
+      "sum" : {
+        "events" : 7,
+        "elements" : 7
+      },
+      "multi" : 2,
+      "extra" : 2
+    }, {
+      "day" : "2026-11-04",
+      "cells" : [ [ 5, 3 ], [ 0, 0 ] ],
+      "total" : {
+        "events" : 5,
+        "elements" : 3
+      },
+      "sum" : {
+        "events" : 5,
+        "elements" : 3
+      },
+      "multi" : 0,
+      "extra" : 0
+    }, {
+      "day" : "2026-11-05",
+      "cells" : [ [ 2, 2 ], [ 2, 2 ] ],
+      "total" : {
+        "events" : 3,
+        "elements" : 3
+      },
+      "sum" : {
+        "events" : 4,
+        "elements" : 4
+      },
+      "multi" : 1,
+      "extra" : 1
+    }, {
+      "day" : "2026-11-06",
+      "cells" : [ [ 0, 0 ], [ 2, 2 ] ],
+      "total" : {
+        "events" : 2,
+        "elements" : 2
+      },
+      "sum" : {
+        "events" : 2,
+        "elements" : 2
+      },
+      "multi" : 0,
+      "extra" : 0
+    } ],
+    "col_totals" : [ {
+      "col" : "P1",
+      "total" : {
+        "events" : 17,
+        "elements" : 13
+      },
+      "sum" : {
+        "events" : 17,
+        "elements" : 15
+      },
+      "multi" : 2,
+      "extra" : 2
+    }, {
+      "col" : "P2",
+      "total" : {
+        "events" : 10,
+        "elements" : 8
+      },
+      "sum" : {
+        "events" : 10,
+        "elements" : 10
+      },
+      "multi" : 2,
+      "extra" : 2
+    } ],
+    "projects" : 2,
+    "total" : {
+      "events" : 22,
+      "elements" : 17
+    },
+    "sum_rows" : {
+      "events" : 22,
+      "elements" : 20
+    }
+  },
+  "meta" : {
+    "generated_at" : "2026-11-07T20:00:00Z",
+    "scope" : {
+      "applied" : false
+    },
+    "period" : {
+      "from" : "2026-10-31T21:00:00Z",
+      "to" : "2026-11-07T21:00:00Z",
+      "tz" : "Europe/Moscow",
+      "days_local" : [ "2026-11-01", "2026-11-07" ]
+    },
+    "total" : {
+      "events" : 22,
+      "elements" : 17
+    },
+    "multi_group_elements" : 4,
+    "truncated" : false,
+    "errors" : [ ],
+    "state" : "ok",
+    "validation" : {
+      "ok" : true,
+      "checks" : [ {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — project",
+        "ok" : true,
+        "detail" : "групп 2, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — project",
+        "ok" : true,
+        "detail" : "события 17 ≤ 22 ≤ 27; элементы 13 ≤ 17 ≤ 21",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — project",
+        "ok" : true,
+        "detail" : "21 − 17 = 4; Σ(|G|−1) = 4; M = 4",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — project",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "8",
+        "name" : "свёртка не меняет чисел (итог)",
+        "ok" : true,
+        "detail" : "серий 20; по сериям 22 · 17, без свёртки 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "подгруппировка проект → компонент: те же правила на каждом уровне",
+        "ok" : true,
+        "detail" : "2 проектов проверено",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — component",
+        "ok" : true,
+        "detail" : "групп 4, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — component",
+        "ok" : true,
+        "detail" : "события 9 ≤ 22 ≤ 22; элементы 8 ≤ 17 ≤ 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — component",
+        "ok" : true,
+        "detail" : "17 − 17 = 0; Σ(|G|−1) = 0; M = 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — component",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — type",
+        "ok" : true,
+        "detail" : "групп 6, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — type",
+        "ok" : true,
+        "detail" : "события 13 ≤ 22 ≤ 22; элементы 9 ≤ 17 ≤ 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — type",
+        "ok" : true,
+        "detail" : "17 − 17 = 0; Σ(|G|−1) = 0; M = 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — type",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — kind",
+        "ok" : true,
+        "detail" : "групп 7, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — kind",
+        "ok" : true,
+        "detail" : "события 5 ≤ 22 ≤ 22; элементы 5 ≤ 17 ≤ 20",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — kind",
+        "ok" : true,
+        "detail" : "20 − 17 = 3; Σ(|G|−1) = 3; M = 3",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — kind",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — sprint",
+        "ok" : true,
+        "detail" : "групп 4, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — sprint",
+        "ok" : true,
+        "detail" : "события 9 ≤ 22 ≤ 22; элементы 7 ≤ 17 ≤ 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — sprint",
+        "ok" : true,
+        "detail" : "17 − 17 = 0; Σ(|G|−1) = 0; M = 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — sprint",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — milestone",
+        "ok" : true,
+        "detail" : "групп 2, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — milestone",
+        "ok" : true,
+        "detail" : "события 12 ≤ 22 ≤ 22; элементы 9 ≤ 17 ≤ 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — milestone",
+        "ok" : true,
+        "detail" : "17 − 17 = 0; Σ(|G|−1) = 0; M = 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — milestone",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — author",
+        "ok" : true,
+        "detail" : "групп 2, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — author",
+        "ok" : true,
+        "detail" : "события 19 ≤ 22 ≤ 22; элементы 17 ≤ 17 ≤ 18",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — author",
+        "ok" : true,
+        "detail" : "18 − 17 = 1; Σ(|G|−1) = 1; M = 1",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — author",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — who",
+        "ok" : true,
+        "detail" : "групп 2, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — who",
+        "ok" : true,
+        "detail" : "события 19 ≤ 22 ≤ 22; элементы 17 ≤ 17 ≤ 18",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — who",
+        "ok" : true,
+        "detail" : "18 − 17 = 1; Σ(|G|−1) = 1; M = 1",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — who",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — day",
+        "ok" : true,
+        "detail" : "групп 6, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — day",
+        "ok" : true,
+        "detail" : "события 6 ≤ 22 ≤ 22; элементы 6 ≤ 17 ≤ 20",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — day",
+        "ok" : true,
+        "detail" : "20 − 17 = 3; Σ(|G|−1) = 3; M = 3",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — day",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "1",
+        "name" : "N_ev ≥ N_el — record",
+        "ok" : true,
+        "detail" : "групп 17, итог 22 · 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "2",
+        "name" : "max ≤ итог ≤ сумма — record",
+        "ok" : true,
+        "detail" : "события 4 ≤ 22 ≤ 22; элементы 1 ≤ 17 ≤ 17",
+        "examples" : [ ]
+      }, {
+        "inv" : "3",
+        "name" : "Σ N_el(g) − N_el = Σ(|G(x)|−1) — record",
+        "ok" : true,
+        "detail" : "17 − 17 = 0; Σ(|G|−1) = 0; M = 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "7",
+        "name" : "доли ∈ [0,1] — record",
+        "ok" : true,
+        "detail" : "агентских событий 3 из 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "6",
+        "name" : "разбивки по видам и по типам в сумме дают N_ev",
+        "ok" : true,
+        "detail" : "по видам 22, по типам 22, N_ev 22",
+        "examples" : [ ]
+      }, {
+        "inv" : "4",
+        "name" : "Burn = C − A = O(t0) − O(t1) по правилу §7.2a (итог, группы, своё/общее)",
+        "ok" : true,
+        "detail" : "итог: 6 − 5 = 1; C − A = 3 − 2; неизвестно: 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "4",
+        "name" : "Burn по словарю = C − A по словарю (готова = открыта)",
+        "ok" : true,
+        "detail" : "итог: 8 − 6 = 2; C − A = 3 − 1",
+        "examples" : [ ]
+      }, {
+        "inv" : "4",
+        "name" : "сумма дневных S = недельному S (доехавшие считаются один раз)",
+        "ok" : true,
+        "detail" : "Σ S по дням = 1; S = 1; доехавших = 1",
+        "examples" : [ ]
+      }, {
+        "inv" : "4",
+        "name" : "сгорание по дням телескопично",
+        "ok" : true,
+        "detail" : "Σ дневных Burn = 1; Burn = 1",
+        "examples" : [ ]
+      }, {
+        "inv" : "9",
+        "name" : "0 ≤ Y ≤ O — итог и каждая группа",
+        "ok" : true,
+        "detail" : "итог: Y(t0) = 0 ≤ O(t0) = 6, Y(t1) = 2 ≤ O(t1) = 5",
+        "examples" : [ ]
+      }, {
+        "inv" : "10",
+        "name" : "Burn − Burn^dict = Z(t1) − Z(t0) (поправка выкатки)",
+        "ok" : true,
+        "detail" : "итог: 1 − 2 = -1; Z(t1) − Z(t0) = 1 − 2",
+        "examples" : [ ]
+      }, {
+        "inv" : "11",
+        "name" : "Burn_g = своё + общее; итог = Σ своих + объединение общих",
+        "ok" : true,
+        "detail" : "осей 4",
+        "examples" : [ ]
+      }, {
+        "inv" : "12",
+        "name" : "React^ev ≥ React^el; A = A^new + A^react; 0 ≤ ReactRate ≤ 1",
+        "ok" : true,
+        "detail" : "итог: реактиваций 2 · 2, A = 1 + 1",
+        "examples" : [ ]
+      }, {
+        "inv" : "7.2a",
+        "name" : "выкатка определена для всех ждущих задач",
+        "detail" : "не смогли определить выкатку у 1 из 2 ждущих: у спринта нет связи с релизом",
+        "examples" : [ ],
+        "ok" : null
+      }, {
+        "inv" : "10.2",
+        "name" : "статус: история ↔ снимок открытой строки (all_tasks)",
+        "ok" : true,
+        "detail" : "сверено 10 задач; расхождений 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "10.2",
+        "name" : "O(t1): состояние t0 + проигрывание событий ↔ цепочка на t1",
+        "ok" : true,
+        "detail" : "проиграно 10 задач; расхождений 0",
+        "examples" : [ ]
+      }, {
+        "inv" : "5",
+        "name" : "adr: Flow = Acc + Rej − New = Q(t0) − Q(t1)",
+        "detail" : "не вычисляется: нет истории статуса (TODO S2-10/S2-13). Q(t1) = 2; Q(t0) ∈ [1, 2]",
+        "examples" : [ ],
+        "ok" : null
+      }, {
+        "inv" : "5",
+        "name" : "decision: Flow = Acc + Rej − New = Q(t0) − Q(t1)",
+        "detail" : "не вычисляется: нет истории статуса (TODO S2-10/S2-13). Q(t1) = 0; Q(t0) ∈ [0, 0]",
+        "examples" : [ ],
+        "ok" : null
+      } ],
+      "drift" : [ ]
+    },
+    "dropped_changed_on_created_day" : 1,
+    "algorithm" : "SPEC-LORE-UXR-NEWS-ALGORITHMS 1.3.0"
+  }
+}

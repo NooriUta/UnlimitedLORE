@@ -8,7 +8,7 @@
 // были видны все разрезы: мультипроектный спринт (×N, Σ ≠ ∪), день без
 // времени, будущее, «ждёт выкатки», поправка выкатки, реактивация,
 // неизмеримые метрики (S2-12, S2-13), «не смогли проверить».
-import type { NewsBurnPart, NewsEvent, NewsResponse } from './types';
+import type { NewsBurnPart, NewsEvent, NewsResponse, NewsTriple } from './types';
 
 const ULORE = 'NooriUta/UnlimitedLORE';
 const VOLVA = 'NooriUta/volva';
@@ -41,6 +41,8 @@ function ev(p: Partial<NewsEvent> & Pick<NewsEvent, 'type' | 'el' | 'kind' | 'da
     ...p,
   };
 }
+
+const tr = (events: number, elements: number, rows: number): NewsTriple => ({ events, elements, rows });
 
 function part(p: Partial<NewsBurnPart>): NewsBurnPart {
   return {
@@ -131,6 +133,42 @@ export const NEWS_FIXTURE: NewsResponse = {
     multi_group_elements: 2,
     extra: 2,
   },
+  // Свёртки дня (S7A-09) — данные ответа, согласованные со строками выше и с matrix.rows.
+  days: [
+    {
+      day: '2026-11-08', total: { events: 1, elements: 1 }, rows: 1, axis: 'project',
+      by_kind: { released: tr(1, 1, 1) },
+      by_type: { release: { ...tr(1, 1, 1), by_kind: { released: tr(1, 1, 1) } } },
+      groups: [{ key: ULORE, ...tr(1, 1, 1) }],
+    },
+    {
+      day: '2026-11-07', total: { events: 6, elements: 5 }, rows: 5, axis: 'project',
+      by_kind: { closed: tr(2, 1, 1), created: tr(1, 1, 1), ready: tr(1, 1, 1), released: tr(1, 1, 1), version: tr(1, 1, 1) },
+      by_type: {
+        decision: { ...tr(1, 1, 1), by_kind: { created: tr(1, 1, 1) } },
+        release: { ...tr(1, 1, 1), by_kind: { released: tr(1, 1, 1) } },
+        spec: { ...tr(1, 1, 1), by_kind: { version: tr(1, 1, 1) } },
+        task: { ...tr(3, 2, 2), by_kind: { closed: tr(2, 1, 1), ready: tr(1, 1, 1) } },
+      },
+      groups: [{ key: ULORE, ...tr(6, 5, 5) }, { key: VOLVA, ...tr(3, 2, 2) }],
+    },
+    {
+      day: '2026-11-06', total: { events: 3, elements: 3 }, rows: 3, axis: 'project',
+      by_kind: { changed: tr(1, 1, 1), created: tr(1, 1, 1), reactivated: tr(1, 1, 1) },
+      by_type: {
+        adr: { ...tr(1, 1, 1), by_kind: { changed: tr(1, 1, 1) } },
+        sprint: { ...tr(1, 1, 1), by_kind: { created: tr(1, 1, 1) } },
+        task: { ...tr(1, 1, 1), by_kind: { reactivated: tr(1, 1, 1) } },
+      },
+      groups: [{ key: AIDA, ...tr(1, 1, 1) }, { key: ULORE, ...tr(1, 1, 1) }, { key: VOLVA, ...tr(1, 1, 1) }],
+    },
+    {
+      day: '2026-11-05', total: { events: 2, elements: 2 }, rows: 2, axis: 'project',
+      by_kind: { cancelled: tr(1, 1, 1), created: tr(1, 1, 1) },
+      by_type: { task: { ...tr(2, 2, 2), by_kind: { cancelled: tr(1, 1, 1), created: tr(1, 1, 1) } } },
+      groups: [{ key: AIDA, ...tr(2, 2, 2) }],
+    },
+  ],
   metrics: {
     counts: {
       total: { events: 12, elements: 11 },
