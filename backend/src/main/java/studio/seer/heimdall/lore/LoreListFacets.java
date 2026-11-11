@@ -200,6 +200,62 @@ final class LoreListFacets {
         return Boolean.TRUE.equals(t) ? "partial" : "unknown".equals(t) ? "unknown" : "complete";
     }
 
+    // ── S9-03: закреплённые значения фасета ─────────────────────────────────
+    //
+    // «Текущий релиз» знает только сервер (KnowRelease.is_current, по одному на проект).
+    // Он едет в том же ответе /facets, что и счётчики оси: отдельный запрос релизов на
+    // каждом экране списка был бы лишним походом ради двух-трёх строк. Какие значения
+    // закреплять — решает сервер, как расставить блоки фасета — kit (facetSections).
+
+    /** Ось, которой положены закреплённые значения. */
+    static final String RELEASE_AXIS = "release_ids";
+
+    /** Текущие релизы — по одному на проект; свежие сверху. */
+    static final String CURRENT_RELEASES_SQL =
+        "SELECT release_id, git_project, out('BELONGS_TO_PROJECT').slug AS projects, release_date "
+            + "FROM KnowRelease WHERE is_current = true ORDER BY release_date DESC";
+
+    static boolean wantsPinned(List<String> axes) {
+        return axes != null && axes.contains(RELEASE_AXIS);
+    }
+
+    /**
+     * Текущие релизы под скоуп вызывающего: {@code scope == null} — без сужения; иначе
+     * релиз остаётся, если его проект (поле или ребро) в скоупе. Текущий релиз чужого
+     * проекта в фасете — шум, а не подсказка.
+     */
+    static List<String> pinnedReleases(List<Map<String, Object>> rows, Set<String> scope) {
+        List<String> out = new ArrayList<>();
+        if (rows == null) return out;
+        for (Map<String, Object> r : rows) {
+            if (r == null) continue;
+            Object id = r.get("release_id");
+            String s = id == null ? "" : String.valueOf(id).trim();
+            if (s.isEmpty() || out.contains(s)) continue;
+            if (scope != null) {
+                List<String> projects = valuesOf(r.get("projects"));
+                projects.addAll(valuesOf(r.get("git_project")));
+                if (projects.stream().noneMatch(scope::contains)) continue;
+            }
+            out.add(s);
+        }
+        return out;
+    }
+
+    /**
+     * Кладёт закреплённые в ответ: {@code pinned.release_ids} — прочитанные; сбой чтения —
+     * {@code pinned_unavailable.release_ids} с причиной, а не пустой набор («не смогли
+     * прочитать» ≠ «текущих релизов нет»). Ось не спрошена — ничего не кладётся.
+     */
+    static void putPinned(Map<String, Object> out, List<String> axes, List<String> pinned, String error) {
+        if (!wantsPinned(axes)) return;
+        if (pinned != null) {
+            out.put("pinned", Map.of(RELEASE_AXIS, List.copyOf(pinned)));
+        } else {
+            out.put("pinned_unavailable", Map.of(RELEASE_AXIS, error == null ? "закреплённые не прочитаны" : error));
+        }
+    }
+
     /**
      * Ответ эндпоинта.
      *

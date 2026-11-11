@@ -160,6 +160,9 @@ export function sourcesFromServer(dataState: unknown): LoreSource[] {
     const total = num(row.total);
     if (shown !== undefined) out.shown = shown;
     if (total !== undefined) out.total = total;
+    // S4-TECH-NOTES: тег адресата, если его поставил сервер; иначе решит fromLoreRecord.
+    const audience = str(row.audience);
+    if (audience === 'user' || audience === 'tech') out.audience = audience;
     return out;
   });
 }
@@ -341,6 +344,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     values,
     links,
     ...(parts.length ? { parts } : {}),
+    // Итоги, посчитанные сервером (S4-09): у спринта — та же функция, что у
+    // среза sprint_totals. Блока нет — пустой объект: «сервер не прислал»
+    // скажет разбор, а не молчаливое отсутствие полей.
+    computed: obj(b.computed),
     facts: factsOut,
     perms: {
       can_edit: perms.can_edit === true, can_status: perms.can_status === true, can_create: perms.can_create === true,

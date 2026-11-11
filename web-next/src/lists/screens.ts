@@ -16,7 +16,7 @@ import { feedConfig, type FeedSpec } from './feed';
 import type { AppKey } from '../i18n';
 import {
   OPEN_ONLY_NOTE, UC_OWN_LINKS_NOTE,
-  adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord,
+  adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord, projectRecord,
   questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
 } from './records';
 
@@ -131,7 +131,7 @@ const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'mo
  */
 export const FEEDS = {
   sprints: {
-    lead: ['context_md'], inRow: true,
+    lead: ['context_md'], titles: ['pp.adr.context'], inRow: true,
     because: ['DEPENDS_ON', 'IMPLEMENTED_IN'],
     // Два уровня: под полосой спринта — его задачи, по раскрытию.
     under: {
@@ -143,20 +143,22 @@ export const FEEDS = {
       },
     },
   },
-  adrs: { lead: ['context_md', 'decision_md'], because: ['DEPENDS_ON', 'SUPERSEDES'] },
-  tasks: { lead: ['note_md'], because: ['JUSTIFIED_BY', 'GATES'] },
+  // Голова тела — с сервера (body_head, K2-FEED-BODY-MORE), остаток — паспортом.
+  adrs: { lead: ['context_md', 'decision_md'], titles: ['pp.adr.context', 'pp.adr.decision'], headInRow: true, because: ['DEPENDS_ON', 'SUPERSEDES'] },
+  tasks: { lead: ['note_md'], titles: ['lists.feed.sec.note'], headInRow: true, because: ['JUSTIFIED_BY', 'GATES'] },
   decisions: {
-    lead: ['body_md', 'rationale_md'], because: ['DECIDED_IN', 'ANSWERS'],
+    lead: ['body_md', 'rationale_md'], titles: ['pp.adr.decision', 'lists.feed.sec.rationale'], headInRow: true, because: ['DECIDED_IN', 'ANSWERS'],
     becauseFields: { DECIDED_IN: 'adr' },
   },
-  specs: { lead: ['content_md'] },
+  specs: { lead: ['content_md'], titles: ['pp.field.body'], headInRow: true },
   questions: {
-    lead: ['body_md'], inRow: true, because: ['RAISED_IN', 'GATES'],
+    lead: ['body_md'], titles: ['lists.feed.sec.essence'], inRow: true, because: ['RAISED_IN', 'GATES'],
     becauseFields: { GATES: 'gates', RAISED_IN: 'adr' },
   },
   releases: { lead: ['description_md'], inRow: true },
-  tech: { lead: ['content_md'], inRow: true },
-  features: { lead: ['body_md', 'context_md'] },
+  tech: { lead: ['content_md'], titles: ['lists.feed.sec.info'], inRow: true },
+  // «Контекст» первым — как у сервера (LoreBodyHead.SOURCES), владелица 11.11.2026.
+  features: { lead: ['context_md', 'body_md'], titles: ['pp.adr.context', 'lists.feed.sec.description'], headInRow: true },
 } as const satisfies Partial<Record<string, FeedSpec>>;
 
 /** Конфиг раздела + лента: вид `feed`, `list.feed` и подписи рёбер-поводов. */
@@ -215,7 +217,10 @@ function sprintsConfig(lang: KitLang): KitConfig {
       // Имена фасетов — из общего набора loreFilters (S4-05): пока они жили
       // строками здесь и ключами там, наборы разошлись молча.
       filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
-      groupings: ['status', 'project', 'priority', 'milestone'],
+      groupings: ['status', 'project', 'priority', 'milestone', 'release'],
+      // S9-02: релизов у LORE больше сотни — разрез свёрнут при первом показе,
+      // иначе раскрытые группы снова дают стену строк, из которой задача и выросла.
+      collapsedGroupings: ['release'],
       // Код и название — разными колонками, как в прототипе v4 (владелица 08.11).
       columns: ['id', 'title', 'progress:tasks', 'sum:effort_total', 'sum:actual_total', 'status', 'project', 'priority', 'release', 'updated_at'],
     },
@@ -253,7 +258,7 @@ function adrsConfig(lang: KitLang): KitConfig {
         { id: 'accepted', title: appT(lang, 'lists.status.accepted'), filter: { status: 'accepted' } },
         { id: 'no-decisions', title: appT(lang, 'lists.quick.noDecisions'), filter: { decisions: '0' } },
       ],
-      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.tags],
       groupings: ['status', 'component', 'project'],
       columns: ['id', 'title', 'status', 'component', 'decisions', 'updated_at'],
     },
@@ -279,6 +284,7 @@ function tasksConfig(lang: KitLang): KitConfig {
         fields: [
           { key: 'sprint', title: f(lang, 'sprint'), type: 'ref' },
           { key: 'components', title: f(lang, 'components'), type: 'ref' },
+          { key: 'release', title: f(lang, 'release'), type: 'ref' },
           { key: 'effort', title: f(lang, 'effort'), type: 'number' },
         ],
       },
@@ -299,11 +305,11 @@ function tasksConfig(lang: KitLang): KitConfig {
         { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
         { id: 'no-sprint', title: appT(lang, 'lists.quick.noSprint'), filter: { sprint: '' } },
       ],
-      filters: [STATUS_FACET, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
-      groupings: ['status', LORE_FILTER_FIELDS.sprint],
-      // Спринтов много — разрез по спринту свёрнут с первого показа (S9-02).
-      collapsedGroupings: [LORE_FILTER_FIELDS.sprint],
-      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort', 'updated_at'],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
+      groupings: ['status', LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
+      // Спринтов и релизов много — эти разрезы свёрнуты с первого показа (S9-02).
+      collapsedGroupings: [LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
+      columns: ['id', 'title', 'status', 'release', 'sprint', 'components', 'effort', 'updated_at'],
     },
   };
 }
@@ -371,7 +377,7 @@ const decisionsSpec: SectionSpec = {
   views: ['list', 'cards', 'board', 'feed'],
   showClosed: 'below',
   quick: [['proposed', 'lists.status.proposed', { status: 'proposed' }], ['no-adr', 'lists.quick.noAdr', { adr: '' }]],
-  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.tags],
   groupings: ['status', LORE_FILTER_FIELDS.component, 'fields.adr'],
   columns: ['id', 'title', 'status', 'component', 'adr', 'updated_at'],
 };
@@ -448,6 +454,17 @@ const componentsSpec: SectionSpec = {
   filters: ['fields.area', LORE_FILTER_FIELDS.project, 'fields.owner'],
   groupings: ['fields.area', 'fields.owner'],
   columns: ['id', 'title', 'area', 'owner', 'adrs', 'specs'],
+};
+
+/** Проекты (S4-29, 53а): СТАТУСА НЕТ — справочник git-проектов; щелчок — паспорт проекта. */
+const projectsSpec: SectionSpec = {
+  kind: 'project', titleKey: 'lists.projects.title', icon: 'open-folder',
+  fields: [['default_branch', 'text']],
+  views: ['list', 'cards'],
+  quick: [['no-branch', 'lists.quick.noBranch', { default_branch: '' }]],
+  filters: [],
+  groupings: [],
+  columns: ['id', 'title', 'default_branch'],
 };
 
 /** Технологии: СТАТУСА НЕТ — это реестр версий (спеки SPEC-TECH-*). */
@@ -558,6 +575,10 @@ export const LIST_SCREENS = {
   components: {
     slice: 'components', titleKey: 'lists.components.title', icon: 'cog',
     map: componentRecord, config: lang => sectionConfig(lang, componentsSpec), quickIcons: {},
+  },
+  projects: {
+    slice: 'git_projects', titleKey: 'lists.projects.title', icon: 'open-folder',
+    map: projectRecord, config: lang => sectionConfig(lang, projectsSpec), quickIcons: {},
   },
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',

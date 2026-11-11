@@ -104,6 +104,9 @@ public class LoreQuestionResource extends LoreResourceBase {
             putIf(sql, p, "raised_by",    ":rb",    req.raised_by());
             putIf(sql, p, "opened_date",  ":od",    req.opened_date());
             putIf(sql, p, "closed_date",  ":cd",    req.closed_date());
+            // S4-MODEL-TYPES (свежесть): у вопроса истории нет — момент заведения/правки на вершине.
+            sql.append(", updated_at=:upd");
+            p.put("upd", java.time.Instant.now().toString());
             sql.append(" UPSERT WHERE question_id=:qid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
@@ -196,6 +199,7 @@ public class LoreQuestionResource extends LoreResourceBase {
                     "WHERE question_id=:q AND status <> 'closed'",
                     Map.of("cd", java.time.LocalDate.now().toString(), "q", req.question_id()))).await().indefinitely();
             }
+            if (remove ? had : (linked && !had)) touchUpdatedAt("KnowQuestion", "question_id", req.question_id());
             Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
                 "decision_id", req.decision_id(), "action", remove ? "removed" : "added");
             return remove ? unlinkOutcome(base, had)
@@ -241,6 +245,7 @@ public class LoreQuestionResource extends LoreResourceBase {
                     "TO (SELECT FROM " + type + " WHERE " + field + "=:t) IF NOT EXISTS",
                     Map.of("q", req.question_id(), "t", req.target_id()))).await().indefinitely().result());
             }
+            if (remove ? had : (linked && !had)) touchUpdatedAt("KnowQuestion", "question_id", req.question_id());
             Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
                 "target_id", req.target_id(), "action", remove ? "removed" : "added");
             return remove ? unlinkOutcome(base, had)
@@ -278,6 +283,7 @@ public class LoreQuestionResource extends LoreResourceBase {
                     "TO (SELECT FROM KnowTask WHERE task_uid=:t) IF NOT EXISTS",
                     Map.of("q", req.question_id(), "t", req.task_uid()))).await().indefinitely().result());
             }
+            if (remove ? had : (linked && !had)) touchUpdatedAt("KnowQuestion", "question_id", req.question_id());
             Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
                 "task_uid", req.task_uid(), "action", remove ? "removed" : "added");
             return remove ? unlinkOutcome(base, had)
@@ -321,6 +327,7 @@ public class LoreQuestionResource extends LoreResourceBase {
                     "UPDATE KnowQuestion SET component_id=:c WHERE question_id=:q AND component_id IS NULL",
                     Map.of("c", req.component_id(), "q", req.question_id()))).await().indefinitely();
             }
+            if (remove ? had : (linked && !had)) touchUpdatedAt("KnowQuestion", "question_id", req.question_id());
             Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
                 "component_id", req.component_id(), "action", remove ? "removed" : "added");
             return remove ? unlinkOutcome(base, had)
@@ -359,6 +366,7 @@ public class LoreQuestionResource extends LoreResourceBase {
                     "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
                     Map.of("q", req.question_id(), "p", req.project()))).await().indefinitely().result());
             }
+            if (remove ? had : (linked && !had)) touchUpdatedAt("KnowQuestion", "question_id", req.question_id());
             Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
                 "project", req.project(), "action", remove ? "removed" : "added");
             // linked=false на незарегистрированном проекте — noop с причиной, а не ok:true.

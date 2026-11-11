@@ -38,16 +38,21 @@ final class LoreModelTypes {
         Map.entry("task", new Graph("KnowTask", "KnowTaskHist", "task_uid")),
         Map.entry("adr", new Graph("KnowADR", "KnowADRHist", "adr_id")),
         Map.entry("spec", new Graph("KnowSpec", "KnowSpecHist", "spec_id")),
-        // Kit 09.11: вершины без истории SCD2 — hist = null.
-        Map.entry("decision", new Graph("KnowDecision", null, "decision_id")),
+        // Аудит времени (владелица 10.11): hist — цепочка SCD2 в ГРАФЕ. Kit 09.11 считал, что у
+        // решения, вехи и релиза истории нет, — в БД она есть (LoreSlices.HIST_PARENT): статус
+        // решения, цель вехи, заведение и правка релиза пишутся версиями. null — только у
+        // вершин, у которых Hist-типа нет совсем (вопрос, компонент, фича).
+        Map.entry("decision", new Graph("KnowDecision", "KnowDecisionHist", "decision_id")),
         Map.entry("question", new Graph("KnowQuestion", null, "question_id")),
-        Map.entry("milestone", new Graph("KnowMilestone", null, "milestone_id")),
-        Map.entry("release", new Graph("KnowRelease", null, "release_uid")),
-        // S4-V2-SECTIONS: паспорт только чтения — история фасаду не нужна, hist = null
-        // (у технологии-спеки Hist есть, но версию записи фасад у READ_ONLY не спрашивает).
+        Map.entry("milestone", new Graph("KnowMilestone", "KnowMilestoneHist", "milestone_id")),
+        Map.entry("release", new Graph("KnowRelease", "KnowReleaseHist", "release_uid")),
+        // Технология — спека SPEC-TECH-*: её Hist тот же KnowSpecHist (смена номера открывает
+        // версию). Что паспорт только для чтения, на факт графа не влияет.
         Map.entry("component", new Graph("LoreComponent", null, "component_id")),
-        Map.entry("tech", new Graph("KnowSpec", null, "spec_id")),
-        Map.entry("feature", new Graph("KnowUseCase", null, "uc_id")));
+        Map.entry("tech", new Graph("KnowSpec", "KnowSpecHist", "spec_id")),
+        Map.entry("feature", new Graph("KnowUseCase", null, "uc_id")),
+        // S4-29 (53а): проект — справочная вершина без истории.
+        Map.entry("project", new Graph("KnowGitProject", null, "slug")));
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
     static final Map<String, Map<String, String>> ALIASES = Map.ofEntries(
@@ -62,7 +67,8 @@ final class LoreModelTypes {
         Map.entry("release", Map.of("code", "release_id", "date", "release_date", "description_md", "description_md")),
         Map.entry("component", Map.of("title", "full_name", "code", "component_id", "parent", "parent_id", "icon", "game_icon")),
         Map.entry("tech", Map.of("code", "spec_id")),
-        Map.entry("feature", Map.of("code", "uc_id", "date", "date_created", "parent", "parent_uc_id")));
+        Map.entry("feature", Map.of("code", "uc_id", "date", "date_created", "parent", "parent_uc_id")),
+        Map.entry("project", Map.of("title", "name", "code", "slug")));
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
@@ -78,8 +84,31 @@ final class LoreModelTypes {
             "row_version").contains(prop);
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * Чья схема нужна модели: вершины и Hist-типы из {@link #GRAPH}. Раньше
+     * LoreModelResource брал только имена на «Know» — у компонента (LoreComponent)
+     * схемы не было вовсе, и все его поля выходили SUPPLIES.
+     */
+    static boolean wantsSchemaOf(String name) {
+        if (name == null) return false;
+        for (Graph g : GRAPH.values())
+            if (name.equals(g.vertex()) || name.equals(g.hist())) return true;
+        return false;
+    }
+
     static Map<String, Object> build(Map<String, List<String>> schema) {
+        return build(schema, Map.of());
+    }
+
+    /**
+     * @param declared объявленные типы свойств: vertex type → (свойство → тип схемы,
+     *                 DATETIME / DATE / STRING …). Свойство не объявлено (ArcadeDB
+     *                 schemaless) — у поля {@code property_type: null}: тип неизвестен,
+     *                 а не «строка».
+     */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> build(Map<String, List<String>> schema, Map<String, Map<String, String>> declared) {
+        Map<String, Map<String, String>> decl = declared == null ? Map.of() : declared;
         Map<String, Object> out = new LinkedHashMap<>();
         for (String t : LoreRecordRegistry.TYPES) {
             Graph g = GRAPH.get(t);
@@ -99,6 +128,8 @@ final class LoreModelTypes {
                 m.put("visibility", "visible");
                 m.put("display", display(key, f));
                 m.put("property", property);
+                m.put("property_type", property == null ? null : declaredType(decl, g, property));
+                if ("date".equals(f.get("kind"))) m.put("precision", PRECISION.get(t + "." + key));
                 m.put("source", property != null ? "CONFIRMS" : "SUPPLIES");
                 if (property != null) matched.add(property);
                 fields.add(m);
@@ -117,6 +148,7 @@ final class LoreModelTypes {
             type.put("key", g.key());
             type.put("vertex", g.vertex());
             type.put("hist", g.hist());
+            type.put("time", TIME.get(t));
             type.put("fields", fields);
             type.put("relations", contract.get("relations"));
             type.put("computed", COMPUTED.getOrDefault(t, List.of()));
@@ -126,6 +158,109 @@ final class LoreModelTypes {
         }
         return out;
     }
+
+    private static String declaredType(Map<String, Map<String, String>> decl, Graph g, String property) {
+        String v = decl.getOrDefault(g.vertex(), Map.of()).get(property);
+        if (v == null && g.hist() != null) v = decl.getOrDefault(g.hist(), Map.of()).get(property);
+        return v;
+    }
+
+    // ── Время записи (аудит владелицы 10.11) ─────────────────────────────────
+    // Модель называет, ГДЕ у типа время и какой оно точности: «день» (строка YYYY-MM-DD)
+    // или «момент» (DATETIME valid_from версии / ISO-строка с часами). Без этого kit не
+    // отличал «времени дня нет» от «время не пришло». Сверено по коду записи и по проду
+    // (срезы decisions, decision_history_all, sprints, releases, questions, use_cases — 10.11).
+
+    /** Точность полей вида date: тип.ключ → date | datetime. */
+    static final Map<String, String> PRECISION = Map.ofEntries(
+        // created_date ставит заведение спринта (LoreIngestService) — Instant.now(), ISO-момент.
+        Map.entry("sprint.created", "datetime"),
+        Map.entry("sprint.planned_start", "date"),
+        Map.entry("sprint.planned_end_date", "date"),
+        Map.entry("adr.date", "date"),
+        Map.entry("decision.date", "date"),
+        Map.entry("question.due_date", "date"),
+        Map.entry("question.opened", "date"),
+        Map.entry("question.closed", "date"),
+        Map.entry("release.date", "date"),
+        // «Проверено» = valid_from открытой версии спеки-технологии (срез tech_registry).
+        Map.entry("tech.checked_at", "datetime"),
+        Map.entry("feature.date", "date"),
+        // shipped_at при поставке ставит UcReadinessCalculator — LocalDate.now(): день, хоть и «_at».
+        Map.entry("feature.shipped_at", "date"));
+
+    private static Map<String, Object> src(String source, String precision, String note) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("source", source);
+        m.put("precision", precision);
+        if (note != null) m.put("note", note);
+        return m;
+    }
+
+    private static Map<String, Object> time(String history, List<Map<String, Object>> created,
+                                            List<Map<String, Object>> changed) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("history", history);
+        m.put("created", created);
+        m.put("changed", changed);
+        return m;
+    }
+
+    private static final String VER = "version.valid_from";
+    private static final String VER_FIRST = "version.first_valid_from";
+    private static final String TOUCHED = "updated_at";
+    private static final String TOUCHED_NOTE =
+        "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет";
+    /** S4-MODEL-TYPES: у вопроса, фичи/сценария и компонента истории нет — отметку ставит КАЖДЫЙ путь записи. */
+    private static final String TOUCHED_EVERY =
+        "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник";
+
+    /**
+     * Тип → время записи. {@code history}: scd2 — есть цепочка версий (valid_from у
+     * каждой — DATETIME), none — нет. {@code created} / {@code changed}: источники по
+     * старшинству; changed — те же, из которых срез списка собирает {@code changed_at}
+     * (максимум из открытой версии и updated_at, иначе следующий по списку). Пустой
+     * список — источника нет (честное «нет времени»), а не «не смотрели».
+     */
+    static final Map<String, Map<String, Object>> TIME = Map.ofEntries(
+        Map.entry("sprint", time("scd2",
+            List.of(src("created_date", "datetime",
+                "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения")),
+            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE), src("created_date", "datetime", null)))),
+        Map.entry("task", time("scd2",
+            List.of(src(VER_FIRST, "datetime", null)),
+            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
+        Map.entry("adr", time("scd2",
+            List.of(src("created_at", "datetime", "момент — у ADR, заведённых после S2-10"), src("date_created", "date", null)),
+            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE),
+                src("created_at", "datetime", null), src("date_created", "date", null)))),
+        Map.entry("spec", time("scd2",
+            List.of(src(VER_FIRST, "datetime", null)),
+            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
+        Map.entry("decision", time("scd2",
+            List.of(src("created_at", "datetime", "момент — у решений, заведённых после S2-10"), src("date_created", "date", null)),
+            List.of(src(VER, "datetime", "версию открывает смена статуса"), src(TOUCHED, "datetime", TOUCHED_NOTE),
+                src("created_at", "datetime", null), src("date_created", "date", null)))),
+        Map.entry("question", time("none",
+            List.of(src("opened_date", "date", null)),
+            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("closed_date", "date", null), src("opened_date", "date", null)))),
+        Map.entry("milestone", time("scd2",
+            List.of(),
+            List.of(src(VER, "datetime", "версию открывает цель вехи"), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
+        Map.entry("release", time("scd2",
+            List.of(src("released_at", "datetime", "момент — если известен при заведении"), src("release_date", "date", null)),
+            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE),
+                src("released_at", "datetime", null), src("release_date", "date", null)))),
+        Map.entry("component", time("none", List.of(), List.of(src(TOUCHED, "datetime", TOUCHED_EVERY)))),
+        Map.entry("tech", time("scd2",
+            List.of(src(VER_FIRST, "datetime", null)),
+            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
+        Map.entry("feature", time("none",
+            List.of(src("date_created", "date", null)),
+            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("shipped_at", "date", null), src("date_created", "date", null)))),
+        // S4-29 (53а): у проекта ни истории, ни дат заведения и правки — честные пустые списки
+        // («источника нет»), а не отсутствие раздела.
+        Map.entry("project", time("none", List.of(), List.of())));
 
     // ── Вид поля: важность и поведение длинного содержимого (владелица 09.11) ──
     // Водораздел: kit знает только ФОРМУ (рисует поле по этим подсказкам), приложение —

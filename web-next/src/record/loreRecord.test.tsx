@@ -61,7 +61,8 @@ describe('S5-01 · sprintKitData — строки слайсов → запис�
 
   it('задачи не загрузились — meta.errors[tasks], строка говорит «не смогли проверить»', () => {
     const { record, data } = sprintKitData(SPRINT, { error: 'HTTP 403' }, NOW);
-    expect(data.meta.errors).toEqual([{ block: 'tasks', reason: 'HTTP 403' }]);
+    // S4-TECH-NOTES: «tasks — HTTP 403» — диагностика, у человека вместо неё строка без кода.
+    expect(data.meta.errors).toEqual([{ block: 'tasks', reason: 'HTTP 403', audience: 'tech' }]);
     render(<RecordView record={record} ctx={ctxOf(data)} tab="overview" onTab={() => {}} facts={{ ...SPRINT_FACTS, now: NOW }} />);
     expect(screen.getByTestId('kit-facts').querySelector('[data-fact="tasks"]')?.textContent).toContain('не смогли проверить');
   });

@@ -13,8 +13,9 @@
 //     kit показывает три абзаца и раскрывает остальное на месте, без сети;
 //   • тела в строке нет (задача, ADR, решение, спека, фича) — тянуть его на всю
 //     ленту значило бы N запросов на экран (у задач — 4 млн символов, SE-01).
-//     Поэтому тело берётся паспортом `/lore/record` ОДНОЙ записи и только по
-//     раскрытию; до него kit честно пишет «Ещё» без числа.
+//     Поэтому сервер режет ГОЛОВУ — первые 3 абзаца (`body_head`) и сколько ещё
+//     (`body_rest`), а остаток берётся паспортом `/lore/record` ОДНОЙ записи и
+//     только по раскрытию.
 import type { KitConfig, KitEdge, KitRecord } from '@seidr/kit';
 import type { AppKey } from '../i18n';
 import type { LoreClient } from '../sprints/loreClient';
@@ -26,8 +27,21 @@ export interface FeedSpec {
    * в строке среза и в `values` паспорта: одно имя на оба источника.
    */
   lead: readonly string[];
+  /**
+   * Подписи разделов из lead — те же, что у разделов паспорта (по порядку lead).
+   * Лента — лента паспортов (владелица 11.11.2026): тело в ленте — раздел
+   * с подписью. Нет подписи — раздел без заголовка.
+   */
+  titles?: readonly AppKey[];
   /** Срез уже везёт эти поля в строке: тело целиком здесь, сеть не нужна. */
   inRow?: boolean;
+  /**
+   * Срез везёт ГОЛОВУ тела (K2-FEED-BODY-MORE): `body_head` — первые 3 абзаца,
+   * `body_rest` — сколько ещё в источнике. Голова видна сразу, остаток — паспортом
+   * по раскрытию. Строка без `body_head` (старый сервер, тело скрыто правами) —
+   * как раньше: «Ещё» без числа.
+   */
+  headInRow?: boolean;
   /** Связи, объясняющие повод записи (типы рёбер, как в паспорте). */
   because?: readonly string[];
   /**
@@ -76,6 +90,20 @@ export function feedConfig(
  * Абзацы md-текста: куски между пустыми строками. Что считать абзацем — забота
  * источника (kit получает абзацы готовыми), и правило здесь одно на все поля.
  */
+/**
+ * Раздел тела для ленты: первый НЕПУСТОЙ по порядку lead — «Контекст» стоит
+ * первым у тех, у кого он есть; у типа без него — первый раздел тела
+ * (владелица 11.11.2026, вариант «а»). Тот же выбор делает сервер
+ * (LoreBodyHead, body_sec), поэтому раскрытие догружает остаток ТОГО ЖЕ раздела.
+ */
+export function pickSection(lead: readonly string[], values: Record<string, unknown>): { index: number; paragraphs: string[] } {
+  for (let i = 0; i < lead.length; i++) {
+    const p = paragraphsOf(values[lead[i]]);
+    if (p.length) return { index: i, paragraphs: p };
+  }
+  return { index: -1, paragraphs: [] };
+}
+
 export function paragraphsOf(...texts: unknown[]): string[] {
   const out: string[] = [];
   for (const t of texts) {

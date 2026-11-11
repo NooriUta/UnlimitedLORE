@@ -101,7 +101,7 @@ describe('во весь экран — ширина полей настраив�
     localStorage.clear();
     const { container, unmount } = render(<RecordView record={rec} ctx={ctx} tab="overview" onTab={() => {}} placement="full" />);
     const seg = screen.getByRole('radiogroup', { name: 'Ширина текста' });
-    expect(within(seg).getAllByRole('radio').map(b => b.textContent)).toEqual(['уже', 'средне', 'шире']);
+    expect(within(seg).getAllByRole('radio').map(b => b.textContent)).toEqual(['уже', 'средне', 'шире', 'во всю ширину']);
     expect(container.querySelector('.sk-rec')?.getAttribute('data-width')).toBe('m');
     fireEvent.click(within(seg).getByRole('radio', { name: 'шире' }));
     expect(container.querySelector('.sk-rec')?.getAttribute('data-width')).toBe('l');
@@ -126,5 +126,31 @@ describe('ушки разделов — без заливки (владелиц�
     // воздушность».
     expect(ruleOf('.sk-iconbtn')).toMatch(/background:\s*(none|transparent)/);
     expect(ruleOf('.sk-iconbtn:hover')).not.toMatch(/--acc/);
+  });
+});
+
+// Владелица 11.11.2026: «в Паспорте уменьши наполовину пустые отступы у каждого
+// вида (уже средне шире), добавь ещё тип — на всю ширину: там всё раздвигаешь и
+// оставляешь стандартную минимальную границу по краям».
+// Пустое поле по бокам — (100 − мера)%. Вдвое меньше: 44→22, 34→17, 18→9.
+describe('ширина текста 11.11: поля вдвое уже и вариант «во всю ширину»', () => {
+  it('у «уже / средне / шире» пустые поля вдвое меньше прежних: 78% / 83% / 91%', () => {
+    expect(ruleOf(".sk-dock[data-placement='full'] .sk-rec[data-width='s']")).toMatch(/--rec-col:\s*78%/);
+    expect(ruleOf(".sk-dock[data-placement='full'] .sk-rec[data-width='m']")).toMatch(/--rec-col:\s*83%/);
+    expect(ruleOf(".sk-dock[data-placement='full'] .sk-rec[data-width='l']")).toMatch(/--rec-col:\s*91%/);
+  });
+
+  it('четвёртый вариант «во всю ширину»: рамка и мера 100%, по краям только стандартный отступ', () => {
+    localStorage.clear();
+    const { container } = render(<RecordView record={rec} ctx={ctx} tab="overview" onTab={() => {}} placement="full" />);
+    const seg = screen.getByRole('radiogroup', { name: 'Ширина текста' });
+    expect(within(seg).getAllByRole('radio').map(b => b.textContent)).toEqual(['уже', 'средне', 'шире', 'во всю ширину']);
+    fireEvent.click(within(seg).getByRole('radio', { name: 'во всю ширину' }));
+    expect(container.querySelector('.sk-rec')?.getAttribute('data-width')).toBe('f');
+    const full = ruleOf(".sk-dock[data-placement='full'] .sk-rec[data-width='f']");
+    expect(full).toMatch(/--rec-col:\s*100%/);
+    expect(full).toMatch(/max-width:\s*100%/);
+    expect(full).toMatch(/padding-left:\s*var\(--pad-x\)/);
+    expect(full).toMatch(/padding-right:\s*var\(--pad-x\)/);
   });
 });

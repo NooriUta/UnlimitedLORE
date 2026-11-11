@@ -9,7 +9,7 @@
 // строкам». Отказ приходит значением (`unsupported` / `forbidden` / `failed`),
 // потому что «не посчитали» — состояние, которое надо показать.
 import { useEffect, useState } from 'react';
-import type { ListCounts } from '@seidr/kit';
+import type { LoreCounts } from './loreFacets';
 import { fetchFacets } from './loreFacets';
 import type { FacetsOptions } from './loreFacets';
 
@@ -18,9 +18,9 @@ export interface UseListFacetsOptions extends Omit<FacetsOptions, 'signal'> {
   enabled?: boolean;
 }
 
-export function useListFacets(slice: string, opts: UseListFacetsOptions = {}): ListCounts | undefined {
+export function useListFacets(slice: string, opts: UseListFacetsOptions = {}): LoreCounts | undefined {
   const { axes, scopeProjects, params, fetchImpl, enabled = true } = opts;
-  const [counts, setCounts] = useState<ListCounts | undefined>(undefined);
+  const [counts, setCounts] = useState<LoreCounts | undefined>(undefined);
   // Ключи-строки, а не массив и объект: новая ссылка с тем же содержимым — не
   // повод пересчитывать всю выдачу (выбор проектов приходит новым массивом на
   // каждый рендер оболочки).

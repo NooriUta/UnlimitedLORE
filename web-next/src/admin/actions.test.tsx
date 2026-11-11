@@ -306,6 +306,29 @@ describe('экран журнала · честные состояния', () =>
     fireEvent.click(screen.getByTestId('adm-log-apply'));
     await waitFor(() => expect(screen.getByTestId('adm-log-empty').getAttribute('data-empty')).toBe('filter'));
     expect(screen.getByTestId('adm-log-empty').textContent).toMatch(/фильтр/i);
+    // S7B-25: пустое состояние — kit EmptyState (с его значком), а не своя разметка.
+    expect(screen.getByTestId('adm-log-empty').querySelector('.sk-state__icon')).toBeTruthy();
+  });
+
+  it('период — полями даты (type=date), а не текстом; значение уходит в адрес как было (S7B-25)', async () => {
+    const { f } = fake();
+    mount(f);
+    const from = (await screen.findByLabelText('С')) as HTMLInputElement;
+    const to = screen.getByLabelText('По') as HTMLInputElement;
+    expect(from.type).toBe('date');
+    expect(to.type).toBe('date');
+    fireEvent.change(from, { target: { value: '2026-11-10' } });
+    fireEvent.click(screen.getByTestId('adm-log-apply'));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('adm-from')).toBe('2026-11-10'));
+  });
+
+  it('в адресе момент ISO, не дата — поле остаётся текстовым и значение не теряется (S7B-25)', async () => {
+    window.history.replaceState(null, '', '/?adm-from=2026-11-10T12:00:00Z');
+    const { f } = fake();
+    mount(f);
+    const from = (await screen.findByLabelText('С')) as HTMLInputElement;
+    expect(from.type).toBe('text');
+    expect(from.value).toBe('2026-11-10T12:00:00Z');
   });
 
   it('400 — слова сервера и список допустимых значений, а не «ошибка загрузки»', async () => {
@@ -467,7 +490,7 @@ describe('экран журнала · откат пачки (S7B-13)', () => {
     const panel = await openPanel(fk.f);
     fireEvent.click(await within(panel).findByTestId('adm-log-rollback-btn'));
     await screen.findByTestId('kit-diff-apply');
-    expect(screen.getByTestId('adm-danger-confirm')).toBeTruthy();
+    expect(screen.getByTestId('kit-diff-confirm')).toBeTruthy();
     expect(fk.writes()).toHaveLength(0);
     expect(fk.posts[0]).toMatchObject({ kc_sub: 'u-fro', dry_run: true, undo_of: BATCH, changes: BATCH_BODY.undo });
     // display_name не уходит: откат не должен переименовывать человека в его kc_sub.
@@ -481,7 +504,7 @@ describe('экран журнала · откат пачки (S7B-13)', () => {
     const apply = await screen.findByTestId('kit-diff-apply');
     fireEvent.click(apply);
     expect(fk.writes()).toHaveLength(0);
-    fireEvent.change(screen.getByTestId('adm-danger-confirm'), { target: { value: 'u-fro' } });
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'u-fro' } });
     fireEvent.click(screen.getByTestId('kit-diff-apply'));
     expect(await screen.findByTestId('kit-batch-summary')).toBeTruthy();
     expect(fk.writes()).toHaveLength(1);

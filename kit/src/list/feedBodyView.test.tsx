@@ -61,7 +61,7 @@ function feed(body: FeedBody | null, onFeedBody?: (id: string) => void, edges: K
 }
 
 const item = (c: HTMLElement, id: string) => c.querySelector(`[data-record-id="${id}"]`) as HTMLElement;
-const paras = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent);
+const paras = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent?.trim());
 const more = (c: HTMLElement, id: string) => item(c, id).querySelector('.sk-feed__bodymore') as HTMLElement | null;
 
 describe('K2-FEED-BODY-MORE · шапка и первые абзацы', () => {
@@ -197,5 +197,41 @@ describe('K2-FEED-BODY-MORE · вклеенный список относяще�
       { from: 'b', to: 'a', type: 'BECAUSE' },
     ]);
     expect(item(container, 'b').querySelector('.sk-rec-glue')).toBeNull();
+  });
+});
+
+// Владелица 11.11.2026: «в Ленте feed не используется рендеринг MartProse,
+// исправь» и «по факту лента — это лента паспортов». Тело в ленте — тот же
+// MD, что в паспорте, и читается тем же рендером: сырые «**» и «- » в ленте
+// при отрисованном паспорте — два разных вида одного текста.
+describe('тело в ленте рендерится MartProse, как в паспорте', () => {
+  it('MD в абзаце разобран: жирный — <strong>, список — <li>, звёздочек в тексте нет', () => {
+    const { container } = feed({ kind: 'full', paragraphs: ['Это **важно** и `код`', '- пункт один\n- пункт два'] });
+    const body = item(container, 'a').querySelector('.sk-feed__body') as HTMLElement;
+    expect(body.querySelector('.sk-prose')).toBeTruthy();
+    expect(body.querySelector('strong')?.textContent).toBe('важно');
+    expect(body.querySelector('code')?.textContent).toBe('код');
+    expect([...body.querySelectorAll('li')].map(l => l.textContent)).toEqual(['пункт один', 'пункт два']);
+    expect(body.textContent).not.toContain('**');
+  });
+});
+
+// Владелица 11.11.2026: «лента — это лента паспортов», «принудительно с показом
+// раздела „Контекст“»; у типов без контекста — первый раздел тела (вариант «а»).
+// Тело в ленте — РАЗДЕЛ паспорта: тот же блок, та же подпись, что в паспорте.
+describe('тело в ленте — раздел паспорта с подписью', () => {
+  it('приложение назвало раздел — он рисуется блоком раздела паспорта с подписью', () => {
+    const { container } = feed({ kind: 'full', paragraphs: ['абзац контекста'], section: 'Контекст' });
+    const sec = item(container, 'a').querySelector('.sk-feed__body .sk-rec-fields__sec') as HTMLElement;
+    expect(sec).toBeTruthy();
+    expect(sec.getAttribute('aria-label')).toBe('Контекст');
+    expect(sec.querySelector('.sk-rec-fields__sechead')?.textContent).toBe('Контекст');
+    expect(sec.textContent).toContain('абзац контекста');
+  });
+
+  it('раздел не назван — подписи нет, абзацы те же (выдумывать подпись kit не станет)', () => {
+    const { container } = feed({ kind: 'full', paragraphs: ['абзац'] });
+    expect(item(container, 'a').querySelector('.sk-rec-fields__sechead')).toBeNull();
+    expect(paras(container, 'a')).toEqual(['абзац']);
   });
 });

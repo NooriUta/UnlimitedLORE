@@ -291,6 +291,18 @@ public abstract class LoreResourceBase {
     }
 
     /**
+     * Свежесть (S4-MODEL-TYPES, «свежесть = последняя дата изменения»): у вершин без
+     * истории SCD2 — вопроса, фичи/сценария, компонента — момент правки живёт отметкой
+     * {@code updated_at} (ISO-строка, как у задачи в #1124). Пути, что меняют только рёбра
+     * (связи), ставят её этим вызовом; срез отдаёт её в {@code changed_at} (LoreChangedAt).
+     */
+    void touchUpdatedAt(String vertex, String key, String id) {
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "UPDATE " + vertex + " SET updated_at=:upd WHERE " + key + "=:id",
+            Map.of("upd", java.time.Instant.now().toString(), "id", id))).await().indefinitely();
+    }
+
+    /**
      * Кто поставил запись (провенанс ребра): факт токена (ось:идентичность), а не
      * поле тела запроса. S2-06 «Связать» и S7C-05 стрелки холста.
      */

@@ -158,4 +158,46 @@ describe('S9-01 · карта осей LORE', () => {
   it('фасетов, которых сервер не считает, в запросе нет — и это не «ноль», а счёт по странице', () => {
     expect(axesForKeys(['status', 'fields.owner'])).toEqual({});
   });
+
+  // S9-02: у срезов задач столбец компонентов зовётся `component_ids`, а не
+  // `components`. Ось с чужим именем — 400 на ВЕСЬ запрос, то есть раздел
+  // «Задачи» терял счётчики по всем осям сразу, включая новую ось релиза.
+  it('срез задач: компоненты — столбец component_ids, релиз — release_ids', () => {
+    for (const slice of ['open_tasks', 'closed_tasks']) {
+      expect(axesForKeys(['status', 'fields.sprint', 'fields.components', 'fields.release'], slice)).toEqual({
+        sprint_id: 'fields.sprint', component_ids: 'fields.components', release_ids: 'fields.release',
+      });
+    }
+  });
+
+  it('положительный контроль: у прочих срезов имя прежнее', () => {
+    expect(axesForKeys(['fields.components'], 'sprints')).toEqual({ components: 'fields.components' });
+  });
+});
+
+// SPRINT_UXR_S9_SCALE_OPT/S9-03 — закреплённые значения фасета приходят с
+// сервера тем же ответом /facets (текущие релизы — is_current), без
+// отдельного запроса на каждом экране.
+describe('S9-03 · закреплённые значения из ответа /facets', () => {
+  const rel = { release_ids: 'fields.release', sprint_id: 'fields.sprint' };
+  const axis = { values: [{ value: 'v1', count: 3 }], empty: 0, nonempty: 3, total: 3 };
+
+  it('pinned по оси сервера доходит под ключом фасета kit', async () => {
+    const f = vi.fn(async () => ok({ release_ids: axis, sprint_id: axis }, { pinned: { release_ids: ['v1.17.12', 'link-v0.3.7'] } }));
+    const counts = await fetchFacets('sprints', { axes: rel, fetchImpl: f as unknown as typeof fetch });
+    expect(counts.kind).toBe('counted');
+    expect(counts.pinned).toEqual({ 'fields.release': ['v1.17.12', 'link-v0.3.7'] });
+  });
+
+  it('pinned нет — закреплённых нет, а не пустые блоки', async () => {
+    const f = vi.fn(async () => ok({ release_ids: axis }));
+    const counts = await fetchFacets('sprints', { axes: rel, fetchImpl: f as unknown as typeof fetch });
+    expect(counts.pinned).toBeUndefined();
+  });
+
+  it('pinned по оси, которой не просили, и не-строки — отброшены', async () => {
+    const f = vi.fn(async () => ok({ release_ids: axis }, { pinned: { release_ids: ['v1', 7, ''], milestone_ids: ['M-1'] } }));
+    const counts = await fetchFacets('sprints', { axes: rel, fetchImpl: f as unknown as typeof fetch });
+    expect(counts.pinned).toEqual({ 'fields.release': ['v1'] });
+  });
 });

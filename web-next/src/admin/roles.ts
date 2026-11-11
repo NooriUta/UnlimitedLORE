@@ -10,7 +10,7 @@
 //     пачки (changes=undo, undo_of=batch_id).
 //
 // Здесь — модель без React: что рисовать и что отправлять.
-import type { BatchItemFail, BatchResult, DiffCheck, DiffRow, MatrixCellState } from '@seidr/kit';
+import type { BatchItemFail, BatchResult, DiffCheck, DiffRow, MatrixCellState, MatrixChange } from '@seidr/kit';
 import { fetchSlice, LoreHttpError } from '../api/loreSlice';
 import { loreFetch } from '../auth/session';
 
@@ -248,11 +248,6 @@ export function parseApply(body: unknown): ApplyAnswer {
   };
 }
 
-/** Подтверждение — точный логин человека (прототип v6, правило A). */
-export function isConfirmed(typed: string, word: string): boolean {
-  return word.trim() !== '' && typed.trim() === word.trim();
-}
-
 export interface BatchRequest {
   kc_sub: string;
   display_name?: string;
@@ -273,4 +268,79 @@ export async function postRoleBatch(req: BatchRequest, fetchImpl: typeof fetch =
     throw new LoreHttpError(res.status, String(body?.error ?? (body === null ? 'NON_JSON' : '')), String(body?.detail ?? ''));
   }
   return body;
+}
+
+// ── S7B-11: общая матрица «все проекты × все люди» ──────────────────────────
+
+/** Назначений ролей в проектах (ячейки на человека «*» — KC/Forgejo — не в счёт). */
+export function countAssignments(data: RolesData): number {
+  return data.people.reduce((n, p) => n + p.cells.filter(c => c.role !== null).length, 0);
+}
+
+/**
+ * Ячейка «проект × человек». «Роли нет» утверждаем, только если строка
+ * человека проверена И сервер назвал опрошенные источники — иначе «не смогли
+ * проверить»: по дыркам в матрице раздают доступы.
+ */
+export function projectPersonCell(data: RolesData, project: string, kcSub: string, notAsked?: string): MatrixCellState {
+  const person = data.people.find(p => p.kc_sub === kcSub);
+  if (!person) return { state: 'unverified', reason: notAsked };
+  const c = person.cells.find(x => x.project === project);
+  const noneIsKnown = person.state === 'checked' && data.sourcesAsked.length > 0;
+  if (!c) return noneIsKnown ? { state: 'none' } : { state: 'unverified', reason: notAsked };
+  if (c.state === 'forbidden') return { state: 'forbidden', reason: c.source ?? undefined };
+  if (c.state === 'unavailable') return { state: 'unverified', reason: c.source ?? notAsked };
+  return c.role ? { state: 'value', value: c.role } : { state: 'none' };
+}
+
+export interface PersonChanges { kc_sub: string; changes: RoleChange[] }
+
+/**
+ * Предложение матрицы (строка — проект, колонка — человек) → пачки по людям.
+ * Пачка у сервера — на одного человека (POST /lore/user/role/batch {kc_sub}),
+ * поэтому правка проекта сразу у нескольких — несколько пачек; порядок — как
+ * в предложении.
+ */
+export function splitByPerson(changes: readonly MatrixChange[]): PersonChanges[] {
+  const out: PersonChanges[] = [];
+  for (const ch of changes) {
+    let g = out.find(x => x.kc_sub === ch.col);
+    if (!g) { g = { kc_sub: ch.col, changes: [] }; out.push(g); }
+    g.changes.push(ch.value === null ? { project: ch.row, action: 'remove' } : { project: ch.row, role: ch.value });
+  }
+  return out;
+}
+
+// ── S7B-04: карточка роли ──────────────────────────────────────────────────
+
+/** Что даёт роль в проекте — то же правило, что у сервера (LoreAccessExplain): reader только читает. */
+export function roleCanWrite(role: string): boolean {
+  return role !== 'reader';
+}
+
+export interface RoleHolder { kc_sub: string; name: string; projects: string[] }
+
+export function roleHolders(data: RolesData, role: string): RoleHolder[] {
+  return data.people
+    .map(p => ({ kc_sub: p.kc_sub, name: p.name, projects: p.cells.filter(c => c.role === role).map(c => c.project) }))
+    .filter(h => h.projects.length > 0)
+    .sort((a, b) => b.projects.length - a.projects.length || a.name.localeCompare(b.name));
+}
+
+export interface RoleSummary { role: string; people: number; assignments: number }
+
+/** Роли, которые у кого-нибудь есть: больше назначений — выше. */
+export function roleSummary(data: RolesData): RoleSummary[] {
+  const m = new Map<string, { people: Set<string>; n: number }>();
+  for (const p of data.people) {
+    for (const c of p.cells) {
+      if (c.role === null) continue;
+      const e = m.get(c.role) ?? { people: new Set<string>(), n: 0 };
+      e.people.add(p.kc_sub);
+      e.n += 1;
+      m.set(c.role, e);
+    }
+  }
+  return [...m].map(([role, e]) => ({ role, people: e.people.size, assignments: e.n }))
+    .sort((a, b) => b.assignments - a.assignments || a.role.localeCompare(b.role));
 }

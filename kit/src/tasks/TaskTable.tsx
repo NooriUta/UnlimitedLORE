@@ -12,6 +12,9 @@ import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { ColumnsChoice } from '../list/ColumnsChoice';
 import { LIST_BUDGET } from '../list/listModel';
+import { useStepLimits } from '../core/stepLimit';
+import { onScreenItems, selectAllShown, toggleId, visibleSelection } from '../list/listSelection';
+import { useLongPress } from '../list/useLongPress';
 import type { KitConfig, KitDictItem } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
@@ -60,6 +63,13 @@ export interface TaskTableProps {
   columns?: readonly string[];
   /** Передан — в полосе появляется выбор колонок, как у списков. */
   onColumnsChange?: (cols: string[]) => void;
+  /**
+   * Смена статуса пачкой (S9-06). Передан — у строк появляется выбор
+   * (чекбокс, долгое нажатие) и панель действий. Получает ТОЛЬКО выбранные и
+   * показанные задачи: правило то же, что у списков (`onScreenItems`).
+   * Отказ — throw: причина печатается в панели, выбор сохраняется.
+   */
+  onBulkStatusChange?: (tasks: TaskRowData[], status: TaskStatus) => Promise<void>;
   className?: string;
 }
 
@@ -186,7 +196,7 @@ export const TASK_COLUMNS = [
 
 export const TASK_COLUMN_KEYS: readonly string[] = TASK_COLUMNS.map(c => c.key);
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, className }: TaskTableProps) {
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, className }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [colsOpen, setColsOpen] = useState(false);
@@ -197,10 +207,40 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
   // Ctrl+F, и человек решил бы «такой задачи нет». Здесь всё показанное — в
   // DOM, а спрятанное названо числом в своей группе. Состояние местное: это
   // способ дотянуться, а не вид, которым делятся ссылкой.
-  const [limits, setLimits] = useState<Record<string, number>>({});
-  const limitOf = (k: string) => limits[k] ?? LIST_BUDGET.perGroup;
-  const showMore = (k: string) => setLimits(m => ({ ...m, [k]: limitOf(k) + LIST_BUDGET.perGroup }));
+  const { limitOf, showMore } = useStepLimits(LIST_BUDGET.perGroup);
   const showGroupHeads = groupBy !== 'none';
+
+  // Выбор (S9-06). Показанным считается то, что стоит на экране: строки до
+  // потолка каждой группы. Группы таблицы не сворачиваются, поэтому шапка
+  // здесь строк не прячет (headed: false). Правило — общее с ListView.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const bulkHintId = useId();
+  const pickable = onScreenItems(
+    groups.map(g => ({
+      key: g.key, items: g.tasks.map(tk => ({ id: tk.uid, tk })), headed: false,
+      sub: g.subgroups?.map(sg => ({ key: sg.key, items: sg.tasks.map(tk => ({ id: tk.uid, tk })), headed: false })),
+    })),
+    () => true, limitOf,
+  );
+  const selIds = visibleSelection(selected, pickable);
+  const selHidden = selected.size - selIds.length;
+  const allShownSelected = pickable.length > 0 && pickable.every(x => selected.has(x.id));
+  const toggleSel = (uid: string) => { setBulkError(null); setSelected(prev => toggleId(prev, uid)); };
+  const longPress = useLongPress(uid => toggleSel(uid));
+  const runBulk = () => {
+    if (!onBulkStatusChange || bulkBusy || selIds.length === 0 || !bulkStatus) return;
+    const chosen = new Set(selIds);
+    const list = pickable.filter(x => chosen.has(x.id)).map(x => x.tk);
+    setBulkError(null);
+    setBulkBusy(true);
+    onBulkStatusChange(list, bulkStatus).then(
+      () => setBulkBusy(false),
+      (err: unknown) => { setBulkBusy(false); setBulkError(errorDetail(err)); },
+    );
+  };
   const phaseById = new Map(phases.map(p => [p.uid, p]));
   const fmt = { format: (v: number) => kitNumber(lang, v) };
 
@@ -225,6 +265,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
     return col ? t(col.labelKey) : key;
   };
   const cols: { key: string; label: string }[] = [
+    ...(onBulkStatusChange ? [{ key: 'sel', label: t('kit.list.selectMode') }] : []),
     ...shownKeys.map(key => ({ key, label: labelOf(key) })),
     ...(onSave ? [{ key: 'actions', label: t('kit.tasks.col.actions') }] : []),
   ];
@@ -261,14 +302,37 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
           )}
         </div>
       )}
-      <div className="sk-tasks__wrap">
+      {onBulkStatusChange && selected.size > 0 && (
+        <div className="sk-tasks__selbar" role="group" aria-label={t('kit.list.bulk')} aria-busy={bulkBusy}>
+          <span className="sk-tasks__selcount">{t('kit.list.selected', { n: selIds.length })}</span>
+          {selHidden > 0 && <span className="sk-tasks__selhidden" role="status">{t('kit.list.selHidden', { n: selHidden })}</span>}
+          <button type="button" className="sk-btn" onClick={() => setSelected(prev => selectAllShown(prev, pickable))}>
+            {allShownSelected ? t('kit.list.clearSelection') : t('kit.list.selectAll', { n: pickable.length })}
+          </button>
+          <select className="sk-tasks__selstatus" aria-label={t('kit.tasks.bulkStatus')} value={bulkStatus}
+            aria-describedby={bulkStatus ? undefined : bulkHintId}
+            onChange={e => { setBulkStatus(e.target.value); setBulkError(null); }}>
+            <option value="">—</option>
+            {menuStatuses(statuses, '', lang).map(st => <option key={st.code} value={st.code}>{st.label}</option>)}
+          </select>
+          <button type="button" className="sk-btn" disabled={bulkBusy || selIds.length === 0} onClick={runBulk}
+            aria-describedby={bulkStatus ? undefined : bulkHintId}>
+            {t('kit.tasks.bulkApply', { n: selIds.length })}
+          </button>
+          {!bulkStatus && <span id={bulkHintId} className="sk-tasks__selhint">{t('kit.tasks.bulkNeedStatus')}</span>}
+          {bulkBusy && <span className="sk-tasks__selbusy">{t('kit.list.bulkRunning')}</span>}
+          <button type="button" className="sk-btn" onClick={() => { setSelected(new Set()); setBulkError(null); }}>{t('kit.list.done')}</button>
+          {bulkError && <p className="sk-tasks__selerr" role="alert">{t('kit.tasks.statusFailed', { detail: bulkError })}</p>}
+        </div>
+      )}
+      <div className="sk-tasks__wrap" {...(onBulkStatusChange ? longPress : {})}>
         <table className="sk-tasks__table">
           <caption className="sk-sr">{label}</caption>
           <thead>
             <tr>
               {cols.map(c => (
                 <th key={c.key} scope="col" className="sk-tasks__th">
-                  {c.key === 'actions' ? <span className="sk-sr">{c.label}</span> : c.label}
+                  {c.key === 'actions' || c.key === 'sel' ? <span className="sk-sr">{c.label}</span> : c.label}
                 </th>
               ))}
             </tr>
@@ -308,12 +372,13 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   onStatusChange={onStatusChange}
                   onSave={onSave}
                   href={hrefFor?.(task)}
+                  sel={onBulkStatusChange ? { checked: selected.has(task.uid), onToggle: () => toggleSel(task.uid) } : undefined}
                 />
                   ))}
                   {leaf.tasks.length > limitOf(leaf.key) && (
                     <tr className="sk-tasks__morerow">
                       <td colSpan={cols.length}>
-                        <span className="sk-tasks__shown">{t('kit.tasks.shownOf', { shown: limitOf(leaf.key), total: leaf.tasks.length })}</span>
+                        <span className="sk-tasks__shown">{t('kit.fold.shownOf', { shown: limitOf(leaf.key), total: leaf.tasks.length })}</span>
                         <button type="button" className="sk-btn" onClick={() => showMore(leaf.key)}>
                           {t('kit.list.more', { n: leaf.tasks.length - limitOf(leaf.key) })}
                         </button>
@@ -344,9 +409,11 @@ interface RowProps {
   onStatusChange?: TaskTableProps['onStatusChange'];
   onSave?: TaskTableProps['onSave'];
   href?: string;
+  /** Выбор строки (S9-06); нет — колонки выбора нет. */
+  sel?: { checked: boolean; onToggle: () => void };
 }
 
-function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, href }: RowProps) {
+function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, href, sel }: RowProps) {
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -461,6 +528,11 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   // только знает, как рисуется каждая. Раньше ячейки шли жёсткой
   // последовательностью JSX, и набор колонок изменить было нельзя.
   const cells: Record<string, ReactNode> = {
+    sel: sel ? (
+      <td key="sel" className="sk-tasks__td sk-tasks__td--sel">
+        <input type="checkbox" checked={sel.checked} onChange={sel.onToggle} aria-label={t('kit.list.select', { title: task.id })} />
+      </td>
+    ) : null,
     status: (
       <td key="status" className="sk-tasks__td sk-tasks__td--status">
           <StatusStar
@@ -551,7 +623,7 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
 
   return (
     <>
-      <tr className={`sk-tasks__row${draft ? ' is-editing' : ''}${busy ? ' is-busy' : ''}`} data-task={task.id} aria-busy={busy || undefined}>
+      <tr className={`sk-tasks__row${draft ? ' is-editing' : ''}${busy ? ' is-busy' : ''}`} data-task={task.id} data-record-id={sel ? task.uid : undefined} aria-busy={busy || undefined}>
         {colKeys.map(k => cells[k]).filter(Boolean)}
         {onSave && (
           <td className="sk-tasks__td sk-tasks__td--actions">

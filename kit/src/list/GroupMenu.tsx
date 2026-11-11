@@ -8,7 +8,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey } from '../i18n';
 import { useFocusTrap } from '../keyboard/focusTrap';
+import { Sheet } from '../shell/Sheet';
 import type { GroupingOptions } from './grouping';
+import { checkedRadio } from './ViewMenu';
 
 export interface GroupMenuProps {
   /** Текущая группа (null — без группировки). */
@@ -24,29 +26,32 @@ export interface GroupMenuProps {
   onSub: (key: string | null) => void;
   /** В рамке сегмента с подписью «Группировка» (08.11): в кнопке только значение, имя — в aria-label. */
   bare?: boolean;
+  /** Узкий экран (≤720, от ListView): панель — нижним листом (S4-MOBILE-EDGE). */
+  narrow?: boolean;
 }
 
-export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onSub, bare }: GroupMenuProps) {
+export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onSub, bare, narrow = false }: GroupMenuProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const id = useId();
+  // На листе ловушку, Esc и «мимо» ведёт сам Sheet.
   const onKeyDown = useFocusTrap(panelRef, {
-    active: open,
-    initialFocus: root => root.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]'),
+    active: open && !narrow,
+    initialFocus: checkedRadio,
     onEscape: () => setOpen(false),
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || narrow) return;
     const onDown = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
+  }, [open, narrow]);
 
   const value = group ? keyTitle(group) : t('kit.list.groupNone');
   const radio = (key: string | null, title: string, checked: boolean, pick: () => void) => (
@@ -57,21 +62,8 @@ export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onS
   );
   const subKeys = options.fields.filter(k => k !== group);
 
-  return (
-    <span ref={wrapRef} className="sk-gmenu">
-      <button
-        type="button"
-        className="sk-list__dir sk-gmenu__btn"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? id : undefined}
-        onClick={() => setOpen(o => !o)}
-        aria-label={bare ? `${t('kit.list.group')}: ${value}` : undefined}
-      >
-        {bare ? <b>{value}</b> : <>{t('kit.list.group')}: <b>{value}</b></>} <span aria-hidden="true">▾</span>
-      </button>
-      {open && (
-        <div ref={panelRef} id={id} role="dialog" aria-label={t('kit.list.group')} className="sk-vmenu__panel sk-gmenu__panel" onKeyDown={onKeyDown}>
+  const body = (
+        <>
           <div role="radiogroup" aria-label={t('kit.list.groupMenu.main')} className="sk-gmenu__sec">
             <p className="sk-vmenu__title" aria-hidden="true">{t('kit.list.groupMenu.main')}</p>
             {radio(null, t('kit.list.groupNone'), group === null, () => onGroup(null))}
@@ -91,6 +83,30 @@ export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onS
             </div>
           )}
           <p className="sk-vmenu__hint">{t('kit.list.groupMenu.hint')}</p>
+        </>
+  );
+
+  return (
+    <span ref={wrapRef} className="sk-gmenu">
+      <button
+        type="button"
+        className="sk-list__dir sk-gmenu__btn"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open && !narrow ? id : undefined}
+        onClick={() => setOpen(o => !o)}
+        aria-label={bare ? `${t('kit.list.group')}: ${value}` : undefined}
+      >
+        {bare ? <b>{value}</b> : <>{t('kit.list.group')}: <b>{value}</b></>} <span aria-hidden="true">▾</span>
+      </button>
+      {open && narrow && (
+        <Sheet open onClose={() => setOpen(false)} title={t('kit.list.group')} side="bottom" className="sk-lsheet" initialFocus={checkedRadio}>
+          {body}
+        </Sheet>
+      )}
+      {open && !narrow && (
+        <div ref={panelRef} id={id} role="dialog" aria-label={t('kit.list.group')} className="sk-vmenu__panel sk-gmenu__panel" onKeyDown={onKeyDown}>
+          {body}
         </div>
       )}
     </span>

@@ -8,9 +8,10 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { NewsEvent } from '@seidr/kit';
+import type { NewsEvent } from './feed';
 import { V2_SECTIONS } from '../shell/v2Config';
-import { newsHrefV2 } from './newsLinks';
+import { newsHrefV2, newsRefHrefV2 } from './newsLinks';
+import { recordHref } from '../nav/loreRoutes';
 
 const ev = (type: string, el: string, projects: string[] = []) =>
   ({ type, el, projects } as unknown as NewsEvent);
@@ -45,6 +46,14 @@ describe('ссылки ленты ведут в разделы v2 с откры�
     expect(newsHrefV2(ev('unknown-type', 'X'))).toBeNull();
   });
 
+  // S7A-01: вехи и компоненты — новые типы ленты; у обоих есть раздел и паспорт v2.
+  it.each([
+    ['milestone', 'M-UXR-MVP', '/?mod=forseti&sec=milestone&open=M-UXR-MVP'],
+    ['component', 'FORSETI', '/?mod=forseti&sec=component&open=FORSETI'],
+  ])('%s → раздел v2 с открытой записью', (type, el, want) => {
+    expect(newsHrefV2(ev(type, el))).toBe(want);
+  });
+
   it('сторож: каждое <NewsFeed> в приложении получает hrefOf={newsHrefV2}', () => {
     const SRC = join(__dirname, '..');
     const walk = (d: string): string[] => readdirSync(d).flatMap(n => {
@@ -54,5 +63,52 @@ describe('ссылки ленты ведут в разделы v2 с откры�
     const uses = walk(SRC).flatMap(f => readFileSync(f, 'utf8').split('\n').filter(l => l.includes('<NewsFeed ')).map(l => ({ f, l })));
     expect(uses.length).toBeGreaterThan(0);
     expect(uses.filter(u => !u.l.includes('hrefOf={newsHrefV2}')).map(u => u.f)).toEqual([]);
+  });
+});
+
+// S7A-08, п.24 — решение владелицы 10.11.2026: «всё, что можно открыть, делать
+// ссылкой: в ленте открываются люди и любой объект, у которого есть паспорт».
+describe('S7A-08 · П24: ссылки на людей и связанные записи строки ленты', () => {
+  it('человек — его карточка в «Кто где» (раскрыта по kc_sub)', () => {
+    expect(newsRefHrefV2('person', 'sub-anna')).toBe('/admin?adm=who&adm-open=sub-anna');
+  });
+
+  it('агент — раздел агентов админки', () => {
+    expect(newsRefHrefV2('agent', 'mcp-lore')).toBe('/admin?adm=agents');
+  });
+
+  it.each([
+    ['sprint', 'SPRINT_UXR_S7A_NEWS', '/?mod=forseti&sec=sprint&open=SPRINT_UXR_S7A_NEWS'],
+    ['adr', 'ADR-LORE-045', '/?mod=forseti&sec=adr&open=ADR-LORE-045'],
+    ['milestone', 'M-UXR-MVP', '/?mod=forseti&sec=milestone&open=M-UXR-MVP'],
+    ['component', 'FORSETI', '/?mod=forseti&sec=component&open=FORSETI'],
+  ])('%s — запись в своём разделе v2', (type, id, want) => {
+    expect(newsRefHrefV2(type, id)).toBe(want);
+  });
+
+  // До S4-29 (PR #1171) у проекта паспорта не было, и этот тест требовал null.
+  // Паспорт появился — по правилу владелицы «всё, что можно открыть, — ссылкой»
+  // проект теперь ведёт в свой паспорт. Адрес строит тот же recordHref, что у
+  // остальных типов: вторую копию правила кодирования id в тесте не заводим.
+  it('проект — его паспорт (S4-29), адрес тем же путём, что у прочих записей', () => {
+    const want = recordHref('project', 'NooriUta/UnlimitedLORE');
+    expect(want).not.toBeNull();
+    expect(newsRefHrefV2('project', 'NooriUta/UnlimitedLORE')).toBe(want);
+  });
+
+  it('паспорта у типа нет или id пуст — null, а не выдуманный адрес', () => {
+    expect(newsRefHrefV2('no-such-type', 'X-1')).toBeNull();
+    expect(newsRefHrefV2('person', '')).toBeNull();
+  });
+
+  it('сторож: каждое <NewsFeed> в приложении получает refHrefOf={newsRefHrefV2}', () => {
+    const SRC = join(__dirname, '..');
+    const walk = (d: string): string[] => readdirSync(d).flatMap(n => {
+      const p = join(d, n);
+      return statSync(p).isDirectory() ? walk(p) : /\.tsx$/.test(n) && !/\.test\./.test(n) ? [p] : [];
+    });
+    const uses = walk(SRC).flatMap(f => readFileSync(f, 'utf8').split('\n').filter(l => l.includes('<NewsFeed ')).map(l => ({ f, l })));
+    expect(uses.length).toBeGreaterThan(0);
+    expect(uses.filter(u => !u.l.includes('refHrefOf={newsRefHrefV2}')).map(u => u.f)).toEqual([]);
   });
 });

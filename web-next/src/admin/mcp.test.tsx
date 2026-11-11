@@ -109,6 +109,8 @@ describe('экран MCP', () => {
     mount(fake({ conn: { rows: [] }, fail: { rows: [] } }));
     const empty = await screen.findByTestId('adm-mcp-empty');
     expect(empty.textContent).toMatch(/не видели/i);
+    // S7B-25: kit EmptyState (его значок), а не своя разметка.
+    expect(empty.querySelector('.sk-state__icon')).toBeTruthy();
   });
 
   it('403 — «нет прав», а не пустой список', async () => {

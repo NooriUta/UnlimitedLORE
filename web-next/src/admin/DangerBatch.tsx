@@ -4,7 +4,8 @@
 // «всей строки» матрицы (правило A прототипа s7b-admin-v6):
 //   1. дифф «было → станет» — сервер считает его сам (dry_run), ничего не пишет;
 //   2. ввод логина человека — не «ОК»: кнопка применения занята, пока логин
-//      не введён точно;
+//      не введён точно (поле — confirm у kit DiffPreview, S7B-25: тот же
+//      паттерн, что у KcDanger, а не своё поле рядом);
 //   3. применение одной пачкой (batch_id) — итог по каждому проекту, пачка не
 //      атомарна, и частичный отказ назван числами и причинами;
 //   4. «Отменить» — вся пачка одним вызовом (undo_of), пока открыто окно;
@@ -13,11 +14,12 @@
 // Элементы — kit2: DiffPreview (дифф с проверкой у каждой строки) и BatchUndo
 // (окно отмены с остатком). Здесь — только что за изменения и куда их слать.
 import { useEffect, useMemo, useState } from 'react';
-import { BatchUndo, DiffPreview, Forbidden, LoadError, Skeleton, setUrlParams, useKitLang, type DiffRow } from '@seidr/kit';
+import { BatchUndo, DiffPreview, Forbidden, LoadError, Skeleton, useKitLang, type DiffRow } from '@seidr/kit';
+import { useAdminNav } from './adminNav';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  isConfirmed, parseApply, parsePlan, planToDiff, postRoleBatch, type ApplyAnswer, type RoleChange,
+  parseApply, parsePlan, planToDiff, postRoleBatch, type ApplyAnswer, type RoleChange,
 } from './roles';
 
 export interface DangerBatchProps {
@@ -47,10 +49,10 @@ const reasonOf = (e: unknown): string =>
 
 export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, undoOf }: DangerBatchProps) {
   const t = useAppT();
+  const nav = useAdminNav();
   const lang = useKitLang();
   const [plan, setPlan] = useState<PlanState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
-  const [typed, setTyped] = useState('');
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [answer, setAnswer] = useState<ApplyAnswer | null>(null);
@@ -70,7 +72,6 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
     setApplyError(null);
     setUndone(false);
     setUndoError(null);
-    setTyped('');
     postRoleBatch({ ...who, changes, dry_run: true }, fetchImpl).then(
       body => {
         if (alive) setPlan({ kind: 'ok', rows: planToDiff(parsePlan(body), { before: t('admin.roles.diff.before'), none: t('admin.roles.diff.none') }) });
@@ -85,10 +86,9 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
     return () => { alive = false; };
   }, [key, person.kc_sub, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const confirmed = isConfirmed(typed, person.name);
-
   const apply = (rows: readonly DiffRow[]) => {
-    if (!confirmed || applying) return;
+    // Слово проверил kit DiffPreview: без точного логина onApply не зовётся.
+    if (applying) return;
     // В пачку уходят ТОЛЬКО применимые строки (проверенные и меняющие) — их и отдал дифф.
     const ids = new Set(rows.map(r => r.id));
     const send = changes.filter(c => ids.has(c.project));
@@ -110,7 +110,8 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
     );
   };
 
-  const toJournal = (id: string) => setUrlParams({ adm: 'log', 'adm-batch': id });
+  // S7B-01: в модуле оболочки переход в журнал — навигацией оболочки (useAdminNav).
+  const toJournal = (id: string) => nav.go('log', { 'adm-batch': id });
 
   return (
     <section className="adm-danger" aria-labelledby="adm-danger-h" data-testid="adm-danger">
@@ -129,15 +130,10 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
       {plan.kind === 'error' && <LoadError error={plan.error} onRetry={() => setAttempt(a => a + 1)} />}
       {plan.kind === 'ok' && !answer && (
         <>
-          <label className="adm-field adm-danger__confirm">
-            <span className="adm-field__l">{t('admin.roles.danger.confirm', { name: person.name })}</span>
-            <input className="adm-input adm-mono" type="text" value={typed} autoComplete="off" spellCheck={false}
-              data-testid="adm-danger-confirm" aria-invalid={typed !== '' && !confirmed ? true : undefined}
-              onChange={e => setTyped(e.target.value)} />
-          </label>
-          {!confirmed && <p className="adm-hint" data-testid="adm-danger-need">{t('admin.roles.danger.need')}</p>}
-          <DiffPreview rows={plan.rows} onApply={apply} busy={!confirmed || applying}
-            label={t('admin.roles.danger.diff')} lang={lang} />
+          {/* key: новая пачка — новое поле слова; введённое для прежней не переезжает. */}
+          <DiffPreview key={`${key}|${attempt}`} rows={plan.rows} onApply={apply} busy={applying}
+            label={t('admin.roles.danger.diff')} lang={lang}
+            confirm={{ word: person.name, label: t('admin.roles.danger.confirm', { name: person.name }) }} />
           {applyError && (
             <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-danger-applyerror">
               {t('admin.roles.danger.applyError', { reason: applyError })}

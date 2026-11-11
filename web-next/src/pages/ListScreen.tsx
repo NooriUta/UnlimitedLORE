@@ -5,13 +5,17 @@
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  Forbidden, ICON_CANON, ListView, LoadError, RecordDock, ScreenHead, Skeleton, pushUrlState, readUrlState, urlStateHref,
+  Forbidden, ICON_CANON, ListView, LoadError, NO_DATE_RANGE, RecordDock, ScreenHead, Skeleton, dateRangeUrlPatch,
+  isDateRangeActive, pushUrlState, readDateRangeUrl, readUrlState, urlStateHref,
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { KitRecord, RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { DateFilterScope, DateRangeValue, KitRecord, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
+import {
+  DATE_FIELD, DATE_URL_PARAM, changedParams, isRangeRejected, markRangeUnsupported, rangeUnsupported,
+} from '../lists/dateRange';
 import { axesForKeys } from '../api/loreFacets';
 import { useListFacets } from '../api/useListFacets';
 import { useAppT } from '../i18n';
@@ -23,6 +27,7 @@ import { loreValueIcon } from '../lists/loreFilters';
 import { appliedCollapseNavOnRead } from '../settings/applied';
 import { useProjectScope } from '../scope/ProjectScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
+import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
@@ -51,9 +56,12 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   // открывается по spec_id: путь /lore/record/tech/<SPEC-TECH-…>, обычная
   // спека по этому пути даёт 404 — то есть тип выбирает раздел, а не ключ.
   components: 'component', tech: 'tech', features: 'feature',
+  // S4-29 (53а): паспорт проекта (только чтение).
+  projects: 'project',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];
+const NO_PINNED: readonly string[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };
 
 /**
@@ -93,14 +101,26 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
   const win: UrlWindow | undefined = urlState === false ? undefined
     : typeof urlState === 'object' ? urlState
       : typeof window === 'undefined' ? undefined : window;
-  const [open, setOpen] = useState<OpenRecord>(() => {
-    if (!win) return { id: null, place: 'right' };
-    const p = readUrlState(win);
+  const fromUrl = (w: UrlWindow): OpenRecord => {
+    const p = readUrlState(w);
     const id = p.get('open');
     const raw = p.get('place') ?? '';
     const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : 'right';
     return { id: id || null, place };
-  });
+  };
+  const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: 'right' }));
+  // D-24: «назад»/«вперёд» меняют адрес не нашими руками — паспорт обязан
+  // идти за ним, иначе адрес и экран расходятся молча. Следим только у
+  // настоящего окна: у подменного окна тестов событий нет.
+  useEffect(() => {
+    const w = win as (UrlWindow & Partial<Pick<Window, 'addEventListener' | 'removeEventListener'>>) | undefined;
+    if (!w?.addEventListener || !w.removeEventListener) return;
+    const sync = () => setOpen(fromUrl(w));
+    w.addEventListener('popstate', sync);
+    w.addEventListener('hashchange', sync);
+    return () => { w.removeEventListener!('popstate', sync); w.removeEventListener!('hashchange', sync); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [win]);
   const set = (next: OpenRecord) => {
     setOpen(next);
     if (!win) return;
@@ -114,13 +134,34 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     // (D-21): иначе `tab=history` останется в адресе списка и следующая
     // открытая запись покажется не с начала, а с чужой вкладки.
     const patch = { open: next.id, place: closed || next.place === 'right' ? null : next.place, ...(closed ? { tab: null } : {}) };
-    pushUrlState(patch, { replace: true, win, ...(closed ? { anchor: null } : {}) });
+    // Открыть и закрыть паспорт — шаг истории (D-24): «назад» его и отменяет.
+    // Переход между записями (пейджер) и смена места — заменой, иначе листание
+    // десяти записей потребовало бы десяти «назад», чтобы выйти из паспорта.
+    const step = (open.id == null) !== closed;
+    pushUrlState(patch, { replace: !step, win, ...(closed ? { anchor: null } : {}) });
   };
   /** Адрес списка без открытой записи — им крошка «←» становится ссылкой. */
   const backHref = win ? urlStateHref(win, { open: null, place: null, tab: null }, { anchor: null }) : undefined;
   // Окно отдаём наружу: паспорт пишет в адрес свою вкладку, и писать он обязан
   // в ТО ЖЕ окно, где живут `open` и `place` (D-21).
   return [open, set, backHref, win] as const;
+}
+
+function browserZone(): string {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
+}
+
+/**
+ * Диапазон «Изменены с … по …» в адресе (?changed=…, K2-DATE-RANGE): тот же
+ * источник окна, что у открытой записи; urlState=false — в памяти.
+ */
+function useChangedRange(win: UrlWindow | undefined) {
+  const [value, setValue] = useState<DateRangeValue>(() => (win ? readDateRangeUrl(readUrlState(win), DATE_URL_PARAM) : NO_DATE_RANGE));
+  const set = (next: DateRangeValue) => {
+    setValue(next);
+    if (win) pushUrlState(dateRangeUrlPatch(DATE_URL_PARAM, next), { replace: true, win });
+  };
+  return [value, set] as const;
 }
 
 export interface ListScreenProps {
@@ -191,8 +232,14 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   }, [modelType, fetchImpl]);
   const config = useMemo(() => {
     const items = modelStatuses?.items ?? [];
-    if (!items.length) return baseConfig;
-    return { ...baseConfig, statuses: { ...baseConfig.statuses, items } };
+    // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
+    // из той же модели, что статусы. Нет в модели — колонки как раньше.
+    const display = modelStatuses?.display;
+    const withDisplay = display && baseConfig.list
+      ? { ...baseConfig, list: { ...baseConfig.list, columnDisplay: display as NonNullable<NonNullable<typeof baseConfig.list>['columnDisplay']> } }
+      : baseConfig;
+    if (!items.length) return withDisplay;
+    return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
   }, [baseConfig, modelStatuses]);
   // Выбор проектов в шапке наконец доходит до среза (S4-03, жалоба владелицы
   // 09.11.2026: «верхний фильтр по проектам не влияет на элементы внизу»).
@@ -203,11 +250,43 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (scope.length ? { scope_projects: scope.join(',') } : undefined),
     [scope],
   );
+  // Фильтр «Изменены» (K2-DATE-RANGE): только у разделов, где у записи есть
+  // время (у кого есть лента — FEEDS); у прочих он недоступен с причиной.
+  const hasTime = !!def.feed;
+  const [range, setRange] = useChangedRange(urlWin);
+  const tz = useMemo(browserZone, []);
+  const rangeOn = hasTime && isDateRangeActive(range);
+  // Диапазон уходит в срез, пока срез его не отверг (MT-MCP-CHANGED-RANGE).
+  // «Сейчас» для быстрых периодов — последнее время источника, иначе часы браузера.
+  const [sourceNow, setSourceNow] = useState<string | null>(null);
+  const [rangeScope, setRangeScope] = useState<DateFilterScope>('source');
+  const rangeParam = useMemo(
+    () => (rangeOn && !rangeUnsupported(def.slice) ? changedParams(range, sourceNow ?? new Date().toISOString(), tz) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rangeOn, JSON.stringify(range), def.slice, tz],
+  );
+  const rangeKey = rangeParam ? JSON.stringify(rangeParam) : '';
   const result = useLoadState(
-    signal => fetchSlice(def.slice, scopeParam, { signal, fetchImpl }),
-    [def.slice, fetchImpl, scopeParam],
+    async signal => {
+      if (!rangeParam) return fetchSlice(def.slice, scopeParam, { signal, fetchImpl });
+      try {
+        const b = await fetchSlice(def.slice, { ...scopeParam, ...rangeParam }, { signal, fetchImpl });
+        setRangeScope('source');
+        return b;
+      } catch (e) {
+        if (!isRangeRejected(e)) throw e;
+        // Сервер диапазона не знает — честный откат: те же строки без него, отбор
+        // по загруженному, и это сказано словами (kit: «по загруженному»).
+        markRangeUnsupported(def.slice);
+        setRangeScope('loaded');
+        return fetchSlice(def.slice, scopeParam, { signal, fetchImpl });
+      }
+    },
+    [def.slice, fetchImpl, scopeParam, rangeKey],
     { rows: body => body.rows },
   );
+  const servedAt = result.data?.served_at;
+  useEffect(() => { if (servedAt) setSourceNow(servedAt); }, [servedAt]);
   // Счётчики фасетов считает СЕРВЕР по всей выдаче (S9-01). Сам список умеет
   // считать только по загруженным строкам, а рядом стоит «Показано 1000 из
   // 4000» — и число у фасета читается как счёт по всей выдаче, хотя посчитано
@@ -222,7 +301,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // которую человек видит, — ровно та жалоба, с которой начинался S4-03.
   const facetKeys = config.list?.filters ?? [];
   const facetKey = facetKeys.join(',');
-  const facetAxes = useMemo(() => axesForKeys(facetKeys), [facetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const facetAxes = useMemo(() => axesForKeys(facetKeys, def.slice), [facetKey, def.slice]); // eslint-disable-line react-hooks/exhaustive-deps
   const serverCounts = useListFacets(def.slice, {
     axes: facetAxes,
     scopeProjects: scope,
@@ -234,7 +313,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   });
   const body = result.data;
   const data = useMemo(
-    () => (body ? sliceToKitData(body, def.map, new Date().toISOString()) : null),
+    // «Сейчас» — время источника (заголовок Date), иначе часы браузера (K2-DATE-RANGE).
+    () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString()) : null),
     [body, def],
   );
   // Предупреждения выдачи плюс оговорка самого раздела (S4-V2-SECTIONS): где
@@ -251,6 +331,23 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
   // упавшая пачка — «?» с причиной (это решает loadProgress), а не 0/0.
   const ids = useMemo(() => data?.records.map(r => r.id) ?? [], [data]);
+
+  // Цель палитры команд (S4-14): открытая запись, иначе выделение списка.
+  // Записи может не быть в загруженных строках (открыли по ссылке) — тогда
+  // цель несёт её код: действовать над записью можно и без названия.
+  const [selection, setSelection] = useState<string[]>([]);
+  useEffect(() => {
+    if (open.id) {
+      const rec = data?.records.find(r => r.id === open.id)
+        ?? { id: open.id, kind: PASSPORT_OF[screen] ?? screen, title: open.id, status: '', fields: {} };
+      setPaletteTarget({ type: 'record', record: rec });
+    } else {
+      setPaletteTarget(selection.length > 0 ? { type: 'selection', ids: selection } : null);
+    }
+  }, [open.id, data, selection, screen]);
+  // Экран ушёл — цель снимается: палитра не должна действовать над тем, чего
+  // на экране уже нет.
+  useEffect(() => () => setPaletteTarget(null), []);
   const [late, setLate] = useState<Map<string, Record<string, unknown>> | null>(null);
   useEffect(() => {
     if (!nested || !ids.length) return;
@@ -279,7 +376,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // одной записи (слово владелицы 10.11: «первые 3 абзаца, остальное при раскрытии»).
   const feed = useFeed({
     spec: def.feed, passportType: PASSPORT_OF[screen], rows: body?.rows,
-    records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl,
+    records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl, t,
   });
   const viewData = useMemo(() => {
     const base = shownData ?? data;
@@ -304,7 +401,18 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       <ListView
         config={config}
         data={viewData ?? data}
-        counts={serverCounts}
+        // Счётчики источника считаны БЕЗ диапазона дат — при диапазоне им не
+        // место: kit считает по загруженному и говорит это (S9-01).
+        counts={rangeOn ? undefined : serverCounts}
+        dateFilter={{
+          field: DATE_FIELD,
+          title: t('lists.date.changed'),
+          value: range,
+          onChange: setRange,
+          scope: rangeOn && rangeParam && rangeScope === 'source' ? 'source' : 'loaded',
+          timeZone: tz,
+          ...(hasTime ? {} : { unavailable: t('lists.date.noTime') }),
+        }}
         feedBody={feed.feedBody}
         onFeedBody={feed.onFeedBody}
         feedUnder={feed.feedUnder}
@@ -318,6 +426,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
         // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
         valueIcon={loreValueIcon}
+        // Закреплённые значения фасета (S9-03): текущие релизы приходят с сервера
+        // тем же ответом /facets, что и счётчики, — отдельного запроса нет.
+        facetPinned={key => serverCounts?.pinned?.[key] ?? NO_PINNED}
         // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
@@ -336,6 +447,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           });
         }}
         recordPlace={{ value: open.place, onChange: place => setOpen({ ...open, place }) }}
+        onSelectionChange={setSelection}
       />
     );
   }
@@ -367,7 +479,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   }
 
   return (
-    <section className="list-screen" data-screen={screen} aria-labelledby={heading && !titleId ? headId : undefined}>
+    <section className={open.id && ready ? 'list-screen list-screen--passport' : 'list-screen'} data-screen={screen} aria-labelledby={heading && !titleId ? headId : undefined}>
       {/* Пока списка нет (загрузка, ошибка, нет прав) — та же шапка без видов: заголовок не прыгает. */}
       {head && !ready && <ScreenHead {...head} />}
       {warnings.length > 0 && (

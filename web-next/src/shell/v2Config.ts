@@ -13,6 +13,7 @@
 import { ICON_CANON } from '@seidr/kit';
 import { statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
+import { ADMIN_MODULE, adminMenu } from '../admin/adminModule';
 
 /**
  * Разделы меню v2 — они же id пунктов меню и ключи экранов.
@@ -24,7 +25,7 @@ import { appT, type AppKey } from '../i18n';
 export const V2_SECTIONS = [
   'sprint', 'task', 'milestone', 'release',
   'adr', 'decision', 'spec', 'question',
-  'component', 'tech', 'feature',
+  'component', 'tech', 'feature', 'project',
   'news', 'settings',
 ] as const;
 export type V2Section = (typeof V2_SECTIONS)[number];
@@ -77,7 +78,7 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
  * клиента. Рукописный список уже стоил находки аудита 09.11 — четыре кода в
  * него не попали, и у 89 задач корпуса чип выходил пустым.
  */
-export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items']): KitConfig {
+export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string): KitConfig {
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
     ({ id, title: t(`shell.sec.${id}` as AppKey), icon, ...(view ? { view } : {}) });
@@ -88,8 +89,13 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       { id: 'bragi', title: 'BRAGI', icon: 'harp', status: 'planned' },
       { id: 'muninn', title: 'MUNINN', icon: 'raven', status: 'planned' },
       { id: 'tyr', title: 'TYR', icon: 'scales', status: 'planned' },
+      // S7B-01: админка — модулем оболочки (?mod=admin), но в шапке он есть,
+      // только пока открыт: вход — из меню аватара (прототип v6), а среди
+      // рабочих приложений админке не место.
+      ...(module === ADMIN_MODULE ? [{ id: ADMIN_MODULE, title: t('shell.mod.admin'), icon: 'cog', status: 'active' as const }] : []),
     ],
-    menu: {
+    // S7B-01: у модуля admin своё меню — группы по смыслу и риску (adminMenu).
+    menu: module === ADMIN_MODULE ? adminMenu(lang) : {
       myViews: true,
       recent: true,
       groups: [
@@ -114,7 +120,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // «Устройство» — из чего система сделана: компоненты, технологии, фичи.
         {
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
-          items: [item('component', 'cog'), item('tech', 'gears'), item('feature', 'gift-of-knowledge')],
+          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears'), item('feature', 'gift-of-knowledge')],
         },
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
@@ -134,6 +140,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       component: { title: t('shell.sec.component'), icon: 'cog' },
       tech: { title: t('shell.sec.tech'), icon: 'gears' },
       feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge' },
+      project: { title: t('shell.sec.project'), icon: 'open-folder' },
     },
     statuses: {
       // Словарь из модели главнее: он данные, а рукописный список — умолчание.

@@ -155,12 +155,16 @@ describe('S4-00a · плотность и касание', () => {
     expect(v2.get(':root')!['--r-pill']).toBe('999px');
   });
 
-  it('цель касания ≥44px на сенсоре и узком экране, на десктопе 0 (плотный UI не растёт)', () => {
+  // D-2026-UXR-MOBILE-FOLLOWS-V1: видимый минимум (--tap) не растёт нигде —
+  // 44 px на сенсоре даёт невидимая зона --hit, и решает её вид указателя.
+  it('цель касания ≥44px на сенсоре — зоной --hit; видимый --tap везде 0 (плотный UI не растёт)', () => {
     expect(v2.get(':root')!['--tap']).toBe('0px');
-    const media = v2Css.match(/@media \(pointer: coarse\), \(max-width: 768px\)\s*\{\s*:root\s*\{([^}]*)\}/);
+    expect(v2.get(':root')!['--hit']).toBe('0px');
+    const media = v2Css.match(/@media \(pointer: coarse\)\s*\{\s*:root\s*\{([^}]*)\}/);
     expect(media, 'нет @media для сенсора').not.toBeNull();
-    const tap = media![1].match(/--tap:\s*(\d+)px/);
-    expect(Number(tap?.[1])).toBeGreaterThanOrEqual(44);
+    const hit = media![1].match(/--hit:\s*(\d+)px/);
+    expect(Number(hit?.[1])).toBeGreaterThanOrEqual(44);
+    expect(media![1]).not.toMatch(/--tap/);
   });
 });
 

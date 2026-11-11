@@ -29,6 +29,8 @@ export const LORE_FILTER_FIELDS = {
   milestone: 'fields.milestone',
   priority: 'fields.priority',
   sprint: 'fields.sprint',
+  /** S9-03: теги — многозначная ось (Σcount > total — норма, kit это говорит). */
+  tags: 'fields.tags',
 } as const;
 
 /** Фасеты списка спринтов (порядок = порядок кнопок). */

@@ -6,10 +6,10 @@ import App from './App';
 // Старые адреса отдельных страниц паспорта (S5-02 спринт, S5-04 задача) открывают
 // оболочку с записью во весь экран («да» владелицы 09.11): меню больше не пропадает.
 describe('LORE v2 — старый адрес паспорта ведёт в оболочку', () => {
-  const fakeWin = (search: string) => {
+  const fakeWin = (search: string, hash = '') => {
     const calls: string[] = [];
     const w = {
-      location: { pathname: '/', search, hash: '' },
+      location: { pathname: '/', search, hash },
       history: { pushState: () => {}, replaceState: (_s: unknown, _t: string, url: string) => { calls.push(url); } },
     };
     return { w: w as unknown as UrlWindow, calls };
@@ -27,6 +27,13 @@ describe('LORE v2 — старый адрес паспорта ведёт в о�
     const { w, calls } = fakeWin('?section=tasks&passport=SPRINT_A%2FT-1');
     renderToString(<App path="/" search="?section=tasks&passport=SPRINT_A%2FT-1" win={w} />);
     expect(calls).toEqual(['/?mod=forseti&sec=task&open=SPRINT_A%2FT-1&place=full']);
+  });
+
+  // D-22: ссылка v1 на задачу якорем.
+  it('якорь «#СПРИНТ/КОД» переписывается в раздел «Задачи» с этой задачей', () => {
+    const { w, calls } = fakeWin('', '#SPRINT_A/T-1');
+    renderToString(<App path="/" search="" win={w} />);
+    expect(calls).toEqual(['/?mod=forseti&sec=task&open=SPRINT_A%2FT-1']);
   });
 
   it('обычный адрес не переписывается', () => {
