@@ -246,6 +246,120 @@ public class LoreUserResource extends LoreResourceBase {
         }
     }
 
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-ACL-1 · S7B-ACL-2 — выдать / изменить / снять допуск человека к
+     * машине miniLORE. Машина — актор с {@code client_id = minilore-link-<machine_id>}; ребро
+     * {@code MACHINE_ACCESS} KnowUser → актор-машина, одно на пару. Решает владелец машины
+     * ({@code OWNED_BY}) или admin — проверка здесь, на сервере ({@link MachineAccess#writeRefusal}),
+     * отказ 403 словами. {@code dry_run} — только план «было → станет», как у user/role/batch.
+     * Журнал AO-01 — фильтром, сущность записи — {@code machine_id} (первое *_id поле ответа).
+     */
+    @POST
+    @Path("user/machine-access")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setMachineAccess(MachineAccessRequest body, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        MachineAccess.Request req = body == null ? null : body.toRequest();
+        List<String> roles = activeDictCodes(MachineAccess.ROLE_DICT, MachineAccess.ROLES_FALLBACK);
+        String err = MachineAccess.requestError(req, roles, activeDictCodes("harness", LoreActorHarness.REGISTRY));
+        if (err != null) return badParams(err);
+        String clientId = MachineAccess.clientIdOf(req.machine_id());
+        try {
+            List<Map<String, Object>> machine = ingestService.queryPublic(
+                "SELECT actor_id, out('OWNED_BY').kc_sub AS owner_kc_sub FROM KnowActor "
+                + "WHERE kind = 'agent' AND client_id = :c", Map.of("c", clientId));
+            if (machine.isEmpty())
+                return targetNotFound("машина " + req.machine_id() + " не заведена: нет актора-агента с client_id "
+                    + clientId + " (Агенты → «имя, роль, владелец, учётка»)");
+            String owner = MachineAccess.ownerOf(machine.get(0));
+            String refusal = MachineAccess.writeRefusal(callerAgentScope(), role, callerKcSub(), owner, req.machine_id());
+            if (refusal != null)
+                return noStore(Response.status(Response.Status.FORBIDDEN)
+                    .entity(new LoreError("MACHINE_ACCESS_FORBIDDEN", refusal)));
+            String self = MachineAccess.selfGrantRefusal(req.kc_sub(), owner);
+            if (self != null) return badParams(self);
+            if (!req.revoke())
+                for (String p : new java.util.LinkedHashSet<>(req.projects()))
+                    if (!exists("KnowGitProject", "slug", p))
+                        return targetNotFound("проект " + p + " не зарегистрирован — заведите его project_new");
+
+            Map<String, Object> pair = Map.of("sub", req.kc_sub(), "c", clientId);
+            List<Map<String, Object>> cur = ingestService.queryPublic(
+                "SELECT role, projects, harnesses FROM MACHINE_ACCESS WHERE @out.kc_sub = :sub AND @in.client_id = :c", pair);
+            MachineAccess.Grant current = cur.isEmpty() ? null : MachineAccess.grantsOf(Map.of(
+                "grant_kc_subs", List.of(req.kc_sub()),
+                "grant_roles", java.util.Collections.singletonList(cur.get(0).get("role")),
+                "grant_projects", java.util.Collections.singletonList(cur.get(0).get("projects")),
+                "grant_harnesses", java.util.Collections.singletonList(cur.get(0).get("harnesses")))).get(0);
+            Map<String, Object> plan = MachineAccess.plan(current, req);
+
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("machine_id", req.machine_id());   // первое *_id — сущность записи журнала AO-01
+            out.put("ok", true);
+            out.put("client_id", clientId);
+            out.put("kc_sub", req.kc_sub());
+            out.put("plan", plan);
+            if (Boolean.TRUE.equals(body.dry_run())) {
+                out.put("dry_run", true);
+                out.put("applied", 0);
+                return noStore(Response.ok(out));
+            }
+            String kind = String.valueOf(plan.get("kind"));
+            if ("unchanged".equals(kind)) {
+                out.put("outcome", LoreOutcome.UNCHANGED);
+                return noStore(Response.ok(out));
+            }
+            if ("revoke".equals(kind)) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM MACHINE_ACCESS WHERE @out.kc_sub = :sub AND @in.client_id = :c", pair))
+                    .await().indefinitely();
+                boolean gone = !edgeExists(MachineAccess.EDGE, "kc_sub", req.kc_sub(), "client_id", clientId);
+                out.put("outcome", gone ? LoreOutcome.DELETED : LoreOutcome.NOOP);
+                if (!gone) out.put("reason", "DELETE выполнен, но ребро допуска осталось в графе");
+                return noStore(Response.ok(out));
+            }
+            MachineAccess.Grant target = MachineAccess.target(req);
+            Map<String, Object> p = new HashMap<>();
+            p.put("sub", req.kc_sub());
+            p.put("c", clientId);
+            p.put("r", target.role());
+            p.put("pr", target.projects());
+            p.put("hs", target.harnesses());
+            p.put("by", callerLabel());
+            p.put("at", Instant.now().toString());
+            if ("update".equals(kind)) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE MACHINE_ACCESS SET role = :r, projects = :pr, harnesses = :hs, granted_by = :by, granted_at = :at "
+                    + "WHERE @out.kc_sub = :sub AND @in.client_id = :c", p)).await().indefinitely();
+                out.put("outcome", LoreOutcome.UPDATED);
+                return noStore(Response.ok(out));
+            }
+            // grant: вершину человека заводим тут же — допуск из карточки машины не должен
+            // распадаться на два запроса (тот же приём, что user/role).
+            upsertUserVertex(req.kc_sub(), req.display_name());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE MACHINE_ACCESS FROM (SELECT FROM KnowUser WHERE kc_sub = :sub) "
+                + "TO (SELECT FROM KnowActor WHERE client_id = :c) IF NOT EXISTS "
+                + "SET role = :r, projects = :pr, harnesses = :hs, granted_by = :by, granted_at = :at", p))
+                .await().indefinitely();
+            boolean made = edgeExists(MachineAccess.EDGE, "kc_sub", req.kc_sub(), "client_id", clientId);
+            out.put("outcome", made ? LoreOutcome.CREATED : LoreOutcome.NOOP);
+            if (!made) out.put("reason", "ребро MACHINE_ACCESS не создано: человек или машина не найдены");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE MACHINE ACCESS] %s @ %s: %s", req.kc_sub(), req.machine_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
+    public record MachineAccessRequest(String machine_id, String kc_sub, String display_name, String action,
+                                       String role, List<String> projects, List<String> harnesses, Boolean dry_run) {
+        MachineAccess.Request toRequest() {
+            return new MachineAccess.Request(machine_id, kc_sub, display_name, action, role, projects, harnesses);
+        }
+    }
+
     @POST
     @Path("user/role")
     @Consumes(MediaType.APPLICATION_JSON)
