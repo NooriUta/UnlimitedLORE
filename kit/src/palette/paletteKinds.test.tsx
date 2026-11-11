@@ -29,7 +29,7 @@ describe('палитра: фильтр по типам', () => {
   const remote = async (): Promise<{ records: KitRecord[] }> => ({ records: [{ id: 'D-99', kind: 'doc', title: 'Задача в документе', status: '', fields: {} }] });
 
   async function open() {
-    render(<CommandPalette open mode="search" onClose={() => {}} ctx={ctx} recent={createRecentList(createSafeStorage(() => null))} remote={remote} remoteDelayMs={0} />);
+    render(<CommandPalette open mode="records" onClose={() => {}} ctx={ctx} recent={createRecentList(createSafeStorage(() => null))} remote={remote} remoteDelayMs={0} />);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'задача' } });
     await act(async () => { await new Promise(r => setTimeout(r, 5)); });
   }
