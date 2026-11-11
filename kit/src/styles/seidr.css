@@ -1441,7 +1441,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   justify-content: center;
   gap: 2px;
   min-width: 0;
-  min-height: var(--sk-dock-h);
+  /* Видимый минимум — через --tap, как у каждой цели kit (сторож a11y S4-12):
+     высота панели 48 px и так больше зоны касания 44. */
+  min-height: max(var(--tap), var(--sk-dock-h));
   padding: 4px 2px;
   border: 0;
   border-top: 2px solid transparent;
