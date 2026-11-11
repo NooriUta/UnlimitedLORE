@@ -1014,10 +1014,14 @@ export function NewsStatusMark({ code }: { code: string | null }) {
       data-look={look.source}
       data-look-why={look.why}
       title={tip}
+      // Владелица 11.11.2026 (не первый раз): «для всех статусов подпись рядом с
+      // иконкой убрать, оставить только в подсказке всплывающей». В строке — только
+      // значок; подпись — в title и в имени для экранного чтеца.
+      role="img"
+      aria-label={label}
       style={{ '--st-c': look.color } as CSSProperties}
     >
       <StatusIcon icon={look.icon} size={12} />
-      {label}
     </span>
   );
 }
