@@ -88,6 +88,12 @@ export interface RotationPlan {
   /** Всегда false: сервер не сказал — обратимость не выдумываем. */
   undoable: false;
   undoReason: string | null;
+  /**
+   * S7B-19: чего ждать от прежнего секрета. kept — у клиента видна политика
+   * ротации KC, прежний останется до срока; unknown — признаков нет, прежний,
+   * скорее всего, перестанет работать сразу (простой); null — сервер не сказал.
+   */
+  oldSecret: 'kept' | 'unknown' | null;
 }
 
 export function parseRotationPlan(body: unknown): RotationPlan {
@@ -97,14 +103,69 @@ export function parseRotationPlan(body: unknown): RotationPlan {
     const id = str(o.client_id) ?? clientId ?? '';
     return { id, kind: 'add', text: id, check: checkOf(o.check) };
   });
-  return { clientId, rows, undoable: false, undoReason: str(b.undo_reason) };
+  const old = b.old_secret === 'kept' || b.old_secret === 'unknown' ? b.old_secret : null;
+  return { clientId, rows, undoable: false, undoReason: str(b.undo_reason), oldSecret: old };
 }
 
-export interface Rotation { clientId: string | null; secret: string | null; undoReason: string | null }
+export interface Rotation {
+  clientId: string | null; secret: string | null; undoReason: string | null;
+  /** S7B-19: KC сохранил прежний секрет; null — сервер не перечитал клиент, неизвестно. */
+  oldSecretKept: boolean | null;
+  oldSecretExpiresAt: string | null;
+  oldSecretNote: string | null;
+}
 
 export function parseRotation(body: unknown): Rotation {
   const b = (body ?? {}) as Record<string, unknown>;
-  return { clientId: str(b.client_id), secret: str(b.secret), undoReason: str(b.undo_reason) };
+  return {
+    clientId: str(b.client_id), secret: str(b.secret), undoReason: str(b.undo_reason),
+    oldSecretKept: typeof b.old_secret_kept === 'boolean' ? b.old_secret_kept : null,
+    oldSecretExpiresAt: str(b.old_secret_expires_at),
+    oldSecretNote: str(b.old_secret_note),
+  };
+}
+
+// ── два секрета: «перешёл?» и отзыв прежнего (S7B-19) ────────────────────
+
+export interface SecretState {
+  clientId: string | null;
+  /** Прежний секрет ещё принимается; null — клиент не прочитался. */
+  oldSecretActive: boolean | null;
+  rotatedAt: string | null;
+  oldSecretExpiresAt: string | null;
+  /** Начиналась ли сессия агента после ротации — признак, что он взял новый секрет. */
+  switched: { seen: boolean; at: string | null; machine: string | null; reason: string | null };
+}
+
+export function parseSecretState(body: unknown): SecretState {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const s = (b.switched ?? {}) as Record<string, unknown>;
+  return {
+    clientId: str(b.client_id),
+    oldSecretActive: typeof b.old_secret_active === 'boolean' ? b.old_secret_active : null,
+    rotatedAt: str(b.rotated_at),
+    oldSecretExpiresAt: str(b.old_secret_expires_at),
+    switched: { seen: s.seen === true, at: str(s.at), machine: str(s.machine_id), reason: str(s.reason) },
+  };
+}
+
+export async function fetchSecretState(clientId: string, fetchImpl: typeof fetch = loreFetch): Promise<SecretState> {
+  const res = await fetchImpl(`/lore/kc/agent/${encodeURIComponent(clientId)}/secret`, { headers: { Accept: 'application/json' } });
+  const body = await readJson(res);
+  if (!res.ok || body === null) throw httpError(res.status, body);
+  return parseSecretState(body);
+}
+
+/** Дифф отзыва прежнего секрета: строка «нельзя», пока агент не перешёл. */
+export function parseRevokePlan(body: unknown): DiffRow[] {
+  return planRows(body).map(o => {
+    const id = str(o.client_id) ?? '';
+    return { id, kind: o.kind === 'unchanged' ? 'same' as const : 'remove' as const, text: id, check: checkOf(o.check) };
+  });
+}
+
+export function postRevokeOld(clientId: string, dryRun: boolean, fetchImpl: typeof fetch = loreFetch): Promise<unknown> {
+  return postJson(`/lore/kc/agent/${encodeURIComponent(clientId)}/rotated/revoke`, dryRun ? { dry_run: true } : {}, fetchImpl);
 }
 
 export function postRotate(clientId: string, dryRun: boolean, fetchImpl: typeof fetch = loreFetch): Promise<unknown> {
