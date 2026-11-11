@@ -221,7 +221,8 @@ describe('S7A-02 · строка «фильтр / группировка / по�
     await mount(src());
     openFilters();
     const values = screen.getAllByTestId(/^news-group-opt-/).map(o => o.dataset.testid!.replace('news-group-opt-', ''));
-    expect(values).toEqual(['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'who', 'day']);
+    // S9-11: + «по записи» — свёртка событий одной записи.
+    expect(values).toEqual(['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'who', 'day', 'record']);
     expect(screen.getByTestId('news-group-opt-author').textContent).toMatch(/автор.*S2-12/i);
   });
 

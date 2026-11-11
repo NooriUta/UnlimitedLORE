@@ -4,7 +4,8 @@
 // клиент их рисует и ни одного не выводит сам.
 
 /** Оси группировки и фильтра — NewsV2Engine.AXES. */
-export const NEWS_AXES = ['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'who', 'day'] as const;
+/** `record` (S9-11) — свёртка по записи: ключ группы «тип:код» элемента события. */
+export const NEWS_AXES = ['project', 'component', 'type', 'kind', 'sprint', 'milestone', 'author', 'who', 'day', 'record'] as const;
 export type NewsAxis = (typeof NEWS_AXES)[number];
 
 /** Оси, по которым фильтрует сервер (day — только разрез, фильтра у него нет). */
