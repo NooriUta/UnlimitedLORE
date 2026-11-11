@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, CalendarMonth, LibraryView, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, CalendarMonth, LibraryView, FreshCell, MiniList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -45,6 +45,7 @@ const SNAPSHOT_ABS = resolve(KIT, 'demo/seidr-bare.html');
 const css = readFileSync(resolve(KIT, 'src/styles/seidr.css'), 'utf8');
 
 const noop = () => {};
+const FRESH_NOW = Date.parse('2026-11-11T12:00:00Z');
 const STATUSES = ['done', 'active', 'partial', 'planned', 'backlog', 'blocked', 'cancelled'] as const;
 const MD = '## Заголовок\n\nТекст с **жирным**, `кодом` и [ссылкой](https://example.org).\n\n- пункт один\n- [x] пункт два\n\n| поле | значение |\n|---|---|\n| статус | в работе |\n\n```mermaid\ngraph LR; A[Задача] --> B[PR] --> C[Релиз]\n```\n';
 
@@ -225,6 +226,12 @@ function Samples() {
           date="d" month="2026-11" today="2026-11-11" narrow={false}
         />
       </section>
+      <section className="bare__sec" data-kit="minilist">
+        <h2 className="bare__h2">Мини-список</h2>
+        {/* K4-MINILIST: todo с отметками и квиз после ответа (верный и подсказка к неверному). */}
+        <MiniList kind="check" label="Чек-лист" items={[{ id: 'a', text: 'Тест до кода', done: true }, { id: 'b', text: 'Витрина' }]} onToggle={noop} />
+        <MiniList kind="choice" label="Вопрос" items={[{ id: 'x', text: 'Строки слева без пары' }, { id: 'y', text: 'Только пары', hint: 'Это INNER JOIN' }]} picked="y" correct="x" reveal />
+      </section>
       <section className="bare__sec" data-kit="library">
         <h2 className="bare__h2">Библиотека</h2>
         {/* K2-VIEW-LIBRARY: группы слева, чтение справа; «ещё N» и «показаны N из M»; устаревший помечен. */}
@@ -239,6 +246,17 @@ function Samples() {
             { key: 'b', title: 'Документы', total: 9, docs: [{ id: 'N-1', title: 'Как читать вердикт', state: 'устарел', stale: true }] },
           ]}
         />
+      </section>
+      <section className="bare__sec" data-kit="fresh">
+        <h2 className="bare__h2">Свежесть</h2>
+        {/* K4-FRESHNESS: три тона по порогам приложения и пустое значение —
+            «времени нет», а не «давно». Часы подставлены: снимок не меняется от прогона к прогону. */}
+        <div className="bare__row">
+          {[3, 30, 125].map(m => (
+            <FreshCell key={m} value={new Date(FRESH_NOW - m * 60_000).toISOString()} now={FRESH_NOW} thresholds={{ warnAfter: 10, staleAfter: 60 }} />
+          ))}
+          <FreshCell value={null} now={FRESH_NOW} thresholds={{ warnAfter: 10, staleAfter: 60 }} />
+        </div>
       </section>
       <section className="bare__sec" data-kit="chips">
         <h2 className="bare__h2">Значения-чипы</h2>
