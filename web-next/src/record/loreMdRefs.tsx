@@ -11,6 +11,7 @@ import { useKitLang, type KitLang, type MdEditorSlotProps } from '@seidr/kit';
 import { MdInlineEdit, type TipTapRefSource, type RefItem } from '@seidr/kit/content';
 import { fetchSearchSlice, type SearchSliceOptions } from '../api/searchSlice';
 import { appT, type AppKey } from '../i18n';
+import { recordHref } from '../nav/loreRoutes';
 
 /** Слово (нижний регистр) → тип LORE. Латиница — как в [[тип:ID]], русские синонимы — для набора. */
 const WORDS: Record<string, string> = {
@@ -54,9 +55,30 @@ export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchI
   };
 }
 
+/**
+ * Тип по форме ID, когда ссылка без типа ([[ADR-LORE-050]]). Формы — как у ссылок LORE
+ * (splitLoreRefs в miniLORE): ADR-…, SPEC-…, D-ГГГГ-…, SPRINT_X/CODE. Не узнали — null.
+ */
+function typeByForm(id: string): string | null {
+  if (/^ADR-[A-Z0-9-]*[A-Z0-9]$/i.test(id)) return 'adr';
+  if (/^SPEC-[A-Z0-9-]*[A-Z0-9]$/i.test(id)) return 'spec';
+  if (/^D-\d{4}-[A-Z0-9-]*[A-Z0-9]$/i.test(id)) return 'decision';
+  if (/^SPRINT_[A-Z0-9_]+\/[A-Z0-9-]+$/i.test(id)) return 'task';
+  return null;
+}
+
+/**
+ * Куда ведёт [[ссылка]] в чтении (SPRINT_UXR_S10_SEIDR_KIT_2/MD-READ-PEEK): паспорт записи её типа.
+ * Тип не задан и не узнан по форме или его в v2 открыть негде — null: рамка остаётся без ссылки.
+ */
+export function loreRefHref(ref: { id: string; type: string | null }): string | null {
+  const type = ref.type ?? typeByForm(ref.id);
+  return type ? recordHref(type, ref.id) : null;
+}
+
 /** Правка MD-поля записи с окном ссылок — то же MdInlineEdit, плюс источник ссылок LORE. */
 export function MdInlineEditWithRefs(props: MdEditorSlotProps) {
   const lang = useKitLang();
   const refs = useMemo(() => loreMdRefs(lang), [lang]);
-  return <MdInlineEdit {...props} refs={refs} />;
+  return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} />;
 }

@@ -38,3 +38,16 @@ describe('паспорт: окно ссылки в правке MD', () => {
     await waitFor(() => expect(container.querySelector('.sk-ref')).toBeTruthy());
   }, 15000);
 });
+
+describe('паспорт: ссылка в чтении ведёт в паспорт записи', () => {
+  it('[[adr:ADR-1]] в тексте спринта — <a href> на паспорт ADR', async () => {
+    const f = vi.fn(async (input: RequestInfo | URL) => {
+      const name = new URL(String(input), 'http://x').pathname.split('/').pop();
+      if (name === 'sprints') return json({ rows: [{ ...SPRINT, context_md: 'см. [[adr:ADR-1]]' }] });
+      return json({ rows: [] });
+    });
+    const { container } = render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={f as unknown as typeof fetch} />);
+    await waitFor(() => expect(container.querySelector('a.sk-wref')).toBeTruthy(), { timeout: 8000 });
+    expect(container.querySelector('a.sk-wref')?.getAttribute('href')).toContain('open=ADR-1');
+  }, 15000);
+});
