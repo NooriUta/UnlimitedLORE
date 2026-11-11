@@ -259,10 +259,13 @@ public abstract class LoreResourceBase {
         if (expected == null || expected.isBlank() || id == null) return null;
         List<Map<String, Object>> rows = ingestService.queryPublic(LoreRecordVersion.sql(type), Map.of("id", id));
         if (rows.isEmpty()) return null;
-        Object cur = rows.get(0).get("version");
-        if (LoreRecordVersion.matches(expected, cur)) return null;
+        // S5-08: версия = максимум из valid_from и отметки правки на месте — та же,
+        // что отдаёт GET /lore/record (LoreRecordVersion.of), иначе правка текста
+        // поверх чужой правки текста проходила бы с «верной» версией.
+        String cur = LoreRecordVersion.of(rows.get(0));
+        if (LoreRecordVersion.matchesCurrent(expected, cur)) return null;
         return noStore(Response.status(Response.Status.CONFLICT).entity(LoreRecordVersion.conflictBody(
-            type, id, expected, LoreRecordVersion.normalize(cur), rows.get(0).get("updated_by"))));
+            type, id, expected, cur, rows.get(0).get("updated_by"))));
     }
 
     Response badParams(String msg) {

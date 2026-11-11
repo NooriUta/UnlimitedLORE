@@ -34,7 +34,7 @@ import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
   BatchUndo, CalendarMonth, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
-import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
+import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
 
 const SNAPSHOT = '../../demo/seidr-bare.html';
@@ -309,6 +309,17 @@ function Samples() {
         <TipTapField value={MD} onChange={noop} ariaLabel="Правка MD" minHeight={140} />
         <MartProse text={MD} />
         <SandboxedHtmlFrame html="<p>HTML — только в песочнице</p>" title="Песочница" />
+      </section>
+      {/* S5-08: спор при сохранении — дифф только спорных блоков, выбор «моё / их». */}
+      <section className="bare__sec" data-kit="merge">
+        <h2 className="bare__h2">Спорные блоки</h2>
+        <MdMergePanel
+          chunks={mergeBlocks('А.\n\nБ\nобщая строка.', 'А — моё.\n\nБ\nмоя строка.', 'А.\n\nБ\nих строка.').chunks}
+          by="agent-x"
+          picks={{ 0: 'mine' }}
+          onPick={noop}
+          onApply={noop}
+        />
       </section>
     </KitLangProvider>
   );

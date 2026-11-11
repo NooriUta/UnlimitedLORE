@@ -40,6 +40,65 @@ class LoreRecordContractUnitTest {
         assertThrows(IllegalArgumentException.class, () -> LoreRecordVersion.sql("decision"));
     }
 
+    // ── S5-08: правка на месте обязана двигать версию ───────────────────────
+    // Правка текста спринта/задачи/спеки/ADR без checkpoint пишет открытую строку
+    // истории на месте — valid_from стоит, двигается только updated_at вершины.
+    // Версия из одного valid_from пропускала вторую правку поверх первой.
+
+    private static Map<String, Object> vrow(Object validFrom, Object touchedAt) {
+        Map<String, Object> r = new HashMap<>();
+        r.put("version", validFrom);
+        r.put(LoreRecordVersion.TOUCHED, touchedAt);
+        return r;
+    }
+
+    @Test
+    void inPlaceEditMovesTheVersion() {
+        String before = LoreRecordVersion.of(vrow("2026-11-08 15:14:03.730", null));
+        String after = LoreRecordVersion.of(vrow("2026-11-08 15:14:03.730", "2026-11-09T10:00:00.123456Z"));
+        assertEquals("2026-11-08T15:14:03.730Z", before, "без правки на месте — прежняя форма (черновики S5-09 не протухают)");
+        assertEquals("2026-11-09T10:00:00.123456Z", after);
+        assertNotEquals(before, after, "правка на месте — новая версия: устаревший expected_version получит 409");
+    }
+
+    @Test
+    void twoInPlaceEditsInOneMillisecondAreDifferentVersions() {
+        String a = LoreRecordVersion.of(vrow("2026-11-08 15:14:03.730", "2026-11-09T10:00:00.123456Z"));
+        String b = LoreRecordVersion.of(vrow("2026-11-08 15:14:03.730", "2026-11-09T10:00:00.123789Z"));
+        assertNotEquals(a, b);
+        assertFalse(LoreRecordVersion.matchesCurrent(a, b));
+        assertTrue(LoreRecordVersion.matchesCurrent(" " + b + " ", b));
+        assertFalse(LoreRecordVersion.matchesCurrent(b, null), "версии нет, а клиент её назвал — конфликт");
+    }
+
+    @Test
+    void touchBeforeOpenVersionLosesToIt() {
+        // Смена статуса после правки на месте открыла новую строку — версия = её valid_from.
+        assertEquals("2026-11-10T08:00:00.000Z",
+            LoreRecordVersion.of(vrow("2026-11-10 08:00:00.000", "2026-11-09T10:00:00.123456Z")));
+        // Та же миллисекунда (путь: поля, затем статус) — побеждает открытая версия, как в LoreChangedAt.
+        assertEquals("2026-11-10T08:00:00.000Z",
+            LoreRecordVersion.of(vrow("2026-11-10 08:00:00.000", "2026-11-10T08:00:00.000400Z")));
+    }
+
+    @Test
+    void touchWithoutHistoryAndGarbage() {
+        assertEquals("2026-11-09T10:00:00.123Z", LoreRecordVersion.of(vrow(null, "2026-11-09 10:00:00.123")),
+            "DATETIME из ArcadeDB — та же ISO-форма");
+        assertEquals("2026-11-08T15:14:03.730Z", LoreRecordVersion.of(vrow("2026-11-08 15:14:03.730", "не время")),
+            "нечитаемая отметка версию не выигрывает");
+        assertNull(LoreRecordVersion.of(vrow(null, null)));
+        assertNull(LoreRecordVersion.of(null));
+    }
+
+    @Test
+    void versionSqlReadsTheInPlaceTouch() {
+        for (String t : LoreRecordRegistry.TYPES) {
+            if (LoreRecordRegistry.READ_ONLY.contains(t)) continue;
+            assertTrue(LoreRecordVersion.sql(t).contains("updated_at AS " + LoreRecordVersion.TOUCHED), t);
+        }
+    }
+
     @Test
     void versionConflictBodyNamesCurrentVersion() {
         Map<String, Object> b = LoreRecordVersion.conflictBody("task", "S/T-1", "old", "2026-11-08T00:00:00Z", "agent-x");

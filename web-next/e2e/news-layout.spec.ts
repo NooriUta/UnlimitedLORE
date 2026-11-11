@@ -27,6 +27,17 @@ test('первая карточка ленты видна без прокрут�
   expect(box!.y + box!.height, `низ первой карточки ${Math.round(box!.y + box!.height)} px при высоте окна ${h}`).toBeLessThanOrEqual(h);
 });
 
+// Человек открывает новости не голым /news, а разделом оболочки (шапка, меню,
+// охват проектов над лентой) — «лента на первом экране» должна держаться и там.
+test('в оболочке первая карточка ленты тоже видна без прокрутки', async ({ page }) => {
+  await page.goto('/?mod=forseti&sec=news');
+  const first = page.locator('[data-testid^="news-row-"]').first();
+  await expect(first).toBeVisible();
+  const box = await first.boundingBox();
+  const h = page.viewportSize()!.height;
+  expect(box!.y + box!.height, `низ первой карточки ${Math.round(box!.y + box!.height)} px при высоте окна ${h}`).toBeLessThanOrEqual(h);
+});
+
 test('панель «Фильтры» закрывается Esc и не даёт переполнения', async ({ page }) => {
   await open(page);
   await page.getByTestId('news-filters-btn').click();

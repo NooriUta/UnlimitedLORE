@@ -5953,6 +5953,25 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
   .sk-news__link { flex-basis: 100%; }
 }
 
+/* S7A-12 — лента под пальцем (телефон и планшет; решает вид указателя, а не ширина).
+   Невидимая зона касания 44 px (::after kit, PR 1179) хороша для одиночной мелкой
+   кнопки, но у соседей вплотную она ложится поверх соседа. Замер Playwright
+   (центр кнопки → elementFromPoint) на 412, 768 и 1024 до правки:
+   - столбик мини-графика 12 px через 3 px — нажатие на день открывало СЛЕДУЮЩИЙ день;
+   - заголовок группы и ссылки «спринт / ADR» в строке — их перекрывала зона
+     строки ленты снизу или заголовка группы следующей.
+   Правило: у широких строк (строка ленты, заголовок дня и группы) целью касания
+   служит сама строка — она и так во всю ширину; у столбиков зона не шире шага
+   столбика (12 + 3 px), но в полную высоту 44. */
+@media (pointer: coarse) {
+  .sk-news__sbar::after { width: min(calc(100% + 3px), max(100%, var(--hit))); }
+  .sk-news__link::after,
+  .sk-news__daybtn::after,
+  .sk-news__bbtn::after { width: 100%; height: 100%; }
+  /* Наведения нет — подсказки с полным заголовком тоже: заголовок переносится, а не режется «…». */
+  .sk-news__rtitle { white-space: normal; overflow-wrap: anywhere; }
+}
+
 /* ═══ S7A-06 — вкладка «Активность» паспорта (лента /lore/news/v2 по записи) ═══ */
 .sk-act { display: flex; flex-direction: column; gap: var(--gap); }
 .sk-act__summary { display: flex; flex-wrap: wrap; gap: 4px var(--gap); margin: 0; }
@@ -6624,6 +6643,21 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    строки нет, и метка остаётся в углу. */
 .sk-shell--status .sk-shell__main .sk-shell__corner { display: none; }
 .sk-shell__status .sk-shell__corner { position: static; }
+
+/* ---------- S5-08: спор при сохранении — дифф только спорных блоков ---------- */
+.sk-mdmerge { display: flex; flex-direction: column; gap: 8px; margin: 0 0 8px; padding: 6px 9px; border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent); border-radius: var(--r-md); background: var(--bg1); }
+.sk-mdmerge__lead { margin: 0; font-size: var(--fs-xs); color: var(--t1); }
+.sk-mdmerge__block { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--bd); padding-top: 6px; }
+.sk-mdmerge__diff { margin: 0; padding: 0; list-style: none; font-family: var(--mono); font-size: var(--fs-xs); overflow-x: auto; }
+.sk-mdmerge__line { display: flex; gap: 8px; padding: 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sk-mdmerge__line--same { color: var(--t2); }
+.sk-mdmerge__line--del { background: color-mix(in srgb, var(--dng) 14%, transparent); }
+.sk-mdmerge__line--add { background: color-mix(in srgb, var(--suc) 14%, transparent); }
+.sk-mdmerge__line--note { color: var(--t2); font-style: italic; }
+.sk-mdmerge__text { flex: 1 1 auto; min-width: 0; }
+.sk-mdmerge__who { flex: 0 0 3.5em; color: var(--t2); text-transform: uppercase; }
+.sk-mdmerge__picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-mdmerge__picks .sk-btn[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
 
 /* S7B-ACL-3: подписанные группы в ScopePicker — свои / остальные (подписи от приложения). */
 .sk-scope__grp { display: grid; gap: 2px; }
