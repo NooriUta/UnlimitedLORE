@@ -937,5 +937,7 @@
   "admin.roles.filter": "Отбор людей",
   "admin.roles.onlyNoProjects": "Только без проектов",
   "admin.roles.noProjectsEmpty": "Людей без проектов нет",
-  "admin.roles.noProjectsEmptyHint": "у каждой проверенной учётки есть хотя бы одна роль"
+  "admin.roles.noProjectsEmptyHint": "у каждой проверенной учётки есть хотя бы одна роль",
+  "stale.banner": "Вышла новая версия LORE — обновите страницу",
+  "stale.reload": "Обновить страницу"
 }

@@ -20,7 +20,7 @@ import '@fontsource/ibm-plex-mono/600.css';
 import '@fontsource/ibm-plex-mono/700.css';
 import '@fontsource/unbounded/800.css';
 import '@seidr/kit/styles/seidr.css';
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { ErrorBoundary, Pill, Skeleton, useKitLang, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import './App.css';
 import { legacyHashHref, legacyPassportHref } from './nav/loreRoutes';
@@ -33,16 +33,17 @@ import { SectionPalette } from './palette/SectionPalette';
 import { OutsideShell } from './pages/OutsideShell';
 import type { ListScreenId } from './lists/screens';
 import { V2Shell } from './shell/V2Shell';
+import { lazyChunk, StaleChunkBanner } from './shell/staleChunk';
 import type { V2Section } from './shell/v2Config';
 import { storage as appStorage } from './storage/safe';
 
 // Витрина тянет MD/HTML-элементы (TipTap, mermaid, bpmn-js — мегабайты):
 // отдельный чанк, чтобы оболочка v2 за них не платила.
-const KitPage = lazy(() => import('./pages/KitPage'));
+const KitPage = lazyChunk(() => import('./pages/KitPage'));
 // Демо паспортов на реальных объектах (S4-33) — свой чанк: MartProse, граф.
-const PassportDemo = lazy(() => import('./pages/PassportDemo'));
+const PassportDemo = lazyChunk(() => import('./pages/PassportDemo'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
-const NewsPage = lazy(() => import('./news/NewsPage'));
+const NewsPage = lazyChunk(() => import('./news/NewsPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
 // Админка v2 (SPRINT_UXR_S7B_ADMIN/S7B-01) — модуль оболочки ?mod=admin
 // (V2Shell, admin/adminModule.ts). Прежняя страница /admin?adm=… переписывается
@@ -149,12 +150,16 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
   if (route === 'news') {
     return (
       <ErrorBoundary lang="ru">
+        <StaleChunkBanner />
         <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
       </ErrorBoundary>
     );
   }
   if (route === 'sprints' || route === 'adrs') redirectListRoute(route, win ?? (typeof window === 'undefined' ? undefined : window));
   return (
+    <>
+    {/* S4-STALE-CHUNK: вне ErrorBoundary — плашка «обновите» видна и поверх экрана ошибки. */}
+    <StaleChunkBanner />
     <ErrorBoundary lang={lang}>
       <div data-lore-app="v2" className="v2-app">
         {/* Метка версии — ID-пилюля kit в шапке: v2 нельзя спутать с v1. */}
@@ -181,5 +186,6 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
         />
       </div>
     </ErrorBoundary>
+    </>
   );
 }

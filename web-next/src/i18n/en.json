@@ -937,5 +937,7 @@
   "admin.roles.filter": "People filter",
   "admin.roles.onlyNoProjects": "Only without projects",
   "admin.roles.noProjectsEmpty": "Nobody without projects",
-  "admin.roles.noProjectsEmptyHint": "every checked account has at least one role"
+  "admin.roles.noProjectsEmptyHint": "every checked account has at least one role",
+  "stale.banner": "A new version of LORE is out — please reload the page",
+  "stale.reload": "Reload page"
 }
