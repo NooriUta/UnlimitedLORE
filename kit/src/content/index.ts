@@ -17,3 +17,5 @@ export { MathInline, MathBlock, MathSafeText, escapeMathDollars, installMathMark
 export * from './markdownBare';
 // MD-WINDOW · правила вызова мини-окна ссылки и разбор ссылок (spec:SPEC-LORE-MD-INLINE-REF §2, §3a).
 export * from './refTrigger';
+// MD-WINDOW · мини-окно ссылки: две карточки, честные состояния, обязательные поля.
+export * from './RefPicker';
