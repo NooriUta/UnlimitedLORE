@@ -1395,5 +1395,14 @@
   "admin.macl.matrix.noTeams": "Project teams failed to load: {reason}",
   "admin.macl.person.title": "Machines · owns {owned} · granted {granted}",
   "admin.macl.person.none": "No machines: owns none and has no grants (checked)",
-  "mdref.modelLoading": "The LORE model is still loading — try again in a second"
+  "mdref.modelLoading": "The LORE model is still loading — try again in a second",
+  "lists.field.released": "Released",
+  "lists.calendar.dateGroup": "Calendar date",
+  "lists.calendar.plannedStart": "Plan: start",
+  "lists.calendar.doneDate": "Actual: closed",
+  "lists.calendar.released": "Release date",
+  "lists.library.view": "Library",
+  "lists.library.back": "List",
+  "lists.library.noArea": "No area",
+  "lists.library.noComponent": "No component"
 }
