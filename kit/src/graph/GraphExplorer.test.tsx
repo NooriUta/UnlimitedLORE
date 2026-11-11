@@ -41,42 +41,42 @@ afterEach(() => localStorage.clear());
 describe('GC-03 · GraphExplorer', () => {
   it('по умолчанию вид Force, счёт узлов и связей словами', async () => {
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t1" />);
-    expect(await screen.findByTestId('eng-force')).toHaveAttribute('data-nodes', '5');
-    expect(screen.getByTestId('sk-gx-count').textContent).toBe('узлов 5 · связей 3');
+    expect((await screen.findByTestId('eng-force')).getAttribute('data-nodes')).toBe('5');
+    expect(screen.getByTestId('gx-count').textContent).toBe('узлов 5 · связей 3');
   });
 
   it('переключатель вида: Обсидиан рисует тем же набором данных и сообщает о выборе', async () => {
     const onEngineChange = vi.fn();
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t2" onEngineChange={onEngineChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'Обсидиан' }));
-    expect(await screen.findByTestId('eng-obsidian')).toHaveAttribute('data-edges', '3');
+    expect((await screen.findByTestId('eng-obsidian')).getAttribute('data-edges')).toBe('3');
     expect(onEngineChange).toHaveBeenCalledWith('obsidian');
   });
 
   it('панель как у Обсидиана: четыре раздела, тип снимается чекбоксом — «показано N из M»', async () => {
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t3" />);
-    const panel = screen.getByTestId('sk-gx-panel');
+    const panel = screen.getByTestId('gx-panel');
     expect([...panel.querySelectorAll('summary')].map(s => s.textContent)).toEqual(['Фильтры', 'Группы', 'Отображение', 'Силы']);
     fireEvent.click(screen.getByRole('checkbox', { name: /Компонент/ }));
-    await waitFor(() => expect(screen.getByTestId('eng-force')).toHaveAttribute('data-nodes', '4'));
-    expect(screen.getByTestId('sk-gx-count').textContent).toBe('показано 4 из 5 · связей 2');
+    await waitFor(() => expect(screen.getByTestId('eng-force').getAttribute('data-nodes')).toBe('4'));
+    expect(screen.getByTestId('gx-count').textContent).toBe('показано 4 из 5 · связей 2');
   });
 
   it('силы уходят в движок; настройки панели запоминаются в браузере по ключу места', async () => {
     const { unmount } = render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t4" />);
     fireEvent.change(screen.getByLabelText('Отталкивание'), { target: { value: '15' } });
-    expect(await screen.findByTestId('eng-force')).toHaveAttribute('data-repel', '15');
+    expect((await screen.findByTestId('eng-force')).getAttribute('data-repel')).toBe('15');
     unmount();
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t4" />);
-    expect(await screen.findByTestId('eng-force')).toHaveAttribute('data-repel', '15');
+    expect((await screen.findByTestId('eng-force')).getAttribute('data-repel')).toBe('15');
   });
 
   it('группа красит узлы по запросу поверх цвета типа', async () => {
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t5" />);
-    expect(await screen.findByTestId('eng-force')).toHaveAttribute('data-color', 'var(--suc)');
+    expect((await screen.findByTestId('eng-force')).getAttribute('data-color')).toBe('var(--suc, var(--t3))');
     fireEvent.click(screen.getByRole('button', { name: 'Новая группа' }));
     fireEvent.change(screen.getByLabelText('Запрос группы'), { target: { value: 'type:adr' } });
-    await waitFor(() => expect(screen.getByTestId('eng-force')).toHaveAttribute('data-color', 'var(--acc)'));
+    await waitFor(() => expect(screen.getByTestId('eng-force').getAttribute('data-color')).toBe('var(--acc, var(--t3))'));
   });
 
   it('фильтры скрыли всё — это сказано и есть сброс, а не пустой холст', async () => {
@@ -84,8 +84,8 @@ describe('GC-03 · GraphExplorer', () => {
     fireEvent.change(screen.getByLabelText('Поиск по графу'), { target: { value: 'нет-такого' } });
     expect(await screen.findByText('Фильтры скрыли все узлы')).toBeTruthy();
     expect(screen.queryByTestId('eng-force')).toBeNull();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Сбросить настройки' }).at(-1)!);
-    expect(await screen.findByTestId('eng-force')).toHaveAttribute('data-nodes', '5');
+    fireEvent.click((b => b[b.length - 1])(screen.getAllByRole('button', { name: 'Сбросить настройки' })));
+    expect((await screen.findByTestId('eng-force')).getAttribute('data-nodes')).toBe('5');
   });
 
   it('движок не отрисовался — ошибка названа, а не пустой холст', async () => {
@@ -97,7 +97,7 @@ describe('GC-03 · GraphExplorer', () => {
   it('выбранный узел — подпись и обычная ссылка «Открыть» по адресу приложения', async () => {
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t8" hrefOf={id => `?passport=${id}`} />);
     fireEvent.click(await screen.findByRole('button', { name: 'узел T-1' }));
-    const sel = screen.getByTestId('sk-gx-selected');
+    const sel = screen.getByTestId('gx-selected');
     expect(sel.textContent).toContain('Сделать панель');
     expect(sel.querySelector('a')!.getAttribute('href')).toBe('?passport=T-1');
   });
@@ -105,8 +105,8 @@ describe('GC-03 · GraphExplorer', () => {
   it('панель прячется и возвращается кнопкой', async () => {
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t9" />);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Скрыть настройки' })); });
-    expect(screen.queryByTestId('sk-gx-panel')).toBeNull();
+    expect(screen.queryByTestId('gx-panel')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Настройки' }));
-    expect(screen.getByTestId('sk-gx-panel')).toBeTruthy();
+    expect(screen.getByTestId('gx-panel')).toBeTruthy();
   });
 });

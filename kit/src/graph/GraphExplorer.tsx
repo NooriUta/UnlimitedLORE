@@ -16,6 +16,7 @@ import { kitT, type KitLang } from '../i18n';
 import { EmptyState, LoadError } from '../states/StateViews';
 import { Pill } from '../elements/Pill';
 import { toCssColor } from '../record/graph';
+import { useNarrow } from '../core/narrow';
 import { GraphSettingsPanel } from './GraphSettingsPanel';
 import {
   GX_DEFAULTS, GX_ENGINES, gxFilter, gxGroupColor, gxTypeCounts, loadGx, saveGx,
@@ -47,7 +48,7 @@ export interface GraphExplorerProps {
   hrefOf?: (id: string) => string;
   /** Ключ настроек панели в браузере человека; разные места — разные настройки. */
   storageKey?: string;
-  /** Панель открыта при первом показе. */
+  /** Панель открыта при первом показе; не задано — открыта, кроме узкого экрана. */
   panelOpen?: boolean;
   lang: KitLang;
   className?: string;
@@ -60,7 +61,9 @@ export function GraphExplorer(props: GraphExplorerProps) {
   const setEngine = (e: GxEngine) => { if (props.engine === undefined) setOwnEngine(e); props.onEngineChange?.(e); };
   const [settings, setSettingsRaw] = useState<GxSettings>(() => loadGx(storageKey));
   const setSettings = useCallback((s: GxSettings) => { setSettingsRaw(s); saveGx(storageKey, s); }, [storageKey]);
-  const [panel, setPanel] = useState(props.panelOpen ?? true);
+  // На телефоне панель сначала свёрнута: открытая, она закрывает граф целиком.
+  const narrow = useNarrow();
+  const [panel, setPanel] = useState(props.panelOpen ?? !narrow);
   const [selected, setSelected] = useState<string | null>(null);
   const [failure, setFailure] = useState<unknown>(undefined);
 
@@ -80,14 +83,14 @@ export function GraphExplorer(props: GraphExplorerProps) {
   const sel = selected ? nodes.find(n => n.id === selected) : undefined;
 
   return (
-    <div className={['sk-gx', panel ? 'sk-gx--panel' : '', props.className].filter(Boolean).join(' ')} data-testid="sk-gx">
+    <div className={['sk-gx', panel ? 'sk-gx--panel' : '', props.className].filter(Boolean).join(' ')} data-testid="gx">
       <div className="sk-gx__bar" role="toolbar" aria-label={kitT(lang, 'kit.graph.toolbar')}>
         <button type="button" className="sk-btn sk-gx__ghost" aria-pressed={panel} aria-controls="sk-gx-panel"
           onClick={() => setPanel(v => !v)}>
           {kitT(lang, panel ? 'kit.graph.panelHide' : 'kit.graph.panelShow')}
         </button>
         {engineSwitch && (
-          <div className="sk-gx__engines" role="group" aria-label={kitT(lang, 'kit.graph.engine')} data-testid="sk-gx-engines">
+          <div className="sk-gx__engines" role="group" aria-label={kitT(lang, 'kit.graph.engine')} data-testid="gx-engines">
             {GX_ENGINES.map(e => (
               <Pill key={e} variant="filter" pressed={engine === e} onToggle={() => setEngine(e)}
                 title={kitT(lang, e === 'force' ? 'kit.graph.engineForceHint' : 'kit.graph.engineObsidianHint')}>
@@ -96,7 +99,7 @@ export function GraphExplorer(props: GraphExplorerProps) {
             ))}
           </div>
         )}
-        <span className="sk-gx__count" data-testid="sk-gx-count">
+        <span className="sk-gx__count" data-testid="gx-count">
           {kitT(lang, view.nodes.length === view.total ? 'kit.graph.count' : 'kit.graph.countOf',
             { n: view.nodes.length, total: view.total, e: view.edges.length })}
         </span>
@@ -126,7 +129,7 @@ export function GraphExplorer(props: GraphExplorerProps) {
             </Suspense>
           )}
           {sel && (
-            <div className="sk-gx__sel" role="status" data-testid="sk-gx-selected">
+            <div className="sk-gx__sel" role="status" data-testid="gx-selected">
               <span className="sk-gx-dot" aria-hidden="true" style={{ '--gx-c': nodeColor(sel) } as CSSProperties} />
               <span className="sk-gx__sel-title">{sel.title ?? sel.id}</span>
               <code className="sk-gx__sel-id">{sel.id}</code>

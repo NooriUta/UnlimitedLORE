@@ -41,7 +41,7 @@ export function GraphSettingsPanel({ lang, settings: s, onChange, types }: Props
     onChange({ ...s, groups: s.groups.map((g, j) => (j === i ? { ...g, ...patch } : g)) });
 
   return (
-    <aside className="sk-gx-panel" aria-label={kitT(lang, 'kit.graph.settings')} data-testid="sk-gx-panel">
+    <aside className="sk-gx-panel" aria-label={kitT(lang, 'kit.graph.settings')} data-testid="gx-panel">
       <details open className="sk-gx-panel__sec">
         <summary>{kitT(lang, 'kit.graph.filters')}</summary>
         <div className="sk-gx-panel__row sk-gx-panel__row--wide">

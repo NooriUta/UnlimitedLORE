@@ -43,11 +43,13 @@
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@testing-library/react": "^16.3.3",
+    "@types/d3-force": "3.0.10",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "axe-core": "^4.14.0",
+    "graphology-types": "0.24.8",
     "jsdom": "^26.1.0",
     "typescript": "~6.0.3",
     "vite": "^8.3.5",

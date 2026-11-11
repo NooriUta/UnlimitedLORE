@@ -126,7 +126,7 @@ export default function ObsidianEngine(p: GxEngineProps) {
       at.color = resolveColor(el, s.edgeColor({ from: src, to: dst, rel: at.rel as string, kind: at.kind as string | undefined }));
       return at;
     });
-    L.s.setSetting('labelRenderedSizeThreshold', s.settings.labels * 12);
+    L.s.setSetting('labelRenderedSizeThreshold', 4 + s.settings.labels * 16);
     L.s.setSetting('nodeReducer', (n, a) => (nb && !nb.has(n) ? { ...a, color: dim, label: '' } : { ...a, highlighted: n === s.selected }));
     L.s.setSetting('edgeReducer', (e, a) => {
       if (!nb) return a;
@@ -139,5 +139,5 @@ export default function ObsidianEngine(p: GxEngineProps) {
   useEffect(() => { live.current?.w.postMessage({ type: 'forces', forces: gxForces(p.settings) } satisfies ObsidianIn); }, [forceKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { paint(); }, [p.selected, p.settings, p.nodeColor]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div ref={host} className="sk-gx__canvas" data-testid="sk-gx-obsidian" />;
+  return <div ref={host} className="sk-gx__canvas" data-testid="gx-obsidian" />;
 }

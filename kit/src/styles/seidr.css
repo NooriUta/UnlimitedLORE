@@ -4231,7 +4231,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
    Два вида — Force и «как Обсидиан» — и левая панель как у Обсидиана: Фильтры,
    Группы, Отображение, Силы. Холст занимает всё, что осталось. */
 .sk-rec-graph__gx { height: min(70vh, 640px); min-height: 420px; }
-.sk-gx { display: flex; flex-direction: column; min-height: 420px; height: 100%; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg); overflow: hidden; }
+.sk-gx { display: flex; flex-direction: column; min-height: 420px; height: 100%; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); overflow: hidden; }
 .sk-gx--panel { --gx-panel: 248px; }
 .sk-gx__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 6px 8px; border-bottom: 1px solid var(--bd); background: var(--bg2); }
 .sk-gx__engines { display: flex; gap: 4px; align-items: center; }
@@ -4254,7 +4254,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-gx-panel__row--wide { grid-template-columns: minmax(0, 1fr); }
 .sk-gx-panel__row input[type="range"] { width: 100%; accent-color: var(--acc); }
 .sk-gx-panel__val { color: var(--t1); font-family: var(--mono); font-size: var(--fs-xs); text-align: right; font-variant-numeric: tabular-nums; }
-.sk-gx-panel__input { width: 100%; min-width: 0; padding: 3px 6px; border: 1px solid var(--bd); border-radius: 4px; background: var(--bg); color: var(--t1); font-size: var(--fs-sm); }
+.sk-gx-panel__input { width: 100%; min-width: 0; padding: 3px 6px; border: 1px solid var(--bd); border-radius: 4px; background: var(--bg1); color: var(--t1); font-size: var(--fs-sm); }
 .sk-gx-panel__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-gx-panel__types, .sk-gx-panel__groups { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .sk-gx-panel__check { display: flex; align-items: center; gap: 6px; min-height: 24px; color: var(--t1); cursor: pointer; }
@@ -4266,7 +4266,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-gx-swatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--bd); border-radius: 999px; background: var(--gx-c, var(--t3)); cursor: pointer; }
 .sk-gx-swatch[aria-checked="true"] { outline: 2px solid var(--t1); outline-offset: 1px; }
 .sk-gx-panel__reset { align-self: flex-start; margin-top: 6px; }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-gx--panel .sk-gx__body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(360px, 1fr); }
   .sk-gx__side { max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--bd); }
 }

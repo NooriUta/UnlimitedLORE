@@ -55,6 +55,7 @@ const SETTING_KEY: Readonly<Record<keyof UserSettings, string>> = {
   single_key_shortcuts: 'single_key_shortcuts',
   stripes: 'stripes',
   peek_hover: 'peek_hover',
+  graph_view: 'graph_view',
   nav_version: 'new_navigation',
   show_tech: 'show_tech',
 };

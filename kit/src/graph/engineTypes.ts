@@ -27,7 +27,9 @@ export const FALLBACK = 'gray';
 /** CSS-цвет («--acc», «var(--acc)» или готовое значение) → значение для canvas/WebGL. */
 export function resolveColor(el: Element | null, c: string): string {
   const v = c.trim();
-  const m = /^var\((--[\w-]+)(?:,\s*([^)]+))?\)$/.exec(v);
+  // Запасное значение может само быть var(…) — «var(--suc, var(--t3))», как отдаёт
+  // toCssColor; поэтому хвост берётся жадно до последней скобки, а не до первой.
+  const m = /^var\((--[\w-]+)(?:,\s*(.+))?\)$/.exec(v);
   const name = v.startsWith('--') ? v : m?.[1];
   if (!name) return v;
   const got = el ? getComputedStyle(el).getPropertyValue(name).trim() : '';

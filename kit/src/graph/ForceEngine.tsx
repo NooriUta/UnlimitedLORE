@@ -32,7 +32,7 @@ export default function ForceEngine(p: GxEngineProps) {
       const g = new ForceGraph<FgNode, FgLink>(el)
         .graphData({ nodes: p.nodes.map(n => ({ ...n })), links: p.edges.map(e => ({ source: e.from, target: e.to, rel: e.rel, kind: e.kind })) })
         .width(el.clientWidth).height(el.clientHeight)
-        .backgroundColor(resolveColor(el, '--bg'))
+        .backgroundColor(resolveColor(el, '--bg1'))
         .nodeId('id')
         .nodeLabel(n => n.title ? `${n.title} · ${n.id}` : n.id)
         .nodeVal(n => 1 + Math.sqrt(degree.get(n.id) ?? 0))
@@ -103,5 +103,5 @@ export default function ForceEngine(p: GxEngineProps) {
   useEffect(() => { applySettings(); fg.current?.d3ReheatSimulation(); }, [forceKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { applySettings(); }, [p.selected, p.settings, p.nodeColor]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div ref={host} className="sk-gx__canvas" data-testid="sk-gx-force" />;
+  return <div ref={host} className="sk-gx__canvas" data-testid="gx-force" />;
 }
