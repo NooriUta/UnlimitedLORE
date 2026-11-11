@@ -173,6 +173,9 @@ export const datawanderersConfig: KitConfig = {
     ],
     filters: ['quality', 'status', 'review'],
     groupings: ['quality', 'status', 'discipline'],
+    // K4-FACET-LABELS: quality и review — вычисляемые поля (их нет в kinds.*.fields),
+    // подпись им даёт список; без неё фасет печатал ключ капсом («QUALITY все»).
+    fieldLabels: { quality: 'Качество', review: 'Согласование' },
     columns: ['select', 'title', 'id', 'verdict', 'status', 'edges_count'],
   },
 };

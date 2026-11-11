@@ -121,3 +121,39 @@ describe('S4-35 · показ колонок списка из модели', ()
     expect(container.querySelector('th.sk-list__c-priority')?.getAttribute('data-w')).toBe('xs');
   });
 });
+
+// S4-STATUS-AXIS-CONFIG, хвост 11.11: ось из модели доходила до конфига списка,
+// но строку маппер читал перечнем в коде (`DECISION_STATUSES`). Статус, который
+// сервер объявил в цикле типа, а клиент не знал, становился «вне словаря».
+// Замер корпуса 09.11: у решений две строки `rejected` — ровно этот случай.
+describe('S4-STATUS-AXIS-CONFIG · статус строки читается по оси модели', () => {
+  const DECISIONS = [{ decision_id: 'D-2026-X', title: 'Решение', status_raw: 'parked' }];
+  const DECISION_MODEL = {
+    format: 'model/0',
+    version: '2026-11-11T00:00:00Z',
+    statuses: {
+      decision: {
+        entries: [
+          { code: 'accepted', title: 'Принято', category: 'finished', icon: 'trophy', color: 'var(--st-done)', order: 1 },
+          { code: 'parked', title: 'На паузе', category: 'todo', icon: 'trophy', color: 'var(--t3)', order: 2 },
+        ],
+      },
+    },
+  };
+  const netD = (model: unknown, modelStatus = 200) => vi.fn(async (input: RequestInfo | URL) => {
+    if (String(input).includes('/lore/model')) return json(modelStatus, model);
+    return json(200, { rows: DECISIONS });
+  }) as unknown as typeof fetch;
+  const row = (c: HTMLElement) => c.querySelector('[data-record-id="D-2026-X"]');
+
+  it('статус из цикла модели — свой код, а не «вне словаря»', async () => {
+    const { container } = render(<ListScreen screen="decisions" fetchImpl={netD(DECISION_MODEL)} urlState={false} />);
+    await waitFor(() => expect(row(container)?.querySelector('[data-status="parked"]')).toBeTruthy());
+    expect(row(container)?.querySelector('[data-status="unknown"]')).toBeNull();
+  });
+
+  it('положительный контроль: модели нет — перечень в коде, и `parked` в нём «вне словаря»', async () => {
+    const { container } = render(<ListScreen screen="decisions" fetchImpl={netD({ error: 'boom' }, 502)} urlState={false} />);
+    await waitFor(() => expect(row(container)?.querySelector('[data-status="unknown"]')).toBeTruthy());
+  });
+});

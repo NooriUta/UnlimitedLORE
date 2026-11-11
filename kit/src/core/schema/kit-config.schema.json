@@ -187,7 +187,25 @@
         },
         "filters": { "type": "array", "items": { "type": "string" } },
         "groupings": { "type": "array", "items": { "type": "string" } },
+        "fieldLabels": {
+          "description": "K4-FACET-LABELS: подписи полей вне kinds.*.fields (вычисляемых сервером или приложением). Ключ — имя поля, с приставкой fields. или без.",
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        },
+        "collapsedGroupings": { "type": "array", "items": { "type": "string" } },
         "columns": { "type": "array", "items": { "type": "string" } },
+        "columnDisplay": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "priority": { "type": "integer", "minimum": 1, "maximum": 4 },
+              "width": { "enum": ["xs", "s", "m", "l", "fill"] },
+              "overflow": { "enum": ["none", "ellipsis", "more"] }
+            },
+            "additionalProperties": false
+          }
+        },
         "tree": {
           "type": "object",
           "required": ["parent", "order"],
@@ -220,9 +238,27 @@
           "properties": {
             "timeField": { "type": "string", "minLength": 1 },
             "lead": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-            "because": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            "because": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "under": {
+              "type": "object",
+              "required": ["title"],
+              "properties": { "title": { "type": "string", "minLength": 1 } },
+              "additionalProperties": false
+            }
           },
           "additionalProperties": false
+        },
+        "fresh": {
+          "description": "K4-FRESHNESS: пороги свежести колонки fresh:<поле>, в минутах; ключ — имя поля. Порогов нет — тона нет.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "warnAfter": { "type": "number", "minimum": 0 },
+              "staleAfter": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": false
+          }
         },
         "showClosed": { "enum": ["below", "all", "days30", "hide"] }
       },

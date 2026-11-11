@@ -846,6 +846,7 @@ public final class NewsV2Engine {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("events", feedRows(c, q, axis));
         out.put("groups", groupsOut(c.E, axis, q.subBy()));
+        out.put("days", daysOut(c, q, axis));   // S7A-09: свёртки дня — аддитивно
         Map<String, Object> metrics = metrics(c, p, q);
         out.put("metrics", metrics);
         if (q.matrixN() != null && q.matrixN() > 0) out.put("matrix", matrixOut(matrix(c.E, q.matrixN())));
@@ -898,6 +899,79 @@ public final class NewsV2Engine {
     }
 
     static String eventId(Event e) { return e.elKey() + "|" + e.kind() + "|" + e.at() + "|" + e.day(); }
+
+    /**
+     * S7A-09: свёртки по дню — то, что веб и miniLORE раньше считали каждый у себя
+     * по пришедшим строкам ленты (заголовок дня: итог, разбивка по видам и типам,
+     * «закрыто против заведено»; счёт группы внутри дня). Считаются по всему
+     * периоду: {@code limit} режет только список строк.
+     *
+     * <p>Каждый счёт — тройка: {@code events}/{@code elements} (двойной счёт §2) и
+     * {@code rows} — строки ленты (дедуп «элемент : вид : день», §5), то есть ровно
+     * то число, что клиент рисовал. Дни — в порядке ленты, новые сверху.
+     */
+    List<Map<String, Object>> daysOut(Core c, Query q, String axis) {
+        Map<LocalDate, List<Event>> evByDay = new TreeMap<>(Comparator.reverseOrder());
+        for (Event e : c.E) evByDay.computeIfAbsent(dayOf(e), d -> new ArrayList<>()).add(e);
+        // строка = её первое событие из прошедших фильтр (так же, как в feedRows)
+        Map<LocalDate, List<Event>> rowsByDay = new HashMap<>();
+        for (Row r : c.prepared.rows()) {
+            Event first = r.events().stream().filter(e -> matches(e, q)).findFirst().orElse(null);
+            if (first != null) rowsByDay.computeIfAbsent(dayOf(first), d -> new ArrayList<>()).add(first);
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<LocalDate, List<Event>> en : evByDay.entrySet()) {
+            List<Event> evs = en.getValue();
+            List<Event> rows = rowsByDay.getOrDefault(en.getKey(), List.of());
+            Map<String, Object> d = new LinkedHashMap<>();
+            d.put("day", en.getKey().toString());
+            d.put("total", pair(evs.size(), (int) evs.stream().map(Event::elKey).distinct().count()));
+            d.put("rows", rows.size());
+            Map<String, Object> byType = new TreeMap<>();
+            for (Map.Entry<String, Map<String, Object>> t : tripleBy(evs, rows, e -> List.of(e.type())).entrySet()) {
+                String type = t.getKey();
+                Map<String, Object> v = new LinkedHashMap<>(t.getValue());
+                v.put("by_kind", tripleBy(evs.stream().filter(e -> type.equals(e.type())).toList(),
+                    rows.stream().filter(e -> type.equals(e.type())).toList(), e -> List.of(e.kind())));
+                byType.put(type, v);
+            }
+            d.put("by_kind", tripleBy(evs, rows, e -> List.of(e.kind())));
+            d.put("by_type", byType);
+            d.put("axis", axis);
+            List<Map<String, Object>> groups = new ArrayList<>();
+            tripleBy(evs, rows, e -> axisValues(axis, e)).forEach((k, v) -> {
+                Map<String, Object> g = new LinkedHashMap<>();
+                g.put("key", k);
+                g.putAll(v);
+                groups.add(g);
+            });
+            groups.sort(Comparator.comparingInt((Map<String, Object> g) -> (Integer) g.get("events")).reversed()
+                .thenComparing(g -> (String) g.get("key")));
+            d.put("groups", groups);
+            out.add(d);
+        }
+        return out;
+    }
+
+    /** {ключ → {events, elements, rows}}: элемент нескольких групп считается в каждой (как groupCount). */
+    static Map<String, Map<String, Object>> tripleBy(List<Event> evs, List<Event> rows, Function<Event, List<String>> keys) {
+        Map<String, int[]> n = new TreeMap<>();
+        Map<String, Set<String>> els = new HashMap<>();
+        for (Event e : evs) for (String k : new LinkedHashSet<>(keys.apply(e))) {
+            n.computeIfAbsent(k, kk -> new int[2])[0]++;
+            els.computeIfAbsent(k, kk -> new HashSet<>()).add(e.elKey());
+        }
+        for (Event r : rows) for (String k : new LinkedHashSet<>(keys.apply(r))) n.computeIfAbsent(k, kk -> new int[2])[1]++;
+        Map<String, Map<String, Object>> out = new TreeMap<>();
+        n.forEach((k, v) -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("events", v[0]);
+            m.put("elements", els.getOrDefault(k, Set.of()).size());
+            m.put("rows", v[1]);
+            out.put(k, m);
+        });
+        return out;
+    }
 
     Map<String, Object> groupsOut(List<Event> E, String axis, String sub) {
         GroupCount R = groupCount(E, axis);

@@ -20,7 +20,8 @@ import java.util.Map;
  *   <li>Структурные рёбра (HAS_STATE, PART_OF, IN_PHASE, BELONGS_TO,
  *       BELONGS_TO_PROJECT, TAGGED_WITH, DOC_CHILD_OF): это принадлежность и
  *       иерархия, а не «связь по смыслу», и у них есть свои пути записи.
- *       Исключение — BELONGS_TO к компоненту: «запись про компонент» ставится
+ *       Исключение — привязка к компоненту: BELONGS_TO (adr/decision/doc/sprint)
+ *       и TAGGED_WITH задача → компонент; «запись про компонент» ставится
  *       и из упоминания (SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK).</li>
  *   <li>Рёбра с побочным действием: ANSWERS (закрывает вопрос), SUPERSEDES
  *       (требует статуса SUPERSEDED у старого ADR), GATES (меняет готовность
@@ -129,7 +130,11 @@ final class LoreLinkTypes {
         new Pair("adr",      "BELONGS_TO",             "component"),
         new Pair("decision", "BELONGS_TO",             "component"),
         new Pair("doc",      "BELONGS_TO",             "component"),
-        new Pair("sprint",   "BELONGS_TO",             "component")
+        new Pair("sprint",   "BELONGS_TO",             "component"),
+        // У задачи СВОЁ ребро к компоненту — TAGGED_WITH (task/component, task_mv, срез
+        // component_tasks, LoreRecordFrom SLICE_LINKS, LoreGraphBuilder). Слова владелицы 11.11:
+        // «компоненты привязываются и к задаче».
+        new Pair("task",     "TAGGED_WITH",            "component")
     );
 
     /**
@@ -142,7 +147,8 @@ final class LoreLinkTypes {
         "adr|BELONGS_TO|component",
         "decision|BELONGS_TO|component",
         "doc|BELONGS_TO|component",
-        "sprint|BELONGS_TO|component");
+        "sprint|BELONGS_TO|component",
+        "task|TAGGED_WITH|component");
 
     static boolean isAuto(String fromType, String edgeType, String toType) {
         return AUTO_PAIRS.contains(fromType + "|" + edgeType + "|" + toType)

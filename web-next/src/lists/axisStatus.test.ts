@@ -110,3 +110,24 @@ describe('статусные оси неплановых типов', () => {
     expect(featureRecord({ uc_id: 'F-1', title: 'f', status: 'shipped' }).status).toBe('shipped');
   });
 });
+
+// S4-STATUS-AXIS-CONFIG, хвост 11.11: ось из модели доходила до КОНФИГА списка,
+// но не до ЧТЕНИЯ строки — маппер сверял статус с перечнем в коде, и статус,
+// объявленный сервером в цикле типа, становился «вне словаря».
+describe('S4-STATUS-AXIS-CONFIG · маппер читает статус по оси модели', () => {
+  it('код из оси модели остаётся своим, даже если перечень в коде его не знает', () => {
+    expect(decisionRecord({ decision_id: 'D', status_raw: 'rejected' }, { statusCodes: ['accepted', 'rejected'] }).status).toBe('rejected');
+    expect(specRecord({ spec_id: 'S', status: 'draft' }, { statusCodes: ['draft'] }).status).toBe('draft');
+    expect(questionRecord({ question_id: 'Q', status: 'parked' }, { statusCodes: ['parked'] }).status).toBe('parked');
+    expect(featureRecord({ uc_id: 'F', status: 'paused' }, { statusCodes: ['paused'] }).status).toBe('paused');
+  });
+
+  it('вне оси модели — «вне словаря», даже если код есть в перечне клиента', () => {
+    expect(decisionRecord({ decision_id: 'D', status_raw: 'done' }, { statusCodes: ['accepted'] }).status).toBe('unknown');
+  });
+
+  it('оси модели нет (пусто) — перечень в коде, как раньше', () => {
+    expect(decisionRecord({ decision_id: 'D', status_raw: 'accepted' }, { statusCodes: [] }).status).toBe('accepted');
+    expect(decisionRecord({ decision_id: 'D', status_raw: 'rejected' }).status).toBe('unknown');
+  });
+});
