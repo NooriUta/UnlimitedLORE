@@ -73,5 +73,7 @@ export * from './reading';
 // Мастера и операции (SPRINT_UXR_S10_SEIDR_KIT_2, фаза ADMIN): шаги с
 // условием перехода и «осталось руками» (K2-STEPS).
 export * from './flow';
+// S4-FIELD-EDITORS: редакторы по видам полей модели.
+export * from './fields';
 // Новости v2: лента, разрезы, метрики сервера (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06).
 export * from './news';

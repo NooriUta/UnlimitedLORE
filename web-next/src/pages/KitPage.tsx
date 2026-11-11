@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
   BatchUndo, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
-  DENSITIES, type Density, type KitCtx, type Mode,
+  DENSITIES, FieldEditor, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
@@ -16,7 +16,7 @@ import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 
-const SECTIONS = ['tokens', 'elements', 'states', 'shell', 'flow', 'palette', 'content'] as const;
+const SECTIONS = ['tokens', 'elements', 'states', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
@@ -24,6 +24,7 @@ const SECTION_KEY: Record<SectionId, AppKey> = {
   states: 'kitPage.sec.states',
   shell: 'kitPage.sec.shell',
   flow: 'kitPage.sec.flow',
+  fields: 'kitPage.sec.fields',
   palette: 'kitPage.sec.palette',
   content: 'kitPage.sec.content',
 };
@@ -370,6 +371,8 @@ export default function KitPage() {
           <SecretOnce value="demo-0000-0000" label={t('kitPage.flow.secretLabel')} />
         </section>
 
+        <FieldsDemo />
+
         <section id="kit-palette" className="kitp__sec" aria-labelledby="kit-palette-h">
           <h2 id="kit-palette-h" className="kitp__h2">{t('kitPage.sec.palette')}</h2>
           <p>{t('kitPage.pal.lead')}</p>
@@ -433,5 +436,39 @@ export default function KitPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+/**
+ * Редакторы по видам полей (S4-FIELD-EDITORS) — вживую: каждый вид, «не
+ * задано» у числа и логического поля, значение вне списка, неизвестный вид
+ * только чтением, пометка обязательного по кнопке «Проверить».
+ */
+function FieldsDemo() {
+  const t = useAppT();
+  const defs: FieldEditorDef[] = [
+    { key: 'title', label: t('kitPage.fields.text'), kind: 'text', required: 'block' },
+    { key: 'effort', label: t('kitPage.fields.number'), kind: 'number' },
+    { key: 'flag', label: t('kitPage.fields.boolean'), kind: 'boolean' },
+    { key: 'due', label: t('kitPage.fields.date'), kind: 'date', required: 'warn' },
+    { key: 'at', label: t('kitPage.fields.time'), kind: 'time' },
+    { key: 'when', label: t('kitPage.fields.datetime'), kind: 'datetime' },
+    { key: 'prio', label: t('kitPage.fields.enum'), kind: 'enum', options: ['P1', 'P2', 'P3'] },
+    { key: 'geo', label: t('kitPage.fields.unknown'), kind: 'geo' },
+  ];
+  const [vals, setVals] = useState<Record<string, unknown>>({ title: '', effort: null, flag: null, due: null, at: '09:30', when: null, prio: 'P9', geo: '55.75,37.62' });
+  const [check, setCheck] = useState(false);
+  return (
+    <section id="kit-fields" className="kitp__sec" aria-labelledby="kit-fields-h">
+      <h2 id="kit-fields-h" className="kitp__h2">{t('kitPage.sec.fields')}</h2>
+      <p>{t('kitPage.fields.lead')}</p>
+      <div className="kitp__fields">
+        {defs.map(d => (
+          <FieldEditor key={d.key} def={d} value={vals[d.key]} showRequired={check}
+            onChange={v => setVals(m => ({ ...m, [d.key]: v }))} />
+        ))}
+      </div>
+      <button type="button" className="sk-btn" onClick={() => setCheck(true)}>{t('kitPage.fields.check')}</button>
+    </section>
   );
 }
