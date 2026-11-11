@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, CalendarMonth, LibraryView, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, CalendarMonth, LibraryView, MiniList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -224,6 +224,12 @@ function Samples() {
           ]}
           date="d" month="2026-11" today="2026-11-11" narrow={false}
         />
+      </section>
+      <section className="bare__sec" data-kit="minilist">
+        <h2 className="bare__h2">Мини-список</h2>
+        {/* K4-MINILIST: todo с отметками и квиз после ответа (верный и подсказка к неверному). */}
+        <MiniList kind="check" label="Чек-лист" items={[{ id: 'a', text: 'Тест до кода', done: true }, { id: 'b', text: 'Витрина' }]} onToggle={noop} />
+        <MiniList kind="choice" label="Вопрос" items={[{ id: 'x', text: 'Строки слева без пары' }, { id: 'y', text: 'Только пары', hint: 'Это INNER JOIN' }]} picked="y" correct="x" reveal />
       </section>
       <section className="bare__sec" data-kit="library">
         <h2 className="bare__h2">Библиотека</h2>
