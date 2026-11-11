@@ -486,5 +486,27 @@ final class LoreRecordFrom {
             new SliceLink("people", "project_people", "project", "HAS_PROJECT_ROLE", "in", "user",
                 from(Transform.STR, "kc_sub"), from(Transform.FIRST_OF, "display_name", "kc_sub"), null, true),
             new SliceLink("agents", "project_agents", "project", "HAS_PROJECT_ROLE", "in", "agent",
-                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true)));
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — каждый конец
+            // BELONGS_TO_PROJECT своим срезом project_*, постранично, как вкладки 53а.
+            new SliceLink("specs", "project_specs", "project", "BELONGS_TO_PROJECT", "in", "spec",
+                from(Transform.STR, "spec_id"), from(Transform.FIRST_OF, "title", "spec_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("decisions", "project_decisions", "project", "BELONGS_TO_PROJECT", "in", "decision",
+                from(Transform.STR, "decision_id"), from(Transform.FIRST_OF, "title", "decision_id"), from(Transform.DOC_TOKEN, "status_raw"), true),
+            new SliceLink("questions", "project_questions", "project", "BELONGS_TO_PROJECT", "in", "question",
+                from(Transform.STR, "question_id"), from(Transform.FIRST_OF, "title", "question_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("features", "project_features", "project", "BELONGS_TO_PROJECT", "in", "feature",
+                from(Transform.STR, "uc_id"), from(Transform.FIRST_OF, "title", "uc_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("docs", "project_docs", "project", "BELONGS_TO_PROJECT", "in", "doc",
+                from(Transform.STR, "doc_id"), from(Transform.FIRST_OF, "title", "doc_id"), null, true),
+            new SliceLink("runbooks", "project_runbooks", "project", "BELONGS_TO_PROJECT", "in", "runbook",
+                from(Transform.STR, "runbook_id"), from(Transform.FIRST_OF, "name", "runbook_id"), null, true),
+            new SliceLink("actors", "project_actors", "project", "BELONGS_TO_PROJECT", "in", "actor",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            new SliceLink("boundAgents", "project_bound_agents", "project", "BELONGS_TO_PROJECT", "in", "agent",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            new SliceLink("files", "project_files", "project", "BELONGS_TO_PROJECT", "in", "file",
+                from(Transform.STR, "file_path"), from(Transform.STR, "file_path"), null, true),
+            new SliceLink("prs", "project_prs", "project", "BELONGS_TO_PROJECT", "in", "pr",
+                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)));
 }

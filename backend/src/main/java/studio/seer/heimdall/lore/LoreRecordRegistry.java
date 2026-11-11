@@ -708,7 +708,21 @@ final class LoreRecordRegistry {
                 rel("releases", "Релизы", "BELONGS_TO_PROJECT", "in", "release", "attribute", "link_tab", false),
                 rel("people", "Люди", "HAS_PROJECT_ROLE", "in", "user", "association", "link_tab", false),
                 // Агент роли в проекте не получает — он действует от имени владельца с ролью.
-                rel("agents", "Агенты", "HAS_PROJECT_ROLE", "in", "agent", "association", "link_tab", false))));
+                rel("agents", "Агенты", "HAS_PROJECT_ROLE", "in", "agent", "association", "link_tab", false),
+                // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — каждый
+                // конец BELONGS_TO_PROJECT своей вкладкой, после решённых 53а; срезы project_*.
+                rel("specs", "Спеки", "BELONGS_TO_PROJECT", "in", "spec", "attribute", "link_tab", false),
+                rel("decisions", "Решения", "BELONGS_TO_PROJECT", "in", "decision", "attribute", "link_tab", false),
+                rel("questions", "Вопросы", "BELONGS_TO_PROJECT", "in", "question", "attribute", "link_tab", false),
+                rel("features", "Фичи", "BELONGS_TO_PROJECT", "in", "feature", "attribute", "link_tab", false),
+                rel("docs", "Знания", "BELONGS_TO_PROJECT", "in", "doc", "attribute", "link_tab", false),
+                rel("runbooks", "Ранбуки", "BELONGS_TO_PROJECT", "in", "runbook", "attribute", "link_tab", false),
+                rel("actors", "Роли продукта", "BELONGS_TO_PROJECT", "in", "actor", "attribute", "link_tab", false),
+                // Агенты, привязанные к проекту своим ребром (project_actor_new), — в отличие от
+                // вкладки agents, где агент виден через роль владельца.
+                rel("boundAgents", "Агенты проекта", "BELONGS_TO_PROJECT", "in", "agent", "attribute", "link_tab", false),
+                rel("files", "Файлы", "BELONGS_TO_PROJECT", "in", "file", "attribute", "link_tab", false),
+                rel("prs", "PR", "BELONGS_TO_PROJECT", "in", "pr", "attribute", "link_tab", false))));
 
         // ── Дети без своего паспорта: фаза, вопрос, решение — поля для колонок parts ──
         CHILD_ONLY.put("phase", childOnly("phase", "Фаза", List.of(

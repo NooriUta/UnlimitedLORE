@@ -270,8 +270,11 @@ class LorePassportSurfaceTest {
 
     @Test
     void project() {
-        assertEquals(List.of("sprints", "components", "adrs", "releases", "Люди и агенты[people+agents]"), tabs("project"),
-            "проект (53а): Спринты · Компоненты · ADR · Релизы · Люди и агенты");
+        assertEquals(List.of("sprints", "components", "adrs", "releases", "Люди и агенты[people+agents]",
+                // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — после 53а.
+                "specs", "decisions", "questions", "features", "docs", "runbooks", "actors", "boundAgents",
+                "files", "prs"), tabs("project"),
+            "проект (53а): Спринты · Компоненты · ADR · Релизы · Люди и агенты; затем прямые связи (11.11)");
     }
 
     @Test

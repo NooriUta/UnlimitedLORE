@@ -223,23 +223,10 @@ class LorePassportLinksContractTest {
         Map.entry("qg_job|BELONGS_TO|component", "прогон гейта — служебная запись; на компоненте виден гейт (вкладка qgs)"),
         Map.entry("qg_recommendation|BELONGS_TO|component", "рекомендация QG — служебная; на компоненте виден гейт (вкладка qgs)"),
         Map.entry("use_case|TAGGED_WITH|use_case", "легаси переноса KnowFeature: пути записи тегов у фичи нет"),
-        // Проект: вкладки решены владелицей (53а) — Спринты · Компоненты · ADR · Релизы · Люди и агенты.
-        // Принадлежность остальных записей проекту видна на их паспортах полем «Проекты».
-        Map.entry("spec|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
-        Map.entry("decision|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
-        Map.entry("question|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
-        Map.entry("use_case|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
-        Map.entry("doc|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
-        Map.entry("runbook|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
-        Map.entry("actor|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
-        Map.entry("agent|BELONGS_TO_PROJECT|project", "агенты проекта — вкладка agents через владельца (OWNED_BY → HAS_PROJECT_ROLE, AL-104)"),
-        Map.entry("file|BELONGS_TO_PROJECT|project", "файл — служебная запись EDITED_IN; виден у задачи"),
-        Map.entry("pr|BELONGS_TO_PROJECT|project", "PR виден у задачи (CLOSED_BY) и релиза (SHIPPED_IN)"),
+        // Проект: слово владелицы 11.11 «у проекта всё показывать, что связано напрямую» — все концы
+        // BELONGS_TO_PROJECT показаны вкладками проекта (исход а). Остаётся только сторона компонента:
         Map.entry("component|BELONGS_TO_PROJECT|component",
             "проекты компонента — чипы через его спринты (git_projects); прямое ребро ставит только бэкфилл по тем же спринтам"));
-
-    static final String PROJECT_53A =
-        "вкладки проекта решены владелицей (53а); принадлежность видна полем «Проекты» на паспорте записи";
 
     /**
      * Спека/технология ↔ компонент — один факт, два ребра (syncSpecComponent ставит оба). Компонент

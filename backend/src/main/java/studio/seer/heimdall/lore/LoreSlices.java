@@ -2021,9 +2021,12 @@ public final class LoreSlices {
             List.of("project"), Map.of(), " ORDER BY sprint_id DESC");
         // Компонент достигает проекта только через свои спринты — тем же путём, что колонка
         // git_projects у среза components (Component ← BELONGS_TO ← KnowSprint → BELONGS_TO_PROJECT).
+        // Слово владелицы 11.11 («у проекта всё показывать, что связано напрямую»): + компоненты с
+        // прямым ребром компонент → проект (его ставит бэкфилл scripts/backfill-component-project.js).
         slice("project_components",
             "SELECT component_id, full_name FROM LoreComponent " +
-            "WHERE in('BELONGS_TO')[sprint_id IS NOT NULL].out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            "WHERE (in('BELONGS_TO')[sprint_id IS NOT NULL].out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
+            "OR out('BELONGS_TO_PROJECT').slug CONTAINS :project)",
             List.of("project"), Map.of(), " ORDER BY component_id");
         slice("project_adrs",
             "SELECT adr_id, name, status FROM KnowADR WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
@@ -2045,6 +2048,50 @@ public final class LoreSlices {
             "SELECT actor_id, name, client_id, agent_role FROM KnowActor " +
             "WHERE kind = 'agent' AND out('OWNED_BY').out('HAS_PROJECT_ROLE').slug CONTAINS :project",
             List.of("project"), Map.of(), " ORDER BY actor_id");
+        // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — всё, что
+        // привязано к проекту своим ребром BELONGS_TO_PROJECT, по вкладке на тип конца. Форма та же:
+        // без потолка, порядок в хвосте, скоуп вставляется перед ним.
+        slice("project_specs",
+            "SELECT spec_id, title, out('HAS_STATE').status[0] AS status " +
+            "FROM KnowSpec WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY spec_id");
+        slice("project_decisions",
+            "SELECT decision_id, title, status_raw " +
+            "FROM KnowDecision WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY decision_id");
+        slice("project_questions",
+            "SELECT question_id, title, status " +
+            "FROM KnowQuestion WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY question_id");
+        slice("project_features",
+            "SELECT uc_id, title, status, goal_level " +
+            "FROM KnowUseCase WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY uc_id");
+        slice("project_docs",
+            "SELECT doc_id, title, kind " +
+            "FROM KnowDoc WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY doc_id");
+        slice("project_runbooks",
+            "SELECT runbook_id, name, area " +
+            "FROM KnowRunbook WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY runbook_id");
+        // Роли продукта (KnowProjectActor) и агенты (KnowActor), привязанные к проекту своим ребром.
+        slice("project_actors",
+            "SELECT actor_id, name, kind " +
+            "FROM KnowProjectActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY actor_id");
+        slice("project_bound_agents",
+            "SELECT actor_id, name, client_id, agent_role " +
+            "FROM KnowActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY actor_id");
+        slice("project_files",
+            "SELECT project, file_path, summary_md " +
+            "FROM KnowFile WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY file_path");
+        slice("project_prs",
+            "SELECT pr_uid, pr_number, title, merged_at, url " +
+            "FROM KnowPR WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY pr_number DESC, pr_uid");
 
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.
@@ -3001,6 +3048,15 @@ public final class LoreSlices {
         Map.entry("project_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_adrs", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_releases", "out('BELONGS_TO_PROJECT').slug"),
+        // 11.11: прямые связи проекта — запись видна тому, кому виден её проект (своё ребро).
+        Map.entry("project_specs", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_decisions", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_questions", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_features", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_docs", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_runbooks", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_files", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_prs", "out('BELONGS_TO_PROJECT').slug"),
         // Задачи — проект через спринт.
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3085,6 +3141,8 @@ public final class LoreSlices {
         Map.entry("project_users", "то же: участники проекта для разделения по людям"),
         Map.entry("project_people", "паспорт проекта (S4-29): участники — та же выборка, что project_users"),
         Map.entry("project_agents", "паспорт проекта (S4-29): агенты видны всем (AL-106), как actors"),
+        Map.entry("project_actors", "паспорт проекта (11.11): роли продукта видны всем, как actors (AL-106)"),
+        Map.entry("project_bound_agents", "паспорт проекта (11.11): агенты видны всем (AL-106), как project_agents"),
         Map.entry("project_components", "паспорт проекта (S4-29): компоненты — общий справочник, как components"),
         Map.entry("components", "справочник компонентов — общий"),
         Map.entry("component", "паспорт компонента — общий справочник"),
