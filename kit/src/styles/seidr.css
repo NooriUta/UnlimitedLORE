@@ -3503,6 +3503,12 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   border-bottom: 1px solid color-mix(in srgb, var(--bd) 60%, transparent);
   vertical-align: middle;
 }
+/* Классы-хуки колонок (sk-list__c-<колонка>): ширину задаёт data-w и личная
+   ширина, а здесь — только то, что ячейка «общих колонок» (Статус · Вид · Код ·
+   Запись) сжимается, а не распирает таблицу. Длинный код переносится, а не
+   режется: код читают целиком (S4-30, PR #941). */
+.sk-list__c-status, .sk-list__c-kind, .sk-list__c-id, .sk-list__c-title { min-width: 0; }
+.sk-list__c-id { overflow-wrap: anywhere; }
 .sk-list__row:hover { background: var(--bg2); }
 .sk-list__row.is-selected { background: color-mix(in srgb, var(--acc) 10%, transparent); }
 /* S4-11: курсор строки — видимый фокус, клавиатурный слой поверх щелчка. */
@@ -6092,6 +6098,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    иначе «общие колонки» выглядели бы похожими, а не теми же. Здесь только
    место: во вкладке таблица занимает всю ширину. */
 .sk-rel__table { width: 100%; }
+/* Список внутри записи (NestedList, 11.11.2026): тот же ListView, что у
+   разделов, — со своим поиском, фасетами, группировкой и порядком. Здесь только
+   место во вкладке и оговорка под списком («показаны 100 из 230»). */
+.sk-nested { width: 100%; min-width: 0; }
+.sk-nested__note { margin: 6px 0 0; color: var(--t3); font-size: var(--fs-sm); }
 /* Вид записи, которого нет в справочнике видов: показываем код как есть. */
 .sk-rel__raw { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rel__empty { color: var(--t3); font-size: var(--fs-sm); }

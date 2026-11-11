@@ -3,7 +3,9 @@
 // из существующих слайсов (toLoreRecord), а kit рисует только то, что пришло в объекте
 // (fromLoreRecord). Когда фасад появится на бэкенде, toLoreRecord уходит, fromLoreRecord остаётся.
 // Честность: эмуляция помечена в meta.facade; упавший блок — meta.sources[].state='error', не «пусто».
-import type { KitConfig, KitData, KitEdge, KitLang, KitRecord, KitRelation } from '@seidr/kit';
+import { createElement, type ReactNode } from 'react';
+import { NestedList } from '@seidr/kit';
+import type { KitConfig, KitCtx, KitData, KitEdge, KitLang, KitRecord, KitRelation } from '@seidr/kit';
 import { appT } from '../i18n';
 import { baseConfig, type PassportLoad } from './passportAdapters';
 import { SPRINT_FACTS } from './loreRecord';
@@ -317,11 +319,22 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // называет полное число, значит тело обязано сказать, что пришла лишь часть:
   // иначе 100 имён под заголовком «230» читаются как «всё». Число неизвестно
   // (null) — оговорку не выдумываем.
-  const partText = (p: (typeof parts)[number]): string => {
-    const list = p.items.map(i => i.title || i.id).join(' · ') || appT(lang, 'pp.contract.noLinks');
-    return typeof p.count === 'number' && p.count > p.items.length
-      ? `${list} — ${appT(lang, 'pp.contract.partShown', { shown: p.items.length, total: p.count })}`
-      : list;
+  //
+  // 11.11.2026 (владелица): «в паспорте, где табличный вид свёрнут под "ещё",
+  // должны идти стандартные сортировки, фильтры, группировки … и поиск тоже».
+  // Поэтому тело части — не строка имён через «·», а список kit (`NestedList`
+  // → тот же ListView, что у разделов) с поиском, фасетами, группировкой и
+  // порядком. Оговорка об обрезке — под списком.
+  const partShown = (p: (typeof parts)[number]): string | undefined =>
+    typeof p.count === 'number' && p.count > p.items.length
+      ? appT(lang, 'pp.contract.partShown', { shown: p.items.length, total: p.count })
+      : undefined;
+  const partBody = (p: (typeof parts)[number], ctx: KitCtx): ReactNode => {
+    if (p.items.length === 0) return appT(lang, 'pp.contract.noLinks');
+    const records: KitRecord[] = p.items.map(i => ({
+      id: i.id, kind: p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
+    }));
+    return createElement(NestedList, { ctx, records, note: partShown(p) });
   };
   const partTabs = parts.map(p => ({
     key: p.key, title: p.label,
@@ -329,9 +342,9 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     // честной формы: при state !== 'ok' приходит null, то есть «не смогли
     // посчитать», и ряд покажет «?» с подсказкой, а не ложный ноль.
     count: p.count,
-    render: () => (p.state !== 'ok'
+    render: (_r: KitRecord, ctx: KitCtx) => (p.state !== 'ok'
       ? (p.error ?? p.state)
-      : partText(p)),
+      : partBody(p, ctx)),
   }));
   // ОДИН РАЗДЕЛ — ОДНО МЕСТО (ревью 10.11.2026, B13; просьба владелицы того же
   // дня: «проверить, почему… в паспорте у спринтов дублирующиеся вкладки»).
