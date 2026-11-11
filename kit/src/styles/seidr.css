@@ -1891,6 +1891,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
 a.sk-wref { text-decoration: none; cursor: pointer; }
 a.sk-wref:hover { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 16%, transparent); }
 a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+/* Ссылка внутри текста на сенсоре — без невидимой зоны 44 px: строка текста сама цель касания,
+   а зона ловила бы нажатия соседних строк (#1179 даёт её всем ссылкам с kit-классом, a.sk-wref в их числе). */
+@media (pointer: coarse) {
+  .sk-prose a[href]::after { content: none; }
+}
 .sk-prose blockquote { margin: 0 0 .7em; padding: 2px 10px; border-left: 3px solid var(--acc); background: var(--bg1); }
 .sk-prose code { padding: 0 4px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 3px; font-family: var(--mono); font-size: var(--fs-sm); }
 .sk-prose pre { margin: 0 0 .8em; padding: 10px 12px; overflow-x: auto; background: var(--bg0); border: 1px solid var(--bd); border-radius: var(--r-md); }
