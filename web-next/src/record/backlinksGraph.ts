@@ -7,12 +7,12 @@
 // вызовов (maxCalls) не даёт хабу разнести сеть. Результат — KitData для
 // вкладки «Граф» kit (RecordGraph): records + edges + meta.
 //
-// ЗАГЛУШКА ПО КОНТРАКТУ. На origin/develop эндпоинта ещё нет (S2 в батч-ветке
-// feature/fleet-batch-sprint_uxr_s2_graph_memory-*), а web-next/src/api/
-// contracts/s2.ts — там же. Формы ниже — дословное подмножество контракта S2
-// (BacklinksQuery/BacklinksResponse); после слияния S2 импортировать типы и
-// BACKLINK_TARGET_TYPES из '../api/contracts/s2', а createBacklinksStub
-// заменить на createS2Stub().backlinks.
+// Две формы. BacklinksResponse ниже — внутренняя форма, по которой собирается
+// граф (родом из заглушки контракта S2). Живой сервер отвечает иначе
+// (ServerBacklinksBody: edge/count/ref_id/complete), и fetchBacklinksHttp
+// переводит его ответ во внутреннюю форму через fromServerBacklinks. До 11.11.2026
+// перевода не было — тело читалось как заглушка, и у узлов коды были undefined
+// (дефект P0 S5-10, сверено по LoreSearchResource.backlinks).
 //
 // Честные состояния: цель вне скоупа и упавший вызов на цели — ошибка блока
 // 'edges' (kit рисует LoadError, а не «связей нет»); обрезка per_edge,
@@ -144,21 +144,76 @@ export async function loadBacklinksGraph(
 // ── Транспорт ───────────────────────────────────────────────────────────────
 
 /**
- * GET /lore/backlinks по контракту S2. Токен и базовый адрес — забота fetchFn
- * (обёртка авторизации приложения); не-2xx — ошибка «код ERROR: detail».
+ * Ответ GET /lore/backlinks в той форме, в какой его отдаёт сервер
+ * (`LoreSearchResource.backlinks`, сверено по коду 11.11.2026). Все связи —
+ * входящие: поля direction у сервера нет.
+ */
+export interface ServerBacklinkItem { type: string | null; ref_id: string | null; title: string | null; source_class?: string }
+export interface ServerBacklinkGroup { edge: string; count: number; truncated: boolean; items: ServerBacklinkItem[] }
+export interface ServerBacklinksBody {
+  type: string; id: string; title: string | null; total: number;
+  groups: ServerBacklinkGroup[];
+  hidden_by_scope?: number;
+  excluded_edges?: string[];
+  complete: boolean;
+  unread_sources?: number;
+  capped_at?: number;
+  warnings?: unknown[];
+}
+
+/**
+ * Перевод ответа сервера в форму, по которой собирается граф (S5-10, дефект P0).
+ *
+ * Раньше тело читалось как будто в форме заглушки S2 — `edge_type`, `items[].id`,
+ * `completeness` — и на живом сервере у всех узлов коды были undefined, а тип
+ * ребра терялся: граф строился по мусору. Неполнота называется, а не прячется:
+ * `complete:false`, скрытые скоупом и источники без кода дают `partial`.
+ */
+export function fromServerBacklinks(b: ServerBacklinksBody): BacklinksResponse {
+  let dropped = 0;
+  const groups: BacklinkGroup[] = (b.groups ?? []).map(g => {
+    const items: BacklinkItem[] = [];
+    for (const it of g.items ?? []) {
+      // Источник неизвестного серверу класса приходит без кода и типа: узлом его
+      // не нарисовать, но и молча выкинуть нельзя — граф помечается неполным.
+      if (!it.ref_id || !it.type) { dropped++; continue; }
+      items.push({ type: it.type, id: it.ref_id, title: it.title, status: null, status_category: null, linked_at: null });
+    }
+    return { edge_type: g.edge, direction: 'in', total: g.count, truncated: !!g.truncated, items };
+  });
+  const partial = b.complete === false || (b.hidden_by_scope ?? 0) > 0 || (b.unread_sources ?? 0) > 0 || dropped > 0;
+  const warnings: string[] = [];
+  if ((b.hidden_by_scope ?? 0) > 0) warnings.push(`hidden_by_scope: ${b.hidden_by_scope}`);
+  if (dropped > 0) warnings.push(`sources_without_code: ${dropped}`);
+  return {
+    target: { type: b.type, id: b.id, title: b.title ?? null },
+    groups,
+    total: b.total ?? groups.reduce((n, g) => n + g.total, 0),
+    excluded_edge_types: b.excluded_edges ?? [],
+    scope: null,
+    outside_scope: null,
+    completeness: partial ? 'partial' : 'complete',
+    warnings,
+  };
+}
+
+/**
+ * GET /lore/backlinks. Токен и базовый адрес — забота fetchFn (обёртка
+ * авторизации приложения); не-2xx — ошибка «код ERROR: detail» (цель вне
+ * скоупа — 403 OUTSIDE_SCOPE, граф показывает её ошибкой блока, а не «связей нет»).
+ * Сервер знает только `limit` — потолок элементов в группе.
  */
 export function fetchBacklinksHttp(fetchFn: (url: string, init?: RequestInit) => Promise<Response> = loreFetch): BacklinksFetcher {
   return async q => {
     const p = new URLSearchParams({ type: q.type, id: q.id });
-    if (q.per_edge != null) p.set('per_edge', String(q.per_edge));
-    if (q.edge_types) p.set('edge_types', q.edge_types);
+    if (q.per_edge != null) p.set('limit', String(q.per_edge));
     const res = await fetchFn(`/lore/backlinks?${p.toString()}`, { headers: { Accept: 'application/json' } });
     if (!res.ok) {
       let code = '';
       try { const b = await res.json() as { error?: string; detail?: string }; code = [b.error, b.detail].filter(Boolean).join(': '); } catch { /* тело не JSON */ }
       throw new Error(`${res.status}${code ? ` ${code}` : ''}`);
     }
-    return await res.json() as BacklinksResponse;
+    return fromServerBacklinks(await res.json() as ServerBacklinksBody);
   };
 }
 
