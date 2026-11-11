@@ -11,7 +11,8 @@ import {
   type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
-import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
+import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
+import { parentsOf } from './loreRefCreate';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
@@ -157,6 +158,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // снять поле правки вместе с решаемым спором). Новая база и версия поля живут
   // здесь, пока паспорт показывает ту версию, с которой их перечитали.
   const rebased = useRef(new Map<string, FieldState & { readVersion: string | null }>());
+  // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
+  const parentsKey = JSON.stringify(parentsOf(view?.record));
+  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>), [parentsKey]);
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
   // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
   // правится (выбирать не из чего), а не показывает пустой список.
@@ -295,7 +299,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
         признака роли у клиента сейчас нет вовсе, и выдумывать его нельзя.
       */}
       <ModelNotes notes={[...order.notes, ...statuses.notes]} />
-    <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEditWithRefs}
+    <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
       sections={order.order}
