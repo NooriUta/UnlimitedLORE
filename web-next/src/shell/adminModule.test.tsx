@@ -61,6 +61,11 @@ describe('S7B-01 · конфиг модуля admin', () => {
     expect(groups.find(g => g.id === 'adm-access')!.tone).toBe('var(--wrn)');
     // S7B-17: мастера UC-1/UC-2/UC-7 — во «Начале», рядом с Главной: это вход «хочу сделать».
     expect(groups.find(g => g.id === 'adm-start')!.items.map(i => i.id)).toEqual(['adm-home', 'adm-wiz']);
+    // S7B-31 п.1 (решение 1а): «Словари» — в «Языке графа», рядом с правилами CLAUDE:
+    // правка справочника меняет подписи и цвета на каждом экране — это язык системы,
+    // а группа получает тон риска, как «Доступ» (раньше — нейтральный успех).
+    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-rules']);
+    expect(groups.find(g => g.id === 'adm-lang')!.tone).toBe('var(--wrn)');
     // Личные «Мои виды» и «Недавние» — про записи Forseti, в админке их нет.
     expect(cfg.menu.myViews).toBeFalsy();
     expect(cfg.menu.recent).toBeFalsy();
@@ -85,6 +90,17 @@ describe('S7B-01 · старые адреса /admin?adm=…', () => {
       .toBe('/?mod=admin&sec=adm-roles&adm-person=u1&adm-view=matrix');
     expect(legacyAdminHref('')).toBe('/?mod=admin&sec=adm-home');
     expect(legacyAdminHref('?adm=zzz')).toBe('/?mod=admin&sec=adm-home');
+  });
+
+  it('S7B-31: вкладки старой админки v1 (section=admin&tab=…) ведут в новые места', () => {
+    expect(legacyAdminHref('?section=admin&tab=dicts&dict=area')).toBe('/?mod=admin&sec=adm-dicts&adm-dict=area');
+    expect(legacyAdminHref('?section=admin&tab=tags')).toBe('/?mod=admin&sec=adm-dicts&adm-dicts-tab=tags');
+    // Настройки v1 раздали по экранам: чеклист — Главная, отказы — Журнал, параметры — Флаги.
+    expect(legacyAdminHref('?section=admin&tab=settings')).toBe('/?mod=admin&sec=adm-flags');
+    expect(legacyAdminHref('?section=admin&tab=quick')).toBe('/?mod=admin&sec=adm-mcp');
+    expect(legacyAdminHref('?section=admin&tab=claudeRules')).toBe('/?mod=admin&sec=adm-rules');
+    // Неизвестная вкладка v1 — Главная, а не пустой экран.
+    expect(legacyAdminHref('?section=admin&tab=projects')).toBe('/?mod=admin&sec=adm-home');
   });
 
   it('App на /admin переписывает адрес и рисует раздел внутри оболочки', async () => {

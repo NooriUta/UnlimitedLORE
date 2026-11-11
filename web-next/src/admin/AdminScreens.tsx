@@ -7,6 +7,7 @@ import { setUrlParams, useKitShell } from '@seidr/kit';
 import { v2Auth } from '../auth/session';
 import { ActionsScreen } from './ActionsScreen';
 import { AgentsScreen } from './AgentsScreen';
+import { DictsScreen } from './DictsScreen';
 import { FlagsScreen } from './FlagsScreen';
 import { AdminHome } from './HomeScreen';
 import { McpScreen } from './McpScreen';
@@ -23,6 +24,7 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-agents': () => <AgentsScreen />,
   'adm-who': () => <WhoWhereScreen meSub={v2Auth.getState().user?.sub ?? null} />,
   'adm-roles': () => <RolesScreen />,
+  'adm-dicts': () => <DictsScreen />,
   'adm-rules': () => <RulesScreen />,
   'adm-flags': () => <FlagsScreen />,
   'adm-mcp': () => <McpScreen />,
