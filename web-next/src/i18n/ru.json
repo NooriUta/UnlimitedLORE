@@ -1199,6 +1199,8 @@
   "admin.roles.onlyNoProjects": "Только без проектов",
   "admin.roles.noProjectsEmpty": "Людей без проектов нет",
   "admin.roles.noProjectsEmptyHint": "у каждой проверенной учётки есть хотя бы одна роль",
+  "stale.banner": "Вышла новая версия LORE — обновите страницу",
+  "stale.reload": "Обновить страницу",
   "admin.off.open": "Отключить…",
   "admin.off.title": "Отключить {name}",
   "admin.off.lead": "Сначала видно всё, что за человеком числится; снимается по блокам — у каждого дифф и ввод логина.",

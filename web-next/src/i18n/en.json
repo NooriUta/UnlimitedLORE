@@ -1199,6 +1199,8 @@
   "admin.roles.onlyNoProjects": "Only without projects",
   "admin.roles.noProjectsEmpty": "Nobody without projects",
   "admin.roles.noProjectsEmptyHint": "every checked account has at least one role",
+  "stale.banner": "A new version of LORE is out — please reload the page",
+  "stale.reload": "Reload page",
   "admin.off.open": "Offboard…",
   "admin.off.title": "Offboard {name}",
   "admin.off.lead": "First see everything this person holds; then remove it block by block — each with a diff and the login typed to confirm.",

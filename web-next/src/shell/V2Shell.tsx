@@ -6,7 +6,7 @@
 // Экраны разделов подключаются в SCREENS своими задачами S4 (списки спринтов,
 // ADR…). Раздел без экрана честно говорит «экран не собран» (NotBuilt kit), а
 // не рисует «пусто»: данных он не запрашивал.
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
 import { KitShell, NotBuilt, Skeleton, createSafeStorage, useKitLang, useKitShell, type KitNav, type KitShellApi, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import { ADMIN_MODULE, adminSectionTitle, isAdminSection } from '../admin/adminModule';
 import { appT, type AppKey } from '../i18n';
@@ -21,11 +21,12 @@ import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 import { SHELL_STORAGE_KEY, openRecent } from './recentNav';
 import { useModelStatuses } from './useModelStatuses';
 import { VersionCorner } from './VersionCorner';
+import { lazyChunk } from './staleChunk';
 import { StatusBar } from './StatusBar';
 
 
 // S7B-01: экраны модуля «Админка» — свой чанк, оболочка за них не платит.
-const AdminSectionView = lazy(() => import('../admin/AdminScreens'));
+const AdminSectionView = lazyChunk(() => import('../admin/AdminScreens'));
 
 /** Модуль из адреса (?mod=): от него зависит меню оболочки. */
 function moduleOf(w: UrlWindow | undefined): string | null {
