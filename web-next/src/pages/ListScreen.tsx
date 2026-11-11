@@ -23,6 +23,7 @@ import { loreValueIcon } from '../lists/loreFilters';
 import { appliedCollapseNavOnRead } from '../settings/applied';
 import { useProjectScope } from '../scope/ProjectScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
+import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
 import './ListScreen.css';
 
@@ -267,6 +268,23 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
   // упавшая пачка — «?» с причиной (это решает loadProgress), а не 0/0.
   const ids = useMemo(() => data?.records.map(r => r.id) ?? [], [data]);
+
+  // Цель палитры команд (S4-14): открытая запись, иначе выделение списка.
+  // Записи может не быть в загруженных строках (открыли по ссылке) — тогда
+  // цель несёт её код: действовать над записью можно и без названия.
+  const [selection, setSelection] = useState<string[]>([]);
+  useEffect(() => {
+    if (open.id) {
+      const rec = data?.records.find(r => r.id === open.id)
+        ?? { id: open.id, kind: PASSPORT_OF[screen] ?? screen, title: open.id, status: '', fields: {} };
+      setPaletteTarget({ type: 'record', record: rec });
+    } else {
+      setPaletteTarget(selection.length > 0 ? { type: 'selection', ids: selection } : null);
+    }
+  }, [open.id, data, selection, screen]);
+  // Экран ушёл — цель снимается: палитра не должна действовать над тем, чего
+  // на экране уже нет.
+  useEffect(() => () => setPaletteTarget(null), []);
   const [late, setLate] = useState<Map<string, Record<string, unknown>> | null>(null);
   useEffect(() => {
     if (!nested || !ids.length) return;
@@ -352,6 +370,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           });
         }}
         recordPlace={{ value: open.place, onChange: place => setOpen({ ...open, place }) }}
+        onSelectionChange={setSelection}
       />
     );
   }

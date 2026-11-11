@@ -19,6 +19,7 @@ import { appT } from '../i18n';
 import { v2Config } from '../shell/v2Config';
 import { LorePalette } from './LorePalette';
 import { shellRecentList } from './shellRecent';
+import { usePaletteTarget } from './paletteTarget';
 import { sectionOfType } from '../nav/loreRoutes';
 import './SectionPalette.css';
 
@@ -39,6 +40,8 @@ export interface SectionPaletteProps {
 }
 
 export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
+  // S4-14: цель команд — открытая запись или выделение экрана (paletteTarget).
+  const target = usePaletteTarget();
   const lang = useKitLang();
   const api = useKitShell();
   const { navigate } = api;
@@ -98,7 +101,7 @@ export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
 
   return (
     <>
-      <LorePalette storage={storage} ctx={ctx} recent={recent} fetchImpl={fetchImpl} onOpenRecord={openRecord} trigger />
+      <LorePalette storage={storage} ctx={ctx} recent={recent} fetchImpl={fetchImpl} onOpenRecord={openRecord} target={target} trigger />
       {note && <p className="section-palette__note" role="status">{note}</p>}
     </>
   );

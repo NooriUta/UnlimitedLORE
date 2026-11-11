@@ -134,3 +134,17 @@ describe('D-24 · «назад» и «вперёд» управляют пасп
     window.history.replaceState(null, '', '/');
   });
 });
+
+// S4-14: экран списка публикует цель палитры — открытую запись.
+describe('S4-14 · экран списка отдаёт палитре открытую запись', () => {
+  it('открыли — цель «запись SP»; закрыли — цели нет', async () => {
+    const { getPaletteTarget } = await import('../palette/paletteTarget');
+    const win = fakeWin();
+    const { container } = render(<ListScreen screen="sprints" fetchImpl={fakeFetch()} urlState={win} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Спринт SP' }));
+    await waitFor(() => expect(dock(container)).toBeTruthy());
+    expect(getPaletteTarget()).toMatchObject({ type: 'record', record: { id: 'SP' } });
+    fireEvent.click(within(dock(container) as HTMLElement).getAllByRole('button', { name: /Закрыть/ })[0]);
+    await waitFor(() => expect(getPaletteTarget()).toBeNull());
+  });
+});
