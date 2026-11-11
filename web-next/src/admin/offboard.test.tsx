@@ -18,10 +18,11 @@ import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { PersonOffboard } from './PersonOffboard';
 import { WhoWhereScreen } from './WhoWhereScreen';
 import {
-  agentDiffRows, findKcAccount, isLastRealmAdmin, offRoleItems, parseKcClients, realmItems,
+  agentDiffRows, findKcAccount, isLastRealmAdmin, offMachineItems, offRoleItems, parseKcClients, realmItems, revokeMachineRequests,
 } from './offboard';
 import { parseRoleMatrix } from './roles';
 import { parseAgents } from './agents';
+import { parseMachineAcl } from './machines';
 import type { KcUser } from './wizards';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -49,6 +50,20 @@ const KC_CLIENTS = [
   { clientId: 'lore-mcp-full_old', id: 'c2', enabled: false },
 ];
 const REALM_ROLES = [{ name: 'admin', grantable: true }, { name: 'viewer', grantable: true }, { name: 'super-admin', grantable: false }];
+// Допуски к машинам (S7B-ACL-1): anna владеет «anna-pc» и допущена к «boss-pc».
+const MACHINE_ACL = [
+  {
+    actor_id: 'M-1', client_id: 'minilore-link-anna-pc', machine_id: 'anna-pc', name: 'anna-pc',
+    owner_kc_sub: ['u-anna'], owner_display_name: ['anna'],
+    grant_kc_subs: [], grant_display_names: [], grant_roles: [], grant_projects: [], grant_harnesses: [], grant_granted_by: [], grant_granted_at: [],
+  },
+  {
+    actor_id: 'M-2', client_id: 'minilore-link-boss-pc', machine_id: 'boss-pc', name: 'boss-pc',
+    owner_kc_sub: ['u-boss'], owner_display_name: ['boss'],
+    grant_kc_subs: ['u-anna'], grant_display_names: ['anna'], grant_roles: ['actor'],
+    grant_projects: [['AIDA/miniLORE']], grant_harnesses: [[]], grant_granted_by: ['u-boss'], grant_granted_at: ['2026-11-10'],
+  },
+];
 
 const roles = () => parseRoleMatrix({ rows: MATRIX });
 const agents = () => parseAgents({ rows: AGENTS } as never).rows;
@@ -58,7 +73,7 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-interface FakeOpts { kcUsersStatus?: number; kcUsers?: unknown; agentsStatus?: number; users?: KcUser[] }
+interface FakeOpts { kcUsersStatus?: number; kcUsers?: unknown; agentsStatus?: number; users?: KcUser[]; aclStatus?: number }
 
 function fake(opts: FakeOpts = {}) {
   const calls: Array<{ url: string; body: Record<string, unknown> | null }> = [];
@@ -68,6 +83,15 @@ function fake(opts: FakeOpts = {}) {
     if (url.startsWith('/lore/slice/role_matrix')) return json({ rows: MATRIX });
     if (url.startsWith('/lore/slice/agent_owners')) return opts.agentsStatus ? json({ error: 'DOWN' }, opts.agentsStatus) : json({ rows: AGENTS });
     if (url.startsWith('/lore/slice/dictionary')) return json({ rows: [] });
+    if (url.startsWith('/lore/slice/machine_acl')) {
+      if (opts.aclStatus) return json({ error: 'FORBIDDEN', detail: 'нет прав на срез' }, opts.aclStatus);
+      const sub = new URL(url, 'http://x').searchParams.get('kc_sub');
+      return json({ rows: sub ? MACHINE_ACL.filter(m => m.owner_kc_sub.includes(sub) || m.grant_kc_subs.includes(sub)) : MACHINE_ACL });
+    }
+    if (url === '/lore/user/machine-access' && body) {
+      return json({ ok: true, dry_run: body.dry_run === true,
+        plan: { kind: 'revoke', before: { role: 'actor', projects: ['AIDA/miniLORE'], harnesses: [] }, after: null } });
+    }
     if (url === '/lore/kc/users') {
       return opts.kcUsersStatus ? json({ error: 'KC_NOT_CONFIGURED', detail: 'мост KC не настроен' }, opts.kcUsersStatus) : json(opts.users ?? KC_USERS);
     }
@@ -241,13 +265,81 @@ describe('UC-4 · экран', () => {
   });
 });
 
-describe('UC-4 · вход из «Кто где»', () => {
-  it('в раскрытой карточке человека — «Отключить…», открывает инвентаризацию', async () => {
+describe('UC-4 · допуски к машинам (S7B-ACL-1)', () => {
+  const acl = () => parseMachineAcl(MACHINE_ACL);
+
+  it('модель: машины, которыми владеет, и машины, к которым допущен, — раздельно', () => {
+    const items = offMachineItems(acl(), 'u-anna');
+    expect(items.owned.map(m => m.machine_id)).toEqual(['anna-pc']);
+    expect(items.granted.map(g => [g.machine.machine_id, g.role, g.projects])).toEqual([['boss-pc', 'actor', ['AIDA/miniLORE']]]);
+    expect(offMachineItems(acl(), 'u-nobody')).toEqual({ owned: [], granted: [] });
+  });
+
+  it('модель: снятие — revoke на каждый допуск; владение запросом не снимается', () => {
+    expect(revokeMachineRequests(offMachineItems(acl(), 'u-anna'), 'u-anna')).toEqual([
+      { machine_id: 'boss-pc', kc_sub: 'u-anna', action: 'revoke' },
+    ]);
+  });
+
+  it('инвентаризация: машины читаются срезом machine_acl с фильтром kc_sub, числа видны', async () => {
+    const { f, calls } = fake();
+    mount('u-anna', 'anna', f);
+    await waitFor(() => expect(screen.getByTestId('adm-off-inv-machines').getAttribute('data-state')).toBe('ok'));
+    const acl = calls.find(c => c.url.startsWith('/lore/slice/machine_acl'))!;
+    expect(new URL(acl.url, 'http://x').searchParams.get('kc_sub')).toBe('u-anna');
+    expect(screen.getByTestId('adm-off-inv-machines').textContent).toMatch(/владеет 1.*допущен к 1/);
+  });
+
+  it('срез недоступен — «нет прав» с причиной, а не «машин нет»', async () => {
+    const { f } = fake({ aclStatus: 403 });
+    mount('u-anna', 'anna', f);
+    await waitFor(() => expect(screen.getByTestId('adm-off-inv-machines').getAttribute('data-state')).toBe('fail'));
+    expect(screen.getByTestId('adm-off-inv-machines').textContent).toContain('нет прав на срез');
+  });
+
+  it('шаг «Машины»: план сервера (dry_run) → дифф → revoke допуска; владение — в «осталось руками»', async () => {
+    const { f, calls } = fake();
+    window.history.replaceState(null, '', '/?adm-off-step=machines');
+    mount('u-anna', 'anna', f);
+    const box = await screen.findByTestId('adm-off-machines');
+    expect(within(box).getByTestId('adm-off-machines-owned').textContent).toContain('anna-pc');
+    fireEvent.click(within(box).getByTestId('adm-off-machines-revoke'));
+    await within(box).findByTestId('adm-macl-change');
+    await waitFor(() => expect(calls.some(c => c.url === '/lore/user/machine-access' && c.body?.dry_run === true)).toBe(true));
+    // Строку диффа называет машина, а не имя человека (все строки — один человек).
+    const row = await within(box).findByTestId('kit-diff-row-0');
+    expect(row.textContent).toContain('boss-pc');
+    fireEvent.click(within(box).getByTestId('kit-diff-apply'));
+    await within(box).findByTestId('kit-batch');
+    const applied = calls.filter(c => c.url === '/lore/user/machine-access' && c.body?.dry_run !== true).map(c => c.body);
+    expect(applied).toEqual([{ machine_id: 'boss-pc', kc_sub: 'u-anna', action: 'revoke' }]);
+  });
+
+  it('это вы — снятие допусков к машинам заблокировано', async () => {
+    const { f } = fake();
+    window.history.replaceState(null, '', '/?adm-off-step=machines');
+    mount('u-anna', 'anna', f, 'u-anna');
+    const btn = await screen.findByTestId('adm-off-machines-revoke');
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('UC-4 · вход из паспорта человека (S7B-28)', () => {
+  it('в паспорте человека — «Отключить…», открывает инвентаризацию, человек в адресе', async () => {
     const { f } = fake();
     window.history.replaceState(null, '', '/?adm-open=u-anna');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={f} /></KitLangProvider>);
     fireEvent.click(await screen.findByTestId('adm-off-open-u-anna'));
     expect(await screen.findByTestId('adm-off')).toBeTruthy();
     expect(new URLSearchParams(window.location.search).get('adm-off')).toBe('u-anna');
+  });
+
+  it('ссылка ?adm-off=… открывает инвентаризацию сразу; «Закрыть» убирает её из адреса', async () => {
+    const { f } = fake();
+    window.history.replaceState(null, '', '/?adm-open=u-anna&adm-off=u-anna');
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={f} /></KitLangProvider>);
+    fireEvent.click(await screen.findByTestId('adm-off-close'));
+    await waitFor(() => expect(screen.queryByTestId('adm-off')).toBeNull());
+    expect(new URLSearchParams(window.location.search).get('adm-off')).toBeNull();
   });
 });

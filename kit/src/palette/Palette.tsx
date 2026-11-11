@@ -18,7 +18,7 @@ import { matchHotkey } from '../resilience/hotkeys';
 import { isEditableTarget } from '../resilience/editable';
 import {
   actionsFor, hotkeyKeys, itemKey, mergeRemote, normalizeQuery, searchPalette, targetIds,
-  type PaletteAction, type PaletteItem, type PaletteMode, type PaletteRemoteSearch, type PaletteTarget, type RecentList,
+  type PaletteAction, type PaletteItem, kindFacets, type PaletteMode, type PaletteRemoteSearch, type PaletteTarget, type RecentList,
 } from './paletteModel';
 
 // ── горячие клавиши ───────────────────────────────────────────────────────
@@ -113,6 +113,9 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [remoteState, setRemoteState] = useState<RemoteState | null>(null);
+  // S4-14: фильтр по типам — свёрнут по умолчанию (слово владелицы 11.11.2026).
+  const [kindsOpen, setKindsOpen] = useState(false);
+  const [kindsOn, setKindsOn] = useState<ReadonlySet<string>>(() => new Set());
 
   const applicable = useMemo(() => actionsFor(target, actions ?? []), [target, actions]);
   const result = useMemo(
@@ -186,16 +189,28 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
         { id: 'commands', label: kitT(lang, 'kit.palette.commands'), items: result.commands ?? [] },
       ].filter(g => g.items.length > 0);
     }
-    const recs = result.items.filter(i => i.type === 'record');
-    const cmds = result.items.filter(i => i.type === 'command');
-    const server: PaletteItem[] = remoteItems;
+    const pass = (i: PaletteItem) => kindsOn.size === 0 || (i.type === 'record' && kindsOn.has(i.kind));
+    const recs = result.items.filter(i => i.type === 'record' && pass(i));
+    // Фильтр по типам скрывает команды: выбран тип — человек ищет записи.
+    const cmds = kindsOn.size ? [] : result.items.filter(i => i.type === 'command');
+    const server: PaletteItem[] = remoteItems.filter(pass);
     return [
       actionsGroup,
       { id: 'records', label: kitT(lang, 'kit.palette.records'), items: recs },
       { id: 'server', label: kitT(lang, 'kit.palette.server'), items: server },
       { id: 'commands', label: kitT(lang, 'kit.palette.commands'), items: cmds },
     ].filter(g => g.items.length > 0);
-  }, [result, lang, actionsLabel, remoteItems]);
+  }, [result, lang, actionsLabel, remoteItems, kindsOn]);
+  // Пилюли считаются по всей выдаче, а не по отфильтрованной: иначе выбранный
+  // тип стирал бы остальные пилюли, и снять фильтр «соседом» было бы нельзя.
+  const facets = useMemo(
+    () => (result.section === 'results' ? kindFacets([...result.items, ...remoteItems]) : []),
+    [result, remoteItems],
+  );
+  const toggleKind = (k: string) => {
+    setKindsOn(s => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+    setActive(0);
+  };
   const flat = useMemo(() => groups.flatMap(g => g.items), [groups]);
   const optionId = (i: number) => `${uid}-opt-${i}`;
   const current = Math.min(active, Math.max(flat.length - 1, 0));
@@ -351,6 +366,21 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
               ? kitT(lang, 'kit.palette.truncated', { returned, total: meta.total })
               : kitT(lang, 'kit.palette.truncatedUnknown', { returned })}
           </p>
+        )}
+        {(facets.length > 1 || kindsOn.size > 0) && (
+          <div className="sk-palette__kinds">
+            {/* Мышью: фокус остаётся в поле ввода (ловушка Tab палитры). */}
+            <button type="button" className="sk-palette__kindsbtn" aria-expanded={kindsOpen}
+              onMouseDown={e => e.preventDefault()} onClick={() => setKindsOpen(o => !o)}>
+              {kindsOn.size ? kitT(lang, 'kit.palette.kindsOn', { n: kindsOn.size }) : kitT(lang, 'kit.palette.kinds')}
+            </button>
+            {kindsOpen && facets.map(f => (
+              <button key={f.kind} type="button" className="sk-pill sk-pill--filter" aria-pressed={kindsOn.has(f.kind)}
+                onMouseDown={e => e.preventDefault()} onClick={() => toggleKind(f.kind)}>
+                {f.title} <span className="sk-palette__kindn">{f.n}</span>
+              </button>
+            ))}
+          </div>
         )}
         {failure && <div role="alert" className="sk-palette__fail">{failure}</div>}
         {remoteNow?.status === 'error' && (

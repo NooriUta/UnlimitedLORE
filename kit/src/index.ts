@@ -15,6 +15,7 @@ export * from './shell';
 // записи рендерит ctx.md — MD-элементы по-прежнему из `@seidr/kit/content`.
 export type * from './core/contract';
 export * from './record';
+export * from './graph';
 // Контракт ядра (типы, без кода) — и отсюда; хуки вида — `@seidr/kit/core`.
 export * from './approval';
 export * from './tasks';
@@ -65,6 +66,8 @@ export * from './views/tree';
 export * from './picker';
 // Таймлайн с дорожками той же общей группировки (S4-06).
 export * from './views/timeline';
+export * from './views/calendar';
+export * from './views/library';
 // Сохранённые виды списка: сохранить / сохранить как / сбросить, командные виды
 // по умолчанию; хранилище — контракт S2 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-08).
 export * from './views/saved';

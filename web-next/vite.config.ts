@@ -31,6 +31,9 @@ export default defineConfig({
       'marked', 'katex', 'mermaid', '@mermaid-js/layout-elk', 'bpmn-js', 'dompurify',
       // Вход kit (@seidr/kit/auth, S3-18): в образе у kit нет node_modules.
       'oidc-client-ts',
+      // Граф знаний kit (GC-03): движки — peer kit, грузятся лениво; в образе у kit
+      // нет node_modules, поэтому разрешаться они обязаны от web-next.
+      'force-graph', 'sigma', 'graphology', 'd3-force',
     ],
   },
   // PostCSS — пустой и явный: иначе vite ищет конфиг вверх по дереву и берёт

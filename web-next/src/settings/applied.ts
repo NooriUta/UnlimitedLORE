@@ -34,6 +34,15 @@ export function appliedRightColumn(given?: Host): RightColumn {
   return v === 'open' || v === 'closed' ? v : 'auto';
 }
 
+/**
+ * Где открывать запись и черновик новой (S4-24, одна настройка с S4-17).
+ * Не выбирал (auto, атрибута нет, мусор) — undefined: решает экран.
+ */
+export function appliedPassportPlace(given?: Host): 'right' | 'bottom' | 'full' | undefined {
+  const v = host(given)?.getAttribute('data-passport-place');
+  return v === 'right' || v === 'bottom' || v === 'full' ? v : undefined;
+}
+
 /** Сворачивать ли меню оболочки, пока открыта запись (D-2026-UXR-READ-COLLAPSE). */
 export function appliedCollapseNavOnRead(given?: Host): boolean {
   return host(given)?.getAttribute('data-read-nav') === 'collapse';
@@ -47,4 +56,16 @@ export function appliedPeekHover(given?: Host): boolean {
 /** Показывать ли технические сведения (S4-TECH-NOTES). Атрибута нет — нет. */
 export function appliedShowTech(given?: Host): boolean {
   return host(given)?.getAttribute('data-show-tech') === 'on';
+}
+
+/**
+ * Вид вкладки «Граф», выбранный человеком (GC-03), — в словах kit:
+ * секторы → graph, список → links. Не выбирал (auto, атрибута нет) — undefined:
+ * тогда вид решает экран, подменять молчание выбором нельзя.
+ */
+export function appliedGraphView(given?: Host): 'graph' | 'links' | 'force' | 'obsidian' | undefined {
+  const v = host(given)?.getAttribute('data-graph-view');
+  if (v === 'sectors') return 'graph';
+  if (v === 'list') return 'links';
+  return v === 'force' || v === 'obsidian' ? v : undefined;
 }

@@ -13,3 +13,4 @@ export * from './Toolbar';
 export * from './Segmented';
 // Канон иконок (S4-25) и вшитый lucide.
 export * from './iconCanon';
+export * from './MiniList';

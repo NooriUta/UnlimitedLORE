@@ -1,10 +1,11 @@
 // UC-4 «Отключить человека» (SPRINT_UXR_S7B_ADMIN/S7B-20, прототип
 // docs/prototypes/s7b-admin-v6.html, раздел UC-4): уход или компрометация.
 //
-// Вход — из раскрытой карточки человека в «Кто где» («Отключить…»), человек —
-// в адресе (?adm-off=kc_sub), шаг — тоже (?adm-off-step=…).
+// Вход — из паспорта человека в «Люди и их проекты» (S7B-28, «Отключить…»),
+// человек — в адресе (?adm-off=kc_sub), шаг — тоже (?adm-off-step=…).
 //
-//   1. Инвентаризация до действия: учётка KC, роли в проектах, агенты. У
+//   1. Инвентаризация до действия: учётка KC, роли в проектах, агенты,
+//      машины (владеет / допущен — срез machine_acl по kc_sub). У
 //      каждого блока своё честное состояние: загрузка · не смогли проверить
 //      (с причиной) · проверено и пусто · есть.
 //   2. Снятие по блокам (kit Steps), каждый — дифф и ввод логина:
@@ -13,13 +14,16 @@
 //        • учётки агентов — отключение в KC (agent-client/…/disable), дифф —
 //          kit DiffPreview, итог — kit BatchUndo; отмены у сервера нет, и это
 //          сказано ДО применения;
+//        • допуски к машинам — путь «Доступа к машинам» (AccessChange: план
+//          сервера → дифф → revoke → отмена обратными запросами); владение
+//          машиной запросом не снимается — оно в «осталось руками»;
 //        • realm-роли — существующий путь KcDanger (RealmRoleDanger).
 //   3. «Последний админ» блокирует кнопку с объяснением словами сервера, а не
 //      подтверждением: последний owner проекта (AL-100), последний носитель
 //      admin в realm (AL-35), и «это вы».
 //   4. Чего LORE сделать не может (выключить саму учётку KC) — блок «осталось
 //      руками» у kit Steps.
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BatchUndo, DiffPreview, Pill, Skeleton, Steps, useKitLang,
   type BatchItemFail, type BatchResult, type DiffRow, type StepDef,
@@ -32,11 +36,17 @@ import { fetchAgents, type AgentRow } from './agents';
 import { fetchRealmRoles, type RealmRoleOption } from './kc';
 import { fetchRoleMatrix, type RoleChange, type RolesData } from './roles';
 import { fetchKcClients, fetchKcUsers, reasonOf, type KcUser } from './wizards';
+import { AccessChange } from './MachinesScreen';
+import type { AccessRequest, Machine } from './machines';
 import {
-  agentDiffRows, disableAgentClient, findKcAccount, offRoleItems, parseKcClients, realmItems, removeAllChanges,
+  agentDiffRows, disableAgentClient, fetchPersonMachineAcl, findKcAccount, offMachineItems, offRoleItems, parseKcClients,
+  realmItems, removeAllChanges, revokeMachineRequests,
   type KcClientState,
 } from './offboard';
 import './Admin.css';
+
+/** Подписи harness в диффе допусков не нужны: снимается допуск целиком. */
+const NO_LABELS: Record<string, string> = {};
 
 /** Состояние одного источника: «не смогли» — со словами, почему. */
 type Sec<T> =
@@ -82,8 +92,10 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
   const users = useSec<KcUser[]>(() => fetchKcUsers(fetchImpl), [fetchImpl, reload]);
   const realm = useSec<RealmRoleOption[]>(() => fetchRealmRoles(fetchImpl), [fetchImpl]);
   const clients = useSec<KcClientState[]>(() => fetchKcClients(fetchImpl).then(parseKcClients), [fetchImpl, reload]);
+  const machines = useSec<Machine[]>(() => fetchPersonMachineAcl(person.kc_sub, fetchImpl), [fetchImpl, person.kc_sub, reload]);
 
   const roleItems = roles.s === 'ok' ? offRoleItems(roles.v, person.kc_sub) : [];
+  const machineItems = machines.s === 'ok' ? offMachineItems(machines.v, person.kc_sub) : { owned: [], granted: [] };
   const myAgents = agents.s === 'ok' ? agents.v.filter(a => a.owner_kc_subs.includes(person.kc_sub)) : [];
   const account = users.s === 'ok' ? findKcAccount(users.v, person.kc_sub, person.name) : null;
 
@@ -121,6 +133,9 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
         {invLine('adm-off-inv-agents', t('admin.off.inv.agents'), agents, () => myAgents.length
           ? { state: 'ok', text: t('admin.off.agents.n', { n: myAgents.length }) }
           : { state: 'none', text: t('admin.off.agents.none') })}
+        {invLine('adm-off-inv-machines', t('admin.off.inv.machines'), machines, () => (machineItems.owned.length + machineItems.granted.length)
+          ? { state: 'ok', text: t('admin.off.machines.n', { owned: machineItems.owned.length, granted: machineItems.granted.length }) }
+          : { state: 'none', text: t('admin.off.machines.none') })}
       </ul>
     </div>
   );
@@ -256,10 +271,68 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
     );
   };
 
+  // ── 5. допуски к машинам (S7B-ACL-1) ───────────────────────────────────
+  // Снятие — тем же путём, что в «Доступе к машинам» (AccessChange: план
+  // сервера dry_run → дифф → пачка → отмена обратными запросами). Владение
+  // запросом не снимается — оно в «осталось руками».
+  const [machineReqs, setMachineReqs] = useState<AccessRequest[] | null>(null);
+  const nameOfPerson = useCallback(() => person.name, [person.name]);
+  const machineLabel = useCallback((req: AccessRequest) => req.machine_id, []);
+  const machinesStep = () => {
+    if (machines.s === 'loading') return <Skeleton lines={2} label={t('admin.off.loading')} />;
+    if (machines.s === 'fail') return failNote(machines, 'adm-off-machines-fail');
+    const { owned, granted } = machineItems;
+    if (owned.length + granted.length === 0) return <p className="adm-sub" data-testid="adm-off-machines-none">{t('admin.off.machines.none')}</p>;
+    return (
+      <div data-testid="adm-off-machines">
+        {owned.length > 0 && (
+          <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-off-machines-owned">
+            {t('admin.off.machines.owned', { list: owned.map(m => m.machine_id).join(', ') })}
+          </p>
+        )}
+        {granted.length === 0
+          ? <p className="adm-sub">{t('admin.off.machines.noGrants')}</p>
+          : (
+            <>
+              <table className="adm-table">
+                <tbody>
+                  {granted.map(g => (
+                    <tr key={g.machine.machine_id}>
+                      <th scope="row"><span className="adm-mono">{g.machine.machine_id}</span></th>
+                      <td><Pill>{g.role || '—'}</Pill></td>
+                      <td>{g.projects.join(', ') || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!machineReqs && (
+                <div className="adm-filters">
+                  <button type="button" className="adm-btn adm-btn--dng" data-testid="adm-off-machines-revoke" disabled={self}
+                    onClick={() => { if (!self) setMachineReqs(revokeMachineRequests(machineItems, person.kc_sub)); }}>
+                    {t('admin.off.machines.revoke', { n: granted.length })}
+                  </button>
+                </div>
+              )}
+              {/* Запросы заморожены на нажатии: перечитанный срез не сбивает план и окно отмены. */}
+              {machineReqs && (
+                <AccessChange requests={machineReqs} nameOf={nameOfPerson} labelOf={machineLabel} harnessLabels={NO_LABELS}
+                  fetchImpl={fetchImpl} onChanged={again} onClose={() => setMachineReqs(null)} />
+              )}
+            </>
+          )}
+      </div>
+    );
+  };
+
   const steps: StepDef[] = [
     { key: 'roles', title: t('admin.off.step.roles'), render: rolesStep },
     { key: 'agents', title: t('admin.off.step.agents'), render: agentsStep },
+    { key: 'machines', title: t('admin.off.step.machines'), render: machinesStep },
     { key: 'kc', title: t('admin.off.step.kc'), render: kcStep },
+  ];
+  const manual = [
+    { text: t('admin.off.manual.kc'), hint: t('admin.off.manual.kcHint') },
+    ...machineItems.owned.map(m => ({ text: t('admin.off.manual.machine', { machine: m.machine_id }), hint: t('admin.off.manual.machineHint') })),
   ];
 
   return (
@@ -269,7 +342,7 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
       {self && <p className="adm-note" data-tone="dng" role="status" data-testid="adm-off-self">{t('admin.off.self')}</p>}
       {inventory}
       <Steps steps={steps} urlKey="adm-off-step" lang={lang} flow="adm-off" onDone={onClose}
-        manual={{ title: t('admin.off.manual.title'), items: [{ text: t('admin.off.manual.kc'), hint: t('admin.off.manual.kcHint') }] }} />
+        manual={{ title: t('admin.off.manual.title'), items: manual }} />
       <div className="adm-field--btns adm-danger__btns">
         <button type="button" className="adm-btn" data-testid="adm-off-close" onClick={onClose}>{t('admin.off.close')}</button>
       </div>

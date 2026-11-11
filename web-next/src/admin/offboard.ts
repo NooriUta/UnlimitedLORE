@@ -7,7 +7,8 @@
 //   • агенты — срез agent_owners по владельцу (agents.ts), их учётки в KC —
 //     GET /lore/kc/agents (enabled);
 //   • учётка KC и её realm-роли — GET /lore/kc/users, какие роли снимаются
-//     мостом — GET /lore/kc/realm-roles (grantable).
+//     мостом — GET /lore/kc/realm-roles (grantable);
+//   • машины — срез machine_acl с фильтром kc_sub (владеет / допущен).
 //
 // «Последний админ» считается здесь ТЕМИ ЖЕ правилами, что у сервера, чтобы
 // кнопка была заблокирована с объяснением ещё до диффа:
@@ -20,8 +21,9 @@
 // DangerBatch / KcDanger.
 import type { DiffRow } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
-import { LoreHttpError } from '../api/loreSlice';
+import { fetchSlice, LoreHttpError } from '../api/loreSlice';
 import type { AgentRow } from './agents';
+import { parseMachineAcl, personMachines, type AccessRequest, type Machine } from './machines';
 import type { RealmRoleOption } from './kc';
 import type { CellState, RoleChange, RolesData } from './roles';
 import type { KcUser } from './wizards';
@@ -155,6 +157,34 @@ export function agentDiffRows(
     }
     return { id: a.client_id, kind: c.enabled ? 'remove' as const : 'same' as const, text, check: { state: 'checked' as const } };
   });
+}
+
+// ── допуски к машинам (S7B-ACL-1) ─────────────────────────────────────────
+//
+// Машины человека — срез machine_acl с фильтром kc_sub: строки, где он
+// владелец или допущен. Допуск снимается запросом revoke
+// (POST /lore/user/machine-access); владение запросом не снимается — машину
+// передают или убирают в «Агентах», поэтому оно уходит в «осталось руками».
+
+export interface OffMachineGrant { machine: Machine; role: string; projects: string[] }
+export interface OffMachines { owned: Machine[]; granted: OffMachineGrant[] }
+
+export function offMachineItems(ms: readonly Machine[], kcSub: string): OffMachines {
+  const { owned, granted } = personMachines(ms, kcSub);
+  return {
+    owned: owned.map(o => o.machine),
+    granted: granted.map(g => ({ machine: g.machine, role: g.role, projects: g.projects })),
+  };
+}
+
+export function revokeMachineRequests(items: OffMachines, kcSub: string): AccessRequest[] {
+  return items.granted.map(g => ({ machine_id: g.machine.machine_id, kc_sub: kcSub, action: 'revoke' as const }));
+}
+
+/** Срез machine_acl по человеку (фильтр kc_sub: владелец или допущен). */
+export async function fetchPersonMachineAcl(kcSub: string, fetchImpl?: typeof fetch): Promise<Machine[]> {
+  const body = await fetchSlice<Record<string, unknown>>('machine_acl', { kc_sub: kcSub, limit: '1000' }, { fetchImpl });
+  return parseMachineAcl(body.rows);
 }
 
 /** POST /lore/kc/agent-client/{clientId}/disable — отмены у сервера нет. */

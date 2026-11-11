@@ -19,6 +19,7 @@ import {
   adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord, projectRecord,
   questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
 } from './records';
+import type { RowMapCtx } from './records';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
 
@@ -65,7 +66,8 @@ export interface ListScreenDef {
   modelType?: string;
   titleKey: AppKey;
   icon: string;
-  map: (row: Record<string, unknown>) => KitRecord;
+  /** Строка среза → запись; `ctx.statusCodes` — ось типа из модели (S4-STATUS-AXIS-CONFIG). */
+  map: (row: Record<string, unknown>, ctx?: RowMapCtx) => KitRecord;
   config: (lang: KitLang) => KitConfig;
   /** Свои быстрые иконки «Быстро», которым не подходит иконка статуса. */
   quickIcons: Record<string, string>;
@@ -398,7 +400,9 @@ const decisionsSpec: SectionSpec = {
  */
 const specsSpec: SectionSpec = {
   kind: 'spec', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
-  fields: [['component', 'ref'], ['version', 'text'], ['path', 'text'], ['project', 'ref']],
+  // components — поле фасета и разреза (LORE_FILTER_FIELDS.component): без него
+  // в виде фасет «Компоненты» печатал сырой ключ (K4-FACET-LABELS).
+  fields: [['component', 'ref'], ['components', 'ref'], ['version', 'text'], ['path', 'text'], ['project', 'ref']],
   statuses: [['proposed', 'active'], ['accepted', 'done'], ['deprecated', 'cancelled'], ['superseded', 'cancelled']],
   views: ['list', 'cards'],
   quick: [['no-status', 'lists.quick.noStatus', { status: '' }], ['no-version', 'lists.quick.noVersion', { version: '' }]],
@@ -480,7 +484,8 @@ const projectsSpec: SectionSpec = {
 /** Технологии: СТАТУСА НЕТ — это реестр версий (спеки SPEC-TECH-*). */
 const techSpec: SectionSpec = {
   kind: 'tech', titleKey: 'lists.tech.title', icon: 'gears',
-  fields: [['version', 'text'], ['component', 'ref'], ['checked', 'date']],
+  // components — поле фасета и разреза; без него фасет печатал сырой ключ (K4-FACET-LABELS).
+  fields: [['version', 'text'], ['component', 'ref'], ['components', 'ref'], ['checked', 'date']],
   views: ['list', 'cards'],
   quick: [['no-version', 'lists.quick.noVersion', { version: '' }]],
   filters: [LORE_FILTER_FIELDS.component],

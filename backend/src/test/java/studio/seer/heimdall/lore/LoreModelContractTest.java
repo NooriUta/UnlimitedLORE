@@ -74,6 +74,60 @@ class LoreModelContractTest {
     @Test
     void surfacesPassport() { checkSurfaces(doc()); }
 
+    /** MD-REQUIRED: обязательность поля — в контракте /lore/model и /lore/record (kit 9cba12a3). */
+    @Test
+    void fieldRequirements() {
+        Map<String, Object> types = map(doc().get("types"), "types");
+        for (String t : LoreRecordRegistry.TYPES) {
+            Map<String, Object> type = map(types.get(t), "types." + t);
+            checkRequirements(type, "types." + t);
+            checkRequirements(LoreRecordRegistry.schemaJson(t), "record.schema." + t);
+        }
+    }
+
+    private static void checkRequirements(Map<String, Object> holder, String w) {
+        has(holder, Set.of("requirements", "requirements_block"), w);
+        oneOf(holder.get("requirements_block"), Set.of("schema", "unknown"), w + ".requirements_block");
+        for (Object ro : list(holder.get("requirements"), w + ".requirements")) {
+            Map<String, Object> r = map(ro, w + ".requirements[]");
+            checkRule(r, w + ".requirements." + r.get("code"));
+            for (Object to : list(r.get("targets"), w + ".targets")) {
+                Map<String, Object> tg = map(to, w + ".targets[]");
+                assertEquals(Set.of("kind", "key"), tg.keySet(), w + ".targets[] — {kind, key}");
+                oneOf(tg.get("kind"), Set.of("field", "relation"), w + ".targets[].kind");
+            }
+        }
+        for (Object fo : list(holder.get("fields"), w + ".fields")) {
+            Map<String, Object> f = map(fo, w + ".fields[]");
+            String fw = w + "." + f.get("key");
+            has(f, Set.of("required", "required_level", "required_rules"), fw);
+            assertInstanceOf(Boolean.class, f.get("required"), fw + ".required — boolean для старых клиентов");
+            oneOf(f.get("required_level"), new java.util.HashSet<>(java.util.Arrays.asList("block", "warn", null)), fw + ".required_level");
+            for (Object ro : list(f.get("required_rules"), fw + ".required_rules")) checkRule(map(ro, fw + ".required_rules[]"), fw);
+        }
+    }
+
+    private static void checkRule(Map<String, Object> r, String w) {
+        has(r, Set.of("level", "source", "code", "message", "when"), w);
+        oneOf(r.get("level"), Set.of("block", "warn"), w + ".level");
+        oneOf(r.get("source"), Set.of("schema", "quality"), w + ".source");
+        if (r.get("when") != null)
+            assertEquals(Set.of("field", "eq", "text"), map(r.get("when"), w + ".when").keySet(), w + ".when — {field, eq, text}");
+    }
+
+    /** Обратная проверка: снятый required_level ловится. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void requirementsContractCatchesBreakage() {
+        Map<String, Object> d = doc();
+        Map<String, Object> task = map(map(d.get("types"), "t").get("task"), "task");
+        ((Map<String, Object>) ((List<Object>) task.get("fields")).get(0)).remove("required_level");
+        assertThrows(AssertionError.class, () -> checkRequirements(task, "task"));
+        Map<String, Object> task2 = map(map(doc().get("types"), "t").get("task"), "task");
+        ((Map<String, Object>) ((List<Object>) task2.get("requirements")).get(0)).put("level", "error");
+        assertThrows(AssertionError.class, () -> checkRequirements(task2, "task"));
+    }
+
     /** Проверка в обратную сторону: испорченный документ обязан ронять контракт. */
     @Test
     @SuppressWarnings("unchecked")
@@ -94,13 +148,84 @@ class LoreModelContractTest {
         assertThrows(AssertionError.class, () -> checkSurfaces(d3), "«Ещё» больше не место модели (S4-29 v3) — slot more ловится");
     }
 
+    /**
+     * S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): поле, значение которого задаётся ребром,
+     * выбирается из среза — {@code options = {slice, param, value, label, group?}}. У поля без
+     * выбора ключа нет. Пустых строк и лишних ключей нет: kit строит запрос по ним как есть.
+     */
+    private static void checkOptions(Map<String, Object> f, String w) {
+        Object o = f.get("options");
+        if (o == null) return;
+        Map<String, Object> opt = map(o, w + ".options");
+        assertTrue(Set.of("slice", "param", "value", "label", "group").containsAll(opt.keySet()),
+            w + ".options — только {slice, param, value, label, group?}, а не " + opt.keySet());
+        for (String k : List.of("slice", "param", "value", "label")) {
+            assertInstanceOf(String.class, opt.get(k), w + ".options." + k + " — строка");
+            assertFalse(((String) opt.get(k)).isBlank(), w + ".options." + k + " — не пустая");
+        }
+        if (opt.containsKey("group")) assertInstanceOf(String.class, opt.get("group"), w + ".options.group — строка");
+        assertNotNull(LoreSlices.get((String) opt.get("slice")), w + ".options.slice — существующий срез");
+        assertTrue(LoreSlices.get((String) opt.get("slice")).required().contains(opt.get("param")),
+            w + ".options.param — обязательный параметр этого среза");
+    }
+
+    @Test
+    void optionsShapeInRecordSchema() {
+        for (String t : LoreRecordRegistry.TYPES)
+            for (Object fo : list(LoreRecordRegistry.schemaJson(t).get("fields"), t + ".fields"))
+                checkOptions(map(fo, t + ".fields[]"), "record.schema." + t + "." + map(fo, "f").get("key"));
+    }
+
+    /** S4-24: автор, исполнитель и принимающий задачи — выбором из заявленных личностей, не текстом. */
+    @Test
+    void taskRoleFieldsArePickedFromTaskIdentities() {
+        Map<String, Object> model = map(map(doc().get("types"), "types").get("task"), "types.task");
+        for (Map<String, Object> holder : List.of(model, LoreRecordRegistry.schemaJson("task"))) {
+            for (String key : List.of("author", "executor", "reviewer")) {
+                Map<String, Object> f = null;
+                for (Object fo : list(holder.get("fields"), "task.fields"))
+                    if (key.equals(map(fo, "f").get("key"))) f = map(fo, "f");
+                assertNotNull(f, "task." + key);
+                assertEquals("enum", f.get("kind"), "task." + key + ".kind — выбор, а не свободный текст");
+                assertNull(f.get("dict"), "task." + key + ".dict — значения не из справочника, а из среза");
+                assertEquals(Map.of("slice", "task_identities", "param", "id", "value", "code",
+                    "label", "title", "group", "kind"), f.get("options"), "task." + key + ".options");
+            }
+        }
+        // У полей без выбора ключа options нет совсем.
+        for (Object fo : list(LoreRecordRegistry.schemaJson("task").get("fields"), "task.fields")) {
+            Map<String, Object> f = map(fo, "f");
+            if (!List.of("author", "executor", "reviewer").contains(f.get("key")))
+                assertFalse(f.containsKey("options"), "task." + f.get("key") + ": options без выбора не отдаётся");
+        }
+    }
+
+    /** Обратная проверка формы options: лишний ключ и пустой срез ловятся. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void optionsContractCatchesBreakage() {
+        Map<String, Object> f = new java.util.LinkedHashMap<>(Map.of("key", "x"));
+        f.put("options", new java.util.LinkedHashMap<>(Map.of("slice", "task_identities", "param", "id",
+            "value", "code", "label", "title", "extra", "y")));
+        assertThrows(AssertionError.class, () -> checkOptions(f, "x"), "лишний ключ ловится");
+        f.put("options", new java.util.LinkedHashMap<>(Map.of("slice", "no_such_slice", "param", "id",
+            "value", "code", "label", "title")));
+        assertThrows(AssertionError.class, () -> checkOptions(f, "x"), "несуществующий срез ловится");
+        f.put("options", new java.util.LinkedHashMap<>(Map.of("slice", "task_identities", "param", "id", "value", "code")));
+        assertThrows(AssertionError.class, () -> checkOptions(f, "x"), "без label ловится");
+    }
+
     private static void checkTypes(Map<String, Object> d) {
         Map<String, Object> types = map(d.get("types"), "types");
         assertEquals(LoreRecordRegistry.TYPES, List.copyOf(types.keySet()), "все 8 типов паспорта, в порядке показа");
         for (String t : LoreRecordRegistry.TYPES) {
             Map<String, Object> type = map(types.get(t), "types." + t);
-            has(type, Set.of("type", "label", "icon", "key", "vertex", "hist", "fields", "relations", "computed",
+            has(type, Set.of("type", "label", "icon", "color", "key", "vertex", "hist", "fields", "relations", "computed",
                 "unclassified", "internal"), "types." + t);
+            // Поручение владелицы 11.11: цвет типа — имя токена канона (section-*) или null, не hex.
+            Object color = type.get("color");
+            assertTrue(color == null || String.valueOf(color).matches("section-[a-z-]+"),
+                "types." + t + ".color — имя токена section-* или null, а не «" + color + "»");
             for (Object fo : list(type.get("fields"), t + ".fields")) {
                 Map<String, Object> f = map(fo, t + ".fields[]");
                 String w = t + "." + f.get("key");
@@ -113,6 +238,7 @@ class LoreModelContractTest {
                 oneOf(disp.get("priority"), Set.of(1, 2, 3, 4), w + ".display.priority");
                 oneOf(disp.get("width"), Set.of("xs", "s", "m", "l", "fill"), w + ".display.width");
                 oneOf(disp.get("overflow"), Set.of("none", "ellipsis", "more"), w + ".display.overflow");
+                checkOptions(f, w);
             }
             for (Object ro : list(type.get("relations"), t + ".relations")) {
                 Map<String, Object> r = map(ro, t + ".relations[]");

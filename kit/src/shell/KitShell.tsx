@@ -167,6 +167,12 @@ export interface KitShellProps {
   /** Слот аккаунта справа в шапке — меню аватара (AvatarMenu, S4-02). */
   account?: ReactNode;
   /**
+   * Строка состояния во всю ширину внизу окна (S4-21, ответ владелицы 7а: свежесть
+   * данных, проекты, сеть). Что в ней — решает приложение (K-14); на телефоне её нет:
+   * внизу там панель модулей.
+   */
+  statusBar?: ReactNode;
+  /**
    * Глобальные параметры URL, которые переживают смену раздела/модуля
    * (S4-13, B-07). Остальное — q, фильтры, вкладка — принадлежит разделу и
    * снимается при переходе. Смена вида внутри раздела ничего не снимает.
@@ -285,7 +291,7 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
 
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, recordHref, topStart, topEnd, account, keepParams, children,
+  onNavigate, onOpenRecord, recordHref, topStart, topEnd, account, statusBar, keepParams, children,
 }: KitShellProps) {
   const lang = useKitLang();
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
@@ -507,6 +513,7 @@ export function KitShell({
         narrow ? 'sk-shell--narrow' : '',
         !narrow && effMenuMode === 'hidden' ? 'sk-shell--menu-collapsed' : '',
         !narrow && effMenuMode === 'rail' ? 'sk-shell--menu-rail' : '',
+        !narrow && statusBar ? 'sk-shell--status' : '',
       ].filter(Boolean).join(' ')}>
         <header className="sk-shell__top">
           <a className="sk-shell__skip" href={`#${mainId}`}>{kitT(lang, 'kit.shell.skip')}</a>
@@ -618,6 +625,9 @@ export function KitShell({
             {children}
           </main>
         </div>
+        {!narrow && statusBar && (
+          <footer className="sk-shell__status" aria-label={kitT(lang, 'kit.shell.status')}>{statusBar}</footer>
+        )}
         {/* Модули на телефоне — нижняя панель в зоне большого пальца, как в v1
             (SPRINT_LORE_MOBILE_UX/MOB-12; решение D-2026-UXR-MOBILE-FOLLOWS-V1).
             Иконка и короткая подпись под ней; текущий — aria-current. */}
