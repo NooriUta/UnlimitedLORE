@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { kitT, useKitLang } from '../../i18n';
+import type { KitKey } from '../../i18n';
 import { useNarrow } from '../../core/narrow';
 import { useStepLimits } from '../../core/stepLimit';
 import { MartProse } from '../../content/MartProse';
@@ -41,7 +42,7 @@ export interface LibraryViewProps {
 
 export function LibraryView({ groups, status, selected: selectedProp, onSelect, href, renderBody, perGroup = 5, narrow: narrowProp, className }: LibraryViewProps) {
   const lang = useKitLang();
-  const t = (k: string, v?: Record<string, string | number>) => kitT(lang, k, v);
+  const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const narrow = useNarrow(narrowProp);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<LibraryFilter>('all');

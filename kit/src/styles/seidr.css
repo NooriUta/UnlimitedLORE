@@ -6412,7 +6412,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-lib__chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .sk-lib__grp { display: grid; gap: 2px; min-width: 0; }
 .sk-lib__gh { display: flex; justify-content: space-between; margin: 6px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
-.sk-lib__gn { font-family: var(--mono); font-weight: 500; }
+.sk-lib__gn { font-family: var(--mono); font-weight: 400; }
 .sk-lib__docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; min-width: 0; }
 .sk-lib__doc { display: flex; gap: 6px; align-items: baseline; width: 100%; padding: 3px 6px; border: 0; border-radius: var(--r-sm); background: none; color: var(--t1); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; min-width: 0; }
 .sk-lib__doc:hover { background: var(--bg2); }
