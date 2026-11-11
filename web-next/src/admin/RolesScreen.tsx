@@ -19,6 +19,7 @@ import {
 import { useAppT } from '../i18n';
 import { DangerBatch } from './DangerBatch';
 import { EffectiveAccess, PersonAgentsLine } from './AccessBlocks';
+import { RealmRolePanel } from './KcDanger';
 import {
   buildChanges, countAssignments, fetchRoleMatrix, filterProjects, groupByRole, PERSON_SOURCES, personSourceCell,
   projectPersonCell, PROJECT_ROLES, roleCanWrite, roleHolders, roleSummary, splitByPerson,
@@ -109,7 +110,7 @@ export function RolesScreen({ fetchImpl }: RolesScreenProps) {
           </p>
         )}
         {person && (
-          <PersonCard person={person} data={data} fetchImpl={fetchImpl}
+          <PersonCard person={person} data={data} fetchImpl={fetchImpl} onChanged={res.reload}
             onPropose={changes => enqueue([{ kc_sub: person.kc_sub, changes }])} />
         )}
         {person && pending && pending.kc_sub === person.kc_sub && batch}
@@ -137,11 +138,12 @@ export function RolesScreen({ fetchImpl }: RolesScreenProps) {
   );
 }
 
-function PersonCard({ person, data, onPropose, fetchImpl }: {
+function PersonCard({ person, data, onPropose, fetchImpl, onChanged }: {
   person: PersonRoles;
   data: RolesData;
   onPropose: (changes: RoleChange[]) => void;
   fetchImpl?: typeof fetch;
+  onChanged?: () => void;
 }) {
   const t = useAppT();
   const [view, setView] = useUrlParam('adm-view');
@@ -162,6 +164,8 @@ function PersonCard({ person, data, onPropose, fetchImpl }: {
           data-testid="adm-roles-view-matrix" onClick={() => setView('matrix')}>{t('admin.roles.view.matrix')}</button>
       </div>
       <PersonSources person={person} sourcesAsked={data.sourcesAsked} />
+      {/* S7B-03: realm-роль Keycloak — тем же путём опасного действия (дифф → логин → «Отменить» → журнал). */}
+      <RealmRolePanel person={person} fetchImpl={fetchImpl} onChanged={onChanged} />
       {isMatrix
         ? <PersonMatrix person={person} data={data} onPropose={onPropose} />
         : <PersonGroups person={person} onPropose={onPropose} />}

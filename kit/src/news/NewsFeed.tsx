@@ -62,7 +62,18 @@ export interface NewsFeedProps {
    * По умолчанию — простой разбор (эмодзи и слова → код).
    */
   statusOf?: (raw: string | null | undefined) => string;
+  /**
+   * Адрес связанного в строке (S7A-08, п.24 — «ссылкой всё, у чего есть паспорт,
+   * включая людей»): автор (`person` / `agent`), спринт задачи, ADR решения.
+   * Маршруты знает приложение; null — открыть негде, и kit рисует текст.
+   * По умолчанию — нигде.
+   */
+  refHrefOf?: (type: string, id: string) => string | null;
 }
+
+/** Нет адреса связанного — текст, а не ссылка-пустышка. */
+const noRefHref = () => null;
+const RefHrefCtx = createContext<(type: string, id: string) => string | null>(noRefHref);
 
 /**
  * Разбор по умолчанию: «✅ DONE — merged» → «done», «🚀 READY FOR DEPLOY» →
@@ -114,7 +125,7 @@ function sheetChanges(q: NewsQuery, fixed: Set<string>): number {
 
 export function NewsFeed({
   source, scope, urlPrefix = 'n', timeZone, sections = NEWS_SECTIONS_ALL, hrefOf = newsHref, onOpen, title, className,
-  statusOf = defaultNewsStatusOf,
+  statusOf = defaultNewsStatusOf, refHrefOf = noRefHref,
 }: NewsFeedProps) {
   const lang = useKitLang();
   const t: T = (k, vars) => newsT(lang, k, vars);
@@ -192,8 +203,10 @@ export function NewsFeed({
               hint={t('empty.hint')}
             />
           : <StatusOfCtx.Provider value={statusOf}>
-              <FeedDays data={data} query={q} lang={lang} tz={q.zone === 'utc' ? 'UTC' : tz} hrefOf={hrefOf} onOpen={onOpen}
-                open={openDays} setOpen={setOpenDays} />
+              <RefHrefCtx.Provider value={refHrefOf}>
+                <FeedDays data={data} query={q} lang={lang} tz={q.zone === 'utc' ? 'UTC' : tz} hrefOf={hrefOf} onOpen={onOpen}
+                  open={openDays} setOpen={setOpenDays} />
+              </RefHrefCtx.Provider>
             </StatusOfCtx.Provider>)}
       </>
     );
@@ -650,6 +663,9 @@ const CRIT_KINDS = ['ready', 'reactivated', 'released'] as const;
  * а не метрика методики (допущение принято с approve прототипа 09.11).
  */
 function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsEvent[]; data: NewsResponse; t: T; lang: KitLang }) {
+  // П6 паритета: в разрезе «по типам» типы и так стоят заголовками групп дня —
+  // вторая разбивка по типам в заголовке дня была бы повтором.
+  const typesShown = data.groups.axis !== 'type';
   const byKind = new Map<string, number>();
   const byType = new Map<string, number>();
   let tasksCreated = 0;
@@ -715,11 +731,13 @@ function DayFigures({ day, events, data, t, lang }: { day: string; events: NewsE
           </span>
         )}
         {total && <span className="sk-news__dchip" data-testid="news-cube-delta" title={t('cube.delta')}>{`Δ ${total.elements}`}</span>}
-        <span className="sk-news__ftypes" data-testid="news-day-types" title={t('day.types')}>
-          {[...byType].map(([k, n]) => (
-            <span key={k} title={typeLabel(k, lang)}><GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={11} />{n}</span>
-          ))}
-        </span>
+        {typesShown && (
+          <span className="sk-news__ftypes" data-testid="news-day-types" title={t('day.types')}>
+            {[...byType].map(([k, n]) => (
+              <span key={k} title={typeLabel(k, lang)}><GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={11} />{n}</span>
+            ))}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -915,6 +933,13 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
           : <span className="sk-news__time is-none" title={t('time.none.hint')} data-testid="news-time-none">{t('time.none')}</span>}
         {utc && <span className="sk-news__utc" title={t('time.utc.hint')} data-testid="news-time-utc">{`${utc} UTC`}</span>}
         {(e.projects ?? []).map(p => <span key={p} className="sk-news__proj" title={p}>{shortProject(p)}</span>)}
+        {/* П24 (решение владелицы 10.11): связанное — ссылкой, если у него есть паспорт. */}
+        {e.type === 'task' && e.sprint && <RowRef type="sprint" id={e.sprint} testId="news-ref-sprint" title={t('ref.sprint')} />}
+        {e.type === 'decision' && e.parent && <RowRef type="adr" id={e.parent} testId="news-ref-adr" title={t('ref.adr')} />}
+        {e.who && (
+          <RowRef type={e.author === 'agent' ? 'agent' : 'person'} id={e.who} testId="news-who"
+            title={t(e.author === 'agent' ? 'ref.agent' : 'ref.person')} icon={e.author === 'agent' ? 'robot-golem' : 'person'} />
+        )}
         {(e.from || e.to) && e.type === 'task' && (
           // Переход статусов — значками со своим цветом (владелица 09.11: «невыделенным
           // шрифтом написан, может значками сделать?»). Иконка и цвет — общая таблица kit.
@@ -994,6 +1019,23 @@ export function NewsStatusMark({ code }: { code: string | null }) {
       {label}
     </span>
   );
+}
+
+/**
+ * Связанное в строке ленты (П24): автор, спринт задачи, ADR решения. Адрес даёт
+ * приложение (`refHrefOf`); нет адреса — текст той же формы, а не ссылка в никуда.
+ */
+function RowRef({ type, id, testId, title, icon }: { type: string; id: string; testId: string; title: string; icon?: string }) {
+  const href = useContext(RefHrefCtx)(type, id);
+  const body = (
+    <>
+      {icon && <GameIcon slug={icon} size={11} />}
+      {id}
+    </>
+  );
+  return href
+    ? <a className="sk-news__ref" href={href} data-testid={testId} data-ref={type} title={`${title}: ${id}`}>{body}</a>
+    : <span className="sk-news__ref is-static" data-testid={testId} data-ref={type} title={`${title}: ${id}`}>{body}</span>;
 }
 
 /** «Скопировать код» — кнопка рядом с кодом; буфер недоступен — молча не врём, что скопировали. */

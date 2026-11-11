@@ -61,13 +61,32 @@ export const LORE_FACET_AXES: Readonly<Record<string, string>> = {
  * нет (статус) — остаётся со счётом по загруженным строкам, и список говорит
  * это словами.
  */
-export function axesForKeys(keys: readonly string[]): Record<string, string> {
+export function axesForKeys(keys: readonly string[], slice?: string): Record<string, string> {
+  const rename = (slice && SLICE_AXIS_NAMES[slice]) || {};
   const out: Record<string, string> = {};
   for (const [axis, key] of Object.entries(LORE_FACET_AXES)) {
-    if (keys.includes(key)) out[axis] = key;
+    if (keys.includes(key)) out[rename[axis] ?? axis] = key;
   }
   return out;
 }
+
+/**
+ * Срезы, где столбец оси назван иначе, чем в общей карте (S9-02). У срезов задач
+ * компоненты — `component_ids`, а не `components`; ось с чужим именем — 400 на
+ * ВЕСЬ запрос /facets, и раздел «Задачи» терял счётчики по всем осям сразу.
+ */
+const TASK_AXIS_NAMES: Readonly<Record<string, string>> = { components: 'component_ids' };
+const SLICE_AXIS_NAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  open_tasks: TASK_AXIS_NAMES,
+  closed_tasks: TASK_AXIS_NAMES,
+};
+
+/**
+ * Счётчики LORE: форма kit плюс закреплённые значения оси (S9-03) — их знает
+ * сервер (текущие релизы, `is_current`) и отдаёт тем же ответом /facets, чтобы
+ * экрану не ходить за релизами отдельно. Ключ — фасет kit (`fields.release`).
+ */
+export type LoreCounts = ListCounts & { pinned?: Readonly<Record<string, readonly string[]>> };
 
 export interface FacetsOptions {
   /** Ось сервера → ключ фасета kit; по умолчанию — вся карта LORE. */
@@ -152,7 +171,7 @@ function urlOf(slice: string, opts: FacetsOptions, axes: Readonly<Record<string,
  * исключением: «не посчитали» — это состояние, которое список обязан показать,
  * а не аварийная ветка. Отмена запроса пробрасывается: она не состояние счёта.
  */
-export async function fetchFacets(slice: string, opts: FacetsOptions = {}): Promise<ListCounts> {
+export async function fetchFacets(slice: string, opts: FacetsOptions = {}): Promise<LoreCounts> {
   const axes = opts.axes ?? LORE_FACET_AXES;
   const doFetch = opts.fetchImpl ?? loreFetch;
   let res: Response;
@@ -197,11 +216,26 @@ export async function fetchFacets(slice: string, opts: FacetsOptions = {}): Prom
     else out[key] = read;
   }
   const cap = capOf(body.cap);
+  const pinned = pinnedOf(body.pinned, axes);
   return {
     kind: 'counted',
     axes: out,
     ...(Object.keys(unavailable).length ? { unavailable } : {}),
     completeness: completenessOf(body.completeness),
     ...(cap ? { cap } : {}),
+    ...(pinned ? { pinned } : {}),
   };
+}
+
+/** Закреплённые по осям, которые спрашивали; не-строки и пустые отброшены. */
+function pinnedOf(raw: unknown, axes: Readonly<Record<string, string>>): Record<string, string[]> | undefined {
+  const row = obj(raw);
+  const out: Record<string, string[]> = {};
+  for (const [axis, key] of Object.entries(axes)) {
+    const v = row[axis];
+    if (!Array.isArray(v)) continue;
+    const vals = v.filter((x): x is string => typeof x === 'string' && x.length > 0);
+    if (vals.length) out[key] = vals;
+  }
+  return Object.keys(out).length ? out : undefined;
 }

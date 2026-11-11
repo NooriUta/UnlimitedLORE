@@ -10,6 +10,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useUrlParam } from '@seidr/kit';
 import { AgentProjectsPanel } from './AccessBlocks';
+import { RotatePanel } from './KcDanger';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
@@ -87,6 +88,8 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                       <td colSpan={6}>
                         <AgentWhyLine row={r} />
                         <MachineEditor row={r} fetchImpl={fetchImpl} onSaved={res.reload} />
+                        {/* S7B-03: ротация секрета — дифф → ввод clientId → секрет один раз; отменить нельзя. */}
+                        <RotatePanel clientId={r.client_id} fetchImpl={fetchImpl} />
                         <AgentProjectsPanel clientId={r.client_id} agentScope={r.agent_role}
                           ownerName={r.owner_display_name} fetchImpl={fetchImpl} />
                       </td>

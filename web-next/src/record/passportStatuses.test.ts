@@ -93,3 +93,29 @@ describe('S4-STATUS-AXIS-CONFIG · статусы паспорта — цикл 
     expect(r.notes.join(' ')).toMatch(/цвет|значок/i);
   });
 });
+
+// S4-35 / ADR-LORE-049: вместе с циклом статусов из той же модели берётся
+// показ колонок типа — `types.<тип>.fields[].display`. kit его разбирал и
+// никто не применял.
+describe('S4-35 · показ колонок типа из модели', () => {
+  const withTypes = {
+    ...model({ sprint: { entries: TASK_CYCLE } }),
+    types: { sprint: { label: 'Спринт', fields: [
+      { key: 'release', label: 'Релиз', kind: 'ref', visibility: 'visible', display: { priority: 4, width: 's', overflow: 'none' } },
+      { key: 'goal', label: 'Цель', kind: 'text', visibility: 'visible', display: { priority: 2, width: 'm', overflow: 'ellipsis' } },
+    ] } },
+  };
+
+  it('display типа приходит вместе со статусами', async () => {
+    const r = await fetchTypeStatuses('sprint', { fetchImpl: net(withTypes) });
+    expect(r.display).toEqual({
+      release: { priority: 4, width: 's', overflow: 'none' },
+      goal: { priority: 2, width: 'm', overflow: 'ellipsis' },
+    });
+  });
+
+  it('положительный контроль: в модели нет типов — display нет, а не пустой объект', async () => {
+    const r = await fetchTypeStatuses('sprint', { fetchImpl: net(model({ sprint: { entries: TASK_CYCLE } })) });
+    expect(r.display).toBeUndefined();
+  });
+});

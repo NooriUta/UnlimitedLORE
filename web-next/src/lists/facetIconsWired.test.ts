@@ -43,16 +43,27 @@ describe('S4-05 · имена полей фасетов — из одного м
   });
 
   it('фасеты ADR — тоже из общего набора', () => {
-    expect(adrFilters()).toEqual(['status', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project]);
+    expect(adrFilters()).toEqual(['status', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, TAGS]);
   });
 
-  it('у каждого фасета, кроме статуса, есть иконка значения', () => {
+  it('у каждого фасета, кроме статуса и тегов, есть иконка значения', () => {
     for (const key of [...sprintFilters(), ...adrFilters()]) {
-      if (key === 'status') continue;
+      if (NO_ICON.has(key)) continue;
       expect(loreValueIcon(key, 'какое-то-значение'), `${key}: иконки нет`).not.toBeNull();
     }
   });
+
+  // Решение владелицы 11.11.2026 (SPRINT_UXR_S9_SCALE_OPT/S9-03, вариант «в»):
+  // у значения тега иконки нет. В v1 её не было, а выдумывать нельзя (S4-25).
+  // Исключение названо здесь, а не заглушено общим «пропустить, если нет».
+  it('тег — без иконки по решению владелицы, и это ровно одно исключение', () => {
+    expect(loreValueIcon(TAGS, 'ux')).toBeNull();
+    expect([...NO_ICON]).toEqual(['status', TAGS]);
+  });
 });
+
+const TAGS = 'fields.tags';
+const NO_ICON = new Set(['status', TAGS]);
 
 describe('S4-25 · иконка находится по обоим написаниям ключа', () => {
   it('фасет зовёт поле «fields.release», колонка — «release»; иконка одна и та же', () => {

@@ -26,6 +26,11 @@ export interface TypeStatuses {
   items: KitConfig['statuses']['items'];
   /** Что случилось — словами, на экран. Пусто — говорить нечего. */
   notes: string[];
+  /**
+   * S4-35 / ADR-LORE-049: показ полей типа в колонках (приоритет, ширина,
+   * переполнение) из той же модели. Нет в модели — поля нет, а не пустой объект.
+   */
+  display?: Record<string, { priority: number; width: string; overflow: string }>;
 }
 
 export interface TypeStatusesOptions {
@@ -60,13 +65,16 @@ export async function fetchTypeStatuses(type: string, opts: TypeStatusesOptions 
   // Имя словаря — это имя ТИПА: предметное имя даёт приложение, генератор kit
   // предметных имён не знает (K-14).
   const parsed = configFromModel(res.model, { statusDict: type });
+  const typeDisplay = parsed.display[type];
   if (parsed.statuses.length === 0) {
     return {
       items: [],
       notes: [...notes, `статусы — умолчание приложения: в модели нет цикла для типа «${type}»`],
+      ...(typeDisplay ? { display: typeDisplay } : {}),
     };
   }
   // Берём только замечания ПРО СТАТУСЫ: потребителю цикла незачем читать
   // жалобы про разделы types, которыми он не пользуется.
-  return { items: parsed.statuses, notes: [...notes, ...parsed.notes.statuses] };
+  const display = parsed.display[type];
+  return { items: parsed.statuses, notes: [...notes, ...parsed.notes.statuses], ...(display ? { display } : {}) };
 }

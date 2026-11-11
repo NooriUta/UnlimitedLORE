@@ -5356,6 +5356,10 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-news__time.is-none { font-family: inherit; color: var(--t3); font-style: italic; }
 .sk-news__utc { font-family: var(--mono); color: var(--t3); }
 .sk-news__proj { color: var(--t2); }
+/* П24 (владелица 10.11): автор, спринт задачи, ADR решения — ссылкой, если есть паспорт. */
+.sk-news__ref { display: inline-flex; align-items: center; gap: 3px; color: var(--inf); font: var(--fs-2xs) var(--mono); text-decoration: none; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-news__ref:hover, .sk-news__ref:focus-visible { text-decoration: underline; }
+.sk-news__ref.is-static { color: var(--t2); }
 .sk-news__status { display: inline-flex; align-items: center; gap: 2px; font-family: var(--mono); color: var(--t2); }
 /* Владелица 09.11: код — ссылка, статусы — значками, «скопировать» рядом с кодом. */
 .sk-news__code { padding: 0 6px; border: 1px solid var(--bd); border-radius: 999px; color: var(--acc); font: 600 var(--fs-2xs) var(--mono); text-decoration: none; }
@@ -5987,4 +5991,23 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* S4-35 / ADR-LORE-049: показ колонки по модели. Ширина — по шагу содержимого,
+   при сужении первой уходит наименее важная колонка (p4 → p3 → p2); p1 —
+   «запись» и статус — не прячется никогда, поэтому класса у неё нет. */
+.sk-list__th[data-w='xs'], .sk-list__td[data-w='xs'] { width: 64px; }
+.sk-list__th[data-w='s'], .sk-list__td[data-w='s'] { width: 104px; }
+.sk-list__th[data-w='m'], .sk-list__td[data-w='m'] { width: 168px; }
+.sk-list__th[data-w='l'], .sk-list__td[data-w='l'] { width: 240px; }
+.sk-list__ellip { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.sk-list__ellip[data-open='true'] { white-space: normal; overflow: visible; }
+@media (max-width: 1280px) {
+  .sk-list__p4 { display: none; }
+}
+@media (max-width: 1100px) {
+  .sk-list__p3 { display: none; }
+}
+@media (max-width: 900px) {
+  .sk-list__p2 { display: none; }
 }
