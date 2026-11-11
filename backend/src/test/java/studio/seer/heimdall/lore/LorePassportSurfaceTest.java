@@ -224,7 +224,9 @@ class LorePassportSurfaceTest {
 
     @Test
     void sprint() {
-        assertEquals(List.of("tasks", "content", "adrs", "Связи[dependsOn+blocks]", "questions", "phases"), tabs("sprint"),
+        assertEquals(List.of("tasks", "content", "adrs", "Связи[dependsOn+blocks]", "questions", "phases",
+            // 11.11 (полнота модели рёбер): новые разделы — после решённых 43а.
+            "docs", "Ссылки[refsOut+refsIn]", "publications"), tabs("sprint"),
             "спринт: Задачи · Контент · ADR · Связи · Вопросы · Фазы (43а)");
         assertEquals(List.of(), keysIn(sections("sprint"), "content"), "зависимости спринта переехали во вкладку «Связи»");
     }
@@ -236,31 +238,32 @@ class LorePassportSurfaceTest {
 
     @Test
     void decision() {
-        assertEquals(List.of("content", "answers", "supersedes"), tabs("decision"),
+        assertEquals(List.of("content", "answers", "supersedes", "supersededBy", "useCases", "Ссылки[refsOut+refsIn]"),
+            tabs("decision"),
             "решение: Текст · Вопросы · Замены (44а); родительский ADR — в шапке");
     }
 
     @Test
     void question() {
-        assertEquals(List.of("content", "answeredBy", "gates"), tabs("question"),
+        assertEquals(List.of("content", "answeredBy", "gates", "Ссылки[refsOut+refsIn]"), tabs("question"),
             "вопрос: Текст · Ответ · Блокирует задачи (44а)");
     }
 
     @Test
     void milestone() {
-        assertEquals(List.of("sprints", "content"), tabs("milestone"),
+        assertEquals(List.of("sprints", "features", "content"), tabs("milestone"),
             "веха — контейнер: спринты первыми (45а); решения вехи — поле тела, читаются в конце текста");
     }
 
     @Test
     void release() {
-        assertEquals(List.of("content", "sprints", "prs"), tabs("release"), "релиз: Описание · Спринты · PR (44а)");
+        assertEquals(List.of("content", "sprints", "prs", "adrs", "publications", "Ссылки[refsOut+refsIn]"), tabs("release"), "релиз: Описание · Спринты · PR (44а)");
     }
 
     @Test
     void component() {
         assertEquals(List.of("specs", "adrs", "tech", "children", "decisions", "questions", "features", "docs", "qgs",
-                "tasks", "sprints"), tabs("component"),
+                "tasks", "sprints", "Ссылки[refsOut+refsIn]"), tabs("component"),
             "компонент: Спеки · ADR · Технологии · Подкомпоненты (46а/52а) · решения, вопросы, сценарии, знания, гейты "
                 + "(11.11, как v1) · Задачи · Спринты (срезы с пагинацией, S4-29)");
     }
@@ -273,12 +276,15 @@ class LorePassportSurfaceTest {
 
     @Test
     void tech() {
-        assertEquals(List.of("content"), tabs("tech"));
+        assertEquals(List.of("content", "Ссылки[refsOut+refsIn]"), tabs("tech"));
     }
 
     @Test
     void feature() {
-        assertEquals(List.of("content", "children", "tasks", "Ценность[actors+pains+gains+jobs]"), tabs("feature"),
+        assertEquals(List.of("content", "children", "tasks", "Ценность[actors+pains+gains+jobs+relieves+delivers+performs]",
+                "Обоснование[adrs+decisions]", "milestones",
+                "Связи сценариев[buildsOn+builtOnBy+includes+includedBy+extends+extendedBy]", "Ссылки[refsOut+refsIn]"),
+            tabs("feature"),
             "фича: Текст · Сценарии · Задачи · Ценность");
     }
 }

@@ -78,18 +78,24 @@ class LoreRecordRowLinksTest {
     void everyNewLinkTabIsFilledFromTheRow() {
         List<String> x = List.of("x");
         Map<String, Map<String, Object>> full = Map.ofEntries(
-            Map.entry("decision", Map.of("supersedes_ids", x, "answers_ids", x)),
+            Map.entry("decision", Map.of("supersedes_ids", x, "answers_ids", x,
+                "superseded_by_ids", x, "traced_by_ucs", x)),
             Map.entry("question", Map.of("answered_by", x, "gating_tasks", x)),
-            Map.entry("milestone", Map.of("direct_sprint_ids", x)),
+            Map.entry("milestone", Map.of("direct_sprint_ids", x, "feature_ids", x)),
             Map.entry("component", Map.of("specs", List.of("x", "SPEC-TECH-X-JAVA"), "adrs", x, "tech", x,
                 "sub_components", x, "decisions", x, "questions", x, "features", x, "docs", x, "qgs", x)),
-            Map.entry("feature", Map.of("child_uc_ids", x, "task_uids", x, "actor_ids", x,
-                "pain_ids", x, "gain_ids", x, "job_ids", x)),
-            Map.entry("sprint", Map.of("depends_on", x, "blocks", x, "adr_ids", x)),
+            Map.entry("feature", Map.ofEntries(Map.entry("child_uc_ids", x), Map.entry("task_uids", x),
+                Map.entry("actor_ids", x), Map.entry("pain_ids", x), Map.entry("gain_ids", x), Map.entry("job_ids", x),
+                // 11.11 (полнота модели рёбер)
+                Map.entry("relieved_pain_ids", x), Map.entry("delivered_gain_ids", x), Map.entry("performed_job_ids", x),
+                Map.entry("traced_adrs", x), Map.entry("traced_decisions", x), Map.entry("milestone_ids", x),
+                Map.entry("builds_on_ids", x), Map.entry("built_on_by_ids", x), Map.entry("includes_ids", x),
+                Map.entry("included_by_ids", x), Map.entry("extends_ids", x), Map.entry("extended_by_ids", x))),
+            Map.entry("sprint", Map.of("depends_on", x, "blocks", x, "adr_ids", x, "doc_ids", x)),
             Map.entry("task", Map.of("closed_by_prs", x, "realizes_uc", x)),
             Map.entry("adr", Map.of("depends_on_ids", x, "blocks_ids", x, "supersedes_ids", x, "superseded_by_ids", x,
                 "implemented_in_ids", x, "release_ids", x, "justified_task_uids", x, "traced_by_ucs", x)),
-            Map.entry("spec", Map.of()), Map.entry("release", Map.of()), Map.entry("tech", Map.of()),
+            Map.entry("spec", Map.of()), Map.entry("release", Map.of("adr_ids", x)), Map.entry("tech", Map.of()),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()));
         assertEquals(Set.copyOf(LoreRecordRegistry.TYPES), full.keySet(), "проверены все типы паспорта");
@@ -131,6 +137,8 @@ class LoreRecordRowLinksTest {
             assertEquals("error", m.get("state"), "не проверено ≠ пусто");
             assertNotNull(m.get("reason"));
         }
-        assertTrue(LoreRecordValues.unreadState("decision").isEmpty());
+        // 11.11: у решения теперь объявлены «Ссылки» (REFERENCES) без среза — полностью прочитанный
+        // тип для этой проверки — веха.
+        assertTrue(LoreRecordValues.unreadState("milestone").isEmpty());
     }
 }

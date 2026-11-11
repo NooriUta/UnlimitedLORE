@@ -52,7 +52,7 @@ class LoreRecordRegistryTest {
             "REALIZES:out=realization", "JUSTIFIED_BY:out=realization", "PROMOTED_TO:in=realization",
             "LED_TO:in=realization", "GATES:in=association", "REFERENCES:out=association",
             "REFERENCES:in=association", "PRODUCED_BY:in=association", "RAISED_IN:in=aggregation",
-            "HAS_STATE:out=composition", "ATTACHED_TO:in=composition");
+            "HAS_STATE:out=composition", "ATTACHED_TO:out=composition");
         assertEquals(new java.util.TreeSet<>(want), relations("task"));
     }
 
@@ -66,7 +66,7 @@ class LoreRecordRegistryTest {
             "BELONGS_TO:out=attribute", "BELONGS_TO_PROJECT:out=attribute", "TAGGED_WITH:out=attribute",
             "IMPLEMENTED_IN:out=realization", "IMPLEMENTED_IN_RELEASE:out=realization",
             "JUSTIFIED_BY:in=realization", "TRACED_TO:in=realization", "LED_TO:in=realization",
-            "HAS_STATE:out=composition", "ATTACHED_TO:in=composition");
+            "HAS_STATE:out=composition", "ATTACHED_TO:out=composition");
         assertEquals(new java.util.TreeSet<>(want), relations("adr"));
     }
 
@@ -75,7 +75,7 @@ class LoreRecordRegistryTest {
         Set<String> want = Set.of(
             "DOCUMENTED_IN:in=attribute", "BELONGS_TO:out=attribute", "BELONGS_TO_PROJECT:out=attribute",
             "REFERENCES:out=association", "REFERENCES:in=association",
-            "HAS_STATE:out=composition", "ATTACHED_TO:in=composition");
+            "HAS_STATE:out=composition", "ATTACHED_TO:out=composition");
         assertEquals(new java.util.TreeSet<>(want), relations("spec"));
         assertTrue(def("spec").parts().isEmpty(), "у спеки нет parts (документ: «всё, кроме текста и Истории, — props и Зависимости»)");
     }

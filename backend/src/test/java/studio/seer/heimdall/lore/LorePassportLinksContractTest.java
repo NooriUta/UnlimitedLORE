@@ -47,7 +47,159 @@ class LorePassportLinksContractTest {
         new Fact("tech", "BELONGS_TO", "component", "LoreResourceBase.syncSpecComponent (SPEC-TECH-…)"),
         new Fact("component", "DOCUMENTED_IN", "tech", "LoreResourceBase.relinkSpecComponentEdge (SPEC-TECH-…)"),
         new Fact("component", "PARENT_OF", "component", "LoreResourceBase (ребёнок → родитель, parent_id)"),
-        new Fact("component", "USES", "tech_ref", "LoreTechnology по tech_id (стек компонента)"));
+        new Fact("component", "USES", "tech_ref", "LoreTechnology по tech_id (стек компонента)"),
+
+        // ── Полная карта (слово владелицы 11.11: «все типы связей описаны в модели и попадают
+        //    в паспорта»). Каждое ребро схемы — здесь фактом с концами и местом записи, либо в
+        //    SERVICE. Рёбра из LoreLinkTypes.PAIRS здесь не повторяются.
+        // работа и план
+        new Fact("sprint", "DEPENDS_ON", "sprint", "LoreSprintTaskResource sprint_link(rel:dep)"),
+        new Fact("adr", "SUPERSEDES", "adr", "LoreAdrResource adr_new/adr_link supersedes_ids"),
+        new Fact("decision", "SUPERSEDES", "decision", "пути записи в коде нет — наследие; читается срезом decision"),
+        new Fact("decision", "ANSWERS", "question", "LoreQuestionResource question_link(rel:answer)"),
+        new Fact("question", "GATES", "task", "LoreQuestionResource question_link(rel:gates)"),
+        new Fact("task", "PART_OF", "sprint", "LoreSprintTaskResource task_new / task_mv"),
+        new Fact("phase", "PART_OF", "sprint", "LoreSprintTaskResource sprint_phase_new"),
+        new Fact("task", "IN_PHASE", "phase", "LoreSprintTaskResource task_new / task_link(phase)"),
+        new Fact("task", "CLOSED_BY", "pr", "LoreSprintTaskResource task_link(pr)"),
+        new Fact("file", "EDITED_IN", "task", "LoreSprintTaskResource task_link(files)"),
+        new Fact("sprint", "IMPLEMENTED_IN_RELEASE", "release", "LoreReleaseResource release_link, LoreForgejoResource"),
+        new Fact("pr", "SHIPPED_IN", "release", "LoreReleaseResource release_link, LoreForgejoResource"),
+        new Fact("sprint", "TARGETS_MILESTONE", "milestone", "LoreMilestoneResource milestone_link / sprint_link"),
+        new Fact("use_case", "TARGETS_MILESTONE", "milestone", "LoreProductResource feature_link(rel:milestone)"),
+        new Fact("use_case", "DECOMPOSES_INTO", "use_case", "LoreProductResource uc_new (родитель → сценарий)"),
+        // ADR ↔ компонент пишет и ingest (LoreIngestService), то же ребро, что adr_new.
+        // Легаси: NM-02 достроил BELONGS_TO задачам по полю component_id (канон задачи — TAGGED_WITH).
+        new Fact("task", "BELONGS_TO", "component", "LoreSchemaMigrationRunner NM-02 (COMPONENT_FIELD_TYPES, легаси)"),
+        new Fact("qg_job", "BELONGS_TO", "component", "LoreSchemaMigrationRunner NM-07"),
+        new Fact("qg_recommendation", "BELONGS_TO", "component", "LoreSchemaMigrationRunner NM-07"),
+        // теги
+        new Fact("adr", "TAGGED_WITH", "tag", "LoreAdrResource adr_new tags"),
+        new Fact("decision", "TAGGED_WITH", "tag", "LoreDecisionResource decision_new tags"),
+        new Fact("use_case", "TAGGED_WITH", "tag", "LoreSchemaMigrationRunner (перенос KnowFeature → KnowUseCase, легаси)"),
+        // QG и BRAGI
+        new Fact("qg_recommendation", "PROMOTED_TO", "task", "LoreQgResource rec_promote"),
+        new Fact("qg", "YIELDED", "qg_job", "LoreQgResource qg_job_new"),
+        new Fact("qg_job", "PRODUCED", "qg_recommendation", "LoreQgResource rec_new"),
+        new Fact("qg", "MEASURED_BY", "qg_metric", "LoreIngestService (метрики гейта)"),
+        new Fact("insight", "LED_TO", "task", "LoreBragiResource insight_link"),
+        new Fact("insight", "LED_TO", "adr", "LoreBragiResource insight_link"),
+        new Fact("publication", "PRODUCED_BY", "task", "LoreBragiResource bragi_link (публикация или её вариант)"),
+        new Fact("publication", "PRODUCED_BY", "sprint", "LoreBragiResource bragi_link (публикация или её вариант)"),
+        new Fact("publication", "SHIPPED_IN", "release", "LoreBragiResource bragi_link (публикация или её вариант)"),
+        new Fact("publication", "HAS_VARIANT", "variant", "LoreBragiResource bragi_variant_new"),
+        new Fact("variant", "IN_CHANNEL", "channel", "LoreBragiResource bragi_variant_new"),
+        new Fact("variant", "HAS_ASSET", "bragi_asset", "LoreBragiResource bragi_asset_attach"),
+        new Fact("publication", "HAS_ASSET", "bragi_asset", "LoreBragiResource bragi_asset_attach"),
+        new Fact("publication", "TARGETS_KEY", "keyword", "LoreBragiResource bragi_pub_new"),
+        new Fact("keyword", "TARGETS_PAGE", "page", "LoreBragiResource bragi_keyword_set"),
+        new Fact("campaign", "FOR_VARIANT", "variant", "LoreBragiResource bragi_campaign_new"),
+        new Fact("publication", "IN_RUBRIC", "rubric", "LoreBragiResource bragi_rubric_set"),
+        new Fact("keyword", "IN_RUBRIC", "rubric", "LoreBragiResource bragi_rubric_set"),
+        // знания
+        new Fact("doc", "DOC_CHILD_OF", "doc", "LoreDocResource doc_new parent_doc_id"),
+        // продукт, область
+        new Fact("component", "IN_AREA", "area", "LoreResourceBase.relinkAreaEdge"),
+        new Fact("component", "IN_PRODUCT", "product", "LoreProductAxisResource product_link(rel:component)"),
+        new Fact("product", "PARENT_PRODUCT", "product", "LoreProductAxisResource product_link(rel:parent)"),
+        new Fact("product", "SERVES", "product", "LoreProductAxisResource product_link(rel:serves)"),
+        new Fact("milestone", "TARGETS_PRODUCT", "product", "LoreMilestoneResource milestone_product"),
+        // проект
+        new Fact("sprint", "BELONGS_TO_PROJECT", "project", "LoreSprintTaskResource sprint_new / sprint_link"),
+        new Fact("adr", "BELONGS_TO_PROJECT", "project", "LoreAdrResource adr_link(project)"),
+        new Fact("release", "BELONGS_TO_PROJECT", "project", "LoreReleaseResource release_new"),
+        new Fact("spec", "BELONGS_TO_PROJECT", "project", "LoreSpecResource spec_link(rel:project)"),
+        new Fact("decision", "BELONGS_TO_PROJECT", "project", "LoreDecisionResource decision_new / decision_link"),
+        new Fact("question", "BELONGS_TO_PROJECT", "project", "LoreQuestionResource question_link(project)"),
+        new Fact("use_case", "BELONGS_TO_PROJECT", "project", "LoreProductResource uc_link(rel:project)"),
+        new Fact("doc", "BELONGS_TO_PROJECT", "project", "LoreDocResource doc_link(project)"),
+        new Fact("runbook", "BELONGS_TO_PROJECT", "project", "LoreRunbookResource runbook_link(project)"),
+        new Fact("actor", "BELONGS_TO_PROJECT", "project", "LoreProductResource actor_new (KnowProjectActor)"),
+        new Fact("agent", "BELONGS_TO_PROJECT", "project", "LoreProductResource project_actor_new (KnowActor)"),
+        new Fact("file", "BELONGS_TO_PROJECT", "project", "LoreSprintTaskResource task_link(files)"),
+        new Fact("pr", "BELONGS_TO_PROJECT", "project", "LoreReleaseResource (PR релиза)"),
+        new Fact("component", "BELONGS_TO_PROJECT", "project", "scripts/backfill-component-project.js (по спринтам)"),
+        new Fact("user", "HAS_PROJECT_ROLE", "project", "LoreProjectResource / LoreUserResource project_role_set"),
+        // «упоминает» — между любыми сущностями каталога (LoreLinkTypes.ENTITIES): /lore/link/mention,
+        // автосвязи по упоминанию, холст. Конец «any» — каждый тип паспорта из каталога.
+        new Fact("any", "REFERENCES", "any", "LoreLinkResource /lore/link/mention, LoreMentionAutoLink, LoreCanvasResource"),
+        // Служебные (SERVICE) — фактами, чтобы сторожить направление там, где паспорт их объявляет.
+        new Fact("sprint", "HAS_STATE", "hist", "StatusHistoryService (строка SCD2)"),
+        new Fact("task", "HAS_STATE", "hist", "StatusHistoryService (строка SCD2)"),
+        new Fact("adr", "HAS_STATE", "hist", "StatusHistoryService (строка SCD2)"),
+        new Fact("spec", "HAS_STATE", "hist", "StatusHistoryService (строка SCD2)"),
+        new Fact("sprint", "ATTACHED_TO", "asset", "LoreAssetResource asset_up (сущность → KnowAsset)"),
+        new Fact("task", "ATTACHED_TO", "asset", "LoreAssetResource asset_up (сущность → KnowAsset)"),
+        new Fact("adr", "ATTACHED_TO", "asset", "LoreAssetResource asset_up (сущность → KnowAsset)"),
+        new Fact("spec", "ATTACHED_TO", "asset", "LoreAssetResource asset_up (сущность → KnowAsset)"),
+        new Fact("task", "ROLE_HELD_BY", "agent", "TaskRoleService (роль задачи → KnowActor)"),
+        new Fact("task", "ROLE_HELD_BY", "user", "TaskRoleService (роль задачи → KnowUser)"),
+        new Fact("agent", "OWNED_BY", "user", "LoreProductResource project_actor_new"),
+        new Fact("agent", "FILLS_ROLE", "actor", "LoreProductResource actor_link(rel:fills_role)"),
+        new Fact("agent", "USES_MACHINE", "machine", "AgentMachine"),
+        new Fact("user", "MACHINE_ACCESS", "agent", "LoreUserResource"),
+        new Fact("agent_session", "LOGGED_BY", "agent", "LoreProductResource agent_session_log"));
+
+    /**
+     * Исход «в»: ребро служебное или структурное — в паспорте связью не показывается (или
+     * показывается не связью). Ребро → причина. Концы у таких рёбер не сверяются, направление —
+     * сверяется, если факт есть.
+     */
+    static final Map<String, String> SERVICE = Map.ofEntries(
+        Map.entry("E", "базовый тип рёбер схемы (EXTENDS E) — экземпляров нет"),
+        Map.entry("HAS_STATE", "строка истории SCD2 — раздел «История», а не связь"),
+        Map.entry("HAS_STATUS", "легаси: словарь статусов у KnowADRHist, снят V51; пути записи нет"),
+        Map.entry("ATTACHED_TO", "вложения тела (MinIO) — показываются в тексте MD, а не связью"),
+        Map.entry("ROLE_HELD_BY", "роли задачи — поля автор/исполнитель/принимающий (выбор из task_identities)"),
+        Map.entry("OWNED_BY", "личность: агент → его владелец (права, AL-104)"),
+        Map.entry("FILLS_ROLE", "личность: агент → роль продукта (профиль клиента)"),
+        Map.entry("USES_MACHINE", "личность: агент → машина (miniLORE)"),
+        Map.entry("MACHINE_ACCESS", "права: человек → доступ к машине miniLORE"),
+        Map.entry("LOGGED_BY", "журнал сессий агентов"),
+        Map.entry("ClRoutineHasOutput", "журнал рутин (ClRoutine*); пути записи в коде нет"),
+        Map.entry("ON_MILESTONE", "конфиг плана (контрольные точки, срез plan_checkpoints); пути записи в коде нет"),
+        Map.entry("OF_TYPE", "конфиг плана (тип трека, срез plan_tracks); пути записи в коде нет"),
+        Map.entry("CHANGED_IN", "объявлено DDL, ни записи, ни чтения в коде нет"),
+        Map.entry("FORMALIZED_AS", "объявлено DDL, ни записи, ни чтения в коде нет"),
+        Map.entry("INCLUDES", "объявлено DDL, ни записи, ни чтения в коде нет (сценарии — UC_INCLUDES)"),
+        Map.entry("RELEASED_IN", "объявлено DDL, ни записи, ни чтения в коде нет (релиз — IMPLEMENTED_IN_RELEASE)"),
+        Map.entry("VALIDATES", "объявлено DDL, ни записи, ни чтения в коде нет"));
+
+    /**
+     * Сущности графа без паспорта v2: их конец ребра не показывается — причина здесь, одна на
+     * сущность. Конец с паспортом при этом сверяется как обычно.
+     */
+    static final Map<String, String> NO_PASSPORT = Map.ofEntries(
+        Map.entry("doc", "у документа нет паспорта v2 (TYPES) — показывает сторона с паспортом"),
+        Map.entry("runbook", "у ранбука нет паспорта v2"),
+        Map.entry("qg", "у гейта качества нет паспорта v2"),
+        Map.entry("qg_job", "прогон гейта — служебная запись QG"),
+        Map.entry("qg_recommendation", "рекомендация QG — служебная запись прогона"),
+        Map.entry("qg_metric", "метрика гейта — служебная запись QG"),
+        Map.entry("pain", "профиль клиента (VP-канва) — без паспорта v2"),
+        Map.entry("gain", "профиль клиента (VP-канва) — без паспорта v2"),
+        Map.entry("job", "профиль клиента (VP-канва) — без паспорта v2"),
+        Map.entry("actor", "роль продукта KnowProjectActor — без паспорта v2"),
+        Map.entry("agent", "личность агента KnowActor — без паспорта v2"),
+        Map.entry("user", "личность человека KnowUser — без паспорта v2"),
+        Map.entry("pr", "PR — внешняя запись Forgejo, без паспорта"),
+        Map.entry("file", "файл репозитория — без паспорта"),
+        Map.entry("phase", "фаза — только ребёнок спринта (CHILD_ONLY)"),
+        Map.entry("tag", "тег — справочник"),
+        Map.entry("area", "область — словарь (KnowDictEntry area)"),
+        Map.entry("product", "продукт — словарь (KnowDictEntry product), паспорта нет"),
+        Map.entry("tech_ref", "LoreTechnology — метка стека (tech_id), не паспорт"),
+        Map.entry("insight", "инсайт BRAGI — без паспорта v2"),
+        Map.entry("publication", "публикация BRAGI — без паспорта v2"),
+        Map.entry("variant", "вариант публикации BRAGI"),
+        Map.entry("channel", "канал BRAGI"),
+        Map.entry("bragi_asset", "ассет BRAGI"),
+        Map.entry("keyword", "ключ BRAGI"),
+        Map.entry("page", "страница BRAGI"),
+        Map.entry("campaign", "кампания BRAGI"),
+        Map.entry("rubric", "рубрика BRAGI"));
+    // Концы только служебных рёбер (hist, asset, machine, agent_session) здесь не нужны:
+    // концы рёбер SERVICE не сверяются, и причина без случая считалась бы протухшей.
 
     /**
      * Тип паспорта → тип сущности в каталоге рёбер ({@link LoreLinkTypes#ENTITIES}, {@link #GRAPH}).
@@ -61,12 +213,33 @@ class LorePassportLinksContractTest {
      * Пропуски, которые сделаны НАМЕРЕННО: «тип|ребро|сторона» → причина. Сторона — тип паспорта,
      * который ребро не показывает.
      */
-    static final Map<String, String> NOT_SHOWN = Map.of(
-        "doc|BELONGS_TO|doc", "у документа нет паспорта v2 (TYPES) — показывает только сторона компонента",
-        "qg|BELONGS_TO|qg", "у гейта качества нет паспорта v2 — показывает только сторона компонента",
-        "component|USES|tech_ref", "LoreTechnology — метка стека (tech_id), не паспорт; у компонента — полем «Технологии»",
-        "spec|BELONGS_TO|component", LorePassportLinksContractTest.ALIAS,
-        "tech|BELONGS_TO|component", LorePassportLinksContractTest.ALIAS);
+    static final Map<String, String> NOT_SHOWN = Map.ofEntries(
+        Map.entry("spec|BELONGS_TO|component", LorePassportLinksContractTest.ALIAS),
+        Map.entry("tech|BELONGS_TO|component", LorePassportLinksContractTest.ALIAS),
+        // Легаси NM-02: задачам достроено BELONGS_TO по полю component_id, а канон задачи — TAGGED_WITH
+        // (паспорт задачи, component_tasks, граф). Показать второе ребро — задвоить компонент.
+        Map.entry("task|BELONGS_TO|task", "легаси NM-02; компонент задачи — TAGGED_WITH (поле «Компоненты»)"),
+        Map.entry("task|BELONGS_TO|component", "легаси NM-02; задачи компонента — вкладка tasks по TAGGED_WITH"),
+        Map.entry("qg_job|BELONGS_TO|component", "прогон гейта — служебная запись; на компоненте виден гейт (вкладка qgs)"),
+        Map.entry("qg_recommendation|BELONGS_TO|component", "рекомендация QG — служебная; на компоненте виден гейт (вкладка qgs)"),
+        Map.entry("use_case|TAGGED_WITH|use_case", "легаси переноса KnowFeature: пути записи тегов у фичи нет"),
+        // Проект: вкладки решены владелицей (53а) — Спринты · Компоненты · ADR · Релизы · Люди и агенты.
+        // Принадлежность остальных записей проекту видна на их паспортах полем «Проекты».
+        Map.entry("spec|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
+        Map.entry("decision|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
+        Map.entry("question|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
+        Map.entry("use_case|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
+        Map.entry("doc|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
+        Map.entry("runbook|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
+        Map.entry("actor|BELONGS_TO_PROJECT|project", LorePassportLinksContractTest.PROJECT_53A),
+        Map.entry("agent|BELONGS_TO_PROJECT|project", "агенты проекта — вкладка agents через владельца (OWNED_BY → HAS_PROJECT_ROLE, AL-104)"),
+        Map.entry("file|BELONGS_TO_PROJECT|project", "файл — служебная запись EDITED_IN; виден у задачи"),
+        Map.entry("pr|BELONGS_TO_PROJECT|project", "PR виден у задачи (CLOSED_BY) и релиза (SHIPPED_IN)"),
+        Map.entry("component|BELONGS_TO_PROJECT|component",
+            "проекты компонента — чипы через его спринты (git_projects); прямое ребро ставит только бэкфилл по тем же спринтам"));
+
+    static final String PROJECT_53A =
+        "вкладки проекта решены владелицей (53а); принадлежность видна полем «Проекты» на паспорте записи";
 
     /**
      * Спека/технология ↔ компонент — один факт, два ребра (syncSpecComponent ставит оба). Компонент
@@ -251,49 +424,178 @@ class LorePassportLinksContractTest {
 
     // ── 4. Компонент и технология — с обеих сторон ───────────────────────────
 
+    /** Объявлена ли связь: ребро, сторона и тип цели; цель «any» у связи покрывает любую. */
     private static boolean declares(String passportType, String edge, String dir, String target) {
         LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(passportType);
         if (d == null) return false;
         for (LoreRecordRegistry.Relation r : d.relations())
-            if (r.rel().equals(edge) && r.dir().equals(dir) && r.targetType().equals(target)) return true;
+            if (r.rel().equals(edge) && r.dir().equals(dir)
+                && (r.targetType().equals(target) || "any".equals(r.targetType()))) return true;
         return false;
     }
 
-    /** Типы паспорта, которые стоят за сущностью графа. */
+    /**
+     * Типы паспорта, которые стоят за сущностью графа. «Технология» в графе — тоже KnowSpec, но
+     * факт spec ↔ … к паспорту tech не относится: у tech свои факты. «any» (REFERENCES) — каждый
+     * тип паспорта, чья сущность есть в каталоге {@link LoreLinkTypes#ENTITIES} (и tech — это KnowSpec).
+     */
     private static List<String> passportsOf(String entity) {
         List<String> out = new ArrayList<>();
-        for (String t : LoreRecordRegistry.TYPES) if (entityOf(t).equals(entity)) out.add(t);
+        if ("tech".equals(entity)) return List.of("tech");
+        for (String t : LoreRecordRegistry.TYPES) {
+            if ("any".equals(entity)) {
+                if (LoreLinkTypes.ENTITIES.containsKey(entityOf(t)) || "tech".equals(t)) out.add(t);
+            } else if (entityOf(t).equals(entity)) out.add(t);
+        }
         return out;
     }
 
-    @Test
-    void componentAndTechEdgesAreShownOnBothEnds() {
-        List<String> bad = new ArrayList<>();
-        Set<String> used = new LinkedHashSet<>();
+    /** Исход факта на одном конце: a — объявлено, b — исключение, «нет паспорта» — причина сущности. */
+    record EndOutcome(Fact fact, String side, String passport, String outcome, String note) {}
+
+    static List<EndOutcome> endOutcomes(List<String> bad, Set<String> usedNotShown, Set<String> usedNoPassport) {
+        List<EndOutcome> out = new ArrayList<>();
         for (Fact f : facts()) {
-            boolean touches = Set.of("component", "tech", "tech_ref").contains(f.from())
-                || Set.of("component", "tech", "tech_ref").contains(f.to());
-            if (!touches) continue;
-            // «Технология» в графе — тоже KnowSpec: факт spec ↔ component не относится к паспорту tech.
+            if (SERVICE.containsKey(f.edge())) continue;
             for (String[] end : new String[][]{{f.from(), "out", f.to()}, {f.to(), "in", f.from()}}) {
                 String side = end[0];
                 String otherPassport = "use_case".equals(end[2]) ? "feature" : end[2];
-                List<String> sides = "tech".equals(side) ? List.of("tech") : passportsOf(side);
+                List<String> sides = passportsOf(side);
                 String key = f.from() + "|" + f.edge() + "|" + side;
                 if (sides.isEmpty()) {
-                    if (NOT_SHOWN.containsKey(key)) used.add(key);
-                    else bad.add(key + ": у сущности " + side + " нет паспорта — нужно исключение с причиной");
+                    if (NO_PASSPORT.containsKey(side)) {
+                        usedNoPassport.add(side);
+                        out.add(new EndOutcome(f, side, null, "no_passport", NO_PASSPORT.get(side)));
+                    } else bad.add(key + ": у сущности " + side + " нет паспорта — нужна причина в NO_PASSPORT");
                     continue;
                 }
                 for (String p : sides) {
-                    if (declares(p, f.edge(), end[1], otherPassport)) continue;
-                    if (NOT_SHOWN.containsKey(key)) { used.add(key); continue; }
+                    // Цель «сценарий» реестр пишет и как feature (паспорт), и как use_case (task.useCases,
+                    // adr.useCases — тип ссылки из чтения): это одна вершина KnowUseCase.
+                    if (declares(p, f.edge(), end[1], otherPassport)
+                        || ("feature".equals(otherPassport) && declares(p, f.edge(), end[1], "use_case"))) {
+                        out.add(new EndOutcome(f, side, p, "a", null));
+                        continue;
+                    }
+                    if (NOT_SHOWN.containsKey(key)) {
+                        usedNotShown.add(key);
+                        out.add(new EndOutcome(f, side, p, "b", NOT_SHOWN.get(key)));
+                        continue;
+                    }
                     bad.add(p + ": не показывает " + f.edge() + "/" + end[1] + " → " + otherPassport + " (" + f.writtenBy() + ")");
                 }
             }
         }
+        return out;
+    }
+
+    /**
+     * Каждое ребро графа (кроме служебных) показано паспортом на каждом конце, у которого паспорт
+     * есть (исход а), либо пропуск назван в {@link #NOT_SHOWN} с причиной (исход б); конец без
+     * паспорта — с причиной в {@link #NO_PASSPORT}. Раньше тест проверял только рёбра к компоненту
+     * и технологии.
+     */
+    @Test
+    void everyGraphEdgeIsShownOnBothEndsOrExplained() {
+        List<String> bad = new ArrayList<>();
+        Set<String> used = new LinkedHashSet<>();
+        Set<String> usedNp = new LinkedHashSet<>();
+        endOutcomes(bad, used, usedNp);
+        assertEquals(List.of(), bad, "ребро есть в графе, а паспорт конца его не показывает и причины нет");
+        assertEquals(new java.util.TreeSet<>(NOT_SHOWN.keySet()), new java.util.TreeSet<>(used), "исключение без случая — протухло");
+        assertEquals(new java.util.TreeSet<>(NO_PASSPORT.keySet()), new java.util.TreeSet<>(usedNp), "причина «нет паспорта» без случая — протухла");
+        for (String e : NO_PASSPORT.keySet())
+            assertTrue(passportsOf(e).isEmpty(), e + ": паспорт появился — причина «нет паспорта» протухла");
+    }
+
+    // ── 4а. Полнота: каждое ребро схемы описано ─────────────────────────────
+
+    /**
+     * Каждый тип ребра схемы (DDL + миграции) описан: фактами с концами (исходы а/б) или в
+     * {@link #SERVICE} с причиной (исход в). Новое ребро без описания роняет CI.
+     */
+    @Test
+    void everySchemaEdgeIsDescribed() {
+        Set<String> withFacts = new LinkedHashSet<>();
+        for (Fact f : facts()) withFacts.add(f.edge());
+        List<String> bad = new ArrayList<>();
+        for (String e : schemaEdges())
+            if (!withFacts.contains(e) && !SERVICE.containsKey(e))
+                bad.add(e + ": в схеме есть, а концов (GRAPH/PAIRS) и причины «служебное» (SERVICE) нет");
+        assertEquals(List.of(), bad, "ребро схемы не описано в модели паспорта");
+        Set<String> known = new LinkedHashSet<>(schemaEdges());
+        known.addAll(UNDECLARED_EDGES.keySet());
+        for (String e : SERVICE.keySet()) assertTrue(known.contains(e), e + ": в SERVICE, но в схеме нет — протухло");
+        for (String e : withFacts) assertTrue(known.contains(e), e + ": факт графа, а в схеме ребра нет");
+        for (String r : SERVICE.values()) assertFalse(r.isBlank());
+    }
+
+    private static final Pattern CODE_CREATE_EDGE = Pattern.compile("CREATE\\s+EDGE\\s+([A-Z][A-Za-z_]+)\\b");
+    private static final Pattern CODE_TRAVERSE =
+        Pattern.compile("\\b(?:out|in|both|outE|inE|bothE)\\(\\s*((?:'[A-Za-z_]+'\\s*,?\\s*)+)\\)");
+    private static final Pattern QUOTED = Pattern.compile("'([A-Za-z_]+)'");
+
+    /**
+     * Рёбра, которые код пакета lore пишет ({@code CREATE EDGE X}) или обходит
+     * ({@code out('X')}, {@code inE('X')}…), есть в схеме. Иначе ребро живёт на проде без
+     * объявления (ArcadeDB заводит тип на первой записи) — и мимо проверки полноты выше.
+     */
+    @Test
+    void everyEdgeInCodeIsInSchema() throws java.io.IOException {
+        java.nio.file.Path dir = java.nio.file.Paths.get("src/main/java/studio/seer/heimdall/lore");
+        assertTrue(java.nio.file.Files.isDirectory(dir), "исходники пакета lore не найдены — проверка не выполнена: " + dir.toAbsolutePath());
+        Set<String> known = new LinkedHashSet<>(schemaEdges());
+        known.addAll(UNDECLARED_EDGES.keySet());
+        Set<String> seen = new java.util.TreeSet<>();
+        List<String> bad = new ArrayList<>();
+        try (var files = java.nio.file.Files.list(dir)) {
+            for (java.nio.file.Path p : files.filter(x -> x.toString().endsWith(".java")).sorted().toList()) {
+                String src = java.nio.file.Files.readString(p);
+                Matcher m = CODE_CREATE_EDGE.matcher(src);
+                while (m.find()) {
+                    String e = m.group(1);
+                    if (Set.of("TYPE", "FROM").contains(e)) continue;
+                    seen.add(e);
+                    if (!known.contains(e)) bad.add(p.getFileName() + ": CREATE EDGE " + e);
+                }
+                Matcher t = CODE_TRAVERSE.matcher(src);
+                while (t.find()) {
+                    Matcher q = QUOTED.matcher(t.group(1));
+                    while (q.find()) {
+                        seen.add(q.group(1));
+                        if (!known.contains(q.group(1))) bad.add(p.getFileName() + ": обход '" + q.group(1) + "'");
+                    }
+                }
+            }
+        }
+        assertTrue(seen.size() > 30, "сканер нашёл подозрительно мало рёбер (" + seen.size() + ") — регулярка сломана?");
+        assertEquals(List.of(), bad, "ребро в коде, которого нет в схеме (CREATE EDGE TYPE)");
+    }
+
+    /** Таблица исходов для отчёта: ребро → между чем → исход. Печатается в system-out теста. */
+    @Test
+    void printOutcomeTable() {
+        List<String> bad = new ArrayList<>();
+        List<EndOutcome> ends = endOutcomes(bad, new LinkedHashSet<>(), new LinkedHashSet<>());
+        StringBuilder sb = new StringBuilder("EDGE-OUTCOMES\n");
+        Map<String, List<String>> byEdge = new java.util.TreeMap<>();
+        for (EndOutcome e : ends)
+            byEdge.computeIfAbsent(e.fact().edge() + " " + e.fact().from() + "→" + e.fact().to(), k -> new ArrayList<>())
+                .add(e.side() + (e.passport() != null && !e.passport().equals(e.side()) ? "(" + e.passport() + ")" : "")
+                    + "=" + e.outcome());
+        byEdge.forEach((k, v) -> sb.append(k).append(" | ").append(String.join(", ", v)).append('\n'));
+        for (var s : new java.util.TreeMap<>(SERVICE).entrySet()) sb.append(s.getKey()).append(" | в: ").append(s.getValue()).append('\n');
+        System.out.println(sb);
+        assertTrue(byEdge.size() > 0);
+    }
+
+    @Test
+    void componentAndTechEdgesAreShownOnBothEnds() {
+        // Частный случай полной проверки выше — оставлен ради имени: компонент и технология.
+        List<String> bad = new ArrayList<>();
+        endOutcomes(bad, new LinkedHashSet<>(), new LinkedHashSet<>());
+        bad.removeIf(s -> !(s.contains("component") || s.contains("tech")));
         assertEquals(List.of(), bad, "ребро «запись ↔ компонент/технология» есть в графе, а паспорт его не показывает");
-        assertEquals(NOT_SHOWN.keySet(), used, "исключение без случая — протухло");
     }
 
     // ── 5. Чипы проектов и компонентов ───────────────────────────────────────

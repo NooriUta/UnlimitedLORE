@@ -647,7 +647,10 @@ public final class LoreSlices {
             "out('TAGGED_WITH').tag_id AS tags, " +
             "out('SUPERSEDES').decision_id AS supersedes_ids, " +
             // S4-29 v3 (44а): вкладка «Вопросы» паспорта решения — на какие вопросы оно отвечает.
-            "out('ANSWERS').question_id AS answers_ids " +
+            "out('ANSWERS').question_id AS answers_ids, " +
+            // 11.11 (полнота модели рёбер): кем заменено и сценарии, обоснованные решением.
+            "in('SUPERSEDES').decision_id AS superseded_by_ids, " +
+            "in('TRACED_TO').uc_id AS traced_by_ucs " +
             "FROM KnowDecision WHERE decision_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -767,7 +770,20 @@ public final class LoreSlices {
             "out('ADDRESSES').pain_id          AS pain_ids, " +
             "out('PROMISES').gain_id           AS gain_ids, " +
             "out('HELPS_WITH').job_id          AS job_ids, " +
-            "in('REALIZES').task_uid           AS task_uids " +
+            "in('REALIZES').task_uid           AS task_uids, " +
+            // 11.11 (полнота модели рёбер): что сценарий делает, обоснование, вехи, граф сценариев.
+            "out('RELIEVES').pain_id           AS relieved_pain_ids, " +
+            "out('DELIVERS').gain_id           AS delivered_gain_ids, " +
+            "out('PERFORMS').job_id            AS performed_job_ids, " +
+            "out('TRACED_TO')[@this INSTANCEOF 'KnowADR'].adr_id           AS traced_adrs, " +
+            "out('TRACED_TO')[@this INSTANCEOF 'KnowDecision'].decision_id AS traced_decisions, " +
+            "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
+            "out('BUILDS_ON').uc_id            AS builds_on_ids, " +
+            "in('BUILDS_ON').uc_id             AS built_on_by_ids, " +
+            "out('UC_INCLUDES').uc_id          AS includes_ids, " +
+            "in('UC_INCLUDES').uc_id           AS included_by_ids, " +
+            "out('UC_EXTENDS').uc_id           AS extends_ids, " +
+            "in('UC_EXTENDS').uc_id            AS extended_by_ids " +
             "FROM KnowUseCase WHERE uc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -917,6 +933,8 @@ public final class LoreSlices {
             // to surface the link even though adr_link(rel:"sprint") has always
             // been able to create it.
             "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
+            // 11.11 (полнота модели рёбер): документы, реализованные в спринте (doc_link rel:sprint).
+            "in('IMPLEMENTED_IN').doc_id   AS doc_ids, " +
             "out('HAS_STATE')[track_id IS NOT NULL].track_id[0] AS track_id " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
@@ -1727,6 +1745,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[valid_to IS NULL].goal_md[0]      AS goal_md, " +
             "out('HAS_STATE')[valid_to IS NULL].decisions_md[0] AS decisions_md, " +
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids, " +
+            // 11.11 (полнота модели рёбер): фичи, целящие в веху (feature_link rel:milestone).
+            "in('TARGETS_MILESTONE')[@this INSTANCEOF 'KnowUseCase'].uc_id AS feature_ids, " +
             "out('TARGETS_PRODUCT').code       AS products " +
             "FROM KnowMilestone WHERE milestone_id = :id",
             List.of("id"), Map.of(), "");
@@ -1738,7 +1758,9 @@ public final class LoreSlices {
             "release_date, is_current, description_md, git_project, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
-            "in('SHIPPED_IN').size() AS pr_count " +
+            "in('SHIPPED_IN').size() AS pr_count, " +
+            // 11.11 (полнота модели рёбер): ADR, выпущенные релизом (adr_link rel:release).
+            "in('IMPLEMENTED_IN_RELEASE')[@this INSTANCEOF 'KnowADR'].adr_id AS adr_ids " +
             "FROM KnowRelease WHERE release_uid = :id",
             List.of("id"), Map.of(), "");
 
@@ -1953,7 +1975,9 @@ public final class LoreSlices {
             "in('BELONGS_TO')[@this INSTANCEOF 'KnowQuestion'].question_id AS questions, " +
             "in('BELONGS_TO')[@this INSTANCEOF 'KnowUseCase'].uc_id        AS features, " +
             "in('BELONGS_TO')[@this INSTANCEOF 'KnowDoc'].doc_id           AS docs, " +
-            "in('BELONGS_TO')[@this INSTANCEOF 'QualityGate'].qg_id        AS qgs " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'QualityGate'].qg_id        AS qgs, " +
+            // 11.11 (полнота модели рёбер): продукты компонента (product_link rel:component).
+            "out('IN_PRODUCT').code AS products " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 

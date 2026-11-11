@@ -313,6 +313,8 @@ final class LoreRecordFrom {
             list("tech", "tech"),
             list("adrs", "adrs"),
             list("specs", "specs"),
+            // 11.11: продукты компонента (IN_PRODUCT → словарь product).
+            list("products", "products"),
             v("status", Transform.DOC_TOKEN, "status"))),
         Map.entry("tech", List.of(
             v("title", Transform.FIRST_OF, "tech_name", "spec_id"),
@@ -383,7 +385,9 @@ final class LoreRecordFrom {
         Map.entry("sprint", List.of(
             lf("DEPENDS_ON", "out", "sprint", "depends_on"),
             lf("DEPENDS_ON", "in", "sprint", "blocks"),
-            lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"))),
+            lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"),
+            // 11.11 (полнота модели рёбер): документы, реализованные в спринте.
+            lf("IMPLEMENTED_IN", "in", "doc", "doc_ids"))),
         Map.entry("task", List.of(
             lf("CLOSED_BY", "out", "pr", "closed_by_prs"),
             lf("REALIZES", "out", "use_case", "realizes_uc"))),
@@ -398,12 +402,20 @@ final class LoreRecordFrom {
             lf("TRACED_TO", "in", "use_case", "traced_by_ucs"))),
         Map.entry("decision", List.of(
             lf("SUPERSEDES", "out", "decision", "supersedes_ids"),
-            lf("ANSWERS", "out", "question", "answers_ids"))),
+            lf("ANSWERS", "out", "question", "answers_ids"),
+            // 11.11: кем заменено и какие сценарии ссылаются на решение как на обоснование.
+            lf("SUPERSEDES", "in", "decision", "superseded_by_ids"),
+            lf("TRACED_TO", "in", "feature", "traced_by_ucs"))),
         Map.entry("question", List.of(
             lf("ANSWERS", "in", "decision", "answered_by"),
             lf("GATES", "out", "task", "gating_tasks"))),
         Map.entry("milestone", List.of(
-            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"))),
+            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"),
+            // 11.11: фичи, целящие в веху (то же ребро, другой тип источника).
+            lf("TARGETS_MILESTONE", "in", "feature", "feature_ids"))),
+        // 11.11: ADR, выпущенные релизом; спринты и PR — отдельными срезами (SLICE_LINKS).
+        Map.entry("release", List.of(
+            lf("IMPLEMENTED_IN_RELEASE", "in", "adr", "adr_ids"))),
         Map.entry("component", List.of(
             // Технология — это спека SPEC-TECH-…: тип tech, чтобы щелчок открыл паспорт технологии.
             // Слово владелицы 11.11: + спеки, привязанные только ребром спека → компонент (BELONGS_TO).
@@ -424,7 +436,20 @@ final class LoreRecordFrom {
             lf("HAS_ACTOR", "out", "actor", "actor_ids"),
             lf("ADDRESSES", "out", "pain", "pain_ids"),
             lf("PROMISES", "out", "gain", "gain_ids"),
-            lf("HELPS_WITH", "out", "job", "job_ids"))));
+            lf("HELPS_WITH", "out", "job", "job_ids"),
+            // 11.11 (полнота модели рёбер): что сценарий делает, обоснование, вехи, граф сценариев.
+            lf("RELIEVES", "out", "pain", "relieved_pain_ids"),
+            lf("DELIVERS", "out", "gain", "delivered_gain_ids"),
+            lf("PERFORMS", "out", "job", "performed_job_ids"),
+            lf("TRACED_TO", "out", "adr", "traced_adrs"),
+            lf("TRACED_TO", "out", "decision", "traced_decisions"),
+            lf("TARGETS_MILESTONE", "out", "milestone", "milestone_ids"),
+            lf("BUILDS_ON", "out", "feature", "builds_on_ids"),
+            lf("BUILDS_ON", "in", "feature", "built_on_by_ids"),
+            lf("UC_INCLUDES", "out", "feature", "includes_ids"),
+            lf("UC_INCLUDES", "in", "feature", "included_by_ids"),
+            lf("UC_EXTENDS", "out", "feature", "extends_ids"),
+            lf("UC_EXTENDS", "in", "feature", "extended_by_ids"))));
 
     /** Вкладки связей, которые фасад читает отдельным срезом, — в порядке чтения. */
     static final Map<String, List<SliceLink>> SLICE_LINKS = Map.of(

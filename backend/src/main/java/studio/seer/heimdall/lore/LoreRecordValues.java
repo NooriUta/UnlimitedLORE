@@ -189,7 +189,16 @@ final class LoreRecordValues {
     static final Map<String, java.util.Set<String>> UNREAD_LINK_TABS = Map.of(
         "task", java.util.Set.of("qgRecs", "insights", "refsOut", "refsIn", "publications"),
         "adr", java.util.Set.of("runbooks", "refsOut", "refsIn", "insights"),
-        "spec", java.util.Set.of("refsOut", "refsIn"));
+        "spec", java.util.Set.of("refsOut", "refsIn"),
+        // 11.11 (полнота модели рёбер): «упоминает» и публикации BRAGI объявлены у всех концов,
+        // а срезов под них нет — вкладка честно говорит «не проверено», а не «0».
+        "sprint", java.util.Set.of("refsOut", "refsIn", "publications"),
+        "release", java.util.Set.of("refsOut", "refsIn", "publications"),
+        "decision", java.util.Set.of("refsOut", "refsIn"),
+        "question", java.util.Set.of("refsOut", "refsIn"),
+        "component", java.util.Set.of("refsOut", "refsIn"),
+        "tech", java.util.Set.of("refsOut", "refsIn"),
+        "feature", java.util.Set.of("refsOut", "refsIn"));
 
     /** Строки {@code meta.data_state} для вкладок без среза — форма та же, что у прочитанных источников. */
     static List<Map<String, Object>> unreadState(String type) {
