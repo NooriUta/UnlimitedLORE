@@ -834,5 +834,9 @@
   "admin.home.retry": "Повторить",
   "admin.home.partial": "пришли не все строки",
   "lists.date.changed": "Изменены",
-  "lists.date.noTime": "срез этого раздела не отдаёт время изменения записей"
+  "lists.date.noTime": "срез этого раздела не отдаёт время изменения записей",
+  "admin.roles.danger.need": "Пока логин не введён точно, применить нельзя.",
+  "peek.kind.unknown": "запись",
+  "peek.err.noType": "тип записи не задан и по виду ID не узнан — открыть не можем",
+  "peek.sheetTitle": "Запись {id}"
 }

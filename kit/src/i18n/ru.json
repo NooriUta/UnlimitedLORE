@@ -933,5 +933,21 @@
   "kit.date.scope.loadedChip": "по загруженному",
   "kit.date.undated": "Без отметки времени: {n} — в диапазон не входят.",
   "kit.date.unavailable": "Фильтр по дате недоступен: {reason}",
-  "kit.date.unavailableShort": "недоступно"
+  "kit.date.unavailableShort": "недоступно",
+  "kit.peek.loading": "Загружаю…",
+  "kit.peek.error": "Не смогли загрузить: {reason}. Это не «записи нет».",
+  "kit.peek.retry": "Повторить",
+  "kit.peek.missing": "Такой записи нет: {id} — удалена или переименована, ссылка битая.",
+  "kit.peek.forbidden": "Нет прав видеть эту запись.",
+  "kit.peek.forbiddenWhy": "Нет прав видеть эту запись: {reason}.",
+  "kit.peek.unset": "не задано",
+  "kit.peek.noText": "Текста нет — у записи нет описания.",
+  "kit.peek.open": "Открыть паспорт",
+  "kit.peek.newTab": "В новой вкладке",
+  "kit.peek.copy": "Копировать ссылку",
+  "kit.peek.copied": "Ссылка скопирована.",
+  "kit.peek.copyFailed": "Не удалось скопировать: браузер не дал доступа к буферу обмена.",
+  "kit.peek.close": "Закрыть просмотр",
+  "kit.peek.width": "Ширина просмотра",
+  "kit.peek.keys": "Пробел — закрыть · J/K — соседняя строка · Esc"
 }

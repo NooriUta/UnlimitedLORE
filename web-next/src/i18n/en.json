@@ -834,5 +834,9 @@
   "admin.home.retry": "Retry",
   "admin.home.partial": "not all rows arrived",
   "lists.date.changed": "Changed",
-  "lists.date.noTime": "this section's slice does not return record change times"
+  "lists.date.noTime": "this section's slice does not return record change times",
+  "admin.roles.danger.need": "Until the login is typed exactly, nothing can be applied.",
+  "peek.kind.unknown": "record",
+  "peek.err.noType": "record type is not set and cannot be recognised from the ID — cannot open",
+  "peek.sheetTitle": "Record {id}"
 }
