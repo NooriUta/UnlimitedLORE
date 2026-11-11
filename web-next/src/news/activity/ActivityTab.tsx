@@ -9,11 +9,11 @@
 //  - задачи и спеки (и прочие записи) — ссылки на свои паспорта;
 //  - честные состояния (S7A-07): пусто ≠ сбой ≠ нет прав ≠ неполно ≠ не проверено.
 import { useMemo, type ReactNode } from 'react';
-import type { KindConfig, KitRecord } from '../core/contract';
-import { Pill } from '../elements/Pill';
-import { useKitLang, type KitLang } from '../i18n';
-import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
-import { useLoadState } from '../states/useLoadState';
+import type { KindConfig, KitRecord } from '@seidr/kit';
+import { Pill } from '@seidr/kit';
+import { useKitLang, type KitLang } from '@seidr/kit';
+import { EmptyState, Forbidden, LoadError, Skeleton } from '@seidr/kit';
+import { useLoadState } from '@seidr/kit';
 import {
   activityBurn, activityParams, activityState, machineTime,
   type ActivityOptions, type ActivityTarget,

@@ -28,6 +28,7 @@ public class LoreAdminFlags extends LoreResourceBase {
         new Flag("lore.scope.enforce", false, "проектный read-скоуп: пользователь видит только проекты, где у него роль"),
         new Flag("lore.scope.redact-bodies", false, "обнулять тела документов читателю без роли в их проекте"),
         new Flag("lore.auth.require-admin", true, "запись в админке — только с ролью admin"),
+        new Flag(AgentMachine.FLAG_REQUIRED, false, "мутация агента без машины (X-Lore-Machine) — отказ 400; выключен — запись с предупреждением (AO-MACHINE-OBJ)"),
         new Flag("lore.stats.enabled", true, "телеметрия обращений и журнал действий (AO-01)"),
         new Flag("lore.qg.actions-poll.enabled", true, "опрос CI Forgejo для гейтов качества"),
         new Flag("lore.schema.verify", true, "сверка схемы БД при старте"),

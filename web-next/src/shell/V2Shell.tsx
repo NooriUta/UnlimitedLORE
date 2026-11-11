@@ -7,12 +7,13 @@
 // ADR…). Раздел без экрана честно говорит «экран не собран» (NotBuilt kit), а
 // не рисует «пусто»: данных он не запрашивал.
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
-import { KitShell, NewsFeed, NotBuilt, Skeleton, createSafeStorage, useKitLang, useKitShell, type KitNav, type KitShellApi, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { KitShell, NotBuilt, Skeleton, createSafeStorage, useKitLang, useKitShell, type KitNav, type KitShellApi, type SafeStorage, type UrlWindow } from '@seidr/kit';
 import { ADMIN_MODULE, adminSectionTitle, isAdminSection } from '../admin/adminModule';
 import { appT, type AppKey } from '../i18n';
 import { switchNavUrl } from '../nav/navVersion';
 import { ListScreen } from '../pages/ListScreen';
 import { newsSource } from '../news/source';
+import { NewsFeed } from '../news/feed';
 import { planStatusOf } from '../sprints/taskStatus';
 import { newsHrefV2, newsRefHrefV2 } from '../news/newsLinks';
 import { NavSwitch } from '../settings/NavSwitch';

@@ -5,13 +5,17 @@
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  Forbidden, ICON_CANON, ListView, LoadError, RecordDock, ScreenHead, Skeleton, pushUrlState, readUrlState, urlStateHref,
+  Forbidden, ICON_CANON, ListView, LoadError, NO_DATE_RANGE, RecordDock, ScreenHead, Skeleton, dateRangeUrlPatch,
+  isDateRangeActive, pushUrlState, readDateRangeUrl, readUrlState, urlStateHref,
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { KitRecord, RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { DateFilterScope, DateRangeValue, KitRecord, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
+import {
+  DATE_FIELD, DATE_URL_PARAM, changedParams, isRangeRejected, markRangeUnsupported, rangeUnsupported,
+} from '../lists/dateRange';
 import { axesForKeys } from '../api/loreFacets';
 import { useListFacets } from '../api/useListFacets';
 import { useAppT } from '../i18n';
@@ -143,6 +147,23 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
   return [open, set, backHref, win] as const;
 }
 
+function browserZone(): string {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
+}
+
+/**
+ * Диапазон «Изменены с … по …» в адресе (?changed=…, K2-DATE-RANGE): тот же
+ * источник окна, что у открытой записи; urlState=false — в памяти.
+ */
+function useChangedRange(win: UrlWindow | undefined) {
+  const [value, setValue] = useState<DateRangeValue>(() => (win ? readDateRangeUrl(readUrlState(win), DATE_URL_PARAM) : NO_DATE_RANGE));
+  const set = (next: DateRangeValue) => {
+    setValue(next);
+    if (win) pushUrlState(dateRangeUrlPatch(DATE_URL_PARAM, next), { replace: true, win });
+  };
+  return [value, set] as const;
+}
+
 export interface ListScreenProps {
   screen: ListScreenId;
   /** Подмена сети (тесты); по умолчанию — window.fetch. */
@@ -229,11 +250,43 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (scope.length ? { scope_projects: scope.join(',') } : undefined),
     [scope],
   );
+  // Фильтр «Изменены» (K2-DATE-RANGE): только у разделов, где у записи есть
+  // время (у кого есть лента — FEEDS); у прочих он недоступен с причиной.
+  const hasTime = !!def.feed;
+  const [range, setRange] = useChangedRange(urlWin);
+  const tz = useMemo(browserZone, []);
+  const rangeOn = hasTime && isDateRangeActive(range);
+  // Диапазон уходит в срез, пока срез его не отверг (MT-MCP-CHANGED-RANGE).
+  // «Сейчас» для быстрых периодов — последнее время источника, иначе часы браузера.
+  const [sourceNow, setSourceNow] = useState<string | null>(null);
+  const [rangeScope, setRangeScope] = useState<DateFilterScope>('source');
+  const rangeParam = useMemo(
+    () => (rangeOn && !rangeUnsupported(def.slice) ? changedParams(range, sourceNow ?? new Date().toISOString(), tz) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rangeOn, JSON.stringify(range), def.slice, tz],
+  );
+  const rangeKey = rangeParam ? JSON.stringify(rangeParam) : '';
   const result = useLoadState(
-    signal => fetchSlice(def.slice, scopeParam, { signal, fetchImpl }),
-    [def.slice, fetchImpl, scopeParam],
+    async signal => {
+      if (!rangeParam) return fetchSlice(def.slice, scopeParam, { signal, fetchImpl });
+      try {
+        const b = await fetchSlice(def.slice, { ...scopeParam, ...rangeParam }, { signal, fetchImpl });
+        setRangeScope('source');
+        return b;
+      } catch (e) {
+        if (!isRangeRejected(e)) throw e;
+        // Сервер диапазона не знает — честный откат: те же строки без него, отбор
+        // по загруженному, и это сказано словами (kit: «по загруженному»).
+        markRangeUnsupported(def.slice);
+        setRangeScope('loaded');
+        return fetchSlice(def.slice, scopeParam, { signal, fetchImpl });
+      }
+    },
+    [def.slice, fetchImpl, scopeParam, rangeKey],
     { rows: body => body.rows },
   );
+  const servedAt = result.data?.served_at;
+  useEffect(() => { if (servedAt) setSourceNow(servedAt); }, [servedAt]);
   // Счётчики фасетов считает СЕРВЕР по всей выдаче (S9-01). Сам список умеет
   // считать только по загруженным строкам, а рядом стоит «Показано 1000 из
   // 4000» — и число у фасета читается как счёт по всей выдаче, хотя посчитано
@@ -260,7 +313,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   });
   const body = result.data;
   const data = useMemo(
-    () => (body ? sliceToKitData(body, def.map, new Date().toISOString()) : null),
+    // «Сейчас» — время источника (заголовок Date), иначе часы браузера (K2-DATE-RANGE).
+    () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString()) : null),
     [body, def],
   );
   // Предупреждения выдачи плюс оговорка самого раздела (S4-V2-SECTIONS): где
@@ -347,7 +401,18 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       <ListView
         config={config}
         data={viewData ?? data}
-        counts={serverCounts}
+        // Счётчики источника считаны БЕЗ диапазона дат — при диапазоне им не
+        // место: kit считает по загруженному и говорит это (S9-01).
+        counts={rangeOn ? undefined : serverCounts}
+        dateFilter={{
+          field: DATE_FIELD,
+          title: t('lists.date.changed'),
+          value: range,
+          onChange: setRange,
+          scope: rangeOn && rangeParam && rangeScope === 'source' ? 'source' : 'loaded',
+          timeZone: tz,
+          ...(hasTime ? {} : { unavailable: t('lists.date.noTime') }),
+        }}
         feedBody={feed.feedBody}
         onFeedBody={feed.onFeedBody}
         feedUnder={feed.feedUnder}

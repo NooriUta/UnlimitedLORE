@@ -67,6 +67,9 @@ import { axisSource, countsNotes, facetFromAxis, quickSource } from './listCount
 import type { ListCounts } from './listCounts';
 import { FacetFilter, ValueIconMark } from './FacetFilter';
 import type { ValueIcon } from './FacetFilter';
+// Фильтр по дате — диапазон (K2-DATE-RANGE): одна модель на таблицу, ленту и фасеты.
+import { DateRangeFilter, type DateFilterScope } from './DateRangeFilter';
+import { NO_DATE_RANGE, describeDateRange, filterByDateRange, isDateRangeActive, type DateRangeValue } from './dateRange';
 import { onScreenItems, selectAllShown, toggleId, visibleSelection, type ShownGroup } from './listSelection';
 import { useLongPress } from './useLongPress';
 import { ScreenHead } from './ScreenHead';
@@ -264,6 +267,40 @@ export interface ListViewProps {
    */
   narrow?: boolean;
   className?: string;
+  /**
+   * Фильтр по дате — диапазон «с … по …» (K2-DATE-RANGE). Поле времени,
+   * подпись и ГДЕ отобрано называет приложение (K-14); значение держит тоже
+   * оно — ему же уходить в адрес и, если источник умеет, в запрос. Не задан —
+   * фильтра по дате нет.
+   */
+  dateFilter?: ListDateFilter;
+}
+
+/** Фильтр по дате списка: значение и смысл — от приложения, отбор и вид — kit. */
+export interface ListDateFilter {
+  /** Поле отметки времени записи (`updated_at` или `fields.<ключ>`). */
+  field: string;
+  /** Подпись поля словами («Изменены»). */
+  title: string;
+  value: DateRangeValue;
+  onChange: (v: DateRangeValue) => void;
+  /**
+   * `source` — источник уже отобрал выдачу по диапазону, kit второй раз не
+   * режет; `loaded` (по умолчанию) — kit отбирает загруженные строки и
+   * говорит об этом «по загруженному».
+   */
+  scope?: DateFilterScope;
+  /** Пояс «местного» дня (IANA); по умолчанию — пояс браузера. */
+  timeZone?: string;
+  /** Фильтр недоступен (у типа нет времени) — причина словами; строки не режутся. */
+  unavailable?: string;
+}
+
+/** Метка сужения диапазоном дат для правил счётчиков (S9-01): не совпадает ни с одной осью. */
+const DATE_NARROW_KEY = '\u0000date';
+
+function browserZone(): string {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
 }
 
 /** Шапка экрана списка: заголовок, его id и иконка, первичное действие. */
@@ -409,7 +446,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions, rowActions, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
-  counts: serverCounts,
+  counts: serverCounts, dateFilter,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
   const narrow = useNarrow(narrowProp);
@@ -574,7 +611,20 @@ export function ListView({
     data, config, href: href ?? (id => `#${encodeURIComponent(id)}`), esc, md: (s: string) => s, ...ctxPart,
   }), [data, config, href, ctxPart]);
 
-  const records = data.records;
+  // Диапазон дат (K2-DATE-RANGE) режет выдачу ДО всего остального: таблица,
+  // лента, доска и счётчики фасетов дальше берут один и тот же набор — второй
+  // реализации фильтра нет. «Сейчас» — время источника (meta.generated_at).
+  const dateTz = dateFilter?.timeZone ?? browserZone();
+  const dateOn = !!dateFilter && dateFilter.unavailable === undefined && isDateRangeActive(dateFilter.value);
+  const dateLoaded = dateOn && (dateFilter!.scope ?? 'loaded') === 'loaded';
+  const dated = useMemo(
+    () => (dateLoaded
+      ? filterByDateRange(data.records, dateFilter!.field, dateFilter!.value, data.meta.generated_at, dateTz)
+      : { records: data.records, undated: 0 }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data.records, dateLoaded, dateFilter?.field, JSON.stringify(dateFilter?.value), data.meta.generated_at, dateTz],
+  );
+  const records = dated.records;
   // S4-05: поля (есть / нет / пусто / не пусто) и текст — одним набором
   const filterSet = useMemo(() => toFilterSet(state),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -589,8 +639,10 @@ export function ListView({
    * числа годятся только пока выдачу не сузило что-то другое.
    */
   const narrowing = useMemo(
-    () => ({ keys: Object.keys(filterSet.fields), text: (filterSet.text ?? '') !== '' }),
-    [filterSet],
+    // Диапазон дат источнику не отправлялся вместе со счётчиками — его числа
+    // при диапазоне не годятся (ключ-метка не совпадает ни с одной осью).
+    () => ({ keys: [...Object.keys(filterSet.fields), ...(dateOn ? [DATE_NARROW_KEY] : [])], text: (filterSet.text ?? '') !== '' }),
+    [filterSet, dateOn],
   );
   /**
    * Выдача не обрезана — «по загруженным строкам» и «по всей выдаче» это одно и
@@ -1043,7 +1095,7 @@ export function ListView({
         : t('kit.list.groupCapPage', { top: shownGroups, total: groupTotal }))
       : (shown.kind === 'complete' ? null : t('kit.list.groupsPage'));
 
-  const hasFilter = Object.keys(filterSet.fields).length > 0 || !!filterSet.text || activeQuick !== null;
+  const hasFilter = Object.keys(filterSet.fields).length > 0 || !!filterSet.text || activeQuick !== null || dateOn;
   const opTitles = Object.fromEntries((['any', 'not', 'empty', 'nonempty'] as FilterOp[])
     .map(op => [op, t(`kit.list.op.${op}` as KitKey)])) as Record<FilterOp, string>;
   // Строка-описание (S4-04): каждое условие — свой снимаемый чип, а не сплошной
@@ -1069,7 +1121,20 @@ export function ListView({
   if (activeQuick) {
     chips.push({ id: 'q', text: `${t('kit.list.quick')}: ${activeQuick.title}`, remove: () => update({ quick: null }) });
   }
-  const resetFilters = () => update({ filters: {}, ops: {}, text: '', quick: null });
+  // Диапазон снимается с сохранением зоны: зона — выбор человека, а не часть условия.
+  const clearDate = () => dateFilter?.onChange({ ...NO_DATE_RANGE, zone: dateFilter.value.zone });
+  if (dateOn) {
+    const words = describeDateRange(dateFilter!.value, lang, { showZone: true });
+    chips.push({
+      id: 'd',
+      text: `${dateFilter!.title}: ${words}${dateLoaded ? ` · ${t('kit.date.scope.loadedChip')}` : ''}`,
+      remove: clearDate,
+    });
+  }
+  const resetFilters = () => {
+    update({ filters: {}, ops: {}, text: '', quick: null });
+    if (dateOn) clearDate();
+  };
   // «Вид ⌄» (S4-27): режим закрытых — часть состояния списка и сохранённого вида.
   // Телефон: виды — внутри «Вид ▾», а не строкой над списком (владелица 11.11).
   const viewsInMenu = narrow && views.length > 1;
@@ -1118,7 +1183,7 @@ export function ListView({
       })}
     </div>
   ) : null;
-  const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0);
+  const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0) + (dateOn ? 1 : 0);
   const segCount = (n: number) => (n > 0
     ? <span className="sk-list__segcount" data-testid="kit-list-segcount" title={t('kit.list.segActive', { n })}>{n}</span>
     : null);
@@ -2128,6 +2193,19 @@ export function ListView({
               />
             );
           })}
+          {dateFilter && (
+            <DateRangeFilter
+              title={dateFilter.title}
+              value={dateFilter.value}
+              onChange={dateFilter.onChange}
+              now={data.meta.generated_at}
+              timeZone={dateTz}
+              lang={lang}
+              scope={dateFilter.scope ?? 'loaded'}
+              undated={dated.undated}
+              unavailable={dateFilter.unavailable}
+            />
+          )}
         </fieldset>
         {/* Лента получает ТУ ЖЕ строку управления (K2-FEED-VIEW §1): просьба
             была именно про «фильтровать и группировать наверху, как в

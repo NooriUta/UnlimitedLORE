@@ -16,7 +16,7 @@
 // в подсказке. Подменять отсутствующую подпись выдуманной нельзя.
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { StatusDictCtx } from '../core/statusLook';
+import { StatusDictCtx } from '@seidr/kit';
 import { NewsStatusMark } from './NewsFeed';
 
 const DICT = [

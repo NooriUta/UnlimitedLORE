@@ -8,7 +8,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { NewsEvent } from '@seidr/kit';
+import type { NewsEvent } from './feed';
 import { V2_SECTIONS } from '../shell/v2Config';
 import { newsHrefV2, newsRefHrefV2 } from './newsLinks';
 import { recordHref } from '../nav/loreRoutes';

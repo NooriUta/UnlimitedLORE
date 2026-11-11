@@ -2,7 +2,7 @@
 // «некоторые переходы странно себя ведут»; «меню не должны ни по одной ссылке
 // пропадать»). kit по умолчанию строит адреса v1 (/lore?section=…&passport=…),
 // которых в v2 нет. Адрес записи — единый модуль маршрутов loreRoutes (S4-13).
-import type { NewsEvent } from '@seidr/kit';
+import type { NewsEvent } from './feed';
 import { recordHref, recordIdOf } from '../nav/loreRoutes';
 
 export function newsHrefV2(e: NewsEvent): string | null {

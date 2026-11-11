@@ -6,6 +6,7 @@ import { AuthGate } from '@seidr/kit/auth';
 import App from './App';
 import { v2Auth } from './auth/session';
 import { themeSource } from './storage/themeSource';
+import { ShowTechFromSettings } from './settings/ShowTech';
 
 // Иконки game-icons — весь набор офлайн, до первого рендера (S4-00b): CSP
 // запрещает удалённую подгрузку, а неизвестный слаг GameIcon рисует честной
@@ -30,7 +31,10 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <KitLangProvider lang={kitLang}>
       <AuthGate session={v2Auth}>
-        <App />
+        {/* S4-TECH-NOTES: техническое скрыто, пока его не включили личной настройкой. */}
+        <ShowTechFromSettings>
+          <App />
+        </ShowTechFromSettings>
       </AuthGate>
     </KitLangProvider>
   </StrictMode>,

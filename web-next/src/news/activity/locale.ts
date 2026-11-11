@@ -3,7 +3,7 @@
 // координирует оркестратор. Ключи — в пространстве kit.activity.*, чтобы их
 // можно было перенести в общие локали kit без переименования. ru и en обязаны
 // совпадать по ключам и плейсхолдерам (activityModel.test.ts).
-import type { KitLang } from '../i18n';
+import type { KitLang } from '@seidr/kit';
 
 export const ACTIVITY_RU = {
   'kit.activity.tab': 'Активность',

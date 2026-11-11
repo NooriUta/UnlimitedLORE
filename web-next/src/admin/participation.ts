@@ -88,3 +88,23 @@ export async function fetchParticipation(signal?: AbortSignal, fetchImpl?: typeo
   ]);
   return buildParticipation(matrix.rows, agents, matrix.truncated === true);
 }
+
+/**
+ * S7B-25: поиск в «Кто где». Без регистра, по подстроке. Человек находится по
+ * имени, kc_sub, своему проекту или своему агенту (имя, client_id); проект —
+ * по slug, участнику или агенту участника. Пустой запрос — всё как есть.
+ */
+const hit = (q: string, ...xs: Array<string | null | undefined>) => xs.some(x => (x ?? '').toLocaleLowerCase().includes(q));
+const agentHit = (q: string, a: AgentRow) => hit(q, a.name, a.client_id, a.actor_id);
+
+export function filterPeople(people: readonly Person[], query: string | null): Person[] {
+  const q = (query ?? '').trim().toLocaleLowerCase();
+  if (!q) return [...people];
+  return people.filter(p => hit(q, p.name, p.kc_sub) || p.projects.some(pr => hit(q, pr.slug)) || p.agents.some(a => agentHit(q, a)));
+}
+
+export function filterProjectViews(projects: readonly ProjectView[], query: string | null): ProjectView[] {
+  const q = (query ?? '').trim().toLocaleLowerCase();
+  if (!q) return [...projects];
+  return projects.filter(pr => hit(q, pr.slug) || pr.members.some(m => hit(q, m.name, m.kc_sub) || m.agents.some(a => agentHit(q, a))));
+}
