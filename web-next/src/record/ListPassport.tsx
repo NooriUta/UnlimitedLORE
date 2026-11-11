@@ -123,7 +123,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // что список собирался из внутренней таблицы kit, то есть из всех осей
   // разом. Теперь спрашиваем цикл этого типа; модель не ответила — остаётся
   // умолчание приложения, и это сказано словами в той же строке замечаний.
-  const [statuses, setStatuses] = useState<{ items: KitConfig['statuses']['items']; notes: string[] }>({ items: [], notes: [] });
+  const [statuses, setStatuses] = useState<{ items: KitConfig['statuses']['items']; notes: string[]; byKind?: Record<string, KitConfig['statuses']['items']> }>({ items: [], notes: [] });
   useEffect(() => {
     let alive = true;
     fetchTypeStatuses(type, { fetchImpl }).then(r => { if (alive) setStatuses(r); }, () => { /* сказано в notes */ });
@@ -342,7 +342,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // внутренняя таблица kit со всеми осями сразу, из-за неё в меню задачи и
     // были чужие статусы и два «В работе». Пусто — модель не ответила, и
     // причина уже названа в строке замечаний.
-    statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
+    // Меню смены статуса — цикл своего типа (items); строки других типов — их цикл (byKind).
+    statuses: { ...baseConfig.statuses, ...(statuses.items.length ? { items: statuses.items } : {}), ...(statuses.byKind ? { byKind: statuses.byKind } : {}) },
     hooks: { ...baseConfig.hooks, onSave, onRelation },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
     graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
