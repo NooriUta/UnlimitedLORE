@@ -152,6 +152,21 @@ final class LoreRecordValues {
         return m;
     }
 
+    /**
+     * Вид обоих концов в каждой связи — {@code fromKind}/{@code toKind} (замечание kit-сессии 11.11):
+     * клиент отбирает связь по виду цели, и угадывать вид по загруженным записям нельзя — запись,
+     * которой среди них нет, пропадала бы молча. Ключи только добавляются; {@code type} прежний.
+     */
+    static List<Map<String, Object>> withKinds(String ownType, List<Map<String, Object>> links) {
+        for (Map<String, Object> l : links) {
+            Object other = l.get("type");
+            boolean out = "out".equals(l.get("dir"));
+            l.put("fromKind", out ? ownType : other);
+            l.put("toKind", out ? other : ownType);
+        }
+        return links;
+    }
+
     /** Связь {@code links[]}: {rel, dir, id, type, title, status} (+ свойства ребра). */
     static Map<String, Object> link(String rel, String dir, String id, String type, String title, String status) {
         Map<String, Object> m = new LinkedHashMap<>();

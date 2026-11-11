@@ -250,6 +250,9 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
   const links: LoreLink[] = arr(b.links).map(l => ({
     rel: str(l.rel), dir: str(l.dir) === 'in' ? 'in' : 'out', id: str(l.id),
     type: str(l.type), title: str(l.title) || str(l.id), status: str(l.status),
+    // Вид обоих концов (сервер 11.11): kit отбирает по нему связь, не угадывая по записям.
+    ...(str(l.fromKind) ? { fromKind: str(l.fromKind) } : {}),
+    ...(str(l.toKind) ? { toKind: str(l.toKind) } : {}),
   }));
 
   const writeOf = (w: unknown): { endpoint: string; field: string } | null => {

@@ -71,7 +71,9 @@ export interface LoreRelation { key: string; label: string; relation: KitRelatio
   place?: LorePlace;
   /** Тип на другом конце (сервер: target_type) — для подписи и иконки. */
   target_type?: string }
-export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string }
+export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string;
+  /** Вид концов ребра (сервер: fromKind/toKind) — идёт в KitEdge, чтобы kit не угадывал вид по записям. */
+  fromKind?: string; toKind?: string }
 export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number;
   /** Кому строка (S4-TECH-NOTES), если её назвал сервер. Нет — решает приложение (fromLoreRecord). */
   audience?: 'user' | 'tech' }
@@ -236,13 +238,15 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // записями и рёбрами: дальше с ними работает всё обычное — вкладки, граф,
   // вердикт, таблица задач.
   const parts = c.parts ?? [];
+  const kinds = (fromKind?: string, toKind?: string) => ({ ...(fromKind ? { fromKind } : {}), ...(toKind ? { toKind } : {}) });
   const partEdges: KitEdge[] = parts.flatMap(p => p.items.map(i =>
-    p.dir === 'in' ? { from: i.id, to: id, type: p.rel } : { from: id, to: i.id, type: p.rel }));
+    p.dir === 'in' ? { from: i.id, to: id, type: p.rel, ...kinds(p.type, type) } : { from: id, to: i.id, type: p.rel, ...kinds(type, p.type) }));
   const partRecords: KitRecord[] = parts.flatMap(p => p.items.map(i => ({
     id: i.id, kind: p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
   })));
   const edges: KitEdge[] = [
-    ...c.links.map(l => (l.dir === 'out' ? { from: id, to: l.id, type: l.rel } : { from: l.id, to: id, type: l.rel })),
+    ...c.links.map(l => ({ ...(l.dir === 'out' ? { from: id, to: l.id, type: l.rel } : { from: l.id, to: id, type: l.rel }),
+      ...kinds(l.fromKind, l.toKind) })),
     ...partEdges,
   ];
   const linkRecords: KitRecord[] = c.links.filter((l, i, a) => a.findIndex(x => x.id === l.id) === i)

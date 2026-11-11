@@ -126,6 +126,13 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
 
   // Слово владелицы 11.11 («связь с компонентами пропала»): у компонента BELONGS_TO:in — ADR,
   // спринты, решения… Одно ребро, разные связи; счёт — по типу цели, а не по ребру.
+  it('вид концов связи (fromKind/toKind) доходит от сервера — kit не угадывает его по записям', () => {
+    const b = sprintBody();
+    b.links = [{ rel: 'BELONGS_TO', dir: 'in', id: 'D-1', type: 'decision', title: 'Р', status: '', fromKind: 'decision', toKind: 'component' } as never];
+    const c = recordFromServer(b, LOADED);
+    expect(c.links[0]).toMatchObject({ fromKind: 'decision', toKind: 'component' });
+  });
+
   it('одно ребро в двух связях — счётчик по типу цели', () => {
     const b = sprintBody();
     b.links = [

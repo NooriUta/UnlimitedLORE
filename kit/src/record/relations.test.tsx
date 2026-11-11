@@ -107,6 +107,35 @@ describe('паспорт по видам связей', () => {
     const rows = within(screen.getByTestId('kit-relation-list')).getAllByRole('row').slice(1);
     expect(rows.map(tr => tr.getAttribute('data-record-id'))).toEqual(['ADR-9']);
   });
+  // Замечание kit-сессии 11.11: вид по загруженным записям — молчаливое скрытие, если записи
+  // конца среди них нет. Вид берётся из ребра; нет нигде — запись остаётся с пометкой.
+  const compCtx = (edges: KitCtx['data']['edges'], recs: KitRecord[]): { comp: KitRecord; ctx: KitCtx } => {
+    const comp = r('C-1', 'component', 'Компонент');
+    const cfg: KitConfig = { ...config(), kinds: { component: { title: 'Компонент', icon: 'cog', fields: [], relations: [
+      { key: 'adrs', label: 'ADR', relation: 'aggregation', rel: 'BELONGS_TO', dir: 'in', targetKind: 'adr' },
+      { key: 'sprints', label: 'Спринты', relation: 'aggregation', rel: 'BELONGS_TO', dir: 'in', targetKind: 'sprint' },
+    ] } } };
+    return { comp, ctx: { ...ctxOf(cfg), data: { records: [comp, ...recs], edges, journal: [], meta: { generated_at: '2026-11-11T00:00:00Z' } } } };
+  };
+  const rowIds = () => within(screen.getByTestId('kit-relation-list')).getAllByRole('row').slice(1).map(tr => tr.getAttribute('data-record-id'));
+  it('записи нет среди загруженных, вид — в ребре: попадает в свою вкладку и только в неё', () => {
+    const { comp, ctx } = compCtx([{ from: 'S-77', to: 'C-1', type: 'BELONGS_TO', fromKind: 'sprint', toKind: 'component' }], []);
+    const { unmount } = render(<RecordView record={comp} ctx={ctx} tab="sprints" onTab={() => {}} placement="bottom" />);
+    expect(rowIds()).toEqual(['S-77']);
+    expect(screen.queryByTestId('kit-relation-unknown-kind')).toBeNull();
+    unmount();
+    render(<RecordView record={comp} ctx={ctx} tab="adrs" onTab={() => {}} placement="bottom" />);
+    expect(screen.getByTestId('kit-relation-list').textContent).toBe('Связей нет');
+  });
+  it('вида нет ни в ребре, ни в записях — запись не теряется: в каждой вкладке ребра, с пометкой', () => {
+    const { comp, ctx } = compCtx([{ from: 'X-1', to: 'C-1', type: 'BELONGS_TO' }], []);
+    for (const tab of ['adrs', 'sprints']) {
+      const { unmount } = render(<RecordView record={comp} ctx={ctx} tab={tab} onTab={() => {}} placement="bottom" />);
+      expect(rowIds()).toEqual(['X-1']);
+      expect(screen.getByTestId('kit-relation-unknown-kind').textContent).toContain('X-1');
+      unmount();
+    }
+  });
   it('без hooks.onRelation — только чтение, кнопок управления нет', () => {
     view('decisions');
     expect(screen.queryByRole('button', { name: /^Отвязать/ })).toBeNull();

@@ -87,6 +87,20 @@ class LorePassportLinksContractTest {
             List.of(r.rel(), r.dir(), r.targetType(), r.place()), "вкладка tech — паспорта технологий SPEC-TECH-…");
     }
 
+    /**
+     * Замечание kit-сессии 11.11: вид конца ребра клиент угадывал по загруженным записям, и запись,
+     * которой среди них нет, тихо пропадала из вкладки. Сервер знает вид обоих концов — отдаёт его
+     * в каждой связи: fromKind/toKind (ключи только добавляются).
+     */
+    @Test
+    void linksCarryKindOfBothEnds() {
+        List<Map<String, Object>> got = LoreRecordValues.withKinds("component", LoreRecordValues.rowLinks("component", Map.of(
+            "specs", List.of("SPEC-TECH-C-JAVA"), "decisions", List.of("D-1"))));
+        assertEquals(List.of("component→tech", "decision→component"),
+            got.stream().map(m -> m.get("fromKind") + "→" + m.get("toKind")).toList());
+        assertEquals("tech", got.get(0).get("type"), "прежний ключ type на месте");
+    }
+
     @Test
     void specAliasIsReadAsUnion() {
         LoreRecordFrom.LinkFrom l = LoreRecordFrom.ROW_LINKS.get("component").stream()

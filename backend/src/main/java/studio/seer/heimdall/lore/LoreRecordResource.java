@@ -225,6 +225,8 @@ public class LoreRecordResource extends LoreResourceBase {
         }
         dataState.add(LoreRecordDataState.version(versionError));
         Map<String, Object> rec = recordHead(type, id, (String) values.get("title"), status, version);
+        // Вид обоих концов в каждой связи (fromKind/toKind) — клиент не угадывает его по записям.
+        LoreRecordValues.withKinds(type, links);
         Map<String, Object> out = envelope(rec, values, parts, links,
             LoreRecordPerms.of(type, role, identified, status, openTasks, specStatuses(type)), facts, type, blocks,
             dataState);
