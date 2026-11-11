@@ -24,9 +24,14 @@ export interface SheetProps {
   actions?: ReactNode;
   children?: ReactNode;
   className?: string;
+  /**
+   * Куда поставить фокус при открытии (S4-MOBILE-EDGE): меню-лист ставит его на
+   * выбранный пункт, как его поповер. Нет или вернул null — первый элемент тела.
+   */
+  initialFocus?: (root: HTMLElement) => HTMLElement | null | undefined;
 }
 
-export function Sheet({ open, onClose, title, side = 'right', actions, children, className }: SheetProps) {
+export function Sheet({ open, onClose, title, side = 'right', actions, children, className, initialFocus }: SheetProps) {
   const lang = useKitLang();
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -37,7 +42,7 @@ export function Sheet({ open, onClose, title, side = 'right', actions, children,
     // Первый элемент тела, а не «Закрыть»: открыли ради содержимого.
     initialFocus: root => {
       const body = root.querySelector<HTMLElement>('.sk-sheet__body');
-      return body ? focusables(body)[0] : null;
+      return initialFocus?.(root) ?? (body ? focusables(body)[0] : null);
     },
   });
 

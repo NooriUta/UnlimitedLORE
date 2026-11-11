@@ -58,7 +58,7 @@ describe('S4-MOBILE-COMPARE · на телефоне список по умол�
   it('явный выбор «Список» на телефоне — закон: таблица остаётся', () => {
     const { container } = render(<ListView config={config(['list', 'cards'])} data={data} urlState={false} narrow href={id => `#${id}`} />);
     fireEvent.click(container.querySelector('.sk-vmenu__btn')!);
-    const list = [...container.querySelectorAll('.sk-vmenu__kinds [role="radio"]')].find(b => /Список|List/.test(b.textContent ?? ''))!;
+    const list = [...document.querySelectorAll('.sk-vmenu__kinds [role="radio"]')].find(b => /Список|List/.test(b.textContent ?? ''))!;
     fireEvent.click(list);
     expect(isTable(container)).toBe(true);
     expect(isCards(container)).toBe(false);
@@ -100,7 +100,7 @@ describe('S4-MOBILE-COMPARE · на телефоне список по умол�
     it('в открытом меню виды первым разделом, выбор применяется сразу', () => {
       const { container } = phone();
       fireEvent.click(container.querySelector('.sk-vmenu__btn')!);
-      const panel = container.querySelector('.sk-vmenu__panel')!;
+      const panel = (document.querySelector('.sk-lsheet') ?? document.querySelector('.sk-vmenu__panel'))!;
       const group = panel.querySelector('[role="radiogroup"]')!;
       expect(group.getAttribute('aria-label')).toMatch(/Вид|View/);
       const radios = [...group.querySelectorAll('[role="radio"]')].map(b => b.textContent?.trim());
