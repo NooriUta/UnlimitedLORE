@@ -6543,6 +6543,28 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-lib__open { justify-self: start; text-decoration: none; }
 .sk-lib__sheet .sk-lib__open { margin-top: 8px; }
 
+/* S6-04: живой блок в тексте — рамка, режимы «код / превью / рядом», свежесть (прототип принят 11.11.2026). */
+.sk-live { border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); margin: 8px 0; min-width: 0; }
+.sk-live__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 1px solid var(--bd); min-width: 0; }
+.sk-live__lang { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--acc); border: 1px solid var(--bd); border-radius: var(--r-pill); padding: 0 6px; }
+.sk-live__src { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); }
+.sk-live__modes { display: flex; gap: 2px; }
+.sk-live__body { display: grid; gap: 8px; padding: 8px; min-width: 0; }
+.sk-live[data-mode="side"] .sk-live__body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.sk-live__code { margin: 0; padding: 6px 8px; background: var(--bg2); border-radius: var(--r-sm); font-family: var(--mono); font-size: var(--fs-xs); color: var(--t1); white-space: pre-wrap; overflow-x: auto; }
+.sk-live__result { min-width: 0; }
+.sk-live__scroll { overflow-x: auto; }
+.sk-live__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.sk-live__table th { text-align: left; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); padding: 3px 6px; border-bottom: 1px solid var(--bd); }
+.sk-live__table td { padding: 3px 6px; border-bottom: 1px solid var(--bd); color: var(--t1); }
+.sk-live__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 3px 8px; border-top: 1px solid var(--bd); font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-live__fresh[data-stale] { color: var(--wrn); }
+.sk-live__refresh { border: 0; background: none; padding: 0; font: inherit; color: var(--acc); cursor: pointer; }
+.sk-live__refresh:disabled { color: var(--t3); cursor: default; }
+.sk-live__trunc { color: var(--wrn); }
+.sk-live__scope { margin-left: auto; }
+.sk-live__view { min-width: 0; }
+
 /* S4-14: фильтр по типам в поиске — свёрнут по умолчанию (слово владелицы 11.11.2026). */
 .sk-palette__kinds { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 12px; border-bottom: 1px solid var(--bd); }
 .sk-palette__kindsbtn { border: 0; background: none; padding: 2px 4px; font: inherit; font-size: var(--fs-xs); color: var(--t2); cursor: pointer; }
