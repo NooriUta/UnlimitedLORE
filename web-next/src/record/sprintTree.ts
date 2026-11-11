@@ -76,6 +76,7 @@ export function sprintTreeOf(c: LoreRecord1): SprintTree {
       code: ph.id, progress: str(v.progress),
     });
   }
+  const phaseTitle = new Map(phases.map(ph => [ph.id, ph.title || ph.id]));
   const tasks = tasksPart?.state === 'ok' ? tasksPart.items : [];
   for (const tk of tasks) {
     const v = tk.values ?? {};
@@ -86,6 +87,9 @@ export function sprintTreeOf(c: LoreRecord1): SprintTree {
     rows.push({
       key: tk.id, kind: 'task', parent: ph ?? sid, title: tk.title || tk.id, status: tk.status ?? '',
       code: str(v.code) ?? tk.id, executor: str(v.executor), effort: typeof v.effort === 'number' ? v.effort : null,
+      // Поле для фасета «Фаза» (S4-SPRINT-TASKS-CONTROLS): подписью, а фазы нет
+      // в выдаче — её uid как есть (не выдумываем название).
+      phase: ph ? phaseTitle.get(ph) ?? ph : null,
     });
   }
   return {

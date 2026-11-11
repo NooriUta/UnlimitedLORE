@@ -142,14 +142,26 @@ final class MachineAccess {
      * @return причина отказа словами или null
      */
     static String writeRefusal(String agentScope, String seerRole, String callerSub, String ownerSub, String machineId) {
+        if (canManage(agentScope, seerRole, callerSub, ownerSub)) return null;
         if (agentScope != null)
             return "агент (agent-" + agentScope + ") не выдаёт допуск к машине — это решает её владелец или admin";
-        if ("admin".equals(seerRole) || "superadmin".equals(seerRole)) return null;
         if (ownerSub == null || ownerSub.isBlank())
             return "у машины " + machineId + " нет владельца в графе — допуск к ней может выдать только admin";
-        if (callerSub != null && callerSub.equals(ownerSub)) return null;
         return "допуск к машине " + machineId + " выдаёт только её владелец или admin";
     }
+
+    /**
+     * S7B-ACL-3: само правило «кто выдаёт допуск» — одно для записи ({@link #writeRefusal}) и для
+     * поля {@code can_write} среза machine_acl. Владелец машины или admin/superadmin; агент — никогда.
+     */
+    static boolean canManage(String agentScope, String seerRole, String callerSub, String ownerSub) {
+        if (agentScope != null) return false;
+        if ("admin".equals(seerRole) || "superadmin".equals(seerRole)) return true;
+        return ownerSub != null && !ownerSub.isBlank() && callerSub != null && callerSub.equals(ownerSub);
+    }
+
+    /** Вызывающий среза: то, по чему считается {@code can_write}. Не прочитался — {@code null}. */
+    record Caller(String agentScope, String seerRole, String kcSub) {}
 
     /** Владельцу допуск к своей машине не нужен — он и так имеет всё. */
     static String selfGrantRefusal(String kcSub, String ownerSub) {
@@ -235,6 +247,45 @@ final class MachineAccess {
         return p;
     }
 
+    // ── пачка (S7B-ACL-3) ──────────────────────────────────────────────────
+
+    /** Предел пачки — тот же, что у user/role/batch. */
+    static final int BATCH_MAX = LoreRoleBatch.MAX;
+
+    /** Форма пачки целиком: не пуста, в пределе, один человек — одна строка. Строки проверяет {@link #requestError}. */
+    static String batchError(List<Request> items) {
+        if (items == null || items.isEmpty()) return "items required — пачка без строк";
+        if (items.size() > BATCH_MAX) return "items: не больше " + BATCH_MAX + " строк в пачке (пришло " + items.size() + ")";
+        Set<String> seen = new LinkedHashSet<>();
+        for (Request r : items)
+            if (r != null && r.kc_sub() != null && !seen.add(r.kc_sub()))
+                return "items: человек " + r.kc_sub() + " дважды в одной пачке — одно ребро на пару, итог был бы неоднозначен";
+        return null;
+    }
+
+    /**
+     * Обратная строка для отмены пачки по плану: «было» пусто — снять, иначе вернуть «было».
+     * Ничего не менялось ({@code unchanged}) — {@code null}: откатывать нечего.
+     */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> undoItem(Map<String, Object> plan, Request r) {
+        if (plan == null || "unchanged".equals(plan.get("kind"))) return null;
+        Map<String, Object> u = new LinkedHashMap<>();
+        u.put("kc_sub", r.kc_sub());
+        Object before = plan.get("before");
+        if (!(before instanceof Map<?, ?> b)) {
+            u.put("action", "revoke");
+            return u;
+        }
+        Map<String, Object> was = (Map<String, Object>) b;
+        if (r.display_name() != null) u.put("display_name", r.display_name());
+        u.put("action", "grant");
+        u.put("role", was.get("role"));
+        u.put("projects", was.get("projects"));
+        u.put("harnesses", was.get("harnesses"));
+        return u;
+    }
+
     // ── строка среза machine_acl ───────────────────────────────────────────
 
     private static List<?> list(Object v) {
@@ -270,5 +321,78 @@ final class MachineAccess {
                 i < harnesses.size() ? strings(harnesses.get(i)) : List.of()));
         }
         return out;
+    }
+
+    // ── обогащение среза (S7B-ACL-3) ───────────────────────────────────────
+
+    /** Владельцы машин выдачи — для запроса их проектных ролей (без повторов, порядок строк). */
+    static List<String> ownerSubs(List<Map<String, Object>> rows) {
+        Set<String> out = new LinkedHashSet<>();
+        for (Map<String, Object> r : rows) {
+            String o = ownerOf(r);
+            if (o != null && !o.isBlank()) out.add(o);
+        }
+        return List.copyOf(out);
+    }
+
+    /** Строки запроса ролей владельцев ({@code kc_sub, projects}) → kc_sub → проекты. */
+    static Map<String, List<String>> projectsBySub(List<Map<String, Object>> rows) {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        if (rows == null) return out;
+        for (Map<String, Object> r : rows) {
+            Object sub = r == null ? null : r.get("kc_sub");
+            if (sub != null) out.put(String.valueOf(sub), strings(r.get("projects")));
+        }
+        return out;
+    }
+
+    private static List<String> sortedDistinct(java.util.Collection<String> xs) {
+        return new java.util.TreeSet<>(xs).stream().toList();
+    }
+
+    /**
+     * Дописывает в строки machine_acl то, что раньше собирал клиент (контракт только расширяется):
+     * <ul>
+     *   <li>{@code projects} — проекты, где у владельца машины есть роль ({@code HAS_PROJECT_ROLE}),
+     *       плюс проекты уже выданных допусков. Агент видит проекты владельца (SPEC-RBAC-OMILORE-AGENTS §10.6),
+     *       а допуски добавлены, чтобы ни один не выпал из группировки;</li>
+     *   <li>{@code harnesses} — harness агентов, привязанных к машине: сам актор-машина, акторы с тем же
+     *       client_id, агенты, писавшие с неё последний раз ({@code machine_id}) или связанные с ней
+     *       {@code USES_MACHINE};</li>
+     *   <li>{@code can_write} — {@link #canManage} вызывающего; вызывающий не прочитан — {@code null}.</li>
+     * </ul>
+     * Источник не прочитан ({@code null}) — поля нет: «не смогли узнать» не выглядит как «пусто».
+     *
+     * @param ownerProjects kc_sub владельца → его проекты; null — роли не прочитаны
+     * @param agents строки агентов (actor_id, client_id, machine_id, harness, machines); null — не прочитаны
+     */
+    static void enrichAcl(List<Map<String, Object>> rows, Map<String, List<String>> ownerProjects,
+                          List<Map<String, Object>> agents, Caller caller) {
+        for (Map<String, Object> r : rows) {
+            String owner = ownerOf(r);
+            if (ownerProjects != null) {
+                Set<String> ps = new LinkedHashSet<>();
+                if (owner != null) ps.addAll(ownerProjects.getOrDefault(owner, List.of()));
+                for (Object o : list(r.get("grant_projects"))) ps.addAll(strings(o));
+                r.put("projects", sortedDistinct(ps));
+            }
+            if (agents != null) {
+                String clientId = r.get("client_id") == null ? null : String.valueOf(r.get("client_id"));
+                String actorId = r.get("actor_id") == null ? null : String.valueOf(r.get("actor_id"));
+                String machineId = clientId != null && clientId.startsWith(PREFIX) ? clientId.substring(PREFIX.length()) : null;
+                Set<String> hs = new LinkedHashSet<>();
+                for (Map<String, Object> a : agents) {
+                    Object h = a.get("harness");
+                    if (h == null || String.valueOf(h).isBlank()) continue;
+                    boolean bound = (actorId != null && actorId.equals(a.get("actor_id")))
+                        || (clientId != null && clientId.equals(a.get("client_id")))
+                        || (machineId != null && (machineId.equals(a.get("machine_id")) || strings(a.get("machines")).contains(machineId)));
+                    if (bound) hs.add(String.valueOf(h));
+                }
+                r.put("harnesses", sortedDistinct(hs));
+            }
+            r.put("can_write", caller == null ? null
+                : canManage(caller.agentScope(), caller.seerRole(), caller.kcSub(), owner));
+        }
     }
 }

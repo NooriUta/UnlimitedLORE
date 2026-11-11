@@ -959,6 +959,82 @@
 <p class="sk-nested__note" role="status">показаны 2 из 3</p>
 </div>
 </section>
+<section class="bare__sec" data-kit="ctlbar">
+<h2 class="bare__h2">Полоса управления</h2>
+<div role="group" aria-label="Фильтр, группировка и порядок" class="sk-list__controls" data-testid="kit-ctlbar">
+<fieldset class="sk-list__seg" data-seg="filter">
+<legend class="sk-list__seglabel">Фильтр</legend>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--lucide sk-icon sk-list__segicon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 24 24">
+<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z">
+</path>
+</g>
+</svg>
+<span class="sk-list__segcount" title="активных условий: 1">1</span>
+<input class="sk-list__search" aria-label="Текст в ID или названии" placeholder="Найти в списке…" type="search" value="срез">
+<div class="sk-facet">
+<button type="button" class="sk-facet__btn" aria-expanded="false">
+<span class="sk-list__label">Статус</span>
+<span class="sk-facet__sum">все</span>
+<span class="sk-facet__chev" aria-hidden="true">▾</span>
+</button>
+<div class="sk-facet__panel" role="group" aria-label="Фильтр «Статус»" hidden="">
+</div>
+</div>
+</fieldset>
+<fieldset class="sk-list__seg" data-seg="group">
+<legend class="sk-list__seglabel">Группировка</legend>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--lucide sk-icon sk-list__segicon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 24 24">
+<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M3 7V5c0-1.1.9-2 2-2h2">
+</path>
+<path d="M17 3h2c1.1 0 2 .9 2 2v2">
+</path>
+<path d="M21 17v2c0 1.1-.9 2-2 2h-2">
+</path>
+<path d="M7 21H5c-1.1 0-2-.9-2-2v-2">
+</path>
+<rect width="7" height="5" x="7" y="7" rx="1">
+</rect>
+<rect width="7" height="5" x="10" y="12" rx="1">
+</rect>
+</g>
+</svg>
+<span class="sk-gmenu">
+<button type="button" class="sk-list__dir sk-gmenu__btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Группировка: без группировки">
+<b>без группировки</b> <span aria-hidden="true">▾</span>
+</button>
+</span>
+</fieldset>
+<fieldset class="sk-list__seg" data-seg="sort">
+<legend class="sk-list__seglabel">Порядок</legend>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--lucide sk-icon sk-list__segicon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 24 24">
+<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M11 5h10">
+</path>
+<path d="M11 12h10">
+</path>
+<path d="M11 19h10">
+</path>
+<path d="M4 4h1v5">
+</path>
+<path d="M4 9h2">
+</path>
+<path d="M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02">
+</path>
+</g>
+</svg>
+<span class="sk-gmenu">
+<button type="button" class="sk-list__dir sk-gmenu__btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Порядок: как пришло">
+<b>как пришло</b> <span aria-hidden="true">▾</span>
+</button>
+</span>
+<button type="button" class="sk-list__dir" aria-pressed="false" disabled="">по убыванию</button>
+</fieldset>
+<button type="button" class="sk-btn">Сбросить фильтр</button>
+<span class="sk-list__shown" role="status">Показано 1 из 2</span>
+</div>
+</section>
 <section class="bare__sec" data-kit="fresh">
 <h2 class="bare__h2">Свежесть</h2>
 <div class="bare__row">
@@ -1004,15 +1080,15 @@
 <span class="sk-field__label">Флаг</span>
 <span class="sk-field__seg" role="radiogroup">
 <label class="sk-field__opt">
-<input type="radio" name="_r_d_">
+<input type="radio" name="_r_g_">
 <span>Да</span>
 </label>
 <label class="sk-field__opt">
-<input type="radio" name="_r_d_">
+<input type="radio" name="_r_g_">
 <span>Нет</span>
 </label>
 <label class="sk-field__opt">
-<input type="radio" checked="" name="_r_d_">
+<input type="radio" checked="" name="_r_g_">
 <span>Не задано</span>
 </label>
 </span>
