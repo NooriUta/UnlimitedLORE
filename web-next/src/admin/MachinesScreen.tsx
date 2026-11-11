@@ -245,7 +245,7 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
       const g = m.grants.find(x => x.kc_sub === splitPair(id)[0]);
       if (g) setDraft({ who: [g.kc_sub], role: g.role || 'viewer', projects: g.projects, harnesses: g.harnesses });
     } },
-    { id: 'revoke', title: t('admin.macl.act.revoke'), icon: 'cancel', run: ids => { setBulkRole(null); propose(removeProjectsRequests(m, ids.map(splitPair))); } },
+    { id: 'revoke', title: t('admin.macl.act.revoke'), icon: 'lucide:circle-x', run: ids => { setBulkRole(null); propose(removeProjectsRequests(m, ids.map(splitPair))); } },
   ] : [];
   const bulkActions: ListBulkAction[] = canWrite ? [
     { id: 'role', title: t('admin.macl.act.role'), run: ids => {
