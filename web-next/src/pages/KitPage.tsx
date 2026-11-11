@@ -7,8 +7,8 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, CalendarMonth, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
-  DENSITIES, FieldEditor, type Density, type FieldEditorDef, type KitCtx, type Mode,
+  BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  DENSITIES, FieldEditor, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, resolveMerge } from '@seidr/kit/content';
@@ -60,6 +60,7 @@ export default function KitPage() {
   const [fav, setFav] = useState(false);
   const [tab, setTab] = useState<TabId>(readTab);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [ctl, setCtl] = useState<ControlState>(EMPTY_CONTROLS);
   const [flowPick, setFlowPick] = useState<'a' | 'b' | null>(null);
   const [flowDone, setFlowDone] = useState(false);
   const [diffApplied, setDiffApplied] = useState<number | null>(null);
@@ -227,6 +228,11 @@ export default function KitPage() {
               списком, что у разделов: поиск, фильтр, группировка, порядок. */}
           <p>{t('kitPage.sh.nested')}</p>
           <NestedList ctx={paletteCtx} records={PALETTE_DEMO_DATA.records.slice(0, 6)} missing={['GHOST-404']} />
+          {/* Полоса управления отдельно (S4-SPRINT-TASKS-CONTROLS): для таблиц со своими
+              строками — дерево, таблица задач. Те же сегменты и модель, что у списка. */}
+          <p>{t('kitPage.sh.ctlbar')}</p>
+          <ControlBar config={paletteCtx.config} records={PALETTE_DEMO_DATA.records.slice(0, 6)} state={ctl} onChange={setCtl}
+            filterKeys={['status']} groupKeys={['status']} sortKeys={['title', 'status']} />
         </section>
 
         <section id="kit-flow" className="kitp__sec" aria-labelledby="kit-flow-h">

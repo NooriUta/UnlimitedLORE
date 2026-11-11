@@ -8,8 +8,12 @@
 //     работают, плюс «вы: роль» для смотрящего. Точка роста раздела проектов.
 // Строки свёрнуты (details): в шапке — числа, раскрытие — подробности. Так
 // пять человек и двадцать пять проектов помещаются на экран, а не в ленту.
-import { useMemo, useState, type SyntheticEvent } from 'react';
-import { Drawer, EmptyState, Forbidden, ListView, LoadError, Pill, Skeleton, useKitLang, useLoadState, useUrlParam } from '@seidr/kit';
+import { useCallback, useMemo, useState, type SyntheticEvent } from 'react';
+import {
+  Drawer, EmptyState, Forbidden, ListView, LoadError, Pill, Skeleton, setUrlParams, useKitLang, useLoadState, useUrlParam,
+} from '@seidr/kit';
+import { ProjectLikeWizard } from './ProjectLikeWizard';
+import { PROJECT_WIZ_PARAMS } from './projectLike';
 import { useAppT } from '../i18n';
 import { fetchParticipation, filterProjectViews, type Participation, type Person } from './participation';
 import { peopleListConfig, peopleRecords } from './peopleList';
@@ -20,6 +24,9 @@ import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from 
 import { PersonMachines } from './MachinesScreen';
 import { PersonOffboard } from './PersonOffboard';
 import './Admin.css';
+
+/** Сброс адреса мастера UC-5: его поля и общий ключ шага мастеров (WizardsScreen STEP_KEY). */
+const PROJECT_WIZ_RESET: Record<string, null> = Object.fromEntries(['adm-step', ...PROJECT_WIZ_PARAMS].map(p => [p, null]));
 
 /** Ось экрана: раздел «Люди и их проекты» или раздел «Проекты». */
 export type WhoWhereView = 'people' | 'projects';
@@ -43,6 +50,20 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
   const agentNames = (list: AgentRow[]) => list.map(a => (
     <Pill key={a.actor_id} variant="id" title={a.harness ?? t('admin.harness.none')}>{a.name ?? a.actor_id}</Pill>
   ));
+
+  // S7B-18 (UC-5): «проект как у похожего» — действие раздела «Проекты», мастер
+  // на месте в выдвижной панели (как «+ Человек» у людей). Шаги и поля мастера
+  // живут в адресе; при открытии и закрытии они сбрасываются, чтобы мастер не
+  // открылся на шаге или с полями прошлого раза.
+  const [projectWiz, setProjectWiz] = useState(false);
+  const openProjectWiz = useCallback((src: string | null) => {
+    setUrlParams({ ...PROJECT_WIZ_RESET, 'adm-psrc': src });
+    setProjectWiz(true);
+  }, []);
+  const closeProjectWiz = useCallback(() => {
+    setUrlParams(PROJECT_WIZ_RESET);
+    setProjectWiz(false);
+  }, []);
 
   const allSlugs = useMemo(() => (data ? data.projects.map(p => p.slug) : []), [data]);
   const body = useMemo(() => {
@@ -86,12 +107,19 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
                 </tbody>
               </table>
               {open === pr.slug && <WhoSeesBlock project={pr.slug} fetchImpl={fetchImpl} />}
+              {open === pr.slug && (
+                <div className="adm-filters">
+                  {/* S7B-18 (UC-5): этот проект — образец для нового. */}
+                  <button type="button" className="adm-btn" data-testid={`adm-project-like-${pr.slug}`}
+                    onClick={() => openProjectWiz(pr.slug)}>{t('admin.projects.like')}</button>
+                </div>
+              )}
             </details>
           </li>
         ))}
       </ul>
     );
-  }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs, query]);
+  }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs, query, openProjectWiz]);
   // У «Людей» поиск — в самом списке kit; «ничего не нашли» — его честное состояние.
   const nothing = view === 'projects' && !!data && !!(query ?? '').trim()
     && filterProjectViews(data.projects, query).length === 0;
@@ -133,7 +161,19 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
           placeholder={t('admin.who.qHint')} spellCheck={false}
           onChange={e => setQuery(e.target.value === '' ? null : e.target.value, { replace: true })} />
       </label>}
+      {view === 'projects' && (
+        <div className="adm-people__bar">
+          <button type="button" className="sk-btn" data-testid="adm-projects-add" onClick={() => openProjectWiz(null)}>
+            {t('admin.projects.add')}
+          </button>
+        </div>
+      )}
       {content}
+      {projectWiz && (
+        <Drawer open onClose={closeProjectWiz} title={t('admin.wiz.project.title')}>
+          <ProjectLikeWizard fetchImpl={fetchImpl ?? loreFetch} onDone={closeProjectWiz} />
+        </Drawer>
+      )}
     </section>
   );
 }

@@ -5,23 +5,25 @@
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
 import { kitNumber } from '../core/fmtValue';
-import { Fragment, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react';
 import { Popover } from '../shell/Popover';
 import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { ColumnsChoice } from '../list/ColumnsChoice';
+import { ControlBar, EMPTY_CONTROLS, applyControls, controlsActive, type ControlState } from '../list/ControlBar';
+import { EmptyState } from '../states/StateViews';
 import { LIST_BUDGET } from '../list/listModel';
 import { useStepLimits } from '../core/stepLimit';
 import { onScreenItems, selectAllShown, toggleId, visibleSelection } from '../list/listSelection';
 import { useLongPress } from '../list/useLongPress';
-import type { KitConfig, KitDictItem } from '../core/contract';
+import type { KitConfig, KitDictItem, KitRecord } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
 import { statusMeta } from '../elements/statusMeta';
 import { kitT, useKitLang, type KitKey, type KitLang } from '../i18n';
 import { errorDetail } from '../states/loadState';
 import {
-  draftOf, groupTasks, TASK_GROUP_BYS, TASK_STATUSES, validateTaskDraft,
+  draftOf, groupTasks, phaseLabel, TASK_GROUP_BYS, TASK_STATUSES, validateTaskDraft,
   type TaskDraft, type TaskGroup, type TaskGroupBy, type TaskPatch, type TaskPhase, type TaskRowData, type TaskStatus,
 } from './taskGroups';
 
@@ -70,6 +72,13 @@ export interface TaskTableProps {
    * Отказ — throw: причина печатается в панели, выбор сохраняется.
    */
   onBulkStatusChange?: (tasks: TaskRowData[], status: TaskStatus) => Promise<void>;
+  /**
+   * Стандартная полоса управления списков (S4-SPRINT-TASKS-CONTROLS): поиск,
+   * фасеты статус / исполнитель / фаза, сегмент группировки (прежние кнопки
+   * фаза · фаза+статус · статус · списком), порядок. Состояние — в памяти
+   * таблицы. Не задана — прежняя полоса.
+   */
+  controls?: boolean;
   className?: string;
 }
 
@@ -196,11 +205,55 @@ export const TASK_COLUMNS = [
 
 export const TASK_COLUMN_KEYS: readonly string[] = TASK_COLUMNS.map(c => c.key);
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, className }: TaskTableProps) {
+/** Оси фасетов и порядка таблицы задач — в языке колонок списка. */
+export const TASK_FILTER_KEYS = ['status', 'fields.executor', 'fields.phase'] as const;
+export const TASK_SORT_KEYS = ['id', 'title', 'status', 'fields.effort', 'fields.executor', 'fields.reviewer'] as const;
+
+/** Задача → запись списка: так фильтр и порядок — те же, что у списков. */
+function taskRecord(tk: TaskRowData): KitRecord {
+  return {
+    id: tk.uid, kind: 'task', title: tk.title ?? '', status: tk.status ?? '', search: tk.id,
+    fields: { id: tk.id, executor: tk.executor, reviewer: tk.reviewer, phase: tk.phase, effort: tk.effortDays },
+  };
+}
+
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, controls, className }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [colsOpen, setColsOpen] = useState(false);
-  const groups = groupTasks(tasks, groupBy, phases);
+  // Полоса управления (S4-SPRINT-TASKS-CONTROLS): фильтр — до групп, порядок —
+  // внутри каждой группы (группы задают фаза и статус, порядок их не ломает).
+  const [cstate, setCstate] = useState<ControlState>(EMPTY_CONTROLS);
+  const records = useMemo(() => tasks.map(taskRecord), [tasks]);
+  const phaseById = new Map(phases.map(p => [p.uid, p]));
+  const ctlConfig = useMemo<KitConfig>(() => ({
+    modules: [], menu: { groups: [] }, kinds: {},
+    statuses: { items: menuStatuses(statuses, '', lang).map(m => ({ code: m.code, title: m.label, icon: m.icon, color: m.color,
+      // Категория полосе не нужна (порядок — индекс, вид — иконка и цвет); своя статусу — у самой строки.
+      category: (statuses?.find(x => x.code === m.code)?.category ?? 'todo') })) },
+  }), [statuses, lang]);
+  const ctlKeyTitle = (k: string): string | undefined => {
+    const bare = k.startsWith('fields.') ? k.slice(7) : k;
+    const col = TASK_COLUMNS.find(c => c.key === bare);
+    return col ? t(col.labelKey) : undefined;
+  };
+  const ctlValueTitle = (k: string, v: string): string | undefined => {
+    if (k === 'status') return taskStatusName(lang, v);
+    if (k === 'fields.phase' && v) { const ph = phaseById.get(v); return ph ? phaseLabel(ph) : v; }
+    return undefined;
+  };
+  const filtering = !!controls && controlsActive(cstate);
+  const ranked = controls ? applyControls(records, cstate, ctlConfig) : null;
+  const rank = new Map((ranked ?? []).map((r, i) => [r.id, i]));
+  const shownTasks = ranked ? tasks.filter(tk => rank.has(tk.uid)) : tasks;
+  const groups = groupTasks(shownTasks, groupBy, phases);
+  if (controls && cstate.sort) {
+    const byRank = (a: TaskRowData, b: TaskRowData) => (rank.get(a.uid) ?? 0) - (rank.get(b.uid) ?? 0);
+    for (const g of groups) {
+      g.tasks = [...g.tasks].sort(byRank);
+      if (g.subgroups) for (const sg of g.subgroups) sg.tasks = [...sg.tasks].sort(byRank);
+    }
+  }
   const showPhase = groupBy !== 'phase' && groupBy !== 'phase_status';
   // Потолок строк на группу (S9-07, решение 1а): тот же шаг, что у списков,
   // одним местом — LIST_BUDGET. Не виртуализация: строк вне DOM не находит
@@ -241,7 +294,6 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
       (err: unknown) => { setBulkBusy(false); setBulkError(errorDetail(err)); },
     );
   };
-  const phaseById = new Map(phases.map(p => [p.uid, p]));
   const fmt = { format: (v: number) => kitNumber(lang, v) };
 
   // Доступные колонки: «Фаза» недоступна при группировке по фазе — она уже в
@@ -270,9 +322,35 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
     ...(onSave ? [{ key: 'actions', label: t('kit.tasks.col.actions') }] : []),
   ];
 
+  const groupPills = onGroupByChange && (
+    // В полосе управления имя группе даёт legend сегмента «Группировка»: второе
+    // такое же имя у вложенной группы чтец прочёл бы дважды.
+    <span className="sk-tasks__groupby" {...(controls ? {} : { role: 'group', 'aria-label': t('kit.tasks.groupBy') })}>
+      {TASK_GROUP_BYS.map(by => (
+        <Pill key={by} variant="filter" pressed={by === groupBy} onToggle={() => { if (by !== groupBy) onGroupByChange(by); }}>
+          {t(`kit.tasks.groupBy.${by}` as KitKey)}
+        </Pill>
+      ))}
+    </span>
+  );
+
   return (
     <div className={['sk-tasks', className].filter(Boolean).join(' ')}>
-      {(onGroupByChange || onColumnsChange) && (
+      {controls && (
+        <ControlBar
+          config={ctlConfig}
+          records={records}
+          state={cstate}
+          onChange={setCstate}
+          filterKeys={TASK_FILTER_KEYS}
+          groupSlot={groupPills || undefined}
+          sortKeys={TASK_SORT_KEYS}
+          keyTitle={ctlKeyTitle}
+          valueTitle={ctlValueTitle}
+          shown={{ shown: shownTasks.length, total: tasks.length }}
+        />
+      )}
+      {(onColumnsChange || (onGroupByChange && !controls)) && (
         <div className="sk-tasks__bar">
           {onColumnsChange && (
             // Выбор колонок — тот же компонент, что у списков (S4-35):
@@ -291,15 +369,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
               )}
             </span>
           )}
-          {onGroupByChange && (
-            <span className="sk-tasks__groupby" role="group" aria-label={t('kit.tasks.groupBy')}>
-              {TASK_GROUP_BYS.map(by => (
-                <Pill key={by} variant="filter" pressed={by === groupBy} onToggle={() => { if (by !== groupBy) onGroupByChange(by); }}>
-                  {t(`kit.tasks.groupBy.${by}` as KitKey)}
-                </Pill>
-              ))}
-            </span>
-          )}
+          {!controls && groupPills}
         </div>
       )}
       {onBulkStatusChange && selected.size > 0 && (
@@ -324,6 +394,9 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
           <button type="button" className="sk-btn" onClick={() => { setSelected(new Set()); setBulkError(null); }}>{t('kit.list.done')}</button>
           {bulkError && <p className="sk-tasks__selerr" role="alert">{t('kit.tasks.statusFailed', { detail: bulkError })}</p>}
         </div>
+      )}
+      {filtering && shownTasks.length === 0 && tasks.length > 0 && (
+        <EmptyState compact title={t('kit.list.emptyFiltered')} hint={t('kit.list.emptyFilteredHint')} />
       )}
       <div className="sk-tasks__wrap" {...(onBulkStatusChange ? longPress : {})}>
         <table className="sk-tasks__table">

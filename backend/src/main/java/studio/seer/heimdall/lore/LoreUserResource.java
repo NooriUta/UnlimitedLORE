@@ -275,6 +275,7 @@ public class LoreUserResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response setMachineAccess(MachineAccessRequest body, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
+        if (body != null && (body.items() != null || body.undo_of() != null)) return setMachineAccessBatch(body, role);
         MachineAccess.Request req = body == null ? null : body.toRequest();
         List<String> roles = activeDictCodes(MachineAccess.ROLE_DICT, MachineAccess.ROLES_FALLBACK);
         String err = MachineAccess.requestError(req, roles, activeDictCodes("harness", LoreActorHarness.REGISTRY));
@@ -407,8 +408,112 @@ public class LoreUserResource extends LoreResourceBase {
         return b.append("]").toString();
     }
 
+    /**
+     * S7B-ACL-3 — пачка допусков к одной машине: {@code {machine_id, items:[…], dry_run, undo_of}}.
+     * Та же схема, что user/role/batch: строки проверяются все до записи (400 — ничего не записано),
+     * доступ к машине — один раз на пачку (404/403 целиком), затем каждая строка идёт через
+     * одиночный путь {@link #setMachineAccess} с его проверками. Ответ: {@code batch_id} — первое
+     * *_id поле (журнал AO-01 — одна запись на пачку), {@code items} с итогом каждой строки,
+     * {@code undo} — обратная пачка; отмена — этот же вызов с {@code items = undo} и
+     * {@code undo_of = batch_id}, в окне {@link LoreRoleBatch#UNDO_WINDOW}. Пачка не атомарна.
+     */
+    private Response setMachineAccessBatch(MachineAccessRequest body, String role) {
+        List<MachineAccessItem> raw = body.items() == null ? List.of() : body.items();
+        List<MachineAccess.Request> reqs = new java.util.ArrayList<>();
+        for (MachineAccessItem i : raw)
+            reqs.add(i == null ? null : new MachineAccess.Request(body.machine_id(), i.kc_sub(), i.display_name(),
+                i.action(), i.role(), i.projects(), i.harnesses()));
+        String err = MachineAccess.batchError(reqs);
+        if (err != null) return badParams(err);
+        List<String> roles = activeDictCodes(MachineAccess.ROLE_DICT, MachineAccess.ROLES_FALLBACK);
+        List<String> harnesses = activeDictCodes("harness", LoreActorHarness.REGISTRY);
+        for (int i = 0; i < reqs.size(); i++) {
+            String e = MachineAccess.requestError(reqs.get(i), roles, harnesses);
+            if (e != null) return badParams("items[" + i + "]: " + e);
+        }
+        Instant now = Instant.now();
+        if (body.undo_of() != null) {
+            String undoErr = LoreRoleBatch.undoError(body.undo_of(), now);
+            if (undoErr != null) return badParams(undoErr);
+        }
+        String clientId = MachineAccess.clientIdOf(body.machine_id());
+        try {
+            List<Map<String, Object>> machine = ingestService.queryPublic(
+                "SELECT actor_id, out('OWNED_BY').kc_sub AS owner_kc_sub FROM KnowActor "
+                + "WHERE kind = 'agent' AND client_id = :c", Map.of("c", clientId));
+            if (machine.isEmpty())
+                return targetNotFound("машина " + body.machine_id() + " не заведена: нет актора-агента с client_id " + clientId);
+            String refusal = MachineAccess.writeRefusal(callerAgentScope(), role, callerKcSub(),
+                MachineAccess.ownerOf(machine.get(0)), body.machine_id());
+            if (refusal != null)
+                return noStore(Response.status(Response.Status.FORBIDDEN)
+                    .entity(new LoreError("MACHINE_ACCESS_FORBIDDEN", refusal)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE MACHINE ACCESS BATCH] %s: %s", body.machine_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+
+        boolean dry = Boolean.TRUE.equals(body.dry_run());
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        String batchId = dry ? null : LoreRoleBatch.batchId(now);
+        if (batchId != null) out.put("batch_id", batchId);   // первое *_id — сущность записи журнала AO-01
+        out.put("machine_id", body.machine_id());
+        out.put("ok", true);
+        out.put("client_id", clientId);
+        List<Map<String, Object>> plans = new java.util.ArrayList<>();
+        List<Map<String, Object>> items = new java.util.ArrayList<>();
+        List<Map<String, Object>> undo = new java.util.ArrayList<>();
+        int applied = 0, failed = 0, unchanged = 0;
+        for (int i = 0; i < reqs.size(); i++) {
+            MachineAccess.Request r = reqs.get(i);
+            MachineAccessItem it = raw.get(i);
+            Response one = setMachineAccess(new MachineAccessRequest(body.machine_id(), it.kc_sub(), it.display_name(),
+                it.action(), it.role(), it.projects(), it.harnesses(), dry, null, null), role);
+            Map<?, ?> entity = one.getEntity() instanceof Map<?, ?> m ? m : null;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> plan = entity != null && entity.get("plan") instanceof Map<?, ?> p ? (Map<String, Object>) p : null;
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("kc_sub", r.kc_sub());
+            item.put("kind", plan == null ? null : plan.get("kind"));
+            item.put("status", one.getStatus());
+            if (entity != null && entity.get("outcome") != null) item.put("outcome", entity.get("outcome"));
+            if (one.getEntity() instanceof LoreError le) item.put("error", le);
+            if (plan != null) plans.add(plan);
+            String result;
+            if (one.getStatus() != 200) { result = "failed"; failed++; }
+            else if (plan != null && "unchanged".equals(plan.get("kind"))) { result = "unchanged"; unchanged++; }
+            else { result = dry ? "planned" : "applied"; if (!dry) applied++; }
+            item.put("result", result);
+            items.add(item);
+            if (one.getStatus() == 200) {
+                Map<String, Object> u = MachineAccess.undoItem(plan, r);
+                if (u != null) undo.add(u);
+            }
+        }
+        out.put("plan", plans);
+        out.put("undo", undo);
+        out.put("items", items);
+        out.put("applied", applied);
+        out.put("failed", failed);
+        out.put("unchanged", unchanged);
+        out.put("atomic", false);
+        if (dry) out.put("dry_run", true);
+        else out.put("undo_until", String.valueOf(LoreRoleBatch.undoUntil(batchId)));
+        if (body.undo_of() != null) out.put("undo_of", body.undo_of());
+        return noStore(Response.ok(out));
+    }
+
+    /** Строка пачки допусков — машина одна на пачку, она в шапке запроса. */
+    public record MachineAccessItem(String kc_sub, String display_name, String action, String role,
+                                    List<String> projects, List<String> harnesses) {}
+
+    /**
+     * Одиночная форма — прежние поля; {@code items}/{@code undo_of} — пачка (S7B-ACL-3), одиночная
+     * форма без них работает как раньше.
+     */
     public record MachineAccessRequest(String machine_id, String kc_sub, String display_name, String action,
-                                       String role, List<String> projects, List<String> harnesses, Boolean dry_run) {
+                                       String role, List<String> projects, List<String> harnesses, Boolean dry_run,
+                                       List<MachineAccessItem> items, String undo_of) {
         MachineAccess.Request toRequest() {
             return new MachineAccess.Request(machine_id, kc_sub, display_name, action, role, projects, harnesses);
         }

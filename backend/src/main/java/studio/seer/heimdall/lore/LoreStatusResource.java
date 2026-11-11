@@ -623,7 +623,21 @@ public class LoreStatusResource extends LoreResourceBase {
             "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sid), -1);
 
-        return client.query(db, basicAuth(), readQ).chain(res -> {
+        // S4-24: track_id — ссылка на вершину PlanTrack. Несуществующий трек — отказ с причиной
+        // до чтения и записи версии (раньше опечатка молча уходила в план). Пусто — снятие трека.
+        Uni<Response> trackGate = !LoreSprintTracks.needsCheck(req.track_id())
+            ? Uni.createFrom().item((Response) null)
+            : client.query(db, basicAuth(), new MartQuery("sql", LoreSprintTracks.EXISTS_SQL,
+                    Map.of("track_id", req.track_id()), -1))
+                .map(t -> {
+                    LoreError refused = LoreSprintTracks.refusal(req.track_id(), t.result());
+                    return refused == null ? null
+                        : noStore(Response.status(422).entity(refused));
+                });
+
+        return trackGate.chain(refusedTrack -> refusedTrack != null
+            ? Uni.createFrom().item(refusedTrack)
+            : client.query(db, basicAuth(), readQ).chain(res -> {
             List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
             if (rows.isEmpty())
                 return Uni.createFrom().item(badParams("sprint has no open hist row: " + sid));
@@ -695,7 +709,7 @@ public class LoreStatusResource extends LoreResourceBase {
                     out.remove("status_raw");
                     return noStore(Response.ok(out));
                 });
-        }).onFailure().recoverWithItem(ex -> {
+        })).onFailure().recoverWithItem(ex -> {
             LOG.warnf("[LORE SPRINT PLAN] %s: %s", sid, ex.getMessage());
             if (Scd2Guard.isConcurrentModification(ex))
                 return Scd2Guard.conflict("sprint '" + sid

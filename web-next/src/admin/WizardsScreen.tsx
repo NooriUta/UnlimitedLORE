@@ -18,21 +18,24 @@ import { useAdminNav } from './adminNav';
 import { DangerBatch } from './DangerBatch';
 import { fetchAgents, type AgentsData } from './agents';
 import { fetchRoleMatrix, type RolesData } from './roles';
+import { ProjectLikeWizard } from './ProjectLikeWizard';
+import { PROJECT_WIZ_PARAMS } from './projectLike';
 import {
   agentClientIdOf, backendOf, createKcUser, fetchFirstCall, fetchKcClients, fetchKcUsers, findKcUser,
   issueAgent, likeChanges, loginOf, machineProblem, machineTakenBy, mcpAddCommand, mcpJsonText, reasonOf,
   templateProfiles, type FirstCall, type IssuedAgent, type KcUser,
 } from './wizards';
 
-export type WizardKind = 'person' | 'agent' | 'machine';
-const KINDS: readonly WizardKind[] = ['person', 'agent', 'machine'];
+export type WizardKind = 'person' | 'agent' | 'machine' | 'project';
+// UC-5 «проект как у похожего» (S7B-18) — ProjectLikeWizard.tsx.
+const KINDS: readonly WizardKind[] = ['person', 'agent', 'machine', 'project'];
 const STEP_KEY = 'adm-step';
 /**
  * Параметры адреса, которые принадлежат мастеру, а не экрану. Шаг общий у всех
  * трёх мастеров (S7B-29): без сброса при смене мастера новый открывался на
  * шаге прежнего — или с заметкой «шага нет», если такого ключа у него нет.
  */
-const WIZ_PARAMS = [STEP_KEY, 'adm-login', 'adm-like', 'adm-owner', 'adm-machine', 'adm-profile'] as const;
+const WIZ_PARAMS = [STEP_KEY, 'adm-login', 'adm-like', 'adm-owner', 'adm-machine', 'adm-profile', ...PROJECT_WIZ_PARAMS] as const;
 
 export interface WizardsEnv { backend: string; issuer: string }
 
@@ -121,6 +124,7 @@ export function WizardsScreen({ fetchImpl = loreFetch, meSub, env }: WizardsScre
       {wiz === 'person' && <PersonWizard key="person" fetchImpl={fetchImpl} onDone={() => finish('person')} />}
       {wiz === 'agent' && <AgentWizard key="agent" mode="agent" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('agent')} />}
       {wiz === 'machine' && <AgentWizard key="machine" mode="machine" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('machine')} />}
+      {wiz === 'project' && <ProjectLikeWizard key="project" fetchImpl={fetchImpl} onDone={() => finish('project')} />}
     </section>
   );
 }

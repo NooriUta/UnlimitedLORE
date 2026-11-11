@@ -32,6 +32,8 @@ import { useNarrow } from '../core/narrow';
 import { BlockBoundary } from './BlockBoundary';
 import { DataStateBlock } from './DataStateBlock';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
+import { KIT_NEW_ID, RecordCreate, type RecordCreateSpec } from './RecordCreate';
+export { KIT_NEW_ID, type RecordCreateSpec };
 import { RecordLinks, recordLinks } from './RecordLinks';
 import { dataStateOf } from './dataState';
 import { RecordGraph } from './RecordGraph';
@@ -158,6 +160,8 @@ export interface RecordViewProps {
    * по модели. Десктоп от этого не меняется.
    */
   narrow?: boolean;
+  /** S4-24: режим «создание» для записи `_new` — поля, «создано», «отмена». */
+  create?: RecordCreateSpec;
 }
 
 /**
@@ -229,6 +233,16 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
         const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} />;
         // S4-24: ✎ — только у поля, которое приложение назвало правимым, при праве и пути записи;
         // enum без вариантов не правится — выбирать не из чего.
+        // S4-24: варианты не загрузились — причина словами и «Повторить», а не свободный ввод.
+        if (f.type === 'enum' && f.editable && !(f.options?.length) && f.optionsError) {
+          return (
+            <>
+              {view}
+              <span className="sk-rec-fields__opterr" role="status">{kitT(lang, 'kit.field.optionsFailed', { reason: f.optionsError })}</span>
+              {f.onOptionsRetry && <button type="button" className="sk-btn sk-rec-fields__retry" onClick={f.onOptionsRetry}>{kitT(lang, 'kit.state.error.retry')}</button>}
+            </>
+          );
+        }
         const can = fieldSave && f.editable && INLINE_KINDS.has(f.type) && (f.type !== 'enum' || (f.options?.length ?? 0) > 0);
         if (!can) return view;
         const from = record.fields[f.key];
@@ -333,7 +347,17 @@ function propsSummary(record: KitRecord, kind: KindConfig): string {
     .join(' · ');
 }
 
-export function RecordView({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore, narrow: narrowProp }: RecordViewProps) {
+/**
+ * Паспорт записи. Запись `_new` при заданном `create` — режим «создание» (S4-24):
+ * та же точка входа и то же место, что у «Читать целиком», пустая и в правке.
+ */
+export function RecordView(props: RecordViewProps) {
+  return props.create && props.record.id === KIT_NEW_ID
+    ? <RecordCreate record={props.record} ctx={props.ctx} spec={props.create} className={props.className} />
+    : <RecordViewBody {...props} />;
+}
+
+function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore, narrow: narrowProp }: RecordViewProps) {
   const lang = useKitLang();
   const narrow = useNarrow(narrowProp);
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
