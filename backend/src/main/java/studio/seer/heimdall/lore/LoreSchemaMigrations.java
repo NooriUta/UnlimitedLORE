@@ -1584,7 +1584,13 @@ final class LoreSchemaMigrations {
         // сотни, а у старых batch_id пуст — индекс по пустому полю ради скана сотни строк не нужен.
         new Step(78, 17, "project_role_event_batch", List.of(
             "CREATE PROPERTY KnowProjectRoleEvent.batch_id    IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowProjectRoleEvent.role_before IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowProjectRoleEvent.role_before IF NOT EXISTS STRING")),
+
+        // SPRINT_LORE_AGENT_OBSERVABILITY/AO-MACHINE-OBJ (ADR-MINILORE-007, поправка 09.11;
+        // ADR-LORE-041 — связь ребром): машина — вершина KnowMachine, агент привязан к ней
+        // рёбрами USES_MACHINE, машин у агента может быть несколько. Аддитивно, major 17.
+        // DDL рядом с логикой (AgentMachine).
+        new Step(79, 17, "agent_machine", AgentMachine.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

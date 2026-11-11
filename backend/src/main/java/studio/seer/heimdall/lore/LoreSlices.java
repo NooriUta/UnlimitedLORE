@@ -1469,7 +1469,10 @@ public final class LoreSlices {
         slice("agent_owners",
             "SELECT actor_id, name, client_id, agent_role, machine_id, session_id, harness, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
-            "out('OWNED_BY').display_name AS owner_display_name " +
+            "out('OWNED_BY').display_name AS owner_display_name, " +
+            // AO-MACHINE-OBJ: ВСЕ машины агента (рёбра USES_MACHINE), в отличие от
+            // machine_id выше — «откуда писал последний раз».
+            "out('USES_MACHINE').machine_id AS machines " +
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
 
