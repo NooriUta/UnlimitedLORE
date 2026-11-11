@@ -22,6 +22,7 @@ import {
 } from './agents';
 import { useAdminNav } from './adminNav';
 import { WHY_AGENT } from './WhyNotSee';
+import { HarnessMark } from './HarnessMark';
 import './Admin.css';
 
 export interface AgentsScreenProps {
@@ -64,7 +65,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
             <button key={c.key} type="button" className="adm-chip" aria-pressed={harness === c.key}
               data-testid={`adm-harness-${c.key}`} data-none={c.key === HARNESS_NONE || undefined}
               onClick={() => setHarness(h => (h === c.key ? null : c.key))}>
-              {label(c.key)} <b>{c.n}</b>
+              <HarnessMark logo={data.logos[c.key]} label={label(c.key)} />{label(c.key)} <b>{c.n}</b>
             </button>
           ))}
           <button type="button" className="adm-chip" aria-pressed={noMachine} data-testid="adm-agents-nomachine"
@@ -425,7 +426,8 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
   return (
     <tr data-testid={`adm-agent-${row.actor_id}`}>
       <th scope="row">
-        <span className="adm-name">{row.name ?? row.actor_id}</span>
+        {/* S7B-22: рядом с именем — официальный знак harness из справочника; знака нет — ничего. */}
+        <span className="adm-name"><HarnessMark logo={row.harness_logo} label={row.harness_label} />{row.name ?? row.actor_id}</span>
         <span className="adm-id">{row.actor_id}</span>
       </th>
       <td>

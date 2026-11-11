@@ -415,6 +415,8 @@ export interface MachinesData {
   participationError: string | null;
   /** Подписи harness из справочника; кода нет — сам код. */
   harnessLabels: Record<string, string>;
+  /** S7B-22: код harness → официальный логотип из справочника (только у кого он есть). */
+  harnessLogos: Record<string, string>;
   /** Активные коды harness; null — справочник не прочитан. */
   harnessRegistry: string[] | null;
   truncated: boolean;
@@ -441,6 +443,7 @@ export async function fetchMachinesData(signal?: AbortSignal, fetchImpl?: typeof
     participation,
     participationError,
     harnessLabels: 'error' in agents ? {} : agents.labels,
+    harnessLogos: 'error' in agents ? {} : agents.logos,
     harnessRegistry: 'error' in agents ? null : agents.registry,
     truncated: acl.truncated,
   };

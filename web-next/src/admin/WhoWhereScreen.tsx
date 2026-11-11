@@ -24,6 +24,7 @@ import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from 
 import { PersonMachines } from './MachinesScreen';
 import { PersonOffboard } from './PersonOffboard';
 import { WhyNotSee } from './WhyNotSee';
+import { AgentChip } from './HarnessMark';
 import './Admin.css';
 
 /** Сброс адреса мастера UC-5: его поля и общий ключ шага мастеров (WizardsScreen STEP_KEY). */
@@ -49,7 +50,7 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
   const res = useLoadState<Participation>(signal => fetchParticipation(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
   const data = res.data;
   const agentNames = (list: AgentRow[]) => list.map(a => (
-    <Pill key={a.actor_id} variant="id" title={a.harness ?? t('admin.harness.none')}>{a.name ?? a.actor_id}</Pill>
+    <AgentChip key={a.actor_id} row={a} noneLabel={t('admin.harness.none')} />
   ));
 
   // S7B-18 (UC-5): «проект как у похожего» — действие раздела «Проекты», мастер
@@ -250,7 +251,7 @@ function PersonPassport({ person: p, meSub, fetchImpl, allSlugs }: { person: Per
       <p className="adm-sub">
         {t('admin.who.hisAgents')}{' '}
         {p.agents.length
-          ? p.agents.map(a => <Pill key={a.actor_id} variant="id" title={a.harness ?? t('admin.harness.none')}>{a.name ?? a.actor_id}</Pill>)
+          ? p.agents.map(a => <AgentChip key={a.actor_id} row={a} noneLabel={t('admin.harness.none')} />)
           : <span className="adm-missing">{t('admin.who.noAgents')}</span>}
       </p>
       <PersonAgentsLine kcSub={p.kc_sub} isMe={isMe} fetchImpl={fetchImpl} />

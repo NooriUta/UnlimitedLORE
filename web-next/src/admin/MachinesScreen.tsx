@@ -34,6 +34,7 @@ import {
   revokeRequests, roleRequests, sliceWriteRight, enrichMachines,
   type AccessPlan, type AccessRequest, type Machine, type MachineBatch, type MachinesData, type PlanView, type WriteRight,
 } from './machines';
+import { HarnessMark, harnessValueIcon } from './HarnessMark';
 import './Admin.css';
 
 type T = ReturnType<typeof useAppT>;
@@ -183,7 +184,10 @@ function MachinesList({ data, meSub, fetchImpl, onChanged }: { data: MachinesDat
   const machine = open ? data.machines.find(m => m.machine_id === open) ?? null : null;
   return (
     <>
-      <ListView config={config} data={kitData(records, data.truncated)} initial={{ group: 'owner' }} onOpen={id => setOpen(id)} />
+      <ListView config={config} data={kitData(records, data.truncated)} initial={{ group: 'owner' }}
+        valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
+        onOpen={id => setOpen(id)} />
+
       {open && (
         <Drawer open onClose={() => setOpen(null)} title={open}>
           {machine
@@ -265,7 +269,7 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
         <span className="adm-dim">{t('admin.macl.col.owner')}</span>{' '}
         {m.owner_name ? <Pill tone="acc">{m.owner_name}</Pill> : <span className="adm-missing">{t('admin.macl.noOwner')}</span>}{' '}
         <span className="adm-dim">{t('admin.macl.col.harness')}</span>{' '}
-        {m.harness.length ? m.harness.map(h => <Pill key={h}>{data.harnessLabels[h] ?? h}</Pill>) : <span className="adm-missing">{t('admin.macl.harnessUnknown')}</span>}
+        {m.harness.length ? m.harness.map(h => <Pill key={h}><HarnessMark logo={data.harnessLogos[h]} label={data.harnessLabels[h] ?? h} />{data.harnessLabels[h] ?? h}</Pill>) : <span className="adm-missing">{t('admin.macl.harnessUnknown')}</span>}
       </p>
       <p className="adm-sub">
         <span className="adm-dim">{t('admin.macl.col.projects')}</span>{' '}
@@ -278,6 +282,7 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
         {m.grants.length === 0
           ? <EmptyState title={t('admin.macl.grants.empty')} hint={t('admin.macl.grants.emptyHint')} />
           : <ListView config={config} data={kitData(records)} urlState={false} initial={{ group: 'projects' }}
+              valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
               budget={{ perGroup: 8 }} rowActions={rowActions} bulkActions={bulkActions} />}
       </div>
 
