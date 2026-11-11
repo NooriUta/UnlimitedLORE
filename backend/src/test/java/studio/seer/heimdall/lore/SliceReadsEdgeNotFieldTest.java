@@ -31,7 +31,9 @@ class SliceReadsEdgeNotFieldTest {
      * на компонент. У этих срезов поле законно и остаётся.
      */
     private static final Set<String> OWN_IDENTITY = Set.of(
-        "components", "component", "components_in_area");
+        "components", "component", "components_in_area",
+        // S4-29 (53а): компоненты проекта — FROM LoreComponent, component_id здесь свой ключ вершины.
+        "project_components");
 
     /**
      * Список отложенных срезов. ПУСТ: долг NM-07 закрыт — оба QG-типа получили
