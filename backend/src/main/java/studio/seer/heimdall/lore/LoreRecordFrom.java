@@ -72,7 +72,11 @@ final class LoreRecordFrom {
      * Связь из строки главного среза: ребро, сторона, тип цели и колонка-список id.
      * {@code techByPrefix} — цель SPEC-TECH-… открывается паспортом технологии.
      */
-    record LinkFrom(String rel, String dir, String type, String column, boolean techByPrefix) {}
+    record LinkFrom(String rel, String dir, String type, String column, boolean techByPrefix, String unionColumn) {
+        LinkFrom(String rel, String dir, String type, String column, boolean techByPrefix) {
+            this(rel, dir, type, column, techByPrefix, null);
+        }
+    }
 
     /**
      * Вкладка связей, которую фасад читает отдельным срезом: что читать и как строка становится связью.
@@ -147,11 +151,16 @@ final class LoreRecordFrom {
     /** Связи из строки главного среза по описаниям типа. */
     static List<Map<String, Object>> rowLinks(String type, Map<String, Object> row) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (LinkFrom l : ROW_LINKS.getOrDefault(type, List.of()))
-            for (String id : LoreRecordValues.arr(row.get(l.column()))) {
+        for (LinkFrom l : ROW_LINKS.getOrDefault(type, List.of())) {
+            // unionColumn — второе ребро того же факта (спека → компонент BELONGS_TO рядом с
+            // компонент → спека DOCUMENTED_IN): один список без повторов.
+            java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>(LoreRecordValues.arr(row.get(l.column())));
+            if (l.unionColumn() != null) ids.addAll(LoreRecordValues.arr(row.get(l.unionColumn())));
+            for (String id : ids) {
                 String t = l.techByPrefix() && id.startsWith(LoreRecordValues.TECH_SPEC_PREFIX) ? "tech" : l.type();
                 out.add(LoreRecordValues.link(l.rel(), l.dir(), id, t, id, null));
             }
+        }
         return out;
     }
 
@@ -397,11 +406,18 @@ final class LoreRecordFrom {
             lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"))),
         Map.entry("component", List.of(
             // Технология — это спека SPEC-TECH-…: тип tech, чтобы щелчок открыл паспорт технологии.
-            new LinkFrom("DOCUMENTED_IN", "out", "spec", "specs", true),
+            // Слово владелицы 11.11: + спеки, привязанные только ребром спека → компонент (BELONGS_TO).
+            new LinkFrom("DOCUMENTED_IN", "out", "spec", "specs", true, "belonging_specs"),
             lf("BELONGS_TO", "in", "adr", "adrs"),
             // out('USES').tech_id — НЕ ключ паспорта (тот — spec_id SPEC-TECH-…): тип tech_ref.
             lf("USES", "out", "tech_ref", "tech"),
-            lf("PARENT_OF", "in", "component", "sub_components"))),
+            lf("PARENT_OF", "in", "component", "sub_components"),
+            // Как v1 (QG · Знания · Сценарии) и по путям записи: всё, что ставит BELONGS_TO к компоненту.
+            lf("BELONGS_TO", "in", "decision", "decisions"),
+            lf("BELONGS_TO", "in", "question", "questions"),
+            lf("BELONGS_TO", "in", "feature", "features"),
+            lf("BELONGS_TO", "in", "doc", "docs"),
+            lf("BELONGS_TO", "in", "qg", "qgs"))),
         Map.entry("feature", List.of(
             lf("DECOMPOSES_INTO", "out", "feature", "child_uc_ids"),
             lf("REALIZES", "in", "task", "task_uids"),

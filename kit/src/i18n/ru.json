@@ -727,6 +727,7 @@
   "kit.record.rel.linkBtn": "Привязать",
   "kit.record.rel.idPlaceholder": "ID записи",
   "kit.record.rel.failed": "Связь не изменилась: {reason}",
+  "kit.record.rel.unknownKind": "Вид не определён — запись может относиться к другой вкладке: {ids}",
   "kit.record.rail": "Разделы паспорта",
   "kit.record.rail.analytics": "Аналитика",
   "kit.record.width": "Ширина текста",

@@ -727,6 +727,7 @@
   "kit.record.rel.linkBtn": "Link",
   "kit.record.rel.idPlaceholder": "Record ID",
   "kit.record.rel.failed": "Link unchanged: {reason}",
+  "kit.record.rel.unknownKind": "Kind unknown — the record may belong to another tab: {ids}",
   "kit.record.rail": "Passport sections",
   "kit.record.rail.analytics": "Analytics",
   "kit.record.width": "Text width",
