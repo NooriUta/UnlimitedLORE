@@ -8,10 +8,16 @@
 // Прежняя таблица задач (группировка, правка в строке, массовый статус, выбор
 // колонок) НЕ удалена — она вторым видом, выбор в адресе (`?tview=table`):
 // функцию без «да» владелицы не убираем, а в дереве правки в строке пока нет.
+//
+// S4-SPRINT-TASKS-CONTROLS («и а и б» владелицы 11.11.2026): у дерева и таблицы —
+// стандартная полоса списка (поиск, фасеты статус / исполнитель / фаза,
+// группировка, порядок); третий вид «Список» (?tview=list) — kit NestedList.
+// Правило фильтра в дереве — в kit (treeControls): условие судит задачи; фаза
+// видна, если под ней есть подходящая задача, иначе скрыта.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  pushUrlState, readUrlState, TreeTable, useKitLang,
-  type KitConfig, type KitCtx, type KitHooks, type UrlWindow,
+  NestedList, pushUrlState, readUrlState, TreeTable, treeRowRecord, useKitLang,
+  type KitConfig, type KitCtx, type KitHooks, type TreeControls, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse } from '@seidr/kit/content';
 import { loreFetch } from '../auth/session';
@@ -26,8 +32,19 @@ import { SprintBurnLine } from './SprintBurnLine';
 import { SprintTasksTab } from './SprintTasksTab';
 
 export const TASK_VIEW_PARAM = 'tview';
-export type TaskView = 'tree' | 'table';
-const VIEWS: readonly TaskView[] = ['tree', 'table'];
+export type TaskView = 'tree' | 'table' | 'list';
+const VIEWS: readonly TaskView[] = ['tree', 'table', 'list'];
+const VIEW_KEY = { tree: 'sprintTasks.view.tree', table: 'sprintTasks.view.table', list: 'sprintTasks.view.list' } as const;
+
+/** Оси полосы дерева. Фазы в группировке дерева нет — фаза и есть его уровень. */
+const TREE_CONTROLS: TreeControls = {
+  filters: ['status', 'fields.executor', 'fields.phase'],
+  groupings: ['status', 'fields.executor'],
+  sorts: ['title', 'fields.code', 'status', 'fields.executor', 'fields.effort'],
+};
+/** Оси вида «Список» сверх статуса (умолчание NestedList). */
+const LIST_AXES = ['fields.executor', 'fields.phase'] as const;
+const LIST_COLUMNS = ['status', 'fields.code', 'title', 'fields.executor', 'fields.phase', 'fields.effort'];
 
 function viewFromUrl(win: UrlWindow | undefined): TaskView {
   const raw = (win ? readUrlState(win) : typeof window === 'undefined' ? new URLSearchParams() : readUrlState()).get(TASK_VIEW_PARAM);
@@ -90,6 +107,7 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
       fld('executor', appT(lang, 'pp.field.executor')),
       fld('effort', appT(lang, 'pp.field.effort')),
       fld('progress', appT(lang, 'sprintTree.field.progress')),
+      fld('phase', appT(lang, 'sprintTree.kind.phase')),
     ];
     const base = baseConfig(lang, {
       sprint: { title: appT(lang, 'pp.kind.sprint'), icon: 'sprint', fields },
@@ -116,6 +134,7 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
       esc, md,
     };
   }, [lang, taskStatuses, contract, tree, f, onStatusSaved]);
+  const taskRecords = useMemo(() => tree.rows.filter(r => r.kind === 'task').map(treeRowRecord), [tree]);
 
   return (
     <>
@@ -129,13 +148,18 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
             aria-pressed={view === v}
             onClick={() => onView(v)}
           >
-            {t(v === 'tree' ? 'sprintTasks.view.tree' : 'sprintTasks.view.table')}
+            {t(VIEW_KEY[v])}
           </button>
         ))}
       </div>
-      {view === 'tree'
-        ? <TreeTable levels={SPRINT_TREE_LEVELS} columns={SPRINT_TREE_COLUMNS} rows={tree.rows} levelState={tree.levelState} ctx={ctx} />
-        : <SprintTasksTab sprintId={sprintId} fetchImpl={fetchImpl} win={win} />}
+      {view === 'tree' && (
+        <TreeTable levels={SPRINT_TREE_LEVELS} columns={SPRINT_TREE_COLUMNS} rows={tree.rows} levelState={tree.levelState} ctx={ctx} controls={TREE_CONTROLS} />
+      )}
+      {view === 'table' && <SprintTasksTab sprintId={sprintId} fetchImpl={fetchImpl} win={win} />}
+      {view === 'list' && (
+        // Тот же ответ /lore/record, что у дерева: второго чтения нет.
+        <NestedList ctx={ctx} records={taskRecords} columns={LIST_COLUMNS} axes={LIST_AXES} testId="sprint-tasks-list" />
+      )}
     </>
   );
 }

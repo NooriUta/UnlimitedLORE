@@ -229,6 +229,16 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
         const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} />;
         // S4-24: ✎ — только у поля, которое приложение назвало правимым, при праве и пути записи;
         // enum без вариантов не правится — выбирать не из чего.
+        // S4-24: варианты не загрузились — причина словами и «Повторить», а не свободный ввод.
+        if (f.type === 'enum' && f.editable && !(f.options?.length) && f.optionsError) {
+          return (
+            <>
+              {view}
+              <span className="sk-rec-fields__opterr" role="status">{kitT(lang, 'kit.field.optionsFailed', { reason: f.optionsError })}</span>
+              {f.onOptionsRetry && <button type="button" className="sk-btn sk-rec-fields__retry" onClick={f.onOptionsRetry}>{kitT(lang, 'kit.state.error.retry')}</button>}
+            </>
+          );
+        }
         const can = fieldSave && f.editable && INLINE_KINDS.has(f.type) && (f.type !== 'enum' || (f.options?.length ?? 0) > 0);
         if (!can) return view;
         const from = record.fields[f.key];
