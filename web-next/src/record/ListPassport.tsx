@@ -13,8 +13,7 @@ import {
 import { MartProse, MdInlineEdit } from '@seidr/kit/content';
 import { fetchSlice } from '../api/loreClient';
 import { knownRecordHref } from '../nav/loreRoutes';
-import { SprintBurnLine } from '../sprint/SprintBurnLine';
-import { SprintTasksTab } from '../sprint/SprintTasksTab';
+import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
@@ -178,14 +177,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
     pp.reload();
   };
-  // Спринт: вкладка «Задачи» с таблицей задач (группировка, статус в строке, правка)
-  // и строкой сгорания — то, что раньше было только на отдельной странице вне оболочки.
-  const baseConfig = type === 'sprint'
-    ? withSprintTasksTab(view.config, view.record.kind, t('sprintTasks.title'), r => (
-      <>
-        <SprintBurnLine sprintId={r.id} />
-        <SprintTasksTab sprintId={r.id} fetchImpl={fetchImpl} win={win} />
-      </>
+  // Спринт: вкладка «Задачи» — дерево спринт → [фаза] → задача (S4-TREE-NESTED,
+  // решение владелицы 10.11) из того же ответа /lore/record, и вторым видом —
+  // прежняя таблица задач (группировка, правка, массовый статус) со строкой сгорания.
+  const baseConfig = type === 'sprint' && contract
+    ? withSprintTasksTab(view.config, view.record.kind, t('sprintTasks.title'), () => (
+      <SprintTasksPanel contract={contract} onStatusSaved={pp.reload} fetchImpl={fetchImpl} win={win} />
     ))
     : view.config;
   const ctx: KitCtx = { config: {
