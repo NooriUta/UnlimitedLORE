@@ -51,3 +51,32 @@ describe('паспорт: ссылка в чтении ведёт в паспо�
     expect(container.querySelector('a.sk-wref')?.getAttribute('href')).toContain('open=ADR-1');
   }, 15000);
 });
+
+describe('паспорт: Peek по ссылке в чтении', () => {
+  it('наведение на [[adr:ADR-1]] — карточка с названием записи из фасада', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const adr = {
+      contract: 'lore.record/1',
+      record: { type: 'adr', id: 'ADR-1', title: 'Решение про ссылки', status: 'ACCEPTED', version: null, updated_at: null, updated_by: null },
+      schema: { type: 'adr', label: 'ADR', icon: 'x', fields: [], tabs: [], relations: [] },
+      values: {}, links: [], facts: null,
+      perms: { can_edit: false, can_status: false, can_create: false, status_next: [], reason: null },
+      meta: { loaded_at: 'x', facade: 'server', sources: [] },
+    };
+    const f = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes('/lore/record/adr/')) return json(adr);
+      const name = new URL(u, 'http://x').pathname.split('/').pop();
+      if (name === 'sprints') return json({ rows: [{ ...SPRINT, context_md: 'см. [[adr:ADR-1]]' }] });
+      return json({ rows: [] });
+    });
+    vi.stubGlobal('fetch', f);
+    const { container } = render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={f as unknown as typeof fetch} />);
+    await waitFor(() => expect(container.querySelector('a.sk-wref')).toBeTruthy(), { timeout: 8000 });
+    fireEvent.mouseOver(container.querySelector('a.sk-wref')!);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    expect(await screen.findByText('Решение про ссылки', {}, { timeout: 5000 })).toBeTruthy();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  }, 20000);
+});

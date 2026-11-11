@@ -102,3 +102,13 @@ describe('MartProse refPeek — ссылки внутри карточки', () 
     expect(screen.getByText(/карточка ADR-1/)).toBeTruthy();
   });
 });
+
+describe('MdInlineEdit пробрасывает refPeek в чтение', () => {
+  it('наведение на ссылку в теле поля с правкой — карточка', async () => {
+    const { MdInlineEdit } = await import('./MdInlineEdit');
+    const { container } = render(<MdInlineEdit value={text} label="Описание" onSave={() => {}} refHref={href} refPeek={peek()} />);
+    fireEvent.mouseOver(link(container));
+    act(() => { vi.advanceTimersByTime(450); });
+    expect(screen.getByText('карточка ADR-1')).toBeTruthy();
+  });
+});

@@ -796,5 +796,8 @@
   "lists.feed.sec.rationale": "Rationale",
   "lists.feed.sec.essence": "Essence",
   "lists.feed.sec.info": "Details",
-  "lists.feed.sec.description": "Description"
+  "lists.feed.sec.description": "Description",
+  "peek.kind.unknown": "record",
+  "peek.err.noType": "record type is not set and cannot be recognised from the ID — cannot open",
+  "peek.sheetTitle": "Record {id}"
 }

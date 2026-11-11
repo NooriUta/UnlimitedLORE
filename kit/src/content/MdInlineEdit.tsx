@@ -27,7 +27,7 @@
 import { ICON_CANON } from '../elements/iconCanon';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { MartProse, type MartRefHref } from './MartProse';
+import { MartProse, type MartRefHref, type MartRefPeek } from './MartProse';
 import { TipTapField, type MentionItem, type TipTapRefSource } from './TipTapField';
 import { isLosslessMd, sameMd } from './tiptapMd';
 import { IconButton } from '../elements/IconButton';
@@ -76,6 +76,8 @@ export interface MdInlineEditProps {
   refs?: TipTapRefSource;
   /** Куда ведёт [[ссылка]] в чтении (паспорт записи); нет — рамка без ссылки. */
   refHref?: MartRefHref;
+  /** Peek со ссылки в чтении (S9-10): мышь — наведение, палец — нижний лист. */
+  refPeek?: MartRefPeek;
   /**
    * Черновик поля на сервере (S5-09). kit про API не знает — получает три
    * действия: прочитать, сохранить, снять. Нет слота — поле работает как
@@ -99,7 +101,7 @@ export interface MdDraftSlot {
 
 export function MdInlineEdit({
   value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
-  emptyText, hint = true, onUploadImage, mentionItems, refs, refHref, drafts, className,
+  emptyText, hint = true, onUploadImage, mentionItems, refs, refHref, refPeek, drafts, className,
 }: MdInlineEditProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -307,7 +309,7 @@ export function MdInlineEdit({
           />
         )}
         {shown.trim()
-          ? <MartProse text={shown} refHref={refHref} />
+          ? <MartProse text={shown} refHref={refHref} refPeek={refPeek} />
           : <p className="sk-mdedit__empty">{emptyText ?? t('kit.mdedit.empty')}</p>}
       </section>
     );
