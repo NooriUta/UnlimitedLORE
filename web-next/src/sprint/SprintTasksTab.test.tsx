@@ -78,6 +78,18 @@ describe('SprintTasksTab · таблица сверху', () => {
     expect(within(group).getByRole('button', { name: 'Списком' }).getAttribute('aria-pressed')).toBe('true');
   });
 
+  // S9-07: «Фаза → статус» живёт в адресе тем же механизмом, что прочие разрезы.
+  it('?group=phase_status читается из адреса и пишется в него', async () => {
+    const { impl } = ok();
+    const win = fakeWin('?group=phase_status');
+    render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={win} />);
+    const group = await screen.findByRole('group', { name: 'Группировка' });
+    expect(within(group).getByRole('button', { name: 'Фаза → статус' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(within(group).getByRole('button', { name: 'По фазе' }));
+    fireEvent.click(within(group).getByRole('button', { name: 'Фаза → статус' }));
+    expect(win.pushes[win.pushes.length - 1]).toMatch(/group=phase_status/);
+  });
+
   it('мусор в ?group= — умолчание «по фазе», а не пустая таблица', async () => {
     const { impl } = ok();
     render(<SprintTasksTab sprintId="SPRINT_X" fetchImpl={impl} win={fakeWin('?group=zzz')} />);

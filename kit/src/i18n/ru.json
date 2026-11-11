@@ -514,6 +514,8 @@
   "kit.tasks.groupBy.phase": "По фазе",
   "kit.tasks.groupBy.status": "По статусу",
   "kit.tasks.groupBy.none": "Списком",
+  "kit.tasks.groupBy.phase_status": "Фаза → статус",
+  "kit.tasks.shownOf": "Показаны {shown} из {total}",
   "kit.tasks.group.nophase": "Без фазы",
   "kit.tasks.group.orphan": "Фаза не найдена (сбой данных)",
   "kit.tasks.group.all": "Все задачи",

@@ -73,8 +73,15 @@ public final class NewsV2 {
      * Источник, который не удалось прочитать (S7A-07: «источник недоступен» ≠
      * «ничего не было»). {@code critical} — без него метрики раздела не считаются
      * вовсе и отдаются как «не смогли посчитать», а не нулями.
+     *
+     * <p>K2-FEED-VIEW §6: {@code forbidden} — отказ ПО ПРАВАМ, а не сбой («нет прав»
+     * ≠ «не смогли проверить»; по тексту причины это не угадывается). {@code at} —
+     * момент, к которому относится провал (момент чтения); {@code null} — не известен.
+     * Оба необязательны: трёхместная форма остаётся для прежних мест.
      */
-    public record SourceError(String source, String error, boolean critical) {}
+    public record SourceError(String source, String error, boolean critical, boolean forbidden, java.time.Instant at) {
+        public SourceError(String source, String error, boolean critical) { this(source, error, critical, false, null); }
+    }
 
     /**
      * Фильтры и разрез запроса (S7A-02). Пустое множество/null — «без фильтра».
