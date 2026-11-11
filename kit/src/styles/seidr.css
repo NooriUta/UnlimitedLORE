@@ -4845,7 +4845,9 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 
 /* Меню оболочки, свёрнутое на время чтения (D-2026-UXR-READ-COLLAPSE). */
 .sk-shell--menu-collapsed .sk-shell__body { grid-template-columns: auto minmax(0, 1fr); }
-.sk-shell__ear { align-self: start; margin-top: 8px; }
+/* Ушко — посередине высоты окна и липнет при прокрутке (S4-MENU-STATES, владелица 09.11:
+   «ухо хоть в середину поставьте»): у верхнего края оно уезжало со страницей. */
+.sk-shell__ear { align-self: start; position: sticky; top: 50%; transform: translateY(-50%); }
 
 /* S4-MENU-STATES: третье состояние меню — рейка иконок. Колонка узкая, подписи
    скрыты, иконка по центру; цель касания остаётся во всю ширину рейки. */
