@@ -4,7 +4,7 @@
 // применяются к корню документа — тема, текст, плотность и прочее действуют
 // с первого экрана. Хранение — S2Client (до S2-04 — заглушка api/me.ts).
 import { useCallback, useEffect, useState } from 'react';
-import { AvatarMenu, kitT, type AttrTarget } from '@seidr/kit';
+import { AvatarMenu, KeymapMenuButton, kitT, type AttrTarget } from '@seidr/kit';
 import type { UserSettings } from '../api/contracts/s2';
 import type { S2Client } from '../api/contracts/s2.stubs';
 import { t, type Lang } from '../i18n/messages';
@@ -78,6 +78,11 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
       {/* S7B-01: вход в админку — из меню аватара (прототип v6), модуль ?mod=admin.
           Ссылку видят все: права проверяет сервер, и экран без прав скажет
           «нет прав», а не притворится пустым. */}
+      {/* S4-11: «Горячие клавиши» — всегда, и на телефоне: к нему или к планшету
+          могут подключить клавиатуру (владелица 11.11). Панель — общая, kit. */}
+      <div className="memory-actions">
+        <KeymapMenuButton />
+      </div>
       <div className="memory-actions">
         <a className="sk-btn" href="/?mod=admin" data-testid="account-admin">{t(lang, 'settings.admin')}</a>
       </div>
