@@ -33,7 +33,6 @@ const config = (views: string[]): KitConfig => ({
 
 const isCards = (root: ParentNode) => !!root.querySelector('.sk-cards');
 const isTable = (root: ParentNode) => !!root.querySelector('.sk-list__table');
-const onRadio = (root: ParentNode) => root.querySelector('.sk-list__view.is-on')?.textContent?.trim();
 
 describe('S4-MOBILE-COMPARE · на телефоне список по умолчанию — карточками', () => {
   it('положительный контроль: на широком экране по умолчанию таблица', () => {
@@ -46,7 +45,7 @@ describe('S4-MOBILE-COMPARE · на телефоне список по умол�
     const { container } = render(<ListView config={config(['list', 'cards'])} data={data} urlState={false} narrow href={id => `#${id}`} />);
     expect(isCards(container)).toBe(true);
     expect(isTable(container)).toBe(false);
-    expect(onRadio(container)).toMatch(/Карточки|Cards/);
+    expect(container.querySelector('.sk-vmenu__btn')?.textContent).toMatch(/Карточки|Cards/);
   });
 
   it('карточка на телефоне открывает запись — заголовок ссылкой, а не немой текст', () => {
@@ -58,7 +57,8 @@ describe('S4-MOBILE-COMPARE · на телефоне список по умол�
 
   it('явный выбор «Список» на телефоне — закон: таблица остаётся', () => {
     const { container } = render(<ListView config={config(['list', 'cards'])} data={data} urlState={false} narrow href={id => `#${id}`} />);
-    const list = [...container.querySelectorAll('.sk-list__view')].find(b => /Список|List/.test(b.textContent ?? ''))!;
+    fireEvent.click(container.querySelector('.sk-vmenu__btn')!);
+    const list = [...container.querySelectorAll('.sk-vmenu__kinds [role="radio"]')].find(b => /Список|List/.test(b.textContent ?? ''))!;
     fireEvent.click(list);
     expect(isTable(container)).toBe(true);
     expect(isCards(container)).toBe(false);
@@ -75,8 +75,87 @@ describe('S4-MOBILE-COMPARE · на телефоне список по умол�
     expect(isTable(container)).toBe(true);
   });
 
+  // Владелица 11.11: «список карточка список доска — в мобильном состоянии
+  // наверное должен быть в составе дропдаун меню вместе с его кнопкой вид».
+  // Строка из пяти видов на 360 px переносилась в блок на две строки над
+  // списком; в меню «Вид ▾» она не занимает места, а кнопка говорит, какой вид сейчас.
+  describe('виды на телефоне — внутри меню «Вид ▾», а не строкой над списком', () => {
+    const phone = () => render(<ListView config={config(['list', 'cards', 'board'])} data={data} urlState={false} narrow href={id => `#${id}`} />);
+
+    it('положительный контроль: на десктопе строка видов на месте', () => {
+      const { container } = render(<ListView config={config(['list', 'cards', 'board'])} data={data} urlState={false} narrow={false} href={id => `#${id}`} />);
+      expect(container.querySelector('.sk-list__views')).toBeTruthy();
+    });
+
+    it('на телефоне строки видов над списком нет', () => {
+      const { container } = phone();
+      expect(container.querySelector('.sk-list__views')).toBeNull();
+    });
+
+    it('кнопка «Вид» называет текущий вид', () => {
+      const { container } = phone();
+      expect(container.querySelector('.sk-vmenu__btn')?.textContent).toMatch(/Карточки|Cards/);
+    });
+
+    it('в открытом меню виды первым разделом, выбор применяется сразу', () => {
+      const { container } = phone();
+      fireEvent.click(container.querySelector('.sk-vmenu__btn')!);
+      const panel = container.querySelector('.sk-vmenu__panel')!;
+      const group = panel.querySelector('[role="radiogroup"]')!;
+      expect(group.getAttribute('aria-label')).toMatch(/Вид|View/);
+      const radios = [...group.querySelectorAll('[role="radio"]')].map(b => b.textContent?.trim());
+      expect(radios.length).toBe(3);
+      fireEvent.click([...group.querySelectorAll('[role="radio"]')].find(b => /Список|List/.test(b.textContent ?? ''))!);
+      expect(isTable(container)).toBe(true);
+    });
+  });
+
   it('раздел без карточек на телефоне остаётся при своём первом виде', () => {
     const { container } = render(<ListView config={config(['list'])} data={data} urlState={false} narrow href={id => `#${id}`} />);
     expect(isTable(container)).toBe(true);
   });
+});
+
+// Владелица 11.11: «фильтры и порядок прятаться под more». В v1 на телефоне
+// полоса свёрнута в одну строку «фильтры 0 · не заданы ▸ развернуть»; в v2
+// фильтр, группировка и порядок занимали ~400 px над первой записью.
+describe('фильтр, группировка и порядок на телефоне — свёрнуты под одной кнопкой', () => {
+  const segs = (root: ParentNode) => [...root.querySelectorAll('.sk-list__controls .sk-list__seg')]
+    .filter(s => !(s as HTMLElement).closest('.is-folded'));
+  const toggle = (root: ParentNode) => root.querySelector('.sk-list__fold') as HTMLButtonElement | null;
+
+  it('положительный контроль: на десктопе полоса раскрыта и кнопки свёртки нет', () => {
+    const { container } = render(<ListView config={config(['list', 'cards'])} data={data} urlState={false} narrow={false} href={id => `#${id}`} />);
+    expect(segs(container).length).toBeGreaterThan(0);
+    expect(toggle(container)).toBeNull();
+  });
+
+  it('на телефоне сегменты свёрнуты, кнопка говорит, что внутри, и aria-expanded=false', () => {
+    const { container } = render(<ListView config={config(['list', 'cards'])} data={data} urlState={false} narrow href={id => `#${id}`} />);
+    expect(container.querySelector('.sk-list__controls.is-folded')).toBeTruthy();
+    const b = toggle(container)!;
+    expect(b).toBeTruthy();
+    expect(b.getAttribute('aria-expanded')).toBe('false');
+    expect(b.textContent).toMatch(/Фильтр|Filter/);
+  });
+
+  it('кнопка раскрывает и сворачивает полосу', () => {
+    const { container } = render(<ListView config={config(['list', 'cards'])} data={data} urlState={false} narrow href={id => `#${id}`} />);
+    fireEvent.click(toggle(container)!);
+    expect(container.querySelector('.sk-list__controls.is-folded')).toBeNull();
+    expect(toggle(container)!.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(toggle(container)!);
+    expect(container.querySelector('.sk-list__controls.is-folded')).toBeTruthy();
+  });
+
+  it('в свёрнутом виде видно, что фильтр задан: число условий на кнопке', () => {
+    const { container } = render(<ListView config={config(['list', 'cards'])} data={data} urlState={false} initial={{ filters: { project: ['P1'] } }} narrow href={id => `#${id}`} />);
+    expect(toggle(container)!.textContent).toMatch(/1/);
+  });
+});
+
+it('свёрнутая полоса действительно прячет сегменты (правило в seidr.css)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
+  expect(css).toMatch(/\.sk-list__controls\.is-folded > \.sk-list__seg\s*\{\s*display:\s*none/);
 });

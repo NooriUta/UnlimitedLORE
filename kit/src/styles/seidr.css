@@ -6071,3 +6071,27 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-list__p2 { display: none; }
 }
 
+
+/* Телефон: фильтр, группировка и порядок свёрнуты под одной кнопкой — как
+   «фильтры 0 · развернуть» в v1 (S4-MOBILE-COMPARE, владелица 11.11: «фильтры
+   и порядок прятаться под more»). «Быстро» и «Показано N из M» остаются. */
+.sk-list__fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  min-height: max(var(--tap), 24px);
+  padding: 0 10px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.sk-list__fold.is-active { border-color: var(--acc); color: var(--t1); }
+.sk-list__fold:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-list__controls.is-folded > .sk-list__seg { display: none; }
+/* Телефон: виды списка — первым разделом меню «Вид ▾», текущий — в самой кнопке. */
+.sk-vmenu__kinds { flex-wrap: wrap; }
+.sk-vmenu__cur { font-weight: 700; color: var(--t1); }
