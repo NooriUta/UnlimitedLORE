@@ -6,6 +6,7 @@ export * from './listModel';
 export * from './filterModel';
 // Счётчики по всей выдаче, посчитанные источником (SPRINT_UXR_S9_SCALE_OPT/S9-01).
 export * from './listCounts';
+export * from './BucketFigures';
 export * from './FacetFilter';
 // Фильтр по дате — диапазон «с … по …», быстрые периоды, зона, адрес (K2-DATE-RANGE).
 export * from './dateRange';

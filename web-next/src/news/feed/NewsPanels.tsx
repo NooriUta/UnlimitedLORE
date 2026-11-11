@@ -4,7 +4,8 @@
 // сравнение двух присланных чисел, а не пересчёт.
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { useKitLang } from '@seidr/kit';
+import { BucketFigures, useKitLang } from '@seidr/kit';
+import { figuresOf } from './bucketFigures';
 import type { KitLang } from '@seidr/kit';
 import { newsT, type NewsKey } from './i18n';
 import {
@@ -235,6 +236,8 @@ function Groups({ data, t, lang, onFilter }: {
   const g = data.groups;
   const agents = data.metrics.agents.measurable;
   const canFilter = FILTERABLE.has(g.axis);
+  // S7A · сводка группы — колонка есть, только если сервер прислал числа групп.
+  const figs = g.list.some(x => x.by_kind || x.burn || x.sub?.groups.some(s => s.by_kind || s.burn));
   return (
     <Panel id="news-groups" title={`${t('groups')}: ${axisLabel(g.axis, lang)}`}>
       <div className="sk-news__scroll">
@@ -245,11 +248,12 @@ function Groups({ data, t, lang, onFilter }: {
               <th scope="col" className="is-num">{t('pair')}</th>
               {g.element_level && <th scope="col" className="is-num">×N</th>}
               {agents && <th scope="col" className="is-num">{t('agents')}</th>}
+              {figs && <th scope="col">{t('groups.figs')}</th>}
             </tr>
           </thead>
           <tbody>
             {g.list.map(x => (
-              <GroupRows key={x.key} x={x} axis={g.axis} lang={lang} t={t} agents={agents} elementLevel={g.element_level}
+              <GroupRows key={x.key} x={x} axis={g.axis} lang={lang} t={t} agents={agents} elementLevel={g.element_level} figs={figs}
                 onFilter={canFilter ? () => onFilter(x.filter) : undefined} />
             ))}
           </tbody>
@@ -259,12 +263,14 @@ function Groups({ data, t, lang, onFilter }: {
               <td className="is-num">{pairText(g.sum)}</td>
               {g.element_level && <td />}
               {agents && <td />}
+              {figs && <td />}
             </tr>
             <tr data-testid="news-groups-total">
               <th scope="row">{t('groups.total')} <SigmaUnion sum={g.sum} total={g.total} t={t} /></th>
               <td className="is-num">{pairText(g.total)}</td>
               {g.element_level && <td />}
               {agents && <td />}
+              {figs && <td />}
             </tr>
           </tfoot>
         </table>
@@ -274,8 +280,8 @@ function Groups({ data, t, lang, onFilter }: {
   );
 }
 
-function GroupRows({ x, axis, lang, t, agents, elementLevel, onFilter }: {
-  x: NewsResponse['groups']['list'][number]; axis: NewsAxis; lang: KitLang; t: T; agents: boolean; elementLevel: boolean;
+function GroupRows({ x, axis, lang, t, agents, elementLevel, figs, onFilter }: {
+  x: NewsResponse['groups']['list'][number]; axis: NewsAxis; lang: KitLang; t: T; agents: boolean; elementLevel: boolean; figs?: boolean;
   onFilter?: () => void;
 }) {
   const label = newsGroupLabel(axis, x.key, lang);
@@ -294,17 +300,25 @@ function GroupRows({ x, axis, lang, t, agents, elementLevel, onFilter }: {
           </td>
         )}
         {agents && <td className="is-num">{`${x.agent_events} · ${x.agent_elements}`}</td>}
+        {figs && <td><FigCell m={x} lang={lang} t={t} id={`news-gfig-${x.key}`} showTypes={axis !== 'type'} /></td>}
       </tr>
       {x.sub && x.sub.groups.map(s => (
         <tr key={`${x.key}|${s.key}`} className="sk-news__subrow">
           <th scope="row">{`↳ ${newsGroupLabel(x.sub!.axis, s.key, lang)}`}</th>
           <td className="is-num">{`${s.events} · ${s.elements}`}</td>
           {elementLevel && <td className="is-num">{s.multi > 0 ? `×${s.multi}` : ''}</td>}
-          {agents && <td />}
+          {agents && <td className="is-num">{s.agent_events != null ? `${s.agent_events} · ${s.agent_elements ?? 0}` : ''}</td>}
+          {figs && <td><FigCell m={s} lang={lang} t={t} id={`news-gfig-${x.key}-${s.key}`} showTypes={x.sub!.axis !== 'type'} /></td>}
         </tr>
       ))}
     </>
   );
+}
+
+/** Сводка группы или подгруппы в строке таблицы — те же числа, что у дня (считает сервер). */
+function FigCell({ m, lang, t, id, showTypes }: { m: Parameters<typeof figuresOf>[0]; lang: KitLang; t: T; id: string; showTypes: boolean }) {
+  const fig = figuresOf(m, { t, lang, showTypes, idPrefix: `${id}-`, compact: true });
+  return fig ? <BucketFigures {...fig} testid={id} /> : null;
 }
 
 // ── матрица «дни × проекты» ──

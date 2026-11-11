@@ -23,3 +23,4 @@ export * from './refTrigger';
 export * from './RefPicker';
 // Общий список выбора записи: окно ссылки и ref-редактор поля (S4-FIELD-EDITORS).
 export * from './RefSearchList';
+export { useRefPeek } from './RefPeekLayer';
