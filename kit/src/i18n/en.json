@@ -1062,5 +1062,6 @@
   "kit.record.graph.viewObsidian": "Obsidian",
   "kit.record.graph.viewObsidianHint": "background physics, WebGL — for large graphs",
   "kit.steps.held": "Step «{title}» from the link is not open yet — this one is: {reason}",
-  "kit.graph.peekClose": "Close the card"
+  "kit.graph.peekClose": "Close the card",
+  "kit.ref.self": "Me"
 }

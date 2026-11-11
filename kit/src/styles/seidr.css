@@ -669,6 +669,8 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-ref__state--lock { border-left: 3px solid var(--wrn); }
 .sk-ref__form { display: grid; gap: 6px; padding: 8px 10px 10px; }
 .sk-ref__fld { display: grid; gap: 2px; color: var(--t2); font-size: var(--fs-xs); }
+.sk-ref__self { display: flex; gap: 4px; align-items: center; min-width: 0; }
+.sk-ref__self > input { flex: 1 1 auto; min-width: 0; }
 .sk-ref__fld input, .sk-ref__fld select { background: var(--bg1); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-sm); padding: 5px 8px; font-family: inherit; font-size: var(--fs-touch-input); }
 .sk-ref__fld--block input, .sk-ref__fld--block select { border-color: var(--dng); }
 .sk-ref__fld--warn input, .sk-ref__fld--warn select { border-color: var(--wrn); }
@@ -6604,3 +6606,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    строки нет, и метка остаётся в углу. */
 .sk-shell--status .sk-shell__main .sk-shell__corner { display: none; }
 .sk-shell__status .sk-shell__corner { position: static; }
+
+/* S7B-ACL-3: подписанные группы в ScopePicker — свои / остальные (подписи от приложения). */
+.sk-scope__grp { display: grid; gap: 2px; }
+.sk-scope__grp + .sk-scope__grp { margin-top: 6px; }
+.sk-scope__grph { margin: 4px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
