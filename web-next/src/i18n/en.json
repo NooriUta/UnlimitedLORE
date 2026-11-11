@@ -190,6 +190,8 @@
   "record.status.cancelled": "Cancelled",
   "sprintTasks.title": "Tasks",
   "sprintTasks.caption": "Sprint {id} tasks",
+  "sprintTasks.bulkPartial": "changed {ok} of {total}; not changed: {failed}",
+  "sprintTasks.bulkFailedOne": "{id} — {reason}",
   "sprintTasks.back": "Back to LORE",
   "history.legacySlice": "Shared history (S2) is not enabled on the server yet — showing the version chain from slice {slice}; it carries no edit authors.",
   "pp.title": "Passport demo",
