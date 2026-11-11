@@ -59,6 +59,9 @@ public class LoreComponentResource extends LoreResourceBase {
             if (req.area() != null)      { csql.append(", area=:area");           p.put("area",      req.area()); }
             if (req.game_icon() != null) { csql.append(", game_icon=:game_icon"); p.put("game_icon", req.game_icon()); }
             if (req.parent_id() != null) { csql.append(", parent_id=:parent_id"); p.put("parent_id", req.parent_id()); }
+            // S4-MODEL-TYPES (свежесть): ни истории, ни даты у компонента нет — момент правки на вершине.
+            csql.append(", updated_at=:upd");
+            p.put("upd", java.time.Instant.now().toString());
             csql.append(" WHERE component_id=:cid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 csql.toString(), p)).await().indefinitely();
@@ -113,6 +116,9 @@ public class LoreComponentResource extends LoreResourceBase {
             if (req.game_icon() != null) { csql.append(", game_icon=:game_icon"); p.put("game_icon", req.game_icon()); }
             if (req.owner() != null)     { csql.append(", owner=:owner");         p.put("owner",     req.owner()); }
             if (req.parent_id() != null) { csql.append(", parent_id=:parent_id"); p.put("parent_id", req.parent_id()); }
+            // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине.
+            csql.append(", updated_at=:upd");
+            p.put("upd", java.time.Instant.now().toString());
             csql.append(" UPSERT WHERE component_id=:cid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 csql.toString(), p)).await().indefinitely();
@@ -326,9 +332,11 @@ public class LoreComponentResource extends LoreResourceBase {
             // Родитель один: голый CREATE EDGE при смене родителя оставлял и
             // прежнего, а повтор — плодил дубль. Перепривязка снимает все исходящие.
             boolean hadOther = anyEdgeFrom("PARENT_OF", "component_id", req.component_id());
-            Map<String, Object> p = Map.of("cid", req.component_id(), "pid", req.parent_id());
+            Map<String, Object> p = Map.of("cid", req.component_id(), "pid", req.parent_id(),
+                "upd", java.time.Instant.now().toString());
+            // S4-MODEL-TYPES (свежесть): смена родителя — правка компонента.
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE LoreComponent SET parent_id=:pid WHERE component_id=:cid", p))
+                "UPDATE LoreComponent SET parent_id=:pid, updated_at=:upd WHERE component_id=:cid", p))
                 .await().indefinitely();
             relinkParentEdge(req.component_id(), req.parent_id());
             Map<String, Object> out = LoreOutcome.link(base,
