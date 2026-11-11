@@ -38,3 +38,8 @@ export function appliedRightColumn(given?: Host): RightColumn {
 export function appliedCollapseNavOnRead(given?: Host): boolean {
   return host(given)?.getAttribute('data-read-nav') === 'collapse';
 }
+
+/** Показывать ли технические сведения (S4-TECH-NOTES). Атрибута нет — нет. */
+export function appliedShowTech(given?: Host): boolean {
+  return host(given)?.getAttribute('data-show-tech') === 'on';
+}

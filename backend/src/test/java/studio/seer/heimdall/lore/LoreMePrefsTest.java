@@ -33,6 +33,18 @@ class LoreMePrefsTest {
     }
 
     /**
+     * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-TECH-NOTES: «Показывать технические сведения» — личная настройка.
+     * Умолчание — выключено: обычный пользователь кодов срезов и сырых метрик не видит.
+     */
+    @Test
+    void showTechIsAPersonalSettingOffByDefault() {
+        assertEquals(Boolean.FALSE, LoreMePrefs.defaults().get("show_tech"));
+        assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("show_tech", true)));
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("show_tech", "yes")).size(), "не true/false — отказ");
+        assertEquals(Boolean.TRUE, LoreMePrefs.effective(Map.of("show_tech", true)).get("show_tech"));
+    }
+
+    /**
      * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-16: масштаб текста — ползунок-множитель (владелица 10.11:
      * «ползунок с сохранением множителя… сколько мин/макс оставить — скажу после выкатки»).
      * Границы предварительные — значение вне них прижимается к краю, а не отвергается:

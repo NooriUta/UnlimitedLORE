@@ -160,6 +160,9 @@ export function sourcesFromServer(dataState: unknown): LoreSource[] {
     const total = num(row.total);
     if (shown !== undefined) out.shown = shown;
     if (total !== undefined) out.total = total;
+    // S4-TECH-NOTES: тег адресата, если его поставил сервер; иначе решит fromLoreRecord.
+    const audience = str(row.audience);
+    if (audience === 'user' || audience === 'tech') out.audience = audience;
     return out;
   });
 }

@@ -56,7 +56,9 @@ export interface KitMeta { generated_at:string; scope?:string; total?:number; re
   /** Отказ по ПРАВАМ, а не сбой (K2-FEED-VIEW §6): «нет прав» ≠ «не смогли проверить», и по тексту причины это не угадывается — признак называет приложение. */
   forbidden?:boolean;
   /** Когда пропуск случился — чтобы в ленте он стоял на своём месте по времени, а не притворялся свежим. Не названо — строка идёт в «без времени». */
-  at?:string}[] }
+  at?:string;
+  /** Кому строка (S4-TECH-NOTES): 'tech' — диагностика, скрыта, пока её не включили; без тега — 'user'. Ставит тот, кто строку рождает. */
+  audience?:'user'|'tech'}[] }
 export interface KitData { records:KitRecord[]; edges:KitEdge[]; journal:KitJournalEntry[]; meta:KitMeta }
 export interface KitVerdict { score:number; max:number; failed:string[]; hints:string[] }
 export type KitFilter = Record<string, string|string[]>;

@@ -70,3 +70,35 @@ describe('S4-30 · состояние блоков доходит до запи�
     expect(named).toEqual(['data_state', 'errors']);
   });
 });
+
+// SPRINT_UXR_S4_UI_SHELL_LISTS/S4-TECH-NOTES: строки «Состояния данных» —
+// имена источников (`relation:<ключ>`, `chips:inherited`, «срез · часть»), с
+// ними человек ничего сделать не может. Приложение помечает их tech; kit их
+// прячет и оставляет одну строку «часть сведений не загрузилась». Тег,
+// присланный сервером, главнее: решение о строке принимает тот, кто её родил.
+describe('S4-TECH-NOTES · строки состояния — tech', () => {
+  type Row = { source?: string; audience?: string };
+  const rows = (r: ReturnType<typeof withSources>) => (r.data.meta as unknown as { data_state?: Row[] }).data_state ?? [];
+
+  it('строки источников помечены tech', () => {
+    const r = withSources([{ block: 'relation:deps', state: 'error', reason: 'HTTP 500' }, { block: 'links', state: 'ok' }]);
+    expect(rows(r).map(x => x.audience)).toEqual(['tech', 'tech']);
+  });
+
+  it('тег сервера сохраняется', () => {
+    const r = withSources([{ block: 'journal', state: 'forbidden', audience: 'user' } as never]);
+    expect(rows(r)[0].audience).toBe('user');
+  });
+});
+
+describe('S4-TECH-NOTES · тег сервера доходит из meta.data_state', () => {
+  it('audience сервера переносится, незнакомое — отбрасывается (решит приложение)', async () => {
+    const { sourcesFromServer } = await import('../api/liveRecord');
+    const got = sourcesFromServer([
+      { source: 'a', state: 'ok', audience: 'user' },
+      { source: 'b', state: 'ok', audience: 'tech' },
+      { source: 'c', state: 'ok', audience: 'boss' },
+    ]);
+    expect(got.map(s => s.audience)).toEqual(['user', 'tech', undefined]);
+  });
+});
