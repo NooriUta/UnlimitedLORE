@@ -877,5 +877,6 @@
   "kit.ref.blocked": "Not created: missing {fields}. The server will not accept the record without them.",
   "kit.ref.warned": "You can create it, but recommended fields are empty: {fields}.",
   "kit.ref.failed": "Not created: {reason}.",
-  "kit.ref.denied": "No permission to create “{type}”: {reason}. You can still link an existing one."
+  "kit.ref.denied": "No permission to create “{type}”: {reason}. You can still link an existing one.",
+  "kit.ref.idle": "Type words to search — results appear as you type."
 }

@@ -19,6 +19,8 @@ import type { RefTrigger } from './refTrigger';
 export interface RefItem { id: string; type: string; title: string }
 
 export type RefSearch =
+  /** запрос ещё не набран — не спрашивали (это не «не нашлось») */
+  | { state: 'idle' }
   | { state: 'loading' }
   | { state: 'ok'; items: RefItem[] }
   | { state: 'error'; reason: string };
@@ -103,6 +105,8 @@ export const RefPicker = forwardRef<RefPickerHandle, RefPickerProps>(function Re
       {card === 'old' ? (
         trigger.unknownType ? (
           <p className="sk-ref__state sk-ref__state--err">{t('kit.ref.unknownType', { word: trigger.unknownType, known })}</p>
+        ) : search.state === 'idle' ? (
+          <p className="sk-ref__state">{t('kit.ref.idle')}</p>
         ) : search.state === 'loading' ? (
           <p className="sk-ref__state">{t('kit.ref.loading')}</p>
         ) : search.state === 'error' ? (

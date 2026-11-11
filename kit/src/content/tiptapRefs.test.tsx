@@ -54,9 +54,9 @@ describe('TipTapField + refs — окно ссылки', () => {
   it('«[[adr:» открывает окно с сужением; щелчок — в теле [[adr:ID]], без экранирования', async () => {
     const refs = source();
     const f = await mount({ refs });
-    await f.type('См. [[adr:');
+    await f.type('См. [[adr:В');
     await waitFor(() => expect(screen.getByText('ADR-2')).toBeTruthy());
-    expect(refs.search).toHaveBeenLastCalledWith('', 'adr');
+    expect(refs.search).toHaveBeenLastCalledWith('В', 'adr');
     fireEvent.click(screen.getByText('ADR-2'));
     await waitFor(() => expect(f.md()).toContain('См. [[adr:ADR-2]]'));
     expect(f.md()).not.toContain('\\[');
@@ -66,7 +66,7 @@ describe('TipTapField + refs — окно ссылки', () => {
 
   it('стрелка и Enter из редактора выбирают пункт, фокус не уходил из текста', async () => {
     const f = await mount({ refs: source() });
-    await f.type('текст #adr ');
+    await f.type('текст #adr В');
     await waitFor(() => expect(screen.getByText('ADR-1')).toBeTruthy());
     const at = document.activeElement as HTMLElement | null;
     expect(at?.classList.contains('ProseMirror')).toBe(true);
@@ -115,5 +115,39 @@ describe('TipTapField + refs — окно ссылки', () => {
     await new Promise(r => setTimeout(r, 30));
     expect(document.querySelector('.sk-ref')).toBeNull();
     expect(refs.search).not.toHaveBeenCalled();
+  });
+});
+
+describe('TipTapField + refs — пустой запрос', () => {
+  it('«[[adr:» без слов — «введите слова поиска», поиск не вызывается (не спрашивали ≠ не нашлось)', async () => {
+    const refs = source();
+    const f = await mount({ refs });
+    await f.type('см. [[adr:');
+    await waitFor(() => expect(screen.getByText(/Введите слова поиска/)).toBeTruthy());
+    expect(screen.queryByText(/Не нашлось/)).toBeNull();
+    expect(refs.search).not.toHaveBeenCalled();
+  });
+  it('порог задаёт приложение: minQuery=2 — по одной букве не ищем', async () => {
+    const refs = source({ minQuery: 2 });
+    const f = await mount({ refs });
+    await f.type('см. [[В');
+    await waitFor(() => expect(screen.getByText(/Введите слова поиска/)).toBeTruthy());
+    expect(refs.search).not.toHaveBeenCalled();
+    await f.type('т');
+    await waitFor(() => expect(refs.search).toHaveBeenLastCalledWith('Вт', null));
+  });
+});
+
+describe('MdInlineEdit пробрасывает refs в редактор', () => {
+  it('правка тела записи: «[[В» открывает окно ссылки', async () => {
+    const { MdInlineEdit } = await import('./MdInlineEdit');
+    const refs = source();
+    const { container } = render(<MdInlineEdit value="текст" label="Описание" onSave={() => {}} refs={refs} />);
+    fireEvent.click(screen.getByRole('button', { name: /Править «Описание»/ }));
+    await waitFor(() => expect(container.querySelector('.ProseMirror')).toBeTruthy());
+    const editor = (container.querySelector('.ProseMirror') as unknown as { editor: Editor }).editor;
+    await act(() => { editor.view.dom.focus(); editor.chain().focus('end').insertContent(' [[В').run(); });
+    await waitFor(() => expect(container.querySelector('.sk-ref')).toBeTruthy());
+    expect(refs.search).toHaveBeenLastCalledWith('В', null);
   });
 });

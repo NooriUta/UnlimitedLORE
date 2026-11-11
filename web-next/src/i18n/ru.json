@@ -696,5 +696,13 @@
   "admin.roles.danger.cancel": "Отказаться",
   "kitPage.chips.title": "Значения-чипы",
   "kitPage.chips.lead": "Значение поля приходит объектом: код для ссылки, подпись для человека, признак наследования. В ряду первые три, остальное под «ещё N». У унаследованного чипа сказано, откуда он взялся, — «проект задачи» и «проект её спринта» это разные утверждения. Подписи нет — показан код, а не пустота.",
-  "kitPage.chips.projects": "Проекты"
+  "kitPage.chips.projects": "Проекты",
+  "mdref.type.adr": "ADR",
+  "mdref.type.task": "задача",
+  "mdref.type.spec": "спека",
+  "mdref.type.decision": "решение",
+  "mdref.type.doc": "док",
+  "mdref.type.sprint": "спринт",
+  "mdref.type.runbook": "ранбук",
+  "mdref.type.use_case": "сценарий"
 }

@@ -187,6 +187,8 @@ export interface TipTapRefSource {
   search: (query: string, type: string | null) => Promise<RefItem[]>;
   createSpec?: RefPickerProps['createSpec'];
   onCreate?: RefPickerProps['onCreate'];
+  /** с какой длины запроса искать (по умолчанию 1); короче — «введите слова поиска», поиск не зовётся */
+  minQuery?: number;
 }
 
 interface RefOpen { trigger: RefTrigger; from: number; to: number; rect: { left: number; top: number } }
@@ -377,6 +379,7 @@ export function TipTapField({
     const src = refsRef.current;
     const open = refOpenRef.current;
     if (refQuery === null || !src || !open) return;
+    if (open.trigger.query.trim().length < (src.minQuery ?? 1)) { setRefSearch({ state: 'idle' }); return; }
     let live = true;
     setRefSearch({ state: 'loading' });
     src.search(open.trigger.query, open.trigger.type).then(
