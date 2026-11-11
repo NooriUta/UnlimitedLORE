@@ -459,6 +459,14 @@ export function ListView({
   const budget = { ...LIST_BUDGET, ...budgetPart };
   const win = resolveWin(urlState);
   const [ownState, setState] = useState<ListState>(() => initialState(win, initial));
+  /**
+   * Вид выбран ЯВНО: адресом (lv=), приложением (initial — в том числе
+   * сохранённый вид) или кнопкой. Тогда телефонное умолчание «Карточки»
+   * (S4-MOBILE-COMPARE, D-2026-UXR-MOBILE-FOLLOWS-V1) его не переспоривает.
+   */
+  const [viewPicked, setViewPicked] = useState<boolean>(
+    () => initial?.view !== undefined || (!!win && readUrlState(win).has('lv')),
+  );
   const state = stateProp ?? ownState;
   // Управляемый режим: состояние пришло снаружи (выбор вида) — URL догоняет.
   const controlledKey = stateProp ? JSON.stringify(writeListState(stateProp)) : null;
@@ -508,7 +516,11 @@ export function ListView({
       смысл.
     */
     .filter(v => v !== 'feed' || !!feedCfg?.timeField);
-  const view: ListViewKind = views.includes(state.view) ? state.view : (views[0] ?? 'list');
+  // Телефон: по умолчанию карточки — таблица в 6–11 колонок на 360 px шире
+  // экрана, а карточек помещается 9 против 2 строк (замер 11.11, как в v1).
+  // Явный выбор и управляемое состояние — закон.
+  const phoneCards = narrow && !viewPicked && !stateProp && views.includes('cards');
+  const view: ListViewKind = phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
@@ -542,6 +554,7 @@ export function ListView({
   const columns = rowActions?.length && !withSelect.includes('actions') ? [...withSelect, 'actions'] : withSelect;
 
   const update = (patch: Partial<ListState>) => {
+    if (patch.view !== undefined) setViewPicked(true);
     if (stateProp) {
       onStateChange?.({ ...stateProp, ...patch });
       return;
