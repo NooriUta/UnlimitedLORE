@@ -122,7 +122,10 @@ describe('S7A-02 · лента: дни, строки, время', () => {
     await mount(src());
     const row = firstRow('task:SPRINT_UXR_S7A_NEWS/S7A-04|closed|2026-11-07');
     expect(within(row).getByTestId('news-mult').textContent).toBe('×2');
-    expect(row.textContent).toMatch(/ready_for_deploy → done/);
+    // Подпись статуса — в подсказке и имени для чтеца, не в строке (владелица 11.11.2026).
+    const st = [...within(row).getByTestId('news-status').querySelectorAll('[data-status]')];
+    expect(st.map(m => m.getAttribute('aria-label'))).toEqual(['ready_for_deploy', 'done']);
+    expect(within(row).getByTestId('news-status').textContent).toMatch(/→/);
   });
 
   it('П21 (исправление): мультипроектное событие стоит в ОБЕИХ группах дня, с меткой ×N', async () => {
@@ -612,8 +615,9 @@ describe('S7A-12 · строка ленты: код — переход, без �
     const marks = within(firstRow(ev.key)).getByTestId('news-status').querySelectorAll('[data-status]');
     expect([...marks].map(m => m.getAttribute('data-status'))).toEqual(['done', 'ready_for_deploy']);
     expect([...marks].map(m => m.getAttribute('data-category'))).not.toContain('unknown');
-    // Подпись — код без эмодзи; сырой текст сервера — в подсказке.
-    expect(marks[0].textContent).toBe('done');
+    // Подпись — код без эмодзи, в имени для чтеца (в строке только значок); сырой текст — в подсказке.
+    expect(marks[0].getAttribute('aria-label')).toBe('done');
+    expect(marks[0].textContent?.trim()).toBe('');
     expect(marks[0].getAttribute('title')).toContain('✅ DONE');
   });
 

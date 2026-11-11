@@ -81,6 +81,8 @@ final class LoreMePrefs {
         m.put("single_key_shortcuts", bool(false));                          // однобуквенные клавиши
         m.put("stripes", bool(false));                                       // полоски в таблицах
         m.put("peek_hover", bool(true));                                    // карточки Peek по наведению (S9-10)
+        // вид вкладки «Граф» (GC-03): auto = не выбирал — на компьютере секторы, на телефоне список
+        m.put("graph_view", oneOf("auto", "auto", "sectors", "list", "force", "obsidian"));
         m.put("new_navigation", bool(false));                                // флаг «новая навигация»
         // место показа паспорта (S4-17): auto = выбора не было, экран решает сам; не подменять умолчанием
         m.put("passport_place", oneOf("auto", "auto", "right", "bottom", "full"));

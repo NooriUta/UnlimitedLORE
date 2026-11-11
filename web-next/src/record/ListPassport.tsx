@@ -10,9 +10,9 @@ import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
   type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
-import { MartProse } from '@seidr/kit/content';
+import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
-import { loreRefPeek } from './lorePeek';
+import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
@@ -31,18 +31,29 @@ import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
 import { ModelNotes } from './ModelNotes';
+import { loreQueryRun } from './loreQueryBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 /** Чтение тела: ссылка ведёт в паспорт (MD-READ-PEEK), наведение/тап — карточка Peek (S9-10). */
-function ProseWithPeek({ text }: { text: string }) {
+function ProseWithPeek({ text, blocks }: { text: string; blocks?: LiveBlocks }) {
   const lang = useKitLang();
   // Выключатель «Карточки по наведению» (настройки) читается из применённого атрибута.
   const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
-  return <MartProse text={text} refHref={loreRefHref} refPeek={peek} />;
+  return <MartProse text={text} refHref={loreRefHref} refPeek={peek} blocks={blocks} />;
 }
-const md = (s: string) => <ProseWithPeek text={s} />;
+
+// S6-04: живые блоки lore-query в теле записи; $this.id / $this.type — эта запись.
+// Исполнитель — один на запись (кеш), иначе блок перезапрашивал бы данные на каждой перерисовке.
+const BLOCKS = new Map<string, LiveBlocks>();
+function blocksFor(type: string, id: string): LiveBlocks {
+  const k = `${type}|${id}`;
+  let b = BLOCKS.get(k);
+  if (!b) { b = { 'lore-query': loreQueryRun({ 'this.id': id, 'this.type': type }) }; BLOCKS.set(k, b); }
+  return b;
+}
+const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} blocks={blocksFor(type, id)} />;
 
 export interface ListPassportProps {
   type: PassportType;
@@ -223,6 +234,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     : view.config;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf);
+  const graphPeek = loreListPeek(lang, id => view.data.records.find(r => r.id === id)?.kind ?? null);
   const ctx: KitCtx = { config: {
     ...withOptions,
     // Цикл статусов из модели ГЛАВНЕЕ умолчания приложения: умолчание —
@@ -231,12 +243,14 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // причина уже названа в строке замечаний.
     statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
     hooks: { ...baseConfig.hooks, onSave, onRelation },
+    // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
+    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render } : baseConfig.graph,
   }, data: view.data, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
     // Чипы проектов и компонентов шапки — паспорт своего типа (S4-29, 53а): тип берётся из
     // поля, в котором чип пришёл; раньше чип вёл на «#код».
-    href: passportHref(view.data.records, contract?.values ?? {}, x => '#' + encodeURIComponent(x)), esc, md };
+    href: passportHref(view.data.records, contract?.values ?? {}, x => '#' + encodeURIComponent(x)), esc, md: mdFor(type, id) };
   return (
     <>
       {/*

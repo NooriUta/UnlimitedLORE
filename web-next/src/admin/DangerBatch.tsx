@@ -27,8 +27,12 @@ export interface DangerBatchProps {
   changes: readonly RoleChange[];
   fetchImpl?: typeof fetch;
   onClose: () => void;
-  /** Пачка применена или отменена — матрицу пора перечитать. */
-  onChanged?: () => void;
+  /**
+   * Пачка применена или отменена — матрицу пора перечитать. Что именно —
+   * аргументом (S7B-29): мастеру «подключить человека» это не одно и то же —
+   * после отмены ролей у человека нет, и идти «дальше» нельзя.
+   */
+  onChanged?: (what: 'applied' | 'undone') => void;
   /**
    * Откат прошлой пачки из журнала (S7B-13): тот же путь, но с undo_of —
    * сервер проверяет окно и в диффе, и при применении. display_name при
@@ -95,7 +99,7 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
     setApplying(true);
     setApplyError(null);
     postRoleBatch({ ...who, changes: send }, fetchImpl).then(
-      body => { setAnswer(parseApply(body)); setApplying(false); onChanged?.(); },
+      body => { setAnswer(parseApply(body)); setApplying(false); onChanged?.('applied'); },
       (e: unknown) => { setApplyError(reasonOf(e)); setApplying(false); },
     );
   };
@@ -105,7 +109,7 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
     setUndoing(true);
     setUndoError(null);
     postRoleBatch({ ...who, changes: answer.undo, undo_of: id }, fetchImpl).then(
-      () => { setUndone(true); setUndoing(false); onChanged?.(); },
+      () => { setUndone(true); setUndoing(false); onChanged?.('undone'); },
       (e: unknown) => { setUndoError(t('admin.roles.undoFailed', { reason: reasonOf(e) })); setUndoing(false); },
     );
   };

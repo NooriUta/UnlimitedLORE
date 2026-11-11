@@ -82,7 +82,7 @@ export async function fetchPalettes(opts: PalettesOptions = {}): Promise<Palette
     notes.push(`список палитр взят из кеша модели и может быть устаревшим (${reason(res.error)})`);
   }
 
-  const p = palettesFromModel(res.model, { known: PALETTES.map(x => x.id as string) });
+  const p = palettesFromModel(res.model, { known: PALETTES.map(x => x.id as string), lang });
   notes.push(...p.notes);
 
   // Пришёл пустой список — выбирать нечего; подставляем умолчание темы, но

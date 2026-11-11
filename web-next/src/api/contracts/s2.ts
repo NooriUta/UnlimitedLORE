@@ -283,10 +283,21 @@ export interface UserSettings {
   stripes: boolean;
   /** Карточка Peek по наведению на ссылку (S9-10, D-2026-LORE-PEEK-ONE-CARD); выключить можно, как в Wikipedia. */
   peek_hover: boolean;
+  /**
+   * Вид вкладки «Граф» по умолчанию (GC-03, владелица 11.11.2026: «настройкой в
+   * настройках человека»). auto — не выбирал: решает экран (секторы / список на телефоне).
+   */
+  graph_view: 'auto' | 'sectors' | 'list' | 'force' | 'obsidian';
   /** Флаг «новая навигация»; cookie seer-prefs.nav остаётся кэшем для перехода между хостами. */
   nav_version: 'v1' | 'v2';
   /** S4-TECH-NOTES: показывать технические сведения (коды источников, оговорки модели, сырые метрики). */
   show_tech: boolean;
+  /**
+   * Множитель размера шрифта поверх ступени text_size (S4-16, ползунок kit).
+   * Сервер его хранил давно (LoreMePrefs), клиент — нет: ползунка в настройках
+   * не было (S4-21, владелица 11.11: «я жду ползунка для шрифтов»). 1 — выбора не было.
+   */
+  text_scale: number;
 }
 
 export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
@@ -299,8 +310,10 @@ export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   single_key_shortcuts: true,
   stripes: true,
   peek_hover: true,
+  graph_view: 'auto',
   nav_version: 'v2',
   show_tech: false,
+  text_scale: 1,
 };
 
 type Check = (v: unknown) => boolean;
@@ -316,8 +329,10 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   single_key_shortcuts: bool,
   stripes: bool,
   peek_hover: bool,
+  graph_view: oneOf('auto', 'sectors', 'list', 'force', 'obsidian'),
   nav_version: oneOf('v1', 'v2'),
   show_tech: bool,
+  text_scale: v => typeof v === 'number' && Number.isFinite(v),
 };
 
 /** Ключи патча, которые сервер отвергнет 400 BAD_PARAMS (незнакомые и с чужим значением). */

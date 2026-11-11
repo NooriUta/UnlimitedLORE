@@ -75,6 +75,11 @@ export function ContentRelease({ diff, log, onActivate, onRollback, busy, rowBud
   const [ask, setAsk] = useState<Ask>(null);
 
   const cls = diff.class ?? 'unknown';
+  // Какая версия живая — по журналу (новые записи первыми). Журнала нет — не знаем,
+  // и откат остаётся как был. Живая не N — откат вёл бы на ту, что уже стоит
+  // (проверка 11.11.2026): кнопки нет, а сказано, когда она появится.
+  const live = log === undefined ? undefined : (log[0]?.version ?? null);
+  const rollbackPending = live !== undefined && String(live) !== String(diff.to);
   const empty = !diff.added.length && !diff.changed.length && !diff.removed.length;
 
   function head(g: Group, n: number) {
@@ -211,6 +216,8 @@ export function ContentRelease({ diff, log, onActivate, onRollback, busy, rowBud
         )}
         {onRollback && (diff.from === null
           ? <span className="sk-rel__norollback" data-testid="kit-rel-norollback">{kitT(lang, 'kit.rel.noRollback')}</span>
+          : rollbackPending
+          ? <span className="sk-rel__norollback" data-testid="kit-rel-norollback">{kitT(lang, 'kit.rel.rollbackAfter', { to: String(diff.to) })}</span>
           : (
             <button
               type="button"
@@ -233,7 +240,10 @@ export function ContentRelease({ diff, log, onActivate, onRollback, busy, rowBud
             type="button"
             className="sk-rel__act is-primary"
             data-testid="kit-rel-confirm-yes"
+            aria-disabled={busy ? true : undefined}
             onClick={() => {
+              // Выпуск уже идёт (busy пришёл после открытия подтверждения) — второй раз не жмём.
+              if (busy) return;
               const a = ask;
               setAsk(null);
               if (a.kind === 'activate') onActivate?.(a.version);
