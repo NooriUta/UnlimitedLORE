@@ -37,9 +37,13 @@ const FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
 /** Строка без своего переводa строки — для сопоставления с образцом. */
 const bare = (line: string) => line.replace(/\r?\n$/, '');
 
-interface Opening { indent: number; marker: string; lang: string }
+export interface FenceOpening { indent: number; marker: string; lang: string }
 
-function opening(line: string): Opening | null {
+/**
+ * Открывает ли строка фенс по CommonMark. ОДНО правило на весь kit: им пользуются
+ * чтение (diagramFence, markdownBare) и правка (normalizeMarkdown) — K-13.
+ */
+export function fenceOpening(line: string): FenceOpening | null {
   const m = FENCE.exec(line);
   if (!m) return null;
   const marker = m[2];
@@ -51,7 +55,8 @@ function opening(line: string): Opening | null {
   return { indent: m[1].length, marker, lang };
 }
 
-function closes(line: string, marker: string): boolean {
+/** Закрывает ли строка фенс с этим маркером: та же порода, не короче, одни маркеры. */
+export function fenceCloses(line: string, marker: string): boolean {
   const m = FENCE_CLOSE.exec(line);
   return !!m && m[1][0] === marker[0] && m[1].length >= marker.length;
 }
@@ -85,14 +90,14 @@ export function splitDiagramFences(
 
   let i = 0;
   while (i < lines.length) {
-    const open = opening(bare(lines[i]));
+    const open = fenceOpening(bare(lines[i]));
     if (!open) { buf.push(lines[i]); i += 1; continue; }
 
     const body: string[] = [];
     let j = i + 1;
     let closed = false;
     while (j < lines.length) {
-      if (closes(bare(lines[j]), open.marker)) { closed = true; break; }
+      if (fenceCloses(bare(lines[j]), open.marker)) { closed = true; break; }
       body.push(lines[j]);
       j += 1;
     }

@@ -3,6 +3,7 @@
 // markdownSerializerExtension), но без React: редактор без представления,
 // разобрать MD, отдать MD, уничтожить. Нужен тесту без-потерь и S5-06/S5-08
 // (правка на месте и слияние по блокам сравнивают источник после круга).
+import { fenceCloses, fenceOpening } from './diagramFence';
 import { Editor } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -51,14 +52,16 @@ export function normalizeMarkdown(md: string): string {
   const out: string[] = [];
   let fence: string | null = null;
   for (const line of md.replace(/\r\n/g, '\n').split('\n')) {
-    const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
     if (fence === null) {
-      if (m) fence = m[1];
+      // Правило фенса — общее с чтением (K-13): иначе строка прозы с инлайн-кодом
+      // считалась бы началом блока, и всё ниже выпадало бы из нормализации.
+      const open = fenceOpening(line);
+      if (open) fence = open.marker;
       const blank = line.trim() === '';
       if (blank && (out.length === 0 || out[out.length - 1] === '')) continue;
       out.push(blank ? '' : line.replace(/[ \t]+$/, ''));
     } else {
-      if (m && m[1][0] === fence[0] && m[1].length >= fence.length && line.trim() === m[1]) fence = null;
+      if (fenceCloses(line, fence)) fence = null;
       out.push(line);
     }
   }
