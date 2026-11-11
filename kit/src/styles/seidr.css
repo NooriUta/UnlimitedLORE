@@ -5700,7 +5700,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__props--rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; }
 .sk-rec__props--rail .sk-rec__zone { display: none; }
 /* Во весь экран — воздушнее и по центру (владелица 08.11): колонка ~920 px, поля, свободное межстрочие. */
-.sk-dock[data-placement='full'] .sk-rec { max-width: var(--rec-frame); margin: 0 auto; padding: 8px 32px 48px; }
+/* S5-05: width: 100% — статья не сжимается по содержимому вкладки. Без неё ширина
+   статьи (а с ней и мера строки, % от неё) менялась при переключении вкладок:
+   замер Playwright 1280px — 744 / 735 / 684 / 679 px на разных вкладках. */
+.sk-dock[data-placement='full'] .sk-rec { width: 100%; max-width: var(--rec-frame); margin: 0 auto; padding: 8px 32px 48px; }
 /* Пропорции эталона v4 (владелица 08.11: «посмотри на скриншоте хорошие проценты и соблюдай»):
    линия вкладок ~66% области, шапка и текст ~66% линии. Ширина текста — настройка наверху. */
 .sk-dock[data-placement='full'] .sk-rec[data-width='s'] { --rec-col: 56%; }
