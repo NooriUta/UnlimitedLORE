@@ -6618,3 +6618,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-mdmerge__who { flex: 0 0 3.5em; color: var(--t2); text-transform: uppercase; }
 .sk-mdmerge__picks { display: flex; flex-wrap: wrap; gap: 6px; }
 .sk-mdmerge__picks .sk-btn[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+
+/* S7B-ACL-3: подписанные группы в ScopePicker — свои / остальные (подписи от приложения). */
+.sk-scope__grp { display: grid; gap: 2px; }
+.sk-scope__grp + .sk-scope__grp { margin-top: 6px; }
+.sk-scope__grph { margin: 4px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
