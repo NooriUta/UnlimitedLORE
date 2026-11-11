@@ -190,6 +190,8 @@
   "record.status.cancelled": "Отменено",
   "sprintTasks.title": "Задачи",
   "sprintTasks.caption": "Задачи спринта {id}",
+  "sprintTasks.bulkPartial": "сменилось {ok} из {total}; не сменились: {failed}",
+  "sprintTasks.bulkFailedOne": "{id} — {reason}",
   "sprintTasks.back": "К LORE",
   "history.legacySlice": "Общая история (S2) на сервере ещё не включена — показана цепочка версий из слайса {slice}; авторов правок в нём нет.",
   "pp.title": "Демо паспортов",
