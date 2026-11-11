@@ -42,3 +42,20 @@ describe('loreMdRefs', () => {
     expect(loreMdRefs('ru').minQuery).toBe(2);
   });
 });
+
+describe('loreRefHref — куда ведёт ссылка в чтении', () => {
+  it('с типом — паспорт этого типа', async () => {
+    const { loreRefHref } = await import('./loreMdRefs');
+    expect(loreRefHref({ id: 'ADR-LORE-050', type: 'adr' })).toContain('open=ADR-LORE-050');
+  });
+  it('без типа — тип по форме ID (ADR-, SPEC-, D-2026-, SPRINT_X/CODE)', async () => {
+    const { loreRefHref } = await import('./loreMdRefs');
+    expect(loreRefHref({ id: 'ADR-LORE-050', type: null })).toBe(loreRefHref({ id: 'ADR-LORE-050', type: 'adr' }));
+    expect(loreRefHref({ id: 'SPRINT_X/MD-1', type: null })).toBe(loreRefHref({ id: 'SPRINT_X/MD-1', type: 'task' }));
+  });
+  it('форму не узнали или тип открыть негде — null, а не выдуманный адрес', async () => {
+    const { loreRefHref } = await import('./loreMdRefs');
+    expect(loreRefHref({ id: 'UTF-8', type: null })).toBeNull();
+    expect(loreRefHref({ id: 'X', type: 'no_such_type' })).toBeNull();
+  });
+});

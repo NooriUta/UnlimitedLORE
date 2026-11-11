@@ -11,7 +11,7 @@ import {
   type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse } from '@seidr/kit/content';
-import { MdInlineEditWithRefs } from './loreMdRefs';
+import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
@@ -32,7 +32,7 @@ import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-const md = (s: string) => <MartProse text={s} />;
+const md = (s: string) => <MartProse text={s} refHref={loreRefHref} />;
 
 export interface ListPassportProps {
   type: PassportType;
