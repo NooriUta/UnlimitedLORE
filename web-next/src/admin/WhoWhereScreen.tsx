@@ -11,6 +11,7 @@ import { useAppT } from '../i18n';
 import { fetchParticipation, filterPeople, filterProjectViews, type Participation } from './participation';
 import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
+import { PersonOffboard } from './PersonOffboard';
 import './Admin.css';
 
 export interface WhoWhereScreenProps {
@@ -27,6 +28,8 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
   const [open, setOpen] = useUrlParam('adm-open');
   // S7B-25: поиск — в адресе (?adm-q=…), ссылка открывает ту же выборку.
   const [query, setQuery] = useUrlParam('adm-q');
+  // S7B-20 (UC-4): «Отключить…» из карточки человека — кого отключаем, в адресе.
+  const [off, setOff] = useUrlParam('adm-off');
   const res = useLoadState<Participation>(signal => fetchParticipation(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
   const data = res.data;
   const agentNames = (list: AgentRow[]) => list.map(a => (
@@ -72,6 +75,12 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
                   <>
                     <PersonAgentsLine kcSub={p.kc_sub} isMe={p.kc_sub === meSub} fetchImpl={fetchImpl} />
                     <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
+                    {off === p.kc_sub
+                      ? <PersonOffboard person={{ kc_sub: p.kc_sub, name: p.name }} meSub={meSub} fetchImpl={fetchImpl} onClose={() => setOff(null)} />
+                      : (
+                        <button type="button" className="adm-btn adm-btn--dng" data-testid={`adm-off-open-${p.kc_sub}`}
+                          onClick={() => setOff(p.kc_sub)}>{t('admin.off.open')}</button>
+                      )}
                   </>
                 )}
               </details>
@@ -117,7 +126,7 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
         ))}
       </ul>
     );
-  }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs, query]);
+  }, [data, view, meSub, t, open, setOpen, fetchImpl, allSlugs, query, off, setOff]);
   const nothing = !!data && !!(query ?? '').trim()
     && (view === 'people' ? filterPeople(data.people, query) : filterProjectViews(data.projects, query)).length === 0;
 
