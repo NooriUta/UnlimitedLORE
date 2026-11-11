@@ -389,6 +389,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             Map<String, Object> roles = applyRoles(uid,
                                 req.author_agent(), req.executor_agent(), req.reviewer_agent());
                             if (!roles.isEmpty()) body.put("roles", roles);
+                            // MD-AUTOLINK: упоминания в теле задачи → TAGGED_WITH к компоненту.
+                            if (note != null) body.put("mentions", taskMentions(uid, note));
                             return noStore(Response.ok(body));
                         })
                         .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()));
@@ -829,6 +831,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (reqs == null || reqs.isEmpty()) return badParams("tasks array required");
         int updated = 0;
         List<String> errors = new java.util.ArrayList<>();
+        Map<String, Object> mentions = new LinkedHashMap<>();
         for (TaskEditRequest req : reqs) {
             if (req == null || req.task_uid() == null || req.title() == null || req.title().isBlank()) {
                 errors.add("skipped (missing task_uid or title): " + req); continue;
@@ -877,11 +880,17 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 updated++;
             } catch (Exception e) {
                 errors.add(req.task_uid() + ": " + e.getMessage());
+                continue;
             }
+            // MD-AUTOLINK: после записи и вне её try — сбой автосвязи не делает пункт ошибкой.
+            String mentionText = taskNoteMentionText(req.note_md(), req.note_append());
+            if (mentionText != null) mentions.put(req.task_uid(), taskMentions(req.task_uid(), mentionText));
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", errors.isEmpty()); out.put("updated", updated);
         if (!errors.isEmpty()) out.put("errors", errors);
+        // Пакет: блок mentions — по task_uid, у каждого {added, unchanged, skipped}.
+        if (!mentions.isEmpty()) out.put("mentions", mentions);
         return noStore(Response.ok(out));
     }
 
@@ -1087,6 +1096,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     Map<String, Object> roles = applyRoles(uid,
                         req.author_agent(), req.executor_agent(), req.reviewer_agent());
                     if (!roles.isEmpty()) body.put("roles", roles);
+                    // MD-AUTOLINK: для note_append разбирается только дописанное.
+                    String mentionText = taskNoteMentionText(req.note_md(), req.note_append());
+                    if (mentionText != null) body.put("mentions", taskMentions(uid, mentionText));
                     return noStore(Response.ok(body));
                 })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
@@ -1235,6 +1247,30 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (mismatch == null) return null;
         return Scd2Guard.conflict("task '" + uid + "': expected " + mismatch + " = '" + expected.get(mismatch)
             + "' does not match the current value — re-read and retry", cur);
+    }
+
+    /**
+     * MD-AUTOLINK (spec:SPEC-LORE-MD-INLINE-REF §7): какой текст заметки разбирать на упоминания.
+     * Дописка — только добавленная часть (прежняя уже разбиралась при своей записи); поле
+     * целиком — само поле; заметку не трогали — null, автосвязей нет.
+     */
+    static String taskNoteMentionText(String noteMd, String noteAppend) {
+        return noteAppend != null ? noteAppend : noteMd;
+    }
+
+    /**
+     * Автосвязи задачи по упоминаниям в заметке (задача → компонент, TAGGED_WITH). Сбой не
+     * роняет уже сделанную запись: вместо блока — {@code {error}}. Блокирующий — с рабочего пула.
+     */
+    private Map<String, Object> taskMentions(String uid, String text) {
+        try {
+            return autoLinkMentions("task", uid, false, text);
+        } catch (Exception e) {
+            LOG.warnf("[LORE TASK MENTIONS] %s: %s", uid, e.getMessage());
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("error", LoreUpstream.detail(e));
+            return m;
+        }
     }
 
     /** Дописка: пустое поле — запись; иначе прежнее (без хвостовых пустот) + пустая строка + новое. */

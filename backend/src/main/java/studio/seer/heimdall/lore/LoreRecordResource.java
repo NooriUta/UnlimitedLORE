@@ -218,7 +218,7 @@ public class LoreRecordResource extends LoreResourceBase {
         // не ошибка: record.version = null без version_error.
         if (!LoreRecordRegistry.READ_ONLY.contains(type)) try {
             List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordVersion.sql(type), Map.of("id", id));
-            if (!v.isEmpty()) version = LoreRecordVersion.normalize(v.get(0).get("version"));
+            if (!v.isEmpty()) version = LoreRecordVersion.of(v.get(0));
         } catch (RuntimeException e) {
             versionError = e.getMessage();
             facts.put("version_error", versionError);

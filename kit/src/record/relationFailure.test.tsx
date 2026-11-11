@@ -88,7 +88,8 @@ describe('S4-MODEL-PASSPORT-LIST · отказ привязки не молчи�
 
   it('отказ отвязки тоже виден: строка остаётся, причина названа', async () => {
     show(vi.fn(async () => { throw new Error('нужна роль администратора'); }));
-    const unlink = screen.getAllByRole('button').find(b => b !== link())!;
+    // Кнопка отвязки — по имени: в таблице теперь есть и управление списка (поиск, фильтр, порядок).
+    const unlink = screen.getAllByRole('button', { name: /^Отвязать/ })[0];
     await act(async () => { fireEvent.click(unlink); });
     await waitFor(() => expect(document.body.textContent).toContain('нужна роль администратора'));
   });

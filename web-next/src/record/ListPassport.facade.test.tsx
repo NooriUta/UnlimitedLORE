@@ -234,6 +234,68 @@ describe('паспорт v2 — одновременная правка', () => 
     // Текст не потерян: перенабирать не придётся.
     expect((box as HTMLTextAreaElement).value).toBe('мой текст');
   }, 20000);
+
+  // S5-08, слияние по блокам: 409 → перечитали запись → слили три текста поля.
+  /** Сеть, где после первой записи «кто-то» уже поменял текст: первая запись — 409. */
+  function racing(theirs: string, sent: Record<string, unknown>[]) {
+    let reads = 0;
+    return (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), 'http://lore.test');
+      if (url.pathname === '/lore/sprint/update') {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        sent.push(body);
+        if (body.expected_version === 'v1') {
+          return json({ error: 'VERSION_CONFLICT', detail: 'stale', current: { version: 'v2', updated_by: 'agent-x' } }, 409);
+        }
+        return json({ ok: true });
+      }
+      if (url.pathname.startsWith('/lore/record/')) {
+        reads++;
+        // Первое чтение — то, что человек открыл; дальше — запись после чужой правки.
+        return reads === 1
+          ? json({ ...withBody, record: { ...withBody.record, version: 'v1' }, values: { ...withBody.values, context_md: 'А.\n\nБ.\n\nВ.' } })
+          : json({ ...withBody, record: { ...withBody.record, version: 'v2' }, values: { ...withBody.values, context_md: theirs } });
+      }
+      if (url.pathname === '/lore/history') return json({ type: 'sprint', id: 'SP', rows: [], attribution: { ok: true } });
+      if (url.pathname === '/lore/me/drafts') return json({ drafts: [] });
+      return json({ rows: [] });
+    }) as unknown as typeof fetch;
+  }
+
+  async function editAndSave(text: string) {
+    await screen.findByText('Название от фасада', {}, { timeout: 8000 });
+    fireEvent.click(await screen.findByRole('button', { name: /Править/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole('button', { name: 'режим markdown-источника' }));
+    fireEvent.change(screen.getByLabelText(/исходник markdown/i), { target: { value: text } });
+    fireEvent.click(screen.getByRole('button', { name: /Сохранить/ }));
+  }
+
+  it('правки разных блоков сливаются сами: вторая запись — слитый текст с новой версией', async () => {
+    const sent: Record<string, unknown>[] = [];
+    show(racing('А.\n\nБ.\n\nВ — их.', sent));
+    await editAndSave('А — моё.\n\nБ.\n\nВ.');
+    await waitFor(() => expect(sent.length).toBe(2));
+    expect(sent[1]).toMatchObject({ context_md: 'А — моё.\n\nБ.\n\nВ — их.', expected_version: 'v2' });
+    expect(document.body.textContent).not.toMatch(/Не сохранилось/);
+  }, 20000);
+
+  it('правка одного блока обеими — дифф только спорного блока, записи поверх нет', async () => {
+    const sent: Record<string, unknown>[] = [];
+    show(racing('А.\n\nБ — их.\n\nВ.', sent));
+    await editAndSave('А.\n\nБ — моё.\n\nВ.');
+    const panel = await screen.findByRole('group', { name: /Спорные блоки/ }, { timeout: 8000 });
+    expect(panel.textContent).toContain('Б — их.');
+    expect(panel.textContent).toContain('Б — моё.');
+    expect(panel.textContent).toContain('agent-x');
+    expect(document.querySelectorAll('.sk-mdmerge__block')).toHaveLength(1);
+    expect(sent).toHaveLength(1);
+    // Решили спор — следующая запись уходит с версией ПЕРЕЧИТАННОЙ записи, а не 409 снова.
+    fireEvent.click(screen.getByRole('button', { name: /Оставить моё/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Применить/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Сохранить/ }));
+    await waitFor(() => expect(sent.length).toBe(2));
+    expect(sent[1]).toMatchObject({ context_md: 'А.\n\nБ — моё.\n\nВ.', expected_version: 'v2' });
+  }, 20000);
 });
 
 // Вкладка паспорта живёт в адресе (аудит D-21).

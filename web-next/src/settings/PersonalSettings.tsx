@@ -140,6 +140,12 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
           ['force', 'settings.graphView.force'], ['obsidian', 'settings.graphView.obsidian'],
         ] as const),
         v => onChange({ graph_view: v }), 'settings.graphView.hint')}
+      {row('passport_place', 'settings.passportPlace.label', s.passport_place,
+        opts(lang, [
+          ['auto', 'settings.passportPlace.auto'], ['right', 'settings.passportPlace.right'],
+          ['bottom', 'settings.passportPlace.bottom'], ['full', 'settings.passportPlace.full'],
+        ] as const),
+        v => onChange({ passport_place: v }), 'settings.passportPlace.hint')}
       {row('show_tech', 'settings.showTech.label', onOff(s.show_tech), onOffOpts,
         v => onChange({ show_tech: v === 'on' }), 'settings.showTech.hint')}
       <NavSwitch lang={lang} targetUrl={targetUrl} />

@@ -5,13 +5,14 @@
 // листалка по списку и «⤢». Свой ушко «Свойства» RecordReader НЕ включаем (aside нет):
 // свойства во весь экран — рейка и свёртка самого RecordView (сессия kit, #914).
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
   type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
-import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
+import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
+import { parentsOf } from './loreRefCreate';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
@@ -24,6 +25,8 @@ import { fromLoreRecord, withFieldOptions } from './loreRecordContract';
 import { toDictItems, type DictApiRow } from '../sprint/taskDicts';
 import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
+import { saveMerging, type FieldState } from './passportMerge';
+import { fetchLoreRecord } from '../api/liveRecord';
 import { saveRelation } from './relationSave';
 import { saveRecordStatus, statusEntity } from './statusSave';
 import { fetchPassportOrder } from './passportOrder';
@@ -151,6 +154,13 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   );
   const contract = pp.data ?? null;
   const view = useMemo(() => (contract ? fromLoreRecord(contract, lang) : null), [contract, lang]);
+  // S5-08: после 409 запись перечитана, а паспорт ещё нет (перечитать его — значит
+  // снять поле правки вместе с решаемым спором). Новая база и версия поля живут
+  // здесь, пока паспорт показывает ту версию, с которой их перечитали.
+  const rebased = useRef(new Map<string, FieldState & { readVersion: string | null }>());
+  // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
+  const parentsKey = JSON.stringify(parentsOf(view?.record));
+  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>), [parentsKey]);
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
   // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
   // правится (выбирать не из чего), а не показывает пустой список.
@@ -175,7 +185,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   if (!view) return <Skeleton lines={8} label={t('pp.loading')} />;
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
   // паспорт с сервера — показываем записанное, а не то, что набрали.
-  const onSave = async ({ field, to }: { field: string; to: unknown }) => {
+  const onSave = async ({ field, from, to }: { field: string; from?: unknown; to: unknown }) => {
     // СТАТУС сохраняется СВОИМ путём — у него на сервере отдельный эндпоинт
     // (`POST /lore/status`), и он единственный, кто двигает SCD2 состояния.
     //
@@ -209,10 +219,36 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // ADR три, и таблица по одному имени на тип молча не записала бы
     // остальные (замечание серверной сессии 09.11 по его же реестру).
     const def = contract?.schema.fields.find(f => f.key === field);
-    await savePassportField(
-      type, { id: view.record.id, title: view.record.title }, field, to, fetchImpl,
-      contract?.record.version ?? null, def?.write ?? null,
+    const readVersion = contract?.record.version ?? null;
+    const saveAs = (text: unknown, version: string | null) => savePassportField(
+      type, { id: view.record.id, title: view.record.title }, field, text, fetchImpl,
+      version, def?.write ?? null,
     );
+    // Текст (MD) — со слиянием по блокам при 409 (S5-08): правки разных блоков
+    // сливаются сами, спорные блоки показывает поле правки построчным диффом.
+    // Остальные поля (дата, число, имя) — одно значение, сливать в них нечего:
+    // 409 доходит словами «перечитайте».
+    const isText = typeof to === 'string' && (def?.kind === 'md' || field === 'body_md' || field.endsWith('_md'));
+    if (isText) {
+      const key = field;
+      const known = rebased.current.get(key);
+      const live = known && known.readVersion === readVersion ? known : null;
+      await saveMerging({
+        base: live ? live.text : typeof from === 'string' ? from : String(contract?.values[field] ?? ''),
+        mine: to,
+        version: live ? live.version : readVersion,
+        save: saveAs,
+        reread: async () => {
+          const fresh = await fetchLoreRecord(type, view.record.id, { fetchImpl });
+          const v = fresh.values[field];
+          return { text: typeof v === 'string' ? v : '', version: fresh.record.version ?? null };
+        },
+        rebase: fresh => { rebased.current.set(key, { ...fresh, readVersion }); },
+      });
+      rebased.current.delete(key);
+    } else {
+      await saveAs(to, readVersion);
+    }
     pp.reload();
   };
   // Привязка и отвязка связей (S4-MODEL-PASSPORT-LIST): управление в kit было
@@ -263,7 +299,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
         признака роли у клиента сейчас нет вовсе, и выдумывать его нельзя.
       */}
       <ModelNotes notes={[...order.notes, ...statuses.notes]} />
-    <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={MdInlineEditWithRefs}
+    <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
       sections={order.order}
