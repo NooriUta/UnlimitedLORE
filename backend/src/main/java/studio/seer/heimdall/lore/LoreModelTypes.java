@@ -112,8 +112,14 @@ final class LoreModelTypes {
      *                 schemaless) — у поля {@code property_type: null}: тип неизвестен,
      *                 а не «строка».
      */
-    @SuppressWarnings("unchecked")
     static Map<String, Object> build(Map<String, List<String>> schema, Map<String, Map<String, String>> declared) {
+        return build(schema, declared, null);
+    }
+
+    /** ЗАГЛУШКА до правки (MD-REQUIRED): mandatory пока не читается. */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> build(Map<String, List<String>> schema, Map<String, Map<String, String>> declared,
+                                     Map<String, Set<String>> mandatory) {
         Map<String, Map<String, String>> decl = declared == null ? Map.of() : declared;
         Map<String, Object> out = new LinkedHashMap<>();
         for (String t : LoreRecordRegistry.TYPES) {
