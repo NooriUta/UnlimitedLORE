@@ -1117,6 +1117,22 @@ export function ListView({
   // печатался СЫРЫМ: в «Технологиях» в клетке стоял ISO с миллисекундами.
   // Движок знает тип поля из модели — значит и показывать день должен он, а не
   // каждый экран по-своему (ревью 10.11, UX-долг).
+  /** Тип объявил поля, и этого среди них нет — колонка к записи не относится. */
+  const notApplicable = (kind: string, key: string): boolean => {
+    const declared = config.kinds[kind]?.fields;
+    if (!declared) return false;
+    const name = key.startsWith('fields.') ? key.slice(7) : key;
+    return !declared.some(f => f.key === name);
+  };
+  /** Подпись поля по любому типу, который его объявил; не нашлась — ключ как есть. */
+  const fieldTitleOf = (key: string): string => {
+    const name = key.startsWith('fields.') ? key.slice(7) : key;
+    for (const k of Object.values(config.kinds)) {
+      const f = k.fields?.find(x => x.key === name);
+      if (f?.title) return f.title;
+    }
+    return key;
+  };
   const fieldType = (kind: string, key: string): string | undefined => {
     // Колонка приходит с приставкой («fields.start»), а в модели поле зовётся
     // без неё — как и в fieldValue (listModel.ts:54). Без снятия приставки тип
@@ -1219,6 +1235,13 @@ export function ListView({
         // Сумма с охватом (S4-09): «12,5 д» или «12,5 д · у 9 из 14», и
         // «не заполнено» вместо нуля, когда не заполнено ни у кого.
         if (col.startsWith('sum:')) return <SumCell value={fieldValue(r, col.slice(4))} />;
+        // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
+        // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это
+        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем.
+        if (notApplicable(r.kind, col)) {
+          const fieldTitle = fieldTitleOf(col);
+          return <span className="sk-list__na" title={t('kit.list.cell.na', { kind: config.kinds[r.kind]?.title ?? r.kind, field: fieldTitle })}>{t('kit.list.cell.naShort')}</span>;
+        }
         return valueCell(col, r);
     }
   };
