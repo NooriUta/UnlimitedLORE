@@ -25,7 +25,15 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
 
 // ── учётка человека в Keycloak ───────────────────────────────────────────
 
-export interface KcUser { id: string; username: string; email: string | null; enabled: boolean; roles: string[] }
+export interface KcUser {
+  id: string; username: string; email: string | null; enabled: boolean; roles: string[];
+  /**
+   * S7B-20: realm-роли учётки прочитаны. false — сервер не смог их прочитать, и
+   * пустой roles значит «не знаем», а не «ролей нет». Не прислано — прочитаны
+   * (старый сервер так и отвечал: без поля).
+   */
+  rolesChecked?: boolean;
+}
 
 /** Ответ GET /lore/kc/users. Не массив — сбой, а не «никого нет». */
 export function parseKcUsers(raw: unknown): KcUser[] {
@@ -38,6 +46,7 @@ export function parseKcUsers(raw: unknown): KcUser[] {
       email: str(u.email),
       enabled: u.enabled !== false,
       roles: Array.isArray(u.roles) ? u.roles.map(String) : [],
+      rolesChecked: u.roles_checked !== false,
     }));
 }
 

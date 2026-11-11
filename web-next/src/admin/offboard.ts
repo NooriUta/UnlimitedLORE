@@ -13,13 +13,13 @@
 // «Последний админ» считается здесь ТЕМИ ЖЕ правилами, что у сервера, чтобы
 // кнопка была заблокирована с объяснением ещё до диффа:
 //   • последний owner проекта — LoreUserResource.removalBlockedBecause (AL-100):
-//     owner'ов проекта ≤ 1. Пробный прогон пачки (dry_run) этой проверки не
-//     делает — сервер откажет только при применении, поэтому считаем заранее;
+//     owner'ов проекта ≤ 1. С S7B-20 пробный прогон пачки (dry_run) сам
+//     присылает отказ строкой плана; здесь — только подсказка до диффа;
 //   • последний admin realm'а — KcBridge.isLastAdminRemoval (AL-35): включённых
 //     носителей admin/super-admin ≤ 1 и это он, снимается именно admin.
 // Сервер остаётся последним словом: его отказ при применении всё равно покажет
 // DangerBatch / KcDanger.
-import type { DiffRow } from '@seidr/kit';
+import type { DiffCheck, DiffRow } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 import { fetchSlice, LoreHttpError } from '../api/loreSlice';
 import type { AgentRow } from './agents';
@@ -81,9 +81,14 @@ export function enabledAdminHolders(users: readonly KcUser[]): KcUser[] {
   return users.filter(u => u.enabled && u.roles.some(r => ADMIN_REALM_ROLES.includes(r)));
 }
 
-/** Снятие admin у этого человека оставит LORE без администратора (AL-35). */
+/**
+ * Снятие admin у этого человека оставит LORE без администратора (AL-35).
+ * Если у какой-то включённой учётки роли не прочитались (rolesChecked:false),
+ * «последний» не утверждаем: там может быть ещё один admin — решит сервер.
+ */
 export function isLastRealmAdmin(users: readonly KcUser[], user: KcUser): boolean {
   if (!user.roles.includes('admin')) return false;
+  if (users.some(u => u.enabled && u.rolesChecked === false)) return false;
   const holders = enabledAdminHolders(users);
   return holders.length <= 1 && holders.some(h => h.id === user.id);
 }
@@ -187,14 +192,72 @@ export async function fetchPersonMachineAcl(kcSub: string, fetchImpl?: typeof fe
   return parseMachineAcl(body.rows);
 }
 
-/** POST /lore/kc/agent-client/{clientId}/disable — отмены у сервера нет. */
-export async function disableAgentClient(clientId: string, fetchImpl: typeof fetch = loreFetch): Promise<void> {
-  const res = await fetchImpl(`/lore/kc/agent-client/${encodeURIComponent(clientId)}/disable`, {
-    method: 'POST', headers: { Accept: 'application/json' },
-  });
+async function postJson(url: string, payload: unknown, fetchImpl: typeof fetch): Promise<Record<string, unknown>> {
+  const init: RequestInit = { method: 'POST', headers: { Accept: 'application/json' } };
+  if (payload !== undefined) {
+    init.headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+    init.body = JSON.stringify(payload);
+  }
+  const res = await fetchImpl(url, init);
   let body: Record<string, unknown> | null = null;
   try { body = (await res.json()) as Record<string, unknown>; } catch { body = null; }
   if (!res.ok || body === null) {
     throw new LoreHttpError(res.status, String(body?.error ?? (body === null ? 'NON_JSON' : '')), String(body?.detail ?? ''));
   }
+  return body;
+}
+
+/** POST /lore/kc/agent-client/{clientId}/disable. Обратное — {@link enableAgentClient} (S7B-20). */
+export async function disableAgentClient(clientId: string, fetchImpl: typeof fetch = loreFetch): Promise<void> {
+  await postJson(`/lore/kc/agent-client/${encodeURIComponent(clientId)}/disable`, undefined, fetchImpl);
+}
+
+/** POST /lore/kc/agent-client/{clientId}/enable — учётка агента снова получает токены прежним секретом. */
+export async function enableAgentClient(clientId: string, fetchImpl: typeof fetch = loreFetch): Promise<void> {
+  await postJson(`/lore/kc/agent-client/${encodeURIComponent(clientId)}/enable`, undefined, fetchImpl);
+}
+
+/**
+ * Окно «Отменить» у отключения агентов. У сервера окна нет — включить можно
+ * когда угодно; окно — у экрана, тот же срок, что у пачек ролей (15 минут).
+ */
+export const AGENTS_UNDO_MS = 15 * 60_000;
+
+// ── учётка человека: выключить / включить (S7B-20) ────────────────────────
+//
+// POST /lore/kc/user/{id}/enabled {enabled, dry_run?, undo_of?}: сервер считает
+// дифф сам, «последний админ» (AL-35) и «это вы» — строкой «нельзя» в диффе и
+// отказом 409 при применении. Обратное — тот же вызов с undo (enabled: было).
+
+export interface EnabledRequest { enabled: boolean; dry_run?: true; undo_of?: string }
+
+export function postUserEnabled(userId: string, req: EnabledRequest, fetchImpl: typeof fetch = loreFetch): Promise<Record<string, unknown>> {
+  return postJson(`/lore/kc/user/${encodeURIComponent(userId)}/enabled`, req, fetchImpl);
+}
+
+/** Строки диффа из плана сервера. Проверку строки берём у сервера; не прислал — «не проверено». */
+export function enabledPlanRows(body: unknown, words: { disable: string; enable: string }): DiffRow[] {
+  const b = (body ?? {}) as Record<string, unknown>;
+  return (Array.isArray(b.plan) ? b.plan : []).map(raw => {
+    const p = (raw ?? {}) as Record<string, unknown>;
+    const ch = (p.check ?? {}) as Record<string, unknown>;
+    const reason = typeof ch.source === 'string' ? ch.source : undefined;
+    const check: DiffCheck = ch.state === 'checked' ? { state: 'checked' }
+      : ch.state === 'forbidden' ? { state: 'forbidden', reason } : { state: 'unverified', reason };
+    const kind = p.kind === 'unchanged' ? 'same' as const : p.kind === 'enable' ? 'add' as const : 'remove' as const;
+    const login = typeof p.username === 'string' ? p.username : String(p.user_id ?? '');
+    return { id: String(p.user_id ?? ''), kind, text: `${login} · ${p.after === true ? words.enable : words.disable}`, check };
+  });
+}
+
+export interface EnabledAnswer { opId: string; undo: EnabledRequest | null; undoUntil: string | null }
+
+export function parseEnabledAnswer(body: unknown): EnabledAnswer {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const u = (b.undo ?? null) as Record<string, unknown> | null;
+  return {
+    opId: typeof b.op_id === 'string' ? b.op_id : '',
+    undo: u && typeof u.enabled === 'boolean' ? { enabled: u.enabled } : null,
+    undoUntil: typeof b.undo_until === 'string' ? b.undo_until : null,
+  };
 }

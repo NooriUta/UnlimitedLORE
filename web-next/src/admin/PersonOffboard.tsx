@@ -12,16 +12,18 @@
 //        • роли — одной пачкой через DangerBatch (role/batch: dry_run → дифф →
 //          применить → «Отменить»);
 //        • учётки агентов — отключение в KC (agent-client/…/disable), дифф —
-//          kit DiffPreview, итог — kit BatchUndo; отмены у сервера нет, и это
-//          сказано ДО применения;
+//          kit DiffPreview, итог — kit BatchUndo; «Отменить» включает их
+//          обратно (agent-client/…/enable, S7B-20);
 //        • допуски к машинам — путь «Доступа к машинам» (AccessChange: план
 //          сервера → дифф → revoke → отмена обратными запросами); владение
 //          машиной запросом не снимается — оно в «осталось руками»;
-//        • realm-роли — существующий путь KcDanger (RealmRoleDanger).
-//   3. «Последний админ» блокирует кнопку с объяснением словами сервера, а не
-//      подтверждением: последний owner проекта (AL-100), последний носитель
-//      admin в realm (AL-35), и «это вы».
-//   4. Чего LORE сделать не может (выключить саму учётку KC) — блок «осталось
+//        • realm-роли — существующий путь KcDanger (RealmRoleDanger);
+//        • сама учётка KC — выключить / включить обратно (POST
+//          /lore/kc/user/{id}/enabled, S7B-20): дифф сервера → логин → «Отменить».
+//   3. «Последний админ» — словами сервера, а не подтверждением: последний
+//      owner проекта (AL-100) и последний включённый admin (AL-35) приходят
+//      строкой «нельзя» в диффе сервера; «это вы» блокирует кнопки.
+//   4. Чего LORE сделать не может (владение машиной) — блок «осталось
 //      руками» у kit Steps.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -39,9 +41,10 @@ import { fetchKcClients, fetchKcUsers, reasonOf, type KcUser } from './wizards';
 import { AccessChange } from './MachinesScreen';
 import type { AccessRequest, Machine } from './machines';
 import {
-  agentDiffRows, disableAgentClient, fetchPersonMachineAcl, findKcAccount, offMachineItems, offRoleItems, parseKcClients,
-  realmItems, removeAllChanges, revokeMachineRequests,
-  type KcClientState,
+  AGENTS_UNDO_MS, agentDiffRows, disableAgentClient, enableAgentClient, enabledPlanRows, fetchPersonMachineAcl, findKcAccount,
+  offMachineItems, offRoleItems, parseEnabledAnswer, parseKcClients, postUserEnabled, realmItems, removeAllChanges,
+  revokeMachineRequests,
+  type EnabledAnswer, type KcClientState,
 } from './offboard';
 import './Admin.css';
 
@@ -70,6 +73,76 @@ function useSec<T>(load: () => Promise<T>, deps: readonly unknown[]): Sec<T> {
     return () => { alive = false; };
   }, deps); // eslint-disable-line react-hooks/exhaustive-deps
   return sec;
+}
+
+/**
+ * S7B-20: выключить / включить учётку человека в KC. Путь тот же, что у
+ * остальных опасных действий: дифф сервера (dry_run) → ввод логина → применение
+ * → «Отменить» в окне (обратный вызов с undo_of). «Последний админ» и «это вы» —
+ * строкой «нельзя» в диффе словами сервера.
+ */
+function KcAccountEnabled({ userId, name, enable, fetchImpl, onChanged, onClose }: {
+  userId: string; name: string; enable: boolean; fetchImpl?: typeof fetch; onChanged: () => void; onClose: () => void;
+}) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const [rows, setRows] = useState<DiffRow[] | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<EnabledAnswer | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const [undone, setUndone] = useState(false);
+  const [undoError, setUndoError] = useState<string | null>(null);
+  const words = { disable: t('admin.off.kc.willDisable'), enable: t('admin.off.kc.willEnable') };
+
+  useEffect(() => {
+    let alive = true;
+    postUserEnabled(userId, { enabled: enable, dry_run: true }, fetchImpl).then(
+      body => { if (alive) setRows(enabledPlanRows(body, words)); },
+      (e: unknown) => { if (alive) setPlanError(reasonOf(e)); },
+    );
+    return () => { alive = false; };
+  }, [userId, enable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const apply = () => {
+    if (busy) return;
+    setBusy(true);
+    setApplyError(null);
+    postUserEnabled(userId, { enabled: enable }, fetchImpl).then(
+      body => { setAnswer(parseEnabledAnswer(body)); setBusy(false); onChanged(); },
+      (e: unknown) => { setApplyError(reasonOf(e)); setBusy(false); },
+    );
+  };
+  const undo = (id: string) => {
+    if (!answer?.undo || undoing) return;
+    setUndoing(true);
+    setUndoError(null);
+    postUserEnabled(userId, { ...answer.undo, undo_of: id }, fetchImpl).then(
+      () => { setUndone(true); setUndoing(false); onChanged(); },
+      (e: unknown) => { setUndoError(t('admin.roles.undoFailed', { reason: reasonOf(e) })); setUndoing(false); },
+    );
+  };
+
+  return (
+    <div className="adm-card" data-testid="adm-off-kc-enabled">
+      {planError && <p className="adm-note" data-tone="wrn" role="status">{t('admin.off.unchecked', { reason: planError })}</p>}
+      {!planError && !rows && <Skeleton lines={1} label={t('admin.off.loading')} />}
+      {rows && !answer && (
+        <DiffPreview rows={rows} onApply={apply} busy={busy} lang={lang}
+          label={t(enable ? 'admin.off.kc.enableDiff' : 'admin.off.kc.disableDiff')}
+          confirm={{ word: name, label: t('admin.roles.danger.confirm', { name }) }} />
+      )}
+      {applyError && <p className="adm-note" data-tone="dng" role="alert">{applyError}</p>}
+      {answer && (
+        <BatchUndo lang={lang} onUndo={answer.undo ? undo : undefined} undoing={undoing} undone={undone} undoError={undoError}
+          batch={{ id: answer.opId, applied: 1, total: 1, failed: [], undoUntil: answer.undo ? answer.undoUntil : null }} />
+      )}
+      <div className="adm-filters">
+        <button type="button" className="adm-btn" onClick={onClose}>{t('admin.off.close')}</button>
+      </div>
+    </div>
+  );
 }
 
 export interface PersonOffboardProps {
@@ -143,7 +216,9 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
   // ── 2. роли в проектах ─────────────────────────────────────────────────
   const [batch, setBatch] = useState<RoleChange[] | null>(null);
   const lastOwners = roleItems.filter(i => i.lastOwner);
-  const rolesBlocked = self || lastOwners.length > 0;
+  // S7B-20: отказ AL-100 сервер присылает строкой плана (dry_run) — пачка открывается,
+  // запрещённые строки DiffPreview не применит. Подсказка из среза остаётся видна до диффа.
+  const rolesBlocked = self;
   const rolesStep = () => {
     if (roles.s === 'loading') return <Skeleton lines={2} label={t('admin.off.loading')} />;
     if (roles.s === 'fail') return failNote(roles, 'adm-off-roles-fail');
@@ -197,9 +272,29 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
     for (const r of rows) {
       try { await disableAgentClient(r.id, fetchImpl); } catch (e) { failed.push({ id: r.id, text: r.text, reason: reasonOf(e) }); }
     }
-    // Отмены у сервера нет — окна отмены нет: undoUntil null.
-    setAgentsDone({ id: '', applied: rows.length - failed.length, total: rows.length, failed, undoUntil: null });
+    const failedIds = new Set(failed.map(x => x.id));
+    setAgentsOff(rows.filter(r => !failedIds.has(r.id)).map(r => r.id));
+    // S7B-20: обратное есть (agent-client/…/enable) — «Отменить» включает отключённые обратно.
+    setAgentsDone({ id: 'agents-off', applied: rows.length - failed.length, total: rows.length, failed,
+      undoUntil: rows.length > failed.length ? Date.now() + AGENTS_UNDO_MS : null });
     setAgentsBusy(false);
+    again();
+  };
+  const [agentsOff, setAgentsOff] = useState<string[]>([]);
+  const [agentsUndoing, setAgentsUndoing] = useState(false);
+  const [agentsUndone, setAgentsUndone] = useState(false);
+  const [agentsUndoError, setAgentsUndoError] = useState<string | null>(null);
+  const enableAgentsBack = async () => {
+    if (agentsUndoing) return;
+    setAgentsUndoing(true);
+    setAgentsUndoError(null);
+    const fails: string[] = [];
+    for (const id of agentsOff) {
+      try { await enableAgentClient(id, fetchImpl); } catch (e) { fails.push(`${id}: ${reasonOf(e)}`); }
+    }
+    if (fails.length) setAgentsUndoError(t('admin.roles.undoFailed', { reason: fails.join('; ') }));
+    else setAgentsUndone(true);
+    setAgentsUndoing(false);
     again();
   };
   const agentsStep = () => {
@@ -208,9 +303,12 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
     if (myAgents.length === 0) return <p className="adm-sub" data-testid="adm-off-agents-none">{t('admin.off.agents.none')}</p>;
     return (
       <div data-testid="adm-off-agents">
-        {agentsDone ? <BatchUndo batch={agentsDone} lang={lang} /> : (
+        {agentsDone ? (
+          <BatchUndo batch={agentsDone} lang={lang} onUndo={() => { void enableAgentsBack(); }}
+            undoing={agentsUndoing} undone={agentsUndone} undoError={agentsUndoError} />
+        ) : (
           <>
-            <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-off-agents-noundo">{t('admin.off.agents.noUndo')}</p>
+            <p className="adm-note" role="status" data-testid="adm-off-agents-reversible">{t('admin.off.agents.reversible')}</p>
             {clients.s === 'loading' ? <Skeleton lines={2} label={t('admin.off.loading')} /> : self
               ? <p className="adm-note" data-tone="dng" role="status">{t('admin.off.self')}</p>
               : (
@@ -226,15 +324,16 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
 
   // ── 4. учётка KC ───────────────────────────────────────────────────────
   const [realmPending, setRealmPending] = useState<string | null>(null);
+  /** null — панель закрыта; false — выключаем; true — включаем обратно. */
+  const [kcToggle, setKcToggle] = useState<boolean | null>(null);
   const kcStep = () => {
     if (users.s === 'loading') return <Skeleton lines={2} label={t('admin.off.loading')} />;
     if (users.s === 'fail') return failNote(users, 'adm-off-kc-fail');
     if (!account) {
       return (
         <p className="adm-sub" data-testid="adm-off-kc-none">
+          {/* S7B-20: сервер читает учётки постранично — «не нашли» значит по всему realm'у. */}
           {t('admin.off.kc.none', { sub: person.kc_sub })}
-          {/* GET /lore/kc/users отдаёт не больше 100 учёток: «не нашли» в полном списке — не то же, что в первой сотне. */}
-          {users.v.length >= 100 && <span className="adm-missing"> {t('admin.off.kc.capped')}</span>}
         </p>
       );
     }
@@ -247,6 +346,25 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
           <span className="adm-mono">{account.username}</span>{' '}
           {account.roles.map(r => <Pill key={r}>{r}</Pill>)}
         </p>
+        {/* S7B-20: сама учётка — выключить (или включить обратно уже выключенную). */}
+        {kcToggle === null && (
+          <div className="adm-filters">
+            {account.enabled ? (
+              <button type="button" className="adm-btn adm-btn--dng" data-testid="adm-off-kc-disable" disabled={self}
+                onClick={() => { if (!self) setKcToggle(false); }}>
+                {t('admin.off.kc.disable')}
+              </button>
+            ) : (
+              <button type="button" className="adm-btn" data-testid="adm-off-kc-enable" onClick={() => setKcToggle(true)}>
+                {t('admin.off.kc.enable')}
+              </button>
+            )}
+          </div>
+        )}
+        {kcToggle !== null && (
+          <KcAccountEnabled userId={account.id} name={person.name} enable={kcToggle} fetchImpl={fetchImpl}
+            onChanged={again} onClose={() => setKcToggle(null)} />
+        )}
         {items.length === 0 && <p className="adm-sub" data-testid="adm-off-realm-none">{t('admin.off.realm.none')}</p>}
         <ul className="adm-list">
           {items.map(i => {
@@ -330,8 +448,8 @@ export function PersonOffboard({ person, meSub = null, fetchImpl, onClose }: Per
     { key: 'machines', title: t('admin.off.step.machines'), render: machinesStep },
     { key: 'kc', title: t('admin.off.step.kc'), render: kcStep },
   ];
+  // S7B-20: выключение учётки KC теперь делает LORE (шаг «Учётка Keycloak») — из «осталось руками» ушло.
   const manual = [
-    { text: t('admin.off.manual.kc'), hint: t('admin.off.manual.kcHint') },
     ...machineItems.owned.map(m => ({ text: t('admin.off.manual.machine', { machine: m.machine_id }), hint: t('admin.off.manual.machineHint') })),
   ];
 
