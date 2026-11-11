@@ -134,6 +134,7 @@
   "kit.field.required": "Обязательное поле",
   "kit.field.warn": "Желательно заполнить",
   "kit.field.mdNoEditor": "редактор MD не подключён — только чтение",
+  "kit.field.refNoEditor": "выбор записи не подключён — только чтение",
   "kit.field.up": "Выше: {item}",
   "kit.field.down": "Ниже: {item}",
   "kit.list.cell.na": "У типа «{kind}» нет поля «{field}»",

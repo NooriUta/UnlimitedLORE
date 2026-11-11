@@ -134,6 +134,7 @@
   "kit.field.required": "Required field",
   "kit.field.warn": "Worth filling in",
   "kit.field.mdNoEditor": "MD editor is not connected — read only",
+  "kit.field.refNoEditor": "record picker is not connected — read only",
   "kit.field.up": "Up: {item}",
   "kit.field.down": "Down: {item}",
   "kit.list.cell.na": "Type «{kind}» has no field «{field}»",

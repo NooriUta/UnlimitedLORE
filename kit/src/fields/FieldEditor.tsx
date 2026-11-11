@@ -7,8 +7,8 @@
 import { useId, useState, type ReactNode } from 'react';
 import { kitT, useKitLang, type KitKey } from '../i18n';
 import {
-  fieldKindOf, fromZonedIso, isEmptyValue, isKnownKind, optionLabel, optionValue, parseNumberInput,
-  toZonedIso, zoneOffset, type FieldEditorDef,
+  fieldKindOf, fromZonedIso, isEmptyValue, isRefValue, refText, isKnownKind, optionLabel, optionValue, parseNumberInput,
+  toZonedIso, zoneOffset, type FieldEditorDef, type RefValue,
 } from './fieldKinds';
 
 export interface FieldEditorProps {
@@ -27,11 +27,17 @@ export interface FieldEditorProps {
    * правило «MD-поля — только через TipTapField».
    */
   mdEditor?: (p: { value: string; onChange: (next: string) => void; label: string; id: string }) => ReactNode;
+  /**
+   * Выбор записи для ref — слотом от приложения (RefSearchList + поиск по
+   * def.refTypes). Kit не знает, какие записи бывают и как их искать (K-14).
+   * Не передан — ссылка только для чтения.
+   */
+  refEditor?: (p: { value: RefValue | null; onChange: (next: RefValue | null) => void; label: string; id: string; refTypes?: string[] }) => ReactNode;
 }
 
 const text = (v: unknown) => (v === null || v === undefined ? '' : String(v));
 
-export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinutes, mdEditor }: FieldEditorProps) {
+export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinutes, mdEditor, refEditor }: FieldEditorProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const id = useId();
@@ -61,13 +67,14 @@ export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinute
   } as const;
 
   // Только чтение: право не дано или вида kit не знает. Значение видно как есть.
-  if (def.editable === false || !isKnownKind(kind) || (kind === 'md' && !mdEditor)) {
+  if (def.editable === false || !isKnownKind(kind) || (kind === 'md' && !mdEditor) || (kind === 'ref' && !refEditor)) {
     return (
       <div className="sk-field sk-field--ro" data-kind={kind}>
         <span className="sk-field__label">{def.label}</span>
-        <span className="sk-field__value">{empty ? '—' : text(value)}</span>
+        <span className="sk-field__value">{empty ? '—' : isRefValue(value) ? refText(value) : text(value)}</span>
         {!isKnownKind(kind) && <p className="sk-field__note">{t('kit.field.unsupported', { kind })}</p>}
         {kind === 'md' && !mdEditor && def.editable !== false && <p className="sk-field__note">{t('kit.field.mdNoEditor')}</p>}
+        {kind === 'ref' && !refEditor && def.editable !== false && <p className="sk-field__note">{t('kit.field.refNoEditor')}</p>}
       </div>
     );
   }
@@ -107,6 +114,9 @@ export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinute
     }
     case 'md':
       control = mdEditor!({ value: text(value), onChange: v => onChange(v), label: def.label, id });
+      break;
+    case 'ref':
+      control = refEditor!({ value: isRefValue(value) ? value : null, onChange: v => onChange(v), label: def.label, id, refTypes: def.refTypes });
       break;
     case 'enum': {
       const opts = def.options ?? [];
