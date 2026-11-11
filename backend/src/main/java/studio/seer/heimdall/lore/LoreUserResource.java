@@ -356,10 +356,31 @@ public class LoreUserResource extends LoreResourceBase {
      * harness — по словарю), кавычки экранируются {@link #sqlList}.
      */
     private void setMachineAccessProps(Map<String, Object> p, MachineAccess.Grant target) {
-        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-            "UPDATE MACHINE_ACCESS SET role = :r, projects = " + sqlList(target.projects())
-            + ", harnesses = " + sqlList(target.harnesses()) + ", granted_by = :by, granted_at = :at "
-            + "WHERE @out.kc_sub = :sub AND @in.client_id = :c", p)).await().indefinitely();
+        // Второй прогон CI 11.11: UPDATE с «:by» тоже 400 — BY ключевое слово парсера,
+        // параметры переименованы; списки — отдельной командой, чтобы сбой назвал свою половину.
+        Map<String, Object> q = new HashMap<>();
+        q.put("sub", p.get("sub"));
+        q.put("c", p.get("c"));
+        q.put("grole", p.get("r"));
+        q.put("gwho", p.get("by"));
+        q.put("gwhen", p.get("at"));
+        machineAccessCommand("UPDATE MACHINE_ACCESS SET role = :grole, granted_by = :gwho, granted_at = :gwhen "
+            + "WHERE @out.kc_sub = :sub AND @in.client_id = :c", q);
+        machineAccessCommand("UPDATE MACHINE_ACCESS SET projects = " + sqlList(target.projects())
+            + ", harnesses = " + sqlList(target.harnesses())
+            + " WHERE @out.kc_sub = :sub AND @in.client_id = :c", q);
+    }
+
+    /** Команда с телом ответа ArcadeDB в исключении: «400» без тела не называет причину. */
+    private void machineAccessCommand(String sql, Map<String, Object> params) {
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params))
+                .await().indefinitely();
+        } catch (jakarta.ws.rs.WebApplicationException e) {
+            String body = "";
+            try { body = e.getResponse().readEntity(String.class); } catch (Exception ignored) { /* тела нет */ }
+            throw new IllegalStateException("ArcadeDB " + e.getResponse().getStatus() + " на «" + sql + "»: " + body, e);
+        }
     }
 
     static String sqlList(java.util.Collection<String> values) {
