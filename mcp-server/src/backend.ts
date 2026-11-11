@@ -3,6 +3,8 @@
 // named-slice composition + whitelisting. Writes carry either a bearer token
 // (A2, once LORE_MCP_CLIENT_ID/SECRET are set) or the legacy X-Seer-Role header.
 
+import { hostname as osHostname } from 'node:os';
+
 const BASE = (process.env.LORE_BACKEND_URL ?? 'http://localhost:9100').replace(/\/$/, '');
 const ROLE = process.env.LORE_SEER_ROLE ?? 'admin';
 
@@ -229,13 +231,43 @@ export function actAsHeader(env: Record<string, string | undefined>): Record<str
   return v ? { 'X-Lore-Act-As': v } : {};
 }
 
+/**
+ * SPRINT_LORE_AGENT_OBSERVABILITY/AO-MACHINE-OBJ: машина, с которой пишет эта сессия, —
+ * заголовком X-Lore-Machine на каждом вызове. Бэкенд заводит вершину KnowMachine при
+ * отсутствии и привязывает к ней агента ребром (машин у агента может быть несколько).
+ *
+ * Источник: LORE_MACHINE_ID (явно) → COMPUTERNAME (тот же, что у хука SessionStart,
+ * session-start-register.ps1) → HOSTNAME → имя хоста ОС. Символы вне [A-Za-z0-9_.-]
+ * заменяются на «-», длина — до 64: бэкенд недопустимое значение не примет и скажет об этом.
+ */
+export function machineHeader(
+  env: Record<string, string | undefined>,
+  hostname: () => string = osHostname,
+): Record<string, string> {
+  const raw = [env.LORE_MACHINE_ID, env.COMPUTERNAME, env.HOSTNAME, safeHostname(hostname)]
+    .map((v) => (v ?? '').trim())
+    .find((v) => v.length > 0);
+  if (!raw) return {};
+  return { 'X-Lore-Machine': raw.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 64) };
+}
+
+function safeHostname(hostname: () => string): string {
+  try {
+    return hostname();
+  } catch {
+    return '';
+  }
+}
+
 async function writeAuthHeaders(): Promise<Record<string, string>> {
   const actAs = actAsHeader(process.env);
-  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs };
+  const machine = machineHeader(process.env);
+  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs, ...machine };
   return {
     Authorization: `Bearer ${await serviceAccountToken()}`,
     'X-Seer-Role': ROLE,
     ...actAs,
+    ...machine,
   };
 }
 
