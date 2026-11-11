@@ -29,6 +29,12 @@ final class LoreModelTypes {
 
     private LoreModelTypes() {}
 
+    /** Цвет типа — имя токена канона v1. ЗАГЛУШКА до правки. */
+    static final Map<String, String> TYPE_COLOR = Map.of();
+
+    /** Типы без канона цвета в v1. ЗАГЛУШКА до правки. */
+    static final Set<String> NO_TYPE_COLOR = Set.of();
+
     /** Тип записи → (вершина, Hist, деловой ключ). */
     record Graph(String vertex, String hist, String key) {}
 
