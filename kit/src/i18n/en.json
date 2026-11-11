@@ -517,7 +517,7 @@
   "kit.tasks.groupBy.status": "By status",
   "kit.tasks.groupBy.none": "Flat list",
   "kit.tasks.groupBy.phase_status": "Phase → status",
-  "kit.tasks.shownOf": "Showing {shown} of {total}",
+  "kit.fold.shownOf": "Showing {shown} of {total}",
   "kit.tasks.bulkStatus": "New status",
   "kit.tasks.bulkApply": "Change status ({n})",
   "kit.tasks.bulkNeedStatus": "Choose the new status",
