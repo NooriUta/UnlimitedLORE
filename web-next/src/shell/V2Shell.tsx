@@ -6,8 +6,9 @@
 // Экраны разделов подключаются в SCREENS своими задачами S4 (списки спринтов,
 // ADR…). Раздел без экрана честно говорит «экран не собран» (NotBuilt kit), а
 // не рисует «пусто»: данных он не запрашивал.
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
-import { KitShell, NewsFeed, NotBuilt, createSafeStorage, useKitLang, useKitShell, type KitShellApi, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react';
+import { KitShell, NewsFeed, NotBuilt, Skeleton, createSafeStorage, useKitLang, useKitShell, type KitNav, type KitShellApi, type SafeStorage, type UrlWindow } from '@seidr/kit';
+import { ADMIN_MODULE, adminSectionTitle, isAdminSection } from '../admin/adminModule';
 import { appT, type AppKey } from '../i18n';
 import { switchNavUrl } from '../nav/navVersion';
 import { ListScreen } from '../pages/ListScreen';
@@ -20,6 +21,14 @@ import { SHELL_STORAGE_KEY, openRecent } from './recentNav';
 import { useModelStatuses } from './useModelStatuses';
 import { VersionCorner } from './VersionCorner';
 
+
+// S7B-01: экраны модуля «Админка» — свой чанк, оболочка за них не платит.
+const AdminSectionView = lazy(() => import('../admin/AdminScreens'));
+
+/** Модуль из адреса (?mod=): от него зависит меню оболочки. */
+function moduleOf(w: UrlWindow | undefined): string | null {
+  return w ? new URLSearchParams(w.location.search).get('mod') : null;
+}
 
 /** Глобальные параметры URL v2 — не снимаются при смене раздела. */
 export const V2_KEEP_PARAMS = ['proj'] as const;
@@ -101,7 +110,30 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
   // а не код клиента. Модель недоступна — остаётся рукописное умолчание, и
   // причина названа словами в `notes`, а не замолчана.
   const statuses = useModelStatuses();
-  const config = useMemo(() => v2Config(lang, statuses.items), [lang, statuses.items]);
+  // S7B-01: модуль решает, какое меню у оболочки (у админки своё). KitShell
+  // читает адрес по конфигу при монтировании, поэтому смена модуля
+  // пересобирает оболочку (key ниже) — и раздел выбирается уже по новому меню.
+  const urlWin = win ?? (typeof window === 'undefined' ? undefined : window);
+  const [mod, setMod] = useState<string | null>(() => moduleOf(urlWin));
+  const isAdmin = mod === ADMIN_MODULE;
+  const config = useMemo(() => v2Config(lang, statuses.items, mod ?? undefined), [lang, statuses.items, mod]);
+  useEffect(() => {
+    if (!urlWin || typeof window === 'undefined' || urlWin !== window) return;
+    const sync = () => setMod(moduleOf(window));
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, [urlWin]);
+  const onNavigate = useCallback((next: KitNav) => {
+    if ((next.module === ADMIN_MODULE) === isAdmin) return;
+    // Другой модуль — другое меню: раздел прежнего в нём ничего не значит.
+    if (urlWin) {
+      const params = new URLSearchParams(urlWin.location.search);
+      params.delete('sec');
+      params.delete('view');
+      urlWin.history.replaceState(null, '', `?${params.toString()}${urlWin.location.hash}`);
+    }
+    setMod(next.module);
+  }, [isAdmin, urlWin]);
   // api оболочки ловим изнутри (мост ниже): onOpenRecord — проп KitShell, а
   // navigate живёт в api внутри оболочки. Клик по «Недавнему» KitShell
   // обрабатывает сам и зовёт onOpenRecord — без него клик лишь перестраивал
@@ -117,7 +149,9 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
   }, [storage]);
   return (
     <KitShell
+      key={isAdmin ? 'admin' : 'main'}
       config={config}
+      onNavigate={onNavigate}
       brand={appT(lang, 'shell.brand')}
       brandIcon="compass"
       brandTag={brandTag}
@@ -162,6 +196,14 @@ function isSection(id: string | null): id is V2Section {
 function SectionScreen() {
   const lang = useKitLang();
   const { nav } = useKitShell();
+  if (isAdminSection(nav.item)) {
+    // S7B-01: заголовок рисует сам экран админки (h2) — здесь только подпись области.
+    return (
+      <section className="v2-screen" data-section={nav.item} aria-label={adminSectionTitle(lang, nav.item)}>
+        <Suspense fallback={<Skeleton lines={6} />}><AdminSectionView id={nav.item} /></Suspense>
+      </section>
+    );
+  }
   if (!isSection(nav.item)) return null;
   const section = nav.item;
   const title = appT(lang, `shell.sec.${section}` as AppKey);
