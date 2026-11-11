@@ -6605,6 +6605,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-shell--status .sk-shell__main .sk-shell__corner { display: none; }
 .sk-shell__status .sk-shell__corner { position: static; }
 
+/* S7B-ACL-3: подписанные группы в ScopePicker — свои / остальные (подписи от приложения). */
+.sk-scope__grp { display: grid; gap: 2px; }
+.sk-scope__grp + .sk-scope__grp { margin-top: 6px; }
+.sk-scope__grph { margin: 4px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
+
 /* K4-MINILIST: мини-список — квиз (choice), todo (check), простой (plain). Плотно, строка на пункт. */
 .sk-minilist { display: grid; gap: 4px; margin: 0; padding: 0; font-size: var(--fs-sm); color: var(--t1); }
 .sk-minilist__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
