@@ -937,5 +937,15 @@
   "admin.roles.filter": "People filter",
   "admin.roles.onlyNoProjects": "Only without projects",
   "admin.roles.noProjectsEmpty": "Nobody without projects",
-  "admin.roles.noProjectsEmptyHint": "every checked account has at least one role"
+  "admin.roles.noProjectsEmptyHint": "every checked account has at least one role",
+  "kitPage.cal.head": "Calendar",
+  "kitPage.cal.lead": "Month grid: up to three records per day, then “N more”; records without a date are counted. The app decides which field is the date.",
+  "kitPage.cal.todo": "to do",
+  "kitPage.cal.done": "done",
+  "kitPage.cal.e1": "Release cut",
+  "kitPage.cal.e2": "Promotion",
+  "kitPage.cal.e3": "Tag",
+  "kitPage.cal.e4": "Deploy",
+  "kitPage.cal.e5": "Release",
+  "kitPage.cal.e6": "No date"
 }

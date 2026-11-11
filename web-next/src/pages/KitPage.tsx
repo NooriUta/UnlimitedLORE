@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, CalendarMonth, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, FieldEditor, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -366,6 +366,20 @@ export default function KitPage() {
             onRollback={v => setActivated(t('kitPage.flow.relRolledBack', { v: String(v) }))}
           />
           {activated && <p className="kitp__panel" role="status">{t('kitPage.flow.relDone', { v: activated })}</p>}
+          <h3 className="kitp__h3">{t('kitPage.cal.head')}</h3>
+          <p>{t('kitPage.cal.lead')}</p>
+          <CalendarMonth
+            config={{ modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [{ code: 'todo', title: t('kitPage.cal.todo'), category: 'todo', icon: 'calendar', color: 'var(--t3)' }, { code: 'done', title: t('kitPage.cal.done'), category: 'done', icon: 'check-mark', color: 'var(--suc)' }] } }}
+            records={[
+              { id: 'c1', kind: 'k', title: t('kitPage.cal.e1'), status: 'done', fields: { d: '2026-11-11' } },
+              { id: 'c2', kind: 'k', title: t('kitPage.cal.e2'), status: 'todo', fields: { d: '2026-11-11' } },
+              { id: 'c3', kind: 'k', title: t('kitPage.cal.e3'), status: 'todo', fields: { d: '2026-11-11' } },
+              { id: 'c4', kind: 'k', title: t('kitPage.cal.e4'), status: 'todo', fields: { d: '2026-11-11' } },
+              { id: 'c5', kind: 'k', title: t('kitPage.cal.e5'), status: 'todo', fields: { d: '2026-11-18' } },
+              { id: 'c6', kind: 'k', title: t('kitPage.cal.e6'), status: 'todo', fields: {} },
+            ]}
+            date="d" month="2026-11" today="2026-11-11"
+          />
           <h3 className="kitp__h3">{t('kitPage.flow.secretHead')}</h3>
           {/* Значение здесь показное: витрина не выдаёт настоящих секретов. */}
           <SecretOnce value="demo-0000-0000" label={t('kitPage.flow.secretLabel')} />
