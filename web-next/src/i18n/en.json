@@ -1021,5 +1021,17 @@
   "admin.pf.authOn": "Auth: on (JWT, role from Keycloak).",
   "admin.pf.authOff": "Auth: off — dev mode, role from config.",
   "admin.pf.enableNote": "The flip itself is env LORE_AUTH_ENABLED=true and a restart per RUNBOOK-AUTH-OMILORE, all flags together (AL-12 — owner in person). There is no UI button: the server has no runtime switch.",
-  "admin.pf.activeProject": "LORE_ACTIVE_PROJECT is the session default project of the MCP process (env, ADR-LORE-017): set in .mcp.json or the OpenCode config, not readable from the UI."
+  "admin.pf.activeProject": "LORE_ACTIVE_PROJECT is the session default project of the MCP process (env, ADR-LORE-017): set in .mcp.json or the OpenCode config, not readable from the UI.",
+  "admin.denials.title": "Recent access denials",
+  "admin.denials.loading": "Reading denials…",
+  "admin.denials.src": "Source: process memory since the last restart (ring buffer of 401/403/409, AL-45) — not an audit. The long-term action log is above.",
+  "admin.denials.forbidden": "Only the admin role sees denials.",
+  "admin.denials.empty": "No denials since the last restart",
+  "admin.denials.more": "Showing the newest {n} of {total}.",
+  "admin.denials.col.when": "when",
+  "admin.denials.col.method": "method",
+  "admin.denials.col.path": "path",
+  "admin.denials.col.status": "status",
+  "admin.denials.col.error": "error",
+  "admin.denials.col.role": "role"
 }

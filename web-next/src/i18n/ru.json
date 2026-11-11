@@ -1021,5 +1021,17 @@
   "admin.pf.authOn": "Auth: включён (JWT, роль из Keycloak).",
   "admin.pf.authOff": "Auth: выключен — dev-режим, роль из конфига.",
   "admin.pf.enableNote": "Сам флип — env LORE_AUTH_ENABLED=true и рестарт по RUNBOOK-AUTH-OMILORE, все флаги вместе (AL-12 — владелец лично). Кнопки в UI нет: рантайм-ручки у сервера нет.",
-  "admin.pf.activeProject": "LORE_ACTIVE_PROJECT — сессионный проект по умолчанию у MCP-процесса (env, ADR-LORE-017): задаётся в .mcp.json или конфиге OpenCode, из UI не читается."
+  "admin.pf.activeProject": "LORE_ACTIVE_PROJECT — сессионный проект по умолчанию у MCP-процесса (env, ADR-LORE-017): задаётся в .mcp.json или конфиге OpenCode, из UI не читается.",
+  "admin.denials.title": "Последние отказы доступа",
+  "admin.denials.loading": "Читаем отказы…",
+  "admin.denials.src": "Источник: память процесса с последнего рестарта (кольцевой буфер 401/403/409, AL-45) — не аудит. Долговременный журнал действий — выше.",
+  "admin.denials.forbidden": "Отказы видит только роль admin.",
+  "admin.denials.empty": "С последнего рестарта отказов не было",
+  "admin.denials.more": "Показаны новейшие {n} из {total}.",
+  "admin.denials.col.when": "когда",
+  "admin.denials.col.method": "метод",
+  "admin.denials.col.path": "путь",
+  "admin.denials.col.status": "статус",
+  "admin.denials.col.error": "ошибка",
+  "admin.denials.col.role": "роль"
 }
