@@ -96,9 +96,13 @@ describe('док снизу: пустой трети нет', () => {
     expect(ruleOf(".sk-dock[data-placement='bottom']")).not.toBe('');
   });
 
-  it('доля списка — по содержимому, с потолком; остальное паспорту', () => {
+  // Владелица 11.11.2026 сменила правило: «нижняя панель — 1/3 от высоты,
+  // если не предопределено контрактом, с ресайзбл линией». Высоту паспорта
+  // задаёт док (1/3 окна или контракт приложения) переменной --dock-panel-h,
+  // список забирает остаток. Жёстких 2fr/3fr по-прежнему нет.
+  it('высота паспорта — переменная дока; список — остаток', () => {
     const rule = ruleOf(".sk-dock[data-placement='bottom']");
-    expect(rule).toMatch(/fit-content\(/);
+    expect(rule).toMatch(/grid-template-rows:\s*minmax\(0,\s*1fr\)\s*var\(--dock-panel-h/);
     expect(rule).not.toMatch(/2fr/);
   });
 

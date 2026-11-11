@@ -146,10 +146,20 @@ export function groupRecords(
 ): ListGroup[] {
   if (!by) return [{ key: '', records: [...records] }];
   const map = new Map<string, KitRecord[]>();
-  for (const r of records) {
-    const k = valueKey(fieldValue(r, by));
+  const put = (k: string, r: KitRecord) => {
     const arr = map.get(k);
-    if (arr) arr.push(r); else map.set(k, [r]);
+    if (!arr) map.set(k, [r]);
+    else if (!arr.includes(r)) arr.push(r);
+  };
+  for (const r of records) {
+    const v = fieldValue(r, by);
+    // Поле-массив — многозначная ось (долг kit из ACL-3, 11.11.2026): запись в
+    // КАЖДОЙ группе своего значения, как у разреза по связи; пустой массив —
+    // «без значения». Раньше массив ключевался целиком, и [A, B] давал группу «A, B».
+    if (Array.isArray(v)) {
+      if (v.length === 0) put('', r);
+      else for (const x of v) put(valueKey(x), r);
+    } else put(valueKey(v), r);
   }
   let groups: ListGroup[] = [...map].map(([key, rs]) => ({ key, records: rs }));
   if (by === 'status') {
@@ -161,9 +171,12 @@ export function groupRecords(
   groups.sort((a, b) => b.records.length - a.records.length || a.key.localeCompare(b.key));
   if (groups.length > budget.maxGroups) {
     const rest = groups.slice(budget.topGroups);
+    // Запись многозначного поля могла оказаться в нескольких хвостовых группах — без дублей.
+    const seen = new Set<string>();
+    const merged = rest.flatMap(g => g.records).filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true)));
     groups = [
       ...groups.slice(0, budget.topGroups),
-      { key: '\u0000other', records: rest.flatMap(g => g.records), other: true, groupCount: rest.length },
+      { key: '\u0000other', records: merged, other: true, groupCount: rest.length },
     ];
   }
   return groups;

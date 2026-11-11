@@ -15,7 +15,7 @@
 // Второе, что здесь закреплено: границы НЕТ там, где тянуть нечего — у рейки
 // иконок, у меню, убранного в ушко, и у паспорта во весь экран. Ручка без
 // зоны обещала бы управление, которого нет.
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { writeWidths } from '../list/columnWidths';
 import { act, render, screen, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
@@ -261,14 +261,64 @@ describe('S4-30 · граница дока: список и паспорт де�
     });
   });
 
-  it('панель снизу — граница по ВЫСОТЕ, и тянется вверх', () => {
-    dock('bottom');
-    const el = screen.getByRole('separator', { name: /Высота паспорта/ });
-    drag(el, 0, -70);
-    expect(node().style.getPropertyValue('--dock-panel-h')).toBe('490px');
-    // Пока не тянули, раскладка остаётся прежней; тянули — помечено, и правило
-    // «список по содержимому, но не больше 40 %» уступает личному размеру.
-    expect(node().getAttribute('data-sized')).toBe('h');
+  // Владелица 11.11.2026: «нижняя панель — 1/3 от высоты, если не
+  // предопределено контрактом, с ресайзбл линией». Высота окна — как ширина
+  // сбоку: пересчёт вместе с окном, потолок 2/3, запомненное — в пределах окна.
+  describe('нижняя панель — 1/3 высоты окна, потолок 2/3', () => {
+    const was = window.innerHeight;
+    const setH = (h: number) => { Object.defineProperty(window, 'innerHeight', { configurable: true, value: h }); };
+    // Док без widthStore пишет в localStorage окна, и размер, натянутый одним
+    // тестом, стал бы «личным» в следующем.
+    beforeEach(() => { try { window.localStorage.clear(); } catch { /* нет хранилища */ } });
+    afterEach(() => setH(was));
+    const sep = () => screen.getByRole('separator', { name: /Высота паспорта/ });
+
+    it('панель снизу — граница по ВЫСОТЕ, и тянется вверх', () => {
+      setH(1260);
+      dock('bottom');
+      drag(sep(), 0, -70);
+      expect(node().style.getPropertyValue('--dock-panel-h')).toBe('490px');
+      // Тянули — помечено: размер личный только у того, кто тянул.
+      expect(node().getAttribute('data-sized')).toBe('h');
+    });
+
+    it('не тянули — высота 1/3 окна, и это НЕ личный размер', () => {
+      setH(900);
+      dock('bottom');
+      expect(node().style.getPropertyValue('--dock-panel-h')).toBe('300px');
+      expect(node().getAttribute('data-sized')).toBeNull();
+    });
+
+    it('приложение задало свою высоту (контракт) — она вместо 1/3', () => {
+      setH(900);
+      render(<RecordDock placement="bottom" backdrop={<p>список</p>} bottomHeight={500}><p>паспорт</p></RecordDock>);
+      expect(node().style.getPropertyValue('--dock-panel-h')).toBe('500px');
+    });
+
+    it('потолок — 2/3 высоты окна, а не прежние 900 px', () => {
+      setH(1800);
+      dock('bottom');
+      drag(sep(), 0, -3000);
+      expect(node().style.getPropertyValue('--dock-panel-h')).toBe('1200px');
+      expect(sep().getAttribute('aria-valuemax')).toBe('1200');
+    });
+
+    it('окно изменилось — умолчание и потолок пересчитаны', () => {
+      setH(900);
+      dock('bottom');
+      act(() => { setH(1200); window.dispatchEvent(new Event('resize')); });
+      expect(node().style.getPropertyValue('--dock-panel-h')).toBe('400px');
+      expect(sep().getAttribute('aria-valuemax')).toBe('800');
+    });
+
+    it('запомненная высота больше 2/3 (окно уменьшили) — рисуется по потолку', () => {
+      setH(600);
+      const store = createSafeStorage(() => memStorage().storage);
+      writeWidths(store, 'zones', { 'dock.panel.h': 900 });
+      render(<RecordDock placement="bottom" backdrop={<p>список</p>} widthStore={store}><p>паспорт</p></RecordDock>);
+      expect(node().style.getPropertyValue('--dock-panel-h')).toBe('400px');
+      expect(node().getAttribute('data-sized')).toBe('h');
+    });
   });
 
   it('во весь экран границы нет — делить место не с кем', () => {
