@@ -333,7 +333,11 @@ describe('экран журнала · честные состояния', () =>
 
   it('400 — слова сервера и список допустимых значений, а не «ошибка загрузки»', async () => {
     const detail = "unknown axis 'robot' — expected one of [agent, human, unauth]";
-    const f = vi.fn(async () => json({ error: 'BAD_PARAMS', detail }, 400)) as unknown as typeof fetch;
+    // 400 — только у журнала: блок отказов KC (S7B-31) читает свой источник и честно
+    // показал бы СВОЙ сбой, а проверяем здесь, что 400 журнала — не «ошибка загрузки».
+    const f = vi.fn(async (url: string) => (url.startsWith('/lore/kc/denials')
+      ? json({ denials: [] })
+      : json({ error: 'BAD_PARAMS', detail }, 400))) as unknown as typeof fetch;
     mount(f);
     const bad = await screen.findByTestId('adm-log-badparams');
     expect(bad.textContent).toContain(detail);

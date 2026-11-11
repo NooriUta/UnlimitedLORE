@@ -136,3 +136,17 @@ describe('K-14 · палитры из модели', () => {
     expect(palettesFromModel(model())).toEqual(palettesFromModel(model()));
   });
 });
+
+// Проверка 11.11.2026: оговорки kit — локалью kit, а не русским текстом в коде.
+describe('K-14 · оговорки о палитрах — на языке интерфейса', () => {
+  it('lang=en — оговорка по-английски', async () => {
+    const { palettesFromModel } = await import('./palettes');
+    const p = palettesFromModel({}, { lang: 'en' });
+    expect(p.notes[0]).not.toMatch(/[А-Яа-яЁё]/);
+    expect(p.notes[0].length).toBeGreaterThan(0);
+  });
+  it('по умолчанию — по-русски, как было', async () => {
+    const { palettesFromModel } = await import('./palettes');
+    expect(palettesFromModel({}).notes[0]).toMatch(/палитр/);
+  });
+});

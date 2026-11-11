@@ -7,6 +7,7 @@
 import { EmptyState, Forbidden, LoadError, Pill, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT } from '../i18n';
+import { AppSettings } from './AppSettingsBlock';
 import { fetchFlagsAndRelease, type FlagsData, type ReleaseInfo } from './flags';
 import './Admin.css';
 
@@ -101,6 +102,8 @@ export function FlagsScreen({ fetchImpl }: FlagsScreenProps) {
       <h2 id="adm-flags-h" className="adm-h">{t('admin.flags.title')}</h2>
       <p className="adm-lead">{t('admin.flags.lead')}</p>
       {body}
+      {/* S7B-31 п.4а: chart-слой, адрес Völva и прочие app_setting — из старой вкладки «Настройки». */}
+      <AppSettings fetchImpl={fetchImpl} />
     </section>
   );
 }

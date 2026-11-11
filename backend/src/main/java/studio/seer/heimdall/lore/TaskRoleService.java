@@ -257,6 +257,26 @@ public class TaskRoleService {
         return out;
     }
 
+    /** actor_id → имя заявленного агента — подпись в выпадающем списке (S4-24). */
+    Map<String, String> agentTitles() {
+        Map<String, String> out = new java.util.HashMap<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT actor_id, name FROM KnowActor WHERE name IS NOT NULL", Map.of())) {
+            Object a = r.get("actor_id"), n = r.get("name");
+            if (a != null && n != null) out.put(String.valueOf(a), String.valueOf(n).strip());
+        }
+        return out;
+    }
+
+    /**
+     * Срез task_identities (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): кого можно поставить на роль
+     * задачи. Те же {@link #peopleOfTaskProject} и {@link #declaredAgents}, что в
+     * {@link #apply}, — список выбора и проверка записи не расходятся.
+     */
+    List<Map<String, Object>> identitiesOfTask(String taskUid) {
+        return LoreTaskIdentities.rows(peopleOfTaskProject(taskUid), declaredAgents(), agentTitles());
+    }
+
     /** Активные держатели роли: ребро с открытым valid_to — как открытая строка истории. */
     List<String> currentHolders(String taskUid, String role) {
         List<String> out = new ArrayList<>();

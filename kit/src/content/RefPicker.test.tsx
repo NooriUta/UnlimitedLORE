@@ -162,6 +162,42 @@ describe('RefPicker — карточка «Новый»', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Существующий' }));
     expect(screen.getByText('ADR-1')).toBeTruthy();
   });
+  // Владелица 11.11.2026: «исполнителя выбирает или кнопка себя по умолчанию»; родитель из
+  // контекста подставлен заранее. Kit не знает, кто «я» и какой спринт рядом — это value/self
+  // от приложения.
+  it('значение по умолчанию подставлено; кнопка «Себя» ставит значение приложения', async () => {
+    const onCreate = vi.fn(async () => ({ ok: true as const, item: { id: 'S1/N-1', type: 'task', title: 'Мини' } }));
+    newSetup({
+      onCreate,
+      createSpec: () => ({ fields: [
+        { key: 'title', label: 'Название', required: 'block' },
+        { key: 'sprint', label: 'Спринт', required: 'block', value: 'S1' },
+        { key: 'executor', label: 'Исполнитель', required: 'block', value: 'arharaga', self: 'arharaga' },
+      ] }),
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Новый' }));
+    expect((screen.getByLabelText(/Спринт/) as HTMLInputElement).value).toBe('S1');
+    const exec = screen.getByLabelText(/Исполнитель/) as HTMLInputElement;
+    expect(exec.value).toBe('arharaga');
+    fireEvent.change(exec, { target: { value: 'vasilisk' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Себя' }));
+    expect(exec.value).toBe('arharaga');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Создать/ })); });
+    expect(onCreate).toHaveBeenCalledWith('task', { title: 'Мини', sprint: 'S1', executor: 'arharaga' });
+  });
+
+  it('смена типа — значения по умолчанию нового типа, а не пусто', () => {
+    newSetup({
+      trigger: { trigger: 'at', type: null, query: '', start: 0 },
+      createSpec: type => ({ fields: type === 'task'
+        ? [{ key: 'sprint', label: 'Спринт', required: 'block', value: 'S9' }]
+        : [{ key: 'title', label: 'Название', required: 'block' }] }),
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Новый' }));
+    fireEvent.change(screen.getByLabelText('Тип'), { target: { value: 'task' } });
+    expect((screen.getByLabelText(/Спринт/) as HTMLInputElement).value).toBe('S9');
+  });
+
   it('без createSpec карточки «Новый» нет вовсе', () => {
     setup();
     expect(screen.queryByRole('button', { name: 'Новый' })).toBeNull();

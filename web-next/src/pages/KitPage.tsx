@@ -7,11 +7,11 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, CalendarMonth, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, FieldEditor, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
-import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
+import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, resolveMerge } from '@seidr/kit/content';
 import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
@@ -32,6 +32,8 @@ const SECTION_KEY: Record<SectionId, AppKey> = {
 const COLOR_TOKENS = ['--bg0', '--bg1', '--bg2', '--bg3', '--bd', '--t1', '--t2', '--t3', '--acc', '--suc', '--wrn', '--dng', '--inf'] as const;
 const FS_TOKENS = ['--fs-2xs', '--fs-xs', '--fs-sm', '--fs-base', '--fs-md', '--fs-lg', '--fs-xl', '--fs-2xl'] as const;
 const SHOWN_STATUSES = ['done', 'active', 'partial', 'planned', 'backlog', 'blocked', 'cancelled'] as const;
+/** Пороги свежести на витрине (K4-FRESHNESS): с 10 мин — предупреждение, с 60 — устарело. */
+const FRESH_DEMO = { warnAfter: 10, staleAfter: 60 };
 const TAB_IDS = ['list', 'board', 'plan'] as const;
 type TabId = (typeof TAB_IDS)[number];
 const TAB_KEY: Record<TabId, AppKey> = { list: 'kitPage.sh.tab.list', board: 'kitPage.sh.tab.board', plan: 'kitPage.sh.tab.plan' };
@@ -68,7 +70,12 @@ export default function KitPage() {
   const [proposed, setProposed] = useState<number | null>(null);
   const [activated, setActivated] = useState<string | null>(null);
   const [earOpen, setEarOpen] = useState(false);
+  const [freshNow] = useState(() => Date.now());
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
+  // S5-08: спор при сохранении — живой пример панели «Спорные блоки».
+  const merge = useMemo(() => mergeBlocks(t('kitPage.merge.base'), t('kitPage.merge.mine'), t('kitPage.merge.theirs')), [t]);
+  const [mergePicks, setMergePicks] = useState<Record<number, 'mine' | 'theirs'>>({});
+  const [mergeApplied, setMergeApplied] = useState<string | null>(null);
   // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
   const palette = useKitPalette();
   const recent = useMemo(() => createRecentList(createSafeStorage(), { key: 'seidr.kit.vitrine.recent' }), []);
@@ -172,6 +179,14 @@ export default function KitPage() {
               <button type="button" className="sk-btn">{t('kitPage.el.tooltip')}</button>
             </Tooltip>
           </div>
+          {/* K4-FRESHNESS: три тона по порогам приложения и «времени нет» — не «давно». */}
+          <h3 className="kitp__h3">{t('kitPage.el.fresh')}</h3>
+          <div className="kitp__row">
+            {[3, 30, 125].map(m => (
+              <FreshCell key={m} value={new Date(freshNow - m * 60_000).toISOString()} now={freshNow} thresholds={FRESH_DEMO} />
+            ))}
+            <FreshCell value={null} now={freshNow} thresholds={FRESH_DEMO} />
+          </div>
           <Toolbar label={t('kitPage.el.toolbar')}>
             <IconButton icon={SECTION_ICONS.filter} label={t('kitPage.el.filter')} />
             <IconButton icon={SECTION_ICONS.views} label={t('kitPage.sh.tabs')} />
@@ -208,6 +223,10 @@ export default function KitPage() {
           <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('kitPage.sh.sheetTitle')}>
             <p>{t('kitPage.sh.sheetBody')}</p>
           </Sheet>
+          {/* Список внутри записи (11.11.2026): дети и связи паспорта — тем же
+              списком, что у разделов: поиск, фильтр, группировка, порядок. */}
+          <p>{t('kitPage.sh.nested')}</p>
+          <NestedList ctx={paletteCtx} records={PALETTE_DEMO_DATA.records.slice(0, 6)} missing={['GHOST-404']} />
         </section>
 
         <section id="kit-flow" className="kitp__sec" aria-labelledby="kit-flow-h">
@@ -366,6 +385,42 @@ export default function KitPage() {
             onRollback={v => setActivated(t('kitPage.flow.relRolledBack', { v: String(v) }))}
           />
           {activated && <p className="kitp__panel" role="status">{t('kitPage.flow.relDone', { v: activated })}</p>}
+          <h3 className="kitp__h3">{t('kitPage.cal.head')}</h3>
+          <p>{t('kitPage.cal.lead')}</p>
+          <CalendarMonth
+            config={{ modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [{ code: 'todo', title: t('kitPage.cal.todo'), category: 'todo', icon: 'calendar', color: 'var(--t3)' }, { code: 'done', title: t('kitPage.cal.done'), category: 'done', icon: 'check-mark', color: 'var(--suc)' }] } }}
+            records={[
+              { id: 'c1', kind: 'k', title: t('kitPage.cal.e1'), status: 'done', fields: { d: '2026-11-11' } },
+              { id: 'c2', kind: 'k', title: t('kitPage.cal.e2'), status: 'todo', fields: { d: '2026-11-11' } },
+              { id: 'c3', kind: 'k', title: t('kitPage.cal.e3'), status: 'todo', fields: { d: '2026-11-11' } },
+              { id: 'c4', kind: 'k', title: t('kitPage.cal.e4'), status: 'todo', fields: { d: '2026-11-11' } },
+              { id: 'c5', kind: 'k', title: t('kitPage.cal.e5'), status: 'todo', fields: { d: '2026-11-18' } },
+              { id: 'c6', kind: 'k', title: t('kitPage.cal.e6'), status: 'todo', fields: {} },
+            ]}
+            date="d" month="2026-11" today="2026-11-11"
+          />
+          <h3 className="kitp__h3">{t('kitPage.mini.head')}</h3>
+          <p>{t('kitPage.mini.lead')}</p>
+          <MiniListDemo />
+          <h3 className="kitp__h3">{t('kitPage.lib.head')}</h3>
+          <p>{t('kitPage.lib.lead')}</p>
+          <LibraryView
+            href={id => `#${id}`}
+            groups={[
+              { key: 'adr', title: t('kitPage.lib.g1'), docs: [
+                { id: 'L1', code: 'ADR-049', title: t('kitPage.lib.d1'), state: t('kitPage.lib.accepted'), meta: t('kitPage.lib.meta1'), body: t('kitPage.lib.body1') },
+                { id: 'L2', code: 'ADR-047', title: t('kitPage.lib.d2'), state: t('kitPage.lib.accepted') },
+                { id: 'L3', code: 'ADR-031', title: t('kitPage.lib.d3'), state: t('kitPage.lib.replaced'), stale: true },
+                { id: 'L4', code: 'ADR-030', title: t('kitPage.lib.d4'), state: t('kitPage.lib.accepted') },
+                { id: 'L5', code: 'ADR-028', title: t('kitPage.lib.d5'), state: t('kitPage.lib.accepted') },
+                { id: 'L6', code: 'ADR-021', title: t('kitPage.lib.d6'), state: t('kitPage.lib.accepted') },
+              ] },
+              { key: 'doc', title: t('kitPage.lib.g2'), total: 9, docs: [
+                { id: 'L7', title: t('kitPage.lib.d7'), state: t('kitPage.lib.stale'), stale: true },
+                { id: 'L8', title: t('kitPage.lib.d8') },
+              ] },
+            ]}
+          />
           <h3 className="kitp__h3">{t('kitPage.flow.secretHead')}</h3>
           {/* Значение здесь показное: витрина не выдаёт настоящих секретов. */}
           <SecretOnce value="demo-0000-0000" label={t('kitPage.flow.secretLabel')} />
@@ -431,6 +486,16 @@ export default function KitPage() {
               ]} />
             </dd>
           </dl>
+          <h3 className="kitp__h3">{t('kitPage.merge.title')}</h3>
+          <p>{t('kitPage.merge.lead')}</p>
+          <MdMergePanel
+            chunks={merge.chunks}
+            by="agent-x"
+            picks={mergePicks}
+            onPick={(k, p) => setMergePicks(prev => ({ ...prev, [k]: p }))}
+            onApply={() => setMergeApplied(resolveMerge(merge.chunks, mergePicks))}
+          />
+          {mergeApplied !== null && <p role="status">{t('kitPage.merge.applied', { text: mergeApplied })}</p>}
           <h3 className="kitp__h3">{t('kitPage.md.html')}</h3>
           <SandboxedHtmlFrame html={t('kitPage.md.htmlSample')} title={t('kitPage.md.htmlTitle')} />
         </section>
@@ -473,5 +538,20 @@ function FieldsDemo() {
       </div>
       <button type="button" className="sk-btn" onClick={() => setCheck(true)}>{t('kitPage.fields.check')}</button>
     </section>
+  );
+}
+
+/** K4-MINILIST: один компонент на todo и квиз — витрина с живым состоянием. */
+function MiniListDemo() {
+  const t = useAppT();
+  const [done, setDone] = useState<Record<string, boolean>>({ a: true });
+  const [picked, setPicked] = useState<string | null>(null);
+  return (
+    <div className="kitp__row">
+      <MiniList kind="check" label={t('kitPage.mini.todo')} onToggle={(id, d) => setDone(m => ({ ...m, [id]: d }))}
+        items={[{ id: 'a', text: t('kitPage.mini.t1'), done: !!done.a }, { id: 'b', text: t('kitPage.mini.t2'), done: !!done.b }, { id: 'c', text: t('kitPage.mini.t3'), done: !!done.c }]} />
+      <MiniList kind="choice" label={t('kitPage.mini.quiz')} picked={picked} correct="x" reveal={picked !== null} onPick={setPicked}
+        items={[{ id: 'x', text: t('kitPage.mini.q1') }, { id: 'y', text: t('kitPage.mini.q2'), hint: t('kitPage.mini.h2') }, { id: 'z', text: t('kitPage.mini.q3'), hint: t('kitPage.mini.h3') }]} />
+    </div>
   );
 }

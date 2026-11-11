@@ -25,6 +25,7 @@ import {
   forgejoHosts, likeProjectBatches, projectPeople, repoCheckOf, repoProblem, slugProblem, batchVerdict,
 } from './projectLike';
 import { WizardsScreen } from './WizardsScreen';
+import { WhoWhereScreen } from './WhoWhereScreen';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 beforeEach(() => {
@@ -110,14 +111,25 @@ interface Opts {
   register?: { status: number; body: unknown };
   ci?: { status: number; body: unknown };
   failFor?: string;
+  /** role_matrix в сыром виде среза (projects/roles) — так его читает раздел «Проекты». */
+  rawMatrix?: boolean;
 }
+
+const RAW_MATRIX = {
+  rows: MATRIX.rows.map(r => ({
+    kc_sub: r.kc_sub, display_name: r.display_name,
+    projects: r.cells.map(c => c.project), roles: r.cells.map(c => c.role),
+  })),
+};
 
 function mockFetch(opts: Opts = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? 'GET';
     if (url.startsWith('/lore/slice/git_projects')) return json(GIT_PROJECTS);
-    if (url.startsWith('/lore/slice/role_matrix')) return json(MATRIX);
+    if (url.startsWith('/lore/slice/role_matrix')) return json(opts.rawMatrix ? RAW_MATRIX : MATRIX);
+    if (url.startsWith('/lore/slice/agent_owners')) return json({ rows: [] });
+    if (url.startsWith('/lore/slice/dictionary')) return json({ rows: [] });
     if (url === '/lore/project' && method === 'POST') {
       const r = opts.register ?? { status: 200, body: { ok: true, slug: NEW, outcome: 'CREATED', roles_granted: ['u-me'] } };
       return json(r.body, r.status);
@@ -252,5 +264,42 @@ describe('экран · UC-5 проект как у похожего', () => {
     expect(screen.queryByTestId('adm-wiz-register')).toBeNull();
     expect(nextBlocked()).toBe(false);
     expect(calls(f, '/lore/project')).toHaveLength(0);
+  });
+});
+
+// ── вход из раздела «Проекты» (S7B-28: проекты — свой раздел админки) ──────
+//
+// Завести проект — действие раздела «Проекты», как «+ Человек» у людей: мастер
+// открывается на месте, в выдвижной панели. Из раскрытого проекта — «Завести
+// похожий»: мастер сразу знает, с кого копировать (?adm-psrc=slug).
+describe('экран · UC-5 вход из «Проектов»', () => {
+  const mountProjects = (f: typeof fetch, search = '/') => {
+    window.history.replaceState(null, '', search);
+    return render(<KitLangProvider lang="ru"><WhoWhereScreen view="projects" fetchImpl={f} meSub="u-me" /></KitLangProvider>);
+  };
+
+  it('«+ Проект как у похожего» в разделе «Проекты» открывает мастер на месте', async () => {
+    const f = mockFetch({ rawMatrix: true }) as unknown as typeof fetch;
+    mountProjects(f);
+    fireEvent.click(await screen.findByTestId('adm-projects-add'));
+    expect(await screen.findByTestId('adm-wiz-pslug')).toBeTruthy();
+  });
+
+  it('«Завести похожий» в раскрытом проекте — мастер с этим проектом-образцом', async () => {
+    const f = mockFetch({ rawMatrix: true }) as unknown as typeof fetch;
+    mountProjects(f, `/?adm-open=${encodeURIComponent(SRC)}`);
+    fireEvent.click(await screen.findByTestId(`adm-project-like-${SRC}`));
+    expect(await screen.findByTestId('adm-wiz-pslug')).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get('adm-psrc')).toBe(SRC);
+  });
+
+  it('закрыли мастер — его параметры не остаются в адресе', async () => {
+    const f = mockFetch({ rawMatrix: true }) as unknown as typeof fetch;
+    mountProjects(f, `/?adm-open=${encodeURIComponent(SRC)}`);
+    fireEvent.click(await screen.findByTestId(`adm-project-like-${SRC}`));
+    await screen.findByTestId('adm-wiz-pslug');
+    fireEvent.click(document.querySelector('.sk-sheet-backdrop')!);
+    await waitFor(() => expect(screen.queryByTestId('adm-wiz-pslug')).toBeNull());
+    expect(new URLSearchParams(window.location.search).get('adm-psrc')).toBeNull();
   });
 });

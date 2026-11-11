@@ -232,9 +232,32 @@ export interface NewsMeta {
   read_mark?: NewsReadMark;
 }
 
+/**
+ * Счёт свёртки дня (S7A-09): двойной счёт §2 и `rows` — строки ленты (дедуп
+ * «элемент : вид : день», §5), то есть то, что видно в дне.
+ */
+export interface NewsTriple { events: number; elements: number; rows: number }
+
+/**
+ * Свёртки одного дня (S7A-09, NewsV2Engine.daysOut) — по всему периоду, а не по
+ * пришедшим строкам: limit режет ленту, но не эти числа. Клиент их только рисует.
+ */
+export interface NewsDay {
+  day: string;
+  total: NewsPair;
+  rows: number;
+  by_kind: Record<string, NewsTriple>;
+  by_type: Record<string, NewsTriple & { by_kind: Record<string, NewsTriple> }>;
+  /** Ось групп дня — та же, что `groups.axis` ответа. */
+  axis: NewsAxis;
+  groups: Array<NewsTriple & { key: string }>;
+}
+
 export interface NewsResponse {
   events: NewsEvent[];
   groups: NewsGroups;
+  /** S7A-09: свёртки по дню; старый сервер их не шлёт — тогда счёт дня не рисуется. */
+  days?: NewsDay[];
   metrics: NewsMetrics;
   matrix?: NewsMatrix;
   meta: NewsMeta;

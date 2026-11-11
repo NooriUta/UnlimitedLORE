@@ -6,15 +6,17 @@ export * from './sanitizeHtml';
 export * from './sandboxFrameTheme';
 export * from './SandboxedHtmlFrame';
 export * from './MartProse';
+export * from './LiveBlock';
 export * from './TipTapField';
 export * from './markdownLossless';
 export * from './markdownRoundTrip';
 // S5-06/S5-07: правка на месте и круг «Markdown → TipTap → Markdown».
 export * from './tiptapMd';
 export * from './MdInlineEdit';
+export * from './blockMerge';
+export * from './MdMergePanel';
 // S5-13 · формулы в поле правки (узлы TipTap + правила markdown-it).
 export { MathInline, MathBlock, MathSafeText, escapeMathDollars, installMathMarkdownIt } from './tiptapMath';
-export * from './markdownBare';
 // MD-WINDOW · правила вызова мини-окна ссылки и разбор ссылок (spec:SPEC-LORE-MD-INLINE-REF §2, §3a).
 export * from './refTrigger';
 // MD-WINDOW · мини-окно ссылки: две карточки, честные состояния, обязательные поля.

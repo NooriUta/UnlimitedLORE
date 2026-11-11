@@ -8,7 +8,7 @@
 import { createContext, useContext } from 'react';
 import { setUrlParams } from '@seidr/kit';
 
-export type AdminTab = 'home' | 'wiz' | 'agents' | 'who' | 'roles' | 'rules' | 'flags' | 'mcp' | 'log';
+export type AdminTab = 'home' | 'wiz' | 'agents' | 'machines' | 'who' | 'projects' | 'roles' | 'dicts' | 'rules' | 'flags' | 'mcp' | 'log';
 
 export interface AdminNav {
   /** Открыть раздел и положить в адрес его параметры. */

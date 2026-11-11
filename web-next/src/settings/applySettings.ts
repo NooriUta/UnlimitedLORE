@@ -9,6 +9,7 @@
 //   show_tech                   — data-show-tech="on" (общий выключатель tech, ShowTech.tsx).
 // Тема дублируется в общую cookie seer-prefs — её читают v1 и тема входа.
 import { applyDisplay, applyTheme, normalizePalette, DEFAULT_PREFS, type AttrTarget } from '@seidr/kit';
+import { applyTextScale } from '@seidr/kit/core';
 import type { UserSettings } from '../api/contracts/s2';
 import { readSharedPrefs, writeSharedPrefs, type CookieJar } from '../storage/storage';
 
@@ -24,12 +25,20 @@ export function applySettings(root: AttrTarget, s: UserSettings, jar?: CookieJar
     density: s.density,
   });
   applyDisplay(root, { textSize: s.text_size, stripes: s.stripes });
+  // Ползунок шрифта (S4-16/S4-21): --fs-k на корне; 1 — свойство снято. Корень
+  // без style (сервер, тесты без DOM) — пропускаем, а не падаем.
+  const styled = root as unknown as Parameters<typeof applyTextScale>[0];
+  if (styled && (root as { style?: unknown }).style) applyTextScale(styled, s.text_scale);
   setAttr(root, 'data-read-nav', s.collapse_nav_on_read ? 'collapse' : null);
   setAttr(root, 'data-right-column', s.right_column === 'auto' ? null : s.right_column);
   setAttr(root, 'data-single-keys', s.single_key_shortcuts ? null : 'off');
   // Peek по наведению (S9-10): выключено — атрибут; молчание — включено.
   setAttr(root, 'data-peek-hover', s.peek_hover ? null : 'off');
   setAttr(root, 'data-show-tech', s.show_tech ? 'on' : null);
+  // Вид вкладки «Граф» (GC-03): auto — атрибута нет, экран решает сам.
+  setAttr(root, 'data-graph-view', s.graph_view === 'auto' ? null : s.graph_view);
+  // Где открывать запись (S4-24): auto — атрибута нет, экран решает сам.
+  setAttr(root, 'data-passport-place', s.passport_place === 'auto' ? null : s.passport_place);
 
   const shared = readSharedPrefs(jar);
   if (shared.theme !== s.mode || shared.palette !== s.palette) {

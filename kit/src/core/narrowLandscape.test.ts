@@ -12,7 +12,7 @@
 // экрана станет телефонной, а часть останется десктопной.
 import { describe, expect, it, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { NARROW_QUERY, useNarrow } from './narrow';
 
 const LANDSCAPE = '(pointer: coarse) and (max-height: 500px)';
@@ -46,10 +46,18 @@ describe('ландшафт телефона — тоже «узко»', () => {
     expect(src).toMatch(/NARROW_QUERY/);
   });
 
-  for (const file of ['kit/src/styles/seidr.css', 'web-next/src/pages/KitPage.css', 'web-next/src/pages/ListScreen.css']) {
+  // Не список файлов, а КАЖДЫЙ CSS приложения: новый файл с узким @media
+  // иначе прошёл бы мимо сторожа (так было бы с App.css).
+  const webCss = (dir: string): string[] => readdirSync(`${root}/${dir}`, { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? webCss(`${dir}/${e.name}`) : e.name.endsWith('.css') ? [`${dir}/${e.name}`] : []);
+  const files = ['kit/src/styles/seidr.css', ...webCss('web-next/src')].filter(f => narrowMedia(read(f)).length > 0);
+  it('положительный контроль: узкие @media найдены и в kit, и в web-next', () => {
+    expect(files).toContain('kit/src/styles/seidr.css');
+    expect(files.some(f => f.startsWith('web-next/'))).toBe(true);
+  });
+  for (const file of files) {
     it(`${file}: каждый узкий @media включает ландшафт телефона`, () => {
       const media = narrowMedia(read(file));
-      expect(media.length, 'положительный контроль: узкие @media найдены').toBeGreaterThan(0);
       const without = media.filter(m => !m.includes(LANDSCAPE));
       expect(without).toEqual([]);
     });

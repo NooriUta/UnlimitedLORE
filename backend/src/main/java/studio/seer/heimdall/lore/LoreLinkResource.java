@@ -145,24 +145,10 @@ public class LoreLinkResource extends LoreResourceBase {
         }
 
         // Права агента — по семейству ИСХОДНОЙ записи и той же матрицей, что у фильтра.
-        String scope = identity == null ? null : AgentScopeFilter.agentScopeOf(identity);
-        if (scope != null) {
-            AgentScopeFilter.Denial d = AgentScopeFilter.decide(scope, "/lore/" + from.family() + "/link");
-            if (d != null)
-                return agentScopeForbidden("agent-" + scope + " не ставит связи от '" + from.type()
-                    + "' (семейство " + d.what() + ": " + d.why() + ")");
-        }
+        String denied = mentionScopeDenied(from);
+        if (denied != null) return agentScopeForbidden(denied);
 
         try {
-            String fromRid = resolveRid(from, req.from_id());
-            String toRid = resolveRid(to, req.to_id());
-            if (fromRid == null) return targetNotFound(from.type() + " " + req.from_id());
-            if (toRid == null) return targetNotFound(to.type() + " " + req.to_id());
-            if (fromRid.isEmpty() || toRid.isEmpty())
-                return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("AMBIGUOUS_TARGET",
-                    "id " + (fromRid.isEmpty() ? req.from_id() : req.to_id())
-                    + " принадлежит нескольким записям — уточните (например, релиз — в каком проекте)")));
-
             String createdAt = Instant.now().toString();
             String createdBy = callerLabel();
             Map<String, Object> audit = new LinkedHashMap<>();
@@ -180,37 +166,133 @@ public class LoreLinkResource extends LoreResourceBase {
             base.put("fallback", LoreLinkTypes.FALLBACK_EDGE.equals(edge));
             base.put("audit", audit);
 
-            // Проба ДО записи (ADR-LORE-043): CREATE EDGE … IF NOT EXISTS на повторе
-            // возвращает существующее ребро, и по результату «создано» не отличить.
-            if (edgeBetween(edge, fromRid, toRid)) {
-                return noStore(Response.ok(LoreOutcome.link(base, false, true, "")));
+            // Один код с автосвязями по телам (MD-AUTOLINK): проба до записи, запись, проверка факта.
+            MentionEdgeOutcome o = placeMentionEdge(from, req.from_id(), to, req.to_id(), edge,
+                ORIGIN_MENTION, createdAt, createdBy, false);
+            switch (o) {
+                case FROM_NOT_FOUND: return targetNotFound(from.type() + " " + req.from_id());
+                case TO_NOT_FOUND:   return targetNotFound(to.type() + " " + req.to_id());
+                case AMBIGUOUS_FROM:
+                case AMBIGUOUS_TO:
+                    return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("AMBIGUOUS_TARGET",
+                        "id " + (o == MentionEdgeOutcome.AMBIGUOUS_FROM ? req.from_id() : req.to_id())
+                        + " принадлежит нескольким записям — уточните (например, релиз — в каком проекте)")));
+                case UNCHANGED:
+                    return noStore(Response.ok(LoreOutcome.link(base, false, true, "")));
+                default:
+                    boolean exists = o == MentionEdgeOutcome.CREATED;
+                    LOG.infof("[LORE LINK] mention %s %s:%s → %s:%s by %s — %s", edge, from.type(), req.from_id(),
+                        to.type(), req.to_id(), createdBy, exists ? "created" : "NOT created");
+                    return noStore(Response.ok(LoreOutcome.link(base, exists, false,
+                        from.type() + " " + req.from_id() + " или " + to.type() + " " + req.to_id())));
             }
-            // SET — String.format, не именованные параметры: CREATE EDGE их в SET не принимает.
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS SET origin='%s', created_at='%s', created_by='%s'",
-                    edge, fromRid, toRid, ORIGIN_MENTION, createdAt, sqlSafe(createdBy)),
-                Map.of())).await().indefinitely();
-            boolean exists = edgeBetween(edge, fromRid, toRid);
-            LOG.infof("[LORE LINK] mention %s %s:%s → %s:%s by %s — %s", edge, from.type(), req.from_id(),
-                to.type(), req.to_id(), createdBy, exists ? "created" : "NOT created");
-            return noStore(Response.ok(LoreOutcome.link(base, exists, false,
-                from.type() + " " + req.from_id() + " или " + to.type() + " " + req.to_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE LINK] mention %s %s → %s: %s", edge, req.from_id(), req.to_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
         }
     }
 
-    /** @see LoreGraphLinks#resolveRid */
-    private String resolveRid(LoreLinkTypes.Entity e, String id) {
-        return LoreGraphLinks.resolveRid(ingestService, e, id);
+    // ── MD-AUTOLINK: бэкфилл по уже записанным телам — только сухой отчёт ────────
+
+    /**
+     * Откуда читать MD-тела записи типа: SELECT отдаёт {@code id} и поля тел. Только типы,
+     * у которых есть авто-пары ({@link LoreLinkTypes#AUTO_PAIRS}) и чей путь записи
+     * подключён к автосвязям — бэкфилл обязан совпадать с тем, что делает запись тела.
+     */
+    static final Map<String, String> BACKFILL_BODIES = new LinkedHashMap<>();
+    static {
+        BACKFILL_BODIES.put("adr", "SELECT in('HAS_STATE').adr_id[0] AS id, context_md, decision_md, consequences_md "
+            + "FROM KnowADRHist WHERE valid_to IS NULL");
+        BACKFILL_BODIES.put("decision", "SELECT decision_id AS id, body_md FROM KnowDecision");
+        BACKFILL_BODIES.put("doc", "SELECT doc_id AS id, content_md_ru, content_md_en FROM KnowDoc");
+        BACKFILL_BODIES.put("sprint", "SELECT sprint_id AS id, context_md, outcome_md FROM KnowSprint");
+        // Заметка задачи — на открытой строке истории (её читают срезы), вершина — зеркало;
+        // берутся обе (повтор упоминания схлопывает parse), как читает currentTaskNote.
+        BACKFILL_BODIES.put("task", "SELECT task_uid AS id, "
+            + "out('HAS_STATE')[valid_to IS NULL].note_md[0] AS note_md, note_md AS note_md_vertex FROM KnowTask");
     }
 
-    private boolean edgeBetween(String edge, String fromRid, String toRid) {
-        return LoreGraphLinks.edgeBetween(ingestService, edge, fromRid, toRid);
-    }
+    private static final int BACKFILL_RECORDS_SHOWN = 200;
 
-    private static String sqlSafe(String s) {
-        return LoreGraphLinks.sqlSafe(s);
+    /**
+     * SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK · spec:SPEC-LORE-MD-INLINE-REF §7 п.6 —
+     * сухой прогон бэкфилла: сколько упоминаний в существующих телах, сколько рёбер
+     * встало бы, сколько уже есть, сколько пропущено и почему. НИЧЕГО НЕ ПИШЕТ.
+     * Запись бэкфилла — отдельный шаг после просмотра отчёта, по решению владелицы;
+     * здесь её нет намеренно, {@code dry_run=false} — отказ.
+     */
+    @GET
+    @Path("mentions/backfill")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response mentionsBackfill(@QueryParam("dry_run") String dryRun,
+                                     @QueryParam("types") String types,
+                                     @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (dryRun != null && !"true".equalsIgnoreCase(dryRun.trim()))
+            return badParams("бэкфилл — только сухой прогон (dry_run=true); запись — отдельным шагом по решению владелицы");
+        List<String> wanted = new ArrayList<>();
+        if (types == null || types.isBlank()) wanted.addAll(BACKFILL_BODIES.keySet());
+        else for (String t : types.split(",")) {
+            String k = t.trim().toLowerCase(Locale.ROOT);
+            if (!BACKFILL_BODIES.containsKey(k))
+                return badParams("types: допустимы " + String.join(", ", BACKFILL_BODIES.keySet()));
+            if (!wanted.contains(k)) wanted.add(k);
+        }
+        Map<String, Object> totals = new LinkedHashMap<>();
+        Map<String, Integer> reasons = new java.util.TreeMap<>();
+        Map<String, Object> byType = new LinkedHashMap<>();
+        List<Map<String, Object>> records = new ArrayList<>();
+        int scanned = 0, withMentions = 0, mentions = 0, wouldAdd = 0, unchanged = 0, skipped = 0;
+        try {
+            for (String type : wanted) {
+                int tScanned = 0, tAdd = 0, tUnch = 0, tSkip = 0;
+                for (Map<String, Object> row : ingestService.queryPublic(BACKFILL_BODIES.get(type), Map.of())) {
+                    Object idObj = row.get("id");
+                    if (idObj == null) continue;
+                    String id = String.valueOf(idObj);
+                    tScanned++;
+                    List<String> bodies = new ArrayList<>();
+                    row.forEach((k, v) -> { if (!"id".equals(k) && v != null) bodies.add(String.valueOf(v)); });
+                    String[] arr = bodies.toArray(new String[0]);
+                    if (LoreMentionAutoLink.parse(arr).isEmpty()) continue;
+                    Map<String, Object> m = autoLinkMentions(type, id, true, arr);
+                    @SuppressWarnings("unchecked") List<Map<String, Object>> a = (List<Map<String, Object>>) m.get("added");
+                    @SuppressWarnings("unchecked") List<Map<String, Object>> u = (List<Map<String, Object>>) m.get("unchanged");
+                    @SuppressWarnings("unchecked") List<Map<String, Object>> s = (List<Map<String, Object>>) m.get("skipped");
+                    withMentions++;
+                    mentions += a.size() + u.size() + s.size();
+                    tAdd += a.size(); tUnch += u.size(); tSkip += s.size();
+                    for (Map<String, Object> sk : s) reasons.merge(String.valueOf(sk.get("reason")), 1, Integer::sum);
+                    if (!a.isEmpty() && records.size() < BACKFILL_RECORDS_SHOWN) {
+                        Map<String, Object> r = new LinkedHashMap<>();
+                        r.put("type", type);
+                        r.put("id", id);
+                        r.put("would_add", a);
+                        records.add(r);
+                    }
+                }
+                scanned += tScanned; wouldAdd += tAdd; unchanged += tUnch; skipped += tSkip;
+                byType.put(type, Map.of("records", tScanned, "would_add", tAdd, "unchanged", tUnch, "skipped", tSkip));
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE LINK] mentions backfill dry-run: %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+        totals.put("records_scanned", scanned);
+        totals.put("records_with_mentions", withMentions);
+        totals.put("mentions", mentions);
+        totals.put("would_add", wouldAdd);
+        totals.put("unchanged", unchanged);
+        totals.put("skipped", skipped);
+        totals.put("skipped_by_reason", reasons);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("dry_run", true);
+        out.put("auto_pairs", LoreLinkTypes.AUTO_PAIRS.stream().sorted().toList());
+        out.put("totals", totals);
+        out.put("by_type", byType);
+        out.put("records", records);
+        out.put("records_truncated", wouldAdd > 0 && records.size() >= BACKFILL_RECORDS_SHOWN);
+        return noStore(Response.ok(out));
     }
 }

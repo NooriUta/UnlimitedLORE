@@ -158,15 +158,67 @@ describe('S5-10 · сбор графа из backlinks', () => {
   });
 });
 
+/**
+ * Ответ GET /lore/backlinks В ФОРМЕ СЕРВЕРА (LoreSearchResource.backlinks, сверено
+ * по коду 11.11.2026): edge/count/ref_id/complete/excluded_edges, все связи
+ * входящие, поля direction нет. Прежний тест гонял заглушечную форму S2 насквозь,
+ * поэтому не видел, что на живом сервере у узлов коды undefined (дефект P0 S5-10).
+ */
+const SERVER_BODY = {
+  type: 'adr', id: 'ADR-LORE-045', title: 'UI LORE v2', total: 3,
+  groups: [
+    { edge: 'JUSTIFIED_BY', count: 2, truncated: false, items: [
+      { type: 'task', ref_id: 'SPRINT_X/T-1', title: 'Задача один', source_class: 'KnowTask' },
+      { type: 'task', ref_id: 'SPRINT_X/T-2', title: null, source_class: 'KnowTask' },
+    ] },
+    { edge: 'DECIDED_IN', count: 1, truncated: false, items: [
+      { type: 'decision', ref_id: 'D-2026-1', title: 'Решение', source_class: 'KnowDecision' },
+    ] },
+  ],
+  by_edge: { JUSTIFIED_BY: 2, DECIDED_IN: 1 }, hidden_by_scope: 0,
+  excluded_edges: ['BELONGS_TO_PROJECT', 'HAS_STATE'], limit: 20, complete: true,
+};
+const serverFetch = (body: unknown, status = 200) =>
+  vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }));
+
 describe('S5-10 · HTTP по контракту GET /lore/backlinks', () => {
-  it('строит запрос type/id/per_edge и отдаёт тело; не-2xx — ошибка с кодом', async () => {
-    const body = FIXTURES['adr:ADR-LORE-045'];
-    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status: 200 }));
-    const got = await fetchBacklinksHttp(fetchFn)({ type: 'task', id: 'S/T-1', per_edge: 20 });
-    expect(got).toEqual(body);
-    expect(fetchFn.mock.calls[0][0]).toBe('/lore/backlinks?type=task&id=S%2FT-1&per_edge=20');
+  it('запрос — type/id/limit (сервер знает только limit, per_edge он молча игнорировал); не-2xx — ошибка с кодом', async () => {
+    const fetchFn = serverFetch(SERVER_BODY);
+    await fetchBacklinksHttp(fetchFn)({ type: 'task', id: 'S/T-1', per_edge: 20 });
+    expect(fetchFn.mock.calls[0][0]).toBe('/lore/backlinks?type=task&id=S%2FT-1&limit=20');
     const bad = vi.fn(async () => new Response(JSON.stringify({ error: 'NOT_FOUND' }), { status: 404 }));
     await expect(fetchBacklinksHttp(bad)({ type: 'adr', id: 'X' })).rejects.toThrow(/404 NOT_FOUND/);
+  });
+
+  it('ответ в форме сервера переводится: edge→edge_type, count→total, ref_id→id, все связи входящие', async () => {
+    const got = await fetchBacklinksHttp(serverFetch(SERVER_BODY))({ type: 'adr', id: 'ADR-LORE-045' });
+    expect(got.target).toEqual({ type: 'adr', id: 'ADR-LORE-045', title: 'UI LORE v2' });
+    expect(got.groups.map(g => [g.edge_type, g.direction, g.total])).toEqual([['JUSTIFIED_BY', 'in', 2], ['DECIDED_IN', 'in', 1]]);
+    expect(got.groups[0].items.map(i => i.id)).toEqual(['SPRINT_X/T-1', 'SPRINT_X/T-2']);
+    expect(got.completeness).toBe('complete');
+    expect(got.excluded_edge_types).toEqual(['BELONGS_TO_PROJECT', 'HAS_STATE']);
+  });
+
+  it('граф на живом ответе: у узлов настоящие коды, а не undefined; рёбра от ссылающихся к цели', async () => {
+    const data = await loadBacklinksGraph(fetchBacklinksHttp(serverFetch(SERVER_BODY)), { type: 'adr', id: 'ADR-LORE-045' }, { depth: 1 });
+    const ids = data.records.map(r => r.id);
+    expect(ids).not.toContain(undefined);
+    expect(ids.sort()).toEqual(['ADR-LORE-045', 'D-2026-1', 'SPRINT_X/T-1', 'SPRINT_X/T-2']);
+    expect(data.edges).toContainEqual({ from: 'SPRINT_X/T-1', to: 'ADR-LORE-045', type: 'JUSTIFIED_BY' });
+    expect(data.edges.every(e => e.type && e.from && e.to)).toBe(true);
+    expect(data.meta?.truncated).toBe(false);
+  });
+
+  it('complete:false, скрытые скоупом или источник без кода — граф помечен неполным, а не «всё показано»', async () => {
+    const partial = { ...SERVER_BODY, complete: false };
+    const a = await fetchBacklinksHttp(serverFetch(partial))({ type: 'adr', id: 'ADR-LORE-045' });
+    expect(a.completeness).toBe('partial');
+    const hidden = { ...SERVER_BODY, hidden_by_scope: 2 };
+    expect((await fetchBacklinksHttp(serverFetch(hidden))({ type: 'adr', id: 'ADR-LORE-045' })).completeness).toBe('partial');
+    const nocode = { ...SERVER_BODY, groups: [{ edge: 'REFERENCES', count: 1, truncated: false, items: [{ type: null, ref_id: null, title: null, source_class: 'Mystery' }] }] };
+    const c = await fetchBacklinksHttp(serverFetch(nocode))({ type: 'adr', id: 'ADR-LORE-045' });
+    expect(c.groups[0].items).toEqual([]);
+    expect(c.completeness).toBe('partial');
   });
 });
 

@@ -6,11 +6,16 @@
 //   «на связи» / «не видели дольше суток» / «вызовов не видели»;
 //   сбоев 0 / «сбои не смогли прочитать» (не 0);
 //   «вызовов агентов не видели» (не «всё в порядке») / «нет прав» / сбой загрузки.
-// Фильтр «только не видели» — в адресе (?adm-mcp-f=silent).
+// Фильтры — в адресе: ?adm-mcp-f=silent («только не видели») и =failures («только с отказами»;
+// с ним ведёт карточка Главной). Ниже — сами отказы построчно (S7B-30): столько, сколько насчитано.
 import { EmptyState, Forbidden, LoadError, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
-import { fetchMcp, isSilent, type McpData, type McpHealth } from './mcp';
+import { QuickCommands } from './QuickCommands';
+import {
+  fetchMcp, fetchMcpFailureRows, isSilent, MCP_ONLY_FAILURES, type McpData, type McpFailureRowsData, type McpHealth,
+} from './mcp';
+import { mcpFailureTotal } from './home';
 import './Admin.css';
 
 export interface McpScreenProps {
@@ -32,6 +37,7 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
   );
   const [filter, setFilter] = useUrlParam('adm-mcp-f');
   const onlySilent = filter === 'silent';
+  const onlyFailures = filter === MCP_ONLY_FAILURES;
   const data = res.data;
 
   let body;
@@ -46,7 +52,9 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       </div>
     );
   } else {
-    const rows = onlySilent ? data.profiles.filter(isSilent) : data.profiles;
+    const rows = onlySilent ? data.profiles.filter(isSilent)
+      : onlyFailures ? data.profiles.filter(p => (p.failures ?? 0) > 0)
+      : data.profiles;
     body = (
       <>
         {data.failError !== null && (
@@ -59,6 +67,10 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
           <button type="button" className="adm-chip" aria-pressed={onlySilent} data-testid="adm-mcp-only-silent"
             onClick={() => setFilter(onlySilent ? null : 'silent', { replace: true })}>
             {t('admin.mcp.onlySilent')} <b>{data.profiles.filter(isSilent).length}</b>
+          </button>
+          <button type="button" className="adm-chip" aria-pressed={onlyFailures} data-testid="adm-mcp-only-failures"
+            onClick={() => setFilter(onlyFailures ? null : MCP_ONLY_FAILURES, { replace: true })}>
+            {t('admin.mcp.onlyFailures')} <b>{data.profiles.filter(p => (p.failures ?? 0) > 0).length}</b>
           </button>
         </div>
         <div className="adm-tablewrap">
@@ -108,6 +120,9 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       <p className="adm-lead">{t('admin.mcp.lead')}</p>
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-profiles-note">{t('admin.mcp.profilesNote')}</p>
       {body}
+      {data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
+      {/* S7B-31 п.5а: быстрые команды подключения — из старой вкладки v1. */}
+      <QuickCommands />
     </section>
   );
 }
@@ -120,4 +135,81 @@ function When({ ms }: { ms: number | null }) {
   if (Number.isNaN(d.getTime())) return <span className="adm-dim">{t('admin.mcp.none')}</span>;
   const iso = d.toISOString();
   return <span className="adm-mono" title={iso}>{kitMinute(iso)?.text ?? iso}</span>;
+}
+
+/**
+ * Отказы записей агентов ПОСТРОЧНО (S7B-30) — детализация карточки Главной
+ * «N отказов ≥ 400». Тот же ряд и то же условие, что у счётчика (mcp_failure_rows
+ * ↔ mcp_failures), поэтому строк столько же, сколько насчитано; меньше — только
+ * под пределом выдачи, и это сказано словами «показаны N из M».
+ * Честные исходы: ноль — «отказов нет»; не прочитали — «не смогли», а не пусто.
+ */
+function FailureRows({ fetchImpl, total }: { fetchImpl?: typeof fetch; total: number | null }) {
+  const t = useAppT();
+  const res = useLoadState<McpFailureRowsData>(
+    signal => fetchMcpFailureRows(signal, fetchImpl),
+    [fetchImpl],
+    { rows: d => d.rows },
+  );
+  const data = res.data;
+
+  let body;
+  if (res.state === 'loading' && !data) body = <Skeleton lines={3} label={t('admin.mcp.fails.loading')} />;
+  else if (!data) {
+    const reason = res.error instanceof Error ? res.error.message : String(res.error ?? '');
+    body = (
+      <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-mcp-fails-error">
+        {t('admin.mcp.fails.error', { reason })}
+      </p>
+    );
+  } else if (data.rows.length === 0 && (total === 0 || total === null)) {
+    body = (
+      <div data-testid="adm-mcp-fails-empty">
+        <EmptyState title={t('admin.mcp.fails.empty')} hint={t('admin.mcp.fails.emptyHint')} />
+      </div>
+    );
+  } else {
+    const short = data.truncated || (total !== null && data.rows.length < total);
+    body = (
+      <>
+        <p className="adm-note" data-tone={short ? 'wrn' : 'inf'} role="status" data-testid="adm-mcp-fails-count">
+          {total === null
+            ? t('admin.mcp.fails.shownNoTotal', { n: data.rows.length })
+            : t('admin.mcp.fails.shown', { n: data.rows.length, m: total })}
+        </p>
+        <div className="adm-tablewrap">
+          <table className="adm-table" data-testid="adm-mcp-fails-table">
+            <caption className="sk-sr">{t('admin.mcp.fails.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('admin.mcp.fails.col.ts')}</th>
+                <th scope="col">{t('admin.mcp.col.profile')}</th>
+                <th scope="col">{t('admin.mcp.fails.col.family')}</th>
+                <th scope="col">{t('admin.mcp.fails.col.entity')}</th>
+                <th scope="col">{t('admin.mcp.fails.col.code')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.rows.map((r, i) => (
+                <tr key={`${r.ts ?? 'x'}-${i}`} data-testid={`adm-mcp-fail-row-${i}`}>
+                  <td><When ms={r.ts} /></td>
+                  <td>{r.caller === null ? <span className="adm-missing">{t('admin.mcp.none')}</span> : <span className="adm-mono">{r.caller}</span>}</td>
+                  <td>{r.family === null ? <span className="adm-dim">{t('admin.mcp.none')}</span> : <span className="adm-mono">{r.family}</span>}</td>
+                  <td>{r.entity_id === null ? <span className="adm-dim">{t('admin.mcp.none')}</span> : <span className="adm-mono">{r.entity_id}</span>}</td>
+                  <td><span className="adm-outcome adm-mono" data-outcome="refused">{r.status ?? t('admin.mcp.none')}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <section aria-labelledby="adm-mcp-fails-h" data-testid="adm-mcp-fails">
+      <h3 id="adm-mcp-fails-h" className="adm-access__h">{t('admin.mcp.fails.title')}</h3>
+      {body}
+    </section>
+  );
 }
