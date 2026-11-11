@@ -9,7 +9,8 @@ import {
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { KitRecord, RecordPlacement, UrlWindow } from '@seidr/kit';
+import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
 import { axesForKeys } from '../api/loreFacets';
 import { useListFacets } from '../api/useListFacets';
@@ -52,6 +53,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   components: 'component', tech: 'tech', features: 'feature',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
+const NO_RECORDS: readonly KitRecord[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };
 
 /**
@@ -272,6 +274,19 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     };
   }, [data, nested, late]);
 
+  // Лента (K2-FEED-VIEW): тело записи, нижний уровень и рёбра-поводы. Ничего
+  // не грузится на всю ленту — паспорт и задачи спринта идут по раскрытию
+  // одной записи (слово владелицы 10.11: «первые 3 абзаца, остальное при раскрытии»).
+  const feed = useFeed({
+    spec: def.feed, passportType: PASSPORT_OF[screen], rows: body?.rows,
+    records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl,
+  });
+  const viewData = useMemo(() => {
+    const base = shownData ?? data;
+    if (!base || feed.edges.length === 0) return base;
+    return { ...base, edges: [...base.edges, ...feed.edges] };
+  }, [shownData, data, feed.edges]);
+
   const headId = titleId ?? `list-screen-${screen}`;
   // Иконка заголовка — из канона LORE v1 (S4-25): def.icon = иконка раздела v1.
   const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon } : undefined;
@@ -288,8 +303,12 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     content = (
       <ListView
         config={config}
-        data={shownData ?? data}
+        data={viewData ?? data}
         counts={serverCounts}
+        feedBody={feed.feedBody}
+        onFeedBody={feed.onFeedBody}
+        feedUnder={feed.feedUnder}
+        onFeedUnder={feed.onFeedUnder}
         urlState={urlState}
         quickIcons={def.quickIcons}
         // Свежие сверху по умолчанию (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS): это

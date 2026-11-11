@@ -1079,7 +1079,13 @@ public final class NewsV2Engine {
         int rows = (int) c.prepared.rows().stream().filter(r -> r.events().stream().anyMatch(e -> matches(e, q))).count();
         meta.put("truncated", q.limit() != null && rows > q.limit());
         List<Map<String, Object>> errs = new ArrayList<>();
-        for (NewsV2.SourceError e : in.errors()) errs.add(mapOf("source", e.source(), "error", e.error(), "critical", e.critical()));
+        for (NewsV2.SourceError e : in.errors()) {
+            Map<String, Object> m = mapOf("source", e.source(), "error", e.error(), "critical", e.critical());
+            // K2-FEED-VIEW §6: необязательные поля — только когда известны; старая форма валидна.
+            if (e.forbidden()) m.put("forbidden", true);
+            if (e.at() != null) m.put("at", e.at().toString());
+            errs.add(m);
+        }
         meta.put("errors", errs);
         // S7A-07: «источник недоступен» ≠ «ничего не было».
         String state = in.errors().stream().anyMatch(NewsV2.SourceError::critical) ? "partial"
