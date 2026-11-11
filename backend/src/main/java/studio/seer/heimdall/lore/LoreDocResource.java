@@ -106,6 +106,10 @@ public class LoreDocResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("doc_id", req.doc_id());
             linkComponentEdge("KnowDoc", "doc_id", req.doc_id(), req.component_id(), out);
+            // MD-AUTOLINK (spec:SPEC-LORE-MD-INLINE-REF §7): упоминания в теле → рёбра авто-пар.
+            if (req.content_md_ru() != null || req.content_md_en() != null)
+                out.put("mentions", autoLinkMentions("doc", req.doc_id(), false,
+                    req.content_md_ru(), req.content_md_en()));
             return noStore(Response.ok(out));
         } catch (Scd2Guard.ConflictException c) {
             return c.response();

@@ -50,9 +50,13 @@ public class LoreModelResource extends LoreResourceBase {
         // Аудит времени 10.11: объявленный тип свойства (DATETIME / DATE / STRING) — в поле
         // property_type; схема — у всех вершин модели (LoreComponent тоже), не только Know*.
         Map<String, Map<String, String>> declared = new java.util.HashMap<>();
+        // MD-REQUIRED: обязательные свойства (mandatory / notNull) — уровень block у полей модели.
+        Map<String, java.util.Set<String>> mandatory = null;
         try {
             schema = new java.util.HashMap<>();
-            for (Map<String, Object> t : ingestService.queryPublic("SELECT name, properties FROM schema:types", Map.of())) {
+            List<Map<String, Object>> rows = ingestService.queryPublic("SELECT name, properties FROM schema:types", Map.of());
+            mandatory = LoreFieldRequirement.mandatoryOf(rows);
+            for (Map<String, Object> t : rows) {
                 String name = t.get("name") == null ? null : String.valueOf(t.get("name"));
                 if (!LoreModelTypes.wantsSchemaOf(name)) continue;
                 List<String> props = new java.util.ArrayList<>();
@@ -69,8 +73,9 @@ public class LoreModelResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE MODEL] схема типов не прочитана — раздел types не отдаю: %s", e.getMessage());
             schema = null;
+            mandatory = null;
         }
-        Map<String, Object> doc = LoreModel.build(dict, schema, declared);
+        Map<String, Object> doc = LoreModel.build(dict, schema, declared, mandatory);
         String version = String.valueOf(doc.get("version"));
         EntityTag tag = new EntityTag(version);
         if (ifNoneMatch != null && ifNoneMatch.replace("\"", "").trim().equals(version)) {

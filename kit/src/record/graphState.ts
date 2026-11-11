@@ -20,7 +20,9 @@ const LAYER_ON = 'struct';
  * открывается СПИСОК, потому что граф там не читается. Это именно умолчание, а
  * не запрет: переключатель есть на обеих ширинах, выбор за человеком.
  */
-export type GraphView = 'graph' | 'links';
+export type GraphView = 'graph' | 'links' | 'force' | 'obsidian';
+/** GC-03: виды графа знаний (GraphExplorer) рядом с секторами и списком. */
+export const GRAPH_VIEWS: readonly GraphView[] = ['graph', 'links', 'force', 'obsidian'];
 
 export type GraphDepth = 1 | 2 | 3;
 export const GRAPH_DEPTHS: readonly GraphDepth[] = [1, 2, 3];
@@ -56,7 +58,7 @@ function parseOff(raw: string | null): string[] {
 function parseView(raw: string | null): GraphView | null {
   // Мусор в адресе — «не выбирал», а не «холст»: подменить выбор тихо значило
   // бы соврать про ссылку, по которой пришли.
-  return raw === 'graph' || raw === 'links' ? raw : null;
+  return (GRAPH_VIEWS as readonly string[]).includes(raw ?? '') ? raw as GraphView : null;
 }
 
 export function parseGraphState(params: ParamReader, config: Pick<KitConfig, 'graph'>): GraphState {

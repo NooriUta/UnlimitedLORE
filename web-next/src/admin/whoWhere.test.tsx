@@ -65,7 +65,9 @@ describe('UC-8 · модель', () => {
 });
 
 describe('UC-8 · экран', () => {
-  it('«Люди»: у человека «в N проектах» и его агенты', async () => {
+  // S7B-28: подробности человека — в паспорте; он открывается по строке или из адреса (?adm-open=…).
+  it('«Люди»: у человека «в N проектах» и его агенты (паспорт)', async () => {
+    window.history.replaceState(null, '', '/?adm-open=u-owner');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
     const owner = await screen.findByTestId('adm-person-u-owner');
     expect(within(owner).getByTestId('adm-person-projects').textContent).toContain('2');
@@ -85,22 +87,23 @@ describe('UC-8 · экран', () => {
   it('агенты упали — экран жив, плашка с причиной', async () => {
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake({ agentsFail: true })} /></KitLangProvider>);
     expect(await screen.findByTestId('adm-agents-error')).toBeTruthy();
-    expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
+    expect(document.querySelector('[data-record-id="u-owner"]')).toBeTruthy();
   });
 
-  it('поиск: по имени человека, его проекту или агенту; запрос в адресе (adm-q), S7B-25', async () => {
+  // S7B-28: поиск — строкой списка kit; ищет, как раньше (S7B-25), по имени, логину, проекту и агенту
+  // (доп. текст поиска записи). Запрос — в адресе (параметр списка lt).
+  it('поиск: по имени человека, его проекту или агенту; запрос в адресе', async () => {
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
-    const q = await screen.findByTestId('adm-who-q');
+    await screen.findByRole('button', { name: 'omiloreadmin' });
+    const rows = () => [...document.querySelectorAll('[data-record-id]')].map(e => e.getAttribute('data-record-id'));
+    const q = screen.getByRole('searchbox');
     fireEvent.change(q, { target: { value: 'FRO' } });
-    expect(new URLSearchParams(window.location.search).get('adm-q')).toBe('FRO');
-    expect(screen.getByTestId('adm-person-u-fro')).toBeTruthy();
-    expect(screen.queryByTestId('adm-person-u-owner')).toBeNull();
+    expect(new URLSearchParams(window.location.search).get('lt')).toBe('FRO');
+    expect(rows()).toEqual(['u-fro']);
     fireEvent.change(q, { target: { value: 'kimi' } });
-    expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
-    expect(screen.queryByTestId('adm-person-u-fro')).toBeNull();
+    expect(rows()).toEqual(['u-owner']);
     fireEvent.change(q, { target: { value: 'unlimited' } });
-    expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
-    expect(screen.queryByTestId('adm-person-u-fro')).toBeNull();
+    expect(rows()).toEqual(['u-owner']);
   });
 
   it('поиск в «Проектах»: по slug или участнику', async () => {
@@ -110,25 +113,23 @@ describe('UC-8 · экран', () => {
     expect(screen.queryByTestId('adm-project-NooriUta/UnlimitedLORE')).toBeNull();
   });
 
-  it('по запросу никого — «ничего не найдено» с кнопкой сброса, а не «людей нет»', async () => {
+  it('старая ссылка ?adm-q=… открывает ту же выборку; по запросу никого — строк нет, а не «людей нет»', async () => {
     window.history.replaceState(null, '', '/?adm-q=нетакого');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
-    const empty = await screen.findByTestId('adm-who-nothing');
-    expect(empty.textContent).toMatch(/нетакого/);
-    fireEvent.click(within(empty).getByRole('button'));
-    expect(new URLSearchParams(window.location.search).get('adm-q')).toBeNull();
-    expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
+    expect(((await screen.findByRole('searchbox')) as HTMLInputElement).value).toBe('нетакого');
+    expect(document.querySelectorAll('[data-record-id]').length).toBe(0);
+    expect(screen.queryByText('Ролей в проектах пока нет')).toBeNull();
   });
 
   // S7B-28: два раздела вместо переключателя — у каждого свой заголовок, оба наполнены,
   // переключателя «Люди / Проекты» внутри экрана больше нет (его место — меню).
   it('«Люди и их проекты» — заголовок раздела, люди, агенты без владельца; переключателя оси нет', async () => {
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} meSub="u-owner" /></KitLangProvider>);
-    expect(await screen.findByTestId('adm-person-u-owner')).toBeTruthy();
+    const row = await screen.findByRole('button', { name: /omiloreadmin/ });
     expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Люди и их проекты');
-    expect(screen.getByTestId('adm-person-u-owner').textContent).toMatch(/это вы/);
+    expect(row.textContent).toMatch(/это вы/);
     expect(screen.getByTestId('adm-orphans').textContent).toContain('Потерянный');
-    expect(screen.getByTestId('adm-who-q')).toBeTruthy();
+    expect(screen.getByRole('searchbox')).toBeTruthy();
     expect(screen.queryByTestId('adm-by-projects')).toBeNull();
     expect(screen.queryByTestId('adm-projects')).toBeNull();
   });
@@ -147,7 +148,7 @@ describe('UC-8 · экран', () => {
   it('старый параметр оси ?adm-by=projects на экране «Люди» не переключает его тайком', async () => {
     window.history.replaceState(null, '', '/?adm-by=projects');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
-    expect(await screen.findByTestId('adm-person-u-owner')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'omiloreadmin' })).toBeTruthy();
     expect(screen.queryByTestId('adm-projects')).toBeNull();
   });
 });

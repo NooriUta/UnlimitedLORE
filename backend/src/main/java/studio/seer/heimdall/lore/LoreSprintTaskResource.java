@@ -137,6 +137,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 out.put("priority_hint", "спринт уже существует: priority здесь в историю не записан — "
                     + "меняйте через sprint_plan_set (SCD2-ревизия плана)");
             }
+            // MD-AUTOLINK (spec:SPEC-LORE-MD-INLINE-REF §7): упоминания в текстах → рёбра авто-пар.
+            if (req.context_md() != null || req.outcome_md() != null)
+                out.put("mentions", autoLinkMentions("sprint", req.sprint_id(), false, req.context_md(), req.outcome_md()));
             out.put("quality", WorkQuality.compact(sprintQuality(req.sprint_id())));
             return noStore(Response.ok(out));
         } catch (Exception e) {
@@ -1311,6 +1314,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
             if (!previous.isEmpty()) out.put("previous", previous);
+            // MD-AUTOLINK (spec:SPEC-LORE-MD-INLINE-REF §7): упоминания в записанных текстах
+            // (для *_append — весь новый текст) → рёбра авто-пар (спринт → компонент).
+            if (contextNew != null || outcomeNew != null)
+                out.put("mentions", autoLinkMentions("sprint", req.sprint_id(), false, contextNew, outcomeNew));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT UPDATE] %s: %s", req.sprint_id(), e.getMessage());
