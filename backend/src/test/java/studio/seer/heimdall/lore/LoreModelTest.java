@@ -111,7 +111,7 @@ class LoreModelTest {
         Map<String, Object> p = (Map<String, Object>) m.get("palettes");
         assertEquals("amber-forest", p.get("default"));
         List<Map<String, Object>> entries = (List<Map<String, Object>>) p.get("entries");
-        assertEquals(List.of("amber-forest", "lichen", "slate", "juniper", "warm-dark"),
+        assertEquals(List.of("amber-forest", "lichen", "slate", "juniper", "warm-dark", "mono"),
             entries.stream().map(e -> e.get("code")).toList(), "ровно коды настройки palette, в её порядке");
 
         Map<String, Object> lichen = entries.get(1);
