@@ -450,4 +450,25 @@ class NewsV2EngineFixtureTest {
             ((Map<String, Object>) only.get("metrics")).get("counts")).get("total")).get("events"),
             "события под фильтром = счёт этого автора в by_who");
     }
+
+    /**
+     * SPRINT_UXR_S9_SCALE_OPT/S9-11: свёртка ленты «по записи». В пиковый день
+     * у одной записи бывает несколько событий (статус, правка, закрытие), и без
+     * оси «запись» они рассыпаны по дню строками. Ключ группы — «тип:код», то есть
+     * ровно элемент события: одна запись — одна группа, события в ней — её.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void recordAxisGroupsEventsOfOneElement() {
+        assertTrue(NewsV2Engine.AXES.contains("record"), "record — ось группировки");
+        Map<String, Object> res = engine().compute(new NewsV2.Query(null, null, null, null, null, null, null, null,
+            "record", null, null, null, null, null));
+        List<Map<String, Object>> groups = (List<Map<String, Object>>) ((Map<String, Object>) res.get("groups")).get("list");
+        assertFalse(groups.isEmpty(), "группы по записи есть: " + res.get("groups"));
+        for (Map<String, Object> g : groups) {
+            String key = String.valueOf(g.get("key"));
+            assertTrue(key.contains(":"), "ключ группы — «тип:код»: " + key);
+            assertEquals(1, ((Number) g.get("elements")).intValue(), "в группе записи ровно один элемент: " + g);
+        }
+    }
 }
