@@ -1026,6 +1026,17 @@
       ]
     }
   },
+  "harness_list": {
+    "input": {},
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": []
+        }
+      ]
+    }
+  },
   "insight_link": {
     "input": {
       "insight_id": "string",
@@ -1120,6 +1131,70 @@
               "built_at": "string",
               "commit": "string"
             }
+          }
+        }
+      ]
+    }
+  },
+  "machine_access_set": {
+    "input": {
+      "action": "enum(grant|revoke)",
+      "display_name": "string?",
+      "dry_run": "boolean?",
+      "harnesses": "string[]?",
+      "kc_sub": "string",
+      "machine_id": "string",
+      "projects": "string[]?",
+      "role": "enum(actor|viewer)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "machine_acl": {
+    "input": {
+      "client_id": "string?",
+      "kc_sub": "string?",
+      "machine_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "_warning": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "machine_owner_set": {
+    "input": {
+      "actor_id": "string?",
+      "client_id": "string",
+      "harness": "string?",
+      "kc_sub": "string",
+      "machine_id": "string?",
+      "profile": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
           }
         }
       ]
