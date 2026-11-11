@@ -30,3 +30,10 @@ export function mcpFailureTotal(d: McpData): { n: number | null; profiles: numbe
   }
   return { n, profiles };
 }
+
+/**
+ * Отбор «только без проектов» на экране Ролей (?adm-roles-f=noprojects) — S7B-30:
+ * карточка «люди без проектов» ведёт туда С НИМ, и экран показывает ровно тех,
+ * кого посчитала карточка (тем же peopleWithoutProjects), а не всех подряд.
+ */
+export const ROLES_NO_PROJECTS = 'noprojects';

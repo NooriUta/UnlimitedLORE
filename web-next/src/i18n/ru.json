@@ -923,5 +923,21 @@
   "peek.err.noType": "тип записи не задан и по виду ID не узнан — открыть не можем",
   "peek.sheetTitle": "Запись {id}",
   "admin.projects.title": "Проекты",
-  "admin.projects.lead": "Кто в каждом проекте, с какой ролью и чьи агенты там работают. Агент видит все проекты владельца — поэтому в проекте работают агенты всех его участников. Раскройте проект — увидите, кто его видит и почему."
+  "admin.projects.lead": "Кто в каждом проекте, с какой ролью и чьи агенты там работают. Агент видит все проекты владельца — поэтому в проекте работают агенты всех его участников. Раскройте проект — увидите, кто его видит и почему.",
+  "admin.mcp.onlyFailures": "Только с отказами",
+  "admin.mcp.fails.title": "Отказы записей агентов (код ≥ 400)",
+  "admin.mcp.fails.loading": "Читаем отказы",
+  "admin.mcp.fails.error": "Список отказов не смогли прочитать: {reason}",
+  "admin.mcp.fails.empty": "Отказов нет",
+  "admin.mcp.fails.emptyHint": "записи агентов с кодом ≥ 400 не наблюдались",
+  "admin.mcp.fails.shown": "Показано {n} из {m} — столько насчитано на Главной",
+  "admin.mcp.fails.shownNoTotal": "Показано {n}; сколько всего — не смогли прочитать",
+  "admin.mcp.fails.col.ts": "Когда",
+  "admin.mcp.fails.col.family": "Семейство",
+  "admin.mcp.fails.col.entity": "Запись",
+  "admin.mcp.fails.col.code": "Код",
+  "admin.roles.filter": "Отбор людей",
+  "admin.roles.onlyNoProjects": "Только без проектов",
+  "admin.roles.noProjectsEmpty": "Людей без проектов нет",
+  "admin.roles.noProjectsEmptyHint": "у каждой проверенной учётки есть хотя бы одна роль"
 }
