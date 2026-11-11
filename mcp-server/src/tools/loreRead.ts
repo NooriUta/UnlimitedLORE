@@ -340,4 +340,49 @@ export function registerLoreRead(server: McpServer): void {
     },
   );
 
+  // SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04 (11.11.2026): граф одним запросом — тот же GET /lore/graph,
+  // что у GraphExplorer. Тонкая обёртка: параметры как есть, проект из LORE_ACTIVE_PROJECT
+  // не подставляется (скоуп вызывающего режет сервер), ответ — целиком вместе с meta.
+  server.tool(
+    'graph',
+    'LORE graph in ONE call (GET /lore/graph, SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04): nodes[{id,type,title,status,status_category,depth}] + ' +
+      'edges[{from,rel,to,kind?}] + meta. TWO MODES, exactly one: (1) neighborhood of a record — type + id, depth 1..4 ' +
+      '(BFS both directions; depth 4 is wide — narrow it with rels), (2) slice — scope=all|project:<slug>|component:<id> ' +
+      '(the records plus ONE ring of neighbours). rels = CSV of edge types (e.g. "DEPENDS_ON,JUSTIFIED_BY"): the walk goes ONLY ' +
+      'through those edges at every step, a path never passes through an edge of another type. types = CSV of node types (task, adr, ' +
+      'decision, spec, sprint, …) — other types are neither returned nor walked through. structural=true adds the structural layer ' +
+      '(PART_OF, BELONGS_TO_PROJECT, … marked kind:"structural"; off by default). limit caps nodes (neighborhood default 500, slice 10000, ' +
+      'max 20000). READ meta FIRST: complete:false / truncated:true + capped_at:N mean the graph is NOT the whole neighborhood; ' +
+      'dangling[{id,rel,dir,reason: missing|hidden_by_scope,count}] names cut ends; hidden_by_scope counts nodes outside the caller\'s ' +
+      'projects; frontier_edges:"not_read" — edges between two last-level nodes are not read. meta.rels_available[{rel,count}] lists ' +
+      'edge types of the neighborhood at the requested depth WITHOUT the rels filter (count desc, then rel) — use it to pick rels; ' +
+      'meta.by_depth {"1":n,"2":n,…} counts nodes per level (root excluded, an empty level is 0).',
+    {
+      type: z.string().optional().describe('neighborhood: record type, e.g. "adr", "task", "sprint", "spec", "decision"'),
+      id: z.string().optional().describe('neighborhood: business key, e.g. "ADR-LORE-038" or "SPRINT_X/CO-11" for a task'),
+      depth: z.number().int().min(1).max(4).optional().describe('neighborhood: rings to walk, 1..4 (default 1)'),
+      scope: z.string().optional().describe('slice instead of a neighborhood: all | project:<slug> | component:<id>'),
+      rels: z.string().optional().describe('CSV of edge types to walk ONLY, e.g. "DEPENDS_ON"; see meta.rels_available'),
+      types: z.string().optional().describe('CSV of node types to keep, e.g. "adr,decision"'),
+      structural: z.boolean().optional().describe('include structural edges (PART_OF, BELONGS_TO_PROJECT, …); default false'),
+      limit: z.number().int().min(1).max(20000).optional().describe('node cap; neighborhood default 500, slice 10000'),
+    },
+    async ({ type, id, depth, scope, rels, types, structural, limit }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (type !== undefined) params.type = type;
+        if (id !== undefined) params.id = id;
+        if (depth !== undefined) params.depth = String(depth);
+        if (scope !== undefined) params.scope = scope;
+        if (rels !== undefined) params.rels = rels;
+        if (types !== undefined) params.types = types;
+        if (structural !== undefined) params.structural = String(structural);
+        if (limit !== undefined) params.limit = String(limit);
+        return json(await loreGet('/lore/graph', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
 }

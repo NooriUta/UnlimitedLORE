@@ -13,6 +13,7 @@ new/set/del/mv/get/log/search, plus `<cat>_link(rel, ...)` for edges). A represe
 |------|------|--------------|
 | `list_slices` | read | `GET /lore/slices` |
 | `query_slice` | read | `GET /lore/slice/{slice}` (+ params) |
+| `graph` | read | `GET /lore/graph` — neighborhood (`type`+`id`, `depth` 1..4, walk only via `rels`) or slice (`scope`); `meta.rels_available`, `meta.by_depth`, `truncated`/`capped_at`/`limit` (GC-04) |
 | `status_set` | write | `POST /lore/status` (SCD2 transition) |
 | `task_new` | write | `POST /lore/task` (+ optional `phase_uid` → IN_PHASE) |
 | `task_set` | write | `POST /lore/task/edit` |

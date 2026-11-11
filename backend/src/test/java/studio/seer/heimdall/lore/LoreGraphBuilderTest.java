@@ -262,8 +262,8 @@ class LoreGraphBuilderTest {
     }
 
     @Test
-    void depthOutsideOneToThreeIsRefused() {
-        for (int d : new int[]{0, 4}) {
+    void depthOutsideOneToFourIsRefused() {
+        for (int d : new int[]{0, 5}) {
             LoreGraphBuilder.GraphException e = assertThrows(LoreGraphBuilder.GraphException.class,
                 () -> around(sample(), "ADR-1", d));
             assertEquals(400, e.status());
@@ -321,6 +321,79 @@ class LoreGraphBuilderTest {
         assertEquals(List.of("S1", "ADR-1", "S2"), ids(r));
         assertFalse(edgeKeys(r).contains("ADR-1 DEPENDS_ON S2"));
         assertEquals("not_read", r.meta().get("frontier_edges"));
+    }
+
+    // ── 11.11: глубина до 4, обход только по rels, rels_available, by_depth ────
+
+    /**
+     * Цепочка R -X-> A -X-> B -Y-> C -X-> D -X-> E и обход по чужому типу:
+     * R -Y-> P -X-> Q -X-> Q2. Плюс R -Z-> Z1 -Z-> Z2.
+     */
+    static MemSource chain() {
+        MemSource s = new MemSource();
+        for (String n : List.of("R", "A", "B", "C", "D", "E", "P", "Q", "Q2", "Z1", "Z2")) s.node(n, "sprint", "p1");
+        return s.edge("R", "X", "A").edge("A", "X", "B").edge("B", "Y", "C").edge("C", "X", "D").edge("D", "X", "E")
+            .edge("R", "Y", "P").edge("P", "X", "Q").edge("Q", "X", "Q2")
+            .edge("R", "Z", "Z1").edge("Z1", "Z", "Z2");
+    }
+
+    static LoreGraphBuilder.Result around(MemSource src, String root, int depth, Set<String> rels) {
+        return LoreGraphBuilder.build(LoreGraphBuilder.Query.neighborhood(root, depth, rels, Set.of(), false, 500, null), src);
+    }
+
+    @Test
+    void depthFourReachesTheFourthRingAndNoFurther() {
+        LoreGraphBuilder.Result r = around(chain(), "R", 4);
+        assertEquals(4, nodeOf(r, "D").get("depth"));
+        assertNull(nodeOf(r, "E"), "пятое кольцо не отдаётся");
+        assertEquals(4, r.meta().get("depth"));
+        assertEquals(500, r.meta().get("limit"), "действующий потолок назван и тогда, когда он не сработал");
+    }
+
+    @Test
+    void relsFilterWalksOnlyThroughNamedEdgesAtEveryDepth() {
+        for (int d = 2; d <= 4; d++) {
+            LoreGraphBuilder.Result r = around(chain(), "R", d, Set.of("X"));
+            assertEquals(List.of("R", "A", "B"), ids(r),
+                "depth " + d + ": путь не идёт через Y (B→C, R→P) и Z — только по X");
+            assertTrue(edgeKeys(r).stream().allMatch(e -> e.contains(" X ")), "depth " + d + ": " + edgeKeys(r));
+        }
+        // Два типа — обход по обоим, но не по третьему.
+        LoreGraphBuilder.Result xy = around(chain(), "R", 4, Set.of("X", "Y"));
+        assertEquals(List.of("R", "A", "P", "B", "Q", "C", "Q2", "D"), ids(xy));
+        assertNull(nodeOf(xy, "Z1"));
+    }
+
+    @Test
+    void relsAvailableCountsTheUnfilteredNeighborhoodSortedByCountThenRel() {
+        LoreGraphBuilder.Result filtered = around(chain(), "R", 2, Set.of("Z"));
+        LoreGraphBuilder.Result plain = around(chain(), "R", 2);
+        // Окрестность R на глубине 2 без фильтра: X — R→A, A→B, P→Q (3); Y — R→P (1); Z — R→Z1, Z1→Z2 (2).
+        List<Map<String, Object>> expected = List.of(
+            Map.of("rel", "X", "count", 3), Map.of("rel", "Z", "count", 2), Map.of("rel", "Y", "count", 1));
+        assertEquals(expected, filtered.meta().get("rels_available"), "фильтр rels на rels_available не влияет");
+        assertEquals(expected, plain.meta().get("rels_available"));
+        assertEquals(List.of("R", "Z1", "Z2"), ids(filtered));
+    }
+
+    @Test
+    void byDepthCountsEveryLevelWithZerosAndWithoutTheRoot() {
+        LoreGraphBuilder.Result r = around(chain(), "R", 4, Set.of("Z"));
+        Map<String, Object> expected = new LinkedHashMap<>();
+        expected.put("1", 1);
+        expected.put("2", 1);
+        expected.put("3", 0);
+        expected.put("4", 0);
+        assertEquals(expected, r.meta().get("by_depth"));
+        assertEquals(List.of("1", "2", "3", "4"), new ArrayList<>(((Map<?, ?>) r.meta().get("by_depth")).keySet()));
+    }
+
+    @Test
+    void sliceByDepthHasTheRingOnly() {
+        MemSource src = sample();
+        LoreGraphBuilder.Result r = LoreGraphBuilder.build(
+            LoreGraphBuilder.Query.slice(List.of(src.nodes.get("S1")), Set.of(), Set.of(), false, 500, null), src);
+        assertEquals(Map.of("1", 2), r.meta().get("by_depth"));
     }
 
     // ── детерминизм ──────────────────────────────────────────────────────────

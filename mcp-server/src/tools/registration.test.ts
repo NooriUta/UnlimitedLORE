@@ -19,7 +19,7 @@ function fakeServer() {
 }
 
 describe('registerLoreRead', () => {
-  it('registers exactly the seven read tools under their canonical names', () => {
+  it('registers exactly the eight read tools under their canonical names', () => {
     const { server, names } = fakeServer();
     registerLoreRead(server);
     // search — SRCH-07 (ADR-LORE-033): агент ищет тем же /lore/search, что UI.
@@ -27,7 +27,8 @@ describe('registerLoreRead', () => {
     // task_shape — MT-TASK-SHAPE: форма и объём задач для статистики и BI.
     // run_block — S6-08: блок lore-query из текста записи + метаданные полноты.
     // changed — MT-MCP-CHANGED-RANGE: что изменилось за период по многим типам (/lore/changed).
-    expect(names).toEqual(['list_slices', 'query_slice', 'changed', 'run_block', 'search', 'search_similar', 'task_shape']);
+    // graph — SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04: граф окрестности (depth 1..4, rels) или среза (/lore/graph).
+    expect(names).toEqual(['list_slices', 'query_slice', 'changed', 'run_block', 'search', 'search_similar', 'task_shape', 'graph']);
   });
 });
 
