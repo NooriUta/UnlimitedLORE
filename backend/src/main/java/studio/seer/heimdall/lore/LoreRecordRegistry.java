@@ -596,8 +596,16 @@ final class LoreRecordRegistry {
 
     // ── JSON-форма (schema в lore.record/1) ─────────────────────────────────
 
-    /** {@code schema} ответа: подпись, поля, раскладка, связи. {@code null} — тип не заведён. */
+    /** {@code schema} ответа: подпись, поля, раскладка, связи. {@code null} — тип не заведён. Схема БД не читалась — block «unknown». */
     static Map<String, Object> schemaJson(String type) {
+        return schemaJson(type, null, null);
+    }
+
+    /**
+     * MD-REQUIRED: то же с фактами схемы БД — свойства вершины и Hist типа и обязательные из них
+     * ({@link LoreFieldRequirement}). {@code null} — схема не читалась: block неизвестен.
+     */
+    static Map<String, Object> schemaJson(String type, java.util.Set<String> props, java.util.Set<String> mandatory) {
         TypeDef d = get(type);
         if (d == null) return null;
         Map<String, Object> out = new LinkedHashMap<>();
@@ -635,6 +643,9 @@ final class LoreRecordRegistry {
             rels.add(m);
         }
         out.put("relations", rels);
+        // MD-REQUIRED: block — из схемы БД, warn — из проверок качества MCP (с условиями).
+        out.put("requirements", LoreFieldRequirement.annotate(type, fields, rels, props, mandatory));
+        out.put("requirements_block", props != null && mandatory != null ? "schema" : "unknown");
         return out;
     }
 
