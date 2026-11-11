@@ -18,7 +18,8 @@
           "status": { "type": "string", "description": "Код из KitConfig.statuses.items" },
           "fields": { "type": "object" },
           "body_md": { "type": "string" },
-          "updated_at": { "type": "string", "format": "date-time" }
+          "updated_at": { "type": "string", "format": "date-time" },
+          "search": { "type": "string" }
         },
         "additionalProperties": false
       }

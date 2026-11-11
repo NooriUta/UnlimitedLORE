@@ -64,7 +64,7 @@ describe('matchField — четыре условия', () => {
   });
 });
 
-describe('matchText — текст в ID или названии', () => {
+describe('matchText — текст в ID, названии и доп. тексте поиска', () => {
   it('без учёта регистра, по ID и по названию, кириллица и диакритика как есть', () => {
     expect(matchText(sprints[0], 'sprint_a')).toBe(true);
     expect(matchText(sprints[0], 'ОБОЛОЧ')).toBe(true);
@@ -75,6 +75,14 @@ describe('matchText — текст в ID или названии', () => {
     expect(matchText(sprints[1], 'списка фильтры')).toBe(true);
     expect(matchText(sprints[1], 'списка оболочка')).toBe(false);
     expect(matchText(sprints[1], '   ')).toBe(true);
+  });
+  // S7B-28: приложение само называет, что ещё искать у записи (логин, проекты,
+  // агенты человека) — `search`; без него поиск по-прежнему только ID и название.
+  it('доп. текст поиска от приложения (`search`) тоже ищется; слова могут быть в разных частях', () => {
+    const person: KitRecord = { id: 'u-1', kind: 'person', title: 'Фролова', status: '', fields: {}, search: 'frolova AIDA/miniLORE Kimi (full)' };
+    expect(matchText(person, 'kimi')).toBe(true);
+    expect(matchText(person, 'фролова minilore')).toBe(true);
+    expect(matchText({ ...person, search: undefined }, 'kimi')).toBe(false);
   });
 });
 
