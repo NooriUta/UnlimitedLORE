@@ -43,7 +43,7 @@ class AgentProfilesMatchMatrixTest {
 
     /** Читающие инструменты — сервер GET не скоупит, в реестре записей их нет. */
     private static final Set<String> READ_TOOLS = Set.of(
-        "list_slices", "query_slice", "run_block", "search", "search_similar", "metric_get", "bragi_search");
+        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "metric_get", "bragi_search");
 
     /**
      * Чтение графа — у КАЖДОГО профиля (README профилей: «reading the graph never needs
@@ -52,7 +52,7 @@ class AgentProfilesMatchMatrixTest {
      * Все пять — GET (/lore/slice, /lore/search), агентный фильтр их не скоупит.
      */
     static final List<String> GRAPH_READ_TOOLS = List.of(
-        "list_slices", "query_slice", "run_block", "search", "search_similar");
+        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar");
 
     @Test
     void everyProfileReadsTheGraph() throws IOException {

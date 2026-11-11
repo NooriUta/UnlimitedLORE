@@ -1146,7 +1146,10 @@ public class AidaLoreResource extends LoreResourceBase {
         java.util.Set<String> callerScope;
         final Map<String, String> filters;
         SliceProjectNarrowing.Result countNarrowing;
+        final SlicePage countPage;
         try {
+            // MT-MCP-CHANGED-RANGE: период — как у среза (SlicePage); вынимается до compose.
+            countPage = SlicePage.extract(new LinkedHashMap<>(given));
             callerScope = allowedProjectsOrNull(role);
             // Выбор проектов в шапке сужает и счётчик — иначе число в разделе не сойдётся со списком.
             countNarrowing = SliceProjectNarrowing.apply(id, given, callerScope);
@@ -1172,7 +1175,14 @@ public class AidaLoreResource extends LoreResourceBase {
             .map(res -> {
                 Map<String, Object> out = sliceBody(res);
                 if (scopeMarker != null) out.put("scope", scopeMarker);
-                Map<String, Object> counted = LoreSectionCount.count(id, out, filters);
+                Map<String, Object> counted;
+                try {
+                    // S4-04: changed_at сворачивается и период режет строки внутри count(…, page).
+                    counted = LoreSectionCount.count(id, out, filters, countPage);
+                } catch (IllegalArgumentException e) {
+                    return noStore(Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new LoreError("BAD_PARAMS", e.getMessage())));
+                }
                 if (countNarrowMarker != null) counted.put(SliceProjectNarrowing.PARAM, countNarrowMarker);
                 return noStore(Response.ok(counted));
             })
