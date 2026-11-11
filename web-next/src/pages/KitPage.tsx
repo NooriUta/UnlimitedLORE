@@ -11,7 +11,7 @@ import {
   DENSITIES, FieldEditor, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
-import { MartProse, SandboxedHtmlFrame, TipTapField } from '@seidr/kit/content';
+import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, resolveMerge } from '@seidr/kit/content';
 import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
@@ -72,6 +72,10 @@ export default function KitPage() {
   const [earOpen, setEarOpen] = useState(false);
   const [freshNow] = useState(() => Date.now());
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
+  // S5-08: спор при сохранении — живой пример панели «Спорные блоки».
+  const merge = useMemo(() => mergeBlocks(t('kitPage.merge.base'), t('kitPage.merge.mine'), t('kitPage.merge.theirs')), [t]);
+  const [mergePicks, setMergePicks] = useState<Record<number, 'mine' | 'theirs'>>({});
+  const [mergeApplied, setMergeApplied] = useState<string | null>(null);
   // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
   const palette = useKitPalette();
   const recent = useMemo(() => createRecentList(createSafeStorage(), { key: 'seidr.kit.vitrine.recent' }), []);
@@ -478,6 +482,16 @@ export default function KitPage() {
               ]} />
             </dd>
           </dl>
+          <h3 className="kitp__h3">{t('kitPage.merge.title')}</h3>
+          <p>{t('kitPage.merge.lead')}</p>
+          <MdMergePanel
+            chunks={merge.chunks}
+            by="agent-x"
+            picks={mergePicks}
+            onPick={(k, p) => setMergePicks(prev => ({ ...prev, [k]: p }))}
+            onApply={() => setMergeApplied(resolveMerge(merge.chunks, mergePicks))}
+          />
+          {mergeApplied !== null && <p role="status">{t('kitPage.merge.applied', { text: mergeApplied })}</p>}
           <h3 className="kitp__h3">{t('kitPage.md.html')}</h3>
           <SandboxedHtmlFrame html={t('kitPage.md.htmlSample')} title={t('kitPage.md.htmlTitle')} />
         </section>
