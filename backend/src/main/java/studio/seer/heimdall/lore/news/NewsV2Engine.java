@@ -46,7 +46,8 @@ public final class NewsV2Engine {
 
     /** Оси группировки и фильтра (S7A-02; who — S7A-12, конкретный автор). */
     public static final List<String> AXES =
-        List.of("project", "component", "type", "kind", "sprint", "milestone", "author", "who", "day");
+        // S9-11: «record» — свёртка по записи; ключ группы — элемент события («тип:код»).
+        List.of("project", "component", "type", "kind", "sprint", "milestone", "author", "who", "day", "record");
     /** Оси, по которым элемент принадлежит группе (а не событие): для них считается ×N. */
     static final Set<String> ELEMENT_AXES = Set.of("project", "component", "type", "sprint", "milestone");
     /** Оси задач для сгорания по группам (§7.2, §7.2b). */
@@ -242,6 +243,7 @@ public final class NewsV2Engine {
             case "author"    -> List.of(authorClass(e));
             case "who"       -> List.of(e.who() == null || e.who().isBlank() ? NOWHO : e.who());
             case "day"       -> List.of(String.valueOf(dayOf(e)));
+            case "record"    -> List.of(e.elKey());
             default -> throw new IllegalArgumentException("unknown axis: " + axis);
         };
     }

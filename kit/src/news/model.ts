@@ -233,6 +233,8 @@ export function newsGroupLabel(axis: string, key: string, lang: KitLang): string
     case 'project': return shortProject(key);
     case 'type': return typeLabel(key, lang);
     case 'kind': return kindLabel(key, lang);
+    // S9-11: «вид · код» — запись узнаётся по коду, сырой ключ «тип:код» не показываем.
+    case 'record': { const i = key.indexOf(':'); return i > 0 ? `${typeLabel(key.slice(0, i), lang)} · ${key.slice(i + 1)}` : key; }
     case 'author': return key === 'agent' || key === 'human' || key === 'unknown' ? newsT(lang, `author.${key}` as NewsKey) : key;
     default: return key;
   }
@@ -271,6 +273,8 @@ export function eventAxisValues(e: NewsEvent, axis: NewsAxis): string[] {
     case 'author': return [e.author];
     case 'who': return [e.who ?? '(unknown)'];
     case 'day': return [e.day_local];
+    // S9-11: тот же ключ, что у сервера (NewsV2.Event.elKey) — «тип:код».
+    case 'record': return [e.el_key];
   }
 }
 
