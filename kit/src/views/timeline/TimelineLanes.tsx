@@ -11,6 +11,7 @@ import { LIST_BUDGET } from '../../list/listModel';
 import { groupTitle } from '../../list/groupLabel';
 import { timelineLanes } from '../../list/grouping';
 import { EmptyState } from '../../states/StateViews';
+import { useNarrow } from '../../core/narrow';
 
 export interface TimelineLanesProps {
   config: KitConfig;
@@ -26,15 +27,21 @@ export interface TimelineLanesProps {
   href?: (id: string) => string;
   budget?: Partial<{ maxGroups: number; topGroups: number }>;
   className?: string;
+  /**
+   * Узкий экран: вместо шкалы — список по датам начала (S4-MOBILE-EDGE, как
+   * v1 MOB-03). Не задан — по единому порогу kit (useNarrow, ≤720px).
+   */
+  narrow?: boolean;
 }
 
 const DAY = 86_400_000;
 const dayOf = (iso: string): number => Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY);
 
 export function TimelineLanes({
-  config, data, records, group, start, end, href, budget, className,
+  config, data, records, group, start, end, href, budget, className, narrow: narrowProp,
 }: TimelineLanesProps) {
   const lang = useKitLang();
+  const narrow = useNarrow(narrowProp);
   const pool = records ?? data.records;
   const model = useMemo(
     () => timelineLanes(pool, group, config, data, { start, end }, { ...LIST_BUDGET, ...budget }),
@@ -55,6 +62,65 @@ export function TimelineLanes({
           title={kitT(lang, 'kit.timeline.empty')}
           hint={kitT(lang, 'kit.timeline.emptyHint', { field: start })}
         />
+        {undated}
+      </div>
+    );
+  }
+
+  if (narrow) {
+    // Телефон (S4-MOBILE-EDGE): полгода в 300 px не читаются, полосы режутся
+    // справа. Те же записи, что на шкале, — группами по дате начала, по
+    // возрастанию (как ось слева направо); внутри даты — порядок шкалы
+    // (дорожка за дорожкой). Срок и дорожка — в строке: со шкалы не теряется ничего.
+    const days = new Map<string, { item: (typeof model.lanes)[number]['items'][number]; lane: string | null }[]>();
+    for (const { lane, items } of model.lanes) {
+      const laneTitle = group ? groupTitle(config, lang, group, lane) : null;
+      for (const it of items) {
+        const row = days.get(it.start) ?? [];
+        row.push({ item: it, lane: laneTitle });
+        days.set(it.start, row);
+      }
+    }
+    const ordered = [...days.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return (
+      <div
+        className={['sk-tl', 'sk-tl--dates', className].filter(Boolean).join(' ')}
+        role="region"
+        aria-label={kitT(lang, 'kit.timeline.label')}
+      >
+        <p className="sk-tl__range">{kitT(lang, 'kit.timeline.range', model.range)}</p>
+        {ordered.map(([day, rows]) => (
+          <section key={day} className="sk-tl__day" aria-label={kitT(lang, 'kit.list.lane', { title: day, n: rows.length })}>
+            <h3 className="sk-tl__head">
+              <span className="sk-tl__title">{day}</span>
+              <span className="sk-tl__count">{rows.length}</span>
+            </h3>
+            <ul className="sk-tl__items">
+              {rows.map(({ item: it, lane }) => {
+                const s = statuses.get(it.record.status);
+                const label = kitT(lang, 'kit.timeline.bar', { title: it.record.title, start: it.start, end: it.end });
+                const when = it.end === it.start ? it.start : `${it.start} — ${it.end}`;
+                return (
+                  <li
+                    key={it.record.id}
+                    className="sk-tl__item"
+                    data-record-id={it.record.id}
+                    data-status={it.record.status}
+                    style={{ '--st-c': s?.color ?? 'var(--t3)' } as CSSProperties}
+                  >
+                    {href
+                      ? <a className="sk-tl__label" href={href(it.record.id)} aria-label={label}>{it.record.title}</a>
+                      : <span className="sk-tl__label">{it.record.title}</span>}
+                    <span className="sk-tl__meta">
+                      <span className="sk-tl__when">{when}</span>
+                      {lane && <span className="sk-tl__lanechip">{lane}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
         {undated}
       </div>
     );

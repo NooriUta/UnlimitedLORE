@@ -32,6 +32,7 @@ import { RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicke
 import type { RefItem, RefSearch } from './RefSearchList';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
+import { useNarrow } from '../core/narrow';
 
 /** Элемент списка упоминаний: id сущности (им создаётся ребро) и подпись. */
 export interface MentionItem {
@@ -243,15 +244,22 @@ export interface TipTapFieldProps {
   lossyReason?: string;
   /** Ссылки на записи прямо в тексте (мини-окно). Не задан — «[[» и «#» обычные символы. */
   refs?: TipTapRefSource;
+  /**
+   * Узкий экран (телефон): панель — одна строка главных кнопок и «ещё ▾»
+   * (S4-MOBILE-EDGE). Не задан — по единому порогу kit (useNarrow, ≤720px).
+   */
+  narrow?: boolean;
 }
 
 export function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
   onUploadImage, enableHtmlMode = false, ariaLabel, mentionItems,
   mode: modeProp, defaultMode = 'wysiwyg', onModeChange,
-  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason, refs,
+  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason, refs, narrow: narrowProp,
 }: TipTapFieldProps) {
   const lang = useKitLang();
+  const narrow = useNarrow(narrowProp);
+  const [moreOpen, setMoreOpen] = useState(false);
   const t = (k: KitKey) => kitT(lang, k);
   const enableImages = Boolean(onUploadImage);
   const onChangeRef = useRef(onChange);
@@ -574,6 +582,50 @@ export function TipTapField({
     </>
   );
 
+  // Кнопки панели — одним набором на оба вида: широкий ряд и узкий
+  // «главное + ещё» (S4-MOBILE-EDGE) собираются из тех же элементов, и функция
+  // не может потеряться в одном виде, оставшись в другом.
+  const btnUndo = editor && <ToolBtn label={t('kit.md.undo')} onClick={run(e => e.chain().focus().undo().run())}>↺</ToolBtn>;
+  const btnRedo = editor && <ToolBtn label={t('kit.md.redo')} onClick={run(e => e.chain().focus().redo().run())}>↻</ToolBtn>;
+  const btnBold = editor && <ToolBtn label={t('kit.md.bold')} active={editor.isActive('bold')} onClick={run(e => e.chain().focus().toggleBold().run())}><b>B</b></ToolBtn>;
+  const btnItalic = editor && <ToolBtn label={t('kit.md.italic')} active={editor.isActive('italic')} onClick={run(e => e.chain().focus().toggleItalic().run())}><i>i</i></ToolBtn>;
+  const btnStrike = editor && <ToolBtn label={t('kit.md.strike')} active={editor.isActive('strike')} onClick={run(e => e.chain().focus().toggleStrike().run())}><s>S</s></ToolBtn>;
+  const btnCode = editor && <ToolBtn label={t('kit.md.code')} active={editor.isActive('code')} onClick={run(e => e.chain().focus().toggleCode().run())}>{'</>'}</ToolBtn>;
+  const btnLink = editor && <ToolBtn label={t('kit.md.link')} active={editor.isActive('link')} onClick={toggleLink}>🔗</ToolBtn>;
+  const btnBullet = editor && <ToolBtn label={t('kit.md.bulletList')} active={editor.isActive('bulletList')} onClick={run(e => e.chain().focus().toggleBulletList().run())}>•</ToolBtn>;
+  const btnHeadings = editor && (
+    <>
+      <ToolBtn label={t('kit.md.h1')} active={editor.isActive('heading', { level: 1 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 1 }).run())}>H1</ToolBtn>
+      <ToolBtn label={t('kit.md.h2')} active={editor.isActive('heading', { level: 2 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 2 }).run())}>H2</ToolBtn>
+      <ToolBtn label={t('kit.md.h3')} active={editor.isActive('heading', { level: 3 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 3 }).run())}>H3</ToolBtn>
+    </>
+  );
+  const btnLists = editor && (
+    <>
+      <ToolBtn label={t('kit.md.orderedList')} active={editor.isActive('orderedList')} onClick={run(e => e.chain().focus().toggleOrderedList().run())}>1.</ToolBtn>
+      <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
+      <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
+      <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
+      <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
+    </>
+  );
+  const btnTable = editor && (
+    <>
+      {editor.isActive('table') ? (
+        <>
+          <ToolBtn label={t('kit.md.addColumn')} onClick={run(e => e.chain().focus().addColumnAfter().run())}>+▏</ToolBtn>
+          <ToolBtn label={t('kit.md.addRow')} onClick={run(e => e.chain().focus().addRowAfter().run())}>+▁</ToolBtn>
+          <ToolBtn label={t('kit.md.deleteTable')} onClick={run(e => e.chain().focus().deleteTable().run())}>⊞×</ToolBtn>
+        </>
+      ) : (
+        <ToolBtn label={t('kit.md.insertTable')} onClick={run(e => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run())}>⊞</ToolBtn>
+      )}
+      {enableImages && (
+        <ToolBtn label={t('kit.md.insertImage')} active={uploading} onClick={() => fileInputRef.current?.click()}>{uploading ? '…' : '🖼'}</ToolBtn>
+      )}
+    </>
+  );
+
   return (
     <div className="sk-md">
       {editable && editor && !allowWysiwyg && (
@@ -582,41 +634,49 @@ export function TipTapField({
         </div>
       )}
       {editable && editor && allowWysiwyg && (
-        <div className="sk-md__toolbar" role="toolbar" aria-label={t('kit.md.toolbar')}>
-          <ToolBtn label={t('kit.md.undo')} onClick={run(e => e.chain().focus().undo().run())}>↺</ToolBtn>
-          <ToolBtn label={t('kit.md.redo')} onClick={run(e => e.chain().focus().redo().run())}>↻</ToolBtn>
-          <Sep />
-          <ToolBtn label={t('kit.md.bold')} active={editor.isActive('bold')} onClick={run(e => e.chain().focus().toggleBold().run())}><b>B</b></ToolBtn>
-          <ToolBtn label={t('kit.md.italic')} active={editor.isActive('italic')} onClick={run(e => e.chain().focus().toggleItalic().run())}><i>i</i></ToolBtn>
-          <ToolBtn label={t('kit.md.strike')} active={editor.isActive('strike')} onClick={run(e => e.chain().focus().toggleStrike().run())}><s>S</s></ToolBtn>
-          <ToolBtn label={t('kit.md.code')} active={editor.isActive('code')} onClick={run(e => e.chain().focus().toggleCode().run())}>{'</>'}</ToolBtn>
-          <ToolBtn label={t('kit.md.link')} active={editor.isActive('link')} onClick={toggleLink}>🔗</ToolBtn>
-          <Sep />
-          <ToolBtn label={t('kit.md.h1')} active={editor.isActive('heading', { level: 1 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 1 }).run())}>H1</ToolBtn>
-          <ToolBtn label={t('kit.md.h2')} active={editor.isActive('heading', { level: 2 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 2 }).run())}>H2</ToolBtn>
-          <ToolBtn label={t('kit.md.h3')} active={editor.isActive('heading', { level: 3 })} onClick={run(e => e.chain().focus().toggleHeading({ level: 3 }).run())}>H3</ToolBtn>
-          <Sep />
-          <ToolBtn label={t('kit.md.bulletList')} active={editor.isActive('bulletList')} onClick={run(e => e.chain().focus().toggleBulletList().run())}>•</ToolBtn>
-          <ToolBtn label={t('kit.md.orderedList')} active={editor.isActive('orderedList')} onClick={run(e => e.chain().focus().toggleOrderedList().run())}>1.</ToolBtn>
-          <ToolBtn label={t('kit.md.taskList')} active={editor.isActive('taskList')} onClick={run(e => e.chain().focus().toggleTaskList().run())}>☑</ToolBtn>
-          <ToolBtn label={t('kit.md.blockquote')} active={editor.isActive('blockquote')} onClick={run(e => e.chain().focus().toggleBlockquote().run())}>❝</ToolBtn>
-          <ToolBtn label={t('kit.md.hr')} onClick={run(e => e.chain().focus().setHorizontalRule().run())}>—</ToolBtn>
-          <ToolBtn label={t('kit.md.math')} onClick={insertMath}>∑</ToolBtn>
-          <Sep />
-          {editor.isActive('table') ? (
+        <div className={narrow ? 'sk-md__toolbar sk-md__toolbar--narrow' : 'sk-md__toolbar'} role="toolbar" aria-label={t('kit.md.toolbar')}>
+          {narrow ? (
             <>
-              <ToolBtn label={t('kit.md.addColumn')} onClick={run(e => e.chain().focus().addColumnAfter().run())}>+▏</ToolBtn>
-              <ToolBtn label={t('kit.md.addRow')} onClick={run(e => e.chain().focus().addRowAfter().run())}>+▁</ToolBtn>
-              <ToolBtn label={t('kit.md.deleteTable')} onClick={run(e => e.chain().focus().deleteTable().run())}>⊞×</ToolBtn>
+              {/* S4-MOBILE-EDGE: на телефоне одна строка главного + «ещё ▾»;
+                  остальное — тем же набором кнопок под «ещё», ничего не пропадает. */}
+              {btnUndo}{btnBold}{btnItalic}{btnLink}{btnBullet}
+              <button
+                type="button"
+                className={`sk-md__btn sk-md__morebtn${moreOpen ? ' is-on' : ''}`}
+                onClick={() => setMoreOpen(o => !o)}
+                title={t('kit.md.more')}
+                aria-label={t('kit.md.more')}
+                aria-expanded={moreOpen}
+              >{'⋯ ▾'}</button>
+              {moreOpen && (
+                <div className="sk-md__more">
+                  {btnRedo}{btnStrike}{btnCode}
+                  <Sep />
+                  {btnHeadings}
+                  <Sep />
+                  {btnLists}
+                  <Sep />
+                  {btnTable}
+                  <Sep />
+                  {modeBtns}
+                </div>
+              )}
             </>
           ) : (
-            <ToolBtn label={t('kit.md.insertTable')} onClick={run(e => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run())}>⊞</ToolBtn>
+            <>
+              {btnUndo}{btnRedo}
+              <Sep />
+              {btnBold}{btnItalic}{btnStrike}{btnCode}{btnLink}
+              <Sep />
+              {btnHeadings}
+              <Sep />
+              {btnBullet}{btnLists}
+              <Sep />
+              {btnTable}
+              <Sep />
+              {modeBtns}
+            </>
           )}
-          {enableImages && (
-            <ToolBtn label={t('kit.md.insertImage')} active={uploading} onClick={() => fileInputRef.current?.click()}>{uploading ? '…' : '🖼'}</ToolBtn>
-          )}
-          <Sep />
-          {modeBtns}
           {enableImages && (
             <input ref={fileInputRef} type="file" accept="image/*" hidden tabIndex={-1} aria-hidden onChange={onImageSelected} />
           )}

@@ -1770,7 +1770,7 @@ export function ListView({
     // Таймлайн (S4-22): дорожки той же группировки, что у списка и доски.
     const tl = listCfg?.timeline;
     body = tl
-      ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} />
+      ? <TimelineLanes config={config} data={data} records={filtered} group={groupKey} start={tl.start} end={tl.end} href={href} narrow={narrow} />
       : <EmptyState title={t('kit.list.timeline.noConfig')} />;
   } else if (view === 'tree') {
     // Дерево (S4-22): иерархия по list.tree над теми же отфильтрованными записями.
