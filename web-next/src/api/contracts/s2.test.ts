@@ -185,9 +185,15 @@ describe('S2-01 · настройки', () => {
 
   it('все пункты S2-04 есть в настройках, включая флаг новой навигации', () => {
     expect(Object.keys(DEFAULT_SETTINGS).sort()).toEqual([
-      'collapse_nav_on_read', 'density', 'mode', 'nav_version', 'palette', 'peek_hover',
+      'collapse_nav_on_read', 'density', 'graph_view', 'mode', 'nav_version', 'palette', 'peek_hover',
       'right_column', 'show_tech', 'single_key_shortcuts', 'stripes', 'text_scale', 'text_size',
     ]);
+  });
+
+  it('GC-03 · вид графа: auto по умолчанию, четыре вида, незнакомый — отказ', () => {
+    expect(DEFAULT_SETTINGS.graph_view).toBe('auto');
+    for (const v of ['auto', 'sectors', 'list', 'force', 'obsidian'] as const) expect(validateSettingsPatch({ graph_view: v })).toEqual([]);
+    expect(validateSettingsPatch({ graph_view: 'canvas' as never })).toEqual(['graph_view']);
   });
 });
 

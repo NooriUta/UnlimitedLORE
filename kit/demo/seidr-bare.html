@@ -720,6 +720,40 @@
 </div>
 </div>
 </section>
+<section class="bare__sec" data-kit="minilist">
+<h2 class="bare__h2">Мини-список</h2>
+<div class="sk-minilist sk-minilist--check">
+<p class="sk-minilist__count">сделано 1 из 2</p>
+<ul class="sk-minilist__list" aria-label="Чек-лист">
+<li class="sk-minilist__item" data-state="done">
+<label class="sk-minilist__row">
+<input type="checkbox" checked="">
+<span class="sk-minilist__text">Тест до кода</span>
+</label>
+</li>
+<li class="sk-minilist__item" data-state="todo">
+<label class="sk-minilist__row">
+<input type="checkbox">
+<span class="sk-minilist__text">Витрина</span>
+</label>
+</li>
+</ul>
+</div>
+<div class="sk-minilist sk-minilist--choice" role="radiogroup" aria-label="Вопрос">
+<label class="sk-minilist__row sk-minilist__opt" data-state="correct">
+<input disabled="" type="radio" name="_r_5_">
+<span class="sk-minilist__letter" aria-hidden="true">A</span>
+<span class="sk-minilist__text">Строки слева без пары</span>
+<span class="sk-minilist__mark">верно</span>
+</label>
+<label class="sk-minilist__row sk-minilist__opt" data-state="wrong">
+<input disabled="" type="radio" checked="" name="_r_5_">
+<span class="sk-minilist__letter" aria-hidden="true">B</span>
+<span class="sk-minilist__text">Только пары</span>
+<span class="sk-minilist__hint">Это INNER JOIN</span>
+</label>
+</div>
+</section>
 <section class="bare__sec" data-kit="library">
 <h2 class="bare__h2">Библиотека</h2>
 <div class="sk-lib">
@@ -779,150 +813,18 @@
 </article>
 </div>
 </section>
-<section class="bare__sec" data-kit="nested">
-<h2 class="bare__h2">Список внутри записи</h2>
-<div class="sk-nested">
-<div class="sk-list" data-view="list">
-<div role="group" aria-label="Фильтр, группировка и порядок" class="sk-list__controls" data-testid="kit-list-controls">
-<span class="sk-vmenu">
-<button type="button" class="sk-list__dir sk-vmenu__btn" aria-haspopup="dialog" aria-expanded="false">Вид <span aria-hidden="true">▾</span>
-</button>
-</span>
-<fieldset class="sk-list__seg" data-seg="filter">
-<legend class="sk-list__seglabel">Фильтр</legend>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--lucide sk-icon sk-list__segicon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 24 24">
-<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z">
-</path>
-</g>
-</svg>
-<input class="sk-list__search" aria-label="Текст в ID или названии" placeholder="Найти в списке…" type="search" value="">
-<div class="sk-facet">
-<button type="button" class="sk-facet__btn" aria-expanded="false">
-<span class="sk-list__label">Статус</span>
-<span class="sk-facet__sum">все</span>
-<span class="sk-facet__chev" aria-hidden="true">▾</span>
-</button>
-<div class="sk-facet__panel" role="group" aria-label="Фильтр «Статус»" hidden="">
-</div>
-</div>
-</fieldset>
-<fieldset class="sk-list__seg" data-seg="group">
-<legend class="sk-list__seglabel">Группировка</legend>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--lucide sk-icon sk-list__segicon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 24 24">
-<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M3 7V5c0-1.1.9-2 2-2h2">
-</path>
-<path d="M17 3h2c1.1 0 2 .9 2 2v2">
-</path>
-<path d="M21 17v2c0 1.1-.9 2-2 2h-2">
-</path>
-<path d="M7 21H5c-1.1 0-2-.9-2-2v-2">
-</path>
-<rect width="7" height="5" x="7" y="7" rx="1">
-</rect>
-<rect width="7" height="5" x="10" y="12" rx="1">
-</rect>
-</g>
-</svg>
-<span class="sk-gmenu">
-<button type="button" class="sk-list__dir sk-gmenu__btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Группировка: без группировки">
-<b>без группировки</b> <span aria-hidden="true">▾</span>
-</button>
-</span>
-</fieldset>
-<fieldset class="sk-list__seg" data-seg="sort">
-<legend class="sk-list__seglabel">Порядок</legend>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--lucide sk-icon sk-list__segicon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 24 24">
-<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M11 5h10">
-</path>
-<path d="M11 12h10">
-</path>
-<path d="M11 19h10">
-</path>
-<path d="M4 4h1v5">
-</path>
-<path d="M4 9h2">
-</path>
-<path d="M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02">
-</path>
-</g>
-</svg>
-<span class="sk-gmenu">
-<button type="button" class="sk-list__dir sk-gmenu__btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Порядок: как пришло">
-<b>как пришло</b> <span aria-hidden="true">▾</span>
-</button>
-</span>
-<button type="button" class="sk-list__dir" aria-pressed="false" disabled="">по убыванию</button>
-</fieldset>
-<p class="sk-list__shown" data-testid="kit-list-shown" data-kind="complete" role="status">Показано 2 из 2</p>
-</div>
-<div class="sk-list__scroll">
-<table class="sk-list__table">
-<thead>
-<tr>
-<th scope="col" class="sk-list__th sk-list__c-status">Статус</th>
-<th scope="col" class="sk-list__th sk-list__c-kind">Вид</th>
-<th scope="col" class="sk-list__th sk-list__c-id">Код</th>
-<th scope="col" class="sk-list__th sk-list__c-title">Запись</th>
-</tr>
-</thead>
-<tbody>
-<tr class="sk-list__row" data-record-id="T-1" tabindex="0" data-cursor="true">
-<td class="sk-list__td sk-list__c-status">
-<span class="sk-list__status" style="--st-c: var(--suc);" data-status="done">
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--game-icons sk-icon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 512 512">
-<path fill="currentColor" d="M17.47 250.9C88.82 328.1 158 397.6 224.5 485.5c72.3-143.8 146.3-288.1 268.4-444.37L460 26.06C356.9 135.4 276.8 238.9 207.2 361.9c-48.4-43.6-126.62-105.3-174.38-137z">
-</path>
-</svg>
-<span>готово</span>
-</span>
-</td>
-<td class="sk-list__td sk-list__c-kind">Задача</td>
-<td class="sk-list__td sk-list__c-id">
-<span class="sk-pill sk-pill--id">T-1</span>
-</td>
-<td class="sk-list__td sk-list__c-title">
-<a class="sk-list__title" href="#T-1">Срез версии</a>
-</td>
-</tr>
-<tr class="sk-list__row" data-record-id="T-2" tabindex="-1">
-<td class="sk-list__td sk-list__c-status">
-<span class="sk-list__status" style="--st-c: var(--t3);" data-status="todo">
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--game-icons sk-icon" style="color: currentcolor; flex-shrink: 0;" width="14" height="14" viewBox="0 0 512 512">
-<path fill="currentColor" d="M119 31v66h18V31zm256 0v66h18V31zM73 89v30h366V89h-28v26h-54V89H155v26h-54V89zm0 48v302h366V137zm110 14h18v32h46v-32h18v32h46v-32h18v32h46v-32h18v32h32v18h-32v46h32v18h-32v46h32v18h-32v46h32v18H265v32h-18v-32h-46v32h-18v-32h-46v32h-18v-32H87v-18h32v-46H87v-18h32v-46H87v-18h32v-46H87v-18h96zm-46 50v46h46v-46zm64 0v46h46v-46zm64 0v46h46v-46zm64 0v46h46v-46zm-192 64v46h46v-46zm64 0v46h46v-46zm64 0v13.27A25.38 25.38 0 0 1 278.27 265zm32.73 0A25.38 25.38 0 0 1 311 278.27V265zm31.27 0v46h46v-46zm-41 16c-3.973 0-7 3.027-7 7s3.027 7 7 7s7-3.027 7-7s-3.027-7-7-7m-23 16.73V311h13.27A25.38 25.38 0 0 1 265 297.73m46 0A25.38 25.38 0 0 1 297.73 311H311zM137 329v46h46v-46zm64 0v46h46v-46zm64 0v46h46v-46zm64 0v46h46v-46z">
-</path>
-</svg>
-<span>к работе</span>
-</span>
-</td>
-<td class="sk-list__td sk-list__c-kind">Задача</td>
-<td class="sk-list__td sk-list__c-id">
-<span class="sk-pill sk-pill--id">T-2</span>
-</td>
-<td class="sk-list__td sk-list__c-title">
-<a class="sk-list__title" href="#T-2">Промо</a>
-</td>
-</tr>
-</tbody>
-<tbody data-missing-rows="true">
-<tr class="sk-list__row" data-record-id="T-404" data-missing="true">
-<td class="sk-list__td sk-list__c-status">
-</td>
-<td class="sk-list__td sk-list__c-kind">
-</td>
-<td class="sk-list__td sk-list__c-id"> <span class="sk-pill sk-pill--id">T-404</span>
-</td>
-<td class="sk-list__td sk-list__c-title">
-<span class="sk-shell__tag" data-missing="true">нет в выгрузке</span>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<p class="sk-nested__note" role="status">показаны 2 из 3</p>
+<section class="bare__sec" data-kit="fresh">
+<h2 class="bare__h2">Свежесть</h2>
+<div class="bare__row">
+<time class="sk-fresh" data-tone="ok" datetime="2026-11-11T11:57:00.000Z" title="2026-11-11T11:57:00.000Z">3 мин назад</time>
+<time class="sk-fresh" data-tone="warn" datetime="2026-11-11T11:30:00.000Z" title="2026-11-11T11:30:00.000Z · дольше 10 мин — предупреждение" aria-label="30 мин назад, дольше 10 мин — предупреждение">
+<span class="sk-fresh__dot" aria-hidden="true">
+</span>30 мин назад</time>
+<time class="sk-fresh" data-tone="stale" datetime="2026-11-11T09:55:00.000Z" title="2026-11-11T09:55:00.000Z · дольше 60 мин — устарело" aria-label="2 ч назад, дольше 60 мин — устарело">
+<span class="sk-fresh__dot" aria-hidden="true">
+</span>2 ч назад<span class="sk-fresh__word">устарело</span>
+</time>
+<span class="sk-fresh" data-tone="none" title="Отметки времени нет: значение не заполнено — это не «давно»">времени нет</span>
 </div>
 </section>
 <section class="bare__sec" data-kit="chips">
@@ -956,15 +858,15 @@
 <span class="sk-field__label">Флаг</span>
 <span class="sk-field__seg" role="radiogroup">
 <label class="sk-field__opt">
-<input type="radio" name="_r_b_">
+<input type="radio" name="_r_8_">
 <span>Да</span>
 </label>
 <label class="sk-field__opt">
-<input type="radio" name="_r_b_">
+<input type="radio" name="_r_8_">
 <span>Нет</span>
 </label>
 <label class="sk-field__opt">
-<input type="radio" checked="" name="_r_b_">
+<input type="radio" checked="" name="_r_8_">
 <span>Не задано</span>
 </label>
 </span>

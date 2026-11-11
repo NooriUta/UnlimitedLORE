@@ -35,6 +35,8 @@ export function applySettings(root: AttrTarget, s: UserSettings, jar?: CookieJar
   // Peek по наведению (S9-10): выключено — атрибут; молчание — включено.
   setAttr(root, 'data-peek-hover', s.peek_hover ? null : 'off');
   setAttr(root, 'data-show-tech', s.show_tech ? 'on' : null);
+  // Вид вкладки «Граф» (GC-03): auto — атрибута нет, экран решает сам.
+  setAttr(root, 'data-graph-view', s.graph_view === 'auto' ? null : s.graph_view);
 
   const shared = readSharedPrefs(jar);
   if (shared.theme !== s.mode || shared.palette !== s.palette) {

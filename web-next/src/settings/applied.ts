@@ -48,3 +48,15 @@ export function appliedPeekHover(given?: Host): boolean {
 export function appliedShowTech(given?: Host): boolean {
   return host(given)?.getAttribute('data-show-tech') === 'on';
 }
+
+/**
+ * Вид вкладки «Граф», выбранный человеком (GC-03), — в словах kit:
+ * секторы → graph, список → links. Не выбирал (auto, атрибута нет) — undefined:
+ * тогда вид решает экран, подменять молчание выбором нельзя.
+ */
+export function appliedGraphView(given?: Host): 'graph' | 'links' | 'force' | 'obsidian' | undefined {
+  const v = host(given)?.getAttribute('data-graph-view');
+  if (v === 'sectors') return 'graph';
+  if (v === 'list') return 'links';
+  return v === 'force' || v === 'obsidian' ? v : undefined;
+}

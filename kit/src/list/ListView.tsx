@@ -65,6 +65,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { useNarrow } from '../core/narrow';
 import { ProgressCell } from './progress';
 import { SumCell, colKey } from './sum';
+import { FreshCell, useMinuteNow } from './fresh';
 import {
   CHIPS_INLINE, CHIPS_INLINE_NARROW, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
@@ -73,7 +74,7 @@ import {
 import type { FilterOp, ListGroup, ListState, ListViewKind, QuickItem } from './listModel';
 import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
 import { FIND_FROM as GROUP_FIND_FROM } from './FacetFilter';
-import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf } from './groupLabel';
+import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf, keyTitleMissing } from './groupLabel';
 import { applyFilterSet, describeFieldFilter, facetOf, matchText, toFilterSet } from './filterModel';
 import type { FieldFilter } from './filterModel';
 // Счётчики по всей выдаче (S9-01): правила, когда верить числам источника.
@@ -648,6 +649,10 @@ export function ListView({
   // действия строки (S4-11) — последней колонкой.
   const withSelect = mode && !baseColumns.includes('select') ? ['select', ...baseColumns] : baseColumns;
   const columns = rowActions?.length && !withSelect.includes('actions') ? [...withSelect, 'actions'] : withSelect;
+  // Свежесть (K4-FRESHNESS): ОДНИ часы на весь список, раз в минуту, и только
+  // когда колонка `fresh:` показана. Таймер на строку — тысяча интервалов у
+  // реестра в тысячу строк.
+  const freshNow = useMinuteNow(columns.some(c0 => c0.startsWith('fresh:')));
 
   const update = (patch: Partial<ListState>) => {
     if (patch.view !== undefined) setViewPicked(true);
@@ -1431,6 +1436,12 @@ export function ListView({
         // Сумма с охватом (S4-09): «12,5 д» или «12,5 д · у 9 из 14», и
         // «не заполнено» вместо нуля, когда не заполнено ни у кого.
         if (col.startsWith('sum:')) return <SumCell value={fieldValue(r, col.slice(4))} />;
+        // Свежесть (K4-FRESHNESS): «3 мин назад», тон — по порогам приложения
+        // list.fresh[<поле>]; «времени нет» словами, а не «давно».
+        if (col.startsWith('fresh:')) {
+          const f = col.slice(6);
+          return <FreshCell value={fieldValue(r, f)} now={freshNow} thresholds={config.list?.fresh?.[f]} />;
+        }
         // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
         // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это
         // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем.
@@ -1468,14 +1479,15 @@ export function ListView({
    */
   const boardBadges = (r: KitRecord): ReactNode => {
     const keys = columns
-      .filter(c0 => c0.startsWith('fields.'))
-      .filter(c0 => valueKey(fieldValue(r, c0)) !== '')
+      // Свежесть (K4-FRESHNESS) — тем же видом, что в строке списка.
+      .filter(c0 => c0.startsWith('fields.') || c0.startsWith('fresh:'))
+      .filter(c0 => valueKey(fieldValue(r, colKey(c0))) !== '')
       .slice(0, 3);
     if (keys.length === 0) return null;
     return (
       <span className="sk-board__badges" data-testid="board-badges">
         {keys.map(k => (
-          <span key={k} className="sk-board__badge" title={labels.keyTitle(k)}>{cell(k, r)}</span>
+          <span key={k} className="sk-board__badge" title={labels.keyTitle(colKey(k))}>{cell(k, r)}</span>
         ))}
       </span>
     );
@@ -2283,6 +2295,7 @@ export function ListView({
               <FacetFilter
                 key={k}
                 title={labels.keyTitle(k)}
+                untitled={keyTitleMissing(config, k)}
                 filter={fieldFilterOf(k)}
                 facet={src.from === 'all' ? facetFromAxis(src.axis) : page}
                 valueTitle={v => labels.valueTitle(k, v)}

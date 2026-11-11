@@ -247,6 +247,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     );
     return () => { live = false; };
   }, [modelType, fetchImpl]);
+  const modelCodes = useMemo(() => (modelStatuses?.items ?? []).map(s => s.code), [modelStatuses]);
   const config = useMemo(() => {
     const items = modelStatuses?.items ?? [];
     // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
@@ -348,8 +349,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const body = result.data;
   const data = useMemo(
     // «Сейчас» — время источника (заголовок Date), иначе часы браузера (K2-DATE-RANGE).
-    () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString()) : null),
-    [body, def],
+    // Статус строки сверяется с осью ТИПА из модели, а не с перечнем в коде
+    // (S4-STATUS-AXIS-CONFIG, 11.11): ось доходила до конфига, но не до чтения строки.
+    () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes }) : null),
+    [body, def, modelCodes],
   );
   // Переход на запись вне фильтра (слово владелицы 11.11.2026): открыта запись,
   // которой в загруженном нет, а закрытые скрыты, — фильтр снимается сам

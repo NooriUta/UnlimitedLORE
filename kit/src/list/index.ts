@@ -25,6 +25,8 @@ export * from './feedUnder';
 export * from './progress';
 // Сумма с охватом (S4-09): колонка sum:<поле> — «12,5 д · у 9 из 14».
 export * from './sum';
+// Свежесть ячейкой (K4-FRESHNESS): колонка fresh:<поле> — «3 мин назад», тон по порогам приложения.
+export * from './fresh';
 // Выделение: режим выбора, долгое нажатие (S4-10).
 export * from './listSelection';
 export * from './useLongPress';

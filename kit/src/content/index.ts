@@ -6,6 +6,7 @@ export * from './sanitizeHtml';
 export * from './sandboxFrameTheme';
 export * from './SandboxedHtmlFrame';
 export * from './MartProse';
+export * from './LiveBlock';
 export * from './TipTapField';
 export * from './markdownLossless';
 export * from './markdownRoundTrip';
