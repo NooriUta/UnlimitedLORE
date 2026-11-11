@@ -88,3 +88,6 @@
 .kitp__chips dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; }
 .kitp__chips dd { margin: 0; min-width: 0; }
 @media (max-width: 720px) { .kitp__chips { grid-template-columns: minmax(0, 1fr); } }
+
+/* S4-FIELD-EDITORS: витрина редакторов полей. */
+.kitp__fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; margin-bottom: 8px; }

@@ -13,15 +13,17 @@
 // отмеченные проекты (adm-sel). Ссылка открывает ту же карточку с тем же выбором.
 import { useMemo, useState } from 'react';
 import {
-  EmptyState, Forbidden, LoadError, Matrix, Pill, Skeleton, useKitLang, useLoadState, useUrlParam,
+  EmptyState, Forbidden, LoadError, Matrix, Pill, Skeleton, setUrlParams, useKitLang, useLoadState, useUrlParam,
   type MatrixCellState, type MatrixChange,
 } from '@seidr/kit';
 import { useAppT } from '../i18n';
 import { DangerBatch } from './DangerBatch';
+import { EffectiveAccess, PersonAgentsLine } from './AccessBlocks';
 import { RealmRolePanel } from './KcDanger';
 import {
-  buildChanges, fetchRoleMatrix, filterProjects, groupByRole, PERSON_SOURCES, personSourceCell, PROJECT_ROLES,
-  type PersonRoles, type RoleChange, type RolesData,
+  buildChanges, countAssignments, fetchRoleMatrix, filterProjects, groupByRole, PERSON_SOURCES, personSourceCell,
+  projectPersonCell, PROJECT_ROLES, roleCanWrite, roleHolders, roleSummary, splitByPerson,
+  type PersonChanges, type PersonRoles, type RoleChange, type RolesData,
 } from './roles';
 import './Admin.css';
 
@@ -32,12 +34,35 @@ export interface RolesScreenProps {
 /** Отмеченные проекты в адресе — через запятую (в slug запятой не бывает: SAFE_ID). */
 const SEL_SEP = ',';
 
+/** Разрез экрана в адресе: null — по человеку, all — все проекты × все люди, role — по ролям. */
+const BY_PARAM = 'adm-roles-by';
+type RolesBy = 'person' | 'all' | 'role';
+
 export function RolesScreen({ fetchImpl }: RolesScreenProps) {
   const t = useAppT();
   const [personKey, setPerson] = useUrlParam('adm-person');
+  const [byRaw, setBy] = useUrlParam(BY_PARAM);
+  const by: RolesBy = byRaw === 'all' ? 'all' : byRaw === 'role' ? 'role' : 'person';
   const res = useLoadState<RolesData>(signal => fetchRoleMatrix(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
   const data = res.data;
-  const [pending, setPending] = useState<{ kc_sub: string; changes: RoleChange[] } | null>(null);
+  // Очередь пачек: у пачки сервера один человек, а правка общей матрицы может
+  // задеть нескольких — тогда пачки идут по одной (S7B-11).
+  const [queue, setQueue] = useState<PersonChanges[]>([]);
+  const [seq, setSeq] = useState(0);
+  const enqueue = (items: PersonChanges[]) => { setQueue(items.filter(i => i.changes.length > 0)); setSeq(n => n + 1); };
+  const pending = queue[0] ?? null;
+  const pendingPerson = pending && data ? data.people.find(p => p.kc_sub === pending.kc_sub) ?? null : null;
+  const batch = pending && pendingPerson && (
+    <>
+      {queue.length > 1 && (
+        <p className="adm-note" data-tone="inf" role="status" data-testid="adm-roles-queue">
+          {t('admin.roles.queue', { n: queue.length - 1 })}
+        </p>
+      )}
+      <DangerBatch key={`${seq}-${pending.kc_sub}-${queue.length}`} person={pendingPerson} changes={pending.changes} fetchImpl={fetchImpl}
+        onClose={() => setQueue(q => q.slice(1))} onChanged={res.reload} />
+    </>
+  );
 
   let content;
   if (res.state === 'loading' && !data) content = <Skeleton lines={6} label={t('admin.roles.loading')} />;
@@ -49,6 +74,21 @@ export function RolesScreen({ fetchImpl }: RolesScreenProps) {
   } else if (res.state === 'error' || !data) content = <LoadError error={res.error} onRetry={res.reload} />;
   else if (data.people.length === 0) {
     content = <div data-testid="adm-roles-empty"><EmptyState title={t('admin.roles.empty')} hint={t('admin.roles.emptyHint')} /></div>;
+  } else if (by === 'all') {
+    content = (
+      <>
+        {data.truncated && <p className="adm-note" role="status">{t('admin.agents.truncated')}</p>}
+        <AllMatrix data={data} onPropose={enqueue} />
+        {batch}
+      </>
+    );
+  } else if (by === 'role') {
+    content = (
+      <>
+        {data.truncated && <p className="adm-note" role="status">{t('admin.agents.truncated')}</p>}
+        <RoleCards data={data} />
+      </>
+    );
   } else {
     const person = personKey ? data.people.find(p => p.kc_sub === personKey) ?? null : null;
     content = (
@@ -58,7 +98,7 @@ export function RolesScreen({ fetchImpl }: RolesScreenProps) {
           {data.people.map(p => (
             <button key={p.kc_sub} type="button" className="adm-chip" aria-pressed={p.kc_sub === personKey}
               data-testid={`adm-roles-person-${p.kc_sub}`}
-              onClick={() => { setPending(null); setPerson(p.kc_sub === personKey ? null : p.kc_sub); }}>
+              onClick={() => { setQueue([]); setPerson(p.kc_sub === personKey ? null : p.kc_sub); }}>
               {p.name} <b>{p.cells.length}</b>
             </button>
           ))}
@@ -71,31 +111,39 @@ export function RolesScreen({ fetchImpl }: RolesScreenProps) {
         )}
         {person && (
           <PersonCard person={person} data={data} fetchImpl={fetchImpl} onChanged={res.reload}
-            onPropose={changes => setPending({ kc_sub: person.kc_sub, changes })} />
+            onPropose={changes => enqueue([{ kc_sub: person.kc_sub, changes }])} />
         )}
-        {person && pending && pending.kc_sub === person.kc_sub && (
-          <DangerBatch person={person} changes={pending.changes} fetchImpl={fetchImpl}
-            onClose={() => setPending(null)} onChanged={res.reload} />
-        )}
+        {person && pending && pending.kc_sub === person.kc_sub && batch}
       </>
     );
   }
+
+  const byChip = (key: RolesBy, label: string) => (
+    <button type="button" role="radio" className="adm-chip" aria-checked={by === key} aria-pressed={by === key}
+      data-testid={`adm-roles-by-${key}`}
+      onClick={() => { setQueue([]); setBy(key === 'person' ? null : key); }}>{label}</button>
+  );
 
   return (
     <section className="adm" aria-labelledby="adm-roles-h">
       <h2 id="adm-roles-h" className="adm-h">{t('admin.roles.title')}</h2>
       <p className="adm-lead">{t('admin.roles.lead')}</p>
+      <div className="adm-chips" role="radiogroup" aria-label={t('admin.roles.by')}>
+        {byChip('person', t('admin.roles.by.person'))}
+        {byChip('all', t('admin.roles.by.all'))}
+        {byChip('role', t('admin.roles.by.role'))}
+      </div>
       {content}
     </section>
   );
 }
 
 function PersonCard({ person, data, onPropose, fetchImpl, onChanged }: {
-  fetchImpl?: typeof fetch;
-  onChanged?: () => void;
   person: PersonRoles;
   data: RolesData;
   onPropose: (changes: RoleChange[]) => void;
+  fetchImpl?: typeof fetch;
+  onChanged?: () => void;
 }) {
   const t = useAppT();
   const [view, setView] = useUrlParam('adm-view');
@@ -121,7 +169,136 @@ function PersonCard({ person, data, onPropose, fetchImpl, onChanged }: {
       {isMatrix
         ? <PersonMatrix person={person} data={data} onPropose={onPropose} />
         : <PersonGroups person={person} onPropose={onPropose} />}
+      {/* S7B-04: «почему видит / не видит» — тот же разбор сервера, что в «Кто где»
+          (GET /lore/admin/access, S7B-10), и скоуп его агентов (S7B-12). */}
+      <section className="adm-why" aria-label={t('admin.roles.why')} data-testid="adm-roles-why">
+        <PersonAgentsLine kcSub={person.kc_sub} isMe={false} fetchImpl={fetchImpl} />
+        <EffectiveAccess kcSub={person.kc_sub} projects={data.projects} fetchImpl={fetchImpl} />
+      </section>
     </article>
+  );
+}
+
+/**
+ * S7B-11: все проекты × все люди одной матрицей. Строка — проект (их много,
+ * строки листаются), колонка — человек. Ячейки на человека (Keycloak, Forgejo)
+ * — отдельной матрицей только на чтение: это не роль проекта.
+ */
+function AllMatrix({ data, onPropose }: { data: RolesData; onPropose: (items: PersonChanges[]) => void }) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const notAsked = t('admin.roles.notAsked');
+  const people = data.people.map(p => ({ key: p.kc_sub, title: p.name }));
+  const sources = useMemo(() => {
+    const s: string[] = [...PERSON_SOURCES];
+    for (const p of data.people) for (const c of p.personCells) if (c.source && !s.includes(c.source)) s.push(c.source);
+    return s;
+  }, [data]);
+  const propose = (changes: readonly MatrixChange[]) => {
+    if (changes.length > 0) onPropose(splitByPerson(changes));
+  };
+  return (
+    <div data-testid="adm-roles-all">
+      <p className="adm-count" data-testid="adm-roles-all-total">
+        {t('admin.roles.all.total', { p: data.projects.length, n: data.people.length, a: countAssignments(data) })}
+      </p>
+      <div data-testid="adm-roles-all-matrix">
+        <Matrix
+          rows={data.projects.map(p => ({ key: p, title: p }))}
+          cols={people}
+          cell={(row, col) => projectPersonCell(data, row, col, notAsked)}
+          options={PROJECT_ROLES.map(r => ({ value: r, title: r }))}
+          labels={{ rows: t('admin.roles.col.project'), cols: t('admin.col.person') }}
+          onPropose={propose}
+          lang={lang}
+        />
+      </div>
+      <p className="adm-hint">{t('admin.roles.all.hint')}</p>
+      <div data-testid="adm-roles-all-sources" role="group" aria-label={t('admin.roles.all.sources')}>
+        <h3 className="adm-access__h">{t('admin.roles.all.sources')}</h3>
+        <Matrix
+          rows={sources.map(s => ({ key: s, title: SOURCE_TITLE[s] ?? s }))}
+          cols={people}
+          cell={(src, kc) => {
+            const person = data.people.find(p => p.kc_sub === kc);
+            return personSourceCell(person?.personCells.find(c => (c.source ?? '') === src), data.sourcesAsked, src);
+          }}
+          options={[]}
+          labels={{ rows: t('admin.roles.sources.col'), cols: t('admin.col.person') }}
+          lang={lang}
+        />
+        <p className="adm-hint">{t('admin.roles.sources.hint')}</p>
+      </div>
+    </div>
+  );
+}
+
+/** S7B-04: карточка роли — что даёт и у кого есть. Выбор роли — в адресе (adm-role). */
+function RoleCards({ data }: { data: RolesData }) {
+  const t = useAppT();
+  const [role, setRole] = useUrlParam('adm-role');
+  const summary = useMemo(() => roleSummary(data), [data]);
+  const byRole = new Map(summary.map(s => [s.role, s]));
+  // Закрытый список ролей плюс роли из данных, которых в нём нет (не прячем чужое).
+  const roles = [...PROJECT_ROLES, ...summary.map(s => s.role).filter(r => !(PROJECT_ROLES as readonly string[]).includes(r))];
+  const holders = role ? roleHolders(data, role) : [];
+  const allChecked = data.people.every(p => p.state === 'checked') && data.sourcesAsked.length > 0;
+  const open = (kc: string) => setUrlParams({ [BY_PARAM]: null, 'adm-role': null, 'adm-person': kc });
+  return (
+    <>
+      <div className="adm-chips" role="group" aria-label={t('admin.roles.role.list')}>
+        {roles.map(r => {
+          const s = byRole.get(r);
+          return (
+            <button key={r} type="button" className="adm-chip" aria-pressed={r === role} data-testid={`adm-role-${r}`}
+              onClick={() => setRole(r === role ? null : r)}>
+              {r} <b>{s ? s.assignments : 0}</b>
+            </button>
+          );
+        })}
+      </div>
+      {!role && <p className="adm-hint">{t('admin.roles.role.pick')}</p>}
+      {role && (
+        <article className="adm-card" data-testid="adm-role-card" aria-label={role}>
+          <header className="adm-card__head">
+            <Pill>{role}</Pill>
+            {byRole.get(role) && (
+              <span className="adm-count">{t('admin.roles.role.count', { people: byRole.get(role)!.people, a: byRole.get(role)!.assignments })}</span>
+            )}
+          </header>
+          <p className="adm-verdict" data-testid="adm-role-grants" data-write={String(roleCanWrite(role))}>
+            {t(roleCanWrite(role) ? 'admin.roles.role.grantsWrite' : 'admin.roles.role.grantsRead', { role })}
+          </p>
+          <p className="adm-hint">{t('admin.roles.role.bypass')}</p>
+          <h3 className="adm-access__h">{t('admin.roles.role.holders')}</h3>
+          {holders.length === 0
+            ? (
+              <p className="adm-note" data-tone={allChecked ? 'inf' : 'wrn'} role="status" data-testid="adm-role-nobody">
+                {t(allChecked ? 'admin.roles.role.nobody' : 'admin.roles.role.nobodyUnverified', { role })}
+              </p>
+            )
+            : (
+              <ul className="adm-list">
+                {holders.map(h => (
+                  <li key={h.kc_sub} data-testid={`adm-role-holder-${h.kc_sub}`}>
+                    <details>
+                      <summary>
+                        <span className="adm-name">{h.name}</span>
+                        <span className="adm-count">{t('admin.roles.role.inProjects', { n: h.projects.length })}</span>
+                        <button type="button" className="adm-btn" data-testid={`adm-role-open-${h.kc_sub}`}
+                          onClick={e => { e.preventDefault(); open(h.kc_sub); }}>{t('admin.roles.role.open')}</button>
+                      </summary>
+                      <ul className="adm-plist">
+                        {h.projects.map(p => <li key={p}><span className="adm-mono">{p}</span></li>)}
+                      </ul>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            )}
+        </article>
+      )}
+    </>
   );
 }
 

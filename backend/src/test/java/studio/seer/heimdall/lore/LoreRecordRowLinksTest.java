@@ -88,7 +88,9 @@ class LoreRecordRowLinksTest {
             Map.entry("task", Map.of("closed_by_prs", x, "realizes_uc", x)),
             Map.entry("adr", Map.of("depends_on_ids", x, "blocks_ids", x, "supersedes_ids", x, "superseded_by_ids", x,
                 "implemented_in_ids", x, "release_ids", x, "justified_task_uids", x, "traced_by_ucs", x)),
-            Map.entry("spec", Map.of()), Map.entry("release", Map.of()), Map.entry("tech", Map.of()));
+            Map.entry("spec", Map.of()), Map.entry("release", Map.of()), Map.entry("tech", Map.of()),
+            // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
+            Map.entry("project", Map.of()));
         assertEquals(Set.copyOf(LoreRecordRegistry.TYPES), full.keySet(), "проверены все типы паспорта");
         for (Map.Entry<String, Map<String, Object>> e : full.entrySet()) {
             String type = e.getKey();

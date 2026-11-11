@@ -13,7 +13,7 @@ import {
 import { MartProse } from '@seidr/kit/content';
 import { MdInlineEditWithRefs } from './loreMdRefs';
 import { fetchSlice } from '../api/loreClient';
-import { knownRecordHref } from '../nav/loreRoutes';
+import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
@@ -197,7 +197,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   }, data: view.data, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
-    href: id => knownRecordHref(id, view.data.records, x => '#' + encodeURIComponent(x)), esc, md };
+    // Чипы проектов и компонентов шапки — паспорт своего типа (S4-29, 53а): тип берётся из
+    // поля, в котором чип пришёл; раньше чип вёл на «#код».
+    href: passportHref(view.data.records, contract?.values ?? {}, x => '#' + encodeURIComponent(x)), esc, md };
   return (
     <>
       {/*
