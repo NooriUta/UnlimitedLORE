@@ -435,7 +435,7 @@
   "admin.harness.dictError": "Could not read the harness dictionary ({reason}) — editing is unavailable, shown as is.",
   "admin.harness.offDict": "{code} — not in dictionary",
   "admin.harness.offDictNote": "not in dictionary",
-  "admin.who.title": "Who is where",
+  "admin.who.title": "People and their projects",
   "admin.who.lead": "How many projects each person is in, their role in each and their agents. An agent sees all of its owner’s projects, so a project runs the agents of all its members.",
   "admin.who.loading": "Gathering roles and agents",
   "admin.who.empty": "No project roles yet",
@@ -855,8 +855,8 @@
   "admin.wiz.person.roleOf": "Role in {project}",
   "admin.wiz.person.unverified": "unverified — not copied",
   "admin.wiz.person.diffLead": "The “what changes” diff appears here — the server computes it when you reach this step.",
-  "admin.wiz.person.checkLead": "Check on “Who is where” that the person sees their projects.",
-  "admin.wiz.person.openWho": "Open “Who is where”",
+  "admin.wiz.person.checkLead": "Check in “People and their projects” that the person sees their projects.",
+  "admin.wiz.person.openWho": "Open “People and their projects”",
   "admin.wiz.person.s.account": "Account",
   "admin.wiz.person.s.projects": "Projects",
   "admin.wiz.person.s.diff": "What changes",
@@ -921,5 +921,7 @@
   "admin.roles.danger.need": "Until the login is typed exactly, nothing can be applied.",
   "peek.kind.unknown": "record",
   "peek.err.noType": "record type is not set and cannot be recognised from the ID — cannot open",
-  "peek.sheetTitle": "Record {id}"
+  "peek.sheetTitle": "Record {id}",
+  "admin.projects.title": "Projects",
+  "admin.projects.lead": "Who is in each project, with which role, and whose agents work there. An agent sees all of its owner’s projects, so a project runs the agents of all its members. Expand a project to see who sees it and why."
 }
