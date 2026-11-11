@@ -5834,6 +5834,8 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
 .sk-news__more[hidden] { display: none; }
 /* цифры дня: критичное — кубиками, информационное — строкой-сноской */
 .sk-news__figs { display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 4px; }
+.sk-news__figs[data-compact] { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 0 0 2px; }
+.sk-news__figs[data-compact] .sk-news__balbar { max-width: 120px; }
 .sk-news__cubes { display: flex; flex-wrap: wrap; gap: 6px; }
 .sk-news__cube {
   display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 4px;
