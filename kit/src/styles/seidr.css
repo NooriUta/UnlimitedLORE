@@ -5993,6 +5993,26 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   letter-spacing: 0.04em;
 }
 
+/* S4-FIELD-EDITORS: редактор поля по виду — плотная строка формы. Поле ввода
+   на сенсорном вводе не мельче --fs-touch-input (иначе iOS зумит страницу). */
+.sk-field { display: grid; gap: 3px; margin: 0 0 8px; }
+.sk-field__label { font-size: var(--fs-xs); color: var(--t2); font-weight: 600; }
+.sk-field__req { color: var(--dng); }
+.sk-field__input { font: inherit; font-size: var(--fs-base); color: var(--t1); background: var(--bg1); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 4px 8px; min-height: max(var(--tap), 26px); }
+.sk-field__input[aria-invalid='true'] { border-color: var(--dng); }
+.sk-field__input--num { font-family: var(--mono); }
+.sk-field__row { display: flex; gap: 6px; align-items: center; }
+.sk-field__zone { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); }
+.sk-field__seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); width: max-content; }
+.sk-field__opt { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: var(--fs-sm); color: var(--t2); min-height: max(var(--tap), 22px); cursor: pointer; }
+.sk-field__opt input { margin: 0; }
+.sk-field__err { margin: 0; font-size: var(--fs-xs); color: var(--dng); }
+.sk-field__warn { margin: 0; font-size: var(--fs-xs); color: var(--wrn); }
+.sk-field__note { margin: 0; font-size: var(--fs-xs); color: var(--t3); }
+.sk-field--ro .sk-field__value { font-size: var(--fs-base); color: var(--t1); }
+@media (pointer: coarse) {
+  .sk-field__input { font-size: var(--fs-touch-input); }
+}
 /* S4-35 / ADR-LORE-049: показ колонки по модели. Ширина — по шагу содержимого,
    при сужении первой уходит наименее важная колонка (p4 → p3 → p2); p1 —
    «запись» и статус — не прячется никогда, поэтому класса у неё нет. */

@@ -576,6 +576,58 @@
 <button type="button" class="sk-btn sk-rec-chips__more" data-chips-more="" aria-expanded="false">ещё 3</button>
 </span>
 </section>
+<section class="bare__sec" data-kit="fields">
+<h2 class="bare__h2">Редакторы полей</h2>
+<div class="sk-field" data-kind="text">
+<label class="sk-field__label">Название<span class="sk-field__req" aria-hidden="true"> *</span>
+</label>
+<input aria-invalid="true" aria-required="true" class="sk-field__input" type="text" value="">
+<p class="sk-field__err">Обязательное поле</p>
+</div>
+<div class="sk-field" data-kind="number">
+<label class="sk-field__label">Оценка</label>
+<input class="sk-field__input sk-field__input--num" inputmode="decimal" type="text" value="1.5">
+</div>
+<div class="sk-field" data-kind="boolean">
+<span class="sk-field__label">Флаг</span>
+<span class="sk-field__seg" role="radiogroup">
+<label class="sk-field__opt">
+<input type="radio" name="_r_5_">
+<span>Да</span>
+</label>
+<label class="sk-field__opt">
+<input type="radio" name="_r_5_">
+<span>Нет</span>
+</label>
+<label class="sk-field__opt">
+<input type="radio" checked="" name="_r_5_">
+<span>Не задано</span>
+</label>
+</span>
+</div>
+<div class="sk-field" data-kind="datetime">
+<label class="sk-field__label">Когда</label>
+<span class="sk-field__row">
+<input class="sk-field__input" type="datetime-local" value="">
+<span class="sk-field__zone">UTC+03:00</span>
+</span>
+<p class="sk-field__warn">Желательно заполнить</p>
+</div>
+<div class="sk-field" data-kind="enum">
+<label class="sk-field__label">Приоритет</label>
+<select class="sk-field__input">
+<option value="">— не задано —</option>
+<option value="P1">P1</option>
+<option value="P2">P2</option>
+<option value="P9">«P9» нет в списке</option>
+</select>
+</div>
+<div class="sk-field sk-field--ro" data-kind="geo">
+<span class="sk-field__label">Гео</span>
+<span class="sk-field__value">55.75,37.62</span>
+<p class="sk-field__note">вид поля «geo» не поддерживается — только чтение</p>
+</div>
+</section>
 <section class="bare__sec" data-kit="content">
 <h2 class="bare__h2">MD / HTML</h2>
 <div class="sk-md">
