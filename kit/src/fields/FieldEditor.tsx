@@ -8,7 +8,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { kitT, useKitLang, type KitKey } from '../i18n';
 import {
   fieldKindOf, fromZonedIso, isEmptyValue, isRefValue, refText, isKnownKind, optionLabel, optionValue, parseNumberInput,
-  toZonedIso, zoneOffset, type FieldEditorDef, type RefValue,
+  toZonedIso, zoneOffset, type FieldEditorDef, type FieldOption, type RefValue,
 } from './fieldKinds';
 
 export interface FieldEditorProps {
@@ -160,7 +160,7 @@ export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinute
       control = (
         <select {...aria} className="sk-field__input" value={cur} onChange={e => onChange(e.target.value === '' ? null : e.target.value)}>
           <option value="">{t('kit.field.none')}</option>
-          {opts.map(o => <option key={optionValue(o)} value={optionValue(o)}>{optionLabel(o)}</option>)}
+          {renderOptions(opts)}
           {/* Значение вне списка не пропадает: его видно и его можно оставить. */}
           {cur !== '' && !known && <option value={cur}>{t('kit.field.notInList', { value: cur })}</option>}
         </select>
@@ -196,4 +196,19 @@ export function FieldEditor({ def, value, onChange, showRequired, tzOffsetMinute
       {hint}
     </div>
   );
+}
+
+/**
+ * Варианты одиночного выбора: с подписью группы — <optgroup> в порядке первого
+ * появления (S4-24: люди и агенты), без неё — плоским списком, как раньше.
+ */
+function renderOptions(opts: readonly FieldOption[]) {
+  const groupOf = (o: FieldOption) => (typeof o === 'string' ? undefined : o.group);
+  if (!opts.some(groupOf)) return opts.map(o => <option key={optionValue(o)} value={optionValue(o)}>{optionLabel(o)}</option>);
+  const order: (string | undefined)[] = [];
+  for (const o of opts) if (!order.includes(groupOf(o))) order.push(groupOf(o));
+  return order.map(g => {
+    const items = opts.filter(o => groupOf(o) === g).map(o => <option key={optionValue(o)} value={optionValue(o)}>{optionLabel(o)}</option>);
+    return g === undefined ? items : <optgroup key={g} label={g}>{items}</optgroup>;
+  });
 }

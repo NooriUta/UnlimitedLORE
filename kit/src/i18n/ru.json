@@ -139,6 +139,7 @@
   "kit.list.shownUnknown": "Показано {shown} · загружено {loaded}, всего неизвестно — выдача обрезана сервером",
   "kit.list.more": "ещё {n}",
   "kit.field.none": "— не задано —",
+  "kit.field.optionsFailed": "варианты не загрузились — править нельзя ({reason})",
   "kit.field.notInList": "«{value}» нет в списке",
   "kit.field.yes": "Да",
   "kit.field.no": "Нет",
