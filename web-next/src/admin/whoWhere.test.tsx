@@ -73,9 +73,9 @@ describe('UC-8 · экран', () => {
     expect(screen.getByTestId('adm-orphans').textContent).toContain('Потерянный');
   });
 
+  // S7B-28: «Проекты» — свой раздел меню (view="projects"), а не переключатель внутри экрана.
   it('«Проекты»: кто в проекте, роль, их агенты, и «вы: роль» для смотрящего', async () => {
-    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} meSub="u-fro" /></KitLangProvider>);
-    fireEvent.click(await screen.findByTestId('adm-by-projects'));
+    render(<KitLangProvider lang="ru"><WhoWhereScreen view="projects" fetchImpl={fake()} meSub="u-fro" /></KitLangProvider>);
     const mini = await screen.findByTestId('adm-project-AIDA/miniLORE');
     expect(mini.textContent).toMatch(/вы: reader/);
     expect(mini.textContent).toContain('omiloreadmin');
@@ -104,8 +104,8 @@ describe('UC-8 · экран', () => {
   });
 
   it('поиск в «Проектах»: по slug или участнику', async () => {
-    window.history.replaceState(null, '', '/?adm-by=projects&adm-q=frolova');
-    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
+    window.history.replaceState(null, '', '/?adm-q=frolova');
+    render(<KitLangProvider lang="ru"><WhoWhereScreen view="projects" fetchImpl={fake()} /></KitLangProvider>);
     expect(await screen.findByTestId('adm-project-AIDA/miniLORE')).toBeTruthy();
     expect(screen.queryByTestId('adm-project-NooriUta/UnlimitedLORE')).toBeNull();
   });
@@ -118,5 +118,36 @@ describe('UC-8 · экран', () => {
     fireEvent.click(within(empty).getByRole('button'));
     expect(new URLSearchParams(window.location.search).get('adm-q')).toBeNull();
     expect(screen.getByTestId('adm-person-u-owner')).toBeTruthy();
+  });
+
+  // S7B-28: два раздела вместо переключателя — у каждого свой заголовок, оба наполнены,
+  // переключателя «Люди / Проекты» внутри экрана больше нет (его место — меню).
+  it('«Люди и их проекты» — заголовок раздела, люди, агенты без владельца; переключателя оси нет', async () => {
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} meSub="u-owner" /></KitLangProvider>);
+    expect(await screen.findByTestId('adm-person-u-owner')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Люди и их проекты');
+    expect(screen.getByTestId('adm-person-u-owner').textContent).toMatch(/это вы/);
+    expect(screen.getByTestId('adm-orphans').textContent).toContain('Потерянный');
+    expect(screen.getByTestId('adm-who-q')).toBeTruthy();
+    expect(screen.queryByTestId('adm-by-projects')).toBeNull();
+    expect(screen.queryByTestId('adm-projects')).toBeNull();
+  });
+
+  it('«Проекты» — заголовок раздела, проекты, поиск, агенты без владельца; людей списком нет', async () => {
+    render(<KitLangProvider lang="ru"><WhoWhereScreen view="projects" fetchImpl={fake()} /></KitLangProvider>);
+    expect(await screen.findByTestId('adm-project-AIDA/miniLORE')).toBeTruthy();
+    expect(screen.getByTestId('adm-project-NooriUta/UnlimitedLORE')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Проекты');
+    expect(screen.getByTestId('adm-orphans').textContent).toContain('Потерянный');
+    expect(screen.getByTestId('adm-who-q')).toBeTruthy();
+    expect(screen.queryByTestId('adm-by-people')).toBeNull();
+    expect(screen.queryByTestId('adm-people')).toBeNull();
+  });
+
+  it('старый параметр оси ?adm-by=projects на экране «Люди» не переключает его тайком', async () => {
+    window.history.replaceState(null, '', '/?adm-by=projects');
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
+    expect(await screen.findByTestId('adm-person-u-owner')).toBeTruthy();
+    expect(screen.queryByTestId('adm-projects')).toBeNull();
   });
 });

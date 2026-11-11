@@ -204,9 +204,24 @@ const SPRINT_SUMS = [
   ['actual_total', 'actual_days_total', 'lists.field.actualTotal'],
 ] as const;
 
+/**
+ * `body_md` — самостоятельный раздел тела записи, а не копия другого раздела:
+ * схема называет его полем группы body, он непуст и не совпадает ни с одним
+ * другим полем той же группы.
+ */
+export function bodyMdIsOwnSection(c: LoreRecord1): boolean {
+  const body = c.values.body_md;
+  if (typeof body !== 'string' || !body.trim()) return false;
+  const bodyFields = c.schema.fields.filter(f => f.group === 'body');
+  if (!bodyFields.some(f => f.key === 'body_md')) return false;
+  return !bodyFields.some(f => f.key !== 'body_md' && c.values[f.key] === body);
+}
+
 export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   const { type, id } = c.record;
   const { title, body_md, ...fields } = c.values;
+  const bodyIsOwn = bodyMdIsOwnSection(c);
+  if (bodyIsOwn) fields.body_md = body_md;
   const record: KitRecord = {
     id, kind: type, title: typeof title === 'string' && title ? title : id, status: c.record.status,
     body_md: typeof body_md === 'string' && body_md ? body_md : undefined, updated_at: c.record.updated_at ?? undefined, fields,
@@ -264,7 +279,12 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   const propFields = propRels.map(r => ({
     key: r.key, title: r.label, type: 'ref' as const,
   }));
-  const sections = c.schema.fields.filter(f => f.group === 'body' && f.key !== 'body_md');
+  // body_md в разделах — только когда это НАСТОЯЩЕЕ тело, а не копия (прод
+  // v1.17.13, 11.11: у решения «Контент» был пуст). Копия — когда его текст
+  // совпадает с другим разделом тела (у задачи body_md = note_md, у спринта =
+  // context_md); тогда второй раз его не показываем. Иначе (у решения body_md —
+  // само решение, rationale_md — обоснование) это первый раздел.
+  const sections = c.schema.fields.filter(f => f.group === 'body' && (f.key !== 'body_md' || bodyIsOwn));
   // Разделы текста — ДАННЫМИ, а не своей функцией рисования (S5-06).
   //
   // Было: функция, которая печатала разделы текстом. И это тихо отнимало

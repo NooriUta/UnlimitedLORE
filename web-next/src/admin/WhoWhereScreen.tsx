@@ -1,8 +1,11 @@
-// Экран «Кто где» админки v2 (UC-8, SPEC-ADMIN-LORE-UC 1.2.0).
-// Два разворота одних и тех же данных:
-//   • «Люди» — в скольких проектах человек, его роль в каждом и его агенты;
-//   • «Проекты» — кто в проекте, с какой ролью и чьи агенты там работают,
-//     плюс «это вы» для смотрящего.
+// Экраны «Люди и их проекты» и «Проекты» админки v2 (UC-8, SPEC-ADMIN-LORE-UC 1.2.0).
+// Два разворота одних и тех же данных — два раздела меню (S7B-28, владелица
+// 11.11: «люди и проекты будут двумя разделами»; раньше — один раздел «Кто где»
+// с переключателем осей ?adm-by=…):
+//   • adm-who «Люди и их проекты» — в скольких проектах человек, его роль в
+//     каждом и его агенты;
+//   • adm-projects «Проекты» — кто в проекте, с какой ролью и чьи агенты там
+//     работают, плюс «вы: роль» для смотрящего. Точка роста раздела проектов.
 // Строки свёрнуты (details): в шапке — числа, раскрытие — подробности. Так
 // пять человек и двадцать пять проектов помещаются на экран, а не в ленту.
 import { useMemo, type SyntheticEvent } from 'react';
@@ -13,16 +16,19 @@ import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import './Admin.css';
 
+/** Ось экрана: раздел «Люди и их проекты» или раздел «Проекты». */
+export type WhoWhereView = 'people' | 'projects';
+
 export interface WhoWhereScreenProps {
+  /** Какой раздел рисуем; по умолчанию — «Люди и их проекты». */
+  view?: WhoWhereView;
   fetchImpl?: typeof fetch;
   /** kc_sub смотрящего — для пометки «это вы». */
   meSub?: string | null;
 }
 
-export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps) {
+export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: WhoWhereScreenProps) {
   const t = useAppT();
-  const [by, setBy] = useUrlParam('adm-by');
-  const view = by === 'projects' ? 'projects' : 'people';
   // Раскрытая строка — в адресе (?adm-open=kc_sub | slug): ссылка открывает тот же вопрос «почему».
   const [open, setOpen] = useUrlParam('adm-open');
   // S7B-25: поиск — в адресе (?adm-q=…), ссылка открывает ту же выборку.
@@ -147,15 +153,9 @@ export function WhoWhereScreen({ fetchImpl, meSub = null }: WhoWhereScreenProps)
   }
 
   return (
-    <section className="adm" aria-labelledby="adm-who-h">
-      <h2 id="adm-who-h" className="adm-h">{t('admin.who.title')}</h2>
-      <p className="adm-lead">{t('admin.who.lead')}</p>
-      <div className="adm-chips" role="radiogroup" aria-label={t('admin.who.by')}>
-        <button type="button" role="radio" className="adm-chip" aria-checked={view === 'people'} aria-pressed={view === 'people'}
-          data-testid="adm-by-people" onClick={() => setBy(null)}>{t('admin.who.byPeople')}</button>
-        <button type="button" role="radio" className="adm-chip" aria-checked={view === 'projects'} aria-pressed={view === 'projects'}
-          data-testid="adm-by-projects" onClick={() => setBy('projects')}>{t('admin.who.byProjects')}</button>
-      </div>
+    <section className="adm" aria-labelledby="adm-who-h" data-view={view}>
+      <h2 id="adm-who-h" className="adm-h">{t(view === 'projects' ? 'admin.projects.title' : 'admin.who.title')}</h2>
+      <p className="adm-lead">{t(view === 'projects' ? 'admin.projects.lead' : 'admin.who.lead')}</p>
       <label className="adm-field adm-who__q">
         <span className="adm-field__l">{t('admin.who.q')}</span>
         <input className="adm-input" type="search" value={query ?? ''} data-testid="adm-who-q"
