@@ -68,11 +68,28 @@ export interface ScopePickerProps {
    * проектах машины»), kit делит только по `mine`. Роли не проверены — групп нет.
    */
   groups?: { mine: string; other: string };
+  /**
+   * Слова о выбираемом от приложения (долг kit из S7B-ACL-3): по умолчанию
+   * picker говорит о проектах («Все проекты», «Найти проект», «Проектов: {n}»),
+   * а выбирать им можно и людей, и машины. `{n}` в `many` подставляется.
+   * Не задано (или задано не всё) — недостающие слова прежние, про проекты.
+   */
+  labels?: ScopeLabels;
   /** Телефон — лист снизу; иначе поповер. Не задан — по ширине экрана (useNarrow). */
   narrow?: boolean;
   /** Язык поверх KitLangProvider. */
   lang?: KitLang;
   className?: string;
+}
+
+/** Подписи ScopePicker от приложения — см. `ScopePickerProps.labels`. */
+export interface ScopeLabels {
+  /** «Все …» — кнопка в диалоге и итог «ничего не выбрано» (с числом: «{all} · {n}»). */
+  all?: string;
+  /** Поле поиска: подпись и подсказка. */
+  search?: string;
+  /** Итог «выбрано несколько»; `{n}` — сколько. */
+  many?: string;
 }
 
 /** Число своих — только от приложения; нет числа — нет и цифры в подписи. */
@@ -81,9 +98,11 @@ function knownCount(n: number | undefined): number | null {
 }
 
 /** Скрытое — числом (S4-23): «Все проекты · 23», если число проектов известно. */
-function summaryText(lang: KitLang, s: ScopeSummary, total = 0, mineCount?: number): string {
+function summaryText(lang: KitLang, s: ScopeSummary, total = 0, mineCount?: number, labels?: ScopeLabels): string {
   switch (s.kind) {
-    case 'all': return total > 0 ? kitT(lang, 'kit.scope.allN', { n: total }) : kitT(lang, 'kit.scope.all');
+    case 'all':
+      if (labels?.all) return total > 0 ? `${labels.all} · ${total}` : labels.all;
+      return total > 0 ? kitT(lang, 'kit.scope.allN', { n: total }) : kitT(lang, 'kit.scope.all');
     // «Все мои» без числа читается как «всё, что есть». Число своих знает
     // приложение; не сказало — говорим, что не посчитали, а не печатаем счёт
     // по загруженному списку (он бывает обрезан) и не ставим ноль.
@@ -94,7 +113,9 @@ function summaryText(lang: KitLang, s: ScopeSummary, total = 0, mineCount?: numb
         : kitT(lang, 'kit.scope.summary.mine', { n: own });
     }
     case 'one': return s.title;
-    case 'many': return kitT(lang, 'kit.scope.summary.many', { n: s.count });
+    case 'many': return labels?.many
+      ? labels.many.split('{n}').join(String(s.count))
+      : kitT(lang, 'kit.scope.summary.many', { n: s.count });
   }
 }
 
@@ -110,7 +131,7 @@ export function ScopePicker(props: ScopePickerProps) {
 
 function ScopePickerInner({
   label, icon = ICON_CANON.scopeAll, options, value, onChange, state = 'ok', error, onRetry, completeness,
-  forbiddenReason, mine = 'known', mineHint, mineCount, groups, narrow: narrowProp, lang = 'ru', className,
+  forbiddenReason, mine = 'known', mineHint, mineCount, groups, labels, narrow: narrowProp, lang = 'ru', className,
 }: ScopePickerProps) {
   const narrow = useNarrow(narrowProp);
   const name = label ?? kitT(lang, 'kit.scope.label');
@@ -118,7 +139,7 @@ function ScopePickerInner({
   const trigger = useRef<HTMLButtonElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const summary = summarizeScope(value, options, mine === 'known');
-  const sumText = summaryText(lang, summary, options.length, mineCount);
+  const sumText = summaryText(lang, summary, options.length, mineCount, labels);
 
   const close = (refocus = true) => {
     setOpen(false);
@@ -150,6 +171,7 @@ function ScopePickerInner({
       mineHint={mineHint}
       mineCount={mineCount}
       groups={groups}
+      labels={labels}
     />
   );
 
@@ -212,11 +234,14 @@ interface BodyProps {
   mineHint?: string;
   mineCount?: number;
   groups?: { mine: string; other: string };
+  labels?: ScopeLabels;
 }
 
 function ScopeBody({
-  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount, groups,
+  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount, groups, labels,
 }: BodyProps) {
+  const searchText = labels?.search || kitT(lang, 'kit.scope.search');
+  const allText = labels?.all || kitT(lang, 'kit.scope.all');
   const [query, setQuery] = useState('');
   const searchId = useId();
   const mineKnown = mine === 'known';
@@ -325,12 +350,12 @@ function ScopeBody({
 
   return (
     <div className="sk-scope__body">
-      <label className="sk-sr" htmlFor={searchId}>{kitT(lang, 'kit.scope.search')}</label>
+      <label className="sk-sr" htmlFor={searchId}>{searchText}</label>
       <input
         id={searchId}
         type="search"
         className="sk-scope__search"
-        placeholder={kitT(lang, 'kit.scope.search')}
+        placeholder={searchText}
         value={query}
         disabled={!hasData}
         onChange={e => setQuery(e.target.value)}
@@ -352,7 +377,7 @@ function ScopeBody({
           onClick={() => onChange([])}
         >
           <GameIcon slug={ICON_CANON.scopeAll} size={13} />
-          {kitT(lang, 'kit.scope.all')}
+          {allText}
         </button>
       </div>
       {mineNote && <p className="sk-scope__note sk-scope__note--wrn" data-testid="kit-scope-minenote">{mineNote}</p>}
