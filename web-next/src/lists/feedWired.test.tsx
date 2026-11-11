@@ -19,7 +19,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons, type UrlWindow } from '@seidr/kit';
 import { validateKitConfig } from '@seidr/kit/core';
-import { LIST_SCREENS, type ListScreenId } from './screens';
+import { FEEDS, LIST_SCREENS, type ListScreenId } from './screens';
+import type { FeedSpec } from './feed';
 import { ListScreen } from '../pages/ListScreen';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -154,6 +155,43 @@ describe('K2-FEED-BODY-MORE · тело: первые 3 абзаца, остал
     expect(paths.filter(p => p.startsWith('/lore/record/'))).toEqual(['/lore/record/task/S1/T-1']);
     // Повод из связей паспорта: «обоснована ADR» встаёт у записи.
     await waitFor(() => expect(item(container, 'S1/T-1').querySelector('.sk-feed__ref')?.textContent).toBe('ADR-X'));
+  });
+
+  // Голова тела на сервере (K2-FEED-BODY-MORE): срез отдаёт первые 3 абзаца
+  // (body_head) и сколько ещё (body_rest/body_more) — тяжёлое тело в строку не едет.
+  // Было: у задач, ADR, решений, спек и фич до раскрытия не было видно НИЧЕГО.
+  const TASKS_HEAD = {
+    rows: [
+      { ...TASKS.rows[0], body_head: ['заметка: абзац 1', 'заметка: абзац 2', 'заметка: абзац 3'], body_rest: 2, body_more: true },
+      { ...TASKS.rows[1], body_head: ['коротко: абзац 1'], body_rest: 0, body_more: false },
+    ],
+    truncated: false,
+  };
+
+  it('голова тела в строке среза (задача): три абзаца сразу без паспорта; «Ещё 2» грузит остаток одним паспортом', async () => {
+    const { fn, paths } = net(TASKS_HEAD);
+    const { container } = render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('?lv=feed')} />);
+    await waitFor(() => expect(shown(container, 'S1/T-1')).toHaveLength(3));
+    expect(shown(container, 'S1/T-1')[0]).toBe('заметка: абзац 1');
+    expect(paths.filter(p => p.startsWith('/lore/record/'))).toEqual([]);
+    const more = item(container, 'S1/T-1').querySelector('.sk-feed__bodymore') as HTMLElement;
+    expect(more.textContent).toMatch(/2/);
+    fireEvent.click(more);
+    await waitFor(() => expect(shown(container, 'S1/T-1')).toHaveLength(5));
+    expect(paths.filter(p => p.startsWith('/lore/record/'))).toEqual(['/lore/record/task/S1/T-1']);
+  });
+
+  it('голова — всё тело (остатка нет): абзацы видны, «Ещё» не обещается', async () => {
+    const { fn } = net(TASKS_HEAD);
+    const { container } = render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('?lv=feed')} />);
+    await waitFor(() => expect(shown(container, 'S1/T-2')).toEqual(['коротко: абзац 1']));
+    expect(item(container, 'S1/T-2').querySelector('.sk-feed__bodymore')).toBeNull();
+  });
+
+  it('разделы без тела в строке (задачи, ADR, решения, спеки, фичи) читают голову сервера', () => {
+    for (const id of ['tasks', 'adrs', 'decisions', 'specs', 'features'] as const) {
+      expect((FEEDS[id] as FeedSpec).headInRow, id).toBe(true);
+    }
   });
 
   it('отказ паспорта — причина у записи и повтор, а не пустое тело', async () => {
