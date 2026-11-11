@@ -12,7 +12,7 @@ import {
 } from '@seidr/kit';
 import { MartProse } from '@seidr/kit/content';
 import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
-import { loreRefPeek } from './lorePeek';
+import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
@@ -223,6 +223,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     : view.config;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf);
+  const graphPeek = loreListPeek(lang, id => view.data.records.find(r => r.id === id)?.kind ?? null);
   const ctx: KitCtx = { config: {
     ...withOptions,
     // Цикл статусов из модели ГЛАВНЕЕ умолчания приложения: умолчание —
@@ -231,6 +232,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // причина уже названа в строке замечаний.
     statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
     hooks: { ...baseConfig.hooks, onSave, onRelation },
+    // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
+    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render } : baseConfig.graph,
   }, data: view.data, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.

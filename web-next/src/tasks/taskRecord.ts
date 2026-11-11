@@ -4,6 +4,7 @@
 // одинокий код принадлежит многим спринтам сразу.
 import { statusMeta, type KitConfig, type KitData, type KitEdge, type KitJournalEntry, type KitLang, type KitRecord } from '@seidr/kit';
 import { taskT, type TaskReadKey } from './taskRead.i18n';
+import { appliedGraphView } from '../settings/applied';
 
 /** Строка /lore/slice/tasks_of_sprint (поля — как в LoreSlices.java). */
 export interface SprintTaskRow {
@@ -162,7 +163,8 @@ export function taskConfig(lang: KitLang): KitConfig {
       TAGGED_WITH: { label: t('task.edge.TAGGED_WITH'), color: 'var(--inf)' },
       REALIZES: { label: t('task.edge.REALIZES'), color: 'var(--suc)' },
     },
-    graph: { depth: 1, limit: 60, colorBy: 'type' },
+    // Вид вкладки «Граф» по умолчанию — личная настройка человека (GC-03).
+    graph: { depth: 1, limit: 60, colorBy: 'type', ...(appliedGraphView() ? { view: appliedGraphView() } : {}) },
     // Чтение (S5-04): статус не меняется, пока S5-05 не подключит сохранение.
     roles: { reader: { canEdit: false, canStatus: false } },
     statuses: {
