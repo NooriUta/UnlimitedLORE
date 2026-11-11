@@ -1259,6 +1259,17 @@ public class AidaLoreResource extends LoreResourceBase {
             });
             unis.add(u);
         }
+        // S9-03: закреплённые значения оси релиза (текущие релизы) — тем же ответом.
+        // Сбой этого запроса не роняет счётчики: он становится pinned_unavailable.
+        final int pinnedAt = LoreListFacets.wantsPinned(axes) ? unis.size() : -1;
+        if (pinnedAt >= 0) {
+            MartQuery pq = new MartQuery("sql", LoreListFacets.CURRENT_RELEASES_SQL, null, -1);
+            unis.add(client.query(db, basicAuth(), pq).map(res -> (Object) sliceBody(res))
+                .onFailure().recoverWithItem(ex -> {
+                    LoreError err = LoreUpstream.error(ex);
+                    return err.error() + (err.detail() == null ? "" : ": " + err.detail());
+                }));
+        }
         return Uni.combine().all().unis(unis).with(results -> {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> base = (Map<String, Object>) results.get(0);
@@ -1277,6 +1288,16 @@ public class AidaLoreResource extends LoreResourceBase {
                     }
                 }
                 Map<String, Object> out = LoreListFacets.assemble(id, axes, base, perAxis, errors, groupBy, filters);
+                if (pinnedAt >= 0) {
+                    Object pr = results.get(pinnedAt);
+                    if (pr instanceof Map<?, ?> pm && pm.get("rows") instanceof List<?> pl) {
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> prows = (List<Map<String, Object>>) pl;
+                        LoreListFacets.putPinned(out, axes, LoreListFacets.pinnedReleases(prows, rowScope), null);
+                    } else {
+                        LoreListFacets.putPinned(out, axes, null, String.valueOf(pr));
+                    }
+                }
                 if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
                 return noStore(Response.ok(out));
             })

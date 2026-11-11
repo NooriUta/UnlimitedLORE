@@ -282,6 +282,7 @@ function tasksConfig(lang: KitLang): KitConfig {
         fields: [
           { key: 'sprint', title: f(lang, 'sprint'), type: 'ref' },
           { key: 'components', title: f(lang, 'components'), type: 'ref' },
+          { key: 'release', title: f(lang, 'release'), type: 'ref' },
           { key: 'effort', title: f(lang, 'effort'), type: 'number' },
         ],
       },
@@ -302,11 +303,11 @@ function tasksConfig(lang: KitLang): KitConfig {
         { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
         { id: 'no-sprint', title: appT(lang, 'lists.quick.noSprint'), filter: { sprint: '' } },
       ],
-      filters: [STATUS_FACET, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
-      groupings: ['status', LORE_FILTER_FIELDS.sprint],
-      // Спринтов много — разрез по спринту свёрнут с первого показа (S9-02).
-      collapsedGroupings: [LORE_FILTER_FIELDS.sprint],
-      columns: ['id', 'title', 'status', 'sprint', 'components', 'effort', 'updated_at'],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
+      groupings: ['status', LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
+      // Спринтов и релизов много — эти разрезы свёрнуты с первого показа (S9-02).
+      collapsedGroupings: [LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
+      columns: ['id', 'title', 'status', 'release', 'sprint', 'components', 'effort', 'updated_at'],
     },
   };
 }
