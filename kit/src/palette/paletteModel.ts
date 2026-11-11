@@ -168,6 +168,29 @@ export function mergeRemote(local: readonly PaletteItem[], remote: readonly KitR
   return out;
 }
 
+/** Пилюля фильтра по типам в поиске (S4-14): тип, подпись и сколько записей этого типа в выдаче. */
+export interface KindFacet {
+  kind: string;
+  title: string;
+  n: number;
+}
+
+/**
+ * Типы выдачи для фильтра «Типы» (S4-14, слово владелицы 11.11.2026: «верните
+ * фильтры по типам хотя бы в свёрнутом виде»). Порядок — по числу, при равенстве
+ * по подписи: самый частый тип первым. Запись без типа (только «недавнее») не считается.
+ */
+export function kindFacets(items: readonly PaletteItem[]): KindFacet[] {
+  const by = new Map<string, KindFacet>();
+  for (const i of items) {
+    if (i.type !== 'record' || !i.kind) continue;
+    const f = by.get(i.kind) ?? { kind: i.kind, title: i.kindTitle || i.kind, n: 0 };
+    f.n += 1;
+    by.set(i.kind, f);
+  }
+  return [...by.values()].sort((a, b) => b.n - a.n || a.title.localeCompare(b.title));
+}
+
 export interface SearchInput {
   query: string;
   data: KitData;

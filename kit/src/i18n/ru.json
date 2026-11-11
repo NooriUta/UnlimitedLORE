@@ -287,6 +287,8 @@
   "kit.palette.more": "Показано {shown} из {total} — уточните запрос",
   "kit.palette.commandFailed": "Команда «{title}» не выполнилась: {reason}",
   "kit.palette.hint": "↑↓ — выбор · Enter — открыть · Esc — закрыть",
+  "kit.palette.kinds": "Типы",
+  "kit.palette.kindsOn": "Типы · {n}",
   "kit.palette.action": "действие",
   "kit.palette.targetRecord": "Над записью {id}",
   "kit.palette.targetSelection": "Выбрано: {n}",
