@@ -14,8 +14,9 @@ import { RotatePanel } from './KcDanger';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  fetchAgents, filterAgents, harnessCounts, HARNESS_NONE, offRegistry, setAgentHarness, setAgentMachine,
-  type AgentRow, type AgentsData,
+  agentWhy, fetchAgentOrphans, fetchAgents, filterAgents, graphOrphans, harnessCounts, HARNESS_NONE, offRegistry,
+  setAgentHarness, setAgentMachine,
+  type AgentRow, type AgentsData, type KcOrphan,
 } from './agents';
 import './Admin.css';
 
@@ -85,6 +86,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                   {openAgent === r.actor_id && (
                     <tr data-testid={`adm-agent-row-${r.actor_id}`}>
                       <td colSpan={6}>
+                        <AgentWhyLine row={r} />
                         <MachineEditor row={r} fetchImpl={fetchImpl} onSaved={res.reload} />
                         {/* S7B-03: ротация секрета — дифф → ввод clientId → секрет один раз; отменить нельзя. */}
                         <RotatePanel clientId={r.client_id} fetchImpl={fetchImpl} />
@@ -98,6 +100,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
             </tbody>
           </table>
         </div>
+        <OrphansBlock rows={data.rows} fetchImpl={fetchImpl} />
       </>
     );
   }
@@ -106,6 +109,85 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
       <h2 id="adm-agents-h" className="adm-h">{t('admin.agents.title')}</h2>
       <p className="adm-lead">{t('admin.agents.lead')}</p>
       {body}
+    </section>
+  );
+}
+
+/**
+ * S7B-04: почему агент видит проекты — цепочка сервера словами: учётка →
+ * агент → владелец → его проекты; пишет по профилю (D4). Список проектов —
+ * ниже, в AgentProjectsPanel (ответ сервера).
+ */
+function AgentWhyLine({ row }: { row: AgentRow }) {
+  const t = useAppT();
+  const why = agentWhy(row);
+  const text = why.kind === 'inherits'
+    ? t('admin.agentWhy.inherits', { owner: why.owner, scope: why.scope ?? t('admin.agentWhy.noScope') })
+    : why.kind === 'noowner' ? t('admin.agentWhy.noowner') : t('admin.agentWhy.noclient');
+  return (
+    <p className={why.kind === 'inherits' ? 'adm-sub' : 'adm-note'} data-tone={why.kind === 'inherits' ? undefined : 'wrn'}
+      data-testid="adm-agent-why" data-why={why.kind}>
+      <b>{t('admin.agentWhy.title')}:</b> {text}
+    </p>
+  );
+}
+
+/**
+ * S7B-16: находки детектора осиротевших агентов.
+ *   • граф — агенты без владельца (из того же agent_owners, без запроса);
+ *   • Keycloak — GET /lore/kc/agent-orphans: клиенты с сервисной учёткой без
+ *     агента в графе. «Сирот нет» — только если KC ответил; 403, «KC не
+ *     настроен» (503 KC_NOT_CONFIGURED) и сбой — каждое своими словами.
+ */
+function OrphansBlock({ rows, fetchImpl }: { rows: AgentRow[]; fetchImpl?: typeof fetch }) {
+  const t = useAppT();
+  const lonely = graphOrphans(rows);
+  const res = useLoadState<KcOrphan[]>(signal => fetchAgentOrphans(signal, fetchImpl), [fetchImpl]);
+  const err = res.error;
+  let kc;
+  if (res.state === 'forbidden' || (err instanceof LoreHttpError && err.status === 403)) {
+    kc = <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-orphans-kc-forbidden">{t('admin.orphans.kcForbidden')}</p>;
+  } else if (err instanceof LoreHttpError && err.status === 503 && err.code === 'KC_NOT_CONFIGURED') {
+    kc = <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-orphans-kc-unconfigured">{t('admin.orphans.kcUnconfigured')}</p>;
+  } else if (res.state === 'error' || (err && !res.data)) {
+    const reason = err instanceof LoreHttpError ? (err.detail || err.message) : err instanceof Error ? err.message : String(err);
+    kc = <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-orphans-kc-error">{t('admin.orphans.kcError', { reason })}</p>;
+  } else if (!res.data) {
+    kc = <Skeleton lines={2} label={t('admin.orphans.kcLoading')} />;
+  } else if (res.data.length === 0) {
+    kc = <p className="adm-sub" data-testid="adm-orphans-kc-none">{t('admin.orphans.kcNone')}</p>;
+  } else {
+    kc = (
+      <>
+        <ul className="adm-plist">
+          {res.data.map(o => (
+            <li key={o.clientId} data-testid={`adm-orphan-kc-${o.clientId}`} data-enabled={o.enabled === null ? undefined : String(o.enabled)}>
+              <span className="adm-mono">{o.clientId}</span>
+              {o.enabled === false && <span className="adm-missing"> · {t('admin.orphans.disabled')}</span>}
+            </li>
+          ))}
+        </ul>
+        <p className="adm-hint">{t('admin.orphans.kcHint')}</p>
+      </>
+    );
+  }
+  return (
+    <section className="adm-access" aria-labelledby="adm-orphans-h" data-testid="adm-orphans-box">
+      <h3 id="adm-orphans-h" className="adm-access__h">{t('admin.orphans.title')}</h3>
+      <div data-testid="adm-orphans-graph">
+        {lonely.length === 0
+          ? <p className="adm-sub">{t('admin.orphans.graphNone')}</p>
+          : (
+            <p className="adm-note" data-tone="wrn" role="status">
+              {t('admin.orphans.graph', { n: lonely.length })}{' '}
+              {lonely.map(a => <Pill key={a.actor_id} variant="id">{a.name ?? a.actor_id}</Pill>)}
+            </p>
+          )}
+      </div>
+      <div data-testid="adm-orphans-kc" role="group" aria-label={t('admin.orphans.kc')}>
+        <h4 className="adm-field__l">{t('admin.orphans.kc')}</h4>
+        {kc}
+      </div>
     </section>
   );
 }

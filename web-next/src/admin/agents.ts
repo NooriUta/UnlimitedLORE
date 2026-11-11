@@ -16,6 +16,7 @@
 // «Не указан» и «не привязана» — честные состояния, а не пустые клетки.
 import { loreFetch } from '../auth/session';
 import { fetchSlice, LoreHttpError, type SliceBody } from '../api/loreSlice';
+import { getJson } from './actions';
 
 export interface AgentRow {
   actor_id: string;
@@ -152,6 +153,50 @@ export async function setAgentMachine(
 ): Promise<void> {
   const id = (machineId ?? '').trim();
   await postActorOwner({ actor_id: row.actor_id, client_id: row.client_id, kc_sub: row.owner_kc_sub, machine_id: id }, fetchImpl);
+}
+
+// ── S7B-16: находки детектора осиротевших агентов ─────────────────────────
+
+/** Клиент Keycloak с сервисной учёткой, у которого нет агента в графе. */
+export interface KcOrphan { clientId: string; id: string | null; enabled: boolean | null }
+
+/**
+ * Ответ GET /lore/kc/agent-orphans ({orphans:[{clientId,id,enabled}]}). Нет
+ * массива orphans — сбой, а не «сирот нет»: пустота должна быть ответом KC.
+ */
+export function parseAgentOrphans(raw: unknown): KcOrphan[] {
+  const b = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  if (!Array.isArray(b.orphans)) throw new Error('malformed answer: orphans');
+  return b.orphans.map(o => (o && typeof o === 'object' ? o : {}) as Record<string, unknown>)
+    .map(o => ({ clientId: str(o.clientId) ?? '', id: str(o.id), enabled: typeof o.enabled === 'boolean' ? o.enabled : null }))
+    .filter(o => o.clientId !== '');
+}
+
+export async function fetchAgentOrphans(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<KcOrphan[]> {
+  return parseAgentOrphans(await getJson('/lore/kc/agent-orphans', { signal, fetchImpl }));
+}
+
+/** Сироты графа: агент без владельца (OWNED_BY нет) — проекты ему наследовать не от кого. */
+export function graphOrphans(rows: readonly AgentRow[]): AgentRow[] {
+  return rows.filter(r => r.owner_kc_subs.length === 0);
+}
+
+// ── S7B-04: почему агент видит проекты ─────────────────────────────────────
+
+export type AgentWhy =
+  | { kind: 'inherits'; owner: string; scope: string | null }
+  | { kind: 'noowner' }
+  | { kind: 'noclient' };
+
+/**
+ * Цепочка сервера (AL-68, D4): учётка (client_id) → агент → владелец → его
+ * проекты; пишет агент там, где роль владельца делегирует его профиль.
+ * Нет client_id — в цепочку не войти; нет владельца — наследовать не от кого.
+ */
+export function agentWhy(row: AgentRow): AgentWhy {
+  if (!row.client_id) return { kind: 'noclient' };
+  if (row.owner_kc_subs.length === 0) return { kind: 'noowner' };
+  return { kind: 'inherits', owner: row.owner_display_name ?? row.owner_kc_subs.join(', '), scope: row.agent_role };
 }
 
 async function postActorOwner(body: Record<string, unknown>, fetchImpl: typeof fetch = loreFetch): Promise<void> {

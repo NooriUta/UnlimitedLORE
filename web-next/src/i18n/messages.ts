@@ -57,6 +57,7 @@ const ru = {
   'settings.memory.forgetAll': 'Стереть всё',
   'settings.memory.empty': 'Пусто (проверено)',
   'settings.memory.hits': 'раз',
+  'settings.admin': 'Админка',
 } as const;
 
 const en: Record<keyof typeof ru, string> = {
@@ -111,6 +112,7 @@ const en: Record<keyof typeof ru, string> = {
   'settings.memory.forgetAll': 'Erase all',
   'settings.memory.empty': 'Empty (checked)',
   'settings.memory.hits': 'times',
+  'settings.admin': 'Admin',
 };
 
 export type MessageKey = keyof typeof ru;

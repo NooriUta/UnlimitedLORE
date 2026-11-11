@@ -75,6 +75,12 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
           />
         )
         : <MemoryPanel client={client} lang={lang} onBack={() => setView('settings')} />}
+      {/* S7B-01: вход в админку — из меню аватара (прототип v6), модуль ?mod=admin.
+          Ссылку видят все: права проверяет сервер, и экран без прав скажет
+          «нет прав», а не притворится пустым. */}
+      <div className="memory-actions">
+        <a className="sk-btn" href="/?mod=admin" data-testid="account-admin">{t(lang, 'settings.admin')}</a>
+      </div>
       {onLogout && (
         <div className="memory-actions">
           <button type="button" className="sk-btn" onClick={onLogout}>{kitT(lang, 'kit.auth.logout')}</button>

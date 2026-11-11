@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, ChainExplain, ContentRelease, DiffPreview, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, SandboxedHtmlFrame, TipTapField } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -227,6 +227,15 @@ function Samples() {
             { id: 'NooriUta/BRAGI_WEB', label: 'BRAGI web', inherited_from: { type: 'feature', id: 'FEAT-PUBLISH' } },
           ]}
         />
+      </section>
+      <section className="bare__sec" data-kit="fields">
+        <h2 className="bare__h2">Редакторы полей</h2>
+        <FieldEditor def={{ key: 'title', label: 'Название', kind: 'text', required: 'block' }} value="" onChange={noop} showRequired />
+        <FieldEditor def={{ key: 'effort', label: 'Оценка', kind: 'number' }} value={1.5} onChange={noop} />
+        <FieldEditor def={{ key: 'flag', label: 'Флаг', kind: 'boolean' }} value={null} onChange={noop} />
+        <FieldEditor def={{ key: 'when', label: 'Когда', kind: 'datetime', required: 'warn' }} value={null} onChange={noop} showRequired tzOffsetMinutes={180} />
+        <FieldEditor def={{ key: 'prio', label: 'Приоритет', kind: 'enum', options: ['P1', 'P2'] }} value="P9" onChange={noop} />
+        <FieldEditor def={{ key: 'geo', label: 'Гео', kind: 'geo' }} value="55.75,37.62" onChange={noop} />
       </section>
       <section className="bare__sec" data-kit="content">
         <h2 className="bare__h2">MD / HTML</h2>

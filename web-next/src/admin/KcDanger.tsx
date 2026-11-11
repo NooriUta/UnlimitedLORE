@@ -11,10 +11,11 @@
 // Секрет — только в kit SecretOnce (за предупреждением), не в адресе и не в хранилище.
 import { useEffect, useState } from 'react';
 import {
-  BatchUndo, DiffPreview, Forbidden, LoadError, SecretOnce, Skeleton, setUrlParams, useKitLang, useUrlParam,
+  BatchUndo, DiffPreview, Forbidden, LoadError, SecretOnce, Skeleton, useKitLang, useUrlParam,
   type DiffRow,
 } from '@seidr/kit';
 import { useAppT } from '../i18n';
+import { useAdminNav } from './adminNav';
 import { LoreHttpError } from '../api/loreSlice';
 import {
   fetchRealmRoles, parseRealmApply, parseRealmPlan, parseRotation, parseRotationPlan, postRealmRole, postRotate,
@@ -54,11 +55,12 @@ function FailView({ fail, onRetry }: { fail: Fail; onRetry: () => void }) {
 
 function JournalLink({ id }: { id: string | null }) {
   const t = useAppT();
+  const nav = useAdminNav();
   return (
     <p className="adm-sub">
       {t('admin.kc.logged')}{' '}
       <button type="button" className="adm-link" data-testid="adm-kc-journal"
-        onClick={() => setUrlParams({ adm: 'log', 'adm-family': 'kc' })}>{t('admin.roles.danger.journal')}</button>
+        onClick={() => nav.go('log', { 'adm-family': 'kc' })}>{t('admin.roles.danger.journal')}</button>
       {id && <span className="adm-mono"> {id}</span>}
     </p>
   );
