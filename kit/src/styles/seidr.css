@@ -6611,6 +6611,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-mdmerge__block { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--bd); padding-top: 6px; }
 .sk-mdmerge__diff { margin: 0; padding: 0; list-style: none; font-family: var(--mono); font-size: var(--fs-xs); overflow-x: auto; }
 .sk-mdmerge__line { display: flex; gap: 8px; padding: 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sk-mdmerge__line--same { color: var(--t2); }
 .sk-mdmerge__line--del { background: color-mix(in srgb, var(--dng) 14%, transparent); }
 .sk-mdmerge__line--add { background: color-mix(in srgb, var(--suc) 14%, transparent); }
 .sk-mdmerge__line--note { color: var(--t2); font-style: italic; }
