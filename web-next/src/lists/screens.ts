@@ -143,20 +143,21 @@ export const FEEDS = {
       },
     },
   },
-  adrs: { lead: ['context_md', 'decision_md'], because: ['DEPENDS_ON', 'SUPERSEDES'] },
-  tasks: { lead: ['note_md'], because: ['JUSTIFIED_BY', 'GATES'] },
+  // Голова тела — с сервера (body_head, K2-FEED-BODY-MORE), остаток — паспортом.
+  adrs: { lead: ['context_md', 'decision_md'], headInRow: true, because: ['DEPENDS_ON', 'SUPERSEDES'] },
+  tasks: { lead: ['note_md'], headInRow: true, because: ['JUSTIFIED_BY', 'GATES'] },
   decisions: {
-    lead: ['body_md', 'rationale_md'], because: ['DECIDED_IN', 'ANSWERS'],
+    lead: ['body_md', 'rationale_md'], headInRow: true, because: ['DECIDED_IN', 'ANSWERS'],
     becauseFields: { DECIDED_IN: 'adr' },
   },
-  specs: { lead: ['content_md'] },
+  specs: { lead: ['content_md'], headInRow: true },
   questions: {
     lead: ['body_md'], inRow: true, because: ['RAISED_IN', 'GATES'],
     becauseFields: { GATES: 'gates', RAISED_IN: 'adr' },
   },
   releases: { lead: ['description_md'], inRow: true },
   tech: { lead: ['content_md'], inRow: true },
-  features: { lead: ['body_md', 'context_md'] },
+  features: { lead: ['body_md', 'context_md'], headInRow: true },
 } as const satisfies Partial<Record<string, FeedSpec>>;
 
 /** Конфиг раздела + лента: вид `feed`, `list.feed` и подписи рёбер-поводов. */

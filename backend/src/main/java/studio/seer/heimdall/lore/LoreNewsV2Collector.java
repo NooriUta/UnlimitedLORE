@@ -79,6 +79,23 @@ final class LoreNewsV2Collector {
         "SELECT question_id, title, status, opened_date, closed_date, " +
         "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects, " +
         "out('RAISED_IN').sprint_id[0] AS raised_sprint FROM KnowQuestion";
+    /**
+     * S7A-01, новые типы §1: вехи. Даты заведения у вехи нет, но есть история цели
+     * KnowMilestoneHist (#1146): первая версия — заведение, следующие — правка цели;
+     * правка полей вершины ставит updated_at. Тела (goal_md, decisions_md) не читаются —
+     * только моменты версий списком.
+     */
+    static final String SQL_MILESTONES =
+        "SELECT milestone_id, label, updated_at, out('HAS_STATE').valid_from AS hist_from FROM KnowMilestone";
+    /**
+     * S7A-01: компоненты. Ни истории, ни даты — только updated_at путей записи (#1153),
+     * который ставится и при заведении, и при правке. Проекты — через спринты компонента,
+     * то же выражение, что у среза components.
+     */
+    static final String SQL_COMPONENTS =
+        "SELECT component_id, full_name, updated_at, " +
+        "in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint'].out('BELONGS_TO_PROJECT').slug AS git_projects " +
+        "FROM LoreComponent";
 
     private final BiFunction<String, Map<String, Object>, List<Map<String, Object>>> query;
     private final List<SourceError> errors = new ArrayList<>();
@@ -337,8 +354,41 @@ final class LoreNewsV2Collector {
                     str(q.get("status")), str(q.get("title")), "questions." + k[0]));
             }
         }
-        // TODO(S7A-01, новые типы §1): вехи и компоненты — у них нет даты создания
-        // ни в одном источнике; добавить, когда появится источник даты.
+        // ── вехи (S7A-01, новые типы §1): заведение — первая версия истории цели,
+        // правка — следующие версии и updated_at вершины. Нет ни того, ни другого —
+        // события нет: время не выдумывается. Проекта у вехи нет (она над проектами) —
+        // под скоупом её события скрыты тем же правилом, что «ничьи» записи.
+        for (Map<String, Object> m : read("milestones", SQL_MILESTONES, false)) {
+            String id = str(m.get("milestone_id"));
+            if (id == null) continue;
+            List<Instant> versions = new ArrayList<>();
+            for (Object o : list(m.get("hist_from"))) {
+                Instant vf = instant(o);
+                if (vf != null) versions.add(vf);
+            }
+            Collections.sort(versions);
+            String title = str(m.get("label"));
+            List<String> ms = List.of(id);
+            for (int i = 0; i < versions.size(); i++) {
+                Instant vf = versions.get(i);
+                if (vf.isBefore(from) || !vf.isBefore(t1)) continue;
+                events.add(ev("milestone", id, i == 0 ? "created" : "changed", vf, null, List.of(), List.of(), null, ms,
+                    null, null, title, i == 0 ? "milestone_history.first" : "milestone_history"));
+            }
+            Instant upd = instant(m.get("updated_at"));
+            if (upd != null && !upd.isBefore(from) && upd.isBefore(t1) && !versions.contains(upd))
+                events.add(ev("milestone", id, "changed", upd, null, List.of(), List.of(), null, ms, null, null, title,
+                    "milestones.updated_at"));
+        }
+        // ── компоненты (S7A-01): только отметка updated_at — она ставится и заведением,
+        // и правкой, поэтому вид события — «изменено», а не «появилось».
+        for (Map<String, Object> c : read("components", SQL_COMPONENTS, false)) {
+            String id = str(c.get("component_id"));
+            Instant upd = instant(c.get("updated_at"));
+            if (id == null || upd == null || upd.isBefore(from) || !upd.isBefore(t1)) continue;
+            events.add(ev("component", id, "changed", upd, null, sortedSet(flat(c.get("git_projects"))), List.of(id),
+                null, List.of(), null, null, Optional.ofNullable(str(c.get("full_name"))).orElse(id), "components.updated_at"));
+        }
 
         return new NewsV2.Input(t0, t1, now, zone, tasks, sprints, events, knowledge, List.copyOf(errors), scope);
     }
@@ -395,6 +445,16 @@ final class LoreNewsV2Collector {
     }
 
     static List<String> sortedSet(Object v) { return List.copyOf(new TreeSet<>(strList(v))); }
+
+    /** Вложенные списки обхода (рёбра через рёбра) — в один плоский. */
+    static List<Object> flat(Object v) {
+        List<Object> out = new ArrayList<>();
+        for (Object o : list(v)) {
+            if (o instanceof List<?> l) out.addAll(flat(l));
+            else out.add(o);
+        }
+        return out;
+    }
 
     static LocalDate day(Object v) {
         String s = str(v);
