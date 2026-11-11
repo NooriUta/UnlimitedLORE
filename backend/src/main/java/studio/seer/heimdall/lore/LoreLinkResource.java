@@ -206,6 +206,10 @@ public class LoreLinkResource extends LoreResourceBase {
         BACKFILL_BODIES.put("decision", "SELECT decision_id AS id, body_md FROM KnowDecision");
         BACKFILL_BODIES.put("doc", "SELECT doc_id AS id, content_md_ru, content_md_en FROM KnowDoc");
         BACKFILL_BODIES.put("sprint", "SELECT sprint_id AS id, context_md, outcome_md FROM KnowSprint");
+        // Заметка задачи — на открытой строке истории (её читают срезы), вершина — зеркало;
+        // берутся обе (повтор упоминания схлопывает parse), как читает currentTaskNote.
+        BACKFILL_BODIES.put("task", "SELECT task_uid AS id, "
+            + "out('HAS_STATE')[valid_to IS NULL].note_md[0] AS note_md, note_md AS note_md_vertex FROM KnowTask");
     }
 
     private static final int BACKFILL_RECORDS_SHOWN = 200;
