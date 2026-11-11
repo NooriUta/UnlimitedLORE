@@ -80,8 +80,25 @@ const AA_V2_FIXES: Record<string, Record<string, { v1: string; v2: string }>> = 
   "[data-theme='warm-dark']": { '--dng': { v1: '#c85848', v2: '#cc6455' } },
 };
 
+/**
+ * Палитры только v2 (S4-19): в замороженном v1 их нет и не будет. Сверке с v1
+ * они не подлежат, но обязаны перекрыть ВСЁ ядро (иначе протечёт умолчание),
+ * а контраст держит contrast.test.ts, как у остальных.
+ */
+const V2_ONLY_PALETTES = new Set(['mono']);
+
+describe('S4-00b · палитры только v2 — полное ядро в обоих режимах', () => {
+  for (const p of PALETTES.filter(x => V2_ONLY_PALETTES.has(x.id))) for (const mode of MODES) {
+    it(`${p.id} / ${mode}`, () => {
+      const b = v2.get(selectorOf(p.id, mode));
+      expect(b).toBeDefined();
+      for (const k of CORE) expect(b![k], k).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  }
+});
+
 describe('S4-00a · палитры v2 = палитры v1', () => {
-  for (const p of PALETTES) {
+  for (const p of PALETTES.filter(x => !V2_ONLY_PALETTES.has(x.id))) {
     for (const mode of MODES) {
       const sel = selectorOf(p.id, mode);
       it(`${p.id} / ${mode} (${sel})`, () => {
@@ -180,7 +197,7 @@ describe('S4-00a · образцы палитр в выборе темы — т�
     expect(Object.keys(v1Swatch)).toHaveLength(5);
   });
 
-  for (const p of PALETTES) {
+  for (const p of PALETTES.filter(x => !V2_ONLY_PALETTES.has(x.id))) {
     it(`${p.id}: swatch = var(--swatch-${p.id}) со значением v1`, () => {
       expect(p.swatch).toBe(`var(--swatch-${p.id})`);
       expect(v2.get(':root')![`--swatch-${p.id}`]).toBe(v1Swatch[p.id]);

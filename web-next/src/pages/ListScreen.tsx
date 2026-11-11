@@ -38,7 +38,7 @@ import './ListScreen.css';
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
 const ListPassport = lazy(() => import('../record/ListPassport'));
 // Черновик новой записи (S4-24) — тоже свой чанк: в нём TipTap.
-const RecordCreate = lazy(() => import('../record/RecordCreateForm'));
+const RecordCreate = lazy(() => import('../record/RecordCreateDock'));
 /**
  * Тип паспорта по экрану списка — карта ЧАСТИЧНАЯ (S4-V2-SECTIONS).
  *

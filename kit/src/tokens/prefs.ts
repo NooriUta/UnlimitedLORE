@@ -7,7 +7,7 @@
 // Функции чистые (источники передаются аргументами): так их можно проверить
 // без DOM, а потребитель сам решает, откуда читать.
 
-export type Palette = 'amber-forest' | 'lichen' | 'slate' | 'juniper' | 'warm-dark';
+export type Palette = 'amber-forest' | 'lichen' | 'slate' | 'juniper' | 'warm-dark' | 'mono';
 export type Mode = 'dark' | 'light';
 export type Density = 'roomy' | 'compact' | 'comfortable';
 
@@ -24,6 +24,8 @@ export const PALETTES: readonly { id: Palette; label: string; swatch: string }[]
   { id: 'slate',        label: 'slate',        swatch: 'var(--swatch-slate)' },
   { id: 'juniper',      label: 'juniper',      swatch: 'var(--swatch-juniper)' },
   { id: 'warm-dark',    label: 'warm dark',    swatch: 'var(--swatch-warm-dark)' },
+  // S4-19: приглушённая почти монохромная — только v2 (V2_ONLY_PALETTES в tokens.test.ts).
+  { id: 'mono',         label: 'mono',         swatch: 'var(--swatch-mono)' },
 ];
 
 export const MODES: readonly Mode[] = ['dark', 'light'];

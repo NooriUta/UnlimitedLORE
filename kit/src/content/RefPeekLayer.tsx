@@ -36,15 +36,24 @@ const CLOSE_GRACE_MS = 150;
 const isCoarse = () =>
   typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
 
-function refOf(target: EventTarget | null): { el: HTMLElement; ref: MartPeekRef } | null {
+/** Что считать ссылкой для Peek: по умолчанию вики-ссылка текста; ленты и списки дают свой класс. */
+const DEFAULT_SELECTOR = '.sk-wref';
+
+function refOf(target: EventTarget | null, selector = DEFAULT_SELECTOR): { el: HTMLElement; ref: MartPeekRef } | null {
   // Ссылки внутри самой карточки или листа — не вход в новый Peek (иначе карточка подменяла бы себя).
   if ((target as Element | null)?.closest?.('.sk-peek-hover, .sk-peek-sheet')) return null;
-  const el = (target as Element | null)?.closest?.('.sk-wref') as HTMLElement | null;
+  const el = (target as Element | null)?.closest?.(selector) as HTMLElement | null;
   const id = el?.getAttribute('data-ref');
   return el && id ? { el, ref: { id, type: el.getAttribute('data-ref-type') } } : null;
 }
 
-export function useRefPeek(peek?: MartRefPeek) {
+/**
+ * Слой Peek: наведение мышью — карточка после задержки, касание — нижний лист.
+ * `selector` — какие элементы считать ссылками (у них data-ref и data-ref-type); по умолчанию
+ * вики-ссылки текста. Владелица 11.11.2026: «и к новостям тоже приделай peek» — строки ленты.
+ */
+export function useRefPeek(peek?: MartRefPeek, opts?: { selector?: string }) {
+  const sel = opts?.selector ?? DEFAULT_SELECTOR;
   const [hover, setHover] = useState<{ ref: MartPeekRef; left: number; top: number } | null>(null);
   const [sheet, setSheet] = useState<MartPeekRef | null>(null);
   const openT = useRef<number | undefined>(undefined);
@@ -61,10 +70,10 @@ export function useRefPeek(peek?: MartRefPeek) {
   };
 
   const handlers = {
-    onTouchStart: (e: ReactTouchEvent) => { if (refOf(e.target)) lastTouch.current = Date.now(); },
+    onTouchStart: (e: ReactTouchEvent) => { if (refOf(e.target, sel)) lastTouch.current = Date.now(); },
     onMouseOver: (e: ReactMouseEvent) => {
       if (peek.enabled === false || isCoarse() || recentTouch()) return;
-      const hit = refOf(e.target);
+      const hit = refOf(e.target, sel);
       if (!hit) return;
       window.clearTimeout(closeT.current);
       if (hover?.ref.id === hit.ref.id) return;
@@ -75,12 +84,12 @@ export function useRefPeek(peek?: MartRefPeek) {
       }, peek.delayMs ?? 400);
     },
     onMouseOut: (e: ReactMouseEvent) => {
-      if (!refOf(e.target)) return;
+      if (!refOf(e.target, sel)) return;
       window.clearTimeout(openT.current);
       scheduleClose();
     },
     onClick: (e: ReactMouseEvent) => {
-      const hit = refOf(e.target);
+      const hit = refOf(e.target, sel);
       if (!hit || !(isCoarse() || recentTouch())) return; // мышь — обычный переход по ссылке
       e.preventDefault();
       window.clearTimeout(openT.current);

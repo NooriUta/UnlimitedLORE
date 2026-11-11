@@ -23,7 +23,7 @@ import {
 import { parseRoleMatrix } from './roles';
 import { parseAgents } from './agents';
 import { parseMachineAcl } from './machines';
-import type { KcUser } from './wizards';
+import { parseKcUsers, type KcUser } from './wizards';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 beforeEach(() => { window.history.replaceState(null, '', '/'); });
@@ -73,7 +73,11 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-interface FakeOpts { kcUsersStatus?: number; kcUsers?: unknown; agentsStatus?: number; users?: KcUser[]; aclStatus?: number }
+interface FakeOpts {
+  kcUsersStatus?: number; kcUsers?: unknown; agentsStatus?: number; users?: KcUser[]; aclStatus?: number;
+  /** S7B-20: сервер отвечает на выключение учётки «нельзя» с этой причиной. */
+  enabledForbidden?: string;
+}
 
 function fake(opts: FakeOpts = {}) {
   const calls: Array<{ url: string; body: Record<string, unknown> | null }> = [];
@@ -99,14 +103,43 @@ function fake(opts: FakeOpts = {}) {
     if (url === '/lore/kc/agents') return json(KC_CLIENTS);
     if (url === '/lore/user/role/batch' && body) {
       const changes = (body.changes as Array<{ project: string }>) ?? [];
+      // S7B-20: сервер сам отвечает отказом AL-100 строкой плана (последний owner).
+      if (body.kc_sub === 'u-solo') {
+        return json({
+          ok: true, kc_sub: body.kc_sub, dry_run: body.dry_run === true, blocked: 1,
+          plan: changes.map(c => ({ project: c.project, before: 'owner', after: null, kind: 'remove',
+            check: { state: 'forbidden', source: 'Это последний владелец проекта AIDA/solo. Без владельца проектом некому управлять.' } })),
+          undo: [],
+        });
+      }
       return json({
         ok: true, kc_sub: body.kc_sub, dry_run: body.dry_run === true,
         plan: changes.map(c => ({ project: c.project, before: 'editor', after: null, kind: 'remove', check: { state: 'checked', source: 'graph' } })),
         undo: changes.map(c => ({ project: c.project, role: 'editor' })),
       });
     }
-    const dis = /^\/lore\/kc\/agent-client\/([^/]+)\/disable$/.exec(url);
-    if (dis) return json({ ok: true, clientId: decodeURIComponent(dis[1]), enabled: false });
+    const dis = /^\/lore\/kc\/agent-client\/([^/]+)\/(disable|enable)$/.exec(url);
+    if (dis) {
+      const on = dis[2] === 'enable';
+      return json({ client_id: decodeURIComponent(dis[1]), ok: true, clientId: decodeURIComponent(dis[1]), enabled: on,
+        kind: on ? 'enable' : 'disable', undo: { action: on ? 'disable' : 'enable' } });
+    }
+    const en = /^\/lore\/kc\/user\/([^/]+)\/enabled$/.exec(url);
+    if (en && body) {
+      const id = decodeURIComponent(en[1]);
+      const u = (opts.users ?? KC_USERS).find(x => x.id === id);
+      const before = u ? u.enabled : null;
+      const after = body.enabled === true;
+      const kind = before === after ? 'unchanged' : after ? 'enable' : 'disable';
+      const check = opts.enabledForbidden
+        ? { state: 'forbidden', source: opts.enabledForbidden }
+        : { state: 'checked', source: 'keycloak' };
+      const plan = { user_id: id, username: u?.username ?? null, before, after, kind, sign: after ? '+' : '−', check };
+      if (body.dry_run === true) return json({ user_id: id, ok: true, dry_run: true, plan: [plan] });
+      return json({ user_id: id, op_id: 'kr-1762891200000-0000abcd', ok: true, username: u?.username, enabled: after, kind,
+        undo: kind === 'unchanged' ? null : { enabled: before }, undo_until: new Date(Date.now() + 15 * 60_000).toISOString(),
+        sessions_logged_out: !after });
+    }
     const rr = /^\/lore\/kc\/user\/([^/]+)\/role$/.exec(url);
     if (rr && body) {
       return json({ user_id: rr[1], ok: true, dry_run: true,
@@ -214,14 +247,18 @@ describe('UC-4 · экран', () => {
     ]);
   });
 
-  it('последний owner проекта — кнопка снятия ролей заблокирована, объяснение словами сервера (AL-100), пачка не уходит', async () => {
+  it('последний owner проекта — отказ AL-100 строкой плана сервера (dry_run): строка «нельзя» с причиной, не применяется', async () => {
     const { f, calls } = fake();
     mount('u-solo', 'solo', f);
     const btn = await screen.findByTestId('adm-off-roles-remove');
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    // Подсказка из среза видна до диффа, но решает сервер: кнопка не заперта догадкой клиента.
     expect(screen.getByTestId('adm-off-roles-blocked').textContent).toMatch(/последний владелец проекта AIDA\/solo/);
+    expect((btn as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(btn);
-    expect(calls.some(c => c.url === '/lore/user/role/batch')).toBe(false);
+    const row = await screen.findByTestId('kit-diff-row-AIDA/solo');
+    expect(row.getAttribute('data-check')).toBe('forbidden');
+    expect(row.textContent).toMatch(/последний владелец проекта AIDA\/solo/);
+    expect(calls.filter(c => c.url === '/lore/user/role/batch').every(c => c.body?.dry_run === true)).toBe(true);
   });
 
   it('последний носитель realm admin — снятие admin заблокировано с объяснением AL-35', async () => {
@@ -243,17 +280,30 @@ describe('UC-4 · экран', () => {
     expect(calls.find(c => c.url === '/lore/kc/user/u-anna/role')!.body).toEqual({ role: 'viewer', action: 'remove', dry_run: true });
   });
 
-  it('агенты: дифф, ввод логина, отключение только проверенных включённых; «отменить нельзя» сказано до применения', async () => {
+  it('агенты: дифф, ввод логина, отключение только проверенных включённых; «вернуть можно» сказано до применения', async () => {
     const { f, calls } = fake();
     mount('u-anna', 'anna', f);
     const box = await screen.findByTestId('adm-off-agents');
     await within(box).findByTestId('kit-diff-row-lore-mcp-full_anna');
-    expect(screen.getByTestId('adm-off-agents-noundo')).toBeTruthy();
+    expect(screen.getByTestId('adm-off-agents-reversible')).toBeTruthy();
+    expect(screen.queryByTestId('adm-off-agents-noundo')).toBeNull();
     fireEvent.change(within(box).getByTestId('kit-diff-confirm'), { target: { value: 'anna' } });
     fireEvent.click(within(box).getByTestId('kit-diff-apply'));
     await within(box).findByTestId('kit-batch');
     const disables = calls.filter(c => c.url.endsWith('/disable')).map(c => c.url);
     expect(disables).toEqual(['/lore/kc/agent-client/lore-mcp-full_anna/disable']);
+  });
+
+  it('агенты: «Отменить» после отключения включает учётки обратно (agent-client/…/enable)', async () => {
+    const { f, calls } = fake();
+    mount('u-anna', 'anna', f);
+    const box = await screen.findByTestId('adm-off-agents');
+    await within(box).findByTestId('kit-diff-row-lore-mcp-full_anna');
+    fireEvent.change(within(box).getByTestId('kit-diff-confirm'), { target: { value: 'anna' } });
+    fireEvent.click(within(box).getByTestId('kit-diff-apply'));
+    fireEvent.click(await within(box).findByTestId('kit-batch-undo'));
+    await within(box).findByTestId('kit-batch-undone');
+    expect(calls.filter(c => c.url.endsWith('/enable')).map(c => c.url)).toEqual(['/lore/kc/agent-client/lore-mcp-full_anna/enable']);
   });
 
   it('это вы — отключать себя нельзя: кнопки заблокированы с причиной', async () => {
@@ -262,6 +312,85 @@ describe('UC-4 · экран', () => {
     expect(await screen.findByTestId('adm-off-self')).toBeTruthy();
     const btn = await screen.findByTestId('adm-off-roles-remove');
     expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('UC-4 · учётка человека в Keycloak (серверные хвосты S7B-20)', () => {
+  const kcStep = () => window.history.replaceState(null, '', '/?adm-off-step=kc');
+  const enabledCalls = (calls: Array<{ url: string; body: Record<string, unknown> | null }>, id: string) =>
+    calls.filter(c => c.url === `/lore/kc/user/${id}/enabled`).map(c => c.body);
+
+  it('модель: роли учётки не прочитались — rolesChecked:false, и «последний admin» не утверждаем', () => {
+    const users = parseKcUsers([
+      { id: 'u-boss', username: 'boss', enabled: true, roles: ['admin'], roles_checked: true },
+      { id: 'u-x', username: 'x', enabled: true, roles: [], roles_checked: false },
+    ]);
+    expect(users.map(u => u.rolesChecked)).toEqual([true, false]);
+    // У x роли неизвестны — может быть ещё один admin; решит сервер (AL-35).
+    expect(isLastRealmAdmin(users, users[0])).toBe(false);
+  });
+
+  it('«Выключить учётку»: дифф сервера (dry_run) → логин → выключение; «Отменить» включает обратно (undo_of)', async () => {
+    const { f, calls } = fake();
+    kcStep();
+    mount('u-anna', 'anna', f);
+    fireEvent.click(await screen.findByTestId('adm-off-kc-disable'));
+    const box = await screen.findByTestId('adm-off-kc-enabled');
+    await within(box).findByTestId('kit-diff-row-u-anna');
+    expect(enabledCalls(calls, 'u-anna')).toEqual([{ enabled: false, dry_run: true }]);
+    fireEvent.change(within(box).getByTestId('kit-diff-confirm'), { target: { value: 'anna' } });
+    fireEvent.click(within(box).getByTestId('kit-diff-apply'));
+    fireEvent.click(await within(box).findByTestId('kit-batch-undo'));
+    await within(box).findByTestId('kit-batch-undone');
+    expect(enabledCalls(calls, 'u-anna').slice(1)).toEqual([
+      { enabled: false },
+      { enabled: true, undo_of: 'kr-1762891200000-0000abcd' },
+    ]);
+  });
+
+  it('последний админ — строка диффа «нельзя» словами сервера (AL-35), применять нечего', async () => {
+    const { f, calls } = fake({ enabledForbidden: 'это последняя включённая учётка с ролью admin/super-admin (AL-35)' });
+    kcStep();
+    mount('u-boss', 'boss', f);
+    fireEvent.click(await screen.findByTestId('adm-off-kc-disable'));
+    const row = await screen.findByTestId('kit-diff-row-u-boss');
+    expect(row.getAttribute('data-check')).toBe('forbidden');
+    expect(row.textContent).toContain('AL-35');
+    expect(enabledCalls(calls, 'u-boss').every(b => b?.dry_run === true)).toBe(true);
+  });
+
+  it('учётка уже выключена — «Включить обратно», дифф на включение', async () => {
+    const { f, calls } = fake({ users: [{ ...KC_USERS[0], enabled: false }, KC_USERS[1]] });
+    kcStep();
+    mount('u-anna', 'anna', f);
+    expect(screen.queryByTestId('adm-off-kc-disable')).toBeNull();
+    fireEvent.click(await screen.findByTestId('adm-off-kc-enable'));
+    await screen.findByTestId('kit-diff-row-u-anna');
+    expect(enabledCalls(calls, 'u-anna')).toEqual([{ enabled: true, dry_run: true }]);
+  });
+
+  it('это вы — выключить свою учётку нельзя: кнопка заблокирована', async () => {
+    const { f } = fake();
+    kcStep();
+    mount('u-anna', 'anna', f, 'u-anna');
+    expect((await screen.findByTestId('adm-off-kc-disable') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('«осталось руками» больше не просит выключить учётку в консоли KC — это делает LORE', async () => {
+    const { f } = fake();
+    kcStep();
+    mount('u-anna', 'anna', f);
+    await screen.findByTestId('adm-off-kc-disable');
+    expect(screen.queryByText(/Выключить саму учётку человека в Keycloak/)).toBeNull();
+  });
+
+  it('учёток больше 100 — список полный, оговорки «первые 100» нет', async () => {
+    const many: KcUser[] = Array.from({ length: 150 }, (_, i) => ({ id: `u-${i}`, username: `user${i}`, email: null, enabled: true, roles: [] }));
+    const { f } = fake({ users: many });
+    kcStep();
+    mount('u-nobody', 'nobody', f);
+    await screen.findByTestId('adm-off-kc-none');
+    expect(screen.queryByText(/первые 100/)).toBeNull();
   });
 });
 
@@ -312,7 +441,8 @@ describe('UC-4 · допуски к машинам (S7B-ACL-1)', () => {
     fireEvent.click(within(box).getByTestId('kit-diff-apply'));
     await within(box).findByTestId('kit-batch');
     const applied = calls.filter(c => c.url === '/lore/user/machine-access' && c.body?.dry_run !== true).map(c => c.body);
-    expect(applied).toEqual([{ machine_id: 'boss-pc', kc_sub: 'u-anna', action: 'revoke' }]);
+    // S7B-ACL-3 (#1255): допуски уходят пачкой по машине — {machine_id, items:[…]}, не запросом на допуск.
+    expect(applied).toEqual([{ machine_id: 'boss-pc', items: [{ kc_sub: 'u-anna', action: 'revoke' }] }]);
   });
 
   it('это вы — снятие допусков к машинам заблокировано', async () => {
