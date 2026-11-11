@@ -791,5 +791,7 @@
   "mdref.type.doc": "док",
   "mdref.type.sprint": "спринт",
   "mdref.type.runbook": "ранбук",
-  "mdref.type.use_case": "сценарий"
+  "mdref.type.use_case": "сценарий",
+  "lists.date.changed": "Изменены",
+  "lists.date.noTime": "срез этого раздела не отдаёт время изменения записей"
 }

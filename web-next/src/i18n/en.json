@@ -791,5 +791,7 @@
   "mdref.type.doc": "doc",
   "mdref.type.sprint": "sprint",
   "mdref.type.runbook": "runbook",
-  "mdref.type.use_case": "use case"
+  "mdref.type.use_case": "use case",
+  "lists.date.changed": "Changed",
+  "lists.date.noTime": "this section's slice does not return record change times"
 }
