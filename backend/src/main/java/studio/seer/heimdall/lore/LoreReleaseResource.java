@@ -322,17 +322,55 @@ public class LoreReleaseResource extends LoreResourceBase {
             if (set.equals("UPDATE KnowRelease SET")) {
                 return badParams("at least one field (git_tag, release_date, description_md, is_current) required");
             }
-            // S4-04 (свежесть): правка релиза версию SCD2 не открывает — момент правки на
-            // вершине; changed_at среза releases — максимум с открытой версией.
+            // S4-04 (свежесть): момент правки на вершине; changed_at среза releases —
+            // максимум с открытой версией.
+            String nowIso = Instant.now().toString();
             set = set + ", updated_at=:upd";
-            p.put("upd", Instant.now().toString());
+            p.put("upd", nowIso);
             // REL-UID-01: релиз адресуется ТОЛЬКО парой «проект#версия». Проект
             // известен всегда (ugp — явный или проект релизов по умолчанию, иначе
             // отказ выше); прежняя ветка «WHERE release_id=…» без проекта правила
             // разом все релизы с этим номером во всех проектах.
-            p.put("rkey", ugp + "#" + req.release_id());
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                set + " WHERE release_uid=:rkey", p)).await().indefinitely();
+            String rkey = ugp + "#" + req.release_id();
+            p.put("rkey", rkey);
+            // Аудит времени 10.11: у релиза есть SCD2 (KnowReleaseHist), но версия
+            // открывалась только при заведении — правка истории не оставляла. Теперь правка
+            // закрывает открытую версию и открывает новую (с описанием после правки) в ОДНОМ
+            // sqlscript с правкой вершины; закрыть можно только ещё открытую строку
+            // (Scd2Guard), иначе 409 и ничего не записано.
+            List<Map<String, Object>> curRow = ingestService.queryPublic(
+                "SELECT description_md FROM KnowRelease WHERE release_uid = :k", Map.of("k", rkey));
+            if (curRow.isEmpty()) return badParams("release not found: " + rkey);
+            List<Map<String, Object>> openRows = ingestService.queryPublic(
+                "SELECT @rid AS rid FROM KnowReleaseHist WHERE in('HAS_STATE').release_uid CONTAINS :k "
+                + "AND valid_to IS NULL", Map.of("k", rkey));
+            Object openRid = openRows.isEmpty() ? null : openRows.get(0).get("rid");
+            String newUid = p.containsKey("ruid") ? String.valueOf(p.get("ruid")) : rkey;
+            Object desc = req.description_md() != null ? req.description_md() : curRow.get(0).get("description_md");
+            p.put("now", nowIso);
+            p.put("nsid", UUID.randomUUID().toString());
+            p.put("nuid", newUid);
+            changeAuthor().bind(p); // S2-12
+            StringBuilder script = new StringBuilder();
+            if (openRid != null) {
+                p.put("oldrid", String.valueOf(openRid));
+                script.append(Scd2Guard.guardedClose("KnowReleaseHist", false));
+            } else {
+                // Релиз без строки истории (заведён до REL-UID-01 / импортом): первая версия.
+                p.put("gk", rkey);
+                script.append(Scd2Guard.guardedNoOpen("KnowReleaseHist", "release_uid", "gk"));
+            }
+            script.append(set).append(" WHERE release_uid=:rkey;");
+            script.append("INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now");
+            if (desc != null) { script.append(", description_md=:hdesc"); p.put("hdesc", String.valueOf(desc)); }
+            script.append(ChangeAuthor.SET_SQL).append(";");
+            script.append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_uid=:nuid) ")
+                  .append("TO (SELECT FROM KnowReleaseHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);");
+            Object res = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                script.toString(), p)).await().indefinitely().result();
+            if (Scd2Guard.isConflict(res))
+                return Scd2Guard.conflict("release '" + rkey
+                    + "': открытую версию закрыла соседняя запись — перечитайте и повторите", Map.of());
             if (req.git_project() != null && !req.git_project().isBlank()) {
                 // PS-20: смена git_project → перевесить ребро BELONGS_TO_PROJECT на
                 // новый проект (иначе поле и ребро расходятся, как нашёл аудит AL-96).

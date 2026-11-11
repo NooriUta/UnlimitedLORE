@@ -1300,6 +1300,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         String set = sb.toString().replaceAll(",\\s*$", "").trim();
         if (set.equals("UPDATE KnowSprint SET"))
             return badParams("at least one field required");
+        // Аудит времени 10.11 (класс S4-04): поля вершины спринта версию SCD2 не открывают —
+        // момент правки на вершине; changed_at среза sprints — максимум с открытой версией.
+        set = set + ", updated_at=:upd";
+        p.put("upd", java.time.Instant.now().toString());
         p.put("sid", req.sprint_id());
         try {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",

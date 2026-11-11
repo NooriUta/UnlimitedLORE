@@ -43,7 +43,10 @@ class ComponentTechFeaturePassportTest {
             LoreModelTypes.Graph g = LoreModelTypes.GRAPH.get(t);
             assertNotNull(g, t + ": нет вершины в модели");
             assertEquals(e.getValue()[1], g.vertex(), t);
-            assertNull(g.hist(), t + ": истории SCD2 у паспорта нет");
+            // Аудит времени 10.11: hist — факт графа, а не «нужна ли история фасаду». У технологии
+            // (спека SPEC-TECH-*) цепочка KnowSpecHist есть; у компонента и фичи Hist-типа нет.
+            if ("tech".equals(t)) assertEquals("KnowSpecHist", g.hist(), t + ": цепочка спеки");
+            else assertNull(g.hist(), t + ": Hist-типа в графе нет");
             assertEquals(e.getValue()[2], g.key(), t);
         }
     }
