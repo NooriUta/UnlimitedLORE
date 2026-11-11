@@ -62,6 +62,12 @@ export interface ScopePickerProps {
    * и «не посчитали» — разные утверждения, и путать их нельзя.
    */
   mineCount?: number;
+  /**
+   * Подписанные группы (S7B-ACL-3): свои (`mine`) и остальные — двумя списками с
+   * заголовками. Подписи — от приложения («участники проектов машины» / «не в
+   * проектах машины»), kit делит только по `mine`. Роли не проверены — групп нет.
+   */
+  groups?: { mine: string; other: string };
   /** Телефон — лист снизу; иначе поповер. Не задан — по ширине экрана (useNarrow). */
   narrow?: boolean;
   /** Язык поверх KitLangProvider. */
@@ -104,7 +110,7 @@ export function ScopePicker(props: ScopePickerProps) {
 
 function ScopePickerInner({
   label, icon = ICON_CANON.scopeAll, options, value, onChange, state = 'ok', error, onRetry, completeness,
-  forbiddenReason, mine = 'known', mineHint, mineCount, narrow: narrowProp, lang = 'ru', className,
+  forbiddenReason, mine = 'known', mineHint, mineCount, groups, narrow: narrowProp, lang = 'ru', className,
 }: ScopePickerProps) {
   const narrow = useNarrow(narrowProp);
   const name = label ?? kitT(lang, 'kit.scope.label');
@@ -143,6 +149,7 @@ function ScopePickerInner({
       mine={mine}
       mineHint={mineHint}
       mineCount={mineCount}
+      groups={groups}
     />
   );
 
@@ -204,10 +211,11 @@ interface BodyProps {
   mine: 'known' | 'unknown';
   mineHint?: string;
   mineCount?: number;
+  groups?: { mine: string; other: string };
 }
 
 function ScopeBody({
-  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount,
+  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount, groups,
 }: BodyProps) {
   const [query, setQuery] = useState('');
   const searchId = useId();
@@ -217,6 +225,19 @@ function ScopeBody({
   const shown = useMemo(() => filterScopeOptions(ordered, query), [ordered, query]);
   const missing = useMemo(() => unknownScopeIds(value, options), [value, options]);
   const hasData = state === 'ok' || state === 'partial';
+  // Подписанные группы — только когда есть подписи и роли проверены: делить не по чему иначе.
+  const grouped = !!groups && mineKnown;
+  const renderRow = (o: ScopeOption) => (
+              <ScopeRow
+                key={o.id}
+                lang={lang}
+                option={o}
+                checked={value.includes(o.id)}
+                showMine={mineKnown && !grouped}
+                onToggle={() => onChange(toggleScope(value, o.id))}
+                onOnly={() => onChange(onlyScope(o.id))}
+              />
+            );
 
   const mineDisabled = !hasData || !mineKnown || mineIds.length === 0;
   const own = knownCount(mineCount);
@@ -258,6 +279,31 @@ function ScopeBody({
           {shown.length === 0 && query.trim() !== '' && (
             <p className="sk-scope__note" role="status">{kitT(lang, 'kit.scope.noMatch', { q: query.trim() })}</p>
           )}
+          {grouped ? (
+            <>
+              {missing.length > 0 && <ul className="sk-scope__list">
+            {missing.map(id => (
+              <ScopeRow
+                key={`missing:${id}`}
+                lang={lang}
+                option={{ id }}
+                checked
+                missing
+                onToggle={() => onChange(toggleScope(value, id))}
+                onOnly={() => onChange(onlyScope(id))}
+              />
+            ))}
+              </ul>}
+              {[{ key: 'mine', title: groups!.mine, list: shown.filter(o => o.mine) }, { key: 'other', title: groups!.other, list: shown.filter(o => !o.mine) }]
+                .filter(g => g.list.length > 0)
+                .map(g => (
+                  <div key={g.key} className="sk-scope__grp">
+                    <h4 className="sk-scope__grph" id={`${searchId}-${g.key}`}>{g.title}</h4>
+                    <ul className="sk-scope__list" aria-labelledby={`${searchId}-${g.key}`}>{g.list.map(renderRow)}</ul>
+                  </div>
+                ))}
+            </>
+          ) : (
           <ul className="sk-scope__list">
             {missing.map(id => (
               <ScopeRow
@@ -270,18 +316,9 @@ function ScopeBody({
                 onOnly={() => onChange(onlyScope(id))}
               />
             ))}
-            {shown.map(o => (
-              <ScopeRow
-                key={o.id}
-                lang={lang}
-                option={o}
-                checked={value.includes(o.id)}
-                showMine={mineKnown}
-                onToggle={() => onChange(toggleScope(value, o.id))}
-                onOnly={() => onChange(onlyScope(o.id))}
-              />
-            ))}
+            {shown.map(renderRow)}
           </ul>
+          )}
         </>
       );
   }
@@ -344,7 +381,7 @@ interface RowProps {
 function ScopeRow({ lang, option, checked, missing, showMine, onToggle, onOnly }: RowProps) {
   const title = scopeTitle(option);
   return (
-    <li className={['sk-scope__row', missing ? 'sk-scope__row--missing' : ''].filter(Boolean).join(' ')}>
+    <li className={['sk-scope__row', missing ? 'sk-scope__row--missing' : ''].filter(Boolean).join(' ')} data-scope-id={option.id}>
       <label className="sk-scope__check">
         <input type="checkbox" checked={checked} onChange={onToggle} />
         <span className="sk-scope__title">{title}</span>

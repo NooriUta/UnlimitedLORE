@@ -6604,6 +6604,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    строки нет, и метка остаётся в углу. */
 .sk-shell--status .sk-shell__main .sk-shell__corner { display: none; }
 .sk-shell__status .sk-shell__corner { position: static; }
+
+/* S7B-ACL-3: подписанные группы в ScopePicker — свои / остальные (подписи от приложения). */
+.sk-scope__grp { display: grid; gap: 2px; }
+.sk-scope__grp + .sk-scope__grp { margin-top: 6px; }
+.sk-scope__grph { margin: 4px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
+
 /* K4-FRESHNESS: свежесть ячейкой — «3 мин назад», тон по порогам приложения; «времени нет» — нейтрально, не «давно». */
 .sk-fresh { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--t2); }
 .sk-fresh[data-tone='ok'] { color: var(--t1); }

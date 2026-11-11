@@ -175,6 +175,56 @@ export async function issueAgent(req: IssueRequest, fetchImpl: typeof fetch = lo
   }
 }
 
+// ── S4-AGENT-CLIENT-PICK: привязать готовую учётку KC к человеку ──────────
+
+const MACHINE_CLIENT = /^lore-mcp-[A-Za-z0-9][A-Za-z0-9.-]{0,63}_([A-Za-z0-9][A-Za-z0-9._-]{0,63})$/;
+
+/** Учётка KC без агента в графе — что из неё можно привязать. */
+export interface OrphanBindOption {
+  clientId: string;
+  /** Профили из оси клиента (agent-full → full). Пусто — оси нет, привязка запрещена (как в v1). */
+  profiles: string[];
+  /** Машина из имени lore-mcp-<профиль>_<машина>; null — имя не машинное. */
+  machine: string | null;
+}
+
+/**
+ * Сироты KC (GET /lore/kc/agent-orphans) + ось из GET /lore/kc/agents. Ось
+ * машинного клиента сервер собирает и из ролей его сервисной учётки (#1062):
+ * у lore-mcp-full_<машина> своих ролей нет. Клиента нет в ответе — оси не
+ * знаем, и привязки нет: агент без профиля не наследует ничего.
+ */
+export function orphanBindOptions(
+  orphans: readonly { clientId: string }[],
+  kcClients: readonly unknown[],
+): OrphanBindOption[] {
+  const scopeOf = new Map<string, string[]>();
+  for (const raw of kcClients) {
+    const c = (raw ?? {}) as Record<string, unknown>;
+    const id = str(c.clientId);
+    if (!id) continue;
+    const scope = Array.isArray(c.agent_scope) ? c.agent_scope.map(String) : [];
+    scopeOf.set(id, scope.filter(s => s.startsWith('agent-') && s.length > 6).map(s => s.slice(6)));
+  }
+  return orphans.map(o => ({
+    clientId: o.clientId,
+    profiles: [...new Set(scopeOf.get(o.clientId) ?? [])],
+    machine: MACHINE_CLIENT.exec(o.clientId)?.[1] ?? null,
+  }));
+}
+
+export interface BindRequest { clientId: string; ownerSub: string; profile: string; machine: string | null }
+
+/** Агент для готовой учётки: актор kind=agent (actor_id = client_id, как у мастера) → владелец, профиль, машина. */
+export async function bindKcClient(req: BindRequest, fetchImpl: typeof fetch = loreFetch): Promise<void> {
+  await postJson('/lore/actor', { actor_id: req.clientId, name: req.clientId, kind: 'agent' }, fetchImpl);
+  const owner: Record<string, unknown> = {
+    actor_id: req.clientId, client_id: req.clientId, kc_sub: req.ownerSub, agent_role: req.profile,
+  };
+  if (req.machine) owner.machine_id = req.machine;
+  await postJson('/lore/actor/owner', owner, fetchImpl);
+}
+
 // ── конфиг MCP ────────────────────────────────────────────────────────────
 
 export interface McpEnv { backend: string; issuer: string; clientId: string; machine: string }
