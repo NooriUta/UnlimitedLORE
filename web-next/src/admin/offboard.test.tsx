@@ -441,7 +441,8 @@ describe('UC-4 · допуски к машинам (S7B-ACL-1)', () => {
     fireEvent.click(within(box).getByTestId('kit-diff-apply'));
     await within(box).findByTestId('kit-batch');
     const applied = calls.filter(c => c.url === '/lore/user/machine-access' && c.body?.dry_run !== true).map(c => c.body);
-    expect(applied).toEqual([{ machine_id: 'boss-pc', kc_sub: 'u-anna', action: 'revoke' }]);
+    // S7B-ACL-3 (#1255): допуски уходят пачкой по машине — {machine_id, items:[…]}, не запросом на допуск.
+    expect(applied).toEqual([{ machine_id: 'boss-pc', items: [{ kc_sub: 'u-anna', action: 'revoke' }] }]);
   });
 
   it('это вы — снятие допусков к машинам заблокировано', async () => {
