@@ -11,7 +11,8 @@ export const FIELD_KINDS = ['text', 'number', 'boolean', 'date', 'time', 'dateti
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
 /** Вариант выбора: строкой или парой «значение + подпись». */
-export type FieldOption = string | { value: string; label: string };
+/** Вариант выбора; `group` — подпись группы (S4-24: «Люди» / «Агенты»), даёт приложение. */
+export type FieldOption = string | { value: string; label: string; group?: string };
 
 /**
  * Описание поля. Совместимо с RefFieldDef сессии «MD и супертеги»
