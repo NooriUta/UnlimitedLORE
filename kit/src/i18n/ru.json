@@ -515,7 +515,7 @@
   "kit.tasks.groupBy.status": "По статусу",
   "kit.tasks.groupBy.none": "Списком",
   "kit.tasks.groupBy.phase_status": "Фаза → статус",
-  "kit.tasks.shownOf": "Показаны {shown} из {total}",
+  "kit.fold.shownOf": "Показаны {shown} из {total}",
   "kit.tasks.bulkStatus": "Новый статус",
   "kit.tasks.bulkApply": "Сменить статус ({n})",
   "kit.tasks.bulkNeedStatus": "Выберите новый статус",

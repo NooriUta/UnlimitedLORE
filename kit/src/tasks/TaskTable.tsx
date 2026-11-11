@@ -12,6 +12,7 @@ import { GameIcon } from '../elements/GameIcon';
 import { Pill } from '../elements/Pill';
 import { ColumnsChoice } from '../list/ColumnsChoice';
 import { LIST_BUDGET } from '../list/listModel';
+import { useStepLimits } from '../core/stepLimit';
 import { onScreenItems, selectAllShown, toggleId, visibleSelection } from '../list/listSelection';
 import { useLongPress } from '../list/useLongPress';
 import type { KitConfig, KitDictItem } from '../core/contract';
@@ -206,9 +207,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
   // Ctrl+F, и человек решил бы «такой задачи нет». Здесь всё показанное — в
   // DOM, а спрятанное названо числом в своей группе. Состояние местное: это
   // способ дотянуться, а не вид, которым делятся ссылкой.
-  const [limits, setLimits] = useState<Record<string, number>>({});
-  const limitOf = (k: string) => limits[k] ?? LIST_BUDGET.perGroup;
-  const showMore = (k: string) => setLimits(m => ({ ...m, [k]: limitOf(k) + LIST_BUDGET.perGroup }));
+  const { limitOf, showMore } = useStepLimits(LIST_BUDGET.perGroup);
   const showGroupHeads = groupBy !== 'none';
 
   // Выбор (S9-06). Показанным считается то, что стоит на экране: строки до
@@ -379,7 +378,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   {leaf.tasks.length > limitOf(leaf.key) && (
                     <tr className="sk-tasks__morerow">
                       <td colSpan={cols.length}>
-                        <span className="sk-tasks__shown">{t('kit.tasks.shownOf', { shown: limitOf(leaf.key), total: leaf.tasks.length })}</span>
+                        <span className="sk-tasks__shown">{t('kit.fold.shownOf', { shown: limitOf(leaf.key), total: leaf.tasks.length })}</span>
                         <button type="button" className="sk-btn" onClick={() => showMore(leaf.key)}>
                           {t('kit.list.more', { n: leaf.tasks.length - limitOf(leaf.key) })}
                         </button>

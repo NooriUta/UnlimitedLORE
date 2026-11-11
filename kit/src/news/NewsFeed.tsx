@@ -18,7 +18,9 @@ import { Pill } from '../elements/Pill';
 import { statusMeta } from '../elements/statusMeta';
 import { statusLook, useStatusDict } from '../core/statusLook';
 import { StatusIcon } from '../core/StatusIcon';
-import { useKitLang } from '../i18n';
+import { kitT, useKitLang } from '../i18n';
+import { LIST_BUDGET } from '../list/listModel';
+import { useStepLimits, type StepLimits } from '../core/stepLimit';
 import type { KitLang } from '../i18n';
 import { pushUrlState, readUrlState } from '../resilience/urlState';
 import { classifyError, errorDetail } from '../states/loadState';
@@ -737,6 +739,7 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: F
     return q.order === 'asc' ? out.reverse().map(([d, es]) => [d, [...es].reverse()] as const) : out;
   }, [data.events, q.order]);
   const axis = data.groups.axis;
+  const dayFold = useStepLimits(LIST_BUDGET.perGroup);
   const rank = new Map(data.groups.list.map((g, i) => [g.key, i]));
   // Черта «прочитано до сюда» (S7A-04): после последнего дня с непрочитанным —
   // только при новых сверху и поставленной черте. Счётчиков не добавляет.
@@ -764,7 +767,8 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: F
               </h3>
               {isOpen && <DayFigures day={day} events={events} data={data} t={t} lang={lang} />}
               {isOpen && (axis === 'day'
-                ? <ul className="sk-news__rows">{events.map(e => <Row key={e.key} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />)}</ul>
+                ? <CappedRows list={events} fold={dayFold} foldKey={day} lang={lang}
+                    render={e => <Row key={e.key} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />} />
                 : <Buckets day={day} events={events} axis={axis} rank={rank} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />)}
             </section>
             {showLine && i === lastUnread && (
@@ -787,8 +791,37 @@ interface BucketsProps extends Omit<FeedProps, 'data' | 'query'> {
   rank: Map<string, number>;
 }
 
+/**
+ * Строки группы с потолком (S9-11): не больше LIST_BUDGET.perGroup, спрятанное
+ * названо числом, «ещё N» добавляет следующий шаг. Та же механика, что у
+ * таблицы задач и списков (`useStepLimits`).
+ */
+function CappedRows({ list, fold, foldKey, render, lang }: {
+  list: NewsEvent[];
+  fold: StepLimits;
+  foldKey: string;
+  render: (e: NewsEvent) => ReactNode;
+  lang: KitLang;
+}) {
+  const lim = fold.limitOf(foldKey);
+  return (
+    <ul className="sk-news__rows">
+      {list.slice(0, lim).map(render)}
+      {list.length > lim && (
+        <li className="sk-news__morerow">
+          <span className="sk-news__shown">{kitT(lang, 'kit.fold.shownOf', { shown: lim, total: list.length })}</span>
+          <button type="button" className="sk-btn" onClick={() => fold.showMore(foldKey)}>
+            {kitT(lang, 'kit.list.more', { n: list.length - lim })}
+          </button>
+        </li>
+      )}
+    </ul>
+  );
+}
+
 function Buckets({ day, events, axis, rank, lang, tz, hrefOf, onOpen }: BucketsProps) {
   const [closed, setClosed] = useState<Record<string, boolean>>({});
+  const fold = useStepLimits(LIST_BUDGET.perGroup);
   const buckets = new Map<string, NewsEvent[]>();
   for (const e of events) {
     for (const v of new Set(eventAxisValues(e, axis))) {
@@ -813,9 +846,8 @@ function Buckets({ day, events, axis, rank, lang, tz, hrefOf, onOpen }: BucketsP
               </button>
             </h4>
             {isOpen && (
-              <ul className="sk-news__rows">
-                {list.map(e => <Row key={`${day}|${k}|${e.key}`} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />)}
-              </ul>
+              <CappedRows list={list} fold={fold} foldKey={k} lang={lang}
+                render={e => <Row key={`${day}|${k}|${e.key}`} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />} />
             )}
           </div>
         );
