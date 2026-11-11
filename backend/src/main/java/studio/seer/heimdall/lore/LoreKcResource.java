@@ -311,7 +311,11 @@ public class LoreKcResource extends LoreResourceBase {
         catch (Exception e) { return upstream(e); }
     }
 
-    public record KcRoleRequest(String role, String action) {}
+    /**
+     * S7B-03: {@code dry_run} — только дифф (KcDanger.realmRolePlan), ничего не пишет;
+     * {@code undo_of} — этот вызов отменяет операцию {@code kr-…}; вне окна — 400.
+     */
+    public record KcRoleRequest(String role, String action, Boolean dry_run, String undo_of) {}
 
     @POST
     @Path("user/{id}/role")
@@ -327,26 +331,47 @@ public class LoreKcResource extends LoreResourceBase {
         // роли realm'а выдаются (KcBridge.isGrantableRealmRole); несуществующая — 404 ниже.
         if (!KcBridge.isGrantableRealmRole(req.role()))
             return badParams("role " + req.role() + " is not grantable from LORE: super-admin is out of bridge scope by design (D11), Keycloak service roles are not LORE rights");
+        java.time.Instant now = java.time.Instant.now();
+        if (req.undo_of() != null) {
+            String undoErr = KcDanger.undoError(req.undo_of(), now);
+            if (undoErr != null) return badParams(undoErr);
+        }
         try {
             String t = adminToken();
             boolean remove = "remove".equalsIgnoreCase(req.action());
-            // AL-35: последняя администрирующая учётка неснимаема. Не «двухшаг», а отказ:
-            // свойство «администратор существует» защищается бэкендом, не интерфейсом.
-            if (remove && KcBridge.isLastAdminRemoval(bridge.enabledAdminHolders(t), userId, req.role())) {
-                return noStore(Response.status(Response.Status.CONFLICT)
-                    .entity(new LoreError("LAST_ADMIN",
-                        "это последняя включённая учётка с ролью admin/super-admin — снятие роли оставит LORE "
-                        + "без администратора. Сначала назначьте admin кому-то ещё (AL-35)")));
-            }
+            boolean dry = Boolean.TRUE.equals(req.dry_run());
             HttpResponse<String> rr = kc("GET", "/roles/" + req.role(), null, t);
             if (rr.statusCode() != 200)
                 return noStore(Response.status(404).entity(new LoreError("NOT_FOUND", "realm role " + req.role())));
+            // S7B-03: дифф — по текущим realm-ролям человека; не прочитали — строка «не проверено».
+            HttpResponse<String> cur = kc("GET", "/users/" + userId + "/role-mappings/realm", null, t);
+            Map<String, Object> plan = KcDanger.realmRolePlan(req.role(), remove, cur.statusCode() == 200 ? cur.body() : null);
+            // AL-35: последняя администрирующая учётка неснимаема. Не «двухшаг», а отказ:
+            // свойство «администратор существует» защищается бэкендом, не интерфейсом.
+            String lastAdmin = "это последняя включённая учётка с ролью admin/super-admin — снятие роли оставит LORE "
+                + "без администратора. Сначала назначьте admin кому-то ещё (AL-35)";
+            boolean blocked = remove && KcBridge.isLastAdminRemoval(bridge.enabledAdminHolders(t), userId, req.role());
+            if (dry) {
+                // В диффе тот же отказ — строкой «нельзя» с причиной, до ввода подтверждения.
+                if (blocked) plan.put("check", Map.of("state", "forbidden", "source", lastAdmin));
+                Map<String, Object> out = new java.util.LinkedHashMap<>();
+                out.put("user_id", userId);
+                out.put("ok", true);
+                out.put("dry_run", true);
+                out.put("plan", List.of(plan));
+                return noStore(Response.ok(out));
+            }
+            if (blocked) {
+                return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("LAST_ADMIN", lastAdmin)));
+            }
             String payload = "[" + rr.body() + "]";
             HttpResponse<String> r = kc(remove ? "DELETE" : "POST", "/users/" + userId + "/role-mappings/realm", payload, t);
             if (r.statusCode() >= 300)
                 return noStore(Response.status(r.statusCode()).entity(new LoreError("KC_UPSTREAM", r.body())));
-            return noStore(Response.ok(Map.of("ok", true, "user", userId, "role", req.role(),
-                "action", remove ? "removed" : "added")));
+            // Ответ: user_id первым — журнал AO-01 пишет человека; op_id с окном отмены и обратный вызов.
+            Map<String, Object> out = KcDanger.realmRoleAnswer(userId, KcDanger.opId(now), plan);
+            if (req.undo_of() != null) out.put("undo_of", req.undo_of());
+            return noStore(Response.ok(out));
         } catch (Exception e) { return upstream(e); }
     }
 
@@ -485,20 +510,76 @@ public class LoreKcResource extends LoreResourceBase {
         } catch (Exception e) { return upstream(e); }
     }
 
+    /** S7B-03: {@code dry_run} — только дифф ротации, секрет не трогается. */
+    public record KcRotateRequest(Boolean dry_run) {}
+
+    /**
+     * Ротация секрета агента (S7B-03). {@code id} — внутренний uuid клиента KC или
+     * его clientId (экран агентов знает только clientId).
+     *
+     * <p>Отмены НЕТ и не будет: Keycloak делает старый секрет недействительным
+     * сразу, а вернуть его можно только записав старое значение обратно — то есть
+     * прочитав и сохранив его, что запрещено (KcDanger, javadoc). Ответ несёт
+     * {@code undoable:false} с причиной — и в диффе, и после применения.
+     */
     @POST
     @Path("agent/{id}/rotate")
+    @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response rotateAgentSecret(@PathParam("id") String clientUuid, @HeaderParam("X-Seer-Role") String role) {
+    public Response rotateAgentSecret(@PathParam("id") String idOrClientId, KcRotateRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (!configured()) return notConfigured();
         try {
             String t = adminToken();
-            HttpResponse<String> r = kc("POST", "/clients/" + clientUuid + "/client-secret", null, t);
+            String clientJson;
+            if (KcDanger.isUuid(idOrClientId)) {
+                HttpResponse<String> c = kc("GET", "/clients/" + idOrClientId, null, t);
+                if (c.statusCode() == 404)
+                    return noStore(Response.status(404).entity(new LoreError("NOT_FOUND", "client " + idOrClientId)));
+                if (c.statusCode() >= 300)
+                    return noStore(Response.status(c.statusCode()).entity(new LoreError("KC_UPSTREAM", c.body())));
+                clientJson = c.body();
+            } else {
+                HttpResponse<String> c = kc("GET", "/clients?clientId="
+                    + URLEncoder.encode(idOrClientId, StandardCharsets.UTF_8), null, t);
+                if (c.statusCode() >= 300)
+                    return noStore(Response.status(c.statusCode()).entity(new LoreError("KC_UPSTREAM", c.body())));
+                io.vertx.core.json.JsonArray arr = new io.vertx.core.json.JsonArray(c.body());
+                if (arr.isEmpty())
+                    return noStore(Response.status(404).entity(new LoreError("NOT_FOUND", "client " + idOrClientId)));
+                clientJson = arr.getJsonObject(0).encode();
+            }
+            Map<String, Object> plan = KcDanger.rotationPlan(clientJson);
+            String uuid = (String) plan.get("id");
+            String clientId = (String) plan.get("client_id");
+            if (req != null && Boolean.TRUE.equals(req.dry_run())) {
+                Map<String, Object> out = new java.util.LinkedHashMap<>();
+                out.put("client_id", clientId);
+                out.put("id", uuid);
+                out.put("ok", true);
+                out.put("dry_run", true);
+                out.put("undoable", false);
+                out.put("undo_reason", KcDanger.UNDO_IMPOSSIBLE);
+                out.put("plan", List.of(plan));
+                return noStore(Response.ok(out));
+            }
+            if (uuid == null)
+                return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("KC_UPSTREAM", "клиент Keycloak не прочитался — ротация не выполнена")));
+            HttpResponse<String> r = kc("POST", "/clients/" + uuid + "/client-secret", null, t);
             if (r.statusCode() >= 300)
                 return noStore(Response.status(r.statusCode()).entity(new LoreError("KC_UPSTREAM", r.body())));
             // Секрет возвращается ОДИН раз вызывающему admin'у; нигде не сохраняется/не логируется.
-            return noStore(Response.ok(r.body()));
+            // Журнал AO-01 берёт первое *_id поле — client_id, не секрет.
+            Map<String, Object> out = KcDanger.rotationAnswer(clientId, r.body());
+            if (out == null)
+                return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(new LoreError("KC_UPSTREAM",
+                    "Keycloak ответил без значения секрета — старый, скорее всего, уже недействителен; выпустите новый")));
+            // v1 (AgentsTab) читает секрет из поля value — тот же единственный ответ, не вторая выдача.
+            out.put("value", out.get("secret"));
+            return noStore(Response.ok(out));
         } catch (Exception e) { return upstream(e); }
     }
 
