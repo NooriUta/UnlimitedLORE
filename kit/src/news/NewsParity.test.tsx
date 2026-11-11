@@ -79,6 +79,7 @@ describe('S7A-08 · паритет v1 → v2: рендер', () => {
 
   it.each([[3, 'suc'], [-2, 'dng'], [0, 't3']] as const)('П7: сгорание %s — цвет по знаку (%s)', async (burn, tone) => {
     const d = clone();
+    if (!d.metrics.tasks.available) throw new Error('фикстура: сгорание посчитано');
     d.metrics.tasks.all.burn = burn;
     await mount(src(d));
     expect(screen.getByTestId('news-strip-burn').getAttribute('data-tone')).toBe(tone);

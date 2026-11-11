@@ -5356,6 +5356,10 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-news__time.is-none { font-family: inherit; color: var(--t3); font-style: italic; }
 .sk-news__utc { font-family: var(--mono); color: var(--t3); }
 .sk-news__proj { color: var(--t2); }
+/* П24 (владелица 10.11): автор, спринт задачи, ADR решения — ссылкой, если есть паспорт. */
+.sk-news__ref { display: inline-flex; align-items: center; gap: 3px; color: var(--inf); font: var(--fs-2xs) var(--mono); text-decoration: none; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-news__ref:hover, .sk-news__ref:focus-visible { text-decoration: underline; }
+.sk-news__ref.is-static { color: var(--t2); }
 .sk-news__status { display: inline-flex; align-items: center; gap: 2px; font-family: var(--mono); color: var(--t2); }
 /* Владелица 09.11: код — ссылка, статусы — значками, «скопировать» рядом с кодом. */
 .sk-news__code { padding: 0 6px; border: 1px solid var(--bd); border-radius: 999px; color: var(--acc); font: 600 var(--fs-2xs) var(--mono); text-decoration: none; }

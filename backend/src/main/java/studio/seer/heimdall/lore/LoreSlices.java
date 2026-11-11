@@ -3026,7 +3026,10 @@ public final class LoreSlices {
     static final Map<String, List<String>> BODY_SCOPED = Map.of(
         "doc_by_id",     List.of("content_html", "content_md_en", "content_md_ru"),
         "spec_by_id",    List.of("content_md", "summary"),
-        "runbook_by_id", List.of("content_md")
+        "runbook_by_id", List.of("content_md"),
+        // K2-FEED-BODY-MORE: голова тела спеки в строке списка — то же тело, что
+        // content_md паспорта; обнуляется до свёртки, и головы у записи нет вовсе.
+        "specs",         List.of(LoreBodyHead.SRC + "1")
     );
 
     /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */

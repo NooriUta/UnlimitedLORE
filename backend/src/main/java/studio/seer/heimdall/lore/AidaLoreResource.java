@@ -970,7 +970,8 @@ public class AidaLoreResource extends LoreResourceBase {
                 .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
         }
 
-        MartQuery body = new MartQuery("sql", composed.sql(),
+        // K2-FEED-BODY-MORE: голова тела — колонки только у выдачи среза (не у счётчика и фасетов).
+        MartQuery body = new MartQuery("sql", LoreBodyHead.withSources(id, composed.sql()),
             composed.params().isEmpty() ? null : composed.params(), -1);
         LOG.debugf("[LORE:%s] %s %s", db, id, composed.params());
 
@@ -1026,7 +1027,7 @@ public class AidaLoreResource extends LoreResourceBase {
         return client.query(db, basicAuth(), body)
             .chain(res -> {
                 if (exemptQuery == null) return Uni.createFrom().item(res);
-                MartQuery extra = new MartQuery("sql", exemptQuery.sql(),
+                MartQuery extra = new MartQuery("sql", LoreBodyHead.withSources(id, exemptQuery.sql()),
                     exemptQuery.params().isEmpty() ? null : exemptQuery.params(), -1);
                 // Сбой второго запроса — это сбой выдачи, а не «исключённых нет»:
                 // молча отдать урезанный список значило бы повторить исходный дефект.
@@ -1086,7 +1087,10 @@ public class AidaLoreResource extends LoreResourceBase {
                 // чтобы fields=…,status_category проецировалось как обычная колонка.
                 // S4-04: changed_at — максимум из открытой версии и updated_at (служебная колонка
                 // свёртывается здесь же, до страницы, чтобы fields/total её не видели).
-                out.put("rows", LoreStatusCategory.enrich(id, LoreChangedAt.fold(castRows(out.get("rows")))));
+                // K2-FEED-BODY-MORE: колонки-источники → body_head/body_rest/body_more (после
+                // обнуления тела правами — обнулённому голова не строится).
+                out.put("rows", LoreStatusCategory.enrich(id,
+                    LoreBodyHead.fold(LoreChangedAt.fold(castRows(out.get("rows"))))));
                 // Владелица 09.11: итоги спринта — строки задач сворачиваются в строку на
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
