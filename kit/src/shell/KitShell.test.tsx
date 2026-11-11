@@ -10,6 +10,7 @@ import { axeViolations } from '../test/axe';
 import { KitShell, createSafeStorage, registerGameIcons, useKitShell } from '../index';
 import type { KitConfig, KitData } from '../index';
 import type { UrlWindow } from '../resilience/urlState';
+import { NARROW_QUERY } from '../core/narrow';
 
 beforeAll(() => {
   registerGameIcons(gameIcons);
@@ -214,7 +215,7 @@ describe('KitShell — телефон: меню в drawer', () => {
     // jsdom matchMedia не реализует — подставляем свой и возвращаем как было.
     const w = window as unknown as { matchMedia?: unknown };
     const orig = w.matchMedia;
-    w.matchMedia = (q: string) => (q === '(max-width: 720px)' ? mql : { matches: false, addEventListener() {}, removeEventListener() {} });
+    w.matchMedia = (q: string) => (q === NARROW_QUERY ? mql : { matches: false, addEventListener() {}, removeEventListener() {} });
     try {
       render(<KitShell config={CONFIG} win={fakeWin()} storage={createSafeStorage(memStorage)} />);
       expect(screen.getByRole('button', { name: 'Меню' })).toBeTruthy();

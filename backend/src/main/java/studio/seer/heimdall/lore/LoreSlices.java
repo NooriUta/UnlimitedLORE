@@ -40,6 +40,34 @@ public final class LoreSlices {
     static final Pattern VALUE_RE =
         Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}", Pattern.UNICODE_CHARACTER_CLASS);
 
+    /**
+     * S7B-26: типизированные параметры среза — значение проверяется белым списком VALUE_RE, как любое,
+     * а в базу уходит НЕ строкой. {@code epoch_ms} — ISO-дата (полночь UTC) или момент → epoch-мс
+     * (Long): {@code MetricSnapshot.ts} — LONG, и сравнение числа со строкой не то, что ждёт читатель.
+     * {@code http_code} — код ответа 100..599 (Long).
+     */
+    static final Map<String, Map<String, String>> TYPED_PARAMS = Map.of(
+        "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"));
+
+    static Object typedValue(String name, String kind, String value) {
+        String v = value.trim();
+        if ("epoch_ms".equals(kind)) {
+            java.time.Instant t = null;
+            if (v.matches("\\d{4}-\\d{2}-\\d{2}([T ]\\d{2}:\\d{2}.*)?")) t = LoreChangedAt.instant(v);
+            if (t == null) throw new IllegalArgumentException("bad value for param: " + name + " (" + value
+                + ") — ISO date YYYY-MM-DD or date-time, UTC when no zone");
+            return t.toEpochMilli();
+        }
+        if ("http_code".equals(kind)) {
+            long c;
+            try { c = Long.parseLong(v); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException("bad value for param: " + name + " (HTTP status code expected)"); }
+            if (c < 100 || c > 599) throw new IllegalArgumentException("bad value for param: " + name + " (HTTP status code 100..599)");
+            return c;
+        }
+        throw new IllegalStateException("unknown param kind: " + kind);
+    }
+
     /** MT-03: с этой даты заведения enb-задача обязана нести JUSTIFIED_BY (раньше — вне правила). Константа времени компиляции. */
     static final String ENB_RULE_SINCE = "2026-08-01";
 
@@ -2670,10 +2698,15 @@ public final class LoreSlices {
             " GROUP BY object_id ORDER BY last_seen DESC LIMIT 100");
 
         // Сбои агентских записей: ответ с кодом ≥ 400 (AO-01 пишет код в value).
+        // S7B-26: since (ISO-дата/момент, UTC → epoch-мс числом: ts — LONG) и code (точный код) —
+        // Главной админки нужно «403 за сутки», а не «≥ 400 за всё время» (TYPED_PARAMS).
         slice("mcp_failures",
             "SELECT source AS caller, count(*) AS failures, max(ts) AS last_failure " +
             "FROM MetricSnapshot WHERE metric = 'lore.action' AND segment = 'agent' AND value >= 400",
-            List.of(), Map.of("caller", " WHERE source = :caller"),
+            List.of(), new LinkedHashMap<>(Map.of(
+                "caller", " WHERE source = :caller",
+                "since", " WHERE ts >= :since",
+                "code", " WHERE value = :code")),
             " GROUP BY source ORDER BY last_failure DESC LIMIT 100");
 
         // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
@@ -3203,7 +3236,8 @@ public final class LoreSlices {
             }
             if (value == null || !VALUE_RE.matcher(value).matches())
                 throw new IllegalArgumentException("bad value for param: " + e.getKey());
-            params.put(e.getKey(), value);
+            String kind = TYPED_PARAMS.getOrDefault(id, Map.of()).get(e.getKey());
+            params.put(e.getKey(), kind == null ? value : typedValue(e.getKey(), kind, value));
         }
 
         StringBuilder sql = new StringBuilder(def.baseSql());

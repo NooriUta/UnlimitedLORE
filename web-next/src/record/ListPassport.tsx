@@ -12,13 +12,16 @@ import {
 } from '@seidr/kit';
 import { MartProse } from '@seidr/kit/content';
 import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
+import { loreRefPeek } from './lorePeek';
+import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
-import { fromLoreRecord } from './loreRecordContract';
+import { fromLoreRecord, withFieldOptions } from './loreRecordContract';
+import { toDictItems, type DictApiRow } from '../sprint/taskDicts';
 import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
 import { saveRelation } from './relationSave';
@@ -32,7 +35,14 @@ import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-const md = (s: string) => <MartProse text={s} refHref={loreRefHref} />;
+/** Чтение тела: ссылка ведёт в паспорт (MD-READ-PEEK), наведение/тап — карточка Peek (S9-10). */
+function ProseWithPeek({ text }: { text: string }) {
+  const lang = useKitLang();
+  // Выключатель «Карточки по наведению» (настройки) читается из применённого атрибута.
+  const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
+  return <MartProse text={text} refHref={loreRefHref} refPeek={peek} />;
+}
+const md = (s: string) => <ProseWithPeek text={s} />;
 
 export interface ListPassportProps {
   type: PassportType;
@@ -130,6 +140,26 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   );
   const contract = pp.data ?? null;
   const view = useMemo(() => (contract ? fromLoreRecord(contract, lang) : null), [contract, lang]);
+  // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
+  // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
+  // правится (выбирать не из чего), а не показывает пустой список.
+  const dictKeys = useMemo(() => [...new Set((contract?.schema.fields ?? [])
+    .filter(f => f.kind === 'enum' && f.editable && f.write && f.dict).map(f => f.dict as string))].sort().join(','), [contract]);
+  const [dicts, setDicts] = useState<Record<string, { code: string; title: string }[]>>({});
+  useEffect(() => {
+    if (!dictKeys) return;
+    let alive = true;
+    for (const key of dictKeys.split(',')) {
+      slice<DictApiRow>('dictionary', { dict_type: key }).then(
+        body => {
+          const rows = body?.rows ?? [];
+          if (alive) setDicts(prev => ({ ...prev, [key]: toDictItems(rows, lang) }));
+        },
+        () => { /* справочник не пришёл — enum остаётся только для чтения */ },
+      );
+    }
+    return () => { alive = false; };
+  }, [dictKeys, slice, lang]);
   if (pp.state === 'error') return <LoadError error={pp.error} onRetry={pp.reload} />;
   if (!view) return <Skeleton lines={8} label={t('pp.loading')} />;
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
@@ -191,8 +221,10 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       <SprintTasksPanel contract={contract} onStatusSaved={pp.reload} fetchImpl={fetchImpl} win={win} />
     ))
     : view.config;
+  const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
+  const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf);
   const ctx: KitCtx = { config: {
-    ...baseConfig,
+    ...withOptions,
     // Цикл статусов из модели ГЛАВНЕЕ умолчания приложения: умолчание —
     // внутренняя таблица kit со всеми осями сразу, из-за неё в меню задачи и
     // были чужие статусы и два «В работе». Пусто — модель не ответила, и

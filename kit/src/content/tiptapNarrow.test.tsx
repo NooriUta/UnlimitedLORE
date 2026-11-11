@@ -7,6 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { TipTapField } from './index';
+import { NARROW_QUERY } from '../core/narrow';
+import { readFileSync } from 'node:fs';
 
 const ALL = [
   'отменить', 'повторить', 'жирный', 'курсив', 'зачёркнутый', 'код', 'ссылка',
@@ -14,7 +16,9 @@ const ALL = [
   'маркированный список', 'нумерованный список', 'чек-лист', 'цитата', 'разделитель', 'формула',
   'вставить таблицу', 'markdown-источника',
 ];
-const PRIMARY = ['отменить', 'жирный', 'курсив', 'ссылка', 'маркированный список'];
+// Владелица 11.11 (выбор по прототипу): «повтор» — в «ещё» (1а), «но лучше уменьшить кнопки в
+// мобильном, вообще больше их» — в первой строке девять частых кнопок по 30 px.
+const PRIMARY = ['отменить', 'жирный', 'курсив', 'зачёркнутый', 'ссылка', 'маркированный список', 'нумерованный список', 'чек-лист', 'цитата'];
 
 const names = (root: HTMLElement) => within(root).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? '');
 const has = (list: string[], word: string) => list.some(n => n.toLowerCase().includes(word.toLowerCase()));
@@ -63,7 +67,7 @@ describe('S4-MOBILE-EDGE п.А — панель TipTap узко', () => {
   it('без явного narrow — по matchMedia(max-width: 720px)', async () => {
     const w = window as unknown as { matchMedia?: unknown };
     const orig = w.matchMedia;
-    w.matchMedia = (q: string) => ({ matches: q === '(max-width: 720px)', addEventListener() {}, removeEventListener() {} });
+    w.matchMedia = (q: string) => ({ matches: q === NARROW_QUERY, addEventListener() {}, removeEventListener() {} });
     try {
       await mount(undefined);
       expect(screen.getByRole('button', { name: /ещё/i })).toBeTruthy();
@@ -72,4 +76,19 @@ describe('S4-MOBILE-EDGE п.А — панель TipTap узко', () => {
     }
   });
 
+});
+
+describe('S4-MOBILE-EDGE п.А — кнопки панели на телефоне мельче, зона касания не залезает на соседа', () => {
+  const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  it('узкая панель: кнопка 30 px шириной и 32 px высотой', () => {
+    const m = /\.sk-md__toolbar--narrow \.sk-md__btn\s*\{([^}]*)\}/.exec(css);
+    expect(m, 'правило найдено').not.toBeNull();
+    expect(m![1]).toMatch(/min-width:\s*30px/);
+    expect(m![1]).toMatch(/height:\s*32px/);
+  });
+  it('в плотной строке зона касания растёт только по высоте: ширина = сама кнопка', () => {
+    const m = /\.sk-md__toolbar--narrow \.sk-md__btn::after\s*\{([^}]*)\}/.exec(css);
+    expect(m, 'правило найдено').not.toBeNull();
+    expect(m![1]).toMatch(/width:\s*100%/);
+  });
 });

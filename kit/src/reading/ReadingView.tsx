@@ -19,6 +19,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import type { KeyboardEvent, ReactNode } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey } from '../i18n';
+import { NARROW_QUERY } from '../core/narrow';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { SafeStorage } from '../resilience/safeStorage';
 import { Ear } from '../shell/Ear';
@@ -34,7 +35,6 @@ const SIZE_LABEL: Record<ReadingPrefs['size'], KitKey> = {
   s: 'kit.read.size.s', m: 'kit.read.size.m', l: 'kit.read.size.l', xl: 'kit.read.size.xl',
 };
 
-const NARROW_QUERY = '(max-width: 720px)';
 
 /** Настройки чтения с записью в хранилище; правка — частичная. */
 export function useReadingPrefs(storage: SafeStorage, storageKey: string): [ReadingPrefs, (patch: Partial<ReadingPrefs>) => void] {

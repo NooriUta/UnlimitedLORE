@@ -15,7 +15,7 @@ import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
 import type { AppKey } from '../i18n';
 import {
-  OPEN_ONLY_NOTE, UC_OWN_LINKS_NOTE,
+  CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord, projectRecord,
   questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
 } from './records';
@@ -77,6 +77,16 @@ export interface ListScreenDef {
    * остального у него нет.
    */
   note?: string;
+  /**
+   * Срез ЗАКРЫТЫХ записей раздела, когда основной срез отдаёт только открытые
+   * (задачи: `open_tasks` + `closed_tasks`). Закрытые тогда — фильтр по
+   * умолчанию, а не отсечка: режим «Показывать закрытые» не «скрыть» —
+   * догружается этот срез; открыта запись, которой в загруженном нет, — фильтр
+   * снимается сам (слово владелицы 11.11.2026).
+   */
+  closedSlice?: string;
+  /** Оговорка, пока закрытые скрыты: где снять фильтр. */
+  closedNote?: string;
   /**
    * Вложенное (S4-09, перенесено на общий путь в S4-22): колонка прогресса,
    * которая догружается после списка, и раскрытие строки. Раздел подключает
@@ -271,9 +281,9 @@ function adrsConfig(lang: KitLang): KitConfig {
  *
  * Источник — `open_tasks`, а не `all_tasks`: второй несёт `note_md`, и на живом
  * замере весь корпус дал 4 млн символов на 57 730 строк (SE-01 в `LoreSlices`).
- * Цена выбора названа словами (`OPEN_ONLY_NOTE`): закрытых задач в этой выдаче
- * не бывает, поэтому режим «закрытые внизу» разделу не ставится — обещать
- * сортировку того, чего нет, нельзя.
+ * Закрытые — второй срез `closed_tasks` той же лёгкой проекции; он грузится,
+ * когда режим «Показывать закрытые» их показывает. Умолчание режима — «скрыть»:
+ * это фильтр, который человек снимает, а не отсечка на сервере (11.11.2026).
  */
 function tasksConfig(lang: KitLang): KitConfig {
   return {
@@ -540,8 +550,10 @@ export const LIST_SCREENS = {
     slice: 'open_tasks', titleKey: 'lists.tasks.title', icon: ICON_CANON.sectionTask,
     defaultSort: FRESH_FIRST,
     map: taskListRecord, config: lang => withFeed(lang, tasksConfig(lang), FEEDS.tasks), feed: FEEDS.tasks, quickIcons: {},
-    // Срез отдаёт только открытые задачи — это сказано словами на экране.
-    note: OPEN_ONLY_NOTE,
+    // Закрытые — фильтр по умолчанию, а не срез (слово владелицы 11.11): режим
+    // «Показывать закрытые» их показывает — догружается closed_tasks.
+    closedSlice: 'closed_tasks',
+    closedNote: CLOSED_HIDDEN_NOTE,
   },
   decisions: {
     modelType: 'decision',
