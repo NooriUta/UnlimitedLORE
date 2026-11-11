@@ -468,6 +468,30 @@ export function KitShell({
     />
   );
 
+  // Кнопка модуля — одна на шапку и нижнюю панель телефона: имя, «скоро» и
+  // текущий отмечаются одинаково, различается только раскладка.
+  const moduleButton = (m: KitConfig['modules'][number], where: 'top' | 'dock') => {
+    const planned = m.status === 'planned';
+    const current = m.id === nav.module;
+    const dock = where === 'dock';
+    return (
+      <button
+        key={m.id}
+        type="button"
+        className={dock ? 'sk-shell__dock-item' : 'sk-shell__mod'}
+        aria-label={planned ? `${m.title} · ${kitT(lang, 'kit.shell.planned')}` : m.title}
+        aria-current={current ? 'page' : undefined}
+        aria-disabled={planned ? true : undefined}
+        title={planned ? kitT(lang, 'kit.shell.plannedHint') : m.title}
+        onClick={() => { if (!planned && !current) navigate({ module: m.id }); }}
+      >
+        <GameIcon slug={m.icon} size={dock ? 18 : 15} />
+        <span className={dock ? 'sk-shell__dock-label' : 'sk-shell__label'}>{m.title}</span>
+        {planned && !dock && <span className="sk-shell__tag" aria-hidden="true">{kitT(lang, 'kit.shell.planned')}</span>}
+      </button>
+    );
+  };
+
   return (
     <ShellContext.Provider value={api}>
       {/* Словарь статусов — всем, кто рисует статус (S4-STATUS-AXIS-CONFIG,
@@ -508,28 +532,13 @@ export function KitShell({
             <span className="sk-shell__brand-text">{brand ?? config.modules[0]?.title ?? ''}</span>
             {brandTag}
           </div>
-          <nav className="sk-shell__mods" aria-label={kitT(lang, 'kit.shell.modules')}>
-            {config.modules.map(m => {
-              const planned = m.status === 'planned';
-              const current = m.id === nav.module;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  className="sk-shell__mod"
-                  aria-label={planned ? `${m.title} · ${kitT(lang, 'kit.shell.planned')}` : m.title}
-                  aria-current={current ? 'page' : undefined}
-                  aria-disabled={planned ? true : undefined}
-                  title={planned ? kitT(lang, 'kit.shell.plannedHint') : m.title}
-                  onClick={() => { if (!planned && !current) navigate({ module: m.id }); }}
-                >
-                  <GameIcon slug={m.icon} size={15} />
-                  <span className="sk-shell__label">{m.title}</span>
-                  {planned && <span className="sk-shell__tag" aria-hidden="true">{kitT(lang, 'kit.shell.planned')}</span>}
-                </button>
-              );
-            })}
-          </nav>
+          {/* На телефоне модули — нижней панелью (ниже), не в шапке:
+              S4-MOBILE-COMPARE, замер 360 px — в шапке они выходили за край. */}
+          {!narrow && (
+            <nav className="sk-shell__mods" aria-label={kitT(lang, 'kit.shell.modules')}>
+              {config.modules.map(m => moduleButton(m, 'top'))}
+            </nav>
+          )}
           {topStart && <div className="sk-shell__top-start">{topStart}</div>}
           {topEnd && <div className="sk-shell__top-end">{topEnd}</div>}
           {account && <div className="sk-shell__account">{account}</div>}
@@ -608,6 +617,14 @@ export function KitShell({
             {children}
           </main>
         </div>
+        {/* Модули на телефоне — нижняя панель в зоне большого пальца, как в v1
+            (SPRINT_LORE_MOBILE_UX/MOB-12; решение D-2026-UXR-MOBILE-FOLLOWS-V1).
+            Иконка и короткая подпись под ней; текущий — aria-current. */}
+        {narrow && (
+          <nav className="sk-shell__dock" aria-label={kitT(lang, 'kit.shell.modules')}>
+            {config.modules.map(m => moduleButton(m, 'dock'))}
+          </nav>
+        )}
         {narrow && (
           <Sheet open={drawer} onClose={() => setDrawer(false)} title={activeModule?.title ?? kitT(lang, 'kit.shell.menu')} side="left">
             {menu(() => setDrawer(false))}
