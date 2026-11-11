@@ -506,13 +506,15 @@ final class LoreRecordRegistry {
                 // S4-29 v3 (46а/52а): Спеки · ADR · Технологии · Подкомпоненты — вкладками (поля в
                 // «Свойствах» остаются).
                 rel("children", "Подкомпоненты", "PARENT_OF", "in", "component", "composition", "link_tab", false),
-                // Стек (USES → LoreTechnology, tech_id «java») — метка, не паспорт: полем «Технологии»
-                // в «Свойствах», цель tech_ref (так её и отдаёт чтение).
-                rel("tech", "Технологии", "USES", "out", "tech_ref", "attribute", "prop", false),
-                // Слово владелицы 11.11: паспорта технологий (SPEC-TECH-…) — вкладкой «Технологии».
-                // Раньше вкладка шла по USES и у HARPA (17 технологий) была пустой, а технологии
+                // Стек (USES → LoreTechnology, tech_id «java») — метка, не паспорт: виден текстовым
+                // полем tech в «Свойствах», цель tech_ref (так её и отдаёт чтение). Место links —
+                // ни вкладки, ни второго поля: ключ tech занят вкладкой ниже.
+                rel("stack", "Стек", "USES", "out", "tech_ref", "attribute", "links", false),
+                // Слово владелицы 11.11: вкладка «Технологии» (ключ tech — прежний, контракт и личный
+                // порядок вкладок не ломаются) — паспорта технологий SPEC-TECH-… (DOCUMENTED_IN ∪
+                // BELONGS_TO). Раньше шла по USES: у HARPA (17 технологий) была пустой, а технологии
                 // смешивались со спеками во вкладке «Спеки».
-                rel("techs", "Технологии", "DOCUMENTED_IN", "out", "tech", "attribute", "link_tab", false),
+                rel("tech", "Технологии", "DOCUMENTED_IN", "out", "tech", "attribute", "link_tab", false),
                 rel("adrs", "ADR", "BELONGS_TO", "in", "adr", "attribute", "link_tab", false),
                 // Спеки — DOCUMENTED_IN ∪ BELONGS_TO спеки (путь записи ставит оба, старые — одно).
                 rel("specs", "Спеки", "DOCUMENTED_IN", "out", "spec", "attribute", "link_tab", false),

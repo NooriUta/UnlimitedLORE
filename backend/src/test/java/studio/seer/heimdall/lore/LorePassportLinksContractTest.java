@@ -73,7 +73,19 @@ class LorePassportLinksContractTest {
      * показывает его одной вкладкой по DOCUMENTED_IN, а чтение сводит туда и BELONGS_TO
      * ({@link LoreRecordFrom.LinkFrom#unionColumn()}) — это проверяет {@link #specAliasIsReadAsUnion()}.
      */
-    static final String ALIAS = "показывается вкладкой specs/techs (DOCUMENTED_IN out) — чтение сводит оба ребра";
+    static final String ALIAS = "показывается вкладкой specs/tech (DOCUMENTED_IN out) — чтение сводит оба ребра";
+
+    /**
+     * Ключ вкладки «Технологии» компонента — прежний tech: на нём держатся контракт /lore/model
+     * (surfaces) и сохранённый личный порядок вкладок. Меняется содержимое, не ключ.
+     */
+    @Test
+    void componentTechTabKeepsItsKey() {
+        LoreRecordRegistry.Relation r = LoreRecordRegistry.get("component").relations().stream()
+            .filter(x -> x.key().equals("tech")).findFirst().orElseThrow();
+        assertEquals(List.of("DOCUMENTED_IN", "out", "tech", "link_tab"),
+            List.of(r.rel(), r.dir(), r.targetType(), r.place()), "вкладка tech — паспорта технологий SPEC-TECH-…");
+    }
 
     @Test
     void specAliasIsReadAsUnion() {
