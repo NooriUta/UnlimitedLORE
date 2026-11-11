@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, CalendarMonth, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -263,6 +263,25 @@ function Samples() {
           ]}
           missing={['T-404']}
           note="показаны 2 из 3"
+        />
+      </section>
+      <section className="bare__sec" data-kit="ctlbar">
+        <h2 className="bare__h2">Полоса управления</h2>
+        {/* ControlBar (S4-SPRINT-TASKS-CONTROLS): для таблиц со своими строками — дерево,
+            таблица задач. Те же сегменты, классы и модель, что у списка; условие задано —
+            «Сбросить фильтр» и «Показано N из M». */}
+        <ControlBar
+          config={{ modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [{ code: 'todo', title: 'к работе', category: 'todo', icon: 'calendar', color: 'var(--t3)' }, { code: 'done', title: 'готово', category: 'done', icon: 'check-mark', color: 'var(--suc)' }] } }}
+          records={[
+            { id: 'T-1', kind: 'k', title: 'Срез версии', status: 'done', fields: {} },
+            { id: 'T-2', kind: 'k', title: 'Промо', status: 'todo', fields: {} },
+          ]}
+          state={{ ...EMPTY_CONTROLS, text: 'срез' }}
+          onChange={() => {}}
+          filterKeys={['status']}
+          groupKeys={['status']}
+          sortKeys={['title', 'status']}
+          shown={{ shown: 1, total: 2 }}
         />
       </section>
       <section className="bare__sec" data-kit="fresh">

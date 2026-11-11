@@ -148,4 +148,69 @@ class MachineAccessLiveDbTest {
         given().header("X-Seer-Role", "admin").when().get("/lore/slice/machine_acl?client_id=" + CLIENT)
             .then().statusCode(200).body("rows[0].grant_kc_subs.size()", equalTo(0));
     }
+
+    // ── S7B-ACL-3: поля среза и пачка ─────────────────────────────────────
+
+    private static final String KID2 = "acl3-kid2-sub-0001";
+
+    private static String batch(String items, String extra) {
+        return "{\"machine_id\":\"" + MACHINE + "\",\"items\":[" + items + "]" + extra + "}";
+    }
+
+    private static String item(String sub, String role) {
+        return "{\"kc_sub\":\"" + sub + "\",\"action\":\"grant\",\"role\":\"" + role + "\",\"projects\":[\"" + PROJECT + "\"]}";
+    }
+
+    @Test
+    @Order(9)
+    void batch_dryRun_plansAll_writesNothing_badItemRefusesWholeBatch() {
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body(batch(item(KID, "viewer") + "," + item(KID2, "actor"), ",\"dry_run\":true"))
+            .when().post("/lore/user/machine-access").then().statusCode(200)
+            .body("dry_run", equalTo(true)).body("plan.size()", equalTo(2)).body("plan[0].kind", equalTo("grant"))
+            .body("undo.size()", equalTo(2));
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body(batch(item(KID, "viewer") + ",{\"kc_sub\":\"" + KID2 + "\",\"role\":\"viewer\"}", ""))
+            .when().post("/lore/user/machine-access").then().statusCode(400);
+        given().header("X-Seer-Role", "editor").contentType("application/json")
+            .body(batch(item(KID, "viewer"), ""))
+            .when().post("/lore/user/machine-access").then().statusCode(403).body("error", equalTo("MACHINE_ACCESS_FORBIDDEN"));
+        given().header("X-Seer-Role", "admin").when().get("/lore/slice/machine_acl?client_id=" + CLIENT)
+            .then().statusCode(200).body("rows[0].grant_kc_subs.size()", equalTo(0));
+    }
+
+    @Test
+    @Order(10)
+    @SuppressWarnings("unchecked")
+    void batch_apply_oneBatchId_sliceCarriesProjectsHarnessesCanWrite_undoOfRevertsIt() {
+        var applied = given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body(batch(item(KID, "viewer") + "," + item(KID2, "actor"), ""))
+            .when().post("/lore/user/machine-access").then().statusCode(200)
+            .body("applied", equalTo(2)).body("failed", equalTo(0))
+            .extract().jsonPath();
+        String batchId = applied.getString("batch_id");
+        assertTrue(batchId != null && LoreRoleBatch.isBatchId(batchId), "batch_id: " + batchId);
+        List<Map<String, Object>> undo = applied.getList("undo");
+        assertEquals(2, undo.size());
+
+        Map<String, Object> row = given().header("X-Seer-Role", "admin")
+            .when().get("/lore/slice/machine_acl?client_id=" + CLIENT).then().statusCode(200)
+            .extract().jsonPath().getMap("rows[0]");
+        assertEquals(2, ((List<?>) row.get("grant_kc_subs")).size());
+        assertEquals(List.of(PROJECT), row.get("projects"), "проекты машины: роли владельца ∪ допуски");
+        assertTrue(row.get("harnesses") instanceof List<?>, "harness машины — список: " + row);
+        assertEquals(Boolean.TRUE, row.get("can_write"), "admin вправе выдавать допуск");
+
+        String undoItems = String.join(",", undo.stream().map(u -> "{\"kc_sub\":\"" + u.get("kc_sub")
+            + "\",\"action\":\"" + u.get("action") + "\"}").toList());
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body(batch(undoItems, ",\"undo_of\":\"" + batchId + "\""))
+            .when().post("/lore/user/machine-access").then().statusCode(200)
+            .body("undo_of", equalTo(batchId)).body("applied", equalTo(2));
+        given().header("X-Seer-Role", "admin").when().get("/lore/slice/machine_acl?client_id=" + CLIENT)
+            .then().statusCode(200).body("rows[0].grant_kc_subs.size()", equalTo(0));
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body(batch(item(KID, "viewer"), ",\"undo_of\":\"rb-0000000000001-deadbeef\""))
+            .when().post("/lore/user/machine-access").then().statusCode(400);
+    }
 }
