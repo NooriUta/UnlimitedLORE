@@ -47,7 +47,8 @@ public final class LoreSlices {
      * {@code http_code} — код ответа 100..599 (Long).
      */
     static final Map<String, Map<String, String>> TYPED_PARAMS = Map.of(
-        "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"));
+        "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"),
+        "mcp_failure_rows", Map.of("since", "epoch_ms", "code", "http_code"));
 
     static Object typedValue(String name, String kind, String value) {
         String v = value.trim();
@@ -2709,6 +2710,19 @@ public final class LoreSlices {
                 "code", " WHERE value = :code")),
             " GROUP BY source ORDER BY last_failure DESC LIMIT 100");
 
+        // S7B-30: те же отказы ПОСТРОЧНО — детализация карточки Главной «N отказов ≥ 400».
+        // Условие и фильтры — ровно как у mcp_failures (счётчик и список обязаны сходиться 1:1);
+        // admin_actions не годится (режет агентские записи по админским семействам), agent_actions —
+        // тоже (500 последних действий всех исходов, отказы среди них — малая часть).
+        slice("mcp_failure_rows",
+            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, value AS status " +
+            "FROM MetricSnapshot WHERE metric = 'lore.action' AND segment = 'agent' AND value >= 400",
+            List.of(), new LinkedHashMap<>(Map.of(
+                "caller", " WHERE source = :caller",
+                "since", " WHERE ts >= :since",
+                "code", " WHERE value = :code")),
+            " ORDER BY ts DESC LIMIT 500");
+
         // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
         // Отличать от sessions_recent намеренно: здесь наблюдённый факт входа,
         // там — догадка LORE по первому запросу после паузы. source = clientId,
@@ -3084,6 +3098,7 @@ public final class LoreSlices {
         Map.entry("role_matrix", "матрица ролей проект × люди (S7B-11) — админская, как project_users для всех; решение"),
         Map.entry("mcp_connections", "подключения MCP (S7B-07) — телеметрия агентов, админская; решение"),
         Map.entry("mcp_failures", "сбои записей агентов (S7B-07) — ряд AO-01, админский; решение"),
+        Map.entry("mcp_failure_rows", "отказы записей агентов построчно (S7B-30) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")

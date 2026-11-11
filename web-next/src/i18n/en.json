@@ -921,5 +921,21 @@
   "admin.roles.danger.need": "Until the login is typed exactly, nothing can be applied.",
   "peek.kind.unknown": "record",
   "peek.err.noType": "record type is not set and cannot be recognised from the ID — cannot open",
-  "peek.sheetTitle": "Record {id}"
+  "peek.sheetTitle": "Record {id}",
+  "admin.mcp.onlyFailures": "Only with refusals",
+  "admin.mcp.fails.title": "Agent write refusals (code ≥ 400)",
+  "admin.mcp.fails.loading": "Reading refusals",
+  "admin.mcp.fails.error": "Could not read the refusal list: {reason}",
+  "admin.mcp.fails.empty": "No refusals",
+  "admin.mcp.fails.emptyHint": "no agent writes answered with code ≥ 400 were observed",
+  "admin.mcp.fails.shown": "Showing {n} of {m} — the count on the Home screen",
+  "admin.mcp.fails.shownNoTotal": "Showing {n}; the total could not be read",
+  "admin.mcp.fails.col.ts": "When",
+  "admin.mcp.fails.col.family": "Family",
+  "admin.mcp.fails.col.entity": "Record",
+  "admin.mcp.fails.col.code": "Code",
+  "admin.roles.filter": "People filter",
+  "admin.roles.onlyNoProjects": "Only without projects",
+  "admin.roles.noProjectsEmpty": "Nobody without projects",
+  "admin.roles.noProjectsEmptyHint": "every checked account has at least one role"
 }
