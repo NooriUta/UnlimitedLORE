@@ -7,6 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
+import { SumCell } from '../list/sum';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
@@ -183,6 +184,9 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
     const text = value === null || value === undefined ? '' : valueText(value);
     return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} drafts={edit.drafts?.(fieldKey)} />;
   }
+  // Сумма с охватом (S4-09): та же ячейка, что `sum:` в списке — число,
+  // «у 9 из 14», «не заполнено» вместо нуля, «?» с причиной. Одно число — один вид.
+  if (type === 'sum') return <SumCell value={value} />;
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
   if (type === 'ref') {

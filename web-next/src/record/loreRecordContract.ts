@@ -7,6 +7,7 @@ import type { KitConfig, KitData, KitEdge, KitLang, KitRecord, KitRelation } fro
 import { appT } from '../i18n';
 import { baseConfig, type PassportLoad } from './passportAdapters';
 import { SPRINT_FACTS } from './loreRecord';
+import { ABSENT_NUMBERS, sumOfRow, type ServerSum } from '../sprints/sprintTotals';
 import { ADR_BODY_READONLY, EDITABLE_BODY } from './passportSave';
 
 export type FieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number';
@@ -83,6 +84,12 @@ export interface LoreRecord1 {
   /** Части записи; у старой клиентской эмуляции их нет. */
   parts?: LorePart[];
   /**
+   * Итоги сервера (S4-09): у спринта `effort_days_total`, `actual_days_total`
+   * формой {value, known, of}. У клиентской эмуляции блока нет вовсе — там
+   * итогов не показываем, а не выдумываем.
+   */
+  computed?: Record<string, unknown>;
+  /**
    * Итоги, посчитанные СЕРВЕРОМ по корпусу (не по присланной выборке).
    *
    * `facts.tasks` считается только при успешном чтении задач: при сбое ключа
@@ -132,8 +139,10 @@ export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang
   const req = REQUIRED[type] ?? [];
   const all = kind?.fields ?? [];
   const bodyDefs = all.filter(f => BODY_FIELDS.includes(f.key));
-  const props: LoreField[] = all.filter(f => !BODY_FIELDS.includes(f.key)).map(f => ({
-    key: f.key, label: f.title, kind: f.type, required: req.includes(f.key), editable: true,
+  // Поле-сумма (S4-09) — итог сервера, а не поле записи: в поля паспорта для
+  // правки оно не идёт (писать его некуда).
+  const props: LoreField[] = all.filter(f => !BODY_FIELDS.includes(f.key) && f.type !== 'sum').map(f => ({
+    key: f.key, label: f.title, kind: f.type as FieldKind, required: req.includes(f.key), editable: true,
     ...(f.type === 'ref' && Array.isArray(r.fields[f.key]) ? { multi: true } : {}),
     ...(f.section ? { section: f.section } : {}),
     group: 'props' as const,
@@ -185,6 +194,12 @@ export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang
 }
 
 /** Объект контракта → входы kit. Kit не знает полей типа — всё отсюда. */
+/** Итоги спринта: поле паспорта ← ключ `computed` сервера, подпись — та же, что у колонки списка. */
+const SPRINT_SUMS = [
+  ['effort_total', 'effort_days_total', 'lists.field.effortTotal'],
+  ['actual_total', 'actual_days_total', 'lists.field.actualTotal'],
+] as const;
+
 export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   const { type, id } = c.record;
   const { title, body_md, ...fields } = c.values;
@@ -230,6 +245,17 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // `schema.fields` её не перечислили, поле добавляем сами — иначе значение
   // («Проекты: NooriUta/AIDA») не показалось бы вообще, а в блоке связей
   // стояло бы «Проекты 0».
+  // Итоги спринта в паспорте (S4-09): поля-суммы с охватом — тем же разбором
+  // (sumOfRow), что и ячейки списка. Сервер не прислал число — «не посчитали»
+  // с причиной, а не ноль.
+  const sumFields: { key: string; title: string; type: 'sum' }[] = [];
+  if (type === 'sprint' && c.computed) {
+    for (const [key, from, titleKey] of SPRINT_SUMS) {
+      const v = c.computed[from];
+      record.fields[key] = v && typeof v === 'object' ? sumOfRow(v as ServerSum, false) : { error: ABSENT_NUMBERS };
+      sumFields.push({ key, title: appT(lang, titleKey), type: 'sum' });
+    }
+  }
   const propRels = c.schema.relations.filter(r => r.place === 'prop' && !props.some(f => f.key === r.key));
   const propFields = propRels.map(r => ({
     key: r.key, title: r.label, type: 'ref' as const,
@@ -287,7 +313,7 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // `parts[]` лежат настоящие элементы) и свойства.
   const tabs = [...partTabs, ...linkTabs.filter(t => !partTabs.some(x => x.key === t.key) && !kitRelKeys.has(t.key))];
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: kitRels.map(({ count: _n, place: _p, target_type: _t, ...d }) => d), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...propFields], ...(tabs.length ? { tabs } : {}) },
+    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: kitRels.map(({ count: _n, place: _p, target_type: _t, ...d }) => d), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit
