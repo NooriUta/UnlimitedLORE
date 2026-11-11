@@ -3971,6 +3971,11 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-head__kind { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
 .sk-rec-head__time { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
 .sk-rec-head__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1.2; color: var(--t1); word-break: break-word; }
+/* Телефон (S4-MOBILE-COMPARE, замер 360 px): --fs-xl давал заголовок задачи в семь
+   строк и сдвигал текст заметки на второй экран. Как в v1 — не крупнее --fs-lg. */
+@media (max-width: 720px) {
+  .sk-rec-head__title { font-size: var(--fs-lg); }
+}
 .sk-rec-status { gap: 4px; }
 
 .sk-rec-verdict {
@@ -6013,6 +6018,19 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
      Заодно снимаем явные места: в одной клетке паспорт встаёт сам. */
   .sk-dock[data-placement] .sk-dock__resize { display: none; }
   .sk-dock[data-placement] .sk-dock__panel { grid-area: auto; }
+  /* Паспорт во весь экран, без полей (S4-MOBILE-COMPARE, D-2026-UXR-MOBILE-FOLLOWS-V1:
+     образец — v1). Замер 360 px: колонка записи 227 px — треть ширины съедали
+     рамка и поля дока и плавающая «×». Остаётся только внутренний отступ 12 px. */
+  .sk-dock[data-placement] { border: 0; border-radius: 0; }
+  .sk-dock[data-placement] .sk-dock__panel { padding: 8px 12px; border: 0; }
+  .sk-dock[data-placement='full'] .sk-dock__panel { padding: 44px 12px 12px; }
+  .sk-dock[data-placement='full'] .sk-rec { padding: 0 0 24px; }
+  /* «×» плавает справа, а плавающий элемент сужает ВЕСЬ соседний блок-сетку
+     (паспорт — блок со своим контекстом), а не одну строку: запись теряла
+     ширину кнопки по всей высоте. Отрицательное нижнее поле снимает обтекание,
+     кнопка остаётся на месте (липкой), а место ей держит строка крошек. */
+  .sk-dock[data-placement] .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px) - 8px); }
+  .sk-dock[data-placement] .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 4px); }
 }
 
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */

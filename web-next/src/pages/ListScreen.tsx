@@ -414,7 +414,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   }
 
   return (
-    <section className="list-screen" data-screen={screen} aria-labelledby={heading && !titleId ? headId : undefined}>
+    <section className={open.id && ready ? 'list-screen list-screen--passport' : 'list-screen'} data-screen={screen} aria-labelledby={heading && !titleId ? headId : undefined}>
       {/* Пока списка нет (загрузка, ошибка, нет прав) — та же шапка без видов: заголовок не прыгает. */}
       {head && !ready && <ScreenHead {...head} />}
       {warnings.length > 0 && (
