@@ -324,14 +324,10 @@ public class LoreUserResource extends LoreResourceBase {
             p.put("sub", req.kc_sub());
             p.put("c", clientId);
             p.put("r", target.role());
-            p.put("pr", target.projects());
-            p.put("hs", target.harnesses());
             p.put("by", callerLabel());
             p.put("at", Instant.now().toString());
             if ("update".equals(kind)) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE MACHINE_ACCESS SET role = :r, projects = :pr, harnesses = :hs, granted_by = :by, granted_at = :at "
-                    + "WHERE @out.kc_sub = :sub AND @in.client_id = :c", p)).await().indefinitely();
+                setMachineAccessProps(p, target);
                 out.put("outcome", LoreOutcome.UPDATED);
                 return noStore(Response.ok(out));
             }
@@ -340,10 +336,10 @@ public class LoreUserResource extends LoreResourceBase {
             upsertUserVertex(req.kc_sub(), req.display_name());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "CREATE EDGE MACHINE_ACCESS FROM (SELECT FROM KnowUser WHERE kc_sub = :sub) "
-                + "TO (SELECT FROM KnowActor WHERE client_id = :c) IF NOT EXISTS "
-                + "SET role = :r, projects = :pr, harnesses = :hs, granted_by = :by, granted_at = :at", p))
+                + "TO (SELECT FROM KnowActor WHERE client_id = :c) IF NOT EXISTS", pair))
                 .await().indefinitely();
             boolean made = edgeExists(MachineAccess.EDGE, "kc_sub", req.kc_sub(), "client_id", clientId);
+            if (made) setMachineAccessProps(p, target);
             out.put("outcome", made ? LoreOutcome.CREATED : LoreOutcome.NOOP);
             if (!made) out.put("reason", "ребро MACHINE_ACCESS не создано: человек или машина не найдены");
             return noStore(Response.ok(out));
@@ -351,6 +347,28 @@ public class LoreUserResource extends LoreResourceBase {
             LOG.warnf("[LORE MACHINE ACCESS] %s @ %s: %s", req.kc_sub(), req.machine_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
         }
+    }
+
+    /**
+     * Свойства ребра допуска — отдельным UPDATE после CREATE EDGE. CI 11.11 (#1225):
+     * «CREATE EDGE … IF NOT EXISTS SET …» с параметрами-списками ArcadeDB отверг 400.
+     * Списки пишем литералом: значения уже проверены (проекты — по KnowGitProject,
+     * harness — по словарю), кавычки экранируются {@link #sqlList}.
+     */
+    private void setMachineAccessProps(Map<String, Object> p, MachineAccess.Grant target) {
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "UPDATE MACHINE_ACCESS SET role = :r, projects = " + sqlList(target.projects())
+            + ", harnesses = " + sqlList(target.harnesses()) + ", granted_by = :by, granted_at = :at "
+            + "WHERE @out.kc_sub = :sub AND @in.client_id = :c", p)).await().indefinitely();
+    }
+
+    static String sqlList(java.util.Collection<String> values) {
+        StringBuilder b = new StringBuilder("[");
+        for (String v : values) {
+            if (b.length() > 1) b.append(", ");
+            b.append('\'').append(v.replace("\\", "\\\\").replace("'", "\\'")).append('\'');
+        }
+        return b.append("]").toString();
     }
 
     public record MachineAccessRequest(String machine_id, String kc_sub, String display_name, String action,
