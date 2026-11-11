@@ -664,6 +664,7 @@
   "kit.record.width.s": "narrower",
   "kit.record.width.m": "medium",
   "kit.record.width.l": "wider",
+  "kit.record.width.f": "full width",
   "kit.ds.title": "Data state",
   "kit.ds.checked": "Checked:",
   "kit.ds.failed": "Could not check:",

@@ -664,6 +664,7 @@
   "kit.record.width.s": "уже",
   "kit.record.width.m": "средне",
   "kit.record.width.l": "шире",
+  "kit.record.width.f": "во всю ширину",
   "kit.ds.title": "Состояние данных",
   "kit.ds.checked": "Проверено:",
   "kit.ds.failed": "Не смогли проверить:",

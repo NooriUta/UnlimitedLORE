@@ -293,11 +293,11 @@ function KindTab({ render, record, ctx }: { render: NonNullable<KindConfig['tabs
   return <>{renderOut(render(record, ctx), ctx)}</>;
 }
 
-type RecWidth = 's' | 'm' | 'l';
-const WIDTHS: readonly RecWidth[] = ['s', 'm', 'l'];
+type RecWidth = 's' | 'm' | 'l' | 'f';
+const WIDTHS: readonly RecWidth[] = ['s', 'm', 'l', 'f'];
 const WIDTH_KEY = 'seidr-kit:rec-width';
 function readWidth(): RecWidth {
-  try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' ? v : 'm'; } catch { return 'm'; }
+  try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' || v === 'f' ? v : 'm'; } catch { return 'm'; }
 }
 
 /** Свёртка «Свойства · …» (v4): непустые значения полей одной строкой. */

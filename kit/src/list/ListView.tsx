@@ -42,6 +42,7 @@ import { chipLabel, isChipList, toChips } from '../core/chipValue';
 import { foldBody, type FeedBody } from './feedBody';
 import { foldUnder, type FeedUnder, type FeedUnderFold } from './feedUnder';
 import { GluedBlock } from '../record/GluedBlock';
+import { MartProse } from '../content/MartProse';
 import type { UrlWindow } from '../resilience/urlState';
 import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
@@ -1432,8 +1433,9 @@ export function ListView({
       toggleBody(r.id);
     };
     return (
-      <span className="sk-feed__body" data-body={action.kind} data-open={open ? '' : undefined}>
-        {shown.map((para, i) => <span key={i} className="sk-feed__para">{para}</span>)}
+      <div className="sk-feed__body" data-body={action.kind} data-open={open ? '' : undefined}>
+        {/* Тело — тот же MD, что в паспорте, и тот же рендер (владелица 11.11.2026). */}
+        {shown.map((para, i) => <MartProse key={i} className="sk-feed__para" text={para} />)}
         {action.kind === 'retry' && (
           <span className="sk-feed__bodyfail" role="alert">
             {t('kit.list.feed.body.failed', { reason: action.reason })}
@@ -1451,7 +1453,7 @@ export function ListView({
             {label}
           </button>
         )}
-      </span>
+      </div>
     );
   };
 

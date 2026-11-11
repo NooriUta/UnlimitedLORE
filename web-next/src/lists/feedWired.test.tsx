@@ -111,7 +111,7 @@ function net(rows: Record<string, unknown>) {
 }
 
 const item = (c: HTMLElement, id: string) => c.querySelector(`.sk-feed [data-record-id="${id}"]`) as HTMLElement;
-const shown = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent);
+const shown = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent?.trim());
 
 describe('K2-FEED-VIEW · лента открывается в разделе', () => {
   it('у раздела со временем лента стоит в переключателе видов', async () => {

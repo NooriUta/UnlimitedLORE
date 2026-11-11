@@ -61,7 +61,7 @@ function feed(body: FeedBody | null, onFeedBody?: (id: string) => void, edges: K
 }
 
 const item = (c: HTMLElement, id: string) => c.querySelector(`[data-record-id="${id}"]`) as HTMLElement;
-const paras = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent);
+const paras = (c: HTMLElement, id: string) => [...item(c, id).querySelectorAll('.sk-feed__para')].map(e => e.textContent?.trim());
 const more = (c: HTMLElement, id: string) => item(c, id).querySelector('.sk-feed__bodymore') as HTMLElement | null;
 
 describe('K2-FEED-BODY-MORE · шапка и первые абзацы', () => {
@@ -197,5 +197,21 @@ describe('K2-FEED-BODY-MORE · вклеенный список относяще�
       { from: 'b', to: 'a', type: 'BECAUSE' },
     ]);
     expect(item(container, 'b').querySelector('.sk-rec-glue')).toBeNull();
+  });
+});
+
+// Владелица 11.11.2026: «в Ленте feed не используется рендеринг MartProse,
+// исправь» и «по факту лента — это лента паспортов». Тело в ленте — тот же
+// MD, что в паспорте, и читается тем же рендером: сырые «**» и «- » в ленте
+// при отрисованном паспорте — два разных вида одного текста.
+describe('тело в ленте рендерится MartProse, как в паспорте', () => {
+  it('MD в абзаце разобран: жирный — <strong>, список — <li>, звёздочек в тексте нет', () => {
+    const { container } = feed({ kind: 'full', paragraphs: ['Это **важно** и `код`', '- пункт один\n- пункт два'] });
+    const body = item(container, 'a').querySelector('.sk-feed__body') as HTMLElement;
+    expect(body.querySelector('.sk-prose')).toBeTruthy();
+    expect(body.querySelector('strong')?.textContent).toBe('важно');
+    expect(body.querySelector('code')?.textContent).toBe('код');
+    expect([...body.querySelectorAll('li')].map(l => l.textContent)).toEqual(['пункт один', 'пункт два']);
+    expect(body.textContent).not.toContain('**');
   });
 });
