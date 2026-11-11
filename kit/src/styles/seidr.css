@@ -1783,6 +1783,13 @@ code, pre, kbd, samp { font-family: var(--mono); }
    первая строка — пять главных кнопок и «ещё ▾» (6 × 44 px влезают в 300 px),
    остальное — под «ещё» своим блоком во всю ширину, с переносом. */
 .sk-md__toolbar--narrow { flex-wrap: wrap; }
+/* Владелица 11.11: «лучше уменьшить кнопки в мобильном, вообще больше их» —
+   девять частых кнопок по 30 px и «ещё» помещаются в строку на 360 px. */
+.sk-md__toolbar--narrow .sk-md__btn { min-width: 30px; height: 32px; padding: 0 3px; }
+/* Плотная строка: общая зона касания 44×44 (seidr.css, --hit) залезала бы на
+   соседнюю кнопку на 7 px с каждой стороны — палец попадал бы не туда. Здесь
+   зона растёт только по высоте, по ширине она равна самой кнопке. */
+.sk-md__toolbar--narrow .sk-md__btn::after { width: 100%; }
 .sk-md__morebtn { margin-left: auto; white-space: nowrap; }
 .sk-md__more {
   display: flex;
