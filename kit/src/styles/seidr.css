@@ -2831,17 +2831,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
   border-radius: var(--r-pill);
   background: var(--bg2);
 }
-/* Узкий экран: пять видов не помещаются в строку, и при переносе контейнер со
-   скруглением 999 превращался в овал высотой 104 px. Одна строка, прокрутка
-   вбок — так же, как у строки фильтров в SAP Fiori (filter feedback bar). */
+/* Узкий экран: пять видов не помещаются в строку и переносятся, а контейнер со
+   скруглением 999 при переносе становился овалом высотой 104 px. Перенос
+   оставляем (владелица 11.11: горизонтальных прокруток по возможности не
+   должно быть), а скругление контейнера — малое, как у блоков v1. */
 @media (max-width: 720px) {
-  .sk-list__views {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    max-width: 100%;
-  }
-  .sk-list__view { flex-shrink: 0; white-space: nowrap; }
+  .sk-list__views { border-radius: var(--r-md); }
 }
 .sk-list__view,
 .sk-list__dir {
