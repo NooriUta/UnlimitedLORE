@@ -24,7 +24,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { RolesScreen } from './RolesScreen';
 import {
-  buildChanges, filterProjects, groupByRole, isConfirmed, parseApply, parsePlan, parseRoleMatrix, personSourceCell,
+  buildChanges, filterProjects, groupByRole, parseApply, parsePlan, parseRoleMatrix, personSourceCell,
   planToDiff, PROJECT_ROLES,
 } from './roles';
 
@@ -227,12 +227,6 @@ describe('модель · опасное действие (S7B-03)', () => {
     expect(parseApply({ batch_id: BATCH, applied: 0, items: [], undo_until: 'null' }).batch.undoUntil).toBeNull();
   });
 
-  it('подтверждение — точный логин человека, не «ОК» и не пустая строка', () => {
-    expect(isConfirmed('omiloreadmin', 'omiloreadmin')).toBe(true);
-    expect(isConfirmed(' omiloreadmin ', 'omiloreadmin')).toBe(true);
-    expect(isConfirmed('ok', 'omiloreadmin')).toBe(false);
-    expect(isConfirmed('', '')).toBe(false);
-  });
 });
 
 // ── экран ─────────────────────────────────────────────────────────────────
@@ -325,7 +319,7 @@ describe('экран · опасное действие (S7B-03)', () => {
     expect(apply.getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(apply);
     expect(fk.writes()).toHaveLength(0);
-    fireEvent.change(screen.getByTestId('adm-danger-confirm'), { target: { value: 'ok' } });
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'ok' } });
     fireEvent.click(apply);
     expect(fk.writes()).toHaveLength(0);
   });
@@ -333,7 +327,7 @@ describe('экран · опасное действие (S7B-03)', () => {
   it('логин введён → одна пачка; «Отменить» и ссылка на запись в журнале', async () => {
     const fk = fake();
     await toDiff(fk);
-    fireEvent.change(screen.getByTestId('adm-danger-confirm'), { target: { value: 'omiloreadmin' } });
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'omiloreadmin' } });
     fireEvent.click(screen.getByTestId('kit-diff-apply'));
     expect(await screen.findByTestId('kit-batch-summary')).toBeTruthy();
     expect(fk.writes()).toHaveLength(1);
@@ -350,7 +344,7 @@ describe('экран · опасное действие (S7B-03)', () => {
   it('«Отменить» — вся пачка одним вызовом: changes=undo, undo_of=batch_id', async () => {
     const fk = fake();
     await toDiff(fk);
-    fireEvent.change(screen.getByTestId('adm-danger-confirm'), { target: { value: 'omiloreadmin' } });
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'omiloreadmin' } });
     fireEvent.click(screen.getByTestId('kit-diff-apply'));
     fireEvent.click(await screen.findByTestId('kit-batch-undo'));
     expect(await screen.findByTestId('kit-batch-undone')).toBeTruthy();
@@ -362,7 +356,7 @@ describe('экран · опасное действие (S7B-03)', () => {
   it('отмена вне окна — слова сервера, а не «отменено»', async () => {
     const fk = fake({ undoStatus: 400 });
     await toDiff(fk);
-    fireEvent.change(screen.getByTestId('adm-danger-confirm'), { target: { value: 'omiloreadmin' } });
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'omiloreadmin' } });
     fireEvent.click(screen.getByTestId('kit-diff-apply'));
     fireEvent.click(await screen.findByTestId('kit-batch-undo'));
     expect((await screen.findByTestId('kit-batch-undofail')).textContent).toContain('окно отмены');
@@ -372,7 +366,7 @@ describe('экран · опасное действие (S7B-03)', () => {
   it('частичный отказ — «применилось 1 из 2» и причина у отказавшего проекта', async () => {
     const fk = fake({ failOn: ['AIDA/p02'] });
     await toDiff(fk);
-    fireEvent.change(screen.getByTestId('adm-danger-confirm'), { target: { value: 'omiloreadmin' } });
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'omiloreadmin' } });
     fireEvent.click(screen.getByTestId('kit-diff-apply'));
     await screen.findByTestId('kit-batch-summary');
     expect(screen.getByTestId('kit-batch').getAttribute('data-outcome')).toBe('partial');
@@ -413,7 +407,7 @@ describe('экран · матрица ролей человека (S7B-05)', ()
     fireEvent.click(screen.getByTestId('kit-matrix-opt-owner'));
     await screen.findByTestId('kit-diff-apply');
     expect((fk.dry()[0].body!.changes as Change[])).toHaveLength(23);
-    expect(screen.getByTestId('adm-danger-confirm')).toBeTruthy();
+    expect(screen.getByTestId('kit-diff-confirm')).toBeTruthy();
     expect(fk.writes()).toHaveLength(0);
   });
 

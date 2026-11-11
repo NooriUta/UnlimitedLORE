@@ -248,11 +248,6 @@ export function parseApply(body: unknown): ApplyAnswer {
   };
 }
 
-/** Подтверждение — точный логин человека (прототип v6, правило A). */
-export function isConfirmed(typed: string, word: string): boolean {
-  return word.trim() !== '' && typed.trim() === word.trim();
-}
-
 export interface BatchRequest {
   kc_sub: string;
   display_name?: string;

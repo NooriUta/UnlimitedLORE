@@ -7,7 +7,7 @@
 //   сбоев 0 / «сбои не смогли прочитать» (не 0);
 //   «вызовов агентов не видели» (не «всё в порядке») / «нет прав» / сбой загрузки.
 // Фильтр «только не видели» — в адресе (?adm-mcp-f=silent).
-import { Forbidden, LoadError, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
+import { EmptyState, Forbidden, LoadError, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
 import { fetchMcp, isSilent, type McpData, type McpHealth } from './mcp';
@@ -40,9 +40,9 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
   else if (res.state === 'error' || !data) body = <LoadError error={res.error} onRetry={res.reload} />;
   else if (data.profiles.length === 0 && data.failError === null) {
     body = (
-      <div className="sk-state sk-state--empty" data-state="empty" data-testid="adm-mcp-empty">
-        <p className="sk-state__title">{t('admin.mcp.empty')}</p>
-        <p className="sk-state__hint">{t('admin.mcp.emptyHint')}</p>
+      // S7B-25: kit EmptyState, а не своя разметка; обёртка — метка для проверок.
+      <div data-testid="adm-mcp-empty">
+        <EmptyState title={t('admin.mcp.empty')} hint={t('admin.mcp.emptyHint')} />
       </div>
     );
   } else {
