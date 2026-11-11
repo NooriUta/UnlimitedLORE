@@ -39,3 +39,4 @@ export * from './RecordSection';
 // (S4-29). Нужен не только паспорту — отсюда отдельный файл и экспорт.
 export * from './ValueChips';
 export * from './RecordCardHead';
+export * from './PeekCard';

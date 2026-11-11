@@ -5107,6 +5107,26 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
    Справа: шапка с «Читать целиком», затем задачи, затем текст. Текст — превью:
    высота ограничена, полное чтение — по кнопке. */
 .sk-peek { display: flex; flex-direction: column; }
+/* Карточка Peek (S9-10, D-2026-LORE-PEEK-ONE-CARD): шапка и раздел — общие с лентой (sk-feed__*, sk-rec-fields__*),
+   здесь только своё — свойства, счётчики, действия и честные состояния. */
+.sk-peek-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: var(--fs-sm); }
+.sk-peek-card__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); word-break: break-all; }
+.sk-peek-card__props { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
+.sk-peek-card__prop { display: contents; }
+.sk-peek-card__prop dt { font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; color: var(--t3); padding-top: 2px; white-space: nowrap; }
+.sk-peek-card__prop dd { margin: 0; color: var(--t2); min-width: 0; overflow-wrap: anywhere; }
+.sk-peek-card__unset, .sk-peek-card__none { color: var(--t3); font-style: italic; }
+.sk-peek-card__none { margin: 0; }
+.sk-peek-card__cnt { margin: 0; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-peek-card__cnt b { color: var(--t2); font-weight: 600; }
+.sk-peek-card__acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.sk-peek-card__state { margin: 0; color: var(--t2); }
+.sk-peek-card__state--err { color: var(--dng); }
+.sk-peek-card__state--lock { color: var(--wrn); }
+.sk-peek-card__note { margin: 0; font-size: var(--fs-xs); color: var(--t3); }
+@media (max-width: 720px) {
+  .sk-peek-card__open { flex: 1 1 100%; justify-content: center; text-align: center; }
+}
 .sk-peek .sk-sheet__body { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .sk-peek__read { flex: none; text-decoration: none; color: var(--bg0); background: var(--acc); border-color: var(--acc); }
 .sk-peek__read:hover { color: var(--bg0); background: color-mix(in srgb, var(--acc) 85%, var(--t1)); }

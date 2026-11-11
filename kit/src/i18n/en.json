@@ -893,5 +893,18 @@
   "kit.ref.warned": "You can create it, but recommended fields are empty: {fields}.",
   "kit.ref.failed": "Not created: {reason}.",
   "kit.ref.denied": "No permission to create “{type}”: {reason}. You can still link an existing one.",
-  "kit.ref.idle": "Type words to search — results appear as you type."
+  "kit.ref.idle": "Type words to search — results appear as you type.",
+  "kit.peek.loading": "Loading…",
+  "kit.peek.error": "Could not load: {reason}. This is not “record missing”.",
+  "kit.peek.retry": "Retry",
+  "kit.peek.missing": "No such record: {id} — deleted or renamed, the link is broken.",
+  "kit.peek.forbidden": "No permission to view this record.",
+  "kit.peek.forbiddenWhy": "No permission to view this record: {reason}.",
+  "kit.peek.unset": "not set",
+  "kit.peek.noText": "No text — the record has no description.",
+  "kit.peek.open": "Open passport",
+  "kit.peek.newTab": "In a new tab",
+  "kit.peek.copy": "Copy link",
+  "kit.peek.copied": "Link copied.",
+  "kit.peek.copyFailed": "Could not copy: the browser denied clipboard access."
 }
