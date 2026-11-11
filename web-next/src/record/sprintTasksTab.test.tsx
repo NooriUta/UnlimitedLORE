@@ -28,7 +28,7 @@ describe('вкладка «Задачи» у спринта в оболочке'
   it('паспорт оболочки подключает её у спринта (таблица задач, а не только связи)', () => {
     const src = readFileSync(join(__dirname, 'ListPassport.tsx'), 'utf8');
     expect(src).toMatch(/withSprintTasksTab\(/);
-    expect(src).toMatch(/<SprintTasksTab /);
-    expect(src).toMatch(/<SprintBurnLine /);
+    expect(src).toMatch(/<SprintTasksPanel /);
+    expect(readFileSync(join(__dirname, "../sprint/SprintTasksPanel.tsx"), "utf8")).toMatch(/<SprintTasksTab [^]*<SprintBurnLine |<SprintBurnLine [^]*<SprintTasksTab /);
   });
 });
