@@ -10,7 +10,7 @@
 // адресе; секрет — нигде, кроме ответа сервера и SecretOnce.
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  LoadError, SecretOnce, Skeleton, Steps, useKitLang, useUrlParam, type StepDef, type StepsManualItem,
+  LoadError, SecretOnce, Skeleton, Steps, setUrlParams, useKitLang, useUrlParam, type StepDef, type StepsManualItem,
 } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 import { useAppT, type AppKey } from '../i18n';
@@ -27,6 +27,12 @@ import {
 export type WizardKind = 'person' | 'agent' | 'machine';
 const KINDS: readonly WizardKind[] = ['person', 'agent', 'machine'];
 const STEP_KEY = 'adm-step';
+/**
+ * Параметры адреса, которые принадлежат мастеру, а не экрану. Шаг общий у всех
+ * трёх мастеров (S7B-29): без сброса при смене мастера новый открывался на
+ * шаге прежнего — или с заметкой «шага нет», если такого ключа у него нет.
+ */
+const WIZ_PARAMS = [STEP_KEY, 'adm-login', 'adm-like', 'adm-owner', 'adm-machine', 'adm-profile'] as const;
 
 export interface WizardsEnv { backend: string; issuer: string }
 
@@ -71,9 +77,23 @@ function Loaded<T>({ state, retry, children }: { state: Load<T>; retry: () => vo
 
 export function WizardsScreen({ fetchImpl = loreFetch, meSub, env }: WizardsScreenProps) {
   const t = useAppT();
-  const [wizRaw, setWiz] = useUrlParam('adm-wiz');
+  const [wizRaw] = useUrlParam('adm-wiz');
   const wiz = KINDS.includes(wizRaw as WizardKind) ? (wizRaw as WizardKind) : null;
   const cfg = useMemo(() => env ?? defaultEnv(), [env]);
+  // Чем закончился последний мастер: «Готово» снимает выбор, и без этой
+  // строки экран молча вернулся бы к выбору — непонятно, сработало ли.
+  const [finished, setFinished] = useState<WizardKind | null>(null);
+  const pick = (k: WizardKind) => {
+    setFinished(null);
+    if (k === wiz) return;
+    // Введённое прежним мастером не переезжает в новый: у «агента машины»
+    // владелец — вы, и чужое имя машины из «агента человеку» там было бы враньём.
+    setUrlParams({ 'adm-wiz': k, ...Object.fromEntries(WIZ_PARAMS.map(p => [p, null])) });
+  };
+  const finish = (k: WizardKind) => {
+    setUrlParams({ 'adm-wiz': null, ...Object.fromEntries(WIZ_PARAMS.map(p => [p, null])) });
+    setFinished(k);
+  };
   return (
     <section className="adm" aria-labelledby="adm-wiz-h" data-testid="adm-wizards">
       <h2 id="adm-wiz-h" className="adm-h">{t('admin.wiz.title')}</h2>
@@ -86,27 +106,32 @@ export function WizardsScreen({ fetchImpl = loreFetch, meSub, env }: WizardsScre
             className="adm-wiz-card"
             aria-pressed={wiz === k}
             data-testid={`adm-wiz-pick-${k}`}
-            onClick={() => setWiz(k)}
+            onClick={() => pick(k)}
           >
             <b>{t(`admin.wiz.${k}.title` as AppKey)}</b>
             <span className="adm-dim">{t(`admin.wiz.${k}.lead` as AppKey)}</span>
           </button>
         ))}
       </div>
-      {wiz === 'person' && <PersonWizard key="person" fetchImpl={fetchImpl} />}
-      {wiz === 'agent' && <AgentWizard key="agent" mode="agent" fetchImpl={fetchImpl} meSub={meSub} env={cfg} />}
-      {wiz === 'machine' && <AgentWizard key="machine" mode="machine" fetchImpl={fetchImpl} meSub={meSub} env={cfg} />}
+      {!wiz && finished && (
+        <p className="adm-verdict" role="status" data-testid="adm-wiz-finished">
+          {t('admin.wiz.finished', { title: t(`admin.wiz.${finished}.title` as AppKey) })}
+        </p>
+      )}
+      {wiz === 'person' && <PersonWizard key="person" fetchImpl={fetchImpl} onDone={() => finish('person')} />}
+      {wiz === 'agent' && <AgentWizard key="agent" mode="agent" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('agent')} />}
+      {wiz === 'machine' && <AgentWizard key="machine" mode="machine" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('machine')} />}
     </section>
   );
 }
 
 // ── UC-1: подключить человека ─────────────────────────────────────────────
 
-function PersonWizard({ fetchImpl }: { fetchImpl: typeof fetch }) {
+function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; onDone: () => void }) {
   const t = useAppT();
   const lang = useKitLang();
   const nav = useAdminNav();
-  const [step] = useUrlParam(STEP_KEY);
+  const [step, setStep] = useUrlParam(STEP_KEY);
   const [q, setQ] = useUrlParam('adm-login');
   const [likeSub, setLike] = useUrlParam('adm-like');
   const [users, retryUsers] = useLoad(() => fetchKcUsers(fetchImpl), [fetchImpl]);
@@ -115,10 +140,20 @@ function PersonWizard({ fetchImpl }: { fetchImpl: typeof fetch }) {
   const [override, setOverride] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [applied, setApplied] = useState(false);
+  // Какая пачка применена (S7B-29). Флаг «применено» без пачки врал в двух
+  // местах: после отмены пачки вперёд было можно, хотя ролей уже нет; после
+  // смены проектов — тоже, хотя новая пачка не применялась.
+  const [appliedKey, setAppliedKey] = useState<string | null>(null);
+  // Шаг диффа, раз открытый, остаётся смонтированным (S7B-29): иначе уход на
+  // «проверку» размонтировал DangerBatch — пропадали итог пачки и окно
+  // отмены, а возврат заново считал дифф и предлагал применить ещё раз.
+  const [diffReached, setDiffReached] = useState(false);
+  if (!diffReached && step === 'diff') setDiffReached(true);
 
   const found: KcUser | null | undefined = users.kind === 'ok' ? findKcUser(users.data, q ?? '') : undefined;
   const changes = matrix.kind === 'ok' && likeSub ? likeChanges(matrix.data, likeSub, excluded, override) : [];
+  const changesKey = JSON.stringify(changes);
+  const applied = appliedKey !== null && appliedKey === changesKey;
 
   const create = async () => {
     const s = (q ?? '').trim();
@@ -225,14 +260,16 @@ function PersonWizard({ fetchImpl }: { fetchImpl: typeof fetch }) {
     </Loaded>
   );
 
-  const diff = found && step === 'diff'
+  // «Отмена» до применения — назад к проектам; «Готово» после — дальше, к
+  // проверке. Прежде обе кнопки сбрасывали «применено» и запирали мастер.
+  const diff = found && diffReached && changes.length > 0
     ? (
       <DangerBatch
         person={{ kc_sub: found.id, name: found.username }}
         changes={changes}
         fetchImpl={fetchImpl}
-        onClose={() => setApplied(false)}
-        onChanged={() => setApplied(true)}
+        onClose={() => setStep(applied ? 'check' : 'projects')}
+        onChanged={what => setAppliedKey(what === 'applied' ? changesKey : null)}
       />
     )
     : <p className="adm-dim">{t('admin.wiz.person.diffLead')}</p>;
@@ -258,14 +295,14 @@ function PersonWizard({ fetchImpl }: { fetchImpl: typeof fetch }) {
     { text: t('admin.wiz.manual.password'), hint: t('admin.wiz.manual.passwordHint') },
     { text: t('admin.wiz.manual.forgejo'), href: 'https://git.seidrstudio.pro', hint: t('admin.wiz.manual.forgejoHint') },
   ];
-  return <Steps steps={steps} urlKey={STEP_KEY} lang={lang} flow="adm-person" manual={{ title: t('admin.wiz.manual.title'), items: manual }} />;
+  return <Steps steps={steps} urlKey={STEP_KEY} lang={lang} flow="adm-person" onDone={onDone} manual={{ title: t('admin.wiz.manual.title'), items: manual }} />;
 }
 
 // ── UC-2 / UC-7: агент человеку · агент новой машины ─────────────────────
 
-interface AgentWizardProps { mode: 'agent' | 'machine'; fetchImpl: typeof fetch; meSub: string | null; env: WizardsEnv }
+interface AgentWizardProps { mode: 'agent' | 'machine'; fetchImpl: typeof fetch; meSub: string | null; env: WizardsEnv; onDone: () => void }
 
-function AgentWizard({ mode, fetchImpl, meSub, env }: AgentWizardProps) {
+function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) {
   const t = useAppT();
   const lang = useKitLang();
   const [ownerParam, setOwner] = useUrlParam('adm-owner');
@@ -454,6 +491,7 @@ function AgentWizard({ mode, fetchImpl, meSub, env }: AgentWizardProps) {
       urlKey={STEP_KEY}
       lang={lang}
       flow={`adm-${mode}`}
+      onDone={onDone}
       manual={{ title: t('admin.wiz.manual.title'), items: manual }}
     />
   );

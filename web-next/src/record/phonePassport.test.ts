@@ -37,6 +37,16 @@ describe('S4-MOBILE-COMPARE · паспорт на телефоне в прил�
     expect(m![1]).toMatch(/padding-inline:\s*0/);
   });
 
+  // Проверка матрицы после выкатки v1.17.13 (360×800): паспорт стоял с полями
+  // 24 px слева — 12 px от .v2-screen (родитель) и 12 px внутреннего отступа
+  // дока. Правило выше снимало поля только у .list-screen, а родитель оставался.
+  it('на узком экране поля сняты и у родителя .v2-screen, когда в нём открыт паспорт', () => {
+    const app = readFileSync(join(__dirname, '../App.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const m = app.match(/@media \(max-width: 720px\)[^{]*\{([^@]*?\.v2-screen:has\(> \.list-screen--passport\) \{[^}]*\})/);
+    expect(m, 'правила .v2-screen:has(> .list-screen--passport) в узком @media нет').not.toBeNull();
+    expect(m![1]).toMatch(/padding-inline:\s*0/);
+  });
+
   it('класс открытого паспорта ставит экран списка, когда паспорт открыт', () => {
     const screen = readFileSync(join(__dirname, '../pages/ListScreen.tsx'), 'utf8');
     expect(screen).toMatch(/open\.id && ready \? 'list-screen list-screen--passport' : 'list-screen'/);

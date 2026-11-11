@@ -672,6 +672,18 @@
   "kit.calendar.more": "{n} more",
   "kit.calendar.event": "{title} · {status}",
   "kit.calendar.emptyMonth": "No records this month",
+  "kit.library.search": "Search documents",
+  "kit.library.filter": "Document state",
+  "kit.library.all": "all",
+  "kit.library.fresh": "current",
+  "kit.library.stale": "stale {n}",
+  "kit.library.more": "{n} more",
+  "kit.library.truncated": "showing {n} of {total}",
+  "kit.library.open": "Open passport",
+  "kit.library.empty": "No documents in the library yet",
+  "kit.library.noMatch": "Nothing found for “{q}”",
+  "kit.library.noneInFilter": "No documents in this state",
+  "kit.library.pick": "Pick a document on the left",
   "kit.list.feed.undated": "No time",
   "kit.list.feed.unread": "Time could not be read",
   "kit.list.feed.day.today": "Today",
@@ -1033,5 +1045,6 @@
   "kit.record.graph.viewForce": "Force",
   "kit.record.graph.viewForceHint": "live physics: drag a node and its neighbours follow",
   "kit.record.graph.viewObsidian": "Obsidian",
-  "kit.record.graph.viewObsidianHint": "background physics, WebGL — for large graphs"
+  "kit.record.graph.viewObsidianHint": "background physics, WebGL — for large graphs",
+  "kit.steps.held": "Step «{title}» from the link is not open yet — this one is: {reason}"
 }

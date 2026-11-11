@@ -58,6 +58,7 @@ const SETTING_KEY: Readonly<Record<keyof UserSettings, string>> = {
   graph_view: 'graph_view',
   nav_version: 'new_navigation',
   show_tech: 'show_tech',
+  text_scale: 'text_scale',
 };
 
 /** Значения перечислений: v2 → сервер. Обратный перевод строится из этих же таблиц. */
