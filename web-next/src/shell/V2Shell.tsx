@@ -21,6 +21,7 @@ import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
 import { SHELL_STORAGE_KEY, openRecent } from './recentNav';
 import { useModelStatuses } from './useModelStatuses';
 import { VersionCorner } from './VersionCorner';
+import { StatusBar } from './StatusBar';
 
 
 // S7B-01: экраны модуля «Админка» — свой чанк, оболочка за них не платит.
@@ -164,6 +165,8 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
       // Выбор проектов (S4-03, ?proj=) — глобальный: переживает смену раздела (S4-13, B-07).
       keepParams={V2_KEEP_PARAMS}
       account={account}
+      // S4-21 (ответ владелицы 7а): строка состояния внизу — сеть, проекты, свежесть, версия.
+      statusBar={<StatusBar end={<VersionCorner />} />}
       storage={storage}
       storageKey={SHELL_STORAGE_KEY}
       win={win}
