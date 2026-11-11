@@ -16,7 +16,7 @@ import { feedConfig, type FeedSpec } from './feed';
 import type { AppKey } from '../i18n';
 import {
   OPEN_ONLY_NOTE, UC_OWN_LINKS_NOTE,
-  adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord,
+  adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord, projectRecord,
   questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
 } from './records';
 
@@ -453,6 +453,17 @@ const componentsSpec: SectionSpec = {
   columns: ['id', 'title', 'area', 'owner', 'adrs', 'specs'],
 };
 
+/** Проекты (S4-29, 53а): СТАТУСА НЕТ — справочник git-проектов; щелчок — паспорт проекта. */
+const projectsSpec: SectionSpec = {
+  kind: 'project', titleKey: 'lists.projects.title', icon: 'open-folder',
+  fields: [['default_branch', 'text']],
+  views: ['list', 'cards'],
+  quick: [['no-branch', 'lists.quick.noBranch', { default_branch: '' }]],
+  filters: [],
+  groupings: [],
+  columns: ['id', 'title', 'default_branch'],
+};
+
 /** Технологии: СТАТУСА НЕТ — это реестр версий (спеки SPEC-TECH-*). */
 const techSpec: SectionSpec = {
   kind: 'tech', titleKey: 'lists.tech.title', icon: 'gears',
@@ -561,6 +572,10 @@ export const LIST_SCREENS = {
   components: {
     slice: 'components', titleKey: 'lists.components.title', icon: 'cog',
     map: componentRecord, config: lang => sectionConfig(lang, componentsSpec), quickIcons: {},
+  },
+  projects: {
+    slice: 'git_projects', titleKey: 'lists.projects.title', icon: 'open-folder',
+    map: projectRecord, config: lang => sectionConfig(lang, projectsSpec), quickIcons: {},
   },
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',

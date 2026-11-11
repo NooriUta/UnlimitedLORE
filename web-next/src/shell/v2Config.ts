@@ -24,7 +24,7 @@ import { appT, type AppKey } from '../i18n';
 export const V2_SECTIONS = [
   'sprint', 'task', 'milestone', 'release',
   'adr', 'decision', 'spec', 'question',
-  'component', 'tech', 'feature',
+  'component', 'tech', 'feature', 'project',
   'news', 'settings',
 ] as const;
 export type V2Section = (typeof V2_SECTIONS)[number];
@@ -114,7 +114,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // «Устройство» — из чего система сделана: компоненты, технологии, фичи.
         {
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
-          items: [item('component', 'cog'), item('tech', 'gears'), item('feature', 'gift-of-knowledge')],
+          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears'), item('feature', 'gift-of-knowledge')],
         },
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
@@ -134,6 +134,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       component: { title: t('shell.sec.component'), icon: 'cog' },
       tech: { title: t('shell.sec.tech'), icon: 'gears' },
       feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge' },
+      project: { title: t('shell.sec.project'), icon: 'open-folder' },
     },
     statuses: {
       // Словарь из модели главнее: он данные, а рукописный список — умолчание.

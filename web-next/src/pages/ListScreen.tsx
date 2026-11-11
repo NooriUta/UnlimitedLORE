@@ -52,6 +52,8 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   // открывается по spec_id: путь /lore/record/tech/<SPEC-TECH-…>, обычная
   // спека по этому пути даёт 404 — то есть тип выбирает раздел, а не ключ.
   components: 'component', tech: 'tech', features: 'feature',
+  // S4-29 (53а): паспорт проекта (только чтение).
+  projects: 'project',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];

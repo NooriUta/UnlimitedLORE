@@ -384,6 +384,24 @@ export function componentRecord(row: Row): KitRecord {
 }
 
 /**
+ * Строка слайса git_projects → запись kit (S4-29, решение 53а). **Статуса нет** —
+ * проект справочная вершина; ключ — slug «владелец/репозиторий», им же
+ * открывается паспорт (/lore/record/project/<slug>).
+ */
+export function projectRecord(row: Row): KitRecord {
+  const id = str(row.slug);
+  return {
+    id,
+    kind: 'project',
+    title: str(row.name) || id,
+    status: '',
+    fields: {
+      default_branch: str(row.default_branch),
+    },
+  };
+}
+
+/**
  * Строка слайса tech_registry → запись kit. **Статуса нет** — это реестр
  * версий. Тело спеки технологии (content_md) не переносится.
  *
