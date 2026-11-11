@@ -1174,5 +1174,6 @@
   "kitPage.lib.stale": "stale",
   "kitPage.lib.meta1": "ADR-049 · accepted 08.11",
   "kitPage.lib.body1": "List columns drifted: width and order were set per screen. **Decision:** the model describes how a column shows — priority, width step and overflow.",
-  "kitPage.cal.e6": "No date"
+  "kitPage.cal.e6": "No date",
+  "mdref.modelLoading": "The LORE model is still loading — try again in a second"
 }

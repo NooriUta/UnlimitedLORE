@@ -174,4 +174,41 @@ class LoreMentionAutoLinkTest {
         assertEquals("references_only", ((LoreMentionAutoLink.Skip) ds.get(1)).reason());
         assertEquals("[[pain:P-1]]", ds.get(1).ref().raw());
     }
+
+    // ── задача → компонент (слова владелицы 11.11: «компоненты привязываются и к задаче») ──
+
+    @Test
+    void taskMentioningComponentPlansTaggedWith() {
+        LoreMentionAutoLink.Plan p = assertInstanceOf(LoreMentionAutoLink.Plan.class,
+            LoreMentionAutoLink.decide("task", "SPRINT_X/T-1",
+                new LoreMentionAutoLink.Ref("[[component:OMILORE]]", "component", "OMILORE")));
+        assertEquals("TAGGED_WITH", p.option().edgeType());
+        assertEquals("task", p.fromType());
+        assertEquals("SPRINT_X/T-1", p.fromId());
+        assertEquals("component", p.toType());
+        assertEquals("OMILORE", p.toId());
+        // компонент упоминает задачу — ребро всё равно задача → компонент
+        LoreMentionAutoLink.Plan r = assertInstanceOf(LoreMentionAutoLink.Plan.class,
+            LoreMentionAutoLink.decide("component", "C",
+                new LoreMentionAutoLink.Ref("r", "task", "SPRINT_X/T-1")));
+        assertEquals("TAGGED_WITH", r.option().edgeType());
+        assertEquals("task", r.fromType());
+        assertEquals("SPRINT_X/T-1", r.fromId());
+    }
+
+    @Test
+    void taskNoteMentionTextIsOnlyAppendedPartOnAppend() {
+        assertEquals("дописка [[component:B]]",
+            LoreSprintTaskResource.taskNoteMentionText(null, "дописка [[component:B]]"),
+            "note_append — разбирается только добавленный текст");
+        assertEquals("целиком [[component:A]]",
+            LoreSprintTaskResource.taskNoteMentionText("целиком [[component:A]]", null));
+        assertNull(LoreSprintTaskResource.taskNoteMentionText(null, null), "заметку не трогали — разбирать нечего");
+    }
+
+    @Test
+    void backfillCoversTasks() {
+        assertTrue(LoreLinkResource.BACKFILL_BODIES.containsKey("task"), "сухой бэкфилл обязан учитывать задачи");
+        assertTrue(LoreLinkResource.BACKFILL_BODIES.get("task").contains("note_md"));
+    }
 }

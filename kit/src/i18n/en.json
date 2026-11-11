@@ -1075,5 +1075,6 @@
   "kit.fresh.noneHint": "No timestamp: the value is empty — this is not «long ago»",
   "kit.fresh.tone.warn": "over {n} min — warning",
   "kit.fresh.tone.stale": "over {n} min — stale",
-  "kit.fresh.staleShort": "stale"
+  "kit.fresh.staleShort": "stale",
+  "kit.ref.self": "Me"
 }
