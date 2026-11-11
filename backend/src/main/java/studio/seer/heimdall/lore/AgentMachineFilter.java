@@ -57,9 +57,15 @@ public class AgentMachineFilter implements ContainerRequestFilter, ContainerResp
     @Inject
     LoreIngestService ingest;
 
+    /**
+     * Лениво: фильтр — провайдер JAX-RS, его экземпляр строится при развёртывании, раньше
+     * конфигурации REST-клиентов. Прямое внедрение клиента роняло старт Quarkus
+     * (SRCFG00027: нет mapping для RestClientsConfig) — и вместе с ним все live-DB классы.
+     * Клиент берётся только в момент записи, в рабочем потоке.
+     */
     @Inject
     @RestClient
-    LoreCommandClient writeClient;
+    jakarta.enterprise.inject.Instance<LoreCommandClient> writeClient;
 
     @ConfigProperty(name = "lore.enabled", defaultValue = "false")
     boolean loreEnabled;
@@ -128,7 +134,7 @@ public class AgentMachineFilter implements ContainerRequestFilter, ContainerResp
     }
 
     private void command(String sql, Map<String, Object> params) {
-        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params))
+        writeClient.get().command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params))
             .await().indefinitely();
     }
 
