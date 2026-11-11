@@ -6626,3 +6626,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-minilist__hint { flex-basis: 100%; padding-left: calc(1.6em + 24px); font-size: var(--fs-xs); color: var(--dng); }
 .sk-minilist__opt { flex-wrap: wrap; }
 .sk-minilist__empty { color: var(--t3); font-size: var(--fs-sm); }
+
+/* K4-MINILIST: вид списка — todo (длинный пункт переносится) и квиз (вариант — цель касания целиком). */
+.sk-minilist--check .sk-minilist__text { overflow-wrap: anywhere; }
+.sk-minilist--choice .sk-minilist__row { cursor: pointer; }

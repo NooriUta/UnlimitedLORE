@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, CalendarMonth, LibraryView, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, CalendarMonth, LibraryView, MiniList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, FieldEditor, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -380,6 +380,9 @@ export default function KitPage() {
             ]}
             date="d" month="2026-11" today="2026-11-11"
           />
+          <h3 className="kitp__h3">{t('kitPage.mini.head')}</h3>
+          <p>{t('kitPage.mini.lead')}</p>
+          <MiniListDemo />
           <h3 className="kitp__h3">{t('kitPage.lib.head')}</h3>
           <p>{t('kitPage.lib.lead')}</p>
           <LibraryView
@@ -506,5 +509,20 @@ function FieldsDemo() {
       </div>
       <button type="button" className="sk-btn" onClick={() => setCheck(true)}>{t('kitPage.fields.check')}</button>
     </section>
+  );
+}
+
+/** K4-MINILIST: один компонент на todo и квиз — витрина с живым состоянием. */
+function MiniListDemo() {
+  const t = useAppT();
+  const [done, setDone] = useState<Record<string, boolean>>({ a: true });
+  const [picked, setPicked] = useState<string | null>(null);
+  return (
+    <div className="kitp__row">
+      <MiniList kind="check" label={t('kitPage.mini.todo')} onToggle={(id, d) => setDone(m => ({ ...m, [id]: d }))}
+        items={[{ id: 'a', text: t('kitPage.mini.t1'), done: !!done.a }, { id: 'b', text: t('kitPage.mini.t2'), done: !!done.b }, { id: 'c', text: t('kitPage.mini.t3'), done: !!done.c }]} />
+      <MiniList kind="choice" label={t('kitPage.mini.quiz')} picked={picked} correct="x" reveal={picked !== null} onPick={setPicked}
+        items={[{ id: 'x', text: t('kitPage.mini.q1') }, { id: 'y', text: t('kitPage.mini.q2'), hint: t('kitPage.mini.h2') }, { id: 'z', text: t('kitPage.mini.q3'), hint: t('kitPage.mini.h3') }]} />
+    </div>
   );
 }
