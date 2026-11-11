@@ -48,7 +48,12 @@ export function RecordGraph(
   const failed = blockError(ctx, 'edges');
   if (failed !== undefined) return <LoadError compact title={kitT(lang, 'kit.record.links.failed')} error={failed} />;
 
-  const around = typesAround(record.id, ctx.data, state.depth);
+  // Типы связей: сервер знает ВСЕ типы окрестности (graphRels) — и снятые фильтром тоже;
+  // без него — посчитанные по пришедшим данным, как раньше.
+  const serverRels = ctx.data.meta.graphRels;
+  const around = serverRels?.length
+    ? serverRels.map(r => ({ type: r.rel, count: r.count }))
+    : typesAround(record.id, ctx.data, state.depth);
   if (around.length === 0) {
     return <EmptyState compact title={kitT(lang, 'kit.record.graph.empty')} hint={kitT(lang, 'kit.record.links.emptyHint')} />;
   }
@@ -323,7 +328,7 @@ const KIND_TONES = ['--acc', '--inf', '--suc', '--wrn', '--dng', '--t2'] as cons
  */
 function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links }: {
   record: KitRecord; ctx: KitCtx; lang: KitLang; engine: GxEngine; onEngine: (v: GraphView) => void;
-  nodes: { id: string; record?: KitRecord }[]; links: { from: string; to: string; type: string }[];
+  nodes: { id: string; record?: KitRecord; depth?: number }[]; links: { from: string; to: string; type: string }[];
 }) {
   const host = useRef<HTMLDivElement>(null);
   const kindKeys = Object.keys(ctx.config.kinds);
@@ -334,8 +339,8 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
   const rels: Record<string, GxStyle> = {};
   for (const [k, e] of Object.entries(ctx.config.edges ?? {})) rels[k] = { label: e.label, color: e.color };
   const gxNodes: GxNode[] = [
-    { id: record.id, type: record.kind ?? 'other', title: record.title },
-    ...nodes.filter(n => n.id !== record.id).map(n => ({ id: n.id, type: n.record?.kind ?? 'other', title: n.record?.title })),
+    { id: record.id, type: record.kind ?? 'other', title: record.title, depth: 0 },
+    ...nodes.filter(n => n.id !== record.id).map(n => ({ id: n.id, type: n.record?.kind ?? 'other', title: n.record?.title, depth: ctx.data.meta.graphDepth?.[n.id] ?? n.depth })),
   ];
   const gxEdges: GxEdge[] = links.map(l => ({ from: l.from, to: l.to, rel: l.type }));
   const open = (id: string) => {

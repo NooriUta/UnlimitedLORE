@@ -1087,5 +1087,8 @@
   "kit.fresh.tone.warn": "over {n} min — warning",
   "kit.fresh.tone.stale": "over {n} min — stale",
   "kit.fresh.staleShort": "stale",
-  "kit.ref.self": "Me"
+  "kit.ref.self": "Me",
+  "kit.graph.colorBy": "Node colour",
+  "kit.graph.colorByType": "by type",
+  "kit.graph.colorByDepth": "by level"
 }

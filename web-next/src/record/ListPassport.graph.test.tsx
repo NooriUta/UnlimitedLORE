@@ -82,4 +82,14 @@ describe('GC-04 · вкладка «Граф» на /lore/graph', () => {
     expect(document.querySelector('[data-node="SP/A-1"]')).not.toBeNull();
     expect(document.querySelector('[data-node="ADR-DEEP"]')).toBeNull();
   }, 15000);
+
+  it('снятый тип связи (goff) уходит из обхода на сервере: rels = все типы окрестности минус снятые, глубина 4', async () => {
+    window.history.replaceState(null, '', '/?tab=graph&gdepth=4&goff=JUSTIFIED_BY');
+    const f = net(() => json({ ...GRAPH, meta: { ...GRAPH.meta, rels_available: [{ rel: 'HAS_TASK', count: 5 }, { rel: 'JUSTIFIED_BY', count: 2 }] } }));
+    show(f);
+    await waitFor(() => {
+      const urls = f.mock.calls.map(c => new URL(String(c[0]), 'http://lore.test')).filter(u => u.pathname === '/lore/graph');
+      expect(urls.some(u => u.searchParams.get('rels') === 'HAS_TASK' && u.searchParams.get('depth') === '4')).toBe(true);
+    }, { timeout: 8000 });
+  }, 15000);
 });

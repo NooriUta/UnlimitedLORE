@@ -14,7 +14,8 @@ import { RecordView } from './index';
 const stub = (name: string) => function Stub(p: GxEngineProps) {
   return (
     <div data-testid={`eng-${name}`} data-ids={p.nodes.map(n => `${n.id}:${n.type}`).sort().join(',')}
-      data-rels={[...new Set(p.edges.map(e => e.rel))].sort().join(',')}>
+      data-rels={[...new Set(p.edges.map(e => e.rel))].sort().join(',')}
+      data-depth-colors={p.nodes.map(n => `${n.id}:${p.nodeColor(n).replace(/^var\((--[\w-]+).*$/, '$1')}`).sort().join(',')}>
       {p.nodes.map(n => <button key={n.id} type="button" onClick={() => p.onSelect(n.id)}>{`узел ${n.id}`}</button>)}
     </div>
   );
@@ -103,6 +104,34 @@ describe('GC-03 · вкладка «Граф»: Секторы / Список / 
     ctx.data = { ...ctx.data, meta: { ...ctx.data.meta, graphNotes: ['Скрыто правами: 3'] } };
     render(<RecordView record={CENTER} ctx={ctx} tab="graph" onTab={() => {}} />);
     expect(screen.getByTestId('kit-graph-notes').textContent).toContain('Скрыто правами: 3');
+  });
+
+  it('глубина 1–4 (владелица 11.11: «связи 2, 3, 4 уровней»), выбор пишется в адрес', () => {
+    show();
+    const depth = screen.getByRole('group', { name: 'Глубина' });
+    expect([...depth.querySelectorAll('button')].map(b => b.textContent)).toEqual(['1', '2', '3', '4']);
+    fireEvent.click(screen.getByRole('button', { name: '4' }));
+    expect(new URLSearchParams(window.location.search).get('gdepth')).toBe('4');
+  });
+
+  it('типы связей — из ответа сервера (graphRels): все типы окрестности со счётом, даже снятые', () => {
+    const ctx = ctxOf(cfg());
+    ctx.data = { ...ctx.data, meta: { ...ctx.data.meta, graphRels: [{ rel: 'DECIDED_IN', count: 7 }, { rel: 'REFERENCES', count: 3 }, { rel: 'JUSTIFIED_BY', count: 2 }] } };
+    window.history.replaceState(null, '', '/r?goff=REFERENCES');
+    render(<RecordView record={CENTER} ctx={ctx} tab="graph" onTab={() => {}} />);
+    const legend = screen.getByTestId('kit-graph-legend');
+    expect(legend.textContent).toContain('7');
+    expect(legend.textContent).toContain('JUSTIFIED_BY');
+    expect(screen.getByRole('button', { name: /упоминает/ }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('подсветка уровней: «цвет по уровню» красит узлы по глубине от записи (graphDepth)', async () => {
+    const ctx = ctxOf(cfg('force'));
+    ctx.data = { ...ctx.data, meta: { ...ctx.data.meta, graphDepth: { 'ADR-1': 0, 'D-1': 1, 'T-1': 2 } } };
+    render(<RecordView record={CENTER} ctx={ctx} tab="graph" onTab={() => {}} />);
+    await screen.findByTestId('eng-force');
+    fireEvent.click(screen.getByRole('radio', { name: 'по уровню' }));
+    expect(screen.getByTestId('eng-force').getAttribute('data-depth-colors')).toBe('ADR-1:--acc,D-1:--inf,T-1:--suc');
   });
 
   it('свой переключатель GraphExplorer во вкладке спрятан — переключатель один', async () => {

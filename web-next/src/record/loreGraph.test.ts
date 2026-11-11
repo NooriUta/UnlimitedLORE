@@ -3,7 +3,7 @@
 // давал только один шаг, и глубина 2–3 вкладки ничего не добавляла.
 import { describe, expect, it, vi } from 'vitest';
 import type { KitData } from '@seidr/kit';
-import { fetchLoreGraph, graphNotes, mergeGraph, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
+import { depthsOf, fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 
 const BODY: LoreGraphBody = {
   nodes: [
@@ -27,6 +27,30 @@ describe('GC-04 · клиент /lore/graph', () => {
     const f = ok(BODY);
     await fetchLoreGraph({ type: 'sprint', id: 'SPRINT X/1', depth: 2, structural: true }, f);
     expect(f.mock.calls[0][0]).toBe('/lore/graph?type=sprint&id=SPRINT+X%2F1&depth=2&structural=true');
+  });
+
+  it('связи выбранного типа — параметром rels (обход на сервере строго по ним), глубина до 4', async () => {
+    const f = ok(BODY);
+    await fetchLoreGraph({ type: 'adr', id: 'A', depth: 4, rels: ['JUSTIFIED_BY', 'DECIDED_IN'] }, f);
+    expect(f.mock.calls[0][0]).toBe('/lore/graph?type=adr&id=A&depth=4&rels=JUSTIFIED_BY%2CDECIDED_IN');
+  });
+
+  it('типы связей окрестности: rels_available сервера; старый сервер — счёт по рёбрам ответа', () => {
+    expect(relsOf({ ...BODY, meta: { ...BODY.meta, rels_available: [{ rel: 'X', count: 9 }] } })).toEqual([{ rel: 'X', count: 9 }]);
+    expect(relsOf(BODY)).toEqual([{ rel: 'JUSTIFIED_BY', count: 1 }, { rel: 'PART_OF', count: 1 }]);
+  });
+
+  it('глубина узлов для подсветки уровней; строка «Уровни» — из by_depth сервера', () => {
+    expect(depthsOf(BODY)).toEqual({ SPRINT_X: 0, 'SPRINT_X/T-1': 1, 'ADR-1': 2 });
+    const notes = graphNotes({ ...BODY.meta, by_depth: { 1: 12, 2: 40, 3: 0 } }, 'ru');
+    expect(notes).toContain('Уровни: 1 — 12 · 2 — 40 · 3 — 0');
+  });
+
+  it('глубина 4 без фильтра упёрлась в потолок — подсказка снять лишние типы связей', () => {
+    const cut = { ...BODY.meta, depth: 4, truncated: true, complete: false, capped_at: 500, rels: null };
+    expect(graphNotes(cut, 'ru').join('|')).toMatch(/снимите лишние типы связей/);
+    expect(graphNotes({ ...cut, rels: ['HAS_TASK'] }, 'ru').join('|')).not.toMatch(/снимите/);
+    expect(graphNotes({ ...cut, depth: 3 }, 'ru').join('|')).not.toMatch(/снимите/);
   });
 
   it('отказ сервера — код и причина, а не пустой граф', async () => {

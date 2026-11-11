@@ -13,7 +13,7 @@ import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
 import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
 import { parentsOf } from './loreRefCreate';
-import { fetchLoreGraph, graphNotes, mergeGraph, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
+import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
@@ -164,16 +164,41 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>), [parentsKey]);
   // Граф (GC-04): вкладка «Граф» берёт окрестность записи с сервера на глубину из адреса —
   // фасад давал один шаг. Ошибка — строкой блока графа, а не пустым графом.
+  // Глубина 1–4 и снятые типы связей (goff) — из адреса. Владелица 11.11: «показать связи
+  // определённого типа, связи 2, 3, 4 уровней» — снятый тип исключается из ОБХОДА на сервере
+  // (rels = все типы окрестности минус снятые), а не только прячется на экране.
   const [gdepthRaw] = useUrlParam('gdepth');
-  const gdepth = gdepthRaw === '2' || gdepthRaw === '3' ? Number(gdepthRaw) : 1;
+  const gdepth = gdepthRaw === '2' || gdepthRaw === '3' || gdepthRaw === '4' ? Number(gdepthRaw) : 1;
+  const [goffRaw] = useUrlParam('goff');
+  const goff = (goffRaw ?? '').split(',').filter(Boolean).sort().join(',');
   const [graph, setGraph] = useState<{ key: string; body?: LoreGraphBody; error?: string } | null>(null);
-  const graphKey = view && tab === 'graph' ? `${type}|${view.record.id}|${gdepth}` : null;
+  // Все типы связей окрестности по записи и глубине — из ответа без фильтра (rels_available
+  // его не учитывает; у старого сервера — счёт рёбер полного ответа).
+  const graphRels = useRef(new Map<string, { rel: string; count: number }[]>());
+  const graphBase = view && tab === 'graph' ? `${type}|${view.record.id}|${gdepth}` : null;
+  const graphKey = graphBase ? `${graphBase}|${goff}` : null;
   useEffect(() => {
-    if (!graphKey || !view) return;
+    if (!graphKey || !graphBase || !view) return;
     let alive = true;
-    fetchLoreGraph({ type, id: view.record.id, depth: gdepth }, fetchImpl)
-      .then(body => { if (alive) setGraph({ key: graphKey, body }); },
-        e => { if (alive) setGraph({ key: graphKey, error: e instanceof Error ? e.message : String(e) }); });
+    const off = goff ? goff.split(',') : [];
+    const q = { type, id: view.record.id, depth: gdepth };
+    const known = graphRels.current.get(graphBase);
+    const all = known
+      ? Promise.resolve(known)
+      : fetchLoreGraph(q, fetchImpl).then(body => {
+        const rels = relsOf(body);
+        graphRels.current.set(graphBase, rels);
+        if (alive && !off.length) setGraph({ key: graphKey, body });
+        return rels;
+      });
+    all.then(rels => {
+      if (!off.length) return known ? fetchLoreGraph(q, fetchImpl) : null;
+      const on = rels.map(r => r.rel).filter(r => !off.includes(r));
+      // Сняты все типы — обходить нечего: только сама запись, без запроса.
+      if (!on.length) return { nodes: [], edges: [], meta: { complete: true, truncated: false } } as LoreGraphBody;
+      return fetchLoreGraph({ ...q, rels: on }, fetchImpl);
+    }).then(body => { if (alive && body) setGraph({ key: graphKey, body }); },
+      e => { if (alive) setGraph({ key: graphKey, error: e instanceof Error ? e.message : String(e) }); });
     return () => { alive = false; };
   }, [graphKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
@@ -306,7 +331,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const g = graph && graph.key === graphKey ? graph : null;
   const graphData = g?.body
-    ? (() => { const d = mergeGraph(view.data, g.body); return { ...d, meta: { ...d.meta, graphNotes: graphNotes(g.body.meta, lang) } }; })()
+    ? (() => { const d = mergeGraph(view.data, g.body); return { ...d, meta: { ...d.meta, graphRels: (graphBase && graphRels.current.get(graphBase)) || d.meta.graphRels, graphNotes: graphNotes(g.body.meta, lang) } }; })()
     : g?.error
       ? { ...view.data, meta: { ...view.data.meta, graphNotes: [`${appT(lang, 'pp.graphFailed')}: ${g.error}`] } }
       : view.data;
