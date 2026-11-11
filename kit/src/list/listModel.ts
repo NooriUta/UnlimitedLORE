@@ -217,7 +217,7 @@ export function shownOf(meta: KitMeta | null | undefined, loaded: number, shown:
 
 /* ---------- состояние в URL ---------- */
 
-export type ListViewKind = 'list' | 'cards' | 'board' | 'tree' | 'feed' | 'timeline';
+export type ListViewKind = 'list' | 'cards' | 'board' | 'tree' | 'feed' | 'timeline' | 'calendar';
 
 /** Условие фильтра поля (S4-05): есть / нет / пусто / не пусто. */
 export type FilterOp = 'any' | 'not' | 'empty' | 'nonempty';

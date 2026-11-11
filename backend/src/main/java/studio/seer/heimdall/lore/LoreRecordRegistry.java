@@ -55,7 +55,25 @@ final class LoreRecordRegistry {
      */
     record Field(String key, String label, String labelKey, String kind, String group, String dict,
                  boolean editable, Write write, boolean multi, boolean required,
-                 String refType, String rel, String dir, String relation) {}
+                 String refType, String rel, String dir, String relation, Options options) {
+        Field(String key, String label, String labelKey, String kind, String group, String dict,
+              boolean editable, Write write, boolean multi, boolean required,
+              String refType, String rel, String dir, String relation) {
+            this(key, label, labelKey, kind, group, dict, editable, write, multi, required,
+                refType, rel, dir, relation, null);
+        }
+    }
+
+    /**
+     * S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): значения поля — строки среза, а не справочник
+     * и не свободный текст. {@code GET /lore/slice/{slice}?{param}=<id записи>}; в поле пишется
+     * {@code value} строки, показывается {@code label}, группируется по {@code group} (может быть null).
+     */
+    record Options(String slice, String param, String value, String label, String group) {}
+
+    /** Автор, исполнитель, принимающий задачи — из заявленных личностей проекта задачи (TR-05). */
+    static final Options TASK_IDENTITY_OPTIONS =
+        new Options(LoreTaskIdentities.SLICE, "id", "code", "title", "kind");
 
     /** Раздел текста записи; каждый пишется своим полем (у ADR — три поля adr_set). */
     record Body(String key, String label, String labelKey, boolean editable, Write write) {}
@@ -107,6 +125,12 @@ final class LoreRecordRegistry {
     private static Field prop(String key, String label, String labelKey, String kind, String dict, Write write) {
         return new Field(key, label, labelKey, kind, "props", dict, write != null, write, false, false,
             null, null, null, null);
+    }
+
+    /** То же поле, но значения — строками среза ({@link Options}). */
+    private static Field picked(Field f, Options o) {
+        return new Field(f.key(), f.label(), f.labelKey(), f.kind(), f.group(), f.dict(), f.editable(), f.write(),
+            f.multi(), f.required(), f.refType(), f.rel(), f.dir(), f.relation(), o);
     }
 
     /** Поле-ссылка: ребро в «Свойствах». editable — правится через путь привязки. */
@@ -213,9 +237,11 @@ final class LoreRecordRegistry {
                     "sprint", "PART_OF", "out", "composition"),
                 ref("phase", "Фаза", null, "phase", "IN_PHASE", "out", "attribute", false, true),
                 ref("components", "Компоненты", "pp.field.components", "component", "TAGGED_WITH", "out", "attribute", true, true),
-                prop("author", "Автор", "pp.field.author", "text", null, w(edit, "author_agent")),
-                prop("executor", "Исполнитель", "pp.field.executor", "text", null, w(edit, "executor_agent")),
-                prop("reviewer", "Принимающий", "pp.field.reviewer", "text", null, w(edit, "reviewer_agent")),
+                // S4-24: роли — рёбра ROLE_HELD_BY; значение выбирается из среза task_identities
+                // (тот же список, что проверяет запись), а не набирается текстом.
+                picked(prop("author", "Автор", "pp.field.author", "enum", null, w(edit, "author_agent")), TASK_IDENTITY_OPTIONS),
+                picked(prop("executor", "Исполнитель", "pp.field.executor", "enum", null, w(edit, "executor_agent")), TASK_IDENTITY_OPTIONS),
+                picked(prop("reviewer", "Принимающий", "pp.field.reviewer", "enum", null, w(edit, "reviewer_agent")), TASK_IDENTITY_OPTIONS),
                 prop("effort", "Оценка, чел.-дн", "pp.field.effort", "number", null, w(edit, "effort_days")),
                 prop("actual", "Факт, чел.-дн", "pp.field.actual", "number", null, w(edit, "actual_days")),
                 prop("task_type", "Тип задачи", "pp.field.taskType", "enum", "task_type", w(edit, "task_type")),
@@ -596,8 +622,16 @@ final class LoreRecordRegistry {
 
     // ── JSON-форма (schema в lore.record/1) ─────────────────────────────────
 
-    /** {@code schema} ответа: подпись, поля, раскладка, связи. {@code null} — тип не заведён. */
+    /** {@code schema} ответа: подпись, поля, раскладка, связи. {@code null} — тип не заведён. Схема БД не читалась — block «unknown». */
     static Map<String, Object> schemaJson(String type) {
+        return schemaJson(type, null, null);
+    }
+
+    /**
+     * MD-REQUIRED: то же с фактами схемы БД — свойства вершины и Hist типа и обязательные из них
+     * ({@link LoreFieldRequirement}). {@code null} — схема не читалась: block неизвестен.
+     */
+    static Map<String, Object> schemaJson(String type, java.util.Set<String> props, java.util.Set<String> mandatory) {
         TypeDef d = get(type);
         if (d == null) return null;
         Map<String, Object> out = new LinkedHashMap<>();
@@ -635,6 +669,9 @@ final class LoreRecordRegistry {
             rels.add(m);
         }
         out.put("relations", rels);
+        // MD-REQUIRED: block — из схемы БД, warn — из проверок качества MCP (с условиями).
+        out.put("requirements", LoreFieldRequirement.annotate(type, fields, rels, props, mandatory));
+        out.put("requirements_block", props != null && mandatory != null ? "schema" : "unknown");
         return out;
     }
 
@@ -659,6 +696,16 @@ final class LoreRecordRegistry {
             m.put("ref", ref);
         }
         if (f.relation() != null) m.put("relation", f.relation());
+        // S4-24: как dict/ref — ключ только у поля с выбором из среза; group — если задан.
+        if (f.options() != null) {
+            Map<String, Object> o = new LinkedHashMap<>();
+            o.put("slice", f.options().slice());
+            o.put("param", f.options().param());
+            o.put("value", f.options().value());
+            o.put("label", f.options().label());
+            if (f.options().group() != null) o.put("group", f.options().group());
+            m.put("options", o);
+        }
         m.put("write", writeJson(f.write()));
         return m;
     }

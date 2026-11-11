@@ -31,6 +31,12 @@ export function ValueIconMark({ icon }: { icon: ValueIcon | null | undefined }) 
 
 export interface FacetFilterProps {
   title: string;
+  /**
+   * K4-FACET-LABELS: подписи поля приложение не дало, и `title` — это ключ.
+   * Тогда ключ стоит строчными, без капса подписи, с подсказкой «подпись не
+   * задана приложением»: пропуск виден, а не выдаётся за подпись.
+   */
+  untitled?: boolean;
   filter: FieldFilter;
   facet: Facet;
   valueTitle: (v: string) => string;
@@ -88,7 +94,7 @@ function FacetCount({ n, from, unknown, lang }: { n: number; from: 'all' | 'page
 export const FIND_FROM = FACET_SCALE.findFrom;
 
 export function FacetFilter({
-  title, filter, facet, valueTitle, valueIcon, compare, onChange, lang,
+  title: rawTitle, untitled = false, filter, facet, valueTitle, valueIcon, compare, onChange, lang,
   countsFrom = 'page', countsUnknown, multi, pinned, narrow = false,
 }: FacetFilterProps) {
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -96,6 +102,7 @@ export function FacetFilter({
   const [find, setFind] = useState('');
   const trigger = useRef<HTMLButtonElement>(null);
   const panelId = useId();
+  const title = untitled ? rawTitle.toLocaleLowerCase() : rawTitle;
 
   const opTitle = (op: FilterOp) => t(`kit.list.op.${op}` as KitKey);
   const counts = new Map(facet.values.map(v => [v.value, v.count]));
@@ -247,7 +254,9 @@ export function FacetFilter({
         aria-controls={narrow ? undefined : panelId}
         onClick={() => setOpen(o => !o)}
       >
-        <span className="sk-list__label">{title}</span>
+        {untitled
+          ? <span className="sk-list__label is-untitled" title={t('kit.list.facetUntitled', { key: title })}>{title}</span>
+          : <span className="sk-list__label">{title}</span>}
         <span className="sk-facet__sum">{summary}</span>
         <span className="sk-facet__chev" aria-hidden="true">{open ? '▴' : '▾'}</span>
       </button>

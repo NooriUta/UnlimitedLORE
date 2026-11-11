@@ -15,7 +15,8 @@
 // Второе, что здесь закреплено: границы НЕТ там, где тянуть нечего — у рейки
 // иконок, у меню, убранного в ушко, и у паспорта во весь экран. Ручка без
 // зоны обещала бы управление, которого нет.
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { writeWidths } from '../list/columnWidths';
 import { act, render, screen, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitShell, RecordDock, RecordView, createSafeStorage, registerGameIcons } from '../index';
@@ -218,6 +219,46 @@ describe('S4-30 · граница дока: список и паспорт де�
     const el = screen.getByRole('separator', { name: /Ширина паспорта/ });
     drag(el, -60);
     expect(node().style.getPropertyValue('--dock-panel-w')).toBe('620px');
+  });
+
+  // Владелица 11.11.2026: «паспорт сбоку может раздвигаться на две трети
+  // экрана». Потолок был числом (1100 px) — на широком экране паспорт
+  // упирался задолго до 2/3, на узком позволял съесть почти весь список.
+  describe('потолок панели сбоку — две трети окна', () => {
+    const was = window.innerWidth;
+    const setW = (w: number) => { Object.defineProperty(window, 'innerWidth', { configurable: true, value: w }); };
+    afterEach(() => setW(was));
+
+    it('широкое окно: тянется до 2/3 ширины, а не до прежних 1100 px', () => {
+      setW(1800);
+      dock('right');
+      const el = screen.getByRole('separator', { name: /Ширина паспорта/ });
+      drag(el, -2000);
+      expect(node().style.getPropertyValue('--dock-panel-w')).toBe('1200px');
+      expect(el.getAttribute('aria-valuemax')).toBe('1200');
+    });
+
+    it('узкое окно: потолок тоже 2/3 — список не исчезает', () => {
+      setW(1200);
+      dock('right');
+      drag(screen.getByRole('separator', { name: /Ширина паспорта/ }), -2000);
+      expect(node().style.getPropertyValue('--dock-panel-w')).toBe('800px');
+    });
+
+    it('минимум прежний: уже 320 px не сжимается', () => {
+      setW(1800);
+      dock('right');
+      drag(screen.getByRole('separator', { name: /Ширина паспорта/ }), 2000);
+      expect(node().style.getPropertyValue('--dock-panel-w')).toBe('320px');
+    });
+
+    it('запомненный размер больше 2/3 (окно сузили) — рисуется по потолку', () => {
+      setW(900);
+      const store = createSafeStorage(() => memStorage().storage);
+      writeWidths(store, 'zones', { 'dock.panel.w': 1100 });
+      render(<RecordDock placement="right" backdrop={<p>список</p>} widthStore={store}><p>паспорт</p></RecordDock>);
+      expect(node().style.getPropertyValue('--dock-panel-w')).toBe('600px');
+    });
   });
 
   it('панель снизу — граница по ВЫСОТЕ, и тянется вверх', () => {

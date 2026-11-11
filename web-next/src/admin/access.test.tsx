@@ -130,6 +130,8 @@ describe('доступ · модели ответов сервера', () => {
 describe('S7B-14 · «Все мои (N своих)» в карточке смотрящего', () => {
   it('число своих — с /lore/me/projects, а не число всех проектов LORE', async () => {
     const f = fake();
+    // S7B-28: подробности человека — в паспорте, он открывается из адреса (?adm-open=…).
+    window.history.replaceState(null, '', '/?adm-open=u-owner');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={f} meSub="u-owner" /></KitLangProvider>);
     const chip = await screen.findByTestId('adm-my-projects');
     await vi.waitFor(() => expect(chip.textContent).toMatch(/Все мои \(3 своих\)/));
@@ -137,12 +139,16 @@ describe('S7B-14 · «Все мои (N своих)» в карточке смо�
   });
 
   it('ролей нет — честный ноль, а не прочерк', async () => {
+    // S7B-28: подробности человека — в паспорте, он открывается из адреса (?adm-open=…).
+    window.history.replaceState(null, '', '/?adm-open=u-owner');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake({ me: { ok: true, projects: [], count: 0 } })} meSub="u-owner" /></KitLangProvider>);
     const chip = await screen.findByTestId('adm-my-projects');
     await vi.waitFor(() => expect(chip.textContent).toMatch(/Все мои \(0 своих\)/));
   });
 
   it('не опознан (401) — «не проверено», а не ноль', async () => {
+    // S7B-28: подробности человека — в паспорте, он открывается из адреса (?adm-open=…).
+    window.history.replaceState(null, '', '/?adm-open=u-owner');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake({ me: { error: 'NO_IDENTITY' }, meStatus: 401 })} meSub="u-owner" /></KitLangProvider>);
     const chip = await screen.findByTestId('adm-my-projects');
     await vi.waitFor(() => expect(chip.getAttribute('data-state')).toBe('error'));
@@ -151,6 +157,8 @@ describe('S7B-14 · «Все мои (N своих)» в карточке смо�
   });
 
   it('в строке человека — «своих проектов», по его ролям', async () => {
+    // S7B-28: подробности человека — в паспорте, он открывается из адреса (?adm-open=…).
+    window.history.replaceState(null, '', '/?adm-open=u-fro');
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
     const fro = await screen.findByTestId('adm-person-u-fro');
     expect(within(fro).getByTestId('adm-person-projects').textContent).toMatch(/своих проектов: 1/);
@@ -199,8 +207,9 @@ describe('S7B-10 · эффективный доступ', () => {
   });
 
   it('раскрытый проект — «кто видит»: люди, роль, пишет ли, и роли realm в обход', async () => {
-    window.history.replaceState(null, '', '/?adm-by=projects&adm-open=AIDA%2FminiLORE');
-    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake()} /></KitLangProvider>);
+    // S7B-28: «Проекты» — свой раздел (view="projects"), ось больше не в адресе.
+    window.history.replaceState(null, '', '/?adm-open=AIDA%2FminiLORE');
+    render(<KitLangProvider lang="ru"><WhoWhereScreen view="projects" fetchImpl={fake()} /></KitLangProvider>);
     const who = await screen.findByTestId('adm-who-sees');
     await vi.waitFor(() => expect(who.textContent).toContain('frolova'));
     expect(who.textContent).toMatch(/только чтение/);

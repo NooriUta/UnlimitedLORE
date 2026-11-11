@@ -259,10 +259,13 @@ public abstract class LoreResourceBase {
         if (expected == null || expected.isBlank() || id == null) return null;
         List<Map<String, Object>> rows = ingestService.queryPublic(LoreRecordVersion.sql(type), Map.of("id", id));
         if (rows.isEmpty()) return null;
-        Object cur = rows.get(0).get("version");
-        if (LoreRecordVersion.matches(expected, cur)) return null;
+        // S5-08: версия = максимум из valid_from и отметки правки на месте — та же,
+        // что отдаёт GET /lore/record (LoreRecordVersion.of), иначе правка текста
+        // поверх чужой правки текста проходила бы с «верной» версией.
+        String cur = LoreRecordVersion.of(rows.get(0));
+        if (LoreRecordVersion.matchesCurrent(expected, cur)) return null;
         return noStore(Response.status(Response.Status.CONFLICT).entity(LoreRecordVersion.conflictBody(
-            type, id, expected, LoreRecordVersion.normalize(cur), rows.get(0).get("updated_by"))));
+            type, id, expected, cur, rows.get(0).get("updated_by"))));
     }
 
     Response badParams(String msg) {
@@ -527,6 +530,133 @@ public abstract class LoreResourceBase {
                 + "поле записано, но связь не создана и в паспорте компонента запись не появится; "
                 + "заведите компонент, затем сохраните ещё раз");
         }
+    }
+
+    // ── Рёбра по упоминаниям: «Связать» (S2-06) и автосвязи по телам (MD-AUTOLINK) ──
+
+    /** Исход постановки ребра по упоминанию. */
+    enum MentionEdgeOutcome { CREATED, UNCHANGED, NOT_CREATED, FROM_NOT_FOUND, TO_NOT_FOUND, AMBIGUOUS_FROM, AMBIGUOUS_TO }
+
+    /**
+     * Права агента на ребро от записи {@code from} — по семейству ИСХОДНОЙ записи и
+     * той же матрицей, что у фильтра. null — можно; иначе — текст отказа.
+     */
+    String mentionScopeDenied(LoreLinkTypes.Entity from) {
+        String scope = identity == null ? null : AgentScopeFilter.agentScopeOf(identity);
+        if (scope == null) return null;
+        AgentScopeFilter.Denial d = AgentScopeFilter.decide(scope, "/lore/" + from.family() + "/link");
+        return d == null ? null : "agent-" + scope + " не ставит связи от '" + from.type()
+            + "' (семейство " + d.what() + ": " + d.why() + ")";
+    }
+
+    /**
+     * Один код постановки ребра по упоминанию — для {@code POST /lore/link/mention}
+     * ({@code origin='mention'}) и для автосвязей при записи тела
+     * ({@code origin='mention-auto'}). Проба ДО записи (ADR-LORE-043): CREATE EDGE …
+     * IF NOT EXISTS на повторе возвращает существующее ребро, и по результату
+     * «создано» не отличить — поэтому существующее ребро → UNCHANGED без записи.
+     * {@code dryRun} — только проба, без записи (сухой отчёт бэкфилла).
+     * Сбой запроса летит наверх: «не смогли проверить» ≠ «нет».
+     */
+    MentionEdgeOutcome placeMentionEdge(LoreLinkTypes.Entity from, String fromId,
+                                        LoreLinkTypes.Entity to, String toId, String edge,
+                                        String origin, String createdAt, String createdBy, boolean dryRun) {
+        String fromRid = LoreGraphLinks.resolveRid(ingestService, from, fromId);
+        if (fromRid == null) return MentionEdgeOutcome.FROM_NOT_FOUND;
+        if (fromRid.isEmpty()) return MentionEdgeOutcome.AMBIGUOUS_FROM;
+        String toRid = LoreGraphLinks.resolveRid(ingestService, to, toId);
+        if (toRid == null) return MentionEdgeOutcome.TO_NOT_FOUND;
+        if (toRid.isEmpty()) return MentionEdgeOutcome.AMBIGUOUS_TO;
+        if (LoreGraphLinks.edgeBetween(ingestService, edge, fromRid, toRid)) return MentionEdgeOutcome.UNCHANGED;
+        if (dryRun) return MentionEdgeOutcome.CREATED;
+        // SET — String.format, не именованные параметры: CREATE EDGE их в SET не принимает.
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS SET origin='%s', created_at='%s', created_by='%s'",
+                edge, fromRid, toRid, LoreGraphLinks.sqlSafe(origin), LoreGraphLinks.sqlSafe(createdAt),
+                LoreGraphLinks.sqlSafe(createdBy)),
+            Map.of())).await().indefinitely();
+        return LoreGraphLinks.edgeBetween(ingestService, edge, fromRid, toRid)
+            ? MentionEdgeOutcome.CREATED : MentionEdgeOutcome.NOT_CREATED;
+    }
+
+    /**
+     * SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK · spec:SPEC-LORE-MD-INLINE-REF §7 — автосвязи
+     * по упоминаниям в MD-телах записи {@code fromType:fromId}. Ставит только однозначные
+     * пары из {@link LoreLinkTypes#AUTO_PAIRS} ({@link LoreMentionAutoLink}), тем же
+     * {@link #placeMentionEdge}, что «Связать», с {@code origin='mention-auto'}. Без дублей:
+     * существующее ребро → {@code unchanged}. Удаление упоминания ребро НЕ снимает.
+     *
+     * <p>Ответ — блок {@code mentions: {added[], unchanged[], skipped[{ref, reason}]}}; на
+     * запись тела не влияет (сбой одного упоминания — {@code skipped} с причиной
+     * {@code error}, а не 5xx за уже записанное тело). {@code dryRun} — ничего не пишет,
+     * {@code added} означает «было бы добавлено».
+     */
+    Map<String, Object> autoLinkMentions(String fromType, String fromId, boolean dryRun, String... bodies) {
+        List<Map<String, Object>> added = new java.util.ArrayList<>();
+        List<Map<String, Object>> unchanged = new java.util.ArrayList<>();
+        List<Map<String, Object>> skipped = new java.util.ArrayList<>();
+        String createdAt = java.time.Instant.now().toString();
+        String createdBy = null;
+        for (LoreMentionAutoLink.Decision d : LoreMentionAutoLink.plan(fromType, fromId, bodies)) {
+            if (d instanceof LoreMentionAutoLink.Skip s) {
+                skipped.add(mentionSkip(s.ref(), s.reason(), null));
+                continue;
+            }
+            LoreMentionAutoLink.Plan p = (LoreMentionAutoLink.Plan) d;
+            LoreLinkTypes.Entity from = LoreLinkTypes.entity(p.fromType());
+            LoreLinkTypes.Entity to = LoreLinkTypes.entity(p.toType());
+            String denied = mentionScopeDenied(from);
+            if (denied != null) { skipped.add(mentionSkip(p.ref(), "forbidden", denied)); continue; }
+            try {
+                if (createdBy == null) createdBy = callerLabel();
+                MentionEdgeOutcome o = placeMentionEdge(from, p.fromId(), to, p.toId(), p.option().edgeType(),
+                    LoreMentionAutoLink.ORIGIN, createdAt, createdBy, dryRun);
+                switch (o) {
+                    case CREATED -> added.add(mentionEdgeJson(p));
+                    case UNCHANGED -> unchanged.add(mentionEdgeJson(p));
+                    case NOT_CREATED -> skipped.add(mentionSkip(p.ref(), "not_created", "ребро не появилось после записи"));
+                    case FROM_NOT_FOUND, TO_NOT_FOUND -> skipped.add(mentionSkip(p.ref(), "not_found",
+                        (o == MentionEdgeOutcome.FROM_NOT_FOUND ? p.fromType() + " " + p.fromId()
+                                                                : p.toType() + " " + p.toId()) + " — такой записи нет"));
+                    case AMBIGUOUS_FROM, AMBIGUOUS_TO -> skipped.add(mentionSkip(p.ref(), "ambiguous_target",
+                        "id " + (o == MentionEdgeOutcome.AMBIGUOUS_FROM ? p.fromId() : p.toId())
+                        + " принадлежит нескольким записям"));
+                }
+            } catch (Exception e) {
+                LOG_MENTIONS.warnf("[LORE MENTION-AUTO] %s:%s %s: %s", fromType, fromId, p.ref().raw(), e.getMessage());
+                skipped.add(mentionSkip(p.ref(), "error", LoreUpstream.detail(e)));
+            }
+        }
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        if (dryRun) out.put("dry_run", true);
+        out.put("added", added);
+        out.put("unchanged", unchanged);
+        out.put("skipped", skipped);
+        return out;
+    }
+
+    private static final Logger LOG_MENTIONS = Logger.getLogger("studio.seer.heimdall.lore.mentions");
+
+    private static Map<String, Object> mentionEdgeJson(LoreMentionAutoLink.Plan p) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("ref", p.ref().raw());
+        m.put("edge_type", p.option().edgeType());
+        m.put("from_type", p.fromType());
+        m.put("from_id", p.fromId());
+        m.put("to_type", p.toType());
+        m.put("to_id", p.toId());
+        m.put("origin", LoreMentionAutoLink.ORIGIN);
+        return m;
+    }
+
+    private static Map<String, Object> mentionSkip(LoreMentionAutoLink.Ref ref, String reason, String detail) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("ref", ref.raw());
+        if (ref.type() != null) m.put("type", ref.type());
+        m.put("id", ref.id());
+        m.put("reason", reason);
+        if (detail != null) m.put("detail", detail);
+        return m;
     }
 
     int deleteEdges(String edgeType, String where, Map<String, Object> params) {

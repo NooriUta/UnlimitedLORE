@@ -5,6 +5,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { AuthGate } from '@seidr/kit/auth';
 import App from './App';
 import { v2Auth } from './auth/session';
+import { installServerPulse } from './shell/serverPulse';
 import { themeSource } from './storage/themeSource';
 import { ShowTechFromSettings } from './settings/ShowTech';
 
@@ -26,6 +27,9 @@ const kitLang = document.documentElement.lang === 'en' ? 'en' : 'ru';
 // сохранённый пользователь, тихое продление. Пока не поднялась, AuthGate
 // показывает скелет; нет сессии — уводит на вход; вход выключен — как раньше.
 void v2Auth.init();
+
+// Свежесть для строки состояния (S4-21): когда сервер LORE ответил в последний раз.
+installServerPulse();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

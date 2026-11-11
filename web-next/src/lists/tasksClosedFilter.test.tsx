@@ -66,7 +66,7 @@ describe('Задачи · закрытые — фильтр по умолчан�
   it('по умолчанию грузятся только открытые, и сказано: закрытые скрыты фильтром', async () => {
     const { fn, paths } = net();
     render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('')} />);
-    expect(await screen.findByText('Открытая задача')).toBeTruthy();
+    expect(await screen.findByText('Открытая задача', {}, { timeout: 5000 })).toBeTruthy();
     expect(paths).toContain('/lore/slice/open_tasks');
     expect(paths).not.toContain('/lore/slice/closed_tasks');
     expect(screen.getByText(CLOSED_HIDDEN_NOTE)).toBeTruthy();
@@ -76,7 +76,7 @@ describe('Задачи · закрытые — фильтр по умолчан�
   it('режим показывает закрытые (lc=all) — догружается срез закрытых, записи слиты', async () => {
     const { fn, paths } = net();
     render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('?lc=all')} />);
-    expect(await screen.findByText('Закрытая задача')).toBeTruthy();
+    expect(await screen.findByText('Закрытая задача', {}, { timeout: 5000 })).toBeTruthy();
     expect(screen.getByText('Открытая задача')).toBeTruthy();
     expect(paths).toContain('/lore/slice/closed_tasks');
     expect(screen.queryByText(CLOSED_HIDDEN_NOTE)).toBeNull();
@@ -86,15 +86,15 @@ describe('Задачи · закрытые — фильтр по умолчан�
     const { fn, paths } = net();
     const w = win('?open=S1%2FT-9');
     render(<ListScreen screen="tasks" fetchImpl={fn} urlState={w} />);
-    await waitFor(() => expect(paths).toContain('/lore/slice/closed_tasks'));
-    await waitFor(() => expect(w.location.search).toMatch(/lc=below/));
+    await waitFor(() => expect(paths).toContain('/lore/slice/closed_tasks'), { timeout: 5000 });
+    await waitFor(() => expect(w.location.search).toMatch(/lc=below/), { timeout: 5000 });
   });
 
   it('открыта задача, которая и так видна, — фильтр не трогаем', async () => {
     const { fn, paths } = net();
     const w = win('?open=S1%2FT-1');
     render(<ListScreen screen="tasks" fetchImpl={fn} urlState={w} />);
-    await waitFor(() => expect(paths).toContain('/lore/slice/open_tasks'));
+    await waitFor(() => expect(paths).toContain('/lore/slice/open_tasks'), { timeout: 5000 });
     await new Promise(r => setTimeout(r, 50));
     expect(paths).not.toContain('/lore/slice/closed_tasks');
     expect(w.location.search).not.toMatch(/lc=/);

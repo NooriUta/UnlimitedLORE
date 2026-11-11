@@ -136,6 +136,8 @@ export const loreConfig: KitConfig = {
     ],
     filters: ['status', 'kind', 'quality', 'sprint_id', 'component_id'],
     groupings: ['status', 'kind', 'sprint_id'],
+    // K4-FACET-LABELS: quality — вычисляемое поле (его нет в kinds.*.fields).
+    fieldLabels: { quality: 'Качество' },
     columns: ['title', 'id', 'verdict', 'status', 'updated_at'],
     tree: { parent: 'sprint_id', order: 'priority', rollup: 'status' },
   },

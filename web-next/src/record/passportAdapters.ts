@@ -3,6 +3,7 @@
 // поля типа описаны здесь. Когда придут контракты по объектам (docs/reports/lore-object-contracts.md)
 // и реестр — эти описания заменяются ответом сервера, раскладка kit не меняется.
 // Честность: упавший дополнительный слайс — meta.errors блока, а не «пусто».
+import { appliedGraphView } from '../settings/applied';
 import type { KitConfig, KitData, KitEdge, KitLang, KitRecord } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import type { SliceBody } from '../api/loreSlice';
@@ -42,11 +43,14 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export interface PassportLoad { record: KitRecord; data: KitData; config: KitConfig; facts?: typeof SPRINT_FACTS }
 
 /** Конфиг вида: поля, статусы LORE, подписи рёбер. */
+const graphViewPref = () => { const view = appliedGraphView(); return view ? { view } : {}; };
+
 export function baseConfig(lang: KitLang, kinds: KitConfig['kinds']): KitConfig {
   return {
     modules: [], menu: { groups: [] }, kinds,
     edges: loreEdgesConfig(lang),
-    graph: { depth: 1, limit: 60, colorBy: 'type' },
+    // Вид вкладки «Граф» по умолчанию — личная настройка человека (GC-03).
+    graph: { depth: 1, limit: 60, colorBy: 'type', ...graphViewPref() },
     statuses: loreStatuses(lang),
     roles: { reader: { canEdit: false, canStatus: false } },
   };
