@@ -9,5 +9,8 @@ export { TREE_FIXTURE, TREE_FIXTURE_CONFIG, fixtureVerdict } from './fixture';
 // не меняет разметку (S4-TREE-NESTED).
 export {
   TreeTable, treeTableLines,
+  type TreeControls, type TreeLinesOptions,
   type TreeFlatRow, type TreeLevel, type TreeLevelState, type TreeTableLine, type TreeTableProps,
 } from './TreeTable';
+// Фильтр и порядок дерева: условие судит листья, предки — контекст (S4-SPRINT-TASKS-CONTROLS).
+export { filterTreeRows, leafKindOf, treeRowRecord, type TreeRowsFiltered } from './treeControls';
