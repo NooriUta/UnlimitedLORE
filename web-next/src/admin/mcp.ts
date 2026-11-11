@@ -97,3 +97,51 @@ export async function fetchMcp(now: number, signal?: AbortSignal, fetchImpl?: ty
     truncated: conn.truncated === true || (fail.ok && fail.body.truncated === true),
   };
 }
+
+/** Отбор «только с отказами» (?adm-mcp-f=failures) — с ним Главная ведёт сюда из карточки отказов. */
+export const MCP_ONLY_FAILURES = 'failures';
+
+/**
+ * Отказ записи агента — ОДНО событие из тех, что считает mcp_failures (S7B-30):
+ * срез mcp_failure_rows, то же условие (lore.action, ось agent, код ≥ 400), построчно.
+ */
+export interface McpFailureRow {
+  /** epoch millis или null — отметки нет. */
+  ts: number | null;
+  family: string | null;
+  entity_id: string | null;
+  caller: string | null;
+  status: number | null;
+}
+
+export interface McpFailureRowsData {
+  rows: McpFailureRow[];
+  /** Сервер обрезал выдачу пределом (LIMIT 500): отказов больше, чем строк. */
+  truncated: boolean;
+}
+
+/** Момент: epoch-мс числом/строкой или ISO-строка (MCP-обёртка отдаёт ts строкой ISO). */
+const when = (v: unknown): number | null => {
+  const n = num(v);
+  if (n !== null) return n;
+  if (typeof v === 'string' && v.trim() !== '') {
+    const ms = Date.parse(v);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  return null;
+};
+
+export function parseFailureRows(rows: readonly Row[]): McpFailureRow[] {
+  return rows.map(r => ({
+    ts: when(r.ts),
+    family: str(r.family),
+    entity_id: str(r.entity_id),
+    caller: str(r.caller),
+    status: num(r.status),
+  }));
+}
+
+export async function fetchMcpFailureRows(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<McpFailureRowsData> {
+  const b = await fetchSlice<Row>('mcp_failure_rows', {}, { signal, fetchImpl });
+  return { rows: parseFailureRows(b.rows), truncated: b.truncated === true };
+}

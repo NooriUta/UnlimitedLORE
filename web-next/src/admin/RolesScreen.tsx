@@ -25,6 +25,7 @@ import {
   projectPersonCell, PROJECT_ROLES, roleCanWrite, roleHolders, roleSummary, splitByPerson,
   type PersonChanges, type PersonRoles, type RoleChange, type RolesData,
 } from './roles';
+import { peopleWithoutProjects, ROLES_NO_PROJECTS } from './home';
 import './Admin.css';
 
 export interface RolesScreenProps {
@@ -42,6 +43,9 @@ export function RolesScreen({ fetchImpl }: RolesScreenProps) {
   const t = useAppT();
   const [personKey, setPerson] = useUrlParam('adm-person');
   const [byRaw, setBy] = useUrlParam(BY_PARAM);
+  // S7B-30: отбор «только без проектов» — с ним ведёт карточка Главной; тот же счёт, что у карточки.
+  const [rolesF, setRolesF] = useUrlParam('adm-roles-f');
+  const onlyNoProjects = rolesF === ROLES_NO_PROJECTS;
   const by: RolesBy = byRaw === 'all' ? 'all' : byRaw === 'role' ? 'role' : 'person';
   const res = useLoadState<RolesData>(signal => fetchRoleMatrix(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
   const data = res.data;
@@ -91,11 +95,24 @@ export function RolesScreen({ fetchImpl }: RolesScreenProps) {
     );
   } else {
     const person = personKey ? data.people.find(p => p.kc_sub === personKey) ?? null : null;
+    const noProjects = peopleWithoutProjects(data);
+    const shown = onlyNoProjects ? noProjects : data.people;
     content = (
       <>
         {data.truncated && <p className="adm-note" role="status">{t('admin.agents.truncated')}</p>}
+        <div className="adm-chips" role="group" aria-label={t('admin.roles.filter')}>
+          <button type="button" className="adm-chip" aria-pressed={onlyNoProjects} data-testid="adm-roles-only-noprojects"
+            onClick={() => setRolesF(onlyNoProjects ? null : ROLES_NO_PROJECTS, { replace: true })}>
+            {t('admin.roles.onlyNoProjects')} <b>{noProjects.length}</b>
+          </button>
+        </div>
+        {onlyNoProjects && noProjects.length === 0 && (
+          <div data-testid="adm-roles-noprojects-empty">
+            <EmptyState title={t('admin.roles.noProjectsEmpty')} hint={t('admin.roles.noProjectsEmptyHint')} />
+          </div>
+        )}
         <div className="adm-chips" role="group" aria-label={t('admin.roles.people')}>
-          {data.people.map(p => (
+          {shown.map(p => (
             <button key={p.kc_sub} type="button" className="adm-chip" aria-pressed={p.kc_sub === personKey}
               data-testid={`adm-roles-person-${p.kc_sub}`}
               onClick={() => { setQueue([]); setPerson(p.kc_sub === personKey ? null : p.kc_sub); }}>
