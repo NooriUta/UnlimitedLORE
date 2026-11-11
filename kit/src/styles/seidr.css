@@ -6726,3 +6726,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec-create__err { margin: 0; color: var(--dng); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .sk-rec-create__foot { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
 .sk-rec-create__why { font-size: var(--fs-xs); color: var(--t3); }
+
+/* S4-24: поле-связь в «Свойствах» — чипы с «×» и выбор с поиском. */
+.sk-relfield { display: grid; gap: 4px; min-width: 0; }
+.sk-relfield__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-relfield__chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 8px; border: 1px solid var(--bd); border-radius: 999px; background: var(--bg2); font-size: var(--fs-xs); }
+.sk-relfield__chip--inherited { padding-right: 8px; color: var(--t3); border-style: dashed; }
+.sk-relfield__x { min-width: 20px; min-height: 20px; border: 0; border-radius: 999px; background: transparent; color: var(--t3); font: inherit; cursor: pointer; }
+.sk-relfield__x:hover { color: var(--dng); }
