@@ -446,6 +446,42 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
     */
     const under = feed ? c.obj(feed, 'under', 'list.feed', false) : null;
     if (under) c.str(under, 'title', 'list.feed.under');
+    /*
+      Пороги свежести (K4-FRESHNESS): минуты, неотрицательные; предупреждение
+      не позже «устарело» — иначе тон «предупреждение» не наступит никогда, и
+      это ошибка конфига, а не вкус. Колонка fresh: без порогов законна, но
+      рисуется без тона — говорим об этом, чтобы «без тона» не читалось как
+      «всё свежо».
+    */
+    const fresh = c.obj(list, 'fresh', 'list', false);
+    if (fresh) {
+      for (const [field, th] of Object.entries(fresh)) {
+        const p = `list.fresh.${field}`;
+        if (!isObj(th)) { c.err(p, 'type', `${p} должно быть объектом {warnAfter, staleAfter}`); continue; }
+        c.unknownKeys(th, ['warnAfter', 'staleAfter'], p, 'kit его не прочтёт');
+        const num = (k: string): number | undefined => {
+          const v = th[k];
+          if (v === undefined) return undefined;
+          if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
+            c.err(`${p}.${k}`, 'type', `${p}.${k}: нужно неотрицательное число минут, получено «${String(v)}»`);
+            return undefined;
+          }
+          return v;
+        };
+        const w = num('warnAfter');
+        const st = num('staleAfter');
+        if (w !== undefined && st !== undefined && w > st) {
+          c.err(p, 'fresh-order', `${p}: warnAfter (${w}) больше staleAfter (${st}) — тон «предупреждение» не наступит никогда`);
+        }
+      }
+    }
+    for (const col of listArrays.columns ?? []) {
+      if (!isStr(col) || !col.startsWith('fresh:')) continue;
+      const field = col.slice('fresh:'.length);
+      if (!fresh || !isObj(fresh[field])) {
+        c.warn('list.columns', 'fresh-without-thresholds', `колонка «${col}» без list.fresh.${field}: время покажем, тона «устарело» не будет — что считать давним, решает приложение`);
+      }
+    }
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
     if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');

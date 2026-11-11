@@ -35,6 +35,7 @@
   "kitPage.el.statuses": "Statuses",
   "kitPage.el.status": "Status: {status}",
   "kitPage.el.keys": "Keys and tooltips",
+  "kitPage.el.fresh": "Freshness cell — column fresh:<field>, thresholds come from the app",
   "kitPage.el.tooltip": "Tooltip above the button",
   "kitPage.el.toolbar": "Action bar",
   "kitPage.st.retry": "Retried",

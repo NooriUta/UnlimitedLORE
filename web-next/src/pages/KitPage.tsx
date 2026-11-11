@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, CalendarMonth, LibraryView, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, CalendarMonth, FreshCell, LibraryView, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   DENSITIES, FieldEditor, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -32,6 +32,8 @@ const SECTION_KEY: Record<SectionId, AppKey> = {
 const COLOR_TOKENS = ['--bg0', '--bg1', '--bg2', '--bg3', '--bd', '--t1', '--t2', '--t3', '--acc', '--suc', '--wrn', '--dng', '--inf'] as const;
 const FS_TOKENS = ['--fs-2xs', '--fs-xs', '--fs-sm', '--fs-base', '--fs-md', '--fs-lg', '--fs-xl', '--fs-2xl'] as const;
 const SHOWN_STATUSES = ['done', 'active', 'partial', 'planned', 'backlog', 'blocked', 'cancelled'] as const;
+/** Пороги свежести на витрине (K4-FRESHNESS): с 10 мин — предупреждение, с 60 — устарело. */
+const FRESH_DEMO = { warnAfter: 10, staleAfter: 60 };
 const TAB_IDS = ['list', 'board', 'plan'] as const;
 type TabId = (typeof TAB_IDS)[number];
 const TAB_KEY: Record<TabId, AppKey> = { list: 'kitPage.sh.tab.list', board: 'kitPage.sh.tab.board', plan: 'kitPage.sh.tab.plan' };
@@ -68,6 +70,7 @@ export default function KitPage() {
   const [proposed, setProposed] = useState<number | null>(null);
   const [activated, setActivated] = useState<string | null>(null);
   const [earOpen, setEarOpen] = useState(false);
+  const [freshNow] = useState(() => Date.now());
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
   // Палитра Ctrl+K / поиск «/» (K-07): недавние — в хранилище с откатом в память.
   const palette = useKitPalette();
@@ -171,6 +174,14 @@ export default function KitPage() {
             <Tooltip text={t('kitPage.el.tooltip')}>
               <button type="button" className="sk-btn">{t('kitPage.el.tooltip')}</button>
             </Tooltip>
+          </div>
+          {/* K4-FRESHNESS: три тона по порогам приложения и «времени нет» — не «давно». */}
+          <h3 className="kitp__h3">{t('kitPage.el.fresh')}</h3>
+          <div className="kitp__row">
+            {[3, 30, 125].map(m => (
+              <FreshCell key={m} value={new Date(freshNow - m * 60_000).toISOString()} now={freshNow} thresholds={FRESH_DEMO} />
+            ))}
+            <FreshCell value={null} now={freshNow} thresholds={FRESH_DEMO} />
           </div>
           <Toolbar label={t('kitPage.el.toolbar')}>
             <IconButton icon={SECTION_ICONS.filter} label={t('kitPage.el.filter')} />
