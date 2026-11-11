@@ -90,6 +90,10 @@ final class LorePassportSurface {
             own("adrs"), own("decisions"), own("milestones"),
             own("buildsOn"), own("builtOnBy"), own("includes"), own("includedBy"), own("extends"), own("extendedBy"),
             own("refsOut"), own("refsIn"))),
+        // S4-PRODUCTS-NODE: продукт — контейнер, тела нет: Компоненты · Фичи и сценарии · Боли · Выгоды ·
+        // Работы · Роли · Подпродукты (профиль клиента — после того, что продукт делает).
+        Map.entry("product", List.of(own("components"), own("features"), own("pains"), own("gains"), own("jobs"),
+            own("actors"), own("children"))),
         // 53а: проект — контейнер, тела нет: Спринты · Компоненты · ADR · Релизы · Люди и агенты
         // (люди и их агенты — одной вкладкой-группой linkTab «people»).
         Map.entry("project", List.of(own("sprints"), own("components"), own("adrs"), own("releases"),

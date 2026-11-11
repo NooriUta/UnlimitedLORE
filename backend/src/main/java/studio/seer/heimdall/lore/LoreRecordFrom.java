@@ -313,7 +313,7 @@ final class LoreRecordFrom {
             list("tech", "tech"),
             list("adrs", "adrs"),
             list("specs", "specs"),
-            // 11.11: продукты компонента (IN_PRODUCT → словарь product).
+            // S4-PRODUCTS-NODE: продукты компонента (IN_PRODUCT) — чипами в паспорт продукта.
             list("products", "products"),
             v("status", Transform.DOC_TOKEN, "status"))),
         Map.entry("tech", List.of(
@@ -349,7 +349,20 @@ final class LoreRecordFrom {
             v("title", Transform.FIRST_OF, "name", "slug"),
             s("code", "slug"),
             s("default_branch", "default_branch"),
-            v("is_private", Transform.BOOL_YES, "is_private"))));
+            v("is_private", Transform.BOOL_YES, "is_private"))),
+        // S4-PRODUCTS-NODE: продукт — статья словаря (ключ code); подпись — label_ru, иначе код.
+        // Цвет — колонка color статьи как есть: нет её — null, цвет не выдумывается.
+        Map.entry("product", List.of(
+            v("title", Transform.FIRST_OF, "label_ru", "code"),
+            s("code", "code"),
+            s("color", "color"),
+            s("label_en", "label_en"),
+            s("icon", "icon"),
+            v("sort_order", Transform.RAW, "sort_order"),
+            v("is_active", Transform.BOOL_YES, "is_active"),
+            v("parent", Transform.HEAD_OR, "parent_code"),
+            list("projects", "git_projects"),
+            list("components", "components"))));
 
     /** Строки детей частей по типу ребёнка (фаза — не здесь: её «x/y» считается по задачам). */
     static final Map<String, ItemDef> ITEMS = Map.of(
@@ -429,7 +442,12 @@ final class LoreRecordFrom {
             lf("BELONGS_TO", "in", "question", "questions"),
             lf("BELONGS_TO", "in", "feature", "features"),
             lf("BELONGS_TO", "in", "doc", "docs"),
-            lf("BELONGS_TO", "in", "qg", "qgs"))),
+            lf("BELONGS_TO", "in", "qg", "qgs"),
+            lf("IN_PRODUCT", "out", "product", "products"))),
+        // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
+        Map.entry("product", List.of(
+            lf("IN_PRODUCT", "in", "component", "components"),
+            lf("PARENT_PRODUCT", "in", "product", "sub_products"))),
         Map.entry("feature", List.of(
             lf("DECOMPOSES_INTO", "out", "feature", "child_uc_ids"),
             lf("REALIZES", "in", "task", "task_uids"),
@@ -508,5 +526,17 @@ final class LoreRecordFrom {
             new SliceLink("files", "project_files", "project", "BELONGS_TO_PROJECT", "in", "file",
                 from(Transform.STR, "file_path"), from(Transform.STR, "file_path"), null, true),
             new SliceLink("prs", "project_prs", "project", "BELONGS_TO_PROJECT", "in", "pr",
-                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)));
+                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)),
+        // S4-PRODUCTS-NODE: сценарии и профиль клиента продукта — через его компоненты, постранично.
+        "product", List.of(
+            new SliceLink("features", "product_features", "code", "IN_PRODUCT", "in", "feature",
+                from(Transform.STR, "uc_id"), from(Transform.FIRST_OF, "title", "uc_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("pains", "product_pains", "code", "ADDRESSES", "out", "pain",
+                from(Transform.STR, "pain_id"), from(Transform.FIRST_OF, "title", "pain_id"), null, true),
+            new SliceLink("gains", "product_gains", "code", "PROMISES", "out", "gain",
+                from(Transform.STR, "gain_id"), from(Transform.FIRST_OF, "title", "gain_id"), null, true),
+            new SliceLink("jobs", "product_jobs", "code", "HELPS_WITH", "out", "job",
+                from(Transform.STR, "job_id"), from(Transform.FIRST_OF, "title", "job_id"), null, true),
+            new SliceLink("actors", "product_actors", "code", "HAS_ACTOR", "out", "actor",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true)));
 }

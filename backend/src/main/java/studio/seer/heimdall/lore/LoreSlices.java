@@ -1956,7 +1956,9 @@ public final class LoreSlices {
             "in('BELONGS_TO')[sprint_id IS NOT NULL].size() AS sprint_count, " +
             // Git projects this component touches, via its sprints
             // (Component ← BELONGS_TO ← KnowSprint → BELONGS_TO_PROJECT → KnowGitProject).
-            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint'].out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint'].out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+            // S4-PRODUCT-HILITE: продукты компонента — по ним v2 красит записи цветом продукта.
+            "out('IN_PRODUCT').code AS products " +
             "FROM LoreComponent",
             List.of(),
             new LinkedHashMap<>(Map.of("root", " WHERE parent_id = :root")),
@@ -2959,6 +2961,62 @@ public final class LoreSlices {
             "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
             List.of("code"), Map.of(), " ORDER BY sprint_id");
 
+        // ── S4-PRODUCTS-NODE: паспорт продукта (v2, только чтение) ────────────
+        // Продукт — статья словаря (dict_type='product'), ключ — код. Та же проекция,
+        // что у среза products, по одному коду. Цвет — колонка color статьи: в v2 он
+        // показывается как есть, нет его — null (цвет не выдумывается).
+        slice("product_by_id",
+            "SELECT code, label_ru, label_en, color, icon, sort_order, " +
+            "ifnull(is_active, true) AS is_active, " +
+            "in('IN_PRODUCT').component_id  AS components, " +
+            "out('PARENT_PRODUCT').code     AS parent_code, " +
+            "in('PARENT_PRODUCT').code      AS sub_products, " +
+            "out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "FROM KnowDictEntry WHERE dict_type = 'product' AND code = :code",
+            List.of("code"), Map.of(), "");
+
+        // Вкладки паспорта продукта. Своих рёбер к сценариям, болям, выгодам, работам и
+        // ролям у продукта нет — путь тот же, что у product_sprints: продукт ← компонент
+        // (IN_PRODUCT) ← сценарий (BELONGS_TO) → боль/выгода/работа/роль. Сценарии — ВСЕ
+        // уровни (фичи и US — один тип KnowUseCase, один паспорт), только со своим
+        // ребром к компоненту: унаследованного у детей сценария срез не видит — это
+        // сказано в подписи вкладки клиента, а не замолчано.
+        slice("product_features",
+            "SELECT uc_id, title, status, goal_level " +
+            "FROM KnowUseCase " +
+            "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY goal_level, uc_id");
+
+        // Боль — продукту, если её ЗАЯВЛЯЕТ (ADDRESSES) или СНИМАЕТ (RELIEVES) сценарий
+        // продукта: обе стороны «заявлено vs доставлено» (ADR-LORE-032 D5).
+        slice("product_pains",
+            "SELECT pain_id, title, severity " +
+            "FROM KnowPain " +
+            "WHERE in('ADDRESSES').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "OR in('RELIEVES').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY pain_id");
+
+        slice("product_gains",
+            "SELECT gain_id, title, rank " +
+            "FROM KnowGain " +
+            "WHERE in('PROMISES').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "OR in('DELIVERS').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY gain_id");
+
+        slice("product_jobs",
+            "SELECT job_id, title, kind " +
+            "FROM KnowJob " +
+            "WHERE in('HELPS_WITH').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "OR in('PERFORMS').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY job_id");
+
+        // Пользовательские роли (клиентские сегменты) — акторы сценариев продукта (HAS_ACTOR).
+        slice("product_actors",
+            "SELECT actor_id, name, kind " +
+            "FROM KnowProjectActor " +
+            "WHERE in('HAS_ACTOR').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY actor_id");
+
         // AL-43: SCD2 history for one dict entry — same close/open pattern as
         // history_sprint/history_task/adr_history, keyed by the composite
         // (dict_type, code) denormalized onto KnowDictEntryHist rather than a
@@ -3128,6 +3186,8 @@ public final class LoreSlices {
         Map.entry("features", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("uc_by_id", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_component", UC_INHERITED_SCOPE),
+        // S4-PRODUCTS-NODE: сценарии продукта — тот же скоуп, что у сценариев компонента.
+        Map.entry("product_features", UC_INHERITED_SCOPE),
         Map.entry("use_cases", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_feature", UC_INHERITED_SCOPE),
         Map.entry("shipped_dynamics", UC_INHERITED_SCOPE),
@@ -3154,6 +3214,11 @@ public final class LoreSlices {
         Map.entry("dictionary", "справочники — общие"),
         Map.entry("history_dict", "история справочника — общая"),
         Map.entry("products", "продукты — общий справочник"),
+        Map.entry("product_by_id", "паспорт продукта (S4-PRODUCTS-NODE) — общий справочник, как products"),
+        Map.entry("product_pains", "боли продукта — общий продуктовый профиль, как pains"),
+        Map.entry("product_gains", "выгоды продукта — общий продуктовый профиль, как gains"),
+        Map.entry("product_jobs", "работы продукта — глобальные вершины, как jobs (AL-113)"),
+        Map.entry("product_actors", "роли продукта — AL-106: акторы видны всем, как actors"),
         Map.entry("tags_usage", "теги — общие"),
         Map.entry("jobs", "работа (JTBD) — глобальная вершина по построению (AL-113)"),
         Map.entry("pains", "боли сегмента — общий продуктовый профиль"),

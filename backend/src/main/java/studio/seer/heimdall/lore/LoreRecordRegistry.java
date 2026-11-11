@@ -36,6 +36,8 @@ final class LoreRecordRegistry {
     static final List<String> TYPES = List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release",
         // S4-V2-SECTIONS (kit 09.11): последние три раздела v2 — компонент, технология, фича.
         "component", "tech", "feature",
+        // S4-PRODUCTS-NODE (владелица 11.11: «добавь ещё паспорт и объект»): паспорт продукта.
+        "product",
         // S4-29 (53а, D-2026-UXR-OWNER-DELEGATED-ANSWERS-10-11): паспорт проекта.
         "project");
 
@@ -44,7 +46,7 @@ final class LoreRecordRegistry {
      * Поля не правятся, perms ничего не обещают: кнопка без пути сохранения хуже её отсутствия.
      */
     static final java.util.Set<String> READ_ONLY = java.util.Set.of("decision", "question", "milestone", "release",
-        "component", "tech", "feature", "project");
+        "component", "tech", "feature", "product", "project");
 
     /** Куда пишется поле: эндпоинт существующего пути записи и имя поля в его теле. */
     record Write(String endpoint, String field) {}
@@ -550,10 +552,8 @@ final class LoreRecordRegistry {
                 ref("specs", "Спеки", null, "spec", "DOCUMENTED_IN", "out", "attribute", true, false),
                 // Компонент достигает проекта через свои спринты (чипы S4-29) — своего ребра нет.
                 inheritedRef("projects", "Проекты", "pp.field.projects", "project"),
-                // 11.11 (полнота модели рёбер): продукты компонента — out('IN_PRODUCT').code
-                // (product_link rel:component). Продукт — словарь, паспорта нет: поле текстовое.
-                new Field("products", "Продукты", null, "text", "props", null, false, null, true, false,
-                    null, null, null, null)),
+                // S4-PRODUCTS-NODE: компонент входит в продукт (IN_PRODUCT) — чип ведёт в паспорт продукта.
+                ref("products", "Продукты", null, "product", "IN_PRODUCT", "out", "attribute", true, false)),
             List.of(),
             List.of(
                 new PropSection(null, List.of("area", "parent", "owner", "team", "icon", "projects", "products")),
@@ -561,6 +561,7 @@ final class LoreRecordRegistry {
             List.of(), List.of(refsTab("на него ссылаются")), List.of(),
             List.of(
                 rel("parent", "Родитель", "PARENT_OF", "out", "component", "composition", "prop", false),
+                rel("products", "Продукты", "IN_PRODUCT", "out", "product", "attribute", "prop", false),
                 // S4-29 v3 (46а/52а): Спеки · ADR · Технологии · Подкомпоненты — вкладками (поля в
                 // «Свойствах» остаются).
                 rel("children", "Подкомпоненты", "PARENT_OF", "in", "component", "composition", "link_tab", false),
@@ -689,6 +690,40 @@ final class LoreRecordRegistry {
                 rel("extendedBy", "Расширена", "UC_EXTENDS", "in", "feature", "association", "link_tab", false),
                 refsOut("Ссылается"),
                 refsIn("На неё ссылаются"))));
+
+        // ── Продукт (только чтение, S4-PRODUCTS-NODE) ───────────────────────
+        // Статья словаря KnowDictEntry (dict_type='product'), ключ — код. Тела нет. Цвет — из
+        // данных статьи (color), не выдумывается. Вкладки по смыслу: Компоненты (IN_PRODUCT) ·
+        // Фичи и сценарии · Боли · Выгоды · Работы · Роли · Подпродукты. Своих рёбер к сценариям
+        // и профилю клиента у продукта нет — их срезы идут через компоненты продукта (как
+        // product_sprints), поэтому у этих вкладок ребро — последнее звено пути.
+        TYPE_DEFS.put("product", new TypeDef("product", "Продукт", "pp.kind.product", "bullseye",
+            List.of(
+                head("title", "Название", "pp.field.title", "text", null, null),
+                head("code", "Код", null, "text", null, null),
+                head("color", "Цвет", null, "text", null, null),
+                prop("label_en", "Название (en)", null, "text", null, null),
+                prop("icon", "Иконка", null, "text", null, null),
+                prop("sort_order", "Порядок", null, "number", null, null),
+                prop("is_active", "Активен", null, "text", null, null),
+                ref("parent", "Родитель", null, "product", "PARENT_PRODUCT", "out", "composition", false, false),
+                ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false),
+                ref("components", "Компоненты", "pp.field.components", "component", "IN_PRODUCT", "in", "attribute", true, false)),
+            List.of(),
+            List.of(new PropSection(null, List.of("label_en", "icon", "sort_order", "is_active", "parent", "projects",
+                "components"))),
+            List.of(), List.of(), List.of(),
+            List.of(
+                rel("parent", "Родитель", "PARENT_PRODUCT", "out", "product", "composition", "prop", false),
+                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
+                rel("components", "Компоненты", "IN_PRODUCT", "in", "component", "attribute", "link_tab", false),
+                // Сценарии всех уровней (фичи и US — один паспорт feature) — через компоненты продукта.
+                rel("features", "Фичи и сценарии", "IN_PRODUCT", "in", "feature", "attribute", "link_tab", false),
+                rel("pains", "Боли", "ADDRESSES", "out", "pain", "association", "link_tab", false),
+                rel("gains", "Выгоды", "PROMISES", "out", "gain", "association", "link_tab", false),
+                rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "link_tab", false),
+                rel("actors", "Роли", "HAS_ACTOR", "out", "actor", "association", "link_tab", false),
+                rel("children", "Подпродукты", "PARENT_PRODUCT", "in", "product", "composition", "link_tab", false))));
 
         // ── Проект (только чтение, S4-29, решение 53а) ──────────────────────
         // KnowGitProject: справочная вершина, ключ slug («владелец/репозиторий»), статуса и

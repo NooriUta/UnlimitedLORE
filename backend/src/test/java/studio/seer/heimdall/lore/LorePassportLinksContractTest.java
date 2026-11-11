@@ -187,7 +187,6 @@ class LorePassportLinksContractTest {
         Map.entry("phase", "фаза — только ребёнок спринта (CHILD_ONLY)"),
         Map.entry("tag", "тег — справочник"),
         Map.entry("area", "область — словарь (KnowDictEntry area)"),
-        Map.entry("product", "продукт — словарь (KnowDictEntry product), паспорта нет"),
         Map.entry("tech_ref", "LoreTechnology — метка стека (tech_id), не паспорт"),
         Map.entry("insight", "инсайт BRAGI — без паспорта v2"),
         Map.entry("publication", "публикация BRAGI — без паспорта v2"),

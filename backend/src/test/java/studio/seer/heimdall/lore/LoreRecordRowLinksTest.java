@@ -83,7 +83,7 @@ class LoreRecordRowLinksTest {
             Map.entry("question", Map.of("answered_by", x, "gating_tasks", x)),
             Map.entry("milestone", Map.of("direct_sprint_ids", x, "feature_ids", x)),
             Map.entry("component", Map.of("specs", List.of("x", "SPEC-TECH-X-JAVA"), "adrs", x, "tech", x,
-                "sub_components", x, "decisions", x, "questions", x, "features", x, "docs", x, "qgs", x)),
+                "sub_components", x, "decisions", x, "questions", x, "features", x, "docs", x, "qgs", x, "products", x)),
             Map.entry("feature", Map.ofEntries(Map.entry("child_uc_ids", x), Map.entry("task_uids", x),
                 Map.entry("actor_ids", x), Map.entry("pain_ids", x), Map.entry("gain_ids", x), Map.entry("job_ids", x),
                 // 11.11 (полнота модели рёбер)
@@ -97,7 +97,9 @@ class LoreRecordRowLinksTest {
                 "implemented_in_ids", x, "release_ids", x, "justified_task_uids", x, "traced_by_ucs", x)),
             Map.entry("spec", Map.of()), Map.entry("release", Map.of("adr_ids", x)), Map.entry("tech", Map.of()),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
-            Map.entry("project", Map.of()));
+            Map.entry("project", Map.of()),
+            // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.
+            Map.entry("product", Map.of("components", x, "sub_products", x)));
         assertEquals(Set.copyOf(LoreRecordRegistry.TYPES), full.keySet(), "проверены все типы паспорта");
         for (Map.Entry<String, Map<String, Object>> e : full.entrySet()) {
             String type = e.getKey();
