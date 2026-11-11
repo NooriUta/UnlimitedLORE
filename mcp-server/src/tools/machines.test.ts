@@ -180,3 +180,34 @@ describe('machine_owner_set — машинная учётка → человек
     expect(calls.filter((c) => c.method === 'POST').map((c) => c.path)).toEqual(['/lore/actor/owner']);
   });
 });
+
+// SPRINT_UXR_S7B_ADMIN/S7B-MACH-1 — завести машину одним вызовом (пробел OWN-1). Заметка задачи:
+// «Права: полная роль (или admin), журналирование. Критерий: демон/сессия заводит машину одним
+// вызовом (без админки)». Сервер: POST /lore/actor/machine; агент full заводит ТОЛЬКО своему
+// владельцу, чужая машина или занятое имя — 409 с именем владельца. Инструмент отказ не глушит.
+describe('machine_new — завести машину miniLORE одним вызовом', () => {
+  it('одна запись: POST /lore/actor/machine, переданы только названные поля', async () => {
+    await tool('machine_new').handler({ machine_id: 'lorcetus', harness: 'claude-code' });
+    expect(calls).toEqual([{ method: 'POST', path: '/lore/actor/machine', body: { machine_id: 'lorcetus', harness: 'claude-code' } }]);
+  });
+
+  it('kc_sub, name, profile и dry_run уходят как есть', async () => {
+    await tool('machine_new').handler({ machine_id: 'lorcetus', kc_sub: 'sub-1', name: 'Лорцетус', profile: 'full', dry_run: true });
+    expect(calls[0].body).toEqual({ machine_id: 'lorcetus', kc_sub: 'sub-1', name: 'Лорцетус', profile: 'full', dry_run: true });
+  });
+
+  it('имя занято чужой машиной (409) — отказ как есть, с именем владельца', async () => {
+    postImpl = async () => { throw new Error('POST /lore/actor/machine → 409 {"error":"MACHINE_TAKEN","detail":"машина lorcetus уже заведена, её владелец — Лорцетус"}'); };
+    const r = await tool('machine_new').handler({ machine_id: 'lorcetus' });
+    expect(isError(r)).toBe(true);
+    expect(text(r)).toContain('Лорцетус');
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
+  });
+
+  it('описание говорит о правах: full — только своему владельцу, человек — себе, admin — любому', () => {
+    const d = tool('machine_new').description;
+    expect(d).toMatch(/full/);
+    expect(d).toMatch(/own owner/i);
+    expect(d).toMatch(/admin/);
+  });
+});

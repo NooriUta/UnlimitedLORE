@@ -1528,7 +1528,13 @@ public final class LoreSlices {
             "out('OWNED_BY').display_name AS owner_display_name, " +
             // AO-MACHINE-OBJ: ВСЕ машины агента (рёбра USES_MACHINE), в отличие от
             // machine_id выше — «откуда писал последний раз».
-            "out('USES_MACHINE').machine_id AS machines " +
+            "out('USES_MACHINE').machine_id AS machines, " +
+            // S7B-ACT-1: окно активности (часы) — у актора-машины; у прочих агентов пусто.
+            // Окно агента = окно его машины (client_id minilore-link-<machine_id>) с перекрытием по harness.
+            "activity_window_h, activity_window_harness, " +
+            MachineActivity.DEFAULT_H + " AS activity_default_h, " +
+            // S7B-ACT-1: «когда был на связи» — последняя активность его сессий (LOGGED_BY, actor/session).
+            "in('LOGGED_BY').last_activity_at AS session_activity " +
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
 
@@ -1540,6 +1546,8 @@ public final class LoreSlices {
         // где он владелец или допущен. Этим срезом сервер miniLORE решает видимость (MachineOwners, круг 2).
         slice("machine_acl",
             "SELECT actor_id, client_id, machine_id, name, " +
+            // S7B-ACT-1: окно активности машины и окна по harness (MachineActivity.effective).
+            "activity_window_h, activity_window_harness, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
             "out('OWNED_BY').display_name AS owner_display_name, " +
             "in('MACHINE_ACCESS').kc_sub AS grant_kc_subs, " +

@@ -127,6 +127,9 @@
   "machine_access_set": [
     "/lore/user/machine-access"
   ],
+  "machine_new": [
+    "/lore/actor/machine"
+  ],
   "machine_owner_set": [
     "/lore/actor/owner"
   ],

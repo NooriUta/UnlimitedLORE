@@ -1178,6 +1178,28 @@
       ]
     }
   },
+  "machine_new": {
+    "input": {
+      "dry_run": "boolean?",
+      "harness": "string?",
+      "kc_sub": "string?",
+      "machine_id": "string",
+      "name": "string?",
+      "profile": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
   "machine_owner_set": {
     "input": {
       "actor_id": "string?",

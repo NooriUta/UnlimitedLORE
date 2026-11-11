@@ -8,7 +8,7 @@
 //     что пустая клетка читается как «так и надо».
 // Правка harness — выбором из реестра сервера, только если сервер его прислал.
 import { Fragment, useMemo, useState } from 'react';
-import { DiffPreview, Forbidden, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useUrlParam, type DiffRow } from '@seidr/kit';
+import { DiffPreview, Forbidden, FreshCell, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useMinuteNow, useUrlParam, type DiffRow } from '@seidr/kit';
 import { AgentProjectsPanel } from './AccessBlocks';
 import { RotatePanel } from './KcDanger';
 import { bindKcClient, fetchKcClients, orphanBindOptions } from './wizards';
@@ -16,7 +16,7 @@ import { fetchRoleMatrix } from './roles';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  agentWhy, agentsWithoutMachine, AGENTS_NO_MACHINE, fetchAgentOrphans, fetchAgents, filterAgents, graphOrphans, harnessCounts, HARNESS_NONE, offRegistry,
+  agentWhy, agentWindow, agentsWithoutMachine, AGENTS_NO_MACHINE, fetchAgentOrphans, fetchAgents, filterAgents, graphOrphans, harnessCounts, HARNESS_NONE, offRegistry,
   setAgentHarness, setAgentMachine,
   type AgentRow, type AgentsData, type KcOrphan,
 } from './agents';
@@ -48,6 +48,8 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
     return noMachine ? agentsWithoutMachine(byHarness) : byHarness;
   }, [data, harness, noMachine]);
   const label = (k: string) => (k === HARNESS_NONE ? t('admin.harness.none') : data?.labels[k] ?? k);
+  // S7B-ACT-1: одни часы на весь экран (kit), а не таймер на строку.
+  const now = useMinuteNow(true);
 
   let body;
   if (res.state === 'loading' && !data) body = <Skeleton lines={6} label={t('admin.agents.loading')} />;
@@ -92,17 +94,18 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                 <th scope="col">{t('admin.col.owner')}</th>
                 <th scope="col">{t('admin.col.profile')}</th>
                 <th scope="col">{t('admin.col.projects')}</th>
+                <th scope="col">{t('admin.col.lastSeen')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
                 <Fragment key={r.actor_id}>
                   <AgentLine row={r} registry={data.registry} labels={data.labels} fetchImpl={fetchImpl} onSaved={res.reload}
-                    expanded={openAgent === r.actor_id}
+                    expanded={openAgent === r.actor_id} now={now} window={agentWindow(r, data.rows)}
                     onToggle={() => setOpenAgent(openAgent === r.actor_id ? null : r.actor_id)} />
                   {openAgent === r.actor_id && (
                     <tr data-testid={`adm-agent-row-${r.actor_id}`}>
-                      <td colSpan={6}>
+                      <td colSpan={7}>
                         <AgentWhyLine row={r} />
                         <MachineEditor row={r} all={data.rows} fetchImpl={fetchImpl} onSaved={res.reload} />
                         {/* S7B-03: ротация секрета — дифф → ввод clientId → секрет один раз; отменить нельзя. */}
@@ -385,9 +388,11 @@ function MachineEditor({ row, all, fetchImpl, onSaved }: { row: AgentRow; all: r
   );
 }
 
-function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onToggle }: {
+function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onToggle, now, window: win }: {
   row: AgentRow; registry: string[] | null; labels: Record<string, string>; fetchImpl?: typeof fetch; onSaved: () => void;
   expanded: boolean; onToggle: () => void;
+  /** S7B-ACT-1: общие часы экрана (тик раз в минуту) и окно активности машины агента. */
+  now: number; window: ReturnType<typeof agentWindow>;
 }) {
   const off = offRegistry(row.harness, registry);
   const t = useAppT();
@@ -462,6 +467,13 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
       <td>
         <button type="button" className="adm-btn" aria-expanded={expanded} data-testid={`adm-agent-proj-btn-${row.actor_id}`}
           onClick={onToggle}>{t('admin.access.agentTab')}</button>
+      </td>
+      {/* S7B-ACT-1: «устарело» — когда с последней активности прошло больше окна машины агента. */}
+      <td data-testid={`adm-agent-seen-${row.actor_id}`}
+        title={win.basis === 'harness' ? t('admin.act.basis.harness', { n: win.hours, machine: win.machine ?? '—' })
+          : win.basis === 'machine' ? t('admin.act.basis.machine', { n: win.hours, machine: win.machine ?? '—' })
+            : t('admin.act.basis.default', { n: win.hours, machine: win.machine ?? '—' })}>
+        <FreshCell value={row.last_seen_at} now={now} thresholds={{ staleAfter: win.hours * 60 }} />
       </td>
     </tr>
   );

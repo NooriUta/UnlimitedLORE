@@ -30,11 +30,13 @@ import { LoreHttpError } from '../api/loreSlice';
 import { useAdminNav } from './adminNav';
 import {
   batchesByMachine, fetchMachineAcl, fetchMachinesData, grantRecords, grantRequests, machineRecords, matrixCell,
-  parsePlan, personMachines, postMachineAccess, postMachineAccessBatch, probeWrite, projectMatrix, removeProjectsRequests,
-  revokeRequests, roleRequests, sliceWriteRight, enrichMachines,
-  type AccessPlan, type AccessRequest, type Machine, type MachineBatch, type MachinesData, type PlanView, type WriteRight,
+  parsePlan, personMachines, postMachineAccess, postMachineAccessBatch, postMachineActivity, probeWrite, projectMatrix,
+  removeProjectsRequests, revokeRequests, roleRequests, sliceWriteRight, enrichMachines,
+  type AccessPlan, type AccessRequest, type ActivityPlan, type Machine, type MachineBatch, type MachinesData, type PlanView,
+  type WriteRight,
 } from './machines';
 import { HarnessMark, harnessValueIcon } from './HarnessMark';
+import { ACTIVITY_CHOICES, ACTIVITY_DEFAULT_H, type MachineActivity } from './activity';
 import './Admin.css';
 
 type T = ReturnType<typeof useAppT>;
@@ -62,6 +64,7 @@ function machinesConfig(lang: KitLang): KitConfig {
           { key: 'harness', title: t('admin.macl.col.harness'), type: 'enum' },
           { key: 'projects', title: t('admin.macl.col.projects'), type: 'enum' },
           { key: 'granted', title: t('admin.macl.col.granted'), type: 'number' },
+          { key: 'last_seen', title: t('admin.macl.col.lastSeen'), type: 'text' },
         ],
       },
     },
@@ -70,7 +73,10 @@ function machinesConfig(lang: KitLang): KitConfig {
       filters: ['fields.projects', 'fields.harness'],
       // «По проекту» — kit режет по массиву projects: машина в каждой своей группе.
       groupings: ['owner', 'projects'],
-      columns: ['title', 'owner', 'harness', 'projects', 'granted'],
+      columns: ['title', 'owner', 'harness', 'projects', 'granted', 'fresh:last_seen'],
+      // S7B-ACT-1: «устарело» — когда с последней отметки прошло больше окна ЭТОЙ машины
+      // (stale_min записи, machineRecords); порог колонки — общий дефолт.
+      fresh: { last_seen: { staleAfter: ACTIVITY_DEFAULT_H * 60, perRecord: { staleAfter: 'stale_min' } } },
     },
   };
 }
@@ -276,6 +282,8 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
         <ValueChips value={m.projects} href={projectHref} />
       </p>
 
+      <ActivityBox machine={m} harnessLabels={data.harnessLabels} canWrite={canWrite} fetchImpl={fetchImpl} onChanged={onChanged} />
+
       <h3 className="adm-h">{t('admin.macl.grants.title', { n: m.grants.length })}</h3>
       <p className="adm-note">{t('admin.macl.grants.note')}</p>
       <div data-testid="adm-macl-grants">
@@ -374,6 +382,87 @@ function GrantForm({ machine: m, data, draft, setDraft, onPreview, nameOf }: {
         </button>
         <button type="button" className="adm-btn" onClick={() => setDraft(EMPTY_DRAFT)}>{t('admin.macl.form.reset')}</button>
       </div>
+    </div>
+  );
+}
+
+// ── окно активности машины и harness (S7B-ACT-1) ──────────────────────────
+// Слово владелицы 11.11: «считать активной в течении — от часа после последнего вызова до суток».
+// Видят все, правят владелец машины или admin (can_write — то же правило, что у допусков).
+// Выбор → dry_run → DiffPreview «было → станет» → применить.
+
+function ActivityBox({ machine: m, harnessLabels, canWrite, fetchImpl, onChanged }: {
+  machine: Machine; harnessLabels: Record<string, string>; canWrite: boolean; fetchImpl?: typeof fetch; onChanged: () => void;
+}) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const [draft, setDraft] = useState<MachineActivity>(m.activity);
+  const [plan, setPlan] = useState<ActivityPlan | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const harnesses = [...new Set([...m.harness, ...Object.keys(m.activity.harness)])].sort();
+  const hName = (h: string) => harnessLabels[h] ?? h;
+  const hours = (n: number) => t('admin.act.hours', { n });
+  const show = (a: MachineActivity): string => [
+    `${t('admin.act.machine')}: ${a.windowH === null ? t('admin.act.default', { n: m.default_h }) : hours(a.windowH)}`,
+    ...Object.entries(a.harness).sort(([x], [y]) => x.localeCompare(y)).map(([h, n]) => `${hName(h)}: ${hours(n)}`),
+  ].join(' · ');
+  const req = (dry: boolean) => ({ machine_id: m.machine_id, window_h: draft.windowH, harness: draft.harness, ...(dry ? { dry_run: true } : {}) });
+  const run = async (dry: boolean) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const p = await postMachineActivity(req(dry), fetchImpl);
+      if (dry) setPlan(p);
+      else { setPlan(null); setDone(true); onChanged(); }
+    } catch (e) {
+      setErr(reasonOf(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const diff: DiffRow[] = plan ? [plan.kind === 'unchanged'
+    ? { id: 'act', kind: 'same', text: t('admin.act.title'), detail: show(plan.after), check: { state: 'checked' } }
+    : { id: 'act', kind: 'change', text: t('admin.act.title'), from: show(plan.before), to: show(plan.after), check: { state: 'checked' } }] : [];
+  const machineOpts = [{ value: '', label: t('admin.act.default', { n: m.default_h }) }, ...ACTIVITY_CHOICES.map(n => ({ value: String(n), label: hours(n) }))];
+  const harnessOpts = [{ value: '', label: t('admin.act.inherit') }, ...ACTIVITY_CHOICES.map(n => ({ value: String(n), label: hours(n) }))];
+  const setHarness = (h: string, v: string) => {
+    const next = { ...draft.harness };
+    if (v === '') delete next[h]; else next[h] = Number(v);
+    setDraft({ ...draft, harness: next });
+    setPlan(null);
+    setDone(false);
+  };
+  return (
+    <div className="adm-field" data-testid="adm-act" role="group" aria-label={t('admin.act.title')}>
+      <h3 className="adm-h">{t('admin.act.title')}</h3>
+      <p className="adm-note">{t('admin.act.lead')}</p>
+      <p className="adm-sub" data-testid="adm-act-now">{show(m.activity)}</p>
+      {!canWrite && <p className="adm-hint">{t('admin.act.readonly')}</p>}
+      {canWrite && (
+        <>
+          <Segmented label={t('admin.act.machine')} value={draft.windowH === null ? '' : String(draft.windowH)} options={machineOpts}
+            disabled={busy} onChange={v => { setDraft({ ...draft, windowH: v === '' ? null : Number(v) }); setPlan(null); setDone(false); }} />
+          {harnesses.map(h => (
+            <Segmented key={h} label={t('admin.act.forHarness', { h: hName(h) })}
+              value={draft.harness[h] === undefined ? '' : String(draft.harness[h])} options={harnessOpts}
+              disabled={busy} onChange={v => setHarness(h, v)} />
+          ))}
+          <div className="adm-field--btns">
+            <button type="button" className="adm-btn" data-testid="adm-act-preview" disabled={busy} onClick={() => { void run(true); }}>
+              {t('admin.act.preview')}
+            </button>
+          </div>
+          {plan && (
+            <div data-testid="adm-act-diff">
+              <DiffPreview rows={diff} onApply={() => { void run(false); }} busy={busy} label={t('admin.act.diff')} lang={lang} />
+            </div>
+          )}
+          {done && <p className="adm-sub" role="status" data-testid="adm-act-done">{t('admin.act.done')}</p>}
+        </>
+      )}
+      {err && <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-act-error">{t('admin.act.error', { reason: err })}</p>}
     </div>
   );
 }
