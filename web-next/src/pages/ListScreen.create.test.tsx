@@ -63,8 +63,8 @@ describe('S4-24 · «+ Новая» открывает черновик в до�
     render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
     await waitFor(() => expect(newBtn()).toBeTruthy());
     fireEvent.click(newBtn()!);
-    const form = await screen.findByTestId('record-create', {}, { timeout: 5000 });
-    expect(form.getAttribute('data-type')).toBe('sprint');
+    const form = await screen.findByTestId('kit-record-create', {}, { timeout: 5000 });
+    expect(form.getAttribute('data-kind')).toBe('sprint');
     expect(form.closest('[data-testid="kit-rec-dock"]')?.getAttribute('data-placement')).toBe('right');
   });
 
@@ -74,7 +74,7 @@ describe('S4-24 · «+ Новая» открывает черновик в до�
     render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
     await waitFor(() => expect(newBtn()).toBeTruthy());
     fireEvent.click(newBtn()!);
-    const form = await screen.findByTestId('record-create', {}, { timeout: 5000 });
+    const form = await screen.findByTestId('kit-record-create', {}, { timeout: 5000 });
     expect(form.closest('[data-testid="kit-rec-dock"]')?.getAttribute('data-placement')).toBe('bottom');
   });
 
@@ -83,7 +83,7 @@ describe('S4-24 · «+ Новая» открывает черновик в до�
     render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
     await waitFor(() => expect(newBtn()).toBeTruthy());
     fireEvent.click(newBtn()!);
-    const form = await screen.findByTestId('record-create', {}, { timeout: 5000 });
+    const form = await screen.findByTestId('kit-record-create', {}, { timeout: 5000 });
     const inputs = form.querySelectorAll('input[type="text"], input:not([type])');
     fireEvent.change(inputs[0], { target: { value: 'S_NEW' } });
     fireEvent.change(inputs[1], { target: { value: 'Новый спринт' } });
@@ -92,7 +92,7 @@ describe('S4-24 · «+ Новая» открывает черновик в до�
     const post = calls.find(c => c.init?.method === 'POST')!;
     expect(JSON.parse(String(post.init!.body))).toMatchObject({ sprint_id: 'S_NEW', name: 'Новый спринт' });
     // Черновика больше нет — в доке запись S_NEW (паспорт грузится по её коду).
-    await waitFor(() => expect(screen.queryByTestId('record-create')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('kit-record-create')).toBeNull());
     expect(screen.getByTestId('kit-rec-dock')).toBeTruthy();
   });
 });

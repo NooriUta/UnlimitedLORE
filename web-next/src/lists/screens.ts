@@ -20,6 +20,7 @@ import {
   questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
+import { staleByStatus, withCalendar, type CalendarDate, type LibrarySpec } from './library';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
 
@@ -110,6 +111,16 @@ export interface ListScreenDef {
    * нижний уровень. Нет — у записи раздела нет времени, ленты нет.
    */
   feed?: FeedSpec;
+  /**
+   * Вид «Библиотека» (K2-VIEW-LIBRARY): группы слева по полю раздела, справа —
+   * паспорт записи. Нет — раздел не про документы, вида нет.
+   */
+  library?: LibrarySpec;
+  /**
+   * Даты календаря (K2-VIEW-CALENDAR) — названы явно, первая по умолчанию.
+   * Нет — у записи раздела нет даты, календаря нет: пустой хуже отсутствия.
+   */
+  calendarDates?: readonly CalendarDate[];
 }
 
 export interface ListNested {
@@ -446,7 +457,7 @@ const milestonesSpec: SectionSpec = {
 const releasesSpec: SectionSpec = {
   kind: 'release', titleKey: 'lists.releases.title', icon: 'open-book',
   fields: [
-    ['version', 'text'], ['type', 'text'], ['week', 'number'], ['current', 'text'],
+    ['version', 'text'], ['type', 'text'], ['week', 'number'], ['current', 'text'], ['released', 'date'],
     ['project', 'ref'], ['sprints', 'number'], ['prs', 'number'],
   ],
   views: ['list', 'cards', 'feed', 'timeline'],
@@ -528,12 +539,48 @@ const featuresSpec: SectionSpec = {
   columns: ['id', 'title', 'status', 'level', 'ucs', 'tasks', 'components'],
 };
 
+/**
+ * Даты календаря по разделам (K2-VIEW-CALENDAR), названы явно:
+ * • спринт — план начала (planned_start_date) и факт закрытия (done_date);
+ * • релиз — дата выпуска (release_date).
+ * Вехам (date_display — «прогноз Q4 2026», текст, а не дата) и задачам (в срезе
+ * нет ни срока, ни даты закрытия — только время правки) календаря нет.
+ */
+const SPRINT_DATES = [
+  { field: 'planned_start', labelKey: 'lists.calendar.plannedStart' },
+  { field: 'done_date', labelKey: 'lists.calendar.doneDate' },
+] as const satisfies readonly CalendarDate[];
+const RELEASE_DATES = [{ field: 'released', labelKey: 'lists.calendar.released' }] as const satisfies readonly CalendarDate[];
+
+const joinMeta = (...parts: unknown[]) => parts.filter(p => typeof p === 'string' && p).join(' · ') || undefined;
+
+/**
+ * Библиотеки разделов (K2-VIEW-LIBRARY). Разрез выбран по данным:
+ * • компоненты — по области (замер 11.11: area заполнена у 105 из 110, команда —
+ *   примерно у четверти, корень дерева — один на десятки компонентов, и у
+ *   половины корней детей нет); устарел — область deprecated;
+ * • ADR, спеки, решения, технологии — по компоненту; устарел — статус
+ *   закрытой ветки «отменено» (заменён, отклонён, выведен).
+ */
+const LIBRARIES = {
+  components: {
+    groupBy: 'area', noGroupKey: 'lists.library.noArea',
+    stale: r => r.fields.area === 'deprecated',
+    meta: r => joinMeta(r.fields.parent ? `↑ ${String(r.fields.parent)}` : '', r.fields.team, r.fields.owner),
+  },
+  adrs: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', stale: staleByStatus },
+  specs: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', stale: staleByStatus, meta: r => joinMeta(r.fields.version) },
+  decisions: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', stale: staleByStatus, meta: r => joinMeta(r.fields.adr) },
+  tech: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', meta: r => joinMeta(r.fields.version) },
+} as const satisfies Record<string, LibrarySpec>;
+
 export const LIST_SCREENS = {
   sprints: {
     modelType: 'sprint',
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     defaultSort: FRESH_FIRST,
-    map: sprintRecord, config: lang => withFeed(lang, sprintsConfig(lang), FEEDS.sprints), feed: FEEDS.sprints, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
+    map: sprintRecord, config: lang => withCalendar(withFeed(lang, sprintsConfig(lang), FEEDS.sprints), SPRINT_DATES), feed: FEEDS.sprints,
+    calendarDates: SPRINT_DATES, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
     // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
     // `sprint_totals` (S4-09). Считает сервер: одно число из двух мест
@@ -548,7 +595,7 @@ export const LIST_SCREENS = {
     modelType: 'adr',
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     defaultSort: FRESH_FIRST,
-    map: adrRecord, config: lang => withFeed(lang, adrsConfig(lang), FEEDS.adrs), feed: FEEDS.adrs, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
+    map: adrRecord, config: lang => withFeed(lang, adrsConfig(lang), FEEDS.adrs), feed: FEEDS.adrs, library: LIBRARIES.adrs, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
   tasks: {
     modelType: 'task',
@@ -564,13 +611,13 @@ export const LIST_SCREENS = {
     modelType: 'decision',
     slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
     defaultSort: FRESH_FIRST,
-    map: decisionRecord, config: lang => withFeed(lang, sectionConfig(lang, decisionsSpec), FEEDS.decisions), feed: FEEDS.decisions, quickIcons: {},
+    map: decisionRecord, config: lang => withFeed(lang, sectionConfig(lang, decisionsSpec), FEEDS.decisions), feed: FEEDS.decisions, library: LIBRARIES.decisions, quickIcons: {},
   },
   specs: {
     modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
     defaultSort: FRESH_FIRST,
-    map: specRecord, config: lang => withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs), feed: FEEDS.specs, quickIcons: {},
+    map: specRecord, config: lang => withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs), feed: FEEDS.specs, library: LIBRARIES.specs, quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
@@ -587,11 +634,13 @@ export const LIST_SCREENS = {
   releases: {
     slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',
     defaultSort: FRESH_FIRST,
-    map: releaseRecord, config: lang => withFeed(lang, sectionConfig(lang, releasesSpec), FEEDS.releases), feed: FEEDS.releases, quickIcons: {},
+    map: releaseRecord, config: lang => withCalendar(withFeed(lang, sectionConfig(lang, releasesSpec), FEEDS.releases), RELEASE_DATES), feed: FEEDS.releases,
+    calendarDates: RELEASE_DATES, quickIcons: {},
   },
   components: {
     slice: 'components', titleKey: 'lists.components.title', icon: 'cog',
     map: componentRecord, config: lang => sectionConfig(lang, componentsSpec), quickIcons: {},
+    library: LIBRARIES.components,
   },
   projects: {
     slice: 'git_projects', titleKey: 'lists.projects.title', icon: 'open-folder',
@@ -600,7 +649,7 @@ export const LIST_SCREENS = {
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',
     defaultSort: FRESH_FIRST,
-    map: techRecord, config: lang => withFeed(lang, sectionConfig(lang, techSpec), FEEDS.tech), feed: FEEDS.tech, quickIcons: {},
+    map: techRecord, config: lang => withFeed(lang, sectionConfig(lang, techSpec), FEEDS.tech), feed: FEEDS.tech, library: LIBRARIES.tech, quickIcons: {},
   },
   features: {
     modelType: 'feature',

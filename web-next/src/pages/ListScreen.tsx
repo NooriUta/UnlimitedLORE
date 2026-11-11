@@ -5,12 +5,13 @@
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  Forbidden, ICON_CANON, ListView, LoadError, NO_DATE_RANGE, RecordDock, ScreenHead, Skeleton, dateRangeUrlPatch,
+  Forbidden, ICON_CANON, LibraryView, ListView, LoadError, NO_DATE_RANGE, RecordDock, ScreenHead, Skeleton, dateRangeUrlPatch,
   isDateRangeActive, isShowClosed, pushUrlState, readDateRangeUrl, readUrlState, showClosedOf, urlStateHref,
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { DateFilterScope, DateRangeValue, KitRecord, KitShowClosed, RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { DateFilterScope, DateRangeValue, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
+import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
 import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
 import {
@@ -37,7 +38,7 @@ import './ListScreen.css';
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
 const ListPassport = lazy(() => import('../record/ListPassport'));
 // Черновик новой записи (S4-24) — тоже свой чанк: в нём TipTap.
-const RecordCreate = lazy(() => import('../record/RecordCreateForm'));
+const RecordCreate = lazy(() => import('../record/RecordCreateDock'));
 /**
  * Тип паспорта по экрану списка — карта ЧАСТИЧНАЯ (S4-V2-SECTIONS).
  *
@@ -187,6 +188,39 @@ function useChangedRange(win: UrlWindow | undefined) {
   return [value, set] as const;
 }
 
+/**
+ * Вид «Библиотека» в адресе (K2-VIEW-LIBRARY): `?lib=1` — вид включён,
+ * `?libo=<id>` — читаемая запись. Это не вид движка списка kit (там
+ * `lv=`), а соседний вид раздела, поэтому и параметры свои. Включить и
+ * выключить — шаг истории («назад» возвращает список); выбор записи — заменой.
+ */
+function useLibraryState(win: UrlWindow | undefined) {
+  const read = () => {
+    const p = win ? readUrlState(win) : null;
+    return { on: p?.get(LIBRARY_PARAM) === '1', doc: p?.get(LIBRARY_OPEN_PARAM) || null };
+  };
+  const [lib, setLib] = useState(read);
+  const setOn = (on: boolean) => {
+    setLib({ on, doc: null });
+    if (win) pushUrlState({ [LIBRARY_PARAM]: on ? '1' : null, [LIBRARY_OPEN_PARAM]: null }, { win });
+  };
+  const setDoc = (doc: string) => {
+    setLib(l => ({ ...l, doc }));
+    if (win) pushUrlState({ [LIBRARY_OPEN_PARAM]: doc }, { win, replace: true });
+  };
+  return [lib, setOn, setDoc] as const;
+}
+
+/** Поле даты календаря в адресе (`?lcd=`, K2-VIEW-CALENDAR) — когда у раздела дат несколько. */
+function useCalendarDate(win: UrlWindow | undefined) {
+  const [picked, setPicked] = useState<string | null>(() => (win ? readUrlState(win).get(CALENDAR_DATE_PARAM) : null));
+  const set = (field: string) => {
+    setPicked(field);
+    if (win) pushUrlState({ [CALENDAR_DATE_PARAM]: field }, { win, replace: true });
+  };
+  return [picked, set] as const;
+}
+
 export interface ListScreenProps {
   screen: ListScreenId;
   /** Подмена сети (тесты); по умолчанию — window.fetch. */
@@ -210,6 +244,14 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const lang = useKitLang();
   const t = useAppT();
   const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
+  // «Библиотека» и «Календарь» (K2-VIEW-LIBRARY, K2-VIEW-CALENDAR): состояние — в адресе.
+  const [lib, setLibOn, setLibDoc] = useLibraryState(urlWin);
+  const libraryOn = !!def.library && lib.on;
+  const [calPicked, setCalPicked] = useCalendarDate(urlWin);
+  // Вид движка списка — чтобы выбор даты календаря стоял только у календаря.
+  // Узнаём его из onStateChange, а не из `lv` адреса: `lv=calendar` kit пока
+  // не читает (readListState), и взятый из адреса вид разошёлся бы с экраном.
+  const [listView, setListView] = useState<ListViewKind | null>(null);
   // Оболочка ведёт «Недавнее», но узнать об открытии записи сама не может:
   // список открывает паспорт своим состоянием (?open=…). Отсюда и находка P1
   // аудита 08.11 — «"Недавние" пусто даже после открытия записи». Экран живёт
@@ -265,6 +307,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     if (!items.length) return withDisplay;
     return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
   }, [baseConfig, modelStatuses]);
+  // Дата календаря (K2-VIEW-CALENDAR): у раздела она названа явно; где дат
+  // несколько (спринт: план и факт), выбор — в адресе (?lcd=).
+  const calDates = def.calendarDates;
+  const calField = calDates ? calendarField(calDates, calPicked) : '';
+  const viewConfig = useMemo(() => (calField && config.list?.calendar && config.list.calendar.date !== calField
+    ? { ...config, list: { ...config.list, calendar: { date: calField } } }
+    : config), [config, calField]);
   // Выбор проектов в шапке наконец доходит до среза (S4-03, жалоба владелицы
   // 09.11.2026: «верхний фильтр по проектам не влияет на элементы внизу»).
   // Причина была не в фильтре: `useProjectScope()` не вызывал НИ ОДИН экран —
@@ -459,7 +508,38 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       {t('create.new')}
     </button>
   ) : undefined;
-  const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon, ...(newAction ? { actions: newAction } : {}) } : undefined;
+  // Группы библиотеки — по загруженным записям раздела; считаются, только пока вид открыт.
+  const libSpec = def.library;
+  const libRecords = (viewData ?? data)?.records;
+  const noGroupTitle = libSpec ? t(libSpec.noGroupKey) : '';
+  const libGroups = useMemo(
+    () => (libSpec && libraryOn && libRecords ? libraryGroups(libRecords, libSpec, config, noGroupTitle) : []),
+    [libSpec, libraryOn, libRecords, config, noGroupTitle],
+  );
+  // Переключатель «Библиотека ⇄ Список» (K2-VIEW-LIBRARY): библиотека — не вид
+  // движка списка kit, а соседний вид раздела, поэтому кнопка стоит в шапке
+  // рядом с видами списка, а не в их radiogroup.
+  const libraryToggle = def.library ? (
+    <button type="button" className="sk-btn" data-testid="list-library" aria-pressed={libraryOn}
+      onClick={() => setLibOn(!libraryOn)}>
+      {t(libraryOn ? 'lists.library.back' : 'lists.library.view')}
+    </button>
+  ) : undefined;
+  // Дата календаря названа словами раздела; где их несколько — выбор (K2-VIEW-CALENDAR).
+  const calendarPicker = calDates && !libraryOn && listView === 'calendar' ? (
+    <div className="list-screen__caldate" role="group" aria-label={t('lists.calendar.dateGroup')}>
+      {calDates.map(d => (
+        <button key={d.field} type="button" className="sk-pill sk-pill--filter" aria-pressed={d.field === calField}
+          onClick={() => setCalPicked(d.field)}>
+          {t(d.labelKey)}
+        </button>
+      ))}
+    </div>
+  ) : undefined;
+  const actions = newAction || libraryToggle || calendarPicker
+    ? <>{calendarPicker}{libraryToggle}{newAction}</>
+    : undefined;
+  const head = heading ? { title: t(def.titleKey), titleId: headId, icon: def.icon, ...(actions ? { actions } : {}) } : undefined;
   // Peek из списка (S9-10): пробел на строке — карточка записи; тип LORE = вид строки.
   const listPeek = useMemo(
     () => loreListPeek(lang, id => (viewData ?? data)?.records.find(r => r.id === id)?.kind ?? null, fetchImpl),
@@ -474,10 +554,31 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     content = <Forbidden reason={body?.outside_scope?.reason ?? (result.error instanceof Error ? result.error.message : undefined)} />;
   } else if (result.state === 'error' || !data) {
     content = <LoadError error={result.error} onRetry={result.reload} />;
+  } else if (libraryOn && def.library) {
+    // «Библиотека» (K2-VIEW-LIBRARY): группы слева по полю раздела, справа —
+    // паспорт записи на месте (у компонента — его ADR, спеки, задачи и
+    // технологии); на телефоне kit открывает чтение нижним листом.
+    const libType = PASSPORT_OF[screen];
+    content = (
+      <>
+        {head ? <ScreenHead {...head} /> : actions && <div className="list-screen__actions">{actions}</div>}
+        <LibraryView
+          groups={libGroups}
+          selected={lib.doc ?? undefined}
+          onSelect={setLibDoc}
+          href={urlWin ? id => urlStateHref(urlWin, { open: id, [LIBRARY_PARAM]: null, [LIBRARY_OPEN_PARAM]: null }, { anchor: null }) : undefined}
+          renderBody={libType ? doc => (
+            <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+              <ListPassport key={doc.id} type={libType} id={doc.id} placement="right" fetchImpl={fetchImpl} win={urlWin} />
+            </Suspense>
+          ) : undefined}
+        />
+      </>
+    );
   } else {
     content = (
       <ListView
-        config={config}
+        config={viewConfig}
         data={viewData ?? data}
         // Счётчики источника считаны БЕЗ диапазона дат — при диапазоне им не
         // место: kit считает по загруженному и говорит это (S9-01).
@@ -503,7 +604,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // умолчание — `ls` в адресе (явный выбор или применённый вид) kit ставит поверх.
         initial={def.defaultSort || listKey ? { ...(def.defaultSort ? { sort: def.defaultSort } : {}), ...(listKey ? { closed: closedMode } : {}) } : undefined}
         key={listKey}
-        onStateChange={s => { if (def.closedSlice) setClosedMode(showClosedOf(s, config)); }}
+        onStateChange={s => {
+          setListView(s.view);
+          if (def.closedSlice) setClosedMode(showClosedOf(s, config));
+        }}
         // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
         // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
         // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
