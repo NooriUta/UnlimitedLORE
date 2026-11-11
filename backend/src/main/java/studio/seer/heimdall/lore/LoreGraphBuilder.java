@@ -70,6 +70,8 @@ final class LoreGraphBuilder {
     static final String KIND_STRUCTURAL = "structural";
     static final String MISSING = "missing";
     static final String HIDDEN = "hidden_by_scope";
+    /** meta.frontier_edges: рёбра между узлами последнего уровня не читались. */
+    static final String FRONTIER_NOT_READ = "not_read";
 
     /**
      * Узел источника. {@code key} — ключ источника (у БД — @rid), {@code id} — бизнес-ключ
@@ -359,6 +361,10 @@ final class LoreGraphBuilder {
         meta.put("capped_at", truncated ? q.limit() : null);
         meta.put("hidden_by_scope", hidden.size());
         meta.put("dangling", danglingJson);
+        // #1228: у последнего уровня рёбра не читаются — ни в окрестности (уровень depth),
+        // ни в срезе (кольцо depth 1). Ребро между двумя такими узлами в ответ не попадает,
+        // и это названо, а не угадывается по отсутствию.
+        meta.put("frontier_edges", FRONTIER_NOT_READ);
         meta.put("structural", q.structural());
         meta.put("structural_rels", new TreeSet<>(STRUCTURAL_RELS));
         return new Result(nodes, edgesJson, meta);

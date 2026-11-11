@@ -287,6 +287,42 @@ class LoreGraphBuilderTest {
         assertEquals(List.of("ADR-1 IMPLEMENTED_IN S1", "S1 DEPENDS_ON S2"), edgeKeys(r));
     }
 
+    // ── #1228: вид ребра как есть, признак непрочитанных рёбер фронта ──────────
+
+    @Test
+    void dependsOnKindIsPassedThroughAsIs() {
+        MemSource src = new MemSource()
+            .node("S1", "sprint", "p1").node("S2", "sprint", "p1").node("S3", "sprint", "p1").node("S4", "sprint", "p1")
+            .edge("S1", "DEPENDS_ON", "S2", "gate")
+            .edge("S1", "DEPENDS_ON", "S3", "informs")
+            .edge("S1", "DEPENDS_ON", "S4", "custom_kind");
+        LoreGraphBuilder.Result r = around(src, "S1", 1);
+        Map<String, Object> kinds = new LinkedHashMap<>();
+        for (Map<String, Object> e : r.edges()) kinds.put(String.valueOf(e.get("to")), e.get("kind"));
+        assertEquals(Map.of("S2", "gate", "S3", "informs", "S4", "custom_kind"), kinds);
+    }
+
+    @Test
+    void neighborhoodSaysFrontierEdgesAreNotRead() {
+        // S2 и ADR-1 — оба на последнем уровне; их общее ребро не читается.
+        MemSource src = sample().edge("ADR-1", "DEPENDS_ON", "S2");
+        LoreGraphBuilder.Result r = around(src, "S1", 1);
+        assertTrue(ids(r).containsAll(List.of("ADR-1", "S2")));
+        assertFalse(edgeKeys(r).contains("ADR-1 DEPENDS_ON S2"));
+        assertEquals("not_read", r.meta().get("frontier_edges"));
+    }
+
+    @Test
+    void sliceSaysRingEdgesAreNotRead() {
+        // Семя S1, кольцо — ADR-1 и S2; ребро ADR-1 → S2 между узлами кольца не читается.
+        MemSource src = sample().edge("ADR-1", "DEPENDS_ON", "S2");
+        LoreGraphBuilder.Result r = LoreGraphBuilder.build(
+            LoreGraphBuilder.Query.slice(List.of(src.nodes.get("S1")), Set.of(), Set.of(), false, 500, null), src);
+        assertEquals(List.of("S1", "ADR-1", "S2"), ids(r));
+        assertFalse(edgeKeys(r).contains("ADR-1 DEPENDS_ON S2"));
+        assertEquals("not_read", r.meta().get("frontier_edges"));
+    }
+
     // ── детерминизм ──────────────────────────────────────────────────────────
 
     @Test
