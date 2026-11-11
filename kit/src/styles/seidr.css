@@ -4226,6 +4226,50 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
    Кнопки — pill-фильтры kit (≥ --tap на касании); подпись ребра — текстом
    на рёбрах центра, с обводкой фоном, чтобы читалась поверх линий. */
 .sk-rec-graph__ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+
+/* ---------- граф знаний GraphExplorer (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-03) ----------
+   Два вида — Force и «как Обсидиан» — и левая панель как у Обсидиана: Фильтры,
+   Группы, Отображение, Силы. Холст занимает всё, что осталось. */
+.sk-rec-graph__gx { height: min(70vh, 640px); min-height: 420px; }
+.sk-gx { display: flex; flex-direction: column; min-height: 420px; height: 100%; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg); overflow: hidden; }
+.sk-gx--panel { --gx-panel: 248px; }
+.sk-gx__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 6px 8px; border-bottom: 1px solid var(--bd); background: var(--bg2); }
+.sk-gx__engines { display: flex; gap: 4px; align-items: center; }
+.sk-gx__count { margin-left: auto; color: var(--t3); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.sk-gx__ghost { background: transparent; }
+.sk-gx__body { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1 1 auto; min-height: 0; }
+.sk-gx--panel .sk-gx__body { grid-template-columns: var(--gx-panel) minmax(0, 1fr); }
+.sk-gx__side { min-width: 0; overflow: auto; border-right: 1px solid var(--bd); background: var(--bg2); }
+.sk-gx__stage { position: relative; min-width: 0; min-height: 360px; }
+.sk-gx__canvas { position: absolute; inset: 0; }
+.sk-gx__loading { padding: 16px; color: var(--t3); font-size: var(--fs-sm); }
+.sk-gx__sel { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2); font-size: var(--fs-sm); }
+.sk-gx__sel-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t1); }
+.sk-gx__sel-id { margin-left: auto; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-gx-dot { display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: var(--gx-c, var(--t3)); flex: none; }
+.sk-gx-panel { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 12px; font-size: var(--fs-sm); }
+.sk-gx-panel__sec { border-bottom: 1px solid var(--bd); padding-bottom: 6px; }
+.sk-gx-panel__sec > summary { cursor: pointer; padding: 4px 0; color: var(--t2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
+.sk-gx-panel__row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 36px; align-items: center; gap: 6px; padding: 2px 0; color: var(--t2); }
+.sk-gx-panel__row--wide { grid-template-columns: minmax(0, 1fr); }
+.sk-gx-panel__row input[type="range"] { width: 100%; accent-color: var(--acc); }
+.sk-gx-panel__val { color: var(--t1); font-family: var(--mono); font-size: var(--fs-xs); text-align: right; font-variant-numeric: tabular-nums; }
+.sk-gx-panel__input { width: 100%; min-width: 0; padding: 3px 6px; border: 1px solid var(--bd); border-radius: 4px; background: var(--bg); color: var(--t1); font-size: var(--fs-sm); }
+.sk-gx-panel__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-gx-panel__types, .sk-gx-panel__groups { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sk-gx-panel__check { display: flex; align-items: center; gap: 6px; min-height: 24px; color: var(--t1); cursor: pointer; }
+.sk-gx-panel__check input { accent-color: var(--acc); }
+.sk-gx-panel__count { margin-left: auto; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-gx-panel__hint { margin: 2px 0 6px; color: var(--t3); font-size: var(--fs-xs); }
+.sk-gx-panel__group { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px; }
+.sk-gx-panel__swatches { display: flex; gap: 2px; }
+.sk-gx-swatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--bd); border-radius: 999px; background: var(--gx-c, var(--t3)); cursor: pointer; }
+.sk-gx-swatch[aria-checked="true"] { outline: 2px solid var(--t1); outline-offset: 1px; }
+.sk-gx-panel__reset { align-self: flex-start; margin-top: 6px; }
+@media (max-width: 720px) {
+  .sk-gx--panel .sk-gx__body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(360px, 1fr); }
+  .sk-gx__side { max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--bd); }
+}
 .sk-rec-graph__depth { display: inline-flex; align-items: center; gap: 4px; }
 .sk-rec-graph__ctl-label { color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; }
 .sk-rec-graph__legend .sk-pill__main,

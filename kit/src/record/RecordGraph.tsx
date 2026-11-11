@@ -19,6 +19,10 @@ import type { EgoCluster } from './graph';
 import { GRAPH_DEPTHS, allowedEdgeTypes, edgeLabel, isStructural, useGraphState } from './graphState';
 import { blockError } from './RecordLinks';
 import { useNarrow } from '../core/narrow';
+import { useRef } from 'react';
+import { GraphExplorer } from '../graph/GraphExplorer';
+import type { GxEdge, GxEngine, GxNode, GxStyle } from '../graph/settings';
+import type { GraphView } from './graphState';
 
 /** Радиус кольца глубины и цель касания — в px viewBox (1 ед. = 1 px). */
 const RING = 96;
@@ -58,7 +62,9 @@ export function RecordGraph(
   const off = new Set(state.off);
   // Вид: выбор человека главнее ширины; не выбирал — на телефоне СПИСОК, там
   // холст не читается (S9-08). Порог — общий порог kit, его же знает список.
-  const view = state.view ?? (narrow ? 'links' : 'graph');
+  // GC-03: умолчание вида может прийти от приложения (у LORE — личная настройка
+  // человека); выбор в адресе всё равно главнее. На телефоне без того и другого — список.
+  const view = state.view ?? ctx.config.graph?.view ?? (narrow ? 'links' : 'graph');
 
   const controls = (
     <div className="sk-rec-graph__ctl" role="group" aria-label={kitT(lang, 'kit.record.graph.controls')}>
@@ -79,6 +85,14 @@ export function RecordGraph(
         <Pill variant="filter" pressed={view === 'links'} onToggle={() => setView('links')}
           title={kitT(lang, 'kit.record.graph.viewLinksHint')}>
           {kitT(lang, 'kit.record.graph.viewLinks')}
+        </Pill>
+        <Pill variant="filter" pressed={view === 'force'} onToggle={() => setView('force')}
+          title={kitT(lang, 'kit.record.graph.viewForceHint')}>
+          {kitT(lang, 'kit.record.graph.viewForce')}
+        </Pill>
+        <Pill variant="filter" pressed={view === 'obsidian'} onToggle={() => setView('obsidian')}
+          title={kitT(lang, 'kit.record.graph.viewObsidianHint')}>
+          {kitT(lang, 'kit.record.graph.viewObsidian')}
         </Pill>
       </div>
       {structuralAround.length > 0 && (
@@ -132,6 +146,20 @@ export function RecordGraph(
   const clusterText = (c: EgoCluster) =>
     kitT(lang, c.atLeast ? 'kit.record.graph.clusterAtLeast' : 'kit.record.graph.cluster',
       { n: c.count, label: edgeLabel(ctx.config, c.sector) });
+
+  if (view === 'force' || view === 'obsidian') {
+    // GC-03: граф знаний — тот же круг записей (глубина и фильтры вкладки), но
+    // живой физикой и без свёртки хабов: в Force/Обсидиане хаб читается сам.
+    const full = egoGraph(record.id, ctx.data, { depth: state.depth, limit, types: allowed, clusterMax: Infinity });
+    return (
+      <div className="sk-rec-graph" data-testid="kit-graph">
+        {controls}
+        {legend}
+        <RecordGraphExplorer record={record} ctx={ctx} lang={lang} engine={view} onEngine={setView}
+          nodes={full.nodes} links={full.links} />
+      </div>
+    );
+  }
 
   if (view === 'links') {
     // Список связей: читается на телефоне и не требует раскладки. Однотипные
@@ -272,6 +300,47 @@ export function RecordGraph(
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+/** Палитра типов записей во вкладке: токены темы, по порядку видов из конфига. */
+const KIND_TONES = ['--acc', '--inf', '--suc', '--wrn', '--dng', '--t2'] as const;
+
+/**
+ * Вкладка «Граф» в видах Force и «Обсидиан» (GC-03): данные вкладки → общий
+ * GraphExplorer. Узел — запись, тип узла — её вид (kinds приложения), связь —
+ * тип ребра с подписью и цветом из config.edges. Переход к записи — той же
+ * ссылкой, что у секторов (ctx.href), чтобы приложение перехватило её как обычно.
+ */
+function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links }: {
+  record: KitRecord; ctx: KitCtx; lang: KitLang; engine: GxEngine; onEngine: (v: GraphView) => void;
+  nodes: { id: string; record?: KitRecord }[]; links: { from: string; to: string; type: string }[];
+}) {
+  const host = useRef<HTMLDivElement>(null);
+  const kindKeys = Object.keys(ctx.config.kinds);
+  const types: Record<string, GxStyle> = {};
+  kindKeys.forEach((k, i) => { types[k] = { label: ctx.config.kinds[k].title, color: KIND_TONES[i % KIND_TONES.length] }; });
+  const rels: Record<string, GxStyle> = {};
+  for (const [k, e] of Object.entries(ctx.config.edges ?? {})) rels[k] = { label: e.label, color: e.color };
+  const gxNodes: GxNode[] = [
+    { id: record.id, type: record.kind ?? 'other', title: record.title },
+    ...nodes.filter(n => n.id !== record.id).map(n => ({ id: n.id, type: n.record?.kind ?? 'other', title: n.record?.title })),
+  ];
+  const gxEdges: GxEdge[] = links.map(l => ({ from: l.from, to: l.to, rel: l.type }));
+  const open = (id: string) => {
+    // Обычная ссылка, а не location: приложение перехватывает ссылки kit само.
+    const a = document.createElement('a');
+    a.href = ctx.href(id);
+    host.current?.appendChild(a);
+    a.click();
+    a.remove();
+  };
+  return (
+    <div ref={host} className="sk-rec-graph__gx">
+      <GraphExplorer nodes={gxNodes} edges={gxEdges} types={types} rels={rels} lang={lang}
+        engine={engine} onEngineChange={onEngine} engineSwitch={false}
+        hrefOf={ctx.href} onOpen={open} storageKey="record" />
     </div>
   );
 }

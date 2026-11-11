@@ -15,6 +15,7 @@ export * from './shell';
 // записи рендерит ctx.md — MD-элементы по-прежнему из `@seidr/kit/content`.
 export type * from './core/contract';
 export * from './record';
+export * from './graph';
 // Контракт ядра (типы, без кода) — и отсюда; хуки вида — `@seidr/kit/core`.
 export * from './approval';
 export * from './tasks';
