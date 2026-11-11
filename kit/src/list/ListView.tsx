@@ -1214,6 +1214,35 @@ export function ListView({
     );
   };
 
+  // S4-35 / ADR-LORE-049: показ колонки из модели — приоритет, шаг ширины,
+  // переполнение. Модель зовёт поле по имени, колонка — «fields.имя»: ищем по
+  // обоим написаниям, как fieldType.
+  const displayOf = (col: string) => {
+    const d = config.list?.columnDisplay;
+    if (!d) return undefined;
+    return d[col] ?? (col.startsWith('fields.') ? d[col.slice(7)] : d[`fields.${col}`]);
+  };
+  const colAttrs = (col: string): { className: string; 'data-w'?: string } => {
+    const d = displayOf(col);
+    const p = d?.priority;
+    // Приоритет 1 не прячется никогда — класса у него нет вовсе.
+    // Полные имена классов, а не шаблон: сторож единого слоя CSS сверяет
+    // каждое имя с правилом в seidr.css (S4-00e).
+    const prio = p === 2 ? ' sk-list__p2' : p === 3 ? ' sk-list__p3' : p === 4 ? ' sk-list__p4' : '';
+    return { className: `sk-list__c-${col.replace(/[^a-z0-9]+/g, '-')}${prio}`, ...(d?.width ? { 'data-w': d.width } : {}) };
+  };
+  // Многоточие: полный текст в подсказке И раскрытие по касанию — на телефоне
+  // наведения нет, и подсказка по title там не откроется никогда.
+  const ellip = (col: string, r: KitRecord, node: ReactNode): ReactNode => {
+    if (displayOf(col)?.overflow !== 'ellipsis') return node;
+    const full = valuesOf(r, col).map(v => String(v)).join(', ');
+    return (
+      <span className="sk-list__ellip" title={full || undefined}
+        onClick={e => { const el = e.currentTarget; if (el.getAttribute('data-open')) el.removeAttribute('data-open'); else el.setAttribute('data-open', 'true'); }}>
+        {node}
+      </span>
+    );
+  };
   const cell = (col: string, r: KitRecord): ReactNode => {
     switch (col) {
       case 'select': return checkbox(r);
@@ -1837,7 +1866,7 @@ export function ListView({
                       onClick={e => onRecordClick(e, r.id)}
                     >
                       {expandCell(r)}
-                      {columns.map(c => <td key={c} className={`sk-list__td sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}>{cell(c, r)}</td>)}
+                      {columns.map(c => { const a = colAttrs(c); return <td key={c} className={`sk-list__td ${a.className}`} data-w={a['data-w']}>{ellip(c, r, cell(c, r))}</td>; })}
                     </tr>
                     {expandRow(r)}
                   </Fragment>
@@ -1854,7 +1883,8 @@ export function ListView({
                 <th
                   key={c}
                   scope="col"
-                  className={`sk-list__th sk-list__c-${c.replace(/[^a-z0-9]+/g, '-')}`}
+                  className={`sk-list__th ${colAttrs(c).className}`}
+                  data-w={colAttrs(c)['data-w']}
                   style={appliedW[c] === undefined ? undefined : { width: `${appliedW[c]}px` }}
                 >
                   {head}
