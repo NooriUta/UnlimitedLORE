@@ -10,7 +10,7 @@ import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
   type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
 } from '@seidr/kit';
-import { MartProse } from '@seidr/kit/content';
+import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { MdInlineEditWithRefs, loreRefHref } from './loreMdRefs';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
@@ -31,18 +31,29 @@ import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
 import { ModelNotes } from './ModelNotes';
+import { loreQueryRun } from './loreQueryBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 /** Чтение тела: ссылка ведёт в паспорт (MD-READ-PEEK), наведение/тап — карточка Peek (S9-10). */
-function ProseWithPeek({ text }: { text: string }) {
+function ProseWithPeek({ text, blocks }: { text: string; blocks?: LiveBlocks }) {
   const lang = useKitLang();
   // Выключатель «Карточки по наведению» (настройки) читается из применённого атрибута.
   const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
-  return <MartProse text={text} refHref={loreRefHref} refPeek={peek} />;
+  return <MartProse text={text} refHref={loreRefHref} refPeek={peek} blocks={blocks} />;
 }
-const md = (s: string) => <ProseWithPeek text={s} />;
+
+// S6-04: живые блоки lore-query в теле записи; $this.id / $this.type — эта запись.
+// Исполнитель — один на запись (кеш), иначе блок перезапрашивал бы данные на каждой перерисовке.
+const BLOCKS = new Map<string, LiveBlocks>();
+function blocksFor(type: string, id: string): LiveBlocks {
+  const k = `${type}|${id}`;
+  let b = BLOCKS.get(k);
+  if (!b) { b = { 'lore-query': loreQueryRun({ 'this.id': id, 'this.type': type }) }; BLOCKS.set(k, b); }
+  return b;
+}
+const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} blocks={blocksFor(type, id)} />;
 
 export interface ListPassportProps {
   type: PassportType;
@@ -239,7 +250,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
     // Чипы проектов и компонентов шапки — паспорт своего типа (S4-29, 53а): тип берётся из
     // поля, в котором чип пришёл; раньше чип вёл на «#код».
-    href: passportHref(view.data.records, contract?.values ?? {}, x => '#' + encodeURIComponent(x)), esc, md };
+    href: passportHref(view.data.records, contract?.values ?? {}, x => '#' + encodeURIComponent(x)), esc, md: mdFor(type, id) };
   return (
     <>
       {/*

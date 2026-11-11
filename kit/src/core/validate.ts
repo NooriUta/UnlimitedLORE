@@ -61,7 +61,7 @@ const STATUS_CODE_RE = /^[A-Za-z0-9_-]+$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 
 const CONFIG_KEYS = ['modules', 'menu', 'kinds', 'edges', 'graph', 'statuses', 'roles', 'verdict', 'list', 'palette', 'hooks'];
-const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at'];
+const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at', 'search'];
 /**
  * Ключи `list` — ОДИН список на валидатор и JSON-схему (сторож
  * facetLabels.test.tsx, по образцу colorTokensMatchCss). До K4-FACET-LABELS
@@ -559,6 +559,7 @@ export function validateKitData(input: unknown, config?: KitConfig): KitValidati
     const status = c.str(r, 'status', p, { allowEmpty: true });
     c.obj(r, 'fields', p, true);
     c.optStr(r, 'body_md', p);
+    c.optStr(r, 'search', p);
     if (r.updated_at !== undefined && !isIsoDate(r.updated_at)) c.err(`${p}.updated_at`, 'date', `${p}.updated_at — дата ISO 8601`);
     c.unknownKeys(r, RECORD_KEYS, p, 'положи его в fields');
     if (kind !== undefined && kindKeys && !kindKeys.has(kind)) c.warn(`${p}.kind`, 'unknown-kind', `${p}.kind «${kind}» нет в config.kinds`);

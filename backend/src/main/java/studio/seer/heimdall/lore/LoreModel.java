@@ -83,6 +83,12 @@ final class LoreModel {
     /** declared — объявленные типы свойств схемы (vertex type → свойство → тип), см. LoreModelTypes. */
     static Map<String, Object> build(List<Map<String, Object>> dictRows, Map<String, List<String>> schema,
                                      Map<String, Map<String, String>> declared) {
+        return build(dictRows, schema, declared, null);
+    }
+
+    /** MD-REQUIRED: mandatory — обязательные свойства схемы (block), см. LoreFieldRequirement; null — не читались. */
+    static Map<String, Object> build(List<Map<String, Object>> dictRows, Map<String, List<String>> schema,
+                                     Map<String, Map<String, String>> declared, Map<String, java.util.Set<String>> mandatory) {
         List<Map<String, Object>> rows = dictRows == null ? List.of() : dictRows;
         List<String> warnings = new ArrayList<>();
 
@@ -122,7 +128,7 @@ final class LoreModel {
         content.put("missing", missing);
         content.put("statuses_known", List.copyOf(STATUS_DICTS.keySet()));
         content.put("statuses", statuses);
-        if (schema != null) content.put("types", LoreModelTypes.build(schema, declared));
+        if (schema != null) content.put("types", LoreModelTypes.build(schema, declared, mandatory));
         Map<String, Object> surfaces = new LinkedHashMap<>();
         surfaces.put("partial", true);
         surfaces.put("passport", LorePassportSurface.build());
