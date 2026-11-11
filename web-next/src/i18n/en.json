@@ -921,5 +921,6 @@
   "admin.roles.danger.need": "Until the login is typed exactly, nothing can be applied.",
   "peek.kind.unknown": "record",
   "peek.err.noType": "record type is not set and cannot be recognised from the ID — cannot open",
-  "peek.sheetTitle": "Record {id}"
+  "peek.sheetTitle": "Record {id}",
+  "admin.wiz.finished": "Wizard «{title}» is finished. Pick a wizard to start again."
 }

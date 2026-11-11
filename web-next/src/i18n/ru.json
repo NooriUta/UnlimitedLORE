@@ -921,5 +921,6 @@
   "admin.roles.danger.need": "Пока логин не введён точно, применить нельзя.",
   "peek.kind.unknown": "запись",
   "peek.err.noType": "тип записи не задан и по виду ID не узнан — открыть не можем",
-  "peek.sheetTitle": "Запись {id}"
+  "peek.sheetTitle": "Запись {id}",
+  "admin.wiz.finished": "Мастер «{title}» завершён. Чтобы начать заново, выберите мастер."
 }
