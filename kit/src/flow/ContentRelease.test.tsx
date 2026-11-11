@@ -215,3 +215,34 @@ describe('K-12 · граница K-14', () => {
     }
   });
 });
+
+// Проверка 11.11.2026 (владелица: «посмотри, нет ли там багов»).
+describe('K-12 · найдено на проверке 11.11', () => {
+  const d: ContentDiff = { from: 7, to: 8, class: 'hotfix', added: [{ id: 'A' }], changed: [], removed: [] };
+
+  it('выпуск начался после открытия подтверждения (busy) — «Да» не активирует второй раз', () => {
+    const onActivate = vi.fn();
+    const { rerender } = render(<ContentRelease diff={d} onActivate={onActivate} />);
+    fireEvent.click(screen.getByTestId('kit-rel-activate'));
+    rerender(<ContentRelease diff={d} onActivate={onActivate} busy />);
+    fireEvent.click(screen.getByTestId('kit-rel-confirm-yes'));
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('kit-rel-confirm-yes').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('пока живая версия — та, что «было» (N ещё не активирована), отката нет: он вёл бы на неё же', () => {
+    render(<ContentRelease diff={d} onRollback={() => {}} log={[{ version: 7, who: 'x', when: 't', action: 'activate' }]} />);
+    expect(screen.queryByTestId('kit-rel-rollback')).toBeNull();
+    expect(screen.getByTestId('kit-rel-norollback').textContent).toMatch(/8/);
+  });
+
+  it('после активации N откат на N-1 предлагается', () => {
+    render(<ContentRelease diff={d} onRollback={() => {}} log={[{ version: 8, who: 'x', when: 't2', action: 'activate' }, { version: 7, who: 'x', when: 't', action: 'activate' }]} />);
+    expect(screen.getByTestId('kit-rel-rollback').textContent).toMatch(/7/);
+  });
+
+  it('журнал не прислали — что живое, неизвестно: откат остаётся, как было', () => {
+    render(<ContentRelease diff={d} onRollback={() => {}} />);
+    expect(screen.getByTestId('kit-rel-rollback')).toBeTruthy();
+  });
+});

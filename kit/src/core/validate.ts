@@ -62,7 +62,7 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d
 
 const CONFIG_KEYS = ['modules', 'menu', 'kinds', 'edges', 'graph', 'statuses', 'roles', 'verdict', 'list', 'palette', 'hooks'];
 const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'updated_at'];
-const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline'];
+const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar'];
 /**
  * Категории статуса: ось владелицы (D-2026-UXR-STATUS-AXIS, шесть значений)
  * плюс прежние четыре — старые конфиги должны проходить проверку.
@@ -390,6 +390,9 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
     const timeline = c.obj(list, 'timeline', 'list', false);
     if (timeline) c.str(timeline, 'start', 'list.timeline');
     if (views?.includes('timeline') && !timeline) c.err('list.timeline', 'timeline-config', 'вид timeline требует list.timeline {start}');
+    const calendar = c.obj(list, 'calendar', 'list', false);
+    if (calendar) c.str(calendar, 'date', 'list.calendar');
+    if (views?.includes('calendar') && !calendar) c.err('list.calendar', 'calendar-config', 'вид calendar требует list.calendar {date}');
     /*
       Вид «Лента» (K2-FEED-VIEW, допущение, принятое владелицей): лента — вид
       там, где приложение НАЗВАЛО поле времени. Поэтому это не ошибка, а

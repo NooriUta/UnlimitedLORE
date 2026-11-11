@@ -211,8 +211,19 @@
     height: max(100%, var(--hit));
     transform: translate(-50%, -50%);
   }
-  /* У поля ввода ::after нет — оно само высотой цели. */
-  :where(input:not([type='checkbox']):not([type='radio']), select) {
+  /* У поля ввода ::after нет — оно само высотой цели. НЕ под :where:
+     компоненты задают своим полям `min-height: max(var(--tap), 26px)` через
+     «.класс input», и при нулевой специфичности общее правило проигрывало
+     (замер v1.17.13: поле «Привязать…» в паспорте — 26 px). */
+  input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+  select {
+    min-height: var(--hit);
+  }
+  /* У чекбокса и радио тоже нет ::after, а сами они 13 px — цель касания здесь
+     вся строка-подпись (замер v1.17.13: листы «Вид» и «Настройки», строка 18 px).
+     :has(> input[…]) по специфичности сильнее класса подписи — правило одно на
+     все виды подписей kit и приложения. */
+  :where(label):has(> input[type='checkbox'], > input[type='radio']) {
     min-height: var(--hit);
   }
 }
@@ -3715,6 +3726,12 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 }
 .sk-feed__item:last-child { border-bottom: 0; }
 .sk-feed__item.is-selected { background: var(--bg2); }
+/* Телефон (S4-MOBILE-EDGE): колонка времени 112 px оставляла тексту 180 из
+   360 px (замер v1.17.13, «Задачи» → «Лента»). Время — над текстом, слева. */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-feed__item { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .sk-feed__when { padding-top: 0; text-align: left; }
+}
 .sk-feed__when { padding-top: 2px; text-align: right; font-size: var(--fs-2xs); color: var(--t3); }
 .sk-feed__nowhen { color: var(--bdh); }
 .sk-feed__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -4572,6 +4589,15 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
    вовсе — он рисуется разметкой строки, карточки или тела паспорта. */
 .sk-kindblock { min-width: 0; }
 .sk-ttab { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+/* Телефон (S4-MOBILE-EDGE): иерархия карточками — те же .sk-cards__card, что у
+   списка; уровень — отступом слева, группа — строкой-заголовком. */
+.sk-ttab__cards { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sk-ttab__card { margin-left: calc(var(--tree-depth, 0) * 12px); }
+.sk-ttab__cgroup {
+  display: flex; align-items: center; gap: 6px;
+  margin-left: calc(var(--tree-depth, 0) * 12px);
+  padding: 4px 0 0;
+}
 .sk-ttab__table { width: 100%; }
 .sk-ttab__note {
   margin: 0;
@@ -6205,7 +6231,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */
 .sk-shell__top-start { display: flex; align-items: center; min-width: 0; }
 .sk-scope__chev { color: var(--t3); font-size: var(--fs-xs); }
-.sk-ptrig { display: inline-flex; align-items: center; gap: var(--gap); }
+/* Шапка не шире экрана между телефоном и десктопом (S4-MOBILE-EDGE,
+   SPEC-SEIDRKIT-ADAPTIVE-TEST §3 п.1): замер v1.17.13 — на 768 и 915 px
+   жёсткие 220 px поиска распирали шапку до 849/948 px, и уезжала вся
+   страница. Поиск сжимается до иконки, подпись — многоточием. */
+.sk-ptrig { display: inline-flex; align-items: center; gap: var(--gap); min-width: 0; }
 .sk-ptrig__search,
 .sk-ptrig__cmd {
   display: inline-flex;
@@ -6221,9 +6251,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   font-size: var(--fs-sm);
   cursor: pointer;
 }
-.sk-ptrig__search { min-width: 220px; justify-content: flex-start; }
+.sk-ptrig__search { flex: 0 1 220px; min-width: 0; justify-content: flex-start; }
 .sk-ptrig__search .sk-kbd { margin-left: auto; }
-.sk-ptrig__text { white-space: nowrap; }
+.sk-ptrig__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-ptrig__search:hover,
 .sk-ptrig__cmd:hover { border-color: var(--bdh); color: var(--t1); }
 .sk-ptrig__search:focus-visible,
@@ -6408,3 +6438,57 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-keymap__none, .sk-keymap__note { color: var(--t3); font-size: var(--fs-xs); margin: 0; }
 .sk-keymap__capture { min-width: 120px; }
 .sk-keymap__foot { display: grid; gap: 4px; margin-top: 8px; }
+
+/* K2-VIEW-CALENDAR: месяц сеткой; телефон — список по дням (прототип утверждён 11.11.2026). */
+.sk-cal { display: grid; gap: 8px; min-width: 0; }
+.sk-cal__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sk-cal__month { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-md); text-transform: capitalize; }
+.sk-cal__undated { font-size: var(--fs-xs); color: var(--wrn); }
+.sk-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--bd); border-radius: var(--r-md); overflow: hidden; }
+.sk-cal__dow { padding: 4px 6px; background: var(--bg2); border-bottom: 1px solid var(--bd); font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
+.sk-cal__day { min-height: 84px; padding: 3px 4px; display: grid; gap: 2px; align-content: start; min-width: 0; border-right: 1px solid var(--bd); border-bottom: 1px solid var(--bd); }
+.sk-cal__day:nth-child(7n) { border-right: 0; }
+.sk-cal__day[data-out] .sk-cal__n { opacity: .45; }
+.sk-cal__day[data-today] { background: color-mix(in srgb, var(--acc) 7%, transparent); }
+.sk-cal__day[data-today] .sk-cal__n { color: var(--acc); font-weight: 700; }
+.sk-cal__n { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-cal__evs { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; min-width: 0; }
+.sk-cal__ev { --st-c: var(--t3); min-width: 0; border-left: 3px solid var(--st-c); border-radius: var(--r-sm); background: var(--bg2); }
+.sk-cal__ev a, .sk-cal__evbtn { display: block; color: var(--t1); text-decoration: none; background: none; border: 0; padding: 1px 4px; font: inherit; text-align: left; width: 100%; cursor: pointer; }
+.sk-cal__evt { display: block; font-size: var(--fs-2xs); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 4px; }
+.sk-cal__ev a .sk-cal__evt, .sk-cal__evbtn .sk-cal__evt { padding: 0; }
+.sk-cal__more { font-size: var(--fs-2xs); color: var(--t3); padding-left: 4px; }
+.sk-cal__pday { display: grid; gap: 3px; }
+.sk-cal__pdh { margin: 0; font-size: var(--fs-xs); font-weight: 700; color: var(--t2); }
+.sk-cal__pday[data-today] .sk-cal__pdh { color: var(--acc); }
+.sk-cal__none { color: var(--t3); font-size: var(--fs-sm); margin: 0; }
+.sk-cal--days { gap: 10px; }
+
+/* K2-VIEW-LIBRARY: группы слева, чтение справа; телефон — список и нижний лист (прототип утверждён 11.11.2026). */
+.sk-lib { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); min-height: 380px; border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--bg1); overflow: hidden; min-width: 0; }
+.sk-lib--narrow { grid-template-columns: minmax(0, 1fr); }
+.sk-lib__side { border-right: 1px solid var(--bd); padding: 10px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.sk-lib--narrow .sk-lib__side { border-right: 0; }
+.sk-lib__search { width: 100%; font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 5px 8px; }
+.sk-lib__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-lib__grp { display: grid; gap: 2px; min-width: 0; }
+.sk-lib__gh { display: flex; justify-content: space-between; margin: 6px 0 0; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
+.sk-lib__gn { font-family: var(--mono); font-weight: 400; }
+.sk-lib__docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; min-width: 0; }
+.sk-lib__doc { display: flex; gap: 6px; align-items: baseline; width: 100%; padding: 3px 6px; border: 0; border-radius: var(--r-sm); background: none; color: var(--t1); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; min-width: 0; }
+.sk-lib__doc:hover { background: var(--bg2); }
+.sk-lib__doc[aria-current="true"] { background: var(--bg3); }
+.sk-lib__code { flex: none; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t2); }
+.sk-lib__dt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-lib__st { flex: none; font-size: var(--fs-2xs); color: var(--t3); }
+.sk-lib__doc[data-stale] .sk-lib__st { color: var(--wrn); }
+.sk-lib__more { justify-self: start; border: 0; background: none; padding: 0 6px; font: inherit; font-size: var(--fs-xs); color: var(--t3); cursor: pointer; }
+.sk-lib__more:hover { color: var(--t1); }
+.sk-lib__trunc { font-size: var(--fs-xs); color: var(--t3); padding: 0 6px; }
+.sk-lib__none { margin: 0; font-size: var(--fs-sm); color: var(--t3); }
+.sk-lib__reader { padding: 12px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.sk-lib__meta { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-lib__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-md); }
+.sk-lib__body { max-width: 62ch; min-width: 0; }
+.sk-lib__open { justify-self: start; text-decoration: none; }
+.sk-lib__sheet .sk-lib__open { margin-top: 8px; }

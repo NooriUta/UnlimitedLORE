@@ -12,7 +12,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { createSafeStorage, registerGameIcons, type UrlWindow } from '@seidr/kit';
 import App from '../App';
-import { ADMIN_SECTIONS, legacyAdminHref } from '../admin/adminModule';
+import { ADMIN_SECTIONS, adminAxisHref, legacyAdminHref } from '../admin/adminModule';
 import { AccountMenu } from '../settings/AccountMenu';
 import { createLocalS2Client } from '../api/me';
 import { v2Config } from './v2Config';
@@ -133,6 +133,55 @@ describe('S7B-01 · модуль в оболочке', () => {
     fireEvent.click(within(mods).getByRole('button', { name: 'Forseti' }));
     await waitFor(() => expect(container.querySelector('[data-section="news"]')).toBeTruthy());
     expect(new URLSearchParams(w.location.search).get('mod')).toBe('forseti');
+  });
+});
+
+// SPRINT_UXR_S7B_ADMIN/S7B-28 — владелица 11.11: «Кто где — странное разделение.
+// Давай люди и проекты будут двумя разделами: "Люди и их проекты" и "Проекты"».
+// Было: один раздел adm-who с переключателем «Люди / Проекты» (?adm-by=projects).
+// Стало: два раздела меню — adm-who («Люди и их проекты») и adm-projects
+// («Проекты», точка роста). Старые адреса с осью ведут в нужный раздел.
+describe('S7B-28 · «Люди и их проекты» и «Проекты» — два раздела', () => {
+  it('в группе «Люди и агенты» — агенты, «Люди и их проекты», «Проекты»', () => {
+    const grp = v2Config('ru', undefined, 'admin').menu.groups.find(g => g.id === 'adm-people')!;
+    expect(grp.items.map(i => i.id)).toEqual(['adm-agents', 'adm-who', 'adm-projects']);
+    expect(grp.items.map(i => i.title)).toEqual(['Агенты', 'Люди и их проекты', 'Проекты']);
+    const icons = (gameIcons as { icons: Record<string, unknown> }).icons;
+    for (const i of grp.items) expect(icons[i.icon as string], `${i.id}:${i.icon}`).toBeTruthy();
+    expect(new Set(grp.items.map(i => i.icon)).size).toBe(3);
+  });
+
+  it('старый /admin?adm=who с осью «проекты» — в раздел «Проекты»; без оси или «люди» — в «Люди и их проекты»', () => {
+    expect(legacyAdminHref('?adm=who&adm-by=projects&adm-open=AIDA%2FminiLORE'))
+      .toBe('/?mod=admin&sec=adm-projects&adm-open=AIDA%2FminiLORE');
+    expect(legacyAdminHref('?adm=who&adm-open=u1')).toBe('/?mod=admin&sec=adm-who&adm-open=u1');
+    expect(legacyAdminHref('?adm=who&adm-by=people&adm-q=x')).toBe('/?mod=admin&sec=adm-who&adm-q=x');
+    expect(legacyAdminHref('?adm=projects')).toBe('/?mod=admin&sec=adm-projects');
+  });
+
+  it('адрес модуля sec=adm-who&adm-by=projects — переписывается в sec=adm-projects, прочее сохраняется', () => {
+    expect(adminAxisHref('?mod=admin&sec=adm-who&adm-by=projects&adm-q=fro'))
+      .toBe('/?mod=admin&sec=adm-projects&adm-q=fro');
+    expect(adminAxisHref('?mod=admin&sec=adm-who&adm-by=people')).toBe('/?mod=admin&sec=adm-who');
+    expect(adminAxisHref('?mod=admin&sec=adm-who&adm-open=u1')).toBeNull();
+    expect(adminAxisHref('?mod=admin&sec=adm-projects')).toBeNull();
+    expect(adminAxisHref('?mod=forseti&sec=news&adm-by=projects')).toBeNull();
+  });
+
+  it('App: старая ссылка с осью «проекты» открывает раздел «Проекты»', async () => {
+    const w = fakeWin('?mod=admin&sec=adm-who&adm-by=projects');
+    const { container } = render(<App path="/" win={w} storage={mem()} narrow={false} />);
+    expect(w.location.search).toBe('?mod=admin&sec=adm-projects');
+    expect(container.querySelector('[data-section="adm-projects"]')).toBeTruthy();
+    const side = screen.getByRole('navigation', { name: 'Разделы' });
+    expect(within(side).getByRole('link', { name: 'Проекты' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('App: /admin?adm=who — раздел «Люди и их проекты»', () => {
+    const w = fakeWin('?adm=who', '/admin');
+    const { container } = render(<App path="/admin" win={w} storage={mem()} narrow={false} />);
+    expect(w.location.search).toBe('?mod=admin&sec=adm-who');
+    expect(container.querySelector('[data-section="adm-who"]')).toBeTruthy();
   });
 });
 
