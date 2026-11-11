@@ -49,6 +49,7 @@
   "kitPage.sh.sheetTitle": "Паспорт записи",
   "kitPage.sh.sheetBody": "Боковая панель: фокус заперт внутри, Esc закрывает.",
   "kitPage.sh.ear": "Свойства",
+  "kitPage.sh.nested": "Список внутри записи — дети и связи паспорта: поиск, фильтр, группировка и порядок те же, что у разделов; ссылка вне выгрузки — строкой с пометкой.",
   "kitPage.md.edit": "Правка MD — TipTapField",
   "kitPage.md.editLabel": "Описание (пример)",
   "kitPage.md.read": "Чтение MD — MartProse",

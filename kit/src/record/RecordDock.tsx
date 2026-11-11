@@ -21,6 +21,28 @@ import type { WidthStore } from '../list/columnWidths';
 const PANEL_W = { def: 560, min: 320, max: 1100 };
 const PANEL_H = { def: 420, min: 240, max: 900 };
 
+/**
+ * Потолок панели СБОКУ — доля ширины окна, а не число (владелица 11.11.2026:
+ * «паспорт сбоку может раздвигаться на две трети экрана»). Число 1100 на
+ * широком экране останавливало паспорт задолго до 2/3, а на узком позволяло
+ * съесть почти весь список. Минимум остаётся числом: читаемость записи от
+ * ширины окна не зависит.
+ */
+export const DOCK_SIDE_SHARE = 2 / 3;
+
+/** Ширина окна и её изменения: потолок панели пересчитывается вместе с окном. */
+function useWindowWidth(): number {
+  const read = () => (typeof window === 'undefined' ? 0 : window.innerWidth);
+  const [w, setW] = useState(read);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const on = () => setW(read());
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return w;
+}
+
 export type RecordPlacement = 'right' | 'bottom' | 'full';
 
 export interface RecordDockProps {
@@ -51,10 +73,16 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
   // Личный размер — в хранилище, как ширина колонки списка.
   const store = useMemo(() => widthStore ?? createSafeStorage(), [widthStore]);
   const vertical = placement === 'bottom';
-  const lim = vertical ? PANEL_H : PANEL_W;
+  const winW = useWindowWidth();
+  // Сбоку потолок — 2/3 окна, но не ниже минимума. Окна нет (SSR) — прежнее число.
+  const sideMax = winW > 0 ? Math.max(PANEL_W.min, Math.round(winW * DOCK_SIDE_SHARE)) : PANEL_W.max;
+  const lim = vertical ? PANEL_H : { ...PANEL_W, max: sideMax };
   const zone = vertical ? 'dock.panel.h' : 'dock.panel.w';
   const saved = zoneSaved(store, zone);
   const [size, setSize] = useState(saved ?? lim.def);
+  // Запомненный размер — чужое число (хранилище, прежнее окно): рисуем его в
+  // пределах ТЕКУЩЕГО окна, иначе сузившееся окно отдало бы панели всё место.
+  const shown = Math.max(lim.min, Math.min(lim.max, size));
   // «Не тянули» ≠ «поставила умолчание»: пока не тянули, работает правило
   // раскладки из seidr.css (панель справа — min(560px, 45%), снизу — остаток
   // после списка «по содержимому, но не больше 40 %»). Личный размер его
@@ -87,7 +115,7 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
   return (
     <div className={['sk-dock', className].filter(Boolean).join(' ')} data-placement={placement} data-testid="kit-rec-dock"
       data-sized={sized && !full ? (vertical ? 'h' : 'w') : undefined}
-      style={sized && !full ? ({ [vertical ? '--dock-panel-h' : '--dock-panel-w']: `${size}px` } as CSSProperties) : undefined}
+      style={sized && !full ? ({ [vertical ? '--dock-panel-h' : '--dock-panel-w']: `${shown}px` } as CSSProperties) : undefined}
       {...(full && modal ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': kitT(lang, 'kit.record.dock.full') } : {})}>
       {/* Список под паспортом живой: своя прокрутка, щелчок по другой записи (08.11). */}
       {!full && backdrop && <div className="sk-dock__backdrop">{backdrop}</div>}
@@ -100,7 +128,7 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
           className="sk-dock__resize"
           axis={vertical ? 'y' : 'x'}
           side="after"
-          size={size}
+          size={shown}
           min={lim.min}
           max={lim.max}
           store={store}

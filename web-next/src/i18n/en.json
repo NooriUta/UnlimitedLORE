@@ -49,6 +49,7 @@
   "kitPage.sh.sheetTitle": "Record passport",
   "kitPage.sh.sheetBody": "Side panel: focus is trapped inside, Esc closes it.",
   "kitPage.sh.ear": "Properties",
+  "kitPage.sh.nested": "List inside a record — a passport's children and links: search, filter, grouping and order are the same as in sections; a reference outside the export stays a row with a note.",
   "kitPage.md.edit": "Editing MD — TipTapField",
   "kitPage.md.editLabel": "Description (sample)",
   "kitPage.md.read": "Reading MD — MartProse",

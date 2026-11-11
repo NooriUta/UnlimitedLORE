@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, CalendarMonth, LibraryView, FreshCell, MiniList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BatchUndo, CalendarMonth, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -245,6 +245,24 @@ function Samples() {
             ] },
             { key: 'b', title: 'Документы', total: 9, docs: [{ id: 'N-1', title: 'Как читать вердикт', state: 'устарел', stale: true }] },
           ]}
+        />
+      </section>
+      <section className="bare__sec" data-kit="nested">
+        <h2 className="bare__h2">Список внутри записи</h2>
+        {/* NestedList (11.11.2026): дети и связи паспорта — тем же списком, что у
+            разделов: поиск, фильтр, группировка, порядок; ссылка вне выгрузки — строкой с пометкой. */}
+        <NestedList
+          ctx={{
+            config: { modules: [], menu: { groups: [] }, kinds: { k: { title: 'Задача', icon: 'checklist' } }, statuses: { items: [{ code: 'todo', title: 'к работе', category: 'todo', icon: 'calendar', color: 'var(--t3)' }, { code: 'done', title: 'готово', category: 'done', icon: 'check-mark', color: 'var(--suc)' }] } },
+            data: { records: [], edges: [], journal: [], meta: { generated_at: '2026-11-11T00:00:00Z' } },
+            href: id => '#' + id, esc: s => s, md: s => s,
+          }}
+          records={[
+            { id: 'T-1', kind: 'k', title: 'Срез версии', status: 'done', fields: {} },
+            { id: 'T-2', kind: 'k', title: 'Промо', status: 'todo', fields: {} },
+          ]}
+          missing={['T-404']}
+          note="показаны 2 из 3"
         />
       </section>
       <section className="bare__sec" data-kit="fresh">
