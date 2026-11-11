@@ -3,7 +3,7 @@
 // ответа сервера как есть (SPEC-LORE-UXR-NEWS-ALGORITHMS 1.3.0: клиент рисует,
 // не считает), состояние — из meta.state (S7A-07), а не из длины массива.
 import { describe, expect, it, vi } from 'vitest';
-import { classifyError } from '../states/loadState';
+import { classifyError } from '@seidr/kit';
 import {
   activityParams, activityState, activityBurn, httpActivitySource, fixtureActivitySource,
   NewsV2HttpError, ACTIVITY_LIVE_API, defaultActivitySource, NEWS_V2_FIXTURE,

@@ -7,7 +7,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./content": "./src/content/index.ts",
-    "./activity": "./src/activity/index.ts",
     "./auth": "./src/auth/index.ts",
     "./core": "./src/core/index.ts",
     "./demo/lore": "./demo/lore.ts",

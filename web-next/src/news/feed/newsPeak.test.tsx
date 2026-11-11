@@ -9,9 +9,9 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons } from '../elements/GameIcon';
-import { KitLangProvider } from '../i18n';
-import { LIST_BUDGET } from '../list/listModel';
+import { registerGameIcons } from '@seidr/kit';
+import { KitLangProvider } from '@seidr/kit';
+import { LIST_BUDGET } from '@seidr/kit';
 import { NEWS_FIXTURE, NewsFeed, type NewsEvent, type NewsResponse, type NewsSource } from './index';
 
 beforeAll(() => { registerGameIcons(gameIcons); });

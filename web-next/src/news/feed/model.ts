@@ -1,9 +1,9 @@
 // Модель экрана новостей v2 (SPRINT_UXR_S7A_NEWS/S7A-02): запрос, состояние в
 // URL, проверка контракта, подписи и ссылки. Ни одной метрики: всё считает
 // сервер (SPEC-LORE-UXR-NEWS-ALGORITHMS 1.3.0), здесь — только форма.
-import { ICON_CANON } from '../elements/iconCanon';
-import type { KitLang } from '../i18n';
-import type { PillTone } from '../elements/Pill';
+import { ICON_CANON } from '@seidr/kit';
+import type { KitLang } from '@seidr/kit';
+import type { PillTone } from '@seidr/kit';
 import { newsT, type NewsKey } from './i18n';
 import {
   NEWS_AXES, NEWS_FILTER_AXES, type NewsAxis, type NewsEvent, type NewsFilterAxis, type NewsResponse,
@@ -283,30 +283,8 @@ export function eventAxisValues(e: NewsEvent, axis: NewsAxis): string[] {
 
 // ── ссылки ──
 
-const enc = encodeURIComponent;
-
-/**
- * Куда ведёт строка ленты (паритет 12; D-2026-UXR-NEWS-V2-RULES п. 2 — задачи
- * и спеки кликабельны). Пока у v2 нет своих паспортов (S5), ведём в паспорта
- * LORE по тем же адресам, что поиск v1 (searchRoutes.ts). Экран может
- * подставить свой hrefOf.
- */
-export function newsHref(e: NewsEvent): string | null {
-  switch (e.type) {
-    case 'task': return `/lore?section=sprints&passport=${enc(e.sprint ?? e.el.split('/')[0])}`;
-    case 'sprint': return `/lore?section=sprints&passport=${enc(e.el)}`;
-    case 'adr': return `/lore?section=adrs&passport=${enc(e.el)}`;
-    case 'decision': return `/lore?section=decisions&passport=${enc(e.el)}`;
-    case 'spec': return `/lore?section=knowledge&passport=${enc(`spec:${e.el}`)}`;
-    case 'question': return `/lore?section=openQuestions&passport=${enc(e.el)}`;
-    // Релиз — парой «проект#id»: один номер версии живёт в нескольких репозиториях.
-    case 'release': {
-      const p = e.projects?.[0];
-      return `/lore?section=releases&rel=${enc(p ? `${p}#${e.el}` : e.el)}`;
-    }
-    default: return null;
-  }
-}
+// Адрес строки ленты строит маршрутизатор приложения (newsHrefV2, nav/loreRoutes):
+// прежнее умолчание kit вело на адреса v1 (/lore?section=…), которых в v2 нет (K-14, S7B-27).
 
 /** Число со знаком: «+3», «−1», «0» (минус — типографский). */
 export function signed(n: number): string {

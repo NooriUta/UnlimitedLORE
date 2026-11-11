@@ -3,6 +3,7 @@
 // стенде. Переключение — выбором источника у экрана, одной строкой.
 import { parseNewsResponse } from './model';
 import type { NewsReadMark, NewsResponse } from './types';
+import { loreFetch } from '../../auth/session';
 
 export interface NewsSource {
   /** live — сервер; fixture — пример по контракту (экран помечает его явно). */
@@ -41,7 +42,8 @@ async function fail(res: Response): Promise<never> {
 
 export function httpNewsSource(opts: HttpNewsSourceOptions = {}): NewsSource {
   const base = opts.base ?? '/lore';
-  const f = opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
+  // В приложении запрос к /lore/* идёт через вход (S3-18): умолчание — loreFetch.
+  const f = opts.fetch ?? loreFetch;
   const headers = () => ({ Accept: 'application/json', ...(opts.headers?.() ?? {}) });
   return {
     kind: 'live',

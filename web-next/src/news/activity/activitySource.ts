@@ -5,6 +5,7 @@
 // ACTIVITY_LIVE_API (одна строка).
 import { NEWS_V2_FIXTURE } from './newsV2.fixture';
 import { NewsV2HttpError, type NewsV2Response, type NewsV2Row } from './newsV2';
+import { loreFetch } from '../../auth/session';
 
 /** Загрузка ленты по строке запроса (activityParams). */
 export type ActivitySource = (query: string, signal?: AbortSignal) => Promise<NewsV2Response>;
@@ -35,7 +36,8 @@ function errorMessage(status: number, text: string): { message: string; code?: s
 export function httpActivitySource(o: HttpActivitySourceOptions = {}): ActivitySource {
   const base = o.base ?? '/lore/news/v2';
   return async (query, signal) => {
-    const f = o.fetchImpl ?? ((i: string, init?: RequestInit) => fetch(i, init));
+    // В приложении запрос к /lore/* идёт через вход (S3-18): умолчание — loreFetch.
+    const f = o.fetchImpl ?? loreFetch;
     const res = await f(`${base}?${query}`, {
       method: 'GET',
       headers: { Accept: 'application/json', ...(o.headers ?? {}) },

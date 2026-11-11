@@ -6,12 +6,13 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { axeViolations } from '../test/axe';
-import { registerGameIcons } from '../elements/GameIcon';
-import { KitLangProvider } from '../i18n';
+import { axeViolations } from '../../test/axe';
+import { registerGameIcons } from '@seidr/kit';
+import { KitLangProvider } from '@seidr/kit';
 import { NEWS_FIXTURE, NewsActivity, NewsFeed, type NewsResponse, type NewsSource } from './index';
-import { StatusDictCtx } from '../core/statusLook';
-import type { KitConfig } from '../core/contract';
+import { newsHrefV2 } from '../newsLinks';
+import { StatusDictCtx } from '@seidr/kit';
+import type { KitConfig } from '@seidr/kit';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -153,9 +154,10 @@ describe('S7A-02 · клик по строке (П12, П24, П29)', () => {
     // Основная ссылка строки — первая; вторая — код записи справа (09.11), ведёт туда же.
     const [a, code] = within(task).getAllByRole('link');
     expect(code.getAttribute('href')).toBe(a.getAttribute('href'));
-    expect(a.getAttribute('href')).toBe('/lore?section=sprints&passport=SPRINT_UXR_S7A_NEWS');
+    const ev = NEWS_FIXTURE.events.find(e => e.key === 'task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07')!;
+    expect(a.getAttribute('href')).toBe(newsHrefV2(ev));
     const spec = screen.getByTestId('news-row-spec:SPEC-LORE-UXR-NEWS-ALGORITHMS|version|2026-11-07');
-    expect(within(spec).getAllByRole('link')[0].getAttribute('href')).toMatch(/passport=spec%3A/);
+    expect(within(spec).getAllByRole('link')[0].getAttribute('href')).toMatch(/SPEC-LORE-UXR-NEWS-ALGORITHMS/);
   });
 
   it('onOpen: Enter и пробел на строке открывают запись (дефект v1 исправлен)', async () => {
@@ -629,7 +631,7 @@ describe('S7A-12 · строка ленты: код — переход, без �
 describe('ширина ленты', () => {
   it('у .sk-news нет своего max-width — лента занимает всю область содержимого', async () => {
     const { readFileSync } = await import('node:fs');
-    const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
+    const css = readFileSync(`${process.cwd()}/../kit/src/styles/seidr.css`, 'utf8');
     const rules = [...css.matchAll(/(^|\n)\.sk-news\s*\{([^}]*)\}/g)].map(m => m[2]);
     expect(rules.length).toBeGreaterThan(0);
     expect(rules.filter(r => /max-width/.test(r))).toEqual([]);

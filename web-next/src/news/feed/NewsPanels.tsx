@@ -4,8 +4,8 @@
 // сравнение двух присланных чисел, а не пересчёт.
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { useKitLang } from '../i18n';
-import type { KitLang } from '../i18n';
+import { useKitLang } from '@seidr/kit';
+import type { KitLang } from '@seidr/kit';
 import { newsT, type NewsKey } from './i18n';
 import {
   NEWS_MATRIX_COLS, axisLabel, drillLabel, groupDrillId, metricDrill, newsGroupLabel, pairText, pctText, shortDay,

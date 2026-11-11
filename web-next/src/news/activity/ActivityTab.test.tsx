@@ -5,10 +5,10 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import { registerGameIcons } from '../elements/GameIcon';
-import { KitLangProvider } from '../i18n';
-import type { KitCtx, KitRecord } from '../core/contract';
-import { axeViolations } from '../test/axe';
+import { registerGameIcons } from '@seidr/kit';
+import { KitLangProvider } from '@seidr/kit';
+import type { KitCtx, KitRecord } from '@seidr/kit';
+import { axeViolations } from '../../test/axe';
 import {
   ActivityTab, activityKindTab, NewsV2HttpError,
   type ActivitySource, type NewsV2Response, type NewsV2Row,

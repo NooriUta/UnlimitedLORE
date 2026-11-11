@@ -4,7 +4,7 @@
 // него стенд с включённым входом отвечает 401, и лента выглядела бы сломанной.
 // Фикстура осталась только для локальных прогонов Playwright (VITE_NEWS_FIXTURE=true):
 // там нет ни сервера, ни входа, а проверяется раскладка, а не числа.
-import { NEWS_FIXTURE, fixtureNewsSource, httpNewsSource, type NewsSource } from '@seidr/kit';
+import { NEWS_FIXTURE, fixtureNewsSource, httpNewsSource, type NewsSource } from './feed';
 import { loreFetch } from '../auth/session';
 
 export const NEWS_LIVE = import.meta.env.VITE_NEWS_FIXTURE !== 'true';
