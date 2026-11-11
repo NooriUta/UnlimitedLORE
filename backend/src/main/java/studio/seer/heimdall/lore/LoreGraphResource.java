@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
  * в форме «узлы + рёбра (from, rel, to)» — вход GraphExplorer (GC-03).
  *
  * <ul>
- *   <li><b>Окрестность записи</b>: {@code ?type&id&depth=1..3[&rels][&types][&structural][&limit]} —
+ *   <li><b>Окрестность записи</b>: {@code ?type&id&depth=1..4[&rels][&types][&structural][&limit]} —
  *       рёбра в обе стороны, обход в ширину, каждая вершина один раз.</li>
  *   <li><b>Срез</b>: {@code ?scope=project:<slug>|component:<id>|all[&types][&rels][&structural][&limit]} —
  *       записи среза (уровень 0) и одно кольцо соседей (уровень 1).</li>
@@ -49,6 +49,17 @@ public class LoreGraphResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreGraphResource.class);
 
+    /**
+     * Потолок окрестности по умолчанию — один на все глубины 1..4, отдельного для depth 4 нет.
+     * Замер 11.11.2026 на чистом сборщике (граф предпочтительного присоединения 7 354 узла —
+     * размер корпуса, средняя степень 4 и 6, 300 корней, seed 42/7): без потолка depth 4 даёт
+     * p50 2 941 / 5 427 узлов (40–74 % корпуса) — картинкой это уже не окрестность. С потолком
+     * 500 число прочитанных рёбер (стоимость БД) на depth 4 — p95 4 211 / 6 261, то же, что на
+     * depth 3 (4 166 / 5 804): потолок по узлам ограничивает и чтение, четвёртое кольцо дороже не
+     * делает. Ниже 500 для depth 4 — меньше картины при той же цене, выше — дороже на всех
+     * глубинах. Поэтому depth 4 — с фильтром rels (meta.rels_available подсказывает типы), а
+     * срабатывание потолка названо: truncated/capped_at и всегда meta.limit.
+     */
     static final int NEIGHBORHOOD_DEFAULT_LIMIT = 500;
     /** Граф знаний целиком (11.11.2026: 7 354 узла) должен входить в ответ по умолчанию. */
     static final int SLICE_DEFAULT_LIMIT = 10_000;
