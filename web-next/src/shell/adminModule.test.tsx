@@ -52,7 +52,7 @@ describe('S7B-01 · конфиг модуля admin', () => {
     const cfg = v2Config('ru', undefined, 'admin');
     expect(cfg.modules.find(m => m.id === 'admin')).toMatchObject({ status: 'active', title: 'Админка' });
     const groups = cfg.menu.groups;
-    expect(groups.map(g => g.id)).toEqual(['adm-people', 'adm-access', 'adm-lang', 'adm-system']);
+    expect(groups.map(g => g.id)).toEqual(['adm-start', 'adm-people', 'adm-access', 'adm-lang', 'adm-system']);
     for (const g of groups) expect(g.tone, g.id).toMatch(/^var\(--(acc|suc|wrn|dng|inf)\)$/);
     const items = groups.flatMap(g => g.items.map(i => i.id));
     expect(new Set(items).size).toBe(items.length);
@@ -81,8 +81,8 @@ describe('S7B-01 · старые адреса /admin?adm=…', () => {
     expect(legacyAdminHref('?adm=log&adm-batch=rb-1')).toBe('/?mod=admin&sec=adm-log&adm-batch=rb-1');
     expect(legacyAdminHref('?adm=roles&adm-person=u1&adm-view=matrix'))
       .toBe('/?mod=admin&sec=adm-roles&adm-person=u1&adm-view=matrix');
-    expect(legacyAdminHref('')).toBe('/?mod=admin&sec=adm-agents');
-    expect(legacyAdminHref('?adm=zzz')).toBe('/?mod=admin&sec=adm-agents');
+    expect(legacyAdminHref('')).toBe('/?mod=admin&sec=adm-home');
+    expect(legacyAdminHref('?adm=zzz')).toBe('/?mod=admin&sec=adm-home');
   });
 
   it('App на /admin переписывает адрес и рисует раздел внутри оболочки', async () => {
@@ -119,9 +119,9 @@ describe('S7B-01 · модуль в оболочке', () => {
     expect(new URLSearchParams(w.location.search).get('mod')).toBe('admin');
   });
 
-  it('без раздела в адресе — первый раздел меню админки', () => {
+  it('без раздела в адресе — Главная «что требует внимания» (S7B-26)', () => {
     const { container } = render(<App path="/" win={fakeWin('?mod=admin')} storage={mem()} narrow={false} />);
-    expect(container.querySelector('[data-section="adm-agents"]')).toBeTruthy();
+    expect(container.querySelector('[data-section="adm-home"]')).toBeTruthy();
   });
 
   it('из админки обратно в Forseti — меню Forseti, первый его раздел', async () => {

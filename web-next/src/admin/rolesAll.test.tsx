@@ -138,7 +138,7 @@ describe('S7B-11 · экран общей матрицы', () => {
     expect(fk.dry()).toHaveLength(1);
     expect(fk.dry()[0].body!.kc_sub).toBe('u-fro');
     expect(fk.dry()[0].body!.changes).toEqual([{ project: 'AIDA/p23', role: 'reader' }]);
-    expect(screen.getByTestId('adm-danger-confirm')).toBeTruthy();
+    expect(screen.getByTestId('kit-diff-confirm')).toBeTruthy();
   });
 
   it('правка проекта всем людям — очередь: сначала первый человек, остальные названы числом', async () => {

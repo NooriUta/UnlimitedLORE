@@ -8,6 +8,7 @@ import { v2Auth } from '../auth/session';
 import { ActionsScreen } from './ActionsScreen';
 import { AgentsScreen } from './AgentsScreen';
 import { FlagsScreen } from './FlagsScreen';
+import { AdminHome } from './HomeScreen';
 import { McpScreen } from './McpScreen';
 import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
@@ -16,6 +17,7 @@ import { AdminNavProvider, type AdminNav } from './adminNav';
 import type { AdminSection } from './adminModule';
 
 const SCREENS: Record<AdminSection, ComponentType> = {
+  'adm-home': () => <AdminHome />,
   'adm-agents': () => <AgentsScreen />,
   'adm-who': () => <WhoWhereScreen meSub={v2Auth.getState().user?.sub ?? null} />,
   'adm-roles': () => <RolesScreen />,
