@@ -38,3 +38,8 @@ export function appliedRightColumn(given?: Host): RightColumn {
 export function appliedCollapseNavOnRead(given?: Host): boolean {
   return host(given)?.getAttribute('data-read-nav') === 'collapse';
 }
+
+/** Карточки Peek по наведению (S9-10). Нет атрибута — включено: человек не выключал. */
+export function appliedPeekHover(given?: Host): boolean {
+  return host(given)?.getAttribute('data-peek-hover') !== 'off';
+}

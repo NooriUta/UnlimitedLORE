@@ -185,7 +185,7 @@ describe('S2-01 · настройки', () => {
 
   it('все пункты S2-04 есть в настройках, включая флаг новой навигации', () => {
     expect(Object.keys(DEFAULT_SETTINGS).sort()).toEqual([
-      'collapse_nav_on_read', 'density', 'mode', 'nav_version', 'palette',
+      'collapse_nav_on_read', 'density', 'mode', 'nav_version', 'palette', 'peek_hover',
       'right_column', 'single_key_shortcuts', 'stripes', 'text_size',
     ]);
   });

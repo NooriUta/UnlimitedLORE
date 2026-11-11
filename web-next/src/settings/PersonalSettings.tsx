@@ -127,6 +127,8 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         v => onChange({ single_key_shortcuts: v === 'on' }), 'settings.keys.hint')}
       {row('stripes', 'settings.stripes.label', onOff(s.stripes), onOffOpts,
         v => onChange({ stripes: v === 'on' }), 'settings.stripes.hint')}
+      {row('peek_hover', 'settings.peekHover.label', onOff(s.peek_hover), onOffOpts,
+        v => onChange({ peek_hover: v === 'on' }), 'settings.peekHover.hint')}
       <NavSwitch lang={lang} targetUrl={targetUrl} />
       {onOpenMemory && (
         <button type="button" className="settings-link" onClick={onOpenMemory}>

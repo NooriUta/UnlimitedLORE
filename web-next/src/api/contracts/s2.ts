@@ -281,6 +281,8 @@ export interface UserSettings {
   density: 'roomy' | 'compact' | 'comfortable';
   single_key_shortcuts: boolean;
   stripes: boolean;
+  /** Карточка Peek по наведению на ссылку (S9-10, D-2026-LORE-PEEK-ONE-CARD); выключить можно, как в Wikipedia. */
+  peek_hover: boolean;
   /** Флаг «новая навигация»; cookie seer-prefs.nav остаётся кэшем для перехода между хостами. */
   nav_version: 'v1' | 'v2';
 }
@@ -294,6 +296,7 @@ export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   density: 'roomy',
   single_key_shortcuts: true,
   stripes: true,
+  peek_hover: true,
   nav_version: 'v2',
 };
 
@@ -309,6 +312,7 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   density: oneOf('roomy', 'compact', 'comfortable'),
   single_key_shortcuts: bool,
   stripes: bool,
+  peek_hover: bool,
   nav_version: oneOf('v1', 'v2'),
 };
 

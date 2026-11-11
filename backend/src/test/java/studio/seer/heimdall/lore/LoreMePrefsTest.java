@@ -94,8 +94,16 @@ class LoreMePrefsTest {
     void settingsCoverTheListFromTheTask() {
         Set<String> keys = LoreMePrefs.SETTINGS.keySet();
         for (String k : List.of("nav_collapse_on_read", "right_column", "text_size", "theme",
-                "density", "single_key_shortcuts", "stripes", "new_navigation"))
+                "density", "single_key_shortcuts", "stripes", "new_navigation", "peek_hover"))
             assertTrue(keys.contains(k), "нет настройки " + k);
+    }
+
+    // S9-10 (D-2026-LORE-PEEK-ONE-CARD): выключатель карточек Peek по наведению — по умолчанию включён.
+    @Test
+    void peekHoverIsBooleanOnByDefault() {
+        assertEquals(true, LoreMePrefs.defaults().get("peek_hover"), "по умолчанию карточки по наведению включены");
+        assertTrue(LoreMePrefs.validateSettingsPatch(Map.of("peek_hover", false)).isEmpty(), "false — допустимое значение");
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("peek_hover", "off")).size(), "строка вместо булева — отказ");
     }
 
     @Test

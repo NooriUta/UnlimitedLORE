@@ -13,6 +13,7 @@ import { fetchSearchSlice, type SearchSliceOptions } from '../api/searchSlice';
 import { appT, type AppKey } from '../i18n';
 import { recordHref } from '../nav/loreRoutes';
 import { loreRefPeek } from './lorePeek';
+import { appliedPeekHover } from '../settings/applied';
 import { typeByForm } from './loreRefForms';
 
 export { typeByForm };
@@ -72,6 +73,6 @@ export function loreRefHref(ref: { id: string; type: string | null }): string | 
 export function MdInlineEditWithRefs(props: MdEditorSlotProps) {
   const lang = useKitLang();
   const refs = useMemo(() => loreMdRefs(lang), [lang]);
-  const peek = useMemo(() => loreRefPeek(lang), [lang]);
+  const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
   return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refPeek={peek} />;
 }
