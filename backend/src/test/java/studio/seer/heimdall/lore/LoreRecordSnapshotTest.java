@@ -441,6 +441,8 @@ class LoreRecordSnapshotTest {
             v.put("tech", arr(r.get("tech")));
             v.put("adrs", arr(r.get("adrs")));
             v.put("specs", arr(r.get("specs")));
+            // 11.11 (полнота модели рёбер): + продукты компонента (IN_PRODUCT) — новый ключ, не замена.
+            v.put("products", arr(r.get("products")));
             return v;
         }
 

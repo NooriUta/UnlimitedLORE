@@ -164,12 +164,32 @@ final class LoreRecordRegistry {
         return new Relation(key, label, rel, dir, target, relation, place, manageable);
     }
 
-    /** HAS_STATE и ATTACHED_TO — общие для всех типов паспорта (документ, «Общее для всех трёх»). */
+    /**
+     * HAS_STATE и ATTACHED_TO — общие для всех типов паспорта (документ, «Общее для всех трёх»).
+     * ATTACHED_TO идёт от записи к вложению (LoreAssetResource: сущность → KnowAsset), поэтому out;
+     * было in — против того, как ребро пишется (LorePassportLinksContractTest, 11.11).
+     */
     private static List<Relation> common(List<Relation> own) {
         List<Relation> all = new ArrayList<>(own);
         all.add(rel("history", "История", "HAS_STATE", "out", "hist", "composition", "history", false));
-        all.add(rel("assets", "Вложения", "ATTACHED_TO", "in", "asset", "composition", "body", false));
+        all.add(rel("assets", "Вложения", "ATTACHED_TO", "out", "asset", "composition", "body", false));
         return List.copyOf(all);
+    }
+
+    /** «Упоминает» (REFERENCES) — между любыми записями каталога LoreLinkTypes.ENTITIES, обе стороны. */
+    private static Relation refsOut(String label) {
+        return rel("refsOut", label, "REFERENCES", "out", "any", "association", "link_tab", false);
+    }
+
+    private static Relation refsIn(String label) {
+        return rel("refsIn", label, "REFERENCES", "in", "any", "association", "link_tab", false);
+    }
+
+    /** Группа «Ссылки» — та же, что у задачи, ADR и спеки. */
+    private static LinkTab refsTab(String inLabel) {
+        return new LinkTab("refs", "Ссылки", List.of(
+            new TabRel("REFERENCES", "out", "ссылается", "association", List.of()),
+            new TabRel("REFERENCES", "in", inLabel, "association", List.of())));
     }
 
     // ── Колонки строки задачи (дерево спринта, D-2026-LORE-RECORD-LAYOUT-V03) ──
@@ -222,7 +242,8 @@ final class LoreRecordRegistry {
             // S4-29 v3: linkTab — группа вкладок паспорта (surfaces.passport.*.group), подпись — слово владелицы (48а).
             List.of(new LinkTab("deps", "Связи", List.of(
                 new TabRel("DEPENDS_ON", "out", "зависит от", "association", List.of("kind", "reason")),
-                new TabRel("DEPENDS_ON", "in", "блокирует", "association", List.of("kind", "reason"))))),
+                new TabRel("DEPENDS_ON", "in", "блокирует", "association", List.of("kind", "reason")))),
+                refsTab("на него ссылаются")),
             List.of(
                 new TreeNode("phases", "Фазы", null, PHASE_NODE_COLUMNS, List.of(),
                     List.of(new TreeNode("tasks", "Задачи", "phase_uid", TASK_NODE_COLUMNS, TASK_NODE_OPTIONAL, List.of()))),
@@ -240,7 +261,13 @@ final class LoreRecordRegistry {
                 // сторона ADR → спринт и вопросы спринта. S4-29 v3 (43а): вкладками —
                 // ADR звено цепочки «решение ↔ работа», вопросы — частью questions_of_sprint.
                 rel("adrs", "Реализует ADR", "IMPLEMENTED_IN", "in", "adr", "realization", "link_tab", true),
-                rel("questions", "Вопросы", "RAISED_IN", "in", "question", "aggregation", "part", true)))));
+                rel("questions", "Вопросы", "RAISED_IN", "in", "question", "aggregation", "part", true),
+                // 11.11 (полнота модели рёбер): документы, реализованные в спринте (doc_link rel:sprint —
+                // то же ребро IMPLEMENTED_IN, что у ADR), публикации BRAGI о спринте, упоминания.
+                rel("docs", "Знания", "IMPLEMENTED_IN", "in", "doc", "realization", "link_tab", false),
+                rel("publications", "Публикации", "PRODUCED_BY", "in", "publication", "association", "link_tab", false),
+                refsOut("Ссылается"),
+                refsIn("На него ссылаются")))));
 
         // ── Задача ──────────────────────────────────────────────────────────
         final String roles = "Роли";
@@ -408,7 +435,7 @@ final class LoreRecordRegistry {
                 new Body("body_md", "Решение", "pp.field.body", false, null),
                 new Body("rationale_md", "Обоснование", null, false, null)),
             List.of(new PropSection(null, List.of("date", "adr", "components", "projects", "tags"))),
-            List.of(), List.of(), List.of(),
+            List.of(), List.of(refsTab("на него ссылаются")), List.of(),
             List.of(
                 rel("adr", "ADR", "DECIDED_IN", "out", "adr", "aggregation", "head", false),
                 // S4-29 v3 (44а): связи решения — вкладками. Данные — из строки среза decision.
@@ -416,7 +443,13 @@ final class LoreRecordRegistry {
                 rel("answers", "Отвечает на вопросы", "ANSWERS", "out", "question", "association", "link_tab", false),
                 rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
                 rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
-                rel("tags", "Теги", "TAGGED_WITH", "out", "tag", "attribute", "prop", false))));
+                rel("tags", "Теги", "TAGGED_WITH", "out", "tag", "attribute", "prop", false),
+                // 11.11 (полнота модели рёбер): обратная сторона замены, сценарии, которые
+                // ссылаются на решение как на обоснование (uc_link rel:decision), упоминания.
+                rel("supersededBy", "Заменено", "SUPERSEDES", "in", "decision", "association", "link_tab", false),
+                rel("useCases", "Сценарии", "TRACED_TO", "in", "feature", "realization", "link_tab", false),
+                refsOut("Ссылается"),
+                refsIn("На него ссылаются"))));
 
         // ── Вопрос (только чтение, kit 09.11) ────────────────────────────────
         // Ключи status/code/title/priority/due_date — те же, что у колонок parts «Вопросы».
@@ -435,14 +468,16 @@ final class LoreRecordRegistry {
                 ref("projects", "Проекты", "pp.field.projects", "project", "BELONGS_TO_PROJECT", "out", "attribute", true, false)),
             List.of(new Body("body_md", "Суть", "pp.field.body", false, null)),
             List.of(new PropSection(null, List.of("priority", "due_date", "owner", "raised_by", "opened", "closed", "components", "projects"))),
-            List.of(), List.of(), List.of(),
+            List.of(), List.of(refsTab("на него ссылаются")), List.of(),
             List.of(
                 rel("raisedIn", "Поднят в", "RAISED_IN", "out", "any", "aggregation", "head", false),
                 // S4-29 v3 (44а): Ответ · Блокирует задачи — вкладками; данные — из question_by_id.
                 rel("gates", "Блокирует задачи", "GATES", "out", "task", "association", "link_tab", false),
                 rel("answeredBy", "Ответ — решения", "ANSWERS", "in", "decision", "association", "link_tab", false),
                 rel("components", "Компоненты", "BELONGS_TO", "out", "component", "attribute", "prop", false),
-                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
+                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
+                refsOut("Ссылается"),
+                refsIn("На него ссылаются"))));
 
         // ── Веха (только чтение, kit 09.11) ───────────────────────────────────
         TYPE_DEFS.put("milestone", new TypeDef("milestone", "Веха", "pp.kind.milestone", "flag-objective",
@@ -462,7 +497,11 @@ final class LoreRecordRegistry {
             List.of(new PropSection(null, List.of("week", "date", "priority", "products", "projects", "components"))),
             List.of(), List.of(), List.of(),
             // S4-29 v3 (45а): веха — контейнер, спринты первой вкладкой.
-            List.of(rel("sprints", "Спринты", "TARGETS_MILESTONE", "in", "sprint", "aggregation", "link_tab", false))));
+            List.of(rel("sprints", "Спринты", "TARGETS_MILESTONE", "in", "sprint", "aggregation", "link_tab", false),
+                // 11.11 (полнота модели рёбер): фичи, целящие в веху (feature_link rel:milestone, KAOS
+                // goal) — тем же ребром, что спринты; продукты вехи — поле products (TARGETS_PRODUCT).
+                rel("features", "Фичи", "TARGETS_MILESTONE", "in", "feature", "aggregation", "link_tab", false),
+                rel("products", "Продукты", "TARGETS_PRODUCT", "out", "product", "attribute", "prop", false))));
 
         // ── Релиз (только чтение, kit 09.11) ─────────────────────────────────
         TYPE_DEFS.put("release", new TypeDef("release", "Релиз", "pp.kind.release", "rocket",
@@ -478,12 +517,18 @@ final class LoreRecordRegistry {
                 inheritedRef("components", "Компоненты", "pp.field.components", "component")),
             List.of(new Body("description_md", "Описание", "pp.field.body", false, null)),
             List.of(new PropSection(null, List.of("type", "date", "is_current", "week", "projects", "components"))),
-            List.of(), List.of(), List.of(),
+            List.of(), List.of(refsTab("на него ссылаются")), List.of(),
             List.of(
                 // S4-29 v3 (44а): Спринты · PR — вкладками; данные — срезы release_sprints / release_prs.
                 rel("sprints", "Спринты", "IMPLEMENTED_IN_RELEASE", "in", "sprint", "realization", "link_tab", false),
                 rel("prs", "PR", "SHIPPED_IN", "in", "pr", "realization", "link_tab", false),
-                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false))));
+                rel("projects", "Проекты", "BELONGS_TO_PROJECT", "out", "project", "attribute", "prop", false),
+                // 11.11 (полнота модели рёбер): ADR, выпущенные релизом (adr_link rel:release — ADR
+                // показывал релиз, релиз ADR — нет), публикации BRAGI о релизе, упоминания.
+                rel("adrs", "ADR", "IMPLEMENTED_IN_RELEASE", "in", "adr", "realization", "link_tab", false),
+                rel("publications", "Публикации", "SHIPPED_IN", "in", "publication", "association", "link_tab", false),
+                refsOut("Ссылается"),
+                refsIn("На него ссылаются"))));
 
         // ── Компонент (только чтение, S4-V2-SECTIONS) ────────────────────────
         // Срез `component`. Тела у компонента нет. Технологии — out('USES').tech_id: это
@@ -504,12 +549,16 @@ final class LoreRecordRegistry {
                 ref("adrs", "ADR", null, "adr", "BELONGS_TO", "in", "attribute", true, false),
                 ref("specs", "Спеки", null, "spec", "DOCUMENTED_IN", "out", "attribute", true, false),
                 // Компонент достигает проекта через свои спринты (чипы S4-29) — своего ребра нет.
-                inheritedRef("projects", "Проекты", "pp.field.projects", "project")),
+                inheritedRef("projects", "Проекты", "pp.field.projects", "project"),
+                // 11.11 (полнота модели рёбер): продукты компонента — out('IN_PRODUCT').code
+                // (product_link rel:component). Продукт — словарь, паспорта нет: поле текстовое.
+                new Field("products", "Продукты", null, "text", "props", null, false, null, true, false,
+                    null, null, null, null)),
             List.of(),
             List.of(
-                new PropSection(null, List.of("area", "parent", "owner", "team", "icon", "projects")),
+                new PropSection(null, List.of("area", "parent", "owner", "team", "icon", "projects", "products")),
                 new PropSection(modules, List.of("children", "tech", "adrs", "specs"))),
-            List.of(), List.of(), List.of(),
+            List.of(), List.of(refsTab("на него ссылаются")), List.of(),
             List.of(
                 rel("parent", "Родитель", "PARENT_OF", "out", "component", "composition", "prop", false),
                 // S4-29 v3 (46а/52а): Спеки · ADR · Технологии · Подкомпоненты — вкладками (поля в
@@ -537,7 +586,13 @@ final class LoreRecordRegistry {
                 // S4-29: Задачи · Спринты — срезами component_tasks / component_sprints (по рёбрам,
                 // постранично через /lore/slice limit/offset); фасад отдаёт первую порцию.
                 rel("tasks", "Задачи", "TAGGED_WITH", "in", "task", "attribute", "link_tab", false),
-                rel("sprints", "Спринты", "BELONGS_TO", "in", "sprint", "attribute", "link_tab", false))));
+                rel("sprints", "Спринты", "BELONGS_TO", "in", "sprint", "attribute", "link_tab", false),
+                // 11.11 (полнота модели рёбер): область и продукты — словарные рёбра, видны полями
+                // area / products в «Свойствах»; упоминания — вкладкой «Ссылки».
+                rel("area", "Область", "IN_AREA", "out", "area", "attribute", "prop", false),
+                rel("products", "Продукты", "IN_PRODUCT", "out", "product", "attribute", "prop", false),
+                refsOut("Ссылается"),
+                refsIn("На него ссылаются"))));
 
         // ── Технология (только чтение, S4-V2-SECTIONS) ───────────────────────
         // Технология — спека SPEC-TECH-<КОМПОНЕНТ>-<ТЕХ> (SPRINT_TECH_REGISTRY), срез tech_by_id.
@@ -550,10 +605,13 @@ final class LoreRecordRegistry {
                 ref("component", "Компонент", "pp.field.component", "component", "BELONGS_TO", "out", "attribute", false, false)),
             List.of(new Body("content_md", "Сведения", "pp.field.body", false, null)),
             List.of(new PropSection(null, List.of("version", "checked_at", "component"))),
-            List.of(), List.of(), List.of(),
+            List.of(), List.of(refsTab("на неё ссылаются")), List.of(),
             List.of(
                 rel("documentedFor", "Компонент", "DOCUMENTED_IN", "in", "component", "attribute", "prop", false),
-                rel("component", "Компонент", "BELONGS_TO", "out", "component", "attribute", "prop", false))));
+                rel("component", "Компонент", "BELONGS_TO", "out", "component", "attribute", "prop", false),
+                // 11.11: технология — спека (KnowSpec), «упоминает» к ней ставится как к спеке.
+                refsOut("Ссылается"),
+                refsIn("На неё ссылаются"))));
 
         // ── Фича / сценарий (только чтение, S4-V2-SECTIONS) ──────────────────
         // Один тип KnowUseCase на все уровни шкалы Коберна (PL-28): паспорт открывает и
@@ -584,11 +642,27 @@ final class LoreRecordRegistry {
                 new PropSection(modules, List.of("children", "tasks"))),
             List.of(),
             // S4-29 v3: «Ценность» — одна вкладка с подзаголовками (акторы · боли · выгоды · работы).
+            // 11.11 (полнота модели рёбер): + что сценарий ДЕЛАЕТ (снимает боли, создаёт выгоды,
+            // выполняет работы — RELIEVES/DELIVERS/PERFORMS рядом с заявленными фичей), обоснование
+            // (TRACED_TO → ADR/решение), граф сценариев (опирается/включает/расширяет) и ссылки.
             List.of(new LinkTab("value", "Ценность", List.of(
                 new TabRel("HAS_ACTOR", "out", "акторы", "association", List.of()),
                 new TabRel("ADDRESSES", "out", "боли", "association", List.of()),
                 new TabRel("PROMISES", "out", "выгоды", "association", List.of()),
-                new TabRel("HELPS_WITH", "out", "работы", "association", List.of())))),
+                new TabRel("HELPS_WITH", "out", "работы", "association", List.of()),
+                new TabRel("RELIEVES", "out", "снимает боли", "association", List.of()),
+                new TabRel("DELIVERS", "out", "создаёт выгоды", "association", List.of()),
+                new TabRel("PERFORMS", "out", "выполняет работы", "association", List.of()))),
+                new LinkTab("trace", "Обоснование", List.of(
+                    new TabRel("TRACED_TO", "out", "обосновано", "realization", List.of()))),
+                new LinkTab("ucLinks", "Связи сценариев", List.of(
+                    new TabRel("BUILDS_ON", "out", "опирается на", "association", List.of()),
+                    new TabRel("BUILDS_ON", "in", "на неё опираются", "association", List.of()),
+                    new TabRel("UC_INCLUDES", "out", "включает", "association", List.of()),
+                    new TabRel("UC_INCLUDES", "in", "включена в", "association", List.of()),
+                    new TabRel("UC_EXTENDS", "out", "расширяет", "association", List.of()),
+                    new TabRel("UC_EXTENDS", "in", "расширена", "association", List.of()))),
+                refsTab("на неё ссылаются")),
             List.of(),
             List.of(
                 rel("parent", "Родитель", "DECOMPOSES_INTO", "in", "feature", "composition", "head", false),
@@ -600,7 +674,21 @@ final class LoreRecordRegistry {
                 rel("actors", "Акторы", "HAS_ACTOR", "out", "actor", "association", "link_tab", false),
                 rel("pains", "Боли", "ADDRESSES", "out", "pain", "association", "link_tab", false),
                 rel("gains", "Выгоды", "PROMISES", "out", "gain", "association", "link_tab", false),
-                rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "link_tab", false))));
+                rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "link_tab", false),
+                rel("relieves", "Снимает боли", "RELIEVES", "out", "pain", "association", "link_tab", false),
+                rel("delivers", "Создаёт выгоды", "DELIVERS", "out", "gain", "association", "link_tab", false),
+                rel("performs", "Выполняет работы", "PERFORMS", "out", "job", "association", "link_tab", false),
+                rel("adrs", "ADR", "TRACED_TO", "out", "adr", "realization", "link_tab", false),
+                rel("decisions", "Решения", "TRACED_TO", "out", "decision", "realization", "link_tab", false),
+                rel("milestones", "Вехи", "TARGETS_MILESTONE", "out", "milestone", "attribute", "link_tab", false),
+                rel("buildsOn", "Опирается на", "BUILDS_ON", "out", "feature", "association", "link_tab", false),
+                rel("builtOnBy", "На неё опираются", "BUILDS_ON", "in", "feature", "association", "link_tab", false),
+                rel("includes", "Включает", "UC_INCLUDES", "out", "feature", "association", "link_tab", false),
+                rel("includedBy", "Включена в", "UC_INCLUDES", "in", "feature", "association", "link_tab", false),
+                rel("extends", "Расширяет", "UC_EXTENDS", "out", "feature", "association", "link_tab", false),
+                rel("extendedBy", "Расширена", "UC_EXTENDS", "in", "feature", "association", "link_tab", false),
+                refsOut("Ссылается"),
+                refsIn("На неё ссылаются"))));
 
         // ── Проект (только чтение, S4-29, решение 53а) ──────────────────────
         // KnowGitProject: справочная вершина, ключ slug («владелец/репозиторий»), статуса и
@@ -629,7 +717,21 @@ final class LoreRecordRegistry {
                 rel("releases", "Релизы", "BELONGS_TO_PROJECT", "in", "release", "attribute", "link_tab", false),
                 rel("people", "Люди", "HAS_PROJECT_ROLE", "in", "user", "association", "link_tab", false),
                 // Агент роли в проекте не получает — он действует от имени владельца с ролью.
-                rel("agents", "Агенты", "HAS_PROJECT_ROLE", "in", "agent", "association", "link_tab", false))));
+                rel("agents", "Агенты", "HAS_PROJECT_ROLE", "in", "agent", "association", "link_tab", false),
+                // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — каждый
+                // конец BELONGS_TO_PROJECT своей вкладкой, после решённых 53а; срезы project_*.
+                rel("specs", "Спеки", "BELONGS_TO_PROJECT", "in", "spec", "attribute", "link_tab", false),
+                rel("decisions", "Решения", "BELONGS_TO_PROJECT", "in", "decision", "attribute", "link_tab", false),
+                rel("questions", "Вопросы", "BELONGS_TO_PROJECT", "in", "question", "attribute", "link_tab", false),
+                rel("features", "Фичи", "BELONGS_TO_PROJECT", "in", "feature", "attribute", "link_tab", false),
+                rel("docs", "Знания", "BELONGS_TO_PROJECT", "in", "doc", "attribute", "link_tab", false),
+                rel("runbooks", "Ранбуки", "BELONGS_TO_PROJECT", "in", "runbook", "attribute", "link_tab", false),
+                rel("actors", "Роли продукта", "BELONGS_TO_PROJECT", "in", "actor", "attribute", "link_tab", false),
+                // Агенты, привязанные к проекту своим ребром (project_actor_new), — в отличие от
+                // вкладки agents, где агент виден через роль владельца.
+                rel("boundAgents", "Агенты проекта", "BELONGS_TO_PROJECT", "in", "agent", "attribute", "link_tab", false),
+                rel("files", "Файлы", "BELONGS_TO_PROJECT", "in", "file", "attribute", "link_tab", false),
+                rel("prs", "PR", "BELONGS_TO_PROJECT", "in", "pr", "attribute", "link_tab", false))));
 
         // ── Дети без своего паспорта: фаза, вопрос, решение — поля для колонок parts ──
         CHILD_ONLY.put("phase", childOnly("phase", "Фаза", List.of(

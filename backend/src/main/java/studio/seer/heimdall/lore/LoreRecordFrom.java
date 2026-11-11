@@ -313,6 +313,8 @@ final class LoreRecordFrom {
             list("tech", "tech"),
             list("adrs", "adrs"),
             list("specs", "specs"),
+            // 11.11: продукты компонента (IN_PRODUCT → словарь product).
+            list("products", "products"),
             v("status", Transform.DOC_TOKEN, "status"))),
         Map.entry("tech", List.of(
             v("title", Transform.FIRST_OF, "tech_name", "spec_id"),
@@ -383,7 +385,9 @@ final class LoreRecordFrom {
         Map.entry("sprint", List.of(
             lf("DEPENDS_ON", "out", "sprint", "depends_on"),
             lf("DEPENDS_ON", "in", "sprint", "blocks"),
-            lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"))),
+            lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"),
+            // 11.11 (полнота модели рёбер): документы, реализованные в спринте.
+            lf("IMPLEMENTED_IN", "in", "doc", "doc_ids"))),
         Map.entry("task", List.of(
             lf("CLOSED_BY", "out", "pr", "closed_by_prs"),
             lf("REALIZES", "out", "use_case", "realizes_uc"))),
@@ -398,12 +402,20 @@ final class LoreRecordFrom {
             lf("TRACED_TO", "in", "use_case", "traced_by_ucs"))),
         Map.entry("decision", List.of(
             lf("SUPERSEDES", "out", "decision", "supersedes_ids"),
-            lf("ANSWERS", "out", "question", "answers_ids"))),
+            lf("ANSWERS", "out", "question", "answers_ids"),
+            // 11.11: кем заменено и какие сценарии ссылаются на решение как на обоснование.
+            lf("SUPERSEDES", "in", "decision", "superseded_by_ids"),
+            lf("TRACED_TO", "in", "feature", "traced_by_ucs"))),
         Map.entry("question", List.of(
             lf("ANSWERS", "in", "decision", "answered_by"),
             lf("GATES", "out", "task", "gating_tasks"))),
         Map.entry("milestone", List.of(
-            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"))),
+            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"),
+            // 11.11: фичи, целящие в веху (то же ребро, другой тип источника).
+            lf("TARGETS_MILESTONE", "in", "feature", "feature_ids"))),
+        // 11.11: ADR, выпущенные релизом; спринты и PR — отдельными срезами (SLICE_LINKS).
+        Map.entry("release", List.of(
+            lf("IMPLEMENTED_IN_RELEASE", "in", "adr", "adr_ids"))),
         Map.entry("component", List.of(
             // Технология — это спека SPEC-TECH-…: тип tech, чтобы щелчок открыл паспорт технологии.
             // Слово владелицы 11.11: + спеки, привязанные только ребром спека → компонент (BELONGS_TO).
@@ -424,7 +436,20 @@ final class LoreRecordFrom {
             lf("HAS_ACTOR", "out", "actor", "actor_ids"),
             lf("ADDRESSES", "out", "pain", "pain_ids"),
             lf("PROMISES", "out", "gain", "gain_ids"),
-            lf("HELPS_WITH", "out", "job", "job_ids"))));
+            lf("HELPS_WITH", "out", "job", "job_ids"),
+            // 11.11 (полнота модели рёбер): что сценарий делает, обоснование, вехи, граф сценариев.
+            lf("RELIEVES", "out", "pain", "relieved_pain_ids"),
+            lf("DELIVERS", "out", "gain", "delivered_gain_ids"),
+            lf("PERFORMS", "out", "job", "performed_job_ids"),
+            lf("TRACED_TO", "out", "adr", "traced_adrs"),
+            lf("TRACED_TO", "out", "decision", "traced_decisions"),
+            lf("TARGETS_MILESTONE", "out", "milestone", "milestone_ids"),
+            lf("BUILDS_ON", "out", "feature", "builds_on_ids"),
+            lf("BUILDS_ON", "in", "feature", "built_on_by_ids"),
+            lf("UC_INCLUDES", "out", "feature", "includes_ids"),
+            lf("UC_INCLUDES", "in", "feature", "included_by_ids"),
+            lf("UC_EXTENDS", "out", "feature", "extends_ids"),
+            lf("UC_EXTENDS", "in", "feature", "extended_by_ids"))));
 
     /** Вкладки связей, которые фасад читает отдельным срезом, — в порядке чтения. */
     static final Map<String, List<SliceLink>> SLICE_LINKS = Map.of(
@@ -461,5 +486,27 @@ final class LoreRecordFrom {
             new SliceLink("people", "project_people", "project", "HAS_PROJECT_ROLE", "in", "user",
                 from(Transform.STR, "kc_sub"), from(Transform.FIRST_OF, "display_name", "kc_sub"), null, true),
             new SliceLink("agents", "project_agents", "project", "HAS_PROJECT_ROLE", "in", "agent",
-                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true)));
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — каждый конец
+            // BELONGS_TO_PROJECT своим срезом project_*, постранично, как вкладки 53а.
+            new SliceLink("specs", "project_specs", "project", "BELONGS_TO_PROJECT", "in", "spec",
+                from(Transform.STR, "spec_id"), from(Transform.FIRST_OF, "title", "spec_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("decisions", "project_decisions", "project", "BELONGS_TO_PROJECT", "in", "decision",
+                from(Transform.STR, "decision_id"), from(Transform.FIRST_OF, "title", "decision_id"), from(Transform.DOC_TOKEN, "status_raw"), true),
+            new SliceLink("questions", "project_questions", "project", "BELONGS_TO_PROJECT", "in", "question",
+                from(Transform.STR, "question_id"), from(Transform.FIRST_OF, "title", "question_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("features", "project_features", "project", "BELONGS_TO_PROJECT", "in", "feature",
+                from(Transform.STR, "uc_id"), from(Transform.FIRST_OF, "title", "uc_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("docs", "project_docs", "project", "BELONGS_TO_PROJECT", "in", "doc",
+                from(Transform.STR, "doc_id"), from(Transform.FIRST_OF, "title", "doc_id"), null, true),
+            new SliceLink("runbooks", "project_runbooks", "project", "BELONGS_TO_PROJECT", "in", "runbook",
+                from(Transform.STR, "runbook_id"), from(Transform.FIRST_OF, "name", "runbook_id"), null, true),
+            new SliceLink("actors", "project_actors", "project", "BELONGS_TO_PROJECT", "in", "actor",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            new SliceLink("boundAgents", "project_bound_agents", "project", "BELONGS_TO_PROJECT", "in", "agent",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            new SliceLink("files", "project_files", "project", "BELONGS_TO_PROJECT", "in", "file",
+                from(Transform.STR, "file_path"), from(Transform.STR, "file_path"), null, true),
+            new SliceLink("prs", "project_prs", "project", "BELONGS_TO_PROJECT", "in", "pr",
+                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)));
 }
