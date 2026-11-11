@@ -133,8 +133,11 @@
   --pad-y: 4px;
   --gap:   8px;
 
-  /* ── цель касания: на десктопе 0 (плотный UI не растёт), на сенсоре ≥44 ── */
+  /* ── цель касания (D-2026-UXR-MOBILE-FOLLOWS-V1): --tap — ВИДИМЫЙ минимум
+     элемента, и он не растёт нигде, иначе чип с подписью 10 px становится
+     овалом 44 px; --hit — невидимая зона касания, на сенсоре 44 px. ── */
   --tap: 0px;
+  --hit: 0px;
 
   /* ── высота шапки оболочки: одним числом для шапки и для «залипания» левого
      меню под ней (S4-MENU-STATES, находка P1 аудита 08.11). Два отдельных
@@ -184,11 +187,33 @@
   --gap:   10px;
 }
 
-/* Сенсор или узкий экран: любая интерактивная цель — не меньше 44px
-   (элементы берут min-height/min-width: var(--tap)). */
-@media (pointer: coarse), (max-width: 768px) {
+/* Сенсор: цель касания 44 px — НЕВИДИМОЙ зоной вокруг элемента, а сам элемент
+   остаётся плотным, как в v1 (D-2026-UXR-MOBILE-FOLLOWS-V1, приём Material:
+   чип 32, цель 48). Решает вид указателя, а не ширина окна (ADR-LORE-049 п.3):
+   узкое окно с мышью пальцем не трогают.
+   Зона — ::after по центру, max(100%, 44px): крупный элемент не теряет своего,
+   мелкий получает 44. :where() — нулевая специфичность, поэтому элемент со
+   своим position (absolute/sticky) его сохраняет. Ссылки — только kit-классов:
+   ссылка в прозе с зоной 44 px ловила бы касания соседних строк текста. */
+@media (pointer: coarse) {
   :root {
-    --tap: 44px;
+    --hit: 44px;
+  }
+  :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class*='sk-']) {
+    position: relative;
+  }
+  :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class*='sk-'])::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, var(--hit));
+    height: max(100%, var(--hit));
+    transform: translate(-50%, -50%);
+  }
+  /* У поля ввода ::after нет — оно само высотой цели. */
+  :where(input:not([type='checkbox']):not([type='radio']), select) {
+    min-height: var(--hit);
   }
 }
 
@@ -2846,6 +2871,13 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   border: 1px solid var(--bd);
   border-radius: var(--r-pill);
   background: var(--bg2);
+}
+/* Узкий экран: пять видов не помещаются в строку и переносятся, а контейнер со
+   скруглением 999 при переносе становился овалом высотой 104 px. Перенос
+   оставляем (владелица 11.11: горизонтальных прокруток по возможности не
+   должно быть), а скругление контейнера — малое, как у блоков v1. */
+@media (max-width: 720px) {
+  .sk-list__views { border-radius: var(--r-md); }
 }
 .sk-list__view,
 .sk-list__dir {
