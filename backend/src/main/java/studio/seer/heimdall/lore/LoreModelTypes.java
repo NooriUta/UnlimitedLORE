@@ -50,7 +50,9 @@ final class LoreModelTypes {
         // версию). Что паспорт только для чтения, на факт графа не влияет.
         Map.entry("component", new Graph("LoreComponent", null, "component_id")),
         Map.entry("tech", new Graph("KnowSpec", "KnowSpecHist", "spec_id")),
-        Map.entry("feature", new Graph("KnowUseCase", null, "uc_id")));
+        Map.entry("feature", new Graph("KnowUseCase", null, "uc_id")),
+        // S4-29 (53а): проект — справочная вершина без истории.
+        Map.entry("project", new Graph("KnowGitProject", null, "slug")));
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
     static final Map<String, Map<String, String>> ALIASES = Map.ofEntries(
@@ -65,7 +67,8 @@ final class LoreModelTypes {
         Map.entry("release", Map.of("code", "release_id", "date", "release_date", "description_md", "description_md")),
         Map.entry("component", Map.of("title", "full_name", "code", "component_id", "parent", "parent_id", "icon", "game_icon")),
         Map.entry("tech", Map.of("code", "spec_id")),
-        Map.entry("feature", Map.of("code", "uc_id", "date", "date_created", "parent", "parent_uc_id")));
+        Map.entry("feature", Map.of("code", "uc_id", "date", "date_created", "parent", "parent_uc_id")),
+        Map.entry("project", Map.of("title", "name", "code", "slug")));
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
@@ -254,7 +257,10 @@ final class LoreModelTypes {
             List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
         Map.entry("feature", time("none",
             List.of(src("date_created", "date", null)),
-            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("shipped_at", "date", null), src("date_created", "date", null)))));
+            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("shipped_at", "date", null), src("date_created", "date", null)))),
+        // S4-29 (53а): у проекта ни истории, ни дат заведения и правки — честные пустые списки
+        // («источника нет»), а не отсутствие раздела.
+        Map.entry("project", time("none", List.of(), List.of())));
 
     // ── Вид поля: важность и поведение длинного содержимого (владелица 09.11) ──
     // Водораздел: kit знает только ФОРМУ (рисует поле по этим подсказкам), приложение —

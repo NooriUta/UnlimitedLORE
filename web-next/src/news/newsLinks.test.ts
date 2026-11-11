@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 import type { NewsEvent } from '@seidr/kit';
 import { V2_SECTIONS } from '../shell/v2Config';
 import { newsHrefV2, newsRefHrefV2 } from './newsLinks';
+import { recordHref } from '../nav/loreRoutes';
 
 const ev = (type: string, el: string, projects: string[] = []) =>
   ({ type, el, projects } as unknown as NewsEvent);
@@ -85,8 +86,18 @@ describe('S7A-08 · П24: ссылки на людей и связанные з�
     expect(newsRefHrefV2(type, id)).toBe(want);
   });
 
-  it('паспорта нет (проект) или id пуст — null, а не выдуманный адрес', () => {
-    expect(newsRefHrefV2('project', 'NooriUta/UnlimitedLORE')).toBeNull();
+  // До S4-29 (PR #1171) у проекта паспорта не было, и этот тест требовал null.
+  // Паспорт появился — по правилу владелицы «всё, что можно открыть, — ссылкой»
+  // проект теперь ведёт в свой паспорт. Адрес строит тот же recordHref, что у
+  // остальных типов: вторую копию правила кодирования id в тесте не заводим.
+  it('проект — его паспорт (S4-29), адрес тем же путём, что у прочих записей', () => {
+    const want = recordHref('project', 'NooriUta/UnlimitedLORE');
+    expect(want).not.toBeNull();
+    expect(newsRefHrefV2('project', 'NooriUta/UnlimitedLORE')).toBe(want);
+  });
+
+  it('паспорта у типа нет или id пуст — null, а не выдуманный адрес', () => {
+    expect(newsRefHrefV2('no-such-type', 'X-1')).toBeNull();
     expect(newsRefHrefV2('person', '')).toBeNull();
   });
 

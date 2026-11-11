@@ -612,6 +612,43 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-pop[data-side='up'] { top: auto; bottom: calc(100% + 4px); }
 .sk-pop[data-side='up'][data-align='side'] { top: auto; bottom: 0; }
 
+/* Мини-окно ссылки на запись в MD (SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW, ADR-LORE-050).
+   Положение даёт .sk-pop; здесь — рамка, плотные IDE-размеры и честные состояния.
+   Поля ввода — порог --fs-touch-input (iOS не приближает страницу при фокусе). */
+.sk-ref { width: min(440px, calc(100vw - 16px)); background: var(--bg2); border: 1px solid var(--bdh); border-radius: var(--r-md); box-shadow: 0 10px 30px rgb(0 0 0 / .45); overflow: hidden; font-size: var(--fs-sm); }
+.sk-ref__head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 8px; border-bottom: 1px solid var(--bd); }
+.sk-ref__trig { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--acc); border: 1px solid var(--acc); border-radius: var(--r-pill); padding: 0 7px; }
+.sk-ref__scope { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); }
+.sk-ref__seg { display: inline-flex; gap: 2px; margin-left: auto; }
+.sk-ref__seg > button { appearance: none; background: var(--bg3); border: 1px solid var(--bd); color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; border-radius: var(--r-pill); padding: 2px 9px; cursor: pointer; }
+.sk-ref__seg > button[aria-pressed='true'] { background: var(--acc); border-color: var(--acc); color: var(--bg0); }
+.sk-ref__list { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow: auto; }
+.sk-ref__item { appearance: none; width: 100%; display: grid; grid-template-columns: auto auto 1fr; gap: 2px 8px; align-items: baseline; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--bd); color: var(--t1); padding: 6px 8px; cursor: pointer; font: inherit; }
+.sk-ref__item:hover, .sk-ref__item.is-on { background: var(--bg3); }
+.sk-ref__ty { font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; color: var(--inf); border: 1px solid var(--bd); border-radius: var(--r-pill); padding: 0 6px; }
+.sk-ref__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); }
+.sk-ref__title { color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-ref__state { margin: 0; padding: 10px; color: var(--t2); }
+.sk-ref__state--err { border-left: 3px solid var(--dng); }
+.sk-ref__state--lock { border-left: 3px solid var(--wrn); }
+.sk-ref__form { display: grid; gap: 6px; padding: 8px 10px 10px; }
+.sk-ref__fld { display: grid; gap: 2px; color: var(--t2); font-size: var(--fs-xs); }
+.sk-ref__fld input, .sk-ref__fld select { background: var(--bg1); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-sm); padding: 5px 8px; font-family: inherit; font-size: var(--fs-touch-input); }
+.sk-ref__fld--block input, .sk-ref__fld--block select { border-color: var(--dng); }
+.sk-ref__fld--warn input, .sk-ref__fld--warn select { border-color: var(--wrn); }
+.sk-ref__mk { font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-ref__mk--block { color: var(--dng); }
+.sk-ref__mk--warn { color: var(--wrn); }
+.sk-ref__msg { margin: 0; font-size: var(--fs-sm); }
+.sk-ref__msg--block { color: var(--dng); }
+.sk-ref__msg--warn { color: var(--wrn); }
+.sk-ref__row { display: flex; gap: 6px; flex-wrap: wrap; }
+.sk-ref__btn { appearance: none; background: var(--bg3); border: 1px solid var(--bd); color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; border-radius: var(--r-pill); padding: 3px 10px; cursor: pointer; }
+.sk-ref__btn--pri { background: var(--acc); border-color: var(--acc); color: var(--bg0); }
+.sk-ref__btn:disabled { opacity: .55; cursor: default; }
+/* Якорь мини-окна ссылки у каретки (TipTapField refs): координаты окна, как у .sk-md__mentions. */
+.sk-md__refanchor { position: fixed; width: 0; height: 0; z-index: 65; }
+
 /* Положение — у общего слоя .sk-pop (S4-MENU-STATES): и меню чипа, и палитра
    звезды рисуются внутри Popover, своего положения у .sk-spop больше нет. */
 .sk-spop {
@@ -3450,7 +3487,6 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 /* «Не заполнено» — словами и приглушённо: это не ошибка и не ноль. */
 .sk-sum[data-sum='empty'] { color: var(--t3); font-size: var(--fs-2xs); font-style: italic; }
 
-
 /* Карточки и лента (S4-22): те же записи, другой вид. */
 .sk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
 .sk-cards__card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
@@ -5151,7 +5187,6 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   }
 }
 
-
 /* ── Новости v2: лента, разрезы, метрики (SPRINT_UXR_S7A_NEWS/S7A-02, S7A-06) ──
    Числа — моно; «ждёт выкатки» и «не смогли» — --wrn; Σ≠∪ — пилюля --acc.
    Строка управления — классы sk-list__* (тот же вид, что у списков). */
@@ -6038,3 +6073,4 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 @media (max-width: 900px) {
   .sk-list__p2 { display: none; }
 }
+

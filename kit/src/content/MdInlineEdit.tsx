@@ -28,7 +28,7 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { MartProse } from './MartProse';
-import { TipTapField, type MentionItem } from './TipTapField';
+import { TipTapField, type MentionItem, type TipTapRefSource } from './TipTapField';
 import { isLosslessMd, sameMd } from './tiptapMd';
 import { IconButton } from '../elements/IconButton';
 import { kitT, type KitKey } from '../i18n';
@@ -72,6 +72,8 @@ export interface MdInlineEditProps {
   onUploadImage?: (file: File) => Promise<{ url: string }>;
   /** Упоминания по «@» в превью. */
   mentionItems?: MentionItem[];
+  /** Ссылки на записи в тексте (мини-окно «[[» / «#тип», ADR-LORE-050); не задан — нет окна. */
+  refs?: TipTapRefSource;
   /**
    * Черновик поля на сервере (S5-09). kit про API не знает — получает три
    * действия: прочитать, сохранить, снять. Нет слота — поле работает как
@@ -95,7 +97,7 @@ export interface MdDraftSlot {
 
 export function MdInlineEdit({
   value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
-  emptyText, hint = true, onUploadImage, mentionItems, drafts, className,
+  emptyText, hint = true, onUploadImage, mentionItems, refs, drafts, className,
 }: MdInlineEditProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
@@ -346,6 +348,7 @@ export function MdInlineEdit({
         ariaLabel={label}
         onUploadImage={onUploadImage}
         mentionItems={mentionItems}
+        refs={refs}
         minHeight={160}
         mode={mode === 'preview' ? 'wysiwyg' : 'md'}
         onModeChange={m => choose(m === 'wysiwyg' ? 'preview' : 'code')}
