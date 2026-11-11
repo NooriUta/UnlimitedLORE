@@ -70,7 +70,7 @@ const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'upda
  */
 export const LIST_KEYS = [
   'views', 'timeline', 'calendar', 'quick', 'filters', 'groupings', 'fieldLabels', 'collapsedGroupings',
-  'feed', 'columns', 'columnDisplay', 'tree', 'showClosed',
+  'feed', 'columns', 'columnDisplay', 'tree', 'showClosed', 'fresh',
 ] as const;
 /** Ключи, подпись которых kit знает сам (groupLabel.ts BUILTIN_KEY_TITLES). */
 export const KIT_BUILTIN_KEYS = ['title', 'id', 'status', 'kind', 'updated_at'] as const;
