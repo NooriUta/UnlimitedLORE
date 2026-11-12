@@ -4,10 +4,11 @@
 // таймлайн), разрезы по связям отдельным разделом, подгруппа «внутри „…“» и
 // пояснение. Иконок у пунктов нет: по правилу S4-25 иконки — только из канона
 // LORE v1, а у полей группировки его нет. Выбранное — ✓ и aria-checked.
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey } from '../i18n';
 import { useFocusTrap } from '../keyboard/focusTrap';
+import { MenuPanel } from './MenuPanel';
 import { Sheet } from '../shell/Sheet';
 import type { GroupingOptions } from './grouping';
 import { checkedRadio } from './ViewMenu';
@@ -44,14 +45,7 @@ export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onS
     onEscape: () => setOpen(false),
   });
 
-  useEffect(() => {
-    if (!open || narrow) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open, narrow]);
+  // «Мимо» и закрытие — в MenuPanel (панель порталом вне этой обёртки).
 
   const value = group ? keyTitle(group) : t('kit.list.groupNone');
   const radio = (key: string | null, title: string, checked: boolean, pick: () => void) => (
@@ -105,9 +99,9 @@ export function GroupMenu({ group, sub, options, withSub, keyTitle, onGroup, onS
         </Sheet>
       )}
       {open && !narrow && (
-        <div ref={panelRef} id={id} role="dialog" aria-label={t('kit.list.group')} className="sk-vmenu__panel sk-gmenu__panel" onKeyDown={onKeyDown}>
+        <MenuPanel panelRef={panelRef} id={id} label={t('kit.list.group')} className="sk-gmenu__panel" anchor={wrapRef.current} onKeyDown={onKeyDown} onClose={() => setOpen(false)}>
           {body}
-        </div>
+        </MenuPanel>
       )}
     </span>
   );

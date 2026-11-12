@@ -473,8 +473,10 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // ключа mergeTabs оставляет первую (её объявило приложение — там настоящая
   // таблица), добирая у связи счётчик и значок вида UML. До этой сверки один
   // раздел занимал в ряду два места (B13).
+  const modes = placement === 'right' && !narrow;
   const recordItems: TabItem[] = mergeTabs([
-    { id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' : undefined },
+    // В правом доке сегмент видов уже означает «Контент» — вкладка-дубль в ряд не идёт.
+    ...(modes ? [] : [{ id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' as const : undefined }]),
     ...(hasProps && !propsSide && !propsRow ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
     // Счётчик у вкладки приложения — по тому же правилу, что у вкладок связей
     // (B13): вкладка без числа рядом с вкладками с числом читается как «тут
@@ -576,7 +578,6 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // Ещё 8»), а задачи спринта уезжали под «Ещё». Один ряд, как в v1: всё, что
   // было под сегментом, — вкладками того же ряда (лишнее — под «Ещё»), ничего
   // не пропадает.
-  const modes = placement === 'right' && !narrow;
   type Mode = 'content' | 'props' | 'analytics';
   const mode: Mode = current === RECORD_TABS.props ? 'props' : aroundItems.some(i => i.id === current) ? 'analytics' : 'content';
   const contentItems = foldGroups(recordItems.filter(i => i.id !== RECORD_TABS.props));

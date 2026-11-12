@@ -754,6 +754,90 @@
 </label>
 </div>
 </section>
+<section class="bare__sec" data-kit="burn-target">
+<h2 class="bare__h2">Цель к сроку</h2>
+<section class="sk-burn" data-state="ok">
+<div class="sk-burn__head">
+<button type="button" class="sk-burn__toggle" aria-expanded="true">
+<span class="sk-burn__chev" aria-hidden="true">▾</span>
+<span class="sk-burn__title">Burnup / burndown</span>
+<span class="sk-burn__badge sk-burn__badge--acc">остаток 6 из 22</span>
+<span class="sk-burn__verdict" data-testid="kit-burn-verdict" data-tone="risk">Не успеваем на 3 дн.</span>
+</button>
+<div class="sk-burn__modes" role="group" aria-label="Вид графика">
+<button type="button" class="sk-burn__mode" aria-pressed="false">Burndown</button>
+<button type="button" class="sk-burn__mode" aria-pressed="true">Burnup</button>
+</div>
+</div>
+<div class="sk-burn__panel">
+<div class="sk-burn__legend">
+<span class="sk-burn__key sk-burn__key--done">закрыто <b>16</b>
+</span>
+<span class="sk-burn__key sk-burn__key--scope">объём <b>22</b>
+</span>
+<span class="sk-burn__key">пик 14</span>
+<span class="sk-burn__key sk-burn__key--plan">план к сроку</span>
+<span class="sk-burn__key sk-burn__key--deadline">срок 2026-11-30</span>
+<span class="sk-burn__key sk-burn__key--forecast">прогноз</span>
+</div>
+<svg class="sk-burn__svg" width="100%" height="96" viewBox="0 0 600 96" preserveAspectRatio="none" role="img" aria-label="Burnup: закрыто 16 из 22, остаток 6">
+<polyline data-series="scope" class="sk-burn__line sk-burn__line--scope" points="0.0,36.0 190.9,16.0 300.0,4.0">
+</polyline>
+<polyline data-series="done" class="sk-burn__line sk-burn__line--done" points="0.0,92.0 190.9,52.0 300.0,28.0">
+</polyline>
+<polyline data-series="plan" class="sk-burn__line sk-burn__line--plan" points="0.0,92.0 559.1,4.0">
+</polyline>
+<polyline data-series="forecast" class="sk-burn__line sk-burn__line--forecast" points="300.0,28.0 600.0,4.0">
+</polyline>
+<line data-series="deadline" class="sk-burn__deadline" x1="559.1" x2="559.1" y1="0" y2="96">
+</line>
+</svg>
+<div class="sk-burn__axis">
+<span>2026-10-20</span>
+<span>2026-12-03</span>
+</div>
+</div>
+</section>
+<section class="sk-burn" data-state="ok">
+<div class="sk-burn__head">
+<button type="button" class="sk-burn__toggle" aria-expanded="true">
+<span class="sk-burn__chev" aria-hidden="true">▾</span>
+<span class="sk-burn__title">Burnup / burndown</span>
+<span class="sk-burn__badge sk-burn__badge--acc">остаток 2 из 4</span>
+</button>
+<div class="sk-burn__modes" role="group" aria-label="Вид графика">
+<button type="button" class="sk-burn__mode" aria-pressed="true">Burndown</button>
+<button type="button" class="sk-burn__mode" aria-pressed="false">Burnup</button>
+</div>
+</div>
+<div class="sk-burn__panel">
+<div class="sk-burn__legend">
+<span class="sk-burn__key sk-burn__key--remaining">остаток <b>2</b>
+</span>
+<span class="sk-burn__key sk-burn__key--ideal">идеал</span>
+<span class="sk-burn__key">пик 4</span>
+</div>
+<p class="sk-burn__note" data-testid="kit-burn-no-deadline">Срок не задан — плана к сроку и отметки срока нет.</p>
+<svg class="sk-burn__svg" width="100%" height="96" viewBox="0 0 600 96" preserveAspectRatio="none" role="img" aria-label="Burndown: остаток 2 из 4, закрыто 2">
+<polyline data-series="ideal" class="sk-burn__line sk-burn__line--ideal" points="0.0,4.0 600.0,92.0">
+</polyline>
+<polyline data-series="remaining" class="sk-burn__line sk-burn__line--remaining" points="0.0,4.0 600.0,48.0">
+</polyline>
+</svg>
+<div class="sk-burn__axis">
+<span>2026-11-01</span>
+<span>2026-11-05</span>
+</div>
+</div>
+</section>
+<svg class="sk-burn-spark" width="80" height="18" viewBox="0 0 80 18" role="img" aria-label="Burnup: закрыто 2 из 4, остаток 2">
+<polyline data-series="scope" class="sk-burn__line sk-burn__line--scope" points="0.0,1.0 80.0,1.0">
+</polyline>
+<polyline data-series="done" class="sk-burn__line sk-burn__line--done" points="0.0,17.0 80.0,9.0">
+</polyline>
+</svg>
+<span class="sk-burn-spark sk-burn-spark--few">мало истории</span>
+</section>
 <section class="bare__sec" data-kit="library">
 <h2 class="bare__h2">Библиотека</h2>
 <div class="sk-lib">
@@ -1080,15 +1164,15 @@
 <span class="sk-field__label">Флаг</span>
 <span class="sk-field__seg" role="radiogroup">
 <label class="sk-field__opt">
-<input type="radio" name="_r_g_">
+<input type="radio" name="_r_i_">
 <span>Да</span>
 </label>
 <label class="sk-field__opt">
-<input type="radio" name="_r_g_">
+<input type="radio" name="_r_i_">
 <span>Нет</span>
 </label>
 <label class="sk-field__opt">
-<input type="radio" checked="" name="_r_g_">
+<input type="radio" checked="" name="_r_i_">
 <span>Не задано</span>
 </label>
 </span>
