@@ -64,8 +64,8 @@ final class LoreModel {
         "spec", "spec_status",
         "decision", "decision_status");
 
-    /** Не перечни значений, а настройки приложения — в модель не едут. */
-    static final Set<String> NOT_ENUM_DICTS = Set.of("app_setting");
+    /** Не перечни значений, а настройки приложения — в модель не едут (palette едет в блок palettes). */
+    static final Set<String> NOT_ENUM_DICTS = Set.of("app_setting", "palette");
 
     static Map<String, Object> build(List<Map<String, Object>> dictRows) {
         return build(dictRows, null);
