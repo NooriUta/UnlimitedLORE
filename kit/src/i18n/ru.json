@@ -1096,5 +1096,8 @@
   "kit.record.create.cancel": "Отмена",
   "kit.record.create.why": "Не заполнено: {fields}",
   "kit.record.create.noPath": "Запись некуда сохранить: приложение не дало пути создания",
-  "kit.record.create.failed": "Не сохранено: {reason}"
+  "kit.record.create.failed": "Не сохранено: {reason}",
+  "kit.graph.colorBy": "Цвет узлов",
+  "kit.graph.colorByType": "по типу",
+  "kit.graph.colorByDepth": "по уровню"
 }

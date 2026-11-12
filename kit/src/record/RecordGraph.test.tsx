@@ -64,7 +64,8 @@ describe('S5-10 · глубина 1–3', () => {
     expect(nodeIds()).toEqual(['D-1', 'T-1']);
     const depth = screen.getByRole('group', { name: 'Глубина' });
     const buttons = within(depth).getAllByRole('button');
-    expect(buttons.map(b => b.textContent)).toEqual(['1', '2', '3']);
+    // Владелица 11.11: «связи 2, 3, 4 уровней» — глубина до 4 (было до 3).
+    expect(buttons.map(b => b.textContent)).toEqual(['1', '2', '3', '4']);
     expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
   });
 

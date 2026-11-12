@@ -71,6 +71,17 @@ describe('S4-STATUS-AXIS-CONFIG · статусы паспорта — цикл 
     expect(r.items.map(s => s.code)).toEqual(['proposed']);
   });
 
+  it('циклы ВСЕХ типов — для чужих строк паспорта (владелица 11.11: «в дочерних табличных видах не подтягиваются правильные иконки»)', async () => {
+    const doc = model({
+      task: { entries: TASK_CYCLE },
+      sprint: { entries: [{ code: 'active', title: 'Идёт', category: 'in_progress', icon: 'run', color: 'var(--inf)' }] },
+    });
+    const r = await fetchTypeStatuses('sprint', { fetchImpl: net(doc) });
+    expect(r.items.map(s => s.code)).toEqual(['active']);
+    expect(r.byKind?.task?.find(s => s.code === 'active')?.icon).toBe('progression');
+    expect(r.byKind?.sprint?.[0].icon).toBe('run');
+  });
+
   it('модель не прочиталась — пусто плюс НАЗВАННАЯ причина, а не тихий откат', async () => {
     const r = await fetchTypeStatuses('task', { fetchImpl: net({ error: 'DISABLED' }, 501) });
     expect(r.items).toEqual([]);

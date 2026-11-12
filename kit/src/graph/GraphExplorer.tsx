@@ -19,7 +19,7 @@ import { toCssColor } from '../record/graph';
 import { useNarrow } from '../core/narrow';
 import { GraphSettingsPanel } from './GraphSettingsPanel';
 import {
-  GX_DEFAULTS, GX_ENGINES, gxFilter, gxGroupColor, gxTypeCounts, loadGx, saveGx,
+  GX_DEFAULTS, GX_DEPTH_COLORS, GX_ENGINES, gxFilter, gxGroupColor, gxTypeCounts, loadGx, saveGx,
   type GxEdge, type GxEngine, type GxNode, type GxSettings, type GxStyle,
 } from './settings';
 
@@ -76,8 +76,13 @@ export function GraphExplorer(props: GraphExplorerProps) {
     key, count, style: types[key] ?? { label: key, color: '--t3' },
   })), [nodes, types]);
 
-  const nodeColor = useCallback((n: GxNode) =>
-    toCssColor(gxGroupColor(n, settings.groups) ?? types[n.type]?.color ?? '--t2'), [settings.groups, types]);
+  const nodeColor = useCallback((n: GxNode) => {
+    const g = gxGroupColor(n, settings.groups);
+    if (g) return toCssColor(g);
+    // Подсветка уровней (владелица 11.11.2026): цвет — шаг от записи; уровня нет — цвет типа.
+    if (settings.colorBy === 'depth' && n.depth != null) return toCssColor(GX_DEPTH_COLORS[Math.min(n.depth, GX_DEPTH_COLORS.length - 1)]);
+    return toCssColor(types[n.type]?.color ?? '--t2');
+  }, [settings.groups, settings.colorBy, types]);
   const edgeColor = useCallback((e: GxEdge) => toCssColor(rels[e.rel]?.color ?? '--bd'), [rels]);
   const edgeDash = useCallback((e: GxEdge) => (e.kind ? KIND_DASH[e.kind] ?? null : null), []);
 
