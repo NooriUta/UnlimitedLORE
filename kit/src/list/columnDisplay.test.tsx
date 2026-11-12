@@ -70,6 +70,15 @@ describe('S4-35 · display колонки из модели доходит до 
     fireEvent.click(box);
     expect(box.getAttribute('data-open')).toBeNull();
   });
+
+  it('подпись значения лежит в своей обёртке чипа — многоточие применимо к ней', () => {
+    render(<ListView config={base} data={data} urlState={false} />);
+    const val = td('fields-goal').querySelector('.sk-list__val') as HTMLElement;
+    expect(val).toBeTruthy();
+    const label = val.querySelector('.sk-list__val-t') as HTMLElement;
+    expect(label).toBeTruthy();
+    expect(label.textContent).toBe(LONG);
+  });
 });
 
 describe('S4-35 · правила CSS по ADR-LORE-049', () => {
@@ -88,6 +97,14 @@ describe('S4-35 · правила CSS по ADR-LORE-049', () => {
   it('многоточие обрезает строку, раскрытое — переносит', () => {
     expect(css).toMatch(/\.sk-list__ellip\s*\{[^}]*text-overflow:\s*ellipsis/);
     expect(css).toMatch(/\.sk-list__ellip\[data-open='true'\]\s*\{[^}]*white-space:\s*normal/);
+  });
+
+  it('подпись значения-чипа обрезается многоточием, а не срезом без знака', () => {
+    // Раньше длинная подпись чипа упиралась в overflow ячейки и обрывалась
+    // посередине буквы — по виду не отличить от полного текста. Теперь чип
+    // сжимается (min-width: 0) и прячет обрез под text-overflow.
+    expect(css).toMatch(/\.sk-list__val\s*\{[^}]*overflow:\s*hidden/);
+    expect(css).toMatch(/\.sk-list__val-t\s*\{[^}]*text-overflow:\s*ellipsis/);
   });
 
   it('ширины колонок — по шагам xs/s/m/l', () => {

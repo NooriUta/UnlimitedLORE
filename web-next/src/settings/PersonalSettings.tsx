@@ -43,18 +43,19 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
     ? navTargetUrl
     : (typeof location === 'undefined' ? null : switchNavUrl(location, 'v1'));
 
+  // Заголовок «Личные настройки» — у самого листа (его рисует Sheet внутри
+  // AvatarMenu): здесь он не повторяется, иначе одна и та же надпись шла бы
+  // дважды подряд. Секции названы aria-label — именем диалога листа.
   if (state.status === 'loading') {
     return (
-      <section className="settings" aria-labelledby="settings-title" aria-busy="true">
-        <h3 id="settings-title" className="settings-title">{t(lang, 'settings.title')}</h3>
+      <section className="settings" aria-label={t(lang, 'settings.title')} aria-busy="true">
         <Skeleton lines={4} label={t(lang, 'settings.loading')} />
       </section>
     );
   }
   if (state.status === 'error') {
     return (
-      <section className="settings" aria-labelledby="settings-title">
-        <h3 id="settings-title" className="settings-title">{t(lang, 'settings.title')}</h3>
+      <section className="settings" aria-label={t(lang, 'settings.title')}>
         <LoadError compact title={t(lang, 'settings.loadFailed')} error={state.error} onRetry={onRetry} />
         <NavSwitch lang={lang} targetUrl={targetUrl} />
       </section>
@@ -74,8 +75,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
   );
 
   return (
-    <section className="settings" aria-labelledby="settings-title" aria-busy={busy}>
-      <h3 id="settings-title" className="settings-title">{t(lang, 'settings.title')}</h3>
+    <section className="settings" aria-label={t(lang, 'settings.title')} aria-busy={busy}>
       <p className="settings-note">{t(lang, busy ? 'settings.saving' : 'settings.serverNote')}</p>
       {(palettes?.notes.length ?? 0) > 0 && (
         // Откуда взялся список палитр — это про ЧЕСТНОСТЬ выбора: «модель не

@@ -3399,8 +3399,12 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   outline: 2px solid var(--acc);
   outline-offset: 1px;
 }
-.sk-list__vals { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; }
-.sk-list__val { display: inline-flex; align-items: center; gap: 3px; }
+.sk-list__vals { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; max-width: 100%; }
+/* Длинная подпись значения не рвёт и не распирает строку: чип сжимается до
+   ширины ячейки, обрез показывается многоточием (раньше текст срезался
+   соседним overflow без всякого знака, что значение не уместилось). */
+.sk-list__val { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; overflow: hidden; }
+.sk-list__val-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-list__vicon { display: inline-flex; flex-shrink: 0; }
 .sk-list__desc {
   display: flex;

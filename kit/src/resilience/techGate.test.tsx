@@ -61,4 +61,21 @@ describe('S4-TECH-NOTES · TechGate', () => {
     render(<Probe />);
     expect(screen.getByText('false')).toBeTruthy();
   });
+
+  it('своя подпись: видимый текст и aria-label отличают кнопку от соседнего тех-блока', () => {
+    render(<TechGate label="тех. модели"><p>код</p></TechGate>);
+    const btn = screen.getByRole('button', { name: /техническ/i });
+    expect(btn.textContent).toBe('тех. модели');
+    expect(btn.getAttribute('aria-label')).toBe('Показать технические сведения (тех. модели)');
+    fireEvent.click(btn);
+    expect(screen.getByRole('button', { name: /техническ/i }).getAttribute('aria-label'))
+      .toBe('Скрыть технические сведения (тех. модели)');
+  });
+
+  it('без подписи — прежняя общая «тех.» и общий aria-label', () => {
+    render(<TechGate><p>код</p></TechGate>);
+    const btn = screen.getByRole('button', { name: /техническ/i });
+    expect(btn.textContent).toBe('тех.');
+    expect(btn.getAttribute('aria-label')).toBe('Показать технические сведения');
+  });
 });

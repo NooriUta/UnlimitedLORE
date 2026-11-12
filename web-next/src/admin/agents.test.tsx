@@ -5,6 +5,8 @@
 // по sort_order), правка POST /lore/actor/owner (harness "" — сброс).
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { AgentsScreen } from './AgentsScreen';
@@ -317,5 +319,19 @@ describe('карточка агента · машина (S7B-16)', () => {
     const box = await screen.findByTestId('adm-machine-A3');
     expect(within(box).getByTestId('adm-machine-noowner')).toBeTruthy();
     expect(within(box).queryByTestId('adm-machine-save')).toBeNull();
+  });
+});
+
+describe('экран «Агенты» · «не привязана» не рвётся на две строки', () => {
+  // P-10: в узкой колонке «не привязана» переносилась посередине слова и
+  // читалась как две подписи. Статус — одной строкой (nowrap в Admin.css),
+  // полный текст остаётся в подсказке.
+  it('в ячейке машины плейсхолдер с подсказкой, а CSS держит его в одну строку', async () => {
+    mount(fake({ rows: ROWS }).f);
+    const row = await screen.findByTestId('adm-agent-A2');
+    const missing = within(row).getByText('не привязана');
+    expect(missing.getAttribute('title')).toBe('не привязана');
+    const css = readFileSync(join(process.cwd(), 'src/admin/Admin.css'), 'utf8');
+    expect(css).toMatch(/\.adm-missing\s*\{[^}]*white-space:\s*nowrap/);
   });
 });
