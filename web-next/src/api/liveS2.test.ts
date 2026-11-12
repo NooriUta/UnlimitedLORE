@@ -9,7 +9,7 @@
 //   контракт v2                     сервер (LoreMePrefs.SETTINGS)
 //   collapse_nav_on_read            nav_collapse_on_read
 //   right_column: auto|open|closed  right_column: auto|shown|hidden
-//   text_size: sm|md|lg             text_size: s|m|l|xl
+//   text_size: sm|md|lg|xl          text_size: s|m|l|xl
 //   mode: dark|light                theme: dark|light|system
 //   nav_version: v1|v2              new_navigation: boolean
 //
@@ -18,8 +18,8 @@
 // переводит имена и значения в обе стороны.
 //
 // Чего переводом не закрыть, то названо честно: значение, которого в v2 нет
-// (theme: system, text_size: xl), не выдумывается и не молчит — берётся
-// умолчание v2, а расхождение попадает в warnings ответа.
+// (theme: system), не выдумывается и не молчит — берётся умолчание v2, а
+// расхождение попадает в warnings ответа.
 //
 // Остальные расхождения тоже не формальность: 401 на сервере называется
 // NO_IDENTITY («не смогли понять, кто вы»), и путать его с «у вас ничего нет»
@@ -93,13 +93,20 @@ describe('настройки: чтение', () => {
     expect(got.defaults.mode).toBe('dark');
   });
 
+  it('text_size: xl доезжает без предупреждений — выбор «очень крупно (4K)» не слетает на умолчание', async () => {
+    const f = vi.fn(async () => json(settingsOut({ text_size: 'xl' })));
+    const got = await client(f).getSettings();
+    expect(got.settings.text_size).toBe('xl');
+    expect(got.warnings ?? []).toEqual([]);
+  });
+
   it('значение, которого в v2 нет, не выдумывается: умолчание v2 плюс честное предупреждение', async () => {
-    const f = vi.fn(async () => json(settingsOut({ theme: 'system', text_size: 'xl' })));
+    const f = vi.fn(async () => json(settingsOut({ theme: 'system' })));
     const got = await client(f).getSettings();
     expect(got.settings.mode).toBe(DEFAULT_SETTINGS.mode);
     expect(got.settings.text_size).toBe(DEFAULT_SETTINGS.text_size);
     expect(got.warnings?.join(' ')).toMatch(/theme/);
-    expect(got.warnings?.join(' ')).toMatch(/text_size/);
+    expect(got.warnings?.join(' ')).not.toMatch(/text_size/);
   });
 
   it('палитра и roomy доходят, когда сервер их знает (белый список PR #945)', async () => {
@@ -119,6 +126,12 @@ describe('настройки: запись', () => {
     expect(url).toContain('/lore/me/settings');
     expect(init.method).toBe('POST');
     expect(body).toEqual({ settings: { theme: 'light', text_size: 's', new_navigation: false }, expected_version: 3 });
+  });
+
+  it('text_size: xl уходит на сервер как xl — round-trip выбора «очень крупно» не теряется', async () => {
+    const f = vi.fn(async () => json(settingsOut({}, 4)));
+    await client(f).patchSettings({ patch: { text_size: 'xl' }, expected_version: 3 });
+    expect(callOf(f).body.settings.text_size).toBe('xl');
   });
 
   it('409 доносится с ТЕКУЩИМ состоянием — иначе человек повторит вслепую', async () => {

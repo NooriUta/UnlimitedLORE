@@ -9,7 +9,7 @@
 //   контракт v2                     сервер (LoreMePrefs.SETTINGS)
 //   collapse_nav_on_read            nav_collapse_on_read
 //   right_column: auto|open|closed  right_column: auto|shown|hidden
-//   text_size: sm|md|lg             text_size: s|m|l|xl
+//   text_size: sm|md|lg|xl          text_size: s|m|l|xl
 //   mode: dark|light                theme: dark|light|system
 //   nav_version: v1|v2              new_navigation: boolean
 //
@@ -23,7 +23,7 @@
 //     путать это с «у вас ничего нет» нельзя: в контракте это
 //     UNAUTHENTICATED, а не пустая выдача;
 //   • 409 несёт ТЕКУЩЕЕ состояние: без него человек повторит правку вслепую;
-//   • значение, которого в v2 нет (theme: system, text_size: xl), не
+//   • значение, которого в v2 нет (theme: system), не
 //     выдумывается и не замалчивается — берётся умолчание v2, а расхождение
 //     попадает в `warnings`;
 //   • «не запоминаю» (remembering: false) — значение, а не пустой список;
@@ -65,7 +65,7 @@ const SETTING_KEY: Readonly<Record<keyof UserSettings, string>> = {
 /** Значения перечислений: v2 → сервер. Обратный перевод строится из этих же таблиц. */
 const SETTING_VALUE: Readonly<Partial<Record<keyof UserSettings, Readonly<Record<string, string | boolean>>>>> = {
   right_column: { auto: 'auto', open: 'shown', closed: 'hidden' },
-  text_size: { sm: 's', md: 'm', lg: 'l' },
+  text_size: { sm: 's', md: 'm', lg: 'l', xl: 'xl' },
   mode: { dark: 'dark', light: 'light' },
   nav_version: { v1: false, v2: true },
 };
