@@ -80,10 +80,10 @@ export function LibraryView({ groups, status, selected: selectedProp, onSelect, 
 
   const reader = (doc: LibraryDoc, withHead: boolean) => (
     <>
-      {doc.meta && <div className="sk-lib__meta">{doc.meta}</div>}
-      {withHead && <h3 className="sk-lib__title">{doc.title}</h3>}
+      {!renderBody && doc.meta && <div className="sk-lib__meta">{doc.meta}</div>}
+      {withHead && !renderBody && <h3 className="sk-lib__title">{doc.title}</h3>}
       <div className="sk-lib__body">{renderBody ? renderBody(doc) : doc.body ? <MartProse text={doc.body} /> : null}</div>
-      {href && <a className="sk-btn sk-lib__open" href={href(doc.id)}>{t('kit.library.open')}</a>}
+      {href && !renderBody && <a className="sk-btn sk-lib__open" href={href(doc.id)}>{t('kit.library.open')}</a>}
     </>
   );
 

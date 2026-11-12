@@ -55,6 +55,15 @@ describe('вид «Библиотека»', () => {
     expect(within(screen.getByRole('article')).getByRole('link', { name: 'Открыть паспорт' }).getAttribute('href')).toBe('/p/ADR-2');
   });
 
+  it('renderBody: своё тело — без дубля meta/заголовка и без «Открыть паспорт»', () => {
+    const withMeta: LibraryGroup[] = [{ key: 'adr', title: 'Решения (ADR)', docs: [{ id: 'ADR-1', code: 'ADR-1', title: 'Колонки по модели', state: 'принят', stale: false, body: 'Тело', meta: 'принят 08.11 · владелица' }] }];
+    render(<LibraryView groups={withMeta} narrow={false} href={id => `/p/${id}`} renderBody={() => <h1>Паспорт ADR-1</h1>} />);
+    const reader = screen.getByRole('article');
+    expect(within(reader).getAllByRole('heading')).toHaveLength(1);
+    expect(within(reader).queryByText('принят 08.11 · владелица')).toBeNull();
+    expect(within(reader).queryByRole('link', { name: 'Открыть паспорт' })).toBeNull();
+  });
+
   it('фильтр «устарели N» в чипе; устаревший помечен', () => {
     render(<LibraryView groups={groups} narrow={false} />);
     fireEvent.click(screen.getByRole('button', { name: 'устарели 2' }));
