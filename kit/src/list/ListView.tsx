@@ -1357,7 +1357,7 @@ export function ListView({
     return (
       <span className="sk-list__vals">
         {vs.map(v => (
-          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} />{labelOf.get(v) ?? labels.valueTitle(key, v)}</span>
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{labelOf.get(v) ?? labels.valueTitle(key, v)}</span></span>
         ))}
       </span>
     );
@@ -1430,6 +1430,10 @@ export function ListView({
       </span>
     );
   };
+  // Статуса у записи нет (или оси нет вовсе, K-14) — чипа нет: пустого места
+  // не рисуем, а «∅» обещало бы значение, которого не существует. Лента и
+  // карточки держат один признак, а не две копии условия.
+  const statusVisible = (r: KitRecord): boolean => r.status !== '' && config.statuses.items.length > 0;
   const cell = (col: string, r: KitRecord): ReactNode => {
     switch (col) {
       case 'select': return checkbox(r);
@@ -1802,9 +1806,7 @@ export function ListView({
     // (K-14): kit не знает, что считать верхним.
     const under = underOf(r, level);
     const fold = under ? foldUnder(under, expanded.has(r.id)) : null;
-    // Статуса у записи нет (или оси нет вовсе, K-14) — чипа нет: пустого места
-    // не рисуем, а «∅» обещало бы значение, которого не существует.
-    const withStatus = r.status !== '' && config.statuses.items.length > 0;
+    const withStatus = statusVisible(r);
     return (
       <li
         key={r.id}
@@ -1927,7 +1929,7 @@ export function ListView({
       <ul className="sk-cards">
         {filtered.map(r => (
           <li key={r.id} className={`sk-cards__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
-            <div className="sk-cards__head">{cell('status', r)}<Pill variant="id">{r.id}</Pill></div>
+            <div className="sk-cards__head">{statusVisible(r) && cell('status', r)}<Pill variant="id">{r.id}</Pill></div>
             <div className="sk-cards__title"><Title r={r} href={href} onOpen={onOpen} /></div>
             {extra.length > 0 && (
               <dl className="sk-cards__fields">

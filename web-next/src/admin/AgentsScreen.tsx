@@ -461,7 +461,7 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
             onClick={revert}>{t('admin.harness.revert', { was: name(revertTo.value) })}</button>
         )}
       </td>
-      <td>{row.machine_id ? <span className="adm-mono">{row.machine_id}</span> : <span className="adm-missing">{t('admin.machine.none')}</span>}</td>
+      <td>{row.machine_id ? <span className="adm-mono">{row.machine_id}</span> : <span className="adm-missing" title={t('admin.machine.none')}>{t('admin.machine.none')}</span>}</td>
       <td>{row.owner_display_name ?? row.owner_kc_sub ?? <span className="adm-missing">{t('admin.owner.none')}</span>}</td>
       <td><span className="adm-mono">{row.client_id ?? '—'}</span>{row.agent_role && <span className="adm-role"> · {row.agent_role}</span>}</td>
       <td>

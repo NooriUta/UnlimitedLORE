@@ -184,6 +184,11 @@
   gap: 6px;
   pointer-events: none;
 }
+/* Узко: на телефоне «Модули» — нижняя панель (.sk-shell__dock, 48px + полоса
+   жестов), метка не должна лежать поверх неё: поднимаем на высоту дока. */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .v2-version { bottom: calc(var(--sk-dock-h, 48px) + env(safe-area-inset-bottom, 0px) + 6px); }
+}
 .v2-version__btn {
   pointer-events: auto;
   border: 0;

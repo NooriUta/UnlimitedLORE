@@ -127,7 +127,8 @@ export default function ObsidianEngine(p: GxEngineProps) {
       return at;
     });
     L.s.setSetting('labelRenderedSizeThreshold', 4 + s.settings.labels * 16);
-    L.s.setSetting('nodeReducer', (n, a) => (nb && !nb.has(n) ? { ...a, color: dim, label: '' } : { ...a, highlighted: n === s.selected }));
+    // Хаб (4+ связей) — с forceLabel подпись рисуется вне порога по размеру.
+    L.s.setSetting('nodeReducer', (n, a) => (nb && !nb.has(n) ? { ...a, color: dim, label: '' } : { ...a, highlighted: n === s.selected, forceLabel: L.G.degree(n) >= 4 }));
     L.s.setSetting('edgeReducer', (e, a) => {
       if (!nb) return a;
       const [x, y] = L.G.extremities(e);

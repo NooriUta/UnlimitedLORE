@@ -756,6 +756,7 @@
   "kit.ds.techFailed": "Some details did not load",
   "kit.ds.techForbidden": "Some details are closed by access rights",
   "kit.ds.techTruncated": "Some details are not shown in full",
+  "kit.ds.techBtn": "tech: data",
   "kit.tech.btn": "tech",
   "kit.tech.show": "Show technical details",
   "kit.tech.hide": "Hide technical details",

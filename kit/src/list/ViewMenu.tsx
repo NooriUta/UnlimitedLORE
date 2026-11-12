@@ -4,10 +4,11 @@
 // скрыть» и пояснение, что считается закрытым. Значение видно в самой кнопке.
 // Поповер — диалог с ловушкой фокуса: Esc и щелчок мимо закрывают, фокус
 // возвращается на кнопку. Выбор — radiogroup, применяется сразу.
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { KitShowClosed } from '../core/contract';
 import type { RecordPlacement } from '../record/RecordDock';
 import { ColumnsChoice, type ColumnChoice } from './ColumnsChoice';
+import { MenuPanel } from './MenuPanel';
 import { kitT, useKitLang } from '../i18n';
 import type { KitKey } from '../i18n';
 import { useFocusTrap } from '../keyboard/focusTrap';
@@ -61,15 +62,7 @@ export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onC
     onEscape: () => setOpen(false),
   });
 
-  useEffect(() => {
-    if (!open || narrow) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open, narrow]);
-
+  // «Мимо» и закрытие — в MenuPanel (панель порталом вне этой обёртки).
   const modeTitle = (m: KitShowClosed) => t(`kit.list.closed.${m}` as KitKey);
 
   const body = (
@@ -141,9 +134,9 @@ export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onC
         </Sheet>
       )}
       {open && !narrow && (
-        <div ref={panelRef} id={id} role="dialog" aria-label={t('kit.list.viewMenu')} className="sk-vmenu__panel" onKeyDown={onKeyDown}>
+        <MenuPanel panelRef={panelRef} id={id} label={t('kit.list.viewMenu')} anchor={wrapRef.current} onKeyDown={onKeyDown} onClose={() => setOpen(false)}>
           {body}
-        </div>
+        </MenuPanel>
       )}
     </span>
   );

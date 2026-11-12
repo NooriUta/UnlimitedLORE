@@ -75,7 +75,7 @@ describe('S4-MOBILE-EDGE · окна строки управления на те
       expect(s[0].classList.contains('sk-lsheet')).toBe(true);
       expect(document.body.querySelector('.sk-sheet-backdrop')).toBeTruthy();
       // прежнего поповера у кнопки при этом нет
-      expect(container.querySelector('.sk-vmenu__panel, .sk-facet__panel:not([hidden])')).toBeNull();
+      expect(document.body.querySelector('.sk-vmenu__panel, .sk-facet__panel:not([hidden])')).toBeNull();
     });
 
     it(`${o.name}: касание внутри листа его НЕ закрывает, Esc и подложка — закрывают`, () => {
@@ -96,7 +96,7 @@ describe('S4-MOBILE-EDGE · окна строки управления на те
       const { container } = show(false);
       fireEvent.click(o.btn(container)!);
       expect(sheets()).toHaveLength(0);
-      expect(container.querySelector('.sk-vmenu__panel, .sk-facet__panel:not([hidden])')).toBeTruthy();
+      expect(document.body.querySelector('.sk-vmenu__panel, .sk-facet__panel:not([hidden])')).toBeTruthy();
     });
   }
 

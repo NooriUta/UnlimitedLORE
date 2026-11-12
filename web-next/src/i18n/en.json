@@ -228,6 +228,8 @@
   "pp.place.bottom": "bottom",
   "pp.place.full": "full screen",
   "pp.modelNotes": "Model notes: {n}",
+  "pp.modelNotes.tech": "tech: model",
+  "pp.modelNotes.badge": "⚠ {n}",
   "pp.loading": "Loading the passport",
   "pp.opt.people": "People",
   "pp.opt.agents": "Agents",
