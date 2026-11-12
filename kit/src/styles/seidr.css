@@ -6346,10 +6346,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    контекста, а не от ширины экрана (замечание владелицы по v1.17.4). Сам по
    себе (витрина /kit/passport) док остаётся слоем поверх окна. */
 .sk-shell__main .sk-dock[data-placement='full'] { position: absolute; inset: 0; }
-.sk-dock[data-placement='full'] .sk-dock__panel { padding: 48px 20px 12px; }
+/* S4-17 (владелица 11.11: «крестик спорят с линией»): кнопки — своей полосой сверху,
+   а не поверх панели. Раньше панель прокручивалась ПОД ними, и липкая строка вкладок
+   (во всю ширину — до самого угла) уходила под «×» и «Выйти». */
+.sk-dock[data-placement='full'] { grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
+.sk-dock[data-placement='full'] .sk-dock__panel { padding: 4px 20px 12px; }
 .sk-dock__close { position: sticky; top: 0; float: right; z-index: 1; min-width: max(var(--tap), 28px); min-height: max(var(--tap), 28px); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 .sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }
-.sk-dock__exit { position: absolute; top: 8px; right: 16px; z-index: 1; min-height: max(var(--tap), 28px); padding: 0 12px; border: 1px solid var(--bd); border-radius: var(--r-pill); background: var(--bg2); color: var(--t1); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.sk-dock__ctl { position: static; justify-self: end; display: flex; align-items: center; gap: 6px; padding: 8px 16px 4px; }
+.sk-dock[data-placement='full'] .sk-dock__ctl .sk-dock__close { position: static; float: none; margin: 0; }
+.sk-dock__exit { z-index: 1; min-height: max(var(--tap), 28px); padding: 0 12px; border: 1px solid var(--bd); border-radius: var(--r-pill); background: var(--bg2); color: var(--t1); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 .sk-dock__exit:hover { border-color: var(--acc); }
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-dock[data-placement] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
@@ -6363,7 +6369,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
      рамка и поля дока и плавающая «×». Остаётся только внутренний отступ 12 px. */
   .sk-dock[data-placement] { border: 0; border-radius: 0; }
   .sk-dock[data-placement] .sk-dock__panel { padding: 8px 12px; border: 0; }
-  .sk-dock[data-placement='full'] .sk-dock__panel { padding: 44px 12px 12px; }
+  .sk-dock[data-placement='full'] { grid-template-rows: auto minmax(0, 1fr); }
+  .sk-dock[data-placement='full'] .sk-dock__panel { padding: 4px 12px 12px; }
+  .sk-dock[data-placement='full'] .sk-dock__ctl { padding: 6px 12px 2px; }
   .sk-dock[data-placement='full'] .sk-rec { padding: 0 0 24px; }
   /* «×» плавает справа, а плавающий элемент сужает ВЕСЬ соседний блок-сетку
      (паспорт — блок со своим контекстом), а не одну строку: запись теряла
@@ -6596,6 +6604,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-cal__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sk-cal__month { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-md); text-transform: capitalize; }
 .sk-cal__undated { font-size: var(--fs-xs); color: var(--wrn); }
+.sk-cal__field { font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 2px 6px; }
 .sk-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--bd); border-radius: var(--r-md); overflow: hidden; }
 .sk-cal__dow { padding: 4px 6px; background: var(--bg2); border-bottom: 1px solid var(--bd); font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
 .sk-cal__day { min-height: 84px; padding: 3px 4px; display: grid; gap: 2px; align-content: start; min-width: 0; border-right: 1px solid var(--bd); border-bottom: 1px solid var(--bd); }
@@ -6767,6 +6776,15 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-fresh__dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none; }
 .sk-fresh__word { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; }
 
+/* S4-24: выбор цели связи с поиском — поле, найденное с «Привязать», честные состояния. */
+.sk-rel__pick { display: grid; gap: 4px; margin-top: 6px; }
+.sk-rel__search { font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 4px 8px; }
+.sk-rel__found { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sk-rel__opt { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sk-rel__optid { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); }
+.sk-rel__opttitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.sk-rel__note { margin: 0; font-size: var(--fs-xs); color: var(--t3); }
+
 /* S4-24: варианты поля не загрузились — причина словами и «Повторить» рядом со значением. */
 .sk-rec-fields__opterr { margin-left: 6px; font-size: var(--fs-xs); color: var(--wrn); }
 .sk-rec-fields__retry { margin-left: 6px; }
@@ -6783,3 +6801,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec-create__err { margin: 0; color: var(--dng); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .sk-rec-create__foot { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
 .sk-rec-create__why { font-size: var(--fs-xs); color: var(--t3); }
+
+/* S4-24: поле-связь в «Свойствах» — чипы с «×» и выбор с поиском. */
+.sk-relfield { display: grid; gap: 4px; min-width: 0; }
+.sk-relfield__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-relfield__chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 8px; border: 1px solid var(--bd); border-radius: 999px; background: var(--bg2); font-size: var(--fs-xs); }
+.sk-relfield__chip--inherited { padding-right: 8px; color: var(--t3); border-style: dashed; }
+.sk-relfield__x { min-width: 20px; min-height: 20px; border: 0; border-radius: 999px; background: transparent; color: var(--t3); font: inherit; cursor: pointer; }
+.sk-relfield__x:hover { color: var(--dng); }

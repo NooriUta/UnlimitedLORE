@@ -47,15 +47,30 @@ export function shiftMonth(month: string, delta: number): string {
   return iso(d.getTime()).slice(0, 7);
 }
 
-export function calendarMonth(records: readonly KitRecord[], field: string, month: string): CalendarMonthModel {
+/** Самый длинный диапазон, который раскладывается по дням: дальше — неразумные данные, не повод перебирать годы. */
+const MAX_SPAN_DAYS = 400;
+
+/**
+ * Записи по дням месяца. `endField` — конец диапазона: запись видна в каждом дне
+ * от начала до конца включительно. Конец пуст, неразборчив или раньше начала —
+ * запись только в дне начала (не теряется и не растягивается назад).
+ */
+export function calendarMonth(records: readonly KitRecord[], field: string, month: string, endField?: string): CalendarMonthModel {
   const byDay = new Map<string, KitRecord[]>();
   const undated: KitRecord[] = [];
-  for (const r of records) {
-    const d = recordDate(r, field);
-    if (!d) { undated.push(r); continue; }
+  const put = (d: string, r: KitRecord) => {
     const list = byDay.get(d) ?? [];
     list.push(r);
     byDay.set(d, list);
+  };
+  for (const r of records) {
+    const d = recordDate(r, field);
+    if (!d) { undated.push(r); continue; }
+    const e = endField ? recordDate(r, endField) : null;
+    const from = Date.parse(`${d}T00:00:00Z`);
+    const to = e ? Date.parse(`${e}T00:00:00Z`) : from;
+    const last = to > from ? Math.min(to, from + MAX_SPAN_DAYS * DAY) : from;
+    for (let t = from; t <= last; t += DAY) put(iso(t), r);
   }
   const first = Date.parse(`${month}-01T00:00:00Z`);
   const next = Date.parse(`${shiftMonth(month, 1)}-01T00:00:00Z`);

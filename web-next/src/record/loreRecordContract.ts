@@ -300,8 +300,14 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     }
   }
   const propRels = c.schema.relations.filter(r => r.place === 'prop' && !props.some(f => f.key === r.key));
+  // S4-24: у связи-свойства с путём привязки — её ребро: kit рисует чипы с «Отвязать»
+  // и выбор с поиском (владелица 11.11: «не сделано редактирование множественного выбора привязок»).
+  const edgeOf = (key: string) => {
+    const r = c.schema.relations.find(x => x.place === 'prop' && x.key === key && x.manageable);
+    return r ? { relation: { rel: r.rel, dir: r.dir } } : {};
+  };
   const propFields = propRels.map(r => ({
-    key: r.key, title: r.label, type: 'ref' as const,
+    key: r.key, title: r.label, type: 'ref' as const, ...edgeOf(r.key),
   }));
   // body_md в разделах — только когда это НАСТОЯЩЕЕ тело, а не копия (прод
   // v1.17.13, 11.11: у решения «Контент» был пуст). Копия — когда его текст
@@ -386,7 +392,8 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: kitRels.map(({ count: _n, place: _p, target_type: t, ...d }) => ({ ...d, ...(t && t !== 'any' ? { targetKind: t } : {}) })), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}),
       // S4-24: правимо только при ОБОИХ — сервер назвал поле правимым И дал путь записи.
       ...(f.editable && f.write ? { editable: true } : {}),
-      ...(f.required ? { required: 'block' as const } : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
+      ...(f.required ? { required: 'block' as const } : {}),
+      ...(f.kind === 'ref' ? edgeOf(f.key) : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit
