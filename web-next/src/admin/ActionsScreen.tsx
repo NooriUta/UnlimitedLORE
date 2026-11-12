@@ -21,6 +21,8 @@ import {
 } from './actions';
 import { DangerBatch } from './DangerBatch';
 import { KcDenials } from './KcDenials';
+import { fetchAgents, type AgentRow } from './agents';
+import { HarnessMark, callerHarness } from './HarnessMark';
 import './Admin.css';
 
 export interface ActionsScreenProps {
@@ -73,6 +75,17 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
     { rows: d => d.rows },
   );
   const [openBatch, setOpenBatch] = useState<string | null>(null);
+  // S7B-22: знак harness у агента-вызывающего. Агенты читаются, только если в
+  // выдаче есть строки оси «агент»; не прочитались — знака нет, журнал тот же
+  // (знак — подсказка рядом с именем, а не данные журнала).
+  const hasAgents = res.data?.rows.some(r => r.axis === 'agent') ?? false;
+  const [agents, setAgents] = useState<AgentRow[]>([]);
+  useEffect(() => {
+    if (!hasAgents) return;
+    const ac = new AbortController();
+    fetchAgents(ac.signal, fetchImpl).then(d => setAgents(d.rows), () => setAgents([]));
+    return () => ac.abort();
+  }, [hasAgents, fetchImpl]);
   /** Пачки, у которых раскрывать нечего (404): раскрытие по ним больше не предлагаем. */
   const [deadBatches, setDeadBatches] = useState<readonly string[]>([]);
   const markDead = useCallback((id: string) => {
@@ -176,7 +189,10 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
                         </td>
                         <td>{label(t, FAMILY_LABEL, r.family)}</td>
                         <th scope="row"><span className="adm-mono">{r.entity_id ?? '—'}</span></th>
-                        <td>{r.caller ?? <span className="adm-missing">{t('admin.log.caller.none')}</span>}</td>
+                        <td>
+                          {r.axis === 'agent' && (() => { const h = callerHarness(r.caller, agents); return h && <HarnessMark logo={h.logo} label={h.label} />; })()}
+                          {r.caller ?? <span className="adm-missing">{t('admin.log.caller.none')}</span>}
+                        </td>
                         <td>{label(t, AXIS_LABEL, r.axis)}</td>
                         <td>
                           <span className="adm-outcome" data-testid="adm-log-outcome" data-outcome={outcome}>

@@ -647,7 +647,10 @@ public final class LoreSlices {
             "out('TAGGED_WITH').tag_id AS tags, " +
             "out('SUPERSEDES').decision_id AS supersedes_ids, " +
             // S4-29 v3 (44а): вкладка «Вопросы» паспорта решения — на какие вопросы оно отвечает.
-            "out('ANSWERS').question_id AS answers_ids " +
+            "out('ANSWERS').question_id AS answers_ids, " +
+            // 11.11 (полнота модели рёбер): кем заменено и сценарии, обоснованные решением.
+            "in('SUPERSEDES').decision_id AS superseded_by_ids, " +
+            "in('TRACED_TO').uc_id AS traced_by_ucs " +
             "FROM KnowDecision WHERE decision_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -767,7 +770,20 @@ public final class LoreSlices {
             "out('ADDRESSES').pain_id          AS pain_ids, " +
             "out('PROMISES').gain_id           AS gain_ids, " +
             "out('HELPS_WITH').job_id          AS job_ids, " +
-            "in('REALIZES').task_uid           AS task_uids " +
+            "in('REALIZES').task_uid           AS task_uids, " +
+            // 11.11 (полнота модели рёбер): что сценарий делает, обоснование, вехи, граф сценариев.
+            "out('RELIEVES').pain_id           AS relieved_pain_ids, " +
+            "out('DELIVERS').gain_id           AS delivered_gain_ids, " +
+            "out('PERFORMS').job_id            AS performed_job_ids, " +
+            "out('TRACED_TO')[@this INSTANCEOF 'KnowADR'].adr_id           AS traced_adrs, " +
+            "out('TRACED_TO')[@this INSTANCEOF 'KnowDecision'].decision_id AS traced_decisions, " +
+            "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
+            "out('BUILDS_ON').uc_id            AS builds_on_ids, " +
+            "in('BUILDS_ON').uc_id             AS built_on_by_ids, " +
+            "out('UC_INCLUDES').uc_id          AS includes_ids, " +
+            "in('UC_INCLUDES').uc_id           AS included_by_ids, " +
+            "out('UC_EXTENDS').uc_id           AS extends_ids, " +
+            "in('UC_EXTENDS').uc_id            AS extended_by_ids " +
             "FROM KnowUseCase WHERE uc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -917,6 +933,8 @@ public final class LoreSlices {
             // to surface the link even though adr_link(rel:"sprint") has always
             // been able to create it.
             "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
+            // 11.11 (полнота модели рёбер): документы, реализованные в спринте (doc_link rel:sprint).
+            "in('IMPLEMENTED_IN').doc_id   AS doc_ids, " +
             "out('HAS_STATE')[track_id IS NOT NULL].track_id[0] AS track_id " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
@@ -1510,7 +1528,13 @@ public final class LoreSlices {
             "out('OWNED_BY').display_name AS owner_display_name, " +
             // AO-MACHINE-OBJ: ВСЕ машины агента (рёбра USES_MACHINE), в отличие от
             // machine_id выше — «откуда писал последний раз».
-            "out('USES_MACHINE').machine_id AS machines " +
+            "out('USES_MACHINE').machine_id AS machines, " +
+            // S7B-ACT-1: окно активности (часы) — у актора-машины; у прочих агентов пусто.
+            // Окно агента = окно его машины (client_id minilore-link-<machine_id>) с перекрытием по harness.
+            "activity_window_h, activity_window_harness, " +
+            MachineActivity.DEFAULT_H + " AS activity_default_h, " +
+            // S7B-ACT-1: «когда был на связи» — последняя активность его сессий (LOGGED_BY, actor/session).
+            "in('LOGGED_BY').last_activity_at AS session_activity " +
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
 
@@ -1522,6 +1546,8 @@ public final class LoreSlices {
         // где он владелец или допущен. Этим срезом сервер miniLORE решает видимость (MachineOwners, круг 2).
         slice("machine_acl",
             "SELECT actor_id, client_id, machine_id, name, " +
+            // S7B-ACT-1: окно активности машины и окна по harness (MachineActivity.effective).
+            "activity_window_h, activity_window_harness, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
             "out('OWNED_BY').display_name AS owner_display_name, " +
             "in('MACHINE_ACCESS').kc_sub AS grant_kc_subs, " +
@@ -1727,6 +1753,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[valid_to IS NULL].goal_md[0]      AS goal_md, " +
             "out('HAS_STATE')[valid_to IS NULL].decisions_md[0] AS decisions_md, " +
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids, " +
+            // 11.11 (полнота модели рёбер): фичи, целящие в веху (feature_link rel:milestone).
+            "in('TARGETS_MILESTONE')[@this INSTANCEOF 'KnowUseCase'].uc_id AS feature_ids, " +
             "out('TARGETS_PRODUCT').code       AS products " +
             "FROM KnowMilestone WHERE milestone_id = :id",
             List.of("id"), Map.of(), "");
@@ -1738,7 +1766,9 @@ public final class LoreSlices {
             "release_date, is_current, description_md, git_project, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
-            "in('SHIPPED_IN').size() AS pr_count " +
+            "in('SHIPPED_IN').size() AS pr_count, " +
+            // 11.11 (полнота модели рёбер): ADR, выпущенные релизом (adr_link rel:release).
+            "in('IMPLEMENTED_IN_RELEASE')[@this INSTANCEOF 'KnowADR'].adr_id AS adr_ids " +
             "FROM KnowRelease WHERE release_uid = :id",
             List.of("id"), Map.of(), "");
 
@@ -1896,6 +1926,10 @@ public final class LoreSlices {
             "FROM PlanTrack ORDER BY track_id",
             List.of(), Map.of(), "");
 
+        // S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): выпадающий список «Трек» паспорта спринта —
+        // те же вершины PlanTrack в форме {code, title}, как у прочих полей с выбором.
+        slice(LoreSprintTracks.SLICE, LoreSprintTracks.SLICE_SQL, List.of(), Map.of(), "");
+
         slice("plan_sections",
             "SELECT section_id, label, start_week, end_week, color FROM PlanSection ORDER BY start_week");
 
@@ -1930,7 +1964,9 @@ public final class LoreSlices {
             "in('BELONGS_TO')[sprint_id IS NOT NULL].size() AS sprint_count, " +
             // Git projects this component touches, via its sprints
             // (Component ← BELONGS_TO ← KnowSprint → BELONGS_TO_PROJECT → KnowGitProject).
-            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint'].out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint'].out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+            // S4-PRODUCT-HILITE: продукты компонента — по ним v2 красит записи цветом продукта.
+            "out('IN_PRODUCT').code AS products " +
             "FROM LoreComponent",
             List.of(),
             new LinkedHashMap<>(Map.of("root", " WHERE parent_id = :root")),
@@ -1941,7 +1977,21 @@ public final class LoreSlices {
             "in('PARENT_OF').component_id   AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
             "in('BELONGS_TO')[adr_id IS NOT NULL].adr_id  AS adrs, " +
-            "out('DOCUMENTED_IN').spec_id   AS specs " +
+            "out('DOCUMENTED_IN').spec_id   AS specs, " +
+            // Слово владелицы 11.11 («связь с компонентами пропала»): всё, что пути записи
+            // привязывают к компоненту ребром BELONGS_TO, — для вкладок паспорта v2 (как в v1:
+            // QG · Знания · Сценарии). belonging_specs — спеки, у которых есть только ребро
+            // спека → компонент (без DOCUMENTED_IN); паспорт сводит их со specs. Отбор — по
+            // классу вершины, а не по наличию поля: qg_id носит не только QualityGate (счётчик
+            // qg_count у HND — 10, а гейтов компонента — 4).
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSpec'].spec_id         AS belonging_specs, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowDecision'].decision_id AS decisions, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowQuestion'].question_id AS questions, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowUseCase'].uc_id        AS features, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowDoc'].doc_id           AS docs, " +
+            "in('BELONGS_TO')[@this INSTANCEOF 'QualityGate'].qg_id        AS qgs, " +
+            // 11.11 (полнота модели рёбер): продукты компонента (product_link rel:component).
+            "out('IN_PRODUCT').code AS products " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -1985,9 +2035,12 @@ public final class LoreSlices {
             List.of("project"), Map.of(), " ORDER BY sprint_id DESC");
         // Компонент достигает проекта только через свои спринты — тем же путём, что колонка
         // git_projects у среза components (Component ← BELONGS_TO ← KnowSprint → BELONGS_TO_PROJECT).
+        // Слово владелицы 11.11 («у проекта всё показывать, что связано напрямую»): + компоненты с
+        // прямым ребром компонент → проект (его ставит бэкфилл scripts/backfill-component-project.js).
         slice("project_components",
             "SELECT component_id, full_name FROM LoreComponent " +
-            "WHERE in('BELONGS_TO')[sprint_id IS NOT NULL].out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            "WHERE (in('BELONGS_TO')[sprint_id IS NOT NULL].out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
+            "OR out('BELONGS_TO_PROJECT').slug CONTAINS :project)",
             List.of("project"), Map.of(), " ORDER BY component_id");
         slice("project_adrs",
             "SELECT adr_id, name, status FROM KnowADR WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
@@ -2009,6 +2062,50 @@ public final class LoreSlices {
             "SELECT actor_id, name, client_id, agent_role FROM KnowActor " +
             "WHERE kind = 'agent' AND out('OWNED_BY').out('HAS_PROJECT_ROLE').slug CONTAINS :project",
             List.of("project"), Map.of(), " ORDER BY actor_id");
+        // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — всё, что
+        // привязано к проекту своим ребром BELONGS_TO_PROJECT, по вкладке на тип конца. Форма та же:
+        // без потолка, порядок в хвосте, скоуп вставляется перед ним.
+        slice("project_specs",
+            "SELECT spec_id, title, out('HAS_STATE').status[0] AS status " +
+            "FROM KnowSpec WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY spec_id");
+        slice("project_decisions",
+            "SELECT decision_id, title, status_raw " +
+            "FROM KnowDecision WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY decision_id");
+        slice("project_questions",
+            "SELECT question_id, title, status " +
+            "FROM KnowQuestion WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY question_id");
+        slice("project_features",
+            "SELECT uc_id, title, status, goal_level " +
+            "FROM KnowUseCase WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY uc_id");
+        slice("project_docs",
+            "SELECT doc_id, title, kind " +
+            "FROM KnowDoc WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY doc_id");
+        slice("project_runbooks",
+            "SELECT runbook_id, name, area " +
+            "FROM KnowRunbook WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY runbook_id");
+        // Роли продукта (KnowProjectActor) и агенты (KnowActor), привязанные к проекту своим ребром.
+        slice("project_actors",
+            "SELECT actor_id, name, kind " +
+            "FROM KnowProjectActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY actor_id");
+        slice("project_bound_agents",
+            "SELECT actor_id, name, client_id, agent_role " +
+            "FROM KnowActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY actor_id");
+        slice("project_files",
+            "SELECT project, file_path, summary_md " +
+            "FROM KnowFile WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY file_path");
+        slice("project_prs",
+            "SELECT pr_uid, pr_number, title, merged_at, url " +
+            "FROM KnowPR WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+            List.of("project"), Map.of(), " ORDER BY pr_number DESC, pr_uid");
 
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.
@@ -2872,6 +2969,65 @@ public final class LoreSlices {
             "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
             List.of("code"), Map.of(), " ORDER BY sprint_id");
 
+        // ── S4-PRODUCTS-NODE: паспорт продукта (v2, только чтение) ────────────
+        // Продукт — статья словаря (dict_type='product'), ключ — код. Та же проекция,
+        // что у среза products, по одному коду. Цвет — колонка color статьи: в v2 он
+        // показывается как есть, нет его — null (цвет не выдумывается).
+        slice("product_by_id",
+            "SELECT code, label_ru, label_en, color, icon, sort_order, " +
+            "ifnull(is_active, true) AS is_active, " +
+            "in('IN_PRODUCT').component_id  AS components, " +
+            "out('PARENT_PRODUCT').code     AS parent_code, " +
+            "in('PARENT_PRODUCT').code      AS sub_products, " +
+            "out('SERVES').code             AS serves, " +
+            "in('SERVES').code              AS served_by, " +
+            "in('TARGETS_PRODUCT').milestone_id AS milestone_ids, " +
+            "out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "FROM KnowDictEntry WHERE dict_type = 'product' AND code = :code",
+            List.of("code"), Map.of(), "");
+
+        // Вкладки паспорта продукта. Своих рёбер к сценариям, болям, выгодам, работам и
+        // ролям у продукта нет — путь тот же, что у product_sprints: продукт ← компонент
+        // (IN_PRODUCT) ← сценарий (BELONGS_TO) → боль/выгода/работа/роль. Сценарии — ВСЕ
+        // уровни (фичи и US — один тип KnowUseCase, один паспорт), только со своим
+        // ребром к компоненту: унаследованного у детей сценария срез не видит — это
+        // сказано в подписи вкладки клиента, а не замолчано.
+        slice("product_features",
+            "SELECT uc_id, title, status, goal_level " +
+            "FROM KnowUseCase " +
+            "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY goal_level, uc_id");
+
+        // Боль — продукту, если её ЗАЯВЛЯЕТ (ADDRESSES) или СНИМАЕТ (RELIEVES) сценарий
+        // продукта: обе стороны «заявлено vs доставлено» (ADR-LORE-032 D5).
+        slice("product_pains",
+            "SELECT pain_id, title, severity " +
+            "FROM KnowPain " +
+            "WHERE in('ADDRESSES').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "OR in('RELIEVES').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY pain_id");
+
+        slice("product_gains",
+            "SELECT gain_id, title, rank " +
+            "FROM KnowGain " +
+            "WHERE in('PROMISES').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "OR in('DELIVERS').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY gain_id");
+
+        slice("product_jobs",
+            "SELECT job_id, title, kind " +
+            "FROM KnowJob " +
+            "WHERE in('HELPS_WITH').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "OR in('PERFORMS').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY job_id");
+
+        // Пользовательские роли (клиентские сегменты) — акторы сценариев продукта (HAS_ACTOR).
+        slice("product_actors",
+            "SELECT actor_id, name, kind " +
+            "FROM KnowProjectActor " +
+            "WHERE in('HAS_ACTOR').out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY actor_id");
+
         // AL-43: SCD2 history for one dict entry — same close/open pattern as
         // history_sprint/history_task/adr_history, keyed by the composite
         // (dict_type, code) denormalized onto KnowDictEntryHist rather than a
@@ -2965,6 +3121,15 @@ public final class LoreSlices {
         Map.entry("project_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_adrs", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_releases", "out('BELONGS_TO_PROJECT').slug"),
+        // 11.11: прямые связи проекта — запись видна тому, кому виден её проект (своё ребро).
+        Map.entry("project_specs", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_decisions", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_questions", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_features", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_docs", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_runbooks", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_files", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("project_prs", "out('BELONGS_TO_PROJECT').slug"),
         // Задачи — проект через спринт.
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3032,6 +3197,8 @@ public final class LoreSlices {
         Map.entry("features", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("uc_by_id", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_component", UC_INHERITED_SCOPE),
+        // S4-PRODUCTS-NODE: сценарии продукта — тот же скоуп, что у сценариев компонента.
+        Map.entry("product_features", UC_INHERITED_SCOPE),
         Map.entry("use_cases", UC_INHERITED_SCOPE),
         Map.entry("use_cases_of_feature", UC_INHERITED_SCOPE),
         Map.entry("shipped_dynamics", UC_INHERITED_SCOPE),
@@ -3049,6 +3216,8 @@ public final class LoreSlices {
         Map.entry("project_users", "то же: участники проекта для разделения по людям"),
         Map.entry("project_people", "паспорт проекта (S4-29): участники — та же выборка, что project_users"),
         Map.entry("project_agents", "паспорт проекта (S4-29): агенты видны всем (AL-106), как actors"),
+        Map.entry("project_actors", "паспорт проекта (11.11): роли продукта видны всем, как actors (AL-106)"),
+        Map.entry("project_bound_agents", "паспорт проекта (11.11): агенты видны всем (AL-106), как project_agents"),
         Map.entry("project_components", "паспорт проекта (S4-29): компоненты — общий справочник, как components"),
         Map.entry("components", "справочник компонентов — общий"),
         Map.entry("component", "паспорт компонента — общий справочник"),
@@ -3056,6 +3225,11 @@ public final class LoreSlices {
         Map.entry("dictionary", "справочники — общие"),
         Map.entry("history_dict", "история справочника — общая"),
         Map.entry("products", "продукты — общий справочник"),
+        Map.entry("product_by_id", "паспорт продукта (S4-PRODUCTS-NODE) — общий справочник, как products"),
+        Map.entry("product_pains", "боли продукта — общий продуктовый профиль, как pains"),
+        Map.entry("product_gains", "выгоды продукта — общий продуктовый профиль, как gains"),
+        Map.entry("product_jobs", "работы продукта — глобальные вершины, как jobs (AL-113)"),
+        Map.entry("product_actors", "роли продукта — AL-106: акторы видны всем, как actors"),
         Map.entry("tags_usage", "теги — общие"),
         Map.entry("jobs", "работа (JTBD) — глобальная вершина по построению (AL-113)"),
         Map.entry("pains", "боли сегмента — общий продуктовый профиль"),
@@ -3114,6 +3288,7 @@ public final class LoreSlices {
         Map.entry("routine_output_by_type", "рутины QG — QG-04"),
         Map.entry("plan_config", "план студии — общий или проектный, решение"),
         Map.entry("plan_tracks", "план — решение"),
+        Map.entry(LoreSprintTracks.SLICE, "план — решение (те же треки, что plan_tracks)"),
         Map.entry("plan_sections", "план — решение"),
         Map.entry("plan_checkpoints", "план — решение"),
         Map.entry("plan_versions", "план — решение"),

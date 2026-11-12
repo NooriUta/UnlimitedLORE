@@ -11,6 +11,8 @@
 //   • счёт использований area: компоненты не прочитаны — «не смогли посчитать».
 import { useMemo, useState, type ReactNode } from 'react';
 import gameIconsData from '@iconify-json/game-icons/icons.json';
+// S7B-22: логотипы harness (simple-icons:…) из поля icon справочника — зарегистрировать до показа чипа.
+import './harnessLogos';
 import {
   DiffPreview, EmptyState, Forbidden, GameIcon, LoadError, Skeleton, hasGameIcon, useKitLang, useLoadState, useUrlParam,
   type DiffRow,

@@ -27,6 +27,33 @@ export interface KitFreshThresholds {
   staleAfter?: number;
 }
 
+/**
+ * Пороги колонки в конфиге: общие числа плюс `perRecord` — ИМЕНА полей записи, где лежат
+ * минуты этой строки (S7B-ACT-1: у каждой машины своё окно активности). Число в поле
+ * главнее числа колонки; поля нет или в нём не число — порог колонки.
+ */
+export interface KitFreshConfig extends KitFreshThresholds {
+  perRecord?: { warnAfter?: string; staleAfter?: string };
+}
+
+const minutes = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined);
+
+/** Пороги для строки: число из поля записи (perRecord) главнее порога колонки. */
+export function freshThresholdsFor(th: KitFreshConfig | undefined, r: { fields?: Record<string, unknown> }): KitFreshThresholds | undefined {
+  if (!th) return undefined;
+  const pick = (k: 'warnAfter' | 'staleAfter'): number | undefined => {
+    const f = th.perRecord?.[k];
+    const own = f ? minutes(r.fields?.[f]) : undefined;
+    return own ?? th[k];
+  };
+  const out: KitFreshThresholds = {};
+  const w = pick('warnAfter');
+  const s = pick('staleAfter');
+  if (w !== undefined) out.warnAfter = w;
+  if (s !== undefined) out.staleAfter = s;
+  return out;
+}
+
 export type FreshTone = 'plain' | 'ok' | 'warn' | 'stale';
 export type FreshWord = 'now' | 'min' | 'hours' | 'yesterday' | 'date';
 

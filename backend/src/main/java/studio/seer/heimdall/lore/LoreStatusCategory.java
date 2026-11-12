@@ -89,6 +89,8 @@ final class LoreStatusCategory {
         Map.entry("component_sprints", new StatusSource("sprint", "status_raw")),
         Map.entry("project_sprints", new StatusSource("sprint", "status_raw")),
         Map.entry("project_adrs", new StatusSource("adr", "status")),
+        Map.entry("project_specs", new StatusSource("spec", "status")),
+        Map.entry("project_decisions", new StatusSource("decision", "status_raw")),
         Map.entry("release_sprints", new StatusSource("sprint", "status_raw")),
         Map.entry("backlog_tasks", new StatusSource("task", "status_raw")),
         Map.entry("all_tasks", new StatusSource("task", "status_raw")),

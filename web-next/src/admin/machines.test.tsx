@@ -8,7 +8,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import {
   enrichMachines, grantRecords, inverseRequest, machineRecords, parseMachineAcl, personMachines,
-  projectMatrix, removeProjectsRequests, roleRequests, splitPair,
+  projectMatrix, removeProjectsRequests, roleRequests, sliceWriteRight,
 } from './machines';
 import { buildParticipation } from './participation';
 import { parseAgents } from './agents';
@@ -45,26 +45,49 @@ const AGENTS = [
   { actor_id: 'AG-M2', name: 'li-ws', client_id: 'minilore-link-li-ws', agent_role: 'full', harness: 'codex', machine_id: 'li-ws', owner_kc_sub: ['u-li'], owner_display_name: ['lisa'] },
 ];
 
+// Срез нового сервера (S7B-ACL-3): проекты, harness и право записи машины — его полями.
+const ACL_SERVER = [
+  { ...ACL[0], projects: ['AIDA/miniLORE', 'BRAGI', 'NooriUta/UnlimitedLORE'], harnesses: ['codex'], can_write: true },
+  { ...ACL[1], projects: [], harnesses: [], can_write: false },
+];
+
 const machines = () => enrichMachines(parseMachineAcl(ACL), buildParticipation(MATRIX, parseAgents({ rows: AGENTS } as never).rows), parseAgents({ rows: AGENTS } as never).rows);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
-type Post = { machine_id: string; kc_sub: string; action: string; role?: string; projects?: string[]; harnesses?: string[]; dry_run?: boolean };
-function fake(opts: { aclStatus?: number; write?: 'ok' | 'forbidden' } = {}) {
+type Item = { kc_sub: string; action: string; role?: string; projects?: string[]; harnesses?: string[] };
+type Post = Item & { machine_id: string; dry_run?: boolean; items?: Item[]; undo_of?: string };
+const BATCH_ID = 'rb-1762855200000-0badcafe';
+function fake(opts: { aclStatus?: number; write?: 'ok' | 'forbidden'; acl?: unknown[] } = {}) {
   const posts: Post[] = [];
+  const planOf = (b: Item) => {
+    const before = b.kc_sub === 'u-fro' ? { role: 'actor', projects: ['AIDA/miniLORE', 'NooriUta/UnlimitedLORE'], harnesses: [] } : null;
+    const after = b.action === 'revoke' ? null : { role: b.role, projects: b.projects, harnesses: b.harnesses ?? [] };
+    const kind = b.action === 'revoke' ? (before ? 'revoke' : 'unchanged') : before ? 'update' : 'grant';
+    return { kc_sub: b.kc_sub, kind, before, after };
+  };
+  const undoOf = (b: Item) => {
+    const p = planOf(b);
+    return p.before ? { kc_sub: b.kc_sub, action: 'grant', ...p.before } : { kc_sub: b.kc_sub, action: 'revoke' };
+  };
   const f = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url.startsWith('/lore/slice/machine_acl')) return opts.aclStatus ? json({ error: 'FORBIDDEN', detail: 'нет прав на срез' }, opts.aclStatus) : json({ rows: ACL });
+    if (url.startsWith('/lore/slice/machine_acl')) return opts.aclStatus ? json({ error: 'FORBIDDEN', detail: 'нет прав на срез' }, opts.aclStatus) : json({ rows: opts.acl ?? ACL });
     if (url.startsWith('/lore/slice/role_matrix')) return json({ rows: MATRIX });
     if (url.startsWith('/lore/slice/agent_owners')) return json({ rows: AGENTS });
     if (url.startsWith('/lore/user/machine-access')) {
       const b = JSON.parse(String(init?.body)) as Post;
       posts.push(b);
       if (opts.write === 'forbidden') return json({ error: 'MACHINE_ACCESS_FORBIDDEN', detail: 'допуск к машине выдаёт только её владелец или admin' }, 403);
-      const before = b.kc_sub === 'u-fro' ? { role: 'actor', projects: ['AIDA/miniLORE', 'NooriUta/UnlimitedLORE'], harnesses: [] } : null;
-      const after = b.action === 'revoke' ? null : { role: b.role, projects: b.projects, harnesses: b.harnesses ?? [] };
-      const kind = b.action === 'revoke' ? (before ? 'revoke' : 'unchanged') : before ? 'update' : 'grant';
-      return json({ machine_id: b.machine_id, ok: true, plan: { kc_sub: b.kc_sub, kind, before, after }, ...(b.dry_run ? { dry_run: true } : { outcome: 'CREATED' }) });
+      if (b.items) {
+        const items = b.items.map(i => ({ kc_sub: i.kc_sub, kind: planOf(i).kind, status: 200, result: b.dry_run ? 'planned' : 'applied' }));
+        return json({
+          ...(b.dry_run ? {} : { batch_id: BATCH_ID }), machine_id: b.machine_id, ok: true,
+          plan: b.items.map(planOf), undo: b.items.map(undoOf), items, applied: b.dry_run ? 0 : items.length, failed: 0, atomic: false,
+          ...(b.dry_run ? { dry_run: true } : { undo_until: '2099-01-01T00:00:00Z' }), ...(b.undo_of ? { undo_of: b.undo_of } : {}),
+        });
+      }
+      return json({ machine_id: b.machine_id, ok: true, plan: planOf(b), ...(b.dry_run ? { dry_run: true } : { outcome: 'CREATED' }) });
     }
     return json({ rows: [] });
   }) as unknown as typeof fetch;
@@ -96,17 +119,39 @@ describe('S7B-ACL-3 · модель', () => {
     expect(m1.projects).toEqual(['AIDA/miniLORE', 'NooriUta/UnlimitedLORE']);
   });
 
-  it('группировка по проекту: машина с двумя проектами — в обеих группах', () => {
-    const ids = machineRecords(machines(), true).map(r => r.id).map(splitPair);
-    expect(ids.filter(([m]) => m === 'ar-matebook').map(([, p]) => p)).toEqual(['AIDA/miniLORE', 'NooriUta/UnlimitedLORE']);
-    expect(machineRecords(machines()).map(r => r.id)).toEqual(['ar-matebook', 'li-ws']);
+  it('сервер отдал projects/harnesses — берутся из среза, клиентская сборка не нужна', () => {
+    const [m1, m2] = enrichMachines(parseMachineAcl(ACL_SERVER), buildParticipation(MATRIX, []), parseAgents({ rows: AGENTS } as never).rows);
+    expect(m1.projects).toEqual(['AIDA/miniLORE', 'BRAGI', 'NooriUta/UnlimitedLORE']);
+    expect(m1.harness).toEqual(['codex']);
+    expect(m2.projects).toEqual([]);
+    expect(m2.harness).toEqual([]);
   });
 
-  it('допуски — строка на «человек × проект»: frolova в двух группах', () => {
+  it('can_write из среза: true — пишет, false — только чтение, null — «не смогли проверить», нет поля — проба', () => {
+    const [m1, m2] = parseMachineAcl(ACL_SERVER);
+    expect(m1.can_write).toBe(true);
+    expect(sliceWriteRight(m1, 'нельзя')).toEqual({ state: 'yes' });
+    expect(sliceWriteRight(m2, 'нельзя')).toEqual({ state: 'no', reason: 'нельзя' });
+    const [unknown] = parseMachineAcl([{ ...ACL[0], can_write: null }]);
+    expect(sliceWriteRight(unknown, 'нельзя', 'не вычислено')).toEqual({ state: 'unknown', reason: 'не вычислено' });
+    const [old] = parseMachineAcl(ACL);
+    expect(old.can_write).toBeUndefined();
+    expect(sliceWriteRight(old, 'нельзя')).toBeNull();
+  });
+
+  it('группировка по проекту — прямо по массиву projects: запись на машину, без «машина × проект»', () => {
+    const recs = machineRecords(machines());
+    expect(recs.map(r => r.id)).toEqual(['ar-matebook', 'li-ws']);
+    expect(recs[0].fields.projects).toEqual(['AIDA/miniLORE', 'NooriUta/UnlimitedLORE']);
+    expect(recs.some(r => 'project' in r.fields)).toBe(false);
+  });
+
+  it('допуски — запись на человека с массивом projects: frolova одна запись с двумя проектами', () => {
     const recs = grantRecords(machines()[0]);
-    expect(recs.map(r => [r.title, r.fields.project])).toEqual([
-      ['frolova', 'AIDA/miniLORE'], ['frolova', 'NooriUta/UnlimitedLORE'], ['lisa', 'AIDA/miniLORE'],
+    expect(recs.map(r => [r.id, r.title, r.fields.projects])).toEqual([
+      ['u-fro', 'frolova', ['AIDA/miniLORE', 'NooriUta/UnlimitedLORE']], ['u-li', 'lisa', ['AIDA/miniLORE']],
     ]);
+    expect(recs.some(r => 'project' in r.fields)).toBe(false);
   });
 
   it('«Снять» у строки снимает проект; ушёл последний — допуск снимается целиком', () => {
@@ -174,6 +219,52 @@ describe('S7B-ACL-3 · экран', () => {
     expect(grants.querySelectorAll('[data-record-id]').length).toBe(3);
   });
 
+  it('группа «по проекту» — kit режет по массиву: машина с двумя проектами в обеих группах', async () => {
+    window.history.replaceState(null, '', '/?lg=projects');
+    const { f } = fake();
+    wrap(<MachinesScreen fetchImpl={f} meSub="u-ar" />);
+    await screen.findAllByRole('button', { name: 'ar-matebook' });
+    expect(document.querySelectorAll('[data-record-id="ar-matebook"]').length).toBe(2);
+    expect(document.querySelectorAll('[data-record-id="li-ws"]').length).toBe(1);
+  });
+
+  it('паспорт: допуски по проекту — человек с двумя проектами в обеих группах, одной записью', async () => {
+    window.history.replaceState(null, '', '/?adm-macl-m=ar-matebook');
+    const { f } = fake();
+    wrap(<MachinesScreen fetchImpl={f} meSub="u-ar" />);
+    const grants = await screen.findByTestId('adm-macl-grants');
+    expect(grants.querySelectorAll('[data-record-id="u-fro"]').length).toBe(2);
+    expect(grants.querySelectorAll('[data-record-id="u-li"]').length).toBe(1);
+  });
+
+  it('can_write из среза — пробного dry_run нет: true — форма, false — только чтение', async () => {
+    window.history.replaceState(null, '', '/?adm-macl-m=ar-matebook');
+    const { f, posts } = fake({ acl: ACL_SERVER });
+    wrap(<MachinesScreen fetchImpl={f} meSub="u-li" />);
+    expect(await screen.findByTestId('adm-macl-grant')).toBeTruthy();
+    expect(posts).toEqual([]);
+  });
+
+  it('can_write=false из среза — только чтение без запросов на запись', async () => {
+    window.history.replaceState(null, '', '/?adm-macl-m=li-ws');
+    const { f, posts } = fake({ acl: ACL_SERVER });
+    wrap(<MachinesScreen fetchImpl={f} meSub="u-ar" />);
+    expect(await screen.findByTestId('adm-macl-readonly')).toBeTruthy();
+    expect(screen.queryByTestId('adm-macl-grant')).toBeNull();
+    expect(posts).toEqual([]);
+  });
+
+  it('«Кого допустить» — подписи пикера про людей; самодельного «Выбрано людей: N» нет', async () => {
+    window.history.replaceState(null, '', '/?adm-macl-m=ar-matebook');
+    const { f } = fake({ acl: ACL_SERVER });
+    wrap(<MachinesScreen fetchImpl={f} meSub="u-ar" />);
+    const form = await screen.findByTestId('adm-macl-grant');
+    expect(form.textContent).toContain('Все люди');
+    fireEvent.click(within(form).getByTestId('adm-macl-team-AIDA/miniLORE'));
+    await waitFor(() => expect(form.textContent).toContain('Выбрано людей: 2'));
+    expect(within(form).getByTestId('adm-macl-who').textContent).not.toContain('Выбрано людей');
+  });
+
   it('не владелец и не admin (сервер 403 на пробе) — только чтение, формы «Допустить» нет', async () => {
     window.history.replaceState(null, '', '/?adm-macl-m=ar-matebook');
     const { f } = fake({ write: 'forbidden' });
@@ -183,7 +274,7 @@ describe('S7B-ACL-3 · экран', () => {
     expect(screen.queryByTestId('adm-macl-grant')).toBeNull();
   });
 
-  it('владелец: «вся команда проекта» → DiffPreview по dry_run → применить → BatchUndo → отмена шлёт обратное', async () => {
+  it('владелец: «вся команда проекта» → DiffPreview по dry_run → применить одной пачкой → BatchUndo → серверный undo_of', async () => {
     window.history.replaceState(null, '', '/?adm-macl-m=ar-matebook');
     const { f, posts } = fake();
     wrap(<MachinesScreen fetchImpl={f} meSub="u-ar" />);
@@ -197,12 +288,17 @@ describe('S7B-ACL-3 · экран', () => {
     const apply = within(change).getByRole('button', { name: /Применить/ });
     fireEvent.click(apply);
     const undo = await screen.findByTestId('kit-batch-undo');
-    expect(posts.filter(p => !p.dry_run).map(p => p.kc_sub).sort()).toEqual(['u-fro', 'u-li']);
+    const writes = posts.filter(p => !p.dry_run);
+    expect(writes).toHaveLength(1);
+    expect(writes[0].machine_id).toBe('ar-matebook');
+    expect(writes[0].items?.map(i => i.kc_sub).sort()).toEqual(['u-fro', 'u-li']);
     fireEvent.click(undo);
     await screen.findByTestId('kit-batch-undone');
-    const undos = posts.filter(p => !p.dry_run).slice(2);
-    expect(undos.find(p => p.kc_sub === 'u-li')).toMatchObject({ action: 'revoke' });
-    expect(undos.find(p => p.kc_sub === 'u-fro')).toMatchObject({ action: 'grant', role: 'actor' });
+    const undos = posts.filter(p => !p.dry_run).slice(1);
+    expect(undos).toHaveLength(1);
+    expect(undos[0].undo_of).toBe(BATCH_ID);
+    expect(undos[0].items?.find(p => p.kc_sub === 'u-li')).toMatchObject({ action: 'revoke' });
+    expect(undos[0].items?.find(p => p.kc_sub === 'u-fro')).toMatchObject({ action: 'grant', role: 'actor' });
   });
 
   it('матрица проекта — kit Matrix; люди без доступа отмечены', async () => {

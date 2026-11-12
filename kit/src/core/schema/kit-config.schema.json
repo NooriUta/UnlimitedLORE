@@ -171,7 +171,7 @@
       "type": "object",
       "required": ["views"],
       "properties": {
-        "views": { "type": "array", "minItems": 1, "items": { "enum": ["list", "cards", "board", "tree", "feed", "timeline", "calendar"] } },
+        "views": { "type": "array", "minItems": 1, "items": { "enum": ["list", "cards", "board", "tree", "feed", "timeline", "calendar", "library"] } },
         "quick": {
           "type": "array",
           "items": {
@@ -219,7 +219,19 @@
         "calendar": {
           "type": "object",
           "required": ["date"],
-          "properties": { "date": { "type": "string", "minLength": 1 } },
+          "properties": {
+            "date": { "type": "string", "minLength": 1 },
+            "end": { "type": "string", "minLength": 1 },
+            "dates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["date", "label"],
+                "properties": { "date": { "type": "string", "minLength": 1 }, "end": { "type": "string", "minLength": 1 }, "label": { "type": "string", "minLength": 1 } },
+                "additionalProperties": false
+              }
+            }
+          },
           "additionalProperties": false
         },
         "timeline": {
@@ -255,7 +267,16 @@
             "type": "object",
             "properties": {
               "warnAfter": { "type": "number", "minimum": 0 },
-              "staleAfter": { "type": "number", "minimum": 0 }
+              "staleAfter": { "type": "number", "minimum": 0 },
+              "perRecord": {
+                "description": "S7B-ACT-1: имена полей записи с минутами этой строки; число в поле главнее порога колонки.",
+                "type": "object",
+                "properties": {
+                  "warnAfter": { "type": "string", "minLength": 1 },
+                  "staleAfter": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
             },
             "additionalProperties": false
           }

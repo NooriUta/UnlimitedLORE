@@ -24,7 +24,7 @@ class LoreRecordFromTest {
         for (String type : LoreRecordSnapshotTest.ROWS.keySet())
             for (Map<String, Object> row : LoreRecordSnapshotTest.variants(LoreRecordSnapshotTest.ROWS.get(type)))
                 LoreRecordSnapshotTest.assertSnapshot(LoreRecordSnapshotTest.Legacy.values(type, row),
-                    LoreRecordFrom.assemble(LoreRecordFrom.VALUES.get(type), row), type + " assemble " + row);
+                    LoreRecordSnapshotTest.sansAdded(type, LoreRecordFrom.assemble(LoreRecordFrom.VALUES.get(type), row)), type + " assemble " + row);
     }
 
     @Test

@@ -8,6 +8,7 @@ import { v2Auth } from './auth/session';
 import { installServerPulse } from './shell/serverPulse';
 import { themeSource } from './storage/themeSource';
 import { ShowTechFromSettings } from './settings/ShowTech';
+import { staleChunk } from './shell/staleChunk';
 
 // Иконки game-icons — весь набор офлайн, до первого рендера (S4-00b): CSP
 // запрещает удалённую подгрузку, а неизвестный слаг GameIcon рисует честной
@@ -28,6 +29,10 @@ const kitLang = document.documentElement.lang === 'en' ? 'en' : 'ru';
 // показывает скелет; нет сессии — уводит на вход; вход выключен — как раньше.
 void v2Auth.init();
 
+// Устаревший чанк после выкатки (S4-STALE-CHUNK): вкладка на прежней сборке
+// просит чанк, которого на сервере уже нет. Одна перезагрузка, повтор — плашка.
+// Слушатель — до рендера: первый же ленивый раздел может упасть.
+staleChunk.install(window);
 // Свежесть для строки состояния (S4-21): когда сервер LORE ответил в последний раз.
 installServerPulse();
 

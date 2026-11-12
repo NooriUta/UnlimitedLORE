@@ -38,8 +38,8 @@ class MachineAccessTest {
             .orElseThrow(() -> new AssertionError("шага миграции с MachineAccess.SCHEMA_SQL нет"));
         assertEquals(80, step.version());
         assertEquals(17, step.compatMajor(), "аддитивно, major 17");
-        assertEquals(80, LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1).version(),
-            "V80 — последний шаг");
+        assertTrue(LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1).version() >= 80,
+            "V80 не позже последнего шага (V81 — S7B-ACT-1)");
         List<String> sql = MachineAccess.SCHEMA_SQL;
         assertTrue(sql.contains("CREATE EDGE TYPE MACHINE_ACCESS IF NOT EXISTS"));
         for (String p : List.of("role", "projects", "harnesses", "granted_by", "granted_at"))

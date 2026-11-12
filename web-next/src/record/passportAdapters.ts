@@ -28,6 +28,8 @@ export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec', 'decision', 'que
   // Появились 10.11 вместе с серверным PR #1090, все три — только на чтение
   // (perms.can_edit=false, status_next=[], version=null приходят с фасада).
   'component', 'tech', 'feature',
+  // S4-PRODUCTS-NODE: паспорт продукта, только чтение; ключ — код статьи словаря.
+  'product',
   // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий».
   'project'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
@@ -83,6 +85,8 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   if (type === 'feature') return (await slice<Row>('use_cases', { fields: 'uc_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.uc_id), title: str(r.title) || str(r.uc_id) }));
   // Проект: перечень — тот же срез, что выбор проекта (git_projects); ключ — slug.
   if (type === 'project') return (await slice<Row>('git_projects', { fields: 'slug,name', limit: '1000' })).rows.map(r => ({ id: str(r.slug), title: str(r.name) || str(r.slug) }));
+  // Продукт: перечень — срез products; ключ — код, подпись — label_ru.
+  if (type === 'product') return (await slice<Row>('products', { fields: 'code,label_ru', limit: '1000' })).rows.map(r => ({ id: str(r.code), title: str(r.label_ru) || str(r.code) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));
 }
 

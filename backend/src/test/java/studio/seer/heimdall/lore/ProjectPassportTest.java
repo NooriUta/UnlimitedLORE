@@ -19,7 +19,36 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ProjectPassportTest {
 
-    private static final List<String> TABS = List.of("sprints", "components", "adrs", "releases", "people", "agents");
+    /**
+     * 53а — первые шесть. Слово владелицы 11.11 («у проекта всё показывать, что связано напрямую»):
+     * за ними — всё, что связано с проектом ребром BELONGS_TO_PROJECT напрямую.
+     */
+    private static final List<String> TABS = List.of("sprints", "components", "adrs", "releases", "people", "agents",
+        "specs", "decisions", "questions", "features", "docs", "runbooks", "actors", "boundAgents", "files", "prs");
+
+    /** Вкладка → срез (у новых — по имени сущности, не по ключу вкладки). */
+    private static final Map<String, String> SLICE = new LinkedHashMap<>();
+    static {
+        for (String k : List.of("sprints", "components", "adrs", "releases", "people", "agents",
+            "specs", "decisions", "questions", "features", "docs", "runbooks", "actors", "files", "prs"))
+            SLICE.put(k, "project_" + k);
+        SLICE.put("boundAgents", "project_bound_agents");
+    }
+
+    /** Новые вкладки 11.11: прямое ребро BELONGS_TO_PROJECT → тип цели. */
+    private static final Map<String, String> DIRECT = new LinkedHashMap<>();
+    static {
+        DIRECT.put("specs", "spec");
+        DIRECT.put("decisions", "decision");
+        DIRECT.put("questions", "question");
+        DIRECT.put("features", "feature");
+        DIRECT.put("docs", "doc");
+        DIRECT.put("runbooks", "runbook");
+        DIRECT.put("actors", "actor");
+        DIRECT.put("boundAgents", "agent");
+        DIRECT.put("files", "file");
+        DIRECT.put("prs", "pr");
+    }
 
     @Test
     void projectIsAPassportTypeReadOnly() {
@@ -71,8 +100,14 @@ class ProjectPassportTest {
     @Test
     void tabsAreLinkTabsReadBySliceEachPaged() {
         LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get("project");
-        Map<String, String> target = Map.of("sprints", "sprint", "components", "component", "adrs", "adr",
-            "releases", "release", "people", "user", "agents", "agent");
+        Map<String, String> target = new LinkedHashMap<>(Map.of("sprints", "sprint", "components", "component", "adrs", "adr",
+            "releases", "release", "people", "user", "agents", "agent"));
+        target.putAll(DIRECT);
+        for (String k : DIRECT.keySet()) {
+            LoreRecordRegistry.Relation r = d.relations().stream().filter(x -> x.key().equals(k)).findFirst().orElse(null);
+            assertNotNull(r, "у паспорта проекта нет вкладки " + k);
+            assertEquals("BELONGS_TO_PROJECT", r.rel(), k + ": связано с проектом напрямую");
+        }
         for (String k : TABS) {
             LoreRecordRegistry.Relation r = d.relations().stream().filter(x -> x.key().equals(k)).findFirst().orElse(null);
             assertNotNull(r, "у паспорта проекта нет вкладки " + k);
@@ -81,9 +116,7 @@ class ProjectPassportTest {
             assertEquals(target.get(k), r.targetType(), k);
             assertFalse(r.manageable(), k + ": пути привязки у проекта нет");
         }
-        Map<String, String> want = new LinkedHashMap<>();
-        for (String k : TABS) want.put(k, "project_" + k);
-        assertEquals(want, LoreRecordValues.READ_BY_SLICE.get("project"));
+        assertEquals(SLICE, LoreRecordValues.READ_BY_SLICE.get("project"));
         for (LoreRecordFrom.SliceLink sl : LoreRecordFrom.SLICE_LINKS.get("project")) {
             assertTrue(sl.paged(), sl.key() + ": первая порция + truncated с total, а не всё подряд");
             assertEquals("project", sl.param(), sl.key());
@@ -93,7 +126,7 @@ class ProjectPassportTest {
     @Test
     void tabSlicesAreHonest_noCap_ordered_scoped() {
         for (String k : TABS) {
-            String id = "project_" + k;
+            String id = SLICE.get(k);
             LoreSlices.SliceDef def = LoreSlices.get(id);
             assertNotNull(def, "среза " + id + " нет");
             assertEquals(List.of("project"), def.required(), id);
@@ -104,8 +137,16 @@ class ProjectPassportTest {
             boolean shared = LoreSlices.SHARED_SLICES.containsKey(id);
             assertTrue(scoped ^ shared, id + ": ровно одно — скоупный или общий с причиной");
         }
-        for (String id : List.of("project_sprints", "project_adrs", "project_releases")) {
+        for (String id : List.of("project_sprints", "project_adrs", "project_releases",
+                "project_specs", "project_decisions", "project_questions", "project_features",
+                "project_docs", "project_runbooks", "project_files", "project_prs")) {
             assertEquals("out('BELONGS_TO_PROJECT').slug", LoreSlices.PROJECT_SCOPED.get(id), id);
+            assertTrue(LoreSlices.get(id).baseSql().contains("out('BELONGS_TO_PROJECT').slug CONTAINS :project"), id);
+        }
+        // 11.11: роли продукта и агенты, привязанные к проекту напрямую, — своим ребром, а не через
+        // владельца; видны всем (AL-106), как actors и project_agents.
+        for (String id : List.of("project_actors", "project_bound_agents")) {
+            assertTrue(LoreSlices.SHARED_SLICES.containsKey(id), id + ": общий с причиной (AL-106)");
             assertTrue(LoreSlices.get(id).baseSql().contains("out('BELONGS_TO_PROJECT').slug CONTAINS :project"), id);
         }
         assertTrue(LoreSlices.get("project_components").baseSql()
@@ -143,7 +184,7 @@ class ProjectPassportTest {
         @SuppressWarnings("unchecked") List<Map<String, Object>> sections = (List<Map<String, Object>>) t.get("sections");
         List<String> keys = new ArrayList<>();
         for (Map<String, Object> m : sections) keys.add((String) m.get("key"));
-        assertEquals(TABS, keys, "Спринты · Компоненты · ADR · Релизы · Люди и агенты (53а)");
+        assertEquals(TABS, keys, "Спринты · Компоненты · ADR · Релизы · Люди и агенты (53а), затем прямые связи (11.11)");
         for (Map<String, Object> m : sections) {
             Object g = m.get("group");
             if (List.of("people", "agents").contains(m.get("key"))) {

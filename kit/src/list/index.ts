@@ -1,11 +1,14 @@
 // listView kit (SPRINT_UXR_S10_SEIDR_KIT/K-03): компонент и чистая модель.
 export * from './ListView';
 export * from './NestedList';
+// Стандартная полоса управления для таблиц со своими строками (S4-SPRINT-TASKS-CONTROLS).
+export * from './ControlBar';
 export * from './listModel';
 // Фильтры: есть / нет / пусто / не пусто, текст, счётчики (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-05).
 export * from './filterModel';
 // Счётчики по всей выдаче, посчитанные источником (SPRINT_UXR_S9_SCALE_OPT/S9-01).
 export * from './listCounts';
+export * from './BucketFigures';
 export * from './FacetFilter';
 // Фильтр по дате — диапазон «с … по …», быстрые периоды, зона, адрес (K2-DATE-RANGE).
 export * from './dateRange';

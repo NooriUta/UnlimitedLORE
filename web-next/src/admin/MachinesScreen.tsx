@@ -12,9 +12,11 @@
 //   • «Матрица проекта» — Matrix (прокрутка вбок внутри контейнера kit).
 // Блок «Машины» паспорта человека (S7B-28) — PersonMachines, ListView.
 //
-// Писать может только владелец машины или admin — решает сервер (dry_run-проба,
-// machines.ts probeWrite). Остальным — только чтение с причиной словами;
+// Писать может только владелец машины или admin — решает сервер: поле can_write
+// среза machine_acl (то же правило, что проверка записи); нет поля — dry_run-проба
+// (machines.ts probeWrite). Остальным — только чтение с причиной словами;
 // «не смогли проверить» — отдельно от «нельзя» и от «никого нет».
+// Применение — одна серверная пачка на машину (batch_id), отмена — undo_of.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BatchUndo, DiffPreview, Drawer, EmptyState, FieldEditor, Forbidden, ListView, LoadError, Matrix, Pill,
@@ -27,17 +29,18 @@ import { useAppT, appT, type AppKey } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import { useAdminNav } from './adminNav';
 import {
-  fetchMachineAcl, fetchMachinesData, grantRecords, grantRequests, inverseRequest, machineRecords, matrixCell,
-  parsePlan, personMachines, postMachineAccess, probeWrite, projectMatrix, removeProjectsRequests, roleRequests,
-  splitPair, enrichMachines,
-  type AccessPlan, type AccessRequest, type Machine, type MachinesData, type PlanView, type WriteRight,
+  batchesByMachine, fetchMachineAcl, fetchMachinesData, grantRecords, grantRequests, machineRecords, matrixCell,
+  parsePlan, personMachines, postMachineAccess, postMachineAccessBatch, postMachineActivity, probeWrite, projectMatrix,
+  removeProjectsRequests, revokeRequests, roleRequests, sliceWriteRight, enrichMachines,
+  type AccessPlan, type AccessRequest, type ActivityPlan, type Machine, type MachineBatch, type MachinesData, type PlanView,
+  type WriteRight,
 } from './machines';
+import { HarnessMark, harnessValueIcon } from './HarnessMark';
+import { ACTIVITY_CHOICES, ACTIVITY_DEFAULT_H, type MachineActivity } from './activity';
 import './Admin.css';
 
 type T = ReturnType<typeof useAppT>;
 const ROLES = ['viewer', 'actor'] as const;
-/** Окно отмены пачки: у сервера пачки для допусков нет, отмена — обратными запросами (machines.ts inverseRequest). */
-const UNDO_MS = 10 * 60 * 1000;
 const projectHref = (slug: string) => `?mod=admin&sec=adm-projects&adm-open=${encodeURIComponent(slug)}`;
 
 function roleWord(t: T, role: string): string {
@@ -60,16 +63,20 @@ function machinesConfig(lang: KitLang): KitConfig {
           { key: 'owner', title: t('admin.macl.col.owner'), type: 'enum' },
           { key: 'harness', title: t('admin.macl.col.harness'), type: 'enum' },
           { key: 'projects', title: t('admin.macl.col.projects'), type: 'enum' },
-          { key: 'project', title: t('admin.macl.col.project'), type: 'enum' },
           { key: 'granted', title: t('admin.macl.col.granted'), type: 'number' },
+          { key: 'last_seen', title: t('admin.macl.col.lastSeen'), type: 'text' },
         ],
       },
     },
     list: {
       views: ['list', 'cards'],
       filters: ['fields.projects', 'fields.harness'],
-      groupings: ['owner', 'project'],
-      columns: ['title', 'owner', 'harness', 'projects', 'granted'],
+      // «По проекту» — kit режет по массиву projects: машина в каждой своей группе.
+      groupings: ['owner', 'projects'],
+      columns: ['title', 'owner', 'harness', 'projects', 'granted', 'fresh:last_seen'],
+      // S7B-ACT-1: «устарело» — когда с последней отметки прошло больше окна ЭТОЙ машины
+      // (stale_min записи, machineRecords); порог колонки — общий дефолт.
+      fresh: { last_seen: { staleAfter: ACTIVITY_DEFAULT_H * 60, perRecord: { staleAfter: 'stale_min' } } },
     },
   };
 }
@@ -85,12 +92,11 @@ function grantsConfig(lang: KitLang): KitConfig {
           { key: 'role', title: t('admin.macl.col.role'), type: 'enum' },
           { key: 'projects', title: t('admin.macl.col.projects'), type: 'enum' },
           { key: 'harness', title: t('admin.macl.col.harness'), type: 'enum' },
-          { key: 'project', title: t('admin.macl.col.project'), type: 'enum' },
           { key: 'by', title: t('admin.macl.col.by'), type: 'text' },
         ],
       },
     },
-    list: { views: ['list'], filters: ['fields.role'], groupings: ['project'], columns: ['title', 'role', 'projects', 'harness', 'by'] },
+    list: { views: ['list'], filters: ['fields.role'], groupings: ['projects'], columns: ['title', 'role', 'projects', 'harness', 'by'] },
   };
 }
 
@@ -178,20 +184,16 @@ function MachinesList({ data, meSub, fetchImpl, onChanged }: { data: MachinesDat
   const t = useAppT();
   const lang = useKitLang();
   const [open, setOpen] = useUrlParam('adm-macl-m');
-  // Группа «по проекту» — строка на пару «машина × проект» (machineRecords): машина
-  // с несколькими проектами стоит в каждой своей группе, как в прототипе.
-  const [lg] = useUrlParam('lg');
-  const [group, setGroup] = useState<string | null>(lg);
-  const byProject = group === 'project';
   const config = useMemo(() => machinesConfig(lang), [lang]);
   const labelled = useMemo(() => data.machines.map(m => ({ ...m, harness: m.harness.map(h => data.harnessLabels[h] ?? h) })), [data]);
-  const records = useMemo(() => machineRecords(labelled, byProject), [labelled, byProject]);
+  const records = useMemo(() => machineRecords(labelled), [labelled]);
   const machine = open ? data.machines.find(m => m.machine_id === open) ?? null : null;
   return (
     <>
-      {byProject && <p className="adm-note" role="status">{t('admin.macl.byProjectNote')}</p>}
       <ListView config={config} data={kitData(records, data.truncated)} initial={{ group: 'owner' }}
-        onStateChange={s => setGroup(s.group)} onOpen={id => setOpen(splitPair(id)[0])} />
+        valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
+        onOpen={id => setOpen(id)} />
+
       {open && (
         <Drawer open onClose={() => setOpen(null)} title={open}>
           {machine
@@ -213,7 +215,7 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
 }) {
   const t = useAppT();
   const lang = useKitLang();
-  const [right, setRight] = useState<WriteRight | null>(null);
+  const [probed, setRight] = useState<WriteRight | null>(null);
   const [probe, setProbe] = useState(0);
   const [pending, setPending] = useState<{ key: number; requests: AccessRequest[] } | null>(null);
   const [bulkRole, setBulkRole] = useState<{ subs: string[]; role: string } | null>(null);
@@ -221,12 +223,17 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
   const seq = useRef(0);
   const propose = (requests: AccessRequest[]) => { seq.current += 1; setPending({ key: seq.current, requests }); };
 
+  // can_write среза — ответ сервера по тому же правилу, что запись; пробный dry_run —
+  // только когда поля нет (старый сервер).
+  const fromSlice = sliceWriteRight(m, t('admin.macl.right.noSlice'), t('admin.macl.right.unknownSlice'));
   useEffect(() => {
+    if (fromSlice) return;
     let alive = true;
     setRight(null);
     probeWrite(m, meSub, fetchImpl).then(r => { if (alive) setRight(r); });
     return () => { alive = false; };
-  }, [m.machine_id, meSub, fetchImpl, probe]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [m.machine_id, meSub, fetchImpl, probe, fromSlice === null]); // eslint-disable-line react-hooks/exhaustive-deps
+  const right: WriteRight | null = fromSlice ?? probed;
 
   const canWrite = right?.state === 'yes';
   const config = useMemo(() => grantsConfig(lang), [lang]);
@@ -242,20 +249,22 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
 
   const rowActions: ListRowAction[] = canWrite ? [
     { id: 'edit', title: t('admin.macl.act.edit'), icon: 'quill', run: ([id]) => {
-      const g = m.grants.find(x => x.kc_sub === splitPair(id)[0]);
+      const g = m.grants.find(x => x.kc_sub === id);
       if (g) setDraft({ who: [g.kc_sub], role: g.role || 'viewer', projects: g.projects, harnesses: g.harnesses });
     } },
-    { id: 'revoke', title: t('admin.macl.act.revoke'), icon: 'lucide:circle-x', run: ids => { setBulkRole(null); propose(removeProjectsRequests(m, ids.map(splitPair))); } },
+    // Запись — человек целиком (группа «по проекту» режется kit по массиву), поэтому
+    // «Снять» снимает допуск; убрать один проект — «Изменить» или матрица проекта.
+    { id: 'revoke', title: t('admin.macl.act.revoke'), icon: 'lucide:circle-x', run: ids => { setBulkRole(null); propose(revokeRequests(m, ids)); } },
   ] : [];
   const bulkActions: ListBulkAction[] = canWrite ? [
     { id: 'role', title: t('admin.macl.act.role'), run: ids => {
-      const subs = [...new Set(ids.map(id => splitPair(id)[0]))];
+      const subs = [...new Set(ids)];
       const first = m.grants.find(g => g.kc_sub === subs[0]);
       const role = first?.role === 'actor' ? 'viewer' : 'actor';
       setBulkRole({ subs, role });
       propose(roleRequests(m, subs, role));
     } },
-    { id: 'revoke', title: t('admin.macl.act.revokeSel'), run: ids => { setBulkRole(null); propose(removeProjectsRequests(m, ids.map(splitPair))); } },
+    { id: 'revoke', title: t('admin.macl.act.revokeSel'), run: ids => { setBulkRole(null); propose(revokeRequests(m, ids)); } },
   ] : [];
 
   return (
@@ -266,19 +275,22 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
         <span className="adm-dim">{t('admin.macl.col.owner')}</span>{' '}
         {m.owner_name ? <Pill tone="acc">{m.owner_name}</Pill> : <span className="adm-missing">{t('admin.macl.noOwner')}</span>}{' '}
         <span className="adm-dim">{t('admin.macl.col.harness')}</span>{' '}
-        {m.harness.length ? m.harness.map(h => <Pill key={h}>{data.harnessLabels[h] ?? h}</Pill>) : <span className="adm-missing">{t('admin.macl.harnessUnknown')}</span>}
+        {m.harness.length ? m.harness.map(h => <Pill key={h}><HarnessMark logo={data.harnessLogos[h]} label={data.harnessLabels[h] ?? h} />{data.harnessLabels[h] ?? h}</Pill>) : <span className="adm-missing">{t('admin.macl.harnessUnknown')}</span>}
       </p>
       <p className="adm-sub">
         <span className="adm-dim">{t('admin.macl.col.projects')}</span>{' '}
         <ValueChips value={m.projects} href={projectHref} />
       </p>
 
+      <ActivityBox machine={m} harnessLabels={data.harnessLabels} canWrite={canWrite} fetchImpl={fetchImpl} onChanged={onChanged} />
+
       <h3 className="adm-h">{t('admin.macl.grants.title', { n: m.grants.length })}</h3>
       <p className="adm-note">{t('admin.macl.grants.note')}</p>
       <div data-testid="adm-macl-grants">
         {m.grants.length === 0
           ? <EmptyState title={t('admin.macl.grants.empty')} hint={t('admin.macl.grants.emptyHint')} />
-          : <ListView config={config} data={kitData(records)} urlState={false} initial={{ group: 'project' }}
+          : <ListView config={config} data={kitData(records)} urlState={false} initial={{ group: 'projects' }}
+              valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
               budget={{ perGroup: 8 }} rowActions={rowActions} bulkActions={bulkActions} />}
       </div>
 
@@ -302,7 +314,7 @@ function MachinePassport({ machine: m, data, meSub, fetchImpl, onChanged }: {
       {right?.state === 'unknown' && (
         <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-macl-readonly">
           {t('admin.macl.right.unknown', { reason: right.reason })}{' '}
-          <button type="button" className="adm-btn" onClick={() => setProbe(p => p + 1)}>{t('admin.macl.retry')}</button>
+          <button type="button" className="adm-btn" onClick={() => (fromSlice ? onChanged() : setProbe(p => p + 1))}>{t('admin.macl.retry')}</button>
         </p>
       )}
       {canWrite && (
@@ -329,11 +341,10 @@ function GrantForm({ machine: m, data, draft, setDraft, onPreview, nameOf }: {
       hint: has ? t('admin.macl.form.already') : mine ? where : t('admin.macl.form.notInMachine'),
     };
   });
-  // TODO(SPRINT_UXR_S10_SEIDR_KIT ветка feat/kit-scope-groups): подписанные группы
-  // ScopePicker (`groups: { mine, other }`). Пока проп не влит, делим по `mine`
-  // (участники проектов машины идут первыми) и передаём проп разворотом — tsc на
-  // неизвестном пропе не падает, а после влития kit группы включатся сами.
-  const scopeGroups = { groups: { mine: t('admin.macl.form.groupMine'), other: t('admin.macl.form.groupOther') } };
+  // Подписанные группы и слова пикера — про людей, а не про проекты (kit #1249: labels;
+  // в many kit подставляет {n}).
+  const groups = { mine: t('admin.macl.form.groupMine'), other: t('admin.macl.form.groupOther') };
+  const labels = { all: t('admin.macl.form.pickAll'), search: t('admin.macl.form.pickSearch'), many: t('admin.macl.form.pickMany') };
   const mineCount = options.filter(o => o.mine).length;
   const team = (slug: string) => {
     const members = data.participation?.projects.find(p => p.slug === slug)?.members.map(x => x.kc_sub).filter(kc => kc !== m.owner_kc_sub) ?? [];
@@ -343,13 +354,13 @@ function GrantForm({ machine: m, data, draft, setDraft, onPreview, nameOf }: {
   const ready = draft.who.length > 0 && draft.projects.length > 0;
   return (
     <div className="adm-field" data-testid="adm-macl-grant">
-      <ScopePicker {...scopeGroups} label={t('admin.macl.form.who')} icon="person" options={options} value={draft.who}
+      <ScopePicker groups={groups} labels={labels} label={t('admin.macl.form.who')} icon="person" options={options} value={draft.who}
         onChange={who => setDraft({ ...draft, who })}
         state={data.participation ? 'ok' : 'error'} error={data.participationError ?? undefined}
         mine={data.participation ? 'known' : 'unknown'} mineHint={data.participationError ?? undefined} mineCount={mineCount} />
       <p className="adm-sub" data-testid="adm-macl-who">
         {draft.who.length
-          ? <>{t('admin.macl.form.chosen', { n: draft.who.length })} {draft.who.map(kc => <Pill key={kc} tone="acc">{nameOf(kc)}</Pill>)}</>
+          ? draft.who.map(kc => <Pill key={kc} tone="acc">{nameOf(kc)}</Pill>)
           : <span className="adm-missing">{t('admin.macl.form.nobody')}</span>}
       </p>
       <p className="adm-sub">
@@ -375,6 +386,87 @@ function GrantForm({ machine: m, data, draft, setDraft, onPreview, nameOf }: {
   );
 }
 
+// ── окно активности машины и harness (S7B-ACT-1) ──────────────────────────
+// Слово владелицы 11.11: «считать активной в течении — от часа после последнего вызова до суток».
+// Видят все, правят владелец машины или admin (can_write — то же правило, что у допусков).
+// Выбор → dry_run → DiffPreview «было → станет» → применить.
+
+function ActivityBox({ machine: m, harnessLabels, canWrite, fetchImpl, onChanged }: {
+  machine: Machine; harnessLabels: Record<string, string>; canWrite: boolean; fetchImpl?: typeof fetch; onChanged: () => void;
+}) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const [draft, setDraft] = useState<MachineActivity>(m.activity);
+  const [plan, setPlan] = useState<ActivityPlan | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const harnesses = [...new Set([...m.harness, ...Object.keys(m.activity.harness)])].sort();
+  const hName = (h: string) => harnessLabels[h] ?? h;
+  const hours = (n: number) => t('admin.act.hours', { n });
+  const show = (a: MachineActivity): string => [
+    `${t('admin.act.machine')}: ${a.windowH === null ? t('admin.act.default', { n: m.default_h }) : hours(a.windowH)}`,
+    ...Object.entries(a.harness).sort(([x], [y]) => x.localeCompare(y)).map(([h, n]) => `${hName(h)}: ${hours(n)}`),
+  ].join(' · ');
+  const req = (dry: boolean) => ({ machine_id: m.machine_id, window_h: draft.windowH, harness: draft.harness, ...(dry ? { dry_run: true } : {}) });
+  const run = async (dry: boolean) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const p = await postMachineActivity(req(dry), fetchImpl);
+      if (dry) setPlan(p);
+      else { setPlan(null); setDone(true); onChanged(); }
+    } catch (e) {
+      setErr(reasonOf(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const diff: DiffRow[] = plan ? [plan.kind === 'unchanged'
+    ? { id: 'act', kind: 'same', text: t('admin.act.title'), detail: show(plan.after), check: { state: 'checked' } }
+    : { id: 'act', kind: 'change', text: t('admin.act.title'), from: show(plan.before), to: show(plan.after), check: { state: 'checked' } }] : [];
+  const machineOpts = [{ value: '', label: t('admin.act.default', { n: m.default_h }) }, ...ACTIVITY_CHOICES.map(n => ({ value: String(n), label: hours(n) }))];
+  const harnessOpts = [{ value: '', label: t('admin.act.inherit') }, ...ACTIVITY_CHOICES.map(n => ({ value: String(n), label: hours(n) }))];
+  const setHarness = (h: string, v: string) => {
+    const next = { ...draft.harness };
+    if (v === '') delete next[h]; else next[h] = Number(v);
+    setDraft({ ...draft, harness: next });
+    setPlan(null);
+    setDone(false);
+  };
+  return (
+    <div className="adm-field" data-testid="adm-act" role="group" aria-label={t('admin.act.title')}>
+      <h3 className="adm-h">{t('admin.act.title')}</h3>
+      <p className="adm-note">{t('admin.act.lead')}</p>
+      <p className="adm-sub" data-testid="adm-act-now">{show(m.activity)}</p>
+      {!canWrite && <p className="adm-hint">{t('admin.act.readonly')}</p>}
+      {canWrite && (
+        <>
+          <Segmented label={t('admin.act.machine')} value={draft.windowH === null ? '' : String(draft.windowH)} options={machineOpts}
+            disabled={busy} onChange={v => { setDraft({ ...draft, windowH: v === '' ? null : Number(v) }); setPlan(null); setDone(false); }} />
+          {harnesses.map(h => (
+            <Segmented key={h} label={t('admin.act.forHarness', { h: hName(h) })}
+              value={draft.harness[h] === undefined ? '' : String(draft.harness[h])} options={harnessOpts}
+              disabled={busy} onChange={v => setHarness(h, v)} />
+          ))}
+          <div className="adm-field--btns">
+            <button type="button" className="adm-btn" data-testid="adm-act-preview" disabled={busy} onClick={() => { void run(true); }}>
+              {t('admin.act.preview')}
+            </button>
+          </div>
+          {plan && (
+            <div data-testid="adm-act-diff">
+              <DiffPreview rows={diff} onApply={() => { void run(false); }} busy={busy} label={t('admin.act.diff')} lang={lang} />
+            </div>
+          )}
+          {done && <p className="adm-sub" role="status" data-testid="adm-act-done">{t('admin.act.done')}</p>}
+        </>
+      )}
+      {err && <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-act-error">{t('admin.act.error', { reason: err })}</p>}
+    </div>
+  );
+}
+
 // ── изменение: план (dry_run) → DiffPreview → пачка → BatchUndo ───────────
 
 type Planned = { req: AccessRequest; plan: AccessPlan | null; error: { forbidden: boolean; reason: string } | null };
@@ -385,10 +477,10 @@ function summary(t: T, v: PlanView | null, labels: Record<string, string>): stri
   return `${roleWord(t, v.role)} · ${v.projects.join(', ') || '—'} · ${harn}`;
 }
 
-function toDiff(t: T, items: readonly Planned[], nameOf: (kc: string) => string, labels: Record<string, string>): DiffRow[] {
+function toDiff(t: T, items: readonly Planned[], labelOf: (req: AccessRequest) => string, labels: Record<string, string>): DiffRow[] {
   return items.map((it, i) => {
     const id = String(i);
-    const text = nameOf(it.req.kc_sub);
+    const text = labelOf(it.req);
     if (it.error) {
       return { id, kind: 'same', text, check: it.error.forbidden ? { state: 'forbidden', reason: it.error.reason } : { state: 'unverified', reason: it.error.reason } };
     }
@@ -402,15 +494,22 @@ function toDiff(t: T, items: readonly Planned[], nameOf: (kc: string) => string,
   });
 }
 
-function AccessChange({ requests, nameOf, harnessLabels, fetchImpl, onChanged, onClose }: {
+/**
+ * План → дифф → пачка → отмена для запросов допуска. Экспортирован для UC-4
+ * (S7B-20, PersonOffboard): там все строки — один человек, и строку называет
+ * машина (`labelOf`), а не имя человека.
+ */
+export function AccessChange({ requests, nameOf, labelOf, harnessLabels, fetchImpl, onChanged, onClose }: {
   requests: readonly AccessRequest[]; nameOf: (kc: string) => string; harnessLabels: Record<string, string>;
+  /** Подпись строки диффа; по умолчанию — имя человека (nameOf). */
+  labelOf?: (req: AccessRequest) => string;
   fetchImpl?: typeof fetch; onChanged: () => void; onClose: () => void;
 }) {
   const t = useAppT();
   const lang = useKitLang();
   const [items, setItems] = useState<Planned[] | null>(null);
   const [busy, setBusy] = useState(false);
-  const [batch, setBatch] = useState<{ result: BatchResult; undo: AccessRequest[] } | null>(null);
+  const [batch, setBatch] = useState<{ result: BatchResult; batches: MachineBatch[] } | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [undone, setUndone] = useState(false);
   const [undoError, setUndoError] = useState<string | null>(null);
@@ -424,25 +523,38 @@ function AccessChange({ requests, nameOf, harnessLabels, fetchImpl, onChanged, o
     return () => { alive = false; };
   }, [requests, fetchImpl]);
 
-  const rows = useMemo(() => (items ? toDiff(t, items, nameOf, harnessLabels) : []), [items, t, nameOf, harnessLabels]);
+  const rows = useMemo(
+    () => (items ? toDiff(t, items, labelOf ?? (req => nameOf(req.kc_sub)), harnessLabels) : []),
+    [items, t, nameOf, labelOf, harnessLabels],
+  );
 
   const apply = async (picked: readonly DiffRow[]) => {
     if (!items || busy) return;
     setBusy(true);
     const chosen = picked.map(r => items[Number(r.id)]);
     const failed: BatchItemFail[] = [];
-    const undo: AccessRequest[] = [];
-    for (const it of chosen) {
+    const done: MachineBatch[] = [];
+    // Серверная пачка на машину: одна запись журнала с batch_id, отмена — undo_of.
+    for (const group of batchesByMachine(chosen.map(it => it.req))) {
       try {
-        await postMachineAccess(it.req, fetchImpl);
-        undo.push(inverseRequest(it.req, it.plan!));
+        const b = await postMachineAccessBatch(group, fetchImpl);
+        done.push(b);
+        for (const it of b.items) {
+          if (it.result === 'failed') failed.push({ id: it.kc_sub, text: nameOf(it.kc_sub), reason: it.reason ?? String(it.status ?? '') });
+        }
       } catch (e) {
-        failed.push({ id: it.req.kc_sub, text: nameOf(it.req.kc_sub), reason: reasonOf(e) });
+        for (const it of group.items) failed.push({ id: it.kc_sub, text: nameOf(it.kc_sub), reason: reasonOf(e) });
       }
     }
+    const undoable = done.filter(b => b.batch_id && b.undo.length);
+    const until = undoable.map(b => b.undo_until).filter((x): x is number => x !== null);
     setBatch({
-      result: { id: `macl-${Date.now()}`, applied: chosen.length - failed.length, total: chosen.length, failed, undoUntil: undo.length ? Date.now() + UNDO_MS : null },
-      undo,
+      result: {
+        id: done.map(b => b.batch_id).filter(Boolean).join(',') || `macl-${Date.now()}`,
+        applied: chosen.length - failed.length, total: chosen.length, failed,
+        undoUntil: undoable.length && until.length ? Math.min(...until) : null,
+      },
+      batches: undoable,
     });
     setBusy(false);
     onChanged();
@@ -453,8 +565,11 @@ function AccessChange({ requests, nameOf, harnessLabels, fetchImpl, onChanged, o
     setUndoing(true);
     setUndoError(null);
     const fails: string[] = [];
-    for (const req of batch.undo) {
-      try { await postMachineAccess(req, fetchImpl); } catch (e) { fails.push(`${nameOf(req.kc_sub)}: ${reasonOf(e)}`); }
+    for (const b of batch.batches) {
+      try {
+        const r = await postMachineAccessBatch({ machine_id: b.machine_id, items: b.undo, undo_of: b.batch_id! }, fetchImpl);
+        for (const it of r.items) if (it.result === 'failed') fails.push(`${nameOf(it.kc_sub)}: ${it.reason ?? it.status ?? ''}`);
+      } catch (e) { fails.push(`${b.machine_id}: ${reasonOf(e)}`); }
     }
     setUndoing(false);
     if (fails.length) setUndoError(t('admin.macl.undoFailed', { reason: fails.join('; ') }));

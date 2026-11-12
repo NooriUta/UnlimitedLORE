@@ -152,6 +152,21 @@ final class LoreRecordValues {
         return m;
     }
 
+    /**
+     * Вид обоих концов в каждой связи — {@code fromKind}/{@code toKind} (замечание kit-сессии 11.11):
+     * клиент отбирает связь по виду цели, и угадывать вид по загруженным записям нельзя — запись,
+     * которой среди них нет, пропадала бы молча. Ключи только добавляются; {@code type} прежний.
+     */
+    static List<Map<String, Object>> withKinds(String ownType, List<Map<String, Object>> links) {
+        for (Map<String, Object> l : links) {
+            Object other = l.get("type");
+            boolean out = "out".equals(l.get("dir"));
+            l.put("fromKind", out ? ownType : other);
+            l.put("toKind", out ? other : ownType);
+        }
+        return links;
+    }
+
     /** Связь {@code links[]}: {rel, dir, id, type, title, status} (+ свойства ребра). */
     static Map<String, Object> link(String rel, String dir, String id, String type, String title, String status) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -189,7 +204,16 @@ final class LoreRecordValues {
     static final Map<String, java.util.Set<String>> UNREAD_LINK_TABS = Map.of(
         "task", java.util.Set.of("qgRecs", "insights", "refsOut", "refsIn", "publications"),
         "adr", java.util.Set.of("runbooks", "refsOut", "refsIn", "insights"),
-        "spec", java.util.Set.of("refsOut", "refsIn"));
+        "spec", java.util.Set.of("refsOut", "refsIn"),
+        // 11.11 (полнота модели рёбер): «упоминает» и публикации BRAGI объявлены у всех концов,
+        // а срезов под них нет — вкладка честно говорит «не проверено», а не «0».
+        "sprint", java.util.Set.of("refsOut", "refsIn", "publications"),
+        "release", java.util.Set.of("refsOut", "refsIn", "publications"),
+        "decision", java.util.Set.of("refsOut", "refsIn"),
+        "question", java.util.Set.of("refsOut", "refsIn"),
+        "component", java.util.Set.of("refsOut", "refsIn"),
+        "tech", java.util.Set.of("refsOut", "refsIn"),
+        "feature", java.util.Set.of("refsOut", "refsIn"));
 
     /** Строки {@code meta.data_state} для вкладок без среза — форма та же, что у прочитанных источников. */
     static List<Map<String, Object>> unreadState(String type) {

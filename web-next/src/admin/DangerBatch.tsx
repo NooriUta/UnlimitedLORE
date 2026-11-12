@@ -34,6 +34,11 @@ export interface DangerBatchProps {
    */
   onChanged?: (what: 'applied' | 'undone') => void;
   /**
+   * Ответ сервера на применение — итог пачки по проектам (S7B-18): мастеру
+   * «проект как у похожего» нужен итог по каждому человеку, а не только факт.
+   */
+  onAnswer?: (answer: ApplyAnswer) => void;
+  /**
    * Откат прошлой пачки из журнала (S7B-13): тот же путь, но с undo_of —
    * сервер проверяет окно и в диффе, и при применении. display_name при
    * этом не уходит: имени человека журнал не знает, и затирать его kc_sub-ом нельзя.
@@ -51,7 +56,7 @@ type PlanState =
 const reasonOf = (e: unknown): string =>
   e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e);
 
-export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, undoOf }: DangerBatchProps) {
+export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, onAnswer, undoOf }: DangerBatchProps) {
   const t = useAppT();
   const nav = useAdminNav();
   const lang = useKitLang();
@@ -99,7 +104,7 @@ export function DangerBatch({ person, changes, fetchImpl, onClose, onChanged, un
     setApplying(true);
     setApplyError(null);
     postRoleBatch({ ...who, changes: send }, fetchImpl).then(
-      body => { setAnswer(parseApply(body)); setApplying(false); onChanged?.('applied'); },
+      body => { const a = parseApply(body); setAnswer(a); setApplying(false); onAnswer?.(a); onChanged?.('applied'); },
       (e: unknown) => { setApplyError(reasonOf(e)); setApplying(false); },
     );
   };

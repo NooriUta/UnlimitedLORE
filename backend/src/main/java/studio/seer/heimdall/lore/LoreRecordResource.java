@@ -70,6 +70,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "tech" -> new Source("tech_by_id", "id", false);
             case "feature" -> new Source("uc_by_id", "id", false);
             // S4-29 (53а): паспорт проекта; ключ — slug «владелец/репозиторий».
+            // S4-PRODUCTS-NODE: паспорт продукта; ключ — код статьи словаря product.
+            case "product" -> new Source("product_by_id", "code", false);
             case "project" -> new Source("project_by_id", "project", false);
             default -> null;
         };
@@ -225,6 +227,8 @@ public class LoreRecordResource extends LoreResourceBase {
         }
         dataState.add(LoreRecordDataState.version(versionError));
         Map<String, Object> rec = recordHead(type, id, (String) values.get("title"), status, version);
+        // Вид обоих концов в каждой связи (fromKind/toKind) — клиент не угадывает его по записям.
+        LoreRecordValues.withKinds(type, links);
         Map<String, Object> out = envelope(rec, values, parts, links,
             LoreRecordPerms.of(type, role, identified, status, openTasks, specStatuses(type)), facts, type, blocks,
             dataState);

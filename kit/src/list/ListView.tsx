@@ -25,6 +25,7 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
+import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
 import { Kbd } from '../elements/Kbd';
@@ -65,7 +66,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { useNarrow } from '../core/narrow';
 import { ProgressCell } from './progress';
 import { SumCell, colKey } from './sum';
-import { FreshCell, useMinuteNow } from './fresh';
+import { FreshCell, freshThresholdsFor, useMinuteNow } from './fresh';
 import {
   CHIPS_INLINE, CHIPS_INLINE_NARROW, DEFAULT_LIST_STATE, LIST_BUDGET, applyFilters, fieldValue,
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
@@ -93,6 +94,8 @@ import { GroupMenu } from './GroupMenu';
 import { SortMenu } from './SortMenu';
 import { TimelineLanes } from '../views/timeline';
 import { CalendarMonth } from '../views/calendar';
+import { LibraryView } from '../views/library/LibraryView';
+import type { LibraryDoc, LibraryGroup } from '../views/library/libraryModel';
 import { TreeView } from '../views/tree';
 import type { RecordPlacement } from '../record/RecordDock';
 import { MIN_COL_W, clampWidth, readWidths, widthsFor, writeWidths, type ColumnWidths, type WidthStore } from './columnWidths';
@@ -270,6 +273,12 @@ export interface ListViewProps {
   /** Иконки видов (вид → слаг game-icons). Задаёт приложение: иконки — из канона LORE v1 (S4-25). */
   viewIcons?: Partial<Record<ListViewKind, string>>;
   /**
+   * Вид «Библиотека» (K2-VIEW-LIBRARY): группы документов по отфильтрованным записям
+   * строит приложение (кто владелец, какие виды, что значит «устарел» — K-14). Нет —
+   * вид, выбранный адресом, говорит словами, что не задан.
+   */
+  library?: { groups: (records: readonly KitRecord[]) => LibraryGroup[]; renderBody?: (doc: LibraryDoc) => ReactNode; selected?: string; onSelect?: (id: string) => void };
+  /**
    * Личная ширина колонок (S4-35, «ширина личная, набор командный»). Задано —
    * у заголовков появляются ручки, ширина живёт в личном хранилище и НЕ идёт в
    * адрес: ссылкой делятся, а ширина своя. Не задано — ручек нет: показывать
@@ -356,7 +365,7 @@ const COLS_LOCKED = 'title+id';
  */
 type FeedLevel = 'flat' | 'top' | 'under';
 
-const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar'];
+const VIEWS_RENDERED: ListViewKind[] = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar', 'library'];
 /** Ключ группы «Закрытые N» (S4-27): не значение поля, с ними не столкнётся. */
 const CLOSED_KEY = '__closed__';
 
@@ -402,19 +411,21 @@ function useLabels(config: KitConfig, lang: KitLang) {
     // Подписи — общие с дорожками доски и таймлайна (groupLabel, S4-06).
     const keyTitle = (key: string): string => groupKeyTitle(config, lang, key);
     const valueTitle = (key: string, v: string): string => fieldValueTitle(config, lang, key, v);
-    return { statuses, keyTitle, valueTitle };
+    // Статус строки — по её виду (statuses.byKind), иначе общий словарь.
+    const statusOf = (code: string, kind?: string) => statusItemFor(config.statuses, code, kind);
+    return { statuses, statusOf, keyTitle, valueTitle };
   }, [config, lang]);
 }
 
 type Labels = ReturnType<typeof useLabels>;
 
-function StatusCell({ code, labels }: { code: string; labels: Labels }) {
-  const s = labels.statuses.get(code);
+function StatusCell({ code, kind, labels }: { code: string; kind?: string; labels: Labels }) {
+  const s = labels.statusOf(code, kind);
   const style = { '--st-c': s?.color ?? 'var(--t3)' } as CSSProperties;
   return (
     <span className={`sk-list__status${s ? '' : ' is-unknown'}`} style={style} data-status={code}>
       <GameIcon slug={s?.icon ?? 'help'} size={14} />
-      <span>{labels.valueTitle('status', code)}</span>
+      <span>{s?.title ?? labels.valueTitle('status', code)}</span>
     </span>
   );
 }
@@ -480,7 +491,7 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, viewIcons, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -1425,7 +1436,7 @@ export function ListView({
       case 'title+id': return <><Title r={r} href={href} onOpen={onOpen} /> <Pill variant="id">{r.id}</Pill></>;
       case 'title': return <Title r={r} href={href} onOpen={onOpen} />;
       case 'id': return <Pill variant="id">{r.id}</Pill>;
-      case 'status': return <StatusCell code={r.status} labels={labels} />;
+      case 'status': return <StatusCell code={r.status} kind={r.kind} labels={labels} />;
       case 'kind': return labels.valueTitle('kind', r.kind);
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
       case 'updated_at': return <DayCell iso={r.updated_at} badTitle={t('kit.fmt.badDate')} />;
@@ -1440,7 +1451,7 @@ export function ListView({
         // list.fresh[<поле>]; «времени нет» словами, а не «давно».
         if (col.startsWith('fresh:')) {
           const f = col.slice(6);
-          return <FreshCell value={fieldValue(r, f)} now={freshNow} thresholds={config.list?.fresh?.[f]} />;
+          return <FreshCell value={fieldValue(r, f)} now={freshNow} thresholds={freshThresholdsFor(config.list?.fresh?.[f], r)} />;
         }
         // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
         // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это
@@ -1816,7 +1827,7 @@ export function ListView({
               нет. У записи без тела всё как было. */}
           {(withStatus || (!bodyNode && feedBecause(r))) && (
             <span className="sk-feed__meta">
-              {withStatus && <StatusCell code={r.status} labels={labels} />}
+              {withStatus && <StatusCell code={r.status} kind={r.kind} labels={labels} />}
               {!bodyNode && feedBecause(r)}
             </span>
           )}
@@ -1935,10 +1946,19 @@ export function ListView({
       : <EmptyState title={t('kit.list.timeline.noConfig')} />;
   } else if (view === 'calendar') {
     // Календарь (K2-VIEW-CALENDAR, прототип утверждён 11.11.2026): те же отфильтрованные записи.
+    // Месяц и поле даты — в состоянии списка, а значит в адресе (lm, lcd): ссылкой делятся тем же видом.
     const cal = listCfg?.calendar;
+    const pick = cal?.dates?.find(d => d.date === state.calDate) ?? cal?.dates?.find(d => d.date === cal.date) ?? cal?.dates?.[0];
     body = cal
-      ? <CalendarMonth config={config} records={filtered} date={cal.date} href={href} onOpen={onOpen} narrow={narrow} />
+      ? <CalendarMonth config={config} records={filtered} date={pick?.date ?? cal.date} end={pick ? pick.end : cal.end} dates={cal.dates}
+          onDate={d => update({ calDate: d })} month={state.month ?? undefined} onMonth={m => update({ month: m })} href={href} onOpen={onOpen} narrow={narrow} />
       : <EmptyState title={t('kit.list.calendar.noConfig')} />;
+  } else if (view === 'library') {
+    // Библиотека — те же отфильтрованные записи; поиск — текст списка (lt), фильтр — llf.
+    body = library
+      ? <LibraryView groups={library.groups(filtered)} href={href} renderBody={library.renderBody} selected={library.selected} onSelect={library.onSelect}
+          query={state.text} onQuery={q => update({ text: q })} filter={state.libFilter ?? 'all'} onFilter={f => update({ libFilter: f })} narrow={narrow} />
+      : <EmptyState title={t('kit.list.library.noConfig')} />;
   } else if (view === 'tree') {
     // Дерево (S4-22): иерархия по list.tree над теми же отфильтрованными записями.
     body = <TreeView config={config} data={{ ...data, records: filtered }} href={href} onOpen={onOpen} />;

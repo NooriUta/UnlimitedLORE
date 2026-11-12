@@ -35,10 +35,44 @@ class LoreRecordSnapshotTest {
     static final Map<String, Map<String, Object>> ROWS = new LinkedHashMap<>();
 
     /** Типы, рождённые после перевода на общий сборщик: снимка «до» у них нет. */
-    static final List<String> POST_REFACTOR = List.of("project");
+    static final List<String> POST_REFACTOR = List.of("project", "product");
+
+    /**
+     * Значения, которые общий сборщик отдаёт СВЕРХ снимка — поля, заведённые после рефакторинга
+     * (S4-PRODUCTS-NODE: «Продукты» компонента, IN_PRODUCT). Снимок «до» их не знал; сверка идёт
+     * без них, а само значение проверяет ProductPassportTest. Список явный: молча расширить
+     * значения типа нельзя.
+     */
+    static final Map<String, List<String>> ADDED_AFTER = Map.of("component", List.of("products"));
+
+    /** Значения сборщика без полей, заведённых после снимка ({@link #ADDED_AFTER}). */
+    static Map<String, Object> sansAdded(String type, Map<String, Object> v) {
+        Map<String, Object> out = new LinkedHashMap<>(v);
+        for (String k : ADDED_AFTER.getOrDefault(type, List.of())) out.remove(k);
+        return out;
+    }
+
+    /**
+     * Ключи связи, которые фасад добавляет СВЕРХ снимка: вид обоих концов (fromKind/toKind,
+     * LoreRecordValues.withKinds, #1265). Снимок «до» их не знал; сверка идёт без них, а их
+     * значения проверяет {@link #addedLinkKeysCarryKindsOfBothEnds()}. Список явный: снимаются
+     * только эти ключи, любой другой лишний или пропавший ключ связи по-прежнему роняет сверку.
+     */
+    static final List<String> LINK_KEYS_ADDED_AFTER = List.of("fromKind", "toKind");
+
+    /** Связи без ключей, заведённых после снимка ({@link #LINK_KEYS_ADDED_AFTER}); порядок прочих ключей сохранён. */
+    static List<Map<String, Object>> sansAddedLinkKeys(List<? extends Map<String, ?>> links) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, ?> l : links) {
+            Map<String, Object> c = new LinkedHashMap<>(l);
+            for (String k : LINK_KEYS_ADDED_AFTER) c.remove(k);
+            out.add(c);
+        }
+        return out;
+    }
 
     static {
-        ROWS.put("sprint", m("sprint_id", "SPRINT_SNAP", "name", "Спринт снимка", "status_raw", "✅ DONE — закрыт",
+        ROWS.put("sprint",m("sprint_id", "SPRINT_SNAP", "name", "Спринт снимка", "status_raw", "✅ DONE — закрыт",
             "context_md", "ctx", "outcome_md", "итог", "priority", "P1", "git_projects", List.of("AIDA/UnlimitedLORE", "x/y"),
             "components", List.of("CMP-A"), "release_ids", List.of("v1.0.0"), "milestone_ids", List.of("M-1"),
             "planned_start_date", "2026-11-01", "planned_end_date", "2026-11-20", "created_date", "2026-10-30T10:11:12Z",
@@ -153,7 +187,7 @@ class LoreRecordSnapshotTest {
     void valuesMatchSnapshotForAllElevenTypes() {
         for (String type : ROWS.keySet())
             for (Map<String, Object> row : variants(ROWS.get(type)))
-                assertSnapshot(Legacy.values(type, row), LoreRecordValues.values(type, row), type + " values " + row);
+                assertSnapshot(Legacy.values(type, row), sansAdded(type, LoreRecordValues.values(type, row)), type + " values " + row);
     }
 
     @Test
@@ -161,6 +195,36 @@ class LoreRecordSnapshotTest {
         for (String type : ROWS.keySet())
             for (Map<String, Object> row : variants(ROWS.get(type)))
                 assertSnapshot(Legacy.rowLinks(type, row), LoreRecordValues.rowLinks(type, row), type + " links " + row);
+    }
+
+    /**
+     * Связи так, как их отдаёт фасад (с fromKind/toKind, #1265), сверяются со снимком без
+     * добавочных ключей — тем же путём, что и живая сверка LoreRecordSnapshotLiveDbTest.
+     */
+    @Test
+    void facadeLinksMatchSnapshotWithoutAddedKeys() {
+        for (String type : ROWS.keySet())
+            for (Map<String, Object> row : variants(ROWS.get(type))) {
+                List<Map<String, Object>> facade = LoreRecordValues.withKinds(type, LoreRecordValues.rowLinks(type, row));
+                assertSnapshot(Legacy.rowLinks(type, row), sansAddedLinkKeys(facade), type + " facade links " + row);
+            }
+    }
+
+    /** Добавочные ключи на месте и верны; сторож строг: лишний чужой ключ сверку роняет. */
+    @Test
+    void addedLinkKeysCarryKindsOfBothEnds() {
+        List<Map<String, Object>> facade = LoreRecordValues.withKinds("sprint",
+            LoreRecordValues.rowLinks("sprint", ROWS.get("sprint")));
+        assertFalse(facade.isEmpty(), "положительный контроль: у спринта снимка связи есть");
+        for (Map<String, Object> l : facade) {
+            boolean out = "out".equals(l.get("dir"));
+            assertEquals(out ? "sprint" : l.get("type"), l.get("fromKind"), "fromKind " + l);
+            assertEquals(out ? l.get("type") : "sprint", l.get("toKind"), "toKind " + l);
+        }
+        List<Map<String, Object>> extra = sansAddedLinkKeys(facade);
+        extra.get(0).put("surprise", "x");
+        assertNotEquals(String.valueOf(Legacy.rowLinks("sprint", ROWS.get("sprint"))), String.valueOf(extra),
+            "ключ вне LINK_KEYS_ADDED_AFTER не снимается — сверка его видит");
     }
 
     @Test
@@ -441,6 +505,8 @@ class LoreRecordSnapshotTest {
             v.put("tech", arr(r.get("tech")));
             v.put("adrs", arr(r.get("adrs")));
             v.put("specs", arr(r.get("specs")));
+            // «Продукты» компонента (IN_PRODUCT) заведены после снимка — снимок их не знает,
+            // сверка снимает их со стороны сборщика (ADDED_AFTER).
             return v;
         }
 

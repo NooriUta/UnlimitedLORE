@@ -137,16 +137,17 @@ describe('паспорт v2 — управление связями', () => {
     tab.click();
   };
 
-  it('связь с путём привязки — форма есть, хотя вид UML это запрещал', async () => {
+  // S4-24: цель — выбором с поиском из среза её типа (у ADR — adrs), а не вводом кода.
+  it('связь с путём привязки — выбор цели есть, хотя вид UML это запрещал', async () => {
     show(net(() => json(withRelation(true))));
     await openDeps();
-    await waitFor(() => expect(screen.getByRole('textbox')).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('searchbox')).toBeTruthy());
   }, 15000);
 
   it('связь без пути — формы нет: иначе человек введёт код и получит UNKNOWN_RELATION', async () => {
     show(net(() => json(withRelation(false))));
     await openDeps();
-    await waitFor(() => expect(document.querySelector('.sk-rel__add')).toBeNull());
+    await waitFor(() => expect(document.querySelector('.sk-rel__add, .sk-rel__pick')).toBeNull());
   }, 15000);
 
   it('сервер отказал по роли — причина напечатана, а не проглочена', async () => {
@@ -156,16 +157,17 @@ describe('паспорт v2 — управление связями', () => {
       if (url.pathname.startsWith('/lore/record/')) return json(withRelation(true));
       if (url.pathname === '/lore/history') return json({ type: 'sprint', id: 'SP', rows: [], attribution: { ok: true } });
       if (url.pathname === '/lore/me/drafts') return json({ drafts: [] });
+      if (url.pathname === '/lore/slice/adrs') return json({ rows: [{ adr_id: 'ADR-B', name: 'Второй' }] });
       return json({ rows: [] });
     }) as unknown as typeof fetch;
     show(http);
     await openDeps();
-    const box = await screen.findByRole('textbox', {}, { timeout: 8000 });
-    fireEvent.change(box, { target: { value: 'SPRINT_B' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Привязать' }));
+    const box = await screen.findByRole('searchbox', {}, { timeout: 8000 });
+    fireEvent.change(box, { target: { value: 'adr-b' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Привязать.*ADR-B/ }));
     await waitFor(() => expect(document.body.textContent).toMatch(/роль администратора/));
-    // Код не потерян: его не придётся набирать заново.
-    expect((box as HTMLInputElement).value).toBe('SPRINT_B');
+    // Поиск не потерян: выбор можно повторить, не набирая заново.
+    expect((box as HTMLInputElement).value).toBe('adr-b');
   }, 15000);
 });
 

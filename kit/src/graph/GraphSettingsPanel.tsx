@@ -96,6 +96,14 @@ export function GraphSettingsPanel({ lang, settings: s, onChange, types }: Props
 
       <details open className="sk-gx-panel__sec">
         <summary>{kitT(lang, 'kit.graph.display')}</summary>
+        <div className="sk-gx-panel__radios" role="radiogroup" aria-label={kitT(lang, 'kit.graph.colorBy')}>
+          {(['type', 'depth'] as const).map(v => (
+            <label key={v} className="sk-gx-panel__check">
+              <input type="radio" name={`gx-color-${searchId}`} checked={s.colorBy === v} onChange={() => onChange({ ...s, colorBy: v })} />
+              <span>{kitT(lang, v === 'type' ? 'kit.graph.colorByType' : 'kit.graph.colorByDepth')}</span>
+            </label>
+          ))}
+        </div>
         <label className="sk-gx-panel__check">
           <input type="checkbox" checked={s.arrows} onChange={() => onChange({ ...s, arrows: !s.arrows })} />
           <span>{kitT(lang, 'kit.graph.arrows')}</span>

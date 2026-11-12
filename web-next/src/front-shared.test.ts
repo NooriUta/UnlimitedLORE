@@ -159,6 +159,16 @@ describe('общий шаблон nginx на оба фронта', () => {
     }
   });
 
+  // S4-STALE-CHUNK: после выкатки старых хэшированных чанков нет, а SPA-фолбэк
+  // отдавал на их адрес index.html (200, text/html) — браузер получал HTML
+  // вместо JS. Отсутствующий /assets/* обязан быть честным 404.
+  it('отсутствующий /assets/* — 404, а не index.html (SPA-фолбэк его не накрывает)', () => {
+    const t = template();
+    const block = t.split('location /assets/ {')[1]?.split('}')[0] ?? '';
+    expect(block).toMatch(/try_files \$uri =404;/);
+    expect(block).not.toMatch(/index\.html/);
+  });
+
   it('скрипт старта метит лог v2, а вывод v1 оставляет прежним «[LORE]»', () => {
     const sh = read(resolve(repo, 'docker/30-lore-public-url.sh'));
     expect(sh).toContain('P="[LORE${LORE_FRONT:+ $LORE_FRONT}]"');

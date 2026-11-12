@@ -17,6 +17,8 @@
 .adm-table th, .adm-table td { padding: 4px 8px; border-bottom: 1px solid var(--bd); text-align: left; vertical-align: top; }
 .adm-table thead th { color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; }
 .adm-name { display: block; color: var(--t1); font-weight: 600; }
+/* S7B-22: маленький официальный знак harness рядом с именем агента; монохромный — цвет текста. */
+.adm-hmark { display: inline-flex; align-items: center; vertical-align: -0.125em; margin-right: 4px; color: var(--t2); }
 .adm-id, .adm-mono { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); }
 .adm-role { color: var(--t3); font-size: var(--fs-xs); }
 .adm-missing { color: var(--wrn); font-size: var(--fs-xs); }

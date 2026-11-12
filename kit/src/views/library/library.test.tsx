@@ -82,3 +82,19 @@ describe('вид «Библиотека»', () => {
     expect(screen.getByText('Ничего не нашлось по «нет такого»')).toBeTruthy();
   });
 });
+
+// Долг, найденный при подключении в web-next (серверная сессия 11.11.2026): поиск и
+// фильтр должны держаться в адресе — значит, у вида они управляемые, с колбэками.
+describe('библиотека: поиск и фильтр управляемые', () => {
+  it('задан query/filter снаружи — вид их показывает; ввод и чип уходят в колбэки', () => {
+    const onQuery = vi.fn();
+    const onFilter = vi.fn();
+    render(<LibraryView groups={groups} narrow={false} query="гейт" onQuery={onQuery} filter="stale" onFilter={onFilter} />);
+    expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('гейт');
+    expect(screen.getAllByRole('button', { name: /^(ADR|DOC)-/ }).map(b => b.getAttribute('data-doc-id'))).toEqual(['ADR-3']);
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'гейты' } });
+    expect(onQuery).toHaveBeenLastCalledWith('гейты');
+    fireEvent.click(screen.getByRole('button', { name: /^все/ }));
+    expect(onFilter).toHaveBeenLastCalledWith('all');
+  });
+});
