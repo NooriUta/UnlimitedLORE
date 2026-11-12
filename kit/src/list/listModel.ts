@@ -146,10 +146,20 @@ export function groupRecords(
 ): ListGroup[] {
   if (!by) return [{ key: '', records: [...records] }];
   const map = new Map<string, KitRecord[]>();
-  for (const r of records) {
-    const k = valueKey(fieldValue(r, by));
+  const put = (k: string, r: KitRecord) => {
     const arr = map.get(k);
-    if (arr) arr.push(r); else map.set(k, [r]);
+    if (!arr) map.set(k, [r]);
+    else if (!arr.includes(r)) arr.push(r);
+  };
+  for (const r of records) {
+    const v = fieldValue(r, by);
+    // Поле-массив — многозначная ось (долг kit из ACL-3, 11.11.2026): запись в
+    // КАЖДОЙ группе своего значения, как у разреза по связи; пустой массив —
+    // «без значения». Раньше массив ключевался целиком, и [A, B] давал группу «A, B».
+    if (Array.isArray(v)) {
+      if (v.length === 0) put('', r);
+      else for (const x of v) put(valueKey(x), r);
+    } else put(valueKey(v), r);
   }
   let groups: ListGroup[] = [...map].map(([key, rs]) => ({ key, records: rs }));
   if (by === 'status') {
@@ -161,9 +171,12 @@ export function groupRecords(
   groups.sort((a, b) => b.records.length - a.records.length || a.key.localeCompare(b.key));
   if (groups.length > budget.maxGroups) {
     const rest = groups.slice(budget.topGroups);
+    // Запись многозначного поля могла оказаться в нескольких хвостовых группах — без дублей.
+    const seen = new Set<string>();
+    const merged = rest.flatMap(g => g.records).filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true)));
     groups = [
       ...groups.slice(0, budget.topGroups),
-      { key: '\u0000other', records: rest.flatMap(g => g.records), other: true, groupCount: rest.length },
+      { key: '\u0000other', records: merged, other: true, groupCount: rest.length },
     ];
   }
   return groups;
@@ -217,7 +230,7 @@ export function shownOf(meta: KitMeta | null | undefined, loaded: number, shown:
 
 /* ---------- состояние в URL ---------- */
 
-export type ListViewKind = 'list' | 'cards' | 'board' | 'tree' | 'feed' | 'timeline' | 'calendar';
+export type ListViewKind = 'list' | 'cards' | 'board' | 'tree' | 'feed' | 'timeline' | 'calendar' | 'library';
 
 /** Условие фильтра поля (S4-05): есть / нет / пусто / не пусто. */
 export type FilterOp = 'any' | 'not' | 'empty' | 'nonempty';
@@ -237,6 +250,12 @@ export interface ListState {
   group2?: string | null;
   /** Режим закрытых (S4-27); null — из конфига (list.showClosed), иначе «все». */
   closed?: KitShowClosed | null;
+  /** Месяц календаря YYYY-MM (K2-VIEW-CALENDAR); нет — текущий. */
+  month?: string | null;
+  /** Поле даты календаря из list.calendar.dates; нет — list.calendar.date. */
+  calDate?: string | null;
+  /** Фильтр «Библиотеки»: все / актуальные / устарели (K2-VIEW-LIBRARY); нет — «все». */
+  libFilter?: 'all' | 'fresh' | 'stale' | null;
 }
 
 export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
@@ -244,9 +263,9 @@ export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group:
 /**
  * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
  * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
- * lg2 (подгруппа, S4-26).
+ * lg2 (подгруппа, S4-26), lm (месяц календаря), lcd (поле даты календаря), llf (фильтр библиотеки).
  */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2'] as const;
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd', 'llf'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
@@ -262,6 +281,9 @@ export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[numb
     lt: text.trim() ? text : null,
     lc: s.closed ?? null,
     lg2: s.group && s.group2 && s.group2 !== s.group ? s.group2 : null,
+    lm: s.month ?? null,
+    lcd: s.calDate ?? null,
+    llf: s.libFilter && s.libFilter !== 'all' ? s.libFilter : null,
   };
 }
 
@@ -296,7 +318,7 @@ export function readListState(p: URLSearchParams): ListState {
     } catch { /* битый URL — условия по умолчанию */ }
   }
   return {
-    view: lv === 'board' || lv === 'tree' || lv === 'cards' || lv === 'feed' || lv === 'timeline' ? lv : 'list',
+    view: lv === 'board' || lv === 'tree' || lv === 'cards' || lv === 'feed' || lv === 'timeline' || lv === 'calendar' || lv === 'library' ? lv : 'list',
     quick: p.get('lq'),
     group: p.get('lg'),
     sort: ls ? { key: ls.replace(/^-/, ''), dir: ls.startsWith('-') ? 'desc' : 'asc' } : null,
@@ -305,6 +327,9 @@ export function readListState(p: URLSearchParams): ListState {
     text: p.get('lt') ?? '',
     closed: isShowClosed(p.get('lc')) ? (p.get('lc') as KitShowClosed) : undefined,
     group2: p.get('lg2') ?? undefined,
+    month: /^\d{4}-(0[1-9]|1[0-2])$/.test(p.get('lm') ?? '') ? p.get('lm')! : undefined,
+    calDate: p.get('lcd') ?? undefined,
+    libFilter: p.get('llf') === 'fresh' || p.get('llf') === 'stale' ? (p.get('llf') as 'fresh' | 'stale') : undefined,
   };
 }
 

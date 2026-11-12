@@ -340,4 +340,111 @@ export function registerLoreRead(server: McpServer): void {
     },
   );
 
+  // SPRINT_UXR_S7B_ADMIN/S7B-ACL-2 · S7B-ACL-3 (приоритет 0 владелицы 11.11.2026): машины и
+  // допуски — из MCP, а не только из админки. Тонкая обёртка над срезом machine_acl:
+  // у среза фильтр по client_id, а человек знает машину по machine_id — учётка машины
+  // всегда minilore-link-<machine_id> (ADR-MINILORE-007 В4, MACHINE_CLIENT_PREFIX сервера).
+  server.tool(
+    'machine_acl',
+    'Who may see a miniLORE machine, and which machines a person may see (slice machine_acl, S7B-ACL-1/2). ' +
+      'One row per machine (actor with client_id minilore-link-<machine_id>): owner_kc_sub/owner_display_name and ' +
+      'parallel arrays grant_kc_subs / grant_display_names / grant_roles / grant_projects / grant_harnesses / ' +
+      'grant_granted_by / grant_granted_at (index i = one MACHINE_ACCESS grant). ' +
+      'Filter by machine_id (or its client_id) → that machine; a person absent from owner and grants is CLOSED, not "empty". ' +
+      'Filter by kc_sub → machines where the person is owner or granted. No filter → all machines. ' +
+      'Change access with machine_access_set; bind a machine account to its owner with machine_owner_set.',
+    {
+      machine_id: z.string().optional().describe('machine id, e.g. "lorcetus" — queried as client_id "minilore-link-<machine_id>"'),
+      client_id:  z.string().optional().describe('machine account client_id, e.g. "minilore-link-lorcetus" (alternative to machine_id; if both differ, machine_id wins and _warning says so)'),
+      kc_sub:     z.string().optional().describe('Keycloak subject of a person — machines they own or are granted'),
+    },
+    async ({ machine_id, client_id, kc_sub }) => {
+      try {
+        const params: Record<string, string> = {};
+        const fromMachine = machine_id ? `minilore-link-${machine_id}` : undefined;
+        if (fromMachine) params.client_id = fromMachine;
+        else if (client_id) params.client_id = client_id;
+        if (kc_sub) params.kc_sub = kc_sub;
+        // Оба фильтра машины и они расходятся — не отказ и не молчание: machine_id главнее,
+        // расхождение названо в ответе.
+        const warning = fromMachine && client_id && client_id !== fromMachine
+          ? `client_id="${client_id}" ignored: machine_id="${machine_id}" wins (queried client_id "${fromMachine}")`
+          : undefined;
+        const { rows, meta, page } = await loreSliceWithMeta('machine_acl', Object.keys(params).length ? params : undefined);
+        if (!meta && !page && !warning) return json(rows);
+        return json({
+          rows,
+          ...(page ? { _page: page } : {}),
+          ...(meta ? { _truncated: meta.truncated, _limit: meta.limit, _hint: meta.hint } : {}),
+          ...(warning ? { _warning: warning } : {}),
+        });
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  // S7B-15, ADR-MINILORE-007: справочник harness (чем запускается агент: claude-code, codex…).
+  // Читается срезом dictionary; пишется существующим dict_set(dict_type:"harness").
+  server.tool(
+    'harness_list',
+    'Harness dictionary (dict_type "harness", ADR-MINILORE-007): the agent runtimes a machine grant or an agent ' +
+      'binding may name (machine_access_set.harnesses, machine_owner_set.harness). Rows: code, label_ru, label_en, ' +
+      'icon, sort_order, is_active. Add or amend values with dict_set(dict_type:"harness") — dictionaries are human-only.',
+    {},
+    async () => {
+      try {
+        const { rows } = await loreSliceWithMeta('dictionary', { dict_type: 'harness' });
+        return json(rows);
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  // SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04 (11.11.2026): граф одним запросом — тот же GET /lore/graph,
+  // что у GraphExplorer. Тонкая обёртка: параметры как есть, проект из LORE_ACTIVE_PROJECT
+  // не подставляется (скоуп вызывающего режет сервер), ответ — целиком вместе с meta.
+  server.tool(
+    'graph',
+    'LORE graph in ONE call (GET /lore/graph, SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04): nodes[{id,type,title,status,status_category,depth}] + ' +
+      'edges[{from,rel,to,kind?}] + meta. TWO MODES, exactly one: (1) neighborhood of a record — type + id, depth 1..4 ' +
+      '(BFS both directions; depth 4 is wide — narrow it with rels), (2) slice — scope=all|project:<slug>|component:<id> ' +
+      '(the records plus ONE ring of neighbours). rels = CSV of edge types (e.g. "DEPENDS_ON,JUSTIFIED_BY"): the walk goes ONLY ' +
+      'through those edges at every step, a path never passes through an edge of another type. types = CSV of node types (task, adr, ' +
+      'decision, spec, sprint, …) — other types are neither returned nor walked through. structural=true adds the structural layer ' +
+      '(PART_OF, BELONGS_TO_PROJECT, … marked kind:"structural"; off by default). limit caps nodes (neighborhood default 500, slice 10000, ' +
+      'max 20000). READ meta FIRST: complete:false / truncated:true + capped_at:N mean the graph is NOT the whole neighborhood; ' +
+      'dangling[{id,rel,dir,reason: missing|hidden_by_scope,count}] names cut ends; hidden_by_scope counts nodes outside the caller\'s ' +
+      'projects; frontier_edges:"not_read" — edges between two last-level nodes are not read. meta.rels_available[{rel,count}] lists ' +
+      'edge types of the neighborhood at the requested depth WITHOUT the rels filter (count desc, then rel) — use it to pick rels; ' +
+      'meta.by_depth {"1":n,"2":n,…} counts nodes per level (root excluded, an empty level is 0).',
+    {
+      type: z.string().optional().describe('neighborhood: record type, e.g. "adr", "task", "sprint", "spec", "decision"'),
+      id: z.string().optional().describe('neighborhood: business key, e.g. "ADR-LORE-038" or "SPRINT_X/CO-11" for a task'),
+      depth: z.number().int().min(1).max(4).optional().describe('neighborhood: rings to walk, 1..4 (default 1)'),
+      scope: z.string().optional().describe('slice instead of a neighborhood: all | project:<slug> | component:<id>'),
+      rels: z.string().optional().describe('CSV of edge types to walk ONLY, e.g. "DEPENDS_ON"; see meta.rels_available'),
+      types: z.string().optional().describe('CSV of node types to keep, e.g. "adr,decision"'),
+      structural: z.boolean().optional().describe('include structural edges (PART_OF, BELONGS_TO_PROJECT, …); default false'),
+      limit: z.number().int().min(1).max(20000).optional().describe('node cap; neighborhood default 500, slice 10000'),
+    },
+    async ({ type, id, depth, scope, rels, types, structural, limit }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (type !== undefined) params.type = type;
+        if (id !== undefined) params.id = id;
+        if (depth !== undefined) params.depth = String(depth);
+        if (scope !== undefined) params.scope = scope;
+        if (rels !== undefined) params.rels = rels;
+        if (types !== undefined) params.types = types;
+        if (structural !== undefined) params.structural = String(structural);
+        if (limit !== undefined) params.limit = String(limit);
+        return json(await loreGet('/lore/graph', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
 }

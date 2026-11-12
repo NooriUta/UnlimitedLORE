@@ -10,6 +10,7 @@
     "run_block": "allow",
     "search": "allow",
     "search_similar": "allow",
+    "graph": "allow",
     "task_*": "allow",
     "release_*": "allow",
     "tech_*": "allow",

@@ -8,7 +8,7 @@
 // их подписи и цвета называет приложение.
 
 /** Узел: код, тип (ключ в `types`), подпись. */
-export interface GxNode { id: string; type: string; title?: string }
+export interface GxNode { id: string; type: string; title?: string; /** Шаг от записи (0 — сама запись) — для подсветки уровней. */ depth?: number }
 /** Ребро «откуда → куда», тип связи и необязательный вид (hard, soft…). */
 export interface GxEdge { from: string; to: string; rel: string; kind?: string }
 /** Как показать тип узла или связи: подпись словом и цвет (токен или CSS). */
@@ -28,7 +28,8 @@ export interface GxSettings {
   orphans: boolean;
   /** Группы — первая подошедшая красит узел. */
   groups: GxGroup[];
-  /** Отображение. */
+  /** Отображение. Цвет узла: по типу записи или по уровню (шагу от записи). */
+  colorBy: 'type' | 'depth';
   arrows: boolean;
   /** Порог подписей 0…1: 0 — подписи всегда, 1 — только при сильном приближении. */
   labels: number;
@@ -44,7 +45,7 @@ export interface GxSettings {
 /** Значения по умолчанию — как у Обсидиана (сила центра ~0.5, отталкивание 10, длина связи 250). */
 export const GX_DEFAULTS: GxSettings = Object.freeze({
   search: '', hiddenTypes: [], orphans: true, groups: [],
-  arrows: false, labels: 0.5, nodeSize: 1, linkWidth: 1,
+  colorBy: 'type', arrows: false, labels: 0.5, nodeSize: 1, linkWidth: 1,
   center: 0.5, repel: 10, linkForce: 1, linkDistance: 250,
 }) as GxSettings;
 
@@ -53,6 +54,9 @@ export const GX_RANGES = {
   labels: [0, 1, 0.05], nodeSize: [0.2, 3, 0.1], linkWidth: [0.2, 3, 0.1],
   center: [0, 1, 0.01], repel: [0, 20, 0.5], linkForce: [0, 1, 0.01], linkDistance: [30, 500, 10],
 } as const satisfies Record<string, readonly [number, number, number]>;
+
+/** Цвета уровней: 0 — сама запись, дальше — шаг за шагом (до 4, как глубина графа). */
+export const GX_DEPTH_COLORS = ['--acc', '--inf', '--suc', '--wrn', '--dng'] as const;
 
 /** Палитра групп — токены темы, а не сырые цвета. */
 export const GX_GROUP_COLORS = ['--acc', '--inf', '--suc', '--wrn', '--dng', '--t2'] as const;
@@ -75,6 +79,7 @@ export function normalizeGx(raw: unknown): GxSettings {
       ? r.groups.filter((g): g is GxGroup => !!g && typeof g === 'object'
           && typeof (g as GxGroup).query === 'string' && typeof (g as GxGroup).color === 'string')
       : [],
+    colorBy: r.colorBy === 'depth' ? 'depth' : 'type',
     arrows: typeof r.arrows === 'boolean' ? r.arrows : d.arrows,
     labels: clamp(r.labels, GX_RANGES.labels, d.labels),
     nodeSize: clamp(r.nodeSize, GX_RANGES.nodeSize, d.nodeSize),

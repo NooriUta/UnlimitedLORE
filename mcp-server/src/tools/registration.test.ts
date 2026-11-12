@@ -19,7 +19,7 @@ function fakeServer() {
 }
 
 describe('registerLoreRead', () => {
-  it('registers exactly the seven read tools under their canonical names', () => {
+  it('registers exactly the ten read tools under their canonical names', () => {
     const { server, names } = fakeServer();
     registerLoreRead(server);
     // search — SRCH-07 (ADR-LORE-033): агент ищет тем же /lore/search, что UI.
@@ -27,7 +27,10 @@ describe('registerLoreRead', () => {
     // task_shape — MT-TASK-SHAPE: форма и объём задач для статистики и BI.
     // run_block — S6-08: блок lore-query из текста записи + метаданные полноты.
     // changed — MT-MCP-CHANGED-RANGE: что изменилось за период по многим типам (/lore/changed).
-    expect(names).toEqual(['list_slices', 'query_slice', 'changed', 'run_block', 'search', 'search_similar', 'task_shape']);
+    // machine_acl, harness_list — S7B-ACL-2/3: допуски к машинам и справочник harness из MCP.
+    // graph — SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04: граф окрестности (depth 1..4, rels) или среза (/lore/graph).
+    expect(names).toEqual(['list_slices', 'query_slice', 'changed', 'run_block', 'search', 'search_similar', 'task_shape',
+      'machine_acl', 'harness_list', 'graph']);
   });
 });
 
@@ -74,7 +77,10 @@ describe('registerLoreWrite', () => {
     //   вызовами, то есть не строится вовсе)
     // + project_role_set (DS-1 — выдача проектной роли из MCP; бэкенд открыт
     //   только профилю full, D-2026-LORE-FULL-WRITES-PROJECT-ROLES)
-    expect(names).toHaveLength(85);
+    // + machine_access_set, machine_owner_set (S7B-ACL-2/3 — допуск к машине и владелец
+    //   машинной учётки из MCP; агенту сервер отказывает, отказ отдаётся как есть)
+    // + machine_new (S7B-MACH-1 — завести машину одним вызовом; агент full — только своему владельцу)
+    expect(names).toHaveLength(88);
   });
 
   it('registers project_role_set (DS-1 — роль в проекте выдаётся без захода в админку)', () => {

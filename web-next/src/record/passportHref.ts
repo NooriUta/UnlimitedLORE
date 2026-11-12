@@ -12,6 +12,8 @@ import { recordHref, knownRecordHref } from '../nav/loreRoutes';
 const CHIP_FIELDS: Readonly<Record<string, string>> = {
   projects: 'project',
   components: 'component',
+  // S4-PRODUCTS-NODE: чип продукта (у компонента — IN_PRODUCT) открывает паспорт продукта.
+  products: 'product',
 };
 
 /** Код чипа: объект `{id}` (форма S4-29) или строка (прежняя форма). */

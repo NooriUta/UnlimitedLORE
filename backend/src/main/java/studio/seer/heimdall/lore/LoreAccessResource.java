@@ -95,6 +95,26 @@ public class LoreAccessResource extends LoreResourceBase {
         }
     }
 
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-21 — «почему агент получил 403 на инструменте»:
+     * {@code ?agent_scope=&family=&path=} → решение {@link AgentScopeFilter#decide}
+     * (то же, что отказывает на проде) словами: что закрыто, почему, каким профилям
+     * открыто, что предложить. Логика — {@link AgentToolExplain}.
+     */
+    @GET
+    @jakarta.ws.rs.Path("tool")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response tool(@QueryParam("agent_scope") String agentScope, @QueryParam("family") String family,
+                         @QueryParam("path") String path) {
+        if (!enabled) return disabled();
+        if (agentScope != null && !agentScope.isBlank() && !SAFE_ID.matcher(agentScope.strip()).matches())
+            return badParams("agent_scope contains illegal characters");
+        if (path != null && path.length() > 300) return badParams("path too long");
+        Map<String, Object> body = AgentToolExplain.explain(agentScope, family, path);
+        if ("bad_input".equals(body.get("verdict"))) return badParams("family or path required");
+        return noStore(Response.ok(body));
+    }
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response access(@QueryParam("kc_sub") String kcSub, @QueryParam("project") String project,

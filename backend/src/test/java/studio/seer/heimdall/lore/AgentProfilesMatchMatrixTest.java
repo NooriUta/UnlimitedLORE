@@ -43,16 +43,16 @@ class AgentProfilesMatchMatrixTest {
 
     /** Читающие инструменты — сервер GET не скоупит, в реестре записей их нет. */
     private static final Set<String> READ_TOOLS = Set.of(
-        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "metric_get", "bragi_search");
+        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "graph", "metric_get", "bragi_search");
 
     /**
      * Чтение графа — у КАЖДОГО профиля (README профилей: «reading the graph never needs
      * restricting»). S6-08: run_block (PR #1086) и поиск search/search_similar в профили
      * не попали — агент OpenCode видел срез, но не мог выполнить блок записи или найти её.
-     * Все пять — GET (/lore/slice, /lore/search), агентный фильтр их не скоупит.
+     * Все — GET (/lore/slice, /lore/search, /lore/graph — GC-04), агентный фильтр их не скоупит.
      */
     static final List<String> GRAPH_READ_TOOLS = List.of(
-        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar");
+        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "graph");
 
     @Test
     void everyProfileReadsTheGraph() throws IOException {

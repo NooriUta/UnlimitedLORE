@@ -124,6 +124,15 @@
   "job_new": [
     "/lore/job"
   ],
+  "machine_access_set": [
+    "/lore/user/machine-access"
+  ],
+  "machine_new": [
+    "/lore/actor/machine"
+  ],
+  "machine_owner_set": [
+    "/lore/actor/owner"
+  ],
   "metric_get": [],
   "metric_log": [
     "/lore/bragi/metric"

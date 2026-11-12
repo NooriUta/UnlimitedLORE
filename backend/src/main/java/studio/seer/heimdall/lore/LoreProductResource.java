@@ -1021,6 +1021,162 @@ public class LoreProductResource extends LoreResourceBase {
     }
 
     /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-MACH-1 — завести машину miniLORE одним вызовом (пробел OWN-1):
+     * актор {@code minilore-link-<machine_id>} (kind=agent, client_id, machine_id, harness, имя),
+     * владелец {@code OWNED_BY}, вершина {@code KnowMachine} и {@code USES_MACHINE} от машины и от
+     * агентов того же владельца с этим machine_id. Кто и на кого — {@link MachineEnroll#owner}
+     * (агент — только full и только своему владельцу; подпуть сужен в AgentScopeFilter); чужая машина
+     * или имя, занятое агентом другого владельца, — 409 с именем владельца. Повтор того же —
+     * unchanged. dry_run — только план. Журнал AO-01 — фильтром, сущность — machine_id.
+     */
+    /** Тело S7B-MACH-1 — публичный record, как остальные тела ресурса (разбор Jackson). */
+    public record MachineEnrollRequest(String machine_id, String kc_sub, String harness, String name, String profile,
+                                       Boolean dry_run) {}
+
+    @POST
+    @Path("actor/machine")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response enrollMachine(MachineEnrollRequest body, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        MachineEnroll.Request req = body == null ? null : new MachineEnroll.Request(body.machine_id(), body.kc_sub(),
+            body.harness(), body.name(), body.profile(), body.dry_run());
+        String err = MachineEnroll.requestError(req, activeDictCodes("harness", LoreActorHarness.REGISTRY));
+        if (err != null) return badParams(err);
+        String agentScope = callerAgentScope();
+        String clientId = MachineAccess.clientIdOf(req.machine_id());
+        try {
+            String callerClient = agentScope == null ? null : callerClientId();
+            String agentOwner = callerClient == null ? null : projectRbac.ownerKcSub(callerClient);
+            MachineEnroll.Owner owner = MachineEnroll.owner(
+                new MachineEnroll.Caller(agentScope, role, callerKcSub(), agentOwner), req.kc_sub());
+            if (owner.refusal() != null)
+                return noStore(Response.status(owner.status()).entity(new LoreError(
+                    owner.status() == 400 ? "BAD_PARAMS" : "MACHINE_ENROLL_FORBIDDEN", owner.refusal())));
+            String sub = owner.kcSub();
+            if (!exists("KnowUser", "kc_sub", sub))
+                return targetNotFound("человек kc_sub=" + sub + " не заведён в графе — сперва POST /lore/user");
+
+            List<Map<String, Object>> found = ingest.queryPublic(
+                "SELECT actor_id, kind, harness, name, out('OWNED_BY').kc_sub AS owners, "
+                + "out('OWNED_BY').display_name AS owner_names FROM KnowActor WHERE client_id = :c",
+                Map.of("c", clientId));
+            MachineEnroll.Existing ex = found.isEmpty() ? null : existingOf(found.get(0));
+            if (ex == null) {
+                // actor_id = client_id (как мастер админки) — не занят ли он актором без учётки.
+                List<Map<String, Object>> sameId = ingest.queryPublic(
+                    "SELECT kind, client_id FROM KnowActor WHERE actor_id = :id", Map.of("id", clientId));
+                if (!sameId.isEmpty())
+                    return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("MACHINE_TAKEN",
+                        "актор " + clientId + " уже есть (kind=" + sameId.get(0).get("kind") + ", client_id="
+                        + sameId.get(0).get("client_id") + ") — машину поверх него не завести")));
+            }
+            List<MachineEnroll.Neighbour> ns = new java.util.ArrayList<>();
+            for (Map<String, Object> r : ingest.queryPublic(
+                    "SELECT actor_id, client_id, out('OWNED_BY').kc_sub AS owners, "
+                    + "out('OWNED_BY').display_name AS owner_names FROM KnowActor WHERE kind = 'agent' AND machine_id = :m",
+                    Map.of("m", req.machine_id()))) {
+                if (ex != null && ex.actorId().equals(String.valueOf(r.get("actor_id")))) continue;
+                ns.add(new MachineEnroll.Neighbour(String.valueOf(r.get("actor_id")),
+                    r.get("client_id") == null ? null : String.valueOf(r.get("client_id")),
+                    strings(r.get("owners")), firstString(r.get("owner_names"))));
+            }
+            boolean admin = agentScope == null && ("admin".equals(role) || "superadmin".equals(role));
+            String conflict = MachineEnroll.conflict(req.machine_id(), sub, ex, ns, admin);
+            if (conflict != null)
+                return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("MACHINE_TAKEN", conflict)));
+
+            Map<String, Object> plan = MachineEnroll.plan(ex, req, sub);
+            List<String> link = MachineEnroll.linkable(ns, req.machine_id(), sub);
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("machine_id", req.machine_id());   // первое *_id — сущность записи журнала AO-01
+            out.put("ok", true);
+            out.put("client_id", clientId);
+            out.put("kc_sub", sub);
+            out.put("plan", plan);
+            out.put("agents_to_link", link);
+            if (Boolean.TRUE.equals(req.dry_run())) {
+                out.put("dry_run", true);
+                out.put("applied", 0);
+                return noStore(Response.ok(out));
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> after = (Map<String, Object>) plan.get("after");
+            String actorId = String.valueOf(after.get("actor_id"));
+            String kind = String.valueOf(plan.get("kind"));
+            if (!"unchanged".equals(kind)) {
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("id", actorId);
+                p.put("n", after.get("name"));
+                p.put("c", clientId);
+                p.put("mid", req.machine_id());
+                StringBuilder sql = new StringBuilder(
+                    "UPDATE KnowActor SET actor_id=:id, name=:n, kind='agent', client_id=:c, machine_id=:mid");
+                if (after.get("harness") != null) { sql.append(", harness=:h"); p.put("h", after.get("harness")); }
+                else if (req.harness() != null) sql.append(", harness=null");
+                if (req.profile() != null && !req.profile().isBlank()) { sql.append(", agent_role=:r"); p.put("r", req.profile()); }
+                sql.append(" UPSERT WHERE actor_id=:id");
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
+                    .await().indefinitely();
+                if (ex == null || ex.ownerSubs().isEmpty())
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE OWNED_BY FROM (SELECT FROM KnowActor WHERE actor_id=:id) "
+                        + "TO (SELECT FROM KnowUser WHERE kc_sub=:s) IF NOT EXISTS",
+                        Map.of("id", actorId, "s", sub))).await().indefinitely();
+            }
+            // Вершина-наблюдение без last_seen_at: «завели» — не то же, что «была на связи».
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowMachine SET machine_id = :m UPSERT WHERE machine_id = :m", Map.of("m", req.machine_id())))
+                .await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowMachine SET first_seen_at = :now WHERE machine_id = :m AND first_seen_at IS NULL",
+                Map.of("m", req.machine_id(), "now", java.time.Instant.now().toString()))).await().indefinitely();
+            List<String> users = new java.util.ArrayList<>(link);
+            users.add(0, actorId);
+            for (String a : users)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE USES_MACHINE FROM (SELECT FROM KnowActor WHERE actor_id = :a) "
+                    + "TO (SELECT FROM KnowMachine WHERE machine_id = :m) IF NOT EXISTS",
+                    Map.of("a", a, "m", req.machine_id()))).await().indefinitely();
+
+            // Исход — из факта графа: машина с владельцем видна тем же запросом, что срез.
+            List<Map<String, Object>> now = ingest.queryPublic(
+                "SELECT actor_id, out('OWNED_BY').kc_sub AS owners FROM KnowActor "
+                + "WHERE kind = 'agent' AND client_id = :c AND machine_id = :m",
+                Map.of("c", clientId, "m", req.machine_id()));
+            boolean owned = !now.isEmpty() && strings(now.get(0).get("owners")).contains(sub);
+            out.put("outcome", !owned ? LoreOutcome.NOOP
+                : "create".equals(kind) ? LoreOutcome.CREATED : "update".equals(kind) ? LoreOutcome.UPDATED : LoreOutcome.UNCHANGED);
+            out.put("owner_linked", owned);
+            if (!owned) out.put("reason", "машина записана, но в графе не видна с владельцем " + sub + " — проверьте agent_owners");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE MACHINE ENROLL] %s: %s", req.machine_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    private static MachineEnroll.Existing existingOf(Map<String, Object> r) {
+        return new MachineEnroll.Existing(String.valueOf(r.get("actor_id")),
+            r.get("kind") == null ? null : String.valueOf(r.get("kind")),
+            strings(r.get("owners")), firstString(r.get("owner_names")),
+            r.get("harness") == null ? null : String.valueOf(r.get("harness")),
+            r.get("name") == null ? null : String.valueOf(r.get("name")));
+    }
+
+    private static List<String> strings(Object v) {
+        List<String> out = new java.util.ArrayList<>();
+        if (v instanceof java.util.Collection<?> c) { for (Object o : c) if (o != null) out.add(String.valueOf(o)); }
+        else if (v != null) out.add(String.valueOf(v));
+        return out;
+    }
+
+    private static String firstString(Object v) {
+        List<String> s = strings(v);
+        return s.isEmpty() ? null : s.get(0);
+    }
+
+    /**
      * MT-11/D-VP-ROLE-AGENT-PAIR: агент → роль, которую он исполняет.
      * {@code rel} принимает единственное значение ({@code "fills_role"}) —
      * enum ради согласованности с остальными {@code *_link}-инструментами

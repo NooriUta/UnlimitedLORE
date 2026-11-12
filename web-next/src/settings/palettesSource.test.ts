@@ -86,9 +86,9 @@ describe('K-14 · палитры из модели', () => {
     expect(p.notes.join(' ')).toContain('neon');
   });
 
-  it('умолчание темы kit — все пять палитр платформы, образцы токенами', () => {
+  it('умолчание темы kit — пять палитр платформы и приглушённая mono (S4-19), образцы токенами', () => {
     const f = paletteFallback();
-    expect(f.map(o => o.value)).toEqual(['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark']);
+    expect(f.map(o => o.value)).toEqual(['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark', 'mono']);
     expect(f.every(o => o.swatch?.startsWith('var(--swatch-'))).toBe(true);
   });
 });

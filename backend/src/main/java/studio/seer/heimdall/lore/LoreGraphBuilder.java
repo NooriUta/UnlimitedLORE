@@ -23,7 +23,8 @@ import java.util.TreeSet;
  * {@code edges[{from,rel,to,kind?}]}, {@code meta}.
  *
  * <p><b>Два режима — один обход.</b> Окрестность записи: уровень 0 — корень, обход в
- * ширину до {@code depth} (1..3). Срез: уровень 0 — семена среза (все записи проекта,
+ * ширину до {@code depth} (1..4; 4 — с 11.11.2026). Фильтр {@code rels} действует на КАЖДОМ шаге:
+ * путь глубины 2..4 идёт только по рёбрам названных типов, через ребро другого типа не проходит. Срез: уровень 0 — семена среза (все записи проекта,
  * компонента или всего LORE), плюс одно кольцо соседей — рёбра, ведущие из среза наружу,
  * не обрываются молча. Рёбра между двумя узлами последнего уровня не запрашиваются:
  * у последнего уровня рёбра не читаются вовсе (так глубина и ограничивает стоимость).
@@ -144,7 +145,7 @@ final class LoreGraphBuilder {
         }
     }
 
-    static final int MAX_DEPTH = 3;
+    static final int MAX_DEPTH = 4;
 
     // ── скоуп ────────────────────────────────────────────────────────────────
 
@@ -194,7 +195,38 @@ final class LoreGraphBuilder {
         .comparing(Edge::from).thenComparing(Edge::rel).thenComparing(Edge::to)
         .thenComparing(e -> e.kind() == null ? "" : e.kind());
 
+    /**
+     * Сборка ответа. 11.11.2026 (GC-04, «связи определённого типа»): {@code meta.rels_available} —
+     * типы рёбер окрестности на запрошенной глубине БЕЗ фильтра {@code rels} (со счётчиком,
+     * по убыванию числа, затем по имени), чтобы легенда показывала и снятые типы. С фильтром
+     * это второй обход без {@code rels} (те же types/structural/limit/скоуп): обход по
+     * отфильтрованным рёбрам другую окрестность и даёт, её счёт был бы не тем.
+     */
     static Result build(Query q, Source src) {
+        Result r = traverse(q, src);
+        boolean filtered = q.rels() != null && !q.rels().isEmpty();
+        Result plain = filtered
+            ? traverse(new Query(q.rootKey(), q.seeds(), q.depth(), Set.of(), q.types(), q.structural(), q.limit(),
+                q.allowed()), src)
+            : r;
+        Map<String, Integer> counts = new HashMap<>();
+        for (Map<String, Object> e : plain.edges()) counts.merge(String.valueOf(e.get("rel")), 1, Integer::sum);
+        List<Map.Entry<String, Integer>> sorted = new ArrayList<>(counts.entrySet());
+        sorted.sort(Map.Entry.<String, Integer>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()));
+        List<Map<String, Object>> available = new ArrayList<>();
+        for (Map.Entry<String, Integer> en : sorted) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("rel", en.getKey());
+            m.put("count", en.getValue());
+            available.add(m);
+        }
+        r.meta().put("rels_available", available);
+        // Неполнота счёта названа: срезанная потолком окрестность считает только то, что вошло.
+        r.meta().put("rels_available_truncated", plain.meta().get("truncated"));
+        return r;
+    }
+
+    private static Result traverse(Query q, Source src) {
         boolean neighborhood = q.rootKey() != null;
         if (neighborhood && (q.depth() < 1 || q.depth() > MAX_DEPTH)) {
             throw new GraphException(400, "BAD_PARAMS", "depth — от 1 до " + MAX_DEPTH + ", получено " + q.depth());
@@ -356,9 +388,18 @@ final class LoreGraphBuilder {
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("mode", neighborhood ? "neighborhood" : "slice");
         if (neighborhood) meta.put("depth", q.depth());
+        // by_depth: число узлов на каждом уровне 1..depth (корень/семена не входят);
+        // пустой уровень — 0, а не отсутствие ключа. Ключи — строки (JSON-объект).
+        Map<String, Integer> byDepth = new LinkedHashMap<>();
+        for (int d = 1; d <= maxDepth; d++) byDepth.put(String.valueOf(d), 0);
+        for (int d : depthOf.values()) if (d >= 1) byDepth.merge(String.valueOf(d), 1, Integer::sum);
         meta.put("complete", !truncated && !anyMissing);
         meta.put("truncated", truncated);
         meta.put("capped_at", truncated ? q.limit() : null);
+        // Действующий потолок — всегда, а не только при срабатывании: на depth 3–4 он решает,
+        // полна ли картина (замер 11.11.2026: на графе формы LORE depth 4 без фильтра rels
+        // упирается в 500 почти всегда).
+        meta.put("limit", q.limit());
         meta.put("hidden_by_scope", hidden.size());
         meta.put("dangling", danglingJson);
         // #1228: у последнего уровня рёбра не читаются — ни в окрестности (уровень depth),
@@ -367,6 +408,9 @@ final class LoreGraphBuilder {
         meta.put("frontier_edges", FRONTIER_NOT_READ);
         meta.put("structural", q.structural());
         meta.put("structural_rels", new TreeSet<>(STRUCTURAL_RELS));
+        meta.put("by_depth", byDepth);
+        // rels — эхо фильтра: обход шёл ТОЛЬКО по этим рёбрам на каждом шаге (пусто — по всем).
+        meta.put("rels", new TreeSet<>(rels));
         return new Result(nodes, edgesJson, meta);
     }
 

@@ -122,4 +122,42 @@ class LoreRoleBatchTest {
         assertNotNull(LoreRoleBatch.error(List.of(ch("a/one", "x"), ch("a/one", "y"))), "один проект дважды");
         assertNull(LoreRoleBatch.error(List.of(ch("a/one", "reader"), ch("a/two", null))));
     }
+
+    // ── S7B-20: отказ AL-100 строкой плана в dry_run ──────────────────────
+
+    private static Map<?, ?> checkOf(Map<String, Object> row) { return (Map<?, ?>) row.get("check"); }
+
+    /** Последний owner проекта: dry_run показывает отказ строкой «нельзя», а не «проверено». */
+    @Test
+    void lastOwnerRemovalIsForbiddenRowInDryRun() {
+        Map<String, String> current = Map.of("a/solo", "owner", "a/shared", "owner", "a/ed", "editor");
+        List<Map<String, Object>> plan = LoreRoleBatch.plan(current,
+            List.of(ch("a/solo", null), ch("a/shared", null), ch("a/ed", null)));
+        int blocked = LoreRoleBatch.markRemovalBlocks(plan, Map.of("a/solo", 1L, "a/shared", 2L), null);
+        assertEquals(1, blocked);
+        assertEquals("forbidden", checkOf(plan.get(0)).get("state"));
+        assertTrue(String.valueOf(checkOf(plan.get(0)).get("source")).contains("a/solo"));
+        assertEquals("checked", checkOf(plan.get(1)).get("state"));
+        assertEquals("checked", checkOf(plan.get(2)).get("state"));
+    }
+
+    /** Свою последнюю роль снять нельзя: пачка «снять всё у себя» — последняя строка запрещена. */
+    @Test
+    void ownLastRoleIsForbiddenAfterTheOthersInSequence() {
+        Map<String, String> current = Map.of("a/one", "editor", "a/two", "reader");
+        List<Map<String, Object>> plan = LoreRoleBatch.plan(current, List.of(ch("a/one", null), ch("a/two", null)));
+        int blocked = LoreRoleBatch.markRemovalBlocks(plan, Map.of(), 2L);
+        assertEquals(1, blocked);
+        assertEquals("checked", checkOf(plan.get(0)).get("state"));
+        assertEquals("forbidden", checkOf(plan.get(1)).get("state"));
+    }
+
+    /** Смена роли и выдача AL-100 не касаются — сервер проверяет только снятие. */
+    @Test
+    void nonRemovalsAreNotTouched() {
+        Map<String, String> current = Map.of("a/solo", "owner");
+        List<Map<String, Object>> plan = LoreRoleBatch.plan(current, List.of(ch("a/solo", "reader"), ch("a/new", "owner")));
+        assertEquals(0, LoreRoleBatch.markRemovalBlocks(plan, Map.of("a/solo", 1L), 1L));
+        assertEquals("checked", checkOf(plan.get(0)).get("state"));
+    }
 }

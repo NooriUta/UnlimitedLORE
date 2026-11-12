@@ -295,4 +295,90 @@ public class LoreLinkResource extends LoreResourceBase {
         out.put("records_truncated", wouldAdd > 0 && records.size() >= BACKFILL_RECORDS_SHOWN);
         return noStore(Response.ok(out));
     }
+
+    /**
+     * Разовая миграция «задача → компонент» ({@link LoreTaskComponentEdgeMigration}):
+     * старые BELONGS_TO KnowTask → LoreComponent (промоушен находок QG до PR #1265)
+     * переводятся на TAGGED_WITH. Только admin.
+     *
+     * <ul>
+     *   <li>{@code GET …/migrate} — сухой прогон, ничего не пишет: сколько задач,
+     *       task_uid, какие рёбра создадутся и удалятся. {@code dry_run=false} на GET — отказ.</li>
+     *   <li>{@code POST …/migrate?apply=true} — применение. Без явного {@code apply=true} — отказ:
+     *       случайный POST не пишет. Один вызов = одна точка журнала AO-01
+     *       ({@link LoreRequestStatsFilter}; object_id — {@code migration_id} из ответа).
+     *       План строится заново на момент применения, а не берётся из сухого прогона.
+     *       Есть провалы — HTTP 207 и {@code failed > 0}: workflow падает.</li>
+     * </ul>
+     */
+    @GET
+    @Path("task-component-edge/migrate")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response taskComponentEdgePlan(@QueryParam("dry_run") String dryRun,
+                                          @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (dryRun != null && !"true".equalsIgnoreCase(dryRun.trim()))
+            return badParams("GET — только сухой прогон; применение — POST …/migrate?apply=true");
+        try {
+            return noStore(Response.ok(taskComponentEdgeCurrentPlan().toMap()));
+        } catch (Exception e) {
+            LOG.warnf("[LORE LINK] task-component-edge dry-run: %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
+    @POST
+    @Path("task-component-edge/migrate")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response taskComponentEdgeApply(@QueryParam("apply") String apply,
+                                           @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (apply == null || !"true".equalsIgnoreCase(apply.trim()))
+            return badParams("применение — только с явным apply=true; сухой прогон — GET …/migrate");
+        LoreTaskComponentEdgeMigration.Plan plan;
+        try {
+            plan = taskComponentEdgeCurrentPlan();
+        } catch (Exception e) {
+            LOG.warnf("[LORE LINK] task-component-edge plan: %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+        LoreTaskComponentEdgeMigration.Result res = LoreTaskComponentEdgeMigration.apply(plan, taskComponentEdgeOps());
+        LOG.infof("[LORE LINK] task-component-edge apply: found=%d created=%d deleted=%d unchanged=%d failed=%d",
+            res.found(), res.created(), res.deleted(), res.unchanged(), res.failed());
+        return noStore(Response.status(res.failed() == 0 ? 200 : 207).entity(res.toMap()));
+    }
+
+    private LoreTaskComponentEdgeMigration.Plan taskComponentEdgeCurrentPlan() {
+        return LoreTaskComponentEdgeMigration.plan(
+            ingestService.queryPublic(LoreTaskComponentEdgeMigration.LEGACY_SQL, Map.of()),
+            ingestService.queryPublic(LoreTaskComponentEdgeMigration.TARGET_SQL, Map.of()));
+    }
+
+    private LoreTaskComponentEdgeMigration.Ops taskComponentEdgeOps() {
+        String edge = LoreTaskComponentEdgeMigration.TARGET_EDGE;
+        return new LoreTaskComponentEdgeMigration.Ops() {
+            @Override public void createTagged(String taskUid, String componentId) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowTask WHERE task_uid=:id) "
+                    + "TO (SELECT FROM LoreComponent WHERE component_id=:c) IF NOT EXISTS",
+                    Map.of("id", taskUid, "c", componentId))).await().indefinitely();
+            }
+
+            @Override public boolean taggedExists(String taskUid, String componentId) {
+                List<Map<String, Object>> n = ingestService.queryPublic(
+                    "SELECT count(*) AS n FROM " + edge + " WHERE @out.task_uid=:id AND @in.component_id=:c",
+                    Map.of("id", taskUid, "c", componentId));
+                return !n.isEmpty() && ((Number) n.get(0).getOrDefault("n", 0)).longValue() > 0;
+            }
+
+            @Override public void deleteLegacy(String rid) {
+                // rid проверен в плане (#N:M). DELETE EDGE в ArcadeDB нет — удаление по @rid.
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM " + LoreTaskComponentEdgeMigration.LEGACY_EDGE + " WHERE @rid=" + rid))
+                    .await().indefinitely();
+            }
+        };
+    }
 }

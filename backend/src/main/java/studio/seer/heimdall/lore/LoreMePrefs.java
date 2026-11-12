@@ -77,7 +77,7 @@ final class LoreMePrefs {
         // плотность: roomy — умолчание v2 (решение владелицы 08.11, SPRINT_UXR_S4_UI_SHELL_LISTS/S4-21)
         m.put("density", oneOf("roomy", "roomy", "compact", "comfortable"));
         // палитра темы — коды kit/tokens/prefs.ts PALETTES (те же, что cookie seer-prefs v1)
-        m.put("palette", oneOf("amber-forest", "amber-forest", "lichen", "slate", "juniper", "warm-dark"));
+        m.put("palette", oneOf("amber-forest", "amber-forest", "lichen", "slate", "juniper", "warm-dark", "mono"));
         m.put("single_key_shortcuts", bool(false));                          // однобуквенные клавиши
         m.put("stripes", bool(false));                                       // полоски в таблицах
         m.put("peek_hover", bool(true));                                    // карточки Peek по наведению (S9-10)

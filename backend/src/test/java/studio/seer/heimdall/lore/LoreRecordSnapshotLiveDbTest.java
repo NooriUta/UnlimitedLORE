@@ -102,7 +102,15 @@ class LoreRecordSnapshotLiveDbTest {
             for (Map<String, Object> q : rows("gating_questions_of_task", "id", id))
                 links.add(LoreRecordSnapshotTest.Legacy.sliceLink("task", "gates", q));
         }
-        same(links, r.get("links"), type + " links");
+        // Связи фасада несут вид обоих концов (fromKind/toKind, #1265) — ключи заведены после снимка.
+        // Их наличие проверяется здесь, а сверка со снимком идёт без них (LoreRecordSnapshotTest
+        // .LINK_KEYS_ADDED_AFTER): остальные ключи, их порядок и значения — по-прежнему строго.
+        List<Map<String, Object>> actualLinks = mapper.convertValue(r.get("links"),
+            new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+        for (Map<String, Object> l : actualLinks)
+            for (String k : LoreRecordSnapshotTest.LINK_KEYS_ADDED_AFTER)
+                assertTrue(l.containsKey(k), type + " link без " + k + ": " + l);
+        same(links, mapper.valueToTree(LoreRecordSnapshotTest.sansAddedLinkKeys(actualLinks)), type + " links");
 
         for (LoreRecordRegistry.Part p : LoreRecordRegistry.get(type).parts()) {
             if ("phase".equals(p.type())) continue;      // «x/y» фазы — вычисление по задачам, не снимок строки

@@ -371,6 +371,8 @@ export function releaseRecord(row: Row): KitRecord {
       project: list(row.projects),
       sprints: num(row.sprint_count),
       prs: num(row.pr_count),
+      // Дата выпуска — поле календаря (K2-VIEW-CALENDAR); updated_at — время правки, не дата события.
+      released: str(row.release_date),
     },
     ...freshness(row, str(row.release_date)),
   };
@@ -402,6 +404,8 @@ export function componentRecord(row: Row): KitRecord {
       project: list(row.git_projects),
       adrs: num(row.adr_count),
       specs: num(row.spec_count),
+      // S4-PRODUCT-HILITE: продукты компонента (IN_PRODUCT) — по ним красится запись.
+      products: list(row.products),
     },
   };
 }
@@ -514,5 +518,104 @@ export function featureRecord(row: Row, ctx?: RowMapCtx): KitRecord {
       ...('milestone_id' in row ? { milestone: str(row.milestone_id) } : {}),
     },
     ...freshness(row, str(row.date_created)),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Нода «Продукт» (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-PRODUCTS-NODE, владелица 11.11):
+// продукты и профиль клиента — боли, выгоды, работы, роли. Срезы — из каталога
+// LoreSlices (products, pains, gains, jobs, actors). Тела (body_md, metric_md) в
+// строку не идут — как у остальных разделов. Статуса у этих записей нет.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Строка среза products → запись kit. Ключ — код; цвет — не поле строки, а краска (productPaint). */
+export function productRecord(row: Row): KitRecord {
+  const id = str(row.code);
+  return {
+    id,
+    kind: 'product',
+    title: str(row.label_ru) || id,
+    status: '',
+    fields: {
+      parent: list(row.parent_code),
+      children: list(row.sub_products),
+      components: list(row.components),
+      project: list(row.git_projects),
+    },
+  };
+}
+
+/** Строка среза pains → запись kit: чья боль, сколько сценариев её заявляют и сколько снимают. */
+export function painRecord(row: Row): KitRecord {
+  const id = str(row.pain_id);
+  const claimed = num(row.addressed_by);
+  const relieved = num(row.relieved_by);
+  return {
+    id,
+    kind: 'pain',
+    title: str(row.title) || id,
+    status: '',
+    fields: {
+      severity: str(row.severity),
+      actors: list(row.actor_ids),
+      ...(claimed !== null ? { claimed } : {}),
+      ...(relieved !== null ? { relieved } : {}),
+    },
+  };
+}
+
+/** Строка среза gains → запись kit: чья выгода, сколько сценариев её обещают и сколько дают. */
+export function gainRecord(row: Row): KitRecord {
+  const id = str(row.gain_id);
+  const claimed = num(row.promised_by);
+  const delivered = num(row.delivered_by);
+  return {
+    id,
+    kind: 'gain',
+    title: str(row.title) || id,
+    status: '',
+    fields: {
+      rank: str(row.rank),
+      actors: list(row.actor_ids),
+      ...(claimed !== null ? { claimed } : {}),
+      ...(delivered !== null ? { delivered } : {}),
+    },
+  };
+}
+
+/** Строка среза jobs → запись kit. Вид работы — `job_kind`: имя `kind` занято видом записи kit. */
+export function jobRecord(row: Row): KitRecord {
+  const id = str(row.job_id);
+  const claimed = num(row.helped_by);
+  const performed = num(row.performed_by);
+  return {
+    id,
+    kind: 'job',
+    title: str(row.title) || id,
+    status: '',
+    fields: {
+      job_kind: str(row.kind),
+      importance: str(row.importance),
+      actors: list(row.actor_ids),
+      ...(claimed !== null ? { claimed } : {}),
+      ...(performed !== null ? { performed } : {}),
+    },
+  };
+}
+
+/** Строка среза actors → запись kit (пользовательская роль / клиентский сегмент). Вид — `actor_kind`. */
+export function actorRecord(row: Row): KitRecord {
+  const id = str(row.actor_id);
+  const ucs = num(row.uc_count);
+  return {
+    id,
+    kind: 'actor',
+    title: str(row.name) || id,
+    status: '',
+    fields: {
+      actor_kind: str(row.kind),
+      project: list(row.projects),
+      ...(ucs !== null ? { ucs } : {}),
+    },
   };
 }

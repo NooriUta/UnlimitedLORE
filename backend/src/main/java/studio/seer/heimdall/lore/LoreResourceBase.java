@@ -502,16 +502,18 @@ public abstract class LoreResourceBase {
 
     boolean linkComponentEdge(String type, String idField, String id, String componentId) {
         if (id == null || id.isBlank() || componentId == null || componentId.isBlank()) return true;
+        // Ребро — по типу вершины (у задачи TAGGED_WITH), одно правило с каталогом LoreLinkTypes.
+        String edge = LoreLinkTypes.componentEdgeOf(type);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> created = (List<Map<String, Object>>)
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE BELONGS_TO FROM (SELECT FROM " + type + " WHERE " + idField + "=:id) "
+                "CREATE EDGE " + edge + " FROM (SELECT FROM " + type + " WHERE " + idField + "=:id) "
                 + "TO (SELECT FROM LoreComponent WHERE component_id=:c) IF NOT EXISTS",
                 Map.of("id", id, "c", componentId)))
             .await().indefinitely().result();
         if (created != null && !created.isEmpty()) return true;
         List<Map<String, Object>> exists = ingestService.queryPublic(
-            "SELECT count(*) AS n FROM BELONGS_TO WHERE @out." + idField + "=:id AND @in.component_id=:c",
+            "SELECT count(*) AS n FROM " + edge + " WHERE @out." + idField + "=:id AND @in.component_id=:c",
             Map.of("id", id, "c", componentId));
         return !exists.isEmpty() && ((Number) exists.get(0).getOrDefault("n", 0)).longValue() > 0;
     }

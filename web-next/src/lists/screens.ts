@@ -16,10 +16,12 @@ import { feedConfig, type FeedSpec } from './feed';
 import type { AppKey } from '../i18n';
 import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
-  adrRecord, componentRecord, decisionRecord, featureRecord, milestoneRecord, projectRecord,
-  questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord, techRecord,
+  actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
+  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord,
+  techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
+import { staleByStatus, withCalendar, type CalendarDate, type LibrarySpec } from './library';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
 
@@ -110,6 +112,16 @@ export interface ListScreenDef {
    * нижний уровень. Нет — у записи раздела нет времени, ленты нет.
    */
   feed?: FeedSpec;
+  /**
+   * Вид «Библиотека» (K2-VIEW-LIBRARY): группы слева по полю раздела, справа —
+   * паспорт записи. Нет — раздел не про документы, вида нет.
+   */
+  library?: LibrarySpec;
+  /**
+   * Даты календаря (K2-VIEW-CALENDAR) — названы явно, первая по умолчанию.
+   * Нет — у записи раздела нет даты, календаря нет: пустой хуже отсутствия.
+   */
+  calendarDates?: readonly CalendarDate[];
 }
 
 export interface ListNested {
@@ -446,7 +458,7 @@ const milestonesSpec: SectionSpec = {
 const releasesSpec: SectionSpec = {
   kind: 'release', titleKey: 'lists.releases.title', icon: 'open-book',
   fields: [
-    ['version', 'text'], ['type', 'text'], ['week', 'number'], ['current', 'text'],
+    ['version', 'text'], ['type', 'text'], ['week', 'number'], ['current', 'text'], ['released', 'date'],
     ['project', 'ref'], ['sprints', 'number'], ['prs', 'number'],
   ],
   views: ['list', 'cards', 'feed', 'timeline'],
@@ -528,12 +540,108 @@ const featuresSpec: SectionSpec = {
   columns: ['id', 'title', 'status', 'level', 'ucs', 'tasks', 'components'],
 };
 
+/**
+ * Даты календаря по разделам (K2-VIEW-CALENDAR), названы явно:
+ * • спринт — план начала (planned_start_date) и факт закрытия (done_date);
+ * • релиз — дата выпуска (release_date).
+ * Вехам (date_display — «прогноз Q4 2026», текст, а не дата) и задачам (в срезе
+ * нет ни срока, ни даты закрытия — только время правки) календаря нет.
+ */
+const SPRINT_DATES = [
+  { field: 'planned_start', labelKey: 'lists.calendar.plannedStart' },
+  { field: 'done_date', labelKey: 'lists.calendar.doneDate' },
+] as const satisfies readonly CalendarDate[];
+const RELEASE_DATES = [{ field: 'released', labelKey: 'lists.calendar.released' }] as const satisfies readonly CalendarDate[];
+
+const joinMeta = (...parts: unknown[]) => parts.filter(p => typeof p === 'string' && p).join(' · ') || undefined;
+
+/**
+ * Библиотеки разделов (K2-VIEW-LIBRARY). Разрез выбран по данным:
+ * • компоненты — по области (замер 11.11: area заполнена у 105 из 110, команда —
+ *   примерно у четверти, корень дерева — один на десятки компонентов, и у
+ *   половины корней детей нет); устарел — область deprecated;
+ * • ADR, спеки, решения, технологии — по компоненту; устарел — статус
+ *   закрытой ветки «отменено» (заменён, отклонён, выведен).
+ */
+const LIBRARIES = {
+  components: {
+    groupBy: 'area', noGroupKey: 'lists.library.noArea',
+    stale: r => r.fields.area === 'deprecated',
+    meta: r => joinMeta(r.fields.parent ? `↑ ${String(r.fields.parent)}` : '', r.fields.team, r.fields.owner),
+  },
+  adrs: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', stale: staleByStatus },
+  specs: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', stale: staleByStatus, meta: r => joinMeta(r.fields.version) },
+  decisions: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', stale: staleByStatus, meta: r => joinMeta(r.fields.adr) },
+  tech: { groupBy: 'component', noGroupKey: 'lists.library.noComponent', meta: r => joinMeta(r.fields.version) },
+} as const satisfies Record<string, LibrarySpec>;
+// ── Нода «Продукт» (S4-PRODUCTS-NODE, владелица 11.11) ───────────────────────
+// Продукты и минимальный профиль клиента: боли, выгоды, работы, роли. Статусов у
+// этих записей нет (справочники) — ни колонки, ни фасета статуса (K-14). VP-канва —
+// отдельный спринт; здесь только списки. Иконки — канон v1 (product/icons.ts,
+// LorePage SECTIONS) и SECTION_ICONS kit.
+
+/** Продукты: статья словаря product; родитель и подпродукты — рёбра PARENT_PRODUCT. */
+const productsSpec: SectionSpec = {
+  kind: 'product', titleKey: 'lists.products.title', icon: 'bullseye',
+  fields: [['parent', 'ref'], ['children', 'ref'], ['components', 'ref'], ['project', 'ref']],
+  views: ['list', 'cards'],
+  quick: [['top-level', 'lists.quick.topLevel', { parent: '' }]],
+  filters: [LORE_FILTER_FIELDS.project, 'fields.parent'],
+  groupings: ['fields.parent'],
+  columns: ['id', 'title', 'parent', 'children', 'components', 'project'],
+};
+
+/** Боли: «заявлено» (ADDRESSES) и «снимает» (RELIEVES) — два разных утверждения (ADR-LORE-032 D5). */
+const painsSpec: SectionSpec = {
+  kind: 'pain', titleKey: 'lists.pains.title', icon: 'thorn-helix',
+  fields: [['severity', 'text'], ['actors', 'ref'], ['claimed', 'number'], ['relieved', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.severity', 'fields.actors'],
+  groupings: ['fields.severity', 'fields.actors'],
+  // «Никто не снимает» — тот же вопрос, что находка pain_without_relief гигиены продукта.
+  quick: [['not-relieved', 'lists.quick.notRelieved', { relieved: '0' }]],
+  columns: ['id', 'title', 'severity', 'actors', 'claimed', 'relieved'],
+};
+
+const gainsSpec: SectionSpec = {
+  kind: 'gain', titleKey: 'lists.gains.title', icon: 'gift-of-knowledge',
+  fields: [['rank', 'text'], ['actors', 'ref'], ['claimed', 'number'], ['delivered', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.rank', 'fields.actors'],
+  groupings: ['fields.rank', 'fields.actors'],
+  quick: [['not-delivered', 'lists.quick.notDelivered', { delivered: '0' }]],
+  columns: ['id', 'title', 'rank', 'actors', 'claimed', 'delivered'],
+};
+
+const jobsSpec: SectionSpec = {
+  kind: 'job', titleKey: 'lists.jobs.title', icon: 'archery-target',
+  fields: [['job_kind', 'text'], ['importance', 'text'], ['actors', 'ref'], ['claimed', 'number'], ['performed', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.job_kind', 'fields.importance', 'fields.actors'],
+  groupings: ['fields.job_kind', 'fields.importance'],
+  quick: [['not-performed', 'lists.quick.notPerformed', { performed: '0' }]],
+  columns: ['id', 'title', 'job_kind', 'importance', 'actors', 'claimed', 'performed'],
+};
+
+/** Пользовательские роли (клиентские сегменты): вид актора — фасет и разрез по умолчанию. */
+const actorsSpec: SectionSpec = {
+  kind: 'actor', titleKey: 'lists.actors.title', icon: 'hooded-figure',
+  fields: [['actor_kind', 'text'], ['project', 'ref'], ['ucs', 'number']],
+  views: ['list', 'cards'],
+  filters: ['fields.actor_kind', LORE_FILTER_FIELDS.project],
+  groupings: ['fields.actor_kind', LORE_FILTER_FIELDS.project],
+  // «Мёртвая роль» v1 (аналитика продукта): роль без сценариев.
+  quick: [['no-ucs', 'lists.quick.noUcs', { ucs: '0' }]],
+  columns: ['id', 'title', 'actor_kind', 'project', 'ucs'],
+};
+
 export const LIST_SCREENS = {
   sprints: {
     modelType: 'sprint',
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     defaultSort: FRESH_FIRST,
-    map: sprintRecord, config: lang => withFeed(lang, sprintsConfig(lang), FEEDS.sprints), feed: FEEDS.sprints, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
+    map: sprintRecord, config: lang => withCalendar(withFeed(lang, sprintsConfig(lang), FEEDS.sprints), SPRINT_DATES), feed: FEEDS.sprints,
+    calendarDates: SPRINT_DATES, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
     // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
     // `sprint_totals` (S4-09). Считает сервер: одно число из двух мест
@@ -548,7 +656,7 @@ export const LIST_SCREENS = {
     modelType: 'adr',
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     defaultSort: FRESH_FIRST,
-    map: adrRecord, config: lang => withFeed(lang, adrsConfig(lang), FEEDS.adrs), feed: FEEDS.adrs, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
+    map: adrRecord, config: lang => withFeed(lang, adrsConfig(lang), FEEDS.adrs), feed: FEEDS.adrs, library: LIBRARIES.adrs, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
   tasks: {
     modelType: 'task',
@@ -564,13 +672,13 @@ export const LIST_SCREENS = {
     modelType: 'decision',
     slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
     defaultSort: FRESH_FIRST,
-    map: decisionRecord, config: lang => withFeed(lang, sectionConfig(lang, decisionsSpec), FEEDS.decisions), feed: FEEDS.decisions, quickIcons: {},
+    map: decisionRecord, config: lang => withFeed(lang, sectionConfig(lang, decisionsSpec), FEEDS.decisions), feed: FEEDS.decisions, library: LIBRARIES.decisions, quickIcons: {},
   },
   specs: {
     modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
     defaultSort: FRESH_FIRST,
-    map: specRecord, config: lang => withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs), feed: FEEDS.specs, quickIcons: {},
+    map: specRecord, config: lang => withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs), feed: FEEDS.specs, library: LIBRARIES.specs, quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
@@ -587,11 +695,13 @@ export const LIST_SCREENS = {
   releases: {
     slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',
     defaultSort: FRESH_FIRST,
-    map: releaseRecord, config: lang => withFeed(lang, sectionConfig(lang, releasesSpec), FEEDS.releases), feed: FEEDS.releases, quickIcons: {},
+    map: releaseRecord, config: lang => withCalendar(withFeed(lang, sectionConfig(lang, releasesSpec), FEEDS.releases), RELEASE_DATES), feed: FEEDS.releases,
+    calendarDates: RELEASE_DATES, quickIcons: {},
   },
   components: {
     slice: 'components', titleKey: 'lists.components.title', icon: 'cog',
     map: componentRecord, config: lang => sectionConfig(lang, componentsSpec), quickIcons: {},
+    library: LIBRARIES.components,
   },
   projects: {
     slice: 'git_projects', titleKey: 'lists.projects.title', icon: 'open-folder',
@@ -600,7 +710,7 @@ export const LIST_SCREENS = {
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',
     defaultSort: FRESH_FIRST,
-    map: techRecord, config: lang => withFeed(lang, sectionConfig(lang, techSpec), FEEDS.tech), feed: FEEDS.tech, quickIcons: {},
+    map: techRecord, config: lang => withFeed(lang, sectionConfig(lang, techSpec), FEEDS.tech), feed: FEEDS.tech, library: LIBRARIES.tech, quickIcons: {},
   },
   features: {
     modelType: 'feature',
@@ -619,6 +729,27 @@ export const LIST_SCREENS = {
     // Оговорка осталась, но про ДРУГУЮ, настоящую причину: компонент и проект
     // срез отдаёт только свои, а у вложенных сценариев они наследованные.
     note: UC_OWN_LINKS_NOTE,
+  },
+  // S4-PRODUCTS-NODE: продукты (паспорт v2 — тип product) и профиль клиента.
+  products: {
+    slice: 'products', titleKey: 'lists.products.title', icon: 'bullseye',
+    map: productRecord, config: lang => sectionConfig(lang, productsSpec), quickIcons: {},
+  },
+  actors: {
+    slice: 'actors', titleKey: 'lists.actors.title', icon: 'hooded-figure',
+    map: actorRecord, config: lang => sectionConfig(lang, actorsSpec), quickIcons: {},
+  },
+  pains: {
+    slice: 'pains', titleKey: 'lists.pains.title', icon: 'thorn-helix',
+    map: painRecord, config: lang => sectionConfig(lang, painsSpec), quickIcons: {},
+  },
+  gains: {
+    slice: 'gains', titleKey: 'lists.gains.title', icon: 'gift-of-knowledge',
+    map: gainRecord, config: lang => sectionConfig(lang, gainsSpec), quickIcons: {},
+  },
+  jobs: {
+    slice: 'jobs', titleKey: 'lists.jobs.title', icon: 'archery-target',
+    map: jobRecord, config: lang => sectionConfig(lang, jobsSpec), quickIcons: {},
   },
 } as const satisfies Record<string, ListScreenDef>;
 

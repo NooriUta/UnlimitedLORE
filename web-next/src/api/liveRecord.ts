@@ -250,6 +250,9 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
   const links: LoreLink[] = arr(b.links).map(l => ({
     rel: str(l.rel), dir: str(l.dir) === 'in' ? 'in' : 'out', id: str(l.id),
     type: str(l.type), title: str(l.title) || str(l.id), status: str(l.status),
+    // Вид обоих концов (сервер 11.11): kit отбирает по нему связь, не угадывая по записям.
+    ...(str(l.fromKind) ? { fromKind: str(l.fromKind) } : {}),
+    ...(str(l.toKind) ? { toKind: str(l.toKind) } : {}),
   }));
 
   const writeOf = (w: unknown): { endpoint: string; field: string } | null => {
@@ -271,6 +274,8 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // write правка поля обещала бы сохранение, которого некуда отправить.
       ...(writeOf(f.write) ? { write: writeOf(f.write) } : { write: null }),
       ...(str(f.dict) ? { dict: str(f.dict) } : {}),
+      // S4-24 (#1241): варианты из среза сервера — {slice, param, value, label, group?}.
+      ...(optionsSpecOf(f.options) ? { options: optionsSpecOf(f.options)! } : {}),
       ...(section ? { section } : {}),
     };
   });
@@ -280,6 +285,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
   const relations: LoreRelation[] = relRows.map(r => {
     const rel = str(r.rel);
     const dir = str(r.dir) === 'in' ? ('in' as const) : ('out' as const);
+    // Одно ребро делят несколько связей типа (у компонента BELONGS_TO:in — ADR, спринты,
+    // решения…): считаем только связи своего типа цели, иначе «ADR 40» насчитал бы и спринты.
+    const target = str(r.target_type);
+    const ofTarget = (l: LoreLink) => !target || target === 'any' || l.type === target;
     return {
       key: str(r.key), label: str(r.label) || str(r.key),
       relation: relationOf(r.relation), rel, dir,
@@ -287,7 +296,7 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // элементы в links не приходят, и пересчёт давал бы 0); у остальных —
       // считаем по пришедшим связям.
       count: parts.find(x => x.key === str(r.key))?.count
-        ?? links.filter(l => l.rel === rel && l.dir === dir).length,
+        ?? links.filter(l => l.rel === rel && l.dir === dir && ofTarget(l)).length,
       // Есть ли путь привязки — знает только сервер (LoreRecordRelationRoutes).
       // Нет признака — это «нет пути», а не «решайте сами»: иначе человек
       // введёт код и получит UNKNOWN_RELATION.
@@ -406,4 +415,14 @@ export async function fetchLoreRecord(type: string, id: string, opts: FetchRecor
     throw new RecordFetchError(res.status, code, detail);
   }
   return recordFromServer(body, now());
+}
+
+/** Разбор options поля схемы; неполная спека — нет вариантов из среза (а не догадка). */
+export function optionsSpecOf(v: unknown): { slice: string; param?: string; value: string; label: string; group?: string } | null {
+  const o = v && typeof v === 'object' ? (v as Record<string, unknown>) : null;
+  if (!o) return null;
+  const s = (k: string) => (typeof o[k] === 'string' && (o[k] as string) !== '' ? (o[k] as string) : '');
+  if (!s('slice') || !s('value') || !s('label')) return null;
+  // param необязателен: у среза без параметров (трек спринта) его нет.
+  return { slice: s('slice'), ...(s('param') ? { param: s('param') } : {}), value: s('value'), label: s('label'), ...(s('group') ? { group: s('group') } : {}) };
 }

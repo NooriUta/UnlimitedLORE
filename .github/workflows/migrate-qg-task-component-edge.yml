@@ -1,0 +1,62 @@
+name: Migrate QG task → component edge (BELONGS_TO → TAGGED_WITH)
+
+# Разовая миграция данных (слово владелицы 11.11: «пиши скрипт миграции,
+# запускаем отдельным yaml»). Задачи из находок QG до PR #1265 получали ребро
+# BELONGS_TO к компоненту, а паспорт задачи, срез component_tasks и граф читают
+# TAGGED_WITH — компонент таких задач не виден нигде.
+#
+# Работу делает СЕРВЕР: /lore/link/task-component-edge/migrate (только admin,
+# LoreTaskComponentEdgeMigration). Отсюда — только вызов API сервисной учёткой,
+# без прямого SQL: запись идёт через журнал AO-01 и проверку роли.
+#
+# ТОЛЬКО ручной запуск. Порядок: dry_run preprod → apply preprod → dry_run prod →
+# apply prod. Повторный apply безопасен — старых рёбер уже нет, «без изменений».
+# Логика и разбор ответа — .github/scripts/task-component-edge-migrate.sh
+# (многострочный bash в `run:` уже ломал разбор workflow у Forgejo).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'dry_run — только план; apply — перевести рёбра'
+        required: true
+        default: 'dry_run'
+        type: choice
+        options: ['dry_run', 'apply']
+      target:
+        description: 'Стенд: preprod или prod'
+        required: true
+        default: 'preprod'
+        type: choice
+        options: ['preprod', 'prod']
+
+concurrency:
+  group: migrate-qg-task-component-edge-${{ inputs.target }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ inputs.mode || 'dry_run' }}
+      TARGET: ${{ inputs.target || 'preprod' }}
+      # Токен — client_credentials учёткой пробы CD, как у /lore/version в LORE CD.
+      LORE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
+      PROBE_CLIENT_SECRET: ${{ secrets.LORE_CD_PROBE_CLIENT_SECRET }}
+      # Имена препрода резолвит CoreDNS 131 — curl из сети хоста, как у пробы CD.
+      MIG_CURL: docker run --rm --network host curlimages/curl:latest curl
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Адрес стенда
+        run: bash .github/scripts/task-component-edge-migrate.sh --resolve-target "$TARGET"
+
+      - name: Самопроверка разбора ответа
+        run: bash .github/scripts/task-component-edge-migrate.sh --selftest
+
+      - name: Миграция (dry_run — план, apply — запись)
+        run: bash .github/scripts/task-component-edge-migrate.sh "$MODE" "$LORE_BASE"

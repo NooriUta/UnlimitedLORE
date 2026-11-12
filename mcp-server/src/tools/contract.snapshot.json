@@ -1026,6 +1026,41 @@
       ]
     }
   },
+  "graph": {
+    "input": {
+      "depth": "number?",
+      "id": "string?",
+      "limit": "number?",
+      "rels": "string?",
+      "scope": "string?",
+      "structural": "boolean?",
+      "type": "string?",
+      "types": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "harness_list": {
+    "input": {},
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": []
+        }
+      ]
+    }
+  },
   "insight_link": {
     "input": {
       "insight_id": "string",
@@ -1120,6 +1155,92 @@
               "built_at": "string",
               "commit": "string"
             }
+          }
+        }
+      ]
+    }
+  },
+  "machine_access_set": {
+    "input": {
+      "action": "enum(grant|revoke)",
+      "display_name": "string?",
+      "dry_run": "boolean?",
+      "harnesses": "string[]?",
+      "kc_sub": "string",
+      "machine_id": "string",
+      "projects": "string[]?",
+      "role": "enum(actor|viewer)?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "machine_acl": {
+    "input": {
+      "client_id": "string?",
+      "kc_sub": "string?",
+      "machine_id": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "_warning": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "machine_new": {
+    "input": {
+      "dry_run": "boolean?",
+      "harness": "string?",
+      "kc_sub": "string?",
+      "machine_id": "string",
+      "name": "string?",
+      "profile": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "machine_owner_set": {
+    "input": {
+      "actor_id": "string?",
+      "client_id": "string",
+      "harness": "string?",
+      "kc_sub": "string",
+      "machine_id": "string?",
+      "profile": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
           }
         }
       ]

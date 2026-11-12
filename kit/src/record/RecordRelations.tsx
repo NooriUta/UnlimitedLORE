@@ -14,6 +14,7 @@ import type { KitCtx, KitRecord, KitRelation, KitRelationDef } from '../core/con
 import { kitT, type KitLang } from '../i18n';
 import { RecordRef } from './fmt';
 import { RelationTable } from './RelationTable';
+import { RelationPicker } from './RelationPicker';
 
 export const RELATION_MARK: Record<KitRelation, string> = {
   composition: '◆', aggregation: '◇', association: '⇢', attribute: '·', realization: '▷', generalization: '△',
@@ -41,11 +42,34 @@ export const SHARED_TAB: Partial<Record<KitRelation, { id: string; label: 'kit.r
   realization: { id: 'rel:realization', label: 'kit.record.rel.realization' },
 };
 
-/** Записи по другую сторону ребра. */
+/**
+ * Записи по другую сторону ребра. Задан вид цели (`def.targetKind`) — только записи этого вида:
+ * одно ребро делят несколько связей (у компонента BELONGS_TO:in — ADR, спринты, решения),
+ * и без отбора по виду каждая вкладка показывала бы все чужие записи сразу.
+ */
 export function relationTargets(record: KitRecord, ctx: KitCtx, def: KitRelationDef): string[] {
-  return ctx.data.edges
-    .filter(e => e.type === def.rel && (def.dir === 'out' ? e.from === record.id : e.to === record.id))
-    .map(e => (def.dir === 'out' ? e.to : e.from));
+  return relationTargetsWithKind(record, ctx, def).ids;
+}
+
+/**
+ * То же, плюс записи, чей вид НЕ определён. Вид конца берётся из ребра (`toKind`/`fromKind`),
+ * иначе из загруженных записей. Не нашёлся нигде — запись не выкидывается (молча показать меньше,
+ * чем связано, хуже): она остаётся во вкладке с тем же ребром и стороной и идёт в `unknown`,
+ * чтобы вкладка сказала об этом словами. Таких вкладок несколько — во всех, с той же пометкой.
+ */
+export function relationTargetsWithKind(record: KitRecord, ctx: KitCtx, def: KitRelationDef): { ids: string[]; unknown: string[] } {
+  const kind = def.targetKind ? new Map(ctx.data.records.map(r => [r.id, r.kind] as const)) : null;
+  const ids: string[] = [];
+  const unknown: string[] = [];
+  for (const e of ctx.data.edges) {
+    if (e.type !== def.rel || (def.dir === 'out' ? e.from !== record.id : e.to !== record.id)) continue;
+    const id = def.dir === 'out' ? e.to : e.from;
+    if (!kind) { ids.push(id); continue; }
+    const k = (def.dir === 'out' ? e.toKind : e.fromKind) ?? kind.get(id);
+    if (k === undefined) { ids.push(id); unknown.push(id); }
+    else if (k === def.targetKind) ids.push(id);
+  }
+  return { ids, unknown };
 }
 
 /**
@@ -71,7 +95,7 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
-  const ids = relationTargets(record, ctx, def);
+  const { ids, unknown } = relationTargetsWithKind(record, ctx, def);
   const manage = onRelation && canManage(def);
   /**
    * Привязать или отвязать. Возвращает, получилось ли.
@@ -114,7 +138,12 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
         testId={single ? 'kit-relation-list' : undefined}
       />
     );
-  const form = manage && (
+  // S4-24: приложение дало варианты — выбор с поиском, свободного ввода кода нет.
+  const pickOptions = ctx.config.hooks?.relationOptions;
+  const form = manage && pickOptions ? (
+    <RelationPicker lang={lang} label={def.label} recordType={record.kind} recordId={record.id} rel={def.rel} dir={def.dir}
+      options={pickOptions} linked={ids} busy={busy} onPick={id => void call(id, 'add')} />
+  ) : manage && (
     <form
       className="sk-rel__add"
       onSubmit={e => {
@@ -134,11 +163,15 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
   const complaint = failed && (
     <p className="sk-rel__failed" role="alert">{kitT(lang, 'kit.record.rel.failed', { reason: failed })}</p>
   );
-  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{form}{complaint}</div>;
+  // Вид конца не определён — запись показана, но об этом сказано словами (честное состояние).
+  const unknownNote = unknown.length > 0 && (
+    <p className="sk-rel__unknown" data-testid="kit-relation-unknown-kind">{kitT(lang, 'kit.record.rel.unknownKind', { ids: unknown.join(', ') })}</p>
+  );
+  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{unknownNote}{form}{complaint}</div>;
   return (
     <section role="group" aria-label={def.label} className="sk-rel__group" data-relation={def.relation}>
       <h3 className="sk-rel__head"><span className="sk-rel__mark" aria-hidden="true">{RELATION_MARK[def.relation]}</span>{def.label}</h3>
-      {list}{form}{complaint}
+      {list}{unknownNote}{form}{complaint}
     </section>
   );
 }

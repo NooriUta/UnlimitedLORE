@@ -17,6 +17,11 @@ export interface CalendarMonthProps {
   records: readonly KitRecord[];
   /** Поле даты (ключ fields или updated_at). */
   date: string;
+  /** Конец диапазона (ключ fields): запись видна в каждом дне от date до end. */
+  end?: string;
+  /** Несколько полей даты — выбор над сеткой; выбранное — date. Меньше двух — выбора нет. */
+  dates?: readonly { date: string; end?: string; label: string }[];
+  onDate?: (date: string) => void;
   /** Месяц YYYY-MM; не задан — текущий (управляемый, если задан onMonth). */
   month?: string;
   onMonth?: (month: string) => void;
@@ -32,14 +37,14 @@ export interface CalendarMonthProps {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-export function CalendarMonth({ config, records, date, month: monthProp, onMonth, href, onOpen, perDay = 3, narrow: narrowProp, today: todayProp, className }: CalendarMonthProps) {
+export function CalendarMonth({ config, records, date, end, dates, onDate, month: monthProp, onMonth, href, onOpen, perDay = 3, narrow: narrowProp, today: todayProp, className }: CalendarMonthProps) {
   const lang = useKitLang();
   const narrow = useNarrow(narrowProp);
   const today = todayProp ?? todayIso();
   const [own, setOwn] = useState(() => (monthProp ?? today.slice(0, 7)));
   const month = monthProp ?? own;
   const go = (m: string) => { if (monthProp === undefined) setOwn(m); onMonth?.(m); };
-  const model = useMemo(() => calendarMonth(records, date, month), [records, date, month]);
+  const model = useMemo(() => calendarMonth(records, date, month, end), [records, date, month, end]);
   const statuses = useMemo(() => new Map(config.statuses.items.map(s => [s.code, s])), [config]);
   const monthTitle = new Intl.DateTimeFormat(lang, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`));
   const dayFmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'long', timeZone: 'UTC' });
@@ -65,6 +70,11 @@ export function CalendarMonth({ config, records, date, month: monthProp, onMonth
       <h3 className="sk-cal__month">{monthTitle}</h3>
       <button type="button" className="sk-btn" aria-label={kitT(lang, 'kit.calendar.next')} onClick={() => go(shiftMonth(month, 1))}>›</button>
       <button type="button" className="sk-btn" onClick={() => go(today.slice(0, 7))}>{kitT(lang, 'kit.calendar.today')}</button>
+      {dates && dates.length > 1 && (
+        <select className="sk-cal__field" value={date} aria-label={kitT(lang, 'kit.calendar.field')} onChange={e => onDate?.(e.target.value)}>
+          {dates.map(d => <option key={d.date} value={d.date}>{d.label}</option>)}
+        </select>
+      )}
       {model.undated.length > 0 && <span className="sk-cal__undated">{kitT(lang, 'kit.calendar.undated', { n: model.undated.length })}</span>}
     </div>
   );

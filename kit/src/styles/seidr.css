@@ -55,6 +55,7 @@
   --swatch-slate:        #6aa6ff;
   --swatch-juniper:      #50c090;
   --swatch-warm-dark:    #d4a830;
+  --swatch-mono:         #b8b7b1;
 
   /* Статусы — 11 постоянных оттенков, различимых без подписи (как в v1):
      семантические --suc/--inf/--wrn схлопывали бы их в 5 семейств. */
@@ -398,6 +399,67 @@
   --wrn: #a04808;
   --inf: #3a6858;
   --dng: #c03030;
+}
+
+/* ---------- MONO (S4-19) ----------
+   Приглушённая, почти монохромная. Фидбек пользователя 07.11: «оранжевое
+   ядовито, тянет к чёрно-(почти)белому»; владелица 11.11: «не такую яркую,
+   как у терминальной сессии» — фон не чисто чёрный, текст не чисто белый.
+   Статусы различимы, но без насыщенности. Только v2 (в v1 этой палитры нет). */
+[data-theme='mono'] {
+  --bg0: #141516;
+  --bg1: #18191b;
+  --bg2: #1d1e21;
+  --bg3: #24262a;
+  --bd:  #34363b;
+  --bdh: #46484e;
+  --t1:  #dddcd7;
+  --t2:  #aeada8;
+  --t3:  #92918d;
+  --acc: #c4c2bb;
+  --suc: #8db596;
+  --wrn: #c9ab78;
+  --inf: #98adbf;
+  --dng: #d48e83;
+  --st-done:             #8db596;
+  --st-ready_for_deploy: #8fb3b6;
+  --st-active:           #98adbf;
+  --st-partial:          #c9a07e;
+  --st-planned:          #c2b07e;
+  --st-design:           #b39cb3;
+  --st-todo:             #9a9c9f;
+  --st-backlog:          #8e9093;
+  --st-deferred:         #95979b;
+  --st-blocked:          #d48e83;
+  --st-cancelled:        #8f8f8f;
+}
+[data-theme='mono'][data-mode='light'] {
+  color-scheme: light;
+  --bg0: #ebeae6;
+  --bg1: #f2f1ed;
+  --bg2: #f8f7f4;
+  --bg3: #e0dfda;
+  --bd:  #c5c4be;
+  --bdh: #a7a6a0;
+  --t1:  #1f2022;
+  --t2:  #44464a;
+  --t3:  #5a5c60;
+  --acc: #3d3f43;
+  --suc: #3b6646;
+  --wrn: #775719;
+  --inf: #3a5870;
+  --dng: #9e4237;
+  --st-done:             #3b6646;
+  --st-ready_for_deploy: #2f6468;
+  --st-active:           #3a5870;
+  --st-partial:          #82502a;
+  --st-planned:          #6e5c1f;
+  --st-design:           #6a4a6a;
+  --st-todo:             #55585c;
+  --st-backlog:          #5a5c60;
+  --st-deferred:         #56585d;
+  --st-blocked:          #9e4237;
+  --st-cancelled:        #5b5b5b;
 }
 
 /* ═══════════ база документа ═══════════ */
@@ -4290,6 +4352,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 /* ---------- граф знаний GraphExplorer (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-03) ----------
    Два вида — Force и «как Обсидиан» — и левая панель как у Обсидиана: Фильтры,
    Группы, Отображение, Силы. Холст занимает всё, что осталось. */
+.sk-rec-graph__notes { margin: 2px 0 6px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--t3); font-size: var(--fs-xs); }
 .sk-rec-graph__gx { height: min(70vh, 640px); min-height: 420px; }
 .sk-gx { display: flex; flex-direction: column; min-height: 420px; height: 100%; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); overflow: hidden; }
 .sk-gx--panel { --gx-panel: 248px; }
@@ -4327,6 +4390,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-gx-panel__swatches { display: flex; gap: 2px; }
 .sk-gx-swatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--bd); border-radius: 999px; background: var(--gx-c, var(--t3)); cursor: pointer; }
 .sk-gx-swatch[aria-checked="true"] { outline: 2px solid var(--t1); outline-offset: 1px; }
+.sk-gx-panel__radios { display: flex; gap: 12px; padding: 2px 0; }
 .sk-gx-panel__reset { align-self: flex-start; margin-top: 6px; }
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-gx--panel .sk-gx__body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(360px, 1fr); }
@@ -5834,6 +5898,8 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
 .sk-news__more[hidden] { display: none; }
 /* цифры дня: критичное — кубиками, информационное — строкой-сноской */
 .sk-news__figs { display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 4px; }
+.sk-news__figs[data-compact] { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 0 0 2px; }
+.sk-news__figs[data-compact] .sk-news__balbar { max-width: 120px; }
 .sk-news__cubes { display: flex; flex-wrap: wrap; gap: 6px; }
 .sk-news__cube {
   display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 4px;
@@ -6173,6 +6239,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Вид записи, которого нет в справочнике видов: показываем код как есть. */
 .sk-rel__raw { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rel__empty { color: var(--t3); font-size: var(--fs-sm); }
+/* Вид конца связи не определён: запись показана, пометка — словами (не молчаливое скрытие). */
+.sk-rel__unknown { color: var(--wrn); font-size: var(--fs-sm); margin: 4px 0 0; }
 /* Отказ привязки: цвет опасности, потому что по этой связи нельзя делать
    выводы — она осталась прежней, хотя человек её менял. */
 .sk-rel__failed {
@@ -6239,17 +6307,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   background: var(--bg0);
 }
 .sk-dock[data-placement='right'] { grid-template-columns: minmax(0, 1fr) var(--dock-panel-w, min(560px, 45%)); }
-/* Доля списка — по его содержимому, но не больше 40 % высоты дока; остальное
-   забирает паспорт. Жёсткие 2fr/3fr оставляли над паспортом пустое поле, когда
-   список короткий: аудит 08.11 намерил «343 px прозрачного backdrop — пустая
-   треть экрана». Затемнять список нельзя — он живой (решение владелицы 08.11),
-   поэтому убрана пустота, а не видимость списка. */
-.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, fit-content(40%)) minmax(0, 1fr); --rec-col: min(var(--read-col), 92vw); }
-/* Границу тянули (S4-30) — личная высота паспорта главнее правила «список по
-   содержимому»: правило существует, чтобы не было пустоты, а не чтобы спорить
-   с тем, кто уже показал, сколько ему нужно. Пока не тянули, атрибута нет и
-   раскладка прежняя. */
-.sk-dock[data-placement='bottom'][data-sized='h'] { grid-template-rows: minmax(0, 1fr) var(--dock-panel-h, 420px); }
+/* Высота паспорта снизу (владелица 11.11.2026: «нижняя панель — 1/3 от высоты,
+   если не предопределено контрактом, с ресайзбл линией»): док всегда ставит
+   --dock-panel-h — треть высоты окна, контракт приложения (bottomHeight) или
+   личный размер того, кто тянул границу (S4-30); список забирает остаток.
+   Запасное 33vh — только без скрипта. Список не затемняется — он живой. */
+.sk-dock[data-placement='bottom'] { grid-template-rows: minmax(0, 1fr) var(--dock-panel-h, 33vh); --rec-col: min(var(--read-col), 92vw); }
 /* Места в сетке названы явно: ручка — третий ребёнок, и при автоматической
    раскладке паспорт уехал бы в неявный третий ряд (пустая полоса вместо
    записи). Ручка сидит в клетке ПАНЕЛИ, прижатая к её внутреннему краю, то
@@ -6283,10 +6346,16 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    контекста, а не от ширины экрана (замечание владелицы по v1.17.4). Сам по
    себе (витрина /kit/passport) док остаётся слоем поверх окна. */
 .sk-shell__main .sk-dock[data-placement='full'] { position: absolute; inset: 0; }
-.sk-dock[data-placement='full'] .sk-dock__panel { padding: 48px 20px 12px; }
+/* S4-17 (владелица 11.11: «крестик спорят с линией»): кнопки — своей полосой сверху,
+   а не поверх панели. Раньше панель прокручивалась ПОД ними, и липкая строка вкладок
+   (во всю ширину — до самого угла) уходила под «×» и «Выйти». */
+.sk-dock[data-placement='full'] { grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
+.sk-dock[data-placement='full'] .sk-dock__panel { padding: 4px 20px 12px; }
 .sk-dock__close { position: sticky; top: 0; float: right; z-index: 1; min-width: max(var(--tap), 28px); min-height: max(var(--tap), 28px); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 .sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }
-.sk-dock__exit { position: absolute; top: 8px; right: 16px; z-index: 1; min-height: max(var(--tap), 28px); padding: 0 12px; border: 1px solid var(--bd); border-radius: var(--r-pill); background: var(--bg2); color: var(--t1); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.sk-dock__ctl { position: static; justify-self: end; display: flex; align-items: center; gap: 6px; padding: 8px 16px 4px; }
+.sk-dock[data-placement='full'] .sk-dock__ctl .sk-dock__close { position: static; float: none; margin: 0; }
+.sk-dock__exit { z-index: 1; min-height: max(var(--tap), 28px); padding: 0 12px; border: 1px solid var(--bd); border-radius: var(--r-pill); background: var(--bg2); color: var(--t1); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 .sk-dock__exit:hover { border-color: var(--acc); }
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-dock[data-placement] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
@@ -6300,7 +6369,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
      рамка и поля дока и плавающая «×». Остаётся только внутренний отступ 12 px. */
   .sk-dock[data-placement] { border: 0; border-radius: 0; }
   .sk-dock[data-placement] .sk-dock__panel { padding: 8px 12px; border: 0; }
-  .sk-dock[data-placement='full'] .sk-dock__panel { padding: 44px 12px 12px; }
+  .sk-dock[data-placement='full'] { grid-template-rows: auto minmax(0, 1fr); }
+  .sk-dock[data-placement='full'] .sk-dock__panel { padding: 4px 12px 12px; }
+  .sk-dock[data-placement='full'] .sk-dock__ctl { padding: 6px 12px 2px; }
   .sk-dock[data-placement='full'] .sk-rec { padding: 0 0 24px; }
   /* «×» плавает справа, а плавающий элемент сужает ВЕСЬ соседний блок-сетку
      (паспорт — блок со своим контекстом), а не одну строку: запись теряла
@@ -6533,6 +6604,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-cal__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sk-cal__month { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-md); text-transform: capitalize; }
 .sk-cal__undated { font-size: var(--fs-xs); color: var(--wrn); }
+.sk-cal__field { font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 2px 6px; }
 .sk-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--bd); border-radius: var(--r-md); overflow: hidden; }
 .sk-cal__dow { padding: 4px 6px; background: var(--bg2); border-bottom: 1px solid var(--bd); font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
 .sk-cal__day { min-height: 84px; padding: 3px 4px; display: grid; gap: 2px; align-content: start; min-width: 0; border-right: 1px solid var(--bd); border-bottom: 1px solid var(--bd); }
@@ -6703,3 +6775,37 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-fresh[data-tone='bad'] { color: var(--t3); border-bottom: 1px dashed var(--t3); }
 .sk-fresh__dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none; }
 .sk-fresh__word { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; }
+
+/* S4-24: выбор цели связи с поиском — поле, найденное с «Привязать», честные состояния. */
+.sk-rel__pick { display: grid; gap: 4px; margin-top: 6px; }
+.sk-rel__search { font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 4px 8px; }
+.sk-rel__found { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sk-rel__opt { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sk-rel__optid { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); }
+.sk-rel__opttitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.sk-rel__note { margin: 0; font-size: var(--fs-xs); color: var(--t3); }
+
+/* S4-24: варианты поля не загрузились — причина словами и «Повторить» рядом со значением. */
+.sk-rec-fields__opterr { margin-left: 6px; font-size: var(--fs-xs); color: var(--wrn); }
+.sk-rec-fields__retry { margin-left: 6px; }
+
+/* Режим «создание» паспорта (S4-24): черновик, поля, причина неактивной «Сохранить». */
+.sk-rec-create { min-width: 0; }
+.sk-rec-create__form { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; padding: var(--pad-y) var(--pad-x); }
+.sk-rec-create__head { display: flex; align-items: baseline; gap: var(--gap); flex-wrap: wrap; }
+.sk-rec-create__draft { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; color: var(--wrn); border: 1px solid var(--wrn); border-radius: 999px; padding: 0 var(--pad-x); }
+.sk-rec-create__title { margin: 0; font-size: var(--fs-lg); color: var(--t1); overflow-wrap: anywhere; }
+.sk-rec-create__note { font-size: var(--fs-xs); color: var(--wrn); overflow-wrap: anywhere; }
+.sk-rec-create__fields { display: flex; flex-direction: column; gap: var(--gap); }
+.sk-rec-create__field { min-width: 0; }
+.sk-rec-create__err { margin: 0; color: var(--dng); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.sk-rec-create__foot { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
+.sk-rec-create__why { font-size: var(--fs-xs); color: var(--t3); }
+
+/* S4-24: поле-связь в «Свойствах» — чипы с «×» и выбор с поиском. */
+.sk-relfield { display: grid; gap: 4px; min-width: 0; }
+.sk-relfield__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-relfield__chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 8px; border: 1px solid var(--bd); border-radius: 999px; background: var(--bg2); font-size: var(--fs-xs); }
+.sk-relfield__chip--inherited { padding-right: 8px; color: var(--t3); border-style: dashed; }
+.sk-relfield__x { min-width: 20px; min-height: 20px; border: 0; border-radius: 999px; background: transparent; color: var(--t3); font: inherit; cursor: pointer; }
+.sk-relfield__x:hover { color: var(--dng); }

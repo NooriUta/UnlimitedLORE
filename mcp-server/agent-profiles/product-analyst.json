@@ -10,6 +10,7 @@
     "run_block": "allow",
     "search": "allow",
     "search_similar": "allow",
+    "graph": "allow",
     "pain_*": "allow",
     "gain_*": "allow",
     "job_*": "allow",

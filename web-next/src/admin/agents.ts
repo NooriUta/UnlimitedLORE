@@ -17,6 +17,8 @@
 import { loreFetch } from '../auth/session';
 import { fetchSlice, LoreHttpError, type SliceBody } from '../api/loreSlice';
 import { getJson } from './actions';
+import { harnessLogo } from './harnessLogos';
+import { ACTIVITY_DEFAULT_H, activityWindowH, MACHINE_CLIENT_PREFIX, parseActivity, type MachineActivity } from './activity';
 
 export interface AgentRow {
   actor_id: string;
@@ -27,11 +29,47 @@ export interface AgentRow {
   session_id: string | null;
   /** Код из реестра или null — сервер не знает (не угадываем). */
   harness: string | null;
+  /** S7B-22: официальный логотип harness из справочника (поле icon) или null — знака нет. */
+  harness_logo?: string | null;
+  /** S7B-22: подпись harness из справочника (кода нет в справочнике — сам код); null — harness не указан. */
+  harness_label?: string | null;
   /** Первый владелец — для правки (сервер ждёт один kc_sub). */
   owner_kc_sub: string | null;
   /** Все владельцы (OWNED_BY может быть несколько). */
   owner_kc_subs: string[];
   owner_display_name: string | null;
+  /** S7B-ACT-1: окно активности — заполнено у актора-машины (minilore-link-*), у прочих пусто. */
+  activity: MachineActivity;
+  /** Общий дефолт окна от сервера (activity_default_h); нет — ACTIVITY_DEFAULT_H. */
+  activity_default_h: number;
+  /** Когда агент был на связи — последняя активность его сессий; null — отметок нет. */
+  last_seen_at: string | null;
+}
+
+/** Самая поздняя ISO-отметка из списка (срез отдаёт активность всех сессий агента). */
+function latest(v: unknown): string | null {
+  let best: string | null = null;
+  let bestMs = -Infinity;
+  for (const x of Array.isArray(v) ? v : v == null ? [] : [v]) {
+    if (typeof x !== 'string') continue;
+    const ms = Date.parse(x);
+    if (Number.isFinite(ms) && ms > bestMs) { bestMs = ms; best = x; }
+  }
+  return best;
+}
+
+/**
+ * S7B-ACT-1: окно активности агента — окно его машины (актор с client_id
+ * minilore-link-<machine_id>, или сам агент, если он и есть машина) с перекрытием
+ * по его harness; машины нет — общий дефолт. Правило — MachineActivity.effective.
+ */
+export function agentWindow(row: AgentRow, rows: readonly AgentRow[]): { hours: number; basis: 'harness' | 'machine' | 'default'; machine: string | null } {
+  const self = row.client_id?.startsWith(MACHINE_CLIENT_PREFIX) ? row : null;
+  const machineRow = self ?? (row.machine_id ? rows.find(r => r.client_id === `${MACHINE_CLIENT_PREFIX}${row.machine_id}`) ?? null : null);
+  const machine = self ? row.client_id!.slice(MACHINE_CLIENT_PREFIX.length) : row.machine_id;
+  // Машина не заведена (нет актора minilore-link-*) — окна взять не у кого: общий дефолт.
+  if (!machineRow) return { ...activityWindowH({ windowH: null, harness: {} }, null, row.activity_default_h), machine: machine ?? null };
+  return { ...activityWindowH(machineRow.activity, row.harness, machineRow.activity_default_h), machine };
 }
 
 export interface AgentsData {
@@ -42,6 +80,8 @@ export interface AgentsData {
   registryProblem: { kind: 'empty' } | { kind: 'error'; reason: string } | null;
   /** Подписи кодов из справочника (в том числе неактивных); кода нет — показываем сам код. */
   labels: Record<string, string>;
+  /** S7B-22: код → официальный логотип (только те, у кого он есть в справочнике). */
+  logos: Record<string, string>;
   /** Строк больше, чем пришло (метаданные полноты среза). */
   truncated: boolean;
 }
@@ -54,7 +94,7 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
  */
 const list = (v: unknown): string[] => (Array.isArray(v) ? v : [v]).map(str).filter((x): x is string => x !== null);
 
-export interface HarnessDictRow { code: string; label: string; active: boolean; sort: number }
+export interface HarnessDictRow { code: string; label: string; active: boolean; sort: number; icon?: string | null }
 
 /** Строки справочника harness: код, подпись на языке, активность, порядок. */
 export function parseHarnessDict(rows: Array<Record<string, unknown>>, lang: 'ru' | 'en' = 'ru'): HarnessDictRow[] {
@@ -64,6 +104,7 @@ export function parseHarnessDict(rows: Array<Record<string, unknown>>, lang: 'ru
     // is_active не пришёл — считаем активным: так справочник отдаёт значения по умолчанию.
     active: r.is_active !== false,
     sort: typeof r.sort_order === 'number' ? r.sort_order : 0,
+    icon: str(r.icon),
   })).filter(d => d.code !== '');
 }
 
@@ -76,21 +117,35 @@ export function parseAgents(body: SliceBody<Record<string, unknown>>, dict?: Har
     machine_id: str(r.machine_id),
     session_id: str(r.session_id),
     harness: str(r.harness),
+    harness_logo: null as string | null,
+    harness_label: null as string | null,
     owner_kc_sub: list(r.owner_kc_sub)[0] ?? null,
     owner_kc_subs: list(r.owner_kc_sub),
     owner_display_name: list(r.owner_display_name).join(', ') || null,
+    activity: parseActivity(r.activity_window_h, r.activity_window_harness),
+    activity_default_h: typeof r.activity_default_h === 'number' ? r.activity_default_h : ACTIVITY_DEFAULT_H,
+    last_seen_at: latest(r.session_activity),
   })).filter(r => r.actor_id !== '');
   let registry: string[] | null = null;
   let registryProblem: AgentsData['registryProblem'] = null;
   const labels: Record<string, string> = {};
+  const logos: Record<string, string> = {};
   if (dict === undefined) registryProblem = { kind: 'empty' };
   else if ('error' in dict) registryProblem = { kind: 'error', reason: dict.error };
   else {
-    for (const d of dict) labels[d.code] = d.label;
+    for (const d of dict) {
+      labels[d.code] = d.label;
+      const logo = harnessLogo(d.icon);
+      if (logo) logos[d.code] = logo;
+    }
     const active = dict.filter(d => d.active).sort((a, b) => a.sort - b.sort || a.code.localeCompare(b.code));
     if (active.length) registry = active.map(d => d.code); else registryProblem = { kind: 'empty' };
   }
-  return { rows, registry, registryProblem, labels, truncated: body.truncated === true };
+  for (const r of rows) {
+    r.harness_label = r.harness ? labels[r.harness] ?? r.harness : null;
+    r.harness_logo = r.harness ? logos[r.harness] ?? null : null;
+  }
+  return { rows, registry, registryProblem, labels, logos, truncated: body.truncated === true };
 }
 
 export async function fetchAgents(signal?: AbortSignal, fetchImpl?: typeof fetch, lang: 'ru' | 'en' = 'ru'): Promise<AgentsData> {

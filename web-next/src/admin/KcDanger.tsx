@@ -5,10 +5,16 @@
 //   2. ввод подтверждения — логин человека / clientId агента (kit DiffPreview confirm);
 //   3. применение;
 //   4. «Отменить»: у realm-роли — обратный вызов в окне (kit BatchUndo, undo_of);
-//      у ротации — НЕЛЬЗЯ, и это сказано до применения и после: Keycloak
-//      делает старый секрет недействительным сразу, LORE его не хранит;
+//      у ротации — НЕЛЬЗЯ, и это сказано до применения и после: LORE прежний
+//      секрет не хранит;
 //   5. запись в журнале AO-01 — ссылка на журнал с отбором по семейству kc.
-// Секрет — только в kit SecretOnce (за предупреждением), не в адресе и не в хранилище.
+// Секрет — только в kit SecretOnce (за предупреждением), не в адресе и не в хранилище;
+// на машину агента — только переменной окружения LORE_MCP_CLIENT_SECRET.
+//
+// S7B-19 (UC-6, без простоя): если у клиента в Keycloak есть политика ротации,
+// прежний секрет остаётся рядом с новым до срока. Это сказано ДО применения
+// (old_secret: kept | unknown), после — OldSecretSwitch: «перешёл?» (сессия
+// агента, начатая после ротации) и «Отозвать прежний» только после перехода.
 import { useEffect, useState } from 'react';
 import {
   BatchUndo, DiffPreview, Forbidden, LoadError, SecretOnce, Skeleton, useKitLang, useUrlParam,
@@ -18,8 +24,9 @@ import { useAppT } from '../i18n';
 import { useAdminNav } from './adminNav';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  fetchRealmRoles, parseRealmApply, parseRealmPlan, parseRotation, parseRotationPlan, postRealmRole, postRotate,
-  type RealmAction, type RealmApply, type RealmRoleOption, type Rotation, type RotationPlan,
+  fetchRealmRoles, fetchSecretState, parseRealmApply, parseRealmPlan, parseRevokePlan, parseRotation, parseRotationPlan,
+  postRealmRole, postRevokeOld, postRotate,
+  type RealmAction, type RealmApply, type RealmRoleOption, type Rotation, type RotationPlan, type SecretState,
 } from './kc';
 
 const reasonOf = (e: unknown): string =>
@@ -274,6 +281,13 @@ export function RotateDanger({ clientId, fetchImpl, onClose }: RotateDangerProps
           <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-rotate-noundo">
             {t('admin.kc.rotate.noUndo')}{reason && <span className="adm-dim"> {reason}</span>}
           </p>
+          {/* S7B-19: будет ли простой — сказано ДО ввода подтверждения. */}
+          {plan.oldSecret && (
+            <p className="adm-note" data-tone={plan.oldSecret === 'kept' ? undefined : 'dng'} role="status"
+              data-testid="adm-rotate-expect" data-expect={plan.oldSecret}>
+              {t(plan.oldSecret === 'kept' ? 'admin.kc.rotate.expectKept' : 'admin.kc.rotate.expectDowntime')}
+            </p>
+          )}
           <DiffPreview rows={plan.rows} onApply={apply} busy={applying} label={t('admin.roles.danger.diff')} lang={lang}
             confirm={{ word: clientId, label: t('admin.kc.rotate.confirm', { client: clientId }) }} />
           {applyError && (
@@ -288,7 +302,22 @@ export function RotateDanger({ clientId, fetchImpl, onClose }: RotateDangerProps
           {done.secret
             ? <SecretOnce value={done.secret} label={t('admin.kc.rotate.secretLabel', { client: clientId })} lang={lang} />
             : <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-rotate-nosecret">{t('admin.kc.rotate.noSecret')}</p>}
+          {/* S7B-19: секрет — только в переменную окружения; в команде и файле — ссылка на неё. */}
+          <p className="adm-note" role="status" data-testid="adm-rotate-env">
+            {t('admin.kc.rotate.env')}
+          </p>
           <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-rotate-done-noundo">{t('admin.kc.rotate.doneNoUndo')}</p>
+          {done.oldSecretKept === true && <OldSecretSwitch clientId={clientId} fetchImpl={fetchImpl} />}
+          {done.oldSecretKept === false && (
+            <p className="adm-note" data-tone="dng" role="status" data-testid="adm-rotate-olddead">
+              {done.oldSecretNote ?? t('admin.kc.rotate.oldDead')}
+            </p>
+          )}
+          {done.oldSecretKept === null && (
+            <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-rotate-oldunknown">
+              {done.oldSecretNote ?? t('admin.kc.rotate.oldUnknown')}
+            </p>
+          )}
           <JournalLink id={done.clientId} />
         </>
       )}
@@ -301,10 +330,111 @@ export function RotateDanger({ clientId, fetchImpl, onClose }: RotateDangerProps
   );
 }
 
+// ── два секрета: «перешёл?» и отзыв прежнего (S7B-19, UC-6) ──────────────
+
+/** Как часто перепроверять «перешёл?», пока панель открыта. */
+const SWITCH_POLL_MS = 15_000;
+
+/**
+ * Прежний секрет рядом с новым: до какого срока он действует, перешёл ли агент
+ * (сессия, начатая после ротации), и «Отозвать прежний» — только после
+ * перехода; до него кнопка заблокирована с причиной, а сервер отвечает 409.
+ * Значений секретов здесь нет — только время и факт.
+ */
+export function OldSecretSwitch({ clientId, fetchImpl }: { clientId: string; fetchImpl?: typeof fetch }) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const [state, setState] = useState<SecretState | Fail | null>(null);
+  const [tick, setTick] = useState(0);
+  const [revoke, setRevoke] = useState<DiffRow[] | Fail | null>(null);
+  const [revoking, setRevoking] = useState(false);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [revoked, setRevoked] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetchSecretState(clientId, fetchImpl).then(
+      s => { if (alive) setState(s); },
+      (e: unknown) => { if (alive) setState(failOf(e)); },
+    );
+    return () => { alive = false; };
+  }, [clientId, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const s = state && 'switched' in state ? state : null;
+  const waiting = s !== null && s.oldSecretActive === true && !s.switched.seen && !revoked;
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const id = window.setInterval(() => setTick(n => n + 1), SWITCH_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [waiting]);
+
+  const openRevoke = () => {
+    if (!s?.switched.seen) return;
+    setRevoke(null);
+    setRevokeError(null);
+    postRevokeOld(clientId, true, fetchImpl).then(
+      body => setRevoke(parseRevokePlan(body)),
+      (e: unknown) => setRevoke(failOf(e)),
+    );
+  };
+  const applyRevoke = () => {
+    if (revoking) return;
+    setRevoking(true);
+    setRevokeError(null);
+    postRevokeOld(clientId, false, fetchImpl).then(
+      () => { setRevoked(true); setRevoking(false); setRevoke(null); setTick(n => n + 1); },
+      (e: unknown) => { setRevokeError(reasonOf(e)); setRevoking(false); },
+    );
+  };
+
+  return (
+    <div className="adm-card" data-testid="adm-oldsecret">
+      <span className="adm-field__l">{t('admin.kc.old.title')}</span>
+      {state === null && <Skeleton lines={2} label={t('admin.roles.danger.loading')} />}
+      {state && 'kind' in state && <FailView fail={state} onRetry={() => setTick(n => n + 1)} />}
+      {s && revoked && <p className="adm-note" role="status" data-testid="adm-oldsecret-revoked">{t('admin.kc.old.revoked')}</p>}
+      {s && !revoked && s.oldSecretActive !== true && (
+        <p className="adm-sub" data-testid="adm-oldsecret-none">{t('admin.kc.old.none')}</p>
+      )}
+      {s && !revoked && s.oldSecretActive === true && (
+        <>
+          <p className="adm-sub" data-testid="adm-oldsecret-expires">
+            {t('admin.kc.old.expires', { at: s.oldSecretExpiresAt ?? t('admin.kc.old.noExpiry') })}
+          </p>
+          <p className="adm-note" data-tone={s.switched.seen ? undefined : 'wrn'} role="status"
+            data-testid="adm-oldsecret-switched" data-seen={String(s.switched.seen)}>
+            {s.switched.seen
+              ? t('admin.kc.old.switched', { at: s.switched.at ?? '—', machine: s.switched.machine ?? '—' })
+              : t('admin.kc.old.waiting', { reason: s.switched.reason ?? '' })}
+          </p>
+          <p className="adm-dim">{t('admin.kc.old.signal')}</p>
+          {revoke === null || !Array.isArray(revoke) ? (
+            <div className="adm-filters">
+              <button type="button" className="adm-btn" data-testid="adm-oldsecret-recheck" onClick={() => setTick(n => n + 1)}>
+                {t('admin.kc.old.recheck')}
+              </button>
+              <button type="button" className="adm-btn adm-btn--dng" data-testid="adm-oldsecret-revoke"
+                disabled={!s.switched.seen} onClick={openRevoke}>
+                {t('admin.kc.old.revoke')}
+              </button>
+            </div>
+          ) : (
+            <DiffPreview rows={revoke} onApply={applyRevoke} busy={revoking} label={t('admin.kc.old.revokeDiff')} lang={lang}
+              confirm={{ word: clientId, label: t('admin.kc.rotate.confirm', { client: clientId }) }} />
+          )}
+          {revoke && !Array.isArray(revoke) && <FailView fail={revoke} onRetry={openRevoke} />}
+          {revokeError && <p className="adm-note" data-tone="dng" role="alert">{t('admin.roles.danger.applyError', { reason: revokeError })}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Кнопка «Ротировать секрет» в карточке агента: без clientId ротировать нечего — сказано словами. */
 export function RotatePanel({ clientId, fetchImpl }: { clientId: string | null; fetchImpl?: typeof fetch }) {
   const t = useAppT();
   const [open, setOpen] = useState(false);
+  const [oldOpen, setOldOpen] = useState(false);
   if (!clientId) {
     return <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-rotate-noclient">{t('admin.kc.rotate.noClient')}</p>;
   }
@@ -315,7 +445,13 @@ export function RotatePanel({ clientId, fetchImpl }: { clientId: string | null; 
           {t('admin.kc.rotate.button')}
         </button>
       )}
+      {!open && (
+        <button type="button" className="adm-btn" data-testid="adm-oldsecret-open" onClick={() => setOldOpen(v => !v)}>
+          {t('admin.kc.old.open')}
+        </button>
+      )}
       {open && <RotateDanger clientId={clientId} fetchImpl={fetchImpl} onClose={() => setOpen(false)} />}
+      {!open && oldOpen && <OldSecretSwitch clientId={clientId} fetchImpl={fetchImpl} />}
     </div>
   );
 }

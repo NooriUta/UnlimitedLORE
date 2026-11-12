@@ -12,14 +12,25 @@ import type { WidthStore } from '../list/columnWidths';
 /**
  * Пределы размера панели паспорта (S4-30).
  *
- * Умолчания — те же, что в seidr.css, чтобы «не тянули» выглядело как прежде:
- * справа min(560px, 45%), снизу — остаток после списка. Минимумы — чтобы в
+ * Умолчание справа — то же, что в seidr.css (min(560px, 45%)), чтобы «не
+ * тянули» выглядело как прежде; снизу — доля высоты окна (DOCK_BOTTOM_SHARE),
+ * если приложение не задало своё (`bottomHeight`). Минимумы — чтобы в
  * панели оставалась читаемая запись, а не полоска; максимумы — чтобы список,
  * из которого запись открыта, не исчезал совсем: он живой (решение владелицы
  * 08.11), и «потянула до конца» не должно выглядеть как «список пропал».
  */
 const PANEL_W = { def: 560, min: 320, max: 1100 };
 const PANEL_H = { def: 420, min: 240, max: 900 };
+
+/**
+ * Нижняя панель (владелица 11.11.2026: «нижняя панель — 1/3 от высоты, если
+ * не предопределено контрактом, с ресайзбл линией»): по умолчанию — треть
+ * высоты окна, потолок — две трети, как у панели сбоку по ширине. Прежнее
+ * «по содержимому, но не больше 40 %» уходит: короткий список отдавал паспорту
+ * почти всё место, длинный — сжимал его, и высота прыгала от записи к записи.
+ */
+export const DOCK_BOTTOM_SHARE = 1 / 3;
+export const DOCK_BOTTOM_MAX_SHARE = 2 / 3;
 
 /**
  * Потолок панели СБОКУ — доля ширины окна, а не число (владелица 11.11.2026:
@@ -30,17 +41,17 @@ const PANEL_H = { def: 420, min: 240, max: 900 };
  */
 export const DOCK_SIDE_SHARE = 2 / 3;
 
-/** Ширина окна и её изменения: потолок панели пересчитывается вместе с окном. */
-function useWindowWidth(): number {
-  const read = () => (typeof window === 'undefined' ? 0 : window.innerWidth);
-  const [w, setW] = useState(read);
+/** Размер окна и его изменения: потолок и умолчание панели пересчитываются вместе с окном. */
+function useWindowSize(): { w: number; h: number } {
+  const read = () => (typeof window === 'undefined' ? { w: 0, h: 0 } : { w: window.innerWidth, h: window.innerHeight });
+  const [s, setS] = useState(read);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const on = () => setW(read());
+    const on = () => setS(read());
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
-  return w;
+  return s;
 }
 
 export type RecordPlacement = 'right' | 'bottom' | 'full';
@@ -64,30 +75,46 @@ export interface RecordDockProps {
   modal?: boolean;
   /** Хранилище личных размеров зон (S4-30); нет — размер живёт до перезагрузки. */
   widthStore?: WidthStore;
+  /**
+   * Высота нижней панели по умолчанию, px — контракт приложения. Не задана —
+   * треть высоты окна (DOCK_BOTTOM_SHARE). Это умолчание, а не личный размер:
+   * кто границу тянул, получает свой; пределы (240 px … 2/3 окна) — те же.
+   */
+  bottomHeight?: number;
 }
 
-export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose, modal = true, widthStore }: RecordDockProps) {
+export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose, modal = true, widthStore, bottomHeight }: RecordDockProps) {
   const lang = useKitLang();
   const full = placement === 'full';
   // S4-30: список и паспорт делят место, и границу между ними можно тянуть.
   // Личный размер — в хранилище, как ширина колонки списка.
   const store = useMemo(() => widthStore ?? createSafeStorage(), [widthStore]);
   const vertical = placement === 'bottom';
-  const winW = useWindowWidth();
+  const { w: winW, h: winH } = useWindowSize();
   // Сбоку потолок — 2/3 окна, но не ниже минимума. Окна нет (SSR) — прежнее число.
   const sideMax = winW > 0 ? Math.max(PANEL_W.min, Math.round(winW * DOCK_SIDE_SHARE)) : PANEL_W.max;
-  const lim = vertical ? PANEL_H : { ...PANEL_W, max: sideMax };
+  // Снизу так же по высоте: потолок 2/3, умолчание — контракт приложения или 1/3.
+  const bottomMax = winH > 0 ? Math.max(PANEL_H.min, Math.round(winH * DOCK_BOTTOM_MAX_SHARE)) : PANEL_H.max;
+  const bottomDef = typeof bottomHeight === 'number' && Number.isFinite(bottomHeight) && bottomHeight > 0
+    ? bottomHeight
+    : winH > 0 ? Math.round(winH * DOCK_BOTTOM_SHARE) : PANEL_H.def;
+  const lim = vertical ? { min: PANEL_H.min, max: bottomMax, def: bottomDef } : { ...PANEL_W, max: sideMax };
   const zone = vertical ? 'dock.panel.h' : 'dock.panel.w';
   const saved = zoneSaved(store, zone);
-  const [size, setSize] = useState(saved ?? lim.def);
+  // null — «не тянули»: размер берётся из умолчания и следует за окном.
+  const [dragged, setSize] = useState<number | null>(saved ?? null);
+  const size = dragged ?? lim.def;
   // Запомненный размер — чужое число (хранилище, прежнее окно): рисуем его в
   // пределах ТЕКУЩЕГО окна, иначе сузившееся окно отдало бы панели всё место.
   const shown = Math.max(lim.min, Math.min(lim.max, size));
-  // «Не тянули» ≠ «поставила умолчание»: пока не тянули, работает правило
-  // раскладки из seidr.css (панель справа — min(560px, 45%), снизу — остаток
-  // после списка «по содержимому, но не больше 40 %»). Личный размер его
-  // отменяет, и отменять его у того, кто границу не трогал, нельзя.
+  // «Не тянули» ≠ «поставила умолчание»: пока не тянули, справа работает
+  // правило раскладки из seidr.css (min(560px, 45%)), снизу — умолчание
+  // (1/3 окна или контракт), которое следует за окном. Личный размер их
+  // отменяет, и отменять их у того, кто границу не трогал, нельзя.
   const [sized, setSized] = useState(saved !== undefined);
+  // Снизу высота задаётся всегда: 1/3 окна в CSS не выразить (доля — от
+  // контейнера, а не окна), а контракт приложения — тем более.
+  const sizeVar = !full && (sized || vertical);
   // Esc выходит из слоя — находка P0 аудита навигации 08.11.2026: «Esc не
   // закрывает ни палитру, ни док». Слушатель висел только в полном экране, и в
   // доке справа/снизу клавиши не было вовсе.
@@ -115,7 +142,7 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
   return (
     <div className={['sk-dock', className].filter(Boolean).join(' ')} data-placement={placement} data-testid="kit-rec-dock"
       data-sized={sized && !full ? (vertical ? 'h' : 'w') : undefined}
-      style={sized && !full ? ({ [vertical ? '--dock-panel-h' : '--dock-panel-w']: `${shown}px` } as CSSProperties) : undefined}
+      style={sizeVar ? ({ [vertical ? '--dock-panel-h' : '--dock-panel-w']: `${shown}px` } as CSSProperties) : undefined}
       {...(full && modal ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': kitT(lang, 'kit.record.dock.full') } : {})}>
       {/* Список под паспортом живой: своя прокрутка, щелчок по другой записи (08.11). */}
       {!full && backdrop && <div className="sk-dock__backdrop">{backdrop}</div>}
@@ -136,11 +163,17 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
           label={kitT(lang, vertical ? 'kit.record.dock.heightBottom' : 'kit.record.dock.widthRight')}
         />
       )}
-      {full && onExitFull && (
-        <button type="button" className="sk-dock__exit" onClick={onExitFull} title="Esc">{kitT(lang, 'kit.record.dock.exitFull')}</button>
+      {/* Полный экран (S4-17, владелица 11.11: «крестик спорят с линией»): «Выйти» и «×» —
+          одной группой в углу, вне панели. Плавающий «×» в панели при прокрутке вставал
+          поверх «Выйти» и сужал всю запись со строкой вкладок. */}
+      {full && (onExitFull || onClose) && (
+        <div className="sk-dock__ctl">
+          {onExitFull && <button type="button" className="sk-dock__exit" onClick={onExitFull} title="Esc">{kitT(lang, 'kit.record.dock.exitFull')}</button>}
+          {onClose && <button type="button" className="sk-dock__close" onClick={onClose} aria-label={kitT(lang, 'kit.record.dock.close')} title={kitT(lang, 'kit.record.dock.close')}>×</button>}
+        </div>
       )}
       <section className="sk-dock__panel">
-        {onClose && (
+        {onClose && !full && (
           <button type="button" className="sk-dock__close" onClick={onClose} aria-label={kitT(lang, 'kit.record.dock.close')} title={kitT(lang, 'kit.record.dock.close')}>×</button>
         )}
         {children}

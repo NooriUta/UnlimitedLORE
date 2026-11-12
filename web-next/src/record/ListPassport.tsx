@@ -8,11 +8,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
-  type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
-} from '@seidr/kit';
+  type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
+import { appT } from '../i18n';
 import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
 import { parentsOf } from './loreRefCreate';
+import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
@@ -21,13 +22,14 @@ import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
-import { fromLoreRecord, withFieldOptions } from './loreRecordContract';
+import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } from './loreRecordContract';
 import { toDictItems, type DictApiRow } from '../sprint/taskDicts';
 import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
 import { saveMerging, type FieldState } from './passportMerge';
 import { fetchLoreRecord } from '../api/liveRecord';
 import { saveRelation } from './relationSave';
+import { relationOptionsHook } from './relationOptions';
 import { saveRecordStatus, statusEntity } from './statusSave';
 import { fetchPassportOrder } from './passportOrder';
 import { fetchTypeStatuses } from './passportStatuses';
@@ -122,7 +124,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // что список собирался из внутренней таблицы kit, то есть из всех осей
   // разом. Теперь спрашиваем цикл этого типа; модель не ответила — остаётся
   // умолчание приложения, и это сказано словами в той же строке замечаний.
-  const [statuses, setStatuses] = useState<{ items: KitConfig['statuses']['items']; notes: string[] }>({ items: [], notes: [] });
+  const [statuses, setStatuses] = useState<{ items: KitConfig['statuses']['items']; notes: string[]; byKind?: Record<string, KitConfig['statuses']['items']> }>({ items: [], notes: [] });
   useEffect(() => {
     let alive = true;
     fetchTypeStatuses(type, { fetchImpl }).then(r => { if (alive) setStatuses(r); }, () => { /* сказано в notes */ });
@@ -153,6 +155,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     [type, id, lang, slice, fetchImpl],
   );
   const contract = pp.data ?? null;
+  // S4-24: цель связи — выбором из среза её типа, а не вводом кода. Хук держим
+  // стабильным: выбор перезапрашивает варианты, когда меняется его ссылка.
+  const relationOptions = useMemo(() => relationOptionsHook(contract?.schema.relations ?? [], (name, params) => slice<Record<string, unknown>>(name, params)), [contract, slice]);
   const view = useMemo(() => (contract ? fromLoreRecord(contract, lang) : null), [contract, lang]);
   // S5-08: после 409 запись перечитана, а паспорт ещё нет (перечитать его — значит
   // снять поле правки вместе с решаемым спором). Новая база и версия поля живут
@@ -161,6 +166,45 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
   const parentsKey = JSON.stringify(parentsOf(view?.record));
   const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>), [parentsKey]);
+  // Граф (GC-04): вкладка «Граф» берёт окрестность записи с сервера на глубину из адреса —
+  // фасад давал один шаг. Ошибка — строкой блока графа, а не пустым графом.
+  // Глубина 1–4 и снятые типы связей (goff) — из адреса. Владелица 11.11: «показать связи
+  // определённого типа, связи 2, 3, 4 уровней» — снятый тип исключается из ОБХОДА на сервере
+  // (rels = все типы окрестности минус снятые), а не только прячется на экране.
+  const [gdepthRaw] = useUrlParam('gdepth');
+  const gdepth = gdepthRaw === '2' || gdepthRaw === '3' || gdepthRaw === '4' ? Number(gdepthRaw) : 1;
+  const [goffRaw] = useUrlParam('goff');
+  const goff = (goffRaw ?? '').split(',').filter(Boolean).sort().join(',');
+  const [graph, setGraph] = useState<{ key: string; body?: LoreGraphBody; error?: string } | null>(null);
+  // Все типы связей окрестности по записи и глубине — из ответа без фильтра (rels_available
+  // его не учитывает; у старого сервера — счёт рёбер полного ответа).
+  const graphRels = useRef(new Map<string, { rel: string; count: number }[]>());
+  const graphBase = view && tab === 'graph' ? `${type}|${view.record.id}|${gdepth}` : null;
+  const graphKey = graphBase ? `${graphBase}|${goff}` : null;
+  useEffect(() => {
+    if (!graphKey || !graphBase || !view) return;
+    let alive = true;
+    const off = goff ? goff.split(',') : [];
+    const q = { type, id: view.record.id, depth: gdepth };
+    const known = graphRels.current.get(graphBase);
+    const all = known
+      ? Promise.resolve(known)
+      : fetchLoreGraph(q, fetchImpl).then(body => {
+        const rels = relsOf(body);
+        graphRels.current.set(graphBase, rels);
+        if (alive && !off.length) setGraph({ key: graphKey, body });
+        return rels;
+      });
+    all.then(rels => {
+      if (!off.length) return known ? fetchLoreGraph(q, fetchImpl) : null;
+      const on = rels.map(r => r.rel).filter(r => !off.includes(r));
+      // Сняты все типы — обходить нечего: только сама запись, без запроса.
+      if (!on.length) return { nodes: [], edges: [], meta: { complete: true, truncated: false } } as LoreGraphBody;
+      return fetchLoreGraph({ ...q, rels: on }, fetchImpl);
+    }).then(body => { if (alive && body) setGraph({ key: graphKey, body }); },
+      e => { if (alive) setGraph({ key: graphKey, error: e instanceof Error ? e.message : String(e) }); });
+    return () => { alive = false; };
+  }, [graphKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
   // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
   // правится (выбирать не из чего), а не показывает пустой список.
@@ -181,6 +225,25 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     }
     return () => { alive = false; };
   }, [dictKeys, slice, lang]);
+  // S4-24 (#1241): варианты enum из среза сервера (автор/исполнитель/принимающий — task_identities).
+  // Не прочитались — поле говорит причину и даёт «Повторить», свободного ввода нет.
+  const optFields = (contract?.schema.fields ?? []).filter(f => f.kind === 'enum' && f.editable && f.write && !f.dict && f.options);
+  const optKey = optFields.map(f => `${f.key}:${f.options!.slice}`).join(',');
+  const [optSeq, setOptSeq] = useState(0);
+  const [sliceOpts, setSliceOpts] = useState<Record<string, OptionState>>({});
+  useEffect(() => {
+    if (!optKey) return;
+    let alive = true;
+    for (const f of optFields) {
+      const spec = f.options!;
+      slice<Record<string, unknown>>(spec.slice, spec.param ? { [spec.param]: id } : undefined).then(
+        body => { if (alive) setSliceOpts(prev => ({ ...prev, [f.key]: { items: optionsFromSlice(body?.rows ?? [], spec, g => t(g === 'agent' ? 'pp.opt.agents' : g === 'person' ? 'pp.opt.people' : 'pp.opt.other')) } })); },
+        e => { if (alive) setSliceOpts(prev => ({ ...prev, [f.key]: { error: e instanceof Error ? e.message : String(e), retry: () => setOptSeq(n => n + 1) } })); },
+      );
+    }
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optKey, id, slice, optSeq]);
   if (pp.state === 'error') return <LoadError error={pp.error} onRetry={pp.reload} />;
   if (!view) return <Skeleton lines={8} label={t('pp.loading')} />;
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
@@ -269,7 +332,13 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     ))
     : view.config;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
-  const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf);
+  const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
+  const g = graph && graph.key === graphKey ? graph : null;
+  const graphData = g?.body
+    ? (() => { const d = mergeGraph(view.data, g.body); return { ...d, meta: { ...d.meta, graphRels: (graphBase && graphRels.current.get(graphBase)) || d.meta.graphRels, graphNotes: graphNotes(g.body.meta, lang) } }; })()
+    : g?.error
+      ? { ...view.data, meta: { ...view.data.meta, graphNotes: [`${appT(lang, 'pp.graphFailed')}: ${g.error}`] } }
+      : view.data;
   const graphPeek = loreListPeek(lang, id => view.data.records.find(r => r.id === id)?.kind ?? null);
   const ctx: KitCtx = { config: {
     ...withOptions,
@@ -277,11 +346,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // внутренняя таблица kit со всеми осями сразу, из-за неё в меню задачи и
     // были чужие статусы и два «В работе». Пусто — модель не ответила, и
     // причина уже названа в строке замечаний.
-    statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
-    hooks: { ...baseConfig.hooks, onSave, onRelation },
+    // Меню смены статуса — цикл своего типа (items); строки других типов — их цикл (byKind).
+    statuses: { ...baseConfig.statuses, ...(statuses.items.length ? { items: statuses.items } : {}), ...(statuses.byKind ? { byKind: statuses.byKind } : {}) },
+    hooks: { ...baseConfig.hooks, onSave, onRelation, relationOptions },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
-    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render } : baseConfig.graph,
-  }, data: view.data, role: 'reader',
+    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
+  }, data: graphData, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
     // Чипы проектов и компонентов шапки — паспорт своего типа (S4-29, 53а): тип берётся из

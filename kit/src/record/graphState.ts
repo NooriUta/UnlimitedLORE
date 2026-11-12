@@ -24,8 +24,9 @@ export type GraphView = 'graph' | 'links' | 'force' | 'obsidian';
 /** GC-03: виды графа знаний (GraphExplorer) рядом с секторами и списком. */
 export const GRAPH_VIEWS: readonly GraphView[] = ['graph', 'links', 'force', 'obsidian'];
 
-export type GraphDepth = 1 | 2 | 3;
-export const GRAPH_DEPTHS: readonly GraphDepth[] = [1, 2, 3];
+/** До 4 — владелица 11.11.2026: «показать связи 2, 3, 4 уровней глубины» (сервер /lore/graph). */
+export type GraphDepth = 1 | 2 | 3 | 4;
+export const GRAPH_DEPTHS: readonly GraphDepth[] = [1, 2, 3, 4];
 
 export interface GraphState {
   depth: GraphDepth;
@@ -43,12 +44,12 @@ interface ParamReader { get(key: string): string | null }
 
 function configDepth(config: Pick<KitConfig, 'graph'>): GraphDepth {
   const d = config.graph?.depth;
-  return d === 1 || d === 2 || d === 3 ? d : 1;
+  return d === 1 || d === 2 || d === 3 || d === 4 ? d : 1;
 }
 
 function parseDepth(raw: string | null, fallback: GraphDepth): GraphDepth {
   const n = Number(raw);
-  return n === 1 || n === 2 || n === 3 ? n : fallback;
+  return n === 1 || n === 2 || n === 3 || n === 4 ? n : fallback;
 }
 
 function parseOff(raw: string | null): string[] {

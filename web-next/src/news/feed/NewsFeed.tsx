@@ -13,7 +13,7 @@
 import { kitMinute } from '@seidr/kit/core';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
-import { GameIcon } from '@seidr/kit';
+import { BucketFigures, GameIcon } from '@seidr/kit';
 import { Pill } from '@seidr/kit';
 import { statusMeta } from '@seidr/kit';
 import { statusLook, useStatusDict } from '@seidr/kit';
@@ -33,6 +33,10 @@ import {
   utcClock, writeNewsQuery, type NewsPeriod, type NewsQuery, type NewsScope, type NewsZone,
 } from './model';
 import { Delta, NewsPanels, type NewsSection } from './NewsPanels';
+import { figuresOf } from './bucketFigures';
+import { useRefPeek } from '@seidr/kit/content';
+import { loreRefPeek } from '../../record/lorePeek';
+import { appliedPeekHover } from '../../settings/applied';
 import type { NewsSource } from './source';
 import { newsHrefV2 } from '../newsLinks';
 import {
@@ -653,9 +657,6 @@ interface FeedProps {
   onOpen?: (e: NewsEvent) => void;
 }
 
-/** Критичные цифры дня (набор утвердила владелица 09.11.2026) — цветными чипами. */
-const CRIT_KINDS = ['ready', 'reactivated', 'released'] as const;
-
 /** Свёртка дня из ответа (S7A-09); нет — старый сервер, счёт дня не рисуется. */
 const serverDay = (data: NewsResponse, day: string): NewsDay | undefined => data.days?.find(d => d.day === day);
 /** Итог дня: свёртка дня, у старого сервера — строка матрицы. Оба — поля ответа. */
@@ -672,83 +673,21 @@ const dayTotal = (data: NewsResponse, day: string) =>
 function DayFigures({ day, data, t, lang }: { day: string; data: NewsResponse; t: T; lang: KitLang }) {
   // П6 паритета: в разрезе «по типам» типы и так стоят заголовками групп дня —
   // вторая разбивка по типам в заголовке дня была бы повтором.
-  const typesShown = data.groups.axis !== 'type';
   const sd = serverDay(data, day);
-  const kindRows = (k: string) => sd?.by_kind[k]?.rows ?? 0;
-  const tasksCreated = sd?.by_type.task?.by_kind.created?.rows ?? 0;
-  const closed = kindRows('closed');
   const burn = data.metrics.tasks.available ? data.metrics.tasks.days.find(d => d.day_local === day) : undefined;
   const total = dayTotal(data, day);
-  const otherCreated = kindRows('created') - tasksCreated;
-  const showBal = closed + tasksCreated > 0 || (burn && burn.burn !== 0);
-  const share = closed + tasksCreated > 0 ? Math.round((closed / (closed + tasksCreated)) * 100) : 0;
-  const balText = t('bal', { cl: closed, cr: tasksCreated });
-  const chip = (id: string, n: number, label: string, icon: string, tone: string) => (
-    <span key={id} className="sk-news__dchip" data-testid={id} data-tone={tone} title={label}>
-      <GameIcon slug={icon} size={11} />
-      <b>{n}</b>
-      <span>{label}</span>
-    </span>
-  );
-  const crit = CRIT_KINDS.flatMap(k => {
-    const n = kindRows(k);
-    return n ? [chip(`news-cube-kind-${k}`, n, t(`cube.${k}` as NewsKey), NEWS_KIND_META[k].icon, NEWS_KIND_META[k].tone)] : [];
-  });
-  return (
-    <div className="sk-news__figs">
-      {showBal && (
-        <div className="sk-news__bal">
-          {burn && (
-            <span className="sk-news__bburn" data-testid="news-cube-burn" data-tone={signTone(burn.burn)} title={t('cube.burn')}>
-              <GameIcon slug="flame" size={12} />
-              <b>{signed(burn.burn)}</b>
-            </span>
-          )}
-          <span className="sk-news__balbar" role="img" aria-label={balText}>
-            <span data-part="closed" style={{ width: `${share}%` }} />
-            <span data-part="created" style={{ width: `${100 - share}%` }} />
-          </span>
-          <span className="sk-news__ball">
-            <span data-testid="news-cube-kind-closed">{`${closed} ${t('cube.closed')}`}</span>
-            {' · '}
-            <span data-testid="news-cube-kind-created">{`${tasksCreated} ${t('cube.created')}`}</span>
-          </span>
-        </div>
-      )}
-      <div className="sk-news__dchips">
-        {crit}
-        {total && (
-          <span className="sk-news__dchip" data-testid="news-cube-total" title={t('pair')}>
-            <span data-testid="news-day-total">{pairText(total)}</span>
-          </span>
-        )}
-        {otherCreated > 0 && (
-          <span className="sk-news__dchip" title={t('cube.other')}>
-            <GameIcon slug={NEWS_KIND_META.created.icon} size={11} />{otherCreated}
-          </span>
-        )}
-        {kindRows('changed') > 0 && (
-          <span className="sk-news__dchip" title={t('cube.changed')}>
-            <GameIcon slug={NEWS_KIND_META.changed.icon} size={11} />{kindRows('changed')}
-          </span>
-        )}
-        {total && <span className="sk-news__dchip" data-testid="news-cube-delta" title={t('cube.delta')}>{`Δ ${total.elements}`}</span>}
-        {typesShown && sd && (
-          <span className="sk-news__ftypes" data-testid="news-day-types" title={t('day.types')}>
-            {Object.entries(sd.by_type).map(([k, n]) => (
-              <span key={k} title={typeLabel(k, lang)}><GameIcon slug={NEWS_TYPE_META[k]?.icon ?? 'scroll-quill'} size={11} />{n.rows}</span>
-            ))}
-          </span>
-        )}
-      </div>
-    </div>
-  );
+  const fig = figuresOf({ ...sd, total, ...(burn ? { burn } : {}) }, { t, lang, showTypes: data.groups.axis !== 'type', idPrefix: 'news-cube-' });
+  return fig ? <BucketFigures {...fig} /> : null;
 }
 
 function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: FeedProps & {
   open: Record<string, boolean>; setOpen: (f: (o: Record<string, boolean>) => Record<string, boolean>) => void;
 }) {
   const t: T = (k, vars) => newsT(lang, k, vars);
+  // Peek у строк ленты (владелица 11.11.2026: «и к новостям тоже приделай peek») — та же
+  // карточка, что у ссылок в тексте и в списке; выключатель «Карточки по наведению» действует.
+  const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
+  const peekLayer = useRefPeek(peek, { selector: '.sk-news__link[data-ref], .sk-news__code[data-ref]' });
   const days = useMemo(() => {
     const m = new Map<string, NewsEvent[]>();
     for (const e of data.events) {
@@ -769,7 +708,8 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: F
   const showLine = lastUnread >= 0 && lastUnread < days.length - 1;
 
   return (
-    <div className="sk-news__days" data-testid="news-feed-days">
+    <div className="sk-news__days" data-testid="news-feed-days" {...peekLayer.handlers}>
+      {peekLayer.layer}
       {days.map(([day, events], i) => {
         const isOpen = open[day] ?? i < 2;
         const total = dayTotal(data, day);
@@ -857,7 +797,10 @@ function Buckets({ day, events, axis, rank, counts, lang, tz, hrefOf, onOpen }: 
       {keys.map(k => {
         const isOpen = !closed[k];
         const list = buckets.get(k)!;
-        const n = counts?.find(g => g.key === k)?.rows;
+        const g = counts?.find(x => x.key === k);
+        const n = g?.rows;
+        // S7A · метрики группы дня — тот же набор, что у дня (считает сервер).
+        const fig = isOpen ? figuresOf(g, { t: (key, v) => newsT(lang, key, v), lang, showTypes: axis !== 'type', idPrefix: `news-gcube-${k}-`, compact: true }) : null;
         return (
           <div key={k} className="sk-news__bucket" data-testid={`news-bucket-${k}`}>
             <h4 className="sk-news__bh">
@@ -868,6 +811,7 @@ function Buckets({ day, events, axis, rank, counts, lang, tz, hrefOf, onOpen }: 
                 {n != null && <span className="sk-news__bn">{n}</span>}
               </button>
             </h4>
+            {fig && <BucketFigures {...fig} testid={`news-gfigs-${k}`} />}
             {isOpen && (
               <CappedRows list={list} fold={fold} foldKey={k} lang={lang}
                 render={e => <Row key={`${day}|${k}|${e.key}`} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />} />
@@ -922,7 +866,7 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
   return (
     <li className="sk-news__row" data-testid={`news-row-${e.key}`} data-type={e.type} data-unread={e.unread ? 'true' : undefined}>
       {href !== null || onOpen
-        ? <a className="sk-news__link" href={href ?? '#'} onClick={open} onKeyDown={onKey}>{main}</a>
+        ? <a className="sk-news__link" href={href ?? '#'} onClick={open} onKeyDown={onKey} data-ref={e.el} data-ref-type={e.type}>{main}</a>
         : <span className="sk-news__link is-static">{main}</span>}
       <span className="sk-news__meta">
         {e.unread && <span className="sk-news__unread">{t('unread')}</span>}
@@ -930,7 +874,7 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
             заголовок строки и есть код (у спек), второй раз его не пишем — остаётся
             только «скопировать»: «код повторяется, хотя копировать приятно». */}
         {(e.title ?? e.el) !== e.el && (href !== null
-          ? <a className="sk-news__code" href={href} data-testid="news-code" onClick={open} onKeyDown={onKey}>{e.el}</a>
+          ? <a className="sk-news__code" href={href} data-testid="news-code" onClick={open} onKeyDown={onKey} data-ref={e.el} data-ref-type={e.type}>{e.el}</a>
           : <Pill variant="id">{e.el}</Pill>)}
         <CopyCode code={e.el} label={t('code.copy', { code: e.el })} done={t('code.copied')} />
         {e.time_local

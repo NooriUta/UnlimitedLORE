@@ -920,6 +920,25 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
+    static final String MACHINE_ACL = "machine_acl";
+    /** Проекты владельцев машин — по ролям {@code HAS_PROJECT_ROLE} (S7B-ACL-3). */
+    static final String MACHINE_ACL_OWNER_ROLES_SQL =
+        "SELECT kc_sub, out('HAS_PROJECT_ROLE').slug AS projects FROM KnowUser WHERE kc_sub IN :subs";
+    /** Агенты и их машины — для harness машины (S7B-ACL-3; те же поля, что agent_owners). */
+    static final String MACHINE_ACL_AGENTS_SQL =
+        "SELECT actor_id, client_id, machine_id, harness, out('USES_MACHINE').machine_id AS machines "
+        + "FROM KnowActor WHERE kind = 'agent'";
+
+    /** Вызывающий для can_write; личность не читается — null (поле будет null, а не false). */
+    private MachineAccess.Caller machineAclCaller(String role) {
+        try {
+            return new MachineAccess.Caller(callerAgentScope(), role, callerKcSub());
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE] machine_acl: вызывающий не прочитан, can_write=null: %s", e.getMessage());
+            return null;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> castRows(Object rows) {
         return (List<Map<String, Object>>) rows;
@@ -1045,6 +1064,16 @@ public class AidaLoreResource extends LoreResourceBase {
             new java.util.concurrent.atomic.AtomicReference<>();
         final java.util.concurrent.atomic.AtomicReference<List<Map<String, Object>>> identities =
             new java.util.concurrent.atomic.AtomicReference<>();
+        // S7B-ACL-3: machine_acl — проекты, harness и can_write машины. Вызывающий снимается здесь,
+        // до асинхронной цепочки (личность — request-scoped); не прочитался — can_write: null.
+        final boolean machineAcl = MACHINE_ACL.equals(id);
+        final MachineAccess.Caller aclCaller = machineAcl ? machineAclCaller(role) : null;
+        final java.util.concurrent.atomic.AtomicReference<Map<String, List<String>>> aclOwnerProjects =
+            new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicReference<List<Map<String, Object>>> aclAgents =
+            new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicReference<List<Map<String, Object>>> aclSeen =
+            new java.util.concurrent.atomic.AtomicReference<>();
         return client.query(db, basicAuth(), body)
             .chain(res -> {
                 if (exemptQuery == null) return Uni.createFrom().item(res);
@@ -1085,6 +1114,35 @@ public class AidaLoreResource extends LoreResourceBase {
                 return Uni.createFrom().item(() -> LoreRoleMatrix.askKc(kcBridge, subs))
                     .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
                     .map(kc -> { kcAnswer.set(kc); return res; });
+            })
+            // S7B-ACL-3: роли владельцев машин и агенты — второй и третий запросы. Сбой любого —
+            // его поля в строках нет (клиент соберёт сам), а не пустой список и не 502 всего среза.
+            .chain(res -> {
+                if (!machineAcl) return Uni.createFrom().item(res);
+                List<String> owners = MachineAccess.ownerSubs(res.result() == null ? List.of() : res.result());
+                Uni<Object> roles = owners.isEmpty()
+                    ? Uni.createFrom().item(() -> { aclOwnerProjects.set(Map.of()); return (Object) null; })
+                    : client.query(db, basicAuth(), new MartQuery("sql", MACHINE_ACL_OWNER_ROLES_SQL, Map.of("subs", owners), -1))
+                        .map(p -> { aclOwnerProjects.set(MachineAccess.projectsBySub(p.result())); return (Object) null; })
+                        .onFailure().recoverWithItem(ex -> {
+                            LOG.warnf("[LORE] machine_acl: роли владельцев не прочитаны: %s", ex.getMessage());
+                            return null;
+                        });
+                return roles
+                    .chain(x -> client.query(db, basicAuth(), new MartQuery("sql", MACHINE_ACL_AGENTS_SQL, null, -1))
+                        .map(p -> { aclAgents.set(p.result() == null ? List.of() : p.result()); return (Object) null; })
+                        .onFailure().recoverWithItem(ex -> {
+                            LOG.warnf("[LORE] machine_acl: агенты не прочитаны: %s", ex.getMessage());
+                            return null;
+                        }))
+                    // S7B-ACT-1: когда машина была на связи — KnowMachine.last_seen_at. Сбой — поля нет.
+                    .chain(x -> client.query(db, basicAuth(), new MartQuery("sql", MachineActivity.LAST_SEEN_SQL, null, -1))
+                        .map(p -> { aclSeen.set(p.result() == null ? List.of() : p.result()); return (Object) null; })
+                        .onFailure().recoverWithItem(ex -> {
+                            LOG.warnf("[LORE] machine_acl: отметки машин не прочитаны: %s", ex.getMessage());
+                            return null;
+                        }))
+                    .map(x -> res);
             })
             // S4-24: заявленные личности проекта задачи. SQL-часть дала задачу под скоупом и её
             // проекты; строится список только у найденной задачи с проектом. Вызовы графа
@@ -1157,6 +1215,10 @@ public class AidaLoreResource extends LoreResourceBase {
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
                 // Kit 2 (K2-MATRIX): у ячейки матрицы состояние «проверено / не смогли / нет прав».
                 if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out, kcAnswer.get());
+                if (machineAcl) {
+                    MachineAccess.enrichAcl(castRows(out.get("rows")), aclOwnerProjects.get(), aclAgents.get(), aclCaller);
+                    MachineActivity.enrichAcl(castRows(out.get("rows")), aclSeen.get());
+                }
                 if (LoreTaskIdentities.SLICE.equals(id)) {
                     out.put("rows", identities.get());
                     out.put("task_uid", given.get("id"));

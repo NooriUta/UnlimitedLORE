@@ -13,11 +13,17 @@ new/set/del/mv/get/log/search, plus `<cat>_link(rel, ...)` for edges). A represe
 |------|------|--------------|
 | `list_slices` | read | `GET /lore/slices` |
 | `query_slice` | read | `GET /lore/slice/{slice}` (+ params) |
+| `graph` | read | `GET /lore/graph` — neighborhood (`type`+`id`, `depth` 1..4, walk only via `rels`) or slice (`scope`); `meta.rels_available`, `meta.by_depth`, `truncated`/`capped_at`/`limit` (GC-04) |
 | `status_set` | write | `POST /lore/status` (SCD2 transition) |
 | `task_new` | write | `POST /lore/task` (+ optional `phase_uid` → IN_PHASE) |
 | `task_set` | write | `POST /lore/task/edit` |
 | `sprint_phase_new` | write | `POST /lore/phase` (KnowPhase + PART_OF + hist) |
 | `task_link` | write | `POST /lore/task/phase` or `/lore/task/component` (`rel` picks the edge) |
+| `machine_acl` | read | `GET /lore/slice/machine_acl` — `machine_id` (→ `client_id` `minilore-link-<id>`) \| `client_id` \| `kc_sub` |
+| `harness_list` | read | `GET /lore/slice/dictionary?dict_type=harness` (write via `dict_set`) |
+| `machine_access_set` | write | `POST /lore/user/machine-access` — `machine_id, kc_sub, action grant\|revoke, role viewer\|actor, projects[], harnesses[], dry_run`; owner/admin only, an agent gets the server's 403 as is |
+| `machine_new` | write | `POST /lore/actor/machine` — `machine_id, kc_sub?, harness?, name?, profile?, dry_run`; one call enrolls a miniLORE machine (actor `minilore-link-<machine_id>`, owner, KnowMachine, USES_MACHINE). Agent `full` — only for its own owner; human — themself; admin — anyone; someone else's machine/name → 409 with the owner's name |
+| `machine_owner_set` | write | `POST /lore/actor/owner` (+ `POST /lore/actor` if the actor is missing) — `client_id, kc_sub, profile, machine_id, harness`; humans/admin only, an agent gets the server's 403 as is |
 
 Full old→new mapping and the complete link-collapse table: [MIGRATION.md](./MIGRATION.md). Live,
 authoritative catalog with every tool's params: run `tools/list` (see smoke test below), or the
