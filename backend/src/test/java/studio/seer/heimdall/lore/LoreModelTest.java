@@ -168,10 +168,12 @@ class LoreModelTest {
         List<Map<String, Object>> rows = new ArrayList<>(taskDict());
         rows.add(dict("work_class", "uc", "Use Case", null, "#5AB4E8", 10));
         rows.add(dict("app_setting", "md_images_enabled", "true", null, null, 10));
+        rows.add(dict("palette", "lichen", "Лишайник", null, null, 20));
         Map<String, Object> m = LoreModel.build(rows);
         @SuppressWarnings("unchecked") Map<String, Object> d = (Map<String, Object>) m.get("dictionaries");
         assertTrue(d.containsKey("work_class"));
         assertFalse(d.containsKey("app_setting"), "настройки приложения — не перечень значений");
+        assertFalse(d.containsKey("palette"), "palette живёт в блоке palettes, не в dictionaries");
     }
 
     // «У типа нет статусов» ≠ «тип ещё не описан» (замечание kit-сессии 08.11).
