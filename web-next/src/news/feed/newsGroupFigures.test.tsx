@@ -25,6 +25,8 @@ const METRICS = {
   by_type: { task: { ...tr(5), by_kind: { closed: tr(3), created: tr(1), ready: tr(1) } } },
   burn: { open_start: 10, open_end: 8, burn: 2 },
   agent_events: 4, agent_elements: 3,
+  // С S7A-09 (#1261) сервер отдаёт и balance — клиент берёт его, а не пересчёт; числа согласованы с by_kind.
+  balance: { closed: 3, created: 1 },
 };
 
 function withGroupMetrics(): NewsResponse {
@@ -37,6 +39,18 @@ function withGroupMetrics(): NewsResponse {
   return s;
 }
 const src = (data: NewsResponse): NewsSource => ({ kind: 'live', load: vi.fn(async () => data), setReadMark: vi.fn(async (at: string) => ({ state: 'ok', at })) });
+/**
+ * Первый день ленты. С S7A-09 (#1261) числа групп сервер отдаёт у КАЖДОГО дня, и ключ группы
+ * (P2) повторяется в разных днях — проверки дня ищут только внутри своего дня.
+ */
+const firstDay = (s: NewsResponse) => within(screen.getByTestId(`news-day-${s.days![0].day}`));
+/** Ответ «старого сервера»: у групп только прежние поля, без чисел S7A (форма до S7A-09). */
+function oldServer(s: NewsResponse): NewsResponse {
+  const pick = (o: object, keys: string[]) => Object.fromEntries(Object.entries(o).filter(([k]) => keys.includes(k)));
+  for (const d of s.days ?? []) d.groups = d.groups.map(g => pick(g, ['key', 'events', 'elements', 'rows']) as typeof g);
+  s.groups.list = s.groups.list.map(g => pick(g, ['key', 'events', 'elements', 'multi', 'agent_events', 'agent_elements', 'filter', 'sub']) as typeof g);
+  return s;
+}
 async function mount(data: NewsResponse) {
   render(<KitLangProvider lang="ru"><NewsFeed source={src(data)} urlPrefix={null} timeZone="Europe/Moscow" /></KitLangProvider>);
   await screen.findByTestId('news-feed-days');
@@ -47,7 +61,7 @@ describe('S7A · метрики группы — те же, что у дня', (
     const s = withGroupMetrics();
     await mount(s);
     const key = s.days![0].groups[0].key;
-    const f = screen.getByTestId(`news-gfigs-${key}`);
+    const f = firstDay(s).getByTestId(`news-gfigs-${key}`);
     expect(within(f).getByTestId(`news-gcube-${key}-kind-closed`).textContent).toBe('3 закрыто');
     expect(within(f).getByTestId(`news-gcube-${key}-kind-created`).textContent).toMatch(/^1 /);
     expect(within(f).getByTestId(`news-gcube-${key}-kind-ready`).textContent).toContain('2');
@@ -73,12 +87,12 @@ describe('S7A · метрики группы — те же, что у дня', (
     Object.assign(s.days![0].groups[0], { balance: { closed: 9, created: 4 } });
     await mount(s);
     const key = s.days![0].groups[0].key;
-    expect(screen.getByTestId(`news-gcube-${key}-kind-closed`).textContent).toBe('9 закрыто');
-    expect(screen.getByTestId(`news-gcube-${key}-kind-created`).textContent).toMatch(/^4 /);
+    expect(firstDay(s).getByTestId(`news-gcube-${key}-kind-closed`).textContent).toBe('9 закрыто');
+    expect(firstDay(s).getByTestId(`news-gcube-${key}-kind-created`).textContent).toMatch(/^4 /);
   });
 
   it('старый сервер (чисел групп нет) — колонки «Сводка» нет и у групп дня пусто, а не нули', async () => {
-    const s = parseNewsResponse(JSON.parse(readFileSync(SNAPSHOT, 'utf8')));
+    const s = oldServer(parseNewsResponse(JSON.parse(readFileSync(SNAPSHOT, 'utf8'))));
     await mount(s);
     expect([...screen.getByTestId('news-groups').querySelectorAll('thead th')].map(x => x.textContent)).not.toContain('Сводка');
     expect(screen.queryAllByTestId(/^news-gfigs-/)).toEqual([]);

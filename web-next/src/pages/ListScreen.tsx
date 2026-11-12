@@ -3,7 +3,8 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { lazyChunk } from '../shell/staleChunk';
 import {
   Forbidden, ICON_CANON, LibraryView, ListView, LoadError, NO_DATE_RANGE, RecordDock, ScreenHead, Skeleton, dateRangeUrlPatch,
   isDateRangeActive, isShowClosed, pushUrlState, readDateRangeUrl, readUrlState, showClosedOf, urlStateHref,
@@ -25,6 +26,7 @@ import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
 import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
 import { loreValueIcon } from '../lists/loreFilters';
+import { paintRecords, productIndex, productValueIcon, withProductColumn, type ProductIndex } from '../lists/productPaint';
 import { appliedCollapseNavOnRead, appliedPassportPlace } from '../settings/applied';
 import { NEW_RECORD_ID, fetchCanCreate, isCreateType } from '../record/recordCreate';
 import { useProjectScope } from '../scope/ProjectScope';
@@ -36,9 +38,9 @@ import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
-const ListPassport = lazy(() => import('../record/ListPassport'));
+const ListPassport = lazyChunk(() => import('../record/ListPassport'));
 // Черновик новой записи (S4-24) — тоже свой чанк: в нём TipTap.
-const RecordCreate = lazy(() => import('../record/RecordCreateDock'));
+const RecordCreate = lazyChunk(() => import('../record/RecordCreateDock'));
 /**
  * Тип паспорта по экрану списка — карта ЧАСТИЧНАЯ (S4-V2-SECTIONS).
  *
@@ -63,6 +65,9 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   components: 'component', tech: 'tech', features: 'feature',
   // S4-29 (53а): паспорт проекта (только чтение).
   projects: 'project',
+  // S4-PRODUCTS-NODE: паспорт продукта (только чтение). Боли, выгоды, работы и роли —
+  // без паспорта v2: щелчок отвечает словами (NoPassport).
+  products: 'product',
 };
 const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];
@@ -296,7 +301,20 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     return () => { live = false; };
   }, [modelType, fetchImpl]);
   const modelCodes = useMemo(() => (modelStatuses?.items ?? []).map(s => s.code), [modelStatuses]);
-  const config = useMemo(() => {
+  // Цвет продукта (S4-PRODUCT-HILITE): одно правило на все разделы — продукты
+  // записи и её компонентов из среза products, цвет из данных продукта. Не
+  // загрузился срез — список работает без колонки, а причина сказана словами.
+  const [paint, setPaint] = useState<{ idx: ProductIndex } | { error: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetchSlice<Record<string, unknown>>('products', undefined, { fetchImpl }).then(
+      b => { if (live) setPaint({ idx: productIndex(b.rows) }); },
+      e => { if (live) setPaint({ error: e instanceof Error ? e.message : String(e) }); },
+    );
+    return () => { live = false; };
+  }, [fetchImpl]);
+  const paintIdx = paint && 'idx' in paint ? paint.idx : null;
+  const ownConfig = useMemo(() => {
     const items = modelStatuses?.items ?? [];
     // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
     // из той же модели, что статусы. Нет в модели — колонки как раньше.
@@ -307,6 +325,15 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     if (!items.length) return withDisplay;
     return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
   }, [baseConfig, modelStatuses]);
+  const config = useMemo(() => {
+    const own = ownConfig;
+    return paintIdx ? withProductColumn(own, t('lists.field.product')) : own;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownConfig, paintIdx, lang]);
+  const valueIcon = useMemo(() => {
+    const productIcon = paintIdx ? productValueIcon(paintIdx) : null;
+    return (key: string, value: string) => productIcon?.(key, value) ?? loreValueIcon(key, value);
+  }, [paintIdx]);
   // Дата календаря (K2-VIEW-CALENDAR): у раздела она названа явно; где дат
   // несколько (спринт: план и факт), выбор — в адресе (?lcd=).
   const calDates = def.calendarDates;
@@ -406,8 +433,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     // «Сейчас» — время источника (заголовок Date), иначе часы браузера (K2-DATE-RANGE).
     // Статус строки сверяется с осью ТИПА из модели, а не с перечнем в коде
     // (S4-STATUS-AXIS-CONFIG, 11.11): ось доходила до конфига, но не до чтения строки.
-    () => (body ? sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes }) : null),
-    [body, def, modelCodes],
+    () => {
+      if (!body) return null;
+      const d = sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes });
+      // S4-PRODUCT-HILITE: продукт записи — полем `product` (правило одно на все разделы).
+      return paintIdx ? { ...d, records: paintRecords(d.records, paintIdx) } : d;
+    },
+    [body, def, modelCodes, paintIdx],
   );
   // Переход на запись вне фильтра (слово владелицы 11.11.2026): открыта запись,
   // которой в загруженном нет, а закрытые скрыты, — фильтр снимается сам
@@ -430,6 +462,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     // Оговорки про ось статусов — там же, где прочие: человек должен видеть,
     // что список статусов взят не из модели, а из умолчания приложения.
     ...(modelStatuses?.notes ?? []),
+    // Цвет продукта не загрузился — список без колонки «Продукт», и это сказано.
+    ...(paint && 'error' in paint ? [t('lists.productPaint.failed', { reason: paint.error })] : []),
   ];
 
   // Прогресс «x/y» (S4-09): догружается после списка; пока считается — «…»,
@@ -611,7 +645,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
         // шестерёнка, проект — замок, P0 — пламя. Были написаны в loreFilters и
         // НЕ передавались: человек их не видел ни в фильтре, ни в ячейке.
-        valueIcon={loreValueIcon}
+        valueIcon={valueIcon}
         // Закреплённые значения фасета (S9-03): текущие релизы приходят с сервера
         // тем же ответом /facets, что и счётчики, — отдельного запроса нет.
         facetPinned={key => serverCounts?.pinned?.[key] ?? NO_PINNED}

@@ -141,7 +141,7 @@ class LoreMePrefsTest {
     @Test
     void v2PaletteAndRoomyDensityAreAccepted() {
         assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("density", "roomy")));
-        for (String p : List.of("amber-forest", "lichen", "slate", "juniper", "warm-dark"))
+        for (String p : List.of("amber-forest", "lichen", "slate", "juniper", "warm-dark", "mono"))
             assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("palette", p)), "палитра kit " + p);
         assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("palette", "neon")).size(),
             "неизвестная палитра отбивается по имени");

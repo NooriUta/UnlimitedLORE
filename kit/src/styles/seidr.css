@@ -6239,6 +6239,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Вид записи, которого нет в справочнике видов: показываем код как есть. */
 .sk-rel__raw { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rel__empty { color: var(--t3); font-size: var(--fs-sm); }
+/* Вид конца связи не определён: запись показана, пометка — словами (не молчаливое скрытие). */
+.sk-rel__unknown { color: var(--wrn); font-size: var(--fs-sm); margin: 4px 0 0; }
 /* Отказ привязки: цвет опасности, потому что по этой связи нельзя делать
    выводы — она осталась прежней, хотя человек её менял. */
 .sk-rel__failed {

@@ -170,7 +170,7 @@ class LoreGraphLiveDbTest {
     void badInputIsRefused() {
         given().queryParam("type", "nosuchtype").queryParam("id", "X")
             .when().get("/lore/graph").then().statusCode(400).body("error", equalTo("BAD_PARAMS"));
-        given().queryParam("type", "adr").queryParam("id", ADR).queryParam("depth", "4")
+        given().queryParam("type", "adr").queryParam("id", ADR).queryParam("depth", "5")
             .when().get("/lore/graph").then().statusCode(400).body("error", equalTo("BAD_PARAMS"));
         given().queryParam("scope", "galaxy:x")
             .when().get("/lore/graph").then().statusCode(400).body("error", equalTo("BAD_SCOPE"));

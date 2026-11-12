@@ -26,7 +26,11 @@ import type { KitRecord, MatrixCellState } from '@seidr/kit';
 import { fetchAgents, type AgentRow } from './agents';
 import { buildParticipation, type Participation } from './participation';
 
-export const MACHINE_CLIENT_PREFIX = 'minilore-link-';
+import {
+  ACTIVITY_DEFAULT_H, activityWindowH, hoursOf, MACHINE_CLIENT_PREFIX, parseActivity, type MachineActivity,
+} from './activity';
+
+export { ACTIVITY_CHOICES, ACTIVITY_DEFAULT_H, activityWindowH, MACHINE_CLIENT_PREFIX, parseActivity, type MachineActivity } from './activity';
 
 export type MachineRole = 'viewer' | 'actor';
 
@@ -57,6 +61,41 @@ export interface Machine {
   server_harness: string[] | null;
   /** Может ли смотрящий выдавать допуски: от сервера; null — сервер не смог вычислить; undefined — поля нет. */
   can_write: boolean | null | undefined;
+  /** S7B-ACT-1: окно активности машины и окна по harness (часы). */
+  activity: MachineActivity;
+  /** Общий дефолт окна от сервера (activity_default_h); нет — ACTIVITY_DEFAULT_H. */
+  default_h: number;
+  /** Когда машина была на связи (KnowMachine.last_seen_at); null — не видели; undefined — поля нет. */
+  last_seen_at: string | null | undefined;
+}
+
+// ── S7B-ACT-1: окно активности (модель — activity.ts; запрос — здесь) ────
+
+export interface ActivityRequest { machine_id: string; window_h: number | null; harness: Record<string, number>; dry_run?: boolean }
+export interface ActivityPlan { kind: string; before: MachineActivity; after: MachineActivity; defaultH: number }
+
+export function parseActivityPlan(body: unknown): ActivityPlan {
+  const p = ((body as { plan?: Record<string, unknown> } | null)?.plan ?? {}) as Record<string, unknown>;
+  const side = (v: unknown) => {
+    const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+    return parseActivity(o.window_h, o.harness);
+  };
+  return { kind: str(p.kind) ?? 'unknown', before: side(p.before), after: side(p.after), defaultH: hoursOf(p.default_h) ?? ACTIVITY_DEFAULT_H };
+}
+
+/** POST /lore/user/machine-activity — полное желаемое состояние; dry_run — только план. */
+export async function postMachineActivity(req: ActivityRequest, fetchImpl: typeof fetch = loreFetch): Promise<ActivityPlan> {
+  const res = await fetchImpl('/lore/user/machine-activity', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(req),
+  });
+  let body: Record<string, unknown> | null = null;
+  try { body = (await res.json()) as Record<string, unknown>; } catch { /* не-JSON — статус скажет сам */ }
+  if (!res.ok || body === null) {
+    throw new LoreHttpError(res.status, String(body?.error ?? (body === null ? 'NON_JSON' : '')), String(body?.detail ?? body?.message ?? ''));
+  }
+  return parseActivityPlan(body);
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null);
@@ -103,6 +142,9 @@ export function parseMachineAcl(rows: ReadonlyArray<Record<string, unknown>>): M
       server_projects: Array.isArray(r.projects) ? strs(r.projects) : null,
       server_harness: Array.isArray(r.harnesses) ? strs(r.harnesses) : null,
       can_write: !('can_write' in r) ? undefined : typeof r.can_write === 'boolean' ? r.can_write : null,
+      activity: parseActivity(r.activity_window_h, r.activity_window_harness),
+      default_h: hoursOf(r.activity_default_h) ?? ACTIVITY_DEFAULT_H,
+      last_seen_at: r.last_seen_at === undefined ? undefined : str(r.last_seen_at),
     };
   }).filter(m => m.client_id !== '');
 }
@@ -136,6 +178,9 @@ export function machineRecords(ms: readonly Machine[]): KitRecord[] {
     const fields: Record<string, unknown> = { owner: m.owner_name ?? '', granted: m.grants.length };
     if (m.harness.length) fields.harness = m.harness;
     if (m.projects.length) fields.projects = m.projects;
+    // S7B-ACT-1: «когда была на связи» и порог СТРОКИ — окно машины в минутах (kit list.fresh perRecord).
+    if (m.last_seen_at !== undefined) fields.last_seen = m.last_seen_at;
+    fields.stale_min = activityWindowH(m.activity, null, m.default_h).hours * 60;
     return {
       id: m.machine_id, kind: 'machine', title: m.machine_id, status: '', fields,
       search: [m.machine_id, m.client_id, m.owner_name ?? '', m.owner_kc_sub ?? '', ...m.projects, ...m.harness].join(' '),
@@ -415,6 +460,8 @@ export interface MachinesData {
   participationError: string | null;
   /** Подписи harness из справочника; кода нет — сам код. */
   harnessLabels: Record<string, string>;
+  /** S7B-22: код harness → официальный логотип из справочника (только у кого он есть). */
+  harnessLogos: Record<string, string>;
   /** Активные коды harness; null — справочник не прочитан. */
   harnessRegistry: string[] | null;
   truncated: boolean;
@@ -441,6 +488,7 @@ export async function fetchMachinesData(signal?: AbortSignal, fetchImpl?: typeof
     participation,
     participationError,
     harnessLabels: 'error' in agents ? {} : agents.labels,
+    harnessLogos: 'error' in agents ? {} : agents.logos,
     harnessRegistry: 'error' in agents ? null : agents.registry,
     truncated: acl.truncated,
   };

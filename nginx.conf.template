@@ -224,6 +224,17 @@ server {
         try_files $uri =404;
     }
 
+    # Хэшированные чанки сборки (оба фронта — Vite, base "/", assets в /assets/).
+    # Отсутствующий файл — честный 404, НЕ index.html через SPA-фолбэк ниже
+    # (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-STALE-CHUNK): после выкатки вкладка на
+    # прежней сборке просит старый чанк, и HTML с 200 вместо JS выдавал себя за
+    # модуль. С 404 ошибка однозначна, и клиент v2 перезагружает страницу.
+    # Свой add_header здесь не ставим — заголовки безопасности уровня server{}
+    # наследуются как есть.
+    location /assets/ {
+        try_files $uri =404;
+    }
+
     # SPA fallback. No `$uri/` — a directory probe on the `/lore` route would
     # internal-redirect to `/lore/`, collide with the proxy block above, and
     # bounce the browser off-port. SPA paths never need directory resolution.

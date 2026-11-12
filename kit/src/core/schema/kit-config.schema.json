@@ -267,7 +267,16 @@
             "type": "object",
             "properties": {
               "warnAfter": { "type": "number", "minimum": 0 },
-              "staleAfter": { "type": "number", "minimum": 0 }
+              "staleAfter": { "type": "number", "minimum": 0 },
+              "perRecord": {
+                "description": "S7B-ACT-1: имена полей записи с минутами этой строки; число в поле главнее порога колонки.",
+                "type": "object",
+                "properties": {
+                  "warnAfter": { "type": "string", "minLength": 1 },
+                  "staleAfter": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
             },
             "additionalProperties": false
           }

@@ -1026,6 +1026,30 @@
       ]
     }
   },
+  "graph": {
+    "input": {
+      "depth": "number?",
+      "id": "string?",
+      "limit": "number?",
+      "rels": "string?",
+      "scope": "string?",
+      "structural": "boolean?",
+      "type": "string?",
+      "types": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
   "harness_list": {
     "input": {},
     "output": {
@@ -1172,6 +1196,28 @@
           "type": "text",
           "text": {
             "_warning": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "machine_new": {
+    "input": {
+      "dry_run": "boolean?",
+      "harness": "string?",
+      "kc_sub": "string?",
+      "machine_id": "string",
+      "name": "string?",
+      "profile": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
             "rows": []
           }
         }

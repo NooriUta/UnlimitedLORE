@@ -10,6 +10,7 @@
     "run_block": "allow",
     "search": "allow",
     "search_similar": "allow",
+    "graph": "allow",
     "metric_*": "allow",
     "insight_*": "allow",
     "rec_*": "allow",

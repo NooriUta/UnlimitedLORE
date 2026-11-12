@@ -72,7 +72,11 @@ final class LoreRecordFrom {
      * Связь из строки главного среза: ребро, сторона, тип цели и колонка-список id.
      * {@code techByPrefix} — цель SPEC-TECH-… открывается паспортом технологии.
      */
-    record LinkFrom(String rel, String dir, String type, String column, boolean techByPrefix) {}
+    record LinkFrom(String rel, String dir, String type, String column, boolean techByPrefix, String unionColumn) {
+        LinkFrom(String rel, String dir, String type, String column, boolean techByPrefix) {
+            this(rel, dir, type, column, techByPrefix, null);
+        }
+    }
 
     /**
      * Вкладка связей, которую фасад читает отдельным срезом: что читать и как строка становится связью.
@@ -147,11 +151,16 @@ final class LoreRecordFrom {
     /** Связи из строки главного среза по описаниям типа. */
     static List<Map<String, Object>> rowLinks(String type, Map<String, Object> row) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (LinkFrom l : ROW_LINKS.getOrDefault(type, List.of()))
-            for (String id : LoreRecordValues.arr(row.get(l.column()))) {
+        for (LinkFrom l : ROW_LINKS.getOrDefault(type, List.of())) {
+            // unionColumn — второе ребро того же факта (спека → компонент BELONGS_TO рядом с
+            // компонент → спека DOCUMENTED_IN): один список без повторов.
+            java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>(LoreRecordValues.arr(row.get(l.column())));
+            if (l.unionColumn() != null) ids.addAll(LoreRecordValues.arr(row.get(l.unionColumn())));
+            for (String id : ids) {
                 String t = l.techByPrefix() && id.startsWith(LoreRecordValues.TECH_SPEC_PREFIX) ? "tech" : l.type();
                 out.add(LoreRecordValues.link(l.rel(), l.dir(), id, t, id, null));
             }
+        }
         return out;
     }
 
@@ -304,6 +313,8 @@ final class LoreRecordFrom {
             list("tech", "tech"),
             list("adrs", "adrs"),
             list("specs", "specs"),
+            // S4-PRODUCTS-NODE: продукты компонента (IN_PRODUCT) — чипами в паспорт продукта.
+            list("products", "products"),
             v("status", Transform.DOC_TOKEN, "status"))),
         Map.entry("tech", List.of(
             v("title", Transform.FIRST_OF, "tech_name", "spec_id"),
@@ -338,7 +349,20 @@ final class LoreRecordFrom {
             v("title", Transform.FIRST_OF, "name", "slug"),
             s("code", "slug"),
             s("default_branch", "default_branch"),
-            v("is_private", Transform.BOOL_YES, "is_private"))));
+            v("is_private", Transform.BOOL_YES, "is_private"))),
+        // S4-PRODUCTS-NODE: продукт — статья словаря (ключ code); подпись — label_ru, иначе код.
+        // Цвет — колонка color статьи как есть: нет её — null, цвет не выдумывается.
+        Map.entry("product", List.of(
+            v("title", Transform.FIRST_OF, "label_ru", "code"),
+            s("code", "code"),
+            s("color", "color"),
+            s("label_en", "label_en"),
+            s("icon", "icon"),
+            v("sort_order", Transform.RAW, "sort_order"),
+            v("is_active", Transform.BOOL_YES, "is_active"),
+            v("parent", Transform.HEAD_OR, "parent_code"),
+            list("projects", "git_projects"),
+            list("components", "components"))));
 
     /** Строки детей частей по типу ребёнка (фаза — не здесь: её «x/y» считается по задачам). */
     static final Map<String, ItemDef> ITEMS = Map.of(
@@ -374,7 +398,9 @@ final class LoreRecordFrom {
         Map.entry("sprint", List.of(
             lf("DEPENDS_ON", "out", "sprint", "depends_on"),
             lf("DEPENDS_ON", "in", "sprint", "blocks"),
-            lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"))),
+            lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"),
+            // 11.11 (полнота модели рёбер): документы, реализованные в спринте.
+            lf("IMPLEMENTED_IN", "in", "doc", "doc_ids"))),
         Map.entry("task", List.of(
             lf("CLOSED_BY", "out", "pr", "closed_by_prs"),
             lf("REALIZES", "out", "use_case", "realizes_uc"))),
@@ -389,26 +415,62 @@ final class LoreRecordFrom {
             lf("TRACED_TO", "in", "use_case", "traced_by_ucs"))),
         Map.entry("decision", List.of(
             lf("SUPERSEDES", "out", "decision", "supersedes_ids"),
-            lf("ANSWERS", "out", "question", "answers_ids"))),
+            lf("ANSWERS", "out", "question", "answers_ids"),
+            // 11.11: кем заменено и какие сценарии ссылаются на решение как на обоснование.
+            lf("SUPERSEDES", "in", "decision", "superseded_by_ids"),
+            lf("TRACED_TO", "in", "feature", "traced_by_ucs"))),
         Map.entry("question", List.of(
             lf("ANSWERS", "in", "decision", "answered_by"),
             lf("GATES", "out", "task", "gating_tasks"))),
         Map.entry("milestone", List.of(
-            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"))),
+            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"),
+            // 11.11: фичи, целящие в веху (то же ребро, другой тип источника).
+            lf("TARGETS_MILESTONE", "in", "feature", "feature_ids"))),
+        // 11.11: ADR, выпущенные релизом; спринты и PR — отдельными срезами (SLICE_LINKS).
+        Map.entry("release", List.of(
+            lf("IMPLEMENTED_IN_RELEASE", "in", "adr", "adr_ids"))),
         Map.entry("component", List.of(
             // Технология — это спека SPEC-TECH-…: тип tech, чтобы щелчок открыл паспорт технологии.
-            new LinkFrom("DOCUMENTED_IN", "out", "spec", "specs", true),
+            // Слово владелицы 11.11: + спеки, привязанные только ребром спека → компонент (BELONGS_TO).
+            new LinkFrom("DOCUMENTED_IN", "out", "spec", "specs", true, "belonging_specs"),
             lf("BELONGS_TO", "in", "adr", "adrs"),
             // out('USES').tech_id — НЕ ключ паспорта (тот — spec_id SPEC-TECH-…): тип tech_ref.
             lf("USES", "out", "tech_ref", "tech"),
-            lf("PARENT_OF", "in", "component", "sub_components"))),
+            lf("PARENT_OF", "in", "component", "sub_components"),
+            // Как v1 (QG · Знания · Сценарии) и по путям записи: всё, что ставит BELONGS_TO к компоненту.
+            lf("BELONGS_TO", "in", "decision", "decisions"),
+            lf("BELONGS_TO", "in", "question", "questions"),
+            lf("BELONGS_TO", "in", "feature", "features"),
+            lf("BELONGS_TO", "in", "doc", "docs"),
+            lf("BELONGS_TO", "in", "qg", "qgs"),
+            lf("IN_PRODUCT", "out", "product", "products"))),
+        // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
+        Map.entry("product", List.of(
+            lf("IN_PRODUCT", "in", "component", "components"),
+            lf("PARENT_PRODUCT", "in", "product", "sub_products"),
+            lf("SERVES", "out", "product", "serves"),
+            lf("SERVES", "in", "product", "served_by"),
+            lf("TARGETS_PRODUCT", "in", "milestone", "milestone_ids"))),
         Map.entry("feature", List.of(
             lf("DECOMPOSES_INTO", "out", "feature", "child_uc_ids"),
             lf("REALIZES", "in", "task", "task_uids"),
             lf("HAS_ACTOR", "out", "actor", "actor_ids"),
             lf("ADDRESSES", "out", "pain", "pain_ids"),
             lf("PROMISES", "out", "gain", "gain_ids"),
-            lf("HELPS_WITH", "out", "job", "job_ids"))));
+            lf("HELPS_WITH", "out", "job", "job_ids"),
+            // 11.11 (полнота модели рёбер): что сценарий делает, обоснование, вехи, граф сценариев.
+            lf("RELIEVES", "out", "pain", "relieved_pain_ids"),
+            lf("DELIVERS", "out", "gain", "delivered_gain_ids"),
+            lf("PERFORMS", "out", "job", "performed_job_ids"),
+            lf("TRACED_TO", "out", "adr", "traced_adrs"),
+            lf("TRACED_TO", "out", "decision", "traced_decisions"),
+            lf("TARGETS_MILESTONE", "out", "milestone", "milestone_ids"),
+            lf("BUILDS_ON", "out", "feature", "builds_on_ids"),
+            lf("BUILDS_ON", "in", "feature", "built_on_by_ids"),
+            lf("UC_INCLUDES", "out", "feature", "includes_ids"),
+            lf("UC_INCLUDES", "in", "feature", "included_by_ids"),
+            lf("UC_EXTENDS", "out", "feature", "extends_ids"),
+            lf("UC_EXTENDS", "in", "feature", "extended_by_ids"))));
 
     /** Вкладки связей, которые фасад читает отдельным срезом, — в порядке чтения. */
     static final Map<String, List<SliceLink>> SLICE_LINKS = Map.of(
@@ -445,5 +507,39 @@ final class LoreRecordFrom {
             new SliceLink("people", "project_people", "project", "HAS_PROJECT_ROLE", "in", "user",
                 from(Transform.STR, "kc_sub"), from(Transform.FIRST_OF, "display_name", "kc_sub"), null, true),
             new SliceLink("agents", "project_agents", "project", "HAS_PROJECT_ROLE", "in", "agent",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — каждый конец
+            // BELONGS_TO_PROJECT своим срезом project_*, постранично, как вкладки 53а.
+            new SliceLink("specs", "project_specs", "project", "BELONGS_TO_PROJECT", "in", "spec",
+                from(Transform.STR, "spec_id"), from(Transform.FIRST_OF, "title", "spec_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("decisions", "project_decisions", "project", "BELONGS_TO_PROJECT", "in", "decision",
+                from(Transform.STR, "decision_id"), from(Transform.FIRST_OF, "title", "decision_id"), from(Transform.DOC_TOKEN, "status_raw"), true),
+            new SliceLink("questions", "project_questions", "project", "BELONGS_TO_PROJECT", "in", "question",
+                from(Transform.STR, "question_id"), from(Transform.FIRST_OF, "title", "question_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("features", "project_features", "project", "BELONGS_TO_PROJECT", "in", "feature",
+                from(Transform.STR, "uc_id"), from(Transform.FIRST_OF, "title", "uc_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("docs", "project_docs", "project", "BELONGS_TO_PROJECT", "in", "doc",
+                from(Transform.STR, "doc_id"), from(Transform.FIRST_OF, "title", "doc_id"), null, true),
+            new SliceLink("runbooks", "project_runbooks", "project", "BELONGS_TO_PROJECT", "in", "runbook",
+                from(Transform.STR, "runbook_id"), from(Transform.FIRST_OF, "name", "runbook_id"), null, true),
+            new SliceLink("actors", "project_actors", "project", "BELONGS_TO_PROJECT", "in", "actor",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            new SliceLink("boundAgents", "project_bound_agents", "project", "BELONGS_TO_PROJECT", "in", "agent",
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true),
+            new SliceLink("files", "project_files", "project", "BELONGS_TO_PROJECT", "in", "file",
+                from(Transform.STR, "file_path"), from(Transform.STR, "file_path"), null, true),
+            new SliceLink("prs", "project_prs", "project", "BELONGS_TO_PROJECT", "in", "pr",
+                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)),
+        // S4-PRODUCTS-NODE: сценарии и профиль клиента продукта — через его компоненты, постранично.
+        "product", List.of(
+            new SliceLink("features", "product_features", "code", "IN_PRODUCT", "in", "feature",
+                from(Transform.STR, "uc_id"), from(Transform.FIRST_OF, "title", "uc_id"), from(Transform.DOC_TOKEN, "status"), true),
+            new SliceLink("pains", "product_pains", "code", "ADDRESSES", "out", "pain",
+                from(Transform.STR, "pain_id"), from(Transform.FIRST_OF, "title", "pain_id"), null, true),
+            new SliceLink("gains", "product_gains", "code", "PROMISES", "out", "gain",
+                from(Transform.STR, "gain_id"), from(Transform.FIRST_OF, "title", "gain_id"), null, true),
+            new SliceLink("jobs", "product_jobs", "code", "HELPS_WITH", "out", "job",
+                from(Transform.STR, "job_id"), from(Transform.FIRST_OF, "title", "job_id"), null, true),
+            new SliceLink("actors", "product_actors", "code", "HAS_ACTOR", "out", "actor",
                 from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true)));
 }

@@ -47,6 +47,8 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   feature: 'feature',
   // S4-29 (53а): чипы проектов в шапке паспортов открывают паспорт проекта.
   project: 'project',
+  // S4-PRODUCTS-NODE: продукт — свой раздел и паспорт (чипы продуктов у компонента).
+  product: 'product',
 };
 
 /** Модуль оболочки по умолчанию: адрес записи без модуля открывал бы «Новости». */

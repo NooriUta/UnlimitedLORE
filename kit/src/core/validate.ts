@@ -507,7 +507,19 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       for (const [field, th] of Object.entries(fresh)) {
         const p = `list.fresh.${field}`;
         if (!isObj(th)) { c.err(p, 'type', `${p} должно быть объектом {warnAfter, staleAfter}`); continue; }
-        c.unknownKeys(th, ['warnAfter', 'staleAfter'], p, 'kit его не прочтёт');
+        c.unknownKeys(th, ['warnAfter', 'staleAfter', 'perRecord'], p, 'kit его не прочтёт');
+        // S7B-ACT-1: пороги строки — ИМЕНА полей записи, а не числа.
+        const per = th.perRecord;
+        if (per !== undefined) {
+          if (!isObj(per)) c.err(`${p}.perRecord`, 'type', `${p}.perRecord должно быть объектом {warnAfter?, staleAfter?} с именами полей записи`);
+          else {
+            c.unknownKeys(per, ['warnAfter', 'staleAfter'], `${p}.perRecord`, 'kit его не прочтёт');
+            for (const k of ['warnAfter', 'staleAfter'] as const) {
+              const v = per[k];
+              if (v !== undefined && (!isStr(v) || v === '')) c.err(`${p}.perRecord.${k}`, 'type', `${p}.perRecord.${k}: нужно имя поля записи строкой, получено «${String(v)}»`);
+            }
+          }
+        }
         const num = (k: string): number | undefined => {
           const v = th[k];
           if (v === undefined) return undefined;

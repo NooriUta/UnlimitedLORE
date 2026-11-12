@@ -519,6 +519,72 @@ public class LoreUserResource extends LoreResourceBase {
         }
     }
 
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-ACT-1 — окно активности машины и окна по harness (часы, 1..24).
+     * Тело — полное желаемое состояние: {@code {machine_id, window_h, harness:{код: часы}, dry_run}};
+     * {@code window_h} null — общий дефолт, {@code harness} пусто — без перекрытий. Пишет тот же, кто
+     * выдаёт допуски к машине: владелец или admin ({@link MachineAccess#writeRefusal}); агенты отсечены
+     * ещё фильтром (семейство user — HUMAN_ONLY). dry_run — план «было → станет». Журнал AO-01 —
+     * фильтром, сущность записи — {@code machine_id} (первое *_id поле ответа).
+     */
+    /** Тело S7B-ACT-1 — публичный record, как остальные тела ресурса (разбор Jackson). */
+    public record MachineActivityRequest(String machine_id, Integer window_h, Map<String, Integer> harness, Boolean dry_run) {}
+
+    @POST
+    @Path("user/machine-activity")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setMachineActivity(MachineActivityRequest body, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        MachineActivity.Request req = body == null ? null
+            : new MachineActivity.Request(body.machine_id(), body.window_h(), body.harness(), body.dry_run());
+        String err = MachineActivity.requestError(req, activeDictCodes("harness", LoreActorHarness.REGISTRY));
+        if (err != null) return badParams(err);
+        String clientId = MachineAccess.clientIdOf(req.machine_id());
+        try {
+            List<Map<String, Object>> machine = ingestService.queryPublic(
+                "SELECT actor_id, " + MachineActivity.FIELD + ", " + MachineActivity.HARNESS_FIELD
+                + ", out('OWNED_BY').kc_sub AS owner_kc_sub FROM KnowActor WHERE kind = 'agent' AND client_id = :c",
+                Map.of("c", clientId));
+            if (machine.isEmpty())
+                return targetNotFound("машина " + req.machine_id() + " не заведена: нет актора-агента с client_id " + clientId);
+            String refusal = MachineAccess.writeRefusal(callerAgentScope(), role, callerKcSub(),
+                MachineAccess.ownerOf(machine.get(0)), req.machine_id());
+            if (refusal != null)
+                return noStore(Response.status(Response.Status.FORBIDDEN)
+                    .entity(new LoreError("MACHINE_ACCESS_FORBIDDEN", "окно активности машины " + req.machine_id()
+                        + " меняет только её владелец или admin (то же правило, что у допусков: " + refusal + ")")));
+            Map<String, Object> plan = MachineActivity.plan(MachineActivity.settingOf(machine.get(0)), req);
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("machine_id", req.machine_id());   // первое *_id — сущность записи журнала AO-01
+            out.put("ok", true);
+            out.put("client_id", clientId);
+            out.put("plan", plan);
+            if (Boolean.TRUE.equals(req.dry_run())) {
+                out.put("dry_run", true);
+                out.put("applied", 0);
+                return noStore(Response.ok(out));
+            }
+            if ("unchanged".equals(plan.get("kind"))) {
+                out.put("outcome", LoreOutcome.UNCHANGED);
+                return noStore(Response.ok(out));
+            }
+            machineAccessCommand(MachineActivity.updateSql(MachineActivity.target(req)), Map.of("c", clientId));
+            // Исход — из факта: перечитать, а не поверить ответу UPDATE.
+            List<Map<String, Object>> now = ingestService.queryPublic(
+                "SELECT " + MachineActivity.FIELD + ", " + MachineActivity.HARNESS_FIELD
+                + " FROM KnowActor WHERE kind = 'agent' AND client_id = :c", Map.of("c", clientId));
+            boolean written = !now.isEmpty()
+                && MachineActivity.settingOf(now.get(0)).equals(MachineActivity.target(req));
+            out.put("outcome", written ? LoreOutcome.UPDATED : LoreOutcome.NOOP);
+            if (!written) out.put("reason", "UPDATE выполнен, но в графе окно другое — перечитайте machine_acl");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE MACHINE ACTIVITY] %s: %s", req.machine_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
     @POST
     @Path("user/role")
     @Consumes(MediaType.APPLICATION_JSON)

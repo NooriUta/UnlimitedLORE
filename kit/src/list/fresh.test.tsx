@@ -16,7 +16,7 @@ import type { KitConfig, KitData, KitRecord } from '../core/contract';
 import { validateKitConfig } from '../core/validate';
 import schema from '../core/schema/kit-config.schema.json';
 import { ListView } from './ListView';
-import { FreshCell, freshOf } from './fresh';
+import { FreshCell, freshOf, freshThresholdsFor } from './fresh';
 import { colKey } from './sum';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -223,5 +223,44 @@ describe('контракт: list.fresh', () => {
   it('JSON-схема знает list.fresh', () => {
     const list = (schema as { properties: { list: { properties: Record<string, unknown> } } }).properties.list.properties;
     expect(list.fresh).toBeTruthy();
+  });
+});
+
+// ─── Пороги строки (S7B-ACT-1) ───────────────────────────────────────────────
+// У каждой машины своё окно активности (1..24 ч, настройка в админке LORE): порог
+// колонки один на список, а «давно» у строк разное. Приложение называет ПОЛЕ записи,
+// где лежат минуты (perRecord) — kit берёт его, нет значения — порог колонки.
+
+describe('пороги строки: list.fresh[поле].perRecord', () => {
+  const recTh = (id: string, seen: string, stale?: number): KitRecord =>
+    ({ id, kind: 'item', title: id, status: 'todo', fields: { seen_at: seen, ...(stale === undefined ? {} : { stale_min: stale }) } });
+
+  it('freshThresholdsFor: число из поля записи главнее порога колонки; нет числа — порог колонки', () => {
+    const th = { staleAfter: 60, perRecord: { staleAfter: 'stale_min' } };
+    expect(freshThresholdsFor(th, recTh('A', ago(1), 1440))).toEqual({ staleAfter: 1440 });
+    expect(freshThresholdsFor(th, recTh('B', ago(1)))).toEqual({ staleAfter: 60 });
+    expect(freshThresholdsFor(th, { ...recTh('C', ago(1)), fields: { stale_min: 'много' } })).toEqual({ staleAfter: 60 });
+    expect(freshThresholdsFor(undefined, recTh('D', ago(1), 5))).toBeUndefined();
+  });
+
+  it('ListView: одна и та же давность — у строки с окном сутки «ok», с окном час «устарело»', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
+    const config: KitConfig = { ...cfg(['list']), list: { views: ['list'], columns: ['title+id', 'fresh:seen_at'],
+      fresh: { seen_at: { staleAfter: 60, perRecord: { staleAfter: 'stale_min' } } } } };
+    const d: KitData = { ...data, records: [recTh('DAY', ago(125), 1440), recTh('HOUR', ago(125), 60), recTh('COL', ago(125))] };
+    const { container } = render(<ListView config={config} data={d} />);
+    const tones = Array.from(container.querySelectorAll('.sk-fresh')).map(c => c.getAttribute('data-tone'));
+    expect(tones).toEqual(['ok', 'stale', 'stale']);
+  });
+
+  it('контракт: perRecord — имена полей строкой; иначе ошибка; JSON-схема его знает', () => {
+    const base = cfg(['list']);
+    const issues = (fresh: unknown) => { const v = validateKitConfig({ ...base, list: { ...base.list, fresh } }); return [...v.errors, ...v.warnings]; };
+    expect(issues({ seen_at: { staleAfter: 60, perRecord: { staleAfter: 'stale_min' } } }).filter(i => i.path.startsWith('list.fresh'))).toEqual([]);
+    expect(issues({ seen_at: { perRecord: { staleAfter: 5 } } }).some(i => i.path.startsWith('list.fresh') && i.level === 'error')).toBe(true);
+    expect(issues({ seen_at: { perRecord: { soon: 'x' } } }).some(i => i.path.startsWith('list.fresh'))).toBe(true);
+    const list = (schema as unknown as { properties: { list: { properties: Record<string, { additionalProperties?: { properties?: Record<string, unknown> } }> } } }).properties.list.properties;
+    expect(list.fresh.additionalProperties?.properties?.perRecord).toBeTruthy();
   });
 });

@@ -362,7 +362,9 @@ class NewsV2EngineFixtureTest {
         Map<String, Object> m = (Map<String, Object>) e.compute(q).get("metrics");
         Map<String, Object> d = (Map<String, Object>) ((Map<String, Object>) m.get("delta")).get("events");
         // P⁻ = 25.10–31.10: одно событие (B заведена 25.10). Процент не считается при f(P⁻) < 5.
-        assertEquals(22, d.get("value")); assertEquals(1, d.get("previous")); assertEquals(21, d.get("delta"));
+        // Итог периода — последний статус объекта в периоде (S7A-09, 11.11.2026): A «реактивирована 02.11 →
+        // закрыта 03.11» вернулась туда же, где была на t0, и в счёт периода не идёт; лента показывает оба перехода.
+        assertEquals(20, d.get("value")); assertEquals(1, d.get("previous")); assertEquals(19, d.get("delta"));
         assertNull(d.get("pct"));
         // с черты 05.11 00:00Z: D ready, ADR-3, G closed, E ready, SPEC-1 version
         Map<String, Object> since = (Map<String, Object>) m.get("since_mark");
