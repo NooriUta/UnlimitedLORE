@@ -6664,6 +6664,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-lib__meta { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
 .sk-lib__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-md); }
 .sk-lib__body { max-width: 62ch; min-width: 0; }
+/* Встроенный паспорт (RecordReader) — не prose: кап сжимает его, справа пустота. */
+.sk-lib__body:has(.sk-rec-reader) { max-width: none; }
 .sk-lib__open { justify-self: start; text-decoration: none; }
 .sk-lib__sheet .sk-lib__open { margin-top: 8px; }
 
