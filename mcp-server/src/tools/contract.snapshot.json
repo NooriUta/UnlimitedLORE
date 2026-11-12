@@ -1026,6 +1026,30 @@
       ]
     }
   },
+  "graph": {
+    "input": {
+      "depth": "number?",
+      "id": "string?",
+      "limit": "number?",
+      "rels": "string?",
+      "scope": "string?",
+      "structural": "boolean?",
+      "type": "string?",
+      "types": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
   "harness_list": {
     "input": {},
     "output": {

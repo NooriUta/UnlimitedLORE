@@ -99,7 +99,7 @@ class LoreRecordRowLinksTest {
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()),
             // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.
-            Map.entry("product", Map.of("components", x, "sub_products", x)));
+            Map.entry("product", Map.of("components", x, "sub_products", x, "serves", x, "served_by", x, "milestone_ids", x)));
         assertEquals(Set.copyOf(LoreRecordRegistry.TYPES), full.keySet(), "проверены все типы паспорта");
         for (Map.Entry<String, Map<String, Object>> e : full.entrySet()) {
             String type = e.getKey();

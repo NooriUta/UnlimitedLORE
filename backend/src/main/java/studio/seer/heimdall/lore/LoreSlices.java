@@ -2979,6 +2979,9 @@ public final class LoreSlices {
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +
+            "out('SERVES').code             AS serves, " +
+            "in('SERVES').code              AS served_by, " +
+            "in('TARGETS_PRODUCT').milestone_id AS milestone_ids, " +
             "out('BELONGS_TO_PROJECT').slug AS git_projects " +
             "FROM KnowDictEntry WHERE dict_type = 'product' AND code = :code",
             List.of("code"), Map.of(), "");

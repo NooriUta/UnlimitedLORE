@@ -447,7 +447,10 @@ final class LoreRecordFrom {
         // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
         Map.entry("product", List.of(
             lf("IN_PRODUCT", "in", "component", "components"),
-            lf("PARENT_PRODUCT", "in", "product", "sub_products"))),
+            lf("PARENT_PRODUCT", "in", "product", "sub_products"),
+            lf("SERVES", "out", "product", "serves"),
+            lf("SERVES", "in", "product", "served_by"),
+            lf("TARGETS_PRODUCT", "in", "milestone", "milestone_ids"))),
         Map.entry("feature", List.of(
             lf("DECOMPOSES_INTO", "out", "feature", "child_uc_ids"),
             lf("REALIZES", "in", "task", "task_uids"),

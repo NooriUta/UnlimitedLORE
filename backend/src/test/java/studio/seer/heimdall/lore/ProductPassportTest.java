@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProductPassportTest {
 
     private static final List<String> TABS =
-        List.of("components", "features", "pains", "gains", "jobs", "actors", "children");
+        List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones");
 
     @Test
     void productIsAPassportTypeReadOnly() {

@@ -279,8 +279,8 @@ class LorePassportSurfaceTest {
 
     @Test
     void product() {
-        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children"), tabs("product"),
-            "продукт (S4-PRODUCTS-NODE): Компоненты · Фичи и сценарии · Боли · Выгоды · Работы · Роли · Подпродукты");
+        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones"), tabs("product"),
+            "продукт (S4-PRODUCTS-NODE): Компоненты · Фичи и сценарии · Боли · Выгоды · Работы · Роли · Подпродукты · Обслуживает · Обслуживается · Вехи");
     }
 
     @Test

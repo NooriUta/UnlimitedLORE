@@ -588,10 +588,10 @@ final class LoreRecordRegistry {
                 // постранично через /lore/slice limit/offset); фасад отдаёт первую порцию.
                 rel("tasks", "Задачи", "TAGGED_WITH", "in", "task", "attribute", "link_tab", false),
                 rel("sprints", "Спринты", "BELONGS_TO", "in", "sprint", "attribute", "link_tab", false),
-                // 11.11 (полнота модели рёбер): область и продукты — словарные рёбра, видны полями
-                // area / products в «Свойствах»; упоминания — вкладкой «Ссылки».
+                // 11.11 (полнота модели рёбер): область — словарное ребро, видна полем area в
+                // «Свойствах» (продукты — связь products выше, S4-PRODUCTS-NODE); упоминания —
+                // вкладкой «Ссылки».
                 rel("area", "Область", "IN_AREA", "out", "area", "attribute", "prop", false),
-                rel("products", "Продукты", "IN_PRODUCT", "out", "product", "attribute", "prop", false),
                 refsOut("Ссылается"),
                 refsIn("На него ссылаются"))));
 
@@ -723,7 +723,12 @@ final class LoreRecordRegistry {
                 rel("gains", "Выгоды", "PROMISES", "out", "gain", "association", "link_tab", false),
                 rel("jobs", "Работы", "HELPS_WITH", "out", "job", "association", "link_tab", false),
                 rel("actors", "Роли", "HAS_ACTOR", "out", "actor", "association", "link_tab", false),
-                rel("children", "Подпродукты", "PARENT_PRODUCT", "in", "product", "composition", "link_tab", false))));
+                rel("children", "Подпродукты", "PARENT_PRODUCT", "in", "product", "composition", "link_tab", false),
+                // Полнота модели рёбер (11.11) × нода «Продукт»: SERVES (product_link rel:serves) и
+                // вехи, целящие в продукт (TARGETS_PRODUCT, milestone_product), — из строки product_by_id.
+                rel("serves", "Обслуживает", "SERVES", "out", "product", "association", "link_tab", false),
+                rel("servedBy", "Обслуживается", "SERVES", "in", "product", "association", "link_tab", false),
+                rel("milestones", "Вехи", "TARGETS_PRODUCT", "in", "milestone", "attribute", "link_tab", false))));
 
         // ── Проект (только чтение, S4-29, решение 53а) ──────────────────────
         // KnowGitProject: справочная вершина, ключ slug («владелец/репозиторий»), статуса и
