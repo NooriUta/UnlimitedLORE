@@ -54,6 +54,15 @@ describe('/kit — витрина Seiðr-kit', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Seiðr-kit/);
   });
 
+  it('K2-VIEW-TARGET: «Цель к сроку» — срок, план, прогноз, вердикт словами и мини-сгорание в строку', () => {
+    const { container } = render(<KitPage />);
+    const sec = document.getElementById('kit-charts')!;
+    expect(sec).toBeTruthy();
+    expect(sec.querySelector('[data-testid="kit-burn-verdict"]')!.getAttribute('data-tone')).toBe('risk');
+    for (const k of ['plan', 'forecast', 'deadline']) expect(sec.querySelector(`[data-series="${k}"]`), k).toBeTruthy();
+    expect(container.querySelectorAll('#kit-charts .sk-burn-spark').length).toBeGreaterThan(1);
+  });
+
   it('четыре честных исхода + обрезка различимы на одной странице', () => {
     const { container } = render(<KitPage />);
     for (const s of ['loading', 'empty', 'error', 'forbidden', 'partial']) {

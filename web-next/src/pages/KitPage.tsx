@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
   BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BurnChart, BurnSpark, burnSum, type BurnPoint,
   DENSITIES, FieldEditor, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
@@ -16,12 +17,13 @@ import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 
-const SECTIONS = ['tokens', 'elements', 'states', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
+const SECTIONS = ['tokens', 'elements', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
   elements: 'kitPage.sec.elements',
   states: 'kitPage.sec.states',
+  charts: 'kitPage.sec.charts',
   shell: 'kitPage.sec.shell',
   flow: 'kitPage.sec.flow',
   fields: 'kitPage.sec.fields',
@@ -34,6 +36,18 @@ const FS_TOKENS = ['--fs-2xs', '--fs-xs', '--fs-sm', '--fs-base', '--fs-md', '--
 const SHOWN_STATUSES = ['done', 'active', 'partial', 'planned', 'backlog', 'blocked', 'cancelled'] as const;
 /** Пороги свежести на витрине (K4-FRESHNESS): с 10 мин — предупреждение, с 60 — устарело. */
 const FRESH_DEMO = { warnAfter: 10, staleAfter: 60 };
+/**
+ * «Цель к сроку» на витрине (K2-VIEW-TARGET): веха из двух частей — ряд вехи как
+ * сумма рядов частей; срок, прогноз и вердикт — данные приложения (здесь выдуманы).
+ */
+const pt = (date: string, scope: number, done: number): BurnPoint => ({ date, scope, done, remaining: scope - done });
+const TARGET_PARTS: { id: string; points: BurnPoint[] }[] = [
+  { id: 'S1', points: [pt('2026-10-20', 8, 0), pt('2026-10-27', 10, 4), pt('2026-11-03', 10, 10)] },
+  { id: 'S2', points: [pt('2026-10-27', 6, 0), pt('2026-11-05', 9, 3), pt('2026-11-11', 12, 6)] },
+];
+const TARGET_SUM = burnSum(TARGET_PARTS.map(p => p.points));
+const TARGET_FORECAST = [{ date: '2026-11-20', done: 19 }, { date: '2026-12-03', done: 22 }];
+
 const TAB_IDS = ['list', 'board', 'plan'] as const;
 type TabId = (typeof TAB_IDS)[number];
 const TAB_KEY: Record<TabId, AppKey> = { list: 'kitPage.sh.tab.list', board: 'kitPage.sh.tab.board', plan: 'kitPage.sh.tab.plan' };
@@ -203,6 +217,16 @@ export default function KitPage() {
             <LoadError compact error={{ status: 502, message: 'Bad Gateway' }} onRetry={() => {}} />
             <Forbidden compact reason={t('kitPage.st.reason')} />
             <Truncated meta={{ truncated: true, limit: 1000 }} shown={1000} />
+          </div>
+        </section>
+
+        <section id="kit-charts" className="kitp__sec" aria-labelledby="kit-charts-h">
+          <h2 id="kit-charts-h" className="kitp__h2">{t('kitPage.sec.charts')}</h2>
+          <BurnChart state="ok" points={TARGET_SUM} defaultExpanded defaultMode="burnup"
+            deadline="2026-11-30" forecast={TARGET_FORECAST}
+            verdict={{ tone: 'risk', text: t('kitPage.ch.verdict') }} />
+          <div className="kitp__grid">
+            {TARGET_PARTS.map(p => <span key={p.id}>{p.id} <BurnSpark points={p.points} /></span>)}
           </div>
         </section>
 

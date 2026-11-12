@@ -5112,6 +5112,19 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-burn__line--ideal { stroke: var(--bd); stroke-width: 1; stroke-dasharray: 2 3; }
 .sk-burn__axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
 .sk-burn__note { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
+/* K2-VIEW-TARGET «Цель к сроку»: план, прогноз, срок, вердикт; мини-сгорание в строку. */
+.sk-burn__line--plan { stroke: var(--inf); stroke-width: 1; stroke-dasharray: 6 3; }
+.sk-burn__line--forecast { stroke: var(--wrn); stroke-width: 1.4; stroke-dasharray: 3 3; }
+.sk-burn__deadline { stroke: var(--dng); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sk-burn__key--plan { color: var(--inf); }
+.sk-burn__key--forecast { color: var(--wrn); }
+.sk-burn__key--deadline { color: var(--dng); }
+.sk-burn__verdict { padding: 0 8px; border-radius: var(--r-pill); border: 1px solid var(--bd); text-transform: none; letter-spacing: 0; white-space: nowrap; font-size: var(--fs-xs); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.sk-burn__verdict[data-tone='ok'] { color: var(--suc); border-color: var(--suc); }
+.sk-burn__verdict[data-tone='risk'] { color: var(--wrn); border-color: var(--wrn); }
+.sk-burn__verdict[data-tone='late'] { color: var(--dng); border-color: var(--dng); }
+.sk-burn-spark { display: inline-block; vertical-align: middle; }
+.sk-burn-spark--few { color: var(--t3); font-size: var(--fs-2xs); font-family: var(--mono); }
 
 /* ═══════════ режим чтения (SPRINT_UXR_S5_RECORD_TASKS/S5-05) ═══════════
    Текст — колонкой --read-col (~680 px); таблицы, код и диаграммы выходят

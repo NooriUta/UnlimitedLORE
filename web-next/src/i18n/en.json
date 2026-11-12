@@ -13,6 +13,8 @@
   "kitPage.sec.states": "Honest states",
   "kitPage.sec.shell": "Shells",
   "kitPage.sec.content": "MD and HTML",
+  "kitPage.sec.charts": "Charts",
+  "kitPage.ch.verdict": "3 days late: need 7 tasks a week or drop 3",
   "kitPage.sec.palette": "Palette and search",
   "kitPage.pal.lead": "Ctrl+K — records and commands, “/” — search records; with no query — recent items. Keys work in any keyboard layout.",
   "kitPage.pal.open": "Open palette",
