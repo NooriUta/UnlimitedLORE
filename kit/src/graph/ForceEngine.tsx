@@ -42,8 +42,10 @@ export default function ForceEngine(p: GxEngineProps) {
           const s = latest.current;
           const nb = s.selected ? neighborsOf(s.selected, s.edges) : null;
           if (nb && !nb.has(n.id)) return;
-          // Порог подписей: 0 — всегда, 1 — только при сильном приближении.
-          if (!nb && scale < s.settings.labels * 4) return;
+          // Порог подписей: 0 — всегда, 1 — только при сильном приближении. Хабы
+          // (4+ связей) подписаны вне порога: после авто-подгонки зум ≈ 1 и
+          // без хабов весь граф остаётся безымянным.
+          if (!nb && scale < s.settings.labels * 4 && (degree.get(n.id) ?? 0) < 4) return;
           // Холст не читает CSS-шрифты: семейство — то же, что у текста kit.
           ctx.font = `${11 / scale}px Manrope, sans-serif`;
           ctx.fillStyle = resolveColor(el, '--t1');
@@ -63,10 +65,17 @@ export default function ForceEngine(p: GxEngineProps) {
       applySettings();
     }).catch(e => alive && latest.current.onError(e));
 
+    let refitT: ReturnType<typeof setTimeout> | undefined;
     const ro = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(() => fg.current?.width(el.clientWidth).height(el.clientHeight)) : null;
+      ? new ResizeObserver(() => {
+          fg.current?.width(el.clientWidth).height(el.clientHeight);
+          // Ресайз и повторный показ (размер 0 → свой) подгоняют рамку; debounce,
+          // чтобы подгонка не дёргалась посреди непрерывной тяги за краем окна.
+          clearTimeout(refitT);
+          refitT = setTimeout(() => fg.current?.zoomToFit(400, 30), 200);
+        }) : null;
     ro?.observe(el);
-    return () => { alive = false; ro?.disconnect(); fg.current?._destructor(); fg.current = null; el.innerHTML = ''; };
+    return () => { alive = false; clearTimeout(refitT); ro?.disconnect(); fg.current?._destructor(); fg.current = null; el.innerHTML = ''; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.nodes, p.edges]);
 
