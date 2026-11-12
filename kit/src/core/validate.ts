@@ -74,7 +74,7 @@ export const LIST_KEYS = [
 ] as const;
 /** Ключи, подпись которых kit знает сам (groupLabel.ts BUILTIN_KEY_TITLES). */
 export const KIT_BUILTIN_KEYS = ['title', 'id', 'status', 'kind', 'updated_at'] as const;
-const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar'];
+const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calendar', 'library'];
 /**
  * Категории статуса: ось владелицы (D-2026-UXR-STATUS-AXIS, шесть значений)
  * плюс прежние четыре — старые конфиги должны проходить проверку.

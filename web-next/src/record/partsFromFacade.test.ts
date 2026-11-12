@@ -201,3 +201,17 @@ describe('S4-09 · итоги спринта из computed — полями па
 // SPRINT_UXR_S9_SCALE_OPT/S9-05 «пришла не вся — сказано числом» переехала в
 // partTabList.test.tsx: тело вкладки части стало списком kit (React), и
 // проверяется рендером, а не строкой.
+
+// S4-24 (владелица 11.11: «не сделано редактирование множественного выбора привязок
+// (компоненты, проекты)»): связь-свойство с путём привязки получает своё ребро —
+// kit рисует чипы с «Отвязать» и выбор с поиском. Без пути (manageable: false) — чтение.
+describe('S4-24 · связь-свойство правится, если у сервера есть путь привязки', () => {
+  it('компоненты и проекты — поле ref с ребром; без пути — без ребра', () => {
+    const base = sprint();
+    const rels = base.schema.relations.map(r => (r.key === 'projects' ? { ...r, manageable: false } : r));
+    const l = load({ ...base, schema: { ...base.schema, relations: rels } });
+    const f = (k: string) => l.config.kinds.sprint.fields?.find(x => x.key === k);
+    expect(f('components')).toMatchObject({ type: 'ref', relation: { rel: 'TOUCHES', dir: 'out' } });
+    expect(f('projects')?.relation).toBeUndefined();
+  });
+});

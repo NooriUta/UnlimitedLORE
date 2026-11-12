@@ -14,6 +14,7 @@ import type { KitCtx, KitRecord, KitRelation, KitRelationDef } from '../core/con
 import { kitT, type KitLang } from '../i18n';
 import { RecordRef } from './fmt';
 import { RelationTable } from './RelationTable';
+import { RelationPicker } from './RelationPicker';
 
 export const RELATION_MARK: Record<KitRelation, string> = {
   composition: '◆', aggregation: '◇', association: '⇢', attribute: '·', realization: '▷', generalization: '△',
@@ -114,7 +115,12 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
         testId={single ? 'kit-relation-list' : undefined}
       />
     );
-  const form = manage && (
+  // S4-24: приложение дало варианты — выбор с поиском, свободного ввода кода нет.
+  const pickOptions = ctx.config.hooks?.relationOptions;
+  const form = manage && pickOptions ? (
+    <RelationPicker lang={lang} label={def.label} recordType={record.kind} recordId={record.id} rel={def.rel} dir={def.dir}
+      options={pickOptions} linked={ids} busy={busy} onPick={id => void call(id, 'add')} />
+  ) : manage && (
     <form
       className="sk-rel__add"
       onSubmit={e => {
