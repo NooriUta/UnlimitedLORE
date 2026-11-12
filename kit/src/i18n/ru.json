@@ -1102,5 +1102,8 @@
   "kit.record.create.why": "Не заполнено: {fields}",
   "kit.record.create.noPath": "Запись некуда сохранить: приложение не дало пути создания",
   "kit.record.create.failed": "Не сохранено: {reason}",
-  "kit.record.rel.inherited": "Унаследовано — снять можно только там, откуда пришло"
+  "kit.record.rel.inherited": "Унаследовано — снять можно только там, откуда пришло",
+  "kit.calendar.field": "Поле даты",
+  "kit.list.view.library": "Библиотека",
+  "kit.list.library.noConfig": "Для библиотеки у раздела не заданы группы документов"
 }

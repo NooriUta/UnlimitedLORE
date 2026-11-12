@@ -1102,5 +1102,8 @@
   "kit.record.create.why": "Not filled: {fields}",
   "kit.record.create.noPath": "Nowhere to save: the app gave no create path",
   "kit.record.create.failed": "Not saved: {reason}",
-  "kit.record.rel.inherited": "Inherited — remove it where it comes from"
+  "kit.record.rel.inherited": "Inherited — remove it where it comes from",
+  "kit.calendar.field": "Date field",
+  "kit.list.view.library": "Library",
+  "kit.list.library.noConfig": "No document groups are set for the library in this section"
 }
