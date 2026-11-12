@@ -71,3 +71,26 @@ export function burnIdeal(points: readonly BurnPoint[]): { date: string; value: 
     { date: points[points.length - 1].date, value: 0 },
   ];
 }
+
+/** Точка прогноза приложения: сколько будет закрыто к дате (K2-VIEW-TARGET). */
+export interface BurnForecastPoint { date: string; done: number }
+/** Вердикт приложения словами и тоном: успеваем · под риском · не успеваем. */
+export interface BurnVerdict { tone: 'ok' | 'risk' | 'late'; text: string }
+
+/**
+ * Ряд по родителю — сумма рядов частей (веха = её спринты, K2-VIEW-TARGET).
+ * На каждую дату любой части берётся последнее известное значение КАЖДОЙ части:
+ * часть, у которой в этот день событий не было, не «обнуляется».
+ */
+export function burnSum(series: readonly (readonly BurnPoint[])[]): BurnPoint[] {
+  const dates = [...new Set(series.flatMap(s => s.map(p => p.date)))].sort();
+  const idx = series.map(() => -1);
+  return dates.map(date => {
+    let scope = 0, done = 0;
+    series.forEach((s, i) => {
+      while (idx[i] + 1 < s.length && s[idx[i] + 1].date <= date) idx[i]++;
+      if (idx[i] >= 0) { scope += s[idx[i]].scope; done += s[idx[i]].done; }
+    });
+    return { date, scope, done, remaining: scope - done };
+  });
+}

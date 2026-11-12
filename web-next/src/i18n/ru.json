@@ -13,6 +13,8 @@
   "kitPage.sec.states": "Честные состояния",
   "kitPage.sec.shell": "Оболочки",
   "kitPage.sec.content": "MD и HTML",
+  "kitPage.sec.charts": "Графики",
+  "kitPage.ch.verdict": "Не успеваем на 3 дня: нужно 7 задач в неделю или убрать 3",
   "kitPage.sec.palette": "Палитра и поиск",
   "kitPage.pal.lead": "Ctrl+K — записи и команды, «/» — поиск по записям; без запроса — недавние. Клавиши работают в любой раскладке.",
   "kitPage.pal.open": "Открыть палитру",

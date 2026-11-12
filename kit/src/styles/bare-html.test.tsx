@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -231,6 +231,17 @@ function Samples() {
         {/* K4-MINILIST: todo с отметками и квиз после ответа (верный и подсказка к неверному). */}
         <MiniList kind="check" label="Чек-лист" items={[{ id: 'a', text: 'Тест до кода', done: true }, { id: 'b', text: 'Витрина' }]} onToggle={noop} />
         <MiniList kind="choice" label="Вопрос" items={[{ id: 'x', text: 'Строки слева без пары' }, { id: 'y', text: 'Только пары', hint: 'Это INNER JOIN' }]} picked="y" correct="x" reveal />
+      </section>
+      <section className="bare__sec" data-kit="burn-target">
+        <h2 className="bare__h2">Цель к сроку</h2>
+        {/* K2-VIEW-TARGET: срок, план к сроку, прогноз и вердикт приложения; мини-сгорание в строку. */}
+        <BurnChart state="ok" defaultExpanded defaultMode="burnup" deadline="2026-11-30"
+          points={[{ date: '2026-10-20', scope: 14, done: 0, remaining: 14 }, { date: '2026-11-03', scope: 19, done: 10, remaining: 9 }, { date: '2026-11-11', scope: 22, done: 16, remaining: 6 }]}
+          forecast={[{ date: '2026-12-03', done: 22 }]} verdict={{ tone: 'risk', text: 'Не успеваем на 3 дн.' }} />
+        <BurnChart state="ok" defaultExpanded defaultMode="burndown" deadline={null}
+          points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }, { date: '2026-11-05', scope: 4, done: 2, remaining: 2 }]} />
+        <BurnSpark points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }, { date: '2026-11-05', scope: 4, done: 2, remaining: 2 }]} />
+        <BurnSpark points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }]} />
       </section>
       <section className="bare__sec" data-kit="library">
         <h2 className="bare__h2">Библиотека</h2>
