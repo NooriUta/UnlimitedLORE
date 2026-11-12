@@ -31,6 +31,13 @@ export interface TypeStatuses {
    * переполнение) из той же модели. Нет в модели — поля нет, а не пустой объект.
    */
   display?: Record<string, { priority: number; width: string; overflow: string }>;
+  /**
+   * Циклы ВСЕХ типов модели — для показа чужих записей в паспорте (дочерние таблицы,
+   * Peek). Владелица 11.11: «в дочерних табличных видах не подтягиваются правильные
+   * иконки, привязанные к статусам» — строки задач в паспорте спринта искали свой
+   * статус в цикле спринта.
+   */
+  byKind?: Record<string, KitConfig['statuses']['items']>;
 }
 
 export interface TypeStatusesOptions {
@@ -65,16 +72,22 @@ export async function fetchTypeStatuses(type: string, opts: TypeStatusesOptions 
   // Имя словаря — это имя ТИПА: предметное имя даёт приложение, генератор kit
   // предметных имён не знает (K-14).
   const parsed = configFromModel(res.model, { statusDict: type });
+  const model = res.model;
+  const byKind = Object.fromEntries(Object.keys(model.statuses ?? {})
+    .map(k => [k, k === type ? parsed.statuses : configFromModel(model, { statusDict: k }).statuses] as const)
+    .filter(([, items]) => items.length > 0));
+  const withKinds = Object.keys(byKind).length ? { byKind } : {};
   const typeDisplay = parsed.display[type];
   if (parsed.statuses.length === 0) {
     return {
       items: [],
       notes: [...notes, `статусы — умолчание приложения: в модели нет цикла для типа «${type}»`],
       ...(typeDisplay ? { display: typeDisplay } : {}),
+      ...withKinds,
     };
   }
   // Берём только замечания ПРО СТАТУСЫ: потребителю цикла незачем читать
   // жалобы про разделы types, которыми он не пользуется.
   const display = parsed.display[type];
-  return { items: parsed.statuses, notes: [...notes, ...parsed.notes.statuses], ...(display ? { display } : {}) };
+  return { items: parsed.statuses, notes: [...notes, ...parsed.notes.statuses], ...(display ? { display } : {}), ...withKinds };
 }

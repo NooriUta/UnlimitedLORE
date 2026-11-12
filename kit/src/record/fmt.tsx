@@ -3,6 +3,7 @@
 import { asChip, chipLabel } from '../core/chipValue';
 import type { CSSProperties, ReactNode } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
+import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
 import { toCssColor } from './graph';
 
@@ -36,13 +37,13 @@ export function findRecord(ctx: KitCtx, id: string): KitRecord | undefined {
 }
 
 /** Пилюля статуса по config.statuses; кода нет в конфиге — код виден как есть. */
-export function StatusPill({ code, ctx, unknownTitle }: { code: string; ctx: KitCtx; unknownTitle: string }) {
+export function StatusPill({ code, ctx, unknownTitle, kind }: { code: string; ctx: KitCtx; unknownTitle: string; /** Вид записи — оформление по её циклу (statuses.byKind). */ kind?: string }) {
   // Пустой код или пустая ось — плашки нет вовсе (B5, аудит 10.11): «—» у типа
   // без статуса (релиз, компонент, технология) читалось как реальный статус
   // записи. Те же правила у StatusSlot, пиков и таблицы связей — они зовут эту
   // плашку напрямую, так что гард здесь закрывает всех.
   if (!code || !ctx.config.statuses?.items?.length) return null;
-  const item = ctx.config.statuses.items.find(s => s.code === code);
+  const item = statusItemFor(ctx.config.statuses, code, kind);
   const style = { '--pill-c': item ? toCssColor(item.color) : 'var(--t3)' } as CSSProperties;
   return (
     <span className="sk-pill sk-pill--value sk-rec-status" style={style} data-status={code} data-known={item ? 'true' : 'false'}
