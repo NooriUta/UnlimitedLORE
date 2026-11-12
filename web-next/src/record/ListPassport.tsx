@@ -8,11 +8,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
-  type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow,
-} from '@seidr/kit';
+  type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
+import { appT } from '../i18n';
 import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
 import { parentsOf } from './loreRefCreate';
+import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
@@ -123,7 +124,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // что список собирался из внутренней таблицы kit, то есть из всех осей
   // разом. Теперь спрашиваем цикл этого типа; модель не ответила — остаётся
   // умолчание приложения, и это сказано словами в той же строке замечаний.
-  const [statuses, setStatuses] = useState<{ items: KitConfig['statuses']['items']; notes: string[] }>({ items: [], notes: [] });
+  const [statuses, setStatuses] = useState<{ items: KitConfig['statuses']['items']; notes: string[]; byKind?: Record<string, KitConfig['statuses']['items']> }>({ items: [], notes: [] });
   useEffect(() => {
     let alive = true;
     fetchTypeStatuses(type, { fetchImpl }).then(r => { if (alive) setStatuses(r); }, () => { /* сказано в notes */ });
@@ -165,6 +166,45 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
   const parentsKey = JSON.stringify(parentsOf(view?.record));
   const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>), [parentsKey]);
+  // Граф (GC-04): вкладка «Граф» берёт окрестность записи с сервера на глубину из адреса —
+  // фасад давал один шаг. Ошибка — строкой блока графа, а не пустым графом.
+  // Глубина 1–4 и снятые типы связей (goff) — из адреса. Владелица 11.11: «показать связи
+  // определённого типа, связи 2, 3, 4 уровней» — снятый тип исключается из ОБХОДА на сервере
+  // (rels = все типы окрестности минус снятые), а не только прячется на экране.
+  const [gdepthRaw] = useUrlParam('gdepth');
+  const gdepth = gdepthRaw === '2' || gdepthRaw === '3' || gdepthRaw === '4' ? Number(gdepthRaw) : 1;
+  const [goffRaw] = useUrlParam('goff');
+  const goff = (goffRaw ?? '').split(',').filter(Boolean).sort().join(',');
+  const [graph, setGraph] = useState<{ key: string; body?: LoreGraphBody; error?: string } | null>(null);
+  // Все типы связей окрестности по записи и глубине — из ответа без фильтра (rels_available
+  // его не учитывает; у старого сервера — счёт рёбер полного ответа).
+  const graphRels = useRef(new Map<string, { rel: string; count: number }[]>());
+  const graphBase = view && tab === 'graph' ? `${type}|${view.record.id}|${gdepth}` : null;
+  const graphKey = graphBase ? `${graphBase}|${goff}` : null;
+  useEffect(() => {
+    if (!graphKey || !graphBase || !view) return;
+    let alive = true;
+    const off = goff ? goff.split(',') : [];
+    const q = { type, id: view.record.id, depth: gdepth };
+    const known = graphRels.current.get(graphBase);
+    const all = known
+      ? Promise.resolve(known)
+      : fetchLoreGraph(q, fetchImpl).then(body => {
+        const rels = relsOf(body);
+        graphRels.current.set(graphBase, rels);
+        if (alive && !off.length) setGraph({ key: graphKey, body });
+        return rels;
+      });
+    all.then(rels => {
+      if (!off.length) return known ? fetchLoreGraph(q, fetchImpl) : null;
+      const on = rels.map(r => r.rel).filter(r => !off.includes(r));
+      // Сняты все типы — обходить нечего: только сама запись, без запроса.
+      if (!on.length) return { nodes: [], edges: [], meta: { complete: true, truncated: false } } as LoreGraphBody;
+      return fetchLoreGraph({ ...q, rels: on }, fetchImpl);
+    }).then(body => { if (alive && body) setGraph({ key: graphKey, body }); },
+      e => { if (alive) setGraph({ key: graphKey, error: e instanceof Error ? e.message : String(e) }); });
+    return () => { alive = false; };
+  }, [graphKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
   // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
   // правится (выбирать не из чего), а не показывает пустой список.
@@ -293,6 +333,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     : view.config;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
+  const g = graph && graph.key === graphKey ? graph : null;
+  const graphData = g?.body
+    ? (() => { const d = mergeGraph(view.data, g.body); return { ...d, meta: { ...d.meta, graphRels: (graphBase && graphRels.current.get(graphBase)) || d.meta.graphRels, graphNotes: graphNotes(g.body.meta, lang) } }; })()
+    : g?.error
+      ? { ...view.data, meta: { ...view.data.meta, graphNotes: [`${appT(lang, 'pp.graphFailed')}: ${g.error}`] } }
+      : view.data;
   const graphPeek = loreListPeek(lang, id => view.data.records.find(r => r.id === id)?.kind ?? null);
   const ctx: KitCtx = { config: {
     ...withOptions,
@@ -300,11 +346,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // внутренняя таблица kit со всеми осями сразу, из-за неё в меню задачи и
     // были чужие статусы и два «В работе». Пусто — модель не ответила, и
     // причина уже названа в строке замечаний.
-    statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
+    // Меню смены статуса — цикл своего типа (items); строки других типов — их цикл (byKind).
+    statuses: { ...baseConfig.statuses, ...(statuses.items.length ? { items: statuses.items } : {}), ...(statuses.byKind ? { byKind: statuses.byKind } : {}) },
     hooks: { ...baseConfig.hooks, onSave, onRelation, relationOptions },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
-    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render } : baseConfig.graph,
-  }, data: view.data, role: 'reader',
+    graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
+  }, data: graphData, role: 'reader',
     // Связи, граф, таблица связей — ссылки по коду из загруженных записей через loreRoutes
     // (S4-13): «#код» вёл никуда (приёмка на проде 09.11). Тип неизвестен — якорь, как раньше.
     // Чипы проектов и компонентов шапки — паспорт своего типа (S4-29, 53а): тип берётся из

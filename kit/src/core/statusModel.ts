@@ -17,6 +17,18 @@ export function findStatus(statuses: KitStatuses, code: string): KitStatusItem |
 }
 
 /**
+ * Оформление статуса ЗАПИСИ — по паре «вид + код»: цикл вида из `byKind`, если
+ * приложение его дало, иначе общий словарь. Один код у разных видов значит разное
+ * (`active` спринта — «Идёт», задачи — «В работе»), и чужая строка в паспорте не
+ * должна брать иконку вида паспорта (владелица 11.11.2026).
+ */
+export function statusItemFor(statuses: KitStatuses | undefined, code: string, kind?: string): KitStatusItem | undefined {
+  if (!statuses) return undefined;
+  const own = kind ? statuses.byKind?.[kind] : undefined;
+  return (own?.length ? own : statuses.items).find((s) => s.code === code);
+}
+
+/**
  * Куда можно перейти из `from`. allow текущего статуса ограничивает цели
  * (пустой allow = переходов нет); без allow — все, кроме текущего. Статус вне
  * конфига (сбой данных) — предлагаются все: иначе из сбоя не выбраться.

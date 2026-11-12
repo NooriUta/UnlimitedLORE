@@ -1105,5 +1105,8 @@
   "kit.record.rel.inherited": "Inherited — remove it where it comes from",
   "kit.calendar.field": "Date field",
   "kit.list.view.library": "Library",
-  "kit.list.library.noConfig": "No document groups are set for the library in this section"
+  "kit.list.library.noConfig": "No document groups are set for the library in this section",
+  "kit.graph.colorBy": "Node colour",
+  "kit.graph.colorByType": "by type",
+  "kit.graph.colorByDepth": "by level"
 }

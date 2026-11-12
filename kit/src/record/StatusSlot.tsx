@@ -36,7 +36,7 @@ export function StatusSlot({ record, ctx, unknownTitle, compact }: {
   // а «—» у типа без статуса читалось как реальный статус записи.
   if (!hasAxis || !record.status) return null;
   if (!canChangeStatus(ctx.config, ctx.role)) {
-    return <StatusPill code={record.status} ctx={ctx} unknownTitle={unknownTitle} />;
+    return <StatusPill code={record.status} kind={record.kind} ctx={ctx} unknownTitle={unknownTitle} />;
   }
   // Обёртка с тем же классом, что у плашки (`sk-rec-status`), — НАМЕРЕННО:
   // «статус в статье показан один раз» и порядок элементов шапки проверяются

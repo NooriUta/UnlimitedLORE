@@ -25,6 +25,7 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
+import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
 import { Kbd } from '../elements/Kbd';
@@ -410,19 +411,21 @@ function useLabels(config: KitConfig, lang: KitLang) {
     // Подписи — общие с дорожками доски и таймлайна (groupLabel, S4-06).
     const keyTitle = (key: string): string => groupKeyTitle(config, lang, key);
     const valueTitle = (key: string, v: string): string => fieldValueTitle(config, lang, key, v);
-    return { statuses, keyTitle, valueTitle };
+    // Статус строки — по её виду (statuses.byKind), иначе общий словарь.
+    const statusOf = (code: string, kind?: string) => statusItemFor(config.statuses, code, kind);
+    return { statuses, statusOf, keyTitle, valueTitle };
   }, [config, lang]);
 }
 
 type Labels = ReturnType<typeof useLabels>;
 
-function StatusCell({ code, labels }: { code: string; labels: Labels }) {
-  const s = labels.statuses.get(code);
+function StatusCell({ code, kind, labels }: { code: string; kind?: string; labels: Labels }) {
+  const s = labels.statusOf(code, kind);
   const style = { '--st-c': s?.color ?? 'var(--t3)' } as CSSProperties;
   return (
     <span className={`sk-list__status${s ? '' : ' is-unknown'}`} style={style} data-status={code}>
       <GameIcon slug={s?.icon ?? 'help'} size={14} />
-      <span>{labels.valueTitle('status', code)}</span>
+      <span>{s?.title ?? labels.valueTitle('status', code)}</span>
     </span>
   );
 }
@@ -1433,7 +1436,7 @@ export function ListView({
       case 'title+id': return <><Title r={r} href={href} onOpen={onOpen} /> <Pill variant="id">{r.id}</Pill></>;
       case 'title': return <Title r={r} href={href} onOpen={onOpen} />;
       case 'id': return <Pill variant="id">{r.id}</Pill>;
-      case 'status': return <StatusCell code={r.status} labels={labels} />;
+      case 'status': return <StatusCell code={r.status} kind={r.kind} labels={labels} />;
       case 'kind': return labels.valueTitle('kind', r.kind);
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
       case 'updated_at': return <DayCell iso={r.updated_at} badTitle={t('kit.fmt.badDate')} />;
@@ -1824,7 +1827,7 @@ export function ListView({
               нет. У записи без тела всё как было. */}
           {(withStatus || (!bodyNode && feedBecause(r))) && (
             <span className="sk-feed__meta">
-              {withStatus && <StatusCell code={r.status} labels={labels} />}
+              {withStatus && <StatusCell code={r.status} kind={r.kind} labels={labels} />}
               {!bodyNode && feedBecause(r)}
             </span>
           )}

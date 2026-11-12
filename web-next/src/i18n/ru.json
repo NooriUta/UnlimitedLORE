@@ -1393,6 +1393,7 @@
   "admin.macl.person.title": "Машины · владеет {owned} · допущен к {granted}",
   "admin.macl.person.none": "Ни одной машины: не владеет и не допущен (проверено)",
   "mdref.modelLoading": "Модель LORE ещё загружается — повторите через секунду",
+  "pp.graphFailed": "Граф глубже одного шага не загрузился — показаны только прямые связи",
   "lists.field.released": "Выпущен",
   "lists.calendar.dateGroup": "Дата календаря",
   "lists.calendar.plannedStart": "План: начало",
