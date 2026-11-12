@@ -35,6 +35,13 @@ export interface TechGateProps {
    */
   hiddenNote?: ReactNode;
   className?: string;
+  /**
+   * Подпись кнопки: без пропа — общая «тех.». Рядом стоящим тех-блокам
+   * (оговорки модели, состояние данных) — своя: «тех. модели», «тех. данных»,
+   * иначе две одинаковые кнопки на экране неотличимы. Подпись добавляется и к
+   * aria-label/title, а не только к видимому тексту.
+   */
+  label?: string;
 }
 
 /**
@@ -42,12 +49,14 @@ export interface TechGateProps {
  * или кнопкой «тех.» на месте. Кнопка раскрывает только этот блок и
  * настройку не меняет.
  */
-export function TechGate({ children, hiddenNote, className }: TechGateProps) {
+export function TechGate({ children, hiddenNote, className, label }: TechGateProps) {
   const lang = useKitLang();
   const global = useShowTech();
   const [local, setLocal] = useState(false);
   if (global) return <>{children}</>;
   const cls = ['sk-tech', className].filter(Boolean).join(' ');
+  const action = kitT(lang, local ? 'kit.tech.hide' : 'kit.tech.show');
+  const call = label ? `${action} (${label})` : action;
   return (
     <div className={cls} data-tech={local ? 'shown' : 'hidden'}>
       <div className="sk-tech__bar">
@@ -56,11 +65,11 @@ export function TechGate({ children, hiddenNote, className }: TechGateProps) {
           type="button"
           className="sk-tech__btn"
           aria-expanded={local}
-          aria-label={kitT(lang, local ? 'kit.tech.hide' : 'kit.tech.show')}
-          title={kitT(lang, local ? 'kit.tech.hide' : 'kit.tech.show')}
+          aria-label={call}
+          title={call}
           onClick={() => setLocal(v => !v)}
         >
-          {kitT(lang, 'kit.tech.btn')}
+          {label ?? kitT(lang, 'kit.tech.btn')}
         </button>
       </div>
       {local && children}

@@ -1357,7 +1357,7 @@ export function ListView({
     return (
       <span className="sk-list__vals">
         {vs.map(v => (
-          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} />{labelOf.get(v) ?? labels.valueTitle(key, v)}</span>
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{labelOf.get(v) ?? labels.valueTitle(key, v)}</span></span>
         ))}
       </span>
     );

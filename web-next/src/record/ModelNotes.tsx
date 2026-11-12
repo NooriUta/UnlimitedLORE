@@ -45,9 +45,18 @@ export function ModelNotes({ notes }: ModelNotesProps) {
   // для разработчика, человек с ними ничего сделать не может. Скрыты, пока не
   // включена личная настройка или кнопка «тех.» на месте. Неполноты данных они
   // не означают (паспорт показан целиком, меняется только порядок/словарь
-  // умолчания), поэтому заменяющей строки нет.
+  // умолчания), поэтому про неполноту заменяющей строки нет: у кнопки —
+  // только сводка «⚠ N», само число оговорок.
   return (
-    <TechGate className="pp-model-note__tech">
+    // TechGate скрывает содержимое целиком: пока оговорки не раскрыты, число
+    // «⚠ N» остаётся у кнопки (hiddenNote) — свёрнутое не читается как «всё
+    // чисто». Подпись «тех. модели» отличает кнопку от одноимённой у блока
+    // «Состояние данных» (kit), иначе два чипа «тех.» неотличимы.
+    <TechGate
+      className="pp-model-note__tech"
+      label={t('pp.modelNotes.tech')}
+      hiddenNote={t('pp.modelNotes.badge', { n: notes.length })}
+    >
       <div className="pp-model-note" role="status">
         <details className="pp-model-note__box">
           <summary className="pp-model-note__sum">

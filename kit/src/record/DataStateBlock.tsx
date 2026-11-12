@@ -114,7 +114,7 @@ export function DataStateBlock({ meta, className }: DataStateBlockProps) {
       <h3 className="sk-ds__head">{t('kit.ds.title')}</h3>
       <Rows s={user} t={t} />
       {techHasRows && (
-        <TechGate hiddenNote={note && <span className="sk-ds__techNote" data-testid="ds-tech-hidden">{note}</span>}>
+        <TechGate label={t('kit.ds.techBtn')} hiddenNote={note && <span className="sk-ds__techNote" data-testid="ds-tech-hidden">{note}</span>}>
           <Rows s={tech} t={t} />
         </TechGate>
       )}

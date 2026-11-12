@@ -81,6 +81,12 @@ describe('S4-TECH-NOTES · технические строки «Состоян�
     expect(screen.getByTestId('ds-failed').textContent).toContain('relation:deps');
   });
 
+  it('кнопка подписана «тех. данных» — отличима от чипа «тех. модели» оговорок', () => {
+    render(<DataStateBlock meta={techMeta} />);
+    const btn = screen.getByRole('button', { name: /техническ/i });
+    expect(btn.textContent).toBe('тех. данных');
+  });
+
   it('включённая настройка показывает всё прежнее на своих местах', () => {
     render(<TechVisibilityProvider show><DataStateBlock meta={techMeta} /></TechVisibilityProvider>);
     expect(screen.getByTestId('ds-failed').textContent).toContain('HTTP 500');
