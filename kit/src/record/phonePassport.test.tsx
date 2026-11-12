@@ -20,7 +20,7 @@
 //  3. CSS: у дока на телефоне нет рамки и полей шире ~12 px, «×» не сужает
 //     запись, заголовок не крупнее --fs-lg.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import type { KitConfig, KitCtx, KitRecord } from '../core/contract';
 import type { PassportOrder } from '../model/surfaces';
@@ -103,7 +103,8 @@ describe('S4-MOBILE-COMPARE · паспорт на телефоне — один
 describe('S4-MOBILE-COMPARE · у спринта на телефоне первой открыта вкладка «Задачи»', () => {
   it('положительный контроль (десктоп): без выбранной вкладки — обзор', () => {
     view('');
-    expect(screen.getByRole('tab', { selected: true }).textContent).toContain('Контент');
+    // «Контент» — имя сегмента видов, во вкладках его нет (сегмент и означает контент).
+    expect(within(screen.getByRole('group', { name: 'Вид паспорта' })).getByRole('button', { pressed: true }).textContent).toBe('Контент');
   });
 
   it('телефон: без выбранной вкладки — первая по модели, «Задачи»', () => {

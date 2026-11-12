@@ -92,6 +92,11 @@ describe('панелью справа — переключатель видов 
     expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
     expect(container.querySelector('aside[data-zone="props"]')).toBeNull();
   });
+  it('«Контент» — один раз: имя сегмента, а не сегмент и такая же вкладка под ним', () => {
+    view('right');
+    const labels = [...within(sw()).getAllByRole('button'), ...screen.queryAllByRole('tab')].map(b => b.textContent);
+    expect(labels.filter(t => t === 'Контент')).toHaveLength(1);
+  });
   it('Свойства: поля записи', () => {
     view('right', 'props');
     expect(pressed()).toEqual(['Свойства']);

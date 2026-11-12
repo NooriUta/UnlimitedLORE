@@ -259,6 +259,16 @@ describe('S4-02 · меню аватара — личные настройки �
     expect((await within(dlg).findByRole('alert')).textContent).toContain(ru['settings.loadFailed']);
     expect(within(dlg).queryByRole('group', { name: ru['settings.textSize.label'] })).toBeNull();
   });
+
+  it('заголовок «Личные настройки» — один: у самого листа, внутри панели он не дублируется', async () => {
+    render(<AccountMenu client={client()} root={document.createElement('div')} lang="ru" jar={jar()} />);
+    const dlg = await openMenu();
+    await waitFor(() => expect(within(dlg).queryByText(ru['settings.loading'])).toBeNull());
+    // h2 шапки листа (Sheet) — единственный заголовок с этим именем: свой h3
+    // у панели убран, иначе надпись шла дважды подряд.
+    expect(within(dlg).getAllByRole('heading', { name: ru['settings.title'] })).toHaveLength(1);
+    expect(dlg.querySelector('.settings-title')).toBeNull();
+  });
 });
 
 describe('S4-02 · «что LORE помнит обо мне»', () => {

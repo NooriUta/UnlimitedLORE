@@ -2,3 +2,4 @@
 export * from './burn';
 export * from './BurnChart';
 export * from './useSprintBurn';
+export * from './BurnSpark';

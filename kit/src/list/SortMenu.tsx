@@ -2,9 +2,10 @@
 // тот же поповер, что у «Группировки» (GroupMenu): значение в кнопке, пункты —
 // radio с ✓, Esc и щелчок мимо закрывают. Системный список рисовался чужим
 // шрифтом и стрелкой ОС и выбивался из полосы.
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import { useFocusTrap } from '../keyboard/focusTrap';
+import { MenuPanel } from './MenuPanel';
 import { Sheet } from '../shell/Sheet';
 import { checkedRadio } from './ViewMenu';
 
@@ -24,18 +25,12 @@ export function SortMenu({ value, keys, keyTitle, onChange, narrow = false }: So
   const wrapRef = useRef<HTMLSpanElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const id = useId();
-  // На листе ловушку, Esc и «мимо» ведёт сам Sheet.
+  // На листе ловушку, Esc и «мимо» ведёт сам Sheet; в поповере — MenuPanel.
   const onKeyDown = useFocusTrap(panelRef, {
     active: open && !narrow,
     initialFocus: checkedRadio,
     onEscape: () => setOpen(false),
   });
-  useEffect(() => {
-    if (!open || narrow) return;
-    const onDown = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open, narrow]);
   const name = kitT(lang, 'kit.list.sort');
   const title = value ? keyTitle(value) : kitT(lang, 'kit.list.sortNone');
   const radio = (key: string | null, label: string) => {
@@ -66,9 +61,9 @@ export function SortMenu({ value, keys, keyTitle, onChange, narrow = false }: So
         </Sheet>
       )}
       {open && !narrow && (
-        <div ref={panelRef} id={id} role="dialog" aria-label={name} className="sk-vmenu__panel sk-gmenu__panel" onKeyDown={onKeyDown}>
+        <MenuPanel panelRef={panelRef} id={id} label={name} className="sk-gmenu__panel" anchor={wrapRef.current} onKeyDown={onKeyDown} onClose={() => setOpen(false)}>
           {body}
-        </div>
+        </MenuPanel>
       )}
     </span>
   );

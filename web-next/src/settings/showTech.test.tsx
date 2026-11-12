@@ -70,11 +70,16 @@ describe('S4-TECH-NOTES · общий выключатель следует за
 describe('S4-TECH-NOTES · оговорки модели — tech', () => {
   const notes = ['порядок разделов — умолчание приложения: модель недоступна (HTTP 503)'];
 
-  it('по умолчанию оговорок не видно, на месте — кнопка «тех.»', () => {
+  it('по умолчанию оговорок не видно, на месте — кнопка «тех. модели» и сводка «⚠ N»', () => {
     render(<ModelNotes notes={notes} />);
     expect(screen.queryByText(notes[0])).toBeNull();
     expect(screen.queryByText(/оговор/i)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /техническ/i }));
+    // Свёрнутое не молчит: число оговорок стоит у кнопки, подпись отличает
+    // её от чипа «тех. данных» блока «Состояние данных».
+    expect(screen.getByText('⚠ 1')).toBeTruthy();
+    const btn = screen.getByRole('button', { name: /техническ/i });
+    expect(btn.textContent).toBe('тех. модели');
+    fireEvent.click(btn);
     expect(screen.getByText(/оговор/i)).toBeTruthy();
   });
 

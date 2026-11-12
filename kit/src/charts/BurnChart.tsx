@@ -16,7 +16,7 @@ import type { Completeness, LoadState } from '../states/loadState';
 import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
 import { Truncated } from '../states/Truncated';
 import { kitT, useKitLang } from '../i18n';
-import { burnIdeal, burnSummary, type BurnMode, type BurnPoint } from './burn';
+import { burnIdeal, burnSummary, type BurnForecastPoint, type BurnMode, type BurnPoint, type BurnVerdict } from './burn';
 
 export interface BurnChartProps {
   /** Ряд из burnSeries (ok/partial). */
@@ -36,21 +36,50 @@ export interface BurnChartProps {
   defaultMode?: BurnMode;
   onModeChange?: (mode: BurnMode) => void;
   className?: string;
+  /**
+   * K2-VIEW-TARGET «Цель к сроку». Срок объекта (дата): отметка по вертикали и план к
+   * сроку — прямая от начала до объёма в день срока. `null` — приложение говорит, что
+   * срока у объекта НЕТ (сказано словами); не передан — вид без срока, как раньше.
+   */
+  deadline?: string | null;
+  /** Прогноз приложения: сколько будет закрыто к датам. kit его не считает (K-14). */
+  forecast?: readonly BurnForecastPoint[];
+  /** Вердикт приложения словами («не успеваем на 3 дня…») — виден и в свёрнутом заголовке. */
+  verdict?: BurnVerdict;
 }
 
 const W = 600;
 const H = 96;
 const PAD = 4;
 
-function Plot({ points, mode, label }: { points: readonly BurnPoint[]; mode: BurnMode; label: string }) {
+interface Target { deadline?: string; forecast?: readonly BurnForecastPoint[] }
+
+/** Правый край оси: последняя точка данных, срок или прогноз — что дальше. */
+function lastDate(points: readonly BurnPoint[], t: Target): string {
+  return [points[points.length - 1].date, t.deadline ?? '', ...(t.forecast ?? []).map(f => f.date)].sort().pop()!;
+}
+
+function Plot({ points, mode, label, target }: { points: readonly BurnPoint[]; mode: BurnMode; label: string; target: Target }) {
   const ms = points.map(p => Date.parse(p.date));
   const min = ms[0];
-  const range = (ms[ms.length - 1] - min) || 1;
+  const range = (Date.parse(lastDate(points, target)) - min) || 1;
+  const scopeNow = points[points.length - 1].scope;
   const maxY = Math.max(...points.map(p => p.scope), 1);
+  // Значение по режиму: burnup — закрыто, burndown — остаток от нынешнего объёма.
+  const val = (done: number) => (mode === 'burnup' ? done : scopeNow - done);
   const x = (t: number) => (((t - min) / range) * W).toFixed(1);
   const y = (v: number) => (PAD + (H - 2 * PAD) * (1 - v / maxY)).toFixed(1);
+  const xd = (d: string) => x(Date.parse(d));
   const line = (k: 'remaining' | 'scope' | 'done') => points.map((p, i) => `${x(ms[i])},${y(p[k])}`).join(' ');
   const ideal = burnIdeal(points);
+  const first = points[0];
+  const plan = target.deadline
+    ? `${xd(first.date)},${y(val(first.done))} ${xd(target.deadline)},${y(val(scopeNow))}`
+    : null;
+  const fc = target.forecast?.length
+    ? [{ date: points[points.length - 1].date, done: points[points.length - 1].done }, ...target.forecast]
+      .map(f => `${xd(f.date)},${y(val(f.done))}`).join(' ')
+    : null;
   return (
     <svg className="sk-burn__svg" width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
       {mode === 'burndown' ? (
@@ -64,6 +93,9 @@ function Plot({ points, mode, label }: { points: readonly BurnPoint[]; mode: Bur
           <polyline data-series="done" className="sk-burn__line sk-burn__line--done" points={line('done')} />
         </>
       )}
+      {plan && <polyline data-series="plan" className="sk-burn__line sk-burn__line--plan" points={plan} />}
+      {fc && <polyline data-series="forecast" className="sk-burn__line sk-burn__line--forecast" points={fc} />}
+      {target.deadline && <line data-series="deadline" className="sk-burn__deadline" x1={xd(target.deadline)} x2={xd(target.deadline)} y1={0} y2={H} />}
     </svg>
   );
 }
@@ -72,6 +104,7 @@ export function BurnChart({
   points, state, error, onRetry, completeness,
   expanded, defaultExpanded = false, onExpandedChange,
   mode, defaultMode = 'burndown', onModeChange, className,
+  deadline, forecast, verdict,
 }: BurnChartProps) {
   const lang = useKitLang();
   const panelId = useId();
@@ -125,9 +158,13 @@ export function BurnChart({
             </>
           )}
           <span className="sk-burn__key">{kitT(lang, 'kit.burn.peak')} {sum.peak}</span>
+          {deadline && <span className="sk-burn__key sk-burn__key--plan">{kitT(lang, 'kit.burn.plan')}</span>}
+          {deadline && <span className="sk-burn__key sk-burn__key--deadline">{kitT(lang, 'kit.burn.deadline', { date: deadline })}</span>}
+          {forecast?.length ? <span className="sk-burn__key sk-burn__key--forecast">{kitT(lang, 'kit.burn.forecast')}</span> : null}
         </div>
-        <Plot points={points!} mode={curMode} label={label} />
-        <div className="sk-burn__axis"><span>{sum.from}</span><span>{sum.to}</span></div>
+        {deadline === null && <p className="sk-burn__note" data-testid="kit-burn-no-deadline">{kitT(lang, 'kit.burn.noDeadline')}</p>}
+        <Plot points={points!} mode={curMode} label={label} target={{ deadline: deadline ?? undefined, forecast }} />
+        <div className="sk-burn__axis"><span>{sum.from}</span><span>{lastDate(points!, { deadline: deadline ?? undefined, forecast })}</span></div>
       </>
     );
   }
@@ -139,6 +176,7 @@ export function BurnChart({
           <span className="sk-burn__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
           <span className="sk-burn__title">{kitT(lang, 'kit.burn.title')}</span>
           <span className={`sk-burn__badge sk-burn__badge--${tone}`}>{badge}</span>
+          {verdict && hasData && <span className="sk-burn__verdict" data-testid="kit-burn-verdict" data-tone={verdict.tone}>{verdict.text}</span>}
         </button>
         {open && hasData && (
           <div className="sk-burn__modes" role="group" aria-label={kitT(lang, 'kit.burn.mode')}>
