@@ -726,6 +726,12 @@
   "kit.record.rel.link": "Link: {label}",
   "kit.record.rel.linkBtn": "Link",
   "kit.record.rel.idPlaceholder": "Record ID",
+  "kit.record.rel.search": "Find a record",
+  "kit.record.rel.searching": "Searching…",
+  "kit.record.rel.optionsFailed": "Options failed to load: {reason}",
+  "kit.record.rel.nothing": "Nothing found for “{q}”",
+  "kit.record.rel.linkOne": "Link {id}",
+  "kit.record.rel.more": "and {n} more — refine the search",
   "kit.record.rel.failed": "Link unchanged: {reason}",
   "kit.record.rail": "Passport sections",
   "kit.record.rail.analytics": "Analytics",
@@ -1095,5 +1101,6 @@
   "kit.record.create.cancel": "Cancel",
   "kit.record.create.why": "Not filled: {fields}",
   "kit.record.create.noPath": "Nowhere to save: the app gave no create path",
-  "kit.record.create.failed": "Not saved: {reason}"
+  "kit.record.create.failed": "Not saved: {reason}",
+  "kit.record.rel.inherited": "Inherited — remove it where it comes from"
 }

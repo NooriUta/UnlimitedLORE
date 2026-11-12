@@ -33,6 +33,7 @@ import { BlockBoundary } from './BlockBoundary';
 import { DataStateBlock } from './DataStateBlock';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { KIT_NEW_ID, RecordCreate, type RecordCreateSpec } from './RecordCreate';
+import { RelationField } from './RelationField';
 export { KIT_NEW_ID, type RecordCreateSpec };
 import { RecordLinks, recordLinks } from './RecordLinks';
 import { dataStateOf } from './dataState';
@@ -231,6 +232,8 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
       <dt>{f.title}</dt>
       <dd>{(() => {
         const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} />;
+        // S4-24: поле-связь (компоненты, проекты) — чипы с «Отвязать» и выбор с поиском.
+        if (f.type === 'ref' && f.relation) return <RelationField record={record} ctx={ctx} lang={lang} label={f.title} value={record.fields[f.key]} rel={f.relation.rel} dir={f.relation.dir} view={view} />;
         // S4-24: ✎ — только у поля, которое приложение назвало правимым, при праве и пути записи;
         // enum без вариантов не правится — выбирать не из чего.
         // S4-24: варианты не загрузились — причина словами и «Повторить», а не свободный ввод.

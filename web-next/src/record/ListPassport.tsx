@@ -28,6 +28,7 @@ import { savePassportField } from './passportSave';
 import { saveMerging, type FieldState } from './passportMerge';
 import { fetchLoreRecord } from '../api/liveRecord';
 import { saveRelation } from './relationSave';
+import { relationOptionsHook } from './relationOptions';
 import { saveRecordStatus, statusEntity } from './statusSave';
 import { fetchPassportOrder } from './passportOrder';
 import { fetchTypeStatuses } from './passportStatuses';
@@ -153,6 +154,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     [type, id, lang, slice, fetchImpl],
   );
   const contract = pp.data ?? null;
+  // S4-24: цель связи — выбором из среза её типа, а не вводом кода. Хук держим
+  // стабильным: выбор перезапрашивает варианты, когда меняется его ссылка.
+  const relationOptions = useMemo(() => relationOptionsHook(contract?.schema.relations ?? [], (name, params) => slice<Record<string, unknown>>(name, params)), [contract, slice]);
   const view = useMemo(() => (contract ? fromLoreRecord(contract, lang) : null), [contract, lang]);
   // S5-08: после 409 запись перечитана, а паспорт ещё нет (перечитать его — значит
   // снять поле правки вместе с решаемым спором). Новая база и версия поля живут
@@ -297,7 +301,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // были чужие статусы и два «В работе». Пусто — модель не ответила, и
     // причина уже названа в строке замечаний.
     statuses: statuses.items.length ? { ...baseConfig.statuses, items: statuses.items } : baseConfig.statuses,
-    hooks: { ...baseConfig.hooks, onSave, onRelation },
+    hooks: { ...baseConfig.hooks, onSave, onRelation, relationOptions },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
     graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render } : baseConfig.graph,
   }, data: view.data, role: 'reader',

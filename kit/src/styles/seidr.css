@@ -6763,6 +6763,15 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-fresh__dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none; }
 .sk-fresh__word { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; }
 
+/* S4-24: выбор цели связи с поиском — поле, найденное с «Привязать», честные состояния. */
+.sk-rel__pick { display: grid; gap: 4px; margin-top: 6px; }
+.sk-rel__search { font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 4px 8px; }
+.sk-rel__found { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sk-rel__opt { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sk-rel__optid { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t2); }
+.sk-rel__opttitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.sk-rel__note { margin: 0; font-size: var(--fs-xs); color: var(--t3); }
+
 /* S4-24: варианты поля не загрузились — причина словами и «Повторить» рядом со значением. */
 .sk-rec-fields__opterr { margin-left: 6px; font-size: var(--fs-xs); color: var(--wrn); }
 .sk-rec-fields__retry { margin-left: 6px; }
@@ -6779,3 +6788,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec-create__err { margin: 0; color: var(--dng); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .sk-rec-create__foot { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
 .sk-rec-create__why { font-size: var(--fs-xs); color: var(--t3); }
+
+/* S4-24: поле-связь в «Свойствах» — чипы с «×» и выбор с поиском. */
+.sk-relfield { display: grid; gap: 4px; min-width: 0; }
+.sk-relfield__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-relfield__chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 8px; border: 1px solid var(--bd); border-radius: 999px; background: var(--bg2); font-size: var(--fs-xs); }
+.sk-relfield__chip--inherited { padding-right: 8px; color: var(--t3); border-style: dashed; }
+.sk-relfield__x { min-width: 20px; min-height: 20px; border: 0; border-radius: 999px; background: transparent; color: var(--t3); font: inherit; cursor: pointer; }
+.sk-relfield__x:hover { color: var(--dng); }
