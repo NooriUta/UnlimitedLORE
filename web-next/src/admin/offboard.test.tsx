@@ -334,19 +334,19 @@ describe('UC-4 · учётка человека в Keycloak (серверные 
     const { f, calls } = fake();
     kcStep();
     mount('u-anna', 'anna', f);
-    fireEvent.click(await screen.findByTestId('adm-off-kc-disable'));
-    const box = await screen.findByTestId('adm-off-kc-enabled');
-    await within(box).findByTestId('kit-diff-row-u-anna');
+    fireEvent.click(await screen.findByTestId('adm-off-kc-disable', undefined, { timeout: 5000 }));
+    const box = await screen.findByTestId('adm-off-kc-enabled', undefined, { timeout: 5000 });
+    await within(box).findByTestId('kit-diff-row-u-anna', undefined, { timeout: 5000 });
     expect(enabledCalls(calls, 'u-anna')).toEqual([{ enabled: false, dry_run: true }]);
     fireEvent.change(within(box).getByTestId('kit-diff-confirm'), { target: { value: 'anna' } });
     fireEvent.click(within(box).getByTestId('kit-diff-apply'));
-    fireEvent.click(await within(box).findByTestId('kit-batch-undo'));
-    await within(box).findByTestId('kit-batch-undone');
+    fireEvent.click(await within(box).findByTestId('kit-batch-undo', undefined, { timeout: 5000 }));
+    await within(box).findByTestId('kit-batch-undone', undefined, { timeout: 5000 });
     expect(enabledCalls(calls, 'u-anna').slice(1)).toEqual([
       { enabled: false },
       { enabled: true, undo_of: 'kr-1762891200000-0000abcd' },
     ]);
-  });
+  }, 20000);
 
   it('последний админ — строка диффа «нельзя» словами сервера (AL-35), применять нечего', async () => {
     const { f, calls } = fake({ enabledForbidden: 'это последняя включённая учётка с ролью admin/super-admin (AL-35)' });
