@@ -293,7 +293,7 @@ export function MartProse({ text, style, className, refHref, refPeek, blocks, na
     if (refHref && rootRef.current) linkRefs(rootRef.current, refHref);
   }, [segments, refHref]);
   // Хук — до раннего выхода: порядок хуков не должен зависеть от того, есть ли текст.
-  const peek = useRefPeek(refPeek);
+  const peek = useRefPeek(refPeek, { clickCard: true });
   if (!text) return null;
   return (
     <div ref={rootRef} className={['sk-prose', className].filter(Boolean).join(' ')} style={style} {...peek.handlers}>
