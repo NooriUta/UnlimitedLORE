@@ -40,10 +40,14 @@ public class LoreModelStore {
 
     static final String CONFIG_ID = "lore-model";
 
-    /** V84 (major 17, аддитивно): DDL рядом с логикой, как у V79–V81. */
+    /**
+     * V84 (major 17, аддитивно): DDL рядом с логикой, как у V79–V81. Типы БЕЗ «EXTENDS V» — в прод-базе
+     * базового V нет (только bootstrap инициализатора), накатка падала «Supertype V not found»
+     * (PL-MIGRATE-LIVE-CHECK 13.11); сторож — MigrationStepsNoBaseSupertypeTest.
+     */
     static final List<String> SCHEMA_SQL = List.of(
-        "CREATE VERTEX TYPE KnowModelConfig IF NOT EXISTS EXTENDS V",
-        "CREATE VERTEX TYPE KnowModelConfigHist IF NOT EXISTS EXTENDS V",
+        "CREATE VERTEX TYPE KnowModelConfig IF NOT EXISTS",
+        "CREATE VERTEX TYPE KnowModelConfigHist IF NOT EXISTS",
         "CREATE PROPERTY KnowModelConfig.config_id IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowModelConfig.format IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowModelConfig (config_id) UNIQUE",
