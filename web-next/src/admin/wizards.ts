@@ -146,7 +146,27 @@ export async function fetchKcClients(fetchImpl: typeof fetch = loreFetch): Promi
   return b;
 }
 
-export interface IssuedAgent { clientId: string; secret: string | null; rolesCopied: string[]; rolesNote: string | null }
+/** AO-AGENT-ADD: что сервер увидел в токене новой учётки; unchecked — сервер проверку не прислал. */
+export interface TokenCheck {
+  state: 'ok' | 'mismatch' | 'missing' | 'error' | 'unchecked';
+  agentScope: string | null;
+  expected: string | null;
+  reason: string | null;
+}
+
+export interface IssuedAgent {
+  clientId: string; secret: string | null; rolesCopied: string[]; rolesNote: string | null; tokenCheck: TokenCheck;
+}
+
+const CHECK_STATES = ['ok', 'mismatch', 'missing', 'error'] as const;
+
+function parseTokenCheck(v: unknown): TokenCheck {
+  const o = (v ?? null) as Record<string, unknown> | null;
+  const st = o && typeof o.state === 'string' && (CHECK_STATES as readonly string[]).includes(o.state)
+    ? (o.state as TokenCheck['state']) : 'unchecked';
+  if (!o) return { state: 'unchecked', agentScope: null, expected: null, reason: null };
+  return { state: st, agentScope: str(o.agent_scope), expected: str(o.expected), reason: str(o.reason) };
+}
 
 export function parseIssued(raw: unknown): IssuedAgent {
   const b = (raw ?? {}) as Record<string, unknown>;
@@ -157,6 +177,7 @@ export function parseIssued(raw: unknown): IssuedAgent {
     secret: str(b.secret),
     rolesCopied: Array.isArray(b.roles_copied) ? b.roles_copied.map(String) : [],
     rolesNote: str(b.roles_note),
+    tokenCheck: parseTokenCheck(b.token_check),
   };
 }
 
