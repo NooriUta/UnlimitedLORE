@@ -27,6 +27,7 @@
   {"dict_type":"sprint_status","code":"active","label_ru":"В работе","label_en":"In Progress","color":"var(--inf)","icon":"progression","sort_order":30,"is_active":true},
   {"dict_type":"sprint_status","code":"partial","label_ru":"Частично","label_en":"Partial","color":"var(--wrn)","icon":"battery-50","sort_order":40,"is_active":true},
   {"dict_type":"sprint_status","code":"ready_for_deploy","label_ru":"Готово к деплою","label_en":"Ready for Deploy","color":"var(--inf)","icon":"wave-crest","sort_order":50,"is_active":true},
+  {"dict_type":"sprint_status","code":"uat","label_ru":"UAT — приёмка","label_en":"UAT Testing","color":"var(--st-uat)","icon":"stamper","sort_order":55,"is_active":true},
   {"dict_type":"sprint_status","code":"done","label_ru":"Готово","label_en":"Done","color":"var(--suc)","icon":"divided-spiral","sort_order":60,"is_active":true},
   {"dict_type":"sprint_status","code":"blocked","label_ru":"Заблокировано","label_en":"Blocked","color":"var(--dng)","icon":"handcuffed","sort_order":70,"is_active":true},
   {"dict_type":"sprint_status","code":"cancelled","label_ru":"Отменено","label_en":"Cancelled","color":"var(--t3)","icon":"cross-mark","sort_order":80,"is_active":true},
