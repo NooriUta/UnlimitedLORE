@@ -9,9 +9,35 @@ export type KitKey = keyof typeof ru;
 
 const DICTS: Record<KitLang, Record<KitKey, string>> = { ru, en };
 
+/**
+ * Словарь приложения поверх строк kit (K-14, SPRINT_UXR_S7B_ADMIN/S7B-23_2).
+ * Строки kit нейтральны: kit не знает, что у приложения «спринт», «агент» или
+ * какой у него вход. Приложение подставляет свои слова один раз при старте.
+ */
+const OVERRIDES: Record<KitLang, Partial<Record<KitKey, string>>> = { ru: {}, en: {} };
+
+/** Подставить слова приложения. Неизвестный ключ — отказ: опечатка не проходит молча. */
+export function setKitStrings(lang: KitLang, strings: Partial<Record<KitKey, string>>): void {
+  const unknown = Object.keys(strings).filter(k => !(k in DICTS.ru));
+  if (unknown.length) throw new Error(`setKitStrings: нет таких строк kit: ${unknown.join(', ')}`);
+  Object.assign(OVERRIDES[lang], strings);
+}
+
+/** Есть ли у kit такая строка (ключ из данных: код статуса, вид записи…). */
+export function hasKitString(key: string): key is KitKey {
+  return key in DICTS.ru;
+}
+
+/** Вернуть строки kit (для тестов и смены приложения). */
+export function resetKitStrings(): void {
+  OVERRIDES.ru = {};
+  OVERRIDES.en = {};
+}
+
 /** Строка локали; vars подставляются в {name}. Неизвестный язык — русский. */
 export function kitT(lang: KitLang, key: KitKey, vars?: Record<string, string | number>): string {
-  const s = (DICTS[lang] ?? DICTS.ru)[key];
+  const own = (OVERRIDES[lang] ?? OVERRIDES.ru)[key];
+  const s = own ?? (DICTS[lang] ?? DICTS.ru)[key];
   if (!vars) return s;
   return s.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
 }

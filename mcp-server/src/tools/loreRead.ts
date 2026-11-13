@@ -402,6 +402,24 @@ export function registerLoreRead(server: McpServer): void {
     },
   );
 
+  // SPRINT_LORE_AGENT_OBSERVABILITY/AO-WHOAMI: «кто ты» — кем LORE видит этот MCP-процесс.
+  server.tool(
+    'whoami',
+    'Who LORE sees you as (GET /lore/whoami, AO-WHOAMI) — read from the VERIFIED token and the graph, nothing ' +
+      'taken on trust: kind human|agent|unverified (auth off), client_id, profile (agent_scope; "ambiguous" = two ' +
+      'profiles in one token, writes are refused), seer_role, write_families allowed to the profile, ' +
+      'identity {state: known|unknown|error} — unknown means the client is NOT in the graph (not «no rights»), ' +
+      'owners, project_roles, token_expires_at. Call it first in a session or when a write answers 403.',
+    {},
+    async () => {
+      try {
+        return json(await loreGet('/lore/whoami'));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
   // SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04 (11.11.2026): граф одним запросом — тот же GET /lore/graph,
   // что у GraphExplorer. Тонкая обёртка: параметры как есть, проект из LORE_ACTIVE_PROJECT
   // не подставляется (скоуп вызывающего режет сервер), ответ — целиком вместе с meta.

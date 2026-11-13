@@ -51,7 +51,7 @@ describe('PaletteTriggers: поиск строкой и «Команды» с п
     const onSearch = vi.fn();
     const onCommands = vi.fn();
     render(<PaletteTriggers onSearch={onSearch} onCommands={onCommands} />);
-    const search = screen.getByRole('button', { name: /Поиск по LORE/ });
+    const search = screen.getByRole('button', { name: /Поиск/ });
     expect(search.textContent).toContain('/');
     expect(search.getAttribute('aria-keyshortcuts')).toBe('/');
     const cmd = screen.getByRole('button', { name: /Команды/ });

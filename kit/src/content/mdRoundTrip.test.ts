@@ -7,6 +7,10 @@
 // контракт детектора: где круг с потерями, визуальный режим честно закрыт.
 import { describe, expect, it } from 'vitest';
 import { roundTripMd, isLosslessMd, sameMd } from './tiptapMd';
+import { setLinkScheme } from './linkScheme';
+
+// Корпус — тела LORE со ссылками «lore:»; схему называет приложение (K-14), здесь — как у LORE.
+setLinkScheme({ protocols: ['lore'], mentionHref: id => `lore:actor/${id}` });
 
 const CORPUS: Record<string, string> = {
   heading: '# Заголовок\n\n## Второй\n\n### Третий',

@@ -3,7 +3,7 @@
 // но раздела и паспорта не было: ссылка была null.
 import { describe, expect, it } from 'vitest';
 import { recordHref, sectionOfType } from '../nav/loreRoutes';
-import { V2_SECTIONS } from '../shell/v2Config';
+import { V2_SECTIONS, v2Config } from '../shell/v2Config';
 import { agentRecord, userRecord } from '../lists/records';
 import { PASSPORT_TYPES } from './passportAdapters';
 
@@ -31,5 +31,12 @@ describe('человек и агент: раздел, маршрут, паспо
       id: 'AGENT-FULL', kind: 'agent', title: 'Claude Code', status: '',
       fields: { clientId: 'lore-mcp-full', agentRole: 'full', owner: 'kc-1', project: [] },
     });
+  });
+
+  it('MC-07: людей и агентов нет в общем меню и без модели (уровень admin)', () => {
+    const ids = v2Config('ru').menu.groups.flatMap(g => g.items.map(i => i.id));
+    expect(ids).toContain('sprint');
+    expect(ids).not.toContain('user');
+    expect(ids).not.toContain('agent');
   });
 });

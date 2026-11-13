@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "dfbc22c61876b487",
+  "version" : "312faa432b4a8c65",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -767,7 +767,7 @@
         "key" : "no_release",
         "label" : "Не требует релиза",
         "label_key" : "pp.field.noRelease",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
@@ -777,9 +777,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : "no_release_required",
         "property_type" : "BOOLEAN",
@@ -6298,8 +6298,8 @@
         "property_type" : "INTEGER",
         "source" : "CONFIRMS"
       }, {
-        "key" : "is_active",
-        "label" : "Активен",
+        "key" : "kind",
+        "label" : "Вид",
         "label_key" : null,
         "kind" : "text",
         "group" : "props",
@@ -6313,6 +6313,26 @@
           "priority" : 4,
           "width" : "m",
           "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "is_active",
+        "label" : "Активен",
+        "label_key" : null,
+        "kind" : "bool",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : "is_active",
         "property_type" : "BOOLEAN",
@@ -8232,7 +8252,131 @@
           }
         } ]
       }
-    }
+    },
+    "nav" : [ {
+      "id" : "feed",
+      "label_key" : "shell.grp.feed",
+      "tone" : "var(--inf)",
+      "pin_top" : true,
+      "items" : [ {
+        "section" : "news",
+        "icon" : "lucide:megaphone"
+      } ]
+    }, {
+      "id" : "work",
+      "label_key" : "shell.grp.work",
+      "tone" : "var(--acc)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "sprint",
+        "icon" : "sprint"
+      }, {
+        "section" : "task",
+        "icon" : "lucide:list-checks"
+      }, {
+        "section" : "milestone",
+        "icon" : "crossed-axes"
+      }, {
+        "section" : "release",
+        "icon" : "open-book"
+      } ]
+    }, {
+      "id" : "knowledge",
+      "label_key" : "shell.grp.knowledge",
+      "tone" : "var(--suc)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "adr",
+        "icon" : "scroll-quill"
+      }, {
+        "section" : "decision",
+        "icon" : "gavel"
+      }, {
+        "section" : "spec",
+        "icon" : "scroll-unfurled"
+      }, {
+        "section" : "doc",
+        "icon" : "bookshelf"
+      }, {
+        "section" : "question",
+        "icon" : "help"
+      } ]
+    }, {
+      "id" : "product",
+      "label_key" : "shell.grp.product",
+      "tone" : "var(--wrn)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "product",
+        "icon" : "bullseye"
+      }, {
+        "section" : "feature",
+        "icon" : "gift-of-knowledge"
+      }, {
+        "section" : "actor",
+        "icon" : "hooded-figure"
+      }, {
+        "section" : "pain",
+        "icon" : "thorn-helix"
+      }, {
+        "section" : "gain",
+        "icon" : "gift-of-knowledge"
+      }, {
+        "section" : "job",
+        "icon" : "archery-target"
+      } ]
+    }, {
+      "id" : "system",
+      "label_key" : "shell.grp.system",
+      "tone" : "var(--inf)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "project",
+        "icon" : "open-folder"
+      }, {
+        "section" : "component",
+        "icon" : "cog"
+      }, {
+        "section" : "tech",
+        "icon" : "gears"
+      } ]
+    }, {
+      "id" : "personal",
+      "label_key" : "shell.grp.personal",
+      "tone" : "var(--wrn)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "settings",
+        "icon" : "cog",
+        "view" : "settings"
+      } ]
+    } ]
+  },
+  "audience" : {
+    "actor" : "everywhere",
+    "adr" : "everywhere",
+    "agent" : "admin",
+    "component" : "everywhere",
+    "decision" : "everywhere",
+    "doc" : "everywhere",
+    "feature" : "everywhere",
+    "gain" : "everywhere",
+    "job" : "everywhere",
+    "machine" : "admin",
+    "milestone" : "everywhere",
+    "news" : "everywhere",
+    "pain" : "everywhere",
+    "people" : "admin",
+    "product" : "everywhere",
+    "project" : "everywhere",
+    "question" : "everywhere",
+    "release" : "everywhere",
+    "settings" : "everywhere",
+    "spec" : "everywhere",
+    "sprint" : "everywhere",
+    "task" : "everywhere",
+    "tech" : "everywhere",
+    "user" : "admin"
   },
   "palettes" : {
     "source" : "settings:palette",

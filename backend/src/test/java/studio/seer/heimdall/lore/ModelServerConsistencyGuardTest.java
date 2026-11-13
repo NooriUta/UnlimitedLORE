@@ -84,6 +84,25 @@ class ModelServerConsistencyGuardTest {
         return LoreModelConsistency.compatible(kind, schemaType);
     }
 
+    /**
+     * SPRINT_LORE_MODEL_AS_CONFIG/MC-08: флаги — вид bool, а не text; исключений вида не осталось.
+     * Клиент v2 неизвестный вид читает как text (liveRecord.kindOf) — до kit-части флаг показывается как прежде.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void flagsAreBoolAndNoKindExemptionsLeft() {
+        assertEquals(Map.of(), LoreModelConsistency.KIND_EXEMPT, "исключения вида закрыты видом bool");
+        Map<String, Object> types = (Map<String, Object>) LoreModelGoldenTest.modelDoc().get("types");
+        for (String id : List.of("sprint.no_release", "product.is_active")) {
+            String[] p = id.split("\\.");
+            Map<String, Object> f = ((List<Map<String, Object>>) ((Map<String, Object>) types.get(p[0])).get("fields"))
+                .stream().filter(x -> p[1].equals(x.get("key"))).findFirst().orElseThrow();
+            assertEquals("bool", f.get("kind"), id);
+        }
+        assertTrue(compatible("bool", "BOOLEAN"));
+        assertFalse(compatible("bool", "STRING"));
+    }
+
     static JsonObject listFacets() throws IOException {
         Path p = Path.of("..", "shared", "model", "list-facets.json");
         return new JsonObject(Files.readString(p, StandardCharsets.UTF_8));

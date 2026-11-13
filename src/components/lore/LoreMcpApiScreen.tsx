@@ -67,6 +67,9 @@ const TOOLS: ToolDoc[] = [
   { name: 'lore_version', kind: 'read', entity: 'Meta', backend: 'GET /lore/version',
     params: '—',
     desc: 'Сверка сборки MCP-сервера со сборкой бэкенда (SE-10): {mcp:{commit, built_at}, backend:{commit, built_at, schema_version}, drift:{verdict: ok|mcp_older|unknown, reason}}. mcp_older — схемы инструментов в сессии могут отставать от бэкенда (новый параметр отбивается «Unrecognized key», исправленное описание читается старым): пересобрать mcp-server и перезапустить сессию. Бэкенд недоступен — verdict unknown с причиной, а не ok.' },
+  { name: 'whoami', kind: 'read', entity: 'Meta', backend: 'GET /lore/whoami',
+    params: '—',
+    desc: 'Кем LORE видит вызывающего (SPRINT_LORE_AGENT_OBSERVABILITY/AO-WHOAMI) — только из проверенного токена и графа: kind human|agent|unverified (auth выключен), client_id, profile (agent_scope; ambiguous — два профиля в токене, запись отказывает), seer_role, write_families профиля по матрице, identity {state: known|unknown|error} — unknown значит «клиента нет в графе», а не «нет прав», owners, project_roles, token_expires_at. Звать первым в сессии и при 403 на записи.' },
   // ── Sprint (KnowSprint) ──────────────────────────────────────────────────
   { name: 'sprint_new', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint/create',
     params: 'sprint_id, name, status?, plan_id?, priority?, outcome_md?, context_md?, project?',

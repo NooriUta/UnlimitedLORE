@@ -54,4 +54,15 @@ class PersonAgentPassportTest {
     void agentRowIsAnAgentOnly() {
         assertTrue(LoreSlices.get("agent_by_id").baseSql().contains("kind = 'agent'"), "роль продукта (KnowActor kind≠agent) — не агент");
     }
+
+    /** MC-07: человек и агент — уровень admin; в общее меню не попадают, паспорт открывается по чипу. */
+    @Test
+    void peopleAndAgentsAreAdminAudienceNotInTheSharedMenu() {
+        java.util.Map<String, String> audience = LoreModelFile.content().audience();
+        assertEquals("admin", audience.get("user"), "человек — админка (MC-07, решение 13.11)");
+        assertEquals("admin", audience.get("agent"), "агент — админка (MC-07, решение 13.11)");
+        List<String> nav = LoreModelNavTest.navSections(LoreModelGoldenTest.modelDoc());
+        assertTrue(nav.contains("sprint"), "положительный контроль: меню не пустое");
+        assertFalse(nav.contains("user") || nav.contains("agent"), "людей и агентов нет в общем меню: " + nav);
+    }
 }

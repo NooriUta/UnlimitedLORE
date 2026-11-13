@@ -46,9 +46,14 @@ const authOf = (f: ReturnType<typeof okFetch>, call = 0) =>
   new Headers((f.mock.calls[call][1] as RequestInit | undefined)?.headers).get('Authorization');
 
 describe('S3-18 · вход выключен — поведение прежнее', () => {
-  it('статус disabled, заголовок dev-роли, менеджер OIDC даже не создаётся', async () => {
+  it('K-14: у kit своих dev-заголовков нет — без devHeaders приложения запрос уходит без них', async () => {
+    const s = createAuthSession({ enabled: false, manager: () => fakeManager(), location: loc() });
+    await s.init();
+    expect(s.headers()).toEqual({});
+  });
+  it('статус disabled, заголовок dev-роли приложения, менеджер OIDC даже не создаётся', async () => {
     const make = vi.fn(() => fakeManager());
-    const s = createAuthSession({ enabled: false, manager: make, location: loc() });
+    const s = createAuthSession({ enabled: false, manager: make, location: loc(), devHeaders: { 'X-Seer-Role': 'admin' } });
     await s.init();
     expect(s.getState().status).toBe('disabled');
     expect(s.headers()).toEqual({ 'X-Seer-Role': 'admin' });

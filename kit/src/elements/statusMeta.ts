@@ -28,7 +28,7 @@ type Row = [icon: string, colorToken: string, category: StatusCategory];
 
 // S4-07: порядок строк — порядок жизненного цикла внутри категории (по нему
 // звезда сортирует пункты палитры); сами категории — в STATUS_CATEGORIES.
-const TABLE: Record<string, Row> = {
+const DEFAULT_TABLE: Readonly<Record<string, Row>> = {
   todo:             ['checkbox-tree',  'st-todo', 'backlog'],
   backlog:          ['tied-scroll',    'st-backlog', 'backlog'],
   deferred:         ['pause-button',   'st-deferred', 'backlog'],
@@ -39,9 +39,6 @@ const TABLE: Record<string, Row> = {
   active:           ['progression',    'st-active', 'active'],
   in_progress:      ['progression',    'st-active', 'active'],
   partial:          ['battery-50',     'st-partial', 'active'],
-  ready_for_deploy: ['wave-crest',     'st-ready_for_deploy', 'review'],
-  // 13.11.2026: агент проверил на стенде → приёмка человеком; выбор владелицы — индиго + stamper.
-  uat:              ['stamper',        'st-uat', 'review'],
   done:             ['divided-spiral', 'st-done', 'done'],
   fixed:            ['divided-spiral', 'st-done', 'done'],
   reached:          ['divided-spiral', 'st-done', 'done'],
@@ -53,8 +50,52 @@ const TABLE: Record<string, Row> = {
   cancelled:        ['cross-mark',     'st-cancelled', 'closed'],
 };
 
-/** Известные коды статусов в порядке жизненного цикла (для палитры и тестов). */
-export const KNOWN_STATUSES = Object.keys(TABLE);
+// K-14 (S7B-23_2): статусы рабочего процесса приложения (у LORE — «к выкатке», UAT)
+// регистрирует приложение; kit держит общий словарь и механизм.
+let TABLE: Record<string, Row> = { ...DEFAULT_TABLE };
+let LABELS: Record<string, Partial<Record<'ru' | 'en', string>>> = {};
+
+/** Известные коды статусов в порядке жизненного цикла (для палитры и тестов). Живой список: регистрация дописывает. */
+export const KNOWN_STATUSES: string[] = Object.keys(TABLE);
+
+/** Статус приложения: иконка (слаг), токен цвета (имя без var), категория, подпись. */
+export interface StatusRow {
+  icon: string;
+  color: string;
+  category: StatusCategory;
+  label?: Partial<Record<'ru' | 'en', string>>;
+}
+
+/**
+ * Зарегистрировать статусы приложения. `after` — код, за которым они встают в
+ * жизненном цикле; нет — в конец. Неизвестный якорь — отказ словами.
+ */
+export function registerStatuses(rows: Record<string, StatusRow>, opts: { after?: string } = {}): void {
+  let at = KNOWN_STATUSES.length;
+  if (opts.after !== undefined) {
+    const i = KNOWN_STATUSES.indexOf(opts.after);
+    if (i < 0) throw new Error(`registerStatuses: нет статуса «${opts.after}», за которым встать`);
+    at = i + 1;
+  }
+  for (const [raw, r] of Object.entries(rows)) {
+    const code = raw.trim().toLowerCase();
+    TABLE[code] = [r.icon, r.color, r.category];
+    if (r.label) LABELS[code] = r.label;
+    if (!KNOWN_STATUSES.includes(code)) KNOWN_STATUSES.splice(at++, 0, code);
+  }
+}
+
+/** Вернуть словарь kit (тесты, смена приложения). */
+export function resetStatuses(): void {
+  TABLE = { ...DEFAULT_TABLE };
+  LABELS = {};
+  KNOWN_STATUSES.splice(0, KNOWN_STATUSES.length, ...Object.keys(DEFAULT_TABLE));
+}
+
+/** Подпись статуса, зарегистрированная приложением; нет — undefined. */
+export function statusLabel(status: string | null | undefined, lang: 'ru' | 'en'): string | undefined {
+  return LABELS[(status ?? '').trim().toLowerCase()]?.[lang];
+}
 
 export function statusMeta(status: string | null | undefined): StatusMeta {
   const code = (status ?? '').trim().toLowerCase();
@@ -81,11 +122,9 @@ export function isFinalStatus(status: string | null | undefined): boolean {
   return isFinalCategory(statusMeta(status).category);
 }
 
-const RANK = new Map(KNOWN_STATUSES.map((c, i) => [c, i]));
-
 function rank(code: string): [number, number] {
   const m = statusMeta(code);
-  return [STATUS_CATEGORIES.indexOf(m.category), RANK.get(m.code) ?? Number.MAX_SAFE_INTEGER];
+  return [STATUS_CATEGORIES.indexOf(m.category), KNOWN_STATUSES.includes(m.code) ? KNOWN_STATUSES.indexOf(m.code) : Number.MAX_SAFE_INTEGER];
 }
 
 /**

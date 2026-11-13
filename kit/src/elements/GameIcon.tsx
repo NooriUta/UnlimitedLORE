@@ -49,8 +49,6 @@ export const SECTION_ICONS = {
   // раздела «Новости» в v1 молча пустая. Выбор владелицы (S4-25) — из словаря.
   news: ICON_CANON.sectionNews,
   value: 'bullseye',
-  plan: ICON_CANON.plan,
-  knowledge: ICON_CANON.knowledge,
   tech: 'gears',
   control: 'checkered-flag',
   filter: ICON_CANON.segFilter,

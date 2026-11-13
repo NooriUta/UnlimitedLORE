@@ -509,7 +509,7 @@ public class LoreSchemaMigrationRunner {
     @SuppressWarnings("unchecked")
     int mergeMachineCase() {
         Object r = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-            "SELECT machine_id FROM KnowMachine", null)).await().indefinitely().result();
+            "SELECT machine_id, first_seen_at, last_seen_at FROM KnowMachine", null)).await().indefinitely().result();
         List<Map<String, Object>> rows = r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
         List<String> ids = new java.util.ArrayList<>();
         for (Map<String, Object> m : rows) if (m.get("machine_id") != null) ids.add(String.valueOf(m.get("machine_id")));
@@ -520,6 +520,22 @@ public class LoreSchemaMigrationRunner {
             client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowMachine SET machine_id = :m UPSERT WHERE machine_id = :m", Map.of("m", canon)))
                 .await().indefinitely();
+            // Даты группы (находка 13.11): каноническая получает самый ранний first_seen_at и самый
+            // поздний last_seen_at по вариантам И себе — иначе слияние теряло первый вход машины.
+            List<Map<String, Object>> group = new java.util.ArrayList<>();
+            for (Map<String, Object> m : rows) {
+                Object id = m.get("machine_id");
+                if (id != null && (canon.equals(id) || e.getValue().contains(String.valueOf(id)))) group.add(m);
+            }
+            String[] seen = AgentMachine.seenRange(group);
+            if (seen[0] != null)
+                client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowMachine SET first_seen_at = :f WHERE machine_id = :m", Map.of("f", seen[0], "m", canon)))
+                    .await().indefinitely();
+            if (seen[1] != null)
+                client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowMachine SET last_seen_at = :l WHERE machine_id = :m", Map.of("l", seen[1], "m", canon)))
+                    .await().indefinitely();
             for (String variant : e.getValue()) {
                 Object er = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "SELECT @out AS a FROM USES_MACHINE WHERE @in.machine_id = :v", Map.of("v", variant)))
@@ -545,7 +561,7 @@ public class LoreSchemaMigrationRunner {
             client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowActor SET machine_id = :to WHERE actor_id = :id AND machine_id = :from",
                 Map.of("id", t.getKey(), "from", t.getValue().get(0), "to", t.getValue().get(1)))).await().indefinitely();
-        LOG.infof("[LORE MIGRATE] V82 машины по регистру: план %s, перенесено рёбер %d", plan, moved);
+        LOG.infof("[LORE MIGRATE] V82 машины по регистру: план %s, перенесено рёбер %d (даты группы — min/max)", plan, moved);
         return plan.size();
     }
 

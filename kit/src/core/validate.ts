@@ -8,7 +8,7 @@
 // разошлось с контрактом или с конфигом (неизвестный ключ, висячее ребро,
 // returned ≠ числу записей). Ничего не роняется: на любой вход — список.
 import type { KitConfig, KitData } from './contract';
-import { LORE_STATUS_AXIS } from './statusAxis';
+import { STATUS_AXIS } from './statusAxis';
 
 export interface KitIssue {
   /** Путь в стиле JS: `statuses.items[0].color`. */
@@ -83,7 +83,7 @@ const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calen
  * До S4-STATUS-AXIS-CONFIG здесь были только старые четыре, и конфигурация
  * с осью из модели не прошла бы проверку вовсе.
  */
-const STATUS_CATEGORIES = [...LORE_STATUS_AXIS, 'todo', 'active', 'done', 'cancelled'];
+const STATUS_CATEGORIES = [...STATUS_AXIS, 'todo', 'active', 'done', 'cancelled'];
 const FIELD_TYPES = ['text', 'md', 'enum', 'ref', 'date', 'number'];
 
 export interface ValidateConfigOptions {
@@ -235,7 +235,9 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
         c.str(f, 'title', fp);
         c.enumOf(f, 'type', fp, FIELD_TYPES, true);
       });
-      c.unknownKeys(k, ['title', 'icon', 'overview', 'tabs', 'fields'], p, 'kit его не прочтёт');
+      // K-14: подпись наследования от записи вида («от спринта») — слово приложения.
+      if (k.inherited !== undefined) c.str(k, 'inherited', p);
+      c.unknownKeys(k, ['title', 'icon', 'overview', 'tabs', 'fields', 'inherited'], p, 'kit его не прочтёт');
     }
   }
 

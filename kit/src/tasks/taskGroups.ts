@@ -59,9 +59,21 @@ export interface TaskGroup {
  * Статусы, которые палитра предлагает задаче, — тот же набор, что v1 даёт
  * сменить в строке задачи (TASK_PICK_TOKENS) и что принимает POST /lore/status.
  */
-export const TASK_STATUSES = [
-  'todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'uat', 'done', 'blocked', 'cancelled',
+export const DEFAULT_TASK_STATUSES = [
+  'todo', 'planned', 'active', 'partial', 'done', 'blocked', 'cancelled',
 ] as const;
+/**
+ * Живой набор статусов задачи: умолчание kit, пока приложение не назвало свой
+ * (K-14, S7B-23_2: у LORE — ещё «к выкатке» и UAT; коды регистрирует registerStatuses).
+ */
+export const TASK_STATUSES: string[] = [...DEFAULT_TASK_STATUSES];
+/** Набор статусов задачи приложения — порядок жизненного цикла. */
+export function setTaskStatuses(codes: readonly string[]): void {
+  TASK_STATUSES.splice(0, TASK_STATUSES.length, ...codes);
+}
+export function resetTaskStatuses(): void {
+  setTaskStatuses(DEFAULT_TASK_STATUSES);
+}
 /**
  * Код статуса задачи.
  *
@@ -70,7 +82,7 @@ export const TASK_STATUSES = [
  * умолчанием, когда конфигурации нет. `string & {}` сохраняет подсказку
  * известных кодов и при этом не врёт, будто других не бывает.
  */
-export type TaskStatus = (typeof TASK_STATUSES)[number] | (string & {});
+export type TaskStatus = (typeof DEFAULT_TASK_STATUSES)[number] | (string & {});
 
 const byOrder = (a: TaskRowData, b: TaskRowData) => a.order - b.order || a.id.localeCompare(b.id);
 

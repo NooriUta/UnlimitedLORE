@@ -133,7 +133,7 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
   const urlWin = win ?? (typeof window === 'undefined' ? undefined : window);
   const [mod, setMod] = useState<string | null>(() => moduleOf(urlWin));
   const isAdmin = mod === ADMIN_MODULE;
-  const config = useMemo(() => v2Config(lang, statuses.items, mod ?? undefined), [lang, statuses.items, mod]);
+  const config = useMemo(() => v2Config(lang, statuses.items, mod ?? undefined, statuses.nav), [lang, statuses.items, mod, statuses.nav]);
   useEffect(() => {
     if (!urlWin || typeof window === 'undefined' || urlWin !== window) return;
     const sync = () => setMod(moduleOf(window));

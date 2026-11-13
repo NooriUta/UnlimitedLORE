@@ -81,13 +81,17 @@ describe('MD-WINDOW · карточка «Новый» из модели', () =>
 });
 
 describe('MD-WINDOW · заведение записи на сервере', () => {
-  const ok = (body: unknown) => vi.fn(async (_u: string, _i?: RequestInit) => new Response(JSON.stringify(body), { status: 200 }));
+  // Проверка «записи с таким кодом нет» (GET фасада) отвечает 404; запись (POST) — телом body.
+  const ok = (body: unknown) => vi.fn(async (u: string, i?: RequestInit) => (i?.method === 'POST'
+    ? new Response(JSON.stringify(body), { status: 200 })
+    : new Response('{}', { status: u.startsWith('/lore/record/') ? 404 : 200 })));
+  const posts = (f: ReturnType<typeof ok>) => f.mock.calls.filter(c => c[1]?.method === 'POST');
 
   it('задача: POST /lore/task, автор — кто пишет, исполнитель — выбранный; ответ — ссылка SPRINT/CODE', async () => {
     const f = ok({ ok: true, task_uid: 'SPRINT_X/T-9', task_id: 'T-9' });
     const r = await createLoreRecord('task', { title: 'Новая', code: 'T-9', sprint: 'SPRINT_X', executor: 'vasilisk' }, ctx, f);
-    expect(f.mock.calls[0][0]).toBe('/lore/task');
-    expect(JSON.parse(String(f.mock.calls[0][1]!.body))).toEqual({
+    expect(posts(f)[0][0]).toBe('/lore/task');
+    expect(JSON.parse(String(posts(f)[0][1]!.body))).toEqual({
       sprint_id: 'SPRINT_X', task_id: 'T-9', title: 'Новая', author_agent: 'arharaga', executor_agent: 'vasilisk',
     });
     expect(r).toEqual({ ok: true, item: { id: 'SPRINT_X/T-9', type: 'task', title: 'Новая' } });
@@ -96,24 +100,39 @@ describe('MD-WINDOW · заведение записи на сервере', () 
   it('решение: родитель-ADR уходит в adr_id', async () => {
     const f = ok({ ok: true, decision_id: 'D-1' });
     await createLoreRecord('decision', { title: 'Правило', code: 'D-1', adr: 'ADR-LORE-050' }, ctx, f);
-    expect(f.mock.calls[0][0]).toBe('/lore/decision');
-    expect(JSON.parse(String(f.mock.calls[0][1]!.body))).toMatchObject({ decision_id: 'D-1', title: 'Правило', adr_id: 'ADR-LORE-050' });
+    expect(posts(f)[0][0]).toBe('/lore/decision');
+    expect(JSON.parse(String(posts(f)[0][1]!.body))).toMatchObject({ decision_id: 'D-1', title: 'Правило', adr_id: 'ADR-LORE-050' });
   });
 
   it('спека и ADR — свои пути и имена полей сервера', async () => {
     const f = ok({ ok: true });
     await createLoreRecord('spec', { title: 'Спека', code: 'SPEC-X' }, ctx, f);
     await createLoreRecord('adr', { title: 'Решение архитектуры', code: 'ADR-X' }, ctx, f);
-    expect(f.mock.calls.map(c => c[0])).toEqual(['/lore/spec', '/lore/adr']);
-    expect(JSON.parse(String(f.mock.calls[0][1]!.body))).toMatchObject({ spec_id: 'SPEC-X', title: 'Спека' });
-    expect(JSON.parse(String(f.mock.calls[1][1]!.body))).toMatchObject({ adr_id: 'ADR-X', name: 'Решение архитектуры' });
+    expect(posts(f).map(c => c[0])).toEqual(['/lore/spec', '/lore/adr']);
+    expect(JSON.parse(String(posts(f)[0][1]!.body))).toMatchObject({ spec_id: 'SPEC-X', title: 'Спека' });
+    expect(JSON.parse(String(posts(f)[1][1]!.body))).toMatchObject({ adr_id: 'ADR-X', name: 'Решение архитектуры' });
   });
 
   it('сервер отказал (4xx или ok:false с причиной) — причина словами, окно не закрывается', async () => {
-    const bad = vi.fn(async () => new Response(JSON.stringify({ ok: false, outcome: 'noop', reason: 'задача не создана: такой код уже есть' }), { status: 400 }));
+    const bad = vi.fn(async (u: string) => new Response(JSON.stringify({ ok: false, outcome: 'noop', reason: 'задача не создана: такой код уже есть' }), { status: u.startsWith('/lore/record/') ? 404 : 400 }));
     expect(await createLoreRecord('task', { title: 'X', code: 'T-1', sprint: 'S', executor: 'arharaga' }, ctx, bad))
       .toEqual({ ok: false, reason: 'задача не создана: такой код уже есть' });
     const noop = ok({ ok: false, reason: 'нет прав' });
     expect(await createLoreRecord('spec', { title: 'X', code: 'S-1' }, ctx, noop)).toEqual({ ok: false, reason: 'нет прав' });
+  });
+
+  it('сервер пишет upsert: код уже занят — POST не уходит, причина словами (иначе запись перепишется)', async () => {
+    const f = vi.fn(async (u: string, i?: RequestInit) => new Response('{}', { status: i?.method === 'POST' ? 200 : u.startsWith('/lore/record/') ? 200 : 200 }));
+    const r = await createLoreRecord('spec', { title: 'X', code: 'SPEC-TAKEN' }, ctx, f);
+    expect(f.mock.calls.some(c => c[1]?.method === 'POST')).toBe(false);
+    expect(r).toEqual({ ok: false, reason: expect.stringMatching(/уже есть/) });
+    expect(f.mock.calls[0][0]).toBe('/lore/record/spec/SPEC-TAKEN');
+  });
+
+  it('проверить, свободен ли код, не смогли — POST не уходит («не смогли» ≠ «свободно»)', async () => {
+    const f = vi.fn(async (_u: string, i?: RequestInit) => new Response('{}', { status: i?.method === 'POST' ? 200 : 502 }));
+    const r = await createLoreRecord('adr', { title: 'X', code: 'ADR-Q' }, ctx, f);
+    expect(f.mock.calls.some(c => c[1]?.method === 'POST')).toBe(false);
+    expect(r).toEqual({ ok: false, reason: expect.stringMatching(/не смогли проверить/i) });
   });
 });

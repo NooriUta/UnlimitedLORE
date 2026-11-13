@@ -21,6 +21,7 @@ const stub = (name: string) => function Stub(p: GxEngineProps) {
 };
 vi.mock('./ForceEngine', () => ({ default: stub('force') }));
 vi.mock('./ObsidianEngine', () => ({ default: stub('obsidian') }));
+vi.mock('./ReactFlowEngine', () => ({ default: stub('structure') }));
 
 const N: GxNode[] = [
   { id: 'ADR-1', type: 'adr', title: 'Граф в kit' },
@@ -51,6 +52,14 @@ describe('GC-03 · GraphExplorer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Обсидиан' }));
     expect((await screen.findByTestId('eng-obsidian')).getAttribute('data-edges')).toBe('3');
     expect(onEngineChange).toHaveBeenCalledWith('obsidian');
+  });
+
+  // GC-02: третий отрисовщик — «Структура» (React Flow + ELK в воркере).
+  it('переключатель вида: три отрисовщика — Force, Обсидиан, Структура', async () => {
+    render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t2b" />);
+    expect([...screen.getByTestId('gx-engines').querySelectorAll('button')].map(b => b.textContent)).toEqual(['Force', 'Обсидиан', 'Структура']);
+    fireEvent.click(screen.getByRole('button', { name: 'Структура' }));
+    expect((await screen.findByTestId('eng-structure')).getAttribute('data-edges')).toBe('3');
   });
 
   it('панель как у Обсидиана: четыре раздела, тип снимается чекбоксом — «показано N из M»', async () => {

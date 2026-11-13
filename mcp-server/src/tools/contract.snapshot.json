@@ -767,6 +767,7 @@
       "icon": "string?",
       "is_active": "boolean?",
       "is_extensible": "boolean?",
+      "kind": "enum(service|tech)?",
       "label_en": "string?",
       "label_ru": "string?",
       "sort_order": "number?"
@@ -2527,6 +2528,21 @@
       "source_id": "string",
       "target_id": "string"
     },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "whoami": {
+    "input": {},
     "output": {
       "content": [
         {

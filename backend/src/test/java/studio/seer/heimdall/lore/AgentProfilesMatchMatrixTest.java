@@ -46,7 +46,9 @@ class AgentProfilesMatchMatrixTest {
         "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "graph", "metric_get", "bragi_search",
         // MCPV2 (13.11): добраны в agent-profiles как read-only — форма задач, допуски/справочник
         // машин, вердикт полноты, версия сборки. Все GET, агентный фильтр записи их не скоупит.
-        "task_shape", "machine_acl", "harness_list", "quality_check", "lore_version");
+        "task_shape", "machine_acl", "harness_list", "quality_check", "lore_version",
+        // AO-WHOAMI (13.11): «кто ты» — GET /lore/whoami, читающий, во всех профилях.
+        "whoami");
 
     /**
      * Чтение графа — у КАЖДОГО профиля (README профилей: «reading the graph never needs

@@ -37,7 +37,8 @@ describe('конфиг оболочки v2', () => {
     const items = groups.flatMap(g => g.items.map(i => i.id));
     expect(new Set(items).size).toBe(items.length);
     for (const id of ['news', 'sprint', 'task', 'adr', 'settings']) expect(items, id).toContain(id);
-    expect([...items].sort()).toEqual([...V2_SECTIONS].sort());
+    // MC-07: человек и агент — уровень admin, в общем меню их нет (паспорт — по чипу из проекта).
+    expect([...items].sort()).toEqual([...V2_SECTIONS].filter(s => s !== 'user' && s !== 'agent').sort());
     // Спринты и задачи — одна группа «работа», ADR — не в ней: меню по смыслу, а не по таблицам.
     const groupOf = (id: string) => groups.find(g => g.items.some(i => i.id === id))?.id;
     expect(groupOf('sprint')).toBe(groupOf('task'));

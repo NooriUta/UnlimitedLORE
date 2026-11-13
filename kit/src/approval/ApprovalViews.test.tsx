@@ -94,7 +94,7 @@ describe('ApprovalJournal', () => {
     expect(screen.getByRole('columnheader', { name: 'Согласовал' })).toBeTruthy();
     expect(screen.getByText('ждёт согласования')).toBeTruthy();
     expect(screen.getByText('bob')).toBeTruthy();
-    expect(screen.getByText(/агент/)).toBeTruthy();
+    expect(screen.getByText(/бот/)).toBeTruthy();
   });
   it('пустой журнал — проверенный ноль, не ошибка', () => {
     const { container } = render(<ApprovalJournal ctx={ctx('reader', 'r', [])} recordId="Q-1" />);
