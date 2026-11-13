@@ -354,11 +354,11 @@ public class LoreReleaseResource extends LoreResourceBase {
             StringBuilder script = new StringBuilder();
             if (openRid != null) {
                 p.put("oldrid", String.valueOf(openRid));
-                script.append(Scd2Guard.guardedClose("KnowReleaseHist", false));
+                script.append(Scd2Guard.guardedClose("KnowRelease", "KnowReleaseHist", false));
             } else {
                 // Релиз без строки истории (заведён до REL-UID-01 / импортом): первая версия.
                 p.put("gk", rkey);
-                script.append(Scd2Guard.guardedNoOpen("KnowReleaseHist", "release_uid", "gk"));
+                script.append(Scd2Guard.guardedNoOpen("KnowRelease", "KnowReleaseHist", "release_uid", "gk"));
             }
             script.append(set).append(" WHERE release_uid=:rkey;");
             script.append("INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now");
