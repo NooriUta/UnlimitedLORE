@@ -151,3 +151,33 @@
 /* S7B-28: шапка списка людей — кнопка «+ Человек» справа. */
 .adm-people__bar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
 .adm-passport { display: grid; gap: 8px; }
+
+/* PU-20 «Привести в порядок»: статус-строка, план, таблица правил, строки записей. Только токены. */
+.adm-tidy-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
+.adm-tidy-kpi { margin: 0 0 8px; font: 800 var(--fs-lg) var(--display); color: var(--acc); }
+.adm-tidy-rule { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
+.adm-tidy-num { font-family: var(--mono); white-space: nowrap; text-align: right; }
+.adm-tidy-ex { font: var(--fs-xs) var(--mono); color: var(--t2); word-break: break-word; }
+.adm-tidy-ex del { color: var(--dng); }
+.adm-tidy-ex ins { color: var(--suc); text-decoration: none; }
+.adm-table tr:not([data-on]) .adm-tidy-ex, .adm-table tr:not([data-on]) .adm-tidy-num { color: var(--t3); }
+.adm-tidy-rows { list-style: none; margin: 8px 0; padding: 0; border: 1px solid var(--bd); border-radius: 6px; }
+.adm-tidy-row { border-bottom: 1px solid var(--bd); }
+.adm-tidy-row:last-child { border-bottom: 0; }
+.adm-tidy-row__head {
+  display: grid; grid-template-columns: auto minmax(0, 2fr) minmax(0, 0.8fr) auto minmax(0, 1.6fr) auto;
+  align-items: center; gap: 8px; padding: 4px 8px;
+}
+.adm-tidy-tog { padding: 0 8px; }
+.adm-tidy-id { color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-tidy-kinds { display: flex; flex-wrap: wrap; gap: 4px; }
+.adm-tidy-acts { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.adm-tidy-acts a.adm-btn { display: inline-flex; align-items: center; text-decoration: none; }
+.adm-tidy-issues { list-style: none; margin: 0; padding: 4px 8px 8px 32px; display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--t2); word-break: break-word; }
+.adm-tidy-issues mark { background: color-mix(in srgb, var(--dng) 25%, transparent); color: var(--t1); border-radius: 3px; padding: 0 2px; }
+.adm-tidy-suggest { color: var(--inf); }
+@media (max-width: 860px) {
+  .adm-tidy-row__head { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .adm-tidy-id { white-space: normal; word-break: break-all; }
+  .adm-tidy-kinds, .adm-tidy-acts { grid-column: 1 / -1; justify-content: flex-start; }
+}
