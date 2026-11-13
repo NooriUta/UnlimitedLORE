@@ -26,6 +26,7 @@ import { fieldValueTitle, groupKeyTitle, keyTitleMissing } from './groupLabel';
 import { GroupMenu } from './GroupMenu';
 import { sortRecords, type FilterOp, type ListSort } from './listModel';
 import { SortMenu } from './SortMenu';
+import { useFacetFold } from './facetFold';
 
 /** Состояние полосы — подмножество состояния списка (ListState) с тем же смыслом полей. */
 export interface ControlState {
@@ -102,9 +103,12 @@ export function ControlBar({
     : null);
   const active = controlsActive(state);
   const hasGroup = !!groupSlot || (groupKeys?.length ?? 0) > 0;
+  // PU-12, обобщено: тот же ряд в одну строку с «+N», что у ListView (приёмка 13.11 — в паспорте
+  // спринта «Исполнитель / Фаза» уходили второй строкой).
+  const facets = useFacetFold(filterKeys, k => k in filterSet.fields, { narrow, lang });
 
   return (
-    <div role="group" aria-label={t('kit.list.filters')} className="sk-list__controls" data-testid="kit-ctlbar">
+    <div ref={facets.ref} role="group" aria-label={t('kit.list.filters')} className="sk-list__controls" data-testid="kit-ctlbar">
       <fieldset className="sk-list__seg" data-seg="filter">
         <legend className="sk-list__seglabel">{t('kit.list.desc.filter')}</legend>
         <GameIcon slug={ICON_CANON.segFilter} size={14} className="sk-list__segicon" />
@@ -117,7 +121,7 @@ export function ControlBar({
           value={state.text}
           onChange={e => update({ text: e.target.value })}
         />
-        {filterKeys.map(k => (
+        {facets.shown.map(k => (
           <FacetFilter
             key={k}
             title={keyName(k)}
@@ -133,6 +137,7 @@ export function ControlBar({
             narrow={narrow}
           />
         ))}
+        {facets.more}
       </fieldset>
       {hasGroup && (
         <fieldset className="sk-list__seg" data-seg="group">

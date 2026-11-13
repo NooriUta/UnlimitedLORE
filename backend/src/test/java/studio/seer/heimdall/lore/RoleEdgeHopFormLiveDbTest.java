@@ -52,7 +52,7 @@ class RoleEdgeHopFormLiveDbTest {
     private static final String AGENT   = "hop-agent";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final HttpClient HTTP = LiveDbHttp.CLIENT;
 
     @BeforeAll
     static void resourceIsUp() {

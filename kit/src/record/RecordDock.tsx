@@ -54,7 +54,8 @@ function useWindowSize(): { w: number; h: number } {
   return s;
 }
 
-export type RecordPlacement = 'right' | 'bottom' | 'full';
+/** MP2-14-PLACE-LEFT: «слева» — зеркало «справа» (владелица 13.11: «если задано… влево — значит он открывается именно там»). */
+export type RecordPlacement = 'left' | 'right' | 'bottom' | 'full';
 
 export interface RecordDockProps {
   placement: RecordPlacement;
@@ -154,13 +155,13 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
           zone={zone}
           className="sk-dock__resize"
           axis={vertical ? 'y' : 'x'}
-          side="after"
+          side={placement === 'left' ? 'before' : 'after'}
           size={shown}
           min={lim.min}
           max={lim.max}
           store={store}
           onSize={v => { setSize(v); setSized(true); }}
-          label={kitT(lang, vertical ? 'kit.record.dock.heightBottom' : 'kit.record.dock.widthRight')}
+          label={kitT(lang, vertical ? 'kit.record.dock.heightBottom' : placement === 'left' ? 'kit.record.dock.widthLeft' : 'kit.record.dock.widthRight')}
         />
       )}
       {/* Полный экран (S4-17, владелица 11.11: «крестик спорят с линией»): «Выйти» и «×» —

@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StatusHistoryLiveDbTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final HttpClient HTTP = LiveDbHttp.CLIENT;
     static final String SUB = "s213-owner-sub";
 
     @BeforeAll
