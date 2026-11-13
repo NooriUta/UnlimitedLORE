@@ -10,6 +10,7 @@ import { registerForgejo, forgejoConfigured } from './tools/forgejo.js';
 import { registerVersion, warnIfStale } from './tools/version.js';
 import { readBuildInfo } from './buildInfo.js';
 import { withStrictTools } from './tools/strictTool.js';
+import { legacySurfaceGate, LEGACY_CRUD_TOOLS } from './tools/entity.js';
 import { corePermission, permissionForProfile, surfaceScope, type Permission } from './profile.js';
 
 // stdio MCP server for AIDA LORE. Talks to the UnlimitedLORE backend (:9100),
@@ -29,39 +30,54 @@ import { corePermission, permissionForProfile, surfaceScope, type Permission } f
 // давности от сегодняшней, а именно это расхождение и прятало правки схем.
 const build = readBuildInfo();
 
-/** Собрать сужение поверхности: env-ось и ролевая ось (см. profile.ts). */
+/** Собрать сужение поверхности: env-ось и ролевая ось (см. profile.ts).
+ *  profiles — имена профилей, реально применённых осями (нужны legacy-оси MCPV2-3). */
 async function resolveSurface() {
   const perms: Permission[] = [];
   const sources: string[] = [];
+  const profiles: string[] = [];
   const envProfile = (process.env.LORE_MCP_PROFILE ?? '').trim();
   if (envProfile) {
     // Явная ошибка конфига — громко и при старте: человек чинит env, а не гадает.
     perms.push(permissionForProfile(envProfile));
     sources.push(`env:${envProfile}`);
+    profiles.push(envProfile);
   }
   const scope = await clientAgentScope();
   if (scope === 'ambiguous') {
     console.error('[aida-lore-mcp] agent_scope ambiguous (несколько разных профилей в токене) — выдача сужена до core; это ошибка провижининга, бэкенд записи откажет');
     perms.push(corePermission());
     sources.push('token:ambiguous→core');
+    profiles.push('core');
   } else if (scope) {
     try {
       perms.push(permissionForProfile(scope));
       sources.push(`token:${scope}`);
+      profiles.push(scope);
     } catch (e) {
       // Профиль в токене без файла — дрейф провижининга; не роняем сервер,
       // сужаем до core (безопасная сторона), ошибка видна в stderr.
       console.error(`[aida-lore-mcp] ${(e as Error).message} — выдача сужена до core`);
       perms.push(corePermission());
       sources.push(`token:${scope}→core`);
+      profiles.push('core');
     }
   }
-  return surfaceScope(perms, sources);
+  return { surface: surfaceScope(perms, sources), profiles };
 }
 
 async function main(): Promise<void> {
-  const surface = await resolveSurface();
-  const server = withStrictTools(new McpServer({ name: 'aida-lore', version: build.commit }), surface.gate);
+  const { surface, profiles } = await resolveSurface();
+  // MCPV2-3: legacy-ось поверх профильной. LORE_MCP_LEGACY=1 → полная старая
+  // поверхность + entity_*; профиль ≠ full → старые имена видны в рамках профиля
+  // (профили ссылаются на них), entity_* — только если профиль разрешает запись;
+  // дефолт (full) → покрытые старые имена скрыты, работа через entity_*.
+  const legacy = process.env.LORE_MCP_LEGACY === '1';
+  const narrowed = profiles.some(p => p !== 'full');
+  const server = withStrictTools(
+    new McpServer({ name: 'aida-lore', version: build.commit }),
+    legacySurfaceGate(surface.gate, { legacy, narrowed }),
+  );
 
   registerLoreRead(server);
   registerLoreWrite(server);
@@ -80,7 +96,7 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`[aida-lore-mcp] ready — backend ${BACKEND_URL}${BACKEND_FALLBACK_URL ? ` (запасной ${BACKEND_FALLBACK_URL})` : ''}, surface: ${surface.axes ? surface.sources.join(' ∩ ') : 'full'}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
+  console.error(`[aida-lore-mcp] ready — backend ${BACKEND_URL}${BACKEND_FALLBACK_URL ? ` (запасной ${BACKEND_FALLBACK_URL})` : ''}, surface: ${surface.axes ? surface.sources.join(' ∩ ') : 'full'}${legacy ? ', legacy: on (полная старая поверхность + entity_*)' : narrowed ? '' : `, consolidated: entity_* (скрыто ${LEGACY_CRUD_TOOLS.length} per-entity имён; LORE_MCP_LEGACY=1 возвращает)`}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
   // После connect и без await: предупреждение не должно задерживать готовность
   // и не должно ронять старт, если бэкенд недоступен.
   void warnIfStale();
