@@ -5237,6 +5237,8 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 }
 .sk-tasks__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 0; }
 .sk-tasks__input[aria-invalid="true"] { border-color: var(--dng); }
+/* PU-25: выбор типа, класса и ролей в строке — тот же вид, что у поля ввода. */
+.sk-tasks__select { min-width: 96px; }
 .sk-tasks__actions { display: inline-flex; gap: 4px; }
 .sk-tasks__btn--ghost { background: transparent; }
 .sk-tasks__err {

@@ -14,6 +14,8 @@ export interface TaskRowData {
   /** phase_uid; null — задача вне фаз. */
   phase: string | null;
   effortDays: number | null;
+  /** PU-25: автор задачи; срез может его не отдавать — тогда undefined. */
+  author?: string | null;
   executor: string | null;
   reviewer: string | null;
   taskType: string | null;
@@ -130,15 +132,31 @@ function byStatus(sorted: readonly TaskRowData[], prefix: string): TaskGroup[] {
 export interface TaskDraft {
   title: string;
   effort: string;
+  /** PU-25: выбор из списка; нет поля или '' — «не трогать» (значения не было и его не выбрали). */
+  taskType?: string;
+  workClass?: string;
+  author?: string;
+  executor?: string;
+  reviewer?: string;
 }
 
+/** Поля черновика, которые выбираются из списка, а не вводятся (PU-25). */
+export const TASK_PICK_FIELDS = ['taskType', 'workClass', 'author', 'executor', 'reviewer'] as const;
+export type TaskPickField = (typeof TASK_PICK_FIELDS)[number];
+
 /**
- * Изменённые поля — то, что уйдёт в POST /lore/task/edit. Ролей здесь нет (PU-17): роль задачи —
- * ребро заявленной личности и меняется только выбором из кандидатов в паспорте задачи.
+ * Изменённые поля — то, что уйдёт в POST /lore/task/edit. Роли (PU-17) — только код
+ * кандидата, выбранного из списка экрана (PU-25: выбор и в строке, не только в паспорте);
+ * свободного текста для ролей нет.
  */
 export interface TaskPatch {
   title?: string;
   effortDays?: number;
+  taskType?: string;
+  workClass?: string;
+  author?: string;
+  executor?: string;
+  reviewer?: string;
 }
 
 export type TaskDraftResult =
@@ -149,6 +167,11 @@ export function draftOf(t: TaskRowData): TaskDraft {
   return {
     title: t.title ?? '',
     effort: t.effortDays == null ? '' : String(t.effortDays),
+    taskType: t.taskType ?? '',
+    workClass: t.workClass ?? '',
+    author: t.author ?? '',
+    executor: t.executor ?? '',
+    reviewer: t.reviewer ?? '',
   };
 }
 
@@ -170,6 +193,12 @@ export function validateTaskDraft(t: TaskRowData, d: TaskDraft): TaskDraftResult
     const n = Number(effortRaw);
     if (!Number.isFinite(n) || n < 0) return { ok: false, field: 'effort' };
     if (n !== t.effortDays) patch.effortDays = n;
+  }
+
+  // PU-25: выбранное значение уходит, только если оно другое; '' — «не трогать».
+  for (const k of TASK_PICK_FIELDS) {
+    const v = d[k] ?? '';
+    if (v !== '' && v !== (t[k] ?? '')) patch[k] = v;
   }
 
   return { ok: true, patch };

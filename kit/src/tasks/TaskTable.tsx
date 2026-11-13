@@ -24,7 +24,7 @@ import { hasKitString, kitT, useKitLang, type KitKey, type KitLang } from '../i1
 import { errorDetail } from '../states/loadState';
 import {
   draftOf, groupTasks, phaseLabel, TASK_GROUP_BYS, TASK_STATUSES, validateTaskDraft,
-  type TaskDraft, type TaskGroup, type TaskGroupBy, type TaskPatch, type TaskPhase, type TaskRowData, type TaskStatus,
+  type TaskDraft, type TaskGroup, type TaskGroupBy, type TaskPatch, type TaskPhase, type TaskPickField, type TaskRowData, type TaskStatus,
 } from './taskGroups';
 
 export interface TaskTableProps {
@@ -37,6 +37,12 @@ export interface TaskTableProps {
   onStatusChange?: (task: TaskRowData, status: TaskStatus) => Promise<void>;
   /** Сохранение правки в строке (только изменённые поля). Нет — правки нет. Отказ — throw. */
   onSave?: (task: TaskRowData, patch: TaskPatch) => Promise<void>;
+  /**
+   * PU-25: кандидаты на роли задачи (автор, исполнитель, ревьюер) — их даёт экран, kit личностей
+   * не знает. Зовётся при открытии правки строки. Нет — роли в правке только показываются;
+   * отказ — роли остаются текстом с причиной, свободного ввода нет (PU-17).
+   */
+  assigneeOptions?: (task: TaskRowData) => Promise<readonly KitDictItem[]>;
   /** Адрес паспорта задачи — id становится ссылкой. */
   hrefFor?: (task: TaskRowData) => string;
   /** Имя таблицы (caption). */
@@ -203,6 +209,7 @@ export const TASK_COLUMNS = [
   { key: 'title', labelKey: 'kit.tasks.col.title', locked: true },
   { key: 'phase', labelKey: 'kit.tasks.col.phase' },
   { key: 'effort', labelKey: 'kit.tasks.col.effort' },
+  { key: 'author', labelKey: 'kit.tasks.col.author' },
   { key: 'executor', labelKey: 'kit.tasks.col.executor' },
   { key: 'reviewer', labelKey: 'kit.tasks.col.reviewer' },
 ] as const satisfies readonly { key: string; labelKey: KitKey; locked?: boolean }[];
@@ -221,7 +228,7 @@ function taskRecord(tk: TaskRowData): KitRecord {
   };
 }
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, controls, className }: TaskTableProps) {
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, assigneeOptions, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, controls, className }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [colsOpen, setColsOpen] = useState(false);
@@ -448,6 +455,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   statuses={statuses}
                   onStatusChange={onStatusChange}
                   onSave={onSave}
+                  assigneeOptions={assigneeOptions}
                   href={hrefFor?.(task)}
                   sel={onBulkStatusChange ? { checked: selected.has(task.uid), onToggle: () => toggleSel(task.uid) } : undefined}
                 />
@@ -485,18 +493,21 @@ interface RowProps {
   statuses?: TaskTableProps['statuses'];
   onStatusChange?: TaskTableProps['onStatusChange'];
   onSave?: TaskTableProps['onSave'];
+  assigneeOptions?: TaskTableProps['assigneeOptions'];
   href?: string;
   /** Выбор строки (S9-06); нет — колонки выбора нет. */
   sel?: { checked: boolean; onToggle: () => void };
 }
 
-function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, href, sel }: RowProps) {
+function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, assigneeOptions, href, sel }: RowProps) {
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskDraft | null>(null);
   const [invalid, setInvalid] = useState<keyof TaskDraft | null>(null);
+  // PU-25: кандидаты на роли для открытой правки — список, причина отказа или «ещё грузятся».
+  const [people, setPeople] = useState<{ items: readonly KitDictItem[] } | { error: string } | null>(null);
   const firstInput = useRef<HTMLInputElement>(null);
   const menuId = `${useId()}-status`;
 
@@ -548,6 +559,18 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     setError(null);
     setInvalid(null);
     setDraft(draftOf(task));
+    setPeople(null);
+    if (assigneeOptions) {
+      assigneeOptions(task).then(
+        items => setPeople({ items }),
+        e => {
+          const detail = errorDetail(e) || String(e);
+          setPeople({ error: detail });
+          // Причина — один раз строкой ошибки ряда, а не в каждой ячейке роли.
+          setError(t('kit.tasks.pickFailed', { detail }));
+        },
+      );
+    }
   }
 
   function cancelEdit() {
@@ -599,7 +622,34 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
       onKeyDown={onInputKey}
     />
   );
-  const val = (v: string | null) => (v == null || v === '' ? <span className="sk-tasks__none">{dash}</span> : v);
+  const val = (v: string | null | undefined) => (v == null || v === '' ? <span className="sk-tasks__none">{dash}</span> : v);
+  // PU-25: выбор из списка. Текущее значение, которого нет среди вариантов, остаётся
+  // выбранным отдельным пунктом — иначе select молча показал бы первый вариант, и сохранение
+  // переписало бы роль. Пустое текущее — пункт «—»: «не трогать».
+  const pickSel = (field: TaskPickField, colLabel: KitKey, items: readonly KitDictItem[]) => {
+    const cur = draft?.[field] ?? '';
+    const orig = (task[field] ?? '') as string;
+    const extra = [orig, cur].filter((v, i, a) => v !== '' && a.indexOf(v) === i && !items.some(o => o.code === v));
+    return (
+      <select
+        className="sk-tasks__input sk-tasks__select"
+        aria-label={t(colLabel)}
+        value={cur}
+        disabled={busy}
+        onChange={e => { const v = e.target.value; setDraft(d => (d ? { ...d, [field]: v } : d)); }}
+        onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); } }}
+      >
+        {orig === '' && <option value="">{dash}</option>}
+        {extra.map(v => <option key={v} value={v}>{v}</option>)}
+        {items.map(o => <option key={o.code} value={o.code}>{o.title || o.code}</option>)}
+      </select>
+    );
+  };
+  const roleCell = (field: 'author' | 'executor' | 'reviewer', colLabel: KitKey) => {
+    if (!draft || !people) return val(task[field]);
+    if ('error' in people) return val(task[field]);
+    return pickSel(field, colLabel, people.items);
+  };
 
   // Ячейки по ключу колонки (S4-35): порядок и состав задаёт таблица, а строка
   // только знает, как рисуется каждая. Раньше ячейки шли жёсткой
@@ -662,12 +712,12 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     ),
     type: (
       <td key="type" className="sk-tasks__td sk-tasks__td--type">
-        <TypeCell code={task.taskType} items={dict?.taskType} t={t} />
+        {draft && dict?.taskType?.length ? pickSel('taskType', 'kit.tasks.col.type', dict.taskType) : <TypeCell code={task.taskType} items={dict?.taskType} t={t} />}
       </td>
     ),
     cls: (
       <td key="cls" className="sk-tasks__td sk-tasks__td--cls">
-        <ClassCell code={task.workClass} items={dict?.workClass} t={t} />
+        {draft && dict?.workClass?.length ? pickSel('workClass', 'kit.tasks.col.class', dict.workClass) : <ClassCell code={task.workClass} items={dict?.workClass} t={t} />}
       </td>
     ),
     id: (
@@ -688,13 +738,18 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     ),
     executor: (
       <td key="executor" className="sk-tasks__td">
-        {/* PU-17: роль — только выбором в паспорте задачи, не свободным текстом. */}
-        {val(task.executor)}
+        {/* PU-17: роль — только выбором из кандидатов, не свободным текстом (PU-25: и в строке). */}
+        {roleCell('executor', 'kit.tasks.col.executor')}
       </td>
     ),
     reviewer: (
       <td key="reviewer" className="sk-tasks__td">
-        {val(task.reviewer)}
+        {roleCell('reviewer', 'kit.tasks.col.reviewer')}
+      </td>
+    ),
+    author: (
+      <td key="author" className="sk-tasks__td">
+        {roleCell('author', 'kit.tasks.col.author')}
       </td>
     ),
   };

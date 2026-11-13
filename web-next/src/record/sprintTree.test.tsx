@@ -116,6 +116,18 @@ describe('sprintTreeOf · плоский список строк дерева', 
     expect(rows.find(r => r.kind === 'phase')?.progress).toBe('1/2');
     expect(rows.find(r => r.kind === 'sprint')?.progress).toBe('1/3');
   });
+
+  // PU-22: в «Код» строки фазы стоял её полный uid («SPRINT_X/PHASE_A») — он раздувал колонку.
+  // Фасад отдаёт короткий код фазы в values.code; uid остаётся ключом строки.
+  it('строка фазы: в «Код» — короткий код фазы, ключ — uid', () => {
+    const ph = { id: 'SPRINT_X/PHASE_A', title: 'Разведка', status: null as unknown as string,
+      values: { title: 'Разведка', code: 'Фаза A', progress: '0/0', valid_from: null } };
+    const { rows } = sprintTreeOf(sprint([part('phases', [ph]), part('tasks', [])]));
+    const r = rows.find(x => x.kind === 'phase')!;
+    expect(r.key).toBe('SPRINT_X/PHASE_A');
+    expect(r.code).toBe('Фаза A');
+    expect(r.title).toBe('Разведка');
+  });
 });
 
 function fakeWin(search = ''): UrlWindow {

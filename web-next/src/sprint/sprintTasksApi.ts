@@ -9,8 +9,9 @@
 //
 // Ошибки не глотаются: LoreHttpError несёт HTTP-статус, kit по нему отличает
 // «нет прав» (403) от сбоя, а errorDetail показывает «HTTP 409 · текст».
-import type { TaskPatch, TaskPhase, TaskRowData, TaskStatus, SliceCompletenessMeta } from '@seidr/kit';
+import type { KitDictItem, TaskPatch, TaskPhase, TaskRowData, TaskStatus, SliceCompletenessMeta } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { taskStatusCode } from '../tasks/taskRecord';
 
 const LORE = '/lore';
 
@@ -74,6 +75,7 @@ export interface SprintTaskApiRow {
   phase_uid: string | null;
   status_raw: string | null;
   effort_days: number | null;
+  author_agent?: string | null;
   executor_agent?: string | null;
   reviewer_agent?: string | null;
   task_type?: string | null;
@@ -97,9 +99,12 @@ export function toTaskRow(r: SprintTaskApiRow): TaskRowData {
     uid: r.task_uid,
     id: r.task_id,
     title: r.title ?? null,
-    status: r.status_raw ?? null,
+    // PU-25: срез отдаёт status_raw как в базе («✅ DONE»); kit знает статус только по коду —
+    // без перевода в код таблица и полоска счётчиков рисуют «?», а «готово» считает 0.
+    status: r.status_raw == null ? null : taskStatusCode(r.status_raw),
     phase: r.phase_uid ?? null,
     effortDays: typeof r.effort_days === 'number' ? r.effort_days : null,
+    author: r.author_agent ?? null,
     executor: r.executor_agent ?? null,
     reviewer: r.reviewer_agent ?? null,
     taskType: r.task_type ?? null,
@@ -142,5 +147,24 @@ export async function editTask(task: TaskRowData, patch: TaskPatch, f: typeof fe
     title: patch.title ?? task.title ?? '',
     note_md: null,
     effort_days: patch.effortDays ?? null,
+    // PU-25: выбранное в строке — кодами; роли сервер пишет рёбрами и отказывает незаявленным.
+    // Невыбранное в тело не кладём: поле роли в теле — приглашение к тексту (PU-17).
+    ...(patch.taskType ? { task_type: patch.taskType } : {}),
+    ...(patch.workClass ? { work_class: patch.workClass } : {}),
+    ...(patch.author ? { author_agent: patch.author } : {}),
+    ...(patch.executor ? { executor_agent: patch.executor } : {}),
+    ...(patch.reviewer ? { reviewer_agent: patch.reviewer } : {}),
   }, f);
+}
+
+/**
+ * PU-25: кандидаты на роли задачи — тот же срез task_identities, что у паспорта (S4-24): по
+ * задаче, потому что кандидаты зависят от её проекта. Отказ среза — ошибка наверх: «кандидатов
+ * нет» и «не прочитали» — разные ответы.
+ */
+export async function loadTaskAssignees(taskUid: string, f: typeof fetch = loreFetch): Promise<KitDictItem[]> {
+  const body = await get<SliceBody<Record<string, unknown>>>('/slice/task_identities', { id: taskUid }, undefined, f);
+  return (body.rows ?? [])
+    .map(r => ({ code: String(r.code ?? ''), title: String(r.title ?? r.code ?? '') }))
+    .filter(o => o.code !== '');
 }

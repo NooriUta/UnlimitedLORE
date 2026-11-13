@@ -105,6 +105,8 @@ final class LoreRecordValues {
         Map<String, Object> vals = new LinkedHashMap<>();
         vals.put("status", status);
         vals.put("title", title);
+        // PU-22: в «Код» дерева — короткий код фазы («Фаза A»), а не её uid.
+        vals.put("code", str(r.get("phase_id")));
         vals.put("progress", done + "/" + total);
         vals.put("valid_from", str(r.get("valid_from")));
         vals.put("summary_md", str(r.get("summary_md")));
