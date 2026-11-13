@@ -200,7 +200,7 @@ public class LoreModelStore {
             + "INSERT INTO KnowModelConfigHist SET state_uid = :sid, valid_from = :now, content = :content, "
             + "content_hash = :hash, reason = :reason" + ChangeAuthor.SET_SQL + ";"
             + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowModelConfig WHERE config_id = :id) "
-            + "TO (SELECT FROM KnowModelConfigHist WHERE state_uid = :sid);";
+            + "TO (SELECT FROM KnowModelConfigHist WHERE state_uid = :sid AND in('HAS_STATE').size() = 0);";
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("id", CONFIG_ID);
         p.put("fmt", LoreModelFile.FORMAT);
