@@ -64,7 +64,7 @@ describe('S7B-01 · конфиг модуля admin', () => {
     // S7B-31 п.1 (решение 1а): «Словари» — в «Языке графа», рядом с правилами CLAUDE:
     // правка справочника меняет подписи и цвета на каждом экране — это язык системы,
     // а группа получает тон риска, как «Доступ» (раньше — нейтральный успех).
-    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-rules']);
+    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-rules', 'adm-tidy']);
     expect(groups.find(g => g.id === 'adm-lang')!.tone).toBe('var(--wrn)');
     // Личные «Мои виды» и «Недавние» — про записи Forseti, в админке их нет.
     expect(cfg.menu.myViews).toBeFalsy();

@@ -1608,7 +1608,13 @@ final class LoreSchemaMigrations {
         // каноническое имя (AgentMachine.canon) с переносом USES_MACHINE; KnowActor.machine_id —
         // туда же, плюс опечатка lorecetus у Kimi. Идёт вместе с канонизацией входа (#1308):
         // раньше слитое пересоздавалось бы заголовком X-Lore-Machine. Идемпотентен.
-        new Step(82, 17, "java__machine_id_canon", List.of())
+        new Step(82, 17, "java__machine_id_canon", List.of()),
+
+        // SPRINT_UXR_POLISH_UAT_1113/PU-20 (решение владелицы 13.11, A1: «отдельный объект в бд»):
+        // отметки «не ссылка» раздела «Привести в порядок» — вершина LoreRefDismissal, ключ
+        // record_type|record_id|kind. Аддитивно, major 17. Идёт после V82 (PU-18, #1311).
+        // DDL рядом с логикой (MdRefDismissals).
+        new Step(83, 17, "ref_dismissal", MdRefDismissals.SCHEMA_SQL)
     );
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */

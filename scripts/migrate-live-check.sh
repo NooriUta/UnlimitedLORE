@@ -193,6 +193,23 @@ case "$o" in *'"ok"'*) ;; *) skip "open database $DB: $(printf '%s' "$o" | head 
 say "инвентарь ДО"
 $INV snapshot "$API" "$DB" "$REPORT_DIR/before.json" || skip "инвентарь ДО не снят"
 
+# Объявленная убыль из проверяемого кода (declared-decrease.tsv едет в PR вместе с
+# шагом): берутся только шаги НОВЕЕ схемы снимка — после выкатки шага на прод его
+# объявление перестаёт действовать само. На pull_request вход ALLOW_DECREASE пуст,
+# и без файла каждый PR со схемой краснел бы на чужом уже смерженном шаге (#1316).
+snap_ver="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["schema_version"] or 0)' "$REPORT_DIR/before.json")"
+for decl in "$SRC_DIR/scripts/migrate-live-check/declared-decrease.tsv" "$HERE/migrate-live-check/declared-decrease.tsv"; do
+  [ -f "$decl" ] || continue
+  while IFS=$'\t' read -r ver types why; do
+    case "$ver" in ''|\#*) continue ;; esac
+    [ "$ver" -gt "$snap_ver" ] 2>/dev/null || continue
+    case ",$ALLOW_DECREASE," in *",$types,"*) continue ;; esac
+    ALLOW_DECREASE="${ALLOW_DECREASE:+$ALLOW_DECREASE,}$types"
+    note "- объявлено в declared-decrease.tsv: V$ver — $types ($why)"
+  done < "$decl"
+  break
+done
+
 # ── 3. образ проверяемого кода ──────────────────────────────────────────────
 IMG="${IMAGE:-}"
 if [ -z "$IMG" ]; then
