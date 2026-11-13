@@ -43,7 +43,10 @@ class AgentProfilesMatchMatrixTest {
 
     /** Читающие инструменты — сервер GET не скоупит, в реестре записей их нет. */
     private static final Set<String> READ_TOOLS = Set.of(
-        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "graph", "metric_get", "bragi_search");
+        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "graph", "metric_get", "bragi_search",
+        // MCPV2 (13.11): добраны в agent-profiles как read-only — форма задач, допуски/справочник
+        // машин, вердикт полноты, версия сборки. Все GET, агентный фильтр записи их не скоупит.
+        "task_shape", "machine_acl", "harness_list", "quality_check", "lore_version");
 
     /**
      * Чтение графа — у КАЖДОГО профиля (README профилей: «reading the graph never needs
