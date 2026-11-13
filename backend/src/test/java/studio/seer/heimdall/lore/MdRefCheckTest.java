@@ -74,6 +74,20 @@ class MdRefCheckTest {
     }
 
     @Test
+    void dismissedKindLeavesCountersButIsListedAsHidden() {
+        List<MdRefCheck.Field> f = List.of(
+            new MdRefCheck.Field("KnowSpec", "SPEC-UC", "content_md", "UC-1 и UC-2 и PU-15", false, true));
+        Map<String, Object> out = MdRefCheck.compute(f, CTX, Map.of(), MdRefRules.defaults(),
+            Set.of(MdRefDismissals.key("KnowSpec", "SPEC-UC", "no_record")));
+        Map<String, Object> manual = (Map<String, Object>) out.get("manual");
+        assertEquals(1, manual.get("records"), "у записи остался код без спринта");
+        assertEquals(1, manual.get("places"), "места «записи нет» скрыты");
+        assertFalse(((Map<String, Object>) manual.get("groups")).containsKey("no_record"));
+        List<Map<String, Object>> hidden = (List<Map<String, Object>>) manual.get("dismissed");
+        assertEquals(List.of(Map.of("type", "KnowSpec", "id", "SPEC-UC", "kind", "no_record", "places", 2)), hidden);
+    }
+
+    @Test
     void deterministic() {
         List<MdRefCheck.Field> f = List.of(
             new MdRefCheck.Field("KnowTask", "SPRINT_B/PU-15", "note_md", "PU-15 ADR-LORE-050", false, true),

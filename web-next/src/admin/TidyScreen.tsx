@@ -7,17 +7,24 @@
 //     проверок уменьшается и возможность сделать речек» — группы по виду ошибки, строка = запись,
 //     «Перепроверить» у строки и для всего корпуса;
 //   • «внешние ссылки MD должно не быть багом и не быть лишним шумом» — их здесь нет вовсе;
-//   • «на проде все делается бэком с подтверждением через ui и логином человека» — применение
-//     пачки появится вторым шагом (dry_run → DiffPreview с вводом логина → BatchUndo).
-// Элементы — Seiðr kit (просьба владелицы): Pill, EmptyState, LoadError, Forbidden, Skeleton.
-import { useMemo, useState } from 'react';
-import { EmptyState, Forbidden, GameIcon, LoadError, Pill, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
+//   • «на проде все делается бэком с подтверждением через ui и логином человека» — пачку считает
+//     и пишет сервер; окно — kit DiffPreview с вводом своего логина, отмена — kit BatchUndo (15 минут).
+//   • Допущения 13.11: «не ссылка» — объект в БД; применяет суперадмин-человек; все 8 типов сразу.
+// Элементы — Seiðr kit (просьба владелицы): Pill, EmptyState, LoadError, Forbidden, Skeleton,
+// DiffPreview, BatchUndo, GameIcon.
+import { useEffect, useMemo, useState } from 'react';
+import {
+  BatchUndo, DiffPreview, EmptyState, Forbidden, GameIcon, LoadError, Pill, Skeleton,
+  useKitLang, useLoadState, useUrlParam, type DiffRow,
+} from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
 import { recordHref } from '../nav/loreRoutes';
+import { LoreHttpError } from '../api/loreSlice';
 import {
-  TIDY_KINDS, TIDY_RULES, defaultRules, fetchTidy, loreTypeOf, planFor, recheckAll, recheckRecord, rowsOfKind,
-  type TidyCheck, type TidyRow,
+  DISMISSABLE, TIDY_KINDS, TIDY_RULES, applyBatch, defaultRules, dismissKind, fetchTidy, loreTypeOf, planApply, planFor,
+  recheckAll, recheckRecord, rowsOfKind, undoBatch,
+  type TidyApplyAnswer, type TidyCheck, type TidyPlan, type TidyRow,
 } from './tidy';
 import './Admin.css';
 
@@ -28,7 +35,8 @@ export interface TidyScreenProps {
 /** Строк группы на экране сразу; дальше — «показать ещё». */
 export const TIDY_PAGE = 50;
 
-const reasonOf = (e: unknown) => (e instanceof Error ? e.message : undefined);
+const reasonOf = (e: unknown) =>
+  e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : undefined;
 const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
 export function TidyScreen({ fetchImpl }: TidyScreenProps) {
@@ -51,7 +59,7 @@ export function TidyScreen({ fetchImpl }: TidyScreenProps) {
   if (res.state === 'loading' && !data) body = <Skeleton lines={6} label={t('admin.tidy.loading')} />;
   else if (res.state === 'forbidden') body = <Forbidden reason={reasonOf(res.error)} />;
   else if (!data) body = <LoadError title={t('admin.tidy.failed')} error={res.error} onRetry={res.reload} />;
-  else body = <TidyBody check={data} onCheck={setFresh} fetchImpl={fetchImpl} />;
+  else body = <TidyBody check={data} onCheck={setFresh} onChanged={recheck} fetchImpl={fetchImpl} />;
 
   return (
     <section className="adm" aria-labelledby="adm-tidy-h" data-testid="adm-tidy">
@@ -76,22 +84,25 @@ export function TidyScreen({ fetchImpl }: TidyScreenProps) {
   );
 }
 
-function TidyBody({ check, onCheck, fetchImpl }: { check: TidyCheck; onCheck: (c: TidyCheck) => void; fetchImpl?: typeof fetch }) {
+function TidyBody({ check, onCheck, onChanged, fetchImpl }: {
+  check: TidyCheck; onCheck: (c: TidyCheck) => void; onChanged: () => void; fetchImpl?: typeof fetch;
+}) {
   const t = useAppT();
-  if (check.auto.edits === 0 && check.manual.records === 0) {
+  if (check.auto.edits === 0 && check.manual.records === 0 && check.manual.dismissed.length === 0) {
     return <div data-testid="adm-tidy-clean"><EmptyState title={t('admin.tidy.clean')} hint={t('admin.tidy.cleanHint')} /></div>;
   }
   return (
     <>
-      <AutoBlock check={check} />
+      {check.auto.edits > 0 && <AutoBlock check={check} onChanged={onChanged} fetchImpl={fetchImpl} />}
       <ManualBlock check={check} onCheck={onCheck} fetchImpl={fetchImpl} />
     </>
   );
 }
 
-function AutoBlock({ check }: { check: TidyCheck }) {
+function AutoBlock({ check, onChanged, fetchImpl }: { check: TidyCheck; onChanged: () => void; fetchImpl?: typeof fetch }) {
   const t = useAppT();
   const [enabled, setEnabled] = useState<Set<string>>(() => defaultRules(check));
+  const [open, setOpen] = useState(false);
   const plan = useMemo(() => planFor(check, enabled), [check, enabled]);
   const toggle = (k: string) => setEnabled(prev => {
     const n = new Set(prev);
@@ -113,7 +124,7 @@ function AutoBlock({ check }: { check: TidyCheck }) {
                 <tr key={k} data-rule={k} data-on={enabled.has(k) || undefined}>
                   <td>
                     <label className="adm-tidy-rule">
-                      <input type="checkbox" checked={enabled.has(k)} onChange={() => toggle(k)} data-testid={`adm-tidy-rule-${k}`} />
+                      <input type="checkbox" checked={enabled.has(k)} onChange={() => toggle(k)} disabled={open} data-testid={`adm-tidy-rule-${k}`} />
                       {t(`admin.tidy.rule.${k}` as AppKey)}
                     </label>
                     {k === 'lone_unique' && <Pill tone="wrn">{t('admin.tidy.rule.risky')}</Pill>}
@@ -128,19 +139,148 @@ function AutoBlock({ check }: { check: TidyCheck }) {
           </tbody>
         </table>
       </div>
-      <p className="adm-note" data-tone="inf" role="note" data-testid="adm-tidy-apply-next">{t('admin.tidy.auto.applyNext')}</p>
+      {!open ? (
+        <div className="adm-tidy-applybar">
+          <span className="adm-dim">{t('admin.tidy.apply.hint')}</span>
+          <button type="button" className="adm-btn" data-tone="acc" disabled={plan.edits === 0}
+            onClick={() => setOpen(true)} data-testid="adm-tidy-apply-open">
+            <GameIcon slug="broom" size={12} /> {t('admin.tidy.apply.open')}
+          </button>
+        </div>
+      ) : (
+        <ApplyPanel check={check} rules={[...enabled]} fetchImpl={fetchImpl}
+          onClose={() => setOpen(false)} onChanged={onChanged} />
+      )}
     </div>
+  );
+}
+
+type PlanState =
+  | { kind: 'loading' }
+  | { kind: 'ok'; plan: TidyPlan }
+  | { kind: 'forbidden'; reason: string }
+  | { kind: 'bad'; reason: string }
+  | { kind: 'error'; error: unknown };
+
+/**
+ * Окно применения — тот же путь, что у опасных правок ролей (DangerBatch): сервер считает план
+ * (dry_run), строки диффа по правилам с настоящим примером «было → станет», слово подтверждения —
+ * свой логин (его называет сервер), пачка одним вызовом, итог по каждому полю, отмена 15 минут.
+ */
+function ApplyPanel({ check, rules, fetchImpl, onClose, onChanged }: {
+  check: TidyCheck; rules: string[]; fetchImpl?: typeof fetch; onClose: () => void; onChanged: () => void;
+}) {
+  const t = useAppT();
+  const lang = useKitLang();
+  const [state, setState] = useState<PlanState>({ kind: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<TidyApplyAnswer | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const [undone, setUndone] = useState<string | null>(null);
+  const [undoError, setUndoError] = useState<string | null>(null);
+  const key = rules.slice().sort().join(',');
+
+  useEffect(() => {
+    let alive = true;
+    setState({ kind: 'loading' });
+    planApply(rules, { fetchImpl }).then(
+      plan => { if (alive) setState({ kind: 'ok', plan }); },
+      (e: unknown) => {
+        if (!alive) return;
+        if (e instanceof LoreHttpError && (e.status === 401 || e.status === 403)) setState({ kind: 'forbidden', reason: reasonOf(e) ?? '' });
+        else if (e instanceof LoreHttpError && e.status === 400) setState({ kind: 'bad', reason: reasonOf(e) ?? '' });
+        else setState({ kind: 'error', error: e });
+      },
+    );
+    return () => { alive = false; };
+  }, [key, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const rows: DiffRow[] = useMemo(() => {
+    if (state.kind !== 'ok') return [];
+    return state.plan.rules.filter(k => (check.auto.rules[k]?.edits ?? 0) > 0).map(k => {
+      const r = check.auto.rules[k];
+      const s = r.samples[0];
+      const base = { id: k, text: t(`admin.tidy.rule.${k}` as AppKey), detail: t('admin.tidy.apply.edits', { n: fmt(r.edits) }), check: { state: 'checked' as const } };
+      return s ? { ...base, kind: 'change' as const, from: s.old, to: s.new } : { ...base, kind: 'add' as const };
+    });
+  }, [state, check, t]);
+
+  const login = state.kind === 'ok' ? state.plan.login : null;
+
+  const apply = (chosen: readonly DiffRow[]) => {
+    if (applying || !login) return;
+    setApplying(true);
+    setApplyError(null);
+    applyBatch(chosen.map(r => r.id), login, { fetchImpl }).then(
+      a => { setAnswer(a); setApplying(false); onChanged(); },
+      (e: unknown) => { setApplyError(reasonOf(e) ?? ''); setApplying(false); },
+    );
+  };
+
+  const undo = (id: string) => {
+    if (!login || undoing) return;
+    setUndoing(true);
+    setUndoError(null);
+    undoBatch(id, login, { fetchImpl }).then(
+      r => { setUndone(t('admin.tidy.apply.undone', { restored: fmt(r.restored), changed: fmt(r.changedAfter) })); setUndoing(false); onChanged(); },
+      (e: unknown) => { setUndoError(t('admin.tidy.apply.undoFailed', { reason: reasonOf(e) ?? '' })); setUndoing(false); },
+    );
+  };
+
+  return (
+    <section className="adm-danger" aria-labelledby="adm-tidy-apply-h" data-testid="adm-tidy-apply">
+      <h3 id="adm-tidy-apply-h" className="adm-danger__h">{t('admin.tidy.apply.title')}</h3>
+      {state.kind === 'loading' && <Skeleton lines={3} label={t('admin.tidy.apply.loading')} />}
+      {state.kind === 'forbidden' && (
+        <div data-testid="adm-tidy-apply-forbidden">
+          <Forbidden title={t('admin.tidy.apply.forbidden')} reason={state.reason} />
+        </div>
+      )}
+      {state.kind === 'bad' && <p className="adm-note" data-tone="dng" role="alert">{t('admin.tidy.apply.bad', { reason: state.reason })}</p>}
+      {state.kind === 'error' && <LoadError error={state.error} onRetry={() => setAttempt(a => a + 1)} />}
+      {state.kind === 'ok' && !answer && (
+        <>
+          <p className="adm-dim" data-testid="adm-tidy-apply-summary">
+            {t('admin.tidy.apply.summary', { edits: fmt(state.plan.edits), records: fmt(state.plan.records) })}
+          </p>
+          {!login ? (
+            <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-tidy-apply-human">{t('admin.tidy.apply.humanOnly')}</p>
+          ) : rows.length === 0 ? (
+            <p className="adm-note" role="status">{t('admin.tidy.apply.nothing')}</p>
+          ) : (
+            <DiffPreview key={`${key}|${attempt}`} rows={rows} onApply={apply} busy={applying}
+              label={t('admin.tidy.apply.diff')} lang={lang}
+              confirm={{ word: login, label: t('admin.tidy.apply.confirm', { login }) }} />
+          )}
+          {applyError && <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-tidy-apply-error">{t('admin.tidy.apply.error', { reason: applyError })}</p>}
+        </>
+      )}
+      {answer && (
+        <div data-testid="adm-tidy-apply-done">
+          <BatchUndo batch={{ id: answer.batchId, applied: answer.applied, total: answer.applied + answer.failed, failed: answer.failures, undoUntil: answer.undoUntil }}
+            onUndo={undo} undoing={undoing} undone={undone !== null} undoError={undoError} lang={lang} />
+          {undone && <p className="adm-note" data-tone="inf" role="status">{undone}</p>}
+          <p className="adm-sub">{t('admin.tidy.apply.logged')} <span className="adm-mono">{answer.batchId}</span></p>
+        </div>
+      )}
+      <button type="button" className="adm-btn" onClick={onClose} data-testid="adm-tidy-apply-close">{t('admin.tidy.apply.close')}</button>
+    </section>
   );
 }
 
 function ManualBlock({ check, onCheck, fetchImpl }: { check: TidyCheck; onCheck: (c: TidyCheck) => void; fetchImpl?: typeof fetch }) {
   const t = useAppT();
-  const kinds = TIDY_KINDS.filter(k => (check.manual.groups[k]?.records ?? 0) > 0);
+  const kinds = TIDY_KINDS.filter(k => (check.manual.groups[k]?.records ?? 0) > 0 || check.manual.dismissed.some(d => d.kind === k));
   const [param, setParam] = useUrlParam('tidy');
   const kind = param && kinds.includes(param as (typeof kinds)[number]) ? param : kinds[0] ?? null;
   const [limit, setLimit] = useState(TIDY_PAGE);
   const [status, setStatus] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
   const rows = kind ? rowsOfKind(check, kind) : [];
+  const hidden = kind ? check.manual.dismissed.filter(d => d.kind === kind) : [];
+  const canDismiss = kind !== null && DISMISSABLE.includes(kind);
 
   const recheckOne = async (row: TidyRow) => {
     setStatus(null);
@@ -155,6 +295,20 @@ function ManualBlock({ check, onCheck, fetchImpl }: { check: TidyCheck; onCheck:
     }
   };
 
+  const mark = async (type: string, id: string, action: 'add' | 'remove') => {
+    if (!kind) return;
+    setStatus(null);
+    try {
+      const next = await dismissKind(type, id, kind, action, { fetchImpl });
+      if (next) onCheck(next);
+      setStatus(action === 'add'
+        ? t('admin.tidy.row.dismissed', { id, before: fmt(check.manual.records), after: fmt(next?.manual.records ?? check.manual.records) })
+        : t('admin.tidy.hidden.restored', { id }));
+    } catch (e) {
+      setStatus(t('admin.tidy.row.dismissFailed', { id, reason: reasonOf(e) ?? '' }));
+    }
+  };
+
   return (
     <div className="adm-card adm-tidy-manual" data-testid="adm-tidy-manual">
       <h3 className="adm-sub">{t('admin.tidy.manual.title', { records: fmt(check.manual.records), places: fmt(check.manual.places) })}</h3>
@@ -163,20 +317,51 @@ function ManualBlock({ check, onCheck, fetchImpl }: { check: TidyCheck; onCheck:
           <div className="adm-chips" role="radiogroup" aria-label={t('admin.tidy.manual.groups')}>
             {kinds.map(k => (
               <button key={k} type="button" role="radio" className="adm-chip" aria-checked={k === kind} aria-pressed={k === kind}
-                data-testid={`adm-tidy-kind-${k}`} onClick={() => { setParam(k); setLimit(TIDY_PAGE); }}>
-                {t(`admin.tidy.kind.${k}` as AppKey)} <b>{fmt(check.manual.groups[k].records)}</b>
+                data-testid={`adm-tidy-kind-${k}`} onClick={() => { setParam(k); setLimit(TIDY_PAGE); setShowHidden(false); }}>
+                {t(`admin.tidy.kind.${k}` as AppKey)} <b>{fmt(check.manual.groups[k]?.records ?? 0)}</b>
               </button>
             ))}
           </div>
           {kind && <p className="adm-dim">{t(`admin.tidy.fix.${kind}` as AppKey)}</p>}
+          {canDismiss && (
+            <label className="adm-tidy-rule">
+              <input type="checkbox" checked={showHidden} onChange={e => setShowHidden(e.target.checked)} data-testid="adm-tidy-hidden-toggle" />
+              {t('admin.tidy.hidden.toggle')} <b>{fmt(hidden.length)}</b>
+            </label>
+          )}
           {status && <p className="adm-note" data-tone="inf" role="status" data-testid="adm-tidy-status">{status}</p>}
-          <ul className="adm-tidy-rows" data-testid="adm-tidy-rows">
-            {rows.slice(0, limit).map(r => <TidyRowView key={`${r.type}|${r.id}`} row={r} kind={kind!} onRecheck={() => recheckOne(r)} />)}
-          </ul>
-          {rows.length > limit && (
-            <button type="button" className="adm-btn" onClick={() => setLimit(l => l + TIDY_PAGE)} data-testid="adm-tidy-more">
-              {t('admin.tidy.manual.more', { shown: fmt(limit), total: fmt(rows.length) })}
-            </button>
+          {showHidden ? (
+            <ul className="adm-tidy-rows" data-testid="adm-tidy-hidden">
+              {hidden.length === 0 && <li className="adm-dim adm-tidy-row__head">{t('admin.tidy.hidden.empty')}</li>}
+              {hidden.map(d => (
+                <li key={`${d.type}|${d.id}`} className="adm-tidy-row" data-testid="adm-tidy-hidden-row" data-id={d.id}>
+                  <div className="adm-tidy-row__head">
+                    <span />
+                    <span className="adm-mono adm-tidy-id" title={d.id}>{d.id}</span>
+                    <span className="adm-dim">{t(`admin.tidy.type.${d.type}` as AppKey)}</span>
+                    <span className="adm-tidy-num">{t('admin.tidy.row.places', { n: fmt(d.places) })}</span>
+                    <span />
+                    <span className="adm-tidy-acts">
+                      <button type="button" className="adm-btn" onClick={() => mark(d.type, d.id, 'remove')} data-testid="adm-tidy-restore">{t('admin.tidy.hidden.restore')}</button>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <>
+              <ul className="adm-tidy-rows" data-testid="adm-tidy-rows">
+                {rows.slice(0, limit).map(r => (
+                  <TidyRowView key={`${r.type}|${r.id}`} row={r} kind={kind!} onRecheck={() => recheckOne(r)}
+                    onDismiss={canDismiss ? () => mark(r.type, r.id, 'add') : undefined} />
+                ))}
+              </ul>
+              {rows.length > limit && (
+                <button type="button" className="adm-btn" onClick={() => setLimit(l => l + TIDY_PAGE)} data-testid="adm-tidy-more">
+                  {t('admin.tidy.manual.more', { shown: fmt(limit), total: fmt(rows.length) })}
+                </button>
+              )}
+            </>
           )}
         </>
       )}
@@ -184,7 +369,7 @@ function ManualBlock({ check, onCheck, fetchImpl }: { check: TidyCheck; onCheck:
   );
 }
 
-function TidyRowView({ row, kind, onRecheck }: { row: TidyRow; kind: string; onRecheck: () => void }) {
+function TidyRowView({ row, kind, onRecheck, onDismiss }: { row: TidyRow; kind: string; onRecheck: () => void; onDismiss?: () => void }) {
   const t = useAppT();
   const [open, setOpen] = useState(false);
   const loreType = loreTypeOf(row.type);
@@ -206,6 +391,7 @@ function TidyRowView({ row, kind, onRecheck }: { row: TidyRow; kind: string; onR
             ? <a className="adm-btn" href={href} target="_blank" rel="noopener noreferrer" data-testid="adm-tidy-open">{t('admin.tidy.row.open')} ↗</a>
             : <span className="adm-dim" title={t('admin.tidy.row.noPassportHint')}>{t('admin.tidy.row.noPassport')}</span>}
           <button type="button" className="adm-btn" onClick={onRecheck} data-testid="adm-tidy-recheck">{t('admin.tidy.row.recheck')}</button>
+          {onDismiss && <button type="button" className="adm-btn" onClick={onDismiss} data-testid="adm-tidy-dismiss">{t('admin.tidy.row.dismiss')}</button>}
         </span>
       </div>
       {open && (

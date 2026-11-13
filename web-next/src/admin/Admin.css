@@ -181,3 +181,5 @@
   .adm-tidy-id { white-space: normal; word-break: break-all; }
   .adm-tidy-kinds, .adm-tidy-acts { grid-column: 1 / -1; justify-content: flex-start; }
 }
+.adm-tidy-applybar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.adm-btn[data-tone='acc'] { border-color: var(--acc); color: var(--acc); }

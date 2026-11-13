@@ -1601,7 +1601,14 @@ final class LoreSchemaMigrations {
         // SPRINT_UXR_S7B_ADMIN/S7B-ACT-1 (слово владелицы 11.11: «считать активной в течении — от часа
         // после последнего вызова до суток»): окно активности машины и окна по harness — свойства
         // актора-машины (client_id minilore-link-*). Аддитивно, major 17. DDL рядом с логикой (MachineActivity).
-        new Step(81, 17, "machine_activity_window", MachineActivity.SCHEMA_SQL)
+        new Step(81, 17, "machine_activity_window", MachineActivity.SCHEMA_SQL),
+
+        // SPRINT_UXR_POLISH_UAT_1113/PU-20 (решение владелицы 13.11, A1: «отдельный объект в бд»):
+        // отметки «не ссылка» раздела «Привести в порядок» — вершина LoreRefDismissal, ключ
+        // record_type|record_id|kind. Аддитивно, major 17. V82 занят PR #1311 (PU-18, ждёт «да»
+        // владелицы); раннер накатывает недостающие шаги по набору версий, порядок мержа не важен.
+        // DDL рядом с логикой (MdRefDismissals).
+        new Step(83, 17, "ref_dismissal", MdRefDismissals.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */

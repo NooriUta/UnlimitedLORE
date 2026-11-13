@@ -29,8 +29,14 @@ export interface TidyCheck {
   tookMs: number | null;
   scanned: { records: number; fields: number };
   auto: { edits: number; records: number; rules: Record<string, TidyRuleStat>; signatures: Record<string, number> };
-  manual: { records: number; places: number; groups: Record<string, { records: number; places: number }>; rows: TidyRow[] };
+  manual: { records: number; places: number; groups: Record<string, { records: number; places: number }>; rows: TidyRow[]; dismissed: TidyDismissed[] };
 }
+
+/** Отметка «не ссылка»: вид мест записи скрыт из счётчика, текст не менялся. */
+export interface TidyDismissed { type: string; id: string; kind: string; places: number }
+
+/** Виды мест, которые можно отметить «не ссылка» (как MdRefDismissals.KINDS на сервере). */
+export const DISMISSABLE: readonly string[] = ['no_record', 'backtick', 'unknown'];
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Obj) : {});
@@ -69,7 +75,10 @@ export function parseTidy(raw: unknown): TidyCheck {
     tookMs: typeof r.took_ms === 'number' ? r.took_ms : null,
     scanned: { records: num(scanned.records), fields: num(scanned.fields) },
     auto: { edits: num(auto.edits), records: num(auto.records), rules, signatures },
-    manual: { records: num(manual.records), places: num(manual.places), groups, rows },
+    manual: {
+      records: num(manual.records), places: num(manual.places), groups, rows,
+      dismissed: arr(manual.dismissed).map(x => { const o = obj(x); return { type: str(o.type), id: str(o.id), kind: str(o.kind), places: num(o.places) }; }),
+    },
   };
 }
 
@@ -127,4 +136,64 @@ export async function recheckRecord(type: string, id: string, opts: FetchOptions
   const raw = obj(await getJson(`/lore/admin/tidy/record?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`, opts));
   const rec = obj(raw.record);
   return { check: parseTidy(raw), clean: rec.row == null, found: rec.found === true };
+}
+
+// ───────────────────────────── применение пачкой ─────────────────────────────
+
+async function postBody(url: string, body: unknown, opts: FetchOptions): Promise<unknown> {
+  const doFetch = opts.fetchImpl ?? loreFetch;
+  const res = await doFetch(url, {
+    method: 'POST', signal: opts.signal,
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!(res.headers.get('Content-Type') ?? '').includes('json')) throw new LoreHttpError(res.status, 'NON_JSON', res.statusText);
+  const b = (await res.json()) as { error?: string; detail?: string };
+  if (!res.ok) throw new LoreHttpError(res.status, b?.error ?? '', b?.detail ?? '');
+  return b;
+}
+
+export interface TidyDiffRow { type: string; id: string; field: string; rules: string[]; before: string; after: string }
+
+/** Пробный прогон: план без записи и логин, которым подтверждают (null — вызывающий не человек). */
+export interface TidyPlan { login: string | null; records: number; fields: number; edits: number; rules: string[]; diff: TidyDiffRow[] }
+
+export interface TidyApplyAnswer {
+  batchId: string; applied: number; failed: number; undoUntil: string | null;
+  failures: { id: string; text: string; reason: string }[];
+}
+
+export async function planApply(rules: readonly string[], opts: FetchOptions = {}): Promise<TidyPlan> {
+  const o = obj(await postBody('/lore/admin/tidy/apply', { rules, dry_run: true }, opts));
+  return {
+    login: typeof o.login === 'string' && o.login ? o.login : null,
+    records: num(o.records), fields: num(o.fields), edits: num(o.edits), rules: arr(o.rules).map(str),
+    diff: arr(o.diff).map(x => { const d = obj(x); return { type: str(d.type), id: str(d.id), field: str(d.field), rules: arr(d.rules).map(str), before: str(d.before), after: str(d.after) }; }),
+  };
+}
+
+function parseApplyAnswer(raw: unknown): TidyApplyAnswer {
+  const o = obj(raw);
+  const failures = arr(o.items).map(obj).filter(i => i.result === 'failed').map(i => {
+    const err = obj(i.error);
+    return { id: `${str(i.type)}|${str(i.id)}|${str(i.field)}`, text: `${str(i.id)} · ${str(i.field)}`, reason: str(err.detail || err.error || i.status) };
+  });
+  return { batchId: str(o.batch_id), applied: num(o.applied ?? o.restored), failed: num(o.failed), undoUntil: typeof o.undo_until === 'string' ? o.undo_until : null, failures };
+}
+
+/** Применить пачку: правила и логин — слово подтверждения (сервер сверит со входом). */
+export async function applyBatch(rules: readonly string[], login: string, opts: FetchOptions = {}): Promise<TidyApplyAnswer> {
+  return parseApplyAnswer(await postBody('/lore/admin/tidy/apply', { rules, confirm_login: login }, opts));
+}
+
+/** Отменить пачку (15 минут): возвращаются только тексты, которые после пачки никто не правил. */
+export async function undoBatch(batchId: string, login: string, opts: FetchOptions = {}): Promise<{ restored: number; changedAfter: number; failed: number }> {
+  const o = obj(await postBody('/lore/admin/tidy/apply', { undo_of: batchId, confirm_login: login }, opts));
+  return { restored: num(o.restored), changedAfter: num(o.changed_after), failed: num(o.failed) };
+}
+
+/** «Не ссылка» — отметить вид мест записи (или снять отметку); ответ — новый результат проверки, если он был. */
+export async function dismissKind(type: string, id: string, kind: string, action: 'add' | 'remove', opts: FetchOptions = {}): Promise<TidyCheck | null> {
+  const o = obj(await postBody('/lore/admin/tidy/dismiss', { type, id, kind, action }, opts));
+  return o.manual ? parseTidy(o) : null;
 }

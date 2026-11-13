@@ -44,10 +44,18 @@ const CHECK = {
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
-function fake(o: { getStatus?: number; recheck?: unknown; recheckStatus?: number; record?: unknown } = {}) {
-  const calls: { url: string; method: string }[] = [];
+function fake(o: { getStatus?: number; recheck?: unknown; recheckStatus?: number; record?: unknown;
+  plan?: unknown; planStatus?: number; apply?: unknown; undo?: unknown; dismiss?: unknown } = {}) {
+  const calls: { url: string; method: string; body?: Record<string, unknown> }[] = [];
   const f = vi.fn(async (url: string, init?: RequestInit) => {
-    calls.push({ url, method: init?.method ?? 'GET' });
+    const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
+    calls.push({ url, method: init?.method ?? 'GET', body });
+    if (url === '/lore/admin/tidy/apply') {
+      if (body?.dry_run) return o.planStatus ? json({ error: 'FORBIDDEN', detail: 'superadmin only' }, o.planStatus) : json(o.plan ?? PLAN);
+      if (body?.undo_of) return json(o.undo ?? { ok: true, restored: 3, changed_after: 1, failed: 0, items: [] });
+      return json(o.apply ?? APPLIED);
+    }
+    if (url === '/lore/admin/tidy/dismiss') return json(o.dismiss ?? { ok: true, dismissal_key: 'k' });
     if (url === '/lore/admin/tidy') return o.getStatus ? json({ error: 'UPSTREAM', detail: 'ArcadeDB 503' }, o.getStatus) : json(CHECK);
     if (url === '/lore/admin/tidy/recheck') return o.recheckStatus ? json({ error: 'UPSTREAM', detail: 'ArcadeDB 503' }, o.recheckStatus) : json(o.recheck ?? CHECK);
     if (url.startsWith('/lore/admin/tidy/record')) return json(o.record ?? CHECK);
@@ -55,6 +63,12 @@ function fake(o: { getStatus?: number; recheck?: unknown; recheckStatus?: number
   }) as unknown as typeof fetch;
   return { f, calls };
 }
+const PLAN = { ok: true, dry_run: true, login: 'omiloreadmin', rules: ['shape', 'lone_own_sprint'], records: 5, fields: 5, edits: 26, diff: [] };
+const APPLIED = {
+  batch_id: 'tb-1794580000000-0a1b2c3d', ok: true, dry_run: false, applied: 4, failed: 1, atomic: false,
+  undo_until: '2099-01-01T00:00:00Z',
+  items: [{ type: 'KnowTask', id: 'SPRINT_A/X-1', field: 'note_md', status: 409, result: 'failed', error: { error: 'CONFLICT', detail: 'текст менялся после проверки' } }],
+};
 const mount = (f: typeof fetch) => render(<KitLangProvider lang="ru"><TidyScreen fetchImpl={f} /></KitLangProvider>);
 
 describe('модель', () => {
@@ -162,9 +176,68 @@ describe('экран', () => {
     expect((await screen.findByTestId('adm-tidy-clean')).textContent).toContain('Всё чисто');
   });
 
-  it('применение пачкой честно названо следующим шагом, кнопки «применить» нет', async () => {
+  it('применение: пробный прогон сервера → дифф по правилам → логин → пачка → отмена', async () => {
+    const { f, calls } = fake();
+    mount(f);
+    fireEvent.click(await screen.findByTestId('adm-tidy-apply-open'));
+    expect((await screen.findByTestId('adm-tidy-apply-summary')).textContent).toContain('26 правок в 5 записях');
+    const dry = calls.find(c => c.url === '/lore/admin/tidy/apply' && c.body?.dry_run)!;
+    expect(dry.body!.rules).toEqual(['shape', 'lone_own_sprint']);
+    expect(screen.getByTestId('kit-diff-row-shape')).toBeTruthy();
+    expect(screen.queryByTestId('kit-diff-row-lone_unique')).toBeNull();
+    const btn = screen.getByTestId('kit-diff-apply');
+    // Без своего логина кнопка заперта (kit: aria-disabled) и запрос не уходит.
+    expect(btn.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(btn);
+    expect(calls.some(c => c.body?.confirm_login)).toBe(false);
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'omiloreadmin' } });
+    expect(btn.getAttribute('aria-disabled')).toBeNull();
+    fireEvent.click(btn);
+    expect((await screen.findByTestId('kit-batch-summary')).textContent).toContain('4');
+    expect(screen.getByTestId('kit-batch-failed').textContent).toContain('текст менялся после проверки');
+    const sent = calls.find(c => c.url === '/lore/admin/tidy/apply' && c.body?.confirm_login && !c.body?.undo_of)!;
+    expect(sent.body).toEqual({ rules: ['shape', 'lone_own_sprint'], confirm_login: 'omiloreadmin' });
+    await waitFor(() => expect(calls.some(c => c.url === '/lore/admin/tidy/recheck')).toBe(true));
+    fireEvent.click(screen.getByTestId('kit-batch-undo'));
+    expect((await screen.findByText(/Пачка отменена: вернули 3/)).textContent).toContain('правленные после пачки не тронуты — 1');
+    expect(calls.find(c => c.body?.undo_of)!.body).toEqual({ undo_of: APPLIED.batch_id, confirm_login: 'omiloreadmin' });
+  });
+
+  it('применение: сервер не видит человека — окно говорит это словами, поля подтверждения нет', async () => {
+    mount(fake({ plan: { ...PLAN, login: null } }).f);
+    fireEvent.click(await screen.findByTestId('adm-tidy-apply-open'));
+    expect((await screen.findByTestId('adm-tidy-apply-human')).textContent).toContain('только человек');
+    expect(screen.queryByTestId('kit-diff-confirm')).toBeNull();
+  });
+
+  it('применение: не суперадмин — запрет назван', async () => {
+    mount(fake({ planStatus: 403 }).f);
+    fireEvent.click(await screen.findByTestId('adm-tidy-apply-open'));
+    expect((await screen.findByTestId('adm-tidy-apply-forbidden')).textContent).toContain('суперадмин');
+  });
+
+  it('«Не ссылка»: отметка уходит на сервер, строка — в «скрытые», «Вернуть» снимает отметку', async () => {
+    const after = structuredClone(CHECK) as typeof CHECK & { manual: { dismissed?: unknown[] } };
+    after.manual.groups = { ambiguous_code: { records: 2, places: 4 } } as typeof CHECK.manual.groups;
+    after.manual.rows = after.manual.rows.map(r => r.id === 'SPEC-ADMIN-LORE-UC'
+      ? { ...r, places: 1, by_kind: { ambiguous_code: 1 }, issues: r.issues.filter(i => i.kind !== 'no_record') } : r);
+    after.manual.places = 4;
+    after.manual.dismissed = [{ type: 'KnowSpec', id: 'SPEC-ADMIN-LORE-UC', kind: 'no_record', places: 2 }];
+    window.history.replaceState(null, '', '/?mod=admin&sec=adm-tidy&tidy=no_record');
+    const { f, calls } = fake({ dismiss: { ...after, dismissal_key: 'k' } });
+    mount(f);
+    fireEvent.click(await screen.findByTestId('adm-tidy-dismiss'));
+    expect((await screen.findByTestId('adm-tidy-status')).textContent).toContain('отмечены «не ссылка»');
+    expect(calls.find(c => c.url === '/lore/admin/tidy/dismiss')!.body).toEqual({ type: 'KnowSpec', id: 'SPEC-ADMIN-LORE-UC', kind: 'no_record', action: 'add' });
+    fireEvent.click(screen.getByTestId('adm-tidy-hidden-toggle'));
+    expect(screen.getAllByTestId('adm-tidy-hidden-row').map(r => r.getAttribute('data-id'))).toEqual(['SPEC-ADMIN-LORE-UC']);
+    fireEvent.click(screen.getByTestId('adm-tidy-restore'));
+    await waitFor(() => expect(calls.filter(c => c.url === '/lore/admin/tidy/dismiss').pop()!.body!.action).toBe('remove'));
+  });
+
+  it('«Не ссылка» есть только у видов, которые бывают не ссылкой', async () => {
     mount(fake().f);
-    expect(await screen.findByTestId('adm-tidy-apply-next')).toBeTruthy();
-    await waitFor(() => expect(screen.queryByRole('button', { name: /Применить/ })).toBeNull());
+    await screen.findAllByTestId('adm-tidy-row');
+    expect(screen.queryByTestId('adm-tidy-dismiss')).toBeNull();   // группа «код без спринта»
   });
 });
