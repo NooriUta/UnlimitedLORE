@@ -118,16 +118,15 @@ function byStatus(sorted: readonly TaskRowData[], prefix: string): TaskGroup[] {
 export interface TaskDraft {
   title: string;
   effort: string;
-  executor: string;
-  reviewer: string;
 }
 
-/** Изменённые поля — то, что уйдёт в POST /lore/task/edit. */
+/**
+ * Изменённые поля — то, что уйдёт в POST /lore/task/edit. Ролей здесь нет (PU-17): роль задачи —
+ * ребро заявленной личности и меняется только выбором из кандидатов в паспорте задачи.
+ */
 export interface TaskPatch {
   title?: string;
   effortDays?: number;
-  executor?: string;
-  reviewer?: string;
 }
 
 export type TaskDraftResult =
@@ -138,8 +137,6 @@ export function draftOf(t: TaskRowData): TaskDraft {
   return {
     title: t.title ?? '',
     effort: t.effortDays == null ? '' : String(t.effortDays),
-    executor: t.executor ?? '',
-    reviewer: t.reviewer ?? '',
   };
 }
 
@@ -163,12 +160,5 @@ export function validateTaskDraft(t: TaskRowData, d: TaskDraft): TaskDraftResult
     if (n !== t.effortDays) patch.effortDays = n;
   }
 
-  for (const f of ['executor', 'reviewer'] as const) {
-    const v = d[f].trim();
-    const was = (t[f] ?? '').trim();
-    if (v === was) continue;
-    if (v === '') return { ok: false, field: f };
-    patch[f] = v;
-  }
   return { ok: true, patch };
 }
