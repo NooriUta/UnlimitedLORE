@@ -145,6 +145,14 @@ describe('модель журнала · строка', () => {
     expect(d.rows[2].ts).toBe(TS);
   });
 
+  // SPRINT_UXR_POLISH_UAT_1113/PU-03: MetricSnapshot — TIMESERIES, и ts из базы
+  // приходит ISO-строкой ("2026-11-13T12:30:54.337Z"), а не числом. Фикстура с
+  // числом прятала то, что на стенде у ВСЕХ записей было «время не записано».
+  it('ts ISO-строкой (как отдаёт TIMESERIES) читается моментом, а не «не записано»', () => {
+    const d = parseActions({ rows: [{ ...ROWS[0], ts: new Date(TS).toISOString() }] });
+    expect(d.rows[0].ts).toBe(TS);
+  });
+
   it('пачка: id формы rb-<13 цифр>-<8 hex>; всё прочее — не пачка', () => {
     expect(isBatchId(BATCH)).toBe(true);
     expect(isBatchId('rb-176-ab12cd34')).toBe(false);
@@ -250,6 +258,22 @@ describe('экран журнала · честные состояния', () =>
     expect(within(rows[0]).getByTestId('adm-log-ts').textContent).toContain('2026-11-10 09:31');
     expect(rows[2].textContent).not.toContain('1970');
     expect(within(rows[2]).getByTestId('adm-log-ts').textContent).toMatch(/не записано/i);
+  });
+
+  it('PU-03: время ISO-строкой от сервера показано временем', async () => {
+    const iso = { ...BODY, rows: [{ ...ROWS[1], ts: new Date(TS).toISOString() }] };
+    mount(fake({ body: iso }).f);
+    const rows = await screen.findAllByTestId(/^adm-log-row-/);
+    expect(within(rows[0]).getByTestId('adm-log-ts').textContent).toContain('2026-11-10 09:31');
+  });
+
+  it('PU-03: путь эндпоинта вместо объекта — «объект не записан», путь в подсказке', async () => {
+    const path = { ...BODY, rows: [{ ...ROWS[1], entity_id: '/lore/user/role' }] };
+    mount(fake({ body: path }).f);
+    const rows = await screen.findAllByTestId(/^adm-log-row-/);
+    const ent = within(rows[0]).getByTestId('adm-log-entity');
+    expect(ent.textContent).toMatch(/объект не записан/i);
+    expect(ent.getAttribute('title')).toContain('/lore/user/role');
   });
 
   it('«сколько всего не знаем» сказано словами и не притворяется нулём', async () => {

@@ -16,7 +16,7 @@ import { useAppT, type AppKey } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
   ACTION_AXES, ACTION_FAMILIES, ACTION_LIMITS, actionTime, actionsSearch, badParamsOf, EMPTY_ACTIONS_QUERY,
-  fetchActions, fetchBatch, hasActionFilters, outcomeOf, type ActionsData, type ActionsQuery, type BatchData,
+  fetchActions, fetchBatch, hasActionFilters, isEndpointPath, outcomeOf, type ActionsData, type ActionsQuery, type BatchData,
   type BatchState,
 } from './actions';
 import { DangerBatch } from './DangerBatch';
@@ -188,7 +188,16 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
                           )}
                         </td>
                         <td>{label(t, FAMILY_LABEL, r.family)}</td>
-                        <th scope="row"><span className="adm-mono">{r.entity_id ?? '—'}</span></th>
+                        <th scope="row">
+                          {isEndpointPath(r.entity_id) ? (
+                            // PU-03: путь эндпоинта — «куда звали», а не «что изменили».
+                            <span className="adm-missing" data-testid="adm-log-entity" title={r.entity_id ?? ''}>
+                              {t('admin.log.entity.path')}
+                            </span>
+                          ) : (
+                            <span className="adm-mono" data-testid="adm-log-entity">{r.entity_id ?? '—'}</span>
+                          )}
+                        </th>
                         <td>
                           {r.axis === 'agent' && (() => { const h = callerHarness(r.caller, agents); return h && <HarnessMark logo={h.logo} label={h.label} />; })()}
                           {r.caller ?? <span className="adm-missing">{t('admin.log.caller.none')}</span>}

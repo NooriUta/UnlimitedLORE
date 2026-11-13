@@ -27,7 +27,7 @@ class AgentMachineTest {
     @Test
     void agentWithMachineHeader_carriesMachine_noWarning() {
         AgentMachine.Verdict v = AgentMachine.judge(AGENT, "  LORCETUS ", false);
-        assertEquals("LORCETUS", v.machineId());
+        assertEquals("lorcetus", v.machineId());   // PU-18: имя машины канонизируется (регистр)
         assertNull(v.warning());
         assertFalse(v.refuse());
     }
@@ -72,7 +72,7 @@ class AgentMachineTest {
         assertNull(f.get("machine_id"));
         assertNotNull(f.get("machine_warning"));
         assertEquals(Map.of(), AgentMachine.answerFields(AgentMachine.judge(HUMAN, null, false)));
-        assertEquals(Map.of("machine_id", "LORCETUS"),
+        assertEquals(Map.of("machine_id", "lorcetus"),
             AgentMachine.answerFields(AgentMachine.judge(AGENT, "LORCETUS", false)));
     }
 

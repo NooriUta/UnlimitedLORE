@@ -32,7 +32,9 @@ final class MachineEnroll {
 
     private MachineEnroll() {}
 
-    record Request(String machine_id, String kc_sub, String harness, String name, String profile, Boolean dry_run) {}
+    record Request(String machine_id, String kc_sub, String harness, String name, String profile, Boolean dry_run) {
+        Request { machine_id = AgentMachine.canon(machine_id); }   // PU-18: одна машина — один объект
+    }
 
     static String requestError(Request r, List<String> allowedHarnesses) {
         if (r == null) return "body required";

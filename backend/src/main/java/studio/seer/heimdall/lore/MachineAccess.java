@@ -61,7 +61,7 @@ final class MachineAccess {
     }
 
     static String clientIdOf(String machineId) {
-        return PREFIX + machineId;
+        return PREFIX + AgentMachine.canon(machineId);   // PU-18: учётка одна на машину независимо от регистра
     }
 
     // ── V80 ────────────────────────────────────────────────────────────────
@@ -178,6 +178,7 @@ final class MachineAccess {
      */
     record Request(String machine_id, String kc_sub, String display_name, String action, String role,
                    List<String> projects, List<String> harnesses) {
+        Request { machine_id = AgentMachine.canon(machine_id); }   // PU-18
         boolean revoke() { return "revoke".equals(action); }
     }
 

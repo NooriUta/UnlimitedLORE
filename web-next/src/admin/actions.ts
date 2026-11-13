@@ -21,6 +21,7 @@
 //     так»), и это снова не «пусто».
 import { loreFetch } from '../auth/session';
 import { LoreHttpError } from '../api/loreSlice';
+import { momentMs } from './moment';
 
 const ACTIONS_PATH = '/lore/admin/actions';
 
@@ -32,7 +33,7 @@ export const ACTION_AXES = ['human', 'agent', 'unauth'] as const;
 export const ACTION_LIMITS = [50, 100, 200, 500, 1000] as const;
 
 export interface ActionRow {
-  /** epoch millis или null — отметки нет (показывать 1970 нельзя). */
+  /** epoch millis или null — отметки нет (показывать 1970 нельзя). С сервера приходит ISO-строкой (PU-03). */
   ts: number | null;
   family: string | null;
   entity_id: string | null;
@@ -91,6 +92,15 @@ export function isBatchId(s: string | null | undefined): boolean {
   return typeof s === 'string' && /^rb-[0-9]{13}-[0-9a-f]{8}$/.test(s);
 }
 
+/**
+ * PU-03: записи, где сервер не нашёл объекта в ответе, несут ПУТЬ эндпоинта
+ * ("/lore/user/role"). Путь — не объект: показывать его в колонке «Запись»
+ * значит выдать «куда звали» за «что изменили».
+ */
+export function isEndpointPath(s: string | null | undefined): boolean {
+  return typeof s === 'string' && (s.startsWith('/lore/') || s.startsWith('lore/'));
+}
+
 /** Исход действия по коду ответа: нет кода — «не записан», а не успех. */
 export type Outcome = 'ok' | 'refused' | 'unknown';
 export function outcomeOf(status: number | null): Outcome {
@@ -107,7 +117,7 @@ export function parseActions(body: unknown): ActionsData {
     const o = (r ?? {}) as Record<string, unknown>;
     const batch = str(o.batch_id);
     return {
-      ts: num(o.ts),
+      ts: momentMs(o.ts),
       family: str(o.family),
       entity_id: str(o.entity_id),
       caller: str(o.caller),
