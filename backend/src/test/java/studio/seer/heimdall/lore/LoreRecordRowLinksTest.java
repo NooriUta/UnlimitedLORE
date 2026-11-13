@@ -98,6 +98,8 @@ class LoreRecordRowLinksTest {
             Map.entry("spec", Map.of()), Map.entry("release", Map.of("adr_ids", x)), Map.entry("tech", Map.of()),
             // S5-DOC-PASSPORT: вложенные документы и «упоминает» читаются по ребру — из строки ничего.
             Map.entry("doc", Map.of()),
+            Map.entry("user", Map.of()),
+            Map.entry("agent", Map.of()),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()),
             // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.

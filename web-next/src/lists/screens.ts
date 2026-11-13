@@ -17,7 +17,7 @@ import type { AppKey } from '../i18n';
 import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
-  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, sprintRecord, taskListRecord,
+  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
   techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
@@ -439,6 +439,30 @@ const docsSpec: SectionSpec = {
   columns: ['id', 'title', 'docKind', 'component', 'parent'],
 };
 
+/** S9-05 A: люди — статуса нет, разрез по проектам. */
+const usersSpec: SectionSpec = {
+  kind: 'user', titleKey: 'lists.users.title', icon: 'person',
+  fields: [['project', 'ref']],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-projects', 'lists.quick.noProjects', { project: '' }]],
+  filters: [LORE_FILTER_FIELDS.project],
+  groupings: [LORE_FILTER_FIELDS.project],
+  columns: ['title', 'project'],
+};
+
+/** S9-05 A: агенты — профиль и владелец; статуса нет. */
+const agentsSpec: SectionSpec = {
+  kind: 'agent', titleKey: 'lists.agents.title', icon: 'robot-golem',
+  fields: [['clientId', 'text'], ['agentRole', 'text'], ['harness', 'text'], ['owner', 'ref'], ['project', 'ref']],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-owner', 'lists.quick.noOwner', { owner: '' }]],
+  filters: [LORE_FILTER_FIELDS.project],
+  groupings: ['fields.agentRole', LORE_FILTER_FIELDS.project],
+  columns: ['id', 'title', 'agentRole', 'clientId', 'owner'],
+};
+
 /** Вопросы: группировка по статусу — прямая просьба владелицы (06.11). */
 const questionsSpec: SectionSpec = {
   kind: 'question', titleKey: 'lists.questions.title', icon: 'help',
@@ -700,6 +724,16 @@ export const LIST_SCREENS = {
     modelType: 'doc',
     slice: 'docs', titleKey: 'lists.docs.title', icon: 'bookshelf',
     map: docRecord, config: lang => sectionConfig(lang, docsSpec), quickIcons: {},
+  },
+  users: {
+    modelType: 'user',
+    slice: 'users', titleKey: 'lists.users.title', icon: 'person',
+    map: userRecord, config: lang => sectionConfig(lang, usersSpec), quickIcons: {},
+  },
+  agents: {
+    modelType: 'agent',
+    slice: 'agents', titleKey: 'lists.agents.title', icon: 'robot-golem',
+    map: agentRecord, config: lang => sectionConfig(lang, agentsSpec), quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и

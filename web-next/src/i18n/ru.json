@@ -1705,5 +1705,19 @@
   "pp.field.docKind": "Вид",
   "pp.field.parentDoc": "Родительский документ",
   "pp.field.sprints": "Спринты",
-  "pp.field.bodyEn": "Текст (EN)"
+  "pp.field.bodyEn": "Текст (EN)",
+  "shell.sec.user": "Люди",
+  "shell.sec.agent": "Агенты",
+  "lists.users.title": "Люди",
+  "lists.agents.title": "Агенты",
+  "lists.field.clientId": "Учётка",
+  "lists.field.agentRole": "Профиль",
+  "lists.field.harness": "Оболочка",
+  "pp.kind.user": "Человек",
+  "pp.kind.agent": "Агент",
+  "pp.field.clientId": "Учётка",
+  "pp.field.agentRole": "Профиль",
+  "pp.field.harness": "Оболочка",
+  "pp.field.owner": "Владелец",
+  "lists.quick.noProjects": "Без проектов"
 }

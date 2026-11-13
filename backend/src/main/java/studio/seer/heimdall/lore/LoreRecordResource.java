@@ -76,6 +76,10 @@ public class LoreRecordResource extends LoreResourceBase {
             // S4-PRODUCTS-NODE: паспорт продукта; ключ — код статьи словаря product.
             case "product" -> new Source("product_by_id", "code", false);
             case "project" -> new Source("project_by_id", "project", false);
+            // SPRINT_UXR_S9_SCALE_OPT/S9-05 A: человек (ключ kc_sub, как у вкладки «Люди» проекта)
+            // и агент (actor_id, как у вкладки «Агенты») — паспорта, на которые проект уже ссылался.
+            case "user" -> new Source("user_by_id", "kc_sub", false);
+            case "agent" -> new Source("agent_by_id", "id", false);
             default -> null;
         };
     }

@@ -313,6 +313,21 @@ export function docRecord(row: Row): KitRecord {
   };
 }
 
+/** S9-05 A: строка среза users → запись kit. Статуса у человека нет — пустой, а не выдуманный. */
+export function userRecord(row: Row): KitRecord {
+  const id = str(row.kc_sub);
+  return { id, kind: 'user', title: str(row.display_name) || id, status: '', fields: { project: list(row.projects) } };
+}
+
+/** S9-05 A: строка среза agents → запись kit. */
+export function agentRecord(row: Row): KitRecord {
+  const id = str(row.actor_id);
+  return {
+    id, kind: 'agent', title: str(row.name) || id, status: '',
+    fields: { clientId: str(row.client_id), agentRole: str(row.agent_role), harness: str(row.harness), owner: str(row.owner), project: list(row.projects) },
+  };
+}
+
 /**
  * Строка слайса questions → запись kit.
  *
