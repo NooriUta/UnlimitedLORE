@@ -24,7 +24,7 @@ import { ADMIN_MODULE, adminMenu } from '../admin/adminModule';
  */
 export const V2_SECTIONS = [
   'sprint', 'task', 'milestone', 'release',
-  'adr', 'decision', 'spec', 'question',
+  'adr', 'decision', 'spec', 'doc', 'question',
   'component', 'tech', 'feature', 'project',
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
   'product', 'actor', 'pain', 'gain', 'job',
@@ -119,7 +119,8 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // «Знание» — почему так: ADR, решения, спеки, вопросы.
         {
           id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)',
-          items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('question', 'help')],
+          // S5-DOC-PASSPORT (владелица 13.11: «подготовить для docs в LORE паспорт — их нет»): документы — рядом со спеками.
+          items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('doc', 'bookshelf'), item('question', 'help')],
         },
         // «Продукт» — зачем всё это (глава «Зачем» v1): продукты, фичи и сценарии,
         // роли, боли, выгоды, работы (S4-PRODUCTS-NODE). «Фичи» переехали сюда из
@@ -152,6 +153,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       release: { title: t('shell.sec.release'), icon: 'open-book' },
       decision: { title: t('shell.sec.decision'), icon: 'gavel' },
       spec: { title: t('shell.sec.spec'), icon: 'scroll-unfurled' },
+      doc: { title: t('shell.sec.doc'), icon: 'bookshelf' },
       question: { title: t('shell.sec.question'), icon: 'help' },
       component: { title: t('shell.sec.component'), icon: 'cog' },
       tech: { title: t('shell.sec.tech'), icon: 'gears' },
