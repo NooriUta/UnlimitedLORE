@@ -29,7 +29,7 @@ public class KcBridge {
 
     static final String KC_SECRET_KEY = "KC_ADMIN_CLIENT_SECRET";
 
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final LoreHttpClients.Shared HTTP = LoreHttpClients.shared(HttpClient::newBuilder);
 
     /** Обе администрирующие realm-роли: инвариант AL-35 — «существует хотя бы один их носитель». */
     static final List<String> ADMIN_ROLES = List.of("admin", "super-admin");
@@ -75,7 +75,7 @@ public class KcBridge {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url() + "/realms/" + kcRealm + "/protocol/openid-connect/token"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();
-        HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> r = HTTP.get().send(req, HttpResponse.BodyHandlers.ofString());
         if (r.statusCode() != 200) throw new IllegalStateException("kc token " + r.statusCode());
         return new JsonObject(r.body()).getString("access_token");
     }
@@ -85,7 +85,7 @@ public class KcBridge {
             .header("Authorization", "Bearer " + token);
         if (json != null) b.header("Content-Type", "application/json");
         b.method(method, json == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json));
-        return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString());
+        return HTTP.get().send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 
     /**

@@ -43,7 +43,7 @@ class MachineCanonMergeLiveDbTest {
     LoreSchemaMigrationRunner runner;
 
     private static List<Map<String, Object>> sql(String query) throws Exception {
-        HttpClient http = LiveDbHttp.CLIENT;   // один клиент на прогон (сторож LiveDbHttpGuardTest, OOM CI 13.11)
+        HttpClient http = LiveDbHttp.client();   // один клиент на прогон (сторож LiveDbHttpGuardTest, OOM CI 13.11)
         String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", query).encode();
         HttpRequest req = HttpRequest.newBuilder(
                 URI.create(LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))

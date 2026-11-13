@@ -43,7 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class Scd2OptimisticLockLiveDbTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = LiveDbHttp.CLIENT;
 
     @BeforeAll
     static void waitForResource() {
@@ -62,7 +61,7 @@ class Scd2OptimisticLockLiveDbTest {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
                 .build();
-            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> resp = LiveDbHttp.client().send(req, HttpResponse.BodyHandlers.ofString());
             assertEquals(200, resp.statusCode(), "verification query failed: " + resp.body());
             Object result = MAPPER.readValue(resp.body(), Map.class).get("result");
             return result instanceof List ? (List<Map<String, Object>>) result : List.of();
@@ -113,7 +112,7 @@ class Scd2OptimisticLockLiveDbTest {
                     .POST(HttpRequest.BodyPublishers.ofString(
                         "{\"entity_type\":\"sprint\",\"id\":\"" + sid + "\",\"status\":\"" + st + "\"}"))
                     .build();
-                return HTTP.send(r, HttpResponse.BodyHandlers.ofString()).statusCode();
+                return LiveDbHttp.client().send(r, HttpResponse.BodyHandlers.ofString()).statusCode();
             }));
         }
         go.countDown();
