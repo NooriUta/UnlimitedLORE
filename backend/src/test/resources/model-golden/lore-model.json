@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "5870289c469cb894",
+  "version" : "c7a7d6caab4c5d15",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -8377,6 +8377,87 @@
     "task" : "everywhere",
     "tech" : "everywhere",
     "user" : "admin"
+  },
+  "create" : {
+    "decision" : {
+      "endpoint" : "/lore/decision",
+      "id_field" : "decision_id",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "kind" : "text",
+        "multi" : false,
+        "body" : "title",
+        "after_write" : null,
+        "required" : true
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "kind" : "ref",
+        "ref_type" : "project",
+        "multi" : true,
+        "body" : "project",
+        "after_write" : null,
+        "required" : false
+      }, {
+        "key" : "adr",
+        "label" : "ADR",
+        "kind" : "ref",
+        "ref_type" : "adr",
+        "multi" : false,
+        "body" : "adr_id",
+        "after_write" : null,
+        "required" : false
+      } ],
+      "require_one_of" : [ "projects", "adr" ],
+      "absent_check" : "/lore/record/decision/{id}",
+      "audience" : "everywhere"
+    },
+    "spec" : {
+      "endpoint" : "/lore/spec",
+      "id_field" : "spec_id",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "kind" : "text",
+        "multi" : false,
+        "body" : "title",
+        "after_write" : null,
+        "required" : true
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "kind" : "ref",
+        "ref_type" : "project",
+        "multi" : true,
+        "body" : "project",
+        "after_write" : null,
+        "required" : true
+      }, {
+        "key" : "summary",
+        "label" : "Кратко",
+        "kind" : "md",
+        "multi" : false,
+        "body" : "summary",
+        "after_write" : null,
+        "required" : false
+      }, {
+        "key" : "component",
+        "label" : "Компонент",
+        "kind" : "ref",
+        "ref_type" : "component",
+        "multi" : false,
+        "body" : null,
+        "after_write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO"
+        },
+        "required" : false
+      } ],
+      "require_one_of" : [ "projects" ],
+      "absent_check" : "/lore/record/spec/{id}",
+      "audience" : "everywhere"
+    }
   },
   "palettes" : {
     "source" : "settings:palette",

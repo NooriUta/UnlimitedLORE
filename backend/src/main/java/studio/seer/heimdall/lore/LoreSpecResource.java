@@ -35,7 +35,10 @@ public class LoreSpecResource extends LoreResourceBase {
         // DS-4: статус спеки — код словаря spec_status (V50), на открытой ревизии.
         String status,
         // ADR-LORE-047 A3: версия записи паспорта (record.version); не совпала — 409 VERSION_CONFLICT.
-        String expected_version) {}
+        String expected_version,
+        // S4-24: проект рядом с созданием, как у решения (SE-07): спека и её принадлежность одним
+        // вызовом, без сироты между двумя. Только ДОБАВЛЯЕТ связь; снятие — spec_link / паспорт.
+        String project) {}
 
     /** DS-4: страховка на пустой словарь — канон в spec_status (V50). */
     static final List<String> SPEC_STATUSES_FALLBACK =
@@ -209,6 +212,16 @@ public class LoreSpecResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("spec_id", req.spec_id());
             out.put("body_written", histWritten);
+            if (req.project() != null && !req.project().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowSpec WHERE spec_id=:s) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("s", req.spec_id(), "p", req.project()))).await().indefinitely();
+                // Факт, а не намерение: к незарегистрированному проекту CREATE EDGE — тихий no-op.
+                boolean linked = edgeExists("BELONGS_TO_PROJECT", "spec_id", req.spec_id(), "slug", req.project());
+                Map<String, Object> pj = new java.util.LinkedHashMap<>(Map.of("slug", req.project(), "outcome", linked ? "linked" : "noop"));
+                out.put("project", linked ? pj : withSlugCandidates(pj, req.project(), registeredSlugs()));
+            }
             // Вердикт полноты (ADR-LORE-039): спека без содержания — заглушка,
             // она занимает место в реестре знаний и создаёт впечатление, что
             // тема покрыта. Advisory, на запись не влияет.

@@ -137,6 +137,10 @@ final class LoreModel {
         content.put("surfaces", surfaces);
         // MC-07 (D-2026-LORE-MODEL-AUDIENCE-VISIBILITY): уровень видимости каждого раздела — everywhere | detail | admin | hidden.
         content.put("audience", new TreeMap<>(LoreModelFile.content().audience()));
+        // S4-24: паспорт создания по типам (LoreModelCreate) — путь записи, поля формы, обязательное «одно из».
+        Map<String, Object> create = new TreeMap<>();
+        for (String ct : LoreModelFile.content().create().keySet()) create.put(ct, LoreModelCreate.block(ct));
+        content.put("create", create);
         content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), warnings));
         content.put("dictionaries", dictionaries);
         content.put("warnings", warnings);
