@@ -7114,3 +7114,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-rec-editall__fields { grid-template-columns: minmax(0, 1fr); }
   .sk-rec-editall__md, .sk-rec-editall__in { font-size: var(--fs-touch-input); }
 }
+
+/* MD-WINDOW §3a (D-2026-LORE-MD-REF-PASTE-CHECK): ссылка в тексте — найдена (зелёная) / нет (красная) /
+   не смогли проверить (как была). Полоса ненайденных — под полем, сохранить не мешает. */
+.sk-md__raw--wikilink[data-ref-state='ok'] { color: var(--suc); border-color: color-mix(in srgb, var(--suc) 50%, transparent); }
+.sk-md__raw--wikilink[data-ref-state='missing'] { color: var(--dng); border-color: var(--dng); text-decoration: underline wavy var(--dng); }
+.sk-md__refmissing { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--dng) 55%, transparent); border-radius: var(--r-md); color: var(--t1); font-size: var(--fs-sm); }

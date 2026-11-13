@@ -15,6 +15,7 @@ import { recordHref } from '../nav/loreRoutes';
 import { loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { typeByForm } from './loreRefForms';
+import { LORE_ID_FORMS, loreRefsExist } from './loreRefPaste';
 import { cachedModelType, createLoreRecord, createSpecFor, warmCreateModel } from './loreRefCreate';
 import { v2Auth } from '../auth/session';
 
@@ -67,6 +68,9 @@ export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchI
     types: WORDS,
     typeLabels,
     minQuery: 2,
+    // MD-WINDOW §3a: голые ID при вставке → [[тип:ID]], и сразу проверка, есть ли записи.
+    forms: LORE_ID_FORMS,
+    exists: refs => loreRefsExist(refs, opts.fetchImpl),
     async search(query, type): Promise<RefItem[]> {
       const { rows } = await fetchSearchSlice(query.trim(), { ...opts, lang });
       return rows
