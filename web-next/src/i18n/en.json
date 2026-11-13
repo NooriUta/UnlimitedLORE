@@ -230,6 +230,7 @@
   "pp.modelNotes": "Model notes: {n}",
   "pp.modelNotes.tech": "tech: model",
   "pp.modelNotes.badge": "⚠ {n}",
+  "pp.modelNotes.kind": "model notes",
   "pp.loading": "Loading the passport",
   "pp.opt.people": "People",
   "pp.opt.agents": "Agents",

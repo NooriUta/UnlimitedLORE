@@ -1276,25 +1276,35 @@ code, pre, kbd, samp { font-family: var(--mono); }
   max-width: min(320px, 92vw);
   max-height: 62vh;
   overflow: auto;
-  padding: 4px;
+  padding: 8px;
   border: 1px solid var(--bd);
-  border-radius: var(--r-md);
-  background: var(--bg2);
-  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bdh) transparent;
 }
+.sk-tabs__more-pop::-webkit-scrollbar { width: 8px; height: 8px; }
+.sk-tabs__more-pop::-webkit-scrollbar-track { background: transparent; }
+.sk-tabs__more-pop::-webkit-scrollbar-thumb { background: var(--bdh); border-radius: 8px; }
+.sk-tabs__more-pop::-webkit-scrollbar-thumb:hover { background: var(--acc); }
+/* MP2-11 (владелица 13.11.2026): «Ещё» в паспорте приведено к общему дизайну —
+   тому же, что у поповеров фильтров (.sk-vmenu__panel): фон bg1, рамка bd,
+   скругление r-lg, пункты с радиусом r-md и высотой тапа. */
 .sk-tabs__more-item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: max(var(--tap), 28px);
-  padding: 6px 8px;
-  border-radius: var(--r-sm);
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border-radius: var(--r-md);
   color: var(--t2);
   font-size: var(--fs-sm);
   text-align: left;
 }
 .sk-tabs__more-item:hover { background: var(--bg3); color: var(--t1); }
+.sk-tabs__more-item:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
@@ -4449,19 +4459,147 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-reader { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 var(--gap); min-width: 0; }
 .sk-rec-reader[data-aside="open"] { grid-template-columns: minmax(0, 1fr) auto minmax(220px, 300px); }
 .sk-rec-reader__main { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
-/* Строка над записью (S4-28): крошки слева, листалка/инструменты/«Свойства» справа. */
+/* Строка над записью (S4-28): крошки слева, warnings/листалка/инструменты справа.
+   MP2-09/MP2-10 (владелица 13.11.2026): бар ОДНОСТРОЧНЫЙ при любом состоянии
+   паспорта и во всю ширину контейнера — и на телефоне, и на десктопе.
+   Прежде flex-wrap: wrap уводил инструменты на вторую строку при открытом
+   доке (список сжат), а в состояниях загрузки/сбоя строки не было вовсе.
+   Переносимое теперь сжимается многоточием (крошки), а не переносится. */
 .sk-rec-reader__bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
+  width: 100%;
+  min-width: 0;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--bd);
 }
-.sk-rec-reader__crumbs { min-width: 0; }
+.sk-rec-reader__crumbs { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.sk-rec-reader__crumbs .sk-crumbs { max-width: 100%; flex-wrap: nowrap; }
+.sk-rec-reader__crumbs .sk-crumbs__cur { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sk-rec-reader__props[aria-expanded='true'] { border-color: var(--acc); color: var(--t1); }
-.sk-rec-reader__tools { display: inline-flex; align-items: center; gap: var(--gap); margin-left: auto; }
+.sk-rec-reader__tools { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; margin-left: auto; }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-rec-reader__bar { gap: 4px; }
+  .sk-rec-reader__bar .sk-rec-pager__pos { min-width: 0; padding: 0 2px; }
+}
+
+/* ---------- MP2-08 · технические сообщения под значком warnings ----------
+   Один значок «⚠ N» на экран и поповер со ВСЕМИ сообщениями (состояние
+   данных, оговорки модели, замечания графа), сгруппированными по источнику.
+   Вид — в языке поповеров фильтров (.sk-vmenu__panel): тот же фон, рамка,
+   скругление и тень; прокрутка внутри, длинное переносится, а не раздвигает. */
+.sk-warn { position: relative; display: inline-flex; }
+.sk-warn__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 8px;
+  border: 1px solid var(--wrn);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--wrn) 12%, transparent);
+  color: var(--wrn);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+.sk-warn__btn:hover, .sk-warn__btn[aria-expanded='true'] { color: var(--t1); border-color: var(--acc); }
+.sk-warn__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-warn__pop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  width: min(420px, 92vw);
+  max-height: 62vh;
+  padding: 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-warn__title {
+  margin: 0;
+  color: var(--t3);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-warn__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bdh) transparent;
+}
+.sk-warn__body::-webkit-scrollbar { width: 8px; height: 8px; }
+.sk-warn__body::-webkit-scrollbar-track { background: transparent; }
+.sk-warn__body::-webkit-scrollbar-thumb { background: var(--bdh); border-radius: 8px; }
+.sk-warn__body::-webkit-scrollbar-thumb:hover { background: var(--acc); }
+.sk-warn__group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-warn__src { margin: 0; color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); overflow-wrap: anywhere; }
+.sk-warn__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.sk-warn__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: baseline;
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+  font-size: var(--fs-xs);
+}
+.sk-warn__item[data-tone='dng'] { box-shadow: inset 2px 0 0 var(--dng); }
+.sk-warn__item[data-tone='wrn'] { box-shadow: inset 2px 0 0 var(--wrn); }
+.sk-warn__item[data-tone='inf'] { box-shadow: inset 2px 0 0 var(--inf); }
+.sk-warn__kind { color: var(--t3); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-warn__item[data-tone='dng'] .sk-warn__kind { color: var(--dng); }
+.sk-warn__item[data-tone='wrn'] .sk-warn__kind { color: var(--wrn); }
+.sk-warn__text { color: var(--t1); overflow-wrap: anywhere; word-break: break-word; }
+
+/* ---------- MP2-11 · смена места паспорта (право / низ / полный) ----------
+   Прежняя кнопка «⤢» умела только полный экран. Меню — в том же языке, что
+   поповеры фильтров и «Ещё» у вкладок: фон bg1, рамка bd, скругление r-lg. */
+.sk-place { position: relative; display: inline-flex; }
+.sk-place__btn[aria-expanded='true'] { color: var(--t1); border-color: var(--acc); }
+.sk-place__pop {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  max-width: min(320px, 92vw);
+  padding: 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-place__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.sk-place__opt:hover { background: var(--bg3); color: var(--t1); }
+.sk-place__opt[aria-checked='true'] { color: var(--t1); box-shadow: inset 2px 0 0 var(--acc); }
+.sk-place__opt[aria-checked='true']::after { content: '✓'; color: var(--acc); }
+.sk-place__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 /* ---------- Крошки записи (S4-28): «← Раздел · фильтр / ID» ---------- */
 .sk-crumbs {
