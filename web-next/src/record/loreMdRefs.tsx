@@ -70,6 +70,14 @@ export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchI
       },
       onCreate: (type: string, values: Record<string, string>) =>
         createLoreRecord(type, values, { me: me(), parents: create.parents }, opts.fetchImpl),
+      // MD-WINDOW §3a: «Завести» у красной ссылки — под ТЕМ ЖЕ ID. Задача SPRINT_X/CO-9 → спринт и код;
+      // остальные — код целиком. Форма не та — null: заводить под непонятным ID нельзя.
+      // Сервер пишет upsert: проверку «записи нет» перед POST делает createLoreRecord (#1332).
+      presetFor: (id: string, type: string): Record<string, string> | null => {
+        if (type !== 'task') return { code: id };
+        const i = id.lastIndexOf('/');
+        return i > 0 && i < id.length - 1 ? { sprint: id.slice(0, i), code: id.slice(i + 1) } : null;
+      },
     } : {}),
     types: WORDS,
     typeLabels,
