@@ -72,4 +72,25 @@ class AgentActionJournalTest {
         assertEquals("SPRINT_X/T1", LoreAuditLogFilter.entityIdOf(new Echo(true, "task", "SPRINT_X/T1", "📋 PLANNED")));
         assertNull(LoreAuditLogFilter.entityIdOf(new NoId(true, "x")));
     }
+
+    /**
+     * SPRINT_UXR_POLISH_UAT_1113/PU-03: у админских правок в ответе нет *_id — роль
+     * отвечает {kc_sub, project}, словарь {dict_type, code}. Журнал писал путь
+     * (/lore/user/role, /lore/dict/entry) — «куда звали» вместо «что изменили».
+     * Правило: нет id — естественный ключ объекта; составной важнее одиночного.
+     */
+    @Test
+    void naturalKeyNamesTheObjectWhenThereIsNoId() {
+        java.util.Map<String, Object> role = new java.util.LinkedHashMap<>();
+        role.put("ok", true); role.put("kc_sub", "u-1"); role.put("project", "UnlimitedLORE"); role.put("role", "admin");
+        assertEquals("u-1/UnlimitedLORE", LoreAuditLogFilter.entityIdOf(role));
+        assertEquals("task_status/uat",
+            LoreAuditLogFilter.entityIdOf(Map.of("ok", true, "dict_type", "task_status", "code", "uat")));
+        // dry_run пачки ролей: batch_id ещё нет — объект всё равно человек
+        assertEquals("u-1", LoreAuditLogFilter.entityIdOf(Map.of("ok", true, "kc_sub", "u-1", "dry_run", true)));
+        assertEquals("UnlimitedLORE", LoreAuditLogFilter.entityIdOf(Map.of("ok", true, "slug", "UnlimitedLORE")));
+        // id по-прежнему важнее естественного ключа
+        assertEquals("rb-1", LoreAuditLogFilter.entityIdOf(Map.of("batch_id", "rb-1", "kc_sub", "u-1")));
+        assertNull(LoreAuditLogFilter.entityIdOf(Map.of("ok", true)));
+    }
 }

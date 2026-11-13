@@ -87,6 +87,32 @@ describe('S7B-31 · карточки preflight', () => {
     expect(screen.queryByTestId('adm-pf-admins')).toBeNull();
   });
 
+  // SPRINT_UXR_POLISH_UAT_1113/PU-05: Главная противоречила себе — зелёная карточка
+  // «Сейчас: 7. Заведите себя…» и «Включать auth можно» при «Auth: включён».
+  it('PU-05: админы есть — без «Заведите себя»; ноль — с ним', async () => {
+    const { unmount } = mount(fake({ ...PF, admin_count: 7 }));
+    const ok = await screen.findByTestId('adm-pf-admins');
+    expect(ok.textContent).toContain('7');
+    expect(ok.textContent).not.toMatch(/Заведите себя/);
+    unmount();
+    mount(fake({ ...PF, admin_count: 0, can_enable_auth: false }));
+    expect((await screen.findByTestId('adm-pf-admins')).textContent).toMatch(/Заведите себя/);
+  });
+
+  it('PU-05: auth уже включён — чеклиста включения нет, только статус и то, что сломано', async () => {
+    mount(fake({ ...PF, auth_enabled: true, admin_count: 7, agent_scope_enforced: true }));
+    expect((await screen.findByTestId('adm-pf-auth')).textContent).toMatch(/включён/);
+    expect(screen.queryByTestId('adm-pf-enable')).toBeNull();
+    expect(screen.queryByTestId('adm-pf-admins')).toBeNull();
+    expect(screen.queryByText(/LORE_AUTH_ENABLED=true/)).toBeNull();
+  });
+
+  it('PU-05: auth включён, но мост KC упал — сломанное видно', async () => {
+    mount(fake({ ...PF, auth_enabled: true, kc_reachable: false, kc_error: 'timeout', agent_scope_enforced: true }));
+    expect((await screen.findByTestId('adm-pf-kc')).getAttribute('data-state')).toBe('fail');
+    expect(screen.queryByTestId('adm-pf-enable')).toBeNull();
+  });
+
   it('на Главной — блок preflight рядом с «требует внимания»', async () => {
     render(<KitLangProvider lang="ru"><AdminHome fetchImpl={fake(PF)} /></KitLangProvider>);
     expect(await screen.findByTestId('adm-pf-kc')).toBeTruthy();

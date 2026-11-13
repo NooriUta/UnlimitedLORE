@@ -10,12 +10,13 @@
 // адресе; секрет — нигде, кроме ответа сервера и SecretOnce.
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  LoadError, SecretOnce, Skeleton, Steps, setUrlParams, useKitLang, useUrlParam, type StepDef, type StepsManualItem,
+  LoadError, SecretOnce, Skeleton, Steps, setUrlParams, useKitLang, useLoadState, useUrlParam, type StepDef, type StepsManualItem,
 } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 import { useAppT, type AppKey } from '../i18n';
 import { useAdminNav } from './adminNav';
 import { DangerBatch } from './DangerBatch';
+import { RotatePanel } from './KcDanger';
 import { fetchAgents, type AgentsData } from './agents';
 import { fetchRoleMatrix, type RolesData } from './roles';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
@@ -26,16 +27,17 @@ import {
   templateProfiles, type FirstCall, type IssuedAgent, type KcUser,
 } from './wizards';
 
-export type WizardKind = 'person' | 'agent' | 'machine' | 'project';
+export type WizardKind = 'person' | 'agent' | 'machine' | 'project' | 'secret';
 // UC-5 «проект как у похожего» (S7B-18) — ProjectLikeWizard.tsx.
-const KINDS: readonly WizardKind[] = ['person', 'agent', 'machine', 'project'];
+// PU-13: «Сменить секрет агента» (S7B-19, UC-6) — SecretWizard ниже.
+const KINDS: readonly WizardKind[] = ['person', 'agent', 'machine', 'project', 'secret'];
 const STEP_KEY = 'adm-step';
 /**
  * Параметры адреса, которые принадлежат мастеру, а не экрану. Шаг общий у всех
  * трёх мастеров (S7B-29): без сброса при смене мастера новый открывался на
  * шаге прежнего — или с заметкой «шага нет», если такого ключа у него нет.
  */
-const WIZ_PARAMS = [STEP_KEY, 'adm-login', 'adm-like', 'adm-owner', 'adm-machine', 'adm-profile', ...PROJECT_WIZ_PARAMS] as const;
+const WIZ_PARAMS = [STEP_KEY, 'adm-login', 'adm-like', 'adm-owner', 'adm-machine', 'adm-profile', 'adm-secret-client', ...PROJECT_WIZ_PARAMS] as const;
 
 export interface WizardsEnv { backend: string; issuer: string }
 
@@ -125,7 +127,44 @@ export function WizardsScreen({ fetchImpl = loreFetch, meSub, env }: WizardsScre
       {wiz === 'agent' && <AgentWizard key="agent" mode="agent" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('agent')} />}
       {wiz === 'machine' && <AgentWizard key="machine" mode="machine" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('machine')} />}
       {wiz === 'project' && <ProjectLikeWizard key="project" fetchImpl={fetchImpl} onDone={() => finish('project')} />}
+      {wiz === 'secret' && <SecretWizard key="secret" fetchImpl={fetchImpl} />}
     </section>
+  );
+}
+
+// ── UC-6: сменить секрет агента без простоя (S7B-19, PU-13) ─────────────────
+
+/**
+ * Выбор агента → та же панель, что в карточке агента: ротация (дифф, ввод
+ * client_id, секрет один раз) и прежний секрет — «перешёл?» и отзыв. Агент
+ * без клиента KC не предлагается: ротировать нечего. Выбор — в адресе.
+ */
+export function SecretWizard({ fetchImpl }: { fetchImpl: typeof fetch }) {
+  const t = useAppT();
+  const [client, setClient] = useUrlParam('adm-secret-client');
+  const res = useLoadState<AgentsData>(signal => fetchAgents(signal, fetchImpl), [fetchImpl]);
+  const clients = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const r of res.data?.rows ?? []) {
+      if (r.client_id && !seen.has(r.client_id)) seen.set(r.client_id, r.name ?? r.actor_id);
+    }
+    return [...seen.entries()];
+  }, [res.data]);
+  if (!res.data && res.state === 'loading') return <Skeleton lines={2} label={t('admin.wiz.secret.loading')} />;
+  if (!res.data) return <LoadError compact error={res.error} onRetry={res.reload} />;
+  return (
+    <div className="adm-wiz" data-testid="adm-wiz-secret">
+      <label className="adm-field">
+        <span className="adm-field__l">{t('admin.wiz.secret.agent')}</span>
+        <select className="adm-select" data-testid="adm-wiz-secret-agent" value={client ?? ''}
+          onChange={e => setClient(e.target.value || null)}>
+          <option value="">{t('admin.wiz.secret.pick')}</option>
+          {clients.map(([id, name]) => <option key={id} value={id}>{name} · {id}</option>)}
+        </select>
+      </label>
+      {clients.length === 0 && <p className="adm-note" role="status">{t('admin.wiz.secret.none')}</p>}
+      {client && <RotatePanel key={client} clientId={client} fetchImpl={fetchImpl} />}
+    </div>
   );
 }
 
