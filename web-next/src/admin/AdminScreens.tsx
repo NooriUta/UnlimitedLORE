@@ -14,6 +14,7 @@ import { MachinesScreen } from './MachinesScreen';
 import { McpScreen } from './McpScreen';
 import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
+import { TidyScreen } from './TidyScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
 import { WizardsScreen } from './WizardsScreen';
 import { AdminNavProvider, type AdminNav } from './adminNav';
@@ -31,6 +32,8 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-roles': () => <RolesScreen />,
   'adm-dicts': () => <DictsScreen />,
   'adm-rules': () => <RulesScreen />,
+  // PU-20: ссылки в текстах — автопочинка пачкой и ручной список.
+  'adm-tidy': () => <TidyScreen />,
   'adm-flags': () => <FlagsScreen />,
   'adm-mcp': () => <McpScreen />,
   'adm-log': () => <ActionsScreen />,
