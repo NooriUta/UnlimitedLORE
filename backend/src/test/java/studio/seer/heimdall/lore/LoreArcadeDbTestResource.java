@@ -431,7 +431,6 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
 
     static final class HttpDb implements Db {
         private final Conn c;
-        private final HttpClient http = LiveDbHttp.CLIENT;
 
         HttpDb(Conn c) { this.c = c; }
 
@@ -448,7 +447,7 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
             Exception last = null;
             while (System.currentTimeMillis() < deadline) {
                 try {
-                    HttpResponse<Void> resp = http.send(req, HttpResponse.BodyHandlers.discarding());
+                    HttpResponse<Void> resp = LiveDbHttp.client().send(req, HttpResponse.BodyHandlers.discarding());
                     if (resp.statusCode() < 300) return;
                 } catch (Exception e) {
                     last = e;
@@ -467,7 +466,7 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                     .build();
-                HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> resp = LiveDbHttp.client().send(req, HttpResponse.BodyHandlers.ofString());
                 if (resp.statusCode() >= 300 && !ignoreError) {
                     throw new IllegalStateException("'" + command + "' failed: " + resp.statusCode() + " " + resp.body());
                 }
@@ -485,7 +484,7 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
                     .timeout(Duration.ofSeconds(120))
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                     .build();
-                HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                HttpResponse<String> resp = LiveDbHttp.client().send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
                 if (resp.statusCode() >= 300) {
                     String b = resp.body();
                     throw new IllegalStateException(language + " → HTTP " + resp.statusCode() + ": "
