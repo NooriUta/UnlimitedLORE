@@ -9,7 +9,8 @@ scripts/md-refs-audit (SPRINT_UXR_POLISH_UAT_1113/PU-15).
 автор — учётка токена), никакого прямого UPDATE. Без --apply ничего не пишет.
 
 Цель прогона (слова владелицы 13.11.2026): «погонять на препрод, на прод только после моего разрешения».
-Поэтому --apply в базу без суффикса _preprod отказывает, пока не передан --owner-approval "кто, где, когда".
+И её же правило: «на проде всё делается бэком с подтверждением через ui и логином человека». Поэтому
+--apply пишет только в *_preprod; на проде скрипт — только сухой прогон, правка — раздел админки PU-20.
 
 Запуск:
   py -3.12 scripts/md-refs-fix/md_refs_fix.py --env-file .env --db-host 192.168.3.131 \
@@ -471,16 +472,19 @@ def main(argv=None):
     p.add_argument("--out", required=True)
     p.add_argument("--apply", action="store_true")
     p.add_argument("--api", help="база API бэкенда той же базы, напр. http://192.168.3.131:4410")
-    p.add_argument("--owner-approval", help="для записи НЕ в *_preprod: кто, где и когда разрешил")
     p.add_argument("--limit", type=int, default=0, help="записать не больше N записей (обкатка)")
     p.add_argument("--skip-rules", default="", help="через запятую, напр. lone_unique (межспринтовый одинокий код)")
-    a = p.parse_args(argv)
+    a, rest = p.parse_known_args(argv)
+    if a.apply and not a.db.endswith("_preprod"):
+        raise SystemExit(f"ОТКАЗ: запись в {a.db} этим скриптом запрещена. Прод правит только бэкенд с подтверждением "
+                         "через UI и логином человека (владелица 13.11.2026) — раздел админки PU-20. "
+                         "Скрипт пишет только в *_preprod; на проде — сухой прогон.")
+    if rest:
+        p.error("неизвестные аргументы: " + " ".join(rest))
 
     env = {**load_env(a.env_file), **os.environ}
     if not env.get("ARCADEDB_ROOT_PASSWORD"):
         raise SystemExit("BLOCKED: ARCADEDB_ROOT_PASSWORD не задан")
-    if a.apply and not a.db.endswith("_preprod") and not a.owner_approval:
-        raise SystemExit(f"ОТКАЗ: запись в {a.db} — только с --owner-approval (владелица: прод только после её разрешения)")
     if a.apply and not a.api:
         raise SystemExit("ОТКАЗ: --apply требует --api")
     db = Arcade(a.db_host, a.db_port, a.db, env["ARCADEDB_ROOT_PASSWORD"])

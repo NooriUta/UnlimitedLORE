@@ -127,5 +127,15 @@ class Properties(unittest.TestCase):
         self.assertEqual(f("a SPRINT_B\r\nb"), "a [[sprint:SPRINT_B]]\r\nb")
 
 
+class ProdGuard(unittest.TestCase):
+    """Владелица 13.11.2026: «на проде всё делается бэком с подтверждением через ui и логином человека»."""
+
+    def test_apply_outside_preprod_refused_even_with_approval_text(self):
+        from md_refs_fix import main
+        with self.assertRaises(SystemExit) as cm:
+            main(["--db", "system_aida_lore", "--out", "x", "--apply", "--api", "http://x", "--owner-approval", "да"])
+        self.assertIn("UI", str(cm.exception.code))
+
+
 if __name__ == "__main__":
     unittest.main()
