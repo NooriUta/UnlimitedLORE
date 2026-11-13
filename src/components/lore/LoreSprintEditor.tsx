@@ -20,7 +20,7 @@ import { PickerLoadWarning } from './EmptyState';
 
 const SPRINT_STATUSES = [
   'todo', 'planned', 'backlog', 'design', 'active', 'partial',
-  'ready_for_deploy', 'done', 'blocked', 'high', 'cancelled',
+  'ready_for_deploy', 'uat', 'done', 'blocked', 'high', 'cancelled',
 ] as const;
 
 interface GitProjectRow { slug: string; name: string }

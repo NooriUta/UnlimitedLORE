@@ -1,0 +1,76 @@
+{
+  "card": {
+    "cls": "sk-cards",
+    "x": 180,
+    "y": 248.33334350585938,
+    "t": 188,
+    "h": 61607
+  },
+  "passport": {
+    "url": "https://new.lore.odal.seidrstudio.pro/?sec=sprint&mod=forseti",
+    "overCount": 1,
+    "over": [
+      {
+        "tag": "a",
+        "cls": "sk-shell__skip",
+        "l": -9999,
+        "r": -9851,
+        "txt": "Перейти к содержимому"
+      }
+    ],
+    "fixed": [
+      {
+        "tag": "header",
+        "cls": "sk-shell__top",
+        "pos": "sticky",
+        "z": "40",
+        "l": 0,
+        "t": 0,
+        "r": 360,
+        "b": 44,
+        "txt": "Перейти к содержимомуLOREv2ПроектыВсе пр"
+      },
+      {
+        "tag": "div",
+        "cls": "v2-version sk-shell__corner",
+        "pos": "fixed",
+        "z": "50",
+        "l": 286,
+        "t": 729,
+        "r": 352,
+        "b": 746,
+        "txt": "be7f1ef4"
+      },
+      {
+        "tag": "nav",
+        "cls": "sk-shell__dock",
+        "pos": "fixed",
+        "z": "40",
+        "l": 0,
+        "t": 751,
+        "r": 360,
+        "b": 800,
+        "txt": "ForsetiBRAGIMUNINNTYR"
+      }
+    ],
+    "bodyStart": "Перейти к содержимому V2 Все проекты · 26 O Спринты Вид: Карточки ▾ + Новая Фильтр, группировка и порядок ▾ БЫСТРО В работе 86 Заблокирован 1 Запланирован 51 Без релиза 153 Показано 537 из 537 В работе SPRINT_LORE_WORK_ANY_KIND Работа любого типа: тип продукта ИТ/не ИТ, роли связей, SERVES, проект б"
+  },
+  "passportScroll": [
+    {
+      "cls": "sk-shell__top-end",
+      "ox": "visible",
+      "sw": 81,
+      "cw": 77,
+      "t": 8,
+      "txt": "Поиск по LORE…/КомандыCtrlK"
+    },
+    {
+      "cls": "sk-ptrig",
+      "ox": "visible",
+      "sw": 81,
+      "cw": 77,
+      "t": 8,
+      "txt": "Поиск по LORE…/КомандыCtrlK"
+    }
+  ]
+}

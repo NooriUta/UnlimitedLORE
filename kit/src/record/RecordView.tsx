@@ -30,7 +30,7 @@ import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
 import { useNarrow } from '../core/narrow';
 import { BlockBoundary } from './BlockBoundary';
-import { DataStateBlock } from './DataStateBlock';
+import { DataStateWarnings } from './DataStateWarnings';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { KIT_NEW_ID, RecordCreate, type RecordCreateSpec } from './RecordCreate';
 import { RelationField } from './RelationField';
@@ -754,12 +754,13 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
           <RecordVerdict record={record} ctx={ctx} lang={lang} />
         </BlockBoundary>
         {/*
-          S4-30: что проверено, что не смогли, что обрезано — над содержимым.
-          Источник — meta той же выдачи, из которой нарисована запись, поэтому
-          подключать это экранам вручную не нужно (и нельзя: однажды забудут).
-          Сказать нечего — блока нет, компонент возвращает null сам.
+          S4-30 / MP2-08: что проверено, что не смогли, что обрезано. Источник —
+          meta той же выдачи, из которой нарисована запись, поэтому подключать
+          это экранам вручную не нужно (и нельзя: однажды забудут).
+          Сообщения уходят в общий значок warnings над записью (сборщик экрана);
+          без сборщика — прежний блок над содержимым, чтобы не молчать.
         */}
-        <DataStateBlock meta={ctx.data.meta} />
+        <DataStateWarnings meta={ctx.data.meta} />
         {propsRow && kind && (
           <details ref={propsRowRef} className="sk-rec-propsrow" open={propsOpen} onToggle={e => setPropsOpen((e.currentTarget as HTMLDetailsElement).open)}>
             <summary className="sk-rec-propsrow__sum">

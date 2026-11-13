@@ -97,7 +97,7 @@ describe('TaskTable · статус в 2 касания', () => {
     fireEvent.click(within(row).getByRole('button', { name: /Статус: к работе/ }));
     const menu = screen.getByRole('menu', { name: /S5-02/ });
     const items = within(menu).getAllByRole('menuitemradio');
-    expect(items).toHaveLength(8);
+    expect(items).toHaveLength(9); // 13.11.2026: + uat (приёмка)
     expect(within(menu).getByRole('menuitemradio', { name: 'К работе' }).getAttribute('aria-checked')).toBe('true');
     await act(async () => { fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Готово' })); });
     expect(onStatusChange).toHaveBeenCalledWith(tasks[1], 'done');

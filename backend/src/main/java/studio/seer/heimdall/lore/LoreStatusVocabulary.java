@@ -64,6 +64,7 @@ final class LoreStatusVocabulary {
         new Entry("in_progress",      "🔄", List.of("IN PROGRESS", "IN-PROGRESS", "PROGRESS", "WIP", "ACTIVE")),
         new Entry("partial",          "🟡", List.of("PARTIAL", "ЧАСТИЧ")),
         new Entry("ready_for_deploy", "🚀", List.of("READY", "RFD", "К ДЕПЛОЮ", "ДЕПЛО")),
+        new Entry("uat",              "🧪", List.of("UAT", "ПРИЁМК", "ПРИЕМК")),
         new Entry("blocked",          "🔴", List.of("BLOCK", "ЗАБЛОК")),
         new Entry("cancelled",        "🚫", List.of("CANCEL", "ОТМЕН")),
         new Entry("design",           "🔬", List.of("DESIGN", "ДИЗАЙН", "ПРОЕКТ")),

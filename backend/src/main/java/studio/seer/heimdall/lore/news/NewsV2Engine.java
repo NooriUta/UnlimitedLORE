@@ -75,8 +75,10 @@ public final class NewsV2Engine {
     private static final Pattern CLOSED_WORD = Pattern.compile("^(DONE|CLOSED|MERGED|ЗАВЕРШ|ЗАКРЫТ)");
     private static final Pattern CANCEL_WORD = Pattern.compile("^(CANCEL|ОТМЕН)");
     private static final Pattern READY_WORD  = Pattern.compile("READY FOR DEPLOY", Pattern.CASE_INSENSITIVE);
+    /** 🧪 UAT TESTING (13.11.2026): агент проверил на стенде, принимает человек — для ленты это тоже «готово». */
+    private static final Pattern UAT_WORD    = Pattern.compile("^(UAT|ПРИЁМК|ПРИЕМК)");
 
-    /** JS {@code cat3}: closed = done | cancelled; ready = 🚀 / READY FOR DEPLOY; иначе open. null → null. */
+    /** JS {@code cat3}: closed = done | cancelled; ready = 🚀 / READY FOR DEPLOY / 🧪 UAT; иначе open. null → null. */
     public static Cat cat3(String raw) {
         if (raw == null) return null;
         String s = raw.trim();
@@ -84,6 +86,7 @@ public final class NewsV2Engine {
         if (u.startsWith("✅") || CLOSED_WORD.matcher(u).find() || u.startsWith("🚫") || CANCEL_WORD.matcher(u).find())
             return Cat.CLOSED;
         if (s.startsWith("🚀") || READY_WORD.matcher(s).find()) return Cat.READY;
+        if (s.startsWith("🧪") || UAT_WORD.matcher(u).find()) return Cat.READY;
         return Cat.OPEN;
     }
 

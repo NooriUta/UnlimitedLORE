@@ -74,6 +74,8 @@ describe('K2-VIEW-LIBRARY · библиотека у разделов-докум
   it.each(ids)('%s: библиотека подключена ⇔ раздел-документ', id => {
     const lib = (LIST_SCREENS[id] as { library?: { groupBy: string } }).library;
     expect(!!lib, `${id}: библиотека`).toBe(WITH_LIBRARY.includes(id));
+    // MP2-12: библиотека — ВИД в меню видов, а не соседняя кнопка.
+    expect(LIST_SCREENS[id].config('ru').list?.views.includes('library'), `${id}: вид library`).toBe(WITH_LIBRARY.includes(id));
     if (lib) {
       // Разрез — поле, объявленное у вида записи: иначе группы подписаны ключом.
       const kind = Object.values(LIST_SCREENS[id].config('ru').kinds)[0];
@@ -147,18 +149,21 @@ function net(rows: unknown) {
 }
 
 describe('K2-VIEW-LIBRARY · «Библиотека» открывается в разделе «Компоненты»', () => {
-  it('кнопка «Библиотека» в шапке списка переводит в вид и пишет его в адрес', async () => {
+  it('MP2-12: «Библиотека» — вид в меню видов; выбор пишет lib=1 и lv=library, отдельной кнопки нет', async () => {
     const { fn } = net(COMPONENTS);
     const { w, calls } = win('');
     const { container } = render(<ListScreen screen="components" fetchImpl={fn} urlState={w} />);
-    // Список дорисован (шапка движка списка, а не шапка загрузки) — тогда кнопка.
-    await screen.findByRole('radiogroup', { name: /Вид/ });
-    fireEvent.click(screen.getByRole('button', { name: 'Библиотека' }));
+    // Список дорисован (шапка движка списка, а не шапка загрузки) — тогда меню видов.
+    const views = await screen.findByRole('radiogroup', { name: /Вид/ });
+    expect(container.querySelector('[data-testid="list-library"]')).toBeNull();
+    fireEvent.click(within(views).getByRole('radio', { name: 'Библиотека' }));
     await waitFor(() => expect(container.querySelector('.sk-lib')).not.toBeNull());
     expect(calls.some(u => /[?&]lib=1/.test(u))).toBe(true);
-    // Обратно — тем же переключателем: «Список» возвращает движок списка.
-    fireEvent.click(screen.getByRole('button', { name: 'Список' }));
+    expect(calls.some(u => /[?&]lv=library/.test(u))).toBe(true);
+    // Обратно — тем же меню видов: «Список» возвращает движок списка и снимает lib.
+    fireEvent.click(within(views).getByRole('radio', { name: 'Список' }));
     await waitFor(() => expect(container.querySelector('.sk-lib')).toBeNull());
+    expect(w.location.search).not.toMatch(/lib=1/);
   });
 
   it('?lib=1&libo=KIT по ссылке: группы по области, выбранный компонент — справа паспортом', async () => {

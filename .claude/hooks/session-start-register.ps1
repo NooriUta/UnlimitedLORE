@@ -33,14 +33,39 @@ try {
     $sessionId = $payload.session_id
     if (-not $sessionId) { Write-Log 'no session_id on stdin, skip'; exit 0 }
 
-    # Значения — из .mcp.json этого репо (aida-lore MCP-сервер), секрет — из
-    # машинного env (setx, не литерал в файле).
+    # Учётка — ТА ЖЕ, под которой ходит MCP-сервер aida-lore: его запись в
+    # user-скоупе Claude Code (~/.claude.json → mcpServers.aida-lore.env).
+    # Один источник секрета: 13.11.2026 у хука был свой (env
+    # LORE_MCP_CLIENT_SECRET), у MCP свой — после смены секрета клиента они
+    # разошлись, и хук молча падал 401 при живом MCP. Переменная окружения
+    # осталась запасным путём — для машины без записи в ~/.claude.json.
+    # Клиент — lore-mcp-full (Claude Code); у других harness свой
+    # lore-mcp-full_<harness>, и чужим этот хук не пользуется.
     $issuer = 'https://odal.seidrstudio.pro/kc/realms/omilore'
     $clientId = 'lore-mcp-full'
-    $clientSecret = $env:LORE_MCP_CLIENT_SECRET
+    $clientSecret = $null
     $backend = 'https://lore.odal.seidrstudio.pro'
+    $source = 'env'
+    try {
+        # ConvertFrom-Json (PowerShell 5) падает на ~/.claude.json: в projects
+        # есть ключи, различающиеся только регистром ('C:/BlackPerl' и
+        # 'C:/blackperl'). JavaScriptSerializer регистр различает.
+        Add-Type -AssemblyName System.Web.Extensions
+        $js = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+        $js.MaxJsonLength = [int]::MaxValue
+        $cfg = $js.DeserializeObject([IO.File]::ReadAllText((Join-Path $env:USERPROFILE '.claude.json')))
+        $lore = $null
+        if ($cfg.ContainsKey('mcpServers') -and $cfg['mcpServers'].ContainsKey('aida-lore')) { $lore = $cfg['mcpServers']['aida-lore']['env'] }
+        if ($lore -and $lore['LORE_MCP_CLIENT_SECRET']) {
+            if ($lore['LORE_MCP_CLIENT_ID']) { $clientId = $lore['LORE_MCP_CLIENT_ID'] }
+            if ($lore['LORE_OIDC_ISSUER']) { $issuer = $lore['LORE_OIDC_ISSUER'] }
+            $clientSecret = $lore['LORE_MCP_CLIENT_SECRET']
+            $source = '~/.claude.json'
+        }
+    } catch { Write-Log "user-scope aida-lore not readable ($($_.Exception.Message)), fallback to env" }
+    if (-not $clientSecret) { $clientSecret = $env:LORE_MCP_CLIENT_SECRET }
 
-    if (-not $clientSecret) { Write-Log 'LORE_MCP_CLIENT_SECRET not set, skip'; exit 0 }
+    if (-not $clientSecret) { Write-Log 'no aida-lore secret (~/.claude.json, env LORE_MCP_CLIENT_SECRET), skip'; exit 0 }
 
     $tokenResp = Invoke-RestMethod -Method Post -Uri "$issuer/protocol/openid-connect/token" `
         -ContentType 'application/x-www-form-urlencoded' `
@@ -53,6 +78,9 @@ try {
     $mine = $owners.rows | Where-Object { $_.client_id -eq $clientId } | Select-Object -First 1
     if (-not $mine) { Write-Log "no KnowActor with client_id=$clientId, skip"; exit 0 }
     $actorId = $mine.actor_id
+
+    # Проба без записи: учётка принята, актор найден — сессию не регистрируем.
+    if ($env:LORE_HOOK_DRYRUN -eq '1') { Write-Log "dry-run ok: client=$clientId source=$source actor=$actorId"; exit 0 }
 
     $body = @{
         session_id = $sessionId
@@ -73,10 +101,10 @@ try {
         -Body ($body | ConvertTo-Json) `
         -TimeoutSec 10 | Out-Null
 
-    Write-Log "registered session=$sessionId actor=$actorId"
+    Write-Log "registered session=$sessionId actor=$actorId source=$source"
 } catch {
     $detail = $_.ErrorDetails.Message
-    Write-Log "failed: $($_.Exception.Message) $detail"
+    Write-Log "failed (client=$clientId source=$source): $($_.Exception.Message) $detail"
 }
 
 exit 0

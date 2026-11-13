@@ -52,7 +52,7 @@ const TEXT = ['--t1', '--t2', '--t3', '--acc', '--suc', '--wrn', '--inf', '--dng
 const SURFACES = ['--bg0', '--bg1', '--bg2'];
 const HOVER_TEXT = ['--t1', '--t2'];
 const STATUSES = [
-  '--st-done', '--st-ready_for_deploy', '--st-active', '--st-partial', '--st-planned', '--st-design',
+  '--st-done', '--st-ready_for_deploy', '--st-uat', '--st-active', '--st-partial', '--st-planned', '--st-design',
   '--st-todo', '--st-backlog', '--st-deferred', '--st-blocked', '--st-cancelled',
 ];
 

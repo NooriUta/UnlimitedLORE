@@ -126,6 +126,7 @@ const PLAN: Record<string, StatusCategory> = {
   partial: 'in_progress',
   blocked: 'in_progress',
   ready_for_deploy: 'in_progress',
+  uat: 'in_progress',
   done: 'finished',
   cancelled: 'withdrawn',
 };

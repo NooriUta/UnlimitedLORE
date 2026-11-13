@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { collect, isEnum, MARK, NUM, variantsOf } from './writeToolHarness.js';
+import { collect, isEnum, isRecord, MARK, NUM, variantsOf } from './writeToolHarness.js';
 
 // Сторож «параметр принят схемой, но до бэкенда не дошёл».
 //
@@ -46,9 +46,12 @@ describe('каждый параметр схемы записи доходит �
         for (const k of keys) {
           const v = args[k];
           if (v === undefined) continue;
-          if (isEnum(tool.schema[k]) || typeof v === 'boolean') {
+          if (isEnum(tool.schema[k]) || typeof v === 'boolean' || isRecord(tool.schema[k])) {
             // Перечисления и флаги нередко превращаются в путь или выбор ветки — дошедшими
             // считаем, если что-то ушло вообще; иначе ложные срабатывания на rel/action.
+            // Record (fields у entity_*-диспетчеров) — свободная форма: её ключи определяет
+            // бэкенд, сгенерированная метка туда не обязана попадать; покрытие диспетчеров —
+            // паритет-тестами entity.test.ts.
             if (sent.length > 0) reached.add(k);
           } else if (typeof v === 'number' || (Array.isArray(v) && typeof v[0] === 'number')) {
             if (wire.includes(String(NUM))) reached.add(k);

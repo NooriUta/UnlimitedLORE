@@ -92,3 +92,58 @@ live call sites.
 Every `*_link` tool's `target_id` param carries whatever id the old tool's distinct target param held
 (e.g. `adr_link(rel:"sprint", target_id: <sprint_id>)` replaces `lore_link_adr_sprint(sprint_id: ...)`).
 `action` (`add`/`remove`) is unchanged everywhere.
+
+## Entity consolidation (`entity_*`, SPRINT_LORE_MCP_V2/MCPV2-3, 13.11.2026)
+
+The default full surface shrinks by tool COUNT: 59 per-entity CRUD variations collapse into 4 generic
+tools. The dispatcher reuses the same backend paths and payload shapes — no new network behavior; field
+validation stays server-side exactly as it was for the per-entity tools.
+
+| New tool | Replaces (hidden by default) |
+|---|---|
+| `entity_upsert(type, id?, fields)` | `adr_new`, `adr_set`, `spec_new`, `spec_set`, `task_new`, `sprint_new`, `sprint_phase_new`, `release_new`, `milestone_new`, `milestone_set`, `decision_new`, `question_new`, `question_set`, `component_new`, `doc_new`, `uc_new`, `feature_new`, `pain_new`, `gain_new`, `job_new`, `runbook_new`, `insight_new`, `actor_new`, `project_actor_new`, `project_new`, `dict_set`, `tech_set`, `bragi_pub_new`, `bragi_variant_new`, `bragi_keyword_set`, `bragi_page_set`, `bragi_campaign_new`, `bragi_rubric_set`, `bragi_channel_set`, `bragi_integration_new` |
+| `entity_link(type, id, rel, target_id?, action?, fields?)` | `adr_link`, `sprint_link`, `task_link`, `doc_link`, `runbook_link`, `insight_link`, `release_link`, `release_unlink`, `vp_link`, `feature_link`, `uc_link`, `actor_link`, `decision_link`, `question_link`, `product_link`, `milestone_link`, `spec_link` |
+| `entity_delete(type, id)` | `adr_del`, `spec_del`, `doc_del`, `component_del` |
+| `entity_move(type, id, target)` | `task_mv`, `release_mv` (+ `pr` moves) |
+
+`type` is an enum (an unknown value is a 400 with the full list); `fields` is a free-form record whose
+payload shapes are exactly those of the replaced tools (see their descriptions / this file's tables).
+Per-type notes:
+
+- **Composite ids**: `task` takes the uid `"SPRINT_X/T05"` as `id`; `dict`, `phase`, `tech` take their id
+  parts in `fields` (`dict_type+code`, `sprint_id+phase_key`, `component_id+tech_name+version`) — omit `id`.
+- **Project guard** (parity with the old `*_new` orphan guard, now covering amends too): for `adr`, `doc`,
+  `spec`, `runbook`, `question`, `uc`, `feature`, `tech` a project is REQUIRED — pass `fields.project` or set
+  `LORE_ACTIVE_PROJECT`; the BELONGS_TO_PROJECT edge is wired inline after the write. `decision` waives the
+  guard when `fields.adr_id` is set. Tightening vs the old `*_set` tools (which had no guard): an amend via
+  `entity_upsert` needs a project; `LORE_MCP_LEGACY=1` restores the old surface if you must amend project-less.
+- **`dict`**: `fields.human_approval` travels as the `X-Lore-Human-Approval` header, not the body.
+- **`question`**: `fields.status="closed"` is refused with guidance — close via `entity_link type=question rel=answers`.
+- **`entity_link` extras** ride in `fields`: `git_project` (adr/release, bragi `shipped_in`), `kind`+`reason`
+  (sprint `dep`), `project`+`summary_md` (task `file`/`pr`), `actor_role` (uc `actor`), `target_type`
+  (question `raised_in`, bragi `produced_by`), `role`+`kind` (product), `mode` (spec — `add|remove|replace`,
+  default `replace`; `action` is NOT accepted for spec). `target_id` accepts an array for `type=release`
+  (the old `release_link`/`release_unlink` were batch). `type=insight` is add-only.
+- Deliberately NOT consolidated (stay always-on): `status_set`, `status_set_batch`, `sprint_set`,
+  `sprint_plan_set`, `task_set`, `release_set`, `component_set`, `decision_set`, `milestone_sprints`,
+  `adr_rename`, `qg_*`, `rec_*`, `agent_session_log`, `machine_*`, `project_role_set`, `metric_*`,
+  `asset_up`, `bragi_asset_*`, `bragi_sync` — narrow/bespoke shapes (batch, append, SCD2 status, RBAC,
+  machines, uploads).
+
+### LORE_MCP_LEGACY and profiles (exact semantics)
+
+- `LORE_MCP_LEGACY=1` → the full old surface + `entity_*` (escape hatch for stale callers).
+- Active profile ≠ `full` (`LORE_MCP_PROFILE` env or the token's `agent_scope`) → the old names stay
+  available within the profile (the `agent-profiles/*.json` files reference them — a developer-profile
+  session still sees `task_*`); `entity_*` shows only if the profile itself allows writes it covers.
+- Default (full, no axes) → covered old names are hidden; work goes through `entity_*`.
+
+**Finding (13.11.2026): `entity_*` is deliberately NOT listed in `agent-profiles/*.json`.** The backend
+matrix test (`AgentProfilesMatchMatrixTest`) checks every profile promise against `tool-paths.json`: one
+`entity_upsert` entry carries the union of ~36 backend paths across all covered families, and every
+non-full profile is denied several of them (e.g. developer → `/lore/sprint/create`, `/lore/dict/entry`,
+`/lore/bragi/*`, `/lore/component/create`; verified empirically — 51 violations when added to
+`developer.json`). Per-type granularity now lives on the BACKEND (`AgentScopeFilter` by path families and
+subpaths), not in the MCP tool name; the profile files keep the old per-entity names, which remain the
+profiled surface. The default full surface is what shrinks (105 → 50 tools; 110 → 55 with the forgejo
+bridge on).

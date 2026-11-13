@@ -31,6 +31,8 @@ const STATUS_META: Record<string, StatusMeta> = {
   partial:          { icon: 'battery-50',    color: 'var(--st-partial)' },
   // ready for deploy — work done, waiting for release
   ready_for_deploy: { icon: 'wave-crest',    color: 'var(--st-ready_for_deploy)' },
+  // UAT — agent verified on the stand, a human accepts (owner rule 13.11.2026)
+  uat:              { icon: 'stamper',       color: 'var(--st-uat)' },
   // blocked / rejected family
   blocked:     { icon: 'handcuffed',     color: 'var(--st-blocked)' },
   rejected:    { icon: 'crossed-sabres', color: 'var(--st-blocked)' },
@@ -109,6 +111,7 @@ export function taskTick(statusRaw: string | null | undefined): { status: string
     return { status: 'active', done: false };
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return { status: 'partial', done: false };
   if (s.startsWith('🚀') || /^(READY.?FOR.?DEPLOY|RFD|К.?ДЕПЛОЮ)/i.test(s)) return { status: 'ready_for_deploy', done: false };
+  if (s.startsWith('🧪') || /^(UAT|ПРИЁМК|ПРИЕМК)/i.test(s)) return { status: 'uat', done: false };
   if (s.startsWith('🔴') || /^(BLOCK|ЗАБЛОК)/i.test(s)) return { status: 'blocked', done: false };
   if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return { status: 'cancelled', done: false };
   if (s.startsWith('🔬') || /^(DESIGN|ДИЗАЙН|ПРОЕКТ)/i.test(s)) return { status: 'design', done: false };

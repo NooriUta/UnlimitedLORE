@@ -291,9 +291,15 @@ export function RecordGraph(
               <title>{clusterText(c)}</title>
               <line className="sk-rec-graph__edge" x1={0} y1={0} x2={x} y2={y}
                 style={{ stroke: edgeColor(ctx.config, c.sector) }} />
-              <foreignObject x={x - 72} y={y - 16} width={144} height={32}>
+              {/* MP2-13: коробка кластера не меньше кнопки с тап-зоной (44px):
+                  прежние 144×32 были ниже кнопки на телефоне, и карточка
+                  вылезала из своей коробки — «съезжала». Кнопка заполняет
+                  коробку целиком (inline-стиль: у kit один CSS-слой, S4-00e),
+                  поэтому не выезжает ни при каком pointer-режиме. */}
+              <foreignObject x={x - 84} y={y - 24} width={168} height={48}>
                 <button type="button" className="sk-btn sk-rec-graph__cbtn" data-cluster-open={c.key}
-                  aria-expanded="false" onClick={() => toggleOpen(c.key)}>
+                  aria-expanded="false" onClick={() => toggleOpen(c.key)}
+                  style={{ height: '100%', minHeight: 0, boxSizing: 'border-box' }}>
                   {clusterText(c)}
                 </button>
               </foreignObject>

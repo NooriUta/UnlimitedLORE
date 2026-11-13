@@ -21,7 +21,7 @@ import {
   techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
-import { staleByStatus, withCalendar, type CalendarDate, type LibrarySpec } from './library';
+import { staleByStatus, withCalendar, withLibrary, type CalendarDate, type LibrarySpec } from './library';
 
 type Category = KitConfig['statuses']['items'][number]['category'];
 
@@ -222,7 +222,7 @@ function sprintsConfig(lang: KitLang): KitConfig {
     statuses: {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
-        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'],
+        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
         ['done', 'done'], ['cancelled', 'cancelled'],
       ]),
     },
@@ -316,7 +316,7 @@ function tasksConfig(lang: KitLang): KitConfig {
     statuses: {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
-        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'],
+        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
         ['done', 'done'], ['cancelled', 'cancelled'],
       ]),
     },
@@ -656,7 +656,7 @@ export const LIST_SCREENS = {
     modelType: 'adr',
     slice: 'adrs', titleKey: 'lists.adrs.title', icon: 'scroll-quill',
     defaultSort: FRESH_FIRST,
-    map: adrRecord, config: lang => withFeed(lang, adrsConfig(lang), FEEDS.adrs), feed: FEEDS.adrs, library: LIBRARIES.adrs, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
+    map: adrRecord, config: lang => withLibrary(withFeed(lang, adrsConfig(lang), FEEDS.adrs)), feed: FEEDS.adrs, library: LIBRARIES.adrs, quickIcons: { 'no-decisions': ICON_CANON.quickNoDecisions },
   },
   tasks: {
     modelType: 'task',
@@ -672,13 +672,13 @@ export const LIST_SCREENS = {
     modelType: 'decision',
     slice: 'decisions', titleKey: 'lists.decisions.title', icon: 'gavel',
     defaultSort: FRESH_FIRST,
-    map: decisionRecord, config: lang => withFeed(lang, sectionConfig(lang, decisionsSpec), FEEDS.decisions), feed: FEEDS.decisions, library: LIBRARIES.decisions, quickIcons: {},
+    map: decisionRecord, config: lang => withLibrary(withFeed(lang, sectionConfig(lang, decisionsSpec), FEEDS.decisions)), feed: FEEDS.decisions, library: LIBRARIES.decisions, quickIcons: {},
   },
   specs: {
     modelType: 'spec',
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
     defaultSort: FRESH_FIRST,
-    map: specRecord, config: lang => withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs), feed: FEEDS.specs, library: LIBRARIES.specs, quickIcons: {},
+    map: specRecord, config: lang => withLibrary(withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs)), feed: FEEDS.specs, library: LIBRARIES.specs, quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
@@ -700,7 +700,7 @@ export const LIST_SCREENS = {
   },
   components: {
     slice: 'components', titleKey: 'lists.components.title', icon: 'cog',
-    map: componentRecord, config: lang => sectionConfig(lang, componentsSpec), quickIcons: {},
+    map: componentRecord, config: lang => withLibrary(sectionConfig(lang, componentsSpec)), quickIcons: {},
     library: LIBRARIES.components,
   },
   projects: {
@@ -710,7 +710,7 @@ export const LIST_SCREENS = {
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',
     defaultSort: FRESH_FIRST,
-    map: techRecord, config: lang => withFeed(lang, sectionConfig(lang, techSpec), FEEDS.tech), feed: FEEDS.tech, library: LIBRARIES.tech, quickIcons: {},
+    map: techRecord, config: lang => withLibrary(withFeed(lang, sectionConfig(lang, techSpec), FEEDS.tech)), feed: FEEDS.tech, library: LIBRARIES.tech, quickIcons: {},
   },
   features: {
     modelType: 'feature',

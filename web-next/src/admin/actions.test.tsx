@@ -62,12 +62,16 @@ interface FakeOpts {
   status?: number;
   batch?: unknown;
   batchStatus?: number;
+  // ответ пачки приходит позже: панель уже нарисована со скелетоном
+  // (SPRINT_UXR_S11_TEST_OPT/S11-SECRET-ROTATION-RACE — гонка «findBy контейнера → getBy содержимого»)
+  batchDelayMs?: number;
 }
 
 function fake(opts: FakeOpts = {}) {
   const urls: string[] = [];
   const f = vi.fn(async (url: string) => {
     urls.push(url);
+    if (url.includes('/actions/batch/') && opts.batchDelayMs) await new Promise(r => setTimeout(r, opts.batchDelayMs));
     if (url.includes('/actions/batch/')) return json(opts.batch ?? BATCH_BODY, opts.batchStatus ?? 200);
     return json(opts.body ?? BODY, opts.status ?? 200);
   }) as unknown as typeof fetch;
@@ -374,11 +378,12 @@ describe('экран журнала · пачка (S7B-13)', () => {
   });
 
   it('раскрытие: назначения пачки и окно отката словами; кнопки отката нет', async () => {
-    mount(fake().f);
+    mount(fake({ batchDelayMs: 30 }).f);
     const rows = await screen.findAllByTestId(/^adm-log-row-/);
     fireEvent.click(within(rows[0]).getByTestId('adm-log-expand'));
     const panel = await screen.findByTestId('adm-log-batch-panel');
-    expect(within(panel).getAllByTestId(/^adm-log-batch-item-/)).toHaveLength(2);
+    // панель рисуется сразу со скелетоном — ждём строки пачки, а не контейнер
+    expect(await within(panel).findAllByTestId(/^adm-log-batch-item-/)).toHaveLength(2);
     expect(panel.textContent).toContain('AIDA/miniLORE');
     const undo = within(panel).getByTestId('adm-log-undo');
     expect(undo.getAttribute("data-open")).toBe("false");

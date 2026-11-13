@@ -7,7 +7,8 @@
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  LoadError, RecordCrumbs, RecordPager, RecordReader, Skeleton, useKitLang, useLoadState, useRecordTab,
+  LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
+  useKitLang, useLoadState, useRecordTab,
   type KitConfig, type KitCtx, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
@@ -36,6 +37,7 @@ import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
 import { ModelNotes } from './ModelNotes';
+import { PassportPlace } from './PassportPlace';
 import { loreQueryRun } from './loreQueryBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
@@ -83,6 +85,12 @@ export interface ListPassportProps {
   /** «⤢» — развернуть на весь экран; нет — кнопки нет (уже во весь экран). */
   onFull?: () => void;
   /**
+   * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
+   * задать свой обработчик; без него место пишется в адрес (?place=), где его
+   * и читает список, — адрес остаётся одной правдой о месте записи.
+   */
+  onPlace?: (place: RecordPlacement) => void;
+  /**
    * Окно, в котором список держит состояние в адресе (D-21).
    *
    * Нужно, чтобы вкладка записи жила в ТОМ ЖЕ адресе, что `open` и `place`:
@@ -92,7 +100,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, win }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -244,8 +252,48 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optKey, id, slice, optSeq]);
-  if (pp.state === 'error') return <LoadError error={pp.error} onRetry={pp.reload} />;
-  if (!view) return <Skeleton lines={8} label={t('pp.loading')} />;
+  // MP2-11: место паспорта — одна правда в адресе (?place=). Меню «право /
+  // низ / полный» пишет его явно (в том числе «право»: снятый параметр
+  // вернулся бы к личной настройке, а не к выбранному месту). Экран списка
+  // читает адрес по popstate/hashchange; pushState события не шлёт, поэтому
+  // оповещаем тем же событием, каким браузер сообщает о «назад/вперёд».
+  const setPlace = (p: RecordPlacement) => {
+    if (onPlace) { onPlace(p); return; }
+    if (win) {
+      pushUrlState({ place: p }, { replace: true, win });
+      if (typeof window !== 'undefined' && (win as unknown) === window) window.dispatchEvent(new PopStateEvent('popstate'));
+      return;
+    }
+    if (p === 'full') onFull?.();
+  };
+  // MP2-09/MP2-10: строка над паспортом есть В ЛЮБОМ состоянии — загрузка,
+  // сбой, чтение. Прежде при загрузке и сбое её не было, и паспорт прыгал
+  // высотой и шириной между состояниями; теперь бар один и тот же.
+  const barCrumbs = backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view?.record.id ?? id} /> : undefined;
+  const barPager = onGo && ids.length > 0 ? <RecordPager ids={ids} current={view?.record.id ?? id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined;
+  const barTools = <PassportPlace value={placement} onPlace={setPlace} />;
+  // Дерево состояний ОДИНАКОВОЕ сверху: сборщик → оговорки → бар → тело.
+  // Бар стоит на одном и том же месте во всех трёх ветках, поэтому React
+  // сохраняет его узлы (и фокус, и раскрытое меню) при переходе
+  // загрузка → чтение → сбой: строка не пересобирается и не «скачет».
+  if (pp.state === 'error') {
+    return (
+      <WarningsProvider>
+        <ModelNotes notes={[...order.notes, ...statuses.notes]} />
+        <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
+        <LoadError error={pp.error} onRetry={pp.reload} />
+      </WarningsProvider>
+    );
+  }
+  if (!view) {
+    return (
+      <WarningsProvider>
+        <ModelNotes notes={[...order.notes, ...statuses.notes]} />
+        <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
+        <Skeleton lines={8} label={t('pp.loading')} />
+      </WarningsProvider>
+    );
+  }
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
   // паспорт с сервера — показываем записанное, а не то, что набрали.
   const onSave = async ({ field, from, to }: { field: string; from?: unknown; to: unknown }) => {
@@ -358,17 +406,21 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // поля, в котором чип пришёл; раньше чип вёл на «#код».
     href: passportHref(view.data.records, contract?.values ?? {}, x => '#' + encodeURIComponent(x)), esc, md: mdFor(type, id) };
   return (
-    <>
+    // MP2-08: один сборщик технических сообщений на экран — оговорки модели
+    // (рядом с паспортом) и состояние данных (внутри паспорта) попадают в
+    // один значок «⚠ N» в строке над записью, а не полосами в компоновке.
+    <WarningsProvider>
       {/*
-        Оговорки разбора модели — шевроном «⚠ N» (B14 ревью 10.11.2026).
+        Оговорки разбора модели (B14 ревью 10.11.2026, MP2-08 13.11.2026).
         Говорить о них по-прежнему обязаны (S4-29: молчаливый откат хуже
-        отсутствия порядка), но развёрнутая полоса занимала верх паспорта —
-        ровно там, где человек ищет шапку, — и попадала под плавающую «×»
-        дока. Свёрнутый вид НЕ молчит: число оговорок стоит в самой строке.
-        Почему свёрнуто всем, а не только правящим модель, — в ModelNotes.tsx:
-        признака роли у клиента сейчас нет вовсе, и выдумывать его нельзя.
+        отсутствия порядка); теперь их место — общий значок warnings с
+        попапом, а не полоса/чип над шапкой паспорта.
       */}
       <ModelNotes notes={[...order.notes, ...statuses.notes]} />
+      {/* Бар — здесь, а не внутри RecordReader: тот же узел, что в ветках
+          загрузки и сбоя (MP2-09/10). RecordReader свою строку не рисует,
+          когда крошки/листалка/инструменты не переданы. */}
+      <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
@@ -396,11 +448,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       }}
       placement={placement} loadedAt={contract?.meta.loaded_at} onReload={pp.reload}
       className="list-passport"
-      crumbs={backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view.record.id} /> : undefined}
-      pager={onGo && ids.length > 0 ? <RecordPager ids={ids} current={view.record.id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined}
-      tools={onFull ? <button type="button" className="sk-iconbtn list-passport__full" aria-label={t('pp.place.full')} title={t('pp.place.full')} onClick={onFull}>⤢</button> : undefined}
       asideOpen={false} onAside={() => {}}
       {...(rightColumn === 'auto' ? {} : { defaultPropsOpen: rightColumn === 'open' })} />
-    </>
+    </WarningsProvider>
   );
 }

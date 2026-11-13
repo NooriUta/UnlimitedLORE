@@ -24,7 +24,7 @@ final class LoreSprintTotals {
 
     /** Правило подсчёта словами — уходит в модель (rule_text): его читают люди и kit-сессия. */
     static final String RULE = "Задачи спринта по открытой версии истории. «из» (of) — все, кроме категории "
-        + "withdrawn (отменённые). «готово» (done) — только категория finished; PARTIAL и READY FOR DEPLOY "
+        + "withdrawn (отменённые). «готово» (done) — только категория finished; PARTIAL, READY FOR DEPLOY и UAT TESTING "
         + "не готово. Сумма — по заполненным значениям; known — сколько заполнено; при known = 0 value = null.";
 
     static List<Map<String, Object>> aggregate(List<Map<String, Object>> tasks, List<String> sprintIds) {

@@ -14,6 +14,11 @@
     "qg_*": "allow",
     "task_*": "allow",
     "status_set": "allow",
-    "status_set_batch": "allow"
+    "status_set_batch": "allow",
+    "task_shape": "allow",
+    "machine_acl": "allow",
+    "harness_list": "allow",
+    "quality_check": "allow",
+    "lore_version": "allow"
   }
 }

@@ -76,36 +76,40 @@ describe('паспорт v2 — на боевом фасаде', () => {
     expect(document.body.textContent).not.toContain('Название из среза');
   }, 15000);
 
+  // MP2-08 (13.11.2026): состояние данных больше не стоит блоком в потоке —
+  // сообщения живут под значком warnings с попапом. Правило S4-TECH-NOTES
+  // при этом не отменено: коды источников показывает включённая настройка.
+  const openWarnings = async () => {
+    const btn = await screen.findByRole('button', { name: /Состояние данных:/ }, { timeout: 8000 });
+    fireEvent.click(btn);
+    const pop = document.querySelector('.sk-warn__pop') as HTMLElement;
+    expect(pop, 'поповер warnings открылся').toBeTruthy();
+    return pop;
+  };
+
   it('S4-TECH-NOTES: без настройки — код источника скрыт, «закрыта правами» сказано словами', async () => {
     show(net(() => json(FACADE)));
     await screen.findByText('Название от фасада', {}, { timeout: 8000 });
-    await waitFor(() => {
-      const ds = document.querySelector('.sk-ds') as HTMLElement;
-      expect(ds).toBeTruthy();
-      expect(ds.textContent).toContain('закрыта правами');
-      expect(ds.textContent).not.toContain('tasks_of_sprint');
-    });
+    expect(document.querySelector('.sk-ds'), 'inline-блока состояния в компоновке нет').toBeNull();
+    const pop = await openWarnings();
+    expect(pop.textContent).toContain('закрыта правами');
+    expect(pop.textContent).not.toContain('tasks_of_sprint');
   }, 15000);
 
-  it('состояние блоков фасада дошло до блока «Состояние данных»: «нет прав» названо', async () => {
+  it('состояние блоков фасада дошло до значка warnings: «нет прав» названо', async () => {
     show(net(() => json(FACADE)), true);
     await screen.findByText('Название от фасада', {}, { timeout: 8000 });
-    await waitFor(() => {
-      const ds = document.querySelector('.sk-ds') as HTMLElement;
-      expect(ds).toBeTruthy();
-      expect(ds.textContent).toContain('нет прав на задачи');
-    });
+    const pop = await openWarnings();
+    expect(pop.textContent).toContain('нет прав на задачи');
   }, 15000);
 
   it('фасад выключен — паспорт из срезов, и причина отката НАЗВАНА на экране', async () => {
     show(net(() => json({ error: 'DISABLED', detail: 'фасад выключен' }, 501)), true);
     // Виден паспорт из срезов…
     await screen.findByText('Название из среза', {}, { timeout: 8000 });
-    // …и рядом сказано, почему он собран на клиенте.
-    await waitFor(() => {
-      const ds = document.querySelector('.sk-ds') as HTMLElement;
-      expect(ds?.textContent).toContain('собран на клиенте');
-    });
+    // …и в поповере warnings сказано, почему он собран на клиенте.
+    const pop = await openWarnings();
+    expect(pop.textContent).toContain('собран на клиенте');
   }, 15000);
 });
 

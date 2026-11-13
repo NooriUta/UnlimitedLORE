@@ -143,3 +143,28 @@ describe('S9-08 · телефон: первым список связей', () =
     expect(list.querySelectorAll('[data-node^="m"]').length, 'сто сорок девять строк — та же каша').toBeLessThan(149);
   });
 });
+
+// MP2-13 (проход 13.11.2026): карточки элементов графа «съезжали». Кластер-хаб
+// живёт в foreignObject фиксированного размера; коробка 144×32 была НИЖЕ
+// кнопки kit с тап-зоной 44px, и на телефоне карточка вылезала из коробки.
+// Теперь коробка не меньше тап-зоны, а кнопка заполняет её целиком.
+describe('MP2-13 · карточка кластера не выезжает из своей коробки', () => {
+  it('коробка foreignObject не меньше тап-зоны кнопки (44px) и прежней ширины', () => {
+    const { container } = draw(149, false);
+    const boxes = [...container.querySelectorAll('foreignObject')];
+    expect(boxes.length).toBeGreaterThan(0);
+    for (const b of boxes) {
+      expect(Number(b.getAttribute('height')), 'высота коробки кластера').toBeGreaterThanOrEqual(44);
+      expect(Number(b.getAttribute('width')), 'ширина коробки кластера').toBeGreaterThanOrEqual(144);
+    }
+  });
+
+  it('кнопка заполняет коробку целиком: height 100%, min-height 0 (иначе тап-зона выезжает)', () => {
+    const { container } = draw(149, false);
+    const btn = container.querySelector('[data-cluster-open]') as HTMLElement;
+    expect(btn).toBeTruthy();
+    expect(btn.style.height).toBe('100%');
+    expect(btn.style.minHeight).toBe('0');
+    expect(btn.style.boxSizing).toBe('border-box');
+  });
+});

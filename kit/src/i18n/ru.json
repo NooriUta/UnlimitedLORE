@@ -597,6 +597,7 @@
   "kit.tasks.status.active": "В работе",
   "kit.tasks.status.partial": "Частично",
   "kit.tasks.status.ready_for_deploy": "Готово к выкатке",
+  "kit.tasks.status.uat": "UAT — приёмка",
   "kit.tasks.status.done": "Готово",
   "kit.tasks.status.blocked": "Заблокировано",
   "kit.tasks.status.cancelled": "Отменено",
