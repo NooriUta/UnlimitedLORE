@@ -227,6 +227,12 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
         cfg.put("lore.schema.verify", "true");
         cfg.put("bench.mart.user", "root");
         cfg.put("bench.mart.password", ROOT_PASSWORD);
+        // MartCredentials берёт пароль СНАЧАЛА из SecretProvider по ключу
+        // ARCADEDB_ROOT_PASSWORD и лишь потом из bench.mart.password. В CI этот
+        // ключ лежит в окружении джоба — пароль общей тест-базы. Без перекрытия
+        // приложение шло чужим паролем на встроенный сервер сокращённого CI и
+        // ловило «Too many failed authentication attempts» (задание 33514, 13.11).
+        cfg.put("ARCADEDB_ROOT_PASSWORD", ROOT_PASSWORD);
         return cfg;
     }
 
