@@ -40,8 +40,8 @@ export const CLASSES = {
   wiki_unknown: { group: 'violation', title: '[[…]] с неизвестным типом или видом' },
   wiki_escaped: { group: 'violation', title: 'экранированная \\[\\[…\\]\\] (ссылка потеряна)' },
   url_lore:     { group: 'violation', title: 'URL экрана LORE (:4400/lore?…, new.lore…)' },
-  url_github:   { group: 'violation', title: 'GitHub-ссылка' },
-  url_forgejo:  { group: 'info', title: 'URL Forgejo (PR/файл)' },
+  // Внешних ссылок (GitHub, Forgejo, любые сайты) здесь нет намеренно — владелица 13.11.2026:
+  // «внешние ссылки MD должно не быть багом и не быть лишним шумом». Они не упоминания объектов LORE.
   codeblock:    { group: 'info', title: 'ID внутри блока кода ```' },
 };
 
@@ -52,13 +52,12 @@ const TRAIL = '.,;:!?)]}»"\'';
 
 const URL_RE = /https?:\/\/[^\s<>()\]`"']+|(?<![\w/])\/lore\?[^\s<>()\]`"']+/g;
 
+/** 'url_lore' — адрес экрана LORE с объектом; null — внешняя ссылка (не считается, но маскирует свой текст). */
 function urlClass(u) {
-  if (/github\.com\//i.test(u)) return 'url_github';
   // Ссылка на ОБЪЕКТ через экран LORE: путь /lore?… или параметр open=/passport=. Голый адрес
   // стенда (`http://…:4400` в настройке) объектом не является и сюда не попадает.
   if (/(\/lore\?|[?&](open|passport)=)/i.test(u)
     && /(:44\d\d\b|new\.lore|lore\.odal|^\/lore\?|localhost|127\.0\.0\.1|192\.168\.)/i.test(u)) return 'url_lore';
-  if (/(git\.seidrstudio\.pro|:3030\/)/i.test(u)) return 'url_forgejo';
   return null;
 }
 

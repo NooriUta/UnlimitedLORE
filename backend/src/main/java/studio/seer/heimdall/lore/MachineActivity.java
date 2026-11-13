@@ -91,7 +91,9 @@ final class MachineActivity {
      * Полное желаемое состояние (не дельта): {@code window_h} null — снять окно машины (общий
      * дефолт), {@code harness} null/пусто — снять окна по harness. Повтор того же — unchanged.
      */
-    record Request(String machine_id, Integer window_h, Map<String, Integer> harness, Boolean dry_run) {}
+    record Request(String machine_id, Integer window_h, Map<String, Integer> harness, Boolean dry_run) {
+        Request { machine_id = AgentMachine.canon(machine_id); }   // PU-18
+    }
 
     static String requestError(Request r, List<String> allowedHarnesses) {
         if (r == null) return "body required";

@@ -29,15 +29,21 @@ export function AuthPreflight({ fetchImpl }: AuthPreflightProps) {
     );
   } else if (!pf) body = <LoadError compact error={e} onRetry={res.reload} />;
   else {
+    // PU-05: Главная — «только то, что сломано». Auth уже включён — чеклист
+    // включения пройден: показываем статус и лишь проверки, которые сейчас не ок
+    // (мост KC упал, scope не проверяется); «включать можно» — уже не вопрос.
+    const checks = preflightChecks(pf).filter(c => !pf.auth_enabled || (c.id !== 'enable' && c.state !== 'ok'));
     body = (
       <>
-        <div className="adm-attn" role="list" aria-label={t('admin.pf.title')}>
-          {preflightChecks(pf).map(c => <CheckCard key={c.id} c={c} />)}
-        </div>
+        {checks.length > 0 && (
+          <div className="adm-attn" role="list" aria-label={t('admin.pf.title')}>
+            {checks.map(c => <CheckCard key={c.id} c={c} />)}
+          </div>
+        )}
         <p className="adm-sub" data-testid="adm-pf-auth">
           {pf.auth_enabled ? t('admin.pf.authOn') : t('admin.pf.authOff')}
         </p>
-        <p className="adm-hint">{t('admin.pf.enableNote')}</p>
+        {!pf.auth_enabled && <p className="adm-hint">{t('admin.pf.enableNote')}</p>}
         <p className="adm-hint">{t('admin.pf.activeProject')}</p>
       </>
     );
@@ -57,7 +63,9 @@ function CheckCard({ c }: { c: PreflightCheck }) {
   switch (c.id) {
     case 'admins':
       title = t('admin.pf.admins');
-      sub = c.state === 'unknown' ? t('admin.pf.adminsUnknown') : t('admin.pf.adminsN', { n: c.n });
+      // PU-05: «Заведите себя» — только когда админов нет; при n ≥ 1 это противоречие.
+      sub = c.state === 'unknown' ? t('admin.pf.adminsUnknown')
+        : c.n > 0 ? t('admin.pf.adminsHave', { n: c.n }) : t('admin.pf.adminsN', { n: c.n });
       break;
     case 'kc':
       title = t('admin.pf.kc');
