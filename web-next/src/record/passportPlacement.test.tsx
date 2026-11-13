@@ -47,20 +47,21 @@ const openMenu = async () => {
 };
 
 describe('MP2-11 · смена места паспорта: право / низ / полный', () => {
-  it('меню предлагает три места, выбранное отмечено', async () => {
+  // MP2-14-PLACE-LEFT (владелица 13.11: «если задано… влево — значит он открывается именно там»): мест четыре.
+  it('меню предлагает четыре места, выбранное отмечено', async () => {
     render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={fake() as unknown as typeof fetch} />);
     const menu = await openMenu();
     const opts = [...menu.querySelectorAll('[role=menuitemradio]')];
-    expect(opts.map(o => o.textContent)).toEqual(['панелью справа', 'снизу', 'на весь экран']);
-    expect(opts[1].getAttribute('aria-checked')).toBe('true');
-    expect(opts[0].getAttribute('aria-checked')).toBe('false');
+    expect(opts.map(o => o.textContent)).toEqual(['панелью слева', 'панелью справа', 'снизу', 'на весь экран']);
+    expect(opts[2].getAttribute('aria-checked')).toBe('true');
+    expect(opts[1].getAttribute('aria-checked')).toBe('false');
   });
 
   it('выбор места пишется в адрес явно, включая «право»', async () => {
     const { win, history } = winWith('?open=S_A&place=bottom');
     render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={fake() as unknown as typeof fetch} win={win} />);
     const menu = await openMenu();
-    fireEvent.click([...menu.querySelectorAll('[role=menuitemradio]')][0]);
+    fireEvent.click([...menu.querySelectorAll('[role=menuitemradio]')][1]);
     await waitFor(() => expect(history.replaceState).toHaveBeenCalled());
     const calls = history.replaceState.mock.calls;
     const url = String(calls[calls.length - 1][2]);
@@ -73,7 +74,7 @@ describe('MP2-11 · смена места паспорта: право / низ 
     render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={fake() as unknown as typeof fetch} win={win} />);
     const menu = await openMenu();
     const opts = [...menu.querySelectorAll('[role=menuitemradio]')];
-    expect(opts[1].getAttribute('aria-checked')).toBe('true');
+    expect(opts[2].getAttribute('aria-checked')).toBe('true');
   });
 
   it('обработчик экрана главнее адреса', async () => {
@@ -81,8 +82,20 @@ describe('MP2-11 · смена места паспорта: право / низ 
     const { win, history } = winWith('?open=S_A');
     render(<ListPassport type="sprint" id="S_A" placement="right" fetchImpl={fake() as unknown as typeof fetch} win={win} onPlace={onPlace} />);
     const menu = await openMenu();
-    fireEvent.click([...menu.querySelectorAll('[role=menuitemradio]')][2]);
+    fireEvent.click([...menu.querySelectorAll('[role=menuitemradio]')][3]);
     expect(onPlace).toHaveBeenCalledWith('full');
     expect(history.replaceState).not.toHaveBeenCalled();
+  });
+});
+
+describe('MP2-14 · место «слева»', () => {
+  it('выбор «панелью слева» пишется в адрес place=left', async () => {
+    const { win, history } = winWith('?open=S_A&place=bottom');
+    render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={fake() as unknown as typeof fetch} win={win} />);
+    const menu = await openMenu();
+    fireEvent.click([...menu.querySelectorAll('[role=menuitemradio]')][0]);
+    await waitFor(() => expect(history.replaceState).toHaveBeenCalled());
+    const calls = history.replaceState.mock.calls;
+    expect(String(calls[calls.length - 1][2])).toContain('place=left');
   });
 });
