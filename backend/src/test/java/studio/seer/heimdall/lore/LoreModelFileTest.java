@@ -31,11 +31,20 @@ class LoreModelFileTest {
             "shared/model/lore-model.json и backend/src/main/resources/lore-model/lore-model.json разошлись — правьте канон и копируйте");
     }
 
-    /** Файл в каноническом виде: правка руками не оставляет «второго форматирования» для дифф-ревью. */
+    /**
+     * Файл в каноническом виде: правка руками не оставляет «второго форматирования» для дифф-ревью.
+     * Правили руками — LORE_MODEL_CANON=1 перепишет канон и копию каноническим выводом (MC-07).
+     */
     @Test
     void canonIsInCanonicalForm() throws Exception {
         String text = read(CANON);
-        assertEquals(text, LoreModelFile.render(LoreModelFile.parse(text)));
+        String canonical = LoreModelFile.render(LoreModelFile.parse(text));
+        if ("1".equals(System.getenv("LORE_MODEL_CANON"))) {
+            Files.writeString(CANON, canonical, StandardCharsets.UTF_8);
+            Files.writeString(COPY, canonical, StandardCharsets.UTF_8);
+            return;
+        }
+        assertEquals(text, canonical, "файл модели не в каноническом виде — LORE_MODEL_CANON=1");
     }
 
     @Test

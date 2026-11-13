@@ -116,7 +116,7 @@
       "key" : "no_release",
       "label" : "Не требует релиза",
       "labelKey" : "pp.field.noRelease",
-      "kind" : "text",
+      "kind" : "bool",
       "group" : "props"
     }, {
       "key" : "track",
@@ -2968,9 +2968,14 @@
       "kind" : "number",
       "group" : "props"
     }, {
+      "key" : "kind",
+      "label" : "Вид",
+      "kind" : "text",
+      "group" : "props"
+    }, {
       "key" : "is_active",
       "label" : "Активен",
-      "kind" : "text",
+      "kind" : "bool",
       "group" : "props"
     }, {
       "key" : "parent",
@@ -4263,5 +4268,123 @@
       "key" : "refsIn",
       "slot" : "own"
     } ]
+  },
+  "nav" : [ {
+    "id" : "feed",
+    "labelKey" : "shell.grp.feed",
+    "tone" : "var(--inf)",
+    "pinTop" : true,
+    "items" : [ {
+      "section" : "news",
+      "icon" : "lucide:megaphone"
+    } ]
+  }, {
+    "id" : "work",
+    "labelKey" : "shell.grp.work",
+    "tone" : "var(--acc)",
+    "items" : [ {
+      "section" : "sprint",
+      "icon" : "sprint"
+    }, {
+      "section" : "task",
+      "icon" : "lucide:list-checks"
+    }, {
+      "section" : "milestone",
+      "icon" : "crossed-axes"
+    }, {
+      "section" : "release",
+      "icon" : "open-book"
+    } ]
+  }, {
+    "id" : "knowledge",
+    "labelKey" : "shell.grp.knowledge",
+    "tone" : "var(--suc)",
+    "items" : [ {
+      "section" : "adr",
+      "icon" : "scroll-quill"
+    }, {
+      "section" : "decision",
+      "icon" : "gavel"
+    }, {
+      "section" : "spec",
+      "icon" : "scroll-unfurled"
+    }, {
+      "section" : "doc",
+      "icon" : "bookshelf"
+    }, {
+      "section" : "question",
+      "icon" : "help"
+    } ]
+  }, {
+    "id" : "product",
+    "labelKey" : "shell.grp.product",
+    "tone" : "var(--wrn)",
+    "items" : [ {
+      "section" : "product",
+      "icon" : "bullseye"
+    }, {
+      "section" : "feature",
+      "icon" : "gift-of-knowledge"
+    }, {
+      "section" : "actor",
+      "icon" : "hooded-figure"
+    }, {
+      "section" : "pain",
+      "icon" : "thorn-helix"
+    }, {
+      "section" : "gain",
+      "icon" : "gift-of-knowledge"
+    }, {
+      "section" : "job",
+      "icon" : "archery-target"
+    } ]
+  }, {
+    "id" : "system",
+    "labelKey" : "shell.grp.system",
+    "tone" : "var(--inf)",
+    "items" : [ {
+      "section" : "project",
+      "icon" : "open-folder"
+    }, {
+      "section" : "component",
+      "icon" : "cog"
+    }, {
+      "section" : "tech",
+      "icon" : "gears"
+    } ]
+  }, {
+    "id" : "personal",
+    "labelKey" : "shell.grp.personal",
+    "tone" : "var(--wrn)",
+    "items" : [ {
+      "section" : "settings",
+      "icon" : "cog",
+      "view" : "settings"
+    } ]
+  } ],
+  "audience" : {
+    "actor" : "everywhere",
+    "adr" : "everywhere",
+    "agent" : "admin",
+    "component" : "everywhere",
+    "decision" : "everywhere",
+    "doc" : "everywhere",
+    "feature" : "everywhere",
+    "gain" : "everywhere",
+    "job" : "everywhere",
+    "machine" : "admin",
+    "milestone" : "everywhere",
+    "news" : "everywhere",
+    "pain" : "everywhere",
+    "people" : "admin",
+    "product" : "everywhere",
+    "project" : "everywhere",
+    "question" : "everywhere",
+    "release" : "everywhere",
+    "settings" : "everywhere",
+    "spec" : "everywhere",
+    "sprint" : "everywhere",
+    "task" : "everywhere",
+    "tech" : "everywhere"
   }
 }

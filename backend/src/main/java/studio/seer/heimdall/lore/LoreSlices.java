@@ -2958,6 +2958,8 @@ public final class LoreSlices {
         slice("products",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
+            "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +
@@ -2994,6 +2996,8 @@ public final class LoreSlices {
         slice("product_by_id",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
+            "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +

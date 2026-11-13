@@ -180,7 +180,7 @@
         "key" : "no_release",
         "label" : "Не требует релиза",
         "label_key" : "pp.field.noRelease",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
@@ -756,7 +756,7 @@
         "key" : "no_release",
         "label" : "Не требует релиза",
         "label_key" : "pp.field.noRelease",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
@@ -10593,10 +10593,21 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "kind",
+        "label" : "Вид",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "is_active",
         "label" : "Активен",
         "label_key" : null,
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "required" : false,
         "editable" : false,
@@ -10853,10 +10864,21 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "kind",
+        "label" : "Вид",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "is_active",
         "label" : "Активен",
         "label_key" : null,
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "required" : false,
         "editable" : false,

@@ -474,7 +474,53 @@ public abstract class LoreResourceBase {
                          String inField, Object inValue, String what) {
         if (hadBefore) return noStore(Response.ok(LoreOutcome.link(base, false, true, what)));
         boolean exists = created || edgeExists(edgeType, outField, outValue, inField, inValue);
-        return noStore(Response.ok(LoreOutcome.link(base, exists, false, what)));
+        Map<String, Object> out = LoreOutcome.link(base, exists, false, what);
+        if (!exists && "BELONGS_TO_PROJECT".equals(edgeType) && "slug".equals(inField) && inValue != null)
+            out = withSlugCandidates(out, String.valueOf(inValue), registeredSlugs());
+        return noStore(Response.ok(out));
+    }
+
+    /** Слуги реестра проектов; сбой чтения — пустой список (подсказка необязательна, исход noop и так честный). */
+    List<String> registeredSlugs() {
+        try {
+            List<String> out = new java.util.ArrayList<>();
+            for (Map<String, Object> r : ingestService.queryPublic("SELECT slug FROM KnowGitProject", Map.of()))
+                if (r.get("slug") != null) out.add(String.valueOf(r.get("slug")));
+            return out;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * MT-MCP-TRUTH A13: noop привязки к проекту из-за незарегистрированного слуга называет кандидатов
+     * реестра в том же ответе. Слуг в реестре есть — не нашёлся другой конец, кандидаты не добавляются.
+     */
+    static Map<String, Object> withSlugCandidates(Map<String, Object> out, String given, java.util.Collection<String> registry) {
+        if (registry.contains(given)) return out;
+        List<String> c = slugCandidates(given, registry);
+        if (c.isEmpty()) return out;
+        Map<String, Object> m = new java.util.LinkedHashMap<>(out);
+        m.put("project_candidates", c);
+        m.put("hint", "проекта «" + given + "» в реестре нет; ближайшие слуги: " + String.join(", ", c)
+            + " — слуги исторические (owner/repo), повторите вызов с одним из них");
+        return m;
+    }
+
+    /** Кандидаты по имени репозитория (часть после «/»): совпадение без учёта регистра, иначе вхождение. */
+    static List<String> slugCandidates(String given, java.util.Collection<String> registry) {
+        if (given == null || given.isBlank()) return List.of();
+        String tail = tailOf(given);
+        List<String> exact = registry.stream().filter(s -> tailOf(s).equals(tail)).sorted().toList();
+        if (!exact.isEmpty()) return exact;
+        return registry.stream().filter(s -> tailOf(s).contains(tail) || tail.contains(tailOf(s)))
+            .sorted().limit(5).toList();
+    }
+
+    private static String tailOf(String slug) {
+        String t = slug.trim();
+        int i = t.lastIndexOf('/');
+        return (i >= 0 ? t.substring(i + 1) : t).toLowerCase(java.util.Locale.ROOT);
     }
 
     /**
