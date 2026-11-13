@@ -202,19 +202,21 @@ final class LoreRecordValues {
      * список «не читается — среза нет», и паспорт любой записи навсегда показывал «Часть сведений не
      * загрузилась». Вкладка здесь — ровно одним способом из трёх (сверка — LoreRecordRowLinksTest).
      */
-    static final Map<String, java.util.Set<String>> READ_BY_EDGE = Map.of(
-        "task", java.util.Set.of("qgRecs", "insights", "refsOut", "refsIn", "publications"),
-        "adr", java.util.Set.of("runbooks", "refsOut", "refsIn", "insights"),
-        "spec", java.util.Set.of("refsOut", "refsIn"),
+    static final Map<String, java.util.Set<String>> READ_BY_EDGE = Map.ofEntries(
+        Map.entry("task", java.util.Set.of("qgRecs", "insights", "refsOut", "refsIn", "publications")),
+        Map.entry("adr", java.util.Set.of("runbooks", "refsOut", "refsIn", "insights")),
+        Map.entry("spec", java.util.Set.of("refsOut", "refsIn")),
+        // S5-DOC-PASSPORT: вложенные документы и «упоминает» — по ребру, своих срезов у них нет.
+        Map.entry("doc", java.util.Set.of("children", "refsOut", "refsIn")),
         // 11.11 (полнота модели рёбер): «упоминает» и публикации BRAGI объявлены у всех концов,
         // а срезов под них нет — вкладка честно говорит «не проверено», а не «0».
-        "sprint", java.util.Set.of("refsOut", "refsIn", "publications"),
-        "release", java.util.Set.of("refsOut", "refsIn", "publications"),
-        "decision", java.util.Set.of("refsOut", "refsIn"),
-        "question", java.util.Set.of("refsOut", "refsIn"),
-        "component", java.util.Set.of("refsOut", "refsIn"),
-        "tech", java.util.Set.of("refsOut", "refsIn"),
-        "feature", java.util.Set.of("refsOut", "refsIn"));
+        Map.entry("sprint", java.util.Set.of("refsOut", "refsIn", "publications")),
+        Map.entry("release", java.util.Set.of("refsOut", "refsIn", "publications")),
+        Map.entry("decision", java.util.Set.of("refsOut", "refsIn")),
+        Map.entry("question", java.util.Set.of("refsOut", "refsIn")),
+        Map.entry("component", java.util.Set.of("refsOut", "refsIn")),
+        Map.entry("tech", java.util.Set.of("refsOut", "refsIn")),
+        Map.entry("feature", java.util.Set.of("refsOut", "refsIn")));
 
     /**
      * Вкладки связей, которые фасад НЕ читает ничем. Без этого списка такая вкладка показала бы

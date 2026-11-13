@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "c81e09dd802273ab",
+  "version" : "1d787719c6eb2cdf",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -2931,6 +2931,330 @@
       "computed" : [ ],
       "unclassified" : [ ],
       "internal" : [ "valid_from" ]
+    },
+    "doc" : {
+      "type" : "doc",
+      "label" : "Документ",
+      "label_key" : "pp.kind.doc",
+      "icon" : "bookshelf",
+      "color" : null,
+      "key" : "doc_id",
+      "vertex" : "KnowDoc",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : true,
+        "write" : {
+          "endpoint" : "/lore/doc",
+          "field" : "title"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : "title",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "kind",
+        "label" : "Вид",
+        "label_key" : "pp.field.docKind",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : true,
+        "write" : {
+          "endpoint" : "/lore/doc",
+          "field" : "kind"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "component",
+        "label" : "Компонент",
+        "label_key" : "pp.field.component",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : true,
+        "ref" : {
+          "type" : "component",
+          "rel" : "BELONGS_TO",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 2,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : true,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "BELONGS_TO_PROJECT",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO_PROJECT"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "m",
+          "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "parent",
+        "label" : "Родительский документ",
+        "label_key" : "pp.field.parentDoc",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : true,
+        "ref" : {
+          "type" : "doc",
+          "rel" : "DOC_CHILD_OF",
+          "dir" : "out"
+        },
+        "relation" : "composition",
+        "write" : {
+          "endpoint" : "/lore/doc",
+          "field" : "parent_doc_id"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 2,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "sprints",
+        "label" : "Спринты",
+        "label_key" : "pp.field.sprints",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "sprint",
+          "rel" : "IMPLEMENTED_IN",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "m",
+          "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "file_path",
+        "label" : "Файл",
+        "label_key" : "pp.field.file",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : true,
+        "write" : {
+          "endpoint" : "/lore/doc",
+          "field" : "file_path"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "content_md_ru",
+        "label" : "Текст",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : true,
+        "write" : {
+          "endpoint" : "/lore/doc",
+          "field" : "content_md_ru"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "l",
+          "overflow" : "more"
+        },
+        "property" : "content_md_ru",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "content_md_en",
+        "label" : "Текст (EN)",
+        "label_key" : "pp.field.bodyEn",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : true,
+        "write" : {
+          "endpoint" : "/lore/doc",
+          "field" : "content_md_en"
+        },
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "l",
+          "overflow" : "more"
+        },
+        "property" : "content_md_en",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      } ],
+      "relations" : [ {
+        "key" : "components",
+        "label" : "Компонент",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO",
+        "dir" : "out",
+        "target_type" : "component",
+        "place" : "prop",
+        "manageable" : true
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : true
+      }, {
+        "key" : "parentDoc",
+        "label" : "Родительский документ",
+        "relation" : "composition",
+        "rel" : "DOC_CHILD_OF",
+        "dir" : "out",
+        "target_type" : "doc",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "sprints",
+        "label" : "Спринты",
+        "relation" : "attribute",
+        "rel" : "IMPLEMENTED_IN",
+        "dir" : "out",
+        "target_type" : "sprint",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "children",
+        "label" : "Вложенные документы",
+        "relation" : "composition",
+        "rel" : "DOC_CHILD_OF",
+        "dir" : "in",
+        "target_type" : "doc",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На него ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "assets",
+        "label" : "Вложения",
+        "relation" : "composition",
+        "rel" : "ATTACHED_TO",
+        "dir" : "out",
+        "target_type" : "asset",
+        "place" : "body",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ "content_md", "sort_order" ],
+      "internal" : [ ]
     },
     "decision" : {
       "type" : "decision",
@@ -6788,6 +7112,47 @@
           "source" : "relation",
           "ref" : "refsIn",
           "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "refs",
+            "label" : "Ссылки"
+          }
+        } ]
+      },
+      "doc" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "content",
+          "source" : "body",
+          "ref" : null,
+          "order" : 1,
+          "slot" : "own",
+          "group" : null
+        }, {
+          "key" : "children",
+          "source" : "relation",
+          "ref" : "children",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "children",
+            "label" : "Вложенные документы"
+          }
+        }, {
+          "key" : "refsOut",
+          "source" : "relation",
+          "ref" : "refsOut",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "refs",
+            "label" : "Ссылки"
+          }
+        }, {
+          "key" : "refsIn",
+          "source" : "relation",
+          "ref" : "refsIn",
+          "order" : 4,
           "slot" : "own",
           "group" : {
             "key" : "refs",
