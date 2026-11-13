@@ -40,6 +40,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: bash .github/scripts/ci-scope.sh ci
 
       # Раннер получает HTTP_PROXY из своей конфигурации, и она переезжает вместе
@@ -259,6 +260,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: bash .github/scripts/ci-scope.sh ci
 
       # Те же три шага подготовки, что у `build` (разбор причин — там):
@@ -300,14 +302,29 @@ jobs:
       - name: Живые фикстуры (shared/fixtures) — тесты скрипта снятия
         run: node --test shared/fixtures/*.test.mjs
 
-      - name: LORE v2 (web-next) — install + typecheck + test + build
+      - name: LORE v2 (web-next) — install + typecheck
         if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next
         run: |
           bash ../.github/scripts/npm-retry.sh ci
           npm run typecheck
+
+      - name: LORE v2 — все тесты + сборка (полный прогон)
+        if: steps.scope.outputs.v2 == 'true' && steps.scope.outputs.full == 'true'
+        working-directory: web-next
+        run: |
           npm test
           npm run build
+
+      # SPRINT_LORE_PIPELINE_HOST/PL-02, правило владелицы 11.11.2026: PR в develop
+      # гоняет тесты, связанные с правкой (граф модулей vitest), без сборки и
+      # образа. Полная труба — push в develop и промо (ci-scope.sh, флаг full).
+      - name: LORE v2 — тесты, связанные с правкой (сокращённый, PR в develop)
+        if: steps.scope.outputs.v2 == 'true' && steps.scope.outputs.full != 'true'
+        working-directory: web-next
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: npx vitest run --changed "origin/$BASE_REF" --passWithNoTests
 
       # SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00d: axe на витрине /kit — отдельным
       # шагом, чтобы a11y-гейт был виден в сводке по имени, а не тонул среди
@@ -330,7 +347,7 @@ jobs:
       # (прокси /lore/ тот же, что у v1). Прокси раннера пробрасывается так же,
       # как в сборке образа v1 выше.
       - name: Docker image build (v2, web-next + nginx)
-        if: steps.scope.outputs.v2 == 'true'
+        if: steps.scope.outputs.v2 == 'true' && steps.scope.outputs.full == 'true'
         run: |
           ARGS="--add-host=host.docker.internal:host-gateway"
           for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
@@ -344,7 +361,7 @@ jobs:
       # синтаксис собранного конфига (`nginx -T`, апстримы объявлены заглушками,
       # как в проверке v1) и наличие бандла v2 в корне сайта.
       - name: v2 image — nginx config + bundle
-        if: steps.scope.outputs.v2 == 'true'
+        if: steps.scope.outputs.v2 == 'true' && steps.scope.outputs.full == 'true'
         run: |
           set -eo pipefail
           STUBS="--add-host lore-backend:127.0.0.1 --add-host host.docker.internal:127.0.0.1"
@@ -371,7 +388,7 @@ jobs:
       # YAML не разбирает). Без оверлея Traefik — его сеть есть только на
       # ci-server.
       - name: compose — сервис lore-app-next описан и разбирается
-        if: steps.scope.outputs.v2 == 'true'
+        if: steps.scope.outputs.v2 == 'true' && steps.scope.outputs.full == 'true'
         run: |
           set -eo pipefail
           docker compose -f docker-compose.yml config -q

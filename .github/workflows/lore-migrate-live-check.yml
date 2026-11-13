@@ -1,0 +1,109 @@
+name: LORE migrate live check (prod snapshot)
+
+# SPRINT_LORE_PIPELINE_HOST/PL-MIGRATE-LIVE-CHECK — накатка схемы на копии
+# свежего снимка прода и сверка, что данные не поехали (владелица 13.11.2026:
+# «если схема меняется — проверить на реальном бэкапе»). Логика —
+# scripts/migrate-live-check.sh: снимок прода только на чтение (BACKUP DATABASE
+# или уже лежащий архив), своя одноразовая ArcadeDB той же версии, что на проде,
+# инвентарь до/после, повтор накатки и повторное выполнение новых шагов
+# (идемпотентность). В прод ничего не пишется; копия и контейнер удаляются в
+# конце прогона всегда.
+#
+# Когда:
+#   • pull_request, меняющий код схемы (пути ниже), — автоматически;
+#   • вручную — на любую ветку/коммит (например, PR, открытый до появления
+#     этого workflow): ref = ветка или SHA проверяемого кода.
+# Убыль записей, которую миграция делает НАМЕРЕННО (слияние дублей), объявляется
+# во входе allow_decrease (ручной запуск) — без объявления она красная.
+
+on:
+  pull_request:
+    branches: [ "develop", "preprod", "main" ]
+    paths:
+      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrations.java'
+      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrationRunner.java'
+      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaInitializer.java'
+      - 'backend/db-schema/**'
+      - 'scripts/migrate-live-check.sh'
+      - 'scripts/migrate-live-check/**'
+      - '.github/workflows/lore-migrate-live-check.yml'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Ветка или SHA проверяемого кода'
+        required: true
+        type: string
+      label:
+        description: 'Метка прогона (например pr1311)'
+        required: false
+        default: 'manual'
+        type: string
+      allow_decrease:
+        description: 'Типы с объявленной убылью через запятую (например KnowMachine,USES_MACHINE)'
+        required: false
+        default: ''
+        type: string
+      snapshot:
+        description: 'auto — архив моложе суток, иначе свежий BACKUP; fresh; latest'
+        required: false
+        default: 'auto'
+        type: choice
+        options: ['auto', 'fresh', 'latest']
+
+concurrency:
+  group: lore-migrate-live-check-${{ github.event.pull_request.number || inputs.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  live-check:
+    runs-on: ubuntu-latest
+    env:
+      LORE_HOST: lore-host.seidrstudio.pro
+      LORE_HOST_USER: nooriuta
+      LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
+      LABEL: ${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || inputs.label }}
+      ALLOW_DECREASE: ${{ inputs.allow_decrease || '' }}
+      SNAPSHOT: ${{ inputs.snapshot || 'auto' }}
+      REPORT_DIR: ${{ github.workspace }}/migrate-live-check-report
+    steps:
+      # Инструмент проверки — из ветки workflow; проверяемый код — отдельно в
+      # under-test/ (для PR — его голова, для ручного запуска — ref).
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || inputs.ref }}
+          path: under-test
+
+      - name: SSH-ключ CD и закреплённый ключ хоста
+        env:
+          LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
+        run: bash .github/scripts/lore-host-deploy.sh ssh
+
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
+      - name: Use Nexus mirror (сборка образа)
+        run: bash .github/scripts/use-nexus.sh
+
+      - name: Накатка на копии прода и сверка данных
+        env:
+          SRC_DIR: under-test
+        run: bash scripts/migrate-live-check.sh
+
+      # upload-artifact@v4 на Forgejo не работает (db-regression.yml); v3 — на
+      # старой библиотеке артефактов. Отчёт продублирован в сводку шага выше.
+      - name: Отчёт — артефактом
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v3
+        with:
+          name: migrate-live-check-${{ env.LABEL }}
+          path: migrate-live-check-report/
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/lore_host

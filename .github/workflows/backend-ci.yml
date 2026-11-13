@@ -72,6 +72,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: bash .github/scripts/ci-scope.sh ci
 
       # Гейт подъёма ArcadeDB (.github/scripts/ygg-upgrade-gate.sh) живёт вне CI —
@@ -92,6 +93,12 @@ jobs:
       # провал пары обязан красить шаг — проверяем на каждом PR, а не в момент запуска на проде.
       - name: Самопроверка скрипта миграции задача→компонент
         run: bash .github/scripts/task-component-edge-migrate.sh --selftest
+
+      # PL-MIGRATE-LIVE-CHECK: сравнитель живой проверки миграций обязан краснеть
+      # на убыли без объявления, пропаже записи и неидемпотентном повторе — иначе
+      # «зелёная» проверка на снимке прода ничего не значит. Секунды, без БД.
+      - name: Самопроверка живой проверки миграций
+        run: bash -n scripts/migrate-live-check.sh && python3 scripts/migrate-live-check/inventory.py --selftest
 
       # См. подробный комментарий в frontend-ci.yml — там же зафиксировано, что
       # прокси на ci-server НУЖЕН (прямой выход деградирован: минуты вместо
@@ -139,7 +146,7 @@ jobs:
       # кандидата :2480 НЕТ намеренно: тихий откат на прод вернул бы ровно то,
       # от чего уходим, — недоступный CI-контейнер должен краснеть.
       - name: Point live-DB tests at the standing test DB (self-hosted) / Testcontainers (github-hosted)
-        if: steps.scope.outputs.backend == 'true'
+        if: steps.scope.outputs.backend == 'true' && steps.scope.outputs.full == 'true'
         shell: bash
         run: |
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
@@ -232,16 +239,27 @@ jobs:
         run: bash .github/scripts/gradle-retry.sh --selftest
 
       - name: Gradle build (Quarkus backend)
-        if: steps.scope.outputs.backend == 'true'
+        if: steps.scope.outputs.backend == 'true' && steps.scope.outputs.full == 'true'
         working-directory: backend
         run: bash ../.github/scripts/gradle-retry.sh build --no-daemon
 
       # `build` already runs the test task; kept explicit so a future test
       # regression is obvious in the log even if `build` is later narrowed.
       - name: Gradle test (Quarkus backend)
-        if: steps.scope.outputs.backend == 'true'
+        if: steps.scope.outputs.backend == 'true' && steps.scope.outputs.full == 'true'
         working-directory: backend
         run: bash ../.github/scripts/gradle-retry.sh test --no-daemon
+
+      # SPRINT_LORE_PIPELINE_HOST/PL-02, правило владелицы 11.11.2026: PR в develop
+      # гоняет сокращённый набор — компиляция main+test и только затронутые тесты
+      # на встроенной ArcadeDB (без общей тест-БД и образа). Полная труба — push в
+      # develop (пачка мержей) и любой PR в preprod/main (промо); выбор — ci-scope.sh.
+      - name: Gradle test — сокращённый (PR в develop, затронутые тесты)
+        if: steps.scope.outputs.backend == 'true' && steps.scope.outputs.full != 'true'
+        working-directory: backend
+        env:
+          BACKEND_TESTS: ${{ steps.scope.outputs.backend_tests }}
+        run: bash ../.github/scripts/backend-short-tests.sh
 
       # Validates the multi-stage Dockerfile compiles the app from source.
       # Gradle INSIDE the image build fetches deps from Maven Central directly:
@@ -255,7 +273,7 @@ jobs:
       #   2. retry the build twice — a dropped handshake is transient, and the
       #      layer cache makes the retry cheap.
       - name: Docker image build (backend)
-        if: steps.scope.outputs.backend == 'true'
+        if: steps.scope.outputs.backend == 'true' && steps.scope.outputs.full == 'true'
         run: |
           # CIM-02: наблюдаемость registry-mirror базовых образов до сборки.
           bash .github/scripts/registry-mirror-probe.sh || true

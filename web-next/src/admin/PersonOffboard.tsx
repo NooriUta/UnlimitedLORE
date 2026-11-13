@@ -61,7 +61,10 @@ function useSec<T>(load: () => Promise<T>, deps: readonly unknown[]): Sec<T> {
   const [sec, setSec] = useState<Sec<T>>({ s: 'loading' });
   useEffect(() => {
     let alive = true;
-    setSec({ s: 'loading' });
+    // Перечитывание не прячет показанное: уже полученный ответ стоит до нового.
+    // Сброс в «загрузку» пересоздавал блок (агенты: итог пачки с «Отменить»
+    // мигал скелетоном, клик мог уйти в снятый узел) — offboard.test.tsx.
+    setSec(prev => (prev.s === 'ok' ? prev : { s: 'loading' }));
     load().then(
       v => { if (alive) setSec({ s: 'ok', v }); },
       (e: unknown) => {

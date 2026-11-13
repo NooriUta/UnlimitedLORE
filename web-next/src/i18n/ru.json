@@ -1576,5 +1576,13 @@
   "lists.quick.notRelieved": "Никто не снимает",
   "lists.quick.notDelivered": "Никто не даёт",
   "lists.quick.notPerformed": "Никто не выполняет",
-  "lists.quick.noUcs": "Без сценариев"
+  "lists.quick.noUcs": "Без сценариев",
+  "lists.docs.title": "Документы",
+  "shell.sec.doc": "Документы",
+  "lists.field.docKind": "Вид",
+  "pp.kind.doc": "Документ",
+  "pp.field.docKind": "Вид",
+  "pp.field.parentDoc": "Родительский документ",
+  "pp.field.sprints": "Спринты",
+  "pp.field.bodyEn": "Текст (EN)"
 }

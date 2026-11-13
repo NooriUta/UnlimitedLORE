@@ -256,6 +256,20 @@ final class LoreRecordFrom {
             when("body_redacted", "body_redacted", "body_redacted"),
             when("body_redacted_reason", "body_redacted_reason", "body_redacted"),
             v("status", Transform.DOC_TOKEN, "status"))),
+        // S5-DOC-PASSPORT: документ (KnowDoc) — тело ru/en, без статуса и без SCD2-версий.
+        Map.entry("doc", List.of(
+            v("title", Transform.FIRST_OF, "title", "doc_id"),
+            v("body_md", Transform.FIRST_OF, "content_md_ru", "content_md_en"),
+            s("content_md_ru", "content_md_ru"),
+            s("content_md_en", "content_md_en"),
+            s("kind", "kind"),
+            s("component", "component_id"),
+            list("projects", "projects"),
+            s("parent", "parent_doc_id"),
+            list("sprints", "sprint_ids"),
+            s("file_path", "file_path"),
+            when("body_redacted", "body_redacted", "body_redacted"),
+            when("body_redacted_reason", "body_redacted_reason", "body_redacted"))),
         Map.entry("decision", List.of(
             v("title", Transform.FIRST_OF, "title", "decision_id"),
             v("status", Transform.DOC_TOKEN, "status_raw"),

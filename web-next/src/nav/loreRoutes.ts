@@ -42,6 +42,8 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   adr: 'adr',
   decision: 'decision',
   spec: 'spec',
+  // S5-DOC-PASSPORT: документ открывается своим паспортом (раньше ?sec=doc вёл в «Новости»).
+  doc: 'doc',
   question: 'question',
   component: 'component',
   feature: 'feature',

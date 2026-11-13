@@ -1576,5 +1576,13 @@
   "lists.quick.notRelieved": "Relieved by none",
   "lists.quick.notDelivered": "Delivered by none",
   "lists.quick.notPerformed": "Performed by none",
-  "lists.quick.noUcs": "No use cases"
+  "lists.quick.noUcs": "No use cases",
+  "lists.docs.title": "Documents",
+  "shell.sec.doc": "Documents",
+  "lists.field.docKind": "Kind",
+  "pp.kind.doc": "Document",
+  "pp.field.docKind": "Kind",
+  "pp.field.parentDoc": "Parent document",
+  "pp.field.sprints": "Sprints",
+  "pp.field.bodyEn": "Text (EN)"
 }
