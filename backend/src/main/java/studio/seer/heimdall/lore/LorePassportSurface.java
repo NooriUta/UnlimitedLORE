@@ -40,7 +40,7 @@ final class LorePassportSurface {
      * Порядок и место разделов по типам. Раздел, не названный здесь (появился в реестре позже),
      * идёт в конец своей вкладкой — не теряется и не прячется.
      */
-    static final Map<String, List<Slot>> DECIDED = LoreModelFile.content().passport();
+    static final Map<String, List<Slot>> DECIDED = LoreModelViews.map(() -> LoreModelFile.content().passport());
 
     record Section(String key, String source, String ref) {}
 

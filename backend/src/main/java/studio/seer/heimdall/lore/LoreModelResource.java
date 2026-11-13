@@ -28,6 +28,10 @@ public class LoreModelResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreModelResource.class);
 
+    /** MC-05: откуда модель (LORE или файл), её версия и расхождение с файлом репозитория. */
+    @jakarta.inject.Inject
+    LoreModelStore store;
+
     static final String DICT_SQL =
         "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, " +
         "ifnull(is_active, true) AS is_active FROM KnowDictEntry ORDER BY dict_type, sort_order";
@@ -76,6 +80,18 @@ public class LoreModelResource extends LoreResourceBase {
             mandatory = null;
         }
         Map<String, Object> doc = LoreModel.build(dict, schema, declared, mandatory);
+        // MC-05 (SPEC-LORE-MODEL-CONFIG-STORE §2): источник модели — сведения о документе, а не его
+        // содержимое: в отпечаток версии не входят. Модель из файла по сбою — строкой в warnings, не молча.
+        Map<String, Object> config = new java.util.LinkedHashMap<>();
+        config.put("source", store.source());
+        config.put("hash", store.hash());
+        config.put("seed_drift", store.seedDrift());
+        doc.put("config", config);
+        if (store.warning() != null && doc.get("warnings") instanceof List<?> w) {
+            List<Object> ws = new java.util.ArrayList<>(w);
+            ws.add("config: " + store.warning());
+            doc.put("warnings", ws);
+        }
         String version = String.valueOf(doc.get("version"));
         EntityTag tag = new EntityTag(version);
         if (ifNoneMatch != null && ifNoneMatch.replace("\"", "").trim().equals(version)) {

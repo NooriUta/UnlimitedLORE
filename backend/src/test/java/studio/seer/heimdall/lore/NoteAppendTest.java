@@ -50,6 +50,34 @@ class NoteAppendTest {
         assertTrue(has(LoreSprintTaskResource.SprintUpdateRequest.class, "outcome_append"));
     }
 
+    /**
+     * Пункт 4 (content_hash) и основа пункта 3 (откат). sprint_set писал context/outcome только
+     * в вершину, а хэш (LoreHashStamper) и перенос при смене статуса берут тела с ОТКРЫТОЙ
+     * строки истории — там было пусто. Отсюда замер 06.11 по SPRINT_VIZ_EMBED: все ревизии
+     * с context_md = null и одинаковым content_hash при 4819 знаках на вершине.
+     */
+    @Test
+    void sprintTextsAreMirroredOntoTheOpenHistRowWhole() {
+        LoreCommandClient.LoreCommand c = LoreSprintTaskResource.sprintHistMirror("SPRINT_X", "новый контекст", "итог");
+        assertNotNull(c);
+        assertTrue(c.command().startsWith("UPDATE KnowSprintHist SET"), c.command());
+        assertTrue(c.command().contains("valid_to IS NULL"), "только открытая версия: " + c.command());
+        assertTrue(c.command().contains("context_md = :ctx") && c.command().contains("outcome_md = :outcome"), c.command());
+        assertEquals("SPRINT_X", c.params().get("sid"));
+        assertEquals("новый контекст", c.params().get("ctx"));
+        assertEquals("итог", c.params().get("outcome"));
+    }
+
+    @Test
+    void mirrorCarriesTheUntouchedTextTooSoTheHashCoversBoth() {
+        // Пустое второе поле зеркалится как есть (null), а не пропускается: иначе на строке
+        // истории остался бы прежний текст, которого на вершине уже нет.
+        LoreCommandClient.LoreCommand c = LoreSprintTaskResource.sprintHistMirror("SPRINT_X", "контекст", null);
+        assertTrue(c.command().contains("outcome_md = :outcome"), c.command());
+        assertTrue(c.params().containsKey("outcome"));
+        assertNull(c.params().get("outcome"));
+    }
+
     private static boolean has(Class<?> rec, String name) {
         return Arrays.stream(rec.getRecordComponents()).anyMatch(c -> c.getName().equals(name) && c.getType() == String.class);
     }

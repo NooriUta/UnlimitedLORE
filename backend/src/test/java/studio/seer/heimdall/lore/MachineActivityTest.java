@@ -39,7 +39,9 @@ class MachineActivityTest {
             .orElseThrow(() -> new AssertionError("шага миграции с MachineActivity.SCHEMA_SQL нет"));
         assertEquals(81, step.version());
         assertEquals(17, step.compatMajor(), "аддитивно, major 17");
-        assertTrue(LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1).version() >= 81, "V81 зарегистрирован, после него могут идти новые шаги");
+        // Было «V81 — последний шаг»: падало на любой следующей миграции (V82–V84 13.11). Проверяется
+        // то, что важно для V81, — он зарегистрирован ровно один раз.
+        assertEquals(1, LoreSchemaMigrations.STEPS.stream().filter(s -> s.version() == 81).count(), "V81 зарегистрирован один раз");
         assertTrue(MachineActivity.SCHEMA_SQL.contains("CREATE PROPERTY KnowActor.activity_window_h IF NOT EXISTS INTEGER"));
         assertTrue(MachineActivity.SCHEMA_SQL.contains("CREATE PROPERTY KnowActor.activity_window_harness IF NOT EXISTS MAP"));
         for (String ddl : MachineActivity.SCHEMA_SQL) {
