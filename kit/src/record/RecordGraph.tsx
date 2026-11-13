@@ -26,6 +26,10 @@ import type { GraphView } from './graphState';
 
 /** Радиус кольца глубины и цель касания — в px viewBox (1 ед. = 1 px). */
 const RING = 96;
+/** S5-10: дуга на узел кольца, px — меньше подписи слипаются (замер 13.11: 50 узлов на 96 px = 12 px). */
+const ARC_PER_NODE = 26;
+/** S5-10: больше стольких связей подписи на рёбрах не рисуем — тип виден цветом и легендой. */
+const EDGE_LABELS_MAX = 12;
 /** Вид узла-кластера в Force/Обсидиане (PU-11); ключом вида записи не бывает. */
 const CLUSTER_KIND = '@kit:cluster';
 const HIT = 22;
@@ -249,9 +253,14 @@ export function RecordGraph(
   }
 
   const maxDepth = Math.max(...g.nodes.map(n => n.depth), 1);
-  const half = RING * maxDepth + HIT + 24;
+  // Радиус кольца растёт с числом соседей на самом людном уровне (S5-10).
+  const perDepth = new Map<number, number>();
+  for (const n of g.nodes) perDepth.set(n.depth, (perDepth.get(n.depth) ?? 0) + 1);
+  const crowd = Math.max(0, ...perDepth.values()) + g.clusters.length;
+  const ring = Math.max(RING, Math.ceil((crowd * ARC_PER_NODE) / (2 * Math.PI)));
+  const half = ring * maxDepth + HIT + 24;
   const pos = new Map<string, { x: number; y: number }>([[g.center.id, { x: 0, y: 0 }]]);
-  for (const n of g.nodes) pos.set(n.id, { x: n.x * RING, y: n.y * RING });
+  for (const n of g.nodes) pos.set(n.id, { x: n.x * ring, y: n.y * ring });
   const label = (r: KitRecord | undefined, id: string) => (r ? `${r.title} (${id})` : id);
 
   return (
@@ -272,7 +281,7 @@ export function RecordGraph(
         height={half * 2}
       >
         {Array.from({ length: maxDepth }, (_, i) => (
-          <circle key={i} className="sk-rec-graph__ring" r={RING * (i + 1)} cx={0} cy={0} />
+          <circle key={i} className="sk-rec-graph__ring" r={ring * (i + 1)} cx={0} cy={0} />
         ))}
         {g.links.map(l => {
           const a = pos.get(l.from)!;
@@ -287,7 +296,7 @@ export function RecordGraph(
             </g>
           );
         })}
-        {g.links.filter(l => l.from === g.center.id || l.to === g.center.id).map(l => {
+        {g.links.length <= EDGE_LABELS_MAX && g.links.filter(l => l.from === g.center.id || l.to === g.center.id).map(l => {
           const a = pos.get(l.from)!;
           const b = pos.get(l.to)!;
           return (
@@ -308,8 +317,8 @@ export function RecordGraph(
         */}
         {g.clusters.map(c => {
           // PU-11: коробка кластера целиком внутри холста (была за правым краем).
-          const x = Math.min(half - 84, Math.max(-half + 84, c.x * RING));
-          const y = Math.min(half - 24, Math.max(-half + 24, c.y * RING));
+          const x = Math.min(half - 84, Math.max(-half + 84, c.x * ring));
+          const y = Math.min(half - 24, Math.max(-half + 24, c.y * ring));
           const style = { '--node-c': edgeColor(ctx.config, c.sector) } as CSSProperties;
           return (
             <g key={"c:" + c.key} className="sk-rec-graph__cluster" data-cluster={c.key}

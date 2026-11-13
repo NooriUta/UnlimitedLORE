@@ -86,8 +86,10 @@ function fromS2(body: Record<string, unknown>): KitHistory {
     tracking: body.tracking === 'not_tracked' ? 'not_tracked' : 'scd2',
     versions: versions.map(v => ({
       state_uid: v.state_uid ?? null, valid_from: v.valid_from ?? null, valid_to: v.valid_to ?? null,
-      is_open: Boolean(v.is_open), status: v.status ?? null, fields: v.fields ?? {},
-      changed: Array.isArray(v.changed) ? v.changed : [], author: v.author ?? { kind: 'unknown' },
+      // S9-09: служебные поля (хэш содержимого, коммит источника) — не правка; legacy их уже отсекал.
+      is_open: Boolean(v.is_open), status: v.status ?? null,
+      fields: Object.fromEntries(Object.entries(v.fields ?? {}).filter(([k]) => !SERVICE.has(k))),
+      changed: Array.isArray(v.changed) ? v.changed.filter(k => !SERVICE.has(k)) : [], author: v.author ?? { kind: 'unknown' },
     })),
     anomalies: Array.isArray(body.anomalies) ? (body.anomalies as string[]) : [],
     page: (body.page as KitHistory['page']) ?? null,

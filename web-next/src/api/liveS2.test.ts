@@ -324,7 +324,7 @@ describe('чего в боевом клиенте нет — говорится 
 
   it('обратные связи: у графа свой живой путь, здесь — отказ со ссылкой на него', async () => {
     const f = vi.fn(async () => json({}));
-    await expect(client(f).backlinks({ type: 'adr', id: 'ADR-1' })).rejects.toThrow(/backlinksGraph/);
+    await expect(client(f).backlinks({ type: 'adr', id: 'ADR-1' })).rejects.toThrow('record/loreGraph.ts');
     expect(f.mock.calls.length).toBe(0);
   });
 });

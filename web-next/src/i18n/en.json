@@ -227,6 +227,7 @@
   "pp.type": "Record type",
   "pp.record": "Record",
   "pp.place": "Opened as",
+  "pp.place.left": "left panel",
   "pp.place.right": "right panel",
   "pp.place.bottom": "bottom",
   "pp.place.full": "full screen",

@@ -67,12 +67,12 @@ describe('2) свойства — рядом с контентом, от одн�
 });
 
 describe('3) место паспорта — настройка использования, в «Вид» списка', () => {
-  it('в поповере «Вид» — «Паспорт открывается»: панелью справа / снизу / на весь экран', () => {
+  it('в поповере «Вид» — «Паспорт открывается»: слева / справа / снизу / на весь экран (MP2-14)', () => {
     const onPlace = vi.fn();
     render(<ViewMenu closed="below" modes={['below', 'all']} onClosed={() => {}} place="right" onPlace={onPlace} />);
     fireEvent.click(screen.getByRole('button', { name: /Вид/ }));
     const group = screen.getByRole('radiogroup', { name: 'Паспорт открывается' });
-    expect(within(group).getAllByRole('radio').map(r => r.textContent)).toEqual(['панелью справа', 'снизу', 'на весь экран']);
+    expect(within(group).getAllByRole('radio').map(r => r.textContent)).toEqual(['панелью слева', 'панелью справа', 'снизу', 'на весь экран']);
     fireEvent.click(within(group).getByRole('radio', { name: 'снизу' }));
     expect(onPlace).toHaveBeenCalledWith('bottom');
   });
