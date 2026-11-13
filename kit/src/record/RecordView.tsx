@@ -214,7 +214,7 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
     // Значения пришли чипами (S4-29) — ряд чипов со свёрткой; строки — прежний
     // путь. Проверяем форму ДАННЫХ, а не тип поля: сервер сменил форму у
     // существующих полей, и тип поля об этом не знает.
-    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} />;
+    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} fromLabel={t => ctx.config.kinds[t]?.inherited} />;
     const ids = (Array.isArray(value) ? value : [value]).map(v => valueText(v));
     return <span className="sk-rec-fields__refs">{ids.map(id => <RecordRef key={id} id={id} ctx={ctx} />)}</span>;
   }

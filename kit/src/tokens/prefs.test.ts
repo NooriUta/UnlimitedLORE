@@ -37,9 +37,9 @@ describe('resolvePrefs', () => {
 });
 
 describe('K-14 · ключи хранения — от приложения', () => {
-  it('без ключей приложения kit читает свои нейтральные (sk-*), чужие lore-* не трогает', () => {
-    expect(resolveRaw({ local: store({ 'sk-palette': 'slate', 'lore-mode': 'light' }) })).toMatchObject({ palette: 'slate', mode: 'dark' });
-    expect(resolveRaw({ cookie: `sk-prefs=${encodeURIComponent(JSON.stringify({ palette: 'juniper' }))}` }).palette).toBe('juniper');
+  it('без ключей приложения kit читает свои нейтральные (kit-*), чужие lore-* не трогает', () => {
+    expect(resolveRaw({ local: store({ 'kit-palette': 'slate', 'lore-mode': 'light' }) })).toMatchObject({ palette: 'slate', mode: 'dark' });
+    expect(resolveRaw({ cookie: `kit-prefs=${encodeURIComponent(JSON.stringify({ palette: 'juniper' }))}` }).palette).toBe('juniper');
   });
 });
 

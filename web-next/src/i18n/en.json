@@ -89,6 +89,8 @@
   "shell.grp.feed": "Feed",
   "shell.grp.personal": "Personal",
   "shell.sec.sprint": "Sprints",
+  "shell.inherited.sprint": "from the sprint",
+  "shell.inherited.feature": "from the feature",
   "shell.sec.task": "Tasks",
   "shell.sec.adr": "ADR",
   "shell.sec.news": "News",

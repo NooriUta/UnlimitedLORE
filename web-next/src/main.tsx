@@ -5,6 +5,7 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { AuthGate } from '@seidr/kit/auth';
 import { authBrand } from './auth/authBrand';
 import { installKitVocabulary } from './kitVocabulary';
+import { LORE_LUCIDE_ICONS } from './shell/loreIcons';
 import App from './App';
 import { v2Auth } from './auth/session';
 import { installServerPulse } from './shell/serverPulse';
@@ -16,6 +17,8 @@ import { staleChunk } from './shell/staleChunk';
 // запрещает удалённую подгрузку, а неизвестный слаг GameIcon рисует честной
 // заглушкой data-missing, а не пустотой.
 registerGameIcons(gameIcons);
+// Глифы разделов LORE, которых нет во вшитом lucide kit (K-14).
+registerGameIcons(LORE_LUCIDE_ICONS);
 // Слова LORE поверх нейтральных строк kit (K-14) — до первой отрисовки, включая вход.
 installKitVocabulary();
 

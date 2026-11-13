@@ -4,15 +4,7 @@
     "src/auth/oidc.ts": { "markers": ["client_id"], "why": "OIDC-параметр протокола (client_id) — стандарт, не предметность; оставить, перепроверить в S7B-23" },
     "src/content/markdownLossless.ts": { "markers": ["lore"], "why": "схема ссылок lore: в общем редакторе (S7B-23, п.8 §15.4)" },
     "src/content/TipTapField.tsx": { "markers": ["lore"], "why": "схема ссылок lore: и упоминания (S7B-23, п.8 §15.4)" },
-    "src/core/statusAxis.ts": { "markers": ["lore"], "why": "LORE_STATUS_AXIS — ось категорий статусов по умолчанию (S7B-23)" },
-    "src/core/validate.ts": { "markers": ["lore", "ready_for_deploy"], "why": "белый список статусных токенов темы и ось LORE как умолчание (K-14 п.3: предупреждение, не отказ; S7B-23)" },
-    "src/elements/iconCanon.ts": { "markers": ["milestone"], "why": "канон иконок под структуру LORE (S7B-23, п.7 §15.4)" },
-    "src/elements/lucideIcons.ts": { "markers": ["milestone"], "why": "имя иконки lucide «milestone» в наборе — не предметность, уйдёт вместе с каноном (S7B-23)" },
-    "src/elements/statusMeta.ts": { "markers": ["ready_for_deploy"], "why": "словарь иконок статусов LORE по умолчанию (S7B-23)" },
-    "src/i18n/en.json": { "markers": ["ready_for_deploy", "sprint"], "why": "предметные строки kit.tasks (статус ready_for_deploy) и kit.chips.fromSprint (S7B-23_2)" },
-    "src/i18n/ru.json": { "markers": ["ready_for_deploy", "sprint"], "why": "предметные строки kit.tasks (статус ready_for_deploy) и kit.chips.fromSprint (S7B-23_2)" },
-    "src/record/history.ts": { "markers": ["client_id", "kc_sub"], "why": "модель авторства kc_sub/client_id в ядре (S7B-23, п.6 §15.4)" },
-    "src/record/ValueChips.tsx": { "markers": ["sprint"], "why": "подпись «от спринта» по типу источника (S7B-23)" },
-    "src/tasks/taskGroups.ts": { "markers": ["ready_for_deploy"], "why": "дефолтный перечень статусов задач LORE (S7B-23, п.3 §15.4)" }
+    "src/core/validate.ts": { "markers": ["ready_for_deploy"], "why": "токены темы --st-* (в т.ч. ready_for_deploy) — сверка с seidr.css (S7B-23_2: цвета статусов в теме kit)" },
+    "src/record/history.ts": { "markers": ["client_id", "kc_sub"], "why": "модель авторства kc_sub/client_id в ядре (S7B-23, п.6 §15.4)" }
   }
 }

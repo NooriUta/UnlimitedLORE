@@ -23,6 +23,11 @@ export function setKitStrings(lang: KitLang, strings: Partial<Record<KitKey, str
   Object.assign(OVERRIDES[lang], strings);
 }
 
+/** Есть ли у kit такая строка (ключ из данных: код статуса, вид записи…). */
+export function hasKitString(key: string): key is KitKey {
+  return key in DICTS.ru;
+}
+
 /** Вернуть строки kit (для тестов и смены приложения). */
 export function resetKitStrings(): void {
   OVERRIDES.ru = {};

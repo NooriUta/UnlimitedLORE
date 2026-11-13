@@ -10,11 +10,11 @@
 // выглядит завершённым, его перестают считать обязательным.
 
 /** Ось в порядке жизненного цикла; unknown — последней. */
-export const LORE_STATUS_AXIS = [
+export const STATUS_AXIS = [
   'not_started', 'in_progress', 'in_force', 'finished', 'withdrawn', 'unknown',
 ] as const;
 
-export type LoreStatusCategory = (typeof LORE_STATUS_AXIS)[number];
+export type AxisStatusCategory = (typeof STATUS_AXIS)[number];
 
 /**
  * Прежние четыре значения kit → ось. Нужно, чтобы конфиги, написанные до
@@ -24,7 +24,7 @@ export type LoreStatusCategory = (typeof LORE_STATUS_AXIS)[number];
  * значений нельзя, его можно только прислать. Придумать его — значит
  * выдумать смысл, которого в старых данных не было.
  */
-const LEGACY: Readonly<Record<string, LoreStatusCategory>> = {
+const LEGACY: Readonly<Record<string, AxisStatusCategory>> = {
   todo: 'not_started',
   planned: 'not_started',
   backlog: 'not_started',
@@ -35,15 +35,15 @@ const LEGACY: Readonly<Record<string, LoreStatusCategory>> = {
   cancelled: 'withdrawn',
 };
 
-export function isAxisCategory(v: unknown): v is LoreStatusCategory {
-  return typeof v === 'string' && (LORE_STATUS_AXIS as readonly string[]).includes(v);
+export function isAxisCategory(v: unknown): v is AxisStatusCategory {
+  return typeof v === 'string' && (STATUS_AXIS as readonly string[]).includes(v);
 }
 
 /**
  * Значение к оси. Незнакомое — `unknown`, а не «завершено»: сбой данных
  * должен быть виден, а не выглядеть закрытой записью.
  */
-export function normalizeAxisCategory(v: unknown): LoreStatusCategory {
+export function normalizeAxisCategory(v: unknown): AxisStatusCategory {
   if (typeof v !== 'string') return 'unknown';
   const s = v.trim().toLowerCase();
   if (isAxisCategory(s)) return s;
@@ -57,6 +57,6 @@ export function normalizeAxisCategory(v: unknown): LoreStatusCategory {
  * вместе с завершёнными нельзя. `unknown` тоже не прячем — непонятное
  * должно оставаться на виду.
  */
-export function isClosedCategory(c: LoreStatusCategory): boolean {
+export function isClosedCategory(c: AxisStatusCategory): boolean {
   return c === 'finished' || c === 'withdrawn';
 }

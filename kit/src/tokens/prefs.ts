@@ -50,14 +50,14 @@ export interface StorageKeys {
 
 /** Нейтральные ключи kit — пока приложение не назвало свои. */
 export const STORAGE_KEYS: StorageKeys = {
-  palette: 'sk-palette',
-  mode: 'sk-mode',
-  legacy: 'sk-theme',
-  density: 'sk-density',
+  palette: 'kit-palette',
+  mode: 'kit-mode',
+  legacy: 'kit-theme',
+  density: 'kit-density',
 };
 
 /** Общая cookie выбора темы по умолчанию; приложение называет свою (cookieName). */
-export const PREFS_COOKIE = 'sk-prefs';
+export const PREFS_COOKIE = 'kit-prefs';
 
 export interface PrefsSources {
   /** Чтение localStorage (или подмена в тесте). */

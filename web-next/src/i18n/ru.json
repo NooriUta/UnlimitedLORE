@@ -89,6 +89,8 @@
   "shell.grp.feed": "Лента",
   "shell.grp.personal": "Личное",
   "shell.sec.sprint": "Спринты",
+  "shell.inherited.sprint": "от спринта",
+  "shell.inherited.feature": "от фичи",
   "shell.sec.task": "Задачи",
   "shell.sec.adr": "ADR",
   "shell.sec.news": "Новости",

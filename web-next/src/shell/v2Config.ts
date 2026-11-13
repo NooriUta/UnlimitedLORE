@@ -142,7 +142,8 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       ],
     },
     kinds: {
-      sprint: { title: t('shell.sec.sprint'), icon: 'sprint' },
+      // inherited — подпись значения, унаследованного от записи вида (K-14: слово LORE, не kit).
+      sprint: { title: t('shell.sec.sprint'), icon: 'sprint', inherited: t('shell.inherited.sprint') },
       task: { title: t('shell.sec.task'), icon: ICON_CANON.sectionTask },
       adr: { title: t('shell.sec.adr'), icon: 'scroll-quill' },
       news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
@@ -155,7 +156,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       question: { title: t('shell.sec.question'), icon: 'help' },
       component: { title: t('shell.sec.component'), icon: 'cog' },
       tech: { title: t('shell.sec.tech'), icon: 'gears' },
-      feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge' },
+      feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge', inherited: t('shell.inherited.feature') },
       project: { title: t('shell.sec.project'), icon: 'open-folder' },
       product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },
       actor: { title: t('shell.sec.actor'), icon: 'hooded-figure' },
