@@ -2161,7 +2161,7 @@
       "priority": "string?",
       "project": "string?",
       "sprint_id": "string",
-      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo)?"
+      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo|uat)?"
     },
     "output": {
       "content": [
@@ -2260,7 +2260,7 @@
       "expected": "string?",
       "id": "string",
       "reason": "string?",
-      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo)"
+      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo|uat)"
     },
     "output": {
       "content": [
@@ -2279,7 +2279,7 @@
     "input": {
       "entity_type": "enum(checkpoint|phase|sprint|task)",
       "ids": "string[]",
-      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo)"
+      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo|uat)"
     },
     "output": {
       "content": [

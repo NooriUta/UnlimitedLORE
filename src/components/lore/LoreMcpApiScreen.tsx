@@ -84,7 +84,7 @@ const TOOLS: ToolDoc[] = [
   // ── Status (SCD2-переходы, общие для нескольких типов) ────────────────────
   { name: 'status_set', kind: 'write', entity: 'Status', backend: 'POST /lore/status',
     params: 'entity_type, id, status',
-    desc: 'Сменить статус одной сущности через полный SCD2-переход: закрыть текущую открытую hist-строку (valid_to=now), открыть новую. entity_type = sprint | task | checkpoint | phase. status ∈ todo|planned|active|partial|done|blocked|high|cancelled|backlog|design|ready_for_deploy — status="cancelled" это и есть штатный soft-delete для этих типов, отдельного hard-delete тула для них нет и не планируется.' },
+    desc: 'Сменить статус одной сущности через полный SCD2-переход: закрыть текущую открытую hist-строку (valid_to=now), открыть новую. entity_type = sprint | task | checkpoint | phase. status ∈ todo|planned|active|partial|done|blocked|high|cancelled|backlog|design|ready_for_deploy|uat (🧪 UAT TESTING: агент проверил на стенде, принимает человек; done ставит только человек) — status="cancelled" это и есть штатный soft-delete для этих типов, отдельного hard-delete тула для них нет и не планируется.' },
   { name: 'status_set_batch', kind: 'write', entity: 'Status', backend: 'POST /lore/status/batch',
     params: 'entity_type, ids[], status',
     desc: 'То же самое (SCD2-переход), но сразу для списка id одного entity_type. Ошибки собираются по каждому элементу отдельно и не прерывают остальные. Возвращает {ok, updated, errors[]}.' },

@@ -470,16 +470,17 @@ public class LoreStatusResource extends LoreResourceBase {
     //   • any task in progress AND sprint is one of
     //     planned / todo / backlog                → sprint `active` (in progress)
     // Deliberate/terminal sprint states are never overridden: blocked,
-    // cancelled, deferred, and ready_for_deploy (RFD is "work done, waiting for
+    // cancelled, deferred, ready_for_deploy and uat (UAT is the same hold: the
+    // agent verified it, a human accepts it; RFD is "work done, waiting for
     // release" — an intentional hold, so all-done must not silently flip it to
     // done). Best-effort: a failure here never fails the task status change.
     private static final java.util.Set<String> SPRINT_AUTO_GUARD =
-        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy");
+        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy", "uat");
     // MT-SPRINT-STATUS-FOLLOWS-TASKS (decision:D-2026-SPRINT-STATUS-FOLLOWS-LAST-TASK):
     // «в работе» — только задачи, над которыми работают. "done" здесь был
     // дефектом: закрытие задачи открывало спринт (VE-1, 06.11.2026).
     private static final java.util.Set<String> TASK_PROGRESS =
-        java.util.Set.of("active", "partial", "ready_for_deploy");
+        java.util.Set.of("active", "partial", "ready_for_deploy", "uat");
     private static final java.util.Set<String> SPRINT_PROMOTABLE =
         java.util.Set.of("planned", "todo", "backlog");
 
@@ -492,6 +493,7 @@ public class LoreStatusResource extends LoreResourceBase {
         if (s.startsWith("🔄")) return "active";
         if (s.startsWith("🟡")) return "partial";
         if (s.startsWith("🚀")) return "ready_for_deploy";
+        if (s.startsWith("🧪")) return "uat";
         if (s.startsWith("🔴")) return "blocked";
         if (s.startsWith("🚫")) return "cancelled";
         if (s.startsWith("🔬")) return "design";
@@ -505,6 +507,7 @@ public class LoreStatusResource extends LoreResourceBase {
         if (u.startsWith("IN PROGRESS") || u.startsWith("WIP") || u.startsWith("ACTIVE")) return "active";
         if (u.startsWith("PARTIAL") || u.startsWith("ЧАСТИЧ")) return "partial";
         if (u.startsWith("READY") || u.startsWith("RFD")) return "ready_for_deploy";
+        if (u.startsWith("UAT") || u.startsWith("ПРИЁМК") || u.startsWith("ПРИЕМК")) return "uat";
         if (u.startsWith("BLOCK") || u.startsWith("ЗАБЛОК")) return "blocked";
         if (u.startsWith("CANCEL") || u.startsWith("ОТМЕН")) return "cancelled";
         if (u.startsWith("DESIGN") || u.startsWith("ДИЗАЙН")) return "design";

@@ -78,7 +78,7 @@ describe('groupTasks · без группировки', () => {
 
 describe('TASK_STATUSES — набор статусов задачи для палитры', () => {
   it('тот же, что пишет POST /lore/status для задачи (v1 TASK_PICK_TOKENS)', () => {
-    expect([...TASK_STATUSES]).toEqual(['todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled']);
+    expect([...TASK_STATUSES]).toEqual(['todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'uat', 'done', 'blocked', 'cancelled']);
   });
 });
 

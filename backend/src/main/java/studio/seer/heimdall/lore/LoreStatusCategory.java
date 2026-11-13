@@ -54,6 +54,7 @@ final class LoreStatusCategory {
         Map.entry("partial", "in_progress"),
         Map.entry("blocked", "in_progress"),
         Map.entry("ready_for_deploy", "in_progress"),
+        Map.entry("uat", "in_progress"),
         Map.entry("done", "finished"),
         Map.entry("cancelled", "withdrawn"));
 

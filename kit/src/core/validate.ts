@@ -30,6 +30,7 @@ export const KIT_COLOR_TOKENS = [
   'acc', 'suc', 'wrn', 'dng', 'inf', 't1', 't2', 't3', 'bd', 'bdh',
   'st-active', 'st-backlog', 'st-blocked', 'st-cancelled', 'st-deferred',
   'st-design', 'st-done', 'st-partial', 'st-planned', 'st-ready_for_deploy', 'st-todo',
+  'st-uat',
 ] as const;
 
 /**

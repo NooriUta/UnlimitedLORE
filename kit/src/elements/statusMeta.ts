@@ -40,6 +40,8 @@ const TABLE: Record<string, Row> = {
   in_progress:      ['progression',    'st-active', 'active'],
   partial:          ['battery-50',     'st-partial', 'active'],
   ready_for_deploy: ['wave-crest',     'st-ready_for_deploy', 'review'],
+  // 13.11.2026: агент проверил на стенде → приёмка человеком; выбор владелицы — индиго + stamper.
+  uat:              ['stamper',        'st-uat', 'review'],
   done:             ['divided-spiral', 'st-done', 'done'],
   fixed:            ['divided-spiral', 'st-done', 'done'],
   reached:          ['divided-spiral', 'st-done', 'done'],

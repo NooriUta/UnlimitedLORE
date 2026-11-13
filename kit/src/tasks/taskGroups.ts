@@ -60,7 +60,7 @@ export interface TaskGroup {
  * сменить в строке задачи (TASK_PICK_TOKENS) и что принимает POST /lore/status.
  */
 export const TASK_STATUSES = [
-  'todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled',
+  'todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'uat', 'done', 'blocked', 'cancelled',
 ] as const;
 /**
  * Код статуса задачи.

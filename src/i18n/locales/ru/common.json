@@ -1231,7 +1231,9 @@
         "todo": "не начато",
         "done": "готово",
         "deferred": "отложено",
-        "cancelled": "отменено"
+        "cancelled": "отменено",
+        "ready_for_deploy": "к выкатке",
+        "uat": "приёмка"
       },
       "month": {
         "jan": "Янв",
@@ -1401,6 +1403,7 @@
         "active": "В работе",
         "partial": "Частично",
         "readyForDeploy": "К деплою",
+        "uat": "UAT — приёмка",
         "done": "Готово",
         "blocked": "Заблокировано",
         "cancelled": "Отменено",
@@ -2982,6 +2985,7 @@
     "active": "В работе",
     "partial": "Частично",
     "ready_for_deploy": "К деплою",
+    "uat": "UAT — приёмка",
     "blocked": "Заблокировано",
     "cancelled": "Отменено",
     "design": "Дизайн",
