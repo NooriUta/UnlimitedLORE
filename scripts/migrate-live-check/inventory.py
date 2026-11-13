@@ -10,7 +10,8 @@
   compare <before.json> <after.json> <mode> <allow_decrease_csv> <out.md>
       mode=migrate  — до накатки → после: убыль записей/исчезновение типа/пропажа
                       образца без объявления в ALLOW_DECREASE = красно; новые
-                      двойные открытые версии = красно; версия схемы не выросла = красно.
+                      двойные открытые версии = красно; версия схемы упала = красно
+                      (не выросла — норма для кода без новых шагов).
       mode=repeat   — после накатки → после повтора: ЛЮБОЕ расхождение числа
                       записей = красно, изменённые поля образцов = красно.
       Код выхода: 0 — зелёно, 1 — красно, 2 — проверка не выполнилась.
@@ -38,6 +39,9 @@ SCD2 = {
 VOLATILE_SAMPLES = {"LoreSchemaVersion"}
 
 
+NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 class CheckFailed(Exception):
     pass
 
@@ -49,7 +53,10 @@ def q(api, db, sql):
     req.add_header("Content-Type", "application/json")
     req.add_header("Authorization", "Basic " + base64.b64encode(f"root:{pw}".encode()).decode())
     try:
-        with urllib.request.urlopen(req, timeout=300) as r:
+        # Мимо прокси: ArcadeDB копии живёт в сети задания, а прокси раннера
+        # (HTTP_PROXY от resolve-proxy.sh) имени контейнера не знает и отвечает
+        # пустым 503 — так упал первый прогон workflow (PR #1319).
+        with NO_PROXY_OPENER.open(req, timeout=300) as r:
             return json.loads(r.read().decode())["result"]
     except urllib.error.HTTPError as e:
         raise CheckFailed(f"{sql[:120]} → HTTP {e.code}: {e.read()[:300]!r}") from e
@@ -170,8 +177,10 @@ def compare(before_p, after_p, mode, allow_csv, out_md):
     if mode == "migrate":
         va, vb = a.get("schema_version"), b.get("schema_version")
         lines.insert(0, f"Схема: v{va} → v{vb}\n")
-        if va is None or vb is None or vb <= va:
-            red.append(f"версия схемы не выросла (v{va} → v{vb}) — накатка не подтверждена")
+        if va is None or vb is None or vb < va:
+            red.append(f"версия схемы не прочитана или упала (v{va} → v{vb})")
+        elif vb == va:
+            lines.insert(1, "Новых шагов схемы в проверяемом коде нет — сверяется, что накатка ничего не тронула.\n")
     else:
         if a.get("schema_version") != b.get("schema_version"):
             red.append(f"повтор изменил версию схемы v{a.get('schema_version')} → v{b.get('schema_version')}")
@@ -205,13 +214,17 @@ def selftest():
     dup = json.loads(json.dumps(base)); dup["schema_version"] = 82
     dup["scd2"]["KnowTaskHist"]["entities_multi_open"] = ["SPRINT_X/T-1"]
     same = json.loads(json.dumps(base))
+    down = json.loads(json.dumps(base)); down["schema_version"] = 80
+    lost_same = json.loads(json.dumps(lost)); lost_same["schema_version"] = 81
     changed = json.loads(json.dumps(base)); changed["samples"]["KnowTask"]["rows"]["#2:0"] = "t2"
     ok = json.loads(json.dumps(base)); ok["schema_version"] = 82
     checks = {
         "убыль без объявления — красно": case(lost, "migrate", "", 1),
         "объявленная убыль — зелёно": case(lost, "migrate", "KnowMachine", 0),
         "новая двойная открытая версия — красно": case(dup, "migrate", "", 1),
-        "схема не выросла — красно": case(same, "migrate", "", 1),
+        "версия схемы упала — красно": case(down, "migrate", "", 1),
+        "новых шагов нет, данные те же — зелёно": case(same, "migrate", "", 0),
+        "новых шагов нет, а запись пропала — красно": case(lost_same, "migrate", "", 1),
         "честная накатка — зелёно": case(ok, "migrate", "", 0),
         "повтор без изменений — зелёно": case(same, "repeat", "", 0),
         "повтор изменил запись — красно": case(changed, "repeat", "", 1),
