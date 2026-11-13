@@ -2539,5 +2539,20 @@
         }
       ]
     }
+  },
+  "whoami": {
+    "input": {},
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
   }
 }

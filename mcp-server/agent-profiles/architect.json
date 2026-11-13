@@ -32,6 +32,7 @@
     "machine_acl": "allow",
     "harness_list": "allow",
     "quality_check": "allow",
-    "lore_version": "allow"
+    "lore_version": "allow",
+    "whoami": "allow"
   }
 }

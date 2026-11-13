@@ -49,7 +49,8 @@
     "status_set_batch",
     "task_set",
     "task_shape",
-    "uc_quality"
+    "uc_quality",
+    "whoami"
   ],
   "core": [
     "changed",
@@ -63,7 +64,8 @@
     "run_block",
     "search",
     "search_similar",
-    "task_shape"
+    "task_shape",
+    "whoami"
   ],
   "analyst": [
     "changed",
@@ -88,7 +90,8 @@
     "search_similar",
     "status_set",
     "task_set",
-    "task_shape"
+    "task_shape",
+    "whoami"
   ],
   "architect": [
     "adr_del",
@@ -141,7 +144,8 @@
     "uc_link",
     "uc_new",
     "uc_quality",
-    "vp_link"
+    "vp_link",
+    "whoami"
   ],
   "developer": [
     "adr_new",
@@ -173,7 +177,8 @@
     "task_new",
     "task_set",
     "task_shape",
-    "tech_set"
+    "tech_set",
+    "whoami"
   ],
   "marketer": [
     "bragi_asset_attach",
@@ -214,7 +219,8 @@
     "task_mv",
     "task_new",
     "task_set",
-    "task_shape"
+    "task_shape",
+    "whoami"
   ],
   "pm": [
     "changed",
@@ -256,7 +262,8 @@
     "uc_link",
     "uc_new",
     "uc_quality",
-    "vp_link"
+    "vp_link",
+    "whoami"
   ],
   "product-analyst": [
     "changed",
@@ -288,7 +295,8 @@
     "task_shape",
     "uc_link",
     "uc_quality",
-    "vp_link"
+    "vp_link",
+    "whoami"
   ],
   "tester": [
     "changed",
@@ -311,6 +319,7 @@
     "task_mv",
     "task_new",
     "task_set",
-    "task_shape"
+    "task_shape",
+    "whoami"
   ]
 }

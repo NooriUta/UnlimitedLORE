@@ -16,6 +16,7 @@ import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
 import { WizardsScreen } from './WizardsScreen';
+import { WhoamiBar } from './WhoamiBar';
 import { AdminNavProvider, type AdminNav } from './adminNav';
 import type { AdminSection } from './adminModule';
 
@@ -47,5 +48,6 @@ export default function AdminSectionView({ id }: { id: AdminSection }) {
     },
   }), [navigate]);
   const Screen = SCREENS[id];
-  return <AdminNavProvider value={nav}><Screen /></AdminNavProvider>;
+  // AO-WHOAMI: «Вы: …» над каждым разделом — кем LORE видит смотрящего.
+  return <AdminNavProvider value={nav}><WhoamiBar /><Screen /></AdminNavProvider>;
 }
