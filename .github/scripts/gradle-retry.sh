@@ -43,6 +43,15 @@ tests_failed() {
   grep -a -q -E '==== ИТОГ ТЕСТОВ: .*упало [1-9]|There were failing tests' "$1"
 }
 
+# OutOfMemoryError в выводе (SPRINT_LORE_PIPELINE_HOST/PL-14, поручение владелицы
+# 13.11: «поставьте в CI проверку на такие OOM внутри»). 13.11 OOM тестовой JVM
+# сыпался сотнями строк в потоках HttpClient-N-SelectorManager, а джоб не падал —
+# висел час на 1% CPU. Молчаливый OOM недопустим: красно, даже если Gradle
+# вернул 0, и без повтора — память не сеть.
+oom_seen() {
+  grep -a -q -F 'java.lang.OutOfMemoryError' "$1"
+}
+
 if [ "${1:-}" = "--selftest" ]; then
   t=$(mktemp -d); rc=0
   printf '==== ИТОГ ТЕСТОВ: всего 747, зелёных 744, упало 3, пропущено 0 ====\n' > "$t/red"
@@ -53,6 +62,9 @@ if [ "${1:-}" = "--selftest" ]; then
   tests_failed "$t/gradle" || { echo "::error::selftest.gradle FAIL — сообщение Gradle о тестах не опознано"; rc=1; }
   tests_failed "$t/net"    && { echo "::error::selftest.net FAIL — обрыв сети принят за тесты, повтора не будет"; rc=1; }
   tests_failed "$t/green"  && { echo "::error::selftest.green FAIL — «упало 0» принято за отказ тестов"; rc=1; }
+  printf 'Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread "HttpClient-550-SelectorManager"\n' > "$t/oom"
+  oom_seen "$t/oom"   || { echo "::error::selftest.oom FAIL — OutOfMemoryError в выводе не опознан"; rc=1; }
+  oom_seen "$t/green" && { echo "::error::selftest.oom FAIL — зелёный вывод принят за OOM"; rc=1; }
   rm -rf "$t"; [ "$rc" -eq 0 ] && echo "selftest ok"; exit "$rc"
 fi
 
@@ -71,6 +83,10 @@ while : ; do
   # код tee (0) и скрипт «падал бы успешно».
   ./gradlew "$@" 2>&1 | tee "$LOG"
   rc=${PIPESTATUS[0]}
+  if oom_seen "$LOG"; then
+    echo "::error::в выводе Gradle есть OutOfMemoryError ($(grep -a -c 'OutOfMemoryError' "$LOG") строк, код Gradle $rc) — красно, без повтора. Первая: $(grep -a -m1 'OutOfMemoryError' "$LOG" | head -c 300). Дамп heap — backend/build/oom (если JVM успела)."
+    exit 1
+  fi
   if [ "$rc" -eq 0 ]; then
     [ "$attempt" -gt 1 ] && echo "::notice::сборка прошла с попытки $attempt — канал до Maven Central нестабилен"
     exit 0

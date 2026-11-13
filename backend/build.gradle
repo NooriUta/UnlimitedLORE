@@ -76,6 +76,21 @@ dependencies {
 compileJava.options.encoding     = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 
+// SPRINT_LORE_PIPELINE_HOST/PL-14 — OOM бэкенд-CI 13.11.2026: develop 0191682a красный
+// («Java heap space»), #1311 висел час на 1% CPU и убит 137. Тестовая JVM шла с
+// дефолтом Gradle 512 МБ (org.gradle.jvmargs=-Xmx2g — это демон, не тесты).
+// Замер на develop (полный набор, встроенная ArcadeDB): при 512 МБ heap упирается
+// в потолок после ~75 стартов тест-БД, потоки HttpClient-N-SelectorManager растут,
+// затем OutOfMemoryError и прогон стоит. При 2 ГБ: 2168 зелёных, 0 OOM, 4–6 мин,
+// пик heap ~1 ГБ. Здесь: 2 ГБ (демон 2 + тесты 2 в потолке джоба 6 ГБ), выход
+// при первом OOM с дампом heap — красный за минуту, а не час. Часть роста потоков
+// убрана общим клиентом тестов (LiveDbHttp); остаток — не тестовый код, ищется в PL-14.
+tasks.named('test') {
+    maxHeapSize = '2g'
+    jvmArgs '-XX:+ExitOnOutOfMemoryError', '-XX:+HeapDumpOnOutOfMemoryError',
+        "-XX:HeapDumpPath=${layout.buildDirectory.get().asFile}/oom"
+}
+
 // Упавший в CI тест, чьё сообщение нельзя прочитать, бесполезен: по умолчанию
 // Gradle печатает только тип исключения и строку — «AssertionError at
 // FooTest.java:83». Всё, ради чего сообщение писалось (что ожидали, что
