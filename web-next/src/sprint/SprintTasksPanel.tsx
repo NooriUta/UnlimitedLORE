@@ -138,7 +138,7 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
 
   return (
     <>
-      <SprintBurnLine sprintId={sprintId} />
+      <SprintBurnLine sprintId={sprintId} deadline={contract.facts ? (contract.facts.due ?? null) : undefined} />
       <div className="sprint-tasks__views" role="group" aria-label={t('sprintTasks.view.label')}>
         {VIEWS.map(v => (
           <button

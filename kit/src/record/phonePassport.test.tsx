@@ -167,3 +167,17 @@ describe('S4-MOBILE-COMPARE · CSS паспорта на телефоне', () =
     expect(ruleIn(narrowCss, '.sk-rec-head__title')).toMatch(/font-size:\s*var\(--fs-lg\)/);
   });
 });
+
+// Владелица 13.11.2026 (по скрину рейки «Контент · Свойства · Аналитика»): «вынеси в лево мини
+// кнопками или под Заголовок». Выбрано «под заголовок»: переключатель видов стоит ПОСЛЕ шапки
+// записи (а не над ней) и в мини-размере.
+describe('переключатель видов паспорта — под заголовком, мини-кнопками (13.11)', () => {
+  it('сегмент видов идёт после заголовка записи', () => {
+    view('overview');
+    const modes = document.querySelector('.sk-rec__modes')!;
+    const title = document.querySelector('.sk-rec__title, h1, h2')!;
+    expect(title).toBeTruthy();
+    expect(title.compareDocumentPosition(modes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(modes.classList.contains('sk-rec__modes--mini')).toBe(true);
+  });
+});

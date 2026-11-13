@@ -295,6 +295,8 @@
   "pp.rel.supersedes": "Заменяет",
   "pp.rel.supersededBy": "Заменён",
   "pp.rel.justifies": "Обосновывает задачи",
+  "sprintBurn.target": "Цель к сроку",
+  "sprintBurn.noDeadline": "срок спринта не задан — прогноза нет",
   "sprintBurn.title": "BURN-DOWN",
   "sprintBurn.remaining": "остаток",
   "sprintBurn.done": "закрыто",

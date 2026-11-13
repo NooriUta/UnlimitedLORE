@@ -489,6 +489,11 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
  */
 const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title: 220 };
 
+/** Место фильтра по дате в ряду фасетов (PU-12). Ключ оси так не называется: оси — поля записи. */
+const DATE_SLOT = '@kit:date';
+/** PU-07: сколько значений многозначной ячейки видно в строке; остальное — «+N». */
+const CELL_VALUES_INLINE = 1;
+
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
@@ -593,6 +598,13 @@ export function ListView({
   const [groupFind, setGroupFind] = useState('');
   /** Телефон: раскрыта ли полоса фильтра, группировки и порядка (S4-MOBILE-COMPARE). Местное, как «+N». */
   const [ctlOpen, setCtlOpen] = useState(false);
+  // Ряд фасетов в одну строку (SPRINT_UXR_POLISH_UAT_1113/PU-12): сколько МЕСТ влезает
+  // (фасеты + кнопка «+N»). Infinity — «ещё не мерили»: рисуем все и усаживаем по переносу.
+  const [facetFits, setFacetFits] = useState(Infinity);
+  const [facetsOpen, setFacetsOpen] = useState(false);
+  // PU-07: раскрытые многозначные ячейки («+N» нажат) — «записьколонка». Местное, не в адресе.
+  const [cellsOpen, setCellsOpen] = useState<Set<string>>(() => new Set());
+  const ctlRef = useRef<HTMLDivElement>(null);
   const ctlId = useId();
   /** Раскрыта ли свёртка «+N» в строке условий (S9-12). Местное, не в адресе. */
   const [chipsOpen, setChipsOpen] = useState(false);
@@ -702,6 +714,57 @@ export function ListView({
   const activeQuick = quick.find(q => q.id === state.quick) ?? null;
   const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
   const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
+
+  // PU-12: какие фасеты в ряду. Бюджет — от КОНТЕЙНЕРА (переносится ли ряд), не от окна:
+  // с открытым паспортом окно то же, а места у списка меньше. Фасет с заданным условием не
+  // прячется никогда — иначе «что отсеивает записи» ушло бы под «+N». На телефоне ряд и так
+  // под кнопкой «Фильтры» и раскрывается целиком.
+  // Фильтр по дате — такое же место в ряду, как фасет оси: не влез и не задан — тоже в «+N».
+  const facetSlots = useMemo(() => (dateFilter ? [...filterKeys, DATE_SLOT] : filterKeys), [filterKeys, dateFilter]);
+  const facetFold = !narrow && !facetsOpen && facetFits < facetSlots.length;
+  const facetShown = useMemo(() => {
+    if (!facetFold) return facetSlots;
+    const active = new Set(facetSlots.filter(k => (k === DATE_SLOT ? dateOn : k in filterSet.fields)));
+    let room = Math.max(1, facetFits - 1) - active.size; // одно место — кнопке «+N»
+    return facetSlots.filter(k => active.has(k) || room-- > 0);
+  }, [facetFold, facetFits, facetSlots, filterSet, dateOn]);
+  const facetHidden = facetSlots.length - facetShown.length;
+  const facetKeysSig = facetSlots.join('|');
+  useEffect(() => { setFacetFits(Infinity); }, [facetKeysSig]);
+  // Ширина контейнера изменилась — мерить заново. Следим только за шириной: высота ряда
+  // меняется от наших же правок, реакция на неё дала бы петлю (тот же приём, что в Tabs).
+  useEffect(() => {
+    const el = ctlRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    // Первый вызов только запоминает ширину: clientWidth (с отступами) и contentRect (без)
+    // различаются, и сравнение с clientWidth сбрасывало усадку сразу после неё (замер 13.11).
+    let last: number | null = null;
+    const ro = new ResizeObserver(entries => {
+      const w = Math.round(entries[0].contentRect.width);
+      if (last === null) { last = w; return; }
+      if (Math.abs(w - last) < 8) return;
+      last = w;
+      setFacetFits(Infinity);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // Усадка: ряд перенёсся — одним местом меньше. Перенос видно по offsetTop: пока строка
+  // одна, он у всех соседей одинаков. Только вниз и не меньше двух мест — петли нет.
+  useEffect(() => {
+    if (narrow || facetsOpen) return;
+    const el = ctlRef.current;
+    const seg = el?.querySelector<HTMLElement>(':scope > .sk-list__seg[data-seg="filter"]');
+    if (!el || !seg) return;
+    const slots = Array.from(seg.children).filter(c => c.classList.contains('sk-facet') || c.classList.contains('sk-list__facetmore')) as HTMLElement[];
+    // Сегменты фильтра/группы/порядка — одна строка; быстрые фильтры и «показано» живут ниже.
+    // Только ряд сегмента фильтра: группировка и порядок на узком списке стоят своими строками
+    // и раньше — по ним усадка сжала бы фасеты до одного без пользы (замер 13.11, 800 px).
+    // Перенос — сдвиг вниз больше полувысоты: кнопка «+N» ниже фасета на 1 px из-за выравнивания по центру.
+    const wraps = (xs: HTMLElement[]) => xs.length > 1 && xs.some(x => x.offsetTop > xs[0].offsetTop + xs[0].offsetHeight / 2);
+    const used = facetShown.length + (facetHidden > 0 ? 1 : 0);
+    if (used > 2 && wraps(slots)) setFacetFits(used - 1);
+  });
   const pageCounts = useMemo(() => quickCounts(pool, quick, []), [pool, quick]);
   /**
    * Чем выдача сужена СЕЙЧАС (S9-01). Источник считает ось по выдаче без
@@ -1354,11 +1417,32 @@ export function ListView({
         </span>
       );
     }
+    // PU-07: многозначная ячейка — в одну строку, первое значение и «+N». Высота строки списка
+    // не зависит от числа значений (задача на 11 релизах была в 5–8 строк ростом). Спрятанное не
+    // теряется: полный список — в подсказке «+N», нажатие раскрывает его на месте.
+    const title = (v: string) => labelOf.get(v) ?? labels.valueTitle(key, v);
+    const cellKey = `${r.id}${key}`;
+    const open = cellsOpen.has(cellKey);
+    const shownVs = vs.length > CELL_VALUES_INLINE && !open ? vs.slice(0, CELL_VALUES_INLINE) : vs;
     return (
-      <span className="sk-list__vals">
-        {vs.map(v => (
-          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{labelOf.get(v) ?? labels.valueTitle(key, v)}</span></span>
+      <span className={`sk-list__vals${vs.length > CELL_VALUES_INLINE && !open ? ' is-folded' : ''}`}>
+        {shownVs.map(v => (
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{title(v)}</span></span>
         ))}
+        {vs.length > CELL_VALUES_INLINE && (
+          <button
+            type="button"
+            className="sk-list__valmore"
+            aria-expanded={open}
+            title={vs.map(title).join(', ')}
+            onClick={e => {
+              e.stopPropagation();
+              setCellsOpen(prev => { const n = new Set(prev); if (n.has(cellKey)) n.delete(cellKey); else n.add(cellKey); return n; });
+            }}
+          >
+            {open ? '−' : `+${vs.length - CELL_VALUES_INLINE}`}
+          </button>
+        )}
       </span>
     );
   };
@@ -2291,7 +2375,7 @@ export function ListView({
           <span aria-hidden="true">{ctlOpen ? '▴' : '▾'}</span>
         </button>
       )}
-      <div id={ctlId} role="group" aria-label={t('kit.list.filters')} className={`sk-list__controls${narrow && !ctlOpen ? ' is-folded' : ''}`} data-testid="kit-list-controls">
+      <div ref={ctlRef} id={ctlId} role="group" aria-label={t('kit.list.filters')} className={`sk-list__controls${narrow && !ctlOpen ? ' is-folded' : ''}`} data-testid="kit-list-controls">
         {!head && viewsSwitch}
         {!head && viewMenu}
         <fieldset className="sk-list__seg" data-seg="filter">
@@ -2306,7 +2390,7 @@ export function ListView({
             value={state.text}
             onChange={e => update({ text: e.target.value })}
           />
-          {filterKeys.map(k => {
+          {facetShown.filter(k => k !== DATE_SLOT).map(k => {
             // Числа оси: у источника — по всей выдаче, иначе по загруженной
             // странице; «не посчитали» — «?» вместо чисел (S9-01). Значения
             // при «?» остаются страничными: выбрать значение всё равно надо,
@@ -2335,7 +2419,7 @@ export function ListView({
               />
             );
           })}
-          {dateFilter && (
+          {dateFilter && facetShown.includes(DATE_SLOT) && (
             <DateRangeFilter
               title={dateFilter.title}
               value={dateFilter.value}
@@ -2347,6 +2431,16 @@ export function ListView({
               undated={dated.undated}
               unavailable={dateFilter.unavailable}
             />
+          )}
+          {(facetHidden > 0 || (facetsOpen && !narrow && facetFits < facetSlots.length)) && (
+            <button
+              type="button"
+              className="sk-list__facetmore"
+              aria-expanded={facetsOpen}
+              onClick={() => setFacetsOpen(v => !v)}
+            >
+              {facetsOpen ? t('kit.list.facetsLess') : kitPlural(lang, 'kit.list.facetsMore', facetHidden)}
+            </button>
           )}
         </fieldset>
         {/* Лента получает ТУ ЖЕ строку управления (K2-FEED-VIEW §1): просьба

@@ -584,7 +584,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   const shown: TabItem[] = !modes ? items : mode === 'analytics' ? aroundItems : mode === 'content' ? contentItems : [];
   const firstOf: Record<Mode, string> = { content: RECORD_TABS.overview, props: RECORD_TABS.props, analytics: aroundItems[0].id };
   const switcher = modes ? (
-    <div className="sk-rec__modes">
+    <div className="sk-rec__modes sk-rec__modes--mini">
       <Segmented<Mode> label={kitT(lang, 'kit.record.view')} value={mode} onChange={m => onTab(firstOf[m])}
         options={[
           { value: 'content', label: kitT(lang, 'kit.record.view.content') },
@@ -729,7 +729,6 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   ) : null;
   const mainBlock = (
     <>
-        {switcher}
         {placement === 'full' && (
           <div className="sk-rec-widthbar">
             <div role="radiogroup" aria-label={kitT(lang, 'kit.record.width')} className="sk-rec-widthbar__seg">
@@ -742,6 +741,10 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
           </div>
         )}
         <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
+        {/* Виды записи — под заголовком мини-кнопками (владелица 13.11.2026: «вынеси в лево мини
+            кнопками или под Заголовок»): над шапкой рейка стояла первой строкой паспорта и
+            спорила с заголовком. */}
+        {switcher}
         <RelationLines record={record} ctx={ctx} defs={rels} />
         {facts && (
           <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
