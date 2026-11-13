@@ -18,6 +18,7 @@
 // D-2026-UXR-V2-FOLDER-V1-FROZEN); общего клиента v2 пока нет.
 import { diffVersions, type KitHistory, type KitHistoryVersion, type KitRestoreRequest } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { loreAuthor } from './loreAuthor';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -89,7 +90,7 @@ function fromS2(body: Record<string, unknown>): KitHistory {
       // S9-09: служебные поля (хэш содержимого, коммит источника) — не правка; legacy их уже отсекал.
       is_open: Boolean(v.is_open), status: v.status ?? null,
       fields: Object.fromEntries(Object.entries(v.fields ?? {}).filter(([k]) => !SERVICE.has(k))),
-      changed: Array.isArray(v.changed) ? v.changed.filter(k => !SERVICE.has(k)) : [], author: v.author ?? { kind: 'unknown' },
+      changed: Array.isArray(v.changed) ? v.changed.filter(k => !SERVICE.has(k)) : [], author: loreAuthor(v.author),
     })),
     anomalies: Array.isArray(body.anomalies) ? (body.anomalies as string[]) : [],
     page: (body.page as KitHistory['page']) ?? null,

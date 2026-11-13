@@ -1,10 +1,7 @@
 {
   "_about": "Эталон сторожа K-14 (k14Boundary.test.ts): известный долг предметности LORE в kit на 11.11.2026 после выноса news/activity (SPRINT_UXR_S7B_ADMIN/S7B-27). Не разрешение, а перечень к разбору в SPRINT_UXR_S7B_ADMIN/S7B-23. Новая строка сюда — только с причиной и задачей; вынесли — строку убрать (сторож краснеет на устаревшую).",
   "files": {
-    "src/auth/oidc.ts": { "markers": ["client_id"], "why": "OIDC-параметр протокола (client_id) — стандарт, не предметность; оставить, перепроверить в S7B-23" },
-    "src/content/markdownLossless.ts": { "markers": ["lore"], "why": "схема ссылок lore: в общем редакторе (S7B-23, п.8 §15.4)" },
-    "src/content/TipTapField.tsx": { "markers": ["lore"], "why": "схема ссылок lore: и упоминания (S7B-23, п.8 §15.4)" },
-    "src/core/validate.ts": { "markers": ["ready_for_deploy"], "why": "токены темы --st-* (в т.ч. ready_for_deploy) — сверка с seidr.css (S7B-23_2: цвета статусов в теме kit)" },
-    "src/record/history.ts": { "markers": ["client_id", "kc_sub"], "why": "модель авторства kc_sub/client_id в ядре (S7B-23, п.6 §15.4)" }
+    "src/auth/oidc.ts": { "markers": ["client_id"], "why": "OIDC-параметр протокола client_id — стандарт, не предметность; оставлен (S7B-23_2)" },
+    "src/core/validate.ts": { "markers": ["ready_for_deploy"], "why": "имя токена темы --st-ready_for_deploy в перечне KIT_COLOR_TOKENS (сверка с seidr.css). Цвет — тема kit; переименование токена задевает цвета статусов в модели сервера (shared/model) — зона модели, отдельной задачей (S7B-23_2)" }
   }
 }

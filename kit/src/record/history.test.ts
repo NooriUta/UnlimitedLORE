@@ -15,10 +15,10 @@ const v = (over: Partial<KitHistoryVersion>): KitHistoryVersion => ({
 
 const NEW = v({ state_uid: 's3', valid_from: '2026-11-07T10:00:00Z', is_open: true, status: 'IN_PROGRESS',
   fields: { note_md: 'третья', effort_days: 2, status_raw: 'IN_PROGRESS' },
-  author: { kind: 'agent', client_id: 'claude-code', actor_id: 'A-1', session_id: null, owner_kc_sub: 'u-1' } });
+  author: { kind: 'agent', id: 'claude-code', name: null, owner: 'u-1' } });
 const MID = v({ state_uid: 's2', valid_from: '2026-11-06T10:00:00Z', valid_to: '2026-11-07T10:00:00Z',
   fields: { note_md: 'вторая', effort_days: 1, status_raw: 'TODO' },
-  author: { kind: 'human', kc_sub: 'u-1', display_name: 'Маша' } });
+  author: { kind: 'human', id: 'u-1', name: 'Маша' } });
 const OLD = v({ state_uid: 's1', valid_from: '2026-11-05T10:00:00Z', valid_to: '2026-11-06T10:00:00Z',
   fields: { note_md: 'первая', status_raw: 'TODO' } });
 
@@ -43,9 +43,9 @@ describe('S5-11 · history: diffVersions', () => {
 });
 
 describe('S5-11 · history: автор правки', () => {
-  it('человек — имя, иначе kc_sub; агент — client_id и владелец; без авторства — unknown', () => {
+  it('человек — имя, иначе id; агент — имя (иначе id) и владелец; без авторства — unknown', () => {
     expect(historyAuthor(MID.author)).toEqual({ kind: 'human', name: 'Маша' });
-    expect(historyAuthor({ kind: 'human', kc_sub: 'u-7', display_name: null })).toEqual({ kind: 'human', name: 'u-7' });
+    expect(historyAuthor({ kind: 'human', id: 'u-7', name: null })).toEqual({ kind: 'human', name: 'u-7' });
     expect(historyAuthor(NEW.author)).toEqual({ kind: 'agent', name: 'claude-code', owner: 'u-1' });
     expect(historyAuthor({ kind: 'unknown' })).toEqual({ kind: 'unknown', name: null });
   });
@@ -92,7 +92,7 @@ describe('S5-11 · history: возврат версии как новой', () =
 
 // ─── SPRINT_UXR_S9_SCALE_OPT/S9-09 · фильтры, свёртка, честный счёт ──────────
 describe('S9-09 · history: кто правил — как выбор', () => {
-  it('идентификатор автора: человек — kc_sub, агент — client_id, неизвестный — ничего', () => {
+  it('идентификатор автора — id (у LORE: человек — kc_sub, агент — client_id), неизвестный — ничего', () => {
     expect(authorCaller(MID.author)).toBe('u-1');
     expect(authorCaller(NEW.author)).toBe('claude-code');
     expect(authorCaller(OLD.author)).toBeNull();

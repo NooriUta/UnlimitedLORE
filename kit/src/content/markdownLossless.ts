@@ -17,6 +17,7 @@
 // байт-в-байт; то, что схема моделирует, сериализуется так, чтобы marked
 // разобрал его так же. Вид, который не покрыт, ловит тест S5-07
 // (markdownRoundTrip.test.tsx): новый вид в телах — новая строка в его CORPUS.
+import { linkScheme } from './linkScheme';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -303,11 +304,11 @@ export function losslessMarkdownLayer(): AnyExtension[] {
 export function markdownBaseExtensions(opts: Partial<MathNodeOptions> = {}): AnyExtension[] {
   const promptTex = opts.promptTex ?? null;
   return [
-    // Явный протокол lore: — иначе Link отбрасывает адрес ссылки на актора,
-    // спринт, задачу (и упоминание, записанное как [@имя](lore:actor/id)).
+    // Схема ссылок приложения (у LORE — lore:) — иначе Link отбрасывает адрес
+    // ссылки на актора, спринт, задачу и упоминания (K-14: схему называет приложение).
     // Text — свой (MathSafeText, S5-13): доллары, которые при повторном
     // разборе стали бы формулой, пишутся экранированными.
-    StarterKit.configure({ text: false, link: { protocols: ['lore'], openOnClick: false } }),
+    StarterKit.configure({ text: false, link: { protocols: linkScheme().protocols, openOnClick: false } }),
     MathSafeText,
     // Формулы $…$ / $…$ — KaTeX прямо в редакторе (S5-13); двойной клик — правка.
     MathInline.configure({ promptTex }),

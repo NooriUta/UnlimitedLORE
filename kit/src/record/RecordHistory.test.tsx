@@ -22,10 +22,10 @@ const ver = (over: Partial<KitHistoryVersion>): KitHistoryVersion => ({
 
 const V3 = ver({ state_uid: 's3', valid_from: '2026-11-07T10:00:00Z', is_open: true, status: 'IN_PROGRESS',
   fields: { note_md: 'третья', effort_days: 2 }, changed: ['effort_days', 'note_md'],
-  author: { kind: 'agent', client_id: 'claude-code', actor_id: null, session_id: null, owner_kc_sub: 'u-1' } });
+  author: { kind: 'agent', id: 'claude-code', name: null, owner: 'u-1' } });
 const V2 = ver({ state_uid: 's2', valid_from: '2026-11-06T10:00:00Z', valid_to: '2026-11-07T10:00:00Z', status: 'TODO',
   fields: { note_md: 'вторая', effort_days: 1 }, changed: ['effort_days', 'note_md'],
-  author: { kind: 'human', kc_sub: 'u-1', display_name: 'Маша' } });
+  author: { kind: 'human', id: 'u-1', name: 'Маша' } });
 const V1 = ver({ state_uid: 's1', valid_from: '2026-11-05T10:00:00Z', valid_to: '2026-11-06T10:00:00Z', status: 'TODO',
   fields: { note_md: 'первая' }, changed: ['note_md'] });
 

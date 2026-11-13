@@ -18,6 +18,7 @@
 // S5-07: набор расширений — общий с тестом «MD → TipTap → MD без потерь»
 // (markdownLossless.ts): [[ссылки]], формулы, «:::», комментарии, `\|` в
 // ячейках, ссылки lore: и переносы строк переживают сохранение.
+import { linkScheme } from './linkScheme';
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import Image from '@tiptap/extension-image';
 import Mention from '@tiptap/extension-mention';
@@ -65,7 +66,7 @@ function buildMention(
       return {
         markdown: {
           serialize(state: { write: (s: string) => void }, node: { attrs: Record<string, unknown> }) {
-            state.write(`[@${node.attrs.label ?? node.attrs.id}](lore:actor/${node.attrs.id})`);
+            state.write(`[@${node.attrs.label ?? node.attrs.id}](${linkScheme().mentionHref(String(node.attrs.id))})`);
           },
           parse: {},
         },

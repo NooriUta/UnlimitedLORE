@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { KNOWN_STATUSES, TASK_STATUSES, kitT, statusMeta, taskStatusName } from '@seidr/kit';
+import { KNOWN_STATUSES, TASK_STATUSES, kitT, linkScheme, statusMeta, taskStatusName } from '@seidr/kit';
 import { KIT_COLOR_TOKENS } from '@seidr/kit/core';
 
 describe('статус uat', () => {
@@ -45,5 +45,9 @@ describe('слова LORE поверх нейтральных строк kit', (
     expect(kitT('ru', 'kit.palette.trigger.search')).toBe('Поиск по LORE…');
     expect(kitT('ru', 'kit.record.history.agent')).toBe('агент');
     expect(kitT('en', 'kit.auth.redirecting')).toMatch(/Keycloak/);
+  });
+  it('ссылки и упоминания в телах — схемой lore:, как они лежат в данных', () => {
+    expect(linkScheme().protocols).toContain('lore');
+    expect(linkScheme().mentionHref('anna')).toBe('lore:actor/anna');
   });
 });

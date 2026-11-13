@@ -2,7 +2,7 @@
 // kit не знает, что у LORE «спринт», «агент» и вход через Keycloak: эти слова —
 // предметность приложения и живут здесь. Ставится один раз при старте (main.tsx)
 // и в настройке тестов, чтобы экран говорил теми же словами, что и раньше.
-import { registerStatuses, setKitStrings, setTaskStatuses, type KitKey, type KitLang, type StatusRow } from '@seidr/kit';
+import { registerStatuses, setKitStrings, setLinkScheme, setTaskStatuses, type KitKey, type KitLang, type StatusRow } from '@seidr/kit';
 
 export const LORE_KIT_STRINGS: Record<KitLang, Partial<Record<KitKey, string>>> = {
   ru: {
@@ -50,9 +50,14 @@ export const LORE_TASK_STATUSES = [
   'todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'uat', 'done', 'blocked', 'cancelled',
 ] as const;
 
+/** Схема ссылок редактора LORE: [@имя](lore:actor/id), [спринт](lore:sprint/ID). */
+export const LORE_LINK_SCHEME = { protocols: ['lore'], mentionHref: (id: string) => `lore:actor/${id}` };
+
 export function installKitVocabulary(): void {
   setKitStrings('ru', LORE_KIT_STRINGS.ru);
   setKitStrings('en', LORE_KIT_STRINGS.en);
   registerStatuses(LORE_STATUSES, { after: 'partial' });
   setTaskStatuses(LORE_TASK_STATUSES);
+  // Ссылки на записи и упоминания в телах — схемой lore: (так они уже лежат в данных).
+  setLinkScheme(LORE_LINK_SCHEME);
 }

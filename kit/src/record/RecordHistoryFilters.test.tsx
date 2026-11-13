@@ -39,8 +39,8 @@ beforeAll(() => registerGameIcons(gameIcons));
 
 const REC: KitRecord = { id: 'S/T-1', kind: 'Task', title: 'Задача', status: 'IN_PROGRESS', fields: {} };
 
-const agent = (id: string) => ({ kind: 'agent' as const, client_id: id, actor_id: null, session_id: null, owner_kc_sub: 'u-1' });
-const human = (sub: string, name: string) => ({ kind: 'human' as const, kc_sub: sub, display_name: name });
+const agent = (id: string) => ({ kind: 'agent' as const, id, name: null, owner: 'u-1' });
+const human = (sub: string, name: string) => ({ kind: 'human' as const, id: sub, name });
 
 const ver = (over: Partial<KitHistoryVersion>): KitHistoryVersion => ({
   state_uid: null, valid_from: null, valid_to: null, is_open: false, status: null,

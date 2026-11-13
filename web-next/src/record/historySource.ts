@@ -20,6 +20,7 @@
 // «был дифф», нельзя: сравнение показывало бы несуществующие правки.
 import { HISTORY_TYPES, changedFields } from '../api/contracts/s2';
 import type { KitHistory, KitHistoryAuthor, KitHistoryRun, KitHistoryVersion } from '@seidr/kit';
+import { loreAuthor } from '../history/loreAuthor';
 import { loreFetch } from '../auth/session';
 
 /** Служебные поля строки: в снимок полей версии не идут. */
@@ -56,16 +57,9 @@ export interface HistoryQueryOpts {
 
 export class HistoryForbidden extends Error {}
 
+// Автор — общим адаптером LORE → kit (K-14): здесь сервер отдаёт caller.
 function authorOf(raw: unknown): KitHistoryAuthor {
-  if (!raw || typeof raw !== 'object') return { kind: 'unknown' };
-  const a = raw as Record<string, unknown>;
-  const caller = typeof a.caller === 'string' ? a.caller : null;
-  if (a.kind === 'human') return { kind: 'human', kc_sub: caller ?? '', display_name: null };
-  if (a.kind === 'agent') {
-    return { kind: 'agent', client_id: caller ?? '', actor_id: null, session_id: null, owner_kc_sub: null };
-  }
-  // Автора не установили — так и говорим. «unknown» ≠ «правил никто».
-  return { kind: 'unknown' };
+  return loreAuthor(raw);
 }
 
 /** Пометка свёрнутой серии, как её отдаёт сервер. Нет — строка не свёрнута. */
