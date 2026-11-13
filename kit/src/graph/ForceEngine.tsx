@@ -50,7 +50,12 @@ export default function ForceEngine(p: GxEngineProps) {
           ctx.font = `${11 / scale}px Manrope, sans-serif`;
           ctx.fillStyle = resolveColor(el, '--t1');
           ctx.textAlign = 'center';
-          ctx.fillText(n.title ?? n.id, n.x ?? 0, (n.y ?? 0) + 14 / scale);
+          // MP2-13: подпись стоит ПОД кругом узла при любом зуме. Радиус узла
+          // в мировых координатах постоянен, на экране он растёт вместе с
+          // зумом; прежний фиксированный отступ 14px при приближении уводил
+          // подпись внутрь круга — карточка узла «съезжала» с узла.
+          const rWorld = 4 * s.settings.nodeSize * Math.sqrt(1 + Math.sqrt(degree.get(n.id) ?? 0));
+          ctx.fillText(n.title ?? n.id, n.x ?? 0, (n.y ?? 0) + rWorld + 4 / scale);
         });
       g.d3Force('x', d3.forceX()).d3Force('y', d3.forceY());
       let clicks = 0;

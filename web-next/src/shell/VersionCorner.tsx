@@ -57,6 +57,10 @@ export function VersionCorner({ fetchImpl, state: given, front = FRONT_COMMIT, c
 
   return (
     <div className="v2-version sk-shell__corner">
+      {/* MP2-04 (проход 13.11): подпись метки лежит поверх содержимого и не
+          должна перехватывать тапы — текст вне кнопки (контейнер и так
+          pointer-events:none). Копия остаётся кнопкой-иконкой рядом. */}
+      <span className="v2-version__text">{text}</span>
       <button
         type="button"
         className="v2-version__btn"
@@ -64,7 +68,7 @@ export function VersionCorner({ fetchImpl, state: given, front = FRONT_COMMIT, c
         aria-label={`${appT(lang, 'version.action')}: ${full}`}
         onClick={() => void copy()}
       >
-        {text}
+        ⧉
       </button>
       {/* Итог нажатия — словами и для скринридера: «нажала и ничего не
           произошло» ничем не отличается от «скопировалось». */}

@@ -27,7 +27,8 @@
 // свёрнутом виде. Свёрнутая она НЕ МОЛЧИТ: число оговорок и слово о том, что
 // это оговорки модели, стоят в самом шевроне — «свёрнуто» не должно читаться
 // как «предупреждений нет».
-import { TechGate } from '@seidr/kit';
+import { useMemo } from 'react';
+import { TechGate, useWarningsSource, type WarningItem } from '@seidr/kit';
 import { useAppT } from '../i18n';
 
 export interface ModelNotesProps {
@@ -37,6 +38,16 @@ export interface ModelNotesProps {
 
 export function ModelNotes({ notes }: ModelNotesProps) {
   const t = useAppT();
+  // MP2-08 (владелица 13.11.2026): оговорки модели — технические сообщения,
+  // их место под общим значком warnings, а не полосой/чипом в компоновке.
+  // Сборщик экрана собирает их вместе с состоянием данных и замечаниями
+  // графа в один список; без сборщика (витрина, тесты) — прежний шеврон.
+  const items = useMemo<WarningItem[]>(
+    () => notes.map(n => ({ source: t('pp.modelNotes.kind'), label: t('pp.modelNotes.kind'), text: n, tone: 'wrn' })),
+    [notes, t],
+  );
+  const collected = useWarningsSource('model', items);
+  if (collected) return null;
   // Оговорок нет — и панели нет. «Не проверяли» и «модель не прочиталась» сюда
   // приходят СТРОКАМИ (passportOrder.ts, passportStatuses.ts), то есть тоже
   // оговорками: пустой список значит именно «модель ответила, спорить не о чем».

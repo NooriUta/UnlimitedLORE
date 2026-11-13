@@ -78,45 +78,43 @@ describe('groupTasks · без группировки', () => {
 
 describe('TASK_STATUSES — набор статусов задачи для палитры', () => {
   it('тот же, что пишет POST /lore/status для задачи (v1 TASK_PICK_TOKENS)', () => {
-    expect([...TASK_STATUSES]).toEqual(['todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled']);
+    expect([...TASK_STATUSES]).toEqual(['todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'uat', 'done', 'blocked', 'cancelled']);
   });
 });
 
 describe('validateTaskDraft — правка в строке', () => {
-  const base = task('T1', { title: 'Было', effortDays: 1, executor: 'claude', reviewer: 'owner' });
+  const base = task('T1', { title: 'Было', effortDays: 1 });
 
   it('без изменений — пустой патч', () => {
-    expect(validateTaskDraft(base, { title: 'Было', effort: '1', executor: 'claude', reviewer: 'owner' }))
+    expect(validateTaskDraft(base, { title: 'Было', effort: '1' }))
       .toEqual({ ok: true, patch: {} });
   });
 
-  it('в патч идут только изменённые поля; оценка — число, запятая как точка', () => {
-    expect(validateTaskDraft(base, { title: ' Стало ', effort: '1,5', executor: 'claude', reviewer: 'codex' }))
-      .toEqual({ ok: true, patch: { title: 'Стало', effortDays: 1.5, reviewer: 'codex' } });
+  it('в патч идут только изменённые поля; оценка — число, запятая как точка; ролей в патче нет (PU-17)', () => {
+    expect(validateTaskDraft(base, { title: ' Стало ', effort: '1,5' }))
+      .toEqual({ ok: true, patch: { title: 'Стало', effortDays: 1.5 } });
   });
 
   it('пустой заголовок — отказ (бэкенд требует title)', () => {
-    expect(validateTaskDraft(base, { title: '  ', effort: '1', executor: 'claude', reviewer: 'owner' }))
+    expect(validateTaskDraft(base, { title: '  ', effort: '1' }))
       .toEqual({ ok: false, field: 'title' });
   });
 
   it('оценка не число или отрицательная — отказ', () => {
-    expect(validateTaskDraft(base, { title: 'Было', effort: 'abc', executor: 'claude', reviewer: 'owner' }))
+    expect(validateTaskDraft(base, { title: 'Было', effort: 'abc' }))
       .toEqual({ ok: false, field: 'effort' });
-    expect(validateTaskDraft(base, { title: 'Было', effort: '-1', executor: 'claude', reviewer: 'owner' }))
+    expect(validateTaskDraft(base, { title: 'Было', effort: '-1' }))
       .toEqual({ ok: false, field: 'effort' });
   });
 
-  it('стереть оценку или роль нельзя (бэкенд читает null как «не трогать») — честный отказ, а не молчаливый no-op', () => {
-    expect(validateTaskDraft(base, { title: 'Было', effort: '', executor: 'claude', reviewer: 'owner' }))
+  it('стереть оценку нельзя (бэкенд читает null как «не трогать») — честный отказ, а не молчаливый no-op', () => {
+    expect(validateTaskDraft(base, { title: 'Было', effort: '' }))
       .toEqual({ ok: false, field: 'effort' });
-    expect(validateTaskDraft(base, { title: 'Было', effort: '1', executor: '', reviewer: 'owner' }))
-      .toEqual({ ok: false, field: 'executor' });
   });
 
   it('пустое поле, которое и было пустым, — не изменение', () => {
     const blank = task('T2', { title: 'X' });
-    expect(validateTaskDraft(blank, { title: 'X', effort: '', executor: '', reviewer: '' }))
+    expect(validateTaskDraft(blank, { title: 'X', effort: '' }))
       .toEqual({ ok: true, patch: {} });
   });
 });

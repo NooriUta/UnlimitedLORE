@@ -62,23 +62,40 @@ export const LORE_FACET_AXES: Readonly<Record<string, string>> = {
  * это словами.
  */
 export function axesForKeys(keys: readonly string[], slice?: string): Record<string, string> {
-  const rename = (slice && SLICE_AXIS_NAMES[slice]) || {};
+  // Срез известен — только его объявленные колонки (MC-03): ось из общей карты, которой
+  // в срезе нет, — это 400 BAD_PARAMS на весь /facets (PU-01). Среза нет в карте —
+  // счётчиков с сервера не просим, список честно считает по загруженным строкам.
+  const source = slice !== undefined ? SLICE_FACET_AXES[slice] ?? {} : LORE_FACET_AXES;
   const out: Record<string, string> = {};
-  for (const [axis, key] of Object.entries(LORE_FACET_AXES)) {
-    if (keys.includes(key)) out[rename[axis] ?? axis] = key;
+  for (const [axis, key] of Object.entries(source)) {
+    if (keys.includes(key)) out[axis] = key;
   }
   return out;
 }
 
 /**
- * Срезы, где столбец оси назван иначе, чем в общей карте (S9-02). У срезов задач
- * компоненты — `component_ids`, а не `components`; ось с чужим именем — 400 на
- * ВЕСЬ запрос /facets, и раздел «Задачи» терял счётчики по всем осям сразу.
+ * Оси счётчиков по срезу: колонка среза → ключ фасета kit. Копия
+ * `shared/model/list-facets.json` (образ v2 не видит shared/), совпадение держит
+ * loreFacets.test.ts, а то, что каждая колонка есть в своём срезе, — сторож бэкенда
+ * ModelServerConsistencyGuardTest (SPRINT_LORE_MODEL_AS_CONFIG/MC-03). Колонка называется
+ * так, как её отдаёт срез: у «Релизов» и «Решений» проекты — `projects`, у задач
+ * компоненты — `component_ids`, у спек и технологий — `component_id`.
  */
-const TASK_AXIS_NAMES: Readonly<Record<string, string>> = { components: 'component_ids' };
-const SLICE_AXIS_NAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  open_tasks: TASK_AXIS_NAMES,
-  closed_tasks: TASK_AXIS_NAMES,
+export const SLICE_FACET_AXES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  sprints: { components: 'fields.components', git_projects: 'fields.project', release_ids: 'fields.release' },
+  adrs: { components: 'fields.components', git_projects: 'fields.project' },
+  open_tasks: { sprint_id: 'fields.sprint', component_ids: 'fields.components', release_ids: 'fields.release' },
+  closed_tasks: { sprint_id: 'fields.sprint', component_ids: 'fields.components', release_ids: 'fields.release' },
+  decisions: { components: 'fields.components', projects: 'fields.project' },
+  specs: { component_id: 'fields.components', projects: 'fields.project' },
+  questions: { components: 'fields.components', projects: 'fields.project' },
+  milestones: { priority: 'fields.priority' },
+  releases: { projects: 'fields.project' },
+  components: { git_projects: 'fields.project' },
+  tech_registry: { component_id: 'fields.components' },
+  use_cases: { component_ids: 'fields.components', projects: 'fields.project' },
+  products: { git_projects: 'fields.project' },
+  actors: { projects: 'fields.project' },
 };
 
 /**

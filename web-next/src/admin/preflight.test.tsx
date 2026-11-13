@@ -24,7 +24,10 @@ const PF = {
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
-const fake = (body: unknown, status = 200) => vi.fn(async (url: string) => {
+// delayMs: ответ preflight приходит позже — секция adm-pf уже нарисована со скелетоном
+// (SPRINT_UXR_S11_TEST_OPT/S11-SECRET-ROTATION-RACE — гонка «findBy контейнера → getBy содержимого»).
+const fake = (body: unknown, status = 200, delayMs = 0) => vi.fn(async (url: string) => {
+  if (url.startsWith('/lore/kc/auth-preflight') && delayMs) await new Promise(r => setTimeout(r, delayMs));
   if (url.startsWith('/lore/kc/auth-preflight')) return json(body, status);
   return json({ rows: [] });
 }) as unknown as typeof fetch;
@@ -56,9 +59,10 @@ describe('S7B-31 · модель preflight', () => {
 
 describe('S7B-31 · карточки preflight', () => {
   it('четыре проверки карточками; включать нельзя — подсказка сервера', async () => {
-    mount(fake({ ...PF, admin_count: 0, can_enable_auth: false, hint: 'сначала заведите admin' }));
+    mount(fake({ ...PF, admin_count: 0, can_enable_auth: false, hint: 'сначала заведите admin' }, 200, 30));
     const box = await screen.findByTestId('adm-pf');
-    expect(within(box).getByTestId('adm-pf-admins').getAttribute('data-state')).toBe('fail');
+    // секция рисуется сразу со скелетоном — ждём карточку, а не контейнер
+    expect((await within(box).findByTestId('adm-pf-admins')).getAttribute('data-state')).toBe('fail');
     expect(within(box).getByTestId('adm-pf-enable').getAttribute('data-state')).toBe('fail');
     expect(within(box).getByTestId('adm-pf-enable').textContent).toMatch(/сначала заведите admin/);
     expect(within(box).getByTestId('adm-pf-kc').getAttribute('data-state')).toBe('ok');
@@ -81,6 +85,32 @@ describe('S7B-31 · карточки preflight', () => {
     mount(fake({ error: 'DOWN', detail: 'bridge down' }, 502));
     expect(await screen.findByRole('button', { name: 'Повторить' })).toBeTruthy();
     expect(screen.queryByTestId('adm-pf-admins')).toBeNull();
+  });
+
+  // SPRINT_UXR_POLISH_UAT_1113/PU-05: Главная противоречила себе — зелёная карточка
+  // «Сейчас: 7. Заведите себя…» и «Включать auth можно» при «Auth: включён».
+  it('PU-05: админы есть — без «Заведите себя»; ноль — с ним', async () => {
+    const { unmount } = mount(fake({ ...PF, admin_count: 7 }));
+    const ok = await screen.findByTestId('adm-pf-admins');
+    expect(ok.textContent).toContain('7');
+    expect(ok.textContent).not.toMatch(/Заведите себя/);
+    unmount();
+    mount(fake({ ...PF, admin_count: 0, can_enable_auth: false }));
+    expect((await screen.findByTestId('adm-pf-admins')).textContent).toMatch(/Заведите себя/);
+  });
+
+  it('PU-05: auth уже включён — чеклиста включения нет, только статус и то, что сломано', async () => {
+    mount(fake({ ...PF, auth_enabled: true, admin_count: 7, agent_scope_enforced: true }));
+    expect((await screen.findByTestId('adm-pf-auth')).textContent).toMatch(/включён/);
+    expect(screen.queryByTestId('adm-pf-enable')).toBeNull();
+    expect(screen.queryByTestId('adm-pf-admins')).toBeNull();
+    expect(screen.queryByText(/LORE_AUTH_ENABLED=true/)).toBeNull();
+  });
+
+  it('PU-05: auth включён, но мост KC упал — сломанное видно', async () => {
+    mount(fake({ ...PF, auth_enabled: true, kc_reachable: false, kc_error: 'timeout', agent_scope_enforced: true }));
+    expect((await screen.findByTestId('adm-pf-kc')).getAttribute('data-state')).toBe('fail');
+    expect(screen.queryByTestId('adm-pf-enable')).toBeNull();
   });
 
   it('на Главной — блок preflight рядом с «требует внимания»', async () => {

@@ -123,6 +123,7 @@ function toToken(key: string): LorePlanItemStatus {
   if (key === 'in_progress' || key === 'active') return 'active';
   if (key === 'partial') return 'partial';
   if (key === 'ready_for_deploy') return 'ready_for_deploy';
+  if (key === 'uat') return 'uat';
   if (key === 'blocked') return 'blocked';
   if (key === 'cancelled') return 'cancelled';
   if (key === 'planned' || key === 'deferred') return 'planned';
@@ -142,6 +143,7 @@ function buildSprintPickOpts(t: (k: string, d: string) => string): PickOpt[] {
     { token: 'active',           statusKey: 'in_progress',      label: t('lore.sprintDetail.status.active', 'В работе'),       gi: 'progression',     c: 'var(--inf)', abbr: 'WIP'  },
     { token: 'partial',          statusKey: 'partial',          label: t('lore.sprintDetail.status.partial', 'Частично'),      gi: 'battery-50',      c: 'var(--wrn)', abbr: 'PART' },
     { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: t('lore.sprintDetail.status.readyForDeploy', 'К деплою'), gi: 'wave-crest',      c: 'var(--suc)', abbr: 'RD'   },
+    { token: 'uat',              statusKey: 'uat',              label: t('lore.sprintDetail.status.uat', 'UAT — приёмка'),    gi: 'stamper',         c: 'var(--st-uat)', abbr: 'UAT' },
     { token: 'done',             statusKey: 'done',             label: t('lore.sprintDetail.status.done', 'Готово'),           gi: 'divided-spiral',  c: 'var(--suc)', abbr: 'DONE' },
     { token: 'blocked',          statusKey: 'blocked',          label: t('lore.sprintDetail.status.blocked', 'Заблокировано'), gi: 'handcuffed',      c: 'var(--dng)', abbr: 'BLK'  },
     { token: 'cancelled',        statusKey: 'cancelled',        label: t('lore.sprintDetail.status.cancelled', 'Отменено'),    gi: 'cross-mark',      c: 'var(--dng)', abbr: 'CNC'  },
@@ -152,7 +154,7 @@ function buildSprintPickOpts(t: (k: string, d: string) => string): PickOpt[] {
 // '📋 PLANNED'), so the picker must show it (with its calendar icon) AND let a
 // task be set back to planned — it was missing, so a fresh task's own status
 // wasn't selectable in the UI.
-const TASK_PICK_TOKENS = ['todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'];
+const TASK_PICK_TOKENS = ['todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'uat', 'done', 'blocked', 'cancelled'];
 
 // T18: memoized -- rendered once per task/phase row in potentially large
 // sprints, and its own render (building the status option list + several
@@ -298,13 +300,14 @@ function PriorityPicker({ sprintId, current, onChanged }: {
 // Status-count chips for the sprint header: one chip per present status (icon + count).
 // Multi-select: click chips to show only those statuses; click again to deselect.
 export const STATUS_COUNT_ORDER = [
-  'done', 'ready_for_deploy', 'active', 'partial', 'design',
+  'done', 'uat', 'ready_for_deploy', 'active', 'partial', 'design',
   'planned', 'todo', 'deferred', 'backlog', 'blocked', 'cancelled',
 ] as const;
 export function buildStatusCountLabel(t: (k: string, d: string) => string): Record<string, string> {
   return {
     done: t('lore.sprintDetail.status.done', 'Готово'),
     ready_for_deploy: t('lore.sprintDetail.status.readyForDeploy', 'К деплою'),
+    uat: t('lore.sprintDetail.status.uat', 'UAT — приёмка'),
     active: t('lore.sprintDetail.status.active', 'В работе'),
     partial: t('lore.sprintDetail.status.partial', 'Частично'),
     design: t('lore.sprintDetail.status.design', 'Дизайн'),

@@ -74,6 +74,23 @@ export function sumOf(v: unknown): SumValue {
   return { kind, value: o.value, known: o.known, of: o.of, ...(unit ? { unit } : {}), ...cut };
 }
 
+/**
+ * Сумма одной строкой — тот же видимый текст, что у {@link SumCell} (PU-16: свёрнутая строка
+ * «Свойства» печатала объект суммы как JSON). Без разметки и подсказок: для сводок.
+ */
+export function sumText(v: unknown, lang: string): string {
+  const s = sumOf(v);
+  if (s.kind === 'error') return '?';
+  if (s.kind === 'loading') return '…';
+  if (s.kind === 'none') return '—';
+  const cutMark = s.cut ? '*' : '';
+  if (s.kind === 'empty') return kitT(lang as Parameters<typeof kitT>[0], 'kit.sum.emptyShort') + cutMark;
+  const num = formatSum(s.value, lang);
+  const text = (s.unit ? `${num} ${s.unit}` : num) + cutMark;
+  return s.kind === 'full' ? text
+    : `${text} ${kitT(lang as Parameters<typeof kitT>[0], 'kit.sum.cover', { known: s.known, of: s.of })}`;
+}
+
 /** Число без лишних нулей: 12 → «12», 12,5 → «12,5» (разделитель — по языку). */
 export function formatSum(value: number, lang: string): string {
   return kitNumber(lang, value);

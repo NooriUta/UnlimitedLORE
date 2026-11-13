@@ -27,11 +27,24 @@ const { registerLoreWrite } = await import('./loreWrite.js');
 
 const FILE = fileURLToPath(new URL('../../agent-profiles/tool-paths.json', import.meta.url));
 
+// Осмысленные значения, которые generic-генератор вариантов не выводит: uid
+// задачи «SPRINT/T», составной id в fields у composite-типов, обязательный
+// project у guard-типов. Пути по-прежнему СНИМАЮТСЯ с реального вызова —
+// это не ручная запись в реестр, а довыбор аргументов к диспетчерам.
+const EXTRA_VARIANTS: Record<string, Record<string, unknown>[]> = {
+  entity_upsert: [
+    { type: 'task', id: 'SPRINT_X/T05', fields: { title: 't' } },
+    { type: 'phase', fields: { sprint_id: 'SPRINT_X', phase_key: 'A' } },
+    { type: 'dict', fields: { dict_type: 'priority', code: 'P0' } },
+    { type: 'tech', fields: { component_id: 'YGG', tech_name: 'ArcadeDB', version: '26.6.1', project: 'o/r' } },
+  ],
+};
+
 async function snapshot(): Promise<Record<string, string[]>> {
   const out: Record<string, string[]> = {};
   for (const tool of collect(registerLoreWrite)) {
     const paths = new Set<string>();
-    for (const args of variantsOf(tool)) {
+    for (const args of [...variantsOf(tool), ...(EXTRA_VARIANTS[tool.name] ?? [])]) {
       posted.length = 0;
       try { await tool.handler(args); } catch { /* отказ валидации в ветке — путей нет */ }
       for (const p of posted) paths.add(p.split('?')[0]);

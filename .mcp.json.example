@@ -1,0 +1,28 @@
+{
+  "_comment": "Канон подключения aida-lore — user-скоуп Claude Code (~/.claude.json, команда claude mcp add --scope user — см. mcp-server/README.md). Этот шаблон — только для ОСОЗНАННОГО проектного скоупа: локальный .mcp.json перекрывает user-скоуп, и забытая копия со старым секретом даёт 401 на каждый вызов (13.11.2026). .mcp.json не отслеживается git с #1298. KC-клиент у каждого harness свой: lore-mcp-full — Claude Code, lore-mcp-full_<harness> — остальные (например, _kimi). Секрет НЕ коммитить.",
+  "mcpServers": {
+    "aida-lore": {
+      "command": "node",
+      "args": [
+        "mcp-server/dist/index.js"
+      ],
+      "env": {
+        "LORE_BACKEND_URL": "https://lore.odal.seidrstudio.pro/_backend",
+        "LORE_BACKEND_FALLBACK_URL": "http://192.168.3.131:4400",
+        "LORE_SEER_ROLE": "admin",
+        "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
+        "LORE_MCP_CLIENT_ID": "lore-mcp-full",
+        "LORE_MCP_CLIENT_SECRET": "${LORE_MCP_CLIENT_SECRET}",
+        "LORE_MACHINE_ID": "имя-машины",
+        "LORE_ACTIVE_PROJECT": "NooriUta/UnlimitedLORE"
+      }
+    },
+    "forgejo-mcp": {
+      "type": "http",
+      "url": "http://192.168.3.131:3400/mcp",
+      "headers": {
+        "Authorization": "Bearer ${FORGEJO_MCP_API_KEY}"
+      }
+    }
+  }
+}

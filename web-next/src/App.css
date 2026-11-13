@@ -152,6 +152,23 @@
 }
 .sprint-burn__name { letter-spacing: .06em; color: var(--t3); }
 .sprint-burn__pair b { color: var(--t1); font-weight: 700; }
+/* PU-10: «Цель к сроку» — вердикт словами в строке и кнопка, раскрывающая график. */
+.sprint-burn__verdict { font-family: var(--font); color: var(--suc); }
+.sprint-burn__verdict[data-tone='risk'] { color: var(--wrn); }
+.sprint-burn__verdict[data-tone='late'] { color: var(--dng); }
+.sprint-burn__nodue { font-family: var(--font); color: var(--t3); }
+.sprint-burn__toggle {
+  margin-left: auto;
+  padding: 0 8px;
+  min-height: max(var(--tap), 20px);
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sprint-burn__toggle:hover { color: var(--t1); border-color: var(--acc); }
 .sprint-burn--loading,
 .sprint-burn--empty { margin: 0 0 var(--gap); font-size: var(--fs-sm); color: var(--t3); }
 /* Неполная история — видимая строка, а не сноска: цифры ниже посчитаны
@@ -189,11 +206,19 @@
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .v2-version { bottom: calc(var(--sk-dock-h, 48px) + env(safe-area-inset-bottom, 0px) + 6px); }
 }
+/* MP2-04: подпись метки — просто текст (тапы проходят сквозь контейнер),
+   копия — отдельная кнопка-иконка с минимальной зоной перехвата. */
+.v2-version__text {
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: .04em;
+  color: var(--t3);
+}
 .v2-version__btn {
   pointer-events: auto;
   border: 0;
   border-radius: var(--r-pill);
-  padding: 2px 8px;
+  padding: 2px 6px;
   background: color-mix(in srgb, var(--bg1) 80%, transparent);
   color: var(--t3);
   font-family: var(--mono);

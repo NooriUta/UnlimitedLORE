@@ -48,7 +48,7 @@ class DateTimeFormatProbeLiveDbTest {
     static final String ISO_FMT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
     static String url;
     static String auth;
-    static final HttpClient http = HttpClient.newHttpClient();
+    static final HttpClient http = LiveDbHttp.CLIENT;
 
     static String post(String path, String json) throws Exception {
         HttpResponse<String> r = http.send(HttpRequest.newBuilder(URI.create(url + path))

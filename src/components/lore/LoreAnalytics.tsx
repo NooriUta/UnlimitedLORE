@@ -25,12 +25,12 @@ interface Props {
 
 const STATUS_LABEL: Record<string, string> = {
   done: 'Готово', in_progress: 'В работе', partial: 'Частично',
-  ready_for_deploy: 'К деплою', planned: 'Запланировано', todo: 'TODO',
+  ready_for_deploy: 'К деплою', uat: 'UAT — приёмка', planned: 'Запланировано', todo: 'TODO',
   design: 'Дизайн', backlog: 'Беклог', blocked: 'Заблок.',
   deferred: 'Отложено', cancelled: 'Отменено', none: 'Без статуса',
 };
 const STATUS_ORDER = [
-  'done', 'in_progress', 'partial', 'ready_for_deploy', 'planned',
+  'done', 'in_progress', 'partial', 'ready_for_deploy', 'uat', 'planned',
   'todo', 'design', 'backlog', 'deferred', 'blocked', 'cancelled', 'none',
 ];
 
@@ -120,6 +120,7 @@ function classify(s: string | null): string {
   if (!s || !s.trim()) return 'none';
   const u = s.toUpperCase();
   if (/DONE|CLOSED|ЗАВЕРШ|ЗАКРЫТ/.test(u)) return 'done';
+  if (/^(🧪|UAT|ПРИЁМК|ПРИЕМК)/.test(u.trim())) return 'uat';
   if (/PROGRESS|WIP/.test(u))         return 'in_progress';
   if (/PARTIAL|ЧАСТИЧ/.test(u))       return 'partial';
   if (/READY|ДЕПЛО/.test(u))          return 'ready_for_deploy';
@@ -149,9 +150,9 @@ function filterSprints(list: LoreAnalyticsSprint[], f: SprintFilter) {
   switch (f) {
     case 'active': return list.filter(s => {
       const k = classify(s.status_raw);
-      return k !== 'done' && k !== 'cancelled' && k !== 'ready_for_deploy' && s.task_total > 0 && pct(s.task_done, s.task_total) < 100;
+      return k !== 'done' && k !== 'cancelled' && k !== 'ready_for_deploy' && k !== 'uat' && s.task_total > 0 && pct(s.task_done, s.task_total) < 100;
     });
-    case 'ready': return list.filter(s => classify(s.status_raw) === 'ready_for_deploy');
+    case 'ready': return list.filter(s => { const k = classify(s.status_raw); return k === 'ready_for_deploy' || k === 'uat'; });
     case 'done':  return list.filter(s =>
       classify(s.status_raw) === 'done' || (s.task_total > 0 && pct(s.task_done, s.task_total) === 100));
     case 'empty': return list.filter(s => s.task_total === 0);
@@ -1079,7 +1080,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         klass: classify(s.status_raw),
       }))
       .sort((a, b) => {
-        const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
+        const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' || k === 'uat' ? 2 : k === 'partial' ? 3 : 4;
         return rank(a.klass) - rank(b.klass) || b.open_tasks - a.open_tasks;
       });
   }, [data, sprintRows, sprintNameMap, currentMilestone]);
@@ -1984,6 +1985,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   s.klass === 'blocked'          ? 'var(--dng)' :
                   s.klass === 'in_progress'      ? 'var(--inf)' :
                   s.klass === 'ready_for_deploy' ? 'var(--suc)' :
+                  s.klass === 'uat'              ? 'var(--st-uat)' :
                   s.klass === 'partial'          ? 'var(--wrn)' : 'var(--t3)';
                 const taskPct = s.task_total > 0 ? pct(s.task_done, s.task_total) : null;
                 return (

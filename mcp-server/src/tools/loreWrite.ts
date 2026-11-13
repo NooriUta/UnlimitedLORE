@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
+import { registerEntity } from './entity.js';
 
 // ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
 // WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
@@ -109,7 +110,7 @@ export function compactVerdicts(data: unknown): unknown {
   return data;
 }
 
-const json = (data: unknown) => ({
+export const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(compactVerdicts(data), null, 2) }],
 });
 // SPRINT_UXR_S2_GRAPH_MEMORY/S2-09: 409 CONFLICT оптимистической блокировки SCD2 —
@@ -117,7 +118,7 @@ const json = (data: unknown) => ({
 export const CONFLICT_HINT =
   'CONFLICT: the record changed since it was read (another session wrote first) — nothing was written. ' +
   'Re-read it ("current" above is the state now) and retry; pass expected = the value you based the change on.';
-const err = (e: unknown) => {
+export const err = (e: unknown) => {
   const msg = (e as Error).message ?? String(e);
   const conflict = /→ 409 /.test(msg) && msg.includes('"CONFLICT"');
   return {
@@ -198,7 +199,7 @@ function definePostTool<S extends z.ZodRawShape>(
 // (как у sprint_new); откуда взят, видно в ответе (project_source). Ни того,
 // ни другого — рёбра не трогаются. Только ДОБАВЛЯЕТ: принадлежность
 // множественная, чужие проекты сущности не снимаются.
-type ProjectKind = 'adr' | 'doc' | 'spec' | 'runbook' | 'question' | 'uc';
+export type ProjectKind = 'adr' | 'doc' | 'spec' | 'runbook' | 'question' | 'uc';
 
 const PROJECT_LINK: Record<ProjectKind, (id: string, project: string) => [string, Record<string, unknown>]> = {
   adr:      (id, p) => ['/lore/adr/project',      { adr_id: id, project: p, action: 'add' }],
@@ -222,7 +223,7 @@ const PROJECT_PARAM = z.string().optional().describe(
 export function projectMissing(explicit?: string | null): boolean {
   return !(explicit && explicit.trim()) && !ACTIVE_PROJECT;
 }
-const projectRequired = () => ({
+export const projectRequired = () => ({
   content: [{ type: 'text' as const, text:
     'ERROR: project required — pass project (KnowGitProject slug, e.g. "NooriUta/UnlimitedLORE"; ' +
     'list: query_slice slice="git_projects"; new one via project_new) or set LORE_ACTIVE_PROJECT for the session. An entity without ' +
@@ -323,8 +324,17 @@ export async function inlineProject(kind: ProjectKind, id: string, explicit?: st
 // first, then mirror here.
 const LORE_STATUS = z.enum([
   'todo', 'planned', 'active', 'partial', 'done',
-  'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
+  'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy', 'uat',
 ]);
+
+// MT-MCP-TRUTH A1–A2 (06.11.2026): отказ на status="closed" у question_new/question_set —
+// текст вынесен на уровень модуля, его же показывает entity_upsert(type="question").
+export const QUESTION_CLOSE_GUIDANCE =
+  'Вопрос не закрывается статусом: closed ставится САМ, когда решение отвечает на вопрос. ' +
+  'Сделай так: 1) decision_new — решение с доказательством (коммит, PR, замер, слово владелицы); ' +
+  '2) question_link rel="answers" target_id=<decision_id> — вопрос станет closed. ' +
+  'Одно решение может закрыть несколько вопросов (по связи answers на каждый) — для ревизии это одна запись вместо N. ' +
+  'Не путай с dropped: dropped = «решили НЕ отвечать», а «устарел, и вот доказательство» = closed через решение.';
 
 export function registerLoreWrite(server: McpServer): void {
   // SCD2 status transition (closes the open history row, opens a new one, edges,
@@ -332,7 +342,10 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'status_set',
     description: 'Set the status of a LORE entity (SCD2 transition). Mutates the shared ' +
-      'system_aida_lore — use deliberately. Returns the new revision.',
+      'system_aida_lore — use deliberately. Returns the new revision. Task acceptance flow ' +
+      '(owner rule 13.11.2026): ready_for_deploy → the agent verifies the task on the stand AS A USER ' +
+      '(by using the feature, not by reading code) → uat (🧪 UAT TESTING, a human accepts it on preprod) → ' +
+      'done, which ONLY a human sets. An agent never moves a task from uat to done.',
     schema: {
       entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
       id: z.string().describe('entity id (e.g. sprint_id, task_uid, phase_uid "SPRINT_X/PHASE_A")'),
@@ -1342,13 +1355,8 @@ export function registerLoreWrite(server: McpServer): void {
   // MT-MCP-TRUTH A1–A2 (06.11.2026): `closed` раньше отбивался схемой голым
   // «Invalid enum value», и агент выбирал `dropped` как ближайшее по смыслу —
   // четыре доказательства ушли в заметки. Теперь `closed` проходит схему и
-  // получает отказ, который сам говорит, что делать.
-  const QUESTION_CLOSE_GUIDANCE =
-    'Вопрос не закрывается статусом: closed ставится САМ, когда решение отвечает на вопрос. ' +
-    'Сделай так: 1) decision_new — решение с доказательством (коммит, PR, замер, слово владелицы); ' +
-    '2) question_link rel="answers" target_id=<decision_id> — вопрос станет closed. ' +
-    'Одно решение может закрыть несколько вопросов (по связи answers на каждый) — для ревизии это одна запись вместо N. ' +
-    'Не путай с dropped: dropped = «решили НЕ отвечать», а «устарел, и вот доказательство» = closed через решение.';
+  // получает отказ, который сам говорит, что делать. Сам текст отказа вынесен
+  // на уровень модуля (QUESTION_CLOSE_GUIDANCE) — его переиспользует entity_upsert.
   const CLOSED_VS_DROPPED =
     ' closed vs dropped: closed = answered/obsolete WITH a decision (set only via question_link rel="answers"; ' +
     'one decision may answer several questions); dropped = decided NOT to answer. Never use dropped for "obsolete".';
@@ -2803,5 +2811,12 @@ export function registerLoreWrite(server: McpServer): void {
     path: '/lore/bragi/integration/sync',
     body: ({ integration_id, metrics }) => ({ integration_id, metrics }),
   });
+
+  // MCPV2-3: обобщённая CRUD-консолидация (entity_upsert/entity_link/entity_delete/
+  // entity_move) регистрируется вместе с per-entity инструментами — те и только те
+  // тесты/поверхности, что поднимают registerLoreWrite, поднимают и её. Какие из
+  // старых имён скрыты по умолчанию — решает гейт (index.ts, legacySurfaceGate),
+  // а не регистрация: скрытие = инструмент не попадает в payload сессии.
+  registerEntity(server);
 
 }

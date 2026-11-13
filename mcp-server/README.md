@@ -66,19 +66,30 @@ UPDATE_MCP_CONTRACT=1 npx vitest run src/tools/contract.test.ts
 
 ## Register in Claude Code
 
-The repo root ships `.mcp.json`:
+**Canonical: user scope** (`~/.claude.json`), not a project `.mcp.json`. Since
+#1298 the repo no longer tracks `.mcp.json` — secrets and machine paths must not
+travel between branches — and a stale local project file *overrides* the user
+entry (13.11.2026: an old secret there gave every call 401 while the user entry
+was fine). Build a dedicated checkout (e.g. `C:\AIDA\UnlimitedLORE-mcp`) and
+register it once per machine:
 
-```json
-{
-  "mcpServers": {
-    "aida-lore": {
-      "command": "node",
-      "args": ["mcp-server/dist/index.js"],
-      "env": { "LORE_BACKEND_URL": "http://localhost:9100", "LORE_SEER_ROLE": "admin" }
-    }
-  }
-}
+```bash
+claude mcp add --scope user aida-lore \
+  -e LORE_BACKEND_URL=https://lore.odal.seidrstudio.pro/_backend \
+  -e LORE_OIDC_ISSUER=https://odal.seidrstudio.pro/kc/realms/omilore \
+  -e LORE_MCP_CLIENT_ID=lore-mcp-full \
+  -e LORE_MCP_CLIENT_SECRET=<secret of THIS client> \
+  -e LORE_MACHINE_ID=<machine name> \
+  -- node /abs/path/UnlimitedLORE-mcp/mcp-server/dist/index.js
 ```
+
+One Keycloak client per harness: `lore-mcp-full` is Claude Code's,
+other harnesses use their own `lore-mcp-full_<harness>` (e.g. `_kimi`) — a
+borrowed client attributes actions in the graph to the wrong agent. The session
+hook (`.claude/hooks/session-start-register.ps1`) reads the same entry, so the
+secret lives in one place. `.mcp.json.example` is only for a deliberate project
+scope; local dev against `http://localhost:9100` needs just `LORE_BACKEND_URL`
+and `LORE_SEER_ROLE=admin`.
 
 For Claude Desktop, add the same block to its config with an absolute path to
 `dist/index.js`.

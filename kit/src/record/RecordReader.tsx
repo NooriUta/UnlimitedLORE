@@ -8,6 +8,39 @@ import type { ReactNode } from 'react';
 import { useKitLang, kitT } from '../i18n';
 import { Ear } from '../shell/Ear';
 import { RecordView, type RecordViewProps } from './RecordView';
+import { RecordWarnings } from './warnings';
+
+export interface RecordBarProps {
+  /** Крошки слева (обычно <RecordCrumbs/>). */
+  crumbs?: ReactNode;
+  /** Листалка (обычно <RecordPager/>). */
+  pager?: ReactNode;
+  /** Инструменты справа: смена места, полный экран… */
+  tools?: ReactNode;
+  /** Значок warnings перед инструментами (MP2-08); выключить — false. */
+  warnings?: boolean;
+  className?: string;
+}
+
+/**
+ * Строка над записью (S4-28): крошки слева; warnings, листалка и инструменты
+ * справа. Вынесена отдельно, чтобы экран мог рисовать её В ЛЮБОМ состоянии
+ * паспорта — загрузка, сбой, чтение (MP2-09/MP2-10: бар однострочный и во всю
+ * ширину при любом состоянии). Прежде при загрузке и сбое строки не было
+ * вовсе, и паспорт «прыгал» высотой и шириной между состояниями.
+ */
+export function RecordBar({ crumbs, pager, tools, warnings = true, className }: RecordBarProps) {
+  return (
+    <div className={['sk-rec-reader__bar', className].filter(Boolean).join(' ')} data-testid="kit-rec-bar">
+      <div className="sk-rec-reader__crumbs">{crumbs}</div>
+      <div className="sk-rec-reader__tools">
+        {warnings && <RecordWarnings />}
+        {pager}
+        {tools}
+      </div>
+    </div>
+  );
+}
 
 export interface RecordReaderProps extends RecordViewProps {
   /** Листалка — обычно <RecordPager/>. */
@@ -33,13 +66,15 @@ export function RecordReader({ pager, crumbs, tools, aside, asideLabel, asideOpe
     <div className={['sk-rec-reader', className].filter(Boolean).join(' ')}
       data-aside={hasAside ? (asideOpen ? 'open' : 'closed') : undefined} data-testid="kit-rec-reader">
       <div className="sk-rec-reader__main">
-        {/* Одна строка над записью (S4-28): крошки слева; листалка, инструменты и
-            «Свойства» справа. «Свойства» — то же раскрытие, что ушко (ушко остаётся). */}
+        {/* Одна строка над записью (S4-28): крошки слева; warnings, листалка,
+            инструменты и «Свойства» справа. «Свойства» — то же раскрытие, что
+            ушко (ушко остаётся). Разметка строки — в RecordBar: ею же экран
+            рисует бар в состояниях загрузки и сбоя (MP2-09/MP2-10). */}
         {(crumbs || pager || tools) && (
-          <div className="sk-rec-reader__bar" data-testid="kit-rec-bar">
-            <div className="sk-rec-reader__crumbs">{crumbs}</div>
-            <div className="sk-rec-reader__tools">
-              {pager}
+          <RecordBar
+            crumbs={crumbs}
+            pager={pager}
+            tools={<>
               {tools}
               {hasAside && (
                 <button type="button" className="sk-list__dir sk-rec-reader__props" aria-expanded={asideOpen} aria-controls={asideId}
@@ -47,8 +82,8 @@ export function RecordReader({ pager, crumbs, tools, aside, asideLabel, asideOpe
                   {label}
                 </button>
               )}
-            </div>
-          </div>
+            </>}
+          />
         )}
         <RecordView {...view} />
       </div>

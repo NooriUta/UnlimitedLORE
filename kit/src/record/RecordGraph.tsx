@@ -13,7 +13,7 @@ import type { CSSProperties } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { EmptyState, LoadError } from '../states/StateViews';
 import { Pill } from '../elements/Pill';
-import { kitT, type KitLang } from '../i18n';
+import { kitT, pluralForm, type KitLang } from '../i18n';
 import { edgeColor, egoGraph, typesAround, verdictTone } from './graph';
 import type { EgoCluster } from './graph';
 import { GRAPH_DEPTHS, allowedEdgeTypes, edgeLabel, isStructural, useGraphState } from './graphState';
@@ -26,6 +26,12 @@ import type { GraphView } from './graphState';
 
 /** Радиус кольца глубины и цель касания — в px viewBox (1 ед. = 1 px). */
 const RING = 96;
+/** S5-10: дуга на узел кольца, px — меньше подписи слипаются (замер 13.11: 50 узлов на 96 px = 12 px). */
+const ARC_PER_NODE = 26;
+/** S5-10: больше стольких связей подписи на рёбрах не рисуем — тип виден цветом и легендой. */
+const EDGE_LABELS_MAX = 12;
+/** Вид узла-кластера в Force/Обсидиане (PU-11); ключом вида записи не бывает. */
+const CLUSTER_KIND = '@kit:cluster';
 const HIT = 22;
 
 function nodeColor(r: KitRecord | undefined, sector: string, ctx: KitCtx): string {
@@ -130,7 +136,7 @@ export function RecordGraph(
     </>
   );
 
-  if (g.nodes.length === 0) {
+  if (g.nodes.length === 0 && g.clusters.length === 0) {
     const onlyStructural = around.every(t => isStructural(ctx.config, t.type));
     return (
       <div className="sk-rec-graph" data-testid="kit-graph">
@@ -156,20 +162,43 @@ export function RecordGraph(
    * может быть больше. Кластер «149», под которым четыреста, хуже каши — каша
    * видна, а неверное число выглядит знанием.
    */
-  const clusterText = (c: EgoCluster) =>
-    kitT(lang, c.atLeast ? 'kit.record.graph.clusterAtLeast' : 'kit.record.graph.cluster',
+  const byId = new Map(ctx.data.records.map(r => [r.id, r] as const));
+  const clusterText = (c: EgoCluster) => {
+    // PU-11: все свёрнутые одного вида и приложение дало формы слова — «27 спек ▸»: человек
+    // ищет, ЧЕГО там 27, а не как называется связь. Иначе — прежняя подпись типом связи.
+    const kinds = new Set(c.ids.map(id => byId.get(id)?.kind ?? ''));
+    const forms = kinds.size === 1 ? ctx.config.graph?.types?.[[...kinds][0]]?.count : undefined;
+    if (forms) {
+      const tpl = forms[pluralForm(lang, c.count)] ?? forms.many;
+      const what = tpl.replace('{n}', String(c.count));
+      return `${c.atLeast ? kitT(lang, 'kit.record.graph.clusterAtLeastKind', { what }) : what} ▸`;
+    }
+    return kitT(lang, c.atLeast ? 'kit.record.graph.clusterAtLeast' : 'kit.record.graph.cluster',
       { n: c.count, label: edgeLabel(ctx.config, c.sector) });
+  };
+  const clusterId = (key: string) => `cluster:${key}`;
 
   if (view === 'force' || view === 'obsidian') {
     // GC-03: граф знаний — тот же круг записей (глубина и фильтры вкладки), но
     // живой физикой и без свёртки хабов: в Force/Обсидиане хаб читается сам.
-    const full = egoGraph(record.id, ctx.data, { depth: state.depth, limit, types: allowed, clusterMax: Infinity });
+    // PU-11: правило кластера одно для всех раскладок — хаб и здесь один узел (раньше в
+    // Force/Обсидиане 27 спек шли поштучно и подписи слипались). Выбор кластера даёт «раскрыть».
+    const clusterNodes = g.clusters.map(c => ({ id: clusterId(c.key), kind: CLUSTER_KIND, title: clusterText(c) }));
+    const clusterLinks = g.clusters.map(c => (c.dir === 'in'
+      ? { from: clusterId(c.key), to: record.id, type: c.sector }
+      : { from: record.id, to: clusterId(c.key), type: c.sector }));
+    const byCluster = new Map(g.clusters.map(c => [clusterId(c.key), c]));
     return (
       <div className="sk-rec-graph" data-testid="kit-graph">
         {controls}
         {legend}
         <RecordGraphExplorer record={record} ctx={ctx} lang={lang} engine={view} onEngine={setView}
-          nodes={full.nodes} links={full.links} />
+          nodes={[...g.nodes, ...clusterNodes]} links={[...g.links, ...clusterLinks]}
+          cluster={{
+            is: id => byCluster.has(id),
+            open: id => { const c = byCluster.get(id); if (c) toggleOpen(c.key); },
+            label: kitT(lang, 'kit.record.graph.clusterKind'),
+          }} />
       </div>
     );
   }
@@ -224,9 +253,14 @@ export function RecordGraph(
   }
 
   const maxDepth = Math.max(...g.nodes.map(n => n.depth), 1);
-  const half = RING * maxDepth + HIT + 24;
+  // Радиус кольца растёт с числом соседей на самом людном уровне (S5-10).
+  const perDepth = new Map<number, number>();
+  for (const n of g.nodes) perDepth.set(n.depth, (perDepth.get(n.depth) ?? 0) + 1);
+  const crowd = Math.max(0, ...perDepth.values()) + g.clusters.length;
+  const ring = Math.max(RING, Math.ceil((crowd * ARC_PER_NODE) / (2 * Math.PI)));
+  const half = ring * maxDepth + HIT + 24;
   const pos = new Map<string, { x: number; y: number }>([[g.center.id, { x: 0, y: 0 }]]);
-  for (const n of g.nodes) pos.set(n.id, { x: n.x * RING, y: n.y * RING });
+  for (const n of g.nodes) pos.set(n.id, { x: n.x * ring, y: n.y * ring });
   const label = (r: KitRecord | undefined, id: string) => (r ? `${r.title} (${id})` : id);
 
   return (
@@ -247,7 +281,7 @@ export function RecordGraph(
         height={half * 2}
       >
         {Array.from({ length: maxDepth }, (_, i) => (
-          <circle key={i} className="sk-rec-graph__ring" r={RING * (i + 1)} cx={0} cy={0} />
+          <circle key={i} className="sk-rec-graph__ring" r={ring * (i + 1)} cx={0} cy={0} />
         ))}
         {g.links.map(l => {
           const a = pos.get(l.from)!;
@@ -262,7 +296,7 @@ export function RecordGraph(
             </g>
           );
         })}
-        {g.links.filter(l => l.from === g.center.id || l.to === g.center.id).map(l => {
+        {g.links.length <= EDGE_LABELS_MAX && g.links.filter(l => l.from === g.center.id || l.to === g.center.id).map(l => {
           const a = pos.get(l.from)!;
           const b = pos.get(l.to)!;
           return (
@@ -282,8 +316,9 @@ export function RecordGraph(
           работать это обязано без мыши.
         */}
         {g.clusters.map(c => {
-          const x = c.x * RING;
-          const y = c.y * RING;
+          // PU-11: коробка кластера целиком внутри холста (была за правым краем).
+          const x = Math.min(half - 84, Math.max(-half + 84, c.x * ring));
+          const y = Math.min(half - 24, Math.max(-half + 24, c.y * ring));
           const style = { '--node-c': edgeColor(ctx.config, c.sector) } as CSSProperties;
           return (
             <g key={"c:" + c.key} className="sk-rec-graph__cluster" data-cluster={c.key}
@@ -291,9 +326,15 @@ export function RecordGraph(
               <title>{clusterText(c)}</title>
               <line className="sk-rec-graph__edge" x1={0} y1={0} x2={x} y2={y}
                 style={{ stroke: edgeColor(ctx.config, c.sector) }} />
-              <foreignObject x={x - 72} y={y - 16} width={144} height={32}>
+              {/* MP2-13: коробка кластера не меньше кнопки с тап-зоной (44px):
+                  прежние 144×32 были ниже кнопки на телефоне, и карточка
+                  вылезала из своей коробки — «съезжала». Кнопка заполняет
+                  коробку целиком (inline-стиль: у kit один CSS-слой, S4-00e),
+                  поэтому не выезжает ни при каком pointer-режиме. */}
+              <foreignObject x={x - 84} y={y - 24} width={168} height={48}>
                 <button type="button" className="sk-btn sk-rec-graph__cbtn" data-cluster-open={c.key}
-                  aria-expanded="false" onClick={() => toggleOpen(c.key)}>
+                  aria-expanded="false" onClick={() => toggleOpen(c.key)}
+                  style={{ height: '100%', minHeight: 0, boxSizing: 'border-box' }}>
                   {clusterText(c)}
                 </button>
               </foreignObject>
@@ -326,9 +367,11 @@ const KIND_TONES = ['--acc', '--inf', '--suc', '--wrn', '--dng', '--t2'] as cons
  * тип ребра с подписью и цветом из config.edges. Переход к записи — той же
  * ссылкой, что у секторов (ctx.href), чтобы приложение перехватило её как обычно.
  */
-function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links }: {
+function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links, cluster }: {
   record: KitRecord; ctx: KitCtx; lang: KitLang; engine: GxEngine; onEngine: (v: GraphView) => void;
-  nodes: { id: string; record?: KitRecord; depth?: number }[]; links: { from: string; to: string; type: string }[];
+  nodes: { id: string; record?: KitRecord; depth?: number; kind?: string; title?: string }[]; links: { from: string; to: string; type: string }[];
+  /** PU-11: узлы-кластеры хабов — подпись типа, распознавание и раскрытие. */
+  cluster?: { is: (id: string) => boolean; open: (id: string) => void; label: string };
 }) {
   const host = useRef<HTMLDivElement>(null);
   const kindKeys = Object.keys(ctx.config.kinds);
@@ -338,12 +381,14 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
   for (const [k, v] of Object.entries(ctx.config.graph?.types ?? {})) types[k] = { label: v.label, color: v.color };
   const rels: Record<string, GxStyle> = {};
   for (const [k, e] of Object.entries(ctx.config.edges ?? {})) rels[k] = { label: e.label, color: e.color };
+  if (cluster) types[CLUSTER_KIND] = { label: cluster.label, color: '--t3' };
   const gxNodes: GxNode[] = [
     { id: record.id, type: record.kind ?? 'other', title: record.title, depth: 0 },
-    ...nodes.filter(n => n.id !== record.id).map(n => ({ id: n.id, type: n.record?.kind ?? 'other', title: n.record?.title, depth: ctx.data.meta.graphDepth?.[n.id] ?? n.depth })),
+    ...nodes.filter(n => n.id !== record.id).map(n => ({ id: n.id, type: n.kind ?? n.record?.kind ?? 'other', title: n.title ?? n.record?.title, depth: ctx.data.meta.graphDepth?.[n.id] ?? n.depth ?? 1 })),
   ];
   const gxEdges: GxEdge[] = links.map(l => ({ from: l.from, to: l.to, rel: l.type }));
   const open = (id: string) => {
+    if (cluster?.is(id)) { cluster.open(id); return; }
     // Обычная ссылка, а не location: приложение перехватывает ссылки kit само.
     const a = document.createElement('a');
     a.href = ctx.href(id);
@@ -351,11 +396,23 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
     a.click();
     a.remove();
   };
+  // Выбран кластер — его подпись и «раскрыть»; иначе карточка приложения (Peek), если она есть.
+  const peek = ctx.config.graph?.peek;
+  const selected = cluster && (peek || nodes.some(n => cluster.is(n.id)))
+    ? (id: string) => (cluster.is(id)
+      ? (
+        <div className="sk-gx__sel" role="status" data-testid="gx-cluster">
+          <span className="sk-gx__sel-title">{nodes.find(n => n.id === id)?.title ?? id}</span>
+          <button type="button" className="sk-btn" onClick={() => cluster.open(id)}>{kitT(lang, 'kit.record.graph.clusterOpen')}</button>
+        </div>
+      )
+      : peek ? peek(id) : <span className="sk-gx__sel-title">{nodes.find(n => n.id === id)?.record?.title ?? id}</span>)
+    : peek;
   return (
     <div ref={host} className="sk-rec-graph__gx">
       <GraphExplorer nodes={gxNodes} edges={gxEdges} types={types} rels={rels} lang={lang}
         engine={engine} onEngineChange={onEngine} engineSwitch={false}
-        hrefOf={ctx.href} onOpen={open} storageKey="record" renderSelected={ctx.config.graph?.peek} />
+        hrefOf={ctx.href} onOpen={open} storageKey="record" renderSelected={selected} />
     </div>
   );
 }

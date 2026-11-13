@@ -80,7 +80,10 @@ describe('registerLoreWrite', () => {
     // + machine_access_set, machine_owner_set (S7B-ACL-2/3 — допуск к машине и владелец
     //   машинной учётки из MCP; агенту сервер отказывает, отказ отдаётся как есть)
     // + machine_new (S7B-MACH-1 — завести машину одним вызовом; агент full — только своему владельцу)
-    expect(names).toHaveLength(88);
+    // + entity_upsert/entity_link/entity_delete/entity_move (SPRINT_LORE_MCP_V2/MCPV2-3 —
+    //   обобщённая CRUD-консолидация; дефолтная full-поверхность скрывает 59 покрытых
+    //   per-entity имён через гейт в index.ts, сами инструменты регистрируются всегда)
+    expect(names).toHaveLength(92);
   });
 
   it('registers project_role_set (DS-1 — роль в проекте выдаётся без захода в админку)', () => {

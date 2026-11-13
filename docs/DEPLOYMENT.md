@@ -123,22 +123,23 @@ npm install
 npm run build       # tsc → dist/index.js
 ```
 
-Зарегистрировать в `.mcp.json` (пример, уже в репозитории):
+Зарегистрировать **в user-скоупе** Claude Code (`~/.claude.json`), а не
+проектным `.mcp.json`. С #1298 `.mcp.json` не отслеживается git, а забытая
+локальная копия в чекауте **перекрывает** user-скоуп: 13.11.2026 в ней лежал
+старый секрет, и каждый вызов получал 401, хотя запись в user-скоупе была
+исправна. Для локальной разработки:
 
-```json
-{
-  "mcpServers": {
-    "aida-lore": {
-      "command": "node",
-      "args": ["mcp-server/dist/index.js"],
-      "env": {
-        "LORE_BACKEND_URL": "http://localhost:9100",
-        "LORE_SEER_ROLE": "admin"
-      }
-    }
-  }
-}
+```bash
+claude mcp add --scope user aida-lore \
+  -e LORE_BACKEND_URL=http://localhost:9100 -e LORE_SEER_ROLE=admin \
+  -- node /абсолютный/путь/mcp-server/dist/index.js
 ```
+
+Против стенда — то же плюс `LORE_OIDC_ISSUER`, `LORE_MCP_CLIENT_ID`,
+`LORE_MCP_CLIENT_SECRET`, `LORE_MACHINE_ID` (полная команда —
+`mcp-server/README.md`). KC-клиент у каждого harness свой: `lore-mcp-full` —
+Claude Code, `lore-mcp-full_<harness>` — остальные (например, `_kimi`).
+`.mcp.json.example` — только для осознанного проектного скоупа.
 
 **Важно:** MCP-сервер кэширует схему тулов на момент подключения — после
 `npm run build` с изменённой схемой тула (новые параметры и т.д.) уже

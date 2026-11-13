@@ -111,6 +111,7 @@ class LoreRecordRowLinksTest {
             }
             Set<String> bySlice = LoreRecordValues.READ_BY_SLICE.getOrDefault(type, Map.of()).keySet();
             Set<String> unread = LoreRecordValues.UNREAD_LINK_TABS.getOrDefault(type, Set.of());
+            Set<String> byEdge = LoreRecordValues.READ_BY_EDGE.getOrDefault(type, Set.of());
             // Одно ребро в двух вкладках (у компонента BELONGS_TO:in — ADR и спринты, S4-29) —
             // вкладки различаются типом цели, и сверка идёт с ним.
             Map<String, Long> relDirCount = new java.util.HashMap<>();
@@ -121,26 +122,27 @@ class LoreRecordRowLinksTest {
                 String rd = r.rel() + ":" + r.dir();
                 boolean fromRow = relDirCount.get(rd) > 1 ? haveTyped.contains(rd + ":" + r.targetType()) : have.contains(rd);
                 int ways = (fromRow ? 1 : 0) + (bySlice.contains(r.key()) ? 1 : 0)
-                    + (unread.contains(r.key()) ? 1 : 0);
+                    + (unread.contains(r.key()) ? 1 : 0) + (byEdge.contains(r.key()) ? 1 : 0);
                 assertEquals(1, ways, type + "/" + r.key()
-                    + ": вкладка ровно одним способом — из строки, отдельным срезом или названа непрочитанной");
+                    + ": вкладка ровно одним способом — из строки, отдельным срезом, по ребру или названа непрочитанной");
             }
+            for (String k : byEdge)
+                assertTrue(LoreRecordRegistry.get(type).relations().stream()
+                    .anyMatch(r -> r.key().equals(k) && "link_tab".equals(r.place())), type + "/" + k + ": список вкладок по ребру не протух");
             for (String k : unread)
                 assertTrue(LoreRecordRegistry.get(type).relations().stream()
                     .anyMatch(r -> r.key().equals(k) && "link_tab".equals(r.place())), type + "/" + k + ": список непрочитанных не протух");
         }
     }
 
+    /**
+     * MC-04 (PU-02): «упоминает» у спеки раньше был непрочитанной вкладкой (state: error навсегда),
+     * теперь читается по ребру; непрочитанных вкладок нет ни у одного типа.
+     */
     @Test
-    void unreadTabsAreNamedInDataStateNotSilentZero() {
-        List<Map<String, Object>> st = LoreRecordValues.unreadState("spec");
-        assertEquals(List.of("relation:refsIn", "relation:refsOut"), st.stream().map(m -> m.get("source")).toList());
-        for (Map<String, Object> m : st) {
-            assertEquals("error", m.get("state"), "не проверено ≠ пусто");
-            assertNotNull(m.get("reason"));
-        }
-        // 11.11: у решения теперь объявлены «Ссылки» (REFERENCES) без среза — полностью прочитанный
-        // тип для этой проверки — веха.
-        assertTrue(LoreRecordValues.unreadState("milestone").isEmpty());
+    void formerlyUnreadTabsAreReadByEdgeNotSilentError() {
+        assertEquals(Set.of("refsOut", "refsIn"), LoreRecordValues.READ_BY_EDGE.get("spec"));
+        for (String type : LoreRecordRegistry.TYPES)
+            assertTrue(LoreRecordValues.unreadState(type).isEmpty(), type + ": непрочитанных вкладок быть не должно");
     }
 }

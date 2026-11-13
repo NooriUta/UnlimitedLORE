@@ -1231,7 +1231,9 @@
         "todo": "not started",
         "done": "done",
         "deferred": "deferred",
-        "cancelled": "cancelled"
+        "cancelled": "cancelled",
+        "ready_for_deploy": "ready to deploy",
+        "uat": "UAT"
       },
       "month": {
         "jan": "Jan",
@@ -1401,6 +1403,7 @@
         "active": "In progress",
         "partial": "Partial",
         "readyForDeploy": "Ready to deploy",
+        "uat": "UAT Testing",
         "done": "Done",
         "blocked": "Blocked",
         "cancelled": "Cancelled",
@@ -2982,6 +2985,7 @@
     "active": "In progress",
     "partial": "Partial",
     "ready_for_deploy": "Ready to deploy",
+    "uat": "UAT Testing",
     "blocked": "Blocked",
     "cancelled": "Cancelled",
     "design": "Design",

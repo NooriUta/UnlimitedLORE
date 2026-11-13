@@ -470,16 +470,17 @@ public class LoreStatusResource extends LoreResourceBase {
     //   • any task in progress AND sprint is one of
     //     planned / todo / backlog                → sprint `active` (in progress)
     // Deliberate/terminal sprint states are never overridden: blocked,
-    // cancelled, deferred, and ready_for_deploy (RFD is "work done, waiting for
+    // cancelled, deferred, ready_for_deploy and uat (UAT is the same hold: the
+    // agent verified it, a human accepts it; RFD is "work done, waiting for
     // release" — an intentional hold, so all-done must not silently flip it to
     // done). Best-effort: a failure here never fails the task status change.
     private static final java.util.Set<String> SPRINT_AUTO_GUARD =
-        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy");
+        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy", "uat");
     // MT-SPRINT-STATUS-FOLLOWS-TASKS (decision:D-2026-SPRINT-STATUS-FOLLOWS-LAST-TASK):
     // «в работе» — только задачи, над которыми работают. "done" здесь был
     // дефектом: закрытие задачи открывало спринт (VE-1, 06.11.2026).
     private static final java.util.Set<String> TASK_PROGRESS =
-        java.util.Set.of("active", "partial", "ready_for_deploy");
+        java.util.Set.of("active", "partial", "ready_for_deploy", "uat");
     private static final java.util.Set<String> SPRINT_PROMOTABLE =
         java.util.Set.of("planned", "todo", "backlog");
 
@@ -492,6 +493,7 @@ public class LoreStatusResource extends LoreResourceBase {
         if (s.startsWith("🔄")) return "active";
         if (s.startsWith("🟡")) return "partial";
         if (s.startsWith("🚀")) return "ready_for_deploy";
+        if (s.startsWith("🧪")) return "uat";
         if (s.startsWith("🔴")) return "blocked";
         if (s.startsWith("🚫")) return "cancelled";
         if (s.startsWith("🔬")) return "design";
@@ -505,6 +507,7 @@ public class LoreStatusResource extends LoreResourceBase {
         if (u.startsWith("IN PROGRESS") || u.startsWith("WIP") || u.startsWith("ACTIVE")) return "active";
         if (u.startsWith("PARTIAL") || u.startsWith("ЧАСТИЧ")) return "partial";
         if (u.startsWith("READY") || u.startsWith("RFD")) return "ready_for_deploy";
+        if (u.startsWith("UAT") || u.startsWith("ПРИЁМК") || u.startsWith("ПРИЕМК")) return "uat";
         if (u.startsWith("BLOCK") || u.startsWith("ЗАБЛОК")) return "blocked";
         if (u.startsWith("CANCEL") || u.startsWith("ОТМЕН")) return "cancelled";
         if (u.startsWith("DESIGN") || u.startsWith("ДИЗАЙН")) return "design";
@@ -726,6 +729,22 @@ public class LoreStatusResource extends LoreResourceBase {
      * with otherwise. author/executor/reviewer_agent are plain KnowTask vertex fields
      * (not Hist — see LoreSchemaInitializer), so this is a single non-traversal read.
      */
+    /**
+     * Исполнитель и ревьюер задачи для гейта →done — ИЗ ОТКРЫТЫХ РЁБЕР ROLE_HELD_BY (TR-05), строка —
+     * только если задача есть. SPRINT_UXR_POLISH_UAT_1113/PU-17: гейт читал строки вершины
+     * executor_agent/reviewer_agent, которые после TR-05 не пишутся, и узкий профиль получал 409 при
+     * ревьюере, назначенном ребром. Личность — как в срезе task_roles: actor_id агента, иначе
+     * display_name человека. Ключи ответа прежние, их читает doneGateRefusal.
+     */
+    static final String DONE_GATE_SQL = "SELECT task_uid, "
+        + holder("executor") + " AS executor_agent, " + holder("reviewer") + " AS reviewer_agent "
+        + "FROM KnowTask WHERE task_uid = :uid LIMIT 1";
+
+    private static String holder(String role) {
+        String e = "outE('ROLE_HELD_BY')[role='" + role + "' AND valid_to IS NULL].@in.";
+        return "ifnull(" + e + "actor_id[0], " + e + "display_name[0])";
+    }
+
     private Uni<Response> checkTaskDoneGate(String taskUid, String role) {
         // ADR-LORE-014-D4: полный носитель (admin/superadmin, agent-full) работает
         // соло. Гейт рассчитан на ДВОИХ, а второго участника у него взять
@@ -736,22 +755,25 @@ public class LoreStatusResource extends LoreResourceBase {
         // разделение исполнителя и ревьюера осмысленно, там есть кому принимать.
         if (isFullScopeCaller(role)) return Uni.createFrom().nullItem();
 
-        MartQuery q = new MartQuery("sql",
-            "SELECT executor_agent, reviewer_agent FROM KnowTask WHERE task_uid = :uid LIMIT 1",
-            Map.of("uid", taskUid), -1);
+        MartQuery q = new MartQuery("sql", DONE_GATE_SQL, Map.of("uid", taskUid), -1);
         return client.query(db, basicAuth(), q).map(res -> {
             List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
             if (rows.isEmpty()) return null; // unknown task — let the normal flip report NOT_FOUND-shaped failure
-            String executor = (String) rows.get(0).get("executor_agent");
-            String reviewer = (String) rows.get(0).get("reviewer_agent");
-            if (reviewer == null || reviewer.isBlank() || reviewer.equals(executor)) {
-                return noStore(Response.status(Response.Status.CONFLICT)
-                    .entity(new LoreError("NO_SELF_ACCEPTANCE",
-                        "task cannot move to done: reviewer_agent must be set and differ from executor_agent "
-                        + "(снимается только для полного носителя — admin/superadmin/agent-full, ADR-LORE-014-D4)")));
-            }
-            return null;
+            String refusal = doneGateRefusal(rows.get(0));
+            return refusal == null ? null : noStore(Response.status(Response.Status.CONFLICT)
+                .entity(new LoreError("NO_SELF_ACCEPTANCE", refusal)));
         });
+    }
+
+    /** Решение гейта по строке DONE_GATE_SQL: текст отказа или null. */
+    static String doneGateRefusal(Map<String, Object> row) {
+        Object e = row.get("executor_agent"), r = row.get("reviewer_agent");
+        String executor = e == null ? null : String.valueOf(e);
+        String reviewer = r == null ? null : String.valueOf(r);
+        if (reviewer == null || reviewer.isBlank() || reviewer.equals(executor))
+            return "task cannot move to done: reviewer_agent must be set and differ from executor_agent "
+                + "(снимается только для полного носителя — admin/superadmin/agent-full, ADR-LORE-014-D4)";
+        return null;
     }
 
     /** Read note_md / effort_days from the currently-open KnowTaskHist row BEFORE a SCD2 flip.

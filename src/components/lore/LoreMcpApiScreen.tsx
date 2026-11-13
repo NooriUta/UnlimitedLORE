@@ -84,10 +84,27 @@ const TOOLS: ToolDoc[] = [
   // ── Status (SCD2-переходы, общие для нескольких типов) ────────────────────
   { name: 'status_set', kind: 'write', entity: 'Status', backend: 'POST /lore/status',
     params: 'entity_type, id, status',
-    desc: 'Сменить статус одной сущности через полный SCD2-переход: закрыть текущую открытую hist-строку (valid_to=now), открыть новую. entity_type = sprint | task | checkpoint | phase. status ∈ todo|planned|active|partial|done|blocked|high|cancelled|backlog|design|ready_for_deploy — status="cancelled" это и есть штатный soft-delete для этих типов, отдельного hard-delete тула для них нет и не планируется.' },
+    desc: 'Сменить статус одной сущности через полный SCD2-переход: закрыть текущую открытую hist-строку (valid_to=now), открыть новую. entity_type = sprint | task | checkpoint | phase. status ∈ todo|planned|active|partial|done|blocked|high|cancelled|backlog|design|ready_for_deploy|uat (🧪 UAT TESTING: агент проверил на стенде, принимает человек; done ставит только человек) — status="cancelled" это и есть штатный soft-delete для этих типов, отдельного hard-delete тула для них нет и не планируется.' },
   { name: 'status_set_batch', kind: 'write', entity: 'Status', backend: 'POST /lore/status/batch',
     params: 'entity_type, ids[], status',
     desc: 'То же самое (SCD2-переход), но сразу для списка id одного entity_type. Ошибки собираются по каждому элементу отдельно и не прерывают остальные. Возвращает {ok, updated, errors[]}.' },
+
+  // ── Entity (консолидированные CRUD, MCPV2-3) ──────────────────────────────
+  // С 13.11.2026 (SPRINT_LORE_MCP_V2) дефолтная поверхность сервера — эти 4
+  // инструмента вместо ~60 per-entity имён; старые имена живут под
+  // LORE_MCP_LEGACY=1 (и в узких профилях agent-profiles, ссылающихся на них).
+  { name: 'entity_upsert', kind: 'write', entity: 'Entity', backend: 'POST /lore/<family> (таблица в MIGRATION.md)',
+    params: 'type, id?, fields{}',
+    desc: 'Создать/обновить любую сущность одним вызовом (MCPV2-3): type выбирает семейство (actor, adr, bragi_*, component, decision, dict, doc, feature, gain, insight, job, milestone, pain, phase, project, project_actor, question, release, runbook, spec, sprint, task, tech, uc), id — id-поле семейства (task — uid «SPRINT_X/T05»; dict/phase/tech — составные части в fields), fields — свободная запись с теми же формами, что у заменённых *_new/*_set; валидация — бэкендом. Гард AL-113: adr/doc/spec/runbook/question/uc/feature/tech требуют project (или LORE_ACTIVE_PROJECT). dict требует fields.human_approval (заголовок X-Lore-Human-Approval). Закрытие вопроса — не status, а entity_link(type=question, rel=answers).' },
+  { name: 'entity_link', kind: 'write', entity: 'Entity', backend: 'POST /lore/<family>/<rel>',
+    params: 'type, id, rel, target_id, action?, fields{}',
+    desc: 'Связать/отвязать любую сущность (MCPV2-3, заменяет 8 link-collapse + vp/feature/uc/actor/decision/question/product/milestone/spec/release связи): rel — тип ребра, допустимые значения зависят от type (неизвестная пара — 400 со списком); fields — условные допы (git_project, kind+reason для dep, actor_role, target_type, mode для spec, role+kind для product). type=insight — только add; type=release принимает target_id массивом.' },
+  { name: 'entity_delete', kind: 'write', entity: 'Entity', backend: 'POST /lore/<family>/delete',
+    params: 'type (adr|spec|doc|component), id',
+    desc: 'Удалить сущность (MCPV2-3, заменяет adr_del/spec_del/doc_del/component_del). Необратимо: сначала рёбра, потом история, потом вершина. component под гардом: 409 с разбором, пока есть дети/рёбра/спеки/плоские ссылки.' },
+  { name: 'entity_move', kind: 'write', entity: 'Entity', backend: 'POST /lore/task/move, POST /lore/release/mv',
+    params: 'type (task|release|pr), id, target, fields?{new_task_id}',
+    desc: 'Перенос (MCPV2-3, заменяет task_mv/release_mv): task — в другой спринт (cancel+recreate, источник — CANCELLED-томбстоун; target=sprint_id, fields.new_task_id — новый id в цели); release/pr — исправить git_project (target=slug).' },
 
   // ── Task (KnowTask) ────────────────────────────────────────────────────────
   { name: 'task_new', kind: 'write', entity: 'Task', backend: 'POST /lore/task',

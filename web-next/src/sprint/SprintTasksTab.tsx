@@ -118,8 +118,6 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
     const next: Partial<TaskRowData> = {};
     if (p.title !== undefined) next.title = p.title;
     if (p.effortDays !== undefined) next.effortDays = p.effortDays;
-    if (p.executor !== undefined) next.executor = p.executor;
-    if (p.reviewer !== undefined) next.reviewer = p.reviewer;
     patch(task.uid, next);
   }
 

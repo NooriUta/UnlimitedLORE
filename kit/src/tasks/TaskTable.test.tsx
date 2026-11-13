@@ -97,7 +97,7 @@ describe('TaskTable · статус в 2 касания', () => {
     fireEvent.click(within(row).getByRole('button', { name: /Статус: к работе/ }));
     const menu = screen.getByRole('menu', { name: /S5-02/ });
     const items = within(menu).getAllByRole('menuitemradio');
-    expect(items).toHaveLength(8);
+    expect(items).toHaveLength(9); // 13.11.2026: + uat (приёмка)
     expect(within(menu).getByRole('menuitemradio', { name: 'К работе' }).getAttribute('aria-checked')).toBe('true');
     await act(async () => { fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Готово' })); });
     expect(onStatusChange).toHaveBeenCalledWith(tasks[1], 'done');
@@ -178,10 +178,21 @@ describe('TaskTable · правка в строке', () => {
     const onSave = vi.fn(async () => {});
     render(<TaskTable tasks={tasks} phases={phases} groupBy="none" onSave={onSave} label="Задачи" />);
     const row = openEdit();
-    const exec = within(row).getByRole('textbox', { name: 'Исполнитель' });
-    fireEvent.change(exec, { target: { value: 'codex' } });
-    await act(async () => { fireEvent.keyDown(exec, { key: 'Enter' }); });
-    expect(onSave).toHaveBeenCalledWith(tasks[0], { executor: 'codex' });
+    const eff = within(row).getByRole('textbox', { name: 'Оценка, д' });
+    fireEvent.change(eff, { target: { value: '4' } });
+    await act(async () => { fireEvent.keyDown(eff, { key: 'Enter' }); });
+    expect(onSave).toHaveBeenCalledWith(tasks[0], { effortDays: 4 });
+  });
+
+  // SPRINT_UXR_POLISH_UAT_1113/PU-17: роли задачи — рёбра заявленных личностей; свободный текст
+  // в строке давал имя, которого нет среди кандидатов (сервер отказывал или писал не того).
+  // Роль меняется только выбором — в паспорте задачи (поле с вариантами из кандидатов TR-07).
+  it('PU-17: в правке строки исполнитель и ревьюер — не поля ввода, а текущие значения', () => {
+    render(<TaskTable tasks={tasks} phases={phases} groupBy="none" onSave={vi.fn(async () => {})} label="Задачи" />);
+    const row = openEdit();
+    expect(within(row).queryByRole('textbox', { name: 'Исполнитель' })).toBeNull();
+    expect(within(row).queryByRole('textbox', { name: 'Ревьюер' })).toBeNull();
+    expect(within(row).getAllByRole('textbox').length).toBe(2);
   });
 
   it('без изменений — «Сохранить» просто закрывает правку, без запроса', async () => {

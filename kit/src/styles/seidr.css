@@ -57,10 +57,11 @@
   --swatch-warm-dark:    #d4a830;
   --swatch-mono:         #b8b7b1;
 
-  /* Статусы — 11 постоянных оттенков, различимых без подписи (как в v1):
+  /* Статусы — 12 постоянных оттенков, различимых без подписи (как в v1):
      семантические --suc/--inf/--wrn схлопывали бы их в 5 семейств. */
   --st-done:             #5fb86a;
   --st-ready_for_deploy: #3fb6c4;
+  --st-uat:              #7f8cf0;
   --st-active:           #4a9ce6;
   --st-partial:          #e58a3a;
   --st-planned:          #d8b23a;
@@ -250,6 +251,7 @@
   /* Статусы темнее — текст статуса читается на белом. */
   --st-done:             #297d3a;
   --st-ready_for_deploy: #1a7884;
+  --st-uat:              #4b55b8;
   --st-active:           #2b6eba;
   --st-partial:          #a55a14;
   --st-planned:          #866a0e;
@@ -423,6 +425,7 @@
   --dng: #d48e83;
   --st-done:             #8db596;
   --st-ready_for_deploy: #8fb3b6;
+  --st-uat:              #a3a8c9;
   --st-active:           #98adbf;
   --st-partial:          #c9a07e;
   --st-planned:          #c2b07e;
@@ -451,6 +454,7 @@
   --dng: #9e4237;
   --st-done:             #3b6646;
   --st-ready_for_deploy: #2f6468;
+  --st-uat:              #4a4e78;
   --st-active:           #3a5870;
   --st-partial:          #82502a;
   --st-planned:          #6e5c1f;
@@ -1070,6 +1074,13 @@ code, pre, kbd, samp { font-family: var(--mono); }
   white-space: nowrap;
 }
 .sk-sheet__body { padding: 8px 12px; }
+/* MP2-06 (проход 13.11): листы скроллятся дефолтной серой полосой движка.
+   Скроллбар листа — в языке kit: тонкий, цвет границы, hover — акцент. */
+.sk-sheet { scrollbar-width: thin; scrollbar-color: var(--bdh) transparent; }
+.sk-sheet::-webkit-scrollbar { width: 8px; height: 8px; }
+.sk-sheet::-webkit-scrollbar-track { background: transparent; }
+.sk-sheet::-webkit-scrollbar-thumb { background: var(--bdh); border-radius: 8px; }
+.sk-sheet::-webkit-scrollbar-thumb:hover { background: var(--acc); }
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-sheet--right, .sk-sheet--left { width: 100vw; }
 }
@@ -1269,25 +1280,35 @@ code, pre, kbd, samp { font-family: var(--mono); }
   max-width: min(320px, 92vw);
   max-height: 62vh;
   overflow: auto;
-  padding: 4px;
+  padding: 8px;
   border: 1px solid var(--bd);
-  border-radius: var(--r-md);
-  background: var(--bg2);
-  box-shadow: var(--shadow-pop, 0 6px 18px rgb(0 0 0 / 35%));
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bdh) transparent;
 }
+.sk-tabs__more-pop::-webkit-scrollbar { width: 8px; height: 8px; }
+.sk-tabs__more-pop::-webkit-scrollbar-track { background: transparent; }
+.sk-tabs__more-pop::-webkit-scrollbar-thumb { background: var(--bdh); border-radius: 8px; }
+.sk-tabs__more-pop::-webkit-scrollbar-thumb:hover { background: var(--acc); }
+/* MP2-11 (владелица 13.11.2026): «Ещё» в паспорте приведено к общему дизайну —
+   тому же, что у поповеров фильтров (.sk-vmenu__panel): фон bg1, рамка bd,
+   скругление r-lg, пункты с радиусом r-md и высотой тапа. */
 .sk-tabs__more-item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: max(var(--tap), 28px);
-  padding: 6px 8px;
-  border-radius: var(--r-sm);
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border-radius: var(--r-md);
   color: var(--t2);
   font-size: var(--fs-sm);
   text-align: left;
 }
 .sk-tabs__more-item:hover { background: var(--bg3); color: var(--t1); }
+.sk-tabs__more-item:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 /* Вкладки-подчёркивание (S4-21): словарь форм v4 — пилюля = действие или фильтр,
    подчёркивание = вкладка. Выбранная — линия акцента снизу, без заливки. */
@@ -1620,6 +1641,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-setting__label { color: var(--t1); }
 .sk-setting__hint { color: var(--t2); font-size: var(--fs-2xs); }
 .sk-setting__ctl { flex-shrink: 0; }
+/* PU-08: описание над кнопками — на крупном шрифте сегмент из 3–5 вариантов не делит строку с текстом. */
+.sk-setting--stack { flex-direction: column; align-items: stretch; gap: 4px; }
+.sk-setting--stack .sk-setting__ctl { width: 100%; }
+.sk-setting--stack .sk-seg { flex-wrap: wrap; max-width: 100%; row-gap: 2px; }
 .sk-seg {
   display: inline-flex;
   padding: 2px;
@@ -1649,6 +1674,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-setting { flex-wrap: wrap; }
   .sk-setting__ctl { width: 100%; }
+  /* MP2-02 (проход 13.11): «Палитра» — сегмент 430px в коробке 335px растягивал
+     весь лист по горизонтали. Перенос опций внутри сегмента, лист вертикальный. */
+  .sk-seg { flex-wrap: wrap; max-width: 100%; row-gap: 2px; }
 }
 .sk-shell__body {
   display: grid;
@@ -3406,6 +3434,19 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__val { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; overflow: hidden; }
 .sk-list__val-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-list__vicon { display: inline-flex; flex-shrink: 0; }
+/* PU-07: свёрнутая многозначная ячейка — одна строка: значение сжимается, «+N» на виду. */
+.sk-list__vals.is-folded { flex-wrap: nowrap; }
+.sk-list__valmore {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px dashed var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sk-list__valmore:hover { color: var(--t1); border-color: var(--acc); }
 .sk-list__desc {
   display: flex;
   /* S9-12: строка условий — в одну строку. Лишние условия сворачиваются в «+N»
@@ -3439,7 +3480,8 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__desc:has(.sk-list__chipmore[aria-expanded='true']) { flex-wrap: wrap; overflow-x: visible; }
 /* «+N условий» — не чип: это управление свёрткой, и выглядеть оно должно иначе,
    чтобы его не сняли вместо условия. */
-.sk-list__chipmore {
+.sk-list__chipmore,
+.sk-list__facetmore {
   flex: 0 0 auto;
   min-height: max(var(--tap), 20px);
   padding: 0 8px;
@@ -3450,7 +3492,8 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   font-size: var(--fs-xs);
   cursor: pointer;
 }
-.sk-list__chipmore:hover { color: var(--t1); border-color: var(--acc); }
+.sk-list__chipmore:hover,
+.sk-list__facetmore:hover { color: var(--t1); border-color: var(--acc); }
 .sk-list__shown {
   margin: 0;
   color: var(--t2);
@@ -4439,19 +4482,147 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-reader { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 var(--gap); min-width: 0; }
 .sk-rec-reader[data-aside="open"] { grid-template-columns: minmax(0, 1fr) auto minmax(220px, 300px); }
 .sk-rec-reader__main { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
-/* Строка над записью (S4-28): крошки слева, листалка/инструменты/«Свойства» справа. */
+/* Строка над записью (S4-28): крошки слева, warnings/листалка/инструменты справа.
+   MP2-09/MP2-10 (владелица 13.11.2026): бар ОДНОСТРОЧНЫЙ при любом состоянии
+   паспорта и во всю ширину контейнера — и на телефоне, и на десктопе.
+   Прежде flex-wrap: wrap уводил инструменты на вторую строку при открытом
+   доке (список сжат), а в состояниях загрузки/сбоя строки не было вовсе.
+   Переносимое теперь сжимается многоточием (крошки), а не переносится. */
 .sk-rec-reader__bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
+  width: 100%;
+  min-width: 0;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--bd);
 }
-.sk-rec-reader__crumbs { min-width: 0; }
+.sk-rec-reader__crumbs { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.sk-rec-reader__crumbs .sk-crumbs { max-width: 100%; flex-wrap: nowrap; }
+.sk-rec-reader__crumbs .sk-crumbs__cur { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sk-rec-reader__props[aria-expanded='true'] { border-color: var(--acc); color: var(--t1); }
-.sk-rec-reader__tools { display: inline-flex; align-items: center; gap: var(--gap); margin-left: auto; }
+.sk-rec-reader__tools { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; margin-left: auto; }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-rec-reader__bar { gap: 4px; }
+  .sk-rec-reader__bar .sk-rec-pager__pos { min-width: 0; padding: 0 2px; }
+}
+
+/* ---------- MP2-08 · технические сообщения под значком warnings ----------
+   Один значок «⚠ N» на экран и поповер со ВСЕМИ сообщениями (состояние
+   данных, оговорки модели, замечания графа), сгруппированными по источнику.
+   Вид — в языке поповеров фильтров (.sk-vmenu__panel): тот же фон, рамка,
+   скругление и тень; прокрутка внутри, длинное переносится, а не раздвигает. */
+.sk-warn { position: relative; display: inline-flex; }
+.sk-warn__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: max(var(--tap), 24px);
+  padding: 0 8px;
+  border: 1px solid var(--wrn);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--wrn) 12%, transparent);
+  color: var(--wrn);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+.sk-warn__btn:hover, .sk-warn__btn[aria-expanded='true'] { color: var(--t1); border-color: var(--acc); }
+.sk-warn__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-warn__pop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  width: min(420px, 92vw);
+  max-height: 62vh;
+  padding: 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-warn__title {
+  margin: 0;
+  color: var(--t3);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.sk-warn__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bdh) transparent;
+}
+.sk-warn__body::-webkit-scrollbar { width: 8px; height: 8px; }
+.sk-warn__body::-webkit-scrollbar-track { background: transparent; }
+.sk-warn__body::-webkit-scrollbar-thumb { background: var(--bdh); border-radius: 8px; }
+.sk-warn__body::-webkit-scrollbar-thumb:hover { background: var(--acc); }
+.sk-warn__group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-warn__src { margin: 0; color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); overflow-wrap: anywhere; }
+.sk-warn__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.sk-warn__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: baseline;
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  background: var(--bg2);
+  font-size: var(--fs-xs);
+}
+.sk-warn__item[data-tone='dng'] { box-shadow: inset 2px 0 0 var(--dng); }
+.sk-warn__item[data-tone='wrn'] { box-shadow: inset 2px 0 0 var(--wrn); }
+.sk-warn__item[data-tone='inf'] { box-shadow: inset 2px 0 0 var(--inf); }
+.sk-warn__kind { color: var(--t3); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-warn__item[data-tone='dng'] .sk-warn__kind { color: var(--dng); }
+.sk-warn__item[data-tone='wrn'] .sk-warn__kind { color: var(--wrn); }
+.sk-warn__text { color: var(--t1); overflow-wrap: anywhere; word-break: break-word; }
+
+/* ---------- MP2-11 · смена места паспорта (право / низ / полный) ----------
+   Прежняя кнопка «⤢» умела только полный экран. Меню — в том же языке, что
+   поповеры фильтров и «Ещё» у вкладок: фон bg1, рамка bd, скругление r-lg. */
+.sk-place { position: relative; display: inline-flex; }
+.sk-place__btn[aria-expanded='true'] { color: var(--t1); border-color: var(--acc); }
+.sk-place__pop {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  max-width: min(320px, 92vw);
+  padding: 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  background: var(--bg1);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg0) 60%, transparent);
+}
+.sk-place__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: max(var(--tap), 30px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.sk-place__opt:hover { background: var(--bg3); color: var(--t1); }
+.sk-place__opt[aria-checked='true'] { color: var(--t1); box-shadow: inset 2px 0 0 var(--acc); }
+.sk-place__opt[aria-checked='true']::after { content: '✓'; color: var(--acc); }
+.sk-place__opt:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 /* ---------- Крошки записи (S4-28): «← Раздел · фильтр / ID» ---------- */
 .sk-crumbs {
@@ -5449,7 +5620,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   top: calc(100% + 4px);
   left: 0;
   z-index: 60;
-  width: min(360px, 94vw);
+  width: min(420px, 94vw);
   max-height: min(480px, 70vh);
   overflow: auto;
   border: 1px solid var(--bd);
@@ -5507,11 +5678,14 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   padding: 0 6px;
   border-radius: var(--r-md);
   cursor: pointer;
+  overflow: hidden;
 }
 .sk-scope__check input { accent-color: var(--acc); margin: 0; }
 .sk-scope__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
-.sk-scope__id { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); white-space: nowrap; }
+/* PU-06: slug сжимается первым и с многоточием — имя проекта читается, пилюля «мой» не наезжает на «только этот». */
+.sk-scope__id { flex-shrink: 10; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); white-space: nowrap; }
 .sk-scope__tag {
+  flex-shrink: 0;
   padding: 0 6px;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--acc) 14%, transparent);
@@ -6020,7 +6194,10 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
      (scrollbar-width: none) к тому же ничем не показывает, что справа ещё
      что-то есть. */
   .sk-news__frow { flex-wrap: wrap; overflow-x: visible; }
-  .sk-news__frow > .sk-news__types { flex-wrap: wrap; padding-left: 0; border-left: 0; }
+  /* MP2-01 (проход 13.11): ряд типов — flex:none не получал ширины строки и
+     вылезал за экран (419px при 344px), перенос чипов не срабатывал. Полная
+     ширина строки даёт чипам переноситься ВНУТРИ ряда, как решено 10.11. */
+  .sk-news__frow > .sk-news__types { flex: 1 1 100%; min-width: 0; flex-wrap: wrap; padding-left: 0; border-left: 0; }
   .sk-news__facets,
   .sk-news__types,
   .sk-news__strip { flex-wrap: wrap; }
@@ -6154,6 +6331,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 /* Панелью справа: переключатель видов паспорта над шапкой. */
 .sk-rec__modes { display: flex; margin: 0 0 6px; }
+/* Мини-кнопки видов под заголовком (13.11): ниже ростом и мельче кеглем, чем сегмент оболочки. */
+.sk-rec__modes--mini { margin: 2px 0 8px; }
+.sk-rec__modes--mini .sk-seg { padding: 1px; }
+.sk-rec__modes--mini .sk-seg__btn { min-height: max(var(--tap), 20px); padding: 0 8px; font-size: var(--fs-xs); }
 .sk-rec__panel { min-width: 0; }
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
 .sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) var(--props-w, minmax(240px, 320px)); gap: 24px; align-items: start; }
@@ -6224,16 +6405,24 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    контекста», а потолок для телефона, где 680 px просто не влезает.
    Узкая панель справа остаётся как есть (прежнее решение): там своей меры нет,
    колонка и так узкая. */
+/* width: 100% (владелица 13.11: «отступы… странные»): auto-поля у flex-элемента сжимали шапку до
+   ширины заголовка, и она вставала по центру, а строка фактов — нет. Факты — в той же колонке. */
 .sk-dock[data-placement='bottom'] .sk-rec-head,
+.sk-dock[data-placement='bottom'] .sk-rec-facts,
 .sk-dock[data-placement='bottom'] .sk-rec-propsrow,
-.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); width: 100%; margin-left: auto; margin-right: auto; }
 
 /* Линия вкладок — во всю рамку (~1200 px), а шапка, свойства и текст — узкой колонкой по центру:
    владелица 08.11 «выглядит классно, чем всё вписанное в одну ширину» (как v4). */
 .sk-dock[data-placement='full'] .sk-rec-head,
 .sk-dock[data-placement='full'] .sk-rec-facts,
 .sk-dock[data-placement='full'] .sk-rec-propsrow,
-.sk-dock[data-placement='full'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+.sk-dock[data-placement='full'] .sk-tabpanel > * { max-width: var(--rec-col); width: 100%; margin-left: auto; margin-right: auto; }
+/* «×» закрытия справа/слева/снизу — в строке бара, а не отдельной строкой над ним (13.11: пустая
+   полоса ~45 px и асимметрия 15/22 px — плавающая кнопка сужала весь паспорт). Тот же приём, что
+   на телефоне: отрицательное нижнее поле снимает обтекание, место кнопке держит бар. */
+.sk-dock:not([data-placement='full']) .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px)); }
+.sk-dock:not([data-placement='full']) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 8px); }
 .sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
 .sk-dock[data-placement='full'] .sk-rec-head { margin-bottom: 10px; }
 .sk-dock[data-placement='full'] .sk-tabpanel { padding-top: 16px; }
@@ -6326,6 +6515,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   background: var(--bg0);
 }
 .sk-dock[data-placement='right'] { grid-template-columns: minmax(0, 1fr) var(--dock-panel-w, min(560px, 45%)); }
+/* MP2-14: «слева» — зеркало: панель в первой колонке, список во второй. */
+.sk-dock[data-placement='left'] { grid-template-columns: var(--dock-panel-w, min(560px, 45%)) minmax(0, 1fr); }
 /* Пол списка при сжатом правом доке (P-04): панель растягивается до 2/3 окна,
    а док уже главной зоны, и колонка списка minmax(0, 1fr) сжималась почти до
    нуля — названия рвались посередине слова. Пол у колонки нельзя: док
@@ -6333,6 +6524,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    списка: уже 360 px она не сжимается, и включается горизонтальная прокрутка
    бэкдропа (.sk-dock__backdrop, overflow: auto), а не дробь слов. */
 .sk-dock[data-placement='right'] .sk-list__scroll { min-width: 360px; }
+.sk-dock[data-placement='left'] .sk-list__scroll { min-width: 360px; }
 /* Высота паспорта снизу (владелица 11.11.2026: «нижняя панель — 1/3 от высоты,
    если не предопределено контрактом, с ресайзбл линией»): док всегда ставит
    --dock-panel-h — треть высоты окна, контракт приложения (bottomHeight) или
@@ -6346,6 +6538,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-dock[data-placement='right'] .sk-dock__backdrop { grid-area: 1 / 1; }
 .sk-dock[data-placement='right'] .sk-dock__panel { grid-area: 1 / 2; }
 .sk-dock[data-placement='right'] .sk-dock__resize { grid-area: 1 / 2; justify-self: start; align-self: stretch; z-index: 1; }
+.sk-dock[data-placement='left'] .sk-dock__backdrop { grid-area: 1 / 2; }
+.sk-dock[data-placement='left'] .sk-dock__panel { grid-area: 1 / 1; }
+.sk-dock[data-placement='left'] .sk-dock__resize { grid-area: 1 / 1; justify-self: end; align-self: stretch; z-index: 1; }
 .sk-dock[data-placement='bottom'] .sk-dock__backdrop { grid-area: 1 / 1; }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { grid-area: 2 / 1; }
 .sk-dock[data-placement='bottom'] .sk-dock__resize { grid-area: 2 / 1; align-self: start; justify-self: stretch; z-index: 1; }
@@ -6361,6 +6556,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   background: var(--bg1);
 }
 .sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
+.sk-dock[data-placement='left'] .sk-dock__panel { border-right: 1px solid var(--bd); }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
 /* Рамка во весь экран — 66vw, а не 66 %: теперь слой внутри оболочки накрывает
    область содержимого, и процент считался бы от неё, то есть от контекста.
@@ -6441,6 +6637,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   .sk-ptrig__search { min-width: 0; }
   .sk-ptrig__text,
   .sk-ptrig .sk-kbd { display: none; }
+  /* MP2-03 (проход 13.11): две иконы 35px + зазор не влезали в 77px группы
+     (81px содержимого) — клип 4px. Узкий зазор возвращает группу в коробку. */
+  .sk-ptrig { gap: 2px; }
 }
 
 /* S4-CONTENT-V4 (прототип v4): строка-подсказка правки над текстом. */
@@ -6837,3 +7036,44 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-relfield__chip--inherited { padding-right: 8px; color: var(--t3); border-style: dashed; }
 .sk-relfield__x { min-width: 20px; min-height: 20px; border: 0; border-radius: 999px; background: transparent; color: var(--t3); font: inherit; cursor: pointer; }
 .sk-relfield__x:hover { color: var(--dng); }
+
+/* ---------- «Редактировать всё» (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24) ----------
+   Прототип docs/prototypes/s4-24-edit-all.html одобрен 13.11.2026: полоса «изменено N · Отмена ·
+   Сохранить» липкая наверху (длинный ADR прокручивается, а сохранить видно всегда); тексты —
+   исходником во всю колонку; изменённое помечено цветом предупреждения. */
+.sk-rec__editall { align-self: flex-start; margin: 2px 0 8px; }
+.sk-rec-editall { display: flex; flex-direction: column; gap: 10px; }
+.sk-rec-editall__bar {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 6px 0; border-bottom: 1px solid var(--bd); background: var(--bg1);
+}
+.sk-rec-editall__name { font-family: var(--mono); font-size: var(--fs-sm); color: var(--acc); }
+.sk-rec-editall__state { font-size: var(--fs-sm); color: var(--t2); }
+.sk-rec-editall__why { font-size: var(--fs-xs); color: var(--t3); }
+.sk-rec-editall__grow { flex: 1 1 auto; }
+.sk-rec-editall__fail { padding: 6px 10px; border: 1px solid var(--dng); border-radius: var(--r-md); color: var(--dng); font-size: var(--fs-sm); }
+.sk-rec-editall__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--wrn); border-radius: var(--r-md); background: var(--bg2); font-size: var(--fs-sm); }
+.sk-btn--danger { border-color: var(--dng); color: var(--dng); }
+.sk-rec-editall__fields { display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); gap: 8px 14px; margin: 0; }
+.sk-rec-editall__row { display: contents; }
+.sk-rec-editall__row dt { padding-top: 4px; color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .05em; }
+.sk-rec-editall__row dd { margin: 0; min-width: 0; }
+.sk-rec-editall__row.is-md dt { grid-column: 1 / -1; padding-top: 10px; }
+.sk-rec-editall__row.is-md dd { grid-column: 1 / -1; }
+.sk-rec-editall__mark { margin-left: 6px; color: var(--wrn); text-transform: none; letter-spacing: 0; }
+.sk-rec-editall__md {
+  display: block; width: 100%; min-height: 220px; resize: vertical; padding: 10px;
+  border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1);
+  font-family: var(--mono); font-size: var(--fs-md); line-height: 1.6;
+}
+.sk-rec-editall__in { min-height: max(var(--tap), 26px); padding: 2px 8px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1); font: inherit; font-size: var(--fs-base); }
+.sk-rec-editall__row.is-dirty .sk-rec-editall__md,
+.sk-rec-editall__row.is-dirty .sk-rec-editall__in { border-color: var(--wrn); }
+.sk-rec-editall__rel { display: flex; flex-direction: column; gap: 4px; }
+.sk-relfield__chip.is-removed { border-style: dashed; color: var(--t3); text-decoration: line-through; }
+.sk-relfield__chip.is-added { border-color: var(--acc); }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-rec-editall__fields { grid-template-columns: minmax(0, 1fr); }
+  .sk-rec-editall__md, .sk-rec-editall__in { font-size: var(--fs-touch-input); }
+}

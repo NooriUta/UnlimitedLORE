@@ -62,12 +62,16 @@ interface FakeOpts {
   status?: number;
   batch?: unknown;
   batchStatus?: number;
+  // ответ пачки приходит позже: панель уже нарисована со скелетоном
+  // (SPRINT_UXR_S11_TEST_OPT/S11-SECRET-ROTATION-RACE — гонка «findBy контейнера → getBy содержимого»)
+  batchDelayMs?: number;
 }
 
 function fake(opts: FakeOpts = {}) {
   const urls: string[] = [];
   const f = vi.fn(async (url: string) => {
     urls.push(url);
+    if (url.includes('/actions/batch/') && opts.batchDelayMs) await new Promise(r => setTimeout(r, opts.batchDelayMs));
     if (url.includes('/actions/batch/')) return json(opts.batch ?? BATCH_BODY, opts.batchStatus ?? 200);
     return json(opts.body ?? BODY, opts.status ?? 200);
   }) as unknown as typeof fetch;
@@ -139,6 +143,14 @@ describe('модель журнала · строка', () => {
     expect(d.rows[0].ts).toBeNull();
     expect(d.rows[1].ts).toBeNull();
     expect(d.rows[2].ts).toBe(TS);
+  });
+
+  // SPRINT_UXR_POLISH_UAT_1113/PU-03: MetricSnapshot — TIMESERIES, и ts из базы
+  // приходит ISO-строкой ("2026-11-13T12:30:54.337Z"), а не числом. Фикстура с
+  // числом прятала то, что на стенде у ВСЕХ записей было «время не записано».
+  it('ts ISO-строкой (как отдаёт TIMESERIES) читается моментом, а не «не записано»', () => {
+    const d = parseActions({ rows: [{ ...ROWS[0], ts: new Date(TS).toISOString() }] });
+    expect(d.rows[0].ts).toBe(TS);
   });
 
   it('пачка: id формы rb-<13 цифр>-<8 hex>; всё прочее — не пачка', () => {
@@ -246,6 +258,22 @@ describe('экран журнала · честные состояния', () =>
     expect(within(rows[0]).getByTestId('adm-log-ts').textContent).toContain('2026-11-10 09:31');
     expect(rows[2].textContent).not.toContain('1970');
     expect(within(rows[2]).getByTestId('adm-log-ts').textContent).toMatch(/не записано/i);
+  });
+
+  it('PU-03: время ISO-строкой от сервера показано временем', async () => {
+    const iso = { ...BODY, rows: [{ ...ROWS[1], ts: new Date(TS).toISOString() }] };
+    mount(fake({ body: iso }).f);
+    const rows = await screen.findAllByTestId(/^adm-log-row-/);
+    expect(within(rows[0]).getByTestId('adm-log-ts').textContent).toContain('2026-11-10 09:31');
+  });
+
+  it('PU-03: путь эндпоинта вместо объекта — «объект не записан», путь в подсказке', async () => {
+    const path = { ...BODY, rows: [{ ...ROWS[1], entity_id: '/lore/user/role' }] };
+    mount(fake({ body: path }).f);
+    const rows = await screen.findAllByTestId(/^adm-log-row-/);
+    const ent = within(rows[0]).getByTestId('adm-log-entity');
+    expect(ent.textContent).toMatch(/объект не записан/i);
+    expect(ent.getAttribute('title')).toContain('/lore/user/role');
   });
 
   it('«сколько всего не знаем» сказано словами и не притворяется нулём', async () => {
@@ -374,11 +402,12 @@ describe('экран журнала · пачка (S7B-13)', () => {
   });
 
   it('раскрытие: назначения пачки и окно отката словами; кнопки отката нет', async () => {
-    mount(fake().f);
+    mount(fake({ batchDelayMs: 30 }).f);
     const rows = await screen.findAllByTestId(/^adm-log-row-/);
     fireEvent.click(within(rows[0]).getByTestId('adm-log-expand'));
     const panel = await screen.findByTestId('adm-log-batch-panel');
-    expect(within(panel).getAllByTestId(/^adm-log-batch-item-/)).toHaveLength(2);
+    // панель рисуется сразу со скелетоном — ждём строки пачки, а не контейнер
+    expect(await within(panel).findAllByTestId(/^adm-log-batch-item-/)).toHaveLength(2);
     expect(panel.textContent).toContain('AIDA/miniLORE');
     const undo = within(panel).getByTestId('adm-log-undo');
     expect(undo.getAttribute("data-open")).toBe("false");

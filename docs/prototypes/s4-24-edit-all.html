@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S4-24 · «Редактировать всё» — прототип на ADR-LORE-022</title>
+<!-- Прототип раскладки (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24). Выбор владелицы 13.11.2026 через miniLORE:
+     «кнопка наверху сохранить и прототип на реально большом ADR». Данные — настоящий ADR-LORE-022
+     из прода (27 решений, три больших MD-поля с mermaid). Только раскладка и поведение, не код v2. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0:#141108; --bg1:#1c1810; --bg2:#252019; --bd:#42382a; --t1:#ede5d0; --t2:#a6997f; --t3:#9c937b;
+  --acc:#a8b860; --suc:#7dbf78; --wrn:#d4922a; --inf:#88b8a8; --dng:#cf6c5e;
+  --fs-2xs:9px; --fs-xs:10px; --fs-sm:11px; --fs-base:12px; --fs-md:13px; --fs-lg:14px; --fs-xl:20px; --fs-2xl:24px;
+  --font:'Manrope',sans-serif; --mono:'IBM Plex Mono',monospace; --display:'Unbounded',sans-serif;
+  --r-md:6px; --r-lg:10px;
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg0); color:var(--t1); font:var(--fs-base)/1.5 var(--font); }
+.top { display:flex; gap:12px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--bd); background:var(--bg1); }
+.top b { font-family:var(--display); letter-spacing:.04em; }
+.top .note { color:var(--t3); font-size:var(--fs-xs); margin-left:auto; }
+.top .ctl { display:flex; gap:6px; }
+.pill { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); color:var(--t2); font:600 var(--fs-xs)/1.6 var(--font); cursor:pointer; }
+.pill[aria-pressed=true] { color:var(--t1); border-color:var(--acc); background:color-mix(in srgb,var(--acc) 18%,transparent); }
+.frame { position:relative; margin:12px 16px; border:1px solid var(--bd); border-radius:var(--r-lg); background:var(--bg1); min-height:calc(100vh - 80px); }
+.bar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px; padding:8px 20px; border-bottom:1px solid var(--bd); background:var(--bg1); border-radius:var(--r-lg) var(--r-lg) 0 0; }
+.crumbs { color:var(--acc); font-size:var(--fs-sm); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.crumbs code { font-family:var(--mono); color:var(--t1); }
+.btn { min-height:28px; padding:0 12px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); color:var(--t1); font:600 var(--fs-sm) var(--font); cursor:pointer; }
+.btn:hover { border-color:var(--acc); }
+.btn--icon { width:28px; padding:0; border-radius:var(--r-md); color:var(--t2); }
+.btn--primary { background:var(--acc); color:var(--bg0); border-color:var(--acc); }
+.btn--primary:disabled { background:var(--bg2); color:var(--t3); border-color:var(--bd); cursor:not-allowed; }
+.btn--ghost { background:transparent; }
+.warnchip { border:1px solid var(--wrn); color:var(--wrn); border-radius:999px; padding:0 8px; font-size:var(--fs-xs); }
+.pager { color:var(--t2); font-family:var(--mono); font-size:var(--fs-xs); }
+/* полоса правки — та же строка бара, но в режиме правки она другая и липкая */
+.editbar { display:none; align-items:center; gap:10px; flex:1; }
+.editing .editbar { display:flex; }
+.readtools { display:contents; }
+.editing .readtools { display:none; }
+.editbar .state { font-size:var(--fs-sm); color:var(--t2); }
+.editbar .state b { color:var(--wrn); }
+.editbar .why { font-size:var(--fs-xs); color:var(--t3); }
+.editbar .grow { flex:1; }
+.rec { max-width:66vw; margin:0 auto; padding:12px 32px 48px; }
+.col { max-width:680px; width:100%; margin:0 auto; }
+.kind { color:var(--t2); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.06em; }
+.kind code { font-family:var(--mono); text-transform:none; }
+h1 { margin:4px 0 6px; font:800 var(--fs-xl)/1.25 var(--display); }
+.title-in { width:100%; font:800 var(--fs-xl)/1.25 var(--display); color:var(--t1); background:var(--bg0); border:1px solid var(--bd); border-radius:var(--r-md); padding:6px 8px; }
+.modes { display:inline-flex; padding:1px; gap:2px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); margin:4px 0 10px; }
+.modes button { border:0; background:none; color:var(--t2); font:600 var(--fs-xs) var(--font); padding:2px 8px; border-radius:999px; }
+.modes button.on { color:var(--t1); background:color-mix(in srgb,var(--acc) 22%,transparent); box-shadow:inset 0 -2px 0 var(--acc); }
+.facts { display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:var(--t2); font-size:var(--fs-xs); font-family:var(--mono); }
+.status { display:inline-flex; gap:4px; align-items:center; border:1px solid var(--suc); color:var(--suc); border-radius:999px; padding:1px 8px; font:600 var(--fs-xs) var(--font); }
+select.status-in { background:var(--bg0); color:var(--suc); border:1px solid var(--suc); border-radius:999px; font:600 var(--fs-xs) var(--font); padding:1px 6px; }
+.headrow { display:flex; align-items:flex-start; gap:12px; }
+.headrow .grow { flex:1; min-width:0; }
+.edit-all { margin-top:6px; white-space:nowrap; }
+.editing .edit-all { display:none; }
+/* Свойства — строкой на всю колонку, в правке раскрыты */
+.props { margin:14px auto 6px; border:1px solid var(--bd); border-radius:var(--r-md); background:var(--bg0); }
+.props summary { cursor:pointer; padding:6px 10px; color:var(--t2); font-size:var(--fs-sm); }
+.props summary b { color:var(--t1); text-transform:uppercase; font-size:var(--fs-xs); letter-spacing:.06em; }
+.props dl { display:grid; grid-template-columns:170px 1fr; gap:6px 12px; margin:0; padding:6px 12px 12px; }
+.props dt { color:var(--t3); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.05em; padding-top:3px; }
+.props dd { margin:0; display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.chip { display:inline-flex; gap:4px; align-items:center; border:1px solid var(--bd); background:var(--bg2); border-radius:999px; padding:0 8px; font-size:var(--fs-xs); font-family:var(--mono); color:var(--t1); }
+.chip .x { display:none; border:0; background:none; color:var(--t3); cursor:pointer; padding:0; font-size:var(--fs-sm); }
+.editing .chip .x { display:inline; }
+.chip.removed { text-decoration:line-through; color:var(--t3); border-style:dashed; }
+.chip.added { border-color:var(--acc); }
+.add { display:none; border:1px dashed var(--bd); background:transparent; color:var(--t2); border-radius:999px; padding:0 8px; font-size:var(--fs-xs); cursor:pointer; }
+.editing .add { display:inline-flex; }
+.ro { color:var(--t3); font-size:var(--fs-xs); }
+.picker { display:none; position:absolute; z-index:10; width:280px; padding:6px; background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); box-shadow:0 8px 24px #000a; }
+.picker input { width:100%; background:var(--bg0); border:1px solid var(--bd); color:var(--t1); border-radius:var(--r-md); padding:4px 6px; font:var(--fs-sm) var(--font); }
+.picker li { list-style:none; padding:4px 6px; border-radius:var(--r-md); cursor:pointer; font-size:var(--fs-sm); }
+.picker li:hover { background:var(--bg2); }
+.picker ul { margin:6px 0 0; padding:0; max-height:200px; overflow:auto; }
+/* Вкладки и разделы */
+.tabs { display:flex; gap:18px; border-bottom:1px solid var(--bd); margin:14px auto 0; padding:0 4px; }
+.tabs span { padding:8px 0; color:var(--t2); font-size:var(--fs-md); }
+.tabs span.on { color:var(--t1); border-bottom:2px solid var(--acc); }
+.tabs .n { color:var(--t3); font-size:var(--fs-2xs); margin-left:2px; }
+.sec { margin:18px auto 0; }
+.sec h2 { margin:0 0 6px; font:700 var(--fs-xs) var(--font); color:var(--t2); text-transform:uppercase; letter-spacing:.08em; display:flex; gap:8px; align-items:center; }
+.sec h2 .changed { display:none; color:var(--wrn); text-transform:none; letter-spacing:0; font-weight:600; }
+.sec.dirty h2 .changed { display:inline; }
+.prose { line-height:1.7; font-size:var(--fs-lg); }
+.prose h2, .prose h3 { font-family:var(--font); color:var(--t1); text-transform:none; letter-spacing:0; font-size:var(--fs-lg); margin:18px 0 6px; }
+.prose code { font-family:var(--mono); font-size:.9em; background:var(--bg2); padding:0 3px; border-radius:3px; }
+.prose table { border-collapse:collapse; font-size:var(--fs-sm); }
+.prose td, .prose th { border:1px solid var(--bd); padding:4px 6px; vertical-align:top; }
+.prose a.wref { color:var(--acc); border:1px solid color-mix(in srgb,var(--acc) 40%,transparent); border-radius:4px; padding:0 3px; text-decoration:none; font-family:var(--mono); font-size:.85em; }
+.mermaid { background:var(--bg0); border:1px solid var(--bd); border-radius:var(--r-md); padding:8px; overflow-x:auto; }
+.mdedit { display:none; }
+.editing .mdedit { display:block; }
+.editing .prose { display:none; }
+.mdedit .tb { display:flex; gap:4px; padding:4px; border:1px solid var(--bd); border-bottom:0; border-radius:var(--r-md) var(--r-md) 0 0; background:var(--bg2); }
+.mdedit .tb button { border:0; background:none; color:var(--t2); font:600 var(--fs-xs) var(--mono); padding:2px 6px; border-radius:4px; }
+.mdedit .tb button:hover { background:var(--bg1); color:var(--t1); }
+.mdedit .tb .hint { margin-left:auto; color:var(--t3); font:var(--fs-2xs) var(--font); align-self:center; }
+.mdedit textarea { width:100%; min-height:260px; resize:vertical; background:var(--bg0); color:var(--t1); border:1px solid var(--bd); border-radius:0 0 var(--r-md) var(--r-md); padding:10px; font:var(--fs-md)/1.6 var(--mono); }
+.sec.dirty .mdedit textarea { border-color:var(--wrn); }
+.dialog { display:none; position:fixed; inset:0; background:#0009; z-index:50; align-items:center; justify-content:center; }
+.dialog.open { display:flex; }
+.dialog .box { width:420px; background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); padding:16px; }
+.dialog h3 { margin:0 0 8px; font:800 var(--fs-lg) var(--display); }
+.dialog ul { margin:6px 0 12px; padding-left:18px; color:var(--t2); }
+.dialog .row { display:flex; gap:8px; justify-content:flex-end; }
+.toast { position:fixed; right:16px; bottom:16px; background:var(--bg2); border:1px solid var(--suc); color:var(--suc); padding:8px 12px; border-radius:var(--r-md); display:none; }
+.legend { margin:10px 16px; color:var(--t2); font-size:var(--fs-sm); }
+.legend li { margin:2px 0; }
+</style>
+</head>
+<body>
+<div class="top">
+  <b>S4-24 · «Редактировать всё»</b>
+  <span class="ctl">
+    <button class="pill" id="vRead" aria-pressed="true">Чтение</button>
+    <button class="pill" id="vEdit" aria-pressed="false">Правка</button>
+  </span>
+  <span class="note">прототип раскладки · данные — настоящий ADR-LORE-022 с прода · сохранение не уходит на сервер</span>
+</div>
+<ol class="legend">
+  <li><b>Чтение:</b> под заголовком — одна кнопка «✎ Редактировать» на всю запись (тексты + свойства). Карандаши у отдельных полей остаются для быстрой правки одного поля.</li>
+  <li><b>Правка:</b> бар паспорта превращается в полосу правки: «изменено N полей», <b>«Отмена»</b> и <b>«Сохранить»</b> наверху (липкая — видна при прокрутке длинного ADR). Все тексты — исходник MD, свойства раскрыты, связи — чипы с × и «+ добавить».</li>
+  <li>«Сохранить» неактивна с причиной: «нет изменений» или «пустое обязательное: Название». Изменённые поля помечены. «Отмена» с изменениями — подтверждение со списком, что потеряется. Выход по Esc — то же подтверждение.</li>
+  <li>Сохранение — одним действием: сервер получает все изменённые поля и связи; если часть не сохранилась, правка не закрывается и неудачные поля названы.</li>
+</ol>
+
+<div class="frame" id="frame">
+  <div class="bar">
+    <div class="readtools">
+      <span class="crumbs">← ADR / <code>ADR-LORE-022</code></span>
+      <span class="warnchip">⚠ 2</span>
+      <span class="pager">‹ 14 из 211 ›</span>
+      <button class="btn btn--icon" title="Где открыт">⤢</button>
+      <button class="btn btn--icon" title="Закрыть">×</button>
+    </div>
+    <div class="editbar">
+      <span class="crumbs">Правка · <code>ADR-LORE-022</code></span>
+      <span class="state" id="state">изменений нет</span>
+      <span class="why" id="why">«Сохранить» неактивна: нет изменений</span>
+      <span class="grow"></span>
+      <button class="btn btn--ghost" id="cancel">Отмена</button>
+      <button class="btn btn--primary" id="save" disabled>Сохранить</button>
+    </div>
+  </div>
+
+  <article class="rec">
+    <div class="col">
+      <div class="headrow">
+        <div class="grow">
+          <div class="kind">ADR · <code>ADR-LORE-022</code></div>
+          <h1 id="title"></h1>
+          <textarea class="title-in" id="titleIn" rows="2" style="display:none;resize:vertical" aria-label="Название"></textarea>
+        </div>
+        <button class="btn edit-all" id="editAll">✎ Редактировать</button>
+      </div>
+      <div class="modes"><button class="on">Контент</button><button>Свойства</button><button>Аналитика</button></div>
+      <div class="facts">
+        <span class="status" id="statusView">✓ Принято</span>
+        <select class="status-in" id="statusIn" style="display:none" aria-label="Статус">
+          <option>Предложено</option><option selected>Принято</option><option>Заменено</option><option>Отклонено</option>
+        </select>
+        <span>· решений 27</span><span>· от 2026-07-16</span><span>· изменено 2026-07-17</span>
+      </div>
+
+      <details class="props" id="props">
+        <summary><b>Свойства</b> · FORSETI_MCP, FORSETI, OMILORE · UnlimitedLORE, AIDA · зависит от ADR-LORE-015</summary>
+        <dl id="propsList"></dl>
+      </details>
+
+      <nav class="tabs"><span class="on">Контент</span><span>Решения<span class="n">27</span></span><span>Вопросы<span class="n">5</span></span><span>Связи<span class="n">9</span></span><span>История<span class="n">2</span></span></nav>
+    </div>
+    <div id="sections"></div>
+  </article>
+  <div class="picker" id="picker"><input placeholder="Найти компонент…"><ul></ul></div>
+</div>
+
+<div class="dialog" id="dlg"><div class="box">
+  <h3>Выйти без сохранения?</h3>
+  <div>Потеряются изменения:</div>
+  <ul id="lost"></ul>
+  <div class="row"><button class="btn" id="stay">Вернуться к правке</button><button class="btn" id="drop" style="border-color:var(--dng);color:var(--dng)">Выйти без сохранения</button></div>
+</div></div>
+<div class="toast" id="toast">Сохранено: 0 полей · новая версия записи</div>
+
+<script type="application/json" id="adr">
+{
+"title": "Продуктовый слой: Feature → UC + класс работ задачи (work_class: uc/jtd/enb)",
+"components": ["FORSETI_MCP", "FORSETI", "OMILORE"],
+"git_projects": ["NooriUta/UnlimitedLORE", "NooriUta/AIDA"],
+"depends_on": ["ADR-LORE-015"],
+"implemented_in": ["SPRINT_LORE_PRODUCT_LAYER"],
+"blocks": ["ADR-LORE-044", "ADR-LORE-032", "ADR-LORE-030", "ADR-LORE-029", "ADR-LORE-028", "ADR-LORE-027"],
+"tags": [],
+"sections": [
+ {"key": "context_md", "title": "Контекст", "md": "## Чего не хватает\n\nВ LORE сейчас есть две оси прослеживаемости:\n\n- **исполнение**: `KnowSprint → KnowPhase → KnowTask` (кто, когда, каким типом работы — `task_type` из [[ADR-LORE-015]]);\n- **обоснование**: `KnowADR → KnowDecision → KnowQuestion` (почему так решили, какое правило, что ещё открыто).\n\n**Но нет продуктового слоя — «что за пользовательскую способность мы вообще строим».** Задача висит в спринте, но по ней не сказать: *какую пользовательскую ценность* она приближает и *завершена ли фича целиком*. Ровно поэтому в прошлом обсуждении «полнофункциональная фича или часть работы?» ответить строго было нельзя — не было объекта «фича» с критерием готовности.\n\n## Что это ломает на практике\n\n- **Нельзя определить «фича целиком».** «Готово» = задачи done, но фича готова, только когда закрыты **все её UC**. Без UC-слоя «выпускать только целые фичи» — принцип без опоры.\n- **Задачи теряют продуктовый смысл.** `task_type=dev` говорит «это разработка», но не «это ради какого сценария пользователя». Разработческая задача может строить UC, а может — инфраструктуру-энейблер; сегодня их не различить.\n- **Нет декомпозиции ценности.** Крупная фича = набор пользовательских сценариев (UC). Этой иерархии в графе нет.\n\n## Термины (как задал пользователь)\n\n- **Feature (Фича)** — верхнеуровневая продуктовая способность. Содержит **множество UC** как декомпозицию («объект один, но с иерархией внутри»).\n- **UC (Use Case)** — **главная категория**, единица пользовательского сценария/ценности.\n- **Класс работ задачи** (новая ось, не заменяет `task_type`): **UC** (задача реализует use case), **JTD** (Job to be Done — задача-хелпер), **ENB** (Enabler — архитектурный/инфраструктурный принцип, «расчищает дорогу», сам по себе пользователю не виден).\n- Часть задач **не привязана** ни к какой Feature/UC — это допустимо (типичные JTD/ENB).\n\n## Анализ Goal-KAOS · TRIZ · TOC (2026-07-17, аудит полноты)\n\nОграничение (как в ADR-024): все ветки присутствуют, модель исполнима для LLM-агента — статусы из закрытых множеств, каждая обязанность назначена конкретной сущности/инструменту.\n\n### KAOS: целевая модель слоя\n\n```mermaid\nflowchart TD\n    G0[\"ЦЕЛЬ G0: «фича целиком» — проверяемый факт,\\nа задача знает, ради какого сценария существует\"]\n    G0 --> G1[\"G1: вертикаль ценности\\nFeature → UC → Task\"] --> A1[\"DECOMPOSES_INTO + REALIZES\\n(uc-задача: ребро ОБЯЗАТЕЛЬНО, D16)\"]\n    G1 -.-> O1{{\"O1: связки забывают ставить\"}} -.-> M1[\"линтеры спринта: unlinked_uc_tasks,\\nunlinked_enb_tasks — списки нарушений\"]\n    G0 --> G2[\"G2: готовность без деклараций\"] --> A2[\"вычислитель D17: статусы из задач,\\nруками только proposed/dropped\"]\n    G2 -.-> O2{{\"O2: shipped-UC трогают снова\"}} -.-> M2[\"shipped_at + in_rework\\n(OQ-022-REENG, рекомендация б)\"]\n    G0 --> G3[\"G3: сценарии читаемы и человеку, и агенту\"] --> A3[\"шаблон Коберна в uc_new (D14)\\n+ линтер uc_quality (PL-12)\"]\n    G0 --> G4[\"G4: роли продукта = роли доступа\"] --> A4[\"KnowActor (D12) проектный (D18):\\nроль × компонент × сценарий × проект\\n→ ВЫВОДИМАЯ RBAC-матрица\"]\n    G0 --> G5[\"G5: не задушить мелкие работы\"] --> A5[\"jtd свободен; слой добровольный\\nсверху (D3/D7) — бэкфилл не обязателен\"]\n```\n\n### TRIZ: противоречия и разрешения\n\n| # | Противоречие | Разрешение |\n|---|---|---|\n| 1 | Богатая анатомия Коберна ↔ оверинжиниринг ввода | Разделение **формы и схемы**: анатомия конвенцией MD-шаблона + линтером, не колонками (D14); в схему — только фильтруемое (goal_level, priority) |\n| 2 | Статус-декларация проста ↔ декларации лгут | Разделение **намерения и факта**: руками только proposed/dropped, готовность вычисляется из задач (D17) |\n| 3 | shipped фиксирует факт ↔ живой продукт дорабатывается | Разделение **во времени**: shipped_at — исторический факт, in_rework — текущее состояние (REENG-б) |\n| 4 | Роль-строка проста ↔ роли размножаются в написаниях | Актор — вершина, ровно одна на роль (D12), проектная (D18) |\n| 5 | Один словарь классов прост ↔ задачи и сценарии — разные оси | work_class ТОЛЬКО на задачах, goal_level ТОЛЬКО на UC (D15) |\n| 6 | Extensions Коберна ↔ UML-extend | Терминологический якорь: расширения шагов (3a/3b) живут В сценарии; UC_EXTENDS — МЕЖДУ UC (D14) |\n\n### TOC: ограничение слоя\n\nОграничение — не схема (аддитивна и дёшева), а **дисциплина связок**: слой умирает, если рёбра не ставят. Exploit: связки атомарны с записью (uc_id в task_new, feature_id в uc_new — ребро в той же операции); Subordinate: линтеры спринта показывают нарушения немедленно, но НЕ блокируют запись (гейт задушил бы ввод — G5); Elevate: когда появится UI (PL-06), формы не дают забыть связку по построению. Не полируем не-ограничение: бэкфилл 2500 задач отложен (OQ-022-BACKFILL закрыт «только вперёд»)."},
+ {"key": "decision_md", "title": "Решение", "md": "## Модель\n\n**Feature — КОРЕНЬ иерархии сценариев.** Готовность течёт СНИЗУ ВВЕРХ: Sprint/Task → UC → Feature (D17) — исполнение и ценность связаны через REALIZES и PART_OF, оба ребра на диаграмме.\n\n```mermaid\nerDiagram\n    KnowFeature ||--o{ KnowUseCase : \"DECOMPOSES_INTO\"\n    KnowUseCase }o--o{ KnowTask    : \"REALIZES\"\n    KnowSprint  ||--o{ KnowTask    : \"PART_OF\"\n    KnowSprint  ||--o{ KnowPhase   : \"фазы\"\n    KnowUseCase }o--o{ KnowActor   : \"HAS_ACTOR\"\n    KnowUseCase }o--o{ KnowUseCase : \"UC_INCLUDES / UC_EXTENDS\"\n    KnowUseCase }o--o{ LoreComponent : \"BELONGS_TO\"\n    KnowUseCase }o--o| KnowADR     : \"TRACED_TO\"\n    KnowTask    }o--o| KnowADR     : \"JUSTIFIED_BY\"\n    KnowActor   }o--|| KnowGitProject : \"BELONGS_TO_PROJECT\"\n    KnowSprint  }o--o{ KnowRelease : \"IMPLEMENTED_IN_RELEASE\"\n```\n\nЧтение для вычислителя (D17): статус UC = f(его REALIZES-задач: status_raw задач в их спринтах); статус Feature = f(его UC). В списке задач UC каждая строка несёт спринт (ссылку) и ЕГО статус (D16) — исполнение видно из сценария без перехода.\n\n## Решения\n\n**1. Два новых vertex-типа: `KnowFeature` и `KnowUseCase`.** Feature — верх; UC — декомпозиция. Ребро `DECOMPOSES_INTO` (Feature → UC). «Объект один с иерархией» реализуем как **родитель-Feature + дети-UC** (не одна вершина с рекурсией — так проще фильтровать «UC этой фичи» и «фичи компонента»).\n\n**2. Новая ось классификации задачи — `work_class`** (словарь, механизм [[ADR-LORE-012]], как `task_type`): значения **`uc`**, **`jtd`**, **`enb`**. Это **ортогонально `task_type`** ([[ADR-LORE-015]]): `task_type` = **КАК**, `work_class` = **ЗАЧЕМ**.\n\n**3. Ребро `REALIZES` (KnowTask → KnowUseCase).** Задача класса `uc` **должна** ссылаться на UC, который реализует. Задачи `jtd`/`enb` — **опционально**.\n\n**4. Критерий «фича целиком».** Feature `shipped` ⇐ все её UC `shipped`; UC `shipped` ⇐ его `uc`-задачи `done`.\n\n**5. Прослеживаемость сверху вниз:** Feature (ценность) → UC (сценарий) → Task[work_class=uc] (реализация) → ADR/Decision (почему) → Question (что открыто).\n\n**6. MCP + UI** — объём: `feature_new`, `uc_new`, `feature_link`, `task_link(rel: uc)`, `work_class` в `task_new`/`task_set`; раздел «Фичи» с деревом Feature → UC → задачи; слайсы `features`, `use_cases_of_feature`, `tasks_of_uc`, `unlinked_tasks`.\n\n**7. Бэкфилл не обязателен разом.** Слой вводится «вперёд».\n\n## Дополнения при ACCEPTED (2026-07-17, решения D10–D13)\n\n**8. RBAC агентов (D10).** Feature/UC пишут `agent-architect`, `agent-pm` (+full); `work_class` на задачах — все task-писатели; словарь `work_class` — канон, только люди.\n\n**9. UI только после прототипа (D11).** Экранные формы слоя — через UX-процесс (standalone-прототип → approve → код).\n\n**10. Актор — вершина, и не один (D12).** `KnowActor` (actor_id · name · kind: human-role|system|agent · body_md); UC ↔ акторы = multi-ребро `HAS_ACTOR`.\n\n**11. Граф UC шире иерархии (D13).** Поперечные рёбра `UC_INCLUDES` и `UC_EXTENDS`; карточка Feature несёт большое `context_md`.\n\n**12. «UC по Коберну» — РЕШЕНО (D14).** Анатомия — конвенцией MD-шаблона внутри scenario_md, качество — advisory-линтер uc_quality.\n\n**13–17.** Разведение осей (D15), обязательные связки классов (D16), вся готовность — из исполнения (D17), акторы — проектные (D18), добор Коберна (D19).\n\n## Дочерние ADR\n\n| ADR | Что несёт | Решения |\n|---|---|---|\n| [[ADR-LORE-027]] | UC по Коберну: шаблон, goal_level/priority, алгоритм качества | D14, D19 |\n| [[ADR-LORE-028]] | Акторы проекта, HAS_ACTOR role, RBAC-вывод | D10, D12, D18 |\n| [[ADR-LORE-029]] | Вычислитель готовности, shipped_at, реинжиниринг | D4, D17 |\n| [[ADR-LORE-030]] | Аналитика продуктового слоя | — |"},
+ {"key": "consequences_md", "title": "Следствия", "md": "## Что это даёт\n\n- **«Фича целиком» становится проверяемым фактом**, а не суждением: Feature готова ⇔ все UC готовы.\n- **Задача обретает продуктовый смысл**: видно, ради какого сценария она существует (или что она — энейблер/хелпер).\n- **Полная вертикаль трассировки**: ценность (Feature) → сценарий (UC) → работа (Task) → правило (Decision/ADR) → открытый вопрос.\n- **Аналитика продукта**: сколько UC во фиче закрыто; какие фичи «застряли»; доля `enb`/`jtd` vs `uc`.\n\n## Стоимость\n\nДва новых типа + ребра (`DECOMPOSES_INTO`, `REALIZES`, `TRACED_TO`), словарь `work_class`, MCP-инструменты, раздел UI, слайсы. Плюс дисциплина: новые `uc`-задачи требуют привязки к UC.\n\n## Риск\n\n- **Оверинжиниринг для мелких задач.** Поэтому `jtd`/`enb` и «автономные задачи без Feature» — первого класса, а не исключение.\n- **Двойная классификация путает.** `task_type` vs `work_class` — надо чётко развести в UI.\n\n## Вопросы\n\nВедутся в реестре ОВ ([[ADR-LORE-020]]): `OQ-022-TYPES` · `OQ-022-WORKCLASS` · `OQ-022-UC-SPRINT` · `OQ-022-BACKFILL` · `OQ-022-COCKBURN`."}
+]
+}
+</script>
+
+<script type="module">
+import { marked } from 'https://cdn.jsdelivr.net/npm/marked@12/lib/marked.esm.js';
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+mermaid.initialize({ startOnLoad: false, theme: 'dark', layout: 'elk', flowchart: { useMaxWidth: false } });
+
+const adr = JSON.parse(document.getElementById('adr').textContent);
+const orig = structuredClone(adr);
+const $ = id => document.getElementById(id);
+const frame = $('frame');
+const ALL_COMPONENTS = ['FORSETI', 'FORSETI_MCP', 'OMILORE', 'SEIDRKIT', 'SEIDRKIT_PEEK', 'MINILORE', 'BRAGI', 'MUNINN', 'TYR', 'HEIMDALL', 'VERDANDI'];
+
+function renderMd(md) {
+  const wiki = md.replace(/\[\[([^\]]+)\]\]/g, (_, id) => `<a class="wref" href="#">${id}</a>`);
+  const html = marked.parse(wiki);
+  return html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
+    (_, code) => `<pre class="mermaid">---\nconfig:\n  layout: elk\n---\n${code.replace(/&quot;/g, '"').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&')}</pre>`);
+}
+
+function sections() {
+  const host = $('sections'); host.innerHTML = '';
+  for (const s of adr.sections) {
+    const el = document.createElement('section');
+    el.className = 'sec col'; el.dataset.key = s.key;
+    el.innerHTML = `<h2>${s.title} <span class="changed">· изменено</span></h2>
+      <div class="prose">${renderMd(s.md)}</div>
+      <div class="mdedit"><div class="tb"><button>B</button><button>I</button><button>•</button><button>1.</button><button>[[ ]]</button><button>mermaid</button><span class="hint">исходник Markdown · «[[» — ссылка на запись</span></div><textarea aria-label="${s.title}"></textarea></div>`;
+    const ta = el.querySelector('textarea');
+    ta.value = s.md;
+    ta.addEventListener('input', () => { s.md = ta.value; refresh(); });
+    host.appendChild(el);
+  }
+  // По одному блоку: общий run на двух разных диаграммах (flowchart + erDiagram, ELK) терял второй.
+  (async () => { for (const n of document.querySelectorAll('.prose .mermaid:not([data-processed])')) { try { await mermaid.run({ nodes: [n] }); } catch { /* блок покажет исходник */ } } })();
+}
+
+const REL = [['components', 'Компоненты'], ['git_projects', 'Проекты'], ['depends_on', 'Зависит от'], ['blocks', 'Блокирует'], ['implemented_in', 'Реализован в спринте'], ['tags', 'Теги']];
+function props() {
+  const dl = $('propsList'); dl.innerHTML = '';
+  for (const [k, title] of REL) {
+    const dt = document.createElement('dt'); dt.textContent = title;
+    const dd = document.createElement('dd');
+    const shown = [...new Set([...orig[k], ...adr[k]])];
+    for (const v of shown) {
+      const gone = !adr[k].includes(v), fresh = !orig[k].includes(v);
+      const c = document.createElement('span');
+      c.className = 'chip' + (gone ? ' removed' : '') + (fresh ? ' added' : '');
+      c.innerHTML = `${v} <button class="x" title="${gone ? 'Вернуть' : 'Отвязать'}">${gone ? '↺' : '×'}</button>`;
+      c.querySelector('.x').onclick = () => { adr[k] = gone ? [...adr[k], v] : adr[k].filter(x => x !== v); props(); refresh(); };
+      dd.appendChild(c);
+    }
+    if (!shown.length) { const n = document.createElement('span'); n.className = 'ro'; n.textContent = '—'; dd.appendChild(n); }
+    const add = document.createElement('button'); add.className = 'add'; add.textContent = '+ добавить';
+    add.onclick = e => openPicker(e.currentTarget, k);
+    dd.appendChild(add);
+    dl.append(dt, dd);
+  }
+  const dt = document.createElement('dt'); dt.textContent = 'Создан';
+  const dd = document.createElement('dd'); dd.innerHTML = '<span class="chip">2026-07-16</span><span class="ro">проставляет система — не правится</span>';
+  dl.append(dt, dd);
+}
+function openPicker(btn, key) {
+  const p = $('picker'); const r = btn.getBoundingClientRect(), fr = frame.getBoundingClientRect();
+  p.style.left = (r.left - fr.left) + 'px'; p.style.top = (r.bottom - fr.top + 4) + 'px'; p.style.display = 'block';
+  const input = p.querySelector('input'); const ul = p.querySelector('ul');
+  const draw = () => { ul.innerHTML = ''; for (const v of ALL_COMPONENTS.filter(v => !adr[key].includes(v) && v.toLowerCase().includes(input.value.toLowerCase()))) { const li = document.createElement('li'); li.textContent = v; li.onclick = () => { adr[key] = [...adr[key], v]; p.style.display = 'none'; props(); refresh(); }; ul.appendChild(li); } };
+  input.value = ''; input.oninput = draw; draw(); input.focus();
+}
+document.addEventListener('mousedown', e => { if (!e.target.closest('#picker, .add')) $('picker').style.display = 'none'; });
+
+function changes() {
+  const out = [];
+  if (adr.title !== orig.title) out.push('Название');
+  if ($('statusIn').value !== 'Принято') out.push('Статус');
+  adr.sections.forEach((s, i) => { if (s.md !== orig.sections[i].md) out.push(s.title); });
+  for (const [k, t] of REL) if (JSON.stringify([...adr[k]].sort()) !== JSON.stringify([...orig[k]].sort())) out.push(t);
+  return out;
+}
+function refresh() {
+  const ch = changes();
+  document.querySelectorAll('.sec').forEach(el => { const s = adr.sections.find(x => x.key === el.dataset.key); const o = orig.sections.find(x => x.key === el.dataset.key); el.classList.toggle('dirty', s.md !== o.md); });
+  const emptyTitle = !adr.title.trim();
+  $('state').innerHTML = ch.length ? `изменено: <b>${ch.length}</b> — ${ch.join(', ')}` : 'изменений нет';
+  $('save').disabled = !ch.length || emptyTitle;
+  $('why').textContent = emptyTitle ? '«Сохранить» неактивна: пустое обязательное — Название' : !ch.length ? '«Сохранить» неактивна: нет изменений' : '';
+}
+function setMode(edit) {
+  frame.classList.toggle('editing', edit);
+  $('vRead').setAttribute('aria-pressed', String(!edit)); $('vEdit').setAttribute('aria-pressed', String(edit));
+  $('title').style.display = edit ? 'none' : ''; $('titleIn').style.display = edit ? '' : 'none';
+  $('statusView').style.display = edit ? 'none' : ''; $('statusIn').style.display = edit ? '' : 'none';
+  $('props').open = edit ? true : $('props').open;
+  if (edit) $('titleIn').focus();
+  refresh();
+}
+function reset() { Object.assign(adr, structuredClone(orig)); $('statusIn').value = 'Принято'; $('title').textContent = adr.title; $('titleIn').value = adr.title; sections(); props(); }
+function tryLeave() {
+  const ch = changes();
+  if (!ch.length) { setMode(false); return; }
+  $('lost').innerHTML = ch.map(c => `<li>${c}</li>`).join(''); $('dlg').classList.add('open');
+}
+$('title').textContent = adr.title; $('titleIn').value = adr.title;
+$('titleIn').oninput = e => { adr.title = e.target.value; refresh(); };
+$('statusIn').onchange = refresh;
+$('editAll').onclick = () => setMode(true);
+$('vEdit').onclick = () => setMode(true);
+$('vRead').onclick = () => tryLeave();
+$('cancel').onclick = () => tryLeave();
+$('stay').onclick = () => $('dlg').classList.remove('open');
+$('drop').onclick = () => { $('dlg').classList.remove('open'); reset(); setMode(false); };
+$('save').onclick = () => {
+  const n = changes().length;
+  Object.assign(orig, structuredClone(adr)); $('title').textContent = adr.title; sections(); props(); setMode(false);
+  const t = $('toast'); t.textContent = `Сохранено: ${n} ${n === 1 ? 'поле' : n < 5 ? 'поля' : 'полей'} · новая версия записи`; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2600);
+};
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && frame.classList.contains('editing') && !$('dlg').classList.contains('open')) tryLeave(); });
+sections(); props(); refresh();
+</script>
+</body>
+</html>
