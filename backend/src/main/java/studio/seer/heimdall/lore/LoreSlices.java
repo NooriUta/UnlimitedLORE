@@ -2341,7 +2341,7 @@ public final class LoreSlices {
             // never declared in the schema) in case doc history is added later.
             "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
             LoreDocBodyDigest.selectColumns() + // DS-3
-            "sort_order, " +
+            "sort_order, file_path, " + // S5-DOC-PASSPORT: поле «Файл» паспорта
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +

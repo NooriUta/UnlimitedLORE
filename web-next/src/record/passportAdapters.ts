@@ -24,7 +24,10 @@ import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type Sp
  * этом файле — наследство эпохи до фасада (S4-33), и новые типы его не
  * повторяют.
  */
-export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec', 'decision', 'question', 'milestone', 'release',
+export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
+  // S5-DOC-PASSPORT: документ; поля и пути записи присылает фасад (тип doc в модели).
+  'doc',
+  'decision', 'question', 'milestone', 'release',
   // Появились 10.11 вместе с серверным PR #1090, все три — только на чтение
   // (perms.can_edit=false, status_next=[], version=null приходят с фасада).
   'component', 'tech', 'feature',
@@ -66,6 +69,7 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   if (type === 'sprint') return (await slice<Row>('sprints', { fields: 'sprint_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.sprint_id), title: str(r.name) || str(r.sprint_id) }));
   if (type === 'adr') return (await slice<Row>('adrs', { fields: 'adr_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.adr_id), title: str(r.name) || str(r.adr_id) }));
   if (type === 'spec') return (await slice<Row>('specs', { fields: 'spec_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.spec_id), title: str(r.title) || str(r.spec_id) }));
+  if (type === 'doc') return (await slice<Row>('docs', { fields: 'doc_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.doc_id), title: str(r.title) || str(r.doc_id) }));
   // Типы, у которых паспорт появился 09.11 (только чтение). Перечень нужен не
   // паспорту, а переходу «предыдущая / следующая» внутри дока: без своей ветки
   // тип падал в `open_tasks`, и стрелки водили бы по ЧУЖИМ записям — молча.

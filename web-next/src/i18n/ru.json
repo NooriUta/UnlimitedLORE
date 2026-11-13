@@ -1680,5 +1680,13 @@
   "admin.tidy.hidden.toggle": "скрытые «не ссылка»",
   "admin.tidy.hidden.empty": "Скрытых в этой группе нет.",
   "admin.tidy.hidden.restore": "Вернуть",
-  "admin.tidy.hidden.restored": "{id}: отметка снята — места снова в счётчике."
+  "admin.tidy.hidden.restored": "{id}: отметка снята — места снова в счётчике.",
+  "lists.docs.title": "Документы",
+  "shell.sec.doc": "Документы",
+  "lists.field.docKind": "Вид",
+  "pp.kind.doc": "Документ",
+  "pp.field.docKind": "Вид",
+  "pp.field.parentDoc": "Родительский документ",
+  "pp.field.sprints": "Спринты",
+  "pp.field.bodyEn": "Текст (EN)"
 }

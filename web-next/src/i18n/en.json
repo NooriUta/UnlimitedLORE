@@ -1680,5 +1680,13 @@
   "admin.tidy.hidden.toggle": "hidden «not a link»",
   "admin.tidy.hidden.empty": "Nothing hidden in this group.",
   "admin.tidy.hidden.restore": "Restore",
-  "admin.tidy.hidden.restored": "{id}: mark removed — places count again."
+  "admin.tidy.hidden.restored": "{id}: mark removed — places count again.",
+  "lists.docs.title": "Documents",
+  "shell.sec.doc": "Documents",
+  "lists.field.docKind": "Kind",
+  "pp.kind.doc": "Document",
+  "pp.field.docKind": "Kind",
+  "pp.field.parentDoc": "Parent document",
+  "pp.field.sprints": "Sprints",
+  "pp.field.bodyEn": "Text (EN)"
 }

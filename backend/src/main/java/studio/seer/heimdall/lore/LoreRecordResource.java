@@ -48,6 +48,7 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreQuestionResource questionResource;
     @Inject LoreMilestoneResource milestoneResource;
     @Inject LoreSpecResource specResource;
+    @Inject LoreDocResource docResource;
 
     /** Главный срез записи типа и имя его параметра. */
     record Source(String slice, String param, boolean list) {}
@@ -61,6 +62,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "task" -> new Source("tasks_by_uids", "task_uids", true);
             case "adr" -> new Source("adr", "id", false);
             case "spec" -> new Source("spec_by_id", "id", false);
+            // S5-DOC-PASSPORT (владелица 13.11: «подготовить для docs в LORE паспорт — их нет»).
+            case "doc" -> new Source("doc_by_id", "id", false);
             case "decision" -> new Source("decision", "id", false);
             case "question" -> new Source("question_by_id", "id", false);
             case "milestone" -> new Source("milestone_by_id", "id", false);
@@ -556,6 +559,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case ADR_TAG -> adrResource.linkAdrTag(new LoreAdrResource.AdrTagLinkRequest(a, b, action), role);
             case SPEC_COMPONENT -> specResource.linkSpec(new LoreSpecResource.SpecLinkRequest(a, "component", b, action), role);
             case SPEC_PROJECT -> specResource.linkSpec(new LoreSpecResource.SpecLinkRequest(a, "project", b, action), role);
+            case DOC_COMPONENT -> docResource.linkDocComponent(new LoreDocResource.DocComponentLinkRequest(a, b, action), role);
+            case DOC_PROJECT -> docResource.linkDocProject(new LoreDocResource.DocProjectLinkRequest(a, b, action), role);
         };
     }
 }

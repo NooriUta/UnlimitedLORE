@@ -39,6 +39,8 @@ final class LoreRecordVersion {
             case "task"   -> new String[] {"KnowTask", "task_uid"};
             case "adr"    -> new String[] {"KnowADR", "adr_id"};
             case "spec"   -> new String[] {"KnowSpec", "spec_id"};
+            // S5-DOC-PASSPORT: у KnowDoc нет SCD2-версий и updated_at — версия честно null, проверки нет.
+            case "doc"    -> new String[] {"KnowDoc", "doc_id"};
             default -> throw new IllegalArgumentException("версия записи не заведена для типа: " + type);
         };
         return "SELECT out('HAS_STATE')[valid_to IS NULL].valid_from[0] AS version, "

@@ -17,7 +17,7 @@ import type { AppKey } from '../i18n';
 import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
-  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, sprintRecord, taskListRecord,
+  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, sprintRecord, taskListRecord,
   techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
@@ -423,6 +423,22 @@ const specsSpec: SectionSpec = {
   columns: ['id', 'title', 'status', 'component', 'version', 'updated_at'],
 };
 
+/**
+ * Документы (S5-DOC-PASSPORT): статуса у KnowDoc нет вовсе, поэтому разрез — компонент,
+ * и колонок статуса/даты правки нет: их нечем заполнить (у дока нет SCD2-версий и updated_at).
+ */
+const docsSpec: SectionSpec = {
+  kind: 'doc', titleKey: 'lists.docs.title', icon: 'bookshelf',
+  fields: [['component', 'ref'], ['components', 'ref'], ['docKind', 'text'], ['parent', 'ref'], ['project', 'ref']],
+  statuses: [],
+  views: ['list', 'cards'],
+  // Дерево документов (DOC_CHILD_OF): «верхнего уровня» — без родителя.
+  quick: [['top-level', 'lists.quick.topLevel', { parent: '' }]],
+  filters: [LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  groupings: [LORE_FILTER_FIELDS.component, 'fields.docKind'],
+  columns: ['id', 'title', 'docKind', 'component', 'parent'],
+};
+
 /** Вопросы: группировка по статусу — прямая просьба владелицы (06.11). */
 const questionsSpec: SectionSpec = {
   kind: 'question', titleKey: 'lists.questions.title', icon: 'help',
@@ -679,6 +695,11 @@ export const LIST_SCREENS = {
     slice: 'specs', titleKey: 'lists.specs.title', icon: 'scroll-unfurled',
     defaultSort: FRESH_FIRST,
     map: specRecord, config: lang => withLibrary(withFeed(lang, sectionConfig(lang, specsSpec), FEEDS.specs)), feed: FEEDS.specs, library: LIBRARIES.specs, quickIcons: {},
+  },
+  docs: {
+    modelType: 'doc',
+    slice: 'docs', titleKey: 'lists.docs.title', icon: 'bookshelf',
+    map: docRecord, config: lang => sectionConfig(lang, docsSpec), quickIcons: {},
   },
   questions: {
     // Срез `questions`, а НЕ `open_questions`: второй — синоним на переход и
