@@ -1197,6 +1197,21 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
     }
 
+    /**
+     * MT-NOTE-APPEND п.4: context_md/outcome_md спринта — на ОТКРЫТУЮ строку истории, оба поля
+     * целиком (то, что стало на вершине). Строку читают хэш (LoreHashStamper) и перенос тел при
+     * смене статуса (LoreStatusResource.SPRINT_PLAN_FIELDS).
+     */
+    static LoreCommandClient.LoreCommand sprintHistMirror(String sprintId, String contextMd, String outcomeMd) {
+        Map<String, Object> p = new LinkedHashMap<>();
+        p.put("sid", sprintId);
+        p.put("ctx", contextMd);
+        p.put("outcome", outcomeMd);
+        return new LoreCommandClient.LoreCommand("sql",
+            "UPDATE KnowSprintHist SET context_md = :ctx, outcome_md = :outcome"
+            + " WHERE in('HAS_STATE').sprint_id CONTAINS :sid AND valid_to IS NULL", p);
+    }
+
     // ── MT-NOTE-APPEND (06.11.2026): дописывание вместо перезаписи целиком ──
     //
     // note_md / context_md / outcome_md заменялись только целиком; прежней версии
@@ -1308,6 +1323,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         Map<String, Object> previous = new LinkedHashMap<>();
         String contextNew = req.context_md();
         String outcomeNew = req.outcome_md();
+        // Тексты, какими они станут на вершине, — для зеркала на открытую строку истории.
+        String[] finalTexts = null;
         if (req.context_md() != null || req.outcome_md() != null || req.context_append() != null || req.outcome_append() != null) {
             List<Map<String, Object>> cur = ingestService.queryPublic(
                 "SELECT context_md, outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
@@ -1318,6 +1335,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (req.outcome_append() != null) outcomeNew = appendText(out0, req.outcome_append());
             if (contextNew != null) previous.put("context_md", ctx0);
             if (outcomeNew != null) previous.put("outcome_md", out0);
+            finalTexts = new String[]{contextNew != null ? contextNew : ctx0, outcomeNew != null ? outcomeNew : out0};
         }
         StringBuilder sb = new StringBuilder("UPDATE KnowSprint SET ");
         Map<String, Object> p = new LinkedHashMap<>();
@@ -1346,6 +1364,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         try {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 set + " WHERE sprint_id=:sid", p)).await().indefinitely();
+            // MT-NOTE-APPEND п.4 (+ основа п.3): тела — и на открытую строку истории, затем хэш.
+            // Без этого content_hash спринта считался по пустым полям строки (одинаков при любом
+            // тексте), а смена статуса переносила на новую версию null вместо текста.
+            if (finalTexts != null) {
+                writeClient.command(db, basicAuth(), sprintHistMirror(req.sprint_id(), finalTexts[0], finalTexts[1]))
+                    .await().indefinitely();
+                hashStamper.stampOpenHist("KnowSprintHist", "KnowSprint", "sprint_id", req.sprint_id());
+            }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
             if (!previous.isEmpty()) out.put("previous", previous);
