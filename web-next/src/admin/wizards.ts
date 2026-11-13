@@ -148,7 +148,7 @@ export async function fetchKcClients(fetchImpl: typeof fetch = loreFetch): Promi
 
 /** AO-AGENT-ADD: что сервер увидел в токене новой учётки; unchecked — сервер проверку не прислал. */
 export interface TokenCheck {
-  state: 'ok' | 'mismatch' | 'missing' | 'error' | 'unchecked';
+  state: 'ok' | 'mismatch' | 'missing' | 'no_seer_roles' | 'error' | 'unchecked';
   agentScope: string | null;
   expected: string | null;
   reason: string | null;
@@ -158,7 +158,7 @@ export interface IssuedAgent {
   clientId: string; secret: string | null; rolesCopied: string[]; rolesNote: string | null; tokenCheck: TokenCheck;
 }
 
-const CHECK_STATES = ['ok', 'mismatch', 'missing', 'error'] as const;
+const CHECK_STATES = ['ok', 'mismatch', 'missing', 'no_seer_roles', 'error'] as const;
 
 function parseTokenCheck(v: unknown): TokenCheck {
   const o = (v ?? null) as Record<string, unknown> | null;

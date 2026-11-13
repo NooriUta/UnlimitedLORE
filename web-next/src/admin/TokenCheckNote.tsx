@@ -11,7 +11,8 @@ export function TokenCheckNote({ check }: { check: TokenCheck }) {
     check.state === 'ok' ? t('admin.wiz.agent.check.ok', { scope: check.agentScope ?? '—' })
       : check.state === 'mismatch' ? t('admin.wiz.agent.check.mismatch', { got: check.agentScope ?? '—', expected: check.expected ?? '—' })
         : check.state === 'missing' ? t('admin.wiz.agent.check.missing')
+          : check.state === 'no_seer_roles' ? t('admin.wiz.agent.check.noRoles')
           : t('admin.wiz.agent.check.unchecked', { reason: check.reason ?? '—' });
-  const tone = check.state === 'ok' ? undefined : check.state === 'mismatch' || check.state === 'missing' ? 'dng' : 'wrn';
+  const tone = check.state === 'ok' ? undefined : check.state === 'mismatch' || check.state === 'missing' || check.state === 'no_seer_roles' ? 'dng' : 'wrn';
   return <p className="adm-note" role="status" data-testid="adm-token-check" data-state={check.state} data-tone={tone}>{text}</p>;
 }
