@@ -145,7 +145,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         v => onChange({ graph_view: v }), 'settings.graphView.hint')}
       {row('passport_place', 'settings.passportPlace.label', s.passport_place,
         opts(lang, [
-          ['auto', 'settings.passportPlace.auto'], ['right', 'settings.passportPlace.right'],
+          ['auto', 'settings.passportPlace.auto'], ['left', 'settings.passportPlace.left'], ['right', 'settings.passportPlace.right'],
           ['bottom', 'settings.passportPlace.bottom'], ['full', 'settings.passportPlace.full'],
         ] as const),
         v => onChange({ passport_place: v }), 'settings.passportPlace.hint')}

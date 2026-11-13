@@ -69,7 +69,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   // без паспорта v2: щелчок отвечает словами (NoPassport).
   products: 'product',
 };
-const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
+const PLACES: readonly RecordPlacement[] = ['left', 'right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };

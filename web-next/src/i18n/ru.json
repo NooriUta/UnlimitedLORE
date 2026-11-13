@@ -227,6 +227,7 @@
   "pp.type": "Тип записи",
   "pp.record": "Запись",
   "pp.place": "Где открыт",
+  "pp.place.left": "панелью слева",
   "pp.place.right": "панелью справа",
   "pp.place.bottom": "снизу",
   "pp.place.full": "на весь экран",

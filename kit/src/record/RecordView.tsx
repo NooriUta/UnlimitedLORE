@@ -115,7 +115,8 @@ export interface RecordViewProps {
    * связи, граф, журнал, история — вычисляемое: при bottom/full — колонкой
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
-  placement?: 'right' | 'bottom' | 'full';
+  /** «слева» раскладывается как «справа» — узкая боковая панель (MP2-14). */
+  placement?: 'left' | 'right' | 'bottom' | 'full';
   /**
    * S4-30: «Свойства» в режиме «на весь экран» — открыты или свёрнуты.
    *
@@ -473,7 +474,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // ключа mergeTabs оставляет первую (её объявило приложение — там настоящая
   // таблица), добирая у связи счётчик и значок вида UML. До этой сверки один
   // раздел занимал в ряду два места (B13).
-  const modes = placement === 'right' && !narrow;
+  const modes = (placement === 'right' || placement === 'left') && !narrow;
   const recordItems: TabItem[] = mergeTabs([
     // В правом доке сегмент видов уже означает «Контент» — вкладка-дубль в ряд не идёт.
     ...(modes ? [] : [{ id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' as const : undefined }]),
