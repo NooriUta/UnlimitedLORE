@@ -2,7 +2,7 @@
 // Запуск: node --test scripts/md-refs-audit/classify.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classify } from './classify.mjs';
+import { classify, CLASSES } from './classify.mjs';
 
 const ids = {
   task: new Set(['SPRINT_A/PU-15', 'SPRINT_A/PU-09', 'SPRINT_B/PU-15', 'SPRINT_A/MD-READ-PEEK']),
@@ -40,7 +40,17 @@ test('нарушение: одинокий код в [[…]]', () => assert.equa
 test('нарушение: URL экрана LORE', () => assert.equal(one('открой http://192.168.3.131:4400/lore?section=sprints&passport=SPRINT_A').cls, 'url_lore'));
 test('нарушение: URL new.lore …?open=', () => assert.equal(one('https://new.lore.example/?open=task:SPRINT_A/PU-15').cls, 'url_lore'));
 test('нарушение: markdown-ссылка на LORE — одно нарушение, не два', () => { const r = one('[SPRINT_A/PU-15](http://192.168.3.131:4400/lore?passport=x)'); assert.equal(r.cls, 'url_lore'); assert.equal(r.label, 'SPRINT_A/PU-15'); });
-test('нарушение: GitHub', () => assert.equal(one('https://github.com/NooriUta/AIDA/pull/12').cls, 'url_github'));
+// Владелица 13.11.2026: «общие ссылки вида https://github.com/NooriUta/AIDA/pull/495 тоже являются
+// легитимными, править не надо» и «внешние ссылки MD должно не быть багом и не быть лишним шумом».
+// Внешняя ссылка — не упоминание объекта LORE: её нет ни в нарушениях, ни в справке.
+test('внешние ссылки не считаются вовсе: GitHub, Forgejo, любой сайт', () => {
+  assert.deepEqual(classify('https://github.com/NooriUta/AIDA/pull/495 и [#710](https://git.seidrstudio.pro/AIDA/aida-root/pulls/710) и https://arcadedb.com/docs', ctx), []);
+  assert.equal(CLASSES.url_github, undefined);
+  assert.equal(CLASSES.url_forgejo, undefined);
+});
+test('ID в подписи внешней ссылки — тоже не нарушение и не шум', () => {
+  assert.deepEqual(classify('[SPRINT_A/PU-15](https://github.com/x/y/pull/1)', ctx), []);
+});
 test('нарушение: экранированная wiki', () => assert.equal(one('\\[\\[ADR-LORE-050\\]\\]').cls, 'wiki_escaped'));
 test('нарушение: [[…]] с неизвестным типом', () => assert.equal(one('[[foo:BAR]]').cls, 'wiki_unknown'));
 test('битая: формы с типом и по виду', () => {
