@@ -7036,3 +7036,44 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-relfield__chip--inherited { padding-right: 8px; color: var(--t3); border-style: dashed; }
 .sk-relfield__x { min-width: 20px; min-height: 20px; border: 0; border-radius: 999px; background: transparent; color: var(--t3); font: inherit; cursor: pointer; }
 .sk-relfield__x:hover { color: var(--dng); }
+
+/* ---------- «Редактировать всё» (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24) ----------
+   Прототип docs/prototypes/s4-24-edit-all.html одобрен 13.11.2026: полоса «изменено N · Отмена ·
+   Сохранить» липкая наверху (длинный ADR прокручивается, а сохранить видно всегда); тексты —
+   исходником во всю колонку; изменённое помечено цветом предупреждения. */
+.sk-rec__editall { align-self: flex-start; margin: 2px 0 8px; }
+.sk-rec-editall { display: flex; flex-direction: column; gap: 10px; }
+.sk-rec-editall__bar {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 6px 0; border-bottom: 1px solid var(--bd); background: var(--bg1);
+}
+.sk-rec-editall__name { font-family: var(--mono); font-size: var(--fs-sm); color: var(--acc); }
+.sk-rec-editall__state { font-size: var(--fs-sm); color: var(--t2); }
+.sk-rec-editall__why { font-size: var(--fs-xs); color: var(--t3); }
+.sk-rec-editall__grow { flex: 1 1 auto; }
+.sk-rec-editall__fail { padding: 6px 10px; border: 1px solid var(--dng); border-radius: var(--r-md); color: var(--dng); font-size: var(--fs-sm); }
+.sk-rec-editall__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--wrn); border-radius: var(--r-md); background: var(--bg2); font-size: var(--fs-sm); }
+.sk-btn--danger { border-color: var(--dng); color: var(--dng); }
+.sk-rec-editall__fields { display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); gap: 8px 14px; margin: 0; }
+.sk-rec-editall__row { display: contents; }
+.sk-rec-editall__row dt { padding-top: 4px; color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .05em; }
+.sk-rec-editall__row dd { margin: 0; min-width: 0; }
+.sk-rec-editall__row.is-md dt { grid-column: 1 / -1; padding-top: 10px; }
+.sk-rec-editall__row.is-md dd { grid-column: 1 / -1; }
+.sk-rec-editall__mark { margin-left: 6px; color: var(--wrn); text-transform: none; letter-spacing: 0; }
+.sk-rec-editall__md {
+  display: block; width: 100%; min-height: 220px; resize: vertical; padding: 10px;
+  border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1);
+  font-family: var(--mono); font-size: var(--fs-md); line-height: 1.6;
+}
+.sk-rec-editall__in { min-height: max(var(--tap), 26px); padding: 2px 8px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1); font: inherit; font-size: var(--fs-base); }
+.sk-rec-editall__row.is-dirty .sk-rec-editall__md,
+.sk-rec-editall__row.is-dirty .sk-rec-editall__in { border-color: var(--wrn); }
+.sk-rec-editall__rel { display: flex; flex-direction: column; gap: 4px; }
+.sk-relfield__chip.is-removed { border-style: dashed; color: var(--t3); text-decoration: line-through; }
+.sk-relfield__chip.is-added { border-color: var(--acc); }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-rec-editall__fields { grid-template-columns: minmax(0, 1fr); }
+  .sk-rec-editall__md, .sk-rec-editall__in { font-size: var(--fs-touch-input); }
+}

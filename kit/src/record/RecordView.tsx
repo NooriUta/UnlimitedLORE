@@ -34,6 +34,7 @@ import { DataStateWarnings } from './DataStateWarnings';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { KIT_NEW_ID, RecordCreate, type RecordCreateSpec } from './RecordCreate';
 import { RelationField } from './RelationField';
+import { RecordEditAll, editAllFields } from './RecordEditAll';
 export { KIT_NEW_ID, type RecordCreateSpec };
 import { RecordLinks, recordLinks } from './RecordLinks';
 import { dataStateOf } from './dataState';
@@ -369,6 +370,10 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
   // Правка характеристик (S4-24) не зависит от MD-редактора: право и путь записи — те же.
   const fieldSave = fieldSaver(record, ctx);
+  // S4-24 «Редактировать всё» (прототип s4-24-edit-all одобрен 13.11): во весь экран — одна кнопка
+  // на всю запись; правка копится и уходит одним «Сохранить».
+  const [editAll, setEditAll] = useState(false);
+  const editAllDefs = placement === 'full' ? editAllFields(ctx.config.kinds[record.kind], ctx, !!fieldSave) : [];
   const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver, drafts: mdDrafts } : undefined;
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
@@ -745,6 +750,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
         {/* Виды записи — под заголовком мини-кнопками (владелица 13.11.2026: «вынеси в лево мини
             кнопками или под Заголовок»): над шапкой рейка стояла первой строкой паспорта и
             спорила с заголовком. */}
+        {editAllDefs.length > 0 && !editAll && (
+          <button type="button" className="sk-btn sk-rec__editall" onClick={() => setEditAll(true)}>{kitT(lang, 'kit.record.editAll.open')}</button>
+        )}
+        {editAll ? (
+          <RecordEditAll record={record} ctx={ctx} lang={lang} fields={editAllDefs} save={fieldSave} onDone={() => setEditAll(false)} />
+        ) : (<>
         {switcher}
         <RelationLines record={record} ctx={ctx} defs={rels} />
         {facts && (
@@ -827,6 +838,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
             <IconButton icon={ICON_CANON.recAnalytics} label={kitT(lang, 'kit.record.rail.analytics')} onClick={() => onTab(RECORD_TABS.links)} />
           </nav>
         )}
+        </>)}
     </>
   );
   const around = aside ? (
