@@ -95,6 +95,24 @@ final class AgentMachine {
         return machineId == null ? null : machineId.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
+    /**
+     * PU-18 шаг 2 (V82): план слияния вершин KnowMachine, чьё имя не каноническое.
+     * Ключ — каноническое имя, значение — некононические варианты (по алфавиту), которые
+     * в него вливаются. Уже канонические имена в план не попадают — повтор на слитой
+     * базе даёт пустой план.
+     */
+    static Map<String, List<String>> caseMergePlan(java.util.Collection<String> machineIds) {
+        Map<String, List<String>> plan = new java.util.TreeMap<>();
+        for (String id : machineIds) {
+            if (id == null || id.isBlank()) continue;
+            String c = canon(id);
+            if (c.equals(id)) continue;
+            plan.computeIfAbsent(c, k -> new java.util.ArrayList<>()).add(id);
+        }
+        plan.values().forEach(java.util.Collections::sort);
+        return plan;
+    }
+
     static Verdict judge(ChangeAuthor author, String rawHeader, boolean required) {
         if (author == null || !ChangeAuthor.KIND_AGENT.equals(author.kind())) return Verdict.NOT_APPLICABLE;
         String v = rawHeader == null ? "" : rawHeader.trim();
