@@ -1601,7 +1601,12 @@ final class LoreSchemaMigrations {
         // SPRINT_UXR_S7B_ADMIN/S7B-ACT-1 (слово владелицы 11.11: «считать активной в течении — от часа
         // после последнего вызова до суток»): окно активности машины и окна по harness — свойства
         // актора-машины (client_id minilore-link-*). Аддитивно, major 17. DDL рядом с логикой (MachineActivity).
-        new Step(81, 17, "machine_activity_window", MachineActivity.SCHEMA_SQL)
+        new Step(81, 17, "machine_activity_window", MachineActivity.SCHEMA_SQL),
+
+        // SPRINT_LORE_MODEL_AS_CONFIG/MC-05 (SPEC-LORE-MODEL-CONFIG-STORE): V84 (V82 — #1311 PU-18, V83 — #1316 PU-20). Модель LORE — запись в LORE с
+        // историей SCD2 (KnowModelConfig + KnowModelConfigHist через HAS_STATE). Аддитивно, major 17:
+        // только новые типы, данные не трогаются. DDL рядом с логикой (LoreModelStore).
+        new Step(84, 17, "model_config_store", LoreModelStore.SCHEMA_SQL)
     );
 
     /** RM-X1: старый и новый id вехи для V53. */
