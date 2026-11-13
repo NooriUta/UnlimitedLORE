@@ -95,6 +95,17 @@ final class LoreModelTypes {
         Map.entry("project", Map.of("title", "name", "code", "slug")),
         Map.entry("product", Map.of("title", "label_ru")));
 
+    /**
+     * SPRINT_UXR_POLISH_UAT_1113/PU-17: поля, значение которых — ребро, а не свойство вершины
+     * (тип.ключ → ребро). Роли задачи с TR-05 — рёбра ROLE_HELD_BY; строки author/executor/reviewer_agent
+     * не пишутся, и сопоставлять с ними поле значило бы назвать источником пустую строку.
+     */
+    static final Map<String, String> EDGE_FIELDS = Map.of(
+        "task.author", "ROLE_HELD_BY", "task.executor", "ROLE_HELD_BY", "task.reviewer", "ROLE_HELD_BY");
+
+    /** Легаси-строки ролей задачи (до TR-05) — в схеме ещё есть, на поверхности не выводятся: internal. */
+    static final Set<String> LEGACY_ROLE_STRINGS = Set.of("author_agent", "executor_agent", "reviewer_agent");
+
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
         return prop.startsWith("@") || Set.of("valid_to", "state_uid", "content_hash", "secret_ref").contains(prop)
@@ -163,14 +174,17 @@ final class LoreModelTypes {
                 Map<String, Object> m = new LinkedHashMap<>(f);
                 String key = String.valueOf(f.get("key"));
                 String property = null;
-                for (String cand : candidates(key, f, aliases))
-                    if (cand != null && props.contains(cand) && !isSystem(cand)) { property = cand; break; }
+                String edge = EDGE_FIELDS.get(t + "." + key);
+                if (edge == null)
+                    for (String cand : candidates(key, f, aliases))
+                        if (cand != null && props.contains(cand) && !isSystem(cand)) { property = cand; break; }
                 m.put("visibility", "visible");
                 m.put("display", display(key, f));
                 m.put("property", property);
                 m.put("property_type", property == null ? null : declaredType(decl, g, property));
                 if ("date".equals(f.get("kind"))) m.put("precision", PRECISION.get(t + "." + key));
-                m.put("source", property != null ? "CONFIRMS" : "SUPPLIES");
+                m.put("source", edge != null ? "EDGE" : property != null ? "CONFIRMS" : "SUPPLIES");
+                if (edge != null) m.put("edge", edge);
                 if (property != null) matched.add(property);
                 fields.add(m);
             }
@@ -178,6 +192,7 @@ final class LoreModelTypes {
             List<String> internal = new ArrayList<>();
             for (String p : props) {
                 if (isSystem(p) || matched.contains(p) || p.equals(g.key())) continue;
+                if (LEGACY_ROLE_STRINGS.contains(p) && "task".equals(t)) { internal.add(p); continue; }
                 if (isInternal(p, g.key())) internal.add(p); else unclassified.add(p);
             }
             Map<String, Object> type = new LinkedHashMap<>();

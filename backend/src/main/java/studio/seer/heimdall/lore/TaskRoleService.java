@@ -301,6 +301,43 @@ public class TaskRoleService {
         return n instanceof Number num && num.longValue() > 0;
     }
 
+    /** Атрибуты ребра роли, которые переезжают вместе с задачей. */
+    static final List<String> CARRIED = List.of("role", "profile", "model", "verdict", "feedback_md", "reviewed_at", "valid_from");
+
+    private static final java.util.regex.Pattern RID = java.util.regex.Pattern.compile("#\\d+:\\d+");
+
+    /**
+     * SPRINT_UXR_POLISH_UAT_1113/PU-17: перенос задачи (task_mv) — открытые рёбра ролей копируются на
+     * новую задачу как есть: тот же держатель (та же вершина), те же профиль, модель, вердикт и
+     * valid_from — роль держится с того же момента. Не назначение заново: переносу нечего проверять,
+     * а проверка кандидатов могла бы молча отказать и потерять роль. У отменённой задачи-надгробия
+     * рёбра остаются — это её история.
+     *
+     * @return сколько ролей перенесено
+     */
+    public int copyOpenRoles(String fromUid, String toUid) {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT @in AS holder, " + String.join(", ", CARRIED)
+                + " FROM ROLE_HELD_BY WHERE @out.task_uid = :u AND valid_to IS NULL", Map.of("u", fromUid));
+        int n = 0;
+        for (Map<String, Object> r : rows) {
+            String holder = String.valueOf(r.get("holder"));
+            if (!RID.matcher(holder).matches())
+                throw new IllegalStateException("держатель роли " + r.get("role") + " задачи " + fromUid + " без адреса: " + holder);
+            StringBuilder set = new StringBuilder();
+            for (String k : CARRIED) {
+                Object v = r.get(k);
+                if (v == null) continue;
+                set.append(set.isEmpty() ? " SET " : ", ").append(k).append(" = '").append(esc(String.valueOf(v))).append('\'');
+            }
+            // CREATE EDGE — через String.format (именованные параметры в нём не связываются, см. apply).
+            command(String.format("CREATE EDGE ROLE_HELD_BY FROM (SELECT FROM KnowTask WHERE task_uid = '%s') TO %s%s",
+                esc(toUid), holder, set), Map.of());
+            n++;
+        }
+        return n;
+    }
+
     private void command(String sql, Map<String, Object> params) {
         writeClient.command(db, mart.basicAuth(),
             new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
