@@ -9,7 +9,7 @@
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
 import { RecordSection } from './RecordSection';
 import { EditableField } from './EditableField';
-import { SumCell } from '../list/sum';
+import { SumCell, sumText } from '../list/sum';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { rolePerms } from '../approval/approval';
@@ -20,7 +20,7 @@ import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
 import { applySections, gluedSections, sectionGroups, type PassportOrder } from '../model/surfaces';
-import { isChipList } from '../core/chipValue';
+import { asChip, isChipList } from '../core/chipValue';
 import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
 import { Segmented } from '../elements/Segmented';
@@ -343,12 +343,23 @@ function readWidth(): RecWidth {
   try { const v = localStorage.getItem(WIDTH_KEY); return v === 's' || v === 'l' || v === 'f' ? v : 'm'; } catch { return 'm'; }
 }
 
-/** Свёртка «Свойства · …» (v4): непустые значения полей одной строкой. */
-function propsSummary(record: KitRecord, kind: KindConfig): string {
+/**
+ * Свёртка «Свойства · …» (v4): непустые значения полей одной строкой.
+ * PU-16: значение — по виду поля тем же текстом, что во вкладке (сумма — как SumCell);
+ * объект без своего вида (не чип) в сводку не идёт — сырого JSON в строке не бывает.
+ */
+function propsSummary(record: KitRecord, kind: KindConfig, lang: KitLang): string {
+  const one = (x: unknown): string | null =>
+    x !== null && typeof x === 'object' && !asChip(x) ? null : valueText(x);
   return (kind.fields ?? [])
-    .map(f => record.fields[f.key])
-    .filter(x => x !== null && x !== undefined && x !== '' && !(Array.isArray(x) && x.length === 0))
-    .map(x => (Array.isArray(x) ? x.map(valueText).join(', ') : valueText(x)))
+    .map(f => {
+      const x = record.fields[f.key];
+      if (x === null || x === undefined || x === '' || (Array.isArray(x) && x.length === 0)) return null;
+      if (f.type === 'sum') return sumText(x, lang);
+      if (Array.isArray(x)) { const parts = x.map(one).filter((s): s is string => s !== null); return parts.length ? parts.join(', ') : null; }
+      return one(x);
+    })
+    .filter((s): s is string => s !== null && s !== '')
     .join(' · ');
 }
 
@@ -780,7 +791,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
           <details ref={propsRowRef} className="sk-rec-propsrow" open={propsOpen} onToggle={e => setPropsOpen((e.currentTarget as HTMLDetailsElement).open)}>
             <summary className="sk-rec-propsrow__sum">
               <span className="sk-rec-propsrow__label">{kitT(lang, 'kit.record.tab.props')}</span>
-              {propsSummary(record, kind) && <span className="sk-rec-propsrow__vals"> · {propsSummary(record, kind)}</span>}
+              {propsSummary(record, kind, lang) && <span className="sk-rec-propsrow__vals"> · {propsSummary(record, kind, lang)}</span>}
             </summary>
             <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={record.id}>
               <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} fieldSave={fieldSave} />

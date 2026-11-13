@@ -116,16 +116,17 @@ describe('editTask', () => {
     expect(calls[0].url).toBe('/lore/task/edit');
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
       task_uid: 'u1', title: 'Вкладка задач', note_md: null, effort_days: 3,
-      executor_agent: null, reviewer_agent: null,
     });
   });
 
-  it('изменённые роль и заголовок уходят значениями', async () => {
+  // PU-17: роли — рёбра заявленных личностей, правка только выбором в паспорте задачи; строки ролей
+  // из правки строки не уходят вовсе (null на сервере значил «не трогать», но поле в теле — приглашение к тексту).
+  it('изменённый заголовок уходит значением; строк ролей в теле нет (PU-17)', async () => {
     const { impl, calls } = fakeFetch({ '/lore/task/edit': { body: { ok: true } } });
-    await editTask(row, { title: 'Новое', reviewer: 'owner' }, impl);
+    await editTask(row, { title: 'Новое' }, impl);
     const body = JSON.parse(String(calls[0].init?.body));
     expect(body.title).toBe('Новое');
-    expect(body.reviewer_agent).toBe('owner');
-    expect(body.executor_agent).toBeNull();
+    expect('reviewer_agent' in body).toBe(false);
+    expect('executor_agent' in body).toBe(false);
   });
 });

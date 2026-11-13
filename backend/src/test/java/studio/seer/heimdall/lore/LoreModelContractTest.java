@@ -265,7 +265,7 @@ class LoreModelContractTest {
                 has(f, Set.of("key", "label", "kind", "group", "editable", "visibility", "display", "property", "source"), w);
                 oneOf(f.get("group"), Set.of("head", "body", "props"), w + ".group");
                 oneOf(f.get("visibility"), Set.of("visible", "internal", "unclassified"), w + ".visibility");
-                oneOf(f.get("source"), Set.of("CONFIRMS", "SUPPLIES"), w + ".source");
+                oneOf(f.get("source"), Set.of("CONFIRMS", "SUPPLIES", "EDGE"), w + ".source");   // EDGE — PU-17: значение поля — ребро
                 Map<String, Object> disp = map(f.get("display"), w + ".display");
                 has(disp, Set.of("priority", "width", "overflow"), w + ".display");
                 oneOf(disp.get("priority"), Set.of(1, 2, 3, 4), w + ".display.priority");

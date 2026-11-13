@@ -142,7 +142,5 @@ export async function editTask(task: TaskRowData, patch: TaskPatch, f: typeof fe
     title: patch.title ?? task.title ?? '',
     note_md: null,
     effort_days: patch.effortDays ?? null,
-    executor_agent: patch.executor ?? null,
-    reviewer_agent: patch.reviewer ?? null,
   }, f);
 }

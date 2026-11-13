@@ -213,6 +213,11 @@ public class LoreRecordResource extends LoreResourceBase {
         // компонент: задачи, спринты) — по описаниям LoreRecordFrom.SLICE_LINKS, одним циклом (S4-MODEL-RECORD).
         for (LoreRecordFrom.SliceLink sl : LoreRecordFrom.SLICE_LINKS.getOrDefault(type, List.of()))
             tabBySlice(sl, id, scope, blocks, dataState, links, facts);
+        // MC-04 (PU-02): вкладки без своего среза — по ребру из модели, а не «не смогли проверить».
+        java.util.Set<String> byEdge = LoreRecordValues.READ_BY_EDGE.getOrDefault(type, java.util.Set.of());
+        for (LoreRecordRegistry.Relation r : def.relations())
+            if ("link_tab".equals(r.place()) && byEdge.contains(r.key()))
+                tabByEdge(type, r, id, scope, dataState, links);
 
         String version = null;
         String versionError = null;
@@ -394,6 +399,26 @@ public class LoreRecordResource extends LoreResourceBase {
         dataState.add(cut
             ? LoreRecordDataState.truncated(slice, part, page.size(), (long) total)
             : LoreRecordDataState.entry(slice, part, r));
+    }
+
+    /** Вкладка по ребру из модели ({@link LoreRecordEdgeLinks}); сбой чтения — error с причиной, не «0». */
+    private void tabByEdge(String type, LoreRecordRegistry.Relation r, String id, Set<String> scope,
+                           List<Map<String, Object>> dataState, List<Map<String, Object>> links) {
+        String source = LoreRecordEdgeLinks.source(r);
+        List<Map<String, Object>> rows;
+        try {
+            rows = ingestService.queryPublic(LoreRecordEdgeLinks.sql(type, r), Map.of("id", id));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE RECORD] edge %s.%s %s: %s", type, r.key(), id, e.getMessage());
+            dataState.add(LoreRecordDataState.entry(source, r.key(),
+                new Read(List.of(), "error", source + ": " + e.getMessage(), e)));
+            return;
+        }
+        List<Map<String, Object>> got = LoreRecordEdgeLinks.links(r, rows, scope);
+        links.addAll(got);
+        dataState.add(rows.size() > LoreRecordEdgeLinks.LIMIT
+            ? LoreRecordDataState.truncated(source, r.key(), got.size(), null)
+            : LoreRecordDataState.entry(source, r.key(), new Read(rows, "ok", null, null)));
     }
 
     private List<String> specStatuses(String type) {
