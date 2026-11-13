@@ -49,6 +49,9 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   feature: 'feature',
   // S4-29 (53а): чипы проектов в шапке паспортов открывают паспорт проекта.
   project: 'project',
+  // S9-05 A: человек (kc_sub) и агент (actor_id) — свои паспорта.
+  user: 'user',
+  agent: 'agent',
   // S4-PRODUCTS-NODE: продукт — свой раздел и паспорт (чипы продуктов у компонента).
   product: 'product',
 };

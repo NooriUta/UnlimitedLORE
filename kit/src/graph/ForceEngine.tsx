@@ -15,6 +15,9 @@ type Fg = InstanceType<typeof import('force-graph').default<FgNode, FgLink>>;
 const idOf = (v: string | FgNode) => (typeof v === 'string' ? v : v.id);
 
 export default function ForceEngine(p: GxEngineProps) {
+  // GC-02: движок создаётся один раз в эффекте — живой обработчик берём из ref.
+  const layoutDone = useRef(p.onLayoutDone);
+  layoutDone.current = p.onLayoutDone;
   const host = useRef<HTMLDivElement>(null);
   const fg = useRef<Fg | null>(null);
   const latest = useRef(p);
@@ -65,7 +68,7 @@ export default function ForceEngine(p: GxEngineProps) {
         if (clicks === 2 && latest.current.onOpen) { clicks = 0; latest.current.onOpen(n.id); return; }
         setTimeout(() => { if (clicks === 1) latest.current.onSelect(latest.current.selected === n.id ? null : n.id); clicks = 0; }, 250);
       });
-      g.onEngineStop(() => g.zoomToFit(400, 30));
+      g.onEngineStop(() => { g.zoomToFit(400, 30); layoutDone.current?.(); });
       fg.current = g;
       applySettings();
     }).catch(e => alive && latest.current.onError(e));

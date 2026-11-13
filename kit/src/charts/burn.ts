@@ -13,19 +13,22 @@ export interface BurnPoint { date: string; scope: number; done: number; remainin
 export interface BurnSummary { scope: number; done: number; remaining: number; peak: number; from: string; to: string }
 export type BurnMode = 'burnup' | 'burndown';
 
-export function burnSeries(created: readonly BurnRow[], done: readonly BurnRow[], sprintId: string): BurnPoint[] {
-  const prefix = `${sprintId}/`;
+/**
+ * Ряд по группе задач. Какая задача входит в группу, решает приложение (K-14):
+ * kit не знает формата ключа задачи (у LORE — «SPRINT_X/код», префикс с косой чертой).
+ */
+export function burnSeries(created: readonly BurnRow[], done: readonly BurnRow[], inGroup: (taskKey: string) => boolean): BurnPoint[] {
   const day = (v: string) => v.slice(0, 10);
   const born = new Map<string, string>();
   for (const r of created) {
-    if (!r.task_uid?.startsWith(prefix) || !r.valid_from) continue;
+    if (!r.task_uid || !inGroup(r.task_uid) || !r.valid_from) continue;
     const d = day(r.valid_from);
     const cur = born.get(r.task_uid);
     if (!cur || d < cur) born.set(r.task_uid, d);
   }
   const closed = new Map<string, string>();
   for (const r of done) {
-    if (!r.task_uid?.startsWith(prefix) || !r.valid_from) continue;
+    if (!r.task_uid || !inGroup(r.task_uid) || !r.valid_from) continue;
     closed.set(r.task_uid, day(r.valid_from));
   }
 

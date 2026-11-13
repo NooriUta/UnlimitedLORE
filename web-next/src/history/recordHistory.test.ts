@@ -45,7 +45,8 @@ describe('S5-11 · fetchRecordHistory: GET /lore/history (S2-03)', () => {
     expect(r.source).toBe('s2');
     expect(r.history.tracking).toBe('scd2');
     expect(r.history.versions.map(v => v.state_uid)).toEqual(['s2', 's1']);
-    expect(r.history.versions[0].author).toMatchObject({ kind: 'agent', client_id: 'claude-code' });
+    // K-14: поля сервера LORE (client_id, owner_kc_sub) → нейтральный автор kit.
+    expect(r.history.versions[0].author).toEqual({ kind: 'agent', id: 'claude-code', name: null, owner: 'u-1' });
     expect(r.history.page).toEqual({ limit: 50, offset: 0, total: 2, has_more: false });
   });
 

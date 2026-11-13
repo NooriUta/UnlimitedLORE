@@ -270,6 +270,17 @@ final class LoreRecordFrom {
             s("file_path", "file_path"),
             when("body_redacted", "body_redacted", "body_redacted"),
             when("body_redacted_reason", "body_redacted_reason", "body_redacted"))),
+        // S9-05 A: человек и агент — шапка из строки, дети (задачи по открытым ролям) — срезом.
+        Map.entry("user", List.of(
+            v("title", Transform.FIRST_OF, "display_name", "kc_sub"),
+            list("projects", "projects"))),
+        Map.entry("agent", List.of(
+            v("title", Transform.FIRST_OF, "name", "actor_id"),
+            s("client_id", "client_id"),
+            s("agent_role", "agent_role"),
+            s("harness", "harness"),
+            s("owner", "owner"),
+            list("projects", "projects"))),
         Map.entry("decision", List.of(
             v("title", Transform.FIRST_OF, "title", "decision_id"),
             v("status", Transform.DOC_TOKEN, "status_raw"),
@@ -544,6 +555,13 @@ final class LoreRecordFrom {
                 from(Transform.STR, "file_path"), from(Transform.STR, "file_path"), null, true),
             new SliceLink("prs", "project_prs", "project", "BELONGS_TO_PROJECT", "in", "pr",
                 from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)),
+        // S9-05 A: «таблица детей» человека и агента — задачи, где у него ОТКРЫТАЯ роль.
+        "user", List.of(
+            new SliceLink("tasks", "user_tasks", "kc_sub", "ROLE_HELD_BY", "in", "task",
+                from(Transform.STR, "task_uid"), from(Transform.FIRST_OF, "title", "task_uid"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
+        "agent", List.of(
+            new SliceLink("tasks", "agent_tasks", "id", "ROLE_HELD_BY", "in", "task",
+                from(Transform.STR, "task_uid"), from(Transform.FIRST_OF, "title", "task_uid"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
         // S4-PRODUCTS-NODE: сценарии и профиль клиента продукта — через его компоненты, постранично.
         "product", List.of(
             new SliceLink("features", "product_features", "code", "IN_PRODUCT", "in", "feature",

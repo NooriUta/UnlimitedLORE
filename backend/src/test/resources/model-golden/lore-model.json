@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "1d787719c6eb2cdf",
+  "version" : "e88d6ec84d658a18",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -245,15 +245,16 @@
         "active" : true
       }, {
         "code" : "uat",
-        "title" : "uat",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "UAT — приёмка",
+        "title_en" : "UAT Testing",
+        "icon" : "stamper",
+        "color" : "var(--st-uat)",
+        "order" : 55,
         "category" : "in_progress",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "done", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "done",
         "title" : "Готово",
@@ -767,7 +768,7 @@
         "key" : "no_release",
         "label" : "Не требует релиза",
         "label_key" : "pp.field.noRelease",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
@@ -777,9 +778,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : "no_release_required",
         "property_type" : "BOOLEAN",
@@ -6298,8 +6299,8 @@
         "property_type" : "INTEGER",
         "source" : "CONFIRMS"
       }, {
-        "key" : "is_active",
-        "label" : "Активен",
+        "key" : "kind",
+        "label" : "Вид",
         "label_key" : null,
         "kind" : "text",
         "group" : "props",
@@ -6313,6 +6314,26 @@
           "priority" : 4,
           "width" : "m",
           "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "is_active",
+        "label" : "Активен",
+        "label_key" : null,
+        "kind" : "bool",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : "is_active",
         "property_type" : "BOOLEAN",
@@ -6512,6 +6533,302 @@
       "computed" : [ ],
       "unclassified" : [ "dict_type", "is_extensible" ],
       "internal" : [ "valid_from" ]
+    },
+    "user" : {
+      "type" : "user",
+      "label" : "Человек",
+      "label_key" : "pp.kind.user",
+      "icon" : "person",
+      "color" : null,
+      "key" : "kc_sub",
+      "vertex" : "KnowUser",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Имя",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : "display_name",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "HAS_PROJECT_ROLE",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "m",
+          "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "HAS_PROJECT_ROLE",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "tasks",
+        "label" : "Задачи",
+        "relation" : "association",
+        "rel" : "ROLE_HELD_BY",
+        "dir" : "in",
+        "target_type" : "task",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "agents",
+        "label" : "Агенты",
+        "relation" : "aggregation",
+        "rel" : "OWNED_BY",
+        "dir" : "in",
+        "target_type" : "agent",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ ],
+      "internal" : [ ]
+    },
+    "agent" : {
+      "type" : "agent",
+      "label" : "Агент",
+      "label_key" : "pp.kind.agent",
+      "icon" : "robot-golem",
+      "color" : null,
+      "key" : "actor_id",
+      "vertex" : "KnowActor",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Имя",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : "name",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "client_id",
+        "label" : "Учётка",
+        "label_key" : "pp.field.clientId",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : "client_id",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "agent_role",
+        "label" : "Профиль",
+        "label_key" : "pp.field.agentRole",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : "agent_role",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "harness",
+        "label" : "Оболочка",
+        "label_key" : "pp.field.harness",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "owner",
+        "label" : "Владелец",
+        "label_key" : "pp.field.owner",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "ref" : {
+          "type" : "user",
+          "rel" : "OWNED_BY",
+          "dir" : "out"
+        },
+        "relation" : "aggregation",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 2,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "BELONGS_TO_PROJECT",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "m",
+          "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "owner",
+        "label" : "Владелец",
+        "relation" : "aggregation",
+        "rel" : "OWNED_BY",
+        "dir" : "out",
+        "target_type" : "user",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "tasks",
+        "label" : "Задачи",
+        "relation" : "association",
+        "rel" : "ROLE_HELD_BY",
+        "dir" : "in",
+        "target_type" : "task",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "machines",
+        "label" : "Машины",
+        "relation" : "association",
+        "rel" : "USES_MACHINE",
+        "dir" : "out",
+        "target_type" : "machine",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "roles",
+        "label" : "Роли продукта",
+        "relation" : "association",
+        "rel" : "FILLS_ROLE",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ "body_md", "kind", "machine_id", "session_id" ],
+      "internal" : [ ]
     },
     "project" : {
       "type" : "project",
@@ -7756,6 +8073,64 @@
           "group" : null
         } ]
       },
+      "user" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "tasks",
+          "source" : "relation",
+          "ref" : "tasks",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "tasks",
+            "label" : "Задачи"
+          }
+        }, {
+          "key" : "agents",
+          "source" : "relation",
+          "ref" : "agents",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "agents",
+            "label" : "Агенты"
+          }
+        } ]
+      },
+      "agent" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "tasks",
+          "source" : "relation",
+          "ref" : "tasks",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "tasks",
+            "label" : "Задачи"
+          }
+        }, {
+          "key" : "machines",
+          "source" : "relation",
+          "ref" : "machines",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "machines",
+            "label" : "Машины"
+          }
+        }, {
+          "key" : "roles",
+          "source" : "relation",
+          "ref" : "roles",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "roles",
+            "label" : "Роли продукта"
+          }
+        } ]
+      },
       "project" : {
         "decided" : true,
         "sections" : [ {
@@ -7878,7 +8253,131 @@
           "group" : null
         } ]
       }
-    }
+    },
+    "nav" : [ {
+      "id" : "feed",
+      "label_key" : "shell.grp.feed",
+      "tone" : "var(--inf)",
+      "pin_top" : true,
+      "items" : [ {
+        "section" : "news",
+        "icon" : "lucide:megaphone"
+      } ]
+    }, {
+      "id" : "work",
+      "label_key" : "shell.grp.work",
+      "tone" : "var(--acc)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "sprint",
+        "icon" : "sprint"
+      }, {
+        "section" : "task",
+        "icon" : "lucide:list-checks"
+      }, {
+        "section" : "milestone",
+        "icon" : "crossed-axes"
+      }, {
+        "section" : "release",
+        "icon" : "open-book"
+      } ]
+    }, {
+      "id" : "knowledge",
+      "label_key" : "shell.grp.knowledge",
+      "tone" : "var(--suc)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "adr",
+        "icon" : "scroll-quill"
+      }, {
+        "section" : "decision",
+        "icon" : "gavel"
+      }, {
+        "section" : "spec",
+        "icon" : "scroll-unfurled"
+      }, {
+        "section" : "doc",
+        "icon" : "bookshelf"
+      }, {
+        "section" : "question",
+        "icon" : "help"
+      } ]
+    }, {
+      "id" : "product",
+      "label_key" : "shell.grp.product",
+      "tone" : "var(--wrn)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "product",
+        "icon" : "bullseye"
+      }, {
+        "section" : "feature",
+        "icon" : "gift-of-knowledge"
+      }, {
+        "section" : "actor",
+        "icon" : "hooded-figure"
+      }, {
+        "section" : "pain",
+        "icon" : "thorn-helix"
+      }, {
+        "section" : "gain",
+        "icon" : "gift-of-knowledge"
+      }, {
+        "section" : "job",
+        "icon" : "archery-target"
+      } ]
+    }, {
+      "id" : "system",
+      "label_key" : "shell.grp.system",
+      "tone" : "var(--inf)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "project",
+        "icon" : "open-folder"
+      }, {
+        "section" : "component",
+        "icon" : "cog"
+      }, {
+        "section" : "tech",
+        "icon" : "gears"
+      } ]
+    }, {
+      "id" : "personal",
+      "label_key" : "shell.grp.personal",
+      "tone" : "var(--wrn)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "settings",
+        "icon" : "cog",
+        "view" : "settings"
+      } ]
+    } ]
+  },
+  "audience" : {
+    "actor" : "everywhere",
+    "adr" : "everywhere",
+    "agent" : "admin",
+    "component" : "everywhere",
+    "decision" : "everywhere",
+    "doc" : "everywhere",
+    "feature" : "everywhere",
+    "gain" : "everywhere",
+    "job" : "everywhere",
+    "machine" : "admin",
+    "milestone" : "everywhere",
+    "news" : "everywhere",
+    "pain" : "everywhere",
+    "people" : "admin",
+    "product" : "everywhere",
+    "project" : "everywhere",
+    "question" : "everywhere",
+    "release" : "everywhere",
+    "settings" : "everywhere",
+    "spec" : "everywhere",
+    "sprint" : "everywhere",
+    "task" : "everywhere",
+    "tech" : "everywhere",
+    "user" : "admin"
   },
   "palettes" : {
     "source" : "settings:palette",
@@ -8136,6 +8635,14 @@
       "order" : 50,
       "active" : true
     }, {
+      "code" : "uat",
+      "title" : "UAT — приёмка",
+      "title_en" : "UAT Testing",
+      "icon" : "stamper",
+      "color" : "var(--st-uat)",
+      "order" : 55,
+      "active" : true
+    }, {
       "code" : "done",
       "title" : "Готово",
       "title_en" : "Done",
@@ -8267,5 +8774,5 @@
       "active" : false
     } ]
   },
-  "warnings" : [ "sprint_status: статус «uat» есть в жизненном цикле sprint, но его нет в справочнике — подпись = код, иконки и цвета нет", "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
+  "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
 }

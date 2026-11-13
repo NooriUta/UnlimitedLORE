@@ -16,7 +16,7 @@ import { RelationPicker } from './RelationPicker';
 type FieldDef = NonNullable<KindConfig['fields']>[number];
 type Save = (field: string, from: unknown) => (to: unknown) => Promise<void>;
 
-const SIMPLE = new Set(['text', 'number', 'date', 'enum']);
+const SIMPLE = new Set(['text', 'number', 'date', 'enum', 'bool']);
 
 /** Что правится в «Редактировать всё»: тексты, объявленные простые поля, связи-атрибуты. */
 export function editAllFields(kind: KindConfig | undefined, ctx: KitCtx, canSave: boolean): FieldDef[] {
@@ -130,6 +130,18 @@ export function RecordEditAll({ record, ctx, lang, fields, save, onDone }: {
     const set = (to: unknown) => setVals(p => ({ ...p, [f.key]: to }));
     if (f.type === 'md') {
       return <textarea id={id} className="sk-rec-editall__md" aria-label={f.title} value={v == null ? '' : String(v)} onChange={e => set(e.target.value)} />;
+    }
+    // MC-08: флаг — «Да / Нет / —» (null ≠ false); уходит булевым, а не словом.
+    if (f.type === 'bool') {
+      const b = v === true || v === 'true' ? 'true' : v === false || v === 'false' ? 'false' : '';
+      return (
+        <select id={id} className="sk-rec-editall__in" aria-label={f.title} value={b}
+          onChange={e => set(e.target.value === 'true' ? true : e.target.value === 'false' ? false : null)}>
+          <option value="">—</option>
+          <option value="true">{t('kit.field.yes')}</option>
+          <option value="false">{t('kit.field.no')}</option>
+        </select>
+      );
     }
     if (f.type === 'enum') {
       return (

@@ -200,7 +200,15 @@ function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
 interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver>; drafts?: (field: string) => MdDraftSlot | undefined }
 
 
+/** MC-08: значение флага — true/false (сервер бывает шлёт строкой); прочее — null («не задано»). */
+export function boolOf(v: unknown): boolean | null {
+  if (v === true || v === 'true') return true;
+  if (v === false || v === 'false') return false;
+  return null;
+}
+
 function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string }): ReactNode {
+  const lang = useKitLang();
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
     return <edit.Editor value={text} label={title ?? fieldKey} onSave={edit.save(fieldKey, value ?? null)} drafts={edit.drafts?.(fieldKey)} />;
@@ -214,17 +222,22 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
     // Значения пришли чипами (S4-29) — ряд чипов со свёрткой; строки — прежний
     // путь. Проверяем форму ДАННЫХ, а не тип поля: сервер сменил форму у
     // существующих полей, и тип поля об этом не знает.
-    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} />;
+    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} fromLabel={t => ctx.config.kinds[t]?.inherited} />;
     const ids = (Array.isArray(value) ? value : [value]).map(v => valueText(v));
     return <span className="sk-rec-fields__refs">{ids.map(id => <RecordRef key={id} id={id} ctx={ctx} />)}</span>;
   }
   if (type === 'enum') return <span className="sk-pill sk-pill--value">{valueText(value)}</span>;
   if (type === 'number' || type === 'date') return <span className="sk-rec-fields__mono">{valueText(value)}</span>;
+  // MC-08: флаг — «Да»/«Нет»; не флаг (мусор, null) — «—»: null ≠ false.
+  if (type === 'bool') {
+    const b = boolOf(value);
+    return b === null ? <span className="sk-rec-fields__none">—</span> : <span>{kitT(lang, b ? 'kit.field.yes' : 'kit.field.no')}</span>;
+  }
   return <span>{valueText(value)}</span>;
 }
 
 /** Виды, которые правятся на месте FieldEditor'ом. ref и md идут своими путями (связи, MD-редактор). */
-const INLINE_KINDS = new Set(['text', 'number', 'date', 'enum']);
+const INLINE_KINDS = new Set(['text', 'number', 'date', 'enum', 'bool']);
 
 function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang; edit?: EditSlot; fieldSave?: FieldSaver }) {
   const fields = kind.fields ?? [];
@@ -251,7 +264,7 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
         const can = fieldSave && f.editable && INLINE_KINDS.has(f.type) && (f.type !== 'enum' || (f.options?.length ?? 0) > 0);
         if (!can) return view;
         const from = record.fields[f.key];
-        return <EditableField def={{ key: f.key, label: f.title, kind: f.type, options: f.options, required: f.required }} value={from ?? null} view={view} onSave={to => fieldSave(f.key, from ?? null)(to)} />;
+        return <EditableField def={{ key: f.key, label: f.title, kind: f.type === 'bool' ? 'boolean' : f.type, options: f.options, required: f.required }} value={f.type === 'bool' ? boolOf(from) : from ?? null} view={view} onSave={to => fieldSave(f.key, from ?? null)(to)} />;
       })()}</dd>
     </div>
   );
@@ -348,7 +361,7 @@ function readWidth(): RecWidth {
  * PU-16: значение — по виду поля тем же текстом, что во вкладке (сумма — как SumCell);
  * объект без своего вида (не чип) в сводку не идёт — сырого JSON в строке не бывает.
  */
-function propsSummary(record: KitRecord, kind: KindConfig, lang: KitLang): string {
+export function propsSummary(record: KitRecord, kind: KindConfig, lang: KitLang): string {
   const one = (x: unknown): string | null =>
     x !== null && typeof x === 'object' && !asChip(x) ? null : valueText(x);
   return (kind.fields ?? [])
@@ -356,6 +369,8 @@ function propsSummary(record: KitRecord, kind: KindConfig, lang: KitLang): strin
       const x = record.fields[f.key];
       if (x === null || x === undefined || x === '' || (Array.isArray(x) && x.length === 0)) return null;
       if (f.type === 'sum') return sumText(x, lang);
+      // MC-08: в сводке — название включённого флага; выключенный не печатается («true» — не слово).
+      if (f.type === 'bool') return boolOf(x) === true ? f.title : null;
       if (Array.isArray(x)) { const parts = x.map(one).filter((s): s is string => s !== null); return parts.length ? parts.join(', ') : null; }
       return one(x);
     })

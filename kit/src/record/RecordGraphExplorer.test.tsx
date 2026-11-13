@@ -22,6 +22,7 @@ const stub = (name: string) => function Stub(p: GxEngineProps) {
 };
 vi.mock('../graph/ForceEngine', () => ({ default: stub('force') }));
 vi.mock('../graph/ObsidianEngine', () => ({ default: stub('obsidian') }));
+vi.mock('../graph/ReactFlowEngine', () => ({ default: stub('structure') }));
 
 beforeAll(() => registerGameIcons(gameIcons));
 beforeEach(() => window.history.replaceState(null, '', '/r'));
@@ -46,10 +47,10 @@ const ctxOf = (config: KitConfig): KitCtx => ({ data, config, href: id => `#rec=
 const show = (config = cfg()) => render(<RecordView record={CENTER} ctx={ctxOf(config)} tab="graph" onTab={() => {}} />);
 
 describe('GC-03 · вкладка «Граф»: Секторы / Список / Force / Обсидиан', () => {
-  it('четыре вида в переключателе; по умолчанию — секторы, как было', () => {
+  it('пять видов в переключателе (GC-02 добавил «Структуру»); по умолчанию — секторы, как было', () => {
     show();
     const views = screen.getByTestId('kit-graph-view');
-    expect([...views.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Секторы', 'Список', 'Force', 'Обсидиан']);
+    expect([...views.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Секторы', 'Список', 'Force', 'Обсидиан', 'Структура']);
     expect(screen.queryByTestId('gx')).toBeNull();
   });
 

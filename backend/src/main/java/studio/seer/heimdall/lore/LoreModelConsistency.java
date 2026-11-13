@@ -27,9 +27,7 @@ final class LoreModelConsistency {
     private LoreModelConsistency() {}
 
     /** Вид поля, расходящийся с типом свойства схемы сознательно: тип.поле → причина. */
-    static final Map<String, String> KIND_EXEMPT = Map.of(
-        "sprint.no_release", "в kit нет вида bool — флаг показывается словом; вид bool — SPRINT_LORE_MODEL_AS_CONFIG/MC-08",
-        "product.is_active", "в kit нет вида bool — флаг показывается словом; вид bool — SPRINT_LORE_MODEL_AS_CONFIG/MC-08");
+    static final Map<String, String> KIND_EXEMPT = Map.of();
 
     /**
      * @param schemaNames имена типов схемы графа (вершины и рёбра); {@code null} — схема не читалась,
@@ -91,6 +89,8 @@ final class LoreModelConsistency {
             case "date" -> Set.of("DATE", "DATETIME", "STRING").contains(schemaType);
             case "text", "md", "enum" -> "STRING".equals(schemaType);
             case "ref" -> Set.of("STRING", "LIST", "LINK", "LINKLIST").contains(schemaType);
+            // MC-08: флаг — вид bool.
+            case "bool" -> "BOOLEAN".equals(schemaType);
             default -> true;
         };
     }

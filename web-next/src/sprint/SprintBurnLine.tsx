@@ -14,7 +14,8 @@
 // срока — по кнопке «Цель к сроку». Прогноз и вердикт считает приложение (targetForecast),
 // kit рисует. Строка цифр S4-36 остаётся как была; шапку графика не дублируем (headless).
 import { useCallback, useState } from 'react';
-import { BurnChart, burnSummary, LoadError, useKitLang, useSprintBurn, type BurnSliceLoader } from '@seidr/kit';
+import { BurnChart, burnSummary, LoadError, useKitLang } from '@seidr/kit';
+import { useSprintBurn, type BurnSliceLoader } from './useSprintBurn';
 import { targetForecast } from '../record/targetForecast';
 import { sliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';

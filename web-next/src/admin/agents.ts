@@ -26,6 +26,8 @@ export interface AgentRow {
   client_id: string | null;
   agent_role: string | null;
   machine_id: string | null;
+  /** AO-MACHINE-OBJ: машины, с которых агент ходил (USES_MACHINE по X-Lore-Machine); нет — пусто. */
+  machines: string[];
   session_id: string | null;
   /** Код из реестра или null — сервер не знает (не угадываем). */
   harness: string | null;
@@ -115,6 +117,7 @@ export function parseAgents(body: SliceBody<Record<string, unknown>>, dict?: Har
     client_id: str(r.client_id),
     agent_role: str(r.agent_role),
     machine_id: str(r.machine_id),
+    machines: Array.isArray(r.machines) ? list(r.machines) : [],
     session_id: str(r.session_id),
     harness: str(r.harness),
     harness_logo: null as string | null,
@@ -274,9 +277,29 @@ async function postActorOwner(body: Record<string, unknown>, fetchImpl: typeof f
   }
 }
 
-/** S7B-25/26: агенты без машины — не понять, с какого ноутбука они ходят. */
+/**
+ * AO-MACHINE-OBJ A: машины агента — объявленная (machine_id) ∪ наблюдённые по вызовам
+ * (machines). Регистр не различает машины (PU-18): повтор схлопывается, объявленная
+ * идёт первой и помечена declared.
+ */
+export function agentMachines(row: Pick<AgentRow, 'machine_id' | 'machines'>): Array<{ id: string; declared: boolean }> {
+  const out: Array<{ id: string; declared: boolean }> = [];
+  const seen = new Set<string>();
+  const add = (id: string | null, declared: boolean) => {
+    if (!id) return;
+    const k = id.trim().toLowerCase();
+    if (k === '' || seen.has(k)) return;
+    seen.add(k);
+    out.push({ id, declared });
+  };
+  add(row.machine_id, true);
+  for (const m of row.machines ?? []) add(m, false);
+  return out;
+}
+
+/** S7B-25/26: агенты без машины — ни объявленной, ни наблюдённой по вызовам (AO-MACHINE-OBJ A). */
 export function agentsWithoutMachine(rows: readonly AgentRow[]): AgentRow[] {
-  return rows.filter(r => !r.machine_id);
+  return rows.filter(r => agentMachines(r).length === 0);
 }
 
 /** Значение фильтра «без машины» в адресе (?adm-agents-f=nomachine). */

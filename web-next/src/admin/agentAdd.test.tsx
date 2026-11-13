@@ -29,6 +29,7 @@ describe('AO-AGENT-ADD · проверка токена новой учётки'
     ['ok', /agent_scope = pm/, undefined],
     ['mismatch', /full.*вместо.*pm/, 'dng'],
     ['missing', /нет agent_scope/i, 'dng'],
+    ['no_seer_roles', /нет seer_roles/i, 'dng'],
     ['error', /не проверено/i, 'wrn'],
   ])('%s — сказано словами, тон по исходу', (state, re, tone) => {
     render(<KitLangProvider lang="ru"><TokenCheckNote check={{

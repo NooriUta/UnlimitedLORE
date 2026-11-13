@@ -12,9 +12,15 @@
 // только поля, которые этот API умеет писать (restorable), и только отличные
 // от текущей версии.
 
+/**
+ * Автор правки — нейтрально (K-14, SPRINT_UXR_S7B_ADMIN/S7B-23_2): id — идентификатор
+ * вызывающего, им же фильтрует сервер; name — подпись, если она есть; owner — чей агент.
+ * Как это лежит у сервера приложения (у LORE — kc_sub / client_id / owner_kc_sub),
+ * kit не знает: форму ответа переводит адаптер приложения.
+ */
 export type KitHistoryAuthor =
-  | { kind: 'human'; kc_sub: string; display_name: string | null }
-  | { kind: 'agent'; client_id: string; actor_id: string | null; session_id: string | null; owner_kc_sub: string | null }
+  | { kind: 'human'; id: string; name: string | null }
+  | { kind: 'agent'; id: string; name: string | null; owner: string | null }
   | { kind: 'unknown' };
 
 /**
@@ -68,7 +74,7 @@ export interface KitHistoryPage {
 export interface KitHistoryQuery {
   /** Вид автора: правки человека или агента. */
   authorKind: 'human' | 'agent' | null;
-  /** Конкретный автор — его идентификатор вызывающего (kc_sub / client_id). */
+  /** Конкретный автор — его идентификатор вызывающего (KitHistoryAuthor.id). */
   author: string | null;
   /** Свернуть подряд идущие правки одного агента в одну строку. */
   collapse: boolean;
@@ -145,10 +151,10 @@ export type KitAuthorView =
   | { kind: 'agent'; name: string; owner: string | null }
   | { kind: 'unknown'; name: null };
 
-/** Автор словами: человек — имя (иначе kc_sub), агент — client_id и владелец. */
+/** Автор словами: человек — имя (иначе id), агент — имя (иначе id) и владелец. */
 export function historyAuthor(a: KitHistoryAuthor): KitAuthorView {
-  if (a.kind === 'human') return { kind: 'human', name: a.display_name || a.kc_sub };
-  if (a.kind === 'agent') return { kind: 'agent', name: a.client_id, owner: a.owner_kc_sub };
+  if (a.kind === 'human') return { kind: 'human', name: a.name || a.id };
+  if (a.kind === 'agent') return { kind: 'agent', name: a.name || a.id, owner: a.owner };
   return { kind: 'unknown', name: null };
 }
 
@@ -162,8 +168,7 @@ export interface KitHistoryAuthorOption {
 
 /** Идентификатор автора правки; у «автор неизвестен» его нет — фильтровать нечем. */
 export function authorCaller(a: KitHistoryAuthor): string | null {
-  if (a.kind === 'human') return a.kc_sub || null;
-  if (a.kind === 'agent') return a.client_id || null;
+  if (a.kind === 'human' || a.kind === 'agent') return a.id || null;
   return null;
 }
 

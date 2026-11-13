@@ -52,7 +52,6 @@ class RoleEdgeHopFormLiveDbTest {
     private static final String AGENT   = "hop-agent";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = LiveDbHttp.CLIENT;
 
     @BeforeAll
     static void resourceIsUp() {
@@ -79,7 +78,7 @@ class RoleEdgeHopFormLiveDbTest {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
                 .build();
-            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> resp = LiveDbHttp.client().send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() != 200) return List.of(Map.of("__error", resp.body()));
             Map<String, Object> parsed = MAPPER.readValue(resp.body(), Map.class);
             Object result = parsed.get("result");

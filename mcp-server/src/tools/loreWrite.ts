@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 import { registerEntity } from './entity.js';
+import { recordingInputKeys } from './toolInputKeys.js';
 
 // ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
 // WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
@@ -336,7 +337,9 @@ export const QUESTION_CLOSE_GUIDANCE =
   'Одно решение может закрыть несколько вопросов (по связи answers на каждый) — для ревизии это одна запись вместо N. ' +
   'Не путай с dropped: dropped = «решили НЕ отвечать», а «устарел, и вот доказательство» = closed через решение.';
 
-export function registerLoreWrite(server: McpServer): void {
+export function registerLoreWrite(rawServer: McpServer): void {
+  // MT-MCP-TRUTH: ключи схем запоминаются, чтобы entity_upsert называл поля, которых у сущности нет.
+  const server = recordingInputKeys(rawServer);
   // SCD2 status transition (closes the open history row, opens a new one, edges,
   // denormalizes status onto the vertex). Writes to the shared system_aida_lore.
   definePostTool(server, {
@@ -2433,13 +2436,14 @@ export function registerLoreWrite(server: McpServer): void {
       sort_order:    z.number().int().optional().describe('display order within the domain'),
       is_active:     z.boolean().optional().describe('soft-delete flag; default true'),
       is_extensible: z.boolean().optional().describe('true = admins may add values via UI; default false'),
+      kind:          z.enum(['tech', 'service']).optional().describe('only dict_type="product": tech = technology product (has a git repo), service = service/organisational product (no git required). D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE; other dictionaries refuse kind with 400'),
       human_approval: z.string().max(300).optional().describe('WHO approved and WHERE, e.g. "omiloreadmin: minilore channel 09.11". Dictionaries are human-only; the full profile may write only with a named human approval (owner decision 09.11.2026). Logged on the server.'),
     },
     headers: ({ human_approval }) =>
       human_approval && human_approval.trim() ? { 'X-Lore-Human-Approval': encodeURIComponent(human_approval.trim()) } : undefined,
     path: '/lore/dict/entry',
-    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }) =>
-      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }),
+    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind }) =>
+      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind }),
   });
 
   server.tool(

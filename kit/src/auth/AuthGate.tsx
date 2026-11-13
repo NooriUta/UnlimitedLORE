@@ -11,13 +11,47 @@ import { kitT, useKitLang } from '../i18n';
 import { LoadError, Skeleton } from '../states';
 import { GameIcon } from '../elements/GameIcon';
 import type { AuthSession } from './session';
+import { VOLVA_ILLUSTRATION_SVG } from './volvaIllustration';
+
+/**
+ * Слова бренда на экране входа (PU-21): знак, имя, подпись, слоган, строка платформы. Их называет
+ * приложение (K-14) — kit даёт только композицию страницы входа Keycloak/Völva.
+ */
+export interface AuthBrand { mark: string; name: string; sub?: string; slogan?: string; platform?: string }
 
 export interface AuthGateProps {
   session: AuthSession;
   children: ReactNode;
+  brand?: AuthBrand;
 }
 
-export function AuthGate({ session, children }: AuthGateProps) {
+/**
+ * Страница входа (SPRINT_UXR_POLISH_UAT_1113/PU-21, владелица 13.11: «странице без логина возьми
+ * дизайн как у страницы KC и Völva»): та же композиция, что тема Keycloak lore/login — фоном
+ * иллюстрация Völva, над карточкой блок бренда, карточка с акцентной кромкой. Токены kit.
+ */
+function AuthPage({ brand, state, children }: { brand?: AuthBrand; state: string; children: ReactNode }) {
+  return (
+    <main className="sk-auth" data-auth={state}>
+      <div className="sk-auth__art" aria-hidden="true" dangerouslySetInnerHTML={{ __html: VOLVA_ILLUSTRATION_SVG }} />
+      {brand && (
+        <div className="sk-auth__brand">
+          <div className="sk-auth__mark" aria-hidden="true">{brand.mark}</div>
+          <div className="sk-auth__word">
+            <span className="sk-auth__dot" aria-hidden="true" />
+            <span className="sk-auth__name">{brand.name}</span>
+            {brand.sub && <span className="sk-auth__sub">{brand.sub}</span>}
+          </div>
+          {brand.slogan && <div className="sk-auth__slogan">{brand.slogan}</div>}
+          {brand.platform && <div className="sk-auth__platform">{brand.platform}</div>}
+        </div>
+      )}
+      <div className="sk-auth__card">{children}</div>
+    </main>
+  );
+}
+
+export function AuthGate({ session, children, brand }: AuthGateProps) {
   const lang = useKitLang();
   const st = useSyncExternalStore(session.subscribe, session.getState, session.getState);
   const autoLogin = st.status === 'signed_out' && !st.loggedOut;
@@ -43,29 +77,29 @@ export function AuthGate({ session, children }: AuthGateProps) {
         {loginBtn(kitT(lang, 'kit.auth.relogin'))}
       </div>
     );
-    return st.interrupted ? <>{children}{bar}</> : <main className="sk-auth">{bar}</main>;
+    return st.interrupted ? <>{children}{bar}</> : <AuthPage brand={brand} state="expired">{bar}</AuthPage>;
   }
 
   if (st.status === 'error') {
     return (
-      <main className="sk-auth">
+      <AuthPage brand={brand} state="error">
         <LoadError
           title={kitT(lang, 'kit.auth.error.title')}
           hint={kitT(lang, 'kit.auth.error.hint')}
           error={st.error}
           action={loginBtn(kitT(lang, 'kit.auth.relogin'), '/')}
         />
-      </main>
+      </AuthPage>
     );
   }
 
   // signed_out
   return (
-    <main className="sk-auth" data-auth="signed_out">
+    <AuthPage brand={brand} state="signed_out">
       <p className="sk-auth__note" role="status">
         {kitT(lang, st.loggedOut ? 'kit.auth.loggedOut' : 'kit.auth.redirecting')}
       </p>
       {loginBtn(kitT(lang, 'kit.auth.login'))}
-    </main>
+    </AuthPage>
   );
 }

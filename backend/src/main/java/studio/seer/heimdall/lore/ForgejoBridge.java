@@ -34,7 +34,7 @@ public class ForgejoBridge {
     static final String FORGEJO_TOKEN_KEY = "FORGEJO_API_TOKEN";
 
     private static final Logger LOG = Logger.getLogger(ForgejoBridge.class);
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final LoreHttpClients.Shared HTTP = LoreHttpClients.shared(HttpClient::newBuilder);
 
     /** Статусная модель ADR-024 §10 — мост отдаёт ТОЛЬКО эти значения. */
     static final String NO_RUN = "NO_RUN";
@@ -216,7 +216,7 @@ public class ForgejoBridge {
             .header("Accept", "application/json");
         if (json != null) b.header("Content-Type", "application/json");
         b.method(method, json == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json));
-        return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString());
+        return HTTP.get().send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 
     /**
