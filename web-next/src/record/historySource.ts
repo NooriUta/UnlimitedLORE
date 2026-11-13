@@ -19,7 +19,7 @@
 // правилом, что в контракте (changedFields). Выдумывать значения полей, чтобы
 // «был дифф», нельзя: сравнение показывало бы несуществующие правки.
 import { HISTORY_TYPES, changedFields } from '../api/contracts/s2';
-import type { KitHistory, KitHistoryAuthor, KitHistoryRun, KitHistoryVersion } from '@seidr/kit';
+import type { KitHistory, KitHistoryAuthor, KitHistoryQuery, KitHistoryRun, KitHistoryVersion } from '@seidr/kit';
 import { loreAuthor } from '../history/loreAuthor';
 import { loreFetch } from '../auth/session';
 
@@ -53,6 +53,16 @@ export interface HistoryQueryOpts {
    * `page.total` и `has_more` честны по свёрнутым строкам.
    */
   collapse?: 'agent';
+}
+
+/** Запрос вкладки kit (фильтры и свёртка, S9-09) → параметры /lore/history. «Всё» — без параметров. */
+export function historyQueryOpts(q: KitHistoryQuery): HistoryQueryOpts {
+  const o: HistoryQueryOpts = {};
+  if (q.authorKind) o.author_kind = q.authorKind;
+  if (q.author) o.author = q.author;
+  if (q.field) o.field = q.field;
+  if (q.collapse) o.collapse = 'agent';
+  return o;
 }
 
 export class HistoryForbidden extends Error {}
