@@ -115,6 +115,13 @@ class LoreModelGoldenTest {
                 sliceLinks.add(String.valueOf(sl));
             t.put("slice_links", sliceLinks);
             t.put("unread", LoreRecordValues.unreadState(type));
+            // MC-04: вкладки без своего среза — по ребру из модели; запрос — часть контракта.
+            Map<String, Object> edge = new LinkedHashMap<>();
+            Set<String> byEdge = LoreRecordValues.READ_BY_EDGE.getOrDefault(type, Set.of());
+            for (LoreRecordRegistry.Relation r : LoreRecordRegistry.get(type).relations())
+                if ("link_tab".equals(r.place()) && byEdge.contains(r.key()))
+                    edge.put(r.key(), LoreRecordEdgeLinks.sql(type, r));
+            t.put("edge_links", edge);
             t.put("defaults", LoreRecordValues.defaults(type));
             t.put("read_only", LoreRecordRegistry.READ_ONLY.contains(type));
             out.put(type, t);

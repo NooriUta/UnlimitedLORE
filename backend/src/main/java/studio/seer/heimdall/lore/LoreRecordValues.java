@@ -197,11 +197,12 @@ final class LoreRecordValues {
     }
 
     /**
-     * Вкладки связей, которые фасад пока НЕ читает — среза нет. Без этого списка такая вкладка
-     * показала бы «0 — пусто (проверено)», не проверив ничего. По каждой фасад пишет в
-     * {@code meta.data_state} строку {@code state: error} с причиной: «не смогли проверить» ≠ «пусто».
+     * SPRINT_LORE_MODEL_AS_CONFIG/MC-04 (SPRINT_UXR_POLISH_UAT_1113/PU-02): вкладки связей без своего
+     * среза — фасад читает их прямо по ребру из модели ({@link LoreRecordEdgeLinks}). Раньше это был
+     * список «не читается — среза нет», и паспорт любой записи навсегда показывал «Часть сведений не
+     * загрузилась». Вкладка здесь — ровно одним способом из трёх (сверка — LoreRecordRowLinksTest).
      */
-    static final Map<String, java.util.Set<String>> UNREAD_LINK_TABS = Map.of(
+    static final Map<String, java.util.Set<String>> READ_BY_EDGE = Map.of(
         "task", java.util.Set.of("qgRecs", "insights", "refsOut", "refsIn", "publications"),
         "adr", java.util.Set.of("runbooks", "refsOut", "refsIn", "insights"),
         "spec", java.util.Set.of("refsOut", "refsIn"),
@@ -214,6 +215,14 @@ final class LoreRecordValues {
         "component", java.util.Set.of("refsOut", "refsIn"),
         "tech", java.util.Set.of("refsOut", "refsIn"),
         "feature", java.util.Set.of("refsOut", "refsIn"));
+
+    /**
+     * Вкладки связей, которые фасад НЕ читает ничем. Без этого списка такая вкладка показала бы
+     * «0 — пусто (проверено)», не проверив ничего; по каждой фасад пишет в {@code meta.data_state}
+     * {@code state: error} с причиной. Должен быть пуст: сторож ModelServerConsistencyGuardTest (MC-03)
+     * краснеет на любой записи — вкладку надо читать (срез или ребро) либо снять с паспорта.
+     */
+    static final Map<String, java.util.Set<String>> UNREAD_LINK_TABS = Map.of();
 
     /** Строки {@code meta.data_state} для вкладок без среза — форма та же, что у прочитанных источников. */
     static List<Map<String, Object>> unreadState(String type) {
