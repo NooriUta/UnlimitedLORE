@@ -37,7 +37,7 @@ class RoleProfileCoverageLiveDbTest {
             .header("Authorization", "Basic " + Base64.getEncoder().encodeToString(
                 ("root:" + LoreArcadeDbTestResource.ROOT_PASSWORD).getBytes(StandardCharsets.UTF_8)))
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();
-        LiveDbHttp.CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
+        LiveDbHttp.client().send(req, HttpResponse.BodyHandlers.ofString());
     }
 
     private static void edge(String task, String profile, String validTo) throws Exception {
