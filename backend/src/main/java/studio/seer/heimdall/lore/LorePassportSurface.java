@@ -34,7 +34,7 @@ final class LorePassportSurface {
     private static final String OWN = "own", GLUE = "content";
 
     /** Раздел решённого паспорта: ключ и место. */
-    private record Slot(String key, String slot) {}
+    record Slot(String key, String slot) {}
 
     private static Slot own(String key) { return new Slot(key, OWN); }
 
@@ -44,7 +44,7 @@ final class LorePassportSurface {
      * Порядок и место разделов по типам. Раздел, не названный здесь (появился в реестре позже),
      * идёт в конец своей вкладкой — не теряется и не прячется.
      */
-    private static final Map<String, List<Slot>> DECIDED = Map.ofEntries(
+    static final Map<String, List<Slot>> DECIDED = Map.ofEntries(
         // Задачи у 92 % спринтов; ADR — звено цепочки (43а); фазы у 4 из 29 — последними.
         Map.entry("sprint", List.of(own("tasks"), own(CONTENT), own("adrs"),
             own("dependsOn"), own("blocks"), own("questions"), own("phases"),
