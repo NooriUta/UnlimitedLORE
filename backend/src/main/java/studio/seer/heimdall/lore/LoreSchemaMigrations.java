@@ -1614,7 +1614,12 @@ final class LoreSchemaMigrations {
         // отметки «не ссылка» раздела «Привести в порядок» — вершина LoreRefDismissal, ключ
         // record_type|record_id|kind. Аддитивно, major 17. Идёт после V82 (PU-18, #1311).
         // DDL рядом с логикой (MdRefDismissals).
-        new Step(83, 17, "ref_dismissal", MdRefDismissals.SCHEMA_SQL)
+        new Step(83, 17, "ref_dismissal", MdRefDismissals.SCHEMA_SQL),
+
+        // SPRINT_LORE_MODEL_AS_CONFIG/MC-05 (SPEC-LORE-MODEL-CONFIG-STORE): V84 (V82 — #1311 PU-18, V83 — #1316 PU-20). Модель LORE — запись в LORE с
+        // историей SCD2 (KnowModelConfig + KnowModelConfigHist через HAS_STATE). Аддитивно, major 17:
+        // только новые типы, данные не трогаются. DDL рядом с логикой (LoreModelStore).
+        new Step(84, 17, "model_config_store", LoreModelStore.SCHEMA_SQL)
     );
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */

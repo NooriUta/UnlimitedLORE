@@ -19,7 +19,7 @@ function fakeServer() {
 }
 
 describe('registerLoreRead', () => {
-  it('registers exactly the ten read tools under their canonical names', () => {
+  it('registers exactly the eleven read tools under their canonical names', () => {
     const { server, names } = fakeServer();
     registerLoreRead(server);
     // search — SRCH-07 (ADR-LORE-033): агент ищет тем же /lore/search, что UI.
@@ -28,9 +28,10 @@ describe('registerLoreRead', () => {
     // run_block — S6-08: блок lore-query из текста записи + метаданные полноты.
     // changed — MT-MCP-CHANGED-RANGE: что изменилось за период по многим типам (/lore/changed).
     // machine_acl, harness_list — S7B-ACL-2/3: допуски к машинам и справочник harness из MCP.
+    // whoami — AO-WHOAMI: кем LORE видит вызывающего (GET /lore/whoami).
     // graph — SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-04: граф окрестности (depth 1..4, rels) или среза (/lore/graph).
     expect(names).toEqual(['list_slices', 'query_slice', 'changed', 'run_block', 'search', 'search_similar', 'task_shape',
-      'machine_acl', 'harness_list', 'graph']);
+      'machine_acl', 'harness_list', 'whoami', 'graph']);
   });
 });
 

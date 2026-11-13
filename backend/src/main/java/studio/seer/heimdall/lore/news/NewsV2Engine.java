@@ -90,6 +90,23 @@ public final class NewsV2Engine {
         return Cat.OPEN;
     }
 
+    /**
+     * 🧪 UAT TESTING — задача на приёмке у человека. Внутри «готово» (READY) это отдельная
+     * цифра: по ней сверяют, сколько задач ждёт человеческой приёмки (замечание владелицы 13.11.2026).
+     */
+    static boolean isUat(String raw) {
+        if (raw == null) return false;
+        String s = raw.trim();
+        return s.startsWith("🧪") || UAT_WORD.matcher(s.toUpperCase(Locale.ROOT)).find();
+    }
+
+    /** 1 — последняя версия строго до t в статусе UAT. */
+    static int uatAt(List<Version> tl, Instant t) {
+        Version row = null;
+        for (Version v : tl) { if (v.at().isBefore(t)) row = v; else break; }
+        return row != null && isUat(row.status()) ? 1 : 0;
+    }
+
     static boolean isCancel(String raw) {
         if (raw == null) return false;
         String s = raw.trim();
@@ -442,6 +459,9 @@ public final class NewsV2Engine {
         public int oO0, oO1, nO0, nO1, Y0, Y1, Yu1, S, C, A, oC, oA, W;
         public int reactEv, reactEl, aReact, doneEver;
         public int reactFromReady, reactFromClosed, reactAfterRelease;
+        /** На приёмке (🧪 UAT) на t0 / t1 — подмножество «готово», своей цифрой. */
+        public int U0, U1;
+        public final List<String> exU = new ArrayList<>();
         public final List<String> exS = new ArrayList<>(), exY = new ArrayList<>(), exA = new ArrayList<>(),
             exC = new ArrayList<>(), exReact = new ArrayList<>(), els = new ArrayList<>();
         public int burn() { return nO0 - nO1; }
@@ -457,6 +477,8 @@ public final class NewsV2Engine {
             els.add("task:" + s.uid);
             oO0 += s.e0.oldOpen(); oO1 += s.e1.oldOpen(); nO0 += s.e0.newOpen(); nO1 += s.e1.newOpen();
             Y0 += s.e0.y(); Y1 += s.e1.y(); Yu1 += s.e1.yUnk();
+            U0 += s.u0; U1 += s.u1;
+            if (s.u1 == 1) ex(exU, s.uid);
             if (s.S) { S++; ex(exS, s.uid); }
             if (s.e1.y() == 1) ex(exY, s.uid);
             if (s.C) { C++; ex(exC, s.uid); }
@@ -481,6 +503,7 @@ public final class NewsV2Engine {
         Eval e0, e1; Eval[] st; boolean[] sb;
         boolean C, A, oC, oA, S, W, doneEver;
         int reactEv, reactFromReady, reactFromClosed, reactAfterRelease;
+        int u0, u1; int[] ua;
         Shipped shippedAtT1;
     }
 
@@ -488,7 +511,7 @@ public final class NewsV2Engine {
     public static final class TaskGroup {
         public final String key;
         public final Part total = new Part(), own = new Part(), shared = new Part();
-        public int[] dayNO, dayOO, dayY, dayYu, dayS;
+        public int[] dayNO, dayOO, dayY, dayYu, dayS, dayU;
         TaskGroup(String key) { this.key = key; }
     }
 
@@ -506,6 +529,8 @@ public final class NewsV2Engine {
         public final List<Oldest> oldest = new ArrayList<>();
         public Double median;
         public int enteredReady, readyToClosedNoRel, nRecs;
+        /** Вошло в 🧪 UAT за период (переход в UAT из любого другого статуса внутри P). */
+        public int enteredUat;
         final List<TaskState> states = new ArrayList<>();
     }
 
@@ -546,7 +571,7 @@ public final class NewsV2Engine {
         List<Instant> B = dayBounds(); int K = B.size();
         M.bounds = B;
         M.all = new TaskGroup("all");
-        M.all.dayNO = new int[K]; M.all.dayOO = new int[K]; M.all.dayY = new int[K]; M.all.dayYu = new int[K]; M.all.dayS = new int[K - 1];
+        M.all.dayNO = new int[K]; M.all.dayOO = new int[K]; M.all.dayY = new int[K]; M.all.dayYu = new int[K]; M.all.dayS = new int[K - 1]; M.all.dayU = new int[K];
         for (String ax : TASK_AXES) { M.byAxis.put(ax, new TreeMap<>()); M.sharedUnion.put(ax, new Part()); }
 
         List<TaskRecord> tasks = new ArrayList<>(in.tasks());
@@ -560,6 +585,9 @@ public final class NewsV2Engine {
             s.st = new Eval[K];
             for (int k = 0; k < K; k++) s.st[k] = evalAt(rec, B.get(k));
             s.e0 = s.st[0]; s.e1 = s.st[K - 1];
+            s.ua = new int[K];
+            for (int k = 0; k < K; k++) s.ua[k] = uatAt(rec.tl, B.get(k));
+            s.u0 = s.ua[0]; s.u1 = s.ua[K - 1];
             // Нет ни одной датированной версии или статус на t1 пуст — состояние неизвестно (JS: c === null).
             // Заведённая после t1 (все версии ≥ t1) — не «неизвестна», а отсутствует: нули.
             s.unknown = chain(t).isEmpty() || (!s.e1.absent() && s.e1.c() == null);
@@ -594,6 +622,15 @@ public final class NewsV2Engine {
                     prev = v;
                 }
                 if (rec.eps.stream().anyMatch(e -> !e.start().isBefore(in.t0()) && e.start().isBefore(in.t1()))) M.enteredReady++;
+                {
+                    Version pv = null; boolean entered = false;
+                    for (Version v : rec.tl) {
+                        if (!v.at().isBefore(in.t0()) && v.at().isBefore(in.t1()) && isUat(v.status())
+                            && (pv == null || !isUat(pv.status()))) entered = true;
+                        pv = v;
+                    }
+                    if (entered) M.enteredUat++;
+                }
                 for (Ep ep : rec.eps) {
                     if (ep.end() == null || ep.end().isBefore(in.t0()) || !ep.end().isBefore(in.t1())) continue;
                     Version nx = rec.tl.stream().filter(v -> v.at().equals(ep.end())).findFirst().orElse(null);
@@ -612,7 +649,7 @@ public final class NewsV2Engine {
                         Duration.between(s.e1.rs(), in.t1()).toMillis() / 86_400_000.0, s.e1.ship(), linkKind(rec)));
                 for (int k = 0; k < K; k++) {
                     M.all.dayNO[k] += s.st[k].newOpen(); M.all.dayOO[k] += s.st[k].oldOpen();
-                    M.all.dayY[k] += s.st[k].y(); M.all.dayYu[k] += s.st[k].yUnk();
+                    M.all.dayY[k] += s.st[k].y(); M.all.dayYu[k] += s.st[k].yUnk(); M.all.dayU[k] += s.ua[k];
                 }
                 for (int k = 0; k < K - 1; k++) if (!s.sb[k] && s.sb[k + 1]) M.all.dayS[k]++;
             }
@@ -1208,13 +1245,14 @@ public final class NewsV2Engine {
         m.put("open_dict_t0", x.oO0); m.put("open_dict_t1", x.oO1);
         m.put("closed", x.C); m.put("added", x.A); m.put("added_new", x.aNew()); m.put("added_react", x.aReact);
         m.put("waiting_t0", x.Y0); m.put("waiting_t1", x.Y1); m.put("ship_unknown", x.Yu1);
+        m.put("uat_t0", x.U0); m.put("uat_t1", x.U1);
         m.put("shipped", x.S); m.put("done_in_period", x.W);
         m.put("react", mapOf("events", x.reactEv, "elements", x.reactEl, "rate", x.reactRate(), "done_ever", x.doneEver,
             "from_ready", x.reactFromReady, "from_closed", x.reactFromClosed, "after_release", x.reactAfterRelease,
             "examples", x.exReact));
         m.put("unknown", x.unk);
         m.put("tasks", x.n);
-        m.put("examples", mapOf("shipped", x.exS, "waiting", x.exY, "added", x.exA, "closed", x.exC));
+        m.put("examples", mapOf("shipped", x.exS, "waiting", x.exY, "added", x.exA, "closed", x.exC, "uat", x.exU));
         return m;
     }
 
@@ -1247,7 +1285,8 @@ public final class NewsV2Engine {
                 "day_local", String.valueOf(localDay(M.bounds.get(k))),
                 "open_start", M.all.dayNO[k], "open_end", M.all.dayNO[k + 1],
                 "burn", M.all.dayNO[k] - M.all.dayNO[k + 1], "burn_dict", M.all.dayOO[k] - M.all.dayOO[k + 1],
-                "waiting_end", M.all.dayY[k + 1], "ship_unknown_end", M.all.dayYu[k + 1], "shipped", M.all.dayS[k]));
+                "waiting_end", M.all.dayY[k + 1], "ship_unknown_end", M.all.dayYu[k + 1], "shipped", M.all.dayS[k],
+                "uat_end", M.all.dayU[k + 1]));
         }
         out.put("days", days);
         List<Map<String, Object>> waits = new ArrayList<>();
@@ -1261,6 +1300,7 @@ public final class NewsV2Engine {
                 "ship", o.ship(), "link", o.link()));
         out.put("waiting_oldest", old);
         out.put("entered_ready", M.enteredReady);
+        out.put("entered_uat", M.enteredUat);
         out.put("ready_to_closed_no_release", M.readyToClosedNoRel);
         return out;
     }
@@ -1281,6 +1321,7 @@ public final class NewsV2Engine {
             Part a = c.ship.all.total, b = p.ship.all.total;
             d.put("burn", dv(a.burn(), b.burn()));
             d.put("waiting_t1", dv(a.Y1, b.Y1));
+            d.put("uat_t1", dv(a.U1, b.U1));
             d.put("shipped", dv(a.S, b.S));
             d.put("react_events", dv(a.reactEv, b.reactEv));
             d.put("react_elements", dv(a.reactEl, b.reactEl));

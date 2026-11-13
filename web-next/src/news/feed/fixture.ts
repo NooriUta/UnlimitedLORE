@@ -49,10 +49,10 @@ function part(p: Partial<NewsBurnPart>): NewsBurnPart {
     burn: 0, burn_dict: 0, ship_correction: 0,
     open_t0: 0, open_t1: 0, open_dict_t0: 0, open_dict_t1: 0,
     closed: 0, added: 0, added_new: 0, added_react: 0,
-    waiting_t0: 0, waiting_t1: 0, ship_unknown: 0, shipped: 0, done_in_period: 0,
+    waiting_t0: 0, waiting_t1: 0, uat_t0: 0, uat_t1: 0, ship_unknown: 0, shipped: 0, done_in_period: 0,
     react: { events: 0, elements: 0, rate: null, done_ever: 0, from_ready: 0, from_closed: 0, after_release: 0, examples: [] },
     unknown: 0, tasks: 0,
-    examples: { shipped: [], waiting: [], added: [], closed: [] },
+    examples: { shipped: [], waiting: [], added: [], closed: [], uat: [] },
     ...p,
   };
 }
@@ -211,6 +211,7 @@ export const NEWS_FIXTURE: NewsResponse = {
         { uid: `${NEWS_SPRINT}/S7A-02`, sprint: NEWS_SPRINT, since: '2026-11-07T14:42:00Z', age_days: 0, ship: 'pending', link: 'v1.17.0' },
       ],
       entered_ready: 2,
+      entered_uat: 0,
       ready_to_closed_no_release: 1,
     },
     knowledge: {

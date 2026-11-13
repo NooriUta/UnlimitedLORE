@@ -70,8 +70,16 @@ public class KcBridge {
 
     /** client_credentials токен lore-admin — только внутри сервера. */
     String adminToken() throws Exception {
-        String body = "grant_type=client_credentials&client_id=" + URLEncoder.encode(kcClientId, StandardCharsets.UTF_8)
-            + "&client_secret=" + URLEncoder.encode(kcSecret().orElseThrow(), StandardCharsets.UTF_8);
+        return clientToken(kcClientId, kcSecret().orElseThrow());
+    }
+
+    /**
+     * client_credentials токен любого клиента realm — только внутри сервера (AO-AGENT-ADD:
+     * проверка свежей учётки агента). Ни токен, ни секрет наружу не отдаются и в лог не пишутся.
+     */
+    String clientToken(String clientId, String secret) throws Exception {
+        String body = "grant_type=client_credentials&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+            + "&client_secret=" + URLEncoder.encode(secret, StandardCharsets.UTF_8);
         HttpRequest req = HttpRequest.newBuilder(URI.create(url() + "/realms/" + kcRealm + "/protocol/openid-connect/token"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();

@@ -59,12 +59,24 @@ final class LoreModelFile {
      * (выгрузчик, тесты) работали без файла в classpath.
      */
     static Content content() {
-        return Holder.CONTENT;
+        Content c = current;
+        if (c != null) return c;
+        synchronized (LoreModelFile.class) {
+            if (current == null) current = load();
+            return current;
+        }
     }
 
-    private static final class Holder {
-        static final Content CONTENT = load();
+    /**
+     * MC-05 (SPEC-LORE-MODEL-CONFIG-STORE §3): действующая модель заменяется целиком и атомарно —
+     * читатели видят либо прежнюю, либо новую, но не смесь. Проверка согласованности — ДО вызова
+     * (LoreModelStore): сюда приходит только проверенное содержимое.
+     */
+    static void replace(Content c) {
+        current = java.util.Objects.requireNonNull(c, "модель не может быть пустой");
     }
+
+    private static volatile Content current;
 
     static Content load() {
         try (InputStream in = LoreModelFile.class.getResourceAsStream(RESOURCE)) {
