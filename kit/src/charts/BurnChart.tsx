@@ -46,6 +46,11 @@ export interface BurnChartProps {
   forecast?: readonly BurnForecastPoint[];
   /** Вердикт приложения словами («не успеваем на 3 дня…») — виден и в свёрнутом заголовке. */
   verdict?: BurnVerdict;
+  /**
+   * Без своей шапки (PU-10): хозяин уже сказал сводку и вердикт строкой и сам решает, когда
+   * график виден. Панель тогда открыта всегда; переключатель режима — над графиком.
+   */
+  headless?: boolean;
 }
 
 const W = 600;
@@ -104,13 +109,13 @@ export function BurnChart({
   points, state, error, onRetry, completeness,
   expanded, defaultExpanded = false, onExpandedChange,
   mode, defaultMode = 'burndown', onModeChange, className,
-  deadline, forecast, verdict,
+  deadline, forecast, verdict, headless = false,
 }: BurnChartProps) {
   const lang = useKitLang();
   const panelId = useId();
   const [ownOpen, setOwnOpen] = useState(defaultExpanded);
   const [ownMode, setOwnMode] = useState<BurnMode>(defaultMode);
-  const open = expanded ?? ownOpen;
+  const open = headless || (expanded ?? ownOpen);
   const curMode = mode ?? ownMode;
   const hasData = (state === 'ok' || state === 'partial') && !!points;
   const sum = hasData ? burnSummary(points!) : null;
@@ -169,25 +174,28 @@ export function BurnChart({
     );
   }
 
+  const modes = (
+    <div className="sk-burn__modes" role="group" aria-label={kitT(lang, 'kit.burn.mode')}>
+      {(['burndown', 'burnup'] as const).map(m => (
+        <button key={m} type="button" className="sk-burn__mode" aria-pressed={curMode === m} onClick={() => pick(m)}>
+          {kitT(lang, m === 'burndown' ? 'kit.burn.mode.burndown' : 'kit.burn.mode.burnup')}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <section className={['sk-burn', className].filter(Boolean).join(' ')} data-state={state}>
-      <div className="sk-burn__head">
+      {!headless && <div className="sk-burn__head">
         <button type="button" className="sk-burn__toggle" aria-expanded={open} aria-controls={panelId} onClick={toggle}>
           <span className="sk-burn__chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
           <span className="sk-burn__title">{kitT(lang, 'kit.burn.title')}</span>
           <span className={`sk-burn__badge sk-burn__badge--${tone}`}>{badge}</span>
           {verdict && hasData && <span className="sk-burn__verdict" data-testid="kit-burn-verdict" data-tone={verdict.tone}>{verdict.text}</span>}
         </button>
-        {open && hasData && (
-          <div className="sk-burn__modes" role="group" aria-label={kitT(lang, 'kit.burn.mode')}>
-            {(['burndown', 'burnup'] as const).map(m => (
-              <button key={m} type="button" className="sk-burn__mode" aria-pressed={curMode === m} onClick={() => pick(m)}>
-                {kitT(lang, m === 'burndown' ? 'kit.burn.mode.burndown' : 'kit.burn.mode.burnup')}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+        {open && hasData && modes}
+      </div>}
+      {headless && hasData && modes}
       {open && (
         <div id={panelId} className="sk-burn__panel">
           {state === 'partial' && completeness && <Truncated completeness={completeness} />}
