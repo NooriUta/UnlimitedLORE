@@ -641,6 +641,9 @@ public class LoreUserResource extends LoreResourceBase {
                     batchId, roleOf(existing));
                 Map<String, Object> out = new java.util.LinkedHashMap<>();
                 out.put("ok", true);
+                // PU-03: объект снятия — в ответе, иначе журнал действий запишет путь эндпоинта.
+                out.put("kc_sub", req.kc_sub());
+                out.put("project", req.project());
                 out.put("removed", gone);
                 out.put("outcome", gone ? LoreOutcome.DELETED : LoreOutcome.NOOP);
                 if (!gone) out.put("reason", "DELETE выполнен, но ребро роли осталось в графе");

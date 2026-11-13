@@ -86,10 +86,19 @@ final class AgentMachine {
         static final Verdict NOT_APPLICABLE = new Verdict(null, null, false);
     }
 
+    /**
+     * SPRINT_UXR_POLISH_UAT_1113/PU-18: каноническое имя машины — trim + нижний регистр.
+     * Заголовок писался как пришёл, и одна машина стала двумя объектами (LorCetus/LORCETUS).
+     * Канонизируется на каждом входе: заголовок, заведение, доступ, окно активности, учётка.
+     */
+    static String canon(String machineId) {
+        return machineId == null ? null : machineId.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
     static Verdict judge(ChangeAuthor author, String rawHeader, boolean required) {
         if (author == null || !ChangeAuthor.KIND_AGENT.equals(author.kind())) return Verdict.NOT_APPLICABLE;
         String v = rawHeader == null ? "" : rawHeader.trim();
-        if (!v.isEmpty() && SAFE.matcher(v).matches()) return new Verdict(v, null, false);
+        if (!v.isEmpty() && SAFE.matcher(v).matches()) return new Verdict(canon(v), null, false);
         String warning = v.isEmpty() ? WARN_MISSING
             : "машина не указана: значение " + HEADER + " недопустимо (ожидается [A-Za-z0-9_.-], до 64 символов)"
               + " — в графе действие не привязано к машине.";

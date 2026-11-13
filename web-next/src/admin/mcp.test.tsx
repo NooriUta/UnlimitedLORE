@@ -59,6 +59,17 @@ describe('модель MCP-профилей', () => {
     expect(rows[0]).toMatchObject({ calls: 2618, failures: 7, health: 'live' });
   });
 
+  // SPRINT_UXR_POLISH_UAT_1113/PU-04: срез отдаёт last_seen/last_failure из TIMESERIES
+  // ISO-строкой; читать их числом = «вызовов не видели» при 31 512 вызовах.
+  it('last_seen/last_failure ISO-строкой — профиль live, моменты числом', () => {
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const rows = mergeMcp(
+      [{ caller: 'full', calls: 31512, last_seen: iso(NOW - 5 * 60_000) }],
+      [{ caller: 'full', failures: 208, last_failure: iso(NOW - HOUR) }],
+      NOW);
+    expect(rows[0]).toMatchObject({ health: 'live', lastSeen: NOW - 5 * 60_000, lastFailure: NOW - HOUR });
+  });
+
   it('молчит дольше порога — «не видели» (stale), а не «здоров»', () => {
     const rows = mergeMcp(CONN, [], NOW);
     expect(rows.find(r => r.caller === 'pm')?.health).toBe('stale');
