@@ -10,7 +10,10 @@ name: LORE migrate live check (prod snapshot)
 # конце прогона всегда.
 #
 # Когда:
-#   • pull_request, меняющий код схемы (пути ниже), — автоматически;
+#   • КАЖДЫЙ pull_request — статус есть всегда, чтобы его можно было сделать
+#     обязательным в защите main (гейт preprod → main). Нужна ли проверка, решает
+#     .github/scripts/migcheck-needed.sh: схема и инструмент не менялись — джоб
+#     зеленеет за секунды с пометкой «проверять нечего»;
 #   • вручную — на любую ветку/коммит (например, PR, открытый до появления
 #     этого workflow): ref = ветка или SHA проверяемого кода.
 # Убыль записей, которую миграция делает НАМЕРЕННО (слияние дублей), объявляется
@@ -19,14 +22,6 @@ name: LORE migrate live check (prod snapshot)
 on:
   pull_request:
     branches: [ "develop", "preprod", "main" ]
-    paths:
-      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrations.java'
-      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrationRunner.java'
-      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaInitializer.java'
-      - 'backend/db-schema/**'
-      - 'scripts/migrate-live-check.sh'
-      - 'scripts/migrate-live-check/**'
-      - '.github/workflows/lore-migrate-live-check.yml'
   workflow_dispatch:
     inputs:
       ref:
@@ -72,32 +67,55 @@ jobs:
       # Инструмент проверки — из ветки workflow; проверяемый код — отдельно в
       # under-test/ (для PR — его голова, для ручного запуска — ref).
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # дифф base...HEAD для migcheck-needed.sh
+
+      - name: Нужна ли проверка (менялись схема или инструмент)
+        id: need
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/migcheck-needed.sh
 
       - uses: actions/checkout@v7
+        if: steps.need.outputs.run == 'true'
         with:
           ref: ${{ github.event.pull_request.head.sha || inputs.ref }}
           path: under-test
 
+      # Прежний код — то, что сейчас на проде (main): эталон ответов до накатки и
+      # проверка «прежний образ на новой схеме» (откат кода без отката базы).
+      - uses: actions/checkout@v7
+        if: steps.need.outputs.run == 'true'
+        with:
+          ref: main
+          path: base
+
       - name: SSH-ключ CD и закреплённый ключ хоста
+        if: steps.need.outputs.run == 'true'
         env:
           LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
         run: bash .github/scripts/lore-host-deploy.sh ssh
 
       - name: Resolve a working proxy address (or drop it)
+        if: steps.need.outputs.run == 'true'
         run: bash .github/scripts/resolve-proxy.sh
 
       - name: Use Nexus mirror (сборка образа)
+        if: steps.need.outputs.run == 'true'
         run: bash .github/scripts/use-nexus.sh
 
       - name: Накатка на копии прода и сверка данных
+        if: steps.need.outputs.run == 'true'
         env:
           SRC_DIR: under-test
+          BASE_SRC_DIR: base
         run: bash scripts/migrate-live-check.sh
 
       # upload-artifact@v4 на Forgejo не работает (db-regression.yml); v3 — на
       # старой библиотеке артефактов. Отчёт продублирован в сводку шага выше.
       - name: Отчёт — артефактом
-        if: always()
+        if: always() && steps.need.outputs.run == 'true'
         continue-on-error: true
         uses: actions/upload-artifact@v3
         with:
