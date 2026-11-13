@@ -24,7 +24,10 @@ const PF = {
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
-const fake = (body: unknown, status = 200) => vi.fn(async (url: string) => {
+// delayMs: ответ preflight приходит позже — секция adm-pf уже нарисована со скелетоном
+// (SPRINT_UXR_S11_TEST_OPT/S11-SECRET-ROTATION-RACE — гонка «findBy контейнера → getBy содержимого»).
+const fake = (body: unknown, status = 200, delayMs = 0) => vi.fn(async (url: string) => {
+  if (url.startsWith('/lore/kc/auth-preflight') && delayMs) await new Promise(r => setTimeout(r, delayMs));
   if (url.startsWith('/lore/kc/auth-preflight')) return json(body, status);
   return json({ rows: [] });
 }) as unknown as typeof fetch;
@@ -56,9 +59,10 @@ describe('S7B-31 · модель preflight', () => {
 
 describe('S7B-31 · карточки preflight', () => {
   it('четыре проверки карточками; включать нельзя — подсказка сервера', async () => {
-    mount(fake({ ...PF, admin_count: 0, can_enable_auth: false, hint: 'сначала заведите admin' }));
+    mount(fake({ ...PF, admin_count: 0, can_enable_auth: false, hint: 'сначала заведите admin' }, 200, 30));
     const box = await screen.findByTestId('adm-pf');
-    expect(within(box).getByTestId('adm-pf-admins').getAttribute('data-state')).toBe('fail');
+    // секция рисуется сразу со скелетоном — ждём карточку, а не контейнер
+    expect((await within(box).findByTestId('adm-pf-admins')).getAttribute('data-state')).toBe('fail');
     expect(within(box).getByTestId('adm-pf-enable').getAttribute('data-state')).toBe('fail');
     expect(within(box).getByTestId('adm-pf-enable').textContent).toMatch(/сначала заведите admin/);
     expect(within(box).getByTestId('adm-pf-kc').getAttribute('data-state')).toBe('ok');
