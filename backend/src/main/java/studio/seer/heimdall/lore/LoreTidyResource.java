@@ -180,6 +180,9 @@ public class LoreTidyResource extends LoreResourceBase {
         Set<String> hist = new HashSet<>(t.histFields());
         hist.addAll(t.histOnly());
         for (String f : hist) sql.append(", out('HAS_STATE')[valid_to IS NULL].").append(f).append("[0] AS h_").append(f);
+        // Задача без открытой версии: task/edit отказывает NO_OPEN_STATE (на препроде 13.11) — не пишем автоматом.
+        boolean needsOpen = "KnowTask".equals(t.type());
+        if (needsOpen) sql.append(", out('HAS_STATE')[valid_to IS NULL].size() AS open_n");
         sql.append(" FROM ").append(t.type());
         Map<String, Object> params = new HashMap<>();
         if (onlyId != null) {
@@ -192,17 +195,18 @@ public class LoreTidyResource extends LoreResourceBase {
             if (rawId == null && "KnowRelease".equals(t.type())) rawId = r.get("rid");
             if (rawId == null) continue;
             String id = String.valueOf(rawId);
+            boolean writable = t.writable() && !(needsOpen && r.get("open_n") instanceof Number n && n.intValue() == 0);
             for (String f : t.fields()) {
                 String v = textOf(r.get("v_" + f));
                 String h = t.histFields().contains(f) ? textOf(r.get("h_" + f)) : null;
                 String cur = h != null ? h : v;
                 if (cur == null || cur.isBlank()) continue;
                 boolean diverged = h != null && v != null && !h.equals(v);
-                out.add(new MdRefCheck.Field(t.type(), id, f, cur, diverged, t.writable()));
+                out.add(new MdRefCheck.Field(t.type(), id, f, cur, diverged, writable));
             }
             for (String f : t.histOnly()) {
                 String h = textOf(r.get("h_" + f));
-                if (h != null && !h.isBlank()) out.add(new MdRefCheck.Field(t.type(), id, f, h, false, t.writable()));
+                if (h != null && !h.isBlank()) out.add(new MdRefCheck.Field(t.type(), id, f, h, false, writable));
             }
         }
         return out;
