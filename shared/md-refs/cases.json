@@ -1,0 +1,58 @@
+{
+  "_about": "Общие тест-примеры правил ссылок в MD (SPRINT_UXR_POLISH_UAT_1113/PU-20; основа — PU-19). Читают: backend MdRefRulesTest (Java), scripts/md-refs-fix (Python). Случаи с context=true проверяет только бэкенд — у Python-скрипта контекста нет.",
+  "ids": {
+    "task": ["SPRINT_A/PU-15", "SPRINT_A/PU-09", "SPRINT_B/PU-15", "SPRINT_B/ONLY-1", "SPRINT_A/MD-READ-PEEK", "SPRINT_C/AL-1", "SPRINT_D/AL-1", "SPRINT_E/AL-1", "SPRINT_C/GP-1", "SPRINT_D/GP-1", "SPRINT_D/X-7", "SPRINT_E/Y-8"],
+    "sprint": ["SPRINT_A", "SPRINT_B", "SPRINT_C", "SPRINT_D", "SPRINT_E"],
+    "adr": ["ADR-LORE-050"],
+    "decision": ["D-2026-LORE-MD-REF-PASTE-CHECK", "ADR-LORE-033-D14"],
+    "spec": ["SPEC-LORE-MD-INLINE-REF"],
+    "doc": ["claude_rules_global"],
+    "release": ["v1.17.17"],
+    "uc": ["UC-GIT-PR"],
+    "component": ["FORSETI"]
+  },
+  "context": {
+    "sprint_projects": {"SPRINT_C": ["NooriUta/UnlimitedLORE"], "SPRINT_D": ["AIDA/aida-root"], "SPRINT_E": ["NooriUta/UnlimitedLORE"]},
+    "sprint_components": {"SPRINT_C": ["OMILORE"], "SPRINT_D": ["HOUND"], "SPRINT_E": ["FORSETI"]},
+    "task_components": {}
+  },
+  "cases": [
+    {"name": "по виду: задача", "text": "сделано в SPRINT_A/PU-09.", "owner_sprint": "SPRINT_A", "expect": "сделано в [[task:SPRINT_A/PU-09]].", "rules": ["shape"]},
+    {"name": "по виду: спринт и семейства", "text": "SPRINT_B и ADR-LORE-050, SPEC-LORE-MD-INLINE-REF", "expect": "[[sprint:SPRINT_B]] и [[adr:ADR-LORE-050]], [[spec:SPEC-LORE-MD-INLINE-REF]]"},
+    {"name": "тип:ID", "text": "см. task:SPRINT_A/PU-09 и release:v1.17.17.", "expect": "см. [[task:SPRINT_A/PU-09]] и [[release:v1.17.17]]."},
+    {"name": "тип в любом регистре", "text": "ADR:ADR-LORE-050", "expect": "[[adr:ADR-LORE-050]]"},
+    {"name": "одинокий код своего спринта", "text": "после PU-09 готово", "owner_sprint": "SPRINT_A", "expect": "после [[task:SPRINT_A/PU-09]] готово", "rules": ["lone_own_sprint"]},
+    {"name": "одинокий код, единственный в базе (без контекста — правило lone_unique)", "text": "см. ONLY-1", "owner_sprint": "SPRINT_A", "expect": "см. [[task:SPRINT_B/ONLY-1]]", "rules": ["lone_unique"]},
+    {"name": "одинокий код в [[…]] своего спринта", "text": "[[PU-09]]", "owner_sprint": "SPRINT_A", "expect": "[[task:SPRINT_A/PU-09]]"},
+    {"name": "ID целиком в кавычках", "text": "правило `ADR-LORE-050` гласит", "expect": "правило [[adr:ADR-LORE-050]] гласит"},
+    {"name": "одинокий код целиком в кавычках", "text": "`PU-09`", "owner_sprint": "SPRINT_A", "expect": "[[task:SPRINT_A/PU-09]]"},
+    {"name": "вид врёт: решение ADR-…-Dn в [[…]]", "text": "реализует [[ADR-LORE-033-D14]]", "expect": "реализует [[decision:ADR-LORE-033-D14]]", "rules": ["wrong_type"]},
+    {"name": "вид врёт: решение ADR-…-Dn голое", "text": "реализует ADR-LORE-033-D14", "expect": "реализует [[decision:ADR-LORE-033-D14]]"},
+    {"name": "экранированная wiki", "text": "см. \\[\\[SPRINT_A/PU-09\\]\\]", "expect": "см. [[task:SPRINT_A/PU-09]]", "rules": ["escaped"]},
+    {"name": "URL экрана, голый", "text": "http://192.168.3.131:4400/lore?section=sprints&passport=SPRINT_B", "expect": "[[sprint:SPRINT_B]]", "rules": ["lore_url"]},
+    {"name": "URL экрана, подпись = ID", "text": "[SPRINT_A/PU-09](http://localhost:4400/lore?section=tasks&passport=SPRINT_A/PU-09)", "expect": "[[task:SPRINT_A/PU-09]]"},
+    {"name": "URL экрана, open=тип:ID", "text": "https://new.lore.example/?open=adr:ADR-LORE-050", "expect": "[[adr:ADR-LORE-050]]"},
+
+    {"name": "не трогать: канон", "text": "[[ADR-LORE-050]] и [[task:SPRINT_A/PU-09]] и [[claude_rules_global]]", "owner_sprint": "SPRINT_A", "expect": "[[ADR-LORE-050]] и [[task:SPRINT_A/PU-09]] и [[claude_rules_global]]"},
+    {"name": "не трогать: чужой код у нескольких задач, контекста нет", "text": "PU-15 где-то", "owner_sprint": "SPRINT_X", "expect": "PU-15 где-то", "issues": ["ambiguous_code"]},
+    {"name": "не трогать: битые", "text": "ADR-LORE-999 и [[SPEC-NOPE]] и task:SPRINT_A/NOPE-1", "expect": "ADR-LORE-999 и [[SPEC-NOPE]] и task:SPRINT_A/NOPE-1", "issues": ["no_record", "broken", "broken"]},
+    {"name": "не трогать: блок кода", "text": "```\nSPRINT_A/PU-09 ADR-LORE-050\n```", "expect": "```\nSPRINT_A/PU-09 ADR-LORE-050\n```", "issues": []},
+    {"name": "не трогать: кавычки не целиком", "text": "`task_new(sprint_id=SPRINT_A, task_id=PU-09)`", "expect": "`task_new(sprint_id=SPRINT_A, task_id=PU-09)`", "issues": ["backtick"]},
+    {"name": "не трогать: внешние ссылки", "text": "https://github.com/NooriUta/AIDA/pull/12 и [#12](https://github.com/x/y/pull/12)", "expect": "https://github.com/NooriUta/AIDA/pull/12 и [#12](https://github.com/x/y/pull/12)", "issues": []},
+    {"name": "не трогать: ID в подписи внешней ссылки", "text": "[SPRINT_A/PU-09](https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/5)", "expect": "[SPRINT_A/PU-09](https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/5)", "issues": []},
+    {"name": "не трогать: URL экрана с другой подписью", "text": "[тут](http://localhost:4400/lore?passport=SPRINT_B)", "expect": "[тут](http://localhost:4400/lore?passport=SPRINT_B)", "issues": ["lore_url"]},
+    {"name": "не ссылки: UTF-8, время, путь, почта", "text": "UTF-8, ISO-8601, 10:35, C:/x/y.md, почта a@ADR-LORE-050.ru", "expect": "UTF-8, ISO-8601, 10:35, C:/x/y.md, почта a@ADR-LORE-050.ru", "issues": []},
+    {"name": "не трогать: ID внутри чужого URL", "text": "https://example.com/SPRINT_A/PU-09", "expect": "https://example.com/SPRINT_A/PU-09", "issues": []},
+    {"name": "не трогать: [[…]] неизвестного вида", "text": "[[foo:BAR]] и [[NOT-A-THING]]", "expect": "[[foo:BAR]] и [[NOT-A-THING]]", "issues": ["unknown", "unknown"]},
+    {"name": "CRLF сохраняется", "text": "a SPRINT_B\r\nb", "expect": "a [[sprint:SPRINT_B]]\r\nb"},
+    {"name": "идемпотентность", "text": "a SPRINT_A/PU-09 b `ADR-LORE-050` c PU-09 d \\[\\[SPRINT_B\\]\\] e ADR-LORE-033-D14", "owner_sprint": "SPRINT_A", "idempotent": true},
+    {"name": "выключенное правило оставляет место и даёт подсказку", "text": "см. ONLY-1", "owner_sprint": "SPRINT_A", "disabled": ["lone_unique"], "expect": "см. ONLY-1", "issues": ["ambiguous_code"]},
+
+    {"name": "контекст: код у трёх задач, проект+компонент оставляют одну", "context": true, "text": "см. AL-1", "rec_projects": ["NooriUta/UnlimitedLORE"], "rec_components": ["OMILORE"], "expect": "см. [[task:SPRINT_C/AL-1]]", "rules": ["lone_ctx"]},
+    {"name": "контекст: только проект оставляет одну", "context": true, "text": "см. GP-1", "rec_projects": ["AIDA/aida-root"], "rec_components": [], "expect": "см. [[task:SPRINT_D/GP-1]]", "rules": ["lone_ctx"]},
+    {"name": "контекст: только компонент — подсказка, не автопочинка", "context": true, "text": "см. GP-1", "rec_projects": [], "rec_components": ["HOUND"], "expect": "см. GP-1", "issues": ["ambiguous_code"], "suggest": ["SPRINT_D/GP-1"]},
+    {"name": "контекст: проект сужает до двух — подсказка с двумя", "context": true, "text": "см. AL-1", "rec_projects": ["NooriUta/UnlimitedLORE"], "rec_components": [], "expect": "см. AL-1", "issues": ["ambiguous_code"], "suggest": ["SPRINT_C/AL-1", "SPRINT_E/AL-1"]},
+    {"name": "контекст: единственный в базе и подтверждён — включён по умолчанию", "context": true, "text": "см. X-7", "rec_projects": ["AIDA/aida-root"], "rec_components": [], "expect": "см. [[task:SPRINT_D/X-7]]", "rules": ["lone_unique_ctx"]},
+    {"name": "контекст: единственный в базе без подтверждения — выключен, подсказка", "context": true, "text": "см. Y-8", "rec_projects": ["AIDA/aida-root"], "rec_components": [], "expect": "см. Y-8", "issues": ["ambiguous_code"], "suggest": ["SPRINT_E/Y-8"]}
+  ]
+}

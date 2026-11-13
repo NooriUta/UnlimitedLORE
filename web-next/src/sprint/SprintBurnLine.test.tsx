@@ -8,7 +8,7 @@
 // График по обрезанной выдаче врёт тише, чем ошибка, поэтому «неполно» —
 // отдельное видимое состояние, а не мелкий шрифт.
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { SprintBurnLine } from './SprintBurnLine';
 
 const SPRINT = 'SPRINT_X';
@@ -58,5 +58,40 @@ describe('S4-36 · burn-down строкой в паспорте спринта',
     render(<SprintBurnLine sprintId={SPRINT} load={loader({ task_created_dates: { rows: [] }, task_done_dates: { rows: [] } })} />);
     expect(await screen.findByTestId('sprint-burn-empty')).toBeTruthy();
     expect(screen.queryByTestId('sprint-burn')).toBeNull();
+  });
+});
+
+// SPRINT_UXR_POLISH_UAT_1113/PU-10 (K2-VIEW-TARGET, допущение А3 «первым — спринт»): у спринта со сроком
+// строка несёт вердикт словами, а «Цель к сроку» раскрывает график со сгоранием, планом,
+// прогнозом и вертикалью срока. Строка цифр (S4-36) остаётся как есть.
+describe('PU-10 · «Цель к сроку» в паспорте спринта', () => {
+  // A закрыта 03.11, B открыта: за окно скорость 1 задача / 2 дня → B к ~05.11.
+  const body = { task_created_dates: { rows: created }, task_done_dates: { rows: done } };
+  it('срок далеко — вердикт «Успеваем» прямо в строке', async () => {
+    render(<SprintBurnLine sprintId={SPRINT} deadline="2026-12-31" today="2026-11-03" load={loader(body)} />);
+    const v = await screen.findByTestId('sprint-burn-verdict');
+    expect(v.textContent).toMatch(/Успеваем/);
+    expect(v.getAttribute('data-tone')).toBe('ok');
+  });
+  it('срок прошёл — вердикт «Не успеваем на N дн.»', async () => {
+    render(<SprintBurnLine sprintId={SPRINT} deadline="2026-11-02" today="2026-11-03" load={loader(body)} />);
+    const v = await screen.findByTestId('sprint-burn-verdict');
+    expect(v.textContent).toMatch(/Не успеваем на \d+ дн\./);
+  });
+  it('«Цель к сроку» раскрывает график с вертикалью срока и прогнозом', async () => {
+    const { container } = render(<SprintBurnLine sprintId={SPRINT} deadline="2026-12-31" today="2026-11-03" load={loader(body)} />);
+    const btn = await screen.findByRole('button', { name: /Цель к сроку/ });
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(btn);
+    expect(container.querySelector('[data-series="deadline"]')).toBeTruthy();
+    expect(container.querySelector('[data-series="forecast"]')).toBeTruthy();
+    // Заголовок графика не повторяет строку: «осталось N из M» уже сказано цифрами выше.
+    expect(container.querySelector('.sk-burn__head')).toBeNull();
+  });
+  it('срока нет — вердикта нет и об этом сказано словами, а не молчанием', async () => {
+    render(<SprintBurnLine sprintId={SPRINT} deadline={null} today="2026-11-03" load={loader(body)} />);
+    await screen.findByTestId('sprint-burn');
+    expect(screen.queryByTestId('sprint-burn-verdict')).toBeNull();
+    expect(screen.getByTestId('sprint-burn-no-deadline').textContent).toMatch(/срок/i);
   });
 });

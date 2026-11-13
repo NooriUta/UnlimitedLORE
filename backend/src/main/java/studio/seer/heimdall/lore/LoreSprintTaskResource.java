@@ -567,7 +567,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         final ChangeAuthor by = changeAuthor();             // S2-12: автор обеих версий
         try {
             List<Map<String, Object>> src = ingestService.queryPublic(
-                "SELECT task_id, title, task_type, author_agent, executor_agent, reviewer_agent, " +
+                "SELECT task_id, title, task_type, " +
                 "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
                 "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
                 "out('TAGGED_WITH').component_id AS components, " +
@@ -584,13 +584,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             String title    = (String) s.get("title");
             String note     = (String) s.get("note_md");
             Object effort   = s.get("effort_days");
-            // ADR-LORE-013 amendment: task_type (T00) + author/executor/reviewer_agent
-            // (T05) are plain vertex fields on KnowTask (not Hist) — carry across the
-            // cancel+recreate the same way title/note_md do, no SCD2 involved.
+            // ADR-LORE-013 amendment: task_type (T00) is a plain vertex field — carried like title.
+            // PU-17: роли — НЕ строки вершины (после TR-05 они пусты), а рёбра ROLE_HELD_BY;
+            // их переносит roleService.copyOpenRoles после создания новой задачи.
             String taskType = (String) s.get("task_type");
-            String author   = (String) s.get("author_agent");
-            String executor = (String) s.get("executor_agent");
-            String reviewer = (String) s.get("reviewer_agent");
             List<?> comps = s.get("components") instanceof List<?> l ? l : List.of();
             final String carriedStatus = carriedStatus(s.get("status_raw"));
 
@@ -610,7 +607,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // Create the new task (mirrors createTask's atomic sqlscript).
             StringBuilder script = new StringBuilder()
                 .append("INSERT INTO KnowTask SET task_uid=:uid, task_id=:tid, title=:title, note_md=:note, order_index=:oi, src='manual', ")
-                .append("task_type=:tt, author_agent=:author, executor_agent=:executor, reviewer_agent=:reviewer;")
+                .append("task_type=:tt;")
                 .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowSprint WHERE sprint_id=:sid);")
                 .append("INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw=:st, valid_from=:now, note_md=:note")
                 .append(effort != null ? ", effort_days=:eff" : "")
@@ -618,8 +615,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);");
             Map<String, Object> p = mapOfNullable("uid", newUid, "tid", tid, "title", title,
                 "note", note, "oi", order, "sid", targetSid, "nsid", nsid, "now", now,
-                "tt", taskType, "author", author, "executor", executor, "reviewer", reviewer,
-                "st", carriedStatus);
+                "tt", taskType, "st", carriedStatus);
             if (effort != null) p.put("eff", effort);
             by.bind(p);
             for (Object c : comps) {
@@ -630,6 +626,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             }
             writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p)).await().indefinitely();
+            // PU-17: роли переезжают рёбрами — до отмены источника, чтобы сбой не оставил задачу без ролей молча.
+            final int rolesMoved = roleService.copyOpenRoles(oldUid, newUid);
 
             // Cancel the source — reuse the /lore/status flip + #88 note carry-forward.
             Map<String, Object> carry = statusResource.readTaskHistCarryFields(oldUid).await().indefinitely();
@@ -646,7 +644,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             boolean tidChanged = !tid.equals(s.get("task_id"));
             return noStore(Response.ok(Map.of("ok", true,
                 "old_task_uid", oldUid, "new_task_uid", newUid,
-                "task_id_changed", tidChanged, "new_task_id", tid, "status", carriedStatus)));
+                "task_id_changed", tidChanged, "new_task_id", tid, "status", carriedStatus,
+                "roles_moved", rolesMoved)));
         } catch (Exception e) {
             LOG.warnf("[LORE TASK MOVE] %s → %s: %s", oldUid, targetSid, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

@@ -293,11 +293,11 @@ export function createLiveS2Client(opts: LiveS2Options = {}): S2Client {
 
   return {
     async backlinks() {
-      // У графа паспорта свой живой путь (record/backlinksGraph.ts): он ходит
-      // на /lore/backlinks сам и разбирает ответ сервера (edge/count/ref_id),
-      // который не совпадает с формой контракта. Дублировать разбор здесь
-      // значило бы иметь две правды; пустой ответ вместо данных — хуже отказа.
-      throw new Error('backlinks: боевой разбор живёт в record/backlinksGraph.ts — этот клиент его не дублирует');
+      // У графа паспорта свой живой путь (record/loreGraph.ts, GET /lore/graph). Прежний
+      // record/backlinksGraph.ts никто не импортировал — удалён 13.11.2026
+      // (SPRINT_UXR_S12_KIT3_VOLVA_GRAPH/S5-10). Дублировать разбор здесь значило бы иметь
+      // две правды; пустой ответ вместо данных — хуже отказа.
+      throw new Error('backlinks: граф паспорта живёт в record/loreGraph.ts (GET /lore/graph) — этот клиент его не дублирует');
     },
 
     async history() {

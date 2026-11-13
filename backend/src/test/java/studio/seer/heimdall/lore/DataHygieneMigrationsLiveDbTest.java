@@ -69,7 +69,7 @@ class DataHygieneMigrationsLiveDbTest {
     LoreSchemaMigrationRunner runner;
 
     private static List<Map<String, Object>> sql(String command) throws Exception {
-        HttpClient http = HttpClient.newHttpClient();
+        HttpClient http = LiveDbHttp.CLIENT;
         String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", command).encode();
         HttpRequest req = HttpRequest.newBuilder(
                 URI.create(LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))

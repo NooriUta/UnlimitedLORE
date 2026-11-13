@@ -110,7 +110,10 @@ describe('фасет «Релиз» — поле-массив, четыре ус
   it('ячейка поля-массива — значения с иконкой, а не JSON; пусто — прочерк', () => {
     const { container } = render(<ListView config={cfg} data={data} urlState={false} valueIcon={relIcon} />);
     const cell = container.querySelector('[data-record-id="SPRINT_B"] .sk-list__c-fields-release-ids')!;
-    expect(cell.textContent).toBe('v1.2.0v1.3.0');
+    // PU-07: в строке одно значение и «+N», остальное — по нажатию на месте.
+    expect(cell.textContent).toBe('v1.2.0+1');
+    fireEvent.click(cell.querySelector('.sk-list__valmore')!);
+    expect(cell.textContent).toBe('v1.2.0v1.3.0−');
     expect(cell.querySelectorAll('[data-icon="open-book"]')).toHaveLength(2);
     expect(container.querySelector('[data-record-id="SPRINT_D"] .sk-list__c-fields-release-ids')!.textContent).toBe('—');
   });

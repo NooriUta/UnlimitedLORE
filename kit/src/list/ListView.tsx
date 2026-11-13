@@ -64,6 +64,7 @@ import { EmptyState, LoadError } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
 // тянуть за собой меню ради одного хука).
 import { useNarrow } from '../core/narrow';
+import { useFacetFold } from './facetFold';
 import { ProgressCell } from './progress';
 import { SumCell, colKey } from './sum';
 import { FreshCell, freshThresholdsFor, useMinuteNow } from './fresh';
@@ -489,6 +490,11 @@ function Title({ r, href, onOpen }: { r: KitRecord } & Opener) {
  */
 const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title: 220 };
 
+/** Место фильтра по дате в ряду фасетов (PU-12). Ключ оси так не называется: оси — поля записи. */
+const DATE_SLOT = '@kit:date';
+/** PU-07: сколько значений многозначной ячейки видно в строке; остальное — «+N». */
+const CELL_VALUES_INLINE = 1;
+
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
@@ -593,6 +599,8 @@ export function ListView({
   const [groupFind, setGroupFind] = useState('');
   /** Телефон: раскрыта ли полоса фильтра, группировки и порядка (S4-MOBILE-COMPARE). Местное, как «+N». */
   const [ctlOpen, setCtlOpen] = useState(false);
+  // PU-07: раскрытые многозначные ячейки («+N» нажат) — «записьколонка». Местное, не в адресе.
+  const [cellsOpen, setCellsOpen] = useState<Set<string>>(() => new Set());
   const ctlId = useId();
   /** Раскрыта ли свёртка «+N» в строке условий (S9-12). Местное, не в адресе. */
   const [chipsOpen, setChipsOpen] = useState(false);
@@ -702,6 +710,12 @@ export function ListView({
   const activeQuick = quick.find(q => q.id === state.quick) ?? null;
   const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
   const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
+
+  // PU-12: ряд фасетов в одну строку с «+N» — общий хук (facetFold.tsx), тот же у ControlBar.
+  // Фильтр по дате — такое же место в ряду, как фасет оси: не влез и не задан — тоже в «+N».
+  const facetSlots = useMemo(() => (dateFilter ? [...filterKeys, DATE_SLOT] : filterKeys), [filterKeys, dateFilter]);
+  const facets = useFacetFold(facetSlots, k => (k === DATE_SLOT ? dateOn : k in filterSet.fields), { narrow, lang: lang0 });
+  const facetShown = facets.shown;
   const pageCounts = useMemo(() => quickCounts(pool, quick, []), [pool, quick]);
   /**
    * Чем выдача сужена СЕЙЧАС (S9-01). Источник считает ось по выдаче без
@@ -1354,11 +1368,32 @@ export function ListView({
         </span>
       );
     }
+    // PU-07: многозначная ячейка — в одну строку, первое значение и «+N». Высота строки списка
+    // не зависит от числа значений (задача на 11 релизах была в 5–8 строк ростом). Спрятанное не
+    // теряется: полный список — в подсказке «+N», нажатие раскрывает его на месте.
+    const title = (v: string) => labelOf.get(v) ?? labels.valueTitle(key, v);
+    const cellKey = `${r.id}${key}`;
+    const open = cellsOpen.has(cellKey);
+    const shownVs = vs.length > CELL_VALUES_INLINE && !open ? vs.slice(0, CELL_VALUES_INLINE) : vs;
     return (
-      <span className="sk-list__vals">
-        {vs.map(v => (
-          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{labelOf.get(v) ?? labels.valueTitle(key, v)}</span></span>
+      <span className={`sk-list__vals${vs.length > CELL_VALUES_INLINE && !open ? ' is-folded' : ''}`}>
+        {shownVs.map(v => (
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{title(v)}</span></span>
         ))}
+        {vs.length > CELL_VALUES_INLINE && (
+          <button
+            type="button"
+            className="sk-list__valmore"
+            aria-expanded={open}
+            title={vs.map(title).join(', ')}
+            onClick={e => {
+              e.stopPropagation();
+              setCellsOpen(prev => { const n = new Set(prev); if (n.has(cellKey)) n.delete(cellKey); else n.add(cellKey); return n; });
+            }}
+          >
+            {open ? '−' : `+${vs.length - CELL_VALUES_INLINE}`}
+          </button>
+        )}
       </span>
     );
   };
@@ -2291,7 +2326,7 @@ export function ListView({
           <span aria-hidden="true">{ctlOpen ? '▴' : '▾'}</span>
         </button>
       )}
-      <div id={ctlId} role="group" aria-label={t('kit.list.filters')} className={`sk-list__controls${narrow && !ctlOpen ? ' is-folded' : ''}`} data-testid="kit-list-controls">
+      <div ref={facets.ref} id={ctlId} role="group" aria-label={t('kit.list.filters')} className={`sk-list__controls${narrow && !ctlOpen ? ' is-folded' : ''}`} data-testid="kit-list-controls">
         {!head && viewsSwitch}
         {!head && viewMenu}
         <fieldset className="sk-list__seg" data-seg="filter">
@@ -2306,7 +2341,7 @@ export function ListView({
             value={state.text}
             onChange={e => update({ text: e.target.value })}
           />
-          {filterKeys.map(k => {
+          {facetShown.filter(k => k !== DATE_SLOT).map(k => {
             // Числа оси: у источника — по всей выдаче, иначе по загруженной
             // странице; «не посчитали» — «?» вместо чисел (S9-01). Значения
             // при «?» остаются страничными: выбрать значение всё равно надо,
@@ -2335,7 +2370,7 @@ export function ListView({
               />
             );
           })}
-          {dateFilter && (
+          {dateFilter && facetShown.includes(DATE_SLOT) && (
             <DateRangeFilter
               title={dateFilter.title}
               value={dateFilter.value}
@@ -2348,6 +2383,7 @@ export function ListView({
               unavailable={dateFilter.unavailable}
             />
           )}
+          {facets.more}
         </fieldset>
         {/* Лента получает ТУ ЖЕ строку управления (K2-FEED-VIEW §1): просьба
             была именно про «фильтровать и группировать наверху, как в
