@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LoreDictSameAsStoredTest {
 
     private static LoreDictResource.DictEntryRequest req(String label, Integer sort, Boolean active) {
-        return new LoreDictResource.DictEntryRequest("area", "x", label, null, null, null, sort, active, null);
+        return new LoreDictResource.DictEntryRequest("area", "x", label, null, null, null, sort, active, null, null);
     }
 
     private static Map<String, Object> stored(String label, Object sort, Object active) {

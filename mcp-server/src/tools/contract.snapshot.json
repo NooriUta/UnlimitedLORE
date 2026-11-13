@@ -767,6 +767,7 @@
       "icon": "string?",
       "is_active": "boolean?",
       "is_extensible": "boolean?",
+      "kind": "enum(service|tech)?",
       "label_en": "string?",
       "label_ru": "string?",
       "sort_order": "number?"

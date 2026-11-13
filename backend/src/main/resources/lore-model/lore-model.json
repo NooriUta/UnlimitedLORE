@@ -2968,6 +2968,11 @@
       "kind" : "number",
       "group" : "props"
     }, {
+      "key" : "kind",
+      "label" : "Вид",
+      "kind" : "text",
+      "group" : "props"
+    }, {
       "key" : "is_active",
       "label" : "Активен",
       "kind" : "bool",

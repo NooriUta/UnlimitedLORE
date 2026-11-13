@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "63128bde3e9d0caa",
+  "version" : "fd591c6efdd4695e",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -6297,6 +6297,26 @@
         "property" : "sort_order",
         "property_type" : "INTEGER",
         "source" : "CONFIRMS"
+      }, {
+        "key" : "kind",
+        "label" : "Вид",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
       }, {
         "key" : "is_active",
         "label" : "Активен",

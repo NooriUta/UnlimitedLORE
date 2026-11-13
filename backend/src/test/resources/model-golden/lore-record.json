@@ -10593,6 +10593,17 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "kind",
+        "label" : "Вид",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "is_active",
         "label" : "Активен",
         "label_key" : null,
@@ -10846,6 +10857,17 @@
         "label" : "Порядок",
         "label_key" : null,
         "kind" : "number",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "kind",
+        "label" : "Вид",
+        "label_key" : null,
+        "kind" : "text",
         "group" : "props",
         "required" : false,
         "editable" : false,
