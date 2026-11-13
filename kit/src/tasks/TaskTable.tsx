@@ -684,12 +684,13 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     ),
     executor: (
       <td key="executor" className="sk-tasks__td">
-        {draft ? input('executor', 'kit.tasks.col.executor') : val(task.executor)}
+        {/* PU-17: роль — только выбором в паспорте задачи, не свободным текстом. */}
+        {val(task.executor)}
       </td>
     ),
     reviewer: (
       <td key="reviewer" className="sk-tasks__td">
-        {draft ? input('reviewer', 'kit.tasks.col.reviewer') : val(task.reviewer)}
+        {val(task.reviewer)}
       </td>
     ),
   };

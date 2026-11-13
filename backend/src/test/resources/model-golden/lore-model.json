@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "d147160dc0569111",
+  "version" : "c81e09dd802273ab",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -1372,7 +1372,8 @@
         },
         "property" : null,
         "property_type" : null,
-        "source" : "SUPPLIES"
+        "source" : "EDGE",
+        "edge" : "ROLE_HELD_BY"
       }, {
         "key" : "executor",
         "label" : "Исполнитель",
@@ -1403,7 +1404,8 @@
         },
         "property" : null,
         "property_type" : null,
-        "source" : "SUPPLIES"
+        "source" : "EDGE",
+        "edge" : "ROLE_HELD_BY"
       }, {
         "key" : "reviewer",
         "label" : "Принимающий",
@@ -1434,7 +1436,8 @@
         },
         "property" : null,
         "property_type" : null,
-        "source" : "SUPPLIES"
+        "source" : "EDGE",
+        "edge" : "ROLE_HELD_BY"
       }, {
         "key" : "effort",
         "label" : "Оценка, чел.-дн",
