@@ -47,8 +47,10 @@ public class LoreWhoamiResource extends LoreResourceBase {
         Whoami.Token t = new Whoami.Token(true, callerKcSub() != null ? callerKcSub() : jwt.getSubject(),
             callerClientId(), AgentScopeFilter.agentScopeOf(identity), roles, exp > 0 ? exp : null);
         try {
-            Map<String, Object> body = Whoami.body(t, graph(t));
-            body.put("machine", Whoami.machineOf(t, machineHeader));
+            String machine = Whoami.machineOf(t, machineHeader);
+            Whoami.Graph g = graph(t);
+            Map<String, Object> body = Whoami.body(t, t.agentScope() != null ? Whoami.withCallMachine(g, machine) : g);
+            body.put("machine", machine);
             return noStore(Response.ok(body));
         } catch (Exception e) {
             LOG.warnf("[LORE WHOAMI] граф не прочитан: %s", e.getMessage());

@@ -2839,12 +2839,14 @@ public final class LoreSlices {
 
         // AO-01: журнал мутирующих действий — «кто создал/изменил эту сущность».
         // Код ответа в value: упавшие вызовы видны наравне с успешными.
+        // D-2026-LORE-AGENT-MACHINE-EVERYWHERE п.4: ряд — AgentActionLog, с клиентом и машиной.
         slice("agent_actions",
-            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, " +
-            "segment AS axis, value AS status FROM MetricSnapshot WHERE metric = 'lore.action'",
-            List.of(), Map.of(
+            "SELECT " + AgentActionLog.ROW_COLUMNS + " FROM AgentActionLog",
+            List.of(), new LinkedHashMap<>(Map.of(
                 "entity_id", " WHERE object_id = :entity_id",
-                "caller", " WHERE source = :caller"),
+                "caller", " WHERE source = :caller",
+                "client", " WHERE client = :client",
+                "machine", " WHERE machine = :machine")),
             " ORDER BY ts DESC LIMIT 500");
 
         // SPRINT_UXR_S7B_ADMIN/S7B-02: журнал действий АДМИНКИ — тот же ряд AO-01,
@@ -2852,12 +2854,12 @@ public final class LoreSlices {
         // агент» — axis, «что» — family + entity_id, «когда» — ts, исход — status (код
         // ответа): отказы видны наравне с успехом.
         slice("admin_actions",
-            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, " +
-            "segment AS axis, value AS status FROM MetricSnapshot WHERE metric = 'lore.action' " +
-            "AND object_type IN [" + String.join(", ", ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()) + "]",
-            List.of(), Map.of(
+            "SELECT " + AgentActionLog.ROW_COLUMNS + " FROM AgentActionLog " +
+            "WHERE object_type IN [" + String.join(", ", ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()) + "]",
+            List.of(), new LinkedHashMap<>(Map.of(
                 "family", " WHERE object_type = :family",
-                "caller", " WHERE source = :caller"),
+                "caller", " WHERE source = :caller",
+                "machine", " WHERE machine = :machine")),
             " ORDER BY ts DESC LIMIT 500");
 
         // Тот же ряд, свёрнутый до вызывающего: «кто вообще сколько зовёт»,
@@ -2885,7 +2887,7 @@ public final class LoreSlices {
         // Главной админки нужно «403 за сутки», а не «≥ 400 за всё время» (TYPED_PARAMS).
         slice("mcp_failures",
             "SELECT source AS caller, count(*) AS failures, max(ts) AS last_failure " +
-            "FROM MetricSnapshot WHERE metric = 'lore.action' AND segment = 'agent' AND value >= 400",
+            "FROM AgentActionLog WHERE segment = 'agent' AND value >= 400",
             List.of(), new LinkedHashMap<>(Map.of(
                 "caller", " WHERE source = :caller",
                 "since", " WHERE ts >= :since",
@@ -2897,8 +2899,8 @@ public final class LoreSlices {
         // admin_actions не годится (режет агентские записи по админским семействам), agent_actions —
         // тоже (500 последних действий всех исходов, отказы среди них — малая часть).
         slice("mcp_failure_rows",
-            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, value AS status " +
-            "FROM MetricSnapshot WHERE metric = 'lore.action' AND segment = 'agent' AND value >= 400",
+            "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, client, machine, value AS status " +
+            "FROM AgentActionLog WHERE segment = 'agent' AND value >= 400",
             List.of(), new LinkedHashMap<>(Map.of(
                 "caller", " WHERE source = :caller",
                 "since", " WHERE ts >= :since",

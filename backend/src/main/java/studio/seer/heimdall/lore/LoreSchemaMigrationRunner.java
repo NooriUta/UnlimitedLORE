@@ -495,6 +495,56 @@ public class LoreSchemaMigrationRunner {
         if (version == 76) backfillActorHarness();
         if (version == 77) splitSharedStates();
         if (version == 82) mergeMachineCase();
+        if (version == 86) copyLegacyActions();
+    }
+
+    /**
+     * V86 (D-2026-LORE-AGENT-MACHINE-EVERYWHERE п.4): прежние точки журнала {@code lore.action}
+     * из MetricSnapshot → AgentActionLog, клиент и машина «неизвестно». Страницами по
+     * {@link AgentActionLog#PAGE}, целыми моментами; прерванное копирование продолжается с
+     * последнего скопированного момента (RESUME_SQL), а не с нуля — ряд запечатан, дубль
+     * удалить было бы нечем. Источник не меняется. Возвращает число скопированных точек.
+     */
+    @SuppressWarnings("unchecked")
+    long copyLegacyActions() {
+        Long legacyMax = longOf(sqlRows(AgentActionLog.LEGACY_MAX_SQL, Map.of()), "ms");
+        if (legacyMax == null) {
+            LOG.infof("[V86] прежних точек lore.action нет — копировать нечего");
+            return 0;
+        }
+        Long resume = longOf(sqlRows(AgentActionLog.RESUME_SQL, Map.of("legacy_max", legacyMax)), "ms");
+        long from = resume == null ? Long.MIN_VALUE : resume;
+        long skip = resume == null ? 0 : java.util.Optional.ofNullable(
+            longOf(sqlRows(AgentActionLog.COPIED_AT_SQL, Map.of("ms", resume)), "n")).orElse(0L);
+        long copied = 0;
+        while (true) {
+            List<Map<String, Object>> raw = sqlRows(AgentActionLog.LEGACY_PAGE_SQL,
+                Map.of("from", from == Long.MIN_VALUE ? 0L : from));
+            AgentActionLog.Page page = AgentActionLog.nextPage(raw, from, skip, AgentActionLog.PAGE);
+            if (!page.rows().isEmpty()) {
+                AgentActionLog.Script s = AgentActionLog.copyScript(page.rows());
+                client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript", s.sql(), s.params()))
+                    .await().indefinitely();
+                copied += page.rows().size();
+            }
+            if (page.done()) break;
+            from = page.nextFrom();
+            skip = 0;
+        }
+        LOG.infof("[V86] скопировано точек журнала: %d (до момента %d включительно; продолжение с %s)",
+            copied, legacyMax, resume == null ? "начала" : String.valueOf(resume));
+        return copied;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> sqlRows(String sql, Map<String, Object> params) {
+        Object r = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params))
+            .await().indefinitely().result();
+        return r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+    }
+
+    private static Long longOf(List<Map<String, Object>> rows, String key) {
+        return rows.isEmpty() || !(rows.get(0).get(key) instanceof Number n) ? null : n.longValue();
     }
 
     /**

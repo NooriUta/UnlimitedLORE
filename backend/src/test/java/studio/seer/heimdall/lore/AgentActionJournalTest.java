@@ -16,7 +16,7 @@ class AgentActionJournalTest {
     @Test
     void sliceReadsTheActionSeriesNewestFirst() {
         String sql = LoreSlices.compose("agent_actions", Map.of()).sql();
-        assertTrue(sql.contains("metric = 'lore.action'"), sql);
+        assertTrue(sql.contains("FROM AgentActionLog"), sql);
         assertTrue(sql.contains("ORDER BY ts DESC"), sql);
     }
 
@@ -33,7 +33,7 @@ class AgentActionJournalTest {
     @Test
     void adminJournalReadsOnlyAdminFamilies() {
         String sql = LoreSlices.compose("admin_actions", Map.of()).sql();
-        assertTrue(sql.contains("metric = 'lore.action'"), sql);
+        assertTrue(sql.contains("FROM AgentActionLog"), sql);
         for (String f : LoreSlices.ADMIN_FAMILIES)
             assertTrue(sql.contains("'" + f + "'"), "семейство " + f + " в журнале админки: " + sql);
         assertFalse(sql.contains("'task'") || sql.contains("'sprint'"), "рабочие семейства не админка: " + sql);
