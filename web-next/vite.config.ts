@@ -34,6 +34,8 @@ export default defineConfig({
       // Граф знаний kit (GC-03): движки — peer kit, грузятся лениво; в образе у kit
       // нет node_modules, поэтому разрешаться они обязаны от web-next.
       'force-graph', 'sigma', 'graphology', 'd3-force',
+      // GC-02: «Структура» — React Flow и ELK (воркер) — тоже peer kit.
+      '@xyflow/react', 'elkjs',
     ],
   },
   // PostCSS — пустой и явный: иначе vite ищет конфиг вверх по дереву и берёт

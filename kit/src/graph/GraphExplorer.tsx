@@ -26,6 +26,13 @@ import {
 
 const ForceEngine = lazy(() => import('./ForceEngine'));
 const ObsidianEngine = lazy(() => import('./ObsidianEngine'));
+const ReactFlowEngine = lazy(() => import('./ReactFlowEngine'));
+/** Подпись и подсказка переключателя по движку. */
+const ENGINE_LABEL = {
+  force: ['kit.graph.engineForce', 'kit.graph.engineForceHint'],
+  obsidian: ['kit.graph.engineObsidian', 'kit.graph.engineObsidianHint'],
+  structure: ['kit.graph.engineStructure', 'kit.graph.engineStructureHint'],
+} as const;
 
 /** Пунктир вида связи — как в прототипе: мягкая и «к сведению» — штрих. */
 const KIND_DASH: Record<string, number[]> = { soft: [6, 4], informs: [2, 4], untyped: [1, 3] };
@@ -102,7 +109,7 @@ export function GraphExplorer(props: GraphExplorerProps) {
   const edgeColor = useCallback((e: GxEdge) => toCssColor(rels[e.rel]?.color ?? '--bd'), [rels]);
   const edgeDash = useCallback((e: GxEdge) => (e.kind ? KIND_DASH[e.kind] ?? null : null), []);
 
-  const Engine = engine === 'obsidian' ? ObsidianEngine : ForceEngine;
+  const Engine = engine === 'obsidian' ? ObsidianEngine : engine === 'structure' ? ReactFlowEngine : ForceEngine;
   const sel = selected ? nodes.find(n => n.id === selected) : undefined;
 
   return (
@@ -116,8 +123,8 @@ export function GraphExplorer(props: GraphExplorerProps) {
           <div className="sk-gx__engines" role="group" aria-label={kitT(lang, 'kit.graph.engine')} data-testid="gx-engines">
             {GX_ENGINES.map(e => (
               <Pill key={e} variant="filter" pressed={engine === e} onToggle={() => setEngine(e)}
-                title={kitT(lang, e === 'force' ? 'kit.graph.engineForceHint' : 'kit.graph.engineObsidianHint')}>
-                {kitT(lang, e === 'force' ? 'kit.graph.engineForce' : 'kit.graph.engineObsidian')}
+                title={kitT(lang, ENGINE_LABEL[e][1])}>
+                {kitT(lang, ENGINE_LABEL[e][0])}
               </Pill>
             ))}
           </div>

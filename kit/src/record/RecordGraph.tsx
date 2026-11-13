@@ -105,6 +105,10 @@ export function RecordGraph(
           title={kitT(lang, 'kit.record.graph.viewObsidianHint')}>
           {kitT(lang, 'kit.record.graph.viewObsidian')}
         </Pill>
+        <Pill variant="filter" pressed={view === 'structure'} onToggle={() => setView('structure')}
+          title={kitT(lang, 'kit.record.graph.viewStructureHint')}>
+          {kitT(lang, 'kit.record.graph.viewStructure')}
+        </Pill>
       </div>
       {structuralAround.length > 0 && (
         <Pill variant="filter" pressed={state.structural} onToggle={setStructural}
@@ -178,7 +182,7 @@ export function RecordGraph(
   };
   const clusterId = (key: string) => `cluster:${key}`;
 
-  if (view === 'force' || view === 'obsidian') {
+  if (view === 'force' || view === 'obsidian' || view === 'structure') {
     // GC-03: граф знаний — тот же круг записей (глубина и фильтры вкладки), но
     // живой физикой и без свёртки хабов: в Force/Обсидиане хаб читается сам.
     // PU-11: правило кластера одно для всех раскладок — хаб и здесь один узел (раньше в

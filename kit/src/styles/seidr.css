@@ -7123,3 +7123,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 
 /* GC-02: раскладка не уложилась в срок — плашка поверх холста, холст не прячем. */
 .sk-gx__slow { position: absolute; left: 8px; bottom: 8px; z-index: 2; max-width: calc(100% - 16px); margin: 0; padding: 4px 8px; border: 1px solid var(--wrn); border-radius: var(--r-md); background: var(--bg1); color: var(--t1); font-size: var(--fs-sm); }
+
+/* GC-02: «Структура» — React Flow на всю сцену; узел — карточка токенами, рамка цветом типа. */
+.sk-gx__rf { position: absolute; inset: 0; }
+/* Двумя классами — перебить .react-flow__node-default (белый фон, тёмный текст) из CSS React Flow. */
+.sk-gx__rf .sk-gx__rfnode { padding: 6px 10px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); color: var(--t1); font-size: var(--fs-sm); text-align: left; }
+.sk-gx__rf .sk-gx__rfnode.selected { box-shadow: 0 0 0 2px var(--acc); }
+.sk-gx__rf .react-flow__controls-button { background: var(--bg2); color: var(--t1); border-color: var(--bd); fill: var(--t1); }
