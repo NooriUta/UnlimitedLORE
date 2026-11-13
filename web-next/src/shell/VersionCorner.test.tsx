@@ -60,6 +60,14 @@ describe('S4-30 · метка версии в правом нижнем углу
     expect(await screen.findByText(/скопировать не удалось/)).toBeTruthy();
   });
 
+  it('MP2-04: подпись метки вне кнопки — тап по тексту не перехватывается копией', () => {
+    const { container } = show({ state: { kind: 'ok', server: { release: 'v1.17.7', commit: 'abc12345', builtAt: '', schema: null } }, front: 'abc12345' });
+    const txt = container.querySelector('.v2-version__text');
+    const btn = container.querySelector('.v2-version__btn');
+    expect(txt?.textContent).toContain('v1.17.7');
+    expect(btn?.textContent).not.toContain('v1.17.7');
+  });
+
   it('метка подключена к оболочке v2 — иначе её нет на экране', () => {
     const src = readFileSync(`${process.cwd()}/src/shell/V2Shell.tsx`, 'utf8');
     expect(src).toContain('VersionCorner');
