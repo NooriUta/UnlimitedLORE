@@ -142,7 +142,6 @@ const LIVE_CONTROLS = [
   ['KnowTask', 'SPRINT_AIDA_PREPROD_MIGRATION/AID-42', 'note_md', 'AID-41', 'lone_task_wiki', undefined, 'одинокий код в [[…]]'],
   ['KnowRelease', 'v1.11.0', 'description_md', 'SPRINT_LORE_ROADMAP_PER_PROJECT/RM-P18', 'backtick', undefined, 'ID в обратных кавычках'],
   ['KnowTask', 'SPRINT_GEOID_STRUCTURAL_ID/B5', 'note_md', null, 'url_lore', undefined, 'URL экрана :4400/lore?…'],
-  ['KnowTask', 'SPRINT_ARCH_HOUSEKEEPING/AHK-09', 'note_md', null, 'url_github', undefined, 'GitHub-ссылка на PR'],
   ['KnowTask', 'SPRINT_GJALLARHORN_NET_AUDIO/NA-25', 'note_md', 'SPRINT_GJALLARHORN_NET_AUDIO/NA-23', 'wiki_escaped', undefined, 'экранированная \\[\\[…\\]\\]'],
 ];
 

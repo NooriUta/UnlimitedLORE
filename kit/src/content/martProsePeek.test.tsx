@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Peek со ссылки в тексте (SPRINT_UXR_S10_SEIDR_KIT_2/S9-10, D-2026-LORE-PEEK-ONE-CARD, P1а/P2а):
-// мышь — карточка после задержки ~0,4 с, щелчок по-прежнему ведёт в паспорт; палец — тап открывает
+// мышь — карточка после задержки ~0,4 с, щелчок — та же карточка, закреплённая (PU-09); палец — тап открывает
 // нижний лист с карточкой, перехода нет. Наведение после тапа (браузер шлёт mouseover вслед за
 // касанием) карточку НЕ открывает. Выключатель — карточек по наведению нет, ссылка как ссылка.
 // Содержимое карточки — от приложения (render), kit отвечает за время, место и лист.
@@ -38,8 +38,38 @@ describe('MartProse refPeek — мышь', () => {
     act(() => { vi.advanceTimersByTime(600); });
     expect(screen.queryByText('карточка ADR-1')).toBeNull();
   });
-  it('щелчок мышью — обычный переход по ссылке, не перехвачен', () => {
+  // PU-09 (SPRINT_UXR_POLISH_UAT_1113/PU-09, MD-READ-PEEK): щелчок по ссылке в тексте открывает
+  // карточку только для чтения, текущая запись остаётся на месте; переход — из карточки
+  // («Открыть паспорт») или щелчком с модификатором (новая вкладка — как у любой ссылки).
+  it('щелчок мышью — карточка у ссылки, перехода нет (PU-09)', () => {
     const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    act(() => { link(container).dispatchEvent(ev); });
+    expect(ev.defaultPrevented).toBe(true);
+    expect(screen.getByText('карточка ADR-1')).toBeTruthy();
+  });
+  it('карточка по щелчку не закрывается, когда мышь уходит со ссылки', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    act(() => { link(container).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
+    fireEvent.mouseOut(link(container));
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(screen.getByText('карточка ADR-1')).toBeTruthy();
+  });
+  it('щелчок с Ctrl/Cmd — обычная ссылка (новая вкладка), не перехвачен', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek()} />);
+    for (const mod of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }]) {
+      const ev = new MouseEvent('click', { bubbles: true, cancelable: true, ...mod });
+      link(container).dispatchEvent(ev);
+      expect(ev.defaultPrevented).toBe(false);
+    }
+  });
+  it('выключатель наведения не отключает карточку по щелчку — это явное действие', () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek({ enabled: false })} />);
+    act(() => { link(container).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
+    expect(screen.getByText('карточка ADR-1')).toBeTruthy();
+  });
+  it("click: 'navigate' — приложение оставляет переход по щелчку", () => {
+    const { container } = render(<MartProse text={text} refHref={href} refPeek={peek({ click: 'navigate' })} />);
     const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
     link(container).dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(false);
