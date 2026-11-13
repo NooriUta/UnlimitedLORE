@@ -21,6 +21,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 vi.mock('katex/dist/katex.min.css', () => ({}));
 
 import { Editor } from '@tiptap/core';
+import { setLinkScheme } from './linkScheme';
 import {
   markdownExtensions,
   markdownRoundTrip,
@@ -28,6 +29,9 @@ import {
   plainMarkdownExtensions,
 } from './markdownRoundTrip';
 import { TipTapField } from './TipTapField';
+
+// Корпус — тела LORE со ссылками «lore:»; схему называет приложение (K-14), здесь — как у LORE.
+setLinkScheme({ protocols: ['lore'], mentionHref: id => `lore:actor/${id}` });
 
 interface Case { name: string; md: string; /** «голый» TipTap теряет этот вид */ lossyWithoutLayer?: boolean }
 

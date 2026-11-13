@@ -30,9 +30,7 @@ export const ICON_CANON = {
   commands: 'lucide:command',
   views: 'lucide:eye',
   team: null,
-  /** Разделы v1 «План» и «Знание». */
-  plan: 'lucide:milestone',
-  knowledge: 'lucide:book-open',
+  // «План» и «Знание» — разделы LORE: канон приложения (web-next/src/shell/loreIcons.ts, K-14).
   /** Быстрые фильтры. */
   quickNoRelease: null,
   quickNoDecisions: 'lucide:file-question',

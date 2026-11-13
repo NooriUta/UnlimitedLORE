@@ -22,6 +22,8 @@ export * from './tasks';
 // MD/HTML-элементы (TipTapField, MartProse, SandboxedHtmlFrame, S4-00d) — НЕ
 // отсюда, а отдельной точкой входа `@seidr/kit/content`: они тянут TipTap,
 // mermaid и bpmn-js, и экрану без MD-полей платить за них незачем.
+// Исключение — схема ссылок (K-14): без зависимостей, а ставится при старте приложения.
+export { linkScheme, resetLinkScheme, setLinkScheme, type LinkScheme } from './content/linkScheme';
 export { matchHotkey, parseHotkey, type HotkeySpec, type KeyLike } from './resilience/hotkeys';
 export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';

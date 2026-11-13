@@ -32,9 +32,11 @@ export interface ValueChipsProps {
   value: unknown;
   /** Ссылка на запись по коду чипа. Адреса знает приложение, не kit. */
   href: (id: string) => string;
+  /** Подпись источника наследования по его виду словом приложения («от спринта»); нет — нейтрально (K-14). */
+  fromLabel?: (type: string) => string | undefined;
 }
 
-export function ValueChips({ value, href }: ValueChipsProps) {
+export function ValueChips({ value, href, fromLabel }: ValueChipsProps) {
   const lang = useKitLang();
   const [open, setOpen] = useState(false);
   const all = toChips(value);
@@ -45,13 +47,11 @@ export function ValueChips({ value, href }: ValueChipsProps) {
     <span className="sk-rec-chips" data-chips-row="">
       {shown.map(c => {
         const from = c.inherited_from ?? null;
-        // Подпись источника: «от спринта» без имени спринта бесполезно —
-        // человек не поймёт, какой именно спринт принёс это значение. Тип
-        // источника незнаком — говорим о нём как есть, а не молчим.
+        // Подпись источника — словом приложения (K-14: виды записей kit не знает);
+        // рядом всегда код источника: подпись без имени бесполезна. Подписи нет —
+        // говорим о виде как есть, а не молчим.
         const kindWord = from
-          ? (from.type === 'sprint' ? kitT(lang, 'kit.chips.fromSprint')
-            : from.type === 'feature' ? kitT(lang, 'kit.chips.fromFeature')
-            : kitT(lang, 'kit.chips.fromOther', { type: from.type || '—' }))
+          ? (fromLabel?.(from.type) ?? kitT(lang, 'kit.chips.fromOther', { type: from.type || '—' }))
           : null;
         const title = from ? `${kindWord} ${from.id || '—'}`.trim() : undefined;
         return (

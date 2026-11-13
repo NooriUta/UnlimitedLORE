@@ -18,6 +18,7 @@
 // S5-07: набор расширений — общий с тестом «MD → TipTap → MD без потерь»
 // (markdownLossless.ts): [[ссылки]], формулы, «:::», комментарии, `\|` в
 // ячейках, ссылки lore: и переносы строк переживают сохранение.
+import { linkScheme } from './linkScheme';
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import Image from '@tiptap/extension-image';
 import Mention from '@tiptap/extension-mention';
@@ -27,7 +28,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
-import { detectRefTrigger, type RefTrigger } from './refTrigger';
+import { detectRefTrigger, refsInMd, type BareRefForm, type MdRef, type RefTrigger, type RefTriggerKind } from './refTrigger';
+import { Extension } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { pasteRefNodes, refCheckStates, refIdOfRaw, type RefCheckState } from './refPasteCheck';
 import { RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicker';
 import type { RefItem, RefSearch } from './RefSearchList';
 import { kitT, type KitKey } from '../i18n';
@@ -61,7 +66,7 @@ function buildMention(
       return {
         markdown: {
           serialize(state: { write: (s: string) => void }, node: { attrs: Record<string, unknown> }) {
-            state.write(`[@${node.attrs.label ?? node.attrs.id}](lore:actor/${node.attrs.id})`);
+            state.write(`[@${node.attrs.label ?? node.attrs.id}](${linkScheme().mentionHref(String(node.attrs.id))})`);
           },
           parse: {},
         },
@@ -185,13 +190,50 @@ export interface TipTapRefSource {
   /** слово после «#» / префикс «[[тип:» (нижний регистр) → тип записи */
   types: Record<string, string>;
   typeLabels: Record<string, string>;
-  /** поиск; отказ (throw) — окно скажет «не смогли загрузить» с причиной */
-  search: (query: string, type: string | null) => Promise<RefItem[]>;
+  /**
+   * поиск; отказ (throw) — окно скажет «не смогли загрузить» с причиной. `trigger` — каким знаком
+   * открыто окно («@», «[[», «#»): приложение решает, что предлагать (у LORE «@» — объекты и люди).
+   */
+  search: (query: string, type: string | null, trigger?: RefTriggerKind) => Promise<RefItem[]>;
   createSpec?: RefPickerProps['createSpec'];
   onCreate?: RefPickerProps['onCreate'];
   /** с какой длины запроса искать (по умолчанию 1); короче — «введите слова поиска», поиск не зовётся */
   minQuery?: number;
+  /**
+   * MD-WINDOW §3a: формы голых ID (без захватывающих групп). Есть — вставка копипастом
+   * оборачивает их в [[тип:ID]]. Формы знает приложение (K-14).
+   */
+  forms?: readonly BareRefForm[];
+  /**
+   * MD-WINDOW §3a: есть ли записи. true — есть, false — нет, null/без ответа — «не смогли
+   * проверить» (не красим). Отказ (throw) — тоже «не смогли».
+   */
+  exists?: (refs: MdRef[]) => Promise<Record<string, boolean | null>>;
 }
+
+/** Отметки ссылок «есть / нет / не проверено» — декорацией (DOM редактора перерисовывается). */
+const refStateKey = new PluginKey<Record<string, RefCheckState>>('skRefState');
+const RefStateMarks = Extension.create({
+  name: 'skRefState',
+  addProseMirrorPlugins() {
+    return [new Plugin<Record<string, RefCheckState>>({
+      key: refStateKey,
+      state: { init: () => ({}), apply: (tr, prev) => (tr.getMeta(refStateKey) as Record<string, RefCheckState> | undefined) ?? prev },
+      props: {
+        decorations(state) {
+          const map = refStateKey.getState(state) ?? {};
+          const decos: Decoration[] = [];
+          state.doc.descendants((node, pos) => {
+            if (node.type.name !== 'mdRaw' || node.attrs.kind !== 'wikilink') return;
+            const id = refIdOfRaw(String(node.attrs.raw));
+            decos.push(Decoration.node(pos, pos + node.nodeSize, { 'data-ref-state': (id && map[id]) || 'unknown' }));
+          });
+          return DecorationSet.create(state.doc, decos);
+        },
+      },
+    })];
+  },
+});
 
 interface RefOpen { trigger: RefTrigger; from: number; to: number; rect: { left: number; top: number } }
 
@@ -244,6 +286,8 @@ export interface TipTapFieldProps {
   lossyReason?: string;
   /** Ссылки на записи прямо в тексте (мини-окно). Не задан — «[[» и «#» обычные символы. */
   refs?: TipTapRefSource;
+  /** MD-WINDOW §3a: ненайденные ссылки текста (после проверки) — вызывающий предупредит при сохранении. */
+  onRefsMissing?: (ids: string[]) => void;
   /**
    * Узкий экран (телефон): панель — одна строка главных кнопок и «ещё ▾»
    * (S4-MOBILE-EDGE). Не задан — по единому порогу kit (useNarrow, ≤720px).
@@ -255,7 +299,7 @@ export function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
   onUploadImage, enableHtmlMode = false, ariaLabel, mentionItems,
   mode: modeProp, defaultMode = 'wysiwyg', onModeChange,
-  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason, refs, narrow: narrowProp,
+  renderPreview, sideBySide, onSideBySide, allowWysiwyg = true, lossyReason, refs, narrow: narrowProp, onRefsMissing,
 }: TipTapFieldProps) {
   const lang = useKitLang();
   const narrow = useNarrow(narrowProp);
@@ -278,6 +322,13 @@ export function TipTapField({
   // Мини-окно ссылки: расширения фиксируются при создании редактора, поэтому всё живое — в ref.
   const refsRef = useRef(refs);
   refsRef.current = refs;
+  // MD-WINDOW §3a: проверка ссылок текста — отметки и полоса ненайденных.
+  const [refStates, setRefStates] = useState<Record<string, RefCheckState>>({});
+  const [refIdsSig, setRefIdsSig] = useState(() => refsInMd(value).map(r => `${r.type ?? ''}:${r.id}`).join('|'));
+  const [missingHidden, setMissingHidden] = useState(false);
+  const shownMissingRef = useRef('');
+  const onRefsMissingRef = useRef(onRefsMissing);
+  onRefsMissingRef.current = onRefsMissing;
   const [refOpen, setRefOpen] = useState<RefOpen | null>(null);
   const refOpenRef = useRef<RefOpen | null>(null);
   refOpenRef.current = refOpen;
@@ -328,6 +379,7 @@ export function TipTapField({
   langRef.current = lang;
   const promptTex = (tex: string) => window.prompt(kitT(langRef.current, 'kit.md.mathPrompt'), tex);
 
+  const editorRef = useRef<Editor | null>(null);
   const editor = useEditor({
     extensions: [
       // Набор и сериализатор — общие с тестом S5-07 «MD → TipTap → MD без
@@ -339,6 +391,7 @@ export function TipTapField({
         mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : [],
         { promptTex },
       ),
+      RefStateMarks,
     ],
     content: value,
     editable,
@@ -367,20 +420,60 @@ export function TipTapField({
         return true;
       },
       handlePaste: (_view, event) => {
-        if (!enableImages) return false;
-        const files = imageFilesFrom((event as ClipboardEvent).clipboardData);
-        if (files.length === 0) return false;
+        const cd = (event as ClipboardEvent).clipboardData;
+        const files = enableImages ? imageFilesFrom(cd) : [];
+        // MD-WINDOW §3a: текст с голыми ID — оборачиваем в [[тип:ID]] атомами и проверяем.
+        if (files.length === 0) {
+          const forms = refsRef.current?.forms;
+          const nodes = forms && cd ? pasteRefNodes(cd.getData('text/plain'), forms) : null;
+          if (!nodes || !editorRef.current) return false;
+          event.preventDefault();
+          editorRef.current.chain().focus().insertContent(nodes).run();
+          return true;
+        }
         event.preventDefault();
         void uploadAndInsertRef.current(files);
         return true;
       },
     },
     onUpdate: ({ editor }) => {
-      onChangeRef.current(getMarkdown(editor));
+      const md = getMarkdown(editor);
+      onChangeRef.current(md);
+      setRefIdsSig(refsInMd(md).map(r => `${r.type ?? ''}:${r.id}`).join('|'));
       scanRefsRef.current(editor);
     },
     onSelectionUpdate: ({ editor }) => { scanRefsRef.current(editor); },
   });
+
+  editorRef.current = editor;
+  // MD-WINDOW §3a: проверяем, есть ли записи, когда меняется НАБОР ссылок текста (не каждая буква).
+  useEffect(() => {
+    const exists = refsRef.current?.exists;
+    // Проверять нечего — состояние не трогаем (лишняя перерисовка при монтировании меняла панель).
+    if (!exists || !refIdsSig) { setRefStates(p => (Object.keys(p).length ? {} : p)); return; }
+    const list: MdRef[] = refIdsSig.split('|').map(k => { const i = k.indexOf(':'); return { type: k.slice(0, i) || null, id: k.slice(i + 1) }; });
+    let live = true;
+    exists(list).then(
+      ans => { if (live) setRefStates(refCheckStates(list.map(r => r.id), ans)); },
+      () => { if (live) setRefStates(refCheckStates(list.map(r => r.id), {})); },
+    );
+    return () => { live = false; };
+  }, [refIdsSig]);
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    // Пока проверять нечего (нет exists или ссылок) — редактор не трогаем: пустой шаг при
+    // монтировании сбивал состояние панели (снимок seidr-bare: H2 переставала быть активной).
+    const prev = refStateKey.getState(editor.state) ?? {};
+    if (Object.keys(refStates).length === 0 && Object.keys(prev).length === 0) return;
+    editor.view.dispatch(editor.state.tr.setMeta(refStateKey, refStates).setMeta('addToHistory', false));
+    const missing = Object.keys(refStates).filter(k => refStates[k] === 'missing');
+    onRefsMissingRef.current?.(missing);
+    // «Не сейчас» держится, пока набор ненайденных тот же; новый набор — полоса снова видна.
+    const key = missing.join('|');
+    if (missing.length && key !== shownMissingRef.current) setMissingHidden(false);
+    shownMissingRef.current = key;
+  }, [refStates, editor]);
+  const missingIds = Object.keys(refStates).filter(k => refStates[k] === 'missing');
 
   // Поиск для окна ссылки: по запросу и типу; ответ устаревшего запроса не перетирает свежий.
   const refQuery = refOpen && !refOpen.trigger.unknownType ? `${refOpen.trigger.type ?? ''}\u0000${refOpen.trigger.query}` : null;
@@ -391,7 +484,7 @@ export function TipTapField({
     if (open.trigger.query.trim().length < (src.minQuery ?? 1)) { setRefSearch({ state: 'idle' }); return; }
     let live = true;
     setRefSearch({ state: 'loading' });
-    src.search(open.trigger.query, open.trigger.type).then(
+    src.search(open.trigger.query, open.trigger.type, open.trigger.trigger).then(
       found => { if (live) setRefSearch({ state: 'ok', items: found }); },
       (e: unknown) => { if (live) setRefSearch({ state: 'error', reason: e instanceof Error ? e.message : String(e) }); },
     );
@@ -701,6 +794,13 @@ export function TipTapField({
       ) : (
         <div className="sk-md__box">
           <EditorContent editor={editor} />
+          {missingIds.length > 0 && !missingHidden && (
+            // MD-WINDOW §3a: ненайденные ссылки названы; сохранить можно — предупредит вызывающий.
+            <div className="sk-md__refmissing" role="status" data-testid="kit-ref-missing">
+              <span>{kitT(lang, 'kit.md.refMissing', { ids: missingIds.join(', ') })}</span>
+              <button type="button" className="sk-btn" onClick={() => setMissingHidden(true)}>{t('kit.md.refNotNow')}</button>
+            </div>
+          )}
           {editor?.isEmpty && placeholder && <div className="sk-md__placeholder" aria-hidden>{placeholder}</div>}
           {refOpen && refs && (
             // Якорь у каретки (координаты окна); поповер встаёт под ним и прижимается к краю экрана.

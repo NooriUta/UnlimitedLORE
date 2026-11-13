@@ -209,3 +209,23 @@ describe('S4-CONTENT-V4 · подсказка правки над текстом
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });
+
+// MD-WINDOW §3a: сохранение с ненайденными ссылками ПРЕДУПРЕЖДАЕТ, но не запрещает —
+// первое нажатие называет ссылки, второе («Сохранить всё равно») сохраняет.
+describe('MD-WINDOW §3a · сохранение с красными ссылками', () => {
+  it('первое «Сохранить» — предупреждение со ссылками; второе — сохраняет', async () => {
+    const onSave = vi.fn(async () => {});
+    const refs = { types: { spec: 'spec' }, typeLabels: { spec: 'Спека' }, search: async () => [], exists: async () => ({ 'SPEC-X': false }) };
+    render(<MdInlineEdit label="Описание" value="см. [[spec:SPEC-X]]" onSave={onSave} refs={refs} />);
+    fireEvent.click(pen());
+    await waitEditor();
+    await screen.findByTestId('kit-ref-missing');
+    const ed = document.querySelector('.ProseMirror') as HTMLElement & { editor: { chain: () => { focus: (p: string) => { insertContent: (s: string) => { run: () => void } } } } };
+    act(() => { ed.editor.chain().focus('end').insertContent(' и ещё').run(); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Сохранить' })); });
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByTestId('kit-mdedit-refwarn').textContent).toContain('SPEC-X');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Сохранить всё равно' })); });
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+});

@@ -4,7 +4,7 @@
 // (батч-поставка сливает одинаковые копии). Схема, валидатор и примеры — рядом:
 // schema/*.schema.json, validate.ts, kit/demo/*.config.ts.
 import type * as React from 'react';
-import type { LoreStatusCategory } from './statusAxis';
+import type { AxisStatusCategory } from './statusAxis';
 
 /** S4-27: закрытые (категории done/cancelled) — внизу свёрнуто / все / за 30 дней / скрыть. */
 export type KitShowClosed = 'below' | 'all' | 'days30' | 'hide';
@@ -17,7 +17,7 @@ export interface KitConfig { modules: {id:string; title:string; icon:string; sta
  * работать. К оси приводит `normalizeAxisCategory`; сужать её нельзя, иначе
  * «действует» молча станет «завершено».
  */
-export type KitStatusCategoryInput = LoreStatusCategory | 'todo' | 'active' | 'done' | 'cancelled';
+export type KitStatusCategoryInput = AxisStatusCategory | 'todo' | 'active' | 'done' | 'cancelled';
 
 /**
  * Статья справочника LORE (срез `dictionary`, S4-36). `task_type` даёт иконку
@@ -40,6 +40,8 @@ export interface KitRelationDef { key:string; label:string; relation:KitRelation
   /** Вид записи на другом конце (kind; не путать с `target` у onRelation — там id). Одно ребро бывает в нескольких связях вида (у компонента BELONGS_TO:in — ADR, спринты, решения…): без цели вкладка «ADR» показала бы и спринты. Не задан — любые записи. */
   targetKind?:string }
 export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[];
+  /** K-14: подпись значения, унаследованного от записи ЭТОГО вида, словом приложения («от спринта»). Нет — kit говорит нейтрально «унаследовано (вид)». */
+  inherited?:string;
   /**
    * Разделы тела записи — ДАННЫМИ (S5-06, S5-09). Список «ключ поля + подпись»;
    * рисует их kit, поэтому у каждого раздела сразу есть ✎, черновик и честное

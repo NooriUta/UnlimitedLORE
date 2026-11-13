@@ -24,7 +24,7 @@ const CSP = [
 
 const RESIZE_SHIM = `<script>
 (function(){
-  function post(){window.parent.postMessage({_seerResize:document.documentElement.scrollHeight},'*');}
+  function post(){window.parent.postMessage({_skResize:document.documentElement.scrollHeight},'*');}
   post();
   new MutationObserver(post).observe(document.body,{childList:true,subtree:true,attributes:true});
   window.addEventListener('load',post);
@@ -58,7 +58,7 @@ export function SandboxedHtmlFrame({ html, title = '', minHeight = 120 }: Sandbo
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.source !== frameRef.current?.contentWindow) return;
-      const h = e.data?._seerResize;
+      const h = e.data?._skResize;
       if (typeof h === 'number' && h > 0) setHeight(Math.max(minHeight, h + 8));
     };
     window.addEventListener('message', handler);

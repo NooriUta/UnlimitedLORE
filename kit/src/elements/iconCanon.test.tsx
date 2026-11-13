@@ -23,7 +23,6 @@ const CHOICE: Record<keyof typeof ICON_CANON, string | null> = {
   statusDraft: 'quill-ink', statusDeprecated: 'broken-tablet', statusUnknown: 'help',
   myViews: 'lucide:star', saveView: 'lucide:save', recent: 'lucide:history', scopeAll: 'lucide:layers',
   commands: 'lucide:command', views: 'lucide:eye', team: null,
-  plan: 'lucide:milestone', knowledge: 'lucide:book-open',
   quickNoRelease: null, quickNoDecisions: 'lucide:file-question',
   newsReady: 'wave-crest', newsCancelled: 'lucide:circle-x', newsVersion: 'upgrade', newsReactivated: 'lucide:undo-2',
   prioP0: 'lucide:flame', prioP1: 'lucide:chevron-up', prioP2: 'lucide:equal', prioP3: 'lucide:chevron-down',
@@ -50,8 +49,6 @@ describe('ICON_CANON = выбор владелицы', () => {
   });
   it('разделы и приложения (SECTION_ICONS) — из словаря; у «Командных» иконки нет', () => {
     expect(SECTION_ICONS.news).toBe(ICON_CANON.sectionNews);
-    expect(SECTION_ICONS.plan).toBe(ICON_CANON.plan);
-    expect(SECTION_ICONS.knowledge).toBe(ICON_CANON.knowledge);
     expect(SECTION_ICONS.filter).toBe(ICON_CANON.segFilter);
     expect(SECTION_ICONS.commands).toBe(ICON_CANON.commands);
     expect(SECTION_ICONS.views).toBe(ICON_CANON.views);

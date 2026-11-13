@@ -26,7 +26,7 @@
 // модели, а показывает своё.
 import type { KindConfig, KitConfig, KitRelation, KitRelationDef } from '../core/contract';
 import type { LoreModelDoc } from './loadModel';
-import { normalizeAxisCategory, type LoreStatusCategory } from '../core/statusAxis';
+import { normalizeAxisCategory, type AxisStatusCategory } from '../core/statusAxis';
 
 type StatusItem = KitConfig['statuses']['items'][number];
 type Category = StatusItem['category'];
@@ -89,7 +89,7 @@ const UNKNOWN_ICON = 'help';
  * Ось документа → четыре категории контракта.
  *
  * Документ говорит ШЕСТЬЮ значениями оси владелицы (`core/statusAxis.ts`,
- * зеркало серверного `LoreStatusCategory`), а контракт kit знает четыре.
+ * зеркало серверного `AxisStatusCategory`), а контракт kit знает четыре.
  *
  * **Дефект, из-за которого таблица переписана (B2 ревью 10.11.2026, прод
  * v1.17.9):** здесь был свой список, в котором НЕ БЫЛО `not_started`,
@@ -108,7 +108,7 @@ const UNKNOWN_ICON = 'help';
  * контракт не знает «действует», «принято и действует» неотличимо от
  * «в работе» — это отдельное решение, а не умолчание.
  */
-const AXIS_TO_CONTRACT: Record<LoreStatusCategory, Category> = {
+const AXIS_TO_CONTRACT: Record<AxisStatusCategory, Category> = {
   not_started: 'todo',
   in_progress: 'active',
   in_force: 'active',
