@@ -62,3 +62,18 @@ The MCP server itself now narrows its registered tool surface by these same prof
 The backend (`AgentScopeFilter`) remains the security boundary — it denies with a reason even if a hidden tool is called from a stale session. The MCP filter is about payload size and an honest "what you may use" picture. Snapshot test: `src/tools/profileSurface.test.ts` (regenerate: `UPDATE_PROFILE_SURFACE=1`).
 
 Read-only `core` profile: `list_slices query_slice changed run_block search search_similar task_shape machine_acl harness_list graph quality_check lore_version`.
+
+## Entity consolidation (`entity_*`, MCPV2-3, 13.11.2026)
+
+The default full surface now consolidates 59 per-entity CRUD tools into 4 generic ones
+(`entity_upsert` / `entity_link` / `entity_delete` / `entity_move` — see [MIGRATION.md](./MIGRATION.md)).
+The profile files above intentionally still reference the OLD per-entity names: a profiled (non-full)
+session keeps its old surface (`developer` still sees `task_*`), and `LORE_MCP_LEGACY=1` restores the full
+old surface everywhere.
+
+`entity_*` is deliberately NOT added to these profiles. Granularity per entity type now lives on the
+BACKEND (`AgentScopeFilter` decides by path family/subpath, e.g. `developer` may write `/lore/adr` but not
+`/lore/adr/delete`), not in the MCP tool name — so one generic tool's path union spans families no single
+non-full profile may write, and listing it here would promise what the backend denies
+(`AgentProfilesMatchMatrixTest` fails with 51 violations on `developer.json`, verified 13.11.2026). The
+backend remains the security boundary; the MCP-side filter only shapes the payload.
