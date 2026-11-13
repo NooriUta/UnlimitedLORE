@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "fd591c6efdd4695e",
+  "version" : "5870289c469cb894",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -6533,6 +6533,302 @@
       "unclassified" : [ "dict_type", "is_extensible" ],
       "internal" : [ "valid_from" ]
     },
+    "user" : {
+      "type" : "user",
+      "label" : "Человек",
+      "label_key" : "pp.kind.user",
+      "icon" : "person",
+      "color" : null,
+      "key" : "kc_sub",
+      "vertex" : "KnowUser",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Имя",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : "display_name",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "HAS_PROJECT_ROLE",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "m",
+          "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "HAS_PROJECT_ROLE",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "tasks",
+        "label" : "Задачи",
+        "relation" : "association",
+        "rel" : "ROLE_HELD_BY",
+        "dir" : "in",
+        "target_type" : "task",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "agents",
+        "label" : "Агенты",
+        "relation" : "aggregation",
+        "rel" : "OWNED_BY",
+        "dir" : "in",
+        "target_type" : "agent",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ ],
+      "internal" : [ ]
+    },
+    "agent" : {
+      "type" : "agent",
+      "label" : "Агент",
+      "label_key" : "pp.kind.agent",
+      "icon" : "robot-golem",
+      "color" : null,
+      "key" : "actor_id",
+      "vertex" : "KnowActor",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Имя",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : "name",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "client_id",
+        "label" : "Учётка",
+        "label_key" : "pp.field.clientId",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : "client_id",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "agent_role",
+        "label" : "Профиль",
+        "label_key" : "pp.field.agentRole",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : "agent_role",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "harness",
+        "label" : "Оболочка",
+        "label_key" : "pp.field.harness",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "owner",
+        "label" : "Владелец",
+        "label_key" : "pp.field.owner",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "ref" : {
+          "type" : "user",
+          "rel" : "OWNED_BY",
+          "dir" : "out"
+        },
+        "relation" : "aggregation",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 2,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "BELONGS_TO_PROJECT",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "m",
+          "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "owner",
+        "label" : "Владелец",
+        "relation" : "aggregation",
+        "rel" : "OWNED_BY",
+        "dir" : "out",
+        "target_type" : "user",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "tasks",
+        "label" : "Задачи",
+        "relation" : "association",
+        "rel" : "ROLE_HELD_BY",
+        "dir" : "in",
+        "target_type" : "task",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "machines",
+        "label" : "Машины",
+        "relation" : "association",
+        "rel" : "USES_MACHINE",
+        "dir" : "out",
+        "target_type" : "machine",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "roles",
+        "label" : "Роли продукта",
+        "relation" : "association",
+        "rel" : "FILLS_ROLE",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ "body_md", "kind", "machine_id", "session_id" ],
+      "internal" : [ ]
+    },
     "project" : {
       "type" : "project",
       "label" : "Проект",
@@ -7776,6 +8072,64 @@
           "group" : null
         } ]
       },
+      "user" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "tasks",
+          "source" : "relation",
+          "ref" : "tasks",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "tasks",
+            "label" : "Задачи"
+          }
+        }, {
+          "key" : "agents",
+          "source" : "relation",
+          "ref" : "agents",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "agents",
+            "label" : "Агенты"
+          }
+        } ]
+      },
+      "agent" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "tasks",
+          "source" : "relation",
+          "ref" : "tasks",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "tasks",
+            "label" : "Задачи"
+          }
+        }, {
+          "key" : "machines",
+          "source" : "relation",
+          "ref" : "machines",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "machines",
+            "label" : "Машины"
+          }
+        }, {
+          "key" : "roles",
+          "source" : "relation",
+          "ref" : "roles",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "roles",
+            "label" : "Роли продукта"
+          }
+        } ]
+      },
       "project" : {
         "decided" : true,
         "sections" : [ {
@@ -8021,7 +8375,8 @@
     "spec" : "everywhere",
     "sprint" : "everywhere",
     "task" : "everywhere",
-    "tech" : "everywhere"
+    "tech" : "everywhere",
+    "user" : "admin"
   },
   "palettes" : {
     "source" : "settings:palette",

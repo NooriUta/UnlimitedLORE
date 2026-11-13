@@ -1705,5 +1705,19 @@
   "pp.field.docKind": "Kind",
   "pp.field.parentDoc": "Parent document",
   "pp.field.sprints": "Sprints",
-  "pp.field.bodyEn": "Text (EN)"
+  "pp.field.bodyEn": "Text (EN)",
+  "shell.sec.user": "People",
+  "shell.sec.agent": "Agents",
+  "lists.users.title": "People",
+  "lists.agents.title": "Agents",
+  "lists.field.clientId": "Account",
+  "lists.field.agentRole": "Profile",
+  "lists.field.harness": "Harness",
+  "pp.kind.user": "Person",
+  "pp.kind.agent": "Agent",
+  "pp.field.clientId": "Account",
+  "pp.field.agentRole": "Profile",
+  "pp.field.harness": "Harness",
+  "pp.field.owner": "Owner",
+  "lists.quick.noProjects": "No projects"
 }
