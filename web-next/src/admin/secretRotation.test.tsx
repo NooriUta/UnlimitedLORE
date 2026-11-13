@@ -35,7 +35,10 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-interface FakeOpts { policy?: boolean; switched?: boolean; oldActive?: boolean }
+// secretDelayMs: ответ GET …/secret приходит позже — карточка «Прежний секрет» уже нарисована
+// со скелетоном. Так гонка «findBy контейнера → getBy содержимого» воспроизводится детерминированно
+// (SPRINT_UXR_S11_TEST_OPT/S11-SECRET-ROTATION-RACE: develop eb991e41 падал на CI именно так).
+interface FakeOpts { policy?: boolean; switched?: boolean; oldActive?: boolean; secretDelayMs?: number }
 
 function fake(opts: FakeOpts = {}) {
   const policy = opts.policy ?? true;
@@ -57,6 +60,7 @@ function fake(opts: FakeOpts = {}) {
         old_secret_note: policy ? 'прежний секрет действует до 2026-11-13T20:00:00Z' : 'Keycloak не оставил прежний секрет: нет политики secret-rotation' });
     }
     if (url === `/lore/kc/agent/${CID}/secret`) {
+      if (opts.secretDelayMs) await new Promise(r => setTimeout(r, opts.secretDelayMs));
       return json({ client_id: CID, id: 'c-uuid', old_secret_active: oldActive, rotated_at: '2026-11-11T20:00:00Z',
         old_secret_expires_at: '2026-11-13T20:00:00Z', rotation_policy: policy,
         switched: switched
@@ -125,13 +129,14 @@ describe('экран · ротация без простоя', () => {
   });
 
   it('после ротации с двумя секретами: новый — один раз, команда — через переменную окружения, блок «перешёл?»', async () => {
-    const { f } = fake({ policy: true });
+    const { f } = fake({ policy: true, secretDelayMs: 30 });
     await rotate(f);
     const env = screen.getByTestId('adm-rotate-env');
     expect(env.textContent).toContain('LORE_MCP_CLIENT_SECRET');
     expect(env.textContent).not.toContain(SECRET);
     const sw = await screen.findByTestId('adm-oldsecret');
-    expect(within(sw).getByTestId('adm-oldsecret-expires').textContent).toContain('2026-11-13');
+    // карточка рисуется сразу со скелетоном — ждём само содержимое, а не контейнер
+    expect((await within(sw).findByTestId('adm-oldsecret-expires')).textContent).toContain('2026-11-13');
     expect(document.body.textContent).not.toContain(SECRET);
   });
 
