@@ -6419,7 +6419,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    полоса ~45 px и асимметрия 15/22 px — плавающая кнопка сужала весь паспорт). Тот же приём, что
    на телефоне: отрицательное нижнее поле снимает обтекание, место кнопке держит бар. */
 .sk-dock:not([data-placement='full']) .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px)); }
-.sk-dock:not([data-placement='full']) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 8px); }.sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
+.sk-dock:not([data-placement='full']) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 8px); }
+.sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
 .sk-dock[data-placement='full'] .sk-rec-head { margin-bottom: 10px; }
 .sk-dock[data-placement='full'] .sk-tabpanel { padding-top: 16px; }
 /* Связи по видам UML (паспорт): ◆ композиция, ◇ агрегация, ⇢ зависимость, ▷ реализация, △ обобщение. */
