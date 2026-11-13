@@ -53,6 +53,8 @@ export interface NewsV2TaskPart {
   added?: number;
   /** Ждёт выкатки на конец периода (Y). */
   waiting_t1?: number;
+  /** 🧪 На приёмке (UAT) на конец периода — подмножество waiting_t1. */
+  uat_t1?: number;
   ship_unknown?: number;
   shipped?: number;
   react?: { events: number; elements: number; rate?: number | null };

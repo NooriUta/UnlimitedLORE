@@ -103,11 +103,13 @@ export interface NewsBurnPart {
   open_dict_t0: number; open_dict_t1: number;
   closed: number; added: number; added_new: number; added_react: number;
   waiting_t0: number; waiting_t1: number; ship_unknown: number;
+  /** 🧪 На приёмке (UAT) на t0 / t1 — подмножество «ждёт», своей цифрой для сверки (13.11.2026). Старый сервер не шлёт. */
+  uat_t0?: number; uat_t1?: number;
   shipped: number; done_in_period: number;
   react: NewsReact;
   unknown: number;
   tasks: number;
-  examples: { shipped: string[]; waiting: string[]; added: string[]; closed: string[] };
+  examples: { shipped: string[]; waiting: string[]; added: string[]; closed: string[]; uat?: string[] };
 }
 
 export interface NewsTaskGroup {
@@ -129,6 +131,7 @@ export interface NewsBurnDay {
   from: string; to: string; day_local: string;
   open_start: number; open_end: number; burn: number; burn_dict: number;
   waiting_end: number; ship_unknown_end: number; shipped: number;
+  uat_end?: number;
 }
 
 export interface NewsTasksAvailable {
@@ -140,6 +143,8 @@ export interface NewsTasksAvailable {
   wait_median_days: number | null;
   waiting_oldest: Array<{ uid: string; sprint: string; since: string; age_days: number; ship: string; link: string | null }>;
   entered_ready: number;
+  /** Вошло в 🧪 UAT за период. */
+  entered_uat?: number;
   ready_to_closed_no_release: number;
 }
 
@@ -179,7 +184,7 @@ export interface NewsMetrics {
   agents: { measurable: true; events: NewsPair; elements: NewsPair } | (NewsUnmeasurable & { measurable: false });
   delta: {
     events: NewsDelta; elements: NewsDelta; by_type: Record<string, NewsDelta>;
-    burn?: NewsDelta; waiting_t1?: NewsDelta; shipped?: NewsDelta; react_events?: NewsDelta; react_elements?: NewsDelta;
+    burn?: NewsDelta; waiting_t1?: NewsDelta; uat_t1?: NewsDelta; shipped?: NewsDelta; react_events?: NewsDelta; react_elements?: NewsDelta;
     previous: { from: string; to: string };
   };
   since_mark?: { events: number; elements: number; mark: string };

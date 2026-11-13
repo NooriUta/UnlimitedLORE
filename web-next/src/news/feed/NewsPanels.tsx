@@ -167,6 +167,15 @@ function Metrics({ data, t, lang, query, fixed, onToggle, drill }: {
               value={<>{`${tasks.all.waiting_t0} → `}{num('waiting', tasks.all.waiting_t1, tasks.all.examples.waiting)}</>}>
               {dl(d.waiting_t1)}
             </Kpi>
+            {typeof tasks.all.uat_t1 === 'number' && (
+              <Kpi id="uat" label={t('kpi.uat')} tone="inf"
+                value={<>{`${tasks.all.uat_t0 ?? 0} → `}{num('uat', tasks.all.uat_t1, tasks.all.examples.uat ?? [])}</>}>
+                {typeof tasks.entered_uat === 'number' && (
+                  <span className="sk-news__kl">{t('kpi.uatEntered', { n: tasks.entered_uat })}</span>
+                )}
+                {dl(d.uat_t1)}
+              </Kpi>
+            )}
             <Kpi id="ship-unknown" label={t('kpi.shipUnknown')} value={tasks.all.ship_unknown} tone="wrn" />
             <Kpi id="shipped" label={t('kpi.shipped')} value={num('shipped', tasks.all.shipped, tasks.all.examples.shipped)}>
               {dl(d.shipped)}
@@ -431,6 +440,7 @@ function Burn({ data, t, lang, axis, onFilter, drill }: {
                   <th scope="col" className="is-num">{t('burn.col.own')}</th>
                   <th scope="col" className="is-num">{t('burn.col.shared')}</th>
                   <th scope="col" className="is-num">{t('burn.col.waiting')}</th>
+                  <th scope="col" className="is-num">{t('burn.col.uat')}</th>
                   <th scope="col" className="is-num">{t('burn.col.shipped')}</th>
                   <th scope="col" className="is-num">{t('burn.col.correction')}</th>
                 </tr>
@@ -450,6 +460,13 @@ function Burn({ data, t, lang, axis, onFilter, drill }: {
                       <Num value={g.total.waiting_t1} t={t} testId="news-burn-drill-waiting"
                         label={drillLabel(groupDrillId('waiting', cur, g.key), lang)}
                         onClick={drill(groupDrillId('waiting', cur, g.key), g.total.waiting_t1, g.total.examples.waiting)} />
+                    </td>
+                    <td className="is-num" data-tone="inf">
+                      {typeof g.total.uat_t1 === 'number' ? (
+                        <Num value={g.total.uat_t1} t={t} testId="news-burn-drill-uat"
+                          label={drillLabel(groupDrillId('uat', cur, g.key), lang)}
+                          onClick={drill(groupDrillId('uat', cur, g.key), g.total.uat_t1, g.total.examples.uat ?? [])} />
+                      ) : '—'}
                     </td>
                     <td className="is-num">
                       <Num value={g.total.shipped} t={t} testId="news-burn-drill-shipped"
@@ -477,6 +494,7 @@ function Burn({ data, t, lang, axis, onFilter, drill }: {
               <th scope="col" className="is-num">{t('burn.col.total')}</th>
               <th scope="col" className="is-num">{t('burn.col.burnDict')}</th>
               <th scope="col" className="is-num">{t('burn.col.waiting')}</th>
+              <th scope="col" className="is-num">{t('burn.col.uat')}</th>
               <th scope="col" className="is-num">{t('burn.col.unknown')}</th>
               <th scope="col" className="is-num">{t('burn.col.shipped')}</th>
             </tr>
@@ -489,6 +507,7 @@ function Burn({ data, t, lang, axis, onFilter, drill }: {
                 {num(d.burn)}
                 {num(d.burn_dict, 't2')}
                 <td className="is-num" data-tone="wrn">{d.waiting_end}</td>
+                <td className="is-num" data-tone="inf">{d.uat_end ?? '—'}</td>
                 <td className="is-num" data-tone="wrn">{d.ship_unknown_end}</td>
                 <td className="is-num">{d.shipped || ''}</td>
               </tr>
