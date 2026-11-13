@@ -6402,17 +6402,24 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    контекста», а потолок для телефона, где 680 px просто не влезает.
    Узкая панель справа остаётся как есть (прежнее решение): там своей меры нет,
    колонка и так узкая. */
+/* width: 100% (владелица 13.11: «отступы… странные»): auto-поля у flex-элемента сжимали шапку до
+   ширины заголовка, и она вставала по центру, а строка фактов — нет. Факты — в той же колонке. */
 .sk-dock[data-placement='bottom'] .sk-rec-head,
+.sk-dock[data-placement='bottom'] .sk-rec-facts,
 .sk-dock[data-placement='bottom'] .sk-rec-propsrow,
-.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); width: 100%; margin-left: auto; margin-right: auto; }
 
 /* Линия вкладок — во всю рамку (~1200 px), а шапка, свойства и текст — узкой колонкой по центру:
    владелица 08.11 «выглядит классно, чем всё вписанное в одну ширину» (как v4). */
 .sk-dock[data-placement='full'] .sk-rec-head,
 .sk-dock[data-placement='full'] .sk-rec-facts,
 .sk-dock[data-placement='full'] .sk-rec-propsrow,
-.sk-dock[data-placement='full'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
-.sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
+.sk-dock[data-placement='full'] .sk-tabpanel > * { max-width: var(--rec-col); width: 100%; margin-left: auto; margin-right: auto; }
+/* «×» закрытия справа/слева/снизу — в строке бара, а не отдельной строкой над ним (13.11: пустая
+   полоса ~45 px и асимметрия 15/22 px — плавающая кнопка сужала весь паспорт). Тот же приём, что
+   на телефоне: отрицательное нижнее поле снимает обтекание, место кнопке держит бар. */
+.sk-dock:not([data-placement='full']) .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px)); }
+.sk-dock:not([data-placement='full']) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 8px); }.sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
 .sk-dock[data-placement='full'] .sk-rec-head { margin-bottom: 10px; }
 .sk-dock[data-placement='full'] .sk-tabpanel { padding-top: 16px; }
 /* Связи по видам UML (паспорт): ◆ композиция, ◇ агрегация, ⇢ зависимость, ▷ реализация, △ обобщение. */
