@@ -89,6 +89,12 @@ jobs:
       - name: Самопроверка скрипта миграции задача→компонент
         run: bash .github/scripts/task-component-edge-migrate.sh --selftest
 
+      # PL-MIGRATE-LIVE-CHECK: сравнитель живой проверки миграций обязан краснеть
+      # на убыли без объявления, пропаже записи и неидемпотентном повторе — иначе
+      # «зелёная» проверка на снимке прода ничего не значит. Секунды, без БД.
+      - name: Самопроверка живой проверки миграций
+        run: bash -n scripts/migrate-live-check.sh && python3 scripts/migrate-live-check/inventory.py --selftest
+
       # См. подробный комментарий в frontend-ci.yml — там же зафиксировано, что
       # прокси на ci-server НУЖЕН (прямой выход деградирован: минуты вместо
       # секунд, apk add curl отваливается по таймауту) и что проверка сделана
