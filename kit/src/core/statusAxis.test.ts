@@ -9,17 +9,17 @@
 // Принятый ADR схлопывался в «завершено» — а «принято и действует» и
 // «сделано и закрыто» разные вещи: по первому живут, второе лежит в архиве.
 import { describe, expect, it } from 'vitest';
-import { LORE_STATUS_AXIS, isAxisCategory, normalizeAxisCategory } from './statusAxis';
+import { STATUS_AXIS, isAxisCategory, normalizeAxisCategory } from './statusAxis';
 
 describe('S4-STATUS-AXIS-CONFIG · ось из шести значений', () => {
   it('ось перечислена целиком и в порядке жизненного цикла', () => {
-    expect([...LORE_STATUS_AXIS]).toEqual([
+    expect([...STATUS_AXIS]).toEqual([
       'not_started', 'in_progress', 'in_force', 'finished', 'withdrawn', 'unknown',
     ]);
   });
 
   it('значения оси проходят как есть', () => {
-    for (const c of LORE_STATUS_AXIS) expect(normalizeAxisCategory(c)).toBe(c);
+    for (const c of STATUS_AXIS) expect(normalizeAxisCategory(c)).toBe(c);
     expect(isAxisCategory('in_force')).toBe(true);
   });
 

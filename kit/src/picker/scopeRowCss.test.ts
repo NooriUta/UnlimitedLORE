@@ -33,6 +33,16 @@ describe('PU-06 — строка проекта: имя | slug | мой | тол
     expect(shrink(id)).toBeGreaterThan(shrink(rule('.sk-scope__title')));
   });
 
+  // Приёмка на проде v1.17.18: наезда нет, но короткие имена срезались на 2–10 px
+  // («AIDA (monorepo)» 126 > 124): сжатие во flex делится пропорционально базовой
+  // ширине, и при shrink 10 у slug имя всё равно чуть ужималось. Имя не сжимается
+  // вовсе, только упирается в ширину строки (max-width) — всё сжатие берёт slug.
+  it('имя проекта не сжимается — только упирается в ширину строки', () => {
+    const title = rule('.sk-scope__title');
+    expect(shrink(title)).toBe(0);
+    expect(title).toMatch(/max-width: 100%/);
+  });
+
   it('пилюля «мой» не сжимается, подпись не выпускает содержимое на «только этот»', () => {
     expect(shrink(rule('.sk-scope__tag'))).toBe(0);
     expect(shrink(rule('.sk-scope__only'))).toBe(0);

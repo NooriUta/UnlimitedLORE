@@ -15,6 +15,8 @@ const REDIRECT_PATH = '/';
 export const v2Auth: AuthSession = createAuthSession({
   enabled: AUTH_ENABLED,
   redirectPath: REDIRECT_PATH,
+  // Вход выключен — dev-роль, как шлёт v1 (K-14: заголовок — предметность LORE, не kit).
+  devHeaders: { 'X-Seer-Role': 'admin' },
   manager: () => {
     const issuer = import.meta.env.VITE_OIDC_ISSUER as string | undefined;
     if (!issuer) throw new Error('VITE_LORE_AUTH_ENABLED=true, но VITE_OIDC_ISSUER не задан при сборке образа');

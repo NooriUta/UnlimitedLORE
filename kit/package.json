@@ -40,18 +40,20 @@
     "@tiptap/starter-kit": "3.33.1",
     "@tiptap/suggestion": "3.33.1",
     "bpmn-js": "^18.22.1",
+    "d3-force": "^3.0.0",
     "dompurify": "^3.4.17",
+    "force-graph": "^1.52.0",
+    "graphology": "^0.26.0",
     "katex": "^0.18.2",
     "marked": "18.0.6",
     "mermaid": "^11.16.0",
     "oidc-client-ts": "^3.5.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "tiptap-markdown": "^0.9.0",
-    "force-graph": "^1.52.0",
     "sigma": "^3.0.3",
-    "graphology": "^0.26.0",
-    "d3-force": "^3.0.0"
+    "tiptap-markdown": "^0.9.0",
+    "@xyflow/react": "^12.12.1",
+    "elkjs": "^0.12.1"
   },
   "peerDependenciesMeta": {
     "@mermaid-js/layout-elk": {
@@ -119,6 +121,12 @@
     },
     "d3-force": {
       "optional": true
+    },
+    "@xyflow/react": {
+      "optional": true
+    },
+    "elkjs": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -140,10 +148,12 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@xyflow/react": "12.12.1",
     "axe-core": "^4.14.0",
     "bpmn-js": "^18.31.1",
     "d3-force": "3.0.0",
     "dompurify": "^3.4.17",
+    "elkjs": "0.12.1",
     "force-graph": "1.52.0",
     "graphology": "0.26.0",
     "graphology-types": "0.24.8",

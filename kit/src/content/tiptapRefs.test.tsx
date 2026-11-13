@@ -48,7 +48,7 @@ describe('TipTapField + refs — окно ссылки', () => {
     const f = await mount({ refs });
     await f.type('См. [[adr:В');
     await waitFor(() => expect(screen.getByText('ADR-2')).toBeTruthy());
-    expect(refs.search).toHaveBeenLastCalledWith('В', 'adr');
+    expect(refs.search).toHaveBeenLastCalledWith('В', 'adr', 'brackets');
     fireEvent.click(screen.getByText('ADR-2'));
     await waitFor(() => expect(f.md()).toContain('См. [[adr:ADR-2]]'));
     expect(f.md()).not.toContain('\\[');
@@ -126,7 +126,7 @@ describe('TipTapField + refs — пустой запрос', () => {
     await waitFor(() => expect(screen.getByText(/Введите слова поиска/)).toBeTruthy());
     expect(refs.search).not.toHaveBeenCalled();
     await f.type('т');
-    await waitFor(() => expect(refs.search).toHaveBeenLastCalledWith('Вт', null));
+    await waitFor(() => expect(refs.search).toHaveBeenLastCalledWith('Вт', null, 'brackets'));
   });
 });
 
@@ -140,6 +140,6 @@ describe('MdInlineEdit пробрасывает refs в редактор', () =>
     const editor = (container.querySelector('.ProseMirror') as unknown as { editor: Editor }).editor;
     await act(() => { editor.view.dom.focus(); editor.chain().focus('end').insertContent(' [[В').run(); });
     await waitFor(() => expect(container.querySelector('.sk-ref')).toBeTruthy());
-    expect(refs.search).toHaveBeenLastCalledWith('В', null);
+    expect(refs.search).toHaveBeenLastCalledWith('В', null, 'brackets');
   });
 });

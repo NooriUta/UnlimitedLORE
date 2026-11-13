@@ -51,7 +51,10 @@ final class LoreModelFile {
         Map<String, List<Map<String, Object>>> computed,
         Map<String, String> edgeFields,
         Set<String> legacyRoleStrings,
-        Map<String, List<LorePassportSurface.Slot>> passport) {}
+        Map<String, List<LorePassportSurface.Slot>> passport,
+        // MC-07: общее меню и видимость разделов по аудитории (LoreModelNav).
+        List<LoreModelNav.Group> nav,
+        Map<String, String> audience) {}
 
     /**
      * Модель сервера. Ошибка чтения или проверки — ExceptionInInitializerError у первого читателя
@@ -59,12 +62,24 @@ final class LoreModelFile {
      * (выгрузчик, тесты) работали без файла в classpath.
      */
     static Content content() {
-        return Holder.CONTENT;
+        Content c = current;
+        if (c != null) return c;
+        synchronized (LoreModelFile.class) {
+            if (current == null) current = load();
+            return current;
+        }
     }
 
-    private static final class Holder {
-        static final Content CONTENT = load();
+    /**
+     * MC-05 (SPEC-LORE-MODEL-CONFIG-STORE §3): действующая модель заменяется целиком и атомарно —
+     * читатели видят либо прежнюю, либо новую, но не смесь. Проверка согласованности — ДО вызова
+     * (LoreModelStore): сюда приходит только проверенное содержимое.
+     */
+    static void replace(Content c) {
+        current = java.util.Objects.requireNonNull(c, "модель не может быть пустой");
     }
+
+    private static volatile Content current;
 
     static Content load() {
         try (InputStream in = LoreModelFile.class.getResourceAsStream(RESOURCE)) {
@@ -126,10 +141,14 @@ final class LoreModelFile {
             passport.put(e.getKey(), List.copyOf(slots));
         }
 
+        List<LoreModelNav.Group> nav = new ArrayList<>();
+        int gi = 0;
+        for (Object o : list(doc, "nav")) nav.add(LoreModelCodec.decode(LoreModelNav.Group.class, o, "nav[" + gi++ + "]"));
+
         Content c = new Content(List.copyOf(types), ro(typeDefs), ro(childOnly), set(doc, "read_only"), ro(graph), ro(aliases),
             strMap(doc.get("type_color"), "type_color"), set(doc, "no_type_color"), strMap(doc.get("precision"), "precision"),
             ro(time), ro(display), ro(computed), strMap(doc.get("edge_fields"), "edge_fields"),
-            set(doc, "legacy_role_strings"), ro(passport));
+            set(doc, "legacy_role_strings"), ro(passport), List.copyOf(nav), strMap(doc.get("audience"), "audience"));
         check(c);
         return c;
     }
@@ -154,6 +173,7 @@ final class LoreModelFile {
             if (p.length != 2 || !c.typeDefs().containsKey(p[0]) || c.typeDefs().get(p[0]).field(p[1]) == null)
                 bad.add("edge_fields: нет поля " + k);
         }
+        bad.addAll(LoreModelNav.problems(c.nav(), c.audience()));
         if (!bad.isEmpty()) throw new IllegalStateException("файл модели несогласован: " + bad);
     }
 
@@ -197,6 +217,8 @@ final class LoreModelFile {
         Map<String, Object> passport = new TreeMap<>();
         c.passport().forEach((k, v) -> passport.put(k, LoreModelCodec.encode(v)));
         d.put("passport", passport);
+        d.put("nav", LoreModelCodec.encode(c.nav()));
+        d.put("audience", new TreeMap<>(c.audience()));
         return new JsonObject(d).encodePrettily().replace("\r\n", "\n") + "\n";
     }
 

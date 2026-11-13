@@ -34,7 +34,24 @@ public class LoreDictResource extends LoreResourceBase {
     // dictionary slice's ifnull(...) — consumers never see NULL.)
     public record DictEntryRequest(String dict_type, String code, String label_ru,
                                    String label_en, String color, String icon,
-                                   Integer sort_order, Boolean is_active, Boolean is_extensible) {}
+                                   Integer sort_order, Boolean is_active, Boolean is_extensible,
+                                   String kind) {}
+
+    /**
+     * SPRINT_LORE_WORK_ANY_KIND/WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид статьи — набор
+     * допустимых значений на словарь. Сейчас вид есть только у product: tech — технологический,
+     * service — сервисно-организационный (от него git не требуется).
+     */
+    static final Map<String, java.util.Set<String>> KINDS = Map.of("product", java.util.Set.of("tech", "service"));
+
+    /** Отказ словами, если вид не подходит словарю; null — вид не прислан или допустим. */
+    static String kindRefusal(String dictType, String kind) {
+        if (kind == null) return null;
+        java.util.Set<String> allowed = KINDS.get(dictType);
+        if (allowed == null) return "у словаря " + dictType + " вида нет — kind не принимается";
+        if (!allowed.contains(kind)) return "вид «" + kind + "» у словаря " + dictType + " недопустим, есть: " + new java.util.TreeSet<>(allowed);
+        return null;
+    }
 
     @POST
     @Path("dict/entry")
@@ -47,13 +64,15 @@ public class LoreDictResource extends LoreResourceBase {
         if (req == null || req.dict_type() == null || req.dict_type().isBlank()
                 || req.code() == null || req.code().isBlank())
             return badParams("dict_type and code required");
+        String kindBad = kindRefusal(req.dict_type(), req.kind());
+        if (kindBad != null) return badParams(kindBad);
         try {
             // DBR-17: исход из факта. Прежнее состояние читаем ДО записи: повтор
             // тех же значений — unchanged, и он не плодит ревизию истории, а
             // раньше каждый такой вызов открывал новую Hist-строку без изменений.
             Map<String, Object> key0 = Map.of("dt", req.dict_type(), "code", req.code());
             List<Map<String, Object>> prev = ingestService.queryPublic(
-                "SELECT label_ru, label_en, color, icon, sort_order, is_active, is_extensible " +
+                "SELECT label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind " +
                 "FROM KnowDictEntry WHERE dict_type=:dt AND code=:code", key0);
             boolean existed = !prev.isEmpty();
             Map<String, Object> base = Map.of("ok", true, "dict_type", req.dict_type(), "code", req.code());
@@ -78,6 +97,7 @@ public class LoreDictResource extends LoreResourceBase {
             if (req.color()      != null) { sql.append(", color=:col");     p.put("col", req.color()); }
             if (req.icon()       != null) { sql.append(", icon=:icon");     p.put("icon", req.icon()); }
             if (req.sort_order() != null) { sql.append(", sort_order=:so"); p.put("so", req.sort_order()); }
+            if (req.kind()       != null) { sql.append(", kind=:kind");     p.put("kind", req.kind()); }
             sql.append(" UPSERT WHERE dict_type=:dt AND code=:code");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
@@ -119,7 +139,8 @@ public class LoreDictResource extends LoreResourceBase {
             && same(req.icon(), stored.get("icon"))
             && same(req.sort_order(), stored.get("sort_order"))
             && same(req.is_active(), stored.get("is_active"))
-            && same(req.is_extensible(), stored.get("is_extensible"));
+            && same(req.is_extensible(), stored.get("is_extensible"))
+            && same(req.kind(), stored.get("kind"));
     }
 
     private static boolean same(Object sent, Object stored) {
@@ -142,7 +163,7 @@ public class LoreDictResource extends LoreResourceBase {
      */
     private void writeDictHist(String dictType, String code) {
         List<Map<String, Object>> rows = ingestService.queryPublic(
-            "SELECT label_ru, label_en, color, icon, sort_order, " +
+            "SELECT label_ru, label_en, color, icon, sort_order, kind, " +
             "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible " +
             "FROM KnowDictEntry WHERE dict_type=:dt AND code=:code",
             Map.of("dt", dictType, "code", code));
@@ -157,7 +178,7 @@ public class LoreDictResource extends LoreResourceBase {
             "UPDATE KnowDictEntryHist SET valid_to=:now WHERE dict_type=:dt AND code=:code AND valid_to IS NULL;" +
             "INSERT INTO KnowDictEntryHist SET dict_type=:dt, code=:code, state_uid=:nsid, valid_from=:now, " +
             "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
-            "is_active=:is_active, is_extensible=:is_extensible" + ChangeAuthor.SET_SQL + ";" +
+            "is_active=:is_active, is_extensible=:is_extensible, kind=:kind" + ChangeAuthor.SET_SQL + ";" +
             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
             "TO (SELECT FROM KnowDictEntryHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);",
             hp)).await().indefinitely();

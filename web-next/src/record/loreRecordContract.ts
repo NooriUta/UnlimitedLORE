@@ -12,7 +12,8 @@ import { SPRINT_FACTS } from './loreRecord';
 import { ABSENT_NUMBERS, sumOfRow, type ServerSum } from '../sprints/sprintTotals';
 import { ADR_BODY_READONLY, EDITABLE_BODY } from './passportSave';
 
-export type FieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number';
+// MC-08: bool — флаг (sprint.no_release, product.is_active); kit читает «Да»/«Нет», правит флагом.
+export type FieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number' | 'bool';
 export interface LoreField {
   key: string; label: string; kind: FieldKind;
   required: boolean; editable: boolean; multi?: boolean;

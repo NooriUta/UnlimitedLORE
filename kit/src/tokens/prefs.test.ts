@@ -2,9 +2,12 @@
 // что у v1 (localStorage `lore-palette`/`lore-mode`, общая cookie `seer-prefs`),
 // — иначе пользователь, переключивший тему в v1, открыл бы v2 в другой.
 import { describe, expect, it } from 'vitest';
-import { PALETTES, applyTheme, resolvePrefs, themeAttrs } from './prefs';
+import { PALETTES, applyTheme, resolvePrefs as resolveRaw, themeAttrs, type PrefsSources } from './prefs';
 
 const store = (m: Record<string, string>) => (k: string) => m[k] ?? null;
+// Ключи хранения — от приложения (K-14). Здесь — как у LORE (общие с v1).
+const LORE_KEYS = { palette: 'lore-palette', mode: 'lore-mode', legacy: 'lore-theme', density: 'lore-density' };
+const resolvePrefs = (src: PrefsSources) => resolveRaw({ keys: LORE_KEYS, cookieName: 'seer-prefs', ...src });
 const cookie = (v: object) => `a=1; seer-prefs=${encodeURIComponent(JSON.stringify(v))}; b=2`;
 
 describe('resolvePrefs', () => {
@@ -30,6 +33,13 @@ describe('resolvePrefs', () => {
     expect(resolvePrefs({ local: store({ 'lore-density': 'comfortable' }) }).density).toBe('comfortable');
     expect(resolvePrefs({ local: store({ 'lore-density': 'huge' }) }).density).toBe('roomy');
     expect(resolvePrefs({ local: store({ 'lore-density': 'compact' }) }).density).toBe('compact');
+  });
+});
+
+describe('K-14 · ключи хранения — от приложения', () => {
+  it('без ключей приложения kit читает свои нейтральные (kit-*), чужие lore-* не трогает', () => {
+    expect(resolveRaw({ local: store({ 'kit-palette': 'slate', 'lore-mode': 'light' }) })).toMatchObject({ palette: 'slate', mode: 'dark' });
+    expect(resolveRaw({ cookie: `kit-prefs=${encodeURIComponent(JSON.stringify({ palette: 'juniper' }))}` }).palette).toBe('juniper');
   });
 });
 

@@ -22,6 +22,8 @@ const config = {
   modules: [], menu: { groups: [] },
   statuses: { items: [{ code: 'todo', title: 'к работе', category: 'todo', icon: 'calendar', color: 'var(--t3)' }] },
   kinds: {
+    // K-14: подпись наследования («от спринта») — слово приложения, в конфиге вида.
+    sprint: { title: 'Спринт', icon: 'sprint', inherited: 'от спринта' },
     item: {
       title: 'Предмет',
       icon: 'scroll-quill',
@@ -33,11 +35,11 @@ const config = {
   },
 } as unknown as KitConfig;
 
-function draw(fields: Record<string, unknown>) {
+function draw(fields: Record<string, unknown>, cfg: KitConfig = config) {
   const record: KitRecord = { id: 'R-1', kind: 'item', title: 'Запись', status: 'todo', fields };
   const data: KitData = { records: [record], edges: [], journal: [], meta: { generated_at: '2026-11-10T12:00:00Z' } };
   const ctx = {
-    config, data, href: (id: string) => `/r/${id}`, role: 'reader', lang: 'ru',
+    config: cfg, data, href: (id: string) => `/r/${id}`, role: 'reader', lang: 'ru',
     md: (s: string) => s,
   } as unknown as KitCtx;
   return render(<RecordView record={record} ctx={ctx} tab="overview" onTab={() => {}} />);
@@ -92,6 +94,21 @@ describe('S4-29 · «своё» и «унаследованное» — разн
     const el = chips(container)[0];
     const said = (el.textContent ?? '') + (el.getAttribute('title') ?? '');
     expect(said, 'по одному оттенку «от спринта» не прочитать').toMatch(/спринт/i);
+  });
+
+  it('K-14: у вида нет подписи наследования — kit говорит нейтрально, вид не выдумывает', () => {
+    const { container } = draw({ projects: [chip('INH', 'Чужое', { type: 'item', id: 'I-1' })] });
+    const t = chips(container)[0].getAttribute('title') ?? '';
+    expect(t).toMatch(/унаследовано/);
+    expect(t).toMatch(/I-1/);
+  });
+
+  it('K-14: слова «спринт» в kit нет — без подписи приложения и спринт назван нейтрально', () => {
+    const bare = { ...config, kinds: { ...config.kinds, sprint: { title: 'Спринт', icon: 'sprint' } } } as KitConfig;
+    const { container } = draw({ projects: [chip('INH', 'Чужое', { type: 'sprint', id: 'SPRINT_X' })] }, bare);
+    const t = chips(container)[0].getAttribute('title') ?? '';
+    expect(t).not.toMatch(/от спринта/);
+    expect(t).toMatch(/унаследовано/);
   });
 
   it('источник назван кодом: «от спринта» без имени спринта бесполезно', () => {

@@ -70,6 +70,7 @@
         "properties": {
           "title": { "$ref": "#/$defs/title" },
           "icon": { "$ref": "#/$defs/iconSlug" },
+          "inherited": { "type": "string", "description": "K-14: подпись значения, унаследованного от записи этого вида, словом приложения («от спринта»)" },
           "overview": { "description": "(r, ctx) => ReactNode | string; допускается и готовая строка", "x-kit-type": "function|string" },
           "tabs": {
             "type": "array",
@@ -91,7 +92,7 @@
               "properties": {
                 "key": { "type": "string", "minLength": 1 },
                 "title": { "$ref": "#/$defs/title" },
-                "type": { "enum": ["text", "md", "enum", "ref", "date", "number"] },
+                "type": { "enum": ["text", "md", "enum", "ref", "date", "number", "bool"] },
                 "section": { "type": "string", "minLength": 1 }
               },
               "additionalProperties": false

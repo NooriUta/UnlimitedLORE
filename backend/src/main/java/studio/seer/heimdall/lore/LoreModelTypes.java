@@ -35,28 +35,28 @@ final class LoreModelTypes {
      * объекта — с иконкой и цветом его канонического объекта). Каждый токен обязан
      * быть объявлен в src/styles (сторож — LoreModelTypeColorTest).
      */
-    static final Map<String, String> TYPE_COLOR = LoreModelFile.content().typeColor();
+    static final Map<String, String> TYPE_COLOR = LoreModelViews.map(() -> LoreModelFile.content().typeColor());
 
     /** Типы без канона цвета в v1: color = null честно, цвет не выдумываем. */
-    static final Set<String> NO_TYPE_COLOR = LoreModelFile.content().noTypeColor();
+    static final Set<String> NO_TYPE_COLOR = LoreModelViews.set(() -> LoreModelFile.content().noTypeColor());
 
     /** Тип записи → (вершина, Hist, деловой ключ). */
     record Graph(String vertex, String hist, String key) {}
 
-    static final Map<String, Graph> GRAPH = LoreModelFile.content().graph();
+    static final Map<String, Graph> GRAPH = LoreModelViews.map(() -> LoreModelFile.content().graph());
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
-    static final Map<String, Map<String, String>> ALIASES = LoreModelFile.content().aliases();
+    static final Map<String, Map<String, String>> ALIASES = LoreModelViews.map(() -> LoreModelFile.content().aliases());
 
     /**
      * SPRINT_UXR_POLISH_UAT_1113/PU-17: поля, значение которых — ребро, а не свойство вершины
      * (тип.ключ → ребро). Роли задачи с TR-05 — рёбра ROLE_HELD_BY; строки author/executor/reviewer_agent
      * не пишутся, и сопоставлять с ними поле значило бы назвать источником пустую строку.
      */
-    static final Map<String, String> EDGE_FIELDS = LoreModelFile.content().edgeFields();
+    static final Map<String, String> EDGE_FIELDS = LoreModelViews.map(() -> LoreModelFile.content().edgeFields());
 
     /** Легаси-строки ролей задачи (до TR-05) — в схеме ещё есть, на поверхности не выводятся: internal. */
-    static final Set<String> LEGACY_ROLE_STRINGS = LoreModelFile.content().legacyRoleStrings();
+    static final Set<String> LEGACY_ROLE_STRINGS = LoreModelViews.set(() -> LoreModelFile.content().legacyRoleStrings());
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
@@ -182,7 +182,7 @@ final class LoreModelTypes {
     // (срезы decisions, decision_history_all, sprints, releases, questions, use_cases — 10.11).
 
     /** Точность полей вида date: тип.ключ → date | datetime. */
-    static final Map<String, String> PRECISION = LoreModelFile.content().precision();
+    static final Map<String, String> PRECISION = LoreModelViews.map(() -> LoreModelFile.content().precision());
 
 
 
@@ -195,7 +195,7 @@ final class LoreModelTypes {
      * (максимум из открытой версии и updated_at, иначе следующий по списку). Пустой
      * список — источника нет (честное «нет времени»), а не «не смотрели».
      */
-    static final Map<String, Map<String, Object>> TIME = LoreModelFile.content().time();
+    static final Map<String, Map<String, Object>> TIME = LoreModelViews.map(() -> LoreModelFile.content().time());
 
     // ── Вид поля: важность и поведение длинного содержимого (владелица 09.11) ──
     // Водораздел: kit знает только ФОРМУ (рисует поле по этим подсказкам), приложение —
@@ -207,7 +207,7 @@ final class LoreModelTypes {
     static final List<String> OVERFLOWS = List.of("none", "ellipsis", "more");
 
     /** Уточнения поверх умолчаний по kind: ключ поля → {priority, width, overflow}. */
-    static final Map<String, Object[]> DISPLAY_OVERRIDES = LoreModelFile.content().displayOverrides();
+    static final Map<String, Object[]> DISPLAY_OVERRIDES = LoreModelViews.map(() -> LoreModelFile.content().displayOverrides());
 
     /**
      * priority — четыре ступени, как пороги прототипа v4 (kit 09.11): 1 — не скрывается
@@ -221,6 +221,8 @@ final class LoreModelTypes {
             boolean multi = Boolean.TRUE.equals(f.get("multi"));
             d = switch (kind) {
                 case "number" -> new Object[]{3, "xs", "none"};
+                // MC-08: флаг — узкая колонка «да/нет».
+                case "bool" -> new Object[]{3, "xs", "none"};
                 case "date" -> new Object[]{3, "s", "none"};
                 case "enum" -> new Object[]{2, "s", "ellipsis"};
                 case "ref" -> multi ? new Object[]{3, "m", "more"} : new Object[]{2, "m", "ellipsis"};
@@ -245,7 +247,7 @@ final class LoreModelTypes {
     /** Правило словами для счётчиков, которые считаются не по задачам спринта. */
 
     /** Тип → вычисляемые поля. Нет записи — пустой список («вычисляемых нет»). */
-    static final Map<String, List<Map<String, Object>>> COMPUTED = LoreModelFile.content().computed();
+    static final Map<String, List<Map<String, Object>>> COMPUTED = LoreModelViews.map(() -> LoreModelFile.content().computed());
 
     /** Свойство графа, которым подтверждено поле (то же сопоставление, что у build): первый кандидат из props, не system. */
     static String propertyOf(String type, Map<String, Object> f, Set<String> props) {

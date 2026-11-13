@@ -60,9 +60,8 @@ class ModelServerConsistencyGuardTest {
      * Вид поля модели не противоречит объявленному типу свойства схемы. Ключ — тип.поле, значение —
      * причина, по которой расхождение принято (исключение видно, а не спрятано).
      */
-    static final Map<String, String> KIND_EXEMPT = Map.of(
-        "sprint.no_release", "в kit нет вида bool — флаг показывается словом; вид bool заведён отдельной задачей",
-        "product.is_active", "в kit нет вида bool — флаг показывается словом; вид bool заведён отдельной задачей");
+    /** Одно правило с сервером: перечень исключений — LoreModelConsistency.KIND_EXEMPT (MC-05). */
+    static final Map<String, String> KIND_EXEMPT = LoreModelConsistency.KIND_EXEMPT;
 
     @Test
     @SuppressWarnings("unchecked")
@@ -82,14 +81,26 @@ class ModelServerConsistencyGuardTest {
     }
 
     static boolean compatible(String kind, String schemaType) {
-        Set<String> num = Set.of("INTEGER", "LONG", "SHORT", "BYTE", "FLOAT", "DOUBLE", "DECIMAL");
-        return switch (kind) {
-            case "number", "days" -> num.contains(schemaType);
-            case "date" -> Set.of("DATE", "DATETIME", "STRING").contains(schemaType);
-            case "text", "md", "enum" -> "STRING".equals(schemaType);
-            case "ref" -> Set.of("STRING", "LIST", "LINK", "LINKLIST").contains(schemaType);
-            default -> true;
-        };
+        return LoreModelConsistency.compatible(kind, schemaType);
+    }
+
+    /**
+     * SPRINT_LORE_MODEL_AS_CONFIG/MC-08: флаги — вид bool, а не text; исключений вида не осталось.
+     * Клиент v2 неизвестный вид читает как text (liveRecord.kindOf) — до kit-части флаг показывается как прежде.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void flagsAreBoolAndNoKindExemptionsLeft() {
+        assertEquals(Map.of(), LoreModelConsistency.KIND_EXEMPT, "исключения вида закрыты видом bool");
+        Map<String, Object> types = (Map<String, Object>) LoreModelGoldenTest.modelDoc().get("types");
+        for (String id : List.of("sprint.no_release", "product.is_active")) {
+            String[] p = id.split("\\.");
+            Map<String, Object> f = ((List<Map<String, Object>>) ((Map<String, Object>) types.get(p[0])).get("fields"))
+                .stream().filter(x -> p[1].equals(x.get("key"))).findFirst().orElseThrow();
+            assertEquals("bool", f.get("kind"), id);
+        }
+        assertTrue(compatible("bool", "BOOLEAN"));
+        assertFalse(compatible("bool", "STRING"));
     }
 
     static JsonObject listFacets() throws IOException {

@@ -7,10 +7,13 @@
 //   неполная выдача любого среза (truncated / has_more / непроверенные поля)
 //     → partial с полнотой этого среза: график по неполной истории врёт;
 //   полная выдача без задач спринта → empty (проверенный ноль).
+// K-14 (SPRINT_UXR_S7B_ADMIN/S7B-23_2): хук переехал из kit — срезы, спринт и формат
+// task_uid «SPRINT_X/код» — предметность LORE; kit даёт расчёт (burnSeries) и график.
 import { useMemo } from 'react';
-import { useLoadState } from '../states/useLoadState';
-import { completeness, metaOf, rowsOf, type Completeness, type LoadState } from '../states/loadState';
-import { burnSeries, type BurnPoint, type BurnRow } from './burn';
+import {
+  burnSeries, completeness, metaOf, rowsOf, useLoadState,
+  type BurnPoint, type BurnRow, type Completeness, type LoadState,
+} from '@seidr/kit';
 
 export const BURN_SLICES = { created: 'task_created_dates', done: 'task_done_dates' } as const;
 
@@ -24,6 +27,9 @@ export interface SprintBurn {
   completeness?: Completeness;
   onRetry: () => void;
 }
+
+/** Задача спринта — по префиксу task_uid с косой чертой: иначе SPRINT_X цеплял бы SPRINT_X2. */
+export const inSprint = (sprintId: string) => (taskUid: string) => taskUid.startsWith(`${sprintId}/`);
 
 export function useSprintBurn(sprintId: string, load: BurnSliceLoader): SprintBurn {
   const res = useLoadState(
@@ -40,7 +46,7 @@ export function useSprintBurn(sprintId: string, load: BurnSliceLoader): SprintBu
     const dRows = (rowsOf(d) ?? []) as BurnRow[];
     const incomplete = [completeness(metaOf(c), cRows.length), completeness(metaOf(d), dRows.length)]
       .find(x => x.kind !== 'complete');
-    const points = burnSeries(cRows, dRows, sprintId);
+    const points = burnSeries(cRows, dRows, inSprint(sprintId));
     if (incomplete) return { ...base, state: 'partial', points, completeness: incomplete };
     return { ...base, state: points.length === 0 ? 'empty' : 'ok', points };
   }, [res.state, res.data, res.error, res.reload, sprintId]);
