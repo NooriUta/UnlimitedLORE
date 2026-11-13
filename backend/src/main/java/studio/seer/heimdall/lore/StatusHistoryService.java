@@ -145,12 +145,12 @@ final class StatusHistoryService {
         String oldRid = openRow == null ? null : ridOf(openRow);
         if (oldRid != null) {
             boolean checkStatus = expectedRaw != null && openRow.get("status_raw") != null;
-            script.append(Scd2Guard.guardedClose(k.hist(), checkStatus));
+            script.append(Scd2Guard.guardedClose(k.vertex(), k.hist(), checkStatus));
             p.put("oldrid", oldRid);
             if (checkStatus) p.put("expected_raw", expectedRaw);
         } else {
             // S2-15: «открытой не видно» проверяется ещё раз внутри скрипта.
-            script.append(Scd2Guard.guardedNoOpen(k.hist(), k.key(), "id"));
+            script.append(Scd2Guard.guardedNoOpen(k.vertex(), k.hist(), k.key(), "id"));
         }
 
         StringBuilder set = new StringBuilder();
