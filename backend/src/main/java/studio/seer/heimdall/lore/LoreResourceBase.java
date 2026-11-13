@@ -40,7 +40,7 @@ public abstract class LoreResourceBase {
         Set.of("plan_item", "sprint", "task", "checkpoint", "adr", "phase");
     static final Set<String> PLAN_STATUSES =
         Set.of("todo", "active", "partial", "done", "blocked", "cancelled",
-               "planned", "backlog", "design", "ready_for_deploy");
+               "planned", "backlog", "design", "ready_for_deploy", "uat");
     static final Set<String> ADR_STATUSES =
         Set.of("proposed", "accepted", "draft", "deferred", "superseded");
 
@@ -56,6 +56,8 @@ public abstract class LoreResourceBase {
         Map.entry("blocked",          "🔴 BLOCKED"),
         Map.entry("cancelled",        "🚫 CANCELLED"),
         Map.entry("ready_for_deploy", "🚀 READY FOR DEPLOY"),
+        // Правило владелицы 13.11.2026: агент проверил на стенде → UAT, принимает человек.
+        Map.entry("uat",              "🧪 UAT TESTING"),
         Map.entry("backlog",          "🟣 BACKLOG"),
         Map.entry("design",           "🔬 DESIGN"));
 

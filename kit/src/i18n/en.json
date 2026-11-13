@@ -597,6 +597,7 @@
   "kit.tasks.status.active": "In progress",
   "kit.tasks.status.partial": "Partial",
   "kit.tasks.status.ready_for_deploy": "Ready for deploy",
+  "kit.tasks.status.uat": "UAT Testing",
   "kit.tasks.status.done": "Done",
   "kit.tasks.status.blocked": "Blocked",
   "kit.tasks.status.cancelled": "Cancelled",

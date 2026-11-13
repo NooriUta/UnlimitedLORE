@@ -54,6 +54,7 @@ export const STATUS_FILTERS = [
   { key: 'in_progress',      label: 'В работе',      labelKey: 'lore.sprintTree.statusFilter.inProgress'     },
   { key: 'partial',          label: 'Частично',      labelKey: 'lore.sprintTree.statusFilter.partial'        },
   { key: 'ready_for_deploy', label: 'К деплою',      labelKey: 'lore.sprintTree.statusFilter.readyForDeploy' },
+  { key: 'uat',              label: 'UAT — приёмка', labelKey: 'lore.sprintTree.statusFilter.uat'            },
   { key: 'planned',          label: 'Запланировано', labelKey: 'lore.sprintTree.statusFilter.planned'        },
   { key: 'todo',             label: 'TODO',          labelKey: 'lore.sprintTree.statusFilter.todo'           },
   { key: 'design',           label: 'Дизайн',        labelKey: 'lore.sprintTree.statusFilter.design'         },

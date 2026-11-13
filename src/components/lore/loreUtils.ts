@@ -40,6 +40,7 @@ export function normalizeStatus(raw: string | null): string {
   if (!raw) return '';
   const s = raw.trimStart();
   if (s.startsWith('✅') || /^(DONE|CLOSED|ЗАВЕРШ|MERGED|ЗАКРЫТ)/i.test(s)) return 'done';
+  if (s.startsWith('🧪') || /^(UAT|ПРИЁМК|ПРИЕМК)/i.test(s)) return 'uat';
   if (s.startsWith('🔄') || s.startsWith('🟢') || s.startsWith('🔨') ||
       /^(IN.?PROGRESS|WIP|ACTIVE|READY|ОТКРЫТ)/i.test(s)) return 'in_progress';
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return 'partial';

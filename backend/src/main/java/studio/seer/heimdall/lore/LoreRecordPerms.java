@@ -34,7 +34,7 @@ final class LoreRecordPerms {
     static List<String> lifecycle(String type, List<String> specStatuses) {
         return switch (type) {
             case "sprint", "task" -> List.of("todo", "planned", "backlog", "design", "active", "partial",
-                "blocked", "ready_for_deploy", "done", "cancelled");
+                "blocked", "ready_for_deploy", "uat", "done", "cancelled");
             case "adr" -> List.of("draft", "proposed", "accepted", "deferred", "superseded");
             case "spec" -> specStatuses != null && !specStatuses.isEmpty()
                 ? specStatuses : LoreSpecResource.SPEC_STATUSES_FALLBACK;

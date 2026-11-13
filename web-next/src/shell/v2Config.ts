@@ -56,7 +56,9 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
   // Сторож `tasks/twoVocabularies.probe.test.ts` держит правило: код, который
   // может получиться из данных, обязан быть здесь.
   ['partial', 'active', ['done', 'blocked', 'cancelled']],
-  ['ready_for_deploy', 'active', ['done', 'blocked']],
+  ['ready_for_deploy', 'active', ['uat', 'done', 'blocked']],
+  // 13.11.2026: агент проверил на стенде → приёмка человеком; done ставит только человек.
+  ['uat', 'active', ['done', 'in_progress', 'blocked']],
   ['design', 'todo', ['todo', 'planned', 'cancelled']],
   ['deferred', 'todo', ['todo', 'cancelled']],
   ['done', 'done', ['in_progress']],

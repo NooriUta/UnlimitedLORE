@@ -10,7 +10,8 @@
     "planned",
     "backlog",
     "design",
-    "ready_for_deploy"
+    "ready_for_deploy",
+    "uat"
   ],
   "adrStatuses": [
     "proposed",
@@ -94,6 +95,14 @@
         "ДЕПЛО"
       ]
     },
+    "uat": {
+      "marker": "🧪",
+      "words": [
+        "UAT",
+        "ПРИЁМК",
+        "ПРИЕМК"
+      ]
+    },
     "blocked": {
       "marker": "🔴",
       "words": [
@@ -162,6 +171,7 @@
     "blocked": "🔴 BLOCKED",
     "cancelled": "🚫 CANCELLED",
     "ready_for_deploy": "🚀 READY FOR DEPLOY",
+    "uat": "🧪 UAT TESTING",
     "backlog": "🟣 BACKLOG",
     "design": "🔬 DESIGN"
   },
@@ -195,6 +205,7 @@
         "partial": "in_progress",
         "blocked": "in_progress",
         "ready_for_deploy": "in_progress",
+        "uat": "in_progress",
         "done": "finished",
         "cancelled": "withdrawn"
       }

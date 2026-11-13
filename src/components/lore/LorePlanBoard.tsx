@@ -78,14 +78,16 @@ function statusFamily(status: string | null | undefined): StatusFamily {
 // До 30.08.2026 расходился в обе стороны: нёс 'deferred' (статус вопроса, не
 // спринта) и терял 'ready_for_deploy' — законный статус, спринт в котором молча
 // исчезал бы из легенды.
-export const STATUS_ORDER = ['active', 'planned', 'design', 'partial', 'ready_for_deploy', 'blocked', 'backlog', 'todo', 'done', 'cancelled'];
+export const STATUS_ORDER = ['active', 'planned', 'design', 'partial', 'ready_for_deploy', 'uat', 'blocked', 'backlog', 'todo', 'done', 'cancelled'];
 const STATUS_RU: Record<string, string> = {
   active: 'в работе', high: 'важно', planned: 'план', design: 'дизайн', partial: 'частично',
   blocked: 'блок', backlog: 'бэклог', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',
+  ready_for_deploy: 'к выкатке', uat: 'приёмка',
 };
 const STATUS_KEY: Record<string, string> = {
   active: 'active', high: 'high', planned: 'planned', design: 'design', partial: 'partial',
   blocked: 'blocked', backlog: 'backlog', todo: 'todo', done: 'done', deferred: 'deferred', cancelled: 'cancelled',
+  ready_for_deploy: 'ready_for_deploy', uat: 'uat',
 };
 
 const NO_PROJECT   = '__no_project__';

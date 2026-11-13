@@ -49,7 +49,7 @@ export function taskPassport(sprintId: string, taskId: string): string {
 
 /** Коды статусов задачи в порядке жизненного цикла. */
 export const TASK_STATUS_CODES = [
-  'backlog', 'todo', 'planned', 'design', 'in_progress', 'partial', 'ready_for_deploy', 'blocked', 'deferred', 'done', 'cancelled',
+  'backlog', 'todo', 'planned', 'design', 'in_progress', 'partial', 'ready_for_deploy', 'uat', 'blocked', 'deferred', 'done', 'cancelled',
 ] as const;
 
 // Слова «закрыто» — как taskTick v1 / LoreStatusVocabulary на бэкенде (QG-13).
@@ -58,6 +58,7 @@ const RULES: [RegExp, string][] = [
   [/^(🔄|IN.?PROGRESS|WIP|ACTIVE)/i, 'in_progress'],
   [/^(🟡|PARTIAL|ЧАСТИЧ)/i, 'partial'],
   [/^(🚀|READY.?FOR.?DEPLOY|RFD|К.?ДЕПЛОЮ)/i, 'ready_for_deploy'],
+  [/^(🧪|UAT|ПРИЁМК|ПРИЕМК)/i, 'uat'],
   [/^(🔴|BLOCK|ЗАБЛОК)/i, 'blocked'],
   [/^(🚫|CANCEL|ОТМЕН)/i, 'cancelled'],
   [/^(🔬|DESIGN|ДИЗАЙН|ПРОЕКТ)/i, 'design'],

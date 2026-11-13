@@ -128,6 +128,7 @@
      white background too. */
   --st-done:             #5FB86A;  /* green   */
   --st-ready_for_deploy: #3FB6C4;  /* cyan    */
+  --st-uat:              #7F8CF0;  /* indigo  */
   --st-active:           #4A9CE6;  /* blue    */
   --st-partial:          #E58A3A;  /* orange  */
   --st-planned:          #D8B23A;  /* gold    */
@@ -382,6 +383,7 @@
 [data-mode='light'] {
   --st-done:             #2E8B40;
   --st-ready_for_deploy: #1E8C99;
+  --st-uat:              #4B55B8;
   --st-active:           #2D74C4;
   --st-partial:          #C26A18;
   --st-planned:          #9A7A10;

@@ -324,7 +324,7 @@ export async function inlineProject(kind: ProjectKind, id: string, explicit?: st
 // first, then mirror here.
 const LORE_STATUS = z.enum([
   'todo', 'planned', 'active', 'partial', 'done',
-  'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
+  'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy', 'uat',
 ]);
 
 // MT-MCP-TRUTH A1–A2 (06.11.2026): отказ на status="closed" у question_new/question_set —
@@ -342,7 +342,10 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'status_set',
     description: 'Set the status of a LORE entity (SCD2 transition). Mutates the shared ' +
-      'system_aida_lore — use deliberately. Returns the new revision.',
+      'system_aida_lore — use deliberately. Returns the new revision. Task acceptance flow ' +
+      '(owner rule 13.11.2026): ready_for_deploy → the agent verifies the task on the stand AS A USER ' +
+      '(by using the feature, not by reading code) → uat (🧪 UAT TESTING, a human accepts it on preprod) → ' +
+      'done, which ONLY a human sets. An agent never moves a task from uat to done.',
     schema: {
       entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
       id: z.string().describe('entity id (e.g. sprint_id, task_uid, phase_uid "SPRINT_X/PHASE_A")'),

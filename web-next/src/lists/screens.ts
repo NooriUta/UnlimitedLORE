@@ -222,7 +222,7 @@ function sprintsConfig(lang: KitLang): KitConfig {
     statuses: {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
-        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'],
+        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
         ['done', 'done'], ['cancelled', 'cancelled'],
       ]),
     },
@@ -316,7 +316,7 @@ function tasksConfig(lang: KitLang): KitConfig {
     statuses: {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
-        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'],
+        ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
         ['done', 'done'], ['cancelled', 'cancelled'],
       ]),
     },

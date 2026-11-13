@@ -57,10 +57,11 @@
   --swatch-warm-dark:    #d4a830;
   --swatch-mono:         #b8b7b1;
 
-  /* Статусы — 11 постоянных оттенков, различимых без подписи (как в v1):
+  /* Статусы — 12 постоянных оттенков, различимых без подписи (как в v1):
      семантические --suc/--inf/--wrn схлопывали бы их в 5 семейств. */
   --st-done:             #5fb86a;
   --st-ready_for_deploy: #3fb6c4;
+  --st-uat:              #7f8cf0;
   --st-active:           #4a9ce6;
   --st-partial:          #e58a3a;
   --st-planned:          #d8b23a;
@@ -250,6 +251,7 @@
   /* Статусы темнее — текст статуса читается на белом. */
   --st-done:             #297d3a;
   --st-ready_for_deploy: #1a7884;
+  --st-uat:              #4b55b8;
   --st-active:           #2b6eba;
   --st-partial:          #a55a14;
   --st-planned:          #866a0e;
@@ -423,6 +425,7 @@
   --dng: #d48e83;
   --st-done:             #8db596;
   --st-ready_for_deploy: #8fb3b6;
+  --st-uat:              #a3a8c9;
   --st-active:           #98adbf;
   --st-partial:          #c9a07e;
   --st-planned:          #c2b07e;
@@ -451,6 +454,7 @@
   --dng: #9e4237;
   --st-done:             #3b6646;
   --st-ready_for_deploy: #2f6468;
+  --st-uat:              #4a4e78;
   --st-active:           #3a5870;
   --st-partial:          #82502a;
   --st-planned:          #6e5c1f;
