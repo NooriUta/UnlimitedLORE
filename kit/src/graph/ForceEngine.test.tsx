@@ -113,8 +113,29 @@ describe('GC-03 · ForceEngine', () => {
     const ctx = { fillText };
     // Зум 1 → scale 1 < labels(1)·4: порог подписей закрыт, хаб — вне его.
     g.nodeCanvasObjectFn!({ id: 'HUB', title: 'Центральная запись', x: 0, y: 0 }, ctx, 1);
-    expect(fillText).toHaveBeenCalledWith('Центральная запись', 0, 14);
+    expect(fillText).toHaveBeenCalledTimes(1);
+    expect(fillText.mock.calls[0][0]).toBe('Центральная запись');
     g.nodeCanvasObjectFn!({ id: 'A', x: 0, y: 0 }, ctx, 1);
     expect(fillText).toHaveBeenCalledTimes(1);
+  });
+
+  it('MP2-13: подпись стоит под кругом узла при любом зуме, а не внутри него', async () => {
+    render(<ForceEngine {...props()} />);
+    const g = await engine();
+    const at = (scale: number) => {
+      const fillText = vi.fn();
+      g.nodeCanvasObjectFn!({ id: 'HUB', title: 'Центральная запись', x: 0, y: 0 }, { fillText }, scale);
+      return fillText.mock.calls[0][2] as number;
+    };
+    // Радиус узла в мире: nodeRelSize(4·nodeSize)·sqrt(nodeVal), nodeVal = 1+sqrt(degree).
+    const rWorld = 4 * GX_DEFAULTS.nodeSize * Math.sqrt(1 + Math.sqrt(4));
+    const y1 = at(1);
+    const y4 = at(4);
+    // Зазор под кругом — постоянные 4px экрана: разница отступов = 4 - 4/4 = 3.
+    expect(y1 - y4).toBeCloseTo(3, 6);
+    // При зуме 4 экранная подпись ниже экранного края круга (rWorld·4).
+    expect(y4 * 4).toBeGreaterThan(rWorld * 4);
+    // Прежний фиксированный отступ 14px при зуме 4 уводил подпись внутрь круга.
+    expect(14).toBeLessThan(rWorld * 4);
   });
 });
