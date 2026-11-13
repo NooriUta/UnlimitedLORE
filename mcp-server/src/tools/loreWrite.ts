@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 import { registerEntity } from './entity.js';
+import { recordingInputKeys } from './toolInputKeys.js';
 
 // ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
 // WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
@@ -336,7 +337,9 @@ export const QUESTION_CLOSE_GUIDANCE =
   'Одно решение может закрыть несколько вопросов (по связи answers на каждый) — для ревизии это одна запись вместо N. ' +
   'Не путай с dropped: dropped = «решили НЕ отвечать», а «устарел, и вот доказательство» = closed через решение.';
 
-export function registerLoreWrite(server: McpServer): void {
+export function registerLoreWrite(rawServer: McpServer): void {
+  // MT-MCP-TRUTH: ключи схем запоминаются, чтобы entity_upsert называл поля, которых у сущности нет.
+  const server = recordingInputKeys(rawServer);
   // SCD2 status transition (closes the open history row, opens a new one, edges,
   // denormalizes status onto the vertex). Writes to the shared system_aida_lore.
   definePostTool(server, {
