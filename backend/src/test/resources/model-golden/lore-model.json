@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "1d787719c6eb2cdf",
+  "version" : "0762942f8b36c2ca",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -245,15 +245,16 @@
         "active" : true
       }, {
         "code" : "uat",
-        "title" : "uat",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "UAT — приёмка",
+        "title_en" : "UAT Testing",
+        "icon" : "stamper",
+        "color" : "var(--st-uat)",
+        "order" : 55,
         "category" : "in_progress",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "done", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "done",
         "title" : "Готово",
@@ -8136,6 +8137,14 @@
       "order" : 50,
       "active" : true
     }, {
+      "code" : "uat",
+      "title" : "UAT — приёмка",
+      "title_en" : "UAT Testing",
+      "icon" : "stamper",
+      "color" : "var(--st-uat)",
+      "order" : 55,
+      "active" : true
+    }, {
       "code" : "done",
       "title" : "Готово",
       "title_en" : "Done",
@@ -8267,5 +8276,5 @@
       "active" : false
     } ]
   },
-  "warnings" : [ "sprint_status: статус «uat» есть в жизненном цикле sprint, но его нет в справочнике — подпись = код, иконки и цвета нет", "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
+  "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
 }
