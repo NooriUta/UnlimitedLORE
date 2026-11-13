@@ -3430,6 +3430,19 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__val { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; overflow: hidden; }
 .sk-list__val-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-list__vicon { display: inline-flex; flex-shrink: 0; }
+/* PU-07: свёрнутая многозначная ячейка — одна строка: значение сжимается, «+N» на виду. */
+.sk-list__vals.is-folded { flex-wrap: nowrap; }
+.sk-list__valmore {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px dashed var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sk-list__valmore:hover { color: var(--t1); border-color: var(--acc); }
 .sk-list__desc {
   display: flex;
   /* S9-12: строка условий — в одну строку. Лишние условия сворачиваются в «+N»

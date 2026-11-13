@@ -491,6 +491,8 @@ const LIST_COL_MIN: Readonly<Record<string, number>> = { 'title+id': 220, title:
 
 /** Место фильтра по дате в ряду фасетов (PU-12). Ключ оси так не называется: оси — поля записи. */
 const DATE_SLOT = '@kit:date';
+/** PU-07: сколько значений многозначной ячейки видно в строке; остальное — «+N». */
+const CELL_VALUES_INLINE = 1;
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
@@ -600,6 +602,8 @@ export function ListView({
   // (фасеты + кнопка «+N»). Infinity — «ещё не мерили»: рисуем все и усаживаем по переносу.
   const [facetFits, setFacetFits] = useState(Infinity);
   const [facetsOpen, setFacetsOpen] = useState(false);
+  // PU-07: раскрытые многозначные ячейки («+N» нажат) — «записьколонка». Местное, не в адресе.
+  const [cellsOpen, setCellsOpen] = useState<Set<string>>(() => new Set());
   const ctlRef = useRef<HTMLDivElement>(null);
   const ctlId = useId();
   /** Раскрыта ли свёртка «+N» в строке условий (S9-12). Местное, не в адресе. */
@@ -1413,11 +1417,32 @@ export function ListView({
         </span>
       );
     }
+    // PU-07: многозначная ячейка — в одну строку, первое значение и «+N». Высота строки списка
+    // не зависит от числа значений (задача на 11 релизах была в 5–8 строк ростом). Спрятанное не
+    // теряется: полный список — в подсказке «+N», нажатие раскрывает его на месте.
+    const title = (v: string) => labelOf.get(v) ?? labels.valueTitle(key, v);
+    const cellKey = `${r.id}${key}`;
+    const open = cellsOpen.has(cellKey);
+    const shownVs = vs.length > CELL_VALUES_INLINE && !open ? vs.slice(0, CELL_VALUES_INLINE) : vs;
     return (
-      <span className="sk-list__vals">
-        {vs.map(v => (
-          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{labelOf.get(v) ?? labels.valueTitle(key, v)}</span></span>
+      <span className={`sk-list__vals${vs.length > CELL_VALUES_INLINE && !open ? ' is-folded' : ''}`}>
+        {shownVs.map(v => (
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{title(v)}</span></span>
         ))}
+        {vs.length > CELL_VALUES_INLINE && (
+          <button
+            type="button"
+            className="sk-list__valmore"
+            aria-expanded={open}
+            title={vs.map(title).join(', ')}
+            onClick={e => {
+              e.stopPropagation();
+              setCellsOpen(prev => { const n = new Set(prev); if (n.has(cellKey)) n.delete(cellKey); else n.add(cellKey); return n; });
+            }}
+          >
+            {open ? '−' : `+${vs.length - CELL_VALUES_INLINE}`}
+          </button>
+        )}
       </span>
     );
   };
