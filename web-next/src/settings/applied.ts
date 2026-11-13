@@ -38,9 +38,10 @@ export function appliedRightColumn(given?: Host): RightColumn {
  * Где открывать запись и черновик новой (S4-24, одна настройка с S4-17).
  * Не выбирал (auto, атрибута нет, мусор) — undefined: решает экран.
  */
-export function appliedPassportPlace(given?: Host): 'left' | 'right' | 'bottom' | 'full' | undefined {
+export function appliedPassportPlace(given?: Host): RecordPlacement | undefined {
   const v = host(given)?.getAttribute('data-passport-place');
-  return v === 'left' || v === 'right' || v === 'bottom' || v === 'full' ? v : undefined;
+  // Набор мест — данными kit (S4-17): новое место приходит само, без правки здесь.
+  return isRecordPlacement(v) ? v : undefined;
 }
 
 /** Сворачивать ли меню оболочки, пока открыта запись (D-2026-UXR-READ-COLLAPSE). */
@@ -68,4 +69,5 @@ export function appliedGraphView(given?: Host): 'graph' | 'links' | 'force' | 'o
   if (v === 'sectors') return 'graph';
   if (v === 'list') return 'links';
   return v === 'force' || v === 'obsidian' ? v : undefined;
-}
+}import { isRecordPlacement, type RecordPlacement } from '@seidr/kit';
+

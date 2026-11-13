@@ -33,6 +33,20 @@ class LoreMePrefsTest {
     }
 
     /**
+     * S4-17 (владелица 14.11.2026: «пока не делать модалку, но заложить возможность»): набор мест —
+     * одним списком PASSPORT_PLACES, тем же, что RECORD_PLACEMENTS в kit; настройка принимает ровно его
+     * и «auto». Новое место (modal) — строка в списке, без правки проверки.
+     */
+    @Test
+    void passportPlacesAreOneList() {
+        assertEquals(List.of("left", "right", "bottom", "full"), LoreMePrefs.PASSPORT_PLACES);
+        for (String p : LoreMePrefs.PASSPORT_PLACES)
+            assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("passport_place", p)), p);
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("passport_place", "modal")).size(),
+            "места нет в списке — отказ");
+    }
+
+    /**
      * SPRINT_UXR_S4_UI_SHELL_LISTS/S4-TECH-NOTES: «Показывать технические сведения» — личная настройка.
      * Умолчание — выключено: обычный пользователь кодов срезов и сырых метрик не видит.
      */

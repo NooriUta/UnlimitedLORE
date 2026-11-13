@@ -47,6 +47,17 @@ final class LoreMePrefs {
     }
 
     private static SettingSpec bool(boolean def) { return new SettingSpec(Kind.BOOL, def, List.of()); }
+    /** Места показа записи (S4-17): тот же список, что RECORD_PLACEMENTS в kit. Новое место — строка здесь. */
+    static final List<String> PASSPORT_PLACES = List.of("left", "right", "bottom", "full");
+
+    /** Допустимые значения настройки места: «auto» (выбора не было) и каждое место списка. */
+    private static String[] placeValues() {
+        List<String> v = new ArrayList<>();
+        v.add("auto");
+        v.addAll(PASSPORT_PLACES);
+        return v.toArray(new String[0]);
+    }
+
     private static SettingSpec oneOf(String def, String... values) {
         return new SettingSpec(Kind.ENUM, def, List.of(values));
     }
@@ -86,7 +97,8 @@ final class LoreMePrefs {
         m.put("new_navigation", bool(false));                                // флаг «новая навигация»
         // место показа паспорта (S4-17): auto = выбора не было, экран решает сам; не подменять умолчанием
         // MP2-14-PLACE-LEFT (13.11): «слева» — пятое значение
-        m.put("passport_place", oneOf("auto", "auto", "left", "right", "bottom", "full"));
+        // S4-17 (14.11): набор мест — одним списком PASSPORT_PLACES (= RECORD_PLACEMENTS kit); modal — строкой там.
+        m.put("passport_place", oneOf("auto", placeValues()));
         // показывать технические сведения (S4-TECH-NOTES): коды срезов, оговорки модели, сырые метрики
         m.put("show_tech", bool(false));
         SETTINGS = Collections.unmodifiableMap(m);
