@@ -170,7 +170,6 @@ class LorePassportLinksContractTest {
      * сущность. Конец с паспортом при этом сверяется как обычно.
      */
     static final Map<String, String> NO_PASSPORT = Map.ofEntries(
-        Map.entry("doc", "у документа нет паспорта v2 (TYPES) — показывает сторона с паспортом"),
         Map.entry("runbook", "у ранбука нет паспорта v2"),
         Map.entry("qg", "у гейта качества нет паспорта v2"),
         Map.entry("qg_job", "прогон гейта — служебная запись QG"),
@@ -607,6 +606,7 @@ class LorePassportLinksContractTest {
      */
     static final Map<String, String> NO_CHIP_FIELD = Map.of(
         "spec|components", "компонент спеки один — поле component (syncSpecComponent ставит одно ребро)",
+        "doc|components", "компонент документа один — поле component (одно ребро BELONGS_TO, S5-DOC-PASSPORT)",
         "tech|components", "компонент технологии один — поле component",
         "tech|projects", "у технологии проектов нет: ни ребра в tech_by_id, ни наследования",
         "component|components", "компонент — сам себе компонент; дерево — поля parent/children",

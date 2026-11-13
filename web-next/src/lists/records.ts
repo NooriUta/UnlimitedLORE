@@ -290,6 +290,30 @@ export function specRecord(row: Row, ctx?: RowMapCtx): KitRecord {
 }
 
 /**
+ * Строка слайса docs → запись kit (S5-DOC-PASSPORT).
+ *
+ * Статуса у документа нет — запись идёт с пустым статусом, а не с выдуманным.
+ * Тела срез не тянет (только хеши и длины, DS-3): текст читает паспорт.
+ */
+export function docRecord(row: Row): KitRecord {
+  const id = str(row.doc_id);
+  const component = str(row.component_id);
+  return {
+    id,
+    kind: 'doc',
+    title: str(row.title) || id,
+    status: '',
+    fields: {
+      component,
+      components: component ? [component] : [],
+      docKind: str(row.kind),
+      parent: str(row.parent_doc_id),
+      project: list(row.projects),
+    },
+  };
+}
+
+/**
  * Строка слайса questions → запись kit.
  *
  * **Срез именно questions, а не open_questions.** Второй — синоним на переход,
