@@ -127,6 +127,35 @@ class Properties(unittest.TestCase):
         self.assertEqual(f("a SPRINT_B\r\nb"), "a [[sprint:SPRINT_B]]\r\nb")
 
 
+class SharedCases(unittest.TestCase):
+    """Общие тест-примеры shared/md-refs/cases.json — их же гоняет бэкенд (MdRefRulesTest, PU-20).
+    Случаи с context=true — только бэкенд: у скрипта контекста записи нет."""
+
+    def test_shared_cases(self):
+        import json, os
+        from md_refs_fix import base_rule
+        here = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(here, "..", "..", "shared", "md-refs", "cases.json"), encoding="utf-8") as fh:
+            root = json.load(fh)
+        ctx = Ctx.build({k: set(v) for k, v in root["ids"].items()})
+        n = 0
+        for c in root["cases"]:
+            if c.get("context"):
+                continue
+            with self.subTest(c["name"]):
+                skip = frozenset(c.get("disabled", []))
+                new, ch = fix(c["text"], ctx, owner_sprint=c.get("owner_sprint"), skip_rules=skip)
+                if c.get("idempotent"):
+                    self.assertEqual(fix(new, ctx, owner_sprint=c.get("owner_sprint"), skip_rules=skip)[0], new)
+                    continue
+                self.assertEqual(new, c["expect"])
+                got = {base_rule(x["rule"]) for x in ch}
+                for want in c.get("rules", []):
+                    self.assertIn(want, got)
+                n += 1
+        self.assertGreater(n, 20)
+
+
 class ProdGuard(unittest.TestCase):
     """Владелица 13.11.2026: «на проде всё делается бэком с подтверждением через ui и логином человека»."""
 
