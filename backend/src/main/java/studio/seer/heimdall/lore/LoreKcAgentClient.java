@@ -115,4 +115,39 @@ final class LoreKcAgentClient {
             return null;
         }
     }
+
+    /**
+     * SPRINT_LORE_AGENT_OBSERVABILITY/AO-AGENT-ADD шаг 4: что в токене свежей учётки агента.
+     * state: ok (agent_scope = ожидаемый профиль) | mismatch | missing (клейма нет) |
+     * error (токен не разобран). Нормализация та же, что у AgentScopeFilter: элементы
+     * массива снимаются с кавычек, префикс agent- срезается. Сам токен в ответ не попадает.
+     */
+    static java.util.Map<String, Object> tokenCheck(String accessToken, String expectedProfile) {
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("expected", expectedProfile);
+        try {
+            String[] parts = accessToken == null ? new String[0] : accessToken.split(java.util.regex.Pattern.quote("."));
+            if (parts.length < 2) throw new IllegalArgumentException("не JWT");
+            JsonObject claims = new JsonObject(new String(java.util.Base64.getUrlDecoder().decode(parts[1]),
+                java.nio.charset.StandardCharsets.UTF_8));
+            Object raw = claims.getValue("agent_scope");
+            java.util.Set<String> profiles = new java.util.LinkedHashSet<>();
+            if (raw instanceof JsonArray a) { for (Object o : a) addScope(profiles, o); }
+            else if (raw != null) addScope(profiles, raw);
+            if (profiles.isEmpty()) { out.put("state", "missing"); out.put("agent_scope", null); return out; }
+            String got = String.join(",", profiles);
+            out.put("agent_scope", got);
+            out.put("state", profiles.size() == 1 && profiles.contains(expectedProfile) ? "ok" : "mismatch");
+        } catch (RuntimeException e) {
+            out.put("state", "error");
+            out.put("reason", "токен не разобран: " + e.getClass().getSimpleName());
+        }
+        return out;
+    }
+
+    private static void addScope(java.util.Set<String> out, Object v) {
+        String s = String.valueOf(v).replace("\"", "").trim();
+        if (s.isEmpty()) return;
+        out.add(s.startsWith("agent-") ? s.substring("agent-".length()) : s);
+    }
 }
