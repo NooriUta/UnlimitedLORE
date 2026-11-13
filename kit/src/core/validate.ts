@@ -235,7 +235,9 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
         c.str(f, 'title', fp);
         c.enumOf(f, 'type', fp, FIELD_TYPES, true);
       });
-      c.unknownKeys(k, ['title', 'icon', 'overview', 'tabs', 'fields'], p, 'kit его не прочтёт');
+      // K-14: подпись наследования от записи вида («от спринта») — слово приложения.
+      if (k.inherited !== undefined) c.str(k, 'inherited', p);
+      c.unknownKeys(k, ['title', 'icon', 'overview', 'tabs', 'fields', 'inherited'], p, 'kit его не прочтёт');
     }
   }
 
