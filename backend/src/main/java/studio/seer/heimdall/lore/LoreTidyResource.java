@@ -111,7 +111,7 @@ public class LoreTidyResource extends LoreResourceBase {
             Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes = loadScopes();
             List<MdRefCheck.Field> fields = new ArrayList<>();
             for (Target t : TARGETS) fields.addAll(loadFields(t, null));
-            Snapshot s = build(fields, ctx, scopes, t0);
+            Snapshot s = build(fields, ctx, scopes, t0, loadDismissed());
             last = s;
             return noStore(Response.ok(s.answer()));
         } catch (Exception e) {
@@ -138,7 +138,7 @@ public class LoreTidyResource extends LoreResourceBase {
             for (MdRefCheck.Field f : s.fields()) if (!(f.type().equals(type) && f.id().equals(id))) fields.add(f);
             List<MdRefCheck.Field> mine = loadFields(t, id);
             fields.addAll(mine);
-            Snapshot n = build(fields, s.ctx(), s.scopes(), t0);
+            Snapshot n = build(fields, s.ctx(), s.scopes(), t0, loadDismissed());
             last = n;
             Map<String, Object> out = new LinkedHashMap<>(n.answer());
             Map<String, Object> rec = new LinkedHashMap<>();
@@ -161,14 +161,302 @@ public class LoreTidyResource extends LoreResourceBase {
     }
 
     private static Snapshot build(List<MdRefCheck.Field> fields, MdRefRules.Ctx ctx,
-                                  Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes, long t0) {
-        Map<String, Object> body = MdRefCheck.compute(fields, ctx, scopes, MdRefRules.defaults());
+                                  Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes, long t0, Set<String> dismissed) {
+        Map<String, Object> body = MdRefCheck.compute(fields, ctx, scopes, MdRefRules.defaults(), dismissed);
         Map<String, Object> answer = new LinkedHashMap<>();
         answer.put("ok", true);
         answer.put("checked_at", Instant.now().toString());
         answer.put("took_ms", System.currentTimeMillis() - t0);
         answer.putAll(body);
         return new Snapshot(List.copyOf(fields), ctx, scopes, answer);
+    }
+
+    // ───────────────────────────── применение ─────────────────────────────
+
+    /** Тело применения: правила (пусто — умолчания), пробный прогон, логин для подтверждения, отмена пачки. */
+    public record ApplyRequest(List<String> rules, Boolean dry_run, String confirm_login, String undo_of) {}
+
+    @jakarta.inject.Inject LoreSprintTaskResource tasks;
+    @jakarta.inject.Inject LoreReleaseResource releases;
+    @jakarta.inject.Inject LoreQuestionResource questions;
+    @jakarta.inject.Inject LoreDecisionResource decisions;
+    @jakarta.inject.Inject LoreSpecResource specs;
+    @jakarta.inject.Inject LoreDocResource docs;
+    @jakarta.inject.Inject LoreAdrResource adrs;
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper()
+        .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    /**
+     * Применить автопочинку пачкой. Решения владелицы 13.11.2026: прод правит только бэкенд с подтверждением
+     * в UI логином человека; применяет суперадмин-человек (агент — никогда); отмена — 15 минут.
+     * {@code dry_run} — план без записи (для диффа). Иначе: сервер перечитывает тексты, пишет каждое поле
+     * штатным методом ресурса (новая SCD2-версия, автор — вызывающий), и отвечает итогом по каждому полю —
+     * пачка не атомарна. В ответе {@code batch_id} — первым полем: журнал действий пишет его сущностью вызова.
+     */
+    @POST
+    @Path("apply")
+    @jakarta.ws.rs.Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public synchronized Response apply(ApplyRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireSuperAdmin(role);
+        if (req == null) return badParams("body required");
+        String unknown = MdRefApply.unknownRule(req.rules());
+        if (unknown != null) return badParams("unknown rule '" + unknown + "' — one of " + MdRefRules.RULES);
+        boolean dry = Boolean.TRUE.equals(req.dry_run());
+        String human = humanLogin();
+        if (!dry) {
+            if (human == null) return forbiddenHuman();
+            if (req.confirm_login() == null || !req.confirm_login().strip().equals(human))
+                return badParams("confirm_login: введите свой логин (" + human + "), чтобы подтвердить пачку");
+        }
+        Instant now = Instant.now();
+        try {
+            if (req.undo_of() != null) return undo(req.undo_of(), dry, now, role);
+            MdRefRules.Ctx ctx = loadCtx();
+            Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes = loadScopes();
+            List<MdRefCheck.Field> fields = new ArrayList<>();
+            for (Target t : TARGETS) if (t.writable()) fields.addAll(loadFields(t, null));
+            Set<String> rules = MdRefApply.rulesOf(req.rules());
+            List<MdRefApply.Edit> plan = MdRefApply.plan(fields, ctx, scopes, rules);
+            Map<String, Object> out = new LinkedHashMap<>();
+            if (!dry) out.put("batch_id", MdRefApply.batchId(now));
+            out.put("ok", true);
+            out.put("dry_run", dry);
+            // Слово подтверждения — логин из токена: окно спрашивает ровно то, что сервер сверит.
+            // null — вызывающий не человек (агент) или входа нет: применить нельзя, окно говорит это словами.
+            out.put("login", human);
+            out.put("rules", rules);
+            out.put("records", plan.stream().map(e -> e.type() + "|" + e.id()).distinct().count());
+            out.put("fields", plan.size());
+            out.put("edits", plan.stream().mapToInt(MdRefApply.Edit::places).sum());
+            out.put("diff", diffRows(plan, 40));
+            if (dry) return noStore(Response.ok(out));
+            List<Map<String, Object>> items = new ArrayList<>();
+            List<MdRefApply.Edit> done = new ArrayList<>();
+            int applied = 0, failed = 0;
+            for (MdRefApply.Edit e : plan) {
+                Response r = write(e, e.before(), e.after(), role);
+                if (r.getStatus() < 300) { applied++; done.add(e); } else failed++;
+                items.add(item(e, r));
+            }
+            String batchId = String.valueOf(out.get("batch_id"));
+            MdRefApply.remember(batchId, done, now);
+            out.put("applied", applied);
+            out.put("failed", failed);
+            out.put("atomic", false);
+            out.put("items", items);
+            out.put("undo_until", now.plus(MdRefApply.UNDO_WINDOW).toString());
+            out.put("by", human);
+            last = null;   // результат проверки устарел — следующий GET перечитает
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE TIDY] apply failed: %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
+    private Response undo(String batchId, boolean dry, Instant now, String role) {
+        List<MdRefApply.Edit> edits = MdRefApply.batch(batchId);
+        String err = MdRefApply.undoError(batchId, now, edits != null);
+        if (err != null) return badParams(err);
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (!dry) out.put("batch_id", MdRefApply.batchId(now));
+        out.put("ok", true);
+        out.put("undo_of", batchId);
+        out.put("dry_run", dry);
+        List<Map<String, Object>> items = new ArrayList<>();
+        int restored = 0, skipped = 0, failed = 0;
+        for (MdRefApply.Edit e : edits) {
+            Map<String, Object> it = new LinkedHashMap<>();
+            it.put("type", e.type()); it.put("id", e.id()); it.put("field", e.field());
+            if (!MdRefApply.undoable(e, currentText(e))) { it.put("result", "changed_after"); skipped++; items.add(it); continue; }
+            if (dry) { it.put("result", "would_restore"); items.add(it); continue; }
+            Response r = write(e, e.after(), e.before(), role);
+            it.put("status", r.getStatus());
+            if (r.getStatus() < 300) { it.put("result", "restored"); restored++; }
+            else { it.put("result", "failed"); it.put("error", r.getEntity()); failed++; }
+            items.add(it);
+        }
+        if (!dry) MdRefApply.forget(batchId);
+        out.put("restored", restored);
+        out.put("changed_after", skipped);
+        out.put("failed", failed);
+        out.put("items", items);
+        last = null;
+        return noStore(Response.ok(out));
+    }
+
+    private static List<Map<String, Object>> diffRows(List<MdRefApply.Edit> plan, int max) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (MdRefApply.Edit e : plan.subList(0, Math.min(max, plan.size()))) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("type", e.type()); m.put("id", e.id()); m.put("field", e.field());
+            m.put("rules", e.rules()); m.put("places", e.places());
+            m.put("before", e.before()); m.put("after", e.after());
+            rows.add(m);
+        }
+        return rows;
+    }
+
+    private static Map<String, Object> item(MdRefApply.Edit e, Response r) {
+        Map<String, Object> it = new LinkedHashMap<>();
+        it.put("type", e.type()); it.put("id", e.id()); it.put("field", e.field());
+        it.put("status", r.getStatus());
+        it.put("result", r.getStatus() < 300 ? "applied" : "failed");
+        if (r.getStatus() >= 300) it.put("error", r.getEntity());
+        return it;
+    }
+
+    private String currentText(MdRefApply.Edit e) {
+        Target t = TARGETS.stream().filter(x -> x.type().equals(e.type())).findFirst().orElseThrow();
+        return loadFields(t, e.id()).stream().filter(f -> f.field().equals(e.field())).map(MdRefCheck.Field::text).findFirst().orElse(null);
+    }
+
+    /**
+     * Запись поля штатным методом ресурса — те же проверки, SCD2 и автор, что у правки руками.
+     * {@code expected} — текст, который должен лежать сейчас: у задачи сервер сверяет его сам
+     * (expected.note_md, S2-09), у остальных — перечитываем перед записью.
+     */
+    Response write(MdRefApply.Edit e, String expected, String text, String role) {
+        if (!"KnowTask".equals(e.type())) {
+            String cur = currentText(e);
+            if (cur == null || !cur.equals(expected))
+                return Response.status(Response.Status.CONFLICT).entity(new LoreError("CONFLICT", "текст менялся после проверки")).build();
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        switch (e.type()) {
+            case "KnowTask" -> {
+                body.put("task_uid", e.id());
+                body.put("title", currentValue("KnowTask", "task_uid", e.id(), "title"));
+                body.put("note_md", text);
+                body.put("expected", Map.of("note_md", expected));
+                return tasks.editTask(JSON.convertValue(body, LoreSprintTaskResource.TaskEditRequest.class), role).await().indefinitely();
+            }
+            case "KnowSprint" -> {
+                body.put("sprint_id", e.id());
+                body.put(e.field(), text);
+                return tasks.updateSprint(JSON.convertValue(body, LoreSprintTaskResource.SprintUpdateRequest.class), role);
+            }
+            case "KnowRelease" -> {
+                int i = e.id().indexOf('#');
+                if (i <= 0) return Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("BAD_PARAMS", "у релиза нет проекта в release_uid")).build();
+                body.put("release_id", e.id().substring(i + 1));
+                body.put("git_project", e.id().substring(0, i));
+                body.put("description_md", text);
+                return releases.updateRelease(JSON.convertValue(body, LoreReleaseResource.ReleaseUpdateRequest.class), role);
+            }
+            case "KnowQuestion" -> {
+                body.put("question_id", e.id());
+                body.put("body_md", text);
+                return questions.createQuestion(JSON.convertValue(body, LoreQuestionResource.QuestionCreateRequest.class), role);
+            }
+            case "KnowDecision" -> {
+                body.put("decision_id", e.id());
+                body.put("title", currentValue("KnowDecision", "decision_id", e.id(), "title"));   // обязателен у метода
+                body.put("body_md", text);
+                return decisions.createDecision(JSON.convertValue(body, LoreDecisionResource.DecisionCreateRequest.class), role);
+            }
+            case "KnowSpec" -> {
+                body.put("spec_id", e.id());
+                body.put(e.field(), text);
+                return specs.upsertSpec(JSON.convertValue(body, LoreSpecResource.SpecUpsertRequest.class), role);
+            }
+            case "KnowDoc" -> {
+                body.put("doc_id", e.id());
+                body.put(e.field(), text);
+                return docs.upsertDoc(JSON.convertValue(body, LoreDocResource.DocUpsertRequest.class), role);
+            }
+            case "KnowADR" -> {
+                body.put("adr_id", e.id());
+                // createAdr пишет name всегда (SET name=:name) — без текущего имени обнулил бы его.
+                body.put("name", currentValue("KnowADR", "adr_id", e.id(), "name"));
+                body.put(e.field(), text);
+                return adrs.createAdr(JSON.convertValue(body, LoreAdrResource.AdrCreateRequest.class), role);
+            }
+            default -> {
+                return Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("BAD_PARAMS", "тип " + e.type() + " автоматически не пишется")).build();
+            }
+        }
+    }
+
+    private Object currentValue(String type, String idField, String id, String field) {
+        List<Map<String, Object>> r = ingestService.queryPublic(
+            "SELECT " + field + " AS v FROM " + type + " WHERE " + idField + " = :id LIMIT 1", Map.of("id", id));
+        return r.isEmpty() ? null : r.get(0).get("v");
+    }
+
+    /** Логин человека из проверенного токена; null — не человек (агент) или токена нет. */
+    String humanLogin() {
+        if (callerClientId() != null || callerKcSub() == null) return null;
+        if (identity == null || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) return null;
+        Object u = jwt.getClaim("preferred_username");
+        return u == null || String.valueOf(u).isBlank() ? null : String.valueOf(u);
+    }
+
+    private Response forbiddenHuman() {
+        return noStore(Response.status(Response.Status.FORBIDDEN).entity(new LoreError("HUMAN_ONLY",
+            "Пачку применяет только человек под своим логином (решение владелицы 13.11.2026); агенту и запросу без входа — нельзя.")));
+    }
+
+    // ───────────────────────────── «не ссылка» ─────────────────────────────
+
+    public record DismissRequest(String type, String id, String kind, String action) {}
+
+    /** Отметить вид мест записи «не ссылка» (или снять отметку). Текст не меняется. */
+    @POST
+    @Path("dismiss")
+    @jakarta.ws.rs.Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public synchronized Response dismiss(DismissRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.type() == null || req.id() == null || req.kind() == null) return badParams("type, id, kind required");
+        if (TARGETS.stream().noneMatch(t -> t.type().equals(req.type()))) return badParams("unknown type " + req.type());
+        if (!MdRefDismissals.KINDS.contains(req.kind())) return badParams("kind: one of " + MdRefDismissals.KINDS);
+        boolean remove = "remove".equals(req.action());
+        String key = MdRefDismissals.key(req.type(), req.id(), req.kind());
+        try {
+            if (remove) {
+                command("DELETE FROM " + MdRefDismissals.TYPE + " WHERE dismissal_key = :k", Map.of("k", key));
+            } else {
+                command("UPDATE " + MdRefDismissals.TYPE + " SET dismissal_key = :k, record_type = :t, record_id = :i, kind = :kind,"
+                    + " created_by = :by, created_at = :at UPSERT WHERE dismissal_key = :k",
+                    Map.of("k", key, "t", req.type(), "i", req.id(), "kind", req.kind(), "by", callerLabel(), "at", Instant.now().toString()));
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("dismissal_key", key);
+            out.put("action", remove ? "remove" : "add");
+            Snapshot s = last;
+            if (s != null) {
+                Snapshot n = build(s.fields(), s.ctx(), s.scopes(), System.currentTimeMillis(), loadDismissed());
+                last = n;
+                out.putAll(n.answer());
+            }
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE TIDY] dismiss %s: %s", key, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
+    /** Запись в базу — тем же клиентом команд, что у других хранилищ (LoreNewsReadMarkStore): /query пишет не всё. */
+    private void command(String sql, Map<String, Object> params) {
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
+    }
+
+    private Set<String> loadDismissed() {
+        Set<String> out = new HashSet<>();
+        try {
+            for (Map<String, Object> r : ingestService.queryPublic("SELECT dismissal_key AS k FROM " + MdRefDismissals.TYPE, Map.of()))
+                if (r.get("k") != null) out.add(String.valueOf(r.get("k")));
+        } catch (Exception e) {
+            // До накатки V83 типа нет — отметок нет; это не «не смогли проверить» весь корпус.
+            LOG.debugf("[LORE TIDY] dismissals unavailable: %s", e.getMessage());
+        }
+        return out;
     }
 
     // ───────────────────────────── чтение ─────────────────────────────
@@ -206,7 +494,9 @@ public class LoreTidyResource extends LoreResourceBase {
             }
             for (String f : t.histOnly()) {
                 String h = textOf(r.get("h_" + f));
-                if (h != null && !h.isBlank()) out.add(new MdRefCheck.Field(t.type(), id, f, h, false, writable));
+                // Только в версии (outcome_md спринта, цель вехи, тело runbook): путь записи пишет вершину,
+                // а версия остаётся прежней (препрод 13.11) — автоматом не пишем, человеку показываем.
+                if (h != null && !h.isBlank()) out.add(new MdRefCheck.Field(t.type(), id, f, h, false, false));
             }
         }
         return out;

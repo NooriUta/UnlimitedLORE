@@ -33,6 +33,7 @@ export interface AgentsScreenProps {
 export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
   const t = useAppT();
   const lang = useKitLang();
+  const adminNav = useAdminNav();
   const res = useLoadState<AgentsData>(signal => fetchAgents(signal, fetchImpl, lang), [fetchImpl, lang], { rows: d => d.rows });
   const [harness, setHarness] = useState<string | null>(null);
   // Раскрытый агент (вкладка «Проекты») — в адресе: ?adm-agent=actor_id (S7B-12).
@@ -133,6 +134,11 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
     <section className="adm" aria-labelledby="adm-agents-h">
       <h2 id="adm-agents-h" className="adm-h">{t('admin.agents.title')}</h2>
       <p className="adm-lead">{t('admin.agents.lead')}</p>
+      {/* AO-AGENT-ADD: новый агент — тем же мастером, что «Дать человеку агента» (клиент по шаблону, проверка токена). */}
+      <div className="adm-filters">
+        <button type="button" className="adm-btn" data-testid="adm-agents-new"
+          onClick={() => adminNav.go('wiz', { 'adm-wiz': 'agent' })}>{t('admin.agents.new')}</button>
+      </div>
       {body}
     </section>
   );

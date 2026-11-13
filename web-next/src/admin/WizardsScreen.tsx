@@ -17,6 +17,7 @@ import { useAppT, type AppKey } from '../i18n';
 import { useAdminNav } from './adminNav';
 import { DangerBatch } from './DangerBatch';
 import { RotatePanel } from './KcDanger';
+import { TokenCheckNote } from './TokenCheckNote';
 import { fetchAgents, type AgentsData } from './agents';
 import { fetchRoleMatrix, type RolesData } from './roles';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
@@ -474,6 +475,8 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
             : <p className="adm-note" data-tone="dng" role="alert">{t('admin.wiz.agent.noSecret')}</p>}
           {issued.linkError && <p className="adm-err" role="alert" data-testid="adm-wiz-link-error">{t('admin.wiz.agent.linkError', { reason: issued.linkError })}</p>}
           {issued.agent.rolesNote && <p className="adm-note" role="status">{issued.agent.rolesNote}</p>}
+          {/* AO-AGENT-ADD: «завёлся» — фактом токена, а не отсутствием ошибки. */}
+          <TokenCheckNote check={issued.agent.tokenCheck} />
           {mcp && (
             <>
               <p className="adm-lead">{t('admin.wiz.agent.command')}</p>

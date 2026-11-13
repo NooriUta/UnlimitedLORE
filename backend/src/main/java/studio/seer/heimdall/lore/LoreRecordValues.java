@@ -202,19 +202,43 @@ final class LoreRecordValues {
      * список «не читается — среза нет», и паспорт любой записи навсегда показывал «Часть сведений не
      * загрузилась». Вкладка здесь — ровно одним способом из трёх (сверка — LoreRecordRowLinksTest).
      */
-    static final Map<String, java.util.Set<String>> READ_BY_EDGE = Map.of(
-        "task", java.util.Set.of("qgRecs", "insights", "refsOut", "refsIn", "publications"),
-        "adr", java.util.Set.of("runbooks", "refsOut", "refsIn", "insights"),
-        "spec", java.util.Set.of("refsOut", "refsIn"),
-        // 11.11 (полнота модели рёбер): «упоминает» и публикации BRAGI объявлены у всех концов,
-        // а срезов под них нет — вкладка честно говорит «не проверено», а не «0».
-        "sprint", java.util.Set.of("refsOut", "refsIn", "publications"),
-        "release", java.util.Set.of("refsOut", "refsIn", "publications"),
-        "decision", java.util.Set.of("refsOut", "refsIn"),
-        "question", java.util.Set.of("refsOut", "refsIn"),
-        "component", java.util.Set.of("refsOut", "refsIn"),
-        "tech", java.util.Set.of("refsOut", "refsIn"),
-        "feature", java.util.Set.of("refsOut", "refsIn"));
+    static final Map<String, java.util.Set<String>> READ_BY_EDGE = LoreModelViews.map(LoreRecordValues::deriveReadByEdge);
+
+    /** Вкладки типа, которые читаются по ребру ({@link #READ_BY_EDGE}); пусто — всё читается строкой или срезом. */
+    static java.util.Set<String> readByEdge(String type) {
+        return READ_BY_EDGE.getOrDefault(type, java.util.Set.of());
+    }
+
+    /**
+     * MC-05: список выводится из модели, а не ведётся руками — вкладка связи, которую не покрывает ни
+     * строка основного среза ({@link LoreRecordFrom#ROW_LINKS}), ни отдельный срез
+     * ({@link LoreRecordFrom#SLICE_LINKS}), читается по ребру. Так вкладка, заведённая в модели
+     * правкой в админке, сразу читается, а не висит «не загрузилась». Совпадение с прежним ручным
+     * списком держит эталон MC-01 (edge_links по типам).
+     */
+    private static Map<String, java.util.Set<String>> deriveReadByEdge() {
+        Map<String, java.util.Set<String>> out = new LinkedHashMap<>();
+        for (String type : LoreRecordRegistry.TYPES) {
+            LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
+            List<LoreRecordRegistry.Relation> tabs = d.relations().stream().filter(r -> "link_tab".equals(r.place())).toList();
+            Map<String, Long> sameEdge = new java.util.HashMap<>();
+            for (LoreRecordRegistry.Relation r : tabs) sameEdge.merge(r.rel() + ":" + r.dir(), 1L, Long::sum);
+            java.util.Set<String> bySlice = new java.util.HashSet<>();
+            for (LoreRecordFrom.SliceLink sl : LoreRecordFrom.SLICE_LINKS.getOrDefault(type, List.of())) bySlice.add(sl.key());
+            java.util.Set<String> edge = new java.util.LinkedHashSet<>();
+            for (LoreRecordRegistry.Relation r : tabs) {
+                if (bySlice.contains(r.key())) continue;
+                boolean shared = sameEdge.get(r.rel() + ":" + r.dir()) > 1;
+                boolean byRow = LoreRecordFrom.ROW_LINKS.getOrDefault(type, List.of()).stream().anyMatch(l ->
+                    l.rel().equals(r.rel()) && l.dir().equals(r.dir()) && (!shared || l.type().equals(r.targetType())
+                        // SPEC-TECH-* из той же строки открывается паспортом технологии (techByPrefix).
+                        || (l.techByPrefix() && "tech".equals(r.targetType()))));
+                if (!byRow) edge.add(r.key());
+            }
+            if (!edge.isEmpty()) out.put(type, java.util.Collections.unmodifiableSet(edge));
+        }
+        return out;
+    }
 
     /**
      * Вкладки связей, которые фасад НЕ читает ничем. Без этого списка такая вкладка показала бы

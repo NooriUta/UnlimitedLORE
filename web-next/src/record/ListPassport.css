@@ -55,3 +55,6 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+/* S6-04: блок lore-graph в тексте — что граф НЕ показывает, словами под графом. */
+.lore-graph-block-notes { margin: 6px 0 0; padding-left: 18px; font-size: var(--fs-xs); color: var(--t2); }

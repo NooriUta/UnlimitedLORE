@@ -15,11 +15,29 @@ class Scd2GuardTest {
 
     @Test
     void guardedCloseRequiresStillOpenRowAndExitsBeforeAnyWrite() {
-        String s = Scd2Guard.guardedClose("KnowSprintHist", false);
+        String s = Scd2Guard.guardedClose("KnowSprint", "KnowSprintHist", false);
         assertTrue(s.contains("WHERE @rid = :oldrid AND valid_to IS NULL"), s);
         assertFalse(s.contains("status_raw"), "без expected статус не сверяется: " + s);
         assertTrue(s.contains("IF ($closed.size() = 0) { RETURN \"" + Scd2Guard.CONFLICT_MARK + "\"; }"), s);
-        assertTrue(Scd2Guard.guardedClose("KnowTaskHist", true).contains("AND status_raw = :expected_raw"));
+        assertTrue(Scd2Guard.guardedClose("KnowTask", "KnowTaskHist", true).contains("AND status_raw = :expected_raw"));
+    }
+
+    /**
+     * SPRINT_UXR_S11_TEST_OPT/CI-SCD2-RACE: на ArcadeDB 26.11.1 коммит соседа виден
+     * частично — писатель видит закрытую старую версию, но ещё не видит новую и по
+     * ветке «открытой нет» открывает вторую (проба 13.11: 5 раундов из 500 по 8
+     * писателей). Явная блокировка типов цепочки до первого чтения скрипта
+     * сериализует писателей: 0 из 1300. Блокировку обязан брать КАЖДЫЙ писатель
+     * цепочки, иначе её некому ждать, — поэтому она внутри обоих guard'ов.
+     */
+    @Test
+    void everyChainWriterLocksTheWholeChainBeforeItsFirstRead() {
+        String lock = "LOCK TYPE KnowSprint, KnowSprintHist, HAS_STATE;";
+        String close = Scd2Guard.guardedClose("KnowSprint", "KnowSprintHist", false);
+        String noOpen = Scd2Guard.guardedNoOpen("KnowSprint", "KnowSprintHist", "sprint_id", "sid");
+        assertTrue(close.startsWith(lock), close);
+        assertTrue(noOpen.startsWith(lock), noOpen);
+        assertTrue(noOpen.contains("in('HAS_STATE').sprint_id CONTAINS :sid"), noOpen);
     }
 
     @Test

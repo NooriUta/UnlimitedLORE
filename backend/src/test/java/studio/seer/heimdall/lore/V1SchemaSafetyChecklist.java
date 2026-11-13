@@ -83,7 +83,14 @@ final class V1SchemaSafetyChecklist {
         // INSERT копии версии (те же поля v1, новый state_uid) и перевод ребра HAS_STATE второго
         // владельца на копию; исходная версия и её первый владелец не меняются.
         "java__shared_state_split",
-        "копия общей версии второму владельцу и перевод его ребра; исходная строка не меняется");
+        "копия общей версии второму владельцу и перевод его ребра; исходная строка не меняется",
+        // SPRINT_UXR_POLISH_UAT_1113/PU-18, V82. Доказательство — MachineCanonMergeLiveDbTest
+        // (слияние + повтор без изменений) и MachineCanonMergeTest (план). Схема не меняется;
+        // вершины/рёбра — типы V79 (KnowMachine, USES_MACHINE), v1 о них не знает; у
+        // KnowActor.machine_id меняется только значение (регистр, адресная опечатка) — тип и
+        // форма поля те же, v1 читает его как строку по-прежнему.
+        "java__machine_id_canon",
+        "слияние вершин V79 KnowMachine по регистру; значение KnowActor.machine_id → канон, схема не меняется");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

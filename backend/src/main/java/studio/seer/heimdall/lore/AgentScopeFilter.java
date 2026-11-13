@@ -81,7 +81,8 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     // паспорта v2 в UI. Он ведёт в обработчики РАЗНЫХ семейств (sprint, task, adr, spec,
     // question), и строка матрицы для него расширила бы профиль, которому семейство цели
     // закрыто. Агенты привязывают через свои *_link (MCP) — там матрица по семейству цели.
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "news", "record");
+    // model — правка модели LORE (MC-05, SPEC-LORE-MODEL-CONFIG-STORE §4): меняет поверхности всем, правит человек.
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "news", "record", "model");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути

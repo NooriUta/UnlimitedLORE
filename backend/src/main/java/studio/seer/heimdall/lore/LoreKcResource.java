@@ -353,6 +353,17 @@ public class LoreKcResource extends LoreResourceBase {
                 } else rolesNote = (rolesNote == null ? "" : rolesNote + "; ") + "клиентские роли шаблона не прочитаны: KC " + all.statusCode();
             } else rolesNote = "сервисный аккаунт не найден у шаблона или нового клиента";
             LOG.infof("[LORE KC] создан клиент агента %s по шаблону %s, ролей скопировано %d", newId, templateId, copied.size());
+            // AO-AGENT-ADD шаг 4: сразу берём токен новой учётки и смотрим, что в нём agent_scope —
+            // «завёлся» проверяется фактом, а не отсутствием ошибки. Сбой проверки учётку не отменяет.
+            java.util.Map<String, Object> check;
+            try {
+                check = LoreKcAgentClient.tokenCheck(bridge.clientToken(newId, secret), req.profile());
+            } catch (Exception e) {
+                check = new java.util.LinkedHashMap<>();
+                check.put("expected", req.profile());
+                check.put("state", "error");
+                check.put("reason", "токен новой учётки не получен: " + e.getMessage());
+            }
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("clientId", newId);
@@ -361,6 +372,7 @@ public class LoreKcResource extends LoreResourceBase {
             out.put("secret_note", "показывается один раз: LORE его не хранит. Положите в Infisical или в конфиг машины сразу.");
             out.put("roles_copied", copied);
             if (rolesNote != null) out.put("roles_note", rolesNote);
+            out.put("token_check", check);
             return noStore(Response.ok(out));
         } catch (KcCallFailed e) { return kcRefused(e.response); }
         catch (Exception e) { return upstream(e); }
