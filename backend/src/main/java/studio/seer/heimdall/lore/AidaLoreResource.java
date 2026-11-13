@@ -1215,6 +1215,8 @@ public class AidaLoreResource extends LoreResourceBase {
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());
                 // Kit 2 (K2-MATRIX): у ячейки матрицы состояние «проверено / не смогли / нет прав».
                 if ("role_matrix".equals(id)) LoreRoleMatrix.fold(out, kcAnswer.get());
+                // PU-17 шаг 3: кандидаты → пары «перенос потерял роли» (сухой прогон, только чтение).
+                if (LoreRolesLostOnMove.SLICE.equals(id)) LoreRolesLostOnMove.fold(out);
                 if (machineAcl) {
                     MachineAccess.enrichAcl(castRows(out.get("rows")), aclOwnerProjects.get(), aclAgents.get(), aclCaller);
                     MachineActivity.enrichAcl(castRows(out.get("rows")), aclSeen.get());
