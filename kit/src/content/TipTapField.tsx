@@ -322,6 +322,7 @@ export function TipTapField({
   const [refStates, setRefStates] = useState<Record<string, RefCheckState>>({});
   const [refIdsSig, setRefIdsSig] = useState(() => refsInMd(value).map(r => `${r.type ?? ''}:${r.id}`).join('|'));
   const [missingHidden, setMissingHidden] = useState(false);
+  const shownMissingRef = useRef('');
   const onRefsMissingRef = useRef(onRefsMissing);
   onRefsMissingRef.current = onRefsMissing;
   const [refOpen, setRefOpen] = useState<RefOpen | null>(null);
@@ -463,7 +464,10 @@ export function TipTapField({
     editor.view.dispatch(editor.state.tr.setMeta(refStateKey, refStates).setMeta('addToHistory', false));
     const missing = Object.keys(refStates).filter(k => refStates[k] === 'missing');
     onRefsMissingRef.current?.(missing);
-    if (missing.length) setMissingHidden(false);
+    // «Не сейчас» держится, пока набор ненайденных тот же; новый набор — полоса снова видна.
+    const key = missing.join('|');
+    if (missing.length && key !== shownMissingRef.current) setMissingHidden(false);
+    shownMissingRef.current = key;
   }, [refStates, editor]);
   const missingIds = Object.keys(refStates).filter(k => refStates[k] === 'missing');
 

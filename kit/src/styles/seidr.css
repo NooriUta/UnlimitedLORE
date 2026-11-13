@@ -6329,7 +6329,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-auth__word { display: flex; align-items: baseline; gap: 8px; }
 .sk-auth__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); align-self: center; }
 .sk-auth__name { font-family: var(--display); font-weight: 800; font-size: var(--fs-2xl); letter-spacing: .04em; color: var(--t1); }
-.sk-auth__sub { font-size: var(--fs-base); font-weight: 500; letter-spacing: .06em; color: var(--t2); }
+.sk-auth__sub { font-size: var(--fs-base); font-weight: 600; letter-spacing: .06em; color: var(--t2); }
 .sk-auth__slogan { max-width: 320px; min-height: 1.5em; text-align: center; font-style: italic; font-size: var(--fs-sm); letter-spacing: .04em; color: var(--t3); }
 .sk-auth__platform { font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: .07em; color: var(--t3); opacity: .7; }
 .sk-auth__card {
