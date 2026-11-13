@@ -26,9 +26,9 @@ class LoreMePrefsTest {
     @Test
     void passportPlaceIsAPersonalSetting() {
         assertEquals("auto", LoreMePrefs.defaults().get("passport_place"), "умолчание — «выбора не было»");
-        for (String p : List.of("auto", "right", "bottom", "full"))
+        for (String p : List.of("auto", "left", "right", "bottom", "full"))
             assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("passport_place", p)), p);
-        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("passport_place", "left")).size(),
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("passport_place", "top")).size(),
             "неизвестное место — отказ, а не молчаливое умолчание");
     }
 

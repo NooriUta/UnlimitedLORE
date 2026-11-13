@@ -48,11 +48,16 @@ export interface SettingRowProps {
   children?: ReactNode;
   /** Отметка строки для тестов и стилей приложения (data-setting). */
   setting?: string;
+  /**
+   * PU-08: 'stack' — подпись и описание НАД виджетом, виджет на всю ширину под ними (широкие
+   * сегменты из 3+ вариантов на крупном шрифте). По умолчанию — в строку (мелкие вкл/выкл).
+   */
+  layout?: 'row' | 'stack';
 }
 
-export function SettingRow({ label, hint, children, setting }: SettingRowProps) {
+export function SettingRow({ label, hint, children, setting, layout = 'row' }: SettingRowProps) {
   return (
-    <div className="sk-setting" data-setting={setting}>
+    <div className={layout === 'stack' ? 'sk-setting sk-setting--stack' : 'sk-setting'} data-setting={setting} data-layout={layout}>
       <div className="sk-setting__text">
         <span className="sk-setting__label">{label}</span>
         {hint && <span className="sk-setting__hint">{hint}</span>}
