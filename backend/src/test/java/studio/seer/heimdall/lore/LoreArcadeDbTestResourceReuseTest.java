@@ -98,6 +98,26 @@ class LoreArcadeDbTestResourceReuseTest {
         LoreArcadeDbTestResource.captureBaseline(db, url + "|unit_db");
     }
 
+    /**
+     * Сокращённый CI 13.11 (задание 33514): в окружении джоба лежит секрет
+     * ARCADEDB_ROOT_PASSWORD от общей тест-базы, а MartCredentials берёт пароль
+     * СНАЧАЛА из SecretProvider по этому ключу и лишь потом из bench.mart.password.
+     * Приложение шло на встроенный сервер чужим паролем → «Too many failed
+     * authentication attempts», Quarkus не поднимался. Конфиг ресурса обязан
+     * перекрывать и ключ секрета, а не только bench.mart.password.
+     */
+    @Test
+    void appPasswordComesFromTheTestDbEvenWhenEnvCarriesAnotherSecret() {
+        FakeDb db = new FakeDb();
+        LoreArcadeDbTestResource r = resource(new LoreArcadeDbTestResource(), db);
+        java.util.function.Function<String, String> base = r.env;
+        r.env = name -> "ARCADEDB_ROOT_PASSWORD".equals(name) ? "secret-of-another-db" : base.apply(name);
+        Map<String, String> cfg = r.start();
+        assertEquals("pw", cfg.get("bench.mart.password"));
+        assertEquals("pw", cfg.get("ARCADEDB_ROOT_PASSWORD"),
+            "ключ секрета MartCredentials не перекрыт — приложение пойдёт чужим паролем");
+    }
+
     @Test
     void secondStartReusesSchemaWithoutDropCreate() {
         FakeDb first = new FakeDb();

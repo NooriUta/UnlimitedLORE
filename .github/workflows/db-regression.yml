@@ -72,7 +72,7 @@ jobs:
           run_one() {
             ver="$1"; name="arcade-regress-$ver"
             docker rm -f "$name" >/dev/null 2>&1 || true
-            docker run -d --name "$name" --network "$NET" \
+            docker run -d --label "lore.ci.run=$GITHUB_RUN_ID" --name "$name" --network "$NET" \
               -e JAVA_OPTS="-Darcadedb.server.rootPassword=regress-local -Darcadedb.server.defaultDatabases=probe[root]" \
               "arcadedata/arcadedb:$ver" >/dev/null
 
@@ -209,3 +209,9 @@ jobs:
           else
             echo "::warning::поведение версий РАЗЛИЧАЕТСЯ — см. сводку прогона"
           fi
+
+      # OH-17: контейнеры СВОЕГО прогона (метка lore.ci.run) снимаются, даже если
+      # прогон упал или отменён — иначе они держат память ci-server днями.
+      - name: Уборка контейнеров прогона
+        if: always()
+        run: bash .github/scripts/ci-teardown.sh "${{ github.run_id }}"
