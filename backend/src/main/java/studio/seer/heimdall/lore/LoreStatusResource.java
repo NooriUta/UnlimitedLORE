@@ -682,11 +682,11 @@ public class LoreStatusResource extends LoreResourceBase {
             // иначе выход до первой записи и 409.
             StringBuilder script = new StringBuilder();
             if (oldRid.startsWith("#")) {
-                script.append(Scd2Guard.guardedClose("KnowSprintHist", false));
+                script.append(Scd2Guard.guardedClose("KnowSprint", "KnowSprintHist", false));
                 insertParams.put("oldrid", oldRid);
             } else {
                 // S2-15: открытой версии не было видно — проверить внутри скрипта.
-                script.append(Scd2Guard.guardedNoOpen("KnowSprintHist", "sprint_id", "sid"));
+                script.append(Scd2Guard.guardedNoOpen("KnowSprint", "KnowSprintHist", "sprint_id", "sid"));
             }
             script.append("INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +

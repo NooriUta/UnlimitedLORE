@@ -77,14 +77,19 @@ interface FakeOpts {
   kcUsersStatus?: number; kcUsers?: unknown; agentsStatus?: number; users?: KcUser[]; aclStatus?: number;
   /** S7B-20: сервер отвечает на выключение учётки «нельзя» с этой причиной. */
   enabledForbidden?: string;
+  /** Повторные чтения agent_owners (перечитывание после применения) отвечают с задержкой. */
+  reloadDelayMs?: number;
 }
 
 function fake(opts: FakeOpts = {}) {
   const calls: Array<{ url: string; body: Record<string, unknown> | null }> = [];
+  let ownerReads = 0;
   const f = vi.fn(async (url: string, init?: RequestInit) => {
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null;
     calls.push({ url, body });
     if (url.startsWith('/lore/slice/role_matrix')) return json({ rows: MATRIX });
+    if (url.startsWith('/lore/slice/agent_owners') && ++ownerReads > 1 && opts.reloadDelayMs)
+      await new Promise(r => setTimeout(r, opts.reloadDelayMs));
     if (url.startsWith('/lore/slice/agent_owners')) return opts.agentsStatus ? json({ error: 'DOWN' }, opts.agentsStatus) : json({ rows: AGENTS });
     if (url.startsWith('/lore/slice/dictionary')) return json({ rows: [] });
     if (url.startsWith('/lore/slice/machine_acl')) {
@@ -304,6 +309,30 @@ describe('UC-4 · экран', () => {
     fireEvent.click(await within(box).findByTestId('kit-batch-undo'));
     await within(box).findByTestId('kit-batch-undone');
     expect(calls.filter(c => c.url.endsWith('/enable')).map(c => c.url)).toEqual(['/lore/kc/agent-client/lore-mcp-full_anna/enable']);
+  });
+
+  // Корень «падает ~1 из 3» (13.11.2026, 1 из 10 до правки): после «Применить»
+  // экран перечитывает срезы (again()), и useSec сбрасывал уже показанную
+  // секцию в «загрузку» — блок агентов на миг заменялся скелетоном, итог пачки
+  // с кнопкой «Отменить» пересоздавался. Тест держал ссылку на прежний узел и
+  // кликал по отсоединённой кнопке: React этого клика не видит. Пользователь
+  // видел то же мигание. Правило: перечитывание не прячет показанное.
+  it('после применения перечитывание не пересоздаёт блок агентов (итог и «Отменить» на месте)', async () => {
+    // медленное перечитывание делает окно «загрузки» гарантированным, а не случайным
+    const { f, calls } = fake({ reloadDelayMs: 60 });
+    mount('u-anna', 'anna', f);
+    const box = await screen.findByTestId('adm-off-agents');
+    await within(box).findByTestId('kit-diff-row-lore-mcp-full_anna');
+    const ownerReads = () => calls.filter(c => c.url.startsWith('/lore/slice/agent_owners')).length;
+    const before = ownerReads();
+    fireEvent.change(within(box).getByTestId('kit-diff-confirm'), { target: { value: 'anna' } });
+    fireEvent.click(within(box).getByTestId('kit-diff-apply'));
+    await within(box).findByTestId('kit-batch');
+    // перечитывание срезов после применения дошло до конца
+    await waitFor(() => expect(ownerReads()).toBeGreaterThan(before));
+    await waitFor(() => expect(screen.getByTestId('adm-off-inv-agents').getAttribute('data-state')).toBe('ok'));
+    expect(box.isConnected).toBe(true);
+    expect(screen.getByTestId('adm-off-agents')).toBe(box);
   });
 
   it('это вы — отключать себя нельзя: кнопки заблокированы с причиной', async () => {

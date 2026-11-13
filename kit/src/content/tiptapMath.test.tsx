@@ -9,16 +9,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 
 vi.mock('katex/dist/katex.min.css', () => ({}));
 
-// jsdom не меряет раскладку: focus() редактора после правки прокручивает к
-// каретке и зовёт getClientRects у Range/узлов. Пустые прямоугольники — тот же
-// исход, что «ничего не видно», без необработанной ошибки прогона.
-const noRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
-const zeroRect = () => ({ x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0, toJSON: () => ({}) }) as DOMRect;
-for (const proto of [Range.prototype, Element.prototype, Text.prototype as unknown as Element]) {
-  const p = proto as unknown as { getClientRects?: unknown; getBoundingClientRect?: unknown };
-  if (typeof p.getClientRects !== 'function') p.getClientRects = noRects;
-  if (typeof p.getBoundingClientRect !== 'function') p.getBoundingClientRect = zeroRect;
-}
+// Заглушка раскладки jsdom (getClientRects у Range/Text) — общая, в src/test/setup.ts.
 
 import { TipTapField } from './index';
 

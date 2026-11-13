@@ -41,6 +41,16 @@ class MachineIdCanonTest {
         assertEquals("lorcetus", new MachineAccess.Request("LorCetus", "u-1", null, null, "reader", List.of(), List.of()).machine_id());
     }
 
+    /** Пробел #1308: actor, actor/session и actor/owner писали machine_id как пришёл (Kimi — «lorecetus»). */
+    @Test
+    void actorPaths_carryCanonicalMachineId() {
+        assertEquals("lorcetus", new LoreProductResource.ActorRequest("A", null, null, null, null, null, "LorCetus", null).machine_id());
+        assertEquals("lorcetus", new LoreProductResource.AgentSessionRequest("A", "s", "LORCETUS", null, null, null).machine_id());
+        assertEquals("lorcetus", new LoreProductResource.ActorOwnerRequest("A", null, null, null, null, "LORCETUS").machine_id());
+        assertEquals("", new LoreProductResource.ActorOwnerRequest("A", null, null, null, null, "").machine_id(), "«» — отвязать, не трогаем");
+        assertNull(new LoreProductResource.AgentSessionRequest("A", "s", null, null, null, null).machine_id());
+    }
+
     @Test
     void clientId_isCanonical() {
         assertEquals(MachineAccess.PREFIX + "lorcetus", MachineAccess.clientIdOf("LorCetus"));
