@@ -39,7 +39,7 @@ class MachineActivityTest {
             .orElseThrow(() -> new AssertionError("шага миграции с MachineActivity.SCHEMA_SQL нет"));
         assertEquals(81, step.version());
         assertEquals(17, step.compatMajor(), "аддитивно, major 17");
-        assertEquals(81, LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1).version(), "V81 — последний шаг");
+        assertTrue(LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1).version() >= 81, "V81 не позже последнего шага (дальше идут новые миграции)");
         assertTrue(MachineActivity.SCHEMA_SQL.contains("CREATE PROPERTY KnowActor.activity_window_h IF NOT EXISTS INTEGER"));
         assertTrue(MachineActivity.SCHEMA_SQL.contains("CREATE PROPERTY KnowActor.activity_window_harness IF NOT EXISTS MAP"));
         for (String ddl : MachineActivity.SCHEMA_SQL) {
