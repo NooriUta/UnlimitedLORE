@@ -33,7 +33,8 @@ import { loreFetch } from '../auth/session';
 import { fetchSlice } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
 
-export const CREATE_TYPES = ['sprint', 'adr', 'task'] as const;
+// S4-24 (14.11): решения и спеки — та же форма; кнопка появится, когда сервер отдаст паспорт `_new` с can_create.
+export const CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec'] as const;
 export type CreateType = (typeof CREATE_TYPES)[number];
 
 export const isCreateType = (t: string | undefined | null): t is CreateType =>
@@ -78,6 +79,26 @@ const SPECS: Record<CreateType, FieldSpec[]> = {
     { key: 'title', label: 'create.field.title', kind: 'text', required: true },
     { key: 'note_md', label: 'create.field.note', kind: 'md' },
   ],
+  // Решение и спека — по блоку create модели (model-config, S4-24): ключи полей те же, что у сервера.
+  // Проект и ADR — рёбра, выбор из списка; обязательность — require_one_of ниже, а не у поля.
+  decision: [
+    { key: 'id', label: 'create.field.decisionId', kind: 'text', required: true },
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'projects', label: 'create.field.project', kind: 'enum' },
+    { key: 'adr', label: 'create.field.adr', kind: 'enum' },
+  ],
+  spec: [
+    { key: 'id', label: 'create.field.specId', kind: 'text', required: true },
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'projects', label: 'create.field.project', kind: 'enum' },
+    { key: 'summary', label: 'create.field.summary', kind: 'text' },
+  ],
+};
+
+/** require_one_of блока create: хотя бы одно из полей заполнено (у решения — проект ИЛИ ADR-родитель). */
+const ONE_OF: Partial<Record<CreateType, readonly string[]>> = {
+  decision: ['projects', 'adr'],
+  spec: ['projects'],
 };
 
 /** Варианты статуса — цикл ТИПА из модели (S4-STATUS-AXIS-CONFIG); нет — поле статуса не рисуется. */
@@ -88,6 +109,10 @@ export interface CreateFieldOptions {
   status?: readonly StatusOption[];
   /** Спринты, в которые можно завести задачу (срез sprints без закрытых). Пусто/нет — выбирать не из чего. */
   sprints?: readonly StatusOption[];
+  /** ADR, к которым можно привязать новое решение (срез adrs). Нет — поле только для чтения. */
+  adrs?: readonly StatusOption[];
+  /** Проекты (срез git_projects): новое решение или спека кладутся в проект. Нет — поле только для чтения. */
+  projects?: readonly StatusOption[];
 }
 
 /**
@@ -98,16 +123,20 @@ export interface CreateFieldOptions {
 export function createFields(type: CreateType, lang: KitLang, opts: CreateFieldOptions = {}): FieldEditorDef[] {
   const status = opts.status ?? [];
   const sprints = opts.sprints ?? [];
+  const adrs = opts.adrs ?? [];
+  const projects = opts.projects ?? [];
   return SPECS[type]
     .filter(f => f.key !== 'status' || status.length > 0)
     .map(f => ({
       key: f.key,
       label: appT(lang, f.label),
       kind: f.kind,
-      editable: f.key === 'sprint_id' ? sprints.length > 0 : true,
+      editable: f.key === 'sprint_id' ? sprints.length > 0 : f.key === 'adr' ? adrs.length > 0 : f.key === 'projects' ? projects.length > 0 : true,
       ...(f.required ? { required: 'block' as const } : {}),
       ...(f.key === 'status' ? { options: status } : {}),
       ...(f.key === 'sprint_id' ? { options: sprints } : {}),
+      ...(f.key === 'adr' ? { options: adrs } : {}),
+      ...(f.key === 'projects' ? { options: projects } : {}),
     }));
 }
 
@@ -140,7 +169,11 @@ const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : v === n
 
 /** Обязательные поля, которые пусты, — ключами, в порядке формы. */
 export function missingRequired(type: CreateType, values: CreateValues): string[] {
-  return SPECS[type].filter(f => f.required && !text(values[f.key])).map(f => f.key);
+  const own = SPECS[type].filter(f => f.required && !text(values[f.key])).map(f => f.key);
+  // require_one_of: ни одного из полей — называем все, из которых можно выбрать.
+  const oneOf = ONE_OF[type];
+  const none = oneOf && !oneOf.some(k => text(values[k])) ? [...oneOf] : [];
+  return [...own, ...none];
 }
 
 /** Код записи, под которым она откроется после создания (у задачи — «спринт/код»). */
@@ -180,6 +213,11 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
           note_md: opt(values.note_md) ?? null,
         }),
       };
+    // Имена тела — из блока create: title→title, projects→project, adr→adr_id, summary→summary.
+    case 'decision':
+      return { url: '/lore/decision', body: strip({ decision_id: text(values.id), title: text(values.title), project: opt(values.projects), adr_id: opt(values.adr) }) };
+    case 'spec':
+      return { url: '/lore/spec', body: strip({ spec_id: text(values.id), title: text(values.title), project: opt(values.projects), summary: opt(values.summary) }) };
   }
 }
 
@@ -207,7 +245,16 @@ export async function saveCreate(type: CreateType, values: CreateValues, opts: {
   const http = opts.fetchImpl ?? loreFetch;
   const t = (k: AppKey, vars?: Record<string, string | number>) => appT(opts.lang, k, vars);
   const missing = missingRequired(type, values);
-  if (missing.length) return { ok: false, kind: 'refused', reason: t('create.err.required') };
+  if (missing.length) {
+    // require_one_of (проект ИЛИ ADR): назвать, из чего выбрать, а не «заполните обязательные».
+    const oneOf = ONE_OF[type] ?? [];
+    const onlyOneOf = missing.length > 0 && missing.every(k => oneOf.includes(k));
+    if (onlyOneOf) {
+      const labels = SPECS[type].filter(f => oneOf.includes(f.key)).map(f => t(f.label)).join(', ');
+      return { ok: false, kind: 'refused', reason: t('create.err.oneOf', { fields: labels }) };
+    }
+    return { ok: false, kind: 'refused', reason: t('create.err.required') };
+  }
   const id = createdId(type, values);
   try {
     const probe = await http(`/lore/record/${type}/${recordPath(id)}`);
@@ -226,6 +273,36 @@ export async function saveCreate(type: CreateType, values: CreateValues, opts: {
     return { ok: true, id };
   } catch (e) {
     return { ok: false, kind: 'network', reason: t('create.err.network', { reason: e instanceof Error ? e.message : String(e) }) };
+  }
+}
+
+/** Проекты для нового решения или спеки — срез git_projects (ключ — slug). Не прочитался — пусто и причина. */
+export async function fetchProjectOptions(fetchImpl?: typeof fetch): Promise<{ options: StatusOption[]; note?: string }> {
+  try {
+    const body = await fetchSlice<Record<string, unknown>>('git_projects', { fields: 'slug,name', limit: '1000' }, fetchImpl ? { fetchImpl } : {});
+    const options = body.rows
+      .filter(r => typeof r.slug === 'string' && r.slug)
+      .map(r => ({ value: String(r.slug), label: typeof r.name === 'string' && r.name ? `${r.name} · ${String(r.slug)}` : String(r.slug) }));
+    return { options };
+  } catch (e) {
+    return { options: [], note: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** ADR для выбора у нового решения — срез `adrs`. Не прочитался — пусто и причина. */
+export async function fetchAdrOptions(fetchImpl?: typeof fetch): Promise<{ options: StatusOption[]; note?: string }> {
+  try {
+    const body = await fetchSlice<Record<string, unknown>>('adrs', {}, fetchImpl ? { fetchImpl } : {});
+    const options = body.rows
+      .filter(r => typeof r.adr_id === 'string' && r.adr_id)
+      .map(r => {
+        const id = String(r.adr_id);
+        const name = typeof r.name === 'string' && r.name ? r.name : '';
+        return { value: id, label: name ? `${id} · ${name}` : id };
+      });
+    return { options };
+  } catch (e) {
+    return { options: [], note: e instanceof Error ? e.message : String(e) };
   }
 }
 

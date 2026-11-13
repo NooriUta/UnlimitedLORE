@@ -8,7 +8,7 @@
 //   - право создать — perms.can_create паспорта `_new`.
 import { describe, expect, it, vi } from 'vitest';
 import {
-  createFields, createRequest, createdId, fetchCanCreate, fetchSprintOptions, missingRequired, saveCreate,
+  createFields, createRequest, createdId, fetchCanCreate, fetchSprintOptions, isCreateType, missingRequired, saveCreate,
 } from './recordCreate';
 
 const json = (status: number, body: unknown) =>
@@ -164,5 +164,62 @@ describe('S4-24 · право создать — perms.can_create паспорт
     const f = vi.fn(async () => json(200, { perms: { can_create: true } })) as unknown as typeof fetch;
     await fetchCanCreate('task', f);
     expect(String((f as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0])).toBe('/lore/record/task/_new');
+  });
+});
+
+// S4-24 (решение 14.11.2026): «Новая» для решений и спек. Форма та же; появляется сама, когда
+// сервер отдаст паспорт создания `_new` с can_create (model-config, ветка feat/s4-24-new-decision-spec).
+// Поля и имена тела — по блоку create модели: decision {title→title, projects→project, adr→adr_id},
+// require_one_of [projects, adr]; spec {title, projects→project, summary}, require_one_of [projects].
+describe('S4-24 · решения и спеки — та же форма, контракт блока create сервера', () => {
+  it('типы создания включают решение и спеку', () => {
+    expect(isCreateType('decision')).toBe(true);
+    expect(isCreateType('spec')).toBe(true);
+  });
+  it('решение: код и название обязательны; проект и ADR — выбор из списка (рёбра, а не текст)', () => {
+    const f = createFields('decision', 'ru', {
+      projects: [{ value: 'NooriUta/UnlimitedLORE', label: 'UnlimitedLORE' }],
+      adrs: [{ value: 'ADR-LORE-050', label: 'ADR-LORE-050 · Ссылки' }],
+    });
+    expect(f.map(x => x.key)).toEqual(['id', 'title', 'projects', 'adr']);
+    for (const k of ['projects', 'adr']) {
+      const x = f.find(y => y.key === k)!;
+      expect(x.kind).toBe('enum');
+      expect(x.required).toBeUndefined();
+    }
+  });
+  it('решение: нужен проект ИЛИ ADR-родитель (require_one_of) — без обоих не заводится', () => {
+    expect(missingRequired('decision', { id: 'D-1', title: 'Правило' })).toEqual(['projects', 'adr']);
+    expect(missingRequired('decision', { id: 'D-1', title: 'Правило', adr: 'ADR-1' })).toEqual([]);
+    expect(missingRequired('decision', { id: 'D-1', title: 'Правило', projects: 'NooriUta/UnlimitedLORE' })).toEqual([]);
+  });
+  it('спека: код, название, проект (обязателен), краткое описание', () => {
+    expect(createFields('spec', 'ru').map(x => x.key)).toEqual(['id', 'title', 'projects', 'summary']);
+    expect(missingRequired('spec', { id: 'SPEC-X', title: 'Спека' })).toEqual(['projects']);
+    expect(missingRequired('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P' })).toEqual([]);
+  });
+  it('пути записи и имена тела — по блоку create', () => {
+    expect(createRequest('decision', { id: 'D-1', title: 'Правило', adr: 'ADR-1' }))
+      .toEqual({ url: '/lore/decision', body: { decision_id: 'D-1', title: 'Правило', adr_id: 'ADR-1' } });
+    expect(createRequest('decision', { id: 'D-1', title: 'Правило', projects: 'P' }))
+      .toEqual({ url: '/lore/decision', body: { decision_id: 'D-1', title: 'Правило', project: 'P' } });
+    expect(createRequest('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P', summary: 'кратко' }))
+      .toEqual({ url: '/lore/spec', body: { spec_id: 'SPEC-X', title: 'Спека', project: 'P', summary: 'кратко' } });
+  });
+  it('код уже занят — POST не уходит (сервер пишет upsert, #1332)', async () => {
+    const n = net(200, json(200, { ok: true }));
+    const r = await saveCreate('spec', { id: 'SPEC-TAKEN', title: 'X', projects: 'P' }, { fetchImpl: n.impl, lang: 'ru' });
+    expect(r).toMatchObject({ ok: false, kind: 'exists' });
+    expect(n.posts()).toHaveLength(0);
+  });
+});
+
+describe('S4-24 · «проект или ADR» — отказ называет, из чего выбрать', () => {
+  it('решение без проекта и ADR: POST не уходит, причина — «нужно хотя бы одно: Проект, ADR»', async () => {
+    const n = net(404, json(200, { ok: true }));
+    const r = await saveCreate('decision', { id: 'D-1', title: 'Правило' }, { fetchImpl: n.impl, lang: 'ru' });
+    expect(r).toMatchObject({ ok: false, kind: 'refused' });
+    expect(!r.ok && r.reason).toMatch(/хотя бы одно.*Проект.*ADR/);
+    expect(n.posts()).toHaveLength(0);
   });
 });
