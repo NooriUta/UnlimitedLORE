@@ -1641,6 +1641,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-setting__label { color: var(--t1); }
 .sk-setting__hint { color: var(--t2); font-size: var(--fs-2xs); }
 .sk-setting__ctl { flex-shrink: 0; }
+/* PU-08: описание над кнопками — на крупном шрифте сегмент из 3–5 вариантов не делит строку с текстом. */
+.sk-setting--stack { flex-direction: column; align-items: stretch; gap: 4px; }
+.sk-setting--stack .sk-setting__ctl { width: 100%; }
+.sk-setting--stack .sk-seg { flex-wrap: wrap; max-width: 100%; row-gap: 2px; }
 .sk-seg {
   display: inline-flex;
   padding: 2px;
@@ -6401,16 +6405,24 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    контекста», а потолок для телефона, где 680 px просто не влезает.
    Узкая панель справа остаётся как есть (прежнее решение): там своей меры нет,
    колонка и так узкая. */
+/* width: 100% (владелица 13.11: «отступы… странные»): auto-поля у flex-элемента сжимали шапку до
+   ширины заголовка, и она вставала по центру, а строка фактов — нет. Факты — в той же колонке. */
 .sk-dock[data-placement='bottom'] .sk-rec-head,
+.sk-dock[data-placement='bottom'] .sk-rec-facts,
 .sk-dock[data-placement='bottom'] .sk-rec-propsrow,
-.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+.sk-dock[data-placement='bottom'] .sk-tabpanel > * { max-width: var(--rec-col); width: 100%; margin-left: auto; margin-right: auto; }
 
 /* Линия вкладок — во всю рамку (~1200 px), а шапка, свойства и текст — узкой колонкой по центру:
    владелица 08.11 «выглядит классно, чем всё вписанное в одну ширину» (как v4). */
 .sk-dock[data-placement='full'] .sk-rec-head,
 .sk-dock[data-placement='full'] .sk-rec-facts,
 .sk-dock[data-placement='full'] .sk-rec-propsrow,
-.sk-dock[data-placement='full'] .sk-tabpanel > * { max-width: var(--rec-col); margin-left: auto; margin-right: auto; }
+.sk-dock[data-placement='full'] .sk-tabpanel > * { max-width: var(--rec-col); width: 100%; margin-left: auto; margin-right: auto; }
+/* «×» закрытия справа/слева/снизу — в строке бара, а не отдельной строкой над ним (13.11: пустая
+   полоса ~45 px и асимметрия 15/22 px — плавающая кнопка сужала весь паспорт). Тот же приём, что
+   на телефоне: отрицательное нижнее поле снимает обтекание, место кнопке держит бар. */
+.sk-dock:not([data-placement='full']) .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px)); }
+.sk-dock:not([data-placement='full']) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 8px); }
 .sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
 .sk-dock[data-placement='full'] .sk-rec-head { margin-bottom: 10px; }
 .sk-dock[data-placement='full'] .sk-tabpanel { padding-top: 16px; }
@@ -6503,6 +6515,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   background: var(--bg0);
 }
 .sk-dock[data-placement='right'] { grid-template-columns: minmax(0, 1fr) var(--dock-panel-w, min(560px, 45%)); }
+/* MP2-14: «слева» — зеркало: панель в первой колонке, список во второй. */
+.sk-dock[data-placement='left'] { grid-template-columns: var(--dock-panel-w, min(560px, 45%)) minmax(0, 1fr); }
 /* Пол списка при сжатом правом доке (P-04): панель растягивается до 2/3 окна,
    а док уже главной зоны, и колонка списка minmax(0, 1fr) сжималась почти до
    нуля — названия рвались посередине слова. Пол у колонки нельзя: док
@@ -6510,6 +6524,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    списка: уже 360 px она не сжимается, и включается горизонтальная прокрутка
    бэкдропа (.sk-dock__backdrop, overflow: auto), а не дробь слов. */
 .sk-dock[data-placement='right'] .sk-list__scroll { min-width: 360px; }
+.sk-dock[data-placement='left'] .sk-list__scroll { min-width: 360px; }
 /* Высота паспорта снизу (владелица 11.11.2026: «нижняя панель — 1/3 от высоты,
    если не предопределено контрактом, с ресайзбл линией»): док всегда ставит
    --dock-panel-h — треть высоты окна, контракт приложения (bottomHeight) или
@@ -6523,6 +6538,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-dock[data-placement='right'] .sk-dock__backdrop { grid-area: 1 / 1; }
 .sk-dock[data-placement='right'] .sk-dock__panel { grid-area: 1 / 2; }
 .sk-dock[data-placement='right'] .sk-dock__resize { grid-area: 1 / 2; justify-self: start; align-self: stretch; z-index: 1; }
+.sk-dock[data-placement='left'] .sk-dock__backdrop { grid-area: 1 / 2; }
+.sk-dock[data-placement='left'] .sk-dock__panel { grid-area: 1 / 1; }
+.sk-dock[data-placement='left'] .sk-dock__resize { grid-area: 1 / 1; justify-self: end; align-self: stretch; z-index: 1; }
 .sk-dock[data-placement='bottom'] .sk-dock__backdrop { grid-area: 1 / 1; }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { grid-area: 2 / 1; }
 .sk-dock[data-placement='bottom'] .sk-dock__resize { grid-area: 2 / 1; align-self: start; justify-self: stretch; z-index: 1; }
@@ -6538,6 +6556,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   background: var(--bg1);
 }
 .sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
+.sk-dock[data-placement='left'] .sk-dock__panel { border-right: 1px solid var(--bd); }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
 /* Рамка во весь экран — 66vw, а не 66 %: теперь слой внутри оболочки накрывает
    область содержимого, и процент считался бы от неё, то есть от контекста.
@@ -7017,3 +7036,44 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-relfield__chip--inherited { padding-right: 8px; color: var(--t3); border-style: dashed; }
 .sk-relfield__x { min-width: 20px; min-height: 20px; border: 0; border-radius: 999px; background: transparent; color: var(--t3); font: inherit; cursor: pointer; }
 .sk-relfield__x:hover { color: var(--dng); }
+
+/* ---------- «Редактировать всё» (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24) ----------
+   Прототип docs/prototypes/s4-24-edit-all.html одобрен 13.11.2026: полоса «изменено N · Отмена ·
+   Сохранить» липкая наверху (длинный ADR прокручивается, а сохранить видно всегда); тексты —
+   исходником во всю колонку; изменённое помечено цветом предупреждения. */
+.sk-rec__editall { align-self: flex-start; margin: 2px 0 8px; }
+.sk-rec-editall { display: flex; flex-direction: column; gap: 10px; }
+.sk-rec-editall__bar {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 6px 0; border-bottom: 1px solid var(--bd); background: var(--bg1);
+}
+.sk-rec-editall__name { font-family: var(--mono); font-size: var(--fs-sm); color: var(--acc); }
+.sk-rec-editall__state { font-size: var(--fs-sm); color: var(--t2); }
+.sk-rec-editall__why { font-size: var(--fs-xs); color: var(--t3); }
+.sk-rec-editall__grow { flex: 1 1 auto; }
+.sk-rec-editall__fail { padding: 6px 10px; border: 1px solid var(--dng); border-radius: var(--r-md); color: var(--dng); font-size: var(--fs-sm); }
+.sk-rec-editall__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--wrn); border-radius: var(--r-md); background: var(--bg2); font-size: var(--fs-sm); }
+.sk-btn--danger { border-color: var(--dng); color: var(--dng); }
+.sk-rec-editall__fields { display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); gap: 8px 14px; margin: 0; }
+.sk-rec-editall__row { display: contents; }
+.sk-rec-editall__row dt { padding-top: 4px; color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .05em; }
+.sk-rec-editall__row dd { margin: 0; min-width: 0; }
+.sk-rec-editall__row.is-md dt { grid-column: 1 / -1; padding-top: 10px; }
+.sk-rec-editall__row.is-md dd { grid-column: 1 / -1; }
+.sk-rec-editall__mark { margin-left: 6px; color: var(--wrn); text-transform: none; letter-spacing: 0; }
+.sk-rec-editall__md {
+  display: block; width: 100%; min-height: 220px; resize: vertical; padding: 10px;
+  border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1);
+  font-family: var(--mono); font-size: var(--fs-md); line-height: 1.6;
+}
+.sk-rec-editall__in { min-height: max(var(--tap), 26px); padding: 2px 8px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg0); color: var(--t1); font: inherit; font-size: var(--fs-base); }
+.sk-rec-editall__row.is-dirty .sk-rec-editall__md,
+.sk-rec-editall__row.is-dirty .sk-rec-editall__in { border-color: var(--wrn); }
+.sk-rec-editall__rel { display: flex; flex-direction: column; gap: 4px; }
+.sk-relfield__chip.is-removed { border-style: dashed; color: var(--t3); text-decoration: line-through; }
+.sk-relfield__chip.is-added { border-color: var(--acc); }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-rec-editall__fields { grid-template-columns: minmax(0, 1fr); }
+  .sk-rec-editall__md, .sk-rec-editall__in { font-size: var(--fs-touch-input); }
+}

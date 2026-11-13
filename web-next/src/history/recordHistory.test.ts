@@ -191,3 +191,15 @@ describe('S5-11 · restoreRecordVersion: существующий write-API', ()
     expect(onFetch).not.toHaveBeenCalled();
   });
 });
+
+// S9-09 (перепроверка 13.11 на стенде): в дифф истории попадал служебный content_hash — путь S2
+// не отсекал служебные поля, как legacy. Хэш содержимого — не правка человека.
+describe('S9-09 · служебные поля не попадают в историю', () => {
+  it('content_hash и source_commit отсечены и из fields, и из changed', async () => {
+    const body = { ...S2_BODY, versions: [{ ...S2_BODY.versions[0], fields: { note_md: 'b', content_hash: 'h2', source_commit: 'c' }, changed: ['note_md', 'content_hash'] }] };
+    const { f } = fake({ '/lore/history': { status: 200, body } });
+    const r = await fetchRecordHistory('task', 'S/T-1', { fetchImpl: f });
+    expect(Object.keys(r.history.versions[0].fields)).toEqual(['note_md']);
+    expect(r.history.versions[0].changed).toEqual(['note_md']);
+  });
+});

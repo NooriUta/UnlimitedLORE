@@ -22,10 +22,11 @@ const host = () => {
 };
 
 describe('S4-24 · passport_place', () => {
-  it('auto по умолчанию; четыре значения сервера; чужое — отказ', () => {
+  // MP2-14-PLACE-LEFT (13.11): «слева» — пятое значение; чужое по-прежнему отказ.
+  it('auto по умолчанию; пять значений сервера; чужое — отказ', () => {
     expect(DEFAULT_SETTINGS.passport_place).toBe('auto');
-    for (const v of ['auto', 'right', 'bottom', 'full'] as const) expect(validateSettingsPatch({ passport_place: v })).toEqual([]);
-    expect(validateSettingsPatch({ passport_place: 'left' as never })).toEqual(['passport_place']);
+    for (const v of ['auto', 'left', 'right', 'bottom', 'full'] as const) expect(validateSettingsPatch({ passport_place: v })).toEqual([]);
+    expect(validateSettingsPatch({ passport_place: 'top' as never })).toEqual(['passport_place']);
   });
 
   it('выбор ложится атрибутом на корень; auto — атрибута нет', () => {
@@ -42,7 +43,8 @@ describe('S4-24 · passport_place', () => {
     expect(appliedPassportPlace(at('bottom'))).toBe('bottom');
     expect(appliedPassportPlace(at('right'))).toBe('right');
     expect(appliedPassportPlace(at('full'))).toBe('full');
-    expect(appliedPassportPlace(at('left'))).toBeUndefined();
+    expect(appliedPassportPlace(at('left'))).toBe('left');
+    expect(appliedPassportPlace(at('top'))).toBeUndefined();
   });
 
   it('в панели настроек есть строка «Где открывать запись» с вариантами', () => {

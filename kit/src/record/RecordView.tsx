@@ -34,6 +34,7 @@ import { DataStateWarnings } from './DataStateWarnings';
 import { RecordHead, RecordLoaded, RecordVerdict } from './RecordHead';
 import { KIT_NEW_ID, RecordCreate, type RecordCreateSpec } from './RecordCreate';
 import { RelationField } from './RelationField';
+import { RecordEditAll, editAllFields } from './RecordEditAll';
 export { KIT_NEW_ID, type RecordCreateSpec };
 import { RecordLinks, recordLinks } from './RecordLinks';
 import { dataStateOf } from './dataState';
@@ -115,7 +116,8 @@ export interface RecordViewProps {
    * связи, граф, журнал, история — вычисляемое: при bottom/full — колонкой
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
-  placement?: 'right' | 'bottom' | 'full';
+  /** «слева» раскладывается как «справа» — узкая боковая панель (MP2-14). */
+  placement?: 'left' | 'right' | 'bottom' | 'full';
   /**
    * S4-30: «Свойства» в режиме «на весь экран» — открыты или свёрнуты.
    *
@@ -379,6 +381,10 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   const saver = mdEditor ? fieldSaver(record, ctx) : undefined;
   // Правка характеристик (S4-24) не зависит от MD-редактора: право и путь записи — те же.
   const fieldSave = fieldSaver(record, ctx);
+  // S4-24 «Редактировать всё» (прототип s4-24-edit-all одобрен 13.11): во весь экран — одна кнопка
+  // на всю запись; правка копится и уходит одним «Сохранить».
+  const [editAll, setEditAll] = useState(false);
+  const editAllDefs = placement === 'full' ? editAllFields(ctx.config.kinds[record.kind], ctx, !!fieldSave) : [];
   const edit: EditSlot | undefined = mdEditor && saver ? { Editor: mdEditor, save: saver, drafts: mdDrafts } : undefined;
   const titleId = useId();
   const kind = ctx.config.kinds[record.kind];
@@ -484,7 +490,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // ключа mergeTabs оставляет первую (её объявило приложение — там настоящая
   // таблица), добирая у связи счётчик и значок вида UML. До этой сверки один
   // раздел занимал в ряду два места (B13).
-  const modes = placement === 'right' && !narrow;
+  const modes = (placement === 'right' || placement === 'left') && !narrow;
   const recordItems: TabItem[] = mergeTabs([
     // В правом доке сегмент видов уже означает «Контент» — вкладка-дубль в ряд не идёт.
     ...(modes ? [] : [{ id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' as const : undefined }]),
@@ -755,6 +761,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
         {/* Виды записи — под заголовком мини-кнопками (владелица 13.11.2026: «вынеси в лево мини
             кнопками или под Заголовок»): над шапкой рейка стояла первой строкой паспорта и
             спорила с заголовком. */}
+        {editAllDefs.length > 0 && !editAll && (
+          <button type="button" className="sk-btn sk-rec__editall" onClick={() => setEditAll(true)}>{kitT(lang, 'kit.record.editAll.open')}</button>
+        )}
+        {editAll ? (
+          <RecordEditAll record={record} ctx={ctx} lang={lang} fields={editAllDefs} save={fieldSave} onDone={() => setEditAll(false)} />
+        ) : (<>
         {switcher}
         <RelationLines record={record} ctx={ctx} defs={rels} />
         {facts && (
@@ -837,6 +849,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
             <IconButton icon={ICON_CANON.recAnalytics} label={kitT(lang, 'kit.record.rail.analytics')} onClick={() => onTab(RECORD_TABS.links)} />
           </nav>
         )}
+        </>)}
     </>
   );
   const around = aside ? (
