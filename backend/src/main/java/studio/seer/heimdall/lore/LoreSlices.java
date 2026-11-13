@@ -691,6 +691,15 @@ public final class LoreSlices {
             + "FROM ROLE_HELD_BY WHERE @out.task_uid = :id",
             List.of("id"), Map.of(), " ORDER BY valid_from DESC");
 
+        // SPRINT_LORE_AGENT_OBSERVABILITY/AO-06: покрытие ролей профилем по ВСЕМУ корпусу.
+        // task_roles отдаёт profile только для одной задачи — «сколько ролей сегодня несут
+        // профиль» было неотвечаемо, и улучшение нечем было измерить ни до, ни после.
+        // Сырые группы (role, profile, n) — свёртку делает читатель; profile = null и есть
+        // непокрытое. Только открытые роли: закрытые описывают прошлое, а не «сегодня».
+        slice("role_profile_coverage",
+            "SELECT role, profile, count(*) AS n FROM ROLE_HELD_BY WHERE valid_to IS NULL",
+            List.of(), Map.of(), " GROUP BY role, profile ORDER BY role");
+
         // ── ADR-020/021 T25: open-questions register (ОВ) ─────────────────────
         // Derived overdue/blocking/age are computed on the client from the raw
         // fields (status/due_date + gating_tasks) — never stored.
@@ -3251,7 +3260,8 @@ public final class LoreSlices {
         Map.entry("tech_registry", "реестр технологий — общий"),
         Map.entry("tech_by_id", "паспорт технологии — тот же общий реестр"),
         Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
-        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем")
+        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем"),
+        Map.entry("role_profile_coverage", "AO-06: агрегат покрытия ролей профилем — числа по корпусу, без записей проектов")
     );
 
     /**
