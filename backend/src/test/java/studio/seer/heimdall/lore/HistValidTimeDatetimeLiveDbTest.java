@@ -67,7 +67,7 @@ class HistValidTimeDatetimeLiveDbTest {
             .POST(HttpRequest.BodyPublishers.ofString(
                 io.vertx.core.json.JsonObject.of("language", "sql", "command", command).encode(),
                 StandardCharsets.UTF_8)).build();
-        HttpResponse<String> r = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> r = LiveDbHttp.CLIENT.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         System.out.println("[RM-P13 V56] " + command + " → " + r.statusCode() + " " + r.body());
         assertTrue(r.statusCode() == 200, "команда отклонена: " + command + " → " + r.body());
         io.vertx.core.json.JsonObject j = new io.vertx.core.json.JsonObject(r.body());
