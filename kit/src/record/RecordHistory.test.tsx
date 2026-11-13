@@ -78,7 +78,7 @@ describe('S5-11 · RecordHistory: кто правил', () => {
     show(ok());
     const rows = screen.getAllByTestId('kit-history-row');
     expect(rows.map(r => r.getAttribute('data-author'))).toEqual(['agent', 'human', 'unknown']);
-    expect(rows[0].textContent).toContain('агент');
+    expect(rows[0].textContent).toContain('бот');
     expect(rows[0].textContent).toContain('claude-code');
     expect(rows[0].textContent).toContain('текущая');
     expect(rows[1].textContent).toContain('человек');
@@ -192,7 +192,7 @@ describe('S5-11 · RecordHistory: вернуть как новую версию'
 
   it('en-локаль: подписи на английском', () => {
     show(ok(), 'en');
-    expect(screen.getAllByTestId('kit-history-row')[0].textContent).toContain('agent');
+    expect(screen.getAllByTestId('kit-history-row')[0].textContent).toContain('bot');
     expect(screen.getByLabelText('Compare with')).toBeTruthy();
   });
 

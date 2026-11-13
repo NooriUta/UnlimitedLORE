@@ -4,6 +4,7 @@ import { KitLangProvider, applyTheme, registerGameIcons, resolvePrefs } from '@s
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { AuthGate } from '@seidr/kit/auth';
 import { authBrand } from './auth/authBrand';
+import { installKitVocabulary } from './kitVocabulary';
 import App from './App';
 import { v2Auth } from './auth/session';
 import { installServerPulse } from './shell/serverPulse';
@@ -15,6 +16,8 @@ import { staleChunk } from './shell/staleChunk';
 // запрещает удалённую подгрузку, а неизвестный слаг GameIcon рисует честной
 // заглушкой data-missing, а не пустотой.
 registerGameIcons(gameIcons);
+// Слова LORE поверх нейтральных строк kit (K-14) — до первой отрисовки, включая вход.
+installKitVocabulary();
 
 // Тема — до первого рендера, из того же сохранённого выбора, что у v1
 // (lore-palette/lore-mode, общая cookie seer-prefs — storage/themeSource.ts):

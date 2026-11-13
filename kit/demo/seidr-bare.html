@@ -1379,7 +1379,7 @@
 <p>HTML — только в песочнице</p>
 <script>
 (function(){
-  function post(){window.parent.postMessage({_seerResize:document.documentElement.scrollHeight},'*');}
+  function post(){window.parent.postMessage({_skResize:document.documentElement.scrollHeight},'*');}
   post();
   new MutationObserver(post).observe(document.body,{childList:true,subtree:true,attributes:true});
   window.addEventListener('load',post);

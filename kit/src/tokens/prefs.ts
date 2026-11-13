@@ -39,27 +39,41 @@ export const DENSITIES: readonly Density[] = ['roomy', 'compact', 'comfortable']
 
 export const DEFAULT_PREFS: ThemePrefs = { palette: 'amber-forest', mode: 'dark', density: 'roomy' };
 
-export const STORAGE_KEYS = {
-  palette: 'lore-palette',
-  mode: 'lore-mode',
-  /** Старый общий ключ v1: в нём бывала и палитра (`amber`), и режим. */
-  legacy: 'lore-theme',
-  density: 'lore-density',
-} as const;
+/** Ключи localStorage под выбор темы. Имена — приложения (K-14): у LORE они общие с v1. */
+export interface StorageKeys {
+  palette: string;
+  mode: string;
+  /** Старый общий ключ: в нём бывала и палитра (`amber`), и режим. */
+  legacy: string;
+  density: string;
+}
 
-export const PREFS_COOKIE = 'seer-prefs';
+/** Нейтральные ключи kit — пока приложение не назвало свои. */
+export const STORAGE_KEYS: StorageKeys = {
+  palette: 'sk-palette',
+  mode: 'sk-mode',
+  legacy: 'sk-theme',
+  density: 'sk-density',
+};
+
+/** Общая cookie выбора темы по умолчанию; приложение называет свою (cookieName). */
+export const PREFS_COOKIE = 'sk-prefs';
 
 export interface PrefsSources {
   /** Чтение localStorage (или подмена в тесте). */
   local?: (key: string) => string | null;
   /** Строка document.cookie. */
   cookie?: string;
+  /** Ключи localStorage приложения; нет — нейтральные kit. */
+  keys?: StorageKeys;
+  /** Имя общей cookie приложения; нет — PREFS_COOKIE. */
+  cookieName?: string;
 }
 
 /** Разбор общей cookie платформы; битая cookie = пусто, а не исключение. */
-export function readPrefsCookie(cookie: string | undefined): { theme?: string; palette?: string } {
+export function readPrefsCookie(cookie: string | undefined, name: string = PREFS_COOKIE): { theme?: string; palette?: string } {
   if (!cookie) return {};
-  const m = cookie.match(new RegExp(`(?:^|; )${PREFS_COOKIE}=([^;]*)`));
+  const m = cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   if (!m) return {};
   try {
     const v = JSON.parse(decodeURIComponent(m[1])) as unknown;
@@ -78,18 +92,19 @@ export function normalizePalette(v: string | null | undefined): Palette | null {
 
 export function resolvePrefs(src: PrefsSources): ThemePrefs {
   const local = src.local ?? (() => null);
-  const shared = readPrefsCookie(src.cookie);
+  const shared = readPrefsCookie(src.cookie, src.cookieName);
+  const keys = src.keys ?? STORAGE_KEYS;
 
-  const palette = normalizePalette(local(STORAGE_KEYS.palette) ?? local(STORAGE_KEYS.legacy))
+  const palette = normalizePalette(local(keys.palette) ?? local(keys.legacy))
     ?? normalizePalette(shared.palette)
     ?? DEFAULT_PREFS.palette;
 
-  const savedMode = local(STORAGE_KEYS.mode) ?? local(STORAGE_KEYS.legacy);
+  const savedMode = local(keys.mode) ?? local(keys.legacy);
   const mode: Mode = savedMode === 'light' || savedMode === 'dark'
     ? savedMode
     : shared.theme === 'light' ? 'light' : 'dark';
 
-  const savedDensity = local(STORAGE_KEYS.density);
+  const savedDensity = local(keys.density);
   const density = DENSITIES.find(d => d === savedDensity) ?? DEFAULT_PREFS.density;
 
   return { palette, mode, density };

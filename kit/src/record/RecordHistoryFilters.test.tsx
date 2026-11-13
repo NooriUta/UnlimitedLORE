@@ -93,7 +93,7 @@ describe('S9-09 · фильтры истории доходят до челов�
     show({ onQuery: undefined });
     expect(screen.queryByLabelText('Кто правил')).toBeNull();
     expect(screen.queryByLabelText('Автор')).toBeNull();
-    expect(screen.queryByLabelText(/Свернуть правки агента/)).toBeNull();
+    expect(screen.queryByLabelText(/Свернуть правки бота/)).toBeNull();
   });
 
   it('вид автора уходит в запрос', () => {
@@ -161,7 +161,7 @@ describe('S9-09 · свёртка правок агента', () => {
     // Сейчас не свёрнуто — и это сказал сервер эхом, а не мы.
     show({ onQuery, query: { ...HISTORY_QUERY_ALL, collapse: false },
       data: hist({ page: { limit: 20, offset: 0, total: 3, has_more: false, collapse: null } }) });
-    fireEvent.click(screen.getByLabelText(/Свернуть правки агента/));
+    fireEvent.click(screen.getByLabelText(/Свернуть правки бота/));
     expect(onQuery.mock.calls[0][0]).toMatchObject({ collapse: true });
   });
 
@@ -170,7 +170,7 @@ describe('S9-09 · свёртка правок агента', () => {
       query: { ...HISTORY_QUERY_ALL, collapse: true },
       data: hist({ page: { limit: 20, offset: 0, total: 3, has_more: false, collapse: null } }),
     });
-    expect((screen.getByLabelText(/Свернуть правки агента/) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByLabelText(/Свернуть правки бота/) as HTMLInputElement).checked).toBe(false);
   });
 
   it('свёрнутая серия показывает число правок и период', () => {

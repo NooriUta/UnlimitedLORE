@@ -1,0 +1,41 @@
+// Словарь LORE поверх нейтральных строк kit (K-14, SPRINT_UXR_S7B_ADMIN/S7B-23_2).
+// kit не знает, что у LORE «спринт», «агент» и вход через Keycloak: эти слова —
+// предметность приложения и живут здесь. Ставится один раз при старте (main.tsx)
+// и в настройке тестов, чтобы экран говорил теми же словами, что и раньше.
+import { setKitStrings, type KitKey, type KitLang } from '@seidr/kit';
+
+export const LORE_KIT_STRINGS: Record<KitLang, Partial<Record<KitKey, string>>> = {
+  ru: {
+    "kit.record.around": "Вокруг записи · вычисляет LORE",
+    "kit.record.journal.agent": "агент",
+    "kit.appr.journal.agent": "агент",
+    "kit.record.history.agent": "агент",
+    "kit.palette.trigger.search": "Поиск по LORE…",
+    "kit.record.graph.structuralHint": "Принадлежность и иерархия: проект, спринт, фаза, родитель",
+    "kit.burn.emptyHint": "У спринта нет задач в истории — это проверенный ноль, а не сбой.",
+    "kit.auth.redirecting": "Вы не вошли — переходим ко входу через Keycloak…",
+    "kit.auth.loggedOut": "Вы вышли из LORE.",
+    "kit.auth.error.hint": "Keycloak не подтвердил вход — это не «пусто». Войдите снова.",
+    "kit.record.history.fCollapse": "Свернуть правки агента в серии",
+    "kit.record.history.partialRows": "Показано {shown} из {total} строк — правки агента свёрнуты",
+  },
+  en: {
+    "kit.record.around": "Around the record · computed by LORE",
+    "kit.record.journal.agent": "agent",
+    "kit.appr.journal.agent": "agent",
+    "kit.record.history.agent": "agent",
+    "kit.palette.trigger.search": "Search LORE…",
+    "kit.record.graph.structuralHint": "Ownership and hierarchy: project, sprint, phase, parent",
+    "kit.burn.emptyHint": "The sprint has no tasks in history — a checked zero, not a failure.",
+    "kit.auth.redirecting": "You are not signed in — redirecting to Keycloak…",
+    "kit.auth.loggedOut": "You have signed out of LORE.",
+    "kit.auth.error.hint": "Keycloak did not confirm the sign-in — this is not “empty”. Sign in again.",
+    "kit.record.history.fCollapse": "Collapse agent edits into runs",
+    "kit.record.history.partialRows": "Showing {shown} of {total} rows — agent edits are collapsed",
+  },
+};
+
+export function installKitVocabulary(): void {
+  setKitStrings('ru', LORE_KIT_STRINGS.ru);
+  setKitStrings('en', LORE_KIT_STRINGS.en);
+}
