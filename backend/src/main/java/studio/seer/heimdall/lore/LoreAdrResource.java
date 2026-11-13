@@ -171,7 +171,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     // S2-13: правка тела статус не меняет — он переносится в новую версию.
                     String carryStatus = StatusHistoryService.carryStatusSet(histRows.get(0), cp);
                     Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                        Scd2Guard.guardedClose("KnowADRHist", false) +
+                        Scd2Guard.guardedClose("KnowADR", "KnowADRHist", false) +
                         "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
                         "context_md=:ctx, decision_md=:dec, consequences_md=:con" + carryStatus + ChangeAuthor.SET_SQL + ";" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +

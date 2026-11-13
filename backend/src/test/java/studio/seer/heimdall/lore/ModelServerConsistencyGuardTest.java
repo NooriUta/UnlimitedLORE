@@ -60,9 +60,8 @@ class ModelServerConsistencyGuardTest {
      * Вид поля модели не противоречит объявленному типу свойства схемы. Ключ — тип.поле, значение —
      * причина, по которой расхождение принято (исключение видно, а не спрятано).
      */
-    static final Map<String, String> KIND_EXEMPT = Map.of(
-        "sprint.no_release", "в kit нет вида bool — флаг показывается словом; вид bool заведён отдельной задачей",
-        "product.is_active", "в kit нет вида bool — флаг показывается словом; вид bool заведён отдельной задачей");
+    /** Одно правило с сервером: перечень исключений — LoreModelConsistency.KIND_EXEMPT (MC-05). */
+    static final Map<String, String> KIND_EXEMPT = LoreModelConsistency.KIND_EXEMPT;
 
     @Test
     @SuppressWarnings("unchecked")
@@ -82,14 +81,7 @@ class ModelServerConsistencyGuardTest {
     }
 
     static boolean compatible(String kind, String schemaType) {
-        Set<String> num = Set.of("INTEGER", "LONG", "SHORT", "BYTE", "FLOAT", "DOUBLE", "DECIMAL");
-        return switch (kind) {
-            case "number", "days" -> num.contains(schemaType);
-            case "date" -> Set.of("DATE", "DATETIME", "STRING").contains(schemaType);
-            case "text", "md", "enum" -> "STRING".equals(schemaType);
-            case "ref" -> Set.of("STRING", "LIST", "LINK", "LINKLIST").contains(schemaType);
-            default -> true;
-        };
+        return LoreModelConsistency.compatible(kind, schemaType);
     }
 
     static JsonObject listFacets() throws IOException {

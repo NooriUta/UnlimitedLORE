@@ -1392,6 +1392,216 @@
       "place" : "body"
     } ]
   }, {
+    "type" : "doc",
+    "label" : "Документ",
+    "labelKey" : "pp.kind.doc",
+    "icon" : "bookshelf",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "title"
+      },
+      "required" : true
+    }, {
+      "key" : "kind",
+      "label" : "Вид",
+      "labelKey" : "pp.field.docKind",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "kind"
+      }
+    }, {
+      "key" : "component",
+      "label" : "Компонент",
+      "labelKey" : "pp.field.component",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO"
+      },
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "parent",
+      "label" : "Родительский документ",
+      "labelKey" : "pp.field.parentDoc",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "parent_doc_id"
+      },
+      "refType" : "doc",
+      "rel" : "DOC_CHILD_OF",
+      "dir" : "out",
+      "relation" : "composition"
+    }, {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "labelKey" : "pp.field.sprints",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "sprint",
+      "rel" : "IMPLEMENTED_IN",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "file_path",
+      "label" : "Файл",
+      "labelKey" : "pp.field.file",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "file_path"
+      }
+    } ],
+    "body" : [ {
+      "key" : "content_md_ru",
+      "label" : "Текст",
+      "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "content_md_ru"
+      }
+    }, {
+      "key" : "content_md_en",
+      "label" : "Текст (EN)",
+      "labelKey" : "pp.field.bodyEn",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "content_md_en"
+      }
+    } ],
+    "props" : [ {
+      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "children",
+      "label" : "Вложенные документы",
+      "rels" : [ {
+        "rel" : "DOC_CHILD_OF",
+        "dir" : "in",
+        "label" : "вложены",
+        "relation" : "composition"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "components",
+      "label" : "Компонент",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "parentDoc",
+      "label" : "Родительский документ",
+      "rel" : "DOC_CHILD_OF",
+      "dir" : "out",
+      "targetType" : "doc",
+      "relation" : "composition",
+      "place" : "prop"
+    }, {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "rel" : "IMPLEMENTED_IN",
+      "dir" : "out",
+      "targetType" : "sprint",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "children",
+      "label" : "Вложенные документы",
+      "rel" : "DOC_CHILD_OF",
+      "dir" : "in",
+      "targetType" : "doc",
+      "relation" : "composition",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "assets",
+      "label" : "Вложения",
+      "rel" : "ATTACHED_TO",
+      "dir" : "out",
+      "targetType" : "asset",
+      "relation" : "composition",
+      "place" : "body"
+    } ]
+  }, {
     "type" : "decision",
     "label" : "Решение",
     "labelKey" : "pp.kind.decision",
@@ -3172,6 +3382,10 @@
       "hist" : "KnowDecisionHist",
       "key" : "decision_id"
     },
+    "doc" : {
+      "vertex" : "KnowDoc",
+      "key" : "doc_id"
+    },
     "feature" : {
       "vertex" : "KnowUseCase",
       "key" : "uc_id"
@@ -3236,6 +3450,9 @@
       "date" : "date_created",
       "status" : "status_raw"
     },
+    "doc" : {
+      "body_md" : "content_md_ru"
+    },
     "feature" : {
       "code" : "uc_id",
       "date" : "date_created",
@@ -3295,7 +3512,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "product", "project", "question", "spec", "task" ],
+  "no_type_color" : [ "doc", "product", "project", "question", "spec", "task" ],
   "precision" : {
     "adr.date" : "date",
     "decision.date" : "date",
@@ -3370,6 +3587,11 @@
         "source" : "date_created",
         "precision" : "date"
       } ]
+    },
+    "doc" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "feature" : {
       "history" : "none",
@@ -3740,6 +3962,19 @@
       "slot" : "own"
     }, {
       "key" : "useCases",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "doc" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "children",
       "slot" : "own"
     }, {
       "key" : "refsOut",

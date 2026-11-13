@@ -34,6 +34,16 @@ final class MdRefCheck {
 
     static Map<String, Object> compute(List<Field> fields, MdRefRules.Ctx ctx,
                                        Map<RecordKey, MdRefRules.Scope> scopes, Set<String> enabled) {
+        return compute(fields, ctx, scopes, enabled, Set.of());
+    }
+
+    /**
+     * @param dismissed ключи отметок «не ссылка» ({@link MdRefDismissals#key}): места этого вида у
+     *                  записи не считаются, а сама отметка идёт в {@code manual.dismissed} (фильтр «скрытые»).
+     */
+    static Map<String, Object> compute(List<Field> fields, MdRefRules.Ctx ctx,
+                                       Map<RecordKey, MdRefRules.Scope> scopes, Set<String> enabled, Set<String> dismissed) {
+        Map<String, Integer> hidden = new TreeMap<>();              // ключ отметки → скрыто мест
         Map<String, int[]> ruleEdits = new TreeMap<>();            // rule → [edits, records]
         Map<String, Integer> sig = new TreeMap<>();
         Map<String, List<Map<String, Object>>> samples = new TreeMap<>();
@@ -69,7 +79,11 @@ final class MdRefCheck {
                 }
             }
             List<Map<String, Object>> iss = new ArrayList<>();
-            for (MdRefRules.Issue i : r.issues()) iss.add(issue(i.kind(), i.id(), f.field(), i.snippet(), i.suggest()));
+            for (MdRefRules.Issue i : r.issues()) {
+                String dk = MdRefDismissals.key(f.type(), f.id(), i.kind());
+                if (dismissed.contains(dk)) { hidden.merge(dk, 1, Integer::sum); continue; }
+                iss.add(issue(i.kind(), i.id(), f.field(), i.snippet(), i.suggest()));
+            }
             // Нельзя править автоматом, а правки есть: не потерять их — показать человеку.
             if (!r.changes().isEmpty() && !canAuto) {
                 String kind = f.diverged() ? "diverged" : "not_writable";
@@ -136,6 +150,12 @@ final class MdRefCheck {
         manual.put("places", places);
         manual.put("groups", g);
         manual.put("rows", rows);
+        List<Map<String, Object>> hiddenRows = new ArrayList<>();
+        for (Map.Entry<String, Integer> h : hidden.entrySet()) {
+            String[] p = h.getKey().split("\\|", 3);
+            hiddenRows.add(Map.of("type", p[0], "id", p[1], "kind", p[2], "places", h.getValue()));
+        }
+        manual.put("dismissed", hiddenRows);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("scanned", Map.of("records", records.size(), "fields", fields.size()));

@@ -36,13 +36,13 @@ final class LoreRecordRegistry {
      * Типы паспорта v2 — в порядке показа. С MC-02 (D-2026-LORE-MODEL-AS-CONFIG) описание модели лежит
      * конфигурацией — shared/model/lore-model.json ({@link LoreModelFile}), а не таблицами здесь.
      */
-    static final List<String> TYPES = LoreModelFile.content().types();
+    static final List<String> TYPES = LoreModelViews.list(() -> LoreModelFile.content().types());
 
     /**
      * Kit 09.11: типы с паспортом только на чтение — путей записи в фасаде у них пока нет.
      * Поля не правятся, perms ничего не обещают: кнопка без пути сохранения хуже её отсутствия.
      */
-    static final java.util.Set<String> READ_ONLY = LoreModelFile.content().readOnly();
+    static final java.util.Set<String> READ_ONLY = LoreModelViews.set(() -> LoreModelFile.content().readOnly());
 
     /** Куда пишется поле: эндпоинт существующего пути записи и имя поля в его теле. */
     record Write(String endpoint, String field) {}
@@ -107,9 +107,9 @@ final class LoreRecordRegistry {
         }
     }
 
-    private static final Map<String, TypeDef> TYPE_DEFS = LoreModelFile.content().typeDefs();
+    private static final Map<String, TypeDef> TYPE_DEFS = LoreModelViews.map(() -> LoreModelFile.content().typeDefs());
     /** Описания типов, которые бывают только детьми (фаза, вопрос, решение) — для колонок parts. */
-    private static final Map<String, TypeDef> CHILD_ONLY = LoreModelFile.content().childOnly();
+    private static final Map<String, TypeDef> CHILD_ONLY = LoreModelViews.map(() -> LoreModelFile.content().childOnly());
 
     /** Описание типа паспорта или {@code null}, если тип ещё не заведён. */
     static TypeDef get(String type) {

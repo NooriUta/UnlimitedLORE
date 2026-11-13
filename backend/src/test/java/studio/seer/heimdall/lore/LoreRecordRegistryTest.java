@@ -34,7 +34,8 @@ class LoreRecordRegistryTest {
 
     @Test
     void typesNowAreSprintTaskAdrSpec() {
-        assertEquals(List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release",
+        // S5-DOC-PASSPORT: документ — после спеки (группа «Знания»), правится (не READ_ONLY).
+        assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "release",
             "component", "tech", "feature", "product", "project"), LoreRecordRegistry.TYPES);
         // Kit 09.11: решение и вопрос заведены — пока только чтение (READ_ONLY).
         assertNotNull(LoreRecordRegistry.get("decision"));

@@ -27,7 +27,7 @@ class LoreModelTypesLiveDbTest {
         String body = given().header("X-Seer-Role", "admin").when().get("/lore/model").then().statusCode(200)
             .extract().asString();
         JsonPath m = new JsonPath(body);
-        assertEquals(List.of("sprint", "task", "adr", "spec", "decision", "question", "milestone", "release",
+        assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "release",
             "component", "tech", "feature", "product", "project"), List.copyOf(m.getMap("types").keySet()));
         assertEquals("task_uid", m.getString("types.task.key"));
         assertFalse(m.getList("missing").contains("types"), "раздел есть — в missing его нет: " + m.getList("missing"));

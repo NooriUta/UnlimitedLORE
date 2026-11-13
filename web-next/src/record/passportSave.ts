@@ -89,6 +89,8 @@ function idBody(type: PassportType, rec: Ref): Record<string, unknown> {
   if (type === 'task') return named('task_uid', 'title');
   if (type === 'spec') return named('spec_id', 'title');
   if (type === 'adr') return named('adr_id', 'name');
+  // S5-DOC-PASSPORT: /lore/doc пишет только переданные поля — имя не нужно и не затирается.
+  if (type === 'doc') return { doc_id: rec.id };
   return { id: rec.id };
 }
 

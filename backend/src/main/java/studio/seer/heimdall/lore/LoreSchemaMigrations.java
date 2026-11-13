@@ -1601,8 +1601,30 @@ final class LoreSchemaMigrations {
         // SPRINT_UXR_S7B_ADMIN/S7B-ACT-1 (слово владелицы 11.11: «считать активной в течении — от часа
         // после последнего вызова до суток»): окно активности машины и окна по harness — свойства
         // актора-машины (client_id minilore-link-*). Аддитивно, major 17. DDL рядом с логикой (MachineActivity).
-        new Step(81, 17, "machine_activity_window", MachineActivity.SCHEMA_SQL)
+        new Step(81, 17, "machine_activity_window", MachineActivity.SCHEMA_SQL),
+
+        // SPRINT_UXR_POLISH_UAT_1113/PU-18 шаг 2 (слово владелицы 13.11: «да, слить»): вершины
+        // KnowMachine, различающиеся регистром (прод: LorCetus, LORCETUS), сливаются в
+        // каноническое имя (AgentMachine.canon) с переносом USES_MACHINE; KnowActor.machine_id —
+        // туда же, плюс опечатка lorecetus у Kimi. Идёт вместе с канонизацией входа (#1308):
+        // раньше слитое пересоздавалось бы заголовком X-Lore-Machine. Идемпотентен.
+        new Step(82, 17, "java__machine_id_canon", List.of()),
+
+        // SPRINT_UXR_POLISH_UAT_1113/PU-20 (решение владелицы 13.11, A1: «отдельный объект в бд»):
+        // отметки «не ссылка» раздела «Привести в порядок» — вершина LoreRefDismissal, ключ
+        // record_type|record_id|kind. Аддитивно, major 17. Идёт после V82 (PU-18, #1311).
+        // DDL рядом с логикой (MdRefDismissals).
+        new Step(83, 17, "ref_dismissal", MdRefDismissals.SCHEMA_SQL),
+
+        // SPRINT_LORE_MODEL_AS_CONFIG/MC-05 (SPEC-LORE-MODEL-CONFIG-STORE): V84 (V82 — #1311 PU-18, V83 — #1316 PU-20). Модель LORE — запись в LORE с
+        // историей SCD2 (KnowModelConfig + KnowModelConfigHist через HAS_STATE). Аддитивно, major 17:
+        // только новые типы, данные не трогаются. DDL рядом с логикой (LoreModelStore).
+        new Step(84, 17, "model_config_store", LoreModelStore.SCHEMA_SQL)
     );
+
+    /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */
+    static final Map<String, List<String>> MACHINE_ID_TYPOS = Map.of(
+        "AGENT-FULL_KIMI-mw8ykenh", List.of("lorecetus", "lorcetus"));
 
     /** RM-X1: старый и новый id вехи для V53. */
     static final String MILESTONE_OLD_ID = "M2 ✓ core";

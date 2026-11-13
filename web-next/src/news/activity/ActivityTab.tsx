@@ -207,6 +207,9 @@ function Summary({ data, target, lang }: { data: NewsV2Response; target: Activit
       {part && (
         <>
           <Metric id="waiting" label={t('kit.activity.m.waiting')} tone="wrn">{num(part.waiting_t1)}</Metric>
+          {typeof part.uat_t1 === 'number' && (
+            <Metric id="uat" label={t('kit.activity.m.uat')}>{num(part.uat_t1)}</Metric>
+          )}
           <Metric id="ship" label={t('kit.activity.m.ship')}>{num(part.ship_correction)}</Metric>
           <Metric id="react" label={t('kit.activity.m.react')}>
             {part.react ? `${part.react.events} · ${part.react.elements}` : '—'}

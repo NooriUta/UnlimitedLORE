@@ -157,7 +157,7 @@ public class LoreSpecResource extends LoreResourceBase {
                     changeAuthor().bind(hp); // S2-12
                     String carryStatus = StatusHistoryService.carryStatusSet(histRows.get(0), hp);
                     Object cpRes = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                        Scd2Guard.guardedClose("KnowSpecHist", false) +
+                        Scd2Guard.guardedClose("KnowSpec", "KnowSpecHist", false) +
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
                         "content_md=:content, version=:version, summary=:summary, status=:status" +
                         carryStatus + ChangeAuthor.SET_SQL + ";" +

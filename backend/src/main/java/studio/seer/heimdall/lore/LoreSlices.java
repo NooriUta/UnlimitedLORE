@@ -821,6 +821,12 @@ public final class LoreSlices {
         // принимающего. SQL отдаёт только задачу под скоупом и её проекты; строки {code, title,
         // kind} собирает TaskRoleService.identitiesOfTask теми же методами, что проверяет запись
         // роли (TR-05), — в AidaLoreResource. Нет задачи / нет проекта — ошибка, не пустой список.
+        // MC-05 (SPEC-LORE-MODEL-CONFIG-STORE §5): история версий модели — без тела (тело — GET /lore/model/config/{state_uid}).
+        slice("model_config_history",
+            "SELECT state_uid, valid_from, valid_to, content_hash, reason, changed_by, changed_by_kind " +
+            "FROM KnowModelConfigHist WHERE in('HAS_STATE').config_id CONTAINS 'lore-model'",
+            List.of(), Map.of(), " ORDER BY valid_from DESC");
+
         // PU-17 шаг 3: сухой прогон «перенос потерял роли» — только чтение, свёртка LoreRolesLostOnMove.fold.
         slice(LoreRolesLostOnMove.SLICE, LoreRolesLostOnMove.SQL, List.of(), Map.of(), "");
 
@@ -2341,7 +2347,7 @@ public final class LoreSlices {
             // never declared in the schema) in case doc history is added later.
             "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
             LoreDocBodyDigest.selectColumns() + // DS-3
-            "sort_order, " +
+            "sort_order, file_path, " + // S5-DOC-PASSPORT: поле «Файл» паспорта
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
@@ -3251,7 +3257,8 @@ public final class LoreSlices {
         Map.entry("tech_registry", "реестр технологий — общий"),
         Map.entry("tech_by_id", "паспорт технологии — тот же общий реестр"),
         Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
-        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем")
+        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем"),
+        Map.entry("model_config_history", "MC-05: модель LORE одна на всю студию — история её версий общая")
     );
 
     /**

@@ -28,7 +28,9 @@ final class LoreRecordRelationRoutes {
         TASK_COMPONENT, TASK_ADR, TASK_PHASE, TASK_PR,
         QUESTION_RAISED_IN, QUESTION_GATES,
         ADR_DEPENDS_ON, ADR_SUPERSEDES, ADR_COMPONENT, ADR_PROJECT, ADR_TAG,
-        SPEC_COMPONENT, SPEC_PROJECT
+        SPEC_COMPONENT, SPEC_PROJECT,
+        // S5-DOC-PASSPORT: компонент и проекты документа — штатные doc/component, doc/project.
+        DOC_COMPONENT, DOC_PROJECT
     }
 
     record Route(String type, String rel, String dir, Handler handler, boolean reversed) {}
@@ -66,7 +68,10 @@ final class LoreRecordRelationRoutes {
         r("adr", "RAISED_IN", "in", Handler.QUESTION_RAISED_IN, true),
         // спека
         r("spec", "BELONGS_TO", "out", Handler.SPEC_COMPONENT, false),
-        r("spec", "BELONGS_TO_PROJECT", "out", Handler.SPEC_PROJECT, false)
+        r("spec", "BELONGS_TO_PROJECT", "out", Handler.SPEC_PROJECT, false),
+        // документ (S5-DOC-PASSPORT)
+        r("doc", "BELONGS_TO", "out", Handler.DOC_COMPONENT, false),
+        r("doc", "BELONGS_TO_PROJECT", "out", Handler.DOC_PROJECT, false)
     );
 
     /** Маршрут или {@code null}: ребра у типа нет либо путь привязки для него не заведён. */
