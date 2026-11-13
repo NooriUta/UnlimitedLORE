@@ -47,6 +47,9 @@ export function values(key: string, t: z.ZodTypeAny): unknown[] {
   if (u instanceof z.ZodLiteral) return [u.value];
   if (u instanceof z.ZodNumber) return [NUM];
   if (u instanceof z.ZodBoolean) return [true];
+  // Record-параметры диспетчеров (entity_upsert/entity_link/entity_move): непустая
+  // запись с project — иначе project-guard отказывает ДО сети и ветка не снимается.
+  if (u instanceof z.ZodRecord) return [{ project: MARK(key) }];
   if (u instanceof z.ZodArray) {
     const el = unwrap(u.element as unknown as z.ZodTypeAny);
     if (el instanceof z.ZodNumber) return [[NUM]];
@@ -62,18 +65,28 @@ export function isEnum(t: z.ZodTypeAny): boolean {
   return u instanceof z.ZodEnum || u instanceof z.ZodLiteral;
 }
 
+/** Record-параметр (свободная запись fields у entity_*-диспетчеров): ключи определяет бэкенд. */
+export function isRecord(t: z.ZodTypeAny): boolean {
+  return unwrap(t) instanceof z.ZodRecord;
+}
+
 /**
  * Наборы аргументов, покрывающие ветки инструмента: базовый (всё заполнено,
- * перечисления первым значением), по разу на каждое прочее значение каждого
- * перечисления, и без каждого массива — взаимоисключающие режимы (task_set:
- * пакет tasks[] ИЛИ одиночные поля), где массив вытесняет остальное.
+ * перечисления первым значением), ДЕКАРТОВО ПРОИЗВЕДЕНИЕ значений всех
+ * перечислений (ветки диспетчеров живут на ПАРАХ вида (type, rel) — по одному
+ * значению на ключ их не достать), и без каждого массива — взаимоисключающие
+ * режимы (task_set: пакет tasks[] ИЛИ одиночные поля), где массив вытесняет
+ * остальное.
  */
 export function variantsOf(tool: Tool): Record<string, unknown>[] {
   const keys = Object.keys(tool.schema);
   const base = Object.fromEntries(keys.map(k => [k, values(k, tool.schema[k])[0]]));
-  const out: Record<string, unknown>[] = [base];
-  for (const k of keys.filter(k => isEnum(tool.schema[k])))
-    for (const v of values(k, tool.schema[k]).slice(1)) out.push({ ...base, [k]: v });
+  let out: Record<string, unknown>[] = [base];
+  for (const k of keys.filter(k => isEnum(tool.schema[k]))) {
+    const vals = values(k, tool.schema[k]);
+    if (vals.length < 2) continue;
+    out = out.flatMap(v => vals.map(val => ({ ...v, [k]: val })));
+  }
   for (const k of keys) if (Array.isArray(base[k])) {
     const rest = { ...base };
     delete rest[k];

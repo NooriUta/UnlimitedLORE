@@ -857,6 +857,85 @@
       ]
     }
   },
+  "entity_delete": {
+    "input": {
+      "id": "string",
+      "type": "enum(adr|component|doc|spec)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "entity_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "fields": "record<unknown>?",
+      "id": "string",
+      "rel": "enum(actor|adr|answers|blocks|builds_on|component|decision|delivers|dep|depends_on|desired_by|extends|felt_by|file|fills_role|gain|gates|includes|job|milestone|pain|parent|performed_by|performs|phase|pr|produced_by|product|project|raised_in|release|relieves|rubric|serves|shipped_in|sprint|success_of|supersedes|tag|task)",
+      "target_id": "number | number | string[] | string?",
+      "type": "enum(actor|adr|bragi_keyword|bragi_publication|bragi_variant|decision|doc|feature|insight|milestone|product|question|release|runbook|spec|sprint|task|uc|vp)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "entity_move": {
+    "input": {
+      "fields": "record<unknown>?",
+      "id": "string",
+      "target": "string",
+      "type": "enum(pr|release|task)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "entity_upsert": {
+    "input": {
+      "fields": "record<unknown>?",
+      "id": "string?",
+      "type": "enum(actor|adr|bragi_campaign|bragi_channel|bragi_integration|bragi_keyword|bragi_page|bragi_publication|bragi_rubric|bragi_variant|component|decision|dict|doc|feature|gain|insight|job|milestone|pain|phase|project|project_actor|question|release|runbook|spec|sprint|task|tech|uc)"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
   "feature_link": {
     "input": {
       "action": "enum(add|remove)?",

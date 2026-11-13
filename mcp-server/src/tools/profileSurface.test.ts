@@ -8,21 +8,25 @@ import { registerMuninn } from './muninn.js';
 import { registerClaudeRules } from './claudeRules.js';
 import { registerVersion } from './version.js';
 import { withStrictTools } from './strictTool.js';
+import { legacySurfaceGate } from './entity.js';
 import { corePermission, fullPermission, gateFor, permissionForProfile, type Permission } from '../profile.js';
 
 // SPRINT_LORE_MCP_V2/MCPV2-1: снапшот ПОВЕРХНОСТИ (имён зарегистрированных
 // инструментов) по каждому профилю выдачи. Смена набора под любым профилем —
 // красный тест с дифом; намеренная смена — UPDATE_PROFILE_SURFACE=1 и коммит.
+// MCPV2-3: снапшот фиксирует РЕАЛЬНУЮ поверхность — с legacy-композицией
+// index.ts (LORE_MCP_LEGACY здесь выключен): под full скрыты покрытые
+// per-entity имена, под не-full профилями старые имена остаются.
 const SNAPSHOT_URL = new URL('./profile-surface.snapshot.json', import.meta.url);
 
-function namesFor(perm: Permission): string[] {
+function namesFor(perm: Permission, narrowed: boolean): string[] {
   const names: string[] = [];
   const fake = {
     tool: (...args: unknown[]) => { names.push(args[0] as string); },
     registerTool: ((name: string) => { names.push(name); }) as never,
   } as unknown as McpServer;
   // Гейт применяется обёрткой, как в index.ts; forgejo_* вне моста не регистрируются.
-  const server = withStrictTools(fake, gateFor([perm]));
+  const server = withStrictTools(fake, legacySurfaceGate(gateFor([perm]), { legacy: false, narrowed }));
   registerLoreRead(server);
   registerLoreWrite(server);
   registerMuninn(server);
@@ -42,10 +46,10 @@ function allProfiles(): string[] {
 
 function surface(): Record<string, string[]> {
   const out: Record<string, string[]> = {
-    full: namesFor(fullPermission()),
-    core: namesFor(corePermission()),
+    full: namesFor(fullPermission(), false),
+    core: namesFor(corePermission(), true),
   };
-  for (const p of allProfiles()) out[p] = namesFor(permissionForProfile(p));
+  for (const p of allProfiles()) out[p] = namesFor(permissionForProfile(p), p !== 'full');
   return out;
 }
 
