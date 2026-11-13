@@ -6895,6 +6895,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-lib--narrow { grid-template-columns: minmax(0, 1fr); }
 .sk-lib__side { border-right: 1px solid var(--bd); padding: 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: start; min-width: 0; }
 .sk-lib--narrow .sk-lib__side { border-right: 0; }
+/* K2-LIBRARY-DUP-PASSPORT: без читалки — только дерево во всю ширину области списка. */
+.sk-lib--tree { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.sk-lib--tree .sk-lib__side { border-right: 0; }
 .sk-lib__search { width: 100%; font: inherit; font-size: var(--fs-sm); color: var(--t1); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 5px 8px; }
 .sk-lib__chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .sk-lib__grp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; min-width: 0; }

@@ -5,7 +5,7 @@
 // Грузится лениво — только когда строку раскрыли (ListView рисует содержимое
 // лишь у раскрытой строки).
 import { useMemo, type CSSProperties } from 'react';
-import { EmptyState, LoadStateView, Pill, StatusChip, useKitLang, useLoadState } from '@seidr/kit';
+import { EmptyState, LoadStateView, StatusChip, useKitLang, useLoadState } from '@seidr/kit';
 import type { KitConfig, KitRecord } from '@seidr/kit';
 import { appT, useAppT, type AppKey } from '../i18n';
 import { defaultLoreClient, type LoreClient, type SliceBody } from './loreClient';
@@ -62,7 +62,7 @@ export function SprintTasks({ sprintId, client = defaultLoreClient }: { sprintId
                 <li key={r.task_uid} className="sprint-tasks__item">
                   {/* Вложенная строка под ▸ — статус только иконкой, имя в подсказке (владелица 08.11). */}
                   <StatusChip record={rec} config={config} save={save} compact />
-                  <span className="sprint-tasks__code" title={r.task_id}><Pill variant="id">{r.task_id}</Pill></span>
+                  <span className="sprint-tasks__code" title={r.task_id}>{r.task_id}</span>
                   <span className="sprint-tasks__title">{rec.title}</span>
                 </li>
               );
