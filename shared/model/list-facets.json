@@ -1,0 +1,59 @@
+{
+  "format": "list-facets/1",
+  "about": "Оси счётчиков фасетов списков: срез → {колонка среза → ключ фасета kit}. Один источник для web-next (копия SLICE_FACET_AXES в web-next/src/api/loreFacets.ts, совпадение держит loreFacets.test.ts) и сторожа бэкенда ListFacetAxesGuardTest: каждая колонка обязана быть в срезе, иначе /lore/slice/{id}/facets отвечает 400 BAD_PARAMS на весь запрос (SPRINT_UXR_POLISH_UAT_1113/PU-01, SPRINT_LORE_MODEL_AS_CONFIG/MC-03).",
+  "slices": {
+    "sprints": {
+      "components": "fields.components",
+      "git_projects": "fields.project",
+      "release_ids": "fields.release"
+    },
+    "adrs": {
+      "components": "fields.components",
+      "git_projects": "fields.project"
+    },
+    "open_tasks": {
+      "sprint_id": "fields.sprint",
+      "component_ids": "fields.components",
+      "release_ids": "fields.release"
+    },
+    "closed_tasks": {
+      "sprint_id": "fields.sprint",
+      "component_ids": "fields.components",
+      "release_ids": "fields.release"
+    },
+    "decisions": {
+      "components": "fields.components",
+      "projects": "fields.project"
+    },
+    "specs": {
+      "component_id": "fields.components",
+      "projects": "fields.project"
+    },
+    "questions": {
+      "components": "fields.components",
+      "projects": "fields.project"
+    },
+    "milestones": {
+      "priority": "fields.priority"
+    },
+    "releases": {
+      "projects": "fields.project"
+    },
+    "components": {
+      "git_projects": "fields.project"
+    },
+    "tech_registry": {
+      "component_id": "fields.components"
+    },
+    "use_cases": {
+      "component_ids": "fields.components",
+      "projects": "fields.project"
+    },
+    "products": {
+      "git_projects": "fields.project"
+    },
+    "actors": {
+      "projects": "fields.project"
+    }
+  }
+}

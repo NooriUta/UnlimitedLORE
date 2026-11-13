@@ -295,6 +295,8 @@
   "pp.rel.supersedes": "Supersedes",
   "pp.rel.supersededBy": "Superseded by",
   "pp.rel.justifies": "Justifies tasks",
+  "sprintBurn.target": "Target by deadline",
+  "sprintBurn.noDeadline": "no sprint deadline — no forecast",
   "sprintBurn.title": "BURN-DOWN",
   "sprintBurn.remaining": "remaining",
   "sprintBurn.done": "done",

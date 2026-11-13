@@ -152,6 +152,23 @@
 }
 .sprint-burn__name { letter-spacing: .06em; color: var(--t3); }
 .sprint-burn__pair b { color: var(--t1); font-weight: 700; }
+/* PU-10: «Цель к сроку» — вердикт словами в строке и кнопка, раскрывающая график. */
+.sprint-burn__verdict { font-family: var(--font); color: var(--suc); }
+.sprint-burn__verdict[data-tone='risk'] { color: var(--wrn); }
+.sprint-burn__verdict[data-tone='late'] { color: var(--dng); }
+.sprint-burn__nodue { font-family: var(--font); color: var(--t3); }
+.sprint-burn__toggle {
+  margin-left: auto;
+  padding: 0 8px;
+  min-height: max(var(--tap), 20px);
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.sprint-burn__toggle:hover { color: var(--t1); border-color: var(--acc); }
 .sprint-burn--loading,
 .sprint-burn--empty { margin: 0 0 var(--gap); font-size: var(--fs-sm); color: var(--t3); }
 /* Неполная история — видимая строка, а не сноска: цифры ниже посчитаны

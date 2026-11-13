@@ -8,8 +8,14 @@
 // Почему строка, а не график: из прототипа v4 берутся функции и расположение,
 // а эталон для паспорта спринта — v1, и там именно строка. График остаётся
 // доступным отдельно и в эту задачу не входит.
-import { useCallback } from 'react';
-import { burnSummary, LoadError, useSprintBurn, type BurnSliceLoader } from '@seidr/kit';
+//
+// «Цель к сроку» (SPRINT_UXR_POLISH_UAT_1113/PU-10, K2-VIEW-TARGET, допущения А1–А4 владелицы 12.11):
+// вердикт словами — прямо в строке, график со сгоранием, планом, прогнозом и вертикалью
+// срока — по кнопке «Цель к сроку». Прогноз и вердикт считает приложение (targetForecast),
+// kit рисует. Строка цифр S4-36 остаётся как была; шапку графика не дублируем (headless).
+import { useCallback, useState } from 'react';
+import { BurnChart, burnSummary, LoadError, useKitLang, useSprintBurn, type BurnSliceLoader } from '@seidr/kit';
+import { targetForecast } from '../record/targetForecast';
 import { sliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
 
@@ -17,10 +23,16 @@ export interface SprintBurnLineProps {
   sprintId: string;
   /** Загрузчик среза; по умолчанию — обычный путь в LORE. Нужен тестам. */
   load?: BurnSliceLoader;
+  /** Срок спринта (planned_end). null — срока нет, сказать словами; не задан — вида нет. */
+  deadline?: string | null;
+  /** «Сегодня» для прогноза (ГГГГ-ММ-ДД); по умолчанию — текущая дата. Нужен тестам. */
+  today?: string;
 }
 
-export function SprintBurnLine({ sprintId, load }: SprintBurnLineProps) {
+export function SprintBurnLine({ sprintId, load, deadline, today }: SprintBurnLineProps) {
   const t = useAppT();
+  const lang = useKitLang();
+  const [open, setOpen] = useState(false);
   const fetcher = sliceFetcher();
   const loader = useCallback<BurnSliceLoader>(
     (slice, signal) => (load ? load(slice, signal) : fetcher(slice, {}, signal)),
@@ -42,6 +54,9 @@ export function SprintBurnLine({ sprintId, load }: SprintBurnLineProps) {
   }
 
   const sum = burnSummary(burn.points ?? []);
+  const due = deadline ? deadline.slice(0, 10) : deadline;
+  const target = due ? targetForecast(burn.points ?? [], due, today ?? new Date().toISOString().slice(0, 10), lang) : null;
+  const panelId = `sprint-burn-target-${sprintId}`;
   if (!sum) return <p className="sprint-burn sprint-burn--empty" data-testid="sprint-burn-empty">{t('sprintBurn.empty')}</p>;
 
   return (
@@ -59,7 +74,28 @@ export function SprintBurnLine({ sprintId, load }: SprintBurnLineProps) {
         <span className="sprint-burn__pair"><span className="sprint-burn__k">{t('sprintBurn.done')}</span> <b>{sum.done}</b></span>
         <span className="sprint-burn__pair"><span className="sprint-burn__k">{t('sprintBurn.scope')}</span> <b>{sum.scope}</b></span>
         <span className="sprint-burn__pair"><span className="sprint-burn__k">{t('sprintBurn.peak')}</span> <b>{sum.peak}</b></span>
+        {target && <span className="sprint-burn__verdict" data-testid="sprint-burn-verdict" data-tone={target.verdict.tone}>{target.verdict.text}</span>}
+        {due === null && <span className="sprint-burn__nodue" data-testid="sprint-burn-no-deadline">{t('sprintBurn.noDeadline')}</span>}
+        {due !== undefined && (
+          <button type="button" className="sprint-burn__toggle" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(o => !o)}>
+            <span aria-hidden="true">{open ? '▾' : '▸'}</span> {t('sprintBurn.target')}
+          </button>
+        )}
       </p>
+      {open && due !== undefined && (
+        <div id={panelId}>
+          <BurnChart
+            headless
+            points={burn.points}
+            state={burn.state}
+            completeness={burn.completeness}
+            onRetry={burn.onRetry}
+            deadline={due}
+            forecast={target?.forecast}
+            verdict={target?.verdict}
+          />
+        </div>
+      )}
     </div>
   );
 }

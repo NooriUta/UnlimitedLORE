@@ -14,7 +14,10 @@
 // нескольких компонентах. Это норма, и читатель помечает такую ось, чтобы
 // список не выглядел как ошибка счёта.
 import { describe, expect, it, vi } from 'vitest';
-import { LORE_FACET_AXES, axesForKeys, fetchFacets } from './loreFacets';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { LORE_FACET_AXES, SLICE_FACET_AXES, axesForKeys, fetchFacets } from './loreFacets';
+import { LIST_SCREENS } from '../lists/screens';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -199,5 +202,37 @@ describe('S9-03 · закреплённые значения из ответа /
     const f = vi.fn(async () => ok({ release_ids: axis }, { pinned: { release_ids: ['v1', 7, ''], milestone_ids: ['M-1'] } }));
     const counts = await fetchFacets('sprints', { axes: rel, fetchImpl: f as unknown as typeof fetch });
     expect(counts.pinned).toEqual({ 'fields.release': ['v1'] });
+  });
+});
+
+// SPRINT_UXR_POLISH_UAT_1113/PU-01 · SPRINT_LORE_MODEL_AS_CONFIG/MC-03: оси счётчиков — по
+// КОЛОНКАМ СВОЕГО СРЕЗА. Общая карта «ось → фасет» на всех срезах просила у «Релизов»
+// git_projects, а у «Спек» components — таких колонок там нет, и /facets отвечал
+// 400 BAD_PARAMS на весь запрос. Источник — shared/model/list-facets.json (его колонки
+// сверяет со срезами бэкенд, ModelServerConsistencyGuardTest), здесь — копия и сверка.
+describe('MC-03 · оси счётчиков по срезу — из shared/model/list-facets.json', () => {
+  const shared = JSON.parse(
+    readFileSync(resolve(__dirname, '..', '..', '..', 'shared', 'model', 'list-facets.json'), 'utf8'),
+  ) as { slices: Record<string, Record<string, string>> };
+
+  it('копия SLICE_FACET_AXES совпадает с shared/model/list-facets.json', () => {
+    expect(SLICE_FACET_AXES).toEqual(shared.slices);
+  });
+
+  it('каждый экран списка просит только оси, объявленные для его среза', () => {
+    for (const [id, def] of Object.entries(LIST_SCREENS)) {
+      const keys = def.config('ru').list?.filters ?? [];
+      const asked = axesForKeys(keys, def.slice);
+      const allowed = shared.slices[def.slice] ?? {};
+      for (const [axis, key] of Object.entries(asked))
+        expect(allowed[axis], `${id} (${def.slice}): ось ${axis} не объявлена для среза`).toBe(key);
+    }
+  });
+
+  it('положительный контроль PU-01: «Релизы» и «Спеки» считают проекты и компоненты по своим колонкам', () => {
+    expect(axesForKeys(['fields.project', 'fields.type'], 'releases')).toEqual({ projects: 'fields.project' });
+    expect(axesForKeys(['status', 'fields.components', 'fields.project'], 'specs')).toEqual({
+      component_id: 'fields.components', projects: 'fields.project',
+    });
   });
 });

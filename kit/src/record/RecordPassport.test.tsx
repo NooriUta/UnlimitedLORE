@@ -75,14 +75,15 @@ describe('aroundAs="column": снизу / на весь экран — вычи�
   });
 });
 
-describe('панелью справа — переключатель видов над шапкой (владелица 08.11)', () => {
+describe('панелью справа — переключатель видов под заголовком (владелица 08.11; место — 13.11)', () => {
   const sw = () => screen.getByRole('group', { name: 'Вид паспорта' });
   const pressed = () => within(sw()).getAllByRole('button').filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent);
-  it('«Контент · Свойства · Аналитика» стоит над заголовком', () => {
+  // 13.11.2026 владелица: «вынеси в лево мини кнопками или под Заголовок» — теперь ПОД заголовком.
+  it('«Контент · Свойства · Аналитика» стоит под заголовком', () => {
     view('right');
     expect(within(sw()).getAllByRole('button').map(b => b.textContent)).toEqual(['Контент', 'Свойства', 'Аналитика']);
     const h1 = screen.getByRole('heading', { level: 1 });
-    expect(sw().compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(h1.compareDocumentPosition(sw()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
   it('Контент: текст, без вкладок «Свойства» и аналитики', () => {
     const { container } = view('right');
