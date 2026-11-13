@@ -376,13 +376,16 @@ class Arcade:
     def __init__(self, host, port, db, password, user="root"):
         self.url = f"http://{host}:{port}/api/v1/query/{urllib.parse.quote(db)}"
         self.auth = "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+        # База в локальной сети — мимо HTTP(S)_PROXY: 13.11.2026 локальный прокси 127.0.0.1:10809
+        # отвечал 503 на живую 192.168.3.143 (её нет в NO_PROXY), и проверка выглядела «база лежит».
+        self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     def q(self, sql):
         if not re.match(r"^\s*select\b", sql, re.I) or re.search(r";\s*\S", sql):
             raise ValueError("только SELECT: " + sql[:60])
         req = urllib.request.Request(self.url, method="POST", data=json.dumps({"language": "sql", "command": sql}).encode(),
                                      headers={"Authorization": self.auth, "Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=120) as r:
+        with self.opener.open(req, timeout=120) as r:
             return json.loads(r.read())["result"]
 
 
