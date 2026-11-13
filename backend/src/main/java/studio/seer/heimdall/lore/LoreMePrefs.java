@@ -85,7 +85,8 @@ final class LoreMePrefs {
         m.put("graph_view", oneOf("auto", "auto", "sectors", "list", "force", "obsidian"));
         m.put("new_navigation", bool(false));                                // флаг «новая навигация»
         // место показа паспорта (S4-17): auto = выбора не было, экран решает сам; не подменять умолчанием
-        m.put("passport_place", oneOf("auto", "auto", "right", "bottom", "full"));
+        // MP2-14-PLACE-LEFT (13.11): «слева» — пятое значение
+        m.put("passport_place", oneOf("auto", "auto", "left", "right", "bottom", "full"));
         // показывать технические сведения (S4-TECH-NOTES): коды срезов, оговорки модели, сырые метрики
         m.put("show_tech", bool(false));
         SETTINGS = Collections.unmodifiableMap(m);
