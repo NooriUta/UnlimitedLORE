@@ -113,7 +113,7 @@ export class RecordShape extends Error {
 const BODY_AS_RECORD: readonly string[] = ['sprint', 'task', 'spec'];
 
 /** Виды поля паспорта; незнакомый вид показываем текстом, а не прячем поле. */
-const KINDS: readonly FieldKind[] = ['text', 'md', 'enum', 'ref', 'date', 'number'];
+const KINDS: readonly FieldKind[] = ['text', 'md', 'enum', 'ref', 'date', 'number', 'bool'];
 const kindOf = (v: unknown): FieldKind => (KINDS as readonly string[]).includes(str(v)) ? (str(v) as FieldKind) : 'text';
 
 /** Группа поля: голова, тело, свойства. Незнакомая — в свойства: потерять поле хуже. */
