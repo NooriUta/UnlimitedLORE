@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { KitLangProvider, applyTheme, registerGameIcons, resolvePrefs } from '@seidr/kit';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { AuthGate } from '@seidr/kit/auth';
+import { authBrand } from './auth/authBrand';
 import App from './App';
 import { v2Auth } from './auth/session';
 import { installServerPulse } from './shell/serverPulse';
@@ -39,7 +40,7 @@ installServerPulse();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <KitLangProvider lang={kitLang}>
-      <AuthGate session={v2Auth}>
+      <AuthGate session={v2Auth} brand={authBrand(kitLang)}>
         {/* S4-TECH-NOTES: техническое скрыто, пока его не включили личной настройкой. */}
         <ShowTechFromSettings>
           <App />
