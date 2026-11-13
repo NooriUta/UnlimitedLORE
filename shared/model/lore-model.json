@@ -116,7 +116,7 @@
       "key" : "no_release",
       "label" : "Не требует релиза",
       "labelKey" : "pp.field.noRelease",
-      "kind" : "text",
+      "kind" : "bool",
       "group" : "props"
     }, {
       "key" : "track",
@@ -2970,7 +2970,7 @@
     }, {
       "key" : "is_active",
       "label" : "Активен",
-      "kind" : "text",
+      "kind" : "bool",
       "group" : "props"
     }, {
       "key" : "parent",

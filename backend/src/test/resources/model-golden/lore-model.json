@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "12ee7f89b6fcb6dc",
+  "version" : "63128bde3e9d0caa",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -767,7 +767,7 @@
         "key" : "no_release",
         "label" : "Не требует релиза",
         "label_key" : "pp.field.noRelease",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
@@ -777,9 +777,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : "no_release_required",
         "property_type" : "BOOLEAN",
@@ -6301,7 +6301,7 @@
         "key" : "is_active",
         "label" : "Активен",
         "label_key" : null,
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "required" : false,
         "editable" : false,
@@ -6310,9 +6310,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : "is_active",
         "property_type" : "BOOLEAN",

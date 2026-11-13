@@ -61,7 +61,7 @@ public class LoreModelStore {
         "CREATE PROPERTY KnowModelConfigHist.changed_by_kind IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowModelConfigHist (valid_to) NOTUNIQUE");
 
-    static final String OPEN_SQL = "SELECT state_uid, content, content_hash FROM KnowModelConfigHist "
+    static final String OPEN_SQL = "SELECT state_uid, content, content_hash, changed_by FROM KnowModelConfigHist "
         + "WHERE in('HAS_STATE').config_id CONTAINS :id AND valid_to IS NULL";
 
     @ConfigProperty(name = "lore.enabled", defaultValue = "false")
@@ -104,10 +104,12 @@ public class LoreModelStore {
                 return;
             }
             String text = String.valueOf(open.get(0).get("content"));
-            // MC-07: модель засеяна файлом старого формата — досеваем недостающие разделы, правки LORE не трогаем.
-            Upgrade up = upgrade(text, LoreModelFile.render(LoreModelFile.load()));
+            // MC-07/MC-08: семя, которое никто не правил, следует за файлом; правку человека не трогаем,
+            // ей только досеваются недостающие разделы нового формата.
+            Upgrade up = reconcile(text, String.valueOf(open.get(0).get("changed_by")), LoreModelFile.render(LoreModelFile.load()));
             if (!up.added().isEmpty()) {
-                write(up.text(), hashOf(up.text()), "досев разделов из файла: " + String.join(", ", up.added()),
+                write(up.text(), hashOf(up.text()), up.added().equals(List.of("*")) ? "обновление семени из файла репозитория"
+                    : "досев разделов из файла: " + String.join(", ", up.added()),
                     new ChangeAuthor("seed", ChangeAuthor.KIND_UNKNOWN));
                 text = up.text();
                 LOG.infof("[LORE MODEL] досеяны разделы из файла: %s", up.added());
@@ -142,6 +144,18 @@ public class LoreModelStore {
      * MC-07: разделы верхнего уровня, которых нет в сохранённой модели, берутся из файла (новый формат —
      * nav, audience); всё, что в сохранённой есть, остаётся как есть — правки в LORE не перетираются.
      */
+    /**
+     * Решение на старте: версию писало семя ({@code changed_by = seed}) и она отличается от файла —
+     * пересев целиком ({@code added = ["*"]}); иначе — досев недостающих разделов ({@link #upgrade}).
+     */
+    static Upgrade reconcile(String stored, String storedBy, String file) {
+        if (SEED.equals(storedBy) && !hashOf(LoreModelFile.render(LoreModelFile.parse(upgrade(stored, file).text()))).equals(hashOf(file)))
+            return new Upgrade(file, List.of("*"));
+        return upgrade(stored, file);
+    }
+
+    static final String SEED = "seed";
+
     static Upgrade upgrade(String stored, String file) {
         io.vertx.core.json.JsonObject s = new io.vertx.core.json.JsonObject(stored);
         io.vertx.core.json.JsonObject f = new io.vertx.core.json.JsonObject(file);

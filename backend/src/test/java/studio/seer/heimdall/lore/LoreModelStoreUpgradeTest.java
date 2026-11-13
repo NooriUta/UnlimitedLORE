@@ -31,6 +31,29 @@ class LoreModelStoreUpgradeTest {
         assertFalse(c.nav().isEmpty());
     }
 
+    /**
+     * Семя, которое никто не правил, следует за файлом: правка модели в репозитории (например MC-08,
+     * вид bool) иначе не дошла бы до прода — LORE держала бы засеянную при первом старте версию.
+     */
+    @Test
+    void untouchedSeedFollowsTheFile() throws Exception {
+        String file = LoreModelLiveReplaceTest.canon();
+        String oldSeed = file.replaceFirst("\"label\" : \"Спринт\"", "\"label\" : \"Спринт старый\"");
+        LoreModelStore.Upgrade u = LoreModelStore.reconcile(oldSeed, "seed", file);
+        assertEquals(file, u.text(), "семя заменено файлом");
+        assertEquals(List.of("*"), u.added(), "признак полного пересева");
+    }
+
+    /** Версию правил человек — её содержимое главнее файла, досеваются только недостающие разделы. */
+    @Test
+    void humanEditIsNotOverwrittenByTheFile() throws Exception {
+        String file = LoreModelLiveReplaceTest.canon();
+        String edited = file.replaceFirst("\"label\" : \"Спринт\"", "\"label\" : \"Спринт владелицы\"");
+        LoreModelStore.Upgrade u = LoreModelStore.reconcile(edited, "owner-sub", file);
+        assertEquals(edited, u.text());
+        assertEquals(List.of(), u.added());
+    }
+
     @Test
     void storedModelWithAllSectionsIsLeftAsIs() throws Exception {
         String file = LoreModelLiveReplaceTest.canon();
