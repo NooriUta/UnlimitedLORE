@@ -302,7 +302,10 @@ describe('UC-4 · экран', () => {
     fireEvent.change(within(box).getByTestId('kit-diff-confirm'), { target: { value: 'anna' } });
     fireEvent.click(within(box).getByTestId('kit-diff-apply'));
     fireEvent.click(await within(box).findByTestId('kit-batch-undo'));
-    await within(box).findByTestId('kit-batch-undone');
+    // Откат пачки — цепочка запросов (enable на каждую учётку + перечтение): под нагрузкой
+    // полного прогона она не укладывалась в умолчание findBy (1 с) — 2 падения из 3 полных
+    // прогонов 13.11, при 10/10 в одиночку. Ждём исход дольше, а не реже проверяем его.
+    await within(box).findByTestId('kit-batch-undone', {}, { timeout: 5000 });
     expect(calls.filter(c => c.url.endsWith('/enable')).map(c => c.url)).toEqual(['/lore/kc/agent-client/lore-mcp-full_anna/enable']);
   });
 
