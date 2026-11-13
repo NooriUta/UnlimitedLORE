@@ -84,12 +84,13 @@ class LoreRecordFacadeLiveDbTest {
         List<String> dsParts = t.getList("meta.data_state.part");
         assertTrue(dsParts.containsAll(List.of("questions", "adrs")), "data_state: " + t.getList("meta.data_state"));
         assertTrue(t.getList("meta.data_state.source").contains("version"), "сбой версии тоже должен быть виден");
-        // S4-29 v3: строки «relation:<ключ>» — вкладки без среза; они «не проверены» на любой базе.
+        // MC-04 (PU-02): вкладок «без среза — не проверено» больше нет; вкладка без своего среза читается
+        // по ребру из модели (источник «edge:…»). На здоровой базе ВСЕ источники ok.
         List<Map<String, Object>> ds = t.getList("meta.data_state");
-        assertTrue(ds.stream().filter(e -> !String.valueOf(e.get("source")).startsWith("relation:"))
-            .allMatch(e -> "ok".equals(e.get("state"))), "data_state: " + ds);
-        assertTrue(ds.stream().anyMatch(e -> "relation:refsOut".equals(e.get("source")) && "error".equals(e.get("state"))),
-            "вкладка без среза названа непроверенной: " + ds);
+        assertTrue(ds.stream().allMatch(e -> "ok".equals(e.get("state"))), "data_state: " + ds);
+        assertTrue(ds.stream().noneMatch(e -> String.valueOf(e.get("source")).startsWith("relation:")), "data_state: " + ds);
+        assertTrue(ds.stream().anyMatch(e -> "edge:REFERENCES:out".equals(e.get("source"))),
+            "вкладка «Ссылается» прочитана по ребру: " + ds);
 
         admin().body("{\"adr_id\":\"ADR-REC-1\",\"name\":\"проба\",\"status\":\"proposed\",\"context_md\":\"к\",\"decision_md\":\"р\"}")
             .post("/lore/adr").then().statusCode(200);
