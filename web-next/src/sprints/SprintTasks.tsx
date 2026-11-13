@@ -4,7 +4,7 @@
 // сохранение POST /lore/status, отказ — откат и причина на экране.
 // Грузится лениво — только когда строку раскрыли (ListView рисует содержимое
 // лишь у раскрытой строки).
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { EmptyState, LoadStateView, Pill, StatusChip, useKitLang, useLoadState } from '@seidr/kit';
 import type { KitConfig, KitRecord } from '@seidr/kit';
 import { appT, useAppT, type AppKey } from '../i18n';
@@ -50,7 +50,10 @@ export function SprintTasks({ sprintId, client = defaultLoreClient }: { sprintId
         empty={<EmptyState compact title={t('sprints.tasks.empty')} hint={t('sprints.tasks.emptyHint')} />}
       >
         {body => (
-          <ul className="sprint-tasks__list" aria-label={t('sprints.tasks.label', { id: sprintId })}>
+          // PU-23: колонка кода одной ширины на весь список — по самому длинному коду (код
+          // моноширинный, ширина в ch точная); название начинается с одной вертикали.
+          <ul className="sprint-tasks__list" aria-label={t('sprints.tasks.label', { id: sprintId })}
+            style={{ '--sprint-code-w': `${Math.max(1, ...body.rows.map(r => r.task_id.length))}ch` } as CSSProperties}>
             {body.rows.map(r => {
               const rec: KitRecord = {
                 id: r.task_uid, kind: 'task', title: r.title ?? r.task_id, status: planStatusOf(r.status_raw), fields: {},
@@ -59,7 +62,7 @@ export function SprintTasks({ sprintId, client = defaultLoreClient }: { sprintId
                 <li key={r.task_uid} className="sprint-tasks__item">
                   {/* Вложенная строка под ▸ — статус только иконкой, имя в подсказке (владелица 08.11). */}
                   <StatusChip record={rec} config={config} save={save} compact />
-                  <Pill variant="id">{r.task_id}</Pill>
+                  <span className="sprint-tasks__code" title={r.task_id}><Pill variant="id">{r.task_id}</Pill></span>
                   <span className="sprint-tasks__title">{rec.title}</span>
                 </li>
               );

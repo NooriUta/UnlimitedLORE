@@ -17,6 +17,17 @@
   font-size: var(--fs-sm);
 }
 .sprint-tasks__item:last-child { border-bottom: 0; }
+/* PU-23: код — колонка ширины самого длинного кода списка (--sprint-code-w ставит разметка),
+   поэтому название начинается с одной вертикали. На узком экране колонка не шире 40%,
+   длинный код — многоточием, полный — в подсказке. */
+.sprint-tasks__code {
+  flex: 0 0 var(--sprint-code-w, auto);
+  max-width: 40%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sprint-tasks__code > .sk-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .sprint-tasks__title {
   min-width: 0;
   color: var(--t1);
