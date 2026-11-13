@@ -10,7 +10,7 @@ import type { KitConfig, KitLang } from '@seidr/kit';
 export const ADMIN_MODULE = 'admin';
 
 /** Разделы админки — они же id пунктов меню и значения sec. */
-export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-roles', 'adm-dicts', 'adm-rules', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
+export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-roles', 'adm-dicts', 'adm-rules', 'adm-tidy', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
 
 export function isAdminSection(id: string | null): id is AdminSection {
@@ -28,6 +28,7 @@ const TITLE: Record<AdminSection, AppKey> = {
   'adm-roles': 'admin.roles.title',
   'adm-dicts': 'admin.dicts.title',
   'adm-rules': 'admin.rules.title',
+  'adm-tidy': 'admin.tidy.title',
   'adm-flags': 'admin.flags.title',
   'adm-mcp': 'admin.mcp.title',
   'adm-log': 'admin.log.title',
@@ -43,6 +44,7 @@ const ICON: Record<AdminSection, string> = {
   'adm-roles': 'key',
   'adm-dicts': 'spell-book',
   'adm-rules': 'scroll-quill',
+  'adm-tidy': 'broom',
   'adm-flags': 'flying-flag',
   'adm-mcp': 'plug',
   'adm-log': 'open-book',
@@ -63,6 +65,7 @@ export function adminSectionTitle(lang: KitLang, id: AdminSection): string {
  *   • «Язык графа» — словари (S7B-31) и правила CLAUDE. Тон риска, как у «Доступа»:
  *     правка справочника меняет подписи, цвета и иконки на каждом экране, канон-словари
  *     зашиты в статусы всего корпуса — это меняет язык всей системы, а не одну запись;
+ *     там же «Привести в порядок» (PU-20): пачка правит ссылки в текстах всего корпуса;
  *   • «Система» — флаги и версия, MCP, журнал действий.
  */
 export function adminMenu(lang: KitLang): KitConfig['menu'] {
@@ -74,7 +77,7 @@ export function adminMenu(lang: KitLang): KitConfig['menu'] {
       { id: 'adm-start', title: appT(lang, 'shell.grp.admStart'), tone: 'var(--acc)', items: [item('adm-home'), item('adm-wiz')] },
       { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-machines'), item('adm-who'), item('adm-projects')] },
       { id: 'adm-access', title: appT(lang, 'shell.grp.admAccess'), tone: 'var(--wrn)', items: [item('adm-roles')] },
-      { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--wrn)', items: [item('adm-dicts'), item('adm-rules')] },
+      { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--wrn)', items: [item('adm-dicts'), item('adm-rules'), item('adm-tidy')] },
       { id: 'adm-system', title: appT(lang, 'shell.grp.admSystem'), tone: 'var(--inf)', items: [item('adm-flags'), item('adm-mcp'), item('adm-log')] },
     ],
   };

@@ -494,6 +494,75 @@ public class LoreSchemaMigrationRunner {
         if (version == 71) backfillTaskHistory();
         if (version == 76) backfillActorHarness();
         if (version == 77) splitSharedStates();
+        if (version == 82) mergeMachineCase();
+    }
+
+    /**
+     * V82 (PU-18): слить KnowMachine с неканоническим именем в каноническую вершину.
+     * Порядок: каноническая вершина (UPSERT) → рёбра USES_MACHINE с тех же акторов на неё
+     * (IF NOT EXISTS) → удаление варианта (его рёбра уходят вместе с вершиной) →
+     * KnowActor.machine_id. Идемпотентен: на слитой базе план пуст.
+     */
+    /** @rid ArcadeDB: «#bucket:position» — только такой подставляется в SQL литералом. */
+    static final java.util.regex.Pattern RID = java.util.regex.Pattern.compile("#[0-9]+:[0-9]+");
+
+    @SuppressWarnings("unchecked")
+    int mergeMachineCase() {
+        Object r = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "SELECT machine_id, first_seen_at, last_seen_at FROM KnowMachine", null)).await().indefinitely().result();
+        List<Map<String, Object>> rows = r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        List<String> ids = new java.util.ArrayList<>();
+        for (Map<String, Object> m : rows) if (m.get("machine_id") != null) ids.add(String.valueOf(m.get("machine_id")));
+        Map<String, List<String>> plan = AgentMachine.caseMergePlan(ids);
+        int moved = 0;
+        for (Map.Entry<String, List<String>> e : plan.entrySet()) {
+            String canon = e.getKey();
+            client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowMachine SET machine_id = :m UPSERT WHERE machine_id = :m", Map.of("m", canon)))
+                .await().indefinitely();
+            // Даты группы (находка 13.11): каноническая получает самый ранний first_seen_at и самый
+            // поздний last_seen_at по вариантам И себе — иначе слияние теряло первый вход машины.
+            List<Map<String, Object>> group = new java.util.ArrayList<>();
+            for (Map<String, Object> m : rows) {
+                Object id = m.get("machine_id");
+                if (id != null && (canon.equals(id) || e.getValue().contains(String.valueOf(id)))) group.add(m);
+            }
+            String[] seen = AgentMachine.seenRange(group);
+            if (seen[0] != null)
+                client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowMachine SET first_seen_at = :f WHERE machine_id = :m", Map.of("f", seen[0], "m", canon)))
+                    .await().indefinitely();
+            if (seen[1] != null)
+                client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowMachine SET last_seen_at = :l WHERE machine_id = :m", Map.of("l", seen[1], "m", canon)))
+                    .await().indefinitely();
+            for (String variant : e.getValue()) {
+                Object er = client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT @out AS a FROM USES_MACHINE WHERE @in.machine_id = :v", Map.of("v", variant)))
+                    .await().indefinitely().result();
+                List<Map<String, Object>> outs = er instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+                for (Map<String, Object> o : outs) {
+                    String rid = String.valueOf(o.get("a"));
+                    if (!RID.matcher(rid).matches()) continue;
+                    client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        String.format("CREATE EDGE USES_MACHINE FROM %s TO (SELECT FROM KnowMachine WHERE machine_id = :c) IF NOT EXISTS", rid),
+                        Map.of("c", canon))).await().indefinitely();
+                    moved++;
+                }
+                client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    // ArcadeDB: DELETE FROM вершины уносит и её рёбра (DELETE EDGE в грамматике нет).
+                    "DELETE FROM KnowMachine WHERE machine_id = :v", Map.of("v", variant))).await().indefinitely();
+                client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowActor SET machine_id = :c WHERE machine_id = :v", Map.of("c", canon, "v", variant)))
+                    .await().indefinitely();
+            }
+        }
+        for (Map.Entry<String, List<String>> t : LoreSchemaMigrations.MACHINE_ID_TYPOS.entrySet())
+            client.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowActor SET machine_id = :to WHERE actor_id = :id AND machine_id = :from",
+                Map.of("id", t.getKey(), "from", t.getValue().get(0), "to", t.getValue().get(1)))).await().indefinitely();
+        LOG.infof("[LORE MIGRATE] V82 машины по регистру: план %s, перенесено рёбер %d (даты группы — min/max)", plan, moved);
+        return plan.size();
     }
 
     /**

@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LoreScd2AndRollbackLiveDbTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final HttpClient HTTP = LiveDbHttp.CLIENT;
 
     @BeforeAll
     static void waitForResource() {

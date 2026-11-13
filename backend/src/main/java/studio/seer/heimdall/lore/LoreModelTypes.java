@@ -35,76 +35,28 @@ final class LoreModelTypes {
      * объекта — с иконкой и цветом его канонического объекта). Каждый токен обязан
      * быть объявлен в src/styles (сторож — LoreModelTypeColorTest).
      */
-    static final Map<String, String> TYPE_COLOR = Map.of(
-        "sprint", "section-sprints",
-        "adr", "section-adrs",
-        "decision", "section-decisions",
-        "milestone", "section-milestones",
-        "release", "section-releases",
-        "component", "section-components",
-        "tech", "section-tech",
-        "feature", "section-features");
+    static final Map<String, String> TYPE_COLOR = LoreModelViews.map(() -> LoreModelFile.content().typeColor());
 
     /** Типы без канона цвета в v1: color = null честно, цвет не выдумываем. */
-    static final Set<String> NO_TYPE_COLOR = Set.of("task", "spec", "question", "project",
-        // S4-PRODUCTS-NODE: канона --section-products в v1 нет (src/styles/tokens.css) — цвет ТИПА не выдумываем.
-        // Цвет КОНКРЕТНОГО продукта — данные (KnowDictEntry.color), а не цвет типа.
-        "product");
+    static final Set<String> NO_TYPE_COLOR = LoreModelViews.set(() -> LoreModelFile.content().noTypeColor());
 
     /** Тип записи → (вершина, Hist, деловой ключ). */
     record Graph(String vertex, String hist, String key) {}
 
-    // Map.ofEntries, а не Map.of: у Map.of предел — десять пар, типов уже одиннадцать.
-    static final Map<String, Graph> GRAPH = Map.ofEntries(
-        Map.entry("sprint", new Graph("KnowSprint", "KnowSprintHist", "sprint_id")),
-        Map.entry("task", new Graph("KnowTask", "KnowTaskHist", "task_uid")),
-        Map.entry("adr", new Graph("KnowADR", "KnowADRHist", "adr_id")),
-        Map.entry("spec", new Graph("KnowSpec", "KnowSpecHist", "spec_id")),
-        // Аудит времени (владелица 10.11): hist — цепочка SCD2 в ГРАФЕ. Kit 09.11 считал, что у
-        // решения, вехи и релиза истории нет, — в БД она есть (LoreSlices.HIST_PARENT): статус
-        // решения, цель вехи, заведение и правка релиза пишутся версиями. null — только у
-        // вершин, у которых Hist-типа нет совсем (вопрос, компонент, фича).
-        Map.entry("decision", new Graph("KnowDecision", "KnowDecisionHist", "decision_id")),
-        Map.entry("question", new Graph("KnowQuestion", null, "question_id")),
-        Map.entry("milestone", new Graph("KnowMilestone", "KnowMilestoneHist", "milestone_id")),
-        Map.entry("release", new Graph("KnowRelease", "KnowReleaseHist", "release_uid")),
-        // Технология — спека SPEC-TECH-*: её Hist тот же KnowSpecHist (смена номера открывает
-        // версию). Что паспорт только для чтения, на факт графа не влияет.
-        Map.entry("component", new Graph("LoreComponent", null, "component_id")),
-        Map.entry("tech", new Graph("KnowSpec", "KnowSpecHist", "spec_id")),
-        Map.entry("feature", new Graph("KnowUseCase", null, "uc_id")),
-        // S4-29 (53а): проект — справочная вершина без истории.
-        Map.entry("project", new Graph("KnowGitProject", null, "slug")),
-        // S4-PRODUCTS-NODE: продукт — статья словаря; история статьи — KnowDictEntryHist (history_dict).
-        Map.entry("product", new Graph("KnowDictEntry", "KnowDictEntryHist", "code")));
+    static final Map<String, Graph> GRAPH = LoreModelViews.map(() -> LoreModelFile.content().graph());
 
     /** Ключ поля паспорта → имя свойства в графе, где они расходятся (известное сопоставление LoreRecordValues). */
-    static final Map<String, Map<String, String>> ALIASES = Map.ofEntries(
-        Map.entry("sprint", Map.of("title", "name", "status", "status_raw", "created", "created_date",
-            "no_release", "no_release_required", "track", "track_id", "planned_start", "planned_start_date")),
-        Map.entry("task", Map.of("status", "status_raw", "note", "note_md", "effort", "effort_days", "actual", "actual_days")),
-        Map.entry("adr", Map.of("title", "name", "status", "status")),
-        Map.entry("spec", Map.of("status", "status", "body_md", "content_md")),
-        Map.entry("decision", Map.of("status", "status_raw", "code", "decision_id", "date", "date_created")),
-        Map.entry("question", Map.of("code", "question_id", "opened", "opened_date", "closed", "closed_date")),
-        Map.entry("milestone", Map.of("title", "label", "code", "milestone_id", "date", "date_display")),
-        Map.entry("release", Map.of("code", "release_id", "date", "release_date", "description_md", "description_md")),
-        Map.entry("component", Map.of("title", "full_name", "code", "component_id", "parent", "parent_id", "icon", "game_icon")),
-        Map.entry("tech", Map.of("code", "spec_id")),
-        Map.entry("feature", Map.of("code", "uc_id", "date", "date_created", "parent", "parent_uc_id")),
-        Map.entry("project", Map.of("title", "name", "code", "slug")),
-        Map.entry("product", Map.of("title", "label_ru")));
+    static final Map<String, Map<String, String>> ALIASES = LoreModelViews.map(() -> LoreModelFile.content().aliases());
 
     /**
      * SPRINT_UXR_POLISH_UAT_1113/PU-17: поля, значение которых — ребро, а не свойство вершины
      * (тип.ключ → ребро). Роли задачи с TR-05 — рёбра ROLE_HELD_BY; строки author/executor/reviewer_agent
      * не пишутся, и сопоставлять с ними поле значило бы назвать источником пустую строку.
      */
-    static final Map<String, String> EDGE_FIELDS = Map.of(
-        "task.author", "ROLE_HELD_BY", "task.executor", "ROLE_HELD_BY", "task.reviewer", "ROLE_HELD_BY");
+    static final Map<String, String> EDGE_FIELDS = LoreModelViews.map(() -> LoreModelFile.content().edgeFields());
 
     /** Легаси-строки ролей задачи (до TR-05) — в схеме ещё есть, на поверхности не выводятся: internal. */
-    static final Set<String> LEGACY_ROLE_STRINGS = Set.of("author_agent", "executor_agent", "reviewer_agent");
+    static final Set<String> LEGACY_ROLE_STRINGS = LoreModelViews.set(() -> LoreModelFile.content().legacyRoleStrings());
 
     /** System: с сервера не уходит никогда. */
     static boolean isSystem(String prop) {
@@ -230,48 +182,11 @@ final class LoreModelTypes {
     // (срезы decisions, decision_history_all, sprints, releases, questions, use_cases — 10.11).
 
     /** Точность полей вида date: тип.ключ → date | datetime. */
-    static final Map<String, String> PRECISION = Map.ofEntries(
-        // created_date ставит заведение спринта (LoreIngestService) — Instant.now(), ISO-момент.
-        Map.entry("sprint.created", "datetime"),
-        Map.entry("sprint.planned_start", "date"),
-        Map.entry("sprint.planned_end_date", "date"),
-        Map.entry("adr.date", "date"),
-        Map.entry("decision.date", "date"),
-        Map.entry("question.due_date", "date"),
-        Map.entry("question.opened", "date"),
-        Map.entry("question.closed", "date"),
-        Map.entry("release.date", "date"),
-        // «Проверено» = valid_from открытой версии спеки-технологии (срез tech_registry).
-        Map.entry("tech.checked_at", "datetime"),
-        Map.entry("feature.date", "date"),
-        // shipped_at при поставке ставит UcReadinessCalculator — LocalDate.now(): день, хоть и «_at».
-        Map.entry("feature.shipped_at", "date"));
+    static final Map<String, String> PRECISION = LoreModelViews.map(() -> LoreModelFile.content().precision());
 
-    private static Map<String, Object> src(String source, String precision, String note) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("source", source);
-        m.put("precision", precision);
-        if (note != null) m.put("note", note);
-        return m;
-    }
 
-    private static Map<String, Object> time(String history, List<Map<String, Object>> created,
-                                            List<Map<String, Object>> changed) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("history", history);
-        m.put("created", created);
-        m.put("changed", changed);
-        return m;
-    }
 
-    private static final String VER = "version.valid_from";
-    private static final String VER_FIRST = "version.first_valid_from";
-    private static final String TOUCHED = "updated_at";
-    private static final String TOUCHED_NOTE =
-        "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет";
     /** S4-MODEL-TYPES: у вопроса, фичи/сценария и компонента истории нет — отметку ставит КАЖДЫЙ путь записи. */
-    private static final String TOUCHED_EVERY =
-        "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник";
 
     /**
      * Тип → время записи. {@code history}: scd2 — есть цепочка версий (valid_from у
@@ -280,47 +195,7 @@ final class LoreModelTypes {
      * (максимум из открытой версии и updated_at, иначе следующий по списку). Пустой
      * список — источника нет (честное «нет времени»), а не «не смотрели».
      */
-    static final Map<String, Map<String, Object>> TIME = Map.ofEntries(
-        Map.entry("sprint", time("scd2",
-            List.of(src("created_date", "datetime",
-                "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения")),
-            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE), src("created_date", "datetime", null)))),
-        Map.entry("task", time("scd2",
-            List.of(src(VER_FIRST, "datetime", null)),
-            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
-        Map.entry("adr", time("scd2",
-            List.of(src("created_at", "datetime", "момент — у ADR, заведённых после S2-10"), src("date_created", "date", null)),
-            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE),
-                src("created_at", "datetime", null), src("date_created", "date", null)))),
-        Map.entry("spec", time("scd2",
-            List.of(src(VER_FIRST, "datetime", null)),
-            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
-        Map.entry("decision", time("scd2",
-            List.of(src("created_at", "datetime", "момент — у решений, заведённых после S2-10"), src("date_created", "date", null)),
-            List.of(src(VER, "datetime", "версию открывает смена статуса"), src(TOUCHED, "datetime", TOUCHED_NOTE),
-                src("created_at", "datetime", null), src("date_created", "date", null)))),
-        Map.entry("question", time("none",
-            List.of(src("opened_date", "date", null)),
-            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("closed_date", "date", null), src("opened_date", "date", null)))),
-        Map.entry("milestone", time("scd2",
-            List.of(),
-            List.of(src(VER, "datetime", "версию открывает цель вехи"), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
-        Map.entry("release", time("scd2",
-            List.of(src("released_at", "datetime", "момент — если известен при заведении"), src("release_date", "date", null)),
-            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE),
-                src("released_at", "datetime", null), src("release_date", "date", null)))),
-        Map.entry("component", time("none", List.of(), List.of(src(TOUCHED, "datetime", TOUCHED_EVERY)))),
-        Map.entry("tech", time("scd2",
-            List.of(src(VER_FIRST, "datetime", null)),
-            List.of(src(VER, "datetime", null), src(TOUCHED, "datetime", TOUCHED_NOTE)))),
-        Map.entry("feature", time("none",
-            List.of(src("date_created", "date", null)),
-            List.of(src(TOUCHED, "datetime", TOUCHED_EVERY), src("shipped_at", "date", null), src("date_created", "date", null)))),
-        // S4-29 (53а): у проекта ни истории, ни дат заведения и правки — честные пустые списки
-        // («источника нет»), а не отсутствие раздела.
-        Map.entry("project", time("none", List.of(), List.of())),
-        // S4-PRODUCTS-NODE: статья словаря — версия SCD2 в KnowDictEntryHist, даты заведения нет.
-        Map.entry("product", time("scd2", List.of(), List.of(src(VER, "datetime", "версию открывает правка статьи словаря")))));
+    static final Map<String, Map<String, Object>> TIME = LoreModelViews.map(() -> LoreModelFile.content().time());
 
     // ── Вид поля: важность и поведение длинного содержимого (владелица 09.11) ──
     // Водораздел: kit знает только ФОРМУ (рисует поле по этим подсказкам), приложение —
@@ -332,13 +207,7 @@ final class LoreModelTypes {
     static final List<String> OVERFLOWS = List.of("none", "ellipsis", "more");
 
     /** Уточнения поверх умолчаний по kind: ключ поля → {priority, width, overflow}. */
-    private static final Map<String, Object[]> DISPLAY_OVERRIDES = Map.of(
-        "title", new Object[]{1, "fill", "ellipsis"},
-        "status", new Object[]{1, "s", "none"},
-        "code", new Object[]{1, "s", "none"},
-        "priority", new Object[]{2, "xs", "none"},
-        "effort", new Object[]{2, "xs", "none"},
-        "summary", new Object[]{4, "l", "more"});
+    static final Map<String, Object[]> DISPLAY_OVERRIDES = LoreModelViews.map(() -> LoreModelFile.content().displayOverrides());
 
     /**
      * priority — четыре ступени, как пороги прототипа v4 (kit 09.11): 1 — не скрывается
@@ -352,6 +221,8 @@ final class LoreModelTypes {
             boolean multi = Boolean.TRUE.equals(f.get("multi"));
             d = switch (kind) {
                 case "number" -> new Object[]{3, "xs", "none"};
+                // MC-08: флаг — узкая колонка «да/нет».
+                case "bool" -> new Object[]{3, "xs", "none"};
                 case "date" -> new Object[]{3, "s", "none"};
                 case "enum" -> new Object[]{2, "s", "ellipsis"};
                 case "ref" -> multi ? new Object[]{3, "m", "more"} : new Object[]{2, "m", "ellipsis"};
@@ -372,39 +243,11 @@ final class LoreModelTypes {
     // для паспорта — одна функция LoreSprintTotals. Правила в контракте нет — вторая
     // реализация у клиента не нужна. Форма значения — {value, known, of}.
 
-    private static Map<String, Object> computed(String key, String label, String kind, Object[] display) {
-        Map<String, Object> d = new LinkedHashMap<>();
-        d.put("priority", display[0]);
-        d.put("width", display[1]);
-        d.put("overflow", display[2]);
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("key", key);
-        m.put("label", label);
-        m.put("kind", kind);
-        m.put("shape", "value_known_of");
-        m.put("source", "server");
-        m.put("rule_text", RULE_TEXT.getOrDefault(key, LoreSprintTotals.RULE));
-        m.put("display", d);
-        return m;
-    }
 
     /** Правило словами для счётчиков, которые считаются не по задачам спринта. */
-    private static final Map<String, String> RULE_TEXT = Map.of(
-        "sprints_total", "Спринты, связанные с записью ребром (TARGETS_MILESTONE у вехи, IMPLEMENTED_IN_RELEASE у релиза); у счёта known = of.",
-        "prs_total", "PR, привязанные к релизу ребром SHIPPED_IN; у счёта known = of.");
 
     /** Тип → вычисляемые поля. Нет записи — пустой список («вычисляемых нет»). */
-    static final Map<String, List<Map<String, Object>>> COMPUTED = Map.of(
-        "sprint", List.of(
-            computed("tasks_total", "Задач", "count", new Object[]{1, "xs", "none"}),
-            computed("effort_days_total", "Оценка, дн", "days", new Object[]{1, "xs", "none"}),
-            computed("actual_days_total", "Факт, дн", "days", new Object[]{2, "xs", "none"})),
-        // Kit 09.11: у вехи и релиза нужны вычисляемые поля, а не статусы.
-        "milestone", List.of(
-            computed("sprints_total", "Спринтов", "count", new Object[]{1, "xs", "none"})),
-        "release", List.of(
-            computed("sprints_total", "Спринтов", "count", new Object[]{1, "xs", "none"}),
-            computed("prs_total", "PR", "count", new Object[]{2, "xs", "none"})));
+    static final Map<String, List<Map<String, Object>>> COMPUTED = LoreModelViews.map(() -> LoreModelFile.content().computed());
 
     /** Свойство графа, которым подтверждено поле (то же сопоставление, что у build): первый кандидат из props, не system. */
     static String propertyOf(String type, Map<String, Object> f, Set<String> props) {

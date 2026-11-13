@@ -348,7 +348,9 @@ public class LoreProductResource extends LoreResourceBase {
      */
     public record ActorRequest(String actor_id, String name, String kind, String body_md,
                                String project, List<String> projects,
-                               String machine_id, String session_id) {}
+                               String machine_id, String session_id) {
+        public ActorRequest { machine_id = AgentMachine.canon(machine_id); }   // PU-18: имя машины — канон
+    }
 
     /**
      * Чистая часть объяснения отказа — без похода в граф, поэтому проверяема
@@ -731,7 +733,9 @@ public class LoreProductResource extends LoreResourceBase {
      *                    новая сессия — новая вершина, старая остаётся)
      */
     public record AgentSessionRequest(String actor_id, String session_id, String machine_id,
-                                       String project, String entrypoint, String dialogue_name) {}
+                                       String project, String entrypoint, String dialogue_name) {
+        public AgentSessionRequest { machine_id = AgentMachine.canon(machine_id); }   // PU-18
+    }
 
     /**
      * ADR-LORE-037 D1-D4: `KnowAgentSession` — ОТДЕЛЬНАЯ вершина от
@@ -936,7 +940,9 @@ public class LoreProductResource extends LoreResourceBase {
         // S7B-15, ADR-MINILORE-007: harness из справочника harness. null — не трогать, "" — сбросить.
         String harness,
         // S7B-16, ADR-MINILORE-007 В4: машина — поле machine_id. null — не трогать, "" — отвязать.
-        String machine_id) {}
+        String machine_id) {
+        public ActorOwnerRequest { machine_id = AgentMachine.canon(machine_id); }   // PU-18; «» остаётся «» — отвязать
+    }
 
     @POST
     @Path("actor/owner")

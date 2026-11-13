@@ -8,7 +8,7 @@
 // владелицы — в loreRefCreate.ts (родитель обязателен, автор — кто пишет, исполнитель — «Себя»).
 import { useMemo, type ComponentType } from 'react';
 import { useKitLang, type KitLang, type MdEditorSlotProps } from '@seidr/kit';
-import { MdInlineEdit, type TipTapRefSource, type RefItem } from '@seidr/kit/content';
+import { MdInlineEdit, type LiveBlocks, type TipTapRefSource, type RefItem } from '@seidr/kit/content';
 import { fetchSearchSlice, type SearchSliceOptions } from '../api/searchSlice';
 import { appT, type AppKey } from '../i18n';
 import { recordHref } from '../nav/loreRoutes';
@@ -100,14 +100,15 @@ export function loreRefHref(ref: { id: string; type: string | null }): string | 
 /**
  * Редактор MD-полей записи с окном ссылок и карточкой «Новый», знающий контекст записи
  * (её родителей): новая задача из текста спринта сразу кладётся в этот спринт.
+ * blocks — живые блоки записи (S6-04): lore-query/lore-graph исполняются и в правимом поле.
  */
-export function mdEditorWithRefs(parents: Record<string, string>): ComponentType<MdEditorSlotProps> {
+export function mdEditorWithRefs(parents: Record<string, string>, blocks?: (lang: KitLang) => LiveBlocks): ComponentType<MdEditorSlotProps> {
   return function MdInlineEditWithRefsIn(props: MdEditorSlotProps) {
     const lang = useKitLang();
     const key = JSON.stringify(parents);
     const refs = useMemo(() => loreMdRefs(lang, { create: { parents } }), [lang, key]); // eslint-disable-line react-hooks/exhaustive-deps
     const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
-    return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refPeek={peek} />;
+    return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refPeek={peek} blocks={blocks?.(lang)} />;
   };
 }
 

@@ -37,8 +37,9 @@ final class Scd2Guard {
      * иначе вернуть {@link #CONFLICT_MARK} до любой записи. Параметры: :now, :oldrid
      * (+ :expected_raw). histType — из внутреннего switch, не из запроса.
      */
-    static String guardedClose(String histType, boolean checkStatus) {
-        return "LET closed = UPDATE " + histType + " SET valid_to = :now RETURN AFTER"
+    static String guardedClose(String vertexType, String histType, boolean checkStatus) {
+        return lockChain(vertexType, histType)
+            + "LET closed = UPDATE " + histType + " SET valid_to = :now RETURN AFTER"
             + " WHERE @rid = :oldrid AND valid_to IS NULL"
             + (checkStatus ? " AND status_raw = :expected_raw" : "") + ";"
             + "IF ($closed.size() = 0) { RETURN \"" + CONFLICT_MARK + "\"; }";
@@ -52,10 +53,34 @@ final class Scd2Guard {
      * сущности уже есть — {@link #CONFLICT_MARK} до любой записи.
      * Параметр — {@code :<idParam>}; histType/key — из внутреннего реестра, не из запроса.
      */
-    static String guardedNoOpen(String histType, String key, String idParam) {
-        return "LET opened = SELECT FROM " + histType + " WHERE valid_to IS NULL"
+    static String guardedNoOpen(String vertexType, String histType, String key, String idParam) {
+        return lockChain(vertexType, histType)
+            + "LET opened = SELECT FROM " + histType + " WHERE valid_to IS NULL"
             + " AND in('HAS_STATE')." + key + " CONTAINS :" + idParam + ";"
             + "IF ($opened.size() > 0) { RETURN \"" + CONFLICT_MARK + "\"; }";
+    }
+
+    /**
+     * SPRINT_UXR_S11_TEST_OPT/CI-SCD2-RACE: явная блокировка цепочки SCD2 на весь
+     * sqlscript — вершина, её история и ребро HAS_STATE.
+     *
+     * <p>Корень (проба на ArcadeDB 26.11.1, 13.11.2026): коммит соседнего писателя
+     * виден другим транзакциям ЧАСТИЧНО — закрытая старая версия уже видна, новая
+     * (или её ребро) ещё нет. Писатель, читающий в это окно, идёт по ветке
+     * {@link #guardedNoOpen}, внутри скрипта снова видит «открытой нет» и открывает
+     * вторую версию; MVCC его не режет, потому что страницы он прочитал уже
+     * изменёнными. Итог — одна закрытая, две открытые (CI #925 и #1268, проба:
+     * 5 раундов из 500 по 8 писателей). {@code LOCK TYPE} берёт блокировки до
+     * первого чтения и держит их до конца коммита — писатели цепочки идут по
+     * одному (проба: 0 из 1300).
+     *
+     * <p>Блокировка обязана быть у КАЖДОГО писателя цепочки (иначе её некому
+     * ждать) — поэтому она внутри обоих guard'ов, а не у вызывающего. ArcadeDB
+     * требует, чтобы при явной блокировке были заблокированы ВСЕ изменяемые
+     * ресурсы, — скрипт с guard'ом пишет только эти три типа.
+     */
+    static String lockChain(String vertexType, String histType) {
+        return "LOCK TYPE " + vertexType + ", " + histType + ", HAS_STATE;";
     }
 
     /** Вернул ли guarded-скрипт маркер конфликта (ничего не записано). */

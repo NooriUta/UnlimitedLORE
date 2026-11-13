@@ -5681,7 +5681,8 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   overflow: hidden;
 }
 .sk-scope__check input { accent-color: var(--acc); margin: 0; }
-.sk-scope__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+/* PU-06 (приёмка v1.17.18): имя не сжимается — всё сжатие берёт slug; имя длиннее строки режется по её ширине. */
+.sk-scope__title { flex-shrink: 0; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
 /* PU-06: slug сжимается первым и с многоточием — имя проекта читается, пилюля «мой» не наезжает на «только этот». */
 .sk-scope__id { flex-shrink: 10; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); white-space: nowrap; }
 .sk-scope__tag {

@@ -1,0 +1,4390 @@
+{
+  "format" : "lore-model/1",
+  "about" : "Модель LORE — типы паспорта, их поля, связи и поверхности (ADR-LORE-048, D-2026-LORE-MODEL-AS-CONFIG). Канон; копия для образа бэкенда — backend/src/main/resources/lore-model/lore-model.json (LoreModelFileParityTest). Правка меняет контракт /lore/model и /lore/record — эталон MC-01 (LoreModelGoldenTest) покажет дифф.",
+  "types" : [ {
+    "type" : "sprint",
+    "label" : "Спринт",
+    "labelKey" : "pp.kind.sprint",
+    "icon" : "sprint",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/update",
+        "field" : "name"
+      },
+      "required" : true
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "sprint_status",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/status",
+        "field" : "status"
+      }
+    }, {
+      "key" : "priority",
+      "label" : "Приоритет",
+      "labelKey" : "pp.field.priority",
+      "kind" : "enum",
+      "group" : "props",
+      "dict" : "priority",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/plan",
+        "field" : "priority"
+      }
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "releases",
+      "label" : "Релизы",
+      "labelKey" : "pp.field.releases",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "release",
+      "rel" : "IMPLEMENTED_IN_RELEASE",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "created",
+      "label" : "Создан",
+      "labelKey" : "pp.field.created",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "milestones",
+      "label" : "Вехи",
+      "labelKey" : "pp.field.milestones",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "TARGETS_MILESTONE"
+      },
+      "multi" : true,
+      "refType" : "milestone",
+      "rel" : "TARGETS_MILESTONE",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "planned_start",
+      "label" : "Начало по плану",
+      "labelKey" : "pp.field.plannedStart",
+      "kind" : "date",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/plan",
+        "field" : "planned_start_date"
+      }
+    }, {
+      "key" : "planned_end_date",
+      "label" : "Конец по плану",
+      "labelKey" : "pp.field.plannedEnd",
+      "kind" : "date",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/plan",
+        "field" : "planned_end_date"
+      }
+    }, {
+      "key" : "no_release",
+      "label" : "Не требует релиза",
+      "labelKey" : "pp.field.noRelease",
+      "kind" : "bool",
+      "group" : "props"
+    }, {
+      "key" : "track",
+      "label" : "Трек",
+      "kind" : "enum",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/plan",
+        "field" : "track_id"
+      },
+      "options" : {
+        "slice" : "track_options",
+        "value" : "code",
+        "label" : "title"
+      }
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO"
+      },
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "context_md",
+      "label" : "Контекст",
+      "labelKey" : "pp.adr.context",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/update",
+        "field" : "context_md"
+      }
+    }, {
+      "key" : "outcome_md",
+      "label" : "Итог",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/update",
+        "field" : "outcome_md"
+      }
+    } ],
+    "props" : [ {
+      "fields" : [ "priority", "projects", "releases" ]
+    }, {
+      "section" : "Планирование",
+      "fields" : [ "created", "milestones", "planned_start", "planned_end_date", "no_release", "track" ]
+    }, {
+      "section" : "Модули",
+      "fields" : [ "components" ]
+    } ],
+    "parts" : [ {
+      "key" : "phases",
+      "label" : "Фазы",
+      "type" : "phase",
+      "rel" : "PART_OF",
+      "dir" : "in",
+      "owned" : "strict",
+      "relation" : "composition",
+      "columns" : [ "status", "title", "progress", "valid_from" ],
+      "orderBy" : "order_index",
+      "slice" : "phases_of_sprint"
+    }, {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "type" : "task",
+      "rel" : "PART_OF",
+      "dir" : "in",
+      "owned" : "strict",
+      "relation" : "composition",
+      "columns" : [ "status", "task_type", "code", "title", "executor", "effort" ],
+      "optionalColumns" : [ "work_class", "author", "reviewer", "actual", "realizes_uc", "prs" ],
+      "orderBy" : "order_index",
+      "slice" : "tasks_of_sprint"
+    }, {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "type" : "question",
+      "rel" : "RAISED_IN",
+      "dir" : "in",
+      "owned" : "shared",
+      "relation" : "aggregation",
+      "columns" : [ "status", "code", "title", "priority" ],
+      "optionalColumns" : [ "due_date" ],
+      "orderBy" : "question_id",
+      "slice" : "questions_of_sprint"
+    } ],
+    "linkTabs" : [ {
+      "key" : "deps",
+      "label" : "Связи",
+      "rels" : [ {
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "label" : "зависит от",
+        "relation" : "association",
+        "edgeProps" : [ "kind", "reason" ]
+      }, {
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "label" : "блокирует",
+        "relation" : "association",
+        "edgeProps" : [ "kind", "reason" ]
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "tree" : [ {
+      "part" : "phases",
+      "label" : "Фазы",
+      "columns" : [ "status", "title", "progress", "valid_from" ],
+      "children" : [ {
+        "part" : "tasks",
+        "label" : "Задачи",
+        "groupBy" : "phase_uid",
+        "columns" : [ "status", "task_type", "code", "title", "executor", "effort" ],
+        "optionalColumns" : [ "work_class", "author", "reviewer", "actual", "realizes_uc", "prs" ]
+      } ]
+    }, {
+      "part" : "tasks",
+      "label" : "вне фаз",
+      "groupBy" : "phase_uid",
+      "columns" : [ "status", "task_type", "code", "title", "executor", "effort" ],
+      "optionalColumns" : [ "work_class", "author", "reviewer", "actual", "realizes_uc", "prs" ]
+    } ],
+    "relations" : [ {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "rel" : "PART_OF",
+      "dir" : "in",
+      "targetType" : "task",
+      "relation" : "composition",
+      "place" : "part"
+    }, {
+      "key" : "phases",
+      "label" : "Фазы",
+      "rel" : "PART_OF",
+      "dir" : "in",
+      "targetType" : "phase",
+      "relation" : "composition",
+      "place" : "part"
+    }, {
+      "key" : "dependsOn",
+      "label" : "Зависит от",
+      "rel" : "DEPENDS_ON",
+      "dir" : "out",
+      "targetType" : "sprint",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "blocks",
+      "label" : "Блокирует",
+      "rel" : "DEPENDS_ON",
+      "dir" : "in",
+      "targetType" : "sprint",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "releases",
+      "label" : "Релизы",
+      "rel" : "IMPLEMENTED_IN_RELEASE",
+      "dir" : "out",
+      "targetType" : "release",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "milestones",
+      "label" : "Вехи",
+      "rel" : "TARGETS_MILESTONE",
+      "dir" : "out",
+      "targetType" : "milestone",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "adrs",
+      "label" : "Реализует ADR",
+      "rel" : "IMPLEMENTED_IN",
+      "dir" : "in",
+      "targetType" : "adr",
+      "relation" : "realization",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "rel" : "RAISED_IN",
+      "dir" : "in",
+      "targetType" : "question",
+      "relation" : "aggregation",
+      "place" : "part",
+      "manageable" : true
+    }, {
+      "key" : "docs",
+      "label" : "Знания",
+      "rel" : "IMPLEMENTED_IN",
+      "dir" : "in",
+      "targetType" : "doc",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "publications",
+      "label" : "Публикации",
+      "rel" : "PRODUCED_BY",
+      "dir" : "in",
+      "targetType" : "publication",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
+    }, {
+      "key" : "assets",
+      "label" : "Вложения",
+      "rel" : "ATTACHED_TO",
+      "dir" : "out",
+      "targetType" : "asset",
+      "relation" : "composition",
+      "place" : "body"
+    } ]
+  }, {
+    "type" : "task",
+    "label" : "Задача",
+    "labelKey" : "pp.kind.task",
+    "icon" : "checkbox-tree",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "title"
+      },
+      "required" : true
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "task_status",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/status",
+        "field" : "status"
+      }
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "sprint",
+      "label" : "Спринт",
+      "labelKey" : "pp.field.sprint",
+      "kind" : "ref",
+      "group" : "props",
+      "required" : true,
+      "refType" : "sprint",
+      "rel" : "PART_OF",
+      "dir" : "out",
+      "relation" : "composition"
+    }, {
+      "key" : "phase",
+      "label" : "Фаза",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "IN_PHASE"
+      },
+      "refType" : "phase",
+      "rel" : "IN_PHASE",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "TAGGED_WITH"
+      },
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "relation" : "attribute"
+    }, {
+      "key" : "author",
+      "label" : "Автор",
+      "labelKey" : "pp.field.author",
+      "kind" : "enum",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "author_agent"
+      },
+      "options" : {
+        "slice" : "task_identities",
+        "param" : "id",
+        "value" : "code",
+        "label" : "title",
+        "group" : "kind"
+      }
+    }, {
+      "key" : "executor",
+      "label" : "Исполнитель",
+      "labelKey" : "pp.field.executor",
+      "kind" : "enum",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "executor_agent"
+      },
+      "options" : {
+        "slice" : "task_identities",
+        "param" : "id",
+        "value" : "code",
+        "label" : "title",
+        "group" : "kind"
+      }
+    }, {
+      "key" : "reviewer",
+      "label" : "Принимающий",
+      "labelKey" : "pp.field.reviewer",
+      "kind" : "enum",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "reviewer_agent"
+      },
+      "options" : {
+        "slice" : "task_identities",
+        "param" : "id",
+        "value" : "code",
+        "label" : "title",
+        "group" : "kind"
+      }
+    }, {
+      "key" : "effort",
+      "label" : "Оценка, чел.-дн",
+      "labelKey" : "pp.field.effort",
+      "kind" : "number",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "effort_days"
+      }
+    }, {
+      "key" : "actual",
+      "label" : "Факт, чел.-дн",
+      "labelKey" : "pp.field.actual",
+      "kind" : "number",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "actual_days"
+      }
+    }, {
+      "key" : "task_type",
+      "label" : "Тип задачи",
+      "labelKey" : "pp.field.taskType",
+      "kind" : "enum",
+      "group" : "props",
+      "dict" : "task_type",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "task_type"
+      }
+    }, {
+      "key" : "work_class",
+      "label" : "Класс работы",
+      "labelKey" : "pp.field.workClass",
+      "kind" : "enum",
+      "group" : "props",
+      "dict" : "work_class",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "work_class"
+      }
+    }, {
+      "key" : "realizes_uc",
+      "label" : "Сценарий (UC)",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "uc_id"
+      },
+      "multi" : true,
+      "refType" : "use_case",
+      "rel" : "REALIZES",
+      "dir" : "out",
+      "relation" : "realization"
+    }, {
+      "key" : "prs",
+      "label" : "PR",
+      "labelKey" : "pp.field.prs",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "CLOSED_BY"
+      },
+      "multi" : true,
+      "refType" : "pr",
+      "rel" : "CLOSED_BY",
+      "dir" : "out",
+      "relation" : "realization"
+    }, {
+      "key" : "files",
+      "label" : "Файлы",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "file",
+      "rel" : "EDITED_IN",
+      "dir" : "in",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "note_md",
+      "label" : "Заметка",
+      "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/task/edit",
+        "field" : "note_md"
+      }
+    } ],
+    "props" : [ {
+      "fields" : [ "sprint", "phase", "components", "projects", "prs", "files" ]
+    }, {
+      "section" : "Роли",
+      "fields" : [ "author", "executor", "reviewer" ]
+    }, {
+      "section" : "Оценка",
+      "fields" : [ "effort", "actual" ]
+    }, {
+      "section" : "Классы",
+      "fields" : [ "task_type", "work_class", "realizes_uc" ]
+    } ],
+    "parts" : [ {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "type" : "question",
+      "rel" : "RAISED_IN",
+      "dir" : "in",
+      "owned" : "shared",
+      "relation" : "aggregation",
+      "columns" : [ "status", "code", "title", "priority" ],
+      "optionalColumns" : [ "due_date" ],
+      "orderBy" : "question_id",
+      "slice" : "questions_of_task"
+    } ],
+    "linkTabs" : [ {
+      "key" : "justification",
+      "label" : "ADR",
+      "rels" : [ {
+        "rel" : "JUSTIFIED_BY",
+        "dir" : "out",
+        "label" : "обоснована ADR",
+        "relation" : "realization"
+      }, {
+        "rel" : "PROMOTED_TO",
+        "dir" : "in",
+        "label" : "из рекомендации QG",
+        "relation" : "realization"
+      }, {
+        "rel" : "LED_TO",
+        "dir" : "in",
+        "label" : "из инсайта BRAGI",
+        "relation" : "realization"
+      } ]
+    }, {
+      "key" : "realization",
+      "label" : "Реализация",
+      "rels" : [ {
+        "rel" : "CLOSED_BY",
+        "dir" : "out",
+        "label" : "закрыта PR",
+        "relation" : "realization"
+      }, {
+        "rel" : "REALIZES",
+        "dir" : "out",
+        "label" : "реализует сценарий",
+        "relation" : "realization"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "sprint",
+      "label" : "Спринт",
+      "rel" : "PART_OF",
+      "dir" : "out",
+      "targetType" : "sprint",
+      "relation" : "composition",
+      "place" : "head"
+    }, {
+      "key" : "phase",
+      "label" : "Фаза",
+      "rel" : "IN_PHASE",
+      "dir" : "out",
+      "targetType" : "phase",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "roles",
+      "label" : "Роли",
+      "rel" : "ROLE_HELD_BY",
+      "dir" : "out",
+      "targetType" : "actor",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "files",
+      "label" : "Файлы",
+      "rel" : "EDITED_IN",
+      "dir" : "in",
+      "targetType" : "file",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "prs",
+      "label" : "PR",
+      "rel" : "CLOSED_BY",
+      "dir" : "out",
+      "targetType" : "pr",
+      "relation" : "realization",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "useCases",
+      "label" : "Сценарии",
+      "rel" : "REALIZES",
+      "dir" : "out",
+      "targetType" : "use_case",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "adrs",
+      "label" : "Обоснована ADR",
+      "rel" : "JUSTIFIED_BY",
+      "dir" : "out",
+      "targetType" : "adr",
+      "relation" : "realization",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "qgRecs",
+      "label" : "Рекомендации QG",
+      "rel" : "PROMOTED_TO",
+      "dir" : "in",
+      "targetType" : "qg_recommendation",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "insights",
+      "label" : "Инсайты BRAGI",
+      "rel" : "LED_TO",
+      "dir" : "in",
+      "targetType" : "insight",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "gates",
+      "label" : "Блокирующие вопросы",
+      "rel" : "GATES",
+      "dir" : "in",
+      "targetType" : "question",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "publications",
+      "label" : "Публикации",
+      "rel" : "PRODUCED_BY",
+      "dir" : "in",
+      "targetType" : "publication",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "rel" : "RAISED_IN",
+      "dir" : "in",
+      "targetType" : "question",
+      "relation" : "aggregation",
+      "place" : "part",
+      "manageable" : true
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
+    }, {
+      "key" : "assets",
+      "label" : "Вложения",
+      "rel" : "ATTACHED_TO",
+      "dir" : "out",
+      "targetType" : "asset",
+      "relation" : "composition",
+      "place" : "body"
+    } ]
+  }, {
+    "type" : "adr",
+    "label" : "ADR",
+    "labelKey" : "pp.kind.adr",
+    "icon" : "scroll-quill",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/adr",
+        "field" : "name"
+      },
+      "required" : true
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "adr_status",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/status",
+        "field" : "status"
+      }
+    }, {
+      "key" : "date",
+      "label" : "Дата",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/adr",
+        "field" : "date_created"
+      }
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO"
+      },
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "tags",
+      "label" : "Теги",
+      "labelKey" : "pp.field.tags",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "TAGGED_WITH"
+      },
+      "multi" : true,
+      "refType" : "tag",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "file_path",
+      "label" : "Файл",
+      "labelKey" : "pp.field.file",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/adr",
+        "field" : "file_path"
+      }
+    } ],
+    "body" : [ {
+      "key" : "context_md",
+      "label" : "Контекст",
+      "labelKey" : "pp.adr.context",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/adr",
+        "field" : "context_md"
+      }
+    }, {
+      "key" : "decision_md",
+      "label" : "Решение",
+      "labelKey" : "pp.adr.decision",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/adr",
+        "field" : "decision_md"
+      }
+    }, {
+      "key" : "consequences_md",
+      "label" : "Следствия",
+      "labelKey" : "pp.adr.consequences",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/adr",
+        "field" : "consequences_md"
+      }
+    } ],
+    "props" : [ {
+      "fields" : [ "date", "components", "projects", "tags", "file_path" ]
+    } ],
+    "parts" : [ {
+      "key" : "decisions",
+      "label" : "Решения",
+      "type" : "decision",
+      "rel" : "DECIDED_IN",
+      "dir" : "in",
+      "owned" : "shared",
+      "relation" : "aggregation",
+      "columns" : [ "status", "code", "title" ],
+      "optionalColumns" : [ "date" ],
+      "orderBy" : "decision_id",
+      "slice" : "decisions_of_adr"
+    }, {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "type" : "question",
+      "rel" : "RAISED_IN",
+      "dir" : "in",
+      "owned" : "shared",
+      "relation" : "aggregation",
+      "columns" : [ "status", "code", "title", "priority" ],
+      "optionalColumns" : [ "due_date" ],
+      "orderBy" : "question_id",
+      "slice" : "questions_of_adr"
+    } ],
+    "linkTabs" : [ {
+      "key" : "adrLinks",
+      "label" : "Связи ADR",
+      "rels" : [ {
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "label" : "зависит от",
+        "relation" : "association"
+      }, {
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "label" : "блокирует",
+        "relation" : "association"
+      }, {
+        "rel" : "SUPERSEDES",
+        "dir" : "out",
+        "label" : "заменяет",
+        "relation" : "association"
+      }, {
+        "rel" : "SUPERSEDES",
+        "dir" : "in",
+        "label" : "заменён",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES_ADR",
+        "dir" : "in",
+        "label" : "ранбуки",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "decisions",
+      "label" : "Решения",
+      "rel" : "DECIDED_IN",
+      "dir" : "in",
+      "targetType" : "decision",
+      "relation" : "aggregation",
+      "place" : "part"
+    }, {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "rel" : "RAISED_IN",
+      "dir" : "in",
+      "targetType" : "question",
+      "relation" : "aggregation",
+      "place" : "part",
+      "manageable" : true
+    }, {
+      "key" : "dependsOn",
+      "label" : "Зависит от",
+      "rel" : "DEPENDS_ON",
+      "dir" : "out",
+      "targetType" : "adr",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "blocks",
+      "label" : "Блокирует",
+      "rel" : "DEPENDS_ON",
+      "dir" : "in",
+      "targetType" : "adr",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "supersedes",
+      "label" : "Заменяет",
+      "rel" : "SUPERSEDES",
+      "dir" : "out",
+      "targetType" : "adr",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "supersededBy",
+      "label" : "Заменён",
+      "rel" : "SUPERSEDES",
+      "dir" : "in",
+      "targetType" : "adr",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "runbooks",
+      "label" : "Ранбуки",
+      "rel" : "REFERENCES_ADR",
+      "dir" : "in",
+      "targetType" : "runbook",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "tags",
+      "label" : "Теги",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "targetType" : "tag",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "rel" : "IMPLEMENTED_IN",
+      "dir" : "out",
+      "targetType" : "sprint",
+      "relation" : "realization",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "releases",
+      "label" : "Релизы",
+      "rel" : "IMPLEMENTED_IN_RELEASE",
+      "dir" : "out",
+      "targetType" : "release",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "justifies",
+      "label" : "Обосновывает задачи",
+      "rel" : "JUSTIFIED_BY",
+      "dir" : "in",
+      "targetType" : "task",
+      "relation" : "realization",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "useCases",
+      "label" : "Сценарии",
+      "rel" : "TRACED_TO",
+      "dir" : "in",
+      "targetType" : "use_case",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "insights",
+      "label" : "Инсайты BRAGI",
+      "rel" : "LED_TO",
+      "dir" : "in",
+      "targetType" : "insight",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
+    }, {
+      "key" : "assets",
+      "label" : "Вложения",
+      "rel" : "ATTACHED_TO",
+      "dir" : "out",
+      "targetType" : "asset",
+      "relation" : "composition",
+      "place" : "body"
+    } ]
+  }, {
+    "type" : "spec",
+    "label" : "Спека",
+    "labelKey" : "pp.kind.spec",
+    "icon" : "spell-book",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/spec",
+        "field" : "title"
+      },
+      "required" : true
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "spec_status",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/spec",
+        "field" : "status"
+      }
+    }, {
+      "key" : "version",
+      "label" : "Версия",
+      "labelKey" : "pp.field.version",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/spec",
+        "field" : "version"
+      }
+    }, {
+      "key" : "summary",
+      "label" : "Кратко",
+      "labelKey" : "pp.field.summary",
+      "kind" : "md",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/spec",
+        "field" : "summary"
+      }
+    }, {
+      "key" : "component",
+      "label" : "Компонент",
+      "labelKey" : "pp.field.component",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO"
+      },
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "file_path",
+      "label" : "Файл",
+      "labelKey" : "pp.field.file",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/spec",
+        "field" : "file_path"
+      }
+    } ],
+    "body" : [ {
+      "key" : "content_md",
+      "label" : "Текст",
+      "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/spec",
+        "field" : "content_md"
+      }
+    } ],
+    "props" : [ {
+      "fields" : [ "version", "summary", "component", "projects", "file_path" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "documentedFor",
+      "label" : "Компонент",
+      "rel" : "DOCUMENTED_IN",
+      "dir" : "in",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "components",
+      "label" : "Компонент",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
+    }, {
+      "key" : "assets",
+      "label" : "Вложения",
+      "rel" : "ATTACHED_TO",
+      "dir" : "out",
+      "targetType" : "asset",
+      "relation" : "composition",
+      "place" : "body"
+    } ]
+  }, {
+    "type" : "doc",
+    "label" : "Документ",
+    "labelKey" : "pp.kind.doc",
+    "icon" : "bookshelf",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "title"
+      },
+      "required" : true
+    }, {
+      "key" : "kind",
+      "label" : "Вид",
+      "labelKey" : "pp.field.docKind",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "kind"
+      }
+    }, {
+      "key" : "component",
+      "label" : "Компонент",
+      "labelKey" : "pp.field.component",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO"
+      },
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "parent",
+      "label" : "Родительский документ",
+      "labelKey" : "pp.field.parentDoc",
+      "kind" : "ref",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "parent_doc_id"
+      },
+      "refType" : "doc",
+      "rel" : "DOC_CHILD_OF",
+      "dir" : "out",
+      "relation" : "composition"
+    }, {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "labelKey" : "pp.field.sprints",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "sprint",
+      "rel" : "IMPLEMENTED_IN",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "file_path",
+      "label" : "Файл",
+      "labelKey" : "pp.field.file",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "file_path"
+      }
+    } ],
+    "body" : [ {
+      "key" : "content_md_ru",
+      "label" : "Текст",
+      "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "content_md_ru"
+      }
+    }, {
+      "key" : "content_md_en",
+      "label" : "Текст (EN)",
+      "labelKey" : "pp.field.bodyEn",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/doc",
+        "field" : "content_md_en"
+      }
+    } ],
+    "props" : [ {
+      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "children",
+      "label" : "Вложенные документы",
+      "rels" : [ {
+        "rel" : "DOC_CHILD_OF",
+        "dir" : "in",
+        "label" : "вложены",
+        "relation" : "composition"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "components",
+      "label" : "Компонент",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "parentDoc",
+      "label" : "Родительский документ",
+      "rel" : "DOC_CHILD_OF",
+      "dir" : "out",
+      "targetType" : "doc",
+      "relation" : "composition",
+      "place" : "prop"
+    }, {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "rel" : "IMPLEMENTED_IN",
+      "dir" : "out",
+      "targetType" : "sprint",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "children",
+      "label" : "Вложенные документы",
+      "rel" : "DOC_CHILD_OF",
+      "dir" : "in",
+      "targetType" : "doc",
+      "relation" : "composition",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "assets",
+      "label" : "Вложения",
+      "rel" : "ATTACHED_TO",
+      "dir" : "out",
+      "targetType" : "asset",
+      "relation" : "composition",
+      "place" : "body"
+    } ]
+  }, {
+    "type" : "decision",
+    "label" : "Решение",
+    "labelKey" : "pp.kind.decision",
+    "icon" : "scales",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "decision_status"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "date",
+      "label" : "Дата",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "adr",
+      "label" : "ADR",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "adr",
+      "rel" : "DECIDED_IN",
+      "dir" : "out",
+      "relation" : "aggregation"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "tags",
+      "label" : "Теги",
+      "labelKey" : "pp.field.tags",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "tag",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Решение",
+      "labelKey" : "pp.field.body"
+    }, {
+      "key" : "rationale_md",
+      "label" : "Обоснование"
+    } ],
+    "props" : [ {
+      "fields" : [ "date", "adr", "components", "projects", "tags" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "adr",
+      "label" : "ADR",
+      "rel" : "DECIDED_IN",
+      "dir" : "out",
+      "targetType" : "adr",
+      "relation" : "aggregation",
+      "place" : "head"
+    }, {
+      "key" : "supersedes",
+      "label" : "Заменяет",
+      "rel" : "SUPERSEDES",
+      "dir" : "out",
+      "targetType" : "decision",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "answers",
+      "label" : "Отвечает на вопросы",
+      "rel" : "ANSWERS",
+      "dir" : "out",
+      "targetType" : "question",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "tags",
+      "label" : "Теги",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "targetType" : "tag",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "supersededBy",
+      "label" : "Заменено",
+      "rel" : "SUPERSEDES",
+      "dir" : "in",
+      "targetType" : "decision",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "useCases",
+      "label" : "Сценарии",
+      "rel" : "TRACED_TO",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "question",
+    "label" : "Вопрос",
+    "labelKey" : "pp.kind.question",
+    "icon" : "help",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "priority",
+      "label" : "Приоритет",
+      "labelKey" : "pp.field.priority",
+      "kind" : "enum",
+      "group" : "props",
+      "dict" : "priority"
+    }, {
+      "key" : "due_date",
+      "label" : "Срок",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "owner",
+      "label" : "Ответственный",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "raised_by",
+      "label" : "Поднял",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "opened",
+      "label" : "Открыт",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "closed",
+      "label" : "Закрыт",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Суть",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "priority", "due_date", "owner", "raised_by", "opened", "closed", "components", "projects" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "raisedIn",
+      "label" : "Поднят в",
+      "rel" : "RAISED_IN",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "aggregation",
+      "place" : "head"
+    }, {
+      "key" : "gates",
+      "label" : "Блокирует задачи",
+      "rel" : "GATES",
+      "dir" : "out",
+      "targetType" : "task",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "answeredBy",
+      "label" : "Ответ — решения",
+      "rel" : "ANSWERS",
+      "dir" : "in",
+      "targetType" : "decision",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "milestone",
+    "label" : "Веха",
+    "labelKey" : "pp.kind.milestone",
+    "icon" : "flag-objective",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "week",
+      "label" : "Неделя",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Срок",
+      "labelKey" : "pp.field.date",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "priority",
+      "label" : "Приоритет",
+      "labelKey" : "pp.field.priority",
+      "kind" : "enum",
+      "group" : "props",
+      "dict" : "priority"
+    }, {
+      "key" : "products",
+      "label" : "Продукты",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "relation" : "attribute"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "goal_md",
+      "label" : "Цель"
+    }, {
+      "key" : "decisions_md",
+      "label" : "Решения"
+    } ],
+    "props" : [ {
+      "fields" : [ "week", "date", "priority", "products", "projects", "components" ]
+    } ],
+    "relations" : [ {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "rel" : "TARGETS_MILESTONE",
+      "dir" : "in",
+      "targetType" : "sprint",
+      "relation" : "aggregation",
+      "place" : "link_tab"
+    }, {
+      "key" : "features",
+      "label" : "Фичи",
+      "rel" : "TARGETS_MILESTONE",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "aggregation",
+      "place" : "link_tab"
+    }, {
+      "key" : "products",
+      "label" : "Продукты",
+      "rel" : "TARGETS_PRODUCT",
+      "dir" : "out",
+      "targetType" : "product",
+      "relation" : "attribute",
+      "place" : "prop"
+    } ]
+  }, {
+    "type" : "release",
+    "label" : "Релиз",
+    "labelKey" : "pp.kind.release",
+    "icon" : "rocket",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "code",
+      "label" : "Тег",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "type",
+      "label" : "Вид",
+      "kind" : "enum",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Дата",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "is_current",
+      "label" : "Текущий",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "week",
+      "label" : "Неделя",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "description_md",
+      "label" : "Описание",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "type", "date", "is_current", "week", "projects", "components" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "rel" : "IMPLEMENTED_IN_RELEASE",
+      "dir" : "in",
+      "targetType" : "sprint",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "prs",
+      "label" : "PR",
+      "rel" : "SHIPPED_IN",
+      "dir" : "in",
+      "targetType" : "pr",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "adrs",
+      "label" : "ADR",
+      "rel" : "IMPLEMENTED_IN_RELEASE",
+      "dir" : "in",
+      "targetType" : "adr",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "publications",
+      "label" : "Публикации",
+      "rel" : "SHIPPED_IN",
+      "dir" : "in",
+      "targetType" : "publication",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "component",
+    "label" : "Компонент",
+    "labelKey" : "pp.kind.component",
+    "icon" : "cog",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "area",
+      "label" : "Область",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "parent",
+      "label" : "Родитель",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "component",
+      "rel" : "PARENT_OF",
+      "dir" : "out",
+      "relation" : "composition"
+    }, {
+      "key" : "owner",
+      "label" : "Владелец",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "team",
+      "label" : "Команда",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "icon",
+      "label" : "Иконка",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "children",
+      "label" : "Подкомпоненты",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "PARENT_OF",
+      "dir" : "in",
+      "relation" : "composition"
+    }, {
+      "key" : "tech",
+      "label" : "Технологии",
+      "kind" : "text",
+      "group" : "props",
+      "multi" : true
+    }, {
+      "key" : "adrs",
+      "label" : "ADR",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "adr",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "relation" : "attribute"
+    }, {
+      "key" : "specs",
+      "label" : "Спеки",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "spec",
+      "rel" : "DOCUMENTED_IN",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "relation" : "attribute"
+    }, {
+      "key" : "products",
+      "label" : "Продукты",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "product",
+      "rel" : "IN_PRODUCT",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "props" : [ {
+      "fields" : [ "area", "parent", "owner", "team", "icon", "projects", "products" ]
+    }, {
+      "section" : "Модули",
+      "fields" : [ "children", "tech", "adrs", "specs" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "parent",
+      "label" : "Родитель",
+      "rel" : "PARENT_OF",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "composition",
+      "place" : "prop"
+    }, {
+      "key" : "products",
+      "label" : "Продукты",
+      "rel" : "IN_PRODUCT",
+      "dir" : "out",
+      "targetType" : "product",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "children",
+      "label" : "Подкомпоненты",
+      "rel" : "PARENT_OF",
+      "dir" : "in",
+      "targetType" : "component",
+      "relation" : "composition",
+      "place" : "link_tab"
+    }, {
+      "key" : "stack",
+      "label" : "Стек",
+      "rel" : "USES",
+      "dir" : "out",
+      "targetType" : "tech_ref",
+      "relation" : "attribute",
+      "place" : "links"
+    }, {
+      "key" : "tech",
+      "label" : "Технологии",
+      "rel" : "DOCUMENTED_IN",
+      "dir" : "out",
+      "targetType" : "tech",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "adrs",
+      "label" : "ADR",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "targetType" : "adr",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "specs",
+      "label" : "Спеки",
+      "rel" : "DOCUMENTED_IN",
+      "dir" : "out",
+      "targetType" : "spec",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "decisions",
+      "label" : "Решения",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "targetType" : "decision",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "targetType" : "question",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "features",
+      "label" : "Сценарии",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "docs",
+      "label" : "Знания",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "targetType" : "doc",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "qgs",
+      "label" : "Гейты качества",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "targetType" : "qg",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "rel" : "TAGGED_WITH",
+      "dir" : "in",
+      "targetType" : "task",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "rel" : "BELONGS_TO",
+      "dir" : "in",
+      "targetType" : "sprint",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "area",
+      "label" : "Область",
+      "rel" : "IN_AREA",
+      "dir" : "out",
+      "targetType" : "area",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "tech",
+    "label" : "Технология",
+    "labelKey" : "pp.kind.tech",
+    "icon" : "gears",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "version",
+      "label" : "Версия",
+      "labelKey" : "pp.field.version",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "checked_at",
+      "label" : "Проверено",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "component",
+      "label" : "Компонент",
+      "labelKey" : "pp.field.component",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "content_md",
+      "label" : "Сведения",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "version", "checked_at", "component" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "documentedFor",
+      "label" : "Компонент",
+      "rel" : "DOCUMENTED_IN",
+      "dir" : "in",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "component",
+      "label" : "Компонент",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "feature",
+    "label" : "Фича",
+    "labelKey" : "pp.kind.feature",
+    "icon" : "gift-of-knowledge",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "goal_level",
+      "label" : "Уровень цели",
+      "kind" : "enum",
+      "group" : "props",
+      "dict" : "uc_goal_level"
+    }, {
+      "key" : "rigor",
+      "label" : "Оформление",
+      "kind" : "enum",
+      "group" : "props"
+    }, {
+      "key" : "priority",
+      "label" : "Приоритет",
+      "labelKey" : "pp.field.priority",
+      "kind" : "enum",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Создан",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "shipped_at",
+      "label" : "Выпущен",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "parent",
+      "label" : "Родитель",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "feature",
+      "rel" : "DECOMPOSES_INTO",
+      "dir" : "in",
+      "relation" : "composition"
+    }, {
+      "key" : "children",
+      "label" : "Сценарии",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "feature",
+      "rel" : "DECOMPOSES_INTO",
+      "dir" : "out",
+      "relation" : "composition"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "task",
+      "rel" : "REALIZES",
+      "dir" : "in",
+      "relation" : "realization"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Описание",
+      "labelKey" : "pp.field.body"
+    }, {
+      "key" : "context_md",
+      "label" : "Контекст",
+      "labelKey" : "pp.adr.context"
+    }, {
+      "key" : "scenario_md",
+      "label" : "Сценарий"
+    }, {
+      "key" : "acceptance_md",
+      "label" : "Критерии приёмки"
+    } ],
+    "props" : [ {
+      "fields" : [ "goal_level", "rigor", "priority", "date", "shipped_at", "parent", "components", "projects" ]
+    }, {
+      "section" : "Модули",
+      "fields" : [ "children", "tasks" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "value",
+      "label" : "Ценность",
+      "rels" : [ {
+        "rel" : "HAS_ACTOR",
+        "dir" : "out",
+        "label" : "акторы",
+        "relation" : "association"
+      }, {
+        "rel" : "ADDRESSES",
+        "dir" : "out",
+        "label" : "боли",
+        "relation" : "association"
+      }, {
+        "rel" : "PROMISES",
+        "dir" : "out",
+        "label" : "выгоды",
+        "relation" : "association"
+      }, {
+        "rel" : "HELPS_WITH",
+        "dir" : "out",
+        "label" : "работы",
+        "relation" : "association"
+      }, {
+        "rel" : "RELIEVES",
+        "dir" : "out",
+        "label" : "снимает боли",
+        "relation" : "association"
+      }, {
+        "rel" : "DELIVERS",
+        "dir" : "out",
+        "label" : "создаёт выгоды",
+        "relation" : "association"
+      }, {
+        "rel" : "PERFORMS",
+        "dir" : "out",
+        "label" : "выполняет работы",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "trace",
+      "label" : "Обоснование",
+      "rels" : [ {
+        "rel" : "TRACED_TO",
+        "dir" : "out",
+        "label" : "обосновано",
+        "relation" : "realization"
+      } ]
+    }, {
+      "key" : "ucLinks",
+      "label" : "Связи сценариев",
+      "rels" : [ {
+        "rel" : "BUILDS_ON",
+        "dir" : "out",
+        "label" : "опирается на",
+        "relation" : "association"
+      }, {
+        "rel" : "BUILDS_ON",
+        "dir" : "in",
+        "label" : "на неё опираются",
+        "relation" : "association"
+      }, {
+        "rel" : "UC_INCLUDES",
+        "dir" : "out",
+        "label" : "включает",
+        "relation" : "association"
+      }, {
+        "rel" : "UC_INCLUDES",
+        "dir" : "in",
+        "label" : "включена в",
+        "relation" : "association"
+      }, {
+        "rel" : "UC_EXTENDS",
+        "dir" : "out",
+        "label" : "расширяет",
+        "relation" : "association"
+      }, {
+        "rel" : "UC_EXTENDS",
+        "dir" : "in",
+        "label" : "расширена",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "parent",
+      "label" : "Родитель",
+      "rel" : "DECOMPOSES_INTO",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "composition",
+      "place" : "head"
+    }, {
+      "key" : "children",
+      "label" : "Сценарии",
+      "rel" : "DECOMPOSES_INTO",
+      "dir" : "out",
+      "targetType" : "feature",
+      "relation" : "composition",
+      "place" : "link_tab"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "rel" : "REALIZES",
+      "dir" : "in",
+      "targetType" : "task",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "actors",
+      "label" : "Акторы",
+      "rel" : "HAS_ACTOR",
+      "dir" : "out",
+      "targetType" : "actor",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "pains",
+      "label" : "Боли",
+      "rel" : "ADDRESSES",
+      "dir" : "out",
+      "targetType" : "pain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "gains",
+      "label" : "Выгоды",
+      "rel" : "PROMISES",
+      "dir" : "out",
+      "targetType" : "gain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "jobs",
+      "label" : "Работы",
+      "rel" : "HELPS_WITH",
+      "dir" : "out",
+      "targetType" : "job",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "relieves",
+      "label" : "Снимает боли",
+      "rel" : "RELIEVES",
+      "dir" : "out",
+      "targetType" : "pain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "delivers",
+      "label" : "Создаёт выгоды",
+      "rel" : "DELIVERS",
+      "dir" : "out",
+      "targetType" : "gain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "performs",
+      "label" : "Выполняет работы",
+      "rel" : "PERFORMS",
+      "dir" : "out",
+      "targetType" : "job",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "adrs",
+      "label" : "ADR",
+      "rel" : "TRACED_TO",
+      "dir" : "out",
+      "targetType" : "adr",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "decisions",
+      "label" : "Решения",
+      "rel" : "TRACED_TO",
+      "dir" : "out",
+      "targetType" : "decision",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "milestones",
+      "label" : "Вехи",
+      "rel" : "TARGETS_MILESTONE",
+      "dir" : "out",
+      "targetType" : "milestone",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "buildsOn",
+      "label" : "Опирается на",
+      "rel" : "BUILDS_ON",
+      "dir" : "out",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "builtOnBy",
+      "label" : "На неё опираются",
+      "rel" : "BUILDS_ON",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "includes",
+      "label" : "Включает",
+      "rel" : "UC_INCLUDES",
+      "dir" : "out",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "includedBy",
+      "label" : "Включена в",
+      "rel" : "UC_INCLUDES",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "extends",
+      "label" : "Расширяет",
+      "rel" : "UC_EXTENDS",
+      "dir" : "out",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "extendedBy",
+      "label" : "Расширена",
+      "rel" : "UC_EXTENDS",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "product",
+    "label" : "Продукт",
+    "labelKey" : "pp.kind.product",
+    "icon" : "bullseye",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "color",
+      "label" : "Цвет",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "label_en",
+      "label" : "Название (en)",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "icon",
+      "label" : "Иконка",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "sort_order",
+      "label" : "Порядок",
+      "kind" : "number",
+      "group" : "props"
+    }, {
+      "key" : "kind",
+      "label" : "Вид",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "is_active",
+      "label" : "Активен",
+      "kind" : "bool",
+      "group" : "props"
+    }, {
+      "key" : "parent",
+      "label" : "Родитель",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "product",
+      "rel" : "PARENT_PRODUCT",
+      "dir" : "out",
+      "relation" : "composition"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "IN_PRODUCT",
+      "dir" : "in",
+      "relation" : "attribute"
+    } ],
+    "props" : [ {
+      "fields" : [ "label_en", "icon", "sort_order", "is_active", "parent", "projects", "components" ]
+    } ],
+    "relations" : [ {
+      "key" : "parent",
+      "label" : "Родитель",
+      "rel" : "PARENT_PRODUCT",
+      "dir" : "out",
+      "targetType" : "product",
+      "relation" : "composition",
+      "place" : "prop"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "IN_PRODUCT",
+      "dir" : "in",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "features",
+      "label" : "Фичи и сценарии",
+      "rel" : "IN_PRODUCT",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "pains",
+      "label" : "Боли",
+      "rel" : "ADDRESSES",
+      "dir" : "out",
+      "targetType" : "pain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "gains",
+      "label" : "Выгоды",
+      "rel" : "PROMISES",
+      "dir" : "out",
+      "targetType" : "gain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "jobs",
+      "label" : "Работы",
+      "rel" : "HELPS_WITH",
+      "dir" : "out",
+      "targetType" : "job",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "actors",
+      "label" : "Роли",
+      "rel" : "HAS_ACTOR",
+      "dir" : "out",
+      "targetType" : "actor",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "children",
+      "label" : "Подпродукты",
+      "rel" : "PARENT_PRODUCT",
+      "dir" : "in",
+      "targetType" : "product",
+      "relation" : "composition",
+      "place" : "link_tab"
+    }, {
+      "key" : "serves",
+      "label" : "Обслуживает",
+      "rel" : "SERVES",
+      "dir" : "out",
+      "targetType" : "product",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "servedBy",
+      "label" : "Обслуживается",
+      "rel" : "SERVES",
+      "dir" : "in",
+      "targetType" : "product",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "milestones",
+      "label" : "Вехи",
+      "rel" : "TARGETS_PRODUCT",
+      "dir" : "in",
+      "targetType" : "milestone",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "project",
+    "label" : "Проект",
+    "labelKey" : "pp.kind.project",
+    "icon" : "open-folder",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "default_branch",
+      "label" : "Основная ветка",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "is_private",
+      "label" : "Приватный",
+      "kind" : "text",
+      "group" : "props"
+    } ],
+    "props" : [ {
+      "fields" : [ "default_branch", "is_private" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "people",
+      "label" : "Люди и агенты",
+      "rels" : [ {
+        "rel" : "HAS_PROJECT_ROLE",
+        "dir" : "in",
+        "label" : "люди и агенты",
+        "relation" : "association",
+        "edgeProps" : [ "role" ]
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "sprint",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "adrs",
+      "label" : "ADR",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "adr",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "releases",
+      "label" : "Релизы",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "release",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "people",
+      "label" : "Люди",
+      "rel" : "HAS_PROJECT_ROLE",
+      "dir" : "in",
+      "targetType" : "user",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "agents",
+      "label" : "Агенты",
+      "rel" : "HAS_PROJECT_ROLE",
+      "dir" : "in",
+      "targetType" : "agent",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "specs",
+      "label" : "Спеки",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "spec",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "decisions",
+      "label" : "Решения",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "decision",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "questions",
+      "label" : "Вопросы",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "question",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "features",
+      "label" : "Фичи",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "docs",
+      "label" : "Знания",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "doc",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "runbooks",
+      "label" : "Ранбуки",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "runbook",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "actors",
+      "label" : "Роли продукта",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "actor",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "boundAgents",
+      "label" : "Агенты проекта",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "agent",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "files",
+      "label" : "Файлы",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "file",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "prs",
+      "label" : "PR",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "in",
+      "targetType" : "pr",
+      "relation" : "attribute",
+      "place" : "link_tab"
+    } ]
+  } ],
+  "child_only" : [ {
+    "type" : "phase",
+    "label" : "Фаза",
+    "fields" : [ {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "task_status"
+    }, {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "progress",
+      "label" : "Готово",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "valid_from",
+      "label" : "Дата",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    } ]
+  }, {
+    "type" : "question",
+    "label" : "Вопрос",
+    "fields" : [ {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "priority",
+      "label" : "Приоритет",
+      "labelKey" : "pp.field.priority",
+      "kind" : "enum",
+      "group" : "props",
+      "dict" : "priority"
+    }, {
+      "key" : "due_date",
+      "label" : "Срок",
+      "kind" : "date",
+      "group" : "props"
+    } ]
+  }, {
+    "type" : "decision",
+    "label" : "Решение",
+    "fields" : [ {
+      "key" : "status",
+      "label" : "Статус",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "decision_status"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "kind" : "text",
+      "group" : "head"
+    }, {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "date",
+      "label" : "Дата",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    } ]
+  } ],
+  "read_only" : [ "component", "decision", "feature", "milestone", "product", "project", "question", "release", "tech" ],
+  "graph" : {
+    "adr" : {
+      "vertex" : "KnowADR",
+      "hist" : "KnowADRHist",
+      "key" : "adr_id"
+    },
+    "component" : {
+      "vertex" : "LoreComponent",
+      "key" : "component_id"
+    },
+    "decision" : {
+      "vertex" : "KnowDecision",
+      "hist" : "KnowDecisionHist",
+      "key" : "decision_id"
+    },
+    "doc" : {
+      "vertex" : "KnowDoc",
+      "key" : "doc_id"
+    },
+    "feature" : {
+      "vertex" : "KnowUseCase",
+      "key" : "uc_id"
+    },
+    "milestone" : {
+      "vertex" : "KnowMilestone",
+      "hist" : "KnowMilestoneHist",
+      "key" : "milestone_id"
+    },
+    "product" : {
+      "vertex" : "KnowDictEntry",
+      "hist" : "KnowDictEntryHist",
+      "key" : "code"
+    },
+    "project" : {
+      "vertex" : "KnowGitProject",
+      "key" : "slug"
+    },
+    "question" : {
+      "vertex" : "KnowQuestion",
+      "key" : "question_id"
+    },
+    "release" : {
+      "vertex" : "KnowRelease",
+      "hist" : "KnowReleaseHist",
+      "key" : "release_uid"
+    },
+    "spec" : {
+      "vertex" : "KnowSpec",
+      "hist" : "KnowSpecHist",
+      "key" : "spec_id"
+    },
+    "sprint" : {
+      "vertex" : "KnowSprint",
+      "hist" : "KnowSprintHist",
+      "key" : "sprint_id"
+    },
+    "task" : {
+      "vertex" : "KnowTask",
+      "hist" : "KnowTaskHist",
+      "key" : "task_uid"
+    },
+    "tech" : {
+      "vertex" : "KnowSpec",
+      "hist" : "KnowSpecHist",
+      "key" : "spec_id"
+    }
+  },
+  "aliases" : {
+    "adr" : {
+      "status" : "status",
+      "title" : "name"
+    },
+    "component" : {
+      "code" : "component_id",
+      "icon" : "game_icon",
+      "parent" : "parent_id",
+      "title" : "full_name"
+    },
+    "decision" : {
+      "code" : "decision_id",
+      "date" : "date_created",
+      "status" : "status_raw"
+    },
+    "doc" : {
+      "body_md" : "content_md_ru"
+    },
+    "feature" : {
+      "code" : "uc_id",
+      "date" : "date_created",
+      "parent" : "parent_uc_id"
+    },
+    "milestone" : {
+      "code" : "milestone_id",
+      "date" : "date_display",
+      "title" : "label"
+    },
+    "product" : {
+      "title" : "label_ru"
+    },
+    "project" : {
+      "code" : "slug",
+      "title" : "name"
+    },
+    "question" : {
+      "closed" : "closed_date",
+      "code" : "question_id",
+      "opened" : "opened_date"
+    },
+    "release" : {
+      "code" : "release_id",
+      "date" : "release_date",
+      "description_md" : "description_md"
+    },
+    "spec" : {
+      "body_md" : "content_md",
+      "status" : "status"
+    },
+    "sprint" : {
+      "created" : "created_date",
+      "no_release" : "no_release_required",
+      "planned_start" : "planned_start_date",
+      "status" : "status_raw",
+      "title" : "name",
+      "track" : "track_id"
+    },
+    "task" : {
+      "actual" : "actual_days",
+      "effort" : "effort_days",
+      "note" : "note_md",
+      "status" : "status_raw"
+    },
+    "tech" : {
+      "code" : "spec_id"
+    }
+  },
+  "type_color" : {
+    "adr" : "section-adrs",
+    "component" : "section-components",
+    "decision" : "section-decisions",
+    "feature" : "section-features",
+    "milestone" : "section-milestones",
+    "release" : "section-releases",
+    "sprint" : "section-sprints",
+    "tech" : "section-tech"
+  },
+  "no_type_color" : [ "doc", "product", "project", "question", "spec", "task" ],
+  "precision" : {
+    "adr.date" : "date",
+    "decision.date" : "date",
+    "feature.date" : "date",
+    "feature.shipped_at" : "date",
+    "question.closed" : "date",
+    "question.due_date" : "date",
+    "question.opened" : "date",
+    "release.date" : "date",
+    "sprint.created" : "datetime",
+    "sprint.planned_end_date" : "date",
+    "sprint.planned_start" : "date",
+    "tech.checked_at" : "datetime"
+  },
+  "time" : {
+    "adr" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "created_at",
+        "precision" : "datetime",
+        "note" : "момент — у ADR, заведённых после S2-10"
+      }, {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      }, {
+        "source" : "created_at",
+        "precision" : "datetime"
+      }, {
+        "source" : "date_created",
+        "precision" : "date"
+      } ]
+    },
+    "component" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник"
+      } ]
+    },
+    "decision" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "created_at",
+        "precision" : "datetime",
+        "note" : "момент — у решений, заведённых после S2-10"
+      }, {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает смена статуса"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      }, {
+        "source" : "created_at",
+        "precision" : "datetime"
+      }, {
+        "source" : "date_created",
+        "precision" : "date"
+      } ]
+    },
+    "doc" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
+    "feature" : {
+      "history" : "none",
+      "created" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник"
+      }, {
+        "source" : "shipped_at",
+        "precision" : "date"
+      }, {
+        "source" : "date_created",
+        "precision" : "date"
+      } ]
+    },
+    "milestone" : {
+      "history" : "scd2",
+      "created" : [ ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает цель вехи"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      } ]
+    },
+    "product" : {
+      "history" : "scd2",
+      "created" : [ ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка статьи словаря"
+      } ]
+    },
+    "project" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
+    "question" : {
+      "history" : "none",
+      "created" : [ {
+        "source" : "opened_date",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник"
+      }, {
+        "source" : "closed_date",
+        "precision" : "date"
+      }, {
+        "source" : "opened_date",
+        "precision" : "date"
+      } ]
+    },
+    "release" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "released_at",
+        "precision" : "datetime",
+        "note" : "момент — если известен при заведении"
+      }, {
+        "source" : "release_date",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      }, {
+        "source" : "released_at",
+        "precision" : "datetime"
+      }, {
+        "source" : "release_date",
+        "precision" : "date"
+      } ]
+    },
+    "spec" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "version.first_valid_from",
+        "precision" : "datetime"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      } ]
+    },
+    "sprint" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "created_date",
+        "precision" : "datetime",
+        "note" : "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      }, {
+        "source" : "created_date",
+        "precision" : "datetime"
+      } ]
+    },
+    "task" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "version.first_valid_from",
+        "precision" : "datetime"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      } ]
+    },
+    "tech" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "version.first_valid_from",
+        "precision" : "datetime"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime"
+      }, {
+        "source" : "updated_at",
+        "precision" : "datetime",
+        "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      } ]
+    }
+  },
+  "display_overrides" : {
+    "code" : {
+      "priority" : 1,
+      "width" : "s",
+      "overflow" : "none"
+    },
+    "effort" : {
+      "priority" : 2,
+      "width" : "xs",
+      "overflow" : "none"
+    },
+    "priority" : {
+      "priority" : 2,
+      "width" : "xs",
+      "overflow" : "none"
+    },
+    "status" : {
+      "priority" : 1,
+      "width" : "s",
+      "overflow" : "none"
+    },
+    "summary" : {
+      "priority" : 4,
+      "width" : "l",
+      "overflow" : "more"
+    },
+    "title" : {
+      "priority" : 1,
+      "width" : "fill",
+      "overflow" : "ellipsis"
+    }
+  },
+  "computed" : {
+    "milestone" : [ {
+      "key" : "sprints_total",
+      "label" : "Спринтов",
+      "kind" : "count",
+      "shape" : "value_known_of",
+      "source" : "server",
+      "rule_text" : "Спринты, связанные с записью ребром (TARGETS_MILESTONE у вехи, IMPLEMENTED_IN_RELEASE у релиза); у счёта known = of.",
+      "display" : {
+        "priority" : 1,
+        "width" : "xs",
+        "overflow" : "none"
+      }
+    } ],
+    "release" : [ {
+      "key" : "sprints_total",
+      "label" : "Спринтов",
+      "kind" : "count",
+      "shape" : "value_known_of",
+      "source" : "server",
+      "rule_text" : "Спринты, связанные с записью ребром (TARGETS_MILESTONE у вехи, IMPLEMENTED_IN_RELEASE у релиза); у счёта known = of.",
+      "display" : {
+        "priority" : 1,
+        "width" : "xs",
+        "overflow" : "none"
+      }
+    }, {
+      "key" : "prs_total",
+      "label" : "PR",
+      "kind" : "count",
+      "shape" : "value_known_of",
+      "source" : "server",
+      "rule_text" : "PR, привязанные к релизу ребром SHIPPED_IN; у счёта known = of.",
+      "display" : {
+        "priority" : 2,
+        "width" : "xs",
+        "overflow" : "none"
+      }
+    } ],
+    "sprint" : [ {
+      "key" : "tasks_total",
+      "label" : "Задач",
+      "kind" : "count",
+      "shape" : "value_known_of",
+      "source" : "server",
+      "rule_text" : "Задачи спринта по открытой версии истории. «из» (of) — все, кроме категории withdrawn (отменённые). «готово» (done) — только категория finished; PARTIAL, READY FOR DEPLOY и UAT TESTING не готово. Сумма — по заполненным значениям; known — сколько заполнено; при known = 0 value = null.",
+      "display" : {
+        "priority" : 1,
+        "width" : "xs",
+        "overflow" : "none"
+      }
+    }, {
+      "key" : "effort_days_total",
+      "label" : "Оценка, дн",
+      "kind" : "days",
+      "shape" : "value_known_of",
+      "source" : "server",
+      "rule_text" : "Задачи спринта по открытой версии истории. «из» (of) — все, кроме категории withdrawn (отменённые). «готово» (done) — только категория finished; PARTIAL, READY FOR DEPLOY и UAT TESTING не готово. Сумма — по заполненным значениям; known — сколько заполнено; при known = 0 value = null.",
+      "display" : {
+        "priority" : 1,
+        "width" : "xs",
+        "overflow" : "none"
+      }
+    }, {
+      "key" : "actual_days_total",
+      "label" : "Факт, дн",
+      "kind" : "days",
+      "shape" : "value_known_of",
+      "source" : "server",
+      "rule_text" : "Задачи спринта по открытой версии истории. «из» (of) — все, кроме категории withdrawn (отменённые). «готово» (done) — только категория finished; PARTIAL, READY FOR DEPLOY и UAT TESTING не готово. Сумма — по заполненным значениям; known — сколько заполнено; при known = 0 value = null.",
+      "display" : {
+        "priority" : 2,
+        "width" : "xs",
+        "overflow" : "none"
+      }
+    } ]
+  },
+  "edge_fields" : {
+    "task.author" : "ROLE_HELD_BY",
+    "task.executor" : "ROLE_HELD_BY",
+    "task.reviewer" : "ROLE_HELD_BY"
+  },
+  "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
+  "passport" : {
+    "adr" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "decisions",
+      "slot" : "content"
+    }, {
+      "key" : "justifies",
+      "slot" : "own"
+    }, {
+      "key" : "sprints",
+      "slot" : "own"
+    }, {
+      "key" : "questions",
+      "slot" : "own"
+    }, {
+      "key" : "dependsOn",
+      "slot" : "own"
+    }, {
+      "key" : "blocks",
+      "slot" : "own"
+    }, {
+      "key" : "supersedes",
+      "slot" : "own"
+    }, {
+      "key" : "supersededBy",
+      "slot" : "own"
+    }, {
+      "key" : "releases",
+      "slot" : "own"
+    }, {
+      "key" : "useCases",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    }, {
+      "key" : "runbooks",
+      "slot" : "own"
+    }, {
+      "key" : "insights",
+      "slot" : "own"
+    } ],
+    "component" : [ {
+      "key" : "specs",
+      "slot" : "own"
+    }, {
+      "key" : "adrs",
+      "slot" : "own"
+    }, {
+      "key" : "tech",
+      "slot" : "own"
+    }, {
+      "key" : "children",
+      "slot" : "own"
+    }, {
+      "key" : "decisions",
+      "slot" : "own"
+    }, {
+      "key" : "questions",
+      "slot" : "own"
+    }, {
+      "key" : "features",
+      "slot" : "own"
+    }, {
+      "key" : "docs",
+      "slot" : "own"
+    }, {
+      "key" : "qgs",
+      "slot" : "own"
+    }, {
+      "key" : "tasks",
+      "slot" : "own"
+    }, {
+      "key" : "sprints",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "decision" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "answers",
+      "slot" : "own"
+    }, {
+      "key" : "supersedes",
+      "slot" : "own"
+    }, {
+      "key" : "supersededBy",
+      "slot" : "own"
+    }, {
+      "key" : "useCases",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "doc" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "children",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "feature" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "children",
+      "slot" : "own"
+    }, {
+      "key" : "tasks",
+      "slot" : "own"
+    }, {
+      "key" : "actors",
+      "slot" : "own"
+    }, {
+      "key" : "pains",
+      "slot" : "own"
+    }, {
+      "key" : "gains",
+      "slot" : "own"
+    }, {
+      "key" : "jobs",
+      "slot" : "own"
+    }, {
+      "key" : "relieves",
+      "slot" : "own"
+    }, {
+      "key" : "delivers",
+      "slot" : "own"
+    }, {
+      "key" : "performs",
+      "slot" : "own"
+    }, {
+      "key" : "adrs",
+      "slot" : "own"
+    }, {
+      "key" : "decisions",
+      "slot" : "own"
+    }, {
+      "key" : "milestones",
+      "slot" : "own"
+    }, {
+      "key" : "buildsOn",
+      "slot" : "own"
+    }, {
+      "key" : "builtOnBy",
+      "slot" : "own"
+    }, {
+      "key" : "includes",
+      "slot" : "own"
+    }, {
+      "key" : "includedBy",
+      "slot" : "own"
+    }, {
+      "key" : "extends",
+      "slot" : "own"
+    }, {
+      "key" : "extendedBy",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "milestone" : [ {
+      "key" : "sprints",
+      "slot" : "own"
+    }, {
+      "key" : "features",
+      "slot" : "own"
+    }, {
+      "key" : "content",
+      "slot" : "own"
+    } ],
+    "product" : [ {
+      "key" : "components",
+      "slot" : "own"
+    }, {
+      "key" : "features",
+      "slot" : "own"
+    }, {
+      "key" : "pains",
+      "slot" : "own"
+    }, {
+      "key" : "gains",
+      "slot" : "own"
+    }, {
+      "key" : "jobs",
+      "slot" : "own"
+    }, {
+      "key" : "actors",
+      "slot" : "own"
+    }, {
+      "key" : "children",
+      "slot" : "own"
+    }, {
+      "key" : "serves",
+      "slot" : "own"
+    }, {
+      "key" : "servedBy",
+      "slot" : "own"
+    }, {
+      "key" : "milestones",
+      "slot" : "own"
+    } ],
+    "project" : [ {
+      "key" : "sprints",
+      "slot" : "own"
+    }, {
+      "key" : "components",
+      "slot" : "own"
+    }, {
+      "key" : "adrs",
+      "slot" : "own"
+    }, {
+      "key" : "releases",
+      "slot" : "own"
+    }, {
+      "key" : "people",
+      "slot" : "own"
+    }, {
+      "key" : "agents",
+      "slot" : "own"
+    }, {
+      "key" : "specs",
+      "slot" : "own"
+    }, {
+      "key" : "decisions",
+      "slot" : "own"
+    }, {
+      "key" : "questions",
+      "slot" : "own"
+    }, {
+      "key" : "features",
+      "slot" : "own"
+    }, {
+      "key" : "docs",
+      "slot" : "own"
+    }, {
+      "key" : "runbooks",
+      "slot" : "own"
+    }, {
+      "key" : "actors",
+      "slot" : "own"
+    }, {
+      "key" : "boundAgents",
+      "slot" : "own"
+    }, {
+      "key" : "files",
+      "slot" : "own"
+    }, {
+      "key" : "prs",
+      "slot" : "own"
+    } ],
+    "question" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "answeredBy",
+      "slot" : "own"
+    }, {
+      "key" : "gates",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "release" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "sprints",
+      "slot" : "own"
+    }, {
+      "key" : "prs",
+      "slot" : "own"
+    }, {
+      "key" : "adrs",
+      "slot" : "own"
+    }, {
+      "key" : "publications",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "spec" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "sprint" : [ {
+      "key" : "tasks",
+      "slot" : "own"
+    }, {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "adrs",
+      "slot" : "own"
+    }, {
+      "key" : "dependsOn",
+      "slot" : "own"
+    }, {
+      "key" : "blocks",
+      "slot" : "own"
+    }, {
+      "key" : "questions",
+      "slot" : "own"
+    }, {
+      "key" : "phases",
+      "slot" : "own"
+    }, {
+      "key" : "docs",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    }, {
+      "key" : "publications",
+      "slot" : "own"
+    } ],
+    "task" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "gates",
+      "slot" : "content"
+    }, {
+      "key" : "adrs",
+      "slot" : "own"
+    }, {
+      "key" : "qgRecs",
+      "slot" : "own"
+    }, {
+      "key" : "insights",
+      "slot" : "own"
+    }, {
+      "key" : "prs",
+      "slot" : "own"
+    }, {
+      "key" : "useCases",
+      "slot" : "own"
+    }, {
+      "key" : "questions",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    }, {
+      "key" : "publications",
+      "slot" : "own"
+    } ],
+    "tech" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ]
+  },
+  "nav" : [ {
+    "id" : "feed",
+    "labelKey" : "shell.grp.feed",
+    "tone" : "var(--inf)",
+    "pinTop" : true,
+    "items" : [ {
+      "section" : "news",
+      "icon" : "lucide:megaphone"
+    } ]
+  }, {
+    "id" : "work",
+    "labelKey" : "shell.grp.work",
+    "tone" : "var(--acc)",
+    "items" : [ {
+      "section" : "sprint",
+      "icon" : "sprint"
+    }, {
+      "section" : "task",
+      "icon" : "lucide:list-checks"
+    }, {
+      "section" : "milestone",
+      "icon" : "crossed-axes"
+    }, {
+      "section" : "release",
+      "icon" : "open-book"
+    } ]
+  }, {
+    "id" : "knowledge",
+    "labelKey" : "shell.grp.knowledge",
+    "tone" : "var(--suc)",
+    "items" : [ {
+      "section" : "adr",
+      "icon" : "scroll-quill"
+    }, {
+      "section" : "decision",
+      "icon" : "gavel"
+    }, {
+      "section" : "spec",
+      "icon" : "scroll-unfurled"
+    }, {
+      "section" : "doc",
+      "icon" : "bookshelf"
+    }, {
+      "section" : "question",
+      "icon" : "help"
+    } ]
+  }, {
+    "id" : "product",
+    "labelKey" : "shell.grp.product",
+    "tone" : "var(--wrn)",
+    "items" : [ {
+      "section" : "product",
+      "icon" : "bullseye"
+    }, {
+      "section" : "feature",
+      "icon" : "gift-of-knowledge"
+    }, {
+      "section" : "actor",
+      "icon" : "hooded-figure"
+    }, {
+      "section" : "pain",
+      "icon" : "thorn-helix"
+    }, {
+      "section" : "gain",
+      "icon" : "gift-of-knowledge"
+    }, {
+      "section" : "job",
+      "icon" : "archery-target"
+    } ]
+  }, {
+    "id" : "system",
+    "labelKey" : "shell.grp.system",
+    "tone" : "var(--inf)",
+    "items" : [ {
+      "section" : "project",
+      "icon" : "open-folder"
+    }, {
+      "section" : "component",
+      "icon" : "cog"
+    }, {
+      "section" : "tech",
+      "icon" : "gears"
+    } ]
+  }, {
+    "id" : "personal",
+    "labelKey" : "shell.grp.personal",
+    "tone" : "var(--wrn)",
+    "items" : [ {
+      "section" : "settings",
+      "icon" : "cog",
+      "view" : "settings"
+    } ]
+  } ],
+  "audience" : {
+    "actor" : "everywhere",
+    "adr" : "everywhere",
+    "agent" : "admin",
+    "component" : "everywhere",
+    "decision" : "everywhere",
+    "doc" : "everywhere",
+    "feature" : "everywhere",
+    "gain" : "everywhere",
+    "job" : "everywhere",
+    "machine" : "admin",
+    "milestone" : "everywhere",
+    "news" : "everywhere",
+    "pain" : "everywhere",
+    "people" : "admin",
+    "product" : "everywhere",
+    "project" : "everywhere",
+    "question" : "everywhere",
+    "release" : "everywhere",
+    "settings" : "everywhere",
+    "spec" : "everywhere",
+    "sprint" : "everywhere",
+    "task" : "everywhere",
+    "tech" : "everywhere"
+  }
+}

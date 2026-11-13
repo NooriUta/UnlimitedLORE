@@ -53,7 +53,39 @@ final class LoreKcAgentClient {
             }
             c.put("protocolMappers", clean);
         }
+        ensureMappers(c, template.getString("clientId"));
         return c;
+    }
+
+    /**
+     * SPRINT_LORE_PIPELINE_HOST/PL-MCP-CLIENT-MAPPERS: клиент агента обязан нести ОБА маппера —
+     * seer_roles (realm-роли; бэкенд берёт роли только из этого claim) и agent_scope (роль
+     * agent-&lt;профиль&gt; клиента-шаблона, её выдаёт копия ролей). Шаблон без какого-то из них
+     * давал учётку, которая читает, но на любую запись получает 403 (lore-mcp-full_arharaga, 08.11).
+     * Маппер ищется по claim.name, а не по имени: имена у шаблонов разные.
+     */
+    static void ensureMappers(JsonObject client, String roleOwnerClientId) {
+        JsonArray mappers = client.getJsonArray("protocolMappers");
+        if (mappers == null) { mappers = new JsonArray(); client.put("protocolMappers", mappers); }
+        if (!hasClaim(mappers, "seer_roles"))
+            mappers.add(new JsonObject().put("name", "lore-realm-role-mapper").put("protocol", "openid-connect")
+                .put("protocolMapper", "oidc-usermodel-realm-role-mapper").put("config", new JsonObject()
+                    .put("claim.name", "seer_roles").put("jsonType.label", "String").put("multivalued", "true")
+                    .put("access.token.claim", "true").put("id.token.claim", "true").put("userinfo.token.claim", "true")));
+        if (!hasClaim(mappers, "agent_scope") && roleOwnerClientId != null)
+            mappers.add(new JsonObject().put("name", "agent_scope").put("protocol", "openid-connect")
+                .put("protocolMapper", "oidc-usermodel-client-role-mapper").put("config", new JsonObject()
+                    .put("usermodel.clientRoleMapping.clientId", roleOwnerClientId)
+                    .put("claim.name", "agent_scope").put("jsonType.label", "String").put("multivalued", "true")
+                    .put("access.token.claim", "true").put("id.token.claim", "false").put("userinfo.token.claim", "false")));
+    }
+
+    private static boolean hasClaim(JsonArray mappers, String claim) {
+        for (int i = 0; i < mappers.size(); i++) {
+            JsonObject cfg = mappers.getJsonObject(i).getJsonObject("config");
+            if (cfg != null && claim.equals(cfg.getString("claim.name"))) return true;
+        }
+        return false;
     }
 
     /** 401/403 от KC — назвать, чего не хватает lore-admin, а не отдать сырое «forbidden». */
@@ -114,5 +146,45 @@ final class LoreKcAgentClient {
         } catch (RuntimeException e) {
             return null;
         }
+    }
+
+    /**
+     * SPRINT_LORE_AGENT_OBSERVABILITY/AO-AGENT-ADD шаг 4: что в токене свежей учётки агента.
+     * state: ok (agent_scope = ожидаемый профиль) | mismatch | missing (клейма нет) |
+     * error (токен не разобран). Нормализация та же, что у AgentScopeFilter: элементы
+     * массива снимаются с кавычек, префикс agent- срезается. Сам токен в ответ не попадает.
+     */
+    static java.util.Map<String, Object> tokenCheck(String accessToken, String expectedProfile) {
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("expected", expectedProfile);
+        try {
+            String[] parts = accessToken == null ? new String[0] : accessToken.split(java.util.regex.Pattern.quote("."));
+            if (parts.length < 2) throw new IllegalArgumentException("не JWT");
+            JsonObject claims = new JsonObject(new String(java.util.Base64.getUrlDecoder().decode(parts[1]),
+                java.nio.charset.StandardCharsets.UTF_8));
+            Object raw = claims.getValue("agent_scope");
+            java.util.Set<String> profiles = new java.util.LinkedHashSet<>();
+            if (raw instanceof JsonArray a) { for (Object o : a) addScope(profiles, o); }
+            else if (raw != null) addScope(profiles, raw);
+            if (profiles.isEmpty()) { out.put("state", "missing"); out.put("agent_scope", null); return out; }
+            String got = String.join(",", profiles);
+            out.put("agent_scope", got);
+            boolean scopeOk = profiles.size() == 1 && profiles.contains(expectedProfile);
+            // PL-MCP-CLIENT-MAPPERS: без seer_roles учётка читает, но любая запись — 403.
+            Object roles = claims.getValue("seer_roles");
+            boolean hasRoles = roles instanceof JsonArray a ? !a.isEmpty() : roles != null && !String.valueOf(roles).isBlank();
+            out.put("seer_roles", hasRoles);
+            out.put("state", !scopeOk ? "mismatch" : hasRoles ? "ok" : "no_seer_roles");
+        } catch (RuntimeException e) {
+            out.put("state", "error");
+            out.put("reason", "токен не разобран: " + e.getClass().getSimpleName());
+        }
+        return out;
+    }
+
+    private static void addScope(java.util.Set<String> out, Object v) {
+        String s = String.valueOf(v).replace("\"", "").trim();
+        if (s.isEmpty()) return;
+        out.add(s.startsWith("agent-") ? s.substring("agent-".length()) : s);
     }
 }

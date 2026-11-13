@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
-  HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
+  HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
 import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
@@ -39,28 +39,35 @@ import './ListPassport.css';
 import { ModelNotes } from './ModelNotes';
 import { PassportPlace } from './PassportPlace';
 import { loreQueryRun } from './loreQueryBlock';
+import { loreGraphRun } from './loreGraphBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory, historyQueryOpts } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 /** Чтение тела: ссылка ведёт в паспорт (MD-READ-PEEK), наведение/тап — карточка Peek (S9-10). */
-function ProseWithPeek({ text, blocks }: { text: string; blocks?: LiveBlocks }) {
+function ProseWithPeek({ text, type, id }: { text: string; type: string; id: string }) {
   const lang = useKitLang();
+  const blocks = blocksFor(type, id, lang);
   // Выключатель «Карточки по наведению» (настройки) читается из применённого атрибута.
   const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
   return <MartProse text={text} refHref={loreRefHref} refPeek={peek} blocks={blocks} />;
 }
 
-// S6-04: живые блоки lore-query в теле записи; $this.id / $this.type — эта запись.
+// S6-04: живые блоки lore-query и lore-graph в теле записи; $this.id / $this.type — эта запись.
 // Исполнитель — один на запись (кеш), иначе блок перезапрашивал бы данные на каждой перерисовке.
 const BLOCKS = new Map<string, LiveBlocks>();
-function blocksFor(type: string, id: string): LiveBlocks {
-  const k = `${type}|${id}`;
+function blocksFor(type: string, id: string, lang: KitLang): LiveBlocks {
+  const k = `${type}|${id}|${lang}`;
   let b = BLOCKS.get(k);
-  if (!b) { b = { 'lore-query': loreQueryRun({ 'this.id': id, 'this.type': type }) }; BLOCKS.set(k, b); }
+  if (!b) {
+    const vars = { 'this.id': id, 'this.type': type };
+    // lore-graph — общим графом kit (GraphExplorer) по серверному /lore/graph.
+    b = { 'lore-query': loreQueryRun(vars), 'lore-graph': loreGraphRun(vars, undefined, lang) };
+    BLOCKS.set(k, b);
+  }
   return b;
 }
-const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} blocks={blocksFor(type, id)} />;
+const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} type={type} id={id} />;
 
 export interface ListPassportProps {
   type: PassportType;
@@ -178,7 +185,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const rebased = useRef(new Map<string, FieldState & { readVersion: string | null }>());
   // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
   const parentsKey = JSON.stringify(parentsOf(view?.record));
-  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>), [parentsKey]);
+  // S6-04: живые блоки исполняются и в правимом поле (раньше там оставались кодом).
+  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>, l => blocksFor(type, id, l)), [parentsKey, type, id]);
   // Граф (GC-04): вкладка «Граф» берёт окрестность записи с сервера на глубину из адреса —
   // фасад давал один шаг. Ошибка — строкой блока графа, а не пустым графом.
   // Глубина 1–4 и снятые типы связей (goff) — из адреса. Владелица 11.11: «показать связи

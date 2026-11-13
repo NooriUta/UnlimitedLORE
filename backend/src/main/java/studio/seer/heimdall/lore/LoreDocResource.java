@@ -164,9 +164,9 @@ public class LoreDocResource extends LoreResourceBase {
         String guard;
         if (hasOpen) {
             hp.put("oldrid", open.get(0).get("rid"));
-            guard = Scd2Guard.guardedClose("KnowDocHist", false);
+            guard = Scd2Guard.guardedClose("KnowDoc", "KnowDocHist", false);
         } else {
-            guard = Scd2Guard.guardedNoOpen("KnowDocHist", "doc_id", "id");
+            guard = Scd2Guard.guardedNoOpen("KnowDoc", "KnowDocHist", "doc_id", "id");
         }
         Object res = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
             guard

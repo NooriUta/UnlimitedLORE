@@ -31,76 +31,16 @@ final class LorePassportSurface {
     /** Раздел тела — одна статья на все поля тела (у ADR три поля читаются подряд). */
     static final String CONTENT = "content";
 
-    private static final String OWN = "own", GLUE = "content";
+    private static final String OWN = "own";
 
     /** Раздел решённого паспорта: ключ и место. */
-    private record Slot(String key, String slot) {}
-
-    private static Slot own(String key) { return new Slot(key, OWN); }
-
-    private static Slot glue(String key) { return new Slot(key, GLUE); }
+    record Slot(String key, String slot) {}
 
     /**
      * Порядок и место разделов по типам. Раздел, не названный здесь (появился в реестре позже),
      * идёт в конец своей вкладкой — не теряется и не прячется.
      */
-    private static final Map<String, List<Slot>> DECIDED = Map.ofEntries(
-        // Задачи у 92 % спринтов; ADR — звено цепочки (43а); фазы у 4 из 29 — последними.
-        Map.entry("sprint", List.of(own("tasks"), own(CONTENT), own("adrs"),
-            own("dependsOn"), own("blocks"), own("questions"), own("phases"),
-            // 11.11 (полнота модели рёбер): новые разделы — после решённых 43а, их порядок не тронут.
-            own("docs"), own("refsOut"), own("refsIn"), own("publications"))),
-        // Заметка · ADR (+QG, инсайты) · Реализация (PR + сценарии, 42а) · Вопросы · Ссылки · Публикации;
-        // блокирующие вопросы — 42 ребра на 4896 задач — в конце заметки.
-        Map.entry("task", List.of(own(CONTENT), glue("gates"),
-            own("adrs"), own("qgRecs"), own("insights"), own("prs"), own("useCases"),
-            own("questions"), own("refsOut"), own("refsIn"), own("publications"))),
-        // Текст · Задачи · Спринты · Вопросы · Связи ADR · Релизы · Сценарии · Ссылки · Инсайты;
-        // решения — в конце текста (41а, слово владелицы), якорь «Решения N ↓» — по счётчику части.
-        Map.entry("adr", List.of(own(CONTENT), glue("decisions"),
-            own("justifies"), own("sprints"), own("questions"),
-            own("dependsOn"), own("blocks"), own("supersedes"), own("supersededBy"),
-            own("releases"), own("useCases"),
-            own("refsOut"), own("refsIn"), own("runbooks"), own("insights"))),
-        Map.entry("spec", List.of(own(CONTENT), own("refsOut"), own("refsIn"))),
-        // 44а; родительский ADR — в шапке (крошка). Задач у решения в графе нет (ребра нет).
-        // 11.11 (полнота модели рёбер): новые разделы — после решённых 44а/45а.
-        Map.entry("decision", List.of(own(CONTENT), own("answers"), own("supersedes"),
-            own("supersededBy"), own("useCases"), own("refsOut"), own("refsIn"))),
-        Map.entry("question", List.of(own(CONTENT), own("answeredBy"), own("gates"), own("refsOut"), own("refsIn"))),
-        // 45а: контейнер — дети первыми. Решения вехи — поле тела decisions_md, читаются после цели.
-        // 11.11: фичи вехи — тоже дети (то же ребро TARGETS_MILESTONE), сразу за спринтами.
-        Map.entry("milestone", List.of(own("sprints"), own("features"), own(CONTENT))),
-        Map.entry("release", List.of(own(CONTENT), own("sprints"), own("prs"),
-            own("adrs"), own("publications"), own("refsOut"), own("refsIn"))),
-        // 46а/52а: тела у компонента нет — первая вкладка документация. S4-29: Задачи · Спринты
-        // (срезы с пагинацией) — после своих связей.
-        // 11.11 (слово владелицы — «связь с компонентами пропала»): вкладка «Технологии» — паспорта
-        // технологий (ключ tech прежний, DOCUMENTED_IN), а не метки стека USES; + решения, вопросы,
-        // сценарии, знания и гейты — после своих связей, перед задачами и спринтами.
-        Map.entry("component", List.of(own("specs"), own("adrs"), own("tech"), own("children"),
-            own("decisions"), own("questions"), own("features"), own("docs"), own("qgs"),
-            own("tasks"), own("sprints"), own("refsOut"), own("refsIn"))),
-        Map.entry("tech", List.of(own(CONTENT), own("refsOut"), own("refsIn"))),
-        // 11.11 (полнота модели рёбер): «Ценность» дополнена тем, что сценарий делает (снимает боли,
-        // создаёт выгоды, выполняет работы); затем Обоснование · Вехи · Связи сценариев · Ссылки.
-        Map.entry("feature", List.of(own(CONTENT), own("children"), own("tasks"),
-            own("actors"), own("pains"), own("gains"), own("jobs"),
-            own("relieves"), own("delivers"), own("performs"),
-            own("adrs"), own("decisions"), own("milestones"),
-            own("buildsOn"), own("builtOnBy"), own("includes"), own("includedBy"), own("extends"), own("extendedBy"),
-            own("refsOut"), own("refsIn"))),
-        // S4-PRODUCTS-NODE: продукт — контейнер, тела нет: Компоненты · Фичи и сценарии · Боли · Выгоды ·
-        // Работы · Роли · Подпродукты (профиль клиента — после того, что продукт делает).
-        Map.entry("product", List.of(own("components"), own("features"), own("pains"), own("gains"), own("jobs"),
-            own("actors"), own("children"), own("serves"), own("servedBy"), own("milestones"))),
-        // 53а: проект — контейнер, тела нет: Спринты · Компоненты · ADR · Релизы · Люди и агенты
-        // (люди и их агенты — одной вкладкой-группой linkTab «people»).
-        Map.entry("project", List.of(own("sprints"), own("components"), own("adrs"), own("releases"),
-            own("people"), own("agents"),
-            // Слово владелицы 11.11 («у проекта всё показывать, что связано напрямую») — после 53а.
-            own("specs"), own("decisions"), own("questions"), own("features"), own("docs"), own("runbooks"),
-            own("actors"), own("boundAgents"), own("files"), own("prs"))));
+    static final Map<String, List<Slot>> DECIDED = LoreModelViews.map(() -> LoreModelFile.content().passport());
 
     record Section(String key, String source, String ref) {}
 

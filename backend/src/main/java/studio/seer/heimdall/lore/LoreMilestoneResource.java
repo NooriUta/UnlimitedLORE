@@ -349,7 +349,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
                         String carryDecisions = hp.get("dmd") == null ? "" : ", decisions_md=:dmd";
                         if (hp.get("dmd") == null) hp.remove("dmd");
                         Object res = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-                            Scd2Guard.guardedClose("KnowMilestoneHist", false)
+                            Scd2Guard.guardedClose("KnowMilestone", "KnowMilestoneHist", false)
                             + "INSERT INTO KnowMilestoneHist SET state_uid=:nsid, valid_from=:now, goal_md=:g"
                             + carryDecisions + ChangeAuthor.SET_SQL + ";"
                             + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowMilestone WHERE milestone_id=:mid) "

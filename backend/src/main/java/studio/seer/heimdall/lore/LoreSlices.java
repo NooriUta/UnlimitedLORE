@@ -691,6 +691,15 @@ public final class LoreSlices {
             + "FROM ROLE_HELD_BY WHERE @out.task_uid = :id",
             List.of("id"), Map.of(), " ORDER BY valid_from DESC");
 
+        // SPRINT_LORE_AGENT_OBSERVABILITY/AO-06: покрытие ролей профилем по ВСЕМУ корпусу.
+        // task_roles отдаёт profile только для одной задачи — «сколько ролей сегодня несут
+        // профиль» было неотвечаемо, и улучшение нечем было измерить ни до, ни после.
+        // Сырые группы (role, profile, n) — свёртку делает читатель; profile = null и есть
+        // непокрытое. Только открытые роли: закрытые описывают прошлое, а не «сегодня».
+        slice("role_profile_coverage",
+            "SELECT role, profile, count(*) AS n FROM ROLE_HELD_BY WHERE valid_to IS NULL",
+            List.of(), Map.of(), " GROUP BY role, profile ORDER BY role");
+
         // ── ADR-020/021 T25: open-questions register (ОВ) ─────────────────────
         // Derived overdue/blocking/age are computed on the client from the raw
         // fields (status/due_date + gating_tasks) — never stored.
@@ -821,6 +830,15 @@ public final class LoreSlices {
         // принимающего. SQL отдаёт только задачу под скоупом и её проекты; строки {code, title,
         // kind} собирает TaskRoleService.identitiesOfTask теми же методами, что проверяет запись
         // роли (TR-05), — в AidaLoreResource. Нет задачи / нет проекта — ошибка, не пустой список.
+        // MC-05 (SPEC-LORE-MODEL-CONFIG-STORE §5): история версий модели — без тела (тело — GET /lore/model/config/{state_uid}).
+        slice("model_config_history",
+            "SELECT state_uid, valid_from, valid_to, content_hash, reason, changed_by, changed_by_kind " +
+            "FROM KnowModelConfigHist WHERE in('HAS_STATE').config_id CONTAINS 'lore-model'",
+            List.of(), Map.of(), " ORDER BY valid_from DESC");
+
+        // PU-17 шаг 3: сухой прогон «перенос потерял роли» — только чтение, свёртка LoreRolesLostOnMove.fold.
+        slice(LoreRolesLostOnMove.SLICE, LoreRolesLostOnMove.SQL, List.of(), Map.of(), "");
+
         slice(LoreTaskIdentities.SLICE,
             "SELECT task_uid, out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowTask WHERE task_uid = :id",
@@ -2338,7 +2356,7 @@ public final class LoreSlices {
             // never declared in the schema) in case doc history is added later.
             "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
             LoreDocBodyDigest.selectColumns() + // DS-3
-            "sort_order, " +
+            "sort_order, file_path, " + // S5-DOC-PASSPORT: поле «Файл» паспорта
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
@@ -2940,6 +2958,8 @@ public final class LoreSlices {
         slice("products",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
+            "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +
@@ -2976,6 +2996,8 @@ public final class LoreSlices {
         slice("product_by_id",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
+            "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +
@@ -3134,6 +3156,7 @@ public final class LoreSlices {
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry(LoreTaskIdentities.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry(LoreRolesLostOnMove.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3247,7 +3270,9 @@ public final class LoreSlices {
         Map.entry("tech_registry", "реестр технологий — общий"),
         Map.entry("tech_by_id", "паспорт технологии — тот же общий реестр"),
         Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
-        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем")
+        Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем"),
+        Map.entry("role_profile_coverage", "AO-06: агрегат покрытия ролей профилем — числа по корпусу, без записей проектов"),
+        Map.entry("model_config_history", "MC-05: модель LORE одна на всю студию — история её версий общая")
     );
 
     /**
@@ -3256,7 +3281,7 @@ public final class LoreSlices {
      * список, а не умолчание: каждая запись — открытая дыра, видимая в коде.
      */
     static final Map<String, String> SCOPE_PENDING = Map.ofEntries(
-        Map.entry("search", "сложный SQL (подзапрос); вместе с эндпоинтом /lore/search — отдельным шагом"),
+        Map.entry("search", "сложный SQL (подзапрос); эндпоинт /lore/search под скоупом с AL-SCOPE-HOLES A, легаси-срез палитры — ещё нет"),
         Map.entry("product_hygiene", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("strategic_coverage", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("milestones", "вехи M0…M7 не связаны с проектами (MT-GOALS) — решение о модели вех"),

@@ -28,6 +28,9 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { MartProse, type MartRefHref, type MartRefPeek } from './MartProse';
+import type { LiveBlocks } from './LiveBlock';
+import { splitDiagramFences } from './diagramFence';
+import { useNarrow } from '../core/narrow';
 import { TipTapField, type MentionItem, type TipTapRefSource } from './TipTapField';
 import { isLosslessMd, sameMd } from './tiptapMd';
 import { IconButton } from '../elements/IconButton';
@@ -86,7 +89,20 @@ export interface MdInlineEditProps {
    * раньше, без единого вызова.
    */
   drafts?: MdDraftSlot;
+  /**
+   * Живые блоки (S6-04): язык фенса → исполнитель приложения. Без них блок в правимом
+   * поле оставался кодом. Текст с живым блоком открывается в правке сразу «рядом» —
+   * ответ владелицы 11.11.2026 (вопрос 2); на телефоне «рядом» нет.
+   */
+  blocks?: LiveBlocks;
   className?: string;
+}
+
+/** Есть ли в тексте фенс, который приложение умеет исполнить (тем же правилом фенса, что MartProse). */
+export function hasLiveBlock(text: string, blocks: LiveBlocks | undefined): boolean {
+  const langs = blocks ? Object.keys(blocks) : [];
+  if (!langs.length) return false;
+  return splitDiagramFences(text, langs).some(p => p.kind === 'diagram' && langs.includes(p.lang));
 }
 
 /** Черновик поля: что умеет вызывающий (web-next: /lore/me/drafts). */
@@ -103,8 +119,9 @@ export interface MdDraftSlot {
 
 export function MdInlineEdit({
   value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
-  emptyText, hint = true, onUploadImage, mentionItems, refs, refHref, refPeek, drafts, className,
+  emptyText, hint = true, onUploadImage, mentionItems, refs, refHref, refPeek, drafts, blocks, className,
 }: MdInlineEditProps) {
+  const narrow = useNarrow();
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const [editing, setEditing] = useState(false);
@@ -197,6 +214,9 @@ export function MdInlineEdit({
   }, [draft, editing, shown]);
 
   const open = () => {
+    // S6-04: «рядом» само в режиме правки, если в тексте есть живой блок (не на телефоне,
+    // и только когда режим не задаёт вызывающий).
+    if (modeProp === undefined && !narrow && hasLiveBlock(shown, blocks)) setOwnMode('split');
     setDraft(shown);
     setLossless(isLosslessMd(shown));
     setError(null);
@@ -277,7 +297,7 @@ export function MdInlineEdit({
   // Живой просмотр для режима «вместе»: тот же рендер, что у чтения. Поле
   // просит его у нас, а не тянет MartProse само — рендер чтения со схемами и
   // BPMN не должен приезжать в каждое поле правки.
-  const renderPreview = (md: string) => <MartProse text={md} />;
+  const renderPreview = (md: string) => <MartProse text={md} blocks={blocks} />;
 
   const restore = () => {
     if (!pending) return;
@@ -339,7 +359,7 @@ export function MdInlineEdit({
           />
         )}
         {shown.trim()
-          ? <MartProse text={shown} refHref={refHref} refPeek={refPeek} />
+          ? <MartProse text={shown} refHref={refHref} refPeek={refPeek} blocks={blocks} />
           : <p className="sk-mdedit__empty">{emptyText ?? t('kit.mdedit.empty')}</p>}
       </section>
     );

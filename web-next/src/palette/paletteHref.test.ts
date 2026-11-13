@@ -19,6 +19,6 @@ describe('ссылка на запись из палитры — адрес ра
 
   it('тип записи неизвестен — переданная ссылка, без выдумывания раздела', () => {
     expect(paletteHref('X-1', [], id => `custom:${id}`)).toBe('custom:X-1');
-    expect(paletteHref('D-1', [rec('D-1', 'doc')], id => `custom:${id}`)).toBe('custom:D-1');
+    expect(paletteHref('D-1', [rec('D-1', 'runbook')], id => `custom:${id}`)).toBe('custom:D-1');
   });
 });

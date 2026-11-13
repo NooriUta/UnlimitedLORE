@@ -93,6 +93,17 @@ describe('frontend-ci.yml: v1 и v2 гоняются по путям', () => {
     expectGated(w, /lore-app-next:ci nginx -T/, 'v2');
     expectGated(w, /config --services/, 'v2');
   });
+
+  it('PL-02: сборка и образ v2 — только в полном прогоне; на PR в develop — тесты, связанные с правкой', () => {
+    const w = job(F, 'web-next');
+    expectGated(w, /npm run build/, 'full');
+    expectGated(w, /-t lore-app-next:ci/, 'full');
+    const short = stepBy(w, /vitest run --changed/);
+    expect(short, 'нет сокращённого шага web-next').toBeDefined();
+    expect(short!.body).toMatch(/steps\.scope\.outputs\.full != 'true'/);
+    const sc = steps(w).find((s) => /id: scope\b/.test(s.body))!;
+    expect(sc.body, 'метка full-ci не доходит до ci-scope.sh').toMatch(/PR_LABELS:/);
+  });
 });
 
 describe('backend-ci.yml: бэкенд гоняется по путям', () => {
@@ -104,6 +115,17 @@ describe('backend-ci.yml: бэкенд гоняется по путям', () => 
     expectGated(b, /gradle-retry\.sh build\b/, 'backend');
     expectGated(b, /gradle-retry\.sh test\b/, 'backend');
     expectGated(b, /Docker image build \(backend\)/, 'backend');
+  });
+  it('PL-02: живая тест-БД, build, полный test и образ — только в полном прогоне; на PR в develop — затронутые тесты', () => {
+    const b = job(B, 'build');
+    expectGated(b, /Point live-DB tests/, 'full');
+    expectGated(b, /gradle-retry\.sh build\b/, 'full');
+    expectGated(b, /gradle-retry\.sh test --no-daemon\n/, 'full');
+    expectGated(b, /Docker image build \(backend\)/, 'full');
+    const short = stepBy(b, /backend-short-tests\.sh/);
+    expect(short, 'нет сокращённого шага бэкенда').toBeDefined();
+    expect(short!.body).toMatch(/steps\.scope\.outputs\.full != 'true'/);
+    expect(short!.body).toMatch(/BACKEND_TESTS: \$\{\{ steps\.scope\.outputs\.backend_tests \}\}/);
   });
 });
 
@@ -251,6 +273,70 @@ describe.skipIf(!bashBin)('ci-scope.sh ci: что гонять', () => {
       expect(flags(r.kv)).toEqual(ALL);
       expect(r.out).toMatch(/::warning::.*гоняем всё/);
     } finally { rmSync(tmp, { recursive: true, force: true }); }
+  });
+
+  // ── правило владелицы 11.11.2026: маленький CI на PR, полная труба на develop/промо ──
+  // SPRINT_LORE_PIPELINE_HOST/PL-02. Повод — #1170 и #1171: зелёные по одному,
+  // вместе красный develop. Поэтому полный прогон — на push в develop/preprod и на
+  // каждом PR в preprod/main (промо), а сокращённый — только PR в develop.
+  const pr = (files: string[], base = 'develop', extra: Record<string, string> = {}) =>
+    scope(files, 'ci', { EVENT_NAME: 'pull_request', BASE_REF: base, ...extra });
+
+  it('PR в develop с правкой Java бэкенда → сокращённый: тесты, ссылающиеся на класс, без live-DB и образа', () => {
+    const r = pr(['backend/src/main/java/studio/seer/heimdall/lore/Scd2Guard.java']);
+    expect(r.kv.full).toBe('false');
+    expect(r.kv.backend).toBe('true');
+    const t = r.kv.backend_tests.split(' ');
+    expect(t).toContain('Scd2GuardTest');
+    expect(t.every((x) => /^\w+$/.test(x)), r.kv.backend_tests).toBe(true);
+  });
+
+  it('PR в develop: изменённый тест бэкенда входит в набор сам', () => {
+    const r = pr(['backend/src/test/java/studio/seer/heimdall/lore/StatusHistoryServiceTest.java']);
+    expect(r.kv.full).toBe('false');
+    expect(r.kv.backend_tests.split(' ')).toContain('StatusHistoryServiceTest');
+  });
+
+  it('PR в develop только с web-next → сокращённый, бэкенд не гоняется', () => {
+    const r = pr(['web-next/src/App.tsx']);
+    expect(r.kv.full).toBe('false');
+    expect(r.kv.backend).toBe('false');
+    expect(r.kv.backend_tests).toBe('');
+  });
+
+  it('промо: PR в preprod и в main → полный', () => {
+    expect(pr(['web-next/src/App.tsx'], 'preprod').kv.full).toBe('true');
+    expect(pr(['backend/src/main/java/X.java'], 'main').kv.full).toBe('true');
+  });
+
+  it('push (develop/preprod) → полный', () => {
+    expect(scope(['web-next/src/App.tsx'], 'ci', { EVENT_NAME: 'push' }).kv.full).toBe('true');
+  });
+
+  it('схема бэкенда в PR → полный (накатке нужна живая БД)', () => {
+    const r = pr(['backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrations.java']);
+    expect(r.kv.full).toBe('true');
+    expect(r.kv.schema).toBe('true');
+    expect(r.out).toMatch(/полный прогон: .*схем/);
+  });
+
+  it('не-Java файл бэкенда (сборка, ресурсы) в PR → полный: с тестами его не сопоставить', () => {
+    expect(pr(['backend/build.gradle']).kv.full).toBe('true');
+    expect(pr(['backend/src/main/resources/application.properties']).kv.full).toBe('true');
+  });
+
+  it('правка CI (.github/**) в PR → полный: труба проверяет себя целиком', () => {
+    const r = pr(['.github/scripts/ci-scope.sh', 'web-next/src/App.tsx']);
+    expect(r.kv.full).toBe('true');
+    expect(r.out).toMatch(/полный прогон: правка CI/);
+  });
+
+  it('метка full-ci на PR → полный', () => {
+    expect(pr(['web-next/src/App.tsx'], 'develop', { PR_LABELS: '["full-ci"]' }).kv.full).toBe('true');
+  });
+
+  it('событие не определено (ручной прогон, тесты) → полный: сомнение — в сторону лишнего', () => {
+    expect(scope(['web-next/src/App.tsx']).kv.full).toBe('true');
   });
 
   it('выход пишется и в GITHUB_OUTPUT', () => {

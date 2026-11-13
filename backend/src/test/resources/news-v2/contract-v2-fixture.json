@@ -3433,6 +3433,8 @@
         "waiting_t0" : 0,
         "waiting_t1" : 2,
         "ship_unknown" : 1,
+        "uat_t0" : 0,
+        "uat_t1" : 0,
         "shipped" : 1,
         "done_in_period" : 4,
         "react" : {
@@ -3451,7 +3453,8 @@
           "shipped" : [ "S1/F" ],
           "waiting" : [ "S1/D", "S3/E" ],
           "added" : [ "S1/C", "S1/K" ],
-          "closed" : [ "S1/B", "S1/F", "S2/G" ]
+          "closed" : [ "S1/B", "S1/F", "S2/G" ],
+          "uat" : [ ]
         }
       },
       "by_axis" : {
@@ -3473,6 +3476,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 4,
               "react" : {
@@ -3491,7 +3496,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F", "S2/G" ]
+                "closed" : [ "S1/B", "S1/F", "S2/G" ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -3509,6 +3515,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 2,
               "react" : {
@@ -3527,7 +3535,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F" ]
+                "closed" : [ "S1/B", "S1/F" ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -3545,6 +3554,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 2,
               "react" : {
@@ -3563,7 +3574,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ "S2/G" ]
+                "closed" : [ "S2/G" ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -3586,6 +3598,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 2,
               "react" : {
@@ -3604,7 +3618,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ "S2/G" ]
+                "closed" : [ "S2/G" ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -3622,6 +3637,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -3640,7 +3657,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -3658,6 +3676,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 2,
               "react" : {
@@ -3676,7 +3696,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ "S2/G" ]
+                "closed" : [ "S2/G" ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -3705,6 +3726,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 2,
               "react" : {
@@ -3723,7 +3746,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F" ]
+                "closed" : [ "S1/B", "S1/F" ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -3741,6 +3765,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 2,
               "react" : {
@@ -3759,7 +3785,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F" ]
+                "closed" : [ "S1/B", "S1/F" ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -3777,6 +3804,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -3795,7 +3824,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -3818,6 +3848,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 2,
               "react" : {
@@ -3836,7 +3868,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ "S2/G" ]
+                "closed" : [ "S2/G" ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -3854,6 +3887,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 2,
               "react" : {
@@ -3872,7 +3907,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ "S2/G" ]
+                "closed" : [ "S2/G" ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -3890,6 +3926,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -3908,7 +3946,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -3931,6 +3970,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -3949,7 +3990,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -3967,6 +4009,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -3985,7 +4029,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -4003,6 +4048,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4021,7 +4068,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -4050,6 +4098,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 2,
               "react" : {
@@ -4068,7 +4118,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F" ]
+                "closed" : [ "S1/B", "S1/F" ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -4086,6 +4137,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 2,
               "react" : {
@@ -4104,7 +4157,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F" ]
+                "closed" : [ "S1/B", "S1/F" ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -4122,6 +4176,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4140,7 +4196,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -4163,6 +4220,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 2,
               "react" : {
@@ -4181,7 +4240,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ "S2/G" ]
+                "closed" : [ "S2/G" ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -4199,6 +4259,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 2,
               "react" : {
@@ -4217,7 +4279,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ "S2/G" ]
+                "closed" : [ "S2/G" ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -4235,6 +4298,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4253,7 +4318,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -4276,6 +4342,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4294,7 +4362,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -4312,6 +4381,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4330,7 +4401,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -4348,6 +4420,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4366,7 +4440,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -4395,6 +4470,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4413,7 +4490,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -4431,6 +4509,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 1,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4449,7 +4529,8 @@
                 "shipped" : [ ],
                 "waiting" : [ "S3/E" ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -4467,6 +4548,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4485,7 +4568,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -4508,6 +4592,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 4,
               "react" : {
@@ -4526,7 +4612,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F", "S2/G" ]
+                "closed" : [ "S1/B", "S1/F", "S2/G" ],
+                "uat" : [ ]
               }
             },
             "own" : {
@@ -4544,6 +4631,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 1,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 1,
               "done_in_period" : 4,
               "react" : {
@@ -4562,7 +4651,8 @@
                 "shipped" : [ "S1/F" ],
                 "waiting" : [ "S1/D" ],
                 "added" : [ "S1/C", "S1/K" ],
-                "closed" : [ "S1/B", "S1/F", "S2/G" ]
+                "closed" : [ "S1/B", "S1/F", "S2/G" ],
+                "uat" : [ ]
               }
             },
             "shared" : {
@@ -4580,6 +4670,8 @@
               "waiting_t0" : 0,
               "waiting_t1" : 0,
               "ship_unknown" : 0,
+              "uat_t0" : 0,
+              "uat_t1" : 0,
               "shipped" : 0,
               "done_in_period" : 0,
               "react" : {
@@ -4598,7 +4690,8 @@
                 "shipped" : [ ],
                 "waiting" : [ ],
                 "added" : [ ],
-                "closed" : [ ]
+                "closed" : [ ],
+                "uat" : [ ]
               }
             },
             "filter" : {
@@ -4620,7 +4713,8 @@
         "burn_dict" : 0,
         "waiting_end" : 0,
         "ship_unknown_end" : 0,
-        "shipped" : 0
+        "shipped" : 0,
+        "uat_end" : 0
       }, {
         "from" : "2026-11-01T21:00:00Z",
         "to" : "2026-11-02T21:00:00Z",
@@ -4631,7 +4725,8 @@
         "burn_dict" : 0,
         "waiting_end" : 0,
         "ship_unknown_end" : 0,
-        "shipped" : 0
+        "shipped" : 0,
+        "uat_end" : 0
       }, {
         "from" : "2026-11-02T21:00:00Z",
         "to" : "2026-11-03T21:00:00Z",
@@ -4642,7 +4737,8 @@
         "burn_dict" : 1,
         "waiting_end" : 1,
         "ship_unknown_end" : 0,
-        "shipped" : 0
+        "shipped" : 0,
+        "uat_end" : 0
       }, {
         "from" : "2026-11-03T21:00:00Z",
         "to" : "2026-11-04T21:00:00Z",
@@ -4653,7 +4749,8 @@
         "burn_dict" : 0,
         "waiting_end" : 0,
         "ship_unknown_end" : 0,
-        "shipped" : 1
+        "shipped" : 1,
+        "uat_end" : 0
       }, {
         "from" : "2026-11-04T21:00:00Z",
         "to" : "2026-11-05T21:00:00Z",
@@ -4664,7 +4761,8 @@
         "burn_dict" : 1,
         "waiting_end" : 1,
         "ship_unknown_end" : 0,
-        "shipped" : 0
+        "shipped" : 0,
+        "uat_end" : 0
       }, {
         "from" : "2026-11-05T21:00:00Z",
         "to" : "2026-11-06T21:00:00Z",
@@ -4675,7 +4773,8 @@
         "burn_dict" : 0,
         "waiting_end" : 2,
         "ship_unknown_end" : 1,
-        "shipped" : 0
+        "shipped" : 0,
+        "uat_end" : 0
       }, {
         "from" : "2026-11-06T21:00:00Z",
         "to" : "2026-11-07T21:00:00Z",
@@ -4686,7 +4785,8 @@
         "burn_dict" : 0,
         "waiting_end" : 2,
         "ship_unknown_end" : 1,
-        "shipped" : 0
+        "shipped" : 0,
+        "uat_end" : 0
       } ],
       "shipped_list" : [ {
         "uid" : "S1/F",
@@ -4714,6 +4814,7 @@
         "link" : "nolink"
       } ],
       "entered_ready" : 3,
+      "entered_uat" : 0,
       "ready_to_closed_no_release" : 0
     },
     "knowledge" : {
@@ -4847,6 +4948,12 @@
         "value" : 2,
         "previous" : 0,
         "delta" : 2,
+        "pct" : null
+      },
+      "uat_t1" : {
+        "value" : 0,
+        "previous" : 0,
+        "delta" : 0,
         "pct" : null
       },
       "shipped" : {

@@ -144,12 +144,13 @@ describe('D-01 · результат поиска открывает запис�
   });
 
   it('тип без раздела: причина названа словами, и никуда не уводит', async () => {
-    const { w } = mount(found('doc', 'DOC-1', 'Документ'));
+    // S5-DOC-PASSPORT: у документа теперь есть раздел — тип без раздела берём runbook.
+    const { w } = mount(found('runbook', 'DOC-1', 'Документ'));
     openPalette();
     await search('документ');
     await act(async () => { fireEvent.click(screen.getByText('DOC-1')); });
     expect(w.location.search).not.toContain('open=');
     expect(document.body.textContent).toMatch(/раздел/i);
-    expect(document.body.textContent).toContain('doc');
+    expect(document.body.textContent).toContain('runbook');
   });
 });

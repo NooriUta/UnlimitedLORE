@@ -109,6 +109,53 @@ classify() {
 V1=false V2=false BACKEND=false MCP=false DEPLOY_BACKEND=false
 SRC_TOUCHED=""
 REASON=""
+# ── полный или сокращённый прогон (правило владелицы 11.11.2026, PL-02) ──────
+# «Маленькие CI для PR, всю трубу — при мерже многих маленьких PR». Повод:
+# #1170 и #1171 зелёные по одному, вместе — красный develop. Поэтому:
+#   сокращённый — ТОЛЬКО pull_request в develop: затронутые тесты бэкенда на
+#     встроенной ArcadeDB (без общей тест-БД и образа), web-next — тесты,
+#     связанные с правкой, без сборки и образа;
+#   полный — push в develop/preprod (после пачки мержей), любой PR в
+#     preprod/main (промо), схема бэкенда, не-Java файл бэкенда, метка full-ci,
+#     событие не определено. Сомнение — в сторону полного.
+FULL=true FULL_WHY="" SCHEMA=false BACKEND_TESTS=""
+BACKEND_NONJAVA=""
+SCHEMA_RE='^backend/(src/main/java/studio/seer/heimdall/lore/LoreSchema(Migrations|MigrationRunner|Initializer)\.java|db-schema/)'
+
+# Тест-классы бэкенда, затронутые правкой: изменённые тесты сами и тесты,
+# в тексте которых встречается имя изменённого класса.
+backend_tests_for() {
+  local f cls tdir=backend/src/test/java out=""
+  while IFS= read -r f; do
+    case "$f" in
+      backend/src/test/java/*.java) cls="$(basename "$f" .java)"; out="$out $cls" ;;
+      backend/src/main/java/*.java)
+        cls="$(basename "$f" .java)"
+        [ -d "$tdir" ] && out="$out $(grep -rlw --include='*.java' "$cls" "$tdir" 2>/dev/null | xargs -r -n1 basename | sed 's/\.java$//' | tr '\n' ' ')"
+        ;;
+    esac
+  done <<< "$1"
+  # только имена тест-классов, без дублей
+  printf '%s\n' $out | grep -E '^[A-Za-z0-9_]+Test$' | sort -u | tr '\n' ' ' | sed 's/ $//'
+}
+
+decide_full() {
+  if [ "$FILES_OK" != 1 ]; then FULL_WHY="список изменений не получен"; return; fi
+  case "${EVENT_NAME:-}" in
+    pull_request|pull_request_target) ;;
+    push) FULL_WHY="push в ${BASE_REF:-ветку} — после мержей гоняется всё"; return ;;
+    *) FULL_WHY="событие '${EVENT_NAME:-}' — сомнение в сторону полного"; return ;;
+  esac
+  case "${BASE_REF:-}" in
+    develop) ;;
+    *) FULL_WHY="PR в ${BASE_REF:-?} (промо) — полная труба обязательна"; return ;;
+  esac
+  if printf '%s' "${PR_LABELS:-}" | grep -q '"full-ci"'; then FULL_WHY="метка full-ci"; return; fi
+  if [ "$SCHEMA" = true ]; then FULL_WHY="правка схемы бэкенда — накатке нужна живая БД"; return; fi
+  if printf '%s\n' "$FILES" | grep -q '^\.github/'; then FULL_WHY="правка CI — труба проверяет себя целиком"; return; fi
+  if [ -n "$BACKEND_NONJAVA" ]; then FULL_WHY="не-Java файл бэкенда ($BACKEND_NONJAVA) — с тестами не сопоставить"; return; fi
+  FULL=false
+}
 
 scope_all() {
   V1=true V2=true BACKEND=true MCP=true DEPLOY_BACKEND=true
@@ -125,6 +172,11 @@ compute_scope() {
   while IFS= read -r f; do
     n=$((n + 1))
     case "$f" in src/*) SRC_TOUCHED="$SRC_TOUCHED $f" ;; esac
+    if printf '%s' "$f" | grep -qE "$SCHEMA_RE"; then SCHEMA=true; fi
+    case "$f" in
+      backend/src/main/java/*.java|backend/src/test/java/*.java) ;;
+      backend/*) [ -z "$BACKEND_NONJAVA" ] && BACKEND_NONJAVA="$f" ;;
+    esac
     t=" $(classify "$f") "
     case "$t" in *" v1 "*) V1=true ;; esac
     case "$t" in *" v2 "*) V2=true ;; esac
@@ -138,9 +190,18 @@ compute_scope() {
 case "$MODE" in
   ci)
     compute_scope
-    echo "ci-scope: v1=$V1 v2=$V2 backend=$BACKEND mcp=$MCP ($REASON)"
+    decide_full
+    if [ "$FULL" = true ]; then
+      echo "полный прогон: $FULL_WHY"
+    else
+      BACKEND_TESTS="$(backend_tests_for "$FILES")"
+      echo "сокращённый прогон (PR в develop): полная труба — на push в develop и промо"
+      [ "$BACKEND" = true ] && echo "  тесты бэкенда: ${BACKEND_TESTS:-нет затронутых — только компиляция}"
+    fi
+    echo "ci-scope: v1=$V1 v2=$V2 backend=$BACKEND mcp=$MCP full=$FULL schema=$SCHEMA ($REASON)"
     [ "$FILES_OK" = 1 ] && printf '%s\n' "$FILES" | sed '/^[[:space:]]*$/d' | head -50 | sed 's/^/  · /'
     emit v1 "$V1"; emit v2 "$V2"; emit backend "$BACKEND"; emit mcp "$MCP"
+    emit full "$FULL"; emit schema "$SCHEMA"; emit backend_tests "$BACKEND_TESTS"
     emit reason "$REASON"
     ;;
 
