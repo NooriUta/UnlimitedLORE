@@ -38,6 +38,13 @@ class LoreMePrefsTest {
      * и «auto». Новое место (modal) — строка в списке, без правки проверки.
      */
     @Test
+    void statusConfirmIsAPersonalSetting() {
+        // S4-18 (14.11): «подтверждение до записи — личной настройкой»; по умолчанию выключено.
+        assertEquals(Boolean.FALSE, LoreMePrefs.defaults().get("status_confirm"));
+        assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("status_confirm", true)));
+    }
+
+    @Test
     void passportPlacesAreOneList() {
         assertEquals(List.of("left", "right", "bottom", "full"), LoreMePrefs.PASSPORT_PLACES);
         for (String p : LoreMePrefs.PASSPORT_PLACES)

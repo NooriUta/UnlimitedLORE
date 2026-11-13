@@ -54,6 +54,11 @@ export function appliedPeekHover(given?: Host): boolean {
   return host(given)?.getAttribute('data-peek-hover') !== 'off';
 }
 
+/** S4-18: спрашивать «A → B?» до записи смены статуса. Атрибута нет — не спрашивать. */
+export function appliedStatusConfirm(given?: Host): boolean {
+  return host(given)?.getAttribute('data-status-confirm') === 'on';
+}
+
 /** Показывать ли технические сведения (S4-TECH-NOTES). Атрибута нет — нет. */
 export function appliedShowTech(given?: Host): boolean {
   return host(given)?.getAttribute('data-show-tech') === 'on';

@@ -92,6 +92,8 @@ final class LoreMePrefs {
         m.put("single_key_shortcuts", bool(false));                          // однобуквенные клавиши
         m.put("stripes", bool(false));                                       // полоски в таблицах
         m.put("peek_hover", bool(true));                                    // карточки Peek по наведению (S9-10)
+        // S4-18 (14.11): спрашивать «A → B?» до записи смены статуса; по умолчанию — смена сразу и 8 с «Вернуть»
+        m.put("status_confirm", bool(false));
         // вид вкладки «Граф» (GC-03): auto = не выбирал — на компьютере секторы, на телефоне список
         m.put("graph_view", oneOf("auto", "auto", "sectors", "list", "force", "obsidian"));
         m.put("new_navigation", bool(false));                                // флаг «новая навигация»

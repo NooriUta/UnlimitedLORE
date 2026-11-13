@@ -137,6 +137,8 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         v => onChange({ stripes: v === 'on' }), 'settings.stripes.hint')}
       {row('peek_hover', 'settings.peekHover.label', onOff(s.peek_hover), onOffOpts,
         v => onChange({ peek_hover: v === 'on' }), 'settings.peekHover.hint')}
+      {row('status_confirm', 'settings.statusConfirm.label', onOff(s.status_confirm), onOffOpts,
+        v => onChange({ status_confirm: v === 'on' }), 'settings.statusConfirm.hint')}
       {row('graph_view', 'settings.graphView.label', s.graph_view,
         opts(lang, [
           ['auto', 'settings.graphView.auto'], ['sectors', 'settings.graphView.sectors'], ['list', 'settings.graphView.list'],

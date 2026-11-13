@@ -283,6 +283,8 @@ export interface UserSettings {
   stripes: boolean;
   /** Карточка Peek по наведению на ссылку (S9-10, D-2026-LORE-PEEK-ONE-CARD); выключить можно, как в Wikipedia. */
   peek_hover: boolean;
+  /** S4-18: спрашивать «A → B?» до записи смены статуса (по умолчанию — смена сразу и 8 с «Вернуть»). */
+  status_confirm: boolean;
   /**
    * Вид вкладки «Граф» по умолчанию (GC-03, владелица 11.11.2026: «настройкой в
    * настройках человека»). auto — не выбирал: решает экран (секторы / список на телефоне).
@@ -316,6 +318,7 @@ export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   single_key_shortcuts: true,
   stripes: true,
   peek_hover: true,
+  status_confirm: false,
   graph_view: 'auto',
   passport_place: 'auto',
   nav_version: 'v2',
@@ -336,6 +339,7 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   single_key_shortcuts: bool,
   stripes: bool,
   peek_hover: bool,
+  status_confirm: bool,
   graph_view: oneOf('auto', 'sectors', 'list', 'force', 'obsidian'),
   passport_place: oneOf('auto', ...RECORD_PLACEMENTS),
   nav_version: oneOf('v1', 'v2'),

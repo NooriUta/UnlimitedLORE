@@ -10,6 +10,7 @@
 //     задачами S4; до тех пор раздел честно говорит «экран не собран».
 //   • Статусы — коды LORE; иконка и цвет из общей таблицы kit (statusMeta), чтобы
 //     v2 и kit не разошлись; подпись — из локалей web-next.
+import { appliedStatusConfirm } from '../settings/applied';
 import { ICON_CANON, SECTION_ICONS } from '@seidr/kit';
 import { statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
@@ -217,7 +218,9 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         }),
       // →done в LORE идёт через reviewer-гейт: себе не одобряют.
       selfApprove: false,
+      // S4-18: по умолчанию смена сразу и 8 с «Вернуть»; «подтверждать» — личная настройка.
       undo: true,
+      confirmChange: appliedStatusConfirm(),
     },
   };
 }
