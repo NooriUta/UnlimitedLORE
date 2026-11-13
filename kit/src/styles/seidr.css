@@ -1641,6 +1641,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-setting__label { color: var(--t1); }
 .sk-setting__hint { color: var(--t2); font-size: var(--fs-2xs); }
 .sk-setting__ctl { flex-shrink: 0; }
+/* PU-08: описание над кнопками — на крупном шрифте сегмент из 3–5 вариантов не делит строку с текстом. */
+.sk-setting--stack { flex-direction: column; align-items: stretch; gap: 4px; }
+.sk-setting--stack .sk-setting__ctl { width: 100%; }
+.sk-setting--stack .sk-seg { flex-wrap: wrap; max-width: 100%; row-gap: 2px; }
 .sk-seg {
   display: inline-flex;
   padding: 2px;
