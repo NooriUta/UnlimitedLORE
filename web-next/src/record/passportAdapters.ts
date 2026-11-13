@@ -34,7 +34,9 @@ export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
   // S4-PRODUCTS-NODE: паспорт продукта, только чтение; ключ — код статьи словаря.
   'product',
   // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий».
-  'project'] as const;
+  'project',
+  // S9-05 A: человек и агент — только чтение (правят в админке); порядок — как у фасада.
+  'user', 'agent'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
 
 type Slice = <T>(slice: string, params?: Record<string, string>) => Promise<SliceBody<T>>;
@@ -69,6 +71,8 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   if (type === 'sprint') return (await slice<Row>('sprints', { fields: 'sprint_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.sprint_id), title: str(r.name) || str(r.sprint_id) }));
   if (type === 'adr') return (await slice<Row>('adrs', { fields: 'adr_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.adr_id), title: str(r.name) || str(r.adr_id) }));
   if (type === 'spec') return (await slice<Row>('specs', { fields: 'spec_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.spec_id), title: str(r.title) || str(r.spec_id) }));
+  if (type === 'user') return (await slice<Row>('users', { fields: 'kc_sub,display_name', limit: '1000' })).rows.map(r => ({ id: str(r.kc_sub), title: str(r.display_name) || str(r.kc_sub) }));
+  if (type === 'agent') return (await slice<Row>('agents', { fields: 'actor_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.actor_id), title: str(r.name) || str(r.actor_id) }));
   if (type === 'doc') return (await slice<Row>('docs', { fields: 'doc_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.doc_id), title: str(r.title) || str(r.doc_id) }));
   // Типы, у которых паспорт появился 09.11 (только чтение). Перечень нужен не
   // паспорту, а переходу «предыдущая / следующая» внутри дока: без своей ветки

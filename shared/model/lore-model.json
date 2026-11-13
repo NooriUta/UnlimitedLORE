@@ -3275,6 +3275,201 @@
       "relation" : "attribute",
       "place" : "link_tab"
     } ]
+  }, {
+    "type" : "user",
+    "label" : "Человек",
+    "labelKey" : "pp.kind.user",
+    "icon" : "person",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Имя",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "HAS_PROJECT_ROLE",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "props" : [ {
+      "fields" : [ "projects" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "rels" : [ {
+        "rel" : "ROLE_HELD_BY",
+        "dir" : "in",
+        "label" : "роли в задачах",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "agents",
+      "label" : "Агенты",
+      "rels" : [ {
+        "rel" : "OWNED_BY",
+        "dir" : "in",
+        "label" : "владеет",
+        "relation" : "aggregation"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "HAS_PROJECT_ROLE",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "rel" : "ROLE_HELD_BY",
+      "dir" : "in",
+      "targetType" : "task",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "agents",
+      "label" : "Агенты",
+      "rel" : "OWNED_BY",
+      "dir" : "in",
+      "targetType" : "agent",
+      "relation" : "aggregation",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "agent",
+    "label" : "Агент",
+    "labelKey" : "pp.kind.agent",
+    "icon" : "robot-golem",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Имя",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "client_id",
+      "label" : "Учётка",
+      "labelKey" : "pp.field.clientId",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "agent_role",
+      "label" : "Профиль",
+      "labelKey" : "pp.field.agentRole",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "harness",
+      "label" : "Оболочка",
+      "labelKey" : "pp.field.harness",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "owner",
+      "label" : "Владелец",
+      "labelKey" : "pp.field.owner",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "user",
+      "rel" : "OWNED_BY",
+      "dir" : "out",
+      "relation" : "aggregation"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "props" : [ {
+      "fields" : [ "client_id", "agent_role", "harness", "owner", "projects" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "rels" : [ {
+        "rel" : "ROLE_HELD_BY",
+        "dir" : "in",
+        "label" : "роли в задачах",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "machines",
+      "label" : "Машины",
+      "rels" : [ {
+        "rel" : "USES_MACHINE",
+        "dir" : "out",
+        "label" : "работает на",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "roles",
+      "label" : "Роли продукта",
+      "rels" : [ {
+        "rel" : "FILLS_ROLE",
+        "dir" : "out",
+        "label" : "исполняет роль",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "owner",
+      "label" : "Владелец",
+      "rel" : "OWNED_BY",
+      "dir" : "out",
+      "targetType" : "user",
+      "relation" : "aggregation",
+      "place" : "prop"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "tasks",
+      "label" : "Задачи",
+      "rel" : "ROLE_HELD_BY",
+      "dir" : "in",
+      "targetType" : "task",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "machines",
+      "label" : "Машины",
+      "rel" : "USES_MACHINE",
+      "dir" : "out",
+      "targetType" : "machine",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "roles",
+      "label" : "Роли продукта",
+      "rel" : "FILLS_ROLE",
+      "dir" : "out",
+      "targetType" : "actor",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
   } ],
   "child_only" : [ {
     "type" : "phase",
@@ -3366,12 +3561,16 @@
       "group" : "props"
     } ]
   } ],
-  "read_only" : [ "component", "decision", "feature", "milestone", "product", "project", "question", "release", "tech" ],
+  "read_only" : [ "agent", "component", "decision", "feature", "milestone", "product", "project", "question", "release", "tech", "user" ],
   "graph" : {
     "adr" : {
       "vertex" : "KnowADR",
       "hist" : "KnowADRHist",
       "key" : "adr_id"
+    },
+    "agent" : {
+      "vertex" : "KnowActor",
+      "key" : "actor_id"
     },
     "component" : {
       "vertex" : "LoreComponent",
@@ -3432,11 +3631,18 @@
       "vertex" : "KnowSpec",
       "hist" : "KnowSpecHist",
       "key" : "spec_id"
+    },
+    "user" : {
+      "vertex" : "KnowUser",
+      "key" : "kc_sub"
     }
   },
   "aliases" : {
     "adr" : {
       "status" : "status",
+      "title" : "name"
+    },
+    "agent" : {
       "title" : "name"
     },
     "component" : {
@@ -3500,6 +3706,9 @@
     },
     "tech" : {
       "code" : "spec_id"
+    },
+    "user" : {
+      "title" : "display_name"
     }
   },
   "type_color" : {
@@ -3512,7 +3721,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "doc", "product", "project", "question", "spec", "task" ],
+  "no_type_color" : [ "agent", "doc", "product", "project", "question", "spec", "task", "user" ],
   "precision" : {
     "adr.date" : "date",
     "decision.date" : "date",
@@ -3552,6 +3761,11 @@
         "source" : "date_created",
         "precision" : "date"
       } ]
+    },
+    "agent" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "component" : {
       "history" : "none",
@@ -3744,6 +3958,11 @@
         "precision" : "datetime",
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       } ]
+    },
+    "user" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     }
   },
   "display_overrides" : {
@@ -3906,6 +4125,16 @@
       "slot" : "own"
     }, {
       "key" : "insights",
+      "slot" : "own"
+    } ],
+    "agent" : [ {
+      "key" : "tasks",
+      "slot" : "own"
+    }, {
+      "key" : "machines",
+      "slot" : "own"
+    }, {
+      "key" : "roles",
       "slot" : "own"
     } ],
     "component" : [ {
@@ -4261,6 +4490,13 @@
       "slot" : "own"
     }, {
       "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "user" : [ {
+      "key" : "tasks",
+      "slot" : "own"
+    }, {
+      "key" : "agents",
       "slot" : "own"
     } ]
   }

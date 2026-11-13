@@ -31,9 +31,9 @@ final class LoreRecordEdgeLinks {
     /** Деловые ключи концов — первый непустой. */
     static final List<String> ID_FIELDS = List.of("task_uid", "adr_id", "spec_id", "sprint_id", "decision_id",
         "question_id", "milestone_id", "release_uid", "component_id", "uc_id", "runbook_id", "doc_id",
-        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "slug");
+        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "slug");
 
-    static final List<String> TITLE_FIELDS = List.of("title", "name", "label", "full_name", "statement_md");
+    static final List<String> TITLE_FIELDS = List.of("title", "name", "label", "full_name", "display_name", "statement_md");
 
     /** Вид конца по классу вершины — тот же словарь видов, что у паспорта. */
     static final Map<String, String> KIND_OF_VERTEX = Map.ofEntries(
@@ -44,7 +44,9 @@ final class LoreRecordEdgeLinks {
         Map.entry("KnowRunbook", "runbook"), Map.entry("KnowDoc", "doc"), Map.entry("KnowGitProject", "project"),
         Map.entry("BragiPublication", "publication"), Map.entry("BragiInsight", "insight"),
         Map.entry("QGRecommendation", "qg_recommendation"), Map.entry("KnowPain", "pain"),
-        Map.entry("KnowGain", "gain"), Map.entry("KnowJob", "job"), Map.entry("KnowProjectActor", "actor"));
+        Map.entry("KnowGain", "gain"), Map.entry("KnowJob", "job"), Map.entry("KnowProjectActor", "actor"),
+        // S9-05 A: концы вкладок человека и агента.
+        Map.entry("KnowUser", "user"), Map.entry("KnowActor", "agent"), Map.entry("KnowMachine", "machine"));
 
     /** Имя источника в meta.data_state: видно, что вкладка прочитана по ребру, а не срезом. */
     static String source(LoreRecordRegistry.Relation r) {

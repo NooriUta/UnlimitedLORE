@@ -26,6 +26,8 @@ export const V2_SECTIONS = [
   'sprint', 'task', 'milestone', 'release',
   'adr', 'decision', 'spec', 'doc', 'question',
   'component', 'tech', 'feature', 'project',
+  // S9-05 A: люди и агенты — паспорта «шапка + таблица детей».
+  'user', 'agent',
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
   'product', 'actor', 'pain', 'gain', 'job',
   'news', 'settings',
@@ -139,6 +141,8 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
           items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears')],
         },
+        // S9-05 A: «Участники» — кто делает работу: люди и агенты, у каждого паспорт с его задачами.
+        { id: 'people', title: t('shell.grp.people'), tone: 'var(--acc)', items: [item('user', 'person'), item('agent', 'robot-golem')] },
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
     },
@@ -159,6 +163,8 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       tech: { title: t('shell.sec.tech'), icon: 'gears' },
       feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge' },
       project: { title: t('shell.sec.project'), icon: 'open-folder' },
+      user: { title: t('shell.sec.user'), icon: 'person' },
+      agent: { title: t('shell.sec.agent'), icon: 'robot-golem' },
       product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },
       actor: { title: t('shell.sec.actor'), icon: 'hooded-figure' },
       pain: { title: t('shell.sec.pain'), icon: 'thorn-helix' },
