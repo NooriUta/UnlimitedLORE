@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class HistChangeAuthorLiveDbTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final HttpClient HTTP = LiveDbHttp.CLIENT;
 
     static final String HUMAN = "s212-owner";
     /** Личность человека — kc_sub (контракт S2 HistoryAuthor, KnowUser.kc_sub), не отображаемое имя. */

@@ -431,7 +431,7 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
 
     static final class HttpDb implements Db {
         private final Conn c;
-        private final HttpClient http = HttpClient.newHttpClient();
+        private final HttpClient http = LiveDbHttp.CLIENT;
 
         HttpDb(Conn c) { this.c = c; }
 

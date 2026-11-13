@@ -99,7 +99,7 @@ class EntityHistoryLiveDbTest {
     }
 
     private static void sql(String command) throws Exception {
-        java.net.http.HttpClient http = java.net.http.HttpClient.newHttpClient();
+        java.net.http.HttpClient http = LiveDbHttp.CLIENT;
         String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", command).encode();
         java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder(
                 java.net.URI.create(LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))
