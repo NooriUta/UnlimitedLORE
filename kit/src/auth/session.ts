@@ -81,7 +81,7 @@ export interface AuthSessionOptions {
   replaceUrl?: (url: string) => void;
   /** Часы, мс (тесты). */
   now?: () => number;
-  /** Заголовки при выключенном входе — те же, что шлёт v1. */
+  /** Заголовки при выключенном входе (у LORE — dev-роль, как в v1). Нет — без заголовков. */
   devHeaders?: Record<string, string>;
 }
 
@@ -113,7 +113,8 @@ export interface AuthSession {
   expire(): void;
 }
 
-const DEV_HEADERS = { 'X-Seer-Role': 'admin' };
+/** Своих dev-заголовков у kit нет (K-14): какие слать при выключенном входе — решает приложение. */
+const NO_DEV_HEADERS: Record<string, string> = {};
 
 function browserLocation(): LocationLike {
   const l = globalThis.location;
@@ -154,7 +155,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
   const where = opts.location ?? browserLocation;
   const replaceUrl = opts.replaceUrl ?? browserReplace;
   const redirectPath = opts.redirectPath ?? '/';
-  const devHeaders = opts.devHeaders ?? DEV_HEADERS;
+  const devHeaders = opts.devHeaders ?? NO_DEV_HEADERS;
 
   let mgr: UserManagerLike | null = null;
   let user: OidcUserLike | null = null;

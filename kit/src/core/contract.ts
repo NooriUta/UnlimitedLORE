@@ -4,7 +4,7 @@
 // (батч-поставка сливает одинаковые копии). Схема, валидатор и примеры — рядом:
 // schema/*.schema.json, validate.ts, kit/demo/*.config.ts.
 import type * as React from 'react';
-import type { LoreStatusCategory } from './statusAxis';
+import type { AxisStatusCategory } from './statusAxis';
 
 /** S4-27: закрытые (категории done/cancelled) — внизу свёрнуто / все / за 30 дней / скрыть. */
 export type KitShowClosed = 'below' | 'all' | 'days30' | 'hide';
@@ -17,7 +17,7 @@ export interface KitConfig { modules: {id:string; title:string; icon:string; sta
  * работать. К оси приводит `normalizeAxisCategory`; сужать её нельзя, иначе
  * «действует» молча станет «завершено».
  */
-export type KitStatusCategoryInput = LoreStatusCategory | 'todo' | 'active' | 'done' | 'cancelled';
+export type KitStatusCategoryInput = AxisStatusCategory | 'todo' | 'active' | 'done' | 'cancelled';
 
 /**
  * Статья справочника LORE (срез `dictionary`, S4-36). `task_type` даёт иконку
@@ -40,6 +40,8 @@ export interface KitRelationDef { key:string; label:string; relation:KitRelation
   /** Вид записи на другом конце (kind; не путать с `target` у onRelation — там id). Одно ребро бывает в нескольких связях вида (у компонента BELONGS_TO:in — ADR, спринты, решения…): без цели вкладка «ADR» показала бы и спринты. Не задан — любые записи. */
   targetKind?:string }
 export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[];
+  /** K-14: подпись значения, унаследованного от записи ЭТОГО вида, словом приложения («от спринта»). Нет — kit говорит нейтрально «унаследовано (вид)». */
+  inherited?:string;
   /**
    * Разделы тела записи — ДАННЫМИ (S5-06, S5-09). Список «ключ поля + подпись»;
    * рисует их kit, поэтому у каждого раздела сразу есть ✎, черновик и честное
@@ -50,7 +52,7 @@ export interface KindConfig { title:string; icon:string; relations?:KitRelationD
    * что kit отдавал ей весь обзор и редактор до тела не доходил.
    */
   bodySections?:{key:string; title:string; /** Раздел можно писать. false — только чтение даже при праве правки: путь записи для него сервер не даёт (schema.fields[].editable). */ editable?:boolean}[];
-  overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; /** Сколько элементов (B13): число — счёт, `null` — «не смогли посчитать», поля нет — считать нечего. Рисуется тем же TabCount, что у вкладок связей. */ count?:number|null; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; /** `sum` (S4-09) — сумма с охватом (KitSumInput), та же ячейка, что `sum:` в списке. */ type:'text'|'md'|'enum'|'ref'|'date'|'number'|'sum'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string; /** S4-24: поле правится на месте (✎ → FieldEditor). Право и путь записи называет приложение; без него — только чтение. */ editable?:boolean; /** Варианты для enum (значение или пара «значение + подпись»). Нет вариантов — enum не правится: выбирать не из чего. */ options?:(string|{value:string; label:string; /** S4-24: подпись группы варианта («Люди» / «Агенты») — от приложения. */ group?:string})[]; /** S4-24: варианты не загрузились — причина словами; поле не правится, свободного ввода нет. */ optionsError?:string; /** Повторить загрузку вариантов. */ onOptionsRetry?:()=>void; /** Обязательность (D-2026-LORE-RECORD-FIELD-REQUIRED). */ required?:'block'|'warn'; /** S4-24: поле-связь (компоненты, проекты) — правится привязкой/отвязкой через hooks.onRelation; добавить — выбором с поиском (hooks.relationOptions). */ relation?:{rel:string; dir:'out'|'in'}}[] }
+  overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; /** Сколько элементов (B13): число — счёт, `null` — «не смогли посчитать», поля нет — считать нечего. Рисуется тем же TabCount, что у вкладок связей. */ count?:number|null; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; /** `sum` (S4-09) — сумма с охватом (KitSumInput), та же ячейка, что `sum:` в списке. */ type:'text'|'md'|'enum'|'ref'|'date'|'number'|'bool'|'sum'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string; /** S4-24: поле правится на месте (✎ → FieldEditor). Право и путь записи называет приложение; без него — только чтение. */ editable?:boolean; /** Варианты для enum (значение или пара «значение + подпись»). Нет вариантов — enum не правится: выбирать не из чего. */ options?:(string|{value:string; label:string; /** S4-24: подпись группы варианта («Люди» / «Агенты») — от приложения. */ group?:string})[]; /** S4-24: варианты не загрузились — причина словами; поле не правится, свободного ввода нет. */ optionsError?:string; /** Повторить загрузку вариантов. */ onOptionsRetry?:()=>void; /** Обязательность (D-2026-LORE-RECORD-FIELD-REQUIRED). */ required?:'block'|'warn'; /** S4-24: поле-связь (компоненты, проекты) — правится привязкой/отвязкой через hooks.onRelation; добавить — выбором с поиском (hooks.relationOptions). */ relation?:{rel:string; dir:'out'|'in'}}[] }
 export interface KitRecord { id:string; kind:string; title:string; status:string; fields:Record<string,unknown>; body_md?:string; updated_at?:string; /** S7B-28: доп. текст для поиска списка (логин, проекты, агенты…) — называет приложение; kit ищет по id, названию и ему. */ search?:string }
 export interface KitEdge { from:string; to:string; type:string;
   /** Вид записи на концах (kind), если его знает источник ребра. Нужен, когда записи конца нет среди загруженных: без него связь с `targetKind` не на что отобрать. */

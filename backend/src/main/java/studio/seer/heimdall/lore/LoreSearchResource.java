@@ -394,10 +394,28 @@ public class LoreSearchResource extends LoreResourceBase {
         // ошибка и не половина: выдача полная, а вот ранжирования у неё нет.
         Map<String, String> scannedBranches = new LinkedHashMap<>();
 
+        // AL-SCOPE-HOLES A: проектный скоуп — как у срезов и обратных ссылок. Не посчитан —
+        // отвечать «без скоупа» нельзя (обход); пустое множество — 403, а не пустая выдача.
+        Set<String> allowed;
+        try {
+            allowed = sliceScope.allowedProjectsOrNull(role);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE SEARCH] скоуп не посчитан: %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(LoreUpstream.error(e, "проектный скоуп не посчитан: " + LoreUpstream.detail(e))));
+        }
+        if (allowed != null && allowed.isEmpty())
+            return noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — поиск не отдаётся пустым")));
+        int scopeHidden = 0;
+
         for (Branch b : active) {
             try {
-                List<Map<String, Object>> rows =
-                    queryBranch(b, lucene, q, comps, projs, partialBranches, scannedBranches);
+                List<Map<String, Object>> rows = new ArrayList<>(
+                    queryBranch(b, lucene, q, comps, projs, partialBranches, scannedBranches));
+                // До счётчиков фасета и квоты: by_type/by_project не должны выдавать скрытое числом.
+                scopeHidden += scopeRows(b.type(), rows, allowed);
                 byType.put(b.type(), rows.size());
                 // Нормировка внутри ветки: BM25 разных бакетов несравним, а
                 // после деления на максимум ветки хотя бы порядок внутри типа
@@ -487,6 +505,13 @@ public class LoreSearchResource extends LoreResourceBase {
             && !w.containsKey("partial") && !w.containsKey("scanned")).count();
         out.put("outcome", outcomeOf(active.size(), (int) failedBranches, hits.size()));
         out.put("total_collected", hits.size());
+        if (allowed != null) {
+            // Скрытое называется числом: «нашлось меньше» под скоупом ≠ «в корпусе меньше».
+            Map<String, Object> scope = new LinkedHashMap<>();
+            scope.put("projects", allowed.size());
+            scope.put("hidden", scopeHidden);
+            out.put("scope", scope);
+        }
         out.put("capped_at", BRANCH_CAP);
         // SRCH-09: во что превратился запрос. Пользователь ввёл слово, а в
         // индекс ушло `(слово OR слово*)` — и именно это объясняет, почему
@@ -902,6 +927,44 @@ public class LoreSearchResource extends LoreResourceBase {
             case "question" -> List.of(LoreSlices.QUESTION_SCOPE.split("\\|"));
             default -> b.projExpr() == null ? List.of() : List.of(b.projExpr());
         };
+    }
+
+    /**
+     * AL-SCOPE-HOLES A: типы поиска под проектным скоупом — те, чьи срезы в PROJECT_SCOPED
+     * (adr, spec_by_id, sprints, задачи через спринт, решения, вопросы, runbook, doc,
+     * use_cases/uc_by_id, release_by_id).
+     */
+    static final Set<String> SCOPED_TYPES = Set.of(
+        "adr", "spec", "sprint", "task", "decision", "question", "runbook", "doc", "use_case", "release");
+
+    /** Типы поиска, которые скоуп не режет, — с причиной, как SHARED_SLICES / SCOPE_PENDING. */
+    static final Map<String, String> UNSCOPED_TYPES = Map.of(
+        "actor", "AL-106: акторы видны всем (как срезы actors/actor_load)",
+        "agent_actor", "AL-106: агенты видны всем",
+        "pain", "общий продуктовый профиль (как срез pains)",
+        "gain", "общий продуктовый профиль (как срез gains)",
+        "job", "глобальная вершина (AL-113, как срез jobs)",
+        "quality_gate", "ждёт решения владелицы, как срезы qg_* (SCOPE_PENDING)");
+
+    static List<String> branchTypes() {
+        return BRANCHES.stream().map(Branch::type).toList();
+    }
+
+    /**
+     * AL-SCOPE-HOLES A: вычеркнуть из строк ветки то, что вне разрешённых проектов. Правило
+     * срезов: строка видна, если хотя бы один её проект разрешён; строка без проекта под
+     * скоупом не видна. Неклассифицированный тип режется (безопасная сторона). Возвращает
+     * число скрытых. allowed = null — скоуп выключен.
+     */
+    static int scopeRows(String type, List<Map<String, Object>> rows, Set<String> allowed) {
+        if (allowed == null || UNSCOPED_TYPES.containsKey(type)) return 0;
+        int before = rows.size();
+        rows.removeIf(r -> {
+            Set<String> projects = new LinkedHashSet<>();
+            for (Object o : asList(r.get("projects"))) if (o != null) projects.add(String.valueOf(o));
+            return !visibleUnder(projects, allowed);
+        });
+        return before - rows.size();
     }
 
     static Branch branchByType(String type) {

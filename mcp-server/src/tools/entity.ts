@@ -37,6 +37,7 @@ import {
   similarQuestions,
   type ProjectKind,
 } from './loreWrite.js';
+import { ignoredFields } from './toolInputKeys.js';
 
 const rec = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -68,6 +69,8 @@ type UpsertDef = {
   humanApproval?: boolean;
   /** своя сборка body (по умолчанию: fields + id); строка результата = текст отказа */
   build?: (id: string | undefined, fields: Record<string, unknown>) => Record<string, unknown> | string;
+  /** Поля, которые build переводит сам, хотя в схеме заменённого инструмента их нет (не «ignored»). */
+  extraKeys?: readonly string[];
   /** свой второй шаг после записи (по умолчанию для project-kind: inlineProject) */
   after?: (id: string | undefined, fields: Record<string, unknown>, project?: string) => Promise<Record<string, unknown>>;
   /** старые имена, которые эта ветка заменяет (скрываются по умолчанию) */
@@ -159,7 +162,7 @@ const UPSERT_DEFS = {
     replaces: ['spec_new', 'spec_set'],
   },
   sprint: {
-    idField: 'sprint_id', path: '/lore/sprint/create', replaces: ['sprint_new'],
+    idField: 'sprint_id', path: '/lore/sprint/create', replaces: ['sprint_new'], extraKeys: ['git_project'],
     // Паритет sprint_new: status по умолчанию 'todo' (client-side default старого
     // инструмента), project/git_project → git_project с фолбэком на сессию.
     build: (id, f) => {
@@ -580,7 +583,13 @@ export function registerEntity(server: McpServer): void {
           : def.project
             ? await inlineProject(def.project, id!, project)
             : {};
-        return json({ ...(res as Record<string, unknown>), ...extra });
+        // MT-MCP-TRUTH (13.11, ADR-LORE-043): поле, которого у сущности нет, бэкенд отбрасывает молча —
+        // ответ называет его, а не выдаёт ok:true за запись всего присланного.
+        const ignored = ignoredFields(def.replaces, fields, def.extraKeys);
+        const named = ignored
+          ? { ignored_fields: ignored, ignored_hint: `поля ${ignored.join(", ")} у type="${type}" нет — они НЕ записаны (схема: ${def.replaces?.join(", ")})` }
+          : {};
+        return json({ ...(res as Record<string, unknown>), ...extra, ...named });
       } catch (e) {
         return err(e);
       }

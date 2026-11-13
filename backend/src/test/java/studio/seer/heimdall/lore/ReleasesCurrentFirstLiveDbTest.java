@@ -34,7 +34,7 @@ class ReleasesCurrentFirstLiveDbTest {
 
     private static void sql(String command) throws Exception {
         String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", command).encode();
-        HttpResponse<String> r = LiveDbHttp.CLIENT.send(HttpRequest.newBuilder(
+        HttpResponse<String> r = LiveDbHttp.client().send(HttpRequest.newBuilder(
                 URI.create(LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))
             .header("Content-Type", "application/json; charset=utf-8")
             .header("Authorization", "Basic " + Base64.getEncoder().encodeToString(

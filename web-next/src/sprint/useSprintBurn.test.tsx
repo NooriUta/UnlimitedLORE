@@ -4,7 +4,7 @@
 // любого среза = error, 403 = forbidden, неполная выдача любого = partial.
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { BURN_SLICES, useSprintBurn } from '../index';
+import { BURN_SLICES, inSprint, useSprintBurn } from './useSprintBurn';
 
 const rows = (r: unknown[], extra: object = {}) => ({ rows: r, ...extra });
 const CREATED = [{ task_uid: 'S/A', valid_from: '2026-11-01' }, { task_uid: 'S/B', valid_from: '2026-11-02' }];
@@ -16,6 +16,13 @@ function loader(map: Record<string, unknown | Error>) {
     return v instanceof Error ? Promise.reject(v) : Promise.resolve(v);
   });
 }
+
+describe('inSprint — формат task_uid LORE', () => {
+  it('по префиксу с косой чертой: S не цепляет S2', () => {
+    expect(inSprint('S')('S/A')).toBe(true);
+    expect(inSprint('S')('S2/B')).toBe(false);
+  });
+});
 
 describe('useSprintBurn', () => {
   it('грузит оба среза и считает ряд спринта', async () => {

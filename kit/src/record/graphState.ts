@@ -20,9 +20,9 @@ const LAYER_ON = 'struct';
  * открывается СПИСОК, потому что граф там не читается. Это именно умолчание, а
  * не запрет: переключатель есть на обеих ширинах, выбор за человеком.
  */
-export type GraphView = 'graph' | 'links' | 'force' | 'obsidian';
+export type GraphView = 'graph' | 'links' | 'force' | 'obsidian' | 'structure';
 /** GC-03: виды графа знаний (GraphExplorer) рядом с секторами и списком. */
-export const GRAPH_VIEWS: readonly GraphView[] = ['graph', 'links', 'force', 'obsidian'];
+export const GRAPH_VIEWS: readonly GraphView[] = ['graph', 'links', 'force', 'obsidian', 'structure'];
 
 /** До 4 — владелица 11.11.2026: «показать связи 2, 3, 4 уровней глубины» (сервер /lore/graph). */
 export type GraphDepth = 1 | 2 | 3 | 4;

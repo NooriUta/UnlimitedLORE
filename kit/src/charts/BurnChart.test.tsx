@@ -7,12 +7,14 @@ import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { axeViolations } from '../test/axe';
 import { BurnChart, KitLangProvider, burnSeries, type BurnMode } from '../index';
+/** Принадлежность группе задаёт приложение (K-14); здесь — «спринт S» в формате LORE. */
+const inS = (uid: string) => uid.startsWith('S/');
 
 const C = (task_uid: string, valid_from: string) => ({ task_uid, valid_from });
 const POINTS = burnSeries(
   [C('S/A', '2026-11-01'), C('S/B', '2026-11-01'), C('S/C', '2026-11-02')],
   [C('S/A', '2026-11-03')],
-  'S',
+  inS,
 );
 const TOGGLE = /burnup \/ burndown/i;
 

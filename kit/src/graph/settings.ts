@@ -15,8 +15,9 @@ export interface GxEdge { from: string; to: string; rel: string; kind?: string }
 export interface GxStyle { label: string; color?: string }
 
 /** Движок: Force — d3-force на Canvas; Обсидиан — d3-force в воркере, WebGL. */
-export type GxEngine = 'force' | 'obsidian';
-export const GX_ENGINES: readonly GxEngine[] = ['force', 'obsidian'];
+// GC-02: «Структура» — React Flow с раскладкой ELK в воркере (доска, mind map, структура до ~300 узлов).
+export type GxEngine = 'force' | 'obsidian' | 'structure';
+export const GX_ENGINES: readonly GxEngine[] = ['force', 'obsidian', 'structure'];
 
 /** Группа: узлы, подходящие под запрос, красятся в цвет группы. */
 export interface GxGroup { query: string; color: string }

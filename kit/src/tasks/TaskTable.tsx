@@ -19,8 +19,8 @@ import { onScreenItems, selectAllShown, toggleId, visibleSelection } from '../li
 import { useLongPress } from '../list/useLongPress';
 import type { KitConfig, KitDictItem, KitRecord } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
-import { statusMeta } from '../elements/statusMeta';
-import { kitT, useKitLang, type KitKey, type KitLang } from '../i18n';
+import { statusLabel, statusMeta } from '../elements/statusMeta';
+import { hasKitString, kitT, useKitLang, type KitKey, type KitLang } from '../i18n';
 import { errorDetail } from '../states/loadState';
 import {
   draftOf, groupTasks, phaseLabel, TASK_GROUP_BYS, TASK_STATUSES, validateTaskDraft,
@@ -85,7 +85,11 @@ export interface TaskTableProps {
 /** Имя статуса для чтения: известный — из локали, иначе «неизвестный «код»». */
 export function taskStatusName(lang: KitLang, status: string | null | undefined): string {
   const code = statusMeta(status).code;
-  if ((TASK_STATUSES as readonly string[]).includes(code)) return kitT(lang, `kit.tasks.status.${code}` as KitKey);
+  // Подпись статуса приложения (K-14: «к выкатке» у LORE) — главнее; потом своя у kit.
+  const own = statusLabel(code, lang);
+  if (own) return own;
+  const key = `kit.tasks.status.${code}`;
+  if (TASK_STATUSES.includes(code) && hasKitString(key)) return kitT(lang, key);
   const cat = statusMeta(status).category;
   if (cat !== 'unknown') return kitT(lang, `kit.tasks.cat.${cat}` as KitKey);
   return kitT(lang, 'kit.tasks.status.unknown', { code: code || '∅' });
@@ -124,7 +128,7 @@ function menuStatuses(
   if (!items || items.length === 0) {
     return TASK_STATUSES.map(code => {
       const m = statusMeta(code);
-      return { code, label: kitT(lang, `kit.tasks.status.${code}` as KitKey), icon: m.icon, color: m.color };
+      return { code, label: taskStatusName(lang, code), icon: m.icon, color: m.color };
     });
   }
   const cur = items.find(s => s.code === current);

@@ -124,6 +124,18 @@ const PROFILES = ['full', 'architect', 'developer', 'tester', 'pm', 'analyst', '
       }, T);
       console.log('    + mapper agent_scope');
     }
+    // PL-MCP-CLIENT-MAPPERS: бэкенд берёт роли только из claim seer_roles — без этого маппера
+    // клиент читает, но любая запись 403 (lore-mcp-full_arharaga, 08.11). Ищем по claim.name.
+    if (!mappers.some(m => m.config && m.config['claim.name'] === 'seer_roles')) {
+      await req('POST', `/admin/realms/omilore/clients/${id}/protocol-mappers/models`, {
+        name: 'lore-realm-role-mapper', protocol: 'openid-connect', protocolMapper: 'oidc-usermodel-realm-role-mapper',
+        config: {
+          'claim.name': 'seer_roles', 'jsonType.label': 'String', multivalued: 'true',
+          'access.token.claim': 'true', 'id.token.claim': 'true', 'userinfo.token.claim': 'true',
+        },
+      }, T);
+      console.log('    + mapper seer_roles');
+    }
   }
 
   // 4. lore-admin: SA + realm-management view-users/manage-users

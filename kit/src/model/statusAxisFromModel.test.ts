@@ -7,7 +7,7 @@
 // ПРИЧИНА — расхождение двух мест в самом kit. Ось владелицы объявлена в
 // `core/statusAxis.ts` шестью значениями (`not_started · in_progress ·
 // in_force · finished · withdrawn · unknown`) и зеркалит канон сервера
-// (`LoreStatusCategory`). А перевод документа в конфиг (`configFromModel`)
+// (`AxisStatusCategory`). А перевод документа в конфиг (`configFromModel`)
 // держал СВОЙ список из четырёх значений и трёх синонимов, где `not_started`,
 // `in_force` и `unknown` отсутствовали вовсе. Незнакомое падало в «в работе».
 //
@@ -16,7 +16,7 @@
 import { describe, expect, it } from 'vitest';
 import { configFromModel } from './configFromModel';
 import { parseModel } from './loadModel';
-import { LORE_STATUS_AXIS } from '../core/statusAxis';
+import { STATUS_AXIS } from '../core/statusAxis';
 
 const ICON = 'compass';
 
@@ -56,7 +56,7 @@ describe('B2 · категория статуса из модели', () => {
   });
 
   it('каждое значение оси переводится, и ни одно не молчит про «неизвестно»', () => {
-    for (const axis of LORE_STATUS_AXIS) {
+    for (const axis of STATUS_AXIS) {
       if (axis === 'unknown') continue;
       expect(['todo', 'active', 'done', 'cancelled'], axis).toContain(categoryOf(axis));
       expect(notesOf(axis), `${axis}: оговорки быть не должно`).not.toMatch(/категория/i);

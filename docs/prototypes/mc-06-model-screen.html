@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MC-06 · экран «Модель» в админке v2 — прототип</title>
+<!-- SPRINT_LORE_MODEL_AS_CONFIG/MC-06, шаг 1: прототип экрана до кода (процесс владелицы:
+     прототип → approve → код). Опирается на MC-05 (модель — запись в LORE с историей SCD2,
+     PUT /lore/model/config с dry_run, 409 на чужую версию, 422 MODEL_INCONSISTENT) и MC-07
+     (разделы nav и audience). Данные — выдержка из shared/model/lore-model.json. Только раскладка
+     и поведение; иконки, цвета и палитра — из v1/токенов Seiðr. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0:#141108; --bg1:#1c1810; --bg2:#252019; --bd:#42382a; --t1:#ede5d0; --t2:#a6997f; --t3:#9c937b;
+  --acc:#a8b860; --suc:#7dbf78; --wrn:#d4922a; --inf:#88b8a8; --dng:#cf6c5e;
+  --fs-2xs:9px; --fs-xs:10px; --fs-sm:11px; --fs-base:12px; --fs-md:13px; --fs-lg:14px; --fs-xl:20px; --fs-2xl:24px;
+  --font:'Manrope',sans-serif; --mono:'IBM Plex Mono',monospace; --display:'Unbounded',sans-serif;
+  --r-md:6px; --r-lg:10px;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg0); color:var(--t1); font:var(--fs-base)/1.5 var(--font); }
+.top { display:flex; gap:12px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--bd); background:var(--bg1); }
+.top b { font-family:var(--display); letter-spacing:.04em; }
+.top .note { color:var(--t3); font-size:var(--fs-xs); margin-left:auto; max-width:60%; }
+.frame { margin:12px 16px; border:1px solid var(--bd); border-radius:var(--r-lg); background:var(--bg1); min-height:calc(100vh - 80px); display:flex; flex-direction:column; }
+.bar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px; padding:8px 16px; border-bottom:1px solid var(--bd); background:var(--bg1); border-radius:var(--r-lg) var(--r-lg) 0 0; }
+.crumbs { color:var(--acc); font-size:var(--fs-sm); }
+.ver { font-family:var(--mono); font-size:var(--fs-xs); color:var(--t2); }
+.ver b { color:var(--t1); }
+.grow { flex:1; }
+.pill { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); color:var(--t2); font:600 var(--fs-xs)/1.6 var(--font); }
+.pill.wrn { border-color:var(--wrn); color:var(--wrn); }
+.pill.dng { border-color:var(--dng); color:var(--dng); }
+.pill.suc { border-color:var(--suc); color:var(--suc); }
+.pill.inf { border-color:var(--inf); color:var(--inf); }
+.btn { min-height:26px; padding:0 12px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); color:var(--t1); font:600 var(--fs-sm) var(--font); cursor:pointer; }
+.btn:hover { border-color:var(--acc); }
+.btn--primary { background:var(--acc); color:var(--bg0); border-color:var(--acc); }
+.btn--primary:disabled { background:var(--bg2); color:var(--t3); border-color:var(--bd); cursor:not-allowed; }
+.btn--dng { border-color:var(--dng); color:var(--dng); background:transparent; }
+.tabs { display:flex; gap:2px; padding:0 16px; border-bottom:1px solid var(--bd); }
+.tabs button { border:0; background:none; color:var(--t2); font:600 var(--fs-sm) var(--font); padding:8px 10px; cursor:pointer; text-transform:uppercase; letter-spacing:.05em; }
+.tabs button.on { color:var(--t1); box-shadow:inset 0 -2px 0 var(--acc); }
+.tabs .cnt { font-family:var(--mono); color:var(--t3); margin-left:4px; }
+.body { display:flex; flex:1; min-height:0; }
+.side { width:220px; border-right:1px solid var(--bd); padding:8px; overflow:auto; }
+.side input { width:100%; background:var(--bg0); border:1px solid var(--bd); border-radius:var(--r-md); color:var(--t1); padding:4px 8px; font:var(--fs-sm) var(--font); margin-bottom:6px; }
+.side .grp { color:var(--t3); font-size:var(--fs-2xs); text-transform:uppercase; letter-spacing:.08em; margin:8px 4px 2px; }
+.side a { display:flex; align-items:center; gap:6px; padding:3px 6px; border-radius:var(--r-md); color:var(--t2); text-decoration:none; font-size:var(--fs-sm); cursor:pointer; }
+.side a.on { background:color-mix(in srgb,var(--acc) 16%,transparent); color:var(--t1); }
+.side a .dot { width:6px; height:6px; border-radius:999px; background:var(--wrn); margin-left:auto; }
+.main { flex:1; padding:12px 16px 40px; overflow:auto; min-width:0; }
+.kind { color:var(--t2); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.06em; }
+h1 { margin:2px 0 8px; font:800 var(--fs-xl)/1.25 var(--display); }
+.facts { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+table { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+th { text-align:left; color:var(--t3); font:600 var(--fs-2xs) var(--font); text-transform:uppercase; letter-spacing:.08em; padding:4px 6px; border-bottom:1px solid var(--bd); }
+td { padding:3px 6px; border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent); vertical-align:middle; }
+td code, .mono { font-family:var(--mono); font-size:var(--fs-xs); }
+td input, td select { width:100%; background:transparent; border:1px solid transparent; border-radius:var(--r-md); color:var(--t1); font:var(--fs-sm) var(--font); padding:2px 4px; }
+td input:hover, td select:hover { border-color:var(--bd); }
+td input:focus, td select:focus { border-color:var(--acc); background:var(--bg0); outline:none; }
+tr.changed td { background:color-mix(in srgb,var(--wrn) 8%,transparent); }
+tr.changed td:first-child { box-shadow:inset 2px 0 0 var(--wrn); }
+.ro { color:var(--t3); }
+.section { margin-top:18px; }
+.section h2 { font:800 var(--fs-md)/1.3 var(--display); margin:0 0 6px; }
+.section p.why { color:var(--t3); font-size:var(--fs-xs); margin:0 0 8px; }
+/* дифф */
+.diffpane { width:360px; border-left:1px solid var(--bd); padding:12px; overflow:auto; display:none; }
+.has-diff .diffpane { display:block; }
+.diffpane h3 { margin:0 0 6px; font:800 var(--fs-sm) var(--display); }
+.d { font-family:var(--mono); font-size:var(--fs-xs); padding:4px 6px; border-radius:var(--r-md); background:var(--bg0); margin-bottom:4px; }
+.d .path { color:var(--t3); }
+.d del { color:var(--dng); text-decoration:line-through; }
+.d ins { color:var(--suc); text-decoration:none; }
+.prob { border:1px solid var(--dng); border-radius:var(--r-md); padding:6px 8px; color:var(--dng); font-size:var(--fs-xs); margin:6px 0; }
+.ok { border:1px solid var(--suc); border-radius:var(--r-md); padding:6px 8px; color:var(--suc); font-size:var(--fs-xs); margin:6px 0; }
+.hist .row { display:grid; grid-template-columns:70px 130px 1fr auto; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent); font-size:var(--fs-sm); }
+.hist .row.cur { color:var(--t1); }
+.lvl { display:inline-flex; padding:1px; gap:1px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); }
+.lvl button { border:0; background:none; color:var(--t2); font:600 var(--fs-2xs) var(--font); padding:1px 7px; border-radius:999px; cursor:pointer; text-transform:uppercase; }
+.lvl button.on { color:var(--bg0); background:var(--acc); }
+.modal { position:fixed; inset:0; background:color-mix(in srgb,var(--bg0) 70%,transparent); display:none; align-items:center; justify-content:center; z-index:20; }
+.modal.open { display:flex; }
+.modal .box { width:460px; background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); padding:16px; }
+.modal h3 { margin:0 0 8px; font:800 var(--fs-md) var(--display); }
+.modal .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+.hide { display:none; }
+.legend { color:var(--t3); font-size:var(--fs-xs); margin-top:24px; border-top:1px dashed var(--bd); padding-top:8px; }
+.legend li { margin:2px 0; }
+</style>
+</head>
+<body>
+<div class="top">
+  <b>LORE · АДМИН</b>
+  <span class="pill">Справочники</span><span class="pill">Правила CLAUDE</span><span class="pill" style="border-color:var(--acc);color:var(--t1)">Модель</span>
+  <span class="note">Прототип MC-06 — раскладка и поведение. Правит только человек (MC-05: PUT /lore/model/config — human-only). Состояние вкладки — в URL: <code class="mono">?section=admin&amp;tab=model&amp;mtab=types&amp;type=product</code></span>
+</div>
+
+<div class="frame" id="frame">
+  <div class="bar">
+    <span class="crumbs">Админка › Модель LORE</span>
+    <span class="ver">версия <b id="verNo">v7</b> · <span id="verBy">seed — «обновление семени из файла репозитория»</span> · hash <code>3f9a…c21</code></span>
+    <span class="grow"></span>
+    <span class="pill wrn hide" id="dirty">изменено: <b id="dirtyN">0</b></span>
+    <button class="btn" id="btnCheck" disabled>Проверить (dry run)</button>
+    <button class="btn btn--primary" id="btnApply" disabled>Применить…</button>
+    <button class="btn" id="btnReset" disabled>Сбросить</button>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="on" data-t="types">Типы <span class="cnt">31</span></button>
+    <button data-t="nav">Меню и видимость <span class="cnt">6 групп</span></button>
+    <button data-t="hyg">Гигиена <span class="cnt" style="color:var(--wrn)">4</span></button>
+    <button data-t="hist">История <span class="cnt">7</span></button>
+  </div>
+
+  <div class="body" id="body">
+    <!-- ТИПЫ -->
+    <div class="side" id="side">
+      <input placeholder="тип или поле…" aria-label="поиск по модели">
+      <div class="grp">Работа</div>
+      <a>Спринт</a><a>Задача</a><a>Фаза</a><a>Релиз</a>
+      <div class="grp">Знание</div>
+      <a>ADR</a><a>Решение</a><a>Спека</a><a>Док</a><a>Вопрос</a>
+      <div class="grp">Продукт</div>
+      <a class="on">Продукт <span class="dot" title="есть замечания гигиены"></span></a><a>Сценарий</a><a>Боль</a><a>Выгода</a><a>Работа (JTBD)</a><a>Роль</a>
+      <div class="grp">Система</div>
+      <a>Компонент</a><a>Проект</a><a>Люди</a><a>Агенты</a>
+    </div>
+
+    <div class="main" id="main">
+      <section id="p-types">
+        <div class="kind">тип записи · <code>product</code> · вершина <code>KnowDictEntry</code> (dict_type=product)</div>
+        <h1>Продукт</h1>
+        <div class="facts">
+          <span class="pill">иконка bullseye</span>
+          <span class="pill inf">только чтение в v2</span>
+          <span class="pill">аудитория: везде</span>
+          <span class="pill wrn">1 поле не объявлено в схеме</span>
+        </div>
+
+        <table id="fields">
+          <thead><tr><th style="width:110px">Ключ</th><th>Подпись</th><th style="width:90px">Вид</th><th style="width:90px">Группа</th><th style="width:110px">Свойство схемы</th><th style="width:80px">Видимость</th></tr></thead>
+          <tbody>
+            <tr><td><code>title</code></td><td><input value="Название"></td><td class="ro">text</td><td><select><option selected>head</option><option>props</option><option>body</option></select></td><td class="mono ro">label_ru · STRING</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+            <tr><td><code>code</code></td><td><input value="Код"></td><td class="ro">text</td><td><select><option selected>head</option><option>props</option></select></td><td class="mono ro">code · STRING</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+            <tr><td><code>color</code></td><td><input value="Цвет"></td><td class="ro">text</td><td><select><option selected>head</option><option>props</option></select></td><td class="mono ro">color · STRING</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+            <tr><td><code>kind</code></td><td><input value="Вид"></td><td class="ro">text</td><td><select><option>head</option><option selected>props</option></select></td><td class="mono" style="color:var(--wrn)">не объявлено</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+            <tr><td><code>label_en</code></td><td><input value="Название (en)"></td><td class="ro">text</td><td><select><option>head</option><option selected>props</option></select></td><td class="mono ro">label_en · STRING</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+            <tr><td><code>sort_order</code></td><td><input value="Порядок"></td><td class="ro">number</td><td><select><option>head</option><option selected>props</option></select></td><td class="mono ro">sort_order · INTEGER</td><td><select><option>везде</option><option selected>админка</option></select></td></tr>
+            <tr><td><code>is_active</code></td><td><input value="Активен"></td><td class="ro">bool</td><td><select><option>head</option><option selected>props</option></select></td><td class="mono ro">is_active · BOOLEAN</td><td><select><option>везде</option><option selected>админка</option></select></td></tr>
+          </tbody>
+        </table>
+
+        <div class="section">
+          <h2>Связи</h2>
+          <p class="why">Вкладки паспорта. Ребро и направление не правятся здесь: смена ребра — это миграция, а не настройка (сторож MC-03 отвергнет вкладку без читателя).</p>
+          <table>
+            <thead><tr><th style="width:110px">Ключ</th><th>Подпись</th><th style="width:150px">Ребро</th><th style="width:90px">Место</th><th style="width:80px">Видимость</th></tr></thead>
+            <tbody>
+              <tr><td><code>parent</code></td><td><input value="Родитель"></td><td class="mono ro">PARENT_PRODUCT → out</td><td class="ro">поле</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+              <tr><td><code>projects</code></td><td><input value="Проекты"></td><td class="mono ro">BELONGS_TO_PROJECT → out</td><td class="ro">поле</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+              <tr><td><code>components</code></td><td><input value="Компоненты"></td><td class="mono ro">IN_PRODUCT ← in</td><td class="ro">вкладка</td><td><select><option selected>везде</option><option>админка</option></select></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="legend">
+          <li>Правится: подпись, группа, видимость, порядок (перетаскиванием строки). Вид поля и свойство схемы — только чтение: их расхождение ловит проверка согласованности (MC-03/MC-05), а не редактор.</li>
+          <li>Каждая правка подсвечивается строкой и попадает в дифф справа; «Применить» без «Проверить» недоступно.</li>
+        </ul>
+      </section>
+
+      <!-- МЕНЮ И ВИДИМОСТЬ -->
+      <section id="p-nav" class="hide">
+        <div class="kind">раздел модели <code>nav</code> + <code>audience</code> (MC-07)</div>
+        <h1>Меню и видимость</h1>
+        <p class="why" style="color:var(--t3);font-size:var(--fs-xs)">Уровень раздела: <b>везде</b> — в общем меню всем; <b>админка</b> — только в админке (люди, агенты, машины — решение владелицы 13.11: «разделяй реальную админку от бизнес-анализа»).</p>
+        <table>
+          <thead><tr><th style="width:120px">Группа</th><th>Раздел</th><th style="width:150px">Уровень</th></tr></thead>
+          <tbody id="navrows">
+            <tr><td class="ro">Работа</td><td>Спринты</td><td><span class="lvl"><button class="on">везде</button><button>админка</button></span></td></tr>
+            <tr><td class="ro">Работа</td><td>Задачи</td><td><span class="lvl"><button class="on">везде</button><button>админка</button></span></td></tr>
+            <tr><td class="ro">Продукт</td><td>Роли (actors)</td><td><span class="lvl"><button class="on">везде</button><button>админка</button></span></td></tr>
+            <tr><td class="ro">Продукт</td><td>Боли / Выгоды / Работы</td><td><span class="lvl"><button class="on">везде</button><button>админка</button></span></td></tr>
+            <tr><td class="ro">Система</td><td>Проекты</td><td><span class="lvl"><button class="on">везде</button><button>админка</button></span></td></tr>
+            <tr><td class="ro">Система</td><td>Люди</td><td><span class="lvl"><button>везде</button><button class="on">админка</button></span></td></tr>
+            <tr><td class="ro">Система</td><td>Агенты</td><td><span class="lvl"><button>везде</button><button class="on">админка</button></span></td></tr>
+            <tr><td class="ro">Система</td><td>Машины</td><td><span class="lvl"><button>везде</button><button class="on">админка</button></span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ГИГИЕНА -->
+      <section id="p-hyg" class="hide">
+        <div class="kind">замечания модели — не ошибки, а долг</div>
+        <h1>Гигиена</h1>
+        <table>
+          <thead><tr><th style="width:150px">Класс</th><th>Где</th><th>Что сделать</th><th style="width:90px"></th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill wrn">не объявлено в схеме</span></td><td class="mono">product.kind</td><td>Поле пишется (WK-01), но свойства <code>KnowDictEntry.kind</code> в схеме нет — тип в модели не проверяется.</td><td><button class="btn">к полю</button></td></tr>
+            <tr><td><span class="pill wrn">unclassified</span></td><td class="mono">task.closed_by_prs</td><td>Поле без группы — паспорт кладёт его в «прочее».</td><td><button class="btn">к полю</button></td></tr>
+            <tr><td><span class="pill dng">DRIFTED</span></td><td class="mono">версия v7 ↔ файл репозитория</td><td>Версия правлена человеком, файл после неё менялся: новые разделы досеяны, правки сохранены. Сравнить с файлом.</td><td><button class="btn">дифф</button></td></tr>
+            <tr><td><span class="pill">пустой раздел</span></td><td class="mono">nav.personal</td><td>Группа меню без пунктов — в меню не появится.</td><td><button class="btn">к меню</button></td></tr>
+          </tbody>
+        </table>
+        <p class="why" style="color:var(--t3);font-size:var(--fs-xs);margin-top:8px">«Не смогли проверить» показывается отдельной строкой с причиной (схема не прочиталась → 403/таймаут), а не пустым списком.</p>
+      </section>
+
+      <!-- ИСТОРИЯ -->
+      <section id="p-hist" class="hide hist">
+        <div class="kind">срез <code>model_config_history</code> (SCD2, MC-05)</div>
+        <h1>История версий</h1>
+        <div class="row cur"><span class="mono"><b>v7</b></span><span class="mono">13.11 21:40</span><span>seed — обновление семени из файла репозитория (MC-08: флаги вида bool)</span><span class="pill suc">текущая</span></div>
+        <div class="row"><span class="mono">v6</span><span class="mono">13.11 18:02</span><span>omiloreadmin — подпись «Спринт», видимость «Машины» → админка</span><span><button class="btn">дифф</button> <button class="btn btn--dng" data-rollback="v6">откатить…</button></span></div>
+        <div class="row"><span class="mono">v5</span><span class="mono">13.11 16:20</span><span>seed — досеяны разделы nav, audience (MC-07)</span><span><button class="btn">дифф</button> <button class="btn btn--dng" data-rollback="v5">откатить…</button></span></div>
+        <div class="row"><span class="mono">v1</span><span class="mono">12.11 23:10</span><span>seed — первая запись модели (V84)</span><span><button class="btn">дифф</button></span></div>
+        <p class="why" style="color:var(--t3);font-size:var(--fs-xs);margin-top:8px">Откат = новая версия с содержимым старой (история не переписывается). Перед применением — та же проверка согласованности: старая версия может не сойтись с нынешней схемой, тогда 422 с причиной.</p>
+      </section>
+    </div>
+
+    <aside class="diffpane" id="diff">
+      <h3>Дифф к v7</h3>
+      <div id="diffList"></div>
+      <div id="checkOut"></div>
+    </aside>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h3 id="mTitle">Применить модель?</h3>
+    <div id="mBody" style="font-size:var(--fs-sm);color:var(--t2)"></div>
+    <label style="display:block;margin-top:8px;font-size:var(--fs-xs);color:var(--t3)">Что и зачем (попадёт в историю версии)
+      <input id="mWhy" style="width:100%;margin-top:4px;background:var(--bg0);border:1px solid var(--bd);border-radius:var(--r-md);color:var(--t1);padding:4px 8px;font:var(--fs-sm) var(--font)" placeholder="например: видимость «Машины» → админка">
+    </label>
+    <div class="actions"><button class="btn" id="mCancel">Отмена</button><button class="btn btn--primary" id="mOk" disabled>Применить</button></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+// вкладки
+$$('#tabs button').forEach(b => b.onclick = () => {
+  $$('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  ['types','nav','hyg','hist'].forEach(t => $('#p-' + t).classList.toggle('hide', t !== b.dataset.t));
+  $('#side').style.display = b.dataset.t === 'types' ? '' : 'none';
+  history.replaceState(null, '', '?section=admin&tab=model&mtab=' + b.dataset.t);
+});
+// правки → дифф
+const orig = new Map();
+function track(el, path) {
+  orig.set(el, el.value);
+  el.addEventListener('input', update); el.addEventListener('change', update);
+  el.dataset.path = path;
+}
+$$('#fields tbody tr').forEach(tr => {
+  const key = tr.cells[0].innerText.trim();
+  const [label, group, aud] = [tr.cells[1].querySelector('input'), tr.cells[3].querySelector('select'), tr.cells[5].querySelector('select')];
+  track(label, `types.product.${key}.label`); track(group, `types.product.${key}.group`); track(aud, `audience.product.${key}`);
+});
+let checked = false;
+function changes() { return [...orig].filter(([el, v]) => el.value !== v); }
+function update() {
+  checked = false;
+  const ch = changes();
+  $$('#fields tbody tr').forEach(tr => tr.classList.toggle('changed', [...tr.querySelectorAll('input,select')].some(e => orig.has(e) && e.value !== orig.get(e))));
+  $('#dirty').classList.toggle('hide', !ch.length); $('#dirtyN').textContent = ch.length;
+  $('#btnCheck').disabled = !ch.length; $('#btnReset').disabled = !ch.length; $('#btnApply').disabled = true;
+  $('#frame').classList.toggle('has-diff', ch.length > 0);
+  $('#diffList').innerHTML = ch.map(([el, v]) => `<div class="d"><div class="path">${el.dataset.path}</div><del>${v}</del> → <ins>${el.value}</ins></div>`).join('');
+  $('#checkOut').innerHTML = '<p style="color:var(--t3);font-size:var(--fs-xs)">Нажмите «Проверить» — сервер прогонит правку через проверку согласованности (dry_run), ничего не записав.</p>';
+}
+$('#btnReset').onclick = () => { orig.forEach((v, el) => el.value = v); update(); };
+$('#btnCheck').onclick = () => {
+  const bad = changes().filter(([el]) => el.dataset.path.endsWith('.group') && el.dataset.path.includes('.title.') && el.value !== 'head');
+  if (bad.length) {
+    $('#checkOut').innerHTML = `<div class="prob"><b>422 MODEL_INCONSISTENT</b><br>product.title: обязательное поле заголовка обязано быть в группе head — паспорт без названия не строится.</div>`;
+    $('#btnApply').disabled = true; return;
+  }
+  checked = true;
+  $('#checkOut').innerHTML = '<div class="ok"><b>dry run: согласовано</b> · противоречий схеме и срезам нет · запись не выполнялась</div>';
+  $('#btnApply').disabled = false;
+};
+function openModal(title, body) { $('#mTitle').textContent = title; $('#mBody').innerHTML = body; $('#mWhy').value = ''; $('#mOk').disabled = true; $('#modal').classList.add('open'); }
+$('#mWhy').oninput = () => $('#mOk').disabled = !$('#mWhy').value.trim();
+$('#mCancel').onclick = () => $('#modal').classList.remove('open');
+$('#btnApply').onclick = () => openModal('Применить модель?', `Будет записана версия <b>v8</b> поверх <b>v7</b> (${changes().length} изм.). Паспорта и меню перечитают модель без выкатки. Если за это время кто-то записал свою версию — ответ 409, правки останутся на экране.`);
+$('#mOk').onclick = () => {
+  $('#modal').classList.remove('open');
+  $('#verNo').textContent = 'v8'; $('#verBy').textContent = 'omiloreadmin — ' + $('#mWhy').value;
+  orig.forEach((_, el) => orig.set(el, el.value)); update(); $('#frame').classList.remove('has-diff');
+};
+$$('[data-rollback]').forEach(b => b.onclick = () => openModal(`Откатить к ${b.dataset.rollback}?`, `Создаст новую версию <b>v8</b> с содержимым <b>${b.dataset.rollback}</b>. История не переписывается; перед записью — проверка согласованности с нынешней схемой.`));
+update();
+</script>
+</body>
+</html>

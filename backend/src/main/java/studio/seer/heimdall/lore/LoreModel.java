@@ -132,7 +132,11 @@ final class LoreModel {
         Map<String, Object> surfaces = new LinkedHashMap<>();
         surfaces.put("partial", true);
         surfaces.put("passport", LorePassportSurface.build());
+        // MC-07: общее меню из модели — только разделы с уровнем everywhere (LoreModelNav).
+        surfaces.put("nav", LoreModelNav.surface(LoreModelFile.content()));
         content.put("surfaces", surfaces);
+        // MC-07 (D-2026-LORE-MODEL-AUDIENCE-VISIBILITY): уровень видимости каждого раздела — everywhere | detail | admin | hidden.
+        content.put("audience", new TreeMap<>(LoreModelFile.content().audience()));
         content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), warnings));
         content.put("dictionaries", dictionaries);
         content.put("warnings", warnings);

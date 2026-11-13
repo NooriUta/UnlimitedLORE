@@ -85,7 +85,7 @@ class MilestoneGoalHistLiveDbTest {
     }
 
     private static void sql(String command) throws Exception {
-        java.net.http.HttpClient http = LiveDbHttp.CLIENT;
+        java.net.http.HttpClient http = LiveDbHttp.client();
         String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", command).encode();
         java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder(
                 java.net.URI.create(LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))
