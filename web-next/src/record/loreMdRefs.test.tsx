@@ -40,6 +40,15 @@ describe('loreMdRefs', () => {
     const r = loreMdRefs('ru', { fetchImpl: okFetch() });
     expect((await r.search('ан', null, 'brackets')).map(i => i.id)).not.toContain('ACT-ANNA');
   });
+  it('«Завести под этим ID» (MD-WINDOW §3a): задача — спринт и код из ID, остальные — код', () => {
+    const r = loreMdRefs('ru', { create: { parents: {} } });
+    expect(r.presetFor?.('SPRINT_MINILORE_CUTOVER/CO-99', 'task')).toEqual({ sprint: 'SPRINT_MINILORE_CUTOVER', code: 'CO-99' });
+    expect(r.presetFor?.('SPEC-X', 'spec')).toEqual({ code: 'SPEC-X' });
+    expect(r.presetFor?.('BROKEN', 'task')).toBeNull();
+  });
+  it('без контекста заведения presetFor нет — «Завести» не предлагается', () => {
+    expect(loreMdRefs('ru').presetFor).toBeUndefined();
+  });
   it('сужение по типу', async () => {
     const r = loreMdRefs('ru', { fetchImpl: okFetch() });
     expect((await r.search('x', 'task')).map(i => i.id)).toEqual(['SPRINT_X/MD-1']);

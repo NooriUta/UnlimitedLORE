@@ -33,7 +33,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { pasteRefNodes, refCheckStates, refIdOfRaw, type RefCheckState } from './refPasteCheck';
-import { RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicker';
+import { RefCreateCard, RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicker';
 import type { RefItem, RefSearch } from './RefSearchList';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
@@ -197,6 +197,11 @@ export interface TipTapRefSource {
   search: (query: string, type: string | null, trigger?: RefTriggerKind) => Promise<RefItem[]>;
   createSpec?: RefPickerProps['createSpec'];
   onCreate?: RefPickerProps['onCreate'];
+  /**
+   * MD-WINDOW §3a: поля новой записи, заданные её ID в ссылке («завести под этим ID»): у LORE задача
+   * SPRINT_X/CO-9 → {sprint, code}. Нет — «Завести» у красной ссылки не предлагается.
+   */
+  presetFor?: (id: string, type: string) => Record<string, string> | null;
   /** с какой длины запроса искать (по умолчанию 1); короче — «введите слова поиска», поиск не зовётся */
   minQuery?: number;
   /**
@@ -326,6 +331,9 @@ export function TipTapField({
   const [refStates, setRefStates] = useState<Record<string, RefCheckState>>({});
   const [refIdsSig, setRefIdsSig] = useState(() => refsInMd(value).map(r => `${r.type ?? ''}:${r.id}`).join('|'));
   const [missingHidden, setMissingHidden] = useState(false);
+  // MD-WINDOW §3a: тип каждой ссылки текста (для «Завести») и открытая карточка «завести под этим ID».
+  const refTypesRef = useRef<Record<string, string | null>>({});
+  const [createFor, setCreateFor] = useState<{ id: string; type: string } | null>(null);
   const shownMissingRef = useRef('');
   const onRefsMissingRef = useRef(onRefsMissing);
   onRefsMissingRef.current = onRefsMissing;
@@ -452,6 +460,7 @@ export function TipTapField({
     // Проверять нечего — состояние не трогаем (лишняя перерисовка при монтировании меняла панель).
     if (!exists || !refIdsSig) { setRefStates(p => (Object.keys(p).length ? {} : p)); return; }
     const list: MdRef[] = refIdsSig.split('|').map(k => { const i = k.indexOf(':'); return { type: k.slice(0, i) || null, id: k.slice(i + 1) }; });
+    refTypesRef.current = Object.fromEntries(list.map(r => [r.id, r.type]));
     let live = true;
     exists(list).then(
       ans => { if (live) setRefStates(refCheckStates(list.map(r => r.id), ans)); },
@@ -474,6 +483,9 @@ export function TipTapField({
     shownMissingRef.current = key;
   }, [refStates, editor]);
   const missingIds = Object.keys(refStates).filter(k => refStates[k] === 'missing');
+  // Завести можно, если приложение умеет заводить и знает, какие поля задаёт ID.
+  const canCreate = !!(refs?.createSpec && refs?.onCreate && refs?.presetFor);
+  const createType = (id: string) => (canCreate ? refTypesRef.current[id] ?? null : null);
 
   // Поиск для окна ссылки: по запросу и типу; ответ устаревшего запроса не перетирает свежий.
   const refQuery = refOpen && !refOpen.trigger.unknownType ? `${refOpen.trigger.type ?? ''}\u0000${refOpen.trigger.query}` : null;
@@ -798,8 +810,34 @@ export function TipTapField({
             // MD-WINDOW §3a: ненайденные ссылки названы; сохранить можно — предупредит вызывающий.
             <div className="sk-md__refmissing" role="status" data-testid="kit-ref-missing">
               <span>{kitT(lang, 'kit.md.refMissing', { ids: missingIds.join(', ') })}</span>
+              {/* Кадры 16, 19: у каждой красной ссылки — «Завести» (тип известен по ссылке). */}
+              {missingIds.map(id => {
+                const ty = createType(id);
+                return ty ? (
+                  <button key={id} type="button" className="sk-btn" aria-label={`${t('kit.md.refCreate')} ${id}`}
+                    onClick={() => setCreateFor({ id, type: ty })}>{`${t('kit.md.refCreate')} ${id}`}</button>
+                ) : null;
+              })}
               <button type="button" className="sk-btn" onClick={() => setMissingHidden(true)}>{t('kit.md.refNotNow')}</button>
             </div>
+          )}
+          {missingIds.length > 0 && missingHidden && canCreate && (
+            // Кадр 17: после «Не сейчас» ссылки красные, а счётчик «Дозавести» остаётся — он и открывает меню.
+            <button type="button" className="sk-btn sk-md__refmore" onClick={() => setMissingHidden(false)}>
+              {kitT(lang, 'kit.md.refCreateMore', { n: missingIds.length })}
+            </button>
+          )}
+          {createFor && refs?.createSpec && refs.onCreate && (
+            <RefCreateCard id={createFor.id} type={createFor.type} typeLabels={refs.typeLabels}
+              createSpec={refs.createSpec} onCreate={refs.onCreate}
+              preset={refs.presetFor?.(createFor.id, createFor.type) ?? undefined}
+              onClose={() => setCreateFor(null)}
+              onDone={() => {
+                // Кадр 21: запись заведена под тем же ID — ссылка зелёная, счётчик уменьшился.
+                const id = createFor.id;
+                setRefStates(p => ({ ...p, [id]: 'ok' }));
+                setCreateFor(null);
+              }} />
           )}
           {editor?.isEmpty && placeholder && <div className="sk-md__placeholder" aria-hidden>{placeholder}</div>}
           {refOpen && refs && (
