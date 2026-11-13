@@ -104,6 +104,14 @@ public class LoreModelStore {
                 return;
             }
             String text = String.valueOf(open.get(0).get("content"));
+            // MC-07: модель засеяна файлом старого формата — досеваем недостающие разделы, правки LORE не трогаем.
+            Upgrade up = upgrade(text, LoreModelFile.render(LoreModelFile.load()));
+            if (!up.added().isEmpty()) {
+                write(up.text(), hashOf(up.text()), "досев разделов из файла: " + String.join(", ", up.added()),
+                    new ChangeAuthor("seed", ChangeAuthor.KIND_UNKNOWN));
+                text = up.text();
+                LOG.infof("[LORE MODEL] досеяны разделы из файла: %s", up.added());
+            }
             LoreModelFile.Content c = LoreModelFile.parse(text);
             LoreModelFile.replace(c);
             hash = hashOf(LoreModelFile.render(c));
@@ -125,6 +133,23 @@ public class LoreModelStore {
         source = "lore";
         warning = null;
         LOG.infof("[LORE MODEL] модель засеяна из файла, версия %s", hash);
+    }
+
+    /** Досев: текст модели и разделы верхнего уровня, взятые из файла. */
+    record Upgrade(String text, List<String> added) {}
+
+    /**
+     * MC-07: разделы верхнего уровня, которых нет в сохранённой модели, берутся из файла (новый формат —
+     * nav, audience); всё, что в сохранённой есть, остаётся как есть — правки в LORE не перетираются.
+     */
+    static Upgrade upgrade(String stored, String file) {
+        io.vertx.core.json.JsonObject s = new io.vertx.core.json.JsonObject(stored);
+        io.vertx.core.json.JsonObject f = new io.vertx.core.json.JsonObject(file);
+        List<String> added = new ArrayList<>();
+        for (String k : new java.util.TreeSet<>(f.fieldNames()))
+            if (!s.containsKey(k)) { s.put(k, f.getValue(k)); added.add(k); }
+        if (added.isEmpty()) return new Upgrade(stored, List.of());
+        return new Upgrade(LoreModelFile.render(LoreModelFile.parse(s.encode())), List.copyOf(added));
     }
 
     // ── Состояние для /lore/model ───────────────────────────────────────

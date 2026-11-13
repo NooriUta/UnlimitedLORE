@@ -82,7 +82,38 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
  * клиента. Рукописный список уже стоил находки аудита 09.11 — четыре кода в
  * него не попали, и у 89 задач корпуса чип выходил пустым.
  */
-export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string): KitConfig {
+/** Группа общего меню из модели (`surfaces.nav` в /lore/model, MC-07). Разделы — только уровня everywhere. */
+export interface ModelNavGroup {
+  id: string;
+  label_key: string;
+  tone: string;
+  pin_top?: boolean;
+  items: { section: string; icon: string; view?: string }[];
+}
+
+/**
+ * SPRINT_LORE_MODEL_AS_CONFIG/MC-07 (D-2026-LORE-MODEL-AUDIENCE-VISIBILITY): общее меню — из модели, а
+ * не из списка в коде. Видимость раздела (everywhere / detail / admin / hidden) решает сервер по
+ * конфигу модели; сюда приходят только пункты уровня everywhere. Раздел, которого клиент не знает
+ * (нет в V2_SECTIONS — нет экрана), отбрасывается, а не рисуется пустым пунктом.
+ */
+export function menuFromModel(lang: KitLang, nav: readonly ModelNavGroup[]): KitConfig['menu']['groups'] {
+  const t = (key: AppKey) => appT(lang, key);
+  const known = new Set<string>(V2_SECTIONS);
+  return nav
+    .map(g => ({
+      id: g.id,
+      title: t(g.label_key as AppKey),
+      tone: g.tone,
+      ...(g.pin_top ? { pinTop: true } : {}),
+      items: g.items.filter(i => known.has(i.section)).map(i => ({
+        id: i.section, title: t(`shell.sec.${i.section}` as AppKey), icon: i.icon, ...(i.view ? { view: i.view } : {}),
+      })),
+    }))
+    .filter(g => g.items.length > 0);
+}
+
+export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string, navFromModel?: readonly ModelNavGroup[]): KitConfig {
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
     ({ id, title: t(`shell.sec.${id}` as AppKey), icon, ...(view ? { view } : {}) });
@@ -99,7 +130,12 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       ...(module === ADMIN_MODULE ? [{ id: ADMIN_MODULE, title: t('shell.mod.admin'), icon: 'cog', status: 'active' as const }] : []),
     ],
     // S7B-01: у модуля admin своё меню — группы по смыслу и риску (adminMenu).
-    menu: module === ADMIN_MODULE ? adminMenu(lang) : {
+    menu: module === ADMIN_MODULE ? adminMenu(lang) : navFromModel && navFromModel.length ? {
+      myViews: true,
+      recent: true,
+      // MC-07: меню из модели (surfaces.nav); рукописное ниже — только когда модели нет.
+      groups: menuFromModel(lang, navFromModel),
+    } : {
       myViews: true,
       recent: true,
       groups: [
