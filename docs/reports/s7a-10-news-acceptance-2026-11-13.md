@@ -31,11 +31,50 @@
 - Новости v2 за неделю открываются, консоль без ошибок (Chrome, десктоп).
 - Скрин десктопа сохранён у агента; телефон 412 в этот заход не снимался.
 
+## 3a. Паритет: 30 функций SPEC-LORE-UXR-NEWS-PARITY (сверка по коду, 13.11)
+
+Итог: **21 есть, 8 частично, 1 снят** (п.10 «ещё N задач», D-2026-UXR-NEWS-V2-RULES). Сторож `web-next/src/news/feed/NewsParity.test.tsx` падает, если у пункта нет теста, но ищет только метку «Пn» в тексте файла: «тест есть» ≠ «пункт проверен целиком».
+
+| # | v2 | где | тест | заметка |
+|---|---|---|---|---|
+| 1 | да | NewsFeed.tsx:857-861, model.ts:195-205 | NewsFeed.test «П1, П2, П11»; e2e news-layout «п.1» | видов событий больше четырёх |
+| 2 | да | model.ts:181-192 | newsModel.test «иконки типов» | + веха, компонент, вопрос |
+| 3 | частично | NewsFeed.tsx:713-726; sticky — kit seidr.css:5939 | NewsFeed.test «П3» | залипание заголовка тестом не проверено |
+| 4 | да | NewsFeed.tsx:470-473, 784-824 | NewsFeed.test «П4»; e2e «п.4» | осей больше трёх, по умолчанию «по проектам» |
+| 5 | да | NewsFeed.tsx:663-664, bucketFigures.ts:287 | NewsFeed.test «П5» | числа из ответа сервера |
+| 6 | частично | bucketFigures.ts:263-292 | NewsParity.test «П6» | «заведено» = задачи / прочее; спринты отдельно не выделены |
+| 7 | частично | bucketFigures.ts:278-285; NewsFeed.tsx:565-571 | NewsParity.test «П7» (только полоса) | в подсказке чипа нет двух чисел (закрыто/заведено) |
+| 8 | да | bucketFigures.ts:288, сервер el_key | NewsParity.test «П8»; NewsV2EngineFixtureTest | — |
+| 9 | да | NewsFeed.tsx:166-179, 573-586; LoreNewsReadMarkStore | NewsFeed.test «прочитано (П9)»; LoreNewsReadMarkStoreTest | черта на сервере; «сама не тает» тестом не закреплено |
+| 10 | снято | свёртка ×N (NewsFeed.tsx:901) | сторож DROPPED={10} | по решению владелицы |
+| 11 | да | NewsFeed.tsx:871-906 | NewsFeed.test «П11»; e2e «п.11» | + код записи, автор, статус «откуда → куда» |
+| 12 | да | newsLinks.ts:9-12 | NewsFeed.test, newsModel.test | Enter/пробел тоже открывают |
+| 13 | частично | NewsFeed.tsx:183-209 | NewsFeed.test «ошибка… Повторить», «meta.state=empty» | нет теста на скелетон |
+| 14 | да | model.ts:90-91 (limit не шлётся) | newsModel.test «паритет 14»; EngineFixtureTest | обрезку честно показывает плашка meta.truncated |
+| 15 | частично | model.ts:12-15; LoreNewsV2Resource:72-80 | newsModel.test «период День/Неделя/Месяц» | from/to/days вместо since/before; подгрузки архива в UI нет |
+| 16 | да | LoreNewsV2Resource:140-144; NewsFeed.tsx:184-185 | NewsFeed.test «403 SCOPE_EMPTY» | — |
+| 17 | да | NewsV2Engine:946; NewsFeed.tsx:905 | NewsFeed.test «П17» | — |
+| 18 | частично | NewsV2Engine:115-118, 196 | NewsFeed.test «П18» | запись без времени встаёт в конец дня (23:59:59.999), а не 00:00; нет теста на порядок |
+| 19 | да | NewsV2Engine:218-222 | EngineFixtureTest prepareDropsChangedOnCreatedDay… | — |
+| 20 | да | LoreNewsV2Collector:233, 410-414 | CollectorTest historyRowsBecomeTaskChains… | — |
+| 21 | да (с исправлением) | model.ts:268-282 | NewsFeed.test «П21»; NewsCarriesAllProjectsLiveDbTest | событие во всех своих проектах |
+| 22 | да | model.ts:225-244 | NewsParity.test «П22» | — |
+| 23 | частично | NewsFeed.tsx:863, 892-903 | NewsParity.test «П23» | detail по видам как в v1 не воспроизведён |
+| 24 | да | NewsFeed.tsx:868, 886-891 | newsLinks.test П24 | задачи, спеки (и люди) — ссылки |
+| 25 | да | shell/v2Config.ts:113,148 | news.test «П25» | иконка town-crier заменена на lucide:megaphone (iconCanon.ts:11) |
+| 26 | да (с исправлением) | LoreNewsV2Resource:178; model.ts:159-176 | NewsFeed.test «П26»; news.test «502» | ответ без events = ошибка контракта |
+| 27 | да | NewsFeed.tsx:880-883, 507-509 | NewsParity.test «П27» | местное и UTC рядом + переключатель |
+| 28 | частично | seidr.css:5803, 6053 | e2e «нет горизонтальной прокрутки» | своего контейнера прокрутки и max-width не нашлось (раскладку задаёт каркас v4) |
+| 29 | да (с исправлением) | нативные button | NewsFeed.test «Enter и пробел»; e2e «п.29» | — |
+| 30 | да | news/feed/i18n.ts | NewsParity.test «П30» | — |
+
+**К решению владелицы (S7A-11):** п.7 (два числа в подсказке сгорания), п.15 (архив), п.18 (без времени — конец дня или 00:00), п.25 (иконка megaphone вместо town-crier), п.28 (ширина ленты), п.6 (спринты в «заведено»).
+
 ## 4. Не сделано в этом заходе (честно)
 
-- Чек-лист 30 функций SPEC-LORE-UXR-NEWS-PARITY — не пройден.
+- Чек-лист 30 функций — пройден по коду и тестам (§3a), на стенде вручную не прокликан.
 - Все разрезы, матрица «дни × проекты», ×N, Σ≠∪ — не пройдены.
-- Телефон 412 — не снят.
+- Телефон 412 на стенде — не снят: окно Chrome владелицы развёрнуто и не меняет ширину (innerWidth 2560, снимок завис по CDP), а встроенный браузер без входа (страница KC). Узкую раскладку покрывает e2e `news-narrow.spec.ts` на подставных данных.
 - GIF — не записан.
 
 ## BLOCKED
