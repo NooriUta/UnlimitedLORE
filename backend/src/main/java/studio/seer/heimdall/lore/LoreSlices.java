@@ -821,6 +821,9 @@ public final class LoreSlices {
         // принимающего. SQL отдаёт только задачу под скоупом и её проекты; строки {code, title,
         // kind} собирает TaskRoleService.identitiesOfTask теми же методами, что проверяет запись
         // роли (TR-05), — в AidaLoreResource. Нет задачи / нет проекта — ошибка, не пустой список.
+        // PU-17 шаг 3: сухой прогон «перенос потерял роли» — только чтение, свёртка LoreRolesLostOnMove.fold.
+        slice(LoreRolesLostOnMove.SLICE, LoreRolesLostOnMove.SQL, List.of(), Map.of(), "");
+
         slice(LoreTaskIdentities.SLICE,
             "SELECT task_uid, out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowTask WHERE task_uid = :id",
@@ -3134,6 +3137,7 @@ public final class LoreSlices {
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry(LoreTaskIdentities.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry(LoreRolesLostOnMove.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
