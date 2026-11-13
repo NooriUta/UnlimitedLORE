@@ -43,10 +43,14 @@ const T = {
   ru: {
     code: 'Код', model: 'Модель LORE не загрузилась — какие поля нужны, неизвестно; заведите запись в её паспорте',
     type: 'Этот тип из текста пока не заводится — только выбрать существующий', login: 'Не выполнен вход — без автора запись не заводится',
+    taken: 'Запись {id} уже есть — новая не заводится, иначе сервер перепишет существующую; выберите её в «Существующий»',
+    unchecked: 'Не смогли проверить, свободен ли код {id}, — запись не заведена; попробуйте ещё раз',
   },
   en: {
     code: 'Code', model: 'The LORE model did not load — which fields are needed is unknown; create the record in its passport',
     type: 'This type cannot be created from text yet — pick an existing one', login: 'Not signed in — a record cannot be created without its author',
+    taken: 'Record {id} already exists — not created, otherwise the server would overwrite it; pick it under “Existing”',
+    unchecked: 'Could not check whether code {id} is free — nothing created; try again',
   },
 } as const;
 
@@ -103,10 +107,25 @@ function bodyOf(type: Creatable, v: Record<string, string>, me: string): { path:
   }
 }
 
+/** Свободен ли код: true — записи нет (404), false — есть (200/403), null — проверить не смогли. */
+async function codeIsFree(type: string, id: string, fetchFn: FetchFn): Promise<boolean | null> {
+  try {
+    const r = await fetchFn(`/lore/record/${type}/${id.split('/').map(encodeURIComponent).join('/')}`);
+    return r.status === 404 ? true : r.ok || r.status === 403 ? false : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Завести запись. Отказ сервера — причина словами (окно остаётся открытым), а не «ничего не произошло». */
 export async function createLoreRecord(type: string, values: Record<string, string>, ctx: CreateCtx, fetchFn: FetchFn = loreFetch): Promise<RefCreateResult> {
   if (!(CREATABLE as readonly string[]).includes(type) || !ctx.me) return { ok: false, reason: T.ru.type };
   const { path, body, id } = bodyOf(type as Creatable, values, ctx.me);
+  // Сервер пишет UPSERT (ответ model-config 13.11): на занятый код он не скажет 409, а перепишет
+  // существующую запись. Поэтому прямо перед записью спрашиваем фасад: 404 — свободно; есть
+  // (200/403) — отказ словами; не смогли проверить — тоже отказ: «не смогли» ≠ «свободно».
+  const free = await codeIsFree(type, id, fetchFn);
+  if (free !== true) return { ok: false, reason: free === false ? T.ru.taken.replace('{id}', id) : T.ru.unchecked.replace('{id}', id) };
   let res: Response;
   try {
     res = await fetchFn(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
