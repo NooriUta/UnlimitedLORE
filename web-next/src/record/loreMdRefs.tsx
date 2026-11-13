@@ -44,6 +44,12 @@ const LABEL_KEY: Record<string, AppKey> = {
   use_case: 'mdref.type.use_case',
 };
 
+/**
+ * Люди — только на «@» (развилка 7, вариант б владелицы 12.11.2026: «@» — объекты и люди одним
+ * списком). «[[» и «#тип» остаются ссылками на записи.
+ */
+const PEOPLE_KEY: Record<string, AppKey> = { actor: 'mdref.type.actor' };
+
 /** Сколько пунктов показывать в окне: длиннее — уточняют запрос. */
 const MAX_ITEMS = 20;
 
@@ -51,7 +57,7 @@ const MAX_ITEMS = 20;
 export interface LoreRefCreateCtx { parents: Record<string, string>; me?: () => string | null }
 
 export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchImpl' | 'headers'> & { create?: LoreRefCreateCtx } = {}): TipTapRefSource {
-  const typeLabels = Object.fromEntries(Object.entries(LABEL_KEY).map(([t, k]) => [t, appT(lang, k)]));
+  const typeLabels = Object.fromEntries(Object.entries({ ...LABEL_KEY, ...PEOPLE_KEY }).map(([t, k]) => [t, appT(lang, k)]));
   const create = opts.create;
   const me = () => (create?.me ? create.me() : v2Auth.getState().user?.name ?? null);
   if (create) warmCreateModel(opts.fetchImpl);
@@ -71,10 +77,11 @@ export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchI
     // MD-WINDOW §3a: голые ID при вставке → [[тип:ID]], и сразу проверка, есть ли записи.
     forms: LORE_ID_FORMS,
     exists: refs => loreRefsExist(refs, opts.fetchImpl),
-    async search(query, type): Promise<RefItem[]> {
+    async search(query, type, trigger): Promise<RefItem[]> {
       const { rows } = await fetchSearchSlice(query.trim(), { ...opts, lang });
+      const allowed = (t: string) => t in LABEL_KEY || (trigger === 'at' && t in PEOPLE_KEY);
       return rows
-        .filter(r => r.type in LABEL_KEY && (!type || r.type === type))
+        .filter(r => allowed(r.type) && (!type || r.type === type))
         .slice(0, MAX_ITEMS)
         .map(r => ({ id: r.ref_id, type: r.type, title: r.title ?? '' }));
     },

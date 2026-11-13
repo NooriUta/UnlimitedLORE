@@ -8,6 +8,7 @@ const rows = [
   { type: 'adr', ref_id: 'ADR-LORE-050', title: 'Ссылка на объект' },
   { type: 'task', ref_id: 'SPRINT_X/MD-1', title: null },
   { type: 'quality_gate', ref_id: 'QG-1', title: 'Гейт' },
+  { type: 'actor', ref_id: 'ACT-ANNA', title: 'Анна' },
 ];
 const okFetch = () => vi.fn(async () => new Response(JSON.stringify({ rows }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
 
@@ -29,6 +30,15 @@ describe('loreMdRefs', () => {
       { id: 'ADR-LORE-050', type: 'adr', title: 'Ссылка на объект' },
       { id: 'SPRINT_X/MD-1', type: 'task', title: '' },
     ]);
+  });
+  it('«@» (развилка 7, вариант б владелицы 12.11): объекты и люди одним списком', async () => {
+    const r = loreMdRefs('ru', { fetchImpl: okFetch() });
+    expect((await r.search('ан', null, 'at')).map(i => i.id)).toEqual(['ADR-LORE-050', 'SPRINT_X/MD-1', 'ACT-ANNA']);
+    expect(r.typeLabels.actor).toBeTruthy();
+  });
+  it('«[[» без типа людей не предлагает — только объекты', async () => {
+    const r = loreMdRefs('ru', { fetchImpl: okFetch() });
+    expect((await r.search('ан', null, 'brackets')).map(i => i.id)).not.toContain('ACT-ANNA');
   });
   it('сужение по типу', async () => {
     const r = loreMdRefs('ru', { fetchImpl: okFetch() });

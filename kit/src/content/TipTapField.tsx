@@ -28,7 +28,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
-import { detectRefTrigger, refsInMd, type BareRefForm, type MdRef, type RefTrigger } from './refTrigger';
+import { detectRefTrigger, refsInMd, type BareRefForm, type MdRef, type RefTrigger, type RefTriggerKind } from './refTrigger';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
@@ -190,8 +190,11 @@ export interface TipTapRefSource {
   /** слово после «#» / префикс «[[тип:» (нижний регистр) → тип записи */
   types: Record<string, string>;
   typeLabels: Record<string, string>;
-  /** поиск; отказ (throw) — окно скажет «не смогли загрузить» с причиной */
-  search: (query: string, type: string | null) => Promise<RefItem[]>;
+  /**
+   * поиск; отказ (throw) — окно скажет «не смогли загрузить» с причиной. `trigger` — каким знаком
+   * открыто окно («@», «[[», «#»): приложение решает, что предлагать (у LORE «@» — объекты и люди).
+   */
+  search: (query: string, type: string | null, trigger?: RefTriggerKind) => Promise<RefItem[]>;
   createSpec?: RefPickerProps['createSpec'];
   onCreate?: RefPickerProps['onCreate'];
   /** с какой длины запроса искать (по умолчанию 1); короче — «введите слова поиска», поиск не зовётся */
@@ -481,7 +484,7 @@ export function TipTapField({
     if (open.trigger.query.trim().length < (src.minQuery ?? 1)) { setRefSearch({ state: 'idle' }); return; }
     let live = true;
     setRefSearch({ state: 'loading' });
-    src.search(open.trigger.query, open.trigger.type).then(
+    src.search(open.trigger.query, open.trigger.type, open.trigger.trigger).then(
       found => { if (live) setRefSearch({ state: 'ok', items: found }); },
       (e: unknown) => { if (live) setRefSearch({ state: 'error', reason: e instanceof Error ? e.message : String(e) }); },
     );

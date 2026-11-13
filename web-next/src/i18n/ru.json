@@ -852,6 +852,7 @@
   "mdref.type.sprint": "спринт",
   "mdref.type.runbook": "ранбук",
   "mdref.type.use_case": "сценарий",
+  "mdref.type.actor": "человек",
   "lists.feed.sec.note": "Заметка",
   "lists.feed.sec.rationale": "Обоснование",
   "lists.feed.sec.essence": "Суть",
