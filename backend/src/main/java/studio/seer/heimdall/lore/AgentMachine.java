@@ -141,6 +141,22 @@ final class AgentMachine {
         try { return java.time.Instant.parse(s); } catch (java.time.format.DateTimeParseException e) { return null; }
     }
 
+    /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина агента не указана или негодна. */
+    static final String UNKNOWN = "(unknown)";
+    /** Вызов человека: машина неприменима — это не «неизвестно». */
+    static final String NOT_APPLICABLE = "(n/a)";
+
+    /**
+     * Отметка машины вызова — одно правило для аудита, буфера отказов и whoami:
+     * агент — каноническое имя из X-Lore-Machine (без заголовка или с негодным — UNKNOWN);
+     * человек — NOT_APPLICABLE, даже если заголовок прислан.
+     */
+    static String mark(boolean agent, String rawHeader) {
+        if (!agent) return NOT_APPLICABLE;
+        String v = rawHeader == null ? "" : rawHeader.trim();
+        return !v.isEmpty() && SAFE.matcher(v).matches() ? canon(v) : UNKNOWN;
+    }
+
     static Verdict judge(ChangeAuthor author, String rawHeader, boolean required) {
         if (author == null || !ChangeAuthor.KIND_AGENT.equals(author.kind())) return Verdict.NOT_APPLICABLE;
         String v = rawHeader == null ? "" : rawHeader.trim();

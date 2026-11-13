@@ -52,6 +52,11 @@ final class Whoami {
         static final Graph EMPTY = new Graph(null, List.of(), List.of());
     }
 
+    /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина ЭТОГО вызова (агент — X-Lore-Machine, человек — «(n/a)»). */
+    static String machineOf(Token t, String rawHeader) {
+        return AgentMachine.mark(t.agentScope() != null, rawHeader);
+    }
+
     /** Роль первой оси — то же правило, что {@code SeerRoleFromTokenFilter}. */
     static String seerRole(Set<String> realmRoles) {
         if (realmRoles.contains("super-admin")) return "superadmin";

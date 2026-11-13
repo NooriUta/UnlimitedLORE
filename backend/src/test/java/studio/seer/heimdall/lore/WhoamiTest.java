@@ -92,6 +92,14 @@ class WhoamiTest {
         assertEquals(List.of(), b.get("write_families"));
     }
 
+    /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина вызова — агенту из заголовка, человеку «не применимо». */
+    @Test
+    void machineOfTheCall_agentFromHeader_humanNotApplicable() {
+        assertEquals("lorcetus", Whoami.machineOf(agent("full"), "LORCETUS"));
+        assertEquals(AgentMachine.UNKNOWN, Whoami.machineOf(agent("full"), null));
+        assertEquals(AgentMachine.NOT_APPLICABLE, Whoami.machineOf(human(), "lorcetus"));
+    }
+
     @Test
     void authOff_saysSo_noTokenFieldsInvented() {
         Map<String, Object> b = Whoami.body(Whoami.Token.authOff("admin"), Whoami.Graph.EMPTY);

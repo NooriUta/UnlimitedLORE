@@ -9,6 +9,7 @@
 import { useLoadState } from '@seidr/kit';
 import { useAppT } from '../i18n';
 import { getJson } from './actions';
+import { machineMark } from './machineMark';
 
 export interface WhoamiBody {
   auth_enabled?: boolean;
@@ -18,6 +19,8 @@ export interface WhoamiBody {
   client_id?: string | null;
   sub?: string | null;
   identity?: { state?: 'known' | 'unknown' | 'error'; display_name?: string; name?: string; reason?: string };
+  /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина этого вызова — имя | "(unknown)" | "(n/a)". */
+  machine?: string;
 }
 
 export type WhoamiState = 'known' | 'unknown' | 'error' | 'unverified';
@@ -43,6 +46,8 @@ export function WhoamiBar({ fetchImpl }: { fetchImpl?: typeof fetch }) {
       const name = b?.identity?.display_name ?? b?.identity?.name ?? b?.client_id ?? b?.sub ?? '—';
       text = b?.kind === 'agent'
         ? t('admin.whoami.agent', { name, profile: b?.profile ?? '—', client: b?.client_id ?? '—' })
+          + (machineMark(b?.machine).kind === 'name' ? t('admin.whoami.machine', { machine: b?.machine ?? '' })
+            : machineMark(b?.machine).kind === 'unknown' ? t('admin.whoami.machineUnknown') : '')
         : t('admin.whoami.human', { name, role });
       break;
     }

@@ -6,6 +6,7 @@ import { kitMinute } from '@seidr/kit/core';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import { DENIALS_SHOWN, fetchDenials, type DenialsData } from './denials';
+import { MachineCell } from './machineMark';
 import './Admin.css';
 
 export interface KcDenialsProps {
@@ -52,6 +53,7 @@ export function KcDenials({ fetchImpl }: KcDenialsProps) {
                 <th scope="col">{t('admin.denials.col.status')}</th>
                 <th scope="col">{t('admin.denials.col.error')}</th>
                 <th scope="col">{t('admin.denials.col.role')}</th>
+                <th scope="col">{t('admin.col.machine')}</th>
               </tr>
             </thead>
             <tbody>
@@ -65,6 +67,7 @@ export function KcDenials({ fetchImpl }: KcDenialsProps) {
                     <td><span className="adm-err adm-mono">{d.status ?? '—'}</span></td>
                     <td><span className="adm-mono">{d.error || '—'}</span></td>
                     <td><span className="adm-mono">{d.role || '—'}</span></td>
+                    <td><MachineCell value={d.machine} testId="adm-denial-machine" /></td>
                   </tr>
                 );
               })}
