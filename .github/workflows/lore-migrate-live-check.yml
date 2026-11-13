@@ -125,3 +125,9 @@ jobs:
       - name: Убрать ключ
         if: always()
         run: rm -f ~/.ssh/lore_host
+
+      # OH-17: контейнеры СВОЕГО прогона (метка lore.ci.run) снимаются, даже если
+      # джоб убит: trap скрипта при SIGKILL не срабатывает.
+      - name: Уборка контейнеров прогона
+        if: always()
+        run: bash .github/scripts/ci-teardown.sh "${{ github.run_id }}"

@@ -23,6 +23,10 @@
 #            LORE_MAVEN_MIRROR, LORE_PLUGIN_MIRROR, *_PROXY — в сборку образа.
 set -uo pipefail
 
+# OH-17: метка своего прогона на каждом контейнере — шаг ci-teardown.sh с if: always()
+# снимет их, даже если джоб убит (trap при SIGKILL не срабатывает).
+CI_LABEL="--label lore.ci.run=${GITHUB_RUN_ID:-local}"
+
 MODE="${1:-}"
 SRC_DIR="${SRC_DIR:-.}"
 VER="${ARCADEDB_VERSION:-26.11.1}"
@@ -47,11 +51,11 @@ trap cleanup EXIT
 NET="$(docker inspect "$(hostname)" --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}' 2>/dev/null | head -1)"
 start_ygg() {
   if [ -n "$NET" ]; then
-    docker run -d --name "$YGG" --network "$NET" -e JAVA_OPTS="-Darcadedb.server.rootPassword=$PW" "arcadedata/arcadedb:$VER" >/dev/null || die "ArcadeDB $VER не запустилась"
+    docker run -d $CI_LABEL --name "$YGG" --network "$NET" -e JAVA_OPTS="-Darcadedb.server.rootPassword=$PW" "arcadedata/arcadedb:$VER" >/dev/null || die "ArcadeDB $VER не запустилась"
     URL="http://$YGG:2480"; NETARG="--network $NET"
   else
     PORT="${EMPTYDB_PORT:-2498}"
-    docker run -d --name "$YGG" -p "172.17.0.1:$PORT:2480" -e JAVA_OPTS="-Darcadedb.server.rootPassword=$PW" "arcadedata/arcadedb:$VER" >/dev/null || die "ArcadeDB $VER не запустилась"
+    docker run -d $CI_LABEL --name "$YGG" -p "172.17.0.1:$PORT:2480" -e JAVA_OPTS="-Darcadedb.server.rootPassword=$PW" "arcadedata/arcadedb:$VER" >/dev/null || die "ArcadeDB $VER не запустилась"
     URL="http://172.17.0.1:$PORT"; NETARG=""
   fi
   for _ in $(seq 1 60); do ac "$URL/api/v1/databases" | grep -q '"result"' && return 0; sleep 1; done
@@ -87,7 +91,7 @@ case "$MODE" in
     srv "create database $DB" | grep -q '"ok"' || die "пустая база $DB не создана"
     say "накатка схемы с нуля (bootstrap + все шаги)"
     # shellcheck disable=SC2086
-    docker run --rm $NETARG --add-host=host.docker.internal:host-gateway \
+    docker run --rm $CI_LABEL $NETARG --add-host=host.docker.internal:host-gateway \
       -e MART_ARCADE_URL="$URL" -e ARCADEDB_USER=root -e ARCADEDB_ROOT_PASSWORD="$PW" -e LORE_DB="$DB" \
       -e LORE_BOOTSTRAP=true -e LORE_MIGRATE=true -e LORE_MIGRATE_ONLY=true -e LORE_MART_AUTH=basic \
       -e LORE_MIGRATE_BACKUP=false -e LORE_AUTH_ENABLED=false "$IMG" > "$OUT_DIR/migrate.log" 2>&1

@@ -56,6 +56,10 @@
 #                           Не задано — фаза 7 пропускается (в отчёте не упоминается)
 set -uo pipefail
 
+# OH-17: метка своего прогона на каждом контейнере — шаг ci-teardown.sh с if: always()
+# снимет их, даже если джоб убит (trap при SIGKILL не срабатывает).
+CI_LABEL="--label lore.ci.run=${GITHUB_RUN_ID:-local}"
+
 LABEL="$(printf '%s' "${LABEL:-manual}" | tr -c 'a-zA-Z0-9' '_' | cut -c1-24)"
 SRC_DIR="${SRC_DIR:-.}"
 SNAPSHOT="${SNAPSHOT:-auto}"
@@ -170,7 +174,7 @@ if [ "$YGG_CI" = own ]; then
   export ARCADEDB_ROOT_PASSWORD
   ARCADE_URL="http://$OWN_YGG:2480"
   say "своя ArcadeDB $prod_ver: $OWN_YGG в сети $NET"
-  docker run -d --name "$OWN_YGG" --network "$NET" \
+  docker run -d $CI_LABEL --name "$OWN_YGG" --network "$NET" \
     -e JAVA_OPTS="-Darcadedb.server.rootPassword=$ARCADEDB_ROOT_PASSWORD" "arcadedata/arcadedb:$prod_ver" >/dev/null \
     || skip "контейнер arcadedata/arcadedb:$prod_ver не запустился"
 fi
@@ -252,7 +256,7 @@ fi
 
 migrate() { # migrate <имя-лога> → 0, если накатка подтверждена
   # shellcheck disable=SC2086 # MIG_NET — «--network сеть» или пусто
-  docker run --rm $MIG_NET --add-host=host.docker.internal:host-gateway \
+  docker run --rm $CI_LABEL $MIG_NET --add-host=host.docker.internal:host-gateway \
     -e MART_ARCADE_URL="$ARCADE_URL" -e ARCADEDB_USER=root -e ARCADEDB_ROOT_PASSWORD \
     -e LORE_DB="$DB" -e LORE_MIGRATE=true -e LORE_MIGRATE_ONLY=true -e LORE_MART_AUTH=basic \
     -e LORE_MIGRATE_BACKUP=false -e LORE_AUTH_ENABLED=false \
@@ -278,7 +282,7 @@ if [ -n "$MIG_NET" ]; then RT_URL="http://$RT_NAME:9100"; RT_PUB=""; else RT_URL
 rt_up() { # rt_up <образ> <метка> → 0, если поднялось
   docker rm -f "$RT_NAME" >/dev/null 2>&1
   # shellcheck disable=SC2086
-  docker run -d --name "$RT_NAME" $MIG_NET $RT_PUB --add-host=host.docker.internal:host-gateway \
+  docker run -d $CI_LABEL --name "$RT_NAME" $MIG_NET $RT_PUB --add-host=host.docker.internal:host-gateway \
     -e MART_ARCADE_URL="$ARCADE_URL" -e ARCADEDB_USER=root -e ARCADEDB_ROOT_PASSWORD \
     -e LORE_DB="$DB" -e LORE_MART_AUTH=basic -e LORE_AUTH_ENABLED=false -e LORE_MIGRATE=false \
     "$1" >/dev/null || return 1
