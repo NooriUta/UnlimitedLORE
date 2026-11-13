@@ -337,10 +337,16 @@ rt_get() { # rt_get <метка>: ответы ключевых адресов �
     curl -s --noproxy '*' -m 60 -H 'X-Seer-Role: admin' -o "$d/$i.json" -w '%{http_code}\n' "$RT_URL$p" > "$d/$i.code"
   done
 }
-rt_same() { # rt_same <a> <b> → печатает расходящиеся адреса; код 0 — всё равно
-  python3 - "$REPORT_DIR/rt-$1" "$REPORT_DIR/rt-$2" $RT_PATHS <<'PY'
+# Адреса-«данные»: их ответ по замыслу следует за записями LORE, а не за кодом.
+# /lore/model с MC-05 — запись KnowModelConfig: накатка нового кода пересеивает её,
+# и прежний образ после этого ЧИТАЕТ новую модель (seed_drift=true). Расхождение
+# там — 🟡 (строка с «~»), а не поломка отката (прогон #1339, 14.11.2026).
+RT_SOFT="${RT_SOFT:-/lore/model}"
+rt_same() { # rt_same <a> <b> → печатает расходящиеся адреса; код 0 — жёстких расхождений нет
+  RT_SOFT="$RT_SOFT" python3 - "$REPORT_DIR/rt-$1" "$REPORT_DIR/rt-$2" $RT_PATHS <<'PY'
 import json, os, sys
 a, b, paths = sys.argv[1], sys.argv[2], sys.argv[3:]
+soft = set(os.environ.get("RT_SOFT", "").split())
 def load(d, i):
     code = open(os.path.join(d, f"{i}.code")).read().strip()
     raw = open(os.path.join(d, f"{i}.json"), encoding="utf-8", errors="replace").read()
@@ -351,14 +357,16 @@ bad = 0
 for i, p in enumerate(paths, 1):
     ca, ba = load(a, i); cb, bb = load(b, i)
     if ca != cb or ba != bb:
-        bad += 1
+        # мягкий адрес мягок только при 200 → 200: отказ отвечать — всегда жёстко
+        hard = not (p in soft and ca == cb == "200")
+        bad += hard
         keys = ""
         try:
             ja, jb = json.loads(ba), json.loads(bb)
             if isinstance(ja, dict) and isinstance(jb, dict):
                 keys = " ключи: " + ", ".join(k for k in sorted(set(ja) | set(jb)) if json.dumps(ja.get(k), sort_keys=True) != json.dumps(jb.get(k), sort_keys=True))[:300]
         except Exception: pass
-        print(f"  {p}: {ca} → {cb}{keys}")
+        print(f"  {'' if hard else '~ '}{p}: {ca} → {cb}{keys}")
 sys.exit(1 if bad else 0)
 PY
 }
@@ -406,7 +414,11 @@ if [ -n "$BASE_IMG" ]; then
   if rt_up "$BASE_IMG" base-new; then
     rt_get base-new; rt_down base-new
     if diff_out="$(rt_same base-old base-new)"; then
-      note "- 🟢 прежний образ на новой схеме отвечает так же, как на старой"
+      if [ -z "$diff_out" ]; then
+        note "- 🟢 прежний образ на новой схеме отвечает так же, как на старой"
+      else
+        note "- 🟡 прежний образ на новой схеме: записи и срезы те же, но модель из LORE другая — накатка нового кода пересеяла KnowModelConfig, прежний код читает новую модель (сверить, что прежний UI её переживёт):"; note "$diff_out"
+      fi
     else
       note "- 🔴 прежний образ на новой схеме отвечает иначе:"; note "$diff_out"
       VERDICT=1
@@ -428,7 +440,7 @@ if [ -n "$BASE_IMG" ]; then
     else
       note "- 🔴 новый образ не поднялся повторно (rt-new-2.log)"; VERDICT=1
     fi
-    if diff_out="$(rt_same base-old new-1)"; then
+    if diff_out="$(rt_same base-old new-1)" && [ -z "$diff_out" ]; then
       note "- 🟢 новый образ отвечает так же, как прежний до накатки"
     else
       note "- 🟡 ответы нового образа отличаются от прежнего до накатки (изменения кода — сверить с составом релиза):"; note "$diff_out"
