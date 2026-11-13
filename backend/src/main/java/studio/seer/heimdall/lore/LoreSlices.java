@@ -3270,7 +3270,7 @@ public final class LoreSlices {
      * список, а не умолчание: каждая запись — открытая дыра, видимая в коде.
      */
     static final Map<String, String> SCOPE_PENDING = Map.ofEntries(
-        Map.entry("search", "сложный SQL (подзапрос); вместе с эндпоинтом /lore/search — отдельным шагом"),
+        Map.entry("search", "сложный SQL (подзапрос); эндпоинт /lore/search под скоупом с AL-SCOPE-HOLES A, легаси-срез палитры — ещё нет"),
         Map.entry("product_hygiene", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("strategic_coverage", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("milestones", "вехи M0…M7 не связаны с проектами (MT-GOALS) — решение о модели вех"),
