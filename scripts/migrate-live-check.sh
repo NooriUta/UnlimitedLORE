@@ -11,7 +11,8 @@
 #      бэкенда прода (данные прода не меняются, в каталоге бэкапов LORE-ygg
 #      lore-host появляется ещё один архив — как у PL-04); `latest` — самый
 #      свежий уже лежащий архив, ничего на проде не делается; `auto` (по
-#      умолчанию) — latest, если он моложе MAX_AGE_H часов, иначе fresh.
+#      умолчанию) — latest, если он моложе MAX_AGE_H часов И снят после старта
+#      прод-бэкенда (иначе схема в нём старше прода), иначе fresh.
 #      Архив потоком по ssh, сверка sha256;
 #   2. разворачивает его в тест-контейнере CI (LORE-ygg-ci, порт 2482 только на
 #      docker0) под ОДНОРАЗОВЫМ именем lore_migcheck_<метка>_<время>;
@@ -55,6 +56,31 @@
 #                           (откат кода без отката базы); новый образ — старт №1 и №2.
 #                           Не задано — фаза 7 пропускается (в отчёте не упоминается)
 set -uo pipefail
+
+# Выбор снимка для auto. Архив годится, только если он моложе MAX_AGE_H И снят
+# ПОСЛЕ старта прод-бэкенда. Выкатка снимает бэкап ДО накатки и стартует бэкенд
+# уже на новой схеме: 14.11.2026 архив 21:23:52 (v81) был «моложе суток», а прод
+# с 21:23:55 на v84 — прежний образ (main) законно отказался стартовать на копии,
+# и проверка каждого PR вышла «не выполнилась».
+#   snap_mode <mode> <age_h> <max_age_h> <archive_epoch> <backend_start_epoch|"">
+snap_mode() {
+  local mode="$1" age="$2" max="$3" arch="$4" start="$5"
+  [ "$mode" = auto ] || { echo "$mode"; return; }
+  [ -n "$arch" ] && [ "$age" -le "$max" ] || { echo fresh; return; }
+  # старт бэкенда неизвестен — архиву верить нельзя
+  [ -n "$start" ] && [ "$arch" -gt "$start" ] && echo latest || echo fresh
+}
+if [ "${1:-}" = "--selftest" ]; then
+  fail=0
+  t() { got="$(snap_mode "$1" "$2" "$3" "$4" "$5")"; [ "$got" = "$6" ] || { echo "::error::selftest: snap_mode $* → $got"; fail=1; }; }
+  t auto 2 24 1000 900 latest     # архив после старта, свежий
+  t auto 2 24 1000 1003 fresh     # случай 14.11: бэкап выкатки за 3 с до старта
+  t auto 30 24 1000 900 fresh     # старый
+  t auto 2 24 1000 "" fresh       # старт бэкенда неизвестен
+  t auto 2 24 "" 900 fresh        # архива нет
+  t latest 2 24 1000 1003 latest  # явный режим не трогаем
+  [ "$fail" = 0 ] && echo "selftest ok"; exit "$fail"
+fi
 
 # OH-17: метка своего прогона на каждом контейнере — шаг ci-teardown.sh с if: always()
 # снимет их, даже если джоб убит (trap при SIGKILL не срабатывает).
@@ -133,15 +159,19 @@ else
   prod_img="$(r "docker inspect -f '{{.Config.Image}}' $REMOTE_YGG")" || skip "lore-host: контейнер $REMOTE_YGG не найден"
   prod_ver="${prod_img##*:}"
   latest="$(r "docker exec $REMOTE_YGG sh -c 'ls -1t /home/arcadedb/backups/$SOURCE_DB/$SOURCE_DB-backup-*.zip 2>/dev/null | head -1'")"
-  age_h=999999
+  age_h=999999; mt=""
   if [ -n "$latest" ]; then
     mt="$(r "docker exec $REMOTE_YGG stat -c %Y '$latest'")"
     [ -n "$mt" ] && age_h=$(( ( $(date +%s) - mt ) / 3600 ))
   fi
-  mode="$SNAPSHOT"
-  if [ "$mode" = auto ]; then
-    if [ -n "$latest" ] && [ "$age_h" -le "$MAX_AGE_H" ]; then mode=latest; else mode=fresh; fi
+  started=""
+  if [ "$SNAPSHOT" = auto ]; then
+    st="$(r "cd $REMOTE_BACKEND_DIR && c=\$(docker compose ps -q lore-backend | head -1) && [ -n \"\$c\" ] && docker inspect -f '{{.State.StartedAt}}' \$c")"
+    [ -n "$st" ] && started="$(date -d "$st" +%s 2>/dev/null)"
   fi
+  mode="$(snap_mode "$SNAPSHOT" "$age_h" "$MAX_AGE_H" "${mt:-}" "$started")"
+  [ "$SNAPSHOT" = auto ] && [ "$mode" = fresh ] && [ -n "$latest" ] && [ "$age_h" -le "$MAX_AGE_H" ] \
+    && say "архив $(basename "$latest") снят до старта прод-бэкенда ($st) — схема в нём может быть старше прода, снимаю свежий"
   if [ "$mode" = fresh ]; then
     say "lore-host: BACKUP DATABASE $SOURCE_DB (данные прода не меняются)"
     bcid="$(r "cd $REMOTE_BACKEND_DIR && docker compose ps -q lore-backend" | head -1)"
