@@ -10,7 +10,7 @@ import { useId, useState } from 'react';
 import { Popover, type RecordPlacement } from '@seidr/kit';
 import { useAppT } from '../i18n';
 
-const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
+const PLACES: readonly RecordPlacement[] = ['left', 'right', 'bottom', 'full'];
 
 export interface PassportPlaceProps {
   /** Где паспорт открыт сейчас — отметка выбранного пункта. */

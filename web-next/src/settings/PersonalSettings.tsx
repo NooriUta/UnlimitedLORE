@@ -69,7 +69,10 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
     setting: keyof UserSettings, labelKey: MessageKey, value: V, options: Opt<V>[],
     onPick: (v: V) => void, hintKey?: MessageKey,
   ) => (
-    <SettingRow setting={setting} label={t(lang, labelKey)} hint={hintKey ? t(lang, hintKey) : undefined}>
+    // PU-08 (владелица 13.11: «описание над кнопками»): сегмент из 3+ вариантов — под описанием;
+    // вкл/выкл (2 варианта) остаются в строке.
+    <SettingRow setting={setting} label={t(lang, labelKey)} hint={hintKey ? t(lang, hintKey) : undefined}
+      layout={options.length > 2 ? 'stack' : 'row'}>
       <Segmented label={t(lang, labelKey)} value={value} options={options} onChange={onPick} disabled={busy} />
     </SettingRow>
   );
@@ -77,7 +80,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
   return (
     <section className="settings" aria-label={t(lang, 'settings.title')} aria-busy={busy}>
       <p className="settings-note">{t(lang, busy ? 'settings.saving' : 'settings.serverNote')}</p>
-      {(palettes?.notes.length ?? 0) > 0 && (
+      {s.show_tech && (palettes?.notes.length ?? 0) > 0 && (
         // Откуда взялся список палитр — это про ЧЕСТНОСТЬ выбора: «модель не
         // прислала раздел» и «палитра без статьи в справочнике» человек должен
         // видеть словами, иначе список темы kit выглядит выбором модели.
@@ -142,7 +145,7 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         v => onChange({ graph_view: v }), 'settings.graphView.hint')}
       {row('passport_place', 'settings.passportPlace.label', s.passport_place,
         opts(lang, [
-          ['auto', 'settings.passportPlace.auto'], ['right', 'settings.passportPlace.right'],
+          ['auto', 'settings.passportPlace.auto'], ['left', 'settings.passportPlace.left'], ['right', 'settings.passportPlace.right'],
           ['bottom', 'settings.passportPlace.bottom'], ['full', 'settings.passportPlace.full'],
         ] as const),
         v => onChange({ passport_place: v }), 'settings.passportPlace.hint')}

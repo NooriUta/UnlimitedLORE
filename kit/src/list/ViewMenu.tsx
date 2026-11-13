@@ -46,7 +46,7 @@ export interface ViewMenuProps {
   narrow?: boolean;
 }
 
-const PLACES: readonly RecordPlacement[] = ['right', 'bottom', 'full'];
+const PLACES: readonly RecordPlacement[] = ['left', 'right', 'bottom', 'full'];
 
 export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onColumns, kinds, narrow = false }: ViewMenuProps) {
   const lang = useKitLang();
