@@ -1,0 +1,187 @@
+{
+  "controls": [
+    {
+      "tag": "a",
+      "cls": "sk-shell__skip",
+      "aria": null,
+      "title": null,
+      "txt": "Перейти к содержимому",
+      "l": -9999,
+      "t": 6,
+      "w": 148,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "cls": "sk-iconbtn",
+      "aria": "Меню",
+      "title": "Меню",
+      "txt": "",
+      "l": 4,
+      "t": 10,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "cls": "sk-scope__trigger",
+      "aria": "Проекты: Все проекты · 26",
+      "title": null,
+      "txt": "ПроектыВсе проекты · 26▾",
+      "l": 75,
+      "t": 7,
+      "w": 119,
+      "h": 30
+    },
+    {
+      "tag": "button",
+      "cls": "sk-ptrig__search",
+      "aria": "Поиск по LORE… (/)",
+      "title": null,
+      "txt": "Поиск по LORE…/",
+      "l": 241,
+      "t": 8,
+      "w": 35,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "cls": "sk-ptrig__cmd",
+      "aria": "Команды (Ctrl K)",
+      "title": null,
+      "txt": "КомандыCtrlK",
+      "l": 283,
+      "t": 8,
+      "w": 35,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "cls": "sk-shell__account",
+      "aria": null,
+      "title": null,
+      "txt": "O",
+      "l": 320,
+      "t": 6,
+      "w": 36,
+      "h": 32
+    },
+    {
+      "tag": "button",
+      "cls": "sk-avatar",
+      "aria": "omiloreadmin — личные настройки",
+      "title": "omiloreadmin — личные настройки",
+      "txt": "O",
+      "l": 324,
+      "t": 6,
+      "w": 32,
+      "h": 32
+    },
+    {
+      "tag": "button",
+      "cls": "sk-shell__dock-item",
+      "aria": "Forseti",
+      "title": "Forseti",
+      "txt": "Forseti",
+      "l": 0,
+      "t": 752,
+      "w": 90,
+      "h": 48
+    },
+    {
+      "tag": "button",
+      "cls": "sk-shell__dock-item",
+      "aria": "BRAGI · скоро",
+      "title": "Модуль запланирован — пока недоступен",
+      "txt": "BRAGI",
+      "l": 90,
+      "t": 752,
+      "w": 90,
+      "h": 48
+    },
+    {
+      "tag": "button",
+      "cls": "sk-shell__dock-item",
+      "aria": "MUNINN · скоро",
+      "title": "Модуль запланирован — пока недоступен",
+      "txt": "MUNINN",
+      "l": 180,
+      "t": 752,
+      "w": 90,
+      "h": 48
+    },
+    {
+      "tag": "button",
+      "cls": "sk-shell__dock-item",
+      "aria": "TYR · скоро",
+      "title": "Модуль запланирован — пока недоступен",
+      "txt": "TYR",
+      "l": 270,
+      "t": 752,
+      "w": 90,
+      "h": 48
+    }
+  ],
+  "chipsChain": [
+    {
+      "cls": "sk-news__types",
+      "ox": "visible",
+      "sw": 419,
+      "cw": 419
+    },
+    {
+      "cls": "sk-news__frow",
+      "ox": "visible",
+      "sw": 420,
+      "cw": 344
+    },
+    {
+      "cls": "sk-news__filters",
+      "ox": "visible",
+      "sw": 420,
+      "cw": 344
+    },
+    {
+      "cls": "sk-news",
+      "ox": "visible",
+      "sw": 420,
+      "cw": 344
+    },
+    {
+      "cls": "v2-screen",
+      "ox": "visible",
+      "sw": 428,
+      "cw": 360
+    },
+    {
+      "cls": "sk-shell__main",
+      "ox": "clip",
+      "sw": 428,
+      "cw": 360
+    },
+    {
+      "cls": "sk-shell__body",
+      "ox": "visible",
+      "sw": 360,
+      "cw": 360
+    },
+    {
+      "cls": "sk-shell sk-shell--narrow",
+      "ox": "visible",
+      "sw": 360,
+      "cw": 360
+    },
+    {
+      "cls": "v2-app",
+      "ox": "visible",
+      "sw": 360,
+      "cw": 360
+    },
+    {
+      "cls": "",
+      "ox": "visible",
+      "sw": 360,
+      "cw": 360
+    }
+  ]
+}

@@ -230,6 +230,7 @@
   "pp.modelNotes": "Оговорки модели: {n}",
   "pp.modelNotes.tech": "тех. модели",
   "pp.modelNotes.badge": "⚠ {n}",
+  "pp.modelNotes.kind": "оговорки модели",
   "pp.loading": "Загружаем паспорт",
   "pp.opt.people": "Люди",
   "pp.opt.agents": "Агенты",

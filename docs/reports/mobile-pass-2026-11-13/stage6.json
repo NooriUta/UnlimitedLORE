@@ -1,0 +1,138 @@
+{
+  "drawerScroll": [
+    {
+      "cls": "sk-shell__top-end",
+      "ox": "visible",
+      "sw": 81,
+      "cw": 77,
+      "t": 8,
+      "txt": "Поиск по LORE…/КомандыCtrlK"
+    },
+    {
+      "cls": "sk-ptrig",
+      "ox": "visible",
+      "sw": 81,
+      "cw": 77,
+      "t": 8,
+      "txt": "Поиск по LORE…/КомандыCtrlK"
+    },
+    {
+      "cls": "sk-shell__main",
+      "ox": "clip",
+      "sw": 428,
+      "cw": 360,
+      "t": 44,
+      "txt": "НовостиДеньНеделяМесяцЕщё−103сгорание−369 · -138,7"
+    },
+    {
+      "cls": "v2-screen",
+      "ox": "visible",
+      "sw": 428,
+      "cw": 360,
+      "t": 44,
+      "txt": "НовостиДеньНеделяМесяцЕщё−103сгорание−369 · -138,7"
+    },
+    {
+      "cls": "sk-news",
+      "ox": "visible",
+      "sw": 420,
+      "cw": 344,
+      "t": 72,
+      "txt": "ДеньНеделяМесяцЕщё−103сгорание−369 · -138,7 %Черта"
+    },
+    {
+      "cls": "sk-news__filters",
+      "ox": "visible",
+      "sw": 420,
+      "cw": 344,
+      "t": 194,
+      "txt": "Проект▾Компонент▾Кто▾ADR18компонент10решение90вопр"
+    },
+    {
+      "cls": "sk-news__frow",
+      "ox": "visible",
+      "sw": 420,
+      "cw": 344,
+      "t": 194,
+      "txt": "Проект▾Компонент▾Кто▾ADR18компонент10решение90вопр"
+    },
+    {
+      "cls": "sk-news__ref",
+      "ox": "hidden",
+      "sw": 174,
+      "cw": 123,
+      "t": 3164,
+      "txt": "SPRINT_MINILORE_GOALS_MULTIHARNESS"
+    },
+    {
+      "cls": "sk-news__ref",
+      "ox": "hidden",
+      "sw": 174,
+      "cw": 123,
+      "t": 3525,
+      "txt": "SPRINT_MINILORE_GOALS_MULTIHARNESS"
+    },
+    {
+      "cls": "sk-news__ref",
+      "ox": "hidden",
+      "sw": 138,
+      "cw": 123,
+      "t": 3766,
+      "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+    },
+    {
+      "cls": "sk-news__ref",
+      "ox": "hidden",
+      "sw": 138,
+      "cw": 123,
+      "t": 3870,
+      "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+    },
+    {
+      "cls": "sk-news__ref",
+      "ox": "hidden",
+      "sw": 138,
+      "cw": 123,
+      "t": 3973,
+      "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+    }
+  ],
+  "sprintItem": {
+    "tag": "span",
+    "cls": "sk-shell__label",
+    "x": 190.6666717529297,
+    "y": 341.1354269981384
+  },
+  "03-list-sprints": {
+    "url": "https://new.lore.odal.seidrstudio.pro/?sec=sprint&mod=forseti",
+    "overCount": 1,
+    "bodyStart": "Перейти к содержимому V2 Все проекты · 26 O Спринты Вид: Карточки ▾ + Новая Фильтр, группировка и порядок ▾ БЫСТРО В работе 86 Заблокирован 1 Запланирован 51 Без релиза 153 Показано 537 из 537 В работе SPRINT_LORE_WORK_ANY_KIND Работа любого типа: тип продукта ИТ/не ИТ, роли связей, SERVES, проект б"
+  },
+  "listScroll": [
+    {
+      "cls": "sk-shell__top-end",
+      "ox": "visible",
+      "sw": 81,
+      "cw": 77,
+      "t": 8,
+      "txt": "Поиск по LORE…/КомандыCtrlK"
+    },
+    {
+      "cls": "sk-ptrig",
+      "ox": "visible",
+      "sw": 81,
+      "cw": 77,
+      "t": 8,
+      "txt": "Поиск по LORE…/КомандыCtrlK"
+    },
+    {
+      "cls": "sk-pill sk-pill--id",
+      "ox": "hidden",
+      "sw": 206,
+      "cw": 192,
+      "t": 13678,
+      "txt": "SPRINT_MIMIR_TOKEN_USAGE_ACCOUNTING"
+    }
+  ],
+  "row": null
+}

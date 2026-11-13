@@ -12,7 +12,7 @@
 //   • модель пришла, но порядок для типа не задан;
 //   • модель пришла, а форма не та (сторож отказал).
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons, TechVisibilityProvider } from '@seidr/kit';
 import { fetchPassportOrder } from './passportOrder';
@@ -121,19 +121,18 @@ describe('паспорт: причина видна человеку, а не т
     render(<TechVisibilityProvider show><ListPassport type="sprint" id="SPRINT_A" placement="bottom"
       fetchImpl={passportNet({})} backLabel="Спринты" onBack={() => {}} /></TechVisibilityProvider>);
     expect(await screen.findByText('Спринт А', {}, { timeout: 8000 })).toBeTruthy();
+    // MP2-08 (13.11.2026): оговорки модели — под значком warnings с попапом,
+    // а не полосой/шевроном в компоновке. Значок обязан называть число:
+    // иначе «свёрнуто» прочтётся как «оговорок нет».
+    const btn = await screen.findByRole('button', { name: /Состояние данных:/ }, { timeout: 8000 });
+    expect(btn.textContent ?? '').toMatch(/[1-9]/);
+    expect(document.querySelector('.pp-model-note'), 'полосы оговорок в компоновке нет').toBeNull();
+    fireEvent.click(btn);
+    const pop = document.querySelector('.sk-warn__pop') as HTMLElement;
+    expect(pop, 'поповер warnings открылся').toBeTruthy();
     await waitFor(() => {
-      expect(document.body.textContent ?? '').toMatch(/умолчание приложения/);
+      expect(pop.textContent ?? '').toMatch(/умолчание приложения/);
     }, { timeout: 8000 });
-    // Объявлено состоянием, а не ошибкой: ошибки здесь нет.
-    expect(document.querySelector('.pp-model-note[role="status"]')).toBeTruthy();
-    // С B14 оговорки свёрнуты в шеврон, и этой проверки стало недостаточно: в
-    // jsdom текст закрытого <details> попадает в textContent, то есть прежнее
-    // утверждение прошло бы и для спрятанной оговорки. Поэтому требуем, чтобы
-    // САМА строка шеврона называла число — иначе «свёрнуто» прочтётся как
-    // «оговорок нет».
-    const sum = document.querySelector('.pp-model-note summary');
-    expect(sum, 'оговорки должны быть в свёртке с подписью').toBeTruthy();
-    expect(sum!.textContent ?? '').toMatch(/[1-9]/);
   }, 15000);
 
   it('порядок задан — лишних слов на экране нет', async () => {

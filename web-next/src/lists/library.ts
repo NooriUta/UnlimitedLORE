@@ -89,3 +89,17 @@ export function withCalendar(cfg: KitConfig, dates: readonly CalendarDate[]): Ki
     list: { ...list, views: list.views.includes('calendar') ? list.views : [...list.views, 'calendar'], calendar: { date: dates[0].field } },
   };
 }
+
+/**
+ * Конфиг раздела + библиотека (MP2-12): «Библиотека» — ВИД движка списка kit
+ * (`lv=library`, радиокнопка в меню видов наравне с лентой и карточками), а не
+ * соседняя кнопка в шапке. Адрес `?lib=1` остаётся рабочим входом в вид:
+ * экран переводит его в состояние вида при загрузке.
+ */
+export function withLibrary(cfg: KitConfig): KitConfig {
+  const list = cfg.list!;
+  return {
+    ...cfg,
+    list: { ...list, views: list.views.includes('library') ? list.views : [...list.views, 'library'] },
+  };
+}

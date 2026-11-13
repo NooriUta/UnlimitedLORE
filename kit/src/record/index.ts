@@ -28,6 +28,9 @@ export * from './RecordDock';
 export * from './RecordRelations';
 export * from './dataState';
 export * from './DataStateBlock';
+// MP2-08: технические сообщения записи — под одним значком warnings с попапом.
+export * from './warnings';
+export * from './DataStateWarnings';
 // Вложенный блок вида: строка раздела / карточка / тело паспорта одним
 // компонентом, без третьего рендера (S4-TREE-NESTED).
 export { KindBlock, KindCell, kindColumns, kindColumnTitle, type KindBlockAs, type KindBlockProps } from './KindBlock';

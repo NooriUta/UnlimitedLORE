@@ -1,0 +1,628 @@
+{
+  "sheet": {
+    "hosts": [],
+    "hScrollables": [
+      {
+        "tag": "div",
+        "cls": "sk-shell__top-end",
+        "ox": "visible",
+        "sw": 81,
+        "cw": 77,
+        "txt": "Поиск по LORE…/КомандыCtrlK"
+      },
+      {
+        "tag": "span",
+        "cls": "sk-ptrig",
+        "ox": "visible",
+        "sw": 81,
+        "cw": 77,
+        "txt": "Поиск по LORE…/КомандыCtrlK"
+      },
+      {
+        "tag": "main",
+        "cls": "sk-shell__main",
+        "ox": "clip",
+        "sw": 428,
+        "cw": 360,
+        "txt": "НовостиДеньНеделяМесяцЕщё−103сгорание−369 · -138,7 %Черта «п"
+      },
+      {
+        "tag": "section",
+        "cls": "v2-screen",
+        "ox": "visible",
+        "sw": 428,
+        "cw": 360,
+        "txt": "НовостиДеньНеделяМесяцЕщё−103сгорание−369 · -138,7 %Черта «п"
+      },
+      {
+        "tag": "div",
+        "cls": "sk-news",
+        "ox": "visible",
+        "sw": 420,
+        "cw": 344,
+        "txt": "ДеньНеделяМесяцЕщё−103сгорание−369 · -138,7 %Черта «прочитан"
+      },
+      {
+        "tag": "div",
+        "cls": "sk-news__filters",
+        "ox": "visible",
+        "sw": 420,
+        "cw": 344,
+        "txt": "Проект▾Компонент▾Кто▾ADR18компонент10решение90вопрос24релиз4"
+      },
+      {
+        "tag": "div",
+        "cls": "sk-news__frow",
+        "ox": "visible",
+        "sw": 420,
+        "cw": 344,
+        "txt": "Проект▾Компонент▾Кто▾ADR18компонент10решение90вопрос24релиз4"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 174,
+        "cw": 123,
+        "txt": "SPRINT_MINILORE_GOALS_MULTIHARNESS"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 174,
+        "cw": 123,
+        "txt": "SPRINT_MINILORE_GOALS_MULTIHARNESS"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 138,
+        "cw": 123,
+        "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 138,
+        "cw": 123,
+        "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 138,
+        "cw": 123,
+        "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 138,
+        "cw": 123,
+        "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 138,
+        "cw": 123,
+        "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+      },
+      {
+        "tag": "a",
+        "cls": "sk-news__ref",
+        "ox": "hidden",
+        "sw": 138,
+        "cw": 123,
+        "txt": "SPRINT_KIMI_DSH_INTEGRATION"
+      }
+    ],
+    "palRow": {
+      "cls": "sk-setting",
+      "ox": "visible",
+      "sw": 430,
+      "cw": 335,
+      "l": 13,
+      "r": 348
+    }
+  },
+  "02-settings-sheet": {
+    "url": "https://new.lore.odal.seidrstudio.pro/?sec=sprints",
+    "overCount": 7,
+    "bodyStart": "Перейти к содержимому V2 Все проекты · 26 O Новости День Неделя Месяц Ещё −103 сгорание −369 · -138,7 % Черта «прочитано» не поставлена Прочитано ⚠ 5 ▾ все метрики Проект ▾ Компонент ▾ Кто ▾ 18 10 90 24 46 66 48 1151 ▾ 13.11 2026-11-13 +38 36 закрыто · 12 заведено задач 1 релиз 71 · 63 6 16 Δ 63 5 1"
+  },
+  "nav": [
+    {
+      "cls": "sk-iconbtn",
+      "txt": "",
+      "l": 4,
+      "t": 10,
+      "r": 28,
+      "b": 34
+    },
+    {
+      "cls": "sk-scope__trigger",
+      "txt": "ПроектыВсе проекты · 26▾",
+      "l": 75,
+      "t": 7,
+      "r": 194,
+      "b": 37
+    },
+    {
+      "cls": "sk-ptrig__search",
+      "txt": "Поиск по LORE…/",
+      "l": 241,
+      "t": 8,
+      "r": 277,
+      "b": 36
+    },
+    {
+      "cls": "sk-ptrig__cmd",
+      "txt": "КомандыCtrlK",
+      "l": 283,
+      "t": 8,
+      "r": 318,
+      "b": 36
+    },
+    {
+      "cls": "sk-avatar",
+      "txt": "O",
+      "l": 324,
+      "t": 6,
+      "r": 356,
+      "b": 38
+    },
+    {
+      "cls": "sk-list__view",
+      "txt": "День",
+      "l": 11,
+      "t": 75,
+      "r": 58,
+      "b": 97
+    },
+    {
+      "cls": "sk-list__view is-on",
+      "txt": "Неделя",
+      "l": 64,
+      "t": 75,
+      "r": 124,
+      "b": 97
+    },
+    {
+      "cls": "sk-list__view",
+      "txt": "Месяц",
+      "l": 130,
+      "t": 75,
+      "r": 185,
+      "b": 97
+    },
+    {
+      "cls": "sk-news__fbtn",
+      "txt": "Ещё",
+      "l": 287,
+      "t": 74,
+      "r": 352,
+      "b": 98
+    },
+    {
+      "cls": "sk-news__sbar",
+      "txt": "",
+      "l": 10,
+      "t": 107,
+      "r": 22,
+      "b": 135
+    },
+    {
+      "cls": "sk-news__sbar",
+      "txt": "",
+      "l": 25,
+      "t": 130,
+      "r": 37,
+      "b": 135
+    },
+    {
+      "cls": "sk-news__sbar",
+      "txt": "",
+      "l": 40,
+      "t": 120,
+      "r": 52,
+      "b": 135
+    },
+    {
+      "cls": "sk-news__sbar",
+      "txt": "",
+      "l": 55,
+      "t": 124,
+      "r": 67,
+      "b": 135
+    },
+    {
+      "cls": "sk-news__sbar",
+      "txt": "",
+      "l": 70,
+      "t": 128,
+      "r": 82,
+      "b": 135
+    },
+    {
+      "cls": "sk-news__sbar",
+      "txt": "",
+      "l": 85,
+      "t": 122,
+      "r": 97,
+      "b": 135
+    },
+    {
+      "cls": "sk-news__sbar",
+      "txt": "",
+      "l": 100,
+      "t": 124,
+      "r": 112,
+      "b": 135
+    },
+    {
+      "cls": "sk-news__linkbtn",
+      "txt": "Прочитано",
+      "l": 209,
+      "t": 140,
+      "r": 267,
+      "b": 158
+    },
+    {
+      "cls": "sk-news__vbtn",
+      "txt": "⚠ 5",
+      "l": 313,
+      "t": 139,
+      "r": 350,
+      "b": 159
+    },
+    {
+      "cls": "sk-news__linkbtn",
+      "txt": "▾ все метрики",
+      "l": 10,
+      "t": 163,
+      "r": 84,
+      "b": 181
+    },
+    {
+      "cls": "sk-news__fc",
+      "txt": "Проект▾",
+      "l": 9,
+      "t": 195,
+      "r": 76,
+      "b": 217
+    },
+    {
+      "cls": "sk-news__fc",
+      "txt": "Компонент▾",
+      "l": 82,
+      "t": 195,
+      "r": 168,
+      "b": 217
+    },
+    {
+      "cls": "sk-news__fc",
+      "txt": "Кто▾",
+      "l": 174,
+      "t": 195,
+      "r": 224,
+      "b": 217
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "ADR18",
+      "l": 9,
+      "t": 225,
+      "r": 55,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "компонент10",
+      "l": 61,
+      "t": 225,
+      "r": 106,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "решение90",
+      "l": 112,
+      "t": 225,
+      "r": 158,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "вопрос24",
+      "l": 164,
+      "t": 225,
+      "r": 210,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "релиз46",
+      "l": 216,
+      "t": 225,
+      "r": 262,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "спека66",
+      "l": 268,
+      "t": 225,
+      "r": 313,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "спринт48",
+      "l": 319,
+      "t": 225,
+      "r": 365,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__chip",
+      "txt": "задача1151",
+      "l": 371,
+      "t": 225,
+      "r": 428,
+      "b": 245
+    },
+    {
+      "cls": "sk-news__daybtn",
+      "txt": "▾13.112026-11-13",
+      "l": 8,
+      "t": 252,
+      "r": 352,
+      "b": 279
+    },
+    {
+      "cls": "sk-news__bbtn",
+      "txt": "▾UnlimitedLORE17",
+      "l": 19,
+      "t": 336,
+      "r": 133,
+      "b": 356
+    },
+    {
+      "cls": "sk-news__link",
+      "txt": "закрытоПолировка v1.17.17 — визуальные н",
+      "l": 25,
+      "t": 390,
+      "r": 346,
+      "b": 425
+    },
+    {
+      "cls": "sk-news__code",
+      "txt": "SPRINT_UXR_POLISH_V11717",
+      "l": 25,
+      "t": 432,
+      "r": 161,
+      "b": 445
+    },
+    {
+      "cls": "sk-news__copy",
+      "txt": "",
+      "l": 167,
+      "t": 429,
+      "r": 187,
+      "b": 449
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "lore-mcp-full_kimi",
+      "l": 95,
+      "t": 456,
+      "r": 202,
+      "b": 467
+    },
+    {
+      "cls": "sk-news__link",
+      "txt": "закрытоMCP v2: ролевая выдача по agent_s",
+      "l": 25,
+      "t": 474,
+      "r": 346,
+      "b": 525
+    },
+    {
+      "cls": "sk-news__code",
+      "txt": "SPRINT_LORE_MCP_V2/MCPV2-2-ROLE-SURFACE",
+      "l": 25,
+      "t": 533,
+      "r": 238,
+      "b": 545
+    },
+    {
+      "cls": "sk-news__copy",
+      "txt": "",
+      "l": 244,
+      "t": 529,
+      "r": 264,
+      "b": 549
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "SPRINT_LORE_MCP_V2",
+      "l": 153,
+      "t": 556,
+      "r": 245,
+      "b": 568
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "lore-mcp-full_kimi",
+      "l": 25,
+      "t": 577,
+      "r": 131,
+      "b": 588
+    },
+    {
+      "cls": "sk-news__link",
+      "txt": "закрытоMCP v2: LORE_MCP_PROFILE — профил",
+      "l": 25,
+      "t": 594,
+      "r": 346,
+      "b": 645
+    },
+    {
+      "cls": "sk-news__code",
+      "txt": "SPRINT_LORE_MCP_V2/MCPV2-1-PROFILE-FILTE",
+      "l": 25,
+      "t": 653,
+      "r": 248,
+      "b": 666
+    },
+    {
+      "cls": "sk-news__copy",
+      "txt": "",
+      "l": 254,
+      "t": 649,
+      "r": 274,
+      "b": 669
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "SPRINT_LORE_MCP_V2",
+      "l": 153,
+      "t": 677,
+      "r": 245,
+      "b": 688
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "lore-mcp-full_kimi",
+      "l": 25,
+      "t": 697,
+      "r": 131,
+      "b": 708
+    },
+    {
+      "cls": "sk-news__link",
+      "txt": "закрытоПакет мелочей: дубль заголовка на",
+      "l": 25,
+      "t": 714,
+      "r": 346,
+      "b": 766
+    },
+    {
+      "cls": "sk-news__code",
+      "txt": "SPRINT_UXR_POLISH_V11717/P-10-MINOR-FIXE",
+      "l": 25,
+      "t": 773,
+      "r": 274,
+      "b": 786
+    },
+    {
+      "cls": "sk-news__copy",
+      "txt": "",
+      "l": 280,
+      "t": 770,
+      "r": 300,
+      "b": 790
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "SPRINT_UXR_POLISH_V11717",
+      "l": 153,
+      "t": 797,
+      "r": 276,
+      "b": 809
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "lore-mcp-full_kimi",
+      "l": 25,
+      "t": 817,
+      "r": 131,
+      "b": 829
+    },
+    {
+      "cls": "sk-news__link",
+      "txt": "закрытоМобильный: ellipsis в библиотеке ",
+      "l": 25,
+      "t": 835,
+      "r": 346,
+      "b": 886
+    },
+    {
+      "cls": "sk-news__code",
+      "txt": "SPRINT_UXR_POLISH_V11717/P-09-MOBILE-ELL",
+      "l": 25,
+      "t": 894,
+      "r": 310,
+      "b": 907
+    },
+    {
+      "cls": "sk-news__copy",
+      "txt": "",
+      "l": 316,
+      "t": 890,
+      "r": 336,
+      "b": 910
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "SPRINT_UXR_POLISH_V11717",
+      "l": 187,
+      "t": 918,
+      "r": 310,
+      "b": 929
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "lore-mcp-full_kimi",
+      "l": 25,
+      "t": 938,
+      "r": 131,
+      "b": 949
+    },
+    {
+      "cls": "sk-news__link",
+      "txt": "закрытоНастройки: text_size=xl сохраняет",
+      "l": 25,
+      "t": 955,
+      "r": 346,
+      "b": 990
+    },
+    {
+      "cls": "sk-news__code",
+      "txt": "SPRINT_UXR_POLISH_V11717/P-08-TEXT-SIZE-",
+      "l": 25,
+      "t": 997,
+      "r": 253,
+      "b": 1010
+    },
+    {
+      "cls": "sk-news__copy",
+      "txt": "",
+      "l": 259,
+      "t": 994,
+      "r": 279,
+      "b": 1014
+    },
+    {
+      "cls": "sk-news__ref",
+      "txt": "SPRINT_UXR_POLISH_V11717",
+      "l": 153,
+      "t": 1021,
+      "r": 276,
+      "b": 1032
+    }
+  ],
+  "05-nav-drawer": {
+    "url": "https://new.lore.odal.seidrstudio.pro/?sec=sprints",
+    "overCount": 7,
+    "bodyStart": "Перейти к содержимому V2 Все проекты · 26 O Новости День Неделя Месяц Ещё −103 сгорание −369 · -138,7 % Черта «прочитано» не поставлена Прочитано ⚠ 5 ▾ все метрики Проект ▾ Компонент ▾ Кто ▾ 18 10 90 24 46 66 48 1151 ▾ 13.11 2026-11-13 +38 36 закрыто · 12 заведено задач 1 релиз 71 · 63 6 16 Δ 63 5 1"
+  },
+  "sprintItem": null
+}
