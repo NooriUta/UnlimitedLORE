@@ -100,7 +100,10 @@ class NewsCarriesAllProjectsLiveDbTest {
         }
         admin().body("{\"sprint_id\":\"" + SPRINT + "\",\"task_id\":\"T-MULTI\",\"title\":\"Задача двух проектов\"}")
             .when().post("/lore/task").then().statusCode(200);
-        admin().body("{\"entity_type\":\"task\",\"id\":\"" + TASK_UID + "\",\"status\":\"done\"}")
+        // WK-05 (ADR-LORE-014-D5): done — только из review и с доказательством по виду работы.
+        admin().body("{\"entity_type\":\"task\",\"id\":\"" + TASK_UID + "\",\"status\":\"review\"}")
+            .when().post("/lore/status").then().statusCode(200);
+        admin().body("{\"entity_type\":\"task\",\"id\":\"" + TASK_UID + "\",\"status\":\"done\",\"evidence_type\":\"pr\",\"evidence_ref\":\"PR #1\"}")
             .when().post("/lore/status").then().statusCode(200);
     }
 

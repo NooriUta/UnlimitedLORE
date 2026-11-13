@@ -351,18 +351,35 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'system_aida_lore — use deliberately. Returns the new revision. Task acceptance flow ' +
       '(owner rule 13.11.2026): ready_for_deploy → the agent verifies the task on the stand AS A USER ' +
       '(by using the feature, not by reading code) → uat (🧪 UAT TESTING, a human accepts it on preprod) → ' +
-      'done, which ONLY a human sets. An agent never moves a task from uat to done.',
+      'done, which ONLY a human sets. An agent never moves a task from uat to done.\n\n' +
+      'WK-05 core (ADR-LORE-014-D5): eight core statuses planned · active · waiting · review · done · failed · blocked · cancelled; ' +
+      'old values stay valid synonyms (todo/backlog/design→planned, partial→active, ready_for_deploy/uat→review stages stand_check/uat). ' +
+      'Task gate, refused BEFORE any write: done by an agent → 409 DONE_BY_HUMAN_ONLY (move to review instead); done only from review ' +
+      '(incl. ready_for_deploy/uat) → else 409 DONE_ONLY_FROM_REVIEW; a closing human becomes the reviewer unless they are the ' +
+      'executor → 409 NO_REVIEWER; reviewer = executor → 409 REVIEWER_IS_EXECUTOR; done needs evidence by kind of work (from task_type: ' +
+      'dev → pr|release, docs → lore, ops → probe|pr, research/analytics → lore, legal/sales/hiring/finance/support/procurement → doc, ' +
+      'content → url; see /lore/model workflow.kinds) → else 409 NO_EVIDENCE. Attach evidence already when moving to review — it is ' +
+      'carried to done. blocked and a return from review to active need reason (400 REASON_REQUIRED); waiting needs waiting_for ' +
+      '(400 WAITING_FOR_REQUIRED). failed = known negative outcome (lost, refused, overdue), cancelled = decided not to do.',
     schema: {
       entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
       id: z.string().describe('entity id (e.g. sprint_id, task_uid, phase_uid "SPRINT_X/PHASE_A")'),
       status: LORE_STATUS,
-      reason: z.string().optional().describe('QG-16: sprint + status=blocked only — WHY it is blocked, plain text (stored on the new SCD2 state, gone on unblock). Omitted on a blocked sprint → the answer carries a hint and gate QG-LORE-BLOCKED-REASON lists it unless an open dependency or open question explains it'),
+      reason: z.string().optional().describe('WHY: required for a task going blocked or returned from review to active (WK-05); QG-16: sprint + status=blocked — WHY it is blocked, plain text (stored on the new SCD2 state, gone on unblock). Omitted on a blocked sprint → the answer carries a hint and gate QG-LORE-BLOCKED-REASON lists it unless an open dependency or open question explains it'),
       expected: z.string().optional().describe(EXPECTED_STATUS_DESC),
+      evidence_type: z.string().optional().describe('task: proof of done by kind of work — pr | release | lore | probe | doc | url (allowed set per kind: /lore/model workflow.kinds)'),
+      evidence_ref: z.string().optional().describe('task: the proof itself — "PR #1337", "spec:SPEC-X", a URL, a document number, "10/10 CI runs without OOM"'),
+      stage: z.string().optional().describe('task: stage inside the core status, e.g. stand_check | uat in review, implement | test in active'),
+      waiting_for: z.string().optional().describe('task + status=waiting: whose answer we wait for (required)'),
     },
     path: '/lore/status',
-    body: ({ entity_type, id, status, reason, expected }) => ({
+    body: ({ entity_type, id, status, reason, expected, evidence_type, evidence_ref, stage, waiting_for }) => ({
       entity_type, id, status, reason: reason ?? null,
       ...(expected === undefined ? {} : { expected }),
+      ...(evidence_type === undefined ? {} : { evidence_type }),
+      ...(evidence_ref === undefined ? {} : { evidence_ref }),
+      ...(stage === undefined ? {} : { stage }),
+      ...(waiting_for === undefined ? {} : { waiting_for }),
     }),
   });
 

@@ -1619,7 +1619,19 @@ final class LoreSchemaMigrations {
         // SPRINT_LORE_MODEL_AS_CONFIG/MC-05 (SPEC-LORE-MODEL-CONFIG-STORE): V84 (V82 — #1311 PU-18, V83 — #1316 PU-20). Модель LORE — запись в LORE с
         // историей SCD2 (KnowModelConfig + KnowModelConfigHist через HAS_STATE). Аддитивно, major 17:
         // только новые типы, данные не трогаются. DDL рядом с логикой (LoreModelStore).
-        new Step(84, 17, "model_config_store", LoreModelStore.SCHEMA_SQL)
+        new Step(84, 17, "model_config_store", LoreModelStore.SCHEMA_SQL),
+
+        // SPRINT_LORE_WORK_ANY_KIND/WK-05 (ADR-LORE-014-D5, допущение A3 — «Да, как рекомендовано» 14.11):
+        // строка истории задачи несёт доказательство done (evidence_type/evidence_ref по виду работы),
+        // стадию внутри статуса ядра, адресат ожидания (waiting) и причину перехода. Аддитивно, major 17:
+        // только новые свойства, старые done задним числом не трогаются (развилка Г).
+        // Номер — после V85/V86 соседних PR (14.11): сверить перед мержем.
+        new Step(87, 17, "task_workflow_fields", List.of(
+            "CREATE PROPERTY KnowTaskHist.evidence_type IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.evidence_ref IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.stage IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.waiting_for IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.status_reason IF NOT EXISTS STRING"))
     );
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */
