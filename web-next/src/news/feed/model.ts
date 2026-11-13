@@ -56,7 +56,7 @@ function readDrill(v: string | null): NewsDrill | null {
 }
 
 /** Метрики, по числу которых можно кликнуть (S7A-03): id → подпись числа. */
-export const NEWS_DRILL_METRICS = ['shipped', 'waiting', 'added', 'closed', 'react'] as const;
+export const NEWS_DRILL_METRICS = ['shipped', 'waiting', 'uat', 'added', 'closed', 'react'] as const;
 export type NewsDrillMetric = (typeof NEWS_DRILL_METRICS)[number];
 
 /** id метрики группы сгорания: «waiting@project=AIDA/X» — число одной группы. */
