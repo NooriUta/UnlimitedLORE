@@ -6311,6 +6311,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 /* Панелью справа: переключатель видов паспорта над шапкой. */
 .sk-rec__modes { display: flex; margin: 0 0 6px; }
+/* Мини-кнопки видов под заголовком (13.11): ниже ростом и мельче кеглем, чем сегмент оболочки. */
+.sk-rec__modes--mini { margin: 2px 0 8px; }
+.sk-rec__modes--mini .sk-seg { padding: 1px; }
+.sk-rec__modes--mini .sk-seg__btn { min-height: max(var(--tap), 20px); padding: 0 8px; font-size: var(--fs-xs); }
 .sk-rec__panel { min-width: 0; }
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
 .sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) var(--props-w, minmax(240px, 320px)); gap: 24px; align-items: start; }

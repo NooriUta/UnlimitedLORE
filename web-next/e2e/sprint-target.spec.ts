@@ -26,5 +26,5 @@ test('паспорт спринта: вердикт и график «Цель �
   await page.getByRole('button', { name: /Цель к сроку/ }).click();
   await expect(page.locator('[data-series="deadline"]')).toHaveCount(1);
   await expect(page.locator('[data-series="forecast"]')).toHaveCount(1);
-  await page.screenshot({ path: 'e2e/.results/sprint-target.png', clip: { x: 806, y: 280, width: 474, height: 260 } });
+  await page.screenshot({ path: 'e2e/.results/sprint-target.png', clip: { x: 806, y: 90, width: 474, height: 460 } });
 });
