@@ -16,7 +16,7 @@ import { fetchRoleMatrix } from './roles';
 import { useAppT } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  agentWhy, agentWindow, agentsWithoutMachine, AGENTS_NO_MACHINE, fetchAgentOrphans, fetchAgents, filterAgents, graphOrphans, harnessCounts, HARNESS_NONE, offRegistry,
+  agentWhy, agentWindow, agentMachines, agentsWithoutMachine, AGENTS_NO_MACHINE, fetchAgentOrphans, fetchAgents, filterAgents, graphOrphans, harnessCounts, HARNESS_NONE, offRegistry,
   setAgentHarness, setAgentMachine,
   type AgentRow, type AgentsData, type KcOrphan,
 } from './agents';
@@ -472,7 +472,16 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
             onClick={revert}>{t('admin.harness.revert', { was: name(revertTo.value) })}</button>
         )}
       </td>
-      <td>{row.machine_id ? <span className="adm-mono">{row.machine_id}</span> : <span className="adm-missing" title={t('admin.machine.none')}>{t('admin.machine.none')}</span>}</td>
+      {/* AO-MACHINE-OBJ A: объявленная машина и наблюдённые по вызовам (USES_MACHINE). */}
+      <td data-testid={`adm-agent-machines-${row.actor_id}`}>
+        {agentMachines(row).length === 0
+          ? <span className="adm-missing" title={t('admin.machine.none')}>{t('admin.machine.none')}</span>
+          : agentMachines(row).map(m => (
+            <span key={m.id} className="adm-mono" title={m.declared ? t('admin.machine.declared') : t('admin.machine.observed')}>
+              {m.id}{!m.declared && <span className="adm-dim"> · {t('admin.machine.observedShort')}</span>}{' '}
+            </span>
+          ))}
+      </td>
       <td>{row.owner_display_name ?? row.owner_kc_sub ?? <span className="adm-missing">{t('admin.owner.none')}</span>}</td>
       <td>
         <span className="adm-mono">{row.client_id ?? '—'}</span>{row.agent_role && <span className="adm-role"> · {row.agent_role}</span>}
