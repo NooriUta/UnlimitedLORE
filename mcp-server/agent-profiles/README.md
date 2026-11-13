@@ -50,3 +50,15 @@ from the tool name — `insight_*`/`metric_log` write to `/lore/bragi/...`, `rec
 Explicit `deny` entries after a wildcard (`"doc_*": "allow"`, then `"doc_del": "deny"`) carve out
 what the backend reserves: deletions stay `full`/`architect` (owner decision 2026-07-18), and
 `release_mv` writes to `/lore/project/move`.
+
+## Server-side surface (SPRINT_LORE_MCP_V2, 13.11.2026)
+
+The MCP server itself now narrows its registered tool surface by these same profile files:
+
+- **Role axis** — the client's service token claim `agent_scope` (`agent-full` → `full.json` etc.); resolved at startup, no introspection. Unknown profile → narrowed to `core` with a stderr warning. Ambiguous claim (two different profiles) → `core` + loud stderr (provisioning error; the backend will deny writes anyway).
+- **Config axis** — `LORE_MCP_PROFILE` env: `core` | `full` | any file name here. Explicit bad value fails startup loudly.
+- Surface = intersection of active axes; with no axes the full surface registers exactly as before (backward compatible).
+
+The backend (`AgentScopeFilter`) remains the security boundary — it denies with a reason even if a hidden tool is called from a stale session. The MCP filter is about payload size and an honest "what you may use" picture. Snapshot test: `src/tools/profileSurface.test.ts` (regenerate: `UPDATE_PROFILE_SURFACE=1`).
+
+Read-only `core` profile: `list_slices query_slice changed run_block search search_similar task_shape machine_acl harness_list graph quality_check lore_version`.

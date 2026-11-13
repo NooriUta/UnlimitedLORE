@@ -44,7 +44,7 @@ function isRawShapeCompat(obj: unknown): obj is RawShape {
   return Object.values(obj).some(isZodTypeLike);
 }
 
-export function withStrictTools(server: McpServer): McpServer {
+export function withStrictTools(server: McpServer, gate?: (name: string) => boolean): McpServer {
   const registerTool = server.registerTool.bind(server) as (
     name: string,
     config: { description?: string; inputSchema?: unknown; annotations?: unknown },
@@ -52,6 +52,13 @@ export function withStrictTools(server: McpServer): McpServer {
   ) => unknown;
 
   const strictTool = (name: string, ...rest: unknown[]): unknown => {
+    // SPRINT_LORE_MCP_V2: профильная/ролевая выдача — инструмент вне разрешения
+    // просто не регистрируется (и не попадает в payload сессии); пропуски видны
+    // в stderr, чтобы отличить «инструмента нет» от «инструмент запрещён».
+    if (gate && !gate(name)) {
+      console.error(`[aida-lore-mcp] tool hidden by surface profile: ${name}`);
+      return undefined;
+    }
     let description: string | undefined;
     if (typeof rest[0] === 'string') description = rest.shift() as string;
 

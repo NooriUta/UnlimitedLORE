@@ -20,6 +20,11 @@
     "job_*": "allow",
     "doc_*": "allow",
     "status_set": "allow",
-    "doc_del": "deny"
+    "doc_del": "deny",
+    "task_shape": "allow",
+    "machine_acl": "allow",
+    "harness_list": "allow",
+    "quality_check": "allow",
+    "lore_version": "allow"
   }
 }
