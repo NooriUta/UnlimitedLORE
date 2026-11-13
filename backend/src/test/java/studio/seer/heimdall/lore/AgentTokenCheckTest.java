@@ -25,7 +25,7 @@ class AgentTokenCheckTest {
 
     @Test
     void scopeMatchesProfile_ok_arrayAndQuotedLikeKeycloak() {
-        Map<String, Object> c = LoreKcAgentClient.tokenCheck(jwt("{\"agent_scope\":[\"agent-pm\"]}"), "pm");
+        Map<String, Object> c = LoreKcAgentClient.tokenCheck(jwt("{\"agent_scope\":[\"agent-pm\"],\"seer_roles\":[\"admin\"]}"), "pm");
         assertEquals("ok", c.get("state"));
         assertEquals("pm", c.get("agent_scope"));
     }
