@@ -60,8 +60,9 @@ ArcadeDB (граф), читается/пишется через собствен
   (**не GitHub URL** — у сущностей LORE своего внешнего URL нет).
 - **MCP-сервер** (`mcp-server/`, `aida-lore-mcp`) — обёртка над HTTP backend'ом
   для LLM-агентов (`adr_new`, `query_slice`, `qg_run_log`, …).
-  Собирается `npm run build` → `dist/index.js`, подключается через `.mcp.json`
-  (`LORE_BACKEND_URL=http://localhost:9100`).
+  Собирается `npm run build` → `dist/index.js`, подключается в user-скоупе
+  Claude Code (`~/.claude.json`, команда — `mcp-server/README.md`); проектный
+  `.mcp.json` не отслеживается и не нужен.
 
 ## Модель данных — ключевые типы
 
