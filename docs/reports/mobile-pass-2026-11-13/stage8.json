@@ -1,0 +1,75 @@
+{
+  "target": {
+    "cls": "sk-cards__title",
+    "x": 180.0000114440918,
+    "y": 233.59896850585938,
+    "txt": "Работа любого типа: тип продукта ИТ/не ИТ, роли связей, SERV"
+  },
+  "url": "https://new.lore.odal.seidrstudio.pro/?sec=sprint&mod=forseti&open=SPRINT_LORE_WORK_ANY_KIND",
+  "over": [
+    {
+      "tag": "a",
+      "cls": "sk-shell__skip",
+      "l": -9999,
+      "r": -9851,
+      "txt": "Перейти к содержимому"
+    }
+  ],
+  "fixed": [
+    {
+      "tag": "header",
+      "cls": "sk-shell__top",
+      "pos": "sticky",
+      "z": "40",
+      "l": 0,
+      "t": 0,
+      "r": 360,
+      "b": 44,
+      "txt": "Перейти к содержимомуLOREv2ПроектыВсе пр"
+    },
+    {
+      "tag": "button",
+      "cls": "sk-dock__close",
+      "pos": "sticky",
+      "z": "1",
+      "l": 320,
+      "t": 56,
+      "r": 348,
+      "b": 84,
+      "txt": "×"
+    },
+    {
+      "tag": "div",
+      "cls": "sk-tabs sk-tabs--underline",
+      "pos": "sticky",
+      "z": "2",
+      "l": 12,
+      "t": 326,
+      "r": 342,
+      "b": 364,
+      "txt": "Задачи5▷Реализует ADR0Ещё15"
+    },
+    {
+      "tag": "div",
+      "cls": "v2-version sk-shell__corner",
+      "pos": "fixed",
+      "z": "50",
+      "l": 286,
+      "t": 729,
+      "r": 352,
+      "b": 746,
+      "txt": "be7f1ef4"
+    },
+    {
+      "tag": "nav",
+      "cls": "sk-shell__dock",
+      "pos": "fixed",
+      "z": "40",
+      "l": 0,
+      "t": 751,
+      "r": 360,
+      "b": 800,
+      "txt": "ForsetiBRAGIMUNINNTYR"
+    }
+  ]
+}

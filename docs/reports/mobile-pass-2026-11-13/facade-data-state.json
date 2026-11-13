@@ -1,0 +1,20 @@
+{
+  "probe": "GET /lore/record/sprint/SPRINT_LORE_WORK_ANY_KIND (Bearer из localStorage страницы, прод new.lore, 13.11.2026)",
+  "status": 200,
+  "meta": {
+    "facade": "server",
+    "sources": { "block": ["phases", "tasks", "questions"], "record": "sprint_tree" },
+    "data_state": [
+      { "source": "sprint_tree", "state": "ok" },
+      { "source": "phases_of_sprint", "part": "phases", "state": "ok" },
+      { "source": "tasks_of_sprint", "part": "tasks", "state": "ok" },
+      { "source": "questions_of_sprint", "part": "questions", "state": "ok" },
+      { "source": "relation:publications", "part": "publications", "state": "error", "reason": "связь не читается фасадом: среза нет — «0» здесь не проверен" },
+      { "source": "relation:refsIn", "part": "refsIn", "state": "error", "reason": "связь не читается фасадом: среза нет — «0» здесь не проверен" },
+      { "source": "relation:refsOut", "part": "refsOut", "state": "error", "reason": "связь не читается фасадом: среза нет — «0» здесь не проверен" },
+      { "source": "version", "state": "ok" }
+    ]
+  },
+  "client_slices_checked_ok": ["tasks_of_sprint", "history_sprint", "phases_of_sprint", "questions_of_sprint", "sprint_deps_of"],
+  "conclusion": "Блок «Часть сведений не загрузилась» = три связи, которые фасад не умеет читать (срезов нет): publications, refsIn, refsOut. Сбой объяснён; видимый блок останется до MP2-08 (warnings-попап с причинами) либо до появления срезов на бэкенде."
+}
