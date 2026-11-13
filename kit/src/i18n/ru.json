@@ -1111,6 +1111,7 @@
   "kit.graph.engineObsidianHint": "Та же физика, но в фоне, отрисовка через WebGL — держит тысячи узлов",
   "kit.graph.count": "узлов {n} · связей {e}",
   "kit.graph.countOf": "показано {n} из {total} · связей {e}",
+  "kit.graph.layoutSlow": "Раскладка не уложилась в {s} с — граф показан как есть, узлы ещё могут сдвигаться.",
   "kit.graph.failed": "Граф не отрисовался",
   "kit.graph.filtered": "Фильтры скрыли все узлы",
   "kit.graph.empty": "Узлов нет",

@@ -7120,3 +7120,6 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-md__raw--wikilink[data-ref-state='ok'] { color: var(--suc); border-color: color-mix(in srgb, var(--suc) 50%, transparent); }
 .sk-md__raw--wikilink[data-ref-state='missing'] { color: var(--dng); border-color: var(--dng); text-decoration: underline wavy var(--dng); }
 .sk-md__refmissing { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--dng) 55%, transparent); border-radius: var(--r-md); color: var(--t1); font-size: var(--fs-sm); }
+
+/* GC-02: раскладка не уложилась в срок — плашка поверх холста, холст не прячем. */
+.sk-gx__slow { position: absolute; left: 8px; bottom: 8px; z-index: 2; max-width: calc(100% - 16px); margin: 0; padding: 4px 8px; border: 1px solid var(--wrn); border-radius: var(--r-md); background: var(--bg1); color: var(--t1); font-size: var(--fs-sm); }

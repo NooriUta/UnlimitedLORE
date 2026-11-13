@@ -15,6 +15,9 @@ type SigmaT = InstanceType<typeof import('sigma').default>;
 type GraphT = InstanceType<typeof import('graphology').default>;
 
 export default function ObsidianEngine(p: GxEngineProps) {
+  // GC-02: движок создаётся один раз в эффекте — живой обработчик берём из ref.
+  const layoutDone = useRef(p.onLayoutDone);
+  layoutDone.current = p.onLayoutDone;
   const host = useRef<HTMLDivElement>(null);
   const live = useRef<{ s: SigmaT; G: GraphT; w: Worker; idx: Map<string, number> } | null>(null);
   const latest = useRef(p);
@@ -60,7 +63,7 @@ export default function ObsidianEngine(p: GxEngineProps) {
           const a = m.a;
           G.updateEachNodeAttributes((k, at) => { const i = idx.get(k)!; at.x = a[2 * i]; at.y = a[2 * i + 1]; return at; }, { attributes: ['x', 'y'] });
           if (!boxed) { boxed = true; fixBox(1.6); }
-        } else { fixBox(1.1); void s.getCamera().animatedReset({ duration: 400 }); }
+        } else { fixBox(1.1); void s.getCamera().animatedReset({ duration: 400 }); layoutDone.current?.(); }
       };
       const post = (msg: ObsidianIn) => w.postMessage(msg);
       post({ type: 'init', n: p.nodes.length, links: p.edges.filter(e => idx.has(e.from) && idx.has(e.to)).map(e => [idx.get(e.from)!, idx.get(e.to)!]), forces: gxForces(latest.current.settings) });

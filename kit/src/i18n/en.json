@@ -1111,6 +1111,7 @@
   "kit.graph.engineObsidianHint": "The same physics, but in the background with WebGL drawing — holds thousands of nodes",
   "kit.graph.count": "{n} nodes · {e} links",
   "kit.graph.countOf": "showing {n} of {total} · {e} links",
+  "kit.graph.layoutSlow": "Layout did not settle within {s} s — the graph is shown as is; nodes may still move.",
   "kit.graph.failed": "The graph could not be drawn",
   "kit.graph.filtered": "Filters hide every node",
   "kit.graph.empty": "No nodes",
