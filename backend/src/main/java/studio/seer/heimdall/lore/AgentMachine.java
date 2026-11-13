@@ -113,6 +113,34 @@ final class AgentMachine {
         return plan;
     }
 
+    /**
+     * PU-18 (V82, находка 13.11): даты слитой машины — {first_seen_at = min, last_seen_at = max}
+     * по всем вершинам группы (варианты и каноническая). Сравнение — как моменты (дробные
+     * секунды бывают разной длины). Пусто/null и неразбираемое не участвуют; нет ни одной
+     * даты — null (писать нечего, затирать нельзя).
+     */
+    static String[] seenRange(List<Map<String, Object>> rows) {
+        String first = null, last = null;
+        java.time.Instant fi = null, li = null;
+        for (Map<String, Object> r : rows) {
+            String f = nonBlank(r.get("first_seen_at")), l = nonBlank(r.get("last_seen_at"));
+            java.time.Instant fm = moment(f), lm = moment(l);
+            if (fm != null && (fi == null || fm.isBefore(fi))) { fi = fm; first = f; }
+            if (lm != null && (li == null || lm.isAfter(li))) { li = lm; last = l; }
+        }
+        return new String[]{first, last};
+    }
+
+    private static String nonBlank(Object v) {
+        return v == null || String.valueOf(v).isBlank() ? null : String.valueOf(v);
+    }
+
+    /** Момент или null: неразбираемая дата в сравнении не участвует (угадывать её порядок нельзя). */
+    private static java.time.Instant moment(String s) {
+        if (s == null) return null;
+        try { return java.time.Instant.parse(s); } catch (java.time.format.DateTimeParseException e) { return null; }
+    }
+
     static Verdict judge(ChangeAuthor author, String rawHeader, boolean required) {
         if (author == null || !ChangeAuthor.KIND_AGENT.equals(author.kind())) return Verdict.NOT_APPLICABLE;
         String v = rawHeader == null ? "" : rawHeader.trim();

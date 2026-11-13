@@ -81,8 +81,12 @@ class MachineCanonMergeLiveDbTest {
     void caseVariantsMergeIntoOneCanonicalMachine() throws Exception {
         sql("INSERT INTO KnowActor SET actor_id = '" + A + "', kind = 'agent', machine_id = 'MGTEST'");
         sql("INSERT INTO KnowActor SET actor_id = '" + B + "', kind = 'agent'");
-        sql("INSERT INTO KnowMachine SET machine_id = 'MgTest'");
-        sql("INSERT INTO KnowMachine SET machine_id = 'MGTEST'");
+        // Даты (находка 13.11): канонической нет — её даты собираются из вариантов.
+        sql("INSERT INTO KnowMachine SET machine_id = 'MgTest', first_seen_at = '2026-11-13T09:35:00Z', last_seen_at = '2026-11-13T09:35:00Z'");
+        sql("INSERT INTO KnowMachine SET machine_id = 'MGTEST', first_seen_at = '2026-11-13T07:46:00Z', last_seen_at = '2026-11-13T12:24:00Z'");
+        // Вторая группа — каноническая УЖЕ есть и моложе вариантов (как lorcetus 18:49 на проде).
+        sql("INSERT INTO KnowMachine SET machine_id = 'mgdate', first_seen_at = '2026-11-13T18:49:00Z', last_seen_at = '2026-11-13T18:49:00Z'");
+        sql("INSERT INTO KnowMachine SET machine_id = 'MGDATE', first_seen_at = '2026-11-13T07:46:00Z', last_seen_at = '2026-11-13T12:24:00Z'");
         edge(A, "MgTest");
         edge(A, "MGTEST");
         edge(B, "MGTEST");
@@ -92,6 +96,15 @@ class MachineCanonMergeLiveDbTest {
         runner.mergeMachineCase();
 
         assertMerged();
+        assertSeen("mgtest", "2026-11-13T07:46:00Z", "2026-11-13T12:24:00Z");
+        assertSeen("mgdate", "2026-11-13T07:46:00Z", "2026-11-13T18:49:00Z");
+        assertEquals(0, n("SELECT count(*) AS n FROM KnowMachine WHERE machine_id = 'MGDATE'"), "вариант с канонической не удалён");
+    }
+
+    private static void assertSeen(String machine, String first, String last) throws Exception {
+        Map<String, Object> r = sql("SELECT first_seen_at, last_seen_at FROM KnowMachine WHERE machine_id = '" + machine + "'").get(0);
+        assertEquals(first, String.valueOf(r.get("first_seen_at")), machine + ": first_seen_at не самый ранний");
+        assertEquals(last, String.valueOf(r.get("last_seen_at")), machine + ": last_seen_at не самый поздний");
     }
 
     @Test
@@ -99,11 +112,13 @@ class MachineCanonMergeLiveDbTest {
     void secondRunChangesNothing() throws Exception {
         runner.mergeMachineCase();
         assertMerged();
+        assertSeen("mgtest", "2026-11-13T07:46:00Z", "2026-11-13T12:24:00Z");
+        assertSeen("mgdate", "2026-11-13T07:46:00Z", "2026-11-13T18:49:00Z");
     }
 
     @AfterAll
     static void cleanup() throws Exception {
         sql("DELETE FROM KnowActor WHERE actor_id IN ['" + A + "', '" + B + "']");
-        sql("DELETE FROM KnowMachine WHERE machine_id IN ['mgtest', 'MgTest', 'MGTEST']");
+        sql("DELETE FROM KnowMachine WHERE machine_id IN ['mgtest', 'MgTest', 'MGTEST', 'mgdate', 'MGDATE']");
     }
 }
