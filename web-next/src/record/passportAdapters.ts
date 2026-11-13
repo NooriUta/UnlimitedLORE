@@ -33,10 +33,10 @@ export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
   'component', 'tech', 'feature',
   // S4-PRODUCTS-NODE: паспорт продукта, только чтение; ключ — код статьи словаря.
   'product',
-  // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий».
-  'project',
   // S9-05 A: человек и агент — только чтение (правят в админке); порядок — как у фасада.
-  'user', 'agent'] as const;
+  'user', 'agent',
+  // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий». Последним.
+  'project'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
 
 type Slice = <T>(slice: string, params?: Record<string, string>) => Promise<SliceBody<T>>;

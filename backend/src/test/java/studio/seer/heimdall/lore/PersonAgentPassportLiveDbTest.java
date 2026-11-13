@@ -88,7 +88,7 @@ class PersonAgentPassportLiveDbTest {
 
     @Test
     void productRoleIsNotAnAgentPassport() {
-        given().header("X-Seer-Role", "admin").get("/lore/record/agent/нет-такого-агента")
+        given().header("X-Seer-Role", "admin").get("/lore/record/agent/s905-no-such-agent")
             .then().statusCode(404);
     }
 }

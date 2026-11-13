@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "312faa432b4a8c65",
+  "version" : "5870289c469cb894",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -6533,252 +6533,6 @@
       "unclassified" : [ "dict_type", "is_extensible" ],
       "internal" : [ "valid_from" ]
     },
-    "project" : {
-      "type" : "project",
-      "label" : "Проект",
-      "label_key" : "pp.kind.project",
-      "icon" : "open-folder",
-      "color" : null,
-      "key" : "slug",
-      "vertex" : "KnowGitProject",
-      "hist" : null,
-      "time" : {
-        "history" : "none",
-        "created" : [ ],
-        "changed" : [ ]
-      },
-      "fields" : [ {
-        "key" : "title",
-        "label" : "Название",
-        "label_key" : "pp.field.title",
-        "kind" : "text",
-        "group" : "head",
-        "required" : true,
-        "editable" : false,
-        "write" : null,
-        "required_level" : null,
-        "required_rules" : [ ],
-        "visibility" : "visible",
-        "display" : {
-          "priority" : 1,
-          "width" : "fill",
-          "overflow" : "ellipsis"
-        },
-        "property" : "name",
-        "property_type" : "STRING",
-        "source" : "CONFIRMS"
-      }, {
-        "key" : "code",
-        "label" : "Код",
-        "label_key" : null,
-        "kind" : "text",
-        "group" : "head",
-        "required" : false,
-        "editable" : false,
-        "write" : null,
-        "required_level" : null,
-        "required_rules" : [ ],
-        "visibility" : "visible",
-        "display" : {
-          "priority" : 1,
-          "width" : "s",
-          "overflow" : "none"
-        },
-        "property" : "slug",
-        "property_type" : "STRING",
-        "source" : "CONFIRMS"
-      }, {
-        "key" : "default_branch",
-        "label" : "Основная ветка",
-        "label_key" : null,
-        "kind" : "text",
-        "group" : "props",
-        "required" : false,
-        "editable" : false,
-        "write" : null,
-        "required_level" : null,
-        "required_rules" : [ ],
-        "visibility" : "visible",
-        "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
-        },
-        "property" : "default_branch",
-        "property_type" : "STRING",
-        "source" : "CONFIRMS"
-      }, {
-        "key" : "is_private",
-        "label" : "Приватный",
-        "label_key" : null,
-        "kind" : "text",
-        "group" : "props",
-        "required" : false,
-        "editable" : false,
-        "write" : null,
-        "required_level" : null,
-        "required_rules" : [ ],
-        "visibility" : "visible",
-        "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
-        },
-        "property" : null,
-        "property_type" : null,
-        "source" : "SUPPLIES"
-      } ],
-      "relations" : [ {
-        "key" : "sprints",
-        "label" : "Спринты",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "sprint",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "components",
-        "label" : "Компоненты",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "component",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "adrs",
-        "label" : "ADR",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "adr",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "releases",
-        "label" : "Релизы",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "release",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "people",
-        "label" : "Люди",
-        "relation" : "association",
-        "rel" : "HAS_PROJECT_ROLE",
-        "dir" : "in",
-        "target_type" : "user",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "agents",
-        "label" : "Агенты",
-        "relation" : "association",
-        "rel" : "HAS_PROJECT_ROLE",
-        "dir" : "in",
-        "target_type" : "agent",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "specs",
-        "label" : "Спеки",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "spec",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "decisions",
-        "label" : "Решения",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "decision",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "questions",
-        "label" : "Вопросы",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "question",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "features",
-        "label" : "Фичи",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "feature",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "docs",
-        "label" : "Знания",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "doc",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "runbooks",
-        "label" : "Ранбуки",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "runbook",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "actors",
-        "label" : "Роли продукта",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "actor",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "boundAgents",
-        "label" : "Агенты проекта",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "agent",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "files",
-        "label" : "Файлы",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "file",
-        "place" : "link_tab",
-        "manageable" : false
-      }, {
-        "key" : "prs",
-        "label" : "PR",
-        "relation" : "attribute",
-        "rel" : "BELONGS_TO_PROJECT",
-        "dir" : "in",
-        "target_type" : "pr",
-        "place" : "link_tab",
-        "manageable" : false
-      } ],
-      "requirements" : [ ],
-      "requirements_block" : "schema",
-      "computed" : [ ],
-      "unclassified" : [ "description", "hosts" ],
-      "internal" : [ ]
-    },
     "user" : {
       "type" : "user",
       "label" : "Человек",
@@ -7073,6 +6827,252 @@
       "requirements_block" : "schema",
       "computed" : [ ],
       "unclassified" : [ "body_md", "kind", "machine_id", "session_id" ],
+      "internal" : [ ]
+    },
+    "project" : {
+      "type" : "project",
+      "label" : "Проект",
+      "label_key" : "pp.kind.project",
+      "icon" : "open-folder",
+      "color" : null,
+      "key" : "slug",
+      "vertex" : "KnowGitProject",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : "name",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "s",
+          "overflow" : "none"
+        },
+        "property" : "slug",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "default_branch",
+        "label" : "Основная ветка",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : "default_branch",
+        "property_type" : "STRING",
+        "source" : "CONFIRMS"
+      }, {
+        "key" : "is_private",
+        "label" : "Приватный",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "sprints",
+        "label" : "Спринты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "sprint",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "components",
+        "label" : "Компоненты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "component",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "adrs",
+        "label" : "ADR",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "adr",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "releases",
+        "label" : "Релизы",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "release",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "people",
+        "label" : "Люди",
+        "relation" : "association",
+        "rel" : "HAS_PROJECT_ROLE",
+        "dir" : "in",
+        "target_type" : "user",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "agents",
+        "label" : "Агенты",
+        "relation" : "association",
+        "rel" : "HAS_PROJECT_ROLE",
+        "dir" : "in",
+        "target_type" : "agent",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "specs",
+        "label" : "Спеки",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "spec",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "decisions",
+        "label" : "Решения",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "decision",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "questions",
+        "label" : "Вопросы",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "question",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "features",
+        "label" : "Фичи",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "docs",
+        "label" : "Знания",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "doc",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "runbooks",
+        "label" : "Ранбуки",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "runbook",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "actors",
+        "label" : "Роли продукта",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "boundAgents",
+        "label" : "Агенты проекта",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "agent",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "files",
+        "label" : "Файлы",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "file",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "prs",
+        "label" : "PR",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "in",
+        "target_type" : "pr",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ "description", "hosts" ],
       "internal" : [ ]
     }
   },
@@ -8072,6 +8072,64 @@
           "group" : null
         } ]
       },
+      "user" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "tasks",
+          "source" : "relation",
+          "ref" : "tasks",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "tasks",
+            "label" : "Задачи"
+          }
+        }, {
+          "key" : "agents",
+          "source" : "relation",
+          "ref" : "agents",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "agents",
+            "label" : "Агенты"
+          }
+        } ]
+      },
+      "agent" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "tasks",
+          "source" : "relation",
+          "ref" : "tasks",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "tasks",
+            "label" : "Задачи"
+          }
+        }, {
+          "key" : "machines",
+          "source" : "relation",
+          "ref" : "machines",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "machines",
+            "label" : "Машины"
+          }
+        }, {
+          "key" : "roles",
+          "source" : "relation",
+          "ref" : "roles",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "roles",
+            "label" : "Роли продукта"
+          }
+        } ]
+      },
       "project" : {
         "decided" : true,
         "sections" : [ {
@@ -8192,64 +8250,6 @@
           "order" : 16,
           "slot" : "own",
           "group" : null
-        } ]
-      },
-      "user" : {
-        "decided" : true,
-        "sections" : [ {
-          "key" : "tasks",
-          "source" : "relation",
-          "ref" : "tasks",
-          "order" : 1,
-          "slot" : "own",
-          "group" : {
-            "key" : "tasks",
-            "label" : "Задачи"
-          }
-        }, {
-          "key" : "agents",
-          "source" : "relation",
-          "ref" : "agents",
-          "order" : 2,
-          "slot" : "own",
-          "group" : {
-            "key" : "agents",
-            "label" : "Агенты"
-          }
-        } ]
-      },
-      "agent" : {
-        "decided" : true,
-        "sections" : [ {
-          "key" : "tasks",
-          "source" : "relation",
-          "ref" : "tasks",
-          "order" : 1,
-          "slot" : "own",
-          "group" : {
-            "key" : "tasks",
-            "label" : "Задачи"
-          }
-        }, {
-          "key" : "machines",
-          "source" : "relation",
-          "ref" : "machines",
-          "order" : 2,
-          "slot" : "own",
-          "group" : {
-            "key" : "machines",
-            "label" : "Машины"
-          }
-        }, {
-          "key" : "roles",
-          "source" : "relation",
-          "ref" : "roles",
-          "order" : 3,
-          "slot" : "own",
-          "group" : {
-            "key" : "roles",
-            "label" : "Роли продукта"
-          }
         } ]
       }
     },
