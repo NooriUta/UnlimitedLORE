@@ -3463,7 +3463,8 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__desc:has(.sk-list__chipmore[aria-expanded='true']) { flex-wrap: wrap; overflow-x: visible; }
 /* «+N условий» — не чип: это управление свёрткой, и выглядеть оно должно иначе,
    чтобы его не сняли вместо условия. */
-.sk-list__chipmore {
+.sk-list__chipmore,
+.sk-list__facetmore {
   flex: 0 0 auto;
   min-height: max(var(--tap), 20px);
   padding: 0 8px;
@@ -3474,7 +3475,8 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   font-size: var(--fs-xs);
   cursor: pointer;
 }
-.sk-list__chipmore:hover { color: var(--t1); border-color: var(--acc); }
+.sk-list__chipmore:hover,
+.sk-list__facetmore:hover { color: var(--t1); border-color: var(--acc); }
 .sk-list__shown {
   margin: 0;
   color: var(--t2);
