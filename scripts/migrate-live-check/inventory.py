@@ -29,6 +29,7 @@ import urllib.request
 
 SAMPLE = 20          # образцов на большой тип
 FULL_LIMIT = 500     # тип не больше этого числа записей сверяется целиком
+BODY_LIMIT = 50      # тип не больше этого числа записей хранит тела (показ пропавших в отчёте)
 # Цепочки SCD2: тип истории → поле id владельца (как в StatusHistoryService.KINDS).
 SCD2 = {
     "KnowTaskHist": "task_uid", "KnowSprintHist": "sprint_id", "KnowPhaseHist": "phase_uid",
@@ -90,6 +91,11 @@ def snapshot(api, db, out):
             "full": c <= FULL_LIMIT,
             "rows": {r["@rid"]: body_hash(r) for r in rows if r.get("@type") == name},
         }
+        if c <= BODY_LIMIT:
+            # тела малых типов — чтобы пропажу показать полями, а не только @rid (V82: даты машин)
+            inv["samples"][name]["bodies"] = {
+                r["@rid"]: {k: v for k, v in r.items() if k not in ("@cat",)}
+                for r in rows if r.get("@type") == name}
     for hist, key in SCD2.items():
         if hist not in inv["types"]:
             continue
@@ -159,6 +165,21 @@ def compare(before_p, after_p, mode, allow_csv, out_md):
         for n, r in gone:
             if mode == "repeat" or n not in allow:
                 red.append(f"пропала запись {n} {r}")
+        # Убыль объявлена — но ЧТО ушло, должно быть видно: V82 13.11 объявленно удалил
+        # варианты машин и вместе с ними их first_seen_at/last_seen_at, а отчёт
+        # показывал только @rid, и потеря полей прошла проверку.
+        allowed_gone = [(n, r) for n, r in gone if n in allow and mode != "repeat"]
+        if allowed_gone:
+            warn.append(f"объявленная убыль: пропало {len(allowed_gone)} записей — сверить поля с выжившими (тела ниже)")
+            lines.append("\nПропавшие записи объявленных типов (сверить, что их поля не потеряны):")
+            for n, r in allowed_gone[:20]:
+                body = a["samples"].get(n, {}).get("bodies", {}).get(r)
+                lines.append(f"- `{n}` {r}: " + (json.dumps(body, ensure_ascii=False, sort_keys=True)[:400] if body else "(тело не сохранено — тип крупнее BODY_LIMIT)"))
+            survivors = {n: b["samples"].get(n, {}).get("bodies", {}) for n, _ in allowed_gone}
+            for n, bodies in survivors.items():
+                new = {rid: v for rid, v in bodies.items() if rid not in a["samples"].get(n, {}).get("rows", {})}
+                for rid, v in list(new.items())[:10]:
+                    lines.append(f"- новая/выжившая `{n}` {rid}: " + json.dumps(v, ensure_ascii=False, sort_keys=True)[:400])
     if changed:
         lines.append(f"- изменилось тело: {len(changed)} — " + ", ".join(f"`{n}` {r}" for n, r in changed[:30]))
         if mode == "repeat":
@@ -202,11 +223,17 @@ def selftest():
                         "KnowTask": {"full": True, "rows": {"#2:0": "t"}}},
             "scd2": {"KnowTaskHist": {"open": 5, "entities_multi_open": [], "open_without_owner": 0}}}
 
-    def case(after, mode, allow, want):
+    base["samples"]["KnowMachine"]["bodies"] = {
+        "#1:0": {"@rid": "#1:0", "machine_id": "LORCETUS", "first_seen_at": "07:46"},
+        "#1:1": {"@rid": "#1:1", "machine_id": "LorCetus", "first_seen_at": "09:35"}}
+
+    def case(after, mode, allow, want, report_has=None):
         with tempfile.TemporaryDirectory() as d:
             a, b, m = (os.path.join(d, x) for x in ("a.json", "b.json", "r.md"))
             json.dump(base, open(a, "w")); json.dump(after, open(b, "w"))
             got = compare(a, b, mode, allow, m)
+            if report_has and report_has not in open(m, encoding="utf-8").read():
+                return False
             return got == want
 
     lost = json.loads(json.dumps(base)); lost["schema_version"] = 82
@@ -221,6 +248,8 @@ def selftest():
     checks = {
         "убыль без объявления — красно": case(lost, "migrate", "", 1),
         "объявленная убыль — зелёно": case(lost, "migrate", "KnowMachine", 0),
+        "объявленная убыль — тело пропавшей записи в отчёте": case(lost, "migrate", "KnowMachine", 0,
+                                                                   report_has='"first_seen_at": "09:35"'),
         "новая двойная открытая версия — красно": case(dup, "migrate", "", 1),
         "версия схемы упала — красно": case(down, "migrate", "", 1),
         "новых шагов нет, данные те же — зелёно": case(same, "migrate", "", 0),
