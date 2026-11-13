@@ -54,7 +54,7 @@ public class LoreStatusResource extends LoreResourceBase {
      * solved_at; задача снова открыта — метка снимается. Ребро не удаляется никогда.
      */
     static String gatesSolvedSql(String status) {
-        boolean closed = "done".equals(status) || "cancelled".equals(status);
+        boolean closed = "done".equals(status) || "cancelled".equals(status) || "failed".equals(status);
         return closed
             ? "UPDATE GATES SET solved_at = :now WHERE @in.task_uid = :id AND solved_at IS NULL"
             : "UPDATE GATES SET solved_at = null WHERE @in.task_uid = :id AND solved_at IS NOT NULL";
@@ -475,12 +475,14 @@ public class LoreStatusResource extends LoreResourceBase {
     // release" — an intentional hold, so all-done must not silently flip it to
     // done). Best-effort: a failure here never fails the task status change.
     private static final java.util.Set<String> SPRINT_AUTO_GUARD =
-        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy", "uat");
+        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy", "uat",
+            // WK-05: review — та же приёмка, что RFD/UAT; waiting — намеренное ожидание; failed — исход.
+            "review", "waiting", "failed");
     // MT-SPRINT-STATUS-FOLLOWS-TASKS (decision:D-2026-SPRINT-STATUS-FOLLOWS-LAST-TASK):
     // «в работе» — только задачи, над которыми работают. "done" здесь был
     // дефектом: закрытие задачи открывало спринт (VE-1, 06.11.2026).
     private static final java.util.Set<String> TASK_PROGRESS =
-        java.util.Set.of("active", "partial", "ready_for_deploy", "uat");
+        java.util.Set.of("active", "partial", "ready_for_deploy", "uat", "waiting", "review");
     private static final java.util.Set<String> SPRINT_PROMOTABLE =
         java.util.Set.of("planned", "todo", "backlog");
 
@@ -501,6 +503,9 @@ public class LoreStatusResource extends LoreResourceBase {
         if (s.startsWith("📋")) return "planned";
         if (s.startsWith("⬜")) return "todo";
         if (s.startsWith("⏸")) return "deferred";
+        if (s.startsWith("⏳")) return "waiting";
+        if (s.startsWith("🔍")) return "review";
+        if (s.startsWith("❌")) return "failed";
         // Keyword fallbacks for legacy rows written before the emoji convention.
         String u = s.toUpperCase();
         if (u.startsWith("DONE") || u.startsWith("CLOSED") || u.startsWith("ЗАВЕРШ")) return "done";
@@ -515,6 +520,9 @@ public class LoreStatusResource extends LoreResourceBase {
         if (u.startsWith("PLAN") || u.startsWith("ЗАПЛАН")) return "planned";
         if (u.startsWith("TODO") || u.startsWith("НЕ НАЧ")) return "todo";
         if (u.startsWith("DEFER") || u.startsWith("ОТЛОЖ") || u.startsWith("HOLD") || u.startsWith("PAUSE")) return "deferred";
+        if (u.startsWith("WAITING") || u.startsWith("ЖДЁМ") || u.startsWith("ЖДЕМ")) return "waiting";
+        if (u.startsWith("REVIEW")) return "review";
+        if (u.startsWith("FAIL")) return "failed";
         return null;
     }
 
@@ -527,7 +535,8 @@ public class LoreStatusResource extends LoreResourceBase {
             if (tok == null) continue;
             total++;
             if (tok.equals("done")) done++;
-            if (tok.equals("cancelled")) cancelled++;
+            // WK-05: failed закрыт, но не «сделан» — как отменённая.
+            if (tok.equals("cancelled") || tok.equals("failed")) cancelled++;
             if (TASK_PROGRESS.contains(tok)) progress++;
         }
         String target = null;

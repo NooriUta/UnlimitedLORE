@@ -56,7 +56,11 @@ final class LoreStatusCategory {
         Map.entry("ready_for_deploy", "in_progress"),
         Map.entry("uat", "in_progress"),
         Map.entry("done", "finished"),
-        Map.entry("cancelled", "withdrawn"));
+        Map.entry("cancelled", "withdrawn"),
+        // WK-05: waiting и review — работа идёт; failed — закрыт отрицательным исходом, не «сделано».
+        Map.entry("waiting", "in_progress"),
+        Map.entry("review", "in_progress"),
+        Map.entry("failed", "withdrawn"));
 
     /** ADR/спеки/решения. {@code fixed}/{@code done} решений — допущение S1-06. */
     static final Map<String, String> DOC_MAP = Map.ofEntries(

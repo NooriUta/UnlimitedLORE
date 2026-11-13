@@ -326,6 +326,9 @@ export async function inlineProject(kind: ProjectKind, id: string, explicit?: st
 const LORE_STATUS = z.enum([
   'todo', 'planned', 'active', 'partial', 'done',
   'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy', 'uat',
+  // WK-05: ядро — planned · active · waiting · review · done · failed · blocked · cancelled;
+  // прежние значения остаются синонимами (shared/lore-statuses.json coreSynonyms).
+  'waiting', 'review', 'failed',
 ]);
 
 // MT-MCP-TRUTH A1–A2 (06.11.2026): отказ на status="closed" у question_new/question_set —
