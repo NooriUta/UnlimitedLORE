@@ -5,7 +5,7 @@
 //     warnings с попапом; несколько источников агрегируются в один список;
 //   • строка над паспортом есть в ЛЮБОМ состоянии (загрузка, сбой, чтение).
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import ListPassport from './ListPassport';
@@ -23,6 +23,27 @@ function fake() {
     return json({ rows: [] });
   });
 }
+
+/** Фасад записи по контракту lore.record/1 (образец — ListPassport.facade.test.tsx) без строк состояния. */
+const CLEAN_FACADE = {
+  contract: 'lore.record/1',
+  record: { type: 'sprint', id: 'S_A', title: 'Альфа', status: 'active', version: '2026-11-08T00:00:00Z' },
+  values: { title: 'Альфа', context_md: 'текст' },
+  parts: [],
+  links: [],
+  perms: { can_edit: false, can_status: false, can_create: false, status_next: [], reason: null },
+  facts: {},
+  schema: {
+    type: 'sprint', label: 'Спринт', label_key: 'rec.sprint', icon: 'calendar',
+    fields: [
+      { key: 'title', label: 'Название', label_key: 'f.t', kind: 'text', group: 'head', required: true, editable: false },
+      { key: 'context_md', label: 'Контекст', label_key: 'f.c', kind: 'md', group: 'body', required: false, editable: false },
+    ],
+    layout: {},
+    relations: [],
+  },
+  meta: { facade: 'server', sources: {} },
+};
 
 const failing = () => vi.fn(async () => { throw new Error('сеть недоступна'); });
 
@@ -51,8 +72,29 @@ describe('MP2-08 · технические сообщения паспорта �
 
   it('сообщений нет — значка нет', async () => {
     // Модель ответила и тип решён: оговорок нет; состояние данных чистое.
+    //
+    // Проверка «значка нет» — отрицательная, поэтому делается ПОСЛЕ того, как
+    // пришли все загрузки паспорта (фасад записи и история), а не сразу по
+    // заголовку: иначе она проходит по таймингу. Так develop 2648f661 краснел
+    // через раз (SPRINT_UXR_S11_TEST_OPT/S11-PASSPORT-WARNINGS-STUB): заглушка
+    // отвечала на /lore/record/… `{rows: []}`, фасад падал, паспорт честно
+    // собирался на клиенте со строкой `lore.record: error`, и «Часть сведений
+    // не загрузилась» появлялась уже ПОСЛЕ проверки. «Чисто» — значит фасад
+    // ответил по контракту lore.record/1, без data_state.
+    let recordServed!: () => void;
+    let historyServed!: () => void;
+    const recordDone = new Promise<void>(r => { recordServed = r; });
+    const historyDone = new Promise<void>(r => { historyServed = r; });
     const clean = vi.fn(async (input: RequestInfo | URL) => {
-      const name = new URL(String(input), 'http://x').pathname.split('/').pop();
+      const path = new URL(String(input), 'http://x').pathname;
+      const name = path.split('/').pop();
+      if (path.startsWith('/lore/record/')) { recordServed(); return json(CLEAN_FACADE); }
+      // форма LoreHistoryResource: {type, id, rows, attribution} — версий нет, это не сбой
+      if (path === '/lore/history') {
+        historyServed();
+        return json({ type: 'sprint', id: 'S_A', rows: [], attribution: { ok: true } });
+      }
+      if (path === '/lore/me/drafts') return json({ drafts: [] });
       if (name === 'sprints') return json({ rows: [SPRINT] });
       if (name === 'model') {
         return json({
@@ -66,6 +108,8 @@ describe('MP2-08 · технические сообщения паспорта �
     });
     render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={clean as unknown as typeof fetch} />);
     await screen.findByRole('heading', { level: 1, name: 'Альфа' }, { timeout: 8000 });
+    await Promise.all([recordDone, historyDone]);
+    await act(async () => { await new Promise(r => setTimeout(r, 0)); });
     expect(screen.queryByTestId('kit-rec-warnings')).toBeNull();
   });
 });
