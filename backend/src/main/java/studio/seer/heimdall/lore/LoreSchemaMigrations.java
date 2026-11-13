@@ -1610,6 +1610,12 @@ final class LoreSchemaMigrations {
         // раньше слитое пересоздавалось бы заголовком X-Lore-Machine. Идемпотентен.
         new Step(82, 17, "java__machine_id_canon", List.of()),
 
+        // SPRINT_UXR_POLISH_UAT_1113/PU-20 (решение владелицы 13.11, A1: «отдельный объект в бд»):
+        // отметки «не ссылка» раздела «Привести в порядок» — вершина LoreRefDismissal, ключ
+        // record_type|record_id|kind. Аддитивно, major 17. Идёт после V82 (PU-18, #1311).
+        // DDL рядом с логикой (MdRefDismissals).
+        new Step(83, 17, "ref_dismissal", MdRefDismissals.SCHEMA_SQL),
+
         // SPRINT_LORE_MODEL_AS_CONFIG/MC-05 (SPEC-LORE-MODEL-CONFIG-STORE): V84 (V82 — #1311 PU-18, V83 — #1316 PU-20). Модель LORE — запись в LORE с
         // историей SCD2 (KnowModelConfig + KnowModelConfigHist через HAS_STATE). Аддитивно, major 17:
         // только новые типы, данные не трогаются. DDL рядом с логикой (LoreModelStore).
