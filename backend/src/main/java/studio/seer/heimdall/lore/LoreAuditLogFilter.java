@@ -12,6 +12,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -107,7 +108,7 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
                 if (!(e.getKey() instanceof String k)) continue;
                 if (isIdKey(k) && e.getValue() != null) return String.valueOf(e.getValue());
             }
-            return null;
+            return naturalKeyOf(m);
         }
         if (entity != null && entity.getClass().isRecord()) {
             for (var c : entity.getClass().getRecordComponents()) {
@@ -119,6 +120,33 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
                     // разбор best-effort: не смогли прочитать поле — пробуем следующее
                 }
             }
+        }
+        return null;
+    }
+
+    /**
+     * SPRINT_UXR_POLISH_UAT_1113/PU-03: у админских правок id в ответе нет — роль
+     * отвечает {kc_sub, project}, словарь {dict_type, code}, и журнал писал ПУТЬ
+     * эндпоинта: «куда звали» вместо «что изменили». Нет id — естественный ключ
+     * объекта; составные ключи проверяются раньше одиночных (роль человека в
+     * проекте — это пара, а не человек).
+     */
+    static final List<List<String>> NATURAL_KEYS = List.of(
+        List.of("dict_type", "code"),
+        List.of("kc_sub", "project"),
+        List.of("kc_sub"),
+        List.of("slug"),
+        List.of("code"));
+
+    private static String naturalKeyOf(Map<?, ?> m) {
+        for (List<String> keys : NATURAL_KEYS) {
+            List<String> vals = new java.util.ArrayList<>(keys.size());
+            for (String k : keys) {
+                Object v = m.get(k);
+                if (v == null || String.valueOf(v).isBlank()) break;
+                vals.add(String.valueOf(v));
+            }
+            if (vals.size() == keys.size()) return String.join("/", vals);
         }
         return null;
     }

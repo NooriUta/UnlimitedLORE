@@ -6,7 +6,7 @@
 // владелицы 10.11 — экран про профили, различение сессий — отдельной работой).
 //
 // Источники (LoreSlices, PR #961):
-//   • mcp_connections → {caller, calls, last_seen epoch millis};
+//   • mcp_connections → {caller, calls, last_seen — ISO-строкой из TIMESERIES (PU-04)};
 //   • mcp_failures    → {caller, failures, last_failure} — записи агента с кодом ≥ 400.
 //
 // Различаем, что легко выдать друг за друга:
@@ -15,6 +15,7 @@
 //   • unseen — сбои есть, а вызовов не видели вовсе (calls null, не 0);
 //   • сбои не прочитались — failures null у всех, а не 0.
 import { fetchSlice } from '../api/loreSlice';
+import { momentMs } from './moment';
 
 /** Порог «давно молчит» — сутки. */
 export const MCP_STALE_MS = 24 * 3_600_000;
@@ -53,7 +54,7 @@ export function mergeMcp(conn: readonly Row[], fail: readonly Row[] | null, now:
   for (const r of conn) {
     const caller = str(r.caller);
     if (!caller) continue;
-    const lastSeen = num(r.last_seen);
+    const lastSeen = momentMs(r.last_seen);
     m.set(caller, {
       caller,
       calls: num(r.calls),
@@ -70,7 +71,7 @@ export function mergeMcp(conn: readonly Row[], fail: readonly Row[] | null, now:
       caller, calls: null, lastSeen: null, failures: 0, lastFailure: null, health: 'unseen' as const,
     };
     p.failures = num(r.failures);
-    p.lastFailure = num(r.last_failure);
+    p.lastFailure = momentMs(r.last_failure);
     m.set(caller, p);
   }
   return [...m.values()].sort((a, b) =>
@@ -120,16 +121,8 @@ export interface McpFailureRowsData {
   truncated: boolean;
 }
 
-/** Момент: epoch-мс числом/строкой или ISO-строка (MCP-обёртка отдаёт ts строкой ISO). */
-const when = (v: unknown): number | null => {
-  const n = num(v);
-  if (n !== null) return n;
-  if (typeof v === 'string' && v.trim() !== '') {
-    const ms = Date.parse(v);
-    return Number.isFinite(ms) ? ms : null;
-  }
-  return null;
-};
+/** Момент — одно правило на админку (moment.ts, PU-04). */
+const when = momentMs;
 
 export function parseFailureRows(rows: readonly Row[]): McpFailureRow[] {
   return rows.map(r => ({

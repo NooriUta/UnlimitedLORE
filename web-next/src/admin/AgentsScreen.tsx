@@ -108,8 +108,13 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                       <td colSpan={7}>
                         <AgentWhyLine row={r} />
                         <MachineEditor row={r} all={data.rows} fetchImpl={fetchImpl} onSaved={res.reload} />
-                        {/* S7B-03: ротация секрета — дифф → ввод clientId → секрет один раз; отменить нельзя. */}
-                        <RotatePanel clientId={r.client_id} fetchImpl={fetchImpl} />
+                        {/* S7B-03: ротация секрета — дифф → ввод clientId → секрет один раз; отменить нельзя.
+                            PU-13: своим разделом с заголовком — раньше панель пряталась за кнопкой «Проекты». */}
+                        <section className="adm-card" data-testid={`adm-agent-secret-${r.actor_id}`} aria-label={t('admin.agents.secret.title')}>
+                          <span className="adm-field__l">{t('admin.agents.secret.title')}</span>
+                          <p className="adm-dim">{t('admin.agents.secret.lead')}</p>
+                          <RotatePanel clientId={r.client_id} fetchImpl={fetchImpl} />
+                        </section>
                         <AgentProjectsPanel clientId={r.client_id} agentScope={r.agent_role}
                           ownerName={r.owner_display_name} fetchImpl={fetchImpl} />
                       </td>
@@ -463,7 +468,14 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
       </td>
       <td>{row.machine_id ? <span className="adm-mono">{row.machine_id}</span> : <span className="adm-missing" title={t('admin.machine.none')}>{t('admin.machine.none')}</span>}</td>
       <td>{row.owner_display_name ?? row.owner_kc_sub ?? <span className="adm-missing">{t('admin.owner.none')}</span>}</td>
-      <td><span className="adm-mono">{row.client_id ?? '—'}</span>{row.agent_role && <span className="adm-role"> · {row.agent_role}</span>}</td>
+      <td>
+        <span className="adm-mono">{row.client_id ?? '—'}</span>{row.agent_role && <span className="adm-role"> · {row.agent_role}</span>}
+        {/* PU-13: явный вход в смену секрета без простоя (S7B-19) — у агента с клиентом KC. */}
+        {row.client_id && (
+          <button type="button" className="adm-btn" aria-expanded={expanded} data-testid={`adm-agent-secret-btn-${row.actor_id}`}
+            onClick={onToggle}>{t('admin.agents.secret.button')}</button>
+        )}
+      </td>
       <td>
         <button type="button" className="adm-btn" aria-expanded={expanded} data-testid={`adm-agent-proj-btn-${row.actor_id}`}
           onClick={onToggle}>{t('admin.access.agentTab')}</button>

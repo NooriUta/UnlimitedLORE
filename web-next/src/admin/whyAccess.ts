@@ -17,6 +17,7 @@ import type { ChainOutcome, ChainStep, ChainStop } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 import { fetchSlice, LoreHttpError } from '../api/loreSlice';
 import type { AccessExplain, AgentProjects } from './access';
+import { momentMs } from './moment';
 
 /** Ответ сервера или причина, почему его нет: «нет прав» и «сбой» — разные исходы шага. */
 export type Got<T> = { ok: true; data: T } | { ok: false; forbidden: boolean; reason: string };
@@ -234,7 +235,7 @@ export async function fetch403Day(now: number, signal?: AbortSignal, fetchImpl?:
 export async function fetch403Rows(now: number, signal?: AbortSignal, fetchImpl?: typeof fetch) {
   const b = await fetchSlice<Row>('mcp_failure_rows', { since: since24h(now), code: '403' }, { signal, fetchImpl });
   return b.rows.map(r => ({
-    ts: num(r.ts) ?? (typeof r.ts === 'string' && Number.isFinite(Date.parse(r.ts)) ? Date.parse(r.ts) : null),
+    ts: momentMs(r.ts),
     family: typeof r.family === 'string' && r.family !== '' ? r.family : null,
     entity_id: typeof r.entity_id === 'string' && r.entity_id !== '' ? r.entity_id : null,
     caller: typeof r.caller === 'string' && r.caller !== '' ? r.caller : null,
