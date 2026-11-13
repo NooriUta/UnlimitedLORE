@@ -979,6 +979,8 @@
   "kit.record.graph.viewLinksHint": "связи списком по типу — читается на телефоне",
   "kit.record.graph.cluster": "{label}: {n}",
   "kit.record.graph.clusterAtLeast": "{label}: не меньше {n}",
+  "kit.record.graph.clusterKind": "Свёрнутые",
+  "kit.record.graph.clusterAtLeastKind": "не меньше {what}",
   "kit.record.graph.clusterOpen": "раскрыть",
   "kit.ref.label": "Карточка окна ссылки",
   "kit.ref.cardOld": "Существующий",
