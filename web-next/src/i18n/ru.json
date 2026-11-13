@@ -314,6 +314,7 @@
   "outsideShell.missing": "Здесь нет шапки, меню, поиска и команд.",
   "outsideShell.back": "Вернуться в LORE",
   "palette.goSection": "Перейти: {section}",
+  "palette.newIn": "Новая запись в «{section}»…",
   "palette.noSection": "Запись {id} найдена, но раздела для типа «{type}» в v2 пока нет — открыть её негде",
   "shell.grp.system": "Устройство",
   "shell.sec.milestone": "Вехи",
