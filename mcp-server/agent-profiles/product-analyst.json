@@ -23,6 +23,11 @@
     "rec_*": "allow",
     "question_*": "allow",
     "task_set": "allow",
-    "status_set": "allow"
+    "status_set": "allow",
+    "task_shape": "allow",
+    "machine_acl": "allow",
+    "harness_list": "allow",
+    "quality_check": "allow",
+    "lore_version": "allow"
   }
 }

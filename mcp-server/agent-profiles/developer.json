@@ -21,6 +21,11 @@
     "status_set": "allow",
     "doc_del": "deny",
     "spec_del": "deny",
-    "release_mv": "deny"
+    "release_mv": "deny",
+    "task_shape": "allow",
+    "machine_acl": "allow",
+    "harness_list": "allow",
+    "quality_check": "allow",
+    "lore_version": "allow"
   }
 }

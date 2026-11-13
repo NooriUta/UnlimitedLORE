@@ -451,3 +451,21 @@ export async function loreUpload(
 
 export const BACKEND_URL = BASE;
 export const BACKEND_FALLBACK_URL = FALLBACK;
+
+/**
+ * SPRINT_LORE_MCP_V2/MCPV2-2: имя профиля клиента из клейма agent_scope его
+ * сервисного токена (OIDC-режим). В header-режиме — null: роль там заявляет
+ * конфиг (LORE_SEER_ROLE), и сужение поверхности остаётся на LORE_MCP_PROFILE.
+ * Ошибка получения токена НЕ роняет сервер: пишем в stderr и возвращаем null,
+ * ролевая ось просто не участвует (граница прав — бэкенд, не этот фильтр).
+ */
+export async function clientAgentScope(log: (m: string) => void = console.error): Promise<string | null | 'ambiguous'> {
+  if (currentAuthMode() !== 'oidc') return null;
+  try {
+    const { profileNameFromJwt } = await import('./profile.js');
+    return profileNameFromJwt(await serviceAccountToken());
+  } catch (e) {
+    log(`[aida-lore-mcp] agent_scope не прочитан (${(e as Error).message}); ролевая ось сужения не применена`);
+    return null;
+  }
+}

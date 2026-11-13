@@ -23,6 +23,11 @@
     "pain_*": "allow",
     "gain_*": "allow",
     "job_*": "allow",
-    "vp_*": "allow"
+    "vp_*": "allow",
+    "task_shape": "allow",
+    "machine_acl": "allow",
+    "harness_list": "allow",
+    "quality_check": "allow",
+    "lore_version": "allow"
   }
 }

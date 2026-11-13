@@ -3,13 +3,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerLoreRead } from './tools/loreRead.js';
 import { registerLoreWrite } from './tools/loreWrite.js';
-import { BACKEND_FALLBACK_URL, BACKEND_URL } from './backend.js';
+import { BACKEND_FALLBACK_URL, BACKEND_URL, clientAgentScope } from './backend.js';
 import { registerMuninn } from './tools/muninn.js';
 import { registerClaudeRules } from './tools/claudeRules.js';
 import { registerForgejo, forgejoConfigured } from './tools/forgejo.js';
 import { registerVersion, warnIfStale } from './tools/version.js';
 import { readBuildInfo } from './buildInfo.js';
 import { withStrictTools } from './tools/strictTool.js';
+import { corePermission, permissionForProfile, surfaceScope, type Permission } from './profile.js';
 
 // stdio MCP server for AIDA LORE. Talks to the UnlimitedLORE backend (:9100),
 // which in turn serves system_aida_lore. NEVER write to stdout — it is the
@@ -17,31 +18,69 @@ import { withStrictTools } from './tools/strictTool.js';
 // withStrictTools (MT-09): wraps .tool() so every schema below is registered
 // strict — an unknown parameter is a 400, not a silently dropped key.
 //
+// SPRINT_LORE_MCP_V2: сужение поверхности ДО регистрации. Две оси —
+// LORE_MCP_PROFILE (конфиг) и agent_scope сервисного токена (роль клиента,
+// та же, что видит бэкенд). Пересечение; ни одной оси — полная поверхность
+// (прежнее поведение). Граница безопасности — бэкенд (AgentScopeFilter),
+// фильтр здесь — про размер tool-payload и честную картину доступного.
+//
 // SE-10: версия сервера — отметка сборки (dist/build-info.json), а не
 // константа '1.0.0': по константе нельзя было отличить сборку двухнедельной
 // давности от сегодняшней, а именно это расхождение и прятало правки схем.
 const build = readBuildInfo();
-const server = withStrictTools(new McpServer({ name: 'aida-lore', version: build.commit }));
 
-registerLoreRead(server);
-registerLoreWrite(server);
-registerMuninn(server);
-// Правила CLAUDE переехали из репозитория в LORE (29.08.2026): main зеркалируется
-// в публичный GitHub. Эти два инструмента и есть путь туда и обратно — без них
-// перенос оставлял бы правила без способа их положить и забрать.
-registerClaudeRules(server);
-// FJ-04: forgejo_* появляются только при заявленном мосте (LORE_FORGEJO / FORGEJO_*-env);
-// без него инструментов нет вовсе — лучше, чем вечные 503 (ADR-LORE-024).
-registerForgejo(server);
-if (!forgejoConfigured()) console.error('[aida-lore-mcp] forgejo bridge off (no LORE_FORGEJO/FORGEJO_* env) — forgejo_* tools not registered');
-// SE-10: сверка своей сборки со сборкой бэкенда — инструментом для агента и
-// строкой в stderr для человека.
-registerVersion(server);
+/** Собрать сужение поверхности: env-ось и ролевая ось (см. profile.ts). */
+async function resolveSurface() {
+  const perms: Permission[] = [];
+  const sources: string[] = [];
+  const envProfile = (process.env.LORE_MCP_PROFILE ?? '').trim();
+  if (envProfile) {
+    // Явная ошибка конфига — громко и при старте: человек чинит env, а не гадает.
+    perms.push(permissionForProfile(envProfile));
+    sources.push(`env:${envProfile}`);
+  }
+  const scope = await clientAgentScope();
+  if (scope === 'ambiguous') {
+    console.error('[aida-lore-mcp] agent_scope ambiguous (несколько разных профилей в токене) — выдача сужена до core; это ошибка провижининга, бэкенд записи откажет');
+    perms.push(corePermission());
+    sources.push('token:ambiguous→core');
+  } else if (scope) {
+    try {
+      perms.push(permissionForProfile(scope));
+      sources.push(`token:${scope}`);
+    } catch (e) {
+      // Профиль в токене без файла — дрейф провижининга; не роняем сервер,
+      // сужаем до core (безопасная сторона), ошибка видна в stderr.
+      console.error(`[aida-lore-mcp] ${(e as Error).message} — выдача сужена до core`);
+      perms.push(corePermission());
+      sources.push(`token:${scope}→core`);
+    }
+  }
+  return surfaceScope(perms, sources);
+}
 
 async function main(): Promise<void> {
+  const surface = await resolveSurface();
+  const server = withStrictTools(new McpServer({ name: 'aida-lore', version: build.commit }), surface.gate);
+
+  registerLoreRead(server);
+  registerLoreWrite(server);
+  registerMuninn(server);
+  // Правила CLAUDE переехали из репозитория в LORE (29.08.2026): main зеркалируется
+  // в публичный GitHub. Эти два инструмента и есть путь туда и обратно — без них
+  // перенос оставлял бы правила без способа их положить и забрать.
+  registerClaudeRules(server);
+  // FJ-04: forgejo_* появляются только при заявленном мосте (LORE_FORGEJO / FORGEJO_*-env);
+  // без него инструментов нет вовсе — лучше, чем вечные 503 (ADR-LORE-024).
+  registerForgejo(server);
+  if (!forgejoConfigured()) console.error('[aida-lore-mcp] forgejo bridge off (no LORE_FORGEJO/FORGEJO_* env) — forgejo_* tools not registered');
+  // SE-10: сверка своей сборки со сборкой бэкенда — инструментом для агента и
+  // строкой в stderr для человека.
+  registerVersion(server);
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`[aida-lore-mcp] ready — backend ${BACKEND_URL}${BACKEND_FALLBACK_URL ? ` (запасной ${BACKEND_FALLBACK_URL})` : ''}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
+  console.error(`[aida-lore-mcp] ready — backend ${BACKEND_URL}${BACKEND_FALLBACK_URL ? ` (запасной ${BACKEND_FALLBACK_URL})` : ''}, surface: ${surface.axes ? surface.sources.join(' ∩ ') : 'full'}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
   // После connect и без await: предупреждение не должно задерживать готовность
   // и не должно ронять старт, если бэкенд недоступен.
   void warnIfStale();
