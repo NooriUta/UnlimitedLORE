@@ -37,15 +37,24 @@ export interface EmbedChartFrameProps {
   /** Открытый параметр карточки (см. embedSrc); undefined — не трогать. */
   products?: string[];
   onRetry?: () => void;
+  /**
+   * Сколько ждать первого metabase.frame от встройки, мс (живая встройка шлёт его каждые 100 мс,
+   * VE-5). Не пришло — «не ответила» с «Повторить», а не страница браузера в рамке. 0 — не ждать.
+   */
+  answerTimeoutMs?: number;
   className?: string;
 }
 
-export function EmbedChartFrame({ state, source, title, minHeight = 240, products, onRetry, className }: EmbedChartFrameProps) {
+export function EmbedChartFrame({ state, source, title, minHeight = 240, products, onRetry, answerTimeoutMs = 15000, className }: EmbedChartFrameProps) {
   const lang = useKitLang();
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(minHeight);
   const [theme, setTheme] = useState<EmbedTheme>(embedThemeOfDocument);
   const themeKey = `${theme.palette}/${theme.mode}`;
+  // Приёмка 14.11.2026: хост встройки не отвечает — своё состояние, а не страница браузера.
+  const [answered, setAnswered] = useState(false);
+  const [silent, setSilent] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   // Тема страницы меняется атрибутами на <html> — перечитываем.
   useEffect(() => {
@@ -70,11 +79,22 @@ export function EmbedChartFrame({ state, source, title, minHeight = 240, product
       // Только наш фрейм и только origin подписанного адреса: отправитель шлёт на "*".
       if (!frameRef.current || e.source !== frameRef.current.contentWindow) return;
       const h = frameHeightFromMessage({ origin: e.origin, data: e.data }, origin);
-      if (h !== null) setHeight(Math.max(minHeight, h));
+      if (h !== null) { setAnswered(true); setHeight(Math.max(minHeight, h)); }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [origin, minHeight]);
+
+  // Новый адрес или повтор — ждём ответа заново.
+  useEffect(() => {
+    setAnswered(false);
+    setSilent(false);
+  }, [src, attempt]);
+  useEffect(() => {
+    if (!src || answered || answerTimeoutMs <= 0) return;
+    const t = setTimeout(() => setSilent(true), answerTimeoutMs);
+    return () => clearTimeout(t);
+  }, [src, answered, answerTimeoutMs, attempt]);
 
   const wrap = (kind: string, body: ReactNode) => (
     <div className={['sk-embed', className].filter(Boolean).join(' ')} data-embed-state={kind}>{body}</div>
@@ -105,10 +125,17 @@ export function EmbedChartFrame({ state, source, title, minHeight = 240, product
           <LoadError title={kitT(lang, 'kit.embed.unavailable', { source })} hint={kitT(lang, 'kit.embed.badUrl')} onRetry={onRetry} />
         ));
       }
+      if (silent) {
+        return wrap('silent', (
+          <LoadError title={kitT(lang, 'kit.embed.silent', { source })}
+            hint={kitT(lang, 'kit.embed.silentHint', { source, s: Math.round(answerTimeoutMs / 1000) })}
+            onRetry={() => { setAttempt(n => n + 1); onRetry?.(); }} />
+        ));
+      }
       return wrap('ready', (
         <iframe
           ref={frameRef}
-          key={src}
+          key={`${src}#${attempt}`}
           src={src}
           title={title}
           className="sk-embed__frame"
