@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "4a5bc9ae7a66768b",
+  "version" : "3afe182ca79dd9a5",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -772,8 +772,11 @@
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
-        "editable" : false,
-        "write" : null,
+        "editable" : true,
+        "write" : {
+          "endpoint" : "/lore/sprint/update",
+          "field" : "no_release_required"
+        },
         "required_level" : null,
         "required_rules" : [ ],
         "visibility" : "visible",

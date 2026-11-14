@@ -330,11 +330,13 @@ export function TipTapField({
   // MD-WINDOW §3a: проверка ссылок текста — отметки и полоса ненайденных.
   const [refStates, setRefStates] = useState<Record<string, RefCheckState>>({});
   const [refIdsSig, setRefIdsSig] = useState(() => refsInMd(value).map(r => `${r.type ?? ''}:${r.id}`).join('|'));
-  const [missingHidden, setMissingHidden] = useState(false);
+  // «Не сейчас» запоминает НАБОР ненайденных, который спрятали: полоса скрыта, пока набор тот же,
+  // новый набор — снова видна. Выводится при рендере, а не сбрасывается эффектом: эффект после
+  // клика возвращал полосу (гонка, CI web-next падал ~1 из 10).
+  const [hiddenMissingKey, setHiddenMissingKey] = useState<string | null>(null);
   // MD-WINDOW §3a: тип каждой ссылки текста (для «Завести») и открытая карточка «завести под этим ID».
   const refTypesRef = useRef<Record<string, string | null>>({});
   const [createFor, setCreateFor] = useState<{ id: string; type: string } | null>(null);
-  const shownMissingRef = useRef('');
   const onRefsMissingRef = useRef(onRefsMissing);
   onRefsMissingRef.current = onRefsMissing;
   const [refOpen, setRefOpen] = useState<RefOpen | null>(null);
@@ -477,12 +479,9 @@ export function TipTapField({
     editor.view.dispatch(editor.state.tr.setMeta(refStateKey, refStates).setMeta('addToHistory', false));
     const missing = Object.keys(refStates).filter(k => refStates[k] === 'missing');
     onRefsMissingRef.current?.(missing);
-    // «Не сейчас» держится, пока набор ненайденных тот же; новый набор — полоса снова видна.
-    const key = missing.join('|');
-    if (missing.length && key !== shownMissingRef.current) setMissingHidden(false);
-    shownMissingRef.current = key;
   }, [refStates, editor]);
   const missingIds = Object.keys(refStates).filter(k => refStates[k] === 'missing');
+  const missingHidden = missingIds.length > 0 && hiddenMissingKey === missingIds.join('|');
   // Завести можно, если приложение умеет заводить и знает, какие поля задаёт ID.
   const canCreate = !!(refs?.createSpec && refs?.onCreate && refs?.presetFor);
   const createType = (id: string) => (canCreate ? refTypesRef.current[id] ?? null : null);
@@ -818,12 +817,12 @@ export function TipTapField({
                     onClick={() => setCreateFor({ id, type: ty })}>{`${t('kit.md.refCreate')} ${id}`}</button>
                 ) : null;
               })}
-              <button type="button" className="sk-btn" onClick={() => setMissingHidden(true)}>{t('kit.md.refNotNow')}</button>
+              <button type="button" className="sk-btn" onClick={() => setHiddenMissingKey(missingIds.join('|'))}>{t('kit.md.refNotNow')}</button>
             </div>
           )}
           {missingIds.length > 0 && missingHidden && canCreate && (
             // Кадр 17: после «Не сейчас» ссылки красные, а счётчик «Дозавести» остаётся — он и открывает меню.
-            <button type="button" className="sk-btn sk-md__refmore" onClick={() => setMissingHidden(false)}>
+            <button type="button" className="sk-btn sk-md__refmore" onClick={() => setHiddenMissingKey(null)}>
               {kitT(lang, 'kit.md.refCreateMore', { n: missingIds.length })}
             </button>
           )}

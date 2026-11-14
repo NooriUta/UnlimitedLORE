@@ -532,8 +532,11 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // своя вкладка вида), раздел остаётся вкладкой: показать его не там, где
   // просили, — полбеды, а не показать вовсе — потеря данных с экрана.
   const glueable = new Set(relTabs.map(rt => rt.id));
+  // Тело в модели — раздел с source `body` (ключ у сервера `content`), а вкладка тела в kit —
+  // RECORD_TABS.overview. Без сопоставления «Контент» считался не названным моделью и уезжал в
+  // хвост ряда, хотя модель ставит его первым (приёмка 14.11.2026).
   const order: PassportOrder | null | undefined = sections?.decided
-    ? { decided: true, notes: sections.notes, sections: sections.sections.map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
+    ? { decided: true, notes: sections.notes, sections: sections.sections.map(s => (s.source === 'body' ? { ...s, key: RECORD_TABS.overview } : s)).map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
     : sections;
   const glued = gluedSections(order)
     .map(s => relTabs.find(rt => rt.id === s.key))
@@ -613,7 +616,11 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // не пропадает.
   type Mode = 'content' | 'props' | 'analytics';
   const mode: Mode = current === RECORD_TABS.props ? 'props' : aroundItems.some(i => i.id === current) ? 'analytics' : 'content';
-  const contentItems = foldGroups(recordItems.filter(i => i.id !== RECORD_TABS.props));
+  // Ряд «Контент» в доке — тот же упорядоченный ряд, что во весь экран, без служебного и свойств.
+  // Прежде он собирался из recordItems ДО applySections, и в доке порядок модели не применялся
+  // вовсе (приёмка 14.11.2026: у 8 типов из 11 порядок в доке и во весь экран расходился).
+  const aroundIds = new Set(aroundItems.map(i => i.id));
+  const contentItems = items.filter(i => i.id !== RECORD_TABS.props && !aroundIds.has(i.id));
   const shown: TabItem[] = !modes ? items : mode === 'analytics' ? aroundItems : mode === 'content' ? contentItems : [];
   const firstOf: Record<Mode, string> = { content: RECORD_TABS.overview, props: RECORD_TABS.props, analytics: aroundItems[0].id };
   const switcher = modes ? (
