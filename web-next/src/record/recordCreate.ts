@@ -32,6 +32,7 @@ import { recordPath } from '../api/liveRecord';
 import { loreFetch } from '../auth/session';
 import { fetchSlice } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
+import { saveRelation } from './relationSave';
 
 // S4-24 (14.11): решения и спеки — та же форма; кнопка появится, когда сервер отдаст паспорт `_new` с can_create.
 export const CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec'] as const;
@@ -92,6 +93,8 @@ const SPECS: Record<CreateType, FieldSpec[]> = {
     { key: 'title', label: 'create.field.title', kind: 'text', required: true },
     { key: 'projects', label: 'create.field.project', kind: 'enum' },
     { key: 'summary', label: 'create.field.summary', kind: 'text' },
+    // Без body в блоке create: поле несёт after_write — привязка BELONGS_TO после записи (#1344).
+    { key: 'component', label: 'create.field.component', kind: 'enum' },
   ],
 };
 
@@ -113,6 +116,8 @@ export interface CreateFieldOptions {
   adrs?: readonly StatusOption[];
   /** Проекты (срез git_projects): новое решение или спека кладутся в проект. Нет — поле только для чтения. */
   projects?: readonly StatusOption[];
+  /** Компоненты (срез components) — компонент новой спеки. Нет — поле только для чтения. */
+  components?: readonly StatusOption[];
 }
 
 /**
@@ -125,18 +130,20 @@ export function createFields(type: CreateType, lang: KitLang, opts: CreateFieldO
   const sprints = opts.sprints ?? [];
   const adrs = opts.adrs ?? [];
   const projects = opts.projects ?? [];
+  const components = opts.components ?? [];
   return SPECS[type]
     .filter(f => f.key !== 'status' || status.length > 0)
     .map(f => ({
       key: f.key,
       label: appT(lang, f.label),
       kind: f.kind,
-      editable: f.key === 'sprint_id' ? sprints.length > 0 : f.key === 'adr' ? adrs.length > 0 : f.key === 'projects' ? projects.length > 0 : true,
+      editable: f.key === 'sprint_id' ? sprints.length > 0 : f.key === 'adr' ? adrs.length > 0 : f.key === 'projects' ? projects.length > 0 : f.key === 'component' ? components.length > 0 : true,
       ...(f.required ? { required: 'block' as const } : {}),
       ...(f.key === 'status' ? { options: status } : {}),
       ...(f.key === 'sprint_id' ? { options: sprints } : {}),
       ...(f.key === 'adr' ? { options: adrs } : {}),
       ...(f.key === 'projects' ? { options: projects } : {}),
+      ...(f.key === 'component' ? { options: components } : {}),
     }));
 }
 
@@ -223,7 +230,9 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
 
 export type CreateResult =
   | { ok: true; id: string }
-  | { ok: false; reason: string; kind: 'exists' | 'forbidden' | 'refused' | 'unchecked' | 'network' };
+  | { ok: false; reason: string; kind: 'exists' | 'forbidden' | 'refused' | 'unchecked' | 'network' }
+  /** Запись заведена, привязка after_write отказала: запись есть, связи нет — сказать громко. */
+  | { ok: false; reason: string; kind: 'linkFailed'; id: string };
 
 async function reasonOf(res: Response): Promise<string> {
   let detail = '';
@@ -270,6 +279,15 @@ export async function saveCreate(type: CreateType, values: CreateValues, opts: {
     try { out = await res.json() as Record<string, unknown>; } catch { /* ответ без тела — успех по коду */ }
     if (out.ok === false) return { ok: false, kind: 'refused', reason: t('create.err.refused', { reason: String(out.reason ?? out.message ?? 'ok:false') }) };
     if (type === 'sprint' && out.created === false) return { ok: false, kind: 'exists', reason: t('create.err.exists', { id }) };
+    // after_write блока create: компонент спеки — ребро BELONGS_TO, путь записи из модели.
+    const component = type === 'spec' ? text(values.component) : '';
+    if (component) {
+      try {
+        await saveRelation({ type, id, rel: 'BELONGS_TO', dir: 'out', target: component, action: 'add' }, http);
+      } catch (e) {
+        return { ok: false, kind: 'linkFailed', id, reason: t('create.err.linkFailed', { id, reason: e instanceof Error ? e.message : String(e) }) };
+      }
+    }
     return { ok: true, id };
   } catch (e) {
     return { ok: false, kind: 'network', reason: t('create.err.network', { reason: e instanceof Error ? e.message : String(e) }) };
@@ -283,6 +301,23 @@ export async function fetchProjectOptions(fetchImpl?: typeof fetch): Promise<{ o
     const options = body.rows
       .filter(r => typeof r.slug === 'string' && r.slug)
       .map(r => ({ value: String(r.slug), label: typeof r.name === 'string' && r.name ? `${r.name} · ${String(r.slug)}` : String(r.slug) }));
+    return { options };
+  } catch (e) {
+    return { options: [], note: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Компоненты для новой спеки — срез components. Не прочитался — пусто и причина. */
+export async function fetchComponentOptions(fetchImpl?: typeof fetch): Promise<{ options: StatusOption[]; note?: string }> {
+  try {
+    const body = await fetchSlice<Record<string, unknown>>('components', { limit: '1000' }, fetchImpl ? { fetchImpl } : {});
+    const options = body.rows
+      .filter(r => typeof r.component_id === 'string' && r.component_id)
+      .map(r => {
+        const id = String(r.component_id);
+        const name = typeof r.name === 'string' && r.name ? r.name : '';
+        return { value: id, label: name ? `${id} · ${name}` : id };
+      });
     return { options };
   } catch (e) {
     return { options: [], note: e instanceof Error ? e.message : String(e) };

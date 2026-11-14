@@ -194,7 +194,7 @@ describe('S4-24 · решения и спеки — та же форма, кон
     expect(missingRequired('decision', { id: 'D-1', title: 'Правило', projects: 'NooriUta/UnlimitedLORE' })).toEqual([]);
   });
   it('спека: код, название, проект (обязателен), краткое описание', () => {
-    expect(createFields('spec', 'ru').map(x => x.key)).toEqual(['id', 'title', 'projects', 'summary']);
+    expect(createFields('spec', 'ru').map(x => x.key)).toEqual(['id', 'title', 'projects', 'summary', 'component']);
     expect(missingRequired('spec', { id: 'SPEC-X', title: 'Спека' })).toEqual(['projects']);
     expect(missingRequired('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P' })).toEqual([]);
   });
@@ -221,5 +221,53 @@ describe('S4-24 · «проект или ADR» — отказ называет, 
     expect(r).toMatchObject({ ok: false, kind: 'refused' });
     expect(!r.ok && r.reason).toMatch(/хотя бы одно.*Проект.*ADR/);
     expect(n.posts()).toHaveLength(0);
+  });
+});
+
+// S4-24 (model-config #1344, 8ded703f): компонент спеки идёт в блоке create без body —
+// его поле несёт after_write: после записи спеки — привязка BELONGS_TO (out) через
+// /lore/record/spec/{id}/relation. Сбой привязки — громко: спека заведена, компонент нет.
+describe('S4-24 · компонент спеки — привязка после записи (after_write)', () => {
+  it('у спеки есть поле «Компонент» — выбор из списка; без вариантов только чтение', () => {
+    const f = createFields('spec', 'ru', { components: [{ value: 'SEIDRKIT_LIST', label: 'SEIDRKIT_LIST' }] });
+    expect(f.map(x => x.key)).toEqual(['id', 'title', 'projects', 'summary', 'component']);
+    const c = f.find(x => x.key === 'component')!;
+    expect(c.kind).toBe('enum');
+    expect(c.editable).toBe(true);
+    expect(createFields('spec', 'ru').find(x => x.key === 'component')!.editable).toBe(false);
+  });
+  it('компонент не уходит в тело создания', () => {
+    expect(createRequest('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P', component: 'C1' }).body)
+      .toEqual({ spec_id: 'SPEC-X', title: 'Спека', project: 'P' });
+  });
+  it('после записи спеки — POST relation {rel: BELONGS_TO, dir: out, target, action: add}', async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const impl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input); calls.push({ url, init });
+      if (url.startsWith('/lore/record/') && init?.method !== 'POST') return json(404, { error: 'NOT_FOUND' });
+      return json(200, { ok: true });
+    }) as unknown as typeof fetch;
+    const n = { impl, posts: () => calls.filter(c => c.init?.method === 'POST') };
+    const r = await saveCreate('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P', component: 'C1' }, { fetchImpl: n.impl, lang: 'ru' });
+    expect(r).toEqual({ ok: true, id: 'SPEC-X' });
+    const posts = n.posts();
+    expect(posts.map(p => p.url)).toEqual(['/lore/spec', '/lore/record/spec/SPEC-X/relation']);
+    expect(JSON.parse(String(posts[1].init!.body))).toEqual({ rel: 'BELONGS_TO', dir: 'out', target: 'C1', action: 'add' });
+  });
+  it('без компонента — привязки нет', async () => {
+    const n = net(404, () => json(200, { ok: true }));
+    await saveCreate('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P' }, { fetchImpl: n.impl, lang: 'ru' });
+    expect(n.posts().map(p => p.url)).toEqual(['/lore/spec']);
+  });
+  it('привязка отказала — громко: спека заведена, компонент не привязан, причина названа', async () => {
+    const impl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/relation')) return json(403, { error: 'FORBIDDEN', detail: 'нет права на компонент' });
+      if (url.startsWith('/lore/record/') && init?.method !== 'POST') return json(404, { error: 'NOT_FOUND' });
+      return json(200, { ok: true });
+    }) as unknown as typeof fetch;
+    const r = await saveCreate('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P', component: 'C1' }, { fetchImpl: impl, lang: 'ru' });
+    expect(r).toMatchObject({ ok: false, kind: 'linkFailed', id: 'SPEC-X' });
+    expect(!r.ok && r.reason).toMatch(/^SPEC-X заведена, но компонент не привязан: .+. Привяжите/s);
   });
 });

@@ -10,7 +10,7 @@ import { KIT_NEW_ID, RecordView, useKitLang, type KitCtx } from '@seidr/kit';
 import { TipTapField } from '@seidr/kit/content';
 import { useAppT, type AppKey } from '../i18n';
 import { fetchTypeStatuses } from './passportStatuses';
-import { createFields, fetchAdrOptions, fetchProjectOptions, fetchSprintOptions, saveCreate, type CreateType, type StatusOption } from './recordCreate';
+import { createFields, fetchAdrOptions, fetchComponentOptions, fetchProjectOptions, fetchSprintOptions, saveCreate, type CreateType, type StatusOption } from './recordCreate';
 
 export interface RecordCreateProps {
   type: CreateType;
@@ -49,16 +49,18 @@ export function RecordCreate({ type, fetchImpl, onCreated, onCancel }: RecordCre
   // S4-24: ADR нового решения — ребро, выбор из среза adrs.
   const [adrs, setAdrs] = useState<StatusOption[]>([]);
   const [projects, setProjects] = useState<StatusOption[]>([]);
+  const [components, setComponents] = useState<StatusOption[]>([]);
   useEffect(() => {
     if (type !== 'decision' && type !== 'spec') return;
     let live = true;
     if (type === 'decision') fetchAdrOptions(fetchImpl).then(r => { if (live) setAdrs(r.options); });
+    if (type === 'spec') fetchComponentOptions(fetchImpl).then(r => { if (live) setComponents(r.options); });
     fetchProjectOptions(fetchImpl).then(r => { if (live) setProjects(r.options); });
     return () => { live = false; };
   }, [type, fetchImpl]);
   const fields = useMemo(
-    () => createFields(type, lang, { status: statusOptions, sprints: sprints?.options ?? [], adrs, projects }),
-    [type, lang, statusOptions, sprints, adrs, projects],
+    () => createFields(type, lang, { status: statusOptions, sprints: sprints?.options ?? [], adrs, projects, components }),
+    [type, lang, statusOptions, sprints, adrs, projects, components],
   );
   const sprintNote = type !== 'task' || !sprints ? null
     : sprints.options.length === 0
