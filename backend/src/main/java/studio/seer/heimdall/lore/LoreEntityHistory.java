@@ -85,6 +85,21 @@ final class LoreEntityHistory {
     static Set<String> types() { return HIST_OF_TYPE.keySet(); }
 
     /**
+     * MINI-06: заголовок записи для ответа истории — с вершины-владельца цепочки (класс цепочки без «Hist»),
+     * по тому же полю id. Поле имени у типов разное (title у задачи, name у спринта, label у вехи) —
+     * берётся первое непустое. У строки справочника вершины-владельца нет — {@code null}.
+     */
+    static String titleSql(String type) {
+        String hist = type == null ? null : HIST_OF_TYPE.get(type);
+        if (hist == null) throw new IllegalArgumentException("unknown history type: " + type + " (known: " + types() + ")");
+        if ("dict_entry".equals(type)) return null;
+        LoreSlices.HistParent parent = LoreSlices.HIST_PARENT.get(hist);
+        String vertex = hist.substring(0, hist.length() - "Hist".length());
+        return "SELECT coalesce(title, name, label) AS title FROM " + vertex
+            + " WHERE " + parent.idField() + " = :id LIMIT 1";
+    }
+
+    /**
      * SQL цепочки одной сущности. Поля, которых у цепочки нет (status_raw у спеки,
      * source_commit у вехи), ArcadeDB отдаёт null — форма строки одна на все типы.
      */
