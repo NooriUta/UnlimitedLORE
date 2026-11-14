@@ -10,8 +10,9 @@ import java.util.Set;
  * (профиль agent_scope) и потолок на весь контур. Второй из первого не выводится — контур
  * может выбрать потолок, когда ни один агент свой не выбрал.
  *
- * <p>Расход считается по журналу действий AO-01 ({@code MetricSnapshot}, metric
- * {@code lore.action}, ось agent) за окно — своего счётчика нет, иначе две правды о расходе.
+ * <p>Расход считается по журналу действий AO-01 ({@code AgentActionLog}, D-2026-LORE-AGENT-
+ * MACHINE-EVERYWHERE п.4; ось agent) за окно. Третий уровень — потолок на клиента KC (тег
+ * {@code client}): одним профилем ходят разные клиенты, и «по клиенту» — их собственный счёт — своего счётчика нет, иначе две правды о расходе.
  * Журналируются только мутации, поэтому квота — на запись, чтение не считается.
  *
  * <p>Отказ — жёсткий (решение задачи: мягкий лимит без места, куда смотреть, равен
@@ -25,11 +26,23 @@ final class AgentQuota {
     static final String PER_AGENT = "lore.agent.quota.per-agent";
     static final String TOTAL = "lore.agent.quota.total";
     static final String WINDOW = "lore.agent.quota.window";
+    static final String PER_CLIENT = "lore.agent.quota.per-client";
 
-    static final String AGENT_SQL = "SELECT count(*) AS n FROM MetricSnapshot WHERE metric = 'lore.action' "
-        + "AND segment = 'agent' AND source = :scope AND ts >= :from";
-    static final String TOTAL_SQL = "SELECT count(*) AS n FROM MetricSnapshot WHERE metric = 'lore.action' "
-        + "AND segment = 'agent' AND ts >= :from";
+    static final String AGENT_SQL = "SELECT count(*) AS n FROM AgentActionLog "
+        + "WHERE segment = 'agent' AND source = :scope AND ts >= :from";
+    static final String TOTAL_SQL = "SELECT count(*) AS n FROM AgentActionLog "
+        + "WHERE segment = 'agent' AND ts >= :from";
+    static final String CLIENT_SQL = "SELECT count(*) AS n FROM AgentActionLog "
+        + "WHERE segment = 'agent' AND client = :client AND ts >= :from";
+
+    /**
+     * Считать ли потолок клиента. «Неизвестно» и пусто — не клиент: иначе все агенты без
+     * client_id делили бы один общий потолок, которого никто не выбирал.
+     */
+    static boolean countsPerClient(String client) {
+        return client != null && !client.isBlank() && !AgentMachine.UNKNOWN.equals(client)
+            && !AgentMachine.NOT_APPLICABLE.equals(client);
+    }
 
     private static final Set<String> READS = Set.of("GET", "HEAD", "OPTIONS");
 
@@ -46,9 +59,18 @@ final class AgentQuota {
      * уже записано, следующий вызов отказывает.
      */
     static Denial judge(String scope, OptionalInt perAgent, OptionalInt total, long agentCount, long totalCount) {
+        return judge(scope, null, perAgent, OptionalInt.empty(), total, agentCount, 0, totalCount);
+    }
+
+    /** То же с потолком клиента: профиль → клиент → контур, первый исчерпанный отказывает. */
+    static Denial judge(String scope, String client, OptionalInt perAgent, OptionalInt perClient, OptionalInt total,
+                        long agentCount, long clientCount, long totalCount) {
         if (perAgent.isPresent() && agentCount >= perAgent.getAsInt())
             return new Denial("AGENT_QUOTA_EXCEEDED", "профиль агента '" + scope + "' исчерпал квоту записи: "
                 + agentCount + " из " + perAgent.getAsInt() + " за окно (" + PER_AGENT + ")");
+        if (perClient.isPresent() && countsPerClient(client) && clientCount >= perClient.getAsInt())
+            return new Denial("CLIENT_QUOTA_EXCEEDED", "клиент '" + client + "' исчерпал квоту записи: "
+                + clientCount + " из " + perClient.getAsInt() + " за окно (" + PER_CLIENT + ")");
         if (total.isPresent() && totalCount >= total.getAsInt())
             return new Denial("TOTAL_QUOTA_EXCEEDED", "контур агентов исчерпал общую квоту записи: "
                 + totalCount + " из " + total.getAsInt() + " за окно (" + TOTAL + ")");

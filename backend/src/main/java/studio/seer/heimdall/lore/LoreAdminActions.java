@@ -64,7 +64,7 @@ public class LoreAdminActions extends LoreResourceBase {
             throw new IllegalArgumentException("from is later than to");
         if (batchId != null && !LoreRoleBatch.isBatchId(batchId))
             throw new IllegalArgumentException("batch_id '" + batchId + "' is not a batch id (rb-<millis>-<hex8> expected)");
-        StringBuilder where = new StringBuilder(" FROM MetricSnapshot WHERE metric = 'lore.action' AND object_type IN [")
+        StringBuilder where = new StringBuilder(" FROM AgentActionLog WHERE object_type IN [")
             .append(String.join(", ", LoreSlices.ADMIN_FAMILIES.stream().sorted().map(f -> "'" + f + "'").toList()))
             .append("]");
         Map<String, Object> p = new LinkedHashMap<>();
@@ -74,8 +74,7 @@ public class LoreAdminActions extends LoreResourceBase {
         if (batchId != null) { where.append(" AND object_id = :batch"); p.put("batch", batchId); }
         if (from != null)   { where.append(" AND ts >= :from"); p.put("from", from); }
         if (to != null)     { where.append(" AND ts <= :to");   p.put("to", to); }
-        String sql = "SELECT ts, object_type AS family, object_id AS entity_id, source AS caller, "
-            + "segment AS axis, value AS status" + where + " ORDER BY ts DESC LIMIT " + (limit + 1);
+        String sql = "SELECT " + AgentActionLog.ROW_COLUMNS + where + " ORDER BY ts DESC LIMIT " + (limit + 1);
         return new Query(sql, "SELECT count(*) AS n" + where, p);
     }
 

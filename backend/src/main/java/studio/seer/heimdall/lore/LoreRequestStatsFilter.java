@@ -67,9 +67,19 @@ public class LoreRequestStatsFilter implements ContainerResponseFilter {
         // AO-01: мутирующий вызов — точкой в журнал действий, вместе с исходом.
         if (LoreRequestStats.isJournalled(req.getMethod())) {
             String entity = LoreAuditLogFilter.entityIdOf(res.getEntity());
-            stats.journalAction(caller, axis, family, entity != null ? entity : req.getUriInfo().getPath(), res.getStatus());
+            boolean agent = "agent".equals(axis);
+            stats.journalAction(caller, axis, family, entity != null ? entity : req.getUriInfo().getPath(), res.getStatus(),
+                AgentActionLog.clientMark(agent, agent ? clientIdOf(identity) : null),
+                AgentMachine.mark(agent, req.getHeaderString(AgentMachine.HEADER)));
         }
         if (stats.touchSession(axis + ":" + caller)) stats.recordSessionStart(caller, axis);
+    }
+
+    /** client_id токена сервис-аккаунта (тот же claim, что LoreResourceBase.callerClientId). */
+    static String clientIdOf(SecurityIdentity identity) {
+        if (identity == null || !(identity.getPrincipal() instanceof JsonWebToken jwt)) return null;
+        Object raw = jwt.getClaim("client_id");
+        return raw == null ? null : String.valueOf(raw);
     }
 
     /**

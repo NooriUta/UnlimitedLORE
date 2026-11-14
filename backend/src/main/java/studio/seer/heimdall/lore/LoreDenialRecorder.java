@@ -26,7 +26,11 @@ import java.util.List;
 @ApplicationScoped
 public class LoreDenialRecorder implements ContainerResponseFilter {
 
-    public record Denial(String ts, String method, String path, int status, String error, String role) {}
+    /** machine — D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина вызова агента; человек — «(n/a)». */
+    public record Denial(String ts, String method, String path, int status, String error, String role, String machine) {}
+
+    @jakarta.inject.Inject
+    io.quarkus.security.identity.SecurityIdentity identity;
 
     private static final int CAPACITY = 200;
     private final Deque<Denial> ring = new ArrayDeque<>(CAPACITY);
@@ -38,8 +42,10 @@ public class LoreDenialRecorder implements ContainerResponseFilter {
         String path = req.getUriInfo().getPath();
         if (!path.startsWith("lore") && !path.startsWith("/lore")) return;
         String error = resp.getEntity() instanceof LoreResourceBase.LoreError le ? le.error() : "";
+        boolean agent = identity != null && !identity.isAnonymous() && AgentScopeFilter.agentScopeOf(identity) != null;
         Denial d = new Denial(Instant.now().toString(), req.getMethod(), path, s, error,
-            String.valueOf(req.getHeaderString("X-Seer-Role")));
+            String.valueOf(req.getHeaderString("X-Seer-Role")),
+            AgentMachine.mark(agent, req.getHeaderString(AgentMachine.HEADER)));
         synchronized (ring) {
             if (ring.size() >= CAPACITY) ring.removeLast();
             ring.addFirst(d);
