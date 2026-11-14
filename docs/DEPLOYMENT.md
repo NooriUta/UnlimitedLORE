@@ -58,11 +58,11 @@ ARCADEDB_PASS=<password> ./bootstrap.sh
 Проверка: `SELECT FROM schema:types` должно вернуть 87 типов (51 vertex + 36
 edge) — сверить со `schema-metadata.json` в той же папке.
 
-**Альтернатива** — доверить бутстрап Java-коду: выставить `LORE_BOOTSTRAP=true`
-при первом старте backend'а (шаг 3), тогда `LoreSchemaInitializer.java` сам
-прогонит тот же DDL при `@PostConstruct`. Для уже существующей общей БД (как в
-проде) `LORE_BOOTSTRAP` должен оставаться `false` — иначе бэкенд заново гоняет
-DDL при каждом старте (безвредно за счёт `IF NOT EXISTS`, но лишнее).
+**Проще — ничего не делать:** на пустой базе (нет ядровых типов KnowTask/KnowSprint/KnowADR)
+`LoreSchemaInitializer.java` поднимает ядро сам, без флага (D-2026-LORE-AUTO-BOOTSTRAP-CORE;
+свежей базе даётся до 10 попыток пробы). На базе с ядром (общий стенд, прод) — ни одного DDL.
+`LORE_BOOTSTRAP=true` остаётся принуждением. Для внешней/чистой установки есть готовый
+профиль и инсталлятор для Linux — `deploy/install/` (README там же).
 
 ## Шаг 3 — собрать и поднять backend
 

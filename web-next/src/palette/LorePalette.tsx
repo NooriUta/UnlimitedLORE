@@ -21,7 +21,8 @@ export interface LorePaletteProps {
   actions?: readonly PaletteAction[];
   /** Ссылка на запись; по умолчанию — параметр rec в URL текущей страницы. */
   href?: (id: string) => string;
-  onOpenRecord?: (r: KitRecord) => void;
+  /** Открыть запись; `full` — во весь экран (кнопка «→» у найденного, Shift+Enter). */
+  onOpenRecord?: (r: KitRecord, opts?: { full: boolean }) => void;
   headers?: () => Record<string, string>;
   fetchImpl?: typeof fetch;
   clipboard?: ClipboardLike | null;
