@@ -113,3 +113,27 @@ describe('S4-18 · строка таблицы задач', () => {
     expect(onStatusChange).toHaveBeenCalledWith(expect.objectContaining({ id: 'T-1' }), 'active');
   });
 });
+
+// Приёмка препрода 14.11.2026 (S3-18, VE-2): в паспорте «Вернуть» не появлялось. Паспорт после записи
+// перечитывает запись — приходит record.status, равный только что поставленному, и хук принимал это
+// за чужую правку: сбрасывал «последнюю смену» вместе с кнопкой. Подтверждение своей же смены окно не снимает.
+describe('S4-18 · «Вернуть» переживает перечитывание записи приложением', () => {
+  it('приложение перечитало запись с новым статусом — «Вернуть» остаётся', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(<StatusChip record={rec()} config={cfg()} save={save} />);
+    pickActive();
+    await flush();
+    rerender(<StatusChip record={rec('active')} config={cfg()} save={save} />);
+    await flush();
+    expect(screen.getByRole('button', { name: /Вернуть «К работе»/ })).toBeTruthy();
+  });
+  it('чужая правка (другой статус пришёл извне) — окно снимается, показан новый статус', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(<StatusChip record={rec()} config={cfg()} save={save} />);
+    pickActive();
+    await flush();
+    rerender(<StatusChip record={rec('blocked')} config={cfg()} save={save} />);
+    await flush();
+    expect(screen.queryByRole('button', { name: /Вернуть/ })).toBeNull();
+  });
+});

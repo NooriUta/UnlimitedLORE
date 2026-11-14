@@ -25,9 +25,15 @@ export function useStatusChange(record: KitRecord, save: KitSaveFn, onChange?: (
   const busy = useRef(false);
   const current = useRef(record.status);
   current.current = status;
+  const recordId = useRef(record.id);
 
   useEffect(() => {
     if (busy.current) return;
+    // S4-18 (приёмка препрода 14.11.2026): приложение после записи перечитывает запись, и приходит
+    // ровно тот статус, что мы поставили. Это подтверждение своей смены, а не чужая правка: окно
+    // «Вернуть» остаётся. Снимается оно, только если пришёл ДРУГОЙ статус или другая запись.
+    if (record.status === current.current && recordId.current === record.id) return;
+    recordId.current = record.id;
     setStatus(record.status);
     setLast(null);
   }, [record.id, record.status]);
