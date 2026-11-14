@@ -77,11 +77,12 @@ describe('aroundAs="column": снизу / на весь экран — вычи�
 
 describe('панелью справа — переключатель видов под заголовком (владелица 08.11; место — 13.11)', () => {
   const sw = () => screen.getByRole('group', { name: 'Вид паспорта' });
-  const pressed = () => within(sw()).getAllByRole('button').filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent);
+  const pressed = () => within(sw()).getAllByRole('button').filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.getAttribute('aria-label'));
   // 13.11.2026 владелица: «вынеси в лево мини кнопками или под Заголовок» — теперь ПОД заголовком.
   it('«Контент · Свойства · Аналитика» стоит под заголовком', () => {
     view('right');
-    expect(within(sw()).getAllByRole('button').map(b => b.textContent)).toEqual(['Контент', 'Свойства', 'Аналитика']);
+    // S4-29 (14.11): значки в строке статуса — имена доступные, видимого текста нет.
+    expect(within(sw()).getAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Контент', 'Свойства', 'Аналитика']);
     const h1 = screen.getByRole('heading', { level: 1 });
     expect(h1.compareDocumentPosition(sw()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -95,7 +96,7 @@ describe('панелью справа — переключатель видов 
   });
   it('«Контент» — один раз: имя сегмента, а не сегмент и такая же вкладка под ним', () => {
     view('right');
-    const labels = [...within(sw()).getAllByRole('button'), ...screen.queryAllByRole('tab')].map(b => b.textContent);
+    const labels = [...within(sw()).getAllByRole('button').map(b => b.getAttribute('aria-label')), ...screen.queryAllByRole('tab').map(b => b.textContent)];
     expect(labels.filter(t => t === 'Контент')).toHaveLength(1);
   });
   it('Свойства: поля записи', () => {

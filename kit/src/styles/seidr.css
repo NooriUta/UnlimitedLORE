@@ -6386,6 +6386,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec__modes--mini { margin: 2px 0 8px; }
 .sk-rec__modes--mini .sk-seg { padding: 1px; }
 .sk-rec__modes--mini .sk-seg__btn { min-height: max(var(--tap), 20px); padding: 0 8px; font-size: var(--fs-xs); }
+/* S4-29 (владелица 14.11.2026): вид паспорта — тремя значками в строке статуса, в ряд со статусом
+   и «получено N ↻»; отдельного ряда пилюль нет. Выбранный значок — подсветка .sk-iconbtn.is-on. */
+.sk-rec__modes--icons { display: inline-flex; align-items: center; gap: 2px; margin: 0 0 0 6px; }
 .sk-rec__panel { min-width: 0; }
 /* Свойства колонкой справа (снизу / на весь экран): контент и свойства сразу, без переключений. */
 .sk-rec__body { display: grid; grid-template-columns: minmax(0, 1fr) var(--props-w, minmax(240px, 320px)); gap: 24px; align-items: start; }
